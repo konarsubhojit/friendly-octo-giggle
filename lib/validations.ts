@@ -1,6 +1,8 @@
 import { z } from 'zod';
 
 // Product validation schemas
+// Note: ProductSchema with datetime strings is for API responses (already converted from Date)
+// Use ProductInputSchema for validating user input
 export const ProductSchema = z.object({
   id: z.string().cuid(),
   name: z.string().min(1, 'Name is required').max(200),
@@ -9,8 +11,8 @@ export const ProductSchema = z.object({
   image: z.string().url('Must be a valid URL'),
   stock: z.number().int().nonnegative('Stock must be non-negative'),
   category: z.string().min(1, 'Category is required').max(100),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
+  createdAt: z.string().datetime(), // ISO string after conversion from Prisma Date
+  updatedAt: z.string().datetime(), // ISO string after conversion from Prisma Date
 });
 
 export const ProductInputSchema = ProductSchema.omit({
