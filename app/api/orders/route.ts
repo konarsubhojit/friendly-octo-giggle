@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { Prisma } from '@prisma/client';
 import { invalidateCache } from '@/lib/redis';
 import { CreateOrderInput, OrderStatus } from '@/lib/types';
+
+// Infer transaction client type from prisma instance
+type TransactionClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 
 export const dynamic = 'force-dynamic';
 
@@ -73,7 +75,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create order and update stock in a transaction
-    const order = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    const order = await prisma.$transaction(async (tx: TransactionClient) => {
       // Create order
       const newOrder = await tx.order.create({
         data: {
