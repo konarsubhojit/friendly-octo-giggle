@@ -1,0 +1,32 @@
+{
+  "$schema": "https://aka.ms/copilot-instructions-schema",
+  "version": "1.0",
+  "instructions": {
+    "file": ".github/copilot/instructions.md"
+  },
+  "prompts": {
+    "file": ".github/copilot/prompts.md"
+  },
+  "context": {
+    "file": ".github/copilot/memory.md"
+  },
+  "preferences": {
+    "language": "TypeScript",
+    "framework": "Next.js",
+    "style": "Modern, type-safe, functional",
+    "comments": "Add for complex logic only",
+    "testing": "Suggest tests for critical paths"
+  },
+  "rules": [
+    "Always use TypeScript with strict mode",
+    "Prefer Server Components over Client Components",
+    "Use Zod for all input validation",
+    "Follow existing file structure and naming conventions",
+    "Include proper error handling in all async functions",
+    "Use helper functions from lib/ directory",
+    "Add cache invalidation when modifying data",
+    "Check authentication before protected operations",
+    "Return type-safe API responses",
+    "Consider serverless constraints in all code"
+  ]
+}

@@ -1,0 +1,146 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// Authentication Models
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  role          UserRole  @default(CUSTOMER)
+  accounts      Account[]
+  sessions      Session[]
+  orders        Order[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+enum UserRole {
+  CUSTOMER
+  ADMIN
+}
+
+// Product Model
+model Product {
+  id          String             @id @default(cuid())
+  name        String
+  description String
+  price       Float              // Base price
+  image       String             // Main product image
+  stock       Int                // Total stock across all variations
+  category    String
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  variations  ProductVariation[]
+  orderItems  OrderItem[]
+
+  @@index([category])
+}
+
+// Product Variations (different designs, colors, sizes, etc.)
+model ProductVariation {
+  id         String   @id @default(cuid())
+  productId  String
+  name       String   // e.g., "Blue", "Large", "Design A"
+  designName String   // e.g., "Classic Design", "Modern Design"
+  image      String?  // Variation-specific image
+  priceModifier Float @default(0) // Additional price (+/- from base)
+  stock      Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  orderItems OrderItem[]
+
+  @@index([productId])
+  @@unique([productId, name])
+}
+
+// Order Models
+model Order {
+  id              String      @id @default(cuid())
+  userId          String?
+  customerName    String
+  customerEmail   String
+  customerAddress String
+  totalAmount     Float
+  status          OrderStatus @default(PENDING)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  items           OrderItem[]
+  user            User?       @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+model OrderItem {
+  id          String            @id @default(cuid())
+  orderId     String
+  productId   String
+  variationId String?           // Optional: selected variation
+  quantity    Int
+  price       Float             // Price at time of order
+  order       Order             @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product     Product           @relation(fields: [productId], references: [id])
+  variation   ProductVariation? @relation(fields: [variationId], references: [id])
+
+  @@index([orderId])
+  @@index([productId])
+  @@index([variationId])
+}
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
