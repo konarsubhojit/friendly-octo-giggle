@@ -28,7 +28,8 @@ export default function OrdersManagement() {
       const data = await res.json();
       setOrders(data.data?.orders || data.orders || []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load orders');
+      console.error('Error loading orders:', err);
+      setError('Unable to load data');
     } finally {
       setLoading(false);
     }
@@ -54,7 +55,8 @@ export default function OrdersManagement() {
 
       await loadOrders();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update order');
+      console.error('Error updating order:', err);
+      setError('Something went wrong. Please try again.');
     } finally {
       setUpdatingOrderId(null);
     }
@@ -135,7 +137,7 @@ export default function OrdersManagement() {
 
       {filteredOrders.length === 0 ? (
         <div className="text-center py-12 bg-white rounded-lg">
-          <p className="text-gray-600">No orders found</p>
+          <p className="text-gray-600">No items found</p>
         </div>
       ) : (
         <div className="space-y-4">

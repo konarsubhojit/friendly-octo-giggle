@@ -53,7 +53,8 @@ export default function ProductsManagement() {
       const data = await res.json();
       setProducts(data.data?.products || data.products || []);
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : 'Failed to load products';
+      console.error('Error loading products:', err);
+      const errorMsg = 'Unable to load data';
       setError(errorMsg);
       toast.error(errorMsg);
     } finally {
@@ -141,8 +142,8 @@ export default function ProductsManagement() {
       const data = await res.json();
       return data.data.url;
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : 'Failed to upload image';
-      toast.error(errorMsg);
+      console.error('Error uploading image:', err);
+      toast.error('Something went wrong. Please try again.');
       return null;
     } finally {
       setUploading(false);
@@ -206,7 +207,8 @@ export default function ProductsManagement() {
       handleCloseModal();
       await loadProducts();
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : 'Failed to save product';
+      console.error('Error saving product:', err);
+      const errorMsg = 'Something went wrong. Please try again.';
       setError(errorMsg);
       toast.error(errorMsg);
     } finally {
@@ -237,8 +239,8 @@ export default function ProductsManagement() {
       setProductToDelete(null);
       await loadProducts();
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : 'Failed to delete product';
-      toast.error(errorMsg);
+      console.error('Error deleting product:', err);
+      toast.error('Something went wrong. Please try again.');
     }
   };
 

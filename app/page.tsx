@@ -56,7 +56,7 @@ export default async function Home() {
         {products.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-gray-600 text-lg">
-              No products available. Please run database migrations and seed data.
+              No items found
             </p>
           </div>
         ) : (

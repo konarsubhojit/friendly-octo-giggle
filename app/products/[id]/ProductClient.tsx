@@ -68,7 +68,8 @@ export default function ProductClient({ product }: { product: Product }) {
       setCustomerAddress('');
       setQuantity(1);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create order');
+      console.error('Error creating order:', err);
+      setError('Something went wrong. Please try again.');
     } finally {
       setLoading(false);
     }
