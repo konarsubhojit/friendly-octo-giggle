@@ -22,12 +22,13 @@ if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
 
 export const db = {
   products: {
-    findAll: async (): Promise<Product[]> => {
+    findAll: async (options?: { limit?: number }): Promise<Product[]> => {
       const products = await prisma.product.findMany({
         orderBy: { createdAt: 'desc' },
         include: {
           variations: true,
         },
+        take: options?.limit,
       });
       type ProductWithVariations = (typeof products)[number];
       type Variation = ProductWithVariations['variations'][number];

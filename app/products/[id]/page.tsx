@@ -1,26 +1,26 @@
 import { notFound } from 'next/navigation';
 import { Product } from '@/lib/types';
 import ProductClient from './ProductClient';
+import { db } from '@/lib/db';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 60;
+
+const PRERENDERED_PRODUCTS_COUNT = 10;
 
 async function getProduct(id: string): Promise<Product | null> {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
-    const res = await fetch(`${baseUrl}/api/products/${id}`, {
-      cache: 'no-store',
-    });
-
-    if (!res.ok) {
-      return null;
-    }
-
-    const data = await res.json();
-    return data.product;
+    const product = await db.products.findById(id);
+    return product;
   } catch (error) {
     console.error('Error fetching product:', error);
     return null;
   }
+}
+
+// Pre-generate static pages for the 10 most recent products at build time
+export async function generateStaticParams() {
+  const products = await db.products.findAll({ limit: PRERENDERED_PRODUCTS_COUNT });
+  return products.map((product) => ({ id: product.id }));
 }
 
 export default async function ProductPage({

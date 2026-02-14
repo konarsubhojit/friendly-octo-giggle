@@ -1,16 +1,12 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 
 export default function CartIcon() {
   const [itemCount, setItemCount] = useState(0);
 
-  useEffect(() => {
-    fetchCartCount();
-  }, []);
-
-  const fetchCartCount = async () => {
+  const fetchCartCount = useCallback(async () => {
     try {
       const res = await fetch('/api/cart');
       const data = await res.json();
@@ -19,7 +15,11 @@ export default function CartIcon() {
     } catch (err) {
       console.error('Error fetching cart count:', err);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchCartCount();
+  }, [fetchCartCount]);
 
   return (
     <Link href="/cart" className="relative text-gray-700 hover:text-blue-600 transition-all duration-300" aria-label="Shopping cart">

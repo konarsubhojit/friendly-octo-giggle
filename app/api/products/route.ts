@@ -3,8 +3,6 @@ import { db } from '@/lib/db';
 import { getCachedData } from '@/lib/redis';
 import { apiSuccess, handleApiError } from '@/lib/api-utils';
 
-export const dynamic = 'force-dynamic';
-
 export async function GET() {
   try {
     // Use Redis cache with stampede prevention
@@ -17,7 +15,9 @@ export async function GET() {
       10 // Serve stale data for up to 10 extra seconds while revalidating
     );
 
-    return apiSuccess({ products });
+    const response = apiSuccess({ products });
+    response.headers.set('Cache-Control', 's-maxage=60, stale-while-revalidate=120');
+    return response;
   } catch (error) {
     return handleApiError(error);
   }
