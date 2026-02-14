@@ -126,24 +126,30 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ### Admin Panel
 
-The admin panel uses a simple token-based authentication for demo purposes. In production, you should integrate this with NextAuth role-based authentication.
+The admin panel uses NextAuth session-based authentication with role-based access control.
 
 1. Navigate to `/admin`
-2. Enter your `ADMIN_TOKEN` (set in `.env`) to authenticate
-3. **Manage Products**:
-   - Add new products with images, prices, stock
-   - Edit existing products
-   - Delete products (cache automatically invalidated)
-4. **Manage Orders**:
-   - View all orders with customer details
-   - Update order status (PENDING → PROCESSING → SHIPPED → DELIVERED)
-   - Track order history
+2. Sign in with Google (if not already signed in)
+3. If your user has ADMIN role, you'll access the admin dashboard
+4. **Dashboard Options**:
+   - **Products**: Add, edit, and delete products
+   - **Orders**: View and update order status
+   - **Users**: Manage user roles (promote/demote admins)
 
-**Note**: The current admin panel uses localStorage token authentication. For production use with NextAuth Google OAuth, you can modify the admin panel to check for `session?.user?.role === 'ADMIN'` instead. To integrate with NextAuth roles, you would need to:
+#### Setting Up Your First Admin
 
-1. Update the admin panel to use `auth()` from `lib/auth.ts`
-2. Check `session?.user?.role === 'ADMIN'`
-3. Modify admin API routes to verify the session instead of bearer token
+After signing in with Google for the first time, you need to promote yourself to admin:
+
+```bash
+# Use Prisma Studio
+npx prisma studio
+# Navigate to User model, find your email, and change role to ADMIN
+
+# Or use SQL
+psql $DATABASE_URL -c "UPDATE \"User\" SET role = 'ADMIN' WHERE email = 'your-email@example.com';"
+```
+
+After setting your role to ADMIN, sign out and sign in again to refresh your session.
 
 ## API Endpoints
 
@@ -153,24 +159,44 @@ The admin panel uses a simple token-based authentication for demo purposes. In p
 - `GET /api/products/[id]` - Get single product (cached)
 - `POST /api/orders` - Create new order
 
-### Admin APIs (requires Bearer token)
+### Admin APIs (require ADMIN role via NextAuth session)
 
 - `GET /api/admin/products` - List all products
 - `POST /api/admin/products` - Create product
 - `PUT /api/admin/products/[id]` - Update product
 - `DELETE /api/admin/products/[id]` - Delete product
-- `GET /api/admin/orders` - List all orders
-- `GET /api/admin/orders/[id]` - Get single order
+- `GET /api/admin/orders` - List all orders (cached 1min)
+- `GET /api/admin/orders/[id]` - Get single order (cached 1min)
 - `PATCH /api/admin/orders/[id]` - Update order status
+- `GET /api/admin/users` - List all users (cached 5min)
+- `GET /api/admin/users/[id]` - Get user details (cached 5min)
+- `PATCH /api/admin/users/[id]` - Update user role
 
 ## Redis Caching Strategy
 
-The application implements a sophisticated caching strategy:
+The application implements a sophisticated caching strategy with proper invalidation:
 
+### Caching by Endpoint
+1. **Products**:
+   - List: 60s TTL, 10s stale window
+   - Individual: 60s TTL, 10s stale window
+   - Invalidated on: create, update, delete
+
+2. **Orders**:
+   - Admin list: 60s TTL, 10s stale window
+   - Individual: 60s TTL, 10s stale window
+   - Invalidated on: create, status update
+
+3. **Users**:
+   - Admin list: 300s (5min) TTL, 30s stale window
+   - Individual: 300s TTL, 30s stale window
+   - Invalidated on: role update
+
+### Cache Features
 1. **Stale-While-Revalidate**: Serves stale data while fetching fresh data in background
 2. **Cache Stampede Prevention**: Uses distributed locks to prevent multiple simultaneous fetches
-3. **Automatic Invalidation**: Cache is invalidated when products/orders are modified
-4. **TTL Management**: Products cached for 60s with 10s stale window
+3. **SCAN-based Invalidation**: Production-safe pattern deletion using SCAN instead of KEYS
+4. **Automatic Invalidation**: Cache is cleared on all mutations
 
 ## Deployment
 
