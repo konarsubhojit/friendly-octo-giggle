@@ -17,11 +17,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Calculate total and verify product availability
+    // Calculate total and verify product/variation availability
     let totalAmount = 0;
     const productIds = body.items.map(item => item.productId);
     const products = await prisma.product.findMany({
       where: { id: { in: productIds } },
+      include: { variations: true },
     });
 
     if (products.length !== body.items.length) {
@@ -40,13 +41,31 @@ export async function POST(request: NextRequest) {
           { status: 404 }
         );
       }
-      if (product.stock < item.quantity) {
+      
+      let price = product.price;
+      let stockToCheck = product.stock;
+      
+      // If variation is selected, use variation price and stock
+      if (item.variationId) {
+        const variation = product.variations.find(v => v.id === item.variationId);
+        if (!variation) {
+          return NextResponse.json(
+            { error: `Variation not found for ${product.name}` },
+            { status: 404 }
+          );
+        }
+        price = product.price + variation.priceModifier;
+        stockToCheck = variation.stock;
+      }
+      
+      if (stockToCheck < item.quantity) {
         return NextResponse.json(
           { error: `Insufficient stock for ${product.name}` },
           { status: 400 }
         );
       }
-      totalAmount += product.price * item.quantity;
+      
+      totalAmount += price * item.quantity;
     }
 
     // Create order and update stock in a transaction
@@ -62,10 +81,20 @@ export async function POST(request: NextRequest) {
           items: {
             create: body.items.map(item => {
               const product = products.find(p => p.id === item.productId)!;
+              let price = product.price;
+              
+              if (item.variationId) {
+                const variation = product.variations.find(v => v.id === item.variationId);
+                if (variation) {
+                  price = product.price + variation.priceModifier;
+                }
+              }
+              
               return {
                 productId: item.productId,
+                variationId: item.variationId,
                 quantity: item.quantity,
-                price: product.price,
+                price,
               };
             }),
           },
@@ -74,13 +103,27 @@ export async function POST(request: NextRequest) {
           items: {
             include: {
               product: true,
+              variation: true,
             },
           },
         },
       });
 
-      // Update product stock
+      // Update product/variation stock
       for (const item of body.items) {
+        if (item.variationId) {
+          // Update variation stock
+          await tx.productVariation.update({
+            where: { id: item.variationId },
+            data: {
+              stock: {
+                decrement: item.quantity,
+              },
+            },
+          });
+        }
+        
+        // Always update total product stock
         await tx.product.update({
           where: { id: item.productId },
           data: {

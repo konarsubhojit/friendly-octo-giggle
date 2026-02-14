@@ -46,6 +46,7 @@ export async function PATCH(
         items: {
           include: {
             product: true,
+            variation: true,
           },
         },
       },
@@ -66,6 +67,11 @@ export async function PATCH(
             createdAt: item.product.createdAt.toISOString(),
             updatedAt: item.product.updatedAt.toISOString(),
           },
+          variation: item.variation ? {
+            ...item.variation,
+            createdAt: item.variation.createdAt.toISOString(),
+            updatedAt: item.variation.updatedAt.toISOString(),
+          } : null,
         })),
       },
     });
@@ -97,6 +103,7 @@ export async function GET(
             items: {
               include: {
                 product: true,
+                variation: true,
               },
             },
           },

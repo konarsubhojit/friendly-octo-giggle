@@ -3,16 +3,30 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Product, OrderItem } from '@/lib/types';
+import { Product, ProductVariation, OrderItem } from '@/lib/types';
 
 export default function ProductClient({ product }: { product: Product }) {
   const [quantity, setQuantity] = useState(1);
+  const [selectedVariation, setSelectedVariation] = useState<ProductVariation | null>(
+    product.variations && product.variations.length > 0 ? product.variations[0] : null
+  );
   const [customerName, setCustomerName] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
   const [customerAddress, setCustomerAddress] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
+
+  // Calculate effective price and stock based on selected variation
+  const effectivePrice = selectedVariation 
+    ? product.price + selectedVariation.priceModifier 
+    : product.price;
+  
+  const effectiveStock = selectedVariation 
+    ? selectedVariation.stock 
+    : product.stock;
+  
+  const currentImage = selectedVariation?.image || product.image;
 
   const handleOrder = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,8 +42,9 @@ export default function ProductClient({ product }: { product: Product }) {
         items: [
           {
             productId: product.id,
+            variationId: selectedVariation?.id,
             quantity,
-            price: product.price,
+            price: effectivePrice,
           },
         ] as OrderItem[],
       };
@@ -74,7 +89,7 @@ export default function ProductClient({ product }: { product: Product }) {
           {/* Product Image */}
           <div className="relative h-96 md:h-[600px] w-full rounded-lg overflow-hidden">
             <Image
-              src={product.image}
+              src={currentImage}
               alt={product.name}
               fill
               className="object-cover"
@@ -98,14 +113,52 @@ export default function ProductClient({ product }: { product: Product }) {
 
             <div className="mb-6">
               <span className="text-4xl font-bold text-gray-900">
-                ${product.price.toFixed(2)}
+                ${effectivePrice.toFixed(2)}
               </span>
+              {selectedVariation && selectedVariation.priceModifier !== 0 && (
+                <span className="ml-2 text-sm text-gray-600">
+                  (Base: ${product.price.toFixed(2)} {selectedVariation.priceModifier > 0 ? '+' : ''}${selectedVariation.priceModifier.toFixed(2)})
+                </span>
+              )}
             </div>
 
+            {/* Variation Selector */}
+            {product.variations && product.variations.length > 0 && (
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Select Design
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  {product.variations.map((variation) => (
+                    <button
+                      key={variation.id}
+                      onClick={() => setSelectedVariation(variation)}
+                      className={`p-3 border-2 rounded-lg transition ${
+                        selectedVariation?.id === variation.id
+                          ? 'border-blue-600 bg-blue-50'
+                          : 'border-gray-300 hover:border-gray-400'
+                      }`}
+                    >
+                      <div className="text-sm font-medium">{variation.designName}</div>
+                      <div className="text-xs text-gray-600">{variation.name}</div>
+                      {variation.priceModifier !== 0 && (
+                        <div className="text-xs text-gray-500">
+                          {variation.priceModifier > 0 ? '+' : ''}${variation.priceModifier.toFixed(2)}
+                        </div>
+                      )}
+                      <div className="text-xs text-gray-500 mt-1">
+                        Stock: {variation.stock}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="mb-6">
-              {product.stock > 0 ? (
+              {effectiveStock > 0 ? (
                 <span className="text-green-600 font-semibold">
-                  In Stock ({product.stock} available)
+                  In Stock ({effectiveStock} available)
                 </span>
               ) : (
                 <span className="text-red-600 font-semibold">Out of Stock</span>
@@ -113,7 +166,7 @@ export default function ProductClient({ product }: { product: Product }) {
             </div>
 
             {/* Order Form */}
-            {product.stock > 0 && (
+            {effectiveStock > 0 && (
               <div className="bg-white p-6 rounded-lg shadow-md">
                 <h2 className="text-xl font-bold mb-4">Place Order</h2>
                 
@@ -176,7 +229,7 @@ export default function ProductClient({ product }: { product: Product }) {
                     <input
                       type="number"
                       min="1"
-                      max={product.stock}
+                      max={effectiveStock}
                       value={quantity}
                       onChange={(e) => {
                         const rawValue = e.target.value;
@@ -185,7 +238,7 @@ export default function ProductClient({ product }: { product: Product }) {
                           setQuantity(1);
                           return;
                         }
-                        const clamped = Math.min(parsed, product.stock);
+                        const clamped = Math.min(parsed, effectiveStock);
                         setQuantity(clamped);
                       }}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -196,7 +249,7 @@ export default function ProductClient({ product }: { product: Product }) {
                     <div className="flex justify-between mb-4">
                       <span className="font-semibold">Total:</span>
                       <span className="text-2xl font-bold">
-                        ${(product.price * quantity).toFixed(2)}
+                        ${(effectivePrice * quantity).toFixed(2)}
                       </span>
                     </div>
 

@@ -71,16 +71,37 @@ enum UserRole {
 
 // Product Model
 model Product {
-  id          String      @id @default(cuid())
+  id          String             @id @default(cuid())
   name        String
   description String
-  price       Float
-  image       String
-  stock       Int
+  price       Float              // Base price
+  image       String             // Main product image
+  stock       Int                // Total stock across all variations
   category    String
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  variations  ProductVariation[]
   orderItems  OrderItem[]
+
+  @@index([category])
+}
+
+// Product Variations (different designs, colors, sizes, etc.)
+model ProductVariation {
+  id         String   @id @default(cuid())
+  productId  String
+  name       String   // e.g., "Blue", "Large", "Design A"
+  designName String   // e.g., "Classic Design", "Modern Design"
+  image      String?  // Variation-specific image
+  priceModifier Float @default(0) // Additional price (+/- from base)
+  stock      Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  orderItems OrderItem[]
+
+  @@index([productId])
+  @@unique([productId, name])
 }
 
 // Order Models
@@ -101,16 +122,19 @@ model Order {
 }
 
 model OrderItem {
-  id        String  @id @default(cuid())
-  orderId   String
-  productId String
-  quantity  Int
-  price     Float
-  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product   Product @relation(fields: [productId], references: [id])
+  id          String            @id @default(cuid())
+  orderId     String
+  productId   String
+  variationId String?           // Optional: selected variation
+  quantity    Int
+  price       Float             // Price at time of order
+  order       Order             @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product     Product           @relation(fields: [productId], references: [id])
+  variation   ProductVariation? @relation(fields: [variationId], references: [id])
 
   @@index([orderId])
   @@index([productId])
+  @@index([variationId])
 }
 
 enum OrderStatus {

@@ -25,23 +25,39 @@ export const db = {
     findAll: async (): Promise<Product[]> => {
       const products = await prisma.product.findMany({
         orderBy: { createdAt: 'desc' },
+        include: {
+          variations: true,
+        },
       });
       return products.map(p => ({
         ...p,
         createdAt: p.createdAt.toISOString(),
         updatedAt: p.updatedAt.toISOString(),
+        variations: p.variations.map(v => ({
+          ...v,
+          createdAt: v.createdAt.toISOString(),
+          updatedAt: v.updatedAt.toISOString(),
+        })),
       }));
     },
     
     findById: async (id: string): Promise<Product | null> => {
       const product = await prisma.product.findUnique({
         where: { id },
+        include: {
+          variations: true,
+        },
       });
       if (!product) return null;
       return {
         ...product,
         createdAt: product.createdAt.toISOString(),
         updatedAt: product.updatedAt.toISOString(),
+        variations: product.variations.map(v => ({
+          ...v,
+          createdAt: v.createdAt.toISOString(),
+          updatedAt: v.updatedAt.toISOString(),
+        })),
       };
     },
     

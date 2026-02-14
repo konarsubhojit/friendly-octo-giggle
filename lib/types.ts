@@ -8,6 +8,19 @@ export interface Product {
   category: string;
   createdAt: string;
   updatedAt: string;
+  variations?: ProductVariation[];
+}
+
+export interface ProductVariation {
+  id: string;
+  productId: string;
+  name: string;
+  designName: string;
+  image: string | null;
+  priceModifier: number;
+  stock: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface ProductInput {
@@ -29,6 +42,7 @@ export enum OrderStatus {
 
 export interface OrderItem {
   productId: string;
+  variationId?: string;
   quantity: number;
   price: number;
 }
@@ -48,9 +62,11 @@ export interface Order {
 export interface OrderItemWithProduct {
   id: string;
   productId: string;
+  variationId?: string | null;
   quantity: number;
   price: number;
   product: Product;
+  variation?: ProductVariation | null;
 }
 
 export interface CreateOrderInput {

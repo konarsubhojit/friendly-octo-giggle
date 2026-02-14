@@ -39,6 +39,7 @@ export async function GET(request: NextRequest) {
             items: {
               include: {
                 product: true,
+                variation: true,
               },
             },
           },
@@ -59,6 +60,11 @@ export async function GET(request: NextRequest) {
             createdAt: item.product.createdAt.toISOString(),
             updatedAt: item.product.updatedAt.toISOString(),
           },
+          variation: item.variation ? {
+            ...item.variation,
+            createdAt: item.variation.createdAt.toISOString(),
+            updatedAt: item.variation.updatedAt.toISOString(),
+          } : null,
         })),
       })),
     });
