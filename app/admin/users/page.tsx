@@ -41,7 +41,8 @@ export default function UsersManagement() {
       const data = await res.json();
       setUsers(data.data?.users || data.users || []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load users');
+      console.error('Error loading users:', err);
+      setError('Unable to load data');
     } finally {
       setLoading(false);
     }
@@ -68,7 +69,8 @@ export default function UsersManagement() {
       // Reload users to get updated data
       await loadUsers();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update user');
+      console.error('Error updating user:', err);
+      setError('Something went wrong. Please try again.');
     } finally {
       setUpdatingUserId(null);
     }
@@ -100,7 +102,7 @@ export default function UsersManagement() {
 
       {users.length === 0 ? (
         <div className="text-center py-12 bg-white rounded-lg">
-          <p className="text-gray-600">No users found</p>
+          <p className="text-gray-600">No items found</p>
         </div>
       ) : (
         <div className="bg-white shadow-md rounded-lg overflow-hidden">
