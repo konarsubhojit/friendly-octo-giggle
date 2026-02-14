@@ -7,19 +7,25 @@ A highly scalable e-commerce website built with Next.js, PostgreSQL, and Redis c
 - 🚀 **Serverless Architecture**: Built for Next.js serverless functions (Vercel, AWS Lambda, etc.)
 - 🛒 **Product Management**: Full CRUD operations for products with images, prices, and stock
 - 📦 **Order Management**: Complete order processing system with customer information
+- 🔐 **Google Authentication**: Secure server-side authentication with NextAuth.js v5
+- 👥 **Role-Based Access**: Customer and Admin roles with protected routes
 - ⚡ **Redis Caching**: Smart caching with stale-while-revalidate pattern
 - 🔒 **Cache Stampede Prevention**: Distributed locking to prevent cache stampede
+- ✅ **Type Safety**: Full TypeScript with Zod runtime validation
 - 🎨 **Modern UI**: Clean, responsive design with Tailwind CSS
 - 👨‍💼 **Admin Panel**: Secure admin interface for managing products and orders
 - 💾 **PostgreSQL Database**: Reliable data persistence with Prisma ORM
+- 🤖 **AI-Ready**: Includes GitHub Copilot configuration files
 
 ## Tech Stack
 
 - **Framework**: Next.js 16 with App Router
-- **Language**: TypeScript
-- **Database**: PostgreSQL with Prisma ORM
-- **Cache**: Redis (ioredis)
-- **Styling**: Tailwind CSS
+- **Language**: TypeScript with strict mode
+- **Database**: PostgreSQL with Prisma ORM v7
+- **Authentication**: NextAuth.js v5 (Auth.js) with Google OAuth
+- **Cache**: Redis (ioredis) with stampede prevention
+- **Validation**: Zod for runtime type checking
+- **Styling**: Tailwind CSS v4
 - **Deployment**: Optimized for serverless platforms (Vercel, AWS Lambda, etc.)
 
 ## Prerequisites
@@ -60,9 +66,28 @@ DATABASE_URL=postgresql://user:password@localhost:5432/ecommerce?schema=public
 # Redis URL (use Upstash Redis for serverless: https://upstash.com)
 REDIS_URL=rediss://default:your-password@your-redis-host:6379
 
+# NextAuth Secret (generate with: openssl rand -base64 32)
+NEXTAUTH_SECRET=your-nextauth-secret-here
+NEXTAUTH_URL=http://localhost:3000
+
+# Google OAuth Credentials (get from Google Cloud Console)
+GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+
 # Admin authentication token (choose a secure random string)
 ADMIN_TOKEN=your-secure-admin-token-here
 ```
+
+### Getting Google OAuth Credentials
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Create a new project or select existing
+3. Enable Google+ API
+4. Go to "Credentials" → "Create Credentials" → "OAuth client ID"
+5. Choose "Web application"
+6. Add authorized redirect URI: `http://localhost:3000/api/auth/callback/google`
+7. For production, add: `https://your-domain.com/api/auth/callback/google`
+8. Copy Client ID and Client Secret to `.env`
 
 ### 4. Set up the database
 
@@ -91,25 +116,41 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ## Usage
 
-### Customer Store
+### Customer Experience
 
-- Browse products at the homepage
-- Click on any product to view details
-- Place orders directly from product pages
-- Orders automatically update product stock
+1. **Browse Products**: Visit the homepage to see all available products
+2. **Sign In**: Click "Sign In" and authenticate with Google
+3. **View Product Details**: Click on any product to see full details
+4. **Place Orders**: Fill out the order form with shipping information
+5. **Automatic Stock Updates**: Product stock is automatically updated after orders
 
 ### Admin Panel
 
-1. Navigate to [http://localhost:3000/admin](http://localhost:3000/admin)
-2. Enter your `ADMIN_TOKEN` from `.env`
-3. Manage products:
-   - Add new products
+1. Navigate to `/admin`
+2. Sign in with a Google account that has ADMIN role
+3. **Manage Products**:
+   - Add new products with images, prices, stock
    - Edit existing products
    - Delete products (cache automatically invalidated)
-4. Manage orders:
-   - View all orders
+4. **Manage Orders**:
+   - View all orders with customer details
    - Update order status (PENDING → PROCESSING → SHIPPED → DELIVERED)
-   - View order details and customer information
+   - Track order history
+
+### Setting Up Admin User
+
+After creating your first user account:
+
+```sql
+-- Connect to your PostgreSQL database and run:
+UPDATE "User" SET role = 'ADMIN' WHERE email = 'your-email@example.com';
+```
+
+Or use Prisma Studio:
+```bash
+npx prisma studio
+# Navigate to User model and change role to ADMIN
+```
 
 ## API Endpoints
 
