@@ -22,8 +22,8 @@ export function apiError(
 }
 
 // Handle Zod validation errors
-export function handleValidationError(error: ZodError) {
-  const details = error.errors.reduce((acc, err) => {
+export function handleValidationError(error: ZodError<unknown>) {
+  const details = error.issues.reduce((acc, err) => {
     const path = err.path.join('.');
     acc[path] = err.message;
     return acc;

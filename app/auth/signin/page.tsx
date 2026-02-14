@@ -1,7 +1,8 @@
 import { signIn } from '@/lib/auth';
-import { redirect } from 'next/navigation';
 
-export default function SignInPage({
+export const dynamic = 'force-dynamic';
+
+export default async function SignInPage({
   searchParams,
 }: {
   searchParams: Promise<{ callbackUrl?: string }>;

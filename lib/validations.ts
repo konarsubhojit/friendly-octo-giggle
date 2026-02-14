@@ -57,7 +57,7 @@ export const ApiSuccessSchema = <T extends z.ZodTypeAny>(dataSchema: T) =>
 export const ApiErrorSchema = z.object({
   error: z.string(),
   success: z.literal(false),
-  details: z.record(z.string()).optional(),
+  details: z.record(z.string(), z.string()).optional(),
 });
 
 // Infer types from schemas

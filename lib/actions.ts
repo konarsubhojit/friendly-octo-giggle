@@ -13,7 +13,7 @@ import {
   type CreateOrderInput,
   type OrderStatusType,
 } from '@/lib/validations';
-import type { Product, Order } from '@/lib/types';
+import type { Product } from '@/lib/types';
 
 // Server Action for creating a product (admin only)
 export async function createProductAction(
@@ -139,7 +139,23 @@ export async function deleteProductAction(
 // Server Action for creating an order
 export async function createOrderAction(
   data: CreateOrderInput
-): Promise<AsyncResult<Order, string>> {
+): Promise<AsyncResult<{
+  id: string;
+  customerName: string;
+  customerEmail: string;
+  customerAddress: string;
+  totalAmount: number;
+  status: OrderStatusType;
+  createdAt: string;
+  updatedAt: string;
+  items: Array<{
+    id: string;
+    productId: string;
+    quantity: number;
+    price: number;
+    product: Product;
+  }>;
+}, string>> {
   try {
     // Validate input
     const validated = CreateOrderSchema.parse(data);
@@ -256,7 +272,23 @@ export async function updateOrderStatusAction(
   id: string,
   status: OrderStatusType,
   adminToken: string
-): Promise<AsyncResult<Order, string>> {
+): Promise<AsyncResult<{
+  id: string;
+  customerName: string;
+  customerEmail: string;
+  customerAddress: string;
+  totalAmount: number;
+  status: OrderStatusType;
+  createdAt: string;
+  updatedAt: string;
+  items: Array<{
+    id: string;
+    productId: string;
+    quantity: number;
+    price: number;
+    product: Product;
+  }>;
+}, string>> {
   try {
     // Verify admin token
     if (adminToken !== process.env.ADMIN_TOKEN) {
