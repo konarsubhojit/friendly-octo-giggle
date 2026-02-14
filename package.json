@@ -22,19 +22,22 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
+  "type": "module",
   "bugs": {
     "url": "https://github.com/konarsubhojit/friendly-octo-giggle/issues"
   },
   "homepage": "https://github.com/konarsubhojit/friendly-octo-giggle#readme",
   "dependencies": {
+    "@prisma/adapter-pg": "^7.4.0",
     "@prisma/client": "^7.4.0",
+    "@tailwindcss/postcss": "^4.1.18",
     "@types/node": "^25.2.3",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "autoprefixer": "^10.4.24",
     "ioredis": "^5.9.3",
     "next": "^16.1.6",
+    "pg": "^8.18.0",
     "postcss": "^8.5.6",
     "prisma": "^7.4.0",
     "react": "^19.2.4",
@@ -43,6 +46,8 @@
     "typescript": "^5.9.3"
   },
   "devDependencies": {
+    "@types/pg": "^8.16.0",
+    "dotenv": "^17.3.1",
     "tsx": "^4.21.0"
   }
 }
