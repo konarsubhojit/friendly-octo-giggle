@@ -4,6 +4,7 @@ import { OrderStatus } from '@/lib/types';
 import { apiSuccess, apiError, handleApiError } from '@/lib/api-utils';
 import { auth } from '@/lib/auth';
 import { getCachedData, invalidateCache } from '@/lib/redis';
+import { serializeOrder } from '@/lib/serializers';
 
 export const dynamic = 'force-dynamic';
 
@@ -56,24 +57,7 @@ export async function PATCH(
     await invalidateCache('admin:orders:*');
 
     return apiSuccess({
-      order: {
-        ...order,
-        createdAt: order.createdAt.toISOString(),
-        updatedAt: order.updatedAt.toISOString(),
-        items: order.items.map(item => ({
-          ...item,
-          product: {
-            ...item.product,
-            createdAt: item.product.createdAt.toISOString(),
-            updatedAt: item.product.updatedAt.toISOString(),
-          },
-          variation: item.variation ? {
-            ...item.variation,
-            createdAt: item.variation.createdAt.toISOString(),
-            updatedAt: item.variation.updatedAt.toISOString(),
-          } : null,
-        })),
-      },
+      order: serializeOrder(order),
     });
   } catch (error) {
     return handleApiError(error);
@@ -117,19 +101,7 @@ export async function GET(
     }
 
     return apiSuccess({
-      order: {
-        ...order,
-        createdAt: order.createdAt.toISOString(),
-        updatedAt: order.updatedAt.toISOString(),
-        items: order.items.map(item => ({
-          ...item,
-          product: {
-            ...item.product,
-            createdAt: item.product.createdAt.toISOString(),
-            updatedAt: item.product.updatedAt.toISOString(),
-          },
-        })),
-      },
+      order: serializeOrder(order),
     });
   } catch (error) {
     return handleApiError(error);

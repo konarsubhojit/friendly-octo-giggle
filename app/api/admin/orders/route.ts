@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { apiSuccess, apiError, handleApiError } from '@/lib/api-utils';
 import { auth } from '@/lib/auth';
 import { getCachedData } from '@/lib/redis';
+import { serializeOrders } from '@/lib/serializers';
 
 export const dynamic = 'force-dynamic';
 
@@ -49,24 +50,7 @@ export async function GET(request: NextRequest) {
     );
 
     return apiSuccess({
-      orders: orders.map(order => ({
-        ...order,
-        createdAt: order.createdAt.toISOString(),
-        updatedAt: order.updatedAt.toISOString(),
-        items: order.items.map(item => ({
-          ...item,
-          product: {
-            ...item.product,
-            createdAt: item.product.createdAt.toISOString(),
-            updatedAt: item.product.updatedAt.toISOString(),
-          },
-          variation: item.variation ? {
-            ...item.variation,
-            createdAt: item.variation.createdAt.toISOString(),
-            updatedAt: item.variation.updatedAt.toISOString(),
-          } : null,
-        })),
-      })),
+      orders: serializeOrders(orders),
     });
   } catch (error) {
     return handleApiError(error);
