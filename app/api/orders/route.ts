@@ -3,6 +3,9 @@ import { prisma } from '@/lib/db';
 import { invalidateCache } from '@/lib/redis';
 import { CreateOrderInput, OrderStatus } from '@/lib/types';
 
+// Infer transaction client type from prisma instance
+type TransactionClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
@@ -25,6 +28,9 @@ export async function POST(request: NextRequest) {
       include: { variations: true },
     });
 
+    type ProductWithVariations = (typeof products)[number];
+    type ProductVariation = ProductWithVariations['variations'][number];
+
     if (products.length !== body.items.length) {
       return NextResponse.json(
         { error: 'Some products not found' },
@@ -34,7 +40,7 @@ export async function POST(request: NextRequest) {
 
     // Check stock and calculate total
     for (const item of body.items) {
-      const product = products.find(p => p.id === item.productId);
+      const product = products.find((p: ProductWithVariations) => p.id === item.productId);
       if (!product) {
         return NextResponse.json(
           { error: `Product ${item.productId} not found` },
@@ -47,7 +53,7 @@ export async function POST(request: NextRequest) {
       
       // If variation is selected, use variation price and stock
       if (item.variationId) {
-        const variation = product.variations.find(v => v.id === item.variationId);
+        const variation = product.variations.find((v: ProductVariation) => v.id === item.variationId);
         if (!variation) {
           return NextResponse.json(
             { error: `Variation not found for ${product.name}` },
@@ -69,7 +75,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create order and update stock in a transaction
-    const order = await prisma.$transaction(async (tx) => {
+    const order = await prisma.$transaction(async (tx: TransactionClient) => {
       // Create order
       const newOrder = await tx.order.create({
         data: {
@@ -80,11 +86,11 @@ export async function POST(request: NextRequest) {
           status: OrderStatus.PENDING,
           items: {
             create: body.items.map(item => {
-              const product = products.find(p => p.id === item.productId)!;
+              const product = products.find((p: ProductWithVariations) => p.id === item.productId)!;
               let price = product.price;
               
               if (item.variationId) {
-                const variation = product.variations.find(v => v.id === item.variationId);
+                const variation = product.variations.find((v: ProductVariation) => v.id === item.variationId);
                 if (variation) {
                   price = product.price + variation.priceModifier;
                 }
@@ -137,6 +143,9 @@ export async function POST(request: NextRequest) {
       return newOrder;
     });
 
+    // Infer order item type from the order result
+    type OrderItem = (typeof order.items)[number];
+
     // Invalidate product cache
     await invalidateCache('products:*');
     for (const item of body.items) {
@@ -151,7 +160,7 @@ export async function POST(request: NextRequest) {
         ...order,
         createdAt: order.createdAt.toISOString(),
         updatedAt: order.updatedAt.toISOString(),
-        items: order.items.map(item => ({
+        items: order.items.map((item: OrderItem) => ({
           ...item,
           product: {
             ...item.product,
