@@ -143,6 +143,9 @@ export async function POST(request: NextRequest) {
       return newOrder;
     });
 
+    // Infer order item type from the order result
+    type OrderItem = (typeof order.items)[number];
+
     // Invalidate product cache
     await invalidateCache('products:*');
     for (const item of body.items) {
@@ -157,7 +160,7 @@ export async function POST(request: NextRequest) {
         ...order,
         createdAt: order.createdAt.toISOString(),
         updatedAt: order.updatedAt.toISOString(),
-        items: order.items.map(item => ({
+        items: order.items.map((item: OrderItem) => ({
           ...item,
           product: {
             ...item.product,
