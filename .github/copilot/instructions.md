@@ -88,6 +88,38 @@ const result = await prisma.product.findMany({
 });
 ```
 
+#### Database Migrations
+- Use Prisma Migrate for all database schema changes
+- Never modify the schema without creating a migration
+- Always create descriptive migration names
+- Test migrations in development before deploying
+
+**Creating a Migration:**
+```bash
+# After modifying prisma/schema.prisma, create a migration
+npm run db:migrate -- --name descriptive_migration_name
+
+# This will:
+# 1. Generate SQL migration files in prisma/migrations/
+# 2. Apply the migration to your database
+# 3. Update Prisma Client
+```
+
+**Migration Workflow:**
+1. Modify `prisma/schema.prisma` with your changes
+2. Run `npm run db:migrate -- --name your_change_description`
+3. Review the generated SQL in `prisma/migrations/`
+4. Test the migration in development
+5. Commit both schema.prisma and migration files
+6. In production, run `npx prisma migrate deploy`
+
+**Important Notes:**
+- Migrations are applied in order based on timestamp
+- Never edit existing migration files after they've been applied
+- Use normalized relational tables with proper foreign keys
+- Add indexes for frequently queried fields
+- Use `@@index` for single fields, `@@unique` for constraints
+
 ### Caching Strategy
 - Use `getCachedData` from `lib/redis.ts` for read-heavy endpoints
 - Set appropriate TTL (60s for products)

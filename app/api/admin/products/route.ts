@@ -1,27 +1,31 @@
-import { NextResponse, NextRequest } from 'next/server';
+import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
 import { invalidateCache } from '@/lib/redis';
 import { ProductInputSchema } from '@/lib/validations';
 import { apiSuccess, apiError, handleApiError } from '@/lib/api-utils';
+import { auth } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
-// Simple authentication middleware
-function checkAuth(request: NextRequest): boolean {
-  const authHeader = request.headers.get('authorization');
-  const adminToken = process.env.ADMIN_TOKEN;
+// Check if user is admin
+async function checkAdminAuth() {
+  const session = await auth();
   
-  if (!adminToken) {
-    console.warn('ADMIN_TOKEN not set');
-    return false;
+  if (!session || !session.user) {
+    return { authorized: false, error: 'Not authenticated' };
   }
   
-  return authHeader === `Bearer ${adminToken}`;
+  if (session.user.role !== 'ADMIN') {
+    return { authorized: false, error: 'Not authorized - Admin access required' };
+  }
+  
+  return { authorized: true };
 }
 
 export async function GET(request: NextRequest) {
-  if (!checkAuth(request)) {
-    return apiError('Unauthorized', 401);
+  const authCheck = await checkAdminAuth();
+  if (!authCheck.authorized) {
+    return apiError(authCheck.error!, 401);
   }
 
   try {
@@ -33,8 +37,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  if (!checkAuth(request)) {
-    return apiError('Unauthorized', 401);
+  const authCheck = await checkAdminAuth();
+  if (!authCheck.authorized) {
+    return apiError(authCheck.error!, 401);
   }
 
   try {

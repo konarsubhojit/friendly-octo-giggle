@@ -99,6 +99,9 @@ export async function POST(request: NextRequest) {
     for (const item of body.items) {
       await invalidateCache(`product:${item.productId}`);
     }
+    
+    // Invalidate order caches
+    await invalidateCache('admin:orders:*');
 
     return NextResponse.json({ 
       order: {

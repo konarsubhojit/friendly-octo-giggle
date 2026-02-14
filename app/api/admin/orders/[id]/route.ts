@@ -1,31 +1,34 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/db';
 import { OrderStatus } from '@/lib/types';
+import { apiSuccess, apiError, handleApiError } from '@/lib/api-utils';
+import { auth } from '@/lib/auth';
+import { getCachedData, invalidateCache } from '@/lib/redis';
 
 export const dynamic = 'force-dynamic';
 
-// Simple authentication middleware
-function checkAuth(request: NextRequest): boolean {
-  const authHeader = request.headers.get('authorization');
-  const adminToken = process.env.ADMIN_TOKEN;
+// Check if user is admin
+async function checkAdminAuth() {
+  const session = await auth();
   
-  if (!adminToken) {
-    console.warn('ADMIN_TOKEN not set');
-    return false;
+  if (!session || !session.user) {
+    return { authorized: false, error: 'Not authenticated' };
   }
   
-  return authHeader === `Bearer ${adminToken}`;
+  if (session.user.role !== 'ADMIN') {
+    return { authorized: false, error: 'Not authorized - Admin access required' };
+  }
+  
+  return { authorized: true };
 }
 
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  if (!checkAuth(request)) {
-    return NextResponse.json(
-      { error: 'Unauthorized' },
-      { status: 401 }
-    );
+  const authCheck = await checkAdminAuth();
+  if (!authCheck.authorized) {
+    return apiError(authCheck.error!, 401);
   }
 
   try {
@@ -33,10 +36,7 @@ export async function PATCH(
     const body: { status: OrderStatus } = await request.json();
     
     if (!body.status || !Object.values(OrderStatus).includes(body.status)) {
-      return NextResponse.json(
-        { error: 'Invalid status' },
-        { status: 400 }
-      );
+      return apiError('Invalid status', 400);
     }
 
     const order = await prisma.order.update({
@@ -51,7 +51,10 @@ export async function PATCH(
       },
     });
 
-    return NextResponse.json({
+    // Invalidate order caches
+    await invalidateCache('admin:orders:*');
+
+    return apiSuccess({
       order: {
         ...order,
         createdAt: order.createdAt.toISOString(),
@@ -67,11 +70,7 @@ export async function PATCH(
       },
     });
   } catch (error) {
-    console.error('Error updating order:', error);
-    return NextResponse.json(
-      { error: 'Failed to update order' },
-      { status: 500 }
-    );
+    return handleApiError(error);
   }
 }
 
@@ -79,35 +78,38 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  if (!checkAuth(request)) {
-    return NextResponse.json(
-      { error: 'Unauthorized' },
-      { status: 401 }
-    );
+  const authCheck = await checkAdminAuth();
+  if (!authCheck.authorized) {
+    return apiError(authCheck.error!, 401);
   }
 
   try {
     const { id } = await params;
     
-    const order = await prisma.order.findUnique({
-      where: { id },
-      include: {
-        items: {
+    // Use Redis cache for individual order
+    const order = await getCachedData(
+      `admin:order:${id}`,
+      60, // Cache for 1 minute
+      async () => {
+        return await prisma.order.findUnique({
+          where: { id },
           include: {
-            product: true,
+            items: {
+              include: {
+                product: true,
+              },
+            },
           },
-        },
+        });
       },
-    });
+      10 // Stale time
+    );
 
     if (!order) {
-      return NextResponse.json(
-        { error: 'Order not found' },
-        { status: 404 }
-      );
+      return apiError('Order not found', 404);
     }
 
-    return NextResponse.json({
+    return apiSuccess({
       order: {
         ...order,
         createdAt: order.createdAt.toISOString(),
@@ -123,10 +125,6 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error('Error fetching order:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch order' },
-      { status: 500 }
-    );
+    return handleApiError(error);
   }
 }
