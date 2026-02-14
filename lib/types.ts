@@ -75,3 +75,37 @@ export interface CreateOrderInput {
   customerAddress: string;
   items: OrderItem[];
 }
+
+export interface Cart {
+  id: string;
+  userId?: string | null;
+  sessionId?: string | null;
+  items: CartItemWithProduct[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CartItem {
+  id: string;
+  cartId: string;
+  productId: string;
+  variationId?: string | null;
+  quantity: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CartItemWithProduct extends CartItem {
+  product: Product;
+  variation?: ProductVariation | null;
+}
+
+export interface AddToCartInput {
+  productId: string;
+  variationId?: string;
+  quantity: number;
+}
+
+export interface UpdateCartItemInput {
+  quantity: number;
+}
