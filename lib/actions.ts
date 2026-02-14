@@ -15,6 +15,9 @@ import {
 } from '@/lib/validations';
 import type { Product } from '@/lib/types';
 
+// Infer transaction client type from prisma instance
+type TransactionClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+
 // Server Action for creating a product (admin only)
 export async function createProductAction(
   data: ProductInput,
@@ -166,6 +169,9 @@ export async function createOrderAction(
       where: { id: { in: productIds } },
     });
 
+    // Infer product type from query result
+    type ProductType = (typeof products)[number];
+
     if (products.length !== validated.items.length) {
       return { success: false, error: 'Some products not found' };
     }
@@ -173,7 +179,7 @@ export async function createOrderAction(
     // Check stock and calculate total
     let totalAmount = 0;
     for (const item of validated.items) {
-      const product = products.find((p) => p.id === item.productId);
+      const product = products.find((p: ProductType) => p.id === item.productId);
       if (!product) {
         return { success: false, error: `Product ${item.productId} not found` };
       }
@@ -184,7 +190,7 @@ export async function createOrderAction(
     }
 
     // Create order and update stock in transaction
-    const order = await prisma.$transaction(async (tx) => {
+    const order = await prisma.$transaction(async (tx: TransactionClient) => {
       const newOrder = await tx.order.create({
         data: {
           customerName: validated.customerName,
@@ -194,7 +200,7 @@ export async function createOrderAction(
           status: 'PENDING',
           items: {
             create: validated.items.map((item) => {
-              const product = products.find((p) => p.id === item.productId)!;
+              const product = products.find((p: ProductType) => p.id === item.productId)!;
               return {
                 productId: item.productId,
                 quantity: item.quantity,
@@ -225,6 +231,9 @@ export async function createOrderAction(
       return newOrder;
     });
 
+    // Infer order item type from the order result
+    type OrderItemType = (typeof order.items)[number];
+
     // Invalidate product cache
     await invalidateCache('products:*');
     for (const item of validated.items) {
@@ -246,7 +255,7 @@ export async function createOrderAction(
         status: order.status as OrderStatusType,
         createdAt: order.createdAt.toISOString(),
         updatedAt: order.updatedAt.toISOString(),
-        items: order.items.map((item) => ({
+        items: order.items.map((item: OrderItemType) => ({
           id: item.id,
           productId: item.productId,
           quantity: item.quantity,
@@ -311,6 +320,9 @@ export async function updateOrderStatusAction(
       },
     });
 
+    // Infer order item type from the order result  
+    type UpdateOrderItemType = (typeof order.items)[number];
+
     // Revalidate admin page
     revalidatePath('/admin');
 
@@ -325,7 +337,7 @@ export async function updateOrderStatusAction(
         status: order.status as OrderStatusType,
         createdAt: order.createdAt.toISOString(),
         updatedAt: order.updatedAt.toISOString(),
-        items: order.items.map((item) => ({
+        items: order.items.map((item: UpdateOrderItemType) => ({
           id: item.id,
           productId: item.productId,
           quantity: item.quantity,

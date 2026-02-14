@@ -29,11 +29,13 @@ export const db = {
           variations: true,
         },
       });
-      return products.map(p => ({
+      type ProductWithVariations = (typeof products)[number];
+      type Variation = ProductWithVariations['variations'][number];
+      return products.map((p: ProductWithVariations) => ({
         ...p,
         createdAt: p.createdAt.toISOString(),
         updatedAt: p.updatedAt.toISOString(),
-        variations: p.variations.map(v => ({
+        variations: p.variations.map((v: Variation) => ({
           ...v,
           createdAt: v.createdAt.toISOString(),
           updatedAt: v.updatedAt.toISOString(),
@@ -49,11 +51,13 @@ export const db = {
         },
       });
       if (!product) return null;
+      type ProductWithVariations = typeof product;
+      type Variation = ProductWithVariations['variations'][number];
       return {
         ...product,
         createdAt: product.createdAt.toISOString(),
         updatedAt: product.updatedAt.toISOString(),
-        variations: product.variations.map(v => ({
+        variations: product.variations.map((v: Variation) => ({
           ...v,
           createdAt: v.createdAt.toISOString(),
           updatedAt: v.updatedAt.toISOString(),
