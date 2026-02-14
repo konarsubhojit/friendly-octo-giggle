@@ -4,9 +4,14 @@ import { auth } from '@/lib/auth';
 import { isValidImageType, MAX_FILE_SIZE, VALID_IMAGE_TYPES_DISPLAY } from '@/lib/upload-constants';
 
 export async function POST(request: Request) {
+  let fileName = 'unknown';
+  let userId = 'unknown';
+  
   try {
     // Check authentication
     const session = await auth();
+    userId = session?.user?.id ?? 'unknown';
+    
     if (!session?.user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
@@ -32,6 +37,8 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
+
+    fileName = file.name;
 
     // Validate file type
     if (!isValidImageType(file.type)) {
@@ -64,7 +71,11 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
-    console.error('Upload error:', error);
+    console.error('Upload error:', {
+      error,
+      fileName,
+      userId,
+    });
     return NextResponse.json(
       { error: 'Failed to upload file' },
       { status: 500 }

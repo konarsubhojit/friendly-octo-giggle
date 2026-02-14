@@ -396,7 +396,9 @@ export default function ProductsManagement() {
                         value={formData.price}
                         onChange={(e) => {
                           const value = parseFloat(e.target.value);
-                          setFormData({ ...formData, price: isNaN(value) ? 0 : value });
+                          if (!isNaN(value)) {
+                            setFormData({ ...formData, price: value });
+                          }
                         }}
                         required
                         min="0.01"
@@ -414,7 +416,9 @@ export default function ProductsManagement() {
                         value={formData.stock}
                         onChange={(e) => {
                           const value = parseInt(e.target.value, 10);
-                          setFormData({ ...formData, stock: isNaN(value) ? 0 : value });
+                          if (!isNaN(value)) {
+                            setFormData({ ...formData, stock: value });
+                          }
                         }}
                         required
                         min="0"
