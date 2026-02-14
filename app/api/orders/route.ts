@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { Prisma } from '@prisma/client';
 import { invalidateCache } from '@/lib/redis';
 import { CreateOrderInput, OrderStatus } from '@/lib/types';
 
@@ -25,6 +26,8 @@ export async function POST(request: NextRequest) {
       include: { variations: true },
     });
 
+    type ProductWithVariations = (typeof products)[number];
+
     if (products.length !== body.items.length) {
       return NextResponse.json(
         { error: 'Some products not found' },
@@ -34,7 +37,7 @@ export async function POST(request: NextRequest) {
 
     // Check stock and calculate total
     for (const item of body.items) {
-      const product = products.find(p => p.id === item.productId);
+      const product = products.find((p: ProductWithVariations) => p.id === item.productId);
       if (!product) {
         return NextResponse.json(
           { error: `Product ${item.productId} not found` },
@@ -47,7 +50,7 @@ export async function POST(request: NextRequest) {
       
       // If variation is selected, use variation price and stock
       if (item.variationId) {
-        const variation = product.variations.find(v => v.id === item.variationId);
+        const variation = product.variations.find((v: ProductWithVariations['variations'][number]) => v.id === item.variationId);
         if (!variation) {
           return NextResponse.json(
             { error: `Variation not found for ${product.name}` },
@@ -69,7 +72,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create order and update stock in a transaction
-    const order = await prisma.$transaction(async (tx) => {
+    const order = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // Create order
       const newOrder = await tx.order.create({
         data: {
@@ -80,11 +83,11 @@ export async function POST(request: NextRequest) {
           status: OrderStatus.PENDING,
           items: {
             create: body.items.map(item => {
-              const product = products.find(p => p.id === item.productId)!;
+              const product = products.find((p: ProductWithVariations) => p.id === item.productId)!;
               let price = product.price;
               
               if (item.variationId) {
-                const variation = product.variations.find(v => v.id === item.variationId);
+                const variation = product.variations.find((v: ProductWithVariations['variations'][number]) => v.id === item.variationId);
                 if (variation) {
                   price = product.price + variation.priceModifier;
                 }
