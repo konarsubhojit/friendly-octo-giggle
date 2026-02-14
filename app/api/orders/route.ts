@@ -27,6 +27,7 @@ export async function POST(request: NextRequest) {
     });
 
     type ProductWithVariations = (typeof products)[number];
+    type ProductVariation = ProductWithVariations['variations'][number];
 
     if (products.length !== body.items.length) {
       return NextResponse.json(
@@ -50,7 +51,7 @@ export async function POST(request: NextRequest) {
       
       // If variation is selected, use variation price and stock
       if (item.variationId) {
-        const variation = product.variations.find((v: ProductWithVariations['variations'][number]) => v.id === item.variationId);
+        const variation = product.variations.find((v: ProductVariation) => v.id === item.variationId);
         if (!variation) {
           return NextResponse.json(
             { error: `Variation not found for ${product.name}` },
@@ -87,7 +88,7 @@ export async function POST(request: NextRequest) {
               let price = product.price;
               
               if (item.variationId) {
-                const variation = product.variations.find((v: ProductWithVariations['variations'][number]) => v.id === item.variationId);
+                const variation = product.variations.find((v: ProductVariation) => v.id === item.variationId);
                 if (variation) {
                   price = product.price + variation.priceModifier;
                 }
