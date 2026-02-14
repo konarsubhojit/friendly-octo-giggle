@@ -255,3 +255,38 @@ npm run db:seed      # Seed database
 - Add meaningful comments for complex logic
 - Suggest performance optimizations
 - Consider serverless constraints
+
+## UI/UX Testing Requirements
+**MANDATORY**: Always test UI/UX changes with Playwright before completing tasks.
+
+### Testing Process
+1. **Start dev server** with mock data if database is unavailable
+2. **Use Playwright** to navigate and interact with changed UI
+3. **Take screenshots** of all modified pages/components
+4. **Verify**:
+   - Tailwind CSS classes rendering correctly
+   - Responsive design working
+   - Interactive elements functional
+   - Error states display properly
+   - Loading states work
+5. **Include screenshots** in PR description
+6. **Revert temporary mock code** after testing
+
+### Mock Data Pattern
+```typescript
+// Temporary mock for testing - ALWAYS REVERT
+const MOCK_DATA = [...];
+export async function GET() {
+  return NextResponse.json({ data: MOCK_DATA });
+}
+```
+
+### Example Testing Flow
+```bash
+# 1. Create mock data temporarily
+# 2. Start server: npm run dev
+# 3. Test with Playwright
+# 4. Take screenshots
+# 5. Restore original code
+# 6. Commit real changes only
+```

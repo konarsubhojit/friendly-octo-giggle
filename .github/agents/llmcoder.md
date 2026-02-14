@@ -72,4 +72,15 @@ These coding principles are mandatory:
 
 9. Quality
 - Favor deterministic, testable behavior.
+
+## UI/UX Testing Requirements
+**MANDATORY**: Always test UI/UX changes with Playwright before completing.
+
+Process:
+1. Start dev server (use mock data if DB unavailable)
+2. Navigate with Playwright to changed pages
+3. Take screenshots of all modified UI
+4. Verify: Tailwind rendering, responsive design, interactions, errors, loading
+5. Revert temporary mocks
+6. Include screenshots in deliverable
 - Keep tests simple and focused on verifying observable behavior.
