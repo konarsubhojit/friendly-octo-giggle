@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Product, ProductVariation, OrderItem } from '@/lib/types';
-import CartIcon from '@/components/CartIcon';
+import CartIcon from '@/components/layout/CartIcon';
 
 export default function ProductClient({ product }: { product: Product }) {
   const [quantity, setQuantity] = useState(1);
