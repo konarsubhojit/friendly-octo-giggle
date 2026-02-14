@@ -170,10 +170,12 @@ lib/
   ├── validations.ts    # Zod schemas
   ├── api-utils.ts      # API helpers
   ├── actions.ts        # Server Actions
-  └── hooks.ts          # Custom React hooks
+  ├── hooks.ts          # Custom React hooks
+  └── utils/            # Utility functions (future use)
 components/
-  ├── ErrorBoundary.tsx # Error handling
-  └── AuthComponents.tsx # Auth UI components
+  ├── layout/           # Layout components (Header, Footer, CartIcon)
+  ├── ui/               # UI components (NewsletterForm, ErrorBoundary, AuthComponents)
+  └── sections/         # Page sections (Hero, ProductGrid)
 prisma/
   ├── schema.prisma     # Database schema
   └── seed.ts           # Seed data
@@ -197,6 +199,15 @@ prisma/
 5. Create UI components
 6. Test thoroughly
 
+### Component Best Practices
+- **Organized folder structure**: Place components in appropriate folders
+  - `components/layout/` - Reusable layout components (Header, Footer, CartIcon)
+  - `components/ui/` - Generic UI components (forms, buttons, error boundaries)
+  - `components/sections/` - Page-specific sections (Hero, ProductGrid)
+- Use Server Components by default, add 'use client' only when needed
+- Keep components focused and single-purpose
+- Extract shared logic into hooks or utilities
+
 ### Performance Best Practices
 - Cache frequently accessed data
 - Use connection pooling (already configured)
@@ -204,6 +215,55 @@ prisma/
 - Optimize images with Next.js Image
 - Use proper indexes in Prisma schema
 - Implement pagination for large datasets
+
+## Performance Optimizations
+
+This project implements several Next.js 15+ performance optimizations:
+
+### Static Generation with ISR
+- **Removed `force-dynamic`**: Pages use Incremental Static Regeneration (ISR) instead of dynamic rendering
+- **Revalidation timing**: Static pages revalidate every 60 seconds
+- **Benefits**: Faster page loads, reduced database load, better caching
+
+### Direct Database Access
+- **No HTTP fetches in Server Components**: Database queries happen directly in components
+- **Eliminates roundtrip overhead**: No network latency between server component and API route
+- **Simplified architecture**: Fewer layers, easier debugging
+
+### API Route Optimizations
+- **Cache headers**: All API routes include proper Cache-Control headers
+- **Stale-while-revalidate**: Responses can be cached while background revalidation occurs
+- **Redis caching**: Frequently accessed data cached with stampede prevention
+
+### Static Params Generation
+- **`generateStaticParams`**: Pre-generates pages for top 20 products at build time
+- **Incremental builds**: Additional product pages generated on-demand and cached
+- **SEO benefits**: Core product pages indexed immediately
+
+### Implementation Examples
+```typescript
+// ISR with revalidation
+export const revalidate = 60;
+
+// Direct database queries in Server Components
+const products = await prisma.product.findMany();
+
+// API routes with cache headers
+return NextResponse.json(data, {
+  headers: {
+    'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=30',
+  },
+});
+
+// Static params generation
+export async function generateStaticParams() {
+  const products = await prisma.product.findMany({
+    take: 20,
+    orderBy: { id: 'asc' },
+  });
+  return products.map((product) => ({ id: product.id.toString() }));
+}
+```
 
 ## Commands Reference
 ```bash
