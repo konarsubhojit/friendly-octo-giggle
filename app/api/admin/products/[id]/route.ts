@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { invalidateCache } from '@/lib/redis';
-import { ProductInput } from '@/lib/types';
+import { ProductUpdateSchema } from '@/lib/validations';
+import { apiSuccess, apiError, handleApiError } from '@/lib/api-utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,36 +24,29 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   if (!checkAuth(request)) {
-    return NextResponse.json(
-      { error: 'Unauthorized' },
-      { status: 401 }
-    );
+    return apiError('Unauthorized', 401);
   }
 
   try {
     const { id } = await params;
-    const body: Partial<ProductInput> = await request.json();
+    const body = await request.json();
     
-    const product = await db.products.update(id, body);
+    // Validate input with Zod
+    const validated = ProductUpdateSchema.parse(body);
+    
+    const product = await db.products.update(id, validated);
     
     if (!product) {
-      return NextResponse.json(
-        { error: 'Product not found' },
-        { status: 404 }
-      );
+      return apiError('Product not found', 404);
     }
     
     // Invalidate cache
     await invalidateCache('products:*');
     await invalidateCache(`product:${id}`);
     
-    return NextResponse.json({ product });
+    return apiSuccess({ product });
   } catch (error) {
-    console.error('Error updating product:', error);
-    return NextResponse.json(
-      { error: 'Failed to update product' },
-      { status: 500 }
-    );
+    return handleApiError(error);
   }
 }
 
@@ -61,10 +55,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   if (!checkAuth(request)) {
-    return NextResponse.json(
-      { error: 'Unauthorized' },
-      { status: 401 }
-    );
+    return apiError('Unauthorized', 401);
   }
 
   try {
@@ -72,22 +63,15 @@ export async function DELETE(
     const success = await db.products.delete(id);
     
     if (!success) {
-      return NextResponse.json(
-        { error: 'Product not found' },
-        { status: 404 }
-      );
+      return apiError('Product not found', 404);
     }
     
     // Invalidate cache
     await invalidateCache('products:*');
     await invalidateCache(`product:${id}`);
     
-    return NextResponse.json({ success: true });
+    return apiSuccess({ success: true });
   } catch (error) {
-    console.error('Error deleting product:', error);
-    return NextResponse.json(
-      { error: 'Failed to delete product' },
-      { status: 500 }
-    );
+    return handleApiError(error);
   }
 }

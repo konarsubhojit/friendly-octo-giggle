@@ -113,10 +113,36 @@ export async function getCachedData<T>(
 export async function invalidateCache(pattern: string): Promise<void> {
   const redis = getRedisClient();
   try {
-    const keys = await redis.keys(pattern);
-    if (keys.length > 0) {
-      await redis.del(...keys);
-    }
+    // Use SCAN instead of KEYS to avoid blocking Redis
+    const stream = redis.scanStream({
+      match: pattern,
+      count: 100,
+    });
+
+    const keysToDelete: string[] = [];
+    
+    stream.on('data', (keys: string[]) => {
+      keysToDelete.push(...keys);
+    });
+
+    await new Promise<void>((resolve, reject) => {
+      stream.on('end', async () => {
+        try {
+          if (keysToDelete.length > 0) {
+            // Delete in batches to avoid overwhelming Redis
+            const batchSize = 100;
+            for (let i = 0; i < keysToDelete.length; i += batchSize) {
+              const batch = keysToDelete.slice(i, i + batchSize);
+              await redis.del(...batch);
+            }
+          }
+          resolve();
+        } catch (err) {
+          reject(err);
+        }
+      });
+      stream.on('error', reject);
+    });
   } catch (error) {
     console.error('Cache invalidation error:', error);
   }

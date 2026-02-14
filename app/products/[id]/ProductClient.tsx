@@ -178,7 +178,16 @@ export default function ProductClient({ product }: { product: Product }) {
                       min="1"
                       max={product.stock}
                       value={quantity}
-                      onChange={(e) => setQuantity(parseInt(e.target.value))}
+                      onChange={(e) => {
+                        const rawValue = e.target.value;
+                        const parsed = parseInt(rawValue, 10);
+                        if (Number.isNaN(parsed) || parsed < 1) {
+                          setQuantity(1);
+                          return;
+                        }
+                        const clamped = Math.min(parsed, product.stock);
+                        setQuantity(clamped);
+                      }}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>

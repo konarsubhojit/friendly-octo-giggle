@@ -102,7 +102,11 @@ export function useFormState<T extends Record<string, unknown>>(
 
   const handleChange = useCallback((name: keyof T, value: unknown) => {
     setValues((prev) => ({ ...prev, [name]: value }));
-    setErrors((prev) => ({ ...prev, [name]: undefined }));
+    setErrors((prev) => {
+      const newErrors = { ...prev };
+      delete newErrors[name];
+      return newErrors;
+    });
   }, []);
 
   const handleSubmit = useCallback(

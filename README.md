@@ -126,8 +126,10 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ### Admin Panel
 
+The admin panel uses a simple token-based authentication for demo purposes. In production, you should integrate this with NextAuth role-based authentication.
+
 1. Navigate to `/admin`
-2. Sign in with a Google account that has ADMIN role
+2. Enter your `ADMIN_TOKEN` (set in `.env`) to authenticate
 3. **Manage Products**:
    - Add new products with images, prices, stock
    - Edit existing products
@@ -137,20 +139,11 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
    - Update order status (PENDING → PROCESSING → SHIPPED → DELIVERED)
    - Track order history
 
-### Setting Up Admin User
+**Note**: The current admin panel uses localStorage token authentication. For production use with NextAuth Google OAuth, you can modify the admin panel to check for `session?.user?.role === 'ADMIN'` instead. To integrate with NextAuth roles, you would need to:
 
-After creating your first user account:
-
-```sql
--- Connect to your PostgreSQL database and run:
-UPDATE "User" SET role = 'ADMIN' WHERE email = 'your-email@example.com';
-```
-
-Or use Prisma Studio:
-```bash
-npx prisma studio
-# Navigate to User model and change role to ADMIN
-```
+1. Update the admin panel to use `auth()` from `lib/auth.ts`
+2. Check `session?.user?.role === 'ADMIN'`
+3. Modify admin API routes to verify the session instead of bearer token
 
 ## API Endpoints
 

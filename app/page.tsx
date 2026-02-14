@@ -18,7 +18,7 @@ async function getProducts(): Promise<Product[]> {
     }
     
     const data = await res.json();
-    return data.products || [];
+    return data.data?.products || data.products || [];
   } catch (error) {
     console.error('Error fetching products:', error);
     return [];

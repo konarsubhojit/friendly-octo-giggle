@@ -66,15 +66,19 @@ export default function AdminPanel() {
       }
       
       const productsData = await productsRes.json();
-      setProducts(productsData.products);
+      setProducts(productsData.data?.products || productsData.products || []);
 
       // Load orders
       const ordersRes = await fetch('/api/admin/orders', {
         headers: { Authorization: `Bearer ${token}` },
       });
       
+      if (!ordersRes.ok) {
+        throw new Error('Failed to load orders');
+      }
+      
       const ordersData = await ordersRes.json();
-      setOrders(ordersData.orders);
+      setOrders(ordersData.data?.orders || ordersData.orders || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load data');
       setIsAuthenticated(false);
