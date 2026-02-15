@@ -184,7 +184,7 @@ function createPrismaClient() {
 ```
 
 **Key Enhancements for Authentication:**
-- `checkServerIdentity: () => undefined` - Explicitly bypasses SSL certificate validation for self-signed certificates
+- `checkServerIdentity: () => undefined` - Explicitly bypasses SSL certificate validation for self-signed certificates. **Note:** This is required for managed PostgreSQL services (Neon, Supabase, Railway) in serverless environments. For production with custom certificates, consider using proper CA certificates instead.
 - `datasources.db.url` - Ensures PrismaClient uses the enhanced connection string with SSL parameters
 - Connection timeouts - Improves reliability in serverless environments
 - This configuration fixes the `prisma.account.findUnique()` error during NextAuth authentication

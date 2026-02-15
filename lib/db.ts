@@ -24,7 +24,9 @@ function createPrismaClient() {
     ? false 
     : { 
         rejectUnauthorized: false,
-        // Explicitly set to accept self-signed certificates
+        // Explicitly bypass certificate validation for self-signed certificates
+        // This is required for managed PostgreSQL services (Neon, Supabase, Railway)
+        // that use self-signed certificates in serverless environments
         checkServerIdentity: () => undefined
       };
   
