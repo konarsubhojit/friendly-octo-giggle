@@ -21,7 +21,7 @@ function createPrismaClient() {
   
   const pool = new pg.Pool({
     connectionString: enhancedConnectionString,
-    ssl: enhancedConnectionString?.includes('sslmode=disable') 
+    ssl: connectionString?.includes('sslmode=disable') 
       ? false 
       : { rejectUnauthorized: false },
   });
