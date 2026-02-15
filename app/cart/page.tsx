@@ -354,8 +354,8 @@ export default function CartPage() {
                     </svg>
                     <span className="font-semibold text-gray-800">Signed in as:</span>
                   </div>
-                  <p className="text-sm text-gray-700 ml-8">{session.user.name}</p>
-                  <p className="text-sm text-gray-600 ml-8">{session.user.email}</p>
+                  <p className="text-sm text-gray-700 ml-8">{session.user.name || 'User'}</p>
+                  <p className="text-sm text-gray-600 ml-8">{session.user.email || 'No email'}</p>
                 </div>
 
                 <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl">

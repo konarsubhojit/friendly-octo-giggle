@@ -15,7 +15,7 @@ async function handlePost(request: NextRequest) {
   try {
     // Check authentication
     const session = await auth();
-    if (!session?.user) {
+    if (!session?.user?.id) {
       logBusinessEvent({
         event: 'order_create_failed',
         details: { reason: 'not_authenticated' },
@@ -44,8 +44,20 @@ async function handlePost(request: NextRequest) {
 
     // Use customer info from session, with optional override from body
     const customerName = body.customerName || session.user.name || 'Unknown';
-    const customerEmail = body.customerEmail || session.user.email || '';
+    const customerEmail = body.customerEmail || session.user.email;
     const customerAddress = body.customerAddress || '';
+
+    if (!customerEmail) {
+      logBusinessEvent({
+        event: 'order_create_failed',
+        details: { reason: 'missing_email' },
+        success: false,
+      });
+      return NextResponse.json(
+        { error: 'Email address is required. Please update your profile.' },
+        { status: 400 }
+      );
+    }
 
     if (!customerAddress) {
       logBusinessEvent({
