@@ -230,7 +230,7 @@ export default function CartPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                 </svg>
               </Link>
-              <button className="text-gray-600 hover:text-gray-900 transition-colors" title="Notifications">
+              <button className="text-gray-600 hover:text-gray-900 transition-colors" title="Notifications" aria-label="Notifications">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                 </svg>
@@ -240,7 +240,7 @@ export default function CartPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
                 </svg>
               </Link>
-              <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center" title="User Profile">
+              <button className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center" title="User Profile" aria-label="User Profile">
                 {session?.user?.image ? (
                   <Image src={session.user.image} alt="User" width={32} height={32} className="rounded-full" />
                 ) : (
@@ -248,7 +248,7 @@ export default function CartPage() {
                     <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
                   </svg>
                 )}
-              </div>
+              </button>
             </div>
           </div>
         </div>
@@ -329,7 +329,7 @@ export default function CartPage() {
                         >
                           {item.product.name}
                         </Link>
-                        <p className="text-sm text-gray-600 mt-1 line-clamp-2">
+                        <p className="text-sm text-gray-600 mt-1" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                           {item.product.description}
                         </p>
                         {item.variation && (
@@ -386,14 +386,14 @@ export default function CartPage() {
                   </label>
                 </div>
 
-                {/* Saved Payment Method */}
+                {/* Saved Payment Method - Note: Hardcoded for UI demonstration */}
                 <div className="mb-6 p-3 bg-white rounded border border-gray-200">
                   <div className="flex justify-between items-center">
                     <div>
                       <p className="text-sm font-medium text-gray-700">Saved Card:</p>
                       <p className="text-sm text-gray-600">VISA **** 3567</p>
                     </div>
-                    <button className="text-sm text-blue-600 hover:underline">
+                    <button className="text-sm text-blue-600 hover:underline" onClick={() => console.log('Change payment method')}>
                       (change)
                     </button>
                   </div>
@@ -418,6 +418,7 @@ export default function CartPage() {
                 <button
                   onClick={handlePlaceOrder}
                   disabled={orderLoading || !agreedToTerms}
+                  aria-label={!agreedToTerms ? "Please agree to Terms and Conditions to checkout" : "Proceed to checkout"}
                   className="w-full bg-black text-white py-3 rounded font-bold text-base hover:bg-gray-800 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
                 >
                   {orderLoading ? (
