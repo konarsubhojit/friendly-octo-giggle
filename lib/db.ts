@@ -10,9 +10,18 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 function createPrismaClient() {
+  const connectionString = process.env.DATABASE_URL;
+  
+  // Prepare connection string with SSL parameters if not already present
+  let enhancedConnectionString = connectionString;
+  if (connectionString && !connectionString.includes('sslmode=')) {
+    const separator = connectionString.includes('?') ? '&' : '?';
+    enhancedConnectionString = `${connectionString}${separator}sslmode=require&sslaccept=accept_invalid_certs`;
+  }
+  
   const pool = new pg.Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: process.env.DATABASE_URL?.includes('sslmode=disable') 
+    connectionString: enhancedConnectionString,
+    ssl: connectionString?.includes('sslmode=disable') 
       ? false 
       : { rejectUnauthorized: false },
   });
