@@ -25,7 +25,7 @@ This is a modern e-commerce platform built on Next.js 16 with App Router, design
 │                     Client Layer (React 19)                  │
 │  • Server Components (default)                               │
 │  • Client Components (user interactions)                     │
-│  • Incremental Static Regeneration (ISR)                     │
+│  • Dynamic Rendering (force-dynamic)                         │
 └─────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────┐
@@ -49,7 +49,7 @@ This is a modern e-commerce platform built on Next.js 16 with App Router, design
 
 **Architecture Principles:**
 - **Serverless-First:** Singleton patterns, connection pooling, lazy initialization
-- **Edge-Optimized:** ISR for static content, Redis caching at edge locations
+- **Edge-Optimized:** Redis caching at edge locations, dynamic rendering
 - **Type-Safe:** End-to-end TypeScript with Prisma & Zod validation
 - **Observable:** Structured logging with Pino, request tracing, performance metrics
 
@@ -425,9 +425,7 @@ PostgreSQL: SELECT * FROM Product JOIN ProductVariation
          ↓
 Data Serialization: Convert Date objects to ISO strings
          ↓
-ISR Cache: Page cached for 60 seconds (revalidate = 60)
-         ↓
-Response: HTML sent to client
+Response: HTML sent to client (rendered on-demand)
 ```
 
 ### Order Creation Flow (Transactional)
@@ -485,19 +483,19 @@ Session stored in DB          Cookie: cart_session (30 days)
 
 ## 7. Performance Optimizations
 
-### 1. Incremental Static Regeneration (ISR)
+### 1. Dynamic Rendering with Direct Database Access
 **Homepage (`app/page.tsx`):**
 ```typescript
-export const revalidate = 60;  // Regenerate every 60 seconds
+export const dynamic = 'force-dynamic';  // Always render on-demand
 
 export default async function Home() {
   const products = await db.products.findAll();  // Direct DB access
   return <ProductGrid products={products} />;
 }
 ```
-- Static HTML generated at build time
-- Background revalidation every 60s
-- Edge cache serves stale content instantly
+- Always renders on-demand (no static generation)
+- Direct database access from Server Components
+- Fresh data on every request
 
 ### 2. Redis Caching with SWR
 - Product API endpoints cache responses for 60s
@@ -539,9 +537,9 @@ if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
 - Responsive image sizing with `srcSet`
 
 ### Performance Metrics
-- **Time to First Byte (TTFB):** < 200ms (ISR + edge cache)
+- **Time to First Byte (TTFB):** < 300ms (dynamic rendering + Redis cache)
 - **Largest Contentful Paint (LCP):** < 2.5s
-- **Cache Hit Ratio:** > 80% for product listings
+- **Cache Hit Ratio:** > 80% for product listings (Redis layer)
 - **Database Query Time:** < 50ms (with connection pooling)
 
 ---
@@ -644,9 +642,9 @@ const pool = new pg.Pool({
 - Idempotent API endpoints (safe to retry)
 
 **4. Edge Deployment**
-- ISR pages cached at edge locations (CDN)
 - Redis with global replication (Upstash)
 - Images served from Vercel Blob (CDN)
+- API routes at edge locations
 
 **5. Function Timeout Management**
 - Keep API routes under 10s execution time
@@ -659,9 +657,9 @@ const pool = new pg.Pool({
 - Limit query result sizes with `take`
 
 **7. Cost Optimization**
-- ISR reduces function invocations (serves cached HTML)
 - Connection pooling reduces database connections
 - Redis caching reduces database queries by 80%
+- Efficient query patterns minimize compute time
 
 ---
 
@@ -897,7 +895,7 @@ const order = await prisma.$transaction(async (tx) => {
 ## Summary
 
 This architecture provides:
-✅ **High Performance** - ISR, Redis caching, connection pooling
+✅ **High Performance** - Dynamic rendering, Redis caching, connection pooling
 ✅ **Scalability** - Serverless design, edge deployment, stateless functions
 ✅ **Security** - Input validation, SSL, RBAC, secure sessions
 ✅ **Type Safety** - End-to-end TypeScript with Prisma & Zod

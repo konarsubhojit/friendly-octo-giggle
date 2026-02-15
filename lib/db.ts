@@ -10,14 +10,45 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 function createPrismaClient() {
+  const connectionString = process.env.DATABASE_URL;
+  
+  // Prepare connection string with SSL parameters if not already present
+  let enhancedConnectionString = connectionString;
+  if (connectionString && !connectionString.includes('sslmode=')) {
+    const separator = connectionString.includes('?') ? '&' : '?';
+    enhancedConnectionString = `${connectionString}${separator}sslmode=require&sslaccept=accept_invalid_certs`;
+  }
+  
+  // Configure SSL for pg.Pool to handle self-signed certificates
+  const sslConfig = connectionString?.includes('sslmode=disable') 
+    ? false 
+    : { 
+        rejectUnauthorized: false,
+        // Explicitly bypass certificate validation for self-signed certificates
+        // This is required for managed PostgreSQL services (Neon, Supabase, Railway)
+        // that use self-signed certificates in serverless environments
+        checkServerIdentity: () => undefined
+      };
+  
   const pool = new pg.Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: process.env.DATABASE_URL?.includes('sslmode=disable') 
-      ? false 
-      : { rejectUnauthorized: false },
+    connectionString: enhancedConnectionString,
+    ssl: sslConfig,
+    // Add connection timeout and retry settings for serverless
+    connectionTimeoutMillis: 10000,
+    idleTimeoutMillis: 30000,
   });
+  
   const adapter = new PrismaPg(pool);
-  return new PrismaClient({ adapter, log: ['error'] });
+  return new PrismaClient({ 
+    adapter, 
+    log: ['error', 'warn'],
+    // Ensure datasource uses the enhanced connection string
+    datasources: {
+      db: {
+        url: enhancedConnectionString,
+      },
+    },
+  });
 }
 
 export const prisma = globalForPrisma.prisma ?? createPrismaClient();

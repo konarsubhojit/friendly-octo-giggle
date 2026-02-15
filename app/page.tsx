@@ -5,7 +5,8 @@ import Hero from '@/components/sections/Hero';
 import ProductGrid from '@/components/sections/ProductGrid';
 import { db } from '@/lib/db';
 
-export const revalidate = 60;
+// Force dynamic rendering - no static generation
+export const dynamic = 'force-dynamic';
 
 export default async function Home() {
   let products: Product[] = [];
