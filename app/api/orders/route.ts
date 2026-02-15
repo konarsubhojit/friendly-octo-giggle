@@ -4,6 +4,7 @@ import { invalidateCache } from '@/lib/redis';
 import { CreateOrderInput, OrderStatus } from '@/lib/types';
 import { withLogging } from '@/lib/api-middleware';
 import { logBusinessEvent, logError } from '@/lib/logger';
+import { auth } from '@/lib/auth';
 
 // Infer transaction client type from prisma instance
 type TransactionClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
@@ -12,17 +13,48 @@ export const dynamic = 'force-dynamic';
 
 async function handlePost(request: NextRequest) {
   try {
-    const body: CreateOrderInput = await request.json();
-    
-    // Validate input
-    if (!body.customerName || !body.customerEmail || !body.items || body.items.length === 0) {
+    // Check authentication
+    const session = await auth();
+    if (!session?.user) {
       logBusinessEvent({
         event: 'order_create_failed',
-        details: { reason: 'missing_required_fields' },
+        details: { reason: 'not_authenticated' },
         success: false,
       });
       return NextResponse.json(
-        { error: 'Missing required fields' },
+        { error: 'Authentication required. Please sign in to place orders.' },
+        { status: 401 }
+      );
+    }
+
+    const body: CreateOrderInput = await request.json();
+    
+    // Validate input - now we get customer info from session
+    if (!body.items || body.items.length === 0) {
+      logBusinessEvent({
+        event: 'order_create_failed',
+        details: { reason: 'missing_items' },
+        success: false,
+      });
+      return NextResponse.json(
+        { error: 'Order must contain at least one item' },
+        { status: 400 }
+      );
+    }
+
+    // Use customer info from session, with optional override from body
+    const customerName = body.customerName || session.user.name || 'Unknown';
+    const customerEmail = body.customerEmail || session.user.email || '';
+    const customerAddress = body.customerAddress || '';
+
+    if (!customerAddress) {
+      logBusinessEvent({
+        event: 'order_create_failed',
+        details: { reason: 'missing_address' },
+        success: false,
+      });
+      return NextResponse.json(
+        { error: 'Shipping address is required' },
         { status: 400 }
       );
     }
@@ -99,12 +131,13 @@ async function handlePost(request: NextRequest) {
 
     // Create order and update stock in a transaction
     const order = await prisma.$transaction(async (tx: TransactionClient) => {
-      // Create order
+      // Create order with userId
       const newOrder = await tx.order.create({
         data: {
-          customerName: body.customerName,
-          customerEmail: body.customerEmail,
-          customerAddress: body.customerAddress,
+          userId: session.user.id,
+          customerName,
+          customerEmail,
+          customerAddress,
           totalAmount,
           status: OrderStatus.PENDING,
           items: {

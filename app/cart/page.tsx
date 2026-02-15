@@ -4,15 +4,15 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { Cart, CartItemWithProduct } from '@/lib/types';
 
 export default function CartPage() {
   const router = useRouter();
+  const { data: session, status } = useSession();
   const [cart, setCart] = useState<Cart | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
-  const [customerName, setCustomerName] = useState('');
-  const [customerEmail, setCustomerEmail] = useState('');
   const [customerAddress, setCustomerAddress] = useState('');
   const [orderLoading, setOrderLoading] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(false);
@@ -93,6 +93,13 @@ export default function CartPage() {
   const handlePlaceOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Check authentication
+    if (!session?.user) {
+      setError('Please sign in to place an order');
+      router.push('/auth/signin?callbackUrl=/cart');
+      return;
+    }
+    
     if (!cart || !cart.items || cart.items.length === 0) {
       setError('Your cart is empty');
       return;
@@ -102,10 +109,8 @@ export default function CartPage() {
     setError('');
 
     try {
-      // Create order from cart items
+      // Create order from cart items - customer info comes from session
       const orderData = {
-        customerName,
-        customerEmail,
         customerAddress,
         items: cart.items.map((item) => ({
           productId: item.productId,
@@ -150,7 +155,7 @@ export default function CartPage() {
     }
   };
 
-  if (loading) {
+  if (loading || status === 'loading') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 flex items-center justify-center">
         <div className="flex items-center gap-3">
@@ -158,7 +163,38 @@ export default function CartPage() {
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
           </svg>
-          <span className="text-xl font-semibold text-gray-700">Loading cart...</span>
+          <span className="text-xl font-semibold text-gray-700">Loading...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Show sign-in prompt if not authenticated
+  if (!session?.user) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 flex items-center justify-center">
+        <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/50 p-12 text-center max-w-md">
+          <svg className="w-20 h-20 mx-auto mb-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+          </svg>
+          <h2 className="text-3xl font-bold mb-4 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            Sign In Required
+          </h2>
+          <p className="text-gray-700 mb-8 text-lg">
+            Please sign in to view your cart and place orders.
+          </p>
+          <Link
+            href="/auth/signin?callbackUrl=/cart"
+            className="inline-block bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-xl font-bold text-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-2xl hover:scale-105"
+          >
+            Sign In
+          </Link>
+          <Link
+            href="/"
+            className="block mt-4 text-gray-600 hover:text-gray-800 font-medium"
+          >
+            Continue Shopping
+          </Link>
         </div>
       </div>
     );
@@ -310,6 +346,18 @@ export default function CartPage() {
                   Order Summary
                 </h2>
 
+                {/* User Info Display */}
+                <div className="mb-6 p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-200">
+                  <div className="flex items-center gap-3 mb-2">
+                    <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                    </svg>
+                    <span className="font-semibold text-gray-800">Signed in as:</span>
+                  </div>
+                  <p className="text-sm text-gray-700 ml-8">{session.user.name}</p>
+                  <p className="text-sm text-gray-600 ml-8">{session.user.email}</p>
+                </div>
+
                 <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl">
                   <div className="flex justify-between items-center mb-2">
                     <span className="text-gray-700">Items ({cart.items.length})</span>
@@ -328,43 +376,15 @@ export default function CartPage() {
                 <form onSubmit={handlePlaceOrder} className="space-y-4">
                   <div>
                     <label className="block text-sm font-semibold text-gray-800 mb-2">
-                      Your Name
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={customerName}
-                      onChange={(e) => setCustomerName(e.target.value)}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/50 backdrop-blur-sm transition-all duration-300 hover:border-blue-300"
-                      placeholder="Enter your full name"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-800 mb-2">
-                      Email Address
-                    </label>
-                    <input
-                      type="email"
-                      required
-                      value={customerEmail}
-                      onChange={(e) => setCustomerEmail(e.target.value)}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/50 backdrop-blur-sm transition-all duration-300 hover:border-blue-300"
-                      placeholder="your.email@example.com"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-800 mb-2">
-                      Shipping Address
+                      Shipping Address *
                     </label>
                     <textarea
                       required
                       value={customerAddress}
                       onChange={(e) => setCustomerAddress(e.target.value)}
-                      rows={3}
+                      rows={4}
                       className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/50 backdrop-blur-sm transition-all duration-300 hover:border-blue-300 resize-none"
-                      placeholder="Enter your complete shipping address"
+                      placeholder="Enter your complete shipping address&#10;Street, City, State, ZIP Code"
                     />
                   </div>
 
