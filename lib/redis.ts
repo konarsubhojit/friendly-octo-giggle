@@ -1,4 +1,5 @@
 import Redis from 'ioredis';
+import { logCacheOperation, logError, Timer } from './logger';
 
 // Singleton Redis connection for serverless
 let redis: Redis | null = null;
@@ -26,6 +27,7 @@ export async function getCachedData<T>(
   staleTime = 5 // Extra time to serve stale data while revalidating
 ): Promise<T> {
   const redis = getRedisClient();
+  const timer = new Timer(`cache.get.${key}`);
   
   try {
     // Try to get cached data
@@ -37,6 +39,8 @@ export async function getCachedData<T>(
       
       // If data is fresh, return it
       if (age < ttl * 1000) {
+        timer.end({ cacheHit: true, age });
+        logCacheOperation({ operation: 'hit', key, success: true });
         return data.value;
       }
       
@@ -44,6 +48,8 @@ export async function getCachedData<T>(
       if (age < (ttl + staleTime) * 1000) {
         // Return stale data immediately
         const staleData = data.value;
+        timer.end({ cacheHit: true, stale: true, age });
+        logCacheOperation({ operation: 'hit', key, success: true });
         
         // Trigger background revalidation (non-blocking)
         setImmediate(async () => {
@@ -54,14 +60,18 @@ export async function getCachedData<T>(
               timestamp: Date.now(),
             };
             await redis.setex(key, ttl + staleTime, JSON.stringify(cacheData));
+            logCacheOperation({ operation: 'set', key, ttl: ttl + staleTime, success: true });
           } catch (error) {
-            console.error('Background revalidation failed:', error);
+            logError({ error, context: 'background_revalidation', additionalInfo: { key } });
           }
         });
         
         return staleData;
       }
     }
+    
+    // Cache miss
+    logCacheOperation({ operation: 'miss', key, success: true });
     
     // Use distributed lock to prevent stampede
     const lockKey = `lock:${key}`;
@@ -79,6 +89,8 @@ export async function getCachedData<T>(
         
         // Cache the result
         await redis.setex(key, ttl + staleTime, JSON.stringify(cacheData));
+        timer.end({ cacheHit: false, fetched: true });
+        logCacheOperation({ operation: 'set', key, ttl: ttl + staleTime, success: true });
         
         return fresh;
       } finally {
@@ -97,14 +109,18 @@ export async function getCachedData<T>(
       await new Promise(resolve => setTimeout(resolve, 100));
       const retryData = await redis.get(key);
       if (retryData) {
+        timer.end({ cacheHit: true, retried: true });
         return JSON.parse(retryData).value as T;
       }
       
       // Fallback: fetch without caching
-      return await fetcher();
+      const fresh = await fetcher();
+      timer.end({ cacheHit: false, lockFailed: true });
+      return fresh;
     }
   } catch (error) {
-    console.error('Cache error:', error);
+    timer.end({ error: true });
+    logError({ error, context: 'cache_operation', additionalInfo: { key } });
     // Fallback to direct fetch on cache errors
     return await fetcher();
   }
@@ -112,6 +128,7 @@ export async function getCachedData<T>(
 
 export async function invalidateCache(pattern: string): Promise<void> {
   const redis = getRedisClient();
+  const timer = new Timer(`cache.invalidate.${pattern}`);
   try {
     // Use SCAN instead of KEYS to avoid blocking Redis
     const stream = redis.scanStream({
@@ -135,7 +152,13 @@ export async function invalidateCache(pattern: string): Promise<void> {
               const batch = keysToDelete.slice(i, i + batchSize);
               await redis.del(...batch);
             }
+            logCacheOperation({
+              operation: 'invalidate',
+              key: pattern,
+              success: true,
+            });
           }
+          timer.end({ keysDeleted: keysToDelete.length });
           resolve();
         } catch (err) {
           reject(err);
@@ -144,6 +167,7 @@ export async function invalidateCache(pattern: string): Promise<void> {
       stream.on('error', reject);
     });
   } catch (error) {
-    console.error('Cache invalidation error:', error);
+    timer.end({ error: true });
+    logError({ error, context: 'cache_invalidation', additionalInfo: { pattern } });
   }
 }

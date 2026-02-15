@@ -2,18 +2,25 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { invalidateCache } from '@/lib/redis';
 import { CreateOrderInput, OrderStatus } from '@/lib/types';
+import { withLogging } from '@/lib/api-middleware';
+import { logBusinessEvent, logError } from '@/lib/logger';
 
 // Infer transaction client type from prisma instance
 type TransactionClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 
 export const dynamic = 'force-dynamic';
 
-export async function POST(request: NextRequest) {
+async function handlePost(request: NextRequest) {
   try {
     const body: CreateOrderInput = await request.json();
     
     // Validate input
     if (!body.customerName || !body.customerEmail || !body.items || body.items.length === 0) {
+      logBusinessEvent({
+        event: 'order_create_failed',
+        details: { reason: 'missing_required_fields' },
+        success: false,
+      });
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
@@ -32,6 +39,11 @@ export async function POST(request: NextRequest) {
     type ProductVariation = ProductWithVariations['variations'][number];
 
     if (products.length !== body.items.length) {
+      logBusinessEvent({
+        event: 'order_create_failed',
+        details: { reason: 'products_not_found', requestedCount: body.items.length, foundCount: products.length },
+        success: false,
+      });
       return NextResponse.json(
         { error: 'Some products not found' },
         { status: 404 }
@@ -65,6 +77,17 @@ export async function POST(request: NextRequest) {
       }
       
       if (stockToCheck < item.quantity) {
+        logBusinessEvent({
+          event: 'order_create_failed',
+          details: { 
+            reason: 'insufficient_stock', 
+            productId: product.id,
+            productName: product.name,
+            requested: item.quantity,
+            available: stockToCheck,
+          },
+          success: false,
+        });
         return NextResponse.json(
           { error: `Insufficient stock for ${product.name}` },
           { status: 400 }
@@ -146,6 +169,18 @@ export async function POST(request: NextRequest) {
     // Infer order item type from the order result
     type OrderItem = (typeof order.items)[number];
 
+    // Log successful order creation
+    logBusinessEvent({
+      event: 'order_created',
+      details: {
+        orderId: order.id,
+        totalAmount: order.totalAmount,
+        itemCount: order.items.length,
+        customerEmail: order.customerEmail,
+      },
+      success: true,
+    });
+
     // Invalidate product cache
     await invalidateCache('products:*');
     for (const item of body.items) {
@@ -171,10 +206,18 @@ export async function POST(request: NextRequest) {
       },
     }, { status: 201 });
   } catch (error) {
-    console.error('Error creating order:', error);
+    logError({
+      error,
+      context: 'order_creation',
+      additionalInfo: {
+        path: request.nextUrl.pathname,
+      },
+    });
     return NextResponse.json(
       { error: 'Failed to create order' },
       { status: 500 }
     );
   }
 }
+
+export const POST = withLogging(handlePost);
