@@ -3,12 +3,26 @@
 import "dotenv/config";
 import { defineConfig } from "prisma/config";
 
+// Prepare DATABASE_URL with SSL parameters for Prisma
+function getDatabaseUrl() {
+  const databaseUrl = process.env["DATABASE_URL"] || '';
+  
+  // If sslmode is already specified, use it as-is
+  if (databaseUrl.includes('sslmode=')) {
+    return databaseUrl;
+  }
+  
+  // Add SSL parameters to accept self-signed certificates
+  const separator = databaseUrl.includes('?') ? '&' : '?';
+  return `${databaseUrl}${separator}sslmode=require&sslaccept=accept_invalid_certs`;
+}
+
 export default defineConfig({
   schema: "prisma/schema.prisma",
   migrations: {
     path: "prisma/migrations",
   },
   datasource: {
-    url: process.env["DATABASE_URL"],
+    url: getDatabaseUrl(),
   },
 });
