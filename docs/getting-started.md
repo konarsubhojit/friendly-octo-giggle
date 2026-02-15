@@ -117,7 +117,7 @@ psql $DATABASE_URL -c "UPDATE \"User\" SET role = 'ADMIN' WHERE email = 'your-em
 1. **Homepage**: Browse products at http://localhost:3000
 2. **Sign In**: Test Google OAuth authentication
 3. **Product Details**: Click any product
-4. **Admin Panel**: Visit http://localhost:3000/admin (requires admin role)
+4. **Admin Panel**: Manually navigate to http://localhost:3000/admin (no UI link - requires admin role)
 
 ## Testing the Application
 
@@ -135,7 +135,7 @@ psql $DATABASE_URL -c "UPDATE \"User\" SET role = 'ADMIN' WHERE email = 'your-em
 ### Admin Flow
 
 1. Sign in with Google (with admin role)
-2. Navigate to `/admin`
+2. Manually type `/admin` in browser URL bar (no navigation link in UI)
 3. **Products Tab**: Add, edit, or delete products
 4. **Orders Tab**: View and update order statuses
 5. **Users Tab**: Manage user roles
@@ -277,9 +277,11 @@ npx prisma migrate reset
 
 ## Using the Admin Panel
 
+**Note**: There are no UI navigation links to the admin panel. Access it by manually typing `/admin` in your browser's URL bar after signing in with an admin account.
+
 ### Add Products
 
-1. Navigate to `/admin`
+1. Manually navigate to `/admin` in browser URL bar
 2. Click "Products" tab
 3. Click "Add Product" button
 4. Fill in product details:
@@ -307,7 +309,7 @@ Products can have multiple variations (e.g., colors, sizes):
 
 ### Manage Orders
 
-1. Navigate to `/admin`
+1. Go to `/admin` (type in URL bar)
 2. Click "Orders" tab
 3. View order list with filters
 4. Click an order to view details
@@ -320,7 +322,7 @@ Products can have multiple variations (e.g., colors, sizes):
 
 ### Manage Users
 
-1. Navigate to `/admin`
+1. Go to `/admin` (type in URL bar)
 2. Click "Users" tab
 3. View all registered users
 4. Click a user to view details
