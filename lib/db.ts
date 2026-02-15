@@ -39,15 +39,11 @@ function createPrismaClient() {
   });
   
   const adapter = new PrismaPg(pool);
+  // Note: In Prisma 7 with adapters, datasources cannot be passed to PrismaClient constructor
+  // The connection string is already configured in the pg.Pool and passed via the adapter
   return new PrismaClient({ 
     adapter, 
     log: ['error', 'warn'],
-    // Ensure datasource uses the enhanced connection string
-    datasources: {
-      db: {
-        url: enhancedConnectionString,
-      },
-    },
   });
 }
 
