@@ -19,8 +19,15 @@ async function getProduct(id: string): Promise<Product | null> {
 
 // Pre-generate static pages for the 10 most recent products at build time
 export async function generateStaticParams() {
-  const products = await db.products.findAll({ limit: PRERENDERED_PRODUCTS_COUNT });
-  return products.map((product) => ({ id: product.id }));
+  try {
+    const products = await db.products.findAll({ limit: PRERENDERED_PRODUCTS_COUNT });
+    return products.map((product) => ({ id: product.id }));
+  } catch (error) {
+    console.error('Error generating static params:', error);
+    // Return empty array to allow build to continue without pre-rendering
+    // Pages will be generated on-demand instead
+    return [];
+  }
 }
 
 export default async function ProductPage({
