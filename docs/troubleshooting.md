@@ -101,26 +101,45 @@ Error: listen EADDRINUSE: address already in use :::3000
 ```
 Error opening a TLS connection: self-signed certificate in certificate chain
 Invalid `prisma.product.findMany()` invocation
+PrismaClientKnownRequestError
 ```
 
 **Root Cause:**
-PostgreSQL databases (especially Neon, Supabase, Railway) use self-signed SSL certificates that Node.js rejects by default.
+PostgreSQL databases (especially Neon, Supabase, Railway) use self-signed SSL certificates that Node.js rejects by default. In Prisma 7, SSL configuration is handled through the datasource URL in `prisma.config.ts`.
 
 **Solutions:**
 
 **Option 1: Accept Self-Signed Certificates (Recommended)**
-The app now accepts self-signed certificates by default. Just use:
+The app now automatically accepts self-signed certificates. The `prisma.config.ts` file appends SSL parameters to the DATABASE_URL:
+```typescript
+// prisma.config.ts automatically adds:
+// sslmode=require&sslaccept=accept_invalid_certs
+```
+
+Just use a standard connection string:
 ```bash
 DATABASE_URL=postgresql://user:pass@host:5432/db?schema=public
 ```
 
-**Option 2: Disable SSL Completely (Local Development)**
+**Option 2: Disable SSL Completely (Local Development Only)**
 ```bash
 DATABASE_URL=postgresql://user:pass@localhost:5432/db?schema=public&sslmode=disable
 ```
 
 **Option 3: Verify Configuration**
-Check `lib/db.ts` has SSL configuration:
+Check that `prisma.config.ts` has the SSL configuration:
+```typescript
+function getDatabaseUrl() {
+  const databaseUrl = process.env["DATABASE_URL"] || '';
+  if (databaseUrl.includes('sslmode=')) {
+    return databaseUrl;
+  }
+  const separator = databaseUrl.includes('?') ? '&' : '?';
+  return `${databaseUrl}${separator}sslmode=require&sslaccept=accept_invalid_certs`;
+}
+```
+
+And `lib/db.ts` has the pg.Pool SSL configuration:
 ```typescript
 ssl: process.env.DATABASE_URL?.includes('sslmode=disable') 
   ? false 
@@ -450,6 +469,67 @@ Credentials do not match our records
    ```sql
    TRUNCATE TABLE "Account", "Session" CASCADE;
    ```
+
+### "Authentication required to place orders"
+
+**Symptoms:**
+```
+POST /api/orders 401 Unauthorized
+Error: Authentication required. Please sign in to place orders.
+```
+
+**Root Cause:**
+As of the latest update, customers must be authenticated to place orders. This ensures:
+- Orders are linked to user accounts
+- Better order tracking and history
+- Improved security and fraud prevention
+
+**Solutions:**
+
+1. **Sign in before checkout:**
+   - Users are automatically redirected to sign-in page when accessing cart
+   - After sign-in, they're redirected back to cart
+   - User info (name, email) is auto-filled from session
+
+2. **Verify session is active:**
+   ```typescript
+   // Check if user is authenticated
+   const { data: session } = useSession();
+   if (!session?.user) {
+     // Redirect to sign-in
+     router.push('/auth/signin?callbackUrl=/cart');
+   }
+   ```
+
+3. **SessionProvider is configured:**
+   - Root layout must wrap children with `<SessionProvider>`
+   - This enables `useSession()` hook throughout the app
+   ```typescript
+   // app/layout.tsx
+   <SessionProvider>{children}</SessionProvider>
+   ```
+
+4. **Order API authentication check:**
+   The `/api/orders` endpoint now requires authentication:
+   ```typescript
+   const session = await auth();
+   if (!session?.user) {
+     return NextResponse.json(
+       { error: 'Authentication required' },
+       { status: 401 }
+     );
+   }
+   ```
+
+**Testing:**
+```bash
+# 1. Try to access cart without auth (should redirect to sign-in)
+curl http://localhost:3000/cart
+
+# 2. Sign in via Google OAuth
+# 3. Access cart (should show user info and order form)
+# 4. Place order (should succeed with userId linked)
+```
 
 ---
 

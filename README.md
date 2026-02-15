@@ -67,8 +67,9 @@ Complete documentation is available in the [`/docs`](./docs) folder:
 - Browse and search products
 - View product details with variations
 - Add items to cart (session-based for guests, persistent for logged-in users)
-- Checkout with order tracking
-- Google OAuth sign-in
+- **Google OAuth sign-in required for checkout**
+- Place orders with automatic order tracking
+- View order history (linked to account)
 
 ### For Administrators
 - Product management (CRUD operations)
