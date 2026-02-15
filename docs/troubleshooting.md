@@ -139,12 +139,30 @@ function getDatabaseUrl() {
 }
 ```
 
-And `lib/db.ts` has the pg.Pool SSL configuration:
+And `lib/db.ts` has the enhanced SSL configuration for serverless environments:
 ```typescript
-ssl: process.env.DATABASE_URL?.includes('sslmode=disable') 
-  ? false 
-  : { rejectUnauthorized: false }
+function createPrismaClient() {
+  const connectionString = process.env.DATABASE_URL;
+  
+  // Prepare connection string with SSL parameters if not already present
+  let enhancedConnectionString = connectionString;
+  if (connectionString && !connectionString.includes('sslmode=')) {
+    const separator = connectionString.includes('?') ? '&' : '?';
+    enhancedConnectionString = `${connectionString}${separator}sslmode=require&sslaccept=accept_invalid_certs`;
+  }
+  
+  const pool = new pg.Pool({
+    connectionString: enhancedConnectionString,
+    ssl: connectionString?.includes('sslmode=disable') 
+      ? false 
+      : { rejectUnauthorized: false },
+  });
+  const adapter = new PrismaPg(pool);
+  return new PrismaClient({ adapter, log: ['error'] });
+}
 ```
+
+**Note:** The SSL parameters are now applied both in `prisma.config.ts` (for Prisma CLI operations) and in `lib/db.ts` (for runtime Prisma Client in serverless environments). This ensures authentication works correctly in production.
 
 **Testing:**
 ```bash
