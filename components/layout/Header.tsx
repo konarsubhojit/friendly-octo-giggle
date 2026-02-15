@@ -22,12 +22,6 @@ export default function Header() {
           </nav>
           <div className="flex items-center gap-4">
             <CartIcon />
-            <Link
-              href="/admin"
-              className="text-sm text-gray-600 hover:text-blue-600 transition-all duration-300"
-            >
-              Admin Panel
-            </Link>
           </div>
         </div>
       </div>

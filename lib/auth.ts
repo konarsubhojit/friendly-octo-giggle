@@ -3,6 +3,7 @@ import Google from 'next-auth/providers/google';
 import { PrismaAdapter } from '@auth/prisma-adapter';
 import { prisma } from '@/lib/db';
 import type { Adapter } from 'next-auth/adapters';
+import { logAuthEvent } from './logger';
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: PrismaAdapter(prisma) as Adapter,
@@ -24,6 +25,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (session.user) {
         session.user.id = user.id;
         session.user.role = (user as any).role || 'CUSTOMER';
+        
+        // Log session creation
+        logAuthEvent({
+          event: 'session_created',
+          userId: user.id,
+          email: session.user.email || undefined,
+          success: true,
+        });
       }
       return session;
     },
@@ -33,6 +42,26 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.role = (user as any).role || 'CUSTOMER';
       }
       return token;
+    },
+    async signIn({ user, account }) {
+      // Log successful sign-in
+      logAuthEvent({
+        event: 'login',
+        userId: user.id,
+        email: user.email || undefined,
+        provider: account?.provider,
+        success: true,
+      });
+      return true;
+    },
+  },
+  events: {
+    async signOut() {
+      // Log sign-out (user ID not available in signOut event)
+      logAuthEvent({
+        event: 'logout',
+        success: true,
+      });
     },
   },
   pages: {

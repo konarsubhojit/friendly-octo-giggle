@@ -35,3 +35,7 @@ yarn-error.log*
 *.tsbuildinfo
 
 /lib/generated/prisma
+
+# Documentation - only keep README.md in root, all other docs in /docs folder
+/*.md
+!README.md

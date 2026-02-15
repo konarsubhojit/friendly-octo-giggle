@@ -1,9 +1,10 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getCachedData } from '@/lib/redis';
 import { apiSuccess, handleApiError } from '@/lib/api-utils';
+import { withLogging } from '@/lib/api-middleware';
 
-export async function GET() {
+async function handleGet() {
   try {
     // Use Redis cache with stampede prevention
     const products = await getCachedData(
@@ -22,3 +23,5 @@ export async function GET() {
     return handleApiError(error);
   }
 }
+
+export const GET = withLogging(handleGet);
