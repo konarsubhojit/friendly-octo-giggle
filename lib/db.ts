@@ -19,14 +19,34 @@ function createPrismaClient() {
     enhancedConnectionString = `${connectionString}${separator}sslmode=require&sslaccept=accept_invalid_certs`;
   }
   
+  // Configure SSL for pg.Pool to handle self-signed certificates
+  const sslConfig = connectionString?.includes('sslmode=disable') 
+    ? false 
+    : { 
+        rejectUnauthorized: false,
+        // Explicitly set to accept self-signed certificates
+        checkServerIdentity: () => undefined
+      };
+  
   const pool = new pg.Pool({
     connectionString: enhancedConnectionString,
-    ssl: connectionString?.includes('sslmode=disable') 
-      ? false 
-      : { rejectUnauthorized: false },
+    ssl: sslConfig,
+    // Add connection timeout and retry settings for serverless
+    connectionTimeoutMillis: 10000,
+    idleTimeoutMillis: 30000,
   });
+  
   const adapter = new PrismaPg(pool);
-  return new PrismaClient({ adapter, log: ['error'] });
+  return new PrismaClient({ 
+    adapter, 
+    log: ['error', 'warn'],
+    // Ensure datasource uses the enhanced connection string
+    datasources: {
+      db: {
+        url: enhancedConnectionString,
+      },
+    },
+  });
 }
 
 export const prisma = globalForPrisma.prisma ?? createPrismaClient();
