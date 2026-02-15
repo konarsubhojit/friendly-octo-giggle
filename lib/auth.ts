@@ -56,12 +56,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
   },
   events: {
-    async signOut({ session, token }) {
-      // Log sign-out
-      const userId = session?.user?.id || (token as any)?.id;
+    async signOut() {
+      // Log sign-out (user ID not available in signOut event)
       logAuthEvent({
         event: 'logout',
-        userId: userId || undefined,
         success: true,
       });
     },
