@@ -55,16 +55,32 @@ vercel env add ADMIN_TOKEN
 vercel --prod
 ```
 
-**Step 4: Run migrations**
-After deployment, run migrations:
+**Step 4: Initialize Database**
+After deployment, initialize the production database:
+
+**Option 1: Using idempotent SQL script (Recommended for production)**
 ```bash
-# In your local project with DATABASE_URL pointing to production
+# Safe to run multiple times, won't affect existing data
+psql $DATABASE_URL -f scripts/init-database.sql
+```
+
+**Option 2: Using Drizzle Kit**
+```bash
+# Push schema directly (development/testing)
+npm run db:push
+
+# Or generate and run migrations
+npm run db:generate
 npm run db:migrate
+```
+
+**Step 5: Seed Initial Data (Optional)**
+```bash
 npm run db:seed
 ```
 
 **Vercel-specific notes:**
-- Automatically runs `prisma generate` during build
+- Automatically runs `drizzle-kit generate` during build if configured
 - Edge runtime compatible with minor adjustments
 - Built-in CDN for static assets
 - Automatic HTTPS
@@ -202,10 +218,15 @@ Add in Cloudflare Pages dashboard:
 - `REDIS_URL` (from Railway Redis)
 - `ADMIN_TOKEN` (your secret)
 
-**Step 5: Run migrations**
+**Step 5: Initialize Database**
 ```bash
-# Use Railway CLI
-railway run npm run db:migrate
+# Option 1: Using idempotent SQL script (Recommended)
+railway run psql $DATABASE_URL -f scripts/init-database.sql
+
+# Option 2: Using Drizzle Kit
+railway run npm run db:push
+
+# Seed initial data
 railway run npm run db:seed
 ```
 
@@ -213,7 +234,7 @@ railway run npm run db:seed
 
 ## Post-Deployment Checklist
 
-- [ ] Database migrations completed
+- [ ] Database schema initialized (using `init-database.sql` or Drizzle)
 - [ ] Seed data loaded
 - [ ] Environment variables set
 - [ ] Redis connection working
@@ -221,6 +242,51 @@ railway run npm run db:seed
 - [ ] Product listing displays correctly
 - [ ] Order creation works
 - [ ] Cache invalidation working
+
+## Database Initialization
+
+### Using the Idempotent SQL Script
+
+The `scripts/init-database.sql` file provides a safe, idempotent way to initialize your production database schema:
+
+**Advantages:**
+- ✅ Safe to run multiple times (won't affect existing data)
+- ✅ No build-time dependencies required
+- ✅ Fast execution
+- ✅ No schema drift concerns
+- ✅ Works with any PostgreSQL 15+ database
+
+**Usage:**
+```bash
+# Direct execution
+psql $DATABASE_URL -f scripts/init-database.sql
+
+# With specific connection details
+psql -h hostname -U username -d dbname -f scripts/init-database.sql
+
+# Via cloud provider CLI (Railway example)
+railway run psql $DATABASE_URL -f scripts/init-database.sql
+```
+
+**What it creates:**
+- All required enums (UserRole, OrderStatus)
+- 10 tables (User, Account, Session, Product, Order, Cart, etc.)
+- All necessary indexes for optimal performance
+- Foreign key constraints with proper cascade rules
+
+**Alternative: Using Drizzle Kit**
+```bash
+# Generate migration files
+npm run db:generate
+
+# Push schema directly (dev/test only)
+npm run db:push
+
+# Apply migrations
+npm run db:migrate
+```
+
+For detailed information, see [`scripts/README.md`](../scripts/README.md).
 
 ## Monitoring
 
