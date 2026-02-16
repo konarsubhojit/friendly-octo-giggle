@@ -59,7 +59,7 @@ export class ErrorBoundary extends Component<Props, State> {
 }
 
 // Simple error display component
-export function ErrorDisplay({ error }: { error: string | null }) {
+export function ErrorDisplay({ error }: Readonly<{ error: string | null }>) {
   if (!error) return null;
 
   return (
@@ -86,7 +86,7 @@ export function ErrorDisplay({ error }: { error: string | null }) {
 }
 
 // Success message component
-export function SuccessDisplay({ message }: { message: string | null }) {
+export function SuccessDisplay({ message }: Readonly<{ message: string | null }>) {
   if (!message) return null;
 
   return (
@@ -113,7 +113,7 @@ export function SuccessDisplay({ message }: { message: string | null }) {
 }
 
 // Loading spinner component
-export function LoadingSpinner({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
+export function LoadingSpinner({ size = 'md' }: Readonly<{ size?: 'sm' | 'md' | 'lg' }>) {
   const sizeClasses = {
     sm: 'w-4 h-4',
     md: 'w-8 h-8',
@@ -130,7 +130,7 @@ export function LoadingSpinner({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
 }
 
 // Loading overlay component
-export function LoadingOverlay({ message = 'Loading...' }: { message?: string }) {
+export function LoadingOverlay({ message = 'Loading...' }: Readonly<{ message?: string }>) {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg p-6 flex flex-col items-center">

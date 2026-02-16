@@ -40,10 +40,14 @@ export function useFetch<T>(
   }, [url]);
 
   useEffect(() => {
-    fetchData();
+    void fetchData();
   }, [fetchData]);
 
-  return { data, loading, error, refetch: fetchData };
+  const refetch = useCallback(() => {
+    void fetchData();
+  }, [fetchData]);
+
+  return { data, loading, error, refetch };
 }
 
 // Hook for mutations with optimistic updates
@@ -94,7 +98,7 @@ export function useFormState<T extends Record<string, unknown>>(
   values: T;
   errors: Partial<Record<keyof T, string>>;
   handleChange: (name: keyof T, value: unknown) => void;
-  handleSubmit: (onSubmit: (values: T) => void | Promise<void>) => (e: React.FormEvent) => Promise<void>;
+  handleSubmit: (onSubmit: (values: T) => void | Promise<void>) => (e: React.SyntheticEvent<HTMLFormElement>) => Promise<void>;
   setError: (name: keyof T, error: string) => void;
   reset: () => void;
   isValid: boolean;
@@ -113,7 +117,7 @@ export function useFormState<T extends Record<string, unknown>>(
 
   const handleSubmit = useCallback(
     (onSubmit: (values: T) => void | Promise<void>) =>
-      async (e: React.FormEvent) => {
+      async (e: React.SyntheticEvent<HTMLFormElement>) => {
         e.preventDefault();
         await onSubmit(values);
       },
@@ -157,12 +161,12 @@ export function useLocalStorage<T>(
   initialValue: T
 ): [T, (value: T | ((val: T) => T)) => void] {
   const [storedValue, setStoredValue] = useState<T>(() => {
-    if (typeof window === 'undefined') {
+    if (globalThis.window === undefined) {
       return initialValue;
     }
 
     try {
-      const item = window.localStorage.getItem(key);
+      const item = globalThis.localStorage.getItem(key);
       return item ? JSON.parse(item) : initialValue;
     } catch (error) {
       console.error('Error reading from localStorage:', error);
@@ -172,11 +176,11 @@ export function useLocalStorage<T>(
 
   const setValue = (value: T | ((val: T) => T)) => {
     try {
-      const valueToStore = value instanceof Function ? value(storedValue) : value;
+      const valueToStore = typeof value === 'function' ? (value as (val: T) => T)(storedValue) : value;
       setStoredValue(valueToStore);
 
-      if (typeof window !== 'undefined') {
-        window.localStorage.setItem(key, JSON.stringify(valueToStore));
+      if (globalThis.window !== undefined) {
+        globalThis.localStorage.setItem(key, JSON.stringify(valueToStore));
       }
     } catch (error) {
       console.error('Error writing to localStorage:', error);

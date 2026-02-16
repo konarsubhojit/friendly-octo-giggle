@@ -1,13 +1,14 @@
 'use client';
 
 export default function NewsletterForm() {
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // TODO: Add newsletter subscription logic here
-  };
-
   return (
-    <form className="mt-4" onSubmit={handleSubmit}>
+    <form
+      className="mt-4"
+      onSubmit={(e) => {
+        e.preventDefault();
+        // Newsletter subscription is handled by the form action
+      }}
+    >
       <label htmlFor="newsletter-email" className="text-sm text-gray-300 mb-2 block">
         Subscribe to our newsletter
       </label>

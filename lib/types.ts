@@ -47,6 +47,13 @@ export interface OrderItem {
   price: number;
 }
 
+// Input type for order items (without price, which is calculated)
+export interface OrderItemInput {
+  productId: string;
+  variationId?: string;
+  quantity: number;
+}
+
 export interface Order {
   id: string;
   customerName: string;
@@ -73,7 +80,7 @@ export interface CreateOrderInput {
   customerName: string;
   customerEmail: string;
   customerAddress: string;
-  items: OrderItem[];
+  items: OrderItemInput[];
 }
 
 export interface Cart {

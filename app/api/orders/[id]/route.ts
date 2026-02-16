@@ -32,7 +32,7 @@ export async function GET(
       },
     });
 
-    if (!order || order.userId !== session.user.id) {
+    if (order?.userId !== session.user.id) {
       return apiError('Order not found', 404);
     }
 

@@ -3,12 +3,97 @@ import { drizzleDb } from '@/lib/db';
 import * as schema from '@/lib/schema';
 import { eq, inArray, sql, desc } from 'drizzle-orm';
 import { invalidateCache } from '@/lib/redis';
-import { CreateOrderInput } from '@/lib/types';
+import { CreateOrderInput, OrderItemInput } from '@/lib/types';
 import { withLogging } from '@/lib/api-middleware';
 import { logBusinessEvent, logError } from '@/lib/logger';
 import { auth } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
+
+// Type for products with variations
+type ProductWithVariations = Awaited<ReturnType<typeof drizzleDb.query.products.findMany>>[number] & {
+  variations: Array<{ id: string; priceModifier: number; stock: number }>;
+};
+
+// Validation result type
+type ValidationResult = 
+  | { valid: true; customerName: string; customerEmail: string; customerAddress: string }
+  | { valid: false; error: string; status: number; reason: string };
+
+// Stock check result type
+type StockCheckResult = 
+  | { valid: true; totalAmount: number }
+  | { valid: false; error: string; status: number; reason: string; details?: Record<string, unknown> };
+
+function validateCustomerInfo(
+  body: CreateOrderInput,
+  session: { user: { id: string; name?: string | null; email?: string | null } }
+): ValidationResult {
+  const customerName = body.customerName || session.user.name || 'Unknown';
+  const customerEmail = body.customerEmail || session.user.email;
+  const customerAddress = body.customerAddress || '';
+
+  if (!customerEmail) {
+    return { valid: false, error: 'Email address is required. Please update your profile.', status: 400, reason: 'missing_email' };
+  }
+
+  if (!customerAddress) {
+    return { valid: false, error: 'Shipping address is required', status: 400, reason: 'missing_address' };
+  }
+
+  return { valid: true, customerName, customerEmail, customerAddress };
+}
+
+function checkStockForItem(
+  item: OrderItemInput,
+  product: ProductWithVariations
+): StockCheckResult {
+  let price = product.price;
+  let stockToCheck = product.stock;
+
+  if (item.variationId) {
+    const variation = product.variations.find((v) => v.id === item.variationId);
+    if (!variation) {
+      return { valid: false, error: `Variation not found for ${product.name}`, status: 404, reason: 'variation_not_found' };
+    }
+    price = product.price + variation.priceModifier;
+    stockToCheck = variation.stock;
+  }
+
+  if (stockToCheck < item.quantity) {
+    return {
+      valid: false,
+      error: `Insufficient stock for ${product.name}`,
+      status: 400,
+      reason: 'insufficient_stock',
+      details: { productId: product.id, productName: product.name, requested: item.quantity, available: stockToCheck },
+    };
+  }
+
+  return { valid: true, totalAmount: price * item.quantity };
+}
+
+function validateStockAndCalculateTotal(
+  items: OrderItemInput[],
+  products: ProductWithVariations[]
+): StockCheckResult {
+  let totalAmount = 0;
+
+  for (const item of items) {
+    const product = products.find((p) => p.id === item.productId);
+    if (!product) {
+      return { valid: false, error: `Product ${item.productId} not found`, status: 404, reason: 'product_not_found' };
+    }
+
+    const result = checkStockForItem(item, product);
+    if (!result.valid) {
+      return result;
+    }
+    totalAmount += result.totalAmount;
+  }
+
+  return { valid: true, totalAmount };
+}
 
 async function handleGet(_request: NextRequest) {
   try {
@@ -65,130 +150,45 @@ async function handlePost(request: NextRequest) {
     // Check authentication
     const session = await auth();
     if (!session?.user?.id) {
-      logBusinessEvent({
-        event: 'order_create_failed',
-        details: { reason: 'not_authenticated' },
-        success: false,
-      });
-      return NextResponse.json(
-        { error: 'Authentication required. Please sign in to place orders.' },
-        { status: 401 }
-      );
+      logBusinessEvent({ event: 'order_create_failed', details: { reason: 'not_authenticated' }, success: false });
+      return NextResponse.json({ error: 'Authentication required. Please sign in to place orders.' }, { status: 401 });
     }
 
     const body: CreateOrderInput = await request.json();
-    
-    // Validate input - now we get customer info from session
+
+    // Validate items exist
     if (!body.items || body.items.length === 0) {
-      logBusinessEvent({
-        event: 'order_create_failed',
-        details: { reason: 'missing_items' },
-        success: false,
-      });
-      return NextResponse.json(
-        { error: 'Order must contain at least one item' },
-        { status: 400 }
-      );
+      logBusinessEvent({ event: 'order_create_failed', details: { reason: 'missing_items' }, success: false });
+      return NextResponse.json({ error: 'Order must contain at least one item' }, { status: 400 });
     }
 
-    // Use customer info from session, with optional override from body
-    const customerName = body.customerName || session.user.name || 'Unknown';
-    const customerEmail = body.customerEmail || session.user.email;
-    const customerAddress = body.customerAddress || '';
-
-    if (!customerEmail) {
-      logBusinessEvent({
-        event: 'order_create_failed',
-        details: { reason: 'missing_email' },
-        success: false,
-      });
-      return NextResponse.json(
-        { error: 'Email address is required. Please update your profile.' },
-        { status: 400 }
-      );
+    // Validate customer info
+    const customerValidation = validateCustomerInfo(body, session);
+    if (!customerValidation.valid) {
+      logBusinessEvent({ event: 'order_create_failed', details: { reason: customerValidation.reason }, success: false });
+      return NextResponse.json({ error: customerValidation.error }, { status: customerValidation.status });
     }
+    const { customerName, customerEmail, customerAddress } = customerValidation;
 
-    if (!customerAddress) {
-      logBusinessEvent({
-        event: 'order_create_failed',
-        details: { reason: 'missing_address' },
-        success: false,
-      });
-      return NextResponse.json(
-        { error: 'Shipping address is required' },
-        { status: 400 }
-      );
-    }
-
-    // Calculate total and verify product/variation availability
-    let totalAmount = 0;
+    // Fetch products with variations
     const productIds = body.items.map(item => item.productId);
     const products = await drizzleDb.query.products.findMany({
       where: inArray(schema.products.id, productIds),
       with: { variations: true },
-    });
-
-    type ProductWithVariations = (typeof products)[number];
-    type ProductVariation = ProductWithVariations['variations'][number];
+    }) as ProductWithVariations[];
 
     if (products.length !== body.items.length) {
-      logBusinessEvent({
-        event: 'order_create_failed',
-        details: { reason: 'products_not_found', requestedCount: body.items.length, foundCount: products.length },
-        success: false,
-      });
-      return NextResponse.json(
-        { error: 'Some products not found' },
-        { status: 404 }
-      );
+      logBusinessEvent({ event: 'order_create_failed', details: { reason: 'products_not_found', requestedCount: body.items.length, foundCount: products.length }, success: false });
+      return NextResponse.json({ error: 'Some products not found' }, { status: 404 });
     }
 
-    // Check stock and calculate total
-    for (const item of body.items) {
-      const product = products.find((p: ProductWithVariations) => p.id === item.productId);
-      if (!product) {
-        return NextResponse.json(
-          { error: `Product ${item.productId} not found` },
-          { status: 404 }
-        );
-      }
-      
-      let price = product.price;
-      let stockToCheck = product.stock;
-      
-      // If variation is selected, use variation price and stock
-      if (item.variationId) {
-        const variation = product.variations.find((v: ProductVariation) => v.id === item.variationId);
-        if (!variation) {
-          return NextResponse.json(
-            { error: `Variation not found for ${product.name}` },
-            { status: 404 }
-          );
-        }
-        price = product.price + variation.priceModifier;
-        stockToCheck = variation.stock;
-      }
-      
-      if (stockToCheck < item.quantity) {
-        logBusinessEvent({
-          event: 'order_create_failed',
-          details: { 
-            reason: 'insufficient_stock', 
-            productId: product.id,
-            productName: product.name,
-            requested: item.quantity,
-            available: stockToCheck,
-          },
-          success: false,
-        });
-        return NextResponse.json(
-          { error: `Insufficient stock for ${product.name}` },
-          { status: 400 }
-        );
-      }
-      
-      totalAmount += price * item.quantity;
+    // Validate stock and calculate total
+    const stockResult = validateStockAndCalculateTotal(body.items, products);
+    if (!stockResult.valid) {
+      logBusinessEvent({ event: 'order_create_failed', details: { reason: stockResult.reason, ...stockResult.details }, success: false });
+      return NextResponse.json({ error: stockResult.error }, { status: stockResult.status });
     }
+    const { totalAmount } = stockResult;
 
     // Create order and update stock in a transaction
     const order = await drizzleDb.transaction(async (tx) => {
@@ -206,23 +206,13 @@ async function handlePost(request: NextRequest) {
       // Create order items
       await tx.insert(schema.orderItems).values(
         body.items.map(item => {
-          const product = products.find((p: ProductWithVariations) => p.id === item.productId)!;
+          const product = products.find((p) => p.id === item.productId)!;
           let price = product.price;
-
-          if (item.variationId) {
-            const variation = product.variations.find((v: ProductVariation) => v.id === item.variationId);
-            if (variation) {
-              price = product.price + variation.priceModifier;
-            }
+          const variation = item.variationId ? product.variations.find((v) => v.id === item.variationId) : null;
+          if (variation) {
+            price = product.price + variation.priceModifier;
           }
-
-          return {
-            orderId: newOrder.id,
-            productId: item.productId,
-            variationId: item.variationId ?? null,
-            quantity: item.quantity,
-            price,
-          };
+          return { orderId: newOrder.id, productId: item.productId, variationId: item.variationId ?? null, quantity: item.quantity, price };
         })
       );
 
