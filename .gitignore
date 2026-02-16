@@ -39,3 +39,4 @@ yarn-error.log*
 # Documentation - only keep README.md in root, all other docs in /docs folder
 /*.md
 !README.md
+test-db-connection.ts
