@@ -100,21 +100,38 @@ Error: listen EADDRINUSE: address already in use :::3000
 **Symptoms:**
 ```
 Error opening a TLS connection: self-signed certificate in certificate chain
-Invalid `prisma.product.findMany()` invocation
-Invalid `prisma.account.findUnique()` invocation (during authentication)
-PrismaClientKnownRequestError
+Error: self-signed certificate in certificate chain
+SELF_SIGNED_CERT_IN_CHAIN
+Error fetching products from database
+Unable to signin
 ```
 
 **Root Cause:**
-PostgreSQL databases (especially Neon, Supabase, Railway) use self-signed SSL certificates that Node.js rejects by default. In Prisma 7, SSL configuration is handled through the datasource URL in `prisma.config.ts` and the runtime client in `lib/db.ts`.
+PostgreSQL databases (especially Neon, Supabase, Railway) use self-signed SSL certificates that Node.js rejects by default. The pg.Pool client needs explicit SSL configuration to accept self-signed certificates.
 
 **Solutions:**
 
 **Option 1: Accept Self-Signed Certificates (Recommended)**
-The app now automatically accepts self-signed certificates. The `prisma.config.ts` file appends SSL parameters to the DATABASE_URL:
+The app now automatically accepts self-signed certificates. The `lib/db.ts` file has enhanced SSL configuration:
 ```typescript
-// prisma.config.ts automatically adds:
-// sslmode=require&sslaccept=accept_invalid_certs
+function createPool() {
+  const connectionString = process.env.DATABASE_URL || '';
+  const isSSL = !connectionString.includes('sslmode=disable') && !connectionString.includes('localhost');
+  
+  const sslConfig = isSSL
+    ? {
+        rejectUnauthorized: false,
+        checkServerIdentity: () => undefined,
+      }
+    : false;
+  
+  return new pg.Pool({
+    connectionString,
+    ssl: sslConfig,
+    connectionTimeoutMillis: 10000,
+    idleTimeoutMillis: 30000,
+  });
+}
 ```
 
 Just use a standard connection string:
@@ -128,75 +145,22 @@ DATABASE_URL=postgresql://user:pass@localhost:5432/db?schema=public&sslmode=disa
 ```
 
 **Option 3: Verify Configuration**
-Check that `prisma.config.ts` has the SSL configuration:
-```typescript
-function getDatabaseUrl() {
-  const databaseUrl = process.env["DATABASE_URL"] || '';
-  if (databaseUrl.includes('sslmode=')) {
-    return databaseUrl;
-  }
-  const separator = databaseUrl.includes('?') ? '&' : '?';
-  return `${databaseUrl}${separator}sslmode=require&sslaccept=accept_invalid_certs`;
-}
-```
-
-And `lib/db.ts` has the enhanced SSL configuration for serverless environments:
-```typescript
-function createPrismaClient() {
-  const connectionString = process.env.DATABASE_URL;
-  
-  // Prepare connection string with SSL parameters if not already present
-  let enhancedConnectionString = connectionString;
-  if (connectionString && !connectionString.includes('sslmode=')) {
-    const separator = connectionString.includes('?') ? '&' : '?';
-    enhancedConnectionString = `${connectionString}${separator}sslmode=require&sslaccept=accept_invalid_certs`;
-  }
-  
-  // Configure SSL for pg.Pool to handle self-signed certificates
-  const sslConfig = connectionString?.includes('sslmode=disable') 
-    ? false 
-    : { 
-        rejectUnauthorized: false,
-        // Explicitly bypass certificate validation for self-signed certs
-        checkServerIdentity: () => undefined
-      };
-  
-  const pool = new pg.Pool({
-    connectionString: enhancedConnectionString,
-    ssl: sslConfig,
-    // Add connection timeout and retry settings for serverless
-    connectionTimeoutMillis: 10000,
-    idleTimeoutMillis: 30000,
-  });
-  
-  const adapter = new PrismaPg(pool);
-  return new PrismaClient({ 
-    adapter, 
-    log: ['error', 'warn'],
-    // Ensure datasource uses the enhanced connection string
-    datasources: {
-      db: {
-        url: enhancedConnectionString,
-      },
-    },
-  });
-}
-```
-
-**Key Enhancements for Authentication:**
-- `checkServerIdentity: () => undefined` - Explicitly bypasses SSL certificate validation for self-signed certificates. **Note:** This is required for managed PostgreSQL services (Neon, Supabase, Railway) in serverless environments. For production with custom certificates, consider using proper CA certificates instead.
-- `datasources.db.url` - Ensures PrismaClient uses the enhanced connection string with SSL parameters
+Check that `lib/db.ts` has the enhanced SSL configuration shown above with:
+- `rejectUnauthorized: false` - Accepts self-signed certificates
+- `checkServerIdentity: () => undefined` - Explicitly bypasses certificate validation
 - Connection timeouts - Improves reliability in serverless environments
-- This configuration fixes the `prisma.account.findUnique()` error during NextAuth authentication
 
-**Note:** The SSL parameters are now applied both in `prisma.config.ts` (for Prisma CLI operations) and in `lib/db.ts` (for runtime Prisma Client in serverless environments). This ensures authentication works correctly in production.
+**Key Points:**
+- `checkServerIdentity: () => undefined` is **required** for managed PostgreSQL services (Neon, Supabase, Railway) in serverless environments
+- For production with proper CA certificates, you can remove `checkServerIdentity` and set `rejectUnauthorized: true`
+- This configuration fixes database connection errors for both data fetching and authentication
 
 **Testing:**
 ```bash
 # Test connection
 npm run build
 
-# Should see: Build succeeded or warning (not error)
+# Should see: Build succeeded (no SSL errors)
 ```
 
 ### Connection Timeout

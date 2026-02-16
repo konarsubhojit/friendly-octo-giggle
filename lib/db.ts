@@ -13,9 +13,23 @@ const globalForDb = globalThis as unknown as {
 function createPool() {
   const connectionString = process.env.DATABASE_URL || '';
   const isSSL = !connectionString.includes('sslmode=disable') && !connectionString.includes('localhost');
+  
+  // Enhanced SSL configuration for self-signed certificates
+  const sslConfig = isSSL
+    ? {
+        rejectUnauthorized: false,
+        // Explicitly bypass certificate validation for self-signed certs
+        // This is required for managed PostgreSQL services (Neon, Supabase, Railway)
+        checkServerIdentity: () => undefined,
+      }
+    : false;
+  
   return new pg.Pool({
     connectionString,
-    ...(isSSL && { ssl: { rejectUnauthorized: false } }),
+    ssl: sslConfig,
+    // Add connection timeout and retry settings for serverless environments
+    connectionTimeoutMillis: 10000,
+    idleTimeoutMillis: 30000,
   });
 }
 
