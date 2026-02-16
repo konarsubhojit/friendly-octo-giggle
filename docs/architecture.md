@@ -42,7 +42,7 @@ This is a modern e-commerce platform built on Next.js 16 with App Router, design
 │  ┌─────────────────┐  ┌──────────────────┐  ┌─────────────┐│
 │  │   PostgreSQL    │  │   Redis Cache    │  │ Vercel Blob ││
 │  │   (Primary DB)  │  │ (Performance)    │  │  (Files)    ││
-│  │   via Prisma    │  │  60s TTL + SWR   │  │             ││
+│  │  via Drizzle    │  │  60s TTL + SWR   │  │             ││
 │  └─────────────────┘  └──────────────────┘  └─────────────┘│
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -50,7 +50,7 @@ This is a modern e-commerce platform built on Next.js 16 with App Router, design
 **Architecture Principles:**
 - **Serverless-First:** Singleton patterns, connection pooling, lazy initialization
 - **Edge-Optimized:** Redis caching at edge locations, dynamic rendering
-- **Type-Safe:** End-to-end TypeScript with Prisma & Zod validation
+- **Type-Safe:** End-to-end TypeScript with Drizzle & Zod validation
 - **Observable:** Structured logging with Pino, request tracing, performance metrics
 
 ---
@@ -71,7 +71,7 @@ This is a modern e-commerce platform built on Next.js 16 with App Router, design
 |------------|---------|---------|
 | **Node.js** | 18+ | JavaScript runtime |
 | **NextAuth.js** | 5.0 | Authentication with OAuth providers |
-| **Prisma** | 7.4.0 | Type-safe ORM with migrations |
+| **Drizzle ORM** | 0.45.1 | Type-safe ORM with migrations |
 | **PostgreSQL** | 15+ | Primary relational database |
 | **Redis (ioRedis)** | 5.9.3 | Caching layer with stampede prevention |
 | **Zod** | 4.3.6 | Runtime schema validation |
@@ -84,14 +84,16 @@ This is a modern e-commerce platform built on Next.js 16 with App Router, design
 - **Upstash:** Managed Redis with global edge replication
 
 ### Key Libraries
-- `@prisma/adapter-pg`: PostgreSQL connection pooling
-- `@auth/prisma-adapter`: Prisma integration for NextAuth
+- `drizzle-orm`: PostgreSQL ORM with TypeScript support
+- `@auth/drizzle-adapter`: Drizzle integration for NextAuth
 - `pg`: Node.js PostgreSQL client
 - `pino-pretty`: Human-readable logs in development
 
 ---
 
 ## 3. Database Schema
+
+> **Note:** This project uses Drizzle ORM. The schema examples below use Prisma notation for readability, but the actual implementation is in `lib/schema.ts` using Drizzle's `pgTable` syntax.
 
 ### Authentication Models
 
@@ -333,7 +335,12 @@ await invalidateCache('product:abc123');
 **Configuration** (`lib/auth.ts`):
 ```typescript
 export const { handlers, signIn, signOut, auth } = NextAuth({
-  adapter: PrismaAdapter(prisma),  // Database session storage
+  adapter: DrizzleAdapter(drizzleDb, {
+    usersTable: users,
+    accountsTable: accounts,
+    sessionsTable: sessions,
+    verificationTokensTable: verificationTokens,
+  }),  // Database session storage
   providers: [
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID,
@@ -385,7 +392,7 @@ NextAuth exchanges code for access token
            ↓
 NextAuth fetches user profile from Google
            ↓
-Prisma Adapter creates/updates User + Account records
+Drizzle Adapter creates/updates User + Account records
            ↓
 Session stored in database with expiry
            ↓
@@ -419,7 +426,7 @@ Server Component: app/page.tsx
          ↓
 Direct DB Query: db.products.findAll() [bypasses HTTP/API]
          ↓
-Prisma Query with Relations: include { variations: true }
+Drizzle Query with Relations: with: { variations: true }
          ↓
 PostgreSQL: SELECT * FROM Product JOIN ProductVariation
          ↓
@@ -437,7 +444,7 @@ POST /api/orders
    └─ items[] array with productId, variationId, quantity
          ↓
 2. Load Products with Variations
-   ├─ prisma.product.findMany({ include: { variations: true } })
+   ├─ drizzleDb.query.products.findMany({ with: { variations: true } })
    └─ Verify all products exist
          ↓
 3. Calculate Total & Check Stock
@@ -447,7 +454,7 @@ POST /api/orders
    │  └─ totalAmount += price * quantity
    └─ Abort if insufficient stock
          ↓
-4. Atomic Transaction (prisma.$transaction)
+4. Atomic Transaction (drizzleDb.transaction)
    ├─ Create Order + OrderItems (price snapshots)
    ├─ Decrement product.stock (always)
    └─ Decrement variation.stock (if variationId present)
@@ -507,29 +514,34 @@ export default async function Home() {
 // lib/db.ts
 const pool = new pg.Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false },
+  ssl: { 
+    rejectUnauthorized: false,
+    checkServerIdentity: () => undefined,
+  },
+  connectionTimeoutMillis: 10000,
+  idleTimeoutMillis: 30000,
 });
-const adapter = new PrismaPg(pool);
-const prisma = new PrismaClient({ adapter });
+const drizzleDb = drizzle(pool, { schema });
 ```
 - Reuses database connections across requests
 - Critical for serverless (no persistent connections)
+- Enhanced SSL configuration accepts self-signed certificates
 
 ### 4. Singleton Pattern for Clients
 ```typescript
-// Prevent multiple Prisma/Redis instances in serverless
-const globalForPrisma = globalThis as { prisma?: PrismaClient };
-export const prisma = globalForPrisma.prisma ?? createPrismaClient();
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+// Prevent multiple pool/Redis instances in serverless
+const globalForDb = globalThis as { pool?: pg.Pool };
+export const pool = globalForDb.pool ?? createPool();
+if (process.env.NODE_ENV !== 'production') globalForDb.pool = pool;
 ```
 
 ### 5. Optimized Queries
-- **Selective Includes:** Only load relations when needed
+- **Selective Relations:** Only load relations when needed
   ```typescript
-  include: { variations: true }  // Load variations
+  with: { variations: true }  // Load variations
   ```
 - **Indexed Fields:** Database indexes on foreign keys, category, sessionId
-- **Pagination:** Use `take` and `skip` for large datasets
+- **Pagination:** Use `limit` and `offset` for large datasets
 
 ### 6. Image Optimization
 - Next.js `<Image>` component with automatic optimization
@@ -578,7 +590,7 @@ const validated = createOrderSchema.parse(requestBody);
 - **Database Sessions:** More secure than client-side JWT
 
 ### 4. SQL Injection Prevention
-- Prisma uses parameterized queries (no raw SQL concatenation)
+- Drizzle ORM uses parameterized queries (no raw SQL concatenation)
 - Type-safe query builder prevents injection attacks
 
 ### 5. Rate Limiting & DDoS Protection

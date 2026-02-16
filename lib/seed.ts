@@ -6,9 +6,18 @@ import * as schema from './schema';
 const connectionString = process.env.DATABASE_URL || '';
 const isSSL = !connectionString.includes('sslmode=disable') && !connectionString.includes('localhost');
 
+// Enhanced SSL configuration for self-signed certificates
+const sslConfig = isSSL
+  ? {
+      rejectUnauthorized: false,
+      // Explicitly bypass certificate validation for self-signed certs
+      checkServerIdentity: () => undefined,
+    }
+  : false;
+
 const pool = new pg.Pool({
   connectionString,
-  ...(isSSL && { ssl: { rejectUnauthorized: false } }),
+  ssl: sslConfig,
 });
 
 const db = drizzle(pool, { schema });
