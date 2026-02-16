@@ -40,3 +40,7 @@ yarn-error.log*
 /*.md
 !README.md
 test-db-connection.ts
+
+# Claude agent
+tmpclaude*
+nul

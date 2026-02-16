@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { drizzleDb } from '@/lib/db';
 import * as schema from '@/lib/schema';
-import { eq, inArray, sql } from 'drizzle-orm';
+import { eq, inArray, sql, desc } from 'drizzle-orm';
 import { invalidateCache } from '@/lib/redis';
 import { CreateOrderInput } from '@/lib/types';
 import { withLogging } from '@/lib/api-middleware';
@@ -9,6 +9,56 @@ import { logBusinessEvent, logError } from '@/lib/logger';
 import { auth } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
+
+async function handleGet(_request: NextRequest) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    const orders = await drizzleDb.query.orders.findMany({
+      where: eq(schema.orders.userId, session.user.id),
+      with: {
+        items: {
+          with: {
+            product: true,
+            variation: true,
+          },
+        },
+      },
+      orderBy: [desc(schema.orders.createdAt)],
+    });
+
+    return NextResponse.json({
+      orders: orders.map((order) => ({
+        ...order,
+        createdAt: order.createdAt.toISOString(),
+        updatedAt: order.updatedAt.toISOString(),
+        items: order.items.map((item) => ({
+          ...item,
+          product: {
+            ...item.product,
+            createdAt: item.product.createdAt.toISOString(),
+            updatedAt: item.product.updatedAt.toISOString(),
+          },
+        })),
+      })),
+    });
+  } catch (error) {
+    logError({
+      error,
+      context: 'fetch_user_orders',
+    });
+    return NextResponse.json(
+      { error: 'Failed to fetch orders' },
+      { status: 500 }
+    );
+  }
+}
 
 async function handlePost(request: NextRequest) {
   try {
@@ -261,4 +311,5 @@ async function handlePost(request: NextRequest) {
   }
 }
 
+export const GET = withLogging(handleGet);
 export const POST = withLogging(handlePost);
