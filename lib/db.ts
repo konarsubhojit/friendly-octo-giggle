@@ -1,5 +1,5 @@
-import { drizzle } from 'drizzle-orm/node-postgres';
-import pg from 'pg';
+import { Pool } from '@neondatabase/serverless';
+import { drizzle } from 'drizzle-orm/neon-serverless';
 import * as schema from './schema';
 import { eq, desc } from 'drizzle-orm';
 import { Product, ProductInput } from './types';
@@ -7,29 +7,14 @@ import { Product, ProductInput } from './types';
 // ─── Connection Pool (singleton for serverless) ─────────
 
 const globalForDb = globalThis as unknown as {
-  pool: pg.Pool | undefined;
+  pool: Pool | undefined;
 };
 
 function createPool() {
-  const connectionString = process.env.DATABASE_URL || '';
-  const isSSL = !connectionString.includes('sslmode=disable') && !connectionString.includes('localhost');
-  
-  // Enhanced SSL configuration for self-signed certificates
-  const sslConfig = isSSL
-    ? {
-        rejectUnauthorized: false,
-        // Explicitly bypass certificate validation for self-signed certs
-        // This is required for managed PostgreSQL services (Neon, Supabase, Railway)
-        checkServerIdentity: () => undefined,
-      }
-    : false;
-  
-  return new pg.Pool({
-    connectionString,
-    ssl: sslConfig,
-    // Add connection timeout and retry settings for serverless environments
-    connectionTimeoutMillis: 10000,
-    idleTimeoutMillis: 30000,
+  // No SSL config needed — Neon's driver uses WebSocket protocol,
+  // bypassing TCP/TLS certificate issues entirely
+  return new Pool({
+    connectionString: process.env.DATABASE_URL!,
   });
 }
 

@@ -1,23 +1,14 @@
 import 'dotenv/config';
-import { drizzle } from 'drizzle-orm/node-postgres';
-import pg from 'pg';
+import { Pool, neonConfig } from '@neondatabase/serverless';
+import { drizzle } from 'drizzle-orm/neon-serverless';
+import ws from 'ws';
 import * as schema from './schema';
 
-const connectionString = process.env.DATABASE_URL || '';
-const isSSL = !connectionString.includes('sslmode=disable') && !connectionString.includes('localhost');
+// Required: Node.js needs ws for WebSocket support (Neon driver uses WebSockets)
+neonConfig.webSocketConstructor = ws;
 
-// Enhanced SSL configuration for self-signed certificates
-const sslConfig = isSSL
-  ? {
-      rejectUnauthorized: false,
-      // Explicitly bypass certificate validation for self-signed certs
-      checkServerIdentity: () => undefined,
-    }
-  : false;
-
-const pool = new pg.Pool({
-  connectionString,
-  ssl: sslConfig,
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL!,
 });
 
 const db = drizzle(pool, { schema });
@@ -167,7 +158,9 @@ async function main() {
   await pool.end();
 }
 
-main().catch((e) => {
+try {
+  await main();
+} catch (e) {
   console.error(e);
   process.exit(1);
-});
+}

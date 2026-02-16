@@ -27,15 +27,15 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     }),
   ],
   callbacks: {
-    async session({ session, user }) {
+    async session({ session, token }) {
       if (session.user) {
-        session.user.id = user.id;
-        session.user.role = (user as any).role || 'CUSTOMER';
-        
+        session.user.id = token.id as string;
+        session.user.role = (token.role as 'CUSTOMER' | 'ADMIN') || 'CUSTOMER';
+
         // Log session creation
         logAuthEvent({
           event: 'session_created',
-          userId: user.id,
+          userId: token.id as string,
           email: session.user.email || undefined,
           success: true,
         });
@@ -75,6 +75,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     error: '/auth/error',
   },
   session: {
-    strategy: 'database',
+    strategy: 'jwt',
   },
 });
