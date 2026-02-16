@@ -1,8 +1,28 @@
+'use client';
+
 import Link from 'next/link';
 import Image from 'next/image';
 import { Product } from '@/lib/types';
+import { useCurrency } from '@/contexts/CurrencyContext';
 
-export default function ProductGrid({ products }: { products: Product[] }) {
+interface ProductGridProps {
+  readonly products: Product[];
+}
+
+// Helper component for stock badge to avoid nested ternary
+function StockBadge({ stock }: { readonly stock: number }) {
+  if (stock > 5) {
+    return <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full font-semibold">In Stock</span>;
+  }
+  if (stock > 0) {
+    return <span className="bg-amber-100 text-amber-700 px-3 py-1 rounded-full font-semibold">Only {stock} left</span>;
+  }
+  return <span className="bg-red-100 text-red-700 px-3 py-1 rounded-full font-semibold">Out of Stock</span>;
+}
+
+export default function ProductGrid({ products }: ProductGridProps) {
+  const { formatPrice } = useCurrency();
+
   return (
     <main id="products" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
       <h2 className="text-3xl font-bold mb-8 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
@@ -42,14 +62,10 @@ export default function ProductGrid({ products }: { products: Product[] }) {
                 </p>
                 <div className="flex justify-between items-center mb-3">
                   <span className="text-2xl font-bold text-blue-600">
-                    ${product.price.toFixed(2)}
+                    {formatPrice(product.price)}
                   </span>
                   <span className="text-sm">
-                    {product.stock > 0 ? (
-                      <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full font-semibold">In Stock ({product.stock})</span>
-                    ) : (
-                      <span className="bg-red-100 text-red-700 px-3 py-1 rounded-full font-semibold">Out of Stock</span>
-                    )}
+                    <StockBadge stock={product.stock} />
                   </span>
                 </div>
                 <div className="mt-2">

@@ -1,16 +1,54 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
+import Link from 'next/link'
 import Image from 'next/image';
 import { useDispatch } from 'react-redux';
 import { Product, ProductVariation } from '@/lib/types';
 import { addToCart } from '@/lib/features/cart/cartSlice';
+import { useCurrency } from '@/contexts/CurrencyContext';
 import type { AppDispatch } from '@/lib/store';
 import Header from '@/components/layout/Header';
 
-export default function ProductClient({ product }: { product: Product }) {
+interface ProductClientProps {
+  readonly product: Product;
+}
+
+// Helper component for stock badge to avoid nested ternary
+function ProductStockBadge({ stock }: { readonly stock: number }) {
+  if (stock > 5) {
+    return (
+      <span className="inline-flex items-center gap-2 bg-green-100 text-green-700 px-4 py-2 rounded-full font-semibold shadow-md">
+        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+        </svg>
+        In Stock
+      </span>
+    );
+  }
+  if (stock > 0) {
+    return (
+      <span className="inline-flex items-center gap-2 bg-amber-100 text-amber-700 px-4 py-2 rounded-full font-semibold shadow-md">
+        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+          <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+        </svg>
+        Only {stock} left in stock
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-2 bg-red-100 text-red-700 px-4 py-2 rounded-full font-semibold shadow-md">
+      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+      </svg>
+      Out of Stock
+    </span>
+  );
+}
+
+export default function ProductClient({ product }: ProductClientProps) {
   const dispatch = useDispatch<AppDispatch>();
+  const { formatPrice } = useCurrency();
   const [quantity, setQuantity] = useState(1);
   const [selectedVariation, setSelectedVariation] = useState<ProductVariation | null>(
     product.variations && product.variations.length > 0 ? product.variations[0] : null
@@ -71,6 +109,7 @@ export default function ProductClient({ product }: { product: Product }) {
                 src={currentImage}
                 alt={product.name}
                 fill
+                sizes="(max-width: 768px) 100vw, 50vw"
                 className="object-cover transition-transform duration-500 group-hover:scale-105"
                 priority
               />
@@ -97,40 +136,26 @@ export default function ProductClient({ product }: { product: Product }) {
 
               <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border border-blue-100">
                 <span className="text-5xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                  ${effectivePrice.toFixed(2)}
+                  {formatPrice(effectivePrice)}
                 </span>
                 {selectedVariation && selectedVariation.priceModifier !== 0 && (
                   <div className="mt-2 text-sm text-gray-600">
-                    Base: ${product.price.toFixed(2)} {selectedVariation.priceModifier > 0 ? '+' : ''}${selectedVariation.priceModifier.toFixed(2)}
+                    Base: {formatPrice(product.price)} {selectedVariation.priceModifier > 0 ? '+' : '-'}{formatPrice(Math.abs(selectedVariation.priceModifier))}
                   </div>
                 )}
               </div>
 
               {/* Stock Badge */}
               <div className="mb-6">
-                {effectiveStock > 0 ? (
-                  <span className="inline-flex items-center gap-2 bg-green-100 text-green-700 px-4 py-2 rounded-full font-semibold shadow-md">
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    In Stock ({effectiveStock} available)
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-2 bg-red-100 text-red-700 px-4 py-2 rounded-full font-semibold shadow-md">
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                    </svg>
-                    Out of Stock
-                  </span>
-                )}
+                <ProductStockBadge stock={effectiveStock} />
               </div>
 
               {/* Variation Selector */}
               {product.variations && product.variations.length > 0 && (
                 <div className="mb-6">
-                  <label className="block text-lg font-semibold text-gray-800 mb-3">
+                  <span className="block text-lg font-semibold text-gray-800 mb-3" id="variation-selector-label">
                     Select Design
-                  </label>
+                  </span>
                   <div className="grid grid-cols-2 gap-3">
                     {product.variations.map((variation) => (
                       <button
@@ -146,10 +171,12 @@ export default function ProductClient({ product }: { product: Product }) {
                         <div className="text-xs text-gray-600 mt-1">{variation.name}</div>
                         {variation.priceModifier !== 0 && (
                           <div className="text-xs font-semibold text-blue-600 mt-1">
-                            {variation.priceModifier > 0 ? '+' : ''}${variation.priceModifier.toFixed(2)}
+                            {variation.priceModifier > 0 ? '+' : '-'}{formatPrice(Math.abs(variation.priceModifier))}
                           </div>
                         )}
-                        <div className="text-xs text-gray-500 mt-1">Stock: {variation.stock}</div>
+                        {variation.stock > 0 && variation.stock < 6 && (
+                          <div className="text-xs text-amber-600 font-medium mt-1">Only {variation.stock} left</div>
+                        )}
                       </button>
                     ))}
                   </div>
@@ -180,7 +207,7 @@ export default function ProductClient({ product }: { product: Product }) {
 
                 {/* Quantity selector */}
                 <div className="mb-5">
-                  <label className="block text-sm font-semibold text-gray-800 mb-2">Quantity</label>
+                  <label htmlFor="quantity-input" className="block text-sm font-semibold text-gray-800 mb-2">Quantity</label>
                   <div className="flex items-center gap-3">
                     <button
                       onClick={() => setQuantity(Math.max(1, quantity - 1))}
@@ -189,12 +216,13 @@ export default function ProductClient({ product }: { product: Product }) {
                       -
                     </button>
                     <input
+                      id="quantity-input"
                       type="number"
                       min="1"
                       max={effectiveStock}
                       value={quantity}
                       onChange={(e) => {
-                        const parsed = parseInt(e.target.value, 10);
+                        const parsed = Number.parseInt(e.target.value, 10);
                         if (Number.isNaN(parsed) || parsed < 1) {
                           setQuantity(1);
                           return;
@@ -216,7 +244,7 @@ export default function ProductClient({ product }: { product: Product }) {
                 <div className="flex justify-between items-center mb-5 p-3 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl">
                   <span className="text-sm font-semibold text-gray-700">Total:</span>
                   <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                    ${(effectivePrice * quantity).toFixed(2)}
+                    {formatPrice(effectivePrice * quantity)}
                   </span>
                 </div>
 

@@ -3,7 +3,8 @@ import { drizzleDb } from '@/lib/db';
 import * as schema from '@/lib/schema';
 import { eq } from 'drizzle-orm';
 import { auth } from '@/lib/auth';
-import { UpdateCartItemInput } from '@/lib/types';
+import { UpdateCartItemSchema } from '@/lib/validations';
+import { handleValidationError } from '@/lib/api-utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,14 +17,14 @@ export async function PATCH(
     const { id } = await params;
     const session = await auth();
     const sessionId = request.cookies.get('cart_session')?.value;
-    const body: UpdateCartItemInput = await request.json();
+    const rawBody = await request.json();
 
-    if (!body.quantity || body.quantity < 1) {
-      return NextResponse.json(
-        { error: 'Invalid quantity' },
-        { status: 400 }
-      );
+    // Validate input with Zod
+    const parseResult = UpdateCartItemSchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return handleValidationError(parseResult.error);
     }
+    const body = parseResult.data;
 
     // Get cart item
     const cartItem = await drizzleDb.query.cartItems.findFirst({

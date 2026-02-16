@@ -13,12 +13,12 @@ export const dynamic = 'force-dynamic';
 async function checkAdminAuth() {
   const session = await auth();
   
-  if (!session || !session.user) {
-    return { authorized: false, error: 'Not authenticated' };
+  if (!session?.user) {
+    return { authorized: false, error: 'Not authenticated', status: 401 as const };
   }
   
   if (session.user.role !== 'ADMIN') {
-    return { authorized: false, error: 'Not authorized - Admin access required' };
+    return { authorized: false, error: 'Not authorized - Admin access required', status: 403 as const };
   }
   
   return { authorized: true };
@@ -27,7 +27,7 @@ async function checkAdminAuth() {
 export async function GET(request: NextRequest) {
   const authCheck = await checkAdminAuth();
   if (!authCheck.authorized) {
-    return apiError(authCheck.error!, 401);
+    return apiError(authCheck.error!, authCheck.status);
   }
 
   try {

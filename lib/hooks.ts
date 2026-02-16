@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 // Generic hook for fetching data with TypeScript
 export function useFetch<T>(
@@ -15,13 +15,15 @@ export function useFetch<T>(
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const optionsRef = useRef(options);
+  optionsRef.current = options;
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     setError(null);
 
     try {
-      const response = await fetch(url, options);
+      const response = await fetch(url, optionsRef.current);
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -35,7 +37,7 @@ export function useFetch<T>(
     } finally {
       setLoading(false);
     }
-  }, [url, options]);
+  }, [url]);
 
   useEffect(() => {
     fetchData();

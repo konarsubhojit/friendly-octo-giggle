@@ -1,9 +1,21 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
 import Image from 'next/image';
 import { Product } from '@/lib/types';
+import { useCurrency } from '@/contexts/CurrencyContext';
 import toast from 'react-hot-toast';
+import {
+  fetchAdminProducts,
+  selectAdminProducts,
+  selectAdminProductsLoading,
+  selectAdminError,
+  removeProduct,
+  upsertProduct,
+  clearAdminError,
+} from '@/lib/features/admin/adminSlice';
+import type { AppDispatch } from '@/lib/store';
 import { isValidImageType, MAX_FILE_SIZE, VALID_IMAGE_TYPES_DISPLAY } from '@/lib/upload-constants';
 
 interface ProductFormData {
@@ -16,9 +28,11 @@ interface ProductFormData {
 }
 
 export default function ProductsManagement() {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const { formatPrice } = useCurrency();
+  const dispatch = useDispatch<AppDispatch>();
+  const products = useSelector(selectAdminProducts) as Product[];
+  const loading = useSelector(selectAdminProductsLoading);
+  const error = useSelector(selectAdminError);
   const [showModal, setShowModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [productToDelete, setProductToDelete] = useState<string | null>(null);
@@ -36,31 +50,8 @@ export default function ProductsManagement() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    loadProducts();
-  }, []);
-
-  const loadProducts = async () => {
-    setLoading(true);
-    setError('');
-    
-    try {
-      const res = await fetch('/api/admin/products');
-      
-      if (!res.ok) {
-        throw new Error('Failed to load products');
-      }
-      
-      const data = await res.json();
-      setProducts(data.data?.products || data.products || []);
-    } catch (err) {
-      console.error('Error loading products:', err);
-      const errorMsg = 'Unable to load data';
-      setError(errorMsg);
-      toast.error(errorMsg);
-    } finally {
-      setLoading(false);
-    }
-  };
+    dispatch(fetchAdminProducts());
+  }, [dispatch]);
 
   const handleOpenModal = (product?: Product) => {
     if (product) {
@@ -150,31 +141,40 @@ export default function ProductsManagement() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const getSubmitButtonText = (): string => {
+    if (saving || uploading) {
+      return uploading ? 'Uploading...' : 'Saving...';
+    }
+    return editingProduct ? 'Update Product' : 'Create Product';
+  };
+
+  const handleSubmit = (e: React.BaseSyntheticEvent) => {
     e.preventDefault();
     setSaving(true);
-    setError('');
+    dispatch(clearAdminError());
 
-    try {
-      // Upload image if a new file is selected
-      let imageUrl = formData.image;
-      if (imageFile) {
-        const uploadedUrl = await uploadImage();
-        if (!uploadedUrl) {
+    // Use void to explicitly ignore the promise (async operation wrapped)
+    void (async () => {
+      try {
+        // Upload image if a new file is selected
+        let imageUrl = formData.image;
+        if (imageFile) {
+          const uploadedUrl = await uploadImage();
+          if (!uploadedUrl) {
+            setSaving(false);
+            return;
+          }
+          imageUrl = uploadedUrl;
+        }
+
+        // Validate image URL
+        if (!imageUrl) {
+          toast.error('Product image is required');
           setSaving(false);
           return;
         }
-        imageUrl = uploadedUrl;
-      }
 
-      // Validate image URL
-      if (!imageUrl) {
-        toast.error('Product image is required');
-        setSaving(false);
-        return;
-      }
-
-      const productData = {
+        const productData = {
         ...formData,
         image: imageUrl,
       };
@@ -198,6 +198,10 @@ export default function ProductsManagement() {
         throw new Error(error.error || 'Failed to save product');
       }
 
+      const saved = await res.json();
+      const savedProduct = saved.data?.product || saved.product || saved;
+      dispatch(upsertProduct(savedProduct));
+
       toast.success(
         editingProduct
           ? 'Product updated successfully'
@@ -205,15 +209,14 @@ export default function ProductsManagement() {
       );
 
       handleCloseModal();
-      await loadProducts();
     } catch (err) {
       console.error('Error saving product:', err);
       const errorMsg = 'Something went wrong. Please try again.';
-      setError(errorMsg);
       toast.error(errorMsg);
     } finally {
       setSaving(false);
     }
+    })();
   };
 
   const handleDelete = async (id: string) => {
@@ -235,9 +238,9 @@ export default function ProductsManagement() {
       }
 
       toast.success('Product deleted successfully');
+      dispatch(removeProduct(productToDelete));
       setShowDeleteModal(false);
       setProductToDelete(null);
-      await loadProducts();
     } catch (err) {
       console.error('Error deleting product:', err);
       toast.error('Something went wrong. Please try again.');
@@ -269,7 +272,7 @@ export default function ProductsManagement() {
         </div>
         <div className="flex gap-3">
           <button
-            onClick={loadProducts}
+            onClick={() => dispatch(fetchAdminProducts())}
             disabled={loading}
             className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 disabled:bg-gray-400 transition"
           >
@@ -314,7 +317,7 @@ export default function ProductsManagement() {
                 </p>
                 <div className="flex justify-between items-center mb-3">
                   <span className="text-lg font-bold text-gray-900">
-                    ${product.price.toFixed(2)}
+                    {formatPrice(product.price)}
                   </span>
                   <span className="text-sm text-gray-600">
                     Stock: {product.stock}
@@ -357,10 +360,11 @@ export default function ProductsManagement() {
               <form onSubmit={handleSubmit}>
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label htmlFor="product-name" className="block text-sm font-medium text-gray-700 mb-1">
                       Name
                     </label>
                     <input
+                      id="product-name"
                       type="text"
                       value={formData.name}
                       onChange={(e) =>
@@ -373,10 +377,11 @@ export default function ProductsManagement() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label htmlFor="product-description" className="block text-sm font-medium text-gray-700 mb-1">
                       Description
                     </label>
                     <textarea
+                      id="product-description"
                       value={formData.description}
                       onChange={(e) =>
                         setFormData({ ...formData, description: e.target.value })
@@ -390,15 +395,16 @@ export default function ProductsManagement() {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label htmlFor="product-price" className="block text-sm font-medium text-gray-700 mb-1">
                         Price ($)
                       </label>
                       <input
+                        id="product-price"
                         type="number"
                         value={formData.price}
                         onChange={(e) => {
-                          const value = parseFloat(e.target.value);
-                          if (!isNaN(value)) {
+                          const value = Number.parseFloat(e.target.value);
+                          if (!Number.isNaN(value)) {
                             setFormData({ ...formData, price: value });
                           }
                         }}
@@ -410,15 +416,16 @@ export default function ProductsManagement() {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label htmlFor="product-stock" className="block text-sm font-medium text-gray-700 mb-1">
                         Stock
                       </label>
                       <input
+                        id="product-stock"
                         type="number"
                         value={formData.stock}
                         onChange={(e) => {
-                          const value = parseInt(e.target.value, 10);
-                          if (!isNaN(value)) {
+                          const value = Number.parseInt(e.target.value, 10);
+                          if (!Number.isNaN(value)) {
                             setFormData({ ...formData, stock: value });
                           }
                         }}
@@ -431,10 +438,11 @@ export default function ProductsManagement() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label htmlFor="product-category" className="block text-sm font-medium text-gray-700 mb-1">
                       Category
                     </label>
                     <input
+                      id="product-category"
                       type="text"
                       value={formData.category}
                       onChange={(e) =>
@@ -447,7 +455,7 @@ export default function ProductsManagement() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label htmlFor="product-image" className="block text-sm font-medium text-gray-700 mb-1">
                       Product Image
                     </label>
                     {formData.image && !imageFile && (
@@ -462,6 +470,7 @@ export default function ProductsManagement() {
                       </div>
                     )}
                     <input
+                      id="product-image"
                       type="file"
                       accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
                       onChange={handleImageChange}
@@ -495,13 +504,7 @@ export default function ProductsManagement() {
                     disabled={saving || uploading}
                     className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 transition"
                   >
-                    {saving || uploading
-                      ? uploading
-                        ? 'Uploading...'
-                        : 'Saving...'
-                      : editingProduct
-                      ? 'Update Product'
-                      : 'Create Product'}
+                    {getSubmitButtonText()}
                   </button>
                 </div>
               </form>

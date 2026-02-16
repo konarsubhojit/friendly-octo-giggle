@@ -5,7 +5,9 @@ This is a highly scalable e-commerce website built with Next.js 16, TypeScript, 
 
 ## Technology Stack
 - **Framework**: Next.js 16 with App Router (TypeScript)
-- **Database**: PostgreSQL with Prisma ORM v7
+- **Database**: PostgreSQL with Drizzle ORM
+- **State Management**: Redux Toolkit (cart, orders, admin slices)
+- **Currency**: CurrencyContext with INR default, `useCurrency()` hook
 - **Cache**: Redis (ioredis) with stampede prevention
 - **Authentication**: NextAuth.js v5 with Google OAuth
 - **Styling**: Tailwind CSS v4
@@ -163,22 +165,28 @@ app/
   ├── products/         # Product pages
   └── page.tsx          # Home page
 lib/
-  ├── db.ts             # Prisma client
+  ├── db.ts             # Drizzle client
+  ├── schema.ts         # Drizzle schema
   ├── redis.ts          # Redis utilities
   ├── auth.ts           # NextAuth config
   ├── types.ts          # Type definitions
   ├── validations.ts    # Zod schemas
   ├── api-utils.ts      # API helpers
-  ├── actions.ts        # Server Actions
+  ├── store.ts          # Redux store (cart, orders, admin)
   ├── hooks.ts          # Custom React hooks
-  └── utils/            # Utility functions (future use)
+  └── features/
+      ├── cart/cartSlice.ts     # Cart state
+      ├── orders/ordersSlice.ts # Orders state
+      └── admin/adminSlice.ts   # Admin state (products, orders, users)
+contexts/
+  └── CurrencyContext.tsx # Currency context (INR default)
 components/
   ├── layout/           # Layout components (Header, Footer, CartIcon)
-  ├── ui/               # UI components (NewsletterForm, ErrorBoundary, AuthComponents)
+  ├── ui/               # UI components (CurrencySelector, NewsletterForm, ErrorBoundary)
+  ├── providers/        # StoreProvider, SessionProvider
   └── sections/         # Page sections (Hero, ProductGrid)
-prisma/
-  ├── schema.prisma     # Database schema
-  └── seed.ts           # Seed data
+drizzle/
+  └── *.sql             # Migration files
 ```
 
 ## Common Patterns
@@ -187,17 +195,32 @@ prisma/
 1. Define Zod schema in `lib/validations.ts`
 2. Create route in `app/api/[name]/route.ts`
 3. Validate input with schema
-4. Use Prisma for database operations
+4. Use Drizzle for database operations
 5. Handle errors properly
 6. Return type-safe response
 
 ### Adding a New Feature
-1. Update Prisma schema if needed
-2. Run `npm run db:generate` and `npm run db:migrate`
+1. Update Drizzle schema in `lib/schema.ts` if needed
+2. Run `npx drizzle-kit generate` and `npx drizzle-kit migrate`
 3. Create types/validations
-4. Implement API routes or Server Actions
-5. Create UI components
-6. Test thoroughly
+4. Add Redux slice if state is shared across pages
+5. Implement API routes or Server Actions
+6. Create UI components
+7. Test thoroughly
+
+### Currency Formatting
+- Use `useCurrency()` from `@/contexts/CurrencyContext` in all client components
+- Call `formatPrice(amountInUSD)` — never use raw `$` or `.toFixed(2)`
+- Prices stored in DB are in USD; conversion happens at display time
+- CurrencySelector in Header lets users switch between INR/USD/EUR/GBP
+
+### State Management (Redux)
+- Cart state: `lib/features/cart/cartSlice.ts`
+- Orders state: `lib/features/orders/ordersSlice.ts`
+- Admin state: `lib/features/admin/adminSlice.ts` (products, orders, users)
+- Use `useSelector` + `useDispatch<AppDispatch>()` in client components
+- Keep UI-only state (modals, forms) as local `useState`
+- Use Redux for data shared across pages or fetched from APIs
 
 ### Component Best Practices
 - **Organized folder structure**: Place components in appropriate folders
@@ -350,3 +373,78 @@ export async function GET() {
 # 5. Restore original code
 # 6. Commit real changes only
 ```
+## Error Handling & Loading States
+
+This project uses Next.js App Router conventions for error boundaries and loading states:
+
+### Error Boundaries
+- `app/error.tsx` - Global error boundary
+- `app/products/error.tsx` - Products section error handling
+- `app/orders/error.tsx` - Orders section error handling
+- `app/cart/error.tsx` - Cart section error handling
+- `app/admin/error.tsx` - Admin section error handling
+
+### Loading States
+- `app/loading.tsx` - Global loading skeleton
+- `app/products/loading.tsx` - Products listing skeleton
+- `app/products/[id]/loading.tsx` - Product detail skeleton
+
+### Component Props Pattern
+Always use readonly interfaces for component props:
+```typescript
+interface MyComponentProps {
+  readonly data: Data;
+  readonly onAction?: () => void;
+}
+
+export default function MyComponent({ data, onAction }: MyComponentProps) {
+  // ...
+}
+```
+
+## Environment Variable Validation
+
+Environment variables are validated at startup using `lib/env.ts`:
+- `DATABASE_URL` - Required PostgreSQL connection string
+- `REDIS_URL` - Optional Redis URL (defaults to localhost:6379)
+- `NODE_ENV` - Optional (development/production/test)
+
+Import validated env vars:
+```typescript
+import { env } from '@/lib/env';
+console.log(env.DATABASE_URL); // Typed and validated
+```
+
+## API Route Patterns
+
+### Auth Status Codes
+- `401 Unauthorized` - User is not authenticated (no session)
+- `403 Forbidden` - User is authenticated but lacks permission
+
+### Input Validation
+Always use Zod schemas for request body validation:
+```typescript
+import { AddToCartSchema } from '@/lib/validations';
+import { apiError, handleValidationError } from '@/lib/api-utils';
+
+export async function POST(request: NextRequest) {
+  const body = await request.json();
+  const parseResult = AddToCartSchema.safeParse(body);
+  if (!parseResult.success) {
+    return handleValidationError(parseResult.error);
+  }
+  const validated = parseResult.data;
+  // ...
+}
+```
+
+## Accessibility Requirements
+
+All components must include:
+- `aria-expanded` on dropdown triggers
+- `aria-haspopup="menu"` on menu triggers
+- `role="menu"` on dropdown containers
+- `role="menuitem"` on menu items
+- `aria-hidden="true"` on decorative elements
+- `rel="noopener noreferrer"` on external links
+- `htmlFor` and `id` on label/input pairs

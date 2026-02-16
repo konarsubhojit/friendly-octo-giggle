@@ -1,68 +1,38 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Order, OrderStatus } from '@/lib/types';
+import { useSelector, useDispatch } from 'react-redux';
+import { OrderStatus } from '@/lib/types';
+import { useCurrency } from '@/contexts/CurrencyContext';
+import {
+  fetchAdminOrders,
+  updateAdminOrderStatus,
+  selectAdminOrders,
+  selectAdminOrdersLoading,
+  selectAdminError,
+} from '@/lib/features/admin/adminSlice';
+import type { AppDispatch } from '@/lib/store';
 
 export default function OrdersManagement() {
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const { formatPrice } = useCurrency();
+  const dispatch = useDispatch<AppDispatch>();
+  const orders = useSelector(selectAdminOrders);
+  const loading = useSelector(selectAdminOrdersLoading);
+  const error = useSelector(selectAdminError);
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
   const [filter, setFilter] = useState<'ALL' | OrderStatus>('ALL');
 
   useEffect(() => {
-    loadOrders();
-  }, []);
-
-  const loadOrders = async () => {
-    setLoading(true);
-    setError('');
-    
-    try {
-      const res = await fetch('/api/admin/orders');
-      
-      if (!res.ok) {
-        throw new Error('Failed to load orders');
-      }
-      
-      const data = await res.json();
-      setOrders(data.data?.orders || data.orders || []);
-    } catch (err) {
-      console.error('Error loading orders:', err);
-      setError('Unable to load data');
-    } finally {
-      setLoading(false);
-    }
-  };
+    dispatch(fetchAdminOrders());
+  }, [dispatch]);
 
   const handleStatusChange = async (orderId: string, newStatus: OrderStatus) => {
     setUpdatingOrderId(orderId);
-    setError('');
-
-    try {
-      const res = await fetch(`/api/admin/orders/${orderId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ status: newStatus }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || 'Failed to update order status');
-      }
-
-      await loadOrders();
-    } catch (err) {
-      console.error('Error updating order:', err);
-      setError('Something went wrong. Please try again.');
-    } finally {
-      setUpdatingOrderId(null);
-    }
+    await dispatch(updateAdminOrderStatus({ id: orderId, status: newStatus }));
+    setUpdatingOrderId(null);
   };
 
-  const getStatusColor = (status: OrderStatus) => {
+  const getStatusColor = (status: string) => {
     switch (status) {
       case OrderStatus.PENDING:
         return 'bg-yellow-100 text-yellow-800';
@@ -102,7 +72,7 @@ export default function OrdersManagement() {
           <p className="text-gray-600 mt-2">View and manage all customer orders</p>
         </div>
         <button
-          onClick={loadOrders}
+          onClick={() => dispatch(fetchAdminOrders())}
           disabled={loading}
           className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 transition"
         >
@@ -196,18 +166,18 @@ export default function OrdersManagement() {
                   {order.items.map((item) => (
                     <div key={item.id} className="flex justify-between items-center py-2 border-b last:border-b-0">
                       <div className="flex-1">
-                        <p className="font-medium text-sm">{item.product.name}</p>
+                        <p className="font-medium text-sm">{item.product?.name || 'Unknown Product'}</p>
                         {item.variation && (
                           <p className="text-xs text-blue-600">
-                            {item.variation.designName} ({item.variation.name})
+                            {item.variation.name}
                           </p>
                         )}
                         <p className="text-xs text-gray-500">
-                          ${item.price.toFixed(2)} × {item.quantity}
+                          {formatPrice(item.price)} × {item.quantity}
                         </p>
                       </div>
                       <div className="text-right">
-                        <p className="font-semibold">${(item.price * item.quantity).toFixed(2)}</p>
+                        <p className="font-semibold">{formatPrice(item.price * item.quantity)}</p>
                       </div>
                     </div>
                   ))}
@@ -215,7 +185,7 @@ export default function OrdersManagement() {
                 <div className="border-t mt-3 pt-3 flex justify-between items-center">
                   <span className="font-bold text-lg">Total</span>
                   <span className="font-bold text-xl text-gray-900">
-                    ${order.totalAmount.toFixed(2)}
+                    {formatPrice(order.totalAmount)}
                   </span>
                 </div>
               </div>

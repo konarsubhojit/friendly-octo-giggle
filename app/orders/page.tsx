@@ -1,11 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useSession } from 'next-auth/react';
+import { useSelector, useDispatch } from 'react-redux';
 import Header from '@/components/layout/Header';
-import { Order } from '@/lib/types';
+import { useCurrency } from '@/contexts/CurrencyContext';
+import { fetchOrders, selectOrders, selectOrdersLoading, selectOrdersError } from '@/lib/features/orders/ordersSlice';
+import type { AppDispatch } from '@/lib/store';
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
   PENDING: { label: 'Pending', color: 'text-yellow-700', bg: 'bg-yellow-100' },
@@ -17,30 +20,17 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }
 
 export default function OrdersPage() {
   const { data: session, status: authStatus } = useSession();
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const { formatPrice } = useCurrency();
+  const dispatch = useDispatch<AppDispatch>();
+  const orders = useSelector(selectOrders);
+  const loading = useSelector(selectOrdersLoading);
+  const error = useSelector(selectOrdersError);
 
   useEffect(() => {
     if (authStatus === 'authenticated') {
-      fetchOrders();
-    } else if (authStatus === 'unauthenticated') {
-      setLoading(false);
+      dispatch(fetchOrders());
     }
-  }, [authStatus]);
-
-  const fetchOrders = async () => {
-    try {
-      const res = await fetch('/api/orders');
-      if (!res.ok) throw new Error('Failed to fetch orders');
-      const data = await res.json();
-      setOrders(data.orders || []);
-    } catch {
-      setError('Failed to load orders');
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [authStatus, dispatch]);
 
   if (authStatus === 'loading' || loading) {
     return (
@@ -115,7 +105,7 @@ export default function OrdersPage() {
               const statusInfo = STATUS_CONFIG[order.status] || STATUS_CONFIG.PENDING;
               const itemCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
               const firstItem = order.items[0];
-              const firstImage = firstItem?.variation?.image || firstItem?.product?.image;
+              const firstImage = (firstItem?.variation as Record<string, unknown>)?.image as string | undefined || firstItem?.product?.image;
 
               return (
                 <Link
@@ -127,7 +117,7 @@ export default function OrdersPage() {
                     {/* First item thumbnail */}
                     {firstImage && (
                       <div className="relative w-16 h-16 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100">
-                        <Image src={firstImage} alt="" fill className="object-cover" />
+                        <Image src={firstImage} alt={firstItem?.product?.name || 'Order item'} fill sizes="48px" className="object-cover" />
                       </div>
                     )}
 
@@ -154,7 +144,7 @@ export default function OrdersPage() {
                     </div>
 
                     <div className="flex-shrink-0 text-right">
-                      <p className="text-lg font-bold text-gray-900">${order.totalAmount.toFixed(2)}</p>
+                      <p className="text-lg font-bold text-gray-900">{formatPrice(order.totalAmount)}</p>
                       <p className="text-xs text-gray-400">Order #{order.id.slice(0, 8)}</p>
                     </div>
 

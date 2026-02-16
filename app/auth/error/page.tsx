@@ -1,8 +1,12 @@
+import Link from 'next/link';
+
+interface AuthErrorPageProps {
+  readonly searchParams: Promise<{ error?: string }>;
+}
+
 export default async function AuthErrorPage({
   searchParams,
-}: {
-  searchParams: Promise<{ error?: string }>;
-}) {
+}: AuthErrorPageProps) {
   const params = await searchParams;
   const error = params.error;
 
@@ -37,18 +41,18 @@ export default async function AuthErrorPage({
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Authentication Error</h1>
           <p className="text-gray-600 mb-6">{errorMessage}</p>
           <div className="space-y-3">
-            <a
+            <Link
               href="/auth/signin"
               className="block w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition"
             >
               Try Again
-            </a>
-            <a
+            </Link>
+            <Link
               href="/"
               className="block w-full bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300 transition"
             >
               Back to Home
-            </a>
+            </Link>
           </div>
         </div>
       </div>

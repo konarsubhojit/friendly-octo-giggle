@@ -46,9 +46,6 @@ GOOGLE_CLIENT_SECRET=your-client-secret
 
 # Vercel Blob (for image uploads)
 BLOB_READ_WRITE_TOKEN=your-vercel-blob-token
-
-# Optional: Admin token for legacy endpoints
-ADMIN_TOKEN=some-secure-token
 ```
 
 ### 3. Get Google OAuth Credentials

@@ -169,7 +169,6 @@ lib/
   ├── types.ts          # Type definitions
   ├── validations.ts    # Zod schemas
   ├── api-utils.ts      # API helpers
-  ├── actions.ts        # Server Actions
   └── hooks.ts          # Custom React hooks
 components/
   ├── ErrorBoundary.tsx # Error handling

@@ -1,12 +1,15 @@
+import Link from 'next/link';
 import { signIn } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
+interface SignInPageProps {
+  readonly searchParams: Promise<{ callbackUrl?: string }>;
+}
+
 export default async function SignInPage({
   searchParams,
-}: {
-  searchParams: Promise<{ callbackUrl?: string }>;
-}) {
+}: SignInPageProps) {
   async function handleGoogleSignIn() {
     'use server';
     const params = await searchParams;
@@ -49,9 +52,9 @@ export default async function SignInPage({
         </form>
 
         <div className="mt-6 text-center">
-          <a href="/" className="text-sm text-blue-600 hover:text-blue-800">
+          <Link href="/" className="text-sm text-blue-600 hover:text-blue-800">
             Back to store
-          </a>
+          </Link>
         </div>
       </div>
     </div>

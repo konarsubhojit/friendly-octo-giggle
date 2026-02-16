@@ -1,11 +1,18 @@
 'use client';
 
-import { useState, useEffect, use } from 'react';
+import { useEffect, use } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useSession } from 'next-auth/react';
+import { useSelector, useDispatch } from 'react-redux';
 import Header from '@/components/layout/Header';
-import { Order } from '@/lib/types';
+import { useCurrency } from '@/contexts/CurrencyContext';
+import { fetchOrderById, selectCurrentOrder, selectOrderDetailLoading, selectOrdersError, clearCurrentOrder } from '@/lib/features/orders/ordersSlice';
+import type { AppDispatch } from '@/lib/store';
+
+interface OrderDetailPageProps {
+  readonly params: Promise<{ id: string }>;
+}
 
 const STATUS_STEPS = ['PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED'] as const;
 
@@ -22,40 +29,23 @@ function getStepIndex(status: string): number {
   return STATUS_STEPS.indexOf(status as (typeof STATUS_STEPS)[number]);
 }
 
-export default function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default function OrderDetailPage({ params }: OrderDetailPageProps) {
   const { id } = use(params);
   const { data: session, status: authStatus } = useSession();
-  const [order, setOrder] = useState<Order | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const { formatPrice } = useCurrency();
+  const dispatch = useDispatch<AppDispatch>();
+  const order = useSelector(selectCurrentOrder);
+  const loading = useSelector(selectOrderDetailLoading);
+  const error = useSelector(selectOrdersError);
 
   useEffect(() => {
     if (authStatus === 'authenticated') {
-      fetchOrder();
-    } else if (authStatus === 'unauthenticated') {
-      setLoading(false);
+      dispatch(fetchOrderById(id));
     }
-  }, [authStatus, id]);
-
-  const fetchOrder = async () => {
-    try {
-      const res = await fetch(`/api/orders/${id}`);
-      if (!res.ok) {
-        if (res.status === 404) {
-          setError('Order not found');
-        } else {
-          throw new Error('Failed to fetch order');
-        }
-        return;
-      }
-      const data = await res.json();
-      setOrder(data.data?.order || data.order);
-    } catch {
-      setError('Failed to load order details');
-    } finally {
-      setLoading(false);
-    }
-  };
+    return () => {
+      dispatch(clearCurrentOrder());
+    };
+  }, [authStatus, id, dispatch]);
 
   if (authStatus === 'loading' || loading) {
     return (
@@ -141,7 +131,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
               </p>
             </div>
             <p className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              ${order.totalAmount.toFixed(2)}
+              {formatPrice(order.totalAmount)}
             </p>
           </div>
 
@@ -201,12 +191,12 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
           <h2 className="text-lg font-bold text-gray-900 mb-4">Items</h2>
           <div className="space-y-4">
             {order.items.map((item) => {
-              const image = item.variation?.image || item.product?.image;
+              const image = (item.variation as Record<string, unknown>)?.image as string | undefined || item.product?.image;
               return (
                 <div key={item.id} className="flex items-center gap-4 py-3 border-b border-gray-100 last:border-0">
                   {image && (
                     <div className="relative w-16 h-16 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100">
-                      <Image src={image} alt={item.product?.name || ''} fill className="object-cover" />
+                      <Image src={image} alt={item.product?.name || 'Order item'} fill sizes="80px" className="object-cover" />
                     </div>
                   )}
                   <div className="flex-grow min-w-0">
@@ -218,12 +208,12 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                     </Link>
                     {item.variation && (
                       <p className="text-xs text-gray-500">
-                        {item.variation.designName} - {item.variation.name}
+                        {item.variation.name}
                       </p>
                     )}
                     <p className="text-xs text-gray-500">Qty: {item.quantity}</p>
                   </div>
-                  <p className="text-sm font-bold text-gray-900">${(item.price * item.quantity).toFixed(2)}</p>
+                  <p className="text-sm font-bold text-gray-900">{formatPrice(item.price * item.quantity)}</p>
                 </div>
               );
             })}

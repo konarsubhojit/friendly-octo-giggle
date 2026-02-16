@@ -2,75 +2,34 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
-
-interface User {
-  id: string;
-  name: string | null;
-  email: string;
-  role: 'ADMIN' | 'CUSTOMER';
-  emailVerified: Date | null;
-  image: string | null;
-  createdAt: string;
-  updatedAt: string;
-  _count?: {
-    orders: number;
-  };
-}
+import { useSelector, useDispatch } from 'react-redux';
+import {
+  fetchAdminUsers,
+  updateAdminUserRole,
+  selectAdminUsers,
+  selectAdminUsersLoading,
+  selectAdminError,
+} from '@/lib/features/admin/adminSlice';
+import type { AppDispatch } from '@/lib/store';
 
 export default function UsersManagement() {
-  const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const dispatch = useDispatch<AppDispatch>();
+  const users = useSelector(selectAdminUsers);
+  const loading = useSelector(selectAdminUsersLoading);
+  const error = useSelector(selectAdminError);
   const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
 
   useEffect(() => {
-    loadUsers();
-  }, []);
-
-  const loadUsers = async () => {
-    setLoading(true);
-    setError('');
-    
-    try {
-      const res = await fetch('/api/admin/users');
-      
-      if (!res.ok) {
-        throw new Error('Failed to load users');
-      }
-      
-      const data = await res.json();
-      setUsers(data.data?.users || data.users || []);
-    } catch (err) {
-      console.error('Error loading users:', err);
-      setError('Unable to load data');
-    } finally {
-      setLoading(false);
-    }
-  };
+    dispatch(fetchAdminUsers());
+  }, [dispatch]);
 
   const handleRoleChange = async (userId: string, newRole: 'ADMIN' | 'CUSTOMER') => {
     setUpdatingUserId(userId);
-    setError('');
 
     try {
-      const res = await fetch(`/api/admin/users/${userId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ role: newRole }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || 'Failed to update user role');
-      }
-
-      // Reload users to get updated data
-      await loadUsers();
+      await dispatch(updateAdminUserRole({ id: userId, role: newRole })).unwrap();
     } catch (err) {
       console.error('Error updating user:', err);
-      setError('Something went wrong. Please try again.');
     } finally {
       setUpdatingUserId(null);
     }
@@ -171,7 +130,7 @@ export default function UsersManagement() {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {user._count?.orders || 0}
+                    {user.orderCount || 0}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {new Date(user.createdAt).toLocaleDateString()}

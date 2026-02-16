@@ -1,4 +1,3 @@
-import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getCachedData } from '@/lib/redis';
 import { apiSuccess, handleApiError } from '@/lib/api-utils';

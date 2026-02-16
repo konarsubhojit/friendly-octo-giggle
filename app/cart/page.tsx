@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useSelector, useDispatch } from 'react-redux';
 import { CartItemWithProduct } from '@/lib/types';
+import { useCurrency } from '@/contexts/CurrencyContext';
 import Header from '@/components/layout/Header';
 import {
   fetchCart,
@@ -24,6 +25,7 @@ export default function CartPage() {
   const dispatch = useDispatch<AppDispatch>();
   const cart = useSelector(selectCart);
   const loading = useSelector(selectCartLoading);
+  const { formatPrice } = useCurrency();
   const [updating, setUpdating] = useState<string | null>(null);
   const [customerAddress, setCustomerAddress] = useState('');
   const [orderLoading, setOrderLoading] = useState(false);
@@ -242,7 +244,7 @@ export default function CartPage() {
                     >
                       {/* Image */}
                       <div className="relative w-24 h-24 flex-shrink-0 bg-gray-100 rounded-xl overflow-hidden">
-                        <Image src={image} alt={item.product.name} fill className="object-cover" />
+                        <Image src={image} alt={item.product.name} fill sizes="80px" className="object-cover" />
                       </div>
 
                       {/* Details */}
@@ -258,7 +260,7 @@ export default function CartPage() {
                             {item.variation.designName} - {item.variation.name}
                           </p>
                         )}
-                        <p className="text-lg font-bold text-gray-900 mt-1">${price.toFixed(2)}</p>
+                        <p className="text-lg font-bold text-gray-900 mt-1">{formatPrice(price)}</p>
 
                         {/* Quantity controls */}
                         <div className="flex items-center gap-3 mt-3">
@@ -301,7 +303,7 @@ export default function CartPage() {
 
                       {/* Line total */}
                       <div className="flex-shrink-0 text-right">
-                        <p className="text-lg font-bold text-gray-900">${(price * item.quantity).toFixed(2)}</p>
+                        <p className="text-lg font-bold text-gray-900">{formatPrice(price * item.quantity)}</p>
                       </div>
                     </div>
                   );
@@ -324,7 +326,7 @@ export default function CartPage() {
                 <div className="space-y-3 mb-4 text-sm">
                   <div className="flex justify-between text-gray-600">
                     <span>Subtotal ({cart.items.reduce((s, i) => s + i.quantity, 0)} items)</span>
-                    <span className="font-medium">${calculateTotal().toFixed(2)}</span>
+                    <span className="font-medium">{formatPrice(calculateTotal())}</span>
                   </div>
                   <div className="flex justify-between text-gray-600">
                     <span>Shipping</span>
@@ -333,22 +335,24 @@ export default function CartPage() {
                   <div className="border-t border-gray-200 pt-3 flex justify-between">
                     <span className="font-bold text-gray-900">Total</span>
                     <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                      ${calculateTotal().toFixed(2)}
+                      {formatPrice(calculateTotal())}
                     </span>
                   </div>
                 </div>
 
                 {/* Shipping Address */}
                 <div className="mb-4">
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <label htmlFor="shipping-address" className="block text-sm font-semibold text-gray-700 mb-2">
                     Shipping Address
                   </label>
                   <textarea
+                    id="shipping-address"
                     value={customerAddress}
                     onChange={(e) => setCustomerAddress(e.target.value)}
                     rows={3}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm resize-none bg-white/50"
                     placeholder="Enter your shipping address"
+                    aria-describedby="shipping-address-hint"
                   />
                 </div>
 

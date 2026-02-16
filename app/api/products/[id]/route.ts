@@ -1,11 +1,10 @@
-import { NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
 import { getCachedData } from '@/lib/redis';
-
-export const dynamic = 'force-dynamic';
+import { apiSuccess, apiError, handleApiError } from '@/lib/api-utils';
 
 export async function GET(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -14,26 +13,19 @@ export async function GET(
     // Use Redis cache with stampede prevention
     const product = await getCachedData(
       `product:${id}`,
-      60, // Cache for 60 seconds
+      60,
       async () => {
         return await db.products.findById(id);
       },
-      10 // Serve stale data for up to 10 extra seconds while revalidating
+      10
     );
 
     if (!product) {
-      return NextResponse.json(
-        { error: 'Product not found' },
-        { status: 404 }
-      );
+      return apiError('Product not found', 404);
     }
 
-    return NextResponse.json({ product });
+    return apiSuccess({ product });
   } catch (error) {
-    console.error('Error fetching product:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch product' },
-      { status: 500 }
-    );
+    return handleApiError(error);
   }
 }

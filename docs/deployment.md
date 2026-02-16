@@ -49,7 +49,6 @@ vercel
 # Add environment variables via Vercel dashboard or CLI:
 vercel env add DATABASE_URL
 vercel env add REDIS_URL
-vercel env add ADMIN_TOKEN
 
 # Redeploy to apply environment variables
 vercel --prod
@@ -96,7 +95,6 @@ provider:
   environment:
     DATABASE_URL: ${env:DATABASE_URL}
     REDIS_URL: ${env:REDIS_URL}
-    ADMIN_TOKEN: ${env:ADMIN_TOKEN}
 
 functions:
   app:
@@ -150,7 +148,7 @@ gcloud run deploy ecommerce \
   --platform managed \
   --region us-central1 \
   --allow-unauthenticated \
-  --set-env-vars DATABASE_URL=$DATABASE_URL,REDIS_URL=$REDIS_URL,ADMIN_TOKEN=$ADMIN_TOKEN
+  --set-env-vars DATABASE_URL=$DATABASE_URL,REDIS_URL=$REDIS_URL
 ```
 
 ---
@@ -173,7 +171,6 @@ gcloud run deploy ecommerce \
 Add in Cloudflare Pages dashboard:
 - `DATABASE_URL`
 - `REDIS_URL`
-- `ADMIN_TOKEN`
 
 **Step 4: Deploy**
 - Cloudflare automatically deploys on git push
@@ -200,7 +197,6 @@ Add in Cloudflare Pages dashboard:
 
 **Step 4: Configure environment variables**
 - `REDIS_URL` (from Railway Redis)
-- `ADMIN_TOKEN` (your secret)
 
 **Step 5: Run migrations**
 ```bash

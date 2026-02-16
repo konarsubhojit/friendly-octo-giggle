@@ -2,14 +2,16 @@ import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 
+interface AdminLayoutProps {
+  readonly children: React.ReactNode;
+}
+
 export default async function AdminLayout({
   children,
-}: {
-  children: React.ReactNode;
-}) {
+}: AdminLayoutProps) {
   const session = await auth();
 
-  if (!session || !session.user) {
+  if (!session?.user) {
     redirect('/auth/signin?callbackUrl=/admin');
   }
 

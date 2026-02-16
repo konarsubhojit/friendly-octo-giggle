@@ -3,6 +3,7 @@ import { drizzle } from 'drizzle-orm/neon-serverless';
 import * as schema from './schema';
 import { eq, desc } from 'drizzle-orm';
 import { Product, ProductInput } from './types';
+import { env } from './env';
 
 // ─── Connection Pool (singleton for serverless) ─────────
 
@@ -14,12 +15,12 @@ function createPool() {
   // No SSL config needed — Neon's driver uses WebSocket protocol,
   // bypassing TCP/TLS certificate issues entirely
   return new Pool({
-    connectionString: process.env.DATABASE_URL!,
+    connectionString: env.DATABASE_URL,
   });
 }
 
 const pool = globalForDb.pool ?? createPool();
-if (process.env.NODE_ENV !== 'production') globalForDb.pool = pool;
+if (env.NODE_ENV !== 'production') globalForDb.pool = pool;
 
 // ─── Drizzle Instance ───────────────────────────────────
 

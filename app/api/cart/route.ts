@@ -3,9 +3,160 @@ import { drizzleDb } from '@/lib/db';
 import * as schema from '@/lib/schema';
 import { eq, and, isNull } from 'drizzle-orm';
 import { auth } from '@/lib/auth';
-import { AddToCartInput } from '@/lib/types';
+import { AddToCartSchema, type AddToCartInput } from '@/lib/validations';
+import { handleValidationError } from '@/lib/api-utils';
+import type { Session } from 'next-auth';
 
 export const dynamic = 'force-dynamic';
+
+// Types for cart operations
+interface ProductWithVariations {
+  id: string;
+  stock: number;
+  variations: Array<{ id: string; stock: number }>;
+}
+
+interface CartWithItems {
+  id: string;
+  createdAt: Date;
+  updatedAt: Date;
+  items: Array<{
+    id: string;
+    quantity: number;
+    createdAt: Date;
+    updatedAt: Date;
+    product: {
+      id: string;
+      createdAt: Date;
+      updatedAt: Date;
+      variations: Array<{ createdAt: Date; updatedAt: Date }>;
+    };
+    variation: { createdAt: Date; updatedAt: Date } | null;
+  }>;
+}
+
+// Helper: Verify product exists and has sufficient stock
+async function verifyProductStock(
+  body: AddToCartInput
+): Promise<{ product: ProductWithVariations; availableStock: number } | { error: string; status: number }> {
+  const product = await drizzleDb.query.products.findFirst({
+    where: eq(schema.products.id, body.productId),
+    with: { variations: true },
+  });
+
+  if (!product) {
+    return { error: 'Product not found', status: 404 };
+  }
+
+  let availableStock = product.stock;
+  if (body.variationId) {
+    const variation = product.variations.find((v) => v.id === body.variationId);
+    if (!variation) {
+      return { error: 'Variation not found', status: 404 };
+    }
+    availableStock = variation.stock;
+  }
+
+  if (availableStock < body.quantity) {
+    return { error: 'Insufficient stock', status: 400 };
+  }
+
+  return { product, availableStock };
+}
+
+// Helper: Get or create cart for user/guest
+async function getOrCreateCart(
+  session: Session | null,
+  sessionId: string | undefined
+): Promise<{ cart: { id: string }; sessionId: string | undefined }> {
+  if (session?.user?.id) {
+    let cart = await drizzleDb.query.carts.findFirst({
+      where: eq(schema.carts.userId, session.user.id),
+    });
+    if (!cart) {
+      [cart] = await drizzleDb.insert(schema.carts).values({ userId: session.user.id, updatedAt: new Date() }).returning();
+    }
+    return { cart, sessionId: undefined };
+  }
+
+  // Guest user
+  const guestSessionId = sessionId ?? `guest_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+  let cart = await drizzleDb.query.carts.findFirst({
+    where: eq(schema.carts.sessionId, guestSessionId),
+  });
+  if (!cart) {
+    [cart] = await drizzleDb.insert(schema.carts).values({ sessionId: guestSessionId, updatedAt: new Date() }).returning();
+  }
+  return { cart, sessionId: guestSessionId };
+}
+
+// Helper: Add or update cart item
+async function addOrUpdateCartItem(
+  cartId: string,
+  body: AddToCartInput,
+  availableStock: number
+): Promise<{ error: string; status: number } | null> {
+  const existingItem = await drizzleDb.query.cartItems.findFirst({
+    where: and(
+      eq(schema.cartItems.cartId, cartId),
+      eq(schema.cartItems.productId, body.productId),
+      body.variationId
+        ? eq(schema.cartItems.variationId, body.variationId)
+        : isNull(schema.cartItems.variationId)
+    ),
+  });
+
+  if (existingItem) {
+    const newQuantity = existingItem.quantity + body.quantity;
+    if (newQuantity > availableStock) {
+      return { error: 'Insufficient stock', status: 400 };
+    }
+    await drizzleDb.update(schema.cartItems)
+      .set({ quantity: newQuantity, updatedAt: new Date() })
+      .where(eq(schema.cartItems.id, existingItem.id));
+  } else {
+    await drizzleDb.insert(schema.cartItems).values({
+      cartId,
+      productId: body.productId,
+      variationId: body.variationId ?? null,
+      quantity: body.quantity,
+      updatedAt: new Date(),
+    });
+  }
+
+  return null;
+}
+
+// Helper: Serialize cart for JSON response
+function serializeCart(cart: CartWithItems) {
+  return {
+    ...cart,
+    createdAt: cart.createdAt.toISOString(),
+    updatedAt: cart.updatedAt.toISOString(),
+    items: cart.items.map((item) => ({
+      ...item,
+      createdAt: item.createdAt.toISOString(),
+      updatedAt: item.updatedAt.toISOString(),
+      product: {
+        ...item.product,
+        createdAt: item.product.createdAt.toISOString(),
+        updatedAt: item.product.updatedAt.toISOString(),
+        variations: item.product.variations.map((v) => ({
+          ...v,
+          createdAt: v.createdAt.toISOString(),
+          updatedAt: v.updatedAt.toISOString(),
+        })),
+      },
+      variation: item.variation
+        ? {
+            ...item.variation,
+            createdAt: item.variation.createdAt.toISOString(),
+            updatedAt: item.variation.updatedAt.toISOString(),
+          }
+        : null,
+    })),
+  };
+}
 
 // Get cart for current user/session
 export async function GET(request: NextRequest) {
@@ -14,7 +165,6 @@ export async function GET(request: NextRequest) {
     const sessionId = request.cookies.get('cart_session')?.value;
 
     if (!session?.user?.id && !sessionId) {
-      // No cart exists yet
       return NextResponse.json({ cart: null });
     }
 
@@ -25,11 +175,7 @@ export async function GET(request: NextRequest) {
       with: {
         items: {
           with: {
-            product: {
-              with: {
-                variations: true,
-              },
-            },
+            product: { with: { variations: true } },
             variation: true,
           },
         },
@@ -40,42 +186,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ cart: null });
     }
 
-    // Serialize dates
-    const serializedCart = {
-      ...cart,
-      createdAt: cart.createdAt.toISOString(),
-      updatedAt: cart.updatedAt.toISOString(),
-      items: cart.items.map((item) => ({
-        ...item,
-        createdAt: item.createdAt.toISOString(),
-        updatedAt: item.updatedAt.toISOString(),
-        product: {
-          ...item.product,
-          createdAt: item.product.createdAt.toISOString(),
-          updatedAt: item.product.updatedAt.toISOString(),
-          variations: item.product.variations.map((v) => ({
-            ...v,
-            createdAt: v.createdAt.toISOString(),
-            updatedAt: v.updatedAt.toISOString(),
-          })),
-        },
-        variation: item.variation
-          ? {
-              ...item.variation,
-              createdAt: item.variation.createdAt.toISOString(),
-              updatedAt: item.variation.updatedAt.toISOString(),
-            }
-          : null,
-      })),
-    };
-
-    return NextResponse.json({ cart: serializedCart });
+    return NextResponse.json({ cart: serializeCart(cart as unknown as CartWithItems) });
   } catch (error) {
     console.error('Error fetching cart:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch cart' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to fetch cart' }, { status: 500 });
   }
 }
 
@@ -83,107 +197,30 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = await auth();
-    const body: AddToCartInput = await request.json();
+    const rawBody = await request.json();
 
-    if (!body.productId || !body.quantity || body.quantity < 1) {
-      return NextResponse.json(
-        { error: 'Invalid input' },
-        { status: 400 }
-      );
+    // Validate input
+    const parseResult = AddToCartSchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return handleValidationError(parseResult.error);
     }
+    const body = parseResult.data;
 
-    // Verify product exists and has stock
-    const product = await drizzleDb.query.products.findFirst({
-      where: eq(schema.products.id, body.productId),
-      with: { variations: true },
-    });
-
-    if (!product) {
-      return NextResponse.json(
-        { error: 'Product not found' },
-        { status: 404 }
-      );
+    // Verify product and stock
+    const stockResult = await verifyProductStock(body);
+    if ('error' in stockResult) {
+      return NextResponse.json({ error: stockResult.error }, { status: stockResult.status });
     }
-
-    // Check stock
-    let availableStock = product.stock;
-    if (body.variationId) {
-      const variation = product.variations.find((v) => v.id === body.variationId);
-      if (!variation) {
-        return NextResponse.json(
-          { error: 'Variation not found' },
-          { status: 404 }
-        );
-      }
-      availableStock = variation.stock;
-    }
-
-    if (availableStock < body.quantity) {
-      return NextResponse.json(
-        { error: 'Insufficient stock' },
-        { status: 400 }
-      );
-    }
+    const { availableStock } = stockResult;
 
     // Get or create cart
-    let cart;
-    let sessionId = request.cookies.get('cart_session')?.value;
+    const cookieSessionId = request.cookies.get('cart_session')?.value;
+    const { cart, sessionId } = await getOrCreateCart(session, cookieSessionId);
 
-    if (session?.user?.id) {
-      // Logged-in user
-      cart = await drizzleDb.query.carts.findFirst({
-        where: eq(schema.carts.userId, session.user.id),
-      });
-      if (!cart) {
-        [cart] = await drizzleDb.insert(schema.carts).values({ userId: session.user.id, updatedAt: new Date() }).returning();
-      }
-    } else {
-      // Guest user
-      if (!sessionId) {
-        sessionId = `guest_${Date.now()}_${Math.random().toString(36).substring(7)}`;
-      }
-
-      cart = await drizzleDb.query.carts.findFirst({
-        where: eq(schema.carts.sessionId, sessionId),
-      });
-      if (!cart) {
-        [cart] = await drizzleDb.insert(schema.carts).values({ sessionId, updatedAt: new Date() }).returning();
-      }
-    }
-
-    // Add or update cart item
-    // Find existing item (variationId can be null, so we need to handle it separately)
-    const existingItem = await drizzleDb.query.cartItems.findFirst({
-      where: and(
-        eq(schema.cartItems.cartId, cart.id),
-        eq(schema.cartItems.productId, body.productId),
-        body.variationId
-          ? eq(schema.cartItems.variationId, body.variationId)
-          : isNull(schema.cartItems.variationId)
-      ),
-    });
-
-    if (existingItem) {
-      // Update quantity
-      const newQuantity = existingItem.quantity + body.quantity;
-      if (newQuantity > availableStock) {
-        return NextResponse.json(
-          { error: 'Insufficient stock' },
-          { status: 400 }
-        );
-      }
-      await drizzleDb.update(schema.cartItems)
-        .set({ quantity: newQuantity, updatedAt: new Date() })
-        .where(eq(schema.cartItems.id, existingItem.id));
-    } else {
-      // Create new item
-      await drizzleDb.insert(schema.cartItems).values({
-        cartId: cart.id,
-        productId: body.productId,
-        variationId: body.variationId ?? null,
-        quantity: body.quantity,
-        updatedAt: new Date(),
-      });
+    // Add or update item
+    const itemError = await addOrUpdateCartItem(cart.id, body, availableStock);
+    if (itemError) {
+      return NextResponse.json({ error: itemError.error }, { status: itemError.status });
     }
 
     // Fetch updated cart
@@ -192,11 +229,7 @@ export async function POST(request: NextRequest) {
       with: {
         items: {
           with: {
-            product: {
-              with: {
-                variations: true,
-              },
-            },
+            product: { with: { variations: true } },
             variation: true,
           },
         },
@@ -204,59 +237,28 @@ export async function POST(request: NextRequest) {
     });
 
     if (!updatedCart) {
-      return NextResponse.json(
-        { error: 'Cart not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Cart not found' }, { status: 404 });
     }
 
-    // Serialize response
-    const serializedCart = {
-      ...updatedCart,
-      createdAt: updatedCart.createdAt.toISOString(),
-      updatedAt: updatedCart.updatedAt.toISOString(),
-      items: updatedCart.items.map((item) => ({
-        ...item,
-        createdAt: item.createdAt.toISOString(),
-        updatedAt: item.updatedAt.toISOString(),
-        product: {
-          ...item.product,
-          createdAt: item.product.createdAt.toISOString(),
-          updatedAt: item.product.updatedAt.toISOString(),
-          variations: item.product.variations.map((v) => ({
-            ...v,
-            createdAt: v.createdAt.toISOString(),
-            updatedAt: v.updatedAt.toISOString(),
-          })),
-        },
-        variation: item.variation
-          ? {
-              ...item.variation,
-              createdAt: item.variation.createdAt.toISOString(),
-              updatedAt: item.variation.updatedAt.toISOString(),
-            }
-          : null,
-      })),
-    };
+    // Build response with session cookie for guests
+    const response = NextResponse.json(
+      { cart: serializeCart(updatedCart as unknown as CartWithItems) },
+      { status: 201 }
+    );
 
-    // Set cart session cookie for guest users
-    const response = NextResponse.json({ cart: serializedCart }, { status: 201 });
     if (!session?.user?.id && sessionId) {
       response.cookies.set('cart_session', sessionId, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
-        maxAge: 60 * 60 * 24 * 30, // 30 days
+        maxAge: 60 * 60 * 24 * 30,
       });
     }
 
     return response;
   } catch (error) {
     console.error('Error adding to cart:', error);
-    return NextResponse.json(
-      { error: 'Failed to add to cart' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to add to cart' }, { status: 500 });
   }
 }
 

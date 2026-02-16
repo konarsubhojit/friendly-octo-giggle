@@ -66,10 +66,10 @@ export function logDatabaseOperation(data: {
     ...data,
   };
 
-  if (!data.success) {
-    logger.error(logData, 'Database operation failed');
-  } else {
+  if (data.success) {
     logger.debug(logData, 'Database operation completed');
+  } else {
+    logger.error(logData, 'Database operation failed');
   }
 }
 
@@ -87,10 +87,10 @@ export function logAuthEvent(data: {
     ...data,
   };
 
-  if (!data.success) {
-    logger.warn(logData, `Authentication event failed: ${data.event}`);
-  } else {
+  if (data.success) {
     logger.info(logData, `Authentication event: ${data.event}`);
+  } else {
+    logger.warn(logData, `Authentication event failed: ${data.event}`);
   }
 }
 
@@ -106,16 +106,16 @@ export function logBusinessEvent(data: {
     ...data,
   };
 
-  if (!data.success) {
-    logger.warn(logData, `Business event failed: ${data.event}`);
-  } else {
+  if (data.success) {
     logger.info(logData, `Business event: ${data.event}`);
+  } else {
+    logger.warn(logData, `Business event failed: ${data.event}`);
   }
 }
 
 // Error logger with stack trace
 export function logError(data: {
-  error: Error | unknown;
+  error: unknown;
   context?: string;
   userId?: string;
   requestId?: string;
@@ -178,8 +178,8 @@ export function generateRequestId(): string {
 
 // Timing utility
 export class Timer {
-  private startTime: number;
-  private label: string;
+  private readonly startTime: number;
+  private readonly label: string;
 
   constructor(label: string) {
     this.label = label;

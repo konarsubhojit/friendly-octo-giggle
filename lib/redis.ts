@@ -1,21 +1,17 @@
 import Redis from 'ioredis';
 import { logCacheOperation, logError, Timer } from './logger';
+import { env } from './env';
 
 // Singleton Redis connection for serverless
 let redis: Redis | null = null;
 
 export function getRedisClient(): Redis {
-  if (!redis) {
-    const redisUrl = process.env.REDIS_URL;
-    if (!redisUrl) {
-      throw new Error('REDIS_URL environment variable is not set');
-    }
-    redis = new Redis(redisUrl, {
-      maxRetriesPerRequest: 3,
-      enableReadyCheck: false,
-      lazyConnect: true,
-    });
-  }
+  const redisUrl = env.REDIS_URL || 'redis://localhost:6379';
+  redis ??= new Redis(redisUrl, {
+    maxRetriesPerRequest: 3,
+    enableReadyCheck: false,
+    lazyConnect: true,
+  });
   return redis;
 }
 

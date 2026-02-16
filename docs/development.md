@@ -35,7 +35,6 @@ REDIS_URL=rediss://default:password@host:6379
 NEXTAUTH_SECRET=your-secret-here
 GOOGLE_CLIENT_ID=your-google-client-id
 GOOGLE_CLIENT_SECRET=your-google-client-secret
-ADMIN_TOKEN=secure-admin-token
 LOG_LEVEL=debug  # development only - high log volume, impacts performance
 ```
 
@@ -167,7 +166,7 @@ export function ProductCard({ product, showStock = true }: ProductCardProps) {
 - **Files**: kebab-case (`product-card.tsx`, `api-utils.ts`)
 - **Components**: PascalCase (`ProductCard`, `AuthComponents`)
 - **Functions**: camelCase (`createProduct`, `handleApiError`)
-- **Constants**: SCREAMING_SNAKE_CASE (`ADMIN_TOKEN`, `MAX_FILE_SIZE`)
+- **Constants**: SCREAMING_SNAKE_CASE (`MAX_FILE_SIZE`, `API_TIMEOUT`)
 - **Types/Interfaces**: PascalCase (`Product`, `ApiResponse`)
 
 ---
@@ -1209,7 +1208,6 @@ Required for development:
 - `NEXTAUTH_SECRET` - NextAuth secret key
 - `GOOGLE_CLIENT_ID` - Google OAuth client ID
 - `GOOGLE_CLIENT_SECRET` - Google OAuth secret
-- `ADMIN_TOKEN` - Admin authentication token
 
 Optional:
 - `LOG_LEVEL` - debug, info, warn, error (default: info)
