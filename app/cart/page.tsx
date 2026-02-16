@@ -5,13 +5,24 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { Cart, CartItemWithProduct } from '@/lib/types';
+import { useSelector, useDispatch } from 'react-redux';
+import { CartItemWithProduct } from '@/lib/types';
+import {
+  fetchCart,
+  updateCartItem,
+  removeCartItem,
+  clearCart,
+  selectCart,
+  selectCartLoading,
+} from '@/lib/features/cart/cartSlice';
+import type { AppDispatch } from '@/lib/store';
 
 export default function CartPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
-  const [cart, setCart] = useState<Cart | null>(null);
-  const [loading, setLoading] = useState(true);
+  const dispatch = useDispatch<AppDispatch>();
+  const cart = useSelector(selectCart);
+  const loading = useSelector(selectCartLoading);
   const [updating, setUpdating] = useState<string | null>(null);
   const [customerAddress, setCustomerAddress] = useState('');
   const [orderLoading, setOrderLoading] = useState(false);
@@ -20,62 +31,30 @@ export default function CartPage() {
   const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   useEffect(() => {
-    fetchCart();
-  }, []);
+    dispatch(fetchCart());
+  }, [dispatch]);
 
-  const fetchCart = async () => {
-    try {
-      const res = await fetch('/api/cart');
-      const data = await res.json();
-      setCart(data.cart);
-    } catch (err) {
-      console.error('Error fetching cart:', err);
-      setError('Unable to load cart');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const updateQuantity = async (itemId: string, quantity: number) => {
+  const handleUpdateQuantity = async (itemId: string, quantity: number) => {
     if (quantity < 1) return;
-    
+
     setUpdating(itemId);
     try {
-      const res = await fetch(`/api/cart/items/${itemId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ quantity }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || 'Failed to update');
-      }
-
-      await fetchCart();
+      await dispatch(updateCartItem({ itemId, quantity })).unwrap();
     } catch (err) {
       console.error('Error updating item:', err);
-      setError('Something went wrong. Please try again.');
+      setError(typeof err === 'string' ? err : 'Something went wrong. Please try again.');
     } finally {
       setUpdating(null);
     }
   };
 
-  const removeItem = async (itemId: string) => {
+  const handleRemoveItem = async (itemId: string) => {
     setUpdating(itemId);
     try {
-      const res = await fetch(`/api/cart/items/${itemId}`, {
-        method: 'DELETE',
-      });
-
-      if (!res.ok) {
-        throw new Error('Failed to remove item');
-      }
-
-      await fetchCart();
+      await dispatch(removeCartItem(itemId)).unwrap();
     } catch (err) {
       console.error('Error removing item:', err);
-      setError('Something went wrong. Please try again.');
+      setError(typeof err === 'string' ? err : 'Something went wrong. Please try again.');
     } finally {
       setUpdating(null);
     }
@@ -141,7 +120,7 @@ export default function CartPage() {
       }
 
       // Clear cart after successful order
-      await fetch('/api/cart', { method: 'DELETE' });
+      await dispatch(clearCart()).unwrap();
 
       // Show success message
       setOrderSuccess(true);
@@ -344,7 +323,7 @@ export default function CartPage() {
 
                       {/* Remove Button */}
                       <button
-                        onClick={() => removeItem(item.id)}
+                        onClick={() => handleRemoveItem(item.id)}
                         disabled={updating === item.id}
                         className="flex-shrink-0 text-sm text-white bg-pink-500 hover:bg-pink-600 px-4 py-2 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
                       >

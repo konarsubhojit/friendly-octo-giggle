@@ -3,10 +3,14 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useDispatch } from 'react-redux';
 import { Product, ProductVariation, OrderItem } from '@/lib/types';
+import { addToCart } from '@/lib/features/cart/cartSlice';
+import type { AppDispatch } from '@/lib/store';
 import CartIcon from '@/components/layout/CartIcon';
 
 export default function ProductClient({ product }: { product: Product }) {
+  const dispatch = useDispatch<AppDispatch>();
   const [quantity, setQuantity] = useState(1);
   const [selectedVariation, setSelectedVariation] = useState<ProductVariation | null>(
     product.variations && product.variations.length > 0 ? product.variations[0] : null
@@ -84,28 +88,17 @@ export default function ProductClient({ product }: { product: Product }) {
     setCartSuccess(false);
 
     try {
-      const res = await fetch('/api/cart', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          productId: product.id,
-          variationId: selectedVariation?.id,
-          quantity,
-        }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || 'Failed to add to cart');
-      }
+      await dispatch(addToCart({
+        productId: product.id,
+        variationId: selectedVariation?.id,
+        quantity,
+      })).unwrap();
 
       setCartSuccess(true);
       setTimeout(() => setCartSuccess(false), 3000);
     } catch (err) {
       console.error('Error adding to cart:', err);
-      setError('Something went wrong. Please try again.');
+      setError(typeof err === 'string' ? err : 'Something went wrong. Please try again.');
     } finally {
       setAddingToCart(false);
     }

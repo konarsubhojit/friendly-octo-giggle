@@ -1,25 +1,18 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
+import { fetchCart, selectCartItemCount } from '@/lib/features/cart/cartSlice';
+import type { AppDispatch } from '@/lib/store';
 
 export default function CartIcon() {
-  const [itemCount, setItemCount] = useState(0);
-
-  const fetchCartCount = useCallback(async () => {
-    try {
-      const res = await fetch('/api/cart');
-      const data = await res.json();
-      const count = data.cart?.items?.reduce((total: number, item: { quantity: number }) => total + item.quantity, 0) || 0;
-      setItemCount(count);
-    } catch (err) {
-      console.error('Error fetching cart count:', err);
-    }
-  }, []);
+  const dispatch = useDispatch<AppDispatch>();
+  const itemCount = useSelector(selectCartItemCount);
 
   useEffect(() => {
-    fetchCartCount();
-  }, [fetchCartCount]);
+    dispatch(fetchCart());
+  }, [dispatch]);
 
   return (
     <Link href="/cart" className="relative text-gray-700 hover:text-blue-600 transition-all duration-300" aria-label="Shopping cart">
