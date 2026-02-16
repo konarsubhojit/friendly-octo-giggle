@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
+import { drizzleDb } from '@/lib/db';
+import * as schema from '@/lib/schema';
+import { eq } from 'drizzle-orm';
 import { auth } from '@/lib/auth';
 import { UpdateCartItemInput } from '@/lib/types';
 
@@ -24,12 +26,12 @@ export async function PATCH(
     }
 
     // Get cart item
-    const cartItem = await prisma.cartItem.findUnique({
-      where: { id },
-      include: {
+    const cartItem = await drizzleDb.query.cartItems.findFirst({
+      where: eq(schema.cartItems.id, id),
+      with: {
         cart: true,
         product: {
-          include: {
+          with: {
             variations: true,
           },
         },
@@ -69,10 +71,9 @@ export async function PATCH(
     }
 
     // Update quantity
-    await prisma.cartItem.update({
-      where: { id },
-      data: { quantity: body.quantity },
-    });
+    await drizzleDb.update(schema.cartItems)
+      .set({ quantity: body.quantity, updatedAt: new Date() })
+      .where(eq(schema.cartItems.id, id));
 
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -95,9 +96,9 @@ export async function DELETE(
     const sessionId = request.cookies.get('cart_session')?.value;
 
     // Get cart item
-    const cartItem = await prisma.cartItem.findUnique({
-      where: { id },
-      include: {
+    const cartItem = await drizzleDb.query.cartItems.findFirst({
+      where: eq(schema.cartItems.id, id),
+      with: {
         cart: true,
       },
     });
@@ -122,9 +123,7 @@ export async function DELETE(
     }
 
     // Delete item
-    await prisma.cartItem.delete({
-      where: { id },
-    });
+    await drizzleDb.delete(schema.cartItems).where(eq(schema.cartItems.id, id));
 
     return NextResponse.json({ success: true });
   } catch (error) {

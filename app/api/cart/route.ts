@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
+import { drizzleDb } from '@/lib/db';
+import * as schema from '@/lib/schema';
+import { eq, and, isNull } from 'drizzle-orm';
 import { auth } from '@/lib/auth';
 import { AddToCartInput } from '@/lib/types';
 
@@ -16,15 +18,15 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ cart: null });
     }
 
-    const cart = await prisma.cart.findFirst({
+    const cart = await drizzleDb.query.carts.findFirst({
       where: session?.user?.id
-        ? { userId: session.user.id }
-        : { sessionId },
-      include: {
+        ? eq(schema.carts.userId, session.user.id)
+        : eq(schema.carts.sessionId, sessionId!),
+      with: {
         items: {
-          include: {
+          with: {
             product: {
-              include: {
+              with: {
                 variations: true,
               },
             },
@@ -91,9 +93,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify product exists and has stock
-    const product = await prisma.product.findUnique({
-      where: { id: body.productId },
-      include: { variations: true },
+    const product = await drizzleDb.query.products.findFirst({
+      where: eq(schema.products.id, body.productId),
+      with: { variations: true },
     });
 
     if (!product) {
@@ -129,35 +131,38 @@ export async function POST(request: NextRequest) {
 
     if (session?.user?.id) {
       // Logged-in user
-      cart = await prisma.cart.upsert({
-        where: { userId: session.user.id },
-        create: { userId: session.user.id },
-        update: {},
+      cart = await drizzleDb.query.carts.findFirst({
+        where: eq(schema.carts.userId, session.user.id),
       });
+      if (!cart) {
+        [cart] = await drizzleDb.insert(schema.carts).values({ userId: session.user.id, updatedAt: new Date() }).returning();
+      }
     } else {
       // Guest user
       if (!sessionId) {
         sessionId = `guest_${Date.now()}_${Math.random().toString(36).substring(7)}`;
       }
-      
-      cart = await prisma.cart.upsert({
-        where: { sessionId },
-        create: { sessionId },
-        update: {},
+
+      cart = await drizzleDb.query.carts.findFirst({
+        where: eq(schema.carts.sessionId, sessionId),
       });
+      if (!cart) {
+        [cart] = await drizzleDb.insert(schema.carts).values({ sessionId, updatedAt: new Date() }).returning();
+      }
     }
 
     // Add or update cart item
     // Find existing item (variationId can be null, so we need to handle it separately)
-    const existingItem = await prisma.cartItem.findFirst({
-      where: {
-        cartId: cart.id,
-        productId: body.productId,
-        variationId: body.variationId ?? null,
-      },
+    const existingItem = await drizzleDb.query.cartItems.findFirst({
+      where: and(
+        eq(schema.cartItems.cartId, cart.id),
+        eq(schema.cartItems.productId, body.productId),
+        body.variationId
+          ? eq(schema.cartItems.variationId, body.variationId)
+          : isNull(schema.cartItems.variationId)
+      ),
     });
 
-    let cartItem;
     if (existingItem) {
       // Update quantity
       const newQuantity = existingItem.quantity + body.quantity;
@@ -167,30 +172,28 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         );
       }
-      cartItem = await prisma.cartItem.update({
-        where: { id: existingItem.id },
-        data: { quantity: newQuantity },
-      });
+      await drizzleDb.update(schema.cartItems)
+        .set({ quantity: newQuantity, updatedAt: new Date() })
+        .where(eq(schema.cartItems.id, existingItem.id));
     } else {
       // Create new item
-      cartItem = await prisma.cartItem.create({
-        data: {
-          cartId: cart.id,
-          productId: body.productId,
-          variationId: body.variationId ?? null,
-          quantity: body.quantity,
-        },
+      await drizzleDb.insert(schema.cartItems).values({
+        cartId: cart.id,
+        productId: body.productId,
+        variationId: body.variationId ?? null,
+        quantity: body.quantity,
+        updatedAt: new Date(),
       });
     }
 
     // Fetch updated cart
-    const updatedCart = await prisma.cart.findUnique({
-      where: { id: cart.id },
-      include: {
+    const updatedCart = await drizzleDb.query.carts.findFirst({
+      where: eq(schema.carts.id, cart.id),
+      with: {
         items: {
-          include: {
+          with: {
             product: {
-              include: {
+              with: {
                 variations: true,
               },
             },
@@ -267,16 +270,14 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ success: true });
     }
 
-    const cart = await prisma.cart.findFirst({
+    const cart = await drizzleDb.query.carts.findFirst({
       where: session?.user?.id
-        ? { userId: session.user.id }
-        : { sessionId },
+        ? eq(schema.carts.userId, session.user.id)
+        : eq(schema.carts.sessionId, sessionId!),
     });
 
     if (cart) {
-      await prisma.cart.delete({
-        where: { id: cart.id },
-      });
+      await drizzleDb.delete(schema.carts).where(eq(schema.carts.id, cart.id));
     }
 
     const response = NextResponse.json({ success: true });

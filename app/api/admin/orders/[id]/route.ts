@@ -1,5 +1,7 @@
 import { NextRequest } from 'next/server';
-import { prisma } from '@/lib/db';
+import { drizzleDb } from '@/lib/db';
+import * as schema from '@/lib/schema';
+import { eq } from 'drizzle-orm';
 import { OrderStatus } from '@/lib/types';
 import { apiSuccess, apiError, handleApiError } from '@/lib/api-utils';
 import { auth } from '@/lib/auth';
@@ -40,18 +42,18 @@ export async function PATCH(
       return apiError('Invalid status', 400);
     }
 
-    const order = await prisma.order.update({
-      where: { id },
-      data: { status: body.status },
-      include: {
-        items: {
-          include: {
-            product: true,
-            variation: true,
-          },
-        },
-      },
+    await drizzleDb.update(schema.orders)
+      .set({ status: body.status, updatedAt: new Date() })
+      .where(eq(schema.orders.id, id));
+
+    const order = await drizzleDb.query.orders.findFirst({
+      where: eq(schema.orders.id, id),
+      with: { items: { with: { product: true, variation: true } } },
     });
+
+    if (!order) {
+      return apiError('Order not found', 404);
+    }
 
     // Invalidate order caches
     await invalidateCache('admin:orders:*');
@@ -81,16 +83,9 @@ export async function GET(
       `admin:order:${id}`,
       60, // Cache for 1 minute
       async () => {
-        return await prisma.order.findUnique({
-          where: { id },
-          include: {
-            items: {
-              include: {
-                product: true,
-                variation: true,
-              },
-            },
-          },
+        return await drizzleDb.query.orders.findFirst({
+          where: eq(schema.orders.id, id),
+          with: { items: { with: { product: true, variation: true } } },
         });
       },
       10 // Stale time

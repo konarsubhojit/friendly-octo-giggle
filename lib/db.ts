@@ -1,109 +1,107 @@
-import { PrismaClient } from '@prisma/client';
-import { PrismaPg } from '@prisma/adapter-pg';
+import { drizzle } from 'drizzle-orm/node-postgres';
 import pg from 'pg';
+import * as schema from './schema';
+import { eq, desc } from 'drizzle-orm';
 import { Product, ProductInput } from './types';
 
-// Singleton Prisma client for serverless
-const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined;
+// ─── Connection Pool (singleton for serverless) ─────────
+
+const globalForDb = globalThis as unknown as {
+  pool: pg.Pool | undefined;
 };
 
-function createPrismaClient() {
+function createPool() {
   const connectionString = process.env.DATABASE_URL || '';
   const isSSL = !connectionString.includes('sslmode=disable') && !connectionString.includes('localhost');
-  const pool = new pg.Pool({
+  return new pg.Pool({
     connectionString,
     ...(isSSL && { ssl: { rejectUnauthorized: false } }),
   });
-  const adapter = new PrismaPg(pool);
-  return new PrismaClient({ adapter, log: ['error'] });
 }
 
-export const prisma = globalForPrisma.prisma ?? createPrismaClient();
+const pool = globalForDb.pool ?? createPool();
+if (process.env.NODE_ENV !== 'production') globalForDb.pool = pool;
 
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+// ─── Drizzle Instance ───────────────────────────────────
+
+export const drizzleDb = drizzle(pool, { schema });
+
+// Export type for use in other files
+export type DrizzleDb = typeof drizzleDb;
+
+// ─── Product Helpers (with date serialization) ──────────
 
 export const db = {
   products: {
     findAll: async (): Promise<Product[]> => {
-      const products = await prisma.product.findMany({
-        orderBy: { createdAt: 'desc' },
-        include: {
-          variations: true,
-        },
+      const rows = await drizzleDb.query.products.findMany({
+        orderBy: [desc(schema.products.createdAt)],
+        with: { variations: true },
       });
-      type ProductWithVariations = (typeof products)[number];
-      type Variation = ProductWithVariations['variations'][number];
-      return products.map((p: ProductWithVariations) => ({
+      return rows.map((p) => ({
         ...p,
         createdAt: p.createdAt.toISOString(),
         updatedAt: p.updatedAt.toISOString(),
-        variations: p.variations.map((v: Variation) => ({
+        variations: p.variations.map((v) => ({
           ...v,
+          image: v.image ?? null,
           createdAt: v.createdAt.toISOString(),
           updatedAt: v.updatedAt.toISOString(),
         })),
       }));
     },
-    
+
     findById: async (id: string): Promise<Product | null> => {
-      const product = await prisma.product.findUnique({
-        where: { id },
-        include: {
-          variations: true,
-        },
+      const row = await drizzleDb.query.products.findFirst({
+        where: eq(schema.products.id, id),
+        with: { variations: true },
       });
-      if (!product) return null;
-      type ProductWithVariations = typeof product;
-      type Variation = ProductWithVariations['variations'][number];
+      if (!row) return null;
       return {
-        ...product,
-        createdAt: product.createdAt.toISOString(),
-        updatedAt: product.updatedAt.toISOString(),
-        variations: product.variations.map((v: Variation) => ({
+        ...row,
+        createdAt: row.createdAt.toISOString(),
+        updatedAt: row.updatedAt.toISOString(),
+        variations: row.variations.map((v) => ({
           ...v,
+          image: v.image ?? null,
           createdAt: v.createdAt.toISOString(),
           updatedAt: v.updatedAt.toISOString(),
         })),
       };
     },
-    
+
     create: async (input: ProductInput): Promise<Product> => {
-      const product = await prisma.product.create({
-        data: input,
-      });
+      const [row] = await drizzleDb
+        .insert(schema.products)
+        .values({ ...input, updatedAt: new Date() })
+        .returning();
       return {
-        ...product,
-        createdAt: product.createdAt.toISOString(),
-        updatedAt: product.updatedAt.toISOString(),
+        ...row,
+        createdAt: row.createdAt.toISOString(),
+        updatedAt: row.updatedAt.toISOString(),
       };
     },
-    
+
     update: async (id: string, input: Partial<ProductInput>): Promise<Product | null> => {
-      try {
-        const product = await prisma.product.update({
-          where: { id },
-          data: input,
-        });
-        return {
-          ...product,
-          createdAt: product.createdAt.toISOString(),
-          updatedAt: product.updatedAt.toISOString(),
-        };
-      } catch {
-        return null;
-      }
+      const [row] = await drizzleDb
+        .update(schema.products)
+        .set({ ...input, updatedAt: new Date() })
+        .where(eq(schema.products.id, id))
+        .returning();
+      if (!row) return null;
+      return {
+        ...row,
+        createdAt: row.createdAt.toISOString(),
+        updatedAt: row.updatedAt.toISOString(),
+      };
     },
-    
+
     delete: async (id: string): Promise<boolean> => {
-      try {
-        await prisma.product.delete({
-          where: { id },
-        });
-        return true;
-      } catch {
-        return false;
-      }
+      const result = await drizzleDb
+        .delete(schema.products)
+        .where(eq(schema.products.id, id))
+        .returning({ id: schema.products.id });
+      return result.length > 0;
     },
   },
 };

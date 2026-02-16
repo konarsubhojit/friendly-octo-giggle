@@ -1,5 +1,7 @@
 import { NextRequest } from 'next/server';
-import { prisma } from '@/lib/db';
+import { drizzleDb } from '@/lib/db';
+import * as schema from '@/lib/schema';
+import { eq } from 'drizzle-orm';
 import { auth } from '@/lib/auth';
 import { apiSuccess, apiError, handleApiError } from '@/lib/api-utils';
 import { getCachedData, invalidateCache } from '@/lib/redis';
@@ -48,20 +50,19 @@ export async function PATCH(
     }
 
     // Update user role
-    const user = await prisma.user.update({
-      where: { id },
-      data: { role: validated.role },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        emailVerified: true,
-        createdAt: true,
-        updatedAt: true,
-        image: true,
-      },
-    });
+    const [user] = await drizzleDb.update(schema.users)
+      .set({ role: validated.role, updatedAt: new Date() })
+      .where(eq(schema.users.id, id))
+      .returning({
+        id: schema.users.id,
+        name: schema.users.name,
+        email: schema.users.email,
+        role: schema.users.role,
+        emailVerified: schema.users.emailVerified,
+        createdAt: schema.users.createdAt,
+        updatedAt: schema.users.updatedAt,
+        image: schema.users.image,
+      });
 
     // Invalidate user caches
     await invalidateCache('admin:users:*');
@@ -89,25 +90,22 @@ export async function GET(
       `admin:user:${id}`,
       300, // Cache for 5 minutes
       async () => {
-        return await prisma.user.findUnique({
-          where: { id },
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            role: true,
-            emailVerified: true,
-            createdAt: true,
-            updatedAt: true,
-            image: true,
-            _count: {
-              select: {
-                orders: true,
-                sessions: true,
-              },
-            },
-          },
+        const user = await drizzleDb.query.users.findFirst({
+          where: eq(schema.users.id, id),
+          with: { orders: true, sessions: true },
         });
+        if (!user) return null;
+        return {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          emailVerified: user.emailVerified,
+          createdAt: user.createdAt,
+          updatedAt: user.updatedAt,
+          image: user.image,
+          _count: { orders: user.orders.length, sessions: user.sessions.length },
+        };
       },
       30 // Stale time
     );

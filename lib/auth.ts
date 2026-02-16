@@ -1,12 +1,18 @@
 import NextAuth from 'next-auth';
 import Google from 'next-auth/providers/google';
-import { PrismaAdapter } from '@auth/prisma-adapter';
-import { prisma } from '@/lib/db';
+import { DrizzleAdapter } from '@auth/drizzle-adapter';
+import { drizzleDb } from '@/lib/db';
+import { users, accounts, sessions, verificationTokens } from '@/lib/schema';
 import type { Adapter } from 'next-auth/adapters';
 import { logAuthEvent } from './logger';
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
-  adapter: PrismaAdapter(prisma) as Adapter,
+  adapter: DrizzleAdapter(drizzleDb, {
+    usersTable: users,
+    accountsTable: accounts,
+    sessionsTable: sessions,
+    verificationTokensTable: verificationTokens,
+  }) as Adapter,
   providers: [
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID!,

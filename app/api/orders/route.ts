@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
+import { drizzleDb } from '@/lib/db';
+import * as schema from '@/lib/schema';
+import { eq, inArray, sql } from 'drizzle-orm';
 import { invalidateCache } from '@/lib/redis';
-import { CreateOrderInput, OrderStatus } from '@/lib/types';
+import { CreateOrderInput } from '@/lib/types';
 import { withLogging } from '@/lib/api-middleware';
 import { logBusinessEvent, logError } from '@/lib/logger';
 import { auth } from '@/lib/auth';
-
-// Infer transaction client type from prisma instance
-type TransactionClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 
 export const dynamic = 'force-dynamic';
 
@@ -74,9 +73,9 @@ async function handlePost(request: NextRequest) {
     // Calculate total and verify product/variation availability
     let totalAmount = 0;
     const productIds = body.items.map(item => item.productId);
-    const products = await prisma.product.findMany({
-      where: { id: { in: productIds } },
-      include: { variations: true },
+    const products = await drizzleDb.query.products.findMany({
+      where: inArray(schema.products.id, productIds),
+      with: { variations: true },
     });
 
     type ProductWithVariations = (typeof products)[number];
@@ -142,86 +141,83 @@ async function handlePost(request: NextRequest) {
     }
 
     // Create order and update stock in a transaction
-    const order = await prisma.$transaction(async (tx: TransactionClient) => {
+    const order = await drizzleDb.transaction(async (tx) => {
       // Create order with userId
-      const newOrder = await tx.order.create({
-        data: {
-          userId: session.user.id,
-          customerName,
-          customerEmail,
-          customerAddress,
-          totalAmount,
-          status: OrderStatus.PENDING,
-          items: {
-            create: body.items.map(item => {
-              const product = products.find((p: ProductWithVariations) => p.id === item.productId)!;
-              let price = product.price;
-              
-              if (item.variationId) {
-                const variation = product.variations.find((v: ProductVariation) => v.id === item.variationId);
-                if (variation) {
-                  price = product.price + variation.priceModifier;
-                }
-              }
-              
-              return {
-                productId: item.productId,
-                variationId: item.variationId,
-                quantity: item.quantity,
-                price,
-              };
-            }),
-          },
-        },
-        include: {
-          items: {
-            include: {
-              product: true,
-              variation: true,
-            },
-          },
-        },
-      });
+      const [newOrder] = await tx.insert(schema.orders).values({
+        userId: session.user.id,
+        customerName,
+        customerEmail,
+        customerAddress,
+        totalAmount,
+        status: 'PENDING',
+        updatedAt: new Date(),
+      }).returning();
+
+      // Create order items
+      await tx.insert(schema.orderItems).values(
+        body.items.map(item => {
+          const product = products.find((p: ProductWithVariations) => p.id === item.productId)!;
+          let price = product.price;
+
+          if (item.variationId) {
+            const variation = product.variations.find((v: ProductVariation) => v.id === item.variationId);
+            if (variation) {
+              price = product.price + variation.priceModifier;
+            }
+          }
+
+          return {
+            orderId: newOrder.id,
+            productId: item.productId,
+            variationId: item.variationId ?? null,
+            quantity: item.quantity,
+            price,
+          };
+        })
+      );
 
       // Update product/variation stock
       for (const item of body.items) {
         if (item.variationId) {
           // Update variation stock
-          await tx.productVariation.update({
-            where: { id: item.variationId },
-            data: {
-              stock: {
-                decrement: item.quantity,
-              },
-            },
-          });
+          await tx.update(schema.productVariations)
+            .set({ stock: sql`${schema.productVariations.stock} - ${item.quantity}`, updatedAt: new Date() })
+            .where(eq(schema.productVariations.id, item.variationId));
         }
-        
+
         // Always update total product stock
-        await tx.product.update({
-          where: { id: item.productId },
-          data: {
-            stock: {
-              decrement: item.quantity,
-            },
-          },
-        });
+        await tx.update(schema.products)
+          .set({ stock: sql`${schema.products.stock} - ${item.quantity}`, updatedAt: new Date() })
+          .where(eq(schema.products.id, item.productId));
       }
 
       return newOrder;
     });
 
-    // Infer order item type from the order result
-    type OrderItem = (typeof order.items)[number];
+    // Re-fetch order with items, product, and variation details
+    const fullOrder = await drizzleDb.query.orders.findFirst({
+      where: eq(schema.orders.id, order.id),
+      with: { items: { with: { product: true, variation: true } } },
+    });
+
+    if (!fullOrder) {
+      return NextResponse.json(
+        { error: 'Failed to retrieve created order' },
+        { status: 500 }
+      );
+    }
+
+    // Infer order item type from the full order result
+    type OrderItem = (typeof fullOrder.items)[number];
 
     // Log successful order creation
     logBusinessEvent({
       event: 'order_created',
       details: {
-        orderId: order.id,
-        totalAmount: order.totalAmount,
-        itemCount: order.items.length,
-        customerEmail: order.customerEmail,
+        orderId: fullOrder.id,
+        totalAmount: fullOrder.totalAmount,
+        itemCount: fullOrder.items.length,
+        customerEmail: fullOrder.customerEmail,
       },
       success: true,
     });
@@ -237,10 +233,10 @@ async function handlePost(request: NextRequest) {
 
     return NextResponse.json({ 
       order: {
-        ...order,
-        createdAt: order.createdAt.toISOString(),
-        updatedAt: order.updatedAt.toISOString(),
-        items: order.items.map((item: OrderItem) => ({
+        ...fullOrder,
+        createdAt: fullOrder.createdAt.toISOString(),
+        updatedAt: fullOrder.updatedAt.toISOString(),
+        items: fullOrder.items.map((item: OrderItem) => ({
           ...item,
           product: {
             ...item.product,

@@ -1,7 +1,9 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { prisma } from '@/lib/db';
+import { drizzleDb } from '@/lib/db';
+import * as schema from '@/lib/schema';
+import { eq, inArray, sql } from 'drizzle-orm';
 import { invalidateCache } from '@/lib/redis';
 import {
   ProductInputSchema,
@@ -14,9 +16,6 @@ import {
   type OrderStatusType,
 } from '@/lib/validations';
 import type { Product } from '@/lib/types';
-
-// Infer transaction client type from prisma instance
-type TransactionClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 
 // Server Action for creating a product (admin only)
 export async function createProductAction(
@@ -33,9 +32,10 @@ export async function createProductAction(
     const validated = ProductInputSchema.parse(data);
 
     // Create product
-    const product = await prisma.product.create({
-      data: validated,
-    });
+    const [product] = await drizzleDb
+      .insert(schema.products)
+      .values(validated)
+      .returning();
 
     // Invalidate cache
     await invalidateCache('products:*');
@@ -76,10 +76,15 @@ export async function updateProductAction(
     const validated = ProductUpdateSchema.parse(data);
 
     // Update product
-    const product = await prisma.product.update({
-      where: { id },
-      data: validated,
-    });
+    const [product] = await drizzleDb
+      .update(schema.products)
+      .set({ ...validated, updatedAt: new Date() })
+      .where(eq(schema.products.id, id))
+      .returning();
+
+    if (!product) {
+      return { success: false, error: 'Product not found' };
+    }
 
     // Invalidate cache
     await invalidateCache('products:*');
@@ -118,9 +123,9 @@ export async function deleteProductAction(
     }
 
     // Delete product
-    await prisma.product.delete({
-      where: { id },
-    });
+    await drizzleDb
+      .delete(schema.products)
+      .where(eq(schema.products.id, id));
 
     // Invalidate cache
     await invalidateCache('products:*');
@@ -165,8 +170,9 @@ export async function createOrderAction(
 
     // Get product IDs and verify existence
     const productIds = validated.items.map((item) => item.productId);
-    const products = await prisma.product.findMany({
-      where: { id: { in: productIds } },
+    const products = await drizzleDb.query.products.findMany({
+      where: inArray(schema.products.id, productIds),
+      with: { variations: true },
     });
 
     // Infer product type from query result
@@ -190,49 +196,57 @@ export async function createOrderAction(
     }
 
     // Create order and update stock in transaction
-    const order = await prisma.$transaction(async (tx: TransactionClient) => {
-      const newOrder = await tx.order.create({
-        data: {
+    const newOrderId = await drizzleDb.transaction(async (tx) => {
+      const [newOrder] = await tx
+        .insert(schema.orders)
+        .values({
           customerName: validated.customerName,
           customerEmail: validated.customerEmail,
           customerAddress: validated.customerAddress,
           totalAmount,
           status: 'PENDING',
-          items: {
-            create: validated.items.map((item) => {
-              const product = products.find((p: ProductType) => p.id === item.productId)!;
-              return {
-                productId: item.productId,
-                quantity: item.quantity,
-                price: product.price,
-              };
-            }),
-          },
-        },
-        include: {
-          items: {
-            include: {
-              product: true,
-            },
-          },
-        },
-      });
+        })
+        .returning();
+
+      // Insert order items
+      await tx.insert(schema.orderItems).values(
+        validated.items.map((item) => {
+          const product = products.find((p: ProductType) => p.id === item.productId)!;
+          return {
+            orderId: newOrder.id,
+            productId: item.productId,
+            quantity: item.quantity,
+            price: product.price,
+          };
+        })
+      );
 
       // Update product stock
       for (const item of validated.items) {
-        await tx.product.update({
-          where: { id: item.productId },
-          data: {
-            stock: { decrement: item.quantity },
-          },
-        });
+        await tx
+          .update(schema.products)
+          .set({ stock: sql`${schema.products.stock} - ${item.quantity}` })
+          .where(eq(schema.products.id, item.productId));
       }
 
-      return newOrder;
+      return newOrder.id;
     });
 
-    // Infer order item type from the order result
-    type OrderItemType = (typeof order.items)[number];
+    // Re-fetch the order with items and product details
+    const order = await drizzleDb.query.orders.findFirst({
+      where: eq(schema.orders.id, newOrderId),
+      with: {
+        items: {
+          with: {
+            product: true,
+          },
+        },
+      },
+    });
+
+    if (!order) {
+      return { success: false, error: 'Failed to retrieve created order' };
+    }
 
     // Invalidate product cache
     await invalidateCache('products:*');
@@ -255,7 +269,7 @@ export async function createOrderAction(
         status: order.status as OrderStatusType,
         createdAt: order.createdAt.toISOString(),
         updatedAt: order.updatedAt.toISOString(),
-        items: order.items.map((item: OrderItemType) => ({
+        items: order.items.map((item) => ({
           id: item.id,
           productId: item.productId,
           quantity: item.quantity,
@@ -308,20 +322,27 @@ export async function updateOrderStatusAction(
     UpdateOrderStatusSchema.parse({ status });
 
     // Update order
-    const order = await prisma.order.update({
-      where: { id },
-      data: { status },
-      include: {
+    await drizzleDb
+      .update(schema.orders)
+      .set({ status, updatedAt: new Date() })
+      .where(eq(schema.orders.id, id))
+      .returning();
+
+    // Re-fetch order with items and product details
+    const order = await drizzleDb.query.orders.findFirst({
+      where: eq(schema.orders.id, id),
+      with: {
         items: {
-          include: {
+          with: {
             product: true,
           },
         },
       },
     });
 
-    // Infer order item type from the order result  
-    type UpdateOrderItemType = (typeof order.items)[number];
+    if (!order) {
+      return { success: false, error: 'Order not found' };
+    }
 
     // Revalidate admin page
     revalidatePath('/admin');
@@ -337,7 +358,7 @@ export async function updateOrderStatusAction(
         status: order.status as OrderStatusType,
         createdAt: order.createdAt.toISOString(),
         updatedAt: order.updatedAt.toISOString(),
-        items: order.items.map((item: UpdateOrderItemType) => ({
+        items: order.items.map((item) => ({
           id: item.id,
           productId: item.productId,
           quantity: item.quantity,

@@ -1,5 +1,7 @@
 import { NextRequest } from 'next/server';
-import { prisma } from '@/lib/db';
+import { drizzleDb } from '@/lib/db';
+import * as schema from '@/lib/schema';
+import { desc } from 'drizzle-orm';
 import { apiSuccess, apiError, handleApiError } from '@/lib/api-utils';
 import { auth } from '@/lib/auth';
 import { getCachedData } from '@/lib/redis';
@@ -34,16 +36,9 @@ export async function GET(request: NextRequest) {
       'admin:orders:all',
       60, // Cache for 1 minute (orders change more frequently)
       async () => {
-        return await prisma.order.findMany({
-          orderBy: { createdAt: 'desc' },
-          include: {
-            items: {
-              include: {
-                product: true,
-                variation: true,
-              },
-            },
-          },
+        return await drizzleDb.query.orders.findMany({
+          orderBy: [desc(schema.orders.createdAt)],
+          with: { items: { with: { product: true, variation: true } } },
         });
       },
       10 // Stale time

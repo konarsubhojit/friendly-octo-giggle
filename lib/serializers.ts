@@ -1,9 +1,15 @@
-import type { Order as PrismaOrder, OrderItem as PrismaOrderItem, Product as PrismaProduct, ProductVariation as PrismaProductVariation } from '@prisma/client';
+import type { InferSelectModel } from 'drizzle-orm';
+import { orders, orderItems, products, productVariations } from './schema';
 
-type OrderWithItems = PrismaOrder & {
-  items: (PrismaOrderItem & {
-    product: PrismaProduct;
-    variation: PrismaProductVariation | null;
+type DbOrder = InferSelectModel<typeof orders>;
+type DbOrderItem = InferSelectModel<typeof orderItems>;
+type DbProduct = InferSelectModel<typeof products>;
+type DbProductVariation = InferSelectModel<typeof productVariations>;
+
+type OrderWithItems = DbOrder & {
+  items: (DbOrderItem & {
+    product: DbProduct;
+    variation: DbProductVariation | null;
   })[];
 };
 
