@@ -48,7 +48,7 @@ Complete documentation is available in the [`/docs`](./docs) folder:
 | **Next.js 16** | React framework with App Router |
 | **TypeScript** | Type-safe development |
 | **PostgreSQL** | Primary database |
-| **Prisma ORM v7** | Database toolkit |
+| **Drizzle ORM** | Database toolkit |
 | **Redis** | Caching layer |
 | **NextAuth.js v5** | Authentication |
 | **Tailwind CSS v4** | Styling |
