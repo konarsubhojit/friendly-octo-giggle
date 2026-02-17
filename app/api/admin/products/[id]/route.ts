@@ -1,24 +1,24 @@
 import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
-import { invalidateCache } from '@/lib/redis';
 import { ProductUpdateSchema } from '@/lib/validations';
 import { apiSuccess, apiError, handleApiError } from '@/lib/api-utils';
 import { auth } from '@/lib/auth';
+import { revalidateTag } from 'next/cache';
 
 export const dynamic = 'force-dynamic';
 
 // Check if user is admin
 async function checkAdminAuth() {
   const session = await auth();
-  
+
   if (!session?.user) {
     return { authorized: false, error: 'Not authenticated', status: 401 as const };
   }
-  
+
   if (session.user.role !== 'ADMIN') {
     return { authorized: false, error: 'Not authorized - Admin access required', status: 403 as const };
   }
-  
+
   return { authorized: true };
 }
 
@@ -34,20 +34,20 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
-    
+
     // Validate input with Zod
     const validated = ProductUpdateSchema.parse(body);
-    
+
+    // Cache invalidation is handled automatically in db.products.update
     const product = await db.products.update(id, validated);
-    
+
     if (!product) {
       return apiError('Product not found', 404);
     }
-    
-    // Invalidate cache
-    await invalidateCache('products:*');
-    await invalidateCache(`product:${id}`);
-    
+
+    // Revalidate Next.js cache tags (with empty config for immediate revalidation)
+    revalidateTag('products', {});
+
     return apiSuccess({ product });
   } catch (error) {
     return handleApiError(error);
@@ -65,16 +65,17 @@ export async function DELETE(
 
   try {
     const { id } = await params;
+
+    // Cache invalidation is handled automatically in db.products.delete
     const success = await db.products.delete(id);
-    
+
     if (!success) {
       return apiError('Product not found', 404);
     }
-    
-    // Invalidate cache
-    await invalidateCache('products:*');
-    await invalidateCache(`product:${id}`);
-    
+
+    // Revalidate Next.js cache tags (with empty config for immediate revalidation)
+    revalidateTag('products', {});
+
     return apiSuccess({ success: true });
   } catch (error) {
     return handleApiError(error);
