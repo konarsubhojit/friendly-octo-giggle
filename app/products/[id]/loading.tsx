@@ -1,18 +1,11 @@
+import HeaderSkeleton from '@/components/skeletons/HeaderSkeleton';
+
 const VARIATION_SKELETONS = ['v1', 'v2', 'v3', 'v4'] as const;
 
 export default function ProductDetailLoading() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
-      {/* Header Skeleton */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-lg border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="h-8 w-32 bg-gray-200 rounded animate-pulse" />
-          <div className="flex items-center gap-4">
-            <div className="h-8 w-20 bg-gray-200 rounded animate-pulse" />
-            <div className="h-8 w-8 bg-gray-200 rounded-full animate-pulse" />
-          </div>
-        </div>
-      </header>
+      <HeaderSkeleton />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
         {/* Breadcrumb Skeleton */}
