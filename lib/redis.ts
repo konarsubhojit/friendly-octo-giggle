@@ -6,12 +6,27 @@ import { env } from './env';
 let redis: Redis | null = null;
 
 export function getRedisClient(): Redis {
+  if (redis) {
+    return redis;
+  }
+
   const redisUrl = env.REDIS_URL || 'redis://localhost:6379';
-  redis ??= new Redis(redisUrl, {
+  
+  // Parse Redis URL using WHATWG URL API to avoid deprecated url.parse()
+  const parsedUrl = new URL(redisUrl);
+  
+  redis = new Redis({
+    host: parsedUrl.hostname,
+    port: Number.parseInt(parsedUrl.port || '6379', 10),
+    password: parsedUrl.password || undefined,
+    username: parsedUrl.username || undefined,
+    db: parsedUrl.pathname ? Number.parseInt(parsedUrl.pathname.slice(1), 10) : 0,
+    tls: parsedUrl.protocol === 'rediss:' ? {} : undefined,
     maxRetriesPerRequest: 3,
     enableReadyCheck: false,
     lazyConnect: true,
   });
+  
   return redis;
 }
 
