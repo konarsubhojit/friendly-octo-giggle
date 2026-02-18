@@ -103,7 +103,7 @@ export type Env = z.infer<typeof EnvSchema>;
 // Cart validation schemas
 export const AddToCartSchema = z.object({
   productId: z.string().regex(UUID_REGEX, 'Invalid product ID'),
-  variationId: z.string().regex(UUID_REGEX, 'Invalid variation ID').optional(),
+  variationId: z.string().regex(UUID_REGEX, 'Invalid variation ID').nullish(),
   quantity: z.number().int('Quantity must be an integer').positive('Quantity must be positive'),
 });
 
