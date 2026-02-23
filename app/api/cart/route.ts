@@ -1,13 +1,13 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { drizzleDb } from '@/lib/db';
-import * as schema from '@/lib/schema';
-import { eq, and, isNull } from 'drizzle-orm';
-import { auth } from '@/lib/auth';
-import { AddToCartSchema, type AddToCartInput } from '@/lib/validations';
-import { handleValidationError } from '@/lib/api-utils';
-import type { Session } from 'next-auth';
+import { NextRequest, NextResponse } from "next/server";
+import { drizzleDb } from "@/lib/db";
+import * as schema from "@/lib/schema";
+import { eq, and, isNull } from "drizzle-orm";
+import { auth } from "@/lib/auth";
+import { AddToCartSchema, type AddToCartInput } from "@/lib/validations";
+import { handleValidationError } from "@/lib/api-utils";
+import type { Session } from "next-auth";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 // Types for cart operations
 interface ProductWithVariations {
@@ -37,28 +37,31 @@ interface CartWithItems {
 
 // Helper: Verify product exists and has sufficient stock
 async function verifyProductStock(
-  body: AddToCartInput
-): Promise<{ product: ProductWithVariations; availableStock: number } | { error: string; status: number }> {
+  body: AddToCartInput,
+): Promise<
+  | { product: ProductWithVariations; availableStock: number }
+  | { error: string; status: number }
+> {
   const product = await drizzleDb.query.products.findFirst({
     where: eq(schema.products.id, body.productId),
     with: { variations: true },
   });
 
   if (!product) {
-    return { error: 'Product not found', status: 404 };
+    return { error: "Product not found", status: 404 };
   }
 
   let availableStock = product.stock;
   if (body.variationId) {
     const variation = product.variations.find((v) => v.id === body.variationId);
     if (!variation) {
-      return { error: 'Variation not found', status: 404 };
+      return { error: "Variation not found", status: 404 };
     }
     availableStock = variation.stock;
   }
 
   if (availableStock < body.quantity) {
-    return { error: 'Insufficient stock', status: 400 };
+    return { error: "Insufficient stock", status: 400 };
   }
 
   return { product, availableStock };
@@ -67,25 +70,33 @@ async function verifyProductStock(
 // Helper: Get or create cart for user/guest
 async function getOrCreateCart(
   session: Session | null,
-  sessionId: string | undefined
+  sessionId: string | undefined,
 ): Promise<{ cart: { id: string }; sessionId: string | undefined }> {
   if (session?.user?.id) {
     let cart = await drizzleDb.query.carts.findFirst({
       where: eq(schema.carts.userId, session.user.id),
     });
     if (!cart) {
-      [cart] = await drizzleDb.insert(schema.carts).values({ userId: session.user.id, updatedAt: new Date() }).returning();
+      [cart] = await drizzleDb
+        .insert(schema.carts)
+        .values({ userId: session.user.id, updatedAt: new Date() })
+        .returning();
     }
     return { cart, sessionId: undefined };
   }
 
   // Guest user
-  const guestSessionId = sessionId ?? `guest_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+  const guestSessionId =
+    sessionId ??
+    `guest_${Date.now()}_${Math.random().toString(36).substring(7)}`;
   let cart = await drizzleDb.query.carts.findFirst({
     where: eq(schema.carts.sessionId, guestSessionId),
   });
   if (!cart) {
-    [cart] = await drizzleDb.insert(schema.carts).values({ sessionId: guestSessionId, updatedAt: new Date() }).returning();
+    [cart] = await drizzleDb
+      .insert(schema.carts)
+      .values({ sessionId: guestSessionId, updatedAt: new Date() })
+      .returning();
   }
   return { cart, sessionId: guestSessionId };
 }
@@ -94,7 +105,7 @@ async function getOrCreateCart(
 async function addOrUpdateCartItem(
   cartId: string,
   body: AddToCartInput,
-  availableStock: number
+  availableStock: number,
 ): Promise<{ error: string; status: number } | null> {
   const existingItem = await drizzleDb.query.cartItems.findFirst({
     where: and(
@@ -102,16 +113,17 @@ async function addOrUpdateCartItem(
       eq(schema.cartItems.productId, body.productId),
       body.variationId
         ? eq(schema.cartItems.variationId, body.variationId)
-        : isNull(schema.cartItems.variationId)
+        : isNull(schema.cartItems.variationId),
     ),
   });
 
   if (existingItem) {
     const newQuantity = existingItem.quantity + body.quantity;
     if (newQuantity > availableStock) {
-      return { error: 'Insufficient stock', status: 400 };
+      return { error: "Insufficient stock", status: 400 };
     }
-    await drizzleDb.update(schema.cartItems)
+    await drizzleDb
+      .update(schema.cartItems)
       .set({ quantity: newQuantity, updatedAt: new Date() })
       .where(eq(schema.cartItems.id, existingItem.id));
   } else {
@@ -162,7 +174,7 @@ function serializeCart(cart: CartWithItems) {
 export async function GET(request: NextRequest) {
   try {
     const session = await auth();
-    const sessionId = request.cookies.get('cart_session')?.value;
+    const sessionId = request.cookies.get("cart_session")?.value;
 
     if (!session?.user?.id && !sessionId) {
       return NextResponse.json({ cart: null });
@@ -186,10 +198,15 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ cart: null });
     }
 
-    return NextResponse.json({ cart: serializeCart(cart as unknown as CartWithItems) });
+    return NextResponse.json({
+      cart: serializeCart(cart as unknown as CartWithItems),
+    });
   } catch (error) {
-    console.error('Error fetching cart:', error);
-    return NextResponse.json({ error: 'Failed to fetch cart' }, { status: 500 });
+    console.error("Error fetching cart:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch cart" },
+      { status: 500 },
+    );
   }
 }
 
@@ -199,28 +216,69 @@ export async function POST(request: NextRequest) {
     const session = await auth();
     const rawBody = await request.json();
 
+    // ===== DEBUG LOGGING =====
+    console.log("[CART POST] Request received");
+    console.log(
+      "[CART POST] Raw request body:",
+      JSON.stringify(rawBody, null, 2),
+    );
+    console.log("[CART POST] Raw body type check:", {
+      productId: { value: rawBody.productId, type: typeof rawBody.productId },
+      variationId: {
+        value: rawBody.variationId,
+        type: typeof rawBody.variationId,
+      },
+      quantity: { value: rawBody.quantity, type: typeof rawBody.quantity },
+    });
+
     // Validate input
     const parseResult = AddToCartSchema.safeParse(rawBody);
+    console.log("[CART POST] Validation result success:", parseResult.success);
+
     if (!parseResult.success) {
+      console.error("[CART POST] Validation failed with errors:");
+      parseResult.error.issues.forEach((err, index) => {
+        console.error(`  Error ${index + 1}:`, {
+          path: err.path,
+          code: err.code,
+          message: err.message,
+        });
+      });
+      console.error(
+        "[CART POST] Full validation error object:",
+        parseResult.error,
+      );
       return handleValidationError(parseResult.error);
     }
+
     const body = parseResult.data;
+    console.log("[CART POST] Validation passed. Parsed body:", {
+      productId: body.productId,
+      variationId: body.variationId,
+      quantity: body.quantity,
+    });
 
     // Verify product and stock
     const stockResult = await verifyProductStock(body);
-    if ('error' in stockResult) {
-      return NextResponse.json({ error: stockResult.error }, { status: stockResult.status });
+    if ("error" in stockResult) {
+      return NextResponse.json(
+        { error: stockResult.error },
+        { status: stockResult.status },
+      );
     }
     const { availableStock } = stockResult;
 
     // Get or create cart
-    const cookieSessionId = request.cookies.get('cart_session')?.value;
+    const cookieSessionId = request.cookies.get("cart_session")?.value;
     const { cart, sessionId } = await getOrCreateCart(session, cookieSessionId);
 
     // Add or update item
     const itemError = await addOrUpdateCartItem(cart.id, body, availableStock);
     if (itemError) {
-      return NextResponse.json({ error: itemError.error }, { status: itemError.status });
+      return NextResponse.json(
+        { error: itemError.error },
+        { status: itemError.status },
+      );
     }
 
     // Fetch updated cart
@@ -237,28 +295,31 @@ export async function POST(request: NextRequest) {
     });
 
     if (!updatedCart) {
-      return NextResponse.json({ error: 'Cart not found' }, { status: 404 });
+      return NextResponse.json({ error: "Cart not found" }, { status: 404 });
     }
 
     // Build response with session cookie for guests
     const response = NextResponse.json(
       { cart: serializeCart(updatedCart as unknown as CartWithItems) },
-      { status: 201 }
+      { status: 201 },
     );
 
     if (!session?.user?.id && sessionId) {
-      response.cookies.set('cart_session', sessionId, {
+      response.cookies.set("cart_session", sessionId, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
         maxAge: 60 * 60 * 24 * 30,
       });
     }
 
     return response;
   } catch (error) {
-    console.error('Error adding to cart:', error);
-    return NextResponse.json({ error: 'Failed to add to cart' }, { status: 500 });
+    console.error("Error adding to cart:", error);
+    return NextResponse.json(
+      { error: "Failed to add to cart" },
+      { status: 500 },
+    );
   }
 }
 
@@ -266,7 +327,7 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const session = await auth();
-    const sessionId = request.cookies.get('cart_session')?.value;
+    const sessionId = request.cookies.get("cart_session")?.value;
 
     if (!session?.user?.id && !sessionId) {
       return NextResponse.json({ success: true });
@@ -285,15 +346,15 @@ export async function DELETE(request: NextRequest) {
     const response = NextResponse.json({ success: true });
     // Clear cart session cookie
     if (!session?.user?.id && sessionId) {
-      response.cookies.delete('cart_session');
+      response.cookies.delete("cart_session");
     }
 
     return response;
   } catch (error) {
-    console.error('Error clearing cart:', error);
+    console.error("Error clearing cart:", error);
     return NextResponse.json(
-      { error: 'Failed to clear cart' },
-      { status: 500 }
+      { error: "Failed to clear cart" },
+      { status: 500 },
     );
   }
 }

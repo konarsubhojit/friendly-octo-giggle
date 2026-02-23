@@ -75,7 +75,7 @@ export default function ProductClient({ product }: ProductClientProps) {
     try {
       await dispatch(addToCart({
         productId: product.id,
-        variationId: selectedVariation?.id,
+        variationId: selectedVariation?.id ?? null,
         quantity,
       })).unwrap();
 

@@ -33,11 +33,11 @@ export interface ProductInput {
 }
 
 export enum OrderStatus {
-  PENDING = 'PENDING',
-  PROCESSING = 'PROCESSING',
-  SHIPPED = 'SHIPPED',
-  DELIVERED = 'DELIVERED',
-  CANCELLED = 'CANCELLED',
+  PENDING = "PENDING",
+  PROCESSING = "PROCESSING",
+  SHIPPED = "SHIPPED",
+  DELIVERED = "DELIVERED",
+  CANCELLED = "CANCELLED",
 }
 
 export interface OrderItem {
@@ -109,7 +109,7 @@ export interface CartItemWithProduct extends CartItem {
 
 export interface AddToCartInput {
   productId: string;
-  variationId?: string;
+  variationId?: string | null;
   quantity: number;
 }
 
