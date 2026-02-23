@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
 export function proxy(request: NextRequest) {
-  // Enforce HTTPS in both development and production
   const host = request.headers.get("host") || "";
   const proto = request.headers.get("x-forwarded-proto") || "http";
 

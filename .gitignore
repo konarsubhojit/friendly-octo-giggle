@@ -44,3 +44,4 @@ test-db-connection.ts
 # Claude agent
 tmpclaude*
 nul
+certificates/

@@ -1,22 +1,30 @@
-import { NextRequest } from 'next/server';
-import { db } from '@/lib/db';
-import { ProductUpdateSchema } from '@/lib/validations';
-import { apiSuccess, apiError, handleApiError } from '@/lib/api-utils';
-import { auth } from '@/lib/auth';
-import { revalidateTag } from 'next/cache';
+import { NextRequest } from "next/server";
+import { db } from "@/lib/db";
+import { ProductUpdateSchema } from "@/lib/validations";
+import { apiSuccess, apiError, handleApiError } from "@/lib/api-utils";
+import { auth } from "@/lib/auth";
+import { revalidateTag } from "next/cache";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 // Check if user is admin
 async function checkAdminAuth() {
   const session = await auth();
 
   if (!session?.user) {
-    return { authorized: false, error: 'Not authenticated', status: 401 as const };
+    return {
+      authorized: false,
+      error: "Not authenticated",
+      status: 401 as const,
+    };
   }
 
-  if (session.user.role !== 'ADMIN') {
-    return { authorized: false, error: 'Not authorized - Admin access required', status: 403 as const };
+  if (session.user.role !== "ADMIN") {
+    return {
+      authorized: false,
+      error: "Not authorized - Admin access required",
+      status: 403 as const,
+    };
   }
 
   return { authorized: true };
@@ -24,7 +32,7 @@ async function checkAdminAuth() {
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const authCheck = await checkAdminAuth();
   if (!authCheck.authorized) {
@@ -42,11 +50,11 @@ export async function PUT(
     const product = await db.products.update(id, validated);
 
     if (!product) {
-      return apiError('Product not found', 404);
+      return apiError("Product not found", 404);
     }
 
     // Revalidate Next.js cache tags (with empty config for immediate revalidation)
-    revalidateTag('products', {});
+    revalidateTag("products", {});
 
     return apiSuccess({ product });
   } catch (error) {
@@ -56,7 +64,7 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const authCheck = await checkAdminAuth();
   if (!authCheck.authorized) {
@@ -67,16 +75,16 @@ export async function DELETE(
     const { id } = await params;
 
     // Cache invalidation is handled automatically in db.products.delete
-    const success = await db.products.delete(id);
+    const deleted = await db.products.delete(id);
 
-    if (!success) {
-      return apiError('Product not found', 404);
+    if (!deleted) {
+      return apiError("Product not found", 404);
     }
 
     // Revalidate Next.js cache tags (with empty config for immediate revalidation)
-    revalidateTag('products', {});
+    revalidateTag("products", {});
 
-    return apiSuccess({ success: true });
+    return apiSuccess({ message: "Product deleted", id });
   } catch (error) {
     return handleApiError(error);
   }

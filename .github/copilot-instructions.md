@@ -354,17 +354,17 @@ npm run db:seed      # Seed database
 
 ## SSL/HTTPS Setup
 
-- **Development**: HTTPS redirect enabled (HTTP → HTTPS) on localhost:3000
+- **Development**: HTTPS redirect disabled (localhost doesn't have SSL)
 - **Production**: Auto-redirects HTTP → HTTPS via proxy
 - **NEXTAUTH_URL**: Must use `https://` in production (set in `.env.production`)
 - **Strict-Transport-Security**: Enabled for 1 year (max-age=31536000)
-- **Proxy**: `proxy.ts` enforces HTTPS in both development and production
+- **Proxy**: `proxy.ts` enforces HTTPS in production only
 - **Vercel**: Automatically provides SSL certificate
 
 **To Deploy with HTTPS:**
 
 1. Set `NEXTAUTH_URL=https://your-domain.com` in production env vars
-2. Proxy automatically redirects http → https
+2. Proxy automatically redirects http → https in production
 3. No additional SSL configuration needed on Vercel
 
 ## When Adding New Dependencies

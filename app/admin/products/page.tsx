@@ -30,6 +30,7 @@ export default function ProductsManagement() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [productToDelete, setProductToDelete] = useState<string | null>(null);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     dispatch(fetchAdminProducts());
@@ -55,8 +56,9 @@ export default function ProductsManagement() {
   };
 
   const confirmDelete = async () => {
-    if (!productToDelete) return;
+    if (!productToDelete || deleting) return;
 
+    setDeleting(true);
     try {
       const res = await fetch(`/api/admin/products/${productToDelete}`, {
         method: 'DELETE',
@@ -74,6 +76,8 @@ export default function ProductsManagement() {
     } catch (err) {
       console.error('Error deleting product:', err);
       toast.error('Something went wrong. Please try again.');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -161,13 +165,15 @@ export default function ProductsManagement() {
                 <div className="flex gap-2">
                   <button
                     onClick={() => handleOpenModal(product)}
-                    className="flex-1 px-3 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition"
+                    disabled={deleting}
+                    className="flex-1 px-3 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed transition"
                   >
                     Edit
                   </button>
                   <button
                     onClick={() => handleDelete(product.id)}
-                    className="flex-1 px-3 py-2 bg-red-600 text-white text-sm rounded-md hover:bg-red-700 transition"
+                    disabled={deleting}
+                    className="flex-1 px-3 py-2 bg-red-600 text-white text-sm rounded-md hover:bg-red-700 disabled:bg-red-400 disabled:cursor-not-allowed transition"
                   >
                     Delete
                   </button>
@@ -207,6 +213,7 @@ export default function ProductsManagement() {
           <DeleteConfirmModal
             onConfirm={confirmDelete}
             onCancel={cancelDelete}
+            loading={deleting}
           />
         </Suspense>
       )}
