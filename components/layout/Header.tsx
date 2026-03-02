@@ -35,6 +35,8 @@ export default function Header() {
 
           <nav className="hidden md:flex gap-8 items-center">
             <Link href="/" className="text-gray-700 hover:text-blue-600 transition-all duration-300">Home</Link>
+            <Link href="/about" className="text-gray-700 hover:text-blue-600 transition-all duration-300">About</Link>
+            <Link href="/contact" className="text-gray-700 hover:text-blue-600 transition-all duration-300">Contact</Link>
             {session?.user && (
               <Link href="/orders" className="text-gray-700 hover:text-blue-600 transition-all duration-300">My Orders</Link>
             )}
