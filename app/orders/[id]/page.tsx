@@ -216,11 +216,11 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
                     </div>
                     <p className="text-sm font-bold text-gray-900">{formatPrice(item.price * item.quantity)}</p>
                   </div>
-                  {(item as Record<string, unknown>).customizationNote && (
+                  {item.customizationNote && (
                     <div className="mt-2 ml-20 p-2 bg-amber-50 border border-amber-200 rounded-lg">
                       <p className="text-xs text-amber-800">
                         <span className="font-semibold">✏️ Customization:</span>{' '}
-                        {(item as Record<string, unknown>).customizationNote as string}
+                        {item.customizationNote}
                       </p>
                     </div>
                   )}
@@ -231,20 +231,20 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
         </div>
 
         {/* Tracking Info */}
-        {((order as Record<string, unknown>).trackingNumber || (order as Record<string, unknown>).shippingProvider) && (
+        {(order.trackingNumber || order.shippingProvider) && (
           <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/50 p-8 mb-6">
-            <h2 className="text-lg font-bold text-gray-900 mb-3">📦 Shipping & Tracking</h2>
+            <h2 className="text-lg font-bold text-gray-900 mb-3">📦 Shipping &amp; Tracking</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {(order as Record<string, unknown>).shippingProvider && (
+              {order.shippingProvider && (
                 <div>
                   <p className="text-xs font-semibold text-gray-500 uppercase">Shipping Provider</p>
-                  <p className="text-sm text-gray-900 font-medium">{(order as Record<string, unknown>).shippingProvider as string}</p>
+                  <p className="text-sm text-gray-900 font-medium">{order.shippingProvider}</p>
                 </div>
               )}
-              {(order as Record<string, unknown>).trackingNumber && (
+              {order.trackingNumber && (
                 <div>
                   <p className="text-xs font-semibold text-gray-500 uppercase">Tracking Number</p>
-                  <p className="text-sm text-gray-900 font-medium font-mono">{(order as Record<string, unknown>).trackingNumber as string}</p>
+                  <p className="text-sm text-gray-900 font-medium font-mono">{order.trackingNumber}</p>
                 </div>
               )}
             </div>

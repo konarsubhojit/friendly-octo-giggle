@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { drizzleDb } from '@/lib/db';
 import * as schema from '@/lib/schema';
-import { sql, eq, gte, count } from 'drizzle-orm';
+import { sql, eq, count } from 'drizzle-orm';
 import { apiSuccess, apiError, handleApiError } from '@/lib/api-utils';
 import { auth } from '@/lib/auth';
 import { getCachedData } from '@/lib/redis';
