@@ -3,6 +3,7 @@ import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import Hero from '@/components/sections/Hero';
 import ProductGrid from '@/components/sections/ProductGrid';
+import TrendingProducts from '@/components/sections/TrendingProducts';
 import { db } from '@/lib/db';
 import { unstable_cache } from 'next/cache';
 
@@ -29,10 +30,12 @@ export default async function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
+    <div className="min-h-screen bg-gradient-to-br from-rose-50 via-pink-50 to-purple-50">
       <Header />
 
       <Hero />
+
+      <TrendingProducts />
 
       <ProductGrid products={products} />
 

@@ -28,6 +28,7 @@ export default function CartPage() {
   const { formatPrice } = useCurrency();
   const [updating, setUpdating] = useState<string | null>(null);
   const [customerAddress, setCustomerAddress] = useState('');
+  const [customizationNotes, setCustomizationNotes] = useState<Record<string, string>>({});
   const [orderLoading, setOrderLoading] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(false);
   const [error, setError] = useState('');
@@ -101,6 +102,7 @@ export default function CartPage() {
           price: item.variation
             ? item.product.price + item.variation.priceModifier
             : item.product.price,
+          customizationNote: customizationNotes[item.id] || null,
         })),
       };
 
@@ -298,6 +300,19 @@ export default function CartPage() {
                           >
                             Remove
                           </button>
+                        </div>
+
+                        {/* Customization Note */}
+                        <div className="mt-3">
+                          <input
+                            type="text"
+                            placeholder="Add customization note (e.g., color preference, message on card...)"
+                            value={customizationNotes[item.id] || ''}
+                            onChange={(e) => setCustomizationNotes((prev) => ({ ...prev, [item.id]: e.target.value }))}
+                            className="w-full text-xs px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-400 bg-white/50 placeholder-gray-400"
+                            maxLength={500}
+                            aria-label={`Customization note for ${item.product.name}`}
+                          />
                         </div>
                       </div>
 

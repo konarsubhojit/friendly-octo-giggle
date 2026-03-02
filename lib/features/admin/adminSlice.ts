@@ -24,6 +24,7 @@ interface AdminOrderItem {
   productId: string;
   quantity: number;
   price: number;
+  customizationNote?: string | null;
   product?: { id: string; name: string; image: string };
   variation?: { id: string; name: string; priceModifier: number } | null;
 }
@@ -35,6 +36,8 @@ interface AdminOrder {
   customerAddress: string;
   totalAmount: number;
   status: string;
+  trackingNumber?: string | null;
+  shippingProvider?: string | null;
   createdAt: string;
   updatedAt: string;
   items: AdminOrderItem[];
@@ -114,11 +117,14 @@ export const fetchAdminUsers = createAsyncThunk(
 
 export const updateAdminOrderStatus = createAsyncThunk(
   'admin/updateOrderStatus',
-  async ({ id, status }: { id: string; status: string }, { rejectWithValue }) => {
+  async ({ id, status, trackingNumber, shippingProvider }: { id: string; status: string; trackingNumber?: string | null; shippingProvider?: string | null }, { rejectWithValue }) => {
+    const body: Record<string, unknown> = { status };
+    if (trackingNumber !== undefined) body.trackingNumber = trackingNumber;
+    if (shippingProvider !== undefined) body.shippingProvider = shippingProvider;
     const res = await fetch(`/api/admin/orders/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status }),
+      body: JSON.stringify(body),
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));

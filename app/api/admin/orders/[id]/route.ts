@@ -36,14 +36,18 @@ export async function PATCH(
 
   try {
     const { id } = await params;
-    const body: { status: OrderStatus } = await request.json();
+    const body: { status: OrderStatus; trackingNumber?: string | null; shippingProvider?: string | null } = await request.json();
     
     if (!body.status || !Object.values(OrderStatus).includes(body.status)) {
       return apiError('Invalid status', 400);
     }
 
+    const updateData: Record<string, unknown> = { status: body.status, updatedAt: new Date() };
+    if (body.trackingNumber !== undefined) updateData.trackingNumber = body.trackingNumber;
+    if (body.shippingProvider !== undefined) updateData.shippingProvider = body.shippingProvider;
+
     await drizzleDb.update(schema.orders)
-      .set({ status: body.status, updatedAt: new Date() })
+      .set(updateData)
       .where(eq(schema.orders.id, id));
 
     const order = await drizzleDb.query.orders.findFirst({

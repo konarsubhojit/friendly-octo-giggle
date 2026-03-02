@@ -7,6 +7,7 @@ interface OrderItem {
   productId: string;
   quantity: number;
   price: number;
+  customizationNote?: string | null;
   product?: {
     id: string;
     name: string;
@@ -27,6 +28,8 @@ interface Order {
   customerAddress: string;
   totalAmount: number;
   status: string;
+  trackingNumber?: string | null;
+  shippingProvider?: string | null;
   createdAt: string;
   updatedAt: string;
   items: OrderItem[];

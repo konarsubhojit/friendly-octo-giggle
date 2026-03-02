@@ -59,7 +59,7 @@ export default function OrdersManagement() {
     setUpdatingOrderId(null);
   };
 
-  const handleSaveShipping = async (orderId: string, currentStatus: string, order: { trackingNumber?: string | null; shippingProvider?: string | null }) => {
+  const handleSaveShipping = async (orderId: string, currentStatus: OrderStatus | string, order: { trackingNumber?: string | null; shippingProvider?: string | null }) => {
     const edit = getShippingEdit(orderId, order);
     setSavingShippingId(orderId);
     await dispatch(
@@ -175,7 +175,7 @@ export default function OrdersManagement() {
                 <div className="flex justify-between items-start mb-4">
                   <div>
                     <h3 className="font-bold text-lg">
-                      {hasTracking && <span title="Tracking info available" className="mr-1">📦</span>}
+                      {hasTracking && <span role="img" aria-label="Tracking info available" title="Tracking info available" className="mr-1">📦</span>}
                       Order #{order.id.slice(0, 8).toUpperCase()}
                     </h3>
                     <p className="text-sm text-gray-600">

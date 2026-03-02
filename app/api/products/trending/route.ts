@@ -1,0 +1,71 @@
+import { NextRequest } from 'next/server';
+import { drizzleDb } from '@/lib/db';
+import * as schema from '@/lib/schema';
+import { sql, desc, gt } from 'drizzle-orm';
+import { apiSuccess, handleApiError } from '@/lib/api-utils';
+import { getCachedData } from '@/lib/redis';
+
+export const dynamic = 'force-dynamic';
+
+export async function GET(request: NextRequest) {
+  try {
+    const limitParam = request.nextUrl.searchParams.get('limit');
+    const limit = Math.min(Math.max(Number(limitParam) || 6, 1), 20);
+
+    const trending = await getCachedData(
+      `products:trending:${limit}`,
+      300,
+      async () => {
+        // Get products ordered by total quantity sold in recent orders
+        const trendingProducts = await drizzleDb
+          .select({
+            productId: schema.orderItems.productId,
+            totalSold: sql<number>`cast(sum(${schema.orderItems.quantity}) as int)`,
+          })
+          .from(schema.orderItems)
+          .innerJoin(schema.orders, sql`${schema.orders.id} = ${schema.orderItems.orderId}`)
+          .where(gt(schema.orders.createdAt, sql`now() - interval '30 days'`))
+          .groupBy(schema.orderItems.productId)
+          .orderBy(desc(sql`sum(${schema.orderItems.quantity})`))
+          .limit(limit);
+
+        if (trendingProducts.length === 0) {
+          // Fallback: return newest products if no orders yet
+          const newest = await drizzleDb.query.products.findMany({
+            orderBy: [desc(schema.products.createdAt)],
+            limit,
+            with: { variations: true },
+          });
+          return newest.map((p) => ({
+            ...p,
+            createdAt: p.createdAt instanceof Date ? p.createdAt.toISOString() : p.createdAt,
+            updatedAt: p.updatedAt instanceof Date ? p.updatedAt.toISOString() : p.updatedAt,
+            totalSold: 0,
+          }));
+        }
+
+        const productIds = trendingProducts.map((t) => t.productId);
+        const products = await drizzleDb.query.products.findMany({
+          where: sql`${schema.products.id} IN (${sql.join(productIds.map(id => sql`${id}`), sql`, `)})`,
+          with: { variations: true },
+        });
+
+        // Merge totalSold and sort by it
+        const soldMap = new Map(trendingProducts.map((t) => [t.productId, t.totalSold]));
+        return products
+          .map((p) => ({
+            ...p,
+            createdAt: p.createdAt instanceof Date ? p.createdAt.toISOString() : p.createdAt,
+            updatedAt: p.updatedAt instanceof Date ? p.updatedAt.toISOString() : p.updatedAt,
+            totalSold: soldMap.get(p.id) ?? 0,
+          }))
+          .sort((a, b) => b.totalSold - a.totalSold);
+      },
+      60
+    );
+
+    return apiSuccess({ products: trending });
+  } catch (error) {
+    return handleApiError(error);
+  }
+}
