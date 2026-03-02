@@ -10,10 +10,10 @@ export default function Footer() {
           <div>
             <h4 className="text-lg font-bold mb-4">Company</h4>
             <ul className="space-y-2">
-              <li><span className="text-gray-400 cursor-default">About Us</span></li>
-              <li><span className="text-gray-400 cursor-default">Careers</span></li>
-              <li><span className="text-gray-400 cursor-default">Press</span></li>
-              <li><span className="text-gray-400 cursor-default">Blog</span></li>
+              <li><Link href="/about" className="text-gray-400 hover:text-white transition-all duration-300">About Us</Link></li>
+              <li><Link href="/careers" className="text-gray-400 hover:text-white transition-all duration-300">Careers</Link></li>
+              <li><Link href="/press" className="text-gray-400 hover:text-white transition-all duration-300">Press</Link></li>
+              <li><Link href="/blog" className="text-gray-400 hover:text-white transition-all duration-300">Blog</Link></li>
             </ul>
           </div>
           {/* Products */}
@@ -21,19 +21,19 @@ export default function Footer() {
             <h4 className="text-lg font-bold mb-4">Products</h4>
             <ul className="space-y-2">
               <li><Link href="/#products" className="text-gray-400 hover:text-white transition-all duration-300">All Products</Link></li>
-              <li><span className="text-gray-400 cursor-default">New Arrivals</span></li>
-              <li><span className="text-gray-400 cursor-default">Best Sellers</span></li>
-              <li><span className="text-gray-400 cursor-default">Deals</span></li>
+              <li><Link href="/#products" className="text-gray-400 hover:text-white transition-all duration-300">New Arrivals</Link></li>
+              <li><Link href="/#products" className="text-gray-400 hover:text-white transition-all duration-300">Best Sellers</Link></li>
+              <li><Link href="/#products" className="text-gray-400 hover:text-white transition-all duration-300">Deals</Link></li>
             </ul>
           </div>
           {/* Support */}
           <div>
             <h4 className="text-lg font-bold mb-4">Support</h4>
             <ul className="space-y-2">
-              <li><span className="text-gray-400 cursor-default">Help Center</span></li>
-              <li><span className="text-gray-400 cursor-default">Shipping Info</span></li>
-              <li><span className="text-gray-400 cursor-default">Returns</span></li>
-              <li><span className="text-gray-400 cursor-default">Contact Us</span></li>
+              <li><Link href="/help" className="text-gray-400 hover:text-white transition-all duration-300">Help Center</Link></li>
+              <li><Link href="/shipping" className="text-gray-400 hover:text-white transition-all duration-300">Shipping Info</Link></li>
+              <li><Link href="/returns" className="text-gray-400 hover:text-white transition-all duration-300">Returns</Link></li>
+              <li><Link href="/contact" className="text-gray-400 hover:text-white transition-all duration-300">Contact Us</Link></li>
             </ul>
           </div>
           {/* Connect */}
