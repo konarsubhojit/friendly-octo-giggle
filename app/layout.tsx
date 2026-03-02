@@ -4,6 +4,7 @@ import { SessionProvider } from "@/components/providers/SessionProvider";
 import StoreProvider from "@/components/providers/StoreProvider";
 import { CurrencyProvider } from "@/contexts/CurrencyContext";
 import { Toaster } from 'react-hot-toast';
+import { Analytics } from '@vercel/analytics/next';
 
 export const metadata: Metadata = {
   title: "E-commerce Store",
@@ -26,6 +27,7 @@ export default function RootLayout({
             </SessionProvider>
           </CurrencyProvider>
         </StoreProvider>
+        <Analytics />
       </body>
     </html>
   );
