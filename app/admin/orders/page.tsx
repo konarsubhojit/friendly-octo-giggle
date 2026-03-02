@@ -166,7 +166,7 @@ export default function OrdersManagement() {
       ) : (
         <div className="space-y-4">
           {filteredOrders.map((order) => {
-            const hasTracking = !!(order.trackingNumber);
+            const hasTracking = !!(order.trackingNumber || order.shippingProvider);
             const edit = getShippingEdit(order.id, order);
 
             return (

@@ -3,8 +3,8 @@ import Footer from '@/components/layout/Footer';
 import Link from 'next/link';
 
 export const metadata = {
-  title: 'Careers | E-Store',
-  description: 'Join the E-Store team. Explore open positions and opportunities.',
+  title: 'Careers | Craft & Cozy',
+  description: 'Join the Craft & Cozy team. Explore open positions and opportunities.',
 };
 
 const openings = [
@@ -24,7 +24,7 @@ export default function CareersPage() {
         <p className="text-gray-500 text-lg mb-12">Join our team and help build the future of online shopping.</p>
 
         <section className="bg-white rounded-2xl shadow-sm p-8 mb-8">
-          <h2 className="text-2xl font-semibold text-gray-900 mb-4">Why Work at E-Store?</h2>
+          <h2 className="text-2xl font-semibold text-gray-900 mb-4">Why Work at Craft &amp; Cozy?</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {[
               { title: 'Remote-First Culture', desc: 'Work from anywhere in the world with flexible hours.' },

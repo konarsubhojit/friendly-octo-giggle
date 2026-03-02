@@ -3,8 +3,8 @@ import Footer from '@/components/layout/Footer';
 import ContactForm from './ContactForm';
 
 export const metadata = {
-  title: 'Contact Us | E-Store',
-  description: 'Get in touch with the E-Store support team. We\'d love to hear from you.',
+  title: 'Contact Us | Craft & Cozy',
+  description: 'Get in touch with the Craft & Cozy support team. We\'d love to hear from you.',
 };
 
 export default function ContactPage() {

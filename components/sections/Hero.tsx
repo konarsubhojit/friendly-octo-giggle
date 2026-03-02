@@ -8,7 +8,7 @@ export default function Hero() {
           Handcrafted with Love
         </h1>
         <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-          Discover beautiful handmade decorations and cozy wearables — flower bouquets, keyrings, hand warmers, mufflers, scarfs, and more. Each piece crafted with care, just for you.
+          Discover beautiful handmade decorations and cozy wearables — flower bouquets, keyrings, hand warmers, mufflers, scarves, and more. Each piece crafted with care, just for you.
         </p>
         <div className="flex gap-4 justify-center mb-12">
           <Link href="#products" scroll={true} className="px-8 py-4 bg-rose-500 text-white rounded-lg font-semibold hover:bg-rose-600 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105">

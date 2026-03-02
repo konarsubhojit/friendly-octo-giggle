@@ -2,8 +2,8 @@ import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 
 export const metadata = {
-  title: 'About Us | E-Store',
-  description: 'Learn more about E-Store, our mission, values, and the team behind the platform.',
+  title: 'About Us | Craft & Cozy',
+  description: 'Learn more about Craft & Cozy, our mission, values, and the team behind our handmade decorations and wearables.',
 };
 
 export default function AboutPage() {
@@ -17,14 +17,14 @@ export default function AboutPage() {
         <section className="bg-white rounded-2xl shadow-sm p-8 mb-8">
           <h2 className="text-2xl font-semibold text-gray-900 mb-4">Our Mission</h2>
           <p className="text-gray-600 leading-relaxed">
-            At E-Store, our mission is to make high-quality products accessible to everyone. We believe shopping should be simple, enjoyable, and trustworthy. We curate the best products across categories and deliver them right to your door.
+            At Craft &amp; Cozy, our mission is to bring handmade warmth into every home. We craft beautiful flower bouquets, keyrings, hand warmers, mufflers, and scarves — each made with care and delivered right to your door.
           </p>
         </section>
 
         <section className="bg-white rounded-2xl shadow-sm p-8 mb-8">
           <h2 className="text-2xl font-semibold text-gray-900 mb-4">Our Story</h2>
           <p className="text-gray-600 leading-relaxed mb-4">
-            Founded in 2024, E-Store started as a small team passionate about building a better online shopping experience. Today, we serve thousands of customers and partner with hundreds of brands to bring you the best selection at competitive prices.
+            Founded in 2024, Craft &amp; Cozy started as a small team passionate about handmade decorations and cozy wearables. Today, we serve thousands of customers who love our flower bouquets, keyrings, hand warmers, mufflers, and scarves — all crafted with heart.
           </p>
           <p className="text-gray-600 leading-relaxed">
             Built on a modern technology stack including Next.js, PostgreSQL, and Redis, our platform is designed for speed, reliability, and scale — so you can shop with confidence anytime, anywhere.

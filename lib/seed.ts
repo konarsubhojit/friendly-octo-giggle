@@ -27,7 +27,7 @@ async function main() {
   // Seed products - Decorations & Wearables
   const [bouquet] = await db.insert(schema.products).values({
     name: 'Rose Flower Bouquet',
-    description: 'Stunning hand-arranged bouquet of fresh roses, perfect for gifting or decorating your home. Each bouquet is crafted with care and wrapped in elegant packaging.',
+    description: 'Stunning hand-arranged bouquet of beautiful roses, perfect for gifting or decorating your home. Each bouquet is crafted with care and wrapped in elegant packaging.',
     price: 29.99,
     image: 'https://images.unsplash.com/photo-1487530811176-3780de880c2d?w=500&h=500&fit=crop',
     stock: 40,
