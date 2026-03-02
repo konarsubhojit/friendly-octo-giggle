@@ -212,7 +212,7 @@ async function handlePost(request: NextRequest) {
           if (variation) {
             price = product.price + variation.priceModifier;
           }
-          return { orderId: newOrder.id, productId: item.productId, variationId: item.variationId ?? null, quantity: item.quantity, price };
+          return { orderId: newOrder.id, productId: item.productId, variationId: item.variationId ?? null, quantity: item.quantity, price, customizationNote: item.customizationNote ?? null };
         })
       );
 
