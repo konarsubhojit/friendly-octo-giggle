@@ -46,6 +46,7 @@ export const OrderItemSchema = z.object({
   productId: z.string().regex(UUID_REGEX, "Invalid product ID"),
   quantity: z.number().int().positive("Quantity must be positive"),
   price: z.number().positive("Price must be positive"),
+  customizationNote: z.string().max(500, "Customization note must be under 500 characters").nullish(),
 });
 
 export const CreateOrderSchema = z.object({
@@ -60,6 +61,8 @@ export const CreateOrderSchema = z.object({
 
 export const UpdateOrderStatusSchema = z.object({
   status: OrderStatusEnum,
+  trackingNumber: z.string().max(100, "Tracking number must be under 100 characters").nullish(),
+  shippingProvider: z.string().max(100, "Shipping provider must be under 100 characters").nullish(),
 });
 
 // API Response types with validation

@@ -124,6 +124,8 @@ export const orders = pgTable('Order', {
   customerAddress: text('customerAddress').notNull(),
   totalAmount: doublePrecision('totalAmount').notNull(),
   status: orderStatusEnum('status').default('PENDING').notNull(),
+  trackingNumber: text('trackingNumber'),
+  shippingProvider: text('shippingProvider'),
   createdAt: timestamp('createdAt', { mode: 'date' }).defaultNow().notNull(),
   updatedAt: timestamp('updatedAt', { mode: 'date' }).defaultNow().notNull(),
 }, (t) => [
@@ -141,6 +143,7 @@ export const orderItems = pgTable('OrderItem', {
   variationId: text('variationId').references(() => productVariations.id),
   quantity: integer('quantity').notNull(),
   price: doublePrecision('price').notNull(),
+  customizationNote: text('customizationNote'),
 }, (t) => [
   index('OrderItem_orderId_idx').on(t.orderId),
   index('OrderItem_productId_idx').on(t.productId),
