@@ -120,7 +120,7 @@ async function handleGet(_request: NextRequest) {
       );
     }
 
-    const orders = await drizzleDb.query.orders.findMany({
+    const orderList = await drizzleDb.query.orders.findMany({
       where: eq(orders.userId, session.user.id),
       with: {
         items: {
@@ -134,7 +134,32 @@ async function handleGet(_request: NextRequest) {
     });
 
     return NextResponse.json({
-      orders: orders.map((order) => ({
+      orders: orderList.map((order) => ({
+        ...order,
+        createdAt: order.createdAt.toISOString(),
+        updatedAt: order.updatedAt.toISOString(),
+        items: order.items.map((item) => ({
+          ...item,
+          product: {
+            ...item.product,
+            createdAt: item.product.createdAt.toISOString(),
+            updatedAt: item.product.updatedAt.toISOString(),
+          },
+        })),
+      })),
+    });
+  } catch (error) {
+    logError({
+      error,
+      context: 'fetch_user_orders',
+    });
+    return NextResponse.json(
+      { error: 'Failed to fetch orders' },
+      { status: 500 }
+    );
+  }
+}
+
 async function handlePost(request: NextRequest) {
   try {
     const session = await auth();
@@ -175,18 +200,18 @@ async function handlePost(request: NextRequest) {
 
     // Fetch products with variations
     const productIds = body.items.map(item => item.productId);
-    const products = await drizzleDb.query.products.findMany({
+    const productList = await drizzleDb.query.products.findMany({
       where: inArray(products.id, productIds),
       with: { variations: true },
     }) as ProductWithVariations[];
 
-    if (products.length !== body.items.length) {
-      logBusinessEvent({ event: 'order_create_failed', details: { reason: 'products_not_found', requestedCount: body.items.length, foundCount: products.length }, success: false });
+    if (productList.length !== body.items.length) {
+      logBusinessEvent({ event: 'order_create_failed', details: { reason: 'products_not_found', requestedCount: body.items.length, foundCount: productList.length }, success: false });
       return NextResponse.json({ error: 'Some products not found' }, { status: 404 });
     }
 
     // Validate stock and calculate total
-    const stockResult = validateStockAndCalculateTotal(body.items, products);
+    const stockResult = validateStockAndCalculateTotal(body.items, productList);
     if (!stockResult.valid) {
       logBusinessEvent({ event: 'order_create_failed', details: { reason: stockResult.reason, ...stockResult.details }, success: false });
       return NextResponse.json({ error: stockResult.error }, { status: stockResult.status });
@@ -209,7 +234,7 @@ async function handlePost(request: NextRequest) {
       // Create order items
       await tx.insert(orderItems).values(
         body.items.map(item => {
-          const product = products.find((p) => p.id === item.productId);
+          const product = productList.find((p) => p.id === item.productId);
           if (!product) {
             throw new Error(`Product with id ${item.productId} not found`);
           }

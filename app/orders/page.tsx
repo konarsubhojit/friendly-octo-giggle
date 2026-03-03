@@ -27,7 +27,9 @@ export default function OrdersPage() {
   const error = useSelector(selectOrdersError);
 
   useEffect(() => {
-    authStatus === 'authenticated' && dispatch(fetchOrders());
+    if (authStatus === 'authenticated') {
+      dispatch(fetchOrders());
+    }
   }, [authStatus, dispatch]);
 
   if (authStatus === 'loading' || loading) {
@@ -42,9 +44,6 @@ export default function OrdersPage() {
             </svg>
           </div>
         </main>
-      </div>
-    );
-  }
       </div>
     );
   }
@@ -77,64 +76,57 @@ export default function OrdersPage() {
       <Header />
       <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
         <h1 className="text-3xl font-bold mb-8 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-        const STATUS_CONFIG = {
-          PENDING: { label: 'Pending', bg: 'bg-yellow-100', color: 'text-yellow-600' },
-          SHIPPED: { label: 'Shipped', bg: 'bg-blue-100', color: 'text-blue-600' },
-          DELIVERED: { label: 'Delivered', bg: 'bg-green-100', color: 'text-green-600' },
-          CANCELLED: { label: 'Cancelled', bg: 'bg-red-100', color: 'text-red-600' },
-        };
+          My Orders
+        </h1>
 
-                  My Orders
-                </h1>
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 text-red-700 rounded-xl border border-red-200">
+            {error}
+          </div>
+        )}
 
-                {error && (
-                  <div className="mb-6 p-4 bg-red-50 text-red-700 rounded-xl border border-red-200">
-                    {error}
-                  </div>
-                )}
+        {orders.length === 0 ? (
+          <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/50 p-12 text-center">
+            <svg className="w-20 h-20 mx-auto mb-6 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            </svg>
+            <h2 className="text-2xl font-bold text-gray-700 mb-2">No orders yet</h2>
+            <p className="text-gray-500 mb-6">Start shopping and your orders will appear here.</p>
+            <Link
+              href="/"
+              className="inline-block bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-xl font-bold hover:from-blue-700 hover:to-purple-700 transition-all"
+            >
+              Browse Products
+            </Link>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {orders.map((order) => {
+              const statusInfo = STATUS_CONFIG[order.status] || STATUS_CONFIG.PENDING;
+              const itemCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
+              const firstItem = order.items[0];
+              const firstImage = (firstItem?.variation as Record<string, unknown>)?.image as string | undefined || firstItem?.product?.image;
 
-                {orders.length === 0 ? (
-                  <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/50 p-12 text-center">
-                    <svg className="w-20 h-20 mx-auto mb-6 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                    </svg>
-                    <h2 className="text-2xl font-bold text-gray-700 mb-2">No orders yet</h2>
-                    <p className="text-gray-500 mb-6">Start shopping and your orders will appear here.</p>
-                    <Link
-                      href="/"
-                      className="inline-block bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-xl font-bold hover:from-blue-700 hover:to-purple-700 transition-all"
-                    >
-                      Browse Products
-                    </Link>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {orders.map((order) => {
-                      const statusInfo = STATUS_CONFIG[order.status] || STATUS_CONFIG.PENDING;
-                      const itemCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
-                      const firstItem = order.items[0];
-                      const firstImage = (firstItem?.variation as Record<string, unknown>)?.image as string | undefined || firstItem?.product?.image;
+              return (
+                <Link
+                  key={order.id}
+                  href={`/orders/${order.id}`}
+                  className="block bg-white/80 backdrop-blur-lg rounded-xl shadow-md border border-white/50 p-6 hover:shadow-xl hover:scale-[1.01] transition-all duration-300"
+                >
+                  <div className="flex items-center gap-6">
+                    {/* First item thumbnail */}
+                    {firstImage && (
+                      <div className="relative w-16 h-16 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100">
+                        <Image src={firstImage} alt={firstItem?.product?.name || 'Order item'} fill sizes="48px" className="object-cover" />
+                      </div>
+                    )}
 
-                      return (
-                        <Link
-                          key={order.id}
-                          href={`/orders/${order.id}`}
-                          className="block bg-white/80 backdrop-blur-lg rounded-xl shadow-md border border-white/50 p-6 hover:shadow-xl hover:scale-[1.01] transition-all duration-300"
-                        >
-                          <div className="flex items-center gap-6">
-                            {/* First item thumbnail */}
-                            {firstImage && (
-                              <div className="relative w-16 h-16 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100">
-                                <Image src={firstImage} alt={firstItem?.product?.name || 'Order item'} fill sizes="48px" className="object-cover" />
-                              </div>
-                            )}
-
-                            <div className="flex-grow min-w-0">
-                              <div className="flex items-center gap-3 mb-1">
-                                <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${statusInfo.bg} ${statusInfo.color}`}>   
-                                  {statusInfo.label}
-                                </span>
-                                <span className="text-xs text-gray-500">
+                    <div className="flex-grow min-w-0">
+                      <div className="flex items-center gap-3 mb-1">
+                        <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${statusInfo.bg} ${statusInfo.color}`}>
+                          {statusInfo.label}
+                        </span>
+                        <span className="text-xs text-gray-500">
                           {new Date(order.createdAt).toLocaleDateString('en-US', {
                             year: 'numeric',
                             month: 'short',

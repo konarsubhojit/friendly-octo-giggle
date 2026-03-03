@@ -36,9 +36,6 @@ export async function PATCH(
             variations: true,
           },
         },
-      },
-    });
-        },
         variation: true,
       },
     });

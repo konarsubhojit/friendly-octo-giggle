@@ -29,29 +29,9 @@ export function UserMenu({ session }: UserMenuProps) {
     );
   }
 
-  const roleMenuMap: Record<string, { label: string; href: string }[]> = {
-    admin: [
-      { label: 'Admin Panel', href: '/admin' },
-      { label: 'Dashboard', href: '/dashboard' }
-    ],
-    editor: [
-      { label: 'Editor Panel', href: '/editor' }
-    ],
-    user: [
-      { label: 'My Profile', href: '/profile' }
-    ]
-  };
-
-  const currentRole = session.user.role || 'user';
-  const menuItems = roleMenuMap[currentRole] || [];
-
   return (
     <div className="relative group">
-      <button
-        className="flex items-center gap-2 text-sm text-gray-700 hover:text-gray-900"
-        aria-expanded="true"
-        aria-haspopup="menu"
-      >
+      <button className="flex items-center gap-2 text-sm text-gray-700 hover:text-gray-900" aria-expanded="true" aria-haspopup="menu">
         {session.user.image ? (
           <Image
             src={session.user.image}
@@ -63,33 +43,6 @@ export function UserMenu({ session }: UserMenuProps) {
         ) : (
           <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center">
             <span className="text-gray-600 font-medium">
-              {session.user.name?.charAt(0) || 'U'}
-            </span>
-          </div>
-        )}
-        <span>{session.user.name}</span>
-      </button>
-
-      <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg py-1" role="menu">
-        {menuItems.map(({ label, href }) => (
-          <Link
-            key={href}
-            href={href}
-            className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-          >
-            {label}
-          </Link>
-        ))}
-        <button
-          onClick={() => signOut()}
-          className="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-        >
-          Sign Out
-        </button>
-      </div>
-    </div>
-  );
-}
               {session.user.name?.charAt(0) || session.user.email?.charAt(0) || '?'}
             </span>
           </div>

@@ -45,14 +45,14 @@ export async function GET(request: NextRequest) {
         }
 
         const productIds = trendingProducts.map((t) => t.productId);
-        const products = await drizzleDb.query.products.findMany({
+        const productRecords = await drizzleDb.query.products.findMany({
           where: inArray(products.id, productIds),
           with: { variations: true },
         });
 
         // Merge totalSold and sort by it
         const soldMap = new Map(trendingProducts.map((t) => [t.productId, t.totalSold]));
-        return products
+        return productRecords
           .map((p) => ({
             ...p,
             createdAt: p.createdAt instanceof Date ? p.createdAt.toISOString() : p.createdAt,

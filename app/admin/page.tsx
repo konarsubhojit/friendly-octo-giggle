@@ -28,9 +28,13 @@ export default function AdminDashboard() {
     async function fetchData() {
       try {
         const res = await fetch('/api/admin/sales');
-        const data = await res.json();
-        if (res.ok && data.success) {
-          setSales(data.data.sales);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success) {
+            setSales(data.data.sales);
+          } else {
+            setError('Failed to load sales data');
+          }
         } else {
           setError('Failed to load sales data');
         }
@@ -42,9 +46,6 @@ export default function AdminDashboard() {
       }
     }
 
-    fetchData();
-  }, []);
-    }
     fetchData();
   }, []);
 
