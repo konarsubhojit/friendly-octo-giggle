@@ -120,5 +120,5 @@ export function ProtectedRoute({
     );
   }
 
-  return <>{children}</>;
+  return children as React.ReactElement;
 }

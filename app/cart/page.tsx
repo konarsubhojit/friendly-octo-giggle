@@ -19,6 +19,115 @@ import {
 } from '@/lib/features/cart/cartSlice';
 import type { AppDispatch } from '@/lib/store';
 
+// --- CartItemRow: extracted to reduce JSX depth (JS-0415) ---
+interface CartItemRowProps {
+  readonly item: CartItemWithProduct;
+  readonly isLast: boolean;
+  readonly updating: string | null;
+  readonly customizationNote: string;
+  readonly formatPrice: (amount: number) => string;
+  readonly onUpdateQuantity: (itemId: string, quantity: number) => void;
+  readonly onRemoveItem: (itemId: string) => void;
+  readonly onCustomizationChange: (itemId: string, note: string) => void;
+}
+
+function CartItemRow({
+  item,
+  isLast,
+  updating,
+  customizationNote,
+  formatPrice,
+  onUpdateQuantity,
+  onRemoveItem,
+  onCustomizationChange,
+}: CartItemRowProps) {
+  const price = item.variation
+    ? item.product.price + item.variation.priceModifier
+    : item.product.price;
+  const image = item.variation?.image || item.product.image;
+
+  return (
+    <div className={`flex gap-5 p-6 items-start${isLast ? '' : ' border-b border-gray-100'}`}>
+      {/* Image */}
+      <div className="relative w-24 h-24 flex-shrink-0 bg-gray-100 rounded-xl overflow-hidden">
+        <Image src={image} alt={item.product.name} fill sizes="80px" className="object-cover" />
+      </div>
+
+      {/* Details */}
+      <div className="flex-grow min-w-0">
+        <Link
+          href={`/products/${item.productId}`}
+          className="text-base font-bold text-gray-900 hover:text-blue-600 transition-colors block truncate"
+        >
+          {item.product.name}
+        </Link>
+        {item.variation && (
+          <p className="text-xs text-gray-500 mt-0.5">
+            {item.variation.designName} - {item.variation.name}
+          </p>
+        )}
+        <p className="text-lg font-bold text-gray-900 mt-1">{formatPrice(price)}</p>
+
+        {/* Quantity controls */}
+        <div className="flex items-center gap-3 mt-3">
+          <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden">
+            <button
+              onClick={() => onUpdateQuantity(item.id, item.quantity - 1)}
+              disabled={updating === item.id || item.quantity <= 1}
+              className="w-8 h-8 flex items-center justify-center text-gray-600 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              -
+            </button>
+            <span className="w-10 text-center text-sm font-semibold text-gray-900">
+              {updating === item.id ? (
+                <svg className="animate-spin h-4 w-4 mx-auto text-blue-500" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                </svg>
+              ) : (
+                item.quantity
+              )}
+            </span>
+            <button
+              onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
+              disabled={updating === item.id}
+              className="w-8 h-8 flex items-center justify-center text-gray-600 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              +
+            </button>
+          </div>
+
+          <button
+            onClick={() => onRemoveItem(item.id)}
+            disabled={updating === item.id}
+            className="text-xs text-red-500 hover:text-red-700 font-medium disabled:opacity-40 transition-colors"
+          >
+            Remove
+          </button>
+        </div>
+
+        {/* Customization Note */}
+        <div className="mt-3">
+          <input
+            type="text"
+            placeholder="Add customization note (e.g., color preference, message on card...)"
+            value={customizationNote}
+            onChange={(e) => onCustomizationChange(item.id, e.target.value)}
+            className="w-full text-xs px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-400 bg-white/50 placeholder-gray-400"
+            maxLength={500}
+            aria-label={`Customization note for ${item.product.name}`}
+          />
+        </div>
+      </div>
+
+      {/* Line total */}
+      <div className="flex-shrink-0 text-right">
+        <p className="text-lg font-bold text-gray-900">{formatPrice(price * item.quantity)}</p>
+      </div>
+    </div>
+  );
+}
+
 export default function CartPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
@@ -64,15 +173,15 @@ export default function CartPage() {
   const handlePlaceOrder = async () => {
     const validationRules = [
       {
-        valid: !!session?.user,
+        valid: Boolean(session?.user),
         handler: () => router.push('/auth/signin?callbackUrl=/cart'),
       },
       {
-        valid: !!(cart?.items && cart.items.length > 0),
+        valid: Boolean(cart?.items && cart.items.length > 0),
         handler: () => setError('Your cart is empty'),
       },
       {
-        valid: !!customerAddress.trim(),
+        valid: Boolean(customerAddress.trim()),
         handler: () => setError('Please enter a shipping address'),
       },
     ];

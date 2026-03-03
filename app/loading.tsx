@@ -2,10 +2,9 @@ import HeaderSkeleton from '@/components/skeletons/HeaderSkeleton';
 import HeroSkeleton from '@/components/skeletons/HeroSkeleton';
 import ProductCardSkeleton from '@/components/skeletons/ProductCardSkeleton';
 
-const PRODUCT_SKELETONS = ['p1', 'p2', 'p3', 'p4', 'p5', 'p6'] as const;
-const LINK_SKELETONS = ['l1', 'l2', 'l3', 'l4'] as const;
-
 export default function Loading() {
+  const PRODUCT_SKELETONS = ['p1', 'p2', 'p3', 'p4', 'p5', 'p6'] as const;
+  const LINK_SKELETONS = ['l1', 'l2', 'l3', 'l4'] as const;
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
       <HeaderSkeleton />

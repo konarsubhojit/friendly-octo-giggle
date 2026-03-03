@@ -1,9 +1,8 @@
 import HeaderSkeleton from '@/components/skeletons/HeaderSkeleton';
 import ProductCardSkeleton from '@/components/skeletons/ProductCardSkeleton';
 
-const PRODUCT_SKELETONS = ['p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7', 'p8', 'p9'] as const;
-
 export default function ProductsLoading() {
+  const PRODUCT_SKELETONS = ['p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7', 'p8', 'p9'] as const;
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
       <HeaderSkeleton />

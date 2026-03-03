@@ -1,8 +1,7 @@
 import HeaderSkeleton from '@/components/skeletons/HeaderSkeleton';
 
-const VARIATION_SKELETONS = ['v1', 'v2', 'v3', 'v4'] as const;
-
 export default function ProductDetailLoading() {
+  const VARIATION_SKELETONS = ['v1', 'v2', 'v3', 'v4'] as const;
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
       <HeaderSkeleton />
