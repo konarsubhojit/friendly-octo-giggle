@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Image from 'next/image';
 import { Product } from '@/lib/types';
 import toast from 'react-hot-toast';
+import { logError } from '@/lib/logger';
 import { isValidImageType, MAX_FILE_SIZE, VALID_IMAGE_TYPES_DISPLAY } from '@/lib/upload-constants';
 
 interface ProductFormData {
@@ -86,7 +87,8 @@ export default function ProductFormModal({
 
       const data = await res.json();
       return data.data.url;
-    } catch (_err) {
+    } catch (err) {
+      logError({ error: err, context: 'uploadImage' });
       toast.error('Something went wrong. Please try again.');
       return null;
     } finally {
@@ -170,7 +172,8 @@ export default function ProductFormModal({
 
       onSuccess(savedProduct);
       onClose();
-    } catch (_err) {
+    } catch (err) {
+      logError({ error: err, context: 'handleSubmit' });
       toast.error('Something went wrong. Please try again.');
     } finally {
       setSaving(false);

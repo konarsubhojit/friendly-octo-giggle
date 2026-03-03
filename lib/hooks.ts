@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { logError } from '@/lib/logger';
 
 // Generic hook for fetching data with TypeScript
 export function useFetch<T>(
@@ -168,7 +169,8 @@ export function useLocalStorage<T>(
     try {
       const item = globalThis.localStorage.getItem(key);
       return item ? JSON.parse(item) : initialValue;
-    } catch (_error) {
+    } catch (error) {
+      logError({ error, context: 'useLocalStorage:read' });
       return initialValue;
     }
   });
@@ -181,7 +183,8 @@ export function useLocalStorage<T>(
       if (globalThis.window !== undefined) {
         globalThis.localStorage.setItem(key, JSON.stringify(valueToStore));
       }
-    } catch (_error) {
+    } catch (error) {
+      logError({ error, context: 'useLocalStorage:write' });
     }
   };
 
