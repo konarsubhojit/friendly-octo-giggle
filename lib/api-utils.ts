@@ -54,14 +54,19 @@ export async function safeFetch<T>(
 ): Promise<{ data?: T; error?: string }> {
   try {
     const response = await fetch(url, options);
-    
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      return { error: errorData.error || 'Request failed' };
-    }
 
-    const data = await response.json();
-    return { data: data.data || data };
+    const handlers: Record<string, () => Promise<{ data?: T; error?: string }>> = {
+      true: async () => {
+        const data = await response.json();
+        return { data: data.data || data };
+      },
+      false: async () => {
+        const errorData = await response.json().catch(() => ({}));
+        return { error: errorData.error || 'Request failed' };
+      }
+    };
+
+    return handlers[response.ok.toString()]();
   } catch (error) {
     return { error: error instanceof Error ? error.message : 'Network error' };
   }

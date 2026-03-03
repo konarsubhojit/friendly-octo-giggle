@@ -47,16 +47,65 @@ export async function getCachedData<T>(
     if (cached) {
       const data = JSON.parse(cached) as { value: T; timestamp: number };
       const age = Date.now() - data.timestamp;
-      
-      // If data is fresh, return it
-      if (age < ttl * 1000) {
-        timer.end({ cacheHit: true, age });
-        logCacheOperation({ operation: 'hit', key, success: true });
-        return data.value;
-      }
-      
-      // If data is stale but within stale-while-revalidate window
-      if (age < (ttl + staleTime) * 1000) {
+      const status = age < ttl * 1000
+        ? 'fresh'
+        : age < (ttl + staleTime) * 1000
+          ? 'stale'
+          : 'expired';
+
+      const handlers: { [status: string]: () => T | Promise<T> } = {
+        fresh: () => {
+          timer.end({ cacheHit: true, age });
+          logCacheOperation({ operation: 'hit', key, success: true });
+          return data.value;
+        },
+        stale: () => {
+          timer.end({ cacheHit: true, age });
+          logCacheOperation({ operation: 'stale', key, success: true });
+          fetcher().then(async (freshData) => {
+            await redis.set(
+              key,
+              JSON.stringify({ value: freshData, timestamp: Date.now() }),
+              'EX',
+              ttl
+            );
+          });
+          return data.value;
+        },
+        expired: async () => {
+          const value = await fetcher();
+          await redis.set(
+            key,
+            JSON.stringify({ value, timestamp: Date.now() }),
+            'EX',
+            ttl
+          );
+          timer.end({ cacheHit: false });
+          logCacheOperation({ operation: 'miss', key, success: true });
+          return value;
+        },
+      };
+
+      return handlers[status]();
+    }
+
+    // Cache miss
+    const value = await fetcher();
+    await redis.set(
+      key,
+      JSON.stringify({ value, timestamp: Date.now() }),
+      'EX',
+      ttl
+    );
+    timer.end({ cacheHit: false });
+    logCacheOperation({ operation: 'miss', key, success: true });
+    return value;
+  } catch (error) {
+    timer.end({ cacheHit: false, error: error as Error });
+    logCacheOperation({ operation: 'error', key, success: false });
+    throw error;
+  }
+}
         // Return stale data immediately
         const staleData = data.value;
         timer.end({ cacheHit: true, stale: true, age });

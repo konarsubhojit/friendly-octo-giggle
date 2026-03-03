@@ -85,22 +85,15 @@ export default function OrdersManagement() {
     setSavingShippingId(null);
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case OrderStatus.PENDING:
-        return 'bg-yellow-100 text-yellow-800';
-      case OrderStatus.PROCESSING:
-        return 'bg-blue-100 text-blue-800';
-      case OrderStatus.SHIPPED:
-        return 'bg-purple-100 text-purple-800';
-      case OrderStatus.DELIVERED:
-        return 'bg-green-100 text-green-800';
-      case OrderStatus.CANCELLED:
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
+  const statusColorMap: Record<string, string> = {
+    [OrderStatus.PENDING]: 'bg-yellow-100 text-yellow-800',
+    [OrderStatus.PROCESSING]: 'bg-blue-100 text-blue-800',
+    [OrderStatus.SHIPPED]: 'bg-purple-100 text-purple-800',
+    [OrderStatus.DELIVERED]: 'bg-green-100 text-green-800',
+    [OrderStatus.CANCELLED]: 'bg-red-100 text-red-800',
   };
+
+  const getStatusColor = (status: string) => statusColorMap[status] || 'bg-gray-100 text-gray-800';
 
   const filteredOrders = filter === 'ALL'
     ? orders

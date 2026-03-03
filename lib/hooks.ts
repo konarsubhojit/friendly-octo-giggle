@@ -25,13 +25,18 @@ export function useFetch<T>(
     try {
       const response = await fetch(url, optionsRef.current);
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Failed to fetch data');
-      }
+      const handlers = {
+        true: async resp => {
+          const json = await resp.json();
+          setData(json.data || json);
+        },
+        false: async resp => {
+          const errorData = await resp.json().catch(() => ({}));
+          throw new Error(errorData.error || 'Failed to fetch data');
+        }
+      };
 
-      const json = await response.json();
-      setData(json.data || json);
+      await handlers[response.ok](response);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {

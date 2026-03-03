@@ -11,19 +11,24 @@ export async function POST(request: Request) {
     // Check authentication
     const session = await auth();
     userId = session?.user?.id ?? 'unknown';
-    
+
+    const errorMap: Record<string, { message: string; status: number }> = {
+      unauthorized: { message: 'Unauthorized', status: 401 },
+      forbidden: { message: 'Forbidden: Admin access required', status: 403 },
+    };
+
+    let errorKey: string | null = null;
     if (!session?.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      errorKey = 'unauthorized';
+    } else if (session.user.role !== 'ADMIN') {
+      errorKey = 'forbidden';
     }
 
-    // Check if user is admin
-    if (session.user.role !== 'ADMIN') {
+    if (errorKey) {
+      const { message, status } = errorMap[errorKey];
       return NextResponse.json(
-        { error: 'Forbidden: Admin access required' },
-        { status: 403 }
+        { error: message },
+        { status }
       );
     }
 
