@@ -46,6 +46,35 @@ function ProductStockBadge({ stock }: { readonly stock: number }) {
   );
 }
 
+// VariationButton: extracted to reduce map-callback cyclomatic complexity (JS-0415/JS-R1005)
+interface VariationButtonProps {
+  readonly variation: ProductVariation;
+  readonly isSelected: boolean;
+  readonly formatPrice: (amount: number) => string;
+  readonly onSelect: (variation: ProductVariation) => void;
+}
+
+function VariationButton({ variation, isSelected, formatPrice, onSelect }: VariationButtonProps) {
+  const className = isSelected
+    ? 'p-4 border-2 rounded-xl transition-all duration-300 border-blue-600 bg-gradient-to-br from-blue-50 to-purple-50 shadow-lg scale-105'
+    : 'p-4 border-2 rounded-xl transition-all duration-300 border-gray-300 hover:border-blue-400 hover:shadow-md hover:scale-105';
+
+  return (
+    <button key={variation.id} onClick={() => onSelect(variation)} className={className}>
+      <div className="text-sm font-bold text-gray-800">{variation.designName}</div>
+      <div className="text-xs text-gray-600 mt-1">{variation.name}</div>
+      {variation.priceModifier !== 0 && (
+        <div className="text-xs font-semibold text-blue-600 mt-1">
+          {variation.priceModifier > 0 ? '+' : '-'}{formatPrice(Math.abs(variation.priceModifier))}
+        </div>
+      )}
+      {variation.stock > 0 && variation.stock < 6 && (
+        <div className="text-xs text-amber-600 font-medium mt-1">Only {variation.stock} left</div>
+      )}
+    </button>
+  );
+}
+
 export default function ProductClient({ product }: ProductClientProps) {
   const dispatch = useDispatch<AppDispatch>();
   const { formatPrice } = useCurrency();
@@ -156,33 +185,15 @@ export default function ProductClient({ product }: ProductClientProps) {
                     Select Design
                   </span>
                   <div className="grid grid-cols-2 gap-3">
-                    {product.variations.map((variation) => {
-                      const isSelected = selectedVariation?.id === variation.id;
-                      const classNames = isSelected
-                        ? 'p-4 border-2 rounded-xl transition-all duration-300 border-blue-600 bg-gradient-to-br from-blue-50 to-purple-50 shadow-lg scale-105'
-                        : 'p-4 border-2 rounded-xl transition-all duration-300 border-gray-300 hover:border-blue-400 hover:shadow-md hover:scale-105';
-                      const badgeMap = {
-                        price: variation.priceModifier !== 0 && (
-                          <div className="text-xs font-semibold text-blue-600 mt-1">
-                            {variation.priceModifier > 0 ? '+' : '-'}{formatPrice(Math.abs(variation.priceModifier))}
-                          </div>
-                        ),
-                        stock: variation.stock > 0 && variation.stock < 6 && (
-                          <div className="text-xs text-amber-600 font-medium mt-1">Only {variation.stock} left</div>
-                        )
-                      };
-                      return (
-                        <button
-                          key={variation.id}
-                          onClick={() => setSelectedVariation(variation)}
-                          className={classNames}
-                        >
-                          <div className="text-sm font-bold text-gray-800">{variation.designName}</div>
-                          <div className="text-xs text-gray-600 mt-1">{variation.name}</div>
-                          {Object.values(badgeMap)}
-                        </button>
-                      );
-                    })}
+                    {product.variations.map((variation) => (
+                      <VariationButton
+                        key={variation.id}
+                        variation={variation}
+                        isSelected={selectedVariation?.id === variation.id}
+                        formatPrice={formatPrice}
+                        onSelect={setSelectedVariation}
+                      />
+                    ))}
                   </div>
                 </div>
               )}

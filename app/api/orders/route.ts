@@ -160,6 +160,36 @@ async function handleGet(_request: NextRequest) {
   }
 }
 
+/** Sanitizes a raw customization note: trims, truncates to 500 chars, or returns null. */
+function sanitizeCustomizationNote(raw: string | null | undefined): string | null {
+  if (typeof raw !== 'string') return null;
+  const trimmed = raw.trim();
+  if (trimmed.length === 0) return null;
+  return trimmed.slice(0, 500);
+}
+
+/** Builds the values array for orderItems.insert given a list of inputs and matching products. */
+function buildOrderItemValues(
+  items: OrderItemInput[],
+  productList: ProductWithVariations[],
+  orderId: string,
+): Array<{ orderId: string; productId: string; variationId: string | null; quantity: number; price: number; customizationNote: string | null }> {
+  return items.map((item) => {
+    const product = productList.find((p) => p.id === item.productId);
+    if (!product) throw new Error(`Product with id ${item.productId} not found`);
+    const variationMap = new Map(product.variations.map((v) => [v.id, v.priceModifier]));
+    const price = product.price + (variationMap.get(item.variationId ?? '') ?? 0);
+    return {
+      orderId,
+      productId: item.productId,
+      variationId: item.variationId ?? null,
+      quantity: item.quantity,
+      price,
+      customizationNote: sanitizeCustomizationNote(item.customizationNote),
+    };
+  });
+}
+
 async function handlePost(request: NextRequest) {
   try {
     const session = await auth();
@@ -172,6 +202,8 @@ async function handlePost(request: NextRequest) {
         { status: 401 }
       );
     }
+    // userId is guaranteed non-null after the guard above
+    const userId = session.user.id;
 
     const body: CreateOrderInput = await request.json();
 
@@ -211,7 +243,7 @@ async function handlePost(request: NextRequest) {
     const order = await drizzleDb.transaction(async (tx) => {
       // Create order with userId
       const [newOrder] = await tx.insert(orders).values({
-        userId: session!.user!.id,
+        userId,
         customerName,
         customerEmail,
         customerAddress,
@@ -220,47 +252,18 @@ async function handlePost(request: NextRequest) {
         updatedAt: new Date(),
       }).returning();
 
-      // Create order items
+      // Create order items using extracted helper (reduces complexity)
       await tx.insert(orderItems).values(
-        body.items.map(item => {
-          const product = productList.find((p) => p.id === item.productId);
-          if (!product) {
-            throw new Error(`Product with id ${item.productId} not found`);
-          }
-          const variationMap = new Map(product.variations.map((v) => [v.id, v.priceModifier]));
-          const price = product.price + (variationMap.get(item.variationId ?? '') ?? 0);
-
-          const rawNote = item.customizationNote;
-          const trimmed = typeof rawNote === 'string' ? rawNote.trim() : '';
-          const key = typeof rawNote !== 'string'
-            ? 'invalid'
-            : trimmed.length === 0
-              ? 'empty'
-              : trimmed.length > 500
-                ? 'long'
-                : 'valid';
-          const noteMap: Record<string, string | null> = {
-            invalid: null,
-            empty: null,
-            long: trimmed.slice(0, 500),
-            valid: trimmed,
-          };
-          const customizationNote = noteMap[key];
-
-          return { orderId: newOrder.id, productId: item.productId, variationId: item.variationId ?? null, quantity: item.quantity, price, customizationNote };
-        })
+        buildOrderItemValues(body.items, productList, newOrder.id)
       );
 
       // Update product/variation stock
       for (const item of body.items) {
         if (item.variationId) {
-          // Update variation stock
           await tx.update(productVariations)
             .set({ stock: sql`${productVariations.stock} - ${item.quantity}`, updatedAt: new Date() })
             .where(eq(productVariations.id, item.variationId));
         }
-
-        // Always update total product stock
         await tx.update(products)
           .set({ stock: sql`${products.stock} - ${item.quantity}`, updatedAt: new Date() })
           .where(eq(products.id, item.productId));

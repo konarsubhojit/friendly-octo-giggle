@@ -183,11 +183,12 @@ export default function CartPage() {
   // Extracted helper: handles the API call to create an order (JS-R1005)
   const submitOrderToApi = async (
     address: string,
+    cartItems: CartItemWithProduct[],
     notes: Record<string, string>,
   ): Promise<void> => {
     const orderData = {
       customerAddress: address,
-      items: cart!.items.map((item) => ({
+      items: cartItems.map((item) => ({
         productId: item.productId,
         variationId: item.variationId,
         quantity: item.quantity,
@@ -215,39 +216,26 @@ export default function CartPage() {
   };
 
   const handlePlaceOrder = async () => {
-    const validationRules = [
-      {
-        valid: Boolean(session?.user),
-        handler: () => router.push('/auth/signin?callbackUrl=/cart'),
-      },
-      {
-        valid: Boolean(cart?.items && cart.items.length > 0),
-        handler: () => setError('Your cart is empty'),
-      },
-      {
-        valid: Boolean(customerAddress.trim()),
-        handler: () => setError('Please enter a shipping address'),
-      },
-    ];
-
-    for (const rule of validationRules) {
-      if (!rule.valid) {
-        rule.handler();
-        return;
-      }
+    if (!session?.user) {
+      router.push('/auth/signin?callbackUrl=/cart');
+      return;
+    }
+    if (!cart || !cart.items.length) {
+      setError('Your cart is empty');
+      return;
+    }
+    if (!customerAddress.trim()) {
+      setError('Please enter a shipping address');
+      return;
     }
 
     setOrderLoading(true);
     setError('');
 
     try {
-      await submitOrderToApi(customerAddress, customizationNotes);
+      await submitOrderToApi(customerAddress, cart.items, customizationNotes);
     } catch (err: unknown) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError('Something went wrong. Please try again.');
-      }
+      setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
     } finally {
       setOrderLoading(false);
     }
