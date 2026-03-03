@@ -5,6 +5,7 @@ import { eq, and, isNull } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { AddToCartSchema, type AddToCartInput } from "@/lib/validations";
 import { handleValidationError } from "@/lib/api-utils";
+import { logError } from "@/lib/logger";
 import type { Session } from "next-auth";
 
 export const dynamic = "force-dynamic";
@@ -215,7 +216,7 @@ export async function GET(request: NextRequest) {
       cart: serializeCart(cart as unknown as CartWithItems),
     });
   } catch (error) {
-    console.error("Error fetching cart:", error);
+    logError({ error, context: 'cart_fetch' });
     return NextResponse.json(
       { error: "Failed to fetch cart" },
       { status: 500 },
@@ -229,47 +230,14 @@ export async function POST(request: NextRequest) {
     const session = await auth();
     const rawBody = await request.json();
 
-    // ===== DEBUG LOGGING =====
-    console.log("[CART POST] Request received");
-    console.log(
-      "[CART POST] Raw request body:",
-      JSON.stringify(rawBody, null, 2),
-    );
-    console.log("[CART POST] Raw body type check:", {
-      productId: { value: rawBody.productId, type: typeof rawBody.productId },
-      variationId: {
-        value: rawBody.variationId,
-        type: typeof rawBody.variationId,
-      },
-      quantity: { value: rawBody.quantity, type: typeof rawBody.quantity },
-    });
-
     // Validate input
     const parseResult = AddToCartSchema.safeParse(rawBody);
-    console.log("[CART POST] Validation result success:", parseResult.success);
 
     if (!parseResult.success) {
-      console.error("[CART POST] Validation failed with errors:");
-      parseResult.error.issues.forEach((err, index) => {
-        console.error(`  Error ${index + 1}:`, {
-          path: err.path,
-          code: err.code,
-          message: err.message,
-        });
-      });
-      console.error(
-        "[CART POST] Full validation error object:",
-        parseResult.error,
-      );
       return handleValidationError(parseResult.error);
     }
 
     const body = parseResult.data;
-    console.log("[CART POST] Validation passed. Parsed body:", {
-      productId: body.productId,
-      variationId: body.variationId,
-      quantity: body.quantity,
-    });
 
     // Verify product and stock
     const stockResult = await verifyProductStock(body);
@@ -328,7 +296,7 @@ export async function POST(request: NextRequest) {
 
     return response;
   } catch (error) {
-    console.error("Error adding to cart:", error);
+    logError({ error, context: 'cart_add' });
     return NextResponse.json(
       { error: "Failed to add to cart" },
       { status: 500 },
@@ -349,11 +317,11 @@ export async function DELETE(request: NextRequest) {
     const actions = {
       user: async () =>
         drizzleDb.query.carts.findFirst({
-          where: eq(carts.userId, session.user.id),
+          where: eq(carts.userId, session!.user!.id),
         }),
       session: async () =>
         drizzleDb.query.carts.findFirst({
-          where: eq(carts.sessionId, sessionId),
+          where: eq(carts.sessionId, sessionId!),
         }),
     };
 
@@ -366,15 +334,13 @@ export async function DELETE(request: NextRequest) {
 
     const response = NextResponse.json({ success: true });
 
-    const clearActions = {
-      session: () => response.cookies.delete("cart_session"),
-    };
-
-    clearActions[key]?.();
+    if (key === "session") {
+      response.cookies.delete("cart_session");
+    }
 
     return response;
   } catch (error) {
-    console.error("Error clearing cart:", error);
+    logError({ error, context: 'cart_clear' });
     return NextResponse.json(
       { error: "Failed to clear cart" },
       { status: 500 },

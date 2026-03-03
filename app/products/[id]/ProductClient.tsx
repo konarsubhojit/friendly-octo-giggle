@@ -82,7 +82,6 @@ export default function ProductClient({ product }: ProductClientProps) {
       setCartSuccess(true);
       setTimeout(() => setCartSuccess(false), 3000);
     } catch (err) {
-      console.error('Error adding to cart:', err);
       setError(typeof err === 'string' ? err : 'Something went wrong. Please try again.');
     } finally {
       setAddingToCart(false);
@@ -159,10 +158,9 @@ export default function ProductClient({ product }: ProductClientProps) {
                   <div className="grid grid-cols-2 gap-3">
                     {product.variations.map((variation) => {
                       const isSelected = selectedVariation?.id === variation.id;
-                      const classNames = {
-                        true: 'p-4 border-2 rounded-xl transition-all duration-300 border-blue-600 bg-gradient-to-br from-blue-50 to-purple-50 shadow-lg scale-105',
-                        false: 'p-4 border-2 rounded-xl transition-all duration-300 border-gray-300 hover:border-blue-400 hover:shadow-md hover:scale-105'
-                      }[isSelected];
+                      const classNames = isSelected
+                        ? 'p-4 border-2 rounded-xl transition-all duration-300 border-blue-600 bg-gradient-to-br from-blue-50 to-purple-50 shadow-lg scale-105'
+                        : 'p-4 border-2 rounded-xl transition-all duration-300 border-gray-300 hover:border-blue-400 hover:shadow-md hover:scale-105';
                       const badgeMap = {
                         price: variation.priceModifier !== 0 && (
                           <div className="text-xs font-semibold text-blue-600 mt-1">

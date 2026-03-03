@@ -5,6 +5,7 @@ import { eq } from 'drizzle-orm';
 import { auth } from '@/lib/auth';
 import { UpdateCartItemSchema } from '@/lib/validations';
 import { handleValidationError } from '@/lib/api-utils';
+import { logError } from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -78,7 +79,7 @@ export async function PATCH(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error updating cart item:', error);
+    logError({ error, context: 'cart_item_update' });
     return NextResponse.json(
       { error: 'Failed to update cart item' },
       { status: 500 }
@@ -128,7 +129,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error deleting cart item:', error);
+    logError({ error, context: 'cart_item_delete' });
     return NextResponse.json(
       { error: 'Failed to delete cart item' },
       { status: 500 }

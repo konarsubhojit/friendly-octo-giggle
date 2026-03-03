@@ -28,8 +28,7 @@ export default function UsersManagement() {
 
     try {
       await dispatch(updateAdminUserRole({ id: userId, role: newRole })).unwrap();
-    } catch (err) {
-      console.error('Error updating user:', err);
+    } catch (_err) {
     } finally {
       setUpdatingUserId(null);
     }

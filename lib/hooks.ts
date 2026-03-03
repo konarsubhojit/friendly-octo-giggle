@@ -25,18 +25,13 @@ export function useFetch<T>(
     try {
       const response = await fetch(url, optionsRef.current);
 
-      const handlers = {
-        true: async resp => {
-          const json = await resp.json();
-          setData(json.data || json);
-        },
-        false: async resp => {
-          const errorData = await resp.json().catch(() => ({}));
-          throw new Error(errorData.error || 'Failed to fetch data');
-        }
-      };
-
-      await handlers[response.ok](response);
+      if (response.ok) {
+        const json = await response.json();
+        setData(json.data || json);
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to fetch data');
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
@@ -173,8 +168,7 @@ export function useLocalStorage<T>(
     try {
       const item = globalThis.localStorage.getItem(key);
       return item ? JSON.parse(item) : initialValue;
-    } catch (error) {
-      console.error('Error reading from localStorage:', error);
+    } catch (_error) {
       return initialValue;
     }
   });
@@ -187,8 +181,7 @@ export function useLocalStorage<T>(
       if (globalThis.window !== undefined) {
         globalThis.localStorage.setItem(key, JSON.stringify(valueToStore));
       }
-    } catch (error) {
-      console.error('Error writing to localStorage:', error);
+    } catch (_error) {
     }
   };
 

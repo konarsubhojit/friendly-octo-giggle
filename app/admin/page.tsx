@@ -38,8 +38,7 @@ export default function AdminDashboard() {
         } else {
           setError('Failed to load sales data');
         }
-      } catch (err) {
-        console.error('Sales data fetch error:', err);
+      } catch (_err) {
         setError('Failed to load sales data');
       } finally {
         setLoading(false);

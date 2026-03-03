@@ -1,10 +1,31 @@
 import { Pool } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-serverless';
-import { products } from './schema';
+import {
+  products, productVariations,
+  users, accounts, sessions, verificationTokens,
+  orders, orderItems, carts, cartItems,
+  userRoleEnum, orderStatusEnum,
+  usersRelations, accountsRelations, sessionsRelations,
+  productsRelations, productVariationsRelations,
+  ordersRelations, orderItemsRelations,
+  cartsRelations, cartItemsRelations,
+} from './schema';
 import { eq, desc } from 'drizzle-orm';
 import { Product, ProductInput } from './types';
 import { env } from './env';
 import { cacheProductsList, cacheProductById, invalidateProductCaches } from './cache';
+
+// All schema tables and relations collected into one object for Drizzle relational queries
+const schema = {
+  userRoleEnum, orderStatusEnum,
+  users, accounts, sessions, verificationTokens,
+  products, productVariations,
+  orders, orderItems, carts, cartItems,
+  usersRelations, accountsRelations, sessionsRelations,
+  productsRelations, productVariationsRelations,
+  ordersRelations, orderItemsRelations,
+  cartsRelations, cartItemsRelations,
+};
 
 // ─── Connection Pool (singleton for serverless) ─────────
 

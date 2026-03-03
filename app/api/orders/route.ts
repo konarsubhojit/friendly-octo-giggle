@@ -56,7 +56,7 @@ function validateCustomerInfo(
     return { valid: false, ...errorMap[reason] };
   }
 
-  return { valid: true, customerName, customerEmail, customerAddress };
+  return { valid: true, customerName, customerEmail: customerEmail ?? '', customerAddress };
 }
 
 function checkStockForItem(
@@ -163,38 +163,27 @@ async function handleGet(_request: NextRequest) {
 async function handlePost(request: NextRequest) {
   try {
     const session = await auth();
+
+    // Auth guard first — before any other validation
+    if (!session?.user?.id) {
+      logBusinessEvent({ event: 'order_create_failed', details: { reason: 'not_authenticated' }, success: false });
+      return NextResponse.json(
+        { error: 'Authentication required. Please sign in to place orders.' },
+        { status: 401 }
+      );
+    }
+
     const body: CreateOrderInput = await request.json();
+
+    if (!body.items || body.items.length === 0) {
+      logBusinessEvent({ event: 'order_create_failed', details: { reason: 'missing_items' }, success: false });
+      return NextResponse.json({ error: 'Order must contain at least one item' }, { status: 400 });
+    }
+
     const customerValidation = validateCustomerInfo(body, session);
-    const reason =
-      !session?.user?.id
-        ? 'not_authenticated'
-        : !body.items || body.items.length === 0
-        ? 'missing_items'
-        : !customerValidation.valid
-        ? customerValidation.reason
-        : null;
-    if (reason) {
-      const errorMapping = {
-        not_authenticated: {
-          error: 'Authentication required. Please sign in to place orders.',
-          status: 401,
-        },
-        missing_items: {
-          error: 'Order must contain at least one item',
-          status: 400,
-        },
-        [customerValidation.reason]: {
-          error: customerValidation.error,
-          status: customerValidation.status,
-        },
-      };
-      logBusinessEvent({
-        event: 'order_create_failed',
-        details: { reason },
-        success: false,
-      });
-      const { error, status } = errorMapping[reason];
-      return NextResponse.json({ error }, { status });
+    if (!customerValidation.valid) {
+      logBusinessEvent({ event: 'order_create_failed', details: { reason: customerValidation.reason }, success: false });
+      return NextResponse.json({ error: customerValidation.error }, { status: customerValidation.status });
     }
     const { customerName, customerEmail, customerAddress } = customerValidation;
 
@@ -222,7 +211,7 @@ async function handlePost(request: NextRequest) {
     const order = await drizzleDb.transaction(async (tx) => {
       // Create order with userId
       const [newOrder] = await tx.insert(orders).values({
-        userId: session.user.id,
+        userId: session!.user!.id,
         customerName,
         customerEmail,
         customerAddress,
@@ -239,7 +228,7 @@ async function handlePost(request: NextRequest) {
             throw new Error(`Product with id ${item.productId} not found`);
           }
           const variationMap = new Map(product.variations.map((v) => [v.id, v.priceModifier]));
-          const price = product.price + (variationMap.get(item.variationId) ?? 0);
+          const price = product.price + (variationMap.get(item.variationId ?? '') ?? 0);
 
           const rawNote = item.customizationNote;
           const trimmed = typeof rawNote === 'string' ? rawNote.trim() : '';

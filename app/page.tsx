@@ -7,6 +7,8 @@ import TrendingProducts from '@/components/sections/TrendingProducts';
 import { db } from '@/lib/db';
 import { unstable_cache } from 'next/cache';
 
+import { logError } from '@/lib/logger';
+
 export const revalidate = 60;
 
 // Create a cached version of product fetching with Next.js cache tags
@@ -26,7 +28,7 @@ export default async function Home() {
   try {
     products = await getCachedProducts();
   } catch (error) {
-    console.error('Error fetching products from database:', error);
+    logError({ error, context: 'home_products_fetch' });
   }
 
   return (

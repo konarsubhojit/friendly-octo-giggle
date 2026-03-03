@@ -86,8 +86,7 @@ export default function ProductFormModal({
 
       const data = await res.json();
       return data.data.url;
-    } catch (err) {
-      console.error('Error uploading image:', err);
+    } catch (_err) {
       toast.error('Something went wrong. Please try again.');
       return null;
     } finally {
@@ -168,8 +167,7 @@ export default function ProductFormModal({
 
       onSuccess(savedProduct);
       onClose();
-    } catch (err) {
-      console.error('Error saving product:', err);
+    } catch (_err) {
       toast.error('Something went wrong. Please try again.');
     } finally {
       setSaving(false);

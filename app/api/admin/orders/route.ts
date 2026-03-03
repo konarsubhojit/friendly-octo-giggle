@@ -31,7 +31,7 @@ export async function GET() {
 
   try {
     // Use Redis cache for orders list
-    const orders = await getCachedData(
+    const orderList = await getCachedData(
       'admin:orders:all',
       60, // Cache for 1 minute (orders change more frequently)
       async () => {
@@ -44,7 +44,7 @@ export async function GET() {
     );
 
     return apiSuccess({
-      orders: serializeOrders(orders),
+      orders: serializeOrders(orderList),
     });
   } catch (error) {
     return handleApiError(error);

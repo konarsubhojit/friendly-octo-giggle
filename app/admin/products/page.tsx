@@ -73,8 +73,7 @@ export default function ProductsManagement() {
       dispatch(removeProduct(productToDelete));
       setShowDeleteModal(false);
       setProductToDelete(null);
-    } catch (err) {
-      console.error('Error deleting product:', err);
+    } catch (_err) {
       toast.error('Something went wrong. Please try again.');
     } finally {
       setDeleting(false);

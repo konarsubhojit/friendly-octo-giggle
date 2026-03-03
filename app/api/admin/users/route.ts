@@ -30,7 +30,7 @@ export async function GET() {
     }
 
     // Use Redis cache for user list
-    const users = await getCachedData(
+    const userList = await getCachedData(
       'admin:users:all',
       300, // Cache for 5 minutes
       async () => {
@@ -53,7 +53,7 @@ export async function GET() {
       30 // Stale time
     );
 
-    return apiSuccess({ users });
+    return apiSuccess({ users: userList });
   } catch (error) {
     return handleApiError(error);
   }

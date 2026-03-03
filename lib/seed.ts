@@ -2,7 +2,26 @@ import 'dotenv/config';
 import { Pool, neonConfig } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-serverless';
 import ws from 'ws';
-import { products, productVariations, orders, orderItems, carts, cartItems } from './schema';
+import {
+  products, productVariations, orders, orderItems, carts, cartItems,
+  users, accounts, sessions, verificationTokens,
+  userRoleEnum, orderStatusEnum,
+  usersRelations, accountsRelations, sessionsRelations,
+  productsRelations, productVariationsRelations,
+  ordersRelations, orderItemsRelations,
+  cartsRelations, cartItemsRelations,
+} from './schema';
+
+// All schema tables collected for Drizzle relational query support
+const schema = {
+  userRoleEnum, orderStatusEnum,
+  users, accounts, sessions, verificationTokens,
+  products, productVariations, orders, orderItems, carts, cartItems,
+  usersRelations, accountsRelations, sessionsRelations,
+  productsRelations, productVariationsRelations,
+  ordersRelations, orderItemsRelations,
+  cartsRelations, cartItemsRelations,
+};
 
 // Required: Node.js needs ws for WebSocket support (Neon driver uses WebSockets)
 neonConfig.webSocketConstructor = ws;
