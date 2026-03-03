@@ -11,6 +11,7 @@ import {
   selectAdminError,
 } from '@/lib/features/admin/adminSlice';
 import type { AppDispatch } from '@/lib/store';
+import { logError } from '@/lib/logger';
 
 export default function UsersManagement() {
   const dispatch = useDispatch<AppDispatch>();
@@ -28,7 +29,8 @@ export default function UsersManagement() {
 
     try {
       await dispatch(updateAdminUserRole({ id: userId, role: newRole })).unwrap();
-    } catch (_err) {
+    } catch (err) {
+      logError({ error: err, context: 'handleRoleChange' });
     } finally {
       setUpdatingUserId(null);
     }
