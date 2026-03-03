@@ -206,7 +206,10 @@ async function handlePost(request: NextRequest) {
       // Create order items
       await tx.insert(schema.orderItems).values(
         body.items.map(item => {
-          const product = products.find((p) => p.id === item.productId)!;
+          const product = products.find((p) => p.id === item.productId);
+          if (!product) {
+            throw new Error(`Product with id ${item.productId} not found`);
+          }
           let price = product.price;
           const variation = item.variationId ? product.variations.find((v) => v.id === item.variationId) : null;
           if (variation) {
