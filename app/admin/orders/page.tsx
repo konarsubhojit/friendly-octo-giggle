@@ -59,6 +59,12 @@ export default function OrdersManagement() {
     setUpdatingOrderId(null);
   };
 
+  const normalizeShippingField = (value: string | null | undefined): string | null => {
+    if (value == null) return null;
+    const trimmed = value.trim();
+    return trimmed === '' ? null : trimmed;
+  };
+
   const handleSaveShipping = async (orderId: string, currentStatus: OrderStatus | string, order: { trackingNumber?: string | null; shippingProvider?: string | null }) => {
     const edit = getShippingEdit(orderId, order);
     setSavingShippingId(orderId);
@@ -66,8 +72,8 @@ export default function OrdersManagement() {
       updateAdminOrderStatus({
         id: orderId,
         status: currentStatus,
-        trackingNumber: edit.trackingNumber || null,
-        shippingProvider: edit.shippingProvider || null,
+        trackingNumber: normalizeShippingField(edit.trackingNumber),
+        shippingProvider: normalizeShippingField(edit.shippingProvider),
       }),
     );
     // Clear local draft so it re-reads from store on next render

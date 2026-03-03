@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { drizzleDb } from '@/lib/db';
 import * as schema from '@/lib/schema';
-import { sql, eq, count } from 'drizzle-orm';
+import { sql, eq, count, and, gte, lt, ne } from 'drizzle-orm';
 import { apiSuccess, apiError, handleApiError } from '@/lib/api-utils';
 import { auth } from '@/lib/auth';
 import { getCachedData } from '@/lib/redis';
@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
             totalOrders: count(),
           })
           .from(schema.orders)
-          .where(sql`${schema.orders.status} != 'CANCELLED'`);
+          .where(ne(schema.orders.status, 'CANCELLED'));
 
         // Today's revenue
         const [todayStats] = await drizzleDb
@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
             orderCount: count(),
           })
           .from(schema.orders)
-          .where(sql`${schema.orders.createdAt} >= ${today} AND ${schema.orders.status} != 'CANCELLED'`);
+          .where(and(gte(schema.orders.createdAt, today), ne(schema.orders.status, 'CANCELLED')));
 
         // This month's revenue
         const [monthStats] = await drizzleDb
@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
             orderCount: count(),
           })
           .from(schema.orders)
-          .where(sql`${schema.orders.createdAt} >= ${thisMonth} AND ${schema.orders.status} != 'CANCELLED'`);
+          .where(and(gte(schema.orders.createdAt, thisMonth), ne(schema.orders.status, 'CANCELLED')));
 
         // Last month's revenue (for comparison)
         const [lastMonthStats] = await drizzleDb
@@ -69,15 +69,16 @@ export async function GET(request: NextRequest) {
             orderCount: count(),
           })
           .from(schema.orders)
-          .where(sql`${schema.orders.createdAt} >= ${lastMonth} AND ${schema.orders.createdAt} < ${thisMonth} AND ${schema.orders.status} != 'CANCELLED'`);
+          .where(and(gte(schema.orders.createdAt, lastMonth), lt(schema.orders.createdAt, thisMonth), ne(schema.orders.status, 'CANCELLED')));
 
-        // Orders by status
+        // Orders by status (excluding cancelled to match totals)
         const statusCounts = await drizzleDb
           .select({
             status: schema.orders.status,
             count: count(),
           })
           .from(schema.orders)
+          .where(ne(schema.orders.status, 'CANCELLED'))
           .groupBy(schema.orders.status);
 
         // Top selling products
@@ -91,7 +92,7 @@ export async function GET(request: NextRequest) {
           .from(schema.orderItems)
           .innerJoin(schema.products, eq(schema.orderItems.productId, schema.products.id))
           .innerJoin(schema.orders, eq(schema.orderItems.orderId, schema.orders.id))
-          .where(sql`${schema.orders.status} != 'CANCELLED'`)
+          .where(ne(schema.orders.status, 'CANCELLED'))
           .groupBy(schema.orderItems.productId, schema.products.name)
           .orderBy(sql`sum(${schema.orderItems.quantity}) desc`)
           .limit(5);
