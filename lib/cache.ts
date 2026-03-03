@@ -6,7 +6,6 @@
  */
 
 import { getCachedData, invalidateCache as invalidateCachePattern } from './redis';
-import { Product } from './types';
 import { logCacheOperation } from './logger';
 
 // Cache key patterns
