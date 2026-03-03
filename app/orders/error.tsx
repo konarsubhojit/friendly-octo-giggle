@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect } from 'react';
 import Link from 'next/link';
 
 interface ErrorProps {
@@ -9,9 +8,6 @@ interface ErrorProps {
 }
 
 export default function OrdersError({ error, reset }: ErrorProps) {
-  useEffect(() => {
-    console.error('Orders error:', error);
-  }, [error]);
 
   return (
     <div className="min-h-[50vh] flex items-center justify-center px-4">

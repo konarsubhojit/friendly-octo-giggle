@@ -6,7 +6,7 @@
  */
 
 import { getCachedData, invalidateCache as invalidateCachePattern } from './redis';
-import { logCacheOperation } from './logger';
+import { logCacheOperation, logError } from './logger';
 
 // Cache key patterns
 export const CACHE_KEYS = {
@@ -73,6 +73,6 @@ export async function invalidateProductCaches(productId?: string): Promise<void>
     });
   } catch (error) {
     // Log error but don't throw - cache invalidation failure shouldn't break the app
-    console.error('Failed to invalidate product caches:', error);
+    logError({ error, context: 'cache_invalidation' });
   }
 }

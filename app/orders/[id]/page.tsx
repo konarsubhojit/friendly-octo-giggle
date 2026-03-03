@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, use } from 'react';
+import type { ReactElement } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useSession } from 'next-auth/react';
@@ -169,21 +170,19 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
                     completed: 'bg-gradient-to-r from-blue-500 to-purple-500',
                     default: 'bg-gray-200',
                   };
-                  const contentMap = {
-                    true: (
-                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                    ),
-                    false: index + 1,
-                  };
                   return (
                     <div key={step} className="flex items-center flex-1">
                       <div className="flex flex-col items-center flex-shrink-0">
                         <div
                           className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all ${statusClasses[statusKey]}${isCurrent ? ' ring-4 ring-blue-200' : ''}`}
                         >
-                          {contentMap[isCompleted]}
+                          {isCompleted ? (
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    ) : (
+                      index + 1
+                    )}
                         </div>
                         <span className={`text-xs mt-2 font-medium ${textClasses[statusKey]}`}> 
                           {STATUS_LABELS[step]}
@@ -208,7 +207,7 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
           <div className="space-y-4">
             {order.items.map((item) => {
               const image = (item.variation as Record<string, unknown>)?.image as string | undefined || item.product?.image;
-              const sections: Record<string, JSX.Element | null> = {
+              const sections: Record<string, ReactElement | null> = {
                 image: image ? (
                   <div className="relative w-16 h-16 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100">
                     <Image src={image} alt={item.product?.name || 'Order item'} fill sizes="80px" className="object-cover" />

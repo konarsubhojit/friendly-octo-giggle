@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { drizzleDb } from '@/lib/db';
-import * as schema from '@/lib/schema';
+import { orders } from '@/lib/schema';
 import { eq } from 'drizzle-orm';
 import { apiSuccess, apiError, handleApiError } from '@/lib/api-utils';
 import { auth } from '@/lib/auth';
@@ -21,7 +21,7 @@ export async function GET(
     const { id } = await params;
 
     const order = await drizzleDb.query.orders.findFirst({
-      where: eq(schema.orders.id, id),
+      where: eq(orders.id, id),
       with: {
         items: {
           with: {

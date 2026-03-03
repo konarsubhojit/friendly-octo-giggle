@@ -19,6 +19,185 @@ import type { AppDispatch } from '@/lib/store';
  */
 type ShippingEdits = Record<string, { trackingNumber: string; shippingProvider: string }>;
 
+// Shared order types (mirrored from adminSlice internals)
+interface AdminOrderItem {
+  id: string;
+  quantity: number;
+  price: number;
+  customizationNote?: string | null;
+  product?: { id: string; name: string; image: string };
+  variation?: { id: string; name: string; priceModifier: number } | null;
+}
+interface AdminOrder {
+  id: string;
+  customerName: string;
+  customerEmail: string;
+  customerAddress: string;
+  totalAmount: number;
+  status: string;
+  trackingNumber?: string | null;
+  shippingProvider?: string | null;
+  createdAt: string;
+  items: AdminOrderItem[];
+}
+
+// --- AdminOrderCard: extracted to reduce JSX depth (JS-0415) ---
+interface AdminOrderCardProps {
+  readonly order: AdminOrder;
+  readonly updatingOrderId: string | null;
+  readonly savingShippingId: string | null;
+  readonly edit: { trackingNumber: string; shippingProvider: string };
+  readonly getStatusColor: (status: string) => string;
+  readonly formatPrice: (amount: number) => string;
+  readonly onStatusChange: (orderId: string, status: OrderStatus) => void;
+  readonly onShippingFieldChange: (
+    orderId: string,
+    field: 'trackingNumber' | 'shippingProvider',
+    value: string,
+    order: AdminOrder,
+  ) => void;
+  readonly onSaveShipping: (orderId: string, status: string, order: AdminOrder) => void;
+}
+
+function AdminOrderCard({
+  order,
+  updatingOrderId,
+  savingShippingId,
+  edit,
+  getStatusColor,
+  formatPrice,
+  onStatusChange,
+  onShippingFieldChange,
+  onSaveShipping,
+}: AdminOrderCardProps) {
+  const hasTracking = Boolean(order.trackingNumber || order.shippingProvider);
+
+  return (
+    <div className="bg-white p-6 rounded-lg shadow-md">
+      {/* Order Header */}
+      <div className="flex justify-between items-start mb-4">
+        <div>
+          <h3 className="font-bold text-lg">
+            {hasTracking && <span role="img" aria-label="Tracking info available" title="Tracking info available" className="mr-1">📦</span>}
+            Order #{order.id.slice(0, 8).toUpperCase()}
+          </h3>
+          <p className="text-sm text-gray-600">
+            {new Date(order.createdAt).toLocaleString('en-US', {
+              dateStyle: 'medium',
+              timeStyle: 'short',
+            })}
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className={`px-3 py-1 rounded-full text-sm font-semibold ${getStatusColor(order.status)}`}>
+            {order.status}
+          </span>
+          {updatingOrderId === order.id ? (
+            <div className="inline-block w-5 h-5 border-2 border-gray-200 border-t-blue-600 rounded-full animate-spin" />
+          ) : (
+            <select
+              value={order.status}
+              onChange={(e) => onStatusChange(order.id, e.target.value as OrderStatus)}
+              className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={updatingOrderId !== null}
+            >
+              {Object.values(OrderStatus).map((status) => (
+                <option key={status} value={status}>{status}</option>
+              ))}
+            </select>
+          )}
+        </div>
+      </div>
+
+      {/* Customer + Shipping Address */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div>
+          <h4 className="font-semibold text-sm text-gray-700 mb-1">Customer</h4>
+          <p className="text-sm">{order.customerName}</p>
+          <p className="text-sm text-gray-600">{order.customerEmail}</p>
+        </div>
+        <div>
+          <h4 className="font-semibold text-sm text-gray-700 mb-1">Shipping Address</h4>
+          <p className="text-sm text-gray-600">{order.customerAddress}</p>
+        </div>
+      </div>
+
+      {/* Shipping Info: Tracking Number + Provider */}
+      <div className="mb-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+        <h4 className="font-semibold text-sm text-gray-700 mb-2">Shipping Information</h4>
+        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-end">
+          <div className="flex-1 w-full">
+            <label htmlFor={`tracking-${order.id}`} className="block text-xs text-gray-500 mb-1">
+              Tracking Number
+            </label>
+            <input
+              id={`tracking-${order.id}`}
+              type="text"
+              value={edit.trackingNumber}
+              onChange={(e) => onShippingFieldChange(order.id, 'trackingNumber', e.target.value, order)}
+              placeholder="e.g. 1Z999AA10123456784"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div className="flex-1 w-full">
+            <label htmlFor={`provider-${order.id}`} className="block text-xs text-gray-500 mb-1">
+              Shipping Provider
+            </label>
+            <input
+              id={`provider-${order.id}`}
+              type="text"
+              value={edit.shippingProvider}
+              onChange={(e) => onShippingFieldChange(order.id, 'shippingProvider', e.target.value, order)}
+              placeholder="e.g. FedEx, UPS, USPS"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <button
+            onClick={() => onSaveShipping(order.id, order.status, order)}
+            disabled={savingShippingId === order.id}
+            className="px-4 py-2 bg-purple-600 text-white rounded-md text-sm font-medium hover:bg-purple-700 disabled:bg-gray-400 transition whitespace-nowrap"
+          >
+            {savingShippingId === order.id ? 'Saving…' : 'Save Shipping'}
+          </button>
+        </div>
+      </div>
+
+      {/* Order Items */}
+      <div className="border-t pt-4">
+        <h4 className="font-semibold mb-3">Items ({order.items.length})</h4>
+        <div className="space-y-2">
+          {order.items.map((item) => (
+            <div key={item.id} className="flex justify-between items-center py-2 border-b last:border-b-0">
+              <div className="flex-1">
+                <p className="font-medium text-sm">{item.product?.name || 'Unknown Product'}</p>
+                {item.variation && (
+                  <p className="text-xs text-blue-600">{item.variation.name}</p>
+                )}
+                <p className="text-xs text-gray-500">
+                  {formatPrice(item.price)} × {item.quantity}
+                </p>
+                {item.customizationNote && (
+                  <p className="text-xs text-amber-700 bg-amber-50 inline-block mt-1 px-2 py-0.5 rounded">
+                    ✏️ {item.customizationNote}
+                  </p>
+                )}
+              </div>
+              <div className="text-right">
+                <p className="font-semibold">{formatPrice(item.price * item.quantity)}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="border-t mt-3 pt-3 flex justify-between items-center">
+          <span className="font-bold text-lg">Total</span>
+          <span className="font-bold text-xl text-gray-900">{formatPrice(order.totalAmount)}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
 export default function OrdersManagement() {
   const { formatPrice } = useCurrency();
   const dispatch = useDispatch<AppDispatch>();
@@ -78,9 +257,8 @@ export default function OrdersManagement() {
     );
     // Clear local draft so it re-reads from store on next render
     setShippingEdits((prev) => {
-      const next = { ...prev };
-      delete next[orderId];
-      return next;
+      const { [orderId]: _removed, ...rest } = prev;
+      return rest;
     });
     setSavingShippingId(null);
   };
@@ -164,140 +342,20 @@ export default function OrdersManagement() {
         </div>
       ) : (
         <div className="space-y-4">
-          {filteredOrders.map((order) => {
-            const hasTracking = !!(order.trackingNumber || order.shippingProvider);
-            const edit = getShippingEdit(order.id, order);
-
-            return (
-              <div key={order.id} className="bg-white p-6 rounded-lg shadow-md">
-                {/* Order Header */}
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <h3 className="font-bold text-lg">
-                      {hasTracking && <span role="img" aria-label="Tracking info available" title="Tracking info available" className="mr-1">📦</span>}
-                      Order #{order.id.slice(0, 8).toUpperCase()}
-                    </h3>
-                    <p className="text-sm text-gray-600">
-                      {new Date(order.createdAt).toLocaleString('en-US', {
-                        dateStyle: 'medium',
-                        timeStyle: 'short',
-                      })}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className={`px-3 py-1 rounded-full text-sm font-semibold ${getStatusColor(order.status)}`}>
-                      {order.status}
-                    </span>
-                    {updatingOrderId === order.id ? (
-                      <div className="inline-block w-5 h-5 border-2 border-gray-200 border-t-blue-600 rounded-full animate-spin" />
-                    ) : (
-                      <select
-                        value={order.status}
-                        onChange={(e) => handleStatusChange(order.id, e.target.value as OrderStatus)}
-                        className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        disabled={updatingOrderId !== null}
-                      >
-                        {Object.values(OrderStatus).map((status) => (
-                          <option key={status} value={status}>
-                            {status}
-                          </option>
-                        ))}
-                      </select>
-                    )}
-                  </div>
-                </div>
-
-                {/* Customer + Shipping Address */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <h4 className="font-semibold text-sm text-gray-700 mb-1">Customer</h4>
-                    <p className="text-sm">{order.customerName}</p>
-                    <p className="text-sm text-gray-600">{order.customerEmail}</p>
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-sm text-gray-700 mb-1">Shipping Address</h4>
-                    <p className="text-sm text-gray-600">{order.customerAddress}</p>
-                  </div>
-                </div>
-
-                {/* Shipping Info: Tracking Number + Provider */}
-                <div className="mb-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
-                  <h4 className="font-semibold text-sm text-gray-700 mb-2">Shipping Information</h4>
-                  <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-end">
-                    <div className="flex-1 w-full">
-                      <label htmlFor={`tracking-${order.id}`} className="block text-xs text-gray-500 mb-1">
-                        Tracking Number
-                      </label>
-                      <input
-                        id={`tracking-${order.id}`}
-                        type="text"
-                        value={edit.trackingNumber}
-                        onChange={(e) => setShippingField(order.id, 'trackingNumber', e.target.value, order)}
-                        placeholder="e.g. 1Z999AA10123456784"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                    <div className="flex-1 w-full">
-                      <label htmlFor={`provider-${order.id}`} className="block text-xs text-gray-500 mb-1">
-                        Shipping Provider
-                      </label>
-                      <input
-                        id={`provider-${order.id}`}
-                        type="text"
-                        value={edit.shippingProvider}
-                        onChange={(e) => setShippingField(order.id, 'shippingProvider', e.target.value, order)}
-                        placeholder="e.g. FedEx, UPS, USPS"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                    <button
-                      onClick={() => handleSaveShipping(order.id, order.status, order)}
-                      disabled={savingShippingId === order.id}
-                      className="px-4 py-2 bg-purple-600 text-white rounded-md text-sm font-medium hover:bg-purple-700 disabled:bg-gray-400 transition whitespace-nowrap"
-                    >
-                      {savingShippingId === order.id ? 'Saving…' : 'Save Shipping'}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Order Items */}
-                <div className="border-t pt-4">
-                  <h4 className="font-semibold mb-3">Items ({order.items.length})</h4>
-                  <div className="space-y-2">
-                    {order.items.map((item) => (
-                      <div key={item.id} className="flex justify-between items-center py-2 border-b last:border-b-0">
-                        <div className="flex-1">
-                          <p className="font-medium text-sm">{item.product?.name || 'Unknown Product'}</p>
-                          {item.variation && (
-                            <p className="text-xs text-blue-600">
-                              {item.variation.name}
-                            </p>
-                          )}
-                          <p className="text-xs text-gray-500">
-                            {formatPrice(item.price)} × {item.quantity}
-                          </p>
-                          {item.customizationNote && (
-                            <p className="text-xs text-amber-700 bg-amber-50 inline-block mt-1 px-2 py-0.5 rounded">
-                              ✏️ {item.customizationNote}
-                            </p>
-                          )}
-                        </div>
-                        <div className="text-right">
-                          <p className="font-semibold">{formatPrice(item.price * item.quantity)}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="border-t mt-3 pt-3 flex justify-between items-center">
-                    <span className="font-bold text-lg">Total</span>
-                    <span className="font-bold text-xl text-gray-900">
-                      {formatPrice(order.totalAmount)}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+          {filteredOrders.map((order) => (
+            <AdminOrderCard
+              key={order.id}
+              order={order}
+              updatingOrderId={updatingOrderId}
+              savingShippingId={savingShippingId}
+              edit={getShippingEdit(order.id, order)}
+              getStatusColor={getStatusColor}
+              formatPrice={formatPrice}
+              onStatusChange={handleStatusChange}
+              onShippingFieldChange={setShippingField}
+              onSaveShipping={handleSaveShipping}
+            />
+          ))}
         </div>
       )}
     </main>

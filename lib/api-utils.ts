@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { ZodError } from 'zod';
+import { logError } from '@/lib/logger';
 
 // Type-safe success response
 export function apiSuccess<T>(data: T, status = 200) {
@@ -34,7 +35,7 @@ export function handleValidationError(error: ZodError<unknown>) {
 
 // Generic error handler
 export function handleApiError(error: unknown) {
-  console.error('API Error:', error);
+  logError({ error, context: 'api_error' });
 
   if (error instanceof ZodError) {
     return handleValidationError(error);

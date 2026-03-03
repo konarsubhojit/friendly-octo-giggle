@@ -4,6 +4,8 @@ import { Product } from '@/lib/types';
 import ProductClient from './ProductClient';
 import { db } from '@/lib/db';
 
+import { logError } from '@/lib/logger';
+
 export const revalidate = 60;
 
 export async function generateMetadata({
@@ -25,7 +27,7 @@ async function getProduct(id: string): Promise<Product | null> {
     const product = await db.products.findById(id);
     return product;
   } catch (error) {
-    console.error('Error fetching product:', error);
+    logError({ error, context: 'product_fetch', additionalInfo: { id } });
     return null;
   }
 }

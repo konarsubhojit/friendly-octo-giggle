@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { drizzleDb } from '@/lib/db';
-import * as schema from '@/lib/schema';
+import { orders, orderItems, products, productVariations } from '@/lib/schema';
 import { eq, inArray, sql, desc } from 'drizzle-orm';
 import { invalidateCache } from '@/lib/redis';
 import { CreateOrderInput, OrderItemInput } from '@/lib/types';
@@ -56,7 +56,7 @@ function validateCustomerInfo(
     return { valid: false, ...errorMap[reason] };
   }
 
-  return { valid: true, customerName, customerEmail, customerAddress };
+  return { valid: true, customerName, customerEmail: customerEmail ?? '', customerAddress };
 }
 
 function checkStockForItem(
@@ -120,8 +120,8 @@ async function handleGet(_request: NextRequest) {
       );
     }
 
-    const orders = await drizzleDb.query.orders.findMany({
-      where: eq(schema.orders.userId, session.user.id),
+    const orderList = await drizzleDb.query.orders.findMany({
+      where: eq(orders.userId, session.user.id),
       with: {
         items: {
           with: {
@@ -130,63 +130,109 @@ async function handleGet(_request: NextRequest) {
           },
         },
       },
-      orderBy: [desc(schema.orders.createdAt)],
+      orderBy: [desc(orders.createdAt)],
     });
 
     return NextResponse.json({
-      orders: orders.map((order) => ({
+      orders: orderList.map((order) => ({
+        ...order,
+        createdAt: order.createdAt.toISOString(),
+        updatedAt: order.updatedAt.toISOString(),
+        items: order.items.map((item) => ({
+          ...item,
+          product: {
+            ...item.product,
+            createdAt: item.product.createdAt.toISOString(),
+            updatedAt: item.product.updatedAt.toISOString(),
+          },
+        })),
+      })),
+    });
+  } catch (error) {
+    logError({
+      error,
+      context: 'fetch_user_orders',
+    });
+    return NextResponse.json(
+      { error: 'Failed to fetch orders' },
+      { status: 500 }
+    );
+  }
+}
+
+/** Sanitizes a raw customization note: trims, truncates to 500 chars, or returns null. */
+function sanitizeCustomizationNote(raw: string | null | undefined): string | null {
+  if (typeof raw !== 'string') return null;
+  const trimmed = raw.trim();
+  if (trimmed.length === 0) return null;
+  return trimmed.slice(0, 500);
+}
+
+/** Builds the values array for orderItems.insert given a list of inputs and matching products. */
+function buildOrderItemValues(
+  items: OrderItemInput[],
+  productList: ProductWithVariations[],
+  orderId: string,
+): Array<{ orderId: string; productId: string; variationId: string | null; quantity: number; price: number; customizationNote: string | null }> {
+  return items.map((item) => {
+    const product = productList.find((p) => p.id === item.productId);
+    if (!product) throw new Error(`Product with id ${item.productId} not found`);
+    const variationMap = new Map(product.variations.map((v) => [v.id, v.priceModifier]));
+    const price = product.price + (variationMap.get(item.variationId ?? '') ?? 0);
+    return {
+      orderId,
+      productId: item.productId,
+      variationId: item.variationId ?? null,
+      quantity: item.quantity,
+      price,
+      customizationNote: sanitizeCustomizationNote(item.customizationNote),
+    };
+  });
+}
+
 async function handlePost(request: NextRequest) {
   try {
     const session = await auth();
+
+    // Auth guard first — before any other validation
+    if (!session?.user?.id) {
+      logBusinessEvent({ event: 'order_create_failed', details: { reason: 'not_authenticated' }, success: false });
+      return NextResponse.json(
+        { error: 'Authentication required. Please sign in to place orders.' },
+        { status: 401 }
+      );
+    }
+    // userId is guaranteed non-null after the guard above
+    const userId = session.user.id;
+
     const body: CreateOrderInput = await request.json();
+
+    if (!body.items || body.items.length === 0) {
+      logBusinessEvent({ event: 'order_create_failed', details: { reason: 'missing_items' }, success: false });
+      return NextResponse.json({ error: 'Order must contain at least one item' }, { status: 400 });
+    }
+
     const customerValidation = validateCustomerInfo(body, session);
-    const reason =
-      !session?.user?.id
-        ? 'not_authenticated'
-        : !body.items || body.items.length === 0
-        ? 'missing_items'
-        : !customerValidation.valid
-        ? customerValidation.reason
-        : null;
-    if (reason) {
-      const errorMapping = {
-        not_authenticated: {
-          error: 'Authentication required. Please sign in to place orders.',
-          status: 401,
-        },
-        missing_items: {
-          error: 'Order must contain at least one item',
-          status: 400,
-        },
-        [customerValidation.reason]: {
-          error: customerValidation.error,
-          status: customerValidation.status,
-        },
-      };
-      logBusinessEvent({
-        event: 'order_create_failed',
-        details: { reason },
-        success: false,
-      });
-      const { error, status } = errorMapping[reason];
-      return NextResponse.json({ error }, { status });
+    if (!customerValidation.valid) {
+      logBusinessEvent({ event: 'order_create_failed', details: { reason: customerValidation.reason }, success: false });
+      return NextResponse.json({ error: customerValidation.error }, { status: customerValidation.status });
     }
     const { customerName, customerEmail, customerAddress } = customerValidation;
 
     // Fetch products with variations
     const productIds = body.items.map(item => item.productId);
-    const products = await drizzleDb.query.products.findMany({
-      where: inArray(schema.products.id, productIds),
+    const productList = await drizzleDb.query.products.findMany({
+      where: inArray(products.id, productIds),
       with: { variations: true },
     }) as ProductWithVariations[];
 
-    if (products.length !== body.items.length) {
-      logBusinessEvent({ event: 'order_create_failed', details: { reason: 'products_not_found', requestedCount: body.items.length, foundCount: products.length }, success: false });
+    if (productList.length !== body.items.length) {
+      logBusinessEvent({ event: 'order_create_failed', details: { reason: 'products_not_found', requestedCount: body.items.length, foundCount: productList.length }, success: false });
       return NextResponse.json({ error: 'Some products not found' }, { status: 404 });
     }
 
     // Validate stock and calculate total
-    const stockResult = validateStockAndCalculateTotal(body.items, products);
+    const stockResult = validateStockAndCalculateTotal(body.items, productList);
     if (!stockResult.valid) {
       logBusinessEvent({ event: 'order_create_failed', details: { reason: stockResult.reason, ...stockResult.details }, success: false });
       return NextResponse.json({ error: stockResult.error }, { status: stockResult.status });
@@ -196,8 +242,8 @@ async function handlePost(request: NextRequest) {
     // Create order and update stock in a transaction
     const order = await drizzleDb.transaction(async (tx) => {
       // Create order with userId
-      const [newOrder] = await tx.insert(schema.orders).values({
-        userId: session.user.id,
+      const [newOrder] = await tx.insert(orders).values({
+        userId,
         customerName,
         customerEmail,
         customerAddress,
@@ -206,50 +252,21 @@ async function handlePost(request: NextRequest) {
         updatedAt: new Date(),
       }).returning();
 
-      // Create order items
-      await tx.insert(schema.orderItems).values(
-        body.items.map(item => {
-          const product = products.find((p) => p.id === item.productId);
-          if (!product) {
-            throw new Error(`Product with id ${item.productId} not found`);
-          }
-          const variationMap = new Map(product.variations.map((v) => [v.id, v.priceModifier]));
-          const price = product.price + (variationMap.get(item.variationId) ?? 0);
-
-          const rawNote = item.customizationNote;
-          const trimmed = typeof rawNote === 'string' ? rawNote.trim() : '';
-          const key = typeof rawNote !== 'string'
-            ? 'invalid'
-            : trimmed.length === 0
-              ? 'empty'
-              : trimmed.length > 500
-                ? 'long'
-                : 'valid';
-          const noteMap: Record<string, string | null> = {
-            invalid: null,
-            empty: null,
-            long: trimmed.slice(0, 500),
-            valid: trimmed,
-          };
-          const customizationNote = noteMap[key];
-
-          return { orderId: newOrder.id, productId: item.productId, variationId: item.variationId ?? null, quantity: item.quantity, price, customizationNote };
-        })
+      // Create order items using extracted helper (reduces complexity)
+      await tx.insert(orderItems).values(
+        buildOrderItemValues(body.items, productList, newOrder.id)
       );
 
       // Update product/variation stock
       for (const item of body.items) {
         if (item.variationId) {
-          // Update variation stock
-          await tx.update(schema.productVariations)
-            .set({ stock: sql`${schema.productVariations.stock} - ${item.quantity}`, updatedAt: new Date() })
-            .where(eq(schema.productVariations.id, item.variationId));
+          await tx.update(productVariations)
+            .set({ stock: sql`${productVariations.stock} - ${item.quantity}`, updatedAt: new Date() })
+            .where(eq(productVariations.id, item.variationId));
         }
-
-        // Always update total product stock
-        await tx.update(schema.products)
-          .set({ stock: sql`${schema.products.stock} - ${item.quantity}`, updatedAt: new Date() })
-          .where(eq(schema.products.id, item.productId));
+        await tx.update(products)
+          .set({ stock: sql`${products.stock} - ${item.quantity}`, updatedAt: new Date() })
+          .where(eq(products.id, item.productId));
       }
 
       return newOrder;
@@ -257,7 +274,7 @@ async function handlePost(request: NextRequest) {
 
     // Re-fetch order with items, product, and variation details
     const fullOrder = await drizzleDb.query.orders.findFirst({
-      where: eq(schema.orders.id, order.id),
+      where: eq(orders.id, order.id),
       with: { items: { with: { product: true, variation: true } } },
     });
 

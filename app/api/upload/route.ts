@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { put } from '@vercel/blob';
 import { auth } from '@/lib/auth';
 import { isValidImageType, MAX_FILE_SIZE, VALID_IMAGE_TYPES_DISPLAY } from '@/lib/upload-constants';
+import { logError } from '@/lib/logger';
 
 export async function POST(request: Request) {
   let fileName = 'unknown';
@@ -76,11 +77,7 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
-    console.error('Upload error:', {
-      error,
-      fileName,
-      userId,
-    });
+    logError({ error, context: 'file_upload', additionalInfo: { fileName, userId } });
     return NextResponse.json(
       { error: 'Failed to upload file' },
       { status: 500 }

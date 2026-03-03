@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { drizzleDb } from "@/lib/db";
-import * as schema from "@/lib/schema";
+import { products, carts, cartItems } from "@/lib/schema";
 import { eq, and, isNull } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { AddToCartSchema, type AddToCartInput } from "@/lib/validations";
 import { handleValidationError } from "@/lib/api-utils";
+import { logError } from "@/lib/logger";
 import type { Session } from "next-auth";
 
 export const dynamic = "force-dynamic";
@@ -43,7 +44,7 @@ async function verifyProductStock(
   | { error: string; status: number }
 > {
   const product = await drizzleDb.query.products.findFirst({
-    where: eq(schema.products.id, body.productId),
+    where: eq(products.id, body.productId),
     with: { variations: true },
   });
 
@@ -74,11 +75,11 @@ async function getOrCreateCart(
 ): Promise<{ cart: { id: string }; sessionId: string | undefined }> {
   if (session?.user?.id) {
     let cart = await drizzleDb.query.carts.findFirst({
-      where: eq(schema.carts.userId, session.user.id),
+      where: eq(carts.userId, session.user.id),
     });
     if (!cart) {
       [cart] = await drizzleDb
-        .insert(schema.carts)
+        .insert(carts)
         .values({ userId: session.user.id, updatedAt: new Date() })
         .returning();
     }
@@ -90,11 +91,11 @@ async function getOrCreateCart(
     sessionId ??
     `guest_${Date.now()}_${Math.random().toString(36).substring(7)}`;
   let cart = await drizzleDb.query.carts.findFirst({
-    where: eq(schema.carts.sessionId, guestSessionId),
+    where: eq(carts.sessionId, guestSessionId),
   });
   if (!cart) {
     [cart] = await drizzleDb
-      .insert(schema.carts)
+      .insert(carts)
       .values({ sessionId: guestSessionId, updatedAt: new Date() })
       .returning();
   }
@@ -109,11 +110,11 @@ async function addOrUpdateCartItem(
 ): Promise<{ error: string; status: number } | null> {
   const existingItem = await drizzleDb.query.cartItems.findFirst({
     where: and(
-      eq(schema.cartItems.cartId, cartId),
-      eq(schema.cartItems.productId, body.productId),
+      eq(cartItems.cartId, cartId),
+      eq(cartItems.productId, body.productId),
       body.variationId
-        ? eq(schema.cartItems.variationId, body.variationId)
-        : isNull(schema.cartItems.variationId),
+        ? eq(cartItems.variationId, body.variationId)
+        : isNull(cartItems.variationId),
     ),
   });
 
@@ -123,11 +124,11 @@ async function addOrUpdateCartItem(
       return { error: "Insufficient stock", status: 400 };
     }
     await drizzleDb
-      .update(schema.cartItems)
+      .update(cartItems)
       .set({ quantity: newQuantity, updatedAt: new Date() })
-      .where(eq(schema.cartItems.id, existingItem.id));
+      .where(eq(cartItems.id, existingItem.id));
   } else {
-    await drizzleDb.insert(schema.cartItems).values({
+    await drizzleDb.insert(cartItems).values({
       cartId,
       productId: body.productId,
       variationId: body.variationId ?? null,
@@ -146,49 +147,57 @@ function serializeCart(cart: CartWithItems) {
     createdAt: cart.createdAt.toISOString(),
     updatedAt: cart.updatedAt.toISOString(),
     items: cart.items.map((item) => ({
+      ...item,
+      createdAt: item.createdAt.toISOString(),
+      updatedAt: item.updatedAt.toISOString(),
+      product: {
+        ...item.product,
+        createdAt: item.product.createdAt.toISOString(),
+        updatedAt: item.product.updatedAt.toISOString(),
+        variations: item.product.variations.map((v) => ({
+          ...v,
+          createdAt: v.createdAt.toISOString(),
+          updatedAt: v.updatedAt.toISOString(),
+        })),
+      },
+      variation: item.variation
+        ? {
+            ...item.variation,
+            createdAt: item.variation.createdAt.toISOString(),
+            updatedAt: item.variation.updatedAt.toISOString(),
+          }
+        : null,
+    })),
+  };
+}
+
 // Get cart for current user/session
 export async function GET(request: NextRequest) {
   try {
     const session = await auth();
     const sessionId = request.cookies.get("cart_session")?.value;
 
-    const queryOptions = {
-      user: {
-        where: eq(schema.carts.userId, session!.user!.id),
-        with: {
-          items: {
-            with: {
-              product: { with: { variations: true } },
-              variation: true,
-            },
-          },
-        },
-      },
-      session: {
-        where: eq(schema.carts.sessionId, sessionId!),
-        with: {
-          items: {
-            with: {
-              product: { with: { variations: true } },
-              variation: true,
-            },
-          },
-        },
-      },
-    };
-
-    const key = session?.user?.id ? 'user' : sessionId ? 'session' : null;
-    if (!key) {
+    if (!session?.user?.id && !sessionId) {
       return NextResponse.json({ cart: null });
     }
 
-    const cart = await drizzleDb.query.carts.findFirst(queryOptions[key]);
-
-    // ...rest of the logic to format and return the cart
-  } catch (error) {
-    return NextResponse.json({ error }, { status: 500 });
-  }
-}
+    let cart;
+    if (session?.user?.id) {
+      cart = await drizzleDb.query.carts.findFirst({
+        where: eq(carts.userId, session.user.id),
+        with: {
+          items: {
+            with: {
+              product: { with: { variations: true } },
+              variation: true,
+            },
+          },
+        },
+      });
+    } else if (sessionId) {
+      cart = await drizzleDb.query.carts.findFirst({
+        where: eq(carts.sessionId, sessionId),
+        with: {
           items: {
             with: {
               product: { with: { variations: true } },
@@ -207,7 +216,7 @@ export async function GET(request: NextRequest) {
       cart: serializeCart(cart as unknown as CartWithItems),
     });
   } catch (error) {
-    console.error("Error fetching cart:", error);
+    logError({ error, context: 'cart_fetch' });
     return NextResponse.json(
       { error: "Failed to fetch cart" },
       { status: 500 },
@@ -221,47 +230,14 @@ export async function POST(request: NextRequest) {
     const session = await auth();
     const rawBody = await request.json();
 
-    // ===== DEBUG LOGGING =====
-    console.log("[CART POST] Request received");
-    console.log(
-      "[CART POST] Raw request body:",
-      JSON.stringify(rawBody, null, 2),
-    );
-    console.log("[CART POST] Raw body type check:", {
-      productId: { value: rawBody.productId, type: typeof rawBody.productId },
-      variationId: {
-        value: rawBody.variationId,
-        type: typeof rawBody.variationId,
-      },
-      quantity: { value: rawBody.quantity, type: typeof rawBody.quantity },
-    });
-
     // Validate input
     const parseResult = AddToCartSchema.safeParse(rawBody);
-    console.log("[CART POST] Validation result success:", parseResult.success);
 
     if (!parseResult.success) {
-      console.error("[CART POST] Validation failed with errors:");
-      parseResult.error.issues.forEach((err, index) => {
-        console.error(`  Error ${index + 1}:`, {
-          path: err.path,
-          code: err.code,
-          message: err.message,
-        });
-      });
-      console.error(
-        "[CART POST] Full validation error object:",
-        parseResult.error,
-      );
       return handleValidationError(parseResult.error);
     }
 
     const body = parseResult.data;
-    console.log("[CART POST] Validation passed. Parsed body:", {
-      productId: body.productId,
-      variationId: body.variationId,
-      quantity: body.quantity,
-    });
 
     // Verify product and stock
     const stockResult = await verifyProductStock(body);
@@ -288,7 +264,7 @@ export async function POST(request: NextRequest) {
 
     // Fetch updated cart
     const updatedCart = await drizzleDb.query.carts.findFirst({
-      where: eq(schema.carts.id, cart.id),
+      where: eq(carts.id, cart.id),
       with: {
         items: {
           with: {
@@ -320,7 +296,7 @@ export async function POST(request: NextRequest) {
 
     return response;
   } catch (error) {
-    console.error("Error adding to cart:", error);
+    logError({ error, context: 'cart_add' });
     return NextResponse.json(
       { error: "Failed to add to cart" },
       { status: 500 },
@@ -341,11 +317,11 @@ export async function DELETE(request: NextRequest) {
     const actions = {
       user: async () =>
         drizzleDb.query.carts.findFirst({
-          where: eq(schema.carts.userId, session.user.id),
+          where: eq(carts.userId, session!.user!.id),
         }),
       session: async () =>
         drizzleDb.query.carts.findFirst({
-          where: eq(schema.carts.sessionId, sessionId),
+          where: eq(carts.sessionId, sessionId!),
         }),
     };
 
@@ -353,20 +329,18 @@ export async function DELETE(request: NextRequest) {
     const cart = await actions[key]();
 
     if (cart) {
-      await drizzleDb.delete(schema.carts).where(eq(schema.carts.id, cart.id));
+      await drizzleDb.delete(carts).where(eq(carts.id, cart.id));
     }
 
     const response = NextResponse.json({ success: true });
 
-    const clearActions = {
-      session: () => response.cookies.delete("cart_session"),
-    };
-
-    clearActions[key]?.();
+    if (key === "session") {
+      response.cookies.delete("cart_session");
+    }
 
     return response;
   } catch (error) {
-    console.error("Error clearing cart:", error);
+    logError({ error, context: 'cart_clear' });
     return NextResponse.json(
       { error: "Failed to clear cart" },
       { status: 500 },

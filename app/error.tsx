@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect } from 'react';
 
 interface ErrorProps {
   readonly error: Error & { digest?: string };
@@ -8,9 +7,6 @@ interface ErrorProps {
 }
 
 export default function GlobalError({ error, reset }: ErrorProps) {
-  useEffect(() => {
-    console.error('Global error:', error);
-  }, [error]);
 
   return (
     <div className="min-h-[50vh] flex items-center justify-center px-4">

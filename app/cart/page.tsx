@@ -19,6 +19,115 @@ import {
 } from '@/lib/features/cart/cartSlice';
 import type { AppDispatch } from '@/lib/store';
 
+// --- CartItemRow: extracted to reduce JSX depth (JS-0415) ---
+interface CartItemRowProps {
+  readonly item: CartItemWithProduct;
+  readonly isLast: boolean;
+  readonly updating: string | null;
+  readonly customizationNote: string;
+  readonly formatPrice: (amount: number) => string;
+  readonly onUpdateQuantity: (itemId: string, quantity: number) => void;
+  readonly onRemoveItem: (itemId: string) => void;
+  readonly onCustomizationChange: (itemId: string, note: string) => void;
+}
+
+function CartItemRow({
+  item,
+  isLast,
+  updating,
+  customizationNote,
+  formatPrice,
+  onUpdateQuantity,
+  onRemoveItem,
+  onCustomizationChange,
+}: CartItemRowProps) {
+  const price = item.variation
+    ? item.product.price + item.variation.priceModifier
+    : item.product.price;
+  const image = item.variation?.image || item.product.image;
+
+  return (
+    <div className={`flex gap-5 p-6 items-start${isLast ? '' : ' border-b border-gray-100'}`}>
+      {/* Image */}
+      <div className="relative w-24 h-24 flex-shrink-0 bg-gray-100 rounded-xl overflow-hidden">
+        <Image src={image} alt={item.product.name} fill sizes="80px" className="object-cover" />
+      </div>
+
+      {/* Details */}
+      <div className="flex-grow min-w-0">
+        <Link
+          href={`/products/${item.productId}`}
+          className="text-base font-bold text-gray-900 hover:text-blue-600 transition-colors block truncate"
+        >
+          {item.product.name}
+        </Link>
+        {item.variation && (
+          <p className="text-xs text-gray-500 mt-0.5">
+            {item.variation.designName} - {item.variation.name}
+          </p>
+        )}
+        <p className="text-lg font-bold text-gray-900 mt-1">{formatPrice(price)}</p>
+
+        {/* Quantity controls */}
+        <div className="flex items-center gap-3 mt-3">
+          <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden">
+            <button
+              onClick={() => onUpdateQuantity(item.id, item.quantity - 1)}
+              disabled={updating === item.id || item.quantity <= 1}
+              className="w-8 h-8 flex items-center justify-center text-gray-600 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              -
+            </button>
+            <span className="w-10 text-center text-sm font-semibold text-gray-900">
+              {updating === item.id ? (
+                <svg className="animate-spin h-4 w-4 mx-auto text-blue-500" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                </svg>
+              ) : (
+                item.quantity
+              )}
+            </span>
+            <button
+              onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
+              disabled={updating === item.id}
+              className="w-8 h-8 flex items-center justify-center text-gray-600 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              +
+            </button>
+          </div>
+
+          <button
+            onClick={() => onRemoveItem(item.id)}
+            disabled={updating === item.id}
+            className="text-xs text-red-500 hover:text-red-700 font-medium disabled:opacity-40 transition-colors"
+          >
+            Remove
+          </button>
+        </div>
+
+        {/* Customization Note */}
+        <div className="mt-3">
+          <input
+            type="text"
+            placeholder="Add customization note (e.g., color preference, message on card...)"
+            value={customizationNote}
+            onChange={(e) => onCustomizationChange(item.id, e.target.value)}
+            className="w-full text-xs px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-400 bg-white/50 placeholder-gray-400"
+            maxLength={500}
+            aria-label={`Customization note for ${item.product.name}`}
+          />
+        </div>
+      </div>
+
+      {/* Line total */}
+      <div className="flex-shrink-0 text-right">
+        <p className="text-lg font-bold text-gray-900">{formatPrice(price * item.quantity)}</p>
+      </div>
+    </div>
+  );
+}
+
 export default function CartPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
@@ -44,7 +153,17 @@ export default function CartPage() {
     try {
       await dispatch(updateCartItem({ itemId, quantity })).unwrap();
     } catch (err) {
-      console.error('Error updating item:', err);
+      setError(typeof err === 'string' ? err : 'Something went wrong. Please try again.');
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  const handleRemoveItem = async (itemId: string) => {
+    setUpdating(itemId);
+    try {
+      await dispatch(removeCartItem(itemId)).unwrap();
+    } catch (err) {
       setError(typeof err === 'string' ? err : 'Something went wrong. Please try again.');
     } finally {
       setUpdating(null);
@@ -61,70 +180,62 @@ export default function CartPage() {
     }, 0);
   };
 
-  const handlePlaceOrder = async () => {
-    const validationRules = [
-      {
-        valid: !!session?.user,
-        handler: () => router.push('/auth/signin?callbackUrl=/cart'),
-      },
-      {
-        valid: !!(cart?.items && cart.items.length > 0),
-        handler: () => setError('Your cart is empty'),
-      },
-      {
-        valid: !!customerAddress.trim(),
-        handler: () => setError('Please enter a shipping address'),
-      },
-    ];
+  // Extracted helper: handles the API call to create an order (JS-R1005)
+  const submitOrderToApi = async (
+    address: string,
+    cartItems: CartItemWithProduct[],
+    notes: Record<string, string>,
+  ): Promise<void> => {
+    const orderData = {
+      customerAddress: address,
+      items: cartItems.map((item) => ({
+        productId: item.productId,
+        variationId: item.variationId,
+        quantity: item.quantity,
+        price: item.variation
+          ? item.product.price + item.variation.priceModifier
+          : item.product.price,
+        customizationNote: notes[item.id] || null,
+      })),
+    };
 
-    for (const rule of validationRules) {
-      if (!rule.valid) {
-        rule.handler();
-        return;
-      }
+    const res = await fetch('/api/orders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(orderData),
+    });
+
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data.error || 'Failed to place order');
+    }
+
+    await dispatch(clearCart()).unwrap();
+    setOrderSuccess(true);
+    setTimeout(() => { router.push('/orders'); }, 2000);
+  };
+
+  const handlePlaceOrder = async () => {
+    if (!session?.user) {
+      router.push('/auth/signin?callbackUrl=/cart');
+      return;
+    }
+    if (!cart || !cart.items.length) {
+      setError('Your cart is empty');
+      return;
+    }
+    if (!customerAddress.trim()) {
+      setError('Please enter a shipping address');
+      return;
     }
 
     setOrderLoading(true);
     setError('');
 
     try {
-      const orderData = {
-        customerAddress,
-        items: cart.items.map((item) => ({
-          productId: item.productId,
-          variationId: item.variationId,
-          quantity: item.quantity,
-          price: item.variation
-            ? item.product.price + item.variation.priceModifier
-            : item.product.price,
-          customizationNote: customizationNotes[item.id] || null,
-        })),
-      };
-
-      const res = await fetch('/api/orders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(orderData),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || 'Failed to place order');
-      }
-
-      await dispatch(clearCart()).unwrap();
-      setOrderSuccess(true);
-
-      setTimeout(() => {
-        router.push('/orders');
-      }, 2000);
+      await submitOrderToApi(customerAddress, cart.items, customizationNotes);
     } catch (err: unknown) {
-      console.error('Error placing order:', err);
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError('Something went wrong. Please try again.');
-      }
+      setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
     } finally {
       setOrderLoading(false);
     }
@@ -228,96 +339,21 @@ export default function CartPage() {
             {/* Cart Items */}
             <div className="lg:col-span-2">
               <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/50 overflow-hidden">
-                {cart.items.map((item: CartItemWithProduct, index: number) => {
-                  const price = item.variation
-                    ? item.product.price + item.variation.priceModifier
-                    : item.product.price;
-                  const image = item.variation?.image || item.product.image;
-
-                  return (
-                    <div
-                      key={item.id}
-                      className={`flex gap-5 p-6 items-start ${index < cart.items.length - 1 ? 'border-b border-gray-100' : ''}`}
-                    >
-                      {/* Image */}
-                      <div className="relative w-24 h-24 flex-shrink-0 bg-gray-100 rounded-xl overflow-hidden">
-                        <Image src={image} alt={item.product.name} fill sizes="80px" className="object-cover" />
-                      </div>
-
-                      {/* Details */}
-                      <div className="flex-grow min-w-0">
-                        <Link
-                          href={`/products/${item.productId}`}
-                          className="text-base font-bold text-gray-900 hover:text-blue-600 transition-colors block truncate"
-                        >
-                          {item.product.name}
-                        </Link>
-                        {item.variation && (
-                          <p className="text-xs text-gray-500 mt-0.5">
-                            {item.variation.designName} - {item.variation.name}
-                          </p>
-                        )}
-                        <p className="text-lg font-bold text-gray-900 mt-1">{formatPrice(price)}</p>
-
-                        {/* Quantity controls */}
-                        <div className="flex items-center gap-3 mt-3">
-                          <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden">
-                            <button
-                              onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)}
-                              disabled={updating === item.id || item.quantity <= 1}
-                              className="w-8 h-8 flex items-center justify-center text-gray-600 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                            >
-                              -
-                            </button>
-                            <span className="w-10 text-center text-sm font-semibold text-gray-900">
-                              {updating === item.id ? (
-                                <svg className="animate-spin h-4 w-4 mx-auto text-blue-500" fill="none" viewBox="0 0 24 24">
-                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                                </svg>
-                              ) : (
-                                item.quantity
-                              )}
-                            </span>
-                            <button
-                              onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
-                              disabled={updating === item.id}
-                              className="w-8 h-8 flex items-center justify-center text-gray-600 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                            >
-                              +
-                            </button>
-                          </div>
-
-                          <button
-                            onClick={() => handleRemoveItem(item.id)}
-                            disabled={updating === item.id}
-                            className="text-xs text-red-500 hover:text-red-700 font-medium disabled:opacity-40 transition-colors"
-                          >
-                            Remove
-                          </button>
-                        </div>
-
-                        {/* Customization Note */}
-                        <div className="mt-3">
-                          <input
-                            type="text"
-                            placeholder="Add customization note (e.g., color preference, message on card...)"
-                            value={customizationNotes[item.id] || ''}
-                            onChange={(e) => setCustomizationNotes((prev) => ({ ...prev, [item.id]: e.target.value }))}
-                            className="w-full text-xs px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-400 bg-white/50 placeholder-gray-400"
-                            maxLength={500}
-                            aria-label={`Customization note for ${item.product.name}`}
-                          />
-                        </div>
-                      </div>
-
-                      {/* Line total */}
-                      <div className="flex-shrink-0 text-right">
-                        <p className="text-lg font-bold text-gray-900">{formatPrice(price * item.quantity)}</p>
-                      </div>
-                    </div>
-                  );
-                })}
+                {cart.items.map((item: CartItemWithProduct, index: number) => (
+                  <CartItemRow
+                    key={item.id}
+                    item={item}
+                    isLast={index === cart.items.length - 1}
+                    updating={updating}
+                    customizationNote={customizationNotes[item.id] || ''}
+                    formatPrice={formatPrice}
+                    onUpdateQuantity={handleUpdateQuantity}
+                    onRemoveItem={handleRemoveItem}
+                    onCustomizationChange={(itemId, note) =>
+                      setCustomizationNotes((prev) => ({ ...prev, [itemId]: note }))
+                    }
+                  />
+                ))}
               </div>
 
               <Link href="/" className="inline-flex items-center gap-2 mt-4 text-sm text-gray-600 hover:text-blue-600 transition-colors font-medium">

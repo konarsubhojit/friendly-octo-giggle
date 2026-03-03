@@ -1,5 +1,5 @@
 import { drizzleDb } from '@/lib/db';
-import * as schema from '@/lib/schema';
+import { users } from '@/lib/schema';
 import { desc } from 'drizzle-orm';
 import { auth } from '@/lib/auth';
 import { apiSuccess, apiError, handleApiError } from '@/lib/api-utils';
@@ -30,12 +30,12 @@ export async function GET() {
     }
 
     // Use Redis cache for user list
-    const users = await getCachedData(
+    const userList = await getCachedData(
       'admin:users:all',
       300, // Cache for 5 minutes
       async () => {
         const userRows = await drizzleDb.query.users.findMany({
-          orderBy: [desc(schema.users.createdAt)],
+          orderBy: [desc(users.createdAt)],
           with: { orders: true },
         });
         return userRows.map(u => ({
@@ -53,7 +53,7 @@ export async function GET() {
       30 // Stale time
     );
 
-    return apiSuccess({ users });
+    return apiSuccess({ users: userList });
   } catch (error) {
     return handleApiError(error);
   }
