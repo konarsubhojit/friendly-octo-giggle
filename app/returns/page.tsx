@@ -56,7 +56,7 @@ export default function ReturnsPage() {
               'Pack the item(s) securely and drop off at any carrier location.',
               'Once received and inspected, your refund will be issued.',
             ].map((step, i) => (
-              <li key={i} className="flex gap-4">
+              <li key={step} className="flex gap-4">
                 <span className="w-7 h-7 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">{i + 1}</span>
                 <span className="text-gray-600 pt-0.5">{step}</span>
               </li>

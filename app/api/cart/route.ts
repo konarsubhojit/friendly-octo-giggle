@@ -180,19 +180,32 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ cart: null });
     }
 
-    const cart = await drizzleDb.query.carts.findFirst({
-      where: session?.user?.id
-        ? eq(schema.carts.userId, session.user.id)
-        : eq(schema.carts.sessionId, sessionId!),
-      with: {
-        items: {
-          with: {
-            product: { with: { variations: true } },
-            variation: true,
+    let cart;
+    if (session?.user?.id) {
+      cart = await drizzleDb.query.carts.findFirst({
+        where: eq(schema.carts.userId, session.user.id),
+        with: {
+          items: {
+            with: {
+              product: { with: { variations: true } },
+              variation: true,
+            },
           },
         },
-      },
-    });
+      });
+    } else if (sessionId) {
+      cart = await drizzleDb.query.carts.findFirst({
+        where: eq(schema.carts.sessionId, sessionId),
+        with: {
+          items: {
+            with: {
+              product: { with: { variations: true } },
+              variation: true,
+            },
+          },
+        },
+      });
+    }
 
     if (!cart) {
       return NextResponse.json({ cart: null });
@@ -333,11 +346,16 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ success: true });
     }
 
-    const cart = await drizzleDb.query.carts.findFirst({
-      where: session?.user?.id
-        ? eq(schema.carts.userId, session.user.id)
-        : eq(schema.carts.sessionId, sessionId!),
-    });
+    let cart;
+    if (session?.user?.id) {
+      cart = await drizzleDb.query.carts.findFirst({
+        where: eq(schema.carts.userId, session.user.id),
+      });
+    } else if (sessionId) {
+      cart = await drizzleDb.query.carts.findFirst({
+        where: eq(schema.carts.sessionId, sessionId),
+      });
+    }
 
     if (cart) {
       await drizzleDb.delete(schema.carts).where(eq(schema.carts.id, cart.id));

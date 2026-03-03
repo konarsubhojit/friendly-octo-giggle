@@ -40,11 +40,12 @@ export function useFetch<T>(
   }, [url]);
 
   useEffect(() => {
-    void fetchData();
+    // fetchData handles all errors internally via try/catch and sets error state
+    fetchData().catch(() => {});
   }, [fetchData]);
 
   const refetch = useCallback(() => {
-    void fetchData();
+    fetchData().catch(() => {});
   }, [fetchData]);
 
   return { data, loading, error, refetch };
