@@ -2,11 +2,11 @@ import { NextRequest } from 'next/server';
 import { drizzleDb } from '@/lib/db';
 import * as schema from '@/lib/schema';
 import { eq } from 'drizzle-orm';
-import { OrderStatus } from '@/lib/types';
-import { apiSuccess, apiError, handleApiError } from '@/lib/api-utils';
+import { apiSuccess, apiError, handleApiError, handleValidationError } from '@/lib/api-utils';
 import { auth } from '@/lib/auth';
 import { getCachedData, invalidateCache } from '@/lib/redis';
 import { serializeOrder } from '@/lib/serializers';
+import { UpdateOrderStatusSchema } from '@/lib/validations';
 
 export const dynamic = 'force-dynamic';
 
@@ -36,15 +36,18 @@ export async function PATCH(
 
   try {
     const { id } = await params;
-    const body: { status: OrderStatus; trackingNumber?: string | null; shippingProvider?: string | null } = await request.json();
-    
-    if (!body.status || !Object.values(OrderStatus).includes(body.status)) {
-      return apiError('Invalid status', 400);
-    }
+    const rawBody = await request.json();
 
-    const updateData: Record<string, unknown> = { status: body.status, updatedAt: new Date() };
-    if (body.trackingNumber !== undefined) updateData.trackingNumber = body.trackingNumber;
-    if (body.shippingProvider !== undefined) updateData.shippingProvider = body.shippingProvider;
+    // Validate with Zod schema
+    const parseResult = UpdateOrderStatusSchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return handleValidationError(parseResult.error);
+    }
+    const { status, trackingNumber, shippingProvider } = parseResult.data;
+
+    const updateData: Record<string, unknown> = { status, updatedAt: new Date() };
+    if (trackingNumber !== undefined) updateData.trackingNumber = trackingNumber;
+    if (shippingProvider !== undefined) updateData.shippingProvider = shippingProvider;
 
     await drizzleDb.update(schema.orders)
       .set(updateData)
@@ -59,8 +62,9 @@ export async function PATCH(
       return apiError('Order not found', 404);
     }
 
-    // Invalidate order caches
+    // Invalidate order caches (list + individual)
     await invalidateCache('admin:orders:*');
+    await invalidateCache(`admin:order:${id}`);
 
     return apiSuccess({
       order: serializeOrder(order),

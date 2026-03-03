@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { drizzleDb } from '@/lib/db';
 import * as schema from '@/lib/schema';
-import { sql, desc, gt } from 'drizzle-orm';
+import { sql, desc, gt, eq, inArray } from 'drizzle-orm';
 import { apiSuccess, handleApiError } from '@/lib/api-utils';
 import { getCachedData } from '@/lib/redis';
 
@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
             totalSold: sql<number>`cast(sum(${schema.orderItems.quantity}) as int)`,
           })
           .from(schema.orderItems)
-          .innerJoin(schema.orders, sql`${schema.orders.id} = ${schema.orderItems.orderId}`)
+          .innerJoin(schema.orders, eq(schema.orders.id, schema.orderItems.orderId))
           .where(gt(schema.orders.createdAt, sql`now() - interval '30 days'`))
           .groupBy(schema.orderItems.productId)
           .orderBy(desc(sql`sum(${schema.orderItems.quantity})`))
@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
 
         const productIds = trendingProducts.map((t) => t.productId);
         const products = await drizzleDb.query.products.findMany({
-          where: sql`${schema.products.id} IN (${sql.join(productIds.map(id => sql`${id}`), sql`, `)})`,
+          where: inArray(schema.products.id, productIds),
           with: { variations: true },
         });
 
