@@ -35,7 +35,7 @@ export async function PATCH(
   try {
     const authCheck = await checkAdminAuth();
     if (!authCheck.authorized) {
-      return apiError(authCheck.error!, authCheck.status);
+      return apiError(authCheck.error ?? 'Unauthorized', authCheck.status);
     }
 
     const { id } = await params;
@@ -80,7 +80,7 @@ export async function GET(
   try {
     const authCheck = await checkAdminAuth();
     if (!authCheck.authorized) {
-      return apiError(authCheck.error!, authCheck.status);
+      return apiError(authCheck.error ?? 'Unauthorized', authCheck.status);
     }
 
     const { id } = await params;

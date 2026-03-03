@@ -7,8 +7,16 @@ import * as schema from './schema';
 // Required: Node.js needs ws for WebSocket support (Neon driver uses WebSockets)
 neonConfig.webSocketConstructor = ws;
 
+function getEnvVar(key: string): string {
+  const value = process.env[key];
+  if (!value) {
+    throw new Error(`Environment variable ${key} is required`);
+  }
+  return value;
+}
+
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL!,
+  connectionString: getEnvVar('DATABASE_URL'),
 });
 
 const db = drizzle(pool, { schema });

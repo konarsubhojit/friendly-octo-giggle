@@ -26,7 +26,7 @@ export async function GET() {
   try {
     const authCheck = await checkAdminAuth();
     if (!authCheck.authorized) {
-      return apiError(authCheck.error!, authCheck.status);
+      return apiError(authCheck.error ?? 'Unknown error', authCheck.status);
     }
 
     // Use Redis cache for user list

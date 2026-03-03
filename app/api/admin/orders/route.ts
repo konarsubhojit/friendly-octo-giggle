@@ -26,7 +26,7 @@ async function checkAdminAuth() {
 export async function GET() {
   const authCheck = await checkAdminAuth();
   if (!authCheck.authorized) {
-    return apiError(authCheck.error!, authCheck.status);
+    return apiError(authCheck.error ? authCheck.error : 'Unknown error', authCheck.status);
   }
 
   try {
