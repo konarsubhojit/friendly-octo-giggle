@@ -101,13 +101,16 @@ export default function ProductFormModal({
       update: 'Update Product',
       create: 'Create Product',
     };
-    const mode = uploading
-      ? 'uploading'
-      : saving
-      ? 'saving'
-      : editingProduct
-      ? 'update'
-      : 'create';
+    let mode: 'uploading' | 'saving' | 'update' | 'create';
+    if (uploading) {
+      mode = 'uploading';
+    } else if (saving) {
+      mode = 'saving';
+    } else if (editingProduct) {
+      mode = 'update';
+    } else {
+      mode = 'create';
+    }
     return textMap[mode];
   };
 

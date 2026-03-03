@@ -50,7 +50,7 @@ export default function ProductsManagement() {
     dispatch(upsertProduct(product));
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = (id: string) => {
     setProductToDelete(id);
     setShowDeleteModal(true);
   };
@@ -73,8 +73,8 @@ export default function ProductsManagement() {
       dispatch(removeProduct(productToDelete));
       setShowDeleteModal(false);
       setProductToDelete(null);
-    } catch (_err) {
-      toast.error('Something went wrong. Please try again.');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
     } finally {
       setDeleting(false);
     }
