@@ -18,11 +18,22 @@ export default function ContactForm() {
 
   function validate(): boolean {
     const newErrors: Partial<FormState> = {};
-    if (!formState.name.trim()) newErrors.name = 'Name is required';
-    if (!formState.email.trim()) newErrors.email = 'Email is required';
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formState.email)) newErrors.email = 'Enter a valid email';
-    if (!formState.subject) newErrors.subject = 'Please select a subject';
-    if (!formState.message.trim()) newErrors.message = 'Message is required';
+    const validators: { [K in keyof FormState]: (value: string) => string | undefined } = {
+      name: v => v.trim() ? undefined : 'Name is required',
+      email: v => {
+        if (!v.trim()) return 'Email is required';
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) return 'Enter a valid email';
+        return undefined;
+      },
+      subject: v => v ? undefined : 'Please select a subject',
+      message: v => v.trim() ? undefined : 'Message is required',
+    };
+    (Object.entries(validators) as [keyof FormState, (value: string) => string | undefined][]).forEach(([key, validator]) => {
+      const error = validator(formState[key]);
+      if (error) {
+        newErrors[key] = error;
+      }
+    });
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   }

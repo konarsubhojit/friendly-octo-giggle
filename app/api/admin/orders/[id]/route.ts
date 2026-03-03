@@ -45,9 +45,14 @@ export async function PATCH(
     }
     const { status, trackingNumber, shippingProvider } = parseResult.data;
 
-    const updateData: Record<string, unknown> = { status, updatedAt: new Date() };
-    if (trackingNumber !== undefined) updateData.trackingNumber = trackingNumber;
-    if (shippingProvider !== undefined) updateData.shippingProvider = shippingProvider;
+    const fieldUpdates: Record<string, unknown> = { trackingNumber, shippingProvider };
+    const updateData: Record<string, unknown> = {
+      status,
+      updatedAt: new Date(),
+      ...Object.fromEntries(
+        Object.entries(fieldUpdates).filter(([, value]) => value !== undefined)
+      ),
+    };
 
     await drizzleDb.update(schema.orders)
       .set(updateData)

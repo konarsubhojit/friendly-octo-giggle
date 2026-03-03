@@ -51,18 +51,6 @@ export default function CartPage() {
     }
   };
 
-  const handleRemoveItem = async (itemId: string) => {
-    setUpdating(itemId);
-    try {
-      await dispatch(removeCartItem(itemId)).unwrap();
-    } catch (err) {
-      console.error('Error removing item:', err);
-      setError(typeof err === 'string' ? err : 'Something went wrong. Please try again.');
-    } finally {
-      setUpdating(null);
-    }
-  };
-
   const calculateTotal = () => {
     if (!cart?.items) return 0;
     return cart.items.reduce((total, item) => {
@@ -74,19 +62,26 @@ export default function CartPage() {
   };
 
   const handlePlaceOrder = async () => {
-    if (!session?.user) {
-      router.push('/auth/signin?callbackUrl=/cart');
-      return;
-    }
+    const validationRules = [
+      {
+        valid: !!session?.user,
+        handler: () => router.push('/auth/signin?callbackUrl=/cart'),
+      },
+      {
+        valid: !!(cart?.items && cart.items.length > 0),
+        handler: () => setError('Your cart is empty'),
+      },
+      {
+        valid: !!customerAddress.trim(),
+        handler: () => setError('Please enter a shipping address'),
+      },
+    ];
 
-    if (!cart?.items || cart.items.length === 0) {
-      setError('Your cart is empty');
-      return;
-    }
-
-    if (!customerAddress.trim()) {
-      setError('Please enter a shipping address');
-      return;
+    for (const rule of validationRules) {
+      if (!rule.valid) {
+        rule.handler();
+        return;
+      }
     }
 
     setOrderLoading(true);

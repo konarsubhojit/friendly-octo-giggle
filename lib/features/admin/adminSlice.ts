@@ -118,9 +118,13 @@ export const fetchAdminUsers = createAsyncThunk(
 export const updateAdminOrderStatus = createAsyncThunk(
   'admin/updateOrderStatus',
   async ({ id, status, trackingNumber, shippingProvider }: { id: string; status: string; trackingNumber?: string | null; shippingProvider?: string | null }, { rejectWithValue }) => {
-    const body: Record<string, unknown> = { status };
-    if (trackingNumber !== undefined) body.trackingNumber = trackingNumber;
-    if (shippingProvider !== undefined) body.shippingProvider = shippingProvider;
+    const optionalFields = { trackingNumber, shippingProvider };
+    const body: Record<string, unknown> = {
+      status,
+      ...Object.fromEntries(
+        Object.entries(optionalFields).filter(([_, value]) => value !== undefined)
+      ),
+    };
     const res = await fetch(`/api/admin/orders/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -131,7 +135,7 @@ export const updateAdminOrderStatus = createAsyncThunk(
       return rejectWithValue(err.error || 'Failed to update order');
     }
     const data = await res.json();
-    return data.data?.order || data.order || data;
+    return [data.data?.order, data.order, data].find((order) => order !== undefined);
   }
 );
 

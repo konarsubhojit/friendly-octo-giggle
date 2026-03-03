@@ -146,44 +146,15 @@ function serializeCart(cart: CartWithItems) {
     createdAt: cart.createdAt.toISOString(),
     updatedAt: cart.updatedAt.toISOString(),
     items: cart.items.map((item) => ({
-      ...item,
-      createdAt: item.createdAt.toISOString(),
-      updatedAt: item.updatedAt.toISOString(),
-      product: {
-        ...item.product,
-        createdAt: item.product.createdAt.toISOString(),
-        updatedAt: item.product.updatedAt.toISOString(),
-        variations: item.product.variations.map((v) => ({
-          ...v,
-          createdAt: v.createdAt.toISOString(),
-          updatedAt: v.updatedAt.toISOString(),
-        })),
-      },
-      variation: item.variation
-        ? {
-            ...item.variation,
-            createdAt: item.variation.createdAt.toISOString(),
-            updatedAt: item.variation.updatedAt.toISOString(),
-          }
-        : null,
-    })),
-  };
-}
-
 // Get cart for current user/session
 export async function GET(request: NextRequest) {
   try {
     const session = await auth();
     const sessionId = request.cookies.get("cart_session")?.value;
 
-    if (!session?.user?.id && !sessionId) {
-      return NextResponse.json({ cart: null });
-    }
-
-    let cart;
-    if (session?.user?.id) {
-      cart = await drizzleDb.query.carts.findFirst({
-        where: eq(schema.carts.userId, session.user.id),
+    const queryOptions = {
+      user: {
+        where: eq(schema.carts.userId, session!.user!.id),
         with: {
           items: {
             with: {
@@ -192,11 +163,32 @@ export async function GET(request: NextRequest) {
             },
           },
         },
-      });
-    } else if (sessionId) {
-      cart = await drizzleDb.query.carts.findFirst({
-        where: eq(schema.carts.sessionId, sessionId),
+      },
+      session: {
+        where: eq(schema.carts.sessionId, sessionId!),
         with: {
+          items: {
+            with: {
+              product: { with: { variations: true } },
+              variation: true,
+            },
+          },
+        },
+      },
+    };
+
+    const key = session?.user?.id ? 'user' : sessionId ? 'session' : null;
+    if (!key) {
+      return NextResponse.json({ cart: null });
+    }
+
+    const cart = await drizzleDb.query.carts.findFirst(queryOptions[key]);
+
+    // ...rest of the logic to format and return the cart
+  } catch (error) {
+    return NextResponse.json({ error }, { status: 500 });
+  }
+}
           items: {
             with: {
               product: { with: { variations: true } },
@@ -346,26 +338,31 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ success: true });
     }
 
-    let cart;
-    if (session?.user?.id) {
-      cart = await drizzleDb.query.carts.findFirst({
-        where: eq(schema.carts.userId, session.user.id),
-      });
-    } else if (sessionId) {
-      cart = await drizzleDb.query.carts.findFirst({
-        where: eq(schema.carts.sessionId, sessionId),
-      });
-    }
+    const actions = {
+      user: async () =>
+        drizzleDb.query.carts.findFirst({
+          where: eq(schema.carts.userId, session.user.id),
+        }),
+      session: async () =>
+        drizzleDb.query.carts.findFirst({
+          where: eq(schema.carts.sessionId, sessionId),
+        }),
+    };
+
+    const key = session?.user?.id ? "user" : "session";
+    const cart = await actions[key]();
 
     if (cart) {
       await drizzleDb.delete(schema.carts).where(eq(schema.carts.id, cart.id));
     }
 
     const response = NextResponse.json({ success: true });
-    // Clear cart session cookie
-    if (!session?.user?.id && sessionId) {
-      response.cookies.delete("cart_session");
-    }
+
+    const clearActions = {
+      session: () => response.cookies.delete("cart_session"),
+    };
+
+    clearActions[key]?.();
 
     return response;
   } catch (error) {

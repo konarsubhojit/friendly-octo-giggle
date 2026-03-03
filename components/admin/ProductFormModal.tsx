@@ -96,10 +96,20 @@ export default function ProductFormModal({
   };
 
   const getSubmitButtonText = (): string => {
-    if (saving || uploading) {
-      return uploading ? 'Uploading...' : 'Saving...';
-    }
-    return editingProduct ? 'Update Product' : 'Create Product';
+    const textMap: Record<string, string> = {
+      uploading: 'Uploading...',
+      saving: 'Saving...',
+      update: 'Update Product',
+      create: 'Create Product',
+    };
+    const mode = uploading
+      ? 'uploading'
+      : saving
+      ? 'saving'
+      : editingProduct
+      ? 'update'
+      : 'create';
+    return textMap[mode];
   };
 
   const handleSubmit = (e: React.BaseSyntheticEvent) => {

@@ -21,29 +21,35 @@ function ProductStockBadge({ stock }: { readonly stock: number }) {
       <span className="inline-flex items-center gap-2 bg-green-100 text-green-700 px-4 py-2 rounded-full font-semibold shadow-md">
         <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
           <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+function StockIndicator({ stock }: { stock: number }) {
+  const statusKey = stock > 10 ? 'inStock' : stock > 0 ? 'lowStock' : 'outOfStock';
+  const statusMap: { [key: string]: JSX.Element } = {
+    inStock: (
+      <span className="inline-flex items-center gap-2 bg-green-100 text-green-700 px-4 py-2 rounded-full font-semibold shadow-md">
+        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 00-1.414-1.414L9 10.172 6.707 7.879a1 1 0 00-1.414 1.414L9 13l7-7z" clipRule="evenodd" />
         </svg>
         In Stock
       </span>
-    );
-  }
-  if (stock > 0) {
-    return (
+    ),
+    lowStock: (
       <span className="inline-flex items-center gap-2 bg-amber-100 text-amber-700 px-4 py-2 rounded-full font-semibold shadow-md">
         <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
           <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
         </svg>
         Only {stock} left in stock
       </span>
-    );
-  }
-  return (
-    <span className="inline-flex items-center gap-2 bg-red-100 text-red-700 px-4 py-2 rounded-full font-semibold shadow-md">
-      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
-        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-      </svg>
-      Out of Stock
-    </span>
-  );
+    ),
+    outOfStock: (
+      <span className="inline-flex items-center gap-2 bg-red-100 text-red-700 px-4 py-2 rounded-full font-semibold shadow-md">
+        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+        </svg>
+        Out of Stock
+      </span>
+    ),
+  };
+  return statusMap[statusKey];
 }
 
 export default function ProductClient({ product }: ProductClientProps) {
@@ -157,28 +163,34 @@ export default function ProductClient({ product }: ProductClientProps) {
                     Select Design
                   </span>
                   <div className="grid grid-cols-2 gap-3">
-                    {product.variations.map((variation) => (
-                      <button
-                        key={variation.id}
-                        onClick={() => setSelectedVariation(variation)}
-                        className={`p-4 border-2 rounded-xl transition-all duration-300 ${
-                          selectedVariation?.id === variation.id
-                            ? 'border-blue-600 bg-gradient-to-br from-blue-50 to-purple-50 shadow-lg scale-105'
-                            : 'border-gray-300 hover:border-blue-400 hover:shadow-md hover:scale-105'
-                        }`}
-                      >
-                        <div className="text-sm font-bold text-gray-800">{variation.designName}</div>
-                        <div className="text-xs text-gray-600 mt-1">{variation.name}</div>
-                        {variation.priceModifier !== 0 && (
+                    {product.variations.map((variation) => {
+                      const isSelected = selectedVariation?.id === variation.id;
+                      const classNames = {
+                        true: 'p-4 border-2 rounded-xl transition-all duration-300 border-blue-600 bg-gradient-to-br from-blue-50 to-purple-50 shadow-lg scale-105',
+                        false: 'p-4 border-2 rounded-xl transition-all duration-300 border-gray-300 hover:border-blue-400 hover:shadow-md hover:scale-105'
+                      }[isSelected];
+                      const badgeMap = {
+                        price: variation.priceModifier !== 0 && (
                           <div className="text-xs font-semibold text-blue-600 mt-1">
                             {variation.priceModifier > 0 ? '+' : '-'}{formatPrice(Math.abs(variation.priceModifier))}
                           </div>
-                        )}
-                        {variation.stock > 0 && variation.stock < 6 && (
+                        ),
+                        stock: variation.stock > 0 && variation.stock < 6 && (
                           <div className="text-xs text-amber-600 font-medium mt-1">Only {variation.stock} left</div>
-                        )}
-                      </button>
-                    ))}
+                        )
+                      };
+                      return (
+                        <button
+                          key={variation.id}
+                          onClick={() => setSelectedVariation(variation)}
+                          className={classNames}
+                        >
+                          <div className="text-sm font-bold text-gray-800">{variation.designName}</div>
+                          <div className="text-xs text-gray-600 mt-1">{variation.name}</div>
+                          {Object.values(badgeMap)}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               )}

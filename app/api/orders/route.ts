@@ -33,12 +33,27 @@ function validateCustomerInfo(
   const customerEmail = body.customerEmail || session.user.email;
   const customerAddress = body.customerAddress || '';
 
-  if (!customerEmail) {
-    return { valid: false, error: 'Email address is required. Please update your profile.', status: 400, reason: 'missing_email' };
-  }
+  const errorMap: Record<'missing_email' | 'missing_address', { error: string; status: number; reason: string }> = {
+    missing_email: {
+      error: 'Email address is required. Please update your profile.',
+      status: 400,
+      reason: 'missing_email',
+    },
+    missing_address: {
+      error: 'Shipping address is required',
+      status: 400,
+      reason: 'missing_address',
+    },
+  };
 
-  if (!customerAddress) {
-    return { valid: false, error: 'Shipping address is required', status: 400, reason: 'missing_address' };
+  const checks: [boolean, keyof typeof errorMap][] = [
+    [!customerEmail, 'missing_email'],
+    [!customerAddress, 'missing_address'],
+  ];
+  const found = checks.find(([cond]) => cond);
+  if (found) {
+    const [, reason] = found;
+    return { valid: false, ...errorMap[reason] };
   }
 
   return { valid: true, customerName, customerEmail, customerAddress };
@@ -120,53 +135,41 @@ async function handleGet(_request: NextRequest) {
 
     return NextResponse.json({
       orders: orders.map((order) => ({
-        ...order,
-        createdAt: order.createdAt.toISOString(),
-        updatedAt: order.updatedAt.toISOString(),
-        items: order.items.map((item) => ({
-          ...item,
-          product: {
-            ...item.product,
-            createdAt: item.product.createdAt.toISOString(),
-            updatedAt: item.product.updatedAt.toISOString(),
-          },
-        })),
-      })),
-    });
-  } catch (error) {
-    logError({
-      error,
-      context: 'fetch_user_orders',
-    });
-    return NextResponse.json(
-      { error: 'Failed to fetch orders' },
-      { status: 500 }
-    );
-  }
-}
-
 async function handlePost(request: NextRequest) {
   try {
-    // Check authentication
     const session = await auth();
-    if (!session?.user?.id) {
-      logBusinessEvent({ event: 'order_create_failed', details: { reason: 'not_authenticated' }, success: false });
-      return NextResponse.json({ error: 'Authentication required. Please sign in to place orders.' }, { status: 401 });
-    }
-
     const body: CreateOrderInput = await request.json();
-
-    // Validate items exist
-    if (!body.items || body.items.length === 0) {
-      logBusinessEvent({ event: 'order_create_failed', details: { reason: 'missing_items' }, success: false });
-      return NextResponse.json({ error: 'Order must contain at least one item' }, { status: 400 });
-    }
-
-    // Validate customer info
     const customerValidation = validateCustomerInfo(body, session);
-    if (!customerValidation.valid) {
-      logBusinessEvent({ event: 'order_create_failed', details: { reason: customerValidation.reason }, success: false });
-      return NextResponse.json({ error: customerValidation.error }, { status: customerValidation.status });
+    const reason =
+      !session?.user?.id
+        ? 'not_authenticated'
+        : !body.items || body.items.length === 0
+        ? 'missing_items'
+        : !customerValidation.valid
+        ? customerValidation.reason
+        : null;
+    if (reason) {
+      const errorMapping = {
+        not_authenticated: {
+          error: 'Authentication required. Please sign in to place orders.',
+          status: 401,
+        },
+        missing_items: {
+          error: 'Order must contain at least one item',
+          status: 400,
+        },
+        [customerValidation.reason]: {
+          error: customerValidation.error,
+          status: customerValidation.status,
+        },
+      };
+      logBusinessEvent({
+        event: 'order_create_failed',
+        details: { reason },
+        success: false,
+      });
+      const { error, status } = errorMapping[reason];
+      return NextResponse.json({ error }, { status });
     }
     const { customerName, customerEmail, customerAddress } = customerValidation;
 
@@ -210,20 +213,25 @@ async function handlePost(request: NextRequest) {
           if (!product) {
             throw new Error(`Product with id ${item.productId} not found`);
           }
-          let price = product.price;
-          const variation = item.variationId ? product.variations.find((v) => v.id === item.variationId) : null;
-          if (variation) {
-            price = product.price + variation.priceModifier;
-          }
+          const variationMap = new Map(product.variations.map((v) => [v.id, v.priceModifier]));
+          const price = product.price + (variationMap.get(item.variationId) ?? 0);
 
-          // Sanitize customizationNote: ensure string, trim, enforce 500-char limit
-          let customizationNote: string | null = null;
-          if (typeof item.customizationNote === 'string') {
-            const trimmed = item.customizationNote.trim();
-            if (trimmed.length > 0) {
-              customizationNote = trimmed.length > 500 ? trimmed.slice(0, 500) : trimmed;
-            }
-          }
+          const rawNote = item.customizationNote;
+          const trimmed = typeof rawNote === 'string' ? rawNote.trim() : '';
+          const key = typeof rawNote !== 'string'
+            ? 'invalid'
+            : trimmed.length === 0
+              ? 'empty'
+              : trimmed.length > 500
+                ? 'long'
+                : 'valid';
+          const noteMap: Record<string, string | null> = {
+            invalid: null,
+            empty: null,
+            long: trimmed.slice(0, 500),
+            valid: trimmed,
+          };
+          const customizationNote = noteMap[key];
 
           return { orderId: newOrder.id, productId: item.productId, variationId: item.variationId ?? null, quantity: item.quantity, price, customizationNote };
         })
