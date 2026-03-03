@@ -1,5 +1,5 @@
 import { drizzleDb } from '@/lib/db';
-import * as schema from '@/lib/schema';
+import { orders, orderItems, products, users } from '@/lib/schema';
 import { sql, eq, count, and, gte, lt, ne } from 'drizzle-orm';
 import { apiSuccess, apiError, handleApiError } from '@/lib/api-utils';
 import { auth } from '@/lib/auth';
@@ -37,70 +37,70 @@ export async function GET() {
         // Total revenue and order count (all time)
         const [totalStats] = await drizzleDb
           .select({
-            totalRevenue: sql<number>`coalesce(sum(${schema.orders.totalAmount}), 0)`,
+            totalRevenue: sql<number>`coalesce(sum(${orders.totalAmount}), 0)`,
             totalOrders: count(),
           })
-          .from(schema.orders)
-          .where(ne(schema.orders.status, 'CANCELLED'));
+          .from(orders)
+          .where(ne(orders.status, 'CANCELLED'));
 
         // Today's revenue
         const [todayStats] = await drizzleDb
           .select({
-            revenue: sql<number>`coalesce(sum(${schema.orders.totalAmount}), 0)`,
+            revenue: sql<number>`coalesce(sum(${orders.totalAmount}), 0)`,
             orderCount: count(),
           })
-          .from(schema.orders)
-          .where(and(gte(schema.orders.createdAt, today), ne(schema.orders.status, 'CANCELLED')));
+          .from(orders)
+          .where(and(gte(orders.createdAt, today), ne(orders.status, 'CANCELLED')));
 
         // This month's revenue
         const [monthStats] = await drizzleDb
           .select({
-            revenue: sql<number>`coalesce(sum(${schema.orders.totalAmount}), 0)`,
+            revenue: sql<number>`coalesce(sum(${orders.totalAmount}), 0)`,
             orderCount: count(),
           })
-          .from(schema.orders)
-          .where(and(gte(schema.orders.createdAt, thisMonth), ne(schema.orders.status, 'CANCELLED')));
+          .from(orders)
+          .where(and(gte(orders.createdAt, thisMonth), ne(orders.status, 'CANCELLED')));
 
         // Last month's revenue (for comparison)
         const [lastMonthStats] = await drizzleDb
           .select({
-            revenue: sql<number>`coalesce(sum(${schema.orders.totalAmount}), 0)`,
+            revenue: sql<number>`coalesce(sum(${orders.totalAmount}), 0)`,
             orderCount: count(),
           })
-          .from(schema.orders)
-          .where(and(gte(schema.orders.createdAt, lastMonth), lt(schema.orders.createdAt, thisMonth), ne(schema.orders.status, 'CANCELLED')));
+          .from(orders)
+          .where(and(gte(orders.createdAt, lastMonth), lt(orders.createdAt, thisMonth), ne(orders.status, 'CANCELLED')));
 
         // Orders by status (excluding cancelled to match totals)
         const statusCounts = await drizzleDb
           .select({
-            status: schema.orders.status,
+            status: orders.status,
             count: count(),
           })
-          .from(schema.orders)
-          .where(ne(schema.orders.status, 'CANCELLED'))
-          .groupBy(schema.orders.status);
+          .from(orders)
+          .where(ne(orders.status, 'CANCELLED'))
+          .groupBy(orders.status);
 
         // Top selling products
         const topProducts = await drizzleDb
           .select({
-            productId: schema.orderItems.productId,
-            productName: schema.products.name,
-            totalQuantity: sql<number>`cast(sum(${schema.orderItems.quantity}) as int)`,
-            totalRevenue: sql<number>`sum(${schema.orderItems.price} * ${schema.orderItems.quantity})`,
+            productId: orderItems.productId,
+            productName: products.name,
+            totalQuantity: sql<number>`cast(sum(${orderItems.quantity}) as int)`,
+            totalRevenue: sql<number>`sum(${orderItems.price} * ${orderItems.quantity})`,
           })
-          .from(schema.orderItems)
-          .innerJoin(schema.products, eq(schema.orderItems.productId, schema.products.id))
-          .innerJoin(schema.orders, eq(schema.orderItems.orderId, schema.orders.id))
-          .where(ne(schema.orders.status, 'CANCELLED'))
-          .groupBy(schema.orderItems.productId, schema.products.name)
-          .orderBy(sql`sum(${schema.orderItems.quantity}) desc`)
+          .from(orderItems)
+          .innerJoin(products, eq(orderItems.productId, products.id))
+          .innerJoin(orders, eq(orderItems.orderId, orders.id))
+          .where(ne(orders.status, 'CANCELLED'))
+          .groupBy(orderItems.productId, products.name)
+          .orderBy(sql`sum(${orderItems.quantity}) desc`)
           .limit(5);
 
         // Total customers
         const [customerCount] = await drizzleDb
           .select({ count: count() })
-          .from(schema.users)
-          .where(eq(schema.users.role, 'CUSTOMER'));
+          .from(users)
+          .where(eq(users.role, 'CUSTOMER'));
 
         return {
           totalRevenue: Number(totalStats.totalRevenue),

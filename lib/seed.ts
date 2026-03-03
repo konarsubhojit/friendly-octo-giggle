@@ -2,7 +2,7 @@ import 'dotenv/config';
 import { Pool, neonConfig } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-serverless';
 import ws from 'ws';
-import * as schema from './schema';
+import { products, productVariations, orders, orderItems, carts, cartItems } from './schema';
 
 // Required: Node.js needs ws for WebSocket support (Neon driver uses WebSockets)
 neonConfig.webSocketConstructor = ws;
@@ -25,15 +25,15 @@ async function main() {
   console.log('Starting seed...');
 
   // Clear existing data
-  await db.delete(schema.orderItems);
-  await db.delete(schema.orders);
-  await db.delete(schema.cartItems);
-  await db.delete(schema.carts);
-  await db.delete(schema.productVariations);
-  await db.delete(schema.products);
+  await db.delete(orderItems);
+  await db.delete(orders);
+  await db.delete(cartItems);
+  await db.delete(carts);
+  await db.delete(productVariations);
+  await db.delete(products);
 
   // Seed products - Decorations & Wearables
-  const [bouquet] = await db.insert(schema.products).values({
+  const [bouquet] = await db.insert(products).values({
     name: 'Rose Flower Bouquet',
     description: 'Stunning hand-arranged bouquet of beautiful roses, perfect for gifting or decorating your home. Each bouquet is crafted with care and wrapped in elegant packaging.',
     price: 29.99,
@@ -43,7 +43,7 @@ async function main() {
     updatedAt: new Date(),
   }).returning();
 
-  await db.insert(schema.productVariations).values([
+  await db.insert(productVariations).values([
     {
       productId: bouquet.id,
       name: 'Red Roses',
@@ -73,7 +73,7 @@ async function main() {
     },
   ]);
 
-  await db.insert(schema.products).values({
+  await db.insert(products).values({
     name: 'Handmade Keyring Set',
     description: 'Set of 3 beautifully handcrafted keyrings with unique charm designs. Made with premium beads and durable metal rings — a perfect small gift or personal accessory.',
     price: 12.99,
@@ -83,7 +83,7 @@ async function main() {
     updatedAt: new Date(),
   });
 
-  const [handWarmers] = await db.insert(schema.products).values({
+  const [handWarmers] = await db.insert(products).values({
     name: 'Knitted Hand Warmers',
     description: 'Cozy fingerless hand warmers knitted from soft wool blend yarn. Keep your hands warm while staying stylish — great for winter or chilly evenings.',
     price: 18.99,
@@ -93,7 +93,7 @@ async function main() {
     updatedAt: new Date(),
   }).returning();
 
-  await db.insert(schema.productVariations).values([
+  await db.insert(productVariations).values([
     {
       productId: handWarmers.id,
       name: 'Charcoal Grey',
@@ -120,7 +120,7 @@ async function main() {
     },
   ]);
 
-  await db.insert(schema.products).values({
+  await db.insert(products).values({
     name: 'Wool Muffler Scarf',
     description: 'Premium quality wool muffler scarf with a soft, luxurious feel. Perfect for cold weather — wraps comfortably around your neck with timeless style.',
     price: 24.99,
@@ -130,7 +130,7 @@ async function main() {
     updatedAt: new Date(),
   });
 
-  const [mikasa] = await db.insert(schema.products).values({
+  const [mikasa] = await db.insert(products).values({
     name: 'Mikasa Scarf',
     description: 'Iconic Mikasa-inspired scarf with bold patterns. A must-have for anime fans and fashion-forward individuals alike. Soft fabric with detailed design.',
     price: 22.99,
@@ -140,7 +140,7 @@ async function main() {
     updatedAt: new Date(),
   }).returning();
 
-  await db.insert(schema.productVariations).values([
+  await db.insert(productVariations).values([
     {
       productId: mikasa.id,
       name: 'Classic Red',
@@ -159,7 +159,7 @@ async function main() {
     },
   ]);
 
-  await db.insert(schema.products).values({
+  await db.insert(products).values({
     name: 'Decorative Flower Arrangement',
     description: 'Beautiful artificial flower arrangement in a ceramic vase. Long-lasting centerpiece for tables, shelves, or entryways — no watering needed!',
     price: 34.99,

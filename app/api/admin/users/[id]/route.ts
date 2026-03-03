@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { drizzleDb } from '@/lib/db';
-import * as schema from '@/lib/schema';
+import { users } from '@/lib/schema';
 import { eq } from 'drizzle-orm';
 import { auth } from '@/lib/auth';
 import { apiSuccess, apiError, handleApiError } from '@/lib/api-utils';
@@ -50,18 +50,18 @@ export async function PATCH(
     }
 
     // Update user role
-    const [user] = await drizzleDb.update(schema.users)
+    const [user] = await drizzleDb.update(users)
       .set({ role: validated.role, updatedAt: new Date() })
-      .where(eq(schema.users.id, id))
+      .where(eq(users.id, id))
       .returning({
-        id: schema.users.id,
-        name: schema.users.name,
-        email: schema.users.email,
-        role: schema.users.role,
-        emailVerified: schema.users.emailVerified,
-        createdAt: schema.users.createdAt,
-        updatedAt: schema.users.updatedAt,
-        image: schema.users.image,
+        id: users.id,
+        name: users.name,
+        email: users.email,
+        role: users.role,
+        emailVerified: users.emailVerified,
+        createdAt: users.createdAt,
+        updatedAt: users.updatedAt,
+        image: users.image,
       });
 
     // Invalidate user caches
@@ -91,7 +91,7 @@ export async function GET(
       300, // Cache for 5 minutes
       async () => {
         const user = await drizzleDb.query.users.findFirst({
-          where: eq(schema.users.id, id),
+          where: eq(users.id, id),
           with: { orders: true, sessions: true },
         });
         if (!user) return null;

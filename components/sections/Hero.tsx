@@ -11,10 +11,10 @@ export default function Hero() {
           Discover beautiful handmade decorations and cozy wearables — flower bouquets, keyrings, hand warmers, mufflers, scarves, and more. Each piece crafted with care, just for you.
         </p>
         <div className="flex gap-4 justify-center mb-12">
-          <Link href="#products" scroll={true} className="px-8 py-4 bg-rose-500 text-white rounded-lg font-semibold hover:bg-rose-600 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105">
+          <Link href="#products" scroll className="px-8 py-4 bg-rose-500 text-white rounded-lg font-semibold hover:bg-rose-600 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105">
             Shop Now
           </Link>
-          <Link href="#trending" scroll={true} className="px-8 py-4 border-2 border-rose-500 text-rose-500 rounded-lg font-semibold hover:bg-rose-50 transition-all duration-300 hover:scale-105">
+          <Link href="#trending" scroll className="px-8 py-4 border-2 border-rose-500 text-rose-500 rounded-lg font-semibold hover:bg-rose-50 transition-all duration-300 hover:scale-105">
             Trending Items
           </Link>
         </div>

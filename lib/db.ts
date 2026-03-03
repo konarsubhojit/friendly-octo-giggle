@@ -1,6 +1,6 @@
 import { Pool } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-serverless';
-import * as schema from './schema';
+import { products } from './schema';
 import { eq, desc } from 'drizzle-orm';
 import { Product, ProductInput } from './types';
 import { env } from './env';
@@ -51,7 +51,7 @@ export const db = {
 
       const fetcher = async () => {
         const query = drizzleDb.query.products.findMany({
-          orderBy: [desc(schema.products.createdAt)],
+          orderBy: [desc(products.createdAt)],
           with: { variations: true },
           limit,
           offset,
@@ -90,7 +90,7 @@ export const db = {
 
       const fetcher = async () => {
         const rows = await drizzleDb.query.products.findMany({
-          orderBy: [desc(schema.products.createdAt)],
+          orderBy: [desc(products.createdAt)],
           columns: {
             id: true,
             name: true,
@@ -123,7 +123,7 @@ export const db = {
     findById: async (id: string, withCache = false): Promise<Product | null> => {
       const fetcher = async () => {
         const row = await drizzleDb.query.products.findFirst({
-          where: eq(schema.products.id, id),
+          where: eq(products.id, id),
           with: { variations: true },
         });
         if (!row) return null;
@@ -149,7 +149,7 @@ export const db = {
 
     create: async (input: ProductInput): Promise<Product> => {
       const [row] = await drizzleDb
-        .insert(schema.products)
+        .insert(products)
         .values({ ...input, updatedAt: new Date() })
         .returning();
 
@@ -165,9 +165,9 @@ export const db = {
 
     update: async (id: string, input: Partial<ProductInput>): Promise<Product | null> => {
       const [row] = await drizzleDb
-        .update(schema.products)
+        .update(products)
         .set({ ...input, updatedAt: new Date() })
-        .where(eq(schema.products.id, id))
+        .where(eq(products.id, id))
         .returning();
 
       if (!row) return null;
@@ -184,9 +184,9 @@ export const db = {
 
     delete: async (id: string): Promise<boolean> => {
       const result = await drizzleDb
-        .delete(schema.products)
-        .where(eq(schema.products.id, id))
-        .returning({ id: schema.products.id });
+        .delete(products)
+        .where(eq(products.id, id))
+        .returning({ id: products.id });
 
       const success = result.length > 0;
 

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { drizzleDb } from '@/lib/db';
-import * as schema from '@/lib/schema';
+import { orders, orderItems, products, productVariations } from '@/lib/schema';
 import { eq, inArray, sql, desc } from 'drizzle-orm';
 import { invalidateCache } from '@/lib/redis';
 import { CreateOrderInput, OrderItemInput } from '@/lib/types';
@@ -121,7 +121,7 @@ async function handleGet(_request: NextRequest) {
     }
 
     const orders = await drizzleDb.query.orders.findMany({
-      where: eq(schema.orders.userId, session.user.id),
+      where: eq(orders.userId, session.user.id),
       with: {
         items: {
           with: {
@@ -130,7 +130,7 @@ async function handleGet(_request: NextRequest) {
           },
         },
       },
-      orderBy: [desc(schema.orders.createdAt)],
+      orderBy: [desc(orders.createdAt)],
     });
 
     return NextResponse.json({
@@ -176,7 +176,7 @@ async function handlePost(request: NextRequest) {
     // Fetch products with variations
     const productIds = body.items.map(item => item.productId);
     const products = await drizzleDb.query.products.findMany({
-      where: inArray(schema.products.id, productIds),
+      where: inArray(products.id, productIds),
       with: { variations: true },
     }) as ProductWithVariations[];
 
@@ -196,7 +196,7 @@ async function handlePost(request: NextRequest) {
     // Create order and update stock in a transaction
     const order = await drizzleDb.transaction(async (tx) => {
       // Create order with userId
-      const [newOrder] = await tx.insert(schema.orders).values({
+      const [newOrder] = await tx.insert(orders).values({
         userId: session.user.id,
         customerName,
         customerEmail,
@@ -207,7 +207,7 @@ async function handlePost(request: NextRequest) {
       }).returning();
 
       // Create order items
-      await tx.insert(schema.orderItems).values(
+      await tx.insert(orderItems).values(
         body.items.map(item => {
           const product = products.find((p) => p.id === item.productId);
           if (!product) {
@@ -241,15 +241,15 @@ async function handlePost(request: NextRequest) {
       for (const item of body.items) {
         if (item.variationId) {
           // Update variation stock
-          await tx.update(schema.productVariations)
-            .set({ stock: sql`${schema.productVariations.stock} - ${item.quantity}`, updatedAt: new Date() })
-            .where(eq(schema.productVariations.id, item.variationId));
+          await tx.update(productVariations)
+            .set({ stock: sql`${productVariations.stock} - ${item.quantity}`, updatedAt: new Date() })
+            .where(eq(productVariations.id, item.variationId));
         }
 
         // Always update total product stock
-        await tx.update(schema.products)
-          .set({ stock: sql`${schema.products.stock} - ${item.quantity}`, updatedAt: new Date() })
-          .where(eq(schema.products.id, item.productId));
+        await tx.update(products)
+          .set({ stock: sql`${products.stock} - ${item.quantity}`, updatedAt: new Date() })
+          .where(eq(products.id, item.productId));
       }
 
       return newOrder;
@@ -257,7 +257,7 @@ async function handlePost(request: NextRequest) {
 
     // Re-fetch order with items, product, and variation details
     const fullOrder = await drizzleDb.query.orders.findFirst({
-      where: eq(schema.orders.id, order.id),
+      where: eq(orders.id, order.id),
       with: { items: { with: { product: true, variation: true } } },
     });
 

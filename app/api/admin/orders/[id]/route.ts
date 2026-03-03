@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { drizzleDb } from '@/lib/db';
-import * as schema from '@/lib/schema';
+import { orders } from '@/lib/schema';
 import { eq } from 'drizzle-orm';
 import { apiSuccess, apiError, handleApiError, handleValidationError } from '@/lib/api-utils';
 import { auth } from '@/lib/auth';
@@ -54,12 +54,12 @@ export async function PATCH(
       ),
     };
 
-    await drizzleDb.update(schema.orders)
+    await drizzleDb.update(orders)
       .set(updateData)
-      .where(eq(schema.orders.id, id));
+      .where(eq(orders.id, id));
 
     const order = await drizzleDb.query.orders.findFirst({
-      where: eq(schema.orders.id, id),
+      where: eq(orders.id, id),
       with: { items: { with: { product: true, variation: true } } },
     });
 
@@ -97,7 +97,7 @@ export async function GET(
       60, // Cache for 1 minute
       async () => {
         return await drizzleDb.query.orders.findFirst({
-          where: eq(schema.orders.id, id),
+          where: eq(orders.id, id),
           with: { items: { with: { product: true, variation: true } } },
         });
       },

@@ -78,9 +78,8 @@ export default function OrdersManagement() {
     );
     // Clear local draft so it re-reads from store on next render
     setShippingEdits((prev) => {
-      const next = { ...prev };
-      delete next[orderId];
-      return next;
+      const { [orderId]: _removed, ...rest } = prev;
+      return rest;
     });
     setSavingShippingId(null);
   };
@@ -165,7 +164,7 @@ export default function OrdersManagement() {
       ) : (
         <div className="space-y-4">
           {filteredOrders.map((order) => {
-            const hasTracking = !!(order.trackingNumber || order.shippingProvider);
+            const hasTracking = Boolean(order.trackingNumber || order.shippingProvider);
             const edit = getShippingEdit(order.id, order);
 
             return (

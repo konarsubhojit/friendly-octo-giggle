@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { drizzleDb } from '@/lib/db';
-import * as schema from '@/lib/schema';
+import { cartItems } from '@/lib/schema';
 import { eq } from 'drizzle-orm';
 import { auth } from '@/lib/auth';
 import { UpdateCartItemSchema } from '@/lib/validations';
@@ -28,7 +28,7 @@ export async function PATCH(
 
     // Get cart item
     const cartItem = await drizzleDb.query.cartItems.findFirst({
-      where: eq(schema.cartItems.id, id),
+      where: eq(cartItems.id, id),
       with: {
         cart: true,
         product: {
@@ -75,9 +75,9 @@ export async function PATCH(
     }
 
     // Update quantity
-    await drizzleDb.update(schema.cartItems)
+    await drizzleDb.update(cartItems)
       .set({ quantity: body.quantity, updatedAt: new Date() })
-      .where(eq(schema.cartItems.id, id));
+      .where(eq(cartItems.id, id));
 
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -101,7 +101,7 @@ export async function DELETE(
 
     // Get cart item
     const cartItem = await drizzleDb.query.cartItems.findFirst({
-      where: eq(schema.cartItems.id, id),
+      where: eq(cartItems.id, id),
       with: {
         cart: true,
       },
@@ -127,7 +127,7 @@ export async function DELETE(
     }
 
     // Delete item
-    await drizzleDb.delete(schema.cartItems).where(eq(schema.cartItems.id, id));
+    await drizzleDb.delete(cartItems).where(eq(cartItems.id, id));
 
     return NextResponse.json({ success: true });
   } catch (error) {

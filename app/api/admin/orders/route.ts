@@ -1,5 +1,5 @@
 import { drizzleDb } from '@/lib/db';
-import * as schema from '@/lib/schema';
+import { orders } from '@/lib/schema';
 import { desc } from 'drizzle-orm';
 import { apiSuccess, apiError, handleApiError } from '@/lib/api-utils';
 import { auth } from '@/lib/auth';
@@ -36,7 +36,7 @@ export async function GET() {
       60, // Cache for 1 minute (orders change more frequently)
       async () => {
         return await drizzleDb.query.orders.findMany({
-          orderBy: [desc(schema.orders.createdAt)],
+          orderBy: [desc(orders.createdAt)],
           with: { items: { with: { product: true, variation: true } } },
         });
       },

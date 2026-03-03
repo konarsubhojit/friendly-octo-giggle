@@ -1,5 +1,5 @@
 import { drizzleDb } from '@/lib/db';
-import * as schema from '@/lib/schema';
+import { users } from '@/lib/schema';
 import { desc } from 'drizzle-orm';
 import { auth } from '@/lib/auth';
 import { apiSuccess, apiError, handleApiError } from '@/lib/api-utils';
@@ -35,7 +35,7 @@ export async function GET() {
       300, // Cache for 5 minutes
       async () => {
         const userRows = await drizzleDb.query.users.findMany({
-          orderBy: [desc(schema.users.createdAt)],
+          orderBy: [desc(users.createdAt)],
           with: { orders: true },
         });
         return userRows.map(u => ({

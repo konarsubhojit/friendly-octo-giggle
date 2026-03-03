@@ -112,12 +112,11 @@ export default function ProductFormModal({
     return textMap[mode];
   };
 
-  const handleSubmit = (e: React.BaseSyntheticEvent) => {
+  const handleSubmit = async (e: React.BaseSyntheticEvent) => {
     e.preventDefault();
     setSaving(true);
 
-    void (async () => {
-      try {
+    try {
         let imageUrl = formData.image;
         if (imageFile) {
           const uploadedUrl = await uploadImage();
@@ -167,15 +166,14 @@ export default function ProductFormModal({
             : 'Product created successfully'
         );
 
-        onSuccess(savedProduct);
-        onClose();
-      } catch (err) {
-        console.error('Error saving product:', err);
-        toast.error('Something went wrong. Please try again.');
-      } finally {
-        setSaving(false);
-      }
-    })();
+      onSuccess(savedProduct);
+      onClose();
+    } catch (err) {
+      console.error('Error saving product:', err);
+      toast.error('Something went wrong. Please try again.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
