@@ -220,7 +220,7 @@ export default function CartPage() {
       router.push('/auth/signin?callbackUrl=/cart');
       return;
     }
-    if (!cart || !cart.items.length) {
+    if (!cart?.items.length) {
       setError('Your cart is empty');
       return;
     }

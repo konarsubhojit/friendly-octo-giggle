@@ -319,10 +319,12 @@ export async function DELETE(request: NextRequest) {
         drizzleDb.query.carts.findFirst({
           where: eq(carts.userId, session!.user!.id),
         }),
-      session: async () =>
-        drizzleDb.query.carts.findFirst({
-          where: eq(carts.sessionId, sessionId!),
-        }),
+      session: async () => {
+        if (!sessionId) return undefined;
+        return drizzleDb.query.carts.findFirst({
+          where: eq(carts.sessionId, sessionId),
+        });
+      },
     };
 
     const key = session?.user?.id ? "user" : "session";

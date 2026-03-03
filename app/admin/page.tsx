@@ -38,8 +38,8 @@ export default function AdminDashboard() {
         } else {
           setError('Failed to load sales data');
         }
-      } catch (_err) {
-        setError('Failed to load sales data');
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load sales data');
       } finally {
         setLoading(false);
       }
