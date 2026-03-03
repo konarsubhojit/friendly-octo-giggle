@@ -1,4 +1,3 @@
-import { NextRequest } from 'next/server';
 import { drizzleDb } from '@/lib/db';
 import * as schema from '@/lib/schema';
 import { desc } from 'drizzle-orm';
@@ -9,7 +8,7 @@ import { getCachedData } from '@/lib/redis';
 export const dynamic = 'force-dynamic';
 
 // Check if user is admin
-async function checkAdminAuth(request: NextRequest) {
+async function checkAdminAuth() {
   const session = await auth();
   
   if (!session?.user) {
@@ -23,9 +22,9 @@ async function checkAdminAuth(request: NextRequest) {
   return { authorized: true, userId: session.user.id };
 }
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    const authCheck = await checkAdminAuth(request);
+    const authCheck = await checkAdminAuth();
     if (!authCheck.authorized) {
       return apiError(authCheck.error!, authCheck.status);
     }

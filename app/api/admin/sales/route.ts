@@ -1,4 +1,3 @@
-import { NextRequest } from 'next/server';
 import { drizzleDb } from '@/lib/db';
 import * as schema from '@/lib/schema';
 import { sql, eq, count, and, gte, lt, ne } from 'drizzle-orm';
@@ -19,7 +18,7 @@ async function checkAdminAuth() {
   return { authorized: true };
 }
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   const authCheck = await checkAdminAuth();
   if (!authCheck.authorized) {
     return apiError(authCheck.error!, authCheck.status);
