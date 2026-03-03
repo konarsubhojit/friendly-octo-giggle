@@ -3,25 +3,25 @@ import Footer from '@/components/layout/Footer';
 import Link from 'next/link';
 
 export const metadata = {
-  title: 'Press | E-Store',
-  description: 'Latest press releases, media mentions, and press resources for E-Store.',
+  title: 'Press | Craft & Cozy',
+  description: 'Latest press releases, media mentions, and press resources for Craft & Cozy.',
 };
 
 const pressReleases = [
   {
     date: 'February 15, 2026',
-    title: 'E-Store Reaches 100,000 Customers Milestone',
-    summary: 'E-Store today announced it has served over 100,000 customers since its launch, reflecting strong consumer demand for its curated product selection.',
+    title: 'Craft & Cozy Reaches 100,000 Customers Milestone',
+    summary: 'Craft & Cozy today announced it has served over 100,000 customers since its launch, reflecting strong demand for its handmade flower bouquets, keyrings, hand warmers, mufflers, and scarves.',
   },
   {
     date: 'January 10, 2026',
-    title: 'E-Store Launches Same-Day Delivery in San Francisco and New York',
+    title: 'Craft & Cozy Launches Same-Day Delivery in San Francisco and New York',
     summary: 'Customers in select metro areas can now receive orders placed before 2pm on the same day, powered by our new logistics partnership.',
   },
   {
     date: 'December 5, 2025',
-    title: 'E-Store Announces Series A Funding Round',
-    summary: 'E-Store has closed a $12M Series A round led by Apex Ventures, with participation from leading angel investors in the e-commerce space.',
+    title: 'Craft & Cozy Announces Series A Funding Round',
+    summary: 'Craft & Cozy has closed a $12M Series A round led by Apex Ventures, with participation from leading angel investors in the handmade crafts space.',
   },
 ];
 
@@ -31,7 +31,7 @@ export default function PressPage() {
       <Header />
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
         <h1 className="text-4xl font-bold text-gray-900 mb-4">Press</h1>
-        <p className="text-gray-500 text-lg mb-12">News, press releases, and media resources from E-Store.</p>
+        <p className="text-gray-500 text-lg mb-12">News, press releases, and media resources from Craft &amp; Cozy.</p>
 
         <section className="bg-white rounded-2xl shadow-sm p-8 mb-8">
           <h2 className="text-2xl font-semibold text-gray-900 mb-6">Press Releases</h2>

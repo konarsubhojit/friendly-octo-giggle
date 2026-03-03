@@ -193,32 +193,63 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
             {order.items.map((item) => {
               const image = (item.variation as Record<string, unknown>)?.image as string | undefined || item.product?.image;
               return (
-                <div key={item.id} className="flex items-center gap-4 py-3 border-b border-gray-100 last:border-0">
-                  {image && (
-                    <div className="relative w-16 h-16 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100">
-                      <Image src={image} alt={item.product?.name || 'Order item'} fill sizes="80px" className="object-cover" />
+                <div key={item.id} className="py-3 border-b border-gray-100 last:border-0">
+                  <div className="flex items-center gap-4">
+                    {image && (
+                      <div className="relative w-16 h-16 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100">
+                        <Image src={image} alt={item.product?.name || 'Order item'} fill sizes="80px" className="object-cover" />
+                      </div>
+                    )}
+                    <div className="flex-grow min-w-0">
+                      <Link
+                        href={`/products/${item.productId}`}
+                        className="text-sm font-semibold text-gray-900 hover:text-blue-600 transition-colors"
+                      >
+                        {item.product?.name}
+                      </Link>
+                      {item.variation && (
+                        <p className="text-xs text-gray-500">
+                          {item.variation.name}
+                        </p>
+                      )}
+                      <p className="text-xs text-gray-500">Qty: {item.quantity}</p>
+                    </div>
+                    <p className="text-sm font-bold text-gray-900">{formatPrice(item.price * item.quantity)}</p>
+                  </div>
+                  {item.customizationNote && (
+                    <div className="mt-2 ml-20 p-2 bg-amber-50 border border-amber-200 rounded-lg">
+                      <p className="text-xs text-amber-800">
+                        <span className="font-semibold">✏️ Customization:</span>{' '}
+                        {item.customizationNote}
+                      </p>
                     </div>
                   )}
-                  <div className="flex-grow min-w-0">
-                    <Link
-                      href={`/products/${item.productId}`}
-                      className="text-sm font-semibold text-gray-900 hover:text-blue-600 transition-colors"
-                    >
-                      {item.product?.name}
-                    </Link>
-                    {item.variation && (
-                      <p className="text-xs text-gray-500">
-                        {item.variation.name}
-                      </p>
-                    )}
-                    <p className="text-xs text-gray-500">Qty: {item.quantity}</p>
-                  </div>
-                  <p className="text-sm font-bold text-gray-900">{formatPrice(item.price * item.quantity)}</p>
                 </div>
               );
             })}
           </div>
         </div>
+
+        {/* Tracking Info */}
+        {(order.trackingNumber || order.shippingProvider) && (
+          <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/50 p-8 mb-6">
+            <h2 className="text-lg font-bold text-gray-900 mb-3">📦 Shipping &amp; Tracking</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {order.shippingProvider && (
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 uppercase">Shipping Provider</p>
+                  <p className="text-sm text-gray-900 font-medium">{order.shippingProvider}</p>
+                </div>
+              )}
+              {order.trackingNumber && (
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 uppercase">Tracking Number</p>
+                  <p className="text-sm text-gray-900 font-medium font-mono">{order.trackingNumber}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Shipping Address */}
         <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/50 p-8">

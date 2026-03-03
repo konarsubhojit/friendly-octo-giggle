@@ -45,13 +45,14 @@ export interface OrderItem {
   variationId?: string;
   quantity: number;
   price: number;
+  customizationNote?: string | null;
 }
 
-// Input type for order items (without price, which is calculated)
 export interface OrderItemInput {
   productId: string;
   variationId?: string;
   quantity: number;
+  customizationNote?: string | null;
 }
 
 export interface Order {
@@ -61,6 +62,8 @@ export interface Order {
   customerAddress: string;
   totalAmount: number;
   status: OrderStatus;
+  trackingNumber?: string | null;
+  shippingProvider?: string | null;
   createdAt: string;
   updatedAt: string;
   items: OrderItemWithProduct[];
@@ -72,6 +75,7 @@ export interface OrderItemWithProduct {
   variationId?: string | null;
   quantity: number;
   price: number;
+  customizationNote?: string | null;
   product: Product;
   variation?: ProductVariation | null;
 }

@@ -212,7 +212,17 @@ async function handlePost(request: NextRequest) {
           if (variation) {
             price = product.price + variation.priceModifier;
           }
-          return { orderId: newOrder.id, productId: item.productId, variationId: item.variationId ?? null, quantity: item.quantity, price };
+
+          // Sanitize customizationNote: ensure string, trim, enforce 500-char limit
+          let customizationNote: string | null = null;
+          if (typeof item.customizationNote === 'string') {
+            const trimmed = item.customizationNote.trim();
+            if (trimmed.length > 0) {
+              customizationNote = trimmed.length > 500 ? trimmed.slice(0, 500) : trimmed;
+            }
+          }
+
+          return { orderId: newOrder.id, productId: item.productId, variationId: item.variationId ?? null, quantity: item.quantity, price, customizationNote };
         })
       );
 

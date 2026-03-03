@@ -3,7 +3,7 @@ import Footer from '@/components/layout/Footer';
 import Link from 'next/link';
 
 export const metadata = {
-  title: 'Returns & Refunds | E-Store',
+  title: 'Returns & Refunds | Craft & Cozy',
   description: 'Learn about our hassle-free return and refund policy.',
 };
 

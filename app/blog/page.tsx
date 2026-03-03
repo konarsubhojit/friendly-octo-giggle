@@ -2,8 +2,8 @@ import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 
 export const metadata = {
-  title: 'Blog | E-Store',
-  description: 'Latest news, tips, and stories from the E-Store team.',
+  title: 'Blog | Craft & Cozy',
+  description: 'Latest news, tips, and stories from the Craft & Cozy team.',
 };
 
 const posts = [
@@ -39,7 +39,7 @@ export default function BlogPage() {
       <Header />
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
         <h1 className="text-4xl font-bold text-gray-900 mb-4">Blog</h1>
-        <p className="text-gray-500 text-lg mb-12">News, tips, and stories from the E-Store team.</p>
+        <p className="text-gray-500 text-lg mb-12">News, tips, and stories from the Craft &amp; Cozy team.</p>
 
         <div className="space-y-6">
           {posts.map(post => (

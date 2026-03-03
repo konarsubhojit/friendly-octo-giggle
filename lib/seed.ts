@@ -24,136 +24,144 @@ async function main() {
   await db.delete(schema.productVariations);
   await db.delete(schema.products);
 
-  // Seed products
-  const [headphones] = await db.insert(schema.products).values({
-    name: 'Wireless Bluetooth Headphones',
-    description: 'Premium noise-cancelling wireless headphones with 30-hour battery life and superior sound quality.',
-    price: 199.99,
-    image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&h=500&fit=crop',
-    stock: 45,
-    category: 'Electronics',
+  // Seed products - Decorations & Wearables
+  const [bouquet] = await db.insert(schema.products).values({
+    name: 'Rose Flower Bouquet',
+    description: 'Stunning hand-arranged bouquet of beautiful roses, perfect for gifting or decorating your home. Each bouquet is crafted with care and wrapped in elegant packaging.',
+    price: 29.99,
+    image: 'https://images.unsplash.com/photo-1487530811176-3780de880c2d?w=500&h=500&fit=crop',
+    stock: 40,
+    category: 'Flowers',
     updatedAt: new Date(),
   }).returning();
 
   await db.insert(schema.productVariations).values([
     {
-      productId: headphones.id,
-      name: 'Black',
-      designName: 'Classic Black',
+      productId: bouquet.id,
+      name: 'Red Roses',
+      designName: 'Classic Red Romance',
       priceModifier: 0,
       stock: 20,
-      image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&h=500&fit=crop',
+      image: 'https://images.unsplash.com/photo-1490750967868-88aa4f44baee?w=500&h=500&fit=crop',
       updatedAt: new Date(),
     },
     {
-      productId: headphones.id,
-      name: 'Silver',
-      designName: 'Premium Silver',
-      priceModifier: 20,
-      stock: 15,
-      image: 'https://images.unsplash.com/photo-1545127398-14699f92334b?w=500&h=500&fit=crop',
+      productId: bouquet.id,
+      name: 'Pink Roses',
+      designName: 'Blush Pink Elegance',
+      priceModifier: 5,
+      stock: 12,
+      image: 'https://images.unsplash.com/photo-1455659817273-f96807779a8a?w=500&h=500&fit=crop',
       updatedAt: new Date(),
     },
     {
-      productId: headphones.id,
-      name: 'Rose Gold',
-      designName: 'Elegant Rose Gold',
-      priceModifier: 30,
-      stock: 10,
-      image: 'https://images.unsplash.com/photo-1484704849700-f032a568e944?w=500&h=500&fit=crop',
+      productId: bouquet.id,
+      name: 'Mixed Wildflowers',
+      designName: 'Rustic Wildflower Mix',
+      priceModifier: 8,
+      stock: 8,
+      image: 'https://images.unsplash.com/photo-1468327768560-75b778cbb551?w=500&h=500&fit=crop',
       updatedAt: new Date(),
     },
   ]);
 
   await db.insert(schema.products).values({
-    name: 'Ergonomic Office Chair',
-    description: 'Comfortable mesh back office chair with adjustable height and lumbar support. Perfect for long work sessions.',
-    price: 299.99,
-    image: 'https://images.unsplash.com/photo-1580480055273-228ff5388ef8?w=500&h=500&fit=crop',
-    stock: 23,
-    category: 'Furniture',
-    updatedAt: new Date(),
-  });
-
-  const [watch] = await db.insert(schema.products).values({
-    name: 'Smart Watch Series X',
-    description: 'Advanced fitness tracking, heart rate monitoring, and smartphone notifications. Water-resistant up to 50m.',
-    price: 399.99,
-    image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&h=500&fit=crop',
-    stock: 67,
-    category: 'Electronics',
-    updatedAt: new Date(),
-  }).returning();
-
-  await db.insert(schema.productVariations).values([
-    {
-      productId: watch.id,
-      name: '42mm',
-      designName: 'Standard 42mm',
-      priceModifier: 0,
-      stock: 30,
-      updatedAt: new Date(),
-    },
-    {
-      productId: watch.id,
-      name: '46mm',
-      designName: 'Large 46mm',
-      priceModifier: 50,
-      stock: 37,
-      updatedAt: new Date(),
-    },
-  ]);
-
-  const [bag] = await db.insert(schema.products).values({
-    name: 'Leather Laptop Bag',
-    description: 'Genuine leather messenger bag with padded laptop compartment. Fits up to 15-inch laptops.',
-    price: 149.99,
-    image: 'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=500&h=500&fit=crop',
-    stock: 34,
+    name: 'Handmade Keyring Set',
+    description: 'Set of 3 beautifully handcrafted keyrings with unique charm designs. Made with premium beads and durable metal rings — a perfect small gift or personal accessory.',
+    price: 12.99,
+    image: 'https://images.unsplash.com/photo-1579783928621-7a13d66a62d1?w=500&h=500&fit=crop',
+    stock: 80,
     category: 'Accessories',
     updatedAt: new Date(),
+  });
+
+  const [handWarmers] = await db.insert(schema.products).values({
+    name: 'Knitted Hand Warmers',
+    description: 'Cozy fingerless hand warmers knitted from soft wool blend yarn. Keep your hands warm while staying stylish — great for winter or chilly evenings.',
+    price: 18.99,
+    image: 'https://images.unsplash.com/photo-1608541737042-87a12275d313?w=500&h=500&fit=crop',
+    stock: 55,
+    category: 'Wearables',
+    updatedAt: new Date(),
   }).returning();
 
   await db.insert(schema.productVariations).values([
     {
-      productId: bag.id,
-      name: 'Brown',
-      designName: 'Classic Brown Leather',
+      productId: handWarmers.id,
+      name: 'Charcoal Grey',
+      designName: 'Classic Charcoal',
       priceModifier: 0,
+      stock: 25,
+      updatedAt: new Date(),
+    },
+    {
+      productId: handWarmers.id,
+      name: 'Cream White',
+      designName: 'Warm Cream',
+      priceModifier: 2,
       stock: 20,
       updatedAt: new Date(),
     },
     {
-      productId: bag.id,
-      name: 'Black',
-      designName: 'Professional Black',
-      priceModifier: 10,
-      stock: 14,
+      productId: handWarmers.id,
+      name: 'Blush Pink',
+      designName: 'Soft Blush',
+      priceModifier: 3,
+      stock: 10,
       updatedAt: new Date(),
     },
   ]);
 
   await db.insert(schema.products).values({
-    name: 'Portable Power Bank',
-    description: '20,000mAh high-capacity power bank with fast charging support for multiple devices simultaneously.',
-    price: 49.99,
-    image: 'https://images.unsplash.com/photo-1609091839311-d5365f9ff1c5?w=500&h=500&fit=crop',
-    stock: 120,
-    category: 'Electronics',
+    name: 'Wool Muffler Scarf',
+    description: 'Premium quality wool muffler scarf with a soft, luxurious feel. Perfect for cold weather — wraps comfortably around your neck with timeless style.',
+    price: 24.99,
+    image: 'https://images.unsplash.com/photo-1520903920243-00d872a2d1c9?w=500&h=500&fit=crop',
+    stock: 35,
+    category: 'Wearables',
     updatedAt: new Date(),
   });
+
+  const [mikasa] = await db.insert(schema.products).values({
+    name: 'Mikasa Scarf',
+    description: 'Iconic Mikasa-inspired scarf with bold patterns. A must-have for anime fans and fashion-forward individuals alike. Soft fabric with detailed design.',
+    price: 22.99,
+    image: 'https://images.unsplash.com/photo-1601924921557-45e6ddf0c665?w=500&h=500&fit=crop',
+    stock: 45,
+    category: 'Wearables',
+    updatedAt: new Date(),
+  }).returning();
+
+  await db.insert(schema.productVariations).values([
+    {
+      productId: mikasa.id,
+      name: 'Classic Red',
+      designName: 'Mikasa Classic Red',
+      priceModifier: 0,
+      stock: 25,
+      updatedAt: new Date(),
+    },
+    {
+      productId: mikasa.id,
+      name: 'Navy Blue',
+      designName: 'Mikasa Navy Edition',
+      priceModifier: 3,
+      stock: 20,
+      updatedAt: new Date(),
+    },
+  ]);
 
   await db.insert(schema.products).values({
-    name: 'Standing Desk Converter',
-    description: 'Adjustable height desk converter that transforms any desk into a standing desk. Easy assembly required.',
-    price: 249.99,
-    image: 'https://images.unsplash.com/photo-1595515106969-1ce29566ff1c?w=500&h=500&fit=crop',
-    stock: 18,
-    category: 'Furniture',
+    name: 'Decorative Flower Arrangement',
+    description: 'Beautiful artificial flower arrangement in a ceramic vase. Long-lasting centerpiece for tables, shelves, or entryways — no watering needed!',
+    price: 34.99,
+    image: 'https://images.unsplash.com/photo-1487530811176-3780de880c2d?w=500&h=500&fit=crop',
+    stock: 25,
+    category: 'Decorations',
     updatedAt: new Date(),
   });
 
-  console.log('Created 6 products with variations');
+  console.log('Created 7 products with variations (decorations & wearables)');
 
   await pool.end();
 }
