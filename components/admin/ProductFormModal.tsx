@@ -101,7 +101,7 @@ export default function ProductFormModal({
       update: 'Update Product',
       create: 'Create Product',
     };
-    let mode: string;
+    let mode: 'uploading' | 'saving' | 'update' | 'create';
     if (uploading) {
       mode = 'uploading';
     } else if (saving) {
