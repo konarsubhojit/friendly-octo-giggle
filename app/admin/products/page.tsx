@@ -50,7 +50,7 @@ export default function ProductsManagement() {
     dispatch(upsertProduct(product));
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = (id: string) => {
     setProductToDelete(id);
     setShowDeleteModal(true);
   };

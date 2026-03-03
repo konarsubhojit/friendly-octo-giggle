@@ -27,7 +27,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     }),
   ],
   callbacks: {
-    async session({ session, token }) {
+    session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string;
         session.user.role = (token.role as 'CUSTOMER' | 'ADMIN') || 'CUSTOMER';
@@ -42,14 +42,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       }
       return session;
     },
-    async jwt({ token, user }) {
+    jwt({ token, user }) {
       if (user) {
         token.id = user.id;
         token.role = user.role || 'CUSTOMER';
       }
       return token;
     },
-    async signIn({ user, account }) {
+    signIn({ user, account }) {
       // Log successful sign-in
       logAuthEvent({
         event: 'login',
@@ -62,7 +62,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
   },
   events: {
-    async signOut() {
+    signOut() {
       // Log sign-out (user ID not available in signOut event)
       logAuthEvent({
         event: 'logout',
