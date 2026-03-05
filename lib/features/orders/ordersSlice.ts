@@ -1,5 +1,5 @@
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import type { RootState } from '@/lib/store';
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import type { RootState } from "@/lib/store";
 
 // Types matching API responses
 interface OrderItem {
@@ -41,6 +41,7 @@ interface OrdersState {
   currentOrder: Order | null;
   loading: boolean;
   detailLoading: boolean;
+  cancelling: boolean;
   error: string | null;
 }
 
@@ -49,37 +50,55 @@ const initialState: OrdersState = {
   currentOrder: null,
   loading: false,
   detailLoading: false,
+  cancelling: false,
   error: null,
 };
 
 export const fetchOrders = createAsyncThunk(
-  'orders/fetchOrders',
+  "orders/fetchOrders",
   async (_, { rejectWithValue }) => {
-    const res = await fetch('/api/orders');
+    const res = await fetch("/api/orders");
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      return rejectWithValue(err.error || 'Failed to fetch orders');
+      return rejectWithValue(err.error || "Failed to fetch orders");
     }
     const data = await res.json();
     return data.orders || data.data?.orders || [];
-  }
+  },
 );
 
 export const fetchOrderById = createAsyncThunk(
-  'orders/fetchOrderById',
+  "orders/fetchOrderById",
   async (id: string, { rejectWithValue }) => {
     const res = await fetch(`/api/orders/${id}`);
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      return rejectWithValue(err.error || 'Failed to fetch order');
+      return rejectWithValue(err.error || "Failed to fetch order");
     }
     const data = await res.json();
     return data.order || data.data?.order || data;
-  }
+  },
+);
+
+export const cancelOrder = createAsyncThunk(
+  "orders/cancelOrder",
+  async (id: string, { rejectWithValue }) => {
+    const res = await fetch(`/api/orders/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "cancel" }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      return rejectWithValue(err.error || "Failed to cancel order");
+    }
+    const data = await res.json();
+    return data.order || data.data?.order;
+  },
 );
 
 const ordersSlice = createSlice({
-  name: 'orders',
+  name: "orders",
   initialState,
   reducers: {
     clearOrderError(state) {
@@ -116,6 +135,23 @@ const ordersSlice = createSlice({
       .addCase(fetchOrderById.rejected, (state, action) => {
         state.detailLoading = false;
         state.error = action.payload as string;
+      })
+      // cancelOrder
+      .addCase(cancelOrder.pending, (state) => {
+        state.cancelling = true;
+        state.error = null;
+      })
+      .addCase(cancelOrder.fulfilled, (state, action) => {
+        state.cancelling = false;
+        state.currentOrder = action.payload;
+        const idx = state.orders.findIndex((o) => o.id === action.payload.id);
+        if (idx !== -1) {
+          state.orders[idx] = action.payload;
+        }
+      })
+      .addCase(cancelOrder.rejected, (state, action) => {
+        state.cancelling = false;
+        state.error = action.payload as string;
       });
   },
 });
@@ -125,7 +161,11 @@ export const { clearOrderError, clearCurrentOrder } = ordersSlice.actions;
 export const selectOrders = (state: RootState) => state.orders.orders;
 export const selectOrdersLoading = (state: RootState) => state.orders.loading;
 export const selectOrdersError = (state: RootState) => state.orders.error;
-export const selectCurrentOrder = (state: RootState) => state.orders.currentOrder;
-export const selectOrderDetailLoading = (state: RootState) => state.orders.detailLoading;
+export const selectCurrentOrder = (state: RootState) =>
+  state.orders.currentOrder;
+export const selectOrderDetailLoading = (state: RootState) =>
+  state.orders.detailLoading;
+export const selectOrderCancelling = (state: RootState) =>
+  state.orders.cancelling;
 
 export default ordersSlice.reducer;
