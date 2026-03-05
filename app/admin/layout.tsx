@@ -1,6 +1,7 @@
 import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
+import CurrencySelector from '@/components/ui/CurrencySelector';
 
 interface AdminLayoutProps {
   readonly children: React.ReactNode;
@@ -37,8 +38,11 @@ export default async function AdminLayout({
       <header className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-between items-center">
-            <h1 className="text-2xl font-bold text-gray-900">Admin Panel</h1>
+            <div className="flex items-center gap-4">
+              <Link href="/admin" className="text-2xl font-bold text-gray-900 hover:text-blue-700 transition">Admin Panel</Link>
+            </div>
             <div className="flex gap-4 items-center">
+              <CurrencySelector />
               <span className="text-sm text-gray-600">
                 {session.user.name || session.user.email}
               </span>
@@ -57,6 +61,16 @@ export default async function AdminLayout({
           </div>
         </div>
       </header>
+      <nav className="bg-white border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex gap-6 py-3">
+            <Link href="/admin" className="text-sm font-medium text-gray-600 hover:text-blue-600 transition">Dashboard</Link>
+            <Link href="/admin/products" className="text-sm font-medium text-gray-600 hover:text-blue-600 transition">Products</Link>
+            <Link href="/admin/orders" className="text-sm font-medium text-gray-600 hover:text-blue-600 transition">Orders</Link>
+            <Link href="/admin/users" className="text-sm font-medium text-gray-600 hover:text-blue-600 transition">Users</Link>
+          </div>
+        </div>
+      </nav>
       {children}
     </div>
   );

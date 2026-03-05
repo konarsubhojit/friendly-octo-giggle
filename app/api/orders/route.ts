@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { drizzleDb } from "@/lib/db";
 import { orders, orderItems, products, productVariations } from "@/lib/schema";
-import { eq, inArray, sql, desc } from "drizzle-orm";
+import { eq, inArray, sql, desc, and, isNull } from "drizzle-orm";
 import { invalidateCache, getCachedData } from "@/lib/redis";
 import { CACHE_KEYS, CACHE_TTL, invalidateUserOrderCaches } from "@/lib/cache";
 import { CreateOrderInput, OrderItemInput } from "@/lib/types";
@@ -312,7 +312,7 @@ async function handlePost(request: NextRequest) {
     // Fetch products with variations
     const productIds = body.items.map((item) => item.productId);
     const productList = (await drizzleDb.query.products.findMany({
-      where: inArray(products.id, productIds),
+      where: and(inArray(products.id, productIds), isNull(products.deletedAt)),
       with: { variations: true },
     })) as ProductWithVariations[];
 

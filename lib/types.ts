@@ -6,6 +6,7 @@ export interface Product {
   image: string;
   stock: number;
   category: string;
+  deletedAt: string | null;
   createdAt: string;
   updatedAt: string;
   variations?: ProductVariation[];
