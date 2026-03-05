@@ -88,8 +88,7 @@ async function getOrCreateCart(
 
   // Guest user
   const guestSessionId =
-    sessionId ??
-    `guest_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+    sessionId ?? `guest_${Date.now()}_${crypto.randomUUID().substring(0, 8)}`;
   let cart = await drizzleDb.query.carts.findFirst({
     where: eq(carts.sessionId, guestSessionId),
   });
@@ -216,7 +215,7 @@ export async function GET(request: NextRequest) {
       cart: serializeCart(cart as unknown as CartWithItems),
     });
   } catch (error) {
-    logError({ error, context: 'cart_fetch' });
+    logError({ error, context: "cart_fetch" });
     return NextResponse.json(
       { error: "Failed to fetch cart" },
       { status: 500 },
@@ -296,7 +295,7 @@ export async function POST(request: NextRequest) {
 
     return response;
   } catch (error) {
-    logError({ error, context: 'cart_add' });
+    logError({ error, context: "cart_add" });
     return NextResponse.json(
       { error: "Failed to add to cart" },
       { status: 500 },
@@ -314,21 +313,18 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ success: true });
     }
 
-    const actions = {
-      user: () =>
-        drizzleDb.query.carts.findFirst({
-          where: eq(carts.userId, session!.user!.id),
-        }),
-      session: () => {
-        if (!sessionId) return undefined;
-        return drizzleDb.query.carts.findFirst({
-          where: eq(carts.sessionId, sessionId),
-        });
-      },
-    };
-
-    const key = session?.user?.id ? "user" : "session";
-    const cart = await actions[key]();
+    // Find cart based on authenticated user or session
+    const userId = session?.user?.id;
+    let cart;
+    if (userId) {
+      cart = await drizzleDb.query.carts.findFirst({
+        where: eq(carts.userId, userId),
+      });
+    } else if (sessionId) {
+      cart = await drizzleDb.query.carts.findFirst({
+        where: eq(carts.sessionId, sessionId),
+      });
+    }
 
     if (cart) {
       await drizzleDb.delete(carts).where(eq(carts.id, cart.id));
@@ -336,13 +332,14 @@ export async function DELETE(request: NextRequest) {
 
     const response = NextResponse.json({ success: true });
 
-    if (key === "session") {
+    // Clear session cookie for guest users
+    if (!userId && sessionId) {
       response.cookies.delete("cart_session");
     }
 
     return response;
   } catch (error) {
-    logError({ error, context: 'cart_clear' });
+    logError({ error, context: "cart_clear" });
     return NextResponse.json(
       { error: "Failed to clear cart" },
       { status: 500 },

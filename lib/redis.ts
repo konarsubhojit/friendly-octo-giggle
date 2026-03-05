@@ -1,6 +1,6 @@
-import Redis from 'ioredis';
-import { logCacheOperation, logError, Timer } from './logger';
-import { env } from './env';
+import Redis from "ioredis";
+import { logCacheOperation, logError, Timer } from "./logger";
+import { env } from "./env";
 
 // Singleton Redis connection for serverless
 let redis: Redis | null = null;
@@ -10,23 +10,25 @@ export function getRedisClient(): Redis {
     return redis;
   }
 
-  const redisUrl = env.REDIS_URL || 'redis://localhost:6379';
-  
+  const redisUrl = env.REDIS_URL || "redis://localhost:6379";
+
   // Parse Redis URL using WHATWG URL API to avoid deprecated url.parse()
   const parsedUrl = new URL(redisUrl);
-  
+
   redis = new Redis({
     host: parsedUrl.hostname,
-    port: Number.parseInt(parsedUrl.port || '6379', 10),
+    port: Number.parseInt(parsedUrl.port || "6379", 10),
     password: parsedUrl.password || undefined,
     username: parsedUrl.username || undefined,
-    db: parsedUrl.pathname ? Number.parseInt(parsedUrl.pathname.slice(1), 10) : 0,
-    tls: parsedUrl.protocol === 'rediss:' ? {} : undefined,
+    db: parsedUrl.pathname
+      ? Number.parseInt(parsedUrl.pathname.slice(1), 10)
+      : 0,
+    tls: parsedUrl.protocol === "rediss:" ? {} : undefined,
     maxRetriesPerRequest: 3,
     enableReadyCheck: false,
     lazyConnect: true,
   });
-  
+
   return redis;
 }
 
@@ -35,33 +37,33 @@ export async function getCachedData<T>(
   key: string,
   ttl: number, // Time to live in seconds
   fetcher: () => Promise<T>,
-  staleTime = 5 // Extra time to serve stale data while revalidating
+  staleTime = 5, // Extra time to serve stale data while revalidating
 ): Promise<T> {
   const redis = getRedisClient();
   const timer = new Timer(`cache.get.${key}`);
-  
+
   try {
     // Try to get cached data
     const cached = await redis.get(key);
-    
+
     if (cached) {
       const data = JSON.parse(cached) as { value: T; timestamp: number };
       const age = Date.now() - data.timestamp;
-      
+
       // If data is fresh, return it
       if (age < ttl * 1000) {
         timer.end({ cacheHit: true, age });
-        logCacheOperation({ operation: 'hit', key, success: true });
+        logCacheOperation({ operation: "hit", key, success: true });
         return data.value;
       }
-      
+
       // If data is stale but within stale-while-revalidate window
       if (age < (ttl + staleTime) * 1000) {
         // Return stale data immediately
         const staleData = data.value;
         timer.end({ cacheHit: true, stale: true, age });
-        logCacheOperation({ operation: 'hit', key, success: true });
-        
+        logCacheOperation({ operation: "hit", key, success: true });
+
         // Trigger background revalidation (non-blocking)
         setImmediate(async () => {
           try {
@@ -71,24 +73,33 @@ export async function getCachedData<T>(
               timestamp: Date.now(),
             };
             await redis.setex(key, ttl + staleTime, JSON.stringify(cacheData));
-            logCacheOperation({ operation: 'set', key, ttl: ttl + staleTime, success: true });
+            logCacheOperation({
+              operation: "set",
+              key,
+              ttl: ttl + staleTime,
+              success: true,
+            });
           } catch (error) {
-            logError({ error, context: 'background_revalidation', additionalInfo: { key } });
+            logError({
+              error,
+              context: "background_revalidation",
+              additionalInfo: { key },
+            });
           }
         });
-        
+
         return staleData;
       }
     }
-    
+
     // Cache miss
-    logCacheOperation({ operation: 'miss', key, success: true });
-    
+    logCacheOperation({ operation: "miss", key, success: true });
+
     // Use distributed lock to prevent stampede
     const lockKey = `lock:${key}`;
-    const lockValue = Math.random().toString(36);
-    const lockAcquired = await redis.set(lockKey, lockValue, 'EX', 10, 'NX');
-    
+    const lockValue = crypto.randomUUID();
+    const lockAcquired = await redis.set(lockKey, lockValue, "EX", 10, "NX");
+
     if (lockAcquired) {
       try {
         // Fetch fresh data
@@ -97,12 +108,17 @@ export async function getCachedData<T>(
           value: fresh,
           timestamp: Date.now(),
         };
-        
+
         // Cache the result
         await redis.setex(key, ttl + staleTime, JSON.stringify(cacheData));
         timer.end({ cacheHit: false, fetched: true });
-        logCacheOperation({ operation: 'set', key, ttl: ttl + staleTime, success: true });
-        
+        logCacheOperation({
+          operation: "set",
+          key,
+          ttl: ttl + staleTime,
+          success: true,
+        });
+
         return fresh;
       } finally {
         // Release lock only if we still own it
@@ -117,13 +133,13 @@ export async function getCachedData<T>(
       }
     } else {
       // Wait briefly and retry if another process is fetching
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
       const retryData = await redis.get(key);
       if (retryData) {
         timer.end({ cacheHit: true, retried: true });
         return JSON.parse(retryData).value as T;
       }
-      
+
       // Fallback: fetch without caching
       const fresh = await fetcher();
       timer.end({ cacheHit: false, lockFailed: true });
@@ -131,7 +147,7 @@ export async function getCachedData<T>(
     }
   } catch (error) {
     timer.end({ error: true });
-    logError({ error, context: 'cache_operation', additionalInfo: { key } });
+    logError({ error, context: "cache_operation", additionalInfo: { key } });
     // Fallback to direct fetch on cache errors
     return await fetcher();
   }
@@ -148,13 +164,13 @@ export async function invalidateCache(pattern: string): Promise<void> {
     });
 
     const keysToDelete: string[] = [];
-    
-    stream.on('data', (keys: string[]) => {
+
+    stream.on("data", (keys: string[]) => {
       keysToDelete.push(...keys);
     });
 
     await new Promise<void>((resolve, reject) => {
-      stream.on('end', async () => {
+      stream.on("end", async () => {
         try {
           if (keysToDelete.length > 0) {
             // Delete in batches to avoid overwhelming Redis
@@ -164,7 +180,7 @@ export async function invalidateCache(pattern: string): Promise<void> {
               await redis.del(...batch);
             }
             logCacheOperation({
-              operation: 'invalidate',
+              operation: "invalidate",
               key: pattern,
               success: true,
             });
@@ -175,10 +191,14 @@ export async function invalidateCache(pattern: string): Promise<void> {
           reject(err);
         }
       });
-      stream.on('error', reject);
+      stream.on("error", reject);
     });
   } catch (error) {
     timer.end({ error: true });
-    logError({ error, context: 'cache_invalidation', additionalInfo: { pattern } });
+    logError({
+      error,
+      context: "cache_invalidation",
+      additionalInfo: { pattern },
+    });
   }
 }
