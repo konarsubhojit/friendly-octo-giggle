@@ -180,7 +180,7 @@ export function logCacheOperation(data: {
 
 // Generate request ID for tracking
 export function generateRequestId(): string {
-  return `req_${Date.now()}_${crypto.randomUUID().substring(0, 8)}`;
+  return `req_${Date.now()}_${crypto.randomUUID()}`;
 }
 
 // Timing utility

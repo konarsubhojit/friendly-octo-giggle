@@ -6,6 +6,8 @@ import { auth } from "@/lib/auth";
 import { AddToCartSchema, type AddToCartInput } from "@/lib/validations";
 import { handleValidationError } from "@/lib/api-utils";
 import { logError } from "@/lib/logger";
+import { getCachedData } from "@/lib/redis";
+import { CACHE_KEYS, CACHE_TTL, invalidateCartCache } from "@/lib/cache";
 import type { Session } from "next-auth";
 
 export const dynamic = "force-dynamic";
@@ -19,20 +21,20 @@ interface ProductWithVariations {
 
 interface CartWithItems {
   id: string;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: Date | string;
+  updatedAt: Date | string;
   items: Array<{
     id: string;
     quantity: number;
-    createdAt: Date;
-    updatedAt: Date;
+    createdAt: Date | string;
+    updatedAt: Date | string;
     product: {
       id: string;
-      createdAt: Date;
-      updatedAt: Date;
-      variations: Array<{ createdAt: Date; updatedAt: Date }>;
+      createdAt: Date | string;
+      updatedAt: Date | string;
+      variations: Array<{ createdAt: Date | string; updatedAt: Date | string }>;
     };
-    variation: { createdAt: Date; updatedAt: Date } | null;
+    variation: { createdAt: Date | string; updatedAt: Date | string } | null;
   }>;
 }
 
@@ -88,7 +90,7 @@ async function getOrCreateCart(
 
   // Guest user
   const guestSessionId =
-    sessionId ?? `guest_${Date.now()}_${crypto.randomUUID().substring(0, 8)}`;
+    sessionId ?? `guest_${Date.now()}_${crypto.randomUUID()}`;
   let cart = await drizzleDb.query.carts.findFirst({
     where: eq(carts.sessionId, guestSessionId),
   });
@@ -139,73 +141,131 @@ async function addOrUpdateCartItem(
   return null;
 }
 
+// Safely convert Date or string to ISO string (handles DB Date and Redis cached string)
+function toISOString(value: Date | string): string {
+  if (typeof value === "string") return value;
+  return value.toISOString();
+}
+
 // Helper: Serialize cart for JSON response
 function serializeCart(cart: CartWithItems) {
   return {
     ...cart,
-    createdAt: cart.createdAt.toISOString(),
-    updatedAt: cart.updatedAt.toISOString(),
+    createdAt: toISOString(cart.createdAt),
+    updatedAt: toISOString(cart.updatedAt),
     items: cart.items.map((item) => ({
       ...item,
-      createdAt: item.createdAt.toISOString(),
-      updatedAt: item.updatedAt.toISOString(),
+      createdAt: toISOString(item.createdAt),
+      updatedAt: toISOString(item.updatedAt),
       product: {
         ...item.product,
-        createdAt: item.product.createdAt.toISOString(),
-        updatedAt: item.product.updatedAt.toISOString(),
+        createdAt: toISOString(item.product.createdAt),
+        updatedAt: toISOString(item.product.updatedAt),
         variations: item.product.variations.map((v) => ({
           ...v,
-          createdAt: v.createdAt.toISOString(),
-          updatedAt: v.updatedAt.toISOString(),
+          createdAt: toISOString(v.createdAt),
+          updatedAt: toISOString(v.updatedAt),
         })),
       },
       variation: item.variation
         ? {
             ...item.variation,
-            createdAt: item.variation.createdAt.toISOString(),
-            updatedAt: item.variation.updatedAt.toISOString(),
+            createdAt: toISOString(item.variation.createdAt),
+            updatedAt: toISOString(item.variation.updatedAt),
           }
         : null,
     })),
   };
 }
 
+// Helper: Fetch cart from DB
+function fetchCartFromDB(userId?: string, sessionId?: string) {
+  if (userId) {
+    return drizzleDb.query.carts.findFirst({
+      where: eq(carts.userId, userId),
+      with: {
+        items: {
+          with: {
+            product: { with: { variations: true } },
+            variation: true,
+          },
+        },
+      },
+    });
+  }
+  if (sessionId) {
+    return drizzleDb.query.carts.findFirst({
+      where: eq(carts.sessionId, sessionId),
+      with: {
+        items: {
+          with: {
+            product: { with: { variations: true } },
+            variation: true,
+          },
+        },
+      },
+    });
+  }
+  return Promise.resolve(undefined);
+}
+
+// Helper: Resolve cart identity from request
+function getCartIdentity(
+  request: NextRequest,
+  session: { user?: { id?: string } } | null,
+) {
+  const userId = session?.user?.id;
+  const sessionId = request.cookies.get("cart_session")?.value;
+  return { userId, sessionId };
+}
+
+// Helper: Build cache key for cart
+function getCartCacheKey(userId?: string, sessionId?: string): string | null {
+  if (userId) return CACHE_KEYS.CART_BY_USER(userId);
+  if (sessionId) return CACHE_KEYS.CART_BY_SESSION(sessionId);
+  return null;
+}
+
+// Helper: Find cart for deletion
+function findCartForDeletion(userId?: string, sessionId?: string) {
+  if (userId) {
+    return drizzleDb.query.carts.findFirst({ where: eq(carts.userId, userId) });
+  }
+  if (sessionId) {
+    return drizzleDb.query.carts.findFirst({
+      where: eq(carts.sessionId, sessionId),
+    });
+  }
+  return Promise.resolve(undefined);
+}
+
+// Helper: Set guest session cookie on response
+function setGuestSessionCookie(response: NextResponse, sessionId: string) {
+  response.cookies.set("cart_session", sessionId, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: 60 * 60 * 24 * 30,
+  });
+}
+
 // Get cart for current user/session
 export async function GET(request: NextRequest) {
   try {
     const session = await auth();
-    const sessionId = request.cookies.get("cart_session")?.value;
+    const { userId, sessionId } = getCartIdentity(request, session);
+    const cacheKey = getCartCacheKey(userId, sessionId);
 
-    if (!session?.user?.id && !sessionId) {
+    if (!cacheKey) {
       return NextResponse.json({ cart: null });
     }
 
-    let cart;
-    if (session?.user?.id) {
-      cart = await drizzleDb.query.carts.findFirst({
-        where: eq(carts.userId, session.user.id),
-        with: {
-          items: {
-            with: {
-              product: { with: { variations: true } },
-              variation: true,
-            },
-          },
-        },
-      });
-    } else if (sessionId) {
-      cart = await drizzleDb.query.carts.findFirst({
-        where: eq(carts.sessionId, sessionId),
-        with: {
-          items: {
-            with: {
-              product: { with: { variations: true } },
-              variation: true,
-            },
-          },
-        },
-      });
-    }
+    const cart = await getCachedData(
+      cacheKey,
+      CACHE_TTL.CART,
+      () => fetchCartFromDB(userId, sessionId),
+      CACHE_TTL.CART_STALE,
+    );
 
     if (!cart) {
       return NextResponse.json({ cart: null });
@@ -278,6 +338,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Cart not found" }, { status: 404 });
     }
 
+    // Invalidate cart cache
+    await invalidateCartCache(session?.user?.id, sessionId);
+
     // Build response with session cookie for guests
     const response = NextResponse.json(
       { cart: serializeCart(updatedCart as unknown as CartWithItems) },
@@ -285,12 +348,7 @@ export async function POST(request: NextRequest) {
     );
 
     if (!session?.user?.id && sessionId) {
-      response.cookies.set("cart_session", sessionId, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-        maxAge: 60 * 60 * 24 * 30,
-      });
+      setGuestSessionCookie(response, sessionId);
     }
 
     return response;
@@ -307,28 +365,18 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const session = await auth();
-    const sessionId = request.cookies.get("cart_session")?.value;
+    const { userId, sessionId } = getCartIdentity(request, session);
 
-    if (!session?.user?.id && !sessionId) {
+    if (!userId && !sessionId) {
       return NextResponse.json({ success: true });
     }
 
-    // Find cart based on authenticated user or session
-    const userId = session?.user?.id;
-    let cart;
-    if (userId) {
-      cart = await drizzleDb.query.carts.findFirst({
-        where: eq(carts.userId, userId),
-      });
-    } else if (sessionId) {
-      cart = await drizzleDb.query.carts.findFirst({
-        where: eq(carts.sessionId, sessionId),
-      });
-    }
-
+    const cart = await findCartForDeletion(userId, sessionId);
     if (cart) {
       await drizzleDb.delete(carts).where(eq(carts.id, cart.id));
     }
+
+    await invalidateCartCache(userId, sessionId);
 
     const response = NextResponse.json({ success: true });
 

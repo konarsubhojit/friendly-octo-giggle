@@ -7,7 +7,7 @@ interface SignInPageProps {
   readonly searchParams: Promise<{ callbackUrl?: string }>;
 }
 
-export default async function SignInPage({
+export default function SignInPage({
   searchParams,
 }: SignInPageProps) {
   async function handleGoogleSignIn() {

@@ -14,7 +14,7 @@ interface SalesData {
   lastMonthRevenue: number;
   lastMonthOrders: number;
   ordersByStatus: Record<string, number>;
-  topProducts: { name: string; totalQuantity: number; totalRevenue: number }[];
+  topProducts: { productId: string; name: string; totalQuantity: number; totalRevenue: number }[];
   totalCustomers: number;
 }
 
@@ -121,7 +121,7 @@ export default function AdminDashboard() {
             </thead>
             <tbody>
               {sales.topProducts.map((product) => (
-                <tr key={product.name} className="border-b border-gray-100 last:border-0">
+                <tr key={product.productId} className="border-b border-gray-100 last:border-0">
                   <td className="py-2 text-sm text-gray-900">{product.name}</td>
                   <td className="py-2 text-sm text-gray-900 text-right">{product.totalQuantity}</td>
                   <td className="py-2 text-sm text-gray-900 text-right">{formatPrice(product.totalRevenue)}</td>
