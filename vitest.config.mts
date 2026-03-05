@@ -11,6 +11,7 @@ export default defineConfig({
     include: ["__tests__/**/*.test.{ts,tsx}"],
     coverage: {
       provider: "v8",
+      reporter: ["text", "lcov"],
       include: ["lib/**", "contexts/**", "components/**"],
       exclude: ["lib/db.ts", "lib/auth.ts", "lib/seed.ts", "lib/logger.ts"],
     },
