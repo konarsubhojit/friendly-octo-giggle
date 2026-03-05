@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, use } from 'react';
+import { useEffect, useState, useRef, useCallback, use } from 'react';
 import type { ReactElement } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -8,7 +8,7 @@ import { useSession } from 'next-auth/react';
 import { useSelector, useDispatch } from 'react-redux';
 import Header from '@/components/layout/Header';
 import { useCurrency } from '@/contexts/CurrencyContext';
-import { fetchOrderById, selectCurrentOrder, selectOrderDetailLoading, selectOrdersError, clearCurrentOrder } from '@/lib/features/orders/ordersSlice';
+import { fetchOrderById, cancelOrder, selectCurrentOrder, selectOrderDetailLoading, selectOrdersError, selectOrderCancelling, clearCurrentOrder } from '@/lib/features/orders/ordersSlice';
 import type { AppDispatch } from '@/lib/store';
 
 interface OrderDetailPageProps {
@@ -45,6 +45,30 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
   const order = useSelector(selectCurrentOrder);
   const loading = useSelector(selectOrderDetailLoading);
   const error = useSelector(selectOrdersError);
+  const cancelling = useSelector(selectOrderCancelling);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const cancelDialogRef = useRef<HTMLDialogElement>(null);
+
+  const closeCancelDialog = useCallback(() => {
+    setShowCancelConfirm(false);
+  }, []);
+
+  const handleCancelOrder = () => {
+    dispatch(cancelOrder(id))
+      .unwrap()
+      .then(() => closeCancelDialog())
+      .catch(() => {});
+  };
+
+  useEffect(() => {
+    const dialog = cancelDialogRef.current;
+    if (!dialog) return;
+    if (showCancelConfirm) {
+      dialog.showModal();
+    } else {
+      dialog.close();
+    }
+  }, [showCancelConfirm]);
 
   useEffect(() => {
     if (authStatus === 'authenticated') {
@@ -138,10 +162,48 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
                 })}
               </p>
             </div>
-            <p className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              {formatPrice(order.totalAmount)}
-            </p>
+            <div className="flex items-center gap-3">
+              <p className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                {formatPrice(order.totalAmount)}
+              </p>
+              {order.status === 'PENDING' && (
+                <button
+                  onClick={() => setShowCancelConfirm(true)}
+                  disabled={cancelling}
+                  className="px-4 py-2 text-sm font-semibold text-red-600 bg-red-50 border border-red-200 rounded-xl hover:bg-red-100 transition-colors disabled:opacity-50"
+                >
+                  Cancel Order
+                </button>
+              )}
+            </div>
           </div>
+
+          {/* Cancel Confirmation Modal */}
+          <dialog
+            ref={cancelDialogRef}
+            aria-labelledby="cancel-dialog-title"
+            onClose={closeCancelDialog}
+            className="backdrop:bg-black/40 backdrop:backdrop-blur-sm bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full mx-4"
+          >
+            <h3 id="cancel-dialog-title" className="text-lg font-bold text-gray-900 mb-2">Cancel Order?</h3>
+            <p className="text-sm text-gray-600 mb-6">This action cannot be undone. Your order will be cancelled immediately.</p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={closeCancelDialog}
+                disabled={cancelling}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors disabled:opacity-50"
+              >
+                Keep Order
+              </button>
+              <button
+                onClick={handleCancelOrder}
+                disabled={cancelling}
+                className="px-4 py-2 text-sm font-semibold text-white bg-red-600 rounded-xl hover:bg-red-700 transition-colors disabled:opacity-50"
+              >
+                {cancelling ? 'Cancelling...' : 'Yes, Cancel'}
+              </button>
+            </div>
+          </dialog>
 
           {/* Status Timeline */}
           <div className="mt-8">
