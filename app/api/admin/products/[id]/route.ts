@@ -4,6 +4,7 @@ import { ProductUpdateSchema } from "@/lib/validations";
 import { apiSuccess, apiError, handleApiError } from "@/lib/api-utils";
 import { auth } from "@/lib/auth";
 import { revalidateTag } from "next/cache";
+import { invalidateProductCaches } from "@/lib/cache";
 
 export const dynamic = "force-dynamic";
 
@@ -36,7 +37,7 @@ export async function PUT(
 ) {
   const authCheck = await checkAdminAuth();
   if (!authCheck.authorized) {
-    return apiError(authCheck.error ?? 'Unauthorized', authCheck.status);
+    return apiError(authCheck.error ?? "Unauthorized", authCheck.status);
   }
 
   try {
@@ -56,6 +57,9 @@ export async function PUT(
     // Revalidate Next.js cache tags (with empty config for immediate revalidation)
     revalidateTag("products", {});
 
+    // Invalidate Redis caches (public + admin)
+    await invalidateProductCaches(id);
+
     return apiSuccess({ product });
   } catch (error) {
     return handleApiError(error);
@@ -68,7 +72,10 @@ export async function DELETE(
 ) {
   const authCheck = await checkAdminAuth();
   if (!authCheck.authorized) {
-    return apiError(authCheck.error ? authCheck.error : "Unauthorized", authCheck.status);
+    return apiError(
+      authCheck.error ? authCheck.error : "Unauthorized",
+      authCheck.status,
+    );
   }
 
   try {
@@ -83,6 +90,9 @@ export async function DELETE(
 
     // Revalidate Next.js cache tags (with empty config for immediate revalidation)
     revalidateTag("products", {});
+
+    // Invalidate Redis caches (public + admin)
+    await invalidateProductCaches(id);
 
     return apiSuccess({ message: "Product deleted", id });
   } catch (error) {

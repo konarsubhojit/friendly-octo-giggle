@@ -6,6 +6,8 @@ import { auth } from "@/lib/auth";
 import { AddToCartSchema, type AddToCartInput } from "@/lib/validations";
 import { handleValidationError } from "@/lib/api-utils";
 import { logError } from "@/lib/logger";
+import { getCachedData } from "@/lib/redis";
+import { CACHE_KEYS, CACHE_TTL, invalidateCartCache } from "@/lib/cache";
 import type { Session } from "next-auth";
 
 export const dynamic = "force-dynamic";
@@ -88,8 +90,7 @@ async function getOrCreateCart(
 
   // Guest user
   const guestSessionId =
-    sessionId ??
-    `guest_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+    sessionId ?? `guest_${Date.now()}_${crypto.randomUUID()}`;
   let cart = await drizzleDb.query.carts.findFirst({
     where: eq(carts.sessionId, guestSessionId),
   });
@@ -171,6 +172,37 @@ function serializeCart(cart: CartWithItems) {
   };
 }
 
+// Helper: Fetch cart from DB
+async function fetchCartFromDB(userId?: string, sessionId?: string) {
+  if (userId) {
+    return drizzleDb.query.carts.findFirst({
+      where: eq(carts.userId, userId),
+      with: {
+        items: {
+          with: {
+            product: { with: { variations: true } },
+            variation: true,
+          },
+        },
+      },
+    });
+  }
+  if (sessionId) {
+    return drizzleDb.query.carts.findFirst({
+      where: eq(carts.sessionId, sessionId),
+      with: {
+        items: {
+          with: {
+            product: { with: { variations: true } },
+            variation: true,
+          },
+        },
+      },
+    });
+  }
+  return null;
+}
+
 // Get cart for current user/session
 export async function GET(request: NextRequest) {
   try {
@@ -181,32 +213,16 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ cart: null });
     }
 
-    let cart;
-    if (session?.user?.id) {
-      cart = await drizzleDb.query.carts.findFirst({
-        where: eq(carts.userId, session.user.id),
-        with: {
-          items: {
-            with: {
-              product: { with: { variations: true } },
-              variation: true,
-            },
-          },
-        },
-      });
-    } else if (sessionId) {
-      cart = await drizzleDb.query.carts.findFirst({
-        where: eq(carts.sessionId, sessionId),
-        with: {
-          items: {
-            with: {
-              product: { with: { variations: true } },
-              variation: true,
-            },
-          },
-        },
-      });
-    }
+    const cacheKey = session?.user?.id
+      ? CACHE_KEYS.CART_BY_USER(session.user.id)
+      : CACHE_KEYS.CART_BY_SESSION(sessionId!);
+
+    const cart = await getCachedData(
+      cacheKey,
+      CACHE_TTL.CART,
+      () => fetchCartFromDB(session?.user?.id, sessionId),
+      CACHE_TTL.CART_STALE,
+    );
 
     if (!cart) {
       return NextResponse.json({ cart: null });
@@ -216,7 +232,7 @@ export async function GET(request: NextRequest) {
       cart: serializeCart(cart as unknown as CartWithItems),
     });
   } catch (error) {
-    logError({ error, context: 'cart_fetch' });
+    logError({ error, context: "cart_fetch" });
     return NextResponse.json(
       { error: "Failed to fetch cart" },
       { status: 500 },
@@ -279,6 +295,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Cart not found" }, { status: 404 });
     }
 
+    // Invalidate cart cache
+    await invalidateCartCache(session?.user?.id, sessionId);
+
     // Build response with session cookie for guests
     const response = NextResponse.json(
       { cart: serializeCart(updatedCart as unknown as CartWithItems) },
@@ -296,7 +315,7 @@ export async function POST(request: NextRequest) {
 
     return response;
   } catch (error) {
-    logError({ error, context: 'cart_add' });
+    logError({ error, context: "cart_add" });
     return NextResponse.json(
       { error: "Failed to add to cart" },
       { status: 500 },
@@ -334,6 +353,9 @@ export async function DELETE(request: NextRequest) {
       await drizzleDb.delete(carts).where(eq(carts.id, cart.id));
     }
 
+    // Invalidate cart cache
+    await invalidateCartCache(userId, sessionId);
+
     const response = NextResponse.json({ success: true });
 
     if (key === "session") {
@@ -342,7 +364,7 @@ export async function DELETE(request: NextRequest) {
 
     return response;
   } catch (error) {
-    logError({ error, context: 'cart_clear' });
+    logError({ error, context: "cart_clear" });
     return NextResponse.json(
       { error: "Failed to clear cart" },
       { status: 500 },
