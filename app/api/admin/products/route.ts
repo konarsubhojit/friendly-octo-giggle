@@ -1,22 +1,32 @@
-import { NextRequest } from 'next/server';
-import { db } from '@/lib/db';
-import { ProductInputSchema } from '@/lib/validations';
-import { apiSuccess, apiError, handleApiError } from '@/lib/api-utils';
-import { auth } from '@/lib/auth';
-import { revalidateTag } from 'next/cache';
+import { NextRequest } from "next/server";
+import { db } from "@/lib/db";
+import { ProductInputSchema } from "@/lib/validations";
+import { apiSuccess, apiError, handleApiError } from "@/lib/api-utils";
+import { auth } from "@/lib/auth";
+import { revalidateTag } from "next/cache";
+import { getCachedData } from "@/lib/redis";
+import { CACHE_KEYS, CACHE_TTL, invalidateProductCaches } from "@/lib/cache";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 // Check if user is admin
 async function checkAdminAuth() {
   const session = await auth();
 
   if (!session?.user) {
-    return { authorized: false, error: 'Not authenticated', status: 401 as const };
+    return {
+      authorized: false,
+      error: "Not authenticated",
+      status: 401 as const,
+    };
   }
 
-  if (session.user.role !== 'ADMIN') {
-    return { authorized: false, error: 'Not authorized - Admin access required', status: 403 as const };
+  if (session.user.role !== "ADMIN") {
+    return {
+      authorized: false,
+      error: "Not authorized - Admin access required",
+      status: 403 as const,
+    };
   }
 
   return { authorized: true };
@@ -25,11 +35,16 @@ async function checkAdminAuth() {
 export async function GET() {
   const authCheck = await checkAdminAuth();
   if (!authCheck.authorized) {
-    return apiError(authCheck.error ?? 'Unknown error', authCheck.status);
+    return apiError(authCheck.error ?? "Unknown error", authCheck.status);
   }
 
   try {
-    const products = await db.products.findAll();
+    const products = await getCachedData(
+      CACHE_KEYS.ADMIN_PRODUCTS_ALL,
+      CACHE_TTL.ADMIN_PRODUCTS,
+      () => db.products.findAll(),
+      CACHE_TTL.ADMIN_PRODUCTS_STALE,
+    );
     return apiSuccess({ products });
   } catch (error) {
     return handleApiError(error);
@@ -39,7 +54,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   const authCheck = await checkAdminAuth();
   if (!authCheck.authorized) {
-    return apiError(authCheck.error ?? 'Unauthorized', authCheck.status);
+    return apiError(authCheck.error ?? "Unauthorized", authCheck.status);
   }
 
   try {
@@ -52,7 +67,10 @@ export async function POST(request: NextRequest) {
     const product = await db.products.create(validated);
 
     // Revalidate Next.js cache tags (with empty config for immediate revalidation)
-    revalidateTag('products', {});
+    revalidateTag("products", {});
+
+    // Invalidate Redis caches (public + admin)
+    await invalidateProductCaches();
 
     return apiSuccess({ product }, 201);
   } catch (error) {
