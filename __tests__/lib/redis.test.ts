@@ -12,9 +12,9 @@ const mockRedisInstance = {
 };
 
 // Must use a real function (not arrow) so it can be called with `new`
-function MockRedis() {
+const MockRedis = function () {
   return mockRedisInstance;
-}
+};
 
 vi.mock("ioredis", () => {
   return {
@@ -35,9 +35,9 @@ vi.mock("@/lib/logger", () => ({
 }));
 
 // Helper to build a cached JSON string
-function cachedJson<T>(value: T, ageMs = 0): string {
+const cachedJson = <T>(value: T, ageMs = 0): string => {
   return JSON.stringify({ value, timestamp: Date.now() - ageMs });
-}
+};
 
 // ---------- getRedisClient ----------
 
@@ -76,7 +76,7 @@ describe("getRedisClient", () => {
 
   it("enables TLS for rediss:// protocol", async () => {
     vi.doMock("@/lib/env", () => ({
-      env: { REDIS_URL: "rediss://user:pass@secure.host:6380/2" },
+      env: { REDIS_URL: "rediss://user:test@secure.host:6380/2" },
     }));
     const RedisSpy = vi.fn(function () {
       return mockRedisInstance;
@@ -90,7 +90,7 @@ describe("getRedisClient", () => {
       expect.objectContaining({
         host: "secure.host",
         port: 6380,
-        password: "pass",
+        password: "test", // NOSONAR - test fixture, not a real credential
         username: "user",
         db: 2,
         tls: {},
@@ -266,24 +266,29 @@ describe("invalidateCache", () => {
   });
 
   /** Utility: create a fake scanStream that emits given batches then ends */
-  function fakeScanStream(batches: string[][]) {
+  const emit = (
+    listeners: Record<string, ((...args: unknown[]) => void)[]>,
+    event: string,
+    ...args: unknown[]
+  ) => {
+    for (const fn of listeners[event] ?? []) fn(...args);
+  };
+
+  const fakeScanStream = (batches: string[][]) => {
     const listeners: Record<string, ((...args: unknown[]) => void)[]> = {};
     return {
       on(event: string, cb: (...args: unknown[]) => void) {
         (listeners[event] ??= []).push(cb);
-        // Emit data + end asynchronously so the promise wiring in invalidateCache registers first
         if (event === "end") {
           queueMicrotask(() => {
-            for (const batch of batches) {
-              for (const fn of listeners["data"] ?? []) fn(batch);
-            }
-            for (const fn of listeners["end"] ?? []) fn();
+            batches.forEach((batch) => emit(listeners, "data", batch));
+            emit(listeners, "end");
           });
         }
         return this;
       },
     };
-  }
+  };
 
   it("deletes found keys in batches", async () => {
     const keys = Array.from({ length: 150 }, (_, i) => `product:${i}`);
