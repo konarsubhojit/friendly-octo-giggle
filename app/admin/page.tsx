@@ -120,8 +120,8 @@ export default function AdminDashboard() {
               </tr>
             </thead>
             <tbody>
-              {sales.topProducts.map((product) => (
-                <tr key={product.name} className="border-b border-gray-100 last:border-0">
+              {sales.topProducts.map((product, index) => (
+                <tr key={`${product.name}-${index}`} className="border-b border-gray-100 last:border-0">
                   <td className="py-2 text-sm text-gray-900">{product.name}</td>
                   <td className="py-2 text-sm text-gray-900 text-right">{product.totalQuantity}</td>
                   <td className="py-2 text-sm text-gray-900 text-right">{formatPrice(product.totalRevenue)}</td>

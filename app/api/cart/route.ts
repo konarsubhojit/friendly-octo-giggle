@@ -21,20 +21,20 @@ interface ProductWithVariations {
 
 interface CartWithItems {
   id: string;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: Date | string;
+  updatedAt: Date | string;
   items: Array<{
     id: string;
     quantity: number;
-    createdAt: Date;
-    updatedAt: Date;
+    createdAt: Date | string;
+    updatedAt: Date | string;
     product: {
       id: string;
-      createdAt: Date;
-      updatedAt: Date;
-      variations: Array<{ createdAt: Date; updatedAt: Date }>;
+      createdAt: Date | string;
+      updatedAt: Date | string;
+      variations: Array<{ createdAt: Date | string; updatedAt: Date | string }>;
     };
-    variation: { createdAt: Date; updatedAt: Date } | null;
+    variation: { createdAt: Date | string; updatedAt: Date | string } | null;
   }>;
 }
 
@@ -141,31 +141,37 @@ async function addOrUpdateCartItem(
   return null;
 }
 
+// Safely convert Date or string to ISO string (handles DB Date and Redis cached string)
+function toISOString(value: Date | string): string {
+  if (typeof value === "string") return value;
+  return value.toISOString();
+}
+
 // Helper: Serialize cart for JSON response
 function serializeCart(cart: CartWithItems) {
   return {
     ...cart,
-    createdAt: cart.createdAt.toISOString(),
-    updatedAt: cart.updatedAt.toISOString(),
+    createdAt: toISOString(cart.createdAt),
+    updatedAt: toISOString(cart.updatedAt),
     items: cart.items.map((item) => ({
       ...item,
-      createdAt: item.createdAt.toISOString(),
-      updatedAt: item.updatedAt.toISOString(),
+      createdAt: toISOString(item.createdAt),
+      updatedAt: toISOString(item.updatedAt),
       product: {
         ...item.product,
-        createdAt: item.product.createdAt.toISOString(),
-        updatedAt: item.product.updatedAt.toISOString(),
+        createdAt: toISOString(item.product.createdAt),
+        updatedAt: toISOString(item.product.updatedAt),
         variations: item.product.variations.map((v) => ({
           ...v,
-          createdAt: v.createdAt.toISOString(),
-          updatedAt: v.updatedAt.toISOString(),
+          createdAt: toISOString(v.createdAt),
+          updatedAt: toISOString(v.updatedAt),
         })),
       },
       variation: item.variation
         ? {
             ...item.variation,
-            createdAt: item.variation.createdAt.toISOString(),
-            updatedAt: item.variation.updatedAt.toISOString(),
+            createdAt: toISOString(item.variation.createdAt),
+            updatedAt: toISOString(item.variation.updatedAt),
           }
         : null,
     })),
