@@ -39,6 +39,28 @@ async function checkAdminAuth() {
   return { authorized: true };
 }
 
+function buildUpdateData(data: {
+  status: "PENDING" | "PROCESSING" | "SHIPPED" | "DELIVERED" | "CANCELLED";
+  trackingNumber?: string | null;
+  shippingProvider?: string | null;
+}) {
+  const optional = Object.fromEntries(
+    Object.entries({
+      trackingNumber: data.trackingNumber,
+      shippingProvider: data.shippingProvider,
+    }).filter(([, v]) => v !== undefined),
+  );
+  return { status: data.status, updatedAt: new Date(), ...optional };
+}
+
+async function invalidateOrderCaches(orderId: string, userId?: string | null) {
+  await invalidateCache("admin:orders:*");
+  await invalidateCache(`admin:order:${orderId}`);
+  if (userId) {
+    await invalidateUserOrderCaches(userId);
+  }
+}
+
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
@@ -52,26 +74,15 @@ export async function PATCH(
     const { id } = await params;
     const rawBody = await request.json();
 
-    // Validate with Zod schema
     const parseResult = UpdateOrderStatusSchema.safeParse(rawBody);
     if (!parseResult.success) {
       return handleValidationError(parseResult.error);
     }
-    const { status, trackingNumber, shippingProvider } = parseResult.data;
 
-    const fieldUpdates: Record<string, unknown> = {
-      trackingNumber,
-      shippingProvider,
-    };
-    const updateData: Record<string, unknown> = {
-      status,
-      updatedAt: new Date(),
-      ...Object.fromEntries(
-        Object.entries(fieldUpdates).filter(([, value]) => value !== undefined),
-      ),
-    };
-
-    await drizzleDb.update(orders).set(updateData).where(eq(orders.id, id));
+    await drizzleDb
+      .update(orders)
+      .set(buildUpdateData(parseResult.data))
+      .where(eq(orders.id, id));
 
     const order = await drizzleDb.query.orders.findFirst({
       where: eq(orders.id, id),
@@ -82,18 +93,9 @@ export async function PATCH(
       return apiError("Order not found", 404);
     }
 
-    // Invalidate order caches (list + individual)
-    await invalidateCache("admin:orders:*");
-    await invalidateCache(`admin:order:${id}`);
+    await invalidateOrderCaches(id, order.userId);
 
-    // Invalidate user's order cache so they see updated status
-    if (order.userId) {
-      await invalidateUserOrderCaches(order.userId);
-    }
-
-    return apiSuccess({
-      order: serializeOrder(order),
-    });
+    return apiSuccess({ order: serializeOrder(order) });
   } catch (error) {
     return handleApiError(error);
   }

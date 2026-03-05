@@ -179,7 +179,7 @@ function serializeCart(cart: CartWithItems) {
 }
 
 // Helper: Fetch cart from DB
-async function fetchCartFromDB(userId?: string, sessionId?: string) {
+function fetchCartFromDB(userId?: string, sessionId?: string) {
   if (userId) {
     return drizzleDb.query.carts.findFirst({
       where: eq(carts.userId, userId),
@@ -206,27 +206,64 @@ async function fetchCartFromDB(userId?: string, sessionId?: string) {
       },
     });
   }
+  return Promise.resolve(undefined);
+}
+
+// Helper: Resolve cart identity from request
+function getCartIdentity(
+  request: NextRequest,
+  session: { user?: { id?: string } } | null,
+) {
+  const userId = session?.user?.id;
+  const sessionId = request.cookies.get("cart_session")?.value;
+  return { userId, sessionId };
+}
+
+// Helper: Build cache key for cart
+function getCartCacheKey(userId?: string, sessionId?: string): string | null {
+  if (userId) return CACHE_KEYS.CART_BY_USER(userId);
+  if (sessionId) return CACHE_KEYS.CART_BY_SESSION(sessionId);
   return null;
+}
+
+// Helper: Find cart for deletion
+function findCartForDeletion(userId?: string, sessionId?: string) {
+  if (userId) {
+    return drizzleDb.query.carts.findFirst({ where: eq(carts.userId, userId) });
+  }
+  if (sessionId) {
+    return drizzleDb.query.carts.findFirst({
+      where: eq(carts.sessionId, sessionId),
+    });
+  }
+  return Promise.resolve(undefined);
+}
+
+// Helper: Set guest session cookie on response
+function setGuestSessionCookie(response: NextResponse, sessionId: string) {
+  response.cookies.set("cart_session", sessionId, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: 60 * 60 * 24 * 30,
+  });
 }
 
 // Get cart for current user/session
 export async function GET(request: NextRequest) {
   try {
     const session = await auth();
-    const sessionId = request.cookies.get("cart_session")?.value;
+    const { userId, sessionId } = getCartIdentity(request, session);
+    const cacheKey = getCartCacheKey(userId, sessionId);
 
-    if (!session?.user?.id && !sessionId) {
+    if (!cacheKey) {
       return NextResponse.json({ cart: null });
     }
-
-    const cacheKey = session?.user?.id
-      ? CACHE_KEYS.CART_BY_USER(session.user.id)
-      : CACHE_KEYS.CART_BY_SESSION(sessionId!);
 
     const cart = await getCachedData(
       cacheKey,
       CACHE_TTL.CART,
-      () => fetchCartFromDB(session?.user?.id, sessionId),
+      () => fetchCartFromDB(userId, sessionId),
       CACHE_TTL.CART_STALE,
     );
 
@@ -311,12 +348,7 @@ export async function POST(request: NextRequest) {
     );
 
     if (!session?.user?.id && sessionId) {
-      response.cookies.set("cart_session", sessionId, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-        maxAge: 60 * 60 * 24 * 30,
-      });
+      setGuestSessionCookie(response, sessionId);
     }
 
     return response;
@@ -333,30 +365,17 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const session = await auth();
-    const sessionId = request.cookies.get("cart_session")?.value;
+    const { userId, sessionId } = getCartIdentity(request, session);
 
-    if (!session?.user?.id && !sessionId) {
+    if (!userId && !sessionId) {
       return NextResponse.json({ success: true });
     }
 
-    // Find cart based on authenticated user or session
-    const userId = session?.user?.id;
-    let cart;
-    if (userId) {
-      cart = await drizzleDb.query.carts.findFirst({
-        where: eq(carts.userId, userId),
-      });
-    } else if (sessionId) {
-      cart = await drizzleDb.query.carts.findFirst({
-        where: eq(carts.sessionId, sessionId),
-      });
-    }
-
+    const cart = await findCartForDeletion(userId, sessionId);
     if (cart) {
       await drizzleDb.delete(carts).where(eq(carts.id, cart.id));
     }
 
-    // Invalidate cart cache
     await invalidateCartCache(userId, sessionId);
 
     const response = NextResponse.json({ success: true });
