@@ -321,6 +321,9 @@ npm run build        # Build for production
 npm run db:generate  # Generate Drizzle migrations
 npm run db:migrate   # Apply migrations
 npm run db:seed      # Seed database
+npm run test         # Run unit tests (single run)
+npm run test:watch   # Run unit tests (watch mode)
+npm run test:coverage # Run unit tests with coverage
 ```
 
 ## Testing Checklist
@@ -332,6 +335,34 @@ npm run db:seed      # Seed database
 - [ ] TypeScript type checking
 - [ ] Database transactions
 - [ ] Edge cases (out of stock, etc.)
+
+## Unit Testing Setup
+
+- **Framework**: Vitest with jsdom environment
+- **Libraries**: @testing-library/react, @testing-library/jest-dom
+- **Config**: `vitest.config.mts` at project root
+- **Test location**: `__tests__/` directory mirrors source structure
+- **Setup file**: `__tests__/setup.ts` (imports jest-dom matchers)
+
+### Test Coverage Areas
+
+| Area             | Test File                                           | Tests |
+| ---------------- | --------------------------------------------------- | ----- |
+| Zod schemas      | `__tests__/lib/validations.test.ts`                 | 49    |
+| API utilities    | `__tests__/lib/api-utils.test.ts`                   | 13    |
+| Serializers      | `__tests__/lib/serializers.test.ts`                 | 8     |
+| Upload constants | `__tests__/lib/upload-constants.test.ts`            | 14    |
+| Cart slice       | `__tests__/lib/features/cart/cartSlice.test.ts`     | 15    |
+| Orders slice     | `__tests__/lib/features/orders/ordersSlice.test.ts` | 17    |
+| Admin slice      | `__tests__/lib/features/admin/adminSlice.test.ts`   | 22    |
+| Redux store      | `__tests__/lib/store.test.ts`                       | 5     |
+
+### Writing New Tests
+
+- Co-locate test files in `__tests__/` mirroring the source path
+- Use `describe`/`it` pattern with clear test names
+- Mock external dependencies (fetch, DB, Redis) with `vi.mock()` or `vi.stubGlobal()`
+- Run `npm run test` before committing
 
 ## Security Considerations
 
