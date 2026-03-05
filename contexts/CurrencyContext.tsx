@@ -11,7 +11,7 @@ interface CurrencyConfig {
   rate: number; // conversion rate from USD (base)
 }
 
-const CURRENCIES: Record<CurrencyCode, CurrencyConfig> = {
+export const CURRENCIES: Record<CurrencyCode, CurrencyConfig> = {
   INR: { code: 'INR', symbol: '₹', locale: 'en-IN', rate: 83.5 },
   USD: { code: 'USD', symbol: '$', locale: 'en-US', rate: 1 },
   EUR: { code: 'EUR', symbol: '€', locale: 'de-DE', rate: 0.92 },

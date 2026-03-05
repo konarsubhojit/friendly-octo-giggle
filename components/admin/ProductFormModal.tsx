@@ -6,6 +6,7 @@ import { Product } from '@/lib/types';
 import toast from 'react-hot-toast';
 import { logError } from '@/lib/logger';
 import { isValidImageType, MAX_FILE_SIZE, VALID_IMAGE_TYPES_DISPLAY } from '@/lib/upload-constants';
+import { useCurrency, CURRENCIES, type CurrencyCode } from '@/contexts/CurrencyContext';
 
 interface ProductFormData {
   name: string;
@@ -22,17 +23,27 @@ interface ProductFormModalProps {
   readonly onSuccess: (product: Product) => void;
 }
 
+const DEFAULT_PRICE_CURRENCY: CurrencyCode = 'INR';
+
+/** Convert an amount from one currency to another using the rates from CURRENCIES. */
+function convertCurrency(amount: number, from: CurrencyCode, to: CurrencyCode): number {
+  const amountInUSD = amount / CURRENCIES[from].rate;
+  return Number((amountInUSD * CURRENCIES[to].rate).toFixed(2));
+}
+
 export default function ProductFormModal({
   editingProduct,
   onClose,
   onSuccess,
 }: ProductFormModalProps) {
+  const { availableCurrencies } = useCurrency();
+  const [priceCurrency, setPriceCurrency] = useState<CurrencyCode>(DEFAULT_PRICE_CURRENCY);
   const [formData, setFormData] = useState<ProductFormData>(
     editingProduct
       ? {
           name: editingProduct.name,
           description: editingProduct.description,
-          price: editingProduct.price,
+          price: convertCurrency(editingProduct.price, 'USD', DEFAULT_PRICE_CURRENCY),
           stock: editingProduct.stock,
           category: editingProduct.category,
           image: editingProduct.image,
@@ -49,6 +60,11 @@ export default function ProductFormModal({
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  const handlePriceCurrencyChange = (newCurrency: CurrencyCode) => {
+    setFormData({ ...formData, price: convertCurrency(formData.price, priceCurrency, newCurrency) });
+    setPriceCurrency(newCurrency);
+  };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -139,6 +155,7 @@ export default function ProductFormModal({
 
         const productData = {
           ...formData,
+          price: convertCurrency(formData.price, priceCurrency, 'USD'),
           image: imageUrl,
         };
 
@@ -227,23 +244,38 @@ export default function ProductFormModal({
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label htmlFor="product-price" className="block text-sm font-medium text-gray-700 mb-1">
-                    Price ($)
+                    Price
                   </label>
-                  <input
-                    id="product-price"
-                    type="number"
-                    value={formData.price}
-                    onChange={(e) => {
-                      const value = Number.parseFloat(e.target.value);
-                      if (!Number.isNaN(value)) {
-                        setFormData({ ...formData, price: value });
-                      }
-                    }}
-                    required
-                    min="0.01"
-                    step="0.01"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
+                  <div className="flex gap-2">
+                    <select
+                      id="product-price-currency"
+                      value={priceCurrency}
+                      onChange={(e) => handlePriceCurrencyChange(e.target.value as CurrencyCode)}
+                      aria-label="Price currency"
+                      className="px-2 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm"
+                    >
+                      {availableCurrencies.map((code) => (
+                        <option key={code} value={code}>
+                          {code} ({CURRENCIES[code].symbol})
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      id="product-price"
+                      type="number"
+                      value={formData.price}
+                      onChange={(e) => {
+                        const value = Number.parseFloat(e.target.value);
+                        if (!Number.isNaN(value)) {
+                          setFormData({ ...formData, price: value });
+                        }
+                      }}
+                      required
+                      min="0.01"
+                      step="0.01"
+                      className="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
                 </div>
 
                 <div>
