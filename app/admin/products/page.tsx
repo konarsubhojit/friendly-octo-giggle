@@ -133,7 +133,7 @@ export default function ProductsManagement() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {products.map((product) => (
-            <div key={product.id} className="bg-white rounded-lg shadow-md overflow-hidden">
+            <div key={product.id} className="bg-white rounded-lg shadow-md overflow-hidden flex flex-col">
               <div className="aspect-square relative bg-gray-100">
                 <Image
                   src={product.image}
@@ -143,7 +143,7 @@ export default function ProductsManagement() {
                   sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
                 />
               </div>
-              <div className="p-4">
+              <div className="p-4 flex flex-col flex-1">
                 <h3 className="font-bold text-lg mb-1">{product.name}</h3>
                 <p className="text-sm text-gray-600 mb-2 line-clamp-2">
                   {product.description}
@@ -161,7 +161,7 @@ export default function ProductsManagement() {
                     {product.category}
                   </span>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 mt-auto pt-2">
                   <button
                     onClick={() => handleOpenModal(product)}
                     disabled={deleting}

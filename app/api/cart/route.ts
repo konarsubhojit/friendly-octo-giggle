@@ -46,7 +46,7 @@ async function verifyProductStock(
   | { error: string; status: number }
 > {
   const product = await drizzleDb.query.products.findFirst({
-    where: eq(products.id, body.productId),
+    where: and(eq(products.id, body.productId), isNull(products.deletedAt)),
     with: { variations: true },
   });
 

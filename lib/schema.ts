@@ -91,6 +91,7 @@ export const products = pgTable('Product', {
   image: text('image').notNull(),
   stock: integer('stock').notNull(),
   category: text('category').notNull(),
+  deletedAt: timestamp('deletedAt', { mode: 'date' }),
   createdAt: timestamp('createdAt', { mode: 'date' }).defaultNow().notNull(),
   updatedAt: timestamp('updatedAt', { mode: 'date' }).defaultNow().notNull(),
 }, (t) => [

@@ -1,30 +1,60 @@
-import { Pool } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-serverless';
+import { Pool } from "@neondatabase/serverless";
+import { drizzle } from "drizzle-orm/neon-serverless";
 import {
-  products, productVariations,
-  users, accounts, sessions, verificationTokens,
-  orders, orderItems, carts, cartItems,
-  userRoleEnum, orderStatusEnum,
-  usersRelations, accountsRelations, sessionsRelations,
-  productsRelations, productVariationsRelations,
-  ordersRelations, orderItemsRelations,
-  cartsRelations, cartItemsRelations,
-} from './schema';
-import { eq, desc } from 'drizzle-orm';
-import { Product, ProductInput } from './types';
-import { env } from './env';
-import { cacheProductsList, cacheProductById, invalidateProductCaches } from './cache';
+  products,
+  productVariations,
+  users,
+  accounts,
+  sessions,
+  verificationTokens,
+  orders,
+  orderItems,
+  carts,
+  cartItems,
+  userRoleEnum,
+  orderStatusEnum,
+  usersRelations,
+  accountsRelations,
+  sessionsRelations,
+  productsRelations,
+  productVariationsRelations,
+  ordersRelations,
+  orderItemsRelations,
+  cartsRelations,
+  cartItemsRelations,
+} from "./schema";
+import { eq, desc, and, isNull } from "drizzle-orm";
+import { Product, ProductInput } from "./types";
+import { env } from "./env";
+import {
+  cacheProductsList,
+  cacheProductById,
+  invalidateProductCaches,
+} from "./cache";
 
 // All schema tables and relations collected into one object for Drizzle relational queries
 const schema = {
-  userRoleEnum, orderStatusEnum,
-  users, accounts, sessions, verificationTokens,
-  products, productVariations,
-  orders, orderItems, carts, cartItems,
-  usersRelations, accountsRelations, sessionsRelations,
-  productsRelations, productVariationsRelations,
-  ordersRelations, orderItemsRelations,
-  cartsRelations, cartItemsRelations,
+  userRoleEnum,
+  orderStatusEnum,
+  users,
+  accounts,
+  sessions,
+  verificationTokens,
+  products,
+  productVariations,
+  orders,
+  orderItems,
+  carts,
+  cartItems,
+  usersRelations,
+  accountsRelations,
+  sessionsRelations,
+  productsRelations,
+  productVariationsRelations,
+  ordersRelations,
+  orderItemsRelations,
+  cartsRelations,
+  cartItemsRelations,
 };
 
 // ─── Connection Pool (singleton for serverless) ─────────
@@ -42,8 +72,8 @@ function createPool() {
 }
 
 // Using ??= pattern for singleton to avoid recreating pools on hot reloads
-const pool = globalForDb.pool ??= createPool();
-if (env.NODE_ENV !== 'production') globalForDb.pool = pool;
+const pool = (globalForDb.pool ??= createPool());
+if (env.NODE_ENV !== "production") globalForDb.pool = pool;
 
 // ─── Drizzle Instance ───────────────────────────────────
 
@@ -72,6 +102,7 @@ export const db = {
 
       const fetcher = async () => {
         const query = drizzleDb.query.products.findMany({
+          where: isNull(products.deletedAt),
           orderBy: [desc(products.createdAt)],
           with: { variations: true },
           limit,
@@ -82,6 +113,7 @@ export const db = {
 
         return rows.map((p) => ({
           ...p,
+          deletedAt: null,
           createdAt: p.createdAt.toISOString(),
           updatedAt: p.updatedAt.toISOString(),
           variations: p.variations.map((v) => ({
@@ -106,11 +138,18 @@ export const db = {
      * @param options - Pagination options
      * @returns Array of products with only essential fields for list views
      */
-    findAllMinimal: async (options: ProductListOptions = {}): Promise<Array<Pick<Product, 'id' | 'name' | 'price' | 'stock' | 'category' | 'image'>>> => {
+    findAllMinimal: async (
+      options: ProductListOptions = {},
+    ): Promise<
+      Array<
+        Pick<Product, "id" | "name" | "price" | "stock" | "category" | "image">
+      >
+    > => {
       const { limit, offset, withCache = false } = options;
 
       const fetcher = async () => {
         const rows = await drizzleDb.query.products.findMany({
+          where: isNull(products.deletedAt),
           orderBy: [desc(products.createdAt)],
           columns: {
             id: true,
@@ -141,15 +180,19 @@ export const db = {
      * @param withCache - Whether to use Redis cache
      * @returns Product with full details or null if not found
      */
-    findById: async (id: string, withCache = false): Promise<Product | null> => {
+    findById: async (
+      id: string,
+      withCache = false,
+    ): Promise<Product | null> => {
       const fetcher = async () => {
         const row = await drizzleDb.query.products.findFirst({
-          where: eq(products.id, id),
+          where: and(eq(products.id, id), isNull(products.deletedAt)),
           with: { variations: true },
         });
         if (!row) return null;
         return {
           ...row,
+          deletedAt: null,
           createdAt: row.createdAt.toISOString(),
           updatedAt: row.updatedAt.toISOString(),
           variations: row.variations.map((v) => ({
@@ -179,12 +222,16 @@ export const db = {
 
       return {
         ...row,
+        deletedAt: row.deletedAt?.toISOString() ?? null,
         createdAt: row.createdAt.toISOString(),
         updatedAt: row.updatedAt.toISOString(),
       };
     },
 
-    update: async (id: string, input: Partial<ProductInput>): Promise<Product | null> => {
+    update: async (
+      id: string,
+      input: Partial<ProductInput>,
+    ): Promise<Product | null> => {
       const [row] = await drizzleDb
         .update(products)
         .set({ ...input, updatedAt: new Date() })
@@ -198,20 +245,22 @@ export const db = {
 
       return {
         ...row,
+        deletedAt: row.deletedAt?.toISOString() ?? null,
         createdAt: row.createdAt.toISOString(),
         updatedAt: row.updatedAt.toISOString(),
       };
     },
 
     delete: async (id: string): Promise<boolean> => {
+      // Soft delete: set deletedAt timestamp instead of removing the row
       const result = await drizzleDb
-        .delete(products)
-        .where(eq(products.id, id))
+        .update(products)
+        .set({ deletedAt: new Date(), updatedAt: new Date() })
+        .where(and(eq(products.id, id), isNull(products.deletedAt)))
         .returning({ id: products.id });
 
       const success = result.length > 0;
 
-      // Invalidate product caches after deletion
       if (success) {
         await invalidateProductCaches(id);
       }

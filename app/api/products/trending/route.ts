@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { drizzleDb } from '@/lib/db';
 import { orderItems, orders, products } from '@/lib/schema';
-import { sql, desc, gt, eq, inArray } from 'drizzle-orm';
+import { sql, desc, gt, eq, inArray, isNull, and } from 'drizzle-orm';
 import { apiSuccess, handleApiError } from '@/lib/api-utils';
 import { getCachedData } from '@/lib/redis';
 
@@ -32,6 +32,7 @@ export async function GET(request: NextRequest) {
         if (trendingProducts.length === 0) {
           // Fallback: return newest products if no orders yet
           const newest = await drizzleDb.query.products.findMany({
+            where: isNull(products.deletedAt),
             orderBy: [desc(products.createdAt)],
             limit,
             with: { variations: true },
@@ -46,7 +47,7 @@ export async function GET(request: NextRequest) {
 
         const productIds = trendingProducts.map((t) => t.productId);
         const productRecords = await drizzleDb.query.products.findMany({
-          where: inArray(products.id, productIds),
+          where: and(inArray(products.id, productIds), isNull(products.deletedAt)),
           with: { variations: true },
         });
 
