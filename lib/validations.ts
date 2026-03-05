@@ -7,8 +7,10 @@ const UUID_REGEX =
 const URL_REGEX = /^https?:\/\/.+/;
 // ISO datetime regex pattern
 const ISO_DATETIME_REGEX = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z$/;
-// Email regex pattern
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// Email regex pattern - ReDoS-safe using atomic groups via possessive quantifiers simulation
+// Uses a simple, linear-time pattern that validates common email formats
+const EMAIL_REGEX =
+  /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
 
 // Product validation schemas
 // Note: ProductSchema with datetime strings is for API responses (already converted from Date)
@@ -46,7 +48,10 @@ export const OrderItemSchema = z.object({
   productId: z.string().regex(UUID_REGEX, "Invalid product ID"),
   quantity: z.number().int().positive("Quantity must be positive"),
   price: z.number().positive("Price must be positive"),
-  customizationNote: z.string().max(500, "Customization note must be under 500 characters").nullish(),
+  customizationNote: z
+    .string()
+    .max(500, "Customization note must be under 500 characters")
+    .nullish(),
 });
 
 export const CreateOrderSchema = z.object({
@@ -61,8 +66,14 @@ export const CreateOrderSchema = z.object({
 
 export const UpdateOrderStatusSchema = z.object({
   status: OrderStatusEnum,
-  trackingNumber: z.string().max(100, "Tracking number must be under 100 characters").nullish(),
-  shippingProvider: z.string().max(100, "Shipping provider must be under 100 characters").nullish(),
+  trackingNumber: z
+    .string()
+    .max(100, "Tracking number must be under 100 characters")
+    .nullish(),
+  shippingProvider: z
+    .string()
+    .max(100, "Shipping provider must be under 100 characters")
+    .nullish(),
 });
 
 // API Response types with validation

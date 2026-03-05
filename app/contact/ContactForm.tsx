@@ -22,7 +22,8 @@ export default function ContactForm() {
       name: v => v.trim() ? undefined : 'Name is required',
       email: v => {
         if (!v.trim()) return 'Email is required';
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) return 'Enter a valid email';
+        // ReDoS-safe email validation pattern
+        if (!/^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/.test(v)) return 'Enter a valid email';
         return undefined;
       },
       subject: v => v ? undefined : 'Please select a subject',
@@ -46,12 +47,12 @@ export default function ContactForm() {
     }
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  const handleSubmit = (e: React.BaseSyntheticEvent) => {
     e.preventDefault();
     if (validate()) {
       setSubmitted(true);
     }
-  }
+  };
 
   if (submitted) {
     return (

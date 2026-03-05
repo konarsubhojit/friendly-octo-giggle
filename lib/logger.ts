@@ -1,10 +1,10 @@
-import pino from 'pino';
+import pino from "pino";
 
 // Create base logger configuration
-const isDevelopment = process.env.NODE_ENV === 'development';
+const isDevelopment = process.env.NODE_ENV === "development";
 
 export const logger = pino({
-  level: process.env.LOG_LEVEL || (isDevelopment ? 'debug' : 'info'),
+  level: process.env.LOG_LEVEL || (isDevelopment ? "debug" : "info"),
   formatters: {
     level: (label) => {
       return { level: label };
@@ -13,11 +13,11 @@ export const logger = pino({
   // Pretty print in development, JSON in production
   transport: isDevelopment
     ? {
-        target: 'pino-pretty',
+        target: "pino-pretty",
         options: {
           colorize: true,
-          translateTime: 'HH:MM:ss',
-          ignore: 'pid,hostname',
+          translateTime: "HH:MM:ss",
+          ignore: "pid,hostname",
         },
       }
     : undefined,
@@ -41,14 +41,14 @@ export function logApiRequest(data: {
   statusCode?: number;
 }) {
   const logData = {
-    type: 'api_request',
+    type: "api_request",
     ...data,
   };
 
   if (data.statusCode && data.statusCode >= 400) {
-    logger.error(logData, 'API request failed');
+    logger.error(logData, "API request failed");
   } else {
-    logger.info(logData, 'API request completed');
+    logger.info(logData, "API request completed");
   }
 }
 
@@ -62,20 +62,26 @@ export function logDatabaseOperation(data: {
   error?: string;
 }) {
   const logData = {
-    type: 'database_operation',
+    type: "database_operation",
     ...data,
   };
 
   if (data.success) {
-    logger.debug(logData, 'Database operation completed');
+    logger.debug(logData, "Database operation completed");
   } else {
-    logger.error(logData, 'Database operation failed');
+    logger.error(logData, "Database operation failed");
   }
 }
 
 // Authentication event logger
 export function logAuthEvent(data: {
-  event: 'login' | 'logout' | 'register' | 'failed_login' | 'session_created' | 'session_expired';
+  event:
+    | "login"
+    | "logout"
+    | "register"
+    | "failed_login"
+    | "session_created"
+    | "session_expired";
   userId?: string;
   email?: string;
   provider?: string;
@@ -83,7 +89,7 @@ export function logAuthEvent(data: {
   error?: string;
 }) {
   const logData = {
-    type: 'auth_event',
+    type: "auth_event",
     ...data,
   };
 
@@ -102,7 +108,7 @@ export function logBusinessEvent(data: {
   success: boolean;
 }) {
   const logData = {
-    type: 'business_event',
+    type: "business_event",
     ...data,
   };
 
@@ -121,11 +127,12 @@ export function logError(data: {
   requestId?: string;
   additionalInfo?: Record<string, unknown>;
 }) {
-  const error = data.error instanceof Error ? data.error : new Error(String(data.error));
-  
+  const error =
+    data.error instanceof Error ? data.error : new Error(String(data.error));
+
   logger.error(
     {
-      type: 'error',
+      type: "error",
       context: data.context,
       userId: data.userId,
       requestId: data.requestId,
@@ -134,7 +141,7 @@ export function logError(data: {
       stack: error.stack,
       ...data.additionalInfo,
     },
-    `Error occurred: ${data.context || 'Unknown context'}`
+    `Error occurred: ${data.context || "Unknown context"}`,
   );
 }
 
@@ -145,7 +152,7 @@ export function logPerformance(data: {
   metadata?: Record<string, unknown>;
 }) {
   const logData = {
-    type: 'performance',
+    type: "performance",
     ...data,
   };
 
@@ -158,13 +165,13 @@ export function logPerformance(data: {
 
 // Cache operation logger
 export function logCacheOperation(data: {
-  operation: 'hit' | 'miss' | 'set' | 'invalidate';
+  operation: "hit" | "miss" | "set" | "invalidate";
   key: string;
   ttl?: number;
   success: boolean;
 }) {
   const logData = {
-    type: 'cache_operation',
+    type: "cache_operation",
     ...data,
   };
 
@@ -173,7 +180,7 @@ export function logCacheOperation(data: {
 
 // Generate request ID for tracking
 export function generateRequestId(): string {
-  return `req_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+  return `req_${Date.now()}_${crypto.randomUUID().substring(0, 8)}`;
 }
 
 // Timing utility
