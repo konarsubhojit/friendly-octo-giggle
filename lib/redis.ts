@@ -23,7 +23,7 @@ export function getRedisClient(): Redis | null {
     return redis;
   }
 
-  const redisUrl = env.REDIS_URL as string;
+  const redisUrl = env.REDIS_URL!;
 
   // Parse Redis URL using WHATWG URL API to avoid deprecated url.parse()
   const parsedUrl = new URL(redisUrl);
