@@ -1,4 +1,5 @@
 import Redis from "ioredis";
+import type { RedisOptions } from "ioredis";
 import { logCacheOperation, logError, Timer } from "./logger";
 import { env } from "./env";
 
@@ -14,21 +15,13 @@ export function isRedisAvailable(): boolean {
   return Boolean(env.REDIS_URL);
 }
 
-export function getRedisClient(): Redis | null {
-  if (!isRedisAvailable()) {
-    return null;
-  }
-
-  if (redis) {
-    return redis;
-  }
-
-  const redisUrl = env.REDIS_URL!;
-
-  // Parse Redis URL using WHATWG URL API to avoid deprecated url.parse()
+/**
+ * Parse a Redis URL into ioredis connection options.
+ * Uses the WHATWG URL API to avoid deprecated url.parse().
+ */
+function parseRedisUrl(redisUrl: string): RedisOptions {
   const parsedUrl = new URL(redisUrl);
-
-  redis = new Redis({
+  return {
     host: parsedUrl.hostname,
     port: Number.parseInt(parsedUrl.port || "6379", 10),
     password: parsedUrl.password || undefined,
@@ -40,7 +33,20 @@ export function getRedisClient(): Redis | null {
     maxRetriesPerRequest: 3,
     enableReadyCheck: false,
     lazyConnect: true,
-  });
+  };
+}
+
+export function getRedisClient(): Redis | null {
+  const redisUrl = env.REDIS_URL;
+  if (!redisUrl) {
+    return null;
+  }
+
+  if (redis) {
+    return redis;
+  }
+
+  redis = new Redis(parseRedisUrl(redisUrl));
 
   return redis;
 }
