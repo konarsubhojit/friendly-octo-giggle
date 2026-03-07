@@ -63,7 +63,6 @@ npm run db:seed
 ```
 
 **Vercel-specific notes:**
-- Automatically runs `prisma generate` during build
 - Edge runtime compatible with minor adjustments
 - Built-in CDN for static assets
 - Automatic HTTPS
@@ -157,7 +156,7 @@ gcloud run deploy ecommerce \
 
 **Step 1: Prepare for Cloudflare**
 - Cloudflare Pages uses edge runtime
-- May need to adjust Prisma connection for edge
+- May need to adjust Drizzle connection for edge
 
 **Step 2: Connect repository**
 - Go to Cloudflare Pages dashboard
@@ -245,7 +244,7 @@ curl -H "Authorization: Bearer YOUR_TOKEN" \
 ### Database
 - Enable connection pooling (PgBouncer for PostgreSQL)
 - Use read replicas for high read loads
-- Consider Prisma Accelerate for connection pooling
+- Consider PgBouncer or Neon pooler for connection pooling
 
 ### Redis
 - Monitor memory usage
@@ -274,7 +273,7 @@ curl -H "Authorization: Bearer YOUR_TOKEN" \
 ### Build Failures
 - Check Node.js version (18+)
 - Ensure all dependencies installed
-- Verify Prisma generates successfully
+- Verify Drizzle migrations applied successfully
 
 ### Database Connection Issues
 - Check DATABASE_URL format

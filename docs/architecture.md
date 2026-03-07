@@ -93,12 +93,12 @@ This is a modern e-commerce platform built on Next.js 16 with App Router, design
 
 ## 3. Database Schema
 
-> **Note:** This project uses Drizzle ORM. The schema examples below use Prisma notation for readability, but the actual implementation is in `lib/schema.ts` using Drizzle's `pgTable` syntax.
+> **Note:** This project uses Drizzle ORM. The schema examples below use SQL-like notation for readability, but the actual implementation is in `lib/schema.ts` using Drizzle's `pgTable` syntax.
 
 ### Authentication Models
 
 **User**
-```prisma
+```sql
 model User {
   id            String    @id @default(cuid())
   name          String?
@@ -126,7 +126,7 @@ model User {
 ### E-Commerce Models
 
 **Product** - Base product entity
-```prisma
+```sql
 model Product {
   id          String             @id @default(cuid())
   name        String
@@ -144,7 +144,7 @@ model Product {
 ```
 
 **ProductVariation** - SKU-level variants
-```prisma
+```sql
 model ProductVariation {
   id            String   @id @default(cuid())
   productId     String
@@ -160,7 +160,7 @@ model ProductVariation {
 ```
 
 **Order** - Customer orders
-```prisma
+```sql
 model Order {
   id              String      @id @default(cuid())
   userId          String?     // Null for guest checkouts
@@ -184,7 +184,7 @@ enum OrderStatus {
 ```
 
 **OrderItem** - Line items in orders
-```prisma
+```sql
 model OrderItem {
   id          String            @id @default(cuid())
   orderId     String
@@ -199,7 +199,7 @@ model OrderItem {
 ```
 
 **Cart & CartItem** - Shopping cart system
-```prisma
+```sql
 model Cart {
   id        String     @id @default(cuid())
   userId    String?    @unique  // For authenticated users
@@ -634,7 +634,7 @@ headers: [
 ### Optimizations for Serverless Deployment
 
 **1. Cold Start Minimization**
-- Singleton pattern for clients (Prisma, Redis)
+- Singleton pattern for clients (Drizzle, Redis)
 - Lazy initialization (connect on first use)
 - Tree-shaking and code splitting
 
@@ -754,19 +754,18 @@ response.cookies.set('cart_session', sessionId, {
 });
 
 // Query cart by sessionId
-const cart = await prisma.cart.findFirst({
-  where: { sessionId },
-  include: { items: true },
+const cart = await drizzleDb.query.carts.findFirst({
+  where: eq(schema.carts.sessionId, sessionId),
+  with: { items: true },
 });
 ```
 
 **Authenticated Users (User-Based):**
 ```typescript
 const session = await auth();
-const cart = await prisma.cart.upsert({
-  where: { userId: session.user.id },
-  create: { userId: session.user.id },
-  update: {},
+const cart = await drizzleDb.query.carts.findFirst({
+  where: eq(schema.carts.userId, session.user.id),
+  with: { items: true },
 });
 ```
 
@@ -824,39 +823,36 @@ CANCELLED (terminal state)
 ### Order Creation Process (Atomic Transaction)
 
 ```typescript
-const order = await prisma.$transaction(async (tx) => {
+const order = await drizzleDb.transaction(async (tx) => {
   // Step 1: Create Order + OrderItems
-  const newOrder = await tx.order.create({
-    data: {
-      customerName,
-      customerEmail,
-      customerAddress,
-      totalAmount,
-      status: 'PENDING',
-      items: {
-        create: items.map(item => ({
-          productId: item.productId,
-          variationId: item.variationId,
-          quantity: item.quantity,
-          price: calculatePrice(item),  // Snapshot price
-        })),
-      },
-    },
-    include: { items: { include: { product: true, variation: true } } },
-  });
+  const [newOrder] = await tx.insert(schema.orders).values({
+    customerName,
+    customerEmail,
+    customerAddress,
+    totalAmount,
+    status: 'PENDING',
+  }).returning();
+
+  await tx.insert(schema.orderItems).values(
+    items.map(item => ({
+      orderId: newOrder.id,
+      productId: item.productId,
+      variationId: item.variationId,
+      quantity: item.quantity,
+      price: calculatePrice(item),  // Snapshot price
+    }))
+  );
 
   // Step 2: Decrement Stock (atomic)
   for (const item of items) {
     if (item.variationId) {
-      await tx.productVariation.update({
-        where: { id: item.variationId },
-        data: { stock: { decrement: item.quantity } },
-      });
+      await tx.update(schema.productVariations)
+        .set({ stock: sql`stock - ${item.quantity}` })
+        .where(eq(schema.productVariations.id, item.variationId));
     }
-    await tx.product.update({
-      where: { id: item.productId },
-      data: { stock: { decrement: item.quantity } },
-    });
+    await tx.update(schema.products)
+      .set({ stock: sql`stock - ${item.quantity}` })
+      .where(eq(schema.products.id, item.productId));
   }
 
   return newOrder;
@@ -870,7 +866,7 @@ const order = await prisma.$transaction(async (tx) => {
 
 ### Stock Validation
 1. **Pre-Transaction Check:** Validate stock before transaction
-2. **Atomic Decrement:** Use Prisma increment/decrement operations
+2. **Atomic Decrement:** Use Drizzle SQL expressions for atomic operations
 3. **Rollback on Failure:** Transaction ensures consistency
 
 ### Post-Order Actions
@@ -910,7 +906,7 @@ This architecture provides:
 ✅ **High Performance** - Dynamic rendering, Redis caching, connection pooling
 ✅ **Scalability** - Serverless design, edge deployment, stateless functions
 ✅ **Security** - Input validation, SSL, RBAC, secure sessions
-✅ **Type Safety** - End-to-end TypeScript with Prisma & Zod
+✅ **Type Safety** - End-to-end TypeScript with Drizzle & Zod
 ✅ **Observability** - Structured logging, performance metrics, request tracing
 ✅ **Developer Experience** - Hot reload, type checking, auto-generated types
 ✅ **E-Commerce Features** - Product variations, guest carts, atomic transactions

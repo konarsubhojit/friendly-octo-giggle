@@ -66,7 +66,7 @@ https://your-domain.com/api/auth/callback/google
 ### 4. Set Up Database
 
 ```bash
-# Generate Prisma Client
+# Generate Drizzle migrations
 npm run db:generate
 
 # Run migrations
@@ -92,10 +92,10 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 After signing in with Google for the first time:
 
-**Option 1: Using Prisma Studio (Recommended)**
+**Option 1: Using Drizzle Studio (Recommended)**
 
 ```bash
-npx prisma studio
+npx drizzle-kit studio
 ```
 
 1. Find your user in the `User` table
@@ -151,11 +151,10 @@ npm run lint             # Run ESLint
 ### Database
 
 ```bash
-npm run db:generate      # Generate Prisma Client
+npm run db:generate      # Generate Drizzle migrations
 npm run db:migrate       # Run database migrations
 npm run db:seed          # Seed test data
-npx prisma studio        # Open database GUI
-npx prisma format        # Format schema file
+npx drizzle-kit studio   # Open database GUI
 ```
 
 ### Migrations
@@ -165,10 +164,10 @@ npx prisma format        # Format schema file
 npm run db:migrate -- --name add_feature_name
 
 # Apply pending migrations
-npx prisma migrate deploy
+npx drizzle-kit migrate
 
 # Reset database (WARNING: deletes all data)
-npx prisma migrate reset
+npx drizzle-kit drop
 ```
 
 ## Project Structure
@@ -188,15 +187,13 @@ friendly-octo-giggle/
 │   └── ui/               # Reusable UI components
 ├── lib/                   # Utilities and configuration
 │   ├── auth.ts           # NextAuth configuration
-│   ├── db.ts             # Prisma client
+│   ├── db.ts             # Drizzle client
 │   ├── redis.ts          # Redis client
 │   ├── logger.ts         # Logging utility
 │   ├── types.ts          # TypeScript types
 │   └── validations.ts    # Zod schemas
-├── prisma/               # Database schema and migrations
-│   ├── schema.prisma     # Database schema
-│   ├── migrations/       # Migration files
-│   └── seed.ts           # Seed data
+├── drizzle/              # Database migrations
+│   └── *.sql             # Migration SQL files
 ├── docs/                 # Documentation
 └── .env                  # Environment variables (not committed)
 ```
@@ -233,9 +230,9 @@ friendly-octo-giggle/
 3. Ensure Google+ API is enabled
 4. Clear browser cookies and try again
 
-### "Prisma Client not generated"
+### "Database schema not applied"
 
-**Cause**: Prisma Client not built
+**Cause**: Drizzle migrations not applied
 
 **Solution**:
 ```bash
@@ -263,13 +260,13 @@ See [Troubleshooting](./troubleshooting.md#database-ssl-issues) for more details
 **Solution**:
 ```bash
 # Check migration status
-npx prisma migrate status
+npm run db:migrate
 
 # Apply pending migrations
-npx prisma migrate deploy
+npx drizzle-kit migrate
 
 # If stuck, reset (WARNING: deletes data)
-npx prisma migrate reset
+npx drizzle-kit drop
 ```
 
 ## Using the Admin Panel
@@ -352,9 +349,9 @@ Or invalidate specific keys programmatically.
 
 When modifying the schema:
 
-1. Edit `prisma/schema.prisma`
-2. Create migration: `npm run db:migrate -- --name description`
-3. Review generated SQL in `prisma/migrations/`
+1. Edit `lib/schema.ts`
+2. Create migration: `npm run db:generate`
+3. Review generated SQL in `drizzle/`
 4. Regenerate client: `npm run db:generate` (usually automatic)
 5. Restart dev server
 
@@ -363,7 +360,7 @@ When modifying the schema:
 - **Auto-import**: VS Code automatically imports types
 - **Type checking**: Run `npx tsc --noEmit` to check all types
 - **Zod validation**: Use for runtime type checking of API inputs
-- **Prisma types**: Auto-generated, don't edit manually
+- **Drizzle types**: Inferred from schema, don't edit manually
 
 ### Debugging
 
@@ -371,9 +368,9 @@ When modifying the schema:
 
 **Client-side logs**: Check browser console
 
-**Database queries**: Enable Prisma logging in `lib/db.ts`:
+**Database queries**: Enable Drizzle logging in `lib/db.ts`:
 ```typescript
-new PrismaClient({ log: ['query', 'error'] })
+// Set LOG_LEVEL=debug in .env to enable query logging via Pino
 ```
 
 **API requests**: Check Network tab in browser DevTools
@@ -391,7 +388,7 @@ Now that you're set up:
 
 - **Documentation**: Browse other guides in `/docs`
 - **Code Examples**: Check existing components and API routes
-- **Database**: Use `npx prisma studio` to inspect data
+- **Database**: Use `npx drizzle-kit studio` to inspect data
 - **Issues**: Search or create on [GitHub](https://github.com/konarsubhojit/friendly-octo-giggle/issues)
 
 ---
