@@ -8,7 +8,7 @@ Before you begin, ensure you have:
 
 - **Node.js 18+**: [Download here](https://nodejs.org/)
 - **PostgreSQL**: Local installation or cloud service (Supabase, Neon, etc.)
-- **Redis**: Local installation or Upstash account
+- **Redis**: Optional for local dev; recommended for production (Upstash, Redis Labs, etc.)
 - **Google Cloud Account**: For OAuth credentials
 
 ## Quick Start
@@ -33,7 +33,7 @@ Edit `.env` with your credentials:
 # PostgreSQL Database
 DATABASE_URL=postgresql://user:password@localhost:5432/ecommerce?schema=public
 
-# Redis Cache (get free at upstash.com)
+# Redis Cache (optional for local dev; app runs without it)
 REDIS_URL=redis://localhost:6379
 
 # NextAuth Configuration

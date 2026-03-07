@@ -59,7 +59,7 @@ Complete documentation is available in the [`/docs`](./docs) folder:
 
 - **Node.js**: 18.0.0 or higher
 - **PostgreSQL**: 12.0 or higher  
-- **Redis**: 6.0 or higher (or Upstash account)
+- **Redis**: 6.0 or higher (optional for local dev; recommended for production)
 
 ## 🎯 Features Overview
 
@@ -82,14 +82,23 @@ Complete documentation is available in the [`/docs`](./docs) folder:
 ## 🧪 Development
 
 ```bash
-# Development server
+# Development server (HTTP)
 npm run dev
 
+# Development server (HTTPS, experimental)
+npm run dev:https
+
 # Database commands
-npm run db:generate    # Generate Prisma Client
+npm run db:generate    # Generate Drizzle migrations
 npm run db:migrate     # Run migrations
 npm run db:seed        # Seed test data
-npx prisma studio      # Database GUI
+
+# Testing
+npm run test           # Run unit tests
+npm run test:coverage  # Run unit tests with coverage
+
+# Linting
+npm run lint           # Run ESLint
 
 # Production build
 npm run build

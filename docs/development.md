@@ -31,24 +31,34 @@ Copy `.env.example` to `.env` and configure:
 
 ```env
 DATABASE_URL=postgresql://user:password@localhost:5432/ecommerce
-REDIS_URL=rediss://default:password@host:6379
+REDIS_URL=rediss://default:password@host:6379   # Optional in local/dev - app runs without Redis
 NEXTAUTH_SECRET=your-secret-here
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_URL_INTERNAL=http://localhost:3000      # Optional - used for server-to-server auth calls
 GOOGLE_CLIENT_ID=your-google-client-id
 GOOGLE_CLIENT_SECRET=your-google-client-secret
 LOG_LEVEL=debug  # development only - high log volume, impacts performance
 ```
+
+> **Note**: `REDIS_URL` is optional for local development. When absent, the app skips caching and fetches data directly from the database. For production, always configure Redis for optimal performance.
+
+> **Note**: `NEXTAUTH_URL_INTERNAL` can be set to improve performance when the auth server communicates internally (e.g., within Docker or behind a reverse proxy). It defaults to `NEXTAUTH_URL` when not set.
 
 > **Note**: `LOG_LEVEL=debug` logs all cache hits, database queries, and detailed operations. This is useful for development debugging but creates excessive log volume and may impact performance in production. Always use `info` or `warn` level in production.
 
 ### Development Commands
 
 ```bash
-npm run dev         # Start dev server (port 3000)
+npm run dev         # Start dev server over HTTP (port 3000)
+npm run dev:https   # Start dev server over HTTPS (experimental, self-signed cert)
 npm run build       # Build production bundle
 npm run start       # Start production server
-npm run lint        # Run ESLint
-npm run db:generate # Generate Prisma client
-npm run db:migrate  # Create and apply migration
+npm run lint        # Run ESLint (flat config)
+npm run test        # Run unit tests (single run)
+npm run test:watch  # Run unit tests (watch mode)
+npm run test:coverage # Run unit tests with coverage
+npm run db:generate # Generate Drizzle migrations
+npm run db:migrate  # Apply migrations
 npm run db:seed     # Seed database
 ```
 
