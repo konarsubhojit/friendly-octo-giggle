@@ -65,12 +65,11 @@ describe("handleValidationError", () => {
       {
         code: "too_small",
         minimum: 1,
-        type: "string",
         inclusive: true,
         exact: false,
         message: "String must contain at least 1 character(s)",
         path: ["name"],
-      },
+      } as never,
     ]);
     const response = handleValidationError(zodError);
     expect(response.status).toBe(400);
@@ -88,10 +87,9 @@ describe("handleApiError", () => {
       {
         code: "invalid_type",
         expected: "string",
-        received: "number",
         path: ["email"],
         message: "Expected string, received number",
-      },
+      } as never,
     ]);
     const response = handleApiError(zodError);
     expect(response.status).toBe(400);
