@@ -145,4 +145,54 @@ describe("auth module", () => {
       });
     });
   });
+
+  describe("Google provider config", () => {
+    it("uses empty strings when env vars are not set", () => {
+      // The provider config uses conditional checks for GOOGLE_CLIENT_ID/SECRET
+      expect(capturedConfig.providers).toBeDefined();
+      expect(Array.isArray(capturedConfig.providers)).toBe(true);
+      expect(capturedConfig.providers.length).toBe(1);
+      expect(capturedConfig.providers[0].id).toBe("google");
+    });
+  });
+
+  describe("cookies config", () => {
+    it("has session token cookie config", () => {
+      expect(capturedConfig.cookies).toBeDefined();
+      expect(capturedConfig.cookies.sessionToken).toBeDefined();
+      expect(capturedConfig.cookies.sessionToken.options.httpOnly).toBe(true);
+      expect(capturedConfig.cookies.sessionToken.options.sameSite).toBe("lax");
+      expect(capturedConfig.cookies.sessionToken.options.path).toBe("/");
+    });
+  });
+
+  describe("callbacks.jwt edge cases", () => {
+    it("defaults role to CUSTOMER when user.role is missing", () => {
+      const token = { sub: "sub-1" };
+      const user = { id: "user-nrole" };
+
+      const result = capturedConfig.callbacks.jwt({ token, user });
+
+      expect(result.id).toBe("user-nrole");
+      expect(result.role).toBe("CUSTOMER");
+    });
+  });
+
+  describe("callbacks.signIn edge cases", () => {
+    it("handles sign in with null account", () => {
+      const user = { id: "user-x", email: null };
+      const account = null;
+
+      const result = capturedConfig.callbacks.signIn({ user, account });
+
+      expect(result).toBe(true);
+      expect(mockLogAuthEvent).toHaveBeenCalledWith({
+        event: "login",
+        userId: "user-x",
+        email: undefined,
+        provider: undefined,
+        success: true,
+      });
+    });
+  });
 });

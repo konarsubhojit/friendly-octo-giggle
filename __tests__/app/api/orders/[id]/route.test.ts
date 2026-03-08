@@ -282,4 +282,65 @@ describe("PATCH /api/orders/[id]", () => {
     expect(mockInvalidateCache).toHaveBeenCalledWith("admin:orders:*");
     expect(mockInvalidateCache).toHaveBeenCalledWith("admin:order:order1");
   });
+
+  it("returns 500 when updatedOrder is null after cancel", async () => {
+    mockAuth.mockResolvedValue({
+      user: { id: "user1", name: "Test", email: "test@example.com" },
+    } as never);
+
+    mockFindFirst
+      .mockResolvedValueOnce(mockOrder as never)
+      .mockResolvedValueOnce(null as never);
+
+    const mockWhere = vi.fn();
+    const mockSet = vi.fn(() => ({ where: mockWhere }));
+    mockUpdate.mockReturnValue({ set: mockSet } as never);
+
+    const request = new NextRequest("http://localhost/api/orders/order1", {
+      method: "PATCH",
+      body: JSON.stringify({ action: "cancel" }),
+    });
+    const response = await PATCH(request, {
+      params: Promise.resolve({ id: "order1" }),
+    });
+    const data = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(data.error).toBe("Order not found after update");
+  });
+
+  it("returns 500 on unexpected error in GET", async () => {
+    mockAuth.mockResolvedValue({
+      user: { id: "user1", name: "Test", email: "test@example.com" },
+    } as never);
+    mockGetCachedData.mockRejectedValue(new Error("Cache failure"));
+
+    const request = new NextRequest("http://localhost/api/orders/order1");
+    const response = await GET(request, {
+      params: Promise.resolve({ id: "order1" }),
+    });
+    const data = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(data.error).toBeDefined();
+  });
+
+  it("returns 500 on unexpected error in PATCH", async () => {
+    mockAuth.mockResolvedValue({
+      user: { id: "user1", name: "Test", email: "test@example.com" },
+    } as never);
+    mockFindFirst.mockRejectedValue(new Error("DB failure"));
+
+    const request = new NextRequest("http://localhost/api/orders/order1", {
+      method: "PATCH",
+      body: JSON.stringify({ action: "cancel" }),
+    });
+    const response = await PATCH(request, {
+      params: Promise.resolve({ id: "order1" }),
+    });
+    const data = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(data.error).toBeDefined();
+  });
 });

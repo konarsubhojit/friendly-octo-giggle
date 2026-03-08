@@ -83,7 +83,7 @@ export async function PATCH(
       where: eq(orders.id, id),
     });
 
-    if (!order || order.userId !== session.user.id) {
+    if (order?.userId !== session.user.id) {
       return apiError("Order not found", 404);
     }
 

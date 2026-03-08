@@ -84,4 +84,94 @@ describe("schema", () => {
     expect(cols).toContain("userId");
     expect(cols).toContain("sessionId");
   });
+
+  it("accounts table has expected columns", () => {
+    const cols = Object.keys(accounts);
+    expect(cols).toContain("id");
+    expect(cols).toContain("userId");
+    expect(cols).toContain("type");
+    expect(cols).toContain("provider");
+    expect(cols).toContain("providerAccountId");
+    expect(cols).toContain("refresh_token");
+    expect(cols).toContain("access_token");
+    expect(cols).toContain("expires_at");
+    expect(cols).toContain("token_type");
+    expect(cols).toContain("scope");
+    expect(cols).toContain("id_token");
+    expect(cols).toContain("session_state");
+  });
+
+  it("sessions table has expected columns", () => {
+    const cols = Object.keys(sessions);
+    expect(cols).toContain("sessionToken");
+    expect(cols).toContain("userId");
+    expect(cols).toContain("expires");
+  });
+
+  it("verificationTokens table has expected columns", () => {
+    const cols = Object.keys(verificationTokens);
+    expect(cols).toContain("identifier");
+    expect(cols).toContain("token");
+    expect(cols).toContain("expires");
+  });
+
+  it("productVariations table has expected columns", () => {
+    const cols = Object.keys(productVariations);
+    expect(cols).toContain("id");
+    expect(cols).toContain("productId");
+    expect(cols).toContain("name");
+    expect(cols).toContain("designName");
+    expect(cols).toContain("image");
+    expect(cols).toContain("priceModifier");
+    expect(cols).toContain("stock");
+  });
+
+  it("orderItems table has expected columns", () => {
+    const cols = Object.keys(orderItems);
+    expect(cols).toContain("id");
+    expect(cols).toContain("orderId");
+    expect(cols).toContain("productId");
+    expect(cols).toContain("variationId");
+    expect(cols).toContain("quantity");
+    expect(cols).toContain("price");
+    expect(cols).toContain("customizationNote");
+  });
+
+  it("cartItems table has expected columns", () => {
+    const cols = Object.keys(cartItems);
+    expect(cols).toContain("id");
+    expect(cols).toContain("cartId");
+    expect(cols).toContain("productId");
+    expect(cols).toContain("variationId");
+    expect(cols).toContain("quantity");
+  });
+
+  it("orders table has all expected columns", () => {
+    const cols = Object.keys(orders);
+    expect(cols).toContain("customerName");
+    expect(cols).toContain("customerEmail");
+    expect(cols).toContain("customerAddress");
+    expect(cols).toContain("trackingNumber");
+    expect(cols).toContain("shippingProvider");
+    expect(cols).toContain("createdAt");
+    expect(cols).toContain("updatedAt");
+  });
+
+  it("products table has all expected columns", () => {
+    const cols = Object.keys(products);
+    expect(cols).toContain("description");
+    expect(cols).toContain("image");
+    expect(cols).toContain("deletedAt");
+    expect(cols).toContain("createdAt");
+    expect(cols).toContain("updatedAt");
+  });
+
+  it("users table has all expected columns", () => {
+    const cols = Object.keys(users);
+    expect(cols).toContain("name");
+    expect(cols).toContain("emailVerified");
+    expect(cols).toContain("image");
+    expect(cols).toContain("createdAt");
+    expect(cols).toContain("updatedAt");
+  });
 });

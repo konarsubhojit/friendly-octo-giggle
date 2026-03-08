@@ -149,4 +149,79 @@ describe("GET /api/admin/users/[id]", () => {
       30,
     );
   });
+
+  it("returns 403 when not admin in GET", async () => {
+    mockAuth.mockResolvedValue({
+      user: { id: "u1", role: "CUSTOMER" },
+    } as never);
+    const res = await GET(makeRequest(), makeParams());
+    expect(res.status).toBe(403);
+  });
+
+  it("exercises getCachedData fetcher callback for user with data", async () => {
+    mockAuth.mockResolvedValue(adminSession as never);
+
+    const mockUserData = {
+      id: "user1",
+      name: "Fetched User",
+      email: "fetched@test.com",
+      role: "CUSTOMER",
+      emailVerified: null,
+      createdAt: new Date("2024-01-01"),
+      updatedAt: new Date("2024-01-01"),
+      image: null,
+      orders: [{ id: "o1" }, { id: "o2" }],
+      sessions: [{ sessionToken: "s1" }],
+    };
+
+    mockGetCachedData.mockImplementation(
+      async (_key: string, _ttl: number, fetcher: () => Promise<unknown>) => fetcher(),
+    );
+    (drizzleDb.query.users.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(
+      mockUserData,
+    );
+
+    const res = await GET(makeRequest(), makeParams());
+    const data = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(data.data.user.name).toBe("Fetched User");
+    expect(data.data.user._count.orders).toBe(2);
+    expect(data.data.user._count.sessions).toBe(1);
+  });
+
+  it("exercises getCachedData fetcher callback when user is not found", async () => {
+    mockAuth.mockResolvedValue(adminSession as never);
+
+    mockGetCachedData.mockImplementation(
+      async (_key: string, _ttl: number, fetcher: () => Promise<unknown>) => fetcher(),
+    );
+    (drizzleDb.query.users.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(
+      null,
+    );
+
+    const res = await GET(makeRequest(), makeParams());
+    const data = await res.json();
+
+    expect(res.status).toBe(404);
+    expect(data.error).toBe("User not found");
+  });
+
+  it("returns 500 on error in PATCH", async () => {
+    mockAuth.mockResolvedValue(adminSession as never);
+    vi.mocked(drizzleDb.update).mockImplementation(() => {
+      throw new Error("DB error");
+    });
+
+    const res = await PATCH(makeRequest({ role: "ADMIN" }), makeParams());
+    expect(res.status).toBe(500);
+  });
+
+  it("returns 500 on error in GET", async () => {
+    mockAuth.mockResolvedValue(adminSession as never);
+    mockGetCachedData.mockRejectedValue(new Error("Cache error"));
+
+    const res = await GET(makeRequest(), makeParams());
+    expect(res.status).toBe(500);
+  });
 });
