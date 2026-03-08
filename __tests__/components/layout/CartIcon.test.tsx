@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import React from "react";
 import { Provider } from "react-redux";
 import { makeStore } from "@/lib/store";
@@ -22,7 +22,7 @@ vi.mock("next/link", () => ({
   ),
 }));
 
-function renderCartIcon(preloadedState?: object) {
+function renderCartIcon(_preloadedState?: object) {
   const store = makeStore();
   return render(
     <Provider store={store}>

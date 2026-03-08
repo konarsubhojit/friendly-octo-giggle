@@ -1,6 +1,6 @@
 # Development Guide
 
-Complete guide for developing this Next.js e-commerce application. Built for serverless deployment with TypeScript, Prisma, Redis caching, and NextAuth.js v5.
+Complete guide for developing this Next.js e-commerce application. Built for serverless deployment with TypeScript, Drizzle ORM, Redis caching, and NextAuth.js v5.
 
 ---
 
@@ -15,7 +15,7 @@ npm run dev
 # Run in separate terminal for real-time type checking
 npx tsc --watch --noEmit
 
-# Generate Prisma client after schema changes
+# Generate Drizzle migrations after schema changes
 npm run db:generate
 
 # Create and apply database migration
@@ -31,24 +31,31 @@ Copy `.env.example` to `.env` and configure:
 
 ```env
 DATABASE_URL=postgresql://user:password@localhost:5432/ecommerce
-REDIS_URL=rediss://default:password@host:6379
+REDIS_URL=rediss://default:password@host:6379   # Optional in local/dev - app runs without Redis
 NEXTAUTH_SECRET=your-secret-here
+NEXTAUTH_URL=http://localhost:3000
 GOOGLE_CLIENT_ID=your-google-client-id
 GOOGLE_CLIENT_SECRET=your-google-client-secret
 LOG_LEVEL=debug  # development only - high log volume, impacts performance
 ```
+
+> **Note**: `REDIS_URL` is optional for local development. When absent, the app skips caching and fetches data directly from the database. For production, always configure Redis for optimal performance.
 
 > **Note**: `LOG_LEVEL=debug` logs all cache hits, database queries, and detailed operations. This is useful for development debugging but creates excessive log volume and may impact performance in production. Always use `info` or `warn` level in production.
 
 ### Development Commands
 
 ```bash
-npm run dev         # Start dev server (port 3000)
+npm run dev         # Start dev server over HTTP (port 3000)
+npm run dev:https   # Start dev server over HTTPS (experimental, self-signed cert)
 npm run build       # Build production bundle
 npm run start       # Start production server
-npm run lint        # Run ESLint
-npm run db:generate # Generate Prisma client
-npm run db:migrate  # Create and apply migration
+npm run lint        # Run ESLint (flat config)
+npm run test        # Run unit tests (single run)
+npm run test:watch  # Run unit tests (watch mode)
+npm run test:coverage # Run unit tests with coverage
+npm run db:generate # Generate Drizzle migrations
+npm run db:migrate  # Apply migrations
 npm run db:seed     # Seed database
 ```
 
@@ -216,10 +223,8 @@ lib/                         # Shared utilities
 ├── validations.ts           # Zod schemas
 └── types.ts                 # Shared types
 
-prisma/                      # Database
-├── schema.prisma            # Prisma schema
-├── migrations/              # Migration files
-└── seed.ts                  # Seed script
+drizzle/                     # Database
+└── *.sql                    # Migration SQL files
 ```
 
 ### Component Patterns
@@ -267,40 +272,41 @@ export function Product({ product }) {
 
 ### Migration Workflow
 
-**1. Edit Prisma schema**
+**1. Edit Drizzle schema**
 
-```prisma
-// prisma/schema.prisma
-model Product {
-  id          String   @id @default(cuid())
-  name        String
-  description String
-  price       Float
-  featured    Boolean  @default(false)  // New field
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
+```typescript
+// lib/schema.ts
+export const products = pgTable("products", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  name: text("name").notNull(),
+  description: text("description").notNull(),
+  price: doublePrecision("price").notNull(),
+  featured: boolean("featured").default(false),  // New field
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
 ```
 
-**2. Create migration**
+**2. Generate migration**
 
 ```bash
-npm run db:migrate -- --name add_featured_to_products
+npm run db:generate
 ```
 
-This generates SQL in `prisma/migrations/` and applies it.
+This generates SQL in `drizzle/` directory.
 
 **3. Review generated SQL**
 
 ```sql
 -- AlterTable
-ALTER TABLE "Product" ADD COLUMN "featured" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "products" ADD COLUMN "featured" BOOLEAN NOT NULL DEFAULT false;
 ```
 
-**4. Commit migration**
+**4. Apply and commit migration**
 
 ```bash
-git add prisma/schema.prisma prisma/migrations/
+npm run db:migrate
+git add lib/schema.ts drizzle/
 git commit -m "Add featured field to products"
 ```
 
@@ -310,65 +316,71 @@ git commit -m "Add featured field to products"
 
 Use two-step migration:
 
-```prisma
-// Step 1: Add as optional
-model Product {
-  sku String?
-}
+```typescript
+// Step 1: Add as optional in lib/schema.ts
+export const products = pgTable("products", {
+  sku: text("sku"),
+});
 ```
 
 ```bash
-npm run db:migrate -- --name add_sku_optional
+npm run db:generate
+npm run db:migrate
 # Populate data for existing records
 npx tsx scripts/populate-sku.ts
 ```
 
-```prisma
-// Step 2: Make required
-model Product {
-  sku String
-}
+```typescript
+// Step 2: Make required in lib/schema.ts
+export const products = pgTable("products", {
+  sku: text("sku").notNull(),
+});
 ```
 
 ```bash
-npm run db:migrate -- --name make_sku_required
+npm run db:generate
+npm run db:migrate
 ```
 
 **Adding indexes**
 
-```prisma
-model Product {
-  category String
-  price    Float
-  
-  @@index([category])
-  @@index([category, price])  // Composite index
-}
+```typescript
+// In lib/schema.ts - add indexes to pgTable
+export const products = pgTable("products", {
+  category: text("category").notNull(),
+  price: doublePrecision("price").notNull(),
+}, (table) => [
+  index("idx_products_category").on(table.category),
+  index("idx_products_category_price").on(table.category, table.price),
+]);
 ```
 
 **Adding relations**
 
-```prisma
-model Category {
-  id       String    @id @default(cuid())
-  name     String    @unique
-  products Product[]
-}
+```typescript
+// In lib/schema.ts
+export const categories = pgTable("categories", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  name: text("name").notNull().unique(),
+});
 
-model Product {
-  id         String    @id @default(cuid())
-  categoryId String?
-  category   Category? @relation(fields: [categoryId], references: [id])
-}
+export const products = pgTable("products", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  categoryId: uuid("category_id").references(() => categories.id),
+});
+
+export const categoriesRelations = relations(categories, ({ many }) => ({
+  products: many(products),
+}));
 ```
 
 ### Production Deployment
 
-In CI/CD, use `prisma migrate deploy`:
+In CI/CD, use `drizzle-kit migrate`:
 
 ```bash
 # Non-interactive, applies pending migrations
-npx prisma migrate deploy
+npx drizzle-kit migrate
 ```
 
 **Vercel setup**:
@@ -377,7 +389,7 @@ npx prisma migrate deploy
 // package.json
 {
   "scripts": {
-    "build": "prisma generate && prisma migrate deploy && next build"
+    "build": "npm run db:migrate && next build"
   }
 }
 ```
@@ -389,7 +401,7 @@ npx prisma migrate deploy
 - ✅ Test migrations locally first
 - ✅ Keep migrations small and incremental
 - ✅ Never edit existing migrations
-- ❌ Don't rollback via Prisma (restore from backup instead)
+- ❌ Don't rollback via Drizzle (restore from backup instead)
 
 ---
 
@@ -439,12 +451,19 @@ const cached = await redis.get('products:all');
 console.log('Cached data:', cached);
 ```
 
-### Future Testing (Recommended)
+### Testing Framework
 
-Add test frameworks:
+This project uses **Vitest** with **@testing-library/react** for unit testing:
 
 ```bash
-npm install -D jest @testing-library/react @testing-library/jest-dom
+npm run test           # Run tests (single run)
+npm run test:watch     # Run tests in watch mode
+npm run test:coverage  # Run tests with coverage report
+```
+
+For E2E tests:
+
+```bash
 npm install -D @playwright/test  # E2E tests
 ```
 
@@ -634,12 +653,12 @@ export type ReviewInput = z.infer<typeof ReviewSchema>;
 export const db = {
   reviews: {
     async create(data: ReviewInput) {
-      return await prisma.review.create({ data });
+      return await drizzleDb.insert(schema.reviews).values(data).returning();
     },
     async findAll() {
-      return await prisma.review.findMany({
-        include: { product: true, user: true },
-        orderBy: { createdAt: 'desc' },
+      return await drizzleDb.query.reviews.findMany({
+        with: { product: true, user: true },
+        orderBy: desc(schema.reviews.createdAt),
       });
     },
   },
@@ -827,7 +846,7 @@ Use clear, descriptive commits:
 # Good
 git commit -m "Add featured flag to products"
 git commit -m "Fix cart item quantity validation"
-git commit -m "Update Prisma to v7.4.0"
+git commit -m "Update Drizzle ORM dependency"
 
 # Bad
 git commit -m "update"
@@ -875,33 +894,34 @@ git commit -m "WIP"
 
 ```typescript
 // ✅ Good
-const products = await prisma.product.findMany({
-  select: { id: true, name: true, price: true },
+const products = await drizzleDb.query.products.findMany({
+  columns: { id: true, name: true, price: true },
 });
 
 // ❌ Bad - Fetches all fields
-const products = await prisma.product.findMany();
+const products = await drizzleDb.query.products.findMany();
 ```
 
 **Add indexes for frequent queries**
 
-```prisma
-model Product {
-  category String
-  price    Float
-  
-  @@index([category])
-  @@index([price])
-}
+```typescript
+// In lib/schema.ts
+export const products = pgTable("products", {
+  category: text("category").notNull(),
+  price: doublePrecision("price").notNull(),
+}, (table) => [
+  index("idx_products_category").on(table.category),
+  index("idx_products_price").on(table.price),
+]);
 ```
 
 **Use pagination**
 
 ```typescript
-const products = await prisma.product.findMany({
-  take: 20,
-  skip: page * 20,
-  orderBy: { createdAt: 'desc' },
+const products = await drizzleDb.query.products.findMany({
+  limit: 20,
+  offset: page * 20,
+  orderBy: desc(schema.products.createdAt),
 });
 ```
 
@@ -1042,10 +1062,9 @@ console.log('Request ID:', requestId);
 **Database query debugging**
 
 ```typescript
-// Log all Prisma queries
-const prisma = new PrismaClient({
-  log: ['query', 'info', 'warn', 'error'],
-});
+// Enable Drizzle query logging via Pino logger
+// Set LOG_LEVEL=debug in .env to see all database queries
+// Queries are logged via the structured logger in lib/logger.ts
 ```
 
 ---
@@ -1175,7 +1194,7 @@ export function ProductForm() {
 - `lib/logger.ts` - Logging utilities
 - `lib/validations.ts` - Zod schemas
 - `lib/api-middleware.ts` - API middleware
-- `prisma/schema.prisma` - Database schema
+- `lib/schema.ts` - Database schema (Drizzle)
 
 ### Key Imports
 

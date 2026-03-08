@@ -13,12 +13,19 @@ const config = [
   // Next.js core-web-vitals ruleset (includes React, React Hooks, accessibility)
   ...nextPlugin,
 
-  // Project-specific rule overrides
+  // General rule overrides (all files)
   {
     rules: {
       'no-console': 'error',
       'no-implicit-globals': 'error',
       'no-var': 'error',
+    },
+  },
+
+  // TypeScript-specific rule overrides (must be scoped to TS files where the plugin is registered)
+  {
+    files: ['**/*.ts', '**/*.tsx'],
+    rules: {
       '@typescript-eslint/no-unused-vars': [
         'error',
         {
@@ -34,6 +41,14 @@ const config = [
   // Allow console.* in startup/seed files that run before the logger is available
   {
     files: ['lib/env.ts', 'lib/seed.ts'],
+    rules: {
+      'no-console': 'off',
+    },
+  },
+
+  // Allow console.* in test files (e.g. muting React error boundaries)
+  {
+    files: ['__tests__/**'],
     rules: {
       'no-console': 'off',
     },
