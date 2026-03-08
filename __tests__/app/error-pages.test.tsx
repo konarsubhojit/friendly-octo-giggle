@@ -46,6 +46,11 @@ describe('GlobalError (app/error.tsx)', () => {
     fireEvent.click(screen.getByText('Try again'));
     expect(reset).toHaveBeenCalledOnce();
   });
+
+  it('displays fallback message when error.message is empty', () => {
+    render(<GlobalError error={createError('')} reset={vi.fn()} />);
+    expect(screen.getByText('An unexpected error occurred')).toBeInTheDocument();
+  });
 });
 
 describe('OrdersError (app/orders/error.tsx)', () => {
@@ -74,6 +79,16 @@ describe('OrdersError (app/orders/error.tsx)', () => {
   it('"Go home" link points to "/"', () => {
     render(<OrdersError error={createError('fail')} reset={vi.fn()} />);
     expect(screen.getByText('Go home')).toHaveAttribute('href', '/');
+  });
+
+  it('displays fallback message when error.message is empty', () => {
+    render(<OrdersError error={createError('')} reset={vi.fn()} />);
+    expect(screen.getByText('Failed to load your order information')).toBeInTheDocument();
+  });
+
+  it('does not display digest when absent', () => {
+    render(<OrdersError error={createError('fail')} reset={vi.fn()} />);
+    expect(screen.queryByText(/Error ID:/)).not.toBeInTheDocument();
   });
 });
 
@@ -104,6 +119,16 @@ describe('AdminError (app/admin/error.tsx)', () => {
     render(<AdminError error={createError('fail')} reset={vi.fn()} />);
     expect(screen.getByText('Admin home')).toHaveAttribute('href', '/admin');
   });
+
+  it('displays fallback message when error.message is empty', () => {
+    render(<AdminError error={createError('')} reset={vi.fn()} />);
+    expect(screen.getByText('An error occurred in the admin panel')).toBeInTheDocument();
+  });
+
+  it('does not display digest when absent', () => {
+    render(<AdminError error={createError('fail')} reset={vi.fn()} />);
+    expect(screen.queryByText(/Error ID:/)).not.toBeInTheDocument();
+  });
 });
 
 describe('CartError (app/cart/error.tsx)', () => {
@@ -132,6 +157,16 @@ describe('CartError (app/cart/error.tsx)', () => {
   it('"Continue shopping" link points to "/products"', () => {
     render(<CartError error={createError('fail')} reset={vi.fn()} />);
     expect(screen.getByText('Continue shopping')).toHaveAttribute('href', '/products');
+  });
+
+  it('displays fallback message when error.message is empty', () => {
+    render(<CartError error={createError('')} reset={vi.fn()} />);
+    expect(screen.getByText('Failed to load your shopping cart')).toBeInTheDocument();
+  });
+
+  it('does not display digest when absent', () => {
+    render(<CartError error={createError('fail')} reset={vi.fn()} />);
+    expect(screen.queryByText(/Error ID:/)).not.toBeInTheDocument();
   });
 });
 
