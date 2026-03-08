@@ -48,4 +48,26 @@ describe("CartIcon", () => {
     const { container } = renderCartIcon();
     expect(container.querySelector("svg")).toBeTruthy();
   });
+
+  it("shows badge when cart has items", () => {
+    const store = makeStore();
+    // Manually set cart state with items
+    store.dispatch({
+      type: "cart/fetchCart/fulfilled",
+      payload: {
+        id: "cart-1",
+        items: [
+          { id: "item-1", cartId: "cart-1", productId: "p1", quantity: 3, createdAt: "", updatedAt: "", product: { id: "p1", name: "P", description: "", price: 10, image: "", stock: 5, category: "C", deletedAt: null, createdAt: "", updatedAt: "" } },
+        ],
+        createdAt: "",
+        updatedAt: "",
+      },
+    });
+    render(
+      <Provider store={store}>
+        <CartIcon />
+      </Provider>,
+    );
+    expect(screen.getByText("3")).toBeTruthy();
+  });
 });

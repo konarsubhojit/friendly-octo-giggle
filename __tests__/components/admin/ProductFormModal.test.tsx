@@ -397,4 +397,46 @@ describe("ProductFormModal", () => {
       expect(onClose).toHaveBeenCalled();
     });
   });
+
+  it("handles upload fetch returning !res.ok (reads error JSON and throws)", async () => {
+    const toast = await import("react-hot-toast");
+    const logger = await import("@/lib/logger");
+    const onSuccess = vi.fn();
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        json: () => Promise.resolve({ error: "Upload rejected" }),
+      }),
+    );
+
+    const { container } = renderModal({ onSuccess });
+
+    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "P" } });
+    fireEvent.change(screen.getByLabelText("Description"), { target: { value: "D" } });
+    fireEvent.change(screen.getByLabelText("Category"), { target: { value: "C" } });
+    fireEvent.change(screen.getByLabelText("Price"), { target: { value: "10" } });
+    fireEvent.change(screen.getByLabelText("Stock"), { target: { value: "5" } });
+
+    const fileInput = screen.getByLabelText("Product Image") as HTMLInputElement;
+    const validFile = new File(["content"], "test.jpg", { type: "image/jpeg" });
+    Object.defineProperty(validFile, "size", { value: 100 * 1024 });
+    fireEvent.change(fileInput, { target: { files: [validFile] } });
+
+    const form = container.querySelector("form")!;
+    await act(async () => {
+      fireEvent.submit(form);
+    });
+
+    await waitFor(() => {
+      expect(logger.logError).toHaveBeenCalledWith(
+        expect.objectContaining({ context: "uploadImage" }),
+      );
+      expect(toast.default.error).toHaveBeenCalledWith(
+        "Something went wrong. Please try again.",
+      );
+      expect(onSuccess).not.toHaveBeenCalled();
+    });
+  });
 });

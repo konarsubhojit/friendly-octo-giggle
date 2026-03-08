@@ -249,4 +249,28 @@ describe("Header", () => {
     });
     expect(screen.queryByRole("menu")).toBeNull();
   });
+
+  it("closes menu when clicking Admin Dashboard link", async () => {
+    const session = {
+      user: {
+        name: "Admin",
+        email: "admin@example.com",
+        image: null,
+        role: "ADMIN",
+      },
+    };
+    useSession.mockReturnValue({ data: session, status: "authenticated" });
+    const Header = (await import("@/components/layout/Header")).default;
+    render(<Header />);
+
+    act(() => {
+      fireEvent.click(screen.getByLabelText("User menu"));
+    });
+    const menu = screen.getByRole("menu");
+    const adminLink = menu.querySelector("a[href='/admin']");
+    act(() => {
+      fireEvent.click(adminLink!);
+    });
+    expect(screen.queryByRole("menu")).toBeNull();
+  });
 });
