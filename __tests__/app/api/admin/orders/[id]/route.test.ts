@@ -163,7 +163,7 @@ describe("GET /api/admin/orders/[id]", () => {
 
   it("returns order on success", async () => {
     mockAuth.mockResolvedValue(adminSession as never);
-    mockGetCachedData.mockImplementation(async (_key, _ttl, fetcher) => {
+    mockGetCachedData.mockImplementation(async (_key, _ttl, _fetcher) => {
       return mockOrder;
     });
 
