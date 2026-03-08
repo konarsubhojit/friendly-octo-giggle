@@ -12,10 +12,12 @@ vi.mock("next/link", () => ({
   default: ({
     children,
     href,
+    onClick,
   }: {
     children: React.ReactNode;
     href: string;
-  }) => <a href={href}>{children}</a>,
+    onClick?: () => void;
+  }) => <a href={href} onClick={onClick}>{children}</a>,
 }));
 
 vi.mock("next/image", () => ({
@@ -171,5 +173,80 @@ describe("Header", () => {
     render(<Header />);
     expect(screen.getByTestId("cart-icon")).toBeTruthy();
     expect(screen.getByTestId("currency-selector")).toBeTruthy();
+  });
+
+  it("renders user profile image when session.user.image is provided", async () => {
+    const session = {
+      user: {
+        name: "Alice",
+        email: "alice@example.com",
+        image: "https://example.com/avatar.jpg",
+        role: "CUSTOMER",
+      },
+    };
+    useSession.mockReturnValue({ data: session, status: "authenticated" });
+    const Header = (await import("@/components/layout/Header")).default;
+    render(<Header />);
+    // Find the user menu button and check for presence of profile image
+    const menuButton = screen.getByLabelText("User menu");
+    const img = menuButton.querySelector("img");
+    expect(img).toBeTruthy();
+    expect(img?.getAttribute("src")).toBe("https://example.com/avatar.jpg");
+    // Initial letter avatar should not be present
+    expect(screen.queryByText("A")).toBeNull();
+  });
+
+  it("calls signOut and closes menu when Sign Out is clicked", async () => {
+    const session = {
+      user: {
+        name: "Alice",
+        email: "alice@example.com",
+        image: null,
+        role: "CUSTOMER",
+      },
+    };
+    useSession.mockReturnValue({ data: session, status: "authenticated" });
+    const nextAuth = await import("next-auth/react");
+    const signOutMock = vi.mocked(nextAuth.signOut);
+    const Header = (await import("@/components/layout/Header")).default;
+    render(<Header />);
+
+    act(() => {
+      fireEvent.click(screen.getByLabelText("User menu"));
+    });
+    expect(screen.getByRole("menu")).toBeTruthy();
+
+    act(() => {
+      fireEvent.click(screen.getByText("Sign Out"));
+    });
+    expect(signOutMock).toHaveBeenCalled();
+    expect(screen.queryByRole("menu")).toBeNull();
+  });
+
+  it("closes menu when clicking My Orders link in dropdown", async () => {
+    const session = {
+      user: {
+        name: "Alice",
+        email: "alice@example.com",
+        image: null,
+        role: "CUSTOMER",
+      },
+    };
+    useSession.mockReturnValue({ data: session, status: "authenticated" });
+    const Header = (await import("@/components/layout/Header")).default;
+    render(<Header />);
+
+    act(() => {
+      fireEvent.click(screen.getByLabelText("User menu"));
+    });
+    const menu = screen.getByRole("menu");
+    expect(menu).toBeTruthy();
+
+    // Find the My Orders link inside the dropdown menu
+    const myOrdersLink = menu.querySelector("a[href='/orders']");
+    act(() => {
+      fireEvent.click(myOrdersLink!);
+    });
+    expect(screen.queryByRole("menu")).toBeNull();
   });
 });

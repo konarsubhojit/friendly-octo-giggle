@@ -13,7 +13,13 @@ export default defineConfig({
       provider: "v8",
       reporter: ["text", "lcov"],
       include: ["lib/**", "contexts/**", "components/**"],
-      exclude: ["lib/db.ts", "lib/auth.ts", "lib/seed.ts", "lib/logger.ts"],
+      exclude: [
+        "lib/db.ts",
+        "lib/auth.ts",
+        "lib/seed.ts",
+        "lib/logger.ts",
+        "lib/schema.ts",
+      ],
     },
   },
 });
