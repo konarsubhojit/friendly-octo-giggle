@@ -244,8 +244,9 @@ describe("Header", () => {
 
     // Find the My Orders link inside the dropdown menu
     const myOrdersLink = menu.querySelector("a[href='/orders']");
+    expect(myOrdersLink).not.toBeNull();
     act(() => {
-      fireEvent.click(myOrdersLink!);
+      fireEvent.click(myOrdersLink as HTMLElement);
     });
     expect(screen.queryByRole("menu")).toBeNull();
   });
@@ -268,8 +269,9 @@ describe("Header", () => {
     });
     const menu = screen.getByRole("menu");
     const adminLink = menu.querySelector("a[href='/admin']");
+    expect(adminLink).not.toBeNull();
     act(() => {
-      fireEvent.click(adminLink!);
+      fireEvent.click(adminLink as HTMLElement);
     });
     expect(screen.queryByRole("menu")).toBeNull();
   });

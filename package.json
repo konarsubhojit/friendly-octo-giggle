@@ -7,7 +7,7 @@
     "dev": "next dev",
     "dev:https": "next dev --experimental-https",
     "build": "next build",
-    "start": "npm run dev:https",
+    "start": "next start",
     "lint": "eslint .",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",

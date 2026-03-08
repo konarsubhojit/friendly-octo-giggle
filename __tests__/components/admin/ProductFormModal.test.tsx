@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
 import React from "react";
 import ProductFormModal from "@/components/admin/ProductFormModal";
@@ -56,6 +56,10 @@ function renderModal(
 describe("ProductFormModal", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it("renders 'Add Product' heading for new product", () => {
@@ -189,9 +193,10 @@ describe("ProductFormModal", () => {
     const stockInput = screen.getByLabelText("Stock");
     fireEvent.change(stockInput, { target: { value: "5" } });
 
-    const form = container.querySelector("form")!;
-    await act(async () => {
-      fireEvent.submit(form);
+    const form = container.querySelector("form");
+    expect(form).not.toBeNull();
+    await act(() => {
+      fireEvent.submit(form as HTMLFormElement);
     });
     await waitFor(() => {
       expect(toast.default.error).toHaveBeenCalledWith(
@@ -220,9 +225,10 @@ describe("ProductFormModal", () => {
       editingProduct: mockProduct,
     });
 
-    const form = container.querySelector("form")!;
-    await act(async () => {
-      fireEvent.submit(form);
+    const form = container.querySelector("form");
+    expect(form).not.toBeNull();
+    await act(() => {
+      fireEvent.submit(form as HTMLFormElement);
     });
 
     await waitFor(() => {
@@ -241,9 +247,10 @@ describe("ProductFormModal", () => {
       }),
     );
     const { container } = renderModal({ editingProduct: mockProduct });
-    const form = container.querySelector("form")!;
-    await act(async () => {
-      fireEvent.submit(form);
+    const form = container.querySelector("form");
+    expect(form).not.toBeNull();
+    await act(() => {
+      fireEvent.submit(form as HTMLFormElement);
     });
     await waitFor(() => {
       expect(toast.default.error).toHaveBeenCalledWith(
@@ -288,9 +295,10 @@ describe("ProductFormModal", () => {
     Object.defineProperty(validFile, "size", { value: 100 * 1024 });
     fireEvent.change(fileInput, { target: { files: [validFile] } });
 
-    const form = container.querySelector("form")!;
-    await act(async () => {
-      fireEvent.submit(form);
+    const form = container.querySelector("form");
+    expect(form).not.toBeNull();
+    await act(() => {
+      fireEvent.submit(form as HTMLFormElement);
     });
 
     await waitFor(() => {
@@ -317,11 +325,12 @@ describe("ProductFormModal", () => {
     );
 
     const { container } = renderModal({ editingProduct: mockProduct });
-    const form = container.querySelector("form")!;
+    const form = container.querySelector("form");
+    expect(form).not.toBeNull();
 
     // Start submission but don't await it
     act(() => {
-      fireEvent.submit(form);
+      fireEvent.submit(form as HTMLFormElement);
     });
 
     // Button should now show "Saving..."
@@ -330,7 +339,7 @@ describe("ProductFormModal", () => {
     });
 
     // Cleanup: resolve the promise to avoid hanging
-    resolvePromise!({
+    resolvePromise({
       ok: true,
       json: () => Promise.resolve({ data: { product: mockProduct } }),
     });
@@ -386,9 +395,10 @@ describe("ProductFormModal", () => {
     Object.defineProperty(validFile, "size", { value: 100 * 1024 });
     fireEvent.change(fileInput, { target: { files: [validFile] } });
 
-    const form = container.querySelector("form")!;
-    await act(async () => {
-      fireEvent.submit(form);
+    const form = container.querySelector("form");
+    expect(form).not.toBeNull();
+    await act(() => {
+      fireEvent.submit(form as HTMLFormElement);
     });
 
     await waitFor(() => {
@@ -424,9 +434,10 @@ describe("ProductFormModal", () => {
     Object.defineProperty(validFile, "size", { value: 100 * 1024 });
     fireEvent.change(fileInput, { target: { files: [validFile] } });
 
-    const form = container.querySelector("form")!;
-    await act(async () => {
-      fireEvent.submit(form);
+    const form = container.querySelector("form");
+    expect(form).not.toBeNull();
+    await act(() => {
+      fireEvent.submit(form as HTMLFormElement);
     });
 
     await waitFor(() => {
