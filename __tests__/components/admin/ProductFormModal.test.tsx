@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
 import React from "react";
 import ProductFormModal from "@/components/admin/ProductFormModal";
@@ -19,6 +19,10 @@ vi.mock("next/image", () => ({
     // eslint-disable-next-line @next/next/no-img-element
     <img alt={alt} src={src} />
   ),
+}));
+
+vi.mock("@/lib/logger", () => ({
+  logError: vi.fn(),
 }));
 
 const mockProduct: Product = {
@@ -52,6 +56,10 @@ function renderModal(
 describe("ProductFormModal", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it("renders 'Add Product' heading for new product", () => {
@@ -185,9 +193,10 @@ describe("ProductFormModal", () => {
     const stockInput = screen.getByLabelText("Stock");
     fireEvent.change(stockInput, { target: { value: "5" } });
 
-    const form = container.querySelector("form")!;
-    await act(async () => {
-      fireEvent.submit(form);
+    const form = container.querySelector("form");
+    expect(form).not.toBeNull();
+    await act(() => {
+      fireEvent.submit(form as HTMLFormElement);
     });
     await waitFor(() => {
       expect(toast.default.error).toHaveBeenCalledWith(
@@ -216,9 +225,10 @@ describe("ProductFormModal", () => {
       editingProduct: mockProduct,
     });
 
-    const form = container.querySelector("form")!;
-    await act(async () => {
-      fireEvent.submit(form);
+    const form = container.querySelector("form");
+    expect(form).not.toBeNull();
+    await act(() => {
+      fireEvent.submit(form as HTMLFormElement);
     });
 
     await waitFor(() => {
@@ -237,14 +247,207 @@ describe("ProductFormModal", () => {
       }),
     );
     const { container } = renderModal({ editingProduct: mockProduct });
-    const form = container.querySelector("form")!;
-    await act(async () => {
-      fireEvent.submit(form);
+    const form = container.querySelector("form");
+    expect(form).not.toBeNull();
+    await act(() => {
+      fireEvent.submit(form as HTMLFormElement);
     });
     await waitFor(() => {
       expect(toast.default.error).toHaveBeenCalledWith(
         "Something went wrong. Please try again.",
       );
+    });
+  });
+
+  it("shows error toast and stops submit when file upload fails", async () => {
+    const toast = await import("react-hot-toast");
+    const logger = await import("@/lib/logger");
+    const onSuccess = vi.fn();
+
+    // Mock fetch to fail (uploadImage catch block)
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockRejectedValue(new Error("Network error")),
+    );
+
+    const { container } = renderModal({ onSuccess });
+
+    // Fill all required fields
+    fireEvent.change(screen.getByLabelText("Name"), {
+      target: { value: "New Product" },
+    });
+    fireEvent.change(screen.getByLabelText("Description"), {
+      target: { value: "Description" },
+    });
+    fireEvent.change(screen.getByLabelText("Category"), {
+      target: { value: "Flowers" },
+    });
+    fireEvent.change(screen.getByLabelText("Price"), {
+      target: { value: "50" },
+    });
+    fireEvent.change(screen.getByLabelText("Stock"), {
+      target: { value: "10" },
+    });
+
+    // Select a valid image file
+    const fileInput = screen.getByLabelText("Product Image") as HTMLInputElement;
+    const validFile = new File(["content"], "test.jpg", { type: "image/jpeg" });
+    Object.defineProperty(validFile, "size", { value: 100 * 1024 });
+    fireEvent.change(fileInput, { target: { files: [validFile] } });
+
+    const form = container.querySelector("form");
+    expect(form).not.toBeNull();
+    await act(() => {
+      fireEvent.submit(form as HTMLFormElement);
+    });
+
+    await waitFor(() => {
+      expect(logger.logError).toHaveBeenCalledWith(
+        expect.objectContaining({ context: "uploadImage" }),
+      );
+      expect(toast.default.error).toHaveBeenCalledWith(
+        "Something went wrong. Please try again.",
+      );
+      expect(onSuccess).not.toHaveBeenCalled();
+    });
+  });
+
+  it("shows 'Saving...' button text during submission", async () => {
+    // Create a promise that never resolves to keep the component in saving state
+    let resolvePromise: (value: unknown) => void;
+    const pendingPromise = new Promise((resolve) => {
+      resolvePromise = resolve;
+    });
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockReturnValue(pendingPromise),
+    );
+
+    const { container } = renderModal({ editingProduct: mockProduct });
+    const form = container.querySelector("form");
+    expect(form).not.toBeNull();
+
+    // Start submission but don't await it
+    act(() => {
+      fireEvent.submit(form as HTMLFormElement);
+    });
+
+    // Button should now show "Saving..."
+    await waitFor(() => {
+      expect(screen.getByText("Saving...")).toBeTruthy();
+    });
+
+    // Cleanup: resolve the promise to avoid hanging
+    resolvePromise({
+      ok: true,
+      json: () => Promise.resolve({ data: { product: mockProduct } }),
+    });
+  });
+
+  it("successfully creates product with file upload", async () => {
+    const onSuccess = vi.fn();
+    const onClose = vi.fn();
+    const savedProduct = { ...mockProduct, id: "new-prod", image: "https://cdn.example.com/uploaded.jpg" };
+
+    let callCount = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockImplementation((url: string) => {
+        callCount++;
+        if (url === "/api/upload") {
+          // First call: upload
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ data: { url: "https://cdn.example.com/uploaded.jpg" } }),
+          });
+        }
+        // Second call: create product
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ data: { product: savedProduct } }),
+        });
+      }),
+    );
+
+    const { container } = renderModal({ onSuccess, onClose });
+
+    // Fill all required fields
+    fireEvent.change(screen.getByLabelText("Name"), {
+      target: { value: "New Product" },
+    });
+    fireEvent.change(screen.getByLabelText("Description"), {
+      target: { value: "Description" },
+    });
+    fireEvent.change(screen.getByLabelText("Category"), {
+      target: { value: "Flowers" },
+    });
+    fireEvent.change(screen.getByLabelText("Price"), {
+      target: { value: "50" },
+    });
+    fireEvent.change(screen.getByLabelText("Stock"), {
+      target: { value: "10" },
+    });
+
+    // Select a valid image file
+    const fileInput = screen.getByLabelText("Product Image") as HTMLInputElement;
+    const validFile = new File(["content"], "test.jpg", { type: "image/jpeg" });
+    Object.defineProperty(validFile, "size", { value: 100 * 1024 });
+    fireEvent.change(fileInput, { target: { files: [validFile] } });
+
+    const form = container.querySelector("form");
+    expect(form).not.toBeNull();
+    await act(() => {
+      fireEvent.submit(form as HTMLFormElement);
+    });
+
+    await waitFor(() => {
+      expect(callCount).toBe(2); // Upload + Create
+      expect(onSuccess).toHaveBeenCalled();
+      expect(onClose).toHaveBeenCalled();
+    });
+  });
+
+  it("handles upload fetch returning !res.ok (reads error JSON and throws)", async () => {
+    const toast = await import("react-hot-toast");
+    const logger = await import("@/lib/logger");
+    const onSuccess = vi.fn();
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        json: () => Promise.resolve({ error: "Upload rejected" }),
+      }),
+    );
+
+    const { container } = renderModal({ onSuccess });
+
+    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "P" } });
+    fireEvent.change(screen.getByLabelText("Description"), { target: { value: "D" } });
+    fireEvent.change(screen.getByLabelText("Category"), { target: { value: "C" } });
+    fireEvent.change(screen.getByLabelText("Price"), { target: { value: "10" } });
+    fireEvent.change(screen.getByLabelText("Stock"), { target: { value: "5" } });
+
+    const fileInput = screen.getByLabelText("Product Image") as HTMLInputElement;
+    const validFile = new File(["content"], "test.jpg", { type: "image/jpeg" });
+    Object.defineProperty(validFile, "size", { value: 100 * 1024 });
+    fireEvent.change(fileInput, { target: { files: [validFile] } });
+
+    const form = container.querySelector("form");
+    expect(form).not.toBeNull();
+    await act(() => {
+      fireEvent.submit(form as HTMLFormElement);
+    });
+
+    await waitFor(() => {
+      expect(logger.logError).toHaveBeenCalledWith(
+        expect.objectContaining({ context: "uploadImage" }),
+      );
+      expect(toast.default.error).toHaveBeenCalledWith(
+        "Something went wrong. Please try again.",
+      );
+      expect(onSuccess).not.toHaveBeenCalled();
     });
   });
 });

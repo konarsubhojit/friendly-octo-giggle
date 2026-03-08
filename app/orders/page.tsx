@@ -145,7 +145,7 @@ export default function OrdersPage() {
 
                     <div className="flex-shrink-0 text-right">
                       <p className="text-lg font-bold text-gray-900">{formatPrice(order.totalAmount)}</p>
-                      <p className="text-xs text-gray-400">Order #{order.id.slice(0, 8)}</p>
+                      <p className="text-xs text-gray-400">Order #{order.id}</p>
                     </div>
 
                     <svg className="w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">

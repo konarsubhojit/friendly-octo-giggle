@@ -79,7 +79,7 @@ function AdminOrderCard({
         <div>
           <h3 className="font-bold text-lg">
             {hasTracking && <span role="img" aria-label="Tracking info available" title="Tracking info available" className="mr-1">📦</span>}
-            Order #{order.id.slice(0, 8).toUpperCase()}
+            Order #{order.id.toUpperCase()}
           </h3>
           <p className="text-sm text-gray-600">
             {new Date(order.createdAt).toLocaleString('en-US', {
