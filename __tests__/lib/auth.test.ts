@@ -7,17 +7,20 @@ const mockNextAuthReturn = vi.hoisted(() => ({
   signOut: vi.fn(),
   auth: vi.fn(),
 }));
-let capturedConfig: any;
+let capturedConfig: Record<string, unknown>;
 
 vi.mock("next-auth", () => ({
-  default: vi.fn((config: any) => {
+  default: vi.fn((config: Record<string, unknown>) => {
     capturedConfig = config;
     return mockNextAuthReturn;
   }),
 }));
 
 vi.mock("next-auth/providers/google", () => ({
-  default: vi.fn((opts: any) => ({ id: "google", ...opts })),
+  default: vi.fn((opts: Record<string, unknown>) => ({
+    id: "google",
+    ...opts,
+  })),
 }));
 
 vi.mock("@auth/drizzle-adapter", () => ({
