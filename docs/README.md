@@ -15,7 +15,7 @@ Welcome to the comprehensive documentation for the e-commerce platform built wit
 
 ### Development
 - **[Development Guide](./development.md)** - Development workflows, best practices, and coding standards
-- **[Database Migrations](./development.md#database-migrations)** - Managing schema changes with Prisma
+- **[Database Migrations](./development.md#database-migrations)** - Managing schema changes with Drizzle
 - **[Testing](./development.md#testing)** - Testing strategies and examples
 - **[Logging](./development.md#logging)** - Server-side logging and monitoring
 
@@ -69,7 +69,7 @@ This is a highly scalable e-commerce platform designed for serverless deployment
 - **Serverless-First**: Optimized for platforms like Vercel, AWS Lambda
 - **Performance**: Redis caching with stampede prevention
 - **Type Safety**: Full TypeScript with Zod validation
-- **Modern Stack**: Next.js 16, Prisma 7, Tailwind CSS v4
+- **Modern Stack**: Next.js 16, Drizzle ORM, Tailwind CSS v4
 - **Scalable**: Connection pooling, edge-ready architecture
 - **Observable**: Structured logging with Pino
 
@@ -79,7 +79,7 @@ This is a highly scalable e-commerce platform designed for serverless deployment
 |----------|-----------|
 | **Framework** | Next.js 16 with App Router |
 | **Language** | TypeScript (strict mode) |
-| **Database** | PostgreSQL with Prisma ORM v7 |
+| **Database** | PostgreSQL with Drizzle ORM |
 | **Cache** | Redis (ioredis) |
 | **Authentication** | NextAuth.js v5 |
 | **Validation** | Zod |
@@ -91,7 +91,7 @@ This is a highly scalable e-commerce platform designed for serverless deployment
 
 - **Node.js**: 18.0.0 or higher
 - **PostgreSQL**: 12.0 or higher
-- **Redis**: 6.0 or higher (Upstash recommended for serverless)
+- **Redis**: 6.0 or higher (optional for local dev; Upstash recommended for production)
 
 ## 📖 Documentation Updates
 

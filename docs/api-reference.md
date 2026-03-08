@@ -803,13 +803,13 @@ All endpoints use structured logging:
 - Request metadata: Path, user, timestamp
 
 ### Database Transactions
-Critical operations use Prisma transactions:
+Critical operations use Drizzle transactions:
 - Order creation with stock updates
 - Concurrent cart modifications
 - Admin bulk operations
 
 ### Security
-- SQL injection: Protected by Prisma ORM
+- SQL injection: Protected by Drizzle ORM
 - XSS: No HTML rendering in API responses
 - CSRF: Session cookies use SameSite=lax
 - File uploads: Type and size validation

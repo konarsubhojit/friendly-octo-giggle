@@ -207,28 +207,26 @@ Error: relation "Product" already exists
 
 1. **Reset database (development only):**
    ```bash
-   npx prisma migrate reset
-   npx prisma db push
+   npx drizzle-kit drop
+   npm run db:migrate
    npm run db:seed
    ```
 
-2. **Check migration status:**
+2. **Apply pending migrations:**
    ```bash
-   npx prisma migrate status
+   npm run db:migrate
    ```
 
 3. **Resolve migration conflicts:**
    ```bash
-   # Mark migrations as applied
-   npx prisma migrate resolve --applied "migration_name"
-   
-   # Or rollback
-   npx prisma migrate resolve --rolled-back "migration_name"
+   # Review and manually fix migration SQL in drizzle/ directory
+   # Then re-apply
+   npm run db:migrate
    ```
 
 4. **Production migration:**
    ```bash
-   npx prisma migrate deploy
+   npx drizzle-kit migrate
    ```
 
 ### "Too Many Connections" Error
@@ -556,8 +554,8 @@ TS2339: Property does not exist
 
 1. **Check type definitions:**
    ```bash
-   # Regenerate Prisma types
-   npx prisma generate
+   # Regenerate Drizzle types by running migration generate
+   npm run db:generate
    ```
 
 2. **Clear TypeScript cache:**
@@ -779,15 +777,17 @@ Database operation took too long
    ```
 
 2. **Add database indexes:**
-   ```prisma
-   model Product {
-     id    String @id
-     name  String
-     price Float
-     
-     @@index([name])
-     @@index([price])
-   }
+   ```typescript
+   // In lib/schema.ts - add indexes to pgTable
+   export const products = pgTable("products", {
+     id: uuid("id").defaultRandom().primaryKey(),
+     name: text("name").notNull(),
+     category: text("category").notNull(),
+     price: doublePrecision("price").notNull(),
+   }, (table) => [
+     index("idx_products_category").on(table.category),
+     index("idx_products_price").on(table.price),
+   ]);
    ```
 
 3. **Use query optimization:**
@@ -828,8 +828,8 @@ JavaScript heap out of memory
 
 2. **Check for memory leaks:**
    ```typescript
-   // Close database connections
-   await prisma.$disconnect();
+   // Close database connections when needed
+   // (Drizzle uses connection pooling via @neondatabase/serverless)
    
    // Clear large arrays
    largeArray.length = 0;
@@ -943,13 +943,11 @@ Connection pool exhausted
    - Supabase: Transaction mode
    - PgBouncer: Self-hosted
 
-3. **Prisma acceleration:**
-   ```bash
-   # Add to schema.prisma
-   generator client {
-     provider = "prisma-client-js"
-     previewFeatures = ["driverAdapters"]
-   }
+3. **Connection optimization:**
+   ```typescript
+   // Drizzle with @neondatabase/serverless already handles
+   // connection pooling. Use the Neon pooled connection string
+   // for optimal serverless performance.
    ```
 
 ### Cold Start Issues
@@ -1080,7 +1078,7 @@ Committed secrets to Git repository.
 
 ### SQL Injection Prevention
 
-**Already protected** by Prisma ORM:
+**Already protected** by Drizzle ORM:
 ```typescript
 // ✅ Safe: Parameterized queries
 await db.products.findMany({
@@ -1137,9 +1135,9 @@ npm run build               # Build for production
 npm run start               # Start production server
 
 # Database
-npx prisma generate         # Generate Prisma client
-npx prisma migrate dev      # Run migrations
-npx prisma db push          # Push schema changes
+npm run db:generate         # Generate Drizzle migrations
+npm run db:migrate          # Apply migrations
+npx drizzle-kit push        # Push schema changes directly
 npm run db:seed             # Seed database
 
 # Troubleshooting
