@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach, Mock } from "vitest";
 import { NextRequest } from "next/server";
 
-// Valid UUIDs for testing
-const VALID_PRODUCT_ID = "11111111-1111-1111-1111-111111111111";
-const VALID_CART_ID = "22222222-2222-2222-2222-222222222222";
-const VALID_ITEM_ID = "33333333-3333-3333-3333-333333333333";
+// Valid Base62 short IDs for testing (7-char alphanumeric)
+const VALID_PRODUCT_ID = "prod001";
+const VALID_CART_ID = "cart001";
+const VALID_ITEM_ID = "item001";
 
 // Mock dependencies before importing the route
 vi.mock("@/lib/db", () => ({
@@ -437,7 +437,7 @@ describe("Cart API Route", () => {
   });
 
   describe("POST /api/cart - additional edge cases", () => {
-    const VALID_VARIATION_ID = "44444444-4444-4444-4444-444444444444";
+    const VALID_VARIATION_ID = "var0001";
 
     it("returns 404 when variation not found", async () => {
       (auth as Mock).mockResolvedValue({ user: { id: "user123" } });
@@ -447,7 +447,7 @@ describe("Cart API Route", () => {
         variations: [{ id: VALID_VARIATION_ID, stock: 5 }],
       });
 
-      const otherVariationId = "55555555-5555-5555-5555-555555555555";
+      const otherVariationId = "var0002";
       const request = new NextRequest("http://localhost/api/cart", {
         method: "POST",
         body: JSON.stringify({
