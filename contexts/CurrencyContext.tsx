@@ -8,21 +8,21 @@ interface CurrencyConfig {
   code: CurrencyCode;
   symbol: string;
   locale: string;
-  rate: number; // conversion rate from USD (base)
+  rate: number; // conversion rate from INR (base); 1 INR = rate units of this currency
 }
 
 export const CURRENCIES: Record<CurrencyCode, CurrencyConfig> = {
-  INR: { code: 'INR', symbol: '₹', locale: 'en-IN', rate: 83.5 },
-  USD: { code: 'USD', symbol: '$', locale: 'en-US', rate: 1 },
-  EUR: { code: 'EUR', symbol: '€', locale: 'de-DE', rate: 0.92 },
-  GBP: { code: 'GBP', symbol: '£', locale: 'en-GB', rate: 0.79 },
+  INR: { code: 'INR', symbol: '₹', locale: 'en-IN', rate: 1 },
+  USD: { code: 'USD', symbol: '$', locale: 'en-US', rate: 1 / 83.5 },
+  EUR: { code: 'EUR', symbol: '€', locale: 'de-DE', rate: 0.92 / 83.5 },
+  GBP: { code: 'GBP', symbol: '£', locale: 'en-GB', rate: 0.79 / 83.5 },
 } as const;
 
 interface CurrencyContextValue {
   currency: CurrencyCode;
   setCurrency: (code: CurrencyCode) => void;
-  formatPrice: (priceInUSD: number) => string;
-  convertPrice: (priceInUSD: number) => number;
+  formatPrice: (priceInINR: number) => string;
+  convertPrice: (priceInINR: number) => number;
   currencySymbol: string;
   availableCurrencies: CurrencyCode[];
 }
@@ -35,15 +35,15 @@ export function CurrencyProvider({ children }: Readonly<{ children: ReactNode }>
   const config = CURRENCIES[currency];
 
   const convertPrice = useCallback(
-    (priceInUSD: number): number => {
-      return priceInUSD * config.rate;
+    (priceInINR: number): number => {
+      return priceInINR * config.rate;
     },
     [config.rate]
   );
 
   const formatPrice = useCallback(
-    (priceInUSD: number): string => {
-      const converted = priceInUSD * config.rate;
+    (priceInINR: number): string => {
+      const converted = priceInINR * config.rate;
       return new Intl.NumberFormat(config.locale, {
         style: 'currency',
         currency: config.code,

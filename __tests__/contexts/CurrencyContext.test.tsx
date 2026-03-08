@@ -65,7 +65,8 @@ describe("CurrencyProvider", () => {
       </CurrencyProvider>,
     );
     const formatted = screen.getByTestId("formatted").textContent ?? "";
-    expect(formatted).toContain("835");
+    // With INR as the base currency, formatPrice(10) should format 10 INR
+    expect(formatted).toContain("10");
   });
 
   it("updates currency when setCurrency is called", () => {
@@ -150,12 +151,12 @@ describe("CURRENCIES config", () => {
     expect(CURRENCIES.INR).toMatchObject({
       code: "INR",
       symbol: "₹",
-      rate: 83.5,
+      rate: 1,
     });
   });
 
-  it("has USD rate of 1 (base currency)", () => {
-    expect(CURRENCIES.USD.rate).toBe(1);
+  it("has USD rate less than 1 (INR is base currency)", () => {
+    expect(CURRENCIES.USD.rate).toBeCloseTo(1 / 83.5, 6);
   });
 
   it("has all four currencies", () => {

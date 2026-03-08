@@ -29,7 +29,7 @@ const mockProduct: Product = {
   id: "prod-1",
   name: "Test Product",
   description: "A nice product",
-  price: 1, // $1 USD base
+  price: 500, // ₹500 INR (base currency)
   image: "https://example.com/image.jpg",
   stock: 10,
   category: "Flowers",

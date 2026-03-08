@@ -27,8 +27,8 @@ const DEFAULT_PRICE_CURRENCY: CurrencyCode = 'INR';
 
 /** Convert an amount from one currency to another using the rates from CURRENCIES. */
 function convertCurrency(amount: number, from: CurrencyCode, to: CurrencyCode): number {
-  const amountInUSD = amount / CURRENCIES[from].rate;
-  return Number((amountInUSD * CURRENCIES[to].rate).toFixed(2));
+  const amountInBase = amount / CURRENCIES[from].rate;
+  return Number((amountInBase * CURRENCIES[to].rate).toFixed(2));
 }
 
 export default function ProductFormModal({
@@ -43,7 +43,7 @@ export default function ProductFormModal({
       ? {
           name: editingProduct.name,
           description: editingProduct.description,
-          price: convertCurrency(editingProduct.price, 'USD', DEFAULT_PRICE_CURRENCY),
+          price: convertCurrency(editingProduct.price, 'INR', DEFAULT_PRICE_CURRENCY),
           stock: editingProduct.stock,
           category: editingProduct.category,
           image: editingProduct.image,
@@ -155,7 +155,7 @@ export default function ProductFormModal({
 
         const productData = {
           ...formData,
-          price: convertCurrency(formData.price, priceCurrency, 'USD'),
+          price: convertCurrency(formData.price, priceCurrency, 'INR'),
           image: imageUrl,
         };
 
