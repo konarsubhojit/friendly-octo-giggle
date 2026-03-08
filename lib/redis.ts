@@ -21,14 +21,14 @@ export function isRedisAvailable(): boolean {
  */
 function parseRedisUrl(redisUrl: string): RedisOptions {
   const parsedUrl = new URL(redisUrl);
+  const dbStr = parsedUrl.pathname.slice(1);
+  const dbNum = dbStr ? Number.parseInt(dbStr, 10) : 0;
   return {
     host: parsedUrl.hostname,
     port: Number.parseInt(parsedUrl.port || "6379", 10),
     password: parsedUrl.password || undefined,
     username: parsedUrl.username || undefined,
-    db: parsedUrl.pathname
-      ? Number.parseInt(parsedUrl.pathname.slice(1), 10)
-      : 0,
+    db: Number.isNaN(dbNum) ? 0 : dbNum,
     tls: parsedUrl.protocol === "rediss:" ? {} : undefined,
     maxRetriesPerRequest: 3,
     enableReadyCheck: false,

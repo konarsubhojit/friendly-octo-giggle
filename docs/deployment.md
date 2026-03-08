@@ -265,7 +265,7 @@ curl -H "Authorization: Bearer YOUR_TOKEN" \
 4. **Use environment-specific secrets**
 5. **Enable rate limiting** (Vercel/Cloudflare built-in, or use middleware)
 6. **Monitor for suspicious activity**
-7. **Set `NEXTAUTH_URL` and `NEXTAUTH_URL_INTERNAL`** to your production domain with `https://`
+7. **Set `NEXTAUTH_URL`** to your production domain with `https://`
 8. **Security headers are configured automatically** (CSP, HSTS, Referrer-Policy, Permissions-Policy) via `next.config.ts`
 
 ## Troubleshooting

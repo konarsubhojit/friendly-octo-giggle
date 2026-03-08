@@ -34,15 +34,12 @@ DATABASE_URL=postgresql://user:password@localhost:5432/ecommerce
 REDIS_URL=rediss://default:password@host:6379   # Optional in local/dev - app runs without Redis
 NEXTAUTH_SECRET=your-secret-here
 NEXTAUTH_URL=http://localhost:3000
-NEXTAUTH_URL_INTERNAL=http://localhost:3000      # Optional - used for server-to-server auth calls
 GOOGLE_CLIENT_ID=your-google-client-id
 GOOGLE_CLIENT_SECRET=your-google-client-secret
 LOG_LEVEL=debug  # development only - high log volume, impacts performance
 ```
 
 > **Note**: `REDIS_URL` is optional for local development. When absent, the app skips caching and fetches data directly from the database. For production, always configure Redis for optimal performance.
-
-> **Note**: `NEXTAUTH_URL_INTERNAL` can be set to improve performance when the auth server communicates internally (e.g., within Docker or behind a reverse proxy). It defaults to `NEXTAUTH_URL` when not set.
 
 > **Note**: `LOG_LEVEL=debug` logs all cache hits, database queries, and detailed operations. This is useful for development debugging but creates excessive log volume and may impact performance in production. Always use `info` or `warn` level in production.
 

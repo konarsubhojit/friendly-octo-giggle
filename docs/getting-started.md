@@ -160,11 +160,11 @@ npx drizzle-kit studio   # Open database GUI
 ### Migrations
 
 ```bash
-# Create a new migration
-npm run db:migrate -- --name add_feature_name
+# Generate a new migration after editing lib/schema.ts
+npm run db:generate
 
 # Apply pending migrations
-npx drizzle-kit migrate
+npm run db:migrate
 
 # Reset database (WARNING: deletes all data)
 npx drizzle-kit drop

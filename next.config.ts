@@ -1,5 +1,7 @@
 import type { NextConfig } from "next";
 
+const isDev = process.env.NODE_ENV !== "production";
+
 const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
@@ -8,6 +10,7 @@ const nextConfig: NextConfig = {
         hostname: "images.unsplash.com",
       },
       {
+        // ** matches multi-level subdomains in Next.js remotePatterns
         protocol: "https",
         hostname: "**.public.blob.vercel-storage.com",
       },
@@ -30,8 +33,10 @@ const nextConfig: NextConfig = {
             key: "Content-Security-Policy",
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com",
+              // unsafe-eval only in dev (React dev tools / HMR); stripped in production
+              `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://va.vercel-scripts.com`,
               "style-src 'self' 'unsafe-inline'",
+              // CSP * already matches multi-level subdomains (unlike Next.js remotePatterns)
               "img-src 'self' data: blob: https://images.unsplash.com https://*.public.blob.vercel-storage.com https://lh3.googleusercontent.com",
               "font-src 'self'",
               "connect-src 'self' https://va.vercel-scripts.com https://accounts.google.com",
