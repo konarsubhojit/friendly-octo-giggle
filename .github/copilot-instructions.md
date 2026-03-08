@@ -6,14 +6,20 @@ This is a highly scalable e-commerce website built with Next.js 16, TypeScript, 
 
 ## Technology Stack
 
-- **Framework**: Next.js 16 with App Router (TypeScript)
-- **Database**: PostgreSQL with Drizzle ORM
-- **State Management**: Redux Toolkit (cart, orders, admin slices)
+- **Framework**: Next.js 16.1.6 with App Router (TypeScript 5.9)
+- **React**: 19.2.4
+- **Database**: PostgreSQL (Neon Serverless) with Drizzle ORM 0.45
+- **State Management**: Redux Toolkit 2.11 (cart, orders, admin slices)
 - **Currency**: CurrencyContext with INR default, `useCurrency()` hook
-- **Cache**: Redis (ioredis) with stampede prevention
-- **Authentication**: NextAuth.js v5 with Google OAuth
-- **Styling**: Tailwind CSS v4
-- **Validation**: Zod for runtime type checking
+- **Cache**: Redis (ioredis 5.9) with stampede prevention
+- **Authentication**: NextAuth.js v5 (beta.30) with Google OAuth, DrizzleAdapter
+- **Styling**: Tailwind CSS v4.1
+- **Validation**: Zod 4.3 for runtime type checking
+- **IDs**: Base62 short IDs (7-char alphanumeric) via `lib/short-id.ts` for products, orders, carts, and related entities. Uses `varchar(7)` in DB schema.
+- **Logging**: Pino (structured JSON in production, pretty-print in dev)
+- **Testing**: Vitest 4.0 with jsdom + React Testing Library 16.3 + @testing-library/jest-dom
+- **Image Storage**: Vercel Blob
+- **Analytics**: Vercel Analytics
 
 ## Code Style Guidelines
 
@@ -173,34 +179,61 @@ export default async function AdminPage() {
 
 ```
 app/
-  ├── api/              # API routes
-  ├── auth/             # Authentication pages
-  ├── admin/            # Admin panel
-  ├── products/         # Product pages
-  └── page.tsx          # Home page
+  ├── api/
+  │   ├── admin/
+  │   │   ├── orders/route.ts, [id]/route.ts
+  │   │   ├── products/route.ts, [id]/route.ts
+  │   │   ├── users/route.ts, [id]/route.ts
+  │   │   └── sales/route.ts
+  │   ├── auth/[...nextauth]/route.ts
+  │   ├── cart/route.ts, items/[id]/route.ts
+  │   ├── orders/route.ts, [id]/route.ts
+  │   ├── products/route.ts, [id]/route.ts, trending/route.ts
+  │   ├── upload/route.ts
+  │   └── health/route.ts
+  ├── auth/              # Sign-in and auth error pages
+  ├── admin/             # Admin panel (dashboard, products, orders, users)
+  ├── products/          # Product listing and detail pages
+  ├── orders/            # Order listing and detail pages
+  ├── cart/              # Shopping cart
+  ├── about/, blog/, careers/, contact/, help/, press/, returns/, shipping/
+  ├── error.tsx          # Global error boundary
+  ├── loading.tsx        # Global loading skeleton
+  ├── layout.tsx         # Root layout (providers: Redux, Currency, Session, Toast, Analytics)
+  └── page.tsx           # Home page
 lib/
-  ├── db.ts             # Drizzle client
-  ├── schema.ts         # Drizzle schema
-  ├── redis.ts          # Redis utilities
-  ├── auth.ts           # NextAuth config
+  ├── db.ts             # Drizzle client (Neon Serverless)
+  ├── schema.ts         # Drizzle schema (all tables)
+  ├── short-id.ts       # Base62 7-char ID generator
+  ├── redis.ts          # Redis utilities (getCachedData, stampede prevention)
+  ├── cache.ts          # Cache key patterns and TTL constants
+  ├── auth.ts           # NextAuth v5 config (Google OAuth, DrizzleAdapter)
   ├── types.ts          # Type definitions
   ├── validations.ts    # Zod schemas
-  ├── api-utils.ts      # API helpers
+  ├── api-utils.ts      # API helpers (apiSuccess, apiError, handleApiError)
+  ├── api-middleware.ts  # withApiLogging wrapper (requestId, timer, user context)
+  ├── logger.ts         # Pino structured logging (createLogger, logApiRequest, Timer)
+  ├── env.ts            # Environment variable validation
   ├── store.ts          # Redux store (cart, orders, admin)
-  ├── hooks.ts          # Custom React hooks
+  ├── hooks.ts          # Custom React hooks (useLocalStorage, etc.)
+  ├── serializers.ts    # Data serialization helpers
+  ├── upload-constants.ts # Upload config constants
+  ├── seed.ts           # Database seeder
   └── features/
-      ├── cart/cartSlice.ts     # Cart state
-      ├── orders/ordersSlice.ts # Orders state
-      └── admin/adminSlice.ts   # Admin state (products, orders, users)
+      ├── cart/cartSlice.ts     # Cart state + async thunks
+      ├── orders/ordersSlice.ts # Orders state + async thunks
+      └── admin/adminSlice.ts   # Admin state + async thunks (products, orders, users)
 contexts/
-  └── CurrencyContext.tsx # Currency context (INR default)
+  └── CurrencyContext.tsx # Currency context (INR default, supports USD/EUR/GBP)
 components/
-  ├── layout/           # Layout components (Header, Footer, CartIcon)
-  ├── ui/               # UI components (CurrencySelector, NewsletterForm, ErrorBoundary)
+  ├── layout/           # Header, Footer, CartIcon
+  ├── ui/               # AuthComponents, CurrencySelector, NewsletterForm, ErrorBoundary
+  ├── admin/            # ProductFormModal, DeleteConfirmModal
   ├── providers/        # StoreProvider, SessionProvider
-  └── sections/         # Page sections (Hero, ProductGrid)
+  ├── sections/         # Hero, ProductGrid, TrendingProducts
+  └── skeletons/        # HeaderSkeleton, HeroSkeleton, ProductCardSkeleton
 drizzle/
-  └── *.sql             # Migration files
+  └── 0000-0003.sql     # 4 migration files
 ```
 
 ## Common Patterns
@@ -261,7 +294,7 @@ drizzle/
 
 ## Performance Optimizations
 
-This project implements several Next.js 15+ performance optimizations:
+This project implements several Next.js 16 performance optimizations:
 
 ### Static Generation with ISR
 
@@ -317,9 +350,13 @@ export async function generateStaticParams() {
 
 ```bash
 npm run dev          # Start dev server
+npm run dev:https    # Start dev server with experimental HTTPS
 npm run build        # Build for production
+npm run lint         # ESLint check
 npm run db:generate  # Generate Drizzle migrations
 npm run db:migrate   # Apply migrations
+npm run db:push      # Push schema directly (no migration file)
+npm run db:studio    # Open Drizzle Studio GUI
 npm run db:seed      # Seed database
 npm run test         # Run unit tests (single run)
 npm run test:watch   # Run unit tests (watch mode)
@@ -346,16 +383,45 @@ npm run test:coverage # Run unit tests with coverage
 
 ### Test Coverage Areas
 
-| Area             | Test File                                           | Tests |
-| ---------------- | --------------------------------------------------- | ----- |
-| Zod schemas      | `__tests__/lib/validations.test.ts`                 | 49    |
-| API utilities    | `__tests__/lib/api-utils.test.ts`                   | 13    |
-| Serializers      | `__tests__/lib/serializers.test.ts`                 | 8     |
-| Upload constants | `__tests__/lib/upload-constants.test.ts`            | 14    |
-| Cart slice       | `__tests__/lib/features/cart/cartSlice.test.ts`     | 15    |
-| Orders slice     | `__tests__/lib/features/orders/ordersSlice.test.ts` | 17    |
-| Admin slice      | `__tests__/lib/features/admin/adminSlice.test.ts`   | 22    |
-| Redux store      | `__tests__/lib/store.test.ts`                       | 5     |
+| Area               | Test File                                                  | Tests   |
+| ------------------ | ---------------------------------------------------------- | ------- |
+| Zod schemas        | `__tests__/lib/validations.test.ts`                        | 49      |
+| API utilities      | `__tests__/lib/api-utils.test.ts`                          | 13      |
+| API NextResponse   | `__tests__/lib/api-utils-nextresponse.test.ts`             | 12      |
+| API middleware     | `__tests__/lib/api-middleware.test.ts`                     | 9       |
+| Serializers        | `__tests__/lib/serializers.test.ts`                        | 8       |
+| Upload constants   | `__tests__/lib/upload-constants.test.ts`                   | 14      |
+| Short ID           | `__tests__/lib/short-id.test.ts`                           | 3       |
+| Redis cache        | `__tests__/lib/redis.test.ts`                              | 12      |
+| Cache utilities    | `__tests__/lib/cache.test.ts`                              | 30      |
+| Env validation     | `__tests__/lib/env.test.ts`                                | 4       |
+| Types              | `__tests__/lib/types.test.ts`                              | 3       |
+| Schema             | `__tests__/lib/schema.test.ts`                             | 7       |
+| Hooks              | `__tests__/lib/hooks.test.ts`                              | 27      |
+| Cart slice         | `__tests__/lib/features/cart/cartSlice.test.ts`            | 15      |
+| Cart thunks        | `__tests__/lib/features/cart/cartSlice.thunks.test.ts`     | 11      |
+| Orders slice       | `__tests__/lib/features/orders/ordersSlice.test.ts`        | 17      |
+| Orders thunks      | `__tests__/lib/features/orders/ordersSlice.thunks.test.ts` | 12      |
+| Admin slice        | `__tests__/lib/features/admin/adminSlice.test.ts`          | 22      |
+| Admin thunks       | `__tests__/lib/features/admin/adminSlice.thunks.test.ts`   | 14      |
+| Redux store        | `__tests__/lib/store.test.ts`                              | 5       |
+| Header             | `__tests__/components/layout/Header.test.tsx`              | 13      |
+| CartIcon           | `__tests__/components/layout/CartIcon.test.tsx`            | 4       |
+| Footer             | `__tests__/components/layout/Footer.test.tsx`              | 10      |
+| AuthComponents     | `__tests__/components/ui/AuthComponents.test.tsx`          | 14      |
+| CurrencySelector   | `__tests__/components/ui/CurrencySelector.test.tsx`        | 5       |
+| ErrorBoundary      | `__tests__/components/ui/ErrorBoundary.test.tsx`           | 15      |
+| NewsletterForm     | `__tests__/components/ui/NewsletterForm.test.tsx`          | 5       |
+| ProductFormModal   | `__tests__/components/admin/ProductFormModal.test.tsx`     | 22      |
+| DeleteConfirmModal | `__tests__/components/admin/DeleteConfirmModal.test.tsx`   | 6       |
+| Hero               | `__tests__/components/sections/Hero.test.tsx`              | 5       |
+| ProductGrid        | `__tests__/components/sections/ProductGrid.test.tsx`       | 10      |
+| TrendingProducts   | `__tests__/components/sections/TrendingProducts.test.tsx`  | 7       |
+| Skeletons          | `__tests__/components/skeletons/Skeletons.test.tsx`        | 7       |
+| Providers          | `__tests__/components/providers/Providers.test.tsx`        | 3       |
+| CurrencyContext    | `__tests__/contexts/CurrencyContext.test.tsx`              | 12      |
+| Health API         | `__tests__/app/api/health/route.test.ts`                   | 1       |
+| **Total**          | **36 test files**                                          | **426** |
 
 ### Writing New Tests
 

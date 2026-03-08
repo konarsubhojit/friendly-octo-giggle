@@ -150,7 +150,7 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
         <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/50 p-8 mb-6">
           <div className="flex justify-between items-start flex-wrap gap-4">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Order #{order.id.slice(0, 8)}</h1>
+              <h1 className="text-2xl font-bold text-gray-900">Order #{order.id}</h1>
               <p className="text-sm text-gray-500 mt-1">
                 Placed on{' '}
                 {new Date(order.createdAt).toLocaleDateString('en-US', {
