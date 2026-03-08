@@ -38,9 +38,9 @@ const config = [
     },
   },
 
-  // Allow console.* in startup/seed files that run before the logger is available
+  // Allow console.* in startup files that run before the logger is available
   {
-    files: ['lib/env.ts', 'lib/seed.ts'],
+    files: ['lib/env.ts'],
     rules: {
       'no-console': 'off',
     },
