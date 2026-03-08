@@ -18,7 +18,7 @@ describe("isApiSuccess", () => {
   });
 
   it("returns false for undefined", () => {
-    expect(isApiSuccess()).toBe(false);
+    expect(isApiSuccess(undefined)).toBe(false);
   });
 
   it("returns false for string", () => {

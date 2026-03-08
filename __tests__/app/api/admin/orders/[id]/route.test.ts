@@ -1,0 +1,193 @@
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { NextRequest } from "next/server";
+
+vi.mock("@/lib/db", () => ({
+  drizzleDb: {
+    query: { orders: { findFirst: vi.fn() } },
+    update: vi.fn(() => ({ set: vi.fn(() => ({ where: vi.fn() })) })),
+  },
+}));
+vi.mock("@/lib/schema", () => ({ orders: { id: "id" } }));
+vi.mock("drizzle-orm", () => ({ eq: vi.fn() }));
+vi.mock("@/lib/auth", () => ({ auth: vi.fn() }));
+vi.mock("@/lib/redis", () => ({
+  getCachedData: vi.fn(),
+  invalidateCache: vi.fn(),
+}));
+vi.mock("@/lib/cache", () => ({ invalidateUserOrderCaches: vi.fn() }));
+vi.mock("@/lib/serializers", () => ({
+  serializeOrder: vi.fn((o) => ({ ...o, serialized: true })),
+}));
+vi.mock(
+  "@/lib/validations",
+  async () => await vi.importActual("@/lib/validations"),
+);
+vi.mock("@/lib/logger", () => ({ logError: vi.fn() }));
+
+import { PATCH, GET } from "@/app/api/admin/orders/[id]/route";
+import { auth } from "@/lib/auth";
+import { drizzleDb } from "@/lib/db";
+import { getCachedData, invalidateCache } from "@/lib/redis";
+import { invalidateUserOrderCaches } from "@/lib/cache";
+
+const mockAuth = vi.mocked(auth);
+const mockFindFirst = vi.mocked(drizzleDb.query.orders.findFirst);
+const mockUpdate = vi.mocked(drizzleDb.update);
+const mockGetCachedData = vi.mocked(getCachedData);
+const mockInvalidateCache = vi.mocked(invalidateCache);
+const mockInvalidateUserOrderCaches = vi.mocked(invalidateUserOrderCaches);
+
+const mkReq = (body?: Record<string, unknown>) =>
+  new NextRequest("http://localhost/api/admin/orders/o1", {
+    method: body ? "PATCH" : "GET",
+    ...(body ? { body: JSON.stringify(body) } : {}),
+  });
+
+const mkParams = () => ({ params: Promise.resolve({ id: "o1" }) });
+
+const adminSession = {
+  user: { id: "u1", role: "ADMIN", email: "admin@test.com" },
+  expires: new Date(Date.now() + 86400000).toISOString(),
+};
+
+const mockOrder = {
+  id: "o1",
+  userId: "u1",
+  status: "SHIPPED",
+  total: 5000,
+  trackingNumber: "TRK123",
+  items: [{ id: "i1", product: { id: "p1" }, variation: null }],
+};
+
+describe("PATCH /api/admin/orders/[id]", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("returns 401 when not authenticated", async () => {
+    mockAuth.mockResolvedValue(null as never);
+
+    const res = await PATCH(mkReq({ status: "SHIPPED" }), mkParams());
+    const data = await res.json();
+
+    expect(res.status).toBe(401);
+    expect(data.error).toBe("Not authenticated");
+  });
+
+  it("returns 403 when not admin", async () => {
+    mockAuth.mockResolvedValue({
+      user: { id: "u2", role: "USER", email: "user@test.com" },
+      expires: new Date(Date.now() + 86400000).toISOString(),
+    } as never);
+
+    const res = await PATCH(mkReq({ status: "SHIPPED" }), mkParams());
+    const data = await res.json();
+
+    expect(res.status).toBe(403);
+    expect(data.error).toBe("Not authorized - Admin access required");
+  });
+
+  it("returns 400 for invalid body", async () => {
+    mockAuth.mockResolvedValue(adminSession as never);
+
+    const res = await PATCH(mkReq({ invalid: true }), mkParams());
+    const data = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(data.error).toBeDefined();
+  });
+
+  it("updates order successfully", async () => {
+    mockAuth.mockResolvedValue(adminSession as never);
+    mockUpdate.mockReturnValue({
+      set: vi.fn(() => ({ where: vi.fn() })),
+    } as never);
+    mockFindFirst.mockResolvedValue(mockOrder as never);
+
+    const res = await PATCH(
+      mkReq({ status: "SHIPPED", trackingNumber: "TRK123" }),
+      mkParams(),
+    );
+    const data = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(data.data.order.serialized).toBe(true);
+    expect(mockUpdate).toHaveBeenCalled();
+    expect(mockInvalidateCache).toHaveBeenCalledWith("admin:orders:*");
+    expect(mockInvalidateCache).toHaveBeenCalledWith("admin:order:o1");
+    expect(mockInvalidateUserOrderCaches).toHaveBeenCalledWith("u1");
+  });
+
+  it("returns 404 when order not found after update", async () => {
+    mockAuth.mockResolvedValue(adminSession as never);
+    mockUpdate.mockReturnValue({
+      set: vi.fn(() => ({ where: vi.fn() })),
+    } as never);
+    mockFindFirst.mockResolvedValue(undefined as never);
+
+    const res = await PATCH(mkReq({ status: "SHIPPED" }), mkParams());
+    const data = await res.json();
+
+    expect(res.status).toBe(404);
+    expect(data.error).toBe("Order not found");
+  });
+});
+
+describe("GET /api/admin/orders/[id]", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("returns 401 when not authenticated", async () => {
+    mockAuth.mockResolvedValue(null as never);
+
+    const res = await GET(mkReq(), mkParams());
+    const data = await res.json();
+
+    expect(res.status).toBe(401);
+    expect(data.error).toBe("Not authenticated");
+  });
+
+  it("returns 403 when not admin", async () => {
+    mockAuth.mockResolvedValue({
+      user: { id: "u2", role: "USER", email: "user@test.com" },
+      expires: new Date(Date.now() + 86400000).toISOString(),
+    } as never);
+
+    const res = await GET(mkReq(), mkParams());
+    const data = await res.json();
+
+    expect(res.status).toBe(403);
+    expect(data.error).toBe("Not authorized - Admin access required");
+  });
+
+  it("returns order on success", async () => {
+    mockAuth.mockResolvedValue(adminSession as never);
+    mockGetCachedData.mockImplementation(async (_key, _ttl, fetcher) => {
+      return mockOrder;
+    });
+
+    const res = await GET(mkReq(), mkParams());
+    const data = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(data.data.order.serialized).toBe(true);
+    expect(mockGetCachedData).toHaveBeenCalledWith(
+      "admin:order:o1",
+      60,
+      expect.any(Function),
+      10,
+    );
+  });
+
+  it("returns 404 when not found", async () => {
+    mockAuth.mockResolvedValue(adminSession as never);
+    mockGetCachedData.mockImplementation(async () => null);
+
+    const res = await GET(mkReq(), mkParams());
+    const data = await res.json();
+
+    expect(res.status).toBe(404);
+    expect(data.error).toBe("Order not found");
+  });
+});

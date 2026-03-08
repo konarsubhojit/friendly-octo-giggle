@@ -84,8 +84,8 @@ describe("ProductFormModal", () => {
 
   it("pre-fills form fields from editingProduct", () => {
     renderModal({ editingProduct: mockProduct });
-    const nameInput = screen.getByLabelText("Name") as HTMLInputElement;
-    expect(nameInput.value).toBe("Test Product");
+    const nameInput = screen.getByLabelText("Name");
+    expect((nameInput as HTMLInputElement).value).toBe("Test Product");
   });
 
   it("calls onClose when Cancel is clicked", () => {
@@ -97,30 +97,30 @@ describe("ProductFormModal", () => {
 
   it("updates name input when typed", () => {
     renderModal();
-    const nameInput = screen.getByLabelText("Name") as HTMLInputElement;
+    const nameInput = screen.getByLabelText("Name");
     fireEvent.change(nameInput, { target: { value: "New Name" } });
-    expect(nameInput.value).toBe("New Name");
+    expect((nameInput as HTMLInputElement).value).toBe("New Name");
   });
 
   it("updates description when typed", () => {
     renderModal();
-    const descInput = screen.getByLabelText("Description") as HTMLTextAreaElement;
+    const descInput = screen.getByLabelText("Description");
     fireEvent.change(descInput, { target: { value: "New Description" } });
-    expect(descInput.value).toBe("New Description");
+    expect((descInput as HTMLTextAreaElement).value).toBe("New Description");
   });
 
   it("updates stock when changed", () => {
     renderModal();
-    const stockInput = screen.getByLabelText("Stock") as HTMLInputElement;
+    const stockInput = screen.getByLabelText("Stock");
     fireEvent.change(stockInput, { target: { value: "25" } });
-    expect(stockInput.value).toBe("25");
+    expect((stockInput as HTMLInputElement).value).toBe("25");
   });
 
   it("updates category when typed", () => {
     renderModal();
-    const catInput = screen.getByLabelText("Category") as HTMLInputElement;
+    const catInput = screen.getByLabelText("Category");
     fireEvent.change(catInput, { target: { value: "Wearables" } });
-    expect(catInput.value).toBe("Wearables");
+    expect((catInput as HTMLInputElement).value).toBe("Wearables");
   });
 
   it("shows existing image when editing", () => {
@@ -132,7 +132,7 @@ describe("ProductFormModal", () => {
   it("shows invalid file type toast on invalid file upload", async () => {
     const toast = await import("react-hot-toast");
     renderModal();
-    const fileInput = screen.getByLabelText("Product Image") as HTMLInputElement;
+    const fileInput = screen.getByLabelText("Product Image");
     const invalidFile = new File(["content"], "doc.pdf", {
       type: "application/pdf",
     });
@@ -145,7 +145,7 @@ describe("ProductFormModal", () => {
   it("shows file too large toast when file exceeds limit", async () => {
     const toast = await import("react-hot-toast");
     renderModal();
-    const fileInput = screen.getByLabelText("Product Image") as HTMLInputElement;
+    const fileInput = screen.getByLabelText("Product Image");
     // Create a large file
     const largeFile = new File(["x".repeat(6 * 1024 * 1024)], "large.jpg", {
       type: "image/jpeg",
@@ -159,7 +159,7 @@ describe("ProductFormModal", () => {
 
   it("shows selected filename after valid file pick", async () => {
     renderModal();
-    const fileInput = screen.getByLabelText("Product Image") as HTMLInputElement;
+    const fileInput = screen.getByLabelText("Product Image");
     const validFile = new File(["content"], "photo.jpg", {
       type: "image/jpeg",
     });
@@ -170,9 +170,9 @@ describe("ProductFormModal", () => {
 
   it("handles currency change and converts price", () => {
     renderModal({ editingProduct: mockProduct });
-    const currencySelect = screen.getByLabelText("Price currency") as HTMLSelectElement;
+    const currencySelect = screen.getByLabelText("Price currency");
     fireEvent.change(currencySelect, { target: { value: "USD" } });
-    expect(currencySelect.value).toBe("USD");
+    expect((currencySelect as HTMLSelectElement).value).toBe("USD");
   });
 
   it("shows image required toast when submitting without image", async () => {
@@ -195,7 +195,7 @@ describe("ProductFormModal", () => {
 
     const form = container.querySelector("form");
     expect(form).not.toBeNull();
-    await act(() => {
+    await act(async () => {
       fireEvent.submit(form as HTMLFormElement);
     });
     await waitFor(() => {
@@ -227,7 +227,7 @@ describe("ProductFormModal", () => {
 
     const form = container.querySelector("form");
     expect(form).not.toBeNull();
-    await act(() => {
+    await act(async () => {
       fireEvent.submit(form as HTMLFormElement);
     });
 
@@ -249,7 +249,7 @@ describe("ProductFormModal", () => {
     const { container } = renderModal({ editingProduct: mockProduct });
     const form = container.querySelector("form");
     expect(form).not.toBeNull();
-    await act(() => {
+    await act(async () => {
       fireEvent.submit(form as HTMLFormElement);
     });
     await waitFor(() => {
@@ -290,14 +290,14 @@ describe("ProductFormModal", () => {
     });
 
     // Select a valid image file
-    const fileInput = screen.getByLabelText("Product Image") as HTMLInputElement;
+    const fileInput = screen.getByLabelText("Product Image");
     const validFile = new File(["content"], "test.jpg", { type: "image/jpeg" });
     Object.defineProperty(validFile, "size", { value: 100 * 1024 });
     fireEvent.change(fileInput, { target: { files: [validFile] } });
 
     const form = container.querySelector("form");
     expect(form).not.toBeNull();
-    await act(() => {
+    await act(async () => {
       fireEvent.submit(form as HTMLFormElement);
     });
 
@@ -314,7 +314,7 @@ describe("ProductFormModal", () => {
 
   it("shows 'Saving...' button text during submission", async () => {
     // Create a promise that never resolves to keep the component in saving state
-    let resolvePromise: (value: unknown) => void;
+    let resolvePromise: (value: unknown) => void = () => {};
     const pendingPromise = new Promise((resolve) => {
       resolvePromise = resolve;
     });
@@ -390,14 +390,14 @@ describe("ProductFormModal", () => {
     });
 
     // Select a valid image file
-    const fileInput = screen.getByLabelText("Product Image") as HTMLInputElement;
+    const fileInput = screen.getByLabelText("Product Image");
     const validFile = new File(["content"], "test.jpg", { type: "image/jpeg" });
     Object.defineProperty(validFile, "size", { value: 100 * 1024 });
     fireEvent.change(fileInput, { target: { files: [validFile] } });
 
     const form = container.querySelector("form");
     expect(form).not.toBeNull();
-    await act(() => {
+    await act(async () => {
       fireEvent.submit(form as HTMLFormElement);
     });
 
@@ -429,14 +429,14 @@ describe("ProductFormModal", () => {
     fireEvent.change(screen.getByLabelText("Price"), { target: { value: "10" } });
     fireEvent.change(screen.getByLabelText("Stock"), { target: { value: "5" } });
 
-    const fileInput = screen.getByLabelText("Product Image") as HTMLInputElement;
+    const fileInput = screen.getByLabelText("Product Image");
     const validFile = new File(["content"], "test.jpg", { type: "image/jpeg" });
     Object.defineProperty(validFile, "size", { value: 100 * 1024 });
     fireEvent.change(fileInput, { target: { files: [validFile] } });
 
     const form = container.querySelector("form");
     expect(form).not.toBeNull();
-    await act(() => {
+    await act(async () => {
       fireEvent.submit(form as HTMLFormElement);
     });
 
