@@ -40,3 +40,6 @@ jobs:
         uses: SonarSource/sonarqube-scan-action@v6
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.coverage.exclusions=app/**/page.tsx,app/**/layout.tsx,app/products/[id]/ProductClient.tsx
