@@ -3,6 +3,8 @@ import { z } from "zod";
 // UUID regex pattern for validation (accepts any UUID format, not just specific versions)
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+// Short ID regex pattern for Base62 7-character IDs used by products, variations, carts, orders
+const SHORT_ID_REGEX = /^[0-9A-Za-z]{7}$/;
 // URL regex pattern for validation
 const URL_REGEX = /^https?:\/\/.+/;
 // ISO datetime regex pattern
@@ -45,7 +47,7 @@ export const OrderStatusEnum = z.enum([
 ]);
 
 export const OrderItemSchema = z.object({
-  productId: z.string().regex(UUID_REGEX, "Invalid product ID"),
+  productId: z.string().regex(SHORT_ID_REGEX, "Invalid product ID"),
   quantity: z.number().int().positive("Quantity must be positive"),
   price: z.number().positive("Price must be positive"),
   customizationNote: z
@@ -120,8 +122,8 @@ export type Env = z.infer<typeof EnvSchema>;
 
 // Cart validation schemas
 export const AddToCartSchema = z.object({
-  productId: z.string().regex(UUID_REGEX, "Invalid product ID"),
-  variationId: z.string().regex(UUID_REGEX, "Invalid variation ID").nullish(),
+  productId: z.string().regex(SHORT_ID_REGEX, "Invalid product ID"),
+  variationId: z.string().regex(SHORT_ID_REGEX, "Invalid variation ID").nullish(),
   quantity: z
     .number()
     .int("Quantity must be an integer")

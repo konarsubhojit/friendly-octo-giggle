@@ -15,6 +15,7 @@ import {
 
 // Helpers
 const validUUID = "550e8400-e29b-41d4-a716-446655440000";
+const validShortId = "abc1234"; // Base62 7-char short ID used for products, variations, carts, orders
 const validISO = "2024-01-01T00:00:00.000Z";
 
 describe("ProductSchema", () => {
@@ -140,7 +141,7 @@ describe("OrderStatusEnum", () => {
 
 describe("OrderItemSchema", () => {
   const validItem = {
-    productId: validUUID,
+    productId: validShortId,
     quantity: 2,
     price: 19.99,
   };
@@ -197,7 +198,7 @@ describe("CreateOrderSchema", () => {
     customerName: "John Doe",
     customerEmail: "john@example.com",
     customerAddress: "123 Main Street, Anytown, USA 12345",
-    items: [{ productId: validUUID, quantity: 1, price: 29.99 }],
+    items: [{ productId: validShortId, quantity: 1, price: 29.99 }],
   };
 
   it("accepts valid order", () => {
@@ -248,22 +249,22 @@ describe("UpdateOrderStatusSchema", () => {
 
 describe("AddToCartSchema", () => {
   it("accepts valid input", () => {
-    const result = AddToCartSchema.parse({ productId: validUUID, quantity: 1 });
-    expect(result.productId).toBe(validUUID);
+    const result = AddToCartSchema.parse({ productId: validShortId, quantity: 1 });
+    expect(result.productId).toBe(validShortId);
   });
 
   it("accepts with variationId", () => {
     const result = AddToCartSchema.parse({
-      productId: validUUID,
-      variationId: validUUID,
+      productId: validShortId,
+      variationId: validShortId,
       quantity: 2,
     });
-    expect(result.variationId).toBe(validUUID);
+    expect(result.variationId).toBe(validShortId);
   });
 
   it("accepts null variationId", () => {
     const result = AddToCartSchema.parse({
-      productId: validUUID,
+      productId: validShortId,
       variationId: null,
       quantity: 1,
     });
@@ -272,13 +273,13 @@ describe("AddToCartSchema", () => {
 
   it("rejects non-integer quantity", () => {
     expect(() =>
-      AddToCartSchema.parse({ productId: validUUID, quantity: 1.5 }),
+      AddToCartSchema.parse({ productId: validShortId, quantity: 1.5 }),
     ).toThrow();
   });
 
   it("rejects zero quantity", () => {
     expect(() =>
-      AddToCartSchema.parse({ productId: validUUID, quantity: 0 }),
+      AddToCartSchema.parse({ productId: validShortId, quantity: 0 }),
     ).toThrow();
   });
 });
