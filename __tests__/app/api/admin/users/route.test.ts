@@ -12,7 +12,6 @@ vi.mock('@/lib/db', () => ({
 vi.mock('@/lib/schema', () => ({ users: { createdAt: 'createdAt' } }));
 vi.mock('drizzle-orm', () => ({ desc: vi.fn((col: string) => col) }));
 
-import { apiSuccess, apiError, handleApiError } from '@/lib/api-utils';
 import { GET } from '@/app/api/admin/users/route';
 
 describe('GET /api/admin/users', () => {

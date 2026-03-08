@@ -30,9 +30,6 @@ describe('app/loading.tsx – Root Loading', () => {
     const { default: Loading } = await import('@/app/loading');
     const { container } = render(<Loading />);
     const footer = container.querySelector('footer')!;
-    const pulseElements = footer.querySelectorAll('.animate-pulse');
-    // Footer has: 3 column headers + 2 text lines + 4 links + 1 input = multiple pulse elements
-    // The 4 link skeletons are the ones with w-20 class
     const linkSkeletons = footer.querySelectorAll('.h-4.w-20');
     expect(linkSkeletons).toHaveLength(4);
   });
