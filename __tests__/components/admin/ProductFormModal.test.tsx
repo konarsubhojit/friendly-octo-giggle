@@ -350,19 +350,27 @@ describe("ProductFormModal", () => {
     const onClose = vi.fn();
     const savedProduct = { ...mockProduct, id: "new-prod", image: "https://cdn.example.com/uploaded.jpg" };
 
-    let callCount = 0;
+    let productCallCount = 0;
     vi.stubGlobal(
       "fetch",
       vi.fn().mockImplementation((url: string) => {
-        callCount++;
+        // The CurrencyProvider also calls /api/exchange-rates on mount — handle it
+        // separately so it doesn't inflate the product-related call count.
+        if (url === "/api/exchange-rates") {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ data: { rates: { INR: 1, USD: 0.012, EUR: 0.011, GBP: 0.0095 } } }),
+          });
+        }
+        productCallCount++;
         if (url === "/api/upload") {
-          // First call: upload
+          // First product call: upload
           return Promise.resolve({
             ok: true,
             json: () => Promise.resolve({ data: { url: "https://cdn.example.com/uploaded.jpg" } }),
           });
         }
-        // Second call: create product
+        // Second product call: create product
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve({ data: { product: savedProduct } }),
@@ -402,7 +410,7 @@ describe("ProductFormModal", () => {
     });
 
     await waitFor(() => {
-      expect(callCount).toBe(2); // Upload + Create
+      expect(productCallCount).toBe(2); // Upload + Create
       expect(onSuccess).toHaveBeenCalled();
       expect(onClose).toHaveBeenCalled();
     });

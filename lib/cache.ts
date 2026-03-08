@@ -31,6 +31,8 @@ export const CACHE_KEYS = {
   // Admin products
   ADMIN_PRODUCTS_ALL: "admin:products:all",
   ADMIN_PRODUCTS_PATTERN: "admin:products:*",
+  // Exchange rates (date-scoped, refreshed once per UTC day)
+  EXCHANGE_RATES_BY_DATE: (date: string) => `exchange-rates:${date}`,
 } as const;
 
 // Cache TTL configuration (in seconds)
