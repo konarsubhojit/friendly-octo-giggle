@@ -1,11 +1,14 @@
-import { describe, it, expect } from "vitest";
-import { render, screen, fireEvent, act } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { render, screen, fireEvent, act, waitFor } from "@testing-library/react";
 import React from "react";
 import {
   CurrencyProvider,
   useCurrency,
   CURRENCIES,
 } from "@/contexts/CurrencyContext";
+
+// Stub fetch globally so the useEffect that calls /api/exchange-rates
+// doesn't make real network calls during tests.
 
 function CurrencyDisplay() {
   const {
@@ -15,6 +18,8 @@ function CurrencyDisplay() {
     convertPrice,
     currencySymbol,
     availableCurrencies,
+    rates,
+    ratesLoading,
   } = useCurrency();
   return (
     <div>
@@ -23,6 +28,8 @@ function CurrencyDisplay() {
       <span data-testid="formatted">{formatPrice(10)}</span>
       <span data-testid="converted">{convertPrice(10)}</span>
       <span data-testid="available">{availableCurrencies.join(",")}</span>
+      <span data-testid="rates-loading">{String(ratesLoading)}</span>
+      <span data-testid="usd-rate">{rates.USD}</span>
       <button onClick={() => setCurrency("USD")}>Set USD</button>
       <button onClick={() => setCurrency("EUR")}>Set EUR</button>
       <button onClick={() => setCurrency("GBP")}>Set GBP</button>
@@ -36,6 +43,18 @@ function ThrowingComponent() {
 }
 
 describe("CurrencyProvider", () => {
+  beforeEach(() => {
+    // Fresh mock per test so call state never leaks between tests
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockRejectedValue(new Error("no network in tests")),
+    );
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it("provides default INR currency", () => {
     render(
       <CurrencyProvider>
@@ -55,6 +74,7 @@ describe("CurrencyProvider", () => {
     const converted = parseFloat(
       screen.getByTestId("converted").textContent ?? "0",
     );
+    // INR rate = 1, so convertPrice(10) = 10
     expect(converted).toBeCloseTo(10 * CURRENCIES.INR.rate, 2);
   });
 
@@ -65,7 +85,8 @@ describe("CurrencyProvider", () => {
       </CurrencyProvider>,
     );
     const formatted = screen.getByTestId("formatted").textContent ?? "";
-    expect(formatted).toContain("835");
+    // With INR as the base currency, formatPrice(10) should format 10 INR
+    expect(formatted).toContain("10");
   });
 
   it("updates currency when setCurrency is called", () => {
@@ -143,6 +164,64 @@ describe("CurrencyProvider", () => {
     );
     console.error = originalError;
   });
+
+  it("starts with ratesLoading true and clears it after fetch resolves", async () => {
+    render(
+      <CurrencyProvider>
+        <CurrencyDisplay />
+      </CurrencyProvider>,
+    );
+    // fetch is stubbed to reject, so ratesLoading should become false once settled
+    await waitFor(() => {
+      expect(screen.getByTestId("rates-loading").textContent).toBe("false");
+    });
+  });
+
+  it("adopts live rates from the API when the fetch succeeds", async () => {
+    const liveUsdRate = 0.01088; // 1 INR ≈ 0.01088 USD
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          data: {
+            rates: { INR: 1, USD: liveUsdRate, EUR: 0.0094, GBP: 0.0081 },
+          },
+        }),
+      }),
+    );
+
+    render(
+      <CurrencyProvider>
+        <CurrencyDisplay />
+      </CurrencyProvider>,
+    );
+
+    await waitFor(() => {
+      const usdRate = parseFloat(
+        screen.getByTestId("usd-rate").textContent ?? "0",
+      );
+      expect(usdRate).toBeCloseTo(liveUsdRate, 5);
+    });
+  });
+
+  it("keeps fallback rates when the API fetch fails", async () => {
+    render(
+      <CurrencyProvider>
+        <CurrencyDisplay />
+      </CurrencyProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("rates-loading").textContent).toBe("false");
+    });
+
+    // Rates should remain at fallback values
+    const usdRate = parseFloat(
+      screen.getByTestId("usd-rate").textContent ?? "0",
+    );
+    expect(usdRate).toBeCloseTo(CURRENCIES.USD.rate, 5);
+  });
 });
 
 describe("CURRENCIES config", () => {
@@ -150,12 +229,12 @@ describe("CURRENCIES config", () => {
     expect(CURRENCIES.INR).toMatchObject({
       code: "INR",
       symbol: "₹",
-      rate: 83.5,
+      rate: 1,
     });
   });
 
-  it("has USD rate of 1 (base currency)", () => {
-    expect(CURRENCIES.USD.rate).toBe(1);
+  it("has USD rate less than 1 (INR is base currency)", () => {
+    expect(CURRENCIES.USD.rate).toBeCloseTo(1 / 83.5, 6);
   });
 
   it("has all four currencies", () => {

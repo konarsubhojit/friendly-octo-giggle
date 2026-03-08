@@ -116,6 +116,7 @@ export const EnvSchema = z.object({
   DATABASE_URL: z.string(),
   REDIS_URL: z.string().optional(),
   NODE_ENV: z.enum(["development", "production", "test"]).optional(),
+  EXCHANGE_RATE_API_KEY: z.string().optional(),
 });
 
 export type Env = z.infer<typeof EnvSchema>;

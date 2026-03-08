@@ -130,11 +130,6 @@ describe("GET /api/admin/sales", () => {
 
     // Mock all the DB queries inside the fetcher
     const { drizzleDb } = await import("@/lib/db");
-    const selectWhereMock = vi.fn();
-    const selectFromMock = vi.fn();
-    const selectGroupByMock = vi.fn();
-    const selectOrderByMock = vi.fn();
-    const selectLimitMock = vi.fn();
 
     // totalStats
     const totalStatsResult = { totalRevenue: 5000, totalOrders: 25 };
