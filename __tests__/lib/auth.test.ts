@@ -23,6 +23,20 @@ vi.mock("next-auth/providers/google", () => ({
   })),
 }));
 
+vi.mock("next-auth/providers/microsoft-entra-id", () => ({
+  default: vi.fn((opts: Record<string, unknown>) => ({
+    id: "microsoft-entra-id",
+    ...opts,
+  })),
+}));
+
+vi.mock("next-auth/providers/credentials", () => ({
+  default: vi.fn((opts: Record<string, unknown>) => ({
+    id: "credentials",
+    ...opts,
+  })),
+}));
+
 vi.mock("@auth/drizzle-adapter", () => ({
   DrizzleAdapter: vi.fn(() => ({})),
 }));
@@ -40,6 +54,15 @@ vi.mock("@/lib/schema", () => ({
 
 vi.mock("@/lib/logger", () => ({
   logAuthEvent: mockLogAuthEvent,
+}));
+
+vi.mock("@/lib/password", () => ({
+  verifyPassword: vi.fn(),
+}));
+
+vi.mock("drizzle-orm", () => ({
+  eq: vi.fn(),
+  or: vi.fn(),
 }));
 
 describe("auth module", () => {
@@ -151,8 +174,29 @@ describe("auth module", () => {
       // The provider config uses conditional checks for GOOGLE_CLIENT_ID/SECRET
       expect(capturedConfig.providers).toBeDefined();
       expect(Array.isArray(capturedConfig.providers)).toBe(true);
-      expect(capturedConfig.providers.length).toBe(1);
+      expect(capturedConfig.providers.length).toBe(3);
       expect(capturedConfig.providers[0].id).toBe("google");
+    });
+  });
+
+  describe("Microsoft provider config", () => {
+    it("has microsoft-entra-id provider configured", () => {
+      const msProvider = capturedConfig.providers.find(
+        (p: { id: string }) => p.id === "microsoft-entra-id",
+      );
+      expect(msProvider).toBeDefined();
+      expect(msProvider.issuer).toBe(
+        "https://login.microsoftonline.com/consumers/v2.0",
+      );
+    });
+  });
+
+  describe("Credentials provider config", () => {
+    it("has credentials provider configured", () => {
+      const credProvider = capturedConfig.providers.find(
+        (p: { id: string }) => p.id === "credentials",
+      );
+      expect(credProvider).toBeDefined();
     });
   });
 

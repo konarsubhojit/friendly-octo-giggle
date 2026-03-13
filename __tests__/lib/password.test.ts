@@ -1,0 +1,152 @@
+import { describe, it, expect, vi, beforeEach } from "vitest";
+
+// Mock bcryptjs
+const mockHash = vi.hoisted(() => vi.fn());
+const mockCompare = vi.hoisted(() => vi.fn());
+
+vi.mock("bcryptjs", () => ({
+  default: {
+    hash: mockHash,
+    compare: mockCompare,
+  },
+}));
+
+// Mock drizzle DB
+const mockSelect = vi.hoisted(() => vi.fn());
+const mockInsert = vi.hoisted(() => vi.fn());
+const mockDelete = vi.hoisted(() => vi.fn());
+
+const mockFromSelect = vi.hoisted(() => vi.fn());
+const mockWhereSelect = vi.hoisted(() => vi.fn());
+const mockOrderBySelect = vi.hoisted(() => vi.fn());
+const mockLimitSelect = vi.hoisted(() => vi.fn());
+
+const mockValuesInsert = vi.hoisted(() => vi.fn());
+
+const _mockFromDelete = vi.hoisted(() => vi.fn());
+const mockWhereDelete = vi.hoisted(() => vi.fn());
+
+vi.mock("@/lib/db", () => ({
+  drizzleDb: {
+    select: mockSelect,
+    insert: mockInsert,
+    delete: mockDelete,
+  },
+}));
+
+vi.mock("@/lib/schema", () => ({
+  passwordHistory: {
+    passwordHash: "passwordHash",
+    userId: "userId",
+    createdAt: "createdAt",
+    id: "id",
+  },
+}));
+
+vi.mock("drizzle-orm", () => ({
+  eq: vi.fn((...args: unknown[]) => ({ op: "eq", args })),
+  desc: vi.fn((col: unknown) => ({ op: "desc", col })),
+}));
+
+describe("password utilities", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    // Setup select chain
+    mockLimitSelect.mockResolvedValue([]);
+    mockOrderBySelect.mockReturnValue({ limit: mockLimitSelect });
+    mockWhereSelect.mockReturnValue({ orderBy: mockOrderBySelect });
+    mockFromSelect.mockReturnValue({ where: mockWhereSelect });
+    mockSelect.mockReturnValue({ from: mockFromSelect });
+
+    // Setup insert chain
+    mockValuesInsert.mockResolvedValue(undefined);
+    mockInsert.mockReturnValue({ values: mockValuesInsert });
+
+    // Setup delete chain: delete(table).where(condition)
+    mockWhereDelete.mockResolvedValue(undefined);
+    mockDelete.mockReturnValue({ where: mockWhereDelete });
+  });
+
+  describe("hashPassword", () => {
+    it("hashes password with bcryptjs using salt rounds 12", async () => {
+      mockHash.mockResolvedValue("hashed-password");
+      const { hashPassword } = await import("@/lib/password");
+      const result = await hashPassword("MyPassword1!");
+      expect(mockHash).toHaveBeenCalledWith("MyPassword1!", 12);
+      expect(result).toBe("hashed-password");
+    });
+  });
+
+  describe("verifyPassword", () => {
+    it("returns true for matching password", async () => {
+      mockCompare.mockResolvedValue(true);
+      const { verifyPassword } = await import("@/lib/password");
+      const result = await verifyPassword("MyPassword1!", "hashed");
+      expect(mockCompare).toHaveBeenCalledWith("MyPassword1!", "hashed");
+      expect(result).toBe(true);
+    });
+
+    it("returns false for non-matching password", async () => {
+      mockCompare.mockResolvedValue(false);
+      const { verifyPassword } = await import("@/lib/password");
+      const result = await verifyPassword("wrong", "hashed");
+      expect(result).toBe(false);
+    });
+  });
+
+  describe("checkPasswordHistory", () => {
+    it("returns false when no history entries exist", async () => {
+      mockLimitSelect.mockResolvedValue([]);
+      const { checkPasswordHistory } = await import("@/lib/password");
+      const result = await checkPasswordHistory("user-1", "newPass1!");
+      expect(result).toBe(false);
+    });
+
+    it("returns true when password matches a history entry", async () => {
+      mockLimitSelect.mockResolvedValue([{ passwordHash: "old-hash" }]);
+      mockCompare.mockResolvedValue(true);
+      const { checkPasswordHistory } = await import("@/lib/password");
+      const result = await checkPasswordHistory("user-1", "oldPassword1!");
+      expect(result).toBe(true);
+    });
+
+    it("returns false when password does not match any history entry", async () => {
+      mockLimitSelect.mockResolvedValue([{ passwordHash: "old-hash" }]);
+      mockCompare.mockResolvedValue(false);
+      const { checkPasswordHistory } = await import("@/lib/password");
+      const result = await checkPasswordHistory("user-1", "newPassword1!");
+      expect(result).toBe(false);
+    });
+  });
+
+  describe("savePasswordToHistory", () => {
+    it("inserts a new history entry", async () => {
+      // Subsequent select for cleanup returns 1 entry (within limit)
+      mockLimitSelect.mockResolvedValue([]);
+      mockOrderBySelect.mockReturnValue(Promise.resolve([{ id: "entry-1" }]));
+      const { savePasswordToHistory } = await import("@/lib/password");
+      await savePasswordToHistory("user-1", "hashed-password");
+      expect(mockInsert).toHaveBeenCalled();
+      expect(mockValuesInsert).toHaveBeenCalledWith({
+        userId: "user-1",
+        passwordHash: "hashed-password",
+      });
+    });
+
+    it("deletes old entries beyond the limit of 2", async () => {
+      // After insert, there are 3 entries
+      mockOrderBySelect.mockReturnValue(
+        Promise.resolve([
+          { id: "entry-3" },
+          { id: "entry-2" },
+          { id: "entry-1" },
+        ]),
+      );
+      const { savePasswordToHistory } = await import("@/lib/password");
+      await savePasswordToHistory("user-1", "new-hash");
+      // Should delete entry-1 (the 3rd entry)
+      expect(mockDelete).toHaveBeenCalled();
+    });
+  });
+});
