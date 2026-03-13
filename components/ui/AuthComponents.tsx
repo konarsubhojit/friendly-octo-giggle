@@ -15,16 +15,27 @@ interface Session {
 
 interface UserMenuProps {
   readonly session: Session | null;
+  readonly onLoginClick?: () => void;
 }
 
-export function UserMenu({ session }: UserMenuProps) {
+export function UserMenu({ session, onLoginClick }: UserMenuProps) {
   if (!session?.user) {
+    if (onLoginClick) {
+      return (
+        <button
+          onClick={onLoginClick}
+          className="text-sm text-gray-700 hover:text-gray-900 bg-white px-4 py-2 rounded-md border border-gray-300 hover:border-gray-400 transition"
+        >
+          Login
+        </button>
+      );
+    }
     return (
       <Link
         href="/auth/signin"
         className="text-sm text-gray-700 hover:text-gray-900 bg-white px-4 py-2 rounded-md border border-gray-300 hover:border-gray-400 transition"
       >
-        Sign In
+        Login
       </Link>
     );
   }

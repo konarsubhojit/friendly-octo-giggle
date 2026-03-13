@@ -6,10 +6,12 @@ import Image from 'next/image';
 import { useSession, signOut } from 'next-auth/react';
 import CartIcon from '@/components/layout/CartIcon';
 import CurrencySelector from '@/components/ui/CurrencySelector';
+import LoginModal from '@/components/auth/LoginModal';
 
 export default function Header() {
   const { data: session } = useSession();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [loginModalOpen, setLoginModalOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -120,16 +122,17 @@ export default function Header() {
                 )}
               </div>
             ) : (
-              <Link
-                href="/auth/signin?callbackUrl=/"
+              <button
+                onClick={() => setLoginModalOpen(true)}
                 className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-300 shadow-md hover:shadow-lg"
               >
-                Sign In
-              </Link>
+                Login
+              </button>
             )}
           </div>
         </div>
       </div>
+      <LoginModal isOpen={loginModalOpen} onClose={() => setLoginModalOpen(false)} />
     </header>
   );
 }
