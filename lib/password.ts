@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
 import { drizzleDb } from "@/lib/db";
 import { passwordHistory } from "@/lib/schema";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, inArray } from "drizzle-orm";
 
 const SALT_ROUNDS = 12;
 const MAX_HISTORY_ENTRIES = 2;
@@ -60,9 +60,14 @@ export async function savePasswordToHistory(
     .orderBy(desc(passwordHistory.createdAt));
 
   const toDelete = allEntries.slice(MAX_HISTORY_ENTRIES);
-  for (const entry of toDelete) {
+  if (toDelete.length > 0) {
     await drizzleDb
       .delete(passwordHistory)
-      .where(eq(passwordHistory.id, entry.id));
+      .where(
+        inArray(
+          passwordHistory.id,
+          toDelete.map((entry) => entry.id),
+        ),
+      );
   }
 }

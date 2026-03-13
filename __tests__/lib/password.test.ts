@@ -46,6 +46,7 @@ vi.mock("@/lib/schema", () => ({
 vi.mock("drizzle-orm", () => ({
   eq: vi.fn((...args: unknown[]) => ({ op: "eq", args })),
   desc: vi.fn((col: unknown) => ({ op: "desc", col })),
+  inArray: vi.fn((...args: unknown[]) => ({ op: "inArray", args })),
 }));
 
 describe("password utilities", () => {

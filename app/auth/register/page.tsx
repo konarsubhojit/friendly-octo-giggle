@@ -3,14 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-
-const PASSWORD_REQUIREMENTS = [
-  { label: 'At least 8 characters', test: (p: string) => p.length >= 8 },
-  { label: 'One uppercase letter', test: (p: string) => /[A-Z]/.test(p) },
-  { label: 'One lowercase letter', test: (p: string) => /[a-z]/.test(p) },
-  { label: 'One number', test: (p: string) => /\d/.test(p) },
-  { label: 'One special character', test: (p: string) => /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(p) },
-];
+import { PASSWORD_REQUIREMENTS } from '@/lib/validations';
 
 export default function RegisterPage() {
   const router = useRouter();

@@ -8,6 +8,14 @@ vi.mock("next-auth/react", () => ({
   signIn: mockSignIn,
 }));
 
+// Mock next/navigation
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({
+    refresh: vi.fn(),
+    push: vi.fn(),
+  }),
+}));
+
 // Mock next/link
 vi.mock("next/link", () => ({
   default: ({

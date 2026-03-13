@@ -197,3 +197,12 @@ export const changePasswordSchema = z
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type CredentialsLoginInput = z.infer<typeof credentialsLoginSchema>;
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
+
+// Password requirement descriptions for UI display
+export const PASSWORD_REQUIREMENTS = [
+  { label: 'At least 8 characters', test: (p: string) => p.length >= 8 },
+  { label: 'One uppercase letter', test: (p: string) => /[A-Z]/.test(p) },
+  { label: 'One lowercase letter', test: (p: string) => /[a-z]/.test(p) },
+  { label: 'One number', test: (p: string) => /\d/.test(p) },
+  { label: 'One special character', test: (p: string) => /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(p) },
+] as const;

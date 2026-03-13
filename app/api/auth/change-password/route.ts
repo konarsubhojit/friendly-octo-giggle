@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
     await savePasswordToHistory(session.user.id, newHash);
 
     logAuthEvent({
-      event: 'login',
+      event: 'password_change',
       userId: session.user.id,
       email: user.email,
       success: true,

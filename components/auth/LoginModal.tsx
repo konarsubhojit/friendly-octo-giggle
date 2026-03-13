@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { signIn } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 interface LoginModalProps {
@@ -17,6 +18,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
   const [loading, setLoading] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
   const firstFocusRef = useRef<HTMLInputElement>(null);
+  const router = useRouter();
 
   // Body scroll lock
   useEffect(() => {
@@ -93,7 +95,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
         setError('Invalid email/phone or password');
       } else {
         onClose();
-        window.location.reload();
+        router.refresh();
       }
     } catch {
       setError('An unexpected error occurred');

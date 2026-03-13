@@ -81,7 +81,8 @@ export function logAuthEvent(data: {
     | "register"
     | "failed_login"
     | "session_created"
-    | "session_expired";
+    | "session_expired"
+    | "password_change";
   userId?: string;
   email?: string;
   provider?: string;
