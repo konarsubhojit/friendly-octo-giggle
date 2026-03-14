@@ -160,7 +160,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
     jwt({ token, user }) {
       if (user) {
-        token.id = user.id;
+        token.id = user.id ?? '';
         token.role = user.role || 'CUSTOMER';
         if ('phoneNumber' in user && user.phoneNumber) {
           token.phoneNumber = user.phoneNumber;
