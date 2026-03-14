@@ -11,6 +11,10 @@ import {
   UpdateCartItemSchema,
   EnvSchema,
   ApiErrorSchema,
+  registerSchema,
+  credentialsLoginSchema,
+  changePasswordSchema,
+  updateProfileSchema,
 } from "@/lib/validations";
 
 // Helpers
@@ -344,5 +348,155 @@ describe("ApiErrorSchema", () => {
     expect(() =>
       ApiErrorSchema.parse({ error: "fail", success: true }),
     ).toThrow();
+  });
+});
+
+describe("registerSchema", () => {
+  const validRegistration = {
+    name: "Test User",
+    email: "test@example.com",
+    password: "StrongPass1!",
+    confirmPassword: "StrongPass1!",
+  };
+
+  it("accepts valid registration data", () => {
+    const result = registerSchema.safeParse(validRegistration);
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts registration with phone number", () => {
+    const result = registerSchema.safeParse({
+      ...validRegistration,
+      phoneNumber: "+1234567890",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects empty name", () => {
+    const result = registerSchema.safeParse({ ...validRegistration, name: "" });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects invalid email", () => {
+    const result = registerSchema.safeParse({
+      ...validRegistration,
+      email: "invalid",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects weak password", () => {
+    const result = registerSchema.safeParse({
+      ...validRegistration,
+      password: "weak",
+      confirmPassword: "weak",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects mismatched passwords", () => {
+    const result = registerSchema.safeParse({
+      ...validRegistration,
+      confirmPassword: "Different1!",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects invalid phone number format", () => {
+    const result = registerSchema.safeParse({
+      ...validRegistration,
+      phoneNumber: "abc",
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("credentialsLoginSchema", () => {
+  it("accepts valid login data", () => {
+    const result = credentialsLoginSchema.safeParse({
+      identifier: "test@example.com",
+      password: "password123",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects empty identifier", () => {
+    const result = credentialsLoginSchema.safeParse({
+      identifier: "",
+      password: "password123",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects empty password", () => {
+    const result = credentialsLoginSchema.safeParse({
+      identifier: "test@example.com",
+      password: "",
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("changePasswordSchema", () => {
+  const validChangePassword = {
+    currentPassword: "OldPass1!",
+    newPassword: "NewStrong1!",
+    confirmNewPassword: "NewStrong1!",
+  };
+
+  it("accepts valid change password data", () => {
+    const result = changePasswordSchema.safeParse(validChangePassword);
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects weak new password", () => {
+    const result = changePasswordSchema.safeParse({
+      ...validChangePassword,
+      newPassword: "weak",
+      confirmNewPassword: "weak",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects mismatched new passwords", () => {
+    const result = changePasswordSchema.safeParse({
+      ...validChangePassword,
+      confirmNewPassword: "Different1!",
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("updateProfileSchema", () => {
+  it("accepts valid profile update with name only", () => {
+    const result = updateProfileSchema.safeParse({ name: "New Name" });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts valid profile update with email", () => {
+    const result = updateProfileSchema.safeParse({ email: "new@example.com" });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts valid profile update with phone", () => {
+    const result = updateProfileSchema.safeParse({
+      phoneNumber: "+1234567890",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts empty object (all fields optional)", () => {
+    const result = updateProfileSchema.safeParse({});
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects invalid email", () => {
+    const result = updateProfileSchema.safeParse({ email: "invalid" });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects invalid phone number", () => {
+    const result = updateProfileSchema.safeParse({ phoneNumber: "abc" });
+    expect(result.success).toBe(false);
   });
 });

@@ -35,6 +35,11 @@ vi.mock("@/components/ui/CurrencySelector", () => ({
   default: () => <div data-testid="currency-selector" />,
 }));
 
+vi.mock("@/components/auth/LoginModal", () => ({
+  default: ({ isOpen }: { isOpen: boolean }) =>
+    isOpen ? <div data-testid="login-modal" /> : null,
+}));
+
 describe("Header", () => {
   let useSession: ReturnType<typeof vi.fn>;
 
@@ -51,12 +56,23 @@ describe("Header", () => {
     expect(screen.getByText("Craft & Cozy")).toBeTruthy();
   });
 
-  it("shows Sign In link when not authenticated", async () => {
+  it("shows Login button when not authenticated", async () => {
     useSession.mockReturnValue({ data: null, status: "unauthenticated" });
     const Header = (await import("@/components/layout/Header")).default;
     render(<Header />);
-    const signInLink = screen.getByText("Sign In").closest("a");
-    expect(signInLink?.getAttribute("href")).toContain("/auth/signin");
+    const loginButton = screen.getByText("Login");
+    expect(loginButton.tagName).toBe("BUTTON");
+  });
+
+  it("opens login modal when Login button is clicked", async () => {
+    useSession.mockReturnValue({ data: null, status: "unauthenticated" });
+    const Header = (await import("@/components/layout/Header")).default;
+    render(<Header />);
+    expect(screen.queryByTestId("login-modal")).toBeNull();
+    act(() => {
+      fireEvent.click(screen.getByText("Login"));
+    });
+    expect(screen.getByTestId("login-modal")).toBeTruthy();
   });
 
   it("shows navigation links", async () => {
@@ -274,5 +290,27 @@ describe("Header", () => {
       fireEvent.click(adminLink as HTMLElement);
     });
     expect(screen.queryByRole("menu")).toBeNull();
+  });
+
+  it("shows My Account link in user menu", async () => {
+    const session = {
+      user: {
+        name: "Alice",
+        email: "alice@example.com",
+        image: null,
+        role: "CUSTOMER",
+      },
+    };
+    useSession.mockReturnValue({ data: session, status: "authenticated" });
+    const Header = (await import("@/components/layout/Header")).default;
+    render(<Header />);
+
+    act(() => {
+      fireEvent.click(screen.getByLabelText("User menu"));
+    });
+    const menu = screen.getByRole("menu");
+    const accountLink = menu.querySelector("a[href='/account']");
+    expect(accountLink).not.toBeNull();
+    expect(accountLink?.textContent).toContain("My Account");
   });
 });

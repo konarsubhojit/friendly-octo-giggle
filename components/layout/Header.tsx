@@ -6,10 +6,12 @@ import Image from 'next/image';
 import { useSession, signOut } from 'next-auth/react';
 import CartIcon from '@/components/layout/CartIcon';
 import CurrencySelector from '@/components/ui/CurrencySelector';
+import LoginModal from '@/components/auth/LoginModal';
 
 export default function Header() {
   const { data: session } = useSession();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [loginModalOpen, setLoginModalOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -80,6 +82,17 @@ export default function Header() {
                       <p className="text-xs text-gray-500 truncate">{session.user.email}</p>
                     </div>
                     <Link
+                      href="/account"
+                      onClick={() => setMenuOpen(false)}
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                      role="menuitem"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                      My Account
+                    </Link>
+                    <Link
                       href="/orders"
                       onClick={() => setMenuOpen(false)}
                       className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
@@ -120,16 +133,17 @@ export default function Header() {
                 )}
               </div>
             ) : (
-              <Link
-                href="/auth/signin?callbackUrl=/"
+              <button
+                onClick={() => setLoginModalOpen(true)}
                 className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-300 shadow-md hover:shadow-lg"
               >
-                Sign In
-              </Link>
+                Login
+              </button>
             )}
           </div>
         </div>
       </div>
+      <LoginModal isOpen={loginModalOpen} onClose={() => setLoginModalOpen(false)} />
     </header>
   );
 }
