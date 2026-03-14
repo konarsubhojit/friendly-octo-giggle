@@ -70,11 +70,9 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
           e.preventDefault();
           lastEl?.focus();
         }
-      } else {
-        if (document.activeElement === lastEl) {
-          e.preventDefault();
-          firstEl?.focus();
-        }
+      } else if (document.activeElement === lastEl) {
+        e.preventDefault();
+        firstEl?.focus();
       }
     }
 
@@ -110,10 +108,9 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
   if (!isOpen) return null;
 
   return (
-    <div
-      className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center"
-      role="dialog"
-      aria-modal="true"
+    <dialog
+      className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-transparent border-none p-0 m-0 w-full h-full max-w-none max-h-none"
+      open
       aria-label="Login"
     >
       {/* Backdrop */}
@@ -241,6 +238,6 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
           <CopilotDevLoginButton onSuccess={onClose} />
         </div>
       </div>
-    </div>
+    </dialog>
   );
 }

@@ -68,7 +68,7 @@ describe("LoginModal", () => {
     const onClose = vi.fn();
     render(<LoginModal isOpen={true} onClose={onClose} />);
     const backdrop = screen.getByText("Welcome Back")
-      .closest('[role="dialog"]')
+      .closest("dialog")
       ?.querySelector('[aria-hidden="true"]');
     if (backdrop) {
       act(() => {
@@ -130,8 +130,8 @@ describe("LoginModal", () => {
   it("has proper aria attributes", () => {
     render(<LoginModal isOpen={true} onClose={vi.fn()} />);
     const dialog = screen.getByRole("dialog");
-    expect(dialog.getAttribute("aria-modal")).toBe("true");
     expect(dialog.getAttribute("aria-label")).toBe("Login");
+    expect(dialog.tagName.toLowerCase()).toBe("dialog");
   });
 
   it("has register link", () => {
