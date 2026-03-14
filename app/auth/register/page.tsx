@@ -14,6 +14,7 @@ export default function RegisterPage() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [confirmPasswordTouched, setConfirmPasswordTouched] = useState(false);
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
@@ -135,7 +136,10 @@ export default function RegisterPage() {
                 id="register-password"
                 type={showPassword ? 'text' : 'password'}
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  if (fieldErrors.confirmPassword) setFieldErrors((prev) => ({ ...prev, confirmPassword: '' }));
+                }}
                 className="w-full px-4 py-3 text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all pr-12"
                 placeholder="Create a password"
                 required
@@ -155,16 +159,21 @@ export default function RegisterPage() {
               id="register-confirm-password"
               type="password"
               value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
+              onChange={(e) => {
+                setConfirmPassword(e.target.value);
+                if (fieldErrors.confirmPassword) setFieldErrors((prev) => ({ ...prev, confirmPassword: '' }));
+              }}
+              onBlur={() => setConfirmPasswordTouched(true)}
               className="w-full px-4 py-3 text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
               placeholder="Confirm your password"
               required
               autoComplete="new-password"
             />
-            {fieldErrors.confirmPassword && <p className="text-xs text-red-600 mt-1">{fieldErrors.confirmPassword}</p>}
-            {confirmPassword && password !== confirmPassword && (
+            {fieldErrors.confirmPassword ? (
+              <p className="text-xs text-red-600 mt-1">{fieldErrors.confirmPassword}</p>
+            ) : confirmPasswordTouched && confirmPassword && password !== confirmPassword ? (
               <p className="text-xs text-red-600 mt-1">Passwords don&apos;t match</p>
-            )}
+            ) : null}
           </div>
 
           <button
