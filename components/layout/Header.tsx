@@ -147,10 +147,13 @@ export default function Header() {
 
             {/* Mobile hamburger button */}
             <button
+              id="mobile-nav-toggle"
               onClick={() => setMobileNavOpen(!mobileNavOpen)}
               className="md:hidden flex items-center justify-center w-9 h-9 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
               aria-label={mobileNavOpen ? 'Close menu' : 'Open menu'}
               aria-expanded={mobileNavOpen}
+              aria-haspopup="menu"
+              aria-controls="mobile-nav-drawer"
             >
               {mobileNavOpen ? (
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -168,7 +171,7 @@ export default function Header() {
 
       {/* Mobile navigation drawer */}
       {mobileNavOpen && (
-        <div className="md:hidden bg-white/95 backdrop-blur-lg border-t border-gray-100 shadow-lg">
+        <div id="mobile-nav-drawer" role="menu" className="md:hidden bg-white/95 backdrop-blur-lg border-t border-gray-100 shadow-lg">
           <nav className="max-w-7xl mx-auto px-4 py-4 flex flex-col gap-1">
             <Link
               href="/"

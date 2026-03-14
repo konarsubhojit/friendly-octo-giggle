@@ -20,24 +20,24 @@ test.beforeAll(() => {
 // ─── Mobile Navigation (Hamburger Menu) ─────────────────────────────────────
 
 test.describe('Mobile Navigation - Hamburger Menu', () => {
-  test('hamburger button is visible on mobile viewport', async ({ page, isMobile }) => {
-    test.skip(!isMobile, 'Only runs on mobile viewport');
+  test('hamburger button is visible on mobile viewport', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'mobile-chrome', 'Only runs on mobile viewport');
     await page.goto('/');
     const hamburger = page.getByRole('button', { name: /open menu/i });
     await expect(hamburger).toBeVisible();
     await page.screenshot({ path: screenshotPath('mobile-home-closed-nav'), fullPage: false });
   });
 
-  test('hamburger button is hidden on desktop viewport', async ({ page, isMobile }) => {
-    test.skip(!!isMobile, 'Only runs on desktop viewport');
+  test('hamburger button is hidden on desktop viewport', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'desktop-chrome', 'Only runs on desktop viewport');
     await page.goto('/');
     const hamburger = page.getByRole('button', { name: /open menu/i });
     await expect(hamburger).not.toBeVisible();
     await page.screenshot({ path: screenshotPath('desktop-home-no-hamburger'), fullPage: false });
   });
 
-  test('mobile nav drawer opens and shows links on click', async ({ page, isMobile }) => {
-    test.skip(!isMobile, 'Only runs on mobile viewport');
+  test('mobile nav drawer opens and shows links on click', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'mobile-chrome', 'Only runs on mobile viewport');
     await page.goto('/');
     const hamburger = page.getByRole('button', { name: /open menu/i });
     await hamburger.click();
@@ -50,8 +50,8 @@ test.describe('Mobile Navigation - Hamburger Menu', () => {
     await page.screenshot({ path: screenshotPath('mobile-home-open-nav'), fullPage: false });
   });
 
-  test('mobile nav drawer closes when hamburger clicked again', async ({ page, isMobile }) => {
-    test.skip(!isMobile, 'Only runs on mobile viewport');
+  test('mobile nav drawer closes when hamburger clicked again', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'mobile-chrome', 'Only runs on mobile viewport');
     await page.goto('/');
     const hamburger = page.getByRole('button', { name: /open menu/i });
     await hamburger.click();
@@ -62,6 +62,18 @@ test.describe('Mobile Navigation - Hamburger Menu', () => {
     // drawer should be gone - back to open-menu button
     await expect(page.getByRole('button', { name: /open menu/i })).toBeVisible();
     await page.screenshot({ path: screenshotPath('mobile-home-closed-nav-again'), fullPage: false });
+  });
+
+  test('hamburger button has correct aria attributes', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'mobile-chrome', 'Only runs on mobile viewport');
+    await page.goto('/');
+    const hamburger = page.getByRole('button', { name: /open menu/i });
+    await expect(hamburger).toHaveAttribute('aria-haspopup', 'menu');
+    await expect(hamburger).toHaveAttribute('aria-controls', 'mobile-nav-drawer');
+    await expect(hamburger).toHaveAttribute('aria-expanded', 'false');
+    // After opening, aria-expanded should be true
+    await hamburger.click();
+    await expect(page.getByRole('button', { name: /close menu/i })).toHaveAttribute('aria-expanded', 'true');
   });
 });
 
@@ -75,8 +87,8 @@ test.describe('Shipping page - table horizontal scroll', () => {
     await expect(tableWrapper).toBeAttached();
   });
 
-  test('shipping page renders table on mobile', async ({ page, isMobile }) => {
-    test.skip(!isMobile, 'Only runs on mobile viewport');
+  test('shipping page renders table on mobile', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'mobile-chrome', 'Only runs on mobile viewport');
     await page.goto('/shipping');
     await page.screenshot({ path: screenshotPath('mobile-shipping-table'), fullPage: true });
     // Table must exist in the DOM
@@ -84,8 +96,8 @@ test.describe('Shipping page - table horizontal scroll', () => {
     await expect(table).toBeAttached();
   });
 
-  test('shipping page renders table on desktop', async ({ page, isMobile }) => {
-    test.skip(!!isMobile, 'Only runs on desktop viewport');
+  test('shipping page renders table on desktop', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'desktop-chrome', 'Only runs on desktop viewport');
     await page.goto('/shipping');
     await page.screenshot({ path: screenshotPath('desktop-shipping-table'), fullPage: false });
     const table = page.locator('table').first();
@@ -96,12 +108,17 @@ test.describe('Shipping page - table horizontal scroll', () => {
 // ─── Admin Users Table – overflow-x-auto ─────────────────────────────────────
 
 test.describe('Admin users page - table horizontal scroll DOM structure', () => {
-  test('users table wrapper has overflow-x-auto class in HTML source', async ({ page }) => {
-    // We verify the compiled HTML structure for the admin users page
-    // by checking the page source (does not require auth for a DOM check)
-    const response = await page.request.get('/admin/users');
-    // Even if auth redirects, just verify the request works (not 500)
-    expect([200, 302, 307, 308].includes(response.status())).toBeTruthy();
+  test('users table wrapper has overflow-x-auto class', async () => {
+    // Admin pages require authentication; we verify the structural fix
+    // exists in the component source rather than relying on a signed-in session.
+    const source = fs.readFileSync(
+      path.join(__dirname, '../app/admin/users/page.tsx'),
+      'utf-8',
+    );
+    // The overflow-x-auto wrapper must be present inside UsersTable
+    expect(source).toContain('overflow-x-auto');
+    // The table itself must still be present
+    expect(source).toContain('min-w-full');
   });
 });
 
@@ -109,8 +126,6 @@ test.describe('Admin users page - table horizontal scroll DOM structure', () => 
 
 test.describe('Product detail page - dark mode button variants', () => {
   test('variation button has explicit white background class in source', async ({ page }) => {
-    // Navigate to a product page (will 404 since no real product, but source is static)
-    // Instead we check the component by loading the home page to verify the bundle
     await page.goto('/');
     // The page should load without errors
     await expect(page.locator('body')).toBeVisible();
@@ -150,50 +165,49 @@ test.describe('CurrencySelector - dark mode visibility', () => {
 // ─── Admin Nav – mobile overflow scroll ───────────────────────────────────────
 
 test.describe('Admin layout nav - mobile horizontal scroll', () => {
-  test('admin nav has overflow-x-auto class', async ({ page }) => {
-    // We check this by reading the page HTML directly
-    // The admin nav is a server component so we can inspect the HTML structure
-    const response = await page.request.get('/admin');
-    // Even if auth redirects, the HTML structure of the nav component
-    // can be inspected from the redirected signin page
-    const body = await response.text();
-    // Confirm request succeeded or redirected (not 500 error)
-    expect([200, 302, 307, 308].includes(response.status())).toBeTruthy();
-    // Admin nav has whitespace-nowrap for mobile scrolling
-    void body; // suppress unused var
+  test('admin nav has overflow-x-auto and whitespace-nowrap classes', async () => {
+    // Admin pages require authentication; we verify the structural fix
+    // exists in the component source rather than relying on a signed-in session.
+    const source = fs.readFileSync(
+      path.join(__dirname, '../app/admin/layout.tsx'),
+      'utf-8',
+    );
+    // AdminNavLinks must have overflow-x-auto on the nav element
+    expect(source).toContain('overflow-x-auto');
+    // Links must have whitespace-nowrap so they don't wrap on narrow screens
+    expect(source).toContain('whitespace-nowrap');
   });
 });
 
 // ─── Full Page Screenshots ────────────────────────────────────────────────────
 
 test.describe('Full page screenshots for visual verification', () => {
-  test('home page - mobile screenshot', async ({ page, isMobile }) => {
-    test.skip(!isMobile, 'Only runs on mobile viewport');
+  test('home page - mobile screenshot', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'mobile-chrome', 'Only runs on mobile viewport');
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await expect(page.locator('header')).toBeVisible();
     await page.screenshot({ path: screenshotPath('mobile-home-full'), fullPage: true });
-    await expect(page.locator('header')).toBeVisible();
   });
 
-  test('home page - desktop screenshot', async ({ page, isMobile }) => {
-    test.skip(!!isMobile, 'Only runs on desktop viewport');
+  test('home page - desktop screenshot', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'desktop-chrome', 'Only runs on desktop viewport');
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
-    await page.screenshot({ path: screenshotPath('desktop-home-full'), fullPage: false });
     await expect(page.locator('header')).toBeVisible();
+    await page.screenshot({ path: screenshotPath('desktop-home-full'), fullPage: false });
   });
 
-  test('shipping page - mobile full screenshot', async ({ page, isMobile }) => {
-    test.skip(!isMobile, 'Only runs on mobile viewport');
+  test('shipping page - mobile full screenshot', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'mobile-chrome', 'Only runs on mobile viewport');
     await page.goto('/shipping');
-    await page.waitForLoadState('networkidle');
+    await expect(page.locator('h1')).toBeVisible();
     await page.screenshot({ path: screenshotPath('mobile-shipping-full'), fullPage: true });
   });
 
-  test('about page - mobile screenshot', async ({ page, isMobile }) => {
-    test.skip(!isMobile, 'Only runs on mobile viewport');
+  test('about page - mobile screenshot', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'mobile-chrome', 'Only runs on mobile viewport');
     await page.goto('/about');
-    await page.waitForLoadState('networkidle');
+    await expect(page.locator('h1')).toBeVisible();
     await page.screenshot({ path: screenshotPath('mobile-about-full'), fullPage: true });
   });
 });
+
