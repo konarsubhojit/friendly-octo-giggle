@@ -195,7 +195,7 @@ export const changePasswordSchema = z
   });
 
 export const updateProfileSchema = z.object({
-  name: z.string().min(1, "Name is required").max(200).optional(),
+  name: z.string().min(1, "Name cannot be empty").max(200).optional(),
   email: z.string().regex(EMAIL_REGEX, "Invalid email address").optional(),
   phoneNumber: z
     .string()

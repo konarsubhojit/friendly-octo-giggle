@@ -94,7 +94,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     const updateData: Record<string, unknown> = { updatedAt: new Date() };
-    if (name !== undefined) updateData.name = name;
+    if (name !== undefined) updateData.name = name || null;
     if (email !== undefined) updateData.email = email;
     if (phoneNumber !== undefined) updateData.phoneNumber = phoneNumber || null;
 

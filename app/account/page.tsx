@@ -82,7 +82,7 @@ export default function AccountPage() {
         body: JSON.stringify({
           name: name || undefined,
           email: email || undefined,
-          phoneNumber: phoneNumber || undefined,
+          phoneNumber: phoneNumber || null,
         }),
       });
 
