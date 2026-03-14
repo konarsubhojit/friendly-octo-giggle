@@ -3,6 +3,7 @@ import { defineConfig, devices } from '@playwright/test';
 export default defineConfig({
   testDir: './playwright-tests',
   timeout: 30_000,
+  globalSetup: './playwright-tests/global-setup.ts',
   use: {
     baseURL: 'http://localhost:3000',
     // Bypass the proxy middleware HTTP→HTTPS redirect by setting the forwarded-proto header
@@ -16,11 +17,34 @@ export default defineConfig({
     {
       name: 'desktop-chrome',
       use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 800 } },
+      testMatch: '**/ui-changes.spec.ts',
     },
     {
       name: 'mobile-chrome',
       use: { ...devices['Pixel 5'], viewport: { width: 393, height: 851 } },
+      testMatch: '**/ui-changes.spec.ts',
+    },
+    // Admin views — authenticated as Copilot admin (desktop)
+    {
+      name: 'admin-desktop',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1280, height: 800 },
+        storageState: './playwright-tests/.auth/admin.json',
+      },
+      testMatch: '**/admin-views.spec.ts',
+    },
+    // Admin views — authenticated as Copilot admin (mobile)
+    {
+      name: 'admin-mobile',
+      use: {
+        ...devices['Pixel 5'],
+        viewport: { width: 393, height: 851 },
+        storageState: './playwright-tests/.auth/admin.json',
+      },
+      testMatch: '**/admin-views.spec.ts',
     },
   ],
   reporter: [['list'], ['html', { outputFolder: 'playwright-tests/report', open: 'never' }]],
 });
+

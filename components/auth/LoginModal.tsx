@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { PasswordToggleButton } from '@/components/auth/PasswordToggleButton';
 import { OAuthButtons } from '@/components/auth/OAuthButtons';
+import { CopilotDevLoginButton } from '@/components/auth/CopilotDevLoginButton';
 
 interface LoginModalProps {
   readonly isOpen: boolean;
@@ -235,6 +236,9 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
               Register
             </Link>
           </p>
+
+          {/* Dev-only: Copilot Admin sign-in */}
+          <CopilotDevLoginButton onSuccess={onClose} />
         </div>
       </div>
     </div>

@@ -183,8 +183,11 @@ describe("auth module", () => {
       // The provider config uses conditional checks for GOOGLE_CLIENT_ID/SECRET
       expect(capturedConfig.providers).toBeDefined();
       expect(Array.isArray(capturedConfig.providers)).toBe(true);
-      expect(capturedConfig.providers.length).toBe(3);
-      expect(capturedConfig.providers[0].id).toBe("google");
+      // 3 base providers (google, microsoft-entra-id, credentials) +
+      // 1 dev-only copilot provider when NODE_ENV !== 'production'
+      const expectedCount = process.env.NODE_ENV !== 'production' ? 4 : 3;
+      expect(capturedConfig.providers.length).toBe(expectedCount);
+      expect(capturedConfig.providers[0].id).toBe("copilot-dev");
     });
   });
 
