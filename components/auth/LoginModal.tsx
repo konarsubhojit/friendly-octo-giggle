@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -19,68 +19,30 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const modalRef = useRef<HTMLDivElement>(null);
+  const dialogRef = useRef<HTMLDialogElement>(null);
   const firstFocusRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
-  // Body scroll lock
+  // Open dialog as modal and handle native cancel (Escape) event
   useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-      // Focus the first input when modal opens
-      setTimeout(() => firstFocusRef.current?.focus(), 100);
-    } else {
-      document.body.style.overflow = '';
+    const dialog = dialogRef.current;
+    if (!isOpen || !dialog) return;
+
+    document.body.style.overflow = 'hidden';
+    dialog.showModal();
+    setTimeout(() => firstFocusRef.current?.focus(), 100);
+
+    function handleCancel(e: Event) {
+      e.preventDefault();
+      onClose();
     }
+
+    dialog.addEventListener('cancel', handleCancel);
     return () => {
+      dialog.removeEventListener('cancel', handleCancel);
       document.body.style.overflow = '';
     };
-  }, [isOpen]);
-
-  // Close on Escape key
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    },
-    [onClose],
-  );
-
-  useEffect(() => {
-    if (isOpen) {
-      document.addEventListener('keydown', handleKeyDown);
-      return () => document.removeEventListener('keydown', handleKeyDown);
-    }
-  }, [isOpen, handleKeyDown]);
-
-  // Focus trap
-  useEffect(() => {
-    if (!isOpen || !modalRef.current) return;
-
-    const modal = modalRef.current;
-    const focusableElements = modal.querySelectorAll<HTMLElement>(
-      'input, button, a, [tabindex]:not([tabindex="-1"])',
-    );
-    const firstEl = focusableElements[0];
-    const lastEl = focusableElements[focusableElements.length - 1];
-
-    function trapFocus(e: KeyboardEvent) {
-      if (e.key !== 'Tab') return;
-      if (e.shiftKey) {
-        if (document.activeElement === firstEl) {
-          e.preventDefault();
-          lastEl?.focus();
-        }
-      } else {
-        if (document.activeElement === lastEl) {
-          e.preventDefault();
-          firstEl?.focus();
-        }
-      }
-    }
-
-    modal.addEventListener('keydown', trapFocus);
-    return () => modal.removeEventListener('keydown', trapFocus);
-  }, [isOpen]);
+  }, [isOpen, onClose]);
 
   async function handleCredentialsLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -110,10 +72,9 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
   if (!isOpen) return null;
 
   return (
-    <div
-      className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center"
-      role="dialog"
-      aria-modal="true"
+    <dialog
+      ref={dialogRef}
+      className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-transparent border-none p-0 m-0 w-full h-full max-w-none max-h-none"
       aria-label="Login"
     >
       {/* Backdrop */}
@@ -125,7 +86,6 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
 
       {/* Modal */}
       <div
-        ref={modalRef}
         className="relative w-full sm:max-w-md bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl z-10 max-h-[90vh] overflow-y-auto pb-[env(safe-area-inset-bottom)]"
       >
         {/* Drag handle for mobile */}
@@ -241,6 +201,6 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
           <CopilotDevLoginButton onSuccess={onClose} />
         </div>
       </div>
-    </div>
+    </dialog>
   );
 }

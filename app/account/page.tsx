@@ -204,9 +204,9 @@ export default function AccountPage() {
           </div>
 
           {profileSuccess && (
-            <p className="text-sm text-green-600 bg-green-50 rounded-lg px-3 py-2 mb-4" role="status">
+            <output className="text-sm text-green-600 bg-green-50 rounded-lg px-3 py-2 mb-4 block">
               {profileSuccess}
-            </p>
+            </output>
           )}
           {profileError && (
             <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2 mb-4" role="alert">
@@ -287,9 +287,9 @@ export default function AccountPage() {
             </div>
 
             {passwordSuccess && (
-              <p className="text-sm text-green-600 bg-green-50 rounded-lg px-3 py-2 mb-4" role="status">
+              <output className="text-sm text-green-600 bg-green-50 rounded-lg px-3 py-2 mb-4 block">
                 {passwordSuccess}
-              </p>
+              </output>
             )}
             {passwordError && (
               <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2 mb-4" role="alert">

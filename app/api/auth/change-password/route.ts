@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
       where: eq(users.id, session.user.id),
     });
 
-    if (!user || !user.passwordHash) {
+    if (!user?.passwordHash) {
       return apiError('Password change not available for this account', 400);
     }
 
