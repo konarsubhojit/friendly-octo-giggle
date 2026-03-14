@@ -1,0 +1,13 @@
+# Copilot Coding Agent Setup Steps
+# These steps run before the Copilot coding agent starts working on tasks.
+# This ensures all dependencies are installed and the project is ready.
+
+steps:
+  - name: Set up Node.js
+    uses: actions/setup-node@v4
+    with:
+      node-version: 22
+      cache: npm
+
+  - name: Install dependencies
+    run: npm ci
