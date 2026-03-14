@@ -170,4 +170,71 @@ describe("POST /api/auth/change-password", () => {
     expect(res.status).toBe(400);
     expect(data.error).toContain("last 2 passwords");
   });
+
+  it("returns 400 when validation fails (weak password)", async () => {
+    mockAuth.mockResolvedValue({ user: { id: "user-1" } });
+
+    const req = new NextRequest(
+      "http://localhost/api/auth/change-password",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          currentPassword: "OldPass1!",
+          newPassword: "weak",
+          confirmNewPassword: "weak",
+        }),
+      },
+    );
+
+    const res = await POST(req);
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.error).toContain("Validation failed");
+  });
+
+  it("returns 400 when user has no password set (OAuth-only)", async () => {
+    mockAuth.mockResolvedValue({ user: { id: "user-1" } });
+    mockFindFirst.mockResolvedValue({
+      id: "user-1",
+      email: "test@example.com",
+      passwordHash: null,
+    });
+
+    const req = new NextRequest(
+      "http://localhost/api/auth/change-password",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          currentPassword: "OldPass1!",
+          newPassword: "NewStrong1!",
+          confirmNewPassword: "NewStrong1!",
+        }),
+      },
+    );
+
+    const res = await POST(req);
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.error).toContain("not available");
+  });
+
+  it("returns 400 when user is not found", async () => {
+    mockAuth.mockResolvedValue({ user: { id: "user-1" } });
+    mockFindFirst.mockResolvedValue(null);
+
+    const req = new NextRequest(
+      "http://localhost/api/auth/change-password",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          currentPassword: "OldPass1!",
+          newPassword: "NewStrong1!",
+          confirmNewPassword: "NewStrong1!",
+        }),
+      },
+    );
+
+    const res = await POST(req);
+    expect(res.status).toBe(400);
+  });
 });

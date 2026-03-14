@@ -37,16 +37,25 @@ vi.mock("next-auth/providers/credentials", () => ({
   })),
 }));
 
+const mockFindFirst = vi.hoisted(() => vi.fn());
+const mockVerifyPassword = vi.hoisted(() => vi.fn());
+
 vi.mock("@auth/drizzle-adapter", () => ({
   DrizzleAdapter: vi.fn(() => ({})),
 }));
 
 vi.mock("@/lib/db", () => ({
-  drizzleDb: {},
+  drizzleDb: {
+    query: {
+      users: {
+        findFirst: mockFindFirst,
+      },
+    },
+  },
 }));
 
 vi.mock("@/lib/schema", () => ({
-  users: {},
+  users: { email: "email", phoneNumber: "phoneNumber" },
   accounts: {},
   sessions: {},
   verificationTokens: {},
@@ -57,12 +66,12 @@ vi.mock("@/lib/logger", () => ({
 }));
 
 vi.mock("@/lib/password", () => ({
-  verifyPassword: vi.fn(),
+  verifyPassword: mockVerifyPassword,
 }));
 
 vi.mock("drizzle-orm", () => ({
-  eq: vi.fn(),
-  or: vi.fn(),
+  eq: vi.fn((...args: unknown[]) => ({ op: "eq", args })),
+  or: vi.fn((...args: unknown[]) => ({ op: "or", args })),
 }));
 
 describe("auth module", () => {
@@ -197,6 +206,158 @@ describe("auth module", () => {
         (p: { id: string }) => p.id === "credentials",
       );
       expect(credProvider).toBeDefined();
+    });
+  });
+
+  describe("Credentials authorize", () => {
+    let authorize: (credentials: Record<string, unknown>) => Promise<unknown>;
+
+    beforeEach(() => {
+      const credProvider = capturedConfig.providers.find(
+        (p: { id: string }) => p.id === "credentials",
+      );
+      authorize = credProvider.authorize;
+    });
+
+    it("returns null when identifier is missing", async () => {
+      const result = await authorize({ password: "pass" });
+      expect(result).toBeNull();
+    });
+
+    it("returns null when password is missing", async () => {
+      const result = await authorize({ identifier: "test@example.com" });
+      expect(result).toBeNull();
+    });
+
+    it("returns null when both are missing", async () => {
+      const result = await authorize({});
+      expect(result).toBeNull();
+    });
+
+    it("returns null when user is not found", async () => {
+      mockFindFirst.mockResolvedValue(null);
+      const result = await authorize({
+        identifier: "unknown@example.com",
+        password: "pass123",
+      });
+      expect(result).toBeNull();
+      expect(mockLogAuthEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          event: "failed_login",
+          error: "User not found",
+        }),
+      );
+    });
+
+    it("returns null when user has no password (OAuth-only)", async () => {
+      mockFindFirst.mockResolvedValue({
+        id: "user-1",
+        email: "oauth@example.com",
+        passwordHash: null,
+      });
+      const result = await authorize({
+        identifier: "oauth@example.com",
+        password: "pass123",
+      });
+      expect(result).toBeNull();
+      expect(mockLogAuthEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          event: "failed_login",
+          error: "No password set (OAuth-only user)",
+        }),
+      );
+    });
+
+    it("returns null when password is invalid", async () => {
+      mockFindFirst.mockResolvedValue({
+        id: "user-1",
+        email: "test@example.com",
+        passwordHash: "hashed-pass",
+      });
+      mockVerifyPassword.mockResolvedValue(false);
+      const result = await authorize({
+        identifier: "test@example.com",
+        password: "wrong-pass",
+      });
+      expect(result).toBeNull();
+      expect(mockLogAuthEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          event: "failed_login",
+          error: "Invalid password",
+        }),
+      );
+    });
+
+    it("returns user on successful login", async () => {
+      mockFindFirst.mockResolvedValue({
+        id: "user-1",
+        name: "Test User",
+        email: "test@example.com",
+        image: null,
+        role: "CUSTOMER",
+        phoneNumber: "+1234567890",
+        passwordHash: "hashed-pass",
+      });
+      mockVerifyPassword.mockResolvedValue(true);
+      const result = await authorize({
+        identifier: "test@example.com",
+        password: "correct-pass",
+      });
+      expect(result).toEqual({
+        id: "user-1",
+        name: "Test User",
+        email: "test@example.com",
+        image: null,
+        role: "CUSTOMER",
+        phoneNumber: "+1234567890",
+      });
+      expect(mockLogAuthEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          event: "login",
+          provider: "credentials",
+          success: true,
+        }),
+      );
+    });
+  });
+
+  describe("callbacks.session phoneNumber", () => {
+    it("sets phoneNumber from token when present", () => {
+      const session = { user: { id: "", role: "", email: "test@example.com" } };
+      const token = { id: "user-123", role: "CUSTOMER", phoneNumber: "+1234567890" };
+
+      const result = capturedConfig.callbacks.session({ session, token });
+
+      expect(result.user.phoneNumber).toBe("+1234567890");
+    });
+
+    it("sets phoneNumber to undefined when missing from token", () => {
+      const session = { user: { id: "", role: "", email: "test@example.com" } };
+      const token = { id: "user-123", role: "CUSTOMER" };
+
+      const result = capturedConfig.callbacks.session({ session, token });
+
+      expect(result.user.phoneNumber).toBeUndefined();
+    });
+  });
+
+  describe("callbacks.jwt phoneNumber", () => {
+    it("sets phoneNumber on token when user has it", () => {
+      const token = { sub: "sub-1" };
+      const user = { id: "user-123", role: "CUSTOMER", phoneNumber: "+1234567890" };
+
+      const result = capturedConfig.callbacks.jwt({ token, user });
+
+      expect(result.phoneNumber).toBe("+1234567890");
+    });
+
+    it("does not set phoneNumber when user does not have it", () => {
+      const token = { sub: "sub-1" };
+      const user = { id: "user-123", role: "CUSTOMER" };
+
+      const result = capturedConfig.callbacks.jwt({ token, user });
+
+      expect(result.phoneNumber).toBeUndefined();
     });
   });
 

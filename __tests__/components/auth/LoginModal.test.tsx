@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, act } from "@testing-library/react";
+import { render, screen, fireEvent, act, waitFor } from "@testing-library/react";
 import React from "react";
 
 // Mock next-auth/react
@@ -138,5 +138,75 @@ describe("LoginModal", () => {
     render(<LoginModal isOpen={true} onClose={vi.fn()} />);
     const registerLink = screen.getByText("Register").closest("a");
     expect(registerLink?.getAttribute("href")).toBe("/auth/register");
+  });
+
+  it("calls signIn with credentials on form submit", async () => {
+    mockSignIn.mockResolvedValue({ error: null });
+    const onClose = vi.fn();
+    render(<LoginModal isOpen={true} onClose={onClose} />);
+
+    act(() => {
+      fireEvent.change(screen.getByLabelText("Email or Phone Number"), {
+        target: { value: "test@example.com" },
+      });
+      fireEvent.change(screen.getByLabelText("Password"), {
+        target: { value: "password123" },
+      });
+    });
+
+    await act(async () => {
+      fireEvent.submit(screen.getByText("Login").closest("form")!);
+    });
+
+    expect(mockSignIn).toHaveBeenCalledWith("credentials", {
+      identifier: "test@example.com",
+      password: "password123",
+      redirect: false,
+    });
+  });
+
+  it("shows error on credentials login failure", async () => {
+    mockSignIn.mockResolvedValue({ error: "CredentialsSignin" });
+    render(<LoginModal isOpen={true} onClose={vi.fn()} />);
+
+    act(() => {
+      fireEvent.change(screen.getByLabelText("Email or Phone Number"), {
+        target: { value: "test@example.com" },
+      });
+      fireEvent.change(screen.getByLabelText("Password"), {
+        target: { value: "wrong" },
+      });
+    });
+
+    await act(async () => {
+      fireEvent.submit(screen.getByText("Login").closest("form")!);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toBeTruthy();
+      expect(screen.getByText("Invalid email/phone or password")).toBeTruthy();
+    });
+  });
+
+  it("shows error when credentials login throws", async () => {
+    mockSignIn.mockRejectedValue(new Error("Network error"));
+    render(<LoginModal isOpen={true} onClose={vi.fn()} />);
+
+    act(() => {
+      fireEvent.change(screen.getByLabelText("Email or Phone Number"), {
+        target: { value: "test@example.com" },
+      });
+      fireEvent.change(screen.getByLabelText("Password"), {
+        target: { value: "password" },
+      });
+    });
+
+    await act(async () => {
+      fireEvent.submit(screen.getByText("Login").closest("form")!);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText("An unexpected error occurred")).toBeTruthy();
+    });
   });
 });

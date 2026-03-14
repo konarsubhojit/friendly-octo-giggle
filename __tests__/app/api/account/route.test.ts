@@ -101,6 +101,17 @@ describe("GET /api/account", () => {
 
     expect(data.data.hasPassword).toBe(false);
   });
+
+  it("returns 404 when user not found", async () => {
+    mockAuth.mockResolvedValue({ user: { id: "user-not-exist" } });
+    mockFindFirst.mockResolvedValue(null);
+
+    const res = await GET();
+    const data = await res.json();
+
+    expect(res.status).toBe(404);
+    expect(data.error).toContain("not found");
+  });
 });
 
 describe("PATCH /api/account", () => {
@@ -164,5 +175,40 @@ describe("PATCH /api/account", () => {
 
     const res = await PATCH(req);
     expect(res.status).toBe(400);
+  });
+
+  it("returns 409 when phone number is already taken", async () => {
+    mockAuth.mockResolvedValue({ user: { id: "user-1" } });
+    // First call for email check returns null, second for phone check returns existing user
+    mockFindFirst
+      .mockResolvedValueOnce(null) // no email duplicate
+      .mockResolvedValueOnce({ id: "user-3", phoneNumber: "+9999999999" }); // phone duplicate
+
+    const req = new NextRequest("http://localhost/api/account", {
+      method: "PATCH",
+      body: JSON.stringify({
+        email: "new@example.com",
+        phoneNumber: "+9999999999",
+      }),
+    });
+
+    const res = await PATCH(req);
+    const data = await res.json();
+
+    expect(res.status).toBe(409);
+    expect(data.error).toContain("phone");
+  });
+
+  it("updates phone number only", async () => {
+    mockAuth.mockResolvedValue({ user: { id: "user-1" } });
+    mockFindFirst.mockResolvedValue(null); // no duplicate
+
+    const req = new NextRequest("http://localhost/api/account", {
+      method: "PATCH",
+      body: JSON.stringify({ phoneNumber: "+1111111111" }),
+    });
+
+    const res = await PATCH(req);
+    expect(res.status).toBe(200);
   });
 });
