@@ -8,21 +8,21 @@
  * - Only one error message shown at a time (no duplicates)
  */
 import { test, expect } from '@playwright/test';
-import * as path from 'path';
-import * as fs from 'fs';
+import { join, dirname } from 'path';
+import { existsSync, mkdirSync } from 'fs';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const SCREENSHOT_DIR = path.join(__dirname, 'screenshots');
+const __dirname = dirname(__filename);
+const SCREENSHOT_DIR = join(__dirname, 'screenshots');
 
 function screenshotPath(name: string) {
-  return path.join(SCREENSHOT_DIR, `${name}.png`);
+  return join(SCREENSHOT_DIR, `${name}.png`);
 }
 
 test.beforeAll(() => {
-  if (!fs.existsSync(SCREENSHOT_DIR)) {
-    fs.mkdirSync(SCREENSHOT_DIR, { recursive: true });
+  if (!existsSync(SCREENSHOT_DIR)) {
+    mkdirSync(SCREENSHOT_DIR, { recursive: true });
   }
 });
 
