@@ -39,6 +39,13 @@ describe("LoginModal", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     vi.resetModules();
+    // jsdom does not implement showModal/close on HTMLDialogElement
+    HTMLDialogElement.prototype.showModal = vi.fn(function (this: HTMLDialogElement) {
+      this.setAttribute("open", "");
+    });
+    HTMLDialogElement.prototype.close = vi.fn(function (this: HTMLDialogElement) {
+      this.removeAttribute("open");
+    });
     LoginModal = (await import("@/components/auth/LoginModal")).default;
   });
 
@@ -78,11 +85,12 @@ describe("LoginModal", () => {
     expect(onClose).toHaveBeenCalled();
   });
 
-  it("closes on Escape key", () => {
+  it("closes on native dialog cancel event (Escape)", () => {
     const onClose = vi.fn();
     render(<LoginModal isOpen={true} onClose={onClose} />);
+    const dialog = screen.getByRole("dialog");
     act(() => {
-      fireEvent.keyDown(document, { key: "Escape" });
+      dialog.dispatchEvent(new Event("cancel", { bubbles: true }));
     });
     expect(onClose).toHaveBeenCalled();
   });
@@ -127,11 +135,12 @@ describe("LoginModal", () => {
     expect(mockSignIn).toHaveBeenCalledWith("microsoft-entra-id");
   });
 
-  it("has proper aria attributes", () => {
+  it("has proper aria attributes and uses showModal()", () => {
     render(<LoginModal isOpen={true} onClose={vi.fn()} />);
     const dialog = screen.getByRole("dialog");
     expect(dialog.getAttribute("aria-label")).toBe("Login");
     expect(dialog.tagName.toLowerCase()).toBe("dialog");
+    expect(HTMLDialogElement.prototype.showModal).toHaveBeenCalled();
   });
 
   it("has register link", () => {
