@@ -4,6 +4,7 @@ import {
   accounts,
   sessions,
   verificationTokens,
+  passwordHistory,
   products,
   productVariations,
   orders,
@@ -12,6 +13,7 @@ import {
   cartItems,
   usersRelations,
   accountsRelations,
+  passwordHistoryRelations,
   sessionsRelations,
   productsRelations,
   productVariationsRelations,
@@ -29,6 +31,7 @@ describe("schema", () => {
     expect(accounts).toBeDefined();
     expect(sessions).toBeDefined();
     expect(verificationTokens).toBeDefined();
+    expect(passwordHistory).toBeDefined();
     expect(products).toBeDefined();
     expect(productVariations).toBeDefined();
     expect(orders).toBeDefined();
@@ -40,6 +43,7 @@ describe("schema", () => {
   it("exports all relation definitions", () => {
     expect(usersRelations).toBeDefined();
     expect(accountsRelations).toBeDefined();
+    expect(passwordHistoryRelations).toBeDefined();
     expect(sessionsRelations).toBeDefined();
     expect(productsRelations).toBeDefined();
     expect(productVariationsRelations).toBeDefined();
@@ -171,7 +175,17 @@ describe("schema", () => {
     expect(cols).toContain("name");
     expect(cols).toContain("emailVerified");
     expect(cols).toContain("image");
+    expect(cols).toContain("passwordHash");
+    expect(cols).toContain("phoneNumber");
     expect(cols).toContain("createdAt");
     expect(cols).toContain("updatedAt");
+  });
+
+  it("passwordHistory table has expected columns", () => {
+    const cols = Object.keys(passwordHistory);
+    expect(cols).toContain("id");
+    expect(cols).toContain("userId");
+    expect(cols).toContain("passwordHash");
+    expect(cols).toContain("createdAt");
   });
 });

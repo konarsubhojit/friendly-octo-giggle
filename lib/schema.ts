@@ -34,6 +34,8 @@ export const users = pgTable("User", {
   email: text("email").notNull().unique(),
   emailVerified: timestamp("emailVerified", { mode: "date" }),
   image: text("image"),
+  passwordHash: text("passwordHash"),
+  phoneNumber: varchar("phoneNumber", { length: 20 }).unique(),
   role: userRoleEnum("role").default("CUSTOMER").notNull(),
   createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
   updatedAt: timestamp("updatedAt", { mode: "date" }).defaultNow().notNull(),
@@ -90,6 +92,23 @@ export const verificationTokens = pgTable(
   (t) => [
     unique("VerificationToken_identifier_token_key").on(t.identifier, t.token),
   ],
+);
+
+// ─── Password History Table ──────────────────────────────
+
+export const passwordHistory = pgTable(
+  "PasswordHistory",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("userId")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    passwordHash: text("passwordHash").notNull(),
+    createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
+  },
+  (t) => [index("PasswordHistory_userId_idx").on(t.userId)],
 );
 
 // ─── Product Tables ──────────────────────────────────────
@@ -240,11 +259,22 @@ export const usersRelations = relations(users, ({ many, one }) => ({
   sessions: many(sessions),
   orders: many(orders),
   cart: one(carts),
+  passwordHistory: many(passwordHistory),
 }));
 
 export const accountsRelations = relations(accounts, ({ one }) => ({
   user: one(users, { fields: [accounts.userId], references: [users.id] }),
 }));
+
+export const passwordHistoryRelations = relations(
+  passwordHistory,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [passwordHistory.userId],
+      references: [users.id],
+    }),
+  }),
+);
 
 export const sessionsRelations = relations(sessions, ({ one }) => ({
   user: one(users, { fields: [sessions.userId], references: [users.id] }),

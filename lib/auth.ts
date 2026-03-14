@@ -1,10 +1,14 @@
 import NextAuth from 'next-auth';
 import Google from 'next-auth/providers/google';
+import MicrosoftEntraId from 'next-auth/providers/microsoft-entra-id';
+import Credentials from 'next-auth/providers/credentials';
 import { DrizzleAdapter } from '@auth/drizzle-adapter';
 import { drizzleDb } from '@/lib/db';
 import { users, accounts, sessions, verificationTokens } from '@/lib/schema';
 import type { Adapter } from 'next-auth/adapters';
 import { logAuthEvent } from './logger';
+import { verifyPassword } from './password';
+import { eq, or } from 'drizzle-orm';
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: DrizzleAdapter(drizzleDb, {
@@ -25,6 +29,84 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         },
       },
     }),
+    MicrosoftEntraId({
+      clientId: process.env.MICROSOFT_CLIENT_ID ?? '',
+      clientSecret: process.env.MICROSOFT_CLIENT_SECRET ?? '',
+      issuer: 'https://login.microsoftonline.com/consumers/v2.0',
+      authorization: { params: { scope: 'openid profile email User.Read' } },
+    }),
+    Credentials({
+      name: 'credentials',
+      credentials: {
+        identifier: { label: 'Email or Phone', type: 'text' },
+        password: { label: 'Password', type: 'password' },
+      },
+      async authorize(credentials) {
+        const identifier = credentials?.identifier as string | undefined;
+        const password = credentials?.password as string | undefined;
+
+        if (!identifier || !password) return null;
+
+        // Look up user by email first, then by phoneNumber
+        const user = await drizzleDb.query.users.findFirst({
+          where: or(
+            eq(users.email, identifier),
+            eq(users.phoneNumber, identifier),
+          ),
+        });
+
+        if (!user) {
+          logAuthEvent({
+            event: 'failed_login',
+            email: identifier,
+            success: false,
+            error: 'User not found',
+          });
+          return null;
+        }
+
+        // OAuth-only users don't have a password hash
+        if (!user.passwordHash) {
+          logAuthEvent({
+            event: 'failed_login',
+            userId: user.id,
+            email: user.email,
+            success: false,
+            error: 'No password set (OAuth-only user)',
+          });
+          return null;
+        }
+
+        const isValid = await verifyPassword(password, user.passwordHash);
+        if (!isValid) {
+          logAuthEvent({
+            event: 'failed_login',
+            userId: user.id,
+            email: user.email,
+            success: false,
+            error: 'Invalid password',
+          });
+          return null;
+        }
+
+        logAuthEvent({
+          event: 'login',
+          userId: user.id,
+          email: user.email,
+          provider: 'credentials',
+          success: true,
+        });
+
+        return {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          image: user.image,
+          role: user.role,
+          phoneNumber: user.phoneNumber,
+        };
+      },
+    }),
   ],
   cookies: {
     sessionToken: {
@@ -42,6 +124,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (session.user) {
         session.user.id = token.id as string;
         session.user.role = (token.role as 'CUSTOMER' | 'ADMIN') || 'CUSTOMER';
+        session.user.phoneNumber = (token.phoneNumber as string) || undefined;
 
         // Log session creation
         logAuthEvent({
@@ -57,6 +140,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (user) {
         token.id = user.id;
         token.role = user.role || 'CUSTOMER';
+        if ('phoneNumber' in user && user.phoneNumber) {
+          token.phoneNumber = user.phoneNumber;
+        }
       }
       return token;
     },

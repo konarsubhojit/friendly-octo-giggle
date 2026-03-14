@@ -31,11 +31,20 @@ vi.mock("next/image", () => ({
 }));
 
 describe("UserMenu", () => {
-  it("shows Sign In link when no session", () => {
+  it("shows Login link when no session", () => {
     render(<UserMenu session={null} />);
-    expect(screen.getByText("Sign In")).toBeTruthy();
-    const link = screen.getByText("Sign In").closest("a");
+    expect(screen.getByText("Login")).toBeTruthy();
+    const link = screen.getByText("Login").closest("a");
     expect(link?.getAttribute("href")).toBe("/auth/signin");
+  });
+
+  it("shows Login button with onLoginClick callback", () => {
+    const onLoginClick = vi.fn();
+    render(<UserMenu session={null} onLoginClick={onLoginClick} />);
+    const button = screen.getByText("Login");
+    expect(button.tagName).toBe("BUTTON");
+    fireEvent.click(button);
+    expect(onLoginClick).toHaveBeenCalled();
   });
 
   it("renders user avatar initial when session has no image", () => {

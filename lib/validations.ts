@@ -140,3 +140,79 @@ export const UpdateCartItemSchema = z.object({
 
 export type AddToCartInput = z.infer<typeof AddToCartSchema>;
 export type UpdateCartItemInput = z.infer<typeof UpdateCartItemSchema>;
+
+// ─── Auth Validation Schemas ─────────────────────────────
+
+// Phone number regex: optional + prefix, country code (1-9), then 6-14 digits
+const PHONE_REGEX = /^\+?[1-9]\d{6,14}$/;
+
+// Password must be min 8 chars, with uppercase, lowercase, number, and special char
+const PASSWORD_REGEX =
+  /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/;
+
+export const registerSchema = z
+  .object({
+    name: z.string().min(1, "Name is required").max(200),
+    email: z.string().regex(EMAIL_REGEX, "Invalid email address"),
+    phoneNumber: z
+      .string()
+      .regex(PHONE_REGEX, "Invalid phone number format")
+      .nullish(),
+    password: z
+      .string()
+      .min(8, "Password must be at least 8 characters")
+      .regex(
+        PASSWORD_REGEX,
+        "Password must contain uppercase, lowercase, number, and special character",
+      ),
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ["confirmPassword"],
+  });
+
+export const credentialsLoginSchema = z.object({
+  identifier: z.string().min(1, "Email or phone number is required"),
+  password: z.string().min(1, "Password is required"),
+});
+
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1, "Current password is required"),
+    newPassword: z
+      .string()
+      .min(8, "Password must be at least 8 characters")
+      .regex(
+        PASSWORD_REGEX,
+        "Password must contain uppercase, lowercase, number, and special character",
+      ),
+    confirmNewPassword: z.string(),
+  })
+  .refine((data) => data.newPassword === data.confirmNewPassword, {
+    message: "Passwords don't match",
+    path: ["confirmNewPassword"],
+  });
+
+export const updateProfileSchema = z.object({
+  name: z.string().min(1, "Name cannot be empty").max(200).optional(),
+  email: z.string().regex(EMAIL_REGEX, "Invalid email address").optional(),
+  phoneNumber: z
+    .string()
+    .regex(PHONE_REGEX, "Invalid phone number format")
+    .nullish(),
+});
+
+export type RegisterInput = z.infer<typeof registerSchema>;
+export type CredentialsLoginInput = z.infer<typeof credentialsLoginSchema>;
+export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
+export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
+
+// Password requirement descriptions for UI display
+export const PASSWORD_REQUIREMENTS = [
+  { label: 'At least 8 characters', test: (p: string) => p.length >= 8 },
+  { label: 'One uppercase letter', test: (p: string) => /[A-Z]/.test(p) },
+  { label: 'One lowercase letter', test: (p: string) => /[a-z]/.test(p) },
+  { label: 'One number', test: (p: string) => /\d/.test(p) },
+  { label: 'One special character', test: (p: string) => /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(p) },
+] as const;

@@ -7,6 +7,40 @@ interface AdminLayoutProps {
   readonly children: React.ReactNode;
 }
 
+function AdminHeaderNav({ userName }: { readonly userName: string }) {
+  return (
+    <div className="flex gap-4 items-center">
+      <CurrencySelector />
+      <span className="text-sm text-gray-600">{userName}</span>
+      <Link href="/" className="text-sm text-gray-600 hover:text-gray-900">View Store</Link>
+      <form action="/api/auth/signout" method="POST">
+        <button type="submit" className="text-sm text-red-600 hover:text-red-900">Sign Out</button>
+      </form>
+    </div>
+  );
+}
+
+function AdminNavLinks() {
+  const links = [
+    { href: '/admin', label: 'Dashboard' },
+    { href: '/admin/products', label: 'Products' },
+    { href: '/admin/orders', label: 'Orders' },
+    { href: '/admin/users', label: 'Users' },
+  ];
+
+  return (
+    <nav className="bg-white border-b border-gray-200">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex gap-6 py-3">
+          {links.map(({ href, label }) => (
+            <Link key={href} href={href} className="text-sm font-medium text-gray-600 hover:text-blue-600 transition">{label}</Link>
+          ))}
+        </div>
+      </div>
+    </nav>
+  );
+}
+
 export default async function AdminLayout({
   children,
 }: AdminLayoutProps) {
@@ -36,41 +70,12 @@ export default async function AdminLayout({
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-4">
-              <Link href="/admin" className="text-2xl font-bold text-gray-900 hover:text-blue-700 transition">Admin Panel</Link>
-            </div>
-            <div className="flex gap-4 items-center">
-              <CurrencySelector />
-              <span className="text-sm text-gray-600">
-                {session.user.name || session.user.email}
-              </span>
-              <Link href="/" className="text-sm text-gray-600 hover:text-gray-900">
-                View Store
-              </Link>
-              <form action="/api/auth/signout" method="POST">
-                <button
-                  type="submit"
-                  className="text-sm text-red-600 hover:text-red-900"
-                >
-                  Sign Out
-                </button>
-              </form>
-            </div>
-          </div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+          <Link href="/admin" className="text-2xl font-bold text-gray-900 hover:text-blue-700 transition">Admin Panel</Link>
+          <AdminHeaderNav userName={session.user.name || session.user.email || ''} />
         </div>
       </header>
-      <nav className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex gap-6 py-3">
-            <Link href="/admin" className="text-sm font-medium text-gray-600 hover:text-blue-600 transition">Dashboard</Link>
-            <Link href="/admin/products" className="text-sm font-medium text-gray-600 hover:text-blue-600 transition">Products</Link>
-            <Link href="/admin/orders" className="text-sm font-medium text-gray-600 hover:text-blue-600 transition">Orders</Link>
-            <Link href="/admin/users" className="text-sm font-medium text-gray-600 hover:text-blue-600 transition">Users</Link>
-          </div>
-        </div>
-      </nav>
+      <AdminNavLinks />
       {children}
     </div>
   );

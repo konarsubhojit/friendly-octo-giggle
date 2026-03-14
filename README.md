@@ -33,7 +33,7 @@ Complete documentation is available in the [`/docs`](./docs) folder:
 ## ✨ Key Features
 
 - 🛒 **Full E-Commerce**: Products, cart, orders, and checkout
-- 🔐 **Google OAuth**: Secure authentication with NextAuth.js v5
+- 🔐 **Multi-Provider Auth**: Email/password, phone/password, Google OAuth, Microsoft personal accounts
 - 👥 **Role-Based Access**: Customer and Admin roles
 - ⚡ **Redis Caching**: Smart caching with stampede prevention
 - 📦 **Product Variations**: Support for colors, sizes, designs
