@@ -194,9 +194,19 @@ export const changePasswordSchema = z
     path: ["confirmNewPassword"],
   });
 
+export const updateProfileSchema = z.object({
+  name: z.string().min(1, "Name is required").max(200).optional(),
+  email: z.string().regex(EMAIL_REGEX, "Invalid email address").optional(),
+  phoneNumber: z
+    .string()
+    .regex(PHONE_REGEX, "Invalid phone number format")
+    .nullish(),
+});
+
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type CredentialsLoginInput = z.infer<typeof credentialsLoginSchema>;
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
+export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
 
 // Password requirement descriptions for UI display
 export const PASSWORD_REQUIREMENTS = [

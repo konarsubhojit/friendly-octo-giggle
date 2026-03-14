@@ -14,6 +14,7 @@ import {
   registerSchema,
   credentialsLoginSchema,
   changePasswordSchema,
+  updateProfileSchema,
 } from "@/lib/validations";
 
 // Helpers
@@ -462,6 +463,40 @@ describe("changePasswordSchema", () => {
       ...validChangePassword,
       confirmNewPassword: "Different1!",
     });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("updateProfileSchema", () => {
+  it("accepts valid profile update with name only", () => {
+    const result = updateProfileSchema.safeParse({ name: "New Name" });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts valid profile update with email", () => {
+    const result = updateProfileSchema.safeParse({ email: "new@example.com" });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts valid profile update with phone", () => {
+    const result = updateProfileSchema.safeParse({
+      phoneNumber: "+1234567890",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts empty object (all fields optional)", () => {
+    const result = updateProfileSchema.safeParse({});
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects invalid email", () => {
+    const result = updateProfileSchema.safeParse({ email: "invalid" });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects invalid phone number", () => {
+    const result = updateProfileSchema.safeParse({ phoneNumber: "abc" });
     expect(result.success).toBe(false);
   });
 });

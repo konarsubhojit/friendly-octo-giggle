@@ -291,4 +291,26 @@ describe("Header", () => {
     });
     expect(screen.queryByRole("menu")).toBeNull();
   });
+
+  it("shows My Account link in user menu", async () => {
+    const session = {
+      user: {
+        name: "Alice",
+        email: "alice@example.com",
+        image: null,
+        role: "CUSTOMER",
+      },
+    };
+    useSession.mockReturnValue({ data: session, status: "authenticated" });
+    const Header = (await import("@/components/layout/Header")).default;
+    render(<Header />);
+
+    act(() => {
+      fireEvent.click(screen.getByLabelText("User menu"));
+    });
+    const menu = screen.getByRole("menu");
+    const accountLink = menu.querySelector("a[href='/account']");
+    expect(accountLink).not.toBeNull();
+    expect(accountLink?.textContent).toContain("My Account");
+  });
 });
