@@ -1,3 +1,4 @@
+[![Board Status](https://subhojitkonar.visualstudio.com/b392f6f8-0ee4-4da2-ac9e-6e8add712a92/40b0e944-0490-4024-8f04-cd17b1baacc8/_apis/work/boardbadge/3f6e9f2d-cc17-48a8-afe6-58e9fd3a8a21)](https://subhojitkonar.visualstudio.com/b392f6f8-0ee4-4da2-ac9e-6e8add712a92/_boards/board/t/40b0e944-0490-4024-8f04-cd17b1baacc8/Microsoft.RequirementCategory)
 # E-Commerce Platform
 
 A highly scalable, serverless-first e-commerce platform built with Next.js 16, PostgreSQL, and Redis.
