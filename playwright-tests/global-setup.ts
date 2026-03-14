@@ -1,0 +1,51 @@
+/**
+ * Playwright global setup — runs once before all test projects.
+ *
+ * Authenticates as the Copilot admin account via the dev-only API key
+ * endpoint and saves the resulting session state so admin-auth tests
+ * can skip the sign-in flow entirely.
+ */
+import { chromium } from '@playwright/test';
+import * as path from 'path';
+import * as fs from 'fs';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+export const COPILOT_DEV_KEY = 'copilot-dev-admin-2026';
+export const AUTH_STATE_PATH = path.join(__dirname, '.auth', 'admin.json');
+const BASE_URL = 'http://localhost:3000';
+
+export default async function globalSetup() {
+  const authDir = path.dirname(AUTH_STATE_PATH);
+  if (!fs.existsSync(authDir)) {
+    fs.mkdirSync(authDir, { recursive: true });
+  }
+
+  const browser = await chromium.launch();
+  const context = await browser.newContext({
+    baseURL: BASE_URL,
+    extraHTTPHeaders: { 'x-forwarded-proto': 'https' },
+  });
+
+  try {
+    // Authenticate via key — the endpoint sets the session cookie in the context
+    const response = await context.request.get('/api/dev/copilot-auth', {
+      headers: { 'x-copilot-dev-key': COPILOT_DEV_KEY },
+    });
+
+    if (!response.ok()) {
+      const body = await response.text().catch(() => '(no body)');
+      throw new Error(
+        `Copilot dev auth failed — HTTP ${response.status()}: ${body}`,
+      );
+    }
+
+    // Persist the session cookie so every test in the admin-auth project can
+    // load it with `storageState` without re-authenticating.
+    await context.storageState({ path: AUTH_STATE_PATH });
+  } finally {
+    await browser.close();
+  }
+}

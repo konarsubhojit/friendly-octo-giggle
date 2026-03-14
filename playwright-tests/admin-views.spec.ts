@@ -1,0 +1,222 @@
+/**
+ * Admin view tests — run as the Copilot admin account using the stored
+ * session state from global-setup.ts.
+ *
+ * Every admin API call is intercepted by Playwright route mocks so the
+ * tests are fully deterministic and require no real database.
+ */
+import { test, expect, Page } from '@playwright/test';
+import * as path from 'path';
+import * as fs from 'fs';
+import { fileURLToPath } from 'url';
+import {
+  MOCK_PRODUCTS,
+  MOCK_ORDERS,
+  MOCK_USERS,
+  MOCK_SALES,
+} from './mock-data.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const SCREENSHOT_DIR = path.join(__dirname, 'screenshots');
+
+function screenshotPath(name: string) {
+  return path.join(SCREENSHOT_DIR, `${name}.png`);
+}
+
+test.beforeAll(() => {
+  if (!fs.existsSync(SCREENSHOT_DIR)) {
+    fs.mkdirSync(SCREENSHOT_DIR, { recursive: true });
+  }
+});
+
+// ─── Route mocks ─────────────────────────────────────────────────────────────
+
+async function mockAdminRoutes(page: Page) {
+  await page.route('**/api/admin/sales**', (route) =>
+    route.fulfill({ json: { success: true, data: { sales: MOCK_SALES } } }),
+  );
+  await page.route('**/api/admin/products**', (route) =>
+    route.fulfill({ json: { success: true, data: { products: MOCK_PRODUCTS } } }),
+  );
+  await page.route('**/api/admin/orders**', (route) => {
+    const url = route.request().url();
+    if (url.match(/\/api\/admin\/orders\/[^/]+$/)) {
+      return route.fulfill({ json: { success: true, data: { order: MOCK_ORDERS[0] } } });
+    }
+    return route.fulfill({ json: { success: true, data: { orders: MOCK_ORDERS } } });
+  });
+  await page.route('**/api/admin/users**', (route) => {
+    const url = route.request().url();
+    if (url.match(/\/api\/admin\/users\/[^/]+$/)) {
+      return route.fulfill({ json: { success: true, data: { user: MOCK_USERS[0] } } });
+    }
+    return route.fulfill({ json: { success: true, data: { users: MOCK_USERS } } });
+  });
+  // Suppress exchange-rates errors (Redis not available)
+  await page.route('**/api/exchange-rates**', (route) =>
+    route.fulfill({ json: { success: true, data: { rates: { INR: 1, USD: 0.012, EUR: 0.011, GBP: 0.0095 } } } }),
+  );
+}
+
+// ─── Admin Dashboard ─────────────────────────────────────────────────────────
+
+test.describe('Admin Dashboard', () => {
+  test('renders dashboard with sales summary', async ({ page }) => {
+    await mockAdminRoutes(page);
+    await page.goto('/admin');
+    await expect(page.getByRole('heading', { name: /dashboard/i })).toBeVisible();
+
+    // Wait for loading state to clear and stat cards to appear
+    await expect(page.getByText('Total Revenue')).toBeVisible();
+    await expect(page.getByText('Total Orders')).toBeVisible();
+    await page.screenshot({ path: screenshotPath('admin-dashboard'), fullPage: true });
+  });
+
+  test('top products table is visible', async ({ page }) => {
+    await mockAdminRoutes(page);
+    await page.goto('/admin');
+    // Wait for data to load (loading spinner disappears when data arrives)
+    await expect(page.getByText('Top 5 Selling Products')).toBeVisible();
+    await expect(page.getByText('Hand-knitted Flower Bouquet').first()).toBeVisible();
+    await expect(page.getByText('Macramé Wall Hanging').first()).toBeVisible();
+    await page.screenshot({ path: screenshotPath('admin-dashboard-table'), fullPage: true });
+  });
+
+  test('nav links render all sections', async ({ page }) => {
+    await mockAdminRoutes(page);
+    await page.goto('/admin');
+    await expect(page.getByRole('link', { name: /products/i }).first()).toBeVisible();
+    await expect(page.getByRole('link', { name: /orders/i }).first()).toBeVisible();
+    await expect(page.getByRole('link', { name: /users/i }).first()).toBeVisible();
+  });
+});
+
+// ─── Admin Products ───────────────────────────────────────────────────────────
+
+test.describe('Admin Products', () => {
+  test('renders product grid with all mock products', async ({ page }) => {
+    await mockAdminRoutes(page);
+    await page.goto('/admin/products');
+    await expect(page.getByRole('heading', { name: /product management/i })).toBeVisible();
+
+    // Wait for the Redux data to load — first product is the signal
+    await expect(page.getByText('Hand-knitted Flower Bouquet').first()).toBeVisible({ timeout: 10_000 });
+    // All 6 products should appear
+    for (const product of MOCK_PRODUCTS) {
+      await expect(page.getByText(product.name).first()).toBeVisible();
+    }
+    await page.screenshot({ path: screenshotPath('admin-products'), fullPage: true });
+  });
+
+  test('product cards show price and stock', async ({ page }) => {
+    await mockAdminRoutes(page);
+    await page.goto('/admin/products');
+    await expect(page.getByText(/stock:/i).first()).toBeVisible();
+  });
+
+  test('Add Product button is visible', async ({ page }) => {
+    await mockAdminRoutes(page);
+    await page.goto('/admin/products');
+    await expect(page.getByRole('button', { name: /add product/i })).toBeVisible();
+  });
+
+  test('Edit and Delete buttons on each card', async ({ page }) => {
+    await mockAdminRoutes(page);
+    await page.goto('/admin/products');
+    const editBtns = page.getByRole('button', { name: /edit/i });
+    await expect(editBtns.first()).toBeVisible();
+    const deleteBtns = page.getByRole('button', { name: /delete/i });
+    await expect(deleteBtns.first()).toBeVisible();
+  });
+});
+
+// ─── Admin Orders ─────────────────────────────────────────────────────────────
+
+test.describe('Admin Orders', () => {
+  test('renders order management with all mock orders', async ({ page }) => {
+    await mockAdminRoutes(page);
+    await page.goto('/admin/orders');
+    await expect(page.getByRole('heading', { name: /order management/i })).toBeVisible();
+
+    // All customers should appear
+    for (const order of MOCK_ORDERS) {
+      await expect(page.getByText(order.customerName)).toBeVisible();
+    }
+    await page.screenshot({ path: screenshotPath('admin-orders'), fullPage: true });
+  });
+
+  test('shows all order statuses', async ({ page }) => {
+    await mockAdminRoutes(page);
+    await page.goto('/admin/orders');
+    const statuses = ['DELIVERED', 'SHIPPED', 'PROCESSING', 'PENDING', 'CANCELLED'];
+    for (const status of statuses) {
+      await expect(page.getByText(status).first()).toBeVisible();
+    }
+    await page.screenshot({ path: screenshotPath('admin-orders-statuses'), fullPage: true });
+  });
+
+  test('shows customer address and email', async ({ page }) => {
+    await mockAdminRoutes(page);
+    await page.goto('/admin/orders');
+    await expect(page.getByText('priya.sharma@example.com')).toBeVisible();
+  });
+});
+
+// ─── Admin Users ──────────────────────────────────────────────────────────────
+
+test.describe('Admin Users', () => {
+  test('renders user management table with all mock users', async ({ page }) => {
+    await mockAdminRoutes(page);
+    await page.goto('/admin/users');
+    await expect(page.getByRole('heading', { name: /user management/i })).toBeVisible();
+
+    for (const user of MOCK_USERS) {
+      await expect(page.getByText(user.email)).toBeVisible();
+    }
+    await page.screenshot({ path: screenshotPath('admin-users'), fullPage: true });
+  });
+
+  test('table has overflow-x-auto wrapper for mobile scroll', async ({ page }) => {
+    await mockAdminRoutes(page);
+    await page.goto('/admin/users');
+    const tableWrapper = page.locator('.overflow-x-auto').filter({ has: page.locator('table') });
+    await expect(tableWrapper.first()).toBeAttached();
+  });
+
+  test('shows ADMIN and CUSTOMER role badges', async ({ page }) => {
+    await mockAdminRoutes(page);
+    await page.goto('/admin/users');
+    // RoleBadge renders role text in a coloured span;
+    // ADMIN = purple, CUSTOMER = green
+    await expect(page.locator('.bg-purple-100').first()).toBeVisible();
+    await expect(page.locator('.bg-green-100').first()).toBeVisible();
+  });
+
+  test('users page - mobile view card layout', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'mobile-chrome', 'Only runs on mobile viewport');
+    await mockAdminRoutes(page);
+    await page.goto('/admin/users');
+    await expect(page.getByText(MOCK_USERS[0].email)).toBeVisible();
+    await page.screenshot({ path: screenshotPath('admin-users-mobile'), fullPage: true });
+  });
+});
+
+// ─── Admin header and nav ─────────────────────────────────────────────────────
+
+test.describe('Admin layout', () => {
+  test('shows logged-in user name in header', async ({ page }) => {
+    await mockAdminRoutes(page);
+    await page.goto('/admin');
+    await expect(page.getByText(/copilot admin/i)).toBeVisible();
+  });
+
+  test('nav links are scrollable on mobile', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'mobile-chrome', 'Only runs on mobile viewport');
+    await mockAdminRoutes(page);
+    await page.goto('/admin');
+    const nav = page.locator('nav.overflow-x-auto, nav .overflow-x-auto').first();
+    await expect(nav).toBeAttached();
+    await page.screenshot({ path: screenshotPath('admin-nav-mobile'), fullPage: false });
+  });
+});

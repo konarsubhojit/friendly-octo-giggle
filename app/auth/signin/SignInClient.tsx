@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { signIn } from 'next-auth/react';
 import { PasswordToggleButton } from '@/components/auth/PasswordToggleButton';
+import { CopilotDevLoginButton } from '@/components/auth/CopilotDevLoginButton';
 
 export default function SignInClient() {
   const [identifier, setIdentifier] = useState('');
@@ -36,7 +37,8 @@ export default function SignInClient() {
   }
 
   return (
-    <form onSubmit={handleCredentialsLogin} className="space-y-4">
+    <>
+      <form onSubmit={handleCredentialsLogin} className="space-y-4">
       <div>
         <label htmlFor="signin-identifier" className="block text-sm font-medium text-gray-700 mb-1">
           Email or Phone Number
@@ -86,5 +88,9 @@ export default function SignInClient() {
         {loading ? 'Logging in...' : 'Login'}
       </button>
     </form>
+
+    {/* Dev-only: Copilot Admin sign-in */}
+    <CopilotDevLoginButton onSuccess={() => { window.location.href = '/admin'; }} />
+    </>
   );
 }
