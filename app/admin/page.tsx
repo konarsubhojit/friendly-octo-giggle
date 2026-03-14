@@ -18,6 +18,84 @@ interface SalesData {
   totalCustomers: number;
 }
 
+function OrdersByStatusCard({ ordersByStatus }: { readonly ordersByStatus: Record<string, number> }) {
+  if (Object.keys(ordersByStatus).length === 0) {
+    return (
+      <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Orders by Status</p>
+        <p className="text-gray-400 text-sm">No orders yet</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
+      <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Orders by Status</p>
+      <ul className="space-y-1">
+        {Object.entries(ordersByStatus).map(([status, count]) => (
+          <li key={status} className="flex justify-between text-sm">
+            <span className="capitalize text-gray-700 dark:text-gray-300">{status}</span>
+            <span className="font-semibold text-gray-900 dark:text-gray-100">{count}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function TopProductsTable({ products, formatPrice }: { readonly products: SalesData['topProducts']; readonly formatPrice: (price: number) => string }) {
+  if (products.length === 0) {
+    return <p className="text-gray-400 text-sm">No product sales yet</p>;
+  }
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-left min-w-[400px]">
+        <thead>
+          <tr className="border-b border-gray-200 dark:border-gray-700">
+            <th className="pb-2 text-sm font-medium text-gray-500 dark:text-gray-400">Product</th>
+            <th className="pb-2 text-sm font-medium text-gray-500 dark:text-gray-400 text-right">Qty Sold</th>
+            <th className="pb-2 text-sm font-medium text-gray-500 dark:text-gray-400 text-right">Revenue</th>
+          </tr>
+        </thead>
+        <tbody>
+          {products.map((product) => (
+            <tr key={product.productId} className="border-b border-gray-100 dark:border-gray-700 last:border-0">
+              <td className="py-2 text-sm text-gray-900 dark:text-gray-100">{product.name}</td>
+              <td className="py-2 text-sm text-gray-900 dark:text-gray-100 text-right">{product.totalQuantity}</td>
+              <td className="py-2 text-sm text-gray-900 dark:text-gray-100 text-right">{formatPrice(product.totalRevenue)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+const NAV_CARDS = [
+  {
+    href: '/admin/products',
+    title: 'Products',
+    description: 'Manage products, inventory, and pricing',
+    color: 'text-blue-600',
+    icon: 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4',
+  },
+  {
+    href: '/admin/orders',
+    title: 'Orders',
+    description: 'View and manage customer orders',
+    color: 'text-green-600',
+    icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2',
+  },
+  {
+    href: '/admin/users',
+    title: 'Users',
+    description: 'Manage user roles and permissions',
+    color: 'text-purple-600',
+    icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z',
+  },
+];
+
 export default function AdminDashboard() {
   const [sales, setSales] = useState<SalesData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -86,85 +164,28 @@ export default function AdminDashboard() {
             <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-1">{card.value}</p>
           </div>
         ))}
-
-        {/* Orders by Status card */}
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Orders by Status</p>
-          {Object.keys(sales.ordersByStatus).length === 0 ? (
-            <p className="text-gray-400 text-sm">No orders yet</p>
-          ) : (
-            <ul className="space-y-1">
-              {Object.entries(sales.ordersByStatus).map(([status, count]) => (
-                <li key={status} className="flex justify-between text-sm">
-                  <span className="capitalize text-gray-700 dark:text-gray-300">{status}</span>
-                  <span className="font-semibold text-gray-900 dark:text-gray-100">{count}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+        <OrdersByStatusCard ordersByStatus={sales.ordersByStatus} />
       </div>
 
       {/* Top 5 Selling Products */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-8">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Top 5 Selling Products</h3>
-        {sales.topProducts.length === 0 ? (
-          <p className="text-gray-400 text-sm">No product sales yet</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left min-w-[400px]">
-              <thead>
-                <tr className="border-b border-gray-200 dark:border-gray-700">
-                  <th className="pb-2 text-sm font-medium text-gray-500 dark:text-gray-400">Product</th>
-                  <th className="pb-2 text-sm font-medium text-gray-500 dark:text-gray-400 text-right">Qty Sold</th>
-                  <th className="pb-2 text-sm font-medium text-gray-500 dark:text-gray-400 text-right">Revenue</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sales.topProducts.map((product) => (
-                  <tr key={product.productId} className="border-b border-gray-100 dark:border-gray-700 last:border-0">
-                    <td className="py-2 text-sm text-gray-900 dark:text-gray-100">{product.name}</td>
-                    <td className="py-2 text-sm text-gray-900 dark:text-gray-100 text-right">{product.totalQuantity}</td>
-                    <td className="py-2 text-sm text-gray-900 dark:text-gray-100 text-right">{formatPrice(product.totalRevenue)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <TopProductsTable products={sales.topProducts} formatPrice={formatPrice} />
       </div>
 
       {/* Navigation Links */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Link href="/admin/products" className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md hover:shadow-xl transition">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Products</h3>
-            <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-            </svg>
-          </div>
-          <p className="text-gray-600 dark:text-gray-400">Manage products, inventory, and pricing</p>
-        </Link>
-
-        <Link href="/admin/orders" className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md hover:shadow-xl transition">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Orders</h3>
-            <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-            </svg>
-          </div>
-          <p className="text-gray-600 dark:text-gray-400">View and manage customer orders</p>
-        </Link>
-
-        <Link href="/admin/users" className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md hover:shadow-xl transition">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Users</h3>
-            <svg className="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-            </svg>
-          </div>
-          <p className="text-gray-600 dark:text-gray-400">Manage user roles and permissions</p>
-        </Link>
+        {NAV_CARDS.map((card) => (
+          <Link key={card.href} href={card.href} className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md hover:shadow-xl transition">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">{card.title}</h3>
+              <svg className={`w-8 h-8 ${card.color}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={card.icon} />
+              </svg>
+            </div>
+            <p className="text-gray-600 dark:text-gray-400">{card.description}</p>
+          </Link>
+        ))}
       </div>
     </main>
   );

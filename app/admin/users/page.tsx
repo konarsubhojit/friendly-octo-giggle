@@ -13,6 +13,181 @@ import {
 import type { AppDispatch } from '@/lib/store';
 import { logError } from '@/lib/logger';
 
+interface AdminUser {
+  readonly id: string;
+  readonly name: string | null;
+  readonly email: string;
+  readonly image: string | null;
+  readonly role: string;
+  readonly orderCount?: number;
+  readonly createdAt: string;
+}
+
+function UserAvatar({ name, email, image }: { readonly name: string | null; readonly email: string; readonly image: string | null }) {
+  if (image) {
+    return (
+      <Image src={image} alt={name || 'User'} width={40} height={40} className="rounded-full" />
+    );
+  }
+
+  const initial = name?.charAt(0) || email.charAt(0).toUpperCase();
+  return (
+    <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center">
+      <span className="text-gray-600 font-medium">{initial}</span>
+    </div>
+  );
+}
+
+function RoleBadge({ role }: { readonly role: string }) {
+  const colorClass = role === 'ADMIN' ? 'bg-purple-100 text-purple-800' : 'bg-green-100 text-green-800';
+  return (
+    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${colorClass}`}>
+      {role}
+    </span>
+  );
+}
+
+function RoleAction({
+  user,
+  isUpdating,
+  onRoleChange,
+}: {
+  readonly user: AdminUser;
+  readonly isUpdating: boolean;
+  readonly onRoleChange: (userId: string, newRole: 'ADMIN' | 'CUSTOMER') => void;
+}) {
+  if (isUpdating) {
+    return <div className="inline-block w-4 h-4 border-2 border-gray-200 border-t-blue-600 rounded-full animate-spin" />;
+  }
+
+  return (
+    <select
+      value={user.role}
+      onChange={(e) => onRoleChange(user.id, e.target.value as 'ADMIN' | 'CUSTOMER')}
+      className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+    >
+      <option value="CUSTOMER">Customer</option>
+      <option value="ADMIN">Admin</option>
+    </select>
+  );
+}
+
+function UserRow({
+  user,
+  updatingUserId,
+  onRoleChange,
+}: {
+  readonly user: AdminUser;
+  readonly updatingUserId: string | null;
+  readonly onRoleChange: (userId: string, newRole: 'ADMIN' | 'CUSTOMER') => void;
+}) {
+  return (
+    <tr className="hover:bg-gray-50">
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="flex items-center">
+          <UserAvatar name={user.name} email={user.email} image={user.image} />
+          <span className="ml-4 text-sm font-medium text-gray-900">{user.name || 'No name'}</span>
+        </div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{user.email}</td>
+      <td className="px-6 py-4 whitespace-nowrap"><RoleBadge role={user.role} /></td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.orderCount || 0}</td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(user.createdAt).toLocaleDateString()}</td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+        <RoleAction user={user} isUpdating={updatingUserId === user.id} onRoleChange={onRoleChange} />
+      </td>
+    </tr>
+  );
+}
+
+function UserMobileCard({
+  user,
+  updatingUserId,
+  onRoleChange,
+}: {
+  readonly user: AdminUser;
+  readonly updatingUserId: string | null;
+  readonly onRoleChange: (userId: string, newRole: 'ADMIN' | 'CUSTOMER') => void;
+}) {
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 flex flex-col gap-3">
+      <div className="flex items-center gap-3">
+        {user.image ? (
+          <Image
+            src={user.image}
+            alt={user.name || 'User'}
+            width={44}
+            height={44}
+            className="rounded-full flex-shrink-0"
+          />
+        ) : (
+          <div className="w-11 h-11 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center flex-shrink-0">
+            <span className="text-gray-600 dark:text-gray-300 font-semibold text-sm">
+              {user.name?.charAt(0) || user.email.charAt(0).toUpperCase()}
+            </span>
+          </div>
+        )}
+        <div className="min-w-0">
+          <p className="font-semibold text-gray-900 dark:text-gray-100 truncate">{user.name || 'No name'}</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user.email}</p>
+        </div>
+      </div>
+      <div className="flex items-center justify-between text-sm">
+        <RoleBadge role={user.role} />
+        <span className="text-gray-500 dark:text-gray-400 text-xs">
+          {user.orderCount || 0} order{(user.orderCount || 0) !== 1 ? 's' : ''} · Joined {new Date(user.createdAt).toLocaleDateString()}
+        </span>
+      </div>
+      <RoleAction user={user} isUpdating={updatingUserId === user.id} onRoleChange={onRoleChange} />
+    </div>
+  );
+}
+
+const TABLE_HEADERS = ['User', 'Email', 'Role', 'Orders', 'Joined', 'Actions'];
+
+function UsersTable({
+  users,
+  updatingUserId,
+  onRoleChange,
+}: {
+  readonly users: readonly AdminUser[];
+  readonly updatingUserId: string | null;
+  readonly onRoleChange: (userId: string, newRole: 'ADMIN' | 'CUSTOMER') => void;
+}) {
+  return (
+    <>
+      {/* Mobile card view */}
+      <div className="sm:hidden space-y-4">
+        {users.map((user) => (
+          <UserMobileCard key={user.id} user={user} updatingUserId={updatingUserId} onRoleChange={onRoleChange} />
+        ))}
+      </div>
+
+      {/* Desktop table view */}
+      <div className="hidden sm:block bg-white dark:bg-gray-800 shadow-md rounded-lg overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead className="bg-gray-50 dark:bg-gray-900">
+              <tr>
+                {TABLE_HEADERS.map((header) => (
+                  <th key={header} className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    {header}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+              {users.map((user) => (
+                <UserRow key={user.id} user={user} updatingUserId={updatingUserId} onRoleChange={onRoleChange} />
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </>
+  );
+}
+
 export default function UsersManagement() {
   const dispatch = useDispatch<AppDispatch>();
   const users = useSelector(selectAdminUsers);
@@ -26,7 +201,6 @@ export default function UsersManagement() {
 
   const handleRoleChange = async (userId: string, newRole: 'ADMIN' | 'CUSTOMER') => {
     setUpdatingUserId(userId);
-
     try {
       await dispatch(updateAdminUserRole({ id: userId, role: newRole })).unwrap();
     } catch (err) {
@@ -41,7 +215,7 @@ export default function UsersManagement() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="text-center py-12">
           <div className="inline-block w-8 h-8 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin" />
-          <p className="mt-4 text-gray-600">Loading users...</p>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">Loading users...</p>
         </div>
       </main>
     );
@@ -61,166 +235,11 @@ export default function UsersManagement() {
       )}
 
       {users.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-lg">
-          <p className="text-gray-600">No items found</p>
+        <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg">
+          <p className="text-gray-600 dark:text-gray-400">No items found</p>
         </div>
       ) : (
-        <>
-          {/* Mobile card view */}
-          <div className="sm:hidden space-y-4">
-            {users.map((user) => (
-              <div key={user.id} className="bg-white rounded-xl shadow-md p-4 flex flex-col gap-3">
-                <div className="flex items-center gap-3">
-                  {user.image ? (
-                    <Image
-                      src={user.image}
-                      alt={user.name || 'User'}
-                      width={44}
-                      height={44}
-                      className="rounded-full flex-shrink-0"
-                    />
-                  ) : (
-                    <div className="w-11 h-11 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
-                      <span className="text-gray-600 font-semibold text-sm">
-                        {user.name?.charAt(0) || user.email.charAt(0).toUpperCase()}
-                      </span>
-                    </div>
-                  )}
-                  <div className="min-w-0">
-                    <p className="font-semibold text-gray-900 truncate">{user.name || 'No name'}</p>
-                    <p className="text-xs text-gray-500 truncate">{user.email}</p>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span
-                    className={`px-2.5 py-1 text-xs font-semibold rounded-full ${
-                      user.role === 'ADMIN'
-                        ? 'bg-purple-100 text-purple-800'
-                        : 'bg-green-100 text-green-800'
-                    }`}
-                  >
-                    {user.role}
-                  </span>
-                  <span className="text-gray-500 text-xs">
-                    {user.orderCount || 0} order{(user.orderCount || 0) !== 1 ? 's' : ''} · Joined {new Date(user.createdAt).toLocaleDateString()}
-                  </span>
-                </div>
-                <div>
-                  {updatingUserId === user.id ? (
-                    <div className="inline-block w-4 h-4 border-2 border-gray-200 border-t-blue-600 rounded-full animate-spin" />
-                  ) : (
-                    <select
-                      value={user.role}
-                      onChange={(e) =>
-                        handleRoleChange(user.id, e.target.value as 'ADMIN' | 'CUSTOMER')
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 dark:text-gray-100"
-                    >
-                      <option value="CUSTOMER">Customer</option>
-                      <option value="ADMIN">Admin</option>
-                    </select>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Desktop table view */}
-          <div className="hidden sm:block bg-white shadow-md rounded-lg overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      User
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Email
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Role
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Orders
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Joined
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {users.map((user) => (
-                    <tr key={user.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          {user.image ? (
-                            <Image
-                              src={user.image}
-                              alt={user.name || 'User'}
-                              width={40}
-                              height={40}
-                              className="rounded-full"
-                            />
-                          ) : (
-                            <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center">
-                              <span className="text-gray-600 font-medium">
-                                {user.name?.charAt(0) || user.email.charAt(0).toUpperCase()}
-                              </span>
-                            </div>
-                          )}
-                          <div className="ml-4">
-                            <div className="text-sm font-medium text-gray-900">
-                              {user.name || 'No name'}
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">{user.email}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span
-                          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            user.role === 'ADMIN'
-                              ? 'bg-purple-100 text-purple-800'
-                              : 'bg-green-100 text-green-800'
-                          }`}
-                        >
-                          {user.role}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {user.orderCount || 0}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(user.createdAt).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        {updatingUserId === user.id ? (
-                          <div className="inline-block w-4 h-4 border-2 border-gray-200 border-t-blue-600 rounded-full animate-spin" />
-                        ) : (
-                          <select
-                            value={user.role}
-                            onChange={(e) =>
-                              handleRoleChange(user.id, e.target.value as 'ADMIN' | 'CUSTOMER')
-                            }
-                            className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          >
-                            <option value="CUSTOMER">Customer</option>
-                            <option value="ADMIN">Admin</option>
-                          </select>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </>
+        <UsersTable users={users} updatingUserId={updatingUserId} onRoleChange={handleRoleChange} />
       )}
     </main>
   );
