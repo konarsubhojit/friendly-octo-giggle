@@ -129,21 +129,19 @@ describe("ProductFormModal", () => {
     expect(img.getAttribute("src")).toBe("https://example.com/image.jpg");
   });
 
-  it("shows invalid file type toast on invalid file upload", async () => {
-    const toast = await import("react-hot-toast");
+  it("shows inline error on invalid file type upload", async () => {
     renderModal();
     const fileInput = screen.getByLabelText("Product Image");
     const invalidFile = new File(["content"], "doc.pdf", {
       type: "application/pdf",
     });
     fireEvent.change(fileInput, { target: { files: [invalidFile] } });
-    expect(toast.default.error).toHaveBeenCalledWith(
-      expect.stringContaining("Invalid file type"),
-    );
+    await waitFor(() => {
+      expect(screen.getByText(/only .* files are allowed/i)).toBeInTheDocument();
+    });
   });
 
-  it("shows file too large toast when file exceeds limit", async () => {
-    const toast = await import("react-hot-toast");
+  it("shows inline error when file exceeds size limit", async () => {
     renderModal();
     const fileInput = screen.getByLabelText("Product Image");
     // Create a large file
@@ -152,9 +150,9 @@ describe("ProductFormModal", () => {
     });
     Object.defineProperty(largeFile, "size", { value: 6 * 1024 * 1024 });
     fireEvent.change(fileInput, { target: { files: [largeFile] } });
-    expect(toast.default.error).toHaveBeenCalledWith(
-      expect.stringContaining("File too large"),
-    );
+    await waitFor(() => {
+      expect(screen.getByText(/file is too large/i)).toBeInTheDocument();
+    });
   });
 
   it("shows selected filename after valid file pick", async () => {
@@ -175,8 +173,7 @@ describe("ProductFormModal", () => {
     expect((currencySelect as HTMLSelectElement).value).toBe("USD");
   });
 
-  it("shows image required toast when submitting without image", async () => {
-    const toast = await import("react-hot-toast");
+  it("shows inline error when submitting without image", async () => {
     const { container } = renderModal();
     // Fill all fields except image
     fireEvent.change(screen.getByLabelText("Name"), {
@@ -199,9 +196,7 @@ describe("ProductFormModal", () => {
       fireEvent.submit(form as HTMLFormElement);
     });
     await waitFor(() => {
-      expect(toast.default.error).toHaveBeenCalledWith(
-        "Product image is required",
-      );
+      expect(screen.getByText("A product image is required.")).toBeInTheDocument();
     });
   });
 
@@ -254,7 +249,7 @@ describe("ProductFormModal", () => {
     });
     await waitFor(() => {
       expect(toast.default.error).toHaveBeenCalledWith(
-        "Something went wrong. Please try again.",
+        "Could not save the product. Please try again.",
       );
     });
   });
@@ -306,7 +301,7 @@ describe("ProductFormModal", () => {
         expect.objectContaining({ context: "uploadImage" }),
       );
       expect(toast.default.error).toHaveBeenCalledWith(
-        "Something went wrong. Please try again.",
+        "Image upload failed. Please try again.",
       );
       expect(onSuccess).not.toHaveBeenCalled();
     });
@@ -453,9 +448,92 @@ describe("ProductFormModal", () => {
         expect.objectContaining({ context: "uploadImage" }),
       );
       expect(toast.default.error).toHaveBeenCalledWith(
-        "Something went wrong. Please try again.",
+        "Image upload failed. Please try again.",
       );
       expect(onSuccess).not.toHaveBeenCalled();
+    });
+  });
+
+  // --- Inline validation tests ---
+
+  it("shows inline error when name is empty on submit", async () => {
+    const { container } = renderModal();
+    const form = container.querySelector("form");
+    expect(form).not.toBeNull();
+    await act(async () => {
+      fireEvent.submit(form as HTMLFormElement);
+    });
+    await waitFor(() => {
+      expect(screen.getByText("Product name is required.")).toBeInTheDocument();
+    });
+  });
+
+  it("shows inline error when description is empty on submit", async () => {
+    const { container } = renderModal();
+    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "My Product" } });
+    const form = container.querySelector("form");
+    await act(async () => { fireEvent.submit(form as HTMLFormElement); });
+    await waitFor(() => {
+      expect(screen.getByText("Description is required.")).toBeInTheDocument();
+    });
+  });
+
+  it("shows inline error when category is empty on submit", async () => {
+    const { container } = renderModal();
+    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "My Product" } });
+    fireEvent.change(screen.getByLabelText("Description"), { target: { value: "Desc" } });
+    const form = container.querySelector("form");
+    await act(async () => { fireEvent.submit(form as HTMLFormElement); });
+    await waitFor(() => {
+      expect(screen.getByText("Category is required.")).toBeInTheDocument();
+    });
+  });
+
+  it("clears inline error when name is corrected", async () => {
+    const { container } = renderModal();
+    const form = container.querySelector("form");
+    await act(async () => { fireEvent.submit(form as HTMLFormElement); });
+    await waitFor(() => {
+      expect(screen.getByText("Product name is required.")).toBeInTheDocument();
+    });
+    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Fixed Name" } });
+    await waitFor(() => {
+      expect(screen.queryByText("Product name is required.")).not.toBeInTheDocument();
+    });
+  });
+
+  it("clears inline error when price is corrected", async () => {
+    const { container } = renderModal();
+    const form = container.querySelector("form");
+    // Set price to 0 to trigger validation
+    fireEvent.change(screen.getByLabelText("Price"), { target: { value: "0" } });
+    await act(async () => { fireEvent.submit(form as HTMLFormElement); });
+    await waitFor(() => {
+      expect(screen.getByText("Price must be greater than zero.")).toBeInTheDocument();
+    });
+    fireEvent.change(screen.getByLabelText("Price"), { target: { value: "50" } });
+    await waitFor(() => {
+      expect(screen.queryByText("Price must be greater than zero.")).not.toBeInTheDocument();
+    });
+  });
+
+  it("shows inline error for name with only 1 character", async () => {
+    const { container } = renderModal();
+    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "A" } });
+    const form = container.querySelector("form");
+    await act(async () => { fireEvent.submit(form as HTMLFormElement); });
+    await waitFor(() => {
+      expect(screen.getByText("Name must be at least 2 characters.")).toBeInTheDocument();
+    });
+  });
+
+  it("shows red border on name input when validation fails", async () => {
+    const { container } = renderModal();
+    const form = container.querySelector("form");
+    await act(async () => { fireEvent.submit(form as HTMLFormElement); });
+    await waitFor(() => {
+      const nameInput = screen.getByLabelText("Name");
+      expect(nameInput.className).toContain("border-red-400");
     });
   });
 });

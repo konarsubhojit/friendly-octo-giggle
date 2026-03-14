@@ -12,6 +12,7 @@ import {
   selectAdminError,
 } from '@/lib/features/admin/adminSlice';
 import type { AppDispatch } from '@/lib/store';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 
 /**
  * Tracks per-order inline edits for tracking number and shipping provider.
@@ -71,9 +72,38 @@ function AdminOrderCard({
   onSaveShipping,
 }: AdminOrderCardProps) {
   const hasTracking = Boolean(order.trackingNumber || order.shippingProvider);
+  const [pendingStatus, setPendingStatus] = useState<OrderStatus | null>(null);
+
+  const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newStatus = e.target.value as OrderStatus;
+    if (newStatus !== order.status) {
+      setPendingStatus(newStatus);
+    }
+  };
+
+  const handleConfirmStatus = () => {
+    if (pendingStatus) {
+      onStatusChange(order.id, pendingStatus);
+      setPendingStatus(null);
+    }
+  };
+
+  const handleCancelStatus = () => setPendingStatus(null);
 
   return (
     <div className="bg-white p-6 rounded-lg shadow-md">
+      {/* Status change confirmation dialog */}
+      <ConfirmDialog
+        isOpen={pendingStatus !== null}
+        title="Change Order Status"
+        message={`Update this order from "${order.status}" to "${pendingStatus ?? ''}"?`}
+        confirmLabel="Yes, update"
+        variant="warning"
+        loading={updatingOrderId === order.id}
+        onConfirm={handleConfirmStatus}
+        onCancel={handleCancelStatus}
+      />
+
       {/* Order Header */}
       <div className="flex justify-between items-start mb-4">
         <div>
@@ -97,9 +127,10 @@ function AdminOrderCard({
           ) : (
             <select
               value={order.status}
-              onChange={(e) => onStatusChange(order.id, e.target.value as OrderStatus)}
+              onChange={handleSelectChange}
               className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               disabled={updatingOrderId !== null}
+              aria-label={`Change status for order ${order.id}`}
             >
               {Object.values(OrderStatus).map((status) => (
                 <option key={status} value={status}>{status}</option>
