@@ -39,6 +39,7 @@ export default function AccountPage() {
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
+  const [confirmNewPasswordTouched, setConfirmNewPasswordTouched] = useState(false);
   const [passwordSaving, setPasswordSaving] = useState(false);
   const [passwordSuccess, setPasswordSuccess] = useState('');
   const [passwordError, setPasswordError] = useState('');
@@ -354,12 +355,13 @@ export default function AccountPage() {
                   type="password"
                   value={confirmNewPassword}
                   onChange={(e) => setConfirmNewPassword(e.target.value)}
+                  onBlur={() => setConfirmNewPasswordTouched(true)}
                   className="w-full px-4 py-3 text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
                   placeholder="Confirm new password"
                   required
                   autoComplete="new-password"
                 />
-                {confirmNewPassword && newPassword !== confirmNewPassword && (
+                {confirmNewPasswordTouched && confirmNewPassword && newPassword !== confirmNewPassword && (
                   <p className="text-xs text-red-600 mt-1">Passwords don&apos;t match</p>
                 )}
               </div>
