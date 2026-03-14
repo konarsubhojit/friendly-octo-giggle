@@ -42,6 +42,7 @@ describe("LoginModal", () => {
     // jsdom does not implement showModal/close on HTMLDialogElement
     HTMLDialogElement.prototype.showModal = vi.fn(function (this: HTMLDialogElement) {
       this.setAttribute("open", "");
+      this.setAttribute("aria-modal", "true");
     });
     HTMLDialogElement.prototype.close = vi.fn(function (this: HTMLDialogElement) {
       this.removeAttribute("open");
@@ -139,6 +140,7 @@ describe("LoginModal", () => {
     render(<LoginModal isOpen={true} onClose={vi.fn()} />);
     const dialog = screen.getByRole("dialog");
     expect(dialog.getAttribute("aria-label")).toBe("Login");
+    expect(dialog.getAttribute("aria-modal")).toBe("true");
     expect(dialog.tagName.toLowerCase()).toBe("dialog");
     expect(HTMLDialogElement.prototype.showModal).toHaveBeenCalled();
   });
