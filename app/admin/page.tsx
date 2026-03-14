@@ -49,6 +49,7 @@ function TopProductsTable({ products, formatPrice }: { readonly products: SalesD
   }
 
   return (
+    <div className="overflow-x-auto">
     <table className="w-full text-left">
       <thead>
         <tr className="border-b border-gray-200">
@@ -67,6 +68,7 @@ function TopProductsTable({ products, formatPrice }: { readonly products: SalesD
         ))}
       </tbody>
     </table>
+    </div>
   );
 }
 

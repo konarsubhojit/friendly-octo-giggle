@@ -47,3 +47,7 @@ test-db-connection.ts
 tmpclaude*
 nul
 certificates/
+playwright-tests/report/
+playwright-tests/screenshots/
+playwright-tests/results/
+test-results/

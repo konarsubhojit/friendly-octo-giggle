@@ -9,12 +9,12 @@ interface AdminLayoutProps {
 
 function AdminHeaderNav({ userName }: { readonly userName: string }) {
   return (
-    <div className="flex gap-4 items-center">
+    <div className="flex flex-wrap gap-3 items-center">
       <CurrencySelector />
-      <span className="text-sm text-gray-600">{userName}</span>
-      <Link href="/" className="text-sm text-gray-600 hover:text-gray-900">View Store</Link>
+      <span className="text-sm text-gray-600 truncate max-w-[120px] sm:max-w-none" title={userName}>{userName}</span>
+      <Link href="/" className="text-sm text-gray-600 hover:text-gray-900 whitespace-nowrap">View Store</Link>
       <form action="/api/auth/signout" method="POST">
-        <button type="submit" className="text-sm text-red-600 hover:text-red-900">Sign Out</button>
+        <button type="submit" className="text-sm text-red-600 hover:text-red-900 whitespace-nowrap">Sign Out</button>
       </form>
     </div>
   );
@@ -29,9 +29,9 @@ function AdminNavLinks() {
   ];
 
   return (
-    <nav className="bg-white border-b border-gray-200">
+    <nav className="bg-white border-b border-gray-200 overflow-x-auto">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex gap-6 py-3">
+        <div className="flex gap-6 py-3 whitespace-nowrap">
           {links.map(({ href, label }) => (
             <Link key={href} href={href} className="text-sm font-medium text-gray-600 hover:text-blue-600 transition">{label}</Link>
           ))}
