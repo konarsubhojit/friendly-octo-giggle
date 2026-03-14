@@ -24,6 +24,22 @@ export default defineConfig({
       use: { ...devices['Pixel 5'], viewport: { width: 393, height: 851 } },
       testMatch: '**/ui-changes.spec.ts',
     },
+    // Password validation — desktop
+    {
+      name: 'password-validation-desktop',
+      use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 800 } },
+      testMatch: '**/password-validation.spec.ts',
+    },
+    // Account page password validation — authenticated as Copilot admin (desktop)
+    {
+      name: 'account-password-validation',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1280, height: 800 },
+        storageState: './playwright-tests/.auth/admin.json',
+      },
+      testMatch: '**/account-password-validation.spec.ts',
+    },
     // Admin views — authenticated as Copilot admin (desktop)
     {
       name: 'admin-desktop',
