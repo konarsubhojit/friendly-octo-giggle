@@ -49,7 +49,7 @@ export default function ProductGrid({ products }: ProductGridProps) {
         {/* Search bar */}
         <div className="relative max-w-md">
           <svg
-            className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400"
+            className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#d4856b]"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -62,7 +62,7 @@ export default function ProductGrid({ products }: ProductGridProps) {
             placeholder="Search products..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-300 focus:border-rose-400 bg-white text-gray-900 placeholder-gray-400 shadow-sm"
+            className="w-full pl-10 pr-4 py-2.5 border border-[#f0d5c0] rounded-full focus:outline-none focus:ring-2 focus:ring-[#e8a87c]/40 focus:border-[#e8a87c] bg-white/80 text-[#4a3728] placeholder-[#b89a85] shadow-warm"
             aria-label="Search products by name"
           />
         </div>
@@ -75,8 +75,8 @@ export default function ProductGrid({ products }: ProductGridProps) {
               onClick={() => setSelectedCategory(cat)}
               className={`px-4 py-1.5 rounded-full text-sm font-semibold border transition-all duration-200 ${
                 selectedCategory === cat
-                  ? 'bg-rose-500 text-white border-rose-500 shadow-md'
-                  : 'bg-white text-gray-600 border-gray-200 hover:border-rose-300 hover:text-rose-500'
+                  ? 'bg-gradient-to-r from-[#e8a87c] to-[#d4856b] text-white border-[#d4856b] shadow-warm'
+                  : 'bg-white/80 text-[#7a6355] border-[#f0d5c0] hover:border-[#e8a87c] hover:text-[#d4856b]'
               }`}
               aria-pressed={selectedCategory === cat}
             >
@@ -90,10 +90,11 @@ export default function ProductGrid({ products }: ProductGridProps) {
         <EmptyState title="No products found" message={emptyMessage} />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-          {filtered.map((product) => (
+          {filtered.map((product, index) => (
             <div
               key={product.id}
-              className="bg-white rounded-xl shadow-lg overflow-hidden border-2 border-gray-100 group hover:shadow-2xl hover:scale-105 hover:-translate-y-1 hover:border-rose-200 transition-all duration-300 relative"
+              className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-warm overflow-hidden border border-[#f0d5c0] group hover:shadow-warm-lg hover:scale-[1.03] hover:-translate-y-1 hover:border-[#e8a87c] transition-all duration-300 relative animate-fade-in-up"
+              style={{ animationDelay: `${index * 100}ms` }}
             >
               <Link
                 href={`/products/${product.id}`}
@@ -101,24 +102,24 @@ export default function ProductGrid({ products }: ProductGridProps) {
                 aria-label={product.name}
               >
                 {/* Product image — aspect-[4/3] shows full image without clipping */}
-                <div className="relative w-full aspect-[4/3] bg-gray-50">
+                <div className="relative w-full aspect-[4/3] bg-[#fef0e6]/50">
                   <Image
                     src={product.image}
                     alt={product.name}
                     fill
-                    className="object-contain p-2"
+                    className="object-contain p-2 group-hover:scale-105 transition-transform duration-300"
                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                   />
                 </div>
                 <div className="p-4">
-                  <div className="text-xl font-semibold text-gray-900 mb-2">
+                  <div className="text-xl font-semibold text-[#4a3728] mb-2">
                     {product.name}
                   </div>
-                  <p className="text-gray-600 text-sm mb-4 line-clamp-2">
+                  <p className="text-[#7a6355] text-sm mb-4 line-clamp-2">
                     {product.description}
                   </p>
                   <div className="flex justify-between items-center mb-3">
-                    <span className="text-2xl font-bold text-rose-500">
+                    <span className="text-2xl font-bold text-[#d4856b]">
                       {formatPrice(product.price)}
                     </span>
                     <span className="text-sm">
@@ -126,7 +127,7 @@ export default function ProductGrid({ products }: ProductGridProps) {
                     </span>
                   </div>
                   <div className="mt-2">
-                    <span className="inline-block bg-gradient-to-r from-rose-400 to-pink-400 text-white rounded-full px-3 py-1 text-sm font-semibold">
+                    <span className="inline-block bg-gradient-to-r from-[#e8a87c] to-[#d4856b] text-white rounded-full px-3 py-1 text-sm font-semibold">
                       {product.category}
                     </span>
                   </div>

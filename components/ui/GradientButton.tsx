@@ -22,11 +22,11 @@ const SIZE_CLASSES: Record<ButtonSize, string> = {
 
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {
   primary:
-    'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-md hover:shadow-lg',
+    'bg-gradient-to-r from-[#e8a87c] to-[#d4856b] hover:from-[#d4856b] hover:to-[#c97b5e] text-white shadow-warm hover:shadow-warm-lg',
   secondary:
-    'bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white shadow-md hover:shadow-lg',
+    'bg-gradient-to-r from-[#b89a85] to-[#9a8070] hover:from-[#9a8070] hover:to-[#8a7060] text-white shadow-warm hover:shadow-warm-lg',
   danger:
-    'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white shadow-md hover:shadow-lg',
+    'bg-gradient-to-r from-red-400 to-red-500 hover:from-red-500 hover:to-red-600 text-white shadow-md hover:shadow-lg',
 };
 
 /**

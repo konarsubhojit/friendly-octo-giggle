@@ -18,7 +18,7 @@ const SIZE_CLASSES: Record<HeadingSize, string> = {
   xl: 'text-4xl font-extrabold',
 };
 
-const GRADIENT = 'bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent';
+const GRADIENT = 'bg-gradient-to-r from-[#d4856b] via-[#e8a87c] to-[#c97b5e] bg-clip-text text-transparent';
 
 /**
  * Heading element with the standard blue-to-purple gradient text effect.

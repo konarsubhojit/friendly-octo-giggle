@@ -35,10 +35,10 @@ const nextConfig: NextConfig = {
               "default-src 'self'",
               // unsafe-eval only in dev (React dev tools / HMR); stripped in production
               `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://va.vercel-scripts.com`,
-              "style-src 'self' 'unsafe-inline'",
+              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               // CSP * already matches multi-level subdomains (unlike Next.js remotePatterns)
               "img-src 'self' data: blob: https://images.unsplash.com https://*.public.blob.vercel-storage.com https://lh3.googleusercontent.com",
-              "font-src 'self'",
+              "font-src 'self' https://fonts.gstatic.com",
               "connect-src 'self' https://va.vercel-scripts.com https://accounts.google.com https://login.microsoftonline.com https://graph.microsoft.com",
               "frame-src 'self' https://accounts.google.com https://login.microsoftonline.com",
             ].join("; "),

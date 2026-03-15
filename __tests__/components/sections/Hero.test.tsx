@@ -24,9 +24,9 @@ describe("Hero", () => {
     expect(screen.getByText(/Discover beautiful handmade/i)).toBeTruthy();
   });
 
-  it("renders Shop Now link pointing to #products", () => {
+  it("renders Explore Shop link pointing to #products", () => {
     render(<Hero />);
-    const link = screen.getByText("Shop Now").closest("a");
+    const link = screen.getByText(/Explore Shop/).closest("a");
     expect(link?.getAttribute("href")).toBe("#products");
   });
 
@@ -38,8 +38,8 @@ describe("Hero", () => {
 
   it("renders feature badges", () => {
     render(<Hero />);
-    expect(screen.getByText("✓ Free Shipping")).toBeTruthy();
-    expect(screen.getByText("✓ Custom Orders Welcome")).toBeTruthy();
-    expect(screen.getByText("✓ Handmade Quality")).toBeTruthy();
+    expect(screen.getByText(/Free Shipping/)).toBeTruthy();
+    expect(screen.getByText(/Custom Orders Welcome/)).toBeTruthy();
+    expect(screen.getByText(/Handmade Quality/)).toBeTruthy();
   });
 });

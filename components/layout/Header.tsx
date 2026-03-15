@@ -31,7 +31,7 @@ export default function Header() {
 
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-lg border-b border-white/20 shadow-lg">
+      <header className="fixed top-0 left-0 right-0 z-50 bg-[#fef7f2]/85 backdrop-blur-lg border-b border-[#f0d5c0]/40 shadow-warm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-between items-center">
             <Link
@@ -39,7 +39,7 @@ export default function Header() {
               className="text-2xl font-bold flex items-center gap-2 transition-all duration-300"
             >
               <svg
-                className="w-6 h-6 text-rose-500"
+                className="w-6 h-6 text-[#e8a87c]"
                 fill="currentColor"
                 viewBox="0 0 20 20"
                 aria-hidden="true"
@@ -50,7 +50,7 @@ export default function Header() {
                   clipRule="evenodd"
                 />
               </svg>
-              <span className="bg-gradient-to-r from-rose-500 to-purple-600 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-[#d4856b] to-[#e8a87c] bg-clip-text text-transparent">
                 The Kiyon Store
               </span>
             </Link>
@@ -58,26 +58,26 @@ export default function Header() {
             <nav className="hidden md:flex gap-8 items-center">
               <Link
                 href="/"
-                className="text-gray-700 hover:text-blue-600 transition-all duration-300"
+                className="text-[#7a6355] hover:text-[#d4856b] transition-all duration-300 font-semibold"
               >
                 Home
               </Link>
               <Link
                 href="/about"
-                className="text-gray-700 hover:text-blue-600 transition-all duration-300"
+                className="text-[#7a6355] hover:text-[#d4856b] transition-all duration-300 font-semibold"
               >
                 About
               </Link>
               <Link
                 href="/contact"
-                className="text-gray-700 hover:text-blue-600 transition-all duration-300"
+                className="text-[#7a6355] hover:text-[#d4856b] transition-all duration-300 font-semibold"
               >
                 Contact
               </Link>
               {session?.user && (
                 <Link
                   href="/orders"
-                  className="text-gray-700 hover:text-blue-600 transition-all duration-300"
+                  className="text-[#7a6355] hover:text-[#d4856b] transition-all duration-300 font-semibold"
                 >
                   My Orders
                 </Link>
@@ -103,10 +103,10 @@ export default function Header() {
                         alt=""
                         width={32}
                         height={32}
-                        className="rounded-full ring-2 ring-purple-200"
+                        className="rounded-full ring-2 ring-[#f0d5c0]"
                       />
                     ) : (
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white text-sm font-bold">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-r from-[#e8a87c] to-[#d4856b] flex items-center justify-center text-white text-sm font-bold">
                         {session.user.name?.[0]?.toUpperCase() || "U"}
                       </div>
                     )}
@@ -128,21 +128,21 @@ export default function Header() {
 
                   {menuOpen && (
                     <div
-                      className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-50"
+                      className="absolute right-0 mt-2 w-56 bg-[#fef7f2] rounded-2xl shadow-warm-lg border border-[#f0d5c0] py-2 z-50 animate-scale-in"
                       role="menu"
                     >
-                      <div className="px-4 py-3 border-b border-gray-100">
-                        <p className="text-sm font-semibold text-gray-900 truncate">
+                      <div className="px-4 py-3 border-b border-[#f0d5c0]">
+                        <p className="text-sm font-semibold text-[#4a3728] truncate">
                           {session.user.name}
                         </p>
-                        <p className="text-xs text-gray-500 truncate">
+                        <p className="text-xs text-[#b89a85] truncate">
                           {session.user.email}
                         </p>
                       </div>
                       <Link
                         href="/account"
                         onClick={() => setMenuOpen(false)}
-                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-[#7a6355] hover:bg-[#fde8d8] transition-colors rounded-lg mx-1"
                         role="menuitem"
                       >
                         <svg
@@ -164,7 +164,7 @@ export default function Header() {
                       <Link
                         href="/orders"
                         onClick={() => setMenuOpen(false)}
-                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-[#7a6355] hover:bg-[#fde8d8] transition-colors rounded-lg mx-1"
                         role="menuitem"
                       >
                         <svg
@@ -187,7 +187,7 @@ export default function Header() {
                         <Link
                           href="/admin"
                           onClick={() => setMenuOpen(false)}
-                          className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                          className="flex items-center gap-3 px-4 py-2.5 text-sm text-[#7a6355] hover:bg-[#fde8d8] transition-colors rounded-lg mx-1"
                           role="menuitem"
                         >
                           <svg
@@ -213,13 +213,13 @@ export default function Header() {
                           Admin Dashboard
                         </Link>
                       )}
-                      <div className="border-t border-gray-100 mt-1 pt-1">
+                      <div className="border-t border-[#f0d5c0] mt-1 pt-1">
                         <button
                           onClick={() => {
                             setMenuOpen(false);
                             signOut();
                           }}
-                          className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                          className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors rounded-lg mx-1"
                           role="menuitem"
                         >
                           <svg
@@ -256,7 +256,7 @@ export default function Header() {
               <button
                 id="mobile-nav-toggle"
                 onClick={() => setMobileNavOpen(!mobileNavOpen)}
-                className="md:hidden flex items-center justify-center w-9 h-9 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
+                className="md:hidden flex items-center justify-center w-9 h-9 rounded-lg text-[#7a6355] hover:bg-[#fde8d8] transition-colors"
                 aria-label={mobileNavOpen ? "Close menu" : "Open menu"}
                 aria-expanded={mobileNavOpen}
                 aria-haspopup="menu"
@@ -303,16 +303,16 @@ export default function Header() {
           <div
             id="mobile-nav-drawer"
             role="menu"
-            className="md:hidden bg-white/95 backdrop-blur-lg border-t border-gray-100 shadow-lg"
+            className="md:hidden bg-[#fef7f2]/95 backdrop-blur-lg border-t border-[#f0d5c0]/40 shadow-warm animate-fade-in"
           >
             <nav className="max-w-7xl mx-auto px-4 py-4 flex flex-col gap-1">
               <Link
                 href="/"
                 onClick={closeMobileNav}
-                className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-xl font-medium transition-colors"
+                className="flex items-center gap-3 px-4 py-3 text-[#7a6355] hover:bg-[#fde8d8] rounded-xl font-medium transition-colors"
               >
                 <svg
-                  className="w-5 h-5 text-gray-400"
+                  className="w-5 h-5 text-[#d4856b]"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -330,10 +330,10 @@ export default function Header() {
               <Link
                 href="/about"
                 onClick={closeMobileNav}
-                className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-xl font-medium transition-colors"
+                className="flex items-center gap-3 px-4 py-3 text-[#7a6355] hover:bg-[#fde8d8] rounded-xl font-medium transition-colors"
               >
                 <svg
-                  className="w-5 h-5 text-gray-400"
+                  className="w-5 h-5 text-[#d4856b]"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -351,10 +351,10 @@ export default function Header() {
               <Link
                 href="/contact"
                 onClick={closeMobileNav}
-                className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-xl font-medium transition-colors"
+                className="flex items-center gap-3 px-4 py-3 text-[#7a6355] hover:bg-[#fde8d8] rounded-xl font-medium transition-colors"
               >
                 <svg
-                  className="w-5 h-5 text-gray-400"
+                  className="w-5 h-5 text-[#d4856b]"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -373,10 +373,10 @@ export default function Header() {
                 <Link
                   href="/orders"
                   onClick={closeMobileNav}
-                  className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-xl font-medium transition-colors"
+                  className="flex items-center gap-3 px-4 py-3 text-[#7a6355] hover:bg-[#fde8d8] rounded-xl font-medium transition-colors"
                 >
                   <svg
-                    className="w-5 h-5 text-gray-400"
+                    className="w-5 h-5 text-[#d4856b]"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -393,7 +393,7 @@ export default function Header() {
                 </Link>
               )}
               {!session?.user && (
-                <div className="pt-2 border-t border-gray-100 mt-2">
+                <div className="pt-2 border-t border-[#f0d5c0] mt-2">
                   <GradientButton
                     onClick={() => {
                       closeMobileNav();
