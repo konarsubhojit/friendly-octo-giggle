@@ -68,6 +68,16 @@ export default defineConfig({
       },
       testMatch: '**/admin-views.spec.ts',
     },
+    // Cart tests — authenticated as Copilot admin (desktop)
+    {
+      name: 'cart',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1280, height: 800 },
+        storageState: './playwright-tests/.auth/admin.json',
+      },
+      testMatch: '**/cart.spec.ts',
+    },
   ],
   reporter: [['list'], ['html', { outputFolder: 'playwright-tests/report', open: 'never' }]],
 });
