@@ -9,8 +9,7 @@ import {
   handleValidationError,
 } from "@/lib/api-utils";
 import { auth } from "@/lib/auth";
-import { getCachedData, invalidateCache } from "@/lib/redis";
-import { invalidateUserOrderCaches } from "@/lib/cache";
+import { cacheAdminOrderById, invalidateAdminOrderCaches } from "@/lib/cache";
 import { serializeOrder } from "@/lib/serializers";
 import { UpdateOrderStatusSchema } from "@/lib/validations";
 
@@ -54,11 +53,7 @@ function buildUpdateData(data: {
 }
 
 async function invalidateOrderCaches(orderId: string, userId?: string | null) {
-  await invalidateCache("admin:orders:*");
-  await invalidateCache(`admin:order:${orderId}`);
-  if (userId) {
-    await invalidateUserOrderCaches(userId);
-  }
+  await invalidateAdminOrderCaches(orderId, userId);
 }
 
 export async function PATCH(
@@ -113,17 +108,11 @@ export async function GET(
   try {
     const { id } = await params;
 
-    // Use Redis cache for individual order
-    const order = await getCachedData(
-      `admin:order:${id}`,
-      60, // Cache for 1 minute
-      async () => {
-        return await drizzleDb.query.orders.findFirst({
-          where: eq(orders.id, id),
-          with: { items: { with: { product: true, variation: true } } },
-        });
-      },
-      10, // Stale time
+    const order = await cacheAdminOrderById(id, () =>
+      drizzleDb.query.orders.findFirst({
+        where: eq(orders.id, id),
+        with: { items: { with: { product: true, variation: true } } },
+      }),
     );
 
     if (!order) {

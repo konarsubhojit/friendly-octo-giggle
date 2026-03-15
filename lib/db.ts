@@ -25,12 +25,13 @@ import {
   cartsRelations,
   cartItemsRelations,
 } from "./schema";
-import { eq, desc, and, isNull } from "drizzle-orm";
+import { eq, desc, and, isNull, sql, ne } from "drizzle-orm";
 import { Product, ProductInput } from "./types";
 import { env } from "./env";
 import {
   cacheProductsList,
   cacheProductById,
+  cacheProductsBestsellers,
   invalidateProductCaches,
 } from "./cache";
 
@@ -132,6 +133,81 @@ export const db = {
       // Use cache only if explicitly requested and no pagination
       if (withCache && !limit && !offset) {
         return cacheProductsList(fetcher);
+      }
+
+      return fetcher();
+    },
+
+    /**
+     * Find products sorted by total units sold (bestsellers first).
+     * Products with no sales appear at the end, ordered by creation date.
+     * Only counts items from non-cancelled orders.
+     *
+     * @param options - Pagination and cache options
+     * @returns Array of products sorted by sales volume descending
+     */
+    findBestsellers: async (
+      options: ProductListOptions = {},
+    ): Promise<Product[]> => {
+      const { limit, withCache = false } = options;
+
+      const fetcher = async () => {
+        // Step 1: aggregate total sold per product from non-cancelled orders
+        const salesData = await drizzleDb
+          .select({
+            productId: orderItems.productId,
+            totalSold:
+              sql<number>`cast(coalesce(sum(${orderItems.quantity}), 0) as int)`.as(
+                "total_sold",
+              ),
+          })
+          .from(orderItems)
+          .innerJoin(
+            orders,
+            and(
+              eq(orders.id, orderItems.orderId),
+              ne(orders.status, "CANCELLED"),
+            ),
+          )
+          .groupBy(orderItems.productId);
+
+        const salesMap = new Map<string, number>(
+          salesData.map((r) => [r.productId, r.totalSold]),
+        );
+
+        // Step 2: fetch all products with variations (no DB-level limit — sort first)
+        const rows = await drizzleDb.query.products.findMany({
+          where: isNull(products.deletedAt),
+          with: { variations: true },
+        });
+
+        // Step 3: sort by totalSold desc, then by createdAt desc for ties
+        const sorted = rows.slice().sort((a, b) => {
+          const soldA = salesMap.get(a.id) ?? 0;
+          const soldB = salesMap.get(b.id) ?? 0;
+          if (soldB !== soldA) return soldB - soldA;
+          return b.createdAt.getTime() - a.createdAt.getTime();
+        });
+
+        // Step 4: apply limit after sorting so we always return the top sellers
+        const result = limit ? sorted.slice(0, limit) : sorted;
+
+        return result.map((p) => ({
+          ...p,
+          deletedAt: null,
+          createdAt: p.createdAt.toISOString(),
+          updatedAt: p.updatedAt.toISOString(),
+          variations: p.variations.map((v) => ({
+            ...v,
+            image: v.image ?? null,
+            createdAt: v.createdAt.toISOString(),
+            updatedAt: v.updatedAt.toISOString(),
+          })),
+        }));
+      };
+
+      if (withCache) {
+        return cacheProductsBestsellers(fetcher);
       }
 
       return fetcher();

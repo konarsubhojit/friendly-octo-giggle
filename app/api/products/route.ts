@@ -1,19 +1,11 @@
 import { db } from '@/lib/db';
-import { getCachedData } from '@/lib/redis';
 import { apiSuccess, handleApiError } from '@/lib/api-utils';
 import { withLogging } from '@/lib/api-middleware';
+import { cacheProductsList } from '@/lib/cache';
 
 async function handleGet() {
   try {
-    // Use Redis cache with stampede prevention
-    const products = await getCachedData(
-      'products:all',
-      60, // Cache for 60 seconds
-      async () => {
-        return await db.products.findAll();
-      },
-      10 // Serve stale data for up to 10 extra seconds while revalidating
-    );
+    const products = await cacheProductsList(() => db.products.findAll());
 
     const response = apiSuccess({ products });
     response.headers.set('Cache-Control', 's-maxage=60, stale-while-revalidate=120');

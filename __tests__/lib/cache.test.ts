@@ -15,9 +15,17 @@ import {
   CACHE_TTL,
   cacheProductsList,
   cacheProductById,
+  cacheProductsBestsellers,
   invalidateProductCaches,
   invalidateCartCache,
   invalidateUserOrderCaches,
+  cacheAdminOrdersList,
+  cacheAdminOrderById,
+  invalidateAdminOrderCaches,
+  cacheAdminUsersList,
+  cacheAdminUserById,
+  invalidateAdminUserCaches,
+  cacheAdminSales,
 } from "@/lib/cache";
 import { getCachedData, invalidateCache } from "@/lib/redis";
 import { logCacheOperation, logError } from "@/lib/logger";
@@ -34,6 +42,10 @@ describe("CACHE_KEYS", () => {
   describe("static values", () => {
     it("has correct PRODUCTS_ALL key", () => {
       expect(CACHE_KEYS.PRODUCTS_ALL).toBe("products:all");
+    });
+
+    it("has correct PRODUCTS_BESTSELLERS key", () => {
+      expect(CACHE_KEYS.PRODUCTS_BESTSELLERS).toBe("products:bestsellers");
     });
 
     it("has correct PRODUCTS_PATTERN key", () => {
@@ -54,6 +66,26 @@ describe("CACHE_KEYS", () => {
 
     it("has correct ADMIN_PRODUCTS_PATTERN key", () => {
       expect(CACHE_KEYS.ADMIN_PRODUCTS_PATTERN).toBe("admin:products:*");
+    });
+
+    it("has correct ADMIN_ORDERS_ALL key", () => {
+      expect(CACHE_KEYS.ADMIN_ORDERS_ALL).toBe("admin:orders:all");
+    });
+
+    it("has correct ADMIN_ORDERS_PATTERN key", () => {
+      expect(CACHE_KEYS.ADMIN_ORDERS_PATTERN).toBe("admin:orders:*");
+    });
+
+    it("has correct ADMIN_USERS_ALL key", () => {
+      expect(CACHE_KEYS.ADMIN_USERS_ALL).toBe("admin:users:all");
+    });
+
+    it("has correct ADMIN_USERS_PATTERN key", () => {
+      expect(CACHE_KEYS.ADMIN_USERS_PATTERN).toBe("admin:users:*");
+    });
+
+    it("has correct ADMIN_SALES key", () => {
+      expect(CACHE_KEYS.ADMIN_SALES).toBe("admin:sales:summary");
     });
   });
 
@@ -89,22 +121,51 @@ describe("CACHE_KEYS", () => {
     it("ORDER_USER_PATTERN returns correct key", () => {
       expect(CACHE_KEYS.ORDER_USER_PATTERN("user-1")).toBe("order:user-1:*");
     });
+
+    it("ADMIN_ORDER_BY_ID returns correct key", () => {
+      expect(CACHE_KEYS.ADMIN_ORDER_BY_ID("o1")).toBe("admin:order:o1");
+    });
+
+    it("ADMIN_USER_BY_ID returns correct key", () => {
+      expect(CACHE_KEYS.ADMIN_USER_BY_ID("u1")).toBe("admin:user:u1");
+    });
   });
 });
 
 describe("CACHE_TTL", () => {
-  it("has correct TTL values", () => {
+  it("has correct product TTL values", () => {
     expect(CACHE_TTL.PRODUCTS_LIST).toBe(60);
+    expect(CACHE_TTL.PRODUCTS_BESTSELLERS).toBe(120);
+    expect(CACHE_TTL.PRODUCTS_BESTSELLERS_STALE).toBe(20);
     expect(CACHE_TTL.PRODUCT_DETAIL).toBe(300);
     expect(CACHE_TTL.STALE_TIME).toBe(10);
+  });
+
+  it("has correct cart TTL values", () => {
     expect(CACHE_TTL.CART).toBe(30);
     expect(CACHE_TTL.CART_STALE).toBe(5);
+  });
+
+  it("has correct order TTL values", () => {
     expect(CACHE_TTL.USER_ORDERS).toBe(60);
     expect(CACHE_TTL.USER_ORDERS_STALE).toBe(10);
     expect(CACHE_TTL.ORDER_DETAIL).toBe(120);
     expect(CACHE_TTL.ORDER_DETAIL_STALE).toBe(10);
+  });
+
+  it("has correct admin TTL values", () => {
     expect(CACHE_TTL.ADMIN_PRODUCTS).toBe(60);
     expect(CACHE_TTL.ADMIN_PRODUCTS_STALE).toBe(10);
+    expect(CACHE_TTL.ADMIN_ORDERS).toBe(60);
+    expect(CACHE_TTL.ADMIN_ORDERS_STALE).toBe(10);
+    expect(CACHE_TTL.ADMIN_ORDER_DETAIL).toBe(60);
+    expect(CACHE_TTL.ADMIN_ORDER_DETAIL_STALE).toBe(10);
+    expect(CACHE_TTL.ADMIN_USERS).toBe(300);
+    expect(CACHE_TTL.ADMIN_USERS_STALE).toBe(30);
+    expect(CACHE_TTL.ADMIN_USER_DETAIL).toBe(300);
+    expect(CACHE_TTL.ADMIN_USER_DETAIL_STALE).toBe(30);
+    expect(CACHE_TTL.ADMIN_SALES).toBe(120);
+    expect(CACHE_TTL.ADMIN_SALES_STALE).toBe(30);
   });
 });
 
@@ -270,5 +331,162 @@ describe("invalidateUserOrderCaches", () => {
       error,
       context: "order_cache_invalidation",
     });
+  });
+});
+
+describe("cacheProductsBestsellers", () => {
+  it("calls getCachedData with correct arguments", async () => {
+    const fetcher = vi.fn().mockResolvedValue([{ id: "1", name: "Product" }]);
+    mockGetCachedData.mockResolvedValue([{ id: "1", name: "Product" }]);
+
+    await cacheProductsBestsellers(fetcher);
+
+    expect(mockGetCachedData).toHaveBeenCalledWith(
+      "products:bestsellers",
+      120,
+      fetcher,
+      20,
+    );
+  });
+
+  it("returns the result from getCachedData", async () => {
+    const data = [{ id: "1" }];
+    mockGetCachedData.mockResolvedValue(data);
+
+    const result = await cacheProductsBestsellers(vi.fn());
+
+    expect(result).toBe(data);
+  });
+});
+
+describe("cacheAdminOrdersList", () => {
+  it("calls getCachedData with correct arguments", async () => {
+    const fetcher = vi.fn().mockResolvedValue([]);
+    mockGetCachedData.mockResolvedValue([]);
+
+    await cacheAdminOrdersList(fetcher);
+
+    expect(mockGetCachedData).toHaveBeenCalledWith(
+      "admin:orders:all",
+      60,
+      fetcher,
+      10,
+    );
+  });
+});
+
+describe("cacheAdminOrderById", () => {
+  it("calls getCachedData with correct arguments", async () => {
+    const fetcher = vi.fn().mockResolvedValue({ id: "o1" });
+    mockGetCachedData.mockResolvedValue({ id: "o1" });
+
+    await cacheAdminOrderById("o1", fetcher);
+
+    expect(mockGetCachedData).toHaveBeenCalledWith(
+      "admin:order:o1",
+      60,
+      fetcher,
+      10,
+    );
+  });
+});
+
+describe("invalidateAdminOrderCaches", () => {
+  it("invalidates admin orders pattern and specific order without userId", async () => {
+    await invalidateAdminOrderCaches("o1");
+
+    expect(mockInvalidateCache).toHaveBeenCalledWith("admin:orders:*");
+    expect(mockInvalidateCache).toHaveBeenCalledWith("admin:order:o1");
+  });
+
+  it("also invalidates user order caches when userId provided", async () => {
+    await invalidateAdminOrderCaches("o1", "u1");
+
+    expect(mockInvalidateCache).toHaveBeenCalledWith("admin:orders:*");
+    expect(mockInvalidateCache).toHaveBeenCalledWith("admin:order:o1");
+    expect(mockInvalidateCache).toHaveBeenCalledWith("orders:user:u1");
+    expect(mockInvalidateCache).toHaveBeenCalledWith("order:u1:*");
+  });
+
+  it("handles errors by calling logError", async () => {
+    const error = new Error("Redis down");
+    mockInvalidateCache.mockRejectedValueOnce(error);
+
+    await invalidateAdminOrderCaches("o1");
+
+    expect(mockLogError).toHaveBeenCalledWith({
+      error,
+      context: "admin_order_cache_invalidation",
+    });
+  });
+});
+
+describe("cacheAdminUsersList", () => {
+  it("calls getCachedData with correct arguments", async () => {
+    const fetcher = vi.fn().mockResolvedValue([]);
+    mockGetCachedData.mockResolvedValue([]);
+
+    await cacheAdminUsersList(fetcher);
+
+    expect(mockGetCachedData).toHaveBeenCalledWith(
+      "admin:users:all",
+      300,
+      fetcher,
+      30,
+    );
+  });
+});
+
+describe("cacheAdminUserById", () => {
+  it("calls getCachedData with correct arguments", async () => {
+    const fetcher = vi.fn().mockResolvedValue({ id: "u1" });
+    mockGetCachedData.mockResolvedValue({ id: "u1" });
+
+    await cacheAdminUserById("u1", fetcher);
+
+    expect(mockGetCachedData).toHaveBeenCalledWith(
+      "admin:user:u1",
+      300,
+      fetcher,
+      30,
+    );
+  });
+});
+
+describe("invalidateAdminUserCaches", () => {
+  it("invalidates admin users pattern and specific user", async () => {
+    await invalidateAdminUserCaches("u1");
+
+    expect(mockInvalidateCache).toHaveBeenCalledTimes(2);
+    expect(mockInvalidateCache).toHaveBeenCalledWith("admin:users:*");
+    expect(mockInvalidateCache).toHaveBeenCalledWith("admin:user:u1");
+  });
+
+  it("handles errors by calling logError", async () => {
+    const error = new Error("Redis down");
+    mockInvalidateCache.mockRejectedValueOnce(error);
+
+    await invalidateAdminUserCaches("u1");
+
+    expect(mockLogError).toHaveBeenCalledWith({
+      error,
+      context: "admin_user_cache_invalidation",
+    });
+  });
+});
+
+describe("cacheAdminSales", () => {
+  it("calls getCachedData with correct arguments", async () => {
+    const fetcher = vi.fn().mockResolvedValue({ totalRevenue: 1000 });
+    mockGetCachedData.mockResolvedValue({ totalRevenue: 1000 });
+
+    await cacheAdminSales(fetcher);
+
+    expect(mockGetCachedData).toHaveBeenCalledWith(
+      "admin:sales:summary",
+      120,
+      fetcher,
+      30,
+    );
   });
 });

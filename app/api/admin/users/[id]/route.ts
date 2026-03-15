@@ -4,7 +4,7 @@ import { users } from '@/lib/schema';
 import { eq } from 'drizzle-orm';
 import { auth } from '@/lib/auth';
 import { apiSuccess, apiError, handleApiError } from '@/lib/api-utils';
-import { getCachedData, invalidateCache } from '@/lib/redis';
+import { cacheAdminUserById, invalidateAdminUserCaches } from '@/lib/cache';
 import { z } from 'zod';
 
 export const dynamic = 'force-dynamic';
@@ -64,8 +64,8 @@ export async function PATCH(
         image: users.image,
       });
 
-    // Invalidate user caches
-    await invalidateCache('admin:users:*');
+    // Invalidate user caches (list + individual user)
+    await invalidateAdminUserCaches(id);
 
     return apiSuccess({ user });
   } catch (error) {
@@ -85,30 +85,24 @@ export async function GET(
 
     const { id } = await params;
 
-    // Use Redis cache for individual user
-    const user = await getCachedData(
-      `admin:user:${id}`,
-      300, // Cache for 5 minutes
-      async () => {
-        const user = await drizzleDb.query.users.findFirst({
-          where: eq(users.id, id),
-          with: { orders: true, sessions: true },
-        });
-        if (!user) return null;
-        return {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          role: user.role,
-          emailVerified: user.emailVerified,
-          createdAt: user.createdAt,
-          updatedAt: user.updatedAt,
-          image: user.image,
-          _count: { orders: user.orders.length, sessions: user.sessions.length },
-        };
-      },
-      30 // Stale time
-    );
+    const user = await cacheAdminUserById(id, async () => {
+      const found = await drizzleDb.query.users.findFirst({
+        where: eq(users.id, id),
+        with: { orders: true, sessions: true },
+      });
+      if (!found) return null;
+      return {
+        id: found.id,
+        name: found.name,
+        email: found.email,
+        role: found.role,
+        emailVerified: found.emailVerified,
+        createdAt: found.createdAt,
+        updatedAt: found.updatedAt,
+        image: found.image,
+        _count: { orders: found.orders.length, sessions: found.sessions.length },
+      };
+    });
 
     if (!user) {
       return apiError('User not found', 404);

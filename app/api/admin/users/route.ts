@@ -3,7 +3,7 @@ import { users } from '@/lib/schema';
 import { desc } from 'drizzle-orm';
 import { auth } from '@/lib/auth';
 import { apiSuccess, apiError, handleApiError } from '@/lib/api-utils';
-import { getCachedData } from '@/lib/redis';
+import { cacheAdminUsersList } from '@/lib/cache';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,16 +29,12 @@ export async function GET() {
       return apiError(authCheck.error ?? 'Unknown error', authCheck.status);
     }
 
-    // Use Redis cache for user list
-    const userList = await getCachedData(
-      'admin:users:all',
-      300, // Cache for 5 minutes
-      async () => {
-        const userRows = await drizzleDb.query.users.findMany({
-          orderBy: [desc(users.createdAt)],
-          with: { orders: true },
-        });
-        return userRows.map(u => ({
+    const userList = await cacheAdminUsersList(() =>
+      drizzleDb.query.users.findMany({
+        orderBy: [desc(users.createdAt)],
+        with: { orders: true },
+      }).then((rows) =>
+        rows.map((u) => ({
           id: u.id,
           name: u.name,
           email: u.email,
@@ -48,9 +44,8 @@ export async function GET() {
           updatedAt: u.updatedAt,
           image: u.image,
           _count: { orders: u.orders.length },
-        }));
-      },
-      30 // Stale time
+        })),
+      ),
     );
 
     return apiSuccess({ users: userList });

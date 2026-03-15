@@ -15,6 +15,7 @@ import { logCacheOperation, logError } from "./logger";
 export const CACHE_KEYS = {
   // Products
   PRODUCTS_ALL: "products:all",
+  PRODUCTS_BESTSELLERS: "products:bestsellers",
   PRODUCT_BY_ID: (id: string) => `product:${id}`,
   PRODUCTS_PATTERN: "products:*",
   PRODUCT_PATTERN: "product:*",
@@ -31,6 +32,19 @@ export const CACHE_KEYS = {
   // Admin products
   ADMIN_PRODUCTS_ALL: "admin:products:all",
   ADMIN_PRODUCTS_PATTERN: "admin:products:*",
+  // Admin orders
+  ADMIN_ORDERS_ALL: "admin:orders:all",
+  ADMIN_ORDER_BY_ID: (id: string) => `admin:order:${id}`,
+  ADMIN_ORDERS_PATTERN: "admin:orders:*",
+  ADMIN_ORDER_PATTERN: "admin:order:*",
+  // Admin users
+  ADMIN_USERS_ALL: "admin:users:all",
+  ADMIN_USER_BY_ID: (id: string) => `admin:user:${id}`,
+  ADMIN_USERS_PATTERN: "admin:users:*",
+  ADMIN_USER_PATTERN: "admin:user:*",
+  // Admin sales
+  ADMIN_SALES: "admin:sales:summary",
+  ADMIN_SALES_PATTERN: "admin:sales:*",
   // Exchange rates (date-scoped, refreshed once per UTC day)
   EXCHANGE_RATES_BY_DATE: (date: string) => `exchange-rates:${date}`,
 } as const;
@@ -38,6 +52,8 @@ export const CACHE_KEYS = {
 // Cache TTL configuration (in seconds)
 export const CACHE_TTL = {
   PRODUCTS_LIST: 60, // 1 minute for product lists
+  PRODUCTS_BESTSELLERS: 120, // 2 minutes for bestsellers (rankings change with new orders)
+  PRODUCTS_BESTSELLERS_STALE: 20,
   PRODUCT_DETAIL: 300, // 5 minutes for individual products
   STALE_TIME: 10, // Extra time to serve stale data while revalidating
   CART: 30, // 30 seconds for cart (frequently mutated)
@@ -48,6 +64,16 @@ export const CACHE_TTL = {
   ORDER_DETAIL_STALE: 10,
   ADMIN_PRODUCTS: 60,
   ADMIN_PRODUCTS_STALE: 10,
+  ADMIN_ORDERS: 60, // 1 minute for admin orders list
+  ADMIN_ORDERS_STALE: 10,
+  ADMIN_ORDER_DETAIL: 60, // 1 minute for individual admin order
+  ADMIN_ORDER_DETAIL_STALE: 10,
+  ADMIN_USERS: 300, // 5 minutes for admin users list
+  ADMIN_USERS_STALE: 30,
+  ADMIN_USER_DETAIL: 300, // 5 minutes for individual admin user
+  ADMIN_USER_DETAIL_STALE: 30,
+  ADMIN_SALES: 120, // 2 minutes for sales summary
+  ADMIN_SALES_STALE: 30,
 } as const;
 
 /**
@@ -74,6 +100,21 @@ export function cacheProductById<T>(
     CACHE_TTL.PRODUCT_DETAIL,
     fetcher,
     CACHE_TTL.STALE_TIME,
+  );
+}
+
+/**
+ * Cache bestsellers product list with stampede prevention
+ * Uses a separate key from products:all so it can be independently refreshed
+ */
+export function cacheProductsBestsellers<T>(
+  fetcher: () => Promise<T>,
+): Promise<T> {
+  return getCachedData(
+    CACHE_KEYS.PRODUCTS_BESTSELLERS,
+    CACHE_TTL.PRODUCTS_BESTSELLERS,
+    fetcher,
+    CACHE_TTL.PRODUCTS_BESTSELLERS_STALE,
   );
 }
 
@@ -131,4 +172,102 @@ export async function invalidateUserOrderCaches(userId: string): Promise<void> {
   } catch (error) {
     logError({ error, context: "order_cache_invalidation" });
   }
+}
+
+/**
+ * Cache admin orders list with stampede prevention
+ */
+export function cacheAdminOrdersList<T>(fetcher: () => Promise<T>): Promise<T> {
+  return getCachedData(
+    CACHE_KEYS.ADMIN_ORDERS_ALL,
+    CACHE_TTL.ADMIN_ORDERS,
+    fetcher,
+    CACHE_TTL.ADMIN_ORDERS_STALE,
+  );
+}
+
+/**
+ * Cache single admin order by ID with stampede prevention
+ */
+export function cacheAdminOrderById<T>(
+  id: string,
+  fetcher: () => Promise<T>,
+): Promise<T> {
+  return getCachedData(
+    CACHE_KEYS.ADMIN_ORDER_BY_ID(id),
+    CACHE_TTL.ADMIN_ORDER_DETAIL,
+    fetcher,
+    CACHE_TTL.ADMIN_ORDER_DETAIL_STALE,
+  );
+}
+
+/**
+ * Invalidate admin order-related caches
+ * Called after order status updates
+ */
+export async function invalidateAdminOrderCaches(
+  orderId: string,
+  userId?: string | null,
+): Promise<void> {
+  try {
+    await invalidateCachePattern(CACHE_KEYS.ADMIN_ORDERS_PATTERN);
+    await invalidateCachePattern(CACHE_KEYS.ADMIN_ORDER_BY_ID(orderId));
+    if (userId) {
+      await invalidateUserOrderCaches(userId);
+    }
+  } catch (error) {
+    logError({ error, context: "admin_order_cache_invalidation" });
+  }
+}
+
+/**
+ * Cache admin users list with stampede prevention
+ */
+export function cacheAdminUsersList<T>(fetcher: () => Promise<T>): Promise<T> {
+  return getCachedData(
+    CACHE_KEYS.ADMIN_USERS_ALL,
+    CACHE_TTL.ADMIN_USERS,
+    fetcher,
+    CACHE_TTL.ADMIN_USERS_STALE,
+  );
+}
+
+/**
+ * Cache single admin user by ID with stampede prevention
+ */
+export function cacheAdminUserById<T>(
+  id: string,
+  fetcher: () => Promise<T>,
+): Promise<T> {
+  return getCachedData(
+    CACHE_KEYS.ADMIN_USER_BY_ID(id),
+    CACHE_TTL.ADMIN_USER_DETAIL,
+    fetcher,
+    CACHE_TTL.ADMIN_USER_DETAIL_STALE,
+  );
+}
+
+/**
+ * Invalidate admin user-related caches (list + individual user)
+ * Called after user role updates
+ */
+export async function invalidateAdminUserCaches(userId: string): Promise<void> {
+  try {
+    await invalidateCachePattern(CACHE_KEYS.ADMIN_USERS_PATTERN);
+    await invalidateCachePattern(CACHE_KEYS.ADMIN_USER_BY_ID(userId));
+  } catch (error) {
+    logError({ error, context: "admin_user_cache_invalidation" });
+  }
+}
+
+/**
+ * Cache admin sales summary with stampede prevention
+ */
+export function cacheAdminSales<T>(fetcher: () => Promise<T>): Promise<T> {
+  return getCachedData(
+    CACHE_KEYS.ADMIN_SALES,
+    CACHE_TTL.ADMIN_SALES,
+    fetcher,
+    CACHE_TTL.ADMIN_SALES_STALE,
+  );
 }

@@ -3,7 +3,7 @@ import { orders } from '@/lib/schema';
 import { desc } from 'drizzle-orm';
 import { apiSuccess, apiError, handleApiError } from '@/lib/api-utils';
 import { auth } from '@/lib/auth';
-import { getCachedData } from '@/lib/redis';
+import { cacheAdminOrdersList } from '@/lib/cache';
 import { serializeOrders } from '@/lib/serializers';
 
 export const dynamic = 'force-dynamic';
@@ -30,17 +30,11 @@ export async function GET() {
   }
 
   try {
-    // Use Redis cache for orders list
-    const orderList = await getCachedData(
-      'admin:orders:all',
-      60, // Cache for 1 minute (orders change more frequently)
-      async () => {
-        return await drizzleDb.query.orders.findMany({
-          orderBy: [desc(orders.createdAt)],
-          with: { items: { with: { product: true, variation: true } } },
-        });
-      },
-      10 // Stale time
+    const orderList = await cacheAdminOrdersList(() =>
+      drizzleDb.query.orders.findMany({
+        orderBy: [desc(orders.createdAt)],
+        with: { items: { with: { product: true, variation: true } } },
+      }),
     );
 
     return apiSuccess({

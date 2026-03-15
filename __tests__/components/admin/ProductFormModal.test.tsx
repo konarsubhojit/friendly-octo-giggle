@@ -117,6 +117,25 @@ describe("ProductFormModal", () => {
     expect((stockInput as HTMLInputElement).value).toBe("25");
   });
 
+  it("allows setting stock to 0 directly", () => {
+    renderModal({ editingProduct: mockProduct }); // starts with stock=10
+    const stockInput = screen.getByLabelText("Stock");
+    fireEvent.change(stockInput, { target: { value: "0" } });
+    expect((stockInput as HTMLInputElement).value).toBe("0");
+  });
+
+  it("allows clearing stock field and then typing 0", () => {
+    renderModal({ editingProduct: mockProduct }); // starts with stock=10
+    const stockInput = screen.getByLabelText("Stock");
+    // Clear the field (simulating backspace/delete)
+    fireEvent.change(stockInput, { target: { value: "" } });
+    // Field should clear (not revert to 10)
+    expect((stockInput as HTMLInputElement).value).toBe("");
+    // Now type 0
+    fireEvent.change(stockInput, { target: { value: "0" } });
+    expect((stockInput as HTMLInputElement).value).toBe("0");
+  });
+
   it("updates category when typed", () => {
     renderModal();
     const catInput = screen.getByLabelText("Category");
