@@ -79,6 +79,12 @@ export const validatePasswordFields = (
 
 // ─── ProfileSection ────────────────────────────────────────────────────────────
 
+const buildProfilePayload = (name: string, email: string, phoneNumber: string) => ({
+  name: name || undefined,
+  email: email || undefined,
+  phoneNumber: phoneNumber || null,
+});
+
 interface ProfileSectionProps {
   readonly profile: UserProfile;
   readonly onProfileUpdated: () => void;
@@ -125,7 +131,7 @@ const ProfileSection = ({ profile, onProfileUpdated }: ProfileSectionProps) => {
       const res = await fetch('/api/account', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name || undefined, email: email || undefined, phoneNumber: phoneNumber || null }),
+        body: JSON.stringify(buildProfilePayload(name, email, phoneNumber)),
       });
       const data = await res.json();
       if (res.ok) {
@@ -133,7 +139,7 @@ const ProfileSection = ({ profile, onProfileUpdated }: ProfileSectionProps) => {
         setIsEditing(false);
         onProfileUpdated();
       } else {
-        setServerError(data.error || API_ERRORS.PROFILE_UPDATE);
+        setServerError(data.error ?? API_ERRORS.PROFILE_UPDATE);
       }
     } catch {
       setServerError(API_ERRORS.PROFILE_UPDATE);

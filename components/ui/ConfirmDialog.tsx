@@ -152,7 +152,7 @@ const ConfirmDialog = ({
 
       const first = focusable[0];
       // Safe: early return above guarantees focusable.length > 0
-      const last = focusable.at(-1)!;
+      const last = focusable.at(-1) as HTMLElement;
 
       if (e.shiftKey && document.activeElement === first) {
         e.preventDefault();

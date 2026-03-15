@@ -19,6 +19,14 @@ export default function RegisterPage() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
 
+  const handleApiError = (data: { details?: Record<string, string>; error?: string }) => {
+    if (data.details) {
+      setFieldErrors(data.details);
+    } else {
+      setError(data.error ?? 'Registration failed');
+    }
+  };
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError('');
@@ -41,11 +49,7 @@ export default function RegisterPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        if (data.details) {
-          setFieldErrors(data.details);
-        } else {
-          setError(data.error || 'Registration failed');
-        }
+        handleApiError(data);
         return;
       }
 
