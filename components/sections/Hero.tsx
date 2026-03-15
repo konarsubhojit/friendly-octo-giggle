@@ -14,8 +14,8 @@ export default function Hero() {
           <Link href="#products" scroll className="px-8 py-4 bg-rose-500 text-white rounded-lg font-semibold hover:bg-rose-600 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105">
             Shop Now
           </Link>
-          <Link href="#trending" scroll className="px-8 py-4 border-2 border-rose-500 text-rose-500 rounded-lg font-semibold hover:bg-rose-50 transition-all duration-300 hover:scale-105">
-            Trending Items
+          <Link href="#products" scroll className="px-8 py-4 border-2 border-rose-500 text-rose-500 rounded-lg font-semibold hover:bg-rose-50 transition-all duration-300 hover:scale-105">
+            Bestsellers
           </Link>
         </div>
         {/* Floating badges */}

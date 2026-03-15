@@ -30,10 +30,10 @@ describe("Hero", () => {
     expect(link?.getAttribute("href")).toBe("#products");
   });
 
-  it("renders Trending Items link pointing to #trending", () => {
+  it("renders Bestsellers link pointing to #products", () => {
     render(<Hero />);
-    const link = screen.getByText("Trending Items").closest("a");
-    expect(link?.getAttribute("href")).toBe("#trending");
+    const link = screen.getByText("Bestsellers").closest("a");
+    expect(link?.getAttribute("href")).toBe("#products");
   });
 
   it("renders feature badges", () => {

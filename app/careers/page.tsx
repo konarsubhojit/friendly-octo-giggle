@@ -3,8 +3,8 @@ import Footer from '@/components/layout/Footer';
 import Link from 'next/link';
 
 export const metadata = {
-  title: 'Careers | Craft & Cozy',
-  description: 'Join the Craft & Cozy team. Explore open positions and opportunities.',
+  title: 'Careers | The Kiyon Store',
+  description: 'Join The Kiyon Store team. Explore open positions and opportunities.',
 };
 
 const openings = [

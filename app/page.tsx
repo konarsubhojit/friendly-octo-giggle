@@ -1,15 +1,20 @@
+import type { Metadata } from 'next';
 import { Product } from '@/lib/types';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import Hero from '@/components/sections/Hero';
 import ProductGrid from '@/components/sections/ProductGrid';
-import TrendingProducts from '@/components/sections/TrendingProducts';
 import { db } from '@/lib/db';
 import { unstable_cache } from 'next/cache';
 
 import { logError } from '@/lib/logger';
 
 export const revalidate = 60;
+
+export const metadata: Metadata = {
+  title: 'The Kiyon Store | Handcrafted with Love',
+  description: 'Discover beautiful handmade decorations and cozy wearables — flower bouquets, keyrings, hand warmers, mufflers, scarves, and more.',
+};
 
 // Create a cached version of product fetching with Next.js cache tags
 const getCachedProducts = unstable_cache(
@@ -36,8 +41,6 @@ export default async function Home() {
       <Header />
 
       <Hero />
-
-      <TrendingProducts />
 
       <ProductGrid products={products} />
 

@@ -17,7 +17,7 @@ export async function generateMetadata({
   const product = await db.products.findById(id);
   if (!product) return { title: 'Product Not Found' };
   return {
-    title: `${product.name} | E-commerce Store`,
+    title: `${product.name} | The Kiyon Store`,
     description: product.description?.slice(0, 160),
   };
 }

@@ -1,274 +1,25 @@
 'use client';
 
-import { useState, useCallback, type ReactNode } from 'react';
-import { PasswordToggleButton } from '@/components/auth/PasswordToggleButton';
-import { PasswordStrengthChecklist } from '@/components/auth/PasswordStrengthChecklist';
+import { useState, useCallback } from 'react';
+import { FieldRenderer } from '@/components/ui/FieldRenderer';
 
-// ─── Public types ─────────────────────────────────────────────────────────────
+// Re-export public types from DynamicFormTypes for backwards compatibility
+export type {
+  FieldValidateFn,
+  SubmitResult,
+  SelectOption,
+  FieldType,
+  FieldDef,
+  DynamicFormProps,
+} from '@/components/ui/DynamicFormTypes';
 
-/**
- * Validator for a single field. Receives the current value and all current form
- * values (for cross-field rules like "confirm password"). Return a non-empty
- * string to signal an error, or `undefined` when the value is valid.
- */
-export type FieldValidateFn = (
-  value: string,
-  allValues: Readonly<Record<string, string>>,
-) => string | undefined;
-
-/**
- * What `onSubmit` may return:
- * - `void / undefined` → success (no action taken by the form)
- * - `string`           → top-level server error message
- * - `Record<string, string>` → per-field server errors keyed by `FieldDef.name`
- */
-export type SubmitResult = string | Record<string, string> | undefined;
-
-export interface SelectOption {
-  readonly value: string;
-  readonly label: string;
-}
-
-export type FieldType =
-  | 'text'
-  | 'email'
-  | 'tel'
-  | 'password'
-  | 'number'
-  | 'textarea'
-  | 'select';
-
-/** Complete definition of one form field. */
-export interface FieldDef {
-  /** Unique HTML `id` for the input element. */
-  readonly id: string;
-  /** Key used in the `values` / `fieldErrors` maps passed to `onSubmit`. */
-  readonly name: string;
-  /** Label content — may be a string or ReactNode (e.g. with an "(optional)" badge). */
-  readonly label: ReactNode;
-  readonly type: FieldType;
-  readonly placeholder?: string;
-  readonly autoComplete?: string;
-  /** Pre-filled value when the form first mounts. */
-  readonly defaultValue?: string;
-  /** Focus this field immediately after mount. */
-  readonly autoFocus?: boolean;
-  /**
-   * Client-side validator. Called for every field on submit. Return a non-empty
-   * string to block submission and display an inline error under the field.
-   */
-  readonly validate?: FieldValidateFn;
-  /**
-   * When `true`, the `validate` function is also called when the field loses
-   * focus (blur). No error is shown while the user is actively typing —
-   * only after they leave the field. The error is cleared again as soon as
-   * the user edits the field.
-   *
-   * Useful for cross-field validators such as "confirm password".
-   */
-  readonly validateOnBlur?: boolean;
-  // ── textarea ──────────────────────────────────────────────────────────────
-  readonly rows?: number;
-  // ── select ────────────────────────────────────────────────────────────────
-  readonly options?: ReadonlyArray<SelectOption>;
-  // ── number ────────────────────────────────────────────────────────────────
-  readonly min?: number;
-  readonly max?: number;
-  readonly step?: number;
-  // ── password extras ───────────────────────────────────────────────────────
-  /** Render a show/hide toggle button inside the password field. */
-  readonly showPasswordToggle?: boolean;
-  /** Render the `PasswordStrengthChecklist` below the field. */
-  readonly showStrengthChecklist?: boolean;
-}
-
-export interface DynamicFormProps {
-  /** Ordered list of field definitions. */
-  readonly fields: ReadonlyArray<FieldDef>;
-  /**
-   * Called after all client-side validators pass. May be async. Return a
-   * `string` for a top-level server error, a `Record<string,string>` for
-   * per-field server errors, or nothing on success.
-   */
-  readonly onSubmit: (
-    values: Readonly<Record<string, string>>,
-  ) => Promise<SubmitResult> | SubmitResult;
-  /** Seed the form with existing data (e.g. loaded from an API). */
-  readonly initialValues?: Readonly<Record<string, string>>;
-  readonly submitLabel?: string;
-  readonly submittingLabel?: string;
-  readonly onCancel?: () => void;
-  readonly cancelLabel?: string;
-  /** Server-error string controlled by the parent (displayed alongside
-   *  any error returned from `onSubmit`). */
-  readonly serverError?: string;
-  /** Success message to display above the fields (controlled by parent). */
-  readonly serverSuccess?: string;
-  /** Extra class(es) applied to the `<form>` element. */
-  readonly formClassName?: string;
-  /** Full Tailwind class string for the submit button (overrides default). */
-  readonly submitButtonClassName?: string;
-}
-
-// ─── Internal helpers ─────────────────────────────────────────────────────────
-
-const BASE_INPUT =
-  'w-full px-4 py-3 text-base border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all';
+import type { DynamicFormProps } from '@/components/ui/DynamicFormTypes';
 
 const DEFAULT_SUBMIT_BTN =
   'px-6 py-2 text-sm font-semibold bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed';
 
-const borderCls = (hasError: boolean) =>
-  hasError ? 'border-red-400' : 'border-gray-300';
-
-// ─── Input sub-renderers (extracted to keep FieldRenderer CC ≤ 4) ────────────
-
-interface InputSubProps {
-  readonly field: FieldDef;
-  readonly value: string;
-  readonly describedBy: string | undefined;
-  readonly error: string | undefined;
-  readonly onChange: (name: string, value: string) => void;
-}
-
-const TextareaInput = ({ field, value, describedBy, error, onChange }: InputSubProps) => (
-  <textarea
-    id={field.id}
-    value={value}
-    onChange={(e) => onChange(field.name, e.target.value)}
-    rows={field.rows ?? 4}
-    placeholder={field.placeholder}
-    autoComplete={field.autoComplete}
-    aria-describedby={describedBy}
-    className={`${BASE_INPUT} resize-none ${borderCls(Boolean(error))}`}
-  />
-);
-
-const SelectInput = ({ field, value, describedBy, error, onChange }: InputSubProps) => (
-  <select
-    id={field.id}
-    value={value}
-    onChange={(e) => onChange(field.name, e.target.value)}
-    aria-describedby={describedBy}
-    className={`${BASE_INPUT} bg-white ${borderCls(Boolean(error))}`}
-  >
-    <option value="">Select…</option>
-    {field.options?.map((opt) => (
-      <option key={opt.value} value={opt.value}>
-        {opt.label}
-      </option>
-    ))}
-  </select>
-);
-
-interface TextInputProps extends InputSubProps {
-  readonly showPassword: boolean;
-  readonly onTogglePassword: (id: string) => void;
-  readonly onBlur?: () => void;
-}
-
-const TextInput = ({ field, value, describedBy, error, showPassword, onChange, onTogglePassword, onBlur }: TextInputProps) => {
-  const isPassword = field.type === 'password';
-  const hasToggle = isPassword && field.showPasswordToggle;
-  // Resolve input type: non-password fields keep their type unchanged;
-  // password fields toggle between 'text' (show) and 'password' (hide).
-  const passwordType = showPassword ? 'text' : 'password';
-  const resolvedType = isPassword ? passwordType : field.type;
-  const labelStr = typeof field.label === 'string' ? field.label.toLowerCase() : 'password';
-
-  return (
-    <div className={hasToggle ? 'relative' : undefined}>
-      <input
-        id={field.id}
-        type={resolvedType}
-        value={value}
-        onChange={(e) => onChange(field.name, e.target.value)}
-        placeholder={field.placeholder}
-        autoComplete={field.autoComplete}
-        autoFocus={field.autoFocus}
-        min={field.min}
-        max={field.max}
-        step={field.step}
-        aria-describedby={describedBy}
-        onBlur={onBlur}
-        className={`${BASE_INPUT}${hasToggle ? ' pr-12' : ''} ${borderCls(Boolean(error))}`}
-      />
-      {hasToggle && (
-        <PasswordToggleButton
-          showPassword={showPassword}
-          onToggle={() => onTogglePassword(field.id)}
-          label={showPassword ? `Hide ${labelStr}` : `Show ${labelStr}`}
-        />
-      )}
-    </div>
-  );
-};
-
-// ─── FieldRenderer ────────────────────────────────────────────────────────────
-
-interface FieldRendererProps {
-  readonly field: FieldDef;
-  readonly value: string;
-  readonly error?: string;
-  readonly showPassword: boolean;
-  readonly onChange: (name: string, value: string) => void;
-  readonly onTogglePassword: (id: string) => void;
-  readonly onBlur: (name: string) => void;
-}
-
-const FieldRenderer = ({
-  field,
-  value,
-  error,
-  showPassword,
-  onChange,
-  onTogglePassword,
-  onBlur,
-}: FieldRendererProps) => {
-  const errorId = `${field.id}-error`;
-  const describedBy = error ? errorId : undefined;
-  const subProps = { field, value, describedBy, error, onChange };
-  const handleBlur = field.validateOnBlur ? () => onBlur(field.name) : undefined;
-
-  return (
-    <div>
-      <label
-        htmlFor={field.id}
-        className="block text-sm font-medium text-gray-700 mb-1"
-      >
-        {field.label}
-      </label>
-      {field.type === 'textarea' && <TextareaInput {...subProps} />}
-      {field.type === 'select' && <SelectInput {...subProps} />}
-      {field.type !== 'textarea' && field.type !== 'select' && (
-        <TextInput
-          {...subProps}
-          showPassword={showPassword}
-          onTogglePassword={onTogglePassword}
-          onBlur={handleBlur}
-        />
-      )}
-      {error && (
-        <p id={errorId} className="text-xs text-red-600 mt-1">
-          {error}
-        </p>
-      )}
-      {field.type === 'password' && field.showStrengthChecklist && (
-        <PasswordStrengthChecklist password={value} />
-      )}
-    </div>
-  );
-};
-
-// ─── DynamicForm ──────────────────────────────────────────────────────────────
-
 /**
  * A self-managing form component driven by field definitions.
- *
- * - Declare *what* to render and *how* to validate via the `fields` prop.
- * - All form state (values, field errors, submitting flag) is managed internally.
- * - `onSubmit` receives the current values; return an error string or per-field
- *   error map to surface server-side validation, or nothing on success.
  */
 export function DynamicForm({
   fields,
@@ -298,7 +49,6 @@ export function DynamicForm({
 
   const handleChange = useCallback((name: string, value: string) => {
     setValues((prev) => ({ ...prev, [name]: value }));
-    // Clear the inline error for this field as the user types
     setFieldErrors((prev) => (prev[name] ? { ...prev, [name]: '' } : prev));
   }, []);
 
@@ -321,7 +71,6 @@ export function DynamicForm({
       e.preventDefault();
       setInternalServerError('');
 
-      // Run every field validator
       const errors: Record<string, string> = {};
       for (const field of fields) {
         const err = field.validate?.(values[field.name] ?? '', values);

@@ -2,7 +2,7 @@ import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 
 export const metadata = {
-  title: 'Shipping Information | Craft & Cozy',
+  title: 'Shipping Information | The Kiyon Store',
   description: 'Learn about our shipping options, delivery times, and policies.',
 };
 

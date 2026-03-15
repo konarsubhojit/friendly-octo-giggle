@@ -2,8 +2,8 @@ import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 
 export const metadata = {
-  title: 'About Us | Craft & Cozy',
-  description: 'Learn more about Craft & Cozy, our mission, values, and the team behind our handmade decorations and wearables.',
+  title: 'About Us | The Kiyon Store',
+  description: 'Learn more about The Kiyon Store, our mission, values, and the team behind our handmade decorations and wearables.',
 };
 
 export default function AboutPage() {

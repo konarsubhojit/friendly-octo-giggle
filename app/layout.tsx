@@ -7,8 +7,8 @@ import { Toaster } from 'react-hot-toast';
 import { Analytics } from '@vercel/analytics/next';
 
 export const metadata: Metadata = {
-  title: "E-commerce Store",
-  description: "Highly scalable e-commerce website with Next.js, Redis, and PostgreSQL",
+  title: "The Kiyon Store",
+  description: "Discover beautiful handmade decorations and cozy wearables — flower bouquets, keyrings, hand warmers, mufflers, scarves, and more.",
 };
 
 export default function RootLayout({

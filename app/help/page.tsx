@@ -3,7 +3,7 @@ import Footer from '@/components/layout/Footer';
 import Link from 'next/link';
 
 export const metadata = {
-  title: 'Help Center | Craft & Cozy',
+  title: 'Help Center | The Kiyon Store',
   description: 'Find answers to common questions about orders, shipping, returns, and your account.',
 };
 

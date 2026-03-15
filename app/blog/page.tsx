@@ -2,8 +2,8 @@ import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 
 export const metadata = {
-  title: 'Blog | Craft & Cozy',
-  description: 'Latest news, tips, and stories from the Craft & Cozy team.',
+  title: 'Blog | The Kiyon Store',
+  description: 'Latest news, tips, and stories from The Kiyon Store team.',
 };
 
 const posts = [
