@@ -5,6 +5,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { validateProfileFields, validatePasswordFields, isPasswordStrong } from '@/app/account/page';
+import { PROFILE_ERRORS, PASSWORD_ERRORS } from '@/lib/constants/error-messages';
 
 // ─── isPasswordStrong ────────────────────────────────────────────────────────
 
@@ -39,22 +40,22 @@ describe('isPasswordStrong', () => {
 describe('validateProfileFields', () => {
   it('returns name error when name is empty', () => {
     const errors = validateProfileFields('', 'user@example.com', '');
-    expect(errors.name).toBe('Name is required.');
+    expect(errors.name).toBe(PROFILE_ERRORS.NAME_REQUIRED);
   });
 
   it('returns email error when email is empty', () => {
     const errors = validateProfileFields('Alice', '', '');
-    expect(errors.email).toBe('Email is required.');
+    expect(errors.email).toBe(PROFILE_ERRORS.EMAIL_REQUIRED);
   });
 
   it('returns email error for an invalid email', () => {
     const errors = validateProfileFields('Alice', 'not-an-email', '');
-    expect(errors.email).toBe('Enter a valid email address.');
+    expect(errors.email).toBe(PROFILE_ERRORS.EMAIL_INVALID);
   });
 
   it('returns phone error for an invalid phone number', () => {
     const errors = validateProfileFields('Alice', 'alice@example.com', 'bad-phone');
-    expect(errors.phoneNumber).toBe('Enter a valid phone number (e.g. +1234567890).');
+    expect(errors.phoneNumber).toBe(PROFILE_ERRORS.PHONE_INVALID);
   });
 
   it('returns no errors for valid name, email and empty phone', () => {
@@ -69,7 +70,7 @@ describe('validateProfileFields', () => {
 
   it('trims whitespace before checking name', () => {
     const errors = validateProfileFields('   ', 'alice@example.com', '');
-    expect(errors.name).toBe('Name is required.');
+    expect(errors.name).toBe(PROFILE_ERRORS.NAME_REQUIRED);
   });
 
   it('allows phone numbers without country code prefix', () => {
@@ -84,27 +85,27 @@ describe('validateProfileFields', () => {
 describe('validatePasswordFields', () => {
   it('returns currentPassword error when empty', () => {
     const errors = validatePasswordFields('', 'SecurePass1!', 'SecurePass1!');
-    expect(errors.currentPassword).toBe('Current password is required.');
+    expect(errors.currentPassword).toBe(PASSWORD_ERRORS.CURRENT_REQUIRED);
   });
 
   it('returns newPassword error when empty', () => {
     const errors = validatePasswordFields('oldPass1!', '', '');
-    expect(errors.newPassword).toBe('New password is required.');
+    expect(errors.newPassword).toBe(PASSWORD_ERRORS.NEW_REQUIRED);
   });
 
   it('returns newPassword error when password is not strong enough', () => {
     const errors = validatePasswordFields('oldPass1!', 'weakpass', 'weakpass');
-    expect(errors.newPassword).toBe('Password does not meet the requirements below.');
+    expect(errors.newPassword).toBe(PASSWORD_ERRORS.NEW_WEAK);
   });
 
   it('returns confirmNewPassword error when empty', () => {
     const errors = validatePasswordFields('oldPass1!', 'SecurePass1!', '');
-    expect(errors.confirmNewPassword).toBe('Please confirm your new password.');
+    expect(errors.confirmNewPassword).toBe(PASSWORD_ERRORS.CONFIRM_REQUIRED);
   });
 
   it("returns confirmNewPassword error when passwords don't match", () => {
     const errors = validatePasswordFields('oldPass1!', 'SecurePass1!', 'DifferentPass1!');
-    expect(errors.confirmNewPassword).toBe("Passwords don't match.");
+    expect(errors.confirmNewPassword).toBe(PASSWORD_ERRORS.CONFIRM_MISMATCH);
   });
 
   it('returns no errors for valid inputs', () => {

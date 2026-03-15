@@ -42,7 +42,7 @@ const MOCK_PROFILE = {
   createdAt: new Date().toISOString(),
 };
 
-async function goToAccountWithPassword(page: import('@playwright/test').Page) {
+const goToAccountWithPassword = async (page: import('@playwright/test').Page) => {
   // Mock /api/account so hasPassword: true, which shows the Password section
   await page.route('**/api/account**', (route) => {
     if (route.request().method() === 'GET') {
@@ -57,7 +57,7 @@ async function goToAccountWithPassword(page: import('@playwright/test').Page) {
   await expect(page.getByRole('heading', { name: /^password$/i })).toBeVisible();
 }
 
-async function openChangePasswordForm(page: import('@playwright/test').Page) {
+const openChangePasswordForm = async (page: import('@playwright/test').Page) => {
   await goToAccountWithPassword(page);
   // Click the "Change Password" button to reveal the form
   await page.getByRole('button', { name: /change password/i }).click();

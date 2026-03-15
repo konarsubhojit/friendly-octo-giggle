@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import { logError } from '@/lib/logger';
 import { isValidImageType, MAX_FILE_SIZE, VALID_IMAGE_TYPES_DISPLAY } from '@/lib/upload-constants';
 import { useCurrency, CURRENCIES, type CurrencyCode } from '@/contexts/CurrencyContext';
+import { PRODUCT_ERRORS, API_ERRORS } from '@/lib/constants/error-messages';
 
 interface ProductFormData {
   name: string;
@@ -67,31 +68,35 @@ export default function ProductFormModal({
   const [saving, setSaving] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof ProductFormData, string>>>({});
 
-  /** Validate form fields and return true if valid. */
+  /** Per-field validators — each returns an error string or undefined. */
+  const validateName = (v: string) => {
+    if (!v.trim()) return PRODUCT_ERRORS.NAME_REQUIRED;
+    if (v.trim().length < 2) return PRODUCT_ERRORS.NAME_TOO_SHORT;
+    return undefined;
+  };
+  const validateDescription = (v: string) => v.trim() ? undefined : PRODUCT_ERRORS.DESCRIPTION_REQUIRED;
+  const validatePrice = (v: number) => (!v || v <= 0) ? PRODUCT_ERRORS.PRICE_POSITIVE : undefined;
+  const validateStock = (v: number) => (v < 0 || !Number.isInteger(v)) ? PRODUCT_ERRORS.STOCK_INVALID : undefined;
+  const validateCategory = (v: string) => v.trim() ? undefined : PRODUCT_ERRORS.CATEGORY_REQUIRED;
+  const validateImage = (hasExisting: boolean, hasFile: boolean) =>
+    (!hasExisting && !hasFile) ? PRODUCT_ERRORS.IMAGE_REQUIRED : undefined;
+
+  /** Validate all fields and return true if there are no errors. */
   const validate = (): boolean => {
-    const errors: Partial<Record<keyof ProductFormData, string>> = {};
-    if (!formData.name.trim()) {
-      errors.name = 'Product name is required.';
-    } else if (formData.name.trim().length < 2) {
-      errors.name = 'Name must be at least 2 characters.';
-    }
-    if (!formData.description.trim()) {
-      errors.description = 'Description is required.';
-    }
-    if (!formData.price || formData.price <= 0) {
-      errors.price = 'Price must be greater than zero.';
-    }
-    if (formData.stock < 0 || !Number.isInteger(formData.stock)) {
-      errors.stock = 'Stock must be a whole number of 0 or more.';
-    }
-    if (!formData.category.trim()) {
-      errors.category = 'Category is required.';
-    }
-    if (!editingProduct && !imageFile && !formData.image) {
-      errors.image = 'A product image is required.';
-    }
-    setFieldErrors(errors);
-    return Object.keys(errors).length === 0;
+    const errors: Partial<Record<keyof ProductFormData, string>> = {
+      name: validateName(formData.name),
+      description: validateDescription(formData.description),
+      price: validatePrice(formData.price),
+      stock: validateStock(formData.stock),
+      category: validateCategory(formData.category),
+      image: editingProduct ? undefined : validateImage(!!formData.image, !!imageFile),
+    };
+    // Remove undefined entries before setting
+    const filtered = Object.fromEntries(
+      Object.entries(errors).filter(([, v]) => v !== undefined),
+    ) as Partial<Record<keyof ProductFormData, string>>;
+    setFieldErrors(filtered);
+    return Object.keys(filtered).length === 0;
   };
 
   const clearFieldError = (field: keyof ProductFormData) => {
@@ -107,20 +112,17 @@ export default function ProductFormModal({
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      if (!isValidImageType(file.type)) {
-        setFieldErrors((prev) => ({ ...prev, image: `Only ${VALID_IMAGE_TYPES_DISPLAY} files are allowed.` }));
-        return;
-      }
-
-      if (file.size > MAX_FILE_SIZE) {
-        setFieldErrors((prev) => ({ ...prev, image: `File is too large. Maximum size is ${MAX_FILE_SIZE / 1024 / 1024}MB.` }));
-        return;
-      }
-
-      setFieldErrors((prev) => ({ ...prev, image: undefined }));
-      setImageFile(file);
+    if (!file) return;
+    if (!isValidImageType(file.type)) {
+      setFieldErrors((prev) => ({ ...prev, image: PRODUCT_ERRORS.IMAGE_TYPE_INVALID(VALID_IMAGE_TYPES_DISPLAY) }));
+      return;
     }
+    if (file.size > MAX_FILE_SIZE) {
+      setFieldErrors((prev) => ({ ...prev, image: PRODUCT_ERRORS.IMAGE_SIZE_EXCEEDED(MAX_FILE_SIZE / 1024 / 1024) }));
+      return;
+    }
+    setFieldErrors((prev) => ({ ...prev, image: undefined }));
+    setImageFile(file);
   };
 
   const uploadImage = async (): Promise<string | null> => {
@@ -145,7 +147,7 @@ export default function ProductFormModal({
       return data.data.url;
     } catch (err) {
       logError({ error: err, context: 'uploadImage' });
-      toast.error('Image upload failed. Please try again.');
+      toast.error(API_ERRORS.IMAGE_UPLOAD);
       return null;
     } finally {
       setUploading(false);
@@ -172,69 +174,47 @@ export default function ProductFormModal({
     return textMap[mode];
   };
 
+  /** Call the save API and return the saved product, or throw on error. */
+  const saveProductToApi = async (imageUrl: string) => {
+    const productData = {
+      ...formData,
+      price: convertCurrency(formData.price, priceCurrency, 'INR', rates),
+      image: imageUrl,
+    };
+    const url = editingProduct ? `/api/admin/products/${editingProduct.id}` : '/api/admin/products';
+    const method = editingProduct ? 'PUT' : 'POST';
+    const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(productData) });
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.error || 'Failed to save product');
+    }
+    const saved = await res.json();
+    return saved.data?.product || saved.product || saved;
+  };
+
   const handleSubmit = async (e: React.BaseSyntheticEvent) => {
     e.preventDefault();
-
     if (!validate()) return;
-
     setSaving(true);
-
     try {
-        let imageUrl = formData.image;
-        if (imageFile) {
-          const uploadedUrl = await uploadImage();
-          if (!uploadedUrl) {
-            setSaving(false);
-            return;
-          }
-          imageUrl = uploadedUrl;
-        }
-
-        if (!imageUrl) {
-          setFieldErrors((prev) => ({ ...prev, image: 'A product image is required.' }));
-          setSaving(false);
-          return;
-        }
-
-        const productData = {
-          ...formData,
-          price: convertCurrency(formData.price, priceCurrency, 'INR', rates),
-          image: imageUrl,
-        };
-
-        const url = editingProduct
-          ? `/api/admin/products/${editingProduct.id}`
-          : '/api/admin/products';
-
-        const method = editingProduct ? 'PUT' : 'POST';
-
-        const res = await fetch(url, {
-          method,
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(productData),
-        });
-
-        if (!res.ok) {
-          const error = await res.json();
-          throw new Error(error.error || 'Failed to save product');
-        }
-
-        const saved = await res.json();
-        const savedProduct = saved.data?.product || saved.product || saved;
-
-        toast.success(
-          editingProduct
-            ? 'Product updated successfully'
-            : 'Product created successfully'
-        );
-
+      let imageUrl = formData.image;
+      if (imageFile) {
+        const uploadedUrl = await uploadImage();
+        if (!uploadedUrl) { setSaving(false); return; }
+        imageUrl = uploadedUrl;
+      }
+      if (!imageUrl) {
+        setFieldErrors((prev) => ({ ...prev, image: PRODUCT_ERRORS.IMAGE_REQUIRED }));
+        setSaving(false);
+        return;
+      }
+      const savedProduct = await saveProductToApi(imageUrl);
+      toast.success(editingProduct ? 'Product updated successfully' : 'Product created successfully');
       onSuccess(savedProduct);
       onClose();
     } catch (err) {
       logError({ error: err, context: 'handleSubmit' });
-      toast.error('Could not save the product. Please try again.');
+      toast.error(API_ERRORS.PRODUCT_SAVE);
     } finally {
       setSaving(false);
     }

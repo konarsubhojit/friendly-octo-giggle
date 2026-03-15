@@ -97,12 +97,31 @@ describe('ConfirmDialog', () => {
     expect(confirmBtn.className).toContain('bg-blue-600');
   });
 
-  it('has accessible dialog role and labelled by title', () => {
+  it('has accessible dialog role and labelled by unique title id', () => {
     render(<ConfirmDialog {...baseProps} />);
     const dialog = screen.getByRole('dialog');
     expect(dialog).toBeInTheDocument();
     expect(dialog).toHaveAttribute('aria-modal', 'true');
-    expect(dialog).toHaveAttribute('aria-labelledby', 'confirm-dialog-title');
+    // The aria-labelledby must exist and point to the visible title element
+    const labelId = dialog.getAttribute('aria-labelledby');
+    expect(labelId).toBeTruthy();
+    expect(document.getElementById(labelId!)).toHaveTextContent('Are you sure?');
+  });
+
+  it('uses unique IDs when two dialogs are rendered simultaneously', () => {
+    const { container: c1 } = render(<ConfirmDialog {...baseProps} title="Dialog A" />);
+    const { container: c2 } = render(<ConfirmDialog {...baseProps} title="Dialog B" />);
+
+    const dialog1 = c1.querySelector('[role="dialog"]')!;
+    const dialog2 = c2.querySelector('[role="dialog"]')!;
+
+    const labelId1 = dialog1.getAttribute('aria-labelledby');
+    const labelId2 = dialog2.getAttribute('aria-labelledby');
+
+    expect(labelId1).toBeTruthy();
+    expect(labelId2).toBeTruthy();
+    // IDs must differ to avoid duplicate-ID violations
+    expect(labelId1).not.toBe(labelId2);
   });
 
   it('shows loading spinner inside confirm button when loading', () => {
@@ -110,5 +129,47 @@ describe('ConfirmDialog', () => {
     const confirmBtn = screen.getByRole('button', { name: 'Confirm' });
     // There should be an svg spinner
     expect(confirmBtn.querySelector('svg')).not.toBeNull();
+  });
+
+  it('calls onCancel when Escape is pressed', () => {
+    const onCancel = vi.fn();
+    render(<ConfirmDialog {...baseProps} onCancel={onCancel} />);
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(onCancel).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not call onCancel on Escape when loading', () => {
+    const onCancel = vi.fn();
+    render(<ConfirmDialog {...baseProps} onCancel={onCancel} loading />);
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(onCancel).not.toHaveBeenCalled();
+  });
+
+  it('wraps Tab from last focusable element back to first', () => {
+    render(<ConfirmDialog {...baseProps} />);
+    const dialog = screen.getByRole('dialog');
+    const focusable = dialog.querySelectorAll('button:not([disabled])');
+    const last = focusable[focusable.length - 1] as HTMLElement;
+
+    // Focus the last button then Tab
+    last.focus();
+    expect(document.activeElement).toBe(last);
+    fireEvent.keyDown(document, { key: 'Tab', shiftKey: false });
+    // After wrapping, focus should be on the first focusable element
+    expect(document.activeElement).toBe(focusable[0]);
+  });
+
+  it('wraps Shift+Tab from first focusable element back to last', () => {
+    render(<ConfirmDialog {...baseProps} />);
+    const dialog = screen.getByRole('dialog');
+    const focusable = dialog.querySelectorAll('button:not([disabled])');
+    const first = focusable[0] as HTMLElement;
+    const last = focusable[focusable.length - 1] as HTMLElement;
+
+    // Focus the first button then Shift+Tab
+    first.focus();
+    expect(document.activeElement).toBe(first);
+    fireEvent.keyDown(document, { key: 'Tab', shiftKey: true });
+    expect(document.activeElement).toBe(last);
   });
 });

@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
 import React from "react";
 import ProductFormModal from "@/components/admin/ProductFormModal";
+import { PRODUCT_ERRORS, API_ERRORS } from "@/lib/constants/error-messages";
 import { CurrencyProvider } from "@/contexts/CurrencyContext";
 import type { Product } from "@/lib/types";
 
@@ -192,11 +193,11 @@ describe("ProductFormModal", () => {
 
     const form = container.querySelector("form");
     expect(form).not.toBeNull();
-    await act(async () => {
+    await act(() => {
       fireEvent.submit(form as HTMLFormElement);
     });
     await waitFor(() => {
-      expect(screen.getByText("A product image is required.")).toBeInTheDocument();
+      expect(screen.getByText(PRODUCT_ERRORS.IMAGE_REQUIRED)).toBeInTheDocument();
     });
   });
 
@@ -222,7 +223,7 @@ describe("ProductFormModal", () => {
 
     const form = container.querySelector("form");
     expect(form).not.toBeNull();
-    await act(async () => {
+    await act(() => {
       fireEvent.submit(form as HTMLFormElement);
     });
 
@@ -244,12 +245,12 @@ describe("ProductFormModal", () => {
     const { container } = renderModal({ editingProduct: mockProduct });
     const form = container.querySelector("form");
     expect(form).not.toBeNull();
-    await act(async () => {
+    await act(() => {
       fireEvent.submit(form as HTMLFormElement);
     });
     await waitFor(() => {
       expect(toast.default.error).toHaveBeenCalledWith(
-        "Could not save the product. Please try again.",
+        API_ERRORS.PRODUCT_SAVE,
       );
     });
   });
@@ -292,7 +293,7 @@ describe("ProductFormModal", () => {
 
     const form = container.querySelector("form");
     expect(form).not.toBeNull();
-    await act(async () => {
+    await act(() => {
       fireEvent.submit(form as HTMLFormElement);
     });
 
@@ -301,7 +302,7 @@ describe("ProductFormModal", () => {
         expect.objectContaining({ context: "uploadImage" }),
       );
       expect(toast.default.error).toHaveBeenCalledWith(
-        "Image upload failed. Please try again.",
+        API_ERRORS.IMAGE_UPLOAD,
       );
       expect(onSuccess).not.toHaveBeenCalled();
     });
@@ -400,7 +401,7 @@ describe("ProductFormModal", () => {
 
     const form = container.querySelector("form");
     expect(form).not.toBeNull();
-    await act(async () => {
+    await act(() => {
       fireEvent.submit(form as HTMLFormElement);
     });
 
@@ -439,7 +440,7 @@ describe("ProductFormModal", () => {
 
     const form = container.querySelector("form");
     expect(form).not.toBeNull();
-    await act(async () => {
+    await act(() => {
       fireEvent.submit(form as HTMLFormElement);
     });
 
@@ -448,7 +449,7 @@ describe("ProductFormModal", () => {
         expect.objectContaining({ context: "uploadImage" }),
       );
       expect(toast.default.error).toHaveBeenCalledWith(
-        "Image upload failed. Please try again.",
+        API_ERRORS.IMAGE_UPLOAD,
       );
       expect(onSuccess).not.toHaveBeenCalled();
     });
@@ -460,11 +461,11 @@ describe("ProductFormModal", () => {
     const { container } = renderModal();
     const form = container.querySelector("form");
     expect(form).not.toBeNull();
-    await act(async () => {
+    await act(() => {
       fireEvent.submit(form as HTMLFormElement);
     });
     await waitFor(() => {
-      expect(screen.getByText("Product name is required.")).toBeInTheDocument();
+      expect(screen.getByText(PRODUCT_ERRORS.NAME_REQUIRED)).toBeInTheDocument();
     });
   });
 
@@ -472,9 +473,9 @@ describe("ProductFormModal", () => {
     const { container } = renderModal();
     fireEvent.change(screen.getByLabelText("Name"), { target: { value: "My Product" } });
     const form = container.querySelector("form");
-    await act(async () => { fireEvent.submit(form as HTMLFormElement); });
+    await act(() => { fireEvent.submit(form as HTMLFormElement); });
     await waitFor(() => {
-      expect(screen.getByText("Description is required.")).toBeInTheDocument();
+      expect(screen.getByText(PRODUCT_ERRORS.DESCRIPTION_REQUIRED)).toBeInTheDocument();
     });
   });
 
@@ -483,22 +484,22 @@ describe("ProductFormModal", () => {
     fireEvent.change(screen.getByLabelText("Name"), { target: { value: "My Product" } });
     fireEvent.change(screen.getByLabelText("Description"), { target: { value: "Desc" } });
     const form = container.querySelector("form");
-    await act(async () => { fireEvent.submit(form as HTMLFormElement); });
+    await act(() => { fireEvent.submit(form as HTMLFormElement); });
     await waitFor(() => {
-      expect(screen.getByText("Category is required.")).toBeInTheDocument();
+      expect(screen.getByText(PRODUCT_ERRORS.CATEGORY_REQUIRED)).toBeInTheDocument();
     });
   });
 
   it("clears inline error when name is corrected", async () => {
     const { container } = renderModal();
     const form = container.querySelector("form");
-    await act(async () => { fireEvent.submit(form as HTMLFormElement); });
+    await act(() => { fireEvent.submit(form as HTMLFormElement); });
     await waitFor(() => {
-      expect(screen.getByText("Product name is required.")).toBeInTheDocument();
+      expect(screen.getByText(PRODUCT_ERRORS.NAME_REQUIRED)).toBeInTheDocument();
     });
     fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Fixed Name" } });
     await waitFor(() => {
-      expect(screen.queryByText("Product name is required.")).not.toBeInTheDocument();
+      expect(screen.queryByText(PRODUCT_ERRORS.NAME_REQUIRED)).not.toBeInTheDocument();
     });
   });
 
@@ -507,13 +508,13 @@ describe("ProductFormModal", () => {
     const form = container.querySelector("form");
     // Set price to 0 to trigger validation
     fireEvent.change(screen.getByLabelText("Price"), { target: { value: "0" } });
-    await act(async () => { fireEvent.submit(form as HTMLFormElement); });
+    await act(() => { fireEvent.submit(form as HTMLFormElement); });
     await waitFor(() => {
-      expect(screen.getByText("Price must be greater than zero.")).toBeInTheDocument();
+      expect(screen.getByText(PRODUCT_ERRORS.PRICE_POSITIVE)).toBeInTheDocument();
     });
     fireEvent.change(screen.getByLabelText("Price"), { target: { value: "50" } });
     await waitFor(() => {
-      expect(screen.queryByText("Price must be greater than zero.")).not.toBeInTheDocument();
+      expect(screen.queryByText(PRODUCT_ERRORS.PRICE_POSITIVE)).not.toBeInTheDocument();
     });
   });
 
@@ -521,16 +522,16 @@ describe("ProductFormModal", () => {
     const { container } = renderModal();
     fireEvent.change(screen.getByLabelText("Name"), { target: { value: "A" } });
     const form = container.querySelector("form");
-    await act(async () => { fireEvent.submit(form as HTMLFormElement); });
+    await act(() => { fireEvent.submit(form as HTMLFormElement); });
     await waitFor(() => {
-      expect(screen.getByText("Name must be at least 2 characters.")).toBeInTheDocument();
+      expect(screen.getByText(PRODUCT_ERRORS.NAME_TOO_SHORT)).toBeInTheDocument();
     });
   });
 
   it("shows red border on name input when validation fails", async () => {
     const { container } = renderModal();
     const form = container.querySelector("form");
-    await act(async () => { fireEvent.submit(form as HTMLFormElement); });
+    await act(() => { fireEvent.submit(form as HTMLFormElement); });
     await waitFor(() => {
       const nameInput = screen.getByLabelText("Name");
       expect(nameInput.className).toContain("border-red-400");
