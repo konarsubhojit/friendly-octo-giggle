@@ -165,14 +165,16 @@ describe("LoginModal", () => {
       });
     });
 
-    await act(async () => {
-      fireEvent.submit(screen.getByText("Login").closest("form")!);
+    act(() => {
+      fireEvent.submit(screen.getByText("Login").closest("form") as HTMLFormElement);
     });
 
-    expect(mockSignIn).toHaveBeenCalledWith("credentials", {
-      identifier: "test@example.com",
-      password: "password123",
-      redirect: false,
+    await waitFor(() => {
+      expect(mockSignIn).toHaveBeenCalledWith("credentials", {
+        identifier: "test@example.com",
+        password: "password123",
+        redirect: false,
+      });
     });
   });
 
@@ -189,8 +191,8 @@ describe("LoginModal", () => {
       });
     });
 
-    await act(async () => {
-      fireEvent.submit(screen.getByText("Login").closest("form")!);
+    act(() => {
+      fireEvent.submit(screen.getByText("Login").closest("form") as HTMLFormElement);
     });
 
     await waitFor(() => {
@@ -212,8 +214,8 @@ describe("LoginModal", () => {
       });
     });
 
-    await act(async () => {
-      fireEvent.submit(screen.getByText("Login").closest("form")!);
+    act(() => {
+      fireEvent.submit(screen.getByText("Login").closest("form") as HTMLFormElement);
     });
 
     await waitFor(() => {

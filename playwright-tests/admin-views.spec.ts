@@ -19,6 +19,8 @@ import {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const SCREENSHOT_DIR = path.join(__dirname, 'screenshots');
+const ADMIN_ORDER_DETAIL_PATTERN = /\/api\/admin\/orders\/[^/]+$/;
+const ADMIN_USER_DETAIL_PATTERN = /\/api\/admin\/users\/[^/]+$/;
 
 function screenshotPath(name: string) {
   return path.join(SCREENSHOT_DIR, `${name}.png`);
@@ -41,14 +43,14 @@ async function mockAdminRoutes(page: Page) {
   );
   await page.route('**/api/admin/orders**', (route) => {
     const url = route.request().url();
-    if (url.match(/\/api\/admin\/orders\/[^/]+$/)) {
+    if (ADMIN_ORDER_DETAIL_PATTERN.test(url)) {
       return route.fulfill({ json: { success: true, data: { order: MOCK_ORDERS[0] } } });
     }
     return route.fulfill({ json: { success: true, data: { orders: MOCK_ORDERS } } });
   });
   await page.route('**/api/admin/users**', (route) => {
     const url = route.request().url();
-    if (url.match(/\/api\/admin\/users\/[^/]+$/)) {
+    if (ADMIN_USER_DETAIL_PATTERN.test(url)) {
       return route.fulfill({ json: { success: true, data: { user: MOCK_USERS[0] } } });
     }
     return route.fulfill({ json: { success: true, data: { users: MOCK_USERS } } });

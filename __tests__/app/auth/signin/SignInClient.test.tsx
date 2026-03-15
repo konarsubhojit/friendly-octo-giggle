@@ -66,14 +66,16 @@ describe("SignInClient", () => {
       });
     });
 
-    await act(async () => {
-      fireEvent.submit(screen.getByText("Login").closest("form")!);
+    act(() => {
+      fireEvent.submit(screen.getByText("Login").closest("form") as HTMLFormElement);
     });
 
-    expect(mockSignIn).toHaveBeenCalledWith("credentials", {
-      identifier: "test@example.com",
-      password: "password123",
-      redirect: false,
+    await waitFor(() => {
+      expect(mockSignIn).toHaveBeenCalledWith("credentials", {
+        identifier: "test@example.com",
+        password: "password123",
+        redirect: false,
+      });
     });
   });
 
@@ -90,8 +92,8 @@ describe("SignInClient", () => {
       });
     });
 
-    await act(async () => {
-      fireEvent.submit(screen.getByText("Login").closest("form")!);
+    act(() => {
+      fireEvent.submit(screen.getByText("Login").closest("form") as HTMLFormElement);
     });
 
     await waitFor(() => {
@@ -113,8 +115,8 @@ describe("SignInClient", () => {
       });
     });
 
-    await act(async () => {
-      fireEvent.submit(screen.getByText("Login").closest("form")!);
+    act(() => {
+      fireEvent.submit(screen.getByText("Login").closest("form") as HTMLFormElement);
     });
 
     await waitFor(() => {
@@ -123,7 +125,7 @@ describe("SignInClient", () => {
   });
 
   it("shows loading state during submission", async () => {
-    let resolveSignIn: (value: unknown) => void;
+    let resolveSignIn: ((value: unknown) => void) | undefined;
     mockSignIn.mockReturnValue(
       new Promise((resolve) => {
         resolveSignIn = resolve;
@@ -140,14 +142,15 @@ describe("SignInClient", () => {
       });
     });
 
-    await act(async () => {
-      fireEvent.submit(screen.getByText("Login").closest("form")!);
+    act(() => {
+      fireEvent.submit(screen.getByText("Login").closest("form") as HTMLFormElement);
     });
 
     expect(screen.getByText("Logging in...")).toBeTruthy();
 
-    await act(async () => {
-      resolveSignIn!({ error: null });
+    await act(() => {
+      resolveSignIn?.({ error: null });
+      return Promise.resolve();
     });
   });
 });

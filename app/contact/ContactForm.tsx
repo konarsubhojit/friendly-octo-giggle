@@ -1,58 +1,73 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
+import { DynamicForm, type FieldDef, type SubmitResult } from '@/components/ui/DynamicForm';
 
-interface FormState {
-  name: string;
-  email: string;
-  subject: string;
-  message: string;
-}
+// ─── Regexes ──────────────────────────────────────────────────────────────────
 
-const INITIAL_STATE: FormState = { name: '', email: '', subject: '', message: '' };
+const EMAIL_RE =
+  /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+
+// ─── Field definitions ────────────────────────────────────────────────────────
+
+const CONTACT_FIELDS: ReadonlyArray<FieldDef> = [
+  {
+    id: 'contact-name',
+    name: 'name',
+    label: 'Name',
+    type: 'text',
+    placeholder: 'Your name',
+    validate: (v) => v.trim() ? undefined : 'Name is required',
+  },
+  {
+    id: 'contact-email',
+    name: 'email',
+    label: 'Email',
+    type: 'email',
+    placeholder: 'you@example.com',
+    validate: (v) => {
+      if (!v.trim()) return 'Email is required';
+      if (!EMAIL_RE.test(v)) return 'Enter a valid email';
+      return undefined;
+    },
+  },
+  {
+    id: 'contact-subject',
+    name: 'subject',
+    label: 'Subject',
+    type: 'select',
+    options: [
+      { value: 'order',    label: 'Order Inquiry' },
+      { value: 'return',   label: 'Return / Refund' },
+      { value: 'shipping', label: 'Shipping Question' },
+      { value: 'product',  label: 'Product Question' },
+      { value: 'other',    label: 'Other' },
+    ],
+    validate: (v) => v ? undefined : 'Please select a subject',
+  },
+  {
+    id: 'contact-message',
+    name: 'message',
+    label: 'Message',
+    type: 'textarea',
+    rows: 5,
+    placeholder: 'How can we help you?',
+    validate: (v) => v.trim() ? undefined : 'Message is required',
+  },
+];
+
+const SUBMIT_BTN =
+  'w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-xl font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-300 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed';
+
+// ─── Component ────────────────────────────────────────────────────────────────
 
 export default function ContactForm() {
-  const [formState, setFormState] = useState<FormState>(INITIAL_STATE);
   const [submitted, setSubmitted] = useState(false);
-  const [errors, setErrors] = useState<Partial<FormState>>({});
 
-  function validate(): boolean {
-    const newErrors: Partial<FormState> = {};
-    const validators: { [K in keyof FormState]: (value: string) => string | undefined } = {
-      name: v => v.trim() ? undefined : 'Name is required',
-      email: v => {
-        if (!v.trim()) return 'Email is required';
-        // ReDoS-safe email validation pattern
-        if (!/^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/.test(v)) return 'Enter a valid email';
-        return undefined;
-      },
-      subject: v => v ? undefined : 'Please select a subject',
-      message: v => v.trim() ? undefined : 'Message is required',
-    };
-    (Object.entries(validators) as [keyof FormState, (value: string) => string | undefined][]).forEach(([key, validator]) => {
-      const error = validator(formState[key]);
-      if (error) {
-        newErrors[key] = error;
-      }
-    });
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  }
-
-  function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) {
-    const { name, value } = e.target;
-    setFormState(prev => ({ ...prev, [name]: value }));
-    if (errors[name as keyof FormState]) {
-      setErrors(prev => ({ ...prev, [name]: undefined }));
-    }
-  }
-
-  const handleSubmit = (e: React.BaseSyntheticEvent) => {
-    e.preventDefault();
-    if (validate()) {
-      setSubmitted(true);
-    }
-  };
+  const handleSubmit = useCallback((): SubmitResult => {
+    setSubmitted(true);
+    return undefined;
+  }, []);
 
   if (submitted) {
     return (
@@ -65,7 +80,7 @@ export default function ContactForm() {
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Message Sent!</h2>
         <p className="text-gray-500">Thank you for reaching out. We&apos;ll get back to you within 24 hours.</p>
         <button
-          onClick={() => { setSubmitted(false); setFormState(INITIAL_STATE); setErrors({}); }}
+          onClick={() => setSubmitted(false)}
           className="mt-6 text-blue-600 hover:text-blue-700 font-medium text-sm"
         >
           Send another message
@@ -75,77 +90,15 @@ export default function ContactForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} noValidate className="space-y-5">
+    <>
       <h2 className="text-xl font-semibold text-gray-900 mb-6">Send a Message</h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-        <div>
-          <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-          <input
-            id="name"
-            name="name"
-            type="text"
-            value={formState.name}
-            onChange={handleChange}
-            placeholder="Your name"
-            aria-describedby={errors.name ? 'name-error' : undefined}
-            className={`w-full px-4 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.name ? 'border-red-400' : 'border-gray-200'}`}
-          />
-          {errors.name && <p id="name-error" className="text-xs text-red-600 mt-1">{errors.name}</p>}
-        </div>
-        <div>
-          <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-          <input
-            id="email"
-            name="email"
-            type="email"
-            value={formState.email}
-            onChange={handleChange}
-            placeholder="you@example.com"
-            aria-describedby={errors.email ? 'email-error' : undefined}
-            className={`w-full px-4 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.email ? 'border-red-400' : 'border-gray-200'}`}
-          />
-          {errors.email && <p id="email-error" className="text-xs text-red-600 mt-1">{errors.email}</p>}
-        </div>
-      </div>
-      <div>
-        <label htmlFor="subject" className="block text-sm font-medium text-gray-700 mb-1">Subject</label>
-        <select
-          id="subject"
-          name="subject"
-          value={formState.subject}
-          onChange={handleChange}
-          aria-describedby={errors.subject ? 'subject-error' : undefined}
-          className={`w-full px-4 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.subject ? 'border-red-400' : 'border-gray-200'}`}
-        >
-          <option value="">Select a subject</option>
-          <option value="order">Order Inquiry</option>
-          <option value="return">Return / Refund</option>
-          <option value="shipping">Shipping Question</option>
-          <option value="product">Product Question</option>
-          <option value="other">Other</option>
-        </select>
-        {errors.subject && <p id="subject-error" className="text-xs text-red-600 mt-1">{errors.subject}</p>}
-      </div>
-      <div>
-        <label htmlFor="message" className="block text-sm font-medium text-gray-700 mb-1">Message</label>
-        <textarea
-          id="message"
-          name="message"
-          rows={5}
-          value={formState.message}
-          onChange={handleChange}
-          placeholder="How can we help you?"
-          aria-describedby={errors.message ? 'message-error' : undefined}
-          className={`w-full px-4 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none ${errors.message ? 'border-red-400' : 'border-gray-200'}`}
-        />
-        {errors.message && <p id="message-error" className="text-xs text-red-600 mt-1">{errors.message}</p>}
-      </div>
-      <button
-        type="submit"
-        className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-xl font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-300 shadow-md hover:shadow-lg"
-      >
-        Send Message
-      </button>
-    </form>
+      <DynamicForm
+        fields={CONTACT_FIELDS}
+        onSubmit={handleSubmit}
+        submitLabel="Send Message"
+        submitButtonClassName={SUBMIT_BTN}
+        formClassName="space-y-5"
+      />
+    </>
   );
 }

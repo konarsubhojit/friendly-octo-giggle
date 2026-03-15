@@ -1,11 +1,14 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, type ReactNode } from 'react';
 import { useSession } from 'next-auth/react';
 import Header from '@/components/layout/Header';
-import Link from 'next/link';
-import { PasswordToggleButton } from '@/components/auth/PasswordToggleButton';
-import { PasswordStrengthChecklist } from '@/components/auth/PasswordStrengthChecklist';
+import { DynamicForm, type FieldDef, type SubmitResult } from '@/components/ui/DynamicForm';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { AlertBanner } from '@/components/ui/AlertBanner';
+import { AuthRequiredState } from '@/components/ui/AuthRequiredState';
+import { Card } from '@/components/ui/Card';
+import { GradientHeading } from '@/components/ui/GradientHeading';
 import { PASSWORD_REQUIREMENTS } from '@/lib/validations';
 import {
   PROFILE_ERRORS,
@@ -77,13 +80,47 @@ export const validatePasswordFields = (
   return errors;
 };
 
-// ─── ProfileSection ────────────────────────────────────────────────────────────
+// ─── Profile field definitions ────────────────────────────────────────────────
 
-const buildProfilePayload = (name: string, email: string, phoneNumber: string) => ({
-  name: name || undefined,
-  email: email || undefined,
-  phoneNumber: phoneNumber || null,
-});
+const PHONE_LABEL: ReactNode = (
+  <>Phone Number <span className="text-gray-400">(optional)</span></>
+);
+
+const PROFILE_FIELDS: ReadonlyArray<FieldDef> = [
+  {
+    id: 'account-name',
+    name: 'name',
+    label: 'Name',
+    type: 'text',
+    placeholder: 'Your full name',
+    autoComplete: 'name',
+    validate: (v) => v.trim() ? undefined : PROFILE_ERRORS.NAME_REQUIRED,
+  },
+  {
+    id: 'account-email',
+    name: 'email',
+    label: 'Email',
+    type: 'email',
+    placeholder: 'you@example.com',
+    autoComplete: 'email',
+    validate: (v) => {
+      if (!v.trim()) return PROFILE_ERRORS.EMAIL_REQUIRED;
+      if (!EMAIL_RE.test(v)) return PROFILE_ERRORS.EMAIL_INVALID;
+      return undefined;
+    },
+  },
+  {
+    id: 'account-phone',
+    name: 'phoneNumber',
+    label: PHONE_LABEL,
+    type: 'tel',
+    placeholder: '+1234567890',
+    autoComplete: 'tel',
+    validate: (v) => v && !PHONE_RE.test(v) ? PROFILE_ERRORS.PHONE_INVALID : undefined,
+  },
+];
+
+// ─── ProfileSection ────────────────────────────────────────────────────────────
 
 interface ProfileSectionProps {
   readonly profile: UserProfile;
@@ -92,64 +129,37 @@ interface ProfileSectionProps {
 
 const ProfileSection = ({ profile, onProfileUpdated }: ProfileSectionProps) => {
   const [isEditing, setIsEditing] = useState(false);
-  const [name, setName] = useState(profile.name || '');
-  const [email, setEmail] = useState(profile.email || '');
-  const [phoneNumber, setPhoneNumber] = useState(profile.phoneNumber || '');
-  const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState('');
-  const [serverError, setServerError] = useState('');
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
-  const handleEdit = () => {
-    setName(profile.name || '');
-    setEmail(profile.email || '');
-    setPhoneNumber(profile.phoneNumber || '');
-    setFieldErrors({});
-    setServerError('');
-    setSuccess('');
-    setIsEditing(true);
-  };
-
-  const handleCancel = () => {
-    setIsEditing(false);
-    setFieldErrors({});
-    setServerError('');
-  };
-
-  const clearFieldError = (field: string) => {
-    if (fieldErrors[field]) setFieldErrors((p) => ({ ...p, [field]: '' }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setSuccess('');
-    setServerError('');
-    const errors = validateProfileFields(name, email, phoneNumber);
-    if (Object.keys(errors).length > 0) { setFieldErrors(errors); return; }
-    setSaving(true);
-    try {
-      const res = await fetch('/api/account', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(buildProfilePayload(name, email, phoneNumber)),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setSuccess('Profile updated successfully.');
-        setIsEditing(false);
-        onProfileUpdated();
-      } else {
-        setServerError(data.error ?? API_ERRORS.PROFILE_UPDATE);
+  const handleSubmit = useCallback(
+    async (values: Readonly<Record<string, string>>): Promise<SubmitResult> => {
+      try {
+        const res = await fetch('/api/account', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: values.name || undefined,
+            email: values.email || undefined,
+            phoneNumber: values.phoneNumber || null,
+          }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          setSuccess('Profile updated successfully.');
+          setIsEditing(false);
+          onProfileUpdated();
+        } else {
+          return data.error ?? API_ERRORS.PROFILE_UPDATE;
+        }
+      } catch {
+        return API_ERRORS.PROFILE_UPDATE;
       }
-    } catch {
-      setServerError(API_ERRORS.PROFILE_UPDATE);
-    } finally {
-      setSaving(false);
-    }
-  };
+    },
+    [onProfileUpdated],
+  );
 
   return (
-    <section className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/50 p-6 sm:p-8 mb-6">
+    <Card className="p-6 sm:p-8 mb-6">
       <div className="flex items-center justify-between gap-3 mb-6">
         <div className="flex items-center gap-3">
           <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -160,7 +170,7 @@ const ProfileSection = ({ profile, onProfileUpdated }: ProfileSectionProps) => {
         {!isEditing && (
           <button
             type="button"
-            onClick={handleEdit}
+            onClick={() => { setSuccess(''); setIsEditing(true); }}
             className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-purple-700 bg-purple-50 rounded-lg hover:bg-purple-100 transition"
             aria-label="Edit profile"
           >
@@ -172,7 +182,7 @@ const ProfileSection = ({ profile, onProfileUpdated }: ProfileSectionProps) => {
         )}
       </div>
 
-      {success && (
+      {success && !isEditing && (
         <output className="text-sm text-green-600 bg-green-50 rounded-lg px-3 py-2 mb-4 block">
           {success}
         </output>
@@ -201,168 +211,99 @@ const ProfileSection = ({ profile, onProfileUpdated }: ProfileSectionProps) => {
 
       {/* Edit form */}
       {isEditing && (
-        <ProfileEditForm
-          name={name} email={email} phoneNumber={phoneNumber}
-          saving={saving} serverError={serverError} fieldErrors={fieldErrors}
-          onNameChange={(v) => { setName(v); clearFieldError('name'); }}
-          onEmailChange={(v) => { setEmail(v); clearFieldError('email'); }}
-          onPhoneChange={(v) => { setPhoneNumber(v); clearFieldError('phoneNumber'); }}
+        <DynamicForm
+          fields={PROFILE_FIELDS}
           onSubmit={handleSubmit}
-          onCancel={handleCancel}
+          initialValues={{
+            name: profile.name ?? '',
+            email: profile.email,
+            phoneNumber: profile.phoneNumber ?? '',
+          }}
+          submitLabel="Save Changes"
+          submittingLabel="Saving\u2026"
+          onCancel={() => setIsEditing(false)}
         />
       )}
-    </section>
+    </Card>
   );
 };
 
-// ─── ProfileEditForm ──────────────────────────────────────────────────────────
-
-interface ProfileEditFormProps {
-  readonly name: string;
-  readonly email: string;
-  readonly phoneNumber: string;
-  readonly saving: boolean;
-  readonly serverError: string;
-  readonly fieldErrors: Record<string, string>;
-  readonly onNameChange: (v: string) => void;
-  readonly onEmailChange: (v: string) => void;
-  readonly onPhoneChange: (v: string) => void;
-  readonly onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
-  readonly onCancel: () => void;
-}
-
-const ProfileEditForm = ({
-  name, email, phoneNumber, saving, serverError, fieldErrors,
-  onNameChange, onEmailChange, onPhoneChange, onSubmit, onCancel,
-}: ProfileEditFormProps) => (
-  <>
-    {serverError && (
-      <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2 mb-4" role="alert">{serverError}</p>
-    )}
-    <form onSubmit={onSubmit} noValidate className="space-y-4">
-      <div>
-        <label htmlFor="account-name" className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-        <input
-          id="account-name"
-          type="text"
-          value={name}
-          onChange={(e) => onNameChange(e.target.value)}
-          className={`w-full px-4 py-3 text-base border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all ${fieldErrors.name ? 'border-red-400' : 'border-gray-300'}`}
-          placeholder="Your full name"
-          autoComplete="name"
-          aria-describedby={fieldErrors.name ? 'account-name-error' : undefined}
-        />
-        {fieldErrors.name && <p id="account-name-error" className="text-xs text-red-600 mt-1">{fieldErrors.name}</p>}
-      </div>
-      <div>
-        <label htmlFor="account-email" className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-        <input
-          id="account-email"
-          type="email"
-          value={email}
-          onChange={(e) => onEmailChange(e.target.value)}
-          className={`w-full px-4 py-3 text-base border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all ${fieldErrors.email ? 'border-red-400' : 'border-gray-300'}`}
-          placeholder="you@example.com"
-          autoComplete="email"
-          aria-describedby={fieldErrors.email ? 'account-email-error' : undefined}
-        />
-        {fieldErrors.email && <p id="account-email-error" className="text-xs text-red-600 mt-1">{fieldErrors.email}</p>}
-      </div>
-      <div>
-        <label htmlFor="account-phone" className="block text-sm font-medium text-gray-700 mb-1">
-          Phone Number <span className="text-gray-400">(optional)</span>
-        </label>
-        <input
-          id="account-phone"
-          type="tel"
-          value={phoneNumber}
-          onChange={(e) => onPhoneChange(e.target.value)}
-          className={`w-full px-4 py-3 text-base border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all ${fieldErrors.phoneNumber ? 'border-red-400' : 'border-gray-300'}`}
-          placeholder="+1234567890"
-          autoComplete="tel"
-          aria-describedby={fieldErrors.phoneNumber ? 'account-phone-error' : undefined}
-        />
-        {fieldErrors.phoneNumber && <p id="account-phone-error" className="text-xs text-red-600 mt-1">{fieldErrors.phoneNumber}</p>}
-      </div>
-      <div className="flex gap-3 pt-2">
-        <button type="button" onClick={onCancel} disabled={saving}
-          className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50 transition">
-          Cancel
-        </button>
-        <button type="submit" disabled={saving}
-          className="px-6 py-2 text-sm font-semibold bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
-          {saving ? 'Saving\u2026' : 'Save Changes'}
-        </button>
-      </div>
-    </form>
-  </>
-);
+const PASSWORD_FIELDS: ReadonlyArray<FieldDef> = [
+  {
+    id: 'current-password',
+    name: 'currentPassword',
+    label: 'Current Password',
+    type: 'password',
+    placeholder: 'Enter current password',
+    autoComplete: 'current-password',
+    showPasswordToggle: true,
+    validate: (v) => v ? undefined : PASSWORD_ERRORS.CURRENT_REQUIRED,
+  },
+  {
+    id: 'new-password',
+    name: 'newPassword',
+    label: 'New Password',
+    type: 'password',
+    placeholder: 'Enter new password',
+    autoComplete: 'new-password',
+    showPasswordToggle: true,
+    showStrengthChecklist: true,
+    validate: (v) => {
+      if (!v) return PASSWORD_ERRORS.NEW_REQUIRED;
+      if (!isPasswordStrong(v)) return PASSWORD_ERRORS.NEW_WEAK;
+      return undefined;
+    },
+  },
+  {
+    id: 'confirm-new-password',
+    name: 'confirmNewPassword',
+    label: 'Confirm New Password',
+    type: 'password',
+    placeholder: 'Confirm new password',
+    autoComplete: 'new-password',
+    validate: (v, all) => {
+      if (!v) return PASSWORD_ERRORS.CONFIRM_REQUIRED;
+      if (v !== all.newPassword) return PASSWORD_ERRORS.CONFIRM_MISMATCH;
+      return undefined;
+    },
+    validateOnBlur: true,
+  },
+];
 
 // ─── PasswordSection ──────────────────────────────────────────────────────────
 
 const PasswordSection = () => {
   const [isChanging, setIsChanging] = useState(false);
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmNewPassword, setConfirmNewPassword] = useState('');
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [confirmTouched, setConfirmTouched] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState('');
-  const [serverError, setServerError] = useState('');
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
-  const handleStart = () => {
-    setCurrentPassword('');
-    setNewPassword('');
-    setConfirmNewPassword('');
-    setFieldErrors({});
-    setServerError('');
-    setSuccess('');
-    setIsChanging(true);
-  };
-
-  const handleCancel = () => { setIsChanging(false); setFieldErrors({}); setServerError(''); };
-
-  const clearFieldError = (field: string) => {
-    if (fieldErrors[field]) setFieldErrors((p) => ({ ...p, [field]: '' }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setSuccess('');
-    setServerError('');
-    const errors = validatePasswordFields(currentPassword, newPassword, confirmNewPassword);
-    if (Object.keys(errors).length > 0) { setFieldErrors(errors); return; }
-    setSaving(true);
-    try {
-      const res = await fetch('/api/auth/change-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ currentPassword, newPassword, confirmNewPassword }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setSuccess('Password changed successfully.');
-        setIsChanging(false);
-        setCurrentPassword('');
-        setNewPassword('');
-        setConfirmNewPassword('');
-      } else {
-        setServerError(data.error || API_ERRORS.AUTH_CHANGE_FAILED);
+  const handleSubmit = useCallback(
+    async (values: Readonly<Record<string, string>>): Promise<SubmitResult> => {
+      try {
+        const res = await fetch('/api/auth/change-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            currentPassword: values.currentPassword,
+            newPassword: values.newPassword,
+            confirmNewPassword: values.confirmNewPassword,
+          }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          setSuccess('Password changed successfully.');
+          setIsChanging(false);
+        } else {
+          return data.error || API_ERRORS.AUTH_CHANGE_FAILED;
+        }
+      } catch {
+        return API_ERRORS.AUTH_CHANGE_FAILED;
       }
-    } catch {
-      setServerError(API_ERRORS.AUTH_CHANGE_FAILED);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const mismatchVisible = confirmTouched && confirmNewPassword && newPassword !== confirmNewPassword;
+    },
+    [],
+  );
 
   return (
-    <section className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/50 p-6 sm:p-8">
+    <Card className="p-6 sm:p-8">
       <div className="flex items-center justify-between gap-3 mb-6">
         <div className="flex items-center gap-3">
           <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -373,7 +314,7 @@ const PasswordSection = () => {
         {!isChanging && (
           <button
             type="button"
-            onClick={handleStart}
+            onClick={() => { setSuccess(''); setIsChanging(true); }}
             className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-purple-700 bg-purple-50 rounded-lg hover:bg-purple-100 transition"
             aria-label="Change password"
           >
@@ -385,151 +326,30 @@ const PasswordSection = () => {
         )}
       </div>
 
-      {!isChanging && (
+      {success && !isChanging && (
+        <output className="text-sm text-green-600 bg-green-50 rounded-lg px-3 py-2 mb-4 block">
+          {success}
+        </output>
+      )}
+
+      {!isChanging && !success && (
         <p className="text-sm text-gray-500">
           Your password is set. Click &ldquo;Change Password&rdquo; above to update it.
         </p>
       )}
 
       {isChanging && (
-        <PasswordChangeForm
-          currentPassword={currentPassword}
-          newPassword={newPassword}
-          confirmNewPassword={confirmNewPassword}
-          showCurrentPassword={showCurrentPassword}
-          showNewPassword={showNewPassword}
-          mismatchVisible={!!mismatchVisible}
-          saving={saving}
-          success={success}
-          serverError={serverError}
-          fieldErrors={fieldErrors}
-          onCurrentPasswordChange={(v) => { setCurrentPassword(v); clearFieldError('currentPassword'); }}
-          onNewPasswordChange={(v) => { setNewPassword(v); clearFieldError('newPassword'); }}
-          onConfirmPasswordChange={(v) => { setConfirmNewPassword(v); clearFieldError('confirmNewPassword'); }}
-          onToggleCurrentPassword={() => setShowCurrentPassword((s) => !s)}
-          onToggleNewPassword={() => setShowNewPassword((s) => !s)}
-          onConfirmBlur={() => setConfirmTouched(true)}
+        <DynamicForm
+          fields={PASSWORD_FIELDS}
           onSubmit={handleSubmit}
-          onCancel={handleCancel}
+          submitLabel="Change Password"
+          submittingLabel="Changing\u2026"
+          onCancel={() => setIsChanging(false)}
         />
       )}
-    </section>
+    </Card>
   );
 };
-
-// ─── PasswordChangeForm ───────────────────────────────────────────────────────
-
-interface PasswordChangeFormProps {
-  readonly currentPassword: string;
-  readonly newPassword: string;
-  readonly confirmNewPassword: string;
-  readonly showCurrentPassword: boolean;
-  readonly showNewPassword: boolean;
-  readonly mismatchVisible: boolean;
-  readonly saving: boolean;
-  readonly success: string;
-  readonly serverError: string;
-  readonly fieldErrors: Record<string, string>;
-  readonly onCurrentPasswordChange: (v: string) => void;
-  readonly onNewPasswordChange: (v: string) => void;
-  readonly onConfirmPasswordChange: (v: string) => void;
-  readonly onToggleCurrentPassword: () => void;
-  readonly onToggleNewPassword: () => void;
-  readonly onConfirmBlur: () => void;
-  readonly onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
-  readonly onCancel: () => void;
-}
-
-const PasswordChangeForm = ({
-  currentPassword, newPassword, confirmNewPassword,
-  showCurrentPassword, showNewPassword, mismatchVisible,
-  saving, success, serverError, fieldErrors,
-  onCurrentPasswordChange, onNewPasswordChange, onConfirmPasswordChange,
-  onToggleCurrentPassword, onToggleNewPassword, onConfirmBlur,
-  onSubmit, onCancel,
-}: PasswordChangeFormProps) => (
-  <>
-    {success && (
-      <output className="text-sm text-green-600 bg-green-50 rounded-lg px-3 py-2 mb-4 block">{success}</output>
-    )}
-    {serverError && (
-      <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2 mb-4" role="alert">{serverError}</p>
-    )}
-    <form onSubmit={onSubmit} noValidate className="space-y-4">
-      <div>
-        <label htmlFor="current-password" className="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
-        <div className="relative">
-          <input
-            id="current-password"
-            type={showCurrentPassword ? 'text' : 'password'}
-            value={currentPassword}
-            onChange={(e) => onCurrentPasswordChange(e.target.value)}
-            className={`w-full px-4 py-3 text-base border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all pr-12 ${fieldErrors.currentPassword ? 'border-red-400' : 'border-gray-300'}`}
-            placeholder="Enter current password"
-            autoComplete="current-password"
-            aria-describedby={fieldErrors.currentPassword ? 'current-password-error' : undefined}
-          />
-          <PasswordToggleButton showPassword={showCurrentPassword} onToggle={onToggleCurrentPassword}
-            label={showCurrentPassword ? 'Hide current password' : 'Show current password'} />
-        </div>
-        {fieldErrors.currentPassword && (
-          <p id="current-password-error" className="text-xs text-red-600 mt-1">{fieldErrors.currentPassword}</p>
-        )}
-      </div>
-      <div>
-        <label htmlFor="new-password" className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
-        <div className="relative">
-          <input
-            id="new-password"
-            type={showNewPassword ? 'text' : 'password'}
-            value={newPassword}
-            onChange={(e) => onNewPasswordChange(e.target.value)}
-            className={`w-full px-4 py-3 text-base border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all pr-12 ${fieldErrors.newPassword ? 'border-red-400' : 'border-gray-300'}`}
-            placeholder="Enter new password"
-            autoComplete="new-password"
-            aria-describedby={fieldErrors.newPassword ? 'new-password-error' : undefined}
-          />
-          <PasswordToggleButton showPassword={showNewPassword} onToggle={onToggleNewPassword}
-            label={showNewPassword ? 'Hide new password' : 'Show new password'} />
-        </div>
-        {fieldErrors.newPassword && (
-          <p id="new-password-error" className="text-xs text-red-600 mt-1">{fieldErrors.newPassword}</p>
-        )}
-        <PasswordStrengthChecklist password={newPassword} />
-      </div>
-      <div>
-        <label htmlFor="confirm-new-password" className="block text-sm font-medium text-gray-700 mb-1">Confirm New Password</label>
-        <input
-          id="confirm-new-password"
-          type="password"
-          value={confirmNewPassword}
-          onChange={(e) => onConfirmPasswordChange(e.target.value)}
-          onBlur={onConfirmBlur}
-          className={`w-full px-4 py-3 text-base border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all ${fieldErrors.confirmNewPassword ? 'border-red-400' : 'border-gray-300'}`}
-          placeholder="Confirm new password"
-          autoComplete="new-password"
-          aria-describedby={fieldErrors.confirmNewPassword ? 'confirm-new-password-error' : undefined}
-        />
-        {fieldErrors.confirmNewPassword && (
-          <p id="confirm-new-password-error" className="text-xs text-red-600 mt-1">{fieldErrors.confirmNewPassword}</p>
-        )}
-        {!fieldErrors.confirmNewPassword && mismatchVisible && (
-          <p className="text-xs text-red-600 mt-1">{PASSWORD_ERRORS.CONFIRM_MISMATCH}</p>
-        )}
-      </div>
-      <div className="flex gap-3 pt-2">
-        <button type="button" onClick={onCancel} disabled={saving}
-          className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50 transition">
-          Cancel
-        </button>
-        <button type="submit" disabled={saving}
-          className="px-6 py-2 text-sm font-semibold bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
-          {saving ? 'Changing\u2026' : 'Change Password'}
-        </button>
-      </div>
-    </form>
-  </>
-);
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 
@@ -569,10 +389,7 @@ const AccountPage = () => {
         <Header />
         <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
           <div className="flex items-center justify-center py-20">
-            <svg className="animate-spin h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24" aria-hidden="true">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-            </svg>
+            <LoadingSpinner />
           </div>
         </main>
       </div>
@@ -584,14 +401,7 @@ const AccountPage = () => {
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
         <Header />
         <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
-          <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/50 p-12 text-center">
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Sign In Required</h2>
-            <p className="text-gray-600 mb-6">Please sign in to manage your account.</p>
-            <Link href="/auth/signin?callbackUrl=/account"
-              className="inline-block bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-xl font-bold hover:from-blue-700 hover:to-purple-700 transition-all">
-              Sign In
-            </Link>
-          </div>
+          <AuthRequiredState callbackUrl="/account" message="Please sign in to manage your account." />
         </main>
       </div>
     );
@@ -601,12 +411,10 @@ const AccountPage = () => {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
       <Header />
       <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
-        <h1 className="text-3xl font-bold mb-8 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-          My Account
-        </h1>
+        <GradientHeading className="mb-8">My Account</GradientHeading>
 
         {error && (
-          <div className="mb-6 p-4 bg-red-50 text-red-700 rounded-xl border border-red-200" role="alert">{error}</div>
+          <AlertBanner message={error} variant="error" className="mb-6" />
         )}
 
         {profile && <ProfileSection profile={profile} onProfileUpdated={fetchProfile} />}
@@ -614,12 +422,12 @@ const AccountPage = () => {
         {profile?.hasPassword && <PasswordSection />}
 
         {profile && !profile.hasPassword && (
-          <section className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/50 p-6 sm:p-8">
+          <Card className="p-6 sm:p-8">
             <h2 className="text-xl font-bold text-gray-900 mb-4">Password</h2>
             <p className="text-sm text-gray-600">
               Your account uses social login (Google or Microsoft). Password management is not available for social login accounts.
             </p>
-          </section>
+          </Card>
         )}
       </main>
     </div>

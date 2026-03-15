@@ -12,6 +12,10 @@ import {
   selectAdminError,
 } from '@/lib/features/admin/adminSlice';
 import type { AppDispatch } from '@/lib/store';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { AlertBanner } from '@/components/ui/AlertBanner';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { Badge, orderStatusVariant } from '@/components/ui/Badge';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 
 /**
@@ -48,7 +52,6 @@ interface AdminOrderCardProps {
   readonly updatingOrderId: string | null;
   readonly savingShippingId: string | null;
   readonly edit: { trackingNumber: string; shippingProvider: string };
-  readonly getStatusColor: (status: string) => string;
   readonly formatPrice: (amount: number) => string;
   readonly onStatusChange: (orderId: string, status: OrderStatus) => void;
   readonly onShippingFieldChange: (
@@ -65,7 +68,6 @@ function AdminOrderCard({
   updatingOrderId,
   savingShippingId,
   edit,
-  getStatusColor,
   formatPrice,
   onStatusChange,
   onShippingFieldChange,
@@ -119,11 +121,11 @@ function AdminOrderCard({
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <span className={`px-3 py-1 rounded-full text-sm font-semibold ${getStatusColor(order.status)}`}>
+          <Badge variant={orderStatusVariant(order.status)}>
             {order.status}
-          </span>
+          </Badge>
           {updatingOrderId === order.id ? (
-            <div className="inline-block w-5 h-5 border-2 border-gray-200 border-t-blue-600 rounded-full animate-spin" />
+            <LoadingSpinner size="h-5 w-5" />
           ) : (
             <select
               value={order.status}
@@ -294,16 +296,6 @@ export default function OrdersManagement() {
     setSavingShippingId(null);
   };
 
-  const statusColorMap: Record<string, string> = {
-    [OrderStatus.PENDING]: 'bg-yellow-100 text-yellow-800',
-    [OrderStatus.PROCESSING]: 'bg-blue-100 text-blue-800',
-    [OrderStatus.SHIPPED]: 'bg-purple-100 text-purple-800',
-    [OrderStatus.DELIVERED]: 'bg-green-100 text-green-800',
-    [OrderStatus.CANCELLED]: 'bg-red-100 text-red-800',
-  };
-
-  const getStatusColor = (status: string) => statusColorMap[status] || 'bg-gray-100 text-gray-800';
-
   const filteredOrders = filter === 'ALL'
     ? orders
     : orders.filter(order => order.status === filter);
@@ -313,9 +305,8 @@ export default function OrdersManagement() {
   if (loading) {
     return (
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="text-center py-12">
-          <div className="inline-block w-8 h-8 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin" />
-          <p className="mt-4 text-gray-600">Loading orders...</p>
+        <div className="flex items-center justify-center py-12">
+          <LoadingSpinner />
         </div>
       </main>
     );
@@ -342,9 +333,7 @@ export default function OrdersManagement() {
 
       {/* Error Banner */}
       {error && (
-        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-red-700">{error}</p>
-        </div>
+        <AlertBanner message={error} variant="error" className="mb-4" />
       )}
 
       {/* Filter Tabs */}
@@ -368,9 +357,7 @@ export default function OrdersManagement() {
 
       {/* Order List */}
       {filteredOrders.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-lg">
-          <p className="text-gray-600">No items found</p>
-        </div>
+        <EmptyState title="No items found" />
       ) : (
         <div className="space-y-4">
           {filteredOrders.map((order) => (
@@ -380,7 +367,6 @@ export default function OrdersManagement() {
               updatingOrderId={updatingOrderId}
               savingShippingId={savingShippingId}
               edit={getShippingEdit(order.id, order)}
-              getStatusColor={getStatusColor}
               formatPrice={formatPrice}
               onStatusChange={handleStatusChange}
               onShippingFieldChange={setShippingField}

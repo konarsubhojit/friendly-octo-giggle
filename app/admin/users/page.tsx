@@ -13,6 +13,10 @@ import {
 import type { AppDispatch } from '@/lib/store';
 import { logError } from '@/lib/logger';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { AlertBanner } from '@/components/ui/AlertBanner';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { Badge, roleVariant } from '@/components/ui/Badge';
 
 interface AdminUser {
   readonly id: string;
@@ -40,12 +44,7 @@ function UserAvatar({ name, email, image }: { readonly name: string | null; read
 }
 
 function RoleBadge({ role }: { readonly role: string }) {
-  const colorClass = role === 'ADMIN' ? 'bg-purple-100 text-purple-800' : 'bg-green-100 text-green-800';
-  return (
-    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${colorClass}`}>
-      {role}
-    </span>
-  );
+  return <Badge variant={roleVariant(role)}>{role}</Badge>;
 }
 
 function RoleAction({
@@ -60,7 +59,7 @@ function RoleAction({
   const [pendingRole, setPendingRole] = useState<'ADMIN' | 'CUSTOMER' | null>(null);
 
   if (isUpdating) {
-    return <div className="inline-block w-4 h-4 border-2 border-gray-200 border-t-blue-600 rounded-full animate-spin" />;
+    return <LoadingSpinner size="h-4 w-4" />;
   }
 
   const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -190,9 +189,8 @@ export default function UsersManagement() {
   if (loading) {
     return (
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="text-center py-12">
-          <div className="inline-block w-8 h-8 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin" />
-          <p className="mt-4 text-gray-600">Loading users...</p>
+        <div className="flex items-center justify-center py-12">
+          <LoadingSpinner />
         </div>
       </main>
     );
@@ -206,15 +204,11 @@ export default function UsersManagement() {
       </div>
 
       {error && (
-        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-red-700">{error}</p>
-        </div>
+        <AlertBanner message={error} variant="error" className="mb-4" />
       )}
 
       {users.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-lg">
-          <p className="text-gray-600">No items found</p>
-        </div>
+        <EmptyState title="No items found" />
       ) : (
         <UsersTable users={users} updatingUserId={updatingUserId} onRoleChange={handleRoleChange} />
       )}
