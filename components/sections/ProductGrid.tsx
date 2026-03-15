@@ -96,7 +96,7 @@ export default function ProductGrid({ products }: ProductGridProps) {
     <main id="products" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
       <div className="flex items-center gap-3 mb-6">
         <GradientHeading as="h2" size="xl">
-          Shop
+          Bestsellers
         </GradientHeading>
         <FlowerAccent className="w-6 h-6 opacity-60" />
       </div>

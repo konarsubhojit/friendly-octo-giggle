@@ -120,9 +120,9 @@ describe("ProductGrid", () => {
     expect(screen.getByText("Product B")).toBeTruthy();
   });
 
-  it("renders Shop heading", () => {
+  it("renders Bestsellers heading", () => {
     renderGrid([]);
-    expect(screen.getByText(/Shop/i)).toBeTruthy();
+    expect(screen.getByText(/Bestsellers/i)).toBeTruthy();
   });
 
   // ─── Category filter buttons ──────────────────────────────────────────────

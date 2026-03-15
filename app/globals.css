@@ -21,7 +21,6 @@
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: 'Nunito', 'Segoe UI', system-ui, -apple-system, sans-serif;
 }
 
 @utility text-balance {
