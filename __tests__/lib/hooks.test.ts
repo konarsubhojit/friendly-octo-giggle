@@ -116,7 +116,7 @@ describe("useMutation", () => {
   });
 
   it("sets loading during mutation", async () => {
-    let resolvePromise: (v: string) => void = () => {};
+    let resolvePromise: ((v: string) => void) | undefined;
     const mutationFn = vi.fn(
       () => new Promise<string>((r) => (resolvePromise = r)),
     );
@@ -125,7 +125,10 @@ describe("useMutation", () => {
       result.current.mutate("hello").catch(() => {});
     });
     expect(result.current.loading).toBe(true);
-    await act(async () => resolvePromise("HELLO"));
+    await act(() => {
+      resolvePromise?.("HELLO");
+      return Promise.resolve();
+    });
     expect(result.current.loading).toBe(false);
   });
 

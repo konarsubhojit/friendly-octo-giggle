@@ -77,6 +77,46 @@ export const validatePasswordFields = (
   return errors;
 };
 
+// ─── Shared form-field helpers ────────────────────────────────────────────────
+
+const inputBorderClass = (hasError: boolean) =>
+  hasError ? 'border-red-400' : 'border-gray-300';
+
+const fieldDescribedBy = (id: string, hasError: boolean) =>
+  hasError ? id : undefined;
+
+// ─── AccountFormField ─────────────────────────────────────────────────────────
+
+interface AccountFormFieldProps {
+  readonly id: string;
+  readonly label: React.ReactNode;
+  readonly type: string;
+  readonly value: string;
+  readonly onChange: (v: string) => void;
+  readonly placeholder: string;
+  readonly autoComplete: string;
+  readonly error?: string;
+}
+
+const AccountFormField = ({
+  id, label, type, value, onChange, placeholder, autoComplete, error,
+}: AccountFormFieldProps) => (
+  <div>
+    <label htmlFor={id} className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+    <input
+      id={id}
+      type={type}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className={`w-full px-4 py-3 text-base border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all ${inputBorderClass(!!error)}`}
+      placeholder={placeholder}
+      autoComplete={autoComplete}
+      aria-describedby={fieldDescribedBy(`${id}-error`, !!error)}
+    />
+    {error && <p id={`${id}-error`} className="text-xs text-red-600 mt-1">{error}</p>}
+  </div>
+);
+
 // ─── ProfileEditForm ──────────────────────────────────────────────────────────
 
 interface ProfileEditFormProps {
@@ -97,67 +137,37 @@ const ProfileEditForm = ({
   name, email, phoneNumber, saving, serverError, fieldErrors,
   onNameChange, onEmailChange, onPhoneChange, onSubmit, onCancel,
 }: ProfileEditFormProps) => (
-  <>
+  <form onSubmit={onSubmit} noValidate className="space-y-4">
     {serverError && (
       <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2 mb-4" role="alert">{serverError}</p>
     )}
-    <form onSubmit={onSubmit} noValidate className="space-y-4">
-      <div>
-        <label htmlFor="account-name" className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-        <input
-          id="account-name"
-          type="text"
-          value={name}
-          onChange={(e) => onNameChange(e.target.value)}
-          className={`w-full px-4 py-3 text-base border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all ${fieldErrors.name ? 'border-red-400' : 'border-gray-300'}`}
-          placeholder="Your full name"
-          autoComplete="name"
-          aria-describedby={fieldErrors.name ? 'account-name-error' : undefined}
-        />
-        {fieldErrors.name && <p id="account-name-error" className="text-xs text-red-600 mt-1">{fieldErrors.name}</p>}
-      </div>
-      <div>
-        <label htmlFor="account-email" className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-        <input
-          id="account-email"
-          type="email"
-          value={email}
-          onChange={(e) => onEmailChange(e.target.value)}
-          className={`w-full px-4 py-3 text-base border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all ${fieldErrors.email ? 'border-red-400' : 'border-gray-300'}`}
-          placeholder="you@example.com"
-          autoComplete="email"
-          aria-describedby={fieldErrors.email ? 'account-email-error' : undefined}
-        />
-        {fieldErrors.email && <p id="account-email-error" className="text-xs text-red-600 mt-1">{fieldErrors.email}</p>}
-      </div>
-      <div>
-        <label htmlFor="account-phone" className="block text-sm font-medium text-gray-700 mb-1">
-          Phone Number <span className="text-gray-400">(optional)</span>
-        </label>
-        <input
-          id="account-phone"
-          type="tel"
-          value={phoneNumber}
-          onChange={(e) => onPhoneChange(e.target.value)}
-          className={`w-full px-4 py-3 text-base border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all ${fieldErrors.phoneNumber ? 'border-red-400' : 'border-gray-300'}`}
-          placeholder="+1234567890"
-          autoComplete="tel"
-          aria-describedby={fieldErrors.phoneNumber ? 'account-phone-error' : undefined}
-        />
-        {fieldErrors.phoneNumber && <p id="account-phone-error" className="text-xs text-red-600 mt-1">{fieldErrors.phoneNumber}</p>}
-      </div>
-      <div className="flex gap-3 pt-2">
-        <button type="button" onClick={onCancel} disabled={saving}
-          className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50 transition">
-          Cancel
-        </button>
-        <button type="submit" disabled={saving}
-          className="px-6 py-2 text-sm font-semibold bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
-          {saving ? 'Saving\u2026' : 'Save Changes'}
-        </button>
-      </div>
-    </form>
-  </>
+    <AccountFormField
+      id="account-name" type="text" value={name}
+      label="Name" placeholder="Your full name" autoComplete="name"
+      onChange={onNameChange} error={fieldErrors.name}
+    />
+    <AccountFormField
+      id="account-email" type="email" value={email}
+      label="Email" placeholder="you@example.com" autoComplete="email"
+      onChange={onEmailChange} error={fieldErrors.email}
+    />
+    <AccountFormField
+      id="account-phone" type="tel" value={phoneNumber}
+      label={<>Phone Number <span className="text-gray-400">(optional)</span></>}
+      placeholder="+1234567890" autoComplete="tel"
+      onChange={onPhoneChange} error={fieldErrors.phoneNumber}
+    />
+    <div className="flex gap-3 pt-2">
+      <button type="button" onClick={onCancel} disabled={saving}
+        className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50 transition">
+        Cancel
+      </button>
+      <button type="submit" disabled={saving}
+        className="px-6 py-2 text-sm font-semibold bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
+        {saving ? 'Saving\u2026' : 'Save Changes'}
+      </button>
+    </div>
+  </form>
 );
 
 // ─── ProfileSection ────────────────────────────────────────────────────────────
@@ -298,6 +308,76 @@ const ProfileSection = ({ profile, onProfileUpdated }: ProfileSectionProps) => {
   );
 };
 
+// ─── PasswordFormField ────────────────────────────────────────────────────────
+
+interface PasswordFormFieldProps {
+  readonly id: string;
+  readonly label: string;
+  readonly value: string;
+  readonly showPassword: boolean;
+  readonly onChange: (v: string) => void;
+  readonly onToggle: () => void;
+  readonly toggleLabel: string;
+  readonly placeholder: string;
+  readonly autoComplete: string;
+  readonly error?: string;
+}
+
+const PasswordFormField = ({
+  id, label, value, showPassword, onChange, onToggle, toggleLabel, placeholder, autoComplete, error,
+}: PasswordFormFieldProps) => (
+  <div>
+    <label htmlFor={id} className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+    <div className="relative">
+      <input
+        id={id}
+        type={showPassword ? 'text' : 'password'}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className={`w-full px-4 py-3 text-base border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all pr-12 ${inputBorderClass(!!error)}`}
+        placeholder={placeholder}
+        autoComplete={autoComplete}
+        aria-describedby={fieldDescribedBy(`${id}-error`, !!error)}
+      />
+      <PasswordToggleButton showPassword={showPassword} onToggle={onToggle} label={toggleLabel} />
+    </div>
+    {error && <p id={`${id}-error`} className="text-xs text-red-600 mt-1">{error}</p>}
+  </div>
+);
+
+// ─── ConfirmPasswordField ─────────────────────────────────────────────────────
+
+interface ConfirmPasswordFieldProps {
+  readonly value: string;
+  readonly onChange: (v: string) => void;
+  readonly onBlur: () => void;
+  readonly error?: string;
+  readonly mismatchVisible: boolean;
+}
+
+const ConfirmPasswordField = ({
+  value, onChange, onBlur, error, mismatchVisible,
+}: ConfirmPasswordFieldProps) => (
+  <div>
+    <label htmlFor="confirm-new-password" className="block text-sm font-medium text-gray-700 mb-1">Confirm New Password</label>
+    <input
+      id="confirm-new-password"
+      type="password"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      onBlur={onBlur}
+      className={`w-full px-4 py-3 text-base border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all ${inputBorderClass(!!error)}`}
+      placeholder="Confirm new password"
+      autoComplete="new-password"
+      aria-describedby={fieldDescribedBy('confirm-new-password-error', !!error)}
+    />
+    {error && <p id="confirm-new-password-error" className="text-xs text-red-600 mt-1">{error}</p>}
+    {!error && mismatchVisible && (
+      <p className="text-xs text-red-600 mt-1">{PASSWORD_ERRORS.CONFIRM_MISMATCH}</p>
+    )}
+  </div>
+);
+
 // ─── PasswordChangeForm ───────────────────────────────────────────────────────
 
 interface PasswordChangeFormProps {
@@ -329,87 +409,50 @@ const PasswordChangeForm = ({
   onToggleCurrentPassword, onToggleNewPassword, onConfirmBlur,
   onSubmit, onCancel,
 }: PasswordChangeFormProps) => (
-  <>
+  <form onSubmit={onSubmit} noValidate className="space-y-4">
     {success && (
       <output className="text-sm text-green-600 bg-green-50 rounded-lg px-3 py-2 mb-4 block">{success}</output>
     )}
     {serverError && (
       <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2 mb-4" role="alert">{serverError}</p>
     )}
-    <form onSubmit={onSubmit} noValidate className="space-y-4">
-      <div>
-        <label htmlFor="current-password" className="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
-        <div className="relative">
-          <input
-            id="current-password"
-            type={showCurrentPassword ? 'text' : 'password'}
-            value={currentPassword}
-            onChange={(e) => onCurrentPasswordChange(e.target.value)}
-            className={`w-full px-4 py-3 text-base border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all pr-12 ${fieldErrors.currentPassword ? 'border-red-400' : 'border-gray-300'}`}
-            placeholder="Enter current password"
-            autoComplete="current-password"
-            aria-describedby={fieldErrors.currentPassword ? 'current-password-error' : undefined}
-          />
-          <PasswordToggleButton showPassword={showCurrentPassword} onToggle={onToggleCurrentPassword}
-            label={showCurrentPassword ? 'Hide current password' : 'Show current password'} />
-        </div>
-        {fieldErrors.currentPassword && (
-          <p id="current-password-error" className="text-xs text-red-600 mt-1">{fieldErrors.currentPassword}</p>
-        )}
-      </div>
-      <div>
-        <label htmlFor="new-password" className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
-        <div className="relative">
-          <input
-            id="new-password"
-            type={showNewPassword ? 'text' : 'password'}
-            value={newPassword}
-            onChange={(e) => onNewPasswordChange(e.target.value)}
-            className={`w-full px-4 py-3 text-base border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all pr-12 ${fieldErrors.newPassword ? 'border-red-400' : 'border-gray-300'}`}
-            placeholder="Enter new password"
-            autoComplete="new-password"
-            aria-describedby={fieldErrors.newPassword ? 'new-password-error' : undefined}
-          />
-          <PasswordToggleButton showPassword={showNewPassword} onToggle={onToggleNewPassword}
-            label={showNewPassword ? 'Hide new password' : 'Show new password'} />
-        </div>
-        {fieldErrors.newPassword && (
-          <p id="new-password-error" className="text-xs text-red-600 mt-1">{fieldErrors.newPassword}</p>
-        )}
-        <PasswordStrengthChecklist password={newPassword} />
-      </div>
-      <div>
-        <label htmlFor="confirm-new-password" className="block text-sm font-medium text-gray-700 mb-1">Confirm New Password</label>
-        <input
-          id="confirm-new-password"
-          type="password"
-          value={confirmNewPassword}
-          onChange={(e) => onConfirmPasswordChange(e.target.value)}
-          onBlur={onConfirmBlur}
-          className={`w-full px-4 py-3 text-base border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all ${fieldErrors.confirmNewPassword ? 'border-red-400' : 'border-gray-300'}`}
-          placeholder="Confirm new password"
-          autoComplete="new-password"
-          aria-describedby={fieldErrors.confirmNewPassword ? 'confirm-new-password-error' : undefined}
-        />
-        {fieldErrors.confirmNewPassword && (
-          <p id="confirm-new-password-error" className="text-xs text-red-600 mt-1">{fieldErrors.confirmNewPassword}</p>
-        )}
-        {!fieldErrors.confirmNewPassword && mismatchVisible && (
-          <p className="text-xs text-red-600 mt-1">{PASSWORD_ERRORS.CONFIRM_MISMATCH}</p>
-        )}
-      </div>
-      <div className="flex gap-3 pt-2">
-        <button type="button" onClick={onCancel} disabled={saving}
-          className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50 transition">
-          Cancel
-        </button>
-        <button type="submit" disabled={saving}
-          className="px-6 py-2 text-sm font-semibold bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
-          {saving ? 'Changing\u2026' : 'Change Password'}
-        </button>
-      </div>
-    </form>
-  </>
+    <PasswordFormField
+      id="current-password" label="Current Password"
+      value={currentPassword} showPassword={showCurrentPassword}
+      onChange={onCurrentPasswordChange} onToggle={onToggleCurrentPassword}
+      toggleLabel={showCurrentPassword ? 'Hide current password' : 'Show current password'}
+      placeholder="Enter current password" autoComplete="current-password"
+      error={fieldErrors.currentPassword}
+    />
+    <div>
+      <PasswordFormField
+        id="new-password" label="New Password"
+        value={newPassword} showPassword={showNewPassword}
+        onChange={onNewPasswordChange} onToggle={onToggleNewPassword}
+        toggleLabel={showNewPassword ? 'Hide new password' : 'Show new password'}
+        placeholder="Enter new password" autoComplete="new-password"
+        error={fieldErrors.newPassword}
+      />
+      <PasswordStrengthChecklist password={newPassword} />
+    </div>
+    <ConfirmPasswordField
+      value={confirmNewPassword}
+      onChange={onConfirmPasswordChange}
+      onBlur={onConfirmBlur}
+      error={fieldErrors.confirmNewPassword}
+      mismatchVisible={mismatchVisible}
+    />
+    <div className="flex gap-3 pt-2">
+      <button type="button" onClick={onCancel} disabled={saving}
+        className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50 transition">
+        Cancel
+      </button>
+      <button type="submit" disabled={saving}
+        className="px-6 py-2 text-sm font-semibold bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
+        {saving ? 'Changing\u2026' : 'Change Password'}
+      </button>
+    </div>
+  </form>
 );
 
 // ─── PasswordSection ──────────────────────────────────────────────────────────
