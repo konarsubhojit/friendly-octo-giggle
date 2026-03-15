@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { PasswordToggleButton } from '@/components/auth/PasswordToggleButton';
+import { DynamicForm, type FieldDef, type SubmitResult } from '@/components/ui/DynamicForm';
 import { OAuthButtons } from '@/components/auth/OAuthButtons';
 import { CopilotDevLoginButton } from '@/components/auth/CopilotDevLoginButton';
 
@@ -13,14 +13,34 @@ interface LoginModalProps {
   readonly onClose: () => void;
 }
 
+const LOGIN_FIELDS: ReadonlyArray<FieldDef> = [
+  {
+    id: 'login-identifier',
+    name: 'identifier',
+    label: 'Email or Phone Number',
+    type: 'text',
+    placeholder: 'you@example.com or +1234567890',
+    autoComplete: 'username',
+    autoFocus: true,
+    validate: (v) => v.trim() ? undefined : 'Email or phone number is required.',
+  },
+  {
+    id: 'login-password',
+    name: 'password',
+    label: 'Password',
+    type: 'password',
+    placeholder: 'Enter your password',
+    autoComplete: 'current-password',
+    showPasswordToggle: true,
+    validate: (v) => v ? undefined : 'Password is required.',
+  },
+];
+
+const SUBMIT_BTN =
+  'w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-300 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed';
+
 export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
-  const [identifier, setIdentifier] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const firstFocusRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
   // Open dialog as modal and handle native cancel (Escape) event
@@ -30,7 +50,6 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
 
     document.body.style.overflow = 'hidden';
     dialog.showModal();
-    setTimeout(() => firstFocusRef.current?.focus(), 100);
 
     function handleCancel(e: Event) {
       e.preventDefault();
@@ -44,30 +63,23 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
     };
   }, [isOpen, onClose]);
 
-  async function handleCredentialsLogin(e: React.SyntheticEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-
-    try {
-      const result = await signIn('credentials', {
-        identifier,
-        password,
-        redirect: false,
-      });
-
-      if (result?.error) {
-        setError('Invalid email/phone or password');
-      } else {
+  const handleSubmit = useCallback(
+    async (values: Readonly<Record<string, string>>): Promise<SubmitResult> => {
+      try {
+        const result = await signIn('credentials', {
+          identifier: values.identifier,
+          password: values.password,
+          redirect: false,
+        });
+        if (result?.error) return 'Invalid email/phone or password';
         onClose();
         router.refresh();
+      } catch {
+        return 'An unexpected error occurred';
       }
-    } catch {
-      setError('An unexpected error occurred');
-    } finally {
-      setLoading(false);
-    }
-  }
+    },
+    [onClose, router],
+  );
 
   if (!isOpen) return null;
 
@@ -85,9 +97,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
       />
 
       {/* Modal */}
-      <div
-        className="relative w-full sm:max-w-md bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl z-10 max-h-[90vh] overflow-y-auto pb-[env(safe-area-inset-bottom)]"
-      >
+      <div className="relative w-full sm:max-w-md bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl z-10 max-h-[90vh] overflow-y-auto pb-[env(safe-area-inset-bottom)]">
         {/* Drag handle for mobile */}
         <div className="sm:hidden flex justify-center pt-3 pb-1">
           <div className="w-10 h-1 rounded-full bg-gray-300" />
@@ -117,57 +127,14 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
           </div>
 
           {/* Credentials form */}
-          <form onSubmit={handleCredentialsLogin} className="space-y-4">
-            <div>
-              <label htmlFor="login-identifier" className="block text-sm font-medium text-gray-700 mb-1">
-                Email or Phone Number
-              </label>
-              <input
-                ref={firstFocusRef}
-                id="login-identifier"
-                type="text"
-                value={identifier}
-                onChange={(e) => setIdentifier(e.target.value)}
-                className="w-full px-4 py-3 text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
-                placeholder="you@example.com or +1234567890"
-                required
-                autoComplete="username"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="login-password" className="block text-sm font-medium text-gray-700 mb-1">
-                Password
-              </label>
-              <div className="relative">
-                <input
-                  id="login-password"
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-4 py-3 text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all pr-12"
-                  placeholder="Enter your password"
-                  required
-                  autoComplete="current-password"
-                />
-                <PasswordToggleButton showPassword={showPassword} onToggle={() => setShowPassword(!showPassword)} />
-              </div>
-            </div>
-
-            {error && (
-              <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2" role="alert">
-                {error}
-              </p>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-300 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? 'Logging in...' : 'Login'}
-            </button>
-          </form>
+          <DynamicForm
+            fields={LOGIN_FIELDS}
+            onSubmit={handleSubmit}
+            submitLabel="Login"
+            submittingLabel="Logging in..."
+            submitButtonClassName={SUBMIT_BTN}
+            formClassName="space-y-4"
+          />
 
           {/* Divider */}
           <div className="relative my-6">
