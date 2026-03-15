@@ -15,7 +15,7 @@ export default function AboutPage() {
         <ScatteredFlowers />
 
         <div className="relative z-10">
-          <h1 className="text-4xl font-extrabold text-warm-heading mb-2 animate-fade-in-up" style={{ fontStyle: 'italic' }}>About Us</h1>
+          <h1 className="text-4xl font-extrabold text-warm-heading mb-2 italic animate-fade-in-up">About Us</h1>
           <VineDivider className="mb-8" />
 
           {/* Mission — cottage card */}

@@ -10,7 +10,7 @@ export default function Hero() {
         {/* Main hero card — cottage-core illustration-panel style */}
         <div className="bg-white/70 backdrop-blur-sm rounded-3xl border border-[#f0d5c0] shadow-warm-lg p-8 sm:p-12 mb-10 animate-fade-in-up">
           <div className="max-w-2xl">
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-tight mb-4 text-warm-heading animate-fade-in-up" style={{ fontStyle: 'italic' }}>
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-tight mb-4 text-warm-heading italic animate-fade-in-up">
               Handmade<br />With Love
             </h1>
             <p className="text-sm sm:text-base text-[#b89a85] tracking-widest uppercase mb-6 animate-fade-in-up animation-delay-100">
