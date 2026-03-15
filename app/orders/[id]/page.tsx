@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useRef, useCallback, use } from 'react';
 import type { ReactElement } from 'react';
-import type { OrderItemWithProduct } from '@/lib/types';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useSession } from 'next-auth/react';
@@ -108,8 +107,18 @@ function StatusTimeline({ currentStep, isCancelled }: StatusTimelineProps) {
   );
 }
 
+interface OrderItemRowItem {
+  readonly id: string;
+  readonly productId: string;
+  readonly quantity: number;
+  readonly price: number;
+  readonly customizationNote?: string | null;
+  readonly product?: { id: string; name: string; image: string; price: number };
+  readonly variation?: { id: string; name: string; image?: string; priceModifier: number } | null;
+}
+
 interface OrderItemRowProps {
-  readonly item: OrderItemWithProduct;
+  readonly item: OrderItemRowItem;
   readonly formatPrice: (amount: number) => string;
 }
 

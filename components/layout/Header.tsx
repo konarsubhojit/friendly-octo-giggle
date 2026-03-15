@@ -143,7 +143,6 @@ function MobileNav({ isLoggedIn, closeMobileNav, onLoginClick }: MobileNavProps)
   return (
     <div
       id="mobile-nav-drawer"
-      role="menu"
       className="md:hidden bg-[#fef7f2]/95 backdrop-blur-lg border-t border-[#f0d5c0]/40 shadow-warm animate-fade-in"
     >
       <nav className="max-w-7xl mx-auto px-4 py-4 flex flex-col gap-1">
