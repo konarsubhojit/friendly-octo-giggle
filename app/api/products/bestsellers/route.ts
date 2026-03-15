@@ -9,7 +9,7 @@ import { withLogging } from '@/lib/api-middleware';
  * descending. Products with no sales appear at the end ordered by creation date.
  * Results are Redis-cached for 2 minutes with a 20-second stale window.
  */
-async function handleGet() {
+const handleGet = async () => {
   try {
     const products = await db.products.findBestsellers({ withCache: true });
 

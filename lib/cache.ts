@@ -107,16 +107,16 @@ export function cacheProductById<T>(
  * Cache bestsellers product list with stampede prevention
  * Uses a separate key from products:all so it can be independently refreshed
  */
-export function cacheProductsBestsellers<T>(
+export const cacheProductsBestsellers = <T>(
   fetcher: () => Promise<T>,
-): Promise<T> {
+): Promise<T> => {
   return getCachedData(
     CACHE_KEYS.PRODUCTS_BESTSELLERS,
     CACHE_TTL.PRODUCTS_BESTSELLERS,
     fetcher,
     CACHE_TTL.PRODUCTS_BESTSELLERS_STALE,
   );
-}
+};
 
 /**
  * Invalidate all product-related caches (public + admin)
@@ -177,38 +177,38 @@ export async function invalidateUserOrderCaches(userId: string): Promise<void> {
 /**
  * Cache admin orders list with stampede prevention
  */
-export function cacheAdminOrdersList<T>(fetcher: () => Promise<T>): Promise<T> {
+export const cacheAdminOrdersList = <T>(fetcher: () => Promise<T>): Promise<T> => {
   return getCachedData(
     CACHE_KEYS.ADMIN_ORDERS_ALL,
     CACHE_TTL.ADMIN_ORDERS,
     fetcher,
     CACHE_TTL.ADMIN_ORDERS_STALE,
   );
-}
+};
 
 /**
  * Cache single admin order by ID with stampede prevention
  */
-export function cacheAdminOrderById<T>(
+export const cacheAdminOrderById = <T>(
   id: string,
   fetcher: () => Promise<T>,
-): Promise<T> {
+): Promise<T> => {
   return getCachedData(
     CACHE_KEYS.ADMIN_ORDER_BY_ID(id),
     CACHE_TTL.ADMIN_ORDER_DETAIL,
     fetcher,
     CACHE_TTL.ADMIN_ORDER_DETAIL_STALE,
   );
-}
+};
 
 /**
  * Invalidate admin order-related caches
  * Called after order status updates
  */
-export async function invalidateAdminOrderCaches(
+export const invalidateAdminOrderCaches = async (
   orderId: string,
   userId?: string | null,
-): Promise<void> {
+): Promise<void> => {
   try {
     await invalidateCachePattern(CACHE_KEYS.ADMIN_ORDERS_PATTERN);
     await invalidateCachePattern(CACHE_KEYS.ADMIN_ORDER_BY_ID(orderId));
@@ -218,56 +218,56 @@ export async function invalidateAdminOrderCaches(
   } catch (error) {
     logError({ error, context: "admin_order_cache_invalidation" });
   }
-}
+};
 
 /**
  * Cache admin users list with stampede prevention
  */
-export function cacheAdminUsersList<T>(fetcher: () => Promise<T>): Promise<T> {
+export const cacheAdminUsersList = <T>(fetcher: () => Promise<T>): Promise<T> => {
   return getCachedData(
     CACHE_KEYS.ADMIN_USERS_ALL,
     CACHE_TTL.ADMIN_USERS,
     fetcher,
     CACHE_TTL.ADMIN_USERS_STALE,
   );
-}
+};
 
 /**
  * Cache single admin user by ID with stampede prevention
  */
-export function cacheAdminUserById<T>(
+export const cacheAdminUserById = <T>(
   id: string,
   fetcher: () => Promise<T>,
-): Promise<T> {
+): Promise<T> => {
   return getCachedData(
     CACHE_KEYS.ADMIN_USER_BY_ID(id),
     CACHE_TTL.ADMIN_USER_DETAIL,
     fetcher,
     CACHE_TTL.ADMIN_USER_DETAIL_STALE,
   );
-}
+};
 
 /**
  * Invalidate admin user-related caches (list + individual user)
  * Called after user role updates
  */
-export async function invalidateAdminUserCaches(userId: string): Promise<void> {
+export const invalidateAdminUserCaches = async (userId: string): Promise<void> => {
   try {
     await invalidateCachePattern(CACHE_KEYS.ADMIN_USERS_PATTERN);
     await invalidateCachePattern(CACHE_KEYS.ADMIN_USER_BY_ID(userId));
   } catch (error) {
     logError({ error, context: "admin_user_cache_invalidation" });
   }
-}
+};
 
 /**
  * Cache admin sales summary with stampede prevention
  */
-export function cacheAdminSales<T>(fetcher: () => Promise<T>): Promise<T> {
+export const cacheAdminSales = <T>(fetcher: () => Promise<T>): Promise<T> => {
   return getCachedData(
     CACHE_KEYS.ADMIN_SALES,
     CACHE_TTL.ADMIN_SALES,
     fetcher,
     CACHE_TTL.ADMIN_SALES_STALE,
   );
-}
+};

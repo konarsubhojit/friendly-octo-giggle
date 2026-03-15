@@ -15,7 +15,6 @@ vi.mock("@/lib/redis", () => ({
   invalidateCache: vi.fn(),
 }));
 vi.mock("@/lib/cache", () => ({
-  invalidateUserOrderCaches: vi.fn(),
   cacheAdminOrderById: vi.fn(),
   invalidateAdminOrderCaches: vi.fn(),
 }));
@@ -31,21 +30,16 @@ vi.mock("@/lib/logger", () => ({ logError: vi.fn() }));
 import { PATCH, GET } from "@/app/api/admin/orders/[id]/route";
 import { auth } from "@/lib/auth";
 import { drizzleDb } from "@/lib/db";
-import { getCachedData, invalidateCache } from "@/lib/redis";
 import {
   cacheAdminOrderById,
   invalidateAdminOrderCaches,
-  invalidateUserOrderCaches,
 } from "@/lib/cache";
 
 const mockAuth = vi.mocked(auth);
 const mockFindFirst = vi.mocked(drizzleDb.query.orders.findFirst);
 const mockUpdate = vi.mocked(drizzleDb.update);
-const mockGetCachedData = vi.mocked(getCachedData);
 const mockCacheAdminOrderById = vi.mocked(cacheAdminOrderById);
 const mockInvalidateAdminOrderCaches = vi.mocked(invalidateAdminOrderCaches);
-const mockInvalidateCache = vi.mocked(invalidateCache);
-const mockInvalidateUserOrderCaches = vi.mocked(invalidateUserOrderCaches);
 
 const mkReq = (body?: Record<string, unknown>) =>
   new NextRequest("http://localhost/api/admin/orders/o1", {
@@ -171,7 +165,7 @@ describe("GET /api/admin/orders/[id]", () => {
 
   it("returns order on success", async () => {
     mockAuth.mockResolvedValue(adminSession as never);
-    mockCacheAdminOrderById.mockImplementation(async (_id, fetcher) => {
+    mockCacheAdminOrderById.mockImplementation((_id, fetcher) => {
       return fetcher();
     });
     mockFindFirst.mockResolvedValue(mockOrder as never);
@@ -189,7 +183,7 @@ describe("GET /api/admin/orders/[id]", () => {
 
   it("returns 404 when not found", async () => {
     mockAuth.mockResolvedValue(adminSession as never);
-    mockCacheAdminOrderById.mockImplementation(async () => null);
+    mockCacheAdminOrderById.mockImplementation(() => Promise.resolve(null));
 
     const res = await GET(mkReq(), mkParams());
     const data = await res.json();

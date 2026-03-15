@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 // Create a cached version of bestseller products with Next.js cache tags
 const getCachedBestsellers = unstable_cache(
   async () => {
-    return db.products.findBestsellers({ withCache: true });
+    return await db.products.findBestsellers({ withCache: true });
   },
   ['products-bestsellers'],
   {

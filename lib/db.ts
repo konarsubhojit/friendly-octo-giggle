@@ -155,7 +155,7 @@ export const db = {
      * @param options - Pagination and cache options
      * @returns Array of products sorted by sales volume descending
      */
-    findBestsellers: async (
+    findBestsellers: (
       options: ProductListOptions = {},
     ): Promise<Product[]> => {
       const { limit, withCache = false } = options;
