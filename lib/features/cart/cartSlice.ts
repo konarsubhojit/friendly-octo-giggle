@@ -43,7 +43,7 @@ export const addToCart = createAsyncThunk(
 
 export const updateCartItem = createAsyncThunk(
   'cart/updateCartItem',
-  async ({ itemId, quantity }: { itemId: string; quantity: number }, { rejectWithValue }) => {
+  async ({ itemId, quantity }: { itemId: string; quantity: number }, { dispatch, rejectWithValue }) => {
     const res = await fetch(`/api/cart/items/${itemId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -55,8 +55,9 @@ export const updateCartItem = createAsyncThunk(
       return rejectWithValue(data.error || 'Failed to update item');
     }
 
-    const data = await res.json();
-    return data.cart as Cart;
+    // The PATCH endpoint returns { success: true } without cart data.
+    // Re-fetch the full cart so the Redux state stays in sync.
+    return dispatch(fetchCart()).unwrap();
   }
 );
 

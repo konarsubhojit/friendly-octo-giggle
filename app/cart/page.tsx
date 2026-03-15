@@ -246,7 +246,10 @@ export default function CartPage() {
   const CART_SUBMIT_BTN =
     'w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3.5 rounded-xl font-bold text-base hover:from-blue-700 hover:to-purple-700 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed transition-all duration-300 shadow-lg hover:shadow-xl';
 
-  if (loading || status === 'loading') {
+  // Show the full-page spinner only on the very first load (cart not yet fetched).
+  // Background re-fetches triggered by quantity updates / removals must not
+  // replace the visible cart with a blank spinner – that is the bug we are fixing.
+  if ((loading && cart === null) || status === 'loading') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
         <Header />

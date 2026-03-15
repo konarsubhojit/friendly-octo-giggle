@@ -341,6 +341,87 @@ export const MOCK_USERS = [
   },
 ];
 
+// ─── Cart ─────────────────────────────────────────────────────────────────────
+
+export const MOCK_CART_ITEM_1 = {
+  id: 'citem0001',
+  cartId: 'cart0001',
+  productId: 'prd0001',
+  variationId: 'var0001',
+  quantity: 2,
+  createdAt: '2026-03-01T00:00:00.000Z',
+  updatedAt: '2026-03-01T00:00:00.000Z',
+  product: {
+    id: 'prd0001',
+    name: 'Hand-knitted Flower Bouquet',
+    description: 'A beautiful bouquet of hand-knitted flowers in vibrant colours, perfect for home décor or as a gift.',
+    price: 1499,
+    image: 'https://images.unsplash.com/photo-1487530811015-780be3b5e83e?w=600&q=80',
+    stock: 15,
+    category: 'Flowers',
+    deletedAt: null,
+    createdAt: '2026-01-10T08:00:00.000Z',
+    updatedAt: '2026-02-14T10:30:00.000Z',
+    variations: [
+      {
+        id: 'var0001',
+        productId: 'prd0001',
+        name: 'Small (15 cm)',
+        designName: 'Rose Red',
+        image: 'https://images.unsplash.com/photo-1487530811015-780be3b5e83e?w=600&q=80',
+        priceModifier: 0,
+        stock: 8,
+        createdAt: '2026-01-10T08:00:00.000Z',
+        updatedAt: '2026-02-14T10:30:00.000Z',
+      },
+    ],
+  },
+  variation: {
+    id: 'var0001',
+    productId: 'prd0001',
+    name: 'Small (15 cm)',
+    designName: 'Rose Red',
+    image: 'https://images.unsplash.com/photo-1487530811015-780be3b5e83e?w=600&q=80',
+    priceModifier: 0,
+    stock: 8,
+    createdAt: '2026-01-10T08:00:00.000Z',
+    updatedAt: '2026-02-14T10:30:00.000Z',
+  },
+};
+
+export const MOCK_CART_ITEM_2 = {
+  id: 'citem0002',
+  cartId: 'cart0001',
+  productId: 'prd0002',
+  variationId: null,
+  quantity: 1,
+  createdAt: '2026-03-01T00:00:00.000Z',
+  updatedAt: '2026-03-01T00:00:00.000Z',
+  product: {
+    id: 'prd0002',
+    name: 'Macramé Wall Hanging',
+    description: 'Handcrafted macramé wall hanging with intricate knotwork. Adds a bohemian touch to any room.',
+    price: 2299,
+    image: 'https://images.unsplash.com/photo-1545127398-14699f92334b?w=600&q=80',
+    stock: 8,
+    category: 'Home Décor',
+    deletedAt: null,
+    createdAt: '2026-01-15T09:00:00.000Z',
+    updatedAt: '2026-02-20T11:00:00.000Z',
+    variations: [],
+  },
+  variation: null,
+};
+
+export const MOCK_CART = {
+  id: 'cart0001',
+  userId: 'dev-copilot-admin',
+  sessionId: null,
+  createdAt: '2026-03-01T00:00:00.000Z',
+  updatedAt: '2026-03-01T00:00:00.000Z',
+  items: [MOCK_CART_ITEM_1, MOCK_CART_ITEM_2],
+};
+
 // ─── Sales summary ────────────────────────────────────────────────────────────
 
 export const MOCK_SALES = {
