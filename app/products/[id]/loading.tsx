@@ -1,7 +1,5 @@
 import HeaderSkeleton from '@/components/skeletons/HeaderSkeleton';
 
-import HeaderSkeleton from '@/components/skeletons/HeaderSkeleton';
-
 const VARIATION_SKELETONS = ['v1', 'v2', 'v3', 'v4'] as const;
 
 function ImageSkeleton() {

@@ -77,6 +77,7 @@ function StatusTimeline({ currentStep, isCancelled }: StatusTimelineProps) {
         const isCompleted = index <= currentStep;
         const isCurrent = index === currentStep;
         const classes = STEP_CLASSES[isCompleted ? 'completed' : 'default'];
+        const connectorKey = index < currentStep ? 'completed' : 'default';
         return (
           <div key={step} className="flex items-center flex-1">
             <div className="flex flex-col items-center flex-shrink-0">
@@ -97,7 +98,7 @@ function StatusTimeline({ currentStep, isCancelled }: StatusTimelineProps) {
             </div>
             {index < STATUS_STEPS.length - 1 && (
               <div
-                className={`flex-1 h-1 mx-2 rounded-full transition-all ${STEP_CLASSES[index < currentStep ? 'completed' : 'default'].connector}`}
+                className={`flex-1 h-1 mx-2 rounded-full transition-all ${STEP_CLASSES[connectorKey].connector}`}
               />
             )}
           </div>
