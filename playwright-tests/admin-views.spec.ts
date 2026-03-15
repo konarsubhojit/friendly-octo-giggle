@@ -220,3 +220,82 @@ test.describe('Admin layout', () => {
     await page.screenshot({ path: screenshotPath('admin-nav-mobile'), fullPage: false });
   });
 });
+
+// ─── Admin Orders – Status Change Confirmation ────────────────────────────────
+
+test.describe('Admin Orders - status change confirmation', () => {
+  test('shows confirm dialog when status is changed', async ({ page }) => {
+    await mockAdminRoutes(page);
+    await page.goto('/admin/orders');
+    // Wait for orders to load
+    await expect(page.getByText('Order Management')).toBeVisible();
+
+    // Find the first status select and change it to a different value
+    const statusSelect = page.getByLabel(/change status for order/i).first();
+    await statusSelect.selectOption({ label: 'PROCESSING' });
+
+    // The confirm dialog should appear
+    await expect(page.getByRole('dialog')).toBeVisible();
+    await expect(page.getByText('Change Order Status')).toBeVisible();
+    await page.screenshot({ path: screenshotPath('admin-order-status-confirm-dialog'), fullPage: false });
+  });
+
+  test('cancels status change when Cancel is clicked in dialog', async ({ page }) => {
+    await mockAdminRoutes(page);
+    await page.goto('/admin/orders');
+    await expect(page.getByText('Order Management')).toBeVisible();
+
+    const statusSelect = page.getByLabel(/change status for order/i).first();
+    const originalStatus = await statusSelect.inputValue();
+    await statusSelect.selectOption({ index: 1 });
+
+    // Confirm dialog appears; click Cancel
+    await expect(page.getByRole('dialog')).toBeVisible();
+    await page.getByRole('button', { name: /cancel/i }).last().click();
+
+    // Dialog should be gone and no PATCH request should have been made
+    await expect(page.getByRole('dialog')).not.toBeVisible();
+    // Select should still show original value
+    await expect(statusSelect).toHaveValue(originalStatus);
+    await page.screenshot({ path: screenshotPath('admin-order-status-cancelled'), fullPage: false });
+  });
+});
+
+// ─── Admin Users – Role Change Confirmation ────────────────────────────────────
+
+test.describe('Admin Users - role change confirmation', () => {
+  test('shows confirm dialog when role is changed', async ({ page }) => {
+    await mockAdminRoutes(page);
+    await page.goto('/admin/users');
+    await expect(page.getByText('User Management')).toBeVisible();
+
+    // Find a CUSTOMER role select (the second user in MOCK_USERS is a CUSTOMER)
+    // and switch to ADMIN. Use .nth(1) to skip the first row (which is already ADMIN).
+    const roleSelect = page.getByLabel(/change role for/i).nth(1);
+    await roleSelect.selectOption('ADMIN');
+
+    // Confirm dialog should appear
+    await expect(page.getByRole('dialog')).toBeVisible();
+    await expect(page.getByText('Change User Role')).toBeVisible();
+    await page.screenshot({ path: screenshotPath('admin-user-role-confirm-dialog'), fullPage: false });
+  });
+
+  test('cancels role change when Cancel is clicked in dialog', async ({ page }) => {
+    await mockAdminRoutes(page);
+    await page.goto('/admin/users');
+    await expect(page.getByText('User Management')).toBeVisible();
+
+    // Use the second user (a CUSTOMER) to avoid hitting the "can't change own role" guard
+    const roleSelect = page.getByLabel(/change role for/i).nth(1);
+    const originalRole = await roleSelect.inputValue();
+    const newRole = originalRole === 'CUSTOMER' ? 'ADMIN' : 'CUSTOMER';
+    await roleSelect.selectOption(newRole);
+
+    await expect(page.getByRole('dialog')).toBeVisible();
+    await page.getByRole('button', { name: /cancel/i }).last().click();
+
+    await expect(page.getByRole('dialog')).not.toBeVisible();
+    await expect(roleSelect).toHaveValue(originalRole);
+    await page.screenshot({ path: screenshotPath('admin-user-role-cancelled'), fullPage: false });
+  });
+});

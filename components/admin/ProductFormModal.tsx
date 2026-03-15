@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import { logError } from '@/lib/logger';
 import { isValidImageType, MAX_FILE_SIZE, VALID_IMAGE_TYPES_DISPLAY } from '@/lib/upload-constants';
 import { useCurrency, CURRENCIES, type CurrencyCode } from '@/contexts/CurrencyContext';
+import { PRODUCT_ERRORS, API_ERRORS } from '@/lib/constants/error-messages';
 
 interface ProductFormData {
   name: string;
@@ -65,6 +66,44 @@ export default function ProductFormModal({
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof ProductFormData, string>>>({});
+
+  /** Per-field validators — each returns an error string or undefined. */
+  const validateName = (v: string) => {
+    if (!v.trim()) return PRODUCT_ERRORS.NAME_REQUIRED;
+    if (v.trim().length < 2) return PRODUCT_ERRORS.NAME_TOO_SHORT;
+    return undefined;
+  };
+  const validateDescription = (v: string) => v.trim() ? undefined : PRODUCT_ERRORS.DESCRIPTION_REQUIRED;
+  const validatePrice = (v: number) => (!v || v <= 0) ? PRODUCT_ERRORS.PRICE_POSITIVE : undefined;
+  const validateStock = (v: number) => (v < 0 || !Number.isInteger(v)) ? PRODUCT_ERRORS.STOCK_INVALID : undefined;
+  const validateCategory = (v: string) => v.trim() ? undefined : PRODUCT_ERRORS.CATEGORY_REQUIRED;
+  const validateImage = (hasExisting: boolean, hasFile: boolean) =>
+    (!hasExisting && !hasFile) ? PRODUCT_ERRORS.IMAGE_REQUIRED : undefined;
+
+  /** Validate all fields and return true if there are no errors. */
+  const validate = (): boolean => {
+    const errors: Partial<Record<keyof ProductFormData, string>> = {
+      name: validateName(formData.name),
+      description: validateDescription(formData.description),
+      price: validatePrice(formData.price),
+      stock: validateStock(formData.stock),
+      category: validateCategory(formData.category),
+      image: editingProduct ? undefined : validateImage(!!formData.image, !!imageFile),
+    };
+    // Remove undefined entries before setting
+    const filtered = Object.fromEntries(
+      Object.entries(errors).filter(([, v]) => v !== undefined),
+    ) as Partial<Record<keyof ProductFormData, string>>;
+    setFieldErrors(filtered);
+    return Object.keys(filtered).length === 0;
+  };
+
+  const clearFieldError = (field: keyof ProductFormData) => {
+    if (fieldErrors[field]) {
+      setFieldErrors((prev) => ({ ...prev, [field]: undefined }));
+    }
+  };
 
   const handlePriceCurrencyChange = (newCurrency: CurrencyCode) => {
     setFormData({ ...formData, price: convertCurrency(formData.price, priceCurrency, newCurrency, rates) });
@@ -73,19 +112,17 @@ export default function ProductFormModal({
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      if (!isValidImageType(file.type)) {
-        toast.error(`Invalid file type. Only ${VALID_IMAGE_TYPES_DISPLAY} are allowed.`);
-        return;
-      }
-
-      if (file.size > MAX_FILE_SIZE) {
-        toast.error(`File too large. Maximum size is ${MAX_FILE_SIZE / 1024 / 1024}MB.`);
-        return;
-      }
-
-      setImageFile(file);
+    if (!file) return;
+    if (!isValidImageType(file.type)) {
+      setFieldErrors((prev) => ({ ...prev, image: PRODUCT_ERRORS.IMAGE_TYPE_INVALID(VALID_IMAGE_TYPES_DISPLAY) }));
+      return;
     }
+    if (file.size > MAX_FILE_SIZE) {
+      setFieldErrors((prev) => ({ ...prev, image: PRODUCT_ERRORS.IMAGE_SIZE_EXCEEDED(MAX_FILE_SIZE / 1024 / 1024) }));
+      return;
+    }
+    setFieldErrors((prev) => ({ ...prev, image: undefined }));
+    setImageFile(file);
   };
 
   const uploadImage = async (): Promise<string | null> => {
@@ -110,7 +147,7 @@ export default function ProductFormModal({
       return data.data.url;
     } catch (err) {
       logError({ error: err, context: 'uploadImage' });
-      toast.error('Something went wrong. Please try again.');
+      toast.error(API_ERRORS.IMAGE_UPLOAD);
       return null;
     } finally {
       setUploading(false);
@@ -137,66 +174,47 @@ export default function ProductFormModal({
     return textMap[mode];
   };
 
+  /** Call the save API and return the saved product, or throw on error. */
+  const saveProductToApi = async (imageUrl: string) => {
+    const productData = {
+      ...formData,
+      price: convertCurrency(formData.price, priceCurrency, 'INR', rates),
+      image: imageUrl,
+    };
+    const url = editingProduct ? `/api/admin/products/${editingProduct.id}` : '/api/admin/products';
+    const method = editingProduct ? 'PUT' : 'POST';
+    const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(productData) });
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.error || 'Failed to save product');
+    }
+    const saved = await res.json();
+    return saved.data?.product || saved.product || saved;
+  };
+
   const handleSubmit = async (e: React.BaseSyntheticEvent) => {
     e.preventDefault();
+    if (!validate()) return;
     setSaving(true);
-
     try {
-        let imageUrl = formData.image;
-        if (imageFile) {
-          const uploadedUrl = await uploadImage();
-          if (!uploadedUrl) {
-            setSaving(false);
-            return;
-          }
-          imageUrl = uploadedUrl;
-        }
-
-        if (!imageUrl) {
-          toast.error('Product image is required');
-          setSaving(false);
-          return;
-        }
-
-        const productData = {
-          ...formData,
-          price: convertCurrency(formData.price, priceCurrency, 'INR', rates),
-          image: imageUrl,
-        };
-
-        const url = editingProduct
-          ? `/api/admin/products/${editingProduct.id}`
-          : '/api/admin/products';
-
-        const method = editingProduct ? 'PUT' : 'POST';
-
-        const res = await fetch(url, {
-          method,
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(productData),
-        });
-
-        if (!res.ok) {
-          const error = await res.json();
-          throw new Error(error.error || 'Failed to save product');
-        }
-
-        const saved = await res.json();
-        const savedProduct = saved.data?.product || saved.product || saved;
-
-        toast.success(
-          editingProduct
-            ? 'Product updated successfully'
-            : 'Product created successfully'
-        );
-
+      let imageUrl = formData.image;
+      if (imageFile) {
+        const uploadedUrl = await uploadImage();
+        if (!uploadedUrl) { setSaving(false); return; }
+        imageUrl = uploadedUrl;
+      }
+      if (!imageUrl) {
+        setFieldErrors((prev) => ({ ...prev, image: PRODUCT_ERRORS.IMAGE_REQUIRED }));
+        setSaving(false);
+        return;
+      }
+      const savedProduct = await saveProductToApi(imageUrl);
+      toast.success(editingProduct ? 'Product updated successfully' : 'Product created successfully');
       onSuccess(savedProduct);
       onClose();
     } catch (err) {
       logError({ error: err, context: 'handleSubmit' });
-      toast.error('Something went wrong. Please try again.');
+      toast.error(API_ERRORS.PRODUCT_SAVE);
     } finally {
       setSaving(false);
     }
@@ -220,13 +238,18 @@ export default function ProductFormModal({
                   id="product-name"
                   type="text"
                   value={formData.name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
-                  }
+                  onChange={(e) => {
+                    setFormData({ ...formData, name: e.target.value });
+                    clearFieldError('name');
+                  }}
                   required
                   maxLength={200}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  aria-describedby={fieldErrors.name ? 'product-name-error' : undefined}
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${fieldErrors.name ? 'border-red-400' : 'border-gray-300'}`}
                 />
+                {fieldErrors.name && (
+                  <p id="product-name-error" className="text-xs text-red-600 mt-1">{fieldErrors.name}</p>
+                )}
               </div>
 
               <div>
@@ -236,14 +259,19 @@ export default function ProductFormModal({
                 <textarea
                   id="product-description"
                   value={formData.description}
-                  onChange={(e) =>
-                    setFormData({ ...formData, description: e.target.value })
-                  }
+                  onChange={(e) => {
+                    setFormData({ ...formData, description: e.target.value });
+                    clearFieldError('description');
+                  }}
                   required
                   maxLength={2000}
                   rows={4}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  aria-describedby={fieldErrors.description ? 'product-description-error' : undefined}
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${fieldErrors.description ? 'border-red-400' : 'border-gray-300'}`}
                 />
+                {fieldErrors.description && (
+                  <p id="product-description-error" className="text-xs text-red-600 mt-1">{fieldErrors.description}</p>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -273,14 +301,19 @@ export default function ProductFormModal({
                         const value = Number.parseFloat(e.target.value);
                         if (!Number.isNaN(value)) {
                           setFormData({ ...formData, price: value });
+                          clearFieldError('price');
                         }
                       }}
                       required
                       min="0.01"
                       step="0.01"
-                      className="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      aria-describedby={fieldErrors.price ? 'product-price-error' : undefined}
+                      className={`flex-1 min-w-0 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${fieldErrors.price ? 'border-red-400' : 'border-gray-300'}`}
                     />
                   </div>
+                  {fieldErrors.price && (
+                    <p id="product-price-error" className="text-xs text-red-600 mt-1">{fieldErrors.price}</p>
+                  )}
                 </div>
 
                 <div>
@@ -295,13 +328,18 @@ export default function ProductFormModal({
                       const value = Number.parseInt(e.target.value, 10);
                       if (!Number.isNaN(value)) {
                         setFormData({ ...formData, stock: value });
+                        clearFieldError('stock');
                       }
                     }}
                     required
                     min="0"
                     step="1"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    aria-describedby={fieldErrors.stock ? 'product-stock-error' : undefined}
+                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${fieldErrors.stock ? 'border-red-400' : 'border-gray-300'}`}
                   />
+                  {fieldErrors.stock && (
+                    <p id="product-stock-error" className="text-xs text-red-600 mt-1">{fieldErrors.stock}</p>
+                  )}
                 </div>
               </div>
 
@@ -313,13 +351,18 @@ export default function ProductFormModal({
                   id="product-category"
                   type="text"
                   value={formData.category}
-                  onChange={(e) =>
-                    setFormData({ ...formData, category: e.target.value })
-                  }
+                  onChange={(e) => {
+                    setFormData({ ...formData, category: e.target.value });
+                    clearFieldError('category');
+                  }}
                   required
                   maxLength={100}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  aria-describedby={fieldErrors.category ? 'product-category-error' : undefined}
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${fieldErrors.category ? 'border-red-400' : 'border-gray-300'}`}
                 />
+                {fieldErrors.category && (
+                  <p id="product-category-error" className="text-xs text-red-600 mt-1">{fieldErrors.category}</p>
+                )}
               </div>
 
               <div>
@@ -342,7 +385,8 @@ export default function ProductFormModal({
                   type="file"
                   accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
                   onChange={handleImageChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  aria-describedby={fieldErrors.image ? 'product-image-error' : undefined}
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${fieldErrors.image ? 'border-red-400' : 'border-gray-300'}`}
                 />
                 <p className="text-xs text-gray-500 mt-1">
                   {editingProduct
@@ -350,7 +394,10 @@ export default function ProductFormModal({
                     : 'Required. '}
                   Max {MAX_FILE_SIZE / 1024 / 1024}MB. Formats: {VALID_IMAGE_TYPES_DISPLAY}
                 </p>
-                {imageFile && (
+                {fieldErrors.image && (
+                  <p id="product-image-error" className="text-xs text-red-600 mt-1">{fieldErrors.image}</p>
+                )}
+                {imageFile && !fieldErrors.image && (
                   <p className="text-sm text-green-600 mt-1">
                     Selected: {imageFile.name}
                   </p>

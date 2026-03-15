@@ -12,6 +12,7 @@ import {
 } from '@/lib/features/admin/adminSlice';
 import type { AppDispatch } from '@/lib/store';
 import { logError } from '@/lib/logger';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 
 interface AdminUser {
   readonly id: string;
@@ -56,19 +57,48 @@ function RoleAction({
   readonly isUpdating: boolean;
   readonly onRoleChange: (userId: string, newRole: 'ADMIN' | 'CUSTOMER') => void;
 }) {
+  const [pendingRole, setPendingRole] = useState<'ADMIN' | 'CUSTOMER' | null>(null);
+
   if (isUpdating) {
     return <div className="inline-block w-4 h-4 border-2 border-gray-200 border-t-blue-600 rounded-full animate-spin" />;
   }
 
+  const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newRole = e.target.value as 'ADMIN' | 'CUSTOMER';
+    if (newRole !== user.role) {
+      setPendingRole(newRole);
+    }
+  };
+
+  const handleConfirm = () => {
+    if (pendingRole) {
+      onRoleChange(user.id, pendingRole);
+      setPendingRole(null);
+    }
+  };
+
   return (
-    <select
-      value={user.role}
-      onChange={(e) => onRoleChange(user.id, e.target.value as 'ADMIN' | 'CUSTOMER')}
-      className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-    >
-      <option value="CUSTOMER">Customer</option>
-      <option value="ADMIN">Admin</option>
-    </select>
+    <>
+      <ConfirmDialog
+        isOpen={pendingRole !== null}
+        title="Change User Role"
+        message={`Change ${user.name || user.email}'s role from "${user.role}" to "${pendingRole ?? ''}"?`}
+        confirmLabel="Yes, change role"
+        variant="warning"
+        loading={isUpdating}
+        onConfirm={handleConfirm}
+        onCancel={() => setPendingRole(null)}
+      />
+      <select
+        value={user.role}
+        onChange={handleSelectChange}
+        className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        aria-label={`Change role for ${user.name || user.email}`}
+      >
+        <option value="CUSTOMER">Customer</option>
+        <option value="ADMIN">Admin</option>
+      </select>
+    </>
   );
 }
 
