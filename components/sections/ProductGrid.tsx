@@ -125,7 +125,8 @@ export default function ProductGrid({ products }: ProductGridProps) {
         </div>
 
         {/* Category pills */}
-        <div className="flex flex-wrap gap-2" role="group" aria-label="Filter by category">
+        <fieldset className="flex flex-wrap gap-2" aria-label="Filter by category">
+          <legend className="sr-only">Filter by category</legend>
           {CATEGORIES.map((cat) => (
             <button
               key={cat}
@@ -140,7 +141,7 @@ export default function ProductGrid({ products }: ProductGridProps) {
               {cat}
             </button>
           ))}
-        </div>
+        </fieldset>
       </div>
 
       {filtered.length === 0 ? (
