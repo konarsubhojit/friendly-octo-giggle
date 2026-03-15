@@ -3,7 +3,7 @@ import { orders, orderItems, products, users } from '@/lib/schema';
 import { sql, eq, count, and, gte, lt, ne } from 'drizzle-orm';
 import { apiSuccess, apiError, handleApiError } from '@/lib/api-utils';
 import { auth } from '@/lib/auth';
-import { getCachedData } from '@/lib/redis';
+import { cacheAdminSales } from '@/lib/cache';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,10 +25,7 @@ export async function GET() {
   }
 
   try {
-    const sales = await getCachedData(
-      'admin:sales:summary',
-      120,
-      async () => {
+    const sales = await cacheAdminSales(async () => {
         const now = new Date();
         const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -123,9 +120,7 @@ export async function GET() {
           })),
           totalCustomers: customerCount.count,
         };
-      },
-      30
-    );
+      });
 
     return apiSuccess({ sales });
   } catch (error) {

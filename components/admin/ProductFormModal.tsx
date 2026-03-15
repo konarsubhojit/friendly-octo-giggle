@@ -63,6 +63,11 @@ export default function ProductFormModal({
           image: '',
         }
   );
+  // Separate string state for the stock input to allow intermediate empty values
+  // (e.g. clearing "5" before typing "0" without the field reverting)
+  const [stockInput, setStockInput] = useState(
+    String(editingProduct ? editingProduct.stock : 0),
+  );
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -323,12 +328,20 @@ export default function ProductFormModal({
                   <input
                     id="product-stock"
                     type="number"
-                    value={formData.stock}
+                    value={stockInput}
                     onChange={(e) => {
-                      const value = Number.parseInt(e.target.value, 10);
-                      if (!Number.isNaN(value)) {
-                        setFormData({ ...formData, stock: value });
+                      const raw = e.target.value;
+                      setStockInput(raw);
+                      if (raw === '') {
+                        // Allow clearing the field; treat as 0 for form submission
+                        setFormData({ ...formData, stock: 0 });
                         clearFieldError('stock');
+                      } else {
+                        const value = Number.parseInt(raw, 10);
+                        if (!Number.isNaN(value) && value >= 0) {
+                          setFormData({ ...formData, stock: value });
+                          clearFieldError('stock');
+                        }
                       }
                     }}
                     required

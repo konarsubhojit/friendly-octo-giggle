@@ -9,15 +9,14 @@ import {
   handleValidationError,
 } from "@/lib/api-utils";
 import { auth } from "@/lib/auth";
-import { getCachedData, invalidateCache } from "@/lib/redis";
-import { invalidateUserOrderCaches } from "@/lib/cache";
+import { cacheAdminOrderById, invalidateAdminOrderCaches } from "@/lib/cache";
 import { serializeOrder } from "@/lib/serializers";
 import { UpdateOrderStatusSchema } from "@/lib/validations";
 
 export const dynamic = "force-dynamic";
 
 // Check if user is admin
-async function checkAdminAuth() {
+const checkAdminAuth = async () => {
   const session = await auth();
 
   if (!session?.user) {
@@ -37,13 +36,13 @@ async function checkAdminAuth() {
   }
 
   return { authorized: true };
-}
+};
 
-function buildUpdateData(data: {
+const buildUpdateData = (data: {
   status: "PENDING" | "PROCESSING" | "SHIPPED" | "DELIVERED" | "CANCELLED";
   trackingNumber?: string | null;
   shippingProvider?: string | null;
-}) {
+}) => {
   const optional = Object.fromEntries(
     Object.entries({
       trackingNumber: data.trackingNumber,
@@ -51,15 +50,7 @@ function buildUpdateData(data: {
     }).filter(([, v]) => v !== undefined),
   );
   return { status: data.status, updatedAt: new Date(), ...optional };
-}
-
-async function invalidateOrderCaches(orderId: string, userId?: string | null) {
-  await invalidateCache("admin:orders:*");
-  await invalidateCache(`admin:order:${orderId}`);
-  if (userId) {
-    await invalidateUserOrderCaches(userId);
-  }
-}
+};
 
 export async function PATCH(
   request: NextRequest,
@@ -93,7 +84,7 @@ export async function PATCH(
       return apiError("Order not found", 404);
     }
 
-    await invalidateOrderCaches(id, order.userId);
+    await invalidateAdminOrderCaches(id, order.userId);
 
     return apiSuccess({ order: serializeOrder(order) });
   } catch (error) {
@@ -113,17 +104,11 @@ export async function GET(
   try {
     const { id } = await params;
 
-    // Use Redis cache for individual order
-    const order = await getCachedData(
-      `admin:order:${id}`,
-      60, // Cache for 1 minute
-      async () => {
-        return await drizzleDb.query.orders.findFirst({
-          where: eq(orders.id, id),
-          with: { items: { with: { product: true, variation: true } } },
-        });
-      },
-      10, // Stale time
+    const order = await cacheAdminOrderById(id, () =>
+      drizzleDb.query.orders.findFirst({
+        where: eq(orders.id, id),
+        with: { items: { with: { product: true, variation: true } } },
+      }),
     );
 
     if (!order) {

@@ -25,12 +25,13 @@ import {
   cartsRelations,
   cartItemsRelations,
 } from "./schema";
-import { eq, desc, and, isNull } from "drizzle-orm";
+import { eq, desc, and, isNull, sql, ne } from "drizzle-orm";
 import { Product, ProductInput } from "./types";
 import { env } from "./env";
 import {
   cacheProductsList,
   cacheProductById,
+  cacheProductsBestsellers,
   invalidateProductCaches,
 } from "./cache";
 
@@ -132,6 +133,112 @@ export const db = {
       // Use cache only if explicitly requested and no pagination
       if (withCache && !limit && !offset) {
         return cacheProductsList(fetcher);
+      }
+
+      return fetcher();
+    },
+
+    /**
+     * Find products sorted by total units sold (bestsellers first).
+     * Products with no sales appear at the end, ordered by creation date.
+     * Only counts items from non-cancelled orders.
+     *
+     * The sort and limit are pushed entirely to SQL using a LEFT JOIN subquery
+     * so that only the final result-set rows are loaded into memory. Variations
+     * are fetched in a second, narrowly-scoped query so we never load the full
+     * catalog into Node.
+     *
+     * Caching is only enabled when no `limit` is requested, mirroring the
+     * `findAll` behavior to avoid cache-key collisions between differently-sized
+     * result sets.
+     *
+     * @param options - Pagination and cache options
+     * @returns Array of products sorted by sales volume descending
+     */
+    findBestsellers: (
+      options: ProductListOptions = {},
+    ): Promise<Product[]> => {
+      const { limit, withCache = false } = options;
+
+      const fetcher = async () => {
+        // Single SQL query: LEFT JOIN a sales-aggregate subquery so products
+        // with no sales still appear (totalSold = 0), then sort + limit in DB.
+        const salesSubquery = drizzleDb
+          .select({
+            productId: orderItems.productId,
+            totalSold:
+              sql<number>`cast(coalesce(sum(${orderItems.quantity}), 0) as int)`.as(
+                "total_sold",
+              ),
+          })
+          .from(orderItems)
+          .innerJoin(
+            orders,
+            and(
+              eq(orders.id, orderItems.orderId),
+              ne(orders.status, "CANCELLED"),
+            ),
+          )
+          .groupBy(orderItems.productId)
+          .as("sales");
+
+        const rows = await drizzleDb
+          .select({
+            id: products.id,
+            name: products.name,
+            description: products.description,
+            price: products.price,
+            image: products.image,
+            stock: products.stock,
+            category: products.category,
+            deletedAt: products.deletedAt,
+            createdAt: products.createdAt,
+            updatedAt: products.updatedAt,
+          })
+          .from(products)
+          .leftJoin(salesSubquery, eq(products.id, salesSubquery.productId))
+          .where(isNull(products.deletedAt))
+          .orderBy(
+            desc(salesSubquery.totalSold),
+            desc(products.createdAt),
+          )
+          .$dynamic()
+          .then((r) => (limit ? r.slice(0, limit) : r));
+
+        if (rows.length === 0) return [];
+
+        // Fetch variations only for the products that made the cut
+        const productIds = rows.map((r) => r.id);
+        const varRows = await drizzleDb.query.productVariations.findMany({
+          where: (pv, { inArray }) => inArray(pv.productId, productIds),
+        });
+
+        // Group variations by productId for O(1) lookup
+        const varsByProduct = new Map<string, typeof varRows>();
+        for (const v of varRows) {
+          const list = varsByProduct.get(v.productId) ?? [];
+          list.push(v);
+          varsByProduct.set(v.productId, list);
+        }
+
+        return rows.map((p) => ({
+          ...p,
+          deletedAt: null,
+          createdAt: p.createdAt.toISOString(),
+          updatedAt: p.updatedAt.toISOString(),
+          variations: (varsByProduct.get(p.id) ?? []).map((v) => ({
+            ...v,
+            image: v.image ?? null,
+            createdAt: v.createdAt.toISOString(),
+            updatedAt: v.updatedAt.toISOString(),
+          })),
+        }));
+      };
+
+      // Only cache when there is no pagination — a limited result set would
+      // collide with the full-catalog entry under the same cache key.
+      if (withCache && !limit) {
+        return cacheProductsBestsellers(fetcher);
       }
 
       return fetcher();

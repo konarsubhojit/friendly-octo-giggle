@@ -16,12 +16,12 @@ export const metadata: Metadata = {
   description: 'Discover beautiful handmade decorations and cozy wearables — flower bouquets, keyrings, hand warmers, mufflers, scarves, and more.',
 };
 
-// Create a cached version of product fetching with Next.js cache tags
-const getCachedProducts = unstable_cache(
+// Create a cached version of bestseller products with Next.js cache tags
+const getCachedBestsellers = unstable_cache(
   async () => {
-    return db.products.findAll({ withCache: true });
+    return await db.products.findBestsellers({ withCache: true });
   },
-  ['products-list'],
+  ['products-bestsellers'],
   {
     revalidate: 60,
     tags: ['products'],
@@ -31,9 +31,9 @@ const getCachedProducts = unstable_cache(
 export default async function Home() {
   let products: Product[] = [];
   try {
-    products = await getCachedProducts();
+    products = await getCachedBestsellers();
   } catch (error) {
-    logError({ error, context: 'home_products_fetch' });
+    logError({ error, context: 'home_bestsellers_fetch' });
   }
 
   return (

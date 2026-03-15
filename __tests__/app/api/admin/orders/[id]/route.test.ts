@@ -14,7 +14,10 @@ vi.mock("@/lib/redis", () => ({
   getCachedData: vi.fn(),
   invalidateCache: vi.fn(),
 }));
-vi.mock("@/lib/cache", () => ({ invalidateUserOrderCaches: vi.fn() }));
+vi.mock("@/lib/cache", () => ({
+  cacheAdminOrderById: vi.fn(),
+  invalidateAdminOrderCaches: vi.fn(),
+}));
 vi.mock("@/lib/serializers", () => ({
   serializeOrder: vi.fn((o) => ({ ...o, serialized: true })),
 }));
@@ -27,15 +30,16 @@ vi.mock("@/lib/logger", () => ({ logError: vi.fn() }));
 import { PATCH, GET } from "@/app/api/admin/orders/[id]/route";
 import { auth } from "@/lib/auth";
 import { drizzleDb } from "@/lib/db";
-import { getCachedData, invalidateCache } from "@/lib/redis";
-import { invalidateUserOrderCaches } from "@/lib/cache";
+import {
+  cacheAdminOrderById,
+  invalidateAdminOrderCaches,
+} from "@/lib/cache";
 
 const mockAuth = vi.mocked(auth);
 const mockFindFirst = vi.mocked(drizzleDb.query.orders.findFirst);
 const mockUpdate = vi.mocked(drizzleDb.update);
-const mockGetCachedData = vi.mocked(getCachedData);
-const mockInvalidateCache = vi.mocked(invalidateCache);
-const mockInvalidateUserOrderCaches = vi.mocked(invalidateUserOrderCaches);
+const mockCacheAdminOrderById = vi.mocked(cacheAdminOrderById);
+const mockInvalidateAdminOrderCaches = vi.mocked(invalidateAdminOrderCaches);
 
 const mkReq = (body?: Record<string, unknown>) =>
   new NextRequest("http://localhost/api/admin/orders/o1", {
@@ -113,9 +117,7 @@ describe("PATCH /api/admin/orders/[id]", () => {
     expect(res.status).toBe(200);
     expect(data.data.order.serialized).toBe(true);
     expect(mockUpdate).toHaveBeenCalled();
-    expect(mockInvalidateCache).toHaveBeenCalledWith("admin:orders:*");
-    expect(mockInvalidateCache).toHaveBeenCalledWith("admin:order:o1");
-    expect(mockInvalidateUserOrderCaches).toHaveBeenCalledWith("u1");
+    expect(mockInvalidateAdminOrderCaches).toHaveBeenCalledWith("o1", "u1");
   });
 
   it("returns 404 when order not found after update", async () => {
@@ -163,26 +165,25 @@ describe("GET /api/admin/orders/[id]", () => {
 
   it("returns order on success", async () => {
     mockAuth.mockResolvedValue(adminSession as never);
-    mockGetCachedData.mockImplementation(async (_key, _ttl, _fetcher) => {
-      return mockOrder;
+    mockCacheAdminOrderById.mockImplementation((_id, fetcher) => {
+      return fetcher();
     });
+    mockFindFirst.mockResolvedValue(mockOrder as never);
 
     const res = await GET(mkReq(), mkParams());
     const data = await res.json();
 
     expect(res.status).toBe(200);
     expect(data.data.order.serialized).toBe(true);
-    expect(mockGetCachedData).toHaveBeenCalledWith(
-      "admin:order:o1",
-      60,
+    expect(mockCacheAdminOrderById).toHaveBeenCalledWith(
+      "o1",
       expect.any(Function),
-      10,
     );
   });
 
   it("returns 404 when not found", async () => {
     mockAuth.mockResolvedValue(adminSession as never);
-    mockGetCachedData.mockImplementation(async () => null);
+    mockCacheAdminOrderById.mockImplementation(() => Promise.resolve(null));
 
     const res = await GET(mkReq(), mkParams());
     const data = await res.json();

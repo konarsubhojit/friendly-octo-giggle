@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
-import { getCachedData } from '@/lib/redis';
 import { apiSuccess, apiError, handleApiError } from '@/lib/api-utils';
+import { cacheProductById } from '@/lib/cache';
 
 export async function GET(
   request: NextRequest,
@@ -9,16 +9,8 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    
-    // Use Redis cache with stampede prevention
-    const product = await getCachedData(
-      `product:${id}`,
-      60,
-      async () => {
-        return await db.products.findById(id);
-      },
-      10
-    );
+
+    const product = await cacheProductById(id, () => db.products.findById(id));
 
     if (!product) {
       return apiError('Product not found', 404);
