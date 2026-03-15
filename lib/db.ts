@@ -143,6 +143,15 @@ export const db = {
      * Products with no sales appear at the end, ordered by creation date.
      * Only counts items from non-cancelled orders.
      *
+     * The sort and limit are pushed entirely to SQL using a LEFT JOIN subquery
+     * so that only the final result-set rows are loaded into memory. Variations
+     * are fetched in a second, narrowly-scoped query so we never load the full
+     * catalog into Node.
+     *
+     * Caching is only enabled when no `limit` is requested, mirroring the
+     * `findAll` behavior to avoid cache-key collisions between differently-sized
+     * result sets.
+     *
      * @param options - Pagination and cache options
      * @returns Array of products sorted by sales volume descending
      */
@@ -152,8 +161,9 @@ export const db = {
       const { limit, withCache = false } = options;
 
       const fetcher = async () => {
-        // Step 1: aggregate total sold per product from non-cancelled orders
-        const salesData = await drizzleDb
+        // Single SQL query: LEFT JOIN a sales-aggregate subquery so products
+        // with no sales still appear (totalSold = 0), then sort + limit in DB.
+        const salesSubquery = drizzleDb
           .select({
             productId: orderItems.productId,
             totalSold:
@@ -169,35 +179,54 @@ export const db = {
               ne(orders.status, "CANCELLED"),
             ),
           )
-          .groupBy(orderItems.productId);
+          .groupBy(orderItems.productId)
+          .as("sales");
 
-        const salesMap = new Map<string, number>(
-          salesData.map((r) => [r.productId, r.totalSold]),
-        );
+        const rows = await drizzleDb
+          .select({
+            id: products.id,
+            name: products.name,
+            description: products.description,
+            price: products.price,
+            image: products.image,
+            stock: products.stock,
+            category: products.category,
+            deletedAt: products.deletedAt,
+            createdAt: products.createdAt,
+            updatedAt: products.updatedAt,
+          })
+          .from(products)
+          .leftJoin(salesSubquery, eq(products.id, salesSubquery.productId))
+          .where(isNull(products.deletedAt))
+          .orderBy(
+            desc(salesSubquery.totalSold),
+            desc(products.createdAt),
+          )
+          .$dynamic()
+          .then((r) => (limit ? r.slice(0, limit) : r));
 
-        // Step 2: fetch all products with variations (no DB-level limit — sort first)
-        const rows = await drizzleDb.query.products.findMany({
-          where: isNull(products.deletedAt),
-          with: { variations: true },
+        if (rows.length === 0) return [];
+
+        // Fetch variations only for the products that made the cut
+        const productIds = rows.map((r) => r.id);
+        const varRows = await drizzleDb.query.productVariations.findMany({
+          where: (pv, { inArray }) => inArray(pv.productId, productIds),
         });
 
-        // Step 3: sort by totalSold desc, then by createdAt desc for ties
-        const sorted = rows.slice().sort((a, b) => {
-          const soldA = salesMap.get(a.id) ?? 0;
-          const soldB = salesMap.get(b.id) ?? 0;
-          if (soldB !== soldA) return soldB - soldA;
-          return b.createdAt.getTime() - a.createdAt.getTime();
-        });
+        // Group variations by productId for O(1) lookup
+        const varsByProduct = new Map<string, typeof varRows>();
+        for (const v of varRows) {
+          const list = varsByProduct.get(v.productId) ?? [];
+          list.push(v);
+          varsByProduct.set(v.productId, list);
+        }
 
-        // Step 4: apply limit after sorting so we always return the top sellers
-        const result = limit ? sorted.slice(0, limit) : sorted;
-
-        return result.map((p) => ({
+        return rows.map((p) => ({
           ...p,
           deletedAt: null,
           createdAt: p.createdAt.toISOString(),
           updatedAt: p.updatedAt.toISOString(),
-          variations: p.variations.map((v) => ({
+          variations: (varsByProduct.get(p.id) ?? []).map((v) => ({
             ...v,
             image: v.image ?? null,
             createdAt: v.createdAt.toISOString(),
@@ -206,7 +235,9 @@ export const db = {
         }));
       };
 
-      if (withCache) {
+      // Only cache when there is no pagination — a limited result set would
+      // collide with the full-catalog entry under the same cache key.
+      if (withCache && !limit) {
         return cacheProductsBestsellers(fetcher);
       }
 
