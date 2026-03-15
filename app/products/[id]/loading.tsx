@@ -3,7 +3,7 @@ import HeaderSkeleton from '@/components/skeletons/HeaderSkeleton';
 export default function ProductDetailLoading() {
   const VARIATION_SKELETONS = ['v1', 'v2', 'v3', 'v4'] as const;
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
+    <div className="min-h-screen bg-warm-gradient">
       <HeaderSkeleton />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
@@ -36,11 +36,11 @@ export default function ProductDetailLoading() {
           <div className="flex flex-col">
             <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/50 p-8 mb-6">
               {/* Title Skeleton */}
-              <div className="h-10 w-3/4 bg-gradient-to-r from-blue-200 via-purple-200 to-pink-200 rounded-lg animate-pulse mb-4" />
+              <div className="h-10 w-3/4 bg-gradient-to-r from-[#e8a87c] via-[#d4856b] to-[#c7735a] rounded-lg animate-pulse mb-4" />
 
               {/* Category Badge Skeleton */}
               <div className="mb-6">
-                <div className="h-8 w-28 bg-gradient-to-r from-blue-200 to-purple-200 rounded-full animate-pulse" />
+                <div className="h-8 w-28 bg-gradient-to-r from-[#e8a87c] to-[#d4856b] rounded-full animate-pulse" />
               </div>
 
               {/* Description Skeleton */}
@@ -51,8 +51,8 @@ export default function ProductDetailLoading() {
               </div>
 
               {/* Price Skeleton */}
-              <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border border-blue-100">
-                <div className="h-12 w-40 bg-gradient-to-r from-blue-200 to-purple-200 rounded-lg animate-pulse" />
+              <div className="mb-6 p-4 bg-gradient-to-r from-[#fde8d8] to-[#f0d5c0] rounded-xl border border-[#f0d5c0]">
+                <div className="h-12 w-40 bg-gradient-to-r from-[#e8a87c] to-[#d4856b] rounded-lg animate-pulse" />
               </div>
 
               {/* Stock Badge Skeleton */}
@@ -84,7 +84,7 @@ export default function ProductDetailLoading() {
               </div>
 
               {/* Add to Cart Button Skeleton */}
-              <div className="h-14 w-full bg-gradient-to-r from-blue-200 to-purple-200 rounded-xl animate-pulse" />
+              <div className="h-14 w-full bg-gradient-to-r from-[#e8a87c] to-[#d4856b] rounded-xl animate-pulse" />
             </div>
 
             {/* Additional Info Card Skeleton */}
@@ -92,15 +92,15 @@ export default function ProductDetailLoading() {
               <div className="h-6 w-40 bg-gray-200 rounded animate-pulse mb-4" />
               <div className="space-y-3">
                 <div className="flex items-center gap-3">
-                  <div className="h-8 w-8 bg-blue-100 rounded-full animate-pulse" />
+                  <div className="h-8 w-8 bg-[#fde8d8] rounded-full animate-pulse" />
                   <div className="h-4 w-32 bg-gray-200 rounded animate-pulse" />
                 </div>
                 <div className="flex items-center gap-3">
-                  <div className="h-8 w-8 bg-green-100 rounded-full animate-pulse" />
+                  <div className="h-8 w-8 bg-[#d4e4c4] rounded-full animate-pulse" />
                   <div className="h-4 w-40 bg-gray-200 rounded animate-pulse" />
                 </div>
                 <div className="flex items-center gap-3">
-                  <div className="h-8 w-8 bg-purple-100 rounded-full animate-pulse" />
+                  <div className="h-8 w-8 bg-[#fde8d8] rounded-full animate-pulse" />
                   <div className="h-4 w-36 bg-gray-200 rounded animate-pulse" />
                 </div>
               </div>

@@ -41,7 +41,7 @@ export default function OrdersPage() {
 
   if (authStatus === 'loading' || loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
+      <div className="min-h-screen bg-warm-gradient">
         <Header />
         <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
           <div className="flex items-center justify-center py-20">
@@ -54,7 +54,7 @@ export default function OrdersPage() {
 
   if (!session?.user) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
+      <div className="min-h-screen bg-warm-gradient">
         <Header />
         <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
           <AuthRequiredState callbackUrl="/orders" message="Please sign in to view your orders." />
@@ -64,7 +64,7 @@ export default function OrdersPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
+    <div className="min-h-screen bg-warm-gradient">
       <Header />
       <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
         <GradientHeading className="mb-8">My Orders</GradientHeading>
@@ -115,7 +115,7 @@ export default function OrdersPage() {
                         <Badge variant={orderStatusVariant(order.status)} size="sm">
                           {statusInfo.label}
                         </Badge>
-                        <span className="text-xs text-gray-500">
+                        <span className="text-xs text-[#b89a85]">
                           {new Date(order.createdAt).toLocaleDateString('en-US', {
                             year: 'numeric',
                             month: 'short',
@@ -123,17 +123,17 @@ export default function OrdersPage() {
                           })}
                         </span>
                       </div>
-                      <p className="text-sm text-gray-700 truncate">
+                      <p className="text-sm text-[#7a6355] truncate">
                         {firstItem?.product?.name}
                         {order.items.length > 1 && ` and ${order.items.length - 1} more`}
                       </p>
-                      <p className="text-xs text-gray-500 mt-1">
+                      <p className="text-xs text-[#b89a85] mt-1">
                         {itemCount} {itemCount === 1 ? 'item' : 'items'}
                       </p>
                     </div>
 
                     <div className="flex-shrink-0 text-right">
-                      <p className="text-lg font-bold text-gray-900">{formatPrice(order.totalAmount)}</p>
+                      <p className="text-lg font-bold text-[#4a3728]">{formatPrice(order.totalAmount)}</p>
                       <p className="text-xs text-gray-400">Order #{order.id}</p>
                     </div>
 

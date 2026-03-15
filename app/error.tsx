@@ -26,10 +26,10 @@ export default function GlobalError({ error, reset }: ErrorProps) {
             />
           </svg>
         </div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+        <h2 className="text-2xl font-bold text-[#4a3728] mb-2">
           Something went wrong!
         </h2>
-        <p className="text-gray-600 mb-4">
+        <p className="text-[#7a6355] mb-4">
           {error.message || 'An unexpected error occurred'}
         </p>
         {error.digest && (
@@ -37,7 +37,7 @@ export default function GlobalError({ error, reset }: ErrorProps) {
         )}
         <button
           onClick={reset}
-          className="inline-flex items-center px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+          className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-[#e8a87c] to-[#d4856b] text-white font-medium rounded-lg hover:from-[#d4856b] hover:to-[#c7735a] transition-colors focus:outline-none focus:ring-2 focus:ring-[#e8a87c] focus:ring-offset-2"
         >
           Try again
         </button>

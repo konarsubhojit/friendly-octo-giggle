@@ -24,16 +24,16 @@ export default function SignInPage({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-6 sm:p-8">
+    <div className="min-h-screen bg-warm-gradient flex items-center justify-center px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full bg-white/80 backdrop-blur-sm rounded-xl shadow-warm border border-[#f0d5c0] p-6 sm:p-8">
         <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-r from-blue-100 to-purple-100 mb-3">
-            <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-r from-[#fde8d8] to-[#f0d5c0] mb-3">
+            <svg className="w-6 h-6 text-[#e8a87c]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
             </svg>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Welcome Back</h1>
-          <p className="text-gray-600">Sign in to continue shopping</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-[#4a3728] mb-2">Welcome Back</h1>
+          <p className="text-[#7a6355]">Sign in to continue shopping</p>
         </div>
 
         {/* Client-side credentials form */}
@@ -42,10 +42,10 @@ export default function SignInPage({
         {/* Divider */}
         <div className="relative my-6">
           <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-gray-200" />
+            <div className="w-full border-t border-[#f0d5c0]" />
           </div>
           <div className="relative flex justify-center text-sm">
-            <span className="px-4 bg-white text-gray-500">or continue with</span>
+            <span className="px-4 bg-white text-[#b89a85]">or continue with</span>
           </div>
         </div>
 
@@ -54,7 +54,7 @@ export default function SignInPage({
           <form action={handleGoogleSignIn}>
             <button
               type="submit"
-              className="w-full flex items-center justify-center gap-3 bg-white border-2 border-gray-300 rounded-lg px-4 py-3 font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition"
+              className="w-full flex items-center justify-center gap-3 bg-white border-2 border-[#f0d5c0] rounded-lg px-4 py-3 font-medium text-[#7a6355] hover:bg-[#fde8d8] hover:border-[#e8a87c] transition"
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24" aria-hidden="true">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -69,7 +69,7 @@ export default function SignInPage({
           <form action={handleMicrosoftSignIn}>
             <button
               type="submit"
-              className="w-full flex items-center justify-center gap-3 bg-white border-2 border-gray-300 rounded-lg px-4 py-3 font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition"
+              className="w-full flex items-center justify-center gap-3 bg-white border-2 border-[#f0d5c0] rounded-lg px-4 py-3 font-medium text-[#7a6355] hover:bg-[#fde8d8] hover:border-[#e8a87c] transition"
             >
               <svg className="w-5 h-5" viewBox="0 0 23 23" aria-hidden="true">
                 <path fill="#f35325" d="M1 1h10v10H1z" />
@@ -84,13 +84,13 @@ export default function SignInPage({
 
         {/* Links */}
         <div className="mt-6 text-center space-y-3">
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-[#7a6355]">
             Don&apos;t have an account?{' '}
-            <Link href="/auth/register" className="font-semibold text-purple-600 hover:text-purple-700">
+            <Link href="/auth/register" className="font-semibold text-[#e8a87c] hover:text-[#d4856b]">
               Register
             </Link>
           </p>
-          <Link href="/" className="text-sm text-blue-600 hover:text-blue-800 block">
+          <Link href="/" className="text-sm text-[#d4856b] hover:text-[#c7735a] block">
             Back to store
           </Link>
         </div>

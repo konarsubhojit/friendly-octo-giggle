@@ -84,7 +84,7 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
 
   if (authStatus === 'loading' || loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
+      <div className="min-h-screen bg-warm-gradient">
         <Header />
         <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
           <div className="flex items-center justify-center py-20">
@@ -97,7 +97,7 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
 
   if (!session?.user) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
+      <div className="min-h-screen bg-warm-gradient">
         <Header />
         <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
           <AuthRequiredState
@@ -111,12 +111,12 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
 
   if (error || !order) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
+      <div className="min-h-screen bg-warm-gradient">
         <Header />
         <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
           <Card className="p-12 text-center">
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">{error || 'Order not found'}</h2>
-            <Link href="/orders" className="mt-4 inline-block text-blue-600 hover:underline font-medium">
+            <h2 className="text-2xl font-bold text-[#4a3728] mb-2">{error || 'Order not found'}</h2>
+            <Link href="/orders" className="mt-4 inline-block text-[#d4856b] hover:underline font-medium">
               Back to My Orders
             </Link>
           </Card>
@@ -129,11 +129,11 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
   const isCancelled = order.status === 'CANCELLED';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
+    <div className="min-h-screen bg-warm-gradient">
       <Header />
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
         {/* Back link */}
-        <Link href="/orders" className="inline-flex items-center gap-2 text-gray-600 hover:text-blue-600 transition-colors mb-6">
+        <Link href="/orders" className="inline-flex items-center gap-2 text-[#7a6355] hover:text-[#d4856b] transition-colors mb-6">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
           </svg>
@@ -144,8 +144,8 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
         <Card className="p-8 mb-6">
           <div className="flex justify-between items-start flex-wrap gap-4">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Order #{order.id}</h1>
-              <p className="text-sm text-gray-500 mt-1">
+              <h1 className="text-2xl font-bold text-[#4a3728]">Order #{order.id}</h1>
+              <p className="text-sm text-[#b89a85] mt-1">
                 Placed on{' '}
                 {new Date(order.createdAt).toLocaleDateString('en-US', {
                   year: 'numeric',
@@ -157,7 +157,7 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <p className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              <p className="text-2xl font-bold bg-gradient-to-r from-[#e8a87c] to-[#d4856b] bg-clip-text text-transparent">
                 {formatPrice(order.totalAmount)}
               </p>
               {order.status === 'PENDING' && (
@@ -179,13 +179,13 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
             onClose={closeCancelDialog}
             className="backdrop:bg-black/40 backdrop:backdrop-blur-sm bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full mx-4"
           >
-            <h3 id="cancel-dialog-title" className="text-lg font-bold text-gray-900 mb-2">Cancel Order?</h3>
-            <p className="text-sm text-gray-600 mb-6">This action cannot be undone. Your order will be cancelled immediately.</p>
+            <h3 id="cancel-dialog-title" className="text-lg font-bold text-[#4a3728] mb-2">Cancel Order?</h3>
+            <p className="text-sm text-[#7a6355] mb-6">This action cannot be undone. Your order will be cancelled immediately.</p>
             <div className="flex gap-3 justify-end">
               <button
                 onClick={closeCancelDialog}
                 disabled={cancelling}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors disabled:opacity-50"
+                className="px-4 py-2 text-sm font-medium text-[#7a6355] bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors disabled:opacity-50"
               >
                 Keep Order
               </button>
@@ -215,22 +215,22 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
                   const isCurrent = index === currentStep;
                   const statusKey = isCompleted ? 'completed' : 'default';
                   const statusClasses = {
-                    completed: 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg',
+                    completed: 'bg-gradient-to-r from-[#e8a87c] to-[#d4856b] text-white shadow-lg',
                     default: 'bg-gray-200 text-gray-500',
                   };
                   const textClasses = {
-                    completed: 'text-blue-600',
+                    completed: 'text-[#d4856b]',
                     default: 'text-gray-400',
                   };
                   const connectorClasses = {
-                    completed: 'bg-gradient-to-r from-blue-500 to-purple-500',
+                    completed: 'bg-gradient-to-r from-[#e8a87c] to-[#d4856b]',
                     default: 'bg-gray-200',
                   };
                   return (
                     <div key={step} className="flex items-center flex-1">
                       <div className="flex flex-col items-center flex-shrink-0">
                         <div
-                          className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all ${statusClasses[statusKey]}${isCurrent ? ' ring-4 ring-blue-200' : ''}`}
+                          className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all ${statusClasses[statusKey]}${isCurrent ? ' ring-4 ring-[#fde8d8]' : ''}`}
                         >
                           {isCompleted ? (
                       <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
@@ -259,7 +259,7 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
 
         {/* Order Items */}
         <Card className="p-8 mb-6">
-          <h2 className="text-lg font-bold text-gray-900 mb-4">Items</h2>
+          <h2 className="text-lg font-bold text-[#4a3728] mb-4">Items</h2>
           <div className="space-y-4">
             {order.items.map((item) => {
               const image = (item.variation as Record<string, unknown>)?.image as string | undefined || item.product?.image;
@@ -284,20 +284,20 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
                 ) : null
               };
               return (
-                <div key={item.id} className="py-3 border-b border-gray-100 last:border-0">
+                <div key={item.id} className="py-3 border-b border-[#f0d5c0] last:border-0">
                   <div className="flex items-center gap-4">
                     {sections.image}
                     <div className="flex-grow min-w-0">
                       <Link
                         href={`/products/${item.productId}`}
-                        className="text-sm font-semibold text-gray-900 hover:text-blue-600 transition-colors"
+                        className="text-sm font-semibold text-[#4a3728] hover:text-[#d4856b] transition-colors"
                       >
                         {item.product?.name}
                       </Link>
                       {sections.variation}
-                      <p className="text-xs text-gray-500">Qty: {item.quantity}</p>
+                      <p className="text-xs text-[#b89a85]">Qty: {item.quantity}</p>
                     </div>
-                    <p className="text-sm font-bold text-gray-900">{formatPrice(item.price * item.quantity)}</p>
+                    <p className="text-sm font-bold text-[#4a3728]">{formatPrice(item.price * item.quantity)}</p>
                   </div>
                   {sections.customization}
                 </div>
@@ -309,18 +309,18 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
         {/* Tracking Info */}
         {(order.trackingNumber || order.shippingProvider) && (
           <Card className="p-8 mb-6">
-            <h2 className="text-lg font-bold text-gray-900 mb-3">📦 Shipping &amp; Tracking</h2>
+            <h2 className="text-lg font-bold text-[#4a3728] mb-3">📦 Shipping &amp; Tracking</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {order.shippingProvider && (
                 <div>
-                  <p className="text-xs font-semibold text-gray-500 uppercase">Shipping Provider</p>
-                  <p className="text-sm text-gray-900 font-medium">{order.shippingProvider}</p>
+                  <p className="text-xs font-semibold text-[#b89a85] uppercase">Shipping Provider</p>
+                  <p className="text-sm text-[#4a3728] font-medium">{order.shippingProvider}</p>
                 </div>
               )}
               {order.trackingNumber && (
                 <div>
-                  <p className="text-xs font-semibold text-gray-500 uppercase">Tracking Number</p>
-                  <p className="text-sm text-gray-900 font-medium font-mono">{order.trackingNumber}</p>
+                  <p className="text-xs font-semibold text-[#b89a85] uppercase">Tracking Number</p>
+                  <p className="text-sm text-[#4a3728] font-medium font-mono">{order.trackingNumber}</p>
                 </div>
               )}
             </div>
@@ -329,8 +329,8 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
 
         {/* Shipping Address */}
         <Card className="p-8">
-          <h2 className="text-lg font-bold text-gray-900 mb-3">Shipping Address</h2>
-          <p className="text-sm text-gray-700 whitespace-pre-line">{order.customerAddress}</p>
+          <h2 className="text-lg font-bold text-[#4a3728] mb-3">Shipping Address</h2>
+          <p className="text-sm text-[#7a6355] whitespace-pre-line">{order.customerAddress}</p>
         </Card>
       </main>
     </div>

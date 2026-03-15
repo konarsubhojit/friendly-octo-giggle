@@ -6,7 +6,7 @@ export default function Loading() {
   const PRODUCT_SKELETONS = ['p1', 'p2', 'p3', 'p4', 'p5', 'p6'] as const;
   const LINK_SKELETONS = ['l1', 'l2', 'l3', 'l4'] as const;
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
+    <div className="min-h-screen bg-warm-gradient">
       <HeaderSkeleton />
 
       <HeroSkeleton />
@@ -23,7 +23,7 @@ export default function Loading() {
       </main>
 
       {/* Footer Skeleton */}
-      <footer className="bg-gray-100 border-t border-gray-200 py-12">
+      <footer className="bg-gray-100 border-t border-[#f0d5c0] py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div>

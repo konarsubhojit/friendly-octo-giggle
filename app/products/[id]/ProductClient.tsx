@@ -59,15 +59,15 @@ export default function ProductClient({ product }: ProductClientProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
+    <div className="min-h-screen bg-warm-gradient">
       <Header />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
         {/* Breadcrumb */}
         <nav className="mb-6 text-sm">
-          <Link href="/" className="text-gray-500 hover:text-blue-600 transition-colors">Home</Link>
+          <Link href="/" className="text-[#b89a85] hover:text-[#d4856b] transition-colors">Home</Link>
           <span className="mx-2 text-gray-400">/</span>
-          <span className="text-gray-700 font-medium">{product.name}</span>
+          <span className="text-[#7a6355] font-medium">{product.name}</span>
         </nav>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
@@ -91,24 +91,24 @@ export default function ProductClient({ product }: ProductClientProps) {
           {/* Product Details */}
           <div className="flex flex-col">
             <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/50 p-8 mb-6">
-              <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
+              <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-[#e8a87c] via-[#d4856b] to-[#c7735a] bg-clip-text text-transparent">
                 {product.name}
               </h1>
 
               <div className="mb-6">
-                <span className="inline-block bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-full px-4 py-2 text-sm font-semibold shadow-md">
+                <span className="inline-block bg-gradient-to-r from-[#e8a87c] to-[#d4856b] text-white rounded-full px-4 py-2 text-sm font-semibold shadow-md">
                   {product.category}
                 </span>
               </div>
 
-              <p className="text-gray-700 text-lg mb-8 leading-relaxed">{product.description}</p>
+              <p className="text-[#7a6355] text-lg mb-8 leading-relaxed">{product.description}</p>
 
-              <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border border-blue-100">
-                <span className="text-5xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              <div className="mb-6 p-4 bg-gradient-to-r from-[#fde8d8] to-[#f0d5c0] rounded-xl border border-[#f0d5c0]">
+                <span className="text-5xl font-bold bg-gradient-to-r from-[#e8a87c] to-[#d4856b] bg-clip-text text-transparent">
                   {formatPrice(effectivePrice)}
                 </span>
                 {selectedVariation && selectedVariation.priceModifier !== 0 && (
-                  <div className="mt-2 text-sm text-gray-600">
+                  <div className="mt-2 text-sm text-[#7a6355]">
                     Base: {formatPrice(product.price)} {selectedVariation.priceModifier > 0 ? '+' : '-'}{formatPrice(Math.abs(selectedVariation.priceModifier))}
                   </div>
                 )}
@@ -122,7 +122,7 @@ export default function ProductClient({ product }: ProductClientProps) {
               {/* Variation Selector */}
               {product.variations && product.variations.length > 0 && (
                 <div className="mb-6">
-                  <span className="block text-lg font-semibold text-gray-800 mb-3" id="variation-selector-label">
+                  <span className="block text-lg font-semibold text-[#4a3728] mb-3" id="variation-selector-label">
                     Select Design
                   </span>
                   <div className="grid grid-cols-2 gap-3">
@@ -163,11 +163,11 @@ export default function ProductClient({ product }: ProductClientProps) {
 
                 {/* Quantity selector */}
                 <div className="mb-5">
-                  <label htmlFor="quantity-input" className="block text-sm font-semibold text-gray-800 mb-2">Quantity</label>
+                  <label htmlFor="quantity-input" className="block text-sm font-semibold text-[#4a3728] mb-2">Quantity</label>
                   <div className="flex items-center gap-3">
                     <button
                       onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                      className="w-10 h-10 rounded-lg border-2 border-gray-200 flex items-center justify-center text-gray-600 hover:border-blue-400 hover:text-blue-600 transition-colors font-bold text-lg"
+                      className="w-10 h-10 rounded-lg border-2 border-[#f0d5c0] flex items-center justify-center text-[#7a6355] hover:border-[#e8a87c] hover:text-[#d4856b] transition-colors font-bold text-lg"
                     >
                       -
                     </button>
@@ -185,11 +185,11 @@ export default function ProductClient({ product }: ProductClientProps) {
                         }
                         setQuantity(Math.min(parsed, effectiveStock));
                       }}
-                      className="w-16 text-center px-2 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-semibold"
+                      className="w-16 text-center px-2 py-2 border-2 border-[#f0d5c0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e8a87c] focus:border-transparent font-semibold"
                     />
                     <button
                       onClick={() => setQuantity(Math.min(effectiveStock, quantity + 1))}
-                      className="w-10 h-10 rounded-lg border-2 border-gray-200 flex items-center justify-center text-gray-600 hover:border-blue-400 hover:text-blue-600 transition-colors font-bold text-lg"
+                      className="w-10 h-10 rounded-lg border-2 border-[#f0d5c0] flex items-center justify-center text-[#7a6355] hover:border-[#e8a87c] hover:text-[#d4856b] transition-colors font-bold text-lg"
                     >
                       +
                     </button>
@@ -197,9 +197,9 @@ export default function ProductClient({ product }: ProductClientProps) {
                 </div>
 
                 {/* Total */}
-                <div className="flex justify-between items-center mb-5 p-3 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl">
-                  <span className="text-sm font-semibold text-gray-700">Total:</span>
-                  <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                <div className="flex justify-between items-center mb-5 p-3 bg-gradient-to-r from-[#fde8d8] to-[#f0d5c0] rounded-xl">
+                  <span className="text-sm font-semibold text-[#7a6355]">Total:</span>
+                  <span className="text-2xl font-bold bg-gradient-to-r from-[#e8a87c] to-[#d4856b] bg-clip-text text-transparent">
                     {formatPrice(effectivePrice * quantity)}
                   </span>
                 </div>
@@ -209,7 +209,7 @@ export default function ProductClient({ product }: ProductClientProps) {
                   <button
                     onClick={handleAddToCart}
                     disabled={addingToCart}
-                    className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white py-4 rounded-xl font-bold text-lg hover:from-blue-700 hover:to-purple-700 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed transition-all duration-300 shadow-lg hover:shadow-2xl"
+                    className="flex-1 bg-gradient-to-r from-[#e8a87c] to-[#d4856b] text-white py-4 rounded-xl font-bold text-lg hover:from-[#d4856b] hover:to-[#c7735a] disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed transition-all duration-300 shadow-lg hover:shadow-2xl"
                   >
                     {addingToCart ? (
                       <span className="flex items-center justify-center gap-2">
@@ -231,7 +231,7 @@ export default function ProductClient({ product }: ProductClientProps) {
 
                   <Link
                     href="/cart"
-                    className="flex-shrink-0 bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600 px-5 py-4 rounded-xl font-bold transition-all duration-300 flex items-center gap-2"
+                    className="flex-shrink-0 bg-gray-100 hover:bg-gray-200 text-[#7a6355] dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600 px-5 py-4 rounded-xl font-bold transition-all duration-300 flex items-center gap-2"
                   >
                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />

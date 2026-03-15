@@ -9,15 +9,15 @@ export const metadata = {
 
 export default function ReturnsPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
+    <div className="min-h-screen bg-warm-gradient">
       <Header />
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
-        <h1 className="text-4xl font-bold text-gray-900 mb-4">Returns & Refunds</h1>
-        <p className="text-gray-500 text-lg mb-12">We want you to be 100% satisfied. Our return process is simple and hassle-free.</p>
+        <h1 className="text-4xl font-bold text-[#4a3728] mb-4">Returns & Refunds</h1>
+        <p className="text-[#b89a85] text-lg mb-12">We want you to be 100% satisfied. Our return process is simple and hassle-free.</p>
 
-        <section className="bg-white rounded-2xl shadow-sm p-8 mb-8">
-          <h2 className="text-2xl font-semibold text-gray-900 mb-4">Return Policy</h2>
-          <ul className="space-y-3 text-gray-600">
+        <section className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-warm border border-[#f0d5c0] p-8 mb-8">
+          <h2 className="text-2xl font-semibold text-[#4a3728] mb-4">Return Policy</h2>
+          <ul className="space-y-3 text-[#7a6355]">
             <li className="flex gap-3">
               <svg className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -45,8 +45,8 @@ export default function ReturnsPage() {
           </ul>
         </section>
 
-        <section className="bg-white rounded-2xl shadow-sm p-8 mb-8">
-          <h2 className="text-2xl font-semibold text-gray-900 mb-4">How to Start a Return</h2>
+        <section className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-warm border border-[#f0d5c0] p-8 mb-8">
+          <h2 className="text-2xl font-semibold text-[#4a3728] mb-4">How to Start a Return</h2>
           <ol className="space-y-4">
             {[
               'Sign in to your account and go to My Orders.',
@@ -57,24 +57,24 @@ export default function ReturnsPage() {
               'Once received and inspected, your refund will be issued.',
             ].map((step, i) => (
               <li key={step} className="flex gap-4">
-                <span className="w-7 h-7 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">{i + 1}</span>
-                <span className="text-gray-600 pt-0.5">{step}</span>
+                <span className="w-7 h-7 bg-[#fde8d8] text-[#d4856b] rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">{i + 1}</span>
+                <span className="text-[#7a6355] pt-0.5">{step}</span>
               </li>
             ))}
           </ol>
         </section>
 
-        <section className="bg-white rounded-2xl shadow-sm p-8">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Non-Returnable Items</h2>
-          <p className="text-gray-600 mb-4">The following items cannot be returned:</p>
-          <ul className="list-disc list-inside space-y-1 text-gray-600 text-sm">
+        <section className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-warm border border-[#f0d5c0] p-8">
+          <h2 className="text-xl font-semibold text-[#4a3728] mb-4">Non-Returnable Items</h2>
+          <p className="text-[#7a6355] mb-4">The following items cannot be returned:</p>
+          <ul className="list-disc list-inside space-y-1 text-[#7a6355] text-sm">
             <li>Perishable goods (food, flowers, etc.)</li>
             <li>Digital products and software licenses</li>
             <li>Customized or personalized items</li>
             <li>Items marked as Final Sale</li>
           </ul>
-          <p className="mt-6 text-gray-600 text-sm">
-            Questions? <Link href="/contact" className="text-blue-600 hover:underline">Contact our support team</Link> and we&apos;ll be happy to help.
+          <p className="mt-6 text-[#7a6355] text-sm">
+            Questions? <Link href="/contact" className="text-[#d4856b] hover:underline">Contact our support team</Link> and we&apos;ll be happy to help.
           </p>
         </section>
       </main>
