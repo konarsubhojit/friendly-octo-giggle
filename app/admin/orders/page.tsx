@@ -22,6 +22,8 @@ import { AdminOrderCard } from '@/components/admin/AdminOrderCard';
  * Keys are order IDs; values hold the draft field values before saving.
  */
 type ShippingEdits = Record<string, { trackingNumber: string; shippingProvider: string }>;
+
+export default function OrdersManagement() {
   const { formatPrice } = useCurrency();
   const dispatch = useDispatch<AppDispatch>();
   const orders = useSelector(selectAdminOrders);
