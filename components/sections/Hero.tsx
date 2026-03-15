@@ -10,7 +10,7 @@ export default function Hero() {
         <p className="text-lg sm:text-xl text-[#7a6355] mb-4 max-w-2xl mx-auto animate-fade-in-up animation-delay-100">
           Discover beautiful handmade decorations and cozy wearables — flower bouquets, keyrings, hand warmers, mufflers, scarves, and more. Each piece crafted with care, just for you.
         </p>
-        <p className="text-sm text-[#b89a85] mb-8 tracking-widest uppercase animate-fade-in animation-delay-200" aria-hidden="true">
+        <p className="text-sm text-[#b89a85] mb-8 tracking-widest uppercase animate-fade-in animation-delay-200">
           🌸 Crochet · Flowers · Bags · Accessories 🌸
         </p>
         <div className="flex gap-4 justify-center mb-12 animate-fade-in-up animation-delay-300">
