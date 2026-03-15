@@ -10,6 +10,189 @@ import LoginModal from "@/components/auth/LoginModal";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { FlowerAccent, SparkleAccent } from "@/components/ui/DecorativeElements";
 
+interface UserMenuUser {
+  readonly name?: string | null;
+  readonly email?: string | null;
+  readonly image?: string | null;
+  readonly role?: string;
+}
+
+interface UserMenuProps {
+  readonly user: UserMenuUser;
+  readonly menuOpen: boolean;
+  readonly setMenuOpen: (open: boolean) => void;
+  readonly menuRef: React.RefObject<HTMLDivElement | null>;
+}
+
+function UserMenu({ user, menuOpen, setMenuOpen, menuRef }: UserMenuProps) {
+  return (
+    <div className="relative" ref={menuRef}>
+      <button
+        onClick={() => setMenuOpen(!menuOpen)}
+        className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+        aria-label="User menu"
+        aria-expanded={menuOpen}
+        aria-haspopup="menu"
+      >
+        {user.image ? (
+          <Image
+            src={user.image}
+            alt=""
+            width={32}
+            height={32}
+            className="rounded-full ring-2 ring-[#f0d5c0]"
+          />
+        ) : (
+          <div className="w-8 h-8 rounded-full bg-gradient-to-r from-[#e8a87c] to-[#d4856b] flex items-center justify-center text-white text-sm font-bold">
+            {user.name?.[0]?.toUpperCase() || "U"}
+          </div>
+        )}
+        <svg
+          className="w-4 h-4 text-gray-600 hidden sm:block"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M19 9l-7 7-7-7"
+          />
+        </svg>
+      </button>
+
+      {menuOpen && (
+        <div
+          className="absolute right-0 mt-2 w-56 bg-[#fef7f2] rounded-2xl shadow-warm-lg border border-[#f0d5c0] py-2 z-50 animate-scale-in"
+          role="menu"
+        >
+          <div className="px-4 py-3 border-b border-[#f0d5c0]">
+            <p className="text-sm font-semibold text-[#4a3728] truncate">
+              {user.name}
+            </p>
+            <p className="text-xs text-[#b89a85] truncate">
+              {user.email}
+            </p>
+          </div>
+          <Link
+            href="/account"
+            onClick={() => setMenuOpen(false)}
+            className="flex items-center gap-3 px-4 py-2.5 text-sm text-[#7a6355] hover:bg-[#fde8d8] transition-colors rounded-lg mx-1"
+            role="menuitem"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+            My Account
+          </Link>
+          <Link
+            href="/orders"
+            onClick={() => setMenuOpen(false)}
+            className="flex items-center gap-3 px-4 py-2.5 text-sm text-[#7a6355] hover:bg-[#fde8d8] transition-colors rounded-lg mx-1"
+            role="menuitem"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            </svg>
+            My Orders
+          </Link>
+          {user.role === "ADMIN" && (
+            <Link
+              href="/admin"
+              onClick={() => setMenuOpen(false)}
+              className="flex items-center gap-3 px-4 py-2.5 text-sm text-[#7a6355] hover:bg-[#fde8d8] transition-colors rounded-lg mx-1"
+              role="menuitem"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              Admin Dashboard
+            </Link>
+          )}
+          <div className="border-t border-[#f0d5c0] mt-1 pt-1">
+            <button
+              onClick={() => {
+                setMenuOpen(false);
+                signOut();
+              }}
+              className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors rounded-lg mx-1"
+              role="menuitem"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+              Sign Out
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface MobileNavProps {
+  readonly isLoggedIn: boolean;
+  readonly closeMobileNav: () => void;
+  readonly onLoginClick: () => void;
+}
+
+function MobileNav({ isLoggedIn, closeMobileNav, onLoginClick }: MobileNavProps) {
+  return (
+    <div
+      id="mobile-nav-drawer"
+      role="menu"
+      className="md:hidden bg-[#fef7f2]/95 backdrop-blur-lg border-t border-[#f0d5c0]/40 shadow-warm animate-fade-in"
+    >
+      <nav className="max-w-7xl mx-auto px-4 py-4 flex flex-col gap-1">
+        <Link href="/" onClick={closeMobileNav} className="flex items-center gap-3 px-4 py-3 text-[#7a6355] hover:bg-[#fde8d8] rounded-xl font-medium transition-colors">
+          <svg className="w-5 h-5 text-[#d4856b]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+          </svg>
+          Home
+        </Link>
+        <Link href="/about" onClick={closeMobileNav} className="flex items-center gap-3 px-4 py-3 text-[#7a6355] hover:bg-[#fde8d8] rounded-xl font-medium transition-colors">
+          <svg className="w-5 h-5 text-[#d4856b]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          About
+        </Link>
+        <Link href="/contact" onClick={closeMobileNav} className="flex items-center gap-3 px-4 py-3 text-[#7a6355] hover:bg-[#fde8d8] rounded-xl font-medium transition-colors">
+          <svg className="w-5 h-5 text-[#d4856b]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+          </svg>
+          Contact
+        </Link>
+        {isLoggedIn && (
+          <Link href="/orders" onClick={closeMobileNav} className="flex items-center gap-3 px-4 py-3 text-[#7a6355] hover:bg-[#fde8d8] rounded-xl font-medium transition-colors">
+            <svg className="w-5 h-5 text-[#d4856b]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            </svg>
+            My Orders
+          </Link>
+        )}
+        {!isLoggedIn && (
+          <div className="pt-2 border-t border-[#f0d5c0] mt-2">
+            <GradientButton
+              onClick={() => {
+                closeMobileNav();
+                onLoginClick();
+              }}
+              size="lg"
+              fullWidth
+              className="text-sm"
+            >
+              Login
+            </GradientButton>
+          </div>
+        )}
+      </nav>
+    </div>
+  );
+}
+
 export default function Header() {
   const { data: session } = useSession();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -80,159 +263,12 @@ export default function Header() {
               <CartIcon />
 
               {session?.user ? (
-                <div className="relative" ref={menuRef}>
-                  <button
-                    onClick={() => setMenuOpen(!menuOpen)}
-                    className="flex items-center gap-2 hover:opacity-80 transition-opacity"
-                    aria-label="User menu"
-                    aria-expanded={menuOpen}
-                    aria-haspopup="menu"
-                  >
-                    {session.user.image ? (
-                      <Image
-                        src={session.user.image}
-                        alt=""
-                        width={32}
-                        height={32}
-                        className="rounded-full ring-2 ring-[#f0d5c0]"
-                      />
-                    ) : (
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-r from-[#e8a87c] to-[#d4856b] flex items-center justify-center text-white text-sm font-bold">
-                        {session.user.name?.[0]?.toUpperCase() || "U"}
-                      </div>
-                    )}
-                    <svg
-                      className="w-4 h-4 text-gray-600 hidden sm:block"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                      aria-hidden="true"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 9l-7 7-7-7"
-                      />
-                    </svg>
-                  </button>
-
-                  {menuOpen && (
-                    <div
-                      className="absolute right-0 mt-2 w-56 bg-[#fef7f2] rounded-2xl shadow-warm-lg border border-[#f0d5c0] py-2 z-50 animate-scale-in"
-                      role="menu"
-                    >
-                      <div className="px-4 py-3 border-b border-[#f0d5c0]">
-                        <p className="text-sm font-semibold text-[#4a3728] truncate">
-                          {session.user.name}
-                        </p>
-                        <p className="text-xs text-[#b89a85] truncate">
-                          {session.user.email}
-                        </p>
-                      </div>
-                      <Link
-                        href="/account"
-                        onClick={() => setMenuOpen(false)}
-                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-[#7a6355] hover:bg-[#fde8d8] transition-colors rounded-lg mx-1"
-                        role="menuitem"
-                      >
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                          aria-hidden="true"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                          />
-                        </svg>
-                        My Account
-                      </Link>
-                      <Link
-                        href="/orders"
-                        onClick={() => setMenuOpen(false)}
-                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-[#7a6355] hover:bg-[#fde8d8] transition-colors rounded-lg mx-1"
-                        role="menuitem"
-                      >
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                          aria-hidden="true"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-                          />
-                        </svg>
-                        My Orders
-                      </Link>
-                      {session.user.role === "ADMIN" && (
-                        <Link
-                          href="/admin"
-                          onClick={() => setMenuOpen(false)}
-                          className="flex items-center gap-3 px-4 py-2.5 text-sm text-[#7a6355] hover:bg-[#fde8d8] transition-colors rounded-lg mx-1"
-                          role="menuitem"
-                        >
-                          <svg
-                            className="w-4 h-4"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                            aria-hidden="true"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-                            />
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                            />
-                          </svg>
-                          Admin Dashboard
-                        </Link>
-                      )}
-                      <div className="border-t border-[#f0d5c0] mt-1 pt-1">
-                        <button
-                          onClick={() => {
-                            setMenuOpen(false);
-                            signOut();
-                          }}
-                          className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors rounded-lg mx-1"
-                          role="menuitem"
-                        >
-                          <svg
-                            className="w-4 h-4"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                            aria-hidden="true"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-                            />
-                          </svg>
-                          Sign Out
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
+                <UserMenu
+                  user={session.user}
+                  menuOpen={menuOpen}
+                  setMenuOpen={setMenuOpen}
+                  menuRef={menuRef}
+                />
               ) : (
                 <GradientButton
                   onClick={() => setLoginModalOpen(true)}
@@ -289,117 +325,12 @@ export default function Header() {
           </div>
         </div>
 
-        {/* Mobile navigation drawer */}
         {mobileNavOpen && (
-          <div
-            id="mobile-nav-drawer"
-            role="menu"
-            className="md:hidden bg-[#fef7f2]/95 backdrop-blur-lg border-t border-[#f0d5c0]/40 shadow-warm animate-fade-in"
-          >
-            <nav className="max-w-7xl mx-auto px-4 py-4 flex flex-col gap-1">
-              <Link
-                href="/"
-                onClick={closeMobileNav}
-                className="flex items-center gap-3 px-4 py-3 text-[#7a6355] hover:bg-[#fde8d8] rounded-xl font-medium transition-colors"
-              >
-                <svg
-                  className="w-5 h-5 text-[#d4856b]"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
-                  />
-                </svg>
-                Home
-              </Link>
-              <Link
-                href="/about"
-                onClick={closeMobileNav}
-                className="flex items-center gap-3 px-4 py-3 text-[#7a6355] hover:bg-[#fde8d8] rounded-xl font-medium transition-colors"
-              >
-                <svg
-                  className="w-5 h-5 text-[#d4856b]"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-                About
-              </Link>
-              <Link
-                href="/contact"
-                onClick={closeMobileNav}
-                className="flex items-center gap-3 px-4 py-3 text-[#7a6355] hover:bg-[#fde8d8] rounded-xl font-medium transition-colors"
-              >
-                <svg
-                  className="w-5 h-5 text-[#d4856b]"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                  />
-                </svg>
-                Contact
-              </Link>
-              {session?.user && (
-                <Link
-                  href="/orders"
-                  onClick={closeMobileNav}
-                  className="flex items-center gap-3 px-4 py-3 text-[#7a6355] hover:bg-[#fde8d8] rounded-xl font-medium transition-colors"
-                >
-                  <svg
-                    className="w-5 h-5 text-[#d4856b]"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    aria-hidden="true"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-                    />
-                  </svg>
-                  My Orders
-                </Link>
-              )}
-              {!session?.user && (
-                <div className="pt-2 border-t border-[#f0d5c0] mt-2">
-                  <GradientButton
-                    onClick={() => {
-                      closeMobileNav();
-                      setLoginModalOpen(true);
-                    }}
-                    size="lg"
-                    fullWidth
-                    className="text-sm"
-                  >
-                    Login
-                  </GradientButton>
-                </div>
-              )}
-            </nav>
-          </div>
+          <MobileNav
+            isLoggedIn={!!session?.user}
+            closeMobileNav={closeMobileNav}
+            onLoginClick={() => setLoginModalOpen(true)}
+          />
         )}
       </header>
       <LoginModal

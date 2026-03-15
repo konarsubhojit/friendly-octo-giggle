@@ -17,6 +17,59 @@ interface ProductGridProps {
 
 const CATEGORIES = ['All', 'Handbag', 'Flowers', 'Flower Pots', 'Keychains', 'Hair Accessories'];
 
+interface ProductCardProps {
+  readonly product: Product;
+  readonly formatPrice: (amount: number) => string;
+  readonly index: number;
+}
+
+function ProductCard({ product, formatPrice, index }: ProductCardProps) {
+  return (
+    <div
+      className="bg-white/90 backdrop-blur-sm rounded-3xl shadow-warm overflow-hidden border-2 border-[#f0d5c0] group hover:shadow-warm-lg hover:scale-[1.02] hover:-translate-y-1 hover:border-[#e8a87c] transition-all duration-300 relative animate-fade-in-up"
+      style={{ animationDelay: `${index * 80}ms` }}
+    >
+      <Link
+        href={`/products/${product.id}`}
+        className="block"
+        aria-label={product.name}
+      >
+        <div className="relative w-full aspect-square bg-gradient-to-br from-[#fef0e6] to-[#fde8d8]/50 p-4">
+          <Image
+            src={product.image}
+            alt={product.name}
+            fill
+            className="object-contain p-3 group-hover:scale-105 transition-transform duration-300"
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          />
+        </div>
+        <div className="p-5">
+          <div className="flex items-start justify-between gap-2 mb-2">
+            <div className="text-lg font-bold text-[#4a3728]">
+              {product.name}
+            </div>
+            <span className="text-sm mt-0.5">
+              <StockBadge stock={product.stock} />
+            </span>
+          </div>
+          <p className="text-[#7a6355] text-sm mb-3 line-clamp-2">
+            {product.description}
+          </p>
+          <div className="flex items-center justify-between">
+            <span className="text-xl font-bold text-[#d4856b]">
+              {formatPrice(product.price)}
+            </span>
+            <span className="inline-block bg-[#fde8d8] text-[#d4856b] rounded-full px-3 py-0.5 text-xs font-semibold border border-[#f0d5c0]">
+              {product.category}
+            </span>
+          </div>
+        </div>
+      </Link>
+      <QuickAddButton product={product} />
+    </div>
+  );
+}
+
 export default function ProductGrid({ products }: ProductGridProps) {
   const { formatPrice } = useCurrency();
   const [search, setSearch] = useState('');
@@ -95,51 +148,7 @@ export default function ProductGrid({ products }: ProductGridProps) {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {filtered.map((product, index) => (
-            <div
-              key={product.id}
-              className="bg-white/90 backdrop-blur-sm rounded-3xl shadow-warm overflow-hidden border-2 border-[#f0d5c0] group hover:shadow-warm-lg hover:scale-[1.02] hover:-translate-y-1 hover:border-[#e8a87c] transition-all duration-300 relative animate-fade-in-up"
-              style={{ animationDelay: `${index * 80}ms` }}
-            >
-              <Link
-                href={`/products/${product.id}`}
-                className="block"
-                aria-label={product.name}
-              >
-                {/* Product image with soft background */}
-                <div className="relative w-full aspect-square bg-gradient-to-br from-[#fef0e6] to-[#fde8d8]/50 p-4">
-                  <Image
-                    src={product.image}
-                    alt={product.name}
-                    fill
-                    className="object-contain p-3 group-hover:scale-105 transition-transform duration-300"
-                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                  />
-                </div>
-                <div className="p-5">
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <div className="text-lg font-bold text-[#4a3728]">
-                      {product.name}
-                    </div>
-                    <span className="text-sm mt-0.5">
-                      <StockBadge stock={product.stock} />
-                    </span>
-                  </div>
-                  <p className="text-[#7a6355] text-sm mb-3 line-clamp-2">
-                    {product.description}
-                  </p>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xl font-bold text-[#d4856b]">
-                      {formatPrice(product.price)}
-                    </span>
-                    <span className="inline-block bg-[#fde8d8] text-[#d4856b] rounded-full px-3 py-0.5 text-xs font-semibold border border-[#f0d5c0]">
-                      {product.category}
-                    </span>
-                  </div>
-                </div>
-              </Link>
-              {/* Quick add button sits OUTSIDE the <Link> to avoid invalid HTML nesting */}
-              <QuickAddButton product={product} />
-            </div>
+            <ProductCard key={product.id} product={product} formatPrice={formatPrice} index={index} />
           ))}
         </div>
       )}

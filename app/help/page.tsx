@@ -34,6 +34,27 @@ const faqs = [
   },
 ];
 
+interface FAQItem {
+  readonly question: string;
+  readonly answer: string;
+}
+
+function FAQSection({ items }: { readonly items: readonly FAQItem[] }) {
+  return (
+    <section className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-warm border border-[#f0d5c0] p-8 mb-8">
+      <h2 className="text-2xl font-semibold text-[#4a3728] mb-6">Frequently Asked Questions</h2>
+      <div className="space-y-6">
+        {items.map(faq => (
+          <div key={faq.question} className="border-b border-[#f0d5c0] last:border-0 pb-6 last:pb-0">
+            <h3 className="font-semibold text-[#4a3728] mb-2">{faq.question}</h3>
+            <p className="text-[#7a6355] text-sm leading-relaxed">{faq.answer}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export default function HelpPage() {
   return (
     <div className="min-h-screen bg-warm-gradient">
@@ -42,17 +63,7 @@ export default function HelpPage() {
         <h1 className="text-4xl font-bold text-[#4a3728] mb-4">Help Center</h1>
         <p className="text-[#b89a85] text-lg mb-12">Find answers to common questions or reach out to our support team.</p>
 
-        <section className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-warm border border-[#f0d5c0] p-8 mb-8">
-          <h2 className="text-2xl font-semibold text-[#4a3728] mb-6">Frequently Asked Questions</h2>
-          <div className="space-y-6">
-            {faqs.map(faq => (
-              <div key={faq.question} className="border-b border-[#f0d5c0] last:border-0 pb-6 last:pb-0">
-                <h3 className="font-semibold text-[#4a3728] mb-2">{faq.question}</h3>
-                <p className="text-[#7a6355] text-sm leading-relaxed">{faq.answer}</p>
-              </div>
-            ))}
-          </div>
-        </section>
+        <FAQSection items={faqs} />
 
         <section className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-warm border border-[#f0d5c0] p-8">
           <h2 className="text-xl font-semibold text-[#4a3728] mb-4">Still need help?</h2>

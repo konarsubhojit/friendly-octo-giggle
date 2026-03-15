@@ -2,9 +2,38 @@ import HeaderSkeleton from '@/components/skeletons/HeaderSkeleton';
 import HeroSkeleton from '@/components/skeletons/HeroSkeleton';
 import ProductCardSkeleton from '@/components/skeletons/ProductCardSkeleton';
 
+const LINK_SKELETONS = ['l1', 'l2', 'l3', 'l4'] as const;
+
+function FooterSkeleton() {
+  return (
+    <footer className="bg-gray-100 border-t border-[#f0d5c0] py-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div>
+            <div className="h-6 w-32 bg-gray-200 rounded animate-pulse mb-4" />
+            <div className="h-4 w-full bg-gray-200 rounded animate-pulse mb-2" />
+            <div className="h-4 w-3/4 bg-gray-200 rounded animate-pulse" />
+          </div>
+          <div>
+            <div className="h-6 w-24 bg-gray-200 rounded animate-pulse mb-4" />
+            <div className="space-y-2">
+              {LINK_SKELETONS.map((id) => (
+                <div key={id} className="h-4 w-20 bg-gray-200 rounded animate-pulse" />
+              ))}
+            </div>
+          </div>
+          <div>
+            <div className="h-6 w-28 bg-gray-200 rounded animate-pulse mb-4" />
+            <div className="h-10 w-full bg-gray-200 rounded animate-pulse" />
+          </div>
+        </div>
+      </div>
+    </footer>
+  );
+}
+
 export default function Loading() {
   const PRODUCT_SKELETONS = ['p1', 'p2', 'p3', 'p4', 'p5', 'p6'] as const;
-  const LINK_SKELETONS = ['l1', 'l2', 'l3', 'l4'] as const;
   return (
     <div className="min-h-screen bg-warm-gradient">
       <HeaderSkeleton />
@@ -22,30 +51,7 @@ export default function Loading() {
         </div>
       </main>
 
-      {/* Footer Skeleton */}
-      <footer className="bg-gray-100 border-t border-[#f0d5c0] py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div>
-              <div className="h-6 w-32 bg-gray-200 rounded animate-pulse mb-4" />
-              <div className="h-4 w-full bg-gray-200 rounded animate-pulse mb-2" />
-              <div className="h-4 w-3/4 bg-gray-200 rounded animate-pulse" />
-            </div>
-            <div>
-              <div className="h-6 w-24 bg-gray-200 rounded animate-pulse mb-4" />
-              <div className="space-y-2">
-                {LINK_SKELETONS.map((id) => (
-                  <div key={id} className="h-4 w-20 bg-gray-200 rounded animate-pulse" />
-                ))}
-              </div>
-            </div>
-            <div>
-              <div className="h-6 w-28 bg-gray-200 rounded animate-pulse mb-4" />
-              <div className="h-10 w-full bg-gray-200 rounded animate-pulse" />
-            </div>
-          </div>
-        </div>
-      </footer>
+      <FooterSkeleton />
     </div>
   );
 }

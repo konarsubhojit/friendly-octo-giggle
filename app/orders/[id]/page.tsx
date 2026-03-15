@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback, use } from 'react';
 import type { ReactElement } from 'react';
+import type { OrderItemWithProduct } from '@/lib/types';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useSession } from 'next-auth/react';
@@ -38,6 +39,120 @@ const STATUS_STEP_INDEX: Record<string, number> = {
 
 function getStepIndex(status: string): number {
   return STATUS_STEP_INDEX[status] ?? -1;
+}
+
+const STEP_CLASSES = {
+  completed: {
+    status: 'bg-gradient-to-r from-[#e8a87c] to-[#d4856b] text-white shadow-lg',
+    text: 'text-[#d4856b]',
+    connector: 'bg-gradient-to-r from-[#e8a87c] to-[#d4856b]',
+  },
+  default: {
+    status: 'bg-gray-200 text-gray-500',
+    text: 'text-gray-400',
+    connector: 'bg-gray-200',
+  },
+} as const;
+
+interface StatusTimelineProps {
+  readonly currentStep: number;
+  readonly isCancelled: boolean;
+}
+
+function StatusTimeline({ currentStep, isCancelled }: StatusTimelineProps) {
+  if (isCancelled) {
+    return (
+      <div className="flex items-center gap-3 p-4 bg-red-50 rounded-xl border border-red-200">
+        <svg className="w-6 h-6 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+        </svg>
+        <span className="font-semibold text-red-700">This order has been cancelled</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center justify-between">
+      {STATUS_STEPS.map((step, index) => {
+        const isCompleted = index <= currentStep;
+        const isCurrent = index === currentStep;
+        const classes = STEP_CLASSES[isCompleted ? 'completed' : 'default'];
+        return (
+          <div key={step} className="flex items-center flex-1">
+            <div className="flex flex-col items-center flex-shrink-0">
+              <div
+                className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all ${classes.status}${isCurrent ? ' ring-4 ring-[#fde8d8]' : ''}`}
+              >
+                {isCompleted ? (
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                ) : (
+                  index + 1
+                )}
+              </div>
+              <span className={`text-xs mt-2 font-medium ${classes.text}`}>
+                {STATUS_LABELS[step]}
+              </span>
+            </div>
+            {index < STATUS_STEPS.length - 1 && (
+              <div
+                className={`flex-1 h-1 mx-2 rounded-full transition-all ${STEP_CLASSES[index < currentStep ? 'completed' : 'default'].connector}`}
+              />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+interface OrderItemRowProps {
+  readonly item: OrderItemWithProduct;
+  readonly formatPrice: (amount: number) => string;
+}
+
+function OrderItemRow({ item, formatPrice }: OrderItemRowProps) {
+  const image = item.variation?.image || item.product?.image;
+  const sections: Record<string, ReactElement | null> = {
+    image: image ? (
+      <div className="relative w-16 h-16 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100">
+        <Image src={image} alt={item.product?.name || 'Order item'} fill sizes="80px" className="object-cover" />
+      </div>
+    ) : null,
+    variation: item.variation ? (
+      <p className="text-xs text-gray-500">
+        {item.variation.name}
+      </p>
+    ) : null,
+    customization: item.customizationNote ? (
+      <div className="mt-2 ml-20 p-2 bg-amber-50 border border-amber-200 rounded-lg">
+        <p className="text-xs text-amber-800">
+          <span className="font-semibold">✏️ Customization:</span>{' '}
+          {item.customizationNote}
+        </p>
+      </div>
+    ) : null
+  };
+  return (
+    <div className="py-3 border-b border-[#f0d5c0] last:border-0">
+      <div className="flex items-center gap-4">
+        {sections.image}
+        <div className="flex-grow min-w-0">
+          <Link
+            href={`/products/${item.productId}`}
+            className="text-sm font-semibold text-[#4a3728] hover:text-[#d4856b] transition-colors"
+          >
+            {item.product?.name}
+          </Link>
+          {sections.variation}
+          <p className="text-xs text-[#b89a85]">Qty: {item.quantity}</p>
+        </div>
+        <p className="text-sm font-bold text-[#4a3728]">{formatPrice(item.price * item.quantity)}</p>
+      </div>
+      {sections.customization}
+    </div>
+  );
 }
 
 export default function OrderDetailPage({ params }: OrderDetailPageProps) {
@@ -201,59 +316,7 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
 
           {/* Status Timeline */}
           <div className="mt-8">
-            {isCancelled ? (
-              <div className="flex items-center gap-3 p-4 bg-red-50 rounded-xl border border-red-200">
-                <svg className="w-6 h-6 text-red-500" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                </svg>
-                <span className="font-semibold text-red-700">This order has been cancelled</span>
-              </div>
-            ) : (
-              <div className="flex items-center justify-between">
-                {STATUS_STEPS.map((step, index) => {
-                  const isCompleted = index <= currentStep;
-                  const isCurrent = index === currentStep;
-                  const statusKey = isCompleted ? 'completed' : 'default';
-                  const statusClasses = {
-                    completed: 'bg-gradient-to-r from-[#e8a87c] to-[#d4856b] text-white shadow-lg',
-                    default: 'bg-gray-200 text-gray-500',
-                  };
-                  const textClasses = {
-                    completed: 'text-[#d4856b]',
-                    default: 'text-gray-400',
-                  };
-                  const connectorClasses = {
-                    completed: 'bg-gradient-to-r from-[#e8a87c] to-[#d4856b]',
-                    default: 'bg-gray-200',
-                  };
-                  return (
-                    <div key={step} className="flex items-center flex-1">
-                      <div className="flex flex-col items-center flex-shrink-0">
-                        <div
-                          className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all ${statusClasses[statusKey]}${isCurrent ? ' ring-4 ring-[#fde8d8]' : ''}`}
-                        >
-                          {isCompleted ? (
-                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                    ) : (
-                      index + 1
-                    )}
-                        </div>
-                        <span className={`text-xs mt-2 font-medium ${textClasses[statusKey]}`}> 
-                          {STATUS_LABELS[step]}
-                        </span>
-                      </div>
-                      {index < STATUS_STEPS.length - 1 && (
-                        <div
-                          className={`flex-1 h-1 mx-2 rounded-full transition-all ${connectorClasses[index < currentStep ? 'completed' : 'default']}`}
-                        />
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+            <StatusTimeline currentStep={currentStep} isCancelled={isCancelled} />
           </div>
         </Card>
 
@@ -261,48 +324,9 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
         <Card className="p-8 mb-6">
           <h2 className="text-lg font-bold text-[#4a3728] mb-4">Items</h2>
           <div className="space-y-4">
-            {order.items.map((item) => {
-              const image = (item.variation as Record<string, unknown>)?.image as string | undefined || item.product?.image;
-              const sections: Record<string, ReactElement | null> = {
-                image: image ? (
-                  <div className="relative w-16 h-16 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100">
-                    <Image src={image} alt={item.product?.name || 'Order item'} fill sizes="80px" className="object-cover" />
-                  </div>
-                ) : null,
-                variation: item.variation ? (
-                  <p className="text-xs text-gray-500">
-                    {item.variation.name}
-                  </p>
-                ) : null,
-                customization: item.customizationNote ? (
-                  <div className="mt-2 ml-20 p-2 bg-amber-50 border border-amber-200 rounded-lg">
-                    <p className="text-xs text-amber-800">
-                      <span className="font-semibold">✏️ Customization:</span>{' '}
-                      {item.customizationNote}
-                    </p>
-                  </div>
-                ) : null
-              };
-              return (
-                <div key={item.id} className="py-3 border-b border-[#f0d5c0] last:border-0">
-                  <div className="flex items-center gap-4">
-                    {sections.image}
-                    <div className="flex-grow min-w-0">
-                      <Link
-                        href={`/products/${item.productId}`}
-                        className="text-sm font-semibold text-[#4a3728] hover:text-[#d4856b] transition-colors"
-                      >
-                        {item.product?.name}
-                      </Link>
-                      {sections.variation}
-                      <p className="text-xs text-[#b89a85]">Qty: {item.quantity}</p>
-                    </div>
-                    <p className="text-sm font-bold text-[#4a3728]">{formatPrice(item.price * item.quantity)}</p>
-                  </div>
-                  {sections.customization}
-                </div>
-              );
-            })}
+            {order.items.map((item) => (
+              <OrderItemRow key={item.id} item={item} formatPrice={formatPrice} />
+            ))}
           </div>
         </Card>
 
