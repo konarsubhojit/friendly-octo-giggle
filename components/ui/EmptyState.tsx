@@ -64,15 +64,16 @@ export function EmptyState({
       </div>
       <h2 className="text-2xl font-bold text-gray-700 mb-2">{title}</h2>
       {message && <p className="text-gray-500 mb-6">{message}</p>}
-      {ctaText && ctaHref && (
-        <Link href={ctaHref} className={CTA_BTN}>
-          {ctaText}
-        </Link>
-      )}
-      {ctaText && !ctaHref && onCtaClick && (
-        <button type="button" onClick={onCtaClick} className={CTA_BTN}>
-          {ctaText}
-        </button>
+      {ctaText && (
+        ctaHref ? (
+          <Link href={ctaHref} className={CTA_BTN}>
+            {ctaText}
+          </Link>
+        ) : onCtaClick ? (
+          <button type="button" onClick={onCtaClick} className={CTA_BTN}>
+            {ctaText}
+          </button>
+        ) : null
       )}
     </div>
   );

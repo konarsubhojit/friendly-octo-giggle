@@ -66,6 +66,7 @@ export default function ContactForm() {
 
   const handleSubmit = useCallback((): SubmitResult => {
     setSubmitted(true);
+    return undefined;
   }, []);
 
   if (submitted) {

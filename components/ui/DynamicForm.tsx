@@ -288,7 +288,7 @@ export function DynamicForm({
         const result = await onSubmit(values);
         if (typeof result === 'string') {
           setInternalServerError(result);
-        } else if (result !== null && result !== undefined && typeof result === 'object') {
+        } else if (typeof result === 'object' && result !== null) {
           setFieldErrors(result as Record<string, string>);
         }
       } catch {

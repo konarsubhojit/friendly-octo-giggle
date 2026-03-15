@@ -187,10 +187,9 @@ export default function CartPage() {
     address: string,
     notes: Record<string, string>,
   ): Promise<void> => {
-    if (!cart?.items.length) throw new Error('Your cart is empty');
     const orderData = {
       customerAddress: address,
-      items: cart.items.map((item) => ({
+      items: (cart?.items ?? []).map((item) => ({
         productId: item.productId,
         variationId: item.variationId,
         quantity: item.quantity,
@@ -224,6 +223,7 @@ export default function CartPage() {
       router.push('/auth/signin?callbackUrl=/cart');
       return;
     }
+    if (!cart?.items.length) return 'Your cart is empty.';
     try {
       await submitOrderToApi(values.customerAddress, customizationNotes);
     } catch (err: unknown) {
