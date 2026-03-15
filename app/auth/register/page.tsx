@@ -106,7 +106,7 @@ const RegisterPageHeader = () => (
 
 const parseRegisterError = (data: { details?: Record<string, string>; error?: string }): SubmitResult => {
   if (data.details) return data.details;
-  return (data.error as string | undefined) ?? 'Registration failed';
+  return data.error ?? 'Registration failed';
 };
 
 // ─── Page ─────────────────────────────────────────────────────────────────────

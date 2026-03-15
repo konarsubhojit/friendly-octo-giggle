@@ -35,6 +35,22 @@ const DefaultIcon = () => (
 const CTA_BTN =
   'inline-block bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-2.5 rounded-xl font-semibold text-sm hover:from-blue-700 hover:to-purple-700 transition-all shadow-md hover:shadow-lg';
 
+interface CtaProps {
+  readonly text: string;
+  readonly href?: string;
+  readonly onClick?: () => void;
+}
+
+const CtaElement = ({ text, href, onClick }: CtaProps) => {
+  if (href) {
+    return <Link href={href} className={CTA_BTN}>{text}</Link>;
+  }
+  if (onClick) {
+    return <button type="button" onClick={onClick} className={CTA_BTN}>{text}</button>;
+  }
+  return null;
+};
+
 /**
  * Generic empty-state placeholder used when a list or page has no content.
  *
@@ -64,17 +80,7 @@ export function EmptyState({
       </div>
       <h2 className="text-2xl font-bold text-gray-700 mb-2">{title}</h2>
       {message && <p className="text-gray-500 mb-6">{message}</p>}
-      {ctaText && (
-        ctaHref ? (
-          <Link href={ctaHref} className={CTA_BTN}>
-            {ctaText}
-          </Link>
-        ) : onCtaClick ? (
-          <button type="button" onClick={onCtaClick} className={CTA_BTN}>
-            {ctaText}
-          </button>
-        ) : null
-      )}
+      {ctaText && <CtaElement text={ctaText} href={ctaHref} onClick={onCtaClick} />}
     </div>
   );
 }

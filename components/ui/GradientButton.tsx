@@ -51,7 +51,7 @@ export function GradientButton({
   className = '',
   type = 'button',
   ...rest
-}: GradientButtonProps) {
+}: Readonly<GradientButtonProps>) {
   const isDisabled = disabled ?? loading;
 
   return (

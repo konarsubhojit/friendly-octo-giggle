@@ -170,7 +170,12 @@ interface TextInputProps extends InputSubProps {
 const TextInput = ({ field, value, describedBy, error, showPassword, onChange, onTogglePassword, onBlur }: TextInputProps) => {
   const isPassword = field.type === 'password';
   const hasToggle = isPassword && field.showPasswordToggle;
-  const resolvedType = isPassword ? (showPassword ? 'text' : 'password') : field.type;
+  let resolvedType: string;
+  if (isPassword) {
+    resolvedType = showPassword ? 'text' : 'password';
+  } else {
+    resolvedType = field.type;
+  }
   const labelStr = typeof field.label === 'string' ? field.label.toLowerCase() : 'password';
 
   return (
@@ -223,7 +228,7 @@ const FieldRenderer = ({
   onBlur,
 }: FieldRendererProps) => {
   const errorId = `${field.id}-error`;
-  const describedBy = Boolean(error) ? errorId : undefined;
+  const describedBy = error ? errorId : undefined;
   const subProps = { field, value, describedBy, error, onChange };
   const handleBlur = field.validateOnBlur ? () => onBlur(field.name) : undefined;
 
@@ -335,7 +340,7 @@ export function DynamicForm({
         if (typeof result === 'string') {
           setInternalServerError(result);
         } else if (typeof result === 'object' && result !== null) {
-          setFieldErrors(result as Record<string, string>);
+          setFieldErrors(result);
         }
       } catch {
         setInternalServerError('An unexpected error occurred. Please try again.');
