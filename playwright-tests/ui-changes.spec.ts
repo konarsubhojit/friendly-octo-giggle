@@ -359,8 +359,9 @@ test.describe('Quick add-to-cart button', () => {
   });
 
   test('quick add button has aria-label for accessibility', async () => {
+    // After one-file-one-component refactoring, QuickAddButton lives in its own file.
     const source = fs.readFileSync(
-      path.join(__dirname, '../components/sections/ProductGrid.tsx'),
+      path.join(__dirname, '../components/sections/QuickAddButton.tsx'),
       'utf-8',
     );
     expect(source).toContain('aria-label={`Add ${product.name} to cart`}');

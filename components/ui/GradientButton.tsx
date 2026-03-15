@@ -56,7 +56,6 @@ export function GradientButton({
 
   return (
     <button
-      // eslint-disable-next-line react/button-has-type
       type={type}
       disabled={isDisabled}
       className={[

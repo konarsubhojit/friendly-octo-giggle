@@ -13,7 +13,7 @@ export type {
   DynamicFormProps,
 } from '@/components/ui/DynamicFormTypes';
 
-import type { FieldDef, DynamicFormProps } from '@/components/ui/DynamicFormTypes';
+import type { DynamicFormProps } from '@/components/ui/DynamicFormTypes';
 
 const DEFAULT_SUBMIT_BTN =
   'px-6 py-2 text-sm font-semibold bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed';
