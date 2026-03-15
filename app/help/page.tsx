@@ -41,13 +41,13 @@ interface FAQItem {
 
 function FAQSection({ items }: { readonly items: readonly FAQItem[] }) {
   return (
-    <section className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-warm border border-[#f0d5c0] p-8 mb-8">
-      <h2 className="text-2xl font-semibold text-[#4a3728] mb-6">Frequently Asked Questions</h2>
+    <section className="bg-[var(--surface)]/80 backdrop-blur-sm rounded-2xl shadow-warm border border-[var(--border-warm)] p-8 mb-8">
+      <h2 className="text-2xl font-semibold text-[var(--foreground)] mb-6">Frequently Asked Questions</h2>
       <div className="space-y-6">
         {items.map(faq => (
-          <div key={faq.question} className="border-b border-[#f0d5c0] last:border-0 pb-6 last:pb-0">
-            <h3 className="font-semibold text-[#4a3728] mb-2">{faq.question}</h3>
-            <p className="text-[#7a6355] text-sm leading-relaxed">{faq.answer}</p>
+          <div key={faq.question} className="border-b border-[var(--border-warm)] last:border-0 pb-6 last:pb-0">
+            <h3 className="font-semibold text-[var(--foreground)] mb-2">{faq.question}</h3>
+            <p className="text-[var(--text-secondary)] text-sm leading-relaxed">{faq.answer}</p>
           </div>
         ))}
       </div>
@@ -60,24 +60,24 @@ export default function HelpPage() {
     <div className="min-h-screen bg-warm-gradient">
       <Header />
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
-        <h1 className="text-4xl font-bold text-[#4a3728] mb-4">Help Center</h1>
-        <p className="text-[#b89a85] text-lg mb-12">Find answers to common questions or reach out to our support team.</p>
+        <h1 className="text-4xl font-bold text-[var(--foreground)] mb-4">Help Center</h1>
+        <p className="text-[var(--text-muted)] text-lg mb-12">Find answers to common questions or reach out to our support team.</p>
 
         <FAQSection items={faqs} />
 
-        <section className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-warm border border-[#f0d5c0] p-8">
-          <h2 className="text-xl font-semibold text-[#4a3728] mb-4">Still need help?</h2>
-          <p className="text-[#7a6355] mb-6">Our support team is available Monday–Friday, 9am–6pm EST.</p>
+        <section className="bg-[var(--surface)]/80 backdrop-blur-sm rounded-2xl shadow-warm border border-[var(--border-warm)] p-8">
+          <h2 className="text-xl font-semibold text-[var(--foreground)] mb-4">Still need help?</h2>
+          <p className="text-[var(--text-secondary)] mb-6">Our support team is available Monday–Friday, 9am–6pm EST.</p>
           <div className="flex flex-wrap gap-4">
             <Link
               href="/contact"
-              className="bg-gradient-to-r from-[#e8a87c] to-[#d4856b] text-white px-6 py-3 rounded-xl font-semibold hover:from-[#d4856b] hover:to-[#c7735a] transition-all duration-300 shadow-md hover:shadow-lg"
+              className="bg-gradient-to-r from-[var(--accent-warm)] to-[var(--accent-rose)] text-white px-6 py-3 rounded-xl font-semibold hover:from-[var(--accent-rose)] hover:to-[var(--accent-warm)] transition-all duration-300 shadow-md hover:shadow-lg"
             >
               Contact Support
             </Link>
             <a
               href="mailto:support@estore.example.com"
-              className="border border-[#f0d5c0] text-[#7a6355] px-6 py-3 rounded-xl font-semibold hover:bg-[#fde8d8] transition-all duration-300"
+              className="border border-[var(--border-warm)] text-[var(--text-secondary)] px-6 py-3 rounded-xl font-semibold hover:bg-[var(--accent-blush)] transition-all duration-300"
             >
               Email Us
             </a>

@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 export default function NewsletterForm() {
   return (
@@ -9,7 +9,10 @@ export default function NewsletterForm() {
         // Newsletter subscription is handled by the form action
       }}
     >
-      <label htmlFor="newsletter-email" className="text-sm text-[#7a6355] mb-2 block">
+      <label
+        htmlFor="newsletter-email"
+        className="text-sm text-[#7a6355] mb-2 block"
+      >
         Subscribe to our newsletter
       </label>
       <div className="flex gap-2">
@@ -22,7 +25,7 @@ export default function NewsletterForm() {
         />
         <button
           type="submit"
-          className="px-6 py-2 bg-gradient-to-r from-[#e8a87c] to-[#d4856b] text-white rounded-full font-semibold hover:from-[#d4856b] hover:to-[#c97b5e] transition-all duration-300 shadow-warm"
+          className="px-6 py-2 bg-gradient-to-r from-[var(--accent-warm)] to-[var(--accent-rose)] text-white rounded-full font-semibold hover:from-[var(--accent-rose)] hover:to-[var(--accent-warm)] transition-all duration-300 shadow-warm focus-warm"
           aria-label="Subscribe to newsletter"
         >
           Subscribe

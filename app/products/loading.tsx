@@ -1,8 +1,18 @@
-import HeaderSkeleton from '@/components/skeletons/HeaderSkeleton';
-import ProductCardSkeleton from '@/components/skeletons/ProductCardSkeleton';
+import HeaderSkeleton from "@/components/skeletons/HeaderSkeleton";
+import ProductCardSkeleton from "@/components/skeletons/ProductCardSkeleton";
 
 export default function ProductsLoading() {
-  const PRODUCT_SKELETONS = ['p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7', 'p8', 'p9'] as const;
+  const PRODUCT_SKELETONS = [
+    "p1",
+    "p2",
+    "p3",
+    "p4",
+    "p5",
+    "p6",
+    "p7",
+    "p8",
+    "p9",
+  ] as const;
   return (
     <div className="min-h-screen bg-warm-gradient">
       <HeaderSkeleton />
@@ -10,15 +20,15 @@ export default function ProductsLoading() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
         {/* Page Title Skeleton */}
         <div className="mb-8">
-          <div className="h-10 w-64 bg-gradient-to-r from-[#e8a87c] to-[#d4856b] rounded-lg animate-pulse mb-4" />
-          <div className="h-5 w-96 bg-gray-200 rounded animate-pulse" />
+          <div className="h-10 w-64 bg-gradient-to-r from-[var(--accent-warm)] to-[var(--accent-rose)] rounded-lg animate-pulse mb-4" />
+          <div className="h-5 w-96 bg-[var(--accent-blush)] rounded animate-pulse" />
         </div>
 
         {/* Filter/Sort Bar Skeleton */}
         <div className="flex flex-wrap gap-4 mb-8">
-          <div className="h-10 w-32 bg-white rounded-lg border border-[#f0d5c0] animate-pulse" />
-          <div className="h-10 w-40 bg-white rounded-lg border border-[#f0d5c0] animate-pulse" />
-          <div className="h-10 w-28 bg-white rounded-lg border border-[#f0d5c0] animate-pulse" />
+          <div className="h-10 w-32 bg-[var(--surface)] rounded-lg border border-[var(--border-warm)] animate-pulse" />
+          <div className="h-10 w-40 bg-[var(--surface)] rounded-lg border border-[var(--border-warm)] animate-pulse" />
+          <div className="h-10 w-28 bg-[var(--surface)] rounded-lg border border-[var(--border-warm)] animate-pulse" />
         </div>
 
         {/* Product Grid Skeleton */}
@@ -30,11 +40,11 @@ export default function ProductsLoading() {
 
         {/* Pagination Skeleton */}
         <div className="flex justify-center items-center gap-2 mt-12">
-          <div className="h-10 w-10 bg-gray-200 rounded-lg animate-pulse" />
-          <div className="h-10 w-10 bg-blue-200 rounded-lg animate-pulse" />
-          <div className="h-10 w-10 bg-gray-200 rounded-lg animate-pulse" />
-          <div className="h-10 w-10 bg-gray-200 rounded-lg animate-pulse" />
-          <div className="h-10 w-10 bg-gray-200 rounded-lg animate-pulse" />
+          <div className="h-10 w-10 bg-[var(--accent-blush)] rounded-lg animate-pulse" />
+          <div className="h-10 w-10 bg-[var(--accent-peach)] rounded-lg animate-pulse" />
+          <div className="h-10 w-10 bg-[var(--accent-blush)] rounded-lg animate-pulse" />
+          <div className="h-10 w-10 bg-[var(--accent-blush)] rounded-lg animate-pulse" />
+          <div className="h-10 w-10 bg-[var(--accent-blush)] rounded-lg animate-pulse" />
         </div>
       </main>
     </div>

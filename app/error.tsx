@@ -1,5 +1,4 @@
-'use client';
-
+"use client";
 
 interface ErrorProps {
   readonly error: Error & { digest?: string };
@@ -7,13 +6,12 @@ interface ErrorProps {
 }
 
 export default function GlobalError({ error, reset }: ErrorProps) {
-
   return (
     <div className="min-h-[50vh] flex items-center justify-center px-4">
-      <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8 text-center">
-        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-100 flex items-center justify-center">
+      <div className="max-w-md w-full bg-[var(--accent-cream)] rounded-2xl shadow-warm-lg border border-[var(--border-warm)] p-8 text-center">
+        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[var(--accent-peach)]/30 flex items-center justify-center">
           <svg
-            className="w-8 h-8 text-red-600"
+            className="w-8 h-8 text-[var(--accent-rose)]"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -26,18 +24,20 @@ export default function GlobalError({ error, reset }: ErrorProps) {
             />
           </svg>
         </div>
-        <h2 className="text-2xl font-bold text-[#4a3728] mb-2">
+        <h2 className="text-2xl font-bold text-[var(--foreground)] mb-2">
           Something went wrong!
         </h2>
-        <p className="text-[#7a6355] mb-4">
-          {error.message || 'An unexpected error occurred'}
+        <p className="text-[var(--text-secondary)] mb-4">
+          {error.message || "An unexpected error occurred"}
         </p>
         {error.digest && (
-          <p className="text-xs text-gray-400 mb-4">Error ID: {error.digest}</p>
+          <p className="text-xs text-[var(--text-muted)] mb-4">
+            Error ID: {error.digest}
+          </p>
         )}
         <button
           onClick={reset}
-          className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-[#e8a87c] to-[#d4856b] text-white font-medium rounded-lg hover:from-[#d4856b] hover:to-[#c7735a] transition-colors focus:outline-none focus:ring-2 focus:ring-[#e8a87c] focus:ring-offset-2"
+          className="inline-flex items-center px-6 py-2.5 bg-gradient-to-r from-[var(--accent-warm)] to-[var(--accent-rose)] text-white font-bold rounded-full hover:from-[var(--accent-rose)] hover:to-[#c97b5e] transition-all shadow-warm hover:shadow-warm-lg focus-warm"
         >
           Try again
         </button>

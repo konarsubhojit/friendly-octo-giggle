@@ -1,12 +1,16 @@
-'use client';
+"use client";
 
-import { useEffect, useRef, useCallback } from 'react';
-import { signIn } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { DynamicForm, type FieldDef, type SubmitResult } from '@/components/ui/DynamicForm';
-import { OAuthButtons } from '@/components/auth/OAuthButtons';
-import { CopilotDevLoginButton } from '@/components/auth/CopilotDevLoginButton';
+import { useEffect, useRef, useCallback } from "react";
+import { signIn } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import {
+  DynamicForm,
+  type FieldDef,
+  type SubmitResult,
+} from "@/components/ui/DynamicForm";
+import { OAuthButtons } from "@/components/auth/OAuthButtons";
+import { CopilotDevLoginButton } from "@/components/auth/CopilotDevLoginButton";
 
 interface LoginModalProps {
   readonly isOpen: boolean;
@@ -15,29 +19,30 @@ interface LoginModalProps {
 
 const LOGIN_FIELDS: ReadonlyArray<FieldDef> = [
   {
-    id: 'login-identifier',
-    name: 'identifier',
-    label: 'Email or Phone Number',
-    type: 'text',
-    placeholder: 'you@example.com or +1234567890',
-    autoComplete: 'username',
+    id: "login-identifier",
+    name: "identifier",
+    label: "Email or Phone Number",
+    type: "text",
+    placeholder: "you@example.com or +1234567890",
+    autoComplete: "username",
     autoFocus: true,
-    validate: (v) => v.trim() ? undefined : 'Email or phone number is required.',
+    validate: (v) =>
+      v.trim() ? undefined : "Email or phone number is required.",
   },
   {
-    id: 'login-password',
-    name: 'password',
-    label: 'Password',
-    type: 'password',
-    placeholder: 'Enter your password',
-    autoComplete: 'current-password',
+    id: "login-password",
+    name: "password",
+    label: "Password",
+    type: "password",
+    placeholder: "Enter your password",
+    autoComplete: "current-password",
     showPasswordToggle: true,
-    validate: (v) => v ? undefined : 'Password is required.',
+    validate: (v) => (v ? undefined : "Password is required."),
   },
 ];
 
 const SUBMIT_BTN =
-  'w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-300 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed';
+  "w-full py-3 bg-gradient-to-r from-[var(--accent-warm)] to-[var(--accent-rose)] text-white rounded-lg font-semibold hover:from-[var(--accent-rose)] hover:to-[var(--accent-warm)] transition-all duration-300 shadow-warm hover:shadow-warm-lg disabled:opacity-50 disabled:cursor-not-allowed focus-warm";
 
 export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -48,7 +53,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
     const dialog = dialogRef.current;
     if (!isOpen || !dialog) return;
 
-    document.body.style.overflow = 'hidden';
+    document.body.style.overflow = "hidden";
     dialog.showModal();
 
     function handleCancel(e: Event) {
@@ -56,27 +61,27 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
       onClose();
     }
 
-    dialog.addEventListener('cancel', handleCancel);
+    dialog.addEventListener("cancel", handleCancel);
     return () => {
-      dialog.removeEventListener('cancel', handleCancel);
-      document.body.style.overflow = '';
+      dialog.removeEventListener("cancel", handleCancel);
+      document.body.style.overflow = "";
     };
   }, [isOpen, onClose]);
 
   const handleSubmit = useCallback(
     async (values: Readonly<Record<string, string>>): Promise<SubmitResult> => {
       try {
-        const result = await signIn('credentials', {
+        const result = await signIn("credentials", {
           identifier: values.identifier,
           password: values.password,
           redirect: false,
         });
-        if (result?.error) return 'Invalid email/phone or password';
+        if (result?.error) return "Invalid email/phone or password";
         onClose();
         router.refresh();
         return undefined;
       } catch {
-        return 'An unexpected error occurred';
+        return "An unexpected error occurred";
       }
     },
     [onClose, router],
@@ -98,33 +103,59 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
       />
 
       {/* Modal */}
-      <div className="relative w-full sm:max-w-md bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl z-10 max-h-[90vh] overflow-y-auto pb-[env(safe-area-inset-bottom)]">
+      <div className="relative w-full sm:max-w-md bg-[var(--surface)] rounded-t-2xl sm:rounded-2xl shadow-2xl z-10 max-h-[90vh] overflow-y-auto pb-[env(safe-area-inset-bottom)]">
         {/* Drag handle for mobile */}
         <div className="sm:hidden flex justify-center pt-3 pb-1">
-          <div className="w-10 h-1 rounded-full bg-gray-300" />
+          <div className="w-10 h-1 rounded-full bg-[var(--border-warm)]" />
         </div>
 
         {/* Close button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+          className="absolute top-4 right-4 text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors"
           aria-label="Close login modal"
         >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          <svg
+            className="w-6 h-6"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M6 18L18 6M6 6l12 12"
+            />
           </svg>
         </button>
 
         <div className="px-4 sm:px-6 pt-6 pb-8">
           {/* Header */}
           <div className="text-center mb-6">
-            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-r from-blue-100 to-purple-100 mb-3">
-              <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-r from-[var(--accent-blush)] to-[var(--accent-peach)] mb-3">
+              <svg
+                className="w-6 h-6 text-[var(--accent-warm)]"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                />
               </svg>
             </div>
-            <h2 className="text-2xl font-bold text-gray-900">Welcome Back</h2>
-            <p className="text-sm text-gray-500 mt-1">Choose how to login</p>
+            <h2 className="text-2xl font-bold text-[var(--foreground)]">
+              Welcome Back
+            </h2>
+            <p className="text-sm text-[var(--text-muted)] mt-1">
+              Choose how to login
+            </p>
           </div>
 
           {/* Credentials form */}
@@ -140,26 +171,28 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
           {/* Divider */}
           <div className="relative my-6">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-200" />
+              <div className="w-full border-t border-[var(--border-warm)]" />
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-4 bg-white text-gray-500">or continue with</span>
+              <span className="px-4 bg-[var(--surface)] text-[var(--text-muted)]">
+                or continue with
+              </span>
             </div>
           </div>
 
           {/* OAuth buttons */}
           <OAuthButtons
-            onGoogleClick={() => signIn('google')}
-            onMicrosoftClick={() => signIn('microsoft-entra-id')}
+            onGoogleClick={() => signIn("google")}
+            onMicrosoftClick={() => signIn("microsoft-entra-id")}
           />
 
           {/* Register link */}
-          <p className="text-center text-sm text-gray-600 mt-6">
-            Don&apos;t have an account?{' '}
+          <p className="text-center text-sm text-[var(--text-secondary)] mt-6">
+            Don&apos;t have an account?{" "}
             <Link
               href="/auth/register"
               onClick={onClose}
-              className="font-semibold text-purple-600 hover:text-purple-700"
+              className="font-semibold text-[var(--accent-warm)] hover:text-[var(--accent-rose)]"
             >
               Register
             </Link>

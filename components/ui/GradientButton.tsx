@@ -1,7 +1,7 @@
-import type { ButtonHTMLAttributes, ReactNode } from 'react';
+import type { ButtonHTMLAttributes, ReactNode } from "react";
 
-type ButtonSize = 'sm' | 'md' | 'lg';
-type ButtonVariant = 'primary' | 'secondary' | 'danger';
+type ButtonSize = "sm" | "md" | "lg";
+type ButtonVariant = "primary" | "secondary" | "danger";
 
 interface GradientButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   readonly children: ReactNode;
@@ -15,18 +15,18 @@ interface GradientButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const SIZE_CLASSES: Record<ButtonSize, string> = {
-  sm: 'px-4 py-2 text-sm',
-  md: 'px-6 py-2.5 text-sm',
-  lg: 'px-6 py-3 text-base',
+  sm: "px-4 py-2 text-sm",
+  md: "px-6 py-2.5 text-sm",
+  lg: "px-6 py-3 text-base",
 };
 
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {
   primary:
-    'bg-gradient-to-r from-[#e8a87c] to-[#d4856b] hover:from-[#d4856b] hover:to-[#c97b5e] text-white shadow-warm hover:shadow-warm-lg',
+    "bg-gradient-to-r from-[var(--accent-warm)] to-[var(--accent-rose)] hover:from-[var(--accent-rose)] hover:to-[var(--accent-warm)] text-white shadow-warm hover:shadow-warm-lg",
   secondary:
-    'bg-gradient-to-r from-[#b89a85] to-[#9a8070] hover:from-[#9a8070] hover:to-[#8a7060] text-white shadow-warm hover:shadow-warm-lg',
+    "bg-gradient-to-r from-[var(--text-secondary)] to-[var(--text-muted)] hover:from-[var(--text-muted)] hover:to-[var(--text-secondary)] text-white shadow-warm hover:shadow-warm-lg",
   danger:
-    'bg-gradient-to-r from-red-400 to-red-500 hover:from-red-500 hover:to-red-600 text-white shadow-md hover:shadow-lg',
+    "bg-gradient-to-r from-red-400 to-red-500 hover:from-red-500 hover:to-red-600 text-white shadow-md hover:shadow-lg",
 };
 
 /**
@@ -42,14 +42,14 @@ const VARIANT_CLASSES: Record<ButtonVariant, string> = {
  */
 export function GradientButton({
   children,
-  size = 'md',
-  variant = 'primary',
+  size = "md",
+  variant = "primary",
   loading = false,
   loadingText,
   fullWidth = false,
   disabled,
-  className = '',
-  type = 'button',
+  className = "",
+  type = "button",
   ...rest
 }: Readonly<GradientButtonProps>) {
   const isDisabled = disabled ?? loading;
@@ -59,14 +59,14 @@ export function GradientButton({
       type={type}
       disabled={isDisabled}
       className={[
-        'font-semibold rounded-full transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed',
+        "font-semibold rounded-full transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed focus-warm",
         SIZE_CLASSES[size],
         VARIANT_CLASSES[variant],
-        fullWidth ? 'w-full' : '',
+        fullWidth ? "w-full" : "",
         className,
       ]
         .filter(Boolean)
-        .join(' ')}
+        .join(" ")}
       {...rest}
     >
       {loading && loadingText ? loadingText : children}

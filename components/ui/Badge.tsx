@@ -1,32 +1,38 @@
-import type { ReactNode } from 'react';
+import type { ReactNode } from "react";
 
 export type BadgeVariant =
-  | 'success'
-  | 'warning'
-  | 'error'
-  | 'info'
-  | 'neutral'
-  | 'primary';
+  | "success"
+  | "warning"
+  | "error"
+  | "info"
+  | "neutral"
+  | "primary"
+  | "sage"
+  | "peach"
+  | "blush";
 
 interface BadgeProps {
   readonly children: ReactNode;
   readonly variant?: BadgeVariant;
-  readonly size?: 'sm' | 'md';
+  readonly size?: "sm" | "md";
   readonly className?: string;
 }
 
 const VARIANT_CLASSES: Record<BadgeVariant, string> = {
-  success: 'bg-green-100  text-green-700',
-  warning: 'bg-amber-100  text-amber-700',
-  error:   'bg-red-100    text-red-700',
-  info:    'bg-blue-100   text-blue-700',
-  neutral: 'bg-gray-100   text-gray-600',
-  primary: 'bg-purple-100 text-purple-700',
+  success: "bg-[var(--accent-sage)]/20 text-[var(--accent-sage)]",
+  warning: "bg-[var(--accent-peach)]/30 text-[var(--accent-rose)]",
+  error: "bg-[var(--accent-warm)]/20 text-[var(--accent-rose)]",
+  info: "bg-[var(--accent-blush)] text-[var(--accent-rose)]",
+  neutral: "bg-[var(--border-warm)]/30 text-[var(--text-secondary)]",
+  primary: "bg-[var(--accent-blush)] text-[var(--accent-rose)]",
+  sage: "bg-[var(--accent-sage)]/20 text-[var(--accent-sage)]",
+  peach: "bg-[var(--accent-peach)]/30 text-[var(--accent-rose)]",
+  blush: "bg-[var(--accent-blush)] text-[var(--accent-rose)]",
 };
 
 const SIZE_CLASSES = {
-  sm: 'px-2 py-0.5 text-xs',
-  md: 'px-3 py-1   text-sm',
+  sm: "px-2 py-0.5 text-xs",
+  md: "px-3 py-1   text-sm",
 };
 
 /**
@@ -43,9 +49,9 @@ const SIZE_CLASSES = {
  */
 export function Badge({
   children,
-  variant = 'neutral',
-  size = 'md',
-  className = '',
+  variant = "neutral",
+  size = "md",
+  className = "",
 }: BadgeProps) {
   return (
     <span
@@ -61,16 +67,16 @@ export function Badge({
 /** Maps an order-status string to the appropriate `BadgeVariant`. */
 export function orderStatusVariant(status: string): BadgeVariant {
   const map: Record<string, BadgeVariant> = {
-    PENDING:    'warning',
-    PROCESSING: 'info',
-    SHIPPED:    'primary',
-    DELIVERED:  'success',
-    CANCELLED:  'error',
+    PENDING: "warning",
+    PROCESSING: "info",
+    SHIPPED: "primary",
+    DELIVERED: "success",
+    CANCELLED: "error",
   };
-  return map[status.toUpperCase()] ?? 'neutral';
+  return map[status.toUpperCase()] ?? "neutral";
 }
 
 /** Maps a user-role string to the appropriate `BadgeVariant`. */
 export function roleVariant(role: string): BadgeVariant {
-  return role.toUpperCase() === 'ADMIN' ? 'primary' : 'success';
+  return role.toUpperCase() === "ADMIN" ? "primary" : "success";
 }

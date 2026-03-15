@@ -20,11 +20,11 @@ export default function CareersPage() {
     <div className="min-h-screen bg-warm-gradient">
       <Header />
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
-        <h1 className="text-4xl font-bold text-[#4a3728] mb-4">Careers</h1>
-        <p className="text-[#b89a85] text-lg mb-12">Join our team and help build the future of online shopping.</p>
+        <h1 className="text-4xl font-bold text-[var(--foreground)] mb-4">Careers</h1>
+        <p className="text-[var(--text-muted)] text-lg mb-12">Join our team and help build the future of online shopping.</p>
 
-        <section className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-warm border border-[#f0d5c0] p-8 mb-8">
-          <h2 className="text-2xl font-semibold text-[#4a3728] mb-4">Why Work at Craft &amp; Cozy?</h2>
+        <section className="bg-[var(--surface)]/80 backdrop-blur-sm rounded-2xl shadow-warm border border-[var(--border-warm)] p-8 mb-8">
+          <h2 className="text-2xl font-semibold text-[var(--foreground)] mb-4">Why Work at Craft &amp; Cozy?</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {[
               { title: 'Remote-First Culture', desc: 'Work from anywhere in the world with flexible hours.' },
@@ -39,22 +39,22 @@ export default function CareersPage() {
                   </svg>
                 </div>
                 <div>
-                  <h3 className="font-semibold text-[#4a3728] text-sm">{item.title}</h3>
-                  <p className="text-sm text-[#b89a85]">{item.desc}</p>
+                  <h3 className="font-semibold text-[var(--foreground)] text-sm">{item.title}</h3>
+                  <p className="text-sm text-[var(--text-muted)]">{item.desc}</p>
                 </div>
               </div>
             ))}
           </div>
         </section>
 
-        <section className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-warm border border-[#f0d5c0] p-8">
-          <h2 className="text-2xl font-semibold text-[#4a3728] mb-6">Open Positions</h2>
+        <section className="bg-[var(--surface)]/80 backdrop-blur-sm rounded-2xl shadow-warm border border-[var(--border-warm)] p-8">
+          <h2 className="text-2xl font-semibold text-[var(--foreground)] mb-6">Open Positions</h2>
           <div className="space-y-4">
             {openings.map(job => (
-              <div key={job.title} className="flex items-center justify-between p-4 border border-[#f0d5c0] rounded-xl hover:border-[#e8a87c] hover:bg-[#fde8d8]/30 transition-all">
+              <div key={job.title} className="flex items-center justify-between p-4 border border-[var(--border-warm)] rounded-xl hover:border-[#e8a87c] hover:bg-[var(--accent-blush)]/30 transition-all">
                 <div>
-                  <h3 className="font-semibold text-[#4a3728]">{job.title}</h3>
-                  <p className="text-sm text-[#b89a85]">{job.team} · {job.location} · {job.type}</p>
+                  <h3 className="font-semibold text-[var(--foreground)]">{job.title}</h3>
+                  <p className="text-sm text-[var(--text-muted)]">{job.team} · {job.location} · {job.type}</p>
                 </div>
                 <Link
                   href="/contact"

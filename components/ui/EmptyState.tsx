@@ -1,6 +1,6 @@
-import type { ReactNode } from 'react';
-import { EmptyStateIcon } from '@/components/ui/EmptyStateIcon';
-import { CtaButton } from '@/components/ui/CtaButton';
+import type { ReactNode } from "react";
+import { EmptyStateIcon } from "@/components/ui/EmptyStateIcon";
+import { CtaButton } from "@/components/ui/CtaButton";
 
 interface EmptyStateProps {
   /** SVG icon rendered in the empty-state circle. Defaults to a generic empty-box icon. */
@@ -36,16 +36,24 @@ export function EmptyState({
   ctaText,
   ctaHref,
   onCtaClick,
-  className = '',
+  className = "",
 }: EmptyStateProps) {
   return (
-    <div className={`py-16 text-center ${className}`}>
+    <div
+      className={`py-16 text-center bg-[var(--surface)] rounded-3xl border border-[var(--border-warm)] ${className}`}
+    >
       <div className="flex items-center justify-center mb-6">
         {icon ?? <EmptyStateIcon />}
       </div>
-      <h2 className="text-2xl font-bold text-gray-700 mb-2">{title}</h2>
-      {message && <p className="text-gray-500 mb-6">{message}</p>}
-      {ctaText && <CtaButton text={ctaText} href={ctaHref} onClick={onCtaClick} />}
+      <h2 className="text-2xl font-bold text-[var(--foreground)] mb-2">
+        {title}
+      </h2>
+      {message && (
+        <p className="text-[var(--text-secondary)] mb-6">{message}</p>
+      )}
+      {ctaText && (
+        <CtaButton text={ctaText} href={ctaHref} onClick={onCtaClick} />
+      )}
     </div>
   );
 }
