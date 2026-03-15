@@ -89,8 +89,8 @@ export default function SignInClient() {
       </button>
     </form>
 
-    {/* Dev-only: Copilot Admin sign-in */}
-    <CopilotDevLoginButton onSuccess={() => { globalThis.location.href = '/admin'; }} />
+    {/* Dev-only: Copilot Admin sign-in — navigates to /admin on success */}
+    <CopilotDevLoginButton />
     </>
   );
 }

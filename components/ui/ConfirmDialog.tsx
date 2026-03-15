@@ -137,6 +137,10 @@ const ConfirmDialog = ({
     const frame = requestAnimationFrame(() => { cancelBtnRef.current?.focus(); });
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Only handle events when this dialog contains the focused element,
+      // so multiple open dialogs don't interfere with each other.
+      if (!dialogRef.current?.contains(document.activeElement)) return;
+
       if (e.key === 'Escape' && !loading) { onCancel(); return; }
       if (e.key !== 'Tab') return;
 

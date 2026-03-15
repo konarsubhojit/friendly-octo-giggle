@@ -134,6 +134,9 @@ describe('ConfirmDialog', () => {
   it('calls onCancel when Escape is pressed', () => {
     const onCancel = vi.fn();
     render(<ConfirmDialog {...baseProps} onCancel={onCancel} />);
+    // Focus an element inside the dialog so the guard passes
+    const cancelBtn = screen.getByRole('button', { name: 'Cancel' });
+    cancelBtn.focus();
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(onCancel).toHaveBeenCalledTimes(1);
   });
@@ -141,6 +144,8 @@ describe('ConfirmDialog', () => {
   it('does not call onCancel on Escape when loading', () => {
     const onCancel = vi.fn();
     render(<ConfirmDialog {...baseProps} onCancel={onCancel} loading />);
+    // Buttons are disabled when loading; focus remains outside the dialog,
+    // so the handler is correctly suppressed.
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(onCancel).not.toHaveBeenCalled();
   });
