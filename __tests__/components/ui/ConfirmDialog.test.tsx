@@ -112,8 +112,8 @@ describe('ConfirmDialog', () => {
     const { container: c1 } = render(<ConfirmDialog {...baseProps} title="Dialog A" />);
     const { container: c2 } = render(<ConfirmDialog {...baseProps} title="Dialog B" />);
 
-    const dialog1 = c1.querySelector('[role="dialog"]')!;
-    const dialog2 = c2.querySelector('[role="dialog"]')!;
+    const dialog1 = c1.querySelector('dialog') as HTMLDialogElement;
+    const dialog2 = c2.querySelector('dialog') as HTMLDialogElement;
 
     const labelId1 = dialog1.getAttribute('aria-labelledby');
     const labelId2 = dialog2.getAttribute('aria-labelledby');
@@ -134,6 +134,9 @@ describe('ConfirmDialog', () => {
   it('calls onCancel when Escape is pressed', () => {
     const onCancel = vi.fn();
     render(<ConfirmDialog {...baseProps} onCancel={onCancel} />);
+    // Focus an element inside the dialog so the guard passes
+    const cancelBtn = screen.getByRole('button', { name: 'Cancel' });
+    cancelBtn.focus();
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(onCancel).toHaveBeenCalledTimes(1);
   });
@@ -141,6 +144,8 @@ describe('ConfirmDialog', () => {
   it('does not call onCancel on Escape when loading', () => {
     const onCancel = vi.fn();
     render(<ConfirmDialog {...baseProps} onCancel={onCancel} loading />);
+    // Buttons are disabled when loading; focus remains outside the dialog,
+    // so the handler is correctly suppressed.
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(onCancel).not.toHaveBeenCalled();
   });

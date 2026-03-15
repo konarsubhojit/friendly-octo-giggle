@@ -44,7 +44,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
     };
   }, [isOpen, onClose]);
 
-  async function handleCredentialsLogin(e: React.FormEvent) {
+  async function handleCredentialsLogin(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError('');
     setLoading(true);

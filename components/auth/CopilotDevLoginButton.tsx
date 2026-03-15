@@ -28,7 +28,7 @@ export function CopilotDevLoginButton({ onSuccess }: CopilotDevLoginButtonProps)
       });
       if (result?.ok) {
         onSuccess?.();
-        window.location.href = '/admin';
+        globalThis.location.href = '/admin';
       }
     } finally {
       setLoading(false);

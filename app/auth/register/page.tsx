@@ -19,7 +19,15 @@ export default function RegisterPage() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
+  const handleApiError = (data: { details?: Record<string, string>; error?: string }) => {
+    if (data.details) {
+      setFieldErrors(data.details);
+    } else {
+      setError(data.error ?? 'Registration failed');
+    }
+  };
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError('');
     setFieldErrors({});
@@ -41,11 +49,7 @@ export default function RegisterPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        if (data.details) {
-          setFieldErrors(data.details);
-        } else {
-          setError(data.error || 'Registration failed');
-        }
+        handleApiError(data);
         return;
       }
 
@@ -169,11 +173,12 @@ export default function RegisterPage() {
               required
               autoComplete="new-password"
             />
-            {fieldErrors.confirmPassword ? (
+            {fieldErrors.confirmPassword && (
               <p className="text-xs text-red-600 mt-1">{fieldErrors.confirmPassword}</p>
-            ) : confirmPasswordTouched && confirmPassword && password !== confirmPassword ? (
+            )}
+            {!fieldErrors.confirmPassword && confirmPasswordTouched && confirmPassword && password !== confirmPassword && (
               <p className="text-xs text-red-600 mt-1">Passwords don&apos;t match</p>
-            ) : null}
+            )}
           </div>
 
           <button
