@@ -91,8 +91,6 @@ export default function ProductGrid({ products }: ProductGridProps) {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
           {filtered.map((product) => (
-            /* Outer card div with hover effects — QuickAddButton is a direct child (NOT inside the Link)
-               to avoid nesting interactive elements, which is invalid HTML and causes a11y issues. */
             <div
               key={product.id}
               className="bg-white rounded-xl shadow-lg overflow-hidden border-2 border-gray-100 group hover:shadow-2xl hover:scale-105 hover:-translate-y-1 hover:border-rose-200 transition-all duration-300 relative"

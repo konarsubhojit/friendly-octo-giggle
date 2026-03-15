@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import type { ChangeEvent } from 'react';
 import { OrderStatus } from '@/lib/types';
 import { Badge, orderStatusVariant } from '@/components/ui/Badge';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
@@ -57,7 +58,7 @@ export function AdminOrderCard({
   const hasTracking = Boolean(order.trackingNumber || order.shippingProvider);
   const [pendingStatus, setPendingStatus] = useState<OrderStatus | null>(null);
 
-  const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+  const handleSelectChange = (e: ChangeEvent<HTMLSelectElement>) => {
     const newStatus = e.target.value as OrderStatus;
     if (newStatus !== order.status) {
       setPendingStatus(newStatus);

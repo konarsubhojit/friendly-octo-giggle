@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import type { ChangeEvent } from 'react';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 
@@ -24,7 +25,7 @@ export function RoleAction({ user, isUpdating, onRoleChange }: RoleActionProps) 
     return <LoadingSpinner size="h-4 w-4" />;
   }
 
-  const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+  const handleSelectChange = (e: ChangeEvent<HTMLSelectElement>) => {
     const newRole = e.target.value as 'ADMIN' | 'CUSTOMER';
     if (newRole !== user.role) {
       setPendingRole(newRole);

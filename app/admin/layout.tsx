@@ -48,6 +48,3 @@ export default async function AdminLayout({
   );
 }
 
-interface AdminLayoutProps {
-  readonly children: React.ReactNode;
-}
