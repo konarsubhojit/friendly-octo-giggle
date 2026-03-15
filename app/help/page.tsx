@@ -34,39 +34,50 @@ const faqs = [
   },
 ];
 
+interface FAQItem {
+  readonly question: string;
+  readonly answer: string;
+}
+
+function FAQSection({ items }: { readonly items: readonly FAQItem[] }) {
+  return (
+    <section className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-warm border border-[#f0d5c0] p-8 mb-8">
+      <h2 className="text-2xl font-semibold text-[#4a3728] mb-6">Frequently Asked Questions</h2>
+      <div className="space-y-6">
+        {items.map(faq => (
+          <div key={faq.question} className="border-b border-[#f0d5c0] last:border-0 pb-6 last:pb-0">
+            <h3 className="font-semibold text-[#4a3728] mb-2">{faq.question}</h3>
+            <p className="text-[#7a6355] text-sm leading-relaxed">{faq.answer}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export default function HelpPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
+    <div className="min-h-screen bg-warm-gradient">
       <Header />
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
-        <h1 className="text-4xl font-bold text-gray-900 mb-4">Help Center</h1>
-        <p className="text-gray-500 text-lg mb-12">Find answers to common questions or reach out to our support team.</p>
+        <h1 className="text-4xl font-bold text-[#4a3728] mb-4">Help Center</h1>
+        <p className="text-[#b89a85] text-lg mb-12">Find answers to common questions or reach out to our support team.</p>
 
-        <section className="bg-white rounded-2xl shadow-sm p-8 mb-8">
-          <h2 className="text-2xl font-semibold text-gray-900 mb-6">Frequently Asked Questions</h2>
-          <div className="space-y-6">
-            {faqs.map(faq => (
-              <div key={faq.question} className="border-b border-gray-100 last:border-0 pb-6 last:pb-0">
-                <h3 className="font-semibold text-gray-900 mb-2">{faq.question}</h3>
-                <p className="text-gray-600 text-sm leading-relaxed">{faq.answer}</p>
-              </div>
-            ))}
-          </div>
-        </section>
+        <FAQSection items={faqs} />
 
-        <section className="bg-white rounded-2xl shadow-sm p-8">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Still need help?</h2>
-          <p className="text-gray-600 mb-6">Our support team is available Monday–Friday, 9am–6pm EST.</p>
+        <section className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-warm border border-[#f0d5c0] p-8">
+          <h2 className="text-xl font-semibold text-[#4a3728] mb-4">Still need help?</h2>
+          <p className="text-[#7a6355] mb-6">Our support team is available Monday–Friday, 9am–6pm EST.</p>
           <div className="flex flex-wrap gap-4">
             <Link
               href="/contact"
-              className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-xl font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-300 shadow-md hover:shadow-lg"
+              className="bg-gradient-to-r from-[#e8a87c] to-[#d4856b] text-white px-6 py-3 rounded-xl font-semibold hover:from-[#d4856b] hover:to-[#c7735a] transition-all duration-300 shadow-md hover:shadow-lg"
             >
               Contact Support
             </Link>
             <a
               href="mailto:support@estore.example.com"
-              className="border border-gray-200 text-gray-700 px-6 py-3 rounded-xl font-semibold hover:bg-gray-50 transition-all duration-300"
+              className="border border-[#f0d5c0] text-[#7a6355] px-6 py-3 rounded-xl font-semibold hover:bg-[#fde8d8] transition-all duration-300"
             >
               Email Us
             </a>

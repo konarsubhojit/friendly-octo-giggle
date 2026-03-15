@@ -33,7 +33,7 @@ export function QuickAddButton({ product }: { readonly product: Product }) {
       onClick={handleQuickAdd}
       disabled={adding}
       aria-label={`Add ${product.name} to cart`}
-      className="absolute bottom-3 right-3 z-20 bg-white/90 hover:bg-rose-500 text-rose-500 hover:text-white rounded-full p-2 shadow-lg transition-all duration-200 hover:scale-110 disabled:opacity-50"
+      className="absolute bottom-4 right-4 z-20 bg-white/90 hover:bg-gradient-to-r hover:from-[#e8a87c] hover:to-[#d4856b] text-[#d4856b] hover:text-white rounded-full p-2.5 shadow-warm transition-all duration-200 hover:scale-110 hover:shadow-warm-lg disabled:opacity-50 border border-[#f0d5c0]"
     >
       {adding ? (
         <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true">

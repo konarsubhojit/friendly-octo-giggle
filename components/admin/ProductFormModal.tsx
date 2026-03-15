@@ -197,22 +197,43 @@ export default function ProductFormModal({
     return saved.data?.product || saved.product || saved;
   };
 
+  const handleStockChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    setStockInput(raw);
+    if (raw === '') {
+      // Allow clearing the field; treat as 0 for form submission
+      setFormData({ ...formData, stock: 0 });
+      clearFieldError('stock');
+      return;
+    }
+    const value = Number.parseInt(raw, 10);
+    if (!Number.isNaN(value) && value >= 0) {
+      setFormData({ ...formData, stock: value });
+      clearFieldError('stock');
+    }
+  };
+
+  /** Resolve the final image URL (uploading a new file if selected). */
+  const resolveImageUrl = async (): Promise<string | null> => {
+    if (imageFile) {
+      const uploadedUrl = await uploadImage();
+      if (!uploadedUrl) return null;
+      return uploadedUrl;
+    }
+    if (!formData.image) {
+      setFieldErrors((prev) => ({ ...prev, image: PRODUCT_ERRORS.IMAGE_REQUIRED }));
+      return null;
+    }
+    return formData.image;
+  };
+
   const handleSubmit = async (e: React.BaseSyntheticEvent) => {
     e.preventDefault();
     if (!validate()) return;
     setSaving(true);
     try {
-      let imageUrl = formData.image;
-      if (imageFile) {
-        const uploadedUrl = await uploadImage();
-        if (!uploadedUrl) { setSaving(false); return; }
-        imageUrl = uploadedUrl;
-      }
-      if (!imageUrl) {
-        setFieldErrors((prev) => ({ ...prev, image: PRODUCT_ERRORS.IMAGE_REQUIRED }));
-        setSaving(false);
-        return;
-      }
+      const imageUrl = await resolveImageUrl();
+      if (!imageUrl) { setSaving(false); return; }
       const savedProduct = await saveProductToApi(imageUrl);
       toast.success(editingProduct ? 'Product updated successfully' : 'Product created successfully');
       onSuccess(savedProduct);
@@ -329,21 +350,7 @@ export default function ProductFormModal({
                     id="product-stock"
                     type="number"
                     value={stockInput}
-                    onChange={(e) => {
-                      const raw = e.target.value;
-                      setStockInput(raw);
-                      if (raw === '') {
-                        // Allow clearing the field; treat as 0 for form submission
-                        setFormData({ ...formData, stock: 0 });
-                        clearFieldError('stock');
-                      } else {
-                        const value = Number.parseInt(raw, 10);
-                        if (!Number.isNaN(value) && value >= 0) {
-                          setFormData({ ...formData, stock: value });
-                          clearFieldError('stock');
-                        }
-                      }
-                    }}
+                    onChange={handleStockChange}
                     required
                     min="0"
                     step="1"

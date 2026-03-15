@@ -138,14 +138,14 @@ export default function CartPage() {
   ];
 
   const CART_SUBMIT_BTN =
-    'w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3.5 rounded-xl font-bold text-base hover:from-blue-700 hover:to-purple-700 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed transition-all duration-300 shadow-lg hover:shadow-xl';
+    'w-full bg-gradient-to-r from-[#e8a87c] to-[#d4856b] text-white py-3.5 rounded-xl font-bold text-base hover:from-[#d4856b] hover:to-[#c7735a] disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed transition-all duration-300 shadow-lg hover:shadow-xl';
 
   // Show the full-page spinner only on the very first load (cart not yet fetched).
   // Background re-fetches triggered by quantity updates / removals must not
   // replace the visible cart with a blank spinner – that is the bug we are fixing.
   if ((loading && cart === null) || status === 'loading') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
+      <div className="min-h-screen bg-warm-gradient">
         <Header />
         <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
           <div className="flex items-center justify-center py-20">
@@ -158,11 +158,11 @@ export default function CartPage() {
 
   if (!session?.user) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
+      <div className="min-h-screen bg-warm-gradient">
         <Header />
         <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
           <AuthRequiredState callbackUrl="/cart" message="Please sign in to view your cart and place orders." />
-          <Link href="/" className="block mt-4 text-gray-500 hover:text-gray-700 font-medium text-center">
+          <Link href="/" className="block mt-4 text-[#b89a85] hover:text-[#7a6355] font-medium text-center">
             Continue Shopping
           </Link>
         </main>
@@ -173,7 +173,7 @@ export default function CartPage() {
   const isEmpty = !cart?.items || cart.items.length === 0;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
+    <div className="min-h-screen bg-warm-gradient">
       <Header />
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
@@ -233,7 +233,7 @@ export default function CartPage() {
                 ))}
               </Card>
 
-              <Link href="/" className="inline-flex items-center gap-2 mt-4 text-sm text-gray-600 hover:text-blue-600 transition-colors font-medium">
+              <Link href="/" className="inline-flex items-center gap-2 mt-4 text-sm text-[#7a6355] hover:text-[#d4856b] transition-colors font-medium">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                 </svg>
@@ -244,28 +244,28 @@ export default function CartPage() {
             {/* Order Summary Sidebar */}
             <div className="lg:col-span-1">
               <Card className="p-6 sticky top-28">
-                <h2 className="text-lg font-bold text-gray-900 mb-4">Order Summary</h2>
+                <h2 className="text-lg font-bold text-[#4a3728] mb-4">Order Summary</h2>
 
                 <div className="space-y-3 mb-4 text-sm">
-                  <div className="flex justify-between text-gray-600">
+                  <div className="flex justify-between text-[#7a6355]">
                     <span>Subtotal ({cart.items.reduce((s, i) => s + i.quantity, 0)} items)</span>
                     <span className="font-medium">{formatPrice(calculateTotal())}</span>
                   </div>
-                  <div className="flex justify-between text-gray-600">
+                  <div className="flex justify-between text-[#7a6355]">
                     <span>Shipping</span>
-                    <span className="text-green-600 font-medium">Free</span>
+                    <span className="text-[#7a9e5e] font-medium">Free</span>
                   </div>
-                  <div className="border-t border-gray-200 pt-3 flex justify-between">
-                    <span className="font-bold text-gray-900">Total</span>
-                    <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                  <div className="border-t border-[#f0d5c0] pt-3 flex justify-between">
+                    <span className="font-bold text-[#4a3728]">Total</span>
+                    <span className="text-xl font-bold bg-gradient-to-r from-[#e8a87c] to-[#d4856b] bg-clip-text text-transparent">
                       {formatPrice(calculateTotal())}
                     </span>
                   </div>
                 </div>
 
                 {/* Payment placeholder */}
-                <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200 text-center">
-                  <p className="text-xs text-gray-500">Payment integration coming soon</p>
+                <div className="mb-4 p-3 bg-[#fde8d8]/50 rounded-lg border border-[#f0d5c0] text-center">
+                  <p className="text-xs text-[#b89a85]">Payment integration coming soon</p>
                 </div>
 
                 {/* Shipping address + Place Order */}

@@ -27,10 +27,10 @@ export default function ProductsError({ error, reset }: ErrorProps) {
             />
           </svg>
         </div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+        <h2 className="text-2xl font-bold text-[#4a3728] mb-2">
           Error Loading Products
         </h2>
-        <p className="text-gray-600 mb-4">
+        <p className="text-[#7a6355] mb-4">
           {error.message || 'Failed to load product information'}
         </p>
         {error.digest && (
@@ -45,7 +45,7 @@ export default function ProductsError({ error, reset }: ErrorProps) {
           </button>
           <Link
             href="/"
-            className="inline-flex items-center justify-center px-4 py-2 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+            className="inline-flex items-center justify-center px-4 py-2 bg-gray-100 text-[#7a6355] font-medium rounded-lg hover:bg-gray-200 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
           >
             Go home
           </Link>

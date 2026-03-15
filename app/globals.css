@@ -1,13 +1,19 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #fef7f2;
+  --foreground: #4a3728;
+  --accent-warm: #e8a87c;
+  --accent-rose: #d4856b;
+  --accent-peach: #f8c8a8;
+  --accent-cream: #fff5eb;
+  --accent-blush: #fde8d8;
+  --accent-sage: #b8c9a3;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
+    --background: #1a1412;
     --foreground: #ededed;
   }
 }
@@ -15,9 +21,135 @@
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
 }
 
 @utility text-balance {
   text-wrap: balance;
+}
+
+/* ─── Theme Animations ────────────────────────────────────────────────── */
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-32px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(32px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes floatGentle {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-8px); }
+}
+
+@keyframes floatSlow {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50%      { transform: translateY(-12px) rotate(3deg); }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.9); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  25%      { transform: rotate(-3deg); }
+  75%      { transform: rotate(3deg); }
+}
+
+@utility animate-fade-in-up {
+  animation: fadeInUp 0.6s ease-out both;
+}
+
+@utility animate-fade-in {
+  animation: fadeIn 0.5s ease-out both;
+}
+
+@utility animate-slide-in-left {
+  animation: slideInLeft 0.6s ease-out both;
+}
+
+@utility animate-slide-in-right {
+  animation: slideInRight 0.6s ease-out both;
+}
+
+@utility animate-float-gentle {
+  animation: floatGentle 3s ease-in-out infinite;
+}
+
+@utility animate-float-slow {
+  animation: floatSlow 4s ease-in-out infinite;
+}
+
+@utility animate-scale-in {
+  animation: scaleIn 0.4s ease-out both;
+}
+
+@utility animate-shimmer {
+  animation: shimmer 2s linear infinite;
+  background-size: 200% 100%;
+}
+
+@utility animate-wiggle {
+  animation: wiggle 1s ease-in-out infinite;
+}
+
+/* Stagger delays for grid items */
+@utility animation-delay-100 {
+  animation-delay: 100ms;
+}
+@utility animation-delay-200 {
+  animation-delay: 200ms;
+}
+@utility animation-delay-300 {
+  animation-delay: 300ms;
+}
+@utility animation-delay-400 {
+  animation-delay: 400ms;
+}
+@utility animation-delay-500 {
+  animation-delay: 500ms;
+}
+
+/* ─── Warm Theme Utilities ────────────────────────────────────────────── */
+
+@utility bg-warm-gradient {
+  background: linear-gradient(135deg, #fef7f2 0%, #fde8d8 50%, #fef0e6 100%);
+}
+
+@utility text-warm-heading {
+  background: linear-gradient(135deg, #d4856b, #e8a87c, #c97b5e);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+@utility border-warm {
+  border-color: #f0d5c0;
+}
+
+@utility shadow-warm {
+  box-shadow: 0 4px 20px rgba(212, 133, 107, 0.12), 0 1px 4px rgba(232, 168, 124, 0.08);
+}
+
+@utility shadow-warm-lg {
+  box-shadow: 0 8px 32px rgba(212, 133, 107, 0.18), 0 2px 8px rgba(232, 168, 124, 0.12);
 }

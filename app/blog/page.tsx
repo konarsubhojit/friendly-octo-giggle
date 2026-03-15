@@ -35,21 +35,21 @@ const posts = [
 
 export default function BlogPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
+    <div className="min-h-screen bg-warm-gradient">
       <Header />
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
-        <h1 className="text-4xl font-bold text-gray-900 mb-4">Blog</h1>
-        <p className="text-gray-500 text-lg mb-12">News, tips, and stories from the Craft &amp; Cozy team.</p>
+        <h1 className="text-4xl font-bold text-[#4a3728] mb-4">Blog</h1>
+        <p className="text-[#b89a85] text-lg mb-12">News, tips, and stories from the Craft &amp; Cozy team.</p>
 
         <div className="space-y-6">
           {posts.map(post => (
-            <article key={post.title} className="bg-white rounded-2xl shadow-sm p-8 hover:shadow-md transition-shadow">
-              <span className="inline-block text-xs font-semibold text-blue-600 bg-blue-50 px-3 py-1 rounded-full mb-3">
+            <article key={post.title} className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-warm border border-[#f0d5c0] p-8 hover:shadow-md transition-shadow">
+              <span className="inline-block text-xs font-semibold text-[#d4856b] bg-[#fde8d8] px-3 py-1 rounded-full mb-3">
                 {post.category}
               </span>
-              <h2 className="text-xl font-bold text-gray-900 mb-2">{post.title}</h2>
+              <h2 className="text-xl font-bold text-[#4a3728] mb-2">{post.title}</h2>
               <p className="text-sm text-gray-400 mb-3">{post.date}</p>
-              <p className="text-gray-600 leading-relaxed">{post.excerpt}</p>
+              <p className="text-[#7a6355] leading-relaxed">{post.excerpt}</p>
             </article>
           ))}
         </div>

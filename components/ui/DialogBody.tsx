@@ -1,7 +1,6 @@
 'use client';
 
-import type { RefObject } from 'react';
-import type { ReactNode } from 'react';
+import type { RefObject, ReactNode } from 'react';
 
 export interface DialogBodyProps {
   readonly titleId: string;
