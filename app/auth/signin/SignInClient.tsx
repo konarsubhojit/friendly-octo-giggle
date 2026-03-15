@@ -12,7 +12,7 @@ export default function SignInClient() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  async function handleCredentialsLogin(e: React.FormEvent) {
+  async function handleCredentialsLogin(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError('');
     setLoading(true);
@@ -27,7 +27,7 @@ export default function SignInClient() {
       if (result?.error) {
         setError('Invalid email/phone or password');
       } else {
-        window.location.href = '/';
+        globalThis.location.href = '/';
       }
     } catch {
       setError('An unexpected error occurred');
@@ -90,7 +90,7 @@ export default function SignInClient() {
     </form>
 
     {/* Dev-only: Copilot Admin sign-in */}
-    <CopilotDevLoginButton onSuccess={() => { window.location.href = '/admin'; }} />
+    <CopilotDevLoginButton onSuccess={() => { globalThis.location.href = '/admin'; }} />
     </>
   );
 }

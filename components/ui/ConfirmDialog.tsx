@@ -127,7 +127,7 @@ const ConfirmDialog = ({
   const titleId = `${uid}-title`;
   const messageId = `${uid}-message`;
 
-  const dialogRef = useRef<HTMLDivElement>(null);
+  const dialogRef = useRef<HTMLDialogElement>(null);
   const cancelBtnRef = useRef<HTMLButtonElement>(null);
 
   // Move focus into the dialog when it opens and trap Tab / Shift+Tab inside.
@@ -147,7 +147,8 @@ const ConfirmDialog = ({
       if (focusable.length === 0) return;
 
       const first = focusable[0];
-      const last = focusable[focusable.length - 1];
+      // Safe: early return above guarantees focusable.length > 0
+      const last = focusable.at(-1)!;
 
       if (e.shiftKey && document.activeElement === first) {
         e.preventDefault();
@@ -170,10 +171,10 @@ const ConfirmDialog = ({
   const styles = VARIANT_STYLES[variant];
 
   return (
-    <div
+    <dialog
       ref={dialogRef}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      role="dialog"
+      open
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-transparent border-none m-0 w-full max-w-none"
       aria-modal="true"
       aria-labelledby={titleId}
       aria-describedby={messageId}
@@ -194,7 +195,7 @@ const ConfirmDialog = ({
         onCancel={onCancel}
         onConfirm={onConfirm}
       />
-    </div>
+    </dialog>
   );
 };
 

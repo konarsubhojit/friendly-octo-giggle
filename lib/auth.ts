@@ -19,7 +19,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   }) as Adapter,
   providers: [
     // DEV-ONLY: Copilot admin bypass — absent in production
-    ...(process.env.NODE_ENV !== 'production' ? [
+    ...(process.env.NODE_ENV === 'production' ? [] : [
       Credentials({
         id: 'copilot-dev',
         name: 'Copilot Admin (Dev Only)',
@@ -39,7 +39,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           };
         },
       }),
-    ] : []),
+    ]),
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID ? process.env.GOOGLE_CLIENT_ID : '',
       clientSecret: process.env.GOOGLE_CLIENT_SECRET ? process.env.GOOGLE_CLIENT_SECRET : '',
@@ -144,14 +144,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   callbacks: {
     session({ session, token }) {
       if (session.user) {
-        session.user.id = token.id as string;
-        session.user.role = (token.role as 'CUSTOMER' | 'ADMIN') || 'CUSTOMER';
-        session.user.phoneNumber = (token.phoneNumber as string) || undefined;
+        session.user.id = token.id;
+        session.user.role = token.role || 'CUSTOMER';
+        session.user.phoneNumber = token.phoneNumber || undefined;
 
         // Log session creation
         logAuthEvent({
           event: 'session_created',
-          userId: token.id as string,
+          userId: token.id,
           email: session.user.email || undefined,
           success: true,
         });

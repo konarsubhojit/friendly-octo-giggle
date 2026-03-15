@@ -114,7 +114,7 @@ const ProfileSection = ({ profile, onProfileUpdated }: ProfileSectionProps) => {
     if (fieldErrors[field]) setFieldErrors((p) => ({ ...p, [field]: '' }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setSuccess('');
     setServerError('');
@@ -221,7 +221,7 @@ interface ProfileEditFormProps {
   readonly onNameChange: (v: string) => void;
   readonly onEmailChange: (v: string) => void;
   readonly onPhoneChange: (v: string) => void;
-  readonly onSubmit: (e: React.FormEvent) => void;
+  readonly onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
   readonly onCancel: () => void;
 }
 
@@ -323,7 +323,7 @@ const PasswordSection = () => {
     if (fieldErrors[field]) setFieldErrors((p) => ({ ...p, [field]: '' }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setSuccess('');
     setServerError('');
@@ -430,7 +430,7 @@ interface PasswordChangeFormProps {
   readonly onToggleCurrentPassword: () => void;
   readonly onToggleNewPassword: () => void;
   readonly onConfirmBlur: () => void;
-  readonly onSubmit: (e: React.FormEvent) => void;
+  readonly onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
   readonly onCancel: () => void;
 }
 
@@ -504,11 +504,12 @@ const PasswordChangeForm = ({
           autoComplete="new-password"
           aria-describedby={fieldErrors.confirmNewPassword ? 'confirm-new-password-error' : undefined}
         />
-        {fieldErrors.confirmNewPassword ? (
+        {fieldErrors.confirmNewPassword && (
           <p id="confirm-new-password-error" className="text-xs text-red-600 mt-1">{fieldErrors.confirmNewPassword}</p>
-        ) : mismatchVisible ? (
+        )}
+        {!fieldErrors.confirmNewPassword && mismatchVisible && (
           <p className="text-xs text-red-600 mt-1">{PASSWORD_ERRORS.CONFIRM_MISMATCH}</p>
-        ) : null}
+        )}
       </div>
       <div className="flex gap-3 pt-2">
         <button type="button" onClick={onCancel} disabled={saving}

@@ -112,8 +112,8 @@ describe('ConfirmDialog', () => {
     const { container: c1 } = render(<ConfirmDialog {...baseProps} title="Dialog A" />);
     const { container: c2 } = render(<ConfirmDialog {...baseProps} title="Dialog B" />);
 
-    const dialog1 = c1.querySelector('[role="dialog"]')!;
-    const dialog2 = c2.querySelector('[role="dialog"]')!;
+    const dialog1 = c1.querySelector('dialog')!;
+    const dialog2 = c2.querySelector('dialog')!;
 
     const labelId1 = dialog1.getAttribute('aria-labelledby');
     const labelId2 = dialog2.getAttribute('aria-labelledby');
