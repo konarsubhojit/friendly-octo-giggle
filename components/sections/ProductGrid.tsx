@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Product } from '@/lib/types';
@@ -34,10 +34,11 @@ function QuickAddButton({ product }: { readonly product: Product }) {
   const dispatch = useDispatch<AppDispatch>();
   const [adding, setAdding] = useState(false);
 
+  // `adding` is excluded from deps intentionally: the button's `disabled` attribute already
+  // prevents concurrent clicks; including it would recreate the handler on every state change.
   const handleQuickAdd = useCallback(async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (product.stock === 0 || adding) return;
     setAdding(true);
     try {
       await dispatch(addToCart({ productId: product.id, quantity: 1 })).unwrap();
@@ -47,7 +48,7 @@ function QuickAddButton({ product }: { readonly product: Product }) {
     } finally {
       setAdding(false);
     }
-  }, [dispatch, product, adding]);
+  }, [dispatch, product]);
 
   if (product.stock === 0) return null;
 
@@ -77,13 +78,22 @@ export default function ProductGrid({ products }: ProductGridProps) {
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
 
-  const filtered = products.filter((p) => {
-    const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase());
-    const matchesCategory =
-      selectedCategory === 'All' ||
-      p.category?.toLowerCase() === selectedCategory.toLowerCase();
-    return matchesSearch && matchesCategory;
-  });
+  const filtered = useMemo(() => {
+    const searchLower = search.toLowerCase();
+    const categoryLower = selectedCategory.toLowerCase();
+    return products.filter((p) => {
+      const matchesSearch = p.name.toLowerCase().includes(searchLower);
+      const matchesCategory =
+        selectedCategory === 'All' ||
+        p.category?.toLowerCase() === categoryLower;
+      return matchesSearch && matchesCategory;
+    });
+  }, [products, search, selectedCategory]);
+
+  const emptyMessage =
+    search || selectedCategory !== 'All'
+      ? 'Try adjusting your search or category filter.'
+      : undefined;
 
   return (
     <main id="products" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
@@ -134,7 +144,7 @@ export default function ProductGrid({ products }: ProductGridProps) {
       </div>
 
       {filtered.length === 0 ? (
-        <EmptyState title="No products found" message={search || selectedCategory !== 'All' ? 'Try adjusting your search or category filter.' : undefined} />
+        <EmptyState title="No products found" message={emptyMessage} />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
           {filtered.map((product) => (
@@ -143,8 +153,8 @@ export default function ProductGrid({ products }: ProductGridProps) {
               href={`/products/${product.id}`}
               className="bg-white rounded-xl shadow-lg overflow-hidden border-2 border-gray-100 group hover:shadow-2xl hover:scale-105 hover:-translate-y-1 hover:border-rose-200 transition-all duration-300 relative"
             >
-              {/* Product image */}
-              <div className="relative w-full bg-gray-50" style={{ aspectRatio: '4/3' }}>
+              {/* Product image — aspect-[4/3] shows full image without clipping */}
+              <div className="relative w-full aspect-[4/3] bg-gray-50">
                 <Image
                   src={product.image}
                   alt={product.name}
