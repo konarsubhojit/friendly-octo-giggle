@@ -7,6 +7,7 @@ import { useSession, signOut } from "next-auth/react";
 import CartIcon from "@/components/layout/CartIcon";
 import CurrencySelector from "@/components/ui/CurrencySelector";
 import LoginModal from "@/components/auth/LoginModal";
+import { GradientButton } from "@/components/ui/GradientButton";
 
 export default function Header() {
   const { data: session } = useSession();
@@ -242,12 +243,13 @@ export default function Header() {
                   )}
                 </div>
               ) : (
-                <button
+                <GradientButton
                   onClick={() => setLoginModalOpen(true)}
-                  className="hidden sm:block bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-300 shadow-md hover:shadow-lg"
+                  size="sm"
+                  className="hidden sm:block"
                 >
                   Login
-                </button>
+                </GradientButton>
               )}
 
               {/* Mobile hamburger button */}
@@ -392,15 +394,17 @@ export default function Header() {
               )}
               {!session?.user && (
                 <div className="pt-2 border-t border-gray-100 mt-2">
-                  <button
+                  <GradientButton
                     onClick={() => {
                       closeMobileNav();
                       setLoginModalOpen(true);
                     }}
-                    className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-3 rounded-xl text-sm font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-300 shadow-md"
+                    size="lg"
+                    fullWidth
+                    className="text-sm"
                   >
                     Login
-                  </button>
+                  </GradientButton>
                 </div>
               )}
             </nav>

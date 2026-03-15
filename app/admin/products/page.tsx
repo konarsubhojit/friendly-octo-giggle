@@ -15,6 +15,9 @@ import {
   upsertProduct,
 } from '@/lib/features/admin/adminSlice';
 import type { AppDispatch } from '@/lib/store';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { AlertBanner } from '@/components/ui/AlertBanner';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 // Lazy-load heavy modal components to reduce initial bundle size
 const ProductFormModal = lazy(() => import('@/components/admin/ProductFormModal'));
@@ -88,9 +91,8 @@ export default function ProductsManagement() {
   if (loading) {
     return (
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="text-center py-12">
-          <div className="inline-block w-8 h-8 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin" />
-          <p className="mt-4 text-gray-600">Loading products...</p>
+        <div className="flex items-center justify-center py-12">
+          <LoadingSpinner />
         </div>
       </main>
     );
@@ -121,15 +123,11 @@ export default function ProductsManagement() {
       </div>
 
       {error && (
-        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-red-700">{error}</p>
-        </div>
+        <AlertBanner message={error} variant="error" className="mb-4" />
       )}
 
       {products.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-lg">
-          <p className="text-gray-600">No products found</p>
-        </div>
+        <EmptyState title="No products found" />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {products.map((product) => (
@@ -188,7 +186,7 @@ export default function ProductsManagement() {
         <Suspense fallback={
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-lg p-8">
-              <div className="inline-block w-8 h-8 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin" />
+              <LoadingSpinner />
             </div>
           </div>
         }>
@@ -205,7 +203,7 @@ export default function ProductsManagement() {
         <Suspense fallback={
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-lg p-8">
-              <div className="inline-block w-8 h-8 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin" />
+              <LoadingSpinner />
             </div>
           </div>
         }>
