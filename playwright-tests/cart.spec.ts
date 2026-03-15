@@ -10,8 +10,8 @@
  * caused the empty-cart state to flash on the page.
  */
 import { test, expect, Page } from '@playwright/test';
-import * as path from 'path';
-import * as fs from 'fs';
+import { dirname, join } from 'path';
+import { existsSync, mkdirSync } from 'fs';
 import { fileURLToPath } from 'url';
 import {
   MOCK_CART,
@@ -20,23 +20,44 @@ import {
 } from './mock-data.js';
 
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const SCREENSHOT_DIR = path.join(__dirname, 'screenshots');
+const __dirname = dirname(__filename);
+const SCREENSHOT_DIR = join(__dirname, 'screenshots');
 
-function screenshotPath(name: string) {
-  return path.join(SCREENSHOT_DIR, `${name}.png`);
-}
+const screenshotPath = (name: string): string => join(SCREENSHOT_DIR, `${name}.png`);
 
 test.beforeAll(() => {
-  if (!fs.existsSync(SCREENSHOT_DIR)) {
-    fs.mkdirSync(SCREENSHOT_DIR, { recursive: true });
+  if (!existsSync(SCREENSHOT_DIR)) {
+    mkdirSync(SCREENSHOT_DIR, { recursive: true });
   }
 });
 
 // ─── Route mock helpers ───────────────────────────────────────────────────────
 
+type CartState = { current: typeof MOCK_CART | null };
+
+/** Apply an in-memory quantity update to the mock cart state. */
+const applyQuantityUpdate = (cartState: CartState, url: string, rawBody: string | null): void => {
+  if (!cartState.current) return;
+  const body = rawBody ? (JSON.parse(rawBody) as { quantity: number }) : null;
+  cartState.current = {
+    ...cartState.current,
+    items: cartState.current.items.map((item) =>
+      url.endsWith(item.id) && body ? { ...item, quantity: body.quantity } : item,
+    ),
+  };
+};
+
+/** Apply an in-memory item removal to the mock cart state. */
+const applyItemRemoval = (cartState: CartState, url: string): void => {
+  if (!cartState.current) return;
+  cartState.current = {
+    ...cartState.current,
+    items: cartState.current.items.filter((item) => !url.endsWith(item.id)),
+  };
+};
+
 /** Suppress exchange-rate 500s caused by Redis/DB not being available. */
-async function mockExchangeRates(page: Page) {
+const mockExchangeRates = async (page: Page): Promise<void> => {
   await page.route('**/api/exchange-rates**', (route) =>
     route.fulfill({
       json: {
@@ -45,7 +66,7 @@ async function mockExchangeRates(page: Page) {
       },
     }),
   );
-}
+};
 
 /**
  * Set up stateful cart route mocks.
@@ -54,10 +75,7 @@ async function mockExchangeRates(page: Page) {
  * and the GET handler always serves the latest state (simulating what the real
  * server would do after a PATCH/DELETE).
  */
-async function mockCartRoutes(
-  page: Page,
-  cartState: { current: typeof MOCK_CART | null },
-) {
+const mockCartRoutes = async (page: Page, cartState: CartState): Promise<void> => {
   await mockExchangeRates(page);
 
   // GET /api/cart — serve current state
@@ -66,45 +84,21 @@ async function mockCartRoutes(
       await route.continue();
       return;
     }
-    route.fulfill({ json: { cart: cartState.current } });
+    await route.fulfill({ json: { cart: cartState.current } });
   });
 
-  // PATCH /api/cart/items/:id — update quantity in state, return { success: true }
+  // PATCH or DELETE /api/cart/items/:id — mutate state, return { success: true }
   await page.route('**/api/cart/items/**', async (route) => {
     const method = route.request().method();
-
     if (method === 'PATCH') {
-      if (cartState.current) {
-        const url = route.request().url();
-        const rawBody = route.request().postData();
-        const body = rawBody ? (JSON.parse(rawBody) as { quantity: number }) : null;
-
-        cartState.current = {
-          ...cartState.current,
-          items: cartState.current.items.map((item) =>
-            url.endsWith(item.id) && body
-              ? { ...item, quantity: body.quantity }
-              : item,
-          ),
-        };
-      }
-      route.fulfill({ json: { success: true } });
-      return;
+      applyQuantityUpdate(cartState, route.request().url(), route.request().postData());
+      await route.fulfill({ json: { success: true } });
+    } else if (method === 'DELETE') {
+      applyItemRemoval(cartState, route.request().url());
+      await route.fulfill({ json: { success: true } });
+    } else {
+      await route.continue();
     }
-
-    if (method === 'DELETE') {
-      if (cartState.current) {
-        const url = route.request().url();
-        cartState.current = {
-          ...cartState.current,
-          items: cartState.current.items.filter((item) => !url.endsWith(item.id)),
-        };
-      }
-      route.fulfill({ json: { success: true } });
-      return;
-    }
-
-    await route.continue();
   });
 
   // POST /api/orders — accept order placement
@@ -114,7 +108,7 @@ async function mockCartRoutes(
       status: 201,
     }),
   );
-}
+};
 
 // ─── Cart loading & display ───────────────────────────────────────────────────
 
