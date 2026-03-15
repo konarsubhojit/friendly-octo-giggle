@@ -27,7 +27,7 @@ export default function RegisterPage() {
     }
   };
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault();
     setError('');
     setFieldErrors({});

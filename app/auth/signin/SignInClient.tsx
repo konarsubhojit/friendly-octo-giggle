@@ -12,7 +12,7 @@ export default function SignInClient() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  async function handleCredentialsLogin(e: React.FormEvent<HTMLFormElement>) {
+  async function handleCredentialsLogin(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault();
     setError('');
     setLoading(true);

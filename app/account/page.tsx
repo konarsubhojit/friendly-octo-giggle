@@ -120,7 +120,7 @@ const ProfileSection = ({ profile, onProfileUpdated }: ProfileSectionProps) => {
     if (fieldErrors[field]) setFieldErrors((p) => ({ ...p, [field]: '' }));
   };
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     setSuccess('');
     setServerError('');
@@ -227,7 +227,7 @@ interface ProfileEditFormProps {
   readonly onNameChange: (v: string) => void;
   readonly onEmailChange: (v: string) => void;
   readonly onPhoneChange: (v: string) => void;
-  readonly onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
+  readonly onSubmit: (e: React.SyntheticEvent<HTMLFormElement>) => void;
   readonly onCancel: () => void;
 }
 
@@ -329,7 +329,7 @@ const PasswordSection = () => {
     if (fieldErrors[field]) setFieldErrors((p) => ({ ...p, [field]: '' }));
   };
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     setSuccess('');
     setServerError('');
@@ -436,7 +436,7 @@ interface PasswordChangeFormProps {
   readonly onToggleCurrentPassword: () => void;
   readonly onToggleNewPassword: () => void;
   readonly onConfirmBlur: () => void;
-  readonly onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
+  readonly onSubmit: (e: React.SyntheticEvent<HTMLFormElement>) => void;
   readonly onCancel: () => void;
 }
 
