@@ -66,7 +66,7 @@ describe("SignInClient", () => {
       });
     });
 
-    await act(async () => {
+    act(() => {
       fireEvent.submit(screen.getByText("Login").closest("form") as HTMLFormElement);
     });
 

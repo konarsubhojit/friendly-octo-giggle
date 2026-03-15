@@ -30,7 +30,7 @@ const SIGNIN_FIELDS: ReadonlyArray<FieldDef> = [
 const SUBMIT_BTN =
   'w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-300 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed';
 
-export default function SignInClient() {
+const SignInClient = () => {
   const handleSubmit = useCallback(
     async (values: Readonly<Record<string, string>>): Promise<SubmitResult> => {
       try {
@@ -41,6 +41,7 @@ export default function SignInClient() {
         });
         if (result?.error) return 'Invalid email/phone or password';
         globalThis.location.href = '/';
+        return undefined;
       } catch {
         return 'An unexpected error occurred';
       }
@@ -62,4 +63,7 @@ export default function SignInClient() {
       <CopilotDevLoginButton />
     </>
   );
-}
+};
+
+export default SignInClient;
+

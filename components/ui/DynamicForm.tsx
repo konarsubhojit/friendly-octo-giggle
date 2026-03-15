@@ -22,7 +22,7 @@ export type FieldValidateFn = (
  * - `string`           → top-level server error message
  * - `Record<string, string>` → per-field server errors keyed by `FieldDef.name`
  */
-export type SubmitResult = string | Record<string, string> | void;
+export type SubmitResult = string | Record<string, string> | undefined;
 
 export interface SelectOption {
   readonly value: string;
@@ -58,6 +58,15 @@ export interface FieldDef {
    * string to block submission and display an inline error under the field.
    */
   readonly validate?: FieldValidateFn;
+  /**
+   * When `true`, the `validate` function is also called when the field loses
+   * focus (blur). No error is shown while the user is actively typing —
+   * only after they leave the field. The error is cleared again as soon as
+   * the user edits the field.
+   *
+   * Useful for cross-field validators such as "confirm password".
+   */
+  readonly validateOnBlur?: boolean;
   // ── textarea ──────────────────────────────────────────────────────────────
   readonly rows?: number;
   // ── select ────────────────────────────────────────────────────────────────
@@ -112,6 +121,86 @@ const DEFAULT_SUBMIT_BTN =
 const borderCls = (hasError: boolean) =>
   hasError ? 'border-red-400' : 'border-gray-300';
 
+// ─── Input sub-renderers (extracted to keep FieldRenderer CC ≤ 4) ────────────
+
+interface InputSubProps {
+  readonly field: FieldDef;
+  readonly value: string;
+  readonly describedBy: string | undefined;
+  readonly error: string | undefined;
+  readonly onChange: (name: string, value: string) => void;
+}
+
+const TextareaInput = ({ field, value, describedBy, error, onChange }: InputSubProps) => (
+  <textarea
+    id={field.id}
+    value={value}
+    onChange={(e) => onChange(field.name, e.target.value)}
+    rows={field.rows ?? 4}
+    placeholder={field.placeholder}
+    autoComplete={field.autoComplete}
+    aria-describedby={describedBy}
+    className={`${BASE_INPUT} resize-none ${borderCls(Boolean(error))}`}
+  />
+);
+
+const SelectInput = ({ field, value, describedBy, error, onChange }: InputSubProps) => (
+  <select
+    id={field.id}
+    value={value}
+    onChange={(e) => onChange(field.name, e.target.value)}
+    aria-describedby={describedBy}
+    className={`${BASE_INPUT} bg-white ${borderCls(Boolean(error))}`}
+  >
+    <option value="">Select…</option>
+    {field.options?.map((opt) => (
+      <option key={opt.value} value={opt.value}>
+        {opt.label}
+      </option>
+    ))}
+  </select>
+);
+
+interface TextInputProps extends InputSubProps {
+  readonly showPassword: boolean;
+  readonly onTogglePassword: (id: string) => void;
+  readonly onBlur?: () => void;
+}
+
+const TextInput = ({ field, value, describedBy, error, showPassword, onChange, onTogglePassword, onBlur }: TextInputProps) => {
+  const isPassword = field.type === 'password';
+  const hasToggle = isPassword && field.showPasswordToggle;
+  const resolvedType = isPassword ? (showPassword ? 'text' : 'password') : field.type;
+  const labelStr = typeof field.label === 'string' ? field.label.toLowerCase() : 'password';
+
+  return (
+    <div className={hasToggle ? 'relative' : undefined}>
+      <input
+        id={field.id}
+        type={resolvedType}
+        value={value}
+        onChange={(e) => onChange(field.name, e.target.value)}
+        placeholder={field.placeholder}
+        autoComplete={field.autoComplete}
+        autoFocus={field.autoFocus}
+        min={field.min}
+        max={field.max}
+        step={field.step}
+        aria-describedby={describedBy}
+        onBlur={onBlur}
+        className={`${BASE_INPUT}${hasToggle ? ' pr-12' : ''} ${borderCls(Boolean(error))}`}
+      />
+      {hasToggle && (
+        <PasswordToggleButton
+          showPassword={showPassword}
+          onToggle={() => onTogglePassword(field.id)}
+          label={showPassword ? `Hide ${labelStr}` : `Show ${labelStr}`}
+        />
+      )}
+    </div>
+  );
+};
+
 // ─── FieldRenderer ────────────────────────────────────────────────────────────
 
 interface FieldRendererProps {
@@ -121,6 +210,7 @@ interface FieldRendererProps {
   readonly showPassword: boolean;
   readonly onChange: (name: string, value: string) => void;
   readonly onTogglePassword: (id: string) => void;
+  readonly onBlur: (name: string) => void;
 }
 
 const FieldRenderer = ({
@@ -130,75 +220,12 @@ const FieldRenderer = ({
   showPassword,
   onChange,
   onTogglePassword,
+  onBlur,
 }: FieldRendererProps) => {
   const errorId = `${field.id}-error`;
-  const describedBy = error ? errorId : undefined;
-  const isPassword = field.type === 'password';
-  const hasToggle = isPassword && field.showPasswordToggle;
-  const resolvedType = isPassword ? (showPassword ? 'text' : 'password') : field.type;
-
-  const labelStr =
-    typeof field.label === 'string' ? field.label.toLowerCase() : 'password';
-
-  let inputEl: ReactNode;
-
-  if (field.type === 'textarea') {
-    inputEl = (
-      <textarea
-        id={field.id}
-        value={value}
-        onChange={(e) => onChange(field.name, e.target.value)}
-        rows={field.rows ?? 4}
-        placeholder={field.placeholder}
-        autoComplete={field.autoComplete}
-        aria-describedby={describedBy}
-        className={`${BASE_INPUT} resize-none ${borderCls(!!error)}`}
-      />
-    );
-  } else if (field.type === 'select') {
-    inputEl = (
-      <select
-        id={field.id}
-        value={value}
-        onChange={(e) => onChange(field.name, e.target.value)}
-        aria-describedby={describedBy}
-        className={`${BASE_INPUT} bg-white ${borderCls(!!error)}`}
-      >
-        <option value="">Select…</option>
-        {field.options?.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
-    );
-  } else {
-    inputEl = (
-      <div className={hasToggle ? 'relative' : undefined}>
-        <input
-          id={field.id}
-          type={resolvedType}
-          value={value}
-          onChange={(e) => onChange(field.name, e.target.value)}
-          placeholder={field.placeholder}
-          autoComplete={field.autoComplete}
-          autoFocus={field.autoFocus}
-          min={field.min}
-          max={field.max}
-          step={field.step}
-          aria-describedby={describedBy}
-          className={`${BASE_INPUT}${hasToggle ? ' pr-12' : ''} ${borderCls(!!error)}`}
-        />
-        {hasToggle && (
-          <PasswordToggleButton
-            showPassword={showPassword}
-            onToggle={() => onTogglePassword(field.id)}
-            label={showPassword ? `Hide ${labelStr}` : `Show ${labelStr}`}
-          />
-        )}
-      </div>
-    );
-  }
+  const describedBy = Boolean(error) ? errorId : undefined;
+  const subProps = { field, value, describedBy, error, onChange };
+  const handleBlur = field.validateOnBlur ? () => onBlur(field.name) : undefined;
 
   return (
     <div>
@@ -208,13 +235,22 @@ const FieldRenderer = ({
       >
         {field.label}
       </label>
-      {inputEl}
+      {field.type === 'textarea' && <TextareaInput {...subProps} />}
+      {field.type === 'select' && <SelectInput {...subProps} />}
+      {field.type !== 'textarea' && field.type !== 'select' && (
+        <TextInput
+          {...subProps}
+          showPassword={showPassword}
+          onTogglePassword={onTogglePassword}
+          onBlur={handleBlur}
+        />
+      )}
       {error && (
         <p id={errorId} className="text-xs text-red-600 mt-1">
           {error}
         </p>
       )}
-      {isPassword && field.showStrengthChecklist && (
+      {field.type === 'password' && field.showStrengthChecklist && (
         <PasswordStrengthChecklist password={value} />
       )}
     </div>
@@ -262,6 +298,16 @@ export function DynamicForm({
     // Clear the inline error for this field as the user types
     setFieldErrors((prev) => (prev[name] ? { ...prev, [name]: '' } : prev));
   }, []);
+
+  const handleBlur = useCallback((name: string) => {
+    const field = fields.find((f) => f.name === name);
+    if (!field?.validate) return;
+    setValues((currentValues) => {
+      const err = field.validate?.(currentValues[name] ?? '', currentValues);
+      setFieldErrors((prev) => ({ ...prev, [name]: err ?? '' }));
+      return currentValues;
+    });
+  }, [fields]);
 
   const togglePasswordVisibility = useCallback((id: string) => {
     setShowPassword((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -327,6 +373,7 @@ export function DynamicForm({
             showPassword={!!showPassword[field.id]}
             onChange={handleChange}
             onTogglePassword={togglePasswordVisibility}
+            onBlur={handleBlur}
           />
         ))}
       </div>

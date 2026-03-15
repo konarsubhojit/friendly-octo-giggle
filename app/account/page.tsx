@@ -266,6 +266,7 @@ const PASSWORD_FIELDS: ReadonlyArray<FieldDef> = [
       if (v !== all.newPassword) return PASSWORD_ERRORS.CONFIRM_MISMATCH;
       return undefined;
     },
+    validateOnBlur: true,
   },
 ];
 

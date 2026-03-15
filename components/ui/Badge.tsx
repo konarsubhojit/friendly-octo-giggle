@@ -72,5 +72,5 @@ export function orderStatusVariant(status: string): BadgeVariant {
 
 /** Maps a user-role string to the appropriate `BadgeVariant`. */
 export function roleVariant(role: string): BadgeVariant {
-  return role.toUpperCase() === 'ADMIN' ? 'primary' : 'neutral';
+  return role.toUpperCase() === 'ADMIN' ? 'primary' : 'success';
 }

@@ -74,6 +74,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
         if (result?.error) return 'Invalid email/phone or password';
         onClose();
         router.refresh();
+        return undefined;
       } catch {
         return 'An unexpected error occurred';
       }
