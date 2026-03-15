@@ -9,70 +9,11 @@ import { addToCart } from '@/lib/features/cart/cartSlice';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import type { AppDispatch } from '@/lib/store';
 import Header from '@/components/layout/Header';
+import { ProductStockBadge } from '@/components/product/ProductStockBadge';
+import { VariationButton } from '@/components/product/VariationButton';
 
 interface ProductClientProps {
   readonly product: Product;
-}
-
-// Helper component for stock badge to avoid nested ternary
-function ProductStockBadge({ stock }: { readonly stock: number }) {
-  if (stock > 5) {
-    return (
-      <span className="inline-flex items-center gap-2 bg-green-100 text-green-700 px-4 py-2 rounded-full font-semibold shadow-md">
-        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
-          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-        </svg>
-        In Stock
-      </span>
-    );
-  }
-  if (stock > 0) {
-    return (
-      <span className="inline-flex items-center gap-2 bg-amber-100 text-amber-700 px-4 py-2 rounded-full font-semibold shadow-md">
-        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
-          <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-        </svg>
-        Only {stock} left in stock
-      </span>
-    );
-  }
-  return (
-    <span className="inline-flex items-center gap-2 bg-red-100 text-red-700 px-4 py-2 rounded-full font-semibold shadow-md">
-      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
-        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-      </svg>
-      Out of Stock
-    </span>
-  );
-}
-
-// VariationButton: extracted to reduce map-callback cyclomatic complexity (JS-0415/JS-R1005)
-interface VariationButtonProps {
-  readonly variation: ProductVariation;
-  readonly isSelected: boolean;
-  readonly formatPrice: (amount: number) => string;
-  readonly onSelect: (variation: ProductVariation) => void;
-}
-
-function VariationButton({ variation, isSelected, formatPrice, onSelect }: VariationButtonProps) {
-  const className = isSelected
-    ? 'p-4 border-2 rounded-xl transition-all duration-300 border-blue-600 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/30 dark:to-purple-900/30 shadow-lg scale-105'
-    : 'p-4 border-2 rounded-xl transition-all duration-300 border-gray-300 hover:border-blue-400 hover:shadow-md hover:scale-105 bg-white dark:bg-gray-800 dark:border-gray-600';
-
-  return (
-    <button key={variation.id} onClick={() => onSelect(variation)} className={className}>
-      <div className="text-sm font-bold text-gray-800 dark:text-gray-100">{variation.designName}</div>
-      <div className="text-xs text-gray-600 dark:text-gray-300 mt-1">{variation.name}</div>
-      {variation.priceModifier !== 0 && (
-        <div className="text-xs font-semibold text-blue-600 dark:text-blue-400 mt-1">
-          {variation.priceModifier > 0 ? '+' : '-'}{formatPrice(Math.abs(variation.priceModifier))}
-        </div>
-      )}
-      {variation.stock > 0 && variation.stock < 6 && (
-        <div className="text-xs text-amber-600 dark:text-amber-400 font-medium mt-1">Only {variation.stock} left</div>
-      )}
-    </button>
-  );
 }
 
 export default function ProductClient({ product }: ProductClientProps) {

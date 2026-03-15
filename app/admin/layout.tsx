@@ -1,44 +1,11 @@
 import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import CurrencySelector from '@/components/ui/CurrencySelector';
+import { AdminHeaderNav } from '@/components/admin/AdminHeaderNav';
+import { AdminNavLinks } from '@/components/admin/AdminNavLinks';
 
 interface AdminLayoutProps {
   readonly children: React.ReactNode;
-}
-
-function AdminHeaderNav({ userName }: { readonly userName: string }) {
-  return (
-    <div className="flex flex-wrap gap-3 items-center">
-      <CurrencySelector />
-      <span className="text-sm text-gray-600 truncate max-w-[120px] sm:max-w-none" title={userName}>{userName}</span>
-      <Link href="/" className="text-sm text-gray-600 hover:text-gray-900 whitespace-nowrap">View Store</Link>
-      <form action="/api/auth/signout" method="POST">
-        <button type="submit" className="text-sm text-red-600 hover:text-red-900 whitespace-nowrap">Sign Out</button>
-      </form>
-    </div>
-  );
-}
-
-function AdminNavLinks() {
-  const links = [
-    { href: '/admin', label: 'Dashboard' },
-    { href: '/admin/products', label: 'Products' },
-    { href: '/admin/orders', label: 'Orders' },
-    { href: '/admin/users', label: 'Users' },
-  ];
-
-  return (
-    <nav className="bg-white border-b border-gray-200 overflow-x-auto">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex gap-6 py-3 whitespace-nowrap">
-          {links.map(({ href, label }) => (
-            <Link key={href} href={href} className="text-sm font-medium text-gray-600 hover:text-blue-600 transition">{label}</Link>
-          ))}
-        </div>
-      </div>
-    </nav>
-  );
 }
 
 export default async function AdminLayout({
@@ -79,4 +46,8 @@ export default async function AdminLayout({
       {children}
     </div>
   );
+}
+
+interface AdminLayoutProps {
+  readonly children: React.ReactNode;
 }

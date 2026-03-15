@@ -1,10 +1,16 @@
 interface LoadingSpinnerProps {
-  /** Tailwind size class pair, e.g. 'h-8 w-8'. Defaults to 'h-8 w-8'. */
+  /** Tailwind size class pair (e.g. 'h-8 w-8') or shorthand ('sm' | 'md' | 'lg'). Defaults to 'h-8 w-8'. */
   readonly size?: string;
   /** Tailwind text-color class. Defaults to 'text-blue-600'. */
   readonly color?: string;
   readonly label?: string;
 }
+
+const SIZE_MAP: Record<string, string> = {
+  sm: 'h-4 w-4',
+  md: 'h-8 w-8',
+  lg: 'h-12 w-12',
+};
 
 /**
  * Accessible SVG loading spinner.
@@ -13,6 +19,7 @@ interface LoadingSpinnerProps {
  * ```tsx
  * <LoadingSpinner />
  * <LoadingSpinner size="h-5 w-5" color="text-white" label="Saving…" />
+ * <LoadingSpinner size="lg" />
  * ```
  */
 export function LoadingSpinner({
@@ -20,10 +27,11 @@ export function LoadingSpinner({
   color = 'text-blue-600',
   label = 'Loading',
 }: LoadingSpinnerProps) {
+  const sizeClass = SIZE_MAP[size] ?? size;
   return (
     <span role="status" aria-live="polite">
       <svg
-        className={`animate-spin ${size} ${color}`}
+        className={`animate-spin ${sizeClass} ${color}`}
         fill="none"
         viewBox="0 0 24 24"
         aria-hidden="true"
