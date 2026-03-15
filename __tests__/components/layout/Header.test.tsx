@@ -53,7 +53,7 @@ describe("Header", () => {
     useSession.mockReturnValue({ data: null, status: "unauthenticated" });
     const Header = (await import("@/components/layout/Header")).default;
     render(<Header />);
-    expect(screen.getByText("Craft & Cozy")).toBeTruthy();
+    expect(screen.getByText("The Kiyon Store")).toBeTruthy();
   });
 
   it("shows Login button when not authenticated", async () => {

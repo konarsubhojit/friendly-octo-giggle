@@ -3,8 +3,8 @@ import Footer from '@/components/layout/Footer';
 import Link from 'next/link';
 
 export const metadata = {
-  title: 'Press | Craft & Cozy',
-  description: 'Latest press releases, media mentions, and press resources for Craft & Cozy.',
+  title: 'Press | The Kiyon Store',
+  description: 'Latest press releases, media mentions, and press resources for The Kiyon Store.',
 };
 
 const pressReleases = [

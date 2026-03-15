@@ -51,7 +51,7 @@ export default function Header() {
                 />
               </svg>
               <span className="bg-gradient-to-r from-rose-500 to-purple-600 bg-clip-text text-transparent">
-                Craft &amp; Cozy
+                The Kiyon Store
               </span>
             </Link>
 

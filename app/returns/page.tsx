@@ -3,7 +3,7 @@ import Footer from '@/components/layout/Footer';
 import Link from 'next/link';
 
 export const metadata = {
-  title: 'Returns & Refunds | Craft & Cozy',
+  title: 'Returns & Refunds | The Kiyon Store',
   description: 'Learn about our hassle-free return and refund policy.',
 };
 

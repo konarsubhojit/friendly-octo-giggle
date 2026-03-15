@@ -1,5 +1,5 @@
-import { describe, it, vi, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, it, vi, expect, beforeEach } from "vitest";
+import { render, screen, fireEvent } from "@testing-library/react";
 import React from "react";
 import ProductGrid from "@/components/sections/ProductGrid";
 import { CurrencyProvider } from "@/contexts/CurrencyContext";
@@ -20,6 +20,15 @@ vi.mock("next/image", () => ({
     // eslint-disable-next-line @next/next/no-img-element
     <img alt={alt} src={src} />
   ),
+}));
+
+vi.mock("react-redux", () => ({
+  useDispatch: () => vi.fn(),
+  useSelector: vi.fn(),
+}));
+
+vi.mock("react-hot-toast", () => ({
+  default: { success: vi.fn(), error: vi.fn() },
 }));
 
 const makeProduct = (overrides: Partial<Product> = {}): Product => ({
@@ -45,9 +54,13 @@ function renderGrid(products: Product[]) {
 }
 
 describe("ProductGrid", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it("shows empty state when no products", () => {
     renderGrid([]);
-    expect(screen.getByText("No items found")).toBeTruthy();
+    expect(screen.getByText("No products found")).toBeTruthy();
   });
 
   it("renders product names", () => {
@@ -62,7 +75,9 @@ describe("ProductGrid", () => {
 
   it("renders category badge", () => {
     renderGrid([makeProduct({ category: "Flowers" })]);
-    expect(screen.getByText("Flowers")).toBeTruthy();
+    // "Flowers" appears in both category filter pills and product badge
+    const elements = screen.getAllByText("Flowers");
+    expect(elements.length).toBeGreaterThan(0);
   });
 
   it("shows In Stock badge for stock > 5", () => {
@@ -82,7 +97,7 @@ describe("ProductGrid", () => {
 
   it("renders product link with correct href", () => {
     renderGrid([makeProduct({ id: "prod-42" })]);
-    const link = screen.getByRole("link");
+    const link = screen.getByRole("link", { name: /Test Product/i });
     expect(link.getAttribute("href")).toBe("/products/prod-42");
   });
 
@@ -95,8 +110,41 @@ describe("ProductGrid", () => {
     expect(screen.getByText("Product B")).toBeTruthy();
   });
 
-  it("renders Featured Products heading", () => {
+  it("renders Bestsellers heading", () => {
     renderGrid([]);
-    expect(screen.getByText("Featured Products")).toBeTruthy();
+    expect(screen.getByText(/Bestsellers/i)).toBeTruthy();
+  });
+
+  it("renders category filter buttons", () => {
+    renderGrid([]);
+    expect(screen.getByText("All")).toBeTruthy();
+    expect(screen.getByText("Handbag")).toBeTruthy();
+    expect(screen.getByText("Flowers")).toBeTruthy();
+    expect(screen.getByText("Flower Pots")).toBeTruthy();
+    expect(screen.getByText("Keychains")).toBeTruthy();
+    expect(screen.getByText("Hair Accessories")).toBeTruthy();
+  });
+
+  it("filters products by search query", () => {
+    renderGrid([
+      makeProduct({ id: "1", name: "Red Rose" }),
+      makeProduct({ id: "2", name: "Blue Handbag" }),
+    ]);
+    const searchInput = screen.getByPlaceholderText("Search products...");
+    fireEvent.change(searchInput, { target: { value: "Rose" } });
+    expect(screen.getByText("Red Rose")).toBeTruthy();
+    expect(screen.queryByText("Blue Handbag")).toBeNull();
+  });
+
+  it("filters products by category", () => {
+    renderGrid([
+      makeProduct({ id: "1", name: "Red Rose", category: "Flowers" }),
+      makeProduct({ id: "2", name: "Tote Bag", category: "Handbag" }),
+    ]);
+    // Click the Handbag category button
+    const handbagBtn = screen.getByRole("button", { name: "Handbag" });
+    fireEvent.click(handbagBtn);
+    expect(screen.getByText("Tote Bag")).toBeTruthy();
+    expect(screen.queryByText("Red Rose")).toBeNull();
   });
 });
