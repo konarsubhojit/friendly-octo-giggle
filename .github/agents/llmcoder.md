@@ -1,6 +1,5 @@
 ---
-name: "Opus Custom"
-model: Claude Opus 4.6 (copilot)
+name: "Custom"
 description: "Writes code for LLMs, not humans. Optimize for model reasoning, regeneration, and debugging."
 ---
 
