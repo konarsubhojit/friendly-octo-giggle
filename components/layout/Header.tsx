@@ -8,7 +8,7 @@ import CartIcon from "@/components/layout/CartIcon";
 import CurrencySelector from "@/components/ui/CurrencySelector";
 import LoginModal from "@/components/auth/LoginModal";
 import { GradientButton } from "@/components/ui/GradientButton";
-import { FlowerAccent, SparkleAccent } from "@/components/ui/DecorativeElements";
+import { FlowerAccent } from "@/components/ui/DecorativeElements";
 
 interface UserMenuUser {
   readonly name?: string | null;
@@ -40,15 +40,15 @@ function UserMenu({ user, menuOpen, setMenuOpen, menuRef }: UserMenuProps) {
             alt=""
             width={32}
             height={32}
-            className="rounded-full ring-2 ring-[#f0d5c0]"
+            className="rounded-full ring-2 ring-[var(--border-warm)]"
           />
         ) : (
-          <div className="w-8 h-8 rounded-full bg-gradient-to-r from-[#e8a87c] to-[#d4856b] flex items-center justify-center text-white text-sm font-bold">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-r from-[var(--accent-warm)] to-[var(--accent-rose)] flex items-center justify-center text-white text-sm font-bold">
             {user.name?.[0]?.toUpperCase() || "U"}
           </div>
         )}
         <svg
-          className="w-4 h-4 text-gray-600 hidden sm:block"
+          className="w-4 h-4 text-[var(--text-secondary)] hidden sm:block"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -65,36 +65,58 @@ function UserMenu({ user, menuOpen, setMenuOpen, menuRef }: UserMenuProps) {
 
       {menuOpen && (
         <div
-          className="absolute right-0 mt-2 w-56 bg-[#fef7f2] rounded-2xl shadow-warm-lg border border-[#f0d5c0] py-2 z-50 animate-scale-in"
+          className="absolute right-0 mt-2 w-56 bg-[var(--surface)] rounded-2xl shadow-warm-lg border border-[var(--border-warm)] py-2 z-50 animate-scale-in"
           role="menu"
         >
-          <div className="px-4 py-3 border-b border-[#f0d5c0]">
-            <p className="text-sm font-semibold text-[#4a3728] truncate">
+          <div className="px-4 py-3 border-b border-[var(--border-warm)]">
+            <p className="text-sm font-semibold text-[var(--foreground)] truncate">
               {user.name}
             </p>
-            <p className="text-xs text-[#b89a85] truncate">
+            <p className="text-xs text-[var(--text-muted)] truncate">
               {user.email}
             </p>
           </div>
           <Link
             href="/account"
             onClick={() => setMenuOpen(false)}
-            className="flex items-center gap-3 px-4 py-2.5 text-sm text-[#7a6355] hover:bg-[#fde8d8] transition-colors rounded-lg mx-1"
+            className="flex items-center gap-3 px-4 py-2.5 text-sm text-[var(--text-secondary)] hover:bg-[var(--accent-blush)] transition-colors rounded-lg mx-1"
             role="menuitem"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+              />
             </svg>
             My Account
           </Link>
           <Link
             href="/orders"
             onClick={() => setMenuOpen(false)}
-            className="flex items-center gap-3 px-4 py-2.5 text-sm text-[#7a6355] hover:bg-[#fde8d8] transition-colors rounded-lg mx-1"
+            className="flex items-center gap-3 px-4 py-2.5 text-sm text-[var(--text-secondary)] hover:bg-[var(--accent-blush)] transition-colors rounded-lg mx-1"
             role="menuitem"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+              />
             </svg>
             My Orders
           </Link>
@@ -102,27 +124,54 @@ function UserMenu({ user, menuOpen, setMenuOpen, menuRef }: UserMenuProps) {
             <Link
               href="/admin"
               onClick={() => setMenuOpen(false)}
-              className="flex items-center gap-3 px-4 py-2.5 text-sm text-[#7a6355] hover:bg-[#fde8d8] transition-colors rounded-lg mx-1"
+              className="flex items-center gap-3 px-4 py-2.5 text-sm text-[var(--text-secondary)] hover:bg-[var(--accent-blush)] transition-colors rounded-lg mx-1"
               role="menuitem"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                />
               </svg>
               Admin Dashboard
             </Link>
           )}
-          <div className="border-t border-[#f0d5c0] mt-1 pt-1">
+          <div className="border-t border-[var(--border-warm)] mt-1 pt-1">
             <button
               onClick={() => {
                 setMenuOpen(false);
                 signOut();
               }}
-              className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors rounded-lg mx-1"
+              className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-red-500 hover:bg-red-50/50 transition-colors rounded-lg mx-1"
               role="menuitem"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                />
               </svg>
               Sign Out
             </button>
@@ -139,41 +188,105 @@ interface MobileNavProps {
   readonly onLoginClick: () => void;
 }
 
-function MobileNav({ isLoggedIn, closeMobileNav, onLoginClick }: MobileNavProps) {
+function MobileNav({
+  isLoggedIn,
+  closeMobileNav,
+  onLoginClick,
+}: MobileNavProps) {
   return (
     <div
       id="mobile-nav-drawer"
-      className="md:hidden bg-[#fef7f2]/95 backdrop-blur-lg border-t border-[#f0d5c0]/40 shadow-warm animate-fade-in"
+      className="md:hidden bg-[var(--background)]/95 backdrop-blur-lg border-t border-[var(--border-warm)]/40 shadow-warm animate-fade-in"
     >
       <nav className="max-w-7xl mx-auto px-4 py-4 flex flex-col gap-1">
-        <Link href="/" onClick={closeMobileNav} className="flex items-center gap-3 px-4 py-3 text-[#7a6355] hover:bg-[#fde8d8] rounded-xl font-medium transition-colors">
-          <svg className="w-5 h-5 text-[#d4856b]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+        <Link
+          href="/"
+          onClick={closeMobileNav}
+          className="flex items-center gap-3 px-4 py-3 text-[var(--text-secondary)] hover:bg-[var(--accent-blush)] rounded-xl font-medium transition-colors"
+        >
+          <svg
+            className="w-5 h-5 text-[var(--accent-rose)]"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
+            />
           </svg>
           Home
         </Link>
-        <Link href="/about" onClick={closeMobileNav} className="flex items-center gap-3 px-4 py-3 text-[#7a6355] hover:bg-[#fde8d8] rounded-xl font-medium transition-colors">
-          <svg className="w-5 h-5 text-[#d4856b]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        <Link
+          href="/about"
+          onClick={closeMobileNav}
+          className="flex items-center gap-3 px-4 py-3 text-[var(--text-secondary)] hover:bg-[var(--accent-blush)] rounded-xl font-medium transition-colors"
+        >
+          <svg
+            className="w-5 h-5 text-[var(--accent-rose)]"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
           </svg>
           About
         </Link>
-        <Link href="/contact" onClick={closeMobileNav} className="flex items-center gap-3 px-4 py-3 text-[#7a6355] hover:bg-[#fde8d8] rounded-xl font-medium transition-colors">
-          <svg className="w-5 h-5 text-[#d4856b]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+        <Link
+          href="/contact"
+          onClick={closeMobileNav}
+          className="flex items-center gap-3 px-4 py-3 text-[var(--text-secondary)] hover:bg-[var(--accent-blush)] rounded-xl font-medium transition-colors"
+        >
+          <svg
+            className="w-5 h-5 text-[var(--accent-rose)]"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+            />
           </svg>
           Contact
         </Link>
         {isLoggedIn && (
-          <Link href="/orders" onClick={closeMobileNav} className="flex items-center gap-3 px-4 py-3 text-[#7a6355] hover:bg-[#fde8d8] rounded-xl font-medium transition-colors">
-            <svg className="w-5 h-5 text-[#d4856b]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+          <Link
+            href="/orders"
+            onClick={closeMobileNav}
+            className="flex items-center gap-3 px-4 py-3 text-[var(--text-secondary)] hover:bg-[var(--accent-blush)] rounded-xl font-medium transition-colors"
+          >
+            <svg
+              className="w-5 h-5 text-[var(--accent-rose)]"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+              />
             </svg>
             My Orders
           </Link>
         )}
         {!isLoggedIn && (
-          <div className="pt-2 border-t border-[#f0d5c0] mt-2">
+          <div className="pt-2 border-t border-[var(--border-warm)] mt-2">
             <GradientButton
               onClick={() => {
                 closeMobileNav();
@@ -214,7 +327,7 @@ export default function Header() {
 
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 z-50 bg-[#fef7f2]/85 backdrop-blur-lg border-b border-[#f0d5c0]/40 shadow-warm">
+      <header className="fixed top-0 left-0 right-0 z-50 bg-[var(--background)]/85 backdrop-blur-lg border-b border-[var(--border-warm)]/40 shadow-warm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-between items-center">
             <Link
@@ -222,35 +335,34 @@ export default function Header() {
               className="text-2xl font-bold flex items-center gap-1.5 transition-all duration-300 group"
             >
               <FlowerAccent className="w-7 h-7 group-hover:animate-wiggle" />
-              <span className="bg-gradient-to-r from-[#d4856b] to-[#e8a87c] bg-clip-text text-transparent">
+              <span className="font-display bg-gradient-to-r from-[var(--accent-rose)] to-[var(--accent-warm)] bg-clip-text text-transparent">
                 The Kiyon Store
               </span>
-              <SparkleAccent className="w-3 h-3 opacity-60" />
             </Link>
 
             <nav className="hidden md:flex gap-8 items-center">
               <Link
                 href="/"
-                className="text-[#7a6355] hover:text-[#d4856b] transition-all duration-300 font-semibold"
+                className="text-[var(--text-secondary)] hover:text-[var(--accent-rose)] transition-all duration-300 font-semibold px-3 py-1.5 rounded-full hover:bg-[var(--accent-blush)]/50"
               >
                 Home
               </Link>
               <Link
                 href="/about"
-                className="text-[#7a6355] hover:text-[#d4856b] transition-all duration-300 font-semibold"
+                className="text-[var(--text-secondary)] hover:text-[var(--accent-rose)] transition-all duration-300 font-semibold px-3 py-1.5 rounded-full hover:bg-[var(--accent-blush)]/50"
               >
                 About
               </Link>
               <Link
                 href="/contact"
-                className="text-[#7a6355] hover:text-[#d4856b] transition-all duration-300 font-semibold"
+                className="text-[var(--text-secondary)] hover:text-[var(--accent-rose)] transition-all duration-300 font-semibold px-3 py-1.5 rounded-full hover:bg-[var(--accent-blush)]/50"
               >
                 Contact
               </Link>
               {session?.user && (
                 <Link
                   href="/orders"
-                  className="text-[#7a6355] hover:text-[#d4856b] transition-all duration-300 font-semibold"
+                  className="text-[var(--text-secondary)] hover:text-[var(--accent-rose)] transition-all duration-300 font-semibold px-3 py-1.5 rounded-full hover:bg-[var(--accent-blush)]/50"
                 >
                   My Orders
                 </Link>
@@ -282,7 +394,7 @@ export default function Header() {
               <button
                 id="mobile-nav-toggle"
                 onClick={() => setMobileNavOpen(!mobileNavOpen)}
-                className="md:hidden flex items-center justify-center w-9 h-9 rounded-lg text-[#7a6355] hover:bg-[#fde8d8] transition-colors"
+                className="md:hidden flex items-center justify-center w-9 h-9 rounded-lg text-[var(--text-secondary)] hover:bg-[var(--accent-blush)] transition-colors"
                 aria-label={mobileNavOpen ? "Close menu" : "Open menu"}
                 aria-expanded={mobileNavOpen}
                 aria-haspopup="menu"

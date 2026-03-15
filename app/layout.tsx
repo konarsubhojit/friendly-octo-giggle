@@ -1,19 +1,17 @@
 import type { Metadata } from "next";
-import { Nunito } from "next/font/google";
+import { Nunito, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import { SessionProvider } from "@/components/providers/SessionProvider";
 import StoreProvider from "@/components/providers/StoreProvider";
 import { CurrencyProvider } from "@/contexts/CurrencyContext";
-import { Toaster } from 'react-hot-toast';
-import { Analytics } from '@vercel/analytics/next';
+import { Toaster } from "react-hot-toast";
+import { Analytics } from "@vercel/analytics/next";
 
 function AppProviders({ children }: { readonly children: React.ReactNode }) {
   return (
     <StoreProvider>
       <CurrencyProvider>
-        <SessionProvider>
-          {children}
-        </SessionProvider>
+        <SessionProvider>{children}</SessionProvider>
       </CurrencyProvider>
     </StoreProvider>
   );
@@ -25,9 +23,18 @@ const nunito = Nunito({
   display: "swap",
 });
 
+const playfairDisplay = Playfair_Display({
+  subsets: ["latin"],
+  weight: ["400", "700"],
+  style: ["normal", "italic"],
+  display: "swap",
+  variable: "--font-display",
+});
+
 export const metadata: Metadata = {
   title: "The Kiyon Store",
-  description: "Discover beautiful handmade decorations and cozy wearables — flower bouquets, keyrings, hand warmers, mufflers, scarves, and more.",
+  description:
+    "Handmade crochet flowers, bags, keychains, and accessories — crafted with love, delivered to your door.",
 };
 
 export default function RootLayout({
@@ -36,7 +43,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={nunito.className}>
+    <html
+      lang="en"
+      className={`${nunito.className} ${playfairDisplay.variable}`}
+    >
       <body className="antialiased">
         <AppProviders>
           {children}
@@ -44,10 +54,10 @@ export default function RootLayout({
             position="top-right"
             toastOptions={{
               style: {
-                background: '#fef7f2',
-                color: '#4a3728',
-                border: '1px solid #f0d5c0',
-                borderRadius: '16px',
+                background: "#fef7f2",
+                color: "#4a3728",
+                border: "1px solid #f0d5c0",
+                borderRadius: "16px",
               },
             }}
           />

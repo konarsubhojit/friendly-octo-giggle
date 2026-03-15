@@ -1,7 +1,7 @@
-import type { ReactNode } from 'react';
+import type { ReactNode } from "react";
 
-type HeadingLevel = 'h1' | 'h2' | 'h3' | 'h4';
-type HeadingSize = 'sm' | 'md' | 'lg' | 'xl';
+type HeadingLevel = "h1" | "h2" | "h3" | "h4";
+type HeadingSize = "sm" | "md" | "lg" | "xl";
 
 interface GradientHeadingProps {
   readonly children: ReactNode;
@@ -12,13 +12,14 @@ interface GradientHeadingProps {
 }
 
 const SIZE_CLASSES: Record<HeadingSize, string> = {
-  sm: 'text-xl  font-bold',
-  md: 'text-2xl font-bold',
-  lg: 'text-3xl font-bold',
-  xl: 'text-4xl font-extrabold',
+  sm: "text-xl  font-bold",
+  md: "text-2xl font-bold",
+  lg: "text-3xl font-bold",
+  xl: "text-4xl font-extrabold",
 };
 
-const GRADIENT = 'bg-gradient-to-r from-[#d4856b] via-[#e8a87c] to-[#c97b5e] bg-clip-text text-transparent';
+const GRADIENT =
+  "font-display bg-gradient-to-r from-[var(--accent-rose)] via-[var(--accent-warm)] to-[var(--accent-rose)] bg-clip-text text-transparent";
 
 /**
  * Heading element with the standard blue-to-purple gradient text effect.
@@ -31,9 +32,9 @@ const GRADIENT = 'bg-gradient-to-r from-[#d4856b] via-[#e8a87c] to-[#c97b5e] bg-
  */
 export function GradientHeading({
   children,
-  as: Tag = 'h1',
-  size = 'lg',
-  className = '',
+  as: Tag = "h1",
+  size = "lg",
+  className = "",
 }: GradientHeadingProps) {
   return (
     <Tag className={`${SIZE_CLASSES[size]} ${GRADIENT} ${className}`}>

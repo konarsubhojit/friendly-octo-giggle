@@ -9,12 +9,38 @@
   --accent-cream: #fff5eb;
   --accent-blush: #fde8d8;
   --accent-sage: #b8c9a3;
+  --accent-pink: #e8a0bf;
+  --border-warm: #f0d5c0;
+  --text-secondary: #7a6355;
+  --text-muted: #b89a85;
+  --font-display: 'Playfair Display', serif;
+  --font-body: 'Nunito', sans-serif;
+  --surface: #ffffff;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #1a1412;
     --foreground: #ededed;
+    --accent-warm: #d4945c;
+    --accent-rose: #c47a60;
+    --accent-peach: #8a5e42;
+    --accent-cream: #2a1e16;
+    --accent-blush: #3a2a20;
+    --accent-sage: #7a9068;
+    --accent-pink: #b87090;
+    --border-warm: #4a3828;
+    --text-secondary: #d4c0b0;
+    --text-muted: #a89080;
+    --surface: #241c16;
+  }
+}
+
+/* Dark mode overrides for native form elements */
+@media (prefers-color-scheme: dark) {
+  select option {
+    background-color: var(--surface);
+    color: var(--foreground);
   }
 }
 
@@ -132,18 +158,18 @@ body {
 /* ─── Warm Theme Utilities ────────────────────────────────────────────── */
 
 @utility bg-warm-gradient {
-  background: linear-gradient(135deg, #fef7f2 0%, #fde8d8 50%, #fef0e6 100%);
+  background: linear-gradient(135deg, var(--background) 0%, var(--accent-blush) 50%, var(--accent-cream) 100%);
 }
 
 @utility text-warm-heading {
-  background: linear-gradient(135deg, #d4856b, #e8a87c, #c97b5e);
+  background: linear-gradient(135deg, var(--accent-rose), var(--accent-warm), var(--accent-rose));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
 @utility border-warm {
-  border-color: #f0d5c0;
+  border-color: var(--border-warm);
 }
 
 @utility shadow-warm {
@@ -152,4 +178,29 @@ body {
 
 @utility shadow-warm-lg {
   box-shadow: 0 8px 32px rgba(212, 133, 107, 0.18), 0 2px 8px rgba(232, 168, 124, 0.12);
+}
+
+/* ─── Typography Display Utility ──────────────────────────────────────── */
+
+@utility font-display {
+  font-family: var(--font-display);
+}
+
+/* ─── Warm Focus Ring Utility ─────────────────────────────────────────── */
+
+@utility focus-warm {
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--background), 0 0 0 4px var(--accent-warm);
+  }
+}
+
+/* ─── Reduced Motion ──────────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

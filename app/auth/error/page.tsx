@@ -1,10 +1,10 @@
-import Link from 'next/link';
+import Link from "next/link";
 
 function ErrorIcon() {
   return (
-    <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+    <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-500/10 mb-4">
       <svg
-        className="h-6 w-6 text-red-600"
+        className="h-6 w-6 text-red-500"
         fill="none"
         viewBox="0 0 24 24"
         stroke="currentColor"
@@ -25,13 +25,13 @@ function ErrorActions() {
     <div className="space-y-3">
       <Link
         href="/auth/signin"
-        className="block w-full bg-gradient-to-r from-[#e8a87c] to-[#d4856b] text-white px-4 py-2 rounded-md hover:from-[#d4856b] hover:to-[#c7735a] transition"
+        className="block w-full bg-gradient-to-r from-[var(--accent-warm)] to-[var(--accent-rose)] text-white px-4 py-2 rounded-md hover:from-[var(--accent-rose)] hover:to-[var(--accent-warm)] transition"
       >
         Try Again
       </Link>
       <Link
         href="/"
-        className="block w-full bg-gray-200 text-[#7a6355] px-4 py-2 rounded-md hover:bg-gray-300 transition"
+        className="block w-full bg-[var(--accent-blush)] text-[var(--text-secondary)] px-4 py-2 rounded-md hover:bg-[var(--accent-peach)]/50 transition"
       >
         Back to Home
       </Link>
@@ -50,21 +50,26 @@ export default async function AuthErrorPage({
   const error = params.error;
 
   const errorMessages: Record<string, string> = {
-    Configuration: 'There is a problem with the server configuration.',
-    AccessDenied: 'You do not have permission to sign in.',
-    Verification: 'The verification token has expired or has already been used.',
-    Default: 'An error occurred during authentication.',
+    Configuration: "There is a problem with the server configuration.",
+    AccessDenied: "You do not have permission to sign in.",
+    Verification:
+      "The verification token has expired or has already been used.",
+    Default: "An error occurred during authentication.",
   };
 
-  const errorMessage = error ? errorMessages[error] || errorMessages.Default : errorMessages.Default;
+  const errorMessage = error
+    ? errorMessages[error] || errorMessages.Default
+    : errorMessages.Default;
 
   return (
     <div className="min-h-screen bg-warm-gradient flex items-center justify-center px-4">
-      <div className="max-w-md w-full bg-white/80 backdrop-blur-sm rounded-lg shadow-warm border border-[#f0d5c0] p-8">
+      <div className="max-w-md w-full bg-[var(--surface)]/80 backdrop-blur-sm rounded-lg shadow-warm border border-[var(--border-warm)] p-8">
         <div className="text-center">
           <ErrorIcon />
-          <h1 className="text-2xl font-bold text-[#4a3728] mb-2">Authentication Error</h1>
-          <p className="text-[#7a6355] mb-6">{errorMessage}</p>
+          <h1 className="text-2xl font-bold text-[var(--foreground)] mb-2">
+            Authentication Error
+          </h1>
+          <p className="text-[var(--text-secondary)] mb-6">{errorMessage}</p>
           <ErrorActions />
         </div>
       </div>

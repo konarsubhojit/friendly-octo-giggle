@@ -73,6 +73,6 @@ describe("Footer", () => {
 
   it("renders copyright text", () => {
     render(<Footer />);
-    expect(screen.getByText(/Craft & Cozy/)).toBeTruthy();
+    expect(screen.getByText(/The Kiyon Store/)).toBeTruthy();
   });
 });
