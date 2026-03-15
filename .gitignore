@@ -52,3 +52,4 @@ playwright-tests/screenshots/
 playwright-tests/results/
 test-results/
 playwright-tests/.auth/
+.env.local

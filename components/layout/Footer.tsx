@@ -1,10 +1,15 @@
 import Link from 'next/link';
 import NewsletterForm from '@/components/ui/NewsletterForm';
+import { FlowerAccent, VineDivider } from '@/components/ui/DecorativeElements';
 
 export default function Footer() {
   return (
-    <footer className="bg-gradient-to-b from-[#fde8d8] to-[#f8c8a8] text-[#4a3728] py-16 mt-12 border-t border-[#f0d5c0]">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <footer className="bg-gradient-to-b from-[#fde8d8] to-[#f8c8a8] text-[#4a3728] py-16 mt-12 border-t border-[#f0d5c0] relative overflow-hidden">
+      {/* Decorative background elements */}
+      <div className="absolute top-4 right-8 opacity-20" aria-hidden="true"><FlowerAccent className="w-12 h-12" /></div>
+      <div className="absolute bottom-8 left-6 opacity-15" aria-hidden="true"><FlowerAccent className="w-10 h-10" /></div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
           {/* Company */}
           <div>
@@ -64,7 +69,8 @@ export default function Footer() {
             <NewsletterForm />
           </div>
         </div>
-        <div className="border-t border-[#d4856b]/20 mt-12 pt-8 text-center">
+        <VineDivider className="mt-8" />
+        <div className="text-center pt-4">
           <p className="text-[#7a6355] text-sm">
             © 2026 Craft &amp; Cozy. Powered by Next.js, Redis, and PostgreSQL. All rights reserved. 🧶
           </p>

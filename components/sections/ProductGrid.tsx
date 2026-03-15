@@ -9,6 +9,7 @@ import { GradientHeading } from '@/components/ui/GradientHeading';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { StockBadge } from '@/components/sections/StockBadge';
 import { QuickAddButton } from '@/components/sections/QuickAddButton';
+import { FlowerAccent } from '@/components/ui/DecorativeElements';
 
 interface ProductGridProps {
   readonly products: Product[];
@@ -40,9 +41,12 @@ export default function ProductGrid({ products }: ProductGridProps) {
 
   return (
     <main id="products" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-      <GradientHeading as="h2" className="mb-4">
-        ⭐ Bestsellers
-      </GradientHeading>
+      <div className="flex items-center gap-3 mb-6">
+        <GradientHeading as="h2" size="xl">
+          Shop
+        </GradientHeading>
+        <FlowerAccent className="w-6 h-6 opacity-60" />
+      </div>
 
       {/* Search + Category filters */}
       <div className="mb-8 space-y-4">
@@ -89,45 +93,45 @@ export default function ProductGrid({ products }: ProductGridProps) {
       {filtered.length === 0 ? (
         <EmptyState title="No products found" message={emptyMessage} />
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {filtered.map((product, index) => (
             <div
               key={product.id}
-              className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-warm overflow-hidden border border-[#f0d5c0] group hover:shadow-warm-lg hover:scale-[1.03] hover:-translate-y-1 hover:border-[#e8a87c] transition-all duration-300 relative animate-fade-in-up"
-              style={{ animationDelay: `${index * 100}ms` }}
+              className="bg-white/90 backdrop-blur-sm rounded-3xl shadow-warm overflow-hidden border-2 border-[#f0d5c0] group hover:shadow-warm-lg hover:scale-[1.02] hover:-translate-y-1 hover:border-[#e8a87c] transition-all duration-300 relative animate-fade-in-up"
+              style={{ animationDelay: `${index * 80}ms` }}
             >
               <Link
                 href={`/products/${product.id}`}
                 className="block"
                 aria-label={product.name}
               >
-                {/* Product image — aspect-[4/3] shows full image without clipping */}
-                <div className="relative w-full aspect-[4/3] bg-[#fef0e6]/50">
+                {/* Product image with soft background */}
+                <div className="relative w-full aspect-square bg-gradient-to-br from-[#fef0e6] to-[#fde8d8]/50 p-4">
                   <Image
                     src={product.image}
                     alt={product.name}
                     fill
-                    className="object-contain p-2 group-hover:scale-105 transition-transform duration-300"
+                    className="object-contain p-3 group-hover:scale-105 transition-transform duration-300"
                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                   />
                 </div>
-                <div className="p-4">
-                  <div className="text-xl font-semibold text-[#4a3728] mb-2">
-                    {product.name}
-                  </div>
-                  <p className="text-[#7a6355] text-sm mb-4 line-clamp-2">
-                    {product.description}
-                  </p>
-                  <div className="flex justify-between items-center mb-3">
-                    <span className="text-2xl font-bold text-[#d4856b]">
-                      {formatPrice(product.price)}
-                    </span>
-                    <span className="text-sm">
+                <div className="p-5">
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div className="text-lg font-bold text-[#4a3728]">
+                      {product.name}
+                    </div>
+                    <span className="text-sm mt-0.5">
                       <StockBadge stock={product.stock} />
                     </span>
                   </div>
-                  <div className="mt-2">
-                    <span className="inline-block bg-gradient-to-r from-[#e8a87c] to-[#d4856b] text-white rounded-full px-3 py-1 text-sm font-semibold">
+                  <p className="text-[#7a6355] text-sm mb-3 line-clamp-2">
+                    {product.description}
+                  </p>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xl font-bold text-[#d4856b]">
+                      {formatPrice(product.price)}
+                    </span>
+                    <span className="inline-block bg-[#fde8d8] text-[#d4856b] rounded-full px-3 py-0.5 text-xs font-semibold border border-[#f0d5c0]">
                       {product.category}
                     </span>
                   </div>

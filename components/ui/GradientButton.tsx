@@ -59,7 +59,7 @@ export function GradientButton({
       type={type}
       disabled={isDisabled}
       className={[
-        'font-semibold rounded-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed',
+        'font-semibold rounded-full transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed',
         SIZE_CLASSES[size],
         VARIANT_CLASSES[variant],
         fullWidth ? 'w-full' : '',

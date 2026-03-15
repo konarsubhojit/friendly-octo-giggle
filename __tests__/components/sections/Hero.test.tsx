@@ -16,7 +16,10 @@ vi.mock("next/link", () => ({
 describe("Hero", () => {
   it("renders the main heading", () => {
     render(<Hero />);
-    expect(screen.getByText("Handcrafted with Love")).toBeTruthy();
+    const heading = screen.getByRole("heading", { level: 1 });
+    expect(heading).toBeTruthy();
+    expect(heading.textContent).toContain("Handmade");
+    expect(heading.textContent).toContain("With Love");
   });
 
   it("renders descriptive tagline", () => {
@@ -30,16 +33,11 @@ describe("Hero", () => {
     expect(link?.getAttribute("href")).toBe("#products");
   });
 
-  it("renders Bestsellers link pointing to #products", () => {
-    render(<Hero />);
-    const link = screen.getByText("Bestsellers").closest("a");
-    expect(link?.getAttribute("href")).toBe("#products");
-  });
-
   it("renders feature badges", () => {
     render(<Hero />);
-    expect(screen.getByText(/Free Shipping/)).toBeTruthy();
-    expect(screen.getByText(/Custom Orders Welcome/)).toBeTruthy();
-    expect(screen.getByText(/Handmade Quality/)).toBeTruthy();
+    expect(screen.getByText(/Handmade with love/)).toBeTruthy();
+    expect(screen.getByText(/Small batch/)).toBeTruthy();
+    expect(screen.getByText(/Free shipping/)).toBeTruthy();
+    expect(screen.getByText(/Made for you/)).toBeTruthy();
   });
 });
