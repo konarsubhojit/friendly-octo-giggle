@@ -116,7 +116,7 @@ describe("useMutation", () => {
   });
 
   it("sets loading during mutation", async () => {
-    let resolvePromise!: (v: string) => void;
+    let resolvePromise: (v: string) => void = () => {};
     const mutationFn = vi.fn(
       () => new Promise<string>((r) => (resolvePromise = r)),
     );

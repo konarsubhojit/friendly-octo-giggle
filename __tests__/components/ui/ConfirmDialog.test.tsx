@@ -105,7 +105,7 @@ describe('ConfirmDialog', () => {
     // The aria-labelledby must exist and point to the visible title element
     const labelId = dialog.getAttribute('aria-labelledby');
     expect(labelId).toBeTruthy();
-    expect(document.getElementById(labelId!)).toHaveTextContent('Are you sure?');
+    expect(document.getElementById(labelId as string)).toHaveTextContent('Are you sure?');
   });
 
   it('uses unique IDs when two dialogs are rendered simultaneously', () => {

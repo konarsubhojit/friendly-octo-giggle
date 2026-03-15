@@ -166,7 +166,7 @@ describe("LoginModal", () => {
     });
 
     await act(async () => {
-      fireEvent.submit(screen.getByText("Login").closest("form")!);
+      fireEvent.submit(screen.getByText("Login").closest("form") as HTMLFormElement);
     });
 
     expect(mockSignIn).toHaveBeenCalledWith("credentials", {
@@ -190,7 +190,7 @@ describe("LoginModal", () => {
     });
 
     await act(async () => {
-      fireEvent.submit(screen.getByText("Login").closest("form")!);
+      fireEvent.submit(screen.getByText("Login").closest("form") as HTMLFormElement);
     });
 
     await waitFor(() => {
@@ -213,7 +213,7 @@ describe("LoginModal", () => {
     });
 
     await act(async () => {
-      fireEvent.submit(screen.getByText("Login").closest("form")!);
+      fireEvent.submit(screen.getByText("Login").closest("form") as HTMLFormElement);
     });
 
     await waitFor(() => {
