@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useMemo } from 'react';
+import type { MouseEvent } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Product } from '@/lib/types';
@@ -29,14 +30,15 @@ function StockBadge({ stock }: { readonly stock: number }) {
   return <span className="bg-red-100 text-red-700 px-3 py-1 rounded-full font-semibold">Out of Stock</span>;
 }
 
-// Quick add-to-cart icon button
+// Quick add-to-cart icon button.
+// Rendered OUTSIDE the <Link> to avoid invalid nested-interactive-element HTML.
 function QuickAddButton({ product }: { readonly product: Product }) {
   const dispatch = useDispatch<AppDispatch>();
   const [adding, setAdding] = useState(false);
 
   // `adding` is excluded from deps intentionally: the button's `disabled` attribute already
   // prevents concurrent clicks; including it would recreate the handler on every state change.
-  const handleQuickAdd = useCallback(async (e: React.MouseEvent) => {
+  const handleQuickAdd = useCallback(async (e: MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     e.stopPropagation();
     setAdding(true);
@@ -57,7 +59,7 @@ function QuickAddButton({ product }: { readonly product: Product }) {
       onClick={handleQuickAdd}
       disabled={adding}
       aria-label={`Add ${product.name} to cart`}
-      className="absolute bottom-3 right-3 z-10 bg-white/90 hover:bg-rose-500 text-rose-500 hover:text-white rounded-full p-2 shadow-lg transition-all duration-200 hover:scale-110 disabled:opacity-50"
+      className="absolute bottom-3 right-3 z-20 bg-white/90 hover:bg-rose-500 text-rose-500 hover:text-white rounded-full p-2 shadow-lg transition-all duration-200 hover:scale-110 disabled:opacity-50"
     >
       {adding ? (
         <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true">
@@ -148,45 +150,53 @@ export default function ProductGrid({ products }: ProductGridProps) {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
           {filtered.map((product) => (
-            <Link
+            /* Outer card div with hover effects — QuickAddButton is a direct child (NOT inside the Link)
+               to avoid nesting interactive elements, which is invalid HTML and causes a11y issues. */
+            <div
               key={product.id}
-              href={`/products/${product.id}`}
               className="bg-white rounded-xl shadow-lg overflow-hidden border-2 border-gray-100 group hover:shadow-2xl hover:scale-105 hover:-translate-y-1 hover:border-rose-200 transition-all duration-300 relative"
             >
-              {/* Product image — aspect-[4/3] shows full image without clipping */}
-              <div className="relative w-full aspect-[4/3] bg-gray-50">
-                <Image
-                  src={product.image}
-                  alt={product.name}
-                  fill
-                  className="object-contain p-2"
-                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                />
-                <QuickAddButton product={product} />
-              </div>
-              <div className="p-4">
-                {/* Using div instead of h2 to avoid nested interactive elements (Link > h2) which violates HTML semantics and accessibility guidelines */}
-                <div className="text-xl font-semibold text-gray-900 mb-2">
-                  {product.name}
+              <Link
+                href={`/products/${product.id}`}
+                className="block"
+                aria-label={product.name}
+              >
+                {/* Product image — aspect-[4/3] shows full image without clipping */}
+                <div className="relative w-full aspect-[4/3] bg-gray-50">
+                  <Image
+                    src={product.image}
+                    alt={product.name}
+                    fill
+                    className="object-contain p-2"
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                  />
                 </div>
-                <p className="text-gray-600 text-sm mb-4 line-clamp-2">
-                  {product.description}
-                </p>
-                <div className="flex justify-between items-center mb-3">
-                  <span className="text-2xl font-bold text-rose-500">
-                    {formatPrice(product.price)}
-                  </span>
-                  <span className="text-sm">
-                    <StockBadge stock={product.stock} />
-                  </span>
+                <div className="p-4">
+                  {/* Using div instead of h2 to avoid nested interactive elements (Link > h2) which violates HTML semantics and accessibility guidelines */}
+                  <div className="text-xl font-semibold text-gray-900 mb-2">
+                    {product.name}
+                  </div>
+                  <p className="text-gray-600 text-sm mb-4 line-clamp-2">
+                    {product.description}
+                  </p>
+                  <div className="flex justify-between items-center mb-3">
+                    <span className="text-2xl font-bold text-rose-500">
+                      {formatPrice(product.price)}
+                    </span>
+                    <span className="text-sm">
+                      <StockBadge stock={product.stock} />
+                    </span>
+                  </div>
+                  <div className="mt-2">
+                    <span className="inline-block bg-gradient-to-r from-rose-400 to-pink-400 text-white rounded-full px-3 py-1 text-sm font-semibold">
+                      {product.category}
+                    </span>
+                  </div>
                 </div>
-                <div className="mt-2">
-                  <span className="inline-block bg-gradient-to-r from-rose-400 to-pink-400 text-white rounded-full px-3 py-1 text-sm font-semibold">
-                    {product.category}
-                  </span>
-                </div>
-              </div>
-            </Link>
+              </Link>
+              {/* Quick add button sits OUTSIDE the <Link> to avoid invalid HTML nesting */}
+              <QuickAddButton product={product} />
+            </div>
           ))}
         </div>
       )}

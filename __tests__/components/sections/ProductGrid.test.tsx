@@ -1,18 +1,21 @@
 import { describe, it, vi, expect, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
 import React from "react";
 import ProductGrid from "@/components/sections/ProductGrid";
 import { CurrencyProvider } from "@/contexts/CurrencyContext";
 import type { Product } from "@/lib/types";
+import toast from "react-hot-toast";
 
 vi.mock("next/link", () => ({
   default: ({
     children,
     href,
+    "aria-label": ariaLabel,
   }: {
     children: React.ReactNode;
     href: string;
-  }) => <a href={href}>{children}</a>,
+    "aria-label"?: string;
+  }) => <a href={href} aria-label={ariaLabel}>{children}</a>,
 }));
 
 vi.mock("next/image", () => ({
@@ -22,8 +25,11 @@ vi.mock("next/image", () => ({
   ),
 }));
 
+// Mutable mock dispatch — tests can override returnValue for each scenario
+const mockDispatch = vi.fn();
+
 vi.mock("react-redux", () => ({
-  useDispatch: () => vi.fn(),
+  useDispatch: () => mockDispatch,
   useSelector: vi.fn(),
 }));
 
@@ -56,7 +62,11 @@ function renderGrid(products: Product[]) {
 describe("ProductGrid", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Default: dispatch returns a successful unwrap
+    mockDispatch.mockReturnValue({ unwrap: () => Promise.resolve() });
   });
+
+  // ─── Basic rendering ──────────────────────────────────────────────────────
 
   it("shows empty state when no products", () => {
     renderGrid([]);
@@ -96,8 +106,8 @@ describe("ProductGrid", () => {
   });
 
   it("renders product link with correct href", () => {
-    renderGrid([makeProduct({ id: "prod-42" })]);
-    const link = screen.getByRole("link", { name: /Test Product/i });
+    renderGrid([makeProduct({ id: "prod-42", name: "My Product" })]);
+    const link = screen.getByRole("link", { name: /My Product/i });
     expect(link.getAttribute("href")).toBe("/products/prod-42");
   });
 
@@ -114,6 +124,8 @@ describe("ProductGrid", () => {
     renderGrid([]);
     expect(screen.getByText(/Bestsellers/i)).toBeTruthy();
   });
+
+  // ─── Category filter buttons ──────────────────────────────────────────────
 
   it("renders category filter buttons", () => {
     renderGrid([]);
@@ -146,5 +158,71 @@ describe("ProductGrid", () => {
     fireEvent.click(handbagBtn);
     expect(screen.getByText("Tote Bag")).toBeTruthy();
     expect(screen.queryByText("Red Rose")).toBeNull();
+  });
+
+  it("shows contextual empty message when search yields no results", () => {
+    renderGrid([makeProduct({ name: "Bouquet" })]);
+    fireEvent.change(screen.getByPlaceholderText("Search products..."), {
+      target: { value: "xyz-no-match" },
+    });
+    expect(screen.getByText(/Try adjusting your search or category filter/i)).toBeTruthy();
+  });
+
+  // ─── QuickAddButton ───────────────────────────────────────────────────────
+
+  it("renders quick add button for in-stock product", () => {
+    renderGrid([makeProduct({ stock: 5 })]);
+    const btn = screen.getByRole("button", { name: /Add Test Product to cart/i });
+    expect(btn).toBeTruthy();
+  });
+
+  it("does NOT render quick add button for out-of-stock product", () => {
+    renderGrid([makeProduct({ stock: 0 })]);
+    expect(screen.queryByRole("button", { name: /Add.*to cart/i })).toBeNull();
+  });
+
+  it("quick add button dispatches addToCart and shows success toast", async () => {
+    mockDispatch.mockReturnValue({ unwrap: () => Promise.resolve() });
+    renderGrid([makeProduct({ id: "p1", name: "Flower Bouquet", stock: 5 })]);
+
+    const addBtn = screen.getByRole("button", { name: /Add Flower Bouquet to cart/i });
+    await act(async () => { fireEvent.click(addBtn); });
+
+    expect(mockDispatch).toHaveBeenCalledTimes(1);
+    await waitFor(() => {
+      expect(vi.mocked(toast).success).toHaveBeenCalledWith("Flower Bouquet added to cart!");
+    });
+  });
+
+  it("quick add button shows error toast when dispatch fails", async () => {
+    mockDispatch.mockReturnValue({
+      unwrap: () => Promise.reject(new Error("Out of stock")),
+    });
+    renderGrid([makeProduct({ id: "p2", name: "Test Bag", stock: 3 })]);
+
+    const addBtn = screen.getByRole("button", { name: /Add Test Bag to cart/i });
+    await act(async () => { fireEvent.click(addBtn); });
+
+    await waitFor(() => {
+      expect(vi.mocked(toast).error).toHaveBeenCalledWith(
+        "Failed to add to cart. Please try again.",
+      );
+    });
+  });
+
+  it("quick add button is disabled while adding", async () => {
+    let resolveAdd!: () => void;
+    const pendingPromise = new Promise<void>((res) => { resolveAdd = res; });
+    mockDispatch.mockReturnValue({ unwrap: () => pendingPromise });
+
+    renderGrid([makeProduct({ stock: 5 })]);
+    const btn = screen.getByRole("button", { name: /Add Test Product to cart/i });
+
+    fireEvent.click(btn);
+    // Button should become disabled while the promise is pending
+    expect(btn).toBeDisabled();
+
+    // Clean up
+    await act(async () => { resolveAdd(); });
   });
 });
