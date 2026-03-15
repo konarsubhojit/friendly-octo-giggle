@@ -170,12 +170,10 @@ interface TextInputProps extends InputSubProps {
 const TextInput = ({ field, value, describedBy, error, showPassword, onChange, onTogglePassword, onBlur }: TextInputProps) => {
   const isPassword = field.type === 'password';
   const hasToggle = isPassword && field.showPasswordToggle;
-  let resolvedType: string;
-  if (isPassword) {
-    resolvedType = showPassword ? 'text' : 'password';
-  } else {
-    resolvedType = field.type;
-  }
+  // Resolve input type: non-password fields keep their type unchanged;
+  // password fields toggle between 'text' (show) and 'password' (hide).
+  const passwordType = showPassword ? 'text' : 'password';
+  const resolvedType = isPassword ? passwordType : field.type;
   const labelStr = typeof field.label === 'string' ? field.label.toLowerCase() : 'password';
 
   return (

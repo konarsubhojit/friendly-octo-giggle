@@ -31,10 +31,13 @@ test.describe('Mobile Navigation - Hamburger Menu', () => {
   test('hamburger button is hidden on desktop viewport', async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== 'desktop-chrome', 'Only runs on desktop viewport');
     await page.goto('/');
-    // Wait for the page's CSS chunks to finish loading so Tailwind responsive
-    // classes (md:hidden) are applied before we check visibility.
+    // Wait for all resources including CSS chunks to finish loading.
     await page.waitForLoadState('load');
-    // With Turbopack dev server, wait a bit longer for responsive CSS to apply
+    // With Turbopack dev server, responsive CSS (md:hidden) is served as a
+    // separate chunk that arrives after the initial HTML — the button can be
+    // present in the DOM before display:none is applied. Poll the computed style
+    // to detect the correct visual state. The 25s timeout accounts for a cold
+    // Turbopack compile under maximum load during a full parallel test run.
     await page.waitForFunction(
       () => {
         const el = document.getElementById('mobile-nav-toggle');
