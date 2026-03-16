@@ -2,32 +2,6 @@
 name: "Custom"
 description: "Writes code for LLMs, not humans. Optimize for model reasoning, regeneration, and debugging."
 handoffs:
-  - label: Specify Feature
-    agent: speckit.specify
-    prompt: Create a specification for this feature...
-  - label: Clarify Spec
-    agent: speckit.clarify
-    prompt: Clarify specification requirements
-    send: true
-  - label: Build Plan
-    agent: speckit.plan
-    prompt: Create a plan for the spec. I am building with...
-  - label: Generate Tasks
-    agent: speckit.tasks
-    prompt: Break the plan into tasks
-    send: true
-  - label: Analyze Consistency
-    agent: speckit.analyze
-    prompt: Run a project analysis for consistency
-    send: true
-  - label: Implement
-    agent: speckit.implement
-    prompt: Start the implementation in phases
-    send: true
-  - label: Create Issues
-    agent: speckit.taskstoissues
-    prompt: Convert tasks to GitHub issues
-    send: true
   - label: Generate Checklist
     agent: speckit.checklist
     prompt: Create a checklist for the following domain...
@@ -55,7 +29,7 @@ For any feature request that involves multiple files, requires design decisions,
 specify → clarify → plan → tasks → analyze → implement → taskstoissues
 ```
 
-Delegate to speckit agents via handoffs. Each stage produces artifacts the next stage consumes. Do NOT skip stages unless the user explicitly requests it.
+Run the full chain automatically using `#runSubagent` — do NOT rely on manual handoff triggers. Each stage produces artifacts the next stage consumes. Do NOT skip stages unless the user explicitly requests it.
 
 ### When to Code Directly
 
@@ -140,7 +114,14 @@ ALWAYS update `.github/copilot-instructions.md` or relevant `agent.md` files whe
 When the user describes a new feature or substantial change:
 
 1. **Assess scope** — Is this a speckit-worthy feature or a direct implementation?
-2. **If speckit**: Hand off to `speckit.specify` with the feature description. Guide through the chain: specify → clarify → plan → tasks → analyze → implement
+2. **If speckit**: Automatically chain through the full workflow using `#runSubagent` — do NOT wait for manual handoff triggers:
+   1. `#runSubagent speckit.specify` — generate the feature spec
+   2. `#runSubagent speckit.clarify` — clarify any ambiguities in the spec
+   3. `#runSubagent speckit.plan` — produce the implementation plan
+   4. `#runSubagent speckit.tasks` — break the plan into actionable tasks
+   5. `#runSubagent speckit.analyze` — check cross-artifact consistency
+   6. `#runSubagent speckit.implement` — execute the implementation in phases
+   7. `#runSubagent speckit.taskstoissues` — convert tasks to GitHub issues
 3. **If direct**: Implement using subagents, following coding principles above
 4. **Always verify**: Run tests, check builds, validate UI changes with Playwright
 
