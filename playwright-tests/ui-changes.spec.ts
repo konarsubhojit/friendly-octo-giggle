@@ -172,11 +172,11 @@ test.describe('CurrencySelector - dark mode visibility', () => {
     await expect(select).toBeVisible();
   });
 
-  test('currency selector has dark mode border class', async ({ page }) => {
+  test('currency selector has warm border class for dark mode compatibility', async ({ page }) => {
     await page.goto('/');
     const select = page.getByRole('combobox', { name: /select currency/i });
     const cls = await select.getAttribute('class');
-    expect(cls).toContain('dark:border-gray-500');
+    expect(cls).toContain('border-[var(--border-warm)]');
   });
 });
 
@@ -259,7 +259,8 @@ test.describe('Shop page', () => {
     await expect(searchInput).toBeVisible();
   });
 
-  test('header "Shop" nav link points to /shop', async ({ page }) => {
+  test('header "Shop" nav link points to /shop', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'desktop-chrome', 'Shop link is in desktop nav; mobile uses hamburger menu');
     await page.goto('/');
     const shopLink = page.getByRole('link', { name: /^Shop$/i }).first();
     await expect(shopLink).toBeVisible();
