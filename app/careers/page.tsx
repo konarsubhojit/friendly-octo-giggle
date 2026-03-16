@@ -31,8 +31,8 @@ export default function CareersPage() {
               { title: 'Great Benefits', desc: 'Health, dental, vision, and generous PTO.' },
             ].map(item => (
               <div key={item.title} className="flex gap-3">
-                <div className="w-8 h-8 bg-[#fde8d8] rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <svg className="w-4 h-4 text-[#d4856b]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <div className="w-8 h-8 bg-[var(--accent-blush)] rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <svg className="w-4 h-4 text-[var(--accent-rose)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
                 </div>
@@ -49,14 +49,14 @@ export default function CareersPage() {
           <h2 className="text-2xl font-semibold text-[var(--foreground)] mb-6">Open Positions</h2>
           <div className="space-y-4">
             {openings.map(job => (
-              <div key={job.title} className="flex items-center justify-between p-4 border border-[var(--border-warm)] rounded-xl hover:border-[#e8a87c] hover:bg-[var(--accent-blush)]/30 transition-all">
+              <div key={job.title} className="flex items-center justify-between p-4 border border-[var(--border-warm)] rounded-xl hover:border-[var(--accent-warm)] hover:bg-[var(--accent-blush)]/30 transition-all">
                 <div>
                   <h3 className="font-semibold text-[var(--foreground)]">{job.title}</h3>
                   <p className="text-sm text-[var(--text-muted)]">{job.team} · {job.location} · {job.type}</p>
                 </div>
                 <Link
                   href="/contact"
-                  className="text-sm font-medium text-[#d4856b] hover:text-[#c7735a] whitespace-nowrap"
+                  className="text-sm font-medium text-[var(--accent-rose)] hover:text-[var(--accent-warm)] whitespace-nowrap"
                 >
                   Apply →
                 </Link>

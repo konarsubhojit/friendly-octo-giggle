@@ -9,7 +9,7 @@ export function SelectInput({ field, value, describedBy, error, onChange }: Inpu
       value={value}
       onChange={(e) => onChange(field.name, e.target.value)}
       aria-describedby={describedBy}
-      className={`${BASE_INPUT} bg-white ${borderCls(Boolean(error))}`}
+      className={`${BASE_INPUT} ${borderCls(Boolean(error))}`}
     >
       <option value="">Select…</option>
       {field.options?.map((opt) => (

@@ -56,7 +56,7 @@ function ReturnStepsSection() {
       <ol className="space-y-4">
         {RETURN_STEPS.map((step, i) => (
           <li key={step} className="flex gap-4">
-            <span className="w-7 h-7 bg-[#fde8d8] text-[#d4856b] rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">{i + 1}</span>
+            <span className="w-7 h-7 bg-[var(--accent-blush)] text-[var(--accent-rose)] rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">{i + 1}</span>
             <span className="text-[var(--text-secondary)] pt-0.5">{step}</span>
           </li>
         ))}
@@ -77,7 +77,7 @@ function NonReturnableSection() {
         <li>Items marked as Final Sale</li>
       </ul>
       <p className="mt-6 text-[var(--text-secondary)] text-sm">
-        Questions? <Link href="/contact" className="text-[#d4856b] hover:underline">Contact our support team</Link> and we&apos;ll be happy to help.
+        Questions? <Link href="/contact" className="text-[var(--accent-rose)] hover:underline">Contact our support team</Link> and we&apos;ll be happy to help.
       </p>
     </section>
   );

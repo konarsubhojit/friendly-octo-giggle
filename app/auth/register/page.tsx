@@ -86,19 +86,19 @@ const REGISTER_FIELDS: ReadonlyArray<FieldDef> = [
 ];
 
 const SUBMIT_BTN =
-  'w-full py-3 bg-gradient-to-r from-[#e8a87c] to-[#d4856b] text-white rounded-lg font-semibold hover:from-[#d4856b] hover:to-[#c7735a] transition-all duration-300 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed';
+  'w-full py-3 bg-gradient-to-r from-[var(--accent-rose)] to-[var(--accent-pink)] text-white rounded-full font-semibold hover:from-[var(--accent-pink)] hover:to-[var(--accent-rose)] transition-all duration-300 shadow-warm hover:shadow-warm-lg disabled:opacity-50 disabled:cursor-not-allowed focus-warm';
 
 // ─── Header sub-component (extracted to keep JSX nesting ≤ 4 levels) ──────────
 
 const RegisterPageHeader = () => (
   <div className="text-center mb-6">
-    <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-r from-[#fde8d8] to-[#f0d5c0] mb-3">
-      <svg className="w-6 h-6 text-[#e8a87c]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+    <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-r from-[var(--accent-blush)] to-[var(--accent-cream)] mb-3">
+      <svg className="w-6 h-6 text-[var(--accent-rose)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
       </svg>
     </div>
-    <h1 className="text-2xl sm:text-3xl font-bold text-[#4a3728] mb-2">Create Account</h1>
-    <p className="text-[#7a6355]">Join us and start shopping</p>
+    <h1 className="text-2xl sm:text-3xl font-bold text-[var(--foreground)] mb-2">Create Account</h1>
+    <p className="text-[var(--text-secondary)]">Join us and start shopping</p>
   </div>
 );
 
@@ -141,7 +141,7 @@ export default function RegisterPage() {
 
   return (
     <div className="min-h-screen bg-warm-gradient flex items-center justify-center px-4 sm:px-6 lg:px-8 py-12">
-      <div className="max-w-md w-full bg-white/80 backdrop-blur-sm rounded-xl shadow-warm border border-[#f0d5c0] p-6 sm:p-8">
+      <div className="max-w-md w-full bg-[var(--surface)]/80 backdrop-blur-sm rounded-xl shadow-warm border border-[var(--border-warm)] p-6 sm:p-8">
         <RegisterPageHeader />
 
         <DynamicForm
@@ -153,9 +153,9 @@ export default function RegisterPage() {
           formClassName="space-y-4"
         />
 
-        <p className="text-center text-sm text-[#7a6355] mt-6">
+        <p className="text-center text-sm text-[var(--text-secondary)] mt-6">
           Already have an account?{' '}
-          <Link href="/auth/signin" className="font-semibold text-[#e8a87c] hover:text-[#d4856b]">
+          <Link href="/auth/signin" className="font-semibold text-[var(--accent-rose)] hover:text-[var(--accent-pink)]">
             Login
           </Link>
         </p>

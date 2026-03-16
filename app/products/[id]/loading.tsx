@@ -10,7 +10,7 @@ function ImageSkeleton() {
         </div>
       </div>
       <div className="absolute -top-6 -right-6 w-32 h-32 bg-gradient-to-r from-[var(--accent-peach)] to-[var(--accent-blush)] rounded-full blur-3xl opacity-30 -z-10" />
-      <div className="absolute -bottom-6 -left-6 w-40 h-40 bg-gradient-to-r from-[var(--accent-sage)] to-[#d4e4c4] rounded-full blur-3xl opacity-30 -z-10" />
+      <div className="absolute -bottom-6 -left-6 w-40 h-40 bg-gradient-to-r from-[var(--accent-sage)] to-[var(--accent-cream)] rounded-full blur-3xl opacity-30 -z-10" />
     </div>
   );
 }
@@ -19,7 +19,7 @@ function DetailsSkeleton() {
   return (
     <div className="flex flex-col">
       <div className="bg-[var(--surface)]/80 backdrop-blur-lg rounded-2xl shadow-warm border border-[var(--border-warm)] p-8 mb-6">
-        <div className="h-10 w-3/4 bg-gradient-to-r from-[var(--accent-warm)] via-[var(--accent-rose)] to-[#c97b5e] rounded-lg animate-pulse mb-4" />
+        <div className="h-10 w-3/4 bg-gradient-to-r from-[var(--accent-warm)] via-[var(--accent-rose)] to-[var(--accent-warm)] rounded-lg animate-pulse mb-4" />
         <div className="mb-6">
           <div className="h-8 w-28 bg-gradient-to-r from-[var(--accent-warm)] to-[var(--accent-rose)] rounded-full animate-pulse" />
         </div>

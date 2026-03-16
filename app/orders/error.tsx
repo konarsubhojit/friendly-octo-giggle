@@ -11,10 +11,10 @@ export default function OrdersError({ error, reset }: ErrorProps) {
 
   return (
     <div className="min-h-[50vh] flex items-center justify-center px-4">
-      <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8 text-center">
-        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[#fde8d8] flex items-center justify-center">
+      <div className="max-w-md w-full bg-[var(--surface)] rounded-2xl shadow-warm-lg border border-[var(--border-warm)] p-8 text-center">
+        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[var(--accent-blush)] flex items-center justify-center">
           <svg
-            className="w-8 h-8 text-[#e8a87c]"
+            className="w-8 h-8 text-[var(--accent-rose)]"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -27,25 +27,25 @@ export default function OrdersError({ error, reset }: ErrorProps) {
             />
           </svg>
         </div>
-        <h2 className="text-2xl font-bold text-[#4a3728] mb-2">
+        <h2 className="text-2xl font-bold text-[var(--foreground)] mb-2">
           Error Loading Orders
         </h2>
-        <p className="text-[#7a6355] mb-4">
+        <p className="text-[var(--text-secondary)] mb-4">
           {error.message || 'Failed to load your order information'}
         </p>
         {error.digest && (
-          <p className="text-xs text-gray-400 mb-4">Error ID: {error.digest}</p>
+          <p className="text-xs text-[var(--text-muted)] mb-4">Error ID: {error.digest}</p>
         )}
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <button
             onClick={reset}
-            className="inline-flex items-center justify-center px-4 py-2 bg-gradient-to-r from-[#e8a87c] to-[#d4856b] text-white font-medium rounded-lg hover:from-[#d4856b] hover:to-[#c7735a] transition-colors focus:outline-none focus:ring-2 focus:ring-[#e8a87c] focus:ring-offset-2"
+            className="inline-flex items-center justify-center px-4 py-2 bg-gradient-to-r from-[var(--accent-rose)] to-[var(--accent-pink)] text-white font-medium rounded-full hover:opacity-90 transition-all shadow-warm focus-warm"
           >
             Try again
           </button>
           <Link
             href="/"
-            className="inline-flex items-center justify-center px-4 py-2 bg-gray-100 text-[#7a6355] font-medium rounded-lg hover:bg-gray-200 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+            className="inline-flex items-center justify-center px-4 py-2 bg-[var(--accent-blush)] text-[var(--text-secondary)] font-medium rounded-full hover:bg-[var(--accent-cream)] transition-all border border-[var(--border-warm)] focus-warm"
           >
             Go home
           </Link>

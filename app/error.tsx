@@ -37,7 +37,7 @@ export default function GlobalError({ error, reset }: ErrorProps) {
         )}
         <button
           onClick={reset}
-          className="inline-flex items-center px-6 py-2.5 bg-gradient-to-r from-[var(--accent-warm)] to-[var(--accent-rose)] text-white font-bold rounded-full hover:from-[var(--accent-rose)] hover:to-[#c97b5e] transition-all shadow-warm hover:shadow-warm-lg focus-warm"
+          className="inline-flex items-center px-6 py-2.5 bg-gradient-to-r from-[var(--accent-warm)] to-[var(--accent-rose)] text-white font-bold rounded-full hover:from-[var(--accent-rose)] hover:to-[var(--accent-warm)] transition-all shadow-warm hover:shadow-warm-lg focus-warm"
         >
           Try again
         </button>

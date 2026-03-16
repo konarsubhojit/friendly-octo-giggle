@@ -135,7 +135,7 @@ export function DynamicForm({
             type="button"
             onClick={onCancel}
             disabled={submitting}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50 transition"
+            className="px-4 py-2 text-sm font-medium text-[var(--text-secondary)] bg-[var(--accent-blush)] rounded-full hover:bg-[var(--accent-cream)] disabled:opacity-50 transition border border-[var(--border-warm)]"
           >
             {cancelLabel}
           </button>

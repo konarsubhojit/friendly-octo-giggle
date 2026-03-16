@@ -36,7 +36,7 @@ export default function PressPage() {
           <div className="space-y-6">
             {pressReleases.map(pr => (
               <div key={pr.title} className="border-b border-[var(--border-warm)] last:border-0 pb-6 last:pb-0">
-                <p className="text-sm text-gray-400 mb-1">{pr.date}</p>
+                <p className="text-sm text-[var(--text-muted)] mb-1">{pr.date}</p>
                 <h3 className="font-bold text-[var(--foreground)] mb-2">{pr.title}</h3>
                 <p className="text-[var(--text-secondary)] text-sm leading-relaxed">{pr.summary}</p>
               </div>
