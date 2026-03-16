@@ -45,10 +45,15 @@ export function logApiRequest(data: {
     ...data,
   };
 
-  if (data.statusCode && data.statusCode >= 400) {
-    logger.error(logData, "API request failed");
+  if (data.statusCode && data.statusCode >= 500) {
+    // 5xx: server errors — always surfaced in production
+    logger.error(logData, "API request server error");
+  } else if (data.statusCode && data.statusCode >= 400) {
+    // 4xx: client errors (bad input, not found, unauthorized) — warn level
+    logger.warn(logData, "API request client error");
   } else {
-    logger.info(logData, "API request completed");
+    // 2xx/3xx: successful — debug only, too high-volume for production info logs
+    logger.debug(logData, "API request completed");
   }
 }
 
@@ -94,7 +99,14 @@ export function logAuthEvent(data: {
     ...data,
   };
 
-  if (data.success) {
+  // session_created/session_expired fire on every request — log at debug to avoid
+  // flooding production logs. Failures are always logged at warn regardless.
+  if (
+    data.event === "session_created" ||
+    data.event === "session_expired"
+  ) {
+    logger.debug(logData, `Authentication event: ${data.event}`);
+  } else if (data.success) {
     logger.info(logData, `Authentication event: ${data.event}`);
   } else {
     logger.warn(logData, `Authentication event failed: ${data.event}`);

@@ -48,7 +48,7 @@ describe("logger module", () => {
   });
 
   describe("logApiRequest", () => {
-    it("should log info for successful requests (status < 400)", () => {
+    it("should log debug for successful requests (status < 400)", () => {
       logApiRequest({
         method: "GET",
         path: "/api/products",
@@ -56,7 +56,7 @@ describe("logger module", () => {
         statusCode: 200,
         duration: 50,
       });
-      expect(mockLogger.info).toHaveBeenCalledWith(
+      expect(mockLogger.debug).toHaveBeenCalledWith(
         expect.objectContaining({
           type: "api_request",
           method: "GET",
@@ -67,7 +67,24 @@ describe("logger module", () => {
       );
     });
 
-    it("should log error for failed requests (status >= 400)", () => {
+    it("should log warn for client errors (status 400-499)", () => {
+      logApiRequest({
+        method: "GET",
+        path: "/api/products/unknown",
+        statusCode: 404,
+      });
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: "api_request",
+          method: "GET",
+          path: "/api/products/unknown",
+          statusCode: 404,
+        }),
+        "API request client error",
+      );
+    });
+
+    it("should log error for server errors (status >= 500)", () => {
       logApiRequest({
         method: "POST",
         path: "/api/orders",
@@ -80,13 +97,13 @@ describe("logger module", () => {
           path: "/api/orders",
           statusCode: 500,
         }),
-        "API request failed",
+        "API request server error",
       );
     });
 
-    it("should log info when no statusCode is provided", () => {
+    it("should log debug when no statusCode is provided", () => {
       logApiRequest({ method: "GET", path: "/api/health" });
-      expect(mockLogger.info).toHaveBeenCalledWith(
+      expect(mockLogger.debug).toHaveBeenCalledWith(
         expect.objectContaining({ type: "api_request", method: "GET" }),
         "API request completed",
       );
@@ -167,6 +184,39 @@ describe("logger module", () => {
         }),
         "Authentication event failed: failed_login",
       );
+    });
+
+    it("should log debug for session_created events (high-frequency, avoid production noise)", () => {
+      logAuthEvent({
+        event: "session_created",
+        userId: "user_1",
+        success: true,
+      });
+      expect(mockLogger.debug).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: "auth_event",
+          event: "session_created",
+          userId: "user_1",
+        }),
+        "Authentication event: session_created",
+      );
+      expect(mockLogger.info).not.toHaveBeenCalled();
+    });
+
+    it("should log debug for session_expired events (high-frequency, avoid production noise)", () => {
+      logAuthEvent({
+        event: "session_expired",
+        userId: "user_2",
+        success: false,
+      });
+      expect(mockLogger.debug).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: "auth_event",
+          event: "session_expired",
+        }),
+        "Authentication event: session_expired",
+      );
+      expect(mockLogger.warn).not.toHaveBeenCalled();
     });
   });
 

@@ -111,14 +111,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           return null;
         }
 
-        logAuthEvent({
-          event: 'login',
-          userId: user.id,
-          email: user.email,
-          provider: 'credentials',
-          success: true,
-        });
-
         return {
           id: user.id,
           name: user.name,
@@ -147,14 +139,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         session.user.id = token.id;
         session.user.role = token.role || 'CUSTOMER';
         session.user.phoneNumber = token.phoneNumber || undefined;
-
-        // Log session creation
-        logAuthEvent({
-          event: 'session_created',
-          userId: token.id,
-          email: session.user.email || undefined,
-          success: true,
-        });
       }
       return session;
     },
