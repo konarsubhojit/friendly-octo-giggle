@@ -22,7 +22,62 @@ interface ProductCardProps {
   readonly index: number;
 }
 
-function ProductCard({ product, formatPrice, index }: ProductCardProps) {
+interface WishlistButtonProps {
+  readonly productName: string;
+}
+
+const WishlistButton = ({ productName }: WishlistButtonProps) => {
+  return (
+    <button
+      type="button"
+      className="absolute top-3 right-3 z-10 w-9 h-9 rounded-full bg-[var(--surface)]/90 backdrop-blur-sm border border-[var(--border-warm)] flex items-center justify-center text-[var(--accent-pink)] hover:bg-[var(--accent-blush)] hover:scale-110 hover:border-[var(--accent-pink)] transition-all duration-200 shadow-warm focus-warm"
+      aria-label={`Add ${productName} to wishlist`}
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      }}
+    >
+      <svg
+        className="w-5 h-5"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+        aria-hidden="true"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+        />
+      </svg>
+    </button>
+  );
+}
+
+interface ProductImageAreaProps {
+  readonly product: Product;
+}
+
+const ProductImageArea = ({ product }: ProductImageAreaProps) => {
+  return (
+    <div className="relative w-full aspect-square bg-gradient-to-br from-[var(--accent-cream)] to-[var(--accent-blush)] overflow-hidden">
+      <Image
+        src={product.image}
+        alt={product.name}
+        fill
+        className="object-contain p-4 group-hover:scale-108 transition-transform duration-500"
+        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+      />
+      <WishlistButton productName={product.name} />
+      <div className="absolute bottom-3 left-3">
+        <StockBadge stock={product.stock} />
+      </div>
+    </div>
+  );
+}
+
+const ProductCard = ({ product, formatPrice, index }: ProductCardProps) => {
   return (
     <div
       className="bg-[var(--surface)] rounded-3xl shadow-warm overflow-hidden border border-[var(--border-warm)] group hover:shadow-warm-lg hover:scale-[1.02] hover:-translate-y-1 hover:border-[var(--accent-rose)] transition-all duration-300 relative animate-fade-in-up"
@@ -33,45 +88,7 @@ function ProductCard({ product, formatPrice, index }: ProductCardProps) {
         className="block"
         aria-label={product.name}
       >
-        {/* Product image area */}
-        <div className="relative w-full aspect-square bg-gradient-to-br from-[var(--accent-cream)] to-[var(--accent-blush)] overflow-hidden">
-          <Image
-            src={product.image}
-            alt={product.name}
-            fill
-            className="object-contain p-4 group-hover:scale-108 transition-transform duration-500"
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-          />
-          {/* Wishlist button */}
-          <button
-            type="button"
-            className="absolute top-3 right-3 z-10 w-9 h-9 rounded-full bg-[var(--surface)]/90 backdrop-blur-sm border border-[var(--border-warm)] flex items-center justify-center text-[var(--accent-pink)] hover:bg-[var(--accent-blush)] hover:scale-110 hover:border-[var(--accent-pink)] transition-all duration-200 shadow-warm focus-warm"
-            aria-label={`Add ${product.name} to wishlist`}
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-            }}
-          >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              aria-hidden="true"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-              />
-            </svg>
-          </button>
-          {/* Stock badge overlay */}
-          <div className="absolute bottom-3 left-3">
-            <StockBadge stock={product.stock} />
-          </div>
-        </div>
+        <ProductImageArea product={product} />
 
         {/* Product info */}
         <div className="p-5">
@@ -96,7 +113,7 @@ function ProductCard({ product, formatPrice, index }: ProductCardProps) {
   );
 }
 
-export default function ProductGrid({ products }: ProductGridProps) {
+const ProductGrid = ({ products }: ProductGridProps) => {
   const { formatPrice } = useCurrency();
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
@@ -201,4 +218,6 @@ export default function ProductGrid({ products }: ProductGridProps) {
       )}
     </main>
   );
-}
+};
+
+export default ProductGrid;

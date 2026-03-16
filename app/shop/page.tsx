@@ -13,7 +13,7 @@ export const metadata: Metadata = {
     "Browse our full collection of handmade crochet flowers, bags, keychains, hair accessories, and more.",
 };
 
-export default async function ShopPage() {
+const ShopPage = async () => {
   let products: Product[] = [];
   try {
     products = await db.products.findBestsellers({ withCache: true });
@@ -37,4 +37,6 @@ export default async function ShopPage() {
       <Footer />
     </div>
   );
-}
+};
+
+export default ShopPage;
