@@ -38,6 +38,7 @@ const mockProduct: Product = {
   description: "A nice product",
   price: 500, // ₹500 INR (base currency)
   image: "https://example.com/image.jpg",
+  images: [],
   stock: 10,
   category: "Flowers",
   deletedAt: null,
@@ -157,7 +158,7 @@ describe("ProductFormModal", () => {
 
   it("shows inline error on invalid file type upload", async () => {
     renderModal();
-    const fileInput = screen.getByLabelText("Product Image");
+    const fileInput = screen.getByLabelText(/primary image/i);
     const invalidFile = new File(["content"], "doc.pdf", {
       type: "application/pdf",
     });
@@ -171,7 +172,7 @@ describe("ProductFormModal", () => {
 
   it("shows inline error when file exceeds size limit", async () => {
     renderModal();
-    const fileInput = screen.getByLabelText("Product Image");
+    const fileInput = screen.getByLabelText(/primary image/i);
     // Create a large file
     const largeFile = new File(["x".repeat(6 * 1024 * 1024)], "large.jpg", {
       type: "image/jpeg",
@@ -185,7 +186,7 @@ describe("ProductFormModal", () => {
 
   it("shows selected filename after valid file pick", async () => {
     renderModal();
-    const fileInput = screen.getByLabelText("Product Image");
+    const fileInput = screen.getByLabelText(/primary image/i);
     const validFile = new File(["content"], "photo.jpg", {
       type: "image/jpeg",
     });
@@ -313,7 +314,7 @@ describe("ProductFormModal", () => {
     });
 
     // Select a valid image file
-    const fileInput = screen.getByLabelText("Product Image");
+    const fileInput = screen.getByLabelText(/primary image/i);
     const validFile = new File(["content"], "test.jpg", { type: "image/jpeg" });
     Object.defineProperty(validFile, "size", { value: 100 * 1024 });
     fireEvent.change(fileInput, { target: { files: [validFile] } });
@@ -326,7 +327,7 @@ describe("ProductFormModal", () => {
 
     await waitFor(() => {
       expect(logger.logError).toHaveBeenCalledWith(
-        expect.objectContaining({ context: "uploadImage" }),
+        expect.objectContaining({ context: "resolveImageUrl" }),
       );
       expect(toast.default.error).toHaveBeenCalledWith(API_ERRORS.IMAGE_UPLOAD);
       expect(onSuccess).not.toHaveBeenCalled();
@@ -428,7 +429,7 @@ describe("ProductFormModal", () => {
     });
 
     // Select a valid image file
-    const fileInput = screen.getByLabelText("Product Image");
+    const fileInput = screen.getByLabelText(/primary image/i);
     const validFile = new File(["content"], "test.jpg", { type: "image/jpeg" });
     Object.defineProperty(validFile, "size", { value: 100 * 1024 });
     fireEvent.change(fileInput, { target: { files: [validFile] } });
@@ -475,7 +476,7 @@ describe("ProductFormModal", () => {
       target: { value: "5" },
     });
 
-    const fileInput = screen.getByLabelText("Product Image");
+    const fileInput = screen.getByLabelText(/primary image/i);
     const validFile = new File(["content"], "test.jpg", { type: "image/jpeg" });
     Object.defineProperty(validFile, "size", { value: 100 * 1024 });
     fireEvent.change(fileInput, { target: { files: [validFile] } });
@@ -488,7 +489,7 @@ describe("ProductFormModal", () => {
 
     await waitFor(() => {
       expect(logger.logError).toHaveBeenCalledWith(
-        expect.objectContaining({ context: "uploadImage" }),
+        expect.objectContaining({ context: "resolveImageUrl" }),
       );
       expect(toast.default.error).toHaveBeenCalledWith(API_ERRORS.IMAGE_UPLOAD);
       expect(onSuccess).not.toHaveBeenCalled();

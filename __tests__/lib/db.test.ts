@@ -160,6 +160,7 @@ function expectedSerialized(overrides: Record<string, unknown> = {}) {
         name: "Red",
         designName: "red-design",
         image: null,
+        images: [],
         priceModifier: 5,
         stock: 3,
         createdAt: now.toISOString(),
