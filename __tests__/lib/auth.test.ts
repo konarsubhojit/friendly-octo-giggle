@@ -97,7 +97,7 @@ describe("auth module", () => {
   });
 
   describe("callbacks.session", () => {
-    it("sets user.id and user.role from token and calls logAuthEvent", () => {
+    it("sets user.id and user.role from token", () => {
       const session = { user: { id: "", role: "", email: "test@example.com" } };
       const token = { id: "user-123", role: "ADMIN" };
 
@@ -105,12 +105,7 @@ describe("auth module", () => {
 
       expect(result.user.id).toBe("user-123");
       expect(result.user.role).toBe("ADMIN");
-      expect(mockLogAuthEvent).toHaveBeenCalledWith({
-        event: "session_created",
-        userId: "user-123",
-        email: "test@example.com",
-        success: true,
-      });
+      expect(mockLogAuthEvent).not.toHaveBeenCalled();
     });
 
     it("defaults role to CUSTOMER when token.role is missing", () => {
@@ -120,12 +115,7 @@ describe("auth module", () => {
       const result = capturedConfig.callbacks.session({ session, token });
 
       expect(result.user.role).toBe("CUSTOMER");
-      expect(mockLogAuthEvent).toHaveBeenCalledWith({
-        event: "session_created",
-        userId: "user-456",
-        email: undefined,
-        success: true,
-      });
+      expect(mockLogAuthEvent).not.toHaveBeenCalled();
     });
   });
 
@@ -314,12 +304,9 @@ describe("auth module", () => {
         role: "CUSTOMER",
         phoneNumber: "+1234567890",
       });
-      expect(mockLogAuthEvent).toHaveBeenCalledWith(
-        expect.objectContaining({
-          event: "login",
-          provider: "credentials",
-          success: true,
-        }),
+      // login event is handled by the signIn() callback, not by authorize()
+      expect(mockLogAuthEvent).not.toHaveBeenCalledWith(
+        expect.objectContaining({ event: "login" }),
       );
     });
   });

@@ -471,6 +471,18 @@ npm install -D @playwright/test  # E2E tests
 
 ## 6. Logging
 
+### Design Philosophy
+
+Logs should be **meaningful signals, not noise**. In production, the default `info` level must only surface events that require human attention or are useful for business analytics. High-frequency lifecycle callbacks (session reads, successful API calls) belong at `debug` and are invisible in production unless explicitly enabled.
+
+**Rule of thumb:**
+| What happened | Level |
+|---|---|
+| Server error (5xx), exception thrown | `error` |
+| Client error (4xx), failed auth, slow query | `warn` |
+| User action: login, logout, order placed | `info` |
+| Session read, successful API call, cache/DB op | `debug` |
+
 ### Pino Logger Usage
 
 Import from `@/lib/logger`:
@@ -500,7 +512,8 @@ async function handleGet(request: NextRequest) {
 }
 
 export const GET = withLogging(handleGet);
-// Automatically logs: method, path, duration, status, requestId
+// Logs at: debug (2xx/3xx), warn (4xx), error (5xx)
+// Successful requests are debug-only — not visible in production by default
 ```
 
 **Business Events**
@@ -553,10 +566,28 @@ logPerformance({
 
 Set via `LOG_LEVEL` env variable:
 
-- **debug**: Cache hits, DB queries, detailed info
-- **info**: Successful operations, business events (production default)
-- **warn**: Slow queries, failed login attempts
-- **error**: Exceptions, failed operations
+- **debug**: Session reads, successful API calls, cache hits, DB queries — high-frequency, dev/trace only
+- **info**: Meaningful user actions: login, logout, registration, order placed (production default)
+- **warn**: Client errors (4xx), failed login attempts, slow queries (>1000ms)
+- **error**: Server errors (5xx), exceptions, failed operations
+
+> **Production recommendation:** Keep `LOG_LEVEL=info` (default). Use `LOG_LEVEL=warn` if you want only failures and problems. Never use `debug` in production — it includes per-request session and API call entries that will flood your log aggregator.
+
+### Auth Event Logging
+
+Auth events are logged by `logAuthEvent()`. Key events and their levels:
+
+| Event | Level | When |
+|---|---|---|
+| `login` | `info` | User successfully authenticated |
+| `logout` | `info` | User signed out |
+| `register` | `info` | New account created |
+| `failed_login` | `warn` | Authentication attempt failed |
+| `password_change` | `info` | Password updated |
+| `session_created` | `debug` | Session token read (every request) |
+| `session_expired` | `debug` | Session token expired |
+
+> **Important:** Do **not** log inside the NextAuth `session()` callback. It fires on every authenticated request and would generate one log entry per page/API call. Auth events should only be logged for user-initiated actions (login, logout, register).
 
 ### Best Practices
 
@@ -575,6 +606,11 @@ logBusinessEvent({
 
 // ❌ Bad - Unstructured string
 console.log('Payment processed for order order_456');
+
+// ❌ Bad - Logging in session() callback (fires on every request)
+// session({ session, token }) {
+//   logAuthEvent({ event: 'session_created', ... }); // DO NOT DO THIS
+// }
 
 // ❌ Never log sensitive data
 logBusinessEvent({
