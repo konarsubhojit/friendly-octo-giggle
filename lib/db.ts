@@ -124,6 +124,7 @@ export const db = {
           variations: p.variations.map((v) => ({
             ...v,
             image: v.image ?? null,
+            images: (v.images as string[]) ?? [],
             createdAt: v.createdAt.toISOString(),
             updatedAt: v.updatedAt.toISOString(),
           })),
@@ -189,6 +190,7 @@ export const db = {
             description: products.description,
             price: products.price,
             image: products.image,
+            images: products.images,
             stock: products.stock,
             category: products.category,
             deletedAt: products.deletedAt,
@@ -229,6 +231,7 @@ export const db = {
           variations: (varsByProduct.get(p.id) ?? []).map((v) => ({
             ...v,
             image: v.image ?? null,
+            images: (v.images as string[]) ?? [],
             createdAt: v.createdAt.toISOString(),
             updatedAt: v.updatedAt.toISOString(),
           })),
@@ -309,6 +312,7 @@ export const db = {
           variations: row.variations.map((v) => ({
             ...v,
             image: v.image ?? null,
+            images: (v.images as string[]) ?? [],
             createdAt: v.createdAt.toISOString(),
             updatedAt: v.updatedAt.toISOString(),
           })),

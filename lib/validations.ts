@@ -23,6 +23,10 @@ export const ProductSchema = z.object({
   description: z.string().min(1, "Description is required").max(2000),
   price: z.number().positive("Price must be positive"),
   image: z.string().regex(URL_REGEX, "Must be a valid URL"),
+  images: z
+    .array(z.string().regex(URL_REGEX, "Each image must be a valid URL"))
+    .max(10, "Maximum 10 images allowed")
+    .default([]),
   stock: z.number().int().nonnegative("Stock must be non-negative"),
   category: z.string().min(1, "Category is required").max(100),
   createdAt: z.string().regex(ISO_DATETIME_REGEX, "Invalid datetime format"), // ISO string after conversion from Drizzle Date

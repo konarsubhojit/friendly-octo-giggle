@@ -5,7 +5,6 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useSession } from 'next-auth/react';
 import { useSelector, useDispatch } from 'react-redux';
-import Header from '@/components/layout/Header';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { fetchOrders, selectOrders, selectOrdersLoading, selectOrdersError } from '@/lib/features/orders/ordersSlice';
 import type { AppDispatch } from '@/lib/store';
@@ -42,7 +41,6 @@ export default function OrdersPage() {
   if (authStatus === 'loading' || loading) {
     return (
       <div className="min-h-screen bg-warm-gradient">
-        <Header />
         <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
           <div className="flex items-center justify-center py-20">
             <LoadingSpinner />
@@ -55,7 +53,6 @@ export default function OrdersPage() {
   if (!session?.user) {
     return (
       <div className="min-h-screen bg-warm-gradient">
-        <Header />
         <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
           <AuthRequiredState callbackUrl="/orders" message="Please sign in to view your orders." />
         </main>
@@ -65,7 +62,6 @@ export default function OrdersPage() {
 
   return (
     <div className="min-h-screen bg-warm-gradient">
-      <Header />
       <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
         <GradientHeading className="mb-8">My Orders</GradientHeading>
 

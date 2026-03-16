@@ -6,7 +6,6 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useSession } from 'next-auth/react';
 import { useSelector, useDispatch } from 'react-redux';
-import Header from '@/components/layout/Header';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { fetchOrderById, cancelOrder, selectCurrentOrder, selectOrderDetailLoading, selectOrdersError, selectOrderCancelling, clearCurrentOrder } from '@/lib/features/orders/ordersSlice';
 import type { AppDispatch } from '@/lib/store';
@@ -210,7 +209,6 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
   if (authStatus === 'loading' || loading) {
     return (
       <div className="min-h-screen bg-warm-gradient">
-        <Header />
         <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
           <div className="flex items-center justify-center py-20">
             <LoadingSpinner />
@@ -223,7 +221,6 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
   if (!session?.user) {
     return (
       <div className="min-h-screen bg-warm-gradient">
-        <Header />
         <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
           <AuthRequiredState
             callbackUrl={`/orders/${id}`}
@@ -237,7 +234,6 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
   if (error || !order) {
     return (
       <div className="min-h-screen bg-warm-gradient">
-        <Header />
         <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
           <Card className="p-12 text-center">
             <h2 className="text-2xl font-bold text-[#4a3728] mb-2">{error || 'Order not found'}</h2>
@@ -255,7 +251,6 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
 
   return (
     <div className="min-h-screen bg-warm-gradient">
-      <Header />
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
         {/* Back link */}
         <Link href="/orders" className="inline-flex items-center gap-2 text-[#7a6355] hover:text-[#d4856b] transition-colors mb-6">

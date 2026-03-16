@@ -4,6 +4,7 @@ export interface Product {
   description: string;
   price: number;
   image: string;
+  images: string[];
   stock: number;
   category: string;
   deletedAt: string | null;
@@ -18,6 +19,7 @@ export interface ProductVariation {
   name: string;
   designName: string;
   image: string | null;
+  images: string[];
   priceModifier: number;
   stock: number;
   createdAt: string;
@@ -29,6 +31,7 @@ export interface ProductInput {
   description: string;
   price: number;
   image: string;
+  images?: string[];
   stock: number;
   category: string;
 }

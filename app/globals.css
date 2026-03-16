@@ -210,3 +210,35 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ─── Image Carousel Animations ─────────────────────────────────────── */
+
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(-40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@utility animate-slide-in-right {
+  animation: slide-in-right 0.35s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+@utility animate-slide-in-left {
+  animation: slide-in-left 0.35s cubic-bezier(0.4, 0, 0.2, 1) both;
+}

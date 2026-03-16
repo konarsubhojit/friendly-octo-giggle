@@ -1,5 +1,3 @@
-import HeaderSkeleton from "@/components/skeletons/HeaderSkeleton";
-
 const VARIATION_SKELETONS = ["v1", "v2", "v3", "v4"] as const;
 
 function ImageSkeleton() {
@@ -81,8 +79,6 @@ function DetailsSkeleton() {
 export default function ProductDetailLoading() {
   return (
     <div className="min-h-screen bg-warm-gradient">
-      <HeaderSkeleton />
-
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
         {/* Breadcrumb Skeleton */}
         <nav className="mb-6 flex items-center gap-2">

@@ -7,7 +7,6 @@ import { useSession } from "next-auth/react";
 import { useSelector, useDispatch } from "react-redux";
 import { CartItemWithProduct } from "@/lib/types";
 import { useCurrency } from "@/contexts/CurrencyContext";
-import Header from "@/components/layout/Header";
 import {
   DynamicForm,
   type FieldDef,
@@ -167,7 +166,6 @@ export default function CartPage() {
   if ((loading && cart === null) || status === "loading") {
     return (
       <div className="min-h-screen bg-warm-gradient">
-        <Header />
         <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
           <div className="flex items-center justify-center py-20">
             <LoadingSpinner />
@@ -180,7 +178,6 @@ export default function CartPage() {
   if (!session?.user) {
     return (
       <div className="min-h-screen bg-warm-gradient">
-        <Header />
         <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
           <AuthRequiredState
             callbackUrl="/cart"
@@ -201,7 +198,6 @@ export default function CartPage() {
 
   return (
     <div className="min-h-screen bg-warm-gradient">
-      <Header />
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16 relative">
         {/* Decorative leaf accents */}

@@ -36,6 +36,13 @@
       "when": 1773434914323,
       "tag": "0004_rapid_liz_osborn",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1773600000000,
+      "tag": "0005_add_product_images",
+      "breakpoints": true
     }
   ]
 }

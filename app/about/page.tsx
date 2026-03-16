@@ -1,4 +1,3 @@
-import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import {
   VineDivider,
@@ -161,7 +160,6 @@ function TeamSection() {
 export default function AboutPage() {
   return (
     <div className="min-h-screen bg-warm-gradient">
-      <Header />
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16 relative">
         <ScatteredFlowers />
         <MushroomAccent className="absolute top-36 right-6 w-12 h-12 opacity-20 hidden sm:block animate-float-slow" />

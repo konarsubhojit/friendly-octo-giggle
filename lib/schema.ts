@@ -8,6 +8,7 @@ import {
   pgEnum,
   index,
   unique,
+  json,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import type { AdapterAccountType } from "@auth/core/adapters";
@@ -123,6 +124,7 @@ export const products = pgTable(
     description: text("description").notNull(),
     price: doublePrecision("price").notNull(),
     image: text("image").notNull(),
+    images: json("images").$type<string[]>().default([]).notNull(),
     stock: integer("stock").notNull(),
     category: text("category").notNull(),
     deletedAt: timestamp("deletedAt", { mode: "date" }),
@@ -144,6 +146,7 @@ export const productVariations = pgTable(
     name: text("name").notNull(),
     designName: text("designName").notNull(),
     image: text("image"),
+    images: json("images").$type<string[]>().default([]).notNull(),
     priceModifier: doublePrecision("priceModifier").default(0).notNull(),
     stock: integer("stock").notNull(),
     createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
