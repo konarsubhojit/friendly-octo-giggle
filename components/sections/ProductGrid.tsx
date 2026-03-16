@@ -79,12 +79,9 @@ function ProductCard({ product, formatPrice, index }: ProductCardProps) {
           <p className="text-[var(--text-secondary)] text-sm mb-3 line-clamp-2">
             {product.description}
           </p>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center">
             <span className="text-xl font-bold text-[var(--accent-rose)]">
               {formatPrice(product.price)}
-            </span>
-            <span className="inline-block bg-[var(--accent-blush)] text-[var(--accent-rose)] rounded-full px-3 py-0.5 text-xs font-semibold border border-[var(--border-warm)]">
-              {product.category}
             </span>
           </div>
         </div>

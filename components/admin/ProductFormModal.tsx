@@ -58,14 +58,14 @@ interface AdditionalImageRowProps {
 }
 
 const AdditionalImageRow = ({ idx, imgUrl, pendingFile, onFileChange, onRemove }: AdditionalImageRowProps) => (
-  <div className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg bg-gray-50">
+  <div className="flex items-start gap-3 p-3 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700">
     {imgUrl && !pendingFile && (
       <div className="relative flex-shrink-0 w-14 h-14">
-        <Image src={imgUrl} alt={`Additional image ${idx + 1}`} fill sizes="56px" className="object-contain rounded border bg-white" />
+        <Image src={imgUrl} alt={`Additional image ${idx + 1}`} fill sizes="56px" className="object-contain rounded border bg-white dark:bg-gray-800" />
       </div>
     )}
     <div className="flex-1 min-w-0">
-      <label htmlFor={`additional-image-${idx}`} className="block text-xs font-medium text-gray-600 mb-1">
+      <label htmlFor={`additional-image-${idx}`} className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
         Image {idx + 2}{imgUrl && !pendingFile && " (current)"}
       </label>
       <input
@@ -73,7 +73,7 @@ const AdditionalImageRow = ({ idx, imgUrl, pendingFile, onFileChange, onRemove }
         type="file"
         accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
         onChange={(e) => onFileChange(idx, e)}
-        className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+        className="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-xs text-gray-900 dark:text-gray-100 dark:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
       />
       {pendingFile && (
         <p className="text-xs text-green-600 mt-1">Selected: {pendingFile.name}</p>
@@ -394,9 +394,9 @@ export default function ProductFormModal({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6">
-          <h3 className="text-xl font-bold mb-4">
+          <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">
             {editingProduct ? "Edit Product" : "Add Product"}
           </h3>
 
@@ -405,7 +405,7 @@ export default function ProductFormModal({
               <div>
                 <label
                   htmlFor="product-name"
-                  className="block text-sm font-medium text-gray-700 mb-1"
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
                 >
                   Name
                 </label>
@@ -422,7 +422,7 @@ export default function ProductFormModal({
                   aria-describedby={
                     fieldErrors.name ? "product-name-error" : undefined
                   }
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${fieldErrors.name ? "border-red-400" : "border-gray-300"}`}
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white dark:bg-gray-700 ${fieldErrors.name ? "border-red-400 dark:border-red-500" : "border-gray-300 dark:border-gray-600"}`}
                 />
                 {fieldErrors.name && (
                   <p id="product-name-error" className="text-xs text-red-600 mt-1">
@@ -434,7 +434,7 @@ export default function ProductFormModal({
               <div>
                 <label
                   htmlFor="product-description"
-                  className="block text-sm font-medium text-gray-700 mb-1"
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
                 >
                   Description
                 </label>
@@ -451,7 +451,7 @@ export default function ProductFormModal({
                   aria-describedby={
                     fieldErrors.description ? "product-description-error" : undefined
                   }
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${fieldErrors.description ? "border-red-400" : "border-gray-300"}`}
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white dark:bg-gray-700 ${fieldErrors.description ? "border-red-400 dark:border-red-500" : "border-gray-300 dark:border-gray-600"}`}
                 />
                 {fieldErrors.description && (
                   <p id="product-description-error" className="text-xs text-red-600 mt-1">
@@ -464,7 +464,7 @@ export default function ProductFormModal({
                 <div>
                   <label
                     htmlFor="product-price"
-                    className="block text-sm font-medium text-gray-700 mb-1"
+                    className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
                   >
                     Price
                   </label>
@@ -476,7 +476,7 @@ export default function ProductFormModal({
                         handlePriceCurrencyChange(e.target.value as CurrencyCode)
                       }
                       aria-label="Price currency"
-                      className="px-2 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm"
+                      className="px-2 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
                     >
                       {availableCurrencies.map((code) => (
                         <option key={code} value={code}>
@@ -501,7 +501,7 @@ export default function ProductFormModal({
                       aria-describedby={
                         fieldErrors.price ? "product-price-error" : undefined
                       }
-                      className={`flex-1 min-w-0 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${fieldErrors.price ? "border-red-400" : "border-gray-300"}`}
+                      className={`flex-1 min-w-0 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white dark:bg-gray-700 ${fieldErrors.price ? "border-red-400 dark:border-red-500" : "border-gray-300 dark:border-gray-600"}`}
                     />
                   </div>
                   {fieldErrors.price && (
@@ -514,7 +514,7 @@ export default function ProductFormModal({
                 <div>
                   <label
                     htmlFor="product-stock"
-                    className="block text-sm font-medium text-gray-700 mb-1"
+                    className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
                   >
                     Stock
                   </label>
@@ -529,7 +529,7 @@ export default function ProductFormModal({
                     aria-describedby={
                       fieldErrors.stock ? "product-stock-error" : undefined
                     }
-                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${fieldErrors.stock ? "border-red-400" : "border-gray-300"}`}
+                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white dark:bg-gray-700 ${fieldErrors.stock ? "border-red-400 dark:border-red-500" : "border-gray-300 dark:border-gray-600"}`}
                   />
                   {fieldErrors.stock && (
                     <p id="product-stock-error" className="text-xs text-red-600 mt-1">
@@ -542,7 +542,7 @@ export default function ProductFormModal({
               <div>
                 <label
                   htmlFor="product-category"
-                  className="block text-sm font-medium text-gray-700 mb-1"
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
                 >
                   Category
                 </label>
@@ -557,7 +557,7 @@ export default function ProductFormModal({
                   aria-describedby={
                     fieldErrors.category ? "product-category-error" : undefined
                   }
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white ${fieldErrors.category ? "border-red-400" : "border-gray-300"}`}
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${fieldErrors.category ? "border-red-400 dark:border-red-500" : "border-gray-300 dark:border-gray-600"}`}
                 >
                   <option value="">Select a category</option>
                   {PRODUCT_CATEGORIES.map((cat) => (
@@ -577,10 +577,10 @@ export default function ProductFormModal({
               <div>
                 <label
                   htmlFor="product-image"
-                  className="block text-sm font-medium text-gray-700 mb-1"
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
                 >
                   Primary Image{" "}
-                  <span className="text-gray-400 font-normal">(required)</span>
+                  <span className="text-gray-400 dark:text-gray-500 font-normal">(required)</span>
                 </label>
                 {formData.image && !imageFile && (
                   <div className="mb-2 relative w-20 h-20">
@@ -589,7 +589,7 @@ export default function ProductFormModal({
                       alt="Current product"
                       fill
                       sizes="80px"
-                      className="object-contain rounded border bg-gray-50"
+                      className="object-contain rounded border bg-gray-50 dark:bg-gray-700"
                     />
                   </div>
                 )}
@@ -601,9 +601,9 @@ export default function ProductFormModal({
                   aria-describedby={
                     fieldErrors.image ? "product-image-error" : undefined
                   }
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${fieldErrors.image ? "border-red-400" : "border-gray-300"}`}
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-gray-300 dark:bg-gray-700 ${fieldErrors.image ? "border-red-400 dark:border-red-500" : "border-gray-300 dark:border-gray-600"}`}
                 />
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                   {editingProduct ? "Leave empty to keep current image. " : "Required. "}
                   Max {MAX_FILE_SIZE / 1024 / 1024}MB. Formats: {VALID_IMAGE_TYPES_DISPLAY}
                 </p>
@@ -620,9 +620,9 @@ export default function ProductFormModal({
               {/* Additional Images */}
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <label className="block text-sm font-medium text-gray-700">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                     Additional Images{" "}
-                    <span className="text-gray-400 font-normal">
+                    <span className="text-gray-400 dark:text-gray-500 font-normal">
                       ({formData.images.length}/{MAX_IMAGES - 1} extra,{" "}
                       {totalImages}/{MAX_IMAGES} total)
                     </span>
@@ -631,7 +631,7 @@ export default function ProductFormModal({
                     <button
                       type="button"
                       onClick={addImageSlot}
-                      className="text-xs px-2 py-1 bg-blue-50 text-blue-600 rounded border border-blue-200 hover:bg-blue-100 transition"
+                      className="text-xs px-2 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded border border-blue-200 dark:border-blue-700 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition"
                     >
                       + Add Image
                     </button>
@@ -639,7 +639,7 @@ export default function ProductFormModal({
                 </div>
 
                 {formData.images.length === 0 && (
-                  <p className="text-xs text-gray-400">
+                  <p className="text-xs text-gray-400 dark:text-gray-500">
                     No additional images. Click &ldquo;+ Add Image&rdquo; to add up to{" "}
                     {MAX_IMAGES - 1} more images.
                   </p>
@@ -665,7 +665,7 @@ export default function ProductFormModal({
                 type="button"
                 onClick={onClose}
                 disabled={saving || uploading}
-                className="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 disabled:bg-gray-100 transition"
+                className="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 disabled:bg-gray-100 dark:disabled:bg-gray-800 transition"
               >
                 Cancel
               </button>

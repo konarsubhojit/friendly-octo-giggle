@@ -85,7 +85,7 @@ describe("ProductGrid", () => {
 
   it("renders category badge", () => {
     renderGrid([makeProduct({ category: "Flowers" })]);
-    // "Flowers" appears in both category filter pills and product badge
+    // "Flowers" appears in the category filter pills
     const elements = screen.getAllByText("Flowers");
     expect(elements.length).toBeGreaterThan(0);
   });
