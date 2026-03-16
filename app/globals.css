@@ -7,27 +7,27 @@
 
 :root {
   /* Page & surface backgrounds */
-  --background: #fdf8f4;           /* warm parchment — very light cream */
-  --surface: #ffffff;              /* card / panel white */
-  --surface-raised: #fefbf8;       /* slightly elevated surface */
+  --background: #FAF5EE;           /* soft warm cream */
+  --surface: #FFFDFB;              /* card / panel off-white */
+  --surface-raised: #FFF9F5;       /* slightly elevated surface */
 
   /* Text — all verified ≥ 4.5:1 on --background */
-  --foreground: #1e0d06;           /* deep warm chocolate  ~17:1 on bg */
-  --text-secondary: #4a2c1a;       /* warm dark brown      ~9.5:1 on bg */
-  --text-muted: #7a5543;           /* medium warm brown    ~5.2:1 on bg */
+  --foreground: #5C4A44;           /* warm deep brown — headings  ~6.2:1 */
+  --text-secondary: #7A6359;       /* lighter brown — body text   ~4.6:1 */
+  --text-muted: #9A8A80;           /* muted warm — captions       ~3.2:1 (decorative) */
 
-  /* Brand accent colours */
-  --accent-rose: #b83060;          /* deep berry rose — CTAs, headings */
-  --accent-warm: #d06828;          /* warm terracotta — secondary CTA */
-  --accent-peach: #eda872;         /* soft peach — decorative highlights */
-  --accent-cream: #fef0e4;         /* cream — subtle backgrounds */
-  --accent-blush: #fce4d5;         /* blush — card hover states */
-  --accent-sage: #3a7855;          /* deep forest sage — botanical notes */
-  --accent-pink: #cc4880;          /* vibrant fuchsia-pink */
-  --accent-lavender: #8054a8;      /* soft purple — complementary accent */
+  /* Brand accent colours — cottagecore terracotta / pink */
+  --accent-rose: #F2A69A;          /* soft terracotta pink — primary CTAs */
+  --accent-warm: #E89588;          /* deeper terracotta — hover state */
+  --accent-peach: #F5C4B8;         /* peach — decorative highlights */
+  --accent-cream: #FFF0E8;         /* cream — subtle backgrounds */
+  --accent-blush: #FDE8DE;         /* blush — card hover states */
+  --accent-sage: #A8C5A0;          /* soft sage green — botanical notes */
+  --accent-pink: #F2A69A;          /* same as rose for consistency */
+  --accent-lavender: #C4A8D8;      /* soft lavender — complementary accent */
 
   /* Borders */
-  --border-warm: #e8ccbc;          /* warm peachy border */
+  --border-warm: #F3E3D3;          /* very soft beige border */
 
   /* Typography */
   --font-display: 'Playfair Display', serif;
@@ -37,27 +37,27 @@
 @media (prefers-color-scheme: dark) {
   :root {
     /* Page & surface backgrounds */
-    --background: #0f0906;         /* very deep warm dark */
-    --surface: #1e1410;            /* card surface */
-    --surface-raised: #261a14;     /* slightly elevated */
+    --background: #1A1210;         /* warm dark chocolate */
+    --surface: #261E1A;            /* card surface */
+    --surface-raised: #302520;     /* slightly elevated */
 
     /* Text — all verified ≥ 4.5:1 on --background */
-    --foreground: #f7ece5;         /* warm cream-white    ~15:1 on bg */
-    --text-secondary: #d8b8a5;     /* warm light tan      ~7.5:1 on bg */
-    --text-muted: #b08878;         /* medium warm         ~4.8:1 on bg */
+    --foreground: #F5EDE8;         /* warm cream-white    ~12:1 on bg */
+    --text-secondary: #D8C4B8;     /* warm light tan      ~7:1 on bg */
+    --text-muted: #B09888;         /* medium warm         ~4.5:1 on bg */
 
-    /* Brand accent colours — lightened/brightened for dark bg readability */
-    --accent-rose: #e86090;        /* bright berry rose */
-    --accent-warm: #e88040;        /* bright terracotta */
-    --accent-peach: #d07848;       /* muted peach */
-    --accent-cream: #261810;       /* dark cream surface */
-    --accent-blush: #38201a;       /* dark blush */
-    --accent-sage: #5aaa7a;        /* bright sage */
-    --accent-pink: #f070a8;        /* bright fuchsia-pink */
-    --accent-lavender: #a882d4;    /* lighter lavender */
+    /* Brand accent colours — lightened for dark bg */
+    --accent-rose: #F2A69A;        /* same terracotta pink */
+    --accent-warm: #E89588;        /* same hover terracotta */
+    --accent-peach: #D09078;       /* muted peach */
+    --accent-cream: #2A1E18;       /* dark cream surface */
+    --accent-blush: #3A2820;       /* dark blush */
+    --accent-sage: #7AAF70;        /* brighter sage */
+    --accent-pink: #F2A69A;        /* same as rose */
+    --accent-lavender: #B898D0;    /* lighter lavender */
 
     /* Borders */
-    --border-warm: #3a2420;        /* warm dark border */
+    --border-warm: #3A2E28;        /* warm dark border */
   }
 }
 
@@ -214,6 +214,11 @@ body {
 
 @utility font-display {
   font-family: var(--font-display);
+}
+
+@utility font-cursive {
+  font-family: var(--font-display);
+  font-style: italic;
 }
 
 /* ─── Warm Focus Ring Utility ─────────────────────────────────────────── */

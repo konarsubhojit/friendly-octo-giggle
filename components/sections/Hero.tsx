@@ -2,7 +2,6 @@ import Link from "next/link";
 import {
   ScatteredFlowers,
   VineDivider,
-  FlowerBullet,
 } from "@/components/ui/DecorativeElements";
 
 export default function Hero() {
@@ -11,81 +10,63 @@ export default function Hero() {
       <ScatteredFlowers />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        {/* ── Main hero card ───────────────────────────────────────── */}
-        <div className="relative rounded-3xl border border-[var(--border-warm)] shadow-warm-lg mb-12 animate-fade-in-up overflow-hidden glass-card">
-          {/* Decorative corner accent */}
-          <div className="absolute top-0 right-0 w-48 h-48 opacity-10 pointer-events-none" aria-hidden="true">
-            <svg viewBox="0 0 200 200" fill="none" className="w-full h-full">
-              <circle cx="160" cy="40" r="60" fill="var(--accent-rose)" />
-              <circle cx="100" cy="100" r="80" fill="var(--accent-peach)" />
-            </svg>
+        {/* ── Split hero layout ────────────────────────────────── */}
+        <div className="flex flex-col lg:flex-row items-center gap-10 lg:gap-16">
+          {/* Left column — text content */}
+          <div className="flex-1 max-w-xl animate-fade-in-up">
+            <h1 className="font-cursive text-5xl sm:text-6xl lg:text-7xl font-bold leading-tight text-[var(--foreground)] mb-6">
+              Handmade With Love
+            </h1>
+            <p className="text-xs sm:text-sm font-semibold tracking-[0.25em] uppercase text-[var(--text-muted)] mb-8">
+              Crochet&nbsp; •&nbsp; Flowers&nbsp; •&nbsp; Bags&nbsp; •&nbsp; Accessories
+            </p>
+            <p className="text-base sm:text-lg text-[var(--text-secondary)] mb-8 leading-relaxed animate-fade-in-up animation-delay-100">
+              Discover our collection of crocheted flowers, hair accessories,
+              keyrings, scarves, and cozy wearables — each piece lovingly
+              crafted, one stitch at a time.
+            </p>
+            <Link
+              href="/shop"
+              className="inline-flex items-center gap-2 px-8 py-3.5 bg-[var(--accent-rose)] text-white rounded-full font-bold hover:bg-[var(--accent-warm)] transition-all duration-300 shadow-warm hover:shadow-warm-lg hover:scale-105 focus-warm animate-fade-in-up animation-delay-200"
+            >
+              Explore Shop <span aria-hidden="true">→</span>
+            </Link>
+
+            {/* Mini stats */}
+            <div className="flex flex-wrap gap-6 mt-10 pt-8 border-t border-[var(--border-warm)] animate-fade-in-up animation-delay-300">
+              {[
+                { num: "100%", label: "Handmade" },
+                { num: "50+", label: "Products" },
+                { num: "❤️", label: "Made with love" },
+              ].map(({ num, label }) => (
+                <div key={label} className="flex flex-col">
+                  <span className="text-2xl font-bold font-display text-[var(--accent-rose)]">
+                    {num}
+                  </span>
+                  <span className="text-xs text-[var(--text-muted)] font-semibold uppercase tracking-wide">
+                    {label}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
 
-          <div className="p-8 sm:p-12 lg:p-16">
-            <div className="max-w-2xl">
-              {/* Eyebrow tag */}
-              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[var(--accent-blush)] border border-[var(--border-warm)] mb-6 animate-fade-in">
-                <FlowerBullet className="w-3.5 h-3.5" />
-                <span className="text-xs font-bold text-[var(--accent-rose)] uppercase tracking-widest">
-                  Handcrafted with Love
-                </span>
-              </div>
-
-              <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight mb-5 animate-fade-in-up">
-                <span className="text-[var(--foreground)] italic block">
-                  Beautiful Things,
-                </span>
-                <span className="text-warm-heading block">
-                  Made by Hand
-                </span>
-              </h1>
-
-              <p className="text-base sm:text-lg text-[var(--text-secondary)] mb-8 max-w-lg leading-relaxed animate-fade-in-up animation-delay-100">
-                Discover our collection of crocheted flowers, hair accessories,
-                keyrings, scarves, and cozy wearables — each piece lovingly
-                crafted, one stitch at a time.
-              </p>
-
-              <div className="flex flex-wrap gap-4 animate-fade-in-up animation-delay-200">
-                <Link
-                  href="#products"
-                  scroll
-                  className="inline-flex items-center gap-2 px-8 py-3.5 bg-gradient-to-r from-[var(--accent-rose)] to-[var(--accent-pink)] text-white rounded-full font-bold hover:opacity-90 transition-all duration-300 shadow-warm hover:shadow-warm-lg hover:scale-105 focus-warm"
-                >
-                  Shop Now <span aria-hidden="true">→</span>
-                </Link>
-                <Link
-                  href="/about"
-                  className="inline-flex items-center gap-2 px-8 py-3.5 bg-[var(--surface)]/80 text-[var(--text-secondary)] rounded-full font-bold border border-[var(--border-warm)] hover:bg-[var(--accent-blush)] hover:border-[var(--accent-warm)] transition-all duration-300 focus-warm"
-                >
-                  Our Story
-                </Link>
-              </div>
-
-              {/* Mini stats */}
-              <div className="flex flex-wrap gap-6 mt-10 pt-8 border-t border-[var(--border-warm)] animate-fade-in-up animation-delay-300">
-                {[
-                  { num: "100%", label: "Handmade" },
-                  { num: "50+", label: "Products" },
-                  { num: "❤️", label: "Made with love" },
-                ].map(({ num, label }) => (
-                  <div key={label} className="flex flex-col">
-                    <span className="text-2xl font-bold font-display text-[var(--accent-rose)]">
-                      {num}
-                    </span>
-                    <span className="text-xs text-[var(--text-muted)] font-semibold uppercase tracking-wide">
-                      {label}
-                    </span>
-                  </div>
-                ))}
+          {/* Right column — illustration placeholder */}
+          <div className="flex-1 w-full max-w-lg lg:max-w-none animate-fade-in-up animation-delay-200">
+            <div className="w-full min-h-[400px] rounded-[2rem] bg-stone-200 border border-[var(--border-warm)] shadow-warm-lg flex items-center justify-center" role="img" aria-label="Illustration placeholder: girl crocheting by a window">
+              <div className="text-center p-8">
+                <span className="text-6xl block mb-4" aria-hidden="true">🧶</span>
+                <p className="text-sm text-[var(--text-muted)] font-medium">
+                  Illustration: Girl crocheting by a window
+                </p>
               </div>
             </div>
           </div>
         </div>
 
-        <VineDivider />
+        <VineDivider className="mt-12" />
 
-        {/* ── Feature badges ───────────────────────────────────────── */}
+        {/* ── Feature badges ───────────────────────────────────── */}
         <div className="flex flex-wrap gap-4 justify-center mt-6 animate-fade-in-up animation-delay-400">
           {[
             { icon: "🌸", text: "Crochet flowers" },
@@ -106,7 +87,7 @@ export default function Hero() {
         </div>
       </div>
 
-      {/* ── Decorative gradient orbs ─────────────────────────────── */}
+      {/* ── Decorative gradient orbs ─────────────────────────── */}
       <div
         className="absolute top-20 left-10 w-72 h-72 bg-gradient-to-r from-[var(--accent-blush)] to-[var(--accent-peach)] rounded-full blur-3xl opacity-25 animate-float-slow pointer-events-none"
         aria-hidden="true"

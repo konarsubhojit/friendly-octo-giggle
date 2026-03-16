@@ -221,6 +221,27 @@ function MobileNav({
           Home
         </Link>
         <Link
+          href="/shop"
+          onClick={closeMobileNav}
+          className="flex items-center gap-3 px-4 py-3 text-[var(--text-secondary)] hover:bg-[var(--accent-blush)] rounded-xl font-medium transition-colors"
+        >
+          <svg
+            className="w-5 h-5 text-[var(--accent-rose)]"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
+            />
+          </svg>
+          Shop
+        </Link>
+        <Link
           href="/about"
           onClick={closeMobileNav}
           className="flex items-center gap-3 px-4 py-3 text-[var(--text-secondary)] hover:bg-[var(--accent-blush)] rounded-xl font-medium transition-colors"
@@ -346,6 +367,12 @@ export default function Header() {
                 className="text-[var(--text-secondary)] hover:text-[var(--accent-rose)] transition-all duration-300 font-semibold px-3 py-1.5 rounded-full hover:bg-[var(--accent-blush)]/50"
               >
                 Home
+              </Link>
+              <Link
+                href="/shop"
+                className="text-[var(--text-secondary)] hover:text-[var(--accent-rose)] transition-all duration-300 font-semibold px-3 py-1.5 rounded-full hover:bg-[var(--accent-blush)]/50"
+              >
+                Shop
               </Link>
               <Link
                 href="/about"
