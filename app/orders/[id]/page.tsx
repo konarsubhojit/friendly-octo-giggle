@@ -13,6 +13,43 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { AuthRequiredState } from '@/components/ui/AuthRequiredState';
 import { Card } from '@/components/ui/Card';
 
+interface CancelOrderDialogProps {
+  readonly dialogRef: React.RefObject<HTMLDialogElement | null>;
+  readonly cancelling: boolean;
+  readonly onClose: () => void;
+  readonly onConfirm: () => void;
+}
+
+function CancelOrderDialog({ dialogRef, cancelling, onClose, onConfirm }: CancelOrderDialogProps) {
+  return (
+    <dialog
+      ref={dialogRef}
+      aria-labelledby="cancel-dialog-title"
+      onClose={onClose}
+      className="backdrop:bg-black/40 backdrop:backdrop-blur-sm bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 max-w-sm w-full mx-4"
+    >
+      <h3 id="cancel-dialog-title" className="text-lg font-bold text-[var(--foreground)] mb-2">Cancel Order?</h3>
+      <p className="text-sm text-[var(--text-secondary)] mb-6">This action cannot be undone. Your order will be cancelled immediately.</p>
+      <div className="flex gap-3 justify-end">
+        <button
+          onClick={onClose}
+          disabled={cancelling}
+          className="px-4 py-2 text-sm font-medium text-[var(--text-secondary)] bg-gray-100 dark:bg-gray-700 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50"
+        >
+          Keep Order
+        </button>
+        <button
+          onClick={onConfirm}
+          disabled={cancelling}
+          className="px-4 py-2 text-sm font-semibold text-white bg-red-600 rounded-xl hover:bg-red-700 transition-colors disabled:opacity-50"
+        >
+          {cancelling ? 'Cancelling...' : 'Yes, Cancel'}
+        </button>
+      </div>
+    </dialog>
+  );
+}
+
 interface OrderDetailPageProps {
   readonly params: Promise<{ id: string }>;
 }
@@ -314,31 +351,12 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
           />
 
           {/* Cancel Confirmation Modal */}
-          <dialog
-            ref={cancelDialogRef}
-            aria-labelledby="cancel-dialog-title"
+          <CancelOrderDialog
+            dialogRef={cancelDialogRef}
+            cancelling={cancelling}
             onClose={closeCancelDialog}
-            className="backdrop:bg-black/40 backdrop:backdrop-blur-sm bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 max-w-sm w-full mx-4"
-          >
-            <h3 id="cancel-dialog-title" className="text-lg font-bold text-[var(--foreground)] mb-2">Cancel Order?</h3>
-            <p className="text-sm text-[var(--text-secondary)] mb-6">This action cannot be undone. Your order will be cancelled immediately.</p>
-            <div className="flex gap-3 justify-end">
-              <button
-                onClick={closeCancelDialog}
-                disabled={cancelling}
-                className="px-4 py-2 text-sm font-medium text-[var(--text-secondary)] bg-gray-100 dark:bg-gray-700 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50"
-              >
-                Keep Order
-              </button>
-              <button
-                onClick={handleCancelOrder}
-                disabled={cancelling}
-                className="px-4 py-2 text-sm font-semibold text-white bg-red-600 rounded-xl hover:bg-red-700 transition-colors disabled:opacity-50"
-              >
-                {cancelling ? 'Cancelling...' : 'Yes, Cancel'}
-              </button>
-            </div>
-          </dialog>
+            onConfirm={handleCancelOrder}
+          />
 
           {/* Status Timeline */}
           <div className="mt-8">

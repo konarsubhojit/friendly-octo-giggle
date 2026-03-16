@@ -24,6 +24,73 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }
   CANCELLED: { label: 'Cancelled', color: 'text-red-700', bg: 'bg-red-100' },
 };
 
+interface OrderSummary {
+  id: string;
+  status: string;
+  createdAt: string;
+  totalAmount: number;
+  items: Array<{
+    quantity: number;
+    product?: { name: string; image: string } | null;
+    variation?: Record<string, unknown> | null;
+  }>;
+}
+
+interface OrderListCardProps {
+  readonly order: OrderSummary;
+  readonly formatPrice: (amount: number) => string;
+}
+
+function OrderListCard({ order, formatPrice }: OrderListCardProps) {
+  const statusInfo = STATUS_CONFIG[order.status] || STATUS_CONFIG.PENDING;
+  const itemCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
+  const firstItem = order.items[0];
+  const firstImage = (firstItem?.variation as Record<string, unknown>)?.image as string | undefined || firstItem?.product?.image;
+
+  return (
+    <Link
+      href={`/orders/${order.id}`}
+      className="block bg-[var(--surface)] backdrop-blur-lg rounded-xl shadow-warm border border-[var(--border-warm)] p-6 hover:shadow-warm-lg hover:scale-[1.01] transition-all duration-300"
+    >
+      <div className="flex items-center gap-6">
+        {firstImage && (
+          <div className="relative w-16 h-16 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700">
+            <Image src={firstImage} alt={firstItem?.product?.name || 'Order item'} fill sizes="48px" className="object-cover" />
+          </div>
+        )}
+        <div className="flex-grow min-w-0">
+          <div className="flex items-center gap-3 mb-1">
+            <Badge variant={orderStatusVariant(order.status)} size="sm">
+              {statusInfo.label}
+            </Badge>
+            <span className="text-xs text-[var(--text-muted)]">
+              {new Date(order.createdAt).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+              })}
+            </span>
+          </div>
+          <p className="text-sm text-[var(--text-secondary)] truncate">
+            {firstItem?.product?.name}
+            {order.items.length > 1 && ` and ${order.items.length - 1} more`}
+          </p>
+          <p className="text-xs text-[var(--text-muted)] mt-1">
+            {itemCount} {itemCount === 1 ? 'item' : 'items'}
+          </p>
+        </div>
+        <div className="flex-shrink-0 text-right">
+          <p className="text-lg font-bold text-[var(--foreground)]">{formatPrice(order.totalAmount)}</p>
+          <p className="text-xs text-[var(--text-muted)]">Order #{order.id}</p>
+        </div>
+        <svg className="w-5 h-5 text-[var(--text-muted)] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+        </svg>
+      </div>
+    </Link>
+  );
+}
+
 export default function OrdersPage() {
   const { data: session, status: authStatus } = useSession();
   const { formatPrice } = useCurrency();
@@ -86,60 +153,9 @@ export default function OrdersPage() {
           </Card>
         ) : (
           <div className="space-y-4">
-            {orders.map((order) => {
-              const statusInfo = STATUS_CONFIG[order.status] || STATUS_CONFIG.PENDING;
-              const itemCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
-              const firstItem = order.items[0];
-              const firstImage = (firstItem?.variation as Record<string, unknown>)?.image as string | undefined || firstItem?.product?.image;
-
-              return (
-                <Link
-                  key={order.id}
-                  href={`/orders/${order.id}`}
-                  className="block bg-[var(--surface)] backdrop-blur-lg rounded-xl shadow-warm border border-[var(--border-warm)] p-6 hover:shadow-warm-lg hover:scale-[1.01] transition-all duration-300"
-                >
-                  <div className="flex items-center gap-6">
-                    {/* First item thumbnail */}
-                    {firstImage && (
-                      <div className="relative w-16 h-16 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700">
-                        <Image src={firstImage} alt={firstItem?.product?.name || 'Order item'} fill sizes="48px" className="object-cover" />
-                      </div>
-                    )}
-
-                    <div className="flex-grow min-w-0">
-                      <div className="flex items-center gap-3 mb-1">
-                        <Badge variant={orderStatusVariant(order.status)} size="sm">
-                          {statusInfo.label}
-                        </Badge>
-                        <span className="text-xs text-[var(--text-muted)]">
-                          {new Date(order.createdAt).toLocaleDateString('en-US', {
-                            year: 'numeric',
-                            month: 'short',
-                            day: 'numeric',
-                          })}
-                        </span>
-                      </div>
-                      <p className="text-sm text-[var(--text-secondary)] truncate">
-                        {firstItem?.product?.name}
-                        {order.items.length > 1 && ` and ${order.items.length - 1} more`}
-                      </p>
-                      <p className="text-xs text-[var(--text-muted)] mt-1">
-                        {itemCount} {itemCount === 1 ? 'item' : 'items'}
-                      </p>
-                    </div>
-
-                    <div className="flex-shrink-0 text-right">
-                      <p className="text-lg font-bold text-[var(--foreground)]">{formatPrice(order.totalAmount)}</p>
-                      <p className="text-xs text-[var(--text-muted)]">Order #{order.id}</p>
-                    </div>
-
-                    <svg className="w-5 h-5 text-[var(--text-muted)] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </div>
-                </Link>
-              );
-            })}
+            {orders.map((order) => (
+              <OrderListCard key={order.id} order={order} formatPrice={formatPrice} />
+            ))}
           </div>
         )}
       </main>

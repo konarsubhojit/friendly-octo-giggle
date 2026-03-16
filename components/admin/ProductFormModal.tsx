@@ -57,40 +57,95 @@ interface AdditionalImageRowProps {
   readonly onRemove: (idx: number) => void;
 }
 
-const AdditionalImageRow = ({ idx, imgUrl, pendingFile, onFileChange, onRemove }: AdditionalImageRowProps) => (
-  <div className="flex items-start gap-3 p-3 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700">
-    {imgUrl && !pendingFile && (
-      <div className="relative flex-shrink-0 w-14 h-14">
-        <Image src={imgUrl} alt={`Additional image ${idx + 1}`} fill sizes="56px" className="object-contain rounded border bg-white dark:bg-gray-800" />
-      </div>
-    )}
-    <div className="flex-1 min-w-0">
-      <label htmlFor={`additional-image-${idx}`} className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-        Image {idx + 2}{imgUrl && !pendingFile && " (current)"}
-      </label>
-      <input
-        id={`additional-image-${idx}`}
-        type="file"
-        accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
-        onChange={(e) => onFileChange(idx, e)}
-        className="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-xs text-gray-900 dark:text-gray-100 dark:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
-      />
-      {pendingFile && (
-        <p className="text-xs text-green-600 mt-1">Selected: {pendingFile.name}</p>
+function PendingFileNotice({ fileName }: { readonly fileName: string }) {
+  return <p className="text-xs text-green-600 mt-1">Selected: {fileName}</p>;
+}
+
+function AdditionalImageRow({ idx, imgUrl, pendingFile, onFileChange, onRemove }: AdditionalImageRowProps) {
+  const showCurrent = Boolean(imgUrl) && pendingFile === null;
+  const labelText = `Image ${idx + 2}${showCurrent ? ' (current)' : ''}`;
+  return (
+    <div className="flex items-start gap-3 p-3 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700">
+      {showCurrent && (
+        <div className="relative flex-shrink-0 w-14 h-14">
+          <Image src={imgUrl} alt={`Additional image ${idx + 1}`} fill sizes="56px" className="object-contain rounded border bg-white dark:bg-gray-800" />
+        </div>
       )}
+      <div className="flex-1 min-w-0">
+        <label htmlFor={`additional-image-${idx}`} className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+          {labelText}
+        </label>
+        <input
+          id={`additional-image-${idx}`}
+          type="file"
+          accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
+          onChange={(e) => onFileChange(idx, e)}
+          className="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-xs text-gray-900 dark:text-gray-100 dark:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+        />
+        {pendingFile && <PendingFileNotice fileName={pendingFile.name} />}
+      </div>
+      <button
+        type="button"
+        onClick={() => onRemove(idx)}
+        aria-label={`Remove image ${idx + 2}`}
+        className="flex-shrink-0 text-red-400 hover:text-red-600 transition mt-1"
+      >
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
     </div>
-    <button
-      type="button"
-      onClick={() => onRemove(idx)}
-      aria-label={`Remove image ${idx + 2}`}
-      className="flex-shrink-0 text-red-400 hover:text-red-600 transition mt-1"
-    >
-      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-      </svg>
-    </button>
-  </div>
-);
+  );
+}
+
+interface PriceFieldProps {
+  readonly priceCurrency: CurrencyCode;
+  readonly priceValue: number;
+  readonly error?: string;
+  readonly availableCurrencies: CurrencyCode[];
+  readonly onCurrencyChange: (code: CurrencyCode) => void;
+  readonly onPriceChange: (value: number) => void;
+}
+
+function PriceField({ priceCurrency, priceValue, error, availableCurrencies, onCurrencyChange, onPriceChange }: PriceFieldProps) {
+  return (
+    <div>
+      <label htmlFor="product-price" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+        Price
+      </label>
+      <div className="flex gap-2">
+        <select
+          id="product-price-currency"
+          value={priceCurrency}
+          onChange={(e) => onCurrencyChange(e.target.value as CurrencyCode)}
+          aria-label="Price currency"
+          className="px-2 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+        >
+          {availableCurrencies.map((code) => (
+            <option key={code} value={code}>
+              {code} ({CURRENCIES[code].symbol})
+            </option>
+          ))}
+        </select>
+        <input
+          id="product-price"
+          type="number"
+          value={priceValue}
+          onChange={(e) => {
+            const value = Number.parseFloat(e.target.value);
+            if (!Number.isNaN(value)) onPriceChange(value);
+          }}
+          required
+          min="0.01"
+          step="0.01"
+          aria-describedby={error ? "product-price-error" : undefined}
+          className={`flex-1 min-w-0 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white dark:bg-gray-700 ${error ? "border-red-400 dark:border-red-500" : "border-gray-300 dark:border-gray-600"}`}
+        />
+      </div>
+      {error && <p id="product-price-error" className="text-xs text-red-600 mt-1">{error}</p>}
+    </div>
+  );
+}
 
 export default function ProductFormModal({
   editingProduct,
@@ -461,55 +516,17 @@ export default function ProductFormModal({
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label
-                    htmlFor="product-price"
-                    className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-                  >
-                    Price
-                  </label>
-                  <div className="flex gap-2">
-                    <select
-                      id="product-price-currency"
-                      value={priceCurrency}
-                      onChange={(e) =>
-                        handlePriceCurrencyChange(e.target.value as CurrencyCode)
-                      }
-                      aria-label="Price currency"
-                      className="px-2 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
-                    >
-                      {availableCurrencies.map((code) => (
-                        <option key={code} value={code}>
-                          {code} ({CURRENCIES[code].symbol})
-                        </option>
-                      ))}
-                    </select>
-                    <input
-                      id="product-price"
-                      type="number"
-                      value={formData.price}
-                      onChange={(e) => {
-                        const value = Number.parseFloat(e.target.value);
-                        if (!Number.isNaN(value)) {
-                          setFormData({ ...formData, price: value });
-                          clearFieldError("price");
-                        }
-                      }}
-                      required
-                      min="0.01"
-                      step="0.01"
-                      aria-describedby={
-                        fieldErrors.price ? "product-price-error" : undefined
-                      }
-                      className={`flex-1 min-w-0 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white dark:bg-gray-700 ${fieldErrors.price ? "border-red-400 dark:border-red-500" : "border-gray-300 dark:border-gray-600"}`}
-                    />
-                  </div>
-                  {fieldErrors.price && (
-                    <p id="product-price-error" className="text-xs text-red-600 mt-1">
-                      {fieldErrors.price}
-                    </p>
-                  )}
-                </div>
+                <PriceField
+                  priceCurrency={priceCurrency}
+                  priceValue={formData.price}
+                  error={fieldErrors.price}
+                  availableCurrencies={availableCurrencies}
+                  onCurrencyChange={handlePriceCurrencyChange}
+                  onPriceChange={(value) => {
+                    setFormData({ ...formData, price: value });
+                    clearFieldError("price");
+                  }}
+                />
 
                 <div>
                   <label
