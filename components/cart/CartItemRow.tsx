@@ -62,31 +62,36 @@ export function CartItemRow({
         </p>
 
         <div className="flex items-center gap-3 mt-3">
-          <div className="flex items-center border border-[var(--border-warm)] rounded-lg overflow-hidden">
-            <button
-              onClick={() => onUpdateQuantity(item.id, item.quantity - 1)}
-              disabled={updating === item.id || item.quantity <= 1}
-              className="w-8 h-8 flex items-center justify-center text-[var(--text-secondary)] hover:bg-[var(--accent-blush)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors focus-warm"
+          <div className="flex items-center gap-2">
+            <label
+              htmlFor={`qty-${item.id}`}
+              className="text-xs font-semibold text-[var(--text-secondary)]"
             >
-              -
-            </button>
-            <span className="w-10 text-center text-sm font-semibold text-[var(--foreground)]">
-              {updating === item.id ? (
-                <LoadingSpinner
-                  size="h-4 w-4"
-                  color="text-[var(--accent-warm)]"
-                />
-              ) : (
-                item.quantity
-              )}
-            </span>
-            <button
-              onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
-              disabled={updating === item.id}
-              className="w-8 h-8 flex items-center justify-center text-[var(--text-secondary)] hover:bg-[var(--accent-blush)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors focus-warm"
-            >
-              +
-            </button>
+              Qty:
+            </label>
+            {updating === item.id ? (
+              <LoadingSpinner
+                size="h-4 w-4"
+                color="text-[var(--accent-warm)]"
+              />
+            ) : (
+              <select
+                id={`qty-${item.id}`}
+                value={item.quantity}
+                onChange={(e) =>
+                  onUpdateQuantity(item.id, Number(e.target.value))
+                }
+                disabled={updating === item.id}
+                aria-label={`Quantity for ${item.product.name}`}
+                className="px-2 py-1.5 border border-[var(--border-warm)] rounded-lg text-sm font-semibold text-[var(--foreground)] bg-[var(--surface)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-warm)]/40 focus:border-[var(--accent-warm)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+              >
+                {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
+                  <option key={n} value={n}>
+                    {n}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
 
           <button

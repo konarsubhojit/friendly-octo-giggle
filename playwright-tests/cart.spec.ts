@@ -183,16 +183,13 @@ test.describe('Cart page – quantity updates', () => {
     await page.goto('/cart');
     await expect(page.getByText(MOCK_CART_ITEM_1.product.name)).toBeVisible();
 
-    // Click the + button
-    const increaseBtn = page.getByRole('button', { name: '+' }).first();
-    await increaseBtn.click();
+    // Select quantity 3 from the dropdown
+    const qtySelect = page.getByLabel(`Quantity for ${MOCK_CART_ITEM_1.product.name}`);
+    await qtySelect.selectOption('3');
 
     // Cart items must still be visible — NOT the empty state
     await expect(page.getByText(/your cart is empty/i)).not.toBeVisible();
     await expect(page.getByText(MOCK_CART_ITEM_1.product.name)).toBeVisible();
-
-    // Quantity should update to 3
-    await expect(page.getByText('3')).toBeVisible();
 
     await page.screenshot({ path: screenshotPath('cart-quantity-increased') });
   });
@@ -209,21 +206,18 @@ test.describe('Cart page – quantity updates', () => {
     await page.goto('/cart');
     await expect(page.getByText(MOCK_CART_ITEM_1.product.name)).toBeVisible();
 
-    // Click the - button
-    const decreaseBtn = page.getByRole('button', { name: '-' }).first();
-    await decreaseBtn.click();
+    // Select quantity 2 from the dropdown
+    const qtySelect = page.getByLabel(`Quantity for ${MOCK_CART_ITEM_1.product.name}`);
+    await qtySelect.selectOption('2');
 
     // Cart items must still be visible — NOT the empty state
     await expect(page.getByText(/your cart is empty/i)).not.toBeVisible();
     await expect(page.getByText(MOCK_CART_ITEM_1.product.name)).toBeVisible();
 
-    // Quantity should update to 2
-    await expect(page.getByText('2')).toBeVisible();
-
     await page.screenshot({ path: screenshotPath('cart-quantity-decreased') });
   });
 
-  test('- button is disabled when quantity is 1', async ({ page }) => {
+  test('quantity dropdown defaults to current item quantity', async ({ page }) => {
     const cartState = {
       current: {
         ...MOCK_CART,
@@ -234,8 +228,8 @@ test.describe('Cart page – quantity updates', () => {
 
     await page.goto('/cart');
 
-    const decreaseBtn = page.getByRole('button', { name: '-' }).first();
-    await expect(decreaseBtn).toBeDisabled();
+    const qtySelect = page.getByLabel(`Quantity for ${MOCK_CART_ITEM_1.product.name}`);
+    await expect(qtySelect).toHaveValue('1');
   });
 
   test('updating quantity with multiple items preserves all cart items', async ({ page }) => {
@@ -248,9 +242,9 @@ test.describe('Cart page – quantity updates', () => {
     await expect(page.getByText(MOCK_CART_ITEM_1.product.name)).toBeVisible();
     await expect(page.getByText(MOCK_CART_ITEM_2.product.name)).toBeVisible();
 
-    // Increase quantity of first item
-    const increaseBtn = page.getByRole('button', { name: '+' }).first();
-    await increaseBtn.click();
+    // Increase quantity of first item using dropdown
+    const qtySelect = page.getByLabel(`Quantity for ${MOCK_CART_ITEM_1.product.name}`);
+    await qtySelect.selectOption(String(MOCK_CART_ITEM_1.quantity + 1));
 
     // Both items should still be visible after the update
     await expect(page.getByText(/your cart is empty/i)).not.toBeVisible();
@@ -332,8 +326,8 @@ test.describe('Cart page – order summary', () => {
 
     await page.goto('/cart');
 
-    // Increase quantity of first item
-    await page.getByRole('button', { name: '+' }).first().click();
+    // Increase quantity of first item using dropdown
+    await page.getByLabel(`Quantity for ${MOCK_CART_ITEM_1.product.name}`).selectOption('2');
 
     // Item count in summary should now reflect 2 + 1 = 3 items
     await expect(page.getByText(/3 items/)).toBeVisible();

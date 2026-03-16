@@ -164,7 +164,7 @@ body {
       color-mix(in srgb, var(--accent-blush) 60%, transparent) 50%,
       color-mix(in srgb, var(--accent-cream) 60%, transparent) 100%
     ),
-    url('/warm-bg.jpeg') center / cover no-repeat fixed;
+    url('/warm-bg.jpeg') center / cover no-repeat;
 }
 
 @utility text-warm-heading {

@@ -192,36 +192,22 @@ function AddToCartSection({
         >
           Quantity
         </label>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setQuantity(Math.max(1, quantity - 1))}
-            className="w-10 h-10 rounded-lg border-2 border-[var(--border-warm)] flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--accent-warm)] hover:text-[var(--accent-rose)] transition-colors font-bold text-lg focus-warm"
-          >
-            -
-          </button>
-          <input
-            id="quantity-input"
-            type="number"
-            min="1"
-            max={effectiveStock}
-            value={quantity}
-            onChange={(e) => {
-              const parsed = Number.parseInt(e.target.value, 10);
-              if (Number.isNaN(parsed) || parsed < 1) {
-                setQuantity(1);
-                return;
-              }
-              setQuantity(Math.min(parsed, effectiveStock));
-            }}
-            className="w-16 text-center px-2 py-2 border-2 border-[var(--border-warm)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--accent-warm)] focus:border-transparent font-semibold"
-          />
-          <button
-            onClick={() => setQuantity(Math.min(effectiveStock, quantity + 1))}
-            className="w-10 h-10 rounded-lg border-2 border-[var(--border-warm)] flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--accent-warm)] hover:text-[var(--accent-rose)] transition-colors font-bold text-lg focus-warm"
-          >
-            +
-          </button>
-        </div>
+        <select
+          id="quantity-input"
+          value={quantity}
+          onChange={(e) => setQuantity(Number(e.target.value))}
+          aria-label="Select quantity"
+          className="w-full px-3 py-2.5 border-2 border-[var(--border-warm)] rounded-lg text-base font-semibold text-[var(--foreground)] bg-[var(--surface)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-warm)] focus:border-transparent transition-colors cursor-pointer"
+        >
+          {Array.from(
+            { length: Math.min(effectiveStock, 10) },
+            (_, i) => i + 1,
+          ).map((n) => (
+            <option key={n} value={n}>
+              {n}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div className="flex justify-between items-center mb-5 p-3 bg-gradient-to-r from-[var(--accent-blush)] to-[var(--border-warm)] rounded-xl">
@@ -364,16 +350,18 @@ export default function ProductClient({ product }: ProductClientProps) {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
         {/* Breadcrumb */}
         <nav className="mb-6 text-sm">
-          <Link
-            href="/"
-            className="text-[#b89a85] hover:text-[#d4856b] transition-colors"
-          >
-            Home
-          </Link>
-          <span className="mx-2 text-[var(--text-muted)]">/</span>
-          <span className="text-[var(--text-secondary)] font-medium">
-            {product.name}
-          </span>
+          <div className="inline-flex items-center gap-1 px-4 py-2 bg-[var(--surface)]/90 backdrop-blur-sm rounded-full border border-[var(--border-warm)] shadow-warm">
+            <Link
+              href="/"
+              className="text-[var(--foreground)] font-medium hover:text-[var(--accent-rose)] transition-colors"
+            >
+              Home
+            </Link>
+            <span className="mx-1 text-[var(--accent-warm)] font-bold">/</span>
+            <span className="text-[var(--foreground)] font-semibold">
+              {product.name}
+            </span>
+          </div>
         </nav>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
