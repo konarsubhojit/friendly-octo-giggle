@@ -6,7 +6,6 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useSession } from 'next-auth/react';
 import { useSelector, useDispatch } from 'react-redux';
-import Header from '@/components/layout/Header';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { fetchOrderById, cancelOrder, selectCurrentOrder, selectOrderDetailLoading, selectOrdersError, selectOrderCancelling, clearCurrentOrder } from '@/lib/features/orders/ordersSlice';
 import type { AppDispatch } from '@/lib/store';
@@ -165,6 +164,47 @@ function OrderItemRow({ item, formatPrice }: OrderItemRowProps) {
   );
 }
 
+interface OrderSummaryHeaderProps {
+  readonly orderId: string;
+  readonly createdAt: string;
+  readonly totalAmount: number;
+  readonly status: string;
+  readonly cancelling: boolean;
+  readonly formatPrice: (amount: number) => string;
+  readonly onCancelClick: () => void;
+}
+
+function OrderSummaryHeader({ orderId, createdAt, totalAmount, status, cancelling, formatPrice, onCancelClick }: OrderSummaryHeaderProps) {
+  return (
+    <div className="flex justify-between items-start flex-wrap gap-4">
+      <div>
+        <h1 className="text-2xl font-bold text-[#4a3728]">Order #{orderId}</h1>
+        <p className="text-sm text-[#b89a85] mt-1">
+          Placed on{' '}
+          {new Date(createdAt).toLocaleDateString('en-US', {
+            year: 'numeric', month: 'long', day: 'numeric',
+            hour: '2-digit', minute: '2-digit',
+          })}
+        </p>
+      </div>
+      <div className="flex items-center gap-3">
+        <p className="text-2xl font-bold bg-gradient-to-r from-[#e8a87c] to-[#d4856b] bg-clip-text text-transparent">
+          {formatPrice(totalAmount)}
+        </p>
+        {status === 'PENDING' && (
+          <button
+            onClick={onCancelClick}
+            disabled={cancelling}
+            className="px-4 py-2 text-sm font-semibold text-red-600 bg-red-50 border border-red-200 rounded-xl hover:bg-red-100 transition-colors disabled:opacity-50"
+          >
+            Cancel Order
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function OrderDetailPage({ params }: OrderDetailPageProps) {
   const { id } = use(params);
   const { data: session, status: authStatus } = useSession();
@@ -210,7 +250,6 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
   if (authStatus === 'loading' || loading) {
     return (
       <div className="min-h-screen bg-warm-gradient">
-        <Header />
         <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
           <div className="flex items-center justify-center py-20">
             <LoadingSpinner />
@@ -223,7 +262,6 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
   if (!session?.user) {
     return (
       <div className="min-h-screen bg-warm-gradient">
-        <Header />
         <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
           <AuthRequiredState
             callbackUrl={`/orders/${id}`}
@@ -237,7 +275,6 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
   if (error || !order) {
     return (
       <div className="min-h-screen bg-warm-gradient">
-        <Header />
         <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
           <Card className="p-12 text-center">
             <h2 className="text-2xl font-bold text-[#4a3728] mb-2">{error || 'Order not found'}</h2>
@@ -255,7 +292,6 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
 
   return (
     <div className="min-h-screen bg-warm-gradient">
-      <Header />
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
         {/* Back link */}
         <Link href="/orders" className="inline-flex items-center gap-2 text-[#7a6355] hover:text-[#d4856b] transition-colors mb-6">
@@ -267,35 +303,15 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
 
         {/* Order Header */}
         <Card className="p-8 mb-6">
-          <div className="flex justify-between items-start flex-wrap gap-4">
-            <div>
-              <h1 className="text-2xl font-bold text-[#4a3728]">Order #{order.id}</h1>
-              <p className="text-sm text-[#b89a85] mt-1">
-                Placed on{' '}
-                {new Date(order.createdAt).toLocaleDateString('en-US', {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              <p className="text-2xl font-bold bg-gradient-to-r from-[#e8a87c] to-[#d4856b] bg-clip-text text-transparent">
-                {formatPrice(order.totalAmount)}
-              </p>
-              {order.status === 'PENDING' && (
-                <button
-                  onClick={() => setShowCancelConfirm(true)}
-                  disabled={cancelling}
-                  className="px-4 py-2 text-sm font-semibold text-red-600 bg-red-50 border border-red-200 rounded-xl hover:bg-red-100 transition-colors disabled:opacity-50"
-                >
-                  Cancel Order
-                </button>
-              )}
-            </div>
-          </div>
+          <OrderSummaryHeader
+            orderId={order.id}
+            createdAt={order.createdAt}
+            totalAmount={order.totalAmount}
+            status={order.status}
+            cancelling={cancelling}
+            formatPrice={formatPrice}
+            onCancelClick={() => setShowCancelConfirm(true)}
+          />
 
           {/* Cancel Confirmation Modal */}
           <dialog

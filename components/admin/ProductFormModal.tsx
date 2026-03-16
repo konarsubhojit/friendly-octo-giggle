@@ -18,6 +18,8 @@ import {
 import { PRODUCT_ERRORS, API_ERRORS } from "@/lib/constants/error-messages";
 import { PRODUCT_CATEGORIES } from "@/lib/constants/categories";
 
+const MAX_IMAGES = 10;
+
 interface ProductFormData {
   name: string;
   description: string;
@@ -25,6 +27,7 @@ interface ProductFormData {
   stock: number;
   category: string;
   image: string;
+  images: string[];
 }
 
 interface ProductFormModalProps {
@@ -45,6 +48,49 @@ function convertCurrency(
   const amountInBase = amount / rates[from];
   return Number((amountInBase * rates[to]).toFixed(2));
 }
+
+interface AdditionalImageRowProps {
+  readonly idx: number;
+  readonly imgUrl: string;
+  readonly pendingFile: File | null;
+  readonly onFileChange: (idx: number, e: React.ChangeEvent<HTMLInputElement>) => void;
+  readonly onRemove: (idx: number) => void;
+}
+
+const AdditionalImageRow = ({ idx, imgUrl, pendingFile, onFileChange, onRemove }: AdditionalImageRowProps) => (
+  <div className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg bg-gray-50">
+    {imgUrl && !pendingFile && (
+      <div className="relative flex-shrink-0 w-14 h-14">
+        <Image src={imgUrl} alt={`Additional image ${idx + 1}`} fill sizes="56px" className="object-contain rounded border bg-white" />
+      </div>
+    )}
+    <div className="flex-1 min-w-0">
+      <label htmlFor={`additional-image-${idx}`} className="block text-xs font-medium text-gray-600 mb-1">
+        Image {idx + 2}{imgUrl && !pendingFile && " (current)"}
+      </label>
+      <input
+        id={`additional-image-${idx}`}
+        type="file"
+        accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
+        onChange={(e) => onFileChange(idx, e)}
+        className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+      />
+      {pendingFile && (
+        <p className="text-xs text-green-600 mt-1">Selected: {pendingFile.name}</p>
+      )}
+    </div>
+    <button
+      type="button"
+      onClick={() => onRemove(idx)}
+      aria-label={`Remove image ${idx + 2}`}
+      className="flex-shrink-0 text-red-400 hover:text-red-600 transition mt-1"
+    >
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    </button>
+  </div>
+);
 
 export default function ProductFormModal({
   editingProduct,
@@ -69,6 +115,7 @@ export default function ProductFormModal({
           stock: editingProduct.stock,
           category: editingProduct.category,
           image: editingProduct.image,
+          images: editingProduct.images ?? [],
         }
       : {
           name: "",
@@ -77,19 +124,29 @@ export default function ProductFormModal({
           stock: 0,
           category: "",
           image: "",
+          images: [],
         },
   );
-  // Separate string state for the stock input to allow intermediate empty values
-  // (e.g. clearing "5" before typing "0" without the field reverting)
   const [stockInput, setStockInput] = useState(
     String(editingProduct ? editingProduct.stock : 0),
   );
   const [imageFile, setImageFile] = useState<File | null>(null);
+  // Additional image files to upload (paired with formData.images slots)
+  const [additionalFiles, setAdditionalFiles] = useState<(File | null)[]>(
+    () => Array((editingProduct?.images ?? []).length).fill(null),
+  );
+  // Stable IDs for additional image slots (avoids React index-key warnings)
+  const [slotIds, setSlotIds] = useState<string[]>(
+    () => (editingProduct?.images ?? []).map(() => crypto.randomUUID()),
+  );
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<
     Partial<Record<keyof ProductFormData, string>>
   >({});
+
+  const totalImages =
+    (formData.image || imageFile ? 1 : 0) + formData.images.length;
 
   /** Per-field validators — each returns an error string or undefined. */
   const validateName = (v: string) => {
@@ -118,9 +175,8 @@ export default function ProductFormModal({
       category: validateCategory(formData.category),
       image: editingProduct
         ? undefined
-        : validateImage(!!formData.image, !!imageFile),
+        : validateImage(Boolean(formData.image), Boolean(imageFile)),
     };
-    // Remove undefined entries before setting
     const filtered = Object.fromEntries(
       Object.entries(errors).filter(([, v]) => v !== undefined),
     ) as Partial<Record<keyof ProductFormData, string>>;
@@ -142,105 +198,122 @@ export default function ProductFormModal({
     setPriceCurrency(newCurrency);
   };
 
+  const validateImageFile = (file: File): string | null => {
+    if (!isValidImageType(file.type)) {
+      return PRODUCT_ERRORS.IMAGE_TYPE_INVALID(VALID_IMAGE_TYPES_DISPLAY);
+    }
+    if (file.size > MAX_FILE_SIZE) {
+      return PRODUCT_ERRORS.IMAGE_SIZE_EXCEEDED(MAX_FILE_SIZE / 1024 / 1024);
+    }
+    return null;
+  };
+
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!isValidImageType(file.type)) {
-      setFieldErrors((prev) => ({
-        ...prev,
-        image: PRODUCT_ERRORS.IMAGE_TYPE_INVALID(VALID_IMAGE_TYPES_DISPLAY),
-      }));
-      return;
-    }
-    if (file.size > MAX_FILE_SIZE) {
-      setFieldErrors((prev) => ({
-        ...prev,
-        image: PRODUCT_ERRORS.IMAGE_SIZE_EXCEEDED(MAX_FILE_SIZE / 1024 / 1024),
-      }));
+    const err = validateImageFile(file);
+    if (err) {
+      setFieldErrors((prev) => ({ ...prev, image: err }));
       return;
     }
     setFieldErrors((prev) => ({ ...prev, image: undefined }));
     setImageFile(file);
   };
 
-  const uploadImage = async (): Promise<string | null> => {
-    if (!imageFile) return null;
-
-    setUploading(true);
-    try {
-      const formDataUpload = new FormData();
-      formDataUpload.append("file", imageFile);
-
-      const res = await fetch("/api/upload", {
-        method: "POST",
-        body: formDataUpload,
-      });
-
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || "Failed to upload image");
-      }
-
-      const data = await res.json();
-      return data.data.url;
-    } catch (err) {
-      logError({ error: err, context: "uploadImage" });
-      toast.error(API_ERRORS.IMAGE_UPLOAD);
-      return null;
-    } finally {
-      setUploading(false);
+  const handleAdditionalImageChange = (
+    idx: number,
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const err = validateImageFile(file);
+    if (err) {
+      toast.error(err);
+      return;
     }
+    const newFiles = [...additionalFiles];
+    newFiles[idx] = file;
+    setAdditionalFiles(newFiles);
+  };
+
+  const addImageSlot = () => {
+    if (totalImages >= MAX_IMAGES) {
+      toast.error(`Maximum ${MAX_IMAGES} images allowed`);
+      return;
+    }
+    setFormData((prev) => ({ ...prev, images: [...prev.images, ""] }));
+    setAdditionalFiles((prev) => [...prev, null]);
+    setSlotIds((prev) => [...prev, crypto.randomUUID()]);
+  };
+
+  const removeAdditionalImage = (idx: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      images: prev.images.filter((_, i) => i !== idx),
+    }));
+    setAdditionalFiles((prev) => prev.filter((_, i) => i !== idx));
+    setSlotIds((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const uploadSingleImage = async (file: File): Promise<string | null> => {
+    const formDataUpload = new FormData();
+    formDataUpload.append("file", file);
+    const res = await fetch("/api/upload", {
+      method: "POST",
+      body: formDataUpload,
+    });
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.error || "Failed to upload image");
+    }
+    const data = await res.json();
+    return data.data.url;
   };
 
   const getSubmitButtonText = (): string => {
-    const textMap: Record<string, string> = {
-      uploading: "Uploading...",
-      saving: "Saving...",
-      update: "Update Product",
-      create: "Create Product",
-    };
-    let mode: "uploading" | "saving" | "update" | "create";
-    if (uploading) {
-      mode = "uploading";
-    } else if (saving) {
-      mode = "saving";
-    } else if (editingProduct) {
-      mode = "update";
-    } else {
-      mode = "create";
-    }
-    return textMap[mode];
+    if (uploading) return "Uploading...";
+    if (saving) return "Saving...";
+    return editingProduct ? "Update Product" : "Create Product";
   };
 
-  /** Call the save API and return the saved product, or throw on error. */
-  const saveProductToApi = async (imageUrl: string) => {
+  const getApiEndpoint = () =>
+    editingProduct
+      ? { url: `/api/admin/products/${editingProduct.id}`, method: "PUT" as const }
+      : { url: "/api/admin/products", method: "POST" as const };
+
+  const saveProductToApi = async (
+    imageUrl: string,
+    additionalImages: string[],
+  ) => {
     const productData = {
       ...formData,
       price: convertCurrency(formData.price, priceCurrency, "INR", rates),
       image: imageUrl,
+      images: additionalImages,
     };
-    const url = editingProduct
-      ? `/api/admin/products/${editingProduct.id}`
-      : "/api/admin/products";
-    const method = editingProduct ? "PUT" : "POST";
+    const { url, method } = getApiEndpoint();
     const res = await fetch(url, {
       method,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(productData),
     });
     if (!res.ok) {
-      const error = await res.json();
-      throw new Error(error.error || "Failed to save product");
+      const errorBody = await res.json();
+      throw new Error(
+        (errorBody as { error?: string }).error ?? "Failed to save product",
+      );
     }
-    const saved = await res.json();
-    return saved.data?.product || saved.product || saved;
+    const saved = (await res.json()) as {
+      data?: { product?: Product };
+      product?: Product;
+    };
+    return saved.data?.product ?? saved.product ?? (saved as unknown as Product);
   };
 
   const handleStockChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value;
     setStockInput(raw);
     if (raw === "") {
-      // Allow clearing the field; treat as 0 for form submission
       setFormData({ ...formData, stock: 0 });
       clearFieldError("stock");
       return;
@@ -252,21 +325,45 @@ export default function ProductFormModal({
     }
   };
 
-  /** Resolve the final image URL (uploading a new file if selected). */
   const resolveImageUrl = async (): Promise<string | null> => {
     if (imageFile) {
-      const uploadedUrl = await uploadImage();
-      if (!uploadedUrl) return null;
-      return uploadedUrl;
+      setUploading(true);
+      try {
+        return await uploadSingleImage(imageFile);
+      } catch (err) {
+        logError({ error: err, context: "resolveImageUrl" });
+        toast.error(API_ERRORS.IMAGE_UPLOAD);
+        return null;
+      } finally {
+        setUploading(false);
+      }
     }
     if (!formData.image) {
-      setFieldErrors((prev) => ({
-        ...prev,
-        image: PRODUCT_ERRORS.IMAGE_REQUIRED,
-      }));
+      setFieldErrors((prev) => ({ ...prev, image: PRODUCT_ERRORS.IMAGE_REQUIRED }));
       return null;
     }
     return formData.image;
+  };
+
+  const uploadAdditionalImages = async (): Promise<string[]> => {
+    const additionalUrls: string[] = [];
+    for (let i = 0; i < formData.images.length; i++) {
+      const file = additionalFiles[i];
+      if (file) {
+        setUploading(true);
+        try {
+          const url = await uploadSingleImage(file);
+          if (url) additionalUrls.push(url);
+        } catch {
+          // skip failed uploads
+        } finally {
+          setUploading(false);
+        }
+      } else if (formData.images[i]) {
+        additionalUrls.push(formData.images[i]);
+      }
+    }
+    return additionalUrls;
   };
 
   const handleSubmit = async (e: React.BaseSyntheticEvent) => {
@@ -274,16 +371,16 @@ export default function ProductFormModal({
     if (!validate()) return;
     setSaving(true);
     try {
-      const imageUrl = await resolveImageUrl();
-      if (!imageUrl) {
+      const primaryUrl = await resolveImageUrl();
+      if (!primaryUrl) {
         setSaving(false);
         return;
       }
-      const savedProduct = await saveProductToApi(imageUrl);
+
+      const additionalUrls = await uploadAdditionalImages();
+      const savedProduct = await saveProductToApi(primaryUrl, additionalUrls);
       toast.success(
-        editingProduct
-          ? "Product updated successfully"
-          : "Product created successfully",
+        editingProduct ? "Product updated successfully" : "Product created successfully",
       );
       onSuccess(savedProduct);
       onClose();
@@ -328,10 +425,7 @@ export default function ProductFormModal({
                   className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${fieldErrors.name ? "border-red-400" : "border-gray-300"}`}
                 />
                 {fieldErrors.name && (
-                  <p
-                    id="product-name-error"
-                    className="text-xs text-red-600 mt-1"
-                  >
+                  <p id="product-name-error" className="text-xs text-red-600 mt-1">
                     {fieldErrors.name}
                   </p>
                 )}
@@ -355,17 +449,12 @@ export default function ProductFormModal({
                   maxLength={2000}
                   rows={4}
                   aria-describedby={
-                    fieldErrors.description
-                      ? "product-description-error"
-                      : undefined
+                    fieldErrors.description ? "product-description-error" : undefined
                   }
                   className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${fieldErrors.description ? "border-red-400" : "border-gray-300"}`}
                 />
                 {fieldErrors.description && (
-                  <p
-                    id="product-description-error"
-                    className="text-xs text-red-600 mt-1"
-                  >
+                  <p id="product-description-error" className="text-xs text-red-600 mt-1">
                     {fieldErrors.description}
                   </p>
                 )}
@@ -384,9 +473,7 @@ export default function ProductFormModal({
                       id="product-price-currency"
                       value={priceCurrency}
                       onChange={(e) =>
-                        handlePriceCurrencyChange(
-                          e.target.value as CurrencyCode,
-                        )
+                        handlePriceCurrencyChange(e.target.value as CurrencyCode)
                       }
                       aria-label="Price currency"
                       className="px-2 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm"
@@ -418,10 +505,7 @@ export default function ProductFormModal({
                     />
                   </div>
                   {fieldErrors.price && (
-                    <p
-                      id="product-price-error"
-                      className="text-xs text-red-600 mt-1"
-                    >
+                    <p id="product-price-error" className="text-xs text-red-600 mt-1">
                       {fieldErrors.price}
                     </p>
                   )}
@@ -448,10 +532,7 @@ export default function ProductFormModal({
                     className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${fieldErrors.stock ? "border-red-400" : "border-gray-300"}`}
                   />
                   {fieldErrors.stock && (
-                    <p
-                      id="product-stock-error"
-                      className="text-xs text-red-600 mt-1"
-                    >
+                    <p id="product-stock-error" className="text-xs text-red-600 mt-1">
                       {fieldErrors.stock}
                     </p>
                   )}
@@ -486,30 +567,29 @@ export default function ProductFormModal({
                   ))}
                 </select>
                 {fieldErrors.category && (
-                  <p
-                    id="product-category-error"
-                    className="text-xs text-red-600 mt-1"
-                  >
+                  <p id="product-category-error" className="text-xs text-red-600 mt-1">
                     {fieldErrors.category}
                   </p>
                 )}
               </div>
 
+              {/* Primary Image */}
               <div>
                 <label
                   htmlFor="product-image"
                   className="block text-sm font-medium text-gray-700 mb-1"
                 >
-                  Product Image
+                  Primary Image{" "}
+                  <span className="text-gray-400 font-normal">(required)</span>
                 </label>
                 {formData.image && !imageFile && (
-                  <div className="mb-2 relative w-32 h-32">
+                  <div className="mb-2 relative w-20 h-20">
                     <Image
                       src={formData.image}
                       alt="Current product"
                       fill
-                      sizes="128px"
-                      className="object-cover rounded border"
+                      sizes="80px"
+                      className="object-contain rounded border bg-gray-50"
                     />
                   </div>
                 )}
@@ -524,25 +604,59 @@ export default function ProductFormModal({
                   className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${fieldErrors.image ? "border-red-400" : "border-gray-300"}`}
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  {editingProduct
-                    ? "Leave empty to keep current image. "
-                    : "Required. "}
-                  Max {MAX_FILE_SIZE / 1024 / 1024}MB. Formats:{" "}
-                  {VALID_IMAGE_TYPES_DISPLAY}
+                  {editingProduct ? "Leave empty to keep current image. " : "Required. "}
+                  Max {MAX_FILE_SIZE / 1024 / 1024}MB. Formats: {VALID_IMAGE_TYPES_DISPLAY}
                 </p>
                 {fieldErrors.image && (
-                  <p
-                    id="product-image-error"
-                    className="text-xs text-red-600 mt-1"
-                  >
+                  <p id="product-image-error" className="text-xs text-red-600 mt-1">
                     {fieldErrors.image}
                   </p>
                 )}
                 {imageFile && !fieldErrors.image && (
-                  <p className="text-sm text-green-600 mt-1">
-                    Selected: {imageFile.name}
+                  <p className="text-sm text-green-600 mt-1">Selected: {imageFile.name}</p>
+                )}
+              </div>
+
+              {/* Additional Images */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Additional Images{" "}
+                    <span className="text-gray-400 font-normal">
+                      ({formData.images.length}/{MAX_IMAGES - 1} extra,{" "}
+                      {totalImages}/{MAX_IMAGES} total)
+                    </span>
+                  </label>
+                  {totalImages < MAX_IMAGES && (
+                    <button
+                      type="button"
+                      onClick={addImageSlot}
+                      className="text-xs px-2 py-1 bg-blue-50 text-blue-600 rounded border border-blue-200 hover:bg-blue-100 transition"
+                    >
+                      + Add Image
+                    </button>
+                  )}
+                </div>
+
+                {formData.images.length === 0 && (
+                  <p className="text-xs text-gray-400">
+                    No additional images. Click &ldquo;+ Add Image&rdquo; to add up to{" "}
+                    {MAX_IMAGES - 1} more images.
                   </p>
                 )}
+
+                <div className="space-y-3">
+                  {formData.images.map((imgUrl, idx) => (
+                    <AdditionalImageRow
+                      key={slotIds[idx] ?? `slot-${idx}`}
+                      idx={idx}
+                      imgUrl={imgUrl}
+                      pendingFile={additionalFiles[idx] ?? null}
+                      onFileChange={handleAdditionalImageChange}
+                      onRemove={removeAdditionalImage}
+                    />
+                  ))}
+                </div>
               </div>
             </div>
 
@@ -569,3 +683,4 @@ export default function ProductFormModal({
     </div>
   );
 }
+

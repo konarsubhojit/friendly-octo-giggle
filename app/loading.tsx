@@ -1,4 +1,3 @@
-import HeaderSkeleton from "@/components/skeletons/HeaderSkeleton";
 import HeroSkeleton from "@/components/skeletons/HeroSkeleton";
 import ProductCardSkeleton from "@/components/skeletons/ProductCardSkeleton";
 
@@ -39,8 +38,6 @@ function FooterSkeleton() {
 export default function Loading() {
   return (
     <div className="min-h-screen bg-warm-gradient">
-      <HeaderSkeleton />
-
       <HeroSkeleton />
 
       {/* Product Grid Skeleton */}

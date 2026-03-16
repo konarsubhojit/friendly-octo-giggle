@@ -2,49 +2,110 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { useDispatch } from "react-redux";
 import { Product, ProductVariation } from "@/lib/types";
 import { addToCart } from "@/lib/features/cart/cartSlice";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import type { AppDispatch } from "@/lib/store";
-import Header from "@/components/layout/Header";
 import { ProductStockBadge } from "@/components/product/ProductStockBadge";
 import { VariationButton } from "@/components/product/VariationButton";
 import { ButterflyAccent } from "@/components/ui/DecorativeElements";
+import ImageCarousel from "@/components/product/ImageCarousel";
 
 interface ProductClientProps {
   readonly product: Product;
 }
 
+// ─── Pure module-level helpers ────────────────────────────
+
+function getCarouselImages(
+  product: Product,
+  selectedVariation: ProductVariation | null,
+): string[] {
+  if (selectedVariation) {
+    const imgs = [
+      ...(selectedVariation.image ? [selectedVariation.image] : []),
+      ...(selectedVariation.images ?? []),
+    ].filter(Boolean);
+    if (imgs.length > 0) return imgs;
+  }
+  return [product.image, ...(product.images ?? [])].filter(Boolean);
+}
+
+function getClampedQtyState(
+  quantity: number,
+  stock: number,
+): { qty: number; message: string } {
+  if (stock === 0) return { qty: quantity, message: "" };
+  if (quantity > stock) return { qty: stock, message: `Only ${stock} available` };
+  return { qty: quantity, message: "" };
+}
+
+// ─── Small button-content helpers ────────────────────────
+
+const AddingSpinner = () => (
+  <span className="flex items-center justify-center gap-2">
+    <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+    </svg>
+    Adding...
+  </span>
+);
+
+const CartButtonLabel = () => (
+  <span className="flex items-center justify-center gap-2">
+    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+    </svg>
+    Add to Cart
+  </span>
+);
+
+const BreadcrumbNav = ({ productName }: { readonly productName: string }) => (
+  <nav className="mb-6 text-sm">
+    <div className="inline-flex items-center gap-1 px-4 py-2 bg-[var(--surface)]/90 backdrop-blur-sm rounded-full border border-[var(--border-warm)] shadow-warm">
+      <Link href="/" className="text-[var(--foreground)] font-medium hover:text-[var(--accent-rose)] transition-colors">
+        Home
+      </Link>
+      <span className="mx-1 text-[var(--accent-warm)] font-bold">/</span>
+      <span className="text-[var(--foreground)] font-semibold">{productName}</span>
+    </div>
+  </nav>
+);
+
+const OutOfStockPanel = () => (
+  <div className="bg-[var(--surface)]/80 backdrop-blur-lg rounded-2xl shadow-warm border border-[var(--border-warm)] p-8">
+    <div className="flex items-center gap-3 text-red-500">
+      <svg className="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+      </svg>
+      <span className="text-lg font-bold">Out of Stock</span>
+    </div>
+    <p className="mt-2 text-sm text-[var(--text-secondary)]">
+      This item is currently unavailable. Check back later or explore other products.
+    </p>
+    <Link href="/" className="inline-flex items-center gap-2 mt-4 px-5 py-2.5 bg-gradient-to-r from-[var(--accent-warm)] to-[var(--accent-rose)] text-white rounded-xl font-semibold text-sm shadow-warm hover:shadow-warm-lg transition-all duration-300 focus-warm">
+      Browse Products
+    </Link>
+  </div>
+);
+
+// ─── Image Section ────────────────────────────────────────
+
 interface ProductImageSectionProps {
-  readonly currentImage: string;
+  readonly images: string[];
   readonly productName: string;
 }
 
-function ProductImageSection({
-  currentImage,
-  productName,
-}: ProductImageSectionProps) {
-  return (
-    <div className="relative">
-      <div className="relative h-96 md:h-[600px] w-full rounded-2xl overflow-hidden shadow-2xl border-4 border-[var(--border-warm)] group">
-        <Image
-          src={currentImage}
-          alt={productName}
-          fill
-          sizes="(max-width: 768px) 100vw, 50vw"
-          className="object-cover transition-transform duration-500 group-hover:scale-105"
-          priority
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-      </div>
-      <div className="absolute -top-6 -right-6 w-32 h-32 bg-gradient-to-r from-[var(--accent-peach)] to-[var(--accent-blush)] rounded-full blur-3xl opacity-30 -z-10"></div>
-      <div className="absolute -bottom-6 -left-6 w-40 h-40 bg-gradient-to-r from-[var(--accent-sage)] to-[#d4e4c4] rounded-full blur-3xl opacity-30 -z-10"></div>
-      <ButterflyAccent className="absolute -top-4 -left-4 w-10 h-10 opacity-30 hidden sm:block animate-float-gentle" />
-    </div>
-  );
-}
+const ProductImageSection = ({ images, productName }: ProductImageSectionProps) => (
+  <div className="relative">
+    <ImageCarousel images={images} productName={productName} />
+    <ButterflyAccent className="absolute -top-4 -left-4 w-10 h-10 opacity-30 hidden sm:block animate-float-gentle" />
+  </div>
+);
+
+// ─── Info Card ────────────────────────────────────────────
 
 interface ProductInfoCardProps {
   readonly product: Product;
@@ -121,10 +182,13 @@ function ProductInfoCard({
   );
 }
 
+// ─── Add-to-Cart Section ──────────────────────────────────
+
 interface AddToCartSectionProps {
   readonly error: string;
   readonly cartSuccess: boolean;
   readonly quantity: number;
+  readonly quantityMessage: string;
   readonly setQuantity: (q: number) => void;
   readonly effectiveStock: number;
   readonly effectivePrice: number;
@@ -137,6 +201,7 @@ function AddToCartSection({
   error,
   cartSuccess,
   quantity,
+  quantityMessage,
   setQuantity,
   effectiveStock,
   effectivePrice,
@@ -148,11 +213,7 @@ function AddToCartSection({
     <div className="bg-[var(--surface)]/80 backdrop-blur-lg rounded-2xl shadow-warm border border-[var(--border-warm)] p-8">
       {error && (
         <div className="mb-4 p-4 bg-red-500/10 text-red-500 rounded-xl border border-red-500/20 flex items-center gap-3">
-          <svg
-            className="w-5 h-5 flex-shrink-0"
-            fill="currentColor"
-            viewBox="0 0 20 20"
-          >
+          <svg className="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
             <path
               fillRule="evenodd"
               d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
@@ -165,11 +226,7 @@ function AddToCartSection({
 
       {cartSuccess && (
         <div className="mb-4 p-4 bg-gradient-to-r from-green-50 to-emerald-50 text-green-700 rounded-xl border border-green-200 flex items-center gap-3">
-          <svg
-            className="w-5 h-5 flex-shrink-0"
-            fill="currentColor"
-            viewBox="0 0 20 20"
-          >
+          <svg className="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
             <path
               fillRule="evenodd"
               d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
@@ -197,6 +254,7 @@ function AddToCartSection({
           value={quantity}
           onChange={(e) => setQuantity(Number(e.target.value))}
           aria-label="Select quantity"
+          aria-describedby={quantityMessage ? "quantity-message" : undefined}
           className="w-full px-3 py-2.5 border-2 border-[var(--border-warm)] rounded-lg text-base font-semibold text-[var(--foreground)] bg-[var(--surface)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-warm)] focus:border-transparent transition-colors cursor-pointer"
         >
           {Array.from(
@@ -208,12 +266,32 @@ function AddToCartSection({
             </option>
           ))}
         </select>
+        {quantityMessage && (
+          <p
+            id="quantity-message"
+            className="mt-1.5 text-sm font-medium text-[var(--accent-rose)] flex items-center gap-1.5"
+          >
+            <svg
+              className="w-4 h-4 flex-shrink-0"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
+              />
+            </svg>
+            {quantityMessage}
+          </p>
+        )}
       </div>
 
       <div className="flex justify-between items-center mb-5 p-3 bg-gradient-to-r from-[var(--accent-blush)] to-[var(--border-warm)] rounded-xl">
-        <span className="text-sm font-semibold text-[var(--text-secondary)]">
-          Total:
-        </span>
+        <span className="text-sm font-semibold text-[var(--text-secondary)]">Total:</span>
         <span className="text-2xl font-bold bg-gradient-to-r from-[var(--accent-warm)] to-[var(--accent-rose)] bg-clip-text text-transparent">
           {formatPrice(effectivePrice * quantity)}
         </span>
@@ -225,65 +303,15 @@ function AddToCartSection({
           disabled={addingToCart}
           className="flex-1 bg-gradient-to-r from-[var(--accent-warm)] to-[var(--accent-rose)] text-white py-4 rounded-xl font-bold text-lg hover:from-[var(--accent-rose)] hover:to-[var(--accent-warm)] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-warm hover:shadow-warm-lg focus-warm"
         >
-          {addingToCart ? (
-            <span className="flex items-center justify-center gap-2">
-              <svg
-                className="animate-spin h-5 w-5"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                ></circle>
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                ></path>
-              </svg>
-              Adding...
-            </span>
-          ) : (
-            <span className="flex items-center justify-center gap-2">
-              <svg
-                className="w-6 h-6"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"
-                />
-              </svg>
-              Add to Cart
-            </span>
-          )}
+          {addingToCart ? <AddingSpinner /> : <CartButtonLabel />}
         </button>
 
         <Link
           href="/cart"
           className="flex-shrink-0 bg-[var(--accent-blush)] hover:bg-[var(--accent-peach)]/50 text-[var(--text-secondary)] px-5 py-4 rounded-xl font-bold transition-all duration-300 flex items-center gap-2 focus-warm"
         >
-          <svg
-            className="w-6 h-6"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
-            />
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
           </svg>
           View Cart
         </Link>
@@ -292,10 +320,13 @@ function AddToCartSection({
   );
 }
 
+// ─── Main Component ───────────────────────────────────────
+
 export default function ProductClient({ product }: ProductClientProps) {
   const dispatch = useDispatch<AppDispatch>();
   const { formatPrice } = useCurrency();
   const [quantity, setQuantity] = useState(1);
+  const [quantityMessage, setQuantityMessage] = useState("");
   const [selectedVariation, setSelectedVariation] =
     useState<ProductVariation | null>(
       product.variations && product.variations.length > 0
@@ -314,14 +345,14 @@ export default function ProductClient({ product }: ProductClientProps) {
     ? selectedVariation.stock
     : product.stock;
 
-  // Clamp quantity when stock changes (e.g. variation switch)
+  // Clamp quantity when stock changes (e.g. variation switch) and update message
   useEffect(() => {
-    if (quantity > effectiveStock && effectiveStock > 0) {
-      setQuantity(effectiveStock);
-    }
-  }, [effectiveStock, quantity, setQuantity]);
+    const { qty, message } = getClampedQtyState(quantity, effectiveStock);
+    if (qty !== quantity) setQuantity(qty);
+    setQuantityMessage(message);
+  }, [effectiveStock, quantity]);
 
-  const currentImage = selectedVariation?.image || product.image;
+  const carouselImages = getCarouselImages(product, selectedVariation);
 
   const handleAddToCart = async () => {
     setAddingToCart(true);
@@ -332,6 +363,7 @@ export default function ProductClient({ product }: ProductClientProps) {
       await dispatch(
         addToCart({
           productId: product.id,
+          // null = base product (no variation); each variationId is a distinct cart line
           variationId: selectedVariation?.id ?? null,
           quantity,
         }),
@@ -341,9 +373,7 @@ export default function ProductClient({ product }: ProductClientProps) {
       setTimeout(() => setCartSuccess(false), 3000);
     } catch (err) {
       setError(
-        typeof err === "string"
-          ? err
-          : "Something went wrong. Please try again.",
+        typeof err === "string" ? err : "Something went wrong. Please try again.",
       );
     } finally {
       setAddingToCart(false);
@@ -352,28 +382,12 @@ export default function ProductClient({ product }: ProductClientProps) {
 
   return (
     <div className="min-h-screen bg-warm-gradient">
-      <Header />
-
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
-        {/* Breadcrumb */}
-        <nav className="mb-6 text-sm">
-          <div className="inline-flex items-center gap-1 px-4 py-2 bg-[var(--surface)]/90 backdrop-blur-sm rounded-full border border-[var(--border-warm)] shadow-warm">
-            <Link
-              href="/"
-              className="text-[var(--foreground)] font-medium hover:text-[var(--accent-rose)] transition-colors"
-            >
-              Home
-            </Link>
-            <span className="mx-1 text-[var(--accent-warm)] font-bold">/</span>
-            <span className="text-[var(--foreground)] font-semibold">
-              {product.name}
-            </span>
-          </div>
-        </nav>
+        <BreadcrumbNav productName={product.name} />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
           <ProductImageSection
-            currentImage={currentImage}
+            images={carouselImages}
             productName={product.name}
           />
 
@@ -388,12 +402,13 @@ export default function ProductClient({ product }: ProductClientProps) {
               effectiveStock={effectiveStock}
             />
 
-            {/* Add to Cart Section */}
-            {effectiveStock > 0 && (
+            {/* Add to Cart — or Out of Stock panel */}
+            {effectiveStock > 0 ? (
               <AddToCartSection
                 error={error}
                 cartSuccess={cartSuccess}
                 quantity={quantity}
+                quantityMessage={quantityMessage}
                 setQuantity={setQuantity}
                 effectiveStock={effectiveStock}
                 effectivePrice={effectivePrice}
@@ -401,6 +416,8 @@ export default function ProductClient({ product }: ProductClientProps) {
                 handleAddToCart={handleAddToCart}
                 formatPrice={formatPrice}
               />
+            ) : (
+              <OutOfStockPanel />
             )}
           </div>
         </div>

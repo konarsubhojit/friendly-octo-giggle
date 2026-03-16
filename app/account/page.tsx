@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback, type ReactNode } from 'react';
 import { useSession } from 'next-auth/react';
-import Header from '@/components/layout/Header';
 import { DynamicForm, type FieldDef, type SubmitResult } from '@/components/ui/DynamicForm';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { AlertBanner } from '@/components/ui/AlertBanner';
@@ -386,7 +385,6 @@ const AccountPage = () => {
   if (authStatus === 'loading' || loading) {
     return (
       <div className="min-h-screen bg-warm-gradient">
-        <Header />
         <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
           <div className="flex items-center justify-center py-20">
             <LoadingSpinner />
@@ -399,7 +397,6 @@ const AccountPage = () => {
   if (!session?.user) {
     return (
       <div className="min-h-screen bg-warm-gradient">
-        <Header />
         <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
           <AuthRequiredState callbackUrl="/account" message="Please sign in to manage your account." />
         </main>
@@ -409,7 +406,6 @@ const AccountPage = () => {
 
   return (
     <div className="min-h-screen bg-warm-gradient">
-      <Header />
       <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
         <GradientHeading className="mb-8">My Account</GradientHeading>
 

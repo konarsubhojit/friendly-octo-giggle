@@ -36,7 +36,10 @@ describe("ProductSchema", () => {
   };
 
   it("accepts valid product", () => {
-    expect(ProductSchema.parse(validProduct)).toEqual(validProduct);
+    expect(ProductSchema.parse(validProduct)).toEqual({
+      ...validProduct,
+      images: [],
+    });
   });
 
   it("rejects invalid UUID", () => {
@@ -100,7 +103,7 @@ describe("ProductInputSchema", () => {
       stock: 5,
       category: "Books",
     };
-    expect(ProductInputSchema.parse(input)).toEqual(input);
+    expect(ProductInputSchema.parse(input)).toEqual({ ...input, images: [] });
   });
 
   it("rejects extra id field", () => {
@@ -122,11 +125,12 @@ describe("ProductUpdateSchema", () => {
   it("accepts partial update", () => {
     expect(ProductUpdateSchema.parse({ name: "Updated" })).toEqual({
       name: "Updated",
+      images: [],
     });
   });
 
   it("accepts empty object", () => {
-    expect(ProductUpdateSchema.parse({})).toEqual({});
+    expect(ProductUpdateSchema.parse({})).toEqual({ images: [] });
   });
 });
 

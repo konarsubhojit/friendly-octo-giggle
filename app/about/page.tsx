@@ -1,4 +1,3 @@
-import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import {
   VineDivider,
@@ -158,10 +157,48 @@ function TeamSection() {
   );
 }
 
+interface CraftStep {
+  emoji: string;
+  title: string;
+  description: string;
+}
+
+const CRAFT_STEPS: CraftStep[] = [
+  { emoji: "🧶", title: "Our Story", description: "Every piece begins with carefully selected yarns and materials, chosen for quality and color harmony." },
+  { emoji: "🌸", title: "Made with Love", description: "Each stitch is placed by hand with patience and care — no machines, no shortcuts, just love." },
+  { emoji: "🎁", title: "From Our Hands to Yours", description: "Wrapped with care and shipped with a personal touch — because every order deserves to feel special." },
+];
+
+function CraftStepCard({ emoji, title, description }: CraftStep) {
+  return (
+    <div className="text-center p-6 rounded-2xl bg-[var(--accent-cream)]/50 border border-[var(--border-warm)]">
+      <div className="w-14 h-14 bg-[var(--accent-blush)] rounded-full flex items-center justify-center mx-auto mb-4 border border-[var(--border-warm)]">
+        <span className="text-2xl" aria-hidden="true">{emoji}</span>
+      </div>
+      <h3 className="font-bold text-[var(--foreground)] mb-2">{title}</h3>
+      <p className="text-sm text-[var(--text-secondary)] leading-relaxed">{description}</p>
+    </div>
+  );
+}
+
+function CraftingProcessSection() {
+  return (
+    <section className="bg-[var(--surface)]/80 backdrop-blur-sm rounded-3xl shadow-warm border border-[var(--border-warm)] p-8 mb-8 animate-fade-in-up animation-delay-300">
+      <h2 className="text-2xl font-bold text-[var(--foreground)] mb-6 text-center">
+        How We Craft
+      </h2>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+        {CRAFT_STEPS.map((step) => (
+          <CraftStepCard key={step.title} {...step} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export default function AboutPage() {
   return (
     <div className="min-h-screen bg-warm-gradient">
-      <Header />
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16 relative">
         <ScatteredFlowers />
         <MushroomAccent className="absolute top-36 right-6 w-12 h-12 opacity-20 hidden sm:block animate-float-slow" />
@@ -180,53 +217,7 @@ export default function AboutPage() {
           <ValuesSection />
 
           {/* Three-column crafting process section (T042) */}
-          <section className="bg-[var(--surface)]/80 backdrop-blur-sm rounded-3xl shadow-warm border border-[var(--border-warm)] p-8 mb-8 animate-fade-in-up animation-delay-300">
-            <h2 className="text-2xl font-bold text-[var(--foreground)] mb-6 text-center">
-              How We Craft
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-              <div className="text-center p-6 rounded-2xl bg-[var(--accent-cream)]/50 border border-[var(--border-warm)]">
-                <div className="w-14 h-14 bg-[var(--accent-blush)] rounded-full flex items-center justify-center mx-auto mb-4 border border-[var(--border-warm)]">
-                  <span className="text-2xl" aria-hidden="true">
-                    🧶
-                  </span>
-                </div>
-                <h3 className="font-bold text-[var(--foreground)] mb-2">Our Story</h3>
-                <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
-                  Every piece begins with carefully selected yarns and
-                  materials, chosen for quality and color harmony.
-                </p>
-              </div>
-              <div className="text-center p-6 rounded-2xl bg-[var(--accent-cream)]/50 border border-[var(--border-warm)]">
-                <div className="w-14 h-14 bg-[var(--accent-blush)] rounded-full flex items-center justify-center mx-auto mb-4 border border-[var(--border-warm)]">
-                  <span className="text-2xl" aria-hidden="true">
-                    🌸
-                  </span>
-                </div>
-                <h3 className="font-bold text-[var(--foreground)] mb-2">
-                  Made with Love
-                </h3>
-                <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
-                  Each stitch is placed by hand with patience and care — no
-                  machines, no shortcuts, just love.
-                </p>
-              </div>
-              <div className="text-center p-6 rounded-2xl bg-[var(--accent-cream)]/50 border border-[var(--border-warm)]">
-                <div className="w-14 h-14 bg-[var(--accent-blush)] rounded-full flex items-center justify-center mx-auto mb-4 border border-[var(--border-warm)]">
-                  <span className="text-2xl" aria-hidden="true">
-                    🎁
-                  </span>
-                </div>
-                <h3 className="font-bold text-[var(--foreground)] mb-2">
-                  From Our Hands to Yours
-                </h3>
-                <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
-                  Wrapped with care and shipped with a personal touch — because
-                  every order deserves to feel special.
-                </p>
-              </div>
-            </div>
-          </section>
+          <CraftingProcessSection />
 
           <TeamSection />
         </div>

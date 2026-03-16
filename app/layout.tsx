@@ -6,6 +6,7 @@ import StoreProvider from "@/components/providers/StoreProvider";
 import { CurrencyProvider } from "@/contexts/CurrencyContext";
 import { Toaster } from "react-hot-toast";
 import { Analytics } from "@vercel/analytics/next";
+import HeaderWrapper from "@/components/layout/HeaderWrapper";
 
 function AppProviders({ children }: { readonly children: React.ReactNode }) {
   return (
@@ -49,6 +50,7 @@ export default function RootLayout({
     >
       <body className="antialiased">
         <AppProviders>
+          <HeaderWrapper />
           {children}
           <Toaster
             position="top-right"

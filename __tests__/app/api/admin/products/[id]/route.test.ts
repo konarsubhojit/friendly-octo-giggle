@@ -131,6 +131,7 @@ describe("PUT /api/admin/products/[id]", () => {
     expect(json.data.product.name).toBe("Updated Product");
     expect(mockProductsUpdate).toHaveBeenCalledWith("p1", {
       name: "Updated Product",
+      images: [],
     });
     expect(mockRevalidateTag).toHaveBeenCalledWith("products", {});
     expect(mockInvalidateProductCaches).toHaveBeenCalledWith("p1");

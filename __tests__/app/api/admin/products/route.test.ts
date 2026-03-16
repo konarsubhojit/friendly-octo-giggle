@@ -192,7 +192,10 @@ describe("Admin Products API", () => {
       expect(response.status).toBe(201);
       expect(data.success).toBe(true);
       expect(data.data.product).toEqual(mockCreatedProduct);
-      expect(db.products.create).toHaveBeenCalledWith(validProductInput);
+      expect(db.products.create).toHaveBeenCalledWith({
+        ...validProductInput,
+        images: [],
+      });
       expect(revalidateTag).toHaveBeenCalledWith("products", {});
       expect(invalidateProductCaches).toHaveBeenCalled();
     });

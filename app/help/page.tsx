@@ -1,4 +1,3 @@
-import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import Link from 'next/link';
 
@@ -55,34 +54,39 @@ function FAQSection({ items }: { readonly items: readonly FAQItem[] }) {
   );
 }
 
+function HelpContactSection() {
+  return (
+    <section className="bg-[var(--surface)]/80 backdrop-blur-sm rounded-2xl shadow-warm border border-[var(--border-warm)] p-8">
+      <h2 className="text-xl font-semibold text-[var(--foreground)] mb-4">Still need help?</h2>
+      <p className="text-[var(--text-secondary)] mb-6">Our support team is available Monday–Friday, 9am–6pm EST.</p>
+      <div className="flex flex-wrap gap-4">
+        <Link
+          href="/contact"
+          className="bg-gradient-to-r from-[var(--accent-warm)] to-[var(--accent-rose)] text-white px-6 py-3 rounded-xl font-semibold hover:from-[var(--accent-rose)] hover:to-[var(--accent-warm)] transition-all duration-300 shadow-md hover:shadow-lg"
+        >
+          Contact Support
+        </Link>
+        <a
+          href="mailto:support@estore.example.com"
+          className="border border-[var(--border-warm)] text-[var(--text-secondary)] px-6 py-3 rounded-xl font-semibold hover:bg-[var(--accent-blush)] transition-all duration-300"
+        >
+          Email Us
+        </a>
+      </div>
+    </section>
+  );
+}
+
 export default function HelpPage() {
   return (
     <div className="min-h-screen bg-warm-gradient">
-      <Header />
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
         <h1 className="text-4xl font-bold text-[var(--foreground)] mb-4">Help Center</h1>
         <p className="text-[var(--text-muted)] text-lg mb-12">Find answers to common questions or reach out to our support team.</p>
 
         <FAQSection items={faqs} />
 
-        <section className="bg-[var(--surface)]/80 backdrop-blur-sm rounded-2xl shadow-warm border border-[var(--border-warm)] p-8">
-          <h2 className="text-xl font-semibold text-[var(--foreground)] mb-4">Still need help?</h2>
-          <p className="text-[var(--text-secondary)] mb-6">Our support team is available Monday–Friday, 9am–6pm EST.</p>
-          <div className="flex flex-wrap gap-4">
-            <Link
-              href="/contact"
-              className="bg-gradient-to-r from-[var(--accent-warm)] to-[var(--accent-rose)] text-white px-6 py-3 rounded-xl font-semibold hover:from-[var(--accent-rose)] hover:to-[var(--accent-warm)] transition-all duration-300 shadow-md hover:shadow-lg"
-            >
-              Contact Support
-            </Link>
-            <a
-              href="mailto:support@estore.example.com"
-              className="border border-[var(--border-warm)] text-[var(--text-secondary)] px-6 py-3 rounded-xl font-semibold hover:bg-[var(--accent-blush)] transition-all duration-300"
-            >
-              Email Us
-            </a>
-          </div>
-        </section>
+        <HelpContactSection />
       </main>
       <Footer />
     </div>

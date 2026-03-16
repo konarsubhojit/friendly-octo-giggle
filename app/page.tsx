@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Product } from "@/lib/types";
-import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import Hero from "@/components/sections/Hero";
 import ProductGrid from "@/components/sections/ProductGrid";
@@ -27,7 +26,6 @@ export default async function Home() {
 
   return (
     <div className="min-h-screen bg-warm-gradient">
-      <Header />
 
       <Hero />
 

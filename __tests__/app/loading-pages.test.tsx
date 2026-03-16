@@ -20,10 +20,9 @@ describe("app/loading.tsx – Root Loading", () => {
     expect(container).toBeTruthy();
   });
 
-  it("renders HeaderSkeleton, HeroSkeleton, and 6 ProductCardSkeletons", async () => {
+  it("renders HeroSkeleton and 6 ProductCardSkeletons", async () => {
     const { default: Loading } = await import("@/app/loading");
     render(<Loading />);
-    expect(screen.getByTestId("header-skeleton")).toBeInTheDocument();
     expect(screen.getByTestId("hero-skeleton")).toBeInTheDocument();
     expect(screen.getAllByTestId("product-card-skeleton")).toHaveLength(6);
   });
@@ -51,10 +50,9 @@ describe("app/products/loading.tsx – Products Loading", () => {
     expect(container).toBeTruthy();
   });
 
-  it("renders HeaderSkeleton and 9 ProductCardSkeletons", async () => {
+  it("renders 9 ProductCardSkeletons", async () => {
     const { default: ProductsLoading } = await import("@/app/products/loading");
     render(<ProductsLoading />);
-    expect(screen.getByTestId("header-skeleton")).toBeInTheDocument();
     expect(screen.getAllByTestId("product-card-skeleton")).toHaveLength(9);
   });
 
@@ -82,14 +80,7 @@ describe("app/products/[id]/loading.tsx – Product Detail Loading", () => {
     expect(container).toBeTruthy();
   });
 
-  it("renders HeaderSkeleton", async () => {
-    const { default: ProductDetailLoading } =
-      await import("@/app/products/[id]/loading");
-    render(<ProductDetailLoading />);
-    expect(screen.getByTestId("header-skeleton")).toBeInTheDocument();
-  });
-
-  it("renders a product image area skeleton", async () => {
+  it("renders an image area skeleton", async () => {
     const { default: ProductDetailLoading } =
       await import("@/app/products/[id]/loading");
     const { container } = render(<ProductDetailLoading />);
