@@ -77,8 +77,8 @@ export default function AdminDashboard() {
   if (loading) {
     return (
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">Dashboard</h2>
-        <p className="text-gray-600">Loading sales data...</p>
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Dashboard</h2>
+        <p className="text-gray-600 dark:text-gray-400">Loading sales data...</p>
       </main>
     );
   }
@@ -86,7 +86,7 @@ export default function AdminDashboard() {
   if (error || !sales) {
     return (
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">Dashboard</h2>
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Dashboard</h2>
         <p className="text-red-600">{error ?? 'Failed to load sales data'}</p>
       </main>
     );
@@ -102,36 +102,36 @@ export default function AdminDashboard() {
 
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">Dashboard</h2>
+      <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Dashboard</h2>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         {summaryCards.map((card) => (
-          <div key={card.label} className="bg-white p-6 rounded-lg shadow-md">
-            <p className="text-sm text-gray-500">{card.label}</p>
-            <p className="text-2xl font-bold text-gray-900 mt-1">{card.value}</p>
+          <div key={card.label} className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
+            <p className="text-sm text-gray-500 dark:text-gray-400">{card.label}</p>
+            <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{card.value}</p>
           </div>
         ))}
         <OrdersByStatusCard ordersByStatus={sales.ordersByStatus} />
       </div>
 
       {/* Top 5 Selling Products */}
-      <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Top 5 Selling Products</h3>
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-8">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Top 5 Selling Products</h3>
         <TopProductsTable products={sales.topProducts} formatPrice={formatPrice} />
       </div>
 
       {/* Navigation Links */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {NAV_CARDS.map((card) => (
-          <Link key={card.href} href={card.href} className="bg-white p-6 rounded-lg shadow-md hover:shadow-xl transition">
+          <Link key={card.href} href={card.href} className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md hover:shadow-xl transition">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-semibold text-gray-900">{card.title}</h3>
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-white">{card.title}</h3>
               <svg className={`w-8 h-8 ${card.color}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={card.icon} />
               </svg>
             </div>
-            <p className="text-gray-600">{card.description}</p>
+            <p className="text-gray-600 dark:text-gray-400">{card.description}</p>
           </Link>
         ))}
       </div>

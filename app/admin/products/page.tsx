@@ -185,7 +185,7 @@ export default function ProductsManagement() {
       {showModal && (
         <Suspense fallback={
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg p-8">
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-8">
               <LoadingSpinner />
             </div>
           </div>
@@ -202,7 +202,7 @@ export default function ProductsManagement() {
       {showDeleteModal && (
         <Suspense fallback={
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg p-8">
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-8">
               <LoadingSpinner />
             </div>
           </div>

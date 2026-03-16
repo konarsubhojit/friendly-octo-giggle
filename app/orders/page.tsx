@@ -73,7 +73,7 @@ export default function OrdersPage() {
           <Card className="p-12 text-center">
             <EmptyState
               icon={
-                <svg className="w-20 h-20 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <svg className="w-20 h-20 text-[var(--text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                 </svg>
               }
@@ -96,12 +96,12 @@ export default function OrdersPage() {
                 <Link
                   key={order.id}
                   href={`/orders/${order.id}`}
-                  className="block bg-white/80 backdrop-blur-lg rounded-xl shadow-md border border-white/50 p-6 hover:shadow-xl hover:scale-[1.01] transition-all duration-300"
+                  className="block bg-[var(--surface)] backdrop-blur-lg rounded-xl shadow-warm border border-[var(--border-warm)] p-6 hover:shadow-warm-lg hover:scale-[1.01] transition-all duration-300"
                 >
                   <div className="flex items-center gap-6">
                     {/* First item thumbnail */}
                     {firstImage && (
-                      <div className="relative w-16 h-16 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100">
+                      <div className="relative w-16 h-16 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700">
                         <Image src={firstImage} alt={firstItem?.product?.name || 'Order item'} fill sizes="48px" className="object-cover" />
                       </div>
                     )}
@@ -111,7 +111,7 @@ export default function OrdersPage() {
                         <Badge variant={orderStatusVariant(order.status)} size="sm">
                           {statusInfo.label}
                         </Badge>
-                        <span className="text-xs text-[#b89a85]">
+                        <span className="text-xs text-[var(--text-muted)]">
                           {new Date(order.createdAt).toLocaleDateString('en-US', {
                             year: 'numeric',
                             month: 'short',
@@ -119,21 +119,21 @@ export default function OrdersPage() {
                           })}
                         </span>
                       </div>
-                      <p className="text-sm text-[#7a6355] truncate">
+                      <p className="text-sm text-[var(--text-secondary)] truncate">
                         {firstItem?.product?.name}
                         {order.items.length > 1 && ` and ${order.items.length - 1} more`}
                       </p>
-                      <p className="text-xs text-[#b89a85] mt-1">
+                      <p className="text-xs text-[var(--text-muted)] mt-1">
                         {itemCount} {itemCount === 1 ? 'item' : 'items'}
                       </p>
                     </div>
 
                     <div className="flex-shrink-0 text-right">
-                      <p className="text-lg font-bold text-[#4a3728]">{formatPrice(order.totalAmount)}</p>
-                      <p className="text-xs text-gray-400">Order #{order.id}</p>
+                      <p className="text-lg font-bold text-[var(--foreground)]">{formatPrice(order.totalAmount)}</p>
+                      <p className="text-xs text-[var(--text-muted)]">Order #{order.id}</p>
                     </div>
 
-                    <svg className="w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5 text-[var(--text-muted)] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
                   </div>
