@@ -1,19 +1,17 @@
 import { test, expect } from '@playwright/test';
-import * as path from 'path';
-import * as fs from 'fs';
+import { join, dirname } from 'path';
+import { readFileSync, existsSync, mkdirSync } from 'fs';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const SCREENSHOT_DIR = path.join(__dirname, 'screenshots');
+const __dirname = dirname(__filename);
+const SCREENSHOT_DIR = join(__dirname, 'screenshots');
 
-function screenshotPath(name: string) {
-  return path.join(SCREENSHOT_DIR, `${name}.png`);
-}
+const screenshotPath = (name: string) => join(SCREENSHOT_DIR, `${name}.png`);
 
 test.beforeAll(() => {
-  if (!fs.existsSync(SCREENSHOT_DIR)) {
-    fs.mkdirSync(SCREENSHOT_DIR, { recursive: true });
+  if (!existsSync(SCREENSHOT_DIR)) {
+    mkdirSync(SCREENSHOT_DIR, { recursive: true });
   }
 });
 
@@ -21,119 +19,126 @@ test.beforeAll(() => {
 
 test.describe('Fixed background image — warm-bg.jpeg', () => {
 
-  test('globals.css sets background-image on body', () => {
-    const css = fs.readFileSync(
-      path.join(__dirname, '../app/globals.css'),
+  // ── Source CSS assertions ────────────────────────────────────────────────
+
+  test('bg-warm-gradient utility includes fixed warm-bg image and color-mix overlay', () => {
+    const css = readFileSync(
+      join(__dirname, '../app/globals.css'),
       'utf-8',
     );
-    expect(css).toContain("background-image: url('/warm-bg.jpeg')");
-    expect(css).toContain('background-attachment: fixed');
-    expect(css).toContain('background-size: cover');
-    expect(css).toContain('background-position: center');
+    // Fixed background image is scoped to bg-warm-gradient, not body
+    expect(css).toContain("url('/warm-bg.jpeg')");
+    expect(css).toContain('fixed');
+    expect(css).toContain('color-mix(in srgb, var(--background) 60%, transparent)');
+    expect(css).toContain('color-mix(in srgb, var(--accent-blush) 60%, transparent)');
+    expect(css).toContain('color-mix(in srgb, var(--accent-cream) 60%, transparent)');
   });
 
-  test('bg-warm-gradient utility uses color-mix for transparency', () => {
-    const css = fs.readFileSync(
-      path.join(__dirname, '../app/globals.css'),
+  test('body does NOT set background-image (scoped to bg-warm-gradient only)', () => {
+    const css = readFileSync(
+      join(__dirname, '../app/globals.css'),
       'utf-8',
     );
-    expect(css).toContain('color-mix(in srgb, var(--background)');
-    expect(css).toContain('color-mix(in srgb, var(--accent-blush)');
-    expect(css).toContain('color-mix(in srgb, var(--accent-cream)');
-    expect(css).toContain('transparent');
+    // Extract the body rule — it should NOT contain background-image
+    const bodyRule = css.match(/body\s*\{[^}]*\}/)?.[0] ?? '';
+    expect(bodyRule).not.toContain('background-image');
+    expect(bodyRule).not.toContain('warm-bg.jpeg');
   });
 
-  test('body has fixed background-image computed style on home page', async ({ page }) => {
-    await page.goto('/');
-    const bgImage = await page.evaluate(() =>
-      window.getComputedStyle(document.body).backgroundImage,
-    );
+  // ── Computed style assertions on .bg-warm-gradient wrapper ──────────────
+
+  test('bg-warm-gradient wrapper has fixed background-image on blog page', async ({ page }) => {
+    await page.goto('/blog');
+    const bgImage = await page.evaluate(() => {
+      const el = document.querySelector('.bg-warm-gradient');
+      return el ? window.getComputedStyle(el).backgroundImage : '';
+    });
     expect(bgImage).toContain('warm-bg.jpeg');
   });
 
-  test('body has fixed background-attachment computed style on home page', async ({ page }) => {
-    await page.goto('/');
-    const bgAttachment = await page.evaluate(() =>
-      window.getComputedStyle(document.body).backgroundAttachment,
-    );
-    expect(bgAttachment).toBe('fixed');
+  test('bg-warm-gradient wrapper has fixed background-attachment on blog page', async ({ page }) => {
+    await page.goto('/blog');
+    const bgAttachment = await page.evaluate(() => {
+      const el = document.querySelector('.bg-warm-gradient');
+      return el ? window.getComputedStyle(el).backgroundAttachment : '';
+    });
+    // Multi-background: gradient is scroll, image is fixed
+    expect(bgAttachment).toContain('fixed');
   });
 
-  test('body has background-size: cover on home page', async ({ page }) => {
-    await page.goto('/');
-    const bgSize = await page.evaluate(() =>
-      window.getComputedStyle(document.body).backgroundSize,
-    );
-    expect(bgSize).toBe('cover');
+  test('bg-warm-gradient wrapper has background-size: cover on blog page', async ({ page }) => {
+    await page.goto('/blog');
+    const bgSize = await page.evaluate(() => {
+      const el = document.querySelector('.bg-warm-gradient');
+      return el ? window.getComputedStyle(el).backgroundSize : '';
+    });
+    expect(bgSize).toContain('cover');
   });
 
-  test('body background-image is consistent across multiple pages', async ({ page }) => {
+  test('fixed background is consistent across multiple pages', async ({ page }) => {
     const pages = ['/', '/about', '/contact', '/shipping', '/blog'];
     for (const url of pages) {
       await page.goto(url);
-      const bgImage = await page.evaluate(() =>
-        window.getComputedStyle(document.body).backgroundImage,
-      );
-      expect(bgImage, `Expected fixed bg on ${url}`).toContain('warm-bg.jpeg');
-      const bgAttachment = await page.evaluate(() =>
-        window.getComputedStyle(document.body).backgroundAttachment,
-      );
-      expect(bgAttachment, `Expected fixed attachment on ${url}`).toBe('fixed');
+      const bgImage = await page.evaluate(() => {
+        const el = document.querySelector('.bg-warm-gradient');
+        return el ? window.getComputedStyle(el).backgroundImage : '';
+      });
+      expect(bgImage, `Expected warm-bg on ${url}`).toContain('warm-bg.jpeg');
+      const bgAttachment = await page.evaluate(() => {
+        const el = document.querySelector('.bg-warm-gradient');
+        return el ? window.getComputedStyle(el).backgroundAttachment : '';
+      });
+      expect(bgAttachment, `Expected fixed attachment on ${url}`).toContain('fixed');
     }
   });
 
-  test('page content scrolls while background stays fixed — home page', async ({ page }, testInfo) => {
-    test.skip(testInfo.project.name !== 'desktop-chrome', 'Only runs on desktop viewport');
-    await page.goto('/');
-    await page.waitForLoadState('load');
+  // ── Scroll behavior ─────────────────────────────────────────────────────
 
-    // Take screenshot at top of page
-    await page.screenshot({ path: screenshotPath('fixed-bg-home-top'), fullPage: false });
-
-    // Scroll down significantly
-    await page.evaluate(() => window.scrollBy(0, 800));
-    await page.waitForTimeout(300);
-
-    // Take screenshot after scrolling
-    await page.screenshot({ path: screenshotPath('fixed-bg-home-scrolled'), fullPage: false });
-
-    // Verify background-attachment is still fixed after scrolling
-    const bgAttachment = await page.evaluate(() =>
-      window.getComputedStyle(document.body).backgroundAttachment,
-    );
-    expect(bgAttachment).toBe('fixed');
-  });
-
-  test('page content scrolls while background stays fixed — about page', async ({ page }, testInfo) => {
+  test('background stays fixed after scrolling — about page (desktop)', async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== 'desktop-chrome', 'Only runs on desktop viewport');
     await page.goto('/about');
     await page.waitForLoadState('load');
 
     await page.screenshot({ path: screenshotPath('fixed-bg-about-top'), fullPage: false });
 
-    await page.evaluate(() => window.scrollBy(0, 600));
+    await page.evaluate(() => window.scrollBy(0, 800));
     await page.waitForTimeout(300);
 
     await page.screenshot({ path: screenshotPath('fixed-bg-about-scrolled'), fullPage: false });
 
-    const bgAttachment = await page.evaluate(() =>
-      window.getComputedStyle(document.body).backgroundAttachment,
-    );
-    expect(bgAttachment).toBe('fixed');
+    const bgAttachment = await page.evaluate(() => {
+      const el = document.querySelector('.bg-warm-gradient');
+      return el ? window.getComputedStyle(el).backgroundAttachment : '';
+    });
+    expect(bgAttachment).toContain('fixed');
   });
 
-  test('full page screenshot — home with fixed background (desktop)', async ({ page }, testInfo) => {
-    test.skip(testInfo.project.name !== 'desktop-chrome', 'Only runs on desktop viewport');
-    await page.goto('/');
-    await expect(page.locator('header')).toBeVisible();
-    await page.screenshot({ path: screenshotPath('fixed-bg-desktop-home-full'), fullPage: true });
-  });
-
-  test('full page screenshot — home with fixed background (mobile)', async ({ page }, testInfo) => {
+  test('background stays fixed after scrolling — blog page (mobile)', async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== 'mobile-chrome', 'Only runs on mobile viewport');
-    await page.goto('/');
+    await page.goto('/blog');
+    await page.waitForLoadState('load');
+
+    await page.screenshot({ path: screenshotPath('fixed-bg-mobile-blog-top'), fullPage: false });
+
+    await page.evaluate(() => window.scrollBy(0, 500));
+    await page.waitForTimeout(300);
+
+    await page.screenshot({ path: screenshotPath('fixed-bg-mobile-blog-scrolled'), fullPage: false });
+
+    const bgAttachment = await page.evaluate(() => {
+      const el = document.querySelector('.bg-warm-gradient');
+      return el ? window.getComputedStyle(el).backgroundAttachment : '';
+    });
+    expect(bgAttachment).toContain('fixed');
+  });
+
+  // ── Full page screenshots ───────────────────────────────────────────────
+
+  test('full page screenshot — blog with fixed background (desktop)', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'desktop-chrome', 'Only runs on desktop viewport');
+    await page.goto('/blog');
     await expect(page.locator('header')).toBeVisible();
-    await page.screenshot({ path: screenshotPath('fixed-bg-mobile-home-full'), fullPage: true });
+    await page.screenshot({ path: screenshotPath('fixed-bg-desktop-blog-full'), fullPage: true });
   });
 
   test('full page screenshot — about with fixed background (desktop)', async ({ page }, testInfo) => {
@@ -143,11 +148,11 @@ test.describe('Fixed background image — warm-bg.jpeg', () => {
     await page.screenshot({ path: screenshotPath('fixed-bg-desktop-about-full'), fullPage: true });
   });
 
-  test('full page screenshot — contact with fixed background (desktop)', async ({ page }, testInfo) => {
-    test.skip(testInfo.project.name !== 'desktop-chrome', 'Only runs on desktop viewport');
+  test('full page screenshot — contact with fixed background (mobile)', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'mobile-chrome', 'Only runs on mobile viewport');
     await page.goto('/contact');
     await expect(page.locator('h1')).toBeVisible();
-    await page.screenshot({ path: screenshotPath('fixed-bg-desktop-contact-full'), fullPage: true });
+    await page.screenshot({ path: screenshotPath('fixed-bg-mobile-contact-full'), fullPage: true });
   });
 
   test('full page screenshot — shipping with fixed background (mobile)', async ({ page }, testInfo) => {
@@ -157,62 +162,51 @@ test.describe('Fixed background image — warm-bg.jpeg', () => {
     await page.screenshot({ path: screenshotPath('fixed-bg-mobile-shipping-full'), fullPage: true });
   });
 
+  // ── Asset check ─────────────────────────────────────────────────────────
+
   test('warm-bg.jpeg file exists in public directory', () => {
-    const bgPath = path.join(__dirname, '../public/warm-bg.jpeg');
-    expect(fs.existsSync(bgPath)).toBe(true);
+    const bgPath = join(__dirname, '../public/warm-bg.jpeg');
+    expect(existsSync(bgPath)).toBe(true);
   });
 
-  test('bg-warm-gradient overlay is semi-transparent (not fully opaque)', async ({ page }, testInfo) => {
+  // ── Overlay transparency — inspects .bg-warm-gradient container ─────────
+
+  test('bg-warm-gradient overlay is semi-transparent (background has gradient + image)', async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== 'desktop-chrome', 'Only runs on desktop viewport');
-    await page.goto('/');
-    // The page wrapper div with bg-warm-gradient should not have a fully opaque background
-    // We check that the body background image is visually reachable
-    const bodyBg = await page.evaluate(() => {
-      const style = window.getComputedStyle(document.body);
+    await page.goto('/blog');
+    const bg = await page.evaluate(() => {
+      const el = document.querySelector('.bg-warm-gradient');
+      if (!el) return { image: '', attachment: '', size: '' };
+      const style = window.getComputedStyle(el);
       return {
         image: style.backgroundImage,
         attachment: style.backgroundAttachment,
         size: style.backgroundSize,
       };
     });
-    expect(bodyBg.image).toContain('warm-bg.jpeg');
-    expect(bodyBg.attachment).toBe('fixed');
-    expect(bodyBg.size).toBe('cover');
+    // Multi-background: gradient layer + image layer
+    expect(bg.image).toContain('linear-gradient');
+    expect(bg.image).toContain('warm-bg.jpeg');
+    expect(bg.attachment).toContain('fixed');
+    expect(bg.size).toContain('cover');
   });
 
+  // ── Admin isolation ─────────────────────────────────────────────────────
+
   test('admin pages do NOT use bg-warm-gradient (separate styling)', () => {
-    const adminLayout = fs.readFileSync(
-      path.join(__dirname, '../app/admin/layout.tsx'),
+    const adminLayout = readFileSync(
+      join(__dirname, '../app/admin/layout.tsx'),
       'utf-8',
     );
-    // Admin pages use bg-gray-50, not bg-warm-gradient
     expect(adminLayout).toContain('bg-gray-50');
     expect(adminLayout).not.toContain('bg-warm-gradient');
   });
 
   test('blog page uses bg-warm-gradient overlay class', () => {
-    const blogPage = fs.readFileSync(
-      path.join(__dirname, '../app/blog/page.tsx'),
+    const blogPage = readFileSync(
+      join(__dirname, '../app/blog/page.tsx'),
       'utf-8',
     );
     expect(blogPage).toContain('bg-warm-gradient');
-  });
-
-  test('home page screenshot after scroll — content moves, bg fixed (mobile)', async ({ page }, testInfo) => {
-    test.skip(testInfo.project.name !== 'mobile-chrome', 'Only runs on mobile viewport');
-    await page.goto('/');
-    await page.waitForLoadState('load');
-
-    await page.screenshot({ path: screenshotPath('fixed-bg-mobile-home-top'), fullPage: false });
-
-    await page.evaluate(() => window.scrollBy(0, 500));
-    await page.waitForTimeout(300);
-
-    await page.screenshot({ path: screenshotPath('fixed-bg-mobile-home-scrolled'), fullPage: false });
-
-    const bgAttachment = await page.evaluate(() =>
-      window.getComputedStyle(document.body).backgroundAttachment,
-    );
-    expect(bgAttachment).toBe('fixed');
   });
 });

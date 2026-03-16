@@ -46,12 +46,7 @@
 
 body {
   color: var(--foreground);
-  background-color: var(--background);
-  background-image: url('/warm-bg.jpeg');
-  background-attachment: fixed;
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
+  background: var(--background);
 }
 
 @utility text-balance {
@@ -163,11 +158,13 @@ body {
 /* ─── Warm Theme Utilities ────────────────────────────────────────────── */
 
 @utility bg-warm-gradient {
-  background: linear-gradient(135deg,
-    color-mix(in srgb, var(--background) 85%, transparent) 0%,
-    color-mix(in srgb, var(--accent-blush) 85%, transparent) 50%,
-    color-mix(in srgb, var(--accent-cream) 85%, transparent) 100%
-  );
+  background:
+    linear-gradient(135deg,
+      color-mix(in srgb, var(--background) 60%, transparent) 0%,
+      color-mix(in srgb, var(--accent-blush) 60%, transparent) 50%,
+      color-mix(in srgb, var(--accent-cream) 60%, transparent) 100%
+    ),
+    url('/warm-bg.jpeg') center / cover no-repeat fixed;
 }
 
 @utility text-warm-heading {

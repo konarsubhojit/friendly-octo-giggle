@@ -25,12 +25,12 @@ export default defineConfig({
     {
       name: 'desktop-chrome',
       use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 800 } },
-      testMatch: '**/ui-changes.spec.ts',
+      testMatch: ['**/ui-changes.spec.ts', '**/fixed-background.spec.ts'],
     },
     {
       name: 'mobile-chrome',
       use: { ...devices['Pixel 5'], viewport: { width: 393, height: 851 } },
-      testMatch: '**/ui-changes.spec.ts',
+      testMatch: ['**/ui-changes.spec.ts', '**/fixed-background.spec.ts'],
     },
     // Password validation — desktop
     {
