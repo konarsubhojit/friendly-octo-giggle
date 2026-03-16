@@ -102,8 +102,8 @@ export default function ProductsManagement() {
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-6 flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Product Management</h2>
-          <p className="text-gray-600 mt-2">Manage your product inventory</p>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Product Management</h2>
+          <p className="text-gray-600 dark:text-gray-400 mt-2">Manage your product inventory</p>
         </div>
         <div className="flex gap-3">
           <button
@@ -131,8 +131,8 @@ export default function ProductsManagement() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {products.map((product) => (
-            <div key={product.id} className="bg-white rounded-lg shadow-md overflow-hidden flex flex-col">
-              <div className="aspect-square relative bg-gray-100">
+            <div key={product.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden flex flex-col">
+              <div className="aspect-square relative bg-gray-100 dark:bg-gray-700">
                 <Image
                   src={product.image}
                   alt={product.name}
@@ -142,20 +142,20 @@ export default function ProductsManagement() {
                 />
               </div>
               <div className="p-4 flex flex-col flex-1">
-                <h3 className="font-bold text-lg mb-1">{product.name}</h3>
-                <p className="text-sm text-gray-600 mb-2 line-clamp-2">
+                <h3 className="font-bold text-lg mb-1 text-gray-900 dark:text-white">{product.name}</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 line-clamp-2">
                   {product.description}
                 </p>
                 <div className="flex justify-between items-center mb-3">
-                  <span className="text-lg font-bold text-gray-900">
+                  <span className="text-lg font-bold text-gray-900 dark:text-white">
                     {formatPrice(product.price)}
                   </span>
-                  <span className="text-sm text-gray-600">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">
                     Stock: {product.stock}
                   </span>
                 </div>
                 <div className="mb-3">
-                  <span className="inline-block px-2 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded">
+                  <span className="inline-block px-2 py-1 bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 text-xs font-semibold rounded">
                     {product.category}
                   </span>
                 </div>
@@ -185,7 +185,7 @@ export default function ProductsManagement() {
       {showModal && (
         <Suspense fallback={
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg p-8">
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-8">
               <LoadingSpinner />
             </div>
           </div>
@@ -202,7 +202,7 @@ export default function ProductsManagement() {
       {showDeleteModal && (
         <Suspense fallback={
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg p-8">
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-8">
               <LoadingSpinner />
             </div>
           </div>

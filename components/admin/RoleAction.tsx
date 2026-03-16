@@ -54,7 +54,7 @@ export function RoleAction({ user, isUpdating, onRoleChange }: RoleActionProps) 
       <select
         value={user.role}
         onChange={handleSelectChange}
-        className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-md text-sm text-gray-900 dark:text-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
         aria-label={`Change role for ${user.name || user.email}`}
       >
         <option value="CUSTOMER">Customer</option>

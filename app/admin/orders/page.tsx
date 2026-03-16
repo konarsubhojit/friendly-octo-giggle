@@ -111,8 +111,8 @@ export default function OrdersManagement() {
       {/* Header */}
       <div className="mb-6 flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Order Management</h2>
-          <p className="text-gray-600 mt-2">View and manage all customer orders</p>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Order Management</h2>
+          <p className="text-gray-600 dark:text-gray-400 mt-2">View and manage all customer orders</p>
         </div>
         <button
           onClick={() => dispatch(fetchAdminOrders())}
@@ -137,7 +137,7 @@ export default function OrdersManagement() {
             className={`px-4 py-2 rounded-md font-medium whitespace-nowrap transition ${
               filter === status
                 ? 'bg-blue-600 text-white'
-                : 'bg-white text-gray-700 hover:bg-gray-100'
+                : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600'
             }`}
           >
             {status}

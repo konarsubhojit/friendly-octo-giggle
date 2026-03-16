@@ -13,6 +13,43 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { AuthRequiredState } from '@/components/ui/AuthRequiredState';
 import { Card } from '@/components/ui/Card';
 
+interface CancelOrderDialogProps {
+  readonly dialogRef: React.RefObject<HTMLDialogElement | null>;
+  readonly cancelling: boolean;
+  readonly onClose: () => void;
+  readonly onConfirm: () => void;
+}
+
+function CancelOrderDialog({ dialogRef, cancelling, onClose, onConfirm }: CancelOrderDialogProps) {
+  return (
+    <dialog
+      ref={dialogRef}
+      aria-labelledby="cancel-dialog-title"
+      onClose={onClose}
+      className="backdrop:bg-black/40 backdrop:backdrop-blur-sm bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 max-w-sm w-full mx-4"
+    >
+      <h3 id="cancel-dialog-title" className="text-lg font-bold text-[var(--foreground)] mb-2">Cancel Order?</h3>
+      <p className="text-sm text-[var(--text-secondary)] mb-6">This action cannot be undone. Your order will be cancelled immediately.</p>
+      <div className="flex gap-3 justify-end">
+        <button
+          onClick={onClose}
+          disabled={cancelling}
+          className="px-4 py-2 text-sm font-medium text-[var(--text-secondary)] bg-gray-100 dark:bg-gray-700 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50"
+        >
+          Keep Order
+        </button>
+        <button
+          onClick={onConfirm}
+          disabled={cancelling}
+          className="px-4 py-2 text-sm font-semibold text-white bg-red-600 rounded-xl hover:bg-red-700 transition-colors disabled:opacity-50"
+        >
+          {cancelling ? 'Cancelling...' : 'Yes, Cancel'}
+        </button>
+      </div>
+    </dialog>
+  );
+}
+
 interface OrderDetailPageProps {
   readonly params: Promise<{ id: string }>;
 }
@@ -42,13 +79,13 @@ function getStepIndex(status: string): number {
 const STEP_CLASSES = {
   completed: {
     status: 'bg-gradient-to-r from-[#e8a87c] to-[#d4856b] text-white shadow-lg',
-    text: 'text-[#d4856b]',
+    text: 'text-[var(--accent-rose)]',
     connector: 'bg-gradient-to-r from-[#e8a87c] to-[#d4856b]',
   },
   default: {
-    status: 'bg-gray-200 text-gray-500',
-    text: 'text-gray-400',
-    connector: 'bg-gray-200',
+    status: 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400',
+    text: 'text-gray-400 dark:text-gray-500',
+    connector: 'bg-gray-200 dark:bg-gray-700',
   },
 } as const;
 
@@ -125,12 +162,12 @@ function OrderItemRow({ item, formatPrice }: OrderItemRowProps) {
   const image = item.variation?.image || item.product?.image;
   const sections: Record<string, ReactElement | null> = {
     image: image ? (
-      <div className="relative w-16 h-16 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100">
+      <div className="relative w-16 h-16 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700">
         <Image src={image} alt={item.product?.name || 'Order item'} fill sizes="80px" className="object-cover" />
       </div>
     ) : null,
     variation: item.variation ? (
-      <p className="text-xs text-gray-500">
+      <p className="text-xs text-gray-500 dark:text-gray-400">
         {item.variation.name}
       </p>
     ) : null,
@@ -150,14 +187,14 @@ function OrderItemRow({ item, formatPrice }: OrderItemRowProps) {
         <div className="flex-grow min-w-0">
           <Link
             href={`/products/${item.productId}`}
-            className="text-sm font-semibold text-[#4a3728] hover:text-[#d4856b] transition-colors"
+            className="text-sm font-semibold text-[var(--foreground)] hover:text-[var(--accent-rose)] transition-colors"
           >
             {item.product?.name}
           </Link>
           {sections.variation}
-          <p className="text-xs text-[#b89a85]">Qty: {item.quantity}</p>
+          <p className="text-xs text-[var(--text-muted)]">Qty: {item.quantity}</p>
         </div>
-        <p className="text-sm font-bold text-[#4a3728]">{formatPrice(item.price * item.quantity)}</p>
+        <p className="text-sm font-bold text-[var(--foreground)]">{formatPrice(item.price * item.quantity)}</p>
       </div>
       {sections.customization}
     </div>
@@ -178,8 +215,8 @@ function OrderSummaryHeader({ orderId, createdAt, totalAmount, status, cancellin
   return (
     <div className="flex justify-between items-start flex-wrap gap-4">
       <div>
-        <h1 className="text-2xl font-bold text-[#4a3728]">Order #{orderId}</h1>
-        <p className="text-sm text-[#b89a85] mt-1">
+        <h1 className="text-2xl font-bold text-[var(--foreground)]">Order #{orderId}</h1>
+        <p className="text-sm text-[var(--text-muted)] mt-1">
           Placed on{' '}
           {new Date(createdAt).toLocaleDateString('en-US', {
             year: 'numeric', month: 'long', day: 'numeric',
@@ -277,8 +314,8 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
       <div className="min-h-screen bg-warm-gradient">
         <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
           <Card className="p-12 text-center">
-            <h2 className="text-2xl font-bold text-[#4a3728] mb-2">{error || 'Order not found'}</h2>
-            <Link href="/orders" className="mt-4 inline-block text-[#d4856b] hover:underline font-medium">
+            <h2 className="text-2xl font-bold text-[var(--foreground)] mb-2">{error || 'Order not found'}</h2>
+            <Link href="/orders" className="mt-4 inline-block text-[var(--accent-rose)] hover:underline font-medium">
               Back to My Orders
             </Link>
           </Card>
@@ -294,7 +331,7 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
     <div className="min-h-screen bg-warm-gradient">
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
         {/* Back link */}
-        <Link href="/orders" className="inline-flex items-center gap-2 text-[#7a6355] hover:text-[#d4856b] transition-colors mb-6">
+        <Link href="/orders" className="inline-flex items-center gap-2 text-[var(--text-secondary)] hover:text-[var(--accent-rose)] transition-colors mb-6">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
           </svg>
@@ -314,31 +351,12 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
           />
 
           {/* Cancel Confirmation Modal */}
-          <dialog
-            ref={cancelDialogRef}
-            aria-labelledby="cancel-dialog-title"
+          <CancelOrderDialog
+            dialogRef={cancelDialogRef}
+            cancelling={cancelling}
             onClose={closeCancelDialog}
-            className="backdrop:bg-black/40 backdrop:backdrop-blur-sm bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full mx-4"
-          >
-            <h3 id="cancel-dialog-title" className="text-lg font-bold text-[#4a3728] mb-2">Cancel Order?</h3>
-            <p className="text-sm text-[#7a6355] mb-6">This action cannot be undone. Your order will be cancelled immediately.</p>
-            <div className="flex gap-3 justify-end">
-              <button
-                onClick={closeCancelDialog}
-                disabled={cancelling}
-                className="px-4 py-2 text-sm font-medium text-[#7a6355] bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors disabled:opacity-50"
-              >
-                Keep Order
-              </button>
-              <button
-                onClick={handleCancelOrder}
-                disabled={cancelling}
-                className="px-4 py-2 text-sm font-semibold text-white bg-red-600 rounded-xl hover:bg-red-700 transition-colors disabled:opacity-50"
-              >
-                {cancelling ? 'Cancelling...' : 'Yes, Cancel'}
-              </button>
-            </div>
-          </dialog>
+            onConfirm={handleCancelOrder}
+          />
 
           {/* Status Timeline */}
           <div className="mt-8">
@@ -348,7 +366,7 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
 
         {/* Order Items */}
         <Card className="p-8 mb-6">
-          <h2 className="text-lg font-bold text-[#4a3728] mb-4">Items</h2>
+          <h2 className="text-lg font-bold text-[var(--foreground)] mb-4">Items</h2>
           <div className="space-y-4">
             {order.items.map((item) => (
               <OrderItemRow key={item.id} item={item} formatPrice={formatPrice} />
@@ -359,18 +377,18 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
         {/* Tracking Info */}
         {(order.trackingNumber || order.shippingProvider) && (
           <Card className="p-8 mb-6">
-            <h2 className="text-lg font-bold text-[#4a3728] mb-3">📦 Shipping &amp; Tracking</h2>
+            <h2 className="text-lg font-bold text-[var(--foreground)] mb-3">📦 Shipping &amp; Tracking</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {order.shippingProvider && (
                 <div>
-                  <p className="text-xs font-semibold text-[#b89a85] uppercase">Shipping Provider</p>
-                  <p className="text-sm text-[#4a3728] font-medium">{order.shippingProvider}</p>
+                  <p className="text-xs font-semibold text-[var(--text-muted)] uppercase">Shipping Provider</p>
+                  <p className="text-sm text-[var(--foreground)] font-medium">{order.shippingProvider}</p>
                 </div>
               )}
               {order.trackingNumber && (
                 <div>
-                  <p className="text-xs font-semibold text-[#b89a85] uppercase">Tracking Number</p>
-                  <p className="text-sm text-[#4a3728] font-medium font-mono">{order.trackingNumber}</p>
+                  <p className="text-xs font-semibold text-[var(--text-muted)] uppercase">Tracking Number</p>
+                  <p className="text-sm text-[var(--foreground)] font-medium font-mono">{order.trackingNumber}</p>
                 </div>
               )}
             </div>
@@ -379,8 +397,8 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
 
         {/* Shipping Address */}
         <Card className="p-8">
-          <h2 className="text-lg font-bold text-[#4a3728] mb-3">Shipping Address</h2>
-          <p className="text-sm text-[#7a6355] whitespace-pre-line">{order.customerAddress}</p>
+          <h2 className="text-lg font-bold text-[var(--foreground)] mb-3">Shipping Address</h2>
+          <p className="text-sm text-[var(--text-secondary)] whitespace-pre-line">{order.customerAddress}</p>
         </Card>
       </main>
     </div>
