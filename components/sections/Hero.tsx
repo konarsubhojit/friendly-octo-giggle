@@ -11,17 +11,12 @@ export default function Hero() {
       <ScatteredFlowers />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        {/* Main hero card — cottage-core with CSS background illustration */}
+        {/* Main hero card — cottage-core with warm gradient overlay */}
         <div
           className="relative rounded-3xl border border-[var(--border-warm)] shadow-warm-lg mb-10 animate-fade-in-up overflow-hidden"
-          style={{
-            backgroundImage: "url(/warm-bg.jpeg)",
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-          }}
         >
           {/* Semi-transparent backdrop for text legibility */}
-          <div className="bg-[var(--accent-cream)]/50 backdrop-blur-[2px] p-8 sm:p-12">
+          <div className="bg-[var(--accent-cream)]/60 backdrop-blur-[2px] p-8 sm:p-12">
             <div className="max-w-2xl">
               <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight mb-4 text-[var(--foreground)] italic animate-fade-in-up">
                 Handmade
