@@ -5,9 +5,9 @@ import {
 } from "@/components/ui/DecorativeElements";
 
 const STATS = [
-  { num: "100%", label: "Handmade" },
-  { num: "50+", label: "Products" },
-  { num: "❤️", label: "Made with love" },
+  { num: "100%", label: "Handmade", decorative: false },
+  { num: "50+", label: "Products", decorative: false },
+  { num: "❤️", label: "Made with love", decorative: true },
 ] as const;
 
 const FEATURE_BADGES = [
@@ -38,9 +38,9 @@ const HeroTextColumn = () => {
         Explore Shop <span aria-hidden="true">→</span>
       </Link>
       <div className="flex flex-wrap gap-6 mt-10 pt-8 border-t border-[var(--border-warm)] animate-fade-in-up animation-delay-300">
-        {STATS.map(({ num, label }) => (
+        {STATS.map(({ num, label, decorative }) => (
           <div key={label} className="flex flex-col">
-            <span className="text-2xl font-bold font-display text-[var(--accent-rose)]">{num}</span>
+            <span className="text-2xl font-bold font-display text-[var(--accent-rose)]" aria-hidden={decorative || undefined}>{num}</span>
             <span className="text-xs text-[var(--text-muted)] font-semibold uppercase tracking-wide">{label}</span>
           </div>
         ))}
