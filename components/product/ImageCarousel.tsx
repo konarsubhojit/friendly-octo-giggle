@@ -119,7 +119,7 @@ const ImageCarousel = ({
           />
         </div>
         <div className="absolute -top-6 -right-6 w-32 h-32 bg-gradient-to-r from-[var(--accent-peach)] to-[var(--accent-blush)] rounded-full blur-3xl opacity-30 -z-10" />
-        <div className="absolute -bottom-6 -left-6 w-40 h-40 bg-gradient-to-r from-[var(--accent-sage)] to-[#d4e4c4] rounded-full blur-3xl opacity-30 -z-10" />
+        <div className="absolute -bottom-6 -left-6 w-40 h-40 bg-gradient-to-r from-[var(--accent-sage)] to-[var(--accent-cream)] rounded-full blur-3xl opacity-30 -z-10" />
       </div>
     );
   }
@@ -257,7 +257,7 @@ const ImageCarousel = ({
 
       {/* Decorative blobs */}
       <div className="absolute -top-6 -right-6 w-32 h-32 bg-gradient-to-r from-[var(--accent-peach)] to-[var(--accent-blush)] rounded-full blur-3xl opacity-30 -z-10 pointer-events-none" />
-      <div className="absolute -bottom-6 -left-6 w-40 h-40 bg-gradient-to-r from-[var(--accent-sage)] to-[#d4e4c4] rounded-full blur-3xl opacity-30 -z-10 pointer-events-none" />
+      <div className="absolute -bottom-6 -left-6 w-40 h-40 bg-gradient-to-r from-[var(--accent-sage)] to-[var(--accent-cream)] rounded-full blur-3xl opacity-30 -z-10 pointer-events-none" />
     </div>
   );
 };

@@ -172,11 +172,11 @@ test.describe('CurrencySelector - dark mode visibility', () => {
     await expect(select).toBeVisible();
   });
 
-  test('currency selector has dark mode border class', async ({ page }) => {
+  test('currency selector has warm border class for dark mode compatibility', async ({ page }) => {
     await page.goto('/');
     const select = page.getByRole('combobox', { name: /select currency/i });
     const cls = await select.getAttribute('class');
-    expect(cls).toContain('dark:border-gray-500');
+    expect(cls).toContain('border-[var(--border-warm)]');
   });
 });
 
@@ -223,6 +223,49 @@ test.describe('Full page screenshots for visual verification', () => {
     await page.goto('/about');
     await expect(page.locator('h1')).toBeVisible();
     await page.screenshot({ path: screenshotPath('mobile-about-full'), fullPage: true });
+  });
+
+  test('shop page - desktop screenshot', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'desktop-chrome', 'Only runs on desktop viewport');
+    await page.goto('/shop');
+    await expect(page.locator('h1')).toBeVisible();
+    await page.screenshot({ path: screenshotPath('desktop-shop-full'), fullPage: false });
+  });
+});
+
+// ─── Shop Page ────────────────────────────────────────────────────────────────
+
+test.describe('Shop page', () => {
+  test('shop page title contains "The Kiyon Store"', async ({ page }) => {
+    await page.goto('/shop');
+    await expect(page).toHaveTitle(/The Kiyon Store/i);
+  });
+
+  test('shop page has "Shop" heading', async ({ page }) => {
+    await page.goto('/shop');
+    await expect(page.getByRole('heading', { name: /^Shop$/i }).first()).toBeVisible();
+  });
+
+  test('shop page has category filter buttons', async ({ page }) => {
+    await page.goto('/shop');
+    for (const cat of ['All', 'Handbag', 'Flowers', 'Flower Pots', 'Keychains', 'Hair Accessories']) {
+      await expect(page.getByRole('button', { name: cat }).first()).toBeVisible();
+    }
+  });
+
+  test('shop page has search input', async ({ page }) => {
+    await page.goto('/shop');
+    const searchInput = page.getByRole('searchbox', { name: /search products/i });
+    await expect(searchInput).toBeVisible();
+  });
+
+  test('header "Shop" nav link points to /shop', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'desktop-chrome', 'Shop link is in desktop nav; mobile uses hamburger menu');
+    await page.goto('/');
+    const shopLink = page.getByRole('link', { name: /^Shop$/i }).first();
+    await expect(shopLink).toBeVisible();
+    const href = await shopLink.getAttribute('href');
+    expect(href).toBe('/shop');
   });
 });
 
@@ -283,13 +326,13 @@ test.describe('Bestsellers section', () => {
     expect(fs.existsSync(trendingPath)).toBe(false);
   });
 
-  test('"Bestsellers" link in Hero points to #products', async ({ page }) => {
+  test('"Explore Shop" link in Hero points to /shop', async ({ page }) => {
     await page.goto('/');
     // Hero CTA button
-    const btn = page.getByRole('link', { name: /Bestsellers/i });
+    const btn = page.getByRole('link', { name: /Explore Shop/i });
     await expect(btn).toBeVisible();
     const href = await btn.getAttribute('href');
-    expect(href).toBe('#products');
+    expect(href).toBe('/shop');
   });
 });
 
@@ -348,10 +391,7 @@ test.describe('Quick add-to-cart button', () => {
       path.join(__dirname, '../components/sections/ProductGrid.tsx'),
       'utf-8',
     );
-    // The comment asserting button is outside the Link must be present
-    expect(source).toContain('Quick add button sits OUTSIDE the <Link>');
     // QuickAddButton must appear as a sibling of Link, not inside it
-    // Verify there is no pattern where QuickAddButton is inside the Link block
     // (the structural check: QuickAddButton rendered after the closing </Link>)
     const linkCloseIndex = source.lastIndexOf('</Link>');
     const quickAddIndex = source.lastIndexOf('<QuickAddButton');
@@ -373,7 +413,7 @@ test.describe('Quick add-to-cart button', () => {
       'utf-8',
     );
     expect(source).toContain('object-contain');
-    expect(source).toContain('aspect-[4/3]');
+    expect(source).toContain('aspect-square');
   });
 });
 

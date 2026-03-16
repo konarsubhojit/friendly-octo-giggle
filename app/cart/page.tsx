@@ -158,7 +158,7 @@ export default function CartPage() {
   ];
 
   const CART_SUBMIT_BTN =
-    "w-full bg-gradient-to-r from-[var(--accent-warm)] to-[var(--accent-rose)] text-white py-3.5 rounded-full font-bold text-base hover:from-[var(--accent-rose)] hover:to-[#c97b5e] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-warm hover:shadow-warm-lg focus-warm";
+    "w-full bg-gradient-to-r from-[var(--accent-rose)] to-[var(--accent-pink)] text-white py-3.5 rounded-full font-bold text-base hover:from-[var(--accent-pink)] hover:to-[var(--accent-rose)] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-warm hover:shadow-warm-lg focus-warm";
 
   // Show the full-page spinner only on the very first load (cart not yet fetched).
   // Background re-fetches triggered by quantity updates / removals must not

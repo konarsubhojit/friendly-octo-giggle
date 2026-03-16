@@ -23,7 +23,7 @@ export default function CartIcon() {
     >
       <FloralCartIcon className="w-6 h-6" />
       {itemCount > 0 && (
-        <span className="absolute -top-2 -right-2 bg-gradient-to-r from-[var(--accent-warm)] to-[var(--accent-rose)] text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center shadow-warm">
+        <span className="absolute -top-2 -right-2 bg-gradient-to-r from-[var(--accent-rose)] to-[var(--accent-pink)] text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center shadow-warm">
           {itemCount}
         </span>
       )}

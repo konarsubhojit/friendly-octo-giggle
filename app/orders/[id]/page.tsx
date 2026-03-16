@@ -78,9 +78,9 @@ function getStepIndex(status: string): number {
 
 const STEP_CLASSES = {
   completed: {
-    status: 'bg-gradient-to-r from-[#e8a87c] to-[#d4856b] text-white shadow-lg',
+    status: 'bg-gradient-to-r from-[var(--accent-rose)] to-[var(--accent-pink)] text-white shadow-lg',
     text: 'text-[var(--accent-rose)]',
-    connector: 'bg-gradient-to-r from-[#e8a87c] to-[#d4856b]',
+    connector: 'bg-gradient-to-r from-[var(--accent-rose)] to-[var(--accent-pink)]',
   },
   default: {
     status: 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400',
@@ -117,7 +117,7 @@ function StatusTimeline({ currentStep, isCancelled }: StatusTimelineProps) {
           <div key={step} className="flex items-center flex-1">
             <div className="flex flex-col items-center flex-shrink-0">
               <div
-                className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all ${classes.status}${isCurrent ? ' ring-4 ring-[#fde8d8]' : ''}`}
+                className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all ${classes.status}${isCurrent ? ' ring-4 ring-[var(--accent-blush)]' : ''}`}
               >
                 {isCompleted ? (
                   <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
@@ -181,7 +181,7 @@ function OrderItemRow({ item, formatPrice }: OrderItemRowProps) {
     ) : null
   };
   return (
-    <div className="py-3 border-b border-[#f0d5c0] last:border-0">
+    <div className="py-3 border-b border-[var(--border-warm)] last:border-0">
       <div className="flex items-center gap-4">
         {sections.image}
         <div className="flex-grow min-w-0">
@@ -225,7 +225,7 @@ function OrderSummaryHeader({ orderId, createdAt, totalAmount, status, cancellin
         </p>
       </div>
       <div className="flex items-center gap-3">
-        <p className="text-2xl font-bold bg-gradient-to-r from-[#e8a87c] to-[#d4856b] bg-clip-text text-transparent">
+        <p className="text-2xl font-bold bg-gradient-to-r from-[var(--accent-rose)] to-[var(--accent-pink)] bg-clip-text text-transparent">
           {formatPrice(totalAmount)}
         </p>
         {status === 'PENDING' && (

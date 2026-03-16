@@ -19,7 +19,7 @@ const SIZE_CLASSES: Record<HeadingSize, string> = {
 };
 
 const GRADIENT =
-  "font-display bg-gradient-to-r from-[var(--accent-rose)] via-[var(--accent-warm)] to-[var(--accent-rose)] bg-clip-text text-transparent";
+  "font-display bg-gradient-to-r from-[var(--accent-rose)] via-[var(--accent-pink)] to-[var(--accent-warm)] bg-clip-text text-transparent";
 
 /**
  * Heading element with the standard blue-to-purple gradient text effect.

@@ -18,26 +18,25 @@ describe("Hero", () => {
     render(<Hero />);
     const heading = screen.getByRole("heading", { level: 1 });
     expect(heading).toBeTruthy();
-    expect(heading.textContent).toContain("Handmade");
-    expect(heading.textContent).toContain("With Love");
+    expect(heading.textContent).toContain("Handmade With Love");
   });
 
   it("renders descriptive tagline", () => {
     render(<Hero />);
-    expect(screen.getByText(/Discover beautiful handmade/i)).toBeTruthy();
+    expect(screen.getByText(/crocheted flowers/i)).toBeTruthy();
   });
 
-  it("renders Explore Shop link pointing to #products", () => {
+  it("renders Explore Shop link pointing to /shop", () => {
     render(<Hero />);
     const link = screen.getByText(/Explore Shop/).closest("a");
-    expect(link?.getAttribute("href")).toBe("#products");
+    expect(link?.getAttribute("href")).toBe("/shop");
   });
 
   it("renders feature badges", () => {
     render(<Hero />);
-    expect(screen.getByText(/Handmade with love/)).toBeTruthy();
-    expect(screen.getByText(/Small batch/)).toBeTruthy();
+    expect(screen.getByText(/Crochet flowers/)).toBeTruthy();
+    expect(screen.getByText(/Hair accessories/)).toBeTruthy();
     expect(screen.getByText(/Free shipping/)).toBeTruthy();
-    expect(screen.getByText(/Made for you/)).toBeTruthy();
+    expect(screen.getByText(/Handmade knitwear/)).toBeTruthy();
   });
 });

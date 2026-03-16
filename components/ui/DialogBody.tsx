@@ -24,14 +24,14 @@ export function DialogBody({
   onCancel, onConfirm,
 }: DialogBodyProps) {
   return (
-    <div className="relative bg-white rounded-lg shadow-xl max-w-sm w-full p-6">
+    <div className="relative bg-[var(--surface)] rounded-2xl shadow-warm-lg border border-[var(--border-warm)] max-w-sm w-full p-6">
       <div className="flex items-start gap-4 mb-4">
         <span className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${iconBg}`}>
           {icon}
         </span>
         <div>
-          <h3 id={titleId} className="text-lg font-semibold text-gray-900">{title}</h3>
-          <p id={messageId} className="text-sm text-gray-600 mt-1">{message}</p>
+          <h3 id={titleId} className="text-lg font-semibold text-[var(--foreground)]">{title}</h3>
+          <p id={messageId} className="text-sm text-[var(--text-secondary)] mt-1">{message}</p>
         </div>
       </div>
       <div className="flex gap-3 justify-end">
@@ -40,7 +40,7 @@ export function DialogBody({
           type="button"
           onClick={onCancel}
           disabled={loading}
-          className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition"
+          className="px-4 py-2 text-sm font-medium text-[var(--text-secondary)] bg-[var(--accent-blush)] rounded-full hover:bg-[var(--accent-cream)] disabled:opacity-50 disabled:cursor-not-allowed transition border border-[var(--border-warm)]"
         >
           {cancelLabel}
         </button>
@@ -48,7 +48,7 @@ export function DialogBody({
           type="button"
           onClick={onConfirm}
           disabled={loading}
-          className={`px-4 py-2 text-sm font-medium text-white rounded-md transition disabled:cursor-not-allowed flex items-center gap-2 ${buttonClass}`}
+          className={`px-4 py-2 text-sm font-medium text-white rounded-full transition disabled:cursor-not-allowed flex items-center gap-2 ${buttonClass}`}
         >
           {loading && (
             <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24" aria-hidden="true">

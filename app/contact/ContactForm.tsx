@@ -57,7 +57,7 @@ const CONTACT_FIELDS: ReadonlyArray<FieldDef> = [
 ];
 
 const SUBMIT_BTN =
-  'w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-xl font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-300 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed';
+  'w-full bg-gradient-to-r from-[var(--accent-rose)] to-[var(--accent-pink)] text-white py-3 rounded-full font-semibold hover:from-[var(--accent-pink)] hover:to-[var(--accent-rose)] transition-all duration-300 shadow-warm hover:shadow-warm-lg disabled:opacity-50 disabled:cursor-not-allowed focus-warm';
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -77,11 +77,11 @@ export default function ContactForm() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>
         </div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Message Sent!</h2>
-        <p className="text-gray-500">Thank you for reaching out. We&apos;ll get back to you within 24 hours.</p>
+        <h2 className="text-2xl font-bold text-[var(--foreground)] mb-2">Message Sent!</h2>
+        <p className="text-[var(--text-muted)]">Thank you for reaching out. We&apos;ll get back to you within 24 hours.</p>
         <button
           onClick={() => setSubmitted(false)}
-          className="mt-6 text-blue-600 hover:text-blue-700 font-medium text-sm"
+          className="mt-6 text-[var(--accent-rose)] hover:text-[var(--accent-pink)] font-medium text-sm"
         >
           Send another message
         </button>
@@ -91,7 +91,7 @@ export default function ContactForm() {
 
   return (
     <>
-      <h2 className="text-xl font-semibold text-gray-900 mb-6">Send a Message</h2>
+      <h2 className="text-xl font-semibold text-[var(--foreground)] mb-6">Send a Message</h2>
       <DynamicForm
         fields={CONTACT_FIELDS}
         onSubmit={handleSubmit}

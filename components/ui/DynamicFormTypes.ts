@@ -59,10 +59,10 @@ export interface DynamicFormProps {
 
 // Shared style constants used by DynamicForm sub-components
 export const BASE_INPUT =
-  'w-full px-4 py-3 text-base border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all';
+  'w-full px-4 py-3 text-base border rounded-xl focus:ring-2 focus:ring-[var(--accent-rose)] focus:border-transparent transition-all bg-[var(--surface)] text-[var(--foreground)] placeholder-[var(--text-muted)]';
 
 export const borderCls = (hasError: boolean) =>
-  hasError ? 'border-red-400' : 'border-gray-300';
+  hasError ? 'border-red-400' : 'border-[var(--border-warm)]';
 
 // Shared prop interfaces for input sub-components
 export interface InputSubProps {

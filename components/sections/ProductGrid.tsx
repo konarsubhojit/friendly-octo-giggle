@@ -22,10 +22,65 @@ interface ProductCardProps {
   readonly index: number;
 }
 
-function ProductCard({ product, formatPrice, index }: ProductCardProps) {
+interface WishlistButtonProps {
+  readonly productName: string;
+}
+
+const WishlistButton = ({ productName }: WishlistButtonProps) => {
+  return (
+    <button
+      type="button"
+      className="absolute top-3 right-3 z-10 w-9 h-9 rounded-full bg-[var(--surface)]/90 backdrop-blur-sm border border-[var(--border-warm)] flex items-center justify-center text-[var(--accent-pink)] hover:bg-[var(--accent-blush)] hover:scale-110 hover:border-[var(--accent-pink)] transition-all duration-200 shadow-warm focus-warm"
+      aria-label={`Add ${productName} to wishlist`}
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      }}
+    >
+      <svg
+        className="w-5 h-5"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+        aria-hidden="true"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+        />
+      </svg>
+    </button>
+  );
+}
+
+interface ProductImageAreaProps {
+  readonly product: Product;
+}
+
+const ProductImageArea = ({ product }: ProductImageAreaProps) => {
+  return (
+    <div className="relative w-full aspect-square bg-gradient-to-br from-[var(--accent-cream)] to-[var(--accent-blush)] overflow-hidden">
+      <Image
+        src={product.image}
+        alt={product.name}
+        fill
+        className="object-contain p-4 group-hover:scale-108 transition-transform duration-500"
+        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+      />
+      <WishlistButton productName={product.name} />
+      <div className="absolute bottom-3 left-3">
+        <StockBadge stock={product.stock} />
+      </div>
+    </div>
+  );
+}
+
+const ProductCard = ({ product, formatPrice, index }: ProductCardProps) => {
   return (
     <div
-      className="bg-[var(--surface)] backdrop-blur-sm rounded-3xl shadow-warm overflow-hidden border-2 border-[var(--border-warm)] group hover:shadow-warm-lg hover:scale-[1.02] hover:-translate-y-1 hover:border-[var(--accent-warm)] transition-all duration-300 relative animate-fade-in-up"
+      className="bg-[var(--surface)] rounded-3xl shadow-warm overflow-hidden border border-[var(--border-warm)] group hover:shadow-warm-lg hover:scale-[1.02] hover:-translate-y-1 hover:border-[var(--accent-rose)] transition-all duration-300 relative animate-fade-in-up"
       style={{ animationDelay: `${index * 80}ms` }}
     >
       <Link
@@ -33,55 +88,22 @@ function ProductCard({ product, formatPrice, index }: ProductCardProps) {
         className="block"
         aria-label={product.name}
       >
-        <div className="relative w-full aspect-square bg-gradient-to-br from-[var(--accent-cream)] to-[var(--accent-blush)]/50 p-4">
-          <Image
-            src={product.image}
-            alt={product.name}
-            fill
-            className="object-contain p-3 group-hover:scale-105 transition-transform duration-300"
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-          />
-          {/* Heart/wishlist icon (visual only) */}
-          <button
-            type="button"
-            className="absolute top-3 right-3 z-10 w-9 h-9 rounded-full bg-[var(--surface)]/80 backdrop-blur-sm border border-[var(--border-warm)] flex items-center justify-center text-[var(--accent-pink)] hover:bg-[var(--accent-blush)] hover:scale-110 transition-all duration-200 shadow-warm focus-warm"
-            aria-label={`Add ${product.name} to wishlist`}
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-            }}
-          >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              aria-hidden="true"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-              />
-            </svg>
-          </button>
-        </div>
+        <ProductImageArea product={product} />
+
+        {/* Product info */}
         <div className="p-5">
-          <div className="flex items-start justify-between gap-2 mb-2">
-            <div className="text-lg font-bold text-[var(--foreground)]">
-              {product.name}
-            </div>
-            <span className="text-sm mt-0.5">
-              <StockBadge stock={product.stock} />
-            </span>
-          </div>
-          <p className="text-[var(--text-secondary)] text-sm mb-3 line-clamp-2">
+          <h3 className="text-base font-bold text-[var(--foreground)] mb-1.5 line-clamp-1 group-hover:text-[var(--accent-rose)] transition-colors duration-200">
+            {product.name}
+          </h3>
+          <p className="text-[var(--text-muted)] text-sm mb-4 line-clamp-2 leading-relaxed">
             {product.description}
           </p>
-          <div className="flex items-center">
+          <div className="flex items-center justify-between">
             <span className="text-xl font-bold text-[var(--accent-rose)]">
               {formatPrice(product.price)}
+            </span>
+            <span className="text-xs font-semibold text-[var(--text-muted)] bg-[var(--accent-cream)] px-2.5 py-1 rounded-full border border-[var(--border-warm)]">
+              Handmade
             </span>
           </div>
         </div>
@@ -91,7 +113,7 @@ function ProductCard({ product, formatPrice, index }: ProductCardProps) {
   );
 }
 
-export default function ProductGrid({ products }: ProductGridProps) {
+const ProductGrid = ({ products }: ProductGridProps) => {
   const { formatPrice } = useCurrency();
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
@@ -118,19 +140,23 @@ export default function ProductGrid({ products }: ProductGridProps) {
       id="products"
       className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16"
     >
-      <div className="flex items-center gap-3 mb-6">
+      {/* Section header */}
+      <div className="flex items-center gap-3 mb-2">
         <GradientHeading as="h2" size="xl">
           Bestsellers
         </GradientHeading>
-        <FlowerAccent className="w-6 h-6 opacity-60" />
+        <FlowerAccent className="w-6 h-6 opacity-70" />
       </div>
+      <p className="text-[var(--text-muted)] text-sm mb-8">
+        Our most-loved handmade pieces — crafted fresh for you.
+      </p>
 
       {/* Search + Category filters */}
       <div className="mb-8 space-y-4">
         {/* Search bar */}
         <div className="relative max-w-md">
           <svg
-            className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--accent-rose)]"
+            className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--accent-rose)]"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -148,7 +174,7 @@ export default function ProductGrid({ products }: ProductGridProps) {
             placeholder="Search products..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 border border-[var(--border-warm)] rounded-full focus:outline-none focus:ring-2 focus:ring-[var(--accent-warm)]/40 focus:border-[var(--accent-warm)] bg-[var(--surface)]/80 text-[var(--foreground)] placeholder-[var(--text-muted)] shadow-warm"
+            className="w-full pl-11 pr-4 py-3 border border-[var(--border-warm)] rounded-full focus:outline-none focus:ring-2 focus:ring-[var(--accent-rose)]/30 focus:border-[var(--accent-rose)] bg-[var(--surface)] text-[var(--foreground)] placeholder-[var(--text-muted)] shadow-warm transition-all duration-200"
             aria-label="Search products by name"
           />
         </div>
@@ -165,8 +191,8 @@ export default function ProductGrid({ products }: ProductGridProps) {
               onClick={() => setSelectedCategory(cat)}
               className={`px-4 py-1.5 rounded-full text-sm font-semibold border transition-all duration-200 ${
                 selectedCategory === cat
-                  ? "bg-gradient-to-r from-[var(--accent-warm)] to-[var(--accent-rose)] text-white border-[var(--accent-rose)] shadow-warm"
-                  : "bg-[var(--surface)]/80 text-[var(--text-secondary)] border-[var(--border-warm)] hover:border-[var(--accent-warm)] hover:text-[var(--accent-rose)]"
+                  ? "bg-gradient-to-r from-[var(--accent-rose)] to-[var(--accent-pink)] text-white border-[var(--accent-rose)] shadow-warm"
+                  : "bg-[var(--surface)] text-[var(--text-secondary)] border-[var(--border-warm)] hover:border-[var(--accent-rose)] hover:text-[var(--accent-rose)] hover:bg-[var(--accent-blush)]"
               }`}
               aria-pressed={selectedCategory === cat}
             >
@@ -192,4 +218,6 @@ export default function ProductGrid({ products }: ProductGridProps) {
       )}
     </main>
   );
-}
+};
+
+export default ProductGrid;

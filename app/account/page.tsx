@@ -82,7 +82,7 @@ export const validatePasswordFields = (
 // ─── Profile field definitions ────────────────────────────────────────────────
 
 const PHONE_LABEL: ReactNode = (
-  <>Phone Number <span className="text-gray-400">(optional)</span></>
+  <>Phone Number <span className="text-[var(--text-muted)]">(optional)</span></>
 );
 
 const PROFILE_FIELDS: ReadonlyArray<FieldDef> = [
@@ -161,16 +161,16 @@ const ProfileSection = ({ profile, onProfileUpdated }: ProfileSectionProps) => {
     <Card className="p-6 sm:p-8 mb-6">
       <div className="flex items-center justify-between gap-3 mb-6">
         <div className="flex items-center gap-3">
-          <svg className="w-6 h-6 text-[#e8a87c]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <svg className="w-6 h-6 text-[var(--accent-warm)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
           </svg>
-          <h2 className="text-xl font-bold text-[#4a3728]">Profile Information</h2>
+          <h2 className="text-xl font-bold text-[var(--foreground)]">Profile Information</h2>
         </div>
         {!isEditing && (
           <button
             type="button"
             onClick={() => { setSuccess(''); setIsEditing(true); }}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-[#d4856b] bg-[#fde8d8] rounded-lg hover:bg-[#f0d5c0] transition"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-[var(--accent-rose)] bg-[var(--accent-blush)] rounded-lg hover:bg-[var(--accent-cream)] transition"
             aria-label="Edit profile"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -191,18 +191,18 @@ const ProfileSection = ({ profile, onProfileUpdated }: ProfileSectionProps) => {
       {!isEditing && (
         <dl className="space-y-4">
           <div>
-            <dt className="text-sm font-medium text-[#b89a85]">Name</dt>
-            <dd className="mt-1 text-base text-[#4a3728]">{profile.name || <span className="text-gray-400 italic">Not set</span>}</dd>
+            <dt className="text-sm font-medium text-[var(--text-muted)]">Name</dt>
+            <dd className="mt-1 text-base text-[var(--foreground)]">{profile.name || <span className="text-[var(--text-muted)] italic">Not set</span>}</dd>
           </div>
           <div>
-            <dt className="text-sm font-medium text-[#b89a85]">Email</dt>
-            <dd className="mt-1 text-base text-[#4a3728]">{profile.email}</dd>
+            <dt className="text-sm font-medium text-[var(--text-muted)]">Email</dt>
+            <dd className="mt-1 text-base text-[var(--foreground)]">{profile.email}</dd>
           </div>
           <div>
-            <dt className="text-sm font-medium text-[#b89a85]">Phone Number</dt>
-            <dd className="mt-1 text-base text-[#4a3728]">{profile.phoneNumber || <span className="text-gray-400 italic">Not set</span>}</dd>
+            <dt className="text-sm font-medium text-[var(--text-muted)]">Phone Number</dt>
+            <dd className="mt-1 text-base text-[var(--foreground)]">{profile.phoneNumber || <span className="text-[var(--text-muted)] italic">Not set</span>}</dd>
           </div>
-          <div className="text-xs text-gray-400 pt-1">
+          <div className="text-xs text-[var(--text-muted)] pt-1">
             Member since {new Date(profile.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
           </div>
         </dl>
@@ -305,16 +305,16 @@ const PasswordSection = () => {
     <Card className="p-6 sm:p-8">
       <div className="flex items-center justify-between gap-3 mb-6">
         <div className="flex items-center gap-3">
-          <svg className="w-6 h-6 text-[#e8a87c]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <svg className="w-6 h-6 text-[var(--accent-warm)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
           </svg>
-          <h2 className="text-xl font-bold text-[#4a3728]">Password</h2>
+          <h2 className="text-xl font-bold text-[var(--foreground)]">Password</h2>
         </div>
         {!isChanging && (
           <button
             type="button"
             onClick={() => { setSuccess(''); setIsChanging(true); }}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-[#d4856b] bg-[#fde8d8] rounded-lg hover:bg-[#f0d5c0] transition"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-[var(--accent-rose)] bg-[var(--accent-blush)] rounded-lg hover:bg-[var(--accent-cream)] transition"
             aria-label="Change password"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -332,7 +332,7 @@ const PasswordSection = () => {
       )}
 
       {!isChanging && !success && (
-        <p className="text-sm text-[#b89a85]">
+        <p className="text-sm text-[var(--text-muted)]">
           Your password is set. Click &ldquo;Change Password&rdquo; above to update it.
         </p>
       )}
@@ -419,8 +419,8 @@ const AccountPage = () => {
 
         {profile && !profile.hasPassword && (
           <Card className="p-6 sm:p-8">
-            <h2 className="text-xl font-bold text-[#4a3728] mb-4">Password</h2>
-            <p className="text-sm text-[#7a6355]">
+            <h2 className="text-xl font-bold text-[var(--foreground)] mb-4">Password</h2>
+            <p className="text-sm text-[var(--text-secondary)]">
               Your account uses social login (Google or Microsoft). Password management is not available for social login accounts.
             </p>
           </Card>
