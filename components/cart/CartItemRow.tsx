@@ -85,7 +85,15 @@ export function CartItemRow({
                 aria-label={`Quantity for ${item.product.name}`}
                 className="px-2 py-1.5 border border-[var(--border-warm)] rounded-lg text-sm font-semibold text-[var(--foreground)] bg-[var(--surface)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-warm)]/40 focus:border-[var(--accent-warm)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
               >
-                {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
+                {Array.from(
+                  {
+                    length: Math.min(
+                      item.variation?.stock ?? item.product.stock,
+                      10,
+                    ),
+                  },
+                  (_, i) => i + 1,
+                ).map((n) => (
                   <option key={n} value={n}>
                     {n}
                   </option>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useDispatch } from "react-redux";
@@ -313,6 +313,13 @@ export default function ProductClient({ product }: ProductClientProps) {
   const effectiveStock = selectedVariation
     ? selectedVariation.stock
     : product.stock;
+
+  // Clamp quantity when stock changes (e.g. variation switch)
+  useEffect(() => {
+    if (quantity > effectiveStock && effectiveStock > 0) {
+      setQuantity(effectiveStock);
+    }
+  }, [effectiveStock, quantity, setQuantity]);
 
   const currentImage = selectedVariation?.image || product.image;
 
