@@ -16,6 +16,81 @@ interface ProductClientProps {
   readonly product: Product;
 }
 
+// ─── Pure module-level helpers ────────────────────────────
+
+function getCarouselImages(
+  product: Product,
+  selectedVariation: ProductVariation | null,
+): string[] {
+  if (selectedVariation) {
+    const imgs = [
+      ...(selectedVariation.image ? [selectedVariation.image] : []),
+      ...(selectedVariation.images ?? []),
+    ].filter(Boolean);
+    if (imgs.length > 0) return imgs;
+  }
+  return [product.image, ...(product.images ?? [])].filter(Boolean);
+}
+
+function getClampedQtyState(
+  quantity: number,
+  stock: number,
+): { qty: number; message: string } {
+  if (stock === 0) return { qty: quantity, message: "" };
+  if (quantity > stock) return { qty: stock, message: `Only ${stock} available` };
+  return { qty: quantity, message: "" };
+}
+
+// ─── Small button-content helpers ────────────────────────
+
+const AddingSpinner = () => (
+  <span className="flex items-center justify-center gap-2">
+    <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+    </svg>
+    Adding...
+  </span>
+);
+
+const CartButtonLabel = () => (
+  <span className="flex items-center justify-center gap-2">
+    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+    </svg>
+    Add to Cart
+  </span>
+);
+
+const BreadcrumbNav = ({ productName }: { readonly productName: string }) => (
+  <nav className="mb-6 text-sm">
+    <div className="inline-flex items-center gap-1 px-4 py-2 bg-[var(--surface)]/90 backdrop-blur-sm rounded-full border border-[var(--border-warm)] shadow-warm">
+      <Link href="/" className="text-[var(--foreground)] font-medium hover:text-[var(--accent-rose)] transition-colors">
+        Home
+      </Link>
+      <span className="mx-1 text-[var(--accent-warm)] font-bold">/</span>
+      <span className="text-[var(--foreground)] font-semibold">{productName}</span>
+    </div>
+  </nav>
+);
+
+const OutOfStockPanel = () => (
+  <div className="bg-[var(--surface)]/80 backdrop-blur-lg rounded-2xl shadow-warm border border-[var(--border-warm)] p-8">
+    <div className="flex items-center gap-3 text-red-500">
+      <svg className="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+      </svg>
+      <span className="text-lg font-bold">Out of Stock</span>
+    </div>
+    <p className="mt-2 text-sm text-[var(--text-secondary)]">
+      This item is currently unavailable. Check back later or explore other products.
+    </p>
+    <Link href="/" className="inline-flex items-center gap-2 mt-4 px-5 py-2.5 bg-gradient-to-r from-[var(--accent-warm)] to-[var(--accent-rose)] text-white rounded-xl font-semibold text-sm shadow-warm hover:shadow-warm-lg transition-all duration-300 focus-warm">
+      Browse Products
+    </Link>
+  </div>
+);
+
 // ─── Image Section ────────────────────────────────────────
 
 interface ProductImageSectionProps {
@@ -245,44 +320,6 @@ function AddToCartSection({
   );
 }
 
-// ─── Small reusable button-content helpers ────────────────
-
-const AddingSpinner = () => (
-  <span className="flex items-center justify-center gap-2">
-    <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-    </svg>
-    Adding...
-  </span>
-);
-
-const CartButtonLabel = () => (
-  <span className="flex items-center justify-center gap-2">
-    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-    </svg>
-    Add to Cart
-  </span>
-);
-
-const OutOfStockPanel = () => (
-  <div className="bg-[var(--surface)]/80 backdrop-blur-lg rounded-2xl shadow-warm border border-[var(--border-warm)] p-8">
-    <div className="flex items-center gap-3 text-red-500">
-      <svg className="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-      </svg>
-      <span className="text-lg font-bold">Out of Stock</span>
-    </div>
-    <p className="mt-2 text-sm text-[var(--text-secondary)]">
-      This item is currently unavailable. Check back later or explore other products.
-    </p>
-    <Link href="/" className="inline-flex items-center gap-2 mt-4 px-5 py-2.5 bg-gradient-to-r from-[var(--accent-warm)] to-[var(--accent-rose)] text-white rounded-xl font-semibold text-sm shadow-warm hover:shadow-warm-lg transition-all duration-300 focus-warm">
-      Browse Products
-    </Link>
-  </div>
-);
-
 // ─── Main Component ───────────────────────────────────────
 
 export default function ProductClient({ product }: ProductClientProps) {
@@ -310,30 +347,12 @@ export default function ProductClient({ product }: ProductClientProps) {
 
   // Clamp quantity when stock changes (e.g. variation switch) and update message
   useEffect(() => {
-    if (effectiveStock === 0) {
-      setQuantityMessage("");
-      return;
-    }
-    if (quantity > effectiveStock) {
-      setQuantity(effectiveStock);
-      setQuantityMessage(`Only ${effectiveStock} available`);
-    } else {
-      setQuantityMessage("");
-    }
+    const { qty, message } = getClampedQtyState(quantity, effectiveStock);
+    if (qty !== quantity) setQuantity(qty);
+    setQuantityMessage(message);
   }, [effectiveStock, quantity]);
 
-  // Collect carousel images: variation images first (if a variation is selected),
-  // then fall back to the product's own images.
-  const carouselImages = (() => {
-    if (selectedVariation) {
-      const imgs = [
-        ...(selectedVariation.image ? [selectedVariation.image] : []),
-        ...(selectedVariation.images ?? []),
-      ].filter(Boolean);
-      if (imgs.length > 0) return imgs;
-    }
-    return [product.image, ...(product.images ?? [])].filter(Boolean);
-  })();
+  const carouselImages = getCarouselImages(product, selectedVariation);
 
   const handleAddToCart = async () => {
     setAddingToCart(true);
@@ -364,21 +383,7 @@ export default function ProductClient({ product }: ProductClientProps) {
   return (
     <div className="min-h-screen bg-warm-gradient">
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
-        {/* Breadcrumb */}
-        <nav className="mb-6 text-sm">
-          <div className="inline-flex items-center gap-1 px-4 py-2 bg-[var(--surface)]/90 backdrop-blur-sm rounded-full border border-[var(--border-warm)] shadow-warm">
-            <Link
-              href="/"
-              className="text-[var(--foreground)] font-medium hover:text-[var(--accent-rose)] transition-colors"
-            >
-              Home
-            </Link>
-            <span className="mx-1 text-[var(--accent-warm)] font-bold">/</span>
-            <span className="text-[var(--foreground)] font-semibold">
-              {product.name}
-            </span>
-          </div>
-        </nav>
+        <BreadcrumbNav productName={product.name} />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
           <ProductImageSection

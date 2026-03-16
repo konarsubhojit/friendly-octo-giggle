@@ -57,42 +57,40 @@ interface AdditionalImageRowProps {
   readonly onRemove: (idx: number) => void;
 }
 
-function AdditionalImageRow({ idx, imgUrl, pendingFile, onFileChange, onRemove }: AdditionalImageRowProps) {
-  return (
-    <div className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg bg-gray-50">
-      {imgUrl && !pendingFile && (
-        <div className="relative flex-shrink-0 w-14 h-14">
-          <Image src={imgUrl} alt={`Additional image ${idx + 1}`} fill sizes="56px" className="object-contain rounded border bg-white" />
-        </div>
-      )}
-      <div className="flex-1 min-w-0">
-        <label htmlFor={`additional-image-${idx}`} className="block text-xs font-medium text-gray-600 mb-1">
-          Image {idx + 2}{imgUrl && !pendingFile && " (current)"}
-        </label>
-        <input
-          id={`additional-image-${idx}`}
-          type="file"
-          accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
-          onChange={(e) => onFileChange(idx, e)}
-          className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
-        />
-        {pendingFile && (
-          <p className="text-xs text-green-600 mt-1">Selected: {pendingFile.name}</p>
-        )}
+const AdditionalImageRow = ({ idx, imgUrl, pendingFile, onFileChange, onRemove }: AdditionalImageRowProps) => (
+  <div className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg bg-gray-50">
+    {imgUrl && !pendingFile && (
+      <div className="relative flex-shrink-0 w-14 h-14">
+        <Image src={imgUrl} alt={`Additional image ${idx + 1}`} fill sizes="56px" className="object-contain rounded border bg-white" />
       </div>
-      <button
-        type="button"
-        onClick={() => onRemove(idx)}
-        aria-label={`Remove image ${idx + 2}`}
-        className="flex-shrink-0 text-red-400 hover:text-red-600 transition mt-1"
-      >
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-        </svg>
-      </button>
+    )}
+    <div className="flex-1 min-w-0">
+      <label htmlFor={`additional-image-${idx}`} className="block text-xs font-medium text-gray-600 mb-1">
+        Image {idx + 2}{imgUrl && !pendingFile && " (current)"}
+      </label>
+      <input
+        id={`additional-image-${idx}`}
+        type="file"
+        accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
+        onChange={(e) => onFileChange(idx, e)}
+        className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+      />
+      {pendingFile && (
+        <p className="text-xs text-green-600 mt-1">Selected: {pendingFile.name}</p>
+      )}
     </div>
-  );
-}
+    <button
+      type="button"
+      onClick={() => onRemove(idx)}
+      aria-label={`Remove image ${idx + 2}`}
+      className="flex-shrink-0 text-red-400 hover:text-red-600 transition mt-1"
+    >
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    </button>
+  </div>
+);
 
 export default function ProductFormModal({
   editingProduct,
@@ -136,6 +134,10 @@ export default function ProductFormModal({
   // Additional image files to upload (paired with formData.images slots)
   const [additionalFiles, setAdditionalFiles] = useState<(File | null)[]>(
     () => Array((editingProduct?.images ?? []).length).fill(null),
+  );
+  // Stable IDs for additional image slots (avoids React index-key warnings)
+  const [slotIds, setSlotIds] = useState<string[]>(
+    () => (editingProduct?.images ?? []).map(() => crypto.randomUUID()),
   );
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -241,6 +243,7 @@ export default function ProductFormModal({
     }
     setFormData((prev) => ({ ...prev, images: [...prev.images, ""] }));
     setAdditionalFiles((prev) => [...prev, null]);
+    setSlotIds((prev) => [...prev, crypto.randomUUID()]);
   };
 
   const removeAdditionalImage = (idx: number) => {
@@ -249,6 +252,7 @@ export default function ProductFormModal({
       images: prev.images.filter((_, i) => i !== idx),
     }));
     setAdditionalFiles((prev) => prev.filter((_, i) => i !== idx));
+    setSlotIds((prev) => prev.filter((_, i) => i !== idx));
   };
 
   const uploadSingleImage = async (file: File): Promise<string | null> => {
@@ -272,6 +276,11 @@ export default function ProductFormModal({
     return editingProduct ? "Update Product" : "Create Product";
   };
 
+  const getApiEndpoint = () =>
+    editingProduct
+      ? { url: `/api/admin/products/${editingProduct.id}`, method: "PUT" as const }
+      : { url: "/api/admin/products", method: "POST" as const };
+
   const saveProductToApi = async (
     imageUrl: string,
     additionalImages: string[],
@@ -282,10 +291,7 @@ export default function ProductFormModal({
       image: imageUrl,
       images: additionalImages,
     };
-    const url = editingProduct
-      ? `/api/admin/products/${editingProduct.id}`
-      : "/api/admin/products";
-    const method = editingProduct ? "PUT" : "POST";
+    const { url, method } = getApiEndpoint();
     const res = await fetch(url, {
       method,
       headers: { "Content-Type": "application/json" },
@@ -339,37 +345,39 @@ export default function ProductFormModal({
     return formData.image;
   };
 
+  const uploadAdditionalImages = async (): Promise<string[]> => {
+    const additionalUrls: string[] = [];
+    for (let i = 0; i < formData.images.length; i++) {
+      const file = additionalFiles[i];
+      if (file) {
+        setUploading(true);
+        try {
+          const url = await uploadSingleImage(file);
+          if (url) additionalUrls.push(url);
+        } catch {
+          // skip failed uploads
+        } finally {
+          setUploading(false);
+        }
+      } else if (formData.images[i]) {
+        additionalUrls.push(formData.images[i]);
+      }
+    }
+    return additionalUrls;
+  };
+
   const handleSubmit = async (e: React.BaseSyntheticEvent) => {
     e.preventDefault();
     if (!validate()) return;
     setSaving(true);
     try {
-      // Upload primary image if needed
       const primaryUrl = await resolveImageUrl();
       if (!primaryUrl) {
         setSaving(false);
         return;
       }
 
-      // Upload additional images
-      const additionalUrls: string[] = [];
-      for (let i = 0; i < formData.images.length; i++) {
-        const file = additionalFiles[i];
-        if (file) {
-          setUploading(true);
-          try {
-            const url = await uploadSingleImage(file);
-            if (url) additionalUrls.push(url);
-          } catch {
-            // skip failed uploads
-          } finally {
-            setUploading(false);
-          }
-        } else if (formData.images[i]) {
-          additionalUrls.push(formData.images[i]);
-        }
-      }
-
+      const additionalUrls = await uploadAdditionalImages();
       const savedProduct = await saveProductToApi(primaryUrl, additionalUrls);
       toast.success(
         editingProduct ? "Product updated successfully" : "Product created successfully",
@@ -640,7 +648,7 @@ export default function ProductFormModal({
                 <div className="space-y-3">
                   {formData.images.map((imgUrl, idx) => (
                     <AdditionalImageRow
-                      key={`additional-image-${idx}`}
+                      key={slotIds[idx] ?? `slot-${idx}`}
                       idx={idx}
                       imgUrl={imgUrl}
                       pendingFile={additionalFiles[idx] ?? null}

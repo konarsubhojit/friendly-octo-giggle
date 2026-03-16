@@ -17,10 +17,10 @@ const NEXT_KEYS = new Set(["ArrowRight", "ArrowDown"]);
 const PREV_KEYS = new Set(["ArrowLeft", "ArrowUp"]);
 
 // Derive slide-in animation class from direction + in-progress flag
-function getAnimationClass(direction: "next" | "prev", isAnimating: boolean): string {
+const getAnimationClass = (direction: "next" | "prev", isAnimating: boolean): string => {
   if (!isAnimating) return "";
   return direction === "next" ? "animate-slide-in-right" : "animate-slide-in-left";
-}
+};
 
 const ImageCarousel = ({
   images,
@@ -54,32 +54,37 @@ const ImageCarousel = ({
     goToIndex((currentIndex - 1 + total) % total, "prev");
   }, [currentIndex, total, goToIndex]);
 
-  // Auto-scroll — only registered when there are multiple images
+  // Keyboard navigation handler — defined as useCallback so it can be used as
+  // a stable event listener reference in the useEffect below.
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (!containerRef.current) return;
+    if (NEXT_KEYS.has(e.key)) {
+      e.preventDefault();
+      goNext();
+    } else if (PREV_KEYS.has(e.key)) {
+      e.preventDefault();
+      goPrev();
+    }
+  }, [goNext, goPrev]);
+
+  // Auto-scroll — always returns a cleanup so the return type is consistent
   useEffect(() => {
-    if (total <= 1) return undefined;
-    autoScrollRef.current = setTimeout(goNext, autoScrollInterval);
+    let id: ReturnType<typeof setTimeout> | undefined;
+    if (total > 1) {
+      id = setTimeout(goNext, autoScrollInterval);
+      autoScrollRef.current = id ?? null;
+    }
     return () => {
-      if (autoScrollRef.current) clearTimeout(autoScrollRef.current);
+      if (id !== undefined) clearTimeout(id);
     };
   }, [currentIndex, goNext, autoScrollInterval, total]);
 
   // Keyboard navigation
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (!containerRef.current) return;
-      if (NEXT_KEYS.has(e.key)) {
-        e.preventDefault();
-        goNext();
-      } else if (PREV_KEYS.has(e.key)) {
-        e.preventDefault();
-        goPrev();
-      }
-    };
-
     const container = containerRef.current;
     container?.addEventListener("keydown", handleKeyDown);
     return () => container?.removeEventListener("keydown", handleKeyDown);
-  }, [goNext, goPrev]);
+  }, [handleKeyDown]);
 
   // Mouse wheel navigation
   useEffect(() => {
@@ -208,7 +213,7 @@ const ImageCarousel = ({
       >
         {images.map((src, idx) => (
           <button
-            key={`dot-${src}-${idx}`}
+            key={`dot-${src}`}
             role="tab"
             aria-selected={idx === currentIndex}
             aria-label={`Go to image ${idx + 1}`}
@@ -227,7 +232,7 @@ const ImageCarousel = ({
         <div className="flex gap-2 mt-3 overflow-x-auto pb-1 scrollbar-thin">
           {images.map((src, idx) => (
             <button
-              key={`thumb-${src}-${idx}`}
+              key={`thumb-${src}`}
               onClick={() =>
                 goToIndex(idx, idx > currentIndex ? "next" : "prev")
               }

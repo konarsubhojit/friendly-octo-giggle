@@ -164,6 +164,47 @@ function OrderItemRow({ item, formatPrice }: OrderItemRowProps) {
   );
 }
 
+interface OrderSummaryHeaderProps {
+  readonly orderId: string;
+  readonly createdAt: string;
+  readonly totalAmount: number;
+  readonly status: string;
+  readonly cancelling: boolean;
+  readonly formatPrice: (amount: number) => string;
+  readonly onCancelClick: () => void;
+}
+
+function OrderSummaryHeader({ orderId, createdAt, totalAmount, status, cancelling, formatPrice, onCancelClick }: OrderSummaryHeaderProps) {
+  return (
+    <div className="flex justify-between items-start flex-wrap gap-4">
+      <div>
+        <h1 className="text-2xl font-bold text-[#4a3728]">Order #{orderId}</h1>
+        <p className="text-sm text-[#b89a85] mt-1">
+          Placed on{' '}
+          {new Date(createdAt).toLocaleDateString('en-US', {
+            year: 'numeric', month: 'long', day: 'numeric',
+            hour: '2-digit', minute: '2-digit',
+          })}
+        </p>
+      </div>
+      <div className="flex items-center gap-3">
+        <p className="text-2xl font-bold bg-gradient-to-r from-[#e8a87c] to-[#d4856b] bg-clip-text text-transparent">
+          {formatPrice(totalAmount)}
+        </p>
+        {status === 'PENDING' && (
+          <button
+            onClick={onCancelClick}
+            disabled={cancelling}
+            className="px-4 py-2 text-sm font-semibold text-red-600 bg-red-50 border border-red-200 rounded-xl hover:bg-red-100 transition-colors disabled:opacity-50"
+          >
+            Cancel Order
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function OrderDetailPage({ params }: OrderDetailPageProps) {
   const { id } = use(params);
   const { data: session, status: authStatus } = useSession();
@@ -262,35 +303,15 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
 
         {/* Order Header */}
         <Card className="p-8 mb-6">
-          <div className="flex justify-between items-start flex-wrap gap-4">
-            <div>
-              <h1 className="text-2xl font-bold text-[#4a3728]">Order #{order.id}</h1>
-              <p className="text-sm text-[#b89a85] mt-1">
-                Placed on{' '}
-                {new Date(order.createdAt).toLocaleDateString('en-US', {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              <p className="text-2xl font-bold bg-gradient-to-r from-[#e8a87c] to-[#d4856b] bg-clip-text text-transparent">
-                {formatPrice(order.totalAmount)}
-              </p>
-              {order.status === 'PENDING' && (
-                <button
-                  onClick={() => setShowCancelConfirm(true)}
-                  disabled={cancelling}
-                  className="px-4 py-2 text-sm font-semibold text-red-600 bg-red-50 border border-red-200 rounded-xl hover:bg-red-100 transition-colors disabled:opacity-50"
-                >
-                  Cancel Order
-                </button>
-              )}
-            </div>
-          </div>
+          <OrderSummaryHeader
+            orderId={order.id}
+            createdAt={order.createdAt}
+            totalAmount={order.totalAmount}
+            status={order.status}
+            cancelling={cancelling}
+            formatPrice={formatPrice}
+            onCancelClick={() => setShowCancelConfirm(true)}
+          />
 
           {/* Cancel Confirmation Modal */}
           <dialog

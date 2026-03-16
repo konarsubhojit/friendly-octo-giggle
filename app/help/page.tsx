@@ -54,6 +54,29 @@ function FAQSection({ items }: { readonly items: readonly FAQItem[] }) {
   );
 }
 
+function HelpContactSection() {
+  return (
+    <section className="bg-[var(--surface)]/80 backdrop-blur-sm rounded-2xl shadow-warm border border-[var(--border-warm)] p-8">
+      <h2 className="text-xl font-semibold text-[var(--foreground)] mb-4">Still need help?</h2>
+      <p className="text-[var(--text-secondary)] mb-6">Our support team is available Monday–Friday, 9am–6pm EST.</p>
+      <div className="flex flex-wrap gap-4">
+        <Link
+          href="/contact"
+          className="bg-gradient-to-r from-[var(--accent-warm)] to-[var(--accent-rose)] text-white px-6 py-3 rounded-xl font-semibold hover:from-[var(--accent-rose)] hover:to-[var(--accent-warm)] transition-all duration-300 shadow-md hover:shadow-lg"
+        >
+          Contact Support
+        </Link>
+        <a
+          href="mailto:support@estore.example.com"
+          className="border border-[var(--border-warm)] text-[var(--text-secondary)] px-6 py-3 rounded-xl font-semibold hover:bg-[var(--accent-blush)] transition-all duration-300"
+        >
+          Email Us
+        </a>
+      </div>
+    </section>
+  );
+}
+
 export default function HelpPage() {
   return (
     <div className="min-h-screen bg-warm-gradient">
@@ -63,24 +86,7 @@ export default function HelpPage() {
 
         <FAQSection items={faqs} />
 
-        <section className="bg-[var(--surface)]/80 backdrop-blur-sm rounded-2xl shadow-warm border border-[var(--border-warm)] p-8">
-          <h2 className="text-xl font-semibold text-[var(--foreground)] mb-4">Still need help?</h2>
-          <p className="text-[var(--text-secondary)] mb-6">Our support team is available Monday–Friday, 9am–6pm EST.</p>
-          <div className="flex flex-wrap gap-4">
-            <Link
-              href="/contact"
-              className="bg-gradient-to-r from-[var(--accent-warm)] to-[var(--accent-rose)] text-white px-6 py-3 rounded-xl font-semibold hover:from-[var(--accent-rose)] hover:to-[var(--accent-warm)] transition-all duration-300 shadow-md hover:shadow-lg"
-            >
-              Contact Support
-            </Link>
-            <a
-              href="mailto:support@estore.example.com"
-              className="border border-[var(--border-warm)] text-[var(--text-secondary)] px-6 py-3 rounded-xl font-semibold hover:bg-[var(--accent-blush)] transition-all duration-300"
-            >
-              Email Us
-            </a>
-          </div>
-        </section>
+        <HelpContactSection />
       </main>
       <Footer />
     </div>
