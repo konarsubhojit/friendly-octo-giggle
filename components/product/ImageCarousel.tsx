@@ -12,11 +12,21 @@ interface ImageCarouselProps {
 // Auto-scroll every 5 seconds by default
 const DEFAULT_INTERVAL = 5000;
 
-export default function ImageCarousel({
+// Keys that move the carousel forward / backward
+const NEXT_KEYS = new Set(["ArrowRight", "ArrowDown"]);
+const PREV_KEYS = new Set(["ArrowLeft", "ArrowUp"]);
+
+// Derive slide-in animation class from direction + in-progress flag
+function getAnimationClass(direction: "next" | "prev", isAnimating: boolean): string {
+  if (!isAnimating) return "";
+  return direction === "next" ? "animate-slide-in-right" : "animate-slide-in-left";
+}
+
+const ImageCarousel = ({
   images,
   productName,
   autoScrollInterval = DEFAULT_INTERVAL,
-}: ImageCarouselProps) {
+}: ImageCarouselProps) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
   const [direction, setDirection] = useState<"next" | "prev">("next");
@@ -44,9 +54,9 @@ export default function ImageCarousel({
     goToIndex((currentIndex - 1 + total) % total, "prev");
   }, [currentIndex, total, goToIndex]);
 
-  // Auto-scroll
+  // Auto-scroll — only registered when there are multiple images
   useEffect(() => {
-    if (total <= 1) return;
+    if (total <= 1) return undefined;
     autoScrollRef.current = setTimeout(goNext, autoScrollInterval);
     return () => {
       if (autoScrollRef.current) clearTimeout(autoScrollRef.current);
@@ -57,11 +67,10 @@ export default function ImageCarousel({
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!containerRef.current) return;
-      // Only handle when carousel is focused or hovered
-      if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+      if (NEXT_KEYS.has(e.key)) {
         e.preventDefault();
         goNext();
-      } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+      } else if (PREV_KEYS.has(e.key)) {
         e.preventDefault();
         goPrev();
       }
@@ -110,14 +119,7 @@ export default function ImageCarousel({
     );
   }
 
-  const animationClass =
-    direction === "next"
-      ? isAnimating
-        ? "animate-slide-in-right"
-        : ""
-      : isAnimating
-        ? "animate-slide-in-left"
-        : "";
+  const animationClass = getAnimationClass(direction, isAnimating);
 
   return (
     <div className="relative select-none">
@@ -204,9 +206,9 @@ export default function ImageCarousel({
         role="tablist"
         aria-label="Image navigation"
       >
-        {images.map((_, idx) => (
+        {images.map((src, idx) => (
           <button
-            key={idx}
+            key={`dot-${src}-${idx}`}
             role="tab"
             aria-selected={idx === currentIndex}
             aria-label={`Go to image ${idx + 1}`}
@@ -225,7 +227,7 @@ export default function ImageCarousel({
         <div className="flex gap-2 mt-3 overflow-x-auto pb-1 scrollbar-thin">
           {images.map((src, idx) => (
             <button
-              key={idx}
+              key={`thumb-${src}-${idx}`}
               onClick={() =>
                 goToIndex(idx, idx > currentIndex ? "next" : "prev")
               }
@@ -253,4 +255,6 @@ export default function ImageCarousel({
       <div className="absolute -bottom-6 -left-6 w-40 h-40 bg-gradient-to-r from-[var(--accent-sage)] to-[#d4e4c4] rounded-full blur-3xl opacity-30 -z-10 pointer-events-none" />
     </div>
   );
-}
+};
+
+export default ImageCarousel;

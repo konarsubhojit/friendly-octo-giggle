@@ -49,6 +49,51 @@ function convertCurrency(
   return Number((amountInBase * rates[to]).toFixed(2));
 }
 
+interface AdditionalImageRowProps {
+  readonly idx: number;
+  readonly imgUrl: string;
+  readonly pendingFile: File | null;
+  readonly onFileChange: (idx: number, e: React.ChangeEvent<HTMLInputElement>) => void;
+  readonly onRemove: (idx: number) => void;
+}
+
+function AdditionalImageRow({ idx, imgUrl, pendingFile, onFileChange, onRemove }: AdditionalImageRowProps) {
+  return (
+    <div className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg bg-gray-50">
+      {imgUrl && !pendingFile && (
+        <div className="relative flex-shrink-0 w-14 h-14">
+          <Image src={imgUrl} alt={`Additional image ${idx + 1}`} fill sizes="56px" className="object-contain rounded border bg-white" />
+        </div>
+      )}
+      <div className="flex-1 min-w-0">
+        <label htmlFor={`additional-image-${idx}`} className="block text-xs font-medium text-gray-600 mb-1">
+          Image {idx + 2}{imgUrl && !pendingFile && " (current)"}
+        </label>
+        <input
+          id={`additional-image-${idx}`}
+          type="file"
+          accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
+          onChange={(e) => onFileChange(idx, e)}
+          className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+        />
+        {pendingFile && (
+          <p className="text-xs text-green-600 mt-1">Selected: {pendingFile.name}</p>
+        )}
+      </div>
+      <button
+        type="button"
+        onClick={() => onRemove(idx)}
+        aria-label={`Remove image ${idx + 2}`}
+        className="flex-shrink-0 text-red-400 hover:text-red-600 transition mt-1"
+      >
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+  );
+}
+
 export default function ProductFormModal({
   editingProduct,
   onClose,
@@ -128,7 +173,7 @@ export default function ProductFormModal({
       category: validateCategory(formData.category),
       image: editingProduct
         ? undefined
-        : validateImage(!!formData.image, !!imageFile),
+        : validateImage(Boolean(formData.image), Boolean(imageFile)),
     };
     const filtered = Object.fromEntries(
       Object.entries(errors).filter(([, v]) => v !== undefined),
@@ -247,11 +292,16 @@ export default function ProductFormModal({
       body: JSON.stringify(productData),
     });
     if (!res.ok) {
-      const error = await res.json();
-      throw new Error(error.error || "Failed to save product");
+      const errorBody = await res.json();
+      throw new Error(
+        (errorBody as { error?: string }).error ?? "Failed to save product",
+      );
     }
-    const saved = await res.json();
-    return saved.data?.product || saved.product || saved;
+    const saved = (await res.json()) as {
+      data?: { product?: Product };
+      product?: Product;
+    };
+    return saved.data?.product ?? saved.product ?? (saved as unknown as Product);
   };
 
   const handleStockChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -589,53 +639,14 @@ export default function ProductFormModal({
 
                 <div className="space-y-3">
                   {formData.images.map((imgUrl, idx) => (
-                    <div
-                      key={idx}
-                      className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg bg-gray-50"
-                    >
-                      {imgUrl && !additionalFiles[idx] && (
-                        <div className="relative flex-shrink-0 w-14 h-14">
-                          <Image
-                            src={imgUrl}
-                            alt={`Additional image ${idx + 1}`}
-                            fill
-                            sizes="56px"
-                            className="object-contain rounded border bg-white"
-                          />
-                        </div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <label
-                          htmlFor={`additional-image-${idx}`}
-                          className="block text-xs font-medium text-gray-600 mb-1"
-                        >
-                          Image {idx + 2}
-                          {imgUrl && !additionalFiles[idx] && " (current)"}
-                        </label>
-                        <input
-                          id={`additional-image-${idx}`}
-                          type="file"
-                          accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
-                          onChange={(e) => handleAdditionalImageChange(idx, e)}
-                          className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        />
-                        {additionalFiles[idx] && (
-                          <p className="text-xs text-green-600 mt-1">
-                            Selected: {additionalFiles[idx]!.name}
-                          </p>
-                        )}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => removeAdditionalImage(idx)}
-                        aria-label={`Remove image ${idx + 2}`}
-                        className="flex-shrink-0 text-red-400 hover:text-red-600 transition mt-1"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </button>
-                    </div>
+                    <AdditionalImageRow
+                      key={`additional-image-${idx}`}
+                      idx={idx}
+                      imgUrl={imgUrl}
+                      pendingFile={additionalFiles[idx] ?? null}
+                      onFileChange={handleAdditionalImageChange}
+                      onRemove={removeAdditionalImage}
+                    />
                   ))}
                 </div>
               </div>
