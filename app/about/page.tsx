@@ -150,7 +150,7 @@ const AboutIllustration = () => (
     <div className="w-full min-h-[400px] rounded-[2rem] bg-stone-200 border border-[var(--border-warm)] shadow-warm-lg flex items-center justify-center">
       <div className="text-center p-8">
         <span className="text-6xl block mb-4" aria-hidden="true">🐰</span>
-        <p className="text-sm text-[var(--text-muted)] font-medium">
+        <p className="text-sm text-[var(--foreground)] font-medium">
           Illustration: Bunny with yarn
         </p>
       </div>

@@ -29,6 +29,10 @@
   /* Borders */
   --border-warm: #F3E3D3;          /* very soft beige border */
 
+  /* Accessible CTA button — deep terracotta, 4.63:1 contrast with #fff */
+  --btn-primary: #C0524A;
+  --btn-primary-hover: #A84640;
+
   /* Typography */
   --font-display: 'Playfair Display', serif;
   --font-body: 'Nunito', sans-serif;
@@ -58,6 +62,11 @@
 
     /* Borders */
     --border-warm: #3A2E28;        /* warm dark border */
+
+    /* Accessible CTA button — same deep terracotta passes in dark mode too.
+       Verified: #C0524A on dark bg #1A1210 → white text contrast 4.63:1 ≥ WCAG AA */
+    --btn-primary: #C0524A;
+    --btn-primary-hover: #A84640;
   }
 }
 
