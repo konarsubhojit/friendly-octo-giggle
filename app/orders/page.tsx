@@ -32,7 +32,7 @@ interface OrderSummary {
   items: Array<{
     quantity: number;
     product?: { name: string; image: string } | null;
-    variation?: Record<string, unknown> | null;
+    variation?: { id: string; name: string; priceModifier: number } | null;
   }>;
 }
 
@@ -45,7 +45,7 @@ function OrderListCard({ order, formatPrice }: OrderListCardProps) {
   const statusInfo = STATUS_CONFIG[order.status] || STATUS_CONFIG.PENDING;
   const itemCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
   const firstItem = order.items[0];
-  const firstImage = (firstItem?.variation as Record<string, unknown>)?.image as string | undefined || firstItem?.product?.image;
+  const firstImage = firstItem?.product?.image;
 
   return (
     <Link
@@ -83,7 +83,7 @@ function OrderListCard({ order, formatPrice }: OrderListCardProps) {
           <p className="text-lg font-bold text-[var(--foreground)]">{formatPrice(order.totalAmount)}</p>
           <p className="text-xs text-[var(--text-muted)]">Order #{order.id}</p>
         </div>
-        <svg className="w-5 h-5 text-[var(--text-muted)] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-5 h-5 text-[var(--text-muted)] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
         </svg>
       </div>

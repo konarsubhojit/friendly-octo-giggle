@@ -83,7 +83,7 @@ describe("ProductGrid", () => {
     expect(screen.getByText("Beautiful flowers")).toBeTruthy();
   });
 
-  it("renders category badge", () => {
+  it("renders category in filter pills", () => {
     renderGrid([makeProduct({ category: "Flowers" })]);
     // "Flowers" appears in the category filter pills
     const elements = screen.getAllByText("Flowers");
