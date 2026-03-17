@@ -124,3 +124,17 @@ export interface AddToCartInput {
 export interface UpdateCartItemInput {
   quantity: number;
 }
+
+// ─── Wishlist Types ──────────────────────────────────────
+
+export interface WishlistItem {
+  id: string;
+  userId: string;
+  productId: string;
+  createdAt: string;
+  product: Product;
+}
+
+export interface AddToWishlistInput {
+  productId: string;
+}

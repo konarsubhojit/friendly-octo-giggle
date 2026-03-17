@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, lazy, Suspense } from 'react';
+import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import Image from 'next/image';
 import { Product } from '@/lib/types';
@@ -18,6 +18,7 @@ import type { AppDispatch } from '@/lib/store';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { AlertBanner } from '@/components/ui/AlertBanner';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { useModalState } from '@/lib/hooks';
 
 // Lazy-load heavy modal components to reduce initial bundle size
 const ProductFormModal = lazy(() => import('@/components/admin/ProductFormModal'));
@@ -29,64 +30,57 @@ export default function ProductsManagement() {
   const products = useSelector(selectAdminProducts) as Product[];
   const loading = useSelector(selectAdminProductsLoading);
   const error = useSelector(selectAdminError);
-  const [showModal, setShowModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [productToDelete, setProductToDelete] = useState<string | null>(null);
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const editModal = useModalState<Product>();
+  const deleteModal = useModalState<string>();
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     dispatch(fetchAdminProducts());
   }, [dispatch]);
 
-  const handleOpenModal = (product?: Product) => {
-    setEditingProduct(product || null);
-    setShowModal(true);
-  };
+  const handleOpenModal = useCallback((product?: Product) => {
+    editModal.open(product);
+  }, [editModal]);
 
-  const handleCloseModal = () => {
-    setShowModal(false);
-    setEditingProduct(null);
-  };
+  const handleCloseModal = useCallback(() => {
+    editModal.close();
+  }, [editModal]);
 
-  const handleProductSaved = (product: Product) => {
+  const handleProductSaved = useCallback((product: Product) => {
     dispatch(upsertProduct(product));
-  };
+  }, [dispatch]);
 
-  const handleDelete = (id: string) => {
-    setProductToDelete(id);
-    setShowDeleteModal(true);
-  };
+  const handleDelete = useCallback((id: string) => {
+    deleteModal.open(id);
+  }, [deleteModal]);
 
-  const confirmDelete = async () => {
-    if (!productToDelete || deleting) return;
+    const confirmDelete = useCallback(async () => {
+    if (!deleteModal.data || deleting) return;
 
     setDeleting(true);
     try {
-      const res = await fetch(`/api/admin/products/${productToDelete}`, {
+      const res = await fetch(`/api/admin/products/${deleteModal.data}`, {
         method: 'DELETE',
       });
 
       if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || 'Failed to delete product');
+        const errData = await res.json();
+        throw new Error(errData.error || 'Failed to delete product');
       }
 
       toast.success('Product deleted successfully');
-      dispatch(removeProduct(productToDelete));
-      setShowDeleteModal(false);
-      setProductToDelete(null);
+      dispatch(removeProduct(deleteModal.data));
+      deleteModal.close();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
     } finally {
       setDeleting(false);
     }
-  };
+  }, [deleteModal, deleting, dispatch]);
 
-  const cancelDelete = () => {
-    setShowDeleteModal(false);
-    setProductToDelete(null);
-  };
+  const cancelDelete = useCallback(() => {
+    deleteModal.close();
+  }, [deleteModal]);
 
   if (loading) {
     return (
@@ -182,7 +176,7 @@ export default function ProductsManagement() {
       )}
 
       {/* Modal - Lazy-loaded */}
-      {showModal && (
+      {editModal.isOpen && (
         <Suspense fallback={
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div className="bg-white dark:bg-gray-800 rounded-lg p-8">
@@ -191,7 +185,7 @@ export default function ProductsManagement() {
           </div>
         }>
           <ProductFormModal
-            editingProduct={editingProduct}
+            editingProduct={editModal.data}
             onClose={handleCloseModal}
             onSuccess={handleProductSaved}
           />
@@ -199,7 +193,7 @@ export default function ProductsManagement() {
       )}
 
       {/* Delete Confirmation Modal - Lazy-loaded */}
-      {showDeleteModal && (
+      {deleteModal.isOpen && (
         <Suspense fallback={
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div className="bg-white dark:bg-gray-800 rounded-lg p-8">

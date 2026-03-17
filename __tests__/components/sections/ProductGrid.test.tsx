@@ -30,7 +30,11 @@ const mockDispatch = vi.fn();
 
 vi.mock("react-redux", () => ({
   useDispatch: () => mockDispatch,
-  useSelector: vi.fn(),
+  useSelector: vi.fn(() => []),
+}));
+
+vi.mock("next-auth/react", () => ({
+  useSession: vi.fn(() => ({ data: null, status: "unauthenticated" })),
 }));
 
 vi.mock("react-hot-toast", () => ({
