@@ -25,7 +25,7 @@ export default function NewsletterForm() {
         />
         <button
           type="submit"
-          className="px-6 py-2 bg-gradient-to-r from-[var(--accent-rose)] to-[var(--accent-pink)] text-white rounded-full font-semibold hover:from-[var(--accent-pink)] hover:to-[var(--accent-rose)] transition-all duration-300 shadow-warm focus-warm"
+          className="px-6 py-2 bg-[var(--btn-primary)] bg-gradient-to-r from-[var(--accent-rose)] to-[var(--accent-pink)] text-white rounded-full font-semibold hover:from-[var(--accent-pink)] hover:to-[var(--accent-rose)] transition-all duration-300 shadow-warm focus-warm"
           aria-label="Subscribe to newsletter"
         >
           Subscribe

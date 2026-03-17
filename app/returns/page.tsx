@@ -77,7 +77,7 @@ function NonReturnableSection() {
         <li>Items marked as Final Sale</li>
       </ul>
       <p className="mt-6 text-[var(--text-secondary)] text-sm">
-        Questions? <Link href="/contact" className="text-[var(--accent-rose)] hover:underline">Contact our support team</Link> and we&apos;ll be happy to help.
+        Questions? <Link href="/contact" className="text-[var(--btn-primary)] hover:underline">Contact our support team</Link> and we&apos;ll be happy to help.
       </p>
     </section>
   );

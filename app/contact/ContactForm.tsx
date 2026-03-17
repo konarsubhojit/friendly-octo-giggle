@@ -57,7 +57,7 @@ const CONTACT_FIELDS: ReadonlyArray<FieldDef> = [
 ];
 
 const SUBMIT_BTN =
-  'w-full bg-gradient-to-r from-[var(--accent-rose)] to-[var(--accent-pink)] text-white py-3 rounded-full font-semibold hover:from-[var(--accent-pink)] hover:to-[var(--accent-rose)] transition-all duration-300 shadow-warm hover:shadow-warm-lg disabled:opacity-50 disabled:cursor-not-allowed focus-warm';
+  'w-full bg-[var(--btn-primary)] bg-gradient-to-r from-[var(--accent-rose)] to-[var(--accent-pink)] text-white py-3 rounded-full font-semibold hover:from-[var(--accent-pink)] hover:to-[var(--accent-rose)] transition-all duration-300 shadow-warm hover:shadow-warm-lg disabled:opacity-50 disabled:cursor-not-allowed focus-warm';
 
 // ─── Component ────────────────────────────────────────────────────────────────
 

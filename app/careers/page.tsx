@@ -56,7 +56,7 @@ export default function CareersPage() {
                 </div>
                 <Link
                   href="/contact"
-                  className="text-sm font-medium text-[var(--accent-rose)] hover:text-[var(--accent-warm)] whitespace-nowrap"
+                  className="text-sm font-medium text-[var(--btn-primary)] hover:text-[var(--btn-primary-hover)] whitespace-nowrap"
                 >
                   Apply →
                 </Link>

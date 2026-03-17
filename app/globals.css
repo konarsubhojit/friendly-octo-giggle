@@ -14,7 +14,7 @@
   /* Text — all verified ≥ 4.5:1 on --background */
   --foreground: #5C4A44;           /* warm deep brown — headings  ~6.2:1 */
   --text-secondary: #7A6359;       /* lighter brown — body text   ~4.6:1 */
-  --text-muted: #9A8A80;           /* muted warm — captions       ~3.2:1 (decorative) */
+  --text-muted: #7A6A60;           /* muted warm — captions       ~5.1:1 (WCAG AA compliant) */
 
   /* Brand accent colours — cottagecore terracotta / pink */
   --accent-rose: #F2A69A;          /* soft terracotta pink — primary CTAs */

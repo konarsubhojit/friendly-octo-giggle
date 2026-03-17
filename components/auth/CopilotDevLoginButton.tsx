@@ -37,7 +37,7 @@ export function CopilotDevLoginButton({ onSuccess }: CopilotDevLoginButtonProps)
 
   return (
     <div className="mt-4 pt-4 border-t-2 border-dashed border-amber-300">
-      <p className="text-xs text-center font-semibold text-amber-600 uppercase tracking-wide mb-2">
+      <p className="text-xs text-center font-semibold text-amber-800 uppercase tracking-wide mb-2">
         ⚠️ Development Only
       </p>
       <button
