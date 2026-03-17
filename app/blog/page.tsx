@@ -42,7 +42,7 @@ export default function BlogPage() {
         <div className="space-y-6">
           {posts.map(post => (
             <article key={post.title} className="bg-[var(--surface)]/80 backdrop-blur-sm rounded-2xl shadow-warm border border-[var(--border-warm)] p-8 hover:shadow-md transition-shadow">
-              <span className="inline-block text-xs font-semibold text-[var(--accent-rose)] bg-[var(--accent-blush)] px-3 py-1 rounded-full mb-3">
+              <span className="inline-block text-xs font-semibold text-[var(--foreground)] bg-[var(--accent-blush)] px-3 py-1 rounded-full mb-3">
                 {post.category}
               </span>
               <h2 className="text-xl font-bold text-[var(--foreground)] mb-2">{post.title}</h2>

@@ -4,7 +4,7 @@ import { FlowerAccent, VineDivider } from "@/components/ui/DecorativeElements";
 
 export default function Footer() {
   return (
-    <footer className="bg-[var(--surface)] text-[var(--foreground)] py-16 mt-12 border-t border-[var(--border-warm)] relative overflow-hidden">
+    <footer aria-label="Site footer" className="bg-[var(--surface)] text-[var(--foreground)] py-16 mt-12 border-t border-[var(--border-warm)] relative overflow-hidden">
       {/* Decorative background elements */}
       <div className="absolute top-4 right-8 opacity-20" aria-hidden="true">
         <FlowerAccent className="w-12 h-12" />
@@ -17,9 +17,9 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
           {/* Company */}
           <div>
-            <h4 className="text-lg font-bold mb-4 text-[var(--foreground)]">
+            <h2 className="text-lg font-bold mb-4 text-[var(--foreground)]">
               Company
-            </h4>
+            </h2>
             <ul className="space-y-2">
               <li>
                 <Link
@@ -57,9 +57,9 @@ export default function Footer() {
           </div>
           {/* Products */}
           <div>
-            <h4 className="text-lg font-bold mb-4 text-[var(--foreground)]">
+            <h2 className="text-lg font-bold mb-4 text-[var(--foreground)]">
               Products
-            </h4>
+            </h2>
             <ul className="space-y-2">
               <li>
                 <Link
@@ -97,9 +97,9 @@ export default function Footer() {
           </div>
           {/* Support */}
           <div>
-            <h4 className="text-lg font-bold mb-4 text-[var(--foreground)]">
+            <h2 className="text-lg font-bold mb-4 text-[var(--foreground)]">
               Support
-            </h4>
+            </h2>
             <ul className="space-y-2">
               <li>
                 <Link
@@ -137,9 +137,9 @@ export default function Footer() {
           </div>
           {/* Connect */}
           <div>
-            <h4 className="text-lg font-bold mb-4 text-[var(--foreground)]">
+            <h2 className="text-lg font-bold mb-4 text-[var(--foreground)]">
               Connect
-            </h4>
+            </h2>
             <div className="flex gap-4 mb-6">
               <a
                 href="https://twitter.com"

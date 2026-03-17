@@ -22,7 +22,7 @@ const SIZE_CLASSES: Record<ButtonSize, string> = {
 
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {
   primary:
-    "bg-gradient-to-r from-[var(--accent-rose)] to-[var(--accent-pink)] hover:from-[var(--accent-pink)] hover:to-[var(--accent-rose)] text-white shadow-warm hover:shadow-warm-lg",
+    "bg-gradient-to-r from-[var(--btn-primary)] to-[var(--btn-primary-hover)] hover:from-[var(--btn-primary-hover)] hover:to-[var(--btn-primary)] text-white shadow-warm hover:shadow-warm-lg",
   secondary:
     "bg-gradient-to-r from-[var(--text-secondary)] to-[var(--text-muted)] hover:from-[var(--text-muted)] hover:to-[var(--text-secondary)] text-white shadow-warm hover:shadow-warm-lg",
   danger:

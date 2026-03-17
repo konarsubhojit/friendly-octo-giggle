@@ -20,7 +20,7 @@ const FEATURE_BADGES = [
 const HeroTextColumn = () => {
   return (
     <div className="flex-1 max-w-xl animate-fade-in-up">
-      <h1 className="font-cursive text-5xl sm:text-6xl lg:text-7xl font-bold leading-tight text-[var(--foreground)] mb-6">
+      <h1 id="hero-heading" className="font-cursive text-5xl sm:text-6xl lg:text-7xl font-bold leading-tight text-[var(--foreground)] mb-6">
         Handmade With Love
       </h1>
       <p className="text-xs sm:text-sm font-semibold tracking-[0.25em] uppercase text-[var(--text-muted)] mb-8">
@@ -33,7 +33,7 @@ const HeroTextColumn = () => {
       </p>
       <Link
         href="/shop"
-        className="inline-flex items-center gap-2 px-8 py-3.5 bg-[var(--accent-rose)] text-white rounded-full font-bold hover:bg-[var(--accent-warm)] transition-all duration-300 shadow-warm hover:shadow-warm-lg hover:scale-105 focus-warm animate-fade-in-up animation-delay-200"
+        className="inline-flex items-center gap-2 px-8 py-3.5 bg-[var(--btn-primary)] text-white rounded-full font-bold hover:bg-[var(--btn-primary-hover)] transition-all duration-300 shadow-warm hover:shadow-warm-lg hover:scale-105 focus-warm animate-fade-in-up animation-delay-200"
       >
         Explore Shop <span aria-hidden="true">→</span>
       </Link>
@@ -59,7 +59,7 @@ const HeroIllustration = () => {
       >
         <div className="text-center p-8">
           <span className="text-6xl block mb-4" aria-hidden="true">🧶</span>
-          <p className="text-sm text-[var(--text-muted)] font-medium">
+          <p className="text-sm text-[var(--foreground)] font-medium">
             Illustration: Girl crocheting by a window
           </p>
         </div>
@@ -85,7 +85,10 @@ const FeatureBadges = () => {
 }
 
 const Hero = () => (
-  <section className="relative pt-28 pb-20 overflow-hidden bg-hero-gradient">
+  <section
+    className="relative pt-28 pb-20 overflow-hidden bg-hero-gradient"
+    aria-labelledby="hero-heading"
+  >
     <ScatteredFlowers />
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
       <div className="flex flex-col lg:flex-row items-center gap-10 lg:gap-16">
