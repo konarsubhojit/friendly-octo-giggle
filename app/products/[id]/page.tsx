@@ -22,7 +22,7 @@ export async function generateMetadata({
   };
 }
 
-async function getProduct(id: string): Promise<Product | null> {
+const getProduct = async (id: string): Promise<Product | null> => {
   try {
     const product = await db.products.findById(id);
     return product;
@@ -30,19 +30,30 @@ async function getProduct(id: string): Promise<Product | null> {
     logError({ error, context: 'product_fetch', additionalInfo: { id } });
     return null;
   }
-}
+};
 
 export default async function ProductPage({
   params,
+  searchParams,
 }: {
   readonly params: Promise<{ id: string }>;
+  readonly searchParams: Promise<{ v?: string }>;
 }) {
-  const { id } = await params;
+  const [{ id }, { v: initialVariationId }] = await Promise.all([
+    params,
+    searchParams,
+  ]);
   const product = await getProduct(id);
 
   if (!product) {
     notFound();
   }
 
-  return <ProductClient product={product} />;
+  return (
+    <ProductClient
+      product={product}
+      initialVariationId={initialVariationId ?? null}
+    />
+  );
 }
+

@@ -306,6 +306,29 @@ export const reviews = pgTable(
   ],
 );
 
+// ─── Product Share Table ─────────────────────────────────
+
+export const productShares = pgTable(
+  "ProductShare",
+  {
+    key: varchar("key", { length: 7 })
+      .primaryKey()
+      .$defaultFn(() => generateShortId()),
+    productId: varchar("productId", { length: 7 })
+      .notNull()
+      .references(() => products.id, { onDelete: "cascade" }),
+    variationId: varchar("variationId", { length: 7 }).references(
+      () => productVariations.id,
+      { onDelete: "set null" },
+    ),
+    createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
+  },
+  (t) => [
+    index("ProductShare_productId_idx").on(t.productId),
+    index("ProductShare_variationId_idx").on(t.variationId),
+  ],
+);
+
 // ─── Relations ───────────────────────────────────────────
 
 export const usersRelations = relations(users, ({ many, one }) => ({
@@ -404,4 +427,15 @@ export const reviewsRelations = relations(reviews, ({ one }) => ({
   }),
   order: one(orders, { fields: [reviews.orderId], references: [orders.id] }),
   user: one(users, { fields: [reviews.userId], references: [users.id] }),
+}));
+
+export const productSharesRelations = relations(productShares, ({ one }) => ({
+  product: one(products, {
+    fields: [productShares.productId],
+    references: [products.id],
+  }),
+  variation: one(productVariations, {
+    fields: [productShares.variationId],
+    references: [productVariations.id],
+  }),
 }));

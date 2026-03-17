@@ -9,6 +9,7 @@ import { useCurrency } from "@/contexts/CurrencyContext";
 import type { AppDispatch } from "@/lib/store";
 import { ProductStockBadge } from "@/components/product/ProductStockBadge";
 import { VariationButton } from "@/components/product/VariationButton";
+import { ShareButton } from "@/components/product/ShareButton";
 import { ButterflyAccent } from "@/components/ui/DecorativeElements";
 import ImageCarousel from "@/components/product/ImageCarousel";
 import { useRecentlyViewed } from "@/lib/hooks";
@@ -17,14 +18,15 @@ import { ReviewsSection } from "@/components/sections/ReviewsSection";
 
 interface ProductClientProps {
   readonly product: Product;
+  readonly initialVariationId: string | null;
 }
 
 // ─── Pure module-level helpers ────────────────────────────
 
-function getCarouselImages(
+const getCarouselImages = (
   product: Product,
   selectedVariation: ProductVariation | null,
-): string[] {
+): string[] => {
   if (selectedVariation) {
     const imgs = [
       ...(selectedVariation.image ? [selectedVariation.image] : []),
@@ -33,16 +35,16 @@ function getCarouselImages(
     if (imgs.length > 0) return imgs;
   }
   return [product.image, ...(product.images ?? [])].filter(Boolean);
-}
+};
 
-function getClampedQtyState(
+const getClampedQtyState = (
   quantity: number,
   stock: number,
-): { qty: number; message: string } {
+): { qty: number; message: string } => {
   if (stock === 0) return { qty: quantity, message: "" };
   if (quantity > stock) return { qty: stock, message: `Only ${stock} available` };
   return { qty: quantity, message: "" };
-}
+};
 
 // ─── Small button-content helpers ────────────────────────
 
@@ -119,19 +121,25 @@ interface ProductInfoCardProps {
   readonly effectiveStock: number;
 }
 
-function ProductInfoCard({
+const ProductInfoCard = ({
   product,
   formatPrice,
   effectivePrice,
   selectedVariation,
   setSelectedVariation,
   effectiveStock,
-}: ProductInfoCardProps) {
+}: ProductInfoCardProps) => {
   return (
     <div className="bg-[var(--surface)]/80 backdrop-blur-lg rounded-2xl shadow-warm border border-[var(--border-warm)] p-8 mb-6">
-      <h1 className="text-4xl font-display font-bold mb-4 text-warm-heading italic">
-        {product.name}
-      </h1>
+      <div className="flex items-start justify-between gap-4 mb-4">
+        <h1 className="text-4xl font-display font-bold text-warm-heading italic">
+          {product.name}
+        </h1>
+        <ShareButton
+          productId={product.id}
+          variationId={selectedVariation?.id ?? null}
+        />
+      </div>
 
       <div className="mb-6">
         <span className="inline-block bg-gradient-to-r from-[var(--accent-warm)] to-[var(--accent-rose)] text-white rounded-full px-4 py-2 text-sm font-semibold shadow-warm">
@@ -183,7 +191,7 @@ function ProductInfoCard({
       )}
     </div>
   );
-}
+};
 
 // ─── Add-to-Cart Section ──────────────────────────────────
 
@@ -325,7 +333,10 @@ function AddToCartSection({
 
 // ─── Main Component ───────────────────────────────────────
 
-export default function ProductClient({ product }: ProductClientProps) {
+export default function ProductClient({
+  product,
+  initialVariationId,
+}: ProductClientProps) {
   const dispatch = useDispatch<AppDispatch>();
   const { formatPrice } = useCurrency();
   const { trackProduct } = useRecentlyViewed();
@@ -335,11 +346,17 @@ export default function ProductClient({ product }: ProductClientProps) {
   const [quantity, setQuantity] = useState(1);
   const [quantityMessage, setQuantityMessage] = useState("");
   const [selectedVariation, setSelectedVariation] =
-    useState<ProductVariation | null>(
-      product.variations && product.variations.length > 0
+    useState<ProductVariation | null>(() => {
+      if (initialVariationId && product.variations) {
+        const matched = product.variations.find(
+          (v) => v.id === initialVariationId,
+        );
+        if (matched) return matched;
+      }
+      return product.variations && product.variations.length > 0
         ? product.variations[0]
-        : null,
-    );
+        : null;
+    });
   const [addingToCart, setAddingToCart] = useState(false);
   const [cartSuccess, setCartSuccess] = useState(false);
   const [error, setError] = useState("");
