@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useSession } from 'next-auth/react';
@@ -41,7 +41,7 @@ interface OrderListCardProps {
   readonly formatPrice: (amount: number) => string;
 }
 
-function OrderListCard({ order, formatPrice }: OrderListCardProps) {
+const OrderListCard = ({ order, formatPrice }: OrderListCardProps) => {
   const statusInfo = STATUS_CONFIG[order.status] || STATUS_CONFIG.PENDING;
   const itemCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
   const firstItem = order.items[0];
@@ -89,7 +89,7 @@ function OrderListCard({ order, formatPrice }: OrderListCardProps) {
       </div>
     </Link>
   );
-}
+};
 
 export default function OrdersPage() {
   const { data: session, status: authStatus } = useSession();
@@ -98,12 +98,26 @@ export default function OrdersPage() {
   const orders = useSelector(selectOrders);
   const loading = useSelector(selectOrdersLoading);
   const error = useSelector(selectOrdersError);
+  const [search, setSearch] = useState('');
 
   useEffect(() => {
     if (authStatus === 'authenticated') {
       dispatch(fetchOrders());
     }
   }, [authStatus, dispatch]);
+
+  const filtered = useMemo(() => {
+    if (!search.trim()) return orders;
+    const query = search.toLowerCase();
+    return orders.filter((order) => {
+      const matchesId = order.id.toLowerCase().includes(query);
+      const matchesStatus = order.status.toLowerCase().includes(query);
+      const matchesProduct = order.items.some((item) =>
+        item.product?.name?.toLowerCase()?.includes(query) ?? false,
+      );
+      return matchesId || matchesStatus || matchesProduct;
+    });
+  }, [orders, search]);
 
   if (authStatus === 'loading' || loading) {
     return (
@@ -130,11 +144,32 @@ export default function OrdersPage() {
   return (
     <div className="min-h-screen bg-warm-gradient">
       <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
-        <GradientHeading className="mb-8">My Orders</GradientHeading>
+        <GradientHeading className="mb-6">My Orders</GradientHeading>
 
-        {error && (
-          <AlertBanner message={error} variant="error" className="mb-6" />
+        {/* Search */}
+        {orders.length > 0 && (
+          <div className="mb-6 relative max-w-md">
+            <svg
+              className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--accent-rose)]"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <input
+              type="search"
+              placeholder="Search by order ID, status, or product…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-11 pr-4 py-3 border border-[var(--border-warm)] rounded-full focus:outline-none focus:ring-2 focus:ring-[var(--accent-rose)]/30 focus:border-[var(--accent-rose)] bg-[var(--surface)] text-[var(--foreground)] placeholder-[var(--text-muted)] shadow-warm transition-all duration-200"
+              aria-label="Search your orders"
+            />
+          </div>
         )}
+
+        {error && <AlertBanner message={error} variant="error" className="mb-6" />}
 
         {orders.length === 0 ? (
           <Card className="p-12 text-center">
@@ -151,9 +186,17 @@ export default function OrdersPage() {
               className="py-0"
             />
           </Card>
+        ) : filtered.length === 0 ? (
+          <Card className="p-8 text-center">
+            <EmptyState
+              title="No matching orders"
+              message="Try a different search term."
+              className="py-0"
+            />
+          </Card>
         ) : (
           <div className="space-y-4">
-            {orders.map((order) => (
+            {filtered.map((order) => (
               <OrderListCard key={order.id} order={order} formatPrice={formatPrice} />
             ))}
           </div>

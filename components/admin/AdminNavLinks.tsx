@@ -5,6 +5,7 @@ const NAV_LINKS = [
   { href: '/admin/products', label: 'Products' },
   { href: '/admin/orders', label: 'Orders' },
   { href: '/admin/users', label: 'Users' },
+  { href: '/admin/reviews', label: 'Reviews' },
 ];
 
 export function AdminNavLinks() {

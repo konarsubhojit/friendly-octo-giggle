@@ -73,6 +73,7 @@ vi.mock("@/lib/schema", () => ({
   carts: {},
   cartItems: {},
   wishlists: {},
+  reviews: {},
   usersRelations: {},
   accountsRelations: {},
   passwordHistoryRelations: {},
@@ -84,6 +85,7 @@ vi.mock("@/lib/schema", () => ({
   cartsRelations: {},
   cartItemsRelations: {},
   wishlistsRelations: {},
+  reviewsRelations: {},
 }));
 
 vi.mock("@/lib/env", () => ({

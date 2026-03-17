@@ -30,3 +30,5 @@ export { TextareaInput } from "./TextareaInput";
 export { UserMenu } from "./UserMenu";
 export { WishlistButton } from "./WishlistButton";
 export { AuthRequiredState } from "./AuthRequiredState";
+export { StarRating } from "./StarRating";
+export { ReviewForm } from "./ReviewForm";

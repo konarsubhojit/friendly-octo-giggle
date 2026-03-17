@@ -12,6 +12,7 @@ import { auth } from "@/lib/auth";
 import { cacheAdminOrderById, invalidateAdminOrderCaches } from "@/lib/cache";
 import { serializeOrder } from "@/lib/serializers";
 import { UpdateOrderStatusSchema } from "@/lib/validations";
+import { sendOrderStatusUpdateEmail } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 
@@ -85,6 +86,21 @@ export async function PATCH(
     }
 
     await invalidateAdminOrderCaches(id, order.userId);
+
+    // Send status update email for key status transitions (fire-and-forget)
+    const notifyStatuses = ["PROCESSING", "SHIPPED", "DELIVERED", "CANCELLED"];
+    if (notifyStatuses.includes(parseResult.data.status)) {
+      sendOrderStatusUpdateEmail({
+        to: order.customerEmail,
+        customerName: order.customerName,
+        orderId: order.id,
+        status: parseResult.data.status,
+        trackingNumber: parseResult.data.trackingNumber ?? order.trackingNumber,
+        shippingProvider: parseResult.data.shippingProvider ?? order.shippingProvider,
+      }).catch(() => {
+        // Email errors are non-fatal
+      });
+    }
 
     return apiSuccess({ order: serializeOrder(order) });
   } catch (error) {

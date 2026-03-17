@@ -121,6 +121,8 @@ export const EnvSchema = z.object({
   REDIS_URL: z.string().optional(),
   NODE_ENV: z.enum(["development", "production", "test"]).optional(),
   EXCHANGE_RATE_API_KEY: z.string().optional(),
+  SENDGRID_API_KEY: z.string().optional(),
+  SENDGRID_FROM_EMAIL: z.string().optional(),
 });
 
 export type Env = z.infer<typeof EnvSchema>;
@@ -211,6 +213,25 @@ export type RegisterInput = z.infer<typeof registerSchema>;
 export type CredentialsLoginInput = z.infer<typeof credentialsLoginSchema>;
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
+
+// ─── Review Validation Schemas ───────────────────────────
+
+export const CreateReviewSchema = z.object({
+  productId: z.string().regex(SHORT_ID_REGEX, "Invalid product ID"),
+  orderId: z.string().regex(SHORT_ID_REGEX, "Invalid order ID").nullish(),
+  rating: z
+    .number()
+    .int("Rating must be a whole number")
+    .min(1, "Rating must be at least 1")
+    .max(5, "Rating must be at most 5"),
+  comment: z
+    .string()
+    .min(10, "Review must be at least 10 characters")
+    .max(1000, "Review must be under 1000 characters"),
+  isAnonymous: z.boolean().default(false),
+});
+
+export type CreateReviewInput = z.infer<typeof CreateReviewSchema>;
 
 // Password requirement descriptions for UI display
 export const PASSWORD_REQUIREMENTS = [

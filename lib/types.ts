@@ -125,6 +125,30 @@ export interface UpdateCartItemInput {
   quantity: number;
 }
 
+// ─── Review Types ─────────────────────────────────────────
+
+export interface Review {
+  id: string;
+  productId: string;
+  orderId: string | null;
+  userId: string | null;
+  rating: number;
+  comment: string;
+  isAnonymous: boolean;
+  createdAt: string;
+  updatedAt: string;
+  user?: { name: string | null; image: string | null } | null;
+  product?: { id: string; name: string; image: string } | null;
+}
+
+export interface CreateReviewInput {
+  productId: string;
+  orderId?: string | null;
+  rating: number;
+  comment: string;
+  isAnonymous?: boolean;
+}
+
 // ─── Wishlist Types ──────────────────────────────────────
 
 export interface WishlistItem {
