@@ -48,6 +48,15 @@ export interface OrderStatusUpdateData {
 
 // ─── HTML Helpers ─────────────────────────────────────────
 
+/** Escapes user-controlled text for safe interpolation into HTML email bodies. */
+export const escapeHtml = (str: string): string =>
+  str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+
 const emailWrapper = (content: string) => `
 <!DOCTYPE html>
 <html lang="en">
@@ -95,10 +104,10 @@ const itemsTableHtml = (items: OrderEmailItem[]) => `
         (item) => `
     <tr>
       <td style="padding:10px 12px;border-bottom:1px solid #F2E8E4;color:#5C4A44;font-size:13px;">
-        ${item.name}${item.variation ? `<br><span style="color:#7a5543;font-size:12px;">${item.variation}</span>` : ""}
+        ${escapeHtml(item.name)}${item.variation ? `<br><span style="color:#7a5543;font-size:12px;">${escapeHtml(item.variation)}</span>` : ""}
       </td>
       <td style="padding:10px 12px;border-bottom:1px solid #F2E8E4;text-align:center;color:#5C4A44;font-size:13px;">${item.quantity}</td>
-      <td style="padding:10px 12px;border-bottom:1px solid #F2E8E4;text-align:right;color:#b83060;font-size:13px;font-weight:600;">${item.price}</td>
+      <td style="padding:10px 12px;border-bottom:1px solid #F2E8E4;text-align:right;color:#b83060;font-size:13px;font-weight:600;">${escapeHtml(item.price)}</td>
     </tr>`,
       )
       .join("")}
@@ -154,24 +163,24 @@ export const sendOrderConfirmationEmail = async (
   data: OrderConfirmationData,
 ): Promise<void> => {
   const bodyHtml = `
-    <h2 style="color:#5C4A44;margin:0 0 8px;font-size:22px;">Thank you, ${data.customerName}! 🌸</h2>
+    <h2 style="color:#5C4A44;margin:0 0 8px;font-size:22px;">Thank you, ${escapeHtml(data.customerName)}! 🌸</h2>
     <p style="color:#7a5543;margin:0 0 24px;font-size:15px;">
       We've received your order and will start preparing it with care.
     </p>
     <div style="background:#F9F0EB;border-radius:12px;padding:16px 20px;margin-bottom:24px;">
       <p style="margin:0;color:#5C4A44;font-size:14px;">
-        <strong>Order ID:</strong> <span style="font-family:monospace;color:#b83060;">#${data.orderId.toUpperCase()}</span>
+        <strong>Order ID:</strong> <span style="font-family:monospace;color:#b83060;">#${escapeHtml(data.orderId.toUpperCase())}</span>
       </p>
     </div>
     <h3 style="color:#5C4A44;font-size:15px;margin:0 0 8px;">Order Summary</h3>
     ${itemsTableHtml(data.items)}
     <div style="text-align:right;padding:8px 12px;background:#F9F0EB;border-radius:8px;margin-bottom:24px;">
       <strong style="color:#5C4A44;font-size:15px;">Total: </strong>
-      <span style="color:#b83060;font-size:18px;font-weight:700;">${data.totalAmount}</span>
+      <span style="color:#b83060;font-size:18px;font-weight:700;">${escapeHtml(data.totalAmount)}</span>
     </div>
     <div style="margin-bottom:24px;">
       <h3 style="color:#5C4A44;font-size:15px;margin:0 0 8px;">Shipping Address</h3>
-      <p style="color:#7a5543;font-size:14px;margin:0;white-space:pre-line;">${data.shippingAddress}</p>
+      <p style="color:#7a5543;font-size:14px;margin:0;white-space:pre-line;">${escapeHtml(data.shippingAddress)}</p>
     </div>
     <p style="color:#7a5543;font-size:14px;margin:0;">
       You'll receive another email once your order has been shipped. ✨
@@ -198,8 +207,8 @@ export const sendOrderStatusUpdateEmail = async (
     data.status === "SHIPPED" && (data.trackingNumber || data.shippingProvider)
       ? `<div style="background:#F0F7FF;border-radius:12px;padding:16px 20px;margin-top:20px;">
           <h3 style="margin:0 0 8px;color:#5C4A44;font-size:15px;">Tracking Information</h3>
-          ${data.shippingProvider ? `<p style="margin:0 0 4px;color:#7a5543;font-size:14px;"><strong>Carrier:</strong> ${data.shippingProvider}</p>` : ""}
-          ${data.trackingNumber ? `<p style="margin:0;color:#7a5543;font-size:14px;"><strong>Tracking #:</strong> <span style="font-family:monospace;color:#2563eb;">${data.trackingNumber}</span></p>` : ""}
+          ${data.shippingProvider ? `<p style="margin:0 0 4px;color:#7a5543;font-size:14px;"><strong>Carrier:</strong> ${escapeHtml(data.shippingProvider)}</p>` : ""}
+          ${data.trackingNumber ? `<p style="margin:0;color:#7a5543;font-size:14px;"><strong>Tracking #:</strong> <span style="font-family:monospace;color:#2563eb;">${escapeHtml(data.trackingNumber)}</span></p>` : ""}
         </div>`
       : "";
 
@@ -208,11 +217,11 @@ export const sendOrderStatusUpdateEmail = async (
       ${info.emoji} Your Order Status Update
     </h2>
     <p style="color:#7a5543;margin:0 0 24px;font-size:15px;">
-      Hi ${data.customerName}, here's an update on your order.
+      Hi ${escapeHtml(data.customerName)}, here's an update on your order.
     </p>
     <div style="background:#F9F0EB;border-radius:12px;padding:16px 20px;margin-bottom:20px;">
       <p style="margin:0 0 8px;color:#5C4A44;font-size:14px;">
-        <strong>Order:</strong> <span style="font-family:monospace;color:#b83060;">#${data.orderId.toUpperCase()}</span>
+        <strong>Order:</strong> <span style="font-family:monospace;color:#b83060;">#${escapeHtml(data.orderId.toUpperCase())}</span>
       </p>
       <p style="margin:0;color:#5C4A44;font-size:14px;">
         <strong>New Status:</strong>

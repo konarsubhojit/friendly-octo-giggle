@@ -41,7 +41,78 @@ const RATING_FILTERS = [
   { label: '1 ★', value: '1' },
 ];
 
-export default function AdminReviewsPage() {
+// ─── ReviewRow component (defined before use) ────────────
+
+const ReviewRow = ({ review }: { readonly review: AdminReview }) => {
+  const displayName = review.isAnonymous || !review.user
+    ? 'Anonymous'
+    : (review.user.name ?? review.user.email);
+
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-5">
+      <div className="flex items-start gap-4">
+        {review.product && (
+          <div className="relative w-14 h-14 shrink-0 rounded-md overflow-hidden bg-gray-100 dark:bg-gray-700">
+            <Image
+              src={review.product.image}
+              alt={review.product.name}
+              fill
+              sizes="56px"
+              className="object-cover"
+            />
+          </div>
+        )}
+        <div className="flex-1 min-w-0">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mb-2">
+            <StarRating rating={review.rating} size="sm" />
+            {review.product && (
+              <span className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                {review.product.name}
+              </span>
+            )}
+            {review.isAnonymous && (
+              <Badge variant="neutral" size="sm">Anonymous</Badge>
+            )}
+          </div>
+          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed mb-3">
+            {review.comment}
+          </p>
+          <ReviewMeta review={review} displayName={displayName} />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ─── ReviewMeta subcomponent (extracted to reduce nesting) ─
+
+const ReviewMeta = ({
+  review,
+  displayName,
+}: {
+  readonly review: AdminReview;
+  readonly displayName: string;
+}) => (
+  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
+    <span>
+      By: <strong className="text-gray-700 dark:text-gray-300">{displayName}</strong>
+    </span>
+    {!review.isAnonymous && review.user?.email && (
+      <span>{review.user.email}</span>
+    )}
+    <span>
+      {new Date(review.createdAt).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      })}
+    </span>
+  </div>
+);
+
+// ─── Main page component ─────────────────────────────────
+
+const AdminReviewsPage = () => {
   const [reviews, setReviews] = useState<AdminReview[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -75,95 +146,41 @@ export default function AdminReviewsPage() {
     fetchReviews();
   }, [fetchReviews]);
 
-  // Client-side search filter
   const filtered = search.trim()
-    ? reviews.filter((r) => {
-        const q = search.toLowerCase();
+    ? reviews.filter((review) => {
+        const query = search.toLowerCase();
         return (
-          r.product?.name.toLowerCase().includes(q) ||
-          r.user?.name?.toLowerCase().includes(q) ||
-          r.user?.email.toLowerCase().includes(q) ||
-          r.comment.toLowerCase().includes(q)
+          review.product?.name?.toLowerCase().includes(query) ||
+          review.user?.name?.toLowerCase()?.includes(query) ||
+          review.user?.email?.toLowerCase().includes(query) ||
+          review.comment.toLowerCase().includes(query)
         );
       })
     : reviews;
 
   const avgRating =
     filtered.length > 0
-      ? filtered.reduce((sum, r) => sum + r.rating, 0) / filtered.length
+      ? filtered.reduce((sum, review) => sum + review.rating, 0) / filtered.length
       : 0;
 
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Header */}
-      <div className="mb-6 flex flex-wrap justify-between items-start gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Reviews &amp; Feedback
-          </h2>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">
-            {total} total reviews
-            {avgRating > 0 && (
-              <span className="ml-3 inline-flex items-center gap-1 text-amber-500 font-semibold">
-                {avgRating.toFixed(1)} ★ avg
-              </span>
-            )}
-          </p>
-        </div>
-        <button
-          onClick={fetchReviews}
-          disabled={loading}
-          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 transition text-sm"
-        >
-          Refresh
-        </button>
-      </div>
+      <ReviewsHeader
+        total={total}
+        avgRating={avgRating}
+        loading={loading}
+        onRefresh={fetchReviews}
+      />
 
       {error && <AlertBanner message={error} variant="error" className="mb-4" />}
 
-      {/* Filters */}
-      <div className="mb-6 flex flex-col sm:flex-row gap-3">
-        {/* Search */}
-        <div className="relative flex-1 max-w-md">
-          <svg
-            className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            aria-hidden="true"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-          <input
-            type="search"
-            placeholder="Search by product, user, or comment…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            aria-label="Search reviews"
-          />
-        </div>
+      <ReviewsFilters
+        search={search}
+        onSearchChange={setSearch}
+        ratingFilter={ratingFilter}
+        onRatingChange={setRatingFilter}
+      />
 
-        {/* Rating filter */}
-        <div className="flex gap-2 flex-wrap">
-          {RATING_FILTERS.map(({ label, value }) => (
-            <button
-              key={value}
-              onClick={() => setRatingFilter(value)}
-              className={`px-3 py-2 rounded-md text-sm font-medium whitespace-nowrap transition ${
-                ratingFilter === value
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 border border-gray-300 dark:border-gray-600'
-              }`}
-              aria-pressed={ratingFilter === value}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Content */}
       {loading ? (
         <div className="flex items-center justify-center py-16">
           <LoadingSpinner />
@@ -179,66 +196,93 @@ export default function AdminReviewsPage() {
       )}
     </main>
   );
-}
-
-const ReviewRow = ({ review }: { readonly review: AdminReview }) => {
-  const displayName = review.isAnonymous || !review.user
-    ? 'Anonymous'
-    : (review.user.name ?? review.user.email);
-
-  return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-5">
-      <div className="flex items-start gap-4">
-        {/* Product image */}
-        {review.product && (
-          <div className="relative w-14 h-14 shrink-0 rounded-md overflow-hidden bg-gray-100 dark:bg-gray-700">
-            <Image
-              src={review.product.image}
-              alt={review.product.name}
-              fill
-              sizes="56px"
-              className="object-cover"
-            />
-          </div>
-        )}
-
-        <div className="flex-1 min-w-0">
-          {/* Top row */}
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mb-2">
-            <StarRating rating={review.rating} size="sm" />
-            {review.product && (
-              <span className="text-sm font-semibold text-gray-900 dark:text-white truncate">
-                {review.product.name}
-              </span>
-            )}
-            {review.isAnonymous && (
-              <Badge variant="neutral" size="sm">Anonymous</Badge>
-            )}
-          </div>
-
-          {/* Comment */}
-          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed mb-3">
-            {review.comment}
-          </p>
-
-          {/* Meta */}
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
-            <span>
-              By: <strong className="text-gray-700 dark:text-gray-300">{displayName}</strong>
-            </span>
-            {!review.isAnonymous && review.user?.email && (
-              <span>{review.user.email}</span>
-            )}
-            <span>
-              {new Date(review.createdAt).toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric',
-              })}
-            </span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
 };
+
+export default AdminReviewsPage;
+
+// ─── Extracted subcomponents ──────────────────────────────
+
+const ReviewsHeader = ({
+  total,
+  avgRating,
+  loading,
+  onRefresh,
+}: {
+  readonly total: number;
+  readonly avgRating: number;
+  readonly loading: boolean;
+  readonly onRefresh: () => void;
+}) => (
+  <div className="mb-6 flex flex-wrap justify-between items-start gap-4">
+    <div>
+      <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+        Reviews &amp; Feedback
+      </h2>
+      <p className="text-gray-600 dark:text-gray-400 mt-1">
+        {total} total reviews
+        {avgRating > 0 && (
+          <span className="ml-3 inline-flex items-center gap-1 text-amber-500 font-semibold">
+            {avgRating.toFixed(1)} ★ avg
+          </span>
+        )}
+      </p>
+    </div>
+    <button
+      onClick={onRefresh}
+      disabled={loading}
+      className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 transition text-sm"
+    >
+      Refresh
+    </button>
+  </div>
+);
+
+const ReviewsFilters = ({
+  search,
+  onSearchChange,
+  ratingFilter,
+  onRatingChange,
+}: {
+  readonly search: string;
+  readonly onSearchChange: (val: string) => void;
+  readonly ratingFilter: string;
+  readonly onRatingChange: (val: string) => void;
+}) => (
+  <div className="mb-6 flex flex-col sm:flex-row gap-3">
+    <div className="relative flex-1 max-w-md">
+      <svg
+        className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+        aria-hidden="true"
+      >
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+      </svg>
+      <input
+        type="search"
+        placeholder="Search by product, user, or comment…"
+        value={search}
+        onChange={(e) => onSearchChange(e.target.value)}
+        className="w-full pl-9 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        aria-label="Search reviews"
+      />
+    </div>
+    <div className="flex gap-2 flex-wrap">
+      {RATING_FILTERS.map(({ label, value }) => (
+        <button
+          key={value}
+          onClick={() => onRatingChange(value)}
+          className={`px-3 py-2 rounded-md text-sm font-medium whitespace-nowrap transition ${
+            ratingFilter === value
+              ? 'bg-blue-600 text-white'
+              : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 border border-gray-300 dark:border-gray-600'
+          }`}
+          aria-pressed={ratingFilter === value}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  </div>
+);

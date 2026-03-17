@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { StarRating } from "@/components/ui/StarRating";
 import { ReviewForm } from "@/components/ui/ReviewForm";
 import { Card } from "@/components/ui/Card";
@@ -127,9 +127,10 @@ export const ReviewsSection = ({ productId }: ReviewsSectionProps) => {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
 
-  const fetchReviews = async () => {
+  const fetchReviews = useCallback(async () => {
     try {
-      const res = await fetch(`/api/reviews?productId=${productId}`);
+      const params = new URLSearchParams({ productId });
+      const res = await fetch(`/api/reviews?${params.toString()}`);
       if (res.ok) {
         const data = await res.json();
         setReviews(data.data?.reviews ?? data.reviews ?? []);
@@ -139,11 +140,11 @@ export const ReviewsSection = ({ productId }: ReviewsSectionProps) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [productId]);
 
   useEffect(() => {
     fetchReviews();
-  }, [productId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [fetchReviews]);
 
   const handleReviewSuccess = () => {
     setShowForm(false);

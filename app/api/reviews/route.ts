@@ -92,6 +92,15 @@ const handlePost = async (request: NextRequest) => {
       201,
     );
   } catch (error) {
+    // Catch unique-constraint violation (concurrent duplicate review)
+    const isUniqueViolation =
+      error instanceof Error &&
+      ("code" in error || "constraint" in error) &&
+      (String((error as Record<string, unknown>).code) === "23505" ||
+        String((error as Record<string, unknown>).constraint ?? "").includes("userId_productId"));
+    if (isUniqueViolation) {
+      return apiError("You have already reviewed this product", 409);
+    }
     return handleApiError(error);
   }
 };

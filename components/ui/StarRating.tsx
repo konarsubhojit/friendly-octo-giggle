@@ -28,7 +28,7 @@ export const StarRating = ({
   return (
     <div
       className="flex items-center gap-0.5"
-      role={interactive ? "radiogroup" : undefined}
+      role={interactive ? "group" : undefined}
       aria-label={label ?? `Rating: ${rating} out of ${maxStars} stars`}
     >
       {Array.from({ length: maxStars }, (_, i) => {

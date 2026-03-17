@@ -278,6 +278,34 @@ export const wishlists = pgTable(
   ],
 );
 
+// ─── Review Tables ───────────────────────────────────────
+
+export const reviews = pgTable(
+  "Review",
+  {
+    id: varchar("id", { length: 7 })
+      .primaryKey()
+      .$defaultFn(() => generateShortId()),
+    productId: varchar("productId", { length: 7 })
+      .notNull()
+      .references(() => products.id, { onDelete: "cascade" }),
+    orderId: varchar("orderId", { length: 7 }).references(() => orders.id, {
+      onDelete: "set null",
+    }),
+    userId: text("userId").references(() => users.id, { onDelete: "set null" }),
+    rating: integer("rating").notNull(),
+    comment: text("comment").notNull(),
+    isAnonymous: boolean("isAnonymous").default(false).notNull(),
+    createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt", { mode: "date" }).defaultNow().notNull(),
+  },
+  (t) => [
+    index("Review_productId_idx").on(t.productId),
+    index("Review_userId_idx").on(t.userId),
+    unique("Review_userId_productId_key").on(t.userId, t.productId),
+  ],
+);
+
 // ─── Relations ───────────────────────────────────────────
 
 export const usersRelations = relations(users, ({ many, one }) => ({
@@ -368,34 +396,6 @@ export const wishlistsRelations = relations(wishlists, ({ one }) => ({
     references: [products.id],
   }),
 }));
-
-// ─── Review Tables ───────────────────────────────────────
-
-export const reviews = pgTable(
-  "Review",
-  {
-    id: varchar("id", { length: 7 })
-      .primaryKey()
-      .$defaultFn(() => generateShortId()),
-    productId: varchar("productId", { length: 7 })
-      .notNull()
-      .references(() => products.id, { onDelete: "cascade" }),
-    orderId: varchar("orderId", { length: 7 }).references(() => orders.id, {
-      onDelete: "set null",
-    }),
-    userId: text("userId").references(() => users.id, { onDelete: "set null" }),
-    rating: integer("rating").notNull(),
-    comment: text("comment").notNull(),
-    isAnonymous: boolean("isAnonymous").default(false).notNull(),
-    createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
-    updatedAt: timestamp("updatedAt", { mode: "date" }).defaultNow().notNull(),
-  },
-  (t) => [
-    index("Review_productId_idx").on(t.productId),
-    index("Review_userId_idx").on(t.userId),
-    unique("Review_userId_productId_key").on(t.userId, t.productId),
-  ],
-);
 
 export const reviewsRelations = relations(reviews, ({ one }) => ({
   product: one(products, {

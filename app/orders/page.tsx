@@ -108,12 +108,12 @@ export default function OrdersPage() {
 
   const filtered = useMemo(() => {
     if (!search.trim()) return orders;
-    const q = search.toLowerCase();
+    const query = search.toLowerCase();
     return orders.filter((order) => {
-      const matchesId = order.id.toLowerCase().includes(q);
-      const matchesStatus = order.status.toLowerCase().includes(q);
+      const matchesId = order.id.toLowerCase().includes(query);
+      const matchesStatus = order.status.toLowerCase().includes(query);
       const matchesProduct = order.items.some((item) =>
-        item.product?.name?.toLowerCase().includes(q),
+        item.product?.name?.toLowerCase()?.includes(query) ?? false,
       );
       return matchesId || matchesStatus || matchesProduct;
     });

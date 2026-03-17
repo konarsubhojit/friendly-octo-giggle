@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { drizzleDb } from "@/lib/db";
 import { reviews } from "@/lib/schema";
-import { desc } from "drizzle-orm";
+import { desc, eq, and, SQL } from "drizzle-orm";
 import { apiSuccess, apiError, handleApiError } from "@/lib/api-utils";
 import { auth } from "@/lib/auth";
 
@@ -18,8 +18,8 @@ const checkAdminAuth = async () => {
   return { authorized: true };
 };
 
-// GET /api/admin/reviews  — returns all reviews with user + product info
-export async function GET(request: NextRequest) {
+// GET /api/admin/reviews  — returns reviews with user + product info, DB-level filtering
+export const GET = async (request: NextRequest) => {
   const authCheck = await checkAdminAuth();
   if (!authCheck.authorized) {
     return apiError(authCheck.error ?? "Unauthorized", authCheck.status);
@@ -30,7 +30,27 @@ export async function GET(request: NextRequest) {
     const productId = searchParams.get("productId");
     const ratingStr = searchParams.get("rating");
 
+    // Build where conditions at DB level
+    const conditions: SQL[] = [];
+    if (productId) {
+      conditions.push(eq(reviews.productId, productId));
+    }
+    if (ratingStr) {
+      const rating = parseInt(ratingStr, 10);
+      if (!isNaN(rating) && rating >= 1 && rating <= 5) {
+        conditions.push(eq(reviews.rating, rating));
+      }
+    }
+
+    const whereClause =
+      conditions.length === 0
+        ? undefined
+        : conditions.length === 1
+          ? conditions[0]
+          : and(...conditions);
+
     const allReviews = await drizzleDb.query.reviews.findMany({
+      where: whereClause as SQL | undefined,
       orderBy: [desc(reviews.createdAt)],
       with: {
         user: { columns: { id: true, name: true, email: true, image: true } },
@@ -38,19 +58,7 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    // Apply optional filters in memory (small dataset expected)
-    let filtered = allReviews;
-    if (productId) {
-      filtered = filtered.filter((r) => r.productId === productId);
-    }
-    if (ratingStr) {
-      const rating = parseInt(ratingStr, 10);
-      if (!isNaN(rating)) {
-        filtered = filtered.filter((r) => r.rating === rating);
-      }
-    }
-
-    const serialized = filtered.map((r) => ({
+    const serialized = allReviews.map((r) => ({
       ...r,
       createdAt: r.createdAt.toISOString(),
       updatedAt: r.updatedAt.toISOString(),
@@ -61,4 +69,4 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     return handleApiError(error);
   }
-}
+};

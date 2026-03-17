@@ -13,8 +13,7 @@ export const dynamic = "force-dynamic";
 
 const PAGE_SIZE = 20;
 
-// Check if user is admin
-async function checkAdminAuth() {
+const checkAdminAuth = async () => {
   const session = await auth();
 
   if (!session?.user) {
@@ -34,7 +33,7 @@ async function checkAdminAuth() {
   }
 
   return { authorized: true };
-}
+};
 
 /**
  * GET /api/admin/products
@@ -42,9 +41,9 @@ async function checkAdminAuth() {
  * Query params:
  *   cursor   — ISO timestamp of the last item (for next page)
  *   limit    — page size (default 20, max 100)
- *   search   — text filter (matches product name or category)
+ *   search   — text filter (matches product name)
  */
-export async function GET(request: NextRequest) {
+export const GET = async (request: NextRequest) => {
   const authCheck = await checkAdminAuth();
   if (!authCheck.authorized) {
     return apiError(authCheck.error ?? "Unknown error", authCheck.status);
@@ -112,9 +111,9 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     return handleApiError(error);
   }
-}
+};
 
-export async function POST(request: NextRequest) {
+export const POST = async (request: NextRequest) => {
   const authCheck = await checkAdminAuth();
   if (!authCheck.authorized) {
     return apiError(authCheck.error ?? "Unauthorized", authCheck.status);
@@ -139,4 +138,4 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     return handleApiError(error);
   }
-}
+};

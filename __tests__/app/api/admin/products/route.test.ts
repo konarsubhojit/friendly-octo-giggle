@@ -36,7 +36,7 @@ vi.mock("drizzle-orm", () => ({
   ilike: vi.fn(),
   and: vi.fn(),
   isNull: vi.fn(),
-  SQL: class {},
+  SQL: vi.fn(),
 }));
 
 vi.mock("@/lib/auth", () => ({
@@ -196,7 +196,7 @@ describe("Admin Products API", () => {
         expires: new Date().toISOString(),
       } as never);
       mockCreate.mockResolvedValue(mockCreatedProduct);
-      vi.mocked(invalidateProductCaches).mockResolvedValue(undefined);
+      vi.mocked(invalidateProductCaches).mockResolvedValue();
 
       const request = createPostRequest(validProductInput);
       const response = await POST(request);
