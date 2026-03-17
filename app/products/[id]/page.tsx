@@ -8,11 +8,11 @@ import { logError } from '@/lib/logger';
 
 export const revalidate = 60;
 
-export async function generateMetadata({
+export const generateMetadata = async ({
   params,
 }: {
   params: Promise<{ id: string }>;
-}): Promise<Metadata> {
+}): Promise<Metadata> => {
   const { id } = await params;
   const product = await db.products.findById(id);
   if (!product) return { title: 'Product Not Found' };
@@ -20,7 +20,7 @@ export async function generateMetadata({
     title: `${product.name} | The Kiyon Store`,
     description: product.description?.slice(0, 160),
   };
-}
+};
 
 const getProduct = async (id: string): Promise<Product | null> => {
   try {
@@ -32,13 +32,13 @@ const getProduct = async (id: string): Promise<Product | null> => {
   }
 };
 
-export default async function ProductPage({
+const ProductPage = async ({
   params,
   searchParams,
 }: {
   readonly params: Promise<{ id: string }>;
   readonly searchParams: Promise<{ v?: string }>;
-}) {
+}) => {
   const [{ id }, { v: initialVariationId }] = await Promise.all([
     params,
     searchParams,
@@ -55,5 +55,7 @@ export default async function ProductPage({
       initialVariationId={initialVariationId ?? null}
     />
   );
-}
+};
+
+export default ProductPage;
 

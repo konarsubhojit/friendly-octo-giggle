@@ -22,14 +22,14 @@ describe("ShareButton", () => {
     expect(screen.getByRole("button", { name: /share/i })).toBeTruthy();
   });
 
-  it("shows 'Generating…' while loading", async () => {
+  it("shows 'Generating…' while loading", () => {
     mockFetch.mockImplementation(
       () =>
         new Promise((resolve) =>
           setTimeout(
             () =>
               resolve({
-                json: async () => ({
+                json: () => ({
                   success: true,
                   data: { key: "shr1234", shareUrl: "http://localhost/s/shr1234" },
                 }),
@@ -47,7 +47,7 @@ describe("ShareButton", () => {
 
   it("shows share URL panel after successful API call", async () => {
     mockFetch.mockResolvedValue({
-      json: async () => ({
+      json: () => ({
         success: true,
         data: { key: "shr1234", shareUrl: "http://localhost/s/shr1234" },
       }),
@@ -66,7 +66,7 @@ describe("ShareButton", () => {
 
   it("calls fetch with correct productId and variationId", async () => {
     mockFetch.mockResolvedValue({
-      json: async () => ({
+      json: () => ({
         success: true,
         data: { key: "shr1234", shareUrl: "http://localhost/s/shr1234" },
       }),
@@ -99,7 +99,7 @@ describe("ShareButton", () => {
 
   it("shows error state when API returns success=false", async () => {
     mockFetch.mockResolvedValue({
-      json: async () => ({ success: false, error: "Server error" }),
+      json: () => ({ success: false, error: "Server error" }),
     });
 
     render(<ShareButton productId="abc1234" variationId={null} />);
@@ -112,12 +112,12 @@ describe("ShareButton", () => {
 
   it("copies URL to clipboard when Copy button is clicked", async () => {
     mockFetch.mockResolvedValue({
-      json: async () => ({
+      json: () => ({
         success: true,
         data: { key: "shr1234", shareUrl: "http://localhost/s/shr1234" },
       }),
     });
-    mockWriteText.mockResolvedValue(undefined);
+    mockWriteText.mockResolvedValue();
 
     render(<ShareButton productId="abc1234" variationId={null} />);
     fireEvent.click(screen.getByRole("button", { name: /share/i }));
@@ -138,7 +138,7 @@ describe("ShareButton", () => {
 
   it("closes the share panel when close button is clicked", async () => {
     mockFetch.mockResolvedValue({
-      json: async () => ({
+      json: () => ({
         success: true,
         data: { key: "shr1234", shareUrl: "http://localhost/s/shr1234" },
       }),
@@ -159,7 +159,7 @@ describe("ShareButton", () => {
 
   it("toggles share panel off when clicking Share again while panel is open", async () => {
     mockFetch.mockResolvedValue({
-      json: async () => ({
+      json: () => ({
         success: true,
         data: { key: "shr1234", shareUrl: "http://localhost/s/shr1234" },
       }),

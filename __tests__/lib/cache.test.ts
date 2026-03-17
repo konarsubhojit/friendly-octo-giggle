@@ -1,8 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+const mockRedisClient = {
+  get: vi.fn(),
+  setex: vi.fn(),
+};
+
 vi.mock("@/lib/redis", () => ({
   getCachedData: vi.fn(),
   invalidateCache: vi.fn(),
+  getRedisClient: vi.fn(() => mockRedisClient),
 }));
 
 vi.mock("@/lib/logger", () => ({
@@ -505,35 +511,60 @@ describe("CACHE_TTL share", () => {
 });
 
 describe("cacheShareResolve", () => {
-  it("calls getCachedData with correct key, TTL=1year, and staleTime=0", async () => {
+  beforeEach(() => {
+    mockRedisClient.get.mockReset();
+    mockRedisClient.setex.mockReset();
+  });
+
+  it("returns cached value and skips fetcher on cache hit", async () => {
     const shareData = { productId: "prd1234", variationId: "var5678" };
+    mockRedisClient.get.mockResolvedValue(JSON.stringify(shareData));
+    const fetcher = vi.fn();
+
+    const result = await cacheShareResolve("shr1234", fetcher);
+
+    expect(result).toEqual(shareData);
+    expect(fetcher).not.toHaveBeenCalled();
+    expect(mockRedisClient.get).toHaveBeenCalledWith("share:shr1234");
+    expect(mockRedisClient.setex).not.toHaveBeenCalled();
+  });
+
+  it("fetches, caches with 1-year TTL, and returns non-null result on cache miss", async () => {
+    const shareData = { productId: "prd1234", variationId: null };
+    mockRedisClient.get.mockResolvedValue(null);
+    mockRedisClient.setex.mockResolvedValue("OK");
     const fetcher = vi.fn().mockResolvedValue(shareData);
-    mockGetCachedData.mockResolvedValue(shareData);
 
-    await cacheShareResolve("shr1234", fetcher);
+    const result = await cacheShareResolve("shr1234", fetcher);
 
-    expect(mockGetCachedData).toHaveBeenCalledWith(
+    expect(result).toEqual(shareData);
+    expect(fetcher).toHaveBeenCalledOnce();
+    expect(mockRedisClient.setex).toHaveBeenCalledWith(
       "share:shr1234",
       31536000,
-      fetcher,
-      0,
+      JSON.stringify(shareData),
     );
   });
 
-  it("returns the result from getCachedData", async () => {
-    const shareData = { productId: "prd1234", variationId: null };
-    mockGetCachedData.mockResolvedValue(shareData);
+  it("does NOT cache null results to prevent cache-poisoning", async () => {
+    mockRedisClient.get.mockResolvedValue(null);
+    const fetcher = vi.fn().mockResolvedValue(null);
 
-    const result = await cacheShareResolve("shr9999", vi.fn());
-
-    expect(result).toBe(shareData);
-  });
-
-  it("returns null when share key is not found", async () => {
-    mockGetCachedData.mockResolvedValue(null);
-
-    const result = await cacheShareResolve("notexist", vi.fn());
+    const result = await cacheShareResolve("notexist", fetcher);
 
     expect(result).toBeNull();
+    expect(fetcher).toHaveBeenCalledOnce();
+    expect(mockRedisClient.setex).not.toHaveBeenCalled();
+  });
+
+  it("falls back to fetcher when Redis throws", async () => {
+    const shareData = { productId: "prd1234", variationId: null };
+    mockRedisClient.get.mockRejectedValue(new Error("Redis down"));
+    const fetcher = vi.fn().mockResolvedValue(shareData);
+
+    const result = await cacheShareResolve("shr1234", fetcher);
+
+    expect(result).toEqual(shareData);
+    expect(fetcher).toHaveBeenCalledOnce();
   });
 });

@@ -15,6 +15,7 @@ import {
   credentialsLoginSchema,
   changePasswordSchema,
   updateProfileSchema,
+  CreateShareSchema,
 } from "@/lib/validations";
 
 // Helpers
@@ -501,6 +502,54 @@ describe("updateProfileSchema", () => {
 
   it("rejects invalid phone number", () => {
     const result = updateProfileSchema.safeParse({ phoneNumber: "abc" });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("CreateShareSchema", () => {
+  it("accepts valid productId without variationId", () => {
+    const result = CreateShareSchema.safeParse({ productId: validShortId });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.productId).toBe(validShortId);
+  });
+
+  it("accepts valid productId with valid variationId", () => {
+    const result = CreateShareSchema.safeParse({
+      productId: validShortId,
+      variationId: "xyz1234",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.variationId).toBe("xyz1234");
+  });
+
+  it("accepts null variationId", () => {
+    const result = CreateShareSchema.safeParse({
+      productId: validShortId,
+      variationId: null,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts missing variationId (nullish)", () => {
+    const result = CreateShareSchema.safeParse({ productId: validShortId });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects missing productId", () => {
+    const result = CreateShareSchema.safeParse({});
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects invalid productId (wrong format)", () => {
+    const result = CreateShareSchema.safeParse({ productId: "bad!" });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects invalid variationId (too long)", () => {
+    const result = CreateShareSchema.safeParse({
+      productId: validShortId,
+      variationId: "toolongid",
+    });
     expect(result.success).toBe(false);
   });
 });

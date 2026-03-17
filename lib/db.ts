@@ -502,11 +502,12 @@ export const db = {
 
     /**
      * Resolve a share key to its product and variation IDs.
-     * Result is cached in Redis permanently (1-year TTL) since share tokens
+     * Result is cached in Redis with a 1-year TTL since share tokens
      * are immutable — the mapping never changes after creation.
+     * Null results (missing token) are not cached to prevent poisoning.
      * Returns null if the key does not exist.
      */
-    resolve: async (
+    resolve: (
       key: string,
     ): Promise<{ productId: string; variationId: string | null } | null> => {
       return cacheShareResolve(key, async () => {

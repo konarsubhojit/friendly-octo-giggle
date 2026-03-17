@@ -176,9 +176,25 @@ export const ShareButton = ({ productId, variationId }: ShareButtonProps) => {
     };
   }, []);
 
+  const scheduleErrorReset = () => {
+    if (errorTimeoutRef.current !== null) {
+      clearTimeout(errorTimeoutRef.current);
+    }
+    setShareState("error");
+    errorTimeoutRef.current = setTimeout(() => setShareState("idle"), 3000);
+  };
+
+  const applyShareResponse = (data: { success: boolean; data?: { shareUrl: string } }) => {
+    if (data.success && data.data) {
+      setShareUrl(data.data.shareUrl);
+      setShareState("ready");
+    } else {
+      scheduleErrorReset();
+    }
+  };
+
   const handleShare = async () => {
     if (shareState === "ready" && shareUrl) {
-      // Toggle panel off if already open
       setShareState("idle");
       setShareUrl(null);
       return;
@@ -197,17 +213,9 @@ export const ShareButton = ({ productId, variationId }: ShareButtonProps) => {
       });
 
       const data = await response.json();
-
-      if (data.success) {
-        setShareUrl(data.data.shareUrl);
-        setShareState("ready");
-      } else {
-        setShareState("error");
-        errorTimeoutRef.current = setTimeout(() => setShareState("idle"), 3000);
-      }
+      applyShareResponse(data);
     } catch {
-      setShareState("error");
-      errorTimeoutRef.current = setTimeout(() => setShareState("idle"), 3000);
+      scheduleErrorReset();
     }
   };
 

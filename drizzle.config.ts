@@ -1,8 +1,10 @@
 import { config } from 'dotenv';
 import { defineConfig } from 'drizzle-kit';
 
-// Load .env.local first (Next.js convention for local secrets), then fall back to .env.
-// This ensures DATABASE_URL from .env.local is available to drizzle-kit commands.
+// Load .env.local first — it takes precedence over .env and is excluded from
+// version control (Next.js convention). Then load .env as a fallback for
+// defaults and CI-injected values. This ensures DATABASE_URL is available to
+// drizzle-kit commands without requiring a manual `export` step.
 config({ path: '.env.local' });
 config({ path: '.env', override: false });
 

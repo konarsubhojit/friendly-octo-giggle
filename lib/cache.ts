@@ -8,6 +8,7 @@
 import {
   getCachedData,
   invalidateCache as invalidateCachePattern,
+  getRedisClient,
 } from "./redis";
 import { logCacheOperation, logError } from "./logger";
 
@@ -280,18 +281,41 @@ export const cacheAdminSales = <T>(fetcher: () => Promise<T>): Promise<T> => {
  * Cache a resolved share key to its product/variation mapping.
  *
  * Share tokens are immutable — the key → productId+variationId mapping never
- * changes after creation. We therefore cache with a 1-year TTL and no
- * stale-while-revalidate window (staleTime = 0) to avoid unnecessary
- * background refetches.
+ * changes after creation. Non-null results are cached with a 1-year TTL (an
+ * effective permanent cache for an immutable record). Null results (token does
+ * not yet exist) are intentionally NOT cached to prevent cache-poisoning via
+ * prefetching random keys and to allow the token to become resolvable later.
  */
-export const cacheShareResolve = <T>(
+export const cacheShareResolve = async <T>(
   key: string,
-  fetcher: () => Promise<T>,
-): Promise<T> => {
-  return getCachedData(
-    CACHE_KEYS.SHARE_RESOLVE_BY_KEY(key),
-    CACHE_TTL.SHARE_RESOLVE,
-    fetcher,
-    0,
-  );
+  fetcher: () => Promise<T | null>,
+): Promise<T | null> => {
+  const redisClient = getRedisClient();
+  if (!redisClient) return fetcher();
+
+  const cacheKey = CACHE_KEYS.SHARE_RESOLVE_BY_KEY(key);
+  try {
+    const cached = await redisClient.get(cacheKey);
+    if (cached !== null) {
+      logCacheOperation({ operation: "hit", key: cacheKey, success: true });
+      return JSON.parse(cached) as T;
+    }
+
+    logCacheOperation({ operation: "miss", key: cacheKey, success: true });
+    const result = await fetcher();
+
+    // Only cache found results — a null result means the token does not (yet)
+    // exist in the database. Caching nulls with a 1-year TTL would permanently
+    // break share links if that key is created later, or allow arbitrary keys
+    // to be prefetched to poison the cache.
+    if (result !== null) {
+      await redisClient.setex(cacheKey, CACHE_TTL.SHARE_RESOLVE, JSON.stringify(result));
+      logCacheOperation({ operation: "set", key: cacheKey, ttl: CACHE_TTL.SHARE_RESOLVE, success: true });
+    }
+
+    return result;
+  } catch (error) {
+    logError({ error, context: "share_cache_operation", additionalInfo: { key: cacheKey } });
+    return fetcher();
+  }
 };
