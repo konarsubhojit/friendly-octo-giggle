@@ -13,6 +13,7 @@ import { ButterflyAccent } from "@/components/ui/DecorativeElements";
 import ImageCarousel from "@/components/product/ImageCarousel";
 import { useRecentlyViewed } from "@/lib/hooks";
 import RecentlyViewed from "@/components/sections/RecentlyViewed";
+import { ReviewsSection } from "@/components/sections/ReviewsSection";
 
 interface ProductClientProps {
   readonly product: Product;
@@ -443,6 +444,11 @@ export default function ProductClient({ product }: ProductClientProps) {
           </div>
         </div>
       </main>
+
+      {/* Reviews Section */}
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
+        <ReviewsSection productId={product.id} />
+      </div>
 
       <RecentlyViewed />
     </div>

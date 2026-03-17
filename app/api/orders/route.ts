@@ -8,6 +8,7 @@ import { CreateOrderInput, OrderItemInput } from "@/lib/types";
 import { withLogging } from "@/lib/api-middleware";
 import { logBusinessEvent, logError } from "@/lib/logger";
 import { auth } from "@/lib/auth";
+import { sendOrderConfirmationEmail } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 
@@ -428,6 +429,23 @@ async function handlePost(request: NextRequest) {
     // Invalidate order caches
     await invalidateCache("admin:orders:*");
     await invalidateUserOrderCaches(userId);
+
+    // Send confirmation email (fire-and-forget — non-fatal)
+    sendOrderConfirmationEmail({
+      to: fullOrder.customerEmail,
+      customerName: fullOrder.customerName,
+      orderId: fullOrder.id,
+      totalAmount: `$${fullOrder.totalAmount.toFixed(2)}`,
+      shippingAddress: fullOrder.customerAddress,
+      items: fullOrder.items.map((item: OrderItem) => ({
+        name: item.product.name,
+        quantity: item.quantity,
+        price: `$${item.price.toFixed(2)}`,
+        variation: item.variation?.name ?? null,
+      })),
+    }).catch(() => {
+      // Email errors are non-fatal
+    });
 
     return NextResponse.json(
       {

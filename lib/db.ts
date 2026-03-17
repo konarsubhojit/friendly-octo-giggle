@@ -13,6 +13,7 @@ import {
   carts,
   cartItems,
   wishlists,
+  reviews,
   userRoleEnum,
   orderStatusEnum,
   usersRelations,
@@ -26,6 +27,7 @@ import {
   cartsRelations,
   cartItemsRelations,
   wishlistsRelations,
+  reviewsRelations,
 } from "./schema";
 import { eq, desc, and, isNull, sql, ne } from "drizzle-orm";
 import { Product, ProductInput } from "./types";
@@ -64,6 +66,8 @@ const schema = {
   cartsRelations,
   cartItemsRelations,
   wishlistsRelations,
+  reviews,
+  reviewsRelations,
 };
 
 // ─── Connection Pool (singleton for serverless) ─────────
