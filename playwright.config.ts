@@ -78,6 +78,24 @@ export default defineConfig({
       },
       testMatch: '**/cart.spec.ts',
     },
+    // Accessibility — public pages (unauthenticated, desktop)
+    {
+      name: 'accessibility-public',
+      use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 800 } },
+      testMatch: '**/accessibility.spec.ts',
+      grep: /public pages/,
+    },
+    // Accessibility — authenticated pages (admin session, desktop)
+    {
+      name: 'accessibility-authenticated',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1280, height: 800 },
+        storageState: './playwright-tests/.auth/admin.json',
+      },
+      testMatch: '**/accessibility.spec.ts',
+      grep: /authenticated pages/,
+    },
   ],
   reporter: [['list'], ['html', { outputFolder: 'playwright-tests/report', open: 'never' }]],
 });

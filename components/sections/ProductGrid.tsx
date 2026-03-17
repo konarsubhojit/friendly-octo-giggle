@@ -99,7 +99,7 @@ const ProductCard = ({ product, formatPrice, index }: ProductCardProps) => {
             {product.description}
           </p>
           <div className="flex items-center justify-between">
-            <span className="text-xl font-bold text-[var(--accent-rose)]">
+            <span className="text-xl font-bold text-[var(--btn-primary)]">
               {formatPrice(product.price)}
             </span>
             <span className="text-xs font-semibold text-[var(--text-muted)] bg-[var(--accent-cream)] px-2.5 py-1 rounded-full border border-[var(--border-warm)]">

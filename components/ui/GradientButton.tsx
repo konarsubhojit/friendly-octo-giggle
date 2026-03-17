@@ -22,11 +22,11 @@ const SIZE_CLASSES: Record<ButtonSize, string> = {
 
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {
   primary:
-    "bg-gradient-to-r from-[var(--btn-primary)] to-[var(--btn-primary-hover)] hover:from-[var(--btn-primary-hover)] hover:to-[var(--btn-primary)] text-white shadow-warm hover:shadow-warm-lg",
+    "bg-[var(--btn-primary)] bg-gradient-to-r from-[var(--btn-primary)] to-[var(--btn-primary-hover)] hover:from-[var(--btn-primary-hover)] hover:to-[var(--btn-primary)] text-white shadow-warm hover:shadow-warm-lg",
   secondary:
-    "bg-gradient-to-r from-[var(--text-secondary)] to-[var(--text-muted)] hover:from-[var(--text-muted)] hover:to-[var(--text-secondary)] text-white shadow-warm hover:shadow-warm-lg",
+    "bg-[var(--text-secondary)] bg-gradient-to-r from-[var(--text-secondary)] to-[var(--text-muted)] hover:from-[var(--text-muted)] hover:to-[var(--text-secondary)] text-white shadow-warm hover:shadow-warm-lg",
   danger:
-    "bg-gradient-to-r from-red-400 to-red-500 hover:from-red-500 hover:to-red-600 text-white shadow-md hover:shadow-lg",
+    "bg-red-600 bg-gradient-to-r from-red-400 to-red-500 hover:from-red-500 hover:to-red-600 text-white shadow-md hover:shadow-lg",
 };
 
 /**

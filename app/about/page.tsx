@@ -80,7 +80,7 @@ const ValuesSection = () => (
         icon={<svg className="w-6 h-6 text-[var(--accent-sage)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>}
         title="Fast &amp; Reliable"
         description="Quick delivery and dependable service you can count on."
-        bgClass="bg-[var(--accent-sage)]/20"
+        bgClass="bg-[#EEF2E9]"
         iconBgClass="bg-[var(--accent-sage)]/30"
         iconBorderClass="border-[var(--accent-sage)]/40"
       />

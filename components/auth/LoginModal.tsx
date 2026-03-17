@@ -42,7 +42,7 @@ const LOGIN_FIELDS: ReadonlyArray<FieldDef> = [
 ];
 
 const SUBMIT_BTN =
-  "w-full py-3 bg-gradient-to-r from-[var(--accent-warm)] to-[var(--accent-rose)] text-white rounded-lg font-semibold hover:from-[var(--accent-rose)] hover:to-[var(--accent-warm)] transition-all duration-300 shadow-warm hover:shadow-warm-lg disabled:opacity-50 disabled:cursor-not-allowed focus-warm";
+  "w-full py-3 bg-[var(--btn-primary)] bg-gradient-to-r from-[var(--accent-warm)] to-[var(--accent-rose)] text-white rounded-lg font-semibold hover:from-[var(--accent-rose)] hover:to-[var(--accent-warm)] transition-all duration-300 shadow-warm hover:shadow-warm-lg disabled:opacity-50 disabled:cursor-not-allowed focus-warm";
 
 export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);

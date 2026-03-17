@@ -19,7 +19,7 @@ const isPasswordStrong = (p: string) =>
 // ─── Field definitions ────────────────────────────────────────────────────────
 
 const PHONE_LABEL = (
-  <>Phone Number <span className="text-gray-400">(optional)</span></>
+  <>Phone Number <span className="text-[var(--text-secondary)]">(optional)</span></>
 );
 
 const REGISTER_FIELDS: ReadonlyArray<FieldDef> = [
@@ -86,7 +86,7 @@ const REGISTER_FIELDS: ReadonlyArray<FieldDef> = [
 ];
 
 const SUBMIT_BTN =
-  'w-full py-3 bg-gradient-to-r from-[var(--accent-rose)] to-[var(--accent-pink)] text-white rounded-full font-semibold hover:from-[var(--accent-pink)] hover:to-[var(--accent-rose)] transition-all duration-300 shadow-warm hover:shadow-warm-lg disabled:opacity-50 disabled:cursor-not-allowed focus-warm';
+  'w-full py-3 bg-[var(--btn-primary)] bg-gradient-to-r from-[var(--accent-rose)] to-[var(--accent-pink)] text-white rounded-full font-semibold hover:from-[var(--accent-pink)] hover:to-[var(--accent-rose)] transition-all duration-300 shadow-warm hover:shadow-warm-lg disabled:opacity-50 disabled:cursor-not-allowed focus-warm';
 
 // ─── Header sub-component (extracted to keep JSX nesting ≤ 4 levels) ──────────
 
@@ -155,7 +155,7 @@ export default function RegisterPage() {
 
         <p className="text-center text-sm text-[var(--text-secondary)] mt-6">
           Already have an account?{' '}
-          <Link href="/auth/signin" className="font-semibold text-[var(--accent-rose)] hover:text-[var(--accent-pink)]">
+          <Link href="/auth/signin" className="font-semibold text-[var(--btn-primary)] hover:text-[var(--btn-primary-hover)]">
             Login
           </Link>
         </p>

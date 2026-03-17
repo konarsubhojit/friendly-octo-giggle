@@ -123,14 +123,14 @@ export default function SignInPage({ searchParams }: SignInPageProps) {
             Don&apos;t have an account?{" "}
             <Link
               href="/auth/register"
-              className="font-semibold text-[var(--accent-warm)] hover:text-[var(--accent-rose)]"
+              className="font-semibold text-[var(--btn-primary)] hover:text-[var(--btn-primary-hover)]"
             >
               Register
             </Link>
           </p>
           <Link
             href="/"
-            className="text-sm text-[var(--accent-rose)] hover:text-[var(--accent-warm)] block"
+            className="text-sm text-[var(--btn-primary)] hover:text-[var(--btn-primary-hover)] block"
           >
             Back to store
           </Link>
