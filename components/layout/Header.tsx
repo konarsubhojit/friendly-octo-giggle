@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useSession, signOut } from "next-auth/react";
@@ -119,6 +119,28 @@ function UserMenu({ user, menuOpen, setMenuOpen, menuRef }: UserMenuProps) {
               />
             </svg>
             My Orders
+          </Link>
+          <Link
+            href="/wishlist"
+            onClick={() => setMenuOpen(false)}
+            className="flex items-center gap-3 px-4 py-2.5 text-sm text-[var(--text-secondary)] hover:bg-[var(--accent-blush)] transition-colors rounded-lg mx-1"
+            role="menuitem"
+          >
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+              />
+            </svg>
+            My Wishlist
           </Link>
           {user.role === "ADMIN" && (
             <Link
@@ -306,6 +328,29 @@ function MobileNav({
             My Orders
           </Link>
         )}
+        {isLoggedIn && (
+          <Link
+            href="/wishlist"
+            onClick={closeMobileNav}
+            className="flex items-center gap-3 px-4 py-3 text-[var(--text-secondary)] hover:bg-[var(--accent-blush)] rounded-xl font-medium transition-colors"
+          >
+            <svg
+              className="w-5 h-5 text-[var(--accent-rose)]"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+              />
+            </svg>
+            My Wishlist
+          </Link>
+        )}
         {!isLoggedIn && (
           <div className="pt-2 border-t border-[var(--border-warm)] mt-2">
             <GradientButton
@@ -344,7 +389,7 @@ export default function Header() {
   }, []);
 
   // Close mobile nav when route changes (click on link)
-  const closeMobileNav = () => setMobileNavOpen(false);
+  const closeMobileNav = useCallback(() => setMobileNavOpen(false), []);
 
   return (
     <>
@@ -392,6 +437,14 @@ export default function Header() {
                   className="text-[var(--text-secondary)] hover:text-[var(--accent-rose)] transition-all duration-300 font-semibold px-3 py-1.5 rounded-full hover:bg-[var(--accent-blush)]/50"
                 >
                   My Orders
+                </Link>
+              )}
+              {session?.user && (
+                <Link
+                  href="/wishlist"
+                  className="text-[var(--text-secondary)] hover:text-[var(--accent-rose)] transition-all duration-300 font-semibold px-3 py-1.5 rounded-full hover:bg-[var(--accent-blush)]/50"
+                >
+                  Wishlist
                 </Link>
               )}
             </nav>

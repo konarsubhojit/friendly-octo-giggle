@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Product } from "@/lib/types";
@@ -10,6 +10,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { StockBadge } from "@/components/sections/StockBadge";
 import { QuickAddButton } from "@/components/sections/QuickAddButton";
 import { FlowerAccent } from "@/components/ui/DecorativeElements";
+import { WishlistButton } from "@/components/ui/WishlistButton";
 import { CATEGORY_FILTERS } from "@/lib/constants/categories";
 
 interface ProductGridProps {
@@ -20,39 +21,6 @@ interface ProductCardProps {
   readonly product: Product;
   readonly formatPrice: (amount: number) => string;
   readonly index: number;
-}
-
-interface WishlistButtonProps {
-  readonly productName: string;
-}
-
-const WishlistButton = ({ productName }: WishlistButtonProps) => {
-  return (
-    <button
-      type="button"
-      className="absolute top-3 right-3 z-10 w-9 h-9 rounded-full bg-[var(--surface)]/90 backdrop-blur-sm border border-[var(--border-warm)] flex items-center justify-center text-[var(--accent-pink)] hover:bg-[var(--accent-blush)] hover:scale-110 hover:border-[var(--accent-pink)] transition-all duration-200 shadow-warm focus-warm"
-      aria-label={`Add ${productName} to wishlist`}
-      onClick={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-      }}
-    >
-      <svg
-        className="w-5 h-5"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-        aria-hidden="true"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-        />
-      </svg>
-    </button>
-  );
 }
 
 interface ProductImageAreaProps {
@@ -69,7 +37,7 @@ const ProductImageArea = ({ product }: ProductImageAreaProps) => {
         className="object-contain p-4 group-hover:scale-108 transition-transform duration-500"
         sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
       />
-      <WishlistButton productName={product.name} />
+      <WishlistButton productId={product.id} productName={product.name} />
       <div className="absolute bottom-3 left-3">
         <StockBadge stock={product.stock} />
       </div>
@@ -117,6 +85,16 @@ const ProductGrid = ({ products }: ProductGridProps) => {
   const { formatPrice } = useCurrency();
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
+
+  const handleSearchChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => setSearch(e.target.value),
+    [],
+  );
+
+  const handleCategoryChange = useCallback(
+    (category: string) => setSelectedCategory(category),
+    [],
+  );
 
   const filtered = useMemo(() => {
     const searchLower = search.toLowerCase();
@@ -173,7 +151,7 @@ const ProductGrid = ({ products }: ProductGridProps) => {
             type="search"
             placeholder="Search products..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={handleSearchChange}
             className="w-full pl-11 pr-4 py-3 border border-[var(--border-warm)] rounded-full focus:outline-none focus:ring-2 focus:ring-[var(--accent-rose)]/30 focus:border-[var(--accent-rose)] bg-[var(--surface)] text-[var(--foreground)] placeholder-[var(--text-muted)] shadow-warm transition-all duration-200"
             aria-label="Search products by name"
           />
@@ -188,7 +166,7 @@ const ProductGrid = ({ products }: ProductGridProps) => {
           {CATEGORY_FILTERS.map((cat) => (
             <button
               key={cat}
-              onClick={() => setSelectedCategory(cat)}
+              onClick={() => handleCategoryChange(cat)}
               className={`px-4 py-1.5 rounded-full text-sm font-semibold border transition-all duration-200 ${
                 selectedCategory === cat
                   ? "bg-gradient-to-r from-[var(--accent-rose)] to-[var(--accent-pink)] text-white border-[var(--accent-rose)] shadow-warm"

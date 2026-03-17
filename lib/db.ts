@@ -12,6 +12,7 @@ import {
   orderItems,
   carts,
   cartItems,
+  wishlists,
   userRoleEnum,
   orderStatusEnum,
   usersRelations,
@@ -24,6 +25,7 @@ import {
   orderItemsRelations,
   cartsRelations,
   cartItemsRelations,
+  wishlistsRelations,
 } from "./schema";
 import { eq, desc, and, isNull, sql, ne } from "drizzle-orm";
 import { Product, ProductInput } from "./types";
@@ -50,6 +52,7 @@ const schema = {
   orderItems,
   carts,
   cartItems,
+  wishlists,
   usersRelations,
   accountsRelations,
   passwordHistoryRelations,
@@ -60,6 +63,7 @@ const schema = {
   orderItemsRelations,
   cartsRelations,
   cartItemsRelations,
+  wishlistsRelations,
 };
 
 // ─── Connection Pool (singleton for serverless) ─────────
@@ -381,6 +385,93 @@ export const db = {
       }
 
       return success;
+    },
+  },
+
+  wishlists: {
+    /**
+     * Get all wishlist product IDs for a user
+     */
+    getProductIds: async (userId: string): Promise<string[]> => {
+      const rows = await drizzleDb
+        .select({ productId: wishlists.productId })
+        .from(wishlists)
+        .where(eq(wishlists.userId, userId));
+      return rows.map((r) => r.productId);
+    },
+
+    /**
+     * Get full wishlist products for a user
+     */
+    getProducts: async (userId: string): Promise<Product[]> => {
+      const rows = await drizzleDb.query.wishlists.findMany({
+        where: eq(wishlists.userId, userId),
+        with: {
+          product: {
+            with: { variations: true },
+          },
+        },
+      });
+
+      return rows
+        .filter((r) => r.product !== null && !r.product.deletedAt)
+        .map((r) => ({
+          ...r.product,
+          deletedAt: null,
+          createdAt: r.product.createdAt.toISOString(),
+          updatedAt: r.product.updatedAt.toISOString(),
+          variations: r.product.variations.map((v) => ({
+            ...v,
+            image: v.image ?? null,
+            images: (v.images as string[]) ?? [],
+            createdAt: v.createdAt.toISOString(),
+            updatedAt: v.updatedAt.toISOString(),
+          })),
+        }));
+    },
+
+    /**
+     * Add a product to the user's wishlist (idempotent)
+     */
+    add: async (
+      userId: string,
+      productId: string,
+    ): Promise<{ userId: string; productId: string }> => {
+      const [row] = await drizzleDb
+        .insert(wishlists)
+        .values({ userId, productId })
+        .onConflictDoNothing()
+        .returning({ userId: wishlists.userId, productId: wishlists.productId });
+
+      return row ?? { userId, productId };
+    },
+
+    /**
+     * Remove a product from the user's wishlist
+     */
+    remove: async (userId: string, productId: string): Promise<boolean> => {
+      const result = await drizzleDb
+        .delete(wishlists)
+        .where(
+          and(eq(wishlists.userId, userId), eq(wishlists.productId, productId)),
+        )
+        .returning({ id: wishlists.id });
+
+      return result.length > 0;
+    },
+
+    /**
+     * Check if a product is in the user's wishlist
+     */
+    has: async (userId: string, productId: string): Promise<boolean> => {
+      const row = await drizzleDb.query.wishlists.findFirst({
+        where: and(
+          eq(wishlists.userId, userId),
+          eq(wishlists.productId, productId),
+        ),
+        columns: { id: true },
+      });
+      return row !== undefined;
     },
   },
 };

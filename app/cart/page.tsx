@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -48,7 +48,7 @@ export default function CartPage() {
     dispatch(fetchCart());
   }, [dispatch]);
 
-  const handleUpdateQuantity = async (itemId: string, quantity: number) => {
+  const handleUpdateQuantity = useCallback(async (itemId: string, quantity: number) => {
     if (quantity < 1) return;
 
     setUpdating(itemId);
@@ -63,9 +63,9 @@ export default function CartPage() {
     } finally {
       setUpdating(null);
     }
-  };
+  }, [dispatch]);
 
-  const handleRemoveItem = async (itemId: string) => {
+  const handleRemoveItem = useCallback(async (itemId: string) => {
     setUpdating(itemId);
     try {
       await dispatch(removeCartItem(itemId)).unwrap();
@@ -78,9 +78,9 @@ export default function CartPage() {
     } finally {
       setUpdating(null);
     }
-  };
+  }, [dispatch]);
 
-  const calculateTotal = () => {
+  const cartTotal = useMemo(() => {
     if (!cart?.items) return 0;
     return cart.items.reduce((total, item) => {
       const price = item.variation
@@ -88,9 +88,21 @@ export default function CartPage() {
         : item.product.price;
       return total + price * item.quantity;
     }, 0);
-  };
+  }, [cart?.items]);
+
+  const cartItemCount = useMemo(() =>
+    cart?.items?.reduce((s, i) => s + i.quantity, 0) ?? 0,
+    [cart?.items],
+  );
 
   // Extracted helper: handles the API call to create an order (JS-R1005)
+  const handleCustomizationChange = useCallback(
+    (itemId: string, note: string) => {
+      setCustomizationNotes((prev) => ({ ...prev, [itemId]: note }));
+    },
+    [],
+  );
+
   const submitOrderToApi = useCallback(
     async (address: string, notes: Record<string, string>): Promise<void> => {
       const orderData = {
@@ -273,12 +285,7 @@ export default function CartPage() {
                     formatPrice={formatPrice}
                     onUpdateQuantity={handleUpdateQuantity}
                     onRemoveItem={handleRemoveItem}
-                    onCustomizationChange={(itemId, note) =>
-                      setCustomizationNotes((prev) => ({
-                        ...prev,
-                        [itemId]: note,
-                      }))
-                    }
+                    onCustomizationChange={handleCustomizationChange}
                   />
                 ))}
               </Card>
@@ -314,11 +321,11 @@ export default function CartPage() {
                 <div className="space-y-3 mb-4 text-sm">
                   <div className="flex justify-between text-[var(--text-secondary)]">
                     <span>
-                      Subtotal ({cart.items.reduce((s, i) => s + i.quantity, 0)}{" "}
+                      Subtotal ({cartItemCount}{" "}
                       items)
                     </span>
                     <span className="font-medium">
-                      {formatPrice(calculateTotal())}
+                      {formatPrice(cartTotal)}
                     </span>
                   </div>
                   <div className="flex justify-between text-[var(--text-secondary)]">
@@ -332,7 +339,7 @@ export default function CartPage() {
                       Total
                     </span>
                     <span className="text-xl font-bold text-warm-heading">
-                      {formatPrice(calculateTotal())}
+                      {formatPrice(cartTotal)}
                     </span>
                   </div>
                 </div>
