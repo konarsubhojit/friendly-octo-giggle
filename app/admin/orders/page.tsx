@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { OrderStatus } from '@/lib/types';
 import { useCurrency } from '@/contexts/CurrencyContext';
@@ -40,36 +40,39 @@ export default function OrdersManagement() {
 
   // --- Helpers ---
 
-  const getShippingEdit = (orderId: string, order: { trackingNumber?: string | null; shippingProvider?: string | null }) => {
+  const getShippingEdit = useCallback((orderId: string, order: { trackingNumber?: string | null; shippingProvider?: string | null }) => {
     return shippingEdits[orderId] ?? {
       trackingNumber: order.trackingNumber ?? '',
       shippingProvider: order.shippingProvider ?? '',
     };
-  };
+  }, [shippingEdits]);
 
-  const setShippingField = (orderId: string, field: 'trackingNumber' | 'shippingProvider', value: string, order: { trackingNumber?: string | null; shippingProvider?: string | null }) => {
-    const current = getShippingEdit(orderId, order);
-    setShippingEdits((prev) => ({
-      ...prev,
-      [orderId]: { ...current, [field]: value },
-    }));
-  };
+  // Read the current draft from the functional updater to avoid depending on getShippingEdit
+  const setShippingField = useCallback((orderId: string, field: 'trackingNumber' | 'shippingProvider', value: string, order: { trackingNumber?: string | null; shippingProvider?: string | null }) => {
+    setShippingEdits((prev) => {
+      const current = prev[orderId] ?? {
+        trackingNumber: order.trackingNumber ?? '',
+        shippingProvider: order.shippingProvider ?? '',
+      };
+      return { ...prev, [orderId]: { ...current, [field]: value } };
+    });
+  }, []);
 
   // --- Handlers ---
 
-  const handleStatusChange = async (orderId: string, newStatus: OrderStatus) => {
+  const handleStatusChange = useCallback(async (orderId: string, newStatus: OrderStatus) => {
     setUpdatingOrderId(orderId);
     await dispatch(updateAdminOrderStatus({ id: orderId, status: newStatus }));
     setUpdatingOrderId(null);
-  };
+  }, [dispatch]);
 
-  const normalizeShippingField = (value: string | null | undefined): string | null => {
+  const normalizeShippingField = useCallback((value: string | null | undefined): string | null => {
     if (value == null) return null;
     const trimmed = value.trim();
     return trimmed === '' ? null : trimmed;
-  };
+  }, []);
 
-  const handleSaveShipping = async (orderId: string, currentStatus: OrderStatus | string, order: { trackingNumber?: string | null; shippingProvider?: string | null }) => {
+  const handleSaveShipping = useCallback(async (orderId: string, currentStatus: OrderStatus | string, order: { trackingNumber?: string | null; shippingProvider?: string | null }) => {
     const edit = getShippingEdit(orderId, order);
     setSavingShippingId(orderId);
     await dispatch(
@@ -86,11 +89,12 @@ export default function OrdersManagement() {
       return rest;
     });
     setSavingShippingId(null);
-  };
+  }, [dispatch, getShippingEdit, normalizeShippingField]);
 
-  const filteredOrders = filter === 'ALL'
-    ? orders
-    : orders.filter(order => order.status === filter);
+  const filteredOrders = useMemo(
+    () => filter === 'ALL' ? orders : orders.filter(order => order.status === filter),
+    [filter, orders],
+  );
 
   // --- Render: Loading ---
 

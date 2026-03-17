@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import { useDispatch } from "react-redux";
 import { Product, ProductVariation } from "@/lib/types";
@@ -11,6 +11,8 @@ import { ProductStockBadge } from "@/components/product/ProductStockBadge";
 import { VariationButton } from "@/components/product/VariationButton";
 import { ButterflyAccent } from "@/components/ui/DecorativeElements";
 import ImageCarousel from "@/components/product/ImageCarousel";
+import { useRecentlyViewed } from "@/lib/hooks";
+import RecentlyViewed from "@/components/sections/RecentlyViewed";
 
 interface ProductClientProps {
   readonly product: Product;
@@ -325,6 +327,10 @@ function AddToCartSection({
 export default function ProductClient({ product }: ProductClientProps) {
   const dispatch = useDispatch<AppDispatch>();
   const { formatPrice } = useCurrency();
+  const { trackProduct } = useRecentlyViewed();
+  // Use a ref so the effect only depends on product.id, not on trackProduct identity
+  const trackProductRef = useRef(trackProduct);
+  trackProductRef.current = trackProduct;
   const [quantity, setQuantity] = useState(1);
   const [quantityMessage, setQuantityMessage] = useState("");
   const [selectedVariation, setSelectedVariation] =
@@ -336,6 +342,18 @@ export default function ProductClient({ product }: ProductClientProps) {
   const [addingToCart, setAddingToCart] = useState(false);
   const [cartSuccess, setCartSuccess] = useState(false);
   const [error, setError] = useState("");
+
+  // Track this product as recently viewed when product.id changes
+  useEffect(() => {
+    trackProductRef.current({
+      id: product.id,
+      name: product.name,
+      image: product.image,
+      price: product.price,
+      category: product.category,
+      viewedAt: Date.now(),
+    });
+  }, [product.id, product.name, product.image, product.price, product.category]);
 
   const effectivePrice = selectedVariation
     ? product.price + selectedVariation.priceModifier
@@ -352,7 +370,10 @@ export default function ProductClient({ product }: ProductClientProps) {
     setQuantityMessage(message);
   }, [effectiveStock, quantity]);
 
-  const carouselImages = getCarouselImages(product, selectedVariation);
+  const carouselImages = useMemo(
+    () => getCarouselImages(product, selectedVariation),
+    [product, selectedVariation],
+  );
 
   const handleAddToCart = async () => {
     setAddingToCart(true);
@@ -380,7 +401,7 @@ export default function ProductClient({ product }: ProductClientProps) {
     }
   };
 
-  return (
+    return (
     <div className="min-h-screen bg-warm-gradient">
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
         <BreadcrumbNav productName={product.name} />
@@ -422,6 +443,8 @@ export default function ProductClient({ product }: ProductClientProps) {
           </div>
         </div>
       </main>
+
+      <RecentlyViewed />
     </div>
   );
 }

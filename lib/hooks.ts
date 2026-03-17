@@ -190,3 +190,88 @@ export function useLocalStorage<T>(
 
   return [storedValue, setValue];
 }
+
+// ─── Recently Viewed Hook ────────────────────────────────
+
+const RECENTLY_VIEWED_KEY = 'kiyon_recently_viewed';
+const RECENTLY_VIEWED_MAX = 12;
+
+export interface RecentlyViewedProduct {
+  id: string;
+  name: string;
+  image: string;
+  price: number;
+  category: string;
+  viewedAt: number;
+}
+
+/**
+ * Tracks recently viewed products in localStorage.
+ * Stores up to RECENTLY_VIEWED_MAX items, most recent first.
+ */
+export function useRecentlyViewed(): {
+  recentlyViewed: RecentlyViewedProduct[];
+  trackProduct: (product: RecentlyViewedProduct) => void;
+  clearHistory: () => void;
+} {
+  const [recentlyViewed, setRecentlyViewed] = useLocalStorage<RecentlyViewedProduct[]>(
+    RECENTLY_VIEWED_KEY,
+    [],
+  );
+
+  const trackProduct = useCallback(
+    (product: RecentlyViewedProduct) => {
+      setRecentlyViewed((prev) => {
+        // Remove existing entry for same product
+        const filtered = prev.filter((p) => p.id !== product.id);
+        // Add to front, cap at max
+        return [{ ...product, viewedAt: Date.now() }, ...filtered].slice(
+          0,
+          RECENTLY_VIEWED_MAX,
+        );
+      });
+    },
+    [setRecentlyViewed],
+  );
+
+  const clearHistory = useCallback(() => {
+    setRecentlyViewed([]);
+  }, [setRecentlyViewed]);
+
+  return { recentlyViewed, trackProduct, clearHistory };
+}
+
+// ─── Modal State Hook ────────────────────────────────────
+
+/**
+ * Generic hook for managing modal open/close state with an optional
+ * data payload (e.g. the item being edited or deleted).
+ *
+ * Usage:
+ *   const editModal = useModalState<Product>();
+ *   editModal.open(product)   // opens with data
+ *   editModal.close()         // closes and clears data
+ *   editModal.isOpen          // boolean
+ *   editModal.data            // T | null
+ */
+export function useModalState<T = undefined>(): {
+  isOpen: boolean;
+  data: T | null;
+  open: (data?: T) => void;
+  close: () => void;
+} {
+  const [isOpen, setIsOpen] = useState(false);
+  const [data, setData] = useState<T | null>(null);
+
+  const open = useCallback((payload?: T) => {
+    setData(payload ?? null);
+    setIsOpen(true);
+  }, []);
+
+  const close = useCallback(() => {
+    setIsOpen(false);
+    setData(null);
+  }, []);
+
+  return { isOpen, data, open, close };
+}
