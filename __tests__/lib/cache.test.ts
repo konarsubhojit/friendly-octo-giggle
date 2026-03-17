@@ -26,6 +26,7 @@ import {
   cacheAdminUserById,
   invalidateAdminUserCaches,
   cacheAdminSales,
+  cacheShareResolve,
 } from "@/lib/cache";
 import { getCachedData, invalidateCache } from "@/lib/redis";
 import { logCacheOperation, logError } from "@/lib/logger";
@@ -488,5 +489,51 @@ describe("cacheAdminSales", () => {
       fetcher,
       30,
     );
+  });
+});
+
+describe("CACHE_KEYS share", () => {
+  it("SHARE_RESOLVE_BY_KEY returns correct key", () => {
+    expect(CACHE_KEYS.SHARE_RESOLVE_BY_KEY("abc1234")).toBe("share:abc1234");
+  });
+});
+
+describe("CACHE_TTL share", () => {
+  it("has correct SHARE_RESOLVE TTL of 1 year in seconds", () => {
+    expect(CACHE_TTL.SHARE_RESOLVE).toBe(31536000);
+  });
+});
+
+describe("cacheShareResolve", () => {
+  it("calls getCachedData with correct key, TTL=1year, and staleTime=0", async () => {
+    const shareData = { productId: "prd1234", variationId: "var5678" };
+    const fetcher = vi.fn().mockResolvedValue(shareData);
+    mockGetCachedData.mockResolvedValue(shareData);
+
+    await cacheShareResolve("shr1234", fetcher);
+
+    expect(mockGetCachedData).toHaveBeenCalledWith(
+      "share:shr1234",
+      31536000,
+      fetcher,
+      0,
+    );
+  });
+
+  it("returns the result from getCachedData", async () => {
+    const shareData = { productId: "prd1234", variationId: null };
+    mockGetCachedData.mockResolvedValue(shareData);
+
+    const result = await cacheShareResolve("shr9999", vi.fn());
+
+    expect(result).toBe(shareData);
+  });
+
+  it("returns null when share key is not found", async () => {
+    mockGetCachedData.mockResolvedValue(null);
+
+    const result = await cacheShareResolve("notexist", vi.fn());
+
+    expect(result).toBeNull();
   });
 });

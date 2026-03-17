@@ -47,6 +47,8 @@ export const CACHE_KEYS = {
   ADMIN_SALES_PATTERN: "admin:sales:*",
   // Exchange rates (date-scoped, refreshed once per UTC day)
   EXCHANGE_RATES_BY_DATE: (date: string) => `exchange-rates:${date}`,
+  // Product shares (immutable token → productId + variationId mapping)
+  SHARE_RESOLVE_BY_KEY: (key: string) => `share:${key}`,
 } as const;
 
 // Cache TTL configuration (in seconds)
@@ -74,6 +76,8 @@ export const CACHE_TTL = {
   ADMIN_USER_DETAIL_STALE: 30,
   ADMIN_SALES: 120, // 2 minutes for sales summary
   ADMIN_SALES_STALE: 30,
+  // Share resolution: immutable once created — cache for 1 year with no stale window
+  SHARE_RESOLVE: 31536000, // 1 year in seconds
 } as const;
 
 /**
@@ -269,5 +273,25 @@ export const cacheAdminSales = <T>(fetcher: () => Promise<T>): Promise<T> => {
     CACHE_TTL.ADMIN_SALES,
     fetcher,
     CACHE_TTL.ADMIN_SALES_STALE,
+  );
+};
+
+/**
+ * Cache a resolved share key to its product/variation mapping.
+ *
+ * Share tokens are immutable — the key → productId+variationId mapping never
+ * changes after creation. We therefore cache with a 1-year TTL and no
+ * stale-while-revalidate window (staleTime = 0) to avoid unnecessary
+ * background refetches.
+ */
+export const cacheShareResolve = <T>(
+  key: string,
+  fetcher: () => Promise<T>,
+): Promise<T> => {
+  return getCachedData(
+    CACHE_KEYS.SHARE_RESOLVE_BY_KEY(key),
+    CACHE_TTL.SHARE_RESOLVE,
+    fetcher,
+    0,
   );
 };

@@ -14,6 +14,7 @@ const {
   mockCacheProductsList,
   mockCacheProductById,
   mockInvalidateProductCaches,
+  mockCacheShareResolve,
 } = vi.hoisted(() => {
   const mockReturningInsert = vi.fn();
   const mockValues = vi.fn(() => ({ returning: mockReturningInsert }));
@@ -36,6 +37,7 @@ const {
     mockCacheProductsList: vi.fn(),
     mockCacheProductById: vi.fn(),
     mockInvalidateProductCaches: vi.fn(),
+    mockCacheShareResolve: vi.fn(),
   };
 });
 
@@ -101,6 +103,7 @@ vi.mock("@/lib/cache", () => ({
   cacheProductsList: mockCacheProductsList,
   cacheProductById: mockCacheProductById,
   invalidateProductCaches: mockInvalidateProductCaches,
+  cacheShareResolve: mockCacheShareResolve,
 }));
 
 vi.mock("drizzle-orm", () => ({

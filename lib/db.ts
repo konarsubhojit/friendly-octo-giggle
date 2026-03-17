@@ -39,6 +39,7 @@ import {
   cacheProductById,
   cacheProductsBestsellers,
   invalidateProductCaches,
+  cacheShareResolve,
 } from "./cache";
 
 // All schema tables and relations collected into one object for Drizzle relational queries
@@ -501,17 +502,21 @@ export const db = {
 
     /**
      * Resolve a share key to its product and variation IDs.
+     * Result is cached in Redis permanently (1-year TTL) since share tokens
+     * are immutable — the mapping never changes after creation.
      * Returns null if the key does not exist.
      */
     resolve: async (
       key: string,
     ): Promise<{ productId: string; variationId: string | null } | null> => {
-      const row = await drizzleDb.query.productShares.findFirst({
-        where: eq(productShares.key, key),
-        columns: { productId: true, variationId: true },
+      return cacheShareResolve(key, async () => {
+        const row = await drizzleDb.query.productShares.findFirst({
+          where: eq(productShares.key, key),
+          columns: { productId: true, variationId: true },
+        });
+        if (!row) return null;
+        return { productId: row.productId, variationId: row.variationId };
       });
-      if (!row) return null;
-      return { productId: row.productId, variationId: row.variationId ?? null };
     },
   },
 };
