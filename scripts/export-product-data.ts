@@ -2,6 +2,7 @@
  * Export product-related data from the database as SQL INSERT statements.
  * Run with: npx tsx scripts/export-product-data.ts
  */
+/* eslint-disable no-console */
 import { config } from "dotenv";
 config({ path: ".env.local" });
 config({ path: ".env", override: false });

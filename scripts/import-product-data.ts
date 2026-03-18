@@ -2,6 +2,7 @@
  * Re-insert exported product data back into the database.
  * Run with: npx tsx scripts/import-product-data.ts
  */
+/* eslint-disable no-console */
 import { config } from "dotenv";
 config({ path: ".env.local" });
 config({ path: ".env", override: false });

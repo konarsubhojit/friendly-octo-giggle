@@ -6,7 +6,6 @@ import Image from "next/image";
 import { useSession, signOut } from "next-auth/react";
 import CartIcon from "@/components/layout/CartIcon";
 import CurrencySelector from "@/components/ui/CurrencySelector";
-import { ThemeSelector } from "@/components/ui/ThemeSelector";
 import LoginModal from "@/components/auth/LoginModal";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { FlowerAccent } from "@/components/ui/DecorativeElements";
@@ -306,52 +305,6 @@ function MobileNav({
           </svg>
           Contact
         </Link>
-        {isLoggedIn && (
-          <Link
-            href="/orders"
-            onClick={closeMobileNav}
-            className="flex items-center gap-3 px-4 py-3 text-[var(--text-secondary)] hover:bg-[var(--accent-blush)] rounded-xl font-medium transition-colors"
-          >
-            <svg
-              className="w-5 h-5 text-[var(--accent-rose)]"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              aria-hidden="true"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-              />
-            </svg>
-            My Orders
-          </Link>
-        )}
-        {isLoggedIn && (
-          <Link
-            href="/wishlist"
-            onClick={closeMobileNav}
-            className="flex items-center gap-3 px-4 py-3 text-[var(--text-secondary)] hover:bg-[var(--accent-blush)] rounded-xl font-medium transition-colors"
-          >
-            <svg
-              className="w-5 h-5 text-[var(--accent-rose)]"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              aria-hidden="true"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-              />
-            </svg>
-            My Wishlist
-          </Link>
-        )}
         {!isLoggedIn && (
           <div className="pt-2 border-t border-[var(--border-warm)] mt-2">
             <GradientButton
@@ -432,26 +385,9 @@ export default function Header() {
               >
                 Contact
               </Link>
-              {session?.user && (
-                <Link
-                  href="/orders"
-                  className="text-[var(--text-secondary)] hover:text-[var(--accent-rose)] transition-all duration-300 font-semibold px-3 py-1.5 rounded-full hover:bg-[var(--accent-blush)]/50"
-                >
-                  My Orders
-                </Link>
-              )}
-              {session?.user && (
-                <Link
-                  href="/wishlist"
-                  className="text-[var(--text-secondary)] hover:text-[var(--accent-rose)] transition-all duration-300 font-semibold px-3 py-1.5 rounded-full hover:bg-[var(--accent-blush)]/50"
-                >
-                  Wishlist
-                </Link>
-              )}
             </nav>
 
             <div className="flex items-center gap-3 sm:gap-4">
-              <ThemeSelector />
               <CurrencySelector />
               <CartIcon />
 
