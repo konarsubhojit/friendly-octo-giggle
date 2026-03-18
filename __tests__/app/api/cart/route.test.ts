@@ -13,6 +13,7 @@ vi.mock("@/lib/db", () => ({
       products: { findFirst: vi.fn() },
       carts: { findFirst: vi.fn() },
       cartItems: { findFirst: vi.fn() },
+      users: { findFirst: vi.fn() },
     },
     insert: vi.fn(() => ({ values: vi.fn(() => ({ returning: vi.fn() })) })),
     update: vi.fn(() => ({ set: vi.fn(() => ({ where: vi.fn() })) })),
@@ -22,6 +23,7 @@ vi.mock("@/lib/db", () => ({
 
 vi.mock("@/lib/schema", () => ({
   products: { id: "id", deletedAt: "deletedAt" },
+  users: { id: "id" },
   carts: { userId: "userId", sessionId: "sessionId", id: "id" },
   cartItems: {
     cartId: "cartId",
@@ -265,6 +267,7 @@ describe("Cart API Route", () => {
       (drizzleDb.query.carts.findFirst as Mock)
         .mockResolvedValueOnce({ id: VALID_CART_ID }) // getOrCreateCart
         .mockResolvedValueOnce(mockCart); // fetch updated cart
+      (drizzleDb.query.users.findFirst as Mock).mockResolvedValue({ id: "user123" });
       // No existing cart item
       (drizzleDb.query.cartItems.findFirst as Mock).mockResolvedValue(null);
       // Mock insert for new cart item
@@ -325,6 +328,50 @@ describe("Cart API Route", () => {
       expect(response.status).toBe(201);
       expect(data.cart).toBeDefined();
       // Guest should get a session cookie
+      const setCookie = response.headers.get("set-cookie");
+      expect(setCookie).toContain("cart_session=");
+    });
+
+    it("falls back to guest cart when authenticated user no longer exists", async () => {
+      const mockCart = {
+        id: VALID_CART_ID,
+        createdAt: new Date("2024-01-01"),
+        updatedAt: new Date("2024-01-02"),
+        items: [],
+      };
+
+      (auth as Mock).mockResolvedValue({ user: { id: "missing-user" } });
+      (drizzleDb.query.products.findFirst as Mock).mockResolvedValue({
+        id: VALID_PRODUCT_ID,
+        stock: 10,
+        variations: [],
+      });
+
+      (drizzleDb.query.carts.findFirst as Mock)
+        .mockResolvedValueOnce(null) // no user cart
+        .mockResolvedValueOnce(null) // no guest cart
+        .mockResolvedValueOnce(mockCart); // fetch updated cart by id
+
+      (drizzleDb.query.users.findFirst as Mock).mockResolvedValue(null);
+      (drizzleDb.query.cartItems.findFirst as Mock).mockResolvedValue(null);
+
+      const insertReturningMock = vi.fn().mockResolvedValue([{ id: VALID_CART_ID }]);
+      const insertValuesMock = vi.fn(() => ({ returning: insertReturningMock }));
+      (drizzleDb.insert as Mock).mockReturnValue({ values: insertValuesMock });
+
+      const request = new NextRequest("http://localhost/api/cart", {
+        method: "POST",
+        body: JSON.stringify({ productId: VALID_PRODUCT_ID, quantity: 1 }),
+        headers: { "content-type": "application/json" },
+      });
+      const response = await POST(request);
+      const data = await response.json();
+
+      expect(response.status).toBe(201);
+      expect(data.cart).toBeDefined();
+      expect(logError).toHaveBeenCalledWith(
+        expect.objectContaining({ context: "cart_invalid_session_user" }),
+      );
       const setCookie = response.headers.get("set-cookie");
       expect(setCookie).toContain("cart_session=");
     });

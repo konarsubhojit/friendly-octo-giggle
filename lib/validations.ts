@@ -123,6 +123,12 @@ export const EnvSchema = z.object({
   EXCHANGE_RATE_API_KEY: z.string().optional(),
   SENDGRID_API_KEY: z.string().optional(),
   SENDGRID_FROM_EMAIL: z.string().optional(),
+  GOOGLE_SMTP_HOST: z.string().optional(),
+  GOOGLE_SMTP_PORT: z.string().optional(),
+  GOOGLE_SMTP_SECURE: z.enum(["true", "false"]).optional(),
+  GOOGLE_SMTP_USER: z.string().optional(),
+  GOOGLE_SMTP_APP_PASSWORD: z.string().optional(),
+  GOOGLE_SMTP_FROM_EMAIL: z.string().optional(),
 });
 
 export type Env = z.infer<typeof EnvSchema>;

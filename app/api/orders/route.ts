@@ -420,32 +420,33 @@ async function handlePost(request: NextRequest) {
       success: true,
     });
 
-    // Invalidate product cache
-    await invalidateCache("products:*");
-    for (const item of body.items) {
-      await invalidateCache(`product:${item.productId}`);
-    }
+    // Invalidate caches in parallel to reduce order response latency.
+    const productCacheKeys = [...new Set(body.items.map((item) => item.productId))];
+    await Promise.all([
+      invalidateCache("products:*"),
+      invalidateCache("admin:orders:*"),
+      invalidateUserOrderCaches(userId),
+      ...productCacheKeys.map((productId) => invalidateCache(`product:${productId}`)),
+    ]);
 
-    // Invalidate order caches
-    await invalidateCache("admin:orders:*");
-    await invalidateUserOrderCaches(userId);
-
-    // Send confirmation email (fire-and-forget — non-fatal)
-    sendOrderConfirmationEmail({
-      to: fullOrder.customerEmail,
-      customerName: fullOrder.customerName,
-      orderId: fullOrder.id,
-      totalAmount: `$${fullOrder.totalAmount.toFixed(2)}`,
-      shippingAddress: fullOrder.customerAddress,
-      items: fullOrder.items.map((item: OrderItem) => ({
-        name: item.product.name,
-        quantity: item.quantity,
-        price: `$${item.price.toFixed(2)}`,
-        variation: item.variation?.name ?? null,
-      })),
-    }).catch(() => {
-      // Email errors are non-fatal
-    });
+    // Schedule email on next tick so request response is not delayed.
+    setTimeout(() => {
+      void sendOrderConfirmationEmail({
+        to: fullOrder.customerEmail,
+        customerName: fullOrder.customerName,
+        orderId: fullOrder.id,
+        totalAmount: `$${fullOrder.totalAmount.toFixed(2)}`,
+        shippingAddress: fullOrder.customerAddress,
+        items: fullOrder.items.map((item: OrderItem) => ({
+          name: item.product.name,
+          quantity: item.quantity,
+          price: `$${item.price.toFixed(2)}`,
+          variation: item.variation?.name ?? null,
+        })),
+      }).catch(() => {
+        // Email errors are non-fatal
+      });
+    }, 0);
 
     return NextResponse.json(
       {

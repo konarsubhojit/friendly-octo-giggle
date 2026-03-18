@@ -91,7 +91,7 @@ function createPool() {
 
 // Using ??= pattern for singleton to avoid recreating pools on hot reloads
 const pool = (globalForDb.pool ??= createPool());
-if (env.NODE_ENV !== "production") globalForDb.pool = pool;
+if (env.NODE_ENV === "development") globalForDb.pool = pool;
 
 // ─── Drizzle Instance ───────────────────────────────────
 

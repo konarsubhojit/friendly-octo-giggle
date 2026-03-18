@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { drizzleDb } from "@/lib/db";
-import { products, carts, cartItems } from "@/lib/schema";
+import { products, carts, cartItems, users } from "@/lib/schema";
 import { eq, and, isNull } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { AddToCartSchema, type AddToCartInput } from "@/lib/validations";
@@ -75,11 +75,41 @@ async function getOrCreateCart(
   session: Session | null,
   sessionId: string | undefined,
 ): Promise<{ cart: { id: string }; sessionId: string | undefined }> {
+  const createGuestCart = async (providedSessionId?: string) => {
+    const guestSessionId =
+      providedSessionId ?? `guest_${Date.now()}_${crypto.randomUUID()}`;
+    let cart = await drizzleDb.query.carts.findFirst({
+      where: eq(carts.sessionId, guestSessionId),
+    });
+    if (!cart) {
+      [cart] = await drizzleDb
+        .insert(carts)
+        .values({ sessionId: guestSessionId, updatedAt: new Date() })
+        .returning();
+    }
+    return { cart, sessionId: guestSessionId };
+  };
+
   if (session?.user?.id) {
     let cart = await drizzleDb.query.carts.findFirst({
       where: eq(carts.userId, session.user.id),
     });
     if (!cart) {
+      const userRecord = await drizzleDb.query.users.findFirst({
+        where: eq(users.id, session.user.id),
+        columns: { id: true },
+      });
+
+      if (!userRecord) {
+        logError({
+          error: new Error("Authenticated session user not found in database"),
+          context: "cart_invalid_session_user",
+          additionalInfo: { userId: session.user.id },
+        });
+
+        return createGuestCart(sessionId);
+      }
+
       [cart] = await drizzleDb
         .insert(carts)
         .values({ userId: session.user.id, updatedAt: new Date() })
@@ -89,18 +119,7 @@ async function getOrCreateCart(
   }
 
   // Guest user
-  const guestSessionId =
-    sessionId ?? `guest_${Date.now()}_${crypto.randomUUID()}`;
-  let cart = await drizzleDb.query.carts.findFirst({
-    where: eq(carts.sessionId, guestSessionId),
-  });
-  if (!cart) {
-    [cart] = await drizzleDb
-      .insert(carts)
-      .values({ sessionId: guestSessionId, updatedAt: new Date() })
-      .returning();
-  }
-  return { cart, sessionId: guestSessionId };
+  return createGuestCart(sessionId);
 }
 
 // Helper: Add or update cart item
@@ -347,7 +366,7 @@ export async function POST(request: NextRequest) {
       { status: 201 },
     );
 
-    if (!session?.user?.id && sessionId) {
+    if (sessionId) {
       setGuestSessionCookie(response, sessionId);
     }
 

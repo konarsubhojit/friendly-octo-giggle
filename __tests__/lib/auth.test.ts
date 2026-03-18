@@ -174,10 +174,12 @@ describe("auth module", () => {
       expect(capturedConfig.providers).toBeDefined();
       expect(Array.isArray(capturedConfig.providers)).toBe(true);
       // 3 base providers (google, microsoft-entra-id, credentials) +
-      // 1 dev-only copilot provider when NODE_ENV !== 'production'
-      const expectedCount = process.env.NODE_ENV !== 'production' ? 4 : 3;
+      // 1 dev-only copilot provider when NODE_ENV === 'development'
+      const expectedCount = process.env.NODE_ENV === 'development' ? 4 : 3;
       expect(capturedConfig.providers.length).toBe(expectedCount);
-      expect(capturedConfig.providers[0].id).toBe("copilot-dev");
+      if (process.env.NODE_ENV === 'development') {
+        expect(capturedConfig.providers[0].id).toBe("copilot-dev");
+      }
     });
   });
 

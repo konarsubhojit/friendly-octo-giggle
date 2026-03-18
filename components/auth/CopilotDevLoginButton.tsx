@@ -10,14 +10,14 @@ interface CopilotDevLoginButtonProps {
 
 /**
  * DEV-ONLY: one-click sign-in as the Copilot admin account.
- * Renders nothing in production — the `NODE_ENV` check is inlined
+ * Renders nothing outside development — the `NODE_ENV` check is inlined
  * at build time by Next.js / webpack, so the component is dead-code-
  * eliminated from the production bundle entirely.
  */
 export function CopilotDevLoginButton({ onSuccess }: CopilotDevLoginButtonProps) {
   const [loading, setLoading] = useState(false);
 
-  if (process.env.NODE_ENV === 'production') return null;
+  if (process.env.NODE_ENV !== 'development') return null;
 
   async function handleClick() {
     setLoading(true);

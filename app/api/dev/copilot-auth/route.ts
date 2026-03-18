@@ -2,7 +2,8 @@
  * DEV-ONLY route: issues a signed NextAuth JWT session cookie for the Copilot
  * admin account when presented with the correct key header.
  *
- * This file is ONLY active in development. Any request received in production
+ * This file is ONLY active in development. Any request received outside
+ * development
  * returns 404, and the route is never bundled into the production build because
  * of the early `NODE_ENV` guard.
  */
@@ -13,8 +14,8 @@ const COPILOT_DEV_KEY = 'copilot-dev-admin-2026';
 const COOKIE_NAME = 'next-auth.session-token';
 
 export async function GET(request: NextRequest) {
-  // Hard production guard — this endpoint must never be reachable in production.
-  if (process.env.NODE_ENV === 'production') {
+  // Hard environment guard — this endpoint must only be reachable in development.
+  if (process.env.NODE_ENV !== 'development') {
     return NextResponse.json({ error: 'Not Found' }, { status: 404 });
   }
 

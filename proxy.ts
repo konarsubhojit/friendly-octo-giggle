@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const isDev = process.env.NODE_ENV !== "production";
+const isDev = process.env.NODE_ENV === "development";
 
 export function proxy(request: NextRequest) {
   const host = request.headers.get("host") || "";
