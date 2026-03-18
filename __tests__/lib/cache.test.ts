@@ -404,6 +404,8 @@ describe("invalidateAdminOrderCaches", () => {
 
     expect(mockInvalidateCache).toHaveBeenCalledWith("admin:orders:*");
     expect(mockInvalidateCache).toHaveBeenCalledWith("admin:order:o1");
+    expect(mockInvalidateCache).toHaveBeenCalledWith("products:bestsellers");
+    expect(mockInvalidateCache).toHaveBeenCalledWith("admin:sales:*");
   });
 
   it("also invalidates user order caches when userId provided", async () => {
@@ -411,6 +413,8 @@ describe("invalidateAdminOrderCaches", () => {
 
     expect(mockInvalidateCache).toHaveBeenCalledWith("admin:orders:*");
     expect(mockInvalidateCache).toHaveBeenCalledWith("admin:order:o1");
+    expect(mockInvalidateCache).toHaveBeenCalledWith("products:bestsellers");
+    expect(mockInvalidateCache).toHaveBeenCalledWith("admin:sales:*");
     expect(mockInvalidateCache).toHaveBeenCalledWith("orders:user:u1");
     expect(mockInvalidateCache).toHaveBeenCalledWith("order:u1:*");
   });

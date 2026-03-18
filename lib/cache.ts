@@ -217,6 +217,8 @@ export const invalidateAdminOrderCaches = async (
   try {
     await invalidateCachePattern(CACHE_KEYS.ADMIN_ORDERS_PATTERN);
     await invalidateCachePattern(CACHE_KEYS.ADMIN_ORDER_BY_ID(orderId));
+    await invalidateCachePattern(CACHE_KEYS.PRODUCTS_BESTSELLERS);
+    await invalidateCachePattern(CACHE_KEYS.ADMIN_SALES_PATTERN);
     if (userId) {
       await invalidateUserOrderCaches(userId);
     }

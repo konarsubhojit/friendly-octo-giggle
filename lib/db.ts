@@ -196,7 +196,7 @@ export const db = {
           .groupBy(orderItems.productId)
           .as("sales");
 
-        const rows = await drizzleDb
+        let bestsellerQuery = drizzleDb
           .select({
             id: products.id,
             name: products.name,
@@ -214,11 +214,16 @@ export const db = {
           .leftJoin(salesSubquery, eq(products.id, salesSubquery.productId))
           .where(isNull(products.deletedAt))
           .orderBy(
-            desc(salesSubquery.totalSold),
+            desc(sql`coalesce(${salesSubquery.totalSold}, 0)`),
             desc(products.createdAt),
           )
-          .$dynamic()
-          .then((r) => (limit ? r.slice(0, limit) : r));
+          .$dynamic();
+
+        if (limit) {
+          bestsellerQuery = bestsellerQuery.limit(limit);
+        }
+
+        const rows = await bestsellerQuery;
 
         if (rows.length === 0) return [];
 

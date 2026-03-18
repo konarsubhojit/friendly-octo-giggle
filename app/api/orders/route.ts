@@ -431,7 +431,7 @@ async function handlePost(request: NextRequest) {
 
     // Schedule email on next tick so request response is not delayed.
     setTimeout(() => {
-      void sendOrderConfirmationEmail({
+      sendOrderConfirmationEmail({
         to: fullOrder.customerEmail,
         customerName: fullOrder.customerName,
         orderId: fullOrder.id,
