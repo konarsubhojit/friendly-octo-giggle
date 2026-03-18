@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Hero from "@/components/sections/Hero";
-import { FloralBorder } from "@/components/ui/DecorativeElements";
 
 export const revalidate = 60;
 

@@ -2,6 +2,7 @@
  * Drop all tables in the public schema so we can run migrations from scratch.
  * Run with: npx tsx scripts/reset-db.ts
  */
+/* eslint-disable no-console */
 import { config } from "dotenv";
 config({ path: ".env.local" });
 config({ path: ".env", override: false });
