@@ -20,16 +20,20 @@ const FEATURE_BADGES = [
 const HeroTextColumn = () => {
   return (
     <div className="flex-1 max-w-xl animate-fade-in-up">
-      <h1 id="hero-heading" className="font-cursive text-5xl sm:text-6xl lg:text-7xl font-bold leading-tight text-[var(--foreground)] mb-6">
+      <h1
+        id="hero-heading"
+        className="font-cursive text-5xl sm:text-6xl lg:text-7xl font-bold leading-tight text-[var(--foreground)] mb-6"
+      >
         Handmade With Love
       </h1>
       <p className="text-xs sm:text-sm font-semibold tracking-[0.25em] uppercase text-[var(--text-muted)] mb-8">
-        Crochet&nbsp; •&nbsp; Flowers&nbsp; •&nbsp; Bags&nbsp; •&nbsp; Accessories
+        Crochet&nbsp; •&nbsp; Flowers&nbsp; •&nbsp; Bags&nbsp; •&nbsp;
+        Accessories
       </p>
       <p className="text-base sm:text-lg text-[var(--text-secondary)] mb-8 leading-relaxed animate-fade-in-up animation-delay-100">
         Discover our collection of crocheted flowers, hair accessories,
-        keyrings, scarves, and cozy wearables — each piece lovingly
-        crafted, one stitch at a time.
+        keyrings, scarves, and cozy wearables — each piece lovingly crafted, one
+        stitch at a time.
       </p>
       <Link
         href="/shop"
@@ -40,14 +44,21 @@ const HeroTextColumn = () => {
       <div className="flex flex-wrap gap-6 mt-10 pt-8 border-t border-[var(--border-warm)] animate-fade-in-up animation-delay-300">
         {STATS.map(({ num, label, decorative }) => (
           <div key={label} className="flex flex-col">
-            <span className="text-2xl font-bold font-display text-[var(--accent-rose)]" aria-hidden={decorative || undefined}>{num}</span>
-            <span className="text-xs text-[var(--text-muted)] font-semibold uppercase tracking-wide">{label}</span>
+            <span
+              className="text-2xl font-bold font-display text-[var(--accent-rose)]"
+              aria-hidden={decorative || undefined}
+            >
+              {num}
+            </span>
+            <span className="text-xs text-[var(--text-muted)] font-semibold uppercase tracking-wide">
+              {label}
+            </span>
           </div>
         ))}
       </div>
     </div>
   );
-}
+};
 
 const HeroIllustration = () => {
   return (
@@ -58,7 +69,9 @@ const HeroIllustration = () => {
         aria-label="Illustration placeholder: girl crocheting by a window"
       >
         <div className="text-center p-8">
-          <span className="text-6xl block mb-4" aria-hidden="true">🧶</span>
+          <span className="text-6xl block mb-4" aria-hidden="true">
+            🧶
+          </span>
           <p className="text-sm text-[var(--foreground)] font-medium">
             Illustration: Girl crocheting by a window
           </p>
@@ -66,7 +79,7 @@ const HeroIllustration = () => {
       </div>
     </div>
   );
-}
+};
 
 const FeatureBadges = () => {
   return (
@@ -76,17 +89,21 @@ const FeatureBadges = () => {
           key={text}
           className="flex items-center gap-2.5 px-5 py-2.5 bg-[var(--surface)]/80 backdrop-blur-sm rounded-full shadow-warm border border-[var(--border-warm)] animate-float-gentle"
         >
-          <span className="text-base" aria-hidden="true">{icon}</span>
-          <span className="text-sm font-semibold text-[var(--text-secondary)]">{text}</span>
+          <span className="text-base" aria-hidden="true">
+            {icon}
+          </span>
+          <span className="text-sm font-semibold text-[var(--text-secondary)]">
+            {text}
+          </span>
         </div>
       ))}
     </div>
   );
-}
+};
 
 const Hero = () => (
   <section
-    className="relative pt-28 pb-20 overflow-hidden bg-hero-gradient"
+    className="relative flex flex-col justify-center overflow-hidden bg-hero-gradient py-12 lg:py-20"
     aria-labelledby="hero-heading"
   >
     <ScatteredFlowers />
@@ -95,7 +112,7 @@ const Hero = () => (
         <HeroTextColumn />
         <HeroIllustration />
       </div>
-      <VineDivider className="mt-12" />
+      <VineDivider />
       <FeatureBadges />
     </div>
     <div
