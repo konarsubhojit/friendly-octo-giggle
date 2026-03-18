@@ -78,6 +78,44 @@
   }
 }
 
+/* ─── Baby Pink + Light Yellow Theme ─────────────────────────────────────
+   A soft, dreamy palette with baby pink text on a light yellow background.
+   All tokens verified for WCAG 2.1 AA contrast compliance (4.5:1+ normal text).
+   ─────────────────────────────────────────────────────────────────────── */
+
+[data-theme="baby-pink"] {
+  /* Page & surface backgrounds */
+  --background: #FEFCE8;           /* soft light yellow */
+  --surface: #FFFFFF;              /* white card surface */
+  --surface-raised: #FFFBEA;       /* lemon-tint elevated surface */
+
+  /* Text — all verified ≥ 4.5:1 on --background (#FEFCE8) */
+  --foreground: #7D3255;           /* deep rose pink     ~7.2:1 on bg */
+  --text-secondary: #9B4468;       /* medium rose        ~5.9:1 on bg */
+  --text-muted: #AD5878;           /* pink muted         ~4.6:1 on bg */
+
+  /* Brand accent colours — baby pink palette */
+  --accent-rose: #FFB6C1;          /* baby pink — primary CTA accents */
+  --accent-warm: #FF9BAD;          /* deeper baby pink — hover state */
+  --accent-peach: #FFD6DE;         /* light blush — decorative highlights */
+  --accent-cream: #FFF9E0;         /* light yellow cream — subtle backgrounds */
+  --accent-blush: #FFECEF;         /* very light pink — card hover states */
+  --accent-sage: #A8C5A0;          /* soft sage green — botanical notes */
+  --accent-pink: #FFB6C1;          /* same as rose for consistency */
+  --accent-lavender: #C4A8D8;      /* soft lavender — complementary accent */
+
+  /* Borders */
+  --border-warm: #FADADD;          /* soft pink border */
+
+  /* Accessible CTA button — deep rose, 4.59:1 contrast with #fff */
+  --btn-primary: #C04E72;
+  --btn-primary-hover: #A83C60;
+
+  /* Typography */
+  --font-display: 'Playfair Display', serif;
+  --font-body: 'Nunito', sans-serif;
+}
+
 body {
   color: var(--foreground);
   background: var(--background);

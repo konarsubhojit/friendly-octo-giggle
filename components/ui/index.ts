@@ -27,6 +27,7 @@ export { SelectInput } from "./SelectInput";
 export { SuccessDisplay } from "./SuccessDisplay";
 export { TextInput } from "./TextInput";
 export { TextareaInput } from "./TextareaInput";
+export { ThemeSelector } from "./ThemeSelector";
 export { UserMenu } from "./UserMenu";
 export { WishlistButton } from "./WishlistButton";
 export { AuthRequiredState } from "./AuthRequiredState";
