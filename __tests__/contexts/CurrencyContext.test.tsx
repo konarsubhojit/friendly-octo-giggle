@@ -6,10 +6,6 @@ import {
   useCurrency,
   CURRENCIES,
 } from "@/contexts/CurrencyContext";
-
-// Stub fetch globally so the useEffect that calls /api/exchange-rates
-// doesn't make real network calls during tests.
-
 function CurrencyDisplay() {
   const {
     currency,
@@ -44,7 +40,6 @@ function ThrowingComponent() {
 
 describe("CurrencyProvider", () => {
   beforeEach(() => {
-    // Fresh mock per test so call state never leaks between tests
     vi.stubGlobal(
       "fetch",
       vi.fn().mockRejectedValue(new Error("no network in tests")),
@@ -74,7 +69,6 @@ describe("CurrencyProvider", () => {
     const converted = parseFloat(
       screen.getByTestId("converted").textContent ?? "0",
     );
-    // INR rate = 1, so convertPrice(10) = 10
     expect(converted).toBeCloseTo(10 * CURRENCIES.INR.rate, 2);
   });
 
@@ -85,7 +79,6 @@ describe("CurrencyProvider", () => {
       </CurrencyProvider>,
     );
     const formatted = screen.getByTestId("formatted").textContent ?? "";
-    // With INR as the base currency, formatPrice(10) should format 10 INR
     expect(formatted).toContain("10");
   });
 
@@ -171,7 +164,6 @@ describe("CurrencyProvider", () => {
         <CurrencyDisplay />
       </CurrencyProvider>,
     );
-    // fetch is stubbed to reject, so ratesLoading should become false once settled
     await waitFor(() => {
       expect(screen.getByTestId("rates-loading").textContent).toBe("false");
     });
@@ -216,7 +208,6 @@ describe("CurrencyProvider", () => {
       expect(screen.getByTestId("rates-loading").textContent).toBe("false");
     });
 
-    // Rates should remain at fallback values
     const usdRate = parseFloat(
       screen.getByTestId("usd-rate").textContent ?? "0",
     );

@@ -1,9 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { isApiSuccess } from "@/lib/api-utils";
-
-// We test the pure functions. NextResponse-dependent functions are tested
-// via integration tests or with mocked NextResponse.
-
 describe("isApiSuccess", () => {
   it("returns true for valid success response", () => {
     expect(isApiSuccess({ success: true, data: { id: 1 } })).toBe(true);
@@ -34,7 +30,6 @@ describe("isApiSuccess", () => {
   });
 });
 
-// Test safeFetch with mocked global fetch
 describe("safeFetch", () => {
   beforeEach(() => {
     vi.restoreAllMocks();

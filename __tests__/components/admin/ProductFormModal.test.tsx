@@ -134,11 +134,8 @@ describe("ProductFormModal", () => {
   it("allows clearing stock field and then typing 0", () => {
     renderModal({ editingProduct: mockProduct }); // starts with stock=10
     const stockInput = screen.getByLabelText("Stock");
-    // Clear the field (simulating backspace/delete)
     fireEvent.change(stockInput, { target: { value: "" } });
-    // Field should clear (not revert to 10)
     expect((stockInput as HTMLInputElement).value).toBe("");
-    // Now type 0
     fireEvent.change(stockInput, { target: { value: "0" } });
     expect((stockInput as HTMLInputElement).value).toBe("0");
   });
@@ -173,7 +170,6 @@ describe("ProductFormModal", () => {
   it("shows inline error when file exceeds size limit", async () => {
     renderModal();
     const fileInput = screen.getByLabelText(/primary image/i);
-    // Create a large file
     const largeFile = new File(["x".repeat(6 * 1024 * 1024)], "large.jpg", {
       type: "image/jpeg",
     });
@@ -204,7 +200,6 @@ describe("ProductFormModal", () => {
 
   it("shows inline error when submitting without image", async () => {
     const { container } = renderModal();
-    // Fill all fields except image
     fireEvent.change(screen.getByLabelText("Name"), {
       target: { value: "Product" },
     });
@@ -244,7 +239,6 @@ describe("ProductFormModal", () => {
       }),
     );
 
-    // Use an editingProduct with an image URL to bypass file upload requirement
     const { container } = renderModal({
       onClose,
       onSuccess,
@@ -288,7 +282,6 @@ describe("ProductFormModal", () => {
     const logger = await import("@/lib/logger");
     const onSuccess = vi.fn();
 
-    // Mock fetch to fail (uploadImage catch block)
     vi.stubGlobal(
       "fetch",
       vi.fn().mockRejectedValue(new Error("Network error")),
@@ -296,7 +289,6 @@ describe("ProductFormModal", () => {
 
     const { container } = renderModal({ onSuccess });
 
-    // Fill all required fields
     fireEvent.change(screen.getByLabelText("Name"), {
       target: { value: "New Product" },
     });
@@ -313,7 +305,6 @@ describe("ProductFormModal", () => {
       target: { value: "10" },
     });
 
-    // Select a valid image file
     const fileInput = screen.getByLabelText(/primary image/i);
     const validFile = new File(["content"], "test.jpg", { type: "image/jpeg" });
     Object.defineProperty(validFile, "size", { value: 100 * 1024 });
@@ -335,7 +326,6 @@ describe("ProductFormModal", () => {
   });
 
   it("shows 'Saving...' button text during submission", async () => {
-    // Create a promise that never resolves to keep the component in saving state
     let resolvePromise: (value: unknown) => void = () => {};
     const pendingPromise = new Promise((resolve) => {
       resolvePromise = resolve;
@@ -347,17 +337,14 @@ describe("ProductFormModal", () => {
     const form = container.querySelector("form");
     expect(form).not.toBeNull();
 
-    // Start submission but don't await it
     act(() => {
       fireEvent.submit(form as HTMLFormElement);
     });
 
-    // Button should now show "Saving..."
     await waitFor(() => {
       expect(screen.getByText("Saving...")).toBeTruthy();
     });
 
-    // Cleanup: resolve the promise to avoid hanging
     resolvePromise({
       ok: true,
       json: () => Promise.resolve({ data: { product: mockProduct } }),
@@ -377,8 +364,6 @@ describe("ProductFormModal", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockImplementation((url: string) => {
-        // The CurrencyProvider also calls /api/exchange-rates on mount — handle it
-        // separately so it doesn't inflate the product-related call count.
         if (url === "/api/exchange-rates") {
           return Promise.resolve({
             ok: true,
@@ -392,7 +377,6 @@ describe("ProductFormModal", () => {
         }
         productCallCount++;
         if (url === "/api/upload") {
-          // First product call: upload
           return Promise.resolve({
             ok: true,
             json: () =>
@@ -401,7 +385,6 @@ describe("ProductFormModal", () => {
               }),
           });
         }
-        // Second product call: create product
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve({ data: { product: savedProduct } }),
@@ -411,7 +394,6 @@ describe("ProductFormModal", () => {
 
     const { container } = renderModal({ onSuccess, onClose });
 
-    // Fill all required fields
     fireEvent.change(screen.getByLabelText("Name"), {
       target: { value: "New Product" },
     });
@@ -428,7 +410,6 @@ describe("ProductFormModal", () => {
       target: { value: "10" },
     });
 
-    // Select a valid image file
     const fileInput = screen.getByLabelText(/primary image/i);
     const validFile = new File(["content"], "test.jpg", { type: "image/jpeg" });
     Object.defineProperty(validFile, "size", { value: 100 * 1024 });
@@ -495,9 +476,6 @@ describe("ProductFormModal", () => {
       expect(onSuccess).not.toHaveBeenCalled();
     });
   });
-
-  // --- Inline validation tests ---
-
   it("shows inline error when name is empty on submit", async () => {
     const { container } = renderModal();
     const form = container.querySelector("form");
@@ -571,7 +549,6 @@ describe("ProductFormModal", () => {
   it("clears inline error when price is corrected", async () => {
     const { container } = renderModal();
     const form = container.querySelector("form");
-    // Set price to 0 to trigger validation
     fireEvent.change(screen.getByLabelText("Price"), {
       target: { value: "0" },
     });

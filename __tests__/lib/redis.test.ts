@@ -1,7 +1,4 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-
-// --- Mocks ---
-
 const mockRedisInstance = {
   get: vi.fn(),
   set: vi.fn(),
@@ -11,7 +8,6 @@ const mockRedisInstance = {
   scanStream: vi.fn(),
 };
 
-// Must use a real function (not arrow) so it can be called with `new`
 const MockRedis = function () {
   return mockRedisInstance;
 };
@@ -34,13 +30,9 @@ vi.mock("@/lib/logger", () => ({
   }),
 }));
 
-// Helper to build a cached JSON string
 const cachedJson = <T>(value: T, ageMs = 0): string => {
   return JSON.stringify({ value, timestamp: Date.now() - ageMs });
 };
-
-// ---------- getRedisClient ----------
-
 describe("getRedisClient", () => {
   beforeEach(() => {
     vi.resetModules();
@@ -98,9 +90,6 @@ describe("getRedisClient", () => {
     );
   });
 });
-
-// ---------- getCachedData ----------
-
 describe("getCachedData", () => {
   let getCachedData: typeof import("@/lib/redis").getCachedData;
 
@@ -108,7 +97,6 @@ describe("getCachedData", () => {
     vi.resetModules();
     vi.clearAllMocks();
 
-    // Re-mock ioredis so the fresh module picks up the same mock instance
     vi.doMock("ioredis", () => ({ default: MockRedis }));
     vi.doMock("@/lib/env", () => ({
       env: { REDIS_URL: "redis://localhost:6379" },
@@ -121,7 +109,6 @@ describe("getCachedData", () => {
       }),
     }));
 
-    // Reset per-test mock implementations
     mockRedisInstance.get.mockReset();
     mockRedisInstance.set.mockReset();
     mockRedisInstance.setex.mockReset();
@@ -162,7 +149,6 @@ describe("getCachedData", () => {
     expect(result).toBe("stale-value");
     expect(setImmediateSpy).toHaveBeenCalled();
 
-    // Let the background revalidation run
     await new Promise((r) => realSetImmediate(r));
 
     setImmediateSpy.mockRestore();
@@ -221,7 +207,6 @@ describe("getCachedData", () => {
 
     expect(result).toBe("fallback-data");
     expect(fetcher).toHaveBeenCalledOnce();
-    // Should NOT have cached since lock wasn't held
     expect(mockRedisInstance.setex).not.toHaveBeenCalled();
   });
 
@@ -236,9 +221,6 @@ describe("getCachedData", () => {
     expect(fetcher).toHaveBeenCalledOnce();
   });
 });
-
-// ---------- invalidateCache ----------
-
 describe("invalidateCache", () => {
   let invalidateCache: typeof import("@/lib/redis").invalidateCache;
 
@@ -302,7 +284,6 @@ describe("invalidateCache", () => {
 
     await invalidateCache("product:*");
 
-    // Two del calls: one for first 100, one for remaining 50
     expect(mockRedisInstance.del).toHaveBeenCalledTimes(2);
     expect(mockRedisInstance.del).toHaveBeenNthCalledWith(1, ...batch1);
     expect(mockRedisInstance.del).toHaveBeenNthCalledWith(2, ...batch2);
@@ -331,7 +312,6 @@ describe("invalidateCache", () => {
       },
     });
 
-    // Should not throw – error is caught internally
     await expect(invalidateCache("broken:*")).resolves.toBeUndefined();
   });
 });

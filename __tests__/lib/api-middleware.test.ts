@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { NextRequest, NextResponse } from "next/server";
 
-// Mock dependencies
 vi.mock("@/lib/logger", () => ({
   logApiRequest: vi.fn(),
   generateRequestId: vi.fn().mockReturnValue("req-test-id"),

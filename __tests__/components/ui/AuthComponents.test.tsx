@@ -6,12 +6,10 @@ import {
   ProtectedRoute,
 } from "@/components/ui/AuthComponents";
 
-// Mock next-auth/react
 vi.mock("next-auth/react", () => ({
   signOut: vi.fn(),
 }));
 
-// Mock next/link
 vi.mock("next/link", () => ({
   default: ({
     children,
@@ -22,7 +20,6 @@ vi.mock("next/link", () => ({
   }) => <a href={href}>{children}</a>,
 }));
 
-// Mock next/image
 vi.mock("next/image", () => ({
   default: (props: React.ImgHTMLAttributes<HTMLImageElement>) => (
     // eslint-disable-next-line @next/next/no-img-element
@@ -88,7 +85,6 @@ describe("UserMenu", () => {
     };
     render(<UserMenu session={session} />);
     const badges = screen.getAllByText("Admin");
-    // The badge span has class bg-purple-100
     const adminBadge = badges.find(
       (el) => el.classList.contains("bg-purple-100"),
     );

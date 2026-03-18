@@ -6,6 +6,7 @@ export default defineConfig({
   plugins: [tsconfigPaths(), react()],
   test: {
     environment: "jsdom",
+    "maxConcurrency": 8,
     globals: true,
     setupFiles: ["__tests__/setup.ts"],
     include: ["__tests__/**/*.test.{ts,tsx}"],

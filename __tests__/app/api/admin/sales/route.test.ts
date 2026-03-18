@@ -128,23 +128,16 @@ describe("GET /api/admin/sales", () => {
       async (_key: string, _ttl: number, fetcher: () => Promise<unknown>) => fetcher(),
     );
 
-    // Mock all the DB queries inside the fetcher
     const { drizzleDb } = await import("@/lib/db");
 
-    // totalStats
     const totalStatsResult = { totalRevenue: 5000, totalOrders: 25 };
-    // todayStats
     const todayStatsResult = { revenue: 200, orderCount: 3 };
-    // monthStats
     const monthStatsResult = { revenue: 1500, orderCount: 12 };
-    // lastMonthStats
     const lastMonthStatsResult = { revenue: 1200, orderCount: 10 };
-    // statusCounts
     const statusCountsResult = [
       { status: "PENDING", count: 5 },
       { status: "PROCESSING", count: 10 },
     ];
-    // topProducts
     const topProductsResult = [
       {
         productId: "p1",
@@ -153,19 +146,11 @@ describe("GET /api/admin/sales", () => {
         totalRevenue: 2500,
       },
     ];
-    // customerCount
     const customerCountResult = { count: 15 };
-
-    // Chain: select().from().where() for totalStats, todayStats, monthStats, lastMonthStats
-    // Chain: select().from().where().groupBy() for statusCounts
-    // Chain: select().from().innerJoin().innerJoin().where().groupBy().orderBy().limit() for topProducts
-    // Chain: select().from().where() for customerCount
-
     let callCount = 0;
     (drizzleDb.select as ReturnType<typeof vi.fn>).mockImplementation(() => {
       callCount++;
       if (callCount <= 4) {
-        // totalStats, todayStats, monthStats, lastMonthStats
         const results = [
           [totalStatsResult],
           [todayStatsResult],
@@ -179,7 +164,6 @@ describe("GET /api/admin/sales", () => {
         };
       }
       if (callCount === 5) {
-        // statusCounts
         return {
           from: vi.fn(() => ({
             where: vi.fn(() => ({
@@ -189,7 +173,6 @@ describe("GET /api/admin/sales", () => {
         };
       }
       if (callCount === 6) {
-        // topProducts
         return {
           from: vi.fn(() => ({
             innerJoin: vi.fn(() => ({
@@ -206,7 +189,6 @@ describe("GET /api/admin/sales", () => {
           })),
         };
       }
-      // customerCount
       return {
         from: vi.fn(() => ({
           where: vi.fn().mockResolvedValue([customerCountResult]),

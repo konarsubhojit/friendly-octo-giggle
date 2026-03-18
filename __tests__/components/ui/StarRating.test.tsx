@@ -12,7 +12,6 @@ describe("StarRating", () => {
   it("fills stars based on rating", () => {
     const { container } = render(<StarRating rating={3} maxStars={5} />);
     const svgs = container.querySelectorAll("svg");
-    // Stars 1-3 should be filled (text-amber-400), 4-5 unfilled
     const filledStars = Array.from(svgs).filter((svg) =>
       svg.classList.contains("text-amber-400"),
     );
@@ -31,22 +30,23 @@ describe("StarRating", () => {
 
   it("renders interactive buttons when interactive is true", () => {
     const onChange = vi.fn();
-    render(<StarRating rating={2} interactive onChange={onChange} />);
-    const buttons = screen.getAllByRole("button");
+    const { container } = render(<StarRating rating={2} interactive onChange={onChange} />);
+    const buttons = container.querySelectorAll("button");
     expect(buttons).toHaveLength(5);
   });
 
   it("calls onChange with correct value when clicked", () => {
     const onChange = vi.fn();
-    render(<StarRating rating={0} interactive onChange={onChange} />);
-    const buttons = screen.getAllByRole("button");
+    const { container } = render(<StarRating rating={0} interactive onChange={onChange} />);
+    const buttons = container.querySelectorAll("button");
     fireEvent.click(buttons[3]); // Click 4th star
     expect(onChange).toHaveBeenCalledWith(4);
   });
 
   it("uses group role for interactive mode", () => {
-    render(<StarRating rating={2} interactive />);
-    expect(screen.getByRole("group")).toBeInTheDocument();
+    const { container } = render(<StarRating rating={2} interactive />);
+    const group = container.querySelector("[role='group']");
+    expect(group).toBeInTheDocument();
   });
 
   it("applies correct size class", () => {

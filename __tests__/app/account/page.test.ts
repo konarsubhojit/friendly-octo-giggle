@@ -6,9 +6,6 @@
 import { describe, it, expect } from 'vitest';
 import { validateProfileFields, validatePasswordFields, isPasswordStrong } from '@/app/account/page';
 import { PROFILE_ERRORS, PASSWORD_ERRORS } from '@/lib/constants/error-messages';
-
-// ─── isPasswordStrong ────────────────────────────────────────────────────────
-
 describe('isPasswordStrong', () => {
   it('returns false for an empty password', () => {
     expect(isPasswordStrong('')).toBe(false);
@@ -34,9 +31,6 @@ describe('isPasswordStrong', () => {
     expect(isPasswordStrong('SecurePass1!')).toBe(true);
   });
 });
-
-// ─── validateProfileFields ───────────────────────────────────────────────────
-
 describe('validateProfileFields', () => {
   it('returns name error when name is empty', () => {
     const errors = validateProfileFields('', 'user@example.com', '');
@@ -74,14 +68,10 @@ describe('validateProfileFields', () => {
   });
 
   it('allows phone numbers without country code prefix', () => {
-    // PHONE_RE: /^\+?[1-9]\d{6,14}$/
     const errors = validateProfileFields('Alice', 'alice@example.com', '1234567890');
     expect(errors.phoneNumber).toBeUndefined();
   });
 });
-
-// ─── validatePasswordFields ──────────────────────────────────────────────────
-
 describe('validatePasswordFields', () => {
   it('returns currentPassword error when empty', () => {
     const errors = validatePasswordFields('', 'SecurePass1!', 'SecurePass1!');

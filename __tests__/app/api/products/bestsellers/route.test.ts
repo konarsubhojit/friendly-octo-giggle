@@ -125,7 +125,6 @@ describe("GET /api/products/bestsellers", () => {
   });
 
   it("returns products in the order provided by db.products.findBestsellers", async () => {
-    // The DB method returns products already sorted by sales volume
     vi.mocked(db.products.findBestsellers).mockResolvedValue(mockProducts);
 
     const response = await GET(

@@ -1,12 +1,10 @@
 import { describe, it, expect, vi, beforeEach, Mock } from "vitest";
 import { NextRequest } from "next/server";
 
-// Valid Base62 short IDs for testing (7-char alphanumeric)
 const VALID_PRODUCT_ID = "prod001";
 const VALID_CART_ID = "cart001";
 const VALID_ITEM_ID = "item001";
 
-// Mock dependencies before importing the route
 vi.mock("@/lib/db", () => ({
   drizzleDb: {
     query: {
@@ -60,14 +58,12 @@ vi.mock("@/lib/validations", async () => {
   return actual;
 });
 
-// Import mocked modules
 import { drizzleDb } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { getCachedData } from "@/lib/redis";
 import { invalidateCartCache } from "@/lib/cache";
 import { logError } from "@/lib/logger";
 
-// Import route handlers
 import { GET, POST, DELETE } from "@/app/api/cart/route";
 
 describe("Cart API Route", () => {
@@ -263,14 +259,11 @@ describe("Cart API Route", () => {
         stock: 10,
         variations: [],
       });
-      // User already has a cart
       (drizzleDb.query.carts.findFirst as Mock)
         .mockResolvedValueOnce({ id: VALID_CART_ID }) // getOrCreateCart
         .mockResolvedValueOnce(mockCart); // fetch updated cart
       (drizzleDb.query.users.findFirst as Mock).mockResolvedValue({ id: "user123" });
-      // No existing cart item
       (drizzleDb.query.cartItems.findFirst as Mock).mockResolvedValue(null);
-      // Mock insert for new cart item
       const insertValuesMock = vi.fn(() => ({ returning: vi.fn() }));
       (drizzleDb.insert as Mock).mockReturnValue({ values: insertValuesMock });
 
@@ -302,11 +295,9 @@ describe("Cart API Route", () => {
         stock: 10,
         variations: [],
       });
-      // No existing cart for guest
       (drizzleDb.query.carts.findFirst as Mock)
         .mockResolvedValueOnce(null) // getOrCreateCart - no cart
         .mockResolvedValueOnce(mockCart); // fetch updated cart
-      // Mock insert to create cart
       const insertReturningMock = vi
         .fn()
         .mockResolvedValue([{ id: VALID_CART_ID }]);
@@ -314,7 +305,6 @@ describe("Cart API Route", () => {
         returning: insertReturningMock,
       }));
       (drizzleDb.insert as Mock).mockReturnValue({ values: insertValuesMock });
-      // No existing cart item
       (drizzleDb.query.cartItems.findFirst as Mock).mockResolvedValue(null);
 
       const request = new NextRequest("http://localhost/api/cart", {
@@ -327,7 +317,6 @@ describe("Cart API Route", () => {
 
       expect(response.status).toBe(201);
       expect(data.cart).toBeDefined();
-      // Guest should get a session cookie
       const setCookie = response.headers.get("set-cookie");
       expect(setCookie).toContain("cart_session=");
     });
@@ -432,7 +421,6 @@ describe("Cart API Route", () => {
       expect(response.status).toBe(200);
       expect(data).toEqual({ success: true });
       expect(invalidateCartCache).toHaveBeenCalledWith(undefined, "guest123");
-      // Cookie should be deleted
       const setCookie = response.headers.get("set-cookie");
       expect(setCookie).toContain("cart_session=");
     });
@@ -566,12 +554,10 @@ describe("Cart API Route", () => {
       (drizzleDb.query.carts.findFirst as Mock)
         .mockResolvedValueOnce({ id: VALID_CART_ID }) // getOrCreateCart
         .mockResolvedValueOnce(mockCart); // fetch updated cart
-      // Existing item found
       (drizzleDb.query.cartItems.findFirst as Mock).mockResolvedValue({
         id: VALID_ITEM_ID,
         quantity: 2,
       });
-      // Mock update for existing item
       const updateWhereMock = vi.fn();
       const updateSetMock = vi.fn(() => ({ where: updateWhereMock }));
       (drizzleDb.update as Mock).mockReturnValue({ set: updateSetMock });

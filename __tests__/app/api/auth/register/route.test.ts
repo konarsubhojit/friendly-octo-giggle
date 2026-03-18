@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 
-// Hoisted mocks
 const mockFindFirst = vi.hoisted(() => vi.fn());
 const mockInsertReturning = vi.hoisted(() => vi.fn());
 const mockInsertValues = vi.hoisted(() =>

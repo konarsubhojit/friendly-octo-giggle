@@ -1,7 +1,4 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-
-// ─── Hoisted mocks ──────────────────────────────────────
-
 const {
   mockFindMany,
   mockFindFirst,
@@ -42,9 +39,6 @@ const {
     mockCacheShareResolve: vi.fn(),
   };
 });
-
-// ─── Module mocks ────────────────────────────────────────
-
 vi.mock("@neondatabase/serverless", () => ({
   Pool: vi.fn(),
 }));
@@ -117,13 +111,7 @@ vi.mock("drizzle-orm", () => ({
   and: vi.fn((...args: unknown[]) => ({ op: "and", args })),
   isNull: vi.fn((col: unknown) => ({ op: "isNull", col })),
 }));
-
-// ─── Import module under test (after mocks) ─────────────
-
 import { db } from "@/lib/db";
-
-// ─── Test data ───────────────────────────────────────────
-
 const now = new Date("2025-01-15T10:00:00.000Z");
 
 function makeDbRow(overrides: Record<string, unknown> = {}) {
@@ -184,16 +172,12 @@ function expectedSerialized(overrides: Record<string, unknown> = {}) {
     ...overrides,
   };
 }
-
-// ─── Tests ───────────────────────────────────────────────
-
 beforeEach(() => {
   vi.clearAllMocks();
   mockInvalidateProductCaches.mockResolvedValue(undefined);
 });
 
 describe("db.products", () => {
-  // ── findAll ──────────────────────────────────────────
 
   describe("findAll", () => {
     it("returns serialized products without cache", async () => {
@@ -239,9 +223,6 @@ describe("db.products", () => {
       expect(result).toEqual([]);
     });
   });
-
-  // ── findAllMinimal ───────────────────────────────────
-
   describe("findAllMinimal", () => {
     const minimalRow = {
       id: "abc1234",
@@ -285,9 +266,6 @@ describe("db.products", () => {
       expect(mockCacheProductsList).not.toHaveBeenCalled();
     });
   });
-
-  // ── findById ─────────────────────────────────────────
-
   describe("findById", () => {
     it("returns serialized product without cache", async () => {
       mockFindFirst.mockResolvedValue(makeDbRow());
@@ -322,9 +300,6 @@ describe("db.products", () => {
       expect(result).toBeNull();
     });
   });
-
-  // ── create ───────────────────────────────────────────
-
   describe("create", () => {
     it("inserts a product and invalidates caches", async () => {
       const input = {
@@ -365,9 +340,6 @@ describe("db.products", () => {
       expect(mockInvalidateProductCaches).toHaveBeenCalledWith();
     });
   });
-
-  // ── update ───────────────────────────────────────────
-
   describe("update", () => {
     it("updates a product and invalidates caches", async () => {
       const input = { name: "Updated Name", price: 39.99 };
@@ -418,9 +390,6 @@ describe("db.products", () => {
       expect(result).toBeNull();
     });
   });
-
-  // ── delete ───────────────────────────────────────────
-
   describe("delete", () => {
     it("soft-deletes a product and invalidates caches", async () => {
       mockReturningUpdate.mockResolvedValue([{ id: "abc1234" }]);
@@ -507,7 +476,6 @@ describe("db.shares", () => {
       const dbRow = { productId: "prd1234", variationId: "var5678" };
       mockSharesFindFirst.mockResolvedValue(dbRow);
 
-      // Capture the fetcher passed to cacheShareResolve and invoke it
       mockCacheShareResolve.mockImplementation(
         async (_key: string, fetcher: () => Promise<unknown>) => fetcher(),
       );

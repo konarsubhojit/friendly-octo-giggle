@@ -32,7 +32,6 @@ describe("cartSlice async thunks (fetch bodies)", () => {
     vi.restoreAllMocks();
   });
 
-  // fetchCart
   it("fetchCart fulfilled sets cart via real dispatch", async () => {
     vi.stubGlobal(
       "fetch",
@@ -57,7 +56,6 @@ describe("cartSlice async thunks (fetch bodies)", () => {
     expect(store.getState().cart.error).toBe("Network error");
   });
 
-  // addToCart
   it("addToCart fulfilled sets cart", async () => {
     vi.stubGlobal(
       "fetch",
@@ -82,9 +80,7 @@ describe("cartSlice async thunks (fetch bodies)", () => {
       }),
     );
     const store = makeStore();
-    await store.dispatch(
-      addToCart({ productId: "p1", quantity: 99 }),
-    );
+    await store.dispatch(addToCart({ productId: "p1", quantity: 99 }));
     expect(store.getState().cart.error).toBe("Out of stock");
   });
 
@@ -93,17 +89,20 @@ describe("cartSlice async thunks (fetch bodies)", () => {
       "fetch",
       vi.fn().mockResolvedValue({
         ok: false,
+        status: 400,
         json: () => Promise.resolve({}),
       }),
     );
     const store = makeStore();
     await store.dispatch(addToCart({ productId: "p1", quantity: 1 }));
-    expect(store.getState().cart.error).toBe("Failed to add to cart");
+    expect(store.getState().cart.error).toBe("Request failed (400)");
   });
 
-  // updateCartItem
   it("updateCartItem fulfilled sets cart", async () => {
-    const updatedCart = { ...mockCart, items: [{ ...mockCart.items[0], quantity: 5 }] };
+    const updatedCart = {
+      ...mockCart,
+      items: [{ ...mockCart.items[0], quantity: 5 }],
+    };
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue({
@@ -129,7 +128,6 @@ describe("cartSlice async thunks (fetch bodies)", () => {
     expect(store.getState().cart.error).toBe("Item not found");
   });
 
-  // removeCartItem
   it("removeCartItem fulfilled sets cart", async () => {
     const emptyCart = { ...mockCart, items: [] };
     vi.stubGlobal(
@@ -149,15 +147,15 @@ describe("cartSlice async thunks (fetch bodies)", () => {
       "fetch",
       vi.fn().mockResolvedValue({
         ok: false,
+        status: 404,
         json: () => Promise.resolve({ error: "Item not found" }),
       }),
     );
     const store = makeStore();
     await store.dispatch(removeCartItem("bad-id"));
-    expect(store.getState().cart.error).toBe("Failed to remove item");
+    expect(store.getState().cart.error).toBe("Item not found");
   });
 
-  // clearCart
   it("clearCart fulfilled sets cart to null", async () => {
     vi.stubGlobal(
       "fetch",
@@ -178,11 +176,12 @@ describe("cartSlice async thunks (fetch bodies)", () => {
       "fetch",
       vi.fn().mockResolvedValue({
         ok: false,
+        status: 500,
         json: () => Promise.resolve({ error: "Server error" }),
       }),
     );
     const store = makeStore();
     await store.dispatch(clearCart());
-    expect(store.getState().cart.error).toBe("Failed to clear cart");
+    expect(store.getState().cart.error).toBe("Server error");
   });
 });

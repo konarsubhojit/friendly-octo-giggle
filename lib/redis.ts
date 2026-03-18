@@ -51,16 +51,84 @@ export function getRedisClient(): Redis | null {
   return redis;
 }
 
-// Cache stampede prevention using stale-while-revalidate pattern
+// ─── Stampede Prevention ────────────────────────────────
+// SRP: Lock acquisition/release is isolated from cache read/write logic.
+
+const LOCK_TTL_SECONDS = 10;
+const LOCK_RETRY_DELAY_MS = 100;
+
+// Lua script to release lock only if we still own it (atomic check-and-delete)
+const RELEASE_LOCK_SCRIPT = `
+  if redis.call("get", KEYS[1]) == ARGV[1] then
+    return redis.call("del", KEYS[1])
+  else
+    return 0
+  end
+`;
+
+/**
+ * Acquire a distributed lock, execute the fetcher, cache the result, and release the lock.
+ * If the lock is not acquired, wait briefly and try to read the cache (another process may have populated it).
+ * Falls back to a direct fetch if both lock and retry fail.
+ */
+async function fetchWithStampedePrevention<T>(
+  redisClient: Redis,
+  key: string,
+  ttl: number,
+  staleTime: number,
+  fetcher: () => Promise<T>,
+): Promise<T> {
+  const lockKey = `lock:${key}`;
+  const lockValue = crypto.randomUUID();
+  const lockAcquired = await redisClient.set(
+    lockKey,
+    lockValue,
+    "EX",
+    LOCK_TTL_SECONDS,
+    "NX",
+  );
+
+  if (lockAcquired) {
+    try {
+      const fresh = await fetcher();
+      const cacheData = { value: fresh, timestamp: Date.now() };
+      await redisClient.setex(key, ttl + staleTime, JSON.stringify(cacheData));
+      logCacheOperation({
+        operation: "set",
+        key,
+        ttl: ttl + staleTime,
+        success: true,
+      });
+      return fresh;
+    } finally {
+      await redisClient.eval(RELEASE_LOCK_SCRIPT, 1, lockKey, lockValue);
+    }
+  }
+
+  // Another process holds the lock — wait briefly then check cache
+  await new Promise((resolve) => setTimeout(resolve, LOCK_RETRY_DELAY_MS));
+  const retryData = await redisClient.get(key);
+  if (retryData) {
+    return JSON.parse(retryData).value as T;
+  }
+
+  // Fallback: fetch without caching (lock failed, no cached data appeared)
+  return await fetcher();
+}
+
+// ─── Cache Read with Stale-While-Revalidate ─────────────
+
+/**
+ * Get data from cache with stale-while-revalidate and stampede prevention.
+ * SRP: Orchestrates cache lookup, staleness check, and stampede-safe fetching.
+ */
 export async function getCachedData<T>(
   key: string,
-  ttl: number, // Time to live in seconds
+  ttl: number,
   fetcher: () => Promise<T>,
-  staleTime = 5, // Extra time to serve stale data while revalidating
+  staleTime = 5,
 ): Promise<T> {
   const redisClient = getRedisClient();
-
-  // If Redis is not available, skip caching entirely
   if (!redisClient) {
     return await fetcher();
   }
@@ -68,36 +136,33 @@ export async function getCachedData<T>(
   const timer = new Timer(`cache.get.${key}`);
 
   try {
-    // Try to get cached data
     const cached = await redisClient.get(key);
 
     if (cached) {
       const data = JSON.parse(cached) as { value: T; timestamp: number };
       const age = Date.now() - data.timestamp;
 
-      // If data is fresh, return it
+      // Fresh data — return immediately
       if (age < ttl * 1000) {
         timer.end({ cacheHit: true, age });
         logCacheOperation({ operation: "hit", key, success: true });
         return data.value;
       }
 
-      // If data is stale but within stale-while-revalidate window
+      // Stale but within revalidation window — return stale, refresh in background
       if (age < (ttl + staleTime) * 1000) {
-        // Return stale data immediately
-        const staleData = data.value;
         timer.end({ cacheHit: true, stale: true, age });
         logCacheOperation({ operation: "hit", key, success: true });
 
-        // Trigger background revalidation (non-blocking)
         setImmediate(async () => {
           try {
             const fresh = await fetcher();
-            const cacheData = {
-              value: fresh,
-              timestamp: Date.now(),
-            };
-            await redisClient.setex(key, ttl + staleTime, JSON.stringify(cacheData));
+            const cacheData = { value: fresh, timestamp: Date.now() };
+            await redisClient.setex(
+              key,
+              ttl + staleTime,
+              JSON.stringify(cacheData),
+            );
             logCacheOperation({
               operation: "set",
               key,
@@ -113,67 +178,24 @@ export async function getCachedData<T>(
           }
         });
 
-        return staleData;
+        return data.value;
       }
     }
 
-    // Cache miss
+    // Cache miss — fetch with stampede prevention
     logCacheOperation({ operation: "miss", key, success: true });
-
-    // Use distributed lock to prevent stampede
-    const lockKey = `lock:${key}`;
-    const lockValue = crypto.randomUUID();
-    const lockAcquired = await redisClient.set(lockKey, lockValue, "EX", 10, "NX");
-
-    if (lockAcquired) {
-      try {
-        // Fetch fresh data
-        const fresh = await fetcher();
-        const cacheData = {
-          value: fresh,
-          timestamp: Date.now(),
-        };
-
-        // Cache the result
-        await redisClient.setex(key, ttl + staleTime, JSON.stringify(cacheData));
-        timer.end({ cacheHit: false, fetched: true });
-        logCacheOperation({
-          operation: "set",
-          key,
-          ttl: ttl + staleTime,
-          success: true,
-        });
-
-        return fresh;
-      } finally {
-        // Release lock only if we still own it
-        const script = `
-          if redis.call("get", KEYS[1]) == ARGV[1] then
-            return redis.call("del", KEYS[1])
-          else
-            return 0
-          end
-        `;
-        await redisClient.eval(script, 1, lockKey, lockValue);
-      }
-    } else {
-      // Wait briefly and retry if another process is fetching
-      await new Promise((resolve) => setTimeout(resolve, 100));
-      const retryData = await redisClient.get(key);
-      if (retryData) {
-        timer.end({ cacheHit: true, retried: true });
-        return JSON.parse(retryData).value as T;
-      }
-
-      // Fallback: fetch without caching
-      const fresh = await fetcher();
-      timer.end({ cacheHit: false, lockFailed: true });
-      return fresh;
-    }
+    const result = await fetchWithStampedePrevention(
+      redisClient,
+      key,
+      ttl,
+      staleTime,
+      fetcher,
+    );
+    timer.end({ cacheHit: false, fetched: true });
+    return result;
   } catch (error) {
     timer.end({ error: true });
     logError({ error, context: "cache_operation", additionalInfo: { key } });
-    // Fallback to direct fetch on cache errors
     return await fetcher();
   }
 }

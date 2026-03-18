@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-// Pass getCachedData straight through to its fetcher so route logic is exercised
 vi.mock("@/lib/redis", () => ({
   getCachedData: vi.fn(
     async (
@@ -28,7 +27,6 @@ vi.mock("@/lib/logger", () => ({
 
 import { GET } from "@/app/api/exchange-rates/route";
 
-// Build a minimal Response-like object so tests don't need a real fetch runtime
 function mockJsonResponse(body: unknown, ok = true): Response {
   return {
     ok,
@@ -75,7 +73,6 @@ describe("GET /api/exchange-rates", () => {
 
   it("correctly normalises rates when the API returns USD as base (sample response format)", async () => {
     vi.stubEnv("EXCHANGE_RATE_API_KEY", "test-key");
-    // Matches the shape from the real API sample (base_code: "USD")
     vi.mocked(global.fetch).mockResolvedValueOnce(
       mockJsonResponse({
         result: "success",
@@ -93,11 +90,8 @@ describe("GET /api/exchange-rates", () => {
     expect(res.status).toBe(200);
     const { data } = await res.json();
     expect(data.rates.INR).toBe(1);
-    // 1 INR in USD  = 1 / 91.8737
     expect(data.rates.USD).toBeCloseTo(1 / 91.8737, 5);
-    // 1 INR in EUR  = 0.8624 / 91.8737
     expect(data.rates.EUR).toBeCloseTo(0.8624 / 91.8737, 5);
-    // 1 INR in GBP  = 0.7482 / 91.8737
     expect(data.rates.GBP).toBeCloseTo(0.7482 / 91.8737, 5);
   });
 

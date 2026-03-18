@@ -21,7 +21,6 @@ describe("adminSlice async thunks (fetch bodies)", () => {
     vi.restoreAllMocks();
   });
 
-  // fetchAdminProducts
   it("fetchAdminProducts fulfilled sets products via real dispatch", async () => {
     const products = [{ id: "p1", name: "Product A" }];
     vi.stubGlobal(
@@ -70,15 +69,15 @@ describe("adminSlice async thunks (fetch bodies)", () => {
       "fetch",
       vi.fn().mockResolvedValue({
         ok: false,
+        status: 500,
         json: () => Promise.reject(new Error("parse error")),
       }),
     );
     const store = makeStore();
     await store.dispatch(fetchAdminProducts());
-    expect(store.getState().admin.error).toBe("Failed to fetch products");
+    expect(store.getState().admin.error).toBe("Request failed (500)");
   });
 
-  // fetchAdminOrders
   it("fetchAdminOrders fulfilled sets orders", async () => {
     const orders = [{ id: "o1", status: "PENDING" }];
     vi.stubGlobal(
@@ -120,7 +119,6 @@ describe("adminSlice async thunks (fetch bodies)", () => {
     expect(store.getState().admin.error).toBe("Not authorized");
   });
 
-  // fetchAdminUsers
   it("fetchAdminUsers fulfilled sets users", async () => {
     const users = [{ id: "u1", email: "admin@test.com" }];
     vi.stubGlobal(
@@ -148,14 +146,13 @@ describe("adminSlice async thunks (fetch bodies)", () => {
     expect(store.getState().admin.error).toBe("Server error");
   });
 
-  // updateAdminOrderStatus
   it("updateAdminOrderStatus fulfilled updates order in list", async () => {
     const updated = { id: "o1", status: "SHIPPED", trackingNumber: "TRK123" };
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue({
         ok: true,
-        json: () => Promise.resolve({ data: { order: updated } }),
+        json: () => Promise.resolve({ data: updated }),
       }),
     );
     const store = configureStore({
@@ -173,7 +170,11 @@ describe("adminSlice async thunks (fetch bodies)", () => {
       },
     });
     await store.dispatch(
-      updateAdminOrderStatus({ id: "o1", status: "SHIPPED", trackingNumber: "TRK123" }),
+      updateAdminOrderStatus({
+        id: "o1",
+        status: "SHIPPED",
+        trackingNumber: "TRK123",
+      }),
     );
     const order = store.getState().admin.orders[0] as { status: string };
     expect(order.status).toBe("SHIPPED");
@@ -188,14 +189,13 @@ describe("adminSlice async thunks (fetch bodies)", () => {
       }),
     );
     const store = makeStore();
-    // No rejected handler in reducer - error stays null but thunk body runs
     await store.dispatch(
       updateAdminOrderStatus({ id: "o99", status: "CANCELLED" }),
     );
     expect(store.getState().admin.productsLoading).toBe(false);
   });
 
-  it("updateAdminOrderStatus uses order fallback", async () => {
+  it("updateAdminOrderStatus uses data.order fallback", async () => {
     const updated = { id: "o1", status: "DELIVERED" };
     vi.stubGlobal(
       "fetch",
@@ -218,12 +218,43 @@ describe("adminSlice async thunks (fetch bodies)", () => {
         },
       },
     });
-    await store.dispatch(updateAdminOrderStatus({ id: "o1", status: "DELIVERED" }));
+    await store.dispatch(
+      updateAdminOrderStatus({ id: "o1", status: "DELIVERED" }),
+    );
     const order = store.getState().admin.orders[0] as { status: string };
     expect(order.status).toBe("DELIVERED");
   });
 
-  // updateAdminUserRole
+  it("updateAdminOrderStatus uses bare response as final fallback", async () => {
+    const updated = { id: "o1", status: "PROCESSING" };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(updated),
+      }),
+    );
+    const store = configureStore({
+      reducer: { admin: adminReducer },
+      preloadedState: {
+        admin: {
+          products: [],
+          orders: [{ id: "o1", status: "PENDING" } as never],
+          users: [],
+          productsLoading: false,
+          ordersLoading: false,
+          usersLoading: false,
+          error: null,
+        },
+      },
+    });
+    await store.dispatch(
+      updateAdminOrderStatus({ id: "o1", status: "PROCESSING" }),
+    );
+    const order = store.getState().admin.orders[0] as { status: string };
+    expect(order.status).toBe("PROCESSING");
+  });
+
   it("updateAdminUserRole fulfilled updates user role", async () => {
     const updated = { id: "u1", role: "ADMIN" };
     vi.stubGlobal(
@@ -261,7 +292,6 @@ describe("adminSlice async thunks (fetch bodies)", () => {
       }),
     );
     const store = makeStore();
-    // No rejected handler in reducer - state stays unchanged
     await store.dispatch(updateAdminUserRole({ id: "u99", role: "ADMIN" }));
     expect(store.getState().admin.usersLoading).toBe(false);
   });

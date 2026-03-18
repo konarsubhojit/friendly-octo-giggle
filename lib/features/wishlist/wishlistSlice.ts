@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 import { Product } from "@/lib/types";
+import { apiClient, ApiError } from "@/lib/api-client";
 
 interface WishlistState {
   productIds: string[];
@@ -18,45 +19,47 @@ const initialState: WishlistState = {
 export const fetchWishlist = createAsyncThunk(
   "wishlist/fetchWishlist",
   async (_, { rejectWithValue }) => {
-    const res = await fetch("/api/wishlist");
-    if (!res.ok) {
-      if (res.status === 401) return { products: [], productIds: [] };
-      const data = await res.json().catch(() => ({}));
-      return rejectWithValue(data.error || "Failed to fetch wishlist");
+    try {
+      const data = await apiClient.get<{
+        data?: { products?: Product[]; productIds?: string[] };
+      }>("/api/wishlist");
+      return {
+        products: data.data?.products ?? [],
+        productIds: data.data?.productIds ?? [],
+      };
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) {
+        return { products: [], productIds: [] };
+      }
+      if (error instanceof ApiError) return rejectWithValue(error.message);
+      return rejectWithValue("Failed to fetch wishlist");
     }
-    const data = await res.json();
-    return {
-      products: (data.data?.products ?? []) as Product[],
-      productIds: (data.data?.productIds ?? []) as string[],
-    };
   },
 );
 
 export const addToWishlist = createAsyncThunk(
   "wishlist/addToWishlist",
   async (productId: string, { rejectWithValue }) => {
-    const res = await fetch("/api/wishlist", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ productId }),
-    });
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      return rejectWithValue(data.error || "Failed to add to wishlist");
+    try {
+      await apiClient.post("/api/wishlist", { productId });
+      return productId;
+    } catch (error) {
+      if (error instanceof ApiError) return rejectWithValue(error.message);
+      return rejectWithValue("Failed to add to wishlist");
     }
-    return productId;
   },
 );
 
 export const removeFromWishlist = createAsyncThunk(
   "wishlist/removeFromWishlist",
   async (productId: string, { rejectWithValue }) => {
-    const res = await fetch(`/api/wishlist/${productId}`, { method: "DELETE" });
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      return rejectWithValue(data.error || "Failed to remove from wishlist");
+    try {
+      await apiClient.delete(`/api/wishlist/${productId}`);
+      return productId;
+    } catch (error) {
+      if (error instanceof ApiError) return rejectWithValue(error.message);
+      return rejectWithValue("Failed to remove from wishlist");
     }
-    return productId;
   },
 );
 

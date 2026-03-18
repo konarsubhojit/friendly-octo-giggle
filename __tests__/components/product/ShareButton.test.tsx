@@ -172,7 +172,6 @@ describe("ShareButton", () => {
       expect(screen.getByRole("region", { name: /share link/i })).toBeTruthy();
     });
 
-    // Click the Share button again to toggle off
     fireEvent.click(screen.getByRole("button", { name: "Share this product" }));
 
     expect(screen.queryByRole("region", { name: /share link/i })).toBeNull();

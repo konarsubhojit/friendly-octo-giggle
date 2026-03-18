@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 
-// Hoisted mocks
 const mockAuth = vi.hoisted(() => vi.fn());
 const mockFindFirst = vi.hoisted(() => vi.fn());
 const mockUpdateSet = vi.hoisted(() => vi.fn());
@@ -179,7 +178,6 @@ describe("PATCH /api/account", () => {
 
   it("returns 409 when phone number is already taken", async () => {
     mockAuth.mockResolvedValue({ user: { id: "user-1" } });
-    // First call for email check returns null, second for phone check returns existing user
     mockFindFirst
       .mockResolvedValueOnce(null) // no email duplicate
       .mockResolvedValueOnce({ id: "user-3", phoneNumber: "+9999999999" }); // phone duplicate

@@ -13,7 +13,6 @@ vi.mock("next/link", () => ({
   }) => <a href={href}>{children}</a>,
 }));
 
-// NewsletterForm is rendered inside Footer; mock it to simplify
 vi.mock("@/components/ui/NewsletterForm", () => ({
   default: () => <div data-testid="newsletter-form" />,
 }));

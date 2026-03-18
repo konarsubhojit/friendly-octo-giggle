@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import type { RootState } from "@/lib/store";
+import { apiClient, ApiError } from "@/lib/api-client";
 
 // Types matching API responses
 interface OrderItem {
@@ -57,43 +58,48 @@ const initialState: OrdersState = {
 export const fetchOrders = createAsyncThunk(
   "orders/fetchOrders",
   async (_, { rejectWithValue }) => {
-    const res = await fetch("/api/orders");
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      return rejectWithValue(err.error || "Failed to fetch orders");
+    try {
+      const data = await apiClient.get<{
+        orders?: Order[];
+        data?: { orders?: Order[] };
+      }>("/api/orders");
+      return data.orders || data.data?.orders || [];
+    } catch (error) {
+      if (error instanceof ApiError) return rejectWithValue(error.message);
+      return rejectWithValue("Failed to fetch orders");
     }
-    const data = await res.json();
-    return data.orders || data.data?.orders || [];
   },
 );
 
 export const fetchOrderById = createAsyncThunk(
   "orders/fetchOrderById",
   async (id: string, { rejectWithValue }) => {
-    const res = await fetch(`/api/orders/${id}`);
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      return rejectWithValue(err.error || "Failed to fetch order");
+    try {
+      const data = await apiClient.get<{
+        order?: Order;
+        data?: { order?: Order };
+      }>(`/api/orders/${id}`);
+      return (data.order || data.data?.order) as Order;
+    } catch (error) {
+      if (error instanceof ApiError) return rejectWithValue(error.message);
+      return rejectWithValue("Failed to fetch order");
     }
-    const data = await res.json();
-    return data.order || data.data?.order || data;
   },
 );
 
 export const cancelOrder = createAsyncThunk(
   "orders/cancelOrder",
   async (id: string, { rejectWithValue }) => {
-    const res = await fetch(`/api/orders/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "cancel" }),
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      return rejectWithValue(err.error || "Failed to cancel order");
+    try {
+      const data = await apiClient.patch<{
+        order?: Order;
+        data?: { order?: Order };
+      }>(`/api/orders/${id}`, { action: "cancel" });
+      return (data.order || data.data?.order) as Order;
+    } catch (error) {
+      if (error instanceof ApiError) return rejectWithValue(error.message);
+      return rejectWithValue("Failed to cancel order");
     }
-    const data = await res.json();
-    return data.order || data.data?.order;
   },
 );
 

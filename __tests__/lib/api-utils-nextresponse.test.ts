@@ -4,7 +4,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { ZodError } from "zod";
 
-// Mock NextResponse
 vi.mock("next/server", () => ({
   NextResponse: {
     json: vi.fn((body, init) => ({
@@ -60,7 +59,6 @@ describe("apiError", () => {
 describe("handleValidationError", () => {
   it("returns 400 with field errors from ZodError", async () => {
     const { handleValidationError } = await import("@/lib/api-utils");
-    // Create a ZodError manually
     const zodError = new ZodError([
       {
         code: "too_small",

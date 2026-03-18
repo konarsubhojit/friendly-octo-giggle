@@ -51,7 +51,6 @@ describe("lib/email", () => {
 
   describe("sendOrderConfirmationEmail", () => {
     it("skips sending when SENDGRID_API_KEY is not set", async () => {
-      // Re-import to reset sgInitialized
       vi.resetModules();
       const { sendOrderConfirmationEmail: freshSend } = await import("@/lib/email");
 

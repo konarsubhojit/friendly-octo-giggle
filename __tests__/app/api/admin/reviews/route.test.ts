@@ -92,7 +92,6 @@ describe("GET /api/admin/reviews", () => {
     expect(data.success).toBe(true);
     expect(data.data.reviews).toHaveLength(1);
     expect(data.data.total).toBe(1);
-    // Admin sees user info even for anonymous reviews
     expect(data.data.reviews[0].user.name).toBe("Jane");
   });
 

@@ -8,9 +8,6 @@ import {
   useLocalStorage,
 } from "@/lib/hooks";
 
-// ---------------------------------------------------------------------------
-// useFetch
-// ---------------------------------------------------------------------------
 describe("useFetch", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
@@ -102,9 +99,6 @@ describe("useFetch", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// useMutation
-// ---------------------------------------------------------------------------
 describe("useMutation", () => {
   it("starts with loading=false, data=null, error=null", () => {
     const { result } = renderHook(() =>
@@ -184,9 +178,6 @@ describe("useMutation", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// useFormState
-// ---------------------------------------------------------------------------
 describe("useFormState", () => {
   it("initialises with provided state", () => {
     const { result } = renderHook(() =>
@@ -243,9 +234,6 @@ describe("useFormState", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// useDebounce
-// ---------------------------------------------------------------------------
 describe("useDebounce", () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -284,9 +272,6 @@ describe("useDebounce", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// useLocalStorage
-// ---------------------------------------------------------------------------
 describe("useLocalStorage", () => {
   beforeEach(() => {
     localStorage.clear();

@@ -170,11 +170,8 @@ describe("auth module", () => {
 
   describe("Google provider config", () => {
     it("uses empty strings when env vars are not set", () => {
-      // The provider config uses conditional checks for GOOGLE_CLIENT_ID/SECRET
       expect(capturedConfig.providers).toBeDefined();
       expect(Array.isArray(capturedConfig.providers)).toBe(true);
-      // 3 base providers (google, microsoft-entra-id, credentials) +
-      // 1 dev-only copilot provider when NODE_ENV === 'development'
       const expectedCount = process.env.NODE_ENV === 'development' ? 4 : 3;
       expect(capturedConfig.providers.length).toBe(expectedCount);
       if (process.env.NODE_ENV === 'development') {
@@ -306,7 +303,6 @@ describe("auth module", () => {
         role: "CUSTOMER",
         phoneNumber: "+1234567890",
       });
-      // login event is handled by the signIn() callback, not by authorize()
       expect(mockLogAuthEvent).not.toHaveBeenCalledWith(
         expect.objectContaining({ event: "login" }),
       );

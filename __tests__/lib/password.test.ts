@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-// Mock bcryptjs
 const mockHash = vi.hoisted(() => vi.fn());
 const mockCompare = vi.hoisted(() => vi.fn());
 
@@ -11,7 +10,6 @@ vi.mock("bcryptjs", () => ({
   },
 }));
 
-// Mock drizzle DB
 const mockSelect = vi.hoisted(() => vi.fn());
 const mockInsert = vi.hoisted(() => vi.fn());
 const mockDelete = vi.hoisted(() => vi.fn());
@@ -53,18 +51,15 @@ describe("password utilities", () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    // Setup select chain
     mockLimitSelect.mockResolvedValue([]);
     mockOrderBySelect.mockReturnValue({ limit: mockLimitSelect });
     mockWhereSelect.mockReturnValue({ orderBy: mockOrderBySelect });
     mockFromSelect.mockReturnValue({ where: mockWhereSelect });
     mockSelect.mockReturnValue({ from: mockFromSelect });
 
-    // Setup insert chain
     mockValuesInsert.mockResolvedValue(undefined);
     mockInsert.mockReturnValue({ values: mockValuesInsert });
 
-    // Setup delete chain: delete(table).where(condition)
     mockWhereDelete.mockResolvedValue(undefined);
     mockDelete.mockReturnValue({ where: mockWhereDelete });
   });
@@ -123,7 +118,6 @@ describe("password utilities", () => {
 
   describe("savePasswordToHistory", () => {
     it("inserts a new history entry", async () => {
-      // Subsequent select for cleanup returns 1 entry (within limit)
       mockLimitSelect.mockResolvedValue([]);
       mockOrderBySelect.mockReturnValue(Promise.resolve([{ id: "entry-1" }]));
       const { savePasswordToHistory } = await import("@/lib/password");
@@ -136,7 +130,6 @@ describe("password utilities", () => {
     });
 
     it("deletes old entries beyond the limit of 2", async () => {
-      // After insert, there are 3 entries
       mockOrderBySelect.mockReturnValue(
         Promise.resolve([
           { id: "entry-3" },
@@ -146,7 +139,6 @@ describe("password utilities", () => {
       );
       const { savePasswordToHistory } = await import("@/lib/password");
       await savePasswordToHistory("user-1", "new-hash");
-      // Should delete entry-1 (the 3rd entry)
       expect(mockDelete).toHaveBeenCalled();
     });
   });

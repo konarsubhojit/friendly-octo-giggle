@@ -2,13 +2,11 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { ReviewForm } from "@/components/ui/ReviewForm";
 
-// Mock next-auth/react
 const mockSession = vi.hoisted(() => vi.fn());
 vi.mock("next-auth/react", () => ({
   useSession: mockSession,
 }));
 
-// Mock GradientButton to a simple button
 vi.mock("@/components/ui/GradientButton", () => ({
   GradientButton: ({ children, ...props }: React.ComponentProps<"button">) => (
     <button {...props}>{children}</button>
@@ -56,11 +54,9 @@ describe("ReviewForm", () => {
     });
     render(<ReviewForm productId="prod001" />);
 
-    // Select a rating
     const starButtons = screen.getAllByRole("button");
     fireEvent.click(starButtons[3]); // 4 stars
 
-    // Type short comment
     fireEvent.change(screen.getByLabelText(/your review/i), {
       target: { value: "Good" },
     });
@@ -86,16 +82,13 @@ describe("ReviewForm", () => {
 
     render(<ReviewForm productId="prod001" onSuccess={onSuccess} />);
 
-    // Select rating
     const starButtons = screen.getAllByRole("button");
     fireEvent.click(starButtons[4]); // 5 stars
 
-    // Type comment
     fireEvent.change(screen.getByLabelText(/your review/i), {
       target: { value: "This is an excellent product!" },
     });
 
-    // Submit
     fireEvent.click(screen.getByText("Submit Review"));
 
     await waitFor(() => {

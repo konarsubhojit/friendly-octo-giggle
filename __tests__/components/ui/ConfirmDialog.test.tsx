@@ -57,7 +57,6 @@ describe('ConfirmDialog', () => {
   it('calls onCancel when backdrop is clicked', () => {
     const onCancel = vi.fn();
     render(<ConfirmDialog {...baseProps} onCancel={onCancel} />);
-    // The backdrop is the div with aria-hidden="true"
     const backdrop = document.querySelector('[aria-hidden="true"]');
     expect(backdrop).not.toBeNull();
     fireEvent.click(backdrop as Element);
@@ -80,7 +79,6 @@ describe('ConfirmDialog', () => {
 
   it('uses danger variant styles by default when variant=danger', () => {
     render(<ConfirmDialog {...baseProps} variant="danger" />);
-    // Confirm button should have red styling
     const confirmBtn = screen.getByRole('button', { name: 'Confirm' });
     expect(confirmBtn.className).toContain('bg-red-600');
   });
@@ -102,7 +100,6 @@ describe('ConfirmDialog', () => {
     const dialog = screen.getByRole('dialog');
     expect(dialog).toBeInTheDocument();
     expect(dialog).toHaveAttribute('aria-modal', 'true');
-    // The aria-labelledby must exist and point to the visible title element
     const labelId = dialog.getAttribute('aria-labelledby');
     expect(labelId).toBeTruthy();
     expect(document.getElementById(labelId as string)).toHaveTextContent('Are you sure?');
@@ -120,21 +117,18 @@ describe('ConfirmDialog', () => {
 
     expect(labelId1).toBeTruthy();
     expect(labelId2).toBeTruthy();
-    // IDs must differ to avoid duplicate-ID violations
     expect(labelId1).not.toBe(labelId2);
   });
 
   it('shows loading spinner inside confirm button when loading', () => {
     render(<ConfirmDialog {...baseProps} loading />);
     const confirmBtn = screen.getByRole('button', { name: 'Confirm' });
-    // There should be an svg spinner
     expect(confirmBtn.querySelector('svg')).not.toBeNull();
   });
 
   it('calls onCancel when Escape is pressed', () => {
     const onCancel = vi.fn();
     render(<ConfirmDialog {...baseProps} onCancel={onCancel} />);
-    // Focus an element inside the dialog so the guard passes
     const cancelBtn = screen.getByRole('button', { name: 'Cancel' });
     cancelBtn.focus();
     fireEvent.keyDown(document, { key: 'Escape' });
@@ -144,8 +138,6 @@ describe('ConfirmDialog', () => {
   it('does not call onCancel on Escape when loading', () => {
     const onCancel = vi.fn();
     render(<ConfirmDialog {...baseProps} onCancel={onCancel} loading />);
-    // Buttons are disabled when loading; focus remains outside the dialog,
-    // so the handler is correctly suppressed.
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(onCancel).not.toHaveBeenCalled();
   });
@@ -156,11 +148,9 @@ describe('ConfirmDialog', () => {
     const focusable = dialog.querySelectorAll('button:not([disabled])');
     const last = focusable[focusable.length - 1] as HTMLElement;
 
-    // Focus the last button then Tab
     last.focus();
     expect(document.activeElement).toBe(last);
     fireEvent.keyDown(document, { key: 'Tab', shiftKey: false });
-    // After wrapping, focus should be on the first focusable element
     expect(document.activeElement).toBe(focusable[0]);
   });
 
@@ -171,7 +161,6 @@ describe('ConfirmDialog', () => {
     const first = focusable[0] as HTMLElement;
     const last = focusable[focusable.length - 1] as HTMLElement;
 
-    // Focus the first button then Shift+Tab
     first.focus();
     expect(document.activeElement).toBe(first);
     fireEvent.keyDown(document, { key: 'Tab', shiftKey: true });

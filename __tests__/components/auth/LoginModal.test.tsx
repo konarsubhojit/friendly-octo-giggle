@@ -2,13 +2,11 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, act, waitFor } from "@testing-library/react";
 import React from "react";
 
-// Mock next-auth/react
 const mockSignIn = vi.fn();
 vi.mock("next-auth/react", () => ({
   signIn: mockSignIn,
 }));
 
-// Mock next/navigation
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
     refresh: vi.fn(),
@@ -16,7 +14,6 @@ vi.mock("next/navigation", () => ({
   }),
 }));
 
-// Mock next/link
 vi.mock("next/link", () => ({
   default: ({
     children,
@@ -39,7 +36,6 @@ describe("LoginModal", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     vi.resetModules();
-    // jsdom does not implement showModal/close on HTMLDialogElement
     HTMLDialogElement.prototype.showModal = vi.fn(function (this: HTMLDialogElement) {
       this.setAttribute("open", "");
       this.setAttribute("aria-modal", "true");

@@ -23,11 +23,9 @@ describe("NewsletterForm", () => {
   it("does not navigate away when submitted (preventDefault)", () => {
     const { container } = render(<NewsletterForm />);
     const form = container.querySelector("form");
-    // Submit the form — should not throw
     if (form) {
       fireEvent.submit(form);
     }
-    // The page should still render the newsletter form
     expect(screen.getByRole("button", { name: /subscribe/i })).toBeTruthy();
   });
 

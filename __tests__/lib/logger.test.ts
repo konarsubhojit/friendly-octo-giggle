@@ -430,7 +430,6 @@ describe("logger module", () => {
 
     it("should log warn if the timer duration exceeds 1000ms", async () => {
       const _timer = new Timer("slow-op");
-      // Since we can't guarantee > 1000ms in a test, we test via logPerformance directly
       logPerformance({ operation: "slow-op", duration: 1500 });
       expect(mockLogger.warn).toHaveBeenCalledWith(
         expect.objectContaining({ operation: "slow-op", duration: 1500 }),

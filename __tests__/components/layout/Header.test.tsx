@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, act } from "@testing-library/react";
 import React from "react";
 
-// Mock next-auth/react
 vi.mock("next-auth/react", () => ({
   useSession: vi.fn(),
   signOut: vi.fn(),
@@ -96,7 +95,6 @@ describe("Header", () => {
     useSession.mockReturnValue({ data: session, status: "authenticated" });
     const Header = (await import("@/components/layout/Header")).default;
     render(<Header />);
-    // User avatar initial should be visible
     expect(screen.getByText("A")).toBeTruthy();
   });
 
@@ -127,7 +125,6 @@ describe("Header", () => {
     useSession.mockReturnValue({ data: session, status: "authenticated" });
     const Header = (await import("@/components/layout/Header")).default;
     render(<Header />);
-    // Open the menu
     act(() => {
       fireEvent.click(screen.getByLabelText("User menu"));
     });
@@ -203,12 +200,10 @@ describe("Header", () => {
     useSession.mockReturnValue({ data: session, status: "authenticated" });
     const Header = (await import("@/components/layout/Header")).default;
     render(<Header />);
-    // Find the user menu button and check for presence of profile image
     const menuButton = screen.getByLabelText("User menu");
     const img = menuButton.querySelector("img");
     expect(img).toBeTruthy();
     expect(img?.getAttribute("src")).toBe("https://example.com/avatar.jpg");
-    // Initial letter avatar should not be present
     expect(screen.queryByText("A")).toBeNull();
   });
 
@@ -258,7 +253,6 @@ describe("Header", () => {
     const menu = screen.getByRole("menu");
     expect(menu).toBeTruthy();
 
-    // Find the My Orders link inside the dropdown menu
     const myOrdersLink = menu.querySelector("a[href='/orders']");
     expect(myOrdersLink).not.toBeNull();
     act(() => {

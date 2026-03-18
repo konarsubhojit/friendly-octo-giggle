@@ -30,7 +30,6 @@ describe("ordersSlice async thunks (fetch bodies)", () => {
     vi.restoreAllMocks();
   });
 
-  // fetchOrders
   it("fetchOrders fulfilled sets orders (data.orders format)", async () => {
     vi.stubGlobal(
       "fetch",
@@ -89,15 +88,15 @@ describe("ordersSlice async thunks (fetch bodies)", () => {
       "fetch",
       vi.fn().mockResolvedValue({
         ok: false,
+        status: 500,
         json: () => Promise.reject(new Error("parse error")),
       }),
     );
     const store = makeStore();
     await store.dispatch(fetchOrders());
-    expect(store.getState().orders.error).toBe("Failed to fetch orders");
+    expect(store.getState().orders.error).toBe("Request failed (500)");
   });
 
-  // fetchOrderById
   it("fetchOrderById fulfilled sets currentOrder (data.order)", async () => {
     vi.stubGlobal(
       "fetch",
@@ -137,7 +136,6 @@ describe("ordersSlice async thunks (fetch bodies)", () => {
     expect(store.getState().orders.error).toBe("Order not found");
   });
 
-  // cancelOrder
   it("cancelOrder fulfilled updates currentOrder", async () => {
     const cancelled = { ...mockOrder, status: "CANCELLED" };
     vi.stubGlobal(
@@ -183,12 +181,13 @@ describe("ordersSlice async thunks (fetch bodies)", () => {
       "fetch",
       vi.fn().mockResolvedValue({
         ok: false,
+        status: 500,
         json: () => Promise.reject(new Error("parse error")),
       }),
     );
     const store = makeStore();
     await store.dispatch(cancelOrder("o1"));
-    expect(store.getState().orders.error).toBe("Failed to cancel order");
+    expect(store.getState().orders.error).toBe("Request failed (500)");
   });
 
   it("cancelOrder fulfilled uses data.data.order fallback", async () => {

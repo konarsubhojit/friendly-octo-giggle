@@ -8,7 +8,6 @@ import { AuthRequiredState } from "@/components/ui/AuthRequiredState";
 import { AlertBanner } from "@/components/ui/AlertBanner";
 import { EmptyState } from "@/components/ui/EmptyState";
 
-// Mock next/link
 vi.mock("next/link", () => ({
   default: ({
     children,
@@ -18,9 +17,6 @@ vi.mock("next/link", () => ({
     href: string;
   }) => <a href={href}>{children}</a>,
 }));
-
-// ─── Badge ────────────────────────────────────────────────────────────────────
-
 describe("Badge", () => {
   it("renders children", () => {
     render(<Badge>In Stock</Badge>);
@@ -84,9 +80,6 @@ describe("roleVariant", () => {
   it("is case-insensitive for admin", () =>
     expect(roleVariant("admin")).toBe("primary"));
 });
-
-// ─── Card ─────────────────────────────────────────────────────────────────────
-
 describe("Card", () => {
   it("renders children", () => {
     render(
@@ -108,9 +101,6 @@ describe("Card", () => {
     expect(container.firstChild).toHaveClass("p-8");
   });
 });
-
-// ─── LoadingSpinner ───────────────────────────────────────────────────────────
-
 describe("LoadingSpinner", () => {
   it("renders with default aria label", () => {
     render(<LoadingSpinner />);
@@ -145,9 +135,6 @@ describe("LoadingSpinner", () => {
     expect(srSpan?.textContent).toBe("Loading");
   });
 });
-
-// ─── AuthRequiredState ────────────────────────────────────────────────────────
-
 describe("AuthRequiredState", () => {
   it("renders default title and message", () => {
     render(<AuthRequiredState callbackUrl="/cart" />);
@@ -182,9 +169,6 @@ describe("AuthRequiredState", () => {
     expect(screen.getByRole("link", { name: "Log In Now" })).toBeTruthy();
   });
 });
-
-// ─── AlertBanner ─────────────────────────────────────────────────────────────
-
 describe("AlertBanner", () => {
   it("renders message", () => {
     render(<AlertBanner message="Something went wrong" />);
@@ -232,9 +216,6 @@ describe("AlertBanner", () => {
     expect(container.firstChild).toHaveClass("mt-4");
   });
 });
-
-// ─── EmptyState ───────────────────────────────────────────────────────────────
-
 describe("EmptyState", () => {
   it("renders title", () => {
     render(<EmptyState title="No items found" />);

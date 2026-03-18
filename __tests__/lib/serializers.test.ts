@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { serializeOrder, serializeOrders } from "@/lib/serializers";
 
-// Build minimal mock data matching expected types
 const mockDate = new Date("2024-06-15T12:00:00.000Z");
 const mockISOString = "2024-06-15T12:00:00.000Z";
 

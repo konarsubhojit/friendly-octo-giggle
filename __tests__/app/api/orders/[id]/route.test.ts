@@ -256,7 +256,6 @@ describe("PATCH /api/orders/[id]", () => {
 
     const cancelledOrder = { ...mockOrder, status: "CANCELLED" };
 
-    // First call returns the pending order, second call returns updated order
     mockFindFirst
       .mockResolvedValueOnce(mockOrder as never)
       .mockResolvedValueOnce(cancelledOrder as never);

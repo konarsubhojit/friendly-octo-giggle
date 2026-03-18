@@ -7,7 +7,6 @@ const { mockFindMany, mockCreate } = vi.hoisted(() => ({
   mockCreate: vi.fn(),
 }));
 
-// Mock dependencies
 vi.mock("@/lib/db", () => ({
   drizzleDb: {
     query: {
@@ -60,7 +59,6 @@ vi.mock("next/cache", () => ({
   revalidateTag: vi.fn(),
 }));
 
-// Import mocked modules
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { invalidateProductCaches } from "@/lib/cache";

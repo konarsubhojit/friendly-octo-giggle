@@ -1,7 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent, act } from "@testing-library/react";
 
-// Mock validations
 vi.mock("@/lib/validations", () => ({
   PASSWORD_REQUIREMENTS: [
     { label: "At least 8 characters", test: (p: string) => p.length >= 8 },

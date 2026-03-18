@@ -1,5 +1,6 @@
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import type { RootState } from '@/lib/store';
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import type { RootState } from "@/lib/store";
+import { apiClient, ApiError } from "@/lib/api-client";
 
 // Admin-scoped types
 interface AdminProduct {
@@ -76,88 +77,116 @@ const initialState: AdminState = {
   error: null,
 };
 
+type AdminApiResponse = Record<string, unknown> & {
+  data?: Record<string, unknown>;
+};
+
+function extractList<T>(data: AdminApiResponse, key: string): T[] {
+  const nested = data.data?.[key];
+  const top = data[key];
+  return (nested ?? top ?? []) as T[];
+}
+
 export const fetchAdminProducts = createAsyncThunk(
-  'admin/fetchProducts',
+  "admin/fetchProducts",
   async (_, { rejectWithValue }) => {
-    const res = await fetch('/api/admin/products');
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      return rejectWithValue(err.error || 'Failed to fetch products');
+    try {
+      const data = await apiClient.get<AdminApiResponse>("/api/admin/products");
+      return extractList<AdminProduct>(data, "products");
+    } catch (error) {
+      if (error instanceof ApiError) return rejectWithValue(error.message);
+      return rejectWithValue("Failed to fetch products");
     }
-    const data = await res.json();
-    return data.data?.products || data.products || [];
-  }
+  },
 );
 
 export const fetchAdminOrders = createAsyncThunk(
-  'admin/fetchOrders',
+  "admin/fetchOrders",
   async (_, { rejectWithValue }) => {
-    const res = await fetch('/api/admin/orders');
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      return rejectWithValue(err.error || 'Failed to fetch orders');
+    try {
+      const data = await apiClient.get<AdminApiResponse>("/api/admin/orders");
+      return extractList<AdminOrder>(data, "orders");
+    } catch (error) {
+      if (error instanceof ApiError) return rejectWithValue(error.message);
+      return rejectWithValue("Failed to fetch orders");
     }
-    const data = await res.json();
-    return data.data?.orders || data.orders || [];
-  }
+  },
 );
 
 export const fetchAdminUsers = createAsyncThunk(
-  'admin/fetchUsers',
+  "admin/fetchUsers",
   async (_, { rejectWithValue }) => {
-    const res = await fetch('/api/admin/users');
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      return rejectWithValue(err.error || 'Failed to fetch users');
+    try {
+      const data = await apiClient.get<AdminApiResponse>("/api/admin/users");
+      return extractList<AdminUser>(data, "users");
+    } catch (error) {
+      if (error instanceof ApiError) return rejectWithValue(error.message);
+      return rejectWithValue("Failed to fetch users");
     }
-    const data = await res.json();
-    return data.data?.users || data.users || [];
-  }
+  },
 );
 
 export const updateAdminOrderStatus = createAsyncThunk(
-  'admin/updateOrderStatus',
-  async ({ id, status, trackingNumber, shippingProvider }: { id: string; status: string; trackingNumber?: string | null; shippingProvider?: string | null }, { rejectWithValue }) => {
-    const optionalFields = { trackingNumber, shippingProvider };
-    const body: Record<string, unknown> = {
+  "admin/updateOrderStatus",
+  async (
+    {
+      id,
       status,
-      ...Object.fromEntries(
-        Object.entries(optionalFields).filter(([_, value]) => value !== undefined)
-      ),
-    };
-    const res = await fetch(`/api/admin/orders/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      return rejectWithValue(err.error || 'Failed to update order');
+      trackingNumber,
+      shippingProvider,
+    }: {
+      id: string;
+      status: string;
+      trackingNumber?: string | null;
+      shippingProvider?: string | null;
+    },
+    { rejectWithValue },
+  ) => {
+    try {
+      const optionalFields = { trackingNumber, shippingProvider };
+      const body: Record<string, unknown> = {
+        status,
+        ...Object.fromEntries(
+          Object.entries(optionalFields).filter(
+            ([_, value]) => value !== undefined,
+          ),
+        ),
+      };
+      const data = await apiClient.patch<Record<string, unknown>>(
+        `/api/admin/orders/${id}`,
+        body,
+      );
+      const order = [data.data, data.order, data].find(
+        (v): v is Record<string, unknown> => v !== undefined && v !== null,
+      );
+      return order as unknown as AdminOrder;
+    } catch (error) {
+      if (error instanceof ApiError) return rejectWithValue(error.message);
+      return rejectWithValue("Failed to update order");
     }
-    const data = await res.json();
-    return [data.data?.order, data.order, data].find((order) => order !== undefined);
-  }
+  },
 );
 
 export const updateAdminUserRole = createAsyncThunk(
-  'admin/updateUserRole',
+  "admin/updateUserRole",
   async ({ id, role }: { id: string; role: string }, { rejectWithValue }) => {
-    const res = await fetch(`/api/admin/users/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ role }),
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      return rejectWithValue(err.error || 'Failed to update user role');
+    try {
+      const data = await apiClient.patch<Record<string, unknown>>(
+        `/api/admin/users/${id}`,
+        { role },
+      );
+      return ((data.data as Record<string, unknown>)?.user ??
+        data.user ??
+        data) as AdminUser;
+    } catch (error) {
+      if (error instanceof ApiError) return rejectWithValue(error.message);
+      return rejectWithValue("Failed to update user role");
     }
-    const data = await res.json();
-    return data.data?.user || data.user || data;
-  }
+  },
 );
 
 const adminSlice = createSlice({
-  name: 'admin',
+  name: "admin",
   initialState,
   reducers: {
     clearAdminError(state) {
@@ -233,14 +262,18 @@ const adminSlice = createSlice({
   },
 });
 
-export const { clearAdminError, removeProduct, upsertProduct } = adminSlice.actions;
+export const { clearAdminError, removeProduct, upsertProduct } =
+  adminSlice.actions;
 
 export const selectAdminProducts = (state: RootState) => state.admin.products;
 export const selectAdminOrders = (state: RootState) => state.admin.orders;
 export const selectAdminUsers = (state: RootState) => state.admin.users;
-export const selectAdminProductsLoading = (state: RootState) => state.admin.productsLoading;
-export const selectAdminOrdersLoading = (state: RootState) => state.admin.ordersLoading;
-export const selectAdminUsersLoading = (state: RootState) => state.admin.usersLoading;
+export const selectAdminProductsLoading = (state: RootState) =>
+  state.admin.productsLoading;
+export const selectAdminOrdersLoading = (state: RootState) =>
+  state.admin.ordersLoading;
+export const selectAdminUsersLoading = (state: RootState) =>
+  state.admin.usersLoading;
 export const selectAdminError = (state: RootState) => state.admin.error;
 
 export default adminSlice.reducer;

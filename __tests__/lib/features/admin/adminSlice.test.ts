@@ -83,7 +83,6 @@ describe("upsertProduct", () => {
 });
 
 describe("adminSlice extraReducers", () => {
-  // Products
   it("sets productsLoading on fetchAdminProducts.pending", () => {
     const result = adminReducer(initialState, {
       type: "admin/fetchProducts/pending",
@@ -111,7 +110,6 @@ describe("adminSlice extraReducers", () => {
     expect(result.error).toBe("Forbidden");
   });
 
-  // Orders
   it("sets ordersLoading on fetchAdminOrders.pending", () => {
     const result = adminReducer(initialState, {
       type: "admin/fetchOrders/pending",
@@ -129,7 +127,6 @@ describe("adminSlice extraReducers", () => {
     expect(result.orders).toEqual(orders);
   });
 
-  // Users
   it("sets usersLoading on fetchAdminUsers.pending", () => {
     const result = adminReducer(initialState, {
       type: "admin/fetchUsers/pending",
@@ -147,7 +144,6 @@ describe("adminSlice extraReducers", () => {
     expect(result.users).toEqual(users);
   });
 
-  // Update order status
   it("updates order in list on updateAdminOrderStatus.fulfilled", () => {
     const state = {
       ...initialState,
@@ -160,7 +156,6 @@ describe("adminSlice extraReducers", () => {
     expect((result.orders[0] as { status: string }).status).toBe("SHIPPED");
   });
 
-  // Update user role
   it("updates user in list on updateAdminUserRole.fulfilled", () => {
     const state = {
       ...initialState,

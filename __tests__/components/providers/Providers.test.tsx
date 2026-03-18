@@ -6,7 +6,6 @@ import { SessionProvider } from "@/components/providers/SessionProvider";
 import { useSelector } from "react-redux";
 import { selectCartItemCount } from "@/lib/features/cart/cartSlice";
 
-// Mock next-auth/react SessionProvider
 vi.mock("next-auth/react", () => ({
   SessionProvider: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="next-auth-session-provider">{children}</div>

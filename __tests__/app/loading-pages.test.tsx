@@ -59,7 +59,6 @@ describe("app/products/loading.tsx – Products Loading", () => {
   it("renders a pagination skeleton", async () => {
     const { default: ProductsLoading } = await import("@/app/products/loading");
     const { container } = render(<ProductsLoading />);
-    // Pagination section has five 10x10 boxes
     const paginationButtons = container.querySelectorAll(".h-10.w-10");
     expect(paginationButtons.length).toBeGreaterThanOrEqual(5);
   });
@@ -84,7 +83,6 @@ describe("app/products/[id]/loading.tsx – Product Detail Loading", () => {
     const { default: ProductDetailLoading } =
       await import("@/app/products/[id]/loading");
     const { container } = render(<ProductDetailLoading />);
-    // Image skeleton has a large rounded container with shadow-warm-lg
     const imageArea = container.querySelector(".shadow-warm-lg");
     expect(imageArea).toBeInTheDocument();
   });
@@ -93,7 +91,6 @@ describe("app/products/[id]/loading.tsx – Product Detail Loading", () => {
     const { default: ProductDetailLoading } =
       await import("@/app/products/[id]/loading");
     const { container } = render(<ProductDetailLoading />);
-    // Variation skeletons are h-10 w-20 rounded-lg elements
     const variationSkeletons = container.querySelectorAll(".h-10.w-20");
     expect(variationSkeletons).toHaveLength(4);
   });
@@ -102,7 +99,6 @@ describe("app/products/[id]/loading.tsx – Product Detail Loading", () => {
     const { default: ProductDetailLoading } =
       await import("@/app/products/[id]/loading");
     const { container } = render(<ProductDetailLoading />);
-    // Info cards have colored rounded-full icons (blue, green, purple)
     const infoIcons = container.querySelectorAll(".rounded-full.animate-pulse");
     expect(infoIcons.length).toBeGreaterThanOrEqual(3);
   });

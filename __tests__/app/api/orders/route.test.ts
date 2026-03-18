@@ -454,7 +454,6 @@ describe("POST /api/orders", () => {
       return cb(tx as never);
     });
 
-    // fullOrder lookup returns null
     mockFindFirstOrder.mockResolvedValue(null as never);
 
     const request = new NextRequest("http://localhost/api/orders", {

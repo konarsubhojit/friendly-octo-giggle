@@ -18,7 +18,6 @@ import {
   CreateShareSchema,
 } from "@/lib/validations";
 
-// Helpers
 const validUUID = "550e8400-e29b-41d4-a716-446655440000";
 const validShortId = "abc1234"; // Base62 7-char short ID used for products, variations, carts, orders
 const validISO = "2024-01-01T00:00:00.000Z";

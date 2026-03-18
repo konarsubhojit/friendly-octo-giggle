@@ -1,5 +1,6 @@
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { Cart, AddToCartInput } from '@/lib/types';
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import { Cart, AddToCartInput } from "@/lib/types";
+import { apiClient, ApiError } from "@/lib/api-client";
 
 interface CartState {
   cart: Cart | null;
@@ -13,83 +14,67 @@ const initialState: CartState = {
   error: null,
 };
 
-export const fetchCart = createAsyncThunk(
-  'cart/fetchCart',
-  async () => {
-    const res = await fetch('/api/cart');
-    const data = await res.json();
-    return data.cart as Cart | null;
-  }
-);
+export const fetchCart = createAsyncThunk("cart/fetchCart", async () => {
+  const data = await apiClient.get<{ cart: Cart | null }>("/api/cart");
+  return data.cart;
+});
 
 export const addToCart = createAsyncThunk(
-  'cart/addToCart',
+  "cart/addToCart",
   async (input: AddToCartInput, { rejectWithValue }) => {
-    const res = await fetch('/api/cart', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(input),
-    });
-
-    if (!res.ok) {
-      const data = await res.json();
-      return rejectWithValue(data.error || 'Failed to add to cart');
+    try {
+      const data = await apiClient.post<{ cart: Cart }>("/api/cart", input);
+      return data.cart;
+    } catch (error) {
+      if (error instanceof ApiError) return rejectWithValue(error.message);
+      return rejectWithValue("Failed to add to cart");
     }
-
-    const data = await res.json();
-    return data.cart as Cart;
-  }
+  },
 );
 
 export const updateCartItem = createAsyncThunk(
-  'cart/updateCartItem',
-  async ({ itemId, quantity }: { itemId: string; quantity: number }, { dispatch, rejectWithValue }) => {
-    const res = await fetch(`/api/cart/items/${itemId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ quantity }),
-    });
-
-    if (!res.ok) {
-      const data = await res.json();
-      return rejectWithValue(data.error || 'Failed to update item');
+  "cart/updateCartItem",
+  async (
+    { itemId, quantity }: { itemId: string; quantity: number },
+    { dispatch, rejectWithValue },
+  ) => {
+    try {
+      await apiClient.patch(`/api/cart/items/${itemId}`, { quantity });
+      return dispatch(fetchCart()).unwrap();
+    } catch (error) {
+      if (error instanceof ApiError) return rejectWithValue(error.message);
+      return rejectWithValue("Failed to update item");
     }
-
-    // The PATCH endpoint returns { success: true } without cart data.
-    // Re-fetch the full cart so the Redux state stays in sync.
-    return dispatch(fetchCart()).unwrap();
-  }
+  },
 );
 
 export const removeCartItem = createAsyncThunk(
-  'cart/removeCartItem',
+  "cart/removeCartItem",
   async (itemId: string, { dispatch, rejectWithValue }) => {
-    const res = await fetch(`/api/cart/items/${itemId}`, {
-      method: 'DELETE',
-    });
-
-    if (!res.ok) {
-      return rejectWithValue('Failed to remove item');
+    try {
+      await apiClient.delete(`/api/cart/items/${itemId}`);
+      return dispatch(fetchCart()).unwrap();
+    } catch (error) {
+      if (error instanceof ApiError) return rejectWithValue(error.message);
+      return rejectWithValue("Failed to remove item");
     }
-
-    // Re-fetch the full cart after removal
-    const result = await dispatch(fetchCart()).unwrap();
-    return result;
-  }
+  },
 );
 
 export const clearCart = createAsyncThunk(
-  'cart/clearCart',
+  "cart/clearCart",
   async (_, { rejectWithValue }) => {
-    const res = await fetch('/api/cart', { method: 'DELETE' });
-    if (!res.ok) {
-      return rejectWithValue('Failed to clear cart');
+    try {
+      await apiClient.delete("/api/cart");
+    } catch (error) {
+      if (error instanceof ApiError) return rejectWithValue(error.message);
+      return rejectWithValue("Failed to clear cart");
     }
-  }
+  },
 );
 
 const cartSlice = createSlice({
-  name: 'cart',
+  name: "cart",
   initialState,
   reducers: {
     clearError(state) {
@@ -109,7 +94,7 @@ const cartSlice = createSlice({
       })
       .addCase(fetchCart.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.error.message || 'Failed to fetch cart';
+        state.error = action.error.message || "Failed to fetch cart";
       });
 
     // addToCart
@@ -119,7 +104,7 @@ const cartSlice = createSlice({
         state.error = null;
       })
       .addCase(addToCart.rejected, (state, action) => {
-        state.error = (action.payload as string) || 'Failed to add to cart';
+        state.error = (action.payload as string) || "Failed to add to cart";
       });
 
     // updateCartItem
@@ -129,7 +114,7 @@ const cartSlice = createSlice({
         state.error = null;
       })
       .addCase(updateCartItem.rejected, (state, action) => {
-        state.error = (action.payload as string) || 'Failed to update item';
+        state.error = (action.payload as string) || "Failed to update item";
       });
 
     // removeCartItem
@@ -139,7 +124,7 @@ const cartSlice = createSlice({
         state.error = null;
       })
       .addCase(removeCartItem.rejected, (state, action) => {
-        state.error = (action.payload as string) || 'Failed to remove item';
+        state.error = (action.payload as string) || "Failed to remove item";
       });
 
     // clearCart
@@ -149,7 +134,7 @@ const cartSlice = createSlice({
         state.error = null;
       })
       .addCase(clearCart.rejected, (state, action) => {
-        state.error = (action.payload as string) || 'Failed to clear cart';
+        state.error = (action.payload as string) || "Failed to clear cart";
       });
   },
 });
@@ -158,7 +143,8 @@ export const { clearError } = cartSlice.actions;
 
 // Selectors
 export const selectCart = (state: { cart: CartState }) => state.cart.cart;
-export const selectCartLoading = (state: { cart: CartState }) => state.cart.loading;
+export const selectCartLoading = (state: { cart: CartState }) =>
+  state.cart.loading;
 export const selectCartError = (state: { cart: CartState }) => state.cart.error;
 export const selectCartItemCount = (state: { cart: CartState }) => {
   const cart = state.cart.cart;

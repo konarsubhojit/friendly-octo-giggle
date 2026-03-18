@@ -1,13 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, act, waitFor } from "@testing-library/react";
 
-// Mock next-auth/react
 const mockSignIn = vi.fn();
 vi.mock("next-auth/react", () => ({
   signIn: mockSignIn,
 }));
 
-// Mock PasswordToggleButton
 vi.mock("@/components/auth/PasswordToggleButton", () => ({
   PasswordToggleButton: ({
     showPassword,

@@ -9,9 +9,6 @@ import {
   LoadingOverlay,
 } from "@/components/ui/ErrorBoundary";
 
-// ---------------------------------------------------------------------------
-// ErrorBoundary
-// ---------------------------------------------------------------------------
 function ThrowingChild({ shouldThrow }: { shouldThrow: boolean }) {
   if (shouldThrow) throw new Error("Test error");
   return <div>Normal content</div>;
@@ -65,7 +62,6 @@ describe("ErrorBoundary", () => {
   });
 
   it("resets error state when try again is clicked", () => {
-    // Wrap so we can control whether the child throws after reset
     function Wrapper() {
       const [shouldThrow, setShouldThrow] = React.useState(true);
       return (
@@ -81,14 +77,11 @@ describe("ErrorBoundary", () => {
 
     render(<Wrapper />);
     expect(screen.getByText("Oops! Something went wrong")).toBeTruthy();
-    // Click "Try again" — state resets; child still throws and error is caught again
     fireEvent.click(screen.getByText("Try again"));
-    // The boundary catches the error again (expected behaviour)
     expect(screen.getByText("Oops! Something went wrong")).toBeTruthy();
   });
 
   it("shows default error message when error has no message", () => {
-    // Temporarily override getDerivedStateFromError to return error:null
     const originalDerived = ErrorBoundary.getDerivedStateFromError;
     ErrorBoundary.getDerivedStateFromError = () => ({
       hasError: true,
@@ -102,15 +95,11 @@ describe("ErrorBoundary", () => {
       );
       expect(screen.getByText("An unexpected error occurred")).toBeTruthy();
     } finally {
-      // Always restore the original static method
       ErrorBoundary.getDerivedStateFromError = originalDerived;
     }
   });
 });
 
-// ---------------------------------------------------------------------------
-// ErrorDisplay
-// ---------------------------------------------------------------------------
 describe("ErrorDisplay", () => {
   it("renders nothing when error is null", () => {
     const { container } = render(<ErrorDisplay error={null} />);
@@ -124,9 +113,6 @@ describe("ErrorDisplay", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// SuccessDisplay
-// ---------------------------------------------------------------------------
 describe("SuccessDisplay", () => {
   it("renders nothing when message is null", () => {
     const { container } = render(<SuccessDisplay message={null} />);
@@ -140,9 +126,6 @@ describe("SuccessDisplay", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// LoadingSpinner
-// ---------------------------------------------------------------------------
 describe("LoadingSpinner", () => {
   it("renders with default md size", () => {
     const { container } = render(<LoadingSpinner />);
@@ -163,9 +146,6 @@ describe("LoadingSpinner", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// LoadingOverlay
-// ---------------------------------------------------------------------------
 describe("LoadingOverlay", () => {
   it("renders with default loading message", () => {
     render(<LoadingOverlay />);

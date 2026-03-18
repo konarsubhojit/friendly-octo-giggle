@@ -40,7 +40,6 @@ describe("CartIcon", () => {
 
   it("does not show badge when cart is empty", () => {
     renderCartIcon();
-    // No count badge visible
     expect(screen.queryByText(/^\d+$/)).toBeNull();
   });
 
@@ -51,7 +50,6 @@ describe("CartIcon", () => {
 
   it("shows badge when cart has items", () => {
     const store = makeStore();
-    // Manually set cart state with items
     store.dispatch({
       type: "cart/fetchCart/fulfilled",
       payload: {

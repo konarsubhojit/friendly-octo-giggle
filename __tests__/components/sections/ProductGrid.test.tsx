@@ -25,7 +25,6 @@ vi.mock("next/image", () => ({
   ),
 }));
 
-// Mutable mock dispatch — tests can override returnValue for each scenario
 const mockDispatch = vi.fn();
 
 vi.mock("react-redux", () => ({
@@ -66,12 +65,8 @@ function renderGrid(products: Product[]) {
 describe("ProductGrid", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Default: dispatch returns a successful unwrap
     mockDispatch.mockReturnValue({ unwrap: () => Promise.resolve() });
   });
-
-  // ─── Basic rendering ──────────────────────────────────────────────────────
-
   it("shows empty state when no products", () => {
     renderGrid([]);
     expect(screen.getByText("No products found")).toBeTruthy();
@@ -89,7 +84,6 @@ describe("ProductGrid", () => {
 
   it("renders category in filter pills", () => {
     renderGrid([makeProduct({ category: "Flowers" })]);
-    // "Flowers" appears in the category filter pills
     const elements = screen.getAllByText("Flowers");
     expect(elements.length).toBeGreaterThan(0);
   });
@@ -128,9 +122,6 @@ describe("ProductGrid", () => {
     renderGrid([]);
     expect(screen.getByText(/All Products/i)).toBeTruthy();
   });
-
-  // ─── Category filter buttons ──────────────────────────────────────────────
-
   it("renders category filter buttons", () => {
     renderGrid([]);
     expect(screen.getByText("All")).toBeTruthy();
@@ -157,7 +148,6 @@ describe("ProductGrid", () => {
       makeProduct({ id: "1", name: "Red Rose", category: "Flowers" }),
       makeProduct({ id: "2", name: "Tote Bag", category: "Handbag" }),
     ]);
-    // Click the Handbag category button
     const handbagBtn = screen.getByRole("button", { name: "Handbag" });
     fireEvent.click(handbagBtn);
     expect(screen.getByText("Tote Bag")).toBeTruthy();
@@ -171,9 +161,6 @@ describe("ProductGrid", () => {
     });
     expect(screen.getByText(/Try adjusting your search or category filter/i)).toBeTruthy();
   });
-
-  // ─── QuickAddButton ───────────────────────────────────────────────────────
-
   it("renders quick add button for in-stock product", () => {
     renderGrid([makeProduct({ stock: 5 })]);
     const btn = screen.getByRole("button", { name: /Add Test Product to cart/i });
@@ -223,10 +210,8 @@ describe("ProductGrid", () => {
     const btn = screen.getByRole("button", { name: /Add Test Product to cart/i });
 
     fireEvent.click(btn);
-    // Button should become disabled while the promise is pending
     expect(btn).toBeDisabled();
 
-    // Clean up
     await act(async () => { resolveAdd(); });
   });
 });

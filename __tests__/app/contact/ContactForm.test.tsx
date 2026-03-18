@@ -99,7 +99,6 @@ describe('ContactForm', () => {
 
     fireEvent.click(screen.getByText('Send another message'));
 
-    // Form should be visible again with empty fields
     expect(screen.getByLabelText('Name')).toHaveValue('');
     expect(screen.getByLabelText('Email')).toHaveValue('');
     expect(screen.getByLabelText('Subject')).toHaveValue('');
@@ -109,11 +108,9 @@ describe('ContactForm', () => {
   it('clears field error when user types in it', () => {
     render(<ContactForm />);
 
-    // Submit to trigger errors
     fireEvent.click(screen.getByRole('button', { name: 'Send Message' }));
     expect(screen.getByText('Name is required')).toBeInTheDocument();
 
-    // Type in the name field to clear the error
     fireEvent.change(screen.getByLabelText('Name'), {
       target: { value: 'J', name: 'name' },
     });
