@@ -16,7 +16,11 @@ vi.mock("next/link", () => ({
     children: React.ReactNode;
     href: string;
     onClick?: () => void;
-  }) => <a href={href} onClick={onClick}>{children}</a>,
+  }) => (
+    <a href={href} onClick={onClick}>
+      {children}
+    </a>
+  ),
 }));
 
 vi.mock("next/image", () => ({
@@ -32,6 +36,10 @@ vi.mock("@/components/layout/CartIcon", () => ({
 
 vi.mock("@/components/ui/CurrencySelector", () => ({
   default: () => <div data-testid="currency-selector" />,
+}));
+
+vi.mock("@/components/ui/ThemeSelector", () => ({
+  ThemeSelector: () => <div data-testid="theme-selector" />,
 }));
 
 vi.mock("@/components/auth/LoginModal", () => ({

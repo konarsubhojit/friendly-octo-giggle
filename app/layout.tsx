@@ -4,6 +4,7 @@ import "./globals.css";
 import { SessionProvider } from "@/components/providers/SessionProvider";
 import StoreProvider from "@/components/providers/StoreProvider";
 import { CurrencyProvider } from "@/contexts/CurrencyContext";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 import { Toaster } from "react-hot-toast";
 import { Analytics } from "@vercel/analytics/next";
 import HeaderWrapper from "@/components/layout/HeaderWrapper";
@@ -11,9 +12,11 @@ import HeaderWrapper from "@/components/layout/HeaderWrapper";
 function AppProviders({ children }: { readonly children: React.ReactNode }) {
   return (
     <StoreProvider>
-      <CurrencyProvider>
-        <SessionProvider>{children}</SessionProvider>
-      </CurrencyProvider>
+      <ThemeProvider>
+        <CurrencyProvider>
+          <SessionProvider>{children}</SessionProvider>
+        </CurrencyProvider>
+      </ThemeProvider>
     </StoreProvider>
   );
 }
