@@ -5,7 +5,6 @@ import Link from "next/link";
 import Image from "next/image";
 import { useSession, signOut } from "next-auth/react";
 import CartIcon from "@/components/layout/CartIcon";
-import CurrencySelector from "@/components/ui/CurrencySelector";
 import LoginModal from "@/components/auth/LoginModal";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { FlowerAccent } from "@/components/ui/DecorativeElements";
@@ -388,7 +387,6 @@ export default function Header() {
             </nav>
 
             <div className="flex items-center gap-3 sm:gap-4">
-              <CurrencySelector />
               <CartIcon />
 
               {session?.user ? (
