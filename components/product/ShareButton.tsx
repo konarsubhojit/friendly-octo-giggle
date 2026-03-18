@@ -262,7 +262,9 @@ export const ShareButton = ({ productId, variationId }: ShareButtonProps) => {
 
         // Compute panel position from current button bounds before state update
         if (buttonRef.current) {
-          setPanelStyle(computePanelStyle(buttonRef.current.getBoundingClientRect()));
+          setPanelStyle(
+            computePanelStyle(buttonRef.current.getBoundingClientRect()),
+          );
         }
 
         // Auto-copy to clipboard immediately

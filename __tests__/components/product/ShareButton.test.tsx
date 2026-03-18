@@ -30,10 +30,14 @@ describe("ShareButton", () => {
     vi.clearAllMocks();
     mockWriteText.mockResolvedValue(undefined);
     // Attach mock to all button elements rendered after this point
-    Object.defineProperty(window.HTMLButtonElement.prototype, "getBoundingClientRect", {
-      value: mockGetBoundingClientRect,
-      configurable: true,
-    });
+    Object.defineProperty(
+      window.HTMLButtonElement.prototype,
+      "getBoundingClientRect",
+      {
+        value: mockGetBoundingClientRect,
+        configurable: true,
+      },
+    );
   });
 
   it("renders the Share button with icon only (no visible text)", () => {
@@ -53,7 +57,10 @@ describe("ShareButton", () => {
               resolve({
                 json: () => ({
                   success: true,
-                  data: { key: "shr1234", shareUrl: "http://localhost/s/shr1234" },
+                  data: {
+                    key: "shr1234",
+                    shareUrl: "http://localhost/s/shr1234",
+                  },
                 }),
               }),
             200,
@@ -65,8 +72,12 @@ describe("ShareButton", () => {
     const btn = screen.getByRole("button", { name: "Share this product" });
     fireEvent.click(btn);
 
-    expect(screen.getByRole("button", { name: "Generating share link…" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Generating share link…" })).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "Generating share link…" }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Generating share link…" }),
+    ).toBeDisabled();
   });
 
   it("shows share URL panel after successful API call", async () => {
@@ -136,7 +147,10 @@ describe("ShareButton", () => {
         "/api/share",
         expect.objectContaining({
           method: "POST",
-          body: JSON.stringify({ productId: "abc1234", variationId: "var5678" }),
+          body: JSON.stringify({
+            productId: "abc1234",
+            variationId: "var5678",
+          }),
         }),
       );
     });
@@ -150,7 +164,9 @@ describe("ShareButton", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByRole("button", { name: "Failed to share – click to retry" }),
+        screen.getByRole("button", {
+          name: "Failed to share – click to retry",
+        }),
       ).toBeTruthy();
     });
   });
@@ -165,7 +181,9 @@ describe("ShareButton", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByRole("button", { name: "Failed to share – click to retry" }),
+        screen.getByRole("button", {
+          name: "Failed to share – click to retry",
+        }),
       ).toBeTruthy();
     });
   });
@@ -212,7 +230,9 @@ describe("ShareButton", () => {
       expect(screen.getByRole("region", { name: /share link/i })).toBeTruthy();
     });
 
-    const closeButton = screen.getByRole("button", { name: /close share panel/i });
+    const closeButton = screen.getByRole("button", {
+      name: /close share panel/i,
+    });
     fireEvent.click(closeButton);
 
     expect(screen.queryByRole("region", { name: /share link/i })).toBeNull();
