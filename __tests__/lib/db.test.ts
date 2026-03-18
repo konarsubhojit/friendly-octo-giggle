@@ -5,6 +5,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 const {
   mockFindMany,
   mockFindFirst,
+  mockSharesFindFirst,
   mockReturningInsert,
   mockValues,
   mockInsert,
@@ -14,6 +15,7 @@ const {
   mockCacheProductsList,
   mockCacheProductById,
   mockInvalidateProductCaches,
+  mockCacheShareResolve,
 } = vi.hoisted(() => {
   const mockReturningInsert = vi.fn();
   const mockValues = vi.fn(() => ({ returning: mockReturningInsert }));
@@ -27,6 +29,7 @@ const {
   return {
     mockFindMany: vi.fn(),
     mockFindFirst: vi.fn(),
+    mockSharesFindFirst: vi.fn(),
     mockReturningInsert,
     mockValues,
     mockInsert,
@@ -36,6 +39,7 @@ const {
     mockCacheProductsList: vi.fn(),
     mockCacheProductById: vi.fn(),
     mockInvalidateProductCaches: vi.fn(),
+    mockCacheShareResolve: vi.fn(),
   };
 });
 
@@ -51,6 +55,9 @@ vi.mock("drizzle-orm/neon-serverless", () => ({
       products: {
         findMany: mockFindMany,
         findFirst: mockFindFirst,
+      },
+      productShares: {
+        findFirst: mockSharesFindFirst,
       },
     },
     insert: mockInsert,
@@ -86,6 +93,8 @@ vi.mock("@/lib/schema", () => ({
   cartItemsRelations: {},
   wishlistsRelations: {},
   reviewsRelations: {},
+  productShares: {},
+  productSharesRelations: {},
 }));
 
 vi.mock("@/lib/env", () => ({
@@ -99,6 +108,7 @@ vi.mock("@/lib/cache", () => ({
   cacheProductsList: mockCacheProductsList,
   cacheProductById: mockCacheProductById,
   invalidateProductCaches: mockInvalidateProductCaches,
+  cacheShareResolve: mockCacheShareResolve,
 }));
 
 vi.mock("drizzle-orm", () => ({
@@ -435,6 +445,88 @@ describe("db.products", () => {
 
       expect(result).toBe(false);
       expect(mockInvalidateProductCaches).not.toHaveBeenCalled();
+    });
+  });
+});
+
+describe("db.shares", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  describe("create", () => {
+    it("inserts a share record and returns the key", async () => {
+      mockReturningInsert.mockResolvedValue([{ key: "shr1234" }]);
+
+      const result = await db.shares.create("prd1234", null);
+
+      expect(mockInsert).toHaveBeenCalledOnce();
+      expect(mockValues).toHaveBeenCalledWith({
+        productId: "prd1234",
+        variationId: null,
+      });
+      expect(result).toBe("shr1234");
+    });
+
+    it("inserts a share record with a variationId", async () => {
+      mockReturningInsert.mockResolvedValue([{ key: "shr5678" }]);
+
+      const result = await db.shares.create("prd1234", "var5678");
+
+      expect(mockValues).toHaveBeenCalledWith({
+        productId: "prd1234",
+        variationId: "var5678",
+      });
+      expect(result).toBe("shr5678");
+    });
+  });
+
+  describe("resolve", () => {
+    it("calls cacheShareResolve with the correct key and returns the result", async () => {
+      const shareData = { productId: "prd1234", variationId: null };
+      mockCacheShareResolve.mockResolvedValue(shareData);
+
+      const result = await db.shares.resolve("shr1234");
+
+      expect(mockCacheShareResolve).toHaveBeenCalledWith(
+        "shr1234",
+        expect.any(Function),
+      );
+      expect(result).toEqual(shareData);
+    });
+
+    it("returns null when cacheShareResolve returns null", async () => {
+      mockCacheShareResolve.mockResolvedValue(null);
+
+      const result = await db.shares.resolve("nonexistent");
+
+      expect(result).toBeNull();
+    });
+
+    it("fetcher resolves correct row data from DB when called directly", async () => {
+      const dbRow = { productId: "prd1234", variationId: "var5678" };
+      mockSharesFindFirst.mockResolvedValue(dbRow);
+
+      // Capture the fetcher passed to cacheShareResolve and invoke it
+      mockCacheShareResolve.mockImplementation(
+        async (_key: string, fetcher: () => Promise<unknown>) => fetcher(),
+      );
+
+      const result = await db.shares.resolve("shr1234");
+
+      expect(mockSharesFindFirst).toHaveBeenCalledOnce();
+      expect(result).toEqual({ productId: "prd1234", variationId: "var5678" });
+    });
+
+    it("fetcher returns null when DB row not found", async () => {
+      mockSharesFindFirst.mockResolvedValue(undefined);
+      mockCacheShareResolve.mockImplementation(
+        async (_key: string, fetcher: () => Promise<unknown>) => fetcher(),
+      );
+
+      const result = await db.shares.resolve("missing");
+
+      expect(result).toBeNull();
     });
   });
 });

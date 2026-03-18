@@ -11,6 +11,7 @@ import {
   orderItems,
   carts,
   cartItems,
+  productShares,
   usersRelations,
   accountsRelations,
   passwordHistoryRelations,
@@ -21,6 +22,7 @@ import {
   orderItemsRelations,
   cartsRelations,
   cartItemsRelations,
+  productSharesRelations,
   userRoleEnum,
   orderStatusEnum,
 } from "@/lib/schema";
@@ -38,6 +40,7 @@ describe("schema", () => {
     expect(orderItems).toBeDefined();
     expect(carts).toBeDefined();
     expect(cartItems).toBeDefined();
+    expect(productShares).toBeDefined();
   });
 
   it("exports all relation definitions", () => {
@@ -51,6 +54,7 @@ describe("schema", () => {
     expect(orderItemsRelations).toBeDefined();
     expect(cartsRelations).toBeDefined();
     expect(cartItemsRelations).toBeDefined();
+    expect(productSharesRelations).toBeDefined();
   });
 
   it("exports enum definitions", () => {
@@ -187,5 +191,12 @@ describe("schema", () => {
     expect(cols).toContain("userId");
     expect(cols).toContain("passwordHash");
     expect(cols).toContain("createdAt");
+  });
+
+  it("productShares table has expected columns", () => {
+    const cols = Object.keys(productShares);
+    expect(cols).toContain("key");
+    expect(cols).toContain("productId");
+    expect(cols).toContain("variationId");
   });
 });

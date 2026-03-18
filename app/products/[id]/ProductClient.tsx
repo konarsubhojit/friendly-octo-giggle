@@ -9,6 +9,7 @@ import { useCurrency } from "@/contexts/CurrencyContext";
 import type { AppDispatch } from "@/lib/store";
 import { ProductStockBadge } from "@/components/product/ProductStockBadge";
 import { VariationButton } from "@/components/product/VariationButton";
+import { ShareButton } from "@/components/product/ShareButton";
 import { ButterflyAccent } from "@/components/ui/DecorativeElements";
 import ImageCarousel from "@/components/product/ImageCarousel";
 import { useRecentlyViewed } from "@/lib/hooks";
@@ -17,32 +18,51 @@ import { ReviewsSection } from "@/components/sections/ReviewsSection";
 
 interface ProductClientProps {
   readonly product: Product;
+  readonly initialVariationId: string | null;
 }
 
 // ─── Pure module-level helpers ────────────────────────────
 
-function getCarouselImages(
+const getVariationImages = (variation: ProductVariation): string[] =>
+  [
+    ...(variation.image ? [variation.image] : []),
+    ...(variation.images ?? []),
+  ].filter(Boolean);
+
+const getProductImages = (product: Product): string[] =>
+  [product.image, ...(product.images ?? [])].filter(Boolean);
+
+const getCarouselImages = (
   product: Product,
   selectedVariation: ProductVariation | null,
-): string[] {
+): string[] => {
   if (selectedVariation) {
-    const imgs = [
-      ...(selectedVariation.image ? [selectedVariation.image] : []),
-      ...(selectedVariation.images ?? []),
-    ].filter(Boolean);
+    const imgs = getVariationImages(selectedVariation);
     if (imgs.length > 0) return imgs;
   }
-  return [product.image, ...(product.images ?? [])].filter(Boolean);
-}
+  return getProductImages(product);
+};
 
-function getClampedQtyState(
+const resolveInitialVariation = (
+  product: Product,
+  variationId: string | null,
+): ProductVariation | null => {
+  const variations = product.variations ?? [];
+  if (variationId) {
+    const match = variations.find((v) => v.id === variationId);
+    if (match) return match;
+  }
+  return variations[0] ?? null;
+};
+
+const getClampedQtyState = (
   quantity: number,
   stock: number,
-): { qty: number; message: string } {
+): { qty: number; message: string } => {
   if (stock === 0) return { qty: quantity, message: "" };
   if (quantity > stock) return { qty: stock, message: `Only ${stock} available` };
   return { qty: quantity, message: "" };
-}
+};
 
 // ─── Small button-content helpers ────────────────────────
 
@@ -94,6 +114,67 @@ const OutOfStockPanel = () => (
   </div>
 );
 
+// ─── Product Info sub-components ─────────────────────────
+
+interface PriceModifierDisplayProps {
+  readonly product: Product;
+  readonly selectedVariation: ProductVariation | null;
+  readonly formatPrice: (amount: number) => string;
+}
+
+const PriceModifierDisplay = ({
+  product,
+  selectedVariation,
+  formatPrice,
+}: PriceModifierDisplayProps) => {
+  if (!selectedVariation || selectedVariation.priceModifier === 0) return null;
+  const sign = selectedVariation.priceModifier > 0 ? "+" : "-";
+  return (
+    <div className="mt-2 text-sm text-[var(--text-secondary)]">
+      Base: {formatPrice(product.price)}{" "}
+      {sign}
+      {formatPrice(Math.abs(selectedVariation.priceModifier))}
+    </div>
+  );
+};
+
+interface VariationSelectorProps {
+  readonly variations: ProductVariation[] | null | undefined;
+  readonly selectedVariation: ProductVariation | null;
+  readonly formatPrice: (amount: number) => string;
+  readonly onSelect: (v: ProductVariation) => void;
+}
+
+const VariationSelector = ({
+  variations,
+  selectedVariation,
+  formatPrice,
+  onSelect,
+}: VariationSelectorProps) => {
+  if (!variations || variations.length === 0) return null;
+  return (
+    <div className="mb-6">
+      <span
+        className="block text-lg font-semibold text-[var(--foreground)] mb-3"
+        id="variation-selector-label"
+      >
+        Select Design
+      </span>
+      <div className="grid grid-cols-2 gap-3">
+        {variations.map((variation) => (
+          <VariationButton
+            key={variation.id}
+            variation={variation}
+            isSelected={selectedVariation?.id === variation.id}
+            formatPrice={formatPrice}
+            onSelect={onSelect}
+          />
+        ))}
+      </div>
+    </div>
+  );
+};
+
 // ─── Image Section ────────────────────────────────────────
 
 interface ProductImageSectionProps {
@@ -119,19 +200,25 @@ interface ProductInfoCardProps {
   readonly effectiveStock: number;
 }
 
-function ProductInfoCard({
+const ProductInfoCard = ({
   product,
   formatPrice,
   effectivePrice,
   selectedVariation,
   setSelectedVariation,
   effectiveStock,
-}: ProductInfoCardProps) {
+}: ProductInfoCardProps) => {
   return (
     <div className="bg-[var(--surface)]/80 backdrop-blur-lg rounded-2xl shadow-warm border border-[var(--border-warm)] p-8 mb-6">
-      <h1 className="text-4xl font-display font-bold mb-4 text-warm-heading italic">
-        {product.name}
-      </h1>
+      <div className="flex items-start justify-between gap-4 mb-4">
+        <h1 className="text-4xl font-display font-bold text-warm-heading italic">
+          {product.name}
+        </h1>
+        <ShareButton
+          productId={product.id}
+          variationId={selectedVariation?.id ?? null}
+        />
+      </div>
 
       <div className="mb-6">
         <span className="inline-block bg-gradient-to-r from-[var(--accent-warm)] to-[var(--accent-rose)] text-white rounded-full px-4 py-2 text-sm font-semibold shadow-warm">
@@ -147,43 +234,26 @@ function ProductInfoCard({
         <span className="text-5xl font-bold text-warm-heading">
           {formatPrice(effectivePrice)}
         </span>
-        {selectedVariation && selectedVariation.priceModifier !== 0 && (
-          <div className="mt-2 text-sm text-[var(--text-secondary)]">
-            Base: {formatPrice(product.price)}{" "}
-            {selectedVariation.priceModifier > 0 ? "+" : "-"}
-            {formatPrice(Math.abs(selectedVariation.priceModifier))}
-          </div>
-        )}
+        <PriceModifierDisplay
+          product={product}
+          selectedVariation={selectedVariation}
+          formatPrice={formatPrice}
+        />
       </div>
 
       <div className="mb-6">
         <ProductStockBadge stock={effectiveStock} />
       </div>
 
-      {product.variations && product.variations.length > 0 && (
-        <div className="mb-6">
-          <span
-            className="block text-lg font-semibold text-[var(--foreground)] mb-3"
-            id="variation-selector-label"
-          >
-            Select Design
-          </span>
-          <div className="grid grid-cols-2 gap-3">
-            {product.variations.map((variation) => (
-              <VariationButton
-                key={variation.id}
-                variation={variation}
-                isSelected={selectedVariation?.id === variation.id}
-                formatPrice={formatPrice}
-                onSelect={setSelectedVariation}
-              />
-            ))}
-          </div>
-        </div>
-      )}
+      <VariationSelector
+        variations={product.variations}
+        selectedVariation={selectedVariation}
+        formatPrice={formatPrice}
+        onSelect={setSelectedVariation}
+      />
     </div>
   );
-}
+};
 
 // ─── Add-to-Cart Section ──────────────────────────────────
 
@@ -200,7 +270,7 @@ interface AddToCartSectionProps {
   readonly formatPrice: (amount: number) => string;
 }
 
-function AddToCartSection({
+const AddToCartSection = ({
   error,
   cartSuccess,
   quantity,
@@ -211,7 +281,7 @@ function AddToCartSection({
   addingToCart,
   handleAddToCart,
   formatPrice,
-}: AddToCartSectionProps) {
+}: AddToCartSectionProps) => {
   return (
     <div className="bg-[var(--surface)]/80 backdrop-blur-lg rounded-2xl shadow-warm border border-[var(--border-warm)] p-8">
       {error && (
@@ -321,11 +391,14 @@ function AddToCartSection({
       </div>
     </div>
   );
-}
+};
 
 // ─── Main Component ───────────────────────────────────────
 
-export default function ProductClient({ product }: ProductClientProps) {
+export default function ProductClient({
+  product,
+  initialVariationId,
+}: ProductClientProps) {
   const dispatch = useDispatch<AppDispatch>();
   const { formatPrice } = useCurrency();
   const { trackProduct } = useRecentlyViewed();
@@ -335,10 +408,8 @@ export default function ProductClient({ product }: ProductClientProps) {
   const [quantity, setQuantity] = useState(1);
   const [quantityMessage, setQuantityMessage] = useState("");
   const [selectedVariation, setSelectedVariation] =
-    useState<ProductVariation | null>(
-      product.variations && product.variations.length > 0
-        ? product.variations[0]
-        : null,
+    useState<ProductVariation | null>(() =>
+      resolveInitialVariation(product, initialVariationId),
     );
   const [addingToCart, setAddingToCart] = useState(false);
   const [cartSuccess, setCartSuccess] = useState(false);

@@ -233,6 +233,18 @@ export const CreateReviewSchema = z.object({
 
 export type CreateReviewInput = z.infer<typeof CreateReviewSchema>;
 
+// ─── Share Validation Schemas ─────────────────────────────
+
+export const CreateShareSchema = z.object({
+  productId: z.string().regex(SHORT_ID_REGEX, "Invalid product ID"),
+  variationId: z
+    .string()
+    .regex(SHORT_ID_REGEX, "Invalid variation ID")
+    .nullish(),
+});
+
+export type CreateShareInput = z.infer<typeof CreateShareSchema>;
+
 // Password requirement descriptions for UI display
 export const PASSWORD_REQUIREMENTS = [
   { label: 'At least 8 characters', test: (p: string) => p.length >= 8 },

@@ -3,6 +3,7 @@ import { drizzle } from "drizzle-orm/neon-serverless";
 import {
   products,
   productVariations,
+  productShares,
   users,
   accounts,
   sessions,
@@ -28,6 +29,7 @@ import {
   cartItemsRelations,
   wishlistsRelations,
   reviewsRelations,
+  productSharesRelations,
 } from "./schema";
 import { eq, desc, and, isNull, sql, ne } from "drizzle-orm";
 import { Product, ProductInput } from "./types";
@@ -37,6 +39,7 @@ import {
   cacheProductById,
   cacheProductsBestsellers,
   invalidateProductCaches,
+  cacheShareResolve,
 } from "./cache";
 
 // All schema tables and relations collected into one object for Drizzle relational queries
@@ -50,6 +53,7 @@ const schema = {
   passwordHistory,
   products,
   productVariations,
+  productShares,
   orders,
   orderItems,
   carts,
@@ -68,6 +72,7 @@ const schema = {
   wishlistsRelations,
   reviews,
   reviewsRelations,
+  productSharesRelations,
 };
 
 // ─── Connection Pool (singleton for serverless) ─────────
@@ -476,6 +481,43 @@ export const db = {
         columns: { id: true },
       });
       return row !== undefined;
+    },
+  },
+
+  shares: {
+    /**
+     * Create a new product share link.
+     * Returns the 7-char base62 key that acts as the shareable token.
+     */
+    create: async (
+      productId: string,
+      variationId: string | null,
+    ): Promise<string> => {
+      const [row] = await drizzleDb
+        .insert(productShares)
+        .values({ productId, variationId: variationId ?? null })
+        .returning({ key: productShares.key });
+      return row.key;
+    },
+
+    /**
+     * Resolve a share key to its product and variation IDs.
+     * Result is cached in Redis with a 1-year TTL since share tokens
+     * are immutable — the mapping never changes after creation.
+     * Null results (missing token) are not cached to prevent poisoning.
+     * Returns null if the key does not exist.
+     */
+    resolve: (
+      key: string,
+    ): Promise<{ productId: string; variationId: string | null } | null> => {
+      return cacheShareResolve(key, async () => {
+        const row = await drizzleDb.query.productShares.findFirst({
+          where: eq(productShares.key, key),
+          columns: { productId: true, variationId: true },
+        });
+        if (!row) return null;
+        return { productId: row.productId, variationId: row.variationId };
+      });
     },
   },
 };
