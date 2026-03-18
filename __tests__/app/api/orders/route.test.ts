@@ -556,9 +556,7 @@ describe("POST /api/orders", () => {
       method: "POST",
       body: JSON.stringify({
         ...validBody,
-        items: [
-          { productId: "p1", quantity: 1, variationId: "nonexistent" },
-        ],
+        items: [{ productId: "p1", quantity: 1, variationId: "nonexistent" }],
       }),
       headers: { "content-type": "application/json" },
     });

@@ -169,9 +169,7 @@ export const db = {
      * @param options - Pagination and cache options
      * @returns Array of products sorted by sales volume descending
      */
-    findBestsellers: (
-      options: ProductListOptions = {},
-    ): Promise<Product[]> => {
+    findBestsellers: (options: ProductListOptions = {}): Promise<Product[]> => {
       const { limit = 5, withCache = false } = options;
 
       const fetcher = async () => {
@@ -455,7 +453,10 @@ export const db = {
         .insert(wishlists)
         .values({ userId, productId })
         .onConflictDoNothing()
-        .returning({ userId: wishlists.userId, productId: wishlists.productId });
+        .returning({
+          userId: wishlists.userId,
+          productId: wishlists.productId,
+        });
 
       return row ?? { userId, productId };
     },

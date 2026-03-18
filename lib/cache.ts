@@ -182,7 +182,9 @@ export async function invalidateUserOrderCaches(userId: string): Promise<void> {
 /**
  * Cache admin orders list with stampede prevention
  */
-export const cacheAdminOrdersList = <T>(fetcher: () => Promise<T>): Promise<T> => {
+export const cacheAdminOrdersList = <T>(
+  fetcher: () => Promise<T>,
+): Promise<T> => {
   return getCachedData(
     CACHE_KEYS.ADMIN_ORDERS_ALL,
     CACHE_TTL.ADMIN_ORDERS,
@@ -230,7 +232,9 @@ export const invalidateAdminOrderCaches = async (
 /**
  * Cache admin users list with stampede prevention
  */
-export const cacheAdminUsersList = <T>(fetcher: () => Promise<T>): Promise<T> => {
+export const cacheAdminUsersList = <T>(
+  fetcher: () => Promise<T>,
+): Promise<T> => {
   return getCachedData(
     CACHE_KEYS.ADMIN_USERS_ALL,
     CACHE_TTL.ADMIN_USERS,
@@ -258,7 +262,9 @@ export const cacheAdminUserById = <T>(
  * Invalidate admin user-related caches (list + individual user)
  * Called after user role updates
  */
-export const invalidateAdminUserCaches = async (userId: string): Promise<void> => {
+export const invalidateAdminUserCaches = async (
+  userId: string,
+): Promise<void> => {
   try {
     await invalidateCachePattern(CACHE_KEYS.ADMIN_USERS_PATTERN);
     await invalidateCachePattern(CACHE_KEYS.ADMIN_USER_BY_ID(userId));
@@ -311,13 +317,26 @@ export const cacheShareResolve = async <T>(
     // break share links if that key is created later, or allow arbitrary keys
     // to be prefetched to poison the cache.
     if (result !== null) {
-      await redisClient.setex(cacheKey, CACHE_TTL.SHARE_RESOLVE, JSON.stringify(result));
-      logCacheOperation({ operation: "set", key: cacheKey, ttl: CACHE_TTL.SHARE_RESOLVE, success: true });
+      await redisClient.setex(
+        cacheKey,
+        CACHE_TTL.SHARE_RESOLVE,
+        JSON.stringify(result),
+      );
+      logCacheOperation({
+        operation: "set",
+        key: cacheKey,
+        ttl: CACHE_TTL.SHARE_RESOLVE,
+        success: true,
+      });
     }
 
     return result;
   } catch (error) {
-    logError({ error, context: "share_cache_operation", additionalInfo: { key: cacheKey } });
+    logError({
+      error,
+      context: "share_cache_operation",
+      additionalInfo: { key: cacheKey },
+    });
     return fetcher();
   }
 };
