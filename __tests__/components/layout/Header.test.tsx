@@ -16,7 +16,11 @@ vi.mock("next/link", () => ({
     children: React.ReactNode;
     href: string;
     onClick?: () => void;
-  }) => <a href={href} onClick={onClick}>{children}</a>,
+  }) => (
+    <a href={href} onClick={onClick}>
+      {children}
+    </a>
+  ),
 }));
 
 vi.mock("next/image", () => ({

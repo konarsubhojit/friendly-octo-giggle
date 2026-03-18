@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import { useTheme, type ThemeId } from '@/contexts/ThemeContext';
+import { useTheme, type ThemeId } from "@/contexts/ThemeContext";
 
 const THEME_SWATCHES: Record<ThemeId, string> = {
-  'default': '#C0524A',
-  'baby-pink': '#C04E72',
+  default: "#C0524A",
+  "baby-pink": "#C04E72",
 };
 
 export const ThemeSelector = () => {

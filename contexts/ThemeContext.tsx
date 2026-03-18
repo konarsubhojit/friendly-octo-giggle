@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import {
   createContext,
@@ -8,9 +8,9 @@ import {
   useMemo,
   useCallback,
   type ReactNode,
-} from 'react';
+} from "react";
 
-export type ThemeId = 'default' | 'baby-pink';
+export type ThemeId = "default" | "baby-pink";
 
 export interface ThemeOption {
   readonly id: ThemeId;
@@ -22,22 +22,22 @@ export interface ThemeOption {
 
 export const THEMES: readonly ThemeOption[] = [
   {
-    id: 'default',
-    label: 'Bloom & Thread',
-    description: 'Warm cream and terracotta',
-    bgPreview: '#FAF5EE',
-    textPreview: '#5C4A44',
+    id: "default",
+    label: "Bloom & Thread",
+    description: "Warm cream and terracotta",
+    bgPreview: "#FAF5EE",
+    textPreview: "#5C4A44",
   },
   {
-    id: 'baby-pink',
-    label: 'Baby Pink',
-    description: 'Soft yellow with baby pink',
-    bgPreview: '#FEFCE8',
-    textPreview: '#7D3255',
+    id: "baby-pink",
+    label: "Baby Pink",
+    description: "Soft yellow with baby pink",
+    bgPreview: "#FEFCE8",
+    textPreview: "#7D3255",
   },
 ] as const;
 
-const THEME_STORAGE_KEY = 'kiyon_theme';
+const THEME_STORAGE_KEY = "kiyon_theme";
 
 interface ThemeContextValue {
   readonly theme: ThemeId;
@@ -47,25 +47,29 @@ interface ThemeContextValue {
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
-export const ThemeProvider = ({ children }: { readonly children: ReactNode }) => {
+export const ThemeProvider = ({
+  children,
+}: {
+  readonly children: ReactNode;
+}) => {
   const [theme, setThemeState] = useState<ThemeId>(() => {
-    if (typeof window === 'undefined') return 'default';
+    if (typeof window === "undefined") return "default";
     try {
       const stored = globalThis.localStorage.getItem(THEME_STORAGE_KEY);
-      if (stored === 'baby-pink') return 'baby-pink';
+      if (stored === "baby-pink") return "baby-pink";
     } catch {
       // localStorage unavailable — keep default
     }
-    return 'default';
+    return "default";
   });
 
   // Apply / remove data-theme attribute whenever theme changes
   useEffect(() => {
     const root = document.documentElement;
-    if (theme === 'default') {
-      root.removeAttribute('data-theme');
+    if (theme === "default") {
+      root.removeAttribute("data-theme");
     } else {
-      root.setAttribute('data-theme', theme);
+      root.setAttribute("data-theme", theme);
     }
   }, [theme]);
 
@@ -83,13 +87,15 @@ export const ThemeProvider = ({ children }: { readonly children: ReactNode }) =>
     [theme, setTheme],
   );
 
-  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
+  return (
+    <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
+  );
 };
 
 export const useTheme = (): ThemeContextValue => {
   const ctx = useContext(ThemeContext);
   if (!ctx) {
-    throw new Error('useTheme must be used within a ThemeProvider');
+    throw new Error("useTheme must be used within a ThemeProvider");
   }
   return ctx;
 };

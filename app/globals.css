@@ -7,66 +7,66 @@
 
 :root {
   /* Page & surface backgrounds */
-  --background: #FAF5EE;           /* soft warm cream */
-  --surface: #FFFDFB;              /* card / panel off-white */
-  --surface-raised: #FFF9F5;       /* slightly elevated surface */
+  --background: #faf5ee; /* soft warm cream */
+  --surface: #fffdfb; /* card / panel off-white */
+  --surface-raised: #fff9f5; /* slightly elevated surface */
 
   /* Text — all verified ≥ 4.5:1 on --background */
-  --foreground: #5C4A44;           /* warm deep brown — headings  ~6.2:1 */
-  --text-secondary: #7A6359;       /* lighter brown — body text   ~4.6:1 */
-  --text-muted: #7A6A60;           /* muted warm — captions       ~5.1:1 (WCAG AA compliant) */
+  --foreground: #5c4a44; /* warm deep brown — headings  ~6.2:1 */
+  --text-secondary: #7a6359; /* lighter brown — body text   ~4.6:1 */
+  --text-muted: #7a6a60; /* muted warm — captions       ~5.1:1 (WCAG AA compliant) */
 
   /* Brand accent colours — cottagecore terracotta / pink */
-  --accent-rose: #F2A69A;          /* soft terracotta pink — primary CTAs */
-  --accent-warm: #E89588;          /* deeper terracotta — hover state */
-  --accent-peach: #F5C4B8;         /* peach — decorative highlights */
-  --accent-cream: #FFF0E8;         /* cream — subtle backgrounds */
-  --accent-blush: #FDE8DE;         /* blush — card hover states */
-  --accent-sage: #A8C5A0;          /* soft sage green — botanical notes */
-  --accent-pink: #F2A69A;          /* same as rose for consistency */
-  --accent-lavender: #C4A8D8;      /* soft lavender — complementary accent */
+  --accent-rose: #f2a69a; /* soft terracotta pink — primary CTAs */
+  --accent-warm: #e89588; /* deeper terracotta — hover state */
+  --accent-peach: #f5c4b8; /* peach — decorative highlights */
+  --accent-cream: #fff0e8; /* cream — subtle backgrounds */
+  --accent-blush: #fde8de; /* blush — card hover states */
+  --accent-sage: #a8c5a0; /* soft sage green — botanical notes */
+  --accent-pink: #f2a69a; /* same as rose for consistency */
+  --accent-lavender: #c4a8d8; /* soft lavender — complementary accent */
 
   /* Borders */
-  --border-warm: #F3E3D3;          /* very soft beige border */
+  --border-warm: #f3e3d3; /* very soft beige border */
 
   /* Accessible CTA button — deep terracotta, 4.63:1 contrast with #fff */
-  --btn-primary: #C0524A;
-  --btn-primary-hover: #A84640;
+  --btn-primary: #c0524a;
+  --btn-primary-hover: #a84640;
 
   /* Typography */
-  --font-display: 'Playfair Display', serif;
-  --font-body: 'Nunito', sans-serif;
+  --font-display: "Playfair Display", serif;
+  --font-body: "Nunito", sans-serif;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     /* Page & surface backgrounds */
-    --background: #1A1210;         /* warm dark chocolate */
-    --surface: #261E1A;            /* card surface */
-    --surface-raised: #302520;     /* slightly elevated */
+    --background: #1a1210; /* warm dark chocolate */
+    --surface: #261e1a; /* card surface */
+    --surface-raised: #302520; /* slightly elevated */
 
     /* Text — all verified ≥ 4.5:1 on --background */
-    --foreground: #F5EDE8;         /* warm cream-white    ~12:1 on bg */
-    --text-secondary: #D8C4B8;     /* warm light tan      ~7:1 on bg */
-    --text-muted: #B09888;         /* medium warm         ~4.5:1 on bg */
+    --foreground: #f5ede8; /* warm cream-white    ~12:1 on bg */
+    --text-secondary: #d8c4b8; /* warm light tan      ~7:1 on bg */
+    --text-muted: #b09888; /* medium warm         ~4.5:1 on bg */
 
     /* Brand accent colours — lightened for dark bg */
-    --accent-rose: #F2A69A;        /* same terracotta pink */
-    --accent-warm: #E89588;        /* same hover terracotta */
-    --accent-peach: #D09078;       /* muted peach */
-    --accent-cream: #2A1E18;       /* dark cream surface */
-    --accent-blush: #3A2820;       /* dark blush */
-    --accent-sage: #7AAF70;        /* brighter sage */
-    --accent-pink: #F2A69A;        /* same as rose */
-    --accent-lavender: #B898D0;    /* lighter lavender */
+    --accent-rose: #f2a69a; /* same terracotta pink */
+    --accent-warm: #e89588; /* same hover terracotta */
+    --accent-peach: #d09078; /* muted peach */
+    --accent-cream: #2a1e18; /* dark cream surface */
+    --accent-blush: #3a2820; /* dark blush */
+    --accent-sage: #7aaf70; /* brighter sage */
+    --accent-pink: #f2a69a; /* same as rose */
+    --accent-lavender: #b898d0; /* lighter lavender */
 
     /* Borders */
-    --border-warm: #3A2E28;        /* warm dark border */
+    --border-warm: #3a2e28; /* warm dark border */
 
     /* Accessible CTA button — same deep terracotta passes in dark mode too.
        Verified: #C0524A on dark bg #1A1210 → white text contrast 4.63:1 ≥ WCAG AA */
-    --btn-primary: #C0524A;
-    --btn-primary-hover: #A84640;
+    --btn-primary: #c0524a;
+    --btn-primary-hover: #a84640;
   }
 }
 
@@ -85,35 +85,35 @@
 
 [data-theme="baby-pink"] {
   /* Page & surface backgrounds */
-  --background: #FEFCE8;           /* soft light yellow */
-  --surface: #FFFFFF;              /* white card surface */
-  --surface-raised: #FFFBEA;       /* lemon-tint elevated surface */
+  --background: #fefce8; /* soft light yellow */
+  --surface: #ffffff; /* white card surface */
+  --surface-raised: #fffbea; /* lemon-tint elevated surface */
 
   /* Text — all verified ≥ 4.5:1 on --background (#FEFCE8) */
-  --foreground: #7D3255;           /* deep rose pink     ~7.2:1 on bg */
-  --text-secondary: #9B4468;       /* medium rose        ~5.9:1 on bg */
-  --text-muted: #AD5878;           /* pink muted         ~4.6:1 on bg */
+  --foreground: #7d3255; /* deep rose pink     ~7.2:1 on bg */
+  --text-secondary: #9b4468; /* medium rose        ~5.9:1 on bg */
+  --text-muted: #ad5878; /* pink muted         ~4.6:1 on bg */
 
   /* Brand accent colours — baby pink palette */
-  --accent-rose: #FFB6C1;          /* baby pink — primary CTA accents */
-  --accent-warm: #FF9BAD;          /* deeper baby pink — hover state */
-  --accent-peach: #FFD6DE;         /* light blush — decorative highlights */
-  --accent-cream: #FFF9E0;         /* light yellow cream — subtle backgrounds */
-  --accent-blush: #FFECEF;         /* very light pink — card hover states */
-  --accent-sage: #A8C5A0;          /* soft sage green — botanical notes */
-  --accent-pink: #FFB6C1;          /* same as rose for consistency */
-  --accent-lavender: #C4A8D8;      /* soft lavender — complementary accent */
+  --accent-rose: #ffb6c1; /* baby pink — primary CTA accents */
+  --accent-warm: #ff9bad; /* deeper baby pink — hover state */
+  --accent-peach: #ffd6de; /* light blush — decorative highlights */
+  --accent-cream: #fff9e0; /* light yellow cream — subtle backgrounds */
+  --accent-blush: #ffecef; /* very light pink — card hover states */
+  --accent-sage: #a8c5a0; /* soft sage green — botanical notes */
+  --accent-pink: #ffb6c1; /* same as rose for consistency */
+  --accent-lavender: #c4a8d8; /* soft lavender — complementary accent */
 
   /* Borders */
-  --border-warm: #FADADD;          /* soft pink border */
+  --border-warm: #fadadd; /* soft pink border */
 
   /* Accessible CTA button — deep rose, 4.59:1 contrast with #fff */
-  --btn-primary: #C04E72;
-  --btn-primary-hover: #A83C60;
+  --btn-primary: #c04e72;
+  --btn-primary-hover: #a83c60;
 
   /* Typography */
-  --font-display: 'Playfair Display', serif;
-  --font-body: 'Nunito', sans-serif;
+  --font-display: "Playfair Display", serif;
+  --font-body: "Nunito", sans-serif;
 }
 
 body {
@@ -128,49 +128,98 @@ body {
 /* ─── Theme Animations ────────────────────────────────────────────────── */
 
 @keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(24px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes slideInLeft {
-  from { opacity: 0; transform: translateX(-32px); }
-  to   { opacity: 1; transform: translateX(0); }
+  from {
+    opacity: 0;
+    transform: translateX(-32px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 @keyframes slideInRight {
-  from { opacity: 0; transform: translateX(32px); }
-  to   { opacity: 1; transform: translateX(0); }
+  from {
+    opacity: 0;
+    transform: translateX(32px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 @keyframes floatGentle {
-  0%, 100% { transform: translateY(0); }
-  50%      { transform: translateY(-8px); }
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
 }
 
 @keyframes floatSlow {
-  0%, 100% { transform: translateY(0) rotate(0deg); }
-  50%      { transform: translateY(-12px) rotate(3deg); }
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-12px) rotate(3deg);
+  }
 }
 
 @keyframes scaleIn {
-  from { opacity: 0; transform: scale(0.9); }
-  to   { opacity: 1; transform: scale(1); }
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 @keyframes shimmer {
-  0%   { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
 }
 
 @keyframes wiggle {
-  0%, 100% { transform: rotate(0deg); }
-  25%      { transform: rotate(-3deg); }
-  75%      { transform: rotate(3deg); }
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(-3deg);
+  }
+  75% {
+    transform: rotate(3deg);
+  }
 }
 
 @utility animate-fade-in-up {
@@ -239,7 +288,12 @@ body {
 }
 
 @utility text-warm-heading {
-  background: linear-gradient(135deg, var(--accent-rose), var(--accent-warm), var(--accent-pink));
+  background: linear-gradient(
+    135deg,
+    var(--accent-rose),
+    var(--accent-warm),
+    var(--accent-pink)
+  );
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -250,11 +304,15 @@ body {
 }
 
 @utility shadow-warm {
-  box-shadow: 0 4px 20px color-mix(in srgb, var(--accent-rose) 12%, transparent), 0 1px 4px color-mix(in srgb, var(--accent-warm) 10%, transparent);
+  box-shadow:
+    0 4px 20px color-mix(in srgb, var(--accent-rose) 12%, transparent),
+    0 1px 4px color-mix(in srgb, var(--accent-warm) 10%, transparent);
 }
 
 @utility shadow-warm-lg {
-  box-shadow: 0 8px 40px color-mix(in srgb, var(--accent-rose) 16%, transparent), 0 2px 12px color-mix(in srgb, var(--accent-warm) 12%, transparent);
+  box-shadow:
+    0 8px 40px color-mix(in srgb, var(--accent-rose) 16%, transparent),
+    0 2px 12px color-mix(in srgb, var(--accent-warm) 12%, transparent);
 }
 
 /* ─── Typography Display Utility ──────────────────────────────────────── */
@@ -273,7 +331,9 @@ body {
 @utility focus-warm {
   &:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 2px var(--background), 0 0 0 4px var(--accent-rose);
+    box-shadow:
+      0 0 0 2px var(--background),
+      0 0 0 4px var(--accent-rose);
   }
 }
 
@@ -284,7 +344,7 @@ body {
     150deg,
     color-mix(in srgb, var(--accent-blush) 60%, var(--background)) 0%,
     color-mix(in srgb, var(--accent-cream) 50%, var(--background)) 35%,
-    color-mix(in srgb, var(--accent-sage) 10%, var(--background))  100%
+    color-mix(in srgb, var(--accent-sage) 10%, var(--background)) 100%
   );
 }
 
@@ -299,7 +359,9 @@ body {
 /* ─── Reduced Motion ──────────────────────────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
