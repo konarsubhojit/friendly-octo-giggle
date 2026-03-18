@@ -121,12 +121,12 @@ const ProductGrid = ({ products }: ProductGridProps) => {
       {/* Section header */}
       <div className="flex items-center gap-3 mb-2">
         <GradientHeading as="h2" size="xl">
-          Bestsellers
+          All Products
         </GradientHeading>
         <FlowerAccent className="w-6 h-6 opacity-70" />
       </div>
       <p className="text-[var(--text-muted)] text-sm mb-8">
-        Our most-loved handmade pieces — crafted fresh for you.
+        Browse our complete handmade collection — crafted fresh for you.
       </p>
 
       {/* Search + Category filters */}

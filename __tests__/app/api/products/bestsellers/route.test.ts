@@ -69,8 +69,34 @@ describe("GET /api/products/bestsellers", () => {
     const body = await response.json();
     expect(body).toEqual({ success: true, data: { products: mockProducts } });
     expect(db.products.findBestsellers).toHaveBeenCalledWith({
+      limit: 5,
       withCache: true,
     });
+  });
+
+  it("accepts custom limit via query param", async () => {
+    vi.mocked(db.products.findBestsellers).mockResolvedValue(mockProducts);
+
+    const response = await GET(
+      new NextRequest("http://localhost/api/products/bestsellers?limit=8"),
+    );
+
+    expect(response.status).toBe(200);
+    expect(db.products.findBestsellers).toHaveBeenCalledWith({
+      limit: 8,
+      withCache: true,
+    });
+  });
+
+  it("returns 400 for invalid limit query", async () => {
+    const response = await GET(
+      new NextRequest("http://localhost/api/products/bestsellers?limit=0"),
+    );
+
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body).toMatchObject({ success: false, error: "Validation failed" });
+    expect(db.products.findBestsellers).not.toHaveBeenCalled();
   });
 
   it("sets Cache-Control header", async () => {

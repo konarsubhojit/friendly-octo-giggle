@@ -172,7 +172,7 @@ export const db = {
     findBestsellers: (
       options: ProductListOptions = {},
     ): Promise<Product[]> => {
-      const { limit, withCache = false } = options;
+      const { limit = 5, withCache = false } = options;
 
       const fetcher = async () => {
         // Single SQL query: LEFT JOIN a sales-aggregate subquery so products
