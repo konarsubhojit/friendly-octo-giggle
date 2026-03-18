@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import type { CSSProperties } from "react";
 
 interface ShareButtonProps {
   readonly productId: string;
@@ -8,6 +9,11 @@ interface ShareButtonProps {
 }
 
 type ShareState = "idle" | "loading" | "ready" | "error";
+
+// Panel dimensions used for viewport-aware positioning
+const PANEL_WIDTH_PX = 288;
+const PANEL_HEIGHT_PX = 140;
+const VIEWPORT_MARGIN_PX = 8;
 
 // ─── Icon helpers (pure, no state) ────────────────────────
 
@@ -62,16 +68,30 @@ const CheckIcon = () => (
   </svg>
 );
 
-// ─── Share URL popover ────────────────────────────────────
+// ─── Share URL panel ──────────────────────────────────────
 
 interface ShareUrlPanelProps {
   readonly shareUrl: string;
+  readonly initialCopied: boolean;
   readonly onClose: () => void;
+  readonly style: CSSProperties;
 }
 
-const ShareUrlPanel = ({ shareUrl, onClose }: ShareUrlPanelProps) => {
-  const [copied, setCopied] = useState(false);
+const ShareUrlPanel = ({
+  shareUrl,
+  initialCopied,
+  onClose,
+  style,
+}: ShareUrlPanelProps) => {
+  const [copied, setCopied] = useState(initialCopied);
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Auto-reset "Copied!" badge after 2 s when pre-copied on open
+  useEffect(() => {
+    if (!initialCopied) return;
+    const timer = setTimeout(() => setCopied(false), 2000);
+    return () => clearTimeout(timer);
+  }, [initialCopied]);
 
   useEffect(() => {
     return () => {
@@ -102,7 +122,8 @@ const ShareUrlPanel = ({ shareUrl, onClose }: ShareUrlPanelProps) => {
 
   return (
     <div
-      className="mt-3 p-4 bg-[var(--surface)] border border-[var(--border-warm)] rounded-xl shadow-warm"
+      style={style}
+      className="p-4 bg-[var(--surface)] border border-[var(--border-warm)] rounded-xl shadow-warm"
       role="region"
       aria-label="Share link"
     >
@@ -161,11 +182,61 @@ const ShareUrlPanel = ({ shareUrl, onClose }: ShareUrlPanelProps) => {
   );
 };
 
+// ─── Helpers ──────────────────────────────────────────────
+
+const copyTextToClipboard = async (text: string): Promise<void> => {
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    // Fallback for browsers that block the Clipboard API
+    const input = document.createElement("input");
+    input.value = text;
+    document.body.appendChild(input);
+    input.select();
+    document.execCommand("copy");
+    document.body.removeChild(input);
+  }
+};
+
+const computePanelStyle = (rect: DOMRect): CSSProperties => {
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const panelWidth = Math.min(PANEL_WIDTH_PX, vw - 2 * VIEWPORT_MARGIN_PX);
+
+  const spaceBelow = vh - rect.bottom;
+  const fitsBelow = spaceBelow >= PANEL_HEIGHT_PX + VIEWPORT_MARGIN_PX;
+
+  const style: CSSProperties = {
+    position: "fixed",
+    zIndex: 50,
+    width: panelWidth,
+  };
+
+  // Vertical: prefer below, fall back to above
+  if (fitsBelow) {
+    style.top = rect.bottom + VIEWPORT_MARGIN_PX;
+  } else {
+    style.bottom = vh - rect.top + VIEWPORT_MARGIN_PX;
+  }
+
+  // Horizontal: left-align to button unless it would overflow right edge
+  if (rect.left + panelWidth + VIEWPORT_MARGIN_PX <= vw) {
+    style.left = rect.left;
+  } else {
+    style.right = Math.max(VIEWPORT_MARGIN_PX, vw - rect.right);
+  }
+
+  return style;
+};
+
 // ─── Main component ───────────────────────────────────────
 
 export const ShareButton = ({ productId, variationId }: ShareButtonProps) => {
   const [shareState, setShareState] = useState<ShareState>("idle");
   const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [autoCopied, setAutoCopied] = useState(false);
+  const [panelStyle, setPanelStyle] = useState<CSSProperties>({});
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const errorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -176,22 +247,37 @@ export const ShareButton = ({ productId, variationId }: ShareButtonProps) => {
     };
   }, []);
 
-  const scheduleErrorReset = () => {
+  const scheduleErrorReset = useCallback(() => {
     if (errorTimeoutRef.current !== null) {
       clearTimeout(errorTimeoutRef.current);
     }
     setShareState("error");
     errorTimeoutRef.current = setTimeout(() => setShareState("idle"), 3000);
-  };
+  }, []);
 
-  const applyShareResponse = (data: { success: boolean; data?: { shareUrl: string } }) => {
-    if (data.success && data.data) {
-      setShareUrl(data.data.shareUrl);
-      setShareState("ready");
-    } else {
-      scheduleErrorReset();
-    }
-  };
+  const applyShareResponse = useCallback(
+    async (data: { success: boolean; data?: { shareUrl: string } }) => {
+      if (data.success && data.data) {
+        const url = data.data.shareUrl;
+
+        // Compute panel position from current button bounds before state update
+        if (buttonRef.current) {
+          setPanelStyle(
+            computePanelStyle(buttonRef.current.getBoundingClientRect()),
+          );
+        }
+
+        // Auto-copy to clipboard immediately
+        await copyTextToClipboard(url);
+        setAutoCopied(true);
+        setShareUrl(url);
+        setShareState("ready");
+      } else {
+        scheduleErrorReset();
+      }
+    },
+    [scheduleErrorReset],
+  );
 
   const handleShare = async () => {
     if (shareState === "ready" && shareUrl) {
@@ -213,7 +299,7 @@ export const ShareButton = ({ productId, variationId }: ShareButtonProps) => {
       });
 
       const data = await response.json();
-      applyShareResponse(data);
+      await applyShareResponse(data);
     } catch {
       scheduleErrorReset();
     }
@@ -227,22 +313,40 @@ export const ShareButton = ({ productId, variationId }: ShareButtonProps) => {
   const isLoading = shareState === "loading";
   const isError = shareState === "error";
 
+  const buttonAriaLabel = isLoading
+    ? "Generating share link…"
+    : isError
+      ? "Failed to share – click to retry"
+      : "Share this product";
+
+  const buttonClassName = [
+    "flex items-center justify-center p-2.5 border-2 rounded-xl transition-all duration-300 focus-warm disabled:opacity-50 disabled:cursor-not-allowed",
+    isError
+      ? "border-red-400 bg-red-50 text-red-500 hover:bg-red-100"
+      : "border-[var(--border-warm)] hover:border-[var(--accent-rose)] bg-[var(--surface)] hover:bg-[var(--accent-blush)] text-[var(--text-secondary)] hover:text-[var(--accent-rose)]",
+  ].join(" ");
+
   return (
-    <div>
+    <>
       <button
+        ref={buttonRef}
         onClick={handleShare}
         disabled={isLoading}
-        aria-label="Share this product"
+        aria-label={buttonAriaLabel}
         aria-expanded={shareState === "ready"}
-        className="flex items-center gap-2 px-4 py-2.5 border-2 border-[var(--border-warm)] hover:border-[var(--accent-rose)] bg-[var(--surface)] hover:bg-[var(--accent-blush)] text-[var(--text-secondary)] hover:text-[var(--accent-rose)] rounded-xl font-semibold text-sm transition-all duration-300 focus-warm disabled:opacity-50 disabled:cursor-not-allowed"
+        className={buttonClassName}
       >
         <ShareIcon />
-        {isLoading ? "Generating…" : isError ? "Failed — Retry" : "Share"}
       </button>
 
       {shareState === "ready" && shareUrl && (
-        <ShareUrlPanel shareUrl={shareUrl} onClose={handleClose} />
+        <ShareUrlPanel
+          shareUrl={shareUrl}
+          initialCopied={autoCopied}
+          onClose={handleClose}
+          style={panelStyle}
+        />
       )}
-    </div>
+    </>
   );
 };

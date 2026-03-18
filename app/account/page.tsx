@@ -13,6 +13,7 @@ import { AuthRequiredState } from "@/components/ui/AuthRequiredState";
 import { Card } from "@/components/ui/Card";
 import { GradientHeading } from "@/components/ui/GradientHeading";
 import { ThemeSelector } from "@/components/ui/ThemeSelector";
+import CurrencySelector from "@/components/ui/CurrencySelector";
 import { PASSWORD_REQUIREMENTS } from "@/lib/validations";
 import {
   PROFILE_ERRORS,
@@ -474,6 +475,16 @@ const PreferencesSection = () => (
         every visit.
       </p>
       <ThemeSelector />
+    </div>
+
+    <div className="mt-6">
+      <p className="text-sm font-medium text-[var(--text-muted)] mb-2">
+        Currency
+      </p>
+      <p className="text-xs text-[var(--text-muted)] mb-3">
+        Choose your preferred display currency for prices across the store.
+      </p>
+      <CurrencySelector />
     </div>
   </Card>
 );

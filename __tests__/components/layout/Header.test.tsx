@@ -186,12 +186,11 @@ describe("Header", () => {
     expect(screen.queryByRole("menu")).toBeNull();
   });
 
-  it("renders CartIcon and CurrencySelector", async () => {
+  it("renders CartIcon", async () => {
     useSession.mockReturnValue({ data: null, status: "unauthenticated" });
     const Header = (await import("@/components/layout/Header")).default;
     render(<Header />);
     expect(screen.getByTestId("cart-icon")).toBeTruthy();
-    expect(screen.getByTestId("currency-selector")).toBeTruthy();
   });
 
   it("renders user profile image when session.user.image is provided", async () => {
