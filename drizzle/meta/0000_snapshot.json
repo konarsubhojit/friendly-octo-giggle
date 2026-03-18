@@ -1,5 +1,5 @@
 {
-  "id": "689ff939-7334-4c46-8353-27dcc46cffae",
+  "id": "ccea4698-e4c2-4583-a95a-e19835f974a2",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -134,25 +134,25 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "text",
+          "type": "varchar(7)",
           "primaryKey": true,
           "notNull": true
         },
         "cartId": {
           "name": "cartId",
-          "type": "text",
+          "type": "varchar(7)",
           "primaryKey": false,
           "notNull": true
         },
         "productId": {
           "name": "productId",
-          "type": "text",
+          "type": "varchar(7)",
           "primaryKey": false,
           "notNull": true
         },
         "variationId": {
           "name": "variationId",
-          "type": "text",
+          "type": "varchar(7)",
           "primaryKey": false,
           "notNull": false
         },
@@ -287,7 +287,7 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "text",
+          "type": "varchar(7)",
           "primaryKey": true,
           "notNull": true
         },
@@ -377,25 +377,25 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "text",
+          "type": "varchar(7)",
           "primaryKey": true,
           "notNull": true
         },
         "orderId": {
           "name": "orderId",
-          "type": "text",
+          "type": "varchar(7)",
           "primaryKey": false,
           "notNull": true
         },
         "productId": {
           "name": "productId",
-          "type": "text",
+          "type": "varchar(7)",
           "primaryKey": false,
           "notNull": true
         },
         "variationId": {
           "name": "variationId",
-          "type": "text",
+          "type": "varchar(7)",
           "primaryKey": false,
           "notNull": false
         },
@@ -410,6 +410,12 @@
           "type": "double precision",
           "primaryKey": false,
           "notNull": true
+        },
+        "customizationNote": {
+          "name": "customizationNote",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {
@@ -512,7 +518,7 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "text",
+          "type": "varchar(7)",
           "primaryKey": true,
           "notNull": true
         },
@@ -553,6 +559,18 @@
           "primaryKey": false,
           "notNull": true,
           "default": "'PENDING'"
+        },
+        "trackingNumber": {
+          "name": "trackingNumber",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "shippingProvider": {
+          "name": "shippingProvider",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         },
         "createdAt": {
           "name": "createdAt",
@@ -607,8 +625,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.ProductVariation": {
-      "name": "ProductVariation",
+    "public.PasswordHistory": {
+      "name": "PasswordHistory",
       "schema": "",
       "columns": {
         "id": {
@@ -617,9 +635,173 @@
           "primaryKey": true,
           "notNull": true
         },
+        "userId": {
+          "name": "userId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "passwordHash": {
+          "name": "passwordHash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "PasswordHistory_userId_idx": {
+          "name": "PasswordHistory_userId_idx",
+          "columns": [
+            {
+              "expression": "userId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "PasswordHistory_userId_User_id_fk": {
+          "name": "PasswordHistory_userId_User_id_fk",
+          "tableFrom": "PasswordHistory",
+          "tableTo": "User",
+          "columnsFrom": [
+            "userId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.ProductShare": {
+      "name": "ProductShare",
+      "schema": "",
+      "columns": {
+        "key": {
+          "name": "key",
+          "type": "varchar(7)",
+          "primaryKey": true,
+          "notNull": true
+        },
         "productId": {
           "name": "productId",
-          "type": "text",
+          "type": "varchar(7)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "variationId": {
+          "name": "variationId",
+          "type": "varchar(7)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "ProductShare_productId_idx": {
+          "name": "ProductShare_productId_idx",
+          "columns": [
+            {
+              "expression": "productId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "ProductShare_variationId_idx": {
+          "name": "ProductShare_variationId_idx",
+          "columns": [
+            {
+              "expression": "variationId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "ProductShare_productId_Product_id_fk": {
+          "name": "ProductShare_productId_Product_id_fk",
+          "tableFrom": "ProductShare",
+          "tableTo": "Product",
+          "columnsFrom": [
+            "productId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "ProductShare_variationId_ProductVariation_id_fk": {
+          "name": "ProductShare_variationId_ProductVariation_id_fk",
+          "tableFrom": "ProductShare",
+          "tableTo": "ProductVariation",
+          "columnsFrom": [
+            "variationId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.ProductVariation": {
+      "name": "ProductVariation",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "varchar(7)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "productId": {
+          "name": "productId",
+          "type": "varchar(7)",
           "primaryKey": false,
           "notNull": true
         },
@@ -640,6 +822,13 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
+        },
+        "images": {
+          "name": "images",
+          "type": "json",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::json"
         },
         "priceModifier": {
           "name": "priceModifier",
@@ -722,7 +911,7 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "text",
+          "type": "varchar(7)",
           "primaryKey": true,
           "notNull": true
         },
@@ -750,6 +939,13 @@
           "primaryKey": false,
           "notNull": true
         },
+        "images": {
+          "name": "images",
+          "type": "json",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::json"
+        },
         "stock": {
           "name": "stock",
           "type": "integer",
@@ -761,6 +957,12 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "deletedAt": {
+          "name": "deletedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
         },
         "createdAt": {
           "name": "createdAt",
@@ -797,6 +999,156 @@
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.Review": {
+      "name": "Review",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "varchar(7)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "productId": {
+          "name": "productId",
+          "type": "varchar(7)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "orderId": {
+          "name": "orderId",
+          "type": "varchar(7)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "userId": {
+          "name": "userId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "rating": {
+          "name": "rating",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "comment": {
+          "name": "comment",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "isAnonymous": {
+          "name": "isAnonymous",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "Review_productId_idx": {
+          "name": "Review_productId_idx",
+          "columns": [
+            {
+              "expression": "productId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "Review_userId_idx": {
+          "name": "Review_userId_idx",
+          "columns": [
+            {
+              "expression": "userId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "Review_productId_Product_id_fk": {
+          "name": "Review_productId_Product_id_fk",
+          "tableFrom": "Review",
+          "tableTo": "Product",
+          "columnsFrom": [
+            "productId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "Review_orderId_Order_id_fk": {
+          "name": "Review_orderId_Order_id_fk",
+          "tableFrom": "Review",
+          "tableTo": "Order",
+          "columnsFrom": [
+            "orderId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "Review_userId_User_id_fk": {
+          "name": "Review_userId_User_id_fk",
+          "tableFrom": "Review",
+          "tableTo": "User",
+          "columnsFrom": [
+            "userId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "Review_userId_productId_key": {
+          "name": "Review_userId_productId_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "userId",
+            "productId"
+          ]
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -896,6 +1248,18 @@
           "primaryKey": false,
           "notNull": false
         },
+        "passwordHash": {
+          "name": "passwordHash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "phoneNumber": {
+          "name": "phoneNumber",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": false
+        },
         "role": {
           "name": "role",
           "type": "UserRole",
@@ -928,6 +1292,13 @@
           "nullsNotDistinct": false,
           "columns": [
             "email"
+          ]
+        },
+        "User_phoneNumber_unique": {
+          "name": "User_phoneNumber_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "phoneNumber"
           ]
         }
       },
@@ -975,6 +1346,96 @@
           "columns": [
             "identifier",
             "token"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.Wishlist": {
+      "name": "Wishlist",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "varchar(7)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "userId": {
+          "name": "userId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "productId": {
+          "name": "productId",
+          "type": "varchar(7)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "Wishlist_userId_idx": {
+          "name": "Wishlist_userId_idx",
+          "columns": [
+            {
+              "expression": "userId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "Wishlist_userId_User_id_fk": {
+          "name": "Wishlist_userId_User_id_fk",
+          "tableFrom": "Wishlist",
+          "tableTo": "User",
+          "columnsFrom": [
+            "userId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "Wishlist_productId_Product_id_fk": {
+          "name": "Wishlist_productId_Product_id_fk",
+          "tableFrom": "Wishlist",
+          "tableTo": "Product",
+          "columnsFrom": [
+            "productId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "Wishlist_userId_productId_key": {
+          "name": "Wishlist_userId_productId_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "userId",
+            "productId"
           ]
         }
       },

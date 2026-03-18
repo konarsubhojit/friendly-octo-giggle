@@ -5,57 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1771249346780,
-      "tag": "0000_mysterious_natasha_romanoff",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1772475852523,
-      "tag": "0001_chemical_argent",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1772731577866,
-      "tag": "0002_smiling_marvel_boy",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1772950208051,
-      "tag": "0003_conscious_human_fly",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1773434914323,
-      "tag": "0004_rapid_liz_osborn",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1773600000000,
-      "tag": "0005_add_product_images",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "7",
-      "when": 1773700000000,
-      "tag": "0006_add_wishlists",
-      "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "7",
-      "when": 1773800000000,
-      "tag": "0007_add_reviews",
+      "when": 1773807051696,
+      "tag": "0000_perpetual_thaddeus_ross",
       "breakpoints": true
     }
   ]
