@@ -38,6 +38,7 @@ vi.mock("@/lib/cache", () => ({
   CACHE_KEYS: {
     ORDER_BY_ID: (userId: string, orderId: string) =>
       `order:${userId}:${orderId}`,
+    PRODUCTS_BESTSELLERS: "products:bestsellers",
   },
   CACHE_TTL: { ORDER_DETAIL: 120, ORDER_DETAIL_STALE: 10 },
   invalidateUserOrderCaches: vi.fn(),
@@ -281,6 +282,7 @@ describe("PATCH /api/orders/[id]", () => {
     expect(mockInvalidateUserOrderCaches).toHaveBeenCalledWith("user1");
     expect(mockInvalidateCache).toHaveBeenCalledWith("admin:orders:*");
     expect(mockInvalidateCache).toHaveBeenCalledWith("admin:order:order1");
+    expect(mockInvalidateCache).toHaveBeenCalledWith("products:bestsellers");
   });
 
   it("returns 500 when updatedOrder is null after cancel", async () => {

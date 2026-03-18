@@ -137,7 +137,7 @@ export const db = {
           variations: p.variations.map((v) => ({
             ...v,
             image: v.image ?? null,
-            images: (v.images as string[]) ?? [],
+            images: v.images ?? [],
             createdAt: v.createdAt.toISOString(),
             updatedAt: v.updatedAt.toISOString(),
           })),
@@ -169,9 +169,7 @@ export const db = {
      * @param options - Pagination and cache options
      * @returns Array of products sorted by sales volume descending
      */
-    findBestsellers: (
-      options: ProductListOptions = {},
-    ): Promise<Product[]> => {
+    findBestsellers: (options: ProductListOptions = {}): Promise<Product[]> => {
       const { limit = 5, withCache = false } = options;
 
       const fetcher = async () => {
@@ -196,7 +194,7 @@ export const db = {
           .groupBy(orderItems.productId)
           .as("sales");
 
-        const rows = await drizzleDb
+        let bestsellerQuery = drizzleDb
           .select({
             id: products.id,
             name: products.name,
@@ -214,11 +212,16 @@ export const db = {
           .leftJoin(salesSubquery, eq(products.id, salesSubquery.productId))
           .where(isNull(products.deletedAt))
           .orderBy(
-            desc(salesSubquery.totalSold),
+            desc(sql`coalesce(${salesSubquery.totalSold}, 0)`),
             desc(products.createdAt),
           )
-          .$dynamic()
-          .then((r) => (limit ? r.slice(0, limit) : r));
+          .$dynamic();
+
+        if (limit) {
+          bestsellerQuery = bestsellerQuery.limit(limit);
+        }
+
+        const rows = await bestsellerQuery;
 
         if (rows.length === 0) return [];
 
@@ -244,7 +247,7 @@ export const db = {
           variations: (varsByProduct.get(p.id) ?? []).map((v) => ({
             ...v,
             image: v.image ?? null,
-            images: (v.images as string[]) ?? [],
+            images: v.images ?? [],
             createdAt: v.createdAt.toISOString(),
             updatedAt: v.updatedAt.toISOString(),
           })),
@@ -325,7 +328,7 @@ export const db = {
           variations: row.variations.map((v) => ({
             ...v,
             image: v.image ?? null,
-            images: (v.images as string[]) ?? [],
+            images: v.images ?? [],
             createdAt: v.createdAt.toISOString(),
             updatedAt: v.updatedAt.toISOString(),
           })),
@@ -432,7 +435,7 @@ export const db = {
           variations: r.product.variations.map((v) => ({
             ...v,
             image: v.image ?? null,
-            images: (v.images as string[]) ?? [],
+            images: v.images ?? [],
             createdAt: v.createdAt.toISOString(),
             updatedAt: v.updatedAt.toISOString(),
           })),
@@ -450,7 +453,10 @@ export const db = {
         .insert(wishlists)
         .values({ userId, productId })
         .onConflictDoNothing()
-        .returning({ userId: wishlists.userId, productId: wishlists.productId });
+        .returning({
+          userId: wishlists.userId,
+          productId: wishlists.productId,
+        });
 
       return row ?? { userId, productId };
     },

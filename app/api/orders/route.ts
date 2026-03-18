@@ -421,17 +421,21 @@ async function handlePost(request: NextRequest) {
     });
 
     // Invalidate caches in parallel to reduce order response latency.
-    const productCacheKeys = [...new Set(body.items.map((item) => item.productId))];
+    const productCacheKeys = [
+      ...new Set(body.items.map((item) => item.productId)),
+    ];
     await Promise.all([
       invalidateCache("products:*"),
       invalidateCache("admin:orders:*"),
       invalidateUserOrderCaches(userId),
-      ...productCacheKeys.map((productId) => invalidateCache(`product:${productId}`)),
+      ...productCacheKeys.map((productId) =>
+        invalidateCache(`product:${productId}`),
+      ),
     ]);
 
     // Schedule email on next tick so request response is not delayed.
     setTimeout(() => {
-      void sendOrderConfirmationEmail({
+      sendOrderConfirmationEmail({
         to: fullOrder.customerEmail,
         customerName: fullOrder.customerName,
         orderId: fullOrder.id,

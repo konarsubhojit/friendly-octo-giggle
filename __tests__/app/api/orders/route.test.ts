@@ -41,6 +41,7 @@ vi.mock("@/lib/redis", () => ({
 vi.mock("@/lib/cache", () => ({
   CACHE_KEYS: {
     ORDERS_BY_USER: vi.fn((userId: string) => `orders:user:${userId}`),
+    PRODUCTS_BESTSELLERS: "products:bestsellers",
   },
   CACHE_TTL: { USER_ORDERS: 300, USER_ORDERS_STALE: 60 },
   invalidateUserOrderCaches: vi.fn(),
@@ -555,9 +556,7 @@ describe("POST /api/orders", () => {
       method: "POST",
       body: JSON.stringify({
         ...validBody,
-        items: [
-          { productId: "p1", quantity: 1, variationId: "nonexistent" },
-        ],
+        items: [{ productId: "p1", quantity: 1, variationId: "nonexistent" }],
       }),
       headers: { "content-type": "application/json" },
     });

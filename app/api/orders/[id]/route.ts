@@ -100,6 +100,7 @@ export async function PATCH(
       invalidateUserOrderCaches(session.user.id),
       invalidateCache("admin:orders:*"),
       invalidateCache(`admin:order:${id}`),
+      invalidateCache(CACHE_KEYS.PRODUCTS_BESTSELLERS),
     ]);
 
     const updatedOrder = await drizzleDb.query.orders.findFirst({
