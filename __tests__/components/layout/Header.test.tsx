@@ -38,10 +38,6 @@ vi.mock("@/components/ui/CurrencySelector", () => ({
   default: () => <div data-testid="currency-selector" />,
 }));
 
-vi.mock("@/components/ui/ThemeSelector", () => ({
-  ThemeSelector: () => <div data-testid="theme-selector" />,
-}));
-
 vi.mock("@/components/auth/LoginModal", () => ({
   default: ({ isOpen }: { isOpen: boolean }) =>
     isOpen ? <div data-testid="login-modal" /> : null,
@@ -106,7 +102,7 @@ describe("Header", () => {
     expect(screen.getByText("A")).toBeTruthy();
   });
 
-  it("shows My Orders link when authenticated", async () => {
+  it("does not show My Orders or Wishlist in main nav", async () => {
     const session = {
       user: {
         name: "Alice",
@@ -118,7 +114,9 @@ describe("Header", () => {
     useSession.mockReturnValue({ data: session, status: "authenticated" });
     const Header = (await import("@/components/layout/Header")).default;
     render(<Header />);
-    expect(screen.getByText("My Orders")).toBeTruthy();
+    // My Orders and Wishlist should not appear in the header — only in the user icon dropdown
+    expect(screen.queryByText("My Orders")).toBeNull();
+    expect(screen.queryByText("Wishlist")).toBeNull();
   });
 
   it("shows Admin Dashboard link for ADMIN role", async () => {
