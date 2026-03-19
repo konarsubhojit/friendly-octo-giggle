@@ -1,11 +1,11 @@
-import { NextRequest } from 'next/server';
-import { drizzleDb } from '@/lib/db';
-import { users } from '@/lib/schema';
-import { desc, lt, ilike, and, or, SQL } from 'drizzle-orm';
-import { auth } from '@/lib/auth';
-import { apiSuccess, apiError, handleApiError } from '@/lib/api-utils';
+import { NextRequest } from "next/server";
+import { drizzleDb } from "@/lib/db";
+import { users } from "@/lib/schema";
+import { desc, lt, ilike, and, or, SQL } from "drizzle-orm";
+import { auth } from "@/lib/auth";
+import { apiSuccess, apiError, handleApiError } from "@/lib/api-utils";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 const PAGE_SIZE = 20;
 
@@ -13,11 +13,19 @@ const checkAdminAuth = async () => {
   const session = await auth();
 
   if (!session?.user) {
-    return { authorized: false, error: 'Not authenticated', status: 401 as const };
+    return {
+      authorized: false,
+      error: "Not authenticated",
+      status: 401 as const,
+    };
   }
 
-  if (session.user.role !== 'ADMIN') {
-    return { authorized: false, error: 'Not authorized - Admin access required', status: 403 as const };
+  if (session.user.role !== "ADMIN") {
+    return {
+      authorized: false,
+      error: "Not authorized - Admin access required",
+      status: 403 as const,
+    };
   }
 
   return { authorized: true, userId: session.user.id };
@@ -26,14 +34,14 @@ const checkAdminAuth = async () => {
 export const GET = async (request: NextRequest) => {
   const authCheck = await checkAdminAuth();
   if (!authCheck.authorized) {
-    return apiError(authCheck.error ?? 'Unknown error', authCheck.status);
+    return apiError(authCheck.error ?? "Unknown error", authCheck.status);
   }
 
   try {
     const { searchParams } = new URL(request.url);
-    const cursor = searchParams.get('cursor');
-    const limitParam = searchParams.get('limit');
-    const search = searchParams.get('search')?.trim() ?? '';
+    const cursor = searchParams.get("cursor");
+    const limitParam = searchParams.get("limit");
+    const search = searchParams.get("search")?.trim() ?? "";
 
     const limit = Math.min(
       Math.max(1, parseInt(limitParam ?? String(PAGE_SIZE), 10) || PAGE_SIZE),
@@ -52,10 +60,7 @@ export const GET = async (request: NextRequest) => {
     if (search) {
       const pattern = `%${search}%`;
       conditions.push(
-        or(
-          ilike(users.name, pattern),
-          ilike(users.email, pattern),
-        ) as SQL,
+        or(ilike(users.name, pattern), ilike(users.email, pattern)) as SQL,
       );
     }
 
@@ -85,8 +90,14 @@ export const GET = async (request: NextRequest) => {
       email: user.email,
       role: user.role,
       emailVerified: user.emailVerified,
-      createdAt: user.createdAt instanceof Date ? user.createdAt.toISOString() : user.createdAt,
-      updatedAt: user.updatedAt instanceof Date ? user.updatedAt.toISOString() : user.updatedAt,
+      createdAt:
+        user.createdAt instanceof Date
+          ? user.createdAt.toISOString()
+          : user.createdAt,
+      updatedAt:
+        user.updatedAt instanceof Date
+          ? user.updatedAt.toISOString()
+          : user.updatedAt,
       image: user.image,
       _count: { orders: user.orders.length },
     }));

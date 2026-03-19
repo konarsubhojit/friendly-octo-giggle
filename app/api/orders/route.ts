@@ -1,7 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { drizzleDb } from "@/lib/db";
 import { orders, orderItems, products, productVariations } from "@/lib/schema";
-import { eq, inArray, sql, desc, and, isNull, lt, ilike, or, SQL } from "drizzle-orm";
+import {
+  eq,
+  inArray,
+  sql,
+  desc,
+  and,
+  isNull,
+  lt,
+  ilike,
+  or,
+  SQL,
+} from "drizzle-orm";
 import { invalidateCache } from "@/lib/redis";
 import { invalidateUserOrderCaches } from "@/lib/cache";
 import { CreateOrderInput, OrderItemInput } from "@/lib/types";
@@ -185,10 +196,7 @@ async function handleGet(request: NextRequest) {
     if (search) {
       const pattern = `%${search}%`;
       conditions.push(
-        or(
-          ilike(orders.id, pattern),
-          ilike(orders.status, pattern),
-        ) as SQL,
+        or(ilike(orders.id, pattern), ilike(orders.status, pattern)) as SQL,
       );
     }
 

@@ -18,7 +18,12 @@ vi.mock("@/lib/db", () => ({
 }));
 
 vi.mock("@/lib/schema", () => ({
-  orders: { id: "id", userId: "userId", createdAt: "createdAt", status: "status" },
+  orders: {
+    id: "id",
+    userId: "userId",
+    createdAt: "createdAt",
+    status: "status",
+  },
   orderItems: { id: "id" },
   products: { id: "id", stock: "stock", deletedAt: "deletedAt" },
   productVariations: { id: "id", stock: "stock" },

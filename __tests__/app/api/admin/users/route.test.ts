@@ -1,15 +1,17 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { NextRequest } from 'next/server';
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { NextRequest } from "next/server";
 
 const mockAuth = vi.hoisted(() => vi.fn());
 const mockFindMany = vi.hoisted(() => vi.fn());
 
-vi.mock('@/lib/auth', () => ({ auth: mockAuth }));
-vi.mock('@/lib/db', () => ({
+vi.mock("@/lib/auth", () => ({ auth: mockAuth }));
+vi.mock("@/lib/db", () => ({
   drizzleDb: { query: { users: { findMany: mockFindMany } } },
 }));
-vi.mock('@/lib/schema', () => ({ users: { createdAt: 'createdAt', name: 'name', email: 'email' } }));
-vi.mock('drizzle-orm', () => ({
+vi.mock("@/lib/schema", () => ({
+  users: { createdAt: "createdAt", name: "name", email: "email" },
+}));
+vi.mock("drizzle-orm", () => ({
   desc: vi.fn((col: string) => col),
   lt: vi.fn(),
   ilike: vi.fn(),
@@ -17,87 +19,95 @@ vi.mock('drizzle-orm', () => ({
   or: vi.fn(),
 }));
 
-import { GET } from '@/app/api/admin/users/route';
+import { GET } from "@/app/api/admin/users/route";
 
-describe('GET /api/admin/users', () => {
+describe("GET /api/admin/users", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('returns 401 when not authenticated', async () => {
+  it("returns 401 when not authenticated", async () => {
     mockAuth.mockResolvedValue(null);
 
-    const response = await GET(new NextRequest('http://localhost/api/admin/users'));
+    const response = await GET(
+      new NextRequest("http://localhost/api/admin/users"),
+    );
     const body = await response.json();
 
     expect(response.status).toBe(401);
     expect(body.success).toBe(false);
-    expect(body.error).toBe('Not authenticated');
+    expect(body.error).toBe("Not authenticated");
   });
 
-  it('returns 403 when user is not admin', async () => {
+  it("returns 403 when user is not admin", async () => {
     mockAuth.mockResolvedValue({
-      user: { id: 'user-1', role: 'USER' },
+      user: { id: "user-1", role: "USER" },
     });
 
-    const response = await GET(new NextRequest('http://localhost/api/admin/users'));
+    const response = await GET(
+      new NextRequest("http://localhost/api/admin/users"),
+    );
     const body = await response.json();
 
     expect(response.status).toBe(403);
     expect(body.success).toBe(false);
-    expect(body.error).toBe('Not authorized - Admin access required');
+    expect(body.error).toBe("Not authorized - Admin access required");
   });
 
-  it('returns user list for admin users', async () => {
+  it("returns user list for admin users", async () => {
     mockAuth.mockResolvedValue({
-      user: { id: 'admin-1', role: 'ADMIN' },
+      user: { id: "admin-1", role: "ADMIN" },
     });
 
     const mockUsers = [
       {
-        id: 'u1',
-        name: 'Alice',
-        email: 'alice@example.com',
-        role: 'USER',
+        id: "u1",
+        name: "Alice",
+        email: "alice@example.com",
+        role: "USER",
         emailVerified: null,
-        createdAt: new Date('2024-01-01'),
-        updatedAt: new Date('2024-01-02'),
+        createdAt: new Date("2024-01-01"),
+        updatedAt: new Date("2024-01-02"),
         image: null,
-        orders: [{ id: 'o1' }, { id: 'o2' }],
+        orders: [{ id: "o1" }, { id: "o2" }],
       },
       {
-        id: 'u2',
-        name: 'Bob',
-        email: 'bob@example.com',
-        role: 'ADMIN',
-        emailVerified: new Date('2024-01-01'),
-        createdAt: new Date('2024-01-01'),
-        updatedAt: new Date('2024-01-02'),
-        image: 'https://example.com/bob.jpg',
+        id: "u2",
+        name: "Bob",
+        email: "bob@example.com",
+        role: "ADMIN",
+        emailVerified: new Date("2024-01-01"),
+        createdAt: new Date("2024-01-01"),
+        updatedAt: new Date("2024-01-02"),
+        image: "https://example.com/bob.jpg",
         orders: [],
       },
     ];
 
     mockFindMany.mockResolvedValue(mockUsers);
 
-    const response = await GET(new NextRequest('http://localhost/api/admin/users'));
+    const response = await GET(
+      new NextRequest("http://localhost/api/admin/users"),
+    );
     const body = await response.json();
 
     expect(response.status).toBe(200);
     expect(body.success).toBe(true);
     expect(body.data.users).toHaveLength(2);
-    expect(body.data.users[0].id).toBe('u1');
+    expect(body.data.users[0].id).toBe("u1");
     expect(body.data.users[0]._count.orders).toBe(2);
     expect(body.data.users[1]._count.orders).toBe(0);
   });
 
-  it('calls handleApiError on exception', async () => {
+  it("calls handleApiError on exception", async () => {
     mockAuth.mockResolvedValue({
-      user: { id: 'admin-1', role: 'ADMIN' },
+      user: { id: "admin-1", role: "ADMIN" },
     });
-    mockFindMany.mockRejectedValue(new Error('DB connection failed'));
+    mockFindMany.mockRejectedValue(new Error("DB connection failed"));
 
-    const response = await GET(new NextRequest('http://localhost/api/admin/users'));
+    const response = await GET(
+      new NextRequest("http://localhost/api/admin/users"),
+    );
     const body = await response.json();
 
     expect(response.status).toBe(500);

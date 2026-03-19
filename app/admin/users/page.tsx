@@ -1,14 +1,14 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback } from 'react';
-import { useDispatch } from 'react-redux';
-import { updateAdminUserRole } from '@/lib/features/admin/adminSlice';
-import type { AppDispatch } from '@/lib/store';
-import { logError } from '@/lib/logger';
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
-import { AlertBanner } from '@/components/ui/AlertBanner';
-import { EmptyState } from '@/components/ui/EmptyState';
-import { UsersTable } from '@/components/admin/UsersTable';
+import { useState, useEffect, useCallback } from "react";
+import { useDispatch } from "react-redux";
+import { updateAdminUserRole } from "@/lib/features/admin/adminSlice";
+import type { AppDispatch } from "@/lib/store";
+import { logError } from "@/lib/logger";
+import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import { AlertBanner } from "@/components/ui/AlertBanner";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { UsersTable } from "@/components/admin/UsersTable";
 
 interface AdminUser {
   readonly id: string;
@@ -29,41 +29,44 @@ export default function UsersManagement() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
-  const [search, setSearch] = useState('');
-  const [searchInput, setSearchInput] = useState('');
+  const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState("");
   const [cursor, setCursor] = useState<string | null>(null);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [cursorHistory, setCursorHistory] = useState<string[]>([]);
 
-  const fetchUsers = useCallback(async (cursorParam: string | null, searchQuery: string) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const params = new URLSearchParams({ limit: String(PAGE_SIZE) });
-      if (cursorParam) params.set('cursor', cursorParam);
-      if (searchQuery) params.set('search', searchQuery);
+  const fetchUsers = useCallback(
+    async (cursorParam: string | null, searchQuery: string) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const params = new URLSearchParams({ limit: String(PAGE_SIZE) });
+        if (cursorParam) params.set("cursor", cursorParam);
+        if (searchQuery) params.set("search", searchQuery);
 
-      const res = await fetch(`/api/admin/users?${params.toString()}`);
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || 'Failed to load users');
+        const res = await fetch(`/api/admin/users?${params.toString()}`);
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error || "Failed to load users");
+        }
+        const data = await res.json();
+        const rawItems: AdminUser[] = data.data?.users ?? data.users ?? [];
+        const items = rawItems.map((user) => ({
+          ...user,
+          orderCount: user._count?.orders ?? user.orderCount ?? 0,
+        }));
+        setUsers(items);
+        setNextCursor(data.data?.nextCursor ?? null);
+        setHasMore(data.data?.hasMore ?? false);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Something went wrong");
+      } finally {
+        setLoading(false);
       }
-      const data = await res.json();
-      const rawItems: AdminUser[] = data.data?.users ?? data.users ?? [];
-      const items = rawItems.map((user) => ({
-        ...user,
-        orderCount: user._count?.orders ?? user.orderCount ?? 0,
-      }));
-      setUsers(items);
-      setNextCursor(data.data?.nextCursor ?? null);
-      setHasMore(data.data?.hasMore ?? false);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    },
+    [],
+  );
 
   useEffect(() => {
     fetchUsers(cursor, search);
@@ -78,7 +81,7 @@ export default function UsersManagement() {
 
   const handleNext = () => {
     if (!nextCursor) return;
-    setCursorHistory((prev) => [...prev, cursor ?? '']);
+    setCursorHistory((prev) => [...prev, cursor ?? ""]);
     setCursor(nextCursor);
   };
 
@@ -93,19 +96,26 @@ export default function UsersManagement() {
   const handleRefresh = () => {
     setCursor(null);
     setCursorHistory([]);
-    setSearch('');
-    setSearchInput('');
+    setSearch("");
+    setSearchInput("");
   };
 
-  const handleRoleChange = async (userId: string, newRole: 'ADMIN' | 'CUSTOMER') => {
+  const handleRoleChange = async (
+    userId: string,
+    newRole: "ADMIN" | "CUSTOMER",
+  ) => {
     setUpdatingUserId(userId);
     try {
-      await dispatch(updateAdminUserRole({ id: userId, role: newRole })).unwrap();
+      await dispatch(
+        updateAdminUserRole({ id: userId, role: newRole }),
+      ).unwrap();
       setUsers((prev) =>
-        prev.map((user) => (user.id === userId ? { ...user, role: newRole } : user)),
+        prev.map((user) =>
+          user.id === userId ? { ...user, role: newRole } : user,
+        ),
       );
     } catch (err) {
-      logError({ error: err, context: 'handleRoleChange' });
+      logError({ error: err, context: "handleRoleChange" });
     } finally {
       setUpdatingUserId(null);
     }
@@ -117,8 +127,12 @@ export default function UsersManagement() {
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-6 flex justify-between items-center flex-wrap gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">User Management</h2>
-          <p className="text-gray-600 dark:text-gray-400 mt-2">Manage user roles and permissions</p>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+            User Management
+          </h2>
+          <p className="text-gray-600 dark:text-gray-400 mt-2">
+            Manage user roles and permissions
+          </p>
         </div>
         <button
           onClick={handleRefresh}
@@ -139,7 +153,12 @@ export default function UsersManagement() {
               viewBox="0 0 24 24"
               aria-hidden="true"
             >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
             </svg>
             <input
               type="search"
@@ -150,7 +169,10 @@ export default function UsersManagement() {
               aria-label="Search users"
             />
           </div>
-          <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition">
+          <button
+            type="submit"
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition"
+          >
             Search
           </button>
           {search && (
@@ -179,13 +201,22 @@ export default function UsersManagement() {
           <LoadingSpinner />
         </div>
       ) : users.length === 0 ? (
-        <EmptyState title={search ? 'No users found' : 'No items found'} message={search ? 'Try a different search term.' : undefined} />
+        <EmptyState
+          title={search ? "No users found" : "No items found"}
+          message={search ? "Try a different search term." : undefined}
+        />
       ) : (
         <>
-          <UsersTable users={users} updatingUserId={updatingUserId} onRoleChange={handleRoleChange} />
+          <UsersTable
+            users={users}
+            updatingUserId={updatingUserId}
+            onRoleChange={handleRoleChange}
+          />
 
           <div className="flex items-center justify-between border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
-            <p className="text-sm text-gray-600 dark:text-gray-400">Page {currentPage}</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Page {currentPage}
+            </p>
             <div className="flex gap-2">
               <button
                 onClick={handlePrev}
@@ -208,4 +239,3 @@ export default function UsersManagement() {
     </main>
   );
 }
-

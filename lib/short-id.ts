@@ -9,7 +9,11 @@ export const generateShortId = (): string => {
   let result = "";
   while (result.length < SHORT_ID_LENGTH) {
     const bytes = randomBytes(SHORT_ID_LENGTH - result.length);
-    for (let index = 0; index < bytes.length && result.length < SHORT_ID_LENGTH; index++) {
+    for (
+      let index = 0;
+      index < bytes.length && result.length < SHORT_ID_LENGTH;
+      index++
+    ) {
       if (bytes[index] < limit) {
         result += BASE62_CHARS[bytes[index] % 62];
       }

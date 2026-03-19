@@ -1,24 +1,35 @@
-'use client';
+"use client";
 
-import { useEffect, useState, useCallback } from 'react';
-import Link from 'next/link';
-import Image from 'next/image';
-import { useSession } from 'next-auth/react';
-import { useCurrency } from '@/contexts/CurrencyContext';
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
-import { AlertBanner } from '@/components/ui/AlertBanner';
-import { EmptyState } from '@/components/ui/EmptyState';
-import { AuthRequiredState } from '@/components/ui/AuthRequiredState';
-import { Card } from '@/components/ui/Card';
-import { GradientHeading } from '@/components/ui/GradientHeading';
-import { Badge, orderStatusVariant } from '@/components/ui/Badge';
+import { useEffect, useState, useCallback } from "react";
+import Link from "next/link";
+import Image from "next/image";
+import { useSession } from "next-auth/react";
+import { useCurrency } from "@/contexts/CurrencyContext";
+import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import { AlertBanner } from "@/components/ui/AlertBanner";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { AuthRequiredState } from "@/components/ui/AuthRequiredState";
+import { Card } from "@/components/ui/Card";
+import { GradientHeading } from "@/components/ui/GradientHeading";
+import { Badge, orderStatusVariant } from "@/components/ui/Badge";
 
-const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-  PENDING: { label: 'Pending', color: 'text-yellow-700', bg: 'bg-yellow-100' },
-  PROCESSING: { label: 'Processing', color: 'text-blue-700', bg: 'bg-blue-100' },
-  SHIPPED: { label: 'Shipped', color: 'text-purple-700', bg: 'bg-purple-100' },
-  DELIVERED: { label: 'Delivered', color: 'text-green-700', bg: 'bg-green-100' },
-  CANCELLED: { label: 'Cancelled', color: 'text-red-700', bg: 'bg-red-100' },
+const STATUS_CONFIG: Record<
+  string,
+  { label: string; color: string; bg: string }
+> = {
+  PENDING: { label: "Pending", color: "text-yellow-700", bg: "bg-yellow-100" },
+  PROCESSING: {
+    label: "Processing",
+    color: "text-blue-700",
+    bg: "bg-blue-100",
+  },
+  SHIPPED: { label: "Shipped", color: "text-purple-700", bg: "bg-purple-100" },
+  DELIVERED: {
+    label: "Delivered",
+    color: "text-green-700",
+    bg: "bg-green-100",
+  },
+  CANCELLED: { label: "Cancelled", color: "text-red-700", bg: "bg-red-100" },
 };
 
 const PAGE_SIZE = 20;
@@ -54,7 +65,13 @@ const OrderListCard = ({ order, formatPrice }: OrderListCardProps) => {
       <div className="flex items-center gap-6">
         {firstImage && (
           <div className="relative w-16 h-16 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700">
-            <Image src={firstImage} alt={firstItem?.product?.name || 'Order item'} fill sizes="48px" className="object-cover" />
+            <Image
+              src={firstImage}
+              alt={firstItem?.product?.name || "Order item"}
+              fill
+              sizes="48px"
+              className="object-cover"
+            />
           </div>
         )}
         <div className="flex-grow min-w-0">
@@ -63,10 +80,10 @@ const OrderListCard = ({ order, formatPrice }: OrderListCardProps) => {
               {statusInfo.label}
             </Badge>
             <span className="text-xs text-[var(--text-muted)]">
-              {new Date(order.createdAt).toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric',
+              {new Date(order.createdAt).toLocaleDateString("en-US", {
+                year: "numeric",
+                month: "short",
+                day: "numeric",
               })}
             </span>
           </div>
@@ -75,15 +92,28 @@ const OrderListCard = ({ order, formatPrice }: OrderListCardProps) => {
             {order.items.length > 1 && ` and ${order.items.length - 1} more`}
           </p>
           <p className="text-xs text-[var(--text-muted)] mt-1">
-            {itemCount} {itemCount === 1 ? 'item' : 'items'}
+            {itemCount} {itemCount === 1 ? "item" : "items"}
           </p>
         </div>
         <div className="flex-shrink-0 text-right">
-          <p className="text-lg font-bold text-[var(--foreground)]">{formatPrice(order.totalAmount)}</p>
+          <p className="text-lg font-bold text-[var(--foreground)]">
+            {formatPrice(order.totalAmount)}
+          </p>
           <p className="text-xs text-[var(--text-muted)]">Order #{order.id}</p>
         </div>
-        <svg className="w-5 h-5 text-[var(--text-muted)] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+        <svg
+          className="w-5 h-5 text-[var(--text-muted)] flex-shrink-0"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M9 5l7 7-7 7"
+          />
         </svg>
       </div>
     </Link>
@@ -97,40 +127,43 @@ export default function OrdersPage() {
   const [orders, setOrders] = useState<OrderSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [search, setSearch] = useState('');
-  const [searchInput, setSearchInput] = useState('');
+  const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState("");
   const [cursor, setCursor] = useState<string | null>(null);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [cursorHistory, setCursorHistory] = useState<string[]>([]);
 
-  const fetchOrders = useCallback(async (cursorParam: string | null, searchQuery: string) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const params = new URLSearchParams({ limit: String(PAGE_SIZE) });
-      if (cursorParam) params.set('cursor', cursorParam);
-      if (searchQuery) params.set('search', searchQuery);
+  const fetchOrders = useCallback(
+    async (cursorParam: string | null, searchQuery: string) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const params = new URLSearchParams({ limit: String(PAGE_SIZE) });
+        if (cursorParam) params.set("cursor", cursorParam);
+        if (searchQuery) params.set("search", searchQuery);
 
-      const res = await fetch(`/api/orders?${params.toString()}`);
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || 'Failed to load orders');
+        const res = await fetch(`/api/orders?${params.toString()}`);
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error || "Failed to load orders");
+        }
+        const data = await res.json();
+        const items: OrderSummary[] = data.orders ?? [];
+        setOrders(items);
+        setNextCursor(data.nextCursor ?? null);
+        setHasMore(data.hasMore ?? false);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Something went wrong");
+      } finally {
+        setLoading(false);
       }
-      const data = await res.json();
-      const items: OrderSummary[] = data.orders ?? [];
-      setOrders(items);
-      setNextCursor(data.nextCursor ?? null);
-      setHasMore(data.hasMore ?? false);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    },
+    [],
+  );
 
   useEffect(() => {
-    if (authStatus === 'authenticated') {
+    if (authStatus === "authenticated") {
       fetchOrders(cursor, search);
     }
   }, [authStatus, fetchOrders, cursor, search]);
@@ -144,7 +177,7 @@ export default function OrdersPage() {
 
   const handleNext = () => {
     if (!nextCursor) return;
-    setCursorHistory((prev) => [...prev, cursor ?? '']);
+    setCursorHistory((prev) => [...prev, cursor ?? ""]);
     setCursor(nextCursor);
   };
 
@@ -157,15 +190,18 @@ export default function OrdersPage() {
   };
 
   const handleClearSearch = () => {
-    setSearch('');
-    setSearchInput('');
+    setSearch("");
+    setSearchInput("");
     setCursor(null);
     setCursorHistory([]);
   };
 
   const currentPage = cursorHistory.length + 1;
 
-  if (authStatus === 'loading' || (authStatus === 'authenticated' && loading && orders.length === 0 && !error)) {
+  if (
+    authStatus === "loading" ||
+    (authStatus === "authenticated" && loading && orders.length === 0 && !error)
+  ) {
     return (
       <div className="min-h-screen bg-warm-gradient">
         <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
@@ -181,7 +217,10 @@ export default function OrdersPage() {
     return (
       <div className="min-h-screen bg-warm-gradient">
         <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
-          <AuthRequiredState callbackUrl="/orders" message="Please sign in to view your orders." />
+          <AuthRequiredState
+            callbackUrl="/orders"
+            message="Please sign in to view your orders."
+          />
         </main>
       </div>
     );
@@ -202,7 +241,12 @@ export default function OrdersPage() {
                 viewBox="0 0 24 24"
                 aria-hidden="true"
               >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                />
               </svg>
               <input
                 type="search"
@@ -236,7 +280,9 @@ export default function OrdersPage() {
           )}
         </form>
 
-        {error && <AlertBanner message={error} variant="error" className="mb-6" />}
+        {error && (
+          <AlertBanner message={error} variant="error" className="mb-6" />
+        )}
 
         {loading ? (
           <div className="flex items-center justify-center py-16">
@@ -246,14 +292,29 @@ export default function OrdersPage() {
           <Card className="p-12 text-center">
             <EmptyState
               icon={
-                <svg className="w-20 h-20 text-[var(--text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                <svg
+                  className="w-20 h-20 text-[var(--text-muted)]"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                  />
                 </svg>
               }
-              title={search ? 'No matching orders' : 'No orders yet'}
-              message={search ? 'Try a different search term.' : 'Start shopping and your orders will appear here.'}
-              ctaText={search ? undefined : 'Browse Products'}
-              ctaHref={search ? undefined : '/'}
+              title={search ? "No matching orders" : "No orders yet"}
+              message={
+                search
+                  ? "Try a different search term."
+                  : "Start shopping and your orders will appear here."
+              }
+              ctaText={search ? undefined : "Browse Products"}
+              ctaHref={search ? undefined : "/"}
               className="py-0"
             />
           </Card>
@@ -261,12 +322,18 @@ export default function OrdersPage() {
           <>
             <div className="space-y-4 mb-8">
               {orders.map((order) => (
-                <OrderListCard key={order.id} order={order} formatPrice={formatPrice} />
+                <OrderListCard
+                  key={order.id}
+                  order={order}
+                  formatPrice={formatPrice}
+                />
               ))}
             </div>
 
             <div className="flex items-center justify-between border-t border-[var(--border-warm)] pt-4">
-              <p className="text-sm text-[var(--text-muted)]">Page {currentPage}</p>
+              <p className="text-sm text-[var(--text-muted)]">
+                Page {currentPage}
+              </p>
               <div className="flex gap-2">
                 <button
                   onClick={handlePrev}
@@ -290,4 +357,3 @@ export default function OrdersPage() {
     </div>
   );
 }
-
