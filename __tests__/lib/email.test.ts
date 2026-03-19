@@ -1,10 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { mockSend, mockSetApiKey, mockCreateTransport, mockSmtpSendMail } = vi.hoisted(() => ({
+const { mockSendWithRetry, mockSend, mockSetApiKey, mockCreateTransport, mockSmtpSendMail } = vi.hoisted(() => ({
+  mockSendWithRetry: vi.fn(),
   mockSend: vi.fn(),
   mockSetApiKey: vi.fn(),
   mockCreateTransport: vi.fn(),
   mockSmtpSendMail: vi.fn(),
+}));
+
+vi.mock("@/lib/email/retry", () => ({
+  sendWithRetry: mockSendWithRetry,
 }));
 
 vi.mock("@sendgrid/mail", () => ({
@@ -12,9 +17,7 @@ vi.mock("@sendgrid/mail", () => ({
 }));
 
 vi.mock("nodemailer", () => ({
-  default: {
-    createTransport: mockCreateTransport,
-  },
+  default: { createTransport: mockCreateTransport },
 }));
 
 vi.mock("@/lib/logger", () => ({
@@ -22,25 +25,23 @@ vi.mock("@/lib/logger", () => ({
   logBusinessEvent: vi.fn(),
 }));
 
-import {
-  escapeHtml,
-} from "@/lib/email";
-import { logBusinessEvent, logError } from "@/lib/logger";
+vi.mock("@/lib/email/failed-emails", () => ({
+  saveFailedEmail: vi.fn().mockResolvedValue("mock-id"),
+}));
+
+import { escapeHtml } from "@/lib/email";
 
 describe("lib/email", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    delete process.env.SENDGRID_API_KEY;
-    delete process.env.GOOGLE_SMTP_USER;
-    delete process.env.GOOGLE_SMTP_APP_PASSWORD;
     mockCreateTransport.mockReturnValue({ sendMail: mockSmtpSendMail });
   });
 
   describe("escapeHtml", () => {
     it("escapes &, <, >, \", and '", () => {
-      expect(escapeHtml('a & b')).toBe('a &amp; b');
-      expect(escapeHtml('<script>')).toBe('&lt;script&gt;');
-      expect(escapeHtml('"hello"')).toBe('&quot;hello&quot;');
+      expect(escapeHtml("a & b")).toBe("a &amp; b");
+      expect(escapeHtml("<script>")).toBe("&lt;script&gt;");
+      expect(escapeHtml('"hello"')).toBe("&quot;hello&quot;");
       expect(escapeHtml("it's")).toBe("it&#39;s");
     });
 
@@ -50,11 +51,11 @@ describe("lib/email", () => {
   });
 
   describe("sendOrderConfirmationEmail", () => {
-    it("skips sending when SENDGRID_API_KEY is not set", async () => {
+    it("calls sendWithRetry with correct recipient and subject", async () => {
       vi.resetModules();
-      const { sendOrderConfirmationEmail: freshSend } = await import("@/lib/email");
+      const { sendOrderConfirmationEmail } = await import("@/lib/email");
 
-      await freshSend({
+      sendOrderConfirmationEmail({
         to: "user@test.com",
         customerName: "Jane",
         orderId: "abc1234",
@@ -63,133 +64,58 @@ describe("lib/email", () => {
         shippingAddress: "123 Main St",
       });
 
-      expect(mockSend).not.toHaveBeenCalled();
-    });
-
-    it("sends using Google SMTP when configured", async () => {
-      process.env.GOOGLE_SMTP_USER = "store@example.com";
-      process.env.GOOGLE_SMTP_APP_PASSWORD = "app-password";
-      mockSmtpSendMail.mockResolvedValue({ messageId: "smtp-1" });
-
-      vi.resetModules();
-      const { sendOrderConfirmationEmail: freshSend } = await import("@/lib/email");
-
-      await freshSend({
-        to: "user@test.com",
-        customerName: "Jane",
-        orderId: "abc1234",
-        totalAmount: "$42.00",
-        items: [{ name: "Widget", quantity: 1, price: "$42.00" }],
-        shippingAddress: "123 Main St",
-      });
-
-      expect(mockCreateTransport).toHaveBeenCalled();
-      expect(mockSmtpSendMail).toHaveBeenCalled();
-      expect(mockSend).not.toHaveBeenCalled();
-    });
-
-    it("sends confirmation email when API key is configured", async () => {
-      process.env.SENDGRID_API_KEY = "SG.test-key";
-      vi.resetModules();
-      const { sendOrderConfirmationEmail: freshSend } = await import("@/lib/email");
-      mockSend.mockResolvedValue([{ statusCode: 202 }]);
-
-      await freshSend({
-        to: "user@test.com",
-        customerName: "Jane",
-        orderId: "abc1234",
-        totalAmount: "$42.00",
-        items: [
-          { name: "Widget", quantity: 2, price: "$21.00", variation: "Red" },
-        ],
-        shippingAddress: "123 Main St",
-      });
-
-      expect(mockSetApiKey).toHaveBeenCalledWith("SG.test-key");
-      expect(mockSend).toHaveBeenCalledWith(
+      expect(mockSendWithRetry).toHaveBeenCalledWith(
         expect.objectContaining({
           to: "user@test.com",
           subject: expect.stringContaining("ABC1234"),
         }),
-      );
-    });
-
-    it("logs error but does not throw on send failure", async () => {
-      process.env.SENDGRID_API_KEY = "SG.test-key";
-      vi.resetModules();
-      const { sendOrderConfirmationEmail: freshSend } = await import("@/lib/email");
-      mockSend.mockRejectedValue(new Error("SendGrid down"));
-
-      await expect(
-        freshSend({
-          to: "user@test.com",
-          customerName: "Jane",
-          orderId: "abc1234",
-          totalAmount: "$42.00",
-          items: [{ name: "Widget", quantity: 1, price: "$42.00" }],
-          shippingAddress: "123 Main St",
+        expect.objectContaining({
+          emailType: "order_confirmation",
+          referenceId: "abc1234",
         }),
-      ).resolves.toBeUndefined();
-
-      expect(logError).toHaveBeenCalledWith(
-        expect.objectContaining({ context: "email_send_failed" }),
       );
     });
 
-    it("logs SendGrid auth failure metadata for unauthorized responses", async () => {
-      process.env.SENDGRID_API_KEY = "SG.test-key";
+    it("includes order items in the email body", async () => {
       vi.resetModules();
-      const { sendOrderConfirmationEmail: freshSend } = await import("@/lib/email");
-      mockSend.mockRejectedValue({
-        message: "Unauthorized",
-        code: 401,
-        response: {
-          statusCode: 401,
-          body: {
-            errors: [{ message: "authorization required" }],
-          },
-        },
+      const { sendOrderConfirmationEmail } = await import("@/lib/email");
+
+      sendOrderConfirmationEmail({
+        to: "user@test.com",
+        customerName: "Jane",
+        orderId: "abc1234",
+        totalAmount: "$42.00",
+        items: [{ name: "SuperWidget", quantity: 2, price: "$21.00", variation: "Red" }],
+        shippingAddress: "123 Main St",
       });
 
-      await expect(
-        freshSend({
-          to: "user@test.com",
-          customerName: "Jane",
-          orderId: "abc1234",
-          totalAmount: "$42.00",
-          items: [{ name: "Widget", quantity: 1, price: "$42.00" }],
-          shippingAddress: "123 Main St",
-        }),
-      ).resolves.toBeUndefined();
-
-      expect(logBusinessEvent).toHaveBeenCalledWith(
-        expect.objectContaining({
-          event: "email_auth_failed",
-          success: false,
-          details: expect.objectContaining({
-            statusCode: 401,
-            providerErrors: ["authorization required"],
-          }),
-        }),
-      );
-
-      expect(logError).toHaveBeenCalledWith(
-        expect.objectContaining({
-          context: "email_send_failed",
-          additionalInfo: expect.objectContaining({
-            statusCode: 401,
-            providerErrors: ["authorization required"],
-          }),
-        }),
-      );
+      const [msg] = mockSendWithRetry.mock.calls[0] as [{ html: string; text: string }, unknown];
+      expect(msg.html).toContain("SuperWidget");
+      expect(msg.text).toContain("SuperWidget");
     });
 
-    it("skips sending when API key format is invalid", async () => {
-      process.env.SENDGRID_API_KEY = "not-a-sendgrid-key";
+    it("includes shipping address in the email body", async () => {
       vi.resetModules();
-      const { sendOrderConfirmationEmail: freshSend } = await import("@/lib/email");
+      const { sendOrderConfirmationEmail } = await import("@/lib/email");
 
-      await freshSend({
+      sendOrderConfirmationEmail({
+        to: "user@test.com",
+        customerName: "Jane",
+        orderId: "abc1234",
+        totalAmount: "$42.00",
+        items: [{ name: "Widget", quantity: 1, price: "$42.00" }],
+        shippingAddress: "456 Elm Avenue",
+      });
+
+      const [msg] = mockSendWithRetry.mock.calls[0] as [{ html: string; text: string }, unknown];
+      expect(msg.html).toContain("456 Elm Avenue");
+    });
+
+    it("returns void (fire-and-forget)", async () => {
+      vi.resetModules();
+      const { sendOrderConfirmationEmail } = await import("@/lib/email");
+
+      const result = sendOrderConfirmationEmail({
         to: "user@test.com",
         customerName: "Jane",
         orderId: "abc1234",
@@ -198,49 +124,16 @@ describe("lib/email", () => {
         shippingAddress: "123 Main St",
       });
 
-      expect(mockSend).not.toHaveBeenCalled();
-      expect(logBusinessEvent).toHaveBeenCalledWith(
-        expect.objectContaining({
-          event: "email_skipped",
-          success: false,
-          details: expect.objectContaining({ reason: "invalid_api_key_format" }),
-        }),
-      );
-    });
-
-    it("falls back to SendGrid when Google SMTP fails", async () => {
-      process.env.GOOGLE_SMTP_USER = "store@example.com";
-      process.env.GOOGLE_SMTP_APP_PASSWORD = "app-password";
-      process.env.SENDGRID_API_KEY = "SG.test-key";
-
-      mockSmtpSendMail.mockRejectedValue(new Error("SMTP auth failed"));
-      mockSend.mockResolvedValue([{ statusCode: 202 }]);
-
-      vi.resetModules();
-      const { sendOrderConfirmationEmail: freshSend } = await import("@/lib/email");
-
-      await freshSend({
-        to: "user@test.com",
-        customerName: "Jane",
-        orderId: "abc1234",
-        totalAmount: "$42.00",
-        items: [{ name: "Widget", quantity: 1, price: "$42.00" }],
-        shippingAddress: "123 Main St",
-      });
-
-      expect(mockSmtpSendMail).toHaveBeenCalled();
-      expect(mockSend).toHaveBeenCalled();
+      expect(result).toBeUndefined();
     });
   });
 
   describe("sendOrderStatusUpdateEmail", () => {
-    it("sends status update email for SHIPPED with tracking", async () => {
-      process.env.SENDGRID_API_KEY = "SG.test-key";
+    it("calls sendWithRetry for SHIPPED with tracking number", async () => {
       vi.resetModules();
-      const { sendOrderStatusUpdateEmail: freshSend } = await import("@/lib/email");
-      mockSend.mockResolvedValue([{ statusCode: 202 }]);
+      const { sendOrderStatusUpdateEmail } = await import("@/lib/email");
 
-      await freshSend({
+      sendOrderStatusUpdateEmail({
         to: "user@test.com",
         customerName: "Jane",
         orderId: "abc1234",
@@ -249,66 +142,59 @@ describe("lib/email", () => {
         shippingProvider: "FedEx",
       });
 
-      expect(mockSend).toHaveBeenCalledWith(
-        expect.objectContaining({
-          to: "user@test.com",
-          html: expect.stringContaining("TRK123456"),
-        }),
-      );
+      const [msg] = mockSendWithRetry.mock.calls[0] as [{ html: string; text: string }, unknown];
+      expect(msg.html).toContain("TRK123456");
     });
 
-    it("sends status update without tracking for DELIVERED", async () => {
-      process.env.SENDGRID_API_KEY = "SG.test-key";
+    it("calls sendWithRetry for DELIVERED with correct subject", async () => {
       vi.resetModules();
-      const { sendOrderStatusUpdateEmail: freshSend } = await import("@/lib/email");
-      mockSend.mockResolvedValue([{ statusCode: 202 }]);
+      const { sendOrderStatusUpdateEmail } = await import("@/lib/email");
 
-      await freshSend({
+      sendOrderStatusUpdateEmail({
         to: "user@test.com",
         customerName: "Jane",
         orderId: "abc1234",
         status: "DELIVERED",
       });
 
-      expect(mockSend).toHaveBeenCalledWith(
+      expect(mockSendWithRetry).toHaveBeenCalledWith(
+        expect.objectContaining({ subject: expect.stringContaining("Delivered") }),
         expect.objectContaining({
-          subject: expect.stringContaining("Delivered"),
+          emailType: "order_status_update",
+          referenceId: "abc1234",
         }),
       );
     });
 
-    it("falls back gracefully for unknown status", async () => {
-      process.env.SENDGRID_API_KEY = "SG.test-key";
+    it("calls sendWithRetry for CANCELLED", async () => {
       vi.resetModules();
-      const { sendOrderStatusUpdateEmail: freshSend } = await import("@/lib/email");
-      mockSend.mockResolvedValue([{ statusCode: 202 }]);
+      const { sendOrderStatusUpdateEmail } = await import("@/lib/email");
 
-      await freshSend({
-        to: "user@test.com",
-        customerName: "Jane",
-        orderId: "abc1234",
-        status: "UNKNOWN_STATUS",
-      });
-
-      expect(mockSend).toHaveBeenCalledWith(
-        expect.objectContaining({
-          subject: expect.stringContaining("UNKNOWN_STATUS"),
-        }),
-      );
-    });
-
-    it("skips email when no API key", async () => {
-      vi.resetModules();
-      const { sendOrderStatusUpdateEmail: freshSend } = await import("@/lib/email");
-
-      await freshSend({
+      sendOrderStatusUpdateEmail({
         to: "user@test.com",
         customerName: "Jane",
         orderId: "abc1234",
         status: "CANCELLED",
       });
 
-      expect(mockSend).not.toHaveBeenCalled();
+      expect(mockSendWithRetry).toHaveBeenCalledWith(
+        expect.objectContaining({ to: "user@test.com" }),
+        expect.objectContaining({ emailType: "order_status_update" }),
+      );
+    });
+
+    it("returns void (fire-and-forget)", async () => {
+      vi.resetModules();
+      const { sendOrderStatusUpdateEmail } = await import("@/lib/email");
+
+      const result = sendOrderStatusUpdateEmail({
+        to: "user@test.com",
+        customerName: "Jane",
+        orderId: "abc1234",
+        status: "SHIPPED",
+      });
+
+      expect(result).toBeUndefined();
     });
   });
 });

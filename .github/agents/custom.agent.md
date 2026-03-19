@@ -26,14 +26,59 @@ This agent combines two capabilities:
 For any feature request that involves multiple files, requires design decisions, or impacts architecture:
 
 ```
-specify → clarify → plan → tasks → analyze → implement → taskstoissues
+specify → clarify → plan → tasks → analyze → implement
 ```
 
-Run the full chain automatically using `#runSubagent` — do NOT rely on manual handoff triggers. Each stage produces artifacts the next stage consumes. Do NOT skip stages unless the user explicitly requests it.
+**This order is mandatory and non-negotiable.** Each stage produces artifacts the next stage consumes. Run the full chain automatically — do NOT rely on manual handoff triggers and do NOT skip stages unless the user explicitly requests it.
 
 ### When to Code Directly
 
 For bug fixes, single-file changes, refactors, or tasks where speckit overhead is unnecessary — implement directly using the coding principles below.
+
+## Speckit Workflow — Exact Step-by-Step Execution
+
+### Step 1: `speckit.specify`
+- Run `#runSubagent speckit.specify` with the full feature description and codebase context
+- Saves spec to `specs/NNN-feature-name/spec.md`
+- **Do not proceed until spec.md exists**
+
+### Step 2: `speckit.clarify`
+- Run `#runSubagent speckit.clarify` referencing the generated spec.md
+- Encodes any architectural decisions, DB schema choices, UX decisions into the spec
+- **Do not proceed until spec.md is updated with clarifications**
+
+### Step 3: `speckit.plan`
+- Run `#runSubagent speckit.plan` referencing spec.md + any key decisions from clarify
+- Saves to `specs/NNN-feature-name/plan.md` (plus data-model.md, API contracts, etc.)
+- **Do not proceed until plan.md exists**
+
+### Step 4: `speckit.tasks`
+- Run `#runSubagent speckit.tasks` referencing spec.md + plan.md
+- Saves to `specs/NNN-feature-name/tasks.md` with dependency-ordered tasks
+- **analyze MUST run after tasks** — tasks.md must exist for analyze to work
+- **Do not proceed until tasks.md exists**
+
+### Step 5: `speckit.analyze`
+- Run `#runSubagent speckit.analyze` referencing all three artifacts (spec, plan, tasks)
+- Catches cross-artifact inconsistencies, architecture conflicts, coverage gaps
+- Updates spec.md, plan.md, and tasks.md in-place with fixes
+- **Do not proceed until all Critical/High findings are resolved**
+
+### Step 6: Commit spec artifacts
+- Run `report_progress` to commit spec artifacts to the PR **before** starting implementation
+- Commit message: `feat: add [feature-name] specs (spec, plan, tasks)`
+- **Never start implementation without committing specs first**
+
+### Step 7: `speckit.implement`
+- Run `#runSubagent speckit.implement` with full context: spec, plan, tasks, AND all project coding standards
+- Executes all tasks in phase order
+- **Do not commit code without running lint + tests**
+
+### Step 8: Validate & commit
+- Run `npm run lint` — must pass with 0 errors
+- Run `npm run test` — all tests must pass
+- Run `npm run build` — must produce clean output
+- Run `report_progress` to commit implementation
 
 ## Execution Rules
 
@@ -43,7 +88,7 @@ ALWAYS use `#context7` MCP Server to read relevant documentation before working 
 
 ALWAYS check your work before returning control. Run tests, verify builds. Never return incomplete or unverified work.
 
-ALWAYS update `.github/copilot-instructions.md` or relevant `agent.md` files when you learn important project information.
+ALWAYS update `.github/agents/custom.agent.md` and `.specify/memory/constitution.md` when project coding standards or workflow patterns change.
 
 ## Communication Style
 
@@ -60,77 +105,114 @@ ALWAYS update `.github/copilot-instructions.md` or relevant `agent.md` files whe
 - We DO NOT like WASTING TIME
 - IMPORTANT: We're here to FOCUS, BUILD, and SHIP
 
-## Mandatory Coding Principles
+## Mandatory Coding Principles (The Kiyon Store)
 
-### 1. Structure
+These are project-specific rules enforced by ESLint, DeepSource, and SonarQube. Violations cause CI failures.
 
-- Consistent, predictable project layout
-- Group code by feature/screen; minimal shared utilities
-- Simple, obvious entry points
-- Identify shared structure first. Use framework-native composition patterns (layouts, providers, shared components). Duplication requiring the same fix in multiple places is a code smell.
+### 1. Functions — const arrow only
 
-### 2. Architecture
+**ALWAYS** use `const` arrow functions. **NEVER** use `function` declarations.
 
-- Flat, explicit code over abstractions or deep hierarchies
-- No clever patterns, metaprogramming, or unnecessary indirection
-- Minimize coupling so files can be safely regenerated
+```ts
+// ✅ correct
+export const GET = async (req: NextRequest) => { ... };
+const helper = (x: string) => x.trim();
 
-### 3. Functions and Modules
+// ❌ wrong — DeepSource flags "unexpected function declaration in global scope"
+export async function GET(req: NextRequest) { ... }
+function helper(x: string) { return x.trim(); }
+```
 
-- Linear, simple control flow
-- Small-to-medium functions; no deeply nested logic
-- Pass state explicitly; no globals
+### 2. No console
 
-### 4. Naming and Comments
+`console.log/warn/error/info` are **banned** (ESLint `no-console: error`). Use Pino via `lib/logger.ts`:
 
-- Descriptive-but-simple names
-- Comment only invariants, assumptions, or external requirements
+```ts
+import { logError, logBusinessEvent, createLogger } from "@/lib/logger";
+logError({ error, context: "context_name", additionalInfo: { ... } });
+logBusinessEvent({ event: "event_name", details: { ... }, success: true });
+```
 
-### 5. Logging and Errors
+### 3. No comments
 
-- Detailed, structured logs at key boundaries
-- Explicit, informative errors
+Comments are **forbidden** except to suppress a lint/tooling rule. No JSDoc, no explanatory prose, no section headers (`// ─── Section ───`). Code must be self-documenting through clear naming.
 
-### 6. Regenerability
+```ts
+// ✅ only allowed comment form:
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 
-- Any file/module can be rewritten from scratch without breaking the system
-- Clear, declarative configuration (JSON/YAML/etc.)
+// ❌ forbidden:
+// This function sends the email
+// Handle error case
+```
 
-### 7. Platform Use
+### 4. SOLID + low complexity
 
-- Use platform conventions directly and simply without over-abstracting
+- Single Responsibility: each file/function does one thing
+- Max JSX nesting depth: **4 levels**
+- Max cyclomatic complexity: extract helpers when branching gets deep
+- Interface Segregation: small, focused interfaces — no god objects
+- Depend on abstractions (`auth()`, `apiSuccess`, `getCachedData`) not concrete implementations
 
-### 8. Modifications
+### 5. TypeScript strict
 
-- Follow existing patterns when extending/refactoring
-- Prefer full-file rewrites over micro-edits unless told otherwise
+- No `any` — use `unknown` + type guards
+- No type assertions (`as X`) without a comment explaining why
+- Explicit types on all public API surfaces
+- Zod schemas for all runtime boundaries (`lib/validations.ts`)
 
-### 9. Quality
+### 6. Naming
 
-- Deterministic, testable behavior
+- No single-letter or abbreviated variables (`q` → `query`, `e` → `error`, `i` → `index`)
+- No redundant `undefined` in function calls: `fn(a, b, undefined)` → `fn(a, b)`
+- PascalCase components, camelCase hooks/utils, UPPER_SNAKE_CASE constants
 
-## Feature Development Workflow
+### 7. Testing
 
-When the user describes a new feature or substantial change:
+- Test files in `__tests__/` mirroring source structure
+- Use `vi.hoisted()` for mock functions referenced inside `vi.mock()` factories
+- No empty mock classes — use `vi.fn()` directly
+- SonarQube requires **≥80% coverage on new code** — every new util/route/component needs tests
+- Variables in tests must be declared before use (no hoisting surprises)
 
-1. **Assess scope** — Is this a speckit-worthy feature or a direct implementation?
-2. **If speckit**: Automatically chain through the full workflow using `#runSubagent` — do NOT wait for manual handoff triggers:
-   1. `#runSubagent speckit.specify` — generate the feature spec
-   2. `#runSubagent speckit.clarify` — clarify any ambiguities in the spec
-   3. `#runSubagent speckit.plan` — produce the implementation plan
-   4. `#runSubagent speckit.tasks` — break the plan into actionable tasks
-   5. `#runSubagent speckit.analyze` — check cross-artifact consistency
-   6. `#runSubagent speckit.implement` — execute the implementation in phases
-   7. `#runSubagent speckit.taskstoissues` — convert tasks to GitHub issues
-3. **If direct**: Implement using subagents, following coding principles above
-4. **Always verify**: Run tests, check builds, validate UI changes with Playwright
+### 8. DB / IDs
+
+- All schema changes via Drizzle migrations: `npm run db:generate` then `npm run db:migrate`
+- All entity IDs use `generateShortId()` from `lib/short-id.ts` (`varchar(7)`)
+- Never use `crypto.randomUUID()` for entity IDs (only for auth tables)
+
+### 9. Security
+
+- All user-controlled fields in HTML templates must pass through `escapeHtml()` from `lib/email.ts`
+- Admin routes: check `session?.user?.role !== "ADMIN"` → return `apiError("Forbidden", 403)`
+- Unauthenticated: return `apiError("Unauthorized", 401)`
+
+### 10. Regenerability
+
+- Any file can be rewritten from scratch without breaking the system
+- Pass state explicitly — no module-level mutable globals
+- Clear declarative config over clever runtime magic
+
+## Feature Development Workflow (Summary)
+
+```
+1. specify  → specs/NNN/spec.md
+2. clarify  → spec.md updated with decisions
+3. plan     → specs/NNN/plan.md + data-model.md + contracts
+4. tasks    → specs/NNN/tasks.md
+5. analyze  → all three files updated, zero Critical/High findings
+6. COMMIT spec artifacts via report_progress
+7. implement → all files created/modified
+8. lint + test + build → all pass
+9. COMMIT implementation via report_progress
+```
 
 ### Speckit Integration Points
 
-- **Before specifying**: Check if `.specify/memory/constitution.md` exists. If not, consider running `speckit.constitution` first.
-- **After tasks**: Run `speckit.analyze` to catch inconsistencies before implementation
+- **Before specifying**: Check if `.specify/memory/constitution.md` exists. If not, run `speckit.constitution` first.
+- **analyze runs after tasks**: It needs tasks.md to exist — never run analyze before tasks
+- **Commit specs before implement**: Always push spec artifacts to the PR before starting code changes
 - **During implementation**: Follow `speckit.implement` phase execution (Setup → Tests → Core → Integration → Polish)
-- **After implementation**: Run `speckit.taskstoissues` if GitHub issue tracking is desired
 - **Checklists**: Use `speckit.checklist` to validate requirements quality at any point
 
 ## UI/UX Testing Requirements

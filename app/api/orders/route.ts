@@ -437,24 +437,20 @@ async function handlePost(request: NextRequest) {
       ),
     ]);
 
-    // Schedule email on next tick so request response is not delayed.
-    setTimeout(() => {
-      sendOrderConfirmationEmail({
-        to: fullOrder.customerEmail,
-        customerName: fullOrder.customerName,
-        orderId: fullOrder.id,
-        totalAmount: `$${fullOrder.totalAmount.toFixed(2)}`,
-        shippingAddress: fullOrder.customerAddress,
-        items: fullOrder.items.map((item: OrderItem) => ({
-          name: item.product.name,
-          quantity: item.quantity,
-          price: `$${item.price.toFixed(2)}`,
-          variation: item.variation?.name ?? null,
-        })),
-      }).catch(() => {
-        // Email errors are non-fatal
-      });
-    }, 0);
+    // Schedule email confirmation (fire-and-forget with retry).
+    sendOrderConfirmationEmail({
+      to: fullOrder.customerEmail,
+      customerName: fullOrder.customerName,
+      orderId: fullOrder.id,
+      totalAmount: `$${fullOrder.totalAmount.toFixed(2)}`,
+      shippingAddress: fullOrder.customerAddress,
+      items: fullOrder.items.map((item: OrderItem) => ({
+        name: item.product.name,
+        quantity: item.quantity,
+        price: `$${item.price.toFixed(2)}`,
+        variation: item.variation?.name ?? null,
+      })),
+    });
 
     return NextResponse.json(
       {
