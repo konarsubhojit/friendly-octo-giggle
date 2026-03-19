@@ -3,6 +3,8 @@ import { failedEmails } from "@/lib/schema";
 import { desc, inArray } from "drizzle-orm";
 import { EmailFailuresClient } from "@/components/admin/EmailFailuresClient";
 
+export const dynamic = "force-dynamic";
+
 const fetchEmailFailures = async () => {
   const records = await drizzleDb
     .select()
