@@ -3,7 +3,12 @@ import { drizzleDb } from "@/lib/db";
 import { products, productVariations } from "@/lib/schema";
 import { eq, and, isNull, ne } from "drizzle-orm";
 import { UpdateVariationSchema } from "@/lib/validations";
-import { apiSuccess, apiError, handleApiError, handleValidationError } from "@/lib/api-utils";
+import {
+  apiSuccess,
+  apiError,
+  handleApiError,
+  handleValidationError,
+} from "@/lib/api-utils";
 import { auth } from "@/lib/auth";
 import { invalidateProductCaches } from "@/lib/cache";
 import { revalidateTag } from "next/cache";
@@ -13,10 +18,18 @@ export const dynamic = "force-dynamic";
 async function checkAdminAuth() {
   const session = await auth();
   if (!session?.user) {
-    return { authorized: false, error: "Authentication required", status: 401 as const };
+    return {
+      authorized: false,
+      error: "Authentication required",
+      status: 401 as const,
+    };
   }
   if (session.user.role !== "ADMIN") {
-    return { authorized: false, error: "Admin access required", status: 403 as const };
+    return {
+      authorized: false,
+      error: "Admin access required",
+      status: 403 as const,
+    };
   }
   return { authorized: true };
 }

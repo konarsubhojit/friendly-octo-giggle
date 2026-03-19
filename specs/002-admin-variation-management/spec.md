@@ -5,7 +5,7 @@
 **Status**: Draft  
 **Input**: User description: "We have added the feature for product variations/different color or design of the same product. But in admin page we don't even have the capability to add new variations. Add that feature."
 
-## User Scenarios & Testing *(mandatory)*
+## User Scenarios & Testing _(mandatory)_
 
 ### User Story 1 - Create a New Variation for a Product (Priority: P1)
 
@@ -106,7 +106,7 @@ When creating or editing a variation, the admin can upload one primary image and
 - Q: When viewing a past order that referenced a now-deleted variation, what should be displayed? → A: Soft delete (mark as inactive/archived); order history shows the original variation name and details.
 - Q: Should stock be required when creating a variation, or default to zero? → A: Stock is required with no default; admin must explicitly set stock quantity.
 
-## Requirements *(mandatory)*
+## Requirements _(mandatory)_
 
 ### Functional Requirements
 
@@ -129,7 +129,7 @@ When creating or editing a variation, the admin can upload one primary image and
 - **Product**: The parent item being sold. Has a base price, stock, and category. A product can have zero or more variations.
 - **Product Variation**: A specific variant of a product (e.g., a color, design, or size). Key attributes: name, design name, primary image, additional images, price modifier (adjustment from base price), independent stock quantity, and active/archived status. Must have a unique name within its parent product. Soft-deleted variations are retained for order history but hidden from customers and admin variation lists.
 
-## Success Criteria *(mandatory)*
+## Success Criteria _(mandatory)_
 
 ### Measurable Outcomes
 

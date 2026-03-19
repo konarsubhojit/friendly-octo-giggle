@@ -16,7 +16,7 @@
 {
   "name": "Red - Large",
   "designName": "Classic Logo",
-  "priceModifier": 2.50,
+  "priceModifier": 2.5,
   "stock": 100,
   "image": "https://blob.vercel-storage.com/variation-primary.jpg",
   "images": [
@@ -26,14 +26,14 @@
 }
 ```
 
-| Field | Type | Required | Constraints |
-|-------|------|----------|-------------|
-| `name` | string | YES | 1–100 chars |
-| `designName` | string | YES | 1–100 chars |
-| `priceModifier` | number | YES | Any number; effective price must be > 0 |
-| `stock` | integer | YES | ≥ 0 |
-| `image` | string | NO | Valid URL |
-| `images` | string[] | NO | Valid URLs, max 10 |
+| Field           | Type     | Required | Constraints                             |
+| --------------- | -------- | -------- | --------------------------------------- |
+| `name`          | string   | YES      | 1–100 chars                             |
+| `designName`    | string   | YES      | 1–100 chars                             |
+| `priceModifier` | number   | YES      | Any number; effective price must be > 0 |
+| `stock`         | integer  | YES      | ≥ 0                                     |
+| `image`         | string   | NO       | Valid URL                               |
+| `images`        | string[] | NO       | Valid URLs, max 10                      |
 
 ### Response — 201 Created
 
@@ -48,7 +48,7 @@
       "designName": "Classic Logo",
       "image": "https://blob.vercel-storage.com/variation-primary.jpg",
       "images": ["https://..."],
-      "priceModifier": 2.50,
+      "priceModifier": 2.5,
       "stock": 100,
       "createdAt": "2026-03-19T10:00:00.000Z",
       "updatedAt": "2026-03-19T10:00:00.000Z"
@@ -59,15 +59,15 @@
 
 ### Error Responses
 
-| Status | Condition | Body |
-|--------|-----------|------|
-| 400 | Validation error | `{ "success": false, "error": "Validation failed", "details": [...] }` |
-| 400 | Effective price ≤ 0 | `{ "success": false, "error": "Effective price (base + modifier) must be greater than zero" }` |
-| 400 | Max 25 variations reached | `{ "success": false, "error": "Maximum of 25 variations per product reached" }` |
-| 401 | Not authenticated | `{ "success": false, "error": "Authentication required" }` |
-| 403 | Not admin | `{ "success": false, "error": "Admin access required" }` |
-| 404 | Product not found | `{ "success": false, "error": "Product not found" }` |
-| 409 | Duplicate name | `{ "success": false, "error": "A variation with this name already exists for this product" }` |
+| Status | Condition                 | Body                                                                                           |
+| ------ | ------------------------- | ---------------------------------------------------------------------------------------------- |
+| 400    | Validation error          | `{ "success": false, "error": "Validation failed", "details": [...] }`                         |
+| 400    | Effective price ≤ 0       | `{ "success": false, "error": "Effective price (base + modifier) must be greater than zero" }` |
+| 400    | Max 25 variations reached | `{ "success": false, "error": "Maximum of 25 variations per product reached" }`                |
+| 401    | Not authenticated         | `{ "success": false, "error": "Authentication required" }`                                     |
+| 403    | Not admin                 | `{ "success": false, "error": "Admin access required" }`                                       |
+| 404    | Product not found         | `{ "success": false, "error": "Product not found" }`                                           |
+| 409    | Duplicate name            | `{ "success": false, "error": "A variation with this name already exists for this product" }`  |
 
 ---
 
@@ -79,9 +79,9 @@
 
 No body. Optional query params:
 
-| Param | Type | Default | Description |
-|-------|------|---------|-------------|
-| (none currently) | — | — | May add pagination later if needed |
+| Param            | Type | Default | Description                        |
+| ---------------- | ---- | ------- | ---------------------------------- |
+| (none currently) | —    | —       | May add pagination later if needed |
 
 ### Response — 200 OK
 
@@ -97,7 +97,7 @@ No body. Optional query params:
         "designName": "Classic Logo",
         "image": "https://...",
         "images": ["https://..."],
-        "priceModifier": 2.50,
+        "priceModifier": 2.5,
         "stock": 100,
         "createdAt": "2026-03-19T10:00:00.000Z",
         "updatedAt": "2026-03-19T10:00:00.000Z"
@@ -110,11 +110,11 @@ No body. Optional query params:
 
 ### Error Responses
 
-| Status | Condition | Body |
-|--------|-----------|------|
-| 401 | Not authenticated | `{ "success": false, "error": "Authentication required" }` |
-| 403 | Not admin | `{ "success": false, "error": "Admin access required" }` |
-| 404 | Product not found | `{ "success": false, "error": "Product not found" }` |
+| Status | Condition         | Body                                                       |
+| ------ | ----------------- | ---------------------------------------------------------- |
+| 401    | Not authenticated | `{ "success": false, "error": "Authentication required" }` |
+| 403    | Not admin         | `{ "success": false, "error": "Admin access required" }`   |
+| 404    | Product not found | `{ "success": false, "error": "Product not found" }`       |
 
 ---
 
@@ -133,14 +133,14 @@ All fields optional (partial update):
 }
 ```
 
-| Field | Type | Required | Constraints |
-|-------|------|----------|-------------|
-| `name` | string | NO | 1–100 chars |
-| `designName` | string | NO | 1–100 chars |
-| `priceModifier` | number | NO | Effective price must be > 0 |
-| `stock` | integer | NO | ≥ 0 |
-| `image` | string \| null | NO | Valid URL or null to clear |
-| `images` | string[] | NO | Valid URLs, max 10 |
+| Field           | Type           | Required | Constraints                 |
+| --------------- | -------------- | -------- | --------------------------- |
+| `name`          | string         | NO       | 1–100 chars                 |
+| `designName`    | string         | NO       | 1–100 chars                 |
+| `priceModifier` | number         | NO       | Effective price must be > 0 |
+| `stock`         | integer        | NO       | ≥ 0                         |
+| `image`         | string \| null | NO       | Valid URL or null to clear  |
+| `images`        | string[]       | NO       | Valid URLs, max 10          |
 
 ### Response — 200 OK
 
@@ -155,7 +155,7 @@ All fields optional (partial update):
       "designName": "Classic Logo",
       "image": "https://...",
       "images": ["https://..."],
-      "priceModifier": 2.50,
+      "priceModifier": 2.5,
       "stock": 50,
       "createdAt": "2026-03-19T10:00:00.000Z",
       "updatedAt": "2026-03-19T10:30:00.000Z"
@@ -166,15 +166,15 @@ All fields optional (partial update):
 
 ### Error Responses
 
-| Status | Condition | Body |
-|--------|-----------|------|
-| 400 | Validation error | `{ "success": false, "error": "Validation failed", "details": [...] }` |
-| 400 | Effective price ≤ 0 | `{ "success": false, "error": "Effective price (base + modifier) must be greater than zero" }` |
-| 401 | Not authenticated | `{ "success": false, "error": "Authentication required" }` |
-| 403 | Not admin | `{ "success": false, "error": "Admin access required" }` |
-| 404 | Product not found | `{ "success": false, "error": "Product not found" }` |
-| 404 | Variation not found | `{ "success": false, "error": "Variation not found" }` |
-| 409 | Duplicate name | `{ "success": false, "error": "A variation with this name already exists for this product" }` |
+| Status | Condition           | Body                                                                                           |
+| ------ | ------------------- | ---------------------------------------------------------------------------------------------- |
+| 400    | Validation error    | `{ "success": false, "error": "Validation failed", "details": [...] }`                         |
+| 400    | Effective price ≤ 0 | `{ "success": false, "error": "Effective price (base + modifier) must be greater than zero" }` |
+| 401    | Not authenticated   | `{ "success": false, "error": "Authentication required" }`                                     |
+| 403    | Not admin           | `{ "success": false, "error": "Admin access required" }`                                       |
+| 404    | Product not found   | `{ "success": false, "error": "Product not found" }`                                           |
+| 404    | Variation not found | `{ "success": false, "error": "Variation not found" }`                                         |
+| 409    | Duplicate name      | `{ "success": false, "error": "A variation with this name already exists for this product" }`  |
 
 ---
 
@@ -200,12 +200,12 @@ No body.
 
 ### Error Responses
 
-| Status | Condition | Body |
-|--------|-----------|------|
-| 401 | Not authenticated | `{ "success": false, "error": "Authentication required" }` |
-| 403 | Not admin | `{ "success": false, "error": "Admin access required" }` |
-| 404 | Product not found | `{ "success": false, "error": "Product not found" }` |
-| 404 | Variation not found | `{ "success": false, "error": "Variation not found" }` |
+| Status | Condition           | Body                                                       |
+| ------ | ------------------- | ---------------------------------------------------------- |
+| 401    | Not authenticated   | `{ "success": false, "error": "Authentication required" }` |
+| 403    | Not admin           | `{ "success": false, "error": "Admin access required" }`   |
+| 404    | Product not found   | `{ "success": false, "error": "Product not found" }`       |
+| 404    | Variation not found | `{ "success": false, "error": "Variation not found" }`     |
 
 ---
 

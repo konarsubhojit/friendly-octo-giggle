@@ -36,9 +36,9 @@
 
 ### New Column
 
-| Column | Type | Default | Nullable | Index | Description |
-|--------|------|---------|----------|-------|-------------|
-| `deletedAt` | `timestamp` | `null` | YES | No (low cardinality) | Soft-delete marker. `null` = active, non-null = archived. |
+| Column      | Type        | Default | Nullable | Index                | Description                                               |
+| ----------- | ----------- | ------- | -------- | -------------------- | --------------------------------------------------------- |
+| `deletedAt` | `timestamp` | `null`  | YES      | No (low cardinality) | Soft-delete marker. `null` = active, non-null = archived. |
 
 ### Migration SQL (Drizzle-generated)
 
@@ -55,31 +55,31 @@ deletedAt: timestamp("deleted_at"),
 
 ## Existing Columns (unchanged)
 
-| Column | Type | Nullable | Constraints | Description |
-|--------|------|----------|-------------|-------------|
-| `id` | `varchar(7)` | NO | PK, Base62 short ID | Unique variation identifier |
-| `productId` | `varchar(7)` | NO | FK → products.id (CASCADE) | Parent product |
-| `name` | `text` | NO | UNIQUE(productId, name) | Variation display name (e.g., "Red - Large") |
-| `designName` | `text` | NO | — | Design identifier (e.g., "Classic Logo") |
-| `image` | `text` | YES | — | Primary variation image URL |
-| `images` | `json` | NO | DEFAULT `[]` | Additional variation image URLs |
-| `priceModifier` | `doublePrecision` | NO | DEFAULT `0` | Price adjustment from base product price |
-| `stock` | `integer` | NO | — | Variation-specific stock quantity |
-| `createdAt` | `timestamp` | NO | DEFAULT `now()` | Creation timestamp |
-| `updatedAt` | `timestamp` | NO | DEFAULT `now()` | Last update timestamp |
+| Column          | Type              | Nullable | Constraints                | Description                                  |
+| --------------- | ----------------- | -------- | -------------------------- | -------------------------------------------- |
+| `id`            | `varchar(7)`      | NO       | PK, Base62 short ID        | Unique variation identifier                  |
+| `productId`     | `varchar(7)`      | NO       | FK → products.id (CASCADE) | Parent product                               |
+| `name`          | `text`            | NO       | UNIQUE(productId, name)    | Variation display name (e.g., "Red - Large") |
+| `designName`    | `text`            | NO       | —                          | Design identifier (e.g., "Classic Logo")     |
+| `image`         | `text`            | YES      | —                          | Primary variation image URL                  |
+| `images`        | `json`            | NO       | DEFAULT `[]`               | Additional variation image URLs              |
+| `priceModifier` | `doublePrecision` | NO       | DEFAULT `0`                | Price adjustment from base product price     |
+| `stock`         | `integer`         | NO       | —                          | Variation-specific stock quantity            |
+| `createdAt`     | `timestamp`       | NO       | DEFAULT `now()`            | Creation timestamp                           |
+| `updatedAt`     | `timestamp`       | NO       | DEFAULT `now()`            | Last update timestamp                        |
 
 ## Validation Rules
 
 ### Create Variation
 
-| Field | Type | Required | Constraints |
-|-------|------|----------|-------------|
-| `name` | string | YES | 1–100 characters |
-| `designName` | string | YES | 1–100 characters |
-| `priceModifier` | number | YES | Any number (positive or negative); effective price (product.price + modifier) must be > 0 |
-| `stock` | integer | YES | Non-negative integer (≥ 0) |
-| `image` | string | NO | Valid URL |
-| `images` | string[] | NO | Array of valid URLs, max 10 items |
+| Field           | Type     | Required | Constraints                                                                               |
+| --------------- | -------- | -------- | ----------------------------------------------------------------------------------------- |
+| `name`          | string   | YES      | 1–100 characters                                                                          |
+| `designName`    | string   | YES      | 1–100 characters                                                                          |
+| `priceModifier` | number   | YES      | Any number (positive or negative); effective price (product.price + modifier) must be > 0 |
+| `stock`         | integer  | YES      | Non-negative integer (≥ 0)                                                                |
+| `image`         | string   | NO       | Valid URL                                                                                 |
+| `images`        | string[] | NO       | Array of valid URLs, max 10 items                                                         |
 
 ### Update Variation
 

@@ -21,17 +21,17 @@ Add full CRUD management for product variations in the admin panel. This include
 
 ## Constitution Check
 
-*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
+_GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 
-| # | Principle | Status | Notes |
-|---|-----------|--------|-------|
-| I | Server-First Rendering | PASS | Product edit page is a Server Component; variation form is Client Component (requires interactivity). No `next/dynamic` with `{ ssr: false }` used. |
-| II | Type Safety End-to-End | PASS | New Zod schemas for variation create/update. Drizzle typed queries. No raw SQL. |
-| III | Testing Discipline | PASS | Unit tests for new validation schemas, API routes, and Redux slice changes. Playwright for admin UI. |
-| IV | Serverless & Caching | PASS | No in-memory state. Redis cache invalidation on variation writes. ISR-compatible. |
-| V | Security by Default | PASS | All variation endpoints check `auth()` + `role === "ADMIN"`. Input validated with Zod. Parameterized queries via Drizzle. |
-| VI | Observability & Logging | PASS | New API routes wrapped with `withApiLogging`. Errors via `handleApiError`. |
-| VII | Simplicity & YAGNI | PASS | No speculative abstractions. Reuses existing patterns (upload, cache, auth). Schema change is minimal (one column addition). |
+| #   | Principle               | Status | Notes                                                                                                                                               |
+| --- | ----------------------- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| I   | Server-First Rendering  | PASS   | Product edit page is a Server Component; variation form is Client Component (requires interactivity). No `next/dynamic` with `{ ssr: false }` used. |
+| II  | Type Safety End-to-End  | PASS   | New Zod schemas for variation create/update. Drizzle typed queries. No raw SQL.                                                                     |
+| III | Testing Discipline      | PASS   | Unit tests for new validation schemas, API routes, and Redux slice changes. Playwright for admin UI.                                                |
+| IV  | Serverless & Caching    | PASS   | No in-memory state. Redis cache invalidation on variation writes. ISR-compatible.                                                                   |
+| V   | Security by Default     | PASS   | All variation endpoints check `auth()` + `role === "ADMIN"`. Input validated with Zod. Parameterized queries via Drizzle.                           |
+| VI  | Observability & Logging | PASS   | New API routes wrapped with `withApiLogging`. Errors via `handleApiError`.                                                                          |
+| VII | Simplicity & YAGNI      | PASS   | No speculative abstractions. Reuses existing patterns (upload, cache, auth). Schema change is minimal (one column addition).                        |
 
 **Gate result: ALL PASS** — Proceed to Phase 0.
 

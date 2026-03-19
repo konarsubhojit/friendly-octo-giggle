@@ -43,7 +43,7 @@ const ProductImageArea = ({ product }: ProductImageAreaProps) => {
       </div>
     </div>
   );
-}
+};
 
 const ProductCard = ({ product, formatPrice, index }: ProductCardProps) => {
   return (
@@ -76,7 +76,7 @@ const ProductCard = ({ product, formatPrice, index }: ProductCardProps) => {
       <QuickAddButton product={product} />
     </div>
   );
-}
+};
 
 const ProductGrid = ({ products }: ProductGridProps) => {
   const { formatPrice } = useCurrency();
@@ -164,10 +164,11 @@ const ProductGrid = ({ products }: ProductGridProps) => {
             <button
               key={cat}
               onClick={() => handleCategoryChange(cat)}
-              className={`px-4 py-1.5 rounded-full text-sm font-semibold border transition-all duration-200 ${selectedCategory === cat
+              className={`px-4 py-1.5 rounded-full text-sm font-semibold border transition-all duration-200 ${
+                selectedCategory === cat
                   ? "bg-gradient-to-r from-[var(--accent-rose)] to-[var(--accent-pink)] text-white border-[var(--accent-rose)] shadow-warm"
                   : "bg-[var(--surface)] text-[var(--text-secondary)] border-[var(--border-warm)] hover:border-[var(--accent-rose)] hover:text-[var(--accent-rose)] hover:bg-[var(--accent-blush)]"
-                }`}
+              }`}
               aria-pressed={selectedCategory === cat}
             >
               {cat}

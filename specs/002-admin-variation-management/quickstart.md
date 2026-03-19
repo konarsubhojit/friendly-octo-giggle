@@ -93,13 +93,13 @@ npm run test:coverage
 
 ## Key Files
 
-| File | Purpose |
-|------|---------|
-| `lib/schema.ts` | `deletedAt` column added to `productVariations` |
-| `lib/validations.ts` | `CreateVariationSchema`, `UpdateVariationSchema` |
-| `lib/db.ts` | Soft-delete filtering in variation queries |
-| `app/admin/products/[id]/page.tsx` | Dedicated product edit page |
-| `app/api/admin/products/[id]/variations/route.ts` | GET + POST endpoints |
-| `app/api/admin/products/[id]/variations/[variationId]/route.ts` | PUT + DELETE endpoints |
-| `components/admin/VariationList.tsx` | Variation cards list |
-| `components/admin/VariationFormModal.tsx` | Create/edit form modal |
+| File                                                            | Purpose                                          |
+| --------------------------------------------------------------- | ------------------------------------------------ |
+| `lib/schema.ts`                                                 | `deletedAt` column added to `productVariations`  |
+| `lib/validations.ts`                                            | `CreateVariationSchema`, `UpdateVariationSchema` |
+| `lib/db.ts`                                                     | Soft-delete filtering in variation queries       |
+| `app/admin/products/[id]/page.tsx`                              | Dedicated product edit page                      |
+| `app/api/admin/products/[id]/variations/route.ts`               | GET + POST endpoints                             |
+| `app/api/admin/products/[id]/variations/[variationId]/route.ts` | PUT + DELETE endpoints                           |
+| `components/admin/VariationList.tsx`                            | Variation cards list                             |
+| `components/admin/VariationFormModal.tsx`                       | Create/edit form modal                           |

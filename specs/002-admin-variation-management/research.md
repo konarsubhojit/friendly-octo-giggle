@@ -47,17 +47,17 @@
 
 **Impacted query locations** (from codebase exploration):
 
-| File | Line | Query | Action |
-|------|------|-------|--------|
-| `lib/db.ts` | ~125 | `findAll()` → `with: { variations: true }` | Add `where: isNull(deletedAt)` |
-| `lib/db.ts` | ~230 | `findBestsellers()` → `findMany()` | Add `isNull(deletedAt)` to where |
-| `lib/db.ts` | ~320 | `findById()` → `with: { variations: true }` | Add `where: isNull(deletedAt)` |
-| `lib/db.ts` | ~423 | wishlist `getProducts()` → `with: { variations: true }` | Add `where: isNull(deletedAt)` |
-| `app/api/cart/route.ts` | ~50, ~208, ~221, ~349 | cart queries with nested variations | Add `where: isNull(deletedAt)` |
-| `app/api/orders/route.ts` | ~317 | order creation → variation lookup | Add `isNull(deletedAt)` check |
-| `app/api/orders/**` | multiple | order list/detail → `variation: true` | NO FILTER — historical integrity |
-| `app/api/admin/orders/**` | multiple | admin order views | NO FILTER — audit trail |
-| `app/api/admin/products/route.ts` | ~87 | admin product list | Filter in admin variation list UI, not here |
+| File                              | Line                  | Query                                                   | Action                                      |
+| --------------------------------- | --------------------- | ------------------------------------------------------- | ------------------------------------------- |
+| `lib/db.ts`                       | ~125                  | `findAll()` → `with: { variations: true }`              | Add `where: isNull(deletedAt)`              |
+| `lib/db.ts`                       | ~230                  | `findBestsellers()` → `findMany()`                      | Add `isNull(deletedAt)` to where            |
+| `lib/db.ts`                       | ~320                  | `findById()` → `with: { variations: true }`             | Add `where: isNull(deletedAt)`              |
+| `lib/db.ts`                       | ~423                  | wishlist `getProducts()` → `with: { variations: true }` | Add `where: isNull(deletedAt)`              |
+| `app/api/cart/route.ts`           | ~50, ~208, ~221, ~349 | cart queries with nested variations                     | Add `where: isNull(deletedAt)`              |
+| `app/api/orders/route.ts`         | ~317                  | order creation → variation lookup                       | Add `isNull(deletedAt)` check               |
+| `app/api/orders/**`               | multiple              | order list/detail → `variation: true`                   | NO FILTER — historical integrity            |
+| `app/api/admin/orders/**`         | multiple              | admin order views                                       | NO FILTER — audit trail                     |
+| `app/api/admin/products/route.ts` | ~87                   | admin product list                                      | Filter in admin variation list UI, not here |
 
 ---
 
@@ -180,6 +180,6 @@ UpdateVariationSchema:
 **Cache keys to invalidate on variation mutation**:
 
 - `product:{productId}` — Product detail cache
-- `products:all` — Product list cache  
+- `products:all` — Product list cache
 - `products:bestsellers` — Bestsellers cache
 - `admin:products:*` — Admin product list cache
