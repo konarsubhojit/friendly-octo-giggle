@@ -9,7 +9,7 @@ const {
 } = vi.hoisted(() => ({
   mockAuth: vi.fn(),
   mockGetFailedEmails: vi.fn(),
-  mockAcknowledgePendingEmails: vi.fn().mockResolvedValue(undefined),
+  mockAcknowledgePendingEmails: vi.fn().mockResolvedValue(),
   mockBatchRetry: vi.fn(),
 }));
 

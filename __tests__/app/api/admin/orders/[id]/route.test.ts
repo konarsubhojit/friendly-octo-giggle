@@ -26,6 +26,9 @@ vi.mock(
   async () => await vi.importActual("@/lib/validations"),
 );
 vi.mock("@/lib/logger", () => ({ logError: vi.fn() }));
+vi.mock("@/lib/email", () => ({
+  sendOrderStatusUpdateEmail: vi.fn(),
+}));
 
 import { PATCH, GET } from "@/app/api/admin/orders/[id]/route";
 import { auth } from "@/lib/auth";

@@ -13,7 +13,7 @@ const fetchEmailFailures = async () => {
   return records;
 };
 
-export default async function EmailFailuresPage() {
+const EmailFailuresPage = async () => {
   const records = await fetchEmailFailures();
 
   return (
@@ -29,4 +29,6 @@ export default async function EmailFailuresPage() {
       <EmailFailuresClient initialRecords={records} />
     </main>
   );
-}
+};
+
+export default EmailFailuresPage;

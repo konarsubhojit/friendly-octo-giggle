@@ -4,22 +4,12 @@ const {
   mockInsert,
   mockUpdate,
   mockSelect,
-  _mockWhere,
-  _mockReturning,
-  _mockValues,
-  _mockLimit,
-  _mockOffset,
-  _mockOrderBy,
+  mockLogBusinessEvent,
 } = vi.hoisted(() => ({
   mockInsert: vi.fn(),
   mockUpdate: vi.fn(),
   mockSelect: vi.fn(),
-  _mockWhere: vi.fn(),
-  _mockReturning: vi.fn(),
-  _mockValues: vi.fn(),
-  _mockLimit: vi.fn(),
-  _mockOffset: vi.fn(),
-  _mockOrderBy: vi.fn(),
+  mockLogBusinessEvent: vi.fn(),
 }));
 
 vi.mock("@/lib/db", () => ({
@@ -37,7 +27,7 @@ vi.mock("@/lib/db", () => ({
 
 vi.mock("@/lib/logger", () => ({
   logError: vi.fn(),
-  logBusinessEvent: vi.fn(),
+  logBusinessEvent: mockLogBusinessEvent,
 }));
 
 vi.mock("@/lib/email/providers", () => ({
@@ -78,7 +68,7 @@ describe("lib/email/failed-emails", () => {
 
       expect(id).toBe("abc1234");
       expect(mockInsert).toHaveBeenCalled();
-      expect(logBusinessEvent).toHaveBeenCalledWith(
+      expect(mockLogBusinessEvent).toHaveBeenCalledWith(
         expect.objectContaining({ event: "failed_email_saved", success: true }),
       );
     });

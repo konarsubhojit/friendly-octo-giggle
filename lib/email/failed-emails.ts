@@ -136,20 +136,66 @@ export const getFailedEmails = async (
   };
 };
 
+const persistRetrySuccess = async (
+  id: string,
+  attemptNumber: number,
+): Promise<void> => {
+  await drizzleDb
+    .update(failedEmails)
+    .set({
+      status: "sent",
+      sentAt: new Date(),
+      lastAttemptedAt: new Date(),
+      attemptCount: attemptNumber,
+    })
+    .where(eq(failedEmails.id, id));
+  logBusinessEvent({
+    event: "failed_email_retry_success",
+    details: { id, attemptNumber },
+    success: true,
+  });
+};
+
+const persistRetryError = async (
+  id: string,
+  error: unknown,
+  attemptNumber: number,
+  existingHistory: EmailAttemptRecord[] | null,
+): Promise<string> => {
+  const errorMsg = error instanceof Error ? error.message : String(error);
+  const newRecord: EmailAttemptRecord = {
+    attempt: attemptNumber,
+    timestamp: new Date().toISOString(),
+    error: errorMsg,
+    provider: "unknown",
+  };
+  const updatedHistory = [...(existingHistory ?? []), newRecord];
+  await drizzleDb
+    .update(failedEmails)
+    .set({
+      status: "failed",
+      lastError: errorMsg,
+      lastAttemptedAt: new Date(),
+      attemptCount: attemptNumber,
+      errorHistory: updatedHistory,
+    })
+    .where(eq(failedEmails.id, id));
+  logError({
+    error,
+    context: "failed_email_retry",
+    additionalInfo: { id, attemptNumber },
+  });
+  return errorMsg;
+};
+
 export const retryFailedEmail = async (
   id: string,
 ): Promise<FailedEmailRetryResult> => {
   const record = await drizzleDb.query.failedEmails.findFirst({
     where: eq(failedEmails.id, id),
   });
-
-  if (!record) {
-    return { id, success: false, error: "Record not found" };
-  }
-
-  if (record.status === "sent") {
-    return { id, success: true };
-  }
+  if (!record) return { id, success: false, error: "Record not found" };
+  if (record.status === "sent") return { id, success: true };
 
   const msg: EmailMessage = {
     to: record.recipientEmail,
@@ -157,59 +203,19 @@ export const retryFailedEmail = async (
     html: record.bodyHtml,
     text: record.bodyText,
   };
-
-  const attemptNumber = (record.attemptCount ?? 0) + 1;
-  const attemptTimestamp = new Date().toISOString();
+  const attemptNumber = record.attemptCount + 1;
 
   try {
     await sendEmail(msg);
-
-    await drizzleDb
-      .update(failedEmails)
-      .set({
-        status: "sent",
-        sentAt: new Date(),
-        lastAttemptedAt: new Date(),
-        attemptCount: attemptNumber,
-      })
-      .where(eq(failedEmails.id, id));
-
-    logBusinessEvent({
-      event: "failed_email_retry_success",
-      details: { id, attemptNumber },
-      success: true,
-    });
-
+    await persistRetrySuccess(id, attemptNumber);
     return { id, success: true };
   } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : String(error);
-
-    const newAttemptRecord: EmailAttemptRecord = {
-      attempt: attemptNumber,
-      timestamp: attemptTimestamp,
-      error: errorMsg,
-      provider: "unknown",
-    };
-
-    const updatedHistory = [...(record.errorHistory ?? []), newAttemptRecord];
-
-    await drizzleDb
-      .update(failedEmails)
-      .set({
-        status: "failed",
-        lastError: errorMsg,
-        lastAttemptedAt: new Date(),
-        attemptCount: attemptNumber,
-        errorHistory: updatedHistory,
-      })
-      .where(eq(failedEmails.id, id));
-
-    logError({
+    const errorMsg = await persistRetryError(
+      id,
       error,
-      context: "failed_email_retry",
-      additionalInfo: { id, attemptNumber },
-    });
-
+      attemptNumber,
+      record.errorHistory,
+    );
     return { id, success: false, error: errorMsg };
   }
 };

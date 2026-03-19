@@ -48,6 +48,29 @@ const parseStatusList = (statusParam: string): FailedEmailStatus[] => {
     );
 };
 
+const extractQueryParams = (url: URL) => ({
+  status: url.searchParams.get("status") ?? undefined,
+  page: url.searchParams.get("page") ?? undefined,
+  pageSize: url.searchParams.get("pageSize") ?? undefined,
+  sortOrder: url.searchParams.get("sortOrder") ?? undefined,
+});
+
+const fetchEmailRecords = async (filters: {
+  statusList: FailedEmailStatus[];
+  page: number;
+  pageSize: number;
+  sortOrder: "asc" | "desc";
+}) => {
+  const { records, total } = await getFailedEmails(filters);
+  const pendingIds = records
+    .filter((r) => r.status === "pending")
+    .map((r) => r.id);
+  if (pendingIds.length > 0) {
+    await acknowledgePendingEmails(pendingIds);
+  }
+  return { records, total };
+};
+
 export const GET = async (request: NextRequest) => {
   const authCheck = await checkAdminAuth();
   if (!authCheck.authorized) {
@@ -55,14 +78,7 @@ export const GET = async (request: NextRequest) => {
   }
 
   try {
-    const { searchParams } = new URL(request.url);
-    const rawQuery = {
-      status: searchParams.get("status") ?? undefined,
-      page: searchParams.get("page") ?? undefined,
-      pageSize: searchParams.get("pageSize") ?? undefined,
-      sortOrder: searchParams.get("sortOrder") ?? undefined,
-    };
-
+    const rawQuery = extractQueryParams(new URL(request.url));
     const parseResult = FailedEmailQuerySchema.safeParse(rawQuery);
     if (!parseResult.success) {
       return handleValidationError(parseResult.error);
@@ -70,24 +86,16 @@ export const GET = async (request: NextRequest) => {
 
     const { status, page, pageSize, sortOrder } = parseResult.data;
     const statusList = parseStatusList(status);
-
     if (statusList.length === 0) {
       return apiError("Invalid status filter values", 400);
     }
 
-    const { records, total } = await getFailedEmails({
+    const { records, total } = await fetchEmailRecords({
       statusList,
       page,
       pageSize,
       sortOrder,
     });
-
-    const pendingIds = records
-      .filter((r) => r.status === "pending")
-      .map((r) => r.id);
-
-    await acknowledgePendingEmails(pendingIds);
-
     const totalPages = Math.ceil(total / pageSize);
 
     return apiSuccess({

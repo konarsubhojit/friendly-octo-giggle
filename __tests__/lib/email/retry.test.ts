@@ -12,7 +12,7 @@ const {
   mockLogError: vi.fn(),
   mockLogBusinessEvent: vi.fn(),
   mockWaitUntil: vi.fn((p: Promise<unknown>) => {
-    void p;
+    p.catch(() => undefined);
   }),
 }));
 
@@ -111,7 +111,7 @@ describe("lib/email/retry", () => {
     };
 
     it("succeeds on first retry if sendEmail resolves", async () => {
-      mockSendEmail.mockResolvedValue(undefined);
+      mockSendEmail.mockResolvedValue();
 
       const promise = runRetryChain(msg, ctx);
       await vi.runAllTimersAsync();
@@ -159,7 +159,7 @@ describe("lib/email/retry", () => {
     it("succeeds on second retry", async () => {
       mockSendEmail
         .mockRejectedValueOnce(new Error("ETIMEDOUT"))
-        .mockResolvedValue(undefined);
+        .mockResolvedValue();
 
       const promise = runRetryChain(msg, ctx);
       await vi.runAllTimersAsync();
