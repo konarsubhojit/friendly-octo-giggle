@@ -29,7 +29,7 @@
   },
   "homepage": "https://github.com/konarsubhojit/friendly-octo-giggle#readme",
   "dependencies": {
-    "@auth/core": "0.41.1",
+    "@auth/core": "^0.41.0",
     "@auth/drizzle-adapter": "^1.11.1",
     "@neondatabase/serverless": "^0.10.0",
     "@reduxjs/toolkit": "^2.11.2",
@@ -60,8 +60,7 @@
   "overrides": {
     "@esbuild-kit/core-utils": {
       "esbuild": ">=0.25.0"
-    },
-    "@auth/core@0.41.0": "0.41.1"
+    }
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.11.1",
