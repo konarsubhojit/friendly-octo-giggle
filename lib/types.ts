@@ -22,6 +22,7 @@ export interface ProductVariation {
   images: string[];
   priceModifier: number;
   stock: number;
+  deletedAt: string | null;
   createdAt: string;
   updatedAt: string;
 }

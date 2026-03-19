@@ -314,7 +314,11 @@ async function handlePost(request: NextRequest) {
     const productIds = body.items.map((item) => item.productId);
     const productList = (await drizzleDb.query.products.findMany({
       where: and(inArray(products.id, productIds), isNull(products.deletedAt)),
-      with: { variations: true },
+      with: {
+        variations: {
+          where: (v, { isNull }) => isNull(v.deletedAt),
+        },
+      },
     })) as ProductWithVariations[];
 
     if (productList.length !== body.items.length) {

@@ -43,7 +43,7 @@ const ProductImageArea = ({ product }: ProductImageAreaProps) => {
       </div>
     </div>
   );
-}
+};
 
 const ProductCard = ({ product, formatPrice, index }: ProductCardProps) => {
   return (
@@ -66,12 +66,9 @@ const ProductCard = ({ product, formatPrice, index }: ProductCardProps) => {
           <p className="text-[var(--text-muted)] text-sm mb-4 line-clamp-2 leading-relaxed">
             {product.description}
           </p>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center">
             <span className="text-xl font-bold text-[var(--btn-primary)]">
               {formatPrice(product.price)}
-            </span>
-            <span className="text-xs font-semibold text-[var(--text-muted)] bg-[var(--accent-cream)] px-2.5 py-1 rounded-full border border-[var(--border-warm)]">
-              Handmade
             </span>
           </div>
         </div>
@@ -79,7 +76,7 @@ const ProductCard = ({ product, formatPrice, index }: ProductCardProps) => {
       <QuickAddButton product={product} />
     </div>
   );
-}
+};
 
 const ProductGrid = ({ products }: ProductGridProps) => {
   const { formatPrice } = useCurrency();

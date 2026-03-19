@@ -136,7 +136,10 @@ export type Env = z.infer<typeof EnvSchema>;
 // Cart validation schemas
 export const AddToCartSchema = z.object({
   productId: z.string().regex(SHORT_ID_REGEX, "Invalid product ID"),
-  variationId: z.string().regex(SHORT_ID_REGEX, "Invalid variation ID").nullish(),
+  variationId: z
+    .string()
+    .regex(SHORT_ID_REGEX, "Invalid variation ID")
+    .nullish(),
   quantity: z
     .number()
     .int("Quantity must be an integer")
@@ -251,11 +254,42 @@ export const CreateShareSchema = z.object({
 
 export type CreateShareInput = z.infer<typeof CreateShareSchema>;
 
+// ─── Variation Validation Schemas ─────────────────────────
+
+export const CreateVariationSchema = z.object({
+  name: z
+    .string()
+    .min(1, "Name is required")
+    .max(100, "Name must be under 100 characters"),
+  designName: z
+    .string()
+    .min(1, "Design name is required")
+    .max(100, "Design name must be under 100 characters"),
+  priceModifier: z.number({ message: "Price modifier is required" }),
+  stock: z
+    .number({ message: "Stock is required" })
+    .int("Stock must be an integer")
+    .nonnegative("Stock must be non-negative"),
+  image: z.string().regex(URL_REGEX, "Must be a valid URL").nullish(),
+  images: z
+    .array(z.string().regex(URL_REGEX, "Each image must be a valid URL"))
+    .max(10, "Maximum 10 images allowed")
+    .default([]),
+});
+
+export const UpdateVariationSchema = CreateVariationSchema.partial();
+
+export type CreateVariationInput = z.infer<typeof CreateVariationSchema>;
+export type UpdateVariationInput = z.infer<typeof UpdateVariationSchema>;
+
 // Password requirement descriptions for UI display
 export const PASSWORD_REQUIREMENTS = [
-  { label: 'At least 8 characters', test: (p: string) => p.length >= 8 },
-  { label: 'One uppercase letter', test: (p: string) => /[A-Z]/.test(p) },
-  { label: 'One lowercase letter', test: (p: string) => /[a-z]/.test(p) },
-  { label: 'One number', test: (p: string) => /\d/.test(p) },
-  { label: 'One special character', test: (p: string) => /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(p) },
+  { label: "At least 8 characters", test: (p: string) => p.length >= 8 },
+  { label: "One uppercase letter", test: (p: string) => /[A-Z]/.test(p) },
+  { label: "One lowercase letter", test: (p: string) => /[a-z]/.test(p) },
+  { label: "One number", test: (p: string) => /\d/.test(p) },
+  {
+    label: "One special character",
+    test: (p: string) => /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(p),
+  },
 ] as const;

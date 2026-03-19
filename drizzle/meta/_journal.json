@@ -8,6 +8,13 @@
       "when": 1773851673723,
       "tag": "0000_init",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1773934982251,
+      "tag": "0001_chilly_legion",
+      "breakpoints": true
     }
   ]
 }

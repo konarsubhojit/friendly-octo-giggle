@@ -150,6 +150,7 @@ export const productVariations = pgTable(
     images: json("images").$type<string[]>().default([]).notNull(),
     priceModifier: doublePrecision("priceModifier").default(0).notNull(),
     stock: integer("stock").notNull(),
+    deletedAt: timestamp("deletedAt", { mode: "date" }),
     createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
     updatedAt: timestamp("updatedAt", { mode: "date" }).defaultNow().notNull(),
   },

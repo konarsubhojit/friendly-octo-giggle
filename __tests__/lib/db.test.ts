@@ -135,6 +135,7 @@ function makeDbRow(overrides: Record<string, unknown> = {}) {
         image: null,
         priceModifier: 5,
         stock: 3,
+        deletedAt: null,
         createdAt: now,
         updatedAt: now,
       },
@@ -165,6 +166,7 @@ function expectedSerialized(overrides: Record<string, unknown> = {}) {
         images: [],
         priceModifier: 5,
         stock: 3,
+        deletedAt: null,
         createdAt: now.toISOString(),
         updatedAt: now.toISOString(),
       },
@@ -178,7 +180,6 @@ beforeEach(() => {
 });
 
 describe("db.products", () => {
-
   describe("findAll", () => {
     it("returns serialized products without cache", async () => {
       mockFindMany.mockResolvedValue([makeDbRow()]);
