@@ -213,6 +213,7 @@ Comments are **forbidden** except to suppress a lint/tooling rule. No JSDoc, no 
 - **analyze runs after tasks**: It needs tasks.md to exist — never run analyze before tasks
 - **Commit specs before implement**: Always push spec artifacts to the PR before starting code changes
 - **During implementation**: Follow `speckit.implement` phase execution (Setup → Tests → Core → Integration → Polish)
+- **After implementation**: Run `speckit.taskstoissues` if GitHub issue tracking is desired
 - **Checklists**: Use `speckit.checklist` to validate requirements quality at any point
 
 ## UI/UX Testing Requirements
