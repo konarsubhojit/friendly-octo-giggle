@@ -16,6 +16,8 @@ import {
   changePasswordSchema,
   updateProfileSchema,
   CreateShareSchema,
+  CreateVariationSchema,
+  UpdateVariationSchema,
 } from "@/lib/validations";
 
 const validUUID = "550e8400-e29b-41d4-a716-446655440000";
@@ -257,7 +259,10 @@ describe("UpdateOrderStatusSchema", () => {
 
 describe("AddToCartSchema", () => {
   it("accepts valid input", () => {
-    const result = AddToCartSchema.parse({ productId: validShortId, quantity: 1 });
+    const result = AddToCartSchema.parse({
+      productId: validShortId,
+      quantity: 1,
+    });
     expect(result.productId).toBe(validShortId);
   });
 
@@ -549,6 +554,151 @@ describe("CreateShareSchema", () => {
       productId: validShortId,
       variationId: "toolongid",
     });
+    expect(result.success).toBe(false);
+  });
+});
+
+// ─── CreateVariationSchema ───────────────────────────────
+
+describe("CreateVariationSchema", () => {
+  const validVariation = {
+    name: "Red - Large",
+    designName: "Classic Logo",
+    priceModifier: 2.5,
+    stock: 100,
+  };
+
+  it("accepts valid variation with required fields only", () => {
+    const result = CreateVariationSchema.safeParse(validVariation);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.images).toEqual([]);
+    }
+  });
+
+  it("accepts valid variation with optional image fields", () => {
+    const result = CreateVariationSchema.safeParse({
+      ...validVariation,
+      image: "https://example.com/img.jpg",
+      images: ["https://example.com/a.jpg", "https://example.com/b.jpg"],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts negative priceModifier", () => {
+    const result = CreateVariationSchema.safeParse({
+      ...validVariation,
+      priceModifier: -5.0,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts zero stock", () => {
+    const result = CreateVariationSchema.safeParse({
+      ...validVariation,
+      stock: 0,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects missing name", () => {
+    const { name: _name, ...rest } = validVariation;
+    const result = CreateVariationSchema.safeParse(rest);
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects empty name", () => {
+    const result = CreateVariationSchema.safeParse({
+      ...validVariation,
+      name: "",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects name over 100 characters", () => {
+    const result = CreateVariationSchema.safeParse({
+      ...validVariation,
+      name: "x".repeat(101),
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects missing designName", () => {
+    const { designName: _designName, ...rest } = validVariation;
+    const result = CreateVariationSchema.safeParse(rest);
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects missing stock", () => {
+    const { stock: _stock, ...rest } = validVariation;
+    const result = CreateVariationSchema.safeParse(rest);
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects negative stock", () => {
+    const result = CreateVariationSchema.safeParse({
+      ...validVariation,
+      stock: -1,
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects non-integer stock", () => {
+    const result = CreateVariationSchema.safeParse({
+      ...validVariation,
+      stock: 1.5,
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects missing priceModifier", () => {
+    const { priceModifier: _priceModifier, ...rest } = validVariation;
+    const result = CreateVariationSchema.safeParse(rest);
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects invalid image URL", () => {
+    const result = CreateVariationSchema.safeParse({
+      ...validVariation,
+      image: "not-a-url",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects more than 10 additional images", () => {
+    const result = CreateVariationSchema.safeParse({
+      ...validVariation,
+      images: Array(11).fill("https://example.com/img.jpg"),
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+// ─── UpdateVariationSchema ───────────────────────────────
+
+describe("UpdateVariationSchema", () => {
+  it("accepts partial update with just name", () => {
+    const result = UpdateVariationSchema.safeParse({ name: "Blue" });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts partial update with just stock", () => {
+    const result = UpdateVariationSchema.safeParse({ stock: 50 });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts empty object", () => {
+    const result = UpdateVariationSchema.safeParse({});
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects invalid stock in partial update", () => {
+    const result = UpdateVariationSchema.safeParse({ stock: -1 });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects invalid image URL in partial update", () => {
+    const result = UpdateVariationSchema.safeParse({ image: "bad" });
     expect(result.success).toBe(false);
   });
 });

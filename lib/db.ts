@@ -122,7 +122,11 @@ export const db = {
         const query = drizzleDb.query.products.findMany({
           where: isNull(products.deletedAt),
           orderBy: [desc(products.createdAt)],
-          with: { variations: true },
+          with: {
+            variations: {
+              where: (v, { isNull }) => isNull(v.deletedAt),
+            },
+          },
           limit,
           offset,
         });
@@ -138,6 +142,7 @@ export const db = {
             ...v,
             image: v.image ?? null,
             images: v.images ?? [],
+            deletedAt: null,
             createdAt: v.createdAt.toISOString(),
             updatedAt: v.updatedAt.toISOString(),
           })),
@@ -228,7 +233,8 @@ export const db = {
         // Fetch variations only for the products that made the cut
         const productIds = rows.map((r) => r.id);
         const varRows = await drizzleDb.query.productVariations.findMany({
-          where: (pv, { inArray }) => inArray(pv.productId, productIds),
+          where: (pv, { inArray, and, isNull }) =>
+            and(inArray(pv.productId, productIds), isNull(pv.deletedAt)),
         });
 
         // Group variations by productId for O(1) lookup
@@ -248,6 +254,7 @@ export const db = {
             ...v,
             image: v.image ?? null,
             images: v.images ?? [],
+            deletedAt: null,
             createdAt: v.createdAt.toISOString(),
             updatedAt: v.updatedAt.toISOString(),
           })),
@@ -317,7 +324,11 @@ export const db = {
       const fetcher = async () => {
         const row = await drizzleDb.query.products.findFirst({
           where: and(eq(products.id, id), isNull(products.deletedAt)),
-          with: { variations: true },
+          with: {
+            variations: {
+              where: (v, { isNull }) => isNull(v.deletedAt),
+            },
+          },
         });
         if (!row) return null;
         return {
@@ -329,6 +340,7 @@ export const db = {
             ...v,
             image: v.image ?? null,
             images: v.images ?? [],
+            deletedAt: null,
             createdAt: v.createdAt.toISOString(),
             updatedAt: v.updatedAt.toISOString(),
           })),
@@ -420,7 +432,11 @@ export const db = {
         where: eq(wishlists.userId, userId),
         with: {
           product: {
-            with: { variations: true },
+            with: {
+              variations: {
+                where: (v, { isNull }) => isNull(v.deletedAt),
+              },
+            },
           },
         },
       });
@@ -436,6 +452,7 @@ export const db = {
             ...v,
             image: v.image ?? null,
             images: v.images ?? [],
+            deletedAt: null,
             createdAt: v.createdAt.toISOString(),
             updatedAt: v.updatedAt.toISOString(),
           })),

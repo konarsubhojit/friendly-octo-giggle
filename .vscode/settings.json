@@ -1,21 +1,23 @@
 {
-    "sonarlint.connectedMode.project": {
-        "connectionId": "konarsubhojit",
-        "projectKey": "konarsubhojit_friendly-octo-giggle"
-    },
-    "chat.promptFilesRecommendations": {
-        "speckit.constitution": true,
-        "speckit.specify": true,
-        "speckit.plan": true,
-        "speckit.tasks": true,
-        "speckit.implement": true
-    },
-    "chat.tools.terminal.autoApprove": {
-        ".specify/scripts/bash/": true,
-        ".specify/scripts/powershell/": true
-    },
-    "editor.formatOnSave": true,
-    "[typescript]": {
-        "editor.defaultFormatter": "esbenp.prettier-vscode"
-    }
+  "sonarlint.connectedMode.project": {
+    "connectionId": "konarsubhojit",
+    "projectKey": "konarsubhojit_friendly-octo-giggle"
+  },
+  "chat.promptFilesRecommendations": {
+    "speckit.constitution": true,
+    "speckit.specify": true,
+    "speckit.plan": true,
+    "speckit.tasks": true,
+    "speckit.implement": true
+  },
+  "chat.tools.terminal.autoApprove": {
+    ".specify/scripts/bash/": true,
+    ".specify/scripts/powershell/": true
+  },
+  "editor.formatOnSave": true,
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "files.autoSave": "onFocusChange",
+  "chat.agent.maxRequests": 10000
 }

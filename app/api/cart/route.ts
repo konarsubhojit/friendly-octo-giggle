@@ -47,7 +47,11 @@ async function verifyProductStock(
 > {
   const product = await drizzleDb.query.products.findFirst({
     where: and(eq(products.id, body.productId), isNull(products.deletedAt)),
-    with: { variations: true },
+    with: {
+      variations: {
+        where: (v, { isNull }) => isNull(v.deletedAt),
+      },
+    },
   });
 
   if (!product) {
@@ -205,7 +209,13 @@ function fetchCartFromDB(userId?: string, sessionId?: string) {
       with: {
         items: {
           with: {
-            product: { with: { variations: true } },
+            product: {
+              with: {
+                variations: {
+                  where: (v, { isNull }) => isNull(v.deletedAt),
+                },
+              },
+            },
             variation: true,
           },
         },
@@ -218,7 +228,13 @@ function fetchCartFromDB(userId?: string, sessionId?: string) {
       with: {
         items: {
           with: {
-            product: { with: { variations: true } },
+            product: {
+              with: {
+                variations: {
+                  where: (v, { isNull }) => isNull(v.deletedAt),
+                },
+              },
+            },
             variation: true,
           },
         },
@@ -346,7 +362,13 @@ export async function POST(request: NextRequest) {
       with: {
         items: {
           with: {
-            product: { with: { variations: true } },
+            product: {
+              with: {
+                variations: {
+                  where: (v, { isNull }) => isNull(v.deletedAt),
+                },
+              },
+            },
             variation: true,
           },
         },
