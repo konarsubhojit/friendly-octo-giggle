@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { drizzleDb } from "@/lib/db";
 import { orders, orderItems, products, productVariations } from "@/lib/schema";
-import { eq, inArray, sql, desc, and, isNull } from "drizzle-orm";
-import { invalidateCache, getCachedData } from "@/lib/redis";
-import { CACHE_KEYS, CACHE_TTL, invalidateUserOrderCaches } from "@/lib/cache";
+import { eq, inArray, sql, desc, and, isNull, lt, ilike, or, SQL } from "drizzle-orm";
+import { invalidateCache } from "@/lib/redis";
+import { invalidateUserOrderCaches } from "@/lib/cache";
 import { CreateOrderInput, OrderItemInput } from "@/lib/types";
 import { withLogging } from "@/lib/api-middleware";
 import { logBusinessEvent, logError } from "@/lib/logger";
@@ -150,7 +150,9 @@ function validateStockAndCalculateTotal(
   return { valid: true, totalAmount };
 }
 
-async function handleGet(_request: NextRequest) {
+const PAGE_SIZE = 20;
+
+async function handleGet(request: NextRequest) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
@@ -161,53 +163,75 @@ async function handleGet(_request: NextRequest) {
     }
 
     const userId = session.user.id;
-    const orderList = await getCachedData(
-      CACHE_KEYS.ORDERS_BY_USER(userId),
-      CACHE_TTL.USER_ORDERS,
-      async () => {
-        return drizzleDb.query.orders.findMany({
-          where: eq(orders.userId, userId),
-          with: {
-            items: {
-              with: {
-                product: true,
-                variation: true,
-              },
-            },
-          },
-          orderBy: [desc(orders.createdAt)],
-        });
-      },
-      CACHE_TTL.USER_ORDERS_STALE,
+    const { searchParams } = new URL(request.url);
+    const cursor = searchParams.get("cursor");
+    const limitParam = searchParams.get("limit");
+    const search = searchParams.get("search")?.trim() ?? "";
+
+    const limit = Math.min(
+      Math.max(1, parseInt(limitParam ?? String(PAGE_SIZE), 10) || PAGE_SIZE),
+      100,
     );
 
-    return NextResponse.json({
-      orders: orderList.map((order) => ({
-        ...order,
-        createdAt:
-          order.createdAt instanceof Date
-            ? order.createdAt.toISOString()
-            : order.createdAt,
-        updatedAt:
-          order.updatedAt instanceof Date
-            ? order.updatedAt.toISOString()
-            : order.updatedAt,
-        items: order.items.map((item) => ({
-          ...item,
-          product: {
-            ...item.product,
-            createdAt:
-              item.product.createdAt instanceof Date
-                ? item.product.createdAt.toISOString()
-                : item.product.createdAt,
-            updatedAt:
-              item.product.updatedAt instanceof Date
-                ? item.product.updatedAt.toISOString()
-                : item.product.updatedAt,
-          },
-        })),
-      })),
+    const conditions: SQL[] = [eq(orders.userId, userId)];
+
+    if (cursor) {
+      const cursorDate = new Date(cursor);
+      if (!isNaN(cursorDate.getTime())) {
+        conditions.push(lt(orders.createdAt, cursorDate));
+      }
+    }
+
+    if (search) {
+      const pattern = `%${search}%`;
+      conditions.push(
+        or(
+          ilike(orders.id, pattern),
+          ilike(orders.status, pattern),
+        ) as SQL,
+      );
+    }
+
+    const rows = await drizzleDb.query.orders.findMany({
+      where: and(...conditions),
+      with: { items: { with: { product: true, variation: true } } },
+      orderBy: [desc(orders.createdAt)],
+      limit: limit + 1,
     });
+
+    const hasMore = rows.length > limit;
+    const pageItems = hasMore ? rows.slice(0, limit) : rows;
+    const nextCursor = hasMore
+      ? pageItems[pageItems.length - 1].createdAt.toISOString()
+      : null;
+
+    const serialized = pageItems.map((order) => ({
+      ...order,
+      createdAt:
+        order.createdAt instanceof Date
+          ? order.createdAt.toISOString()
+          : order.createdAt,
+      updatedAt:
+        order.updatedAt instanceof Date
+          ? order.updatedAt.toISOString()
+          : order.updatedAt,
+      items: order.items.map((item) => ({
+        ...item,
+        product: {
+          ...item.product,
+          createdAt:
+            item.product.createdAt instanceof Date
+              ? item.product.createdAt.toISOString()
+              : item.product.createdAt,
+          updatedAt:
+            item.product.updatedAt instanceof Date
+              ? item.product.updatedAt.toISOString()
+              : item.product.updatedAt,
+        },
+      })),
+    }));
+
+    return NextResponse.json({ orders: serialized, nextCursor, hasMore });
   } catch (error) {
     logError({
       error,

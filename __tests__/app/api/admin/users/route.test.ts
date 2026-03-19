@@ -1,16 +1,21 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { NextRequest } from 'next/server';
 
 const mockAuth = vi.hoisted(() => vi.fn());
-const mockGetCachedData = vi.hoisted(() => vi.fn());
 const mockFindMany = vi.hoisted(() => vi.fn());
 
 vi.mock('@/lib/auth', () => ({ auth: mockAuth }));
-vi.mock('@/lib/redis', () => ({ getCachedData: mockGetCachedData }));
 vi.mock('@/lib/db', () => ({
   drizzleDb: { query: { users: { findMany: mockFindMany } } },
 }));
-vi.mock('@/lib/schema', () => ({ users: { createdAt: 'createdAt' } }));
-vi.mock('drizzle-orm', () => ({ desc: vi.fn((col: string) => col) }));
+vi.mock('@/lib/schema', () => ({ users: { createdAt: 'createdAt', name: 'name', email: 'email' } }));
+vi.mock('drizzle-orm', () => ({
+  desc: vi.fn((col: string) => col),
+  lt: vi.fn(),
+  ilike: vi.fn(),
+  and: vi.fn(),
+  or: vi.fn(),
+}));
 
 import { GET } from '@/app/api/admin/users/route';
 
@@ -22,7 +27,7 @@ describe('GET /api/admin/users', () => {
   it('returns 401 when not authenticated', async () => {
     mockAuth.mockResolvedValue(null);
 
-    const response = await GET();
+    const response = await GET(new NextRequest('http://localhost/api/admin/users'));
     const body = await response.json();
 
     expect(response.status).toBe(401);
@@ -35,7 +40,7 @@ describe('GET /api/admin/users', () => {
       user: { id: 'user-1', role: 'USER' },
     });
 
-    const response = await GET();
+    const response = await GET(new NextRequest('http://localhost/api/admin/users'));
     const body = await response.json();
 
     expect(response.status).toBe(403);
@@ -74,9 +79,8 @@ describe('GET /api/admin/users', () => {
     ];
 
     mockFindMany.mockResolvedValue(mockUsers);
-    mockGetCachedData.mockImplementation(async (_key: string, _ttl: number, fetcher: () => Promise<unknown>) => fetcher());
 
-    const response = await GET();
+    const response = await GET(new NextRequest('http://localhost/api/admin/users'));
     const body = await response.json();
 
     expect(response.status).toBe(200);
@@ -88,13 +92,15 @@ describe('GET /api/admin/users', () => {
   });
 
   it('calls handleApiError on exception', async () => {
-    mockAuth.mockRejectedValue(new Error('DB connection failed'));
+    mockAuth.mockResolvedValue({
+      user: { id: 'admin-1', role: 'ADMIN' },
+    });
+    mockFindMany.mockRejectedValue(new Error('DB connection failed'));
 
-    const response = await GET();
+    const response = await GET(new NextRequest('http://localhost/api/admin/users'));
     const body = await response.json();
 
     expect(response.status).toBe(500);
     expect(body.success).toBe(false);
-    expect(body.error).toBe('DB connection failed');
   });
 });

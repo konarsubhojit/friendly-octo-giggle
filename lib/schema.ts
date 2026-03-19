@@ -13,7 +13,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import type { AdapterAccountType } from "@auth/core/adapters";
-import { generateShortId } from "./short-id";
+import { generateShortId, generateOrderId } from "./short-id";
 
 // ─── Enums ───────────────────────────────────────────────
 
@@ -176,9 +176,9 @@ export const productVariations = pgTable(
 export const orders = pgTable(
   "Order",
   {
-    id: varchar("id", { length: 7 })
+    id: varchar("id", { length: 10 })
       .primaryKey()
-      .$defaultFn(() => generateShortId()),
+      .$defaultFn(() => generateOrderId()),
     userId: text("userId").references(() => users.id),
     customerName: text("customerName").notNull(),
     customerEmail: text("customerEmail").notNull(),
@@ -199,7 +199,7 @@ export const orderItems = pgTable(
     id: varchar("id", { length: 7 })
       .primaryKey()
       .$defaultFn(() => generateShortId()),
-    orderId: varchar("orderId", { length: 7 })
+    orderId: varchar("orderId", { length: 10 })
       .notNull()
       .references(() => orders.id, { onDelete: "cascade" }),
     productId: varchar("productId", { length: 7 })
@@ -301,7 +301,7 @@ export const reviews = pgTable(
     productId: varchar("productId", { length: 7 })
       .notNull()
       .references(() => products.id, { onDelete: "cascade" }),
-    orderId: varchar("orderId", { length: 7 }).references(() => orders.id, {
+    orderId: varchar("orderId", { length: 10 }).references(() => orders.id, {
       onDelete: "set null",
     }),
     userId: text("userId").references(() => users.id, { onDelete: "set null" }),

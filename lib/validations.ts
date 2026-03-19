@@ -1,16 +1,11 @@
 import { z } from "zod";
 
-// UUID regex pattern for validation (accepts any UUID format, not just specific versions)
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-// Short ID regex pattern for Base62 7-character IDs used by products, variations, carts, orders
 const SHORT_ID_REGEX = /^[0-9A-Za-z]{7}$/;
-// URL regex pattern for validation
+const ORDER_ID_REGEX = /^ORD[0-9A-Za-z]{7}$/;
 const URL_REGEX = /^https?:\/\/.+/;
-// ISO datetime regex pattern
 const ISO_DATETIME_REGEX = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z$/;
-// Email regex pattern - ReDoS-safe using atomic groups via possessive quantifiers simulation
-// Uses a simple, linear-time pattern that validates common email formats
 const EMAIL_REGEX =
   /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
 
@@ -227,7 +222,7 @@ export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
 
 export const CreateReviewSchema = z.object({
   productId: z.string().regex(SHORT_ID_REGEX, "Invalid product ID"),
-  orderId: z.string().regex(SHORT_ID_REGEX, "Invalid order ID").nullish(),
+  orderId: z.string().regex(ORDER_ID_REGEX, "Invalid order ID").nullish(),
   rating: z
     .number()
     .int("Rating must be a whole number")
