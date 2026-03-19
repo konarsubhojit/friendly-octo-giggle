@@ -26,7 +26,7 @@ This agent combines two capabilities:
 For any feature request that involves multiple files, requires design decisions, or impacts architecture:
 
 ```
-specify → clarify → plan → tasks → analyze → implement
+specify → clarify → plan → tasks → analyze → implement → taskstoissues
 ```
 
 **This order is mandatory and non-negotiable.** Each stage produces artifacts the next stage consumes. Run the full chain automatically — do NOT rely on manual handoff triggers and do NOT skip stages unless the user explicitly requests it.
