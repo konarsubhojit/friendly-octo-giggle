@@ -180,7 +180,6 @@ beforeEach(() => {
 });
 
 describe("db.products", () => {
-
   describe("findAll", () => {
     it("returns serialized products without cache", async () => {
       mockFindMany.mockResolvedValue([makeDbRow()]);
