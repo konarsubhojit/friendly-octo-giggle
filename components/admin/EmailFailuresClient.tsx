@@ -37,7 +37,8 @@ const formatDate = (date: Date | null): string => {
 };
 
 const STATUS_CLASSES: Record<string, string> = {
-  pending: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
+  pending:
+    "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
   failed: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
   sent: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
 };
@@ -51,8 +52,14 @@ const StatusBadge = ({ status }: { readonly status: string }) => (
 );
 
 const TABLE_HEADERS = [
-  "Recipient", "Type", "Order ID", "Attempts",
-  "Status", "Last Error", "Created", "Action",
+  "Recipient",
+  "Type",
+  "Order ID",
+  "Attempts",
+  "Status",
+  "Last Error",
+  "Created",
+  "Action",
 ];
 
 interface EmailFailuresTableProps {
@@ -83,14 +90,34 @@ const EmailFailuresTable = ({
         </thead>
         <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
           {records.map((record) => (
-            <tr key={record.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-              <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">{record.recipientEmail}</td>
-              <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{record.emailType}</td>
-              <td className="px-4 py-3 text-sm font-mono text-gray-600 dark:text-gray-300">{record.referenceId}</td>
-              <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{record.attemptCount}</td>
-              <td className="px-4 py-3"><StatusBadge status={record.status} /></td>
-              <td className="px-4 py-3 text-xs text-red-600 dark:text-red-400 max-w-xs truncate" title={record.lastError ?? ""}>{record.lastError ?? "—"}</td>
-              <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">{formatDate(record.createdAt)}</td>
+            <tr
+              key={record.id}
+              className="hover:bg-gray-50 dark:hover:bg-gray-700"
+            >
+              <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
+                {record.recipientEmail}
+              </td>
+              <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
+                {record.emailType}
+              </td>
+              <td className="px-4 py-3 text-sm font-mono text-gray-600 dark:text-gray-300">
+                {record.referenceId}
+              </td>
+              <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
+                {record.attemptCount}
+              </td>
+              <td className="px-4 py-3">
+                <StatusBadge status={record.status} />
+              </td>
+              <td
+                className="px-4 py-3 text-xs text-red-600 dark:text-red-400 max-w-xs truncate"
+                title={record.lastError ?? ""}
+              >
+                {record.lastError ?? "—"}
+              </td>
+              <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                {formatDate(record.createdAt)}
+              </td>
               <td className="px-4 py-3">
                 {record.status !== "sent" && (
                   <button
@@ -164,7 +191,9 @@ export const EmailFailuresClient = ({
 
   return (
     <div>
-      {error && <AlertBanner message={error} variant="error" className="mb-4" />}
+      {error && (
+        <AlertBanner message={error} variant="error" className="mb-4" />
+      )}
       {records.length === 0 ? (
         <EmptyState
           title="No failed emails"

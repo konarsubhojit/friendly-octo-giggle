@@ -1,16 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const {
-  mockInsert,
-  mockUpdate,
-  mockSelect,
-  mockLogBusinessEvent,
-} = vi.hoisted(() => ({
-  mockInsert: vi.fn(),
-  mockUpdate: vi.fn(),
-  mockSelect: vi.fn(),
-  mockLogBusinessEvent: vi.fn(),
-}));
+const { mockInsert, mockUpdate, mockSelect, mockLogBusinessEvent } = vi.hoisted(
+  () => ({
+    mockInsert: vi.fn(),
+    mockUpdate: vi.fn(),
+    mockSelect: vi.fn(),
+    mockLogBusinessEvent: vi.fn(),
+  }),
+);
 
 vi.mock("@/lib/db", () => ({
   drizzleDb: {

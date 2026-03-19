@@ -33,10 +33,7 @@ vi.mock("@/lib/email", () => ({
 import { PATCH, GET } from "@/app/api/admin/orders/[id]/route";
 import { auth } from "@/lib/auth";
 import { drizzleDb } from "@/lib/db";
-import {
-  cacheAdminOrderById,
-  invalidateAdminOrderCaches,
-} from "@/lib/cache";
+import { cacheAdminOrderById, invalidateAdminOrderCaches } from "@/lib/cache";
 
 const mockAuth = vi.mocked(auth);
 const mockFindFirst = vi.mocked(drizzleDb.query.orders.findFirst);
