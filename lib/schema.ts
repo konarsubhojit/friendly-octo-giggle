@@ -18,6 +18,17 @@ import { generateShortId } from "./short-id";
 // ─── Enums ───────────────────────────────────────────────
 
 export const userRoleEnum = pgEnum("UserRole", ["CUSTOMER", "ADMIN"]);
+
+export const emailTypeEnum = pgEnum("EmailType", [
+  "order_confirmation",
+  "order_status_update",
+]);
+
+export const failedEmailStatusEnum = pgEnum("FailedEmailStatus", [
+  "pending",
+  "failed",
+  "sent",
+]);
 export const orderStatusEnum = pgEnum("OrderStatus", [
   "PENDING",
   "PROCESSING",
@@ -440,3 +451,45 @@ export const productSharesRelations = relations(productShares, ({ one }) => ({
     references: [productVariations.id],
   }),
 }));
+
+// ─── Failed Email Types ──────────────────────────────────
+
+export interface EmailAttemptRecord {
+  attempt: number;
+  timestamp: string;
+  error: string;
+  provider: string;
+}
+
+// ─── Failed Email Table ──────────────────────────────────
+
+export const failedEmails = pgTable(
+  "FailedEmail",
+  {
+    id: varchar("id", { length: 7 })
+      .primaryKey()
+      .$defaultFn(() => generateShortId()),
+    recipientEmail: text("recipientEmail").notNull(),
+    subject: text("subject").notNull(),
+    bodyHtml: text("bodyHtml").notNull(),
+    bodyText: text("bodyText").notNull(),
+    emailType: emailTypeEnum("emailType").notNull(),
+    referenceId: varchar("referenceId", { length: 7 }).notNull(),
+    attemptCount: integer("attemptCount").notNull().default(0),
+    lastError: text("lastError"),
+    isRetriable: boolean("isRetriable").notNull().default(true),
+    status: failedEmailStatusEnum("status").notNull().default("pending"),
+    errorHistory: json("errorHistory")
+      .$type<EmailAttemptRecord[]>()
+      .notNull()
+      .default([]),
+    createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
+    lastAttemptedAt: timestamp("lastAttemptedAt", { mode: "date" }),
+    sentAt: timestamp("sentAt", { mode: "date" }),
+  },
+  (t) => [
+    index("FailedEmail_status_idx").on(t.status),
+    index("FailedEmail_referenceId_idx").on(t.referenceId),
+    index("FailedEmail_createdAt_idx").on(t.createdAt),
+  ],
+);

@@ -139,7 +139,7 @@ export function orderConfirmationTemplate(data: OrderConfirmationData) {
   return {
     subject: `Order Confirmed — #${data.orderId.toUpperCase()} 🌸`,
     html: emailWrapper(bodyHtml),
-    text: `Hi ${data.customerName},\n\nYour order #${data.orderId.toUpperCase()} has been confirmed!\nTotal: ${data.totalAmount}\n\nShipping to:\n${data.shippingAddress}\n\nThank you for shopping with The Kiyon Store!`,
+    text: `Hi ${data.customerName},\n\nYour order #${data.orderId.toUpperCase()} has been confirmed!\nTotal: ${data.totalAmount}\n\nItems:\n${data.items.map((item) => `- ${item.name} x${item.quantity}: ${item.price}${item.variation ? ` (${item.variation})` : ""}`).join("\n")}\n\nShipping to:\n${data.shippingAddress}\n\nThank you for shopping with The Kiyon Store!`,
   };
 }
 

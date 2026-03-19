@@ -87,21 +87,18 @@ export async function PATCH(
 
     await invalidateAdminOrderCaches(id, order.userId);
 
-    // Send status update email for key status transitions (fire-and-forget)
+    // Send status update email for key status transitions (fire-and-forget with retry).
     const notifyStatuses = ["PROCESSING", "SHIPPED", "DELIVERED", "CANCELLED"];
     if (notifyStatuses.includes(parseResult.data.status)) {
-      setTimeout(() => {
-        void sendOrderStatusUpdateEmail({
-          to: order.customerEmail,
-          customerName: order.customerName,
-          orderId: order.id,
-          status: parseResult.data.status,
-          trackingNumber: parseResult.data.trackingNumber ?? order.trackingNumber,
-          shippingProvider: parseResult.data.shippingProvider ?? order.shippingProvider,
-        }).catch(() => {
-          // Email errors are non-fatal
-        });
-      }, 0);
+      sendOrderStatusUpdateEmail({
+        to: order.customerEmail,
+        customerName: order.customerName,
+        orderId: order.id,
+        status: parseResult.data.status,
+        trackingNumber: parseResult.data.trackingNumber ?? order.trackingNumber,
+        shippingProvider:
+          parseResult.data.shippingProvider ?? order.shippingProvider,
+      });
     }
 
     return apiSuccess({ order: serializeOrder(order) });

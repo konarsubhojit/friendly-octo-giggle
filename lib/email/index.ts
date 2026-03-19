@@ -1,8 +1,3 @@
-/**
- * Email service — public API.
- * SRP: Composes templates with providers. Only orchestration logic here.
- * DIP: Depends on abstractions (templates, sendEmail) not concrete providers.
- */
 export {
   type OrderEmailItem,
   type OrderConfirmationData,
@@ -12,7 +7,9 @@ export {
 
 export { sendEmail, type EmailMessage } from "./providers";
 
-import { sendEmail } from "./providers";
+export { sendWithRetry } from "./retry";
+
+import { sendWithRetry } from "./retry";
 import {
   orderConfirmationTemplate,
   orderStatusUpdateTemplate,
@@ -20,16 +17,22 @@ import {
   type OrderStatusUpdateData,
 } from "./templates";
 
-export const sendOrderConfirmationEmail = async (
+export const sendOrderConfirmationEmail = (
   data: OrderConfirmationData,
-): Promise<void> => {
+): void => {
   const template = orderConfirmationTemplate(data);
-  await sendEmail({ to: data.to, ...template });
+  sendWithRetry(
+    { to: data.to, ...template },
+    { emailType: "order_confirmation", referenceId: data.orderId },
+  );
 };
 
-export const sendOrderStatusUpdateEmail = async (
+export const sendOrderStatusUpdateEmail = (
   data: OrderStatusUpdateData,
-): Promise<void> => {
+): void => {
   const template = orderStatusUpdateTemplate(data);
-  await sendEmail({ to: data.to, ...template });
+  sendWithRetry(
+    { to: data.to, ...template },
+    { emailType: "order_status_update", referenceId: data.orderId },
+  );
 };
