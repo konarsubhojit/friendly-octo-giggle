@@ -1,6 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { mockSendWithRetry, mockSend, mockSetApiKey, mockCreateTransport, mockSmtpSendMail } = vi.hoisted(() => ({
+const {
+  mockSendWithRetry,
+  mockSend,
+  mockSetApiKey,
+  mockCreateTransport,
+  mockSmtpSendMail,
+} = vi.hoisted(() => ({
   mockSendWithRetry: vi.fn(),
   mockSend: vi.fn(),
   mockSetApiKey: vi.fn(),
@@ -85,11 +91,21 @@ describe("lib/email", () => {
         customerName: "Jane",
         orderId: "abc1234",
         totalAmount: "$42.00",
-        items: [{ name: "SuperWidget", quantity: 2, price: "$21.00", variation: "Red" }],
+        items: [
+          {
+            name: "SuperWidget",
+            quantity: 2,
+            price: "$21.00",
+            variation: "Red",
+          },
+        ],
         shippingAddress: "123 Main St",
       });
 
-      const [msg] = mockSendWithRetry.mock.calls[0] as [{ html: string; text: string }, unknown];
+      const [msg] = mockSendWithRetry.mock.calls[0] as [
+        { html: string; text: string },
+        unknown,
+      ];
       expect(msg.html).toContain("SuperWidget");
       expect(msg.text).toContain("SuperWidget");
     });
@@ -107,7 +123,10 @@ describe("lib/email", () => {
         shippingAddress: "456 Elm Avenue",
       });
 
-      const [msg] = mockSendWithRetry.mock.calls[0] as [{ html: string; text: string }, unknown];
+      const [msg] = mockSendWithRetry.mock.calls[0] as [
+        { html: string; text: string },
+        unknown,
+      ];
       expect(msg.html).toContain("456 Elm Avenue");
     });
 
@@ -142,7 +161,10 @@ describe("lib/email", () => {
         shippingProvider: "FedEx",
       });
 
-      const [msg] = mockSendWithRetry.mock.calls[0] as [{ html: string; text: string }, unknown];
+      const [msg] = mockSendWithRetry.mock.calls[0] as [
+        { html: string; text: string },
+        unknown,
+      ];
       expect(msg.html).toContain("TRK123456");
     });
 
@@ -158,7 +180,9 @@ describe("lib/email", () => {
       });
 
       expect(mockSendWithRetry).toHaveBeenCalledWith(
-        expect.objectContaining({ subject: expect.stringContaining("Delivered") }),
+        expect.objectContaining({
+          subject: expect.stringContaining("Delivered"),
+        }),
         expect.objectContaining({
           emailType: "order_status_update",
           referenceId: "abc1234",

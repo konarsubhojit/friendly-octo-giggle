@@ -36,4 +36,3 @@ export const sendOrderStatusUpdateEmail = (
     { emailType: "order_status_update", referenceId: data.orderId },
   );
 };
-

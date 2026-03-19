@@ -45,14 +45,18 @@ export const isNonRetriableError = (error: unknown): boolean => {
   }
 
   const message =
-    error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
+    error instanceof Error
+      ? error.message.toLowerCase()
+      : String(error).toLowerCase();
 
   return NON_RETRIABLE_STRINGS.some((s) => message.includes(s));
 };
 
 const detectProvider = (error: unknown): string => {
   const msg =
-    error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
+    error instanceof Error
+      ? error.message.toLowerCase()
+      : String(error).toLowerCase();
   if (msg.includes("sendgrid") || msg.includes("sg.")) return "sendgrid";
   if (msg.includes("smtp") || msg.includes("google")) return "google_smtp";
   return "unknown";
@@ -87,8 +91,7 @@ export const runRetryChain = async (
       break;
     } catch (error) {
       lastError = error;
-      const errorMsg =
-        error instanceof Error ? error.message : String(error);
+      const errorMsg = error instanceof Error ? error.message : String(error);
       const provider = detectProvider(error);
 
       history.push({

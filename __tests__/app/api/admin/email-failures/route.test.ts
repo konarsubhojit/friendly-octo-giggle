@@ -1,7 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 
-const { mockAuth, mockGetFailedEmails, mockAcknowledgePendingEmails, mockBatchRetry } = vi.hoisted(() => ({
+const {
+  mockAuth,
+  mockGetFailedEmails,
+  mockAcknowledgePendingEmails,
+  mockBatchRetry,
+} = vi.hoisted(() => ({
   mockAuth: vi.fn(),
   mockGetFailedEmails: vi.fn(),
   mockAcknowledgePendingEmails: vi.fn().mockResolvedValue(undefined),
@@ -14,24 +19,38 @@ vi.mock("@/lib/email/failed-emails", () => ({
   acknowledgePendingEmails: mockAcknowledgePendingEmails,
   batchRetryFailedEmails: mockBatchRetry,
 }));
-vi.mock("@/lib/logger", () => ({ logError: vi.fn(), logBusinessEvent: vi.fn() }));
+vi.mock("@/lib/logger", () => ({
+  logError: vi.fn(),
+  logBusinessEvent: vi.fn(),
+}));
 
-const adminSession = { user: { id: "admin1", role: "ADMIN", name: "Admin", email: "admin@test.com" } };
+const adminSession = {
+  user: { id: "admin1", role: "ADMIN", name: "Admin", email: "admin@test.com" },
+};
 const customerSession = { user: { id: "cust1", role: "CUSTOMER" } };
 
 const makeRequest = (method: string, url: string, body?: unknown) =>
   new NextRequest(url, {
     method,
-    ...(body ? { body: JSON.stringify(body), headers: { "Content-Type": "application/json" } } : {}),
+    ...(body
+      ? {
+          body: JSON.stringify(body),
+          headers: { "Content-Type": "application/json" },
+        }
+      : {}),
   });
 
 describe("GET /api/admin/email-failures", () => {
-  beforeEach(() => { vi.clearAllMocks(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   it("returns 401 when not authenticated", async () => {
     mockAuth.mockResolvedValue(null);
     const { GET } = await import("@/app/api/admin/email-failures/route");
-    const res = await GET(makeRequest("GET", "http://localhost/api/admin/email-failures"));
+    const res = await GET(
+      makeRequest("GET", "http://localhost/api/admin/email-failures"),
+    );
     expect(res.status).toBe(401);
   });
 
@@ -39,16 +58,26 @@ describe("GET /api/admin/email-failures", () => {
     mockAuth.mockResolvedValue(customerSession);
     vi.resetModules();
     const { GET } = await import("@/app/api/admin/email-failures/route");
-    const res = await GET(makeRequest("GET", "http://localhost/api/admin/email-failures"));
+    const res = await GET(
+      makeRequest("GET", "http://localhost/api/admin/email-failures"),
+    );
     expect(res.status).toBe(403);
   });
 
   it("returns paginated records for admin", async () => {
     mockAuth.mockResolvedValue(adminSession);
-    mockGetFailedEmails.mockResolvedValue({ records: [{ id: "abc1234", status: "failed" }], total: 1 });
+    mockGetFailedEmails.mockResolvedValue({
+      records: [{ id: "abc1234", status: "failed" }],
+      total: 1,
+    });
     vi.resetModules();
     const { GET } = await import("@/app/api/admin/email-failures/route");
-    const res = await GET(makeRequest("GET", "http://localhost/api/admin/email-failures?page=1&pageSize=25"));
+    const res = await GET(
+      makeRequest(
+        "GET",
+        "http://localhost/api/admin/email-failures?page=1&pageSize=25",
+      ),
+    );
     const data = await res.json();
     expect(res.status).toBe(200);
     expect(data.success).toBe(true);
@@ -60,19 +89,27 @@ describe("GET /api/admin/email-failures", () => {
     mockAuth.mockResolvedValue(adminSession);
     vi.resetModules();
     const { GET } = await import("@/app/api/admin/email-failures/route");
-    const res = await GET(makeRequest("GET", "http://localhost/api/admin/email-failures?page=0"));
+    const res = await GET(
+      makeRequest("GET", "http://localhost/api/admin/email-failures?page=0"),
+    );
     expect(res.status).toBe(400);
   });
 });
 
 describe("POST /api/admin/email-failures", () => {
-  beforeEach(() => { vi.clearAllMocks(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   it("returns 401 when not authenticated", async () => {
     mockAuth.mockResolvedValue(null);
     vi.resetModules();
     const { POST } = await import("@/app/api/admin/email-failures/route");
-    const res = await POST(makeRequest("POST", "http://localhost/api/admin/email-failures", { ids: ["abc1234"] }));
+    const res = await POST(
+      makeRequest("POST", "http://localhost/api/admin/email-failures", {
+        ids: ["abc1234"],
+      }),
+    );
     expect(res.status).toBe(401);
   });
 
@@ -80,7 +117,11 @@ describe("POST /api/admin/email-failures", () => {
     mockAuth.mockResolvedValue(customerSession);
     vi.resetModules();
     const { POST } = await import("@/app/api/admin/email-failures/route");
-    const res = await POST(makeRequest("POST", "http://localhost/api/admin/email-failures", { ids: ["abc1234"] }));
+    const res = await POST(
+      makeRequest("POST", "http://localhost/api/admin/email-failures", {
+        ids: ["abc1234"],
+      }),
+    );
     expect(res.status).toBe(403);
   });
 
@@ -89,7 +130,11 @@ describe("POST /api/admin/email-failures", () => {
     mockBatchRetry.mockResolvedValue([{ id: "abc1234", success: true }]);
     vi.resetModules();
     const { POST } = await import("@/app/api/admin/email-failures/route");
-    const res = await POST(makeRequest("POST", "http://localhost/api/admin/email-failures", { ids: ["abc1234"] }));
+    const res = await POST(
+      makeRequest("POST", "http://localhost/api/admin/email-failures", {
+        ids: ["abc1234"],
+      }),
+    );
     const data = await res.json();
     expect(res.status).toBe(200);
     expect(data.data.results[0].success).toBe(true);
@@ -99,7 +144,11 @@ describe("POST /api/admin/email-failures", () => {
     mockAuth.mockResolvedValue(adminSession);
     vi.resetModules();
     const { POST } = await import("@/app/api/admin/email-failures/route");
-    const res = await POST(makeRequest("POST", "http://localhost/api/admin/email-failures", { ids: [] }));
+    const res = await POST(
+      makeRequest("POST", "http://localhost/api/admin/email-failures", {
+        ids: [],
+      }),
+    );
     expect(res.status).toBe(400);
   });
 
@@ -107,7 +156,11 @@ describe("POST /api/admin/email-failures", () => {
     mockAuth.mockResolvedValue(adminSession);
     vi.resetModules();
     const { POST } = await import("@/app/api/admin/email-failures/route");
-    const res = await POST(makeRequest("POST", "http://localhost/api/admin/email-failures", { ids: ["not-valid-id!!!"] }));
+    const res = await POST(
+      makeRequest("POST", "http://localhost/api/admin/email-failures", {
+        ids: ["not-valid-id!!!"],
+      }),
+    );
     expect(res.status).toBe(400);
   });
 });

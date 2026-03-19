@@ -96,7 +96,8 @@ export async function PATCH(
         orderId: order.id,
         status: parseResult.data.status,
         trackingNumber: parseResult.data.trackingNumber ?? order.trackingNumber,
-        shippingProvider: parseResult.data.shippingProvider ?? order.shippingProvider,
+        shippingProvider:
+          parseResult.data.shippingProvider ?? order.shippingProvider,
       });
     }
 

@@ -182,8 +182,7 @@ export const retryFailedEmail = async (
 
     return { id, success: true };
   } catch (error) {
-    const errorMsg =
-      error instanceof Error ? error.message : String(error);
+    const errorMsg = error instanceof Error ? error.message : String(error);
 
     const newAttemptRecord: EmailAttemptRecord = {
       attempt: attemptNumber,

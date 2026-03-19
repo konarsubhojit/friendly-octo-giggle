@@ -1,23 +1,39 @@
 import { NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
-import { apiSuccess, apiError, handleApiError, handleValidationError } from "@/lib/api-utils";
+import {
+  apiSuccess,
+  apiError,
+  handleApiError,
+  handleValidationError,
+} from "@/lib/api-utils";
 import {
   getFailedEmails,
   acknowledgePendingEmails,
   batchRetryFailedEmails,
 } from "@/lib/email/failed-emails";
 import type { FailedEmailStatus } from "@/lib/email/failed-emails";
-import { FailedEmailQuerySchema, ManualRetryBodySchema } from "@/lib/validations";
+import {
+  FailedEmailQuerySchema,
+  ManualRetryBodySchema,
+} from "@/lib/validations";
 
 export const dynamic = "force-dynamic";
 
 const checkAdminAuth = async () => {
   const session = await auth();
   if (!session?.user) {
-    return { authorized: false as const, error: "Not authenticated", status: 401 as const };
+    return {
+      authorized: false as const,
+      error: "Not authenticated",
+      status: 401 as const,
+    };
   }
   if (session.user.role !== "ADMIN") {
-    return { authorized: false as const, error: "Not authorized - Admin access required", status: 403 as const };
+    return {
+      authorized: false as const,
+      error: "Not authorized - Admin access required",
+      status: 403 as const,
+    };
   }
   return { authorized: true as const };
 };
@@ -27,7 +43,9 @@ const parseStatusList = (statusParam: string): FailedEmailStatus[] => {
   return statusParam
     .split(",")
     .map((s) => s.trim())
-    .filter((s): s is FailedEmailStatus => valid.includes(s as FailedEmailStatus));
+    .filter((s): s is FailedEmailStatus =>
+      valid.includes(s as FailedEmailStatus),
+    );
 };
 
 export const GET = async (request: NextRequest) => {

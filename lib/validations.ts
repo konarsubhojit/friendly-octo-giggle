@@ -303,11 +303,7 @@ export const FailedEmailQuerySchema = z.object({
 
 export const ManualRetryBodySchema = z.object({
   ids: z
-    .array(
-      z
-        .string()
-        .regex(/^[0-9A-Za-z]{7}$/, "Invalid short ID format"),
-    )
+    .array(z.string().regex(/^[0-9A-Za-z]{7}$/, "Invalid short ID format"))
     .min(1, "At least one ID required")
     .max(50, "Maximum 50 IDs per request"),
 });

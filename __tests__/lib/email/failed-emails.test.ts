@@ -1,6 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { mockInsert, mockUpdate, mockSelect, _mockWhere, _mockReturning, _mockValues, _mockLimit, _mockOffset, _mockOrderBy } = vi.hoisted(() => ({
+const {
+  mockInsert,
+  mockUpdate,
+  mockSelect,
+  _mockWhere,
+  _mockReturning,
+  _mockValues,
+  _mockLimit,
+  _mockOffset,
+  _mockOrderBy,
+} = vi.hoisted(() => ({
   mockInsert: vi.fn(),
   mockUpdate: vi.fn(),
   mockSelect: vi.fn(),
@@ -34,9 +44,11 @@ vi.mock("@/lib/email/providers", () => ({
   sendEmail: vi.fn(),
 }));
 
-import { saveFailedEmail, markFailedEmailSent, countPendingFailedEmails } from "@/lib/email/failed-emails";
-
-
+import {
+  saveFailedEmail,
+  markFailedEmailSent,
+  countPendingFailedEmails,
+} from "@/lib/email/failed-emails";
 
 describe("lib/email/failed-emails", () => {
   beforeEach(() => {
@@ -45,7 +57,10 @@ describe("lib/email/failed-emails", () => {
 
   describe("saveFailedEmail", () => {
     it("inserts a record and returns the id", async () => {
-      const chainMock = { values: vi.fn().mockReturnThis(), returning: vi.fn().mockResolvedValue([{ id: "abc1234" }]) };
+      const chainMock = {
+        values: vi.fn().mockReturnThis(),
+        returning: vi.fn().mockResolvedValue([{ id: "abc1234" }]),
+      };
       mockInsert.mockReturnValue(chainMock);
 
       const id = await saveFailedEmail({
@@ -71,7 +86,10 @@ describe("lib/email/failed-emails", () => {
 
   describe("markFailedEmailSent", () => {
     it("updates status to sent", async () => {
-      const chainMock = { set: vi.fn().mockReturnThis(), where: vi.fn().mockResolvedValue([]) };
+      const chainMock = {
+        set: vi.fn().mockReturnThis(),
+        where: vi.fn().mockResolvedValue([]),
+      };
       mockUpdate.mockReturnValue(chainMock);
 
       await markFailedEmailSent("abc1234");
