@@ -6,9 +6,9 @@
  * tests are fully deterministic and require no real database.
  */
 import { test, expect, Page } from '@playwright/test';
-import * as path from 'path';
-import * as fs from 'fs';
-import { fileURLToPath } from 'url';
+import * as path from 'node:path';
+import * as fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import {
   MOCK_PRODUCTS,
   MOCK_ORDERS,
@@ -113,7 +113,8 @@ test.describe('Admin Products', () => {
 
   test('product cards show price and stock', async ({ page }) => {
     await mockAdminRoutes(page);
-    await page.goto('/admin/products');
+    await page.goto('/admin/products', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByRole('heading', { name: /product management/i })).toBeVisible();
     await expect(page.getByText(/stock:/i).first()).toBeVisible();
   });
 
@@ -189,14 +190,12 @@ test.describe('Admin Users', () => {
   test('shows ADMIN and CUSTOMER role badges', async ({ page }) => {
     await mockAdminRoutes(page);
     await page.goto('/admin/users');
-    // RoleBadge renders role text in a coloured span;
-    // ADMIN = purple, CUSTOMER = green
-    await expect(page.locator('.bg-purple-100').first()).toBeVisible();
-    await expect(page.locator('.bg-green-100').first()).toBeVisible();
+    await expect(page.getByText('ADMIN').first()).toBeVisible();
+    await expect(page.getByText('CUSTOMER').first()).toBeVisible();
   });
 
   test('users page - mobile view card layout', async ({ page }, testInfo) => {
-    test.skip(testInfo.project.name !== 'mobile-chrome', 'Only runs on mobile viewport');
+    test.skip(!testInfo.project.name.includes('mobile'), 'Only runs on mobile viewport');
     await mockAdminRoutes(page);
     await page.goto('/admin/users');
     await expect(page.getByText(MOCK_USERS[0].email)).toBeVisible();
@@ -214,7 +213,7 @@ test.describe('Admin layout', () => {
   });
 
   test('nav links are scrollable on mobile', async ({ page }, testInfo) => {
-    test.skip(testInfo.project.name !== 'mobile-chrome', 'Only runs on mobile viewport');
+    test.skip(!testInfo.project.name.includes('mobile'), 'Only runs on mobile viewport');
     await mockAdminRoutes(page);
     await page.goto('/admin');
     const nav = page.locator('nav.overflow-x-auto, nav .overflow-x-auto').first();

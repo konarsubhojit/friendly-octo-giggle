@@ -66,12 +66,9 @@ const ProductCard = ({ product, formatPrice, index }: ProductCardProps) => {
           <p className="text-[var(--text-muted)] text-sm mb-4 line-clamp-2 leading-relaxed">
             {product.description}
           </p>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center">
             <span className="text-xl font-bold text-[var(--btn-primary)]">
               {formatPrice(product.price)}
-            </span>
-            <span className="text-xs font-semibold text-[var(--text-muted)] bg-[var(--accent-cream)] px-2.5 py-1 rounded-full border border-[var(--border-warm)]">
-              Handmade
             </span>
           </div>
         </div>
@@ -167,11 +164,10 @@ const ProductGrid = ({ products }: ProductGridProps) => {
             <button
               key={cat}
               onClick={() => handleCategoryChange(cat)}
-              className={`px-4 py-1.5 rounded-full text-sm font-semibold border transition-all duration-200 ${
-                selectedCategory === cat
+              className={`px-4 py-1.5 rounded-full text-sm font-semibold border transition-all duration-200 ${selectedCategory === cat
                   ? "bg-gradient-to-r from-[var(--accent-rose)] to-[var(--accent-pink)] text-white border-[var(--accent-rose)] shadow-warm"
                   : "bg-[var(--surface)] text-[var(--text-secondary)] border-[var(--border-warm)] hover:border-[var(--accent-rose)] hover:text-[var(--accent-rose)] hover:bg-[var(--accent-blush)]"
-              }`}
+                }`}
               aria-pressed={selectedCategory === cat}
             >
               {cat}
