@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import type { FormEvent, Dispatch, SetStateAction } from 'react';
+import type { FormEvent, Dispatch, SetStateAction } from "react";
 
 interface OrdersSearchFormProps {
   readonly searchInput: string;

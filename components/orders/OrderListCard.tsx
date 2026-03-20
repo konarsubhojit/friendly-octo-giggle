@@ -1,21 +1,25 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import Image from 'next/image';
-import { Badge, orderStatusVariant } from '@/components/ui/Badge';
+import Link from "next/link";
+import Image from "next/image";
+import { Badge, orderStatusVariant } from "@/components/ui/Badge";
 
 const STATUS_CONFIG: Record<string, { label: string }> = {
-  PENDING: { label: 'Pending' },
-  PROCESSING: { label: 'Processing' },
-  SHIPPED: { label: 'Shipped' },
-  DELIVERED: { label: 'Delivered' },
-  CANCELLED: { label: 'Cancelled' },
+  PENDING: { label: "Pending" },
+  PROCESSING: { label: "Processing" },
+  SHIPPED: { label: "Shipped" },
+  DELIVERED: { label: "Delivered" },
+  CANCELLED: { label: "Cancelled" },
 };
 
 interface OrderItem {
   readonly quantity: number;
   readonly product?: { name: string; image: string } | null;
-  readonly variation?: { id: string; name: string; priceModifier: number } | null;
+  readonly variation?: {
+    id: string;
+    name: string;
+    priceModifier: number;
+  } | null;
 }
 
 interface OrderSummary {
@@ -47,7 +51,7 @@ export const OrderListCard = ({ order, formatPrice }: OrderListCardProps) => {
           <div className="relative w-16 h-16 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700">
             <Image
               src={firstImage}
-              alt={firstItem?.product?.name || 'Order item'}
+              alt={firstItem?.product?.name || "Order item"}
               fill
               sizes="48px"
               className="object-cover"
@@ -60,10 +64,10 @@ export const OrderListCard = ({ order, formatPrice }: OrderListCardProps) => {
               {statusInfo.label}
             </Badge>
             <span className="text-xs text-[var(--text-muted)]">
-              {new Date(order.createdAt).toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric',
+              {new Date(order.createdAt).toLocaleDateString("en-US", {
+                year: "numeric",
+                month: "short",
+                day: "numeric",
               })}
             </span>
           </div>
@@ -72,7 +76,7 @@ export const OrderListCard = ({ order, formatPrice }: OrderListCardProps) => {
             {order.items.length > 1 && ` and ${order.items.length - 1} more`}
           </p>
           <p className="text-xs text-[var(--text-muted)] mt-1">
-            {itemCount} {itemCount === 1 ? 'item' : 'items'}
+            {itemCount} {itemCount === 1 ? "item" : "items"}
           </p>
         </div>
         <div className="flex-shrink-0 text-right">
@@ -88,7 +92,12 @@ export const OrderListCard = ({ order, formatPrice }: OrderListCardProps) => {
           viewBox="0 0 24 24"
           aria-hidden="true"
         >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M9 5l7 7-7 7"
+          />
         </svg>
       </div>
     </Link>

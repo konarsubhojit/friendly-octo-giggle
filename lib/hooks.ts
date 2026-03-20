@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import {
   useState,
@@ -8,13 +8,13 @@ import {
   type Dispatch,
   type SetStateAction,
   type FormEvent,
-} from 'react';
-import { logError } from '@/lib/logger';
+} from "react";
+import { logError } from "@/lib/logger";
 
 // Generic hook for fetching data with TypeScript
 export function useFetch<T>(
   url: string,
-  options?: RequestInit
+  options?: RequestInit,
 ): {
   data: T | null;
   loading: boolean;
@@ -39,10 +39,10 @@ export function useFetch<T>(
         setData(json.data || json);
       } else {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Failed to fetch data');
+        throw new Error(errorData.error || "Failed to fetch data");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setLoading(false);
     }
@@ -50,11 +50,15 @@ export function useFetch<T>(
 
   useEffect(() => {
     // fetchData handles all errors internally via try/catch and sets error state
-    fetchData().catch(() => { /* no-op: errors handled inside fetchData */ });
+    fetchData().catch(() => {
+      /* no-op: errors handled inside fetchData */
+    });
   }, [fetchData]);
 
   const refetch = useCallback(() => {
-    fetchData().catch(() => { /* no-op: errors handled inside fetchData */ });
+    fetchData().catch(() => {
+      /* no-op: errors handled inside fetchData */
+    });
   }, [fetchData]);
 
   return { data, loading, error, refetch };
@@ -62,7 +66,7 @@ export function useFetch<T>(
 
 // Hook for mutations with optimistic updates
 export function useMutation<TData, TVariables>(
-  mutationFn: (variables: TVariables) => Promise<TData>
+  mutationFn: (variables: TVariables) => Promise<TData>,
 ): {
   mutate: (variables: TVariables) => Promise<void>;
   loading: boolean;
@@ -83,13 +87,13 @@ export function useMutation<TData, TVariables>(
         const result = await mutationFn(variables);
         setData(result);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Mutation failed');
+        setError(err instanceof Error ? err.message : "Mutation failed");
         throw err;
       } finally {
         setLoading(false);
       }
     },
-    [mutationFn]
+    [mutationFn],
   );
 
   const reset = useCallback(() => {
@@ -103,12 +107,14 @@ export function useMutation<TData, TVariables>(
 
 // Hook for form state management with TypeScript
 export function useFormState<T extends Record<string, unknown>>(
-  initialState: T
+  initialState: T,
 ): {
   values: T;
   errors: Partial<Record<keyof T, string>>;
   handleChange: (name: keyof T, value: unknown) => void;
-  handleSubmit: (onSubmit: (values: T) => void | Promise<void>) => (e: React.SyntheticEvent<HTMLFormElement>) => Promise<void>;
+  handleSubmit: (
+    onSubmit: (values: T) => void | Promise<void>,
+  ) => (e: React.SyntheticEvent<HTMLFormElement>) => Promise<void>;
   setError: (name: keyof T, error: string) => void;
   reset: () => void;
   isValid: boolean;
@@ -130,7 +136,7 @@ export function useFormState<T extends Record<string, unknown>>(
         e.preventDefault();
         await onSubmit(values);
       },
-    [values]
+    [values],
   );
 
   const setError = useCallback((name: keyof T, error: string) => {
@@ -144,7 +150,15 @@ export function useFormState<T extends Record<string, unknown>>(
 
   const isValid = Object.keys(errors).length === 0;
 
-  return { values, errors, handleChange, handleSubmit, setError, reset, isValid };
+  return {
+    values,
+    errors,
+    handleChange,
+    handleSubmit,
+    setError,
+    reset,
+    isValid,
+  };
 }
 
 // Hook for debouncing values
@@ -167,7 +181,7 @@ export function useDebounce<T>(value: T, delay: number): T {
 // Hook for local storage with TypeScript
 export function useLocalStorage<T>(
   key: string,
-  initialValue: T
+  initialValue: T,
 ): [T, (value: T | ((val: T) => T)) => void] {
   const [storedValue, setStoredValue] = useState<T>(() => {
     if (globalThis.window === undefined) {
@@ -178,21 +192,24 @@ export function useLocalStorage<T>(
       const item = globalThis.localStorage.getItem(key);
       return item ? JSON.parse(item) : initialValue;
     } catch (error) {
-      logError({ error, context: 'useLocalStorage:read' });
+      logError({ error, context: "useLocalStorage:read" });
       return initialValue;
     }
   });
 
   const setValue = (value: T | ((val: T) => T)) => {
     try {
-      const valueToStore = typeof value === 'function' ? (value as (val: T) => T)(storedValue) : value;
+      const valueToStore =
+        typeof value === "function"
+          ? (value as (val: T) => T)(storedValue)
+          : value;
       setStoredValue(valueToStore);
 
       if (globalThis.window !== undefined) {
         globalThis.localStorage.setItem(key, JSON.stringify(valueToStore));
       }
     } catch (error) {
-      logError({ error, context: 'useLocalStorage:write' });
+      logError({ error, context: "useLocalStorage:write" });
     }
   };
 
@@ -201,7 +218,7 @@ export function useLocalStorage<T>(
 
 // ─── Recently Viewed Hook ────────────────────────────────
 
-const RECENTLY_VIEWED_KEY = 'kiyon_recently_viewed';
+const RECENTLY_VIEWED_KEY = "kiyon_recently_viewed";
 const RECENTLY_VIEWED_MAX = 12;
 
 export interface RecentlyViewedProduct {
@@ -222,10 +239,9 @@ export function useRecentlyViewed(): {
   trackProduct: (product: RecentlyViewedProduct) => void;
   clearHistory: () => void;
 } {
-  const [recentlyViewed, setRecentlyViewed] = useLocalStorage<RecentlyViewedProduct[]>(
-    RECENTLY_VIEWED_KEY,
-    [],
-  );
+  const [recentlyViewed, setRecentlyViewed] = useLocalStorage<
+    RecentlyViewedProduct[]
+  >(RECENTLY_VIEWED_KEY, []);
 
   const trackProduct = useCallback(
     (product: RecentlyViewedProduct) => {
@@ -317,8 +333,8 @@ const buildPaginatedUrl = (
   size: number,
 ): string => {
   const params = new URLSearchParams({ limit: String(size) });
-  if (cursor) params.set('cursor', cursor);
-  if (search) params.set('search', search);
+  if (cursor) params.set("cursor", cursor);
+  if (search) params.set("search", search);
   return `${base}?${params.toString()}`;
 };
 
@@ -344,8 +360,8 @@ export const useCursorPagination = <T>({
   const [items, setItems] = useState<T[]>([]);
   const [loading, setLoading] = useState(enabled);
   const [error, setError] = useState<string | null>(null);
-  const [search, setSearch] = useState('');
-  const [searchInput, setSearchInput] = useState('');
+  const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState("");
   const [cursor, setCursor] = useState<string | null>(null);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
@@ -359,20 +375,34 @@ export const useCursorPagination = <T>({
       setLoading(true);
       setError(null);
       try {
-        const fetchUrl = buildPaginatedUrl(url, cursorValue, searchQuery, pageSize);
+        const fetchUrl = buildPaginatedUrl(
+          url,
+          cursorValue,
+          searchQuery,
+          pageSize,
+        );
         const res = await fetch(fetchUrl);
         if (!res.ok) {
-          const errData = (await res.json().catch(() => ({}))) as Record<string, unknown>;
-          throw new Error((errData.error as string) || `Failed to load ${dataKey}`);
+          const errData = (await res.json().catch(() => ({}))) as Record<
+            string,
+            unknown
+          >;
+          throw new Error(
+            (errData.error as string) || `Failed to load ${dataKey}`,
+          );
         }
         const raw = (await res.json()) as Record<string, unknown>;
-        const { items: pageItems, nextCursor: nextCur, hasMore: more } = extractPaginatedResponse<T>(raw, dataKey);
+        const {
+          items: pageItems,
+          nextCursor: nextCur,
+          hasMore: more,
+        } = extractPaginatedResponse<T>(raw, dataKey);
         const applyTransform = transformRef.current;
         setItems(applyTransform ? pageItems.map(applyTransform) : pageItems);
         setNextCursor(nextCur);
         setHasMore(more);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Something went wrong');
+        setError(err instanceof Error ? err.message : "Something went wrong");
       } finally {
         setLoading(false);
       }
@@ -398,7 +428,7 @@ export const useCursorPagination = <T>({
 
   const handleNext = useCallback(() => {
     if (!nextCursor) return;
-    setCursorHistory((prev) => [...prev, cursor ?? '']);
+    setCursorHistory((prev) => [...prev, cursor ?? ""]);
     setCursor(nextCursor);
   }, [nextCursor, cursor]);
 
@@ -413,8 +443,8 @@ export const useCursorPagination = <T>({
   const handleRefresh = useCallback(() => {
     setCursor(null);
     setCursorHistory([]);
-    setSearch('');
-    setSearchInput('');
+    setSearch("");
+    setSearchInput("");
   }, []);
 
   return {

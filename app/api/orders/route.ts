@@ -224,7 +224,8 @@ async function handleGet(request: NextRequest) {
     const hasMore = rows.length > limit;
     const pageItems = hasMore ? rows.slice(0, limit) : rows;
     const lastItem = pageItems.at(-1);
-    const nextCursor = hasMore && lastItem ? serializeDate(lastItem.createdAt) : null;
+    const nextCursor =
+      hasMore && lastItem ? serializeDate(lastItem.createdAt) : null;
 
     const serialized = pageItems.map((order) => ({
       ...order,

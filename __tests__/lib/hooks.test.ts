@@ -84,12 +84,10 @@ describe("useFetch", () => {
   });
 
   it("refetch triggers another fetch call", async () => {
-    const mockFetch = vi
-      .fn()
-      .mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({ data: { id: 3 } }),
-      });
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ data: { id: 3 } }),
+    });
     vi.stubGlobal("fetch", mockFetch);
     const { result } = renderHook(() => useFetch("/api/test"));
     await waitFor(() => expect(result.current.loading).toBe(false));
@@ -181,9 +179,7 @@ describe("useMutation", () => {
 
 describe("useFormState", () => {
   it("initialises with provided state", () => {
-    const { result } = renderHook(() =>
-      useFormState({ name: "", age: 0 }),
-    );
+    const { result } = renderHook(() => useFormState({ name: "", age: 0 }));
     expect(result.current.values).toEqual({ name: "", age: 0 });
     expect(result.current.errors).toEqual({});
     expect(result.current.isValid).toBe(true);
@@ -213,7 +209,9 @@ describe("useFormState", () => {
   it("handleSubmit calls onSubmit with values", async () => {
     const onSubmit = vi.fn();
     const { result } = renderHook(() => useFormState({ name: "Alice" }));
-    const mockSubmitEvent = { preventDefault: vi.fn() } as unknown as React.SyntheticEvent<HTMLFormElement>;
+    const mockSubmitEvent = {
+      preventDefault: vi.fn(),
+    } as unknown as React.SyntheticEvent<HTMLFormElement>;
     await act(async () => {
       await result.current.handleSubmit(onSubmit)(mockSubmitEvent);
     });
@@ -332,8 +330,16 @@ import { useCursorPagination } from "@/lib/hooks";
 
 describe("useCursorPagination", () => {
   const mockOrders = [
-    { id: "ORD1234567", status: "PENDING", createdAt: "2024-01-02T00:00:00.000Z" },
-    { id: "ORD2345678", status: "SHIPPED", createdAt: "2024-01-01T00:00:00.000Z" },
+    {
+      id: "ORD1234567",
+      status: "PENDING",
+      createdAt: "2024-01-02T00:00:00.000Z",
+    },
+    {
+      id: "ORD2345678",
+      status: "SHIPPED",
+      createdAt: "2024-01-01T00:00:00.000Z",
+    },
   ];
 
   beforeEach(() => {
@@ -352,7 +358,11 @@ describe("useCursorPagination", () => {
   it("does not start loading when enabled=false", () => {
     vi.stubGlobal("fetch", vi.fn());
     const { result } = renderHook(() =>
-      useCursorPagination({ url: "/api/orders", dataKey: "orders", enabled: false }),
+      useCursorPagination({
+        url: "/api/orders",
+        dataKey: "orders",
+        enabled: false,
+      }),
     );
     expect(result.current.loading).toBe(false);
     expect(vi.mocked(fetch)).not.toHaveBeenCalled();
@@ -363,7 +373,12 @@ describe("useCursorPagination", () => {
       "fetch",
       vi.fn().mockResolvedValue({
         ok: true,
-        json: () => Promise.resolve({ orders: mockOrders, nextCursor: null, hasMore: false }),
+        json: () =>
+          Promise.resolve({
+            orders: mockOrders,
+            nextCursor: null,
+            hasMore: false,
+          }),
       }),
     );
     const { result } = renderHook(() =>
@@ -383,7 +398,11 @@ describe("useCursorPagination", () => {
         json: () =>
           Promise.resolve({
             success: true,
-            data: { users: [{ id: "u1" }], nextCursor: "cursor123", hasMore: true },
+            data: {
+              users: [{ id: "u1" }],
+              nextCursor: "cursor123",
+              hasMore: true,
+            },
           }),
       }),
     );
@@ -408,13 +427,21 @@ describe("useCursorPagination", () => {
           }),
       }),
     );
-    type User = { id: string; _count?: { orders: number }; orderCount?: number };
+    type User = {
+      id: string;
+      _count?: { orders: number };
+      orderCount?: number;
+    };
     const transform = (user: User): User => ({
       ...user,
       orderCount: user._count?.orders ?? 0,
     });
     const { result } = renderHook(() =>
-      useCursorPagination<User>({ url: "/api/admin/users", dataKey: "users", transform }),
+      useCursorPagination<User>({
+        url: "/api/admin/users",
+        dataKey: "users",
+        transform,
+      }),
     );
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect((result.current.items[0] as User).orderCount).toBe(5);
@@ -452,7 +479,10 @@ describe("useCursorPagination", () => {
   });
 
   it("sets error on network failure", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("Network error")));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockRejectedValue(new Error("Network error")),
+    );
     const { result } = renderHook(() =>
       useCursorPagination({ url: "/api/orders", dataKey: "orders" }),
     );
@@ -463,7 +493,12 @@ describe("useCursorPagination", () => {
   it("handleSearch resets cursor and applies search", async () => {
     const mockFetch = vi.fn().mockResolvedValue({
       ok: true,
-      json: () => Promise.resolve({ orders: mockOrders, nextCursor: null, hasMore: false }),
+      json: () =>
+        Promise.resolve({
+          orders: mockOrders,
+          nextCursor: null,
+          hasMore: false,
+        }),
     });
     vi.stubGlobal("fetch", mockFetch);
 
@@ -476,7 +511,9 @@ describe("useCursorPagination", () => {
       result.current.setSearchInput("ORD");
     });
 
-    const fakeEvent = { preventDefault: vi.fn() } as unknown as React.FormEvent<HTMLFormElement>;
+    const fakeEvent = {
+      preventDefault: vi.fn(),
+    } as unknown as React.FormEvent<HTMLFormElement>;
     await act(async () => {
       result.current.handleSearch(fakeEvent);
     });
@@ -490,7 +527,8 @@ describe("useCursorPagination", () => {
   it("handleNext advances page when hasMore is true", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn()
+      vi
+        .fn()
         .mockResolvedValueOnce({
           ok: true,
           json: () =>
@@ -523,7 +561,12 @@ describe("useCursorPagination", () => {
   it("handleNext does nothing when hasMore is false", async () => {
     const mockFetch = vi.fn().mockResolvedValue({
       ok: true,
-      json: () => Promise.resolve({ orders: mockOrders, nextCursor: null, hasMore: false }),
+      json: () =>
+        Promise.resolve({
+          orders: mockOrders,
+          nextCursor: null,
+          hasMore: false,
+        }),
     });
     vi.stubGlobal("fetch", mockFetch);
 
@@ -539,7 +582,8 @@ describe("useCursorPagination", () => {
   it("handlePrev goes back to previous page", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn()
+      vi
+        .fn()
         .mockResolvedValueOnce({
           ok: true,
           json: () =>
@@ -551,7 +595,8 @@ describe("useCursorPagination", () => {
         })
         .mockResolvedValue({
           ok: true,
-          json: () => Promise.resolve({ orders: [], nextCursor: null, hasMore: false }),
+          json: () =>
+            Promise.resolve({ orders: [], nextCursor: null, hasMore: false }),
         }),
     );
 
@@ -574,7 +619,12 @@ describe("useCursorPagination", () => {
       "fetch",
       vi.fn().mockResolvedValue({
         ok: true,
-        json: () => Promise.resolve({ orders: mockOrders, nextCursor: null, hasMore: false }),
+        json: () =>
+          Promise.resolve({
+            orders: mockOrders,
+            nextCursor: null,
+            hasMore: false,
+          }),
       }),
     );
     const { result } = renderHook(() =>
@@ -615,7 +665,8 @@ describe("useCursorPagination", () => {
   it("includes search in fetch URL when search is non-empty", async () => {
     const mockFetch = vi.fn().mockResolvedValue({
       ok: true,
-      json: () => Promise.resolve({ orders: [], nextCursor: null, hasMore: false }),
+      json: () =>
+        Promise.resolve({ orders: [], nextCursor: null, hasMore: false }),
     });
     vi.stubGlobal("fetch", mockFetch);
 
@@ -625,7 +676,9 @@ describe("useCursorPagination", () => {
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     act(() => result.current.setSearchInput("test query"));
-    const fakeEvent = { preventDefault: vi.fn() } as unknown as React.FormEvent<HTMLFormElement>;
+    const fakeEvent = {
+      preventDefault: vi.fn(),
+    } as unknown as React.FormEvent<HTMLFormElement>;
     await act(async () => {
       result.current.handleSearch(fakeEvent);
     });

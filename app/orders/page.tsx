@@ -83,7 +83,10 @@ export default function OrdersPage() {
 
   const isInitialLoading =
     authStatus === "loading" ||
-    (authStatus === "authenticated" && loading && orders.length === 0 && !error);
+    (authStatus === "authenticated" &&
+      loading &&
+      orders.length === 0 &&
+      !error);
 
   if (isInitialLoading) {
     return (

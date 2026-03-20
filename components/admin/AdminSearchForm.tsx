@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import type { FormEvent, Dispatch, SetStateAction } from 'react';
+import type { FormEvent, Dispatch, SetStateAction } from "react";
 
 interface AdminSearchFormProps {
   readonly searchInput: string;
@@ -18,8 +18,8 @@ export const AdminSearchForm = ({
   search,
   onSearch,
   onClear,
-  placeholder = 'Search\u2026',
-  ariaLabel = 'Search',
+  placeholder = "Search\u2026",
+  ariaLabel = "Search",
 }: AdminSearchFormProps) => (
   <form onSubmit={onSearch} className="mb-6">
     <div className="flex gap-2 max-w-md">

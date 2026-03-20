@@ -74,7 +74,13 @@ describe("GET /api/admin/users", () => {
 
     const mockUsers = [
       makeAdminUser({ orders: [{ id: "o1" }, { id: "o2" }] }),
-      makeAdminUser({ id: "u2", name: "Bob", email: "bob@example.com", role: "ADMIN", orders: [] }),
+      makeAdminUser({
+        id: "u2",
+        name: "Bob",
+        email: "bob@example.com",
+        role: "ADMIN",
+        orders: [],
+      }),
     ];
 
     mockFindMany.mockResolvedValue(mockUsers);
@@ -98,7 +104,11 @@ describe("GET /api/admin/users", () => {
     mockAuth.mockResolvedValue({ user: { id: "admin-1", role: "ADMIN" } });
 
     const manyUsers = Array.from({ length: 21 }, (_, index) =>
-      makeAdminUser({ id: `u${index}`, email: `user${index}@test.com`, orders: [] }),
+      makeAdminUser({
+        id: `u${index}`,
+        email: `user${index}@test.com`,
+        orders: [],
+      }),
     );
     mockFindMany.mockResolvedValue(manyUsers);
 

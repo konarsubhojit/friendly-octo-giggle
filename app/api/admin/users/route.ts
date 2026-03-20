@@ -33,7 +33,10 @@ const checkAdminAuth = async () => {
 
 const parseLimit = (param: string | null, defaultSize: number): number =>
   Math.min(
-    Math.max(1, Number.parseInt(param ?? String(defaultSize), 10) || defaultSize),
+    Math.max(
+      1,
+      Number.parseInt(param ?? String(defaultSize), 10) || defaultSize,
+    ),
     100,
   );
 
@@ -88,7 +91,8 @@ export const GET = async (request: NextRequest) => {
     const hasMore = rows.length > limit;
     const pageItems = hasMore ? rows.slice(0, limit) : rows;
     const lastItem = pageItems.at(-1);
-    const nextCursor = hasMore && lastItem ? lastItem.createdAt.toISOString() : null;
+    const nextCursor =
+      hasMore && lastItem ? lastItem.createdAt.toISOString() : null;
 
     const userList = pageItems.map((user) => ({
       id: user.id,
