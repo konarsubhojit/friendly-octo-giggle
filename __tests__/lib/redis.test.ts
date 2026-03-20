@@ -131,27 +131,20 @@ describe("getCachedData", () => {
   });
 
   it("returns stale data and triggers background revalidation", async () => {
-    const staleAgeMs = 61_000; // 61 s old, ttl=60, staleTime=5 → within stale window
+    const staleAgeMs = 61_000;
     const staleData = cachedJson("stale-value", staleAgeMs);
     mockRedisInstance.get.mockResolvedValueOnce(staleData);
     mockRedisInstance.setex.mockResolvedValue("OK");
 
     const fetcher = vi.fn().mockResolvedValue("fresh-value");
-    const realSetImmediate = globalThis.setImmediate;
-    const setImmediateSpy = vi
-      .spyOn(globalThis, "setImmediate")
-      .mockImplementation((cb: (...args: unknown[]) => void) =>
-        realSetImmediate(cb),
-      );
 
     const result = await getCachedData("key:2", 60, fetcher, 5);
 
     expect(result).toBe("stale-value");
-    expect(setImmediateSpy).toHaveBeenCalled();
 
-    await new Promise((r) => realSetImmediate(r));
-
-    setImmediateSpy.mockRestore();
+    await vi.waitFor(() => {
+      expect(fetcher).toHaveBeenCalled();
+    });
   });
 
   it("fetches, caches, and releases lock on cache miss with lock acquired", async () => {

@@ -91,13 +91,10 @@ const globalForDb = globalThis as unknown as {
   pool: Pool | undefined;
 };
 
-function createPool() {
-  // No SSL config needed — Neon's driver uses WebSocket protocol,
-  // bypassing TCP/TLS certificate issues entirely
-  return new Pool({
+const createPool = () =>
+  new Pool({
     connectionString: env.DATABASE_URL,
   });
-}
 
 // Using ??= pattern for singleton to avoid recreating pools on hot reloads
 const pool = (globalForDb.pool ??= createPool());

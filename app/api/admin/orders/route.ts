@@ -3,7 +3,7 @@ import { drizzleDb } from "@/lib/db";
 import { orders } from "@/lib/schema";
 import { desc, lt, ilike, or, and, eq, inArray, SQL } from "drizzle-orm";
 import { apiSuccess, apiError, handleApiError } from "@/lib/api-utils";
-import { auth } from "@/lib/auth";
+import { checkAdminAuth } from "@/lib/admin-auth";
 import { serializeOrders } from "@/lib/serializers";
 import { OrderStatus } from "@/lib/types";
 import { searchOrderIds } from "@/lib/search-service";
@@ -11,25 +11,6 @@ import { searchOrderIds } from "@/lib/search-service";
 export const dynamic = "force-dynamic";
 
 const PAGE_SIZE = 20;
-
-const checkAdminAuth = async () => {
-  const session = await auth();
-  if (!session?.user) {
-    return {
-      authorized: false,
-      error: "Not authenticated",
-      status: 401 as const,
-    };
-  }
-  if (session.user.role !== "ADMIN") {
-    return {
-      authorized: false,
-      error: "Not authorized - Admin access required",
-      status: 403 as const,
-    };
-  }
-  return { authorized: true };
-};
 
 /**
  * GET /api/admin/orders

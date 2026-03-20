@@ -109,9 +109,7 @@ const statusLabel: Record<
   CANCELLED: { label: "Cancelled", emoji: "❌", color: "#dc2626" },
 };
 
-// ─── Template Functions ─────────────────────────────────
-
-export function orderConfirmationTemplate(data: OrderConfirmationData) {
+export const orderConfirmationTemplate = (data: OrderConfirmationData) => {
   const bodyHtml = `
     <h2 style="color:#5C4A44;margin:0 0 8px;font-size:22px;">Thank you, ${escapeHtml(data.customerName)}! 🌸</h2>
     <p style="color:#7a5543;margin:0 0 24px;font-size:15px;">
@@ -141,9 +139,9 @@ export function orderConfirmationTemplate(data: OrderConfirmationData) {
     html: emailWrapper(bodyHtml),
     text: `Hi ${data.customerName},\n\nYour order #${data.orderId.toUpperCase()} has been confirmed!\nTotal: ${data.totalAmount}\n\nItems:\n${data.items.map((item) => `- ${item.name} x${item.quantity}: ${item.price}${item.variation ? ` (${item.variation})` : ""}`).join("\n")}\n\nShipping to:\n${data.shippingAddress}\n\nThank you for shopping with The Kiyon Store!`,
   };
-}
+};
 
-export function orderStatusUpdateTemplate(data: OrderStatusUpdateData) {
+export const orderStatusUpdateTemplate = (data: OrderStatusUpdateData) => {
   const info = statusLabel[data.status] ?? {
     label: data.status,
     emoji: "📋",
@@ -187,4 +185,4 @@ export function orderStatusUpdateTemplate(data: OrderStatusUpdateData) {
     html: emailWrapper(bodyHtml),
     text: `Hi ${data.customerName},\n\nYour order #${data.orderId.toUpperCase()} status has been updated to: ${info.label}\n${data.trackingNumber ? `\nTracking: ${data.trackingNumber}` : ""}${data.shippingProvider ? `\nCarrier: ${data.shippingProvider}` : ""}\n\nThank you for shopping with The Kiyon Store!`,
   };
-}
+};

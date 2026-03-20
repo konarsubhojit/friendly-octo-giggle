@@ -157,7 +157,11 @@ export const products = pgTable(
     createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
     updatedAt: timestamp("updatedAt", { mode: "date" }).defaultNow().notNull(),
   },
-  (t) => [index("Product_category_idx").on(t.category)],
+  (t) => [
+    index("Product_category_idx").on(t.category),
+    index("Product_createdAt_idx").on(t.createdAt),
+    index("Product_deletedAt_idx").on(t.deletedAt),
+  ],
 );
 
 export const productVariations = pgTable(
@@ -204,7 +208,11 @@ export const orders = pgTable(
     createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
     updatedAt: timestamp("updatedAt", { mode: "date" }).defaultNow().notNull(),
   },
-  (t) => [index("Order_userId_idx").on(t.userId)],
+  (t) => [
+    index("Order_userId_idx").on(t.userId),
+    index("Order_status_idx").on(t.status),
+    index("Order_createdAt_idx").on(t.createdAt),
+  ],
 );
 
 export const orderItems = pgTable(

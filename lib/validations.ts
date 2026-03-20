@@ -1,7 +1,5 @@
 import { z } from "zod";
 
-const UUID_REGEX =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const SHORT_ID_REGEX = /^[0-9A-Za-z]{7}$/;
 const ORDER_ID_REGEX = /^ORD[0-9A-Za-z]{7}$/;
 const URL_REGEX = /^https?:\/\/.+/;
@@ -13,7 +11,7 @@ const EMAIL_REGEX =
 // Note: ProductSchema with datetime strings is for API responses (already converted from Date)
 // Use ProductInputSchema for validating user input
 export const ProductSchema = z.object({
-  id: z.string().regex(UUID_REGEX, "Invalid UUID format"),
+  id: z.string().regex(SHORT_ID_REGEX, "Invalid product ID format"),
   name: z.string().min(1, "Name is required").max(200),
   description: z.string().min(1, "Description is required").max(2000),
   price: z.number().positive("Price must be positive"),

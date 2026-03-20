@@ -9,6 +9,7 @@ import {
   handleValidationError,
 } from "@/lib/api-utils";
 import { auth } from "@/lib/auth";
+import { checkAdminAuth } from "@/lib/admin-auth";
 import { cacheAdminOrderById, invalidateAdminOrderCaches } from "@/lib/cache";
 import { serializeOrder } from "@/lib/serializers";
 import { UpdateOrderStatusSchema } from "@/lib/validations";
@@ -20,28 +21,6 @@ import { logBusinessEvent, logError } from "@/lib/logger";
 import { indexOrder } from "@/lib/search";
 
 export const dynamic = "force-dynamic";
-
-const checkAdminAuth = async () => {
-  const session = await auth();
-
-  if (!session?.user) {
-    return {
-      authorized: false,
-      error: "Not authenticated",
-      status: 401 as const,
-    };
-  }
-
-  if (session.user.role !== "ADMIN") {
-    return {
-      authorized: false,
-      error: "Not authorized - Admin access required",
-      status: 403 as const,
-    };
-  }
-
-  return { authorized: true };
-};
 
 const buildUpdateData = (data: {
   status: "PENDING" | "PROCESSING" | "SHIPPED" | "DELIVERED" | "CANCELLED";

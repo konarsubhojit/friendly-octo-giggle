@@ -16,23 +16,23 @@ export class ApiError extends Error {
   }
 }
 
-async function parseErrorResponse(res: Response): Promise<string> {
+const parseErrorResponse = async (res: Response): Promise<string> => {
   try {
     const data = await res.json();
     return data.error || data.message || `Request failed (${res.status})`;
   } catch {
     return `Request failed (${res.status})`;
   }
-}
+};
 
-async function request<T>(url: string, options?: RequestInit): Promise<T> {
+const request = async <T>(url: string, options?: RequestInit): Promise<T> => {
   const res = await fetch(url, options);
   if (!res.ok) {
     const message = await parseErrorResponse(res);
     throw new ApiError(message, res.status);
   }
   return res.json() as Promise<T>;
-}
+};
 
 // ─── Public Methods ─────────────────────────────────────
 

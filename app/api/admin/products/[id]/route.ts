@@ -2,35 +2,12 @@ import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { ProductUpdateSchema } from "@/lib/validations";
 import { apiSuccess, apiError, handleApiError } from "@/lib/api-utils";
-import { auth } from "@/lib/auth";
+import { checkAdminAuth } from "@/lib/admin-auth";
 import { revalidateTag } from "next/cache";
 import { invalidateProductCaches } from "@/lib/cache";
 import { indexProduct, removeProduct } from "@/lib/search";
 
 export const dynamic = "force-dynamic";
-
-// Check if user is admin
-async function checkAdminAuth() {
-  const session = await auth();
-
-  if (!session?.user) {
-    return {
-      authorized: false,
-      error: "Not authenticated",
-      status: 401 as const,
-    };
-  }
-
-  if (session.user.role !== "ADMIN") {
-    return {
-      authorized: false,
-      error: "Not authorized - Admin access required",
-      status: 403 as const,
-    };
-  }
-
-  return { authorized: true };
-}
 
 export async function PUT(
   request: NextRequest,
@@ -38,14 +15,13 @@ export async function PUT(
 ) {
   const authCheck = await checkAdminAuth();
   if (!authCheck.authorized) {
-    return apiError(authCheck.error ?? "Unauthorized", authCheck.status);
+    return apiError(authCheck.error, authCheck.status);
   }
 
   try {
     const { id } = await params;
     const body = await request.json();
 
-    // Validate input with Zod
     const validated = ProductUpdateSchema.parse(body);
 
     // Cache invalidation is handled automatically in db.products.update
@@ -76,10 +52,7 @@ export async function DELETE(
 ) {
   const authCheck = await checkAdminAuth();
   if (!authCheck.authorized) {
-    return apiError(
-      authCheck.error ? authCheck.error : "Unauthorized",
-      authCheck.status,
-    );
+    return apiError(authCheck.error, authCheck.status);
   }
 
   try {

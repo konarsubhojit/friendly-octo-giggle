@@ -81,32 +81,24 @@ export const CACHE_TTL = {
   SHARE_RESOLVE: 31536000, // 1 year in seconds
 } as const;
 
-/**
- * Cache products list with stampede prevention
- */
-export function cacheProductsList<T>(fetcher: () => Promise<T>): Promise<T> {
-  return getCachedData(
+export const cacheProductsList = <T>(fetcher: () => Promise<T>): Promise<T> =>
+  getCachedData(
     CACHE_KEYS.PRODUCTS_ALL,
     CACHE_TTL.PRODUCTS_LIST,
     fetcher,
     CACHE_TTL.STALE_TIME,
   );
-}
 
-/**
- * Cache single product by ID with stampede prevention
- */
-export function cacheProductById<T>(
+export const cacheProductById = <T>(
   id: string,
   fetcher: () => Promise<T>,
-): Promise<T> {
-  return getCachedData(
+): Promise<T> =>
+  getCachedData(
     CACHE_KEYS.PRODUCT_BY_ID(id),
     CACHE_TTL.PRODUCT_DETAIL,
     fetcher,
     CACHE_TTL.STALE_TIME,
   );
-}
 
 /**
  * Cache bestsellers product list with stampede prevention
@@ -123,13 +115,9 @@ export const cacheProductsBestsellers = <T>(
   );
 };
 
-/**
- * Invalidate all product-related caches (public + admin)
- * Called after product create/update/delete operations
- */
-export async function invalidateProductCaches(
+export const invalidateProductCaches = async (
   productId?: string,
-): Promise<void> {
+): Promise<void> => {
   try {
     await invalidateCachePattern(CACHE_KEYS.PRODUCTS_PATTERN);
     await invalidateCachePattern(CACHE_KEYS.ADMIN_PRODUCTS_PATTERN);
@@ -146,15 +134,12 @@ export async function invalidateProductCaches(
   } catch (error) {
     logError({ error, context: "cache_invalidation" });
   }
-}
+};
 
-/**
- * Invalidate cart cache for a specific user or session
- */
-export async function invalidateCartCache(
+export const invalidateCartCache = async (
   userId?: string,
   sessionId?: string,
-): Promise<void> {
+): Promise<void> => {
   try {
     if (userId) {
       await invalidateCachePattern(CACHE_KEYS.CART_BY_USER(userId));
@@ -165,19 +150,18 @@ export async function invalidateCartCache(
   } catch (error) {
     logError({ error, context: "cart_cache_invalidation" });
   }
-}
+};
 
-/**
- * Invalidate order caches for a specific user
- */
-export async function invalidateUserOrderCaches(userId: string): Promise<void> {
+export const invalidateUserOrderCaches = async (
+  userId: string,
+): Promise<void> => {
   try {
     await invalidateCachePattern(CACHE_KEYS.ORDERS_BY_USER(userId));
     await invalidateCachePattern(CACHE_KEYS.ORDER_USER_PATTERN(userId));
   } catch (error) {
     logError({ error, context: "order_cache_invalidation" });
   }
-}
+};
 
 /**
  * Cache admin orders list with stampede prevention
