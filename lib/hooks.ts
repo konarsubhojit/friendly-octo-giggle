@@ -1,6 +1,14 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  type Dispatch,
+  type SetStateAction,
+  type FormEvent,
+} from 'react';
 import { logError } from '@/lib/logger';
 
 // Generic hook for fetching data with TypeScript
@@ -275,3 +283,153 @@ export function useModalState<T = undefined>(): {
 
   return { isOpen, data, open, close };
 }
+
+export interface UseCursorPaginationOptions<T> {
+  readonly url: string;
+  readonly pageSize?: number;
+  readonly dataKey: string;
+  readonly enabled?: boolean;
+  readonly transform?: (item: T) => T;
+}
+
+export interface UseCursorPaginationResult<T> {
+  readonly items: T[];
+  readonly loading: boolean;
+  readonly error: string | null;
+  readonly search: string;
+  readonly searchInput: string;
+  readonly hasMore: boolean;
+  readonly cursorHistoryLength: number;
+  readonly currentPage: number;
+  readonly setSearchInput: Dispatch<SetStateAction<string>>;
+  readonly handleSearch: (e: FormEvent<HTMLFormElement>) => void;
+  readonly handleNext: () => void;
+  readonly handlePrev: () => void;
+  readonly handleRefresh: () => void;
+}
+
+const DEFAULT_CURSOR_PAGE_SIZE = 20;
+
+const buildPaginatedUrl = (
+  base: string,
+  cursor: string | null,
+  search: string,
+  size: number,
+): string => {
+  const params = new URLSearchParams({ limit: String(size) });
+  if (cursor) params.set('cursor', cursor);
+  if (search) params.set('search', search);
+  return `${base}?${params.toString()}`;
+};
+
+const extractPaginatedResponse = <T>(
+  raw: Record<string, unknown>,
+  key: string,
+): { items: T[]; nextCursor: string | null; hasMore: boolean } => {
+  const wrapper = (raw.data ?? raw) as Record<string, unknown>;
+  return {
+    items: (wrapper[key] ?? []) as T[],
+    nextCursor: (wrapper.nextCursor as string | null) ?? null,
+    hasMore: (wrapper.hasMore as boolean) ?? false,
+  };
+};
+
+export const useCursorPagination = <T>({
+  url,
+  pageSize = DEFAULT_CURSOR_PAGE_SIZE,
+  dataKey,
+  enabled = true,
+  transform,
+}: UseCursorPaginationOptions<T>): UseCursorPaginationResult<T> => {
+  const [items, setItems] = useState<T[]>([]);
+  const [loading, setLoading] = useState(enabled);
+  const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const [cursor, setCursor] = useState<string | null>(null);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [cursorHistory, setCursorHistory] = useState<string[]>([]);
+
+  const transformRef = useRef(transform);
+  transformRef.current = transform;
+
+  const doFetch = useCallback(
+    async (cursorValue: string | null, searchQuery: string) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const fetchUrl = buildPaginatedUrl(url, cursorValue, searchQuery, pageSize);
+        const res = await fetch(fetchUrl);
+        if (!res.ok) {
+          const errData = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+          throw new Error((errData.error as string) || `Failed to load ${dataKey}`);
+        }
+        const raw = (await res.json()) as Record<string, unknown>;
+        const { items: pageItems, nextCursor: nextCur, hasMore: more } = extractPaginatedResponse<T>(raw, dataKey);
+        const applyTransform = transformRef.current;
+        setItems(applyTransform ? pageItems.map(applyTransform) : pageItems);
+        setNextCursor(nextCur);
+        setHasMore(more);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Something went wrong');
+      } finally {
+        setLoading(false);
+      }
+    },
+    [url, pageSize, dataKey],
+  );
+
+  useEffect(() => {
+    if (enabled) {
+      doFetch(cursor, search);
+    }
+  }, [enabled, cursor, search, doFetch]);
+
+  const handleSearch = useCallback(
+    (e: FormEvent<HTMLFormElement>) => {
+      e.preventDefault();
+      setCursor(null);
+      setCursorHistory([]);
+      setSearch(searchInput.trim());
+    },
+    [searchInput],
+  );
+
+  const handleNext = useCallback(() => {
+    if (!nextCursor) return;
+    setCursorHistory((prev) => [...prev, cursor ?? '']);
+    setCursor(nextCursor);
+  }, [nextCursor, cursor]);
+
+  const handlePrev = useCallback(() => {
+    if (cursorHistory.length === 0) return;
+    const history = [...cursorHistory];
+    const prevCursor = history.pop() ?? null;
+    setCursorHistory(history);
+    setCursor(prevCursor);
+  }, [cursorHistory]);
+
+  const handleRefresh = useCallback(() => {
+    setCursor(null);
+    setCursorHistory([]);
+    setSearch('');
+    setSearchInput('');
+  }, []);
+
+  return {
+    items,
+    loading,
+    error,
+    search,
+    searchInput,
+    hasMore,
+    cursorHistoryLength: cursorHistory.length,
+    currentPage: cursorHistory.length + 1,
+    setSearchInput,
+    handleSearch,
+    handleNext,
+    handlePrev,
+    handleRefresh,
+  };
+};

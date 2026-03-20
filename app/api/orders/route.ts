@@ -163,6 +163,39 @@ function validateStockAndCalculateTotal(
 
 const PAGE_SIZE = 20;
 
+const parseOrderLimit = (param: string | null): number =>
+  Math.min(
+    Math.max(1, Number.parseInt(param ?? String(PAGE_SIZE), 10) || PAGE_SIZE),
+    100,
+  );
+
+const buildOrderConditions = (
+  userId: string,
+  cursor: string | null,
+  search: string,
+): SQL[] => {
+  const conditions: SQL[] = [eq(orders.userId, userId)];
+
+  if (cursor) {
+    const cursorDate = new Date(cursor);
+    if (!Number.isNaN(cursorDate.getTime())) {
+      conditions.push(lt(orders.createdAt, cursorDate));
+    }
+  }
+
+  if (search) {
+    const pattern = `%${search}%`;
+    conditions.push(
+      or(ilike(orders.id, pattern), ilike(orders.status, pattern)) as SQL,
+    );
+  }
+
+  return conditions;
+};
+
+const serializeDate = (value: Date | string): string =>
+  value instanceof Date ? value.toISOString() : value;
+
 async function handleGet(request: NextRequest) {
   try {
     const session = await auth();
@@ -173,32 +206,13 @@ async function handleGet(request: NextRequest) {
       );
     }
 
-    const userId = session.user.id;
     const { searchParams } = new URL(request.url);
-    const cursor = searchParams.get("cursor");
-    const limitParam = searchParams.get("limit");
-    const search = searchParams.get("search")?.trim() ?? "";
-
-    const limit = Math.min(
-      Math.max(1, parseInt(limitParam ?? String(PAGE_SIZE), 10) || PAGE_SIZE),
-      100,
+    const limit = parseOrderLimit(searchParams.get("limit"));
+    const conditions = buildOrderConditions(
+      session.user.id,
+      searchParams.get("cursor"),
+      searchParams.get("search")?.trim() ?? "",
     );
-
-    const conditions: SQL[] = [eq(orders.userId, userId)];
-
-    if (cursor) {
-      const cursorDate = new Date(cursor);
-      if (!isNaN(cursorDate.getTime())) {
-        conditions.push(lt(orders.createdAt, cursorDate));
-      }
-    }
-
-    if (search) {
-      const pattern = `%${search}%`;
-      conditions.push(
-        or(ilike(orders.id, pattern), ilike(orders.status, pattern)) as SQL,
-      );
-    }
 
     const rows = await drizzleDb.query.orders.findMany({
       where: and(...conditions),
@@ -209,32 +223,19 @@ async function handleGet(request: NextRequest) {
 
     const hasMore = rows.length > limit;
     const pageItems = hasMore ? rows.slice(0, limit) : rows;
-    const nextCursor = hasMore
-      ? pageItems[pageItems.length - 1].createdAt.toISOString()
-      : null;
+    const lastItem = pageItems.at(-1);
+    const nextCursor = hasMore && lastItem ? serializeDate(lastItem.createdAt) : null;
 
     const serialized = pageItems.map((order) => ({
       ...order,
-      createdAt:
-        order.createdAt instanceof Date
-          ? order.createdAt.toISOString()
-          : order.createdAt,
-      updatedAt:
-        order.updatedAt instanceof Date
-          ? order.updatedAt.toISOString()
-          : order.updatedAt,
+      createdAt: serializeDate(order.createdAt),
+      updatedAt: serializeDate(order.updatedAt),
       items: order.items.map((item) => ({
         ...item,
         product: {
           ...item.product,
-          createdAt:
-            item.product.createdAt instanceof Date
-              ? item.product.createdAt.toISOString()
-              : item.product.createdAt,
-          updatedAt:
-            item.product.updatedAt instanceof Date
-              ? item.product.updatedAt.toISOString()
-              : item.product.updatedAt,
+          createdAt: serializeDate(item.product.createdAt),
+          updatedAt: serializeDate(item.product.updatedAt),
         },
       })),
     }));
