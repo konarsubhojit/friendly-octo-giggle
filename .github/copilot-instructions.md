@@ -9,17 +9,22 @@ This is a highly scalable e-commerce website built with Next.js 16, TypeScript, 
 - **Framework**: Next.js 16.1.6 with App Router (TypeScript 5.9)
 - **React**: 19.2.4
 - **Database**: PostgreSQL (Neon Serverless) with Drizzle ORM 0.45
-- **State Management**: Redux Toolkit 2.11 (cart, orders, admin slices)
+- **State Management**: Redux Toolkit 2.11 (cart, orders, admin, wishlist slices)
 - **Currency**: CurrencyContext with INR default, `useCurrency()` hook
+- **Theme**: ThemeContext with default/baby-pink themes, `useTheme()` hook
 - **Cache**: Redis (ioredis 5.9) with stampede prevention
-- **Authentication**: NextAuth.js v5 (beta.30) with Google OAuth, DrizzleAdapter
+- **Authentication**: NextAuth.js v5 (beta.30) with Google OAuth + credentials (email/password), DrizzleAdapter
+- **Password**: bcryptjs 3.0 with password history tracking (`lib/password.ts`)
+- **Email**: Nodemailer 7.0 + SendGrid, modular email system (`lib/email/` — providers, templates, retry, failed-emails)
 - **Styling**: Tailwind CSS v4.1
 - **Validation**: Zod 4.3 for runtime type checking
 - **IDs**: Base62 short IDs (7-char alphanumeric) via `lib/short-id.ts` for products, orders, carts, and related entities. Uses `varchar(7)` in DB schema.
 - **Logging**: Pino (structured JSON in production, pretty-print in dev)
 - **Testing**: Vitest 4.0 with jsdom + React Testing Library 16.3 + @testing-library/jest-dom
+- **E2E Testing**: Playwright 1.58 with axe-core accessibility testing
 - **Image Storage**: Vercel Blob
 - **Analytics**: Vercel Analytics
+- **API Client**: `lib/api-client.ts` — typed HTTP abstraction for Redux thunks (DIP pattern)
 
 ## Code Style Guidelines
 
@@ -159,9 +164,13 @@ const data = await getCachedData(
 ### Authentication
 
 - Use `auth()` from `lib/auth.ts` to get session
+- Supports Google OAuth + email/password credentials
 - Check user role for admin routes
 - Use `ProtectedRoute` component for protected pages
 - Never expose sensitive data in client components
+- Registration: `POST /api/auth/register` with email, password, name
+- Password change: `POST /api/auth/change-password` (requires session)
+- Password history tracked via `lib/password.ts` (prevents reuse of last 2 passwords)
 
 ```typescript
 import { auth } from "@/lib/auth";
@@ -182,24 +191,37 @@ app/
   ├── api/
   │   ├── admin/
   │   │   ├── orders/route.ts, [id]/route.ts
-  │   │   ├── products/route.ts, [id]/route.ts
+  │   │   ├── products/route.ts, [id]/route.ts, [id]/variations/route.ts, [id]/variations/[variationId]/route.ts
   │   │   ├── users/route.ts, [id]/route.ts
+  │   │   ├── reviews/route.ts
+  │   │   ├── email-failures/route.ts
   │   │   └── sales/route.ts
-  │   ├── auth/[...nextauth]/route.ts
+  │   ├── auth/[...nextauth]/route.ts, register/route.ts, change-password/route.ts
+  │   ├── account/route.ts
   │   ├── cart/route.ts, items/[id]/route.ts
   │   ├── orders/route.ts, [id]/route.ts
-  │   ├── products/route.ts, [id]/route.ts, trending/route.ts
+  │   ├── products/route.ts, [id]/route.ts, bestsellers/route.ts
+  │   ├── reviews/route.ts
+  │   ├── wishlist/route.ts, [productId]/route.ts
+  │   ├── share/route.ts
+  │   ├── exchange-rates/route.ts
   │   ├── upload/route.ts
+  │   ├── dev/copilot-auth/     # Dev-only auth helper
   │   └── health/route.ts
-  ├── auth/              # Sign-in and auth error pages
-  ├── admin/             # Admin panel (dashboard, products, orders, users)
-  ├── products/          # Product listing and detail pages
+  ├── auth/              # Sign-in, register, and auth error pages
+  ├── admin/             # Admin panel (dashboard, products, orders, users, reviews, email-failures)
+  ├── account/           # User account/profile page
+  ├── products/          # Product listing and detail pages (with ProductClient.tsx)
   ├── orders/            # Order listing and detail pages
   ├── cart/              # Shopping cart
-  ├── about/, blog/, careers/, contact/, help/, press/, returns/, shipping/
+  ├── shop/              # Shop page with loading state
+  ├── wishlist/          # Wishlist page with loading state
+  ├── s/[key]/           # Short-link redirects
+  ├── contact/           # Contact page with ContactForm component
+  ├── about/, blog/, careers/, help/, press/, returns/, shipping/
   ├── error.tsx          # Global error boundary
   ├── loading.tsx        # Global loading skeleton
-  ├── layout.tsx         # Root layout (providers: Redux, Currency, Session, Toast, Analytics)
+  ├── layout.tsx         # Root layout (providers: Redux, Currency, Theme, Session, Toast, Analytics)
   └── page.tsx           # Home page
 lib/
   ├── db.ts             # Drizzle client (Neon Serverless)
@@ -207,33 +229,71 @@ lib/
   ├── short-id.ts       # Base62 7-char ID generator
   ├── redis.ts          # Redis utilities (getCachedData, stampede prevention)
   ├── cache.ts          # Cache key patterns and TTL constants
-  ├── auth.ts           # NextAuth v5 config (Google OAuth, DrizzleAdapter)
+  ├── auth.ts           # NextAuth v5 config (Google OAuth + credentials, DrizzleAdapter)
+  ├── password.ts       # Password hashing (bcryptjs) + history tracking
+  ├── api-client.ts     # Typed HTTP client for Redux thunks (DIP abstraction)
   ├── types.ts          # Type definitions
   ├── validations.ts    # Zod schemas
   ├── api-utils.ts      # API helpers (apiSuccess, apiError, handleApiError)
   ├── api-middleware.ts  # withApiLogging wrapper (requestId, timer, user context)
   ├── logger.ts         # Pino structured logging (createLogger, logApiRequest, Timer)
   ├── env.ts            # Environment variable validation
-  ├── store.ts          # Redux store (cart, orders, admin)
+  ├── store.ts          # Redux store (cart, orders, admin, wishlist)
   ├── hooks.ts          # Custom React hooks (useLocalStorage, etc.)
   ├── serializers.ts    # Data serialization helpers
   ├── upload-constants.ts # Upload config constants
-  ├── seed.ts           # Database seeder
+  ├── email.ts          # Re-export from lib/email/ (backward compat)
+  ├── email/            # Modular email system
+  │   ├── index.ts        # Public API (sendOrderConfirmationEmail, etc.)
+  │   ├── providers.ts    # Provider init and transport (Nodemailer/SendGrid)
+  │   ├── templates.ts    # HTML email templates
+  │   ├── retry.ts        # Email retry logic
+  │   └── failed-emails.ts # Failed email tracking and admin queries
+  ├── constants/
+  │   ├── categories.ts   # Product categories (PRODUCT_CATEGORIES, CATEGORY_FILTERS)
+  │   └── error-messages.ts # Centralized form/API error message constants
   └── features/
       ├── cart/cartSlice.ts     # Cart state + async thunks
       ├── orders/ordersSlice.ts # Orders state + async thunks
-      └── admin/adminSlice.ts   # Admin state + async thunks (products, orders, users)
+      ├── admin/adminSlice.ts   # Admin state + async thunks (products, orders, users)
+      └── wishlist/wishlistSlice.ts # Wishlist state + async thunks
 contexts/
-  └── CurrencyContext.tsx # Currency context (INR default, supports USD/EUR/GBP)
+  ├── CurrencyContext.tsx # Currency context (INR default, supports USD/EUR/GBP)
+  └── ThemeContext.tsx   # Theme context (default/baby-pink themes)
 components/
-  ├── layout/           # Header, Footer, CartIcon
-  ├── ui/               # AuthComponents, CurrencySelector, NewsletterForm, ErrorBoundary
-  ├── admin/            # ProductFormModal, DeleteConfirmModal
+  ├── layout/           # Header, HeaderWrapper, Footer, CartIcon
+  ├── ui/               # AuthComponents, CurrencySelector, ThemeSelector, ReviewForm, StarRating,
+  │                       # NewsletterForm, ErrorBoundary, Badge, Card, ConfirmDialog, DynamicForm,
+  │                       # EmptyState, LoadingSpinner, LoadingOverlay, GradientButton, GradientHeading,
+  │                       # AlertBanner, WishlistButton, UserMenu, ProtectedRoute, SelectInput, TextInput, etc.
+  ├── admin/            # ProductFormModal, ProductEditForm, ProductEditPageForm, DeleteConfirmModal,
+  │                       # VariationFormModal, VariationList, AdminHeaderNav, AdminNavLinks, AdminBreadcrumbs,
+  │                       # AdminSearchForm, AdminOrderCard, OrdersByStatusCard, TopProductsTable,
+  │                       # EmailFailuresClient, RoleBadge, RoleAction, UserRow, UsersTable, UserAvatar
+  ├── auth/             # LoginModal, OAuthButtons, PasswordStrengthChecklist, PasswordToggleButton,
+  │                       # CopilotDevLoginButton
+  ├── cart/             # CartItemRow
+  ├── orders/           # OrderListCard, OrdersSearchForm
+  ├── product/          # ImageCarousel, ProductStockBadge, ShareButton, VariationButton
+  ├── icons/            # CheckIcon, CircleIcon, EyeIcon, EyeOffIcon, GoogleIcon, MicrosoftIcon
   ├── providers/        # StoreProvider, SessionProvider
-  ├── sections/         # Hero, ProductGrid, TrendingProducts
+  ├── sections/         # Hero, ProductGrid, QuickAddButton, RecentlyViewed, ReviewsSection, StockBadge
   └── skeletons/        # HeaderSkeleton, HeroSkeleton, ProductCardSkeleton
+scripts/
+  ├── export-product-data.ts  # Export product data
+  ├── import-product-data.ts  # Import product data
+  └── reset-db.ts             # Reset database
+docs/                     # Project documentation
+  ├── api-reference.md, architecture.md, deployment.md,
+  ├── development.md, getting-started.md, troubleshooting.md
 drizzle/
   └── 0000-0003.sql     # 4 migration files
+playwright-tests/         # E2E tests with Playwright
+  ├── accessibility.spec.ts, admin-views.spec.ts, cart.spec.ts,
+  ├── products.spec.ts, ui-changes.spec.ts, password-validation.spec.ts,
+  ├── account-password-validation.spec.ts, fixed-background.spec.ts
+  ├── global-setup.ts, mock-data.ts
+  └── screenshots/      # Screenshot artifacts
 ```
 
 ## Common Patterns
@@ -264,14 +324,23 @@ drizzle/
 - Prices stored in DB are in USD; conversion happens at display time
 - CurrencySelector in Header lets users switch between INR/USD/EUR/GBP
 
+### Theme Support
+
+- Use `useTheme()` from `@/contexts/ThemeContext` in client components
+- Two themes: `default` and `baby-pink`
+- ThemeSelector in Header lets users switch themes
+- Theme persisted to localStorage
+
 ### State Management (Redux)
 
 - Cart state: `lib/features/cart/cartSlice.ts`
 - Orders state: `lib/features/orders/ordersSlice.ts`
 - Admin state: `lib/features/admin/adminSlice.ts` (products, orders, users)
+- Wishlist state: `lib/features/wishlist/wishlistSlice.ts`
 - Use `useSelector` + `useDispatch<AppDispatch>()` in client components
 - Keep UI-only state (modals, forms) as local `useState`
 - Use Redux for data shared across pages or fetched from APIs
+- All thunks use `lib/api-client.ts` typed HTTP abstraction (never raw `fetch`)
 
 ### Component Best Practices
 
@@ -383,45 +452,96 @@ npm run test:coverage # Run unit tests with coverage
 
 ### Test Coverage Areas
 
-| Area               | Test File                                                  | Tests   |
-| ------------------ | ---------------------------------------------------------- | ------- |
-| Zod schemas        | `__tests__/lib/validations.test.ts`                        | 49      |
-| API utilities      | `__tests__/lib/api-utils.test.ts`                          | 13      |
-| API NextResponse   | `__tests__/lib/api-utils-nextresponse.test.ts`             | 12      |
-| API middleware     | `__tests__/lib/api-middleware.test.ts`                     | 9       |
-| Serializers        | `__tests__/lib/serializers.test.ts`                        | 8       |
-| Upload constants   | `__tests__/lib/upload-constants.test.ts`                   | 14      |
-| Short ID           | `__tests__/lib/short-id.test.ts`                           | 3       |
-| Redis cache        | `__tests__/lib/redis.test.ts`                              | 12      |
-| Cache utilities    | `__tests__/lib/cache.test.ts`                              | 30      |
-| Env validation     | `__tests__/lib/env.test.ts`                                | 4       |
-| Types              | `__tests__/lib/types.test.ts`                              | 3       |
-| Schema             | `__tests__/lib/schema.test.ts`                             | 7       |
-| Hooks              | `__tests__/lib/hooks.test.ts`                              | 27      |
-| Cart slice         | `__tests__/lib/features/cart/cartSlice.test.ts`            | 15      |
-| Cart thunks        | `__tests__/lib/features/cart/cartSlice.thunks.test.ts`     | 11      |
-| Orders slice       | `__tests__/lib/features/orders/ordersSlice.test.ts`        | 17      |
-| Orders thunks      | `__tests__/lib/features/orders/ordersSlice.thunks.test.ts` | 12      |
-| Admin slice        | `__tests__/lib/features/admin/adminSlice.test.ts`          | 22      |
-| Admin thunks       | `__tests__/lib/features/admin/adminSlice.thunks.test.ts`   | 14      |
-| Redux store        | `__tests__/lib/store.test.ts`                              | 5       |
-| Header             | `__tests__/components/layout/Header.test.tsx`              | 13      |
-| CartIcon           | `__tests__/components/layout/CartIcon.test.tsx`            | 4       |
-| Footer             | `__tests__/components/layout/Footer.test.tsx`              | 10      |
-| AuthComponents     | `__tests__/components/ui/AuthComponents.test.tsx`          | 14      |
-| CurrencySelector   | `__tests__/components/ui/CurrencySelector.test.tsx`        | 5       |
-| ErrorBoundary      | `__tests__/components/ui/ErrorBoundary.test.tsx`           | 15      |
-| NewsletterForm     | `__tests__/components/ui/NewsletterForm.test.tsx`          | 5       |
-| ProductFormModal   | `__tests__/components/admin/ProductFormModal.test.tsx`     | 22      |
-| DeleteConfirmModal | `__tests__/components/admin/DeleteConfirmModal.test.tsx`   | 6       |
-| Hero               | `__tests__/components/sections/Hero.test.tsx`              | 5       |
-| ProductGrid        | `__tests__/components/sections/ProductGrid.test.tsx`       | 10      |
-| TrendingProducts   | `__tests__/components/sections/TrendingProducts.test.tsx`  | 7       |
-| Skeletons          | `__tests__/components/skeletons/Skeletons.test.tsx`        | 7       |
-| Providers          | `__tests__/components/providers/Providers.test.tsx`        | 3       |
-| CurrencyContext    | `__tests__/contexts/CurrencyContext.test.tsx`              | 12      |
-| Health API         | `__tests__/app/api/health/route.test.ts`                   | 1       |
-| **Total**          | **36 test files**                                          | **426** |
+| Area                | Test File                                                                     | Tests |
+| ------------------- | ----------------------------------------------------------------------------- | ----- |
+| Zod schemas         | `__tests__/lib/validations.test.ts`                                           | 49    |
+| API utilities       | `__tests__/lib/api-utils.test.ts`                                             | 13    |
+| API NextResponse    | `__tests__/lib/api-utils-nextresponse.test.ts`                                | 12    |
+| API middleware      | `__tests__/lib/api-middleware.test.ts`                                        | 9     |
+| Serializers         | `__tests__/lib/serializers.test.ts`                                           | 8     |
+| Upload constants    | `__tests__/lib/upload-constants.test.ts`                                      | 14    |
+| Short ID            | `__tests__/lib/short-id.test.ts`                                              | 3     |
+| Redis cache         | `__tests__/lib/redis.test.ts`                                                 | 12    |
+| Cache utilities     | `__tests__/lib/cache.test.ts`                                                 | 30    |
+| Env validation      | `__tests__/lib/env.test.ts`                                                   | 4     |
+| Types               | `__tests__/lib/types.test.ts`                                                 | 3     |
+| Schema              | `__tests__/lib/schema.test.ts`                                                | 7     |
+| Hooks               | `__tests__/lib/hooks.test.ts`                                                 | 27    |
+| Auth                | `__tests__/lib/auth.test.ts`                                                  |       |
+| Database            | `__tests__/lib/db.test.ts`                                                    |       |
+| Logger              | `__tests__/lib/logger.test.ts`                                                |       |
+| Password            | `__tests__/lib/password.test.ts`                                              |       |
+| Email               | `__tests__/lib/email.test.ts`                                                 |       |
+| Email failed        | `__tests__/lib/email/failed-emails.test.ts`                                   |       |
+| Email retry         | `__tests__/lib/email/retry.test.ts`                                           |       |
+| Error messages      | `__tests__/lib/constants/error-messages.test.ts`                              |       |
+| Cart slice          | `__tests__/lib/features/cart/cartSlice.test.ts`                               | 15    |
+| Cart thunks         | `__tests__/lib/features/cart/cartSlice.thunks.test.ts`                        | 11    |
+| Orders slice        | `__tests__/lib/features/orders/ordersSlice.test.ts`                           | 17    |
+| Orders thunks       | `__tests__/lib/features/orders/ordersSlice.thunks.test.ts`                    | 12    |
+| Admin slice         | `__tests__/lib/features/admin/adminSlice.test.ts`                             | 22    |
+| Admin thunks        | `__tests__/lib/features/admin/adminSlice.thunks.test.ts`                      | 14    |
+| Redux store         | `__tests__/lib/store.test.ts`                                                 | 5     |
+| Header              | `__tests__/components/layout/Header.test.tsx`                                 | 13    |
+| CartIcon            | `__tests__/components/layout/CartIcon.test.tsx`                               | 4     |
+| Footer              | `__tests__/components/layout/Footer.test.tsx`                                 | 10    |
+| AuthComponents      | `__tests__/components/ui/AuthComponents.test.tsx`                             | 14    |
+| CurrencySelector    | `__tests__/components/ui/CurrencySelector.test.tsx`                           | 5     |
+| ErrorBoundary       | `__tests__/components/ui/ErrorBoundary.test.tsx`                              | 15    |
+| NewsletterForm      | `__tests__/components/ui/NewsletterForm.test.tsx`                             | 5     |
+| ConfirmDialog       | `__tests__/components/ui/ConfirmDialog.test.tsx`                              |       |
+| ReviewForm          | `__tests__/components/ui/ReviewForm.test.tsx`                                 |       |
+| StarRating          | `__tests__/components/ui/StarRating.test.tsx`                                 |       |
+| ThemeSelector       | `__tests__/components/ui/ThemeSelector.test.tsx`                              |       |
+| UI Components       | `__tests__/components/ui/UIComponents.test.tsx`                               |       |
+| ProductFormModal    | `__tests__/components/admin/ProductFormModal.test.tsx`                        | 22    |
+| DeleteConfirmModal  | `__tests__/components/admin/DeleteConfirmModal.test.tsx`                      | 6     |
+| VariationFormModal  | `__tests__/components/admin/VariationFormModal.test.tsx`                      |       |
+| VariationList       | `__tests__/components/admin/VariationList.test.tsx`                           |       |
+| LoginModal          | `__tests__/components/auth/LoginModal.test.tsx`                               |       |
+| SharedAuth          | `__tests__/components/auth/SharedAuthComponents.test.tsx`                     |       |
+| ShareButton         | `__tests__/components/product/ShareButton.test.tsx`                           |       |
+| Hero                | `__tests__/components/sections/Hero.test.tsx`                                 | 5     |
+| ProductGrid         | `__tests__/components/sections/ProductGrid.test.tsx`                          | 10    |
+| ReviewsSection      | `__tests__/components/sections/ReviewsSection.test.tsx`                       |       |
+| Skeletons           | `__tests__/components/skeletons/Skeletons.test.tsx`                           | 7     |
+| Providers           | `__tests__/components/providers/Providers.test.tsx`                           | 3     |
+| CurrencyContext     | `__tests__/contexts/CurrencyContext.test.tsx`                                 | 12    |
+| ThemeContext        | `__tests__/contexts/ThemeContext.test.tsx`                                    |       |
+| Error pages         | `__tests__/app/error-pages.test.tsx`                                          |       |
+| Loading pages       | `__tests__/app/loading-pages.test.tsx`                                        |       |
+| Account page        | `__tests__/app/account/page.test.ts`                                          |       |
+| SignIn client       | `__tests__/app/auth/signin/SignInClient.test.tsx`                             |       |
+| ContactForm         | `__tests__/app/contact/ContactForm.test.tsx`                                  |       |
+| Short-link route    | `__tests__/app/s/route.test.ts`                                               |       |
+| Health API          | `__tests__/app/api/health/route.test.ts`                                      | 1     |
+| Account API         | `__tests__/app/api/account/route.test.ts`                                     |       |
+| Auth register API   | `__tests__/app/api/auth/register/route.test.ts`                               |       |
+| Auth change-pw API  | `__tests__/app/api/auth/change-password/route.test.ts`                        |       |
+| Auth route API      | `__tests__/app/api/auth/route.test.ts`                                        |       |
+| Cart API            | `__tests__/app/api/cart/route.test.ts`                                        |       |
+| Cart items API      | `__tests__/app/api/cart/items/[id]/route.test.ts`                             |       |
+| Exchange rates API  | `__tests__/app/api/exchange-rates/route.test.ts`                              |       |
+| Orders API          | `__tests__/app/api/orders/route.test.ts`                                      |       |
+| Orders [id] API     | `__tests__/app/api/orders/[id]/route.test.ts`                                 |       |
+| Products API        | `__tests__/app/api/products/route.test.ts`                                    |       |
+| Products [id] API   | `__tests__/app/api/products/[id]/route.test.ts`                               |       |
+| Bestsellers API     | `__tests__/app/api/products/bestsellers/route.test.ts`                        |       |
+| Reviews API         | `__tests__/app/api/reviews/route.test.ts`                                     |       |
+| Share API           | `__tests__/app/api/share/route.test.ts`                                       |       |
+| Upload API          | `__tests__/app/api/upload/route.test.ts`                                      |       |
+| Admin orders API    | `__tests__/app/api/admin/orders/route.test.ts`                                |       |
+| Admin orders [id]   | `__tests__/app/api/admin/orders/[id]/route.test.ts`                           |       |
+| Admin products API  | `__tests__/app/api/admin/products/route.test.ts`                              |       |
+| Admin products [id] | `__tests__/app/api/admin/products/[id]/route.test.ts`                         |       |
+| Admin variations    | `__tests__/app/api/admin/products/[id]/variations/route.test.ts`              |       |
+| Admin var soft-del  | `__tests__/app/api/admin/products/[id]/variations/soft-delete-orders.test.ts` |       |
+| Admin users API     | `__tests__/app/api/admin/users/route.test.ts`                                 |       |
+| Admin users [id]    | `__tests__/app/api/admin/users/[id]/route.test.ts`                            |       |
+| Admin reviews API   | `__tests__/app/api/admin/reviews/route.test.ts`                               |       |
+| Admin sales API     | `__tests__/app/api/admin/sales/route.test.ts`                                 |       |
+| Admin email-fail    | `__tests__/app/api/admin/email-failures/route.test.ts`                        |       |
+| **Total**           | **87 test files**                                                             |       |
 
 ### Writing New Tests
 
