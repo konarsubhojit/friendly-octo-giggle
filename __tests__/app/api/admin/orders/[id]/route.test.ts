@@ -29,6 +29,17 @@ vi.mock("@/lib/logger", () => ({ logError: vi.fn() }));
 vi.mock("@/lib/email", () => ({
   sendOrderStatusUpdateEmail: vi.fn(),
 }));
+vi.mock("@/lib/env", () => ({
+  env: {
+    NEXT_PUBLIC_APP_URL: "http://localhost:3000",
+    QSTASH_TOKEN: "test-token",
+  },
+}));
+vi.mock("@/lib/qstash", () => ({
+  getQStashClient: vi.fn(() => ({
+    publishJSON: vi.fn().mockResolvedValue({ messageId: "test-msg-id" }),
+  })),
+}));
 
 import { PATCH, GET } from "@/app/api/admin/orders/[id]/route";
 import { auth } from "@/lib/auth";

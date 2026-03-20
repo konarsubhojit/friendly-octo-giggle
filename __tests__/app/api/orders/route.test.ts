@@ -65,6 +65,19 @@ vi.mock("@/lib/auth", () => ({
   auth: vi.fn(),
 }));
 
+vi.mock("@/lib/env", () => ({
+  env: {
+    NEXT_PUBLIC_APP_URL: "http://localhost:3000",
+    QSTASH_TOKEN: "test-token",
+  },
+}));
+
+vi.mock("@/lib/qstash", () => ({
+  getQStashClient: vi.fn(() => ({
+    publishJSON: vi.fn().mockResolvedValue({ messageId: "test-msg-id" }),
+  })),
+}));
+
 const mockAuth = vi.mocked(auth);
 const mockInvalidateCache = vi.mocked(invalidateCache);
 const mockInvalidateUserOrderCaches = vi.mocked(invalidateUserOrderCaches);

@@ -37,6 +37,7 @@
     "@tailwindcss/postcss": "^4.1.18",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
+    "@upstash/qstash": "^2.10.1",
     "@vercel/analytics": "^1.6.1",
     "@vercel/blob": "^2.2.0",
     "@vercel/functions": "^3.4.3",

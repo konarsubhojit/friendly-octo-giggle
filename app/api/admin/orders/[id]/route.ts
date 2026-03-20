@@ -13,10 +13,13 @@ import { cacheAdminOrderById, invalidateAdminOrderCaches } from "@/lib/cache";
 import { serializeOrder } from "@/lib/serializers";
 import { UpdateOrderStatusSchema } from "@/lib/validations";
 import { sendOrderStatusUpdateEmail } from "@/lib/email";
+import { getQStashClient } from "@/lib/qstash";
+import type { OrderStatusChangedEvent } from "@/lib/qstash-events";
+import { env } from "@/lib/env";
+import { logBusinessEvent, logError } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
-// Check if user is admin
 const checkAdminAuth = async () => {
   const session = await auth();
 
@@ -53,10 +56,10 @@ const buildUpdateData = (data: {
   return { status: data.status, updatedAt: new Date(), ...optional };
 };
 
-export async function PATCH(
+export const PATCH = async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
-) {
+) => {
   const authCheck = await checkAdminAuth();
   if (!authCheck.authorized) {
     return apiError(authCheck.error ?? "Unauthorized", authCheck.status);
@@ -87,30 +90,69 @@ export async function PATCH(
 
     await invalidateAdminOrderCaches(id, order.userId);
 
-    // Send status update email for key status transitions (fire-and-forget with retry).
     const notifyStatuses = ["PROCESSING", "SHIPPED", "DELIVERED", "CANCELLED"];
     if (notifyStatuses.includes(parseResult.data.status)) {
-      sendOrderStatusUpdateEmail({
-        to: order.customerEmail,
-        customerName: order.customerName,
-        orderId: order.id,
-        status: parseResult.data.status,
-        trackingNumber: parseResult.data.trackingNumber ?? order.trackingNumber,
-        shippingProvider:
-          parseResult.data.shippingProvider ?? order.shippingProvider,
-      });
+      const workerUrl = `${env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/api/services/email`;
+      const statusEvent: OrderStatusChangedEvent = {
+        type: "order.status_changed",
+        data: {
+          orderId: order.id,
+          customerEmail: order.customerEmail,
+          customerName: order.customerName,
+          newStatus: parseResult.data.status,
+          trackingNumber:
+            parseResult.data.trackingNumber ?? order.trackingNumber ?? null,
+          shippingProvider:
+            parseResult.data.shippingProvider ?? order.shippingProvider ?? null,
+        },
+      };
+
+      try {
+        const publishResult = await getQStashClient().publishJSON({
+          url: workerUrl,
+          body: statusEvent,
+        });
+        logBusinessEvent({
+          event: "order_status_email_queued",
+          details: {
+            orderId: order.id,
+            eventType: statusEvent.type,
+            messageId: publishResult.messageId,
+          },
+          success: true,
+        });
+      } catch (publishError) {
+        logError({
+          error: publishError,
+          context: "qstash_publish_failed_using_fallback",
+          additionalInfo: {
+            orderId: order.id,
+            eventType: statusEvent.type,
+          },
+        });
+        sendOrderStatusUpdateEmail({
+          to: order.customerEmail,
+          customerName: order.customerName,
+          orderId: order.id,
+          status: parseResult.data.status,
+          trackingNumber:
+            parseResult.data.trackingNumber ?? order.trackingNumber,
+          shippingProvider:
+            parseResult.data.shippingProvider ?? order.shippingProvider,
+        });
+      }
     }
 
     return apiSuccess({ order: serializeOrder(order) });
   } catch (error) {
     return handleApiError(error);
   }
-}
+};
 
-export async function GET(
+export const GET = async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
-) {
+) => {
   const authCheck = await checkAdminAuth();
   if (!authCheck.authorized) {
     return apiError(authCheck.error ?? "Unknown error", authCheck.status);
@@ -136,4 +178,4 @@ export async function GET(
   } catch (error) {
     return handleApiError(error);
   }
-}
+};

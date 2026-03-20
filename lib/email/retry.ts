@@ -10,8 +10,6 @@ export interface RetryContext {
   readonly referenceId?: string;
 }
 
-const RETRY_DELAYS_MS = [10000, 30000, 60000];
-
 const NON_RETRIABLE_CODES = new Set([401, 403]);
 const NON_RETRIABLE_STRINGS = [
   "eauth",
@@ -24,9 +22,6 @@ const NON_RETRIABLE_STRINGS = [
   "user unknown",
   "does not exist",
 ];
-
-const delay = (ms: number): Promise<void> =>
-  new Promise((resolve) => setTimeout(resolve, ms));
 
 type SendGridLikeError = Error & {
   code?: number;
@@ -67,114 +62,80 @@ const detectProvider = (error: unknown): string => {
   );
 };
 
-const buildAttemptRecord = (
-  error: unknown,
-  attemptNumber: number,
-): EmailAttemptRecord => ({
-  attempt: attemptNumber,
-  timestamp: new Date().toISOString(),
-  error: error instanceof Error ? error.message : String(error),
-  provider: detectProvider(error),
-});
-
-const handleAttemptFailure = (
-  error: unknown,
-  context: RetryContext,
-  attemptNumber: number,
-  history: EmailAttemptRecord[],
-): boolean => {
-  const record = buildAttemptRecord(error, attemptNumber);
-  history.push(record);
-  logError({
-    error,
-    context: "email_retry_attempt",
-    additionalInfo: {
-      emailType: context.emailType,
-      referenceId: context.referenceId,
-      attempt: attemptNumber,
-      provider: record.provider,
-    },
-  });
-  if (!isNonRetriableError(error)) return false;
-  logBusinessEvent({
-    event: "email_retry_non_retriable",
-    details: {
-      emailType: context.emailType,
-      referenceId: context.referenceId,
-      attempt: attemptNumber,
-      error: record.error,
-    },
-    success: false,
-  });
-  return true;
-};
-
-const saveEmailFailure = async (
-  msg: EmailMessage,
-  context: RetryContext,
-  history: EmailAttemptRecord[],
-  lastError: unknown,
-): Promise<void> => {
-  const nonRetriable = isNonRetriableError(lastError);
-  const lastErrorMsg =
-    lastError instanceof Error ? lastError.message : String(lastError);
-  await saveFailedEmail({
-    recipientEmail: msg.to,
-    subject: msg.subject,
-    bodyHtml: msg.html,
-    bodyText: msg.text,
-    emailType: context.emailType,
-    referenceId: context.referenceId ?? "",
-    errorHistory: history,
-    isRetriable: !nonRetriable,
-    attemptCount: history.length,
-    lastError: lastErrorMsg,
-  });
-  logBusinessEvent({
-    event: "email_retry_exhausted",
-    details: {
-      emailType: context.emailType,
-      referenceId: context.referenceId,
-      totalAttempts: history.length,
-      isRetriable: !nonRetriable,
-    },
-    success: false,
-  });
-};
-
 export const runRetryChain = async (
   msg: EmailMessage,
   context: RetryContext,
 ): Promise<void> => {
-  const history: EmailAttemptRecord[] = [];
-  let lastError: unknown = null;
-  let succeeded = false;
+  try {
+    await sendEmail(msg);
+    logBusinessEvent({
+      event: "email_retry_success",
+      details: {
+        emailType: context.emailType,
+        referenceId: context.referenceId,
+        attempt: 1,
+      },
+      success: true,
+    });
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    const history: EmailAttemptRecord[] = [
+      {
+        attempt: 1,
+        timestamp: new Date().toISOString(),
+        error: errorMsg,
+        provider: detectProvider(error),
+      },
+    ];
 
-  for (let i = 0; i < RETRY_DELAYS_MS.length; i++) {
-    await delay(RETRY_DELAYS_MS[i]);
-    const attemptNumber = i + 1;
-    try {
-      await sendEmail(msg);
+    logError({
+      error,
+      context: "email_retry_attempt",
+      additionalInfo: {
+        emailType: context.emailType,
+        referenceId: context.referenceId,
+        attempt: 1,
+        provider: detectProvider(error),
+      },
+    });
+
+    const nonRetriable = isNonRetriableError(error);
+    if (nonRetriable) {
       logBusinessEvent({
-        event: "email_retry_success",
+        event: "email_retry_non_retriable",
         details: {
           emailType: context.emailType,
           referenceId: context.referenceId,
-          attempt: attemptNumber,
+          attempt: 1,
+          error: errorMsg,
         },
-        success: true,
+        success: false,
       });
-      succeeded = true;
-      break;
-    } catch (error) {
-      lastError = error;
-      const stop = handleAttemptFailure(error, context, attemptNumber, history);
-      if (stop) break;
     }
-  }
 
-  if (!succeeded) {
-    await saveEmailFailure(msg, context, history, lastError);
+    await saveFailedEmail({
+      recipientEmail: msg.to,
+      subject: msg.subject,
+      bodyHtml: msg.html,
+      bodyText: msg.text,
+      emailType: context.emailType,
+      referenceId: context.referenceId ?? "",
+      errorHistory: history,
+      isRetriable: !nonRetriable,
+      attemptCount: 1,
+      lastError: errorMsg,
+    });
+
+    logBusinessEvent({
+      event: "email_retry_exhausted",
+      details: {
+        emailType: context.emailType,
+        referenceId: context.referenceId,
+        totalAttempts: 1,
+        isRetriable: !nonRetriable,
+      },
+      success: false,
+    });
   }
 };
 
