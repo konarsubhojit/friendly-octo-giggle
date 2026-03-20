@@ -49,8 +49,7 @@ vi.mock("@/lib/logger", () => ({
 }));
 
 vi.mock("@/lib/api-middleware", () => ({
-  withApiLogging: (handler: (req: NextRequest) => Promise<Response>) =>
-    handler,
+  withApiLogging: (handler: (req: NextRequest) => Promise<Response>) => handler,
 }));
 
 vi.mock("@/lib/db", () => ({
@@ -191,9 +190,7 @@ describe("POST /api/services/email", () => {
 
   it("returns 500 for transient email send error", async () => {
     mockIsNonRetriableError.mockReturnValue(false);
-    mockSendOrderConfirmationEmail.mockRejectedValue(
-      new Error("SMTP timeout"),
-    );
+    mockSendOrderConfirmationEmail.mockRejectedValue(new Error("SMTP timeout"));
     const req = makeRequest(validOrderCreatedBody);
     const res = await POST(req);
     expect(res.status).toBe(500);

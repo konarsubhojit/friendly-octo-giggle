@@ -96,7 +96,7 @@ const validateCustomerInfo = (
     customerEmail: customerEmail ?? "",
     customerAddress,
   };
-}
+};
 
 const checkStockForItem = (
   item: OrderItemInput,
@@ -135,7 +135,7 @@ const checkStockForItem = (
   }
 
   return { valid: true, totalAmount: price * item.quantity };
-}
+};
 
 const validateStockAndCalculateTotal = (
   items: OrderItemInput[],
@@ -162,7 +162,7 @@ const validateStockAndCalculateTotal = (
   }
 
   return { valid: true, totalAmount };
-}
+};
 
 const PAGE_SIZE = 20;
 
@@ -255,7 +255,7 @@ const handleGet = async (request: NextRequest) => {
       { status: 500 },
     );
   }
-}
+};
 
 const sanitizeCustomizationNote = (
   raw: string | null | undefined,
@@ -264,7 +264,7 @@ const sanitizeCustomizationNote = (
   const trimmed = raw.trim();
   if (trimmed.length === 0) return null;
   return trimmed.slice(0, 500);
-}
+};
 
 const buildOrderItemValues = (
   items: OrderItemInput[],
@@ -558,7 +558,7 @@ const handlePost = async (request: NextRequest) => {
       { status: 500 },
     );
   }
-}
+};
 
 export const GET = withLogging(handleGet);
 export const POST = withLogging(handlePost);

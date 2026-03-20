@@ -103,9 +103,7 @@ export const PATCH = async (
           trackingNumber:
             parseResult.data.trackingNumber ?? order.trackingNumber ?? null,
           shippingProvider:
-            parseResult.data.shippingProvider ??
-            order.shippingProvider ??
-            null,
+            parseResult.data.shippingProvider ?? order.shippingProvider ?? null,
         },
       };
 

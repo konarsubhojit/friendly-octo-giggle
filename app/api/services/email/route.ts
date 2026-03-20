@@ -25,10 +25,7 @@ export const POST = async (request: NextRequest): Promise<NextResponse> => {
 
   const bodyText = await request.text();
 
-  if (
-    env.QSTASH_CURRENT_SIGNING_KEY &&
-    env.QSTASH_NEXT_SIGNING_KEY
-  ) {
+  if (env.QSTASH_CURRENT_SIGNING_KEY && env.QSTASH_NEXT_SIGNING_KEY) {
     const signature = request.headers.get("Upstash-Signature");
     if (!signature) {
       logger.warn({ messageId }, "qstash_signature_invalid");
