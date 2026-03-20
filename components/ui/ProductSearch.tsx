@@ -10,23 +10,36 @@ import "@upstash/search-ui/dist/index.css";
 const searchUrl = process.env.NEXT_PUBLIC_UPSTASH_SEARCH_REST_URL;
 const searchToken = process.env.NEXT_PUBLIC_UPSTASH_SEARCH_REST_READONLY_TOKEN;
 
-const client =
-  searchUrl && searchToken
-    ? new Search({ url: searchUrl, token: searchToken })
-    : null;
-
-const index = client?.index<{
+type ProductContent = Record<string, unknown> & {
   name: string;
   description: string;
   category: string;
   price: number;
   stock: number;
-}>("products");
+};
+
+// Lazily initialized — avoids constructing the client at import time
+let _cached: {
+  search: (opts: {
+    query: string;
+    limit: number;
+    reranking: boolean;
+  }) => Promise<Array<{ id: string; score: number; content: ProductContent }>>;
+} | null = null;
+
+function getIndex() {
+  if (_cached) return _cached;
+  if (!searchUrl || !searchToken) return null;
+  const client = new Search({ url: searchUrl, token: searchToken });
+  _cached = client.index<ProductContent>("products");
+  return _cached;
+}
 
 // ─── Component ───────────────────────────────────────────
 
 export default function ProductSearch() {
   const router = useRouter();
+  const index = getIndex();
 
   if (!index) return null;
 
@@ -43,9 +56,15 @@ export default function ProductSearch() {
           placeholder="Search products..."
         />
         <SearchBar.Results
-          searchFn={(query) =>
-            index.search({ query, limit: 8, reranking: true })
-          }
+          searchFn={async (query) => {
+            try {
+              return await index.search({ query, limit: 8, reranking: true });
+            } catch (error) {
+              // Prevent search errors from breaking the UI
+              console.error("ProductSearch: search failed", error);
+              return [];
+            }
+          }}
         >
           {(result) => (
             <SearchBar.Result

@@ -62,7 +62,7 @@ export async function PUT(
     await invalidateProductCaches(id);
 
     // Update search index (fire-and-forget)
-    indexProduct(product);
+    void indexProduct(product);
 
     return apiSuccess({ product });
   } catch (error) {
@@ -99,7 +99,7 @@ export async function DELETE(
     await invalidateProductCaches(id);
 
     // Remove from search index (fire-and-forget)
-    removeProduct(id);
+    void removeProduct(id);
 
     return apiSuccess({ message: "Product deleted", id });
   } catch (error) {

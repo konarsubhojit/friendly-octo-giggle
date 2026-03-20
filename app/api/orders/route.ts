@@ -461,7 +461,7 @@ const handlePost = async (request: NextRequest) => {
     });
 
     // Index order in Upstash Search (fire-and-forget)
-    indexOrder({
+    void indexOrder({
       id: fullOrder.id,
       customerName: fullOrder.customerName,
       customerEmail: fullOrder.customerEmail,

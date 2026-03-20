@@ -134,7 +134,7 @@ export const POST = async (request: NextRequest) => {
     await invalidateProductCaches();
 
     // Index in Upstash Search (fire-and-forget)
-    indexProduct(product);
+    void indexProduct(product);
 
     return apiSuccess({ product }, 201);
   } catch (error) {

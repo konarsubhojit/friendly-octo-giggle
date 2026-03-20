@@ -220,22 +220,20 @@ describe("lib/search", () => {
 
   describe("searchProducts", () => {
     it("calls search with query and returns mapped results", async () => {
-      mockSearch.mockResolvedValueOnce({
-        results: [
-          {
-            id: "p1",
-            score: 0.95,
-            content: {
-              name: "Cotton Shirt",
-              description: "Soft",
-              category: "Clothing",
-              price: 29.99,
-              stock: 10,
-            },
-            metadata: { image: "https://example.com/shirt.jpg" },
+      mockSearch.mockResolvedValueOnce([
+        {
+          id: "p1",
+          score: 0.95,
+          content: {
+            name: "Cotton Shirt",
+            description: "Soft",
+            category: "Handbag",
+            price: 29.99,
+            stock: 10,
           },
-        ],
-      });
+          metadata: { image: "https://example.com/shirt.jpg" },
+        },
+      ]);
 
       const results = await searchProducts("cotton");
 
@@ -251,14 +249,14 @@ describe("lib/search", () => {
     });
 
     it("passes category filter when provided", async () => {
-      mockSearch.mockResolvedValueOnce({ results: [] });
+      mockSearch.mockResolvedValueOnce([]);
 
-      await searchProducts("shirt", { category: "Clothing" });
+      await searchProducts("shirt", { category: "Handbag" });
 
       expect(mockSearch).toHaveBeenCalledWith({
         query: "shirt",
         limit: 20,
-        filter: "category = 'Clothing'",
+        filter: "category = 'Handbag'",
       });
     });
 
@@ -275,7 +273,7 @@ describe("lib/search", () => {
 
   describe("searchOrders", () => {
     it("calls search with query and status filter", async () => {
-      mockSearch.mockResolvedValueOnce({ results: [] });
+      mockSearch.mockResolvedValueOnce([]);
 
       await searchOrders("john", { status: "PENDING" });
 
