@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { drizzleDb } from "@/lib/db";
-import { orders, orderItems, products, productVariations, users } from "@/lib/schema";
+import {
+  orders,
+  orderItems,
+  products,
+  productVariations,
+  users,
+} from "@/lib/schema";
 import {
   eq,
   inArray,
@@ -546,7 +552,10 @@ const handlePost = async (request: NextRequest) => {
         to: fullOrder.customerEmail,
         customerName: fullOrder.customerName,
         orderId: fullOrder.id,
-        totalAmount: formatPriceForCurrency(fullOrder.totalAmount, currencyCode),
+        totalAmount: formatPriceForCurrency(
+          fullOrder.totalAmount,
+          currencyCode,
+        ),
         shippingAddress: fullOrder.customerAddress,
         items: fullOrder.items.map((item: OrderItem) => ({
           name: item.product.name,

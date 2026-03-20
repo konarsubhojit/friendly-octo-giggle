@@ -79,8 +79,7 @@ export const POST = async (request: NextRequest): Promise<NextResponse> => {
   try {
     if (event.type === "order.created") {
       const currency: CurrencyCode =
-        event.data.currencyCode &&
-        isValidCurrencyCode(event.data.currencyCode)
+        event.data.currencyCode && isValidCurrencyCode(event.data.currencyCode)
           ? event.data.currencyCode
           : "INR";
       await sendOrderConfirmationEmail({
