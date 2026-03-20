@@ -47,12 +47,9 @@ const resolveInitialVariation = (
   product: Product,
   variationId: string | null,
 ): ProductVariation | null => {
+  if (!variationId) return null;
   const variations = product.variations ?? [];
-  if (variationId) {
-    const match = variations.find((v) => v.id === variationId);
-    if (match) return match;
-  }
-  return variations[0] ?? null;
+  return variations.find((v) => v.id === variationId) ?? null;
 };
 
 const getClampedQtyState = (
@@ -143,13 +140,24 @@ interface VariationSelectorProps {
   readonly selectedVariation: ProductVariation | null;
   readonly formatPrice: (amount: number) => string;
   readonly onSelect: (v: ProductVariation) => void;
+  readonly onSelectBase: () => void;
+  readonly basePrice: number;
 }
+
+const baseButtonClass = (isSelected: boolean) => {
+  const base = "p-4 border-2 rounded-xl transition-all duration-300 focus-warm text-left";
+  return isSelected
+    ? `${base} border-[var(--accent-warm)] bg-[var(--accent-cream)] shadow-warm scale-105`
+    : `${base} border-[var(--border-warm)] hover:border-[var(--accent-warm)] hover:shadow-warm hover:scale-105 bg-[var(--accent-cream)]/50`;
+};
 
 const VariationSelector = ({
   variations,
   selectedVariation,
   formatPrice,
   onSelect,
+  onSelectBase,
+  basePrice,
 }: VariationSelectorProps) => {
   if (!variations || variations.length === 0) return null;
   return (
@@ -161,6 +169,18 @@ const VariationSelector = ({
         Select Design
       </span>
       <div className="grid grid-cols-2 gap-3">
+        <button
+          onClick={onSelectBase}
+          aria-label="Select standard base design"
+          aria-pressed={selectedVariation === null}
+          className={baseButtonClass(selectedVariation === null)}
+        >
+          <div className="text-sm font-bold text-[var(--foreground)]">Standard</div>
+          <div className="text-xs text-[var(--text-secondary)] mt-1">Base design</div>
+          <div className="text-xs font-semibold text-[var(--accent-warm)] mt-1">
+            {formatPrice(basePrice)}
+          </div>
+        </button>
         {variations.map((variation) => (
           <VariationButton
             key={variation.id}
@@ -196,7 +216,7 @@ interface ProductInfoCardProps {
   readonly formatPrice: (amount: number) => string;
   readonly effectivePrice: number;
   readonly selectedVariation: ProductVariation | null;
-  readonly setSelectedVariation: (v: ProductVariation) => void;
+  readonly setSelectedVariation: (v: ProductVariation | null) => void;
   readonly effectiveStock: number;
 }
 
@@ -250,6 +270,8 @@ const ProductInfoCard = ({
         selectedVariation={selectedVariation}
         formatPrice={formatPrice}
         onSelect={setSelectedVariation}
+        onSelectBase={() => setSelectedVariation(null)}
+        basePrice={product.price}
       />
     </div>
   );
