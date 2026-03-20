@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 const {
   mockSendEmail,
@@ -111,7 +111,7 @@ describe("lib/email/retry", () => {
     };
 
     it("succeeds on first retry if sendEmail resolves", async () => {
-      mockSendEmail.mockResolvedValue();
+      mockSendEmail.mockResolvedValue(undefined);
 
       const promise = runRetryChain(msg, ctx);
       await vi.runAllTimersAsync();
@@ -121,14 +121,14 @@ describe("lib/email/retry", () => {
       expect(mockSaveFailedEmail).not.toHaveBeenCalled();
     });
 
-    it("saves to DB after all retries fail", async () => {
+    it("saves to DB after send fails", async () => {
       mockSendEmail.mockRejectedValue(new Error("ETIMEDOUT"));
 
       const promise = runRetryChain(msg, ctx);
       await vi.runAllTimersAsync();
       await promise;
 
-      expect(mockSendEmail).toHaveBeenCalledTimes(3);
+      expect(mockSendEmail).toHaveBeenCalledTimes(1);
       expect(mockSaveFailedEmail).toHaveBeenCalledWith(
         expect.objectContaining({
           recipientEmail: "u@test.com",
@@ -156,27 +156,14 @@ describe("lib/email/retry", () => {
       );
     });
 
-    it("succeeds on second retry", async () => {
-      mockSendEmail
-        .mockRejectedValueOnce(new Error("ETIMEDOUT"))
-        .mockResolvedValue();
-
-      const promise = runRetryChain(msg, ctx);
-      await vi.runAllTimersAsync();
-      await promise;
-
-      expect(mockSendEmail).toHaveBeenCalledTimes(2);
-      expect(mockSaveFailedEmail).not.toHaveBeenCalled();
-    });
-
-    it("logs each failed attempt", async () => {
+    it("logs the failed attempt on send error", async () => {
       mockSendEmail.mockRejectedValue(new Error("ETIMEDOUT"));
 
       const promise = runRetryChain(msg, ctx);
       await vi.runAllTimersAsync();
       await promise;
 
-      expect(mockLogError).toHaveBeenCalledTimes(3);
+      expect(mockLogError).toHaveBeenCalledTimes(1);
     });
   });
 

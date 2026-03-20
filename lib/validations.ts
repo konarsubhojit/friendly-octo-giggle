@@ -111,20 +111,45 @@ export interface PaginatedResponse<T> {
 }
 
 // Type-safe environment variables
-export const EnvSchema = z.object({
-  DATABASE_URL: z.string(),
-  REDIS_URL: z.string().optional(),
-  NODE_ENV: z.enum(["development", "production", "test"]).optional(),
-  EXCHANGE_RATE_API_KEY: z.string().optional(),
-  SENDGRID_API_KEY: z.string().optional(),
-  SENDGRID_FROM_EMAIL: z.string().optional(),
-  GOOGLE_SMTP_HOST: z.string().optional(),
-  GOOGLE_SMTP_PORT: z.string().optional(),
-  GOOGLE_SMTP_SECURE: z.enum(["true", "false"]).optional(),
-  GOOGLE_SMTP_USER: z.string().optional(),
-  GOOGLE_SMTP_APP_PASSWORD: z.string().optional(),
-  GOOGLE_SMTP_FROM_EMAIL: z.string().optional(),
-});
+const QSTASH_REQUIRED_KEYS = [
+  "QSTASH_TOKEN",
+  "QSTASH_CURRENT_SIGNING_KEY",
+  "QSTASH_NEXT_SIGNING_KEY",
+  "NEXT_PUBLIC_APP_URL",
+] as const;
+
+export const EnvSchema = z
+  .object({
+    DATABASE_URL: z.string(),
+    REDIS_URL: z.string().optional(),
+    NODE_ENV: z.enum(["development", "production", "test"]).optional(),
+    EXCHANGE_RATE_API_KEY: z.string().optional(),
+    SENDGRID_API_KEY: z.string().optional(),
+    SENDGRID_FROM_EMAIL: z.string().optional(),
+    GOOGLE_SMTP_HOST: z.string().optional(),
+    GOOGLE_SMTP_PORT: z.string().optional(),
+    GOOGLE_SMTP_SECURE: z.enum(["true", "false"]).optional(),
+    GOOGLE_SMTP_USER: z.string().optional(),
+    GOOGLE_SMTP_APP_PASSWORD: z.string().optional(),
+    GOOGLE_SMTP_FROM_EMAIL: z.string().optional(),
+    QSTASH_TOKEN: z.string().optional(),
+    QSTASH_CURRENT_SIGNING_KEY: z.string().optional(),
+    QSTASH_NEXT_SIGNING_KEY: z.string().optional(),
+    NEXT_PUBLIC_APP_URL: z.string().url().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.NODE_ENV === "production") {
+      QSTASH_REQUIRED_KEYS.forEach((key) => {
+        if (!data[key]) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: [key],
+            message: `${key} is required in production`,
+          });
+        }
+      });
+    }
+  });
 
 export type Env = z.infer<typeof EnvSchema>;
 

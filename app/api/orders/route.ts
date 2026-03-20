@@ -20,6 +20,9 @@ import { withLogging } from "@/lib/api-middleware";
 import { logBusinessEvent, logError } from "@/lib/logger";
 import { auth } from "@/lib/auth";
 import { sendOrderConfirmationEmail } from "@/lib/email";
+import { getQStashClient } from "@/lib/qstash";
+import type { OrderCreatedEvent } from "@/lib/qstash-events";
+import { env } from "@/lib/env";
 
 export const dynamic = "force-dynamic";
 
@@ -51,12 +54,12 @@ type StockCheckResult =
       details?: Record<string, unknown>;
     };
 
-function validateCustomerInfo(
+const validateCustomerInfo = (
   body: CreateOrderInput,
   session: {
     user: { id: string; name?: string | null; email?: string | null };
   },
-): ValidationResult {
+): ValidationResult => {
   const customerName = body.customerName || session.user.name || "Unknown";
   const customerEmail = body.customerEmail || session.user.email;
   const customerAddress = body.customerAddress || "";
@@ -95,10 +98,10 @@ function validateCustomerInfo(
   };
 }
 
-function checkStockForItem(
+const checkStockForItem = (
   item: OrderItemInput,
   product: ProductWithVariations,
-): StockCheckResult {
+): StockCheckResult => {
   let price = product.price;
   let stockToCheck = product.stock;
 
@@ -134,10 +137,10 @@ function checkStockForItem(
   return { valid: true, totalAmount: price * item.quantity };
 }
 
-function validateStockAndCalculateTotal(
+const validateStockAndCalculateTotal = (
   items: OrderItemInput[],
   products: ProductWithVariations[],
-): StockCheckResult {
+): StockCheckResult => {
   let totalAmount = 0;
 
   for (const item of items) {
@@ -196,7 +199,7 @@ const buildOrderConditions = (
 const serializeDate = (value: Date | string): string =>
   value instanceof Date ? value.toISOString() : value;
 
-async function handleGet(request: NextRequest) {
+const handleGet = async (request: NextRequest) => {
   try {
     const session = await auth();
     if (!session?.user?.id) {
@@ -254,18 +257,16 @@ async function handleGet(request: NextRequest) {
   }
 }
 
-/** Sanitizes a raw customization note: trims, truncates to 500 chars, or returns null. */
-function sanitizeCustomizationNote(
+const sanitizeCustomizationNote = (
   raw: string | null | undefined,
-): string | null {
+): string | null => {
   if (typeof raw !== "string") return null;
   const trimmed = raw.trim();
   if (trimmed.length === 0) return null;
   return trimmed.slice(0, 500);
 }
 
-/** Builds the values array for orderItems.insert given a list of inputs and matching products. */
-function buildOrderItemValues(
+const buildOrderItemValues = (
   items: OrderItemInput[],
   productList: ProductWithVariations[],
   orderId: string,
@@ -276,7 +277,7 @@ function buildOrderItemValues(
   quantity: number;
   price: number;
   customizationNote: string | null;
-}> {
+}> => {
   return items.map((item) => {
     const product = productList.find((p) => p.id === item.productId);
     if (!product)
@@ -295,9 +296,9 @@ function buildOrderItemValues(
       customizationNote: sanitizeCustomizationNote(item.customizationNote),
     };
   });
-}
+};
 
-async function handlePost(request: NextRequest) {
+const handlePost = async (request: NextRequest) => {
   try {
     const session = await auth();
 
@@ -471,20 +472,60 @@ async function handlePost(request: NextRequest) {
       ),
     ]);
 
-    // Schedule email confirmation (fire-and-forget with retry).
-    sendOrderConfirmationEmail({
-      to: fullOrder.customerEmail,
-      customerName: fullOrder.customerName,
-      orderId: fullOrder.id,
-      totalAmount: `$${fullOrder.totalAmount.toFixed(2)}`,
-      shippingAddress: fullOrder.customerAddress,
-      items: fullOrder.items.map((item: OrderItem) => ({
-        name: item.product.name,
-        quantity: item.quantity,
-        price: `$${item.price.toFixed(2)}`,
-        variation: item.variation?.name ?? null,
-      })),
-    });
+    const workerUrl = `${env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/api/services/email`;
+    const emailEvent: OrderCreatedEvent = {
+      type: "order.created",
+      data: {
+        orderId: fullOrder.id,
+        customerEmail: fullOrder.customerEmail,
+        customerName: fullOrder.customerName,
+        customerAddress: fullOrder.customerAddress,
+        totalAmount: fullOrder.totalAmount,
+        items: fullOrder.items.map((item: OrderItem) => ({
+          name: item.product.name,
+          quantity: item.quantity,
+          price: item.price,
+        })),
+      },
+    };
+
+    try {
+      const publishResult = await getQStashClient().publishJSON({
+        url: workerUrl,
+        body: emailEvent,
+      });
+      logBusinessEvent({
+        event: "order_email_queued",
+        details: {
+          orderId: fullOrder.id,
+          eventType: emailEvent.type,
+          messageId: publishResult.messageId,
+        },
+        success: true,
+      });
+    } catch (publishError) {
+      logError({
+        error: publishError,
+        context: "qstash_publish_failed_using_fallback",
+        additionalInfo: {
+          orderId: fullOrder.id,
+          eventType: emailEvent.type,
+        },
+      });
+      sendOrderConfirmationEmail({
+        to: fullOrder.customerEmail,
+        customerName: fullOrder.customerName,
+        orderId: fullOrder.id,
+        totalAmount: `$${fullOrder.totalAmount.toFixed(2)}`,
+        shippingAddress: fullOrder.customerAddress,
+        items: fullOrder.items.map((item: OrderItem) => ({
+          name: item.product.name,
+          quantity: item.quantity,
+          price: `$${item.price.toFixed(2)}`,
+          variation: item.variation?.name ?? null,
+        })),
+      });
+    }
 
     return NextResponse.json(
       {
