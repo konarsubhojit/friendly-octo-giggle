@@ -138,7 +138,9 @@ export const EnvSchema = z
     NEXT_PUBLIC_APP_URL: z.string().url().optional(),
   })
   .superRefine((data, ctx) => {
-    if (data.NODE_ENV === "production") {
+    // Skip production-only checks during build phase (next build sets NODE_ENV=production)
+    const isBuildPhase = process.env.NEXT_PHASE === "phase-production-build";
+    if (data.NODE_ENV === "production" && !isBuildPhase) {
       QSTASH_REQUIRED_KEYS.forEach((key) => {
         if (!data[key]) {
           ctx.addIssue({

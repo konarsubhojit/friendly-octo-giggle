@@ -7,11 +7,45 @@ const mockNextAuthReturn = vi.hoisted(() => ({
   signOut: vi.fn(),
   auth: vi.fn(),
 }));
-let capturedConfig: Record<string, unknown>;
+
+interface NextAuthConfig {
+  session: { strategy: string };
+  pages: { signIn: string; error: string };
+  providers: Array<{
+    id: string;
+    issuer?: string;
+    authorize?: (credentials: Record<string, unknown>) => Promise<unknown>;
+  }>;
+  adapter: unknown;
+  callbacks: {
+    session: (params: {
+      session: { user: Record<string, unknown> };
+      token: Record<string, unknown>;
+    }) => { user: Record<string, unknown> };
+    jwt: (params: {
+      token: Record<string, unknown>;
+      user?: Record<string, unknown>;
+    }) => Record<string, unknown>;
+    signIn: (params: {
+      user: Record<string, unknown>;
+      account: Record<string, unknown> | null;
+    }) => boolean;
+  };
+  events: {
+    signOut: () => void;
+  };
+  cookies: {
+    sessionToken: {
+      options: Record<string, unknown>;
+    };
+  };
+}
+
+let capturedConfig: NextAuthConfig;
 
 vi.mock("next-auth", () => ({
   default: vi.fn((config: Record<string, unknown>) => {
-    capturedConfig = config;
+    capturedConfig = config as unknown as NextAuthConfig;
     return mockNextAuthReturn;
   }),
 }));
@@ -170,23 +204,28 @@ describe("auth module", () => {
 
   describe("Google provider config", () => {
     it("uses empty strings when env vars are not set", () => {
-      expect(capturedConfig.providers).toBeDefined();
-      expect(Array.isArray(capturedConfig.providers)).toBe(true);
+      const providers = capturedConfig.providers as Array<{ id: string }>;
+      expect(providers).toBeDefined();
+      expect(Array.isArray(providers)).toBe(true);
       const expectedCount = process.env.NODE_ENV === "development" ? 4 : 3;
-      expect(capturedConfig.providers.length).toBe(expectedCount);
+      expect(providers.length).toBe(expectedCount);
       if (process.env.NODE_ENV === "development") {
-        expect(capturedConfig.providers[0].id).toBe("copilot-dev");
+        expect(providers[0].id).toBe("copilot-dev");
       }
     });
   });
 
   describe("Microsoft provider config", () => {
     it("has microsoft-entra-id provider configured", () => {
-      const msProvider = capturedConfig.providers.find(
+      const providers = capturedConfig.providers as Array<{
+        id: string;
+        issuer?: string;
+      }>;
+      const msProvider = providers.find(
         (p: { id: string }) => p.id === "microsoft-entra-id",
       );
       expect(msProvider).toBeDefined();
-      expect(msProvider.issuer).toBe(
+      expect(msProvider?.issuer).toBe(
         "https://login.microsoftonline.com/common/v2.0",
       );
     });
@@ -194,7 +233,8 @@ describe("auth module", () => {
 
   describe("Credentials provider config", () => {
     it("has credentials provider configured", () => {
-      const credProvider = capturedConfig.providers.find(
+      const providers = capturedConfig.providers as Array<{ id: string }>;
+      const credProvider = providers.find(
         (p: { id: string }) => p.id === "credentials",
       );
       expect(credProvider).toBeDefined();
@@ -205,10 +245,14 @@ describe("auth module", () => {
     let authorize: (credentials: Record<string, unknown>) => Promise<unknown>;
 
     beforeEach(() => {
-      const credProvider = capturedConfig.providers.find(
+      const providers = capturedConfig.providers as Array<{
+        id: string;
+        authorize?: (credentials: Record<string, unknown>) => Promise<unknown>;
+      }>;
+      const credProvider = providers.find(
         (p: { id: string }) => p.id === "credentials",
       );
-      authorize = credProvider.authorize;
+      authorize = credProvider!.authorize!;
     });
 
     it("returns null when identifier is missing", async () => {
