@@ -11,10 +11,10 @@ import { StockBadge } from "@/components/sections/StockBadge";
 import { QuickAddButton } from "@/components/sections/QuickAddButton";
 import { FlowerAccent } from "@/components/ui/DecorativeElements";
 import { WishlistButton } from "@/components/ui/WishlistButton";
-import { CATEGORY_FILTERS } from "@/lib/constants/categories";
 
 interface ProductGridProps {
   readonly products: Product[];
+  readonly categories?: string[];
 }
 
 interface ProductCardProps {
@@ -78,10 +78,12 @@ const ProductCard = ({ product, formatPrice, index }: ProductCardProps) => {
   );
 };
 
-const ProductGrid = ({ products }: ProductGridProps) => {
+const ProductGrid = ({ products, categories = [] }: ProductGridProps) => {
   const { formatPrice } = useCurrency();
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
+
+  const categoryFilters = ["All", ...categories];
 
   const handleSearchChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => setSearch(e.target.value),
@@ -160,7 +162,7 @@ const ProductGrid = ({ products }: ProductGridProps) => {
           aria-label="Filter by category"
         >
           <legend className="sr-only">Filter by category</legend>
-          {CATEGORY_FILTERS.map((cat) => (
+          {categoryFilters.map((cat) => (
             <button
               key={cat}
               onClick={() => handleCategoryChange(cat)}

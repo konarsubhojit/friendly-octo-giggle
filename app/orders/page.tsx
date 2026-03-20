@@ -51,7 +51,7 @@ const OrdersEmptyState = ({ search }: { readonly search: string }) => (
           : "Start shopping and your orders will appear here."
       }
       ctaText={search ? undefined : "Browse Products"}
-      ctaHref={search ? undefined : "/"}
+      ctaHref={search ? undefined : "/shop"}
       className="py-0"
     />
   </Card>

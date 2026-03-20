@@ -11,7 +11,9 @@
 
 import { Search } from "@upstash/search";
 import { logError } from "./logger";
-import { PRODUCT_CATEGORIES } from "./constants/categories";
+import { drizzleDb } from "./db";
+import { categories as categoriesTable } from "./schema";
+import { isNull } from "drizzle-orm";
 
 const VALID_ORDER_STATUSES = [
   "PENDING",
@@ -294,10 +296,16 @@ export async function searchProducts(
     const client = getClient();
     const index = client.index<ProductContent, ProductMetadata>(PRODUCTS_INDEX);
 
-    const validCategory =
-      category && (PRODUCT_CATEGORIES as readonly string[]).includes(category)
-        ? category
-        : undefined;
+    // Validate category against DB to prevent filter injection
+    let validCategory: string | undefined;
+    if (category) {
+      const dbCats = await drizzleDb
+        .select({ name: categoriesTable.name })
+        .from(categoriesTable)
+        .where(isNull(categoriesTable.deletedAt));
+      const catNames = dbCats.map((c) => c.name);
+      validCategory = catNames.includes(category) ? category : undefined;
+    }
     const filter = validCategory ? `category = '${validCategory}'` : undefined;
 
     const results = await index.search({

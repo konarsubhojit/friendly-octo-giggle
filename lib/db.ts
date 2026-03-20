@@ -4,6 +4,7 @@ import {
   products,
   productVariations,
   productShares,
+  categories,
   users,
   accounts,
   sessions,
@@ -33,6 +34,7 @@ import {
   wishlistsRelations,
   reviewsRelations,
   productSharesRelations,
+  categoriesRelations,
 } from "./schema";
 import { eq, desc, and, isNull, sql, ne } from "drizzle-orm";
 import { Product, ProductInput } from "./types";
@@ -59,6 +61,7 @@ const schema = {
   products,
   productVariations,
   productShares,
+  categories,
   orders,
   orderItems,
   carts,
@@ -66,6 +69,7 @@ const schema = {
   wishlists,
   failedEmails,
   usersRelations,
+  categoriesRelations,
   accountsRelations,
   passwordHistoryRelations,
   sessionsRelations,

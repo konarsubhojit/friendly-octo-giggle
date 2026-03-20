@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import { Product } from "@/lib/types";
 import toast from "react-hot-toast";
@@ -16,7 +16,6 @@ import {
   type CurrencyCode,
 } from "@/contexts/CurrencyContext";
 import { PRODUCT_ERRORS, API_ERRORS } from "@/lib/constants/error-messages";
-import { PRODUCT_CATEGORIES } from "@/lib/constants/categories";
 
 const MAX_IMAGES = 10;
 
@@ -244,6 +243,20 @@ export default function ProductFormModal({
   const [fieldErrors, setFieldErrors] = useState<
     Partial<Record<keyof ProductFormData, string>>
   >({});
+
+  // Dynamic categories fetched from API
+  const [categoryList, setCategoryList] = useState<string[]>([]);
+  useEffect(() => {
+    fetch("/api/categories")
+      .then((r) => r.json())
+      .then((json) => {
+        const items: { name: string }[] = json.data ?? [];
+        setCategoryList(items.map((c) => c.name));
+      })
+      .catch(() => {
+        // Fallback — keep empty; the select will just show no options
+      });
+  }, []);
 
   const totalImages =
     (formData.image || imageFile ? 1 : 0) + formData.images.length;
@@ -639,7 +652,7 @@ export default function ProductFormModal({
               className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${fieldErrors.category ? "border-red-400 dark:border-red-500" : "border-gray-300 dark:border-gray-600"}`}
             >
               <option value="">Select a category</option>
-              {PRODUCT_CATEGORIES.map((cat) => (
+              {categoryList.map((cat) => (
                 <option key={cat} value={cat}>
                   {cat}
                 </option>

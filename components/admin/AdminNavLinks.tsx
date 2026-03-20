@@ -9,6 +9,8 @@ const NAV_LINKS = [
   { href: "/admin/orders", label: "Orders" },
   { href: "/admin/users", label: "Users" },
   { href: "/admin/reviews", label: "Reviews" },
+  { href: "/admin/categories", label: "Categories" },
+  { href: "/admin/search", label: "Search" },
 ];
 
 const fetchFailedEmailCount = async (): Promise<number> => {

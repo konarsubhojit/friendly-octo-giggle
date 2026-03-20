@@ -48,37 +48,43 @@ export default function CartPage() {
     dispatch(fetchCart());
   }, [dispatch]);
 
-  const handleUpdateQuantity = useCallback(async (itemId: string, quantity: number) => {
-    if (quantity < 1) return;
+  const handleUpdateQuantity = useCallback(
+    async (itemId: string, quantity: number) => {
+      if (quantity < 1) return;
 
-    setUpdating(itemId);
-    try {
-      await dispatch(updateCartItem({ itemId, quantity })).unwrap();
-    } catch (err) {
-      setError(
-        typeof err === "string"
-          ? err
-          : "Something went wrong. Please try again.",
-      );
-    } finally {
-      setUpdating(null);
-    }
-  }, [dispatch]);
+      setUpdating(itemId);
+      try {
+        await dispatch(updateCartItem({ itemId, quantity })).unwrap();
+      } catch (err) {
+        setError(
+          typeof err === "string"
+            ? err
+            : "Something went wrong. Please try again.",
+        );
+      } finally {
+        setUpdating(null);
+      }
+    },
+    [dispatch],
+  );
 
-  const handleRemoveItem = useCallback(async (itemId: string) => {
-    setUpdating(itemId);
-    try {
-      await dispatch(removeCartItem(itemId)).unwrap();
-    } catch (err) {
-      setError(
-        typeof err === "string"
-          ? err
-          : "Something went wrong. Please try again.",
-      );
-    } finally {
-      setUpdating(null);
-    }
-  }, [dispatch]);
+  const handleRemoveItem = useCallback(
+    async (itemId: string) => {
+      setUpdating(itemId);
+      try {
+        await dispatch(removeCartItem(itemId)).unwrap();
+      } catch (err) {
+        setError(
+          typeof err === "string"
+            ? err
+            : "Something went wrong. Please try again.",
+        );
+      } finally {
+        setUpdating(null);
+      }
+    },
+    [dispatch],
+  );
 
   const cartTotal = useMemo(() => {
     if (!cart?.items) return 0;
@@ -90,8 +96,8 @@ export default function CartPage() {
     }, 0);
   }, [cart?.items]);
 
-  const cartItemCount = useMemo(() =>
-    cart?.items?.reduce((s, i) => s + i.quantity, 0) ?? 0,
+  const cartItemCount = useMemo(
+    () => cart?.items?.reduce((s, i) => s + i.quantity, 0) ?? 0,
     [cart?.items],
   );
 
@@ -196,7 +202,7 @@ export default function CartPage() {
             message="Please sign in to view your cart and place orders."
           />
           <Link
-            href="/"
+            href="/shop"
             className="block mt-4 text-[var(--text-muted)] hover:text-[var(--text-secondary)] font-medium text-center"
           >
             Continue Shopping
@@ -210,7 +216,6 @@ export default function CartPage() {
 
   return (
     <div className="min-h-screen bg-warm-gradient">
-
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16 relative">
         {/* Decorative leaf accents */}
         <LeafAccent className="absolute top-32 right-4 w-8 h-8 opacity-20 hidden sm:block animate-float-gentle" />
@@ -266,7 +271,7 @@ export default function CartPage() {
               title="Your cart is empty"
               message="Add some products to get started!"
               ctaText="Browse Products"
-              ctaHref="/"
+              ctaHref="/shop"
               className="py-0"
             />
           </Card>
@@ -291,7 +296,7 @@ export default function CartPage() {
               </Card>
 
               <Link
-                href="/"
+                href="/shop"
                 className="inline-flex items-center gap-2 mt-4 text-sm text-[var(--text-secondary)] hover:text-[var(--accent-rose)] transition-colors font-medium"
               >
                 <svg
@@ -320,10 +325,7 @@ export default function CartPage() {
 
                 <div className="space-y-3 mb-4 text-sm">
                   <div className="flex justify-between text-[var(--text-secondary)]">
-                    <span>
-                      Subtotal ({cartItemCount}{" "}
-                      items)
-                    </span>
+                    <span>Subtotal ({cartItemCount} items)</span>
                     <span className="font-medium">
                       {formatPrice(cartTotal)}
                     </span>

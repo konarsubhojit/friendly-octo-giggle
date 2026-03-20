@@ -145,7 +145,7 @@ const OutOfStockPanel = () => (
       products.
     </p>
     <Link
-      href="/"
+      href="/shop"
       className="inline-flex items-center gap-2 mt-4 px-5 py-2.5 bg-gradient-to-r from-[var(--accent-warm)] to-[var(--accent-rose)] text-white rounded-xl font-semibold text-sm shadow-warm hover:shadow-warm-lg transition-all duration-300 focus-warm"
     >
       Browse Products

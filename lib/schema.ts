@@ -126,6 +126,17 @@ export const passwordHistory = pgTable(
 
 // ─── Product Tables ──────────────────────────────────────
 
+export const categories = pgTable("Category", {
+  id: varchar("id", { length: 7 })
+    .primaryKey()
+    .$defaultFn(() => generateShortId()),
+  name: text("name").notNull().unique(),
+  sortOrder: integer("sortOrder").notNull().default(0),
+  createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { mode: "date" }).defaultNow().notNull(),
+  deletedAt: timestamp("deletedAt", { mode: "date" }),
+});
+
 export const products = pgTable(
   "Product",
   {
@@ -451,6 +462,8 @@ export const productSharesRelations = relations(productShares, ({ one }) => ({
     references: [productVariations.id],
   }),
 }));
+
+export const categoriesRelations = relations(categories, () => ({}));
 
 // ─── Failed Email Types ──────────────────────────────────
 

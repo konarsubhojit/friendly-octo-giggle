@@ -29,6 +29,13 @@
       "when": 1773949751075,
       "tag": "0003_wide_lifeguard",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1774035673950,
+      "tag": "0004_colorful_mad_thinker",
+      "breakpoints": true
     }
   ]
 }
