@@ -3,7 +3,7 @@ import { NextRequest } from "next/server";
 import { GET, POST } from "@/app/api/orders/route";
 import { drizzleDb } from "@/lib/db";
 import { auth } from "@/lib/auth";
-import { getCachedData, invalidateCache } from "@/lib/redis";
+import { invalidateCache } from "@/lib/redis";
 import { invalidateUserOrderCaches } from "@/lib/cache";
 import { logBusinessEvent, logError } from "@/lib/logger";
 
@@ -18,7 +18,12 @@ vi.mock("@/lib/db", () => ({
 }));
 
 vi.mock("@/lib/schema", () => ({
-  orders: { id: "id", userId: "userId", createdAt: "createdAt" },
+  orders: {
+    id: "id",
+    userId: "userId",
+    createdAt: "createdAt",
+    status: "status",
+  },
   orderItems: { id: "id" },
   products: { id: "id", stock: "stock", deletedAt: "deletedAt" },
   productVariations: { id: "id", stock: "stock" },
@@ -31,19 +36,19 @@ vi.mock("drizzle-orm", () => ({
   desc: vi.fn(),
   and: vi.fn(),
   isNull: vi.fn(),
+  lt: vi.fn(),
+  ilike: vi.fn(),
+  or: vi.fn(),
 }));
 
 vi.mock("@/lib/redis", () => ({
-  getCachedData: vi.fn(),
   invalidateCache: vi.fn(),
 }));
 
 vi.mock("@/lib/cache", () => ({
   CACHE_KEYS: {
-    ORDERS_BY_USER: vi.fn((userId: string) => `orders:user:${userId}`),
     PRODUCTS_BESTSELLERS: "products:bestsellers",
   },
-  CACHE_TTL: { USER_ORDERS: 300, USER_ORDERS_STALE: 60 },
   invalidateUserOrderCaches: vi.fn(),
 }));
 
@@ -61,7 +66,6 @@ vi.mock("@/lib/auth", () => ({
 }));
 
 const mockAuth = vi.mocked(auth);
-const mockGetCachedData = vi.mocked(getCachedData);
 const mockInvalidateCache = vi.mocked(invalidateCache);
 const mockInvalidateUserOrderCaches = vi.mocked(invalidateUserOrderCaches);
 const mockLogBusinessEvent = vi.mocked(logBusinessEvent);
@@ -118,9 +122,6 @@ describe("GET /api/orders", () => {
     mockAuth.mockResolvedValue({
       user: { id: "user1", name: "Test", email: "test@example.com" },
     } as never);
-    mockGetCachedData.mockImplementation(async (_key, _ttl, fetcher) => {
-      return fetcher();
-    });
     mockFindManyOrders.mockResolvedValue(mockOrders as never);
 
     const request = new NextRequest("http://localhost/api/orders");
@@ -140,7 +141,7 @@ describe("GET /api/orders", () => {
     mockAuth.mockResolvedValue({
       user: { id: "user1", name: "Test", email: "test@example.com" },
     } as never);
-    mockGetCachedData.mockRejectedValue(new Error("Cache error"));
+    mockFindManyOrders.mockRejectedValue(new Error("DB error"));
 
     const request = new NextRequest("http://localhost/api/orders");
     const response = await GET(request);
@@ -613,9 +614,6 @@ describe("POST /api/orders", () => {
     mockAuth.mockResolvedValue({
       user: { id: "user1", name: "Test", email: "test@example.com" },
     } as never);
-    mockGetCachedData.mockImplementation(async (_key, _ttl, fetcher) => {
-      return fetcher();
-    });
 
     const ordersWithStringDates = [
       {
