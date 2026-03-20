@@ -2,14 +2,12 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const {
   mockSendWithRetry,
-  mockSend,
-  mockSetApiKey,
+  mockMailerSendSend,
   mockCreateTransport,
   mockSmtpSendMail,
 } = vi.hoisted(() => ({
   mockSendWithRetry: vi.fn(),
-  mockSend: vi.fn(),
-  mockSetApiKey: vi.fn(),
+  mockMailerSendSend: vi.fn(),
   mockCreateTransport: vi.fn(),
   mockSmtpSendMail: vi.fn(),
 }));
@@ -18,8 +16,25 @@ vi.mock("@/lib/email/retry", () => ({
   sendWithRetry: mockSendWithRetry,
 }));
 
-vi.mock("@sendgrid/mail", () => ({
-  default: { send: mockSend, setApiKey: mockSetApiKey },
+vi.mock("mailersend", () => ({
+  MailerSend: vi.fn().mockImplementation(() => ({
+    email: { send: mockMailerSendSend },
+  })),
+  EmailParams: vi.fn().mockImplementation(() => {
+    const params: Record<string, unknown> = {};
+    const self = {
+      setFrom: vi.fn().mockReturnValue(self),
+      setTo: vi.fn().mockReturnValue(self),
+      setReplyTo: vi.fn().mockReturnValue(self),
+      setSubject: vi.fn().mockReturnValue(self),
+      setHtml: vi.fn().mockReturnValue(self),
+      setText: vi.fn().mockReturnValue(self),
+      ...params,
+    };
+    return self;
+  }),
+  Sender: vi.fn(),
+  Recipient: vi.fn(),
 }));
 
 vi.mock("nodemailer", () => ({

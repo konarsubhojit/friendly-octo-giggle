@@ -1,14 +1,14 @@
-import NextAuth from 'next-auth';
-import Google from 'next-auth/providers/google';
-import MicrosoftEntraId from 'next-auth/providers/microsoft-entra-id';
-import Credentials from 'next-auth/providers/credentials';
-import { DrizzleAdapter } from '@auth/drizzle-adapter';
-import { drizzleDb } from '@/lib/db';
-import { users, accounts, sessions, verificationTokens } from '@/lib/schema';
-import type { Adapter } from 'next-auth/adapters';
-import { logAuthEvent } from './logger';
-import { verifyPassword } from './password';
-import { eq, or } from 'drizzle-orm';
+import NextAuth from "next-auth";
+import Google from "next-auth/providers/google";
+import MicrosoftEntraId from "next-auth/providers/microsoft-entra-id";
+import Credentials from "next-auth/providers/credentials";
+import { DrizzleAdapter } from "@auth/drizzle-adapter";
+import { drizzleDb } from "@/lib/db";
+import { users, accounts, sessions, verificationTokens } from "@/lib/schema";
+import type { Adapter } from "next-auth/adapters";
+import { logAuthEvent } from "./logger";
+import { verifyPassword } from "./password";
+import { eq, or } from "drizzle-orm";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: DrizzleAdapter(drizzleDb, {
@@ -19,49 +19,55 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   }) as Adapter,
   providers: [
     // DEV-ONLY: Copilot admin bypass — enabled only in development
-    ...(process.env.NODE_ENV === 'development' ? [
-      Credentials({
-        id: 'copilot-dev',
-        name: 'Copilot Admin (Dev Only)',
-        credentials: {
-          devToken: { label: 'Dev Token', type: 'text' },
-        },
-        async authorize(credentials) {
-          const token = credentials?.devToken as string | undefined;
-          if (token !== 'copilot-dev-admin-2026') return null;
-          return {
-            id: 'dev-copilot-admin',
-            name: 'Copilot Admin',
-            email: 'copilot@dev.local',
-            image: null,
-            role: 'ADMIN' as const,
-            phoneNumber: null,
-          };
-        },
-      }),
-    ] : []),
+    ...(process.env.NODE_ENV === "development"
+      ? [
+          Credentials({
+            id: "copilot-dev",
+            name: "Copilot Admin (Dev Only)",
+            credentials: {
+              devToken: { label: "Dev Token", type: "text" },
+            },
+            async authorize(credentials) {
+              const token = credentials?.devToken as string | undefined;
+              if (token !== "copilot-dev-admin-2026") return null;
+              return {
+                id: "dev-copilot-admin",
+                name: "Copilot Admin",
+                email: "copilot@dev.local",
+                image: null,
+                role: "ADMIN" as const,
+                phoneNumber: null,
+              };
+            },
+          }),
+        ]
+      : []),
     Google({
-      clientId: process.env.GOOGLE_CLIENT_ID ? process.env.GOOGLE_CLIENT_ID : '',
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET ? process.env.GOOGLE_CLIENT_SECRET : '',
+      clientId: process.env.GOOGLE_CLIENT_ID
+        ? process.env.GOOGLE_CLIENT_ID
+        : "",
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET
+        ? process.env.GOOGLE_CLIENT_SECRET
+        : "",
       authorization: {
         params: {
-          prompt: 'consent',
-          access_type: 'offline',
-          response_type: 'code',
+          prompt: "consent",
+          access_type: "offline",
+          response_type: "code",
         },
       },
     }),
     MicrosoftEntraId({
-      clientId: process.env.MICROSOFT_CLIENT_ID ?? '',
-      clientSecret: process.env.MICROSOFT_CLIENT_SECRET ?? '',
-      issuer: 'https://login.microsoftonline.com/consumers/v2.0',
-      authorization: { params: { scope: 'openid profile email User.Read' } },
+      clientId: process.env.MICROSOFT_CLIENT_ID ?? "",
+      clientSecret: process.env.MICROSOFT_CLIENT_SECRET ?? "",
+      issuer: "https://login.microsoftonline.com/common/v2.0",
+      authorization: { params: { scope: "openid profile email User.Read" } },
     }),
     Credentials({
-      name: 'credentials',
+      name: "credentials",
       credentials: {
-        identifier: { label: 'Email or Phone', type: 'text' },
-        password: { label: 'Password', type: 'password' },
+        identifier: { label: "Email or Phone", type: "text" },
+        password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
         const identifier = credentials?.identifier as string | undefined;
@@ -79,10 +85,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         if (!user) {
           logAuthEvent({
-            event: 'failed_login',
+            event: "failed_login",
             email: identifier,
             success: false,
-            error: 'User not found',
+            error: "User not found",
           });
           return null;
         }
@@ -90,11 +96,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         // OAuth-only users don't have a password hash
         if (!user.passwordHash) {
           logAuthEvent({
-            event: 'failed_login',
+            event: "failed_login",
             userId: user.id,
             email: user.email,
             success: false,
-            error: 'No password set (OAuth-only user)',
+            error: "No password set (OAuth-only user)",
           });
           return null;
         }
@@ -102,11 +108,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const isValid = await verifyPassword(password, user.passwordHash);
         if (!isValid) {
           logAuthEvent({
-            event: 'failed_login',
+            event: "failed_login",
             userId: user.id,
             email: user.email,
             success: false,
-            error: 'Invalid password',
+            error: "Invalid password",
           });
           return null;
         }
@@ -124,12 +130,15 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   ],
   cookies: {
     sessionToken: {
-      name: process.env.NODE_ENV === 'production' ? '__Secure-next-auth.session-token' : 'next-auth.session-token',
+      name:
+        process.env.NODE_ENV === "production"
+          ? "__Secure-next-auth.session-token"
+          : "next-auth.session-token",
       options: {
         httpOnly: true,
-        sameSite: 'lax',
-        path: '/',
-        secure: process.env.NODE_ENV === 'production',
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
       },
     },
   },
@@ -137,16 +146,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     session({ session, token }) {
       if (session.user) {
         session.user.id = token.id;
-        session.user.role = token.role || 'CUSTOMER';
+        session.user.role = token.role || "CUSTOMER";
         session.user.phoneNumber = token.phoneNumber || undefined;
       }
       return session;
     },
     jwt({ token, user }) {
       if (user) {
-        token.id = user.id ?? '';
-        token.role = user.role || 'CUSTOMER';
-        if ('phoneNumber' in user && user.phoneNumber) {
+        token.id = user.id ?? "";
+        token.role = user.role || "CUSTOMER";
+        if ("phoneNumber" in user && user.phoneNumber) {
           token.phoneNumber = user.phoneNumber;
         }
       }
@@ -155,7 +164,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     signIn({ user, account }) {
       // Log successful sign-in
       logAuthEvent({
-        event: 'login',
+        event: "login",
         userId: user.id,
         email: user.email || undefined,
         provider: account?.provider,
@@ -168,16 +177,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     signOut() {
       // Log sign-out (user ID not available in signOut event)
       logAuthEvent({
-        event: 'logout',
+        event: "logout",
         success: true,
       });
     },
   },
   pages: {
-    signIn: '/auth/signin',
-    error: '/auth/error',
+    signIn: "/auth/signin",
+    error: "/auth/error",
   },
   session: {
-    strategy: 'jwt',
+    strategy: "jwt",
   },
 });

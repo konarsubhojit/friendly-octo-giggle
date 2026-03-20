@@ -52,14 +52,14 @@ describe("lib/email/retry", () => {
   describe("isNonRetriableError", () => {
     it("returns true for 401 status code", () => {
       const err = Object.assign(new Error("Unauthorized"), {
-        response: { statusCode: 401 },
+        statusCode: 401,
       });
       expect(isNonRetriableError(err)).toBe(true);
     });
 
     it("returns true for 403 status code", () => {
       const err = Object.assign(new Error("Forbidden"), {
-        response: { statusCode: 403 },
+        statusCode: 403,
       });
       expect(isNonRetriableError(err)).toBe(true);
     });

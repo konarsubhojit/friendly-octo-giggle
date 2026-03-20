@@ -23,14 +23,13 @@ const NON_RETRIABLE_STRINGS = [
   "does not exist",
 ];
 
-type SendGridLikeError = Error & {
-  code?: number;
-  response?: { statusCode?: number };
+type MailerSendLikeError = Error & {
+  statusCode?: number;
 };
 
 const getErrorStatusCode = (error: unknown): number | undefined => {
-  const sgError = error as SendGridLikeError;
-  return sgError?.response?.statusCode ?? sgError?.code;
+  const msError = error as MailerSendLikeError;
+  return msError?.statusCode;
 };
 
 export const isNonRetriableError = (error: unknown): boolean => {
@@ -46,7 +45,7 @@ export const isNonRetriableError = (error: unknown): boolean => {
 };
 
 const PROVIDER_PATTERNS: Array<[string[], string]> = [
-  [["sendgrid", "sg."], "sendgrid"],
+  [["mailersend"], "mailersend"],
   [["smtp", "google"], "google_smtp"],
 ];
 

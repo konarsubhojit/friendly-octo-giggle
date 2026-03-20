@@ -3,12 +3,12 @@
  * SRP: Only handles provider setup and low-level sending.
  * OCP: New providers can be added by implementing the send flow here.
  */
-import sgMail from "@sendgrid/mail";
+import { MailerSend, EmailParams, Sender, Recipient } from "mailersend";
 import nodemailer, { type Transporter } from "nodemailer";
 import { logError, logBusinessEvent } from "@/lib/logger";
 
 const FROM_EMAIL =
-  process.env.SENDGRID_FROM_EMAIL ??
+  process.env.MAILERSEND_FROM_EMAIL ??
   process.env.GOOGLE_SMTP_FROM_EMAIL ??
   process.env.GOOGLE_SMTP_USER ??
   "noreply@thekiyonstore.com";
@@ -19,52 +19,36 @@ const SMTP_SECURE =
   process.env.GOOGLE_SMTP_SECURE === "true" ||
   (process.env.GOOGLE_SMTP_SECURE !== "false" && SMTP_PORT === 465);
 
-let sgInitialized = false;
+let mailerSendClient: MailerSend | null = null;
+let mailerSendInitialized = false;
 let smtpInitialized = false;
 let smtpTransport: Transporter | null = null;
 
-type SendGridBodyError = {
-  message?: string;
-  field?: string;
-  help?: string;
-};
-
-type SendGridLikeError = Error & {
-  code?: number;
-  response?: {
-    statusCode?: number;
-    body?: {
-      errors?: SendGridBodyError[];
-    };
+type MailerSendLikeError = Error & {
+  statusCode?: number;
+  body?: {
+    message?: string;
+    errors?: Record<string, string[]>;
   };
 };
 
-const extractSendGridErrorMeta = (error: unknown) => {
-  const sgError = error as SendGridLikeError;
-  const statusCode = sgError.response?.statusCode ?? sgError.code;
-  const providerErrors =
-    sgError.response?.body?.errors
-      ?.map((item) => item.message)
-      .filter((message): message is string => Boolean(message)) ?? [];
+const extractMailerSendErrorMeta = (error: unknown) => {
+  const msError = error as MailerSendLikeError;
+  const statusCode = msError.statusCode;
+  const providerErrors = msError.body?.message ? [msError.body.message] : [];
   const isUnauthorized = statusCode === 401 || statusCode === 403;
 
   return { statusCode, providerErrors, isUnauthorized };
 };
 
-export const initSendGrid = () => {
-  if (!sgInitialized && process.env.SENDGRID_API_KEY) {
-    if (!process.env.SENDGRID_API_KEY.startsWith("SG.")) {
-      logBusinessEvent({
-        event: "email_skipped",
-        details: { reason: "invalid_api_key_format" },
-        success: false,
-      });
-      return false;
-    }
-    sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-    sgInitialized = true;
+export const initMailerSend = () => {
+  if (!mailerSendInitialized && process.env.MAILERSEND_API_KEY) {
+    mailerSendClient = new MailerSend({
+      apiKey: process.env.MAILERSEND_API_KEY,
+    });
+    mailerSendInitialized = true;
   }
-  return sgInitialized;
+  return mailerSendInitialized;
 };
 
 export const initGoogleSmtp = () => {
@@ -92,9 +76,9 @@ export interface EmailMessage {
 
 export const sendEmail = async (msg: EmailMessage): Promise<void> => {
   const hasGoogleSmtp = initGoogleSmtp();
-  const hasSendGrid = initSendGrid();
+  const hasMailerSend = initMailerSend();
 
-  if (!hasGoogleSmtp && !hasSendGrid) {
+  if (!hasGoogleSmtp && !hasMailerSend) {
     logBusinessEvent({
       event: "email_skipped",
       details: {
@@ -136,23 +120,28 @@ export const sendEmail = async (msg: EmailMessage): Promise<void> => {
     }
   }
 
-  if (!hasSendGrid) return;
+  if (!hasMailerSend || !mailerSendClient) return;
 
   try {
-    await sgMail.send({
-      to: msg.to,
-      from: { email: FROM_EMAIL, name: FROM_NAME },
-      subject: msg.subject,
-      html: msg.html,
-      text: msg.text,
-    });
+    const sentFrom = new Sender(FROM_EMAIL, FROM_NAME);
+    const recipients = [new Recipient(msg.to)];
+
+    const emailParams = new EmailParams()
+      .setFrom(sentFrom)
+      .setTo(recipients)
+      .setReplyTo(sentFrom)
+      .setSubject(msg.subject)
+      .setHtml(msg.html)
+      .setText(msg.text);
+
+    await mailerSendClient.email.send(emailParams);
     logBusinessEvent({
       event: "email_sent",
-      details: { to: msg.to, subject: msg.subject, provider: "sendgrid" },
+      details: { to: msg.to, subject: msg.subject, provider: "mailersend" },
       success: true,
     });
   } catch (error) {
-    const errorMeta = extractSendGridErrorMeta(error);
+    const errorMeta = extractMailerSendErrorMeta(error);
 
     if (errorMeta.isUnauthorized) {
       logBusinessEvent({
@@ -175,7 +164,7 @@ export const sendEmail = async (msg: EmailMessage): Promise<void> => {
         to: msg.to,
         subject: msg.subject,
         fromEmail: FROM_EMAIL,
-        provider: "sendgrid",
+        provider: "mailersend",
         statusCode: errorMeta.statusCode,
         providerErrors: errorMeta.providerErrors,
       },
