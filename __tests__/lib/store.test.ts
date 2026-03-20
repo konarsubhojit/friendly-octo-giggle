@@ -16,6 +16,8 @@ describe("Redux store", () => {
       cart: null,
       loading: false,
       error: null,
+      stockWarning: null,
+      adjustedQuantity: null,
     });
   });
 

@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { drizzleDb } from "@/lib/db";
 import { products } from "@/lib/schema";
-import { desc, lt, ilike, and, isNull, SQL } from "drizzle-orm";
+import { desc, lt, ilike, and, isNull, inArray, SQL } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { ProductInputSchema } from "@/lib/validations";
 import { apiSuccess, apiError, handleApiError } from "@/lib/api-utils";
@@ -9,6 +9,7 @@ import { auth } from "@/lib/auth";
 import { revalidateTag } from "next/cache";
 import { invalidateProductCaches } from "@/lib/cache";
 import { indexProduct } from "@/lib/search";
+import { searchProductIds } from "@/lib/search-service";
 
 export const dynamic = "force-dynamic";
 
@@ -72,8 +73,16 @@ export const GET = async (request: NextRequest) => {
     }
 
     if (search) {
-      const pattern = `%${search}%`;
-      conditions.push(ilike(products.name, pattern));
+      const matchedIds = await searchProductIds(search, { limit: limit * 5 });
+
+      if (matchedIds === null) {
+        const pattern = `%${search}%`;
+        conditions.push(ilike(products.name, pattern));
+      } else if (matchedIds.length === 0) {
+        return apiSuccess({ products: [], nextCursor: null, hasMore: false });
+      } else {
+        conditions.push(inArray(products.id, matchedIds));
+      }
     }
 
     const whereClause =

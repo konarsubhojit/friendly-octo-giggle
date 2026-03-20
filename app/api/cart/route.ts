@@ -347,8 +347,8 @@ export async function GET(request: NextRequest) {
 // Add item to cart
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth();
-    const rawBody = await request.json();
+    // Parallelize auth and body parsing (independent I/O)
+    const [session, rawBody] = await Promise.all([auth(), request.json()]);
 
     // Validate input
     const parseResult = AddToCartSchema.safeParse(rawBody);
@@ -358,9 +358,20 @@ export async function POST(request: NextRequest) {
     }
 
     const body = parseResult.data;
+    const cookieSessionId = request.cookies.get("cart_session")?.value;
 
-    // Verify product and stock
-    const stockResult = await verifyProductStock(body);
+    // Parallelize stock verification and cart lookup (independent DB queries)
+    // Use allSettled so a cart lookup failure doesn't mask a stock error
+    const [stockSettled, cartSettled] = await Promise.allSettled([
+      verifyProductStock(body),
+      getOrCreateCart(session, cookieSessionId),
+    ]);
+
+    // Check stock result first (most common early-exit path)
+    if (stockSettled.status === "rejected") {
+      throw stockSettled.reason;
+    }
+    const stockResult = stockSettled.value;
     if ("error" in stockResult) {
       return NextResponse.json(
         { error: stockResult.error },
@@ -369,9 +380,11 @@ export async function POST(request: NextRequest) {
     }
     const { availableStock } = stockResult;
 
-    // Get or create cart
-    const cookieSessionId = request.cookies.get("cart_session")?.value;
-    const { cart, sessionId } = await getOrCreateCart(session, cookieSessionId);
+    // Now check cart result
+    if (cartSettled.status === "rejected") {
+      throw cartSettled.reason;
+    }
+    const { cart, sessionId } = cartSettled.value;
 
     // Add or update item (auto-caps to available stock)
     const itemResult = await addOrUpdateCartItem(cart.id, body, availableStock);
@@ -384,31 +397,31 @@ export async function POST(request: NextRequest) {
     const stockWarning =
       itemResult && "warning" in itemResult ? itemResult : null;
 
-    // Fetch updated cart
-    const updatedCart = await drizzleDb.query.carts.findFirst({
-      where: eq(carts.id, cart.id),
-      with: {
-        items: {
-          with: {
-            product: {
-              with: {
-                variations: {
-                  where: (v, { isNull }) => isNull(v.deletedAt),
+    // Fetch updated cart and invalidate cache in parallel
+    const [updatedCart] = await Promise.all([
+      drizzleDb.query.carts.findFirst({
+        where: eq(carts.id, cart.id),
+        with: {
+          items: {
+            with: {
+              product: {
+                with: {
+                  variations: {
+                    where: (v, { isNull }) => isNull(v.deletedAt),
+                  },
                 },
               },
+              variation: true,
             },
-            variation: true,
           },
         },
-      },
-    });
+      }),
+      invalidateCartCache(session?.user?.id, sessionId),
+    ]);
 
     if (!updatedCart) {
       return NextResponse.json({ error: "Cart not found" }, { status: 404 });
     }
-
-    // Invalidate cart cache
-    await invalidateCartCache(session?.user?.id, sessionId);
 
     // Build response with session cookie for guests
     const responseBody: {
@@ -450,10 +463,14 @@ export async function DELETE(request: NextRequest) {
 
     const cart = await findCartForDeletion(userId, sessionId);
     if (cart) {
-      await drizzleDb.delete(carts).where(eq(carts.id, cart.id));
+      // Parallelize cart deletion and cache invalidation
+      await Promise.all([
+        drizzleDb.delete(carts).where(eq(carts.id, cart.id)),
+        invalidateCartCache(userId, sessionId),
+      ]);
+    } else {
+      await invalidateCartCache(userId, sessionId);
     }
-
-    await invalidateCartCache(userId, sessionId);
 
     const response = NextResponse.json({ success: true });
 

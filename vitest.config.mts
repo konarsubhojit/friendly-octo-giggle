@@ -6,8 +6,10 @@ export default defineConfig({
   plugins: [tsconfigPaths(), react()],
   test: {
     environment: "jsdom",
-    "maxConcurrency": 8,
+    maxConcurrency: 128,
     globals: true,
+    maxWorkers: 8,
+    fileParallelism: true,
     setupFiles: ["__tests__/setup.ts"],
     include: ["__tests__/**/*.test.{ts,tsx}"],
     coverage: {

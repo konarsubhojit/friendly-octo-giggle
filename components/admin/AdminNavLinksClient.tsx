@@ -189,6 +189,7 @@ function CommandPalette({
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [prevOpen, setPrevOpen] = useState(open);
   const allItems = useMemo(
     () => getAllNavItems(failedEmailCount),
     [failedEmailCount],
@@ -205,18 +206,26 @@ function CommandPalette({
     );
   }, [query, allItems]);
 
+  // Reset state when the dialog opens (state-based prev tracking)
+  if (open && !prevOpen) {
+    setQuery("");
+    setSelectedIndex(0);
+  }
+  if (open !== prevOpen) {
+    setPrevOpen(open);
+  }
+
   useEffect(() => {
     if (open) {
-      setQuery("");
-      setSelectedIndex(0);
-      // Delay focus to after render
       requestAnimationFrame(() => inputRef.current?.focus());
     }
   }, [open]);
 
-  useEffect(() => {
+  const [prevFilteredLen, setPrevFilteredLen] = useState(filtered.length);
+  if (filtered.length !== prevFilteredLen) {
     setSelectedIndex(0);
-  }, [filtered.length]);
+    setPrevFilteredLen(filtered.length);
+  }
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -234,15 +243,20 @@ function CommandPalette({
         onClose();
       }
     },
-    [filtered, selectedIndex, onClose],
+    [filtered, selectedIndex, onClose, router],
   );
 
   if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[15vh]">
-      {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions -- backdrop dismiss */}
-      <div className="fixed inset-0 bg-black/50" onClick={onClose} />
+      <button
+        type="button"
+        className="fixed inset-0 bg-black/50 cursor-default"
+        onClick={onClose}
+        aria-label="Close navigation"
+        tabIndex={-1}
+      />
       <dialog
         open
         className="relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md mx-4 overflow-hidden border border-gray-200 dark:border-gray-700 p-0"

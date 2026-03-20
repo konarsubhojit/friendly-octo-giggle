@@ -23,6 +23,24 @@ vi.mock("@/lib/logger", () => ({
   logError: vi.fn(),
 }));
 
+const mockWhere = vi
+  .fn()
+  .mockResolvedValue([{ name: "Handbag" }, { name: "Flowers" }]);
+const mockFrom = vi.fn(() => ({ where: mockWhere }));
+const mockSelect = vi.fn(() => ({ from: mockFrom }));
+
+vi.mock("@/lib/db", () => ({
+  drizzleDb: {
+    select: (...args: unknown[]) => mockSelect(...args),
+  },
+}));
+vi.mock("@/lib/schema", () => ({
+  categories: { name: "name", deletedAt: "deletedAt" },
+}));
+vi.mock("drizzle-orm", () => ({
+  isNull: vi.fn(),
+}));
+
 import {
   isSearchAvailable,
   indexProduct,

@@ -1,5 +1,11 @@
 import { describe, it, vi, expect, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  act,
+} from "@testing-library/react";
 import React from "react";
 import ProductGrid from "@/components/sections/ProductGrid";
 import { CurrencyProvider } from "@/contexts/CurrencyContext";
@@ -15,7 +21,11 @@ vi.mock("next/link", () => ({
     children: React.ReactNode;
     href: string;
     "aria-label"?: string;
-  }) => <a href={href} aria-label={ariaLabel}>{children}</a>,
+  }) => (
+    <a href={href} aria-label={ariaLabel}>
+      {children}
+    </a>
+  ),
 }));
 
 vi.mock("next/image", () => ({
@@ -54,10 +64,18 @@ const makeProduct = (overrides: Partial<Product> = {}): Product => ({
   ...overrides,
 });
 
-function renderGrid(products: Product[]) {
+const ALL_CATEGORIES = [
+  "Handbag",
+  "Flowers",
+  "Flower Pots",
+  "Keychains",
+  "Hair Accessories",
+];
+
+function renderGrid(products: Product[], categories?: string[]) {
   return render(
     <CurrencyProvider>
-      <ProductGrid products={products} />
+      <ProductGrid products={products} categories={categories} />
     </CurrencyProvider>,
   );
 }
@@ -65,7 +83,7 @@ function renderGrid(products: Product[]) {
 describe("ProductGrid", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockDispatch.mockReturnValue({ unwrap: () => Promise.resolve() });
+    mockDispatch.mockReturnValue({ unwrap: () => Promise.resolve({}) });
   });
   it("shows empty state when no products", () => {
     renderGrid([]);
@@ -83,7 +101,7 @@ describe("ProductGrid", () => {
   });
 
   it("renders category in filter pills", () => {
-    renderGrid([makeProduct({ category: "Flowers" })]);
+    renderGrid([makeProduct({ category: "Flowers" })], ["Flowers"]);
     const elements = screen.getAllByText("Flowers");
     expect(elements.length).toBeGreaterThan(0);
   });
@@ -123,7 +141,7 @@ describe("ProductGrid", () => {
     expect(screen.getByText(/All Products/i)).toBeTruthy();
   });
   it("renders category filter buttons", () => {
-    renderGrid([]);
+    renderGrid([], ALL_CATEGORIES);
     expect(screen.getByText("All")).toBeTruthy();
     expect(screen.getByText("Handbag")).toBeTruthy();
     expect(screen.getByText("Flowers")).toBeTruthy();
@@ -144,10 +162,13 @@ describe("ProductGrid", () => {
   });
 
   it("filters products by category", () => {
-    renderGrid([
-      makeProduct({ id: "1", name: "Red Rose", category: "Flowers" }),
-      makeProduct({ id: "2", name: "Tote Bag", category: "Handbag" }),
-    ]);
+    renderGrid(
+      [
+        makeProduct({ id: "1", name: "Red Rose", category: "Flowers" }),
+        makeProduct({ id: "2", name: "Tote Bag", category: "Handbag" }),
+      ],
+      ["Flowers", "Handbag"],
+    );
     const handbagBtn = screen.getByRole("button", { name: "Handbag" });
     fireEvent.click(handbagBtn);
     expect(screen.getByText("Tote Bag")).toBeTruthy();
@@ -159,11 +180,15 @@ describe("ProductGrid", () => {
     fireEvent.change(screen.getByPlaceholderText("Search products..."), {
       target: { value: "xyz-no-match" },
     });
-    expect(screen.getByText(/Try adjusting your search or category filter/i)).toBeTruthy();
+    expect(
+      screen.getByText(/Try adjusting your search or category filter/i),
+    ).toBeTruthy();
   });
   it("renders quick add button for in-stock product", () => {
     renderGrid([makeProduct({ stock: 5 })]);
-    const btn = screen.getByRole("button", { name: /Add Test Product to cart/i });
+    const btn = screen.getByRole("button", {
+      name: /Add Test Product to cart/i,
+    });
     expect(btn).toBeTruthy();
   });
 
@@ -173,15 +198,21 @@ describe("ProductGrid", () => {
   });
 
   it("quick add button dispatches addToCart and shows success toast", async () => {
-    mockDispatch.mockReturnValue({ unwrap: () => Promise.resolve() });
+    mockDispatch.mockReturnValue({ unwrap: () => Promise.resolve({}) });
     renderGrid([makeProduct({ id: "p1", name: "Flower Bouquet", stock: 5 })]);
 
-    const addBtn = screen.getByRole("button", { name: /Add Flower Bouquet to cart/i });
-    await act(async () => { fireEvent.click(addBtn); });
+    const addBtn = screen.getByRole("button", {
+      name: /Add Flower Bouquet to cart/i,
+    });
+    await act(async () => {
+      fireEvent.click(addBtn);
+    });
 
     expect(mockDispatch).toHaveBeenCalledTimes(1);
     await waitFor(() => {
-      expect(vi.mocked(toast).success).toHaveBeenCalledWith("Flower Bouquet added to cart!");
+      expect(vi.mocked(toast).success).toHaveBeenCalledWith(
+        "Flower Bouquet added to cart!",
+      );
     });
   });
 
@@ -191,8 +222,12 @@ describe("ProductGrid", () => {
     });
     renderGrid([makeProduct({ id: "p2", name: "Test Bag", stock: 3 })]);
 
-    const addBtn = screen.getByRole("button", { name: /Add Test Bag to cart/i });
-    await act(async () => { fireEvent.click(addBtn); });
+    const addBtn = screen.getByRole("button", {
+      name: /Add Test Bag to cart/i,
+    });
+    await act(async () => {
+      fireEvent.click(addBtn);
+    });
 
     await waitFor(() => {
       expect(vi.mocked(toast).error).toHaveBeenCalledWith(
@@ -203,15 +238,21 @@ describe("ProductGrid", () => {
 
   it("quick add button is disabled while adding", async () => {
     let resolveAdd!: () => void;
-    const pendingPromise = new Promise<void>((res) => { resolveAdd = res; });
+    const pendingPromise = new Promise<void>((res) => {
+      resolveAdd = res;
+    });
     mockDispatch.mockReturnValue({ unwrap: () => pendingPromise });
 
     renderGrid([makeProduct({ stock: 5 })]);
-    const btn = screen.getByRole("button", { name: /Add Test Product to cart/i });
+    const btn = screen.getByRole("button", {
+      name: /Add Test Product to cart/i,
+    });
 
     fireEvent.click(btn);
     expect(btn).toBeDisabled();
 
-    await act(async () => { resolveAdd(); });
+    await act(async () => {
+      resolveAdd();
+    });
   });
 });

@@ -292,42 +292,33 @@ export async function searchProducts(
 
   const { limit = 20, category } = options;
 
-  try {
-    const client = getClient();
-    const index = client.index<ProductContent, ProductMetadata>(PRODUCTS_INDEX);
+  const client = getClient();
+  const index = client.index<ProductContent, ProductMetadata>(PRODUCTS_INDEX);
 
-    // Validate category against DB to prevent filter injection
-    let validCategory: string | undefined;
-    if (category) {
-      const dbCats = await drizzleDb
-        .select({ name: categoriesTable.name })
-        .from(categoriesTable)
-        .where(isNull(categoriesTable.deletedAt));
-      const catNames = dbCats.map((c) => c.name);
-      validCategory = catNames.includes(category) ? category : undefined;
-    }
-    const filter = validCategory ? `category = '${validCategory}'` : undefined;
-
-    const results = await index.search({
-      query,
-      limit,
-      ...(filter ? { filter } : {}),
-    });
-
-    return results.map((r) => ({
-      id: String(r.id),
-      score: r.score,
-      content: r.content,
-      metadata: r.metadata ?? { image: "" },
-    }));
-  } catch (error) {
-    logError({
-      error,
-      context: "search",
-      additionalInfo: { operation: "searchProducts", query },
-    });
-    return [];
+  // Validate category against DB to prevent filter injection
+  let validCategory: string | undefined;
+  if (category) {
+    const dbCats = await drizzleDb
+      .select({ name: categoriesTable.name })
+      .from(categoriesTable)
+      .where(isNull(categoriesTable.deletedAt));
+    const catNames = dbCats.map((c) => c.name);
+    validCategory = catNames.includes(category) ? category : undefined;
   }
+  const filter = validCategory ? `category = '${validCategory}'` : undefined;
+
+  const results = await index.search({
+    query,
+    limit,
+    ...(filter ? { filter } : {}),
+  });
+
+  return results.map((r) => ({
+    id: String(r.id),
+    score: r.score,
+    content: r.content,
+    metadata: r.metadata ?? { image: "" },
+  }));
 }
 
 export async function searchOrders(
@@ -338,36 +329,27 @@ export async function searchOrders(
 
   const { limit = 20, status } = options;
 
-  try {
-    const client = getClient();
-    const index = client.index<OrderContent, OrderMetadata>(ORDERS_INDEX);
+  const client = getClient();
+  const index = client.index<OrderContent, OrderMetadata>(ORDERS_INDEX);
 
-    const validStatus =
-      status && (VALID_ORDER_STATUSES as readonly string[]).includes(status)
-        ? status
-        : undefined;
-    const filter = validStatus ? `status = '${validStatus}'` : undefined;
+  const validStatus =
+    status && (VALID_ORDER_STATUSES as readonly string[]).includes(status)
+      ? status
+      : undefined;
+  const filter = validStatus ? `status = '${validStatus}'` : undefined;
 
-    const results = await index.search({
-      query,
-      limit,
-      ...(filter ? { filter } : {}),
-    });
+  const results = await index.search({
+    query,
+    limit,
+    ...(filter ? { filter } : {}),
+  });
 
-    return results.map((r) => ({
-      id: String(r.id),
-      score: r.score,
-      content: r.content,
-      metadata: r.metadata ?? { createdAt: "" },
-    }));
-  } catch (error) {
-    logError({
-      error,
-      context: "search",
-      additionalInfo: { operation: "searchOrders", query },
-    });
-    return [];
-  }
+  return results.map((r) => ({
+    id: String(r.id),
+    score: r.score,
+    content: r.content,
+    metadata: r.metadata ?? { createdAt: "" },
+  }));
 }
 
 // ─── Admin: reset indexes ────────────────────────────────
