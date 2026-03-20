@@ -57,7 +57,8 @@ const getClampedQtyState = (
   stock: number,
 ): { qty: number; message: string } => {
   if (stock === 0) return { qty: quantity, message: "" };
-  if (quantity > stock) return { qty: stock, message: `Only ${stock} available` };
+  if (quantity > stock)
+    return { qty: stock, message: `Only ${stock} available` };
   return { qty: quantity, message: "" };
 };
 
@@ -66,8 +67,19 @@ const getClampedQtyState = (
 const AddingSpinner = () => (
   <span className="flex items-center justify-center gap-2">
     <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+      <circle
+        className="opacity-25"
+        cx="12"
+        cy="12"
+        r="10"
+        stroke="currentColor"
+        strokeWidth="4"
+      />
+      <path
+        className="opacity-75"
+        fill="currentColor"
+        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+      />
     </svg>
     Adding...
   </span>
@@ -75,8 +87,18 @@ const AddingSpinner = () => (
 
 const CartButtonLabel = () => (
   <span className="flex items-center justify-center gap-2">
-    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+    <svg
+      className="w-6 h-6"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"
+      />
     </svg>
     Add to Cart
   </span>
@@ -85,11 +107,16 @@ const CartButtonLabel = () => (
 const BreadcrumbNav = ({ productName }: { readonly productName: string }) => (
   <nav className="mb-6 text-sm">
     <div className="inline-flex items-center gap-1 px-4 py-2 bg-[var(--surface)]/90 backdrop-blur-sm rounded-full border border-[var(--border-warm)] shadow-warm">
-      <Link href="/" className="text-[var(--foreground)] font-medium hover:text-[var(--accent-rose)] transition-colors">
+      <Link
+        href="/"
+        className="text-[var(--foreground)] font-medium hover:text-[var(--accent-rose)] transition-colors"
+      >
         Home
       </Link>
       <span className="mx-1 text-[var(--accent-warm)] font-bold">/</span>
-      <span className="text-[var(--foreground)] font-semibold">{productName}</span>
+      <span className="text-[var(--foreground)] font-semibold">
+        {productName}
+      </span>
     </div>
   </nav>
 );
@@ -97,15 +124,30 @@ const BreadcrumbNav = ({ productName }: { readonly productName: string }) => (
 const OutOfStockPanel = () => (
   <div className="bg-[var(--surface)]/80 backdrop-blur-lg rounded-2xl shadow-warm border border-[var(--border-warm)] p-8">
     <div className="flex items-center gap-3 text-red-500">
-      <svg className="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+      <svg
+        className="w-6 h-6 flex-shrink-0"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+        aria-hidden="true"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
+        />
       </svg>
       <span className="text-lg font-bold">Out of Stock</span>
     </div>
     <p className="mt-2 text-sm text-[var(--text-secondary)]">
-      This item is currently unavailable. Check back later or explore other products.
+      This item is currently unavailable. Check back later or explore other
+      products.
     </p>
-    <Link href="/" className="inline-flex items-center gap-2 mt-4 px-5 py-2.5 bg-gradient-to-r from-[var(--accent-warm)] to-[var(--accent-rose)] text-white rounded-xl font-semibold text-sm shadow-warm hover:shadow-warm-lg transition-all duration-300 focus-warm">
+    <Link
+      href="/"
+      className="inline-flex items-center gap-2 mt-4 px-5 py-2.5 bg-gradient-to-r from-[var(--accent-warm)] to-[var(--accent-rose)] text-white rounded-xl font-semibold text-sm shadow-warm hover:shadow-warm-lg transition-all duration-300 focus-warm"
+    >
       Browse Products
     </Link>
   </div>
@@ -128,8 +170,7 @@ const PriceModifierDisplay = ({
   const sign = selectedVariation.priceModifier > 0 ? "+" : "-";
   return (
     <div className="mt-2 text-sm text-[var(--text-secondary)]">
-      Base: {formatPrice(product.price)}{" "}
-      {sign}
+      Base: {formatPrice(product.price)} {sign}
       {formatPrice(Math.abs(selectedVariation.priceModifier))}
     </div>
   );
@@ -145,7 +186,8 @@ interface VariationSelectorProps {
 }
 
 const baseButtonClass = (isSelected: boolean) => {
-  const base = "p-4 border-2 rounded-xl transition-all duration-300 focus-warm text-left";
+  const base =
+    "p-4 border-2 rounded-xl transition-all duration-300 focus-warm text-left";
   return isSelected
     ? `${base} border-[var(--accent-warm)] bg-[var(--accent-cream)] shadow-warm scale-105`
     : `${base} border-[var(--border-warm)] hover:border-[var(--accent-warm)] hover:shadow-warm hover:scale-105 bg-[var(--accent-cream)]/50`;
@@ -175,8 +217,12 @@ const VariationSelector = ({
           aria-pressed={selectedVariation === null}
           className={baseButtonClass(selectedVariation === null)}
         >
-          <div className="text-sm font-bold text-[var(--foreground)]">Standard</div>
-          <div className="text-xs text-[var(--text-secondary)] mt-1">Base design</div>
+          <div className="text-sm font-bold text-[var(--foreground)]">
+            Standard
+          </div>
+          <div className="text-xs text-[var(--text-secondary)] mt-1">
+            Base design
+          </div>
           <div className="text-xs font-semibold text-[var(--accent-warm)] mt-1">
             {formatPrice(basePrice)}
           </div>
@@ -202,7 +248,10 @@ interface ProductImageSectionProps {
   readonly productName: string;
 }
 
-const ProductImageSection = ({ images, productName }: ProductImageSectionProps) => (
+const ProductImageSection = ({
+  images,
+  productName,
+}: ProductImageSectionProps) => (
   <div className="relative">
     <ImageCarousel images={images} productName={productName} />
     <ButterflyAccent className="absolute -top-4 -left-4 w-10 h-10 opacity-30 hidden sm:block animate-float-gentle" />
@@ -308,7 +357,11 @@ const AddToCartSection = ({
     <div className="bg-[var(--surface)]/80 backdrop-blur-lg rounded-2xl shadow-warm border border-[var(--border-warm)] p-8">
       {error && (
         <div className="mb-4 p-4 bg-red-500/10 text-red-500 rounded-xl border border-red-500/20 flex items-center gap-3">
-          <svg className="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+          <svg
+            className="w-5 h-5 flex-shrink-0"
+            fill="currentColor"
+            viewBox="0 0 20 20"
+          >
             <path
               fillRule="evenodd"
               d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
@@ -321,7 +374,11 @@ const AddToCartSection = ({
 
       {cartSuccess && (
         <div className="mb-4 p-4 bg-gradient-to-r from-green-50 to-emerald-50 text-green-700 rounded-xl border border-green-200 flex items-center gap-3">
-          <svg className="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+          <svg
+            className="w-5 h-5 flex-shrink-0"
+            fill="currentColor"
+            viewBox="0 0 20 20"
+          >
             <path
               fillRule="evenodd"
               d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
@@ -386,7 +443,9 @@ const AddToCartSection = ({
       </div>
 
       <div className="flex justify-between items-center mb-5 p-3 bg-gradient-to-r from-[var(--accent-blush)] to-[var(--border-warm)] rounded-xl">
-        <span className="text-sm font-semibold text-[var(--text-secondary)]">Total:</span>
+        <span className="text-sm font-semibold text-[var(--text-secondary)]">
+          Total:
+        </span>
         <span className="text-2xl font-bold bg-gradient-to-r from-[var(--accent-warm)] to-[var(--accent-rose)] bg-clip-text text-transparent">
           {formatPrice(effectivePrice * quantity)}
         </span>
@@ -405,8 +464,18 @@ const AddToCartSection = ({
           href="/cart"
           className="flex-shrink-0 bg-[var(--accent-blush)] hover:bg-[var(--accent-peach)]/50 text-[var(--text-secondary)] px-5 py-4 rounded-xl font-bold transition-all duration-300 flex items-center gap-2 focus-warm"
         >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+          <svg
+            className="w-6 h-6"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
+            />
           </svg>
           View Cart
         </Link>
@@ -447,7 +516,13 @@ export default function ProductClient({
       category: product.category,
       viewedAt: Date.now(),
     });
-  }, [product.id, product.name, product.image, product.price, product.category]);
+  }, [
+    product.id,
+    product.name,
+    product.image,
+    product.price,
+    product.category,
+  ]);
 
   const effectivePrice = selectedVariation
     ? product.price + selectedVariation.priceModifier
@@ -488,14 +563,16 @@ export default function ProductClient({
       setTimeout(() => setCartSuccess(false), 3000);
     } catch (err) {
       setError(
-        typeof err === "string" ? err : "Something went wrong. Please try again.",
+        typeof err === "string"
+          ? err
+          : "Something went wrong. Please try again.",
       );
     } finally {
       setAddingToCart(false);
     }
   };
 
-    return (
+  return (
     <div className="min-h-screen bg-warm-gradient">
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
         <BreadcrumbNav productName={product.name} />
