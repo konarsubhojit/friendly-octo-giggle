@@ -38,7 +38,7 @@ interface CartWithItems {
   }>;
 }
 
-// Helper: Verify product exists and has sufficient stock
+// Helper: Verify product exists and return available stock
 async function verifyProductStock(
   body: AddToCartInput,
 ): Promise<
@@ -67,8 +67,8 @@ async function verifyProductStock(
     availableStock = variation.stock;
   }
 
-  if (availableStock < body.quantity) {
-    return { error: "Insufficient stock", status: 400 };
+  if (availableStock <= 0) {
+    return { error: "This product is currently out of stock", status: 400 };
   }
 
   return { product, availableStock };
@@ -126,12 +126,16 @@ async function getOrCreateCart(
   return createGuestCart(sessionId);
 }
 
-// Helper: Add or update cart item
+// Helper: Add or update cart item, auto-capping to available stock
 async function addOrUpdateCartItem(
   cartId: string,
   body: AddToCartInput,
   availableStock: number,
-): Promise<{ error: string; status: number } | null> {
+): Promise<
+  | { error: string; status: number }
+  | { warning: string; adjustedQuantity: number }
+  | null
+> {
   const existingItem = await drizzleDb.query.cartItems.findFirst({
     where: and(
       eq(cartItems.cartId, cartId),
@@ -142,23 +146,45 @@ async function addOrUpdateCartItem(
     ),
   });
 
+  let warning: string | null = null;
+  let adjustedQuantity: number | null = null;
+
   if (existingItem) {
-    const newQuantity = existingItem.quantity + body.quantity;
+    let newQuantity = existingItem.quantity + body.quantity;
     if (newQuantity > availableStock) {
-      return { error: "Insufficient stock", status: 400 };
+      if (existingItem.quantity >= availableStock) {
+        return {
+          error: `You already have the maximum available quantity (${availableStock}) in your cart`,
+          status: 400,
+        };
+      }
+      const canAdd = availableStock - existingItem.quantity;
+      newQuantity = availableStock;
+      adjustedQuantity = newQuantity;
+      warning = `Only ${availableStock} items available. Added ${canAdd} instead of ${body.quantity} (you already had ${existingItem.quantity} in your cart).`;
     }
     await drizzleDb
       .update(cartItems)
       .set({ quantity: newQuantity, updatedAt: new Date() })
       .where(eq(cartItems.id, existingItem.id));
   } else {
+    let qty = body.quantity;
+    if (qty > availableStock) {
+      qty = availableStock;
+      adjustedQuantity = qty;
+      warning = `Only ${availableStock} items available. Added ${availableStock} to your cart.`;
+    }
     await drizzleDb.insert(cartItems).values({
       cartId,
       productId: body.productId,
       variationId: body.variationId ?? null,
-      quantity: body.quantity,
+      quantity: qty,
       updatedAt: new Date(),
     });
+  }
+
+  if (warning && adjustedQuantity !== null) {
+    return { warning, adjustedQuantity };
   }
 
   return null;
@@ -347,14 +373,16 @@ export async function POST(request: NextRequest) {
     const cookieSessionId = request.cookies.get("cart_session")?.value;
     const { cart, sessionId } = await getOrCreateCart(session, cookieSessionId);
 
-    // Add or update item
-    const itemError = await addOrUpdateCartItem(cart.id, body, availableStock);
-    if (itemError) {
+    // Add or update item (auto-caps to available stock)
+    const itemResult = await addOrUpdateCartItem(cart.id, body, availableStock);
+    if (itemResult && "error" in itemResult) {
       return NextResponse.json(
-        { error: itemError.error },
-        { status: itemError.status },
+        { error: itemResult.error },
+        { status: itemResult.status },
       );
     }
+    const stockWarning =
+      itemResult && "warning" in itemResult ? itemResult : null;
 
     // Fetch updated cart
     const updatedCart = await drizzleDb.query.carts.findFirst({
@@ -383,10 +411,18 @@ export async function POST(request: NextRequest) {
     await invalidateCartCache(session?.user?.id, sessionId);
 
     // Build response with session cookie for guests
-    const response = NextResponse.json(
-      { cart: serializeCart(updatedCart as unknown as CartWithItems) },
-      { status: 201 },
-    );
+    const responseBody: {
+      cart: ReturnType<typeof serializeCart>;
+      warning?: string;
+      adjustedQuantity?: number;
+    } = {
+      cart: serializeCart(updatedCart as unknown as CartWithItems),
+    };
+    if (stockWarning) {
+      responseBody.warning = stockWarning.warning;
+      responseBody.adjustedQuantity = stockWarning.adjustedQuantity;
+    }
+    const response = NextResponse.json(responseBody, { status: 201 });
 
     if (sessionId) {
       setGuestSessionCookie(response, sessionId);

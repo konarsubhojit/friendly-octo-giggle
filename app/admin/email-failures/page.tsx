@@ -2,6 +2,7 @@ import { drizzleDb } from "@/lib/db";
 import { failedEmails } from "@/lib/schema";
 import { desc, inArray } from "drizzle-orm";
 import { EmailFailuresClient } from "@/components/admin/EmailFailuresClient";
+import AdminBreadcrumbs from "@/components/admin/AdminBreadcrumbs";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +21,12 @@ const EmailFailuresPage = async () => {
 
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <AdminBreadcrumbs
+        items={[
+          { label: "Admin", href: "/admin" },
+          { label: "Email Failures" },
+        ]}
+      />
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
           Email Failures

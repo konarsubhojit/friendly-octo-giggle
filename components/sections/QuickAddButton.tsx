@@ -18,12 +18,20 @@ export function QuickAddButton({ product }: { readonly product: Product }) {
       e.stopPropagation();
       setAdding(true);
       try {
-        await dispatch(
+        const result = await dispatch(
           addToCart({ productId: product.id, quantity: 1 }),
         ).unwrap();
-        toast.success(`${product.name} added to cart!`);
-      } catch {
-        toast.error("Failed to add to cart. Please try again.");
+        if (result.warning) {
+          toast(result.warning, { icon: "⚠️" });
+        } else {
+          toast.success(`${product.name} added to cart!`);
+        }
+      } catch (err) {
+        toast.error(
+          typeof err === "string"
+            ? err
+            : "Failed to add to cart. Please try again.",
+        );
       } finally {
         setAdding(false);
       }

@@ -23,6 +23,7 @@ export async function GET() {
         image: true,
         role: true,
         passwordHash: true,
+        currencyPreference: true,
         createdAt: true,
       },
     });
@@ -39,6 +40,7 @@ export async function GET() {
       image: user.image,
       role: user.role,
       hasPassword: !!user.passwordHash,
+      currencyPreference: user.currencyPreference,
       createdAt: user.createdAt.toISOString(),
     });
   } catch (error) {
@@ -68,7 +70,7 @@ export async function PATCH(request: NextRequest) {
       return apiError('Validation failed', 400, details);
     }
 
-    const { name, email, phoneNumber } = parseResult.data;
+    const { name, email, phoneNumber, currencyPreference } = parseResult.data;
 
     // Check for duplicate email if changing
     if (email) {
@@ -97,6 +99,7 @@ export async function PATCH(request: NextRequest) {
     if (name !== undefined) updateData.name = name || null;
     if (email !== undefined) updateData.email = email;
     if (phoneNumber !== undefined) updateData.phoneNumber = phoneNumber || null;
+    if (currencyPreference !== undefined) updateData.currencyPreference = currencyPreference;
 
     await drizzleDb
       .update(users)

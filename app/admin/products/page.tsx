@@ -12,6 +12,7 @@ import type { AppDispatch } from "@/lib/store";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { AlertBanner } from "@/components/ui/AlertBanner";
 import { EmptyState } from "@/components/ui/EmptyState";
+import AdminBreadcrumbs from "@/components/admin/AdminBreadcrumbs";
 
 // Lazy-load heavy modal components to reduce initial bundle size
 const ProductFormModal = lazy(
@@ -166,6 +167,9 @@ export default function ProductsManagement() {
 
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <AdminBreadcrumbs
+        items={[{ label: "Admin", href: "/admin" }, { label: "Products" }]}
+      />
       {/* Header */}
       <div className="mb-6 flex flex-wrap justify-between items-start gap-4">
         <div>

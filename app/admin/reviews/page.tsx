@@ -1,12 +1,13 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback } from 'react';
-import Image from 'next/image';
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
-import { AlertBanner } from '@/components/ui/AlertBanner';
-import { EmptyState } from '@/components/ui/EmptyState';
-import { StarRating } from '@/components/ui/StarRating';
-import { Badge } from '@/components/ui/Badge';
+import { useState, useEffect, useCallback } from "react";
+import Image from "next/image";
+import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import { AlertBanner } from "@/components/ui/AlertBanner";
+import { EmptyState } from "@/components/ui/EmptyState";
+import AdminBreadcrumbs from "@/components/admin/AdminBreadcrumbs";
+import { StarRating } from "@/components/ui/StarRating";
+import { Badge } from "@/components/ui/Badge";
 
 interface ReviewProduct {
   id: string;
@@ -33,20 +34,21 @@ interface AdminReview {
 }
 
 const RATING_FILTERS = [
-  { label: 'All', value: '' },
-  { label: '5 ★', value: '5' },
-  { label: '4 ★', value: '4' },
-  { label: '3 ★', value: '3' },
-  { label: '2 ★', value: '2' },
-  { label: '1 ★', value: '1' },
+  { label: "All", value: "" },
+  { label: "5 ★", value: "5" },
+  { label: "4 ★", value: "4" },
+  { label: "3 ★", value: "3" },
+  { label: "2 ★", value: "2" },
+  { label: "1 ★", value: "1" },
 ];
 
 // ─── ReviewRow component (defined before use) ────────────
 
 const ReviewRow = ({ review }: { readonly review: AdminReview }) => {
-  const displayName = review.isAnonymous || !review.user
-    ? 'Anonymous'
-    : (review.user.name ?? review.user.email);
+  const displayName =
+    review.isAnonymous || !review.user
+      ? "Anonymous"
+      : (review.user.name ?? review.user.email);
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-5">
@@ -71,7 +73,9 @@ const ReviewRow = ({ review }: { readonly review: AdminReview }) => {
               </span>
             )}
             {review.isAnonymous && (
-              <Badge variant="neutral" size="sm">Anonymous</Badge>
+              <Badge variant="neutral" size="sm">
+                Anonymous
+              </Badge>
             )}
           </div>
           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed mb-3">
@@ -95,16 +99,19 @@ const ReviewMeta = ({
 }) => (
   <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
     <span>
-      By: <strong className="text-gray-700 dark:text-gray-300">{displayName}</strong>
+      By:{" "}
+      <strong className="text-gray-700 dark:text-gray-300">
+        {displayName}
+      </strong>
     </span>
     {!review.isAnonymous && review.user?.email && (
       <span>{review.user.email}</span>
     )}
     <span>
-      {new Date(review.createdAt).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
+      {new Date(review.createdAt).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
       })}
     </span>
   </div>
@@ -116,8 +123,8 @@ const AdminReviewsPage = () => {
   const [reviews, setReviews] = useState<AdminReview[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [search, setSearch] = useState('');
-  const [ratingFilter, setRatingFilter] = useState('');
+  const [search, setSearch] = useState("");
+  const [ratingFilter, setRatingFilter] = useState("");
   const [total, setTotal] = useState(0);
 
   const fetchReviews = useCallback(async () => {
@@ -125,18 +132,19 @@ const AdminReviewsPage = () => {
     setError(null);
     try {
       const params = new URLSearchParams();
-      if (ratingFilter) params.set('rating', ratingFilter);
+      if (ratingFilter) params.set("rating", ratingFilter);
       const res = await fetch(`/api/admin/reviews?${params.toString()}`);
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || 'Failed to load reviews');
+        throw new Error(data.error || "Failed to load reviews");
       }
       const data = await res.json();
-      const allReviews: AdminReview[] = data.data?.reviews ?? data.reviews ?? [];
+      const allReviews: AdminReview[] =
+        data.data?.reviews ?? data.reviews ?? [];
       setReviews(allReviews);
       setTotal(data.data?.total ?? allReviews.length);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong');
+      setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
       setLoading(false);
     }
@@ -160,11 +168,15 @@ const AdminReviewsPage = () => {
 
   const avgRating =
     filtered.length > 0
-      ? filtered.reduce((sum, review) => sum + review.rating, 0) / filtered.length
+      ? filtered.reduce((sum, review) => sum + review.rating, 0) /
+        filtered.length
       : 0;
 
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <AdminBreadcrumbs
+        items={[{ label: "Admin", href: "/admin" }, { label: "Reviews" }]}
+      />
       <ReviewsHeader
         total={total}
         avgRating={avgRating}
@@ -172,7 +184,9 @@ const AdminReviewsPage = () => {
         onRefresh={fetchReviews}
       />
 
-      {error && <AlertBanner message={error} variant="error" className="mb-4" />}
+      {error && (
+        <AlertBanner message={error} variant="error" className="mb-4" />
+      )}
 
       <ReviewsFilters
         search={search}
@@ -186,7 +200,10 @@ const AdminReviewsPage = () => {
           <LoadingSpinner />
         </div>
       ) : filtered.length === 0 ? (
-        <EmptyState title="No reviews found" message="No reviews match your current filters." />
+        <EmptyState
+          title="No reviews found"
+          message="No reviews match your current filters."
+        />
       ) : (
         <div className="space-y-4">
           {filtered.map((review) => (
@@ -257,7 +274,12 @@ const ReviewsFilters = ({
         viewBox="0 0 24 24"
         aria-hidden="true"
       >
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+        />
       </svg>
       <input
         type="search"
@@ -275,8 +297,8 @@ const ReviewsFilters = ({
           onClick={() => onRatingChange(value)}
           className={`px-3 py-2 rounded-md text-sm font-medium whitespace-nowrap transition ${
             ratingFilter === value
-              ? 'bg-blue-600 text-white'
-              : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 border border-gray-300 dark:border-gray-600'
+              ? "bg-blue-600 text-white"
+              : "bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 border border-gray-300 dark:border-gray-600"
           }`}
           aria-pressed={ratingFilter === value}
         >

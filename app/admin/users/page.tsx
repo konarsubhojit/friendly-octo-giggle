@@ -8,6 +8,7 @@ import { logError } from "@/lib/logger";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { AlertBanner } from "@/components/ui/AlertBanner";
 import { EmptyState } from "@/components/ui/EmptyState";
+import AdminBreadcrumbs from "@/components/admin/AdminBreadcrumbs";
 import { UsersTable } from "@/components/admin/UsersTable";
 import { CursorPaginationBar } from "@/components/ui/CursorPaginationBar";
 import { AdminSearchForm } from "@/components/admin/AdminSearchForm";
@@ -72,6 +73,9 @@ export default function UsersManagement() {
 
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <AdminBreadcrumbs
+        items={[{ label: "Admin", href: "/admin" }, { label: "Users" }]}
+      />
       <div className="mb-6 flex justify-between items-center flex-wrap gap-4">
         <div>
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">

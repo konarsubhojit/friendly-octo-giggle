@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { drizzleDb } from "@/lib/db";
-import { orders, orderItems, products, productVariations } from "@/lib/schema";
+import { orders, orderItems, products, productVariations, users } from "@/lib/schema";
 import {
   eq,
   inArray,
@@ -24,6 +24,11 @@ import { getQStashClient } from "@/lib/qstash";
 import type { OrderCreatedEvent } from "@/lib/qstash-events";
 import { env } from "@/lib/env";
 import { indexOrder } from "@/lib/search";
+import {
+  formatPriceForCurrency,
+  isValidCurrencyCode,
+  type CurrencyCode,
+} from "@/lib/currency";
 
 export const dynamic = "force-dynamic";
 
@@ -485,6 +490,18 @@ const handlePost = async (request: NextRequest) => {
     ]);
 
     const workerUrl = `${env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/api/services/email`;
+
+    // Look up user's currency preference for email formatting
+    const userRecord = await drizzleDb.query.users.findFirst({
+      where: eq(users.id, userId),
+      columns: { currencyPreference: true },
+    });
+    const currencyCode: CurrencyCode =
+      userRecord?.currencyPreference &&
+      isValidCurrencyCode(userRecord.currencyPreference)
+        ? userRecord.currencyPreference
+        : "INR";
+
     const emailEvent: OrderCreatedEvent = {
       type: "order.created",
       data: {
@@ -493,6 +510,7 @@ const handlePost = async (request: NextRequest) => {
         customerName: fullOrder.customerName,
         customerAddress: fullOrder.customerAddress,
         totalAmount: fullOrder.totalAmount,
+        currencyCode,
         items: fullOrder.items.map((item: OrderItem) => ({
           name: item.product.name,
           quantity: item.quantity,
@@ -528,12 +546,12 @@ const handlePost = async (request: NextRequest) => {
         to: fullOrder.customerEmail,
         customerName: fullOrder.customerName,
         orderId: fullOrder.id,
-        totalAmount: `$${fullOrder.totalAmount.toFixed(2)}`,
+        totalAmount: formatPriceForCurrency(fullOrder.totalAmount, currencyCode),
         shippingAddress: fullOrder.customerAddress,
         items: fullOrder.items.map((item: OrderItem) => ({
           name: item.product.name,
           quantity: item.quantity,
-          price: `$${item.price.toFixed(2)}`,
+          price: formatPriceForCurrency(item.price, currencyCode),
           variation: item.variation?.name ?? null,
         })),
       });

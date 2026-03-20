@@ -11,6 +11,8 @@ const initialState = {
   cart: null,
   loading: false,
   error: null,
+  stockWarning: null,
+  adjustedQuantity: null,
 };
 
 describe("cartSlice reducer", () => {
@@ -56,10 +58,29 @@ describe("cartSlice extraReducers", () => {
     const cart = { id: "cart-1", items: [{ id: "item-1", quantity: 2 }] };
     const result = cartReducer(initialState, {
       type: "cart/addToCart/fulfilled",
-      payload: cart,
+      payload: { cart },
     });
     expect(result.cart).toEqual(cart);
     expect(result.error).toBeNull();
+    expect(result.stockWarning).toBeNull();
+    expect(result.adjustedQuantity).toBeNull();
+  });
+
+  it("sets stockWarning on addToCart.fulfilled with warning", () => {
+    const cart = { id: "cart-1", items: [{ id: "item-1", quantity: 3 }] };
+    const result = cartReducer(initialState, {
+      type: "cart/addToCart/fulfilled",
+      payload: {
+        cart,
+        warning: "Only 3 items available. Added 3 to your cart.",
+        adjustedQuantity: 3,
+      },
+    });
+    expect(result.cart).toEqual(cart);
+    expect(result.stockWarning).toBe(
+      "Only 3 items available. Added 3 to your cart.",
+    );
+    expect(result.adjustedQuantity).toBe(3);
   });
 
   it("sets error on addToCart.rejected", () => {

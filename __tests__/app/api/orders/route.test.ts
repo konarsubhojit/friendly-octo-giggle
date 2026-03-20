@@ -12,6 +12,7 @@ vi.mock("@/lib/db", () => ({
     query: {
       orders: { findMany: vi.fn(), findFirst: vi.fn() },
       products: { findMany: vi.fn() },
+      users: { findFirst: vi.fn() },
     },
     transaction: vi.fn(),
   },
@@ -27,6 +28,7 @@ vi.mock("@/lib/schema", () => ({
   orderItems: { id: "id" },
   products: { id: "id", stock: "stock", deletedAt: "deletedAt" },
   productVariations: { id: "id", stock: "stock" },
+  users: { id: "id" },
 }));
 
 vi.mock("drizzle-orm", () => ({
@@ -86,6 +88,7 @@ const mockLogError = vi.mocked(logError);
 const mockFindManyOrders = vi.mocked(drizzleDb.query.orders.findMany);
 const mockFindManyProducts = vi.mocked(drizzleDb.query.products.findMany);
 const mockFindFirstOrder = vi.mocked(drizzleDb.query.orders.findFirst);
+const mockFindFirstUser = vi.mocked(drizzleDb.query.users.findFirst);
 const mockTransaction = vi.mocked(drizzleDb.transaction);
 
 describe("GET /api/orders", () => {
@@ -394,6 +397,7 @@ describe("POST /api/orders", () => {
     });
 
     mockFindFirstOrder.mockResolvedValue(mockFullOrder as never);
+    mockFindFirstUser.mockResolvedValue({ currencyPreference: "INR" } as never);
     mockInvalidateCache.mockResolvedValue(undefined);
     mockInvalidateUserOrderCaches.mockResolvedValue(undefined);
 
@@ -527,6 +531,7 @@ describe("POST /api/orders", () => {
       ],
     };
     mockFindFirstOrder.mockResolvedValue(fullOrderWithVariation as never);
+    mockFindFirstUser.mockResolvedValue({ currencyPreference: "INR" } as never);
     mockInvalidateCache.mockResolvedValue(undefined);
     mockInvalidateUserOrderCaches.mockResolvedValue(undefined);
 
@@ -607,6 +612,7 @@ describe("POST /api/orders", () => {
     });
 
     mockFindFirstOrder.mockResolvedValue(mockFullOrder as never);
+    mockFindFirstUser.mockResolvedValue({ currencyPreference: "INR" } as never);
     mockInvalidateCache.mockResolvedValue(undefined);
     mockInvalidateUserOrderCaches.mockResolvedValue(undefined);
 

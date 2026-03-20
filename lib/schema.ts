@@ -49,6 +49,9 @@ export const users = pgTable("User", {
   image: text("image"),
   passwordHash: text("passwordHash"),
   phoneNumber: varchar("phoneNumber", { length: 20 }).unique(),
+  currencyPreference: varchar("currencyPreference", { length: 3 })
+    .default("INR")
+    .notNull(),
   role: userRoleEnum("role").default("CUSTOMER").notNull(),
   createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
   updatedAt: timestamp("updatedAt", { mode: "date" }).defaultNow().notNull(),

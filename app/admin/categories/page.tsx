@@ -2,6 +2,7 @@ import { drizzleDb } from "@/lib/db";
 import { categories } from "@/lib/schema";
 import { isNull, asc } from "drizzle-orm";
 import CategoriesClient from "@/components/admin/CategoriesClient";
+import AdminBreadcrumbs from "@/components/admin/AdminBreadcrumbs";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,9 @@ export default async function AdminCategoriesPage() {
 
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <AdminBreadcrumbs
+        items={[{ label: "Admin", href: "/admin" }, { label: "Categories" }]}
+      />
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
           Categories

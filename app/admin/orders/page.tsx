@@ -1,17 +1,21 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback } from 'react';
-import { OrderStatus } from '@/lib/types';
-import { useCurrency } from '@/contexts/CurrencyContext';
-import { useDispatch } from 'react-redux';
-import { updateAdminOrderStatus } from '@/lib/features/admin/adminSlice';
-import type { AppDispatch } from '@/lib/store';
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
-import { AlertBanner } from '@/components/ui/AlertBanner';
-import { EmptyState } from '@/components/ui/EmptyState';
-import { AdminOrderCard } from '@/components/admin/AdminOrderCard';
+import { useState, useEffect, useCallback } from "react";
+import { OrderStatus } from "@/lib/types";
+import { useCurrency } from "@/contexts/CurrencyContext";
+import { useDispatch } from "react-redux";
+import { updateAdminOrderStatus } from "@/lib/features/admin/adminSlice";
+import type { AppDispatch } from "@/lib/store";
+import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import { AlertBanner } from "@/components/ui/AlertBanner";
+import { EmptyState } from "@/components/ui/EmptyState";
+import AdminBreadcrumbs from "@/components/admin/AdminBreadcrumbs";
+import { AdminOrderCard } from "@/components/admin/AdminOrderCard";
 
-type ShippingEdits = Record<string, { trackingNumber: string; shippingProvider: string }>;
+type ShippingEdits = Record<
+  string,
+  { trackingNumber: string; shippingProvider: string }
+>;
 
 interface AdminOrderItem {
   id: string;
@@ -38,7 +42,7 @@ interface AdminOrder {
   userId?: string | null;
 }
 
-const STATUS_FILTERS = ['ALL', ...Object.values(OrderStatus)] as const;
+const STATUS_FILTERS = ["ALL", ...Object.values(OrderStatus)] as const;
 const PAGE_SIZE = 20;
 
 export default function OrdersManagement() {
@@ -48,9 +52,9 @@ export default function OrdersManagement() {
   const [orders, setOrders] = useState<AdminOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<'ALL' | OrderStatus>('ALL');
-  const [search, setSearch] = useState('');
-  const [searchInput, setSearchInput] = useState('');
+  const [filter, setFilter] = useState<"ALL" | OrderStatus>("ALL");
+  const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState("");
   const [cursor, setCursor] = useState<string | null>(null);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
@@ -59,31 +63,39 @@ export default function OrdersManagement() {
   const [savingShippingId, setSavingShippingId] = useState<string | null>(null);
   const [shippingEdits, setShippingEdits] = useState<ShippingEdits>({});
 
-  const fetchOrders = useCallback(async (cursorParam: string | null, searchQuery: string, statusFilter: string) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const params = new URLSearchParams({ limit: String(PAGE_SIZE) });
-      if (cursorParam) params.set('cursor', cursorParam);
-      if (searchQuery) params.set('search', searchQuery);
-      if (statusFilter && statusFilter !== 'ALL') params.set('status', statusFilter);
+  const fetchOrders = useCallback(
+    async (
+      cursorParam: string | null,
+      searchQuery: string,
+      statusFilter: string,
+    ) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const params = new URLSearchParams({ limit: String(PAGE_SIZE) });
+        if (cursorParam) params.set("cursor", cursorParam);
+        if (searchQuery) params.set("search", searchQuery);
+        if (statusFilter && statusFilter !== "ALL")
+          params.set("status", statusFilter);
 
-      const res = await fetch(`/api/admin/orders?${params.toString()}`);
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || 'Failed to load orders');
+        const res = await fetch(`/api/admin/orders?${params.toString()}`);
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error || "Failed to load orders");
+        }
+        const data = await res.json();
+        const items: AdminOrder[] = data.data?.orders ?? data.orders ?? [];
+        setOrders(items);
+        setNextCursor(data.data?.nextCursor ?? null);
+        setHasMore(data.data?.hasMore ?? false);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Something went wrong");
+      } finally {
+        setLoading(false);
       }
-      const data = await res.json();
-      const items: AdminOrder[] = data.data?.orders ?? data.orders ?? [];
-      setOrders(items);
-      setNextCursor(data.data?.nextCursor ?? null);
-      setHasMore(data.data?.hasMore ?? false);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    },
+    [],
+  );
 
   useEffect(() => {
     fetchOrders(cursor, search, filter);
@@ -96,7 +108,7 @@ export default function OrdersManagement() {
     setSearch(searchInput.trim());
   };
 
-  const handleFilterChange = (status: 'ALL' | OrderStatus) => {
+  const handleFilterChange = (status: "ALL" | OrderStatus) => {
     setFilter(status);
     setCursor(null);
     setCursorHistory([]);
@@ -104,7 +116,7 @@ export default function OrdersManagement() {
 
   const handleNext = () => {
     if (!nextCursor) return;
-    setCursorHistory((prev) => [...prev, cursor ?? '']);
+    setCursorHistory((prev) => [...prev, cursor ?? ""]);
     setCursor(nextCursor);
   };
 
@@ -119,29 +131,45 @@ export default function OrdersManagement() {
   const handleRefresh = () => {
     setCursor(null);
     setCursorHistory([]);
-    setSearch('');
-    setSearchInput('');
-    setFilter('ALL');
+    setSearch("");
+    setSearchInput("");
+    setFilter("ALL");
   };
 
-  const getShippingEdit = (orderId: string, order: { trackingNumber?: string | null; shippingProvider?: string | null }) =>
+  const getShippingEdit = (
+    orderId: string,
+    order: { trackingNumber?: string | null; shippingProvider?: string | null },
+  ) =>
     shippingEdits[orderId] ?? {
-      trackingNumber: order.trackingNumber ?? '',
-      shippingProvider: order.shippingProvider ?? '',
+      trackingNumber: order.trackingNumber ?? "",
+      shippingProvider: order.shippingProvider ?? "",
     };
 
-  const setShippingField = (orderId: string, field: 'trackingNumber' | 'shippingProvider', value: string, order: { trackingNumber?: string | null; shippingProvider?: string | null }) => {
+  const setShippingField = (
+    orderId: string,
+    field: "trackingNumber" | "shippingProvider",
+    value: string,
+    order: { trackingNumber?: string | null; shippingProvider?: string | null },
+  ) => {
     const current = getShippingEdit(orderId, order);
-    setShippingEdits((prev) => ({ ...prev, [orderId]: { ...current, [field]: value } }));
+    setShippingEdits((prev) => ({
+      ...prev,
+      [orderId]: { ...current, [field]: value },
+    }));
   };
 
-  const normalizeShippingField = (value: string | null | undefined): string | null => {
+  const normalizeShippingField = (
+    value: string | null | undefined,
+  ): string | null => {
     if (value == null) return null;
     const trimmed = value.trim();
-    return trimmed === '' ? null : trimmed;
+    return trimmed === "" ? null : trimmed;
   };
 
-  const handleStatusChange = async (orderId: string, newStatus: OrderStatus) => {
+  const handleStatusChange = async (
+    orderId: string,
+    newStatus: OrderStatus,
+  ) => {
     setUpdatingOrderId(orderId);
     await dispatch(updateAdminOrderStatus({ id: orderId, status: newStatus }));
     setOrders((prev) =>
@@ -150,7 +178,11 @@ export default function OrdersManagement() {
     setUpdatingOrderId(null);
   };
 
-  const handleSaveShipping = async (orderId: string, currentStatus: OrderStatus | string, order: { trackingNumber?: string | null; shippingProvider?: string | null }) => {
+  const handleSaveShipping = async (
+    orderId: string,
+    currentStatus: OrderStatus | string,
+    order: { trackingNumber?: string | null; shippingProvider?: string | null },
+  ) => {
     const edit = getShippingEdit(orderId, order);
     setSavingShippingId(orderId);
     await dispatch(
@@ -183,11 +215,18 @@ export default function OrdersManagement() {
 
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <AdminBreadcrumbs
+        items={[{ label: "Admin", href: "/admin" }, { label: "Orders" }]}
+      />
       {/* Header */}
       <div className="mb-6 flex justify-between items-center flex-wrap gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Order Management</h2>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">View and manage all customer orders</p>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+            Order Management
+          </h2>
+          <p className="text-gray-600 dark:text-gray-400 mt-1">
+            View and manage all customer orders
+          </p>
         </div>
         <button
           onClick={handleRefresh}
@@ -209,7 +248,12 @@ export default function OrdersManagement() {
               viewBox="0 0 24 24"
               aria-hidden="true"
             >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
             </svg>
             <input
               type="search"
@@ -220,7 +264,10 @@ export default function OrdersManagement() {
               aria-label="Search orders"
             />
           </div>
-          <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition">
+          <button
+            type="submit"
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition"
+          >
             Search
           </button>
           {search && (
@@ -240,7 +287,9 @@ export default function OrdersManagement() {
         )}
       </form>
 
-      {error && <AlertBanner message={error} variant="error" className="mb-4" />}
+      {error && (
+        <AlertBanner message={error} variant="error" className="mb-4" />
+      )}
 
       {/* Status Filter Tabs */}
       <div className="mb-6 flex gap-2 overflow-x-auto">
@@ -250,8 +299,8 @@ export default function OrdersManagement() {
             onClick={() => handleFilterChange(status)}
             className={`px-4 py-2 rounded-md font-medium whitespace-nowrap transition ${
               filter === status
-                ? 'bg-blue-600 text-white'
-                : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600'
+                ? "bg-blue-600 text-white"
+                : "bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600"
             }`}
             aria-pressed={filter === status}
           >
@@ -266,7 +315,10 @@ export default function OrdersManagement() {
           <LoadingSpinner />
         </div>
       ) : orders.length === 0 ? (
-        <EmptyState title="No orders found" message={search ? 'Try a different search term.' : undefined} />
+        <EmptyState
+          title="No orders found"
+          message={search ? "Try a different search term." : undefined}
+        />
       ) : (
         <>
           <div className="space-y-4 mb-8">
@@ -287,7 +339,9 @@ export default function OrdersManagement() {
 
           {/* Cursor Pagination */}
           <div className="flex items-center justify-between border-t border-gray-200 dark:border-gray-700 pt-4">
-            <p className="text-sm text-gray-600 dark:text-gray-400">Page {currentPage}</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Page {currentPage}
+            </p>
             <div className="flex gap-2">
               <button
                 onClick={handlePrev}
