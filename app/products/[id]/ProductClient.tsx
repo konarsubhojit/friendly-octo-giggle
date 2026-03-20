@@ -2,11 +2,11 @@
 
 import { useState, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { Product, ProductVariation } from "@/lib/types";
-import { addToCart } from "@/lib/features/cart/cartSlice";
+import { addToCart, fetchCart } from "@/lib/features/cart/cartSlice";
 import { useCurrency } from "@/contexts/CurrencyContext";
-import type { AppDispatch } from "@/lib/store";
+import type { AppDispatch, RootState } from "@/lib/store";
 import { ProductStockBadge } from "@/components/product/ProductStockBadge";
 import { VariationButton } from "@/components/product/VariationButton";
 import { ShareButton } from "@/components/product/ShareButton";
@@ -108,10 +108,10 @@ const BreadcrumbNav = ({ productName }: { readonly productName: string }) => (
   <nav className="mb-6 text-sm">
     <div className="inline-flex items-center gap-1 px-4 py-2 bg-[var(--surface)]/90 backdrop-blur-sm rounded-full border border-[var(--border-warm)] shadow-warm">
       <Link
-        href="/"
+        href="/shop"
         className="text-[var(--foreground)] font-medium hover:text-[var(--accent-rose)] transition-colors"
       >
-        Home
+        Shop
       </Link>
       <span className="mx-1 text-[var(--accent-warm)] font-bold">/</span>
       <span className="text-[var(--foreground)] font-semibold">
@@ -121,35 +121,74 @@ const BreadcrumbNav = ({ productName }: { readonly productName: string }) => (
   </nav>
 );
 
-const OutOfStockPanel = () => (
+const OutOfStockPanel = ({
+  currentCartQuantity,
+}: {
+  readonly currentCartQuantity: number;
+}) => (
   <div className="bg-[var(--surface)]/80 backdrop-blur-lg rounded-2xl shadow-warm border border-[var(--border-warm)] p-8">
-    <div className="flex items-center gap-3 text-red-500">
-      <svg
-        className="w-6 h-6 flex-shrink-0"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-        aria-hidden="true"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
-        />
-      </svg>
-      <span className="text-lg font-bold">Out of Stock</span>
-    </div>
-    <p className="mt-2 text-sm text-[var(--text-secondary)]">
-      This item is currently unavailable. Check back later or explore other
-      products.
-    </p>
-    <Link
-      href="/"
-      className="inline-flex items-center gap-2 mt-4 px-5 py-2.5 bg-gradient-to-r from-[var(--accent-warm)] to-[var(--accent-rose)] text-white rounded-xl font-semibold text-sm shadow-warm hover:shadow-warm-lg transition-all duration-300 focus-warm"
-    >
-      Browse Products
-    </Link>
+    {currentCartQuantity > 0 ? (
+      <>
+        <div className="flex items-center gap-3 text-blue-600">
+          <svg
+            className="w-6 h-6 flex-shrink-0"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"
+            />
+          </svg>
+          <span className="text-lg font-bold">All Available Stock in Cart</span>
+        </div>
+        <p className="mt-2 text-sm text-[var(--text-secondary)]">
+          You have all {currentCartQuantity} available{" "}
+          {currentCartQuantity === 1 ? "item" : "items"} in your cart. No more
+          can be added.
+        </p>
+        <Link
+          href="/cart"
+          className="inline-flex items-center gap-2 mt-4 px-5 py-2.5 bg-gradient-to-r from-[var(--accent-warm)] to-[var(--accent-rose)] text-white rounded-xl font-semibold text-sm shadow-warm hover:shadow-warm-lg transition-all duration-300 focus-warm"
+        >
+          Go to Cart
+        </Link>
+      </>
+    ) : (
+      <>
+        <div className="flex items-center gap-3 text-red-500">
+          <svg
+            className="w-6 h-6 flex-shrink-0"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
+            />
+          </svg>
+          <span className="text-lg font-bold">Out of Stock</span>
+        </div>
+        <p className="mt-2 text-sm text-[var(--text-secondary)]">
+          This item is currently unavailable. Check back later or explore other
+          products.
+        </p>
+        <Link
+          href="/shop"
+          className="inline-flex items-center gap-2 mt-4 px-5 py-2.5 bg-gradient-to-r from-[var(--accent-warm)] to-[var(--accent-rose)] text-white rounded-xl font-semibold text-sm shadow-warm hover:shadow-warm-lg transition-all duration-300 focus-warm"
+        >
+          Browse Products
+        </Link>
+      </>
+    )}
   </div>
 );
 
@@ -183,6 +222,7 @@ interface VariationSelectorProps {
   readonly onSelect: (v: ProductVariation) => void;
   readonly onSelectBase: () => void;
   readonly basePrice: number;
+  readonly cartQuantities: Record<string, number>;
 }
 
 const baseButtonClass = (isSelected: boolean) => {
@@ -200,8 +240,10 @@ const VariationSelector = ({
   onSelect,
   onSelectBase,
   basePrice,
+  cartQuantities,
 }: VariationSelectorProps) => {
   if (!variations || variations.length === 0) return null;
+  const baseInCart = cartQuantities["__base__"] ?? 0;
   return (
     <div className="mb-6">
       <span
@@ -226,6 +268,11 @@ const VariationSelector = ({
           <div className="text-xs font-semibold text-[var(--accent-warm)] mt-1">
             {formatPrice(basePrice)}
           </div>
+          {baseInCart > 0 && (
+            <div className="text-xs font-semibold text-blue-600 mt-1">
+              {baseInCart} in cart
+            </div>
+          )}
         </button>
         {variations.map((variation) => (
           <VariationButton
@@ -234,6 +281,7 @@ const VariationSelector = ({
             isSelected={selectedVariation?.id === variation.id}
             formatPrice={formatPrice}
             onSelect={onSelect}
+            cartQuantity={cartQuantities[variation.id] ?? 0}
           />
         ))}
       </div>
@@ -267,6 +315,7 @@ interface ProductInfoCardProps {
   readonly selectedVariation: ProductVariation | null;
   readonly setSelectedVariation: (v: ProductVariation | null) => void;
   readonly effectiveStock: number;
+  readonly cartQuantities: Record<string, number>;
 }
 
 const ProductInfoCard = ({
@@ -276,6 +325,7 @@ const ProductInfoCard = ({
   selectedVariation,
   setSelectedVariation,
   effectiveStock,
+  cartQuantities,
 }: ProductInfoCardProps) => {
   return (
     <div className="bg-[var(--surface)]/80 backdrop-blur-lg rounded-2xl shadow-warm border border-[var(--border-warm)] p-8 mb-6">
@@ -321,6 +371,7 @@ const ProductInfoCard = ({
         onSelect={setSelectedVariation}
         onSelectBase={() => setSelectedVariation(null)}
         basePrice={product.price}
+        cartQuantities={cartQuantities}
       />
     </div>
   );
@@ -331,6 +382,7 @@ const ProductInfoCard = ({
 interface AddToCartSectionProps {
   readonly error: string;
   readonly cartSuccess: boolean;
+  readonly stockWarning: string;
   readonly quantity: number;
   readonly quantityMessage: string;
   readonly setQuantity: (q: number) => void;
@@ -339,11 +391,13 @@ interface AddToCartSectionProps {
   readonly addingToCart: boolean;
   readonly handleAddToCart: () => void;
   readonly formatPrice: (amount: number) => string;
+  readonly currentCartQuantity: number;
 }
 
 const AddToCartSection = ({
   error,
   cartSuccess,
+  stockWarning,
   quantity,
   quantityMessage,
   setQuantity,
@@ -352,9 +406,36 @@ const AddToCartSection = ({
   addingToCart,
   handleAddToCart,
   formatPrice,
+  currentCartQuantity,
 }: AddToCartSectionProps) => {
   return (
     <div className="bg-[var(--surface)]/80 backdrop-blur-lg rounded-2xl shadow-warm border border-[var(--border-warm)] p-8">
+      {currentCartQuantity > 0 && (
+        <div className="mb-4 p-3 bg-blue-50 text-blue-700 rounded-xl border border-blue-200 flex items-center gap-3">
+          <svg
+            className="w-5 h-5 flex-shrink-0"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"
+            />
+          </svg>
+          <span className="font-medium text-sm">
+            You already have <strong>{currentCartQuantity}</strong> of this item
+            in your{" "}
+            <Link href="/cart" className="underline font-semibold">
+              cart
+            </Link>
+          </span>
+        </div>
+      )}
+
       {error && (
         <div className="mb-4 p-4 bg-red-500/10 text-red-500 rounded-xl border border-red-500/20 flex items-center gap-3">
           <svg
@@ -391,6 +472,23 @@ const AddToCartSection = ({
               View cart
             </Link>
           </span>
+        </div>
+      )}
+
+      {stockWarning && (
+        <div className="mb-4 p-4 bg-amber-500/10 text-amber-700 rounded-xl border border-amber-500/20 flex items-start gap-3">
+          <svg
+            className="w-5 h-5 flex-shrink-0 mt-0.5"
+            fill="currentColor"
+            viewBox="0 0 20 20"
+          >
+            <path
+              fillRule="evenodd"
+              d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+              clipRule="evenodd"
+            />
+          </svg>
+          <span className="font-medium">{stockWarning}</span>
         </div>
       )}
 
@@ -492,6 +590,7 @@ export default function ProductClient({
 }: ProductClientProps) {
   const dispatch = useDispatch<AppDispatch>();
   const { formatPrice } = useCurrency();
+  const cart = useSelector((state: RootState) => state.cart.cart);
   const { trackProduct } = useRecentlyViewed();
   // Use a ref so the effect only depends on product.id, not on trackProduct identity
   const trackProductRef = useRef(trackProduct);
@@ -505,6 +604,28 @@ export default function ProductClient({
   const [addingToCart, setAddingToCart] = useState(false);
   const [cartSuccess, setCartSuccess] = useState(false);
   const [error, setError] = useState("");
+  const [stockWarning, setStockWarning] = useState("");
+
+  // Fetch cart on mount so we can show "already in cart" indicators
+  useEffect(() => {
+    dispatch(fetchCart());
+  }, [dispatch]);
+
+  // Build a map of variationId (or "__base__") -> quantity in cart for this product
+  const cartQuantities = useMemo(() => {
+    const map: Record<string, number> = {};
+    if (!cart?.items) return map;
+    for (const item of cart.items) {
+      if (item.productId === product.id) {
+        const key = item.variationId ?? "__base__";
+        map[key] = (map[key] ?? 0) + item.quantity;
+      }
+    }
+    return map;
+  }, [cart?.items, product.id]);
+
+  const currentCartQuantity =
+    cartQuantities[selectedVariation?.id ?? "__base__"] ?? 0;
 
   // Track this product as recently viewed when product.id changes
   useEffect(() => {
@@ -532,12 +653,15 @@ export default function ProductClient({
     ? selectedVariation.stock
     : product.stock;
 
-  // Clamp quantity when stock changes (e.g. variation switch) and update message
+  // Remaining stock accounts for items already in the user's cart
+  const remainingStock = Math.max(0, effectiveStock - currentCartQuantity);
+
+  // Clamp quantity when remaining stock changes (e.g. variation switch, cart update)
   useEffect(() => {
-    const { qty, message } = getClampedQtyState(quantity, effectiveStock);
+    const { qty, message } = getClampedQtyState(quantity, remainingStock);
     if (qty !== quantity) setQuantity(qty);
     setQuantityMessage(message);
-  }, [effectiveStock, quantity]);
+  }, [remainingStock, quantity]);
 
   const carouselImages = useMemo(
     () => getCarouselImages(product, selectedVariation),
@@ -548,9 +672,10 @@ export default function ProductClient({
     setAddingToCart(true);
     setError("");
     setCartSuccess(false);
+    setStockWarning("");
 
     try {
-      await dispatch(
+      const result = await dispatch(
         addToCart({
           productId: product.id,
           // null = base product (no variation); each variationId is a distinct cart line
@@ -559,8 +684,21 @@ export default function ProductClient({
         }),
       ).unwrap();
 
-      setCartSuccess(true);
-      setTimeout(() => setCartSuccess(false), 3000);
+      if (result.warning) {
+        // Auto-adjust quantity dropdown to max available
+        if (result.adjustedQuantity) {
+          setQuantity(Math.min(result.adjustedQuantity, remainingStock));
+        }
+        setStockWarning(result.warning);
+        setCartSuccess(true);
+        setTimeout(() => {
+          setCartSuccess(false);
+          setStockWarning("");
+        }, 5000);
+      } else {
+        setCartSuccess(true);
+        setTimeout(() => setCartSuccess(false), 3000);
+      }
     } catch (err) {
       setError(
         typeof err === "string"
@@ -591,25 +729,28 @@ export default function ProductClient({
               effectivePrice={effectivePrice}
               selectedVariation={selectedVariation}
               setSelectedVariation={setSelectedVariation}
-              effectiveStock={effectiveStock}
+              effectiveStock={remainingStock}
+              cartQuantities={cartQuantities}
             />
 
             {/* Add to Cart — or Out of Stock panel */}
-            {effectiveStock > 0 ? (
+            {remainingStock > 0 ? (
               <AddToCartSection
                 error={error}
                 cartSuccess={cartSuccess}
+                stockWarning={stockWarning}
                 quantity={quantity}
                 quantityMessage={quantityMessage}
                 setQuantity={setQuantity}
-                effectiveStock={effectiveStock}
+                effectiveStock={remainingStock}
                 effectivePrice={effectivePrice}
                 addingToCart={addingToCart}
                 handleAddToCart={handleAddToCart}
                 formatPrice={formatPrice}
+                currentCartQuantity={currentCartQuantity}
               />
             ) : (
-              <OutOfStockPanel />
+              <OutOfStockPanel currentCartQuantity={currentCartQuantity} />
             )}
           </div>
         </div>

@@ -6,20 +6,9 @@ import { env } from "./env";
 // Singleton Redis connection for serverless
 let redis: Redis | null = null;
 
-/**
- * Returns true when a Redis connection is configured via REDIS_URL.
- * Callers can use this to skip cache operations gracefully in local/dev
- * environments that don't have Redis running.
- */
-export function isRedisAvailable(): boolean {
-  return Boolean(env.REDIS_URL);
-}
+export const isRedisAvailable = (): boolean => Boolean(env.REDIS_URL);
 
-/**
- * Parse a Redis URL into ioredis connection options.
- * Uses the WHATWG URL API to avoid deprecated url.parse().
- */
-function parseRedisUrl(redisUrl: string): RedisOptions {
+const parseRedisUrl = (redisUrl: string): RedisOptions => {
   const parsedUrl = new URL(redisUrl);
   const dbStr = parsedUrl.pathname.slice(1);
   const dbNum = dbStr ? Number.parseInt(dbStr, 10) : 0;
@@ -34,9 +23,9 @@ function parseRedisUrl(redisUrl: string): RedisOptions {
     enableReadyCheck: false,
     lazyConnect: true,
   };
-}
+};
 
-export function getRedisClient(): Redis | null {
+export const getRedisClient = (): Redis | null => {
   const redisUrl = env.REDIS_URL;
   if (!redisUrl) {
     return null;
@@ -49,7 +38,7 @@ export function getRedisClient(): Redis | null {
   redis = new Redis(parseRedisUrl(redisUrl));
 
   return redis;
-}
+};
 
 // ─── Stampede Prevention ────────────────────────────────
 // SRP: Lock acquisition/release is isolated from cache read/write logic.
@@ -66,18 +55,13 @@ const RELEASE_LOCK_SCRIPT = `
   end
 `;
 
-/**
- * Acquire a distributed lock, execute the fetcher, cache the result, and release the lock.
- * If the lock is not acquired, wait briefly and try to read the cache (another process may have populated it).
- * Falls back to a direct fetch if both lock and retry fail.
- */
-async function fetchWithStampedePrevention<T>(
+const fetchWithStampedePrevention = async <T>(
   redisClient: Redis,
   key: string,
   ttl: number,
   staleTime: number,
   fetcher: () => Promise<T>,
-): Promise<T> {
+): Promise<T> => {
   const lockKey = `lock:${key}`;
   const lockValue = crypto.randomUUID();
   const lockAcquired = await redisClient.set(
@@ -114,20 +98,16 @@ async function fetchWithStampedePrevention<T>(
 
   // Fallback: fetch without caching (lock failed, no cached data appeared)
   return await fetcher();
-}
+};
 
 // ─── Cache Read with Stale-While-Revalidate ─────────────
 
-/**
- * Get data from cache with stale-while-revalidate and stampede prevention.
- * SRP: Orchestrates cache lookup, staleness check, and stampede-safe fetching.
- */
-export async function getCachedData<T>(
+export const getCachedData = async <T>(
   key: string,
   ttl: number,
   fetcher: () => Promise<T>,
   staleTime = 5,
-): Promise<T> {
+): Promise<T> => {
   const redisClient = getRedisClient();
   if (!redisClient) {
     return await fetcher();
@@ -149,12 +129,11 @@ export async function getCachedData<T>(
         return data.value;
       }
 
-      // Stale but within revalidation window — return stale, refresh in background
       if (age < (ttl + staleTime) * 1000) {
         timer.end({ cacheHit: true, stale: true, age });
         logCacheOperation({ operation: "hit", key, success: true });
 
-        setImmediate(async () => {
+        void (async () => {
           try {
             const fresh = await fetcher();
             const cacheData = { value: fresh, timestamp: Date.now() };
@@ -169,14 +148,14 @@ export async function getCachedData<T>(
               ttl: ttl + staleTime,
               success: true,
             });
-          } catch (error) {
+          } catch (revalidationError) {
             logError({
-              error,
+              error: revalidationError,
               context: "background_revalidation",
               additionalInfo: { key },
             });
           }
-        });
+        })();
 
         return data.value;
       }
@@ -198,9 +177,9 @@ export async function getCachedData<T>(
     logError({ error, context: "cache_operation", additionalInfo: { key } });
     return await fetcher();
   }
-}
+};
 
-export async function invalidateCache(pattern: string): Promise<void> {
+export const invalidateCache = async (pattern: string): Promise<void> => {
   const redisClient = getRedisClient();
 
   // If Redis is not available, nothing to invalidate
@@ -254,4 +233,4 @@ export async function invalidateCache(pattern: string): Promise<void> {
       additionalInfo: { pattern },
     });
   }
-}
+};

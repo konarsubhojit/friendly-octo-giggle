@@ -6,25 +6,18 @@ import { eq, desc, inArray } from "drizzle-orm";
 const SALT_ROUNDS = 12;
 const MAX_HISTORY_ENTRIES = 2;
 
-export async function hashPassword(plainText: string): Promise<string> {
-  return bcrypt.hash(plainText, SALT_ROUNDS);
-}
+export const hashPassword = async (plainText: string): Promise<string> =>
+  bcrypt.hash(plainText, SALT_ROUNDS);
 
-export async function verifyPassword(
+export const verifyPassword = async (
   plainText: string,
   hash: string,
-): Promise<boolean> {
-  return bcrypt.compare(plainText, hash);
-}
+): Promise<boolean> => bcrypt.compare(plainText, hash);
 
-/**
- * Check if a new password matches any of the user's last 2 passwords.
- * Returns true if the password was recently used (i.e., should be rejected).
- */
-export async function checkPasswordHistory(
+export const checkPasswordHistory = async (
   userId: string,
   newPlainText: string,
-): Promise<boolean> {
+): Promise<boolean> => {
   const recentEntries = await drizzleDb
     .select({ passwordHash: passwordHistory.passwordHash })
     .from(passwordHistory)
@@ -38,15 +31,12 @@ export async function checkPasswordHistory(
   }
 
   return false;
-}
+};
 
-/**
- * Save a password hash to the history table and prune old entries beyond the limit of 2.
- */
-export async function savePasswordToHistory(
+export const savePasswordToHistory = async (
   userId: string,
   hash: string,
-): Promise<void> {
+): Promise<void> => {
   await drizzleDb.insert(passwordHistory).values({
     userId,
     passwordHash: hash,
@@ -61,13 +51,11 @@ export async function savePasswordToHistory(
 
   const toDelete = allEntries.slice(MAX_HISTORY_ENTRIES);
   if (toDelete.length > 0) {
-    await drizzleDb
-      .delete(passwordHistory)
-      .where(
-        inArray(
-          passwordHistory.id,
-          toDelete.map((entry) => entry.id),
-        ),
-      );
+    await drizzleDb.delete(passwordHistory).where(
+      inArray(
+        passwordHistory.id,
+        toDelete.map((entry) => entry.id),
+      ),
+    );
   }
-}
+};

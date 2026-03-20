@@ -29,6 +29,27 @@
       "when": 1773949751075,
       "tag": "0003_wide_lifeguard",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1774035673950,
+      "tag": "0004_colorful_mad_thinker",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1774039254088,
+      "tag": "0005_common_roxanne_simpson",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1774045721658,
+      "tag": "0006_clear_thor_girl",
+      "breakpoints": true
     }
   ]
 }

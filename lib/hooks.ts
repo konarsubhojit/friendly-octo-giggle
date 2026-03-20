@@ -11,8 +11,7 @@ import {
 } from "react";
 import { logError } from "@/lib/logger";
 
-// Generic hook for fetching data with TypeScript
-export function useFetch<T>(
+export const useFetch = <T>(
   url: string,
   options?: RequestInit,
 ): {
@@ -20,7 +19,7 @@ export function useFetch<T>(
   loading: boolean;
   error: string | null;
   refetch: () => void;
-} {
+} => {
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -62,10 +61,9 @@ export function useFetch<T>(
   }, [fetchData]);
 
   return { data, loading, error, refetch };
-}
+};
 
-// Hook for mutations with optimistic updates
-export function useMutation<TData, TVariables>(
+export const useMutation = <TData, TVariables>(
   mutationFn: (variables: TVariables) => Promise<TData>,
 ): {
   mutate: (variables: TVariables) => Promise<void>;
@@ -73,7 +71,7 @@ export function useMutation<TData, TVariables>(
   error: string | null;
   data: TData | null;
   reset: () => void;
-} {
+} => {
   const [data, setData] = useState<TData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -103,10 +101,9 @@ export function useMutation<TData, TVariables>(
   }, []);
 
   return { mutate, loading, error, data, reset };
-}
+};
 
-// Hook for form state management with TypeScript
-export function useFormState<T extends Record<string, unknown>>(
+export const useFormState = <T extends Record<string, unknown>>(
   initialState: T,
 ): {
   values: T;
@@ -118,7 +115,7 @@ export function useFormState<T extends Record<string, unknown>>(
   setError: (name: keyof T, error: string) => void;
   reset: () => void;
   isValid: boolean;
-} {
+} => {
   const [values, setValues] = useState<T>(initialState);
   const [errors, setErrors] = useState<Partial<Record<keyof T, string>>>({});
 
@@ -159,10 +156,9 @@ export function useFormState<T extends Record<string, unknown>>(
     reset,
     isValid,
   };
-}
+};
 
-// Hook for debouncing values
-export function useDebounce<T>(value: T, delay: number): T {
+export const useDebounce = <T>(value: T, delay: number): T => {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
 
   useEffect(() => {
@@ -176,13 +172,12 @@ export function useDebounce<T>(value: T, delay: number): T {
   }, [value, delay]);
 
   return debouncedValue;
-}
+};
 
-// Hook for local storage with TypeScript
-export function useLocalStorage<T>(
+export const useLocalStorage = <T>(
   key: string,
   initialValue: T,
-): [T, (value: T | ((val: T) => T)) => void] {
+): [T, (value: T | ((val: T) => T)) => void] => {
   const [storedValue, setStoredValue] = useState<T>(() => {
     if (globalThis.window === undefined) {
       return initialValue;
@@ -214,7 +209,7 @@ export function useLocalStorage<T>(
   };
 
   return [storedValue, setValue];
-}
+};
 
 // ─── Recently Viewed Hook ────────────────────────────────
 
@@ -230,15 +225,11 @@ export interface RecentlyViewedProduct {
   viewedAt: number;
 }
 
-/**
- * Tracks recently viewed products in localStorage.
- * Stores up to RECENTLY_VIEWED_MAX items, most recent first.
- */
-export function useRecentlyViewed(): {
+export const useRecentlyViewed = (): {
   recentlyViewed: RecentlyViewedProduct[];
   trackProduct: (product: RecentlyViewedProduct) => void;
   clearHistory: () => void;
-} {
+} => {
   const [recentlyViewed, setRecentlyViewed] = useLocalStorage<
     RecentlyViewedProduct[]
   >(RECENTLY_VIEWED_KEY, []);
@@ -263,27 +254,16 @@ export function useRecentlyViewed(): {
   }, [setRecentlyViewed]);
 
   return { recentlyViewed, trackProduct, clearHistory };
-}
+};
 
 // ─── Modal State Hook ────────────────────────────────────
 
-/**
- * Generic hook for managing modal open/close state with an optional
- * data payload (e.g. the item being edited or deleted).
- *
- * Usage:
- *   const editModal = useModalState<Product>();
- *   editModal.open(product)   // opens with data
- *   editModal.close()         // closes and clears data
- *   editModal.isOpen          // boolean
- *   editModal.data            // T | null
- */
-export function useModalState<T = undefined>(): {
+export const useModalState = <T = undefined>(): {
   isOpen: boolean;
   data: T | null;
   open: (data?: T) => void;
   close: () => void;
-} {
+} => {
   const [isOpen, setIsOpen] = useState(false);
   const [data, setData] = useState<T | null>(null);
 
@@ -298,7 +278,7 @@ export function useModalState<T = undefined>(): {
   }, []);
 
   return { isOpen, data, open, close };
-}
+};
 
 export interface UseCursorPaginationOptions<T> {
   readonly url: string;

@@ -4,7 +4,10 @@ import { FlowerAccent, VineDivider } from "@/components/ui/DecorativeElements";
 
 export default function Footer() {
   return (
-    <footer aria-label="Site footer" className="bg-[var(--surface)] text-[var(--foreground)] py-16 mt-12 border-t border-[var(--border-warm)] relative overflow-hidden">
+    <footer
+      aria-label="Site footer"
+      className="bg-[var(--surface)] text-[var(--foreground)] py-16 mt-12 border-t border-[var(--border-warm)] relative overflow-hidden"
+    >
       {/* Decorative background elements */}
       <div className="absolute top-4 right-8 opacity-20" aria-hidden="true">
         <FlowerAccent className="w-12 h-12" />
@@ -63,7 +66,7 @@ export default function Footer() {
             <ul className="space-y-2">
               <li>
                 <Link
-                  href="/#products"
+                  href="/shop"
                   className="text-[var(--text-secondary)] hover:text-[var(--accent-rose)] transition-all duration-300"
                 >
                   All Products
@@ -71,7 +74,7 @@ export default function Footer() {
               </li>
               <li>
                 <Link
-                  href="/#products"
+                  href="/shop"
                   className="text-[var(--text-secondary)] hover:text-[var(--accent-rose)] transition-all duration-300"
                 >
                   New Arrivals
@@ -79,7 +82,7 @@ export default function Footer() {
               </li>
               <li>
                 <Link
-                  href="/#products"
+                  href="/shop"
                   className="text-[var(--text-secondary)] hover:text-[var(--accent-rose)] transition-all duration-300"
                 >
                   Best Sellers
@@ -87,7 +90,7 @@ export default function Footer() {
               </li>
               <li>
                 <Link
-                  href="/#products"
+                  href="/shop"
                   className="text-[var(--text-secondary)] hover:text-[var(--accent-rose)] transition-all duration-300"
                 >
                   Deals

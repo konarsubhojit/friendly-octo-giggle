@@ -64,6 +64,42 @@ function renderModal(
 describe("ProductFormModal", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    // Mock the /api/categories fetch used by the component
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockImplementation((url: string) => {
+        if (url === "/api/categories") {
+          return Promise.resolve({
+            ok: true,
+            json: () =>
+              Promise.resolve({
+                data: [
+                  { name: "Flowers" },
+                  { name: "Handbag" },
+                  { name: "Flower Pots" },
+                  { name: "Keychains" },
+                  { name: "Hair Accessories" },
+                ],
+              }),
+          });
+        }
+        if (url === "/api/exchange-rates") {
+          return Promise.resolve({
+            ok: true,
+            json: () =>
+              Promise.resolve({
+                data: {
+                  rates: { INR: 1, USD: 0.012, EUR: 0.011, GBP: 0.0095 },
+                },
+              }),
+          });
+        }
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ data: {} }),
+        });
+      }),
+    );
   });
 
   afterEach(() => {
@@ -140,8 +176,11 @@ describe("ProductFormModal", () => {
     expect((stockInput as HTMLInputElement).value).toBe("0");
   });
 
-  it("updates category when selected", () => {
+  it("updates category when selected", async () => {
     renderModal();
+    await waitFor(() => {
+      expect(screen.getByRole("option", { name: "Keychains" })).toBeTruthy();
+    });
     const catSelect = screen.getByLabelText("Category");
     fireEvent.change(catSelect, { target: { value: "Keychains" } });
     expect((catSelect as HTMLSelectElement).value).toBe("Keychains");
@@ -284,10 +323,25 @@ describe("ProductFormModal", () => {
 
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockRejectedValue(new Error("Network error")),
+      vi.fn().mockImplementation((url: string) => {
+        if (url === "/api/categories") {
+          return Promise.resolve({
+            ok: true,
+            json: () =>
+              Promise.resolve({
+                data: [{ name: "Flowers" }, { name: "Keychains" }],
+              }),
+          });
+        }
+        return Promise.reject(new Error("Network error"));
+      }),
     );
 
     const { container } = renderModal({ onSuccess });
+
+    await waitFor(() => {
+      expect(screen.getByRole("option", { name: "Flowers" })).toBeTruthy();
+    });
 
     fireEvent.change(screen.getByLabelText("Name"), {
       target: { value: "New Product" },
@@ -364,6 +418,15 @@ describe("ProductFormModal", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockImplementation((url: string) => {
+        if (url === "/api/categories") {
+          return Promise.resolve({
+            ok: true,
+            json: () =>
+              Promise.resolve({
+                data: [{ name: "Flowers" }, { name: "Keychains" }],
+              }),
+          });
+        }
         if (url === "/api/exchange-rates") {
           return Promise.resolve({
             ok: true,
@@ -393,6 +456,10 @@ describe("ProductFormModal", () => {
     );
 
     const { container } = renderModal({ onSuccess, onClose });
+
+    await waitFor(() => {
+      expect(screen.getByRole("option", { name: "Flowers" })).toBeTruthy();
+    });
 
     fireEvent.change(screen.getByLabelText("Name"), {
       target: { value: "New Product" },
@@ -435,13 +502,28 @@ describe("ProductFormModal", () => {
 
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValue({
-        ok: false,
-        json: () => Promise.resolve({ error: "Upload rejected" }),
+      vi.fn().mockImplementation((url: string) => {
+        if (url === "/api/categories") {
+          return Promise.resolve({
+            ok: true,
+            json: () =>
+              Promise.resolve({
+                data: [{ name: "Flowers" }, { name: "Keychains" }],
+              }),
+          });
+        }
+        return Promise.resolve({
+          ok: false,
+          json: () => Promise.resolve({ error: "Upload rejected" }),
+        });
       }),
     );
 
     const { container } = renderModal({ onSuccess });
+
+    await waitFor(() => {
+      expect(screen.getByRole("option", { name: "Flowers" })).toBeTruthy();
+    });
 
     fireEvent.change(screen.getByLabelText("Name"), { target: { value: "P" } });
     fireEvent.change(screen.getByLabelText("Description"), {

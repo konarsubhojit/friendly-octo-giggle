@@ -4,7 +4,9 @@ import Link from "next/link";
 import { Product } from "@/lib/types";
 import Footer from "@/components/layout/Footer";
 import ProductGrid from "@/components/sections/ProductGrid";
-import { db } from "@/lib/db";
+import { db, drizzleDb } from "@/lib/db";
+import { categories as categoriesTable } from "@/lib/schema";
+import { isNull, asc } from "drizzle-orm";
 import { logError } from "@/lib/logger";
 
 export const revalidate = 60;
@@ -18,15 +20,22 @@ export const metadata: Metadata = {
 const ShopPage = async () => {
   let products: Product[] = [];
   let bestsellers: Product[] = [];
+  let categoryNames: string[] = [];
 
   try {
-    const [allProducts, topProducts] = await Promise.all([
+    const [allProducts, topProducts, cats] = await Promise.all([
       db.products.findAll({ withCache: true }),
       db.products.findBestsellers(),
+      drizzleDb
+        .select({ name: categoriesTable.name })
+        .from(categoriesTable)
+        .where(isNull(categoriesTable.deletedAt))
+        .orderBy(asc(categoriesTable.sortOrder), asc(categoriesTable.name)),
     ]);
 
     products = allProducts;
     bestsellers = topProducts;
+    categoryNames = cats.map((c) => c.name);
   } catch (error) {
     logError({ error, context: "shop_products_fetch" });
   }
@@ -103,7 +112,7 @@ const ShopPage = async () => {
         )}
       </section>
 
-      <ProductGrid products={products} />
+      <ProductGrid products={products} categories={categoryNames} />
 
       <Footer />
     </div>

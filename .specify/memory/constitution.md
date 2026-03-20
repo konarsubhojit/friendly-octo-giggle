@@ -1,21 +1,32 @@
 <!--
   Sync Impact Report
   ==================
-  Version change: 0.0.0 (blank template) → 1.0.0
-  Modified principles: N/A (initial population)
+  Version change: 1.0.0 → 1.1.0
+  Bump rationale: MINOR — new principle section added (VIII),
+    new architectural constraints documented (search, QStash,
+    admin-auth module), no existing principles removed or
+    redefined.
+  Modified principles:
+    - IV. Serverless & Caching Architecture — expanded to cover
+      background work pattern (void IIFE instead of setImmediate)
+    - V. Security by Default — added admin auth centralization
+      requirement via lib/admin-auth.ts
   Added sections:
-    - Core Principles (7 principles)
-    - Technology & Architecture Constraints
-    - Development Workflow & Quality Gates
-    - Governance
+    - Principle VIII. DRY Shared Utilities
+    - Search infrastructure (Upstash + DB fallback) in
+      Technology & Architecture Constraints
+    - QStash background jobs in Technology & Architecture
+      Constraints
+    - Categories table reference
   Removed sections: None
   Templates requiring updates:
-    - .specify/templates/plan-template.md — ✅ aligned (Constitution Check
-      section already references constitution file generically)
-    - .specify/templates/spec-template.md — ✅ aligned (no constitution-
-      specific references need updating)
-    - .specify/templates/tasks-template.md — ✅ aligned (phase structure
-      compatible with principles)
+    - .specify/templates/plan-template.md — ✅ aligned
+      (Constitution Check section references constitution
+      generically)
+    - .specify/templates/spec-template.md — ✅ aligned (no
+      constitution-specific references)
+    - .specify/templates/tasks-template.md — ✅ aligned (phase
+      structure compatible with new principle)
     - .specify/templates/checklist-template.md — ✅ aligned
   Follow-up TODOs: None
 -->
@@ -57,12 +68,17 @@ coverage.
 
 The application MUST remain deployable as serverless on-demand
 functions (Vercel/AWS Lambda). No in-memory state may persist
-across requests. Frequently-read data MUST be cached via Redis
-using `getCachedData` from `lib/redis.ts` with stampede prevention
-and stale-while-revalidate. Cache MUST be invalidated on writes
-via `invalidateCache`. API responses MUST include appropriate
-`Cache-Control` headers. Static pages MUST use ISR with
-`revalidate` instead of `force-dynamic` where possible.
+across requests. Background work (e.g., stale-while-revalidate
+cache refresh) MUST use `void (async () => { ... })()` — never
+`setImmediate` or `setTimeout`, as those are not guaranteed to
+complete in serverless runtimes. Frequently-read data MUST be
+cached via Redis using `getCachedData` from `lib/redis.ts` with
+stampede prevention and stale-while-revalidate. Cache MUST be
+invalidated on writes via `invalidateCache`. API responses MUST
+include appropriate `Cache-Control` headers. Static pages MUST
+use ISR with `revalidate` instead of `force-dynamic` where
+possible. Deferred background jobs (email, webhooks) MUST use
+QStash via `lib/qstash.ts` rather than in-process execution.
 
 ### V. Security by Default
 
@@ -70,10 +86,13 @@ All user input MUST be validated and sanitized before processing.
 Database queries MUST use parameterized statements (enforced by
 Drizzle ORM). Sensitive routes MUST check authentication via
 `auth()` from `lib/auth.ts` and enforce RBAC (CUSTOMER / ADMIN).
-API routes MUST return `401` for unauthenticated and `403` for
-unauthorized access. Secrets MUST reside in `.env.local` and MUST
-NOT be committed. HTTPS MUST be enforced in production. All
-components MUST follow OWASP Top 10 mitigations.
+Admin routes MUST use the shared `checkAdminAuth()` from
+`lib/admin-auth.ts` — inline auth checks in individual route
+files are prohibited. API routes MUST return `401` for
+unauthenticated and `403` for unauthorized access. Secrets MUST
+reside in `.env.local` and MUST NOT be committed. HTTPS MUST be
+enforced in production. All components MUST follow OWASP Top 10
+mitigations.
 
 ### VI. Observability & Structured Logging
 
@@ -93,6 +112,17 @@ New dependencies MUST be justified against bundle size impact and
 maintenance cost. Each component MUST have a single, clear
 responsibility. Complexity MUST be explicitly justified in PRs
 when it exceeds straightforward implementation.
+
+### VIII. DRY Shared Utilities
+
+Cross-cutting concerns (admin auth, serialization, cache
+patterns, error handling) MUST be extracted into `lib/` modules
+and imported — not duplicated across route files. When the same
+logic appears in three or more files, it MUST be refactored into
+a shared utility. New shared modules MUST NOT introduce import
+chains that pull heavy dependencies (e.g., `next-auth`) into
+lightweight utility files (e.g., `api-utils.ts`); use separate
+files to isolate dependency graphs.
 
 ## Technology & Architecture Constraints
 
@@ -116,6 +146,17 @@ when it exceeds straightforward implementation.
 - **Authentication**: NextAuth.js v5 with Google OAuth +
   email/password + phone/password, DrizzleAdapter, database
   sessions.
+- **Search**: Upstash Search (`lib/search.ts`) for AI-powered
+  full-text search on products and orders, with automatic DB
+  fallback via `lib/search-service.ts` when Upstash is
+  unavailable. Search index updates MUST happen on write
+  operations.
+- **Background Jobs**: QStash (`lib/qstash.ts`) for reliable
+  deferred execution (email delivery, webhook dispatch). Event
+  types defined in `lib/qstash-events.ts`. Service endpoints
+  under `app/api/services/`.
+- **Admin Auth**: Centralized in `lib/admin-auth.ts`. All admin
+  API routes MUST import `checkAdminAuth` from this module.
 - **Accessibility**: Semantic HTML, ARIA attributes (`aria-expanded`,
   `role="menu"`, `aria-haspopup`), and `rel="noopener noreferrer"`
   on external links are mandatory on all interactive components.
@@ -156,4 +197,4 @@ project documentation. Amendments require:
 Runtime development guidance is maintained in
 `.github/copilot-instructions.md` and `docs/development.md`.
 
-**Version**: 1.0.0 | **Ratified**: 2026-03-19 | **Last Amended**: 2026-03-19
+**Version**: 1.1.0 | **Ratified**: 2026-03-19 | **Last Amended**: 2026-03-21

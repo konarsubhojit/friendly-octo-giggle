@@ -17,12 +17,7 @@ interface LoggingOptions {
   requireAuth?: boolean;
 }
 
-/**
- * Core logging wrapper — shared logic for both authenticated and unauthenticated routes.
- * SRP: single place for request lifecycle (timing, logging, tracing).
- * OCP: new options can be added via LoggingOptions without modifying existing code.
- */
-function createLoggingWrapper(options: LoggingOptions = {}) {
+const createLoggingWrapper = (options: LoggingOptions = {}) => {
   const { requireAuth = false } = options;
 
   return (
@@ -78,20 +73,11 @@ function createLoggingWrapper(options: LoggingOptions = {}) {
       }
     };
   };
-}
+};
 
-/**
- * Wrapper for API route handlers that adds logging, context, and auth session
- */
-export function withApiLogging(handler: ApiHandler) {
-  return createLoggingWrapper({ requireAuth: true })(handler);
-}
+export const withApiLogging = (handler: ApiHandler) =>
+  createLoggingWrapper({ requireAuth: true })(handler);
 
-/**
- * Simple wrapper for API routes without authentication
- */
-export function withLogging(
+export const withLogging = (
   handler: (request: NextRequest) => Promise<NextResponse>,
-) {
-  return createLoggingWrapper({ requireAuth: false })(handler);
-}
+) => createLoggingWrapper({ requireAuth: false })(handler);

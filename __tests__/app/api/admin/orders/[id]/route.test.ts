@@ -29,6 +29,9 @@ vi.mock("@/lib/logger", () => ({ logError: vi.fn() }));
 vi.mock("@/lib/email", () => ({
   sendOrderStatusUpdateEmail: vi.fn(),
 }));
+vi.mock("@/lib/search", () => ({
+  indexOrder: vi.fn(),
+}));
 vi.mock("@/lib/env", () => ({
   env: {
     NEXT_PUBLIC_APP_URL: "http://localhost:3000",
@@ -70,7 +73,14 @@ const mockOrder = {
   userId: "u1",
   status: "SHIPPED",
   total: 5000,
+  totalAmount: 5000,
+  customerName: "Test User",
+  customerEmail: "test@example.com",
+  customerAddress: "123 Test St",
   trackingNumber: "TRK123",
+  shippingProvider: null,
+  createdAt: new Date("2025-01-01T00:00:00.000Z"),
+  updatedAt: new Date("2025-01-01T00:00:00.000Z"),
   items: [{ id: "i1", product: { id: "p1" }, variation: null }],
 };
 

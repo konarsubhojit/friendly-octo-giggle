@@ -8,6 +8,7 @@ import CartIcon from "@/components/layout/CartIcon";
 import LoginModal from "@/components/auth/LoginModal";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { FlowerAccent } from "@/components/ui/DecorativeElements";
+import ProductSearch from "@/components/ui/ProductSearch";
 
 interface UserMenuUser {
   readonly name?: string | null;
@@ -220,6 +221,9 @@ function MobileNav({
       className="md:hidden bg-[var(--background)]/95 backdrop-blur-lg border-t border-[var(--border-warm)]/40 shadow-warm animate-fade-in"
     >
       <nav className="max-w-7xl mx-auto px-4 py-4 flex flex-col gap-1">
+        <div className="px-4 py-2">
+          <ProductSearch />
+        </div>
         <Link
           href="/"
           onClick={closeMobileNav}
@@ -387,6 +391,9 @@ export default function Header() {
             </nav>
 
             <div className="flex items-center gap-3 sm:gap-4">
+              <div className="hidden sm:block">
+                <ProductSearch />
+              </div>
               <CartIcon />
 
               {session?.user ? (

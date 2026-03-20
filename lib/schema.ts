@@ -49,6 +49,9 @@ export const users = pgTable("User", {
   image: text("image"),
   passwordHash: text("passwordHash"),
   phoneNumber: varchar("phoneNumber", { length: 20 }).unique(),
+  currencyPreference: varchar("currencyPreference", { length: 3 })
+    .default("INR")
+    .notNull(),
   role: userRoleEnum("role").default("CUSTOMER").notNull(),
   createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
   updatedAt: timestamp("updatedAt", { mode: "date" }).defaultNow().notNull(),
@@ -126,6 +129,17 @@ export const passwordHistory = pgTable(
 
 // ─── Product Tables ──────────────────────────────────────
 
+export const categories = pgTable("Category", {
+  id: varchar("id", { length: 7 })
+    .primaryKey()
+    .$defaultFn(() => generateShortId()),
+  name: text("name").notNull().unique(),
+  sortOrder: integer("sortOrder").notNull().default(0),
+  createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { mode: "date" }).defaultNow().notNull(),
+  deletedAt: timestamp("deletedAt", { mode: "date" }),
+});
+
 export const products = pgTable(
   "Product",
   {
@@ -143,7 +157,11 @@ export const products = pgTable(
     createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
     updatedAt: timestamp("updatedAt", { mode: "date" }).defaultNow().notNull(),
   },
-  (t) => [index("Product_category_idx").on(t.category)],
+  (t) => [
+    index("Product_category_idx").on(t.category),
+    index("Product_createdAt_idx").on(t.createdAt),
+    index("Product_deletedAt_idx").on(t.deletedAt),
+  ],
 );
 
 export const productVariations = pgTable(
@@ -190,7 +208,11 @@ export const orders = pgTable(
     createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
     updatedAt: timestamp("updatedAt", { mode: "date" }).defaultNow().notNull(),
   },
-  (t) => [index("Order_userId_idx").on(t.userId)],
+  (t) => [
+    index("Order_userId_idx").on(t.userId),
+    index("Order_status_idx").on(t.status),
+    index("Order_createdAt_idx").on(t.createdAt),
+  ],
 );
 
 export const orderItems = pgTable(
@@ -451,6 +473,8 @@ export const productSharesRelations = relations(productShares, ({ one }) => ({
     references: [productVariations.id],
   }),
 }));
+
+export const categoriesRelations = relations(categories, () => ({}));
 
 // ─── Failed Email Types ──────────────────────────────────
 

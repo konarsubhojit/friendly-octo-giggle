@@ -1,56 +1,41 @@
-import { NextRequest } from 'next/server';
-import { drizzleDb } from '@/lib/db';
-import { users } from '@/lib/schema';
-import { eq } from 'drizzle-orm';
-import { auth } from '@/lib/auth';
-import { apiSuccess, apiError, handleApiError } from '@/lib/api-utils';
-import { cacheAdminUserById, invalidateAdminUserCaches } from '@/lib/cache';
-import { z } from 'zod';
+import { NextRequest } from "next/server";
+import { drizzleDb } from "@/lib/db";
+import { users } from "@/lib/schema";
+import { eq } from "drizzle-orm";
+import { apiSuccess, apiError, handleApiError } from "@/lib/api-utils";
+import { checkAdminAuth } from "@/lib/admin-auth";
+import { cacheAdminUserById, invalidateAdminUserCaches } from "@/lib/cache";
+import { z } from "zod";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 const UpdateUserRoleSchema = z.object({
-  role: z.enum(['ADMIN', 'CUSTOMER']),
+  role: z.enum(["ADMIN", "CUSTOMER"]),
 });
-
-// Check if user is admin
-async function checkAdminAuth() {
-  const session = await auth();
-  
-  if (!session?.user) {
-    return { authorized: false, error: 'Not authenticated', status: 401 as const };
-  }
-  
-  if (session.user.role !== 'ADMIN') {
-    return { authorized: false, error: 'Not authorized - Admin access required', status: 403 as const };
-  }
-  
-  return { authorized: true, userId: session.user.id };
-}
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const authCheck = await checkAdminAuth();
     if (!authCheck.authorized) {
-      return apiError(authCheck.error ?? 'Unauthorized', authCheck.status);
+      return apiError(authCheck.error, authCheck.status);
     }
 
     const { id } = await params;
     const body = await request.json();
-    
-    // Validate input
+
     const validated = UpdateUserRoleSchema.parse(body);
 
     // Prevent users from changing their own role
     if (id === authCheck.userId) {
-      return apiError('Cannot modify your own role', 403);
+      return apiError("Cannot modify your own role", 403);
     }
 
     // Update user role
-    const [user] = await drizzleDb.update(users)
+    const [user] = await drizzleDb
+      .update(users)
       .set({ role: validated.role, updatedAt: new Date() })
       .where(eq(users.id, id))
       .returning({
@@ -75,12 +60,12 @@ export async function PATCH(
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const authCheck = await checkAdminAuth();
     if (!authCheck.authorized) {
-      return apiError(authCheck.error ?? 'Unauthorized', authCheck.status);
+      return apiError(authCheck.error, authCheck.status);
     }
 
     const { id } = await params;
@@ -100,12 +85,15 @@ export async function GET(
         createdAt: found.createdAt,
         updatedAt: found.updatedAt,
         image: found.image,
-        _count: { orders: found.orders.length, sessions: found.sessions.length },
+        _count: {
+          orders: found.orders.length,
+          sessions: found.sessions.length,
+        },
       };
     });
 
     if (!user) {
-      return apiError('User not found', 404);
+      return apiError("User not found", 404);
     }
 
     return apiSuccess({ user });

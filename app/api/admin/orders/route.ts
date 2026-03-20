@@ -1,26 +1,16 @@
 import { NextRequest } from "next/server";
 import { drizzleDb } from "@/lib/db";
 import { orders } from "@/lib/schema";
-import { desc, lt, ilike, or, and, eq, SQL } from "drizzle-orm";
+import { desc, lt, ilike, or, and, eq, inArray, SQL } from "drizzle-orm";
 import { apiSuccess, apiError, handleApiError } from "@/lib/api-utils";
-import { auth } from "@/lib/auth";
+import { checkAdminAuth } from "@/lib/admin-auth";
 import { serializeOrders } from "@/lib/serializers";
 import { OrderStatus } from "@/lib/types";
+import { searchOrderIds } from "@/lib/search-service";
 
 export const dynamic = "force-dynamic";
 
 const PAGE_SIZE = 20;
-
-const checkAdminAuth = async () => {
-  const session = await auth();
-  if (!session?.user) {
-    return { authorized: false, error: "Not authenticated", status: 401 as const };
-  }
-  if (session.user.role !== "ADMIN") {
-    return { authorized: false, error: "Not authorized - Admin access required", status: 403 as const };
-  }
-  return { authorized: true };
-};
 
 /**
  * GET /api/admin/orders
@@ -63,22 +53,45 @@ export const GET = async (request: NextRequest) => {
 
     if (statusFilter && statusFilter !== "ALL") {
       if (!VALID_STATUSES.includes(statusFilter)) {
-        return apiError(`Invalid status filter. Must be one of: ${VALID_STATUSES.join(", ")}`, 400);
+        return apiError(
+          `Invalid status filter. Must be one of: ${VALID_STATUSES.join(", ")}`,
+          400,
+        );
       }
       conditions.push(
-        eq(orders.status, statusFilter as "PENDING" | "PROCESSING" | "SHIPPED" | "DELIVERED" | "CANCELLED"),
+        eq(
+          orders.status,
+          statusFilter as
+            | "PENDING"
+            | "PROCESSING"
+            | "SHIPPED"
+            | "DELIVERED"
+            | "CANCELLED",
+        ),
       );
     }
 
     if (search) {
-      const pattern = `%${search}%`;
-      conditions.push(
-        or(
-          ilike(orders.customerName, pattern),
-          ilike(orders.customerEmail, pattern),
-          ilike(orders.id, pattern),
-        ) as SQL,
-      );
+      const matchedIds = await searchOrderIds(search, {
+        limit: limit * 5,
+        status:
+          statusFilter && statusFilter !== "ALL" ? statusFilter : undefined,
+      });
+
+      if (matchedIds === null) {
+        const pattern = `%${search}%`;
+        conditions.push(
+          or(
+            ilike(orders.customerName, pattern),
+            ilike(orders.customerEmail, pattern),
+            ilike(orders.id, pattern),
+          ) as SQL,
+        );
+      } else if (matchedIds.length === 0) {
+        return apiSuccess({ orders: [], nextCursor: null, hasMore: false });
+      } else {
+        conditions.push(inArray(orders.id, matchedIds));
+      }
     }
 
     const whereClause =

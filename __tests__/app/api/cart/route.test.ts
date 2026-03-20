@@ -210,11 +210,11 @@ describe("Cart API Route", () => {
       expect(data).toEqual({ error: "Product not found" });
     });
 
-    it("returns 400 for insufficient stock", async () => {
+    it("returns 400 for out of stock product", async () => {
       (auth as Mock).mockResolvedValue({ user: { id: "user123" } });
       (drizzleDb.query.products.findFirst as Mock).mockResolvedValue({
         id: VALID_PRODUCT_ID,
-        stock: 2,
+        stock: 0,
         variations: [],
       });
 
@@ -227,7 +227,7 @@ describe("Cart API Route", () => {
       const data = await response.json();
 
       expect(response.status).toBe(400);
-      expect(data).toEqual({ error: "Insufficient stock" });
+      expect(data).toEqual({ error: "This product is currently out of stock" });
     });
 
     it("creates cart item for authenticated user (201)", async () => {
@@ -262,7 +262,9 @@ describe("Cart API Route", () => {
       (drizzleDb.query.carts.findFirst as Mock)
         .mockResolvedValueOnce({ id: VALID_CART_ID }) // getOrCreateCart
         .mockResolvedValueOnce(mockCart); // fetch updated cart
-      (drizzleDb.query.users.findFirst as Mock).mockResolvedValue({ id: "user123" });
+      (drizzleDb.query.users.findFirst as Mock).mockResolvedValue({
+        id: "user123",
+      });
       (drizzleDb.query.cartItems.findFirst as Mock).mockResolvedValue(null);
       const insertValuesMock = vi.fn(() => ({ returning: vi.fn() }));
       (drizzleDb.insert as Mock).mockReturnValue({ values: insertValuesMock });
@@ -344,8 +346,12 @@ describe("Cart API Route", () => {
       (drizzleDb.query.users.findFirst as Mock).mockResolvedValue(null);
       (drizzleDb.query.cartItems.findFirst as Mock).mockResolvedValue(null);
 
-      const insertReturningMock = vi.fn().mockResolvedValue([{ id: VALID_CART_ID }]);
-      const insertValuesMock = vi.fn(() => ({ returning: insertReturningMock }));
+      const insertReturningMock = vi
+        .fn()
+        .mockResolvedValue([{ id: VALID_CART_ID }]);
+      const insertValuesMock = vi.fn(() => ({
+        returning: insertReturningMock,
+      }));
       (drizzleDb.insert as Mock).mockReturnValue({ values: insertValuesMock });
 
       const request = new NextRequest("http://localhost/api/cart", {
@@ -499,13 +505,51 @@ describe("Cart API Route", () => {
       expect(data).toEqual({ error: "Variation not found" });
     });
 
-    it("checks variation stock when variationId is provided", async () => {
+    it("auto-caps quantity when variation stock is insufficient", async () => {
+      const mockCart = {
+        id: VALID_CART_ID,
+        createdAt: new Date("2024-01-01"),
+        updatedAt: new Date("2024-01-02"),
+        items: [
+          {
+            id: VALID_ITEM_ID,
+            quantity: 2,
+            createdAt: new Date("2024-01-01"),
+            updatedAt: new Date("2024-01-02"),
+            product: {
+              id: VALID_PRODUCT_ID,
+              createdAt: new Date("2024-01-01"),
+              updatedAt: new Date("2024-01-02"),
+              variations: [
+                {
+                  id: VALID_VARIATION_ID,
+                  stock: 2,
+                  createdAt: new Date("2024-01-01"),
+                  updatedAt: new Date("2024-01-02"),
+                },
+              ],
+            },
+            variation: {
+              id: VALID_VARIATION_ID,
+              createdAt: new Date("2024-01-01"),
+              updatedAt: new Date("2024-01-02"),
+            },
+          },
+        ],
+      };
+
       (auth as Mock).mockResolvedValue({ user: { id: "user123" } });
       (drizzleDb.query.products.findFirst as Mock).mockResolvedValue({
         id: VALID_PRODUCT_ID,
         stock: 100,
         variations: [{ id: VALID_VARIATION_ID, stock: 2 }],
       });
+      (drizzleDb.query.carts.findFirst as Mock)
+        .mockResolvedValueOnce({ id: VALID_CART_ID })
+        .mockResolvedValueOnce(mockCart);
+      (drizzleDb.query.cartItems.findFirst as Mock).mockResolvedValue(null);
+      const insertValuesMock = vi.fn(() => ({ returning: vi.fn() }));
+      (drizzleDb.insert as Mock).mockReturnValue({ values: insertValuesMock });
 
       const request = new NextRequest("http://localhost/api/cart", {
         method: "POST",
@@ -519,8 +563,12 @@ describe("Cart API Route", () => {
       const response = await POST(request);
       const data = await response.json();
 
-      expect(response.status).toBe(400);
-      expect(data).toEqual({ error: "Insufficient stock" });
+      expect(response.status).toBe(201);
+      expect(data.cart).toBeDefined();
+      expect(data.warning).toBe(
+        "Only 2 items available. Added 2 to your cart.",
+      );
+      expect(data.adjustedQuantity).toBe(2);
     });
 
     it("updates existing cart item quantity", async () => {
@@ -575,7 +623,7 @@ describe("Cart API Route", () => {
       expect(drizzleDb.update).toHaveBeenCalled();
     });
 
-    it("returns 400 when existing item + new quantity exceeds stock", async () => {
+    it("returns 400 when cart already has maximum available stock", async () => {
       (auth as Mock).mockResolvedValue({ user: { id: "user123" } });
       (drizzleDb.query.products.findFirst as Mock).mockResolvedValue({
         id: VALID_PRODUCT_ID,
@@ -587,7 +635,7 @@ describe("Cart API Route", () => {
       });
       (drizzleDb.query.cartItems.findFirst as Mock).mockResolvedValue({
         id: VALID_ITEM_ID,
-        quantity: 4,
+        quantity: 5,
       });
 
       const request = new NextRequest("http://localhost/api/cart", {
@@ -599,7 +647,7 @@ describe("Cart API Route", () => {
       const data = await response.json();
 
       expect(response.status).toBe(400);
-      expect(data).toEqual({ error: "Insufficient stock" });
+      expect(data.error).toContain("maximum available quantity (5)");
     });
 
     it("returns 404 when updated cart not found after insert", async () => {

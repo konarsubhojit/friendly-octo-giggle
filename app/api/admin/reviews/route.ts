@@ -3,22 +3,10 @@ import { drizzleDb } from "@/lib/db";
 import { reviews } from "@/lib/schema";
 import { desc, eq, and, SQL } from "drizzle-orm";
 import { apiSuccess, apiError, handleApiError } from "@/lib/api-utils";
-import { auth } from "@/lib/auth";
+import { checkAdminAuth } from "@/lib/admin-auth";
 
 export const dynamic = "force-dynamic";
 
-const checkAdminAuth = async () => {
-  const session = await auth();
-  if (!session?.user) {
-    return { authorized: false, error: "Not authenticated", status: 401 as const };
-  }
-  if (session.user.role !== "ADMIN") {
-    return { authorized: false, error: "Not authorized - Admin access required", status: 403 as const };
-  }
-  return { authorized: true };
-};
-
-// GET /api/admin/reviews  — returns reviews with user + product info, DB-level filtering
 export const GET = async (request: NextRequest) => {
   const authCheck = await checkAdminAuth();
   if (!authCheck.authorized) {

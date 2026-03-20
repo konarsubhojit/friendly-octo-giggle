@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { drizzleDb } from "@/lib/db";
-import { orders, orderItems, products, productVariations } from "@/lib/schema";
+import {
+  orders,
+  orderItems,
+  products,
+  productVariations,
+  users,
+} from "@/lib/schema";
 import {
   eq,
   inArray,
@@ -23,6 +29,13 @@ import { sendOrderConfirmationEmail } from "@/lib/email";
 import { getQStashClient } from "@/lib/qstash";
 import type { OrderCreatedEvent } from "@/lib/qstash-events";
 import { env } from "@/lib/env";
+import { indexOrder } from "@/lib/search";
+import { searchOrderIds } from "@/lib/search-service";
+import {
+  formatPriceForCurrency,
+  isValidCurrencyCode,
+  type CurrencyCode,
+} from "@/lib/currency";
 
 export const dynamic = "force-dynamic";
 
@@ -172,11 +185,7 @@ const parseOrderLimit = (param: string | null): number =>
     100,
   );
 
-const buildOrderConditions = (
-  userId: string,
-  cursor: string | null,
-  search: string,
-): SQL[] => {
+const buildOrderConditions = (userId: string, cursor: string | null): SQL[] => {
   const conditions: SQL[] = [eq(orders.userId, userId)];
 
   if (cursor) {
@@ -184,13 +193,6 @@ const buildOrderConditions = (
     if (!Number.isNaN(cursorDate.getTime())) {
       conditions.push(lt(orders.createdAt, cursorDate));
     }
-  }
-
-  if (search) {
-    const pattern = `%${search}%`;
-    conditions.push(
-      or(ilike(orders.id, pattern), ilike(orders.status, pattern)) as SQL,
-    );
   }
 
   return conditions;
@@ -211,11 +213,30 @@ const handleGet = async (request: NextRequest) => {
 
     const { searchParams } = new URL(request.url);
     const limit = parseOrderLimit(searchParams.get("limit"));
+    const search = searchParams.get("search")?.trim() ?? "";
     const conditions = buildOrderConditions(
       session.user.id,
       searchParams.get("cursor"),
-      searchParams.get("search")?.trim() ?? "",
     );
+
+    if (search) {
+      const matchedIds = await searchOrderIds(search, { limit: limit * 5 });
+
+      if (matchedIds === null) {
+        const pattern = `%${search}%`;
+        conditions.push(
+          or(ilike(orders.id, pattern), ilike(orders.status, pattern)) as SQL,
+        );
+      } else if (matchedIds.length === 0) {
+        return NextResponse.json({
+          orders: [],
+          nextCursor: null,
+          hasMore: false,
+        });
+      } else {
+        conditions.push(inArray(orders.id, matchedIds));
+      }
+    }
 
     const rows = await drizzleDb.query.orders.findMany({
       where: and(...conditions),
@@ -459,6 +480,17 @@ const handlePost = async (request: NextRequest) => {
       success: true,
     });
 
+    // Index order in Upstash Search (fire-and-forget)
+    void indexOrder({
+      id: fullOrder.id,
+      customerName: fullOrder.customerName,
+      customerEmail: fullOrder.customerEmail,
+      customerAddress: fullOrder.customerAddress,
+      status: fullOrder.status,
+      totalAmount: fullOrder.totalAmount,
+      createdAt: fullOrder.createdAt.toISOString(),
+    });
+
     // Invalidate caches in parallel to reduce order response latency.
     const productCacheKeys = [
       ...new Set(body.items.map((item) => item.productId)),
@@ -473,6 +505,18 @@ const handlePost = async (request: NextRequest) => {
     ]);
 
     const workerUrl = `${env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/api/services/email`;
+
+    // Look up user's currency preference for email formatting
+    const userRecord = await drizzleDb.query.users.findFirst({
+      where: eq(users.id, userId),
+      columns: { currencyPreference: true },
+    });
+    const currencyCode: CurrencyCode =
+      userRecord?.currencyPreference &&
+      isValidCurrencyCode(userRecord.currencyPreference)
+        ? userRecord.currencyPreference
+        : "INR";
+
     const emailEvent: OrderCreatedEvent = {
       type: "order.created",
       data: {
@@ -481,6 +525,7 @@ const handlePost = async (request: NextRequest) => {
         customerName: fullOrder.customerName,
         customerAddress: fullOrder.customerAddress,
         totalAmount: fullOrder.totalAmount,
+        currencyCode,
         items: fullOrder.items.map((item: OrderItem) => ({
           name: item.product.name,
           quantity: item.quantity,
@@ -516,12 +561,15 @@ const handlePost = async (request: NextRequest) => {
         to: fullOrder.customerEmail,
         customerName: fullOrder.customerName,
         orderId: fullOrder.id,
-        totalAmount: `$${fullOrder.totalAmount.toFixed(2)}`,
+        totalAmount: formatPriceForCurrency(
+          fullOrder.totalAmount,
+          currencyCode,
+        ),
         shippingAddress: fullOrder.customerAddress,
         items: fullOrder.items.map((item: OrderItem) => ({
           name: item.product.name,
           quantity: item.quantity,
-          price: `$${item.price.toFixed(2)}`,
+          price: formatPriceForCurrency(item.price, currencyCode),
           variation: item.variation?.name ?? null,
         })),
       });

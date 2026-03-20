@@ -7,6 +7,7 @@ interface VariationButtonProps {
   readonly isSelected: boolean;
   readonly formatPrice: (amount: number) => string;
   readonly onSelect: (variation: ProductVariation) => void;
+  readonly cartQuantity?: number;
 }
 
 export function VariationButton({
@@ -14,6 +15,7 @@ export function VariationButton({
   isSelected,
   formatPrice,
   onSelect,
+  cartQuantity = 0,
 }: VariationButtonProps) {
   const className = isSelected
     ? "p-4 border-2 rounded-xl transition-all duration-300 border-[var(--accent-warm)] bg-[var(--accent-cream)] shadow-warm scale-105"
@@ -40,6 +42,11 @@ export function VariationButton({
       {variation.stock > 0 && variation.stock < 6 && (
         <div className="text-xs text-[var(--accent-rose)] font-medium mt-1">
           Only {variation.stock} left
+        </div>
+      )}
+      {cartQuantity > 0 && (
+        <div className="text-xs font-semibold text-blue-600 mt-1">
+          {cartQuantity} in cart
         </div>
       )}
     </button>

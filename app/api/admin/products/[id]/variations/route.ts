@@ -9,7 +9,7 @@ import {
   handleApiError,
   handleValidationError,
 } from "@/lib/api-utils";
-import { auth } from "@/lib/auth";
+import { checkAdminAuth } from "@/lib/admin-auth";
 import { invalidateProductCaches } from "@/lib/cache";
 import { revalidateTag } from "next/cache";
 
@@ -17,30 +17,10 @@ export const dynamic = "force-dynamic";
 
 const MAX_VARIATIONS_PER_PRODUCT = 25;
 
-async function checkAdminAuth() {
-  const session = await auth();
-  if (!session?.user) {
-    return {
-      authorized: false,
-      error: "Authentication required",
-      status: 401 as const,
-    };
-  }
-  if (session.user.role !== "ADMIN") {
-    return {
-      authorized: false,
-      error: "Admin access required",
-      status: 403 as const,
-    };
-  }
-  return { authorized: true };
-}
-
-async function findProduct(productId: string) {
-  return drizzleDb.query.products.findFirst({
+const findProduct = (productId: string) =>
+  drizzleDb.query.products.findFirst({
     where: and(eq(products.id, productId), isNull(products.deletedAt)),
   });
-}
 
 /**
  * GET /api/admin/products/[id]/variations

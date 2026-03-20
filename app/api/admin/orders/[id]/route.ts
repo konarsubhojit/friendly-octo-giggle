@@ -8,7 +8,7 @@ import {
   handleApiError,
   handleValidationError,
 } from "@/lib/api-utils";
-import { auth } from "@/lib/auth";
+import { checkAdminAuth } from "@/lib/admin-auth";
 import { cacheAdminOrderById, invalidateAdminOrderCaches } from "@/lib/cache";
 import { serializeOrder } from "@/lib/serializers";
 import { UpdateOrderStatusSchema } from "@/lib/validations";
@@ -17,30 +17,9 @@ import { getQStashClient } from "@/lib/qstash";
 import type { OrderStatusChangedEvent } from "@/lib/qstash-events";
 import { env } from "@/lib/env";
 import { logBusinessEvent, logError } from "@/lib/logger";
+import { indexOrder } from "@/lib/search";
 
 export const dynamic = "force-dynamic";
-
-const checkAdminAuth = async () => {
-  const session = await auth();
-
-  if (!session?.user) {
-    return {
-      authorized: false,
-      error: "Not authenticated",
-      status: 401 as const,
-    };
-  }
-
-  if (session.user.role !== "ADMIN") {
-    return {
-      authorized: false,
-      error: "Not authorized - Admin access required",
-      status: 403 as const,
-    };
-  }
-
-  return { authorized: true };
-};
 
 const buildUpdateData = (data: {
   status: "PENDING" | "PROCESSING" | "SHIPPED" | "DELIVERED" | "CANCELLED";
@@ -89,6 +68,17 @@ export const PATCH = async (
     }
 
     await invalidateAdminOrderCaches(id, order.userId);
+
+    // Update search index (fire-and-forget)
+    void indexOrder({
+      id: order.id,
+      customerName: order.customerName,
+      customerEmail: order.customerEmail,
+      customerAddress: order.customerAddress,
+      status: order.status,
+      totalAmount: order.totalAmount,
+      createdAt: order.createdAt.toISOString(),
+    });
 
     const notifyStatuses = ["PROCESSING", "SHIPPED", "DELIVERED", "CANCELLED"];
     if (notifyStatuses.includes(parseResult.data.status)) {

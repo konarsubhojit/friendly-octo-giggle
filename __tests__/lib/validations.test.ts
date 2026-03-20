@@ -26,7 +26,7 @@ const validISO = "2024-01-01T00:00:00.000Z";
 
 describe("ProductSchema", () => {
   const validProduct = {
-    id: validUUID,
+    id: validShortId,
     name: "Test Product",
     description: "A test product description",
     price: 29.99,
@@ -44,9 +44,9 @@ describe("ProductSchema", () => {
     });
   });
 
-  it("rejects invalid UUID", () => {
+  it("rejects invalid product ID", () => {
     expect(() =>
-      ProductSchema.parse({ ...validProduct, id: "not-a-uuid" }),
+      ProductSchema.parse({ ...validProduct, id: "not-valid-id" }),
     ).toThrow();
   });
 

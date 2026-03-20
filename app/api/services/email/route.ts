@@ -14,6 +14,11 @@ import { env } from "@/lib/env";
 import { drizzleDb } from "@/lib/db";
 import { failedEmails } from "@/lib/schema";
 import { and, eq } from "drizzle-orm";
+import {
+  formatPriceForCurrency,
+  isValidCurrencyCode,
+  type CurrencyCode,
+} from "@/lib/currency";
 
 const resolveEmailType = (
   eventType: "order.created" | "order.status_changed",
@@ -73,16 +78,20 @@ export const POST = async (request: NextRequest): Promise<NextResponse> => {
 
   try {
     if (event.type === "order.created") {
+      const currency: CurrencyCode =
+        event.data.currencyCode && isValidCurrencyCode(event.data.currencyCode)
+          ? event.data.currencyCode
+          : "INR";
       await sendOrderConfirmationEmail({
         to: event.data.customerEmail,
         customerName: event.data.customerName,
         orderId: event.data.orderId,
-        totalAmount: `$${(event.data.totalAmount / 100).toFixed(2)}`,
+        totalAmount: formatPriceForCurrency(event.data.totalAmount, currency),
         shippingAddress: event.data.customerAddress,
         items: event.data.items.map((item) => ({
           name: item.name,
           quantity: item.quantity,
-          price: `$${(item.price / 100).toFixed(2)}`,
+          price: formatPriceForCurrency(item.price, currency),
           variation: null,
         })),
       });

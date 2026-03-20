@@ -14,6 +14,7 @@ const OrderCreatedEventSchema = z.object({
     customerName: z.string().min(1),
     customerAddress: z.string().min(1),
     totalAmount: z.number().positive(),
+    currencyCode: z.enum(["INR", "USD", "EUR", "GBP"]).default("INR"),
     items: z.array(OrderEmailItemSchema),
   }),
 });

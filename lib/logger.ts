@@ -26,20 +26,17 @@ export const logger = pino({
   },
 });
 
-// Create child logger with context
-export function createLogger(context: Record<string, unknown>) {
-  return logger.child(context);
-}
+export const createLogger = (context: Record<string, unknown>) =>
+  logger.child(context);
 
-// API Request logger
-export function logApiRequest(data: {
+export const logApiRequest = (data: {
   method: string;
   path: string;
   requestId?: string;
   userId?: string;
   duration?: number;
   statusCode?: number;
-}) {
+}) => {
   const logData = {
     type: "api_request",
     ...data,
@@ -55,17 +52,16 @@ export function logApiRequest(data: {
     // 2xx/3xx: successful — debug only, too high-volume for production info logs
     logger.debug(logData, "API request completed");
   }
-}
+};
 
-// Database operation logger
-export function logDatabaseOperation(data: {
+export const logDatabaseOperation = (data: {
   operation: string;
   model: string;
   duration?: number;
   recordCount?: number;
   success: boolean;
   error?: string;
-}) {
+}) => {
   const logData = {
     type: "database_operation",
     ...data,
@@ -76,10 +72,9 @@ export function logDatabaseOperation(data: {
   } else {
     logger.error(logData, "Database operation failed");
   }
-}
+};
 
-// Authentication event logger
-export function logAuthEvent(data: {
+export const logAuthEvent = (data: {
   event:
     | "login"
     | "logout"
@@ -93,7 +88,7 @@ export function logAuthEvent(data: {
   provider?: string;
   success: boolean;
   error?: string;
-}) {
+}) => {
   const logData = {
     type: "auth_event",
     ...data,
@@ -101,25 +96,21 @@ export function logAuthEvent(data: {
 
   // session_created/session_expired fire on every request — log at debug to avoid
   // flooding production logs. Failures are always logged at warn regardless.
-  if (
-    data.event === "session_created" ||
-    data.event === "session_expired"
-  ) {
+  if (data.event === "session_created" || data.event === "session_expired") {
     logger.debug(logData, `Authentication event: ${data.event}`);
   } else if (data.success) {
     logger.info(logData, `Authentication event: ${data.event}`);
   } else {
     logger.warn(logData, `Authentication event failed: ${data.event}`);
   }
-}
+};
 
-// Business event logger (orders, cart actions, etc.)
-export function logBusinessEvent(data: {
+export const logBusinessEvent = (data: {
   event: string;
   userId?: string;
   details: Record<string, unknown>;
   success: boolean;
-}) {
+}) => {
   const logData = {
     type: "business_event",
     ...data,
@@ -130,16 +121,15 @@ export function logBusinessEvent(data: {
   } else {
     logger.warn(logData, `Business event failed: ${data.event}`);
   }
-}
+};
 
-// Error logger with stack trace
-export function logError(data: {
+export const logError = (data: {
   error: unknown;
   context?: string;
   userId?: string;
   requestId?: string;
   additionalInfo?: Record<string, unknown>;
-}) {
+}) => {
   const error =
     data.error instanceof Error ? data.error : new Error(String(data.error));
 
@@ -156,14 +146,13 @@ export function logError(data: {
     },
     `Error occurred: ${data.context || "Unknown context"}`,
   );
-}
+};
 
-// Performance logger
-export function logPerformance(data: {
+export const logPerformance = (data: {
   operation: string;
   duration: number;
   metadata?: Record<string, unknown>;
-}) {
+}) => {
   const logData = {
     type: "performance",
     ...data,
@@ -174,27 +163,24 @@ export function logPerformance(data: {
   } else {
     logger.debug(logData, `Performance: ${data.operation}`);
   }
-}
+};
 
-// Cache operation logger
-export function logCacheOperation(data: {
+export const logCacheOperation = (data: {
   operation: "hit" | "miss" | "set" | "invalidate";
   key: string;
   ttl?: number;
   success: boolean;
-}) {
+}) => {
   const logData = {
     type: "cache_operation",
     ...data,
   };
 
   logger.debug(logData, `Cache ${data.operation}: ${data.key}`);
-}
+};
 
-// Generate request ID for tracking
-export function generateRequestId(): string {
-  return `req_${Date.now()}_${crypto.randomUUID()}`;
-}
+export const generateRequestId = (): string =>
+  `req_${Date.now()}_${crypto.randomUUID()}`;
 
 // Timing utility
 export class Timer {
