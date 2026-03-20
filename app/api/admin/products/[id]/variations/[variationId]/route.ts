@@ -46,7 +46,8 @@ const checkVariationNameUniqueness = async (
   if (!duplicate) return null;
   if (duplicate.deletedAt) {
     return {
-      error: "A variation with this name was previously archived. Please use a different name.",
+      error:
+        "A variation with this name was previously archived. Please use a different name.",
       status: 409,
     };
   }
@@ -99,7 +100,12 @@ export async function PUT(
     }
 
     if (validated.name !== undefined) {
-      const nameError = await checkVariationNameUniqueness(id, validated.name, variationId, existing.name);
+      const nameError = await checkVariationNameUniqueness(
+        id,
+        validated.name,
+        variationId,
+        existing.name,
+      );
       if (nameError) return apiError(nameError.error, nameError.status);
     }
 

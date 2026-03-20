@@ -208,7 +208,10 @@ const validateStock = (v: number): string | undefined =>
 const validateCategory = (v: string): string | undefined =>
   v.trim() ? undefined : PRODUCT_ERRORS.CATEGORY_REQUIRED;
 
-const validateImage = (hasExisting: boolean, hasFile: boolean): string | undefined =>
+const validateImage = (
+  hasExisting: boolean,
+  hasFile: boolean,
+): string | undefined =>
   !hasExisting && !hasFile ? PRODUCT_ERRORS.IMAGE_REQUIRED : undefined;
 
 export default function ProductFormModal({

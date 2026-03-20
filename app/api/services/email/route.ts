@@ -129,7 +129,11 @@ export const POST = async (request: NextRequest): Promise<NextResponse> => {
   const messageId = request.headers.get("Upstash-Message-Id") ?? undefined;
   const bodyText = await request.text();
 
-  const signatureError = await verifyQStashSignature(request, bodyText, messageId);
+  const signatureError = await verifyQStashSignature(
+    request,
+    bodyText,
+    messageId,
+  );
   if (signatureError) return signatureError;
 
   let parsedBody: unknown;
@@ -177,6 +181,12 @@ export const POST = async (request: NextRequest): Promise<NextResponse> => {
     });
     return apiSuccess({ sent: true });
   } catch (sendError) {
-    return handleEmailSendError(sendError, event, emailType, orderId, messageId);
+    return handleEmailSendError(
+      sendError,
+      event,
+      emailType,
+      orderId,
+      messageId,
+    );
   }
 };

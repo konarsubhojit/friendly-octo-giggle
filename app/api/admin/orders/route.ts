@@ -14,20 +14,26 @@ const PAGE_SIZE = 20;
 
 const parseLimit = (limitParam: string | null): number =>
   Math.min(
-    Math.max(1, Number.parseInt(limitParam ?? String(PAGE_SIZE), 10) || PAGE_SIZE),
+    Math.max(
+      1,
+      Number.parseInt(limitParam ?? String(PAGE_SIZE), 10) || PAGE_SIZE,
+    ),
     100,
   );
 
 const buildCursorCondition = (cursor: string | null): SQL | null => {
   if (!cursor) return null;
   const cursorDate = new Date(cursor);
-  return Number.isNaN(cursorDate.getTime()) ? null : lt(orders.createdAt, cursorDate);
+  return Number.isNaN(cursorDate.getTime())
+    ? null
+    : lt(orders.createdAt, cursorDate);
 };
 
 const buildStatusCondition = (
   statusFilter: string,
 ): { condition: SQL | null; error: string | null } => {
-  if (!statusFilter || statusFilter === "ALL") return { condition: null, error: null };
+  if (!statusFilter || statusFilter === "ALL")
+    return { condition: null, error: null };
   const VALID_STATUSES = Object.values(OrderStatus) as string[];
   if (!VALID_STATUSES.includes(statusFilter)) {
     return {
@@ -38,7 +44,12 @@ const buildStatusCondition = (
   return {
     condition: eq(
       orders.status,
-      statusFilter as "PENDING" | "PROCESSING" | "SHIPPED" | "DELIVERED" | "CANCELLED",
+      statusFilter as
+        | "PENDING"
+        | "PROCESSING"
+        | "SHIPPED"
+        | "DELIVERED"
+        | "CANCELLED",
     ),
     error: null,
   };
@@ -92,13 +103,19 @@ export const GET = async (request: NextRequest) => {
     const cursorCond = buildCursorCondition(cursor);
     if (cursorCond) conditions.push(cursorCond);
 
-    const { condition: statusCond, error: statusError } = buildStatusCondition(statusFilter);
+    const { condition: statusCond, error: statusError } =
+      buildStatusCondition(statusFilter);
     if (statusError) return apiError(statusError, 400);
     if (statusCond) conditions.push(statusCond);
 
     if (search) {
-      const { condition: searchCond, empty } = await buildSearchCondition(search, limit, statusFilter);
-      if (empty) return apiSuccess({ orders: [], nextCursor: null, hasMore: false });
+      const { condition: searchCond, empty } = await buildSearchCondition(
+        search,
+        limit,
+        statusFilter,
+      );
+      if (empty)
+        return apiSuccess({ orders: [], nextCursor: null, hasMore: false });
       if (searchCond) conditions.push(searchCond);
     }
 
