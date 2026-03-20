@@ -43,6 +43,10 @@ vi.mock("@/components/auth/LoginModal", () => ({
     isOpen ? <div data-testid="login-modal" /> : null,
 }));
 
+vi.mock("@/components/ui/ProductSearch", () => ({
+  default: () => <div data-testid="product-search" />,
+}));
+
 describe("Header", () => {
   let useSession: ReturnType<typeof vi.fn>;
 

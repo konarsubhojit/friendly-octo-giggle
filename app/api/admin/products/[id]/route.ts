@@ -5,6 +5,7 @@ import { apiSuccess, apiError, handleApiError } from "@/lib/api-utils";
 import { auth } from "@/lib/auth";
 import { revalidateTag } from "next/cache";
 import { invalidateProductCaches } from "@/lib/cache";
+import { indexProduct, removeProduct } from "@/lib/search";
 
 export const dynamic = "force-dynamic";
 
@@ -60,6 +61,9 @@ export async function PUT(
     // Invalidate Redis caches (public + admin)
     await invalidateProductCaches(id);
 
+    // Update search index (fire-and-forget)
+    indexProduct(product);
+
     return apiSuccess({ product });
   } catch (error) {
     return handleApiError(error);
@@ -93,6 +97,9 @@ export async function DELETE(
 
     // Invalidate Redis caches (public + admin)
     await invalidateProductCaches(id);
+
+    // Remove from search index (fire-and-forget)
+    removeProduct(id);
 
     return apiSuccess({ message: "Product deleted", id });
   } catch (error) {

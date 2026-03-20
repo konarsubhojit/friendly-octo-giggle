@@ -23,6 +23,7 @@ import { sendOrderConfirmationEmail } from "@/lib/email";
 import { getQStashClient } from "@/lib/qstash";
 import type { OrderCreatedEvent } from "@/lib/qstash-events";
 import { env } from "@/lib/env";
+import { indexOrder } from "@/lib/search";
 
 export const dynamic = "force-dynamic";
 
@@ -457,6 +458,17 @@ const handlePost = async (request: NextRequest) => {
         customerEmail: fullOrder.customerEmail,
       },
       success: true,
+    });
+
+    // Index order in Upstash Search (fire-and-forget)
+    indexOrder({
+      id: fullOrder.id,
+      customerName: fullOrder.customerName,
+      customerEmail: fullOrder.customerEmail,
+      customerAddress: fullOrder.customerAddress,
+      status: fullOrder.status,
+      totalAmount: fullOrder.totalAmount,
+      createdAt: fullOrder.createdAt.toISOString(),
     });
 
     // Invalidate caches in parallel to reduce order response latency.

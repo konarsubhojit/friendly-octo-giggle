@@ -8,6 +8,7 @@ import { apiSuccess, apiError, handleApiError } from "@/lib/api-utils";
 import { auth } from "@/lib/auth";
 import { revalidateTag } from "next/cache";
 import { invalidateProductCaches } from "@/lib/cache";
+import { indexProduct } from "@/lib/search";
 
 export const dynamic = "force-dynamic";
 
@@ -76,9 +77,7 @@ export const GET = async (request: NextRequest) => {
     }
 
     const whereClause =
-      conditions.length === 1
-        ? conditions[0]
-        : and(...conditions);
+      conditions.length === 1 ? conditions[0] : and(...conditions);
 
     const rows = await drizzleDb.query.products.findMany({
       where: whereClause as SQL | undefined,
@@ -133,6 +132,9 @@ export const POST = async (request: NextRequest) => {
 
     // Invalidate Redis caches (public + admin)
     await invalidateProductCaches();
+
+    // Index in Upstash Search (fire-and-forget)
+    indexProduct(product);
 
     return apiSuccess({ product }, 201);
   } catch (error) {

@@ -136,6 +136,11 @@ export const EnvSchema = z
     QSTASH_CURRENT_SIGNING_KEY: z.string().optional(),
     QSTASH_NEXT_SIGNING_KEY: z.string().optional(),
     NEXT_PUBLIC_APP_URL: z.string().url().optional(),
+    UPSTASH_SEARCH_REST_URL: z.string().url().optional(),
+    UPSTASH_SEARCH_REST_TOKEN: z.string().optional(),
+    UPSTASH_SEARCH_REST_READONLY_TOKEN: z.string().optional(),
+    NEXT_PUBLIC_UPSTASH_SEARCH_REST_URL: z.string().url().optional(),
+    NEXT_PUBLIC_UPSTASH_SEARCH_REST_READONLY_TOKEN: z.string().optional(),
   })
   .superRefine((data, ctx) => {
     // Skip production-only checks during build phase (next build sets NODE_ENV=production)
