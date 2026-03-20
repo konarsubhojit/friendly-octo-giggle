@@ -8,7 +8,6 @@ import {
   handleApiError,
   handleValidationError,
 } from "@/lib/api-utils";
-import { auth } from "@/lib/auth";
 import { checkAdminAuth } from "@/lib/admin-auth";
 import { cacheAdminOrderById, invalidateAdminOrderCaches } from "@/lib/cache";
 import { serializeOrder } from "@/lib/serializers";
