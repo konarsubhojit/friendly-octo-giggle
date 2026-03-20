@@ -172,9 +172,9 @@ describe("auth module", () => {
     it("uses empty strings when env vars are not set", () => {
       expect(capturedConfig.providers).toBeDefined();
       expect(Array.isArray(capturedConfig.providers)).toBe(true);
-      const expectedCount = process.env.NODE_ENV === 'development' ? 4 : 3;
+      const expectedCount = process.env.NODE_ENV === "development" ? 4 : 3;
       expect(capturedConfig.providers.length).toBe(expectedCount);
-      if (process.env.NODE_ENV === 'development') {
+      if (process.env.NODE_ENV === "development") {
         expect(capturedConfig.providers[0].id).toBe("copilot-dev");
       }
     });
@@ -187,7 +187,7 @@ describe("auth module", () => {
       );
       expect(msProvider).toBeDefined();
       expect(msProvider.issuer).toBe(
-        "https://login.microsoftonline.com/consumers/v2.0",
+        "https://login.microsoftonline.com/common/v2.0",
       );
     });
   });
@@ -312,7 +312,11 @@ describe("auth module", () => {
   describe("callbacks.session phoneNumber", () => {
     it("sets phoneNumber from token when present", () => {
       const session = { user: { id: "", role: "", email: "test@example.com" } };
-      const token = { id: "user-123", role: "CUSTOMER", phoneNumber: "+1234567890" };
+      const token = {
+        id: "user-123",
+        role: "CUSTOMER",
+        phoneNumber: "+1234567890",
+      };
 
       const result = capturedConfig.callbacks.session({ session, token });
 
@@ -332,7 +336,11 @@ describe("auth module", () => {
   describe("callbacks.jwt phoneNumber", () => {
     it("sets phoneNumber on token when user has it", () => {
       const token = { sub: "sub-1" };
-      const user = { id: "user-123", role: "CUSTOMER", phoneNumber: "+1234567890" };
+      const user = {
+        id: "user-123",
+        role: "CUSTOMER",
+        phoneNumber: "+1234567890",
+      };
 
       const result = capturedConfig.callbacks.jwt({ token, user });
 
