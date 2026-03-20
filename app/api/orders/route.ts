@@ -185,10 +185,7 @@ const parseOrderLimit = (param: string | null): number =>
     100,
   );
 
-const buildOrderConditions = (
-  userId: string,
-  cursor: string | null,
-): SQL[] => {
+const buildOrderConditions = (userId: string, cursor: string | null): SQL[] => {
   const conditions: SQL[] = [eq(orders.userId, userId)];
 
   if (cursor) {
@@ -231,7 +228,11 @@ const handleGet = async (request: NextRequest) => {
           or(ilike(orders.id, pattern), ilike(orders.status, pattern)) as SQL,
         );
       } else if (matchedIds.length === 0) {
-        return NextResponse.json({ orders: [], nextCursor: null, hasMore: false });
+        return NextResponse.json({
+          orders: [],
+          nextCursor: null,
+          hasMore: false,
+        });
       } else {
         conditions.push(inArray(orders.id, matchedIds));
       }
