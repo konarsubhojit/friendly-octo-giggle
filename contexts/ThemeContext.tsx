@@ -63,13 +63,12 @@ export const ThemeProvider = ({
     return "default";
   });
 
-  // Apply / remove data-theme attribute whenever theme changes
   useEffect(() => {
     const root = document.documentElement;
     if (theme === "default") {
-      root.removeAttribute("data-theme");
+      delete root.dataset.theme;
     } else {
-      root.setAttribute("data-theme", theme);
+      root.dataset.theme = theme;
     }
   }, [theme]);
 

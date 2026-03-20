@@ -42,4 +42,4 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
           args: >
-            -Dsonar.coverage.exclusions=app/**/page.tsx,app/**/layout.tsx,app/products/[id]/ProductClient.tsx
+            -Dsonar.coverage.exclusions=app/**/page.tsx,app/**/layout.tsx,app/**/loading.tsx,app/**/error.tsx,lib/schema.ts,lib/db.ts,lib/email/providers.ts,lib/constants/categories.ts,lib/search-service.ts

@@ -466,12 +466,7 @@ const AddToCartSection = ({
               clipRule="evenodd"
             />
           </svg>
-          <span className="font-semibold">
-            Added to cart!{" "}
-            <Link href="/cart" className="underline">
-              View cart
-            </Link>
-          </span>
+          <span className="font-semibold">Added to cart!</span>
         </div>
       )}
 

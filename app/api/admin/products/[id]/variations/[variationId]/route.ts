@@ -29,10 +29,33 @@ const findVariation = (variationId: string, productId: string) =>
     ),
   });
 
-/**
- * PUT /api/admin/products/[id]/variations/[variationId]
- * Update an existing variation
- */
+const checkVariationNameUniqueness = async (
+  productId: string,
+  name: string,
+  variationId: string,
+  existingName: string,
+): Promise<{ error: string; status: 409 } | null> => {
+  if (name === existingName) return null;
+  const duplicate = await drizzleDb.query.productVariations.findFirst({
+    where: and(
+      eq(productVariations.productId, productId),
+      eq(productVariations.name, name),
+      ne(productVariations.id, variationId),
+    ),
+  });
+  if (!duplicate) return null;
+  if (duplicate.deletedAt) {
+    return {
+      error: "A variation with this name was previously archived. Please use a different name.",
+      status: 409,
+    };
+  }
+  return {
+    error: "A variation with this name already exists for this product",
+    status: 409,
+  };
+};
+
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; variationId: string }> },
@@ -61,12 +84,10 @@ export async function PUT(
     }
     const validated = parseResult.data;
 
-    // Check if there are any actual fields to update
     if (Object.keys(validated).length === 0) {
       return apiError("No fields to update", 400);
     }
 
-    // Effective price check if priceModifier changed
     if (validated.priceModifier !== undefined) {
       const effectivePrice = product.price + validated.priceModifier;
       if (effectivePrice <= 0) {
@@ -77,30 +98,11 @@ export async function PUT(
       }
     }
 
-    // Name uniqueness check if name changed
-    if (validated.name !== undefined && validated.name !== existing.name) {
-      const duplicateName = await drizzleDb.query.productVariations.findFirst({
-        where: and(
-          eq(productVariations.productId, id),
-          eq(productVariations.name, validated.name),
-          ne(productVariations.id, variationId),
-        ),
-      });
-      if (duplicateName) {
-        if (duplicateName.deletedAt) {
-          return apiError(
-            "A variation with this name was previously archived. Please use a different name.",
-            409,
-          );
-        }
-        return apiError(
-          "A variation with this name already exists for this product",
-          409,
-        );
-      }
+    if (validated.name !== undefined) {
+      const nameError = await checkVariationNameUniqueness(id, validated.name, variationId, existing.name);
+      if (nameError) return apiError(nameError.error, nameError.status);
     }
 
-    // Update
     const [updated] = await drizzleDb
       .update(productVariations)
       .set({
@@ -110,7 +112,6 @@ export async function PUT(
       .where(eq(productVariations.id, variationId))
       .returning();
 
-    // Invalidate caches
     revalidateTag("products", {});
     await invalidateProductCaches(id);
 

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { createPortal } from "react-dom";
 
 interface NavItem {
   readonly href: string;
@@ -107,11 +108,16 @@ function DropdownGroup({
   readonly failedEmailCount: number;
 }) {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const [menuStyle, setMenuStyle] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
+      if (
+        menuRef.current && !menuRef.current.contains(e.target as Node) &&
+        buttonRef.current && !buttonRef.current.contains(e.target as Node)
+      ) {
         setOpen(false);
       }
     }
@@ -123,11 +129,20 @@ function DropdownGroup({
 
   if (!group.items) return null;
 
+  const handleToggle = () => {
+    if (!open && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setMenuStyle({ top: rect.bottom + window.scrollY, left: rect.left + window.scrollX });
+    }
+    setOpen((o) => !o);
+  };
+
   return (
-    <div ref={ref} className="relative">
+    <div className="relative">
       <button
+        ref={buttonRef}
         type="button"
-        onClick={() => setOpen((o) => !o)}
+        onClick={handleToggle}
         aria-expanded={open}
         aria-haspopup="menu"
         className="flex items-center gap-1 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition"
@@ -148,10 +163,12 @@ function DropdownGroup({
           />
         </svg>
       </button>
-      {open && (
+      {open && typeof window !== "undefined" && createPortal(
         <div
+          ref={menuRef}
           role="menu"
-          className="absolute top-full left-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-1 min-w-[160px] z-50"
+          style={{ position: "fixed", top: menuStyle.top, left: menuStyle.left }}
+          className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-1 min-w-[160px] z-50"
         >
           {group.items.map((item) => (
             <Link
@@ -170,7 +187,8 @@ function DropdownGroup({
                 )}
             </Link>
           ))}
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );
