@@ -254,7 +254,6 @@ export const fetchCartFromRedis = async (
     logCacheOperation({
       operation: "hit",
       key: `cart:${ownerField}:${ownerValue}`,
-      hit: true,
       success: true,
     });
 
