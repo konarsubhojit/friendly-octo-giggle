@@ -1,4 +1,5 @@
 import { Redis } from "@upstash/redis";
+import { waitUntil } from "@vercel/functions";
 import { logCacheOperation, logError, Timer } from "./logger";
 import { env } from "./env";
 
@@ -53,7 +54,7 @@ const fetchWithStampedePrevention = async <T>(
     try {
       const fresh = await fetcher();
       const cacheData = { value: fresh, timestamp: Date.now() };
-      await redisClient.setex(key, ttl + staleTime, JSON.stringify(cacheData));
+      await redisClient.setex(key, ttl + staleTime, cacheData);
       logCacheOperation({
         operation: "set",
         key,
@@ -67,9 +68,9 @@ const fetchWithStampedePrevention = async <T>(
   }
 
   await new Promise((resolve) => setTimeout(resolve, LOCK_RETRY_DELAY_MS));
-  const retryData = await redisClient.get<string>(key);
+  const retryData = await redisClient.get<{ value: T; timestamp: number }>(key);
   if (retryData) {
-    return (JSON.parse(retryData) as { value: T }).value;
+    return retryData.value;
   }
 
   return await fetcher();
@@ -89,47 +90,44 @@ export const getCachedData = async <T>(
   const timer = new Timer(`cache.get.${key}`);
 
   try {
-    const cached = await redisClient.get<string>(key);
+    const cached = await redisClient.get<{ value: T; timestamp: number }>(key);
 
     if (cached) {
-      const data = JSON.parse(cached) as { value: T; timestamp: number };
-      const age = Date.now() - data.timestamp;
+      const age = Date.now() - cached.timestamp;
 
       if (age < ttl * 1000) {
         timer.end({ cacheHit: true, age });
         logCacheOperation({ operation: "hit", key, success: true });
-        return data.value;
+        return cached.value;
       }
 
       if (age < (ttl + staleTime) * 1000) {
         timer.end({ cacheHit: true, stale: true, age });
         logCacheOperation({ operation: "hit", key, success: true });
 
-        void (async () => {
-          try {
-            const fresh = await fetcher();
-            const cacheData = { value: fresh, timestamp: Date.now() };
-            await redisClient.setex(
-              key,
-              ttl + staleTime,
-              JSON.stringify(cacheData),
-            );
-            logCacheOperation({
-              operation: "set",
-              key,
-              ttl: ttl + staleTime,
-              success: true,
-            });
-          } catch (revalidationError) {
-            logError({
-              error: revalidationError,
-              context: "background_revalidation",
-              additionalInfo: { key },
-            });
-          }
-        })();
+        waitUntil(
+          (async () => {
+            try {
+              const fresh = await fetcher();
+              const cacheData = { value: fresh, timestamp: Date.now() };
+              await redisClient.setex(key, ttl + staleTime, cacheData);
+              logCacheOperation({
+                operation: "set",
+                key,
+                ttl: ttl + staleTime,
+                success: true,
+              });
+            } catch (revalidationError) {
+              logError({
+                error: revalidationError,
+                context: "background_revalidation",
+                additionalInfo: { key },
+              });
+            }
+          })(),
+        );
 
-        return data.value;
+        return cached.value;
       }
     }
 
@@ -194,3 +192,4 @@ export const invalidateCache = async (pattern: string): Promise<void> => {
     });
   }
 };
+

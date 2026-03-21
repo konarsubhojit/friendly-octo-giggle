@@ -1,5 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+const { mockWaitUntil } = vi.hoisted(() => ({
+  mockWaitUntil: vi.fn((promise: Promise<unknown>) => promise),
+}));
+
+vi.mock("@vercel/functions", () => ({
+  waitUntil: mockWaitUntil,
+}));
+
 const mockRedisInstance = {
   get: vi.fn(),
   set: vi.fn(),
@@ -32,9 +40,10 @@ vi.mock("@/lib/logger", () => ({
   }),
 }));
 
-const cachedJson = <T>(value: T, ageMs = 0): string => {
-  return JSON.stringify({ value, timestamp: Date.now() - ageMs });
-};
+const cachedObject = <T>(value: T, ageMs = 0) => ({
+  value,
+  timestamp: Date.now() - ageMs,
+});
 
 describe("getRedisClient", () => {
   beforeEach(() => {
@@ -101,6 +110,7 @@ describe("getCachedData", () => {
     vi.resetModules();
     vi.clearAllMocks();
 
+    vi.doMock("@vercel/functions", () => ({ waitUntil: mockWaitUntil }));
     vi.doMock("@upstash/redis", () => ({ Redis: MockRedis }));
     vi.doMock("@/lib/env", () => ({
       env: {
@@ -127,8 +137,7 @@ describe("getCachedData", () => {
   });
 
   it("returns fresh cached data without calling the fetcher", async () => {
-    const freshData = cachedJson("hello", 1_000);
-    mockRedisInstance.get.mockResolvedValueOnce(freshData);
+    mockRedisInstance.get.mockResolvedValueOnce(cachedObject("hello", 1_000));
     const fetcher = vi.fn();
 
     const result = await getCachedData("key:1", 60, fetcher);
@@ -137,9 +146,10 @@ describe("getCachedData", () => {
     expect(fetcher).not.toHaveBeenCalled();
   });
 
-  it("returns stale data and triggers background revalidation", async () => {
-    const staleData = cachedJson("stale-value", 61_000);
-    mockRedisInstance.get.mockResolvedValueOnce(staleData);
+  it("returns stale data and schedules background revalidation via waitUntil", async () => {
+    mockRedisInstance.get.mockResolvedValueOnce(
+      cachedObject("stale-value", 61_000),
+    );
     mockRedisInstance.setex.mockResolvedValue("OK");
 
     const fetcher = vi.fn().mockResolvedValue("fresh-value");
@@ -147,6 +157,7 @@ describe("getCachedData", () => {
     const result = await getCachedData("key:2", 60, fetcher, 5);
 
     expect(result).toBe("stale-value");
+    expect(mockWaitUntil).toHaveBeenCalledOnce();
 
     await vi.waitFor(() => {
       expect(fetcher).toHaveBeenCalled();
@@ -168,7 +179,7 @@ describe("getCachedData", () => {
     expect(mockRedisInstance.setex).toHaveBeenCalledWith(
       "key:3",
       65,
-      expect.any(String),
+      expect.objectContaining({ value: { id: 1 } }),
     );
     expect(mockRedisInstance.eval).toHaveBeenCalledWith(
       expect.stringContaining("redis.call"),
@@ -180,7 +191,7 @@ describe("getCachedData", () => {
   it("waits and returns retry data when lock is not acquired but data appears", async () => {
     mockRedisInstance.get
       .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce(cachedJson("from-other-process", 0));
+      .mockResolvedValueOnce(cachedObject("from-other-process", 0));
 
     mockRedisInstance.set.mockResolvedValueOnce(null);
 
@@ -227,6 +238,7 @@ describe("invalidateCache", () => {
     vi.resetModules();
     vi.clearAllMocks();
 
+    vi.doMock("@vercel/functions", () => ({ waitUntil: mockWaitUntil }));
     vi.doMock("@upstash/redis", () => ({ Redis: MockRedis }));
     vi.doMock("@/lib/env", () => ({
       env: {
@@ -280,3 +292,4 @@ describe("invalidateCache", () => {
     await expect(invalidateCache("broken:*")).resolves.toBeUndefined();
   });
 });
+

@@ -523,7 +523,7 @@ describe("cacheShareResolve", () => {
 
   it("returns cached value and skips fetcher on cache hit", async () => {
     const shareData = { productId: "prd1234", variationId: "var5678" };
-    mockRedisClient.get.mockResolvedValue(JSON.stringify(shareData));
+    mockRedisClient.get.mockResolvedValue(shareData);
     const fetcher = vi.fn();
 
     const result = await cacheShareResolve("shr1234", fetcher);
@@ -547,7 +547,7 @@ describe("cacheShareResolve", () => {
     expect(mockRedisClient.setex).toHaveBeenCalledWith(
       "share:shr1234",
       31536000,
-      JSON.stringify(shareData),
+      shareData,
     );
   });
 

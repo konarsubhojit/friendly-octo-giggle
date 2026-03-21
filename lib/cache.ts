@@ -287,24 +287,20 @@ export const cacheShareResolve = async <T>(
 
   const cacheKey = CACHE_KEYS.SHARE_RESOLVE_BY_KEY(key);
   try {
-    const cached = await redisClient.get<string>(cacheKey);
+    const cached = await redisClient.get<T>(cacheKey);
     if (cached !== null) {
       logCacheOperation({ operation: "hit", key: cacheKey, success: true });
-      return JSON.parse(cached) as T;
+      return cached;
     }
 
     logCacheOperation({ operation: "miss", key: cacheKey, success: true });
     const result = await fetcher();
 
-    // Only cache found results — a null result means the token does not (yet)
-    // exist in the database. Caching nulls with a 1-year TTL would permanently
-    // break share links if that key is created later, or allow arbitrary keys
-    // to be prefetched to poison the cache.
     if (result !== null) {
       await redisClient.setex(
         cacheKey,
         CACHE_TTL.SHARE_RESOLVE,
-        JSON.stringify(result),
+        result,
       );
       logCacheOperation({
         operation: "set",
