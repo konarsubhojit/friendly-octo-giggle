@@ -1,7 +1,18 @@
 import { NextRequest } from "next/server";
 import { drizzleDb } from "@/lib/db";
 import { orders } from "@/lib/schema";
-import { desc, lt, ilike, or, and, eq, inArray, SQL } from "drizzle-orm";
+import {
+  desc,
+  lt,
+  ilike,
+  or,
+  and,
+  eq,
+  inArray,
+  sql,
+  SQL,
+  count,
+} from "drizzle-orm";
 import { apiSuccess, apiError, handleApiError } from "@/lib/api-utils";
 import { checkAdminAuth } from "@/lib/admin-auth";
 import { serializeOrders } from "@/lib/serializers";
@@ -60,8 +71,7 @@ const buildSearchCondition = async (
   limit: number,
 ): Promise<{ condition: SQL | null; empty: boolean }> => {
   const redisIds = await searchAllOrdersRedis(search, limit * 5);
-  if (redisIds !== null) {
-    if (redisIds.length === 0) return { condition: null, empty: true };
+  if (redisIds && redisIds.length > 0) {
     return { condition: inArray(orders.id, redisIds), empty: false };
   }
   const pattern = `%${search}%`;
@@ -70,6 +80,14 @@ const buildSearchCondition = async (
       ilike(orders.customerName, pattern),
       ilike(orders.customerEmail, pattern),
       ilike(orders.id, pattern),
+      sql`${orders.status}::text ILIKE ${pattern}`,
+      sql`EXISTS (
+        SELECT 1 FROM "OrderItem" oi
+        JOIN "Product" p ON p.id = oi."productId"
+        LEFT JOIN "ProductVariation" pv ON pv.id = oi."variationId"
+        WHERE oi."orderId" = ${orders.id}
+        AND (p.name ILIKE ${pattern} OR pv.name ILIKE ${pattern})
+      )`,
     ) as SQL,
     empty: false,
   };
@@ -99,10 +117,15 @@ export const GET = async (request: NextRequest) => {
     const cursorCond = buildCursorCondition(cursor);
     if (cursorCond) conditions.push(cursorCond);
 
+    const countConditions: SQL[] = [];
+
     const { condition: statusCond, error: statusError } =
       buildStatusCondition(statusFilter);
     if (statusError) return apiError(statusError, 400);
-    if (statusCond) conditions.push(statusCond);
+    if (statusCond) {
+      conditions.push(statusCond);
+      countConditions.push(statusCond);
+    }
 
     if (search) {
       const { condition: searchCond, empty } = await buildSearchCondition(
@@ -110,27 +133,43 @@ export const GET = async (request: NextRequest) => {
         limit,
       );
       if (empty)
-        return apiSuccess({ orders: [], nextCursor: null, hasMore: false });
-      if (searchCond) conditions.push(searchCond);
+        return apiSuccess({
+          orders: [],
+          nextCursor: null,
+          hasMore: false,
+          totalCount: 0,
+        });
+      if (searchCond) {
+        conditions.push(searchCond);
+        countConditions.push(searchCond);
+      }
     }
 
-    const rows = await drizzleDb.query.orders.findMany({
-      where: resolveWhereClause(conditions),
-      orderBy: [desc(orders.createdAt)],
-      limit: limit + 1,
-      with: { items: { with: { product: true, variation: true } } },
-    });
+    const [rows, totalRows] = await Promise.all([
+      drizzleDb.query.orders.findMany({
+        where: resolveWhereClause(conditions),
+        orderBy: [desc(orders.createdAt)],
+        limit: limit + 1,
+        with: { items: { with: { product: true, variation: true } } },
+      }),
+      drizzleDb
+        .select({ value: count() })
+        .from(orders)
+        .where(resolveWhereClause(countConditions)),
+    ]);
 
     const hasMore = rows.length > limit;
     const pageItems = hasMore ? rows.slice(0, limit) : rows;
     const nextCursor = hasMore
       ? pageItems.at(-1)!.createdAt.toISOString()
       : null;
+    const totalCount = Number(totalRows[0]?.value ?? 0);
 
     return apiSuccess({
       orders: serializeOrders(pageItems),
       nextCursor,
       hasMore,
+      totalCount,
     });
   } catch (error) {
     return handleApiError(error);

@@ -17,6 +17,7 @@ import { getQStashClient } from "@/lib/qstash";
 import type { OrderStatusChangedEvent } from "@/lib/qstash-events";
 import { env } from "@/lib/env";
 import { logBusinessEvent, logError } from "@/lib/logger";
+import { getRedisClient } from "@/lib/redis";
 
 export const dynamic = "force-dynamic";
 
@@ -67,6 +68,13 @@ export const PATCH = async (
     }
 
     await invalidateAdminOrderCaches(id, order.userId);
+
+    const redis = getRedisClient();
+    if (redis) {
+      redis
+        .hset(`order:${id}`, { status: parseResult.data.status })
+        .catch(() => {});
+    }
 
     const notifyStatuses = ["PROCESSING", "SHIPPED", "DELIVERED", "CANCELLED"];
     if (notifyStatuses.includes(parseResult.data.status)) {

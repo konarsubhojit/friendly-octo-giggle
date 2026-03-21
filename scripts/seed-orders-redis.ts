@@ -26,6 +26,8 @@ interface OrderItemRow {
   quantity: number;
   price: number;
   customizationNote: string | null;
+  productName: string;
+  variationName: string | null;
 }
 
 const seedRedis = async (
@@ -42,6 +44,15 @@ const seedRedis = async (
 
     for (const order of batch) {
       const items = itemsByOrder.get(order.id) ?? [];
+      const productNames = [
+        ...new Set(
+          items.map((item) => {
+            const parts = [item.productName];
+            if (item.variationName) parts.push(item.variationName);
+            return parts.join(" - ");
+          }),
+        ),
+      ].join(", ");
       pipeline.hset(`order:${order.id}`, {
         id: order.id,
         userId: order.userId ?? "",
@@ -60,6 +71,7 @@ const seedRedis = async (
         total: String(order.totalAmount),
         status: order.status,
         createdAt: order.createdAt.toISOString(),
+        productNames,
       });
 
       if (order.userId) {
@@ -108,10 +120,13 @@ const main = async () => {
     return;
   }
 
-  console.log("Fetching order items from PostgreSQL...");
+  console.log("Fetching order items with product names from PostgreSQL...");
   const { rows: allItems } = await pool.query<OrderItemRow>(
-    `SELECT "orderId", "productId", "variationId", quantity, price, "customizationNote"
-     FROM "OrderItem"`,
+    `SELECT oi."orderId", oi."productId", oi."variationId", oi.quantity, oi.price, oi."customizationNote",
+            p.name as "productName", pv.name as "variationName"
+     FROM "OrderItem" oi
+     JOIN "Product" p ON p.id = oi."productId"
+     LEFT JOIN "ProductVariation" pv ON pv.id = oi."variationId"`,
   );
   console.log(`Found ${allItems.length} order items`);
 
@@ -152,6 +167,7 @@ const main = async () => {
       userId: s.string().noTokenize(),
       total: s.string().noTokenize(),
       createdAt: s.string().noTokenize(),
+      productNames: s.string(),
     }),
   });
   console.log("  Search index 'orders' created (prefix: order:, type: hash)");

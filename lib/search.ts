@@ -1,7 +1,7 @@
 /**
  * Upstash Search integration for products.
  *
- * Uses @upstash/search for AI-powered full-text search.
+ * Uses @upstash/search for full-text product search.
  *
  * Requires UPSTASH_SEARCH_REST_URL and UPSTASH_SEARCH_REST_TOKEN
  * environment variables. When not configured, search operations
@@ -9,12 +9,10 @@
  */
 
 import { Search } from "@upstash/search";
-import { logError } from "./logger";
-import { drizzleDb } from "./db";
-import { categories as categoriesTable } from "./schema";
 import { isNull } from "drizzle-orm";
-
-// ─── Content types (searchable + filterable) ─────────────
+import { drizzleDb } from "./db";
+import { logError } from "./logger";
+import { categories as categoriesTable } from "./schema";
 
 export type ProductContent = {
   name: string;
@@ -24,23 +22,25 @@ export type ProductContent = {
   stock: number;
 };
 
-// ─── Metadata types (not searchable, returned with results)
-
 export type ProductMetadata = {
   image: string;
 };
 
-// ─── Index names ─────────────────────────────────────────
+type ProductIndexDocument = {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  price: number;
+  stock: number;
+  image: string;
+};
 
 const PRODUCTS_INDEX = "products";
-
-// ─── Client singleton ────────────────────────────────────
+const SEARCH_WRITE_BATCH_SIZE = 100;
 
 let searchClient: Search | null = null;
 
-/**
- * Returns true when Upstash Search is configured via env vars.
- */
 export function isSearchAvailable(): boolean {
   return Boolean(
     process.env.UPSTASH_SEARCH_REST_URL &&
@@ -49,7 +49,9 @@ export function isSearchAvailable(): boolean {
 }
 
 function getClient(): Search {
-  if (searchClient) return searchClient;
+  if (searchClient) {
+    return searchClient;
+  }
 
   searchClient = new Search({
     url: process.env.UPSTASH_SEARCH_REST_URL,
@@ -59,97 +61,102 @@ function getClient(): Search {
   return searchClient;
 }
 
-// ─── Product indexing ────────────────────────────────────
+function getProductsIndex() {
+  return getClient().index<ProductContent, ProductMetadata>(PRODUCTS_INDEX);
+}
 
-export async function indexProduct(product: {
-  id: string;
-  name: string;
-  description: string;
-  category: string;
-  price: number;
-  stock: number;
-  image: string;
-}): Promise<void> {
-  if (!isSearchAvailable()) return;
+function toIndexedProduct(product: ProductIndexDocument) {
+  return {
+    id: product.id,
+    content: {
+      name: product.name,
+      description: product.description,
+      category: product.category,
+      price: product.price,
+      stock: product.stock,
+    },
+    metadata: {
+      image: product.image,
+    },
+  };
+}
+
+export async function indexProduct(
+  product: ProductIndexDocument,
+  options: { readonly throwOnError?: boolean } = {},
+): Promise<boolean> {
+  if (!isSearchAvailable()) {
+    return false;
+  }
 
   try {
-    const client = getClient();
-    const index = client.index<ProductContent, ProductMetadata>(PRODUCTS_INDEX);
-
-    await index.upsert({
-      id: product.id,
-      content: {
-        name: product.name,
-        description: product.description,
-        category: product.category,
-        price: product.price,
-        stock: product.stock,
-      },
-      metadata: {
-        image: product.image,
-      },
-    });
+    await getProductsIndex().upsert(toIndexedProduct(product));
+    return true;
   } catch (error) {
     logError({
       error,
       context: "search",
       additionalInfo: { operation: "indexProduct", id: product.id },
     });
+
+    if (options.throwOnError) {
+      throw error;
+    }
+
+    return false;
   }
 }
 
 export async function indexProducts(
-  products: Array<{
-    id: string;
-    name: string;
-    description: string;
-    category: string;
-    price: number;
-    stock: number;
-    image: string;
-  }>,
-): Promise<void> {
-  if (!isSearchAvailable() || products.length === 0) return;
+  products: ProductIndexDocument[],
+  options: { readonly throwOnError?: boolean } = {},
+): Promise<boolean> {
+  if (!isSearchAvailable()) {
+    return false;
+  }
+
+  if (products.length === 0) {
+    return true;
+  }
 
   try {
-    const client = getClient();
-    const index = client.index<ProductContent, ProductMetadata>(PRODUCTS_INDEX);
+    const index = getProductsIndex();
 
-    const BATCH_SIZE = 1000;
-    for (let i = 0; i < products.length; i += BATCH_SIZE) {
-      const batch = products.slice(i, i + BATCH_SIZE);
-      await index.upsert(
-        batch.map((p) => ({
-          id: p.id,
-          content: {
-            name: p.name,
-            description: p.description,
-            category: p.category,
-            price: p.price,
-            stock: p.stock,
-          },
-          metadata: {
-            image: p.image,
-          },
-        })),
+    for (
+      let indexOffset = 0;
+      indexOffset < products.length;
+      indexOffset += SEARCH_WRITE_BATCH_SIZE
+    ) {
+      const batch = products.slice(
+        indexOffset,
+        indexOffset + SEARCH_WRITE_BATCH_SIZE,
       );
+      await index.upsert(batch.map((product) => toIndexedProduct(product)));
     }
+
+    return true;
   } catch (error) {
     logError({
       error,
       context: "search",
       additionalInfo: { operation: "indexProducts" },
     });
+
+    if (options.throwOnError) {
+      throw error;
+    }
+
+    return false;
   }
 }
 
 export async function removeProduct(productId: string): Promise<void> {
-  if (!isSearchAvailable()) return;
+  if (!isSearchAvailable()) {
+    return;
+  }
 
   try {
-    const client = getClient();
-    const index = client.index(PRODUCTS_INDEX);
-    await index.delete(productId);
+    await getClient().index(PRODUCTS_INDEX).delete(productId);
   } catch (error) {
     logError({
       error,
@@ -158,8 +165,6 @@ export async function removeProduct(productId: string): Promise<void> {
     });
   }
 }
-
-// ─── Search queries ──────────────────────────────────────
 
 export interface ProductSearchResult {
   id: string;
@@ -172,45 +177,50 @@ export async function searchProducts(
   query: string,
   options: { limit?: number; category?: string } = {},
 ): Promise<ProductSearchResult[]> {
-  if (!isSearchAvailable()) return [];
+  if (!isSearchAvailable()) {
+    return [];
+  }
 
   const { limit = 20, category } = options;
+  const index = getProductsIndex();
 
-  const client = getClient();
-  const index = client.index<ProductContent, ProductMetadata>(PRODUCTS_INDEX);
-
-  // Validate category against DB to prevent filter injection
   let validCategory: string | undefined;
   if (category) {
-    const dbCats = await drizzleDb
+    const dbCategories = await drizzleDb
       .select({ name: categoriesTable.name })
       .from(categoriesTable)
       .where(isNull(categoriesTable.deletedAt));
-    const catNames = dbCats.map((c) => c.name);
-    validCategory = catNames.includes(category) ? category : undefined;
+    const categoryNames = dbCategories.map((dbCategory) => dbCategory.name);
+    validCategory = categoryNames.includes(category) ? category : undefined;
   }
-  const filter = validCategory ? `category = '${validCategory}'` : undefined;
 
+  const filter = validCategory ? `category = '${validCategory}'` : undefined;
   const results = await index.search({
     query,
     limit,
     ...(filter ? { filter } : {}),
   });
 
-  return results.map((r) => ({
-    id: String(r.id),
-    score: r.score,
-    content: r.content,
-    metadata: r.metadata ?? { image: "" },
+  return results.map((result) => ({
+    id: String(result.id),
+    score: result.score,
+    content: result.content,
+    metadata: result.metadata ?? { image: "" },
   }));
 }
 
-// ─── Admin: reset indexes ────────────────────────────────
-
 export async function resetIndex(indexName: "products"): Promise<void> {
-  if (!isSearchAvailable()) return;
+  if (!isSearchAvailable()) {
+    return;
+  }
 
-  const client = getClient();
-  const index = client.index(indexName);
-  await index.reset();
+  await getClient().index(indexName).reset();
+}
+
+export async function getIndexInfo(indexName: "products"): Promise<unknown> {
+  if (!isSearchAvailable()) {
+    throw new Error("Search is not configured");
+  }
+
+  return getClient().index(indexName).info();
 }

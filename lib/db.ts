@@ -36,7 +36,17 @@ import {
   productSharesRelations,
   categoriesRelations,
 } from "./schema";
-import { eq, desc, and, isNull, sql, ne } from "drizzle-orm";
+import {
+  eq,
+  desc,
+  and,
+  isNull,
+  sql,
+  ne,
+  ilike,
+  or,
+  type SQL,
+} from "drizzle-orm";
 import { Product, ProductInput } from "./types";
 import { env } from "./env";
 import {
@@ -113,6 +123,8 @@ export interface ProductListOptions {
   limit?: number;
   offset?: number;
   withCache?: boolean;
+  search?: string;
+  category?: string;
 }
 
 export const db = {
@@ -286,18 +298,47 @@ export const db = {
       options: ProductListOptions = {},
     ): Promise<
       Array<
-        Pick<Product, "id" | "name" | "price" | "stock" | "category" | "image">
+        Pick<
+          Product,
+          | "id"
+          | "name"
+          | "description"
+          | "price"
+          | "stock"
+          | "category"
+          | "image"
+        >
       >
     > => {
-      const { limit, offset, withCache = false } = options;
+      const { limit, offset, withCache = false, search, category } = options;
 
       const fetcher = async () => {
+        const filters: SQL[] = [isNull(products.deletedAt)];
+        const normalizedSearch = search?.trim();
+        const normalizedCategory = category?.trim();
+
+        if (normalizedSearch) {
+          filters.push(
+            or(
+              ilike(products.name, `%${normalizedSearch}%`),
+              ilike(products.description, `%${normalizedSearch}%`),
+            ) as SQL,
+          );
+        }
+
+        if (normalizedCategory) {
+          filters.push(eq(products.category, normalizedCategory));
+        }
+
+        const whereClause = filters.length === 1 ? filters[0] : and(...filters);
+
         const rows = await drizzleDb.query.products.findMany({
-          where: isNull(products.deletedAt),
+          where: whereClause,
           orderBy: [desc(products.createdAt)],
           columns: {
             id: true,
             name: true,
+            description: true,
             price: true,
             stock: true,
             category: true,
@@ -311,7 +352,7 @@ export const db = {
       };
 
       // Use cache only if explicitly requested and no pagination
-      if (withCache && !limit && !offset) {
+      if (withCache && !limit && !offset && !search && !category) {
         return cacheProductsList(fetcher);
       }
 

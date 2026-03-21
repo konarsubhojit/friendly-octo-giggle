@@ -24,6 +24,9 @@ vi.mock("@/lib/db", () => ({
     update: mockUpdate,
     transaction: mockTransaction,
     query: {
+      products: {
+        findMany: vi.fn(),
+      },
       orders: {
         findMany: vi.fn(),
       },
@@ -33,6 +36,11 @@ vi.mock("@/lib/db", () => ({
 
 vi.mock("@/lib/redis", () => ({
   getRedisClient: mockGetRedisClient,
+  invalidateCache: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock("@/lib/cache", () => ({
+  invalidateUserOrderCaches: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock("@/lib/logger", () => ({
@@ -50,6 +58,7 @@ import {
   updateOrderStatus,
   getUserOrders,
 } from "@/actions/orders";
+import { drizzleDb } from "@/lib/db";
 
 const validOrderData = {
   customerName: "Alice Smith",
@@ -89,6 +98,14 @@ describe("createOrder", () => {
         await cb(makeMockTx());
       },
     );
+    vi.mocked(drizzleDb.query.products.findMany).mockResolvedValue([
+      { id: "prod001", name: "Test Product A", variations: [] },
+      {
+        id: "prod002",
+        name: "Test Product B",
+        variations: [{ id: "var001", name: "Blue" }],
+      },
+    ] as never);
   });
 
   it("inserts into PostgreSQL and returns orderId on success", async () => {

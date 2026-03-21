@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { drizzleDb, db } from "@/lib/db";
 import { products } from "@/lib/schema";
-import { desc, lt, ilike, and, isNull, inArray, SQL } from "drizzle-orm";
+import { desc, lt, ilike, and, isNull, inArray, SQL, count } from "drizzle-orm";
 import { ProductInputSchema } from "@/lib/validations";
 import { apiSuccess, apiError, handleApiError } from "@/lib/api-utils";
 import { revalidateTag } from "next/cache";
@@ -43,6 +43,7 @@ export const GET = async (request: NextRequest) => {
     );
 
     const conditions: SQL[] = [isNull(products.deletedAt)];
+    const countConditions: SQL[] = [isNull(products.deletedAt)];
 
     if (cursor) {
       const cursorDate = new Date(cursor);
@@ -56,29 +57,49 @@ export const GET = async (request: NextRequest) => {
 
       if (matchedIds === null) {
         const pattern = `%${search}%`;
-        conditions.push(ilike(products.name, pattern));
+        const searchCondition = ilike(products.name, pattern);
+        conditions.push(searchCondition);
+        countConditions.push(searchCondition);
       } else if (matchedIds.length === 0) {
-        return apiSuccess({ products: [], nextCursor: null, hasMore: false });
+        return apiSuccess({
+          products: [],
+          nextCursor: null,
+          hasMore: false,
+          totalCount: 0,
+        });
       } else {
-        conditions.push(inArray(products.id, matchedIds));
+        const searchCondition = inArray(products.id, matchedIds);
+        conditions.push(searchCondition);
+        countConditions.push(searchCondition);
       }
     }
 
     const whereClause =
       conditions.length === 1 ? conditions[0] : and(...conditions);
+    const countWhereClause =
+      countConditions.length === 1
+        ? countConditions[0]
+        : and(...countConditions);
 
-    const rows = await drizzleDb.query.products.findMany({
-      where: whereClause,
-      orderBy: [desc(products.createdAt)],
-      limit: limit + 1,
-      with: { variations: true },
-    });
+    const [rows, totalRows] = await Promise.all([
+      drizzleDb.query.products.findMany({
+        where: whereClause,
+        orderBy: [desc(products.createdAt)],
+        limit: limit + 1,
+        with: { variations: true },
+      }),
+      drizzleDb
+        .select({ value: count() })
+        .from(products)
+        .where(countWhereClause),
+    ]);
 
     const hasMore = rows.length > limit;
     const pageItems = hasMore ? rows.slice(0, limit) : rows;
     const nextCursor = hasMore
       ? pageItems.at(-1)!.createdAt.toISOString()
       : null;
+    const totalCount = Number(totalRows[0]?.value ?? 0);
 
     const serialized = pageItems.map((p) => ({
       ...p,
@@ -94,7 +115,12 @@ export const GET = async (request: NextRequest) => {
       })),
     }));
 
-    return apiSuccess({ products: serialized, nextCursor, hasMore });
+    return apiSuccess({
+      products: serialized,
+      nextCursor,
+      hasMore,
+      totalCount,
+    });
   } catch (error) {
     return handleApiError(error);
   }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { OrderStatus } from "@/lib/types";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { useDispatch } from "react-redux";
@@ -11,6 +11,7 @@ import { AlertBanner } from "@/components/ui/AlertBanner";
 import { EmptyState } from "@/components/ui/EmptyState";
 import AdminBreadcrumbs from "@/components/admin/AdminBreadcrumbs";
 import { AdminOrderCard } from "@/components/admin/AdminOrderCard";
+import { CursorPaginationBar } from "@/components/ui/CursorPaginationBar";
 
 type ShippingEdits = Record<
   string,
@@ -58,10 +59,17 @@ export default function OrdersManagement() {
   const [cursor, setCursor] = useState<string | null>(null);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
-  const [cursorHistory, setCursorHistory] = useState<string[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
   const [savingShippingId, setSavingShippingId] = useState<string | null>(null);
   const [shippingEdits, setShippingEdits] = useState<ShippingEdits>({});
+
+  const pageCursorsRef = useRef<Array<string | null>>([null]);
+
+  const syncPageCursors = useCallback((nextValue: Array<string | null>) => {
+    pageCursorsRef.current = nextValue;
+  }, []);
 
   const fetchOrders = useCallback(
     async (
@@ -88,49 +96,149 @@ export default function OrdersManagement() {
         setOrders(items);
         setNextCursor(data.data?.nextCursor ?? null);
         setHasMore(data.data?.hasMore ?? false);
+        setTotalCount(Number(data.data?.totalCount ?? data.totalCount ?? 0));
+        const discoveredCursors = pageCursorsRef.current.slice(0, currentPage);
+        if (data.data?.nextCursor) {
+          discoveredCursors[currentPage] = data.data.nextCursor;
+        }
+        syncPageCursors(discoveredCursors);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Something went wrong");
       } finally {
         setLoading(false);
       }
     },
-    [],
+    [currentPage, syncPageCursors],
   );
 
   useEffect(() => {
     fetchOrders(cursor, search, filter);
   }, [fetchOrders, cursor, search, filter]);
 
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+
   const handleSearch = (e: React.BaseSyntheticEvent) => {
     e.preventDefault();
+    syncPageCursors([null]);
+    setCurrentPage(1);
     setCursor(null);
-    setCursorHistory([]);
     setSearch(searchInput.trim());
   };
 
   const handleFilterChange = (status: "ALL" | OrderStatus) => {
     setFilter(status);
+    syncPageCursors([null]);
+    setCurrentPage(1);
     setCursor(null);
-    setCursorHistory([]);
+  };
+
+  const handleFirst = () => {
+    if (currentPage === 1) return;
+    setCurrentPage(1);
+    setCursor(null);
   };
 
   const handleNext = () => {
-    if (!nextCursor) return;
-    setCursorHistory((prev) => [...prev, cursor ?? ""]);
+    if (!nextCursor || currentPage >= totalPages) return;
+    setCurrentPage((prev) => prev + 1);
     setCursor(nextCursor);
   };
 
   const handlePrev = () => {
-    if (cursorHistory.length === 0) return;
-    const prev = [...cursorHistory];
-    const prevCursor = prev.pop() ?? null;
-    setCursorHistory(prev);
+    if (currentPage === 1) return;
+    const prevCursor = pageCursorsRef.current[currentPage - 2] ?? null;
+    setCurrentPage((prev) => prev - 1);
     setCursor(prevCursor);
   };
 
+  const ensureCursorForPage = useCallback(
+    async (targetPage: number) => {
+      let knownCursors = pageCursorsRef.current;
+      if (knownCursors[targetPage - 1] !== undefined) {
+        return knownCursors[targetPage - 1];
+      }
+
+      let pageNumber = knownCursors.length;
+      let cursorValue = knownCursors.at(-1) ?? null;
+
+      while (pageNumber < targetPage) {
+        const params = new URLSearchParams({ limit: String(PAGE_SIZE) });
+        if (cursorValue) params.set("cursor", cursorValue);
+        if (search) params.set("search", search);
+        if (filter !== "ALL") params.set("status", filter);
+
+        const res = await fetch(`/api/admin/orders?${params.toString()}`);
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error || "Failed to load orders");
+        }
+
+        const data = await res.json();
+        const discoveredCursor =
+          (data.data?.nextCursor as string | null | undefined) ??
+          (data.nextCursor as string | null | undefined);
+
+        if (!discoveredCursor) {
+          return undefined;
+        }
+
+        knownCursors = [...knownCursors, discoveredCursor];
+        syncPageCursors(knownCursors);
+        cursorValue = discoveredCursor;
+        pageNumber += 1;
+      }
+
+      return knownCursors[targetPage - 1];
+    },
+    [filter, search, syncPageCursors],
+  );
+
+  const handlePageSelect = (page: number) => {
+    void (async () => {
+      const targetPage = Math.min(Math.max(1, page), totalPages);
+      if (targetPage === currentPage) return;
+
+      if (targetPage === 1) {
+        handleFirst();
+        return;
+      }
+
+      const knownCursor = pageCursorsRef.current[targetPage - 1];
+      if (knownCursor !== undefined) {
+        setCurrentPage(targetPage);
+        setCursor(knownCursor);
+        return;
+      }
+
+      setLoading(true);
+      setError(null);
+      try {
+        const discoveredCursor = await ensureCursorForPage(targetPage);
+        if (discoveredCursor === undefined) {
+          setLoading(false);
+          return;
+        }
+
+        setCurrentPage(targetPage);
+        setCursor(discoveredCursor);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Something went wrong");
+        setLoading(false);
+      }
+    })();
+  };
+
+  const handleLast = () => {
+    handlePageSelect(totalPages);
+  };
+
   const handleRefresh = () => {
+    syncPageCursors([null]);
+    setCurrentPage(1);
     setCursor(null);
-    setCursorHistory([]);
+    setNextCursor(null);
+    setHasMore(false);
+    setTotalCount(0);
     setSearch("");
     setSearchInput("");
     setFilter("ALL");
@@ -211,8 +319,6 @@ export default function OrdersManagement() {
     setSavingShippingId(null);
   };
 
-  const currentPage = cursorHistory.length + 1;
-
   const ordersListContent =
     orders.length === 0 ? (
       <EmptyState
@@ -237,28 +343,19 @@ export default function OrdersManagement() {
           ))}
         </div>
 
-        {/* Cursor Pagination */}
-        <div className="flex items-center justify-between border-t border-gray-200 dark:border-gray-700 pt-4">
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            Page {currentPage}
-          </p>
-          <div className="flex gap-2">
-            <button
-              onClick={handlePrev}
-              disabled={cursorHistory.length === 0 || loading}
-              className="px-4 py-2 text-sm font-medium bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-40 disabled:cursor-not-allowed transition"
-            >
-              ← Previous
-            </button>
-            <button
-              onClick={handleNext}
-              disabled={!hasMore || loading}
-              className="px-4 py-2 text-sm font-medium bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition"
-            >
-              Next →
-            </button>
-          </div>
-        </div>
+        <CursorPaginationBar
+          currentPage={currentPage}
+          totalCount={totalCount}
+          pageSize={PAGE_SIZE}
+          hasMore={hasMore}
+          loading={loading}
+          totalPages={totalPages}
+          onFirst={handleFirst}
+          onPrev={handlePrev}
+          onNext={handleNext}
+          onLast={handleLast}
+          onPageSelect={handlePageSelect}
+        />
       </>
     );
 

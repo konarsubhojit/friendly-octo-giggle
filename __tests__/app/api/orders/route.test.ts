@@ -7,6 +7,10 @@ import { invalidateCache } from "@/lib/redis";
 import { invalidateUserOrderCaches } from "@/lib/cache";
 import { logBusinessEvent, logError } from "@/lib/logger";
 
+const mockCountWhere = vi.hoisted(() => vi.fn());
+const mockCountFrom = vi.hoisted(() => vi.fn(() => ({ where: mockCountWhere })));
+const mockSelect = vi.hoisted(() => vi.fn(() => ({ from: mockCountFrom })));
+
 vi.mock("@/lib/db", () => ({
   drizzleDb: {
     query: {
@@ -14,6 +18,7 @@ vi.mock("@/lib/db", () => ({
       products: { findMany: vi.fn() },
       users: { findFirst: vi.fn() },
     },
+    select: mockSelect,
     transaction: vi.fn(),
   },
 }));
@@ -32,6 +37,7 @@ vi.mock("@/lib/schema", () => ({
 }));
 
 vi.mock("drizzle-orm", () => ({
+  count: vi.fn(),
   eq: vi.fn(),
   inArray: vi.fn(),
   sql: vi.fn(),
@@ -45,6 +51,7 @@ vi.mock("drizzle-orm", () => ({
 
 vi.mock("@/lib/redis", () => ({
   invalidateCache: vi.fn(),
+  getRedisClient: vi.fn(() => null),
 }));
 
 vi.mock("@/lib/cache", () => ({
@@ -52,6 +59,15 @@ vi.mock("@/lib/cache", () => ({
     PRODUCTS_BESTSELLERS: "products:bestsellers",
   },
   invalidateUserOrderCaches: vi.fn(),
+}));
+
+vi.mock("@/actions/orders", () => ({
+  searchUserOrdersRedis: vi.fn().mockResolvedValue(null),
+  writeOrderToRedis: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock("@vercel/functions", () => ({
+  waitUntil: vi.fn(),
 }));
 
 vi.mock("@/lib/api-middleware", () => ({
@@ -121,6 +137,7 @@ describe("GET /api/orders", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockCountWhere.mockResolvedValue([{ value: 0 }]);
   });
 
   it("returns 401 when not authenticated", async () => {
@@ -139,6 +156,7 @@ describe("GET /api/orders", () => {
       user: { id: "user1", name: "Test", email: "test@example.com" },
     } as never);
     mockFindManyOrders.mockResolvedValue(mockOrders as never);
+    mockCountWhere.mockResolvedValue([{ value: 1 }]);
 
     const request = new NextRequest("http://localhost/api/orders");
     const response = await GET(request);
@@ -151,6 +169,7 @@ describe("GET /api/orders", () => {
     expect(data.orders[0].items[0].product.createdAt).toBe(
       "2024-01-01T00:00:00.000Z",
     );
+    expect(data.totalCount).toBe(1);
   });
 
   it("returns 500 on error", async () => {

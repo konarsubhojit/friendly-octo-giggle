@@ -12,6 +12,7 @@ import {
   inArray,
   sql,
   desc,
+  count,
   and,
   isNull,
   lt,
@@ -29,8 +30,9 @@ import { sendOrderConfirmationEmail } from "@/lib/email";
 import { getQStashClient } from "@/lib/qstash";
 import type { OrderCreatedEvent } from "@/lib/qstash-events";
 import { env } from "@/lib/env";
+import { waitUntil } from "@vercel/functions";
 
-import { searchUserOrdersRedis } from "@/actions/orders";
+import { searchUserOrdersRedis, writeOrderToRedis } from "@/actions/orders";
 import {
   formatPriceForCurrency,
   isValidCurrencyCode,
@@ -215,6 +217,7 @@ const handleGet = async (request: NextRequest) => {
       session.user.id,
       searchParams.get("cursor"),
     );
+    const countConditions = buildOrderConditions(session.user.id, null);
 
     if (search) {
       const redisIds = await searchUserOrdersRedis(
@@ -222,35 +225,48 @@ const handleGet = async (request: NextRequest) => {
         search,
         limit * 5,
       );
-      if (redisIds !== null) {
-        if (redisIds.length === 0) {
-          return NextResponse.json({
-            orders: [],
-            nextCursor: null,
-            hasMore: false,
-          });
-        }
+      if (redisIds && redisIds.length > 0) {
         conditions.push(inArray(orders.id, redisIds));
+        countConditions.push(inArray(orders.id, redisIds));
       } else {
         const pattern = `%${search}%`;
-        conditions.push(
-          or(ilike(orders.id, pattern), ilike(orders.status, pattern)) as SQL,
-        );
+        const searchCondition = or(
+          ilike(orders.id, pattern),
+          sql`${orders.status}::text ILIKE ${pattern}`,
+          ilike(orders.customerName, pattern),
+          ilike(orders.customerEmail, pattern),
+          sql`EXISTS (
+            SELECT 1 FROM "OrderItem" oi
+            JOIN "Product" p ON p.id = oi."productId"
+            LEFT JOIN "ProductVariation" pv ON pv.id = oi."variationId"
+            WHERE oi."orderId" = ${orders.id}
+            AND (p.name ILIKE ${pattern} OR pv.name ILIKE ${pattern})
+          )`,
+        ) as SQL;
+        conditions.push(searchCondition);
+        countConditions.push(searchCondition);
       }
     }
 
-    const rows = await drizzleDb.query.orders.findMany({
-      where: and(...conditions),
-      with: { items: { with: { product: true, variation: true } } },
-      orderBy: [desc(orders.createdAt)],
-      limit: limit + 1,
-    });
+    const [rows, totalRows] = await Promise.all([
+      drizzleDb.query.orders.findMany({
+        where: and(...conditions),
+        with: { items: { with: { product: true, variation: true } } },
+        orderBy: [desc(orders.createdAt)],
+        limit: limit + 1,
+      }),
+      drizzleDb
+        .select({ value: count() })
+        .from(orders)
+        .where(and(...countConditions)),
+    ]);
 
     const hasMore = rows.length > limit;
     const pageItems = hasMore ? rows.slice(0, limit) : rows;
     const lastItem = pageItems.at(-1);
     const nextCursor =
       hasMore && lastItem ? serializeDate(lastItem.createdAt) : null;
+    const totalCount = Number(totalRows[0]?.value ?? 0);
 
     const serialized = pageItems.map((order) => ({
       ...order,
@@ -266,7 +282,12 @@ const handleGet = async (request: NextRequest) => {
       })),
     }));
 
-    return NextResponse.json({ orders: serialized, nextCursor, hasMore });
+    return NextResponse.json({
+      orders: serialized,
+      nextCursor,
+      hasMore,
+      totalCount,
+    });
   } catch (error) {
     logError({
       error,
@@ -470,6 +491,35 @@ const handlePost = async (request: NextRequest) => {
       },
       success: true,
     });
+
+    waitUntil(
+      writeOrderToRedis({
+        id: fullOrder.id,
+        userId,
+        customerName: fullOrder.customerName,
+        customerEmail: fullOrder.customerEmail,
+        customerAddress: fullOrder.customerAddress,
+        total: fullOrder.totalAmount,
+        status: fullOrder.status,
+        items: fullOrder.items.map((item: OrderItem) => ({
+          productId: item.productId,
+          variationId: item.variationId ?? null,
+          quantity: item.quantity,
+          price: item.price,
+          customizationNote: item.customizationNote ?? null,
+        })),
+        createdAt: fullOrder.createdAt.toISOString(),
+        productNames: [
+          ...new Set(
+            fullOrder.items.map((item: OrderItem) => {
+              const parts = [item.product.name];
+              if (item.variation?.name) parts.push(item.variation.name);
+              return parts.join(" - ");
+            }),
+          ),
+        ].join(", "),
+      }),
+    );
 
     const productCacheKeys = [
       ...new Set(body.items.map((item) => item.productId)),

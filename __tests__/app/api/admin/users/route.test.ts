@@ -3,15 +3,22 @@ import { NextRequest } from "next/server";
 
 const mockAuth = vi.hoisted(() => vi.fn());
 const mockFindMany = vi.hoisted(() => vi.fn());
+const mockSelectWhere = vi.hoisted(() => vi.fn());
+const mockSelectFrom = vi.hoisted(() => vi.fn(() => ({ where: mockSelectWhere })));
+const mockSelect = vi.hoisted(() => vi.fn(() => ({ from: mockSelectFrom })));
 
 vi.mock("@/lib/auth", () => ({ auth: mockAuth }));
 vi.mock("@/lib/db", () => ({
-  drizzleDb: { query: { users: { findMany: mockFindMany } } },
+  drizzleDb: {
+    query: { users: { findMany: mockFindMany } },
+    select: mockSelect,
+  },
 }));
 vi.mock("@/lib/schema", () => ({
   users: { createdAt: "createdAt", name: "name", email: "email" },
 }));
 vi.mock("drizzle-orm", () => ({
+  count: vi.fn(),
   desc: vi.fn((col: string) => col),
   lt: vi.fn(),
   ilike: vi.fn(),
@@ -37,6 +44,7 @@ const makeAdminUser = (overrides = {}) => ({
 describe("GET /api/admin/users", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockSelectWhere.mockResolvedValue([{ value: 0 }]);
   });
 
   it("returns 401 when not authenticated", async () => {
@@ -84,6 +92,7 @@ describe("GET /api/admin/users", () => {
     ];
 
     mockFindMany.mockResolvedValue(mockUsers);
+    mockSelectWhere.mockResolvedValue([{ value: 2 }]);
 
     const response = await GET(
       new NextRequest("http://localhost/api/admin/users"),
@@ -98,6 +107,7 @@ describe("GET /api/admin/users", () => {
     expect(body.data.users[1]._count.orders).toBe(0);
     expect(body.data.nextCursor).toBeNull();
     expect(body.data.hasMore).toBe(false);
+    expect(body.data.totalCount).toBe(2);
   });
 
   it("returns hasMore=true and nextCursor when results exceed limit", async () => {
@@ -111,6 +121,7 @@ describe("GET /api/admin/users", () => {
       }),
     );
     mockFindMany.mockResolvedValue(manyUsers);
+    mockSelectWhere.mockResolvedValue([{ value: 21 }]);
 
     const response = await GET(
       new NextRequest("http://localhost/api/admin/users?limit=20"),
@@ -121,6 +132,7 @@ describe("GET /api/admin/users", () => {
     expect(body.data.hasMore).toBe(true);
     expect(body.data.nextCursor).not.toBeNull();
     expect(body.data.users).toHaveLength(20);
+    expect(body.data.totalCount).toBe(21);
   });
 
   it("passes cursor param to where clause builder", async () => {

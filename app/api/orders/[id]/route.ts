@@ -11,7 +11,7 @@ import {
 } from "@/lib/api-utils";
 import { auth } from "@/lib/auth";
 import { serializeOrder } from "@/lib/serializers";
-import { getCachedData, invalidateCache } from "@/lib/redis";
+import { getCachedData, invalidateCache, getRedisClient } from "@/lib/redis";
 import { CACHE_KEYS, CACHE_TTL, invalidateUserOrderCaches } from "@/lib/cache";
 
 export const dynamic = "force-dynamic";
@@ -95,6 +95,11 @@ export async function PATCH(
       .update(orders)
       .set({ status: "CANCELLED", updatedAt: new Date() })
       .where(eq(orders.id, id));
+
+    const redis = getRedisClient();
+    if (redis) {
+      redis.hset(`order:${id}`, { status: "CANCELLED" }).catch(() => {});
+    }
 
     await Promise.allSettled([
       invalidateUserOrderCaches(session.user.id),

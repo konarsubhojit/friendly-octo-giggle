@@ -4,11 +4,10 @@ import { useState } from "react";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import toast from "react-hot-toast";
 
-type ReindexTarget = "products" | "orders" | "all";
+type ReindexTarget = "products";
 
 interface ReindexResult {
   products?: number;
-  orders?: number;
 }
 
 interface SearchReindexClientProps {
@@ -24,16 +23,6 @@ const TARGET_OPTIONS: {
     value: "products",
     label: "Products",
     description: "Rebuild the products search index from the database",
-  },
-  {
-    value: "orders",
-    label: "Orders",
-    description: "Rebuild the orders search index from the database",
-  },
-  {
-    value: "all",
-    label: "All Indexes",
-    description: "Rebuild both products and orders indexes",
   },
 ];
 
@@ -108,8 +97,11 @@ export default function SearchReindexClient({
 
       const parts: string[] = [];
       if (result.products != null) parts.push(`${result.products} products`);
-      if (result.orders != null) parts.push(`${result.orders} orders`);
-      toast.success(`Reindexed ${parts.join(" and ")}`);
+      toast.success(
+        parts.length > 0
+          ? `Reindexed ${parts.join(" and ")}`
+          : "Reindex completed",
+      );
     } catch (err) {
       const message = err instanceof Error ? err.message : "Reindex failed";
       toast.error(message);
@@ -149,19 +141,11 @@ export default function SearchReindexClient({
               {description}
             </p>
 
-            {lastResult && value !== "all" && lastResult[value] != null && (
+            {lastResult?.[value] != null && (
               <p className="text-xs text-green-600 dark:text-green-400 mb-3">
                 Last run: {lastResult[value]} records indexed
               </p>
             )}
-            {lastResult &&
-              value === "all" &&
-              (lastResult.products != null || lastResult.orders != null) && (
-                <p className="text-xs text-green-600 dark:text-green-400 mb-3">
-                  Last run: {lastResult.products ?? 0} products,{" "}
-                  {lastResult.orders ?? 0} orders indexed
-                </p>
-              )}
 
             <button
               type="button"
@@ -181,16 +165,20 @@ export default function SearchReindexClient({
         </h3>
         <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1 list-disc list-inside">
           <li>
-            Reindexing resets the selected index and rebuilds it from the
+            Reindexing resets the products index and rebuilds it from the
             database.
           </li>
           <li>
-            Products and orders are automatically indexed on create/update
-            during normal operations.
+            Products are indexed into Upstash Search during normal admin create
+            and update operations.
           </li>
           <li>
             Use a full reindex after bulk imports, data migrations, or if search
             results seem stale.
+          </li>
+          <li>
+            Orders search is managed separately in Redis Search and is not
+            rebuilt from this screen.
           </li>
           <li>
             The process runs server-side and may take a few seconds for large
@@ -202,11 +190,7 @@ export default function SearchReindexClient({
       <ConfirmDialog
         isOpen={confirmTarget !== null}
         title="Confirm Reindex"
-        message={
-          confirmTarget === "all"
-            ? "This will reset and rebuild both the products and orders search indexes. Existing search results will be temporarily unavailable during the process. Continue?"
-            : `This will reset and rebuild the ${confirmTarget} search index. Existing ${confirmTarget} search results will be temporarily unavailable during the process. Continue?`
-        }
+        message="This will reset and rebuild the products search index. Existing product search results will be temporarily unavailable during the process. Continue?"
         confirmLabel="Reindex"
         cancelLabel="Cancel"
         variant="warning"
