@@ -84,9 +84,11 @@ describe("createOrder", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetRedisClient.mockReturnValue(makeMockRedis());
-    mockTransaction.mockImplementation(async (cb: (tx: ReturnType<typeof makeMockTx>) => Promise<void>) => {
-      await cb(makeMockTx());
-    });
+    mockTransaction.mockImplementation(
+      async (cb: (tx: ReturnType<typeof makeMockTx>) => Promise<void>) => {
+        await cb(makeMockTx());
+      },
+    );
   });
 
   it("inserts into PostgreSQL and returns orderId on success", async () => {
@@ -354,10 +356,7 @@ describe("getUserOrders", () => {
       hset: vi.fn().mockReturnThis(),
       sadd: vi.fn().mockReturnThis(),
       hgetall: vi.fn().mockReturnThis(),
-      exec: vi.fn().mockResolvedValue([
-        redisOrderHash("ORD1234567"),
-        null,
-      ]),
+      exec: vi.fn().mockResolvedValue([redisOrderHash("ORD1234567"), null]),
     };
     mockRedis.pipeline.mockReturnValue(mockPipeline);
     mockGetRedisClient.mockReturnValue(mockRedis);

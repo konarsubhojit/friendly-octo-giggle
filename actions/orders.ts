@@ -9,7 +9,9 @@ import { logError, logBusinessEvent } from "@/lib/logger";
 import { OrderStatusEnum } from "@/lib/validations";
 import { z } from "zod";
 
-type ActionResult<T> = { success: true; data: T } | { success: false; error: string };
+type ActionResult<T> =
+  | { success: true; data: T }
+  | { success: false; error: string };
 
 interface OrderItemRecord {
   productId: string;
@@ -81,9 +83,7 @@ const writeOrderToRedis = async (order: OrderSummary): Promise<void> => {
   }
 };
 
-const parseRedisHash = (
-  hash: Record<string, unknown>,
-): OrderSummary | null => {
+const parseRedisHash = (hash: Record<string, unknown>): OrderSummary | null => {
   if (!hash.id || typeof hash.id !== "string") return null;
   return {
     id: hash.id as string,
@@ -132,8 +132,7 @@ export const createOrder = async (
   if (!parseResult.success) {
     return {
       success: false,
-      error:
-        parseResult.error.issues[0]?.message ?? "Invalid order data",
+      error: parseResult.error.issues[0]?.message ?? "Invalid order data",
     };
   }
 
@@ -266,9 +265,8 @@ export const getUserOrders = async (
         for (const orderId of orderIds) {
           pipeline.hgetall(redisOrderKey(orderId));
         }
-        const results = await pipeline.exec<
-          (Record<string, unknown> | null)[]
-        >();
+        const results =
+          await pipeline.exec<(Record<string, unknown> | null)[]>();
 
         const validOrders: OrderSummary[] = [];
         const missingIds: string[] = [];
