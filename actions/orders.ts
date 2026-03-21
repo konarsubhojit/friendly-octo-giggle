@@ -9,6 +9,7 @@ import { generateOrderId } from "@/lib/short-id";
 import { logError, logBusinessEvent } from "@/lib/logger";
 import { OrderStatusEnum } from "@/lib/validations";
 import { z } from "zod";
+import { s } from "@upstash/redis";
 
 type ActionResult<T> =
   | { success: true; data: T }
@@ -348,3 +349,68 @@ export const getUserOrders = async (
     return { success: false, error: "Failed to retrieve orders" };
   }
 };
+
+const ORDER_SEARCH_SCHEMA = s.object({
+  id: s.string().noTokenize(),
+  customerName: s.string(),
+  customerEmail: s.string().noTokenize(),
+  customerAddress: s.string(),
+  status: s.keyword(),
+  userId: s.string().noTokenize(),
+  total: s.string().noTokenize(),
+  createdAt: s.string().noTokenize(),
+});
+
+const searchOrdersViaIndex = async (
+  searchTerm: string,
+  limit: number,
+  userId?: string,
+): Promise<string[] | null> => {
+  const redis = getRedisClient();
+  if (!redis) return null;
+
+  try {
+    const index = redis.search.index({
+      name: "orders",
+      schema: ORDER_SEARCH_SCHEMA,
+    });
+
+    const userFilter = userId ? { userId } : {};
+
+    const results = await index.query({
+      filter: {
+        $should: [
+          { customerName: searchTerm, ...userFilter },
+          { customerEmail: searchTerm, ...userFilter },
+          { id: searchTerm, ...userFilter },
+          { status: searchTerm, ...userFilter },
+        ],
+      },
+      select: {},
+      limit,
+    });
+
+    return results.map((result) => {
+      const key = String(result.key);
+      return key.startsWith("order:") ? key.slice(6) : key;
+    });
+  } catch (error) {
+    logError({
+      error,
+      context: "search_orders_redis_ft",
+      additionalInfo: { searchTerm, userId },
+    });
+    return null;
+  }
+};
+
+export const searchUserOrdersRedis = async (
+  userId: string,
+  searchTerm: string,
+  limit: number = 100,
+): Promise<string[] | null> => searchOrdersViaIndex(searchTerm, limit, userId);
+
+export const searchAllOrdersRedis = async (
+  searchTerm: string,
+  limit: number = 100,
+): Promise<string[] | null> => searchOrdersViaIndex(searchTerm, limit);

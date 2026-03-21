@@ -1,23 +1,18 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
-import { searchProducts, searchOrders, isSearchAvailable } from "@/lib/search";
+import { searchProducts, isSearchAvailable } from "@/lib/search";
 import { apiSuccess, apiError, handleApiError } from "@/lib/api-utils";
-import { auth } from "@/lib/auth";
 
 const SearchQuerySchema = z.object({
   q: z.string().min(1).max(200),
-  type: z.enum(["products", "orders"]).default("products"),
   category: z.string().optional(),
-  status: z.string().optional(),
   limit: z.coerce.number().int().min(1).max(50).default(20),
 });
 
 /**
- * GET /api/search?q=cotton+shirt&type=products&category=Clothing&limit=10
+ * GET /api/search?q=cotton+shirt&category=Clothing&limit=10
  *
- * Full-text search powered by Upstash Search.
- * - `type=products` is public
- * - `type=orders` requires admin authentication
+ * Full-text search powered by Upstash Search (products only).
  */
 export async function GET(request: NextRequest) {
   if (!isSearchAvailable()) {
@@ -35,24 +30,11 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const { q, type, category, status, limit } = parseResult.data;
-
-    if (type === "orders") {
-      const session = await auth();
-      if (!session?.user) {
-        return apiError("Authentication required", 401);
-      }
-      if (session.user.role !== "ADMIN") {
-        return apiError("Admin access required", 403);
-      }
-
-      const results = await searchOrders(q, { limit, status });
-      return apiSuccess({ results, query: q, type });
-    }
+    const { q, category, limit } = parseResult.data;
 
     const results = await searchProducts(q, { limit, category });
 
-    const response = apiSuccess({ results, query: q, type });
+    const response = apiSuccess({ results, query: q, type: "products" });
     response.headers.set(
       "Cache-Control",
       "public, s-maxage=30, stale-while-revalidate=60",

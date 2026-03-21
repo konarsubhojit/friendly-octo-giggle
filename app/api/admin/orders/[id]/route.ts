@@ -17,7 +17,6 @@ import { getQStashClient } from "@/lib/qstash";
 import type { OrderStatusChangedEvent } from "@/lib/qstash-events";
 import { env } from "@/lib/env";
 import { logBusinessEvent, logError } from "@/lib/logger";
-import { indexOrder } from "@/lib/search";
 
 export const dynamic = "force-dynamic";
 
@@ -68,16 +67,6 @@ export const PATCH = async (
     }
 
     await invalidateAdminOrderCaches(id, order.userId);
-
-    void indexOrder({
-      id: order.id,
-      customerName: order.customerName,
-      customerEmail: order.customerEmail,
-      customerAddress: order.customerAddress,
-      status: order.status,
-      totalAmount: order.totalAmount,
-      createdAt: order.createdAt.toISOString(),
-    });
 
     const notifyStatuses = ["PROCESSING", "SHIPPED", "DELIVERED", "CANCELLED"];
     if (notifyStatuses.includes(parseResult.data.status)) {

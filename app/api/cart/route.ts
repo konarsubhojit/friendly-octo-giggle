@@ -8,6 +8,12 @@ import { handleValidationError } from "@/lib/api-utils";
 import { logError } from "@/lib/logger";
 import { getCachedData } from "@/lib/redis";
 import { CACHE_KEYS, CACHE_TTL, invalidateCartCache } from "@/lib/cache";
+import {
+  fetchCartFromRedis,
+  backfillCartToRedis,
+  removeCartItemsByCartId,
+  type CartItemRedis,
+} from "@/lib/cart-redis";
 import type { Session } from "next-auth";
 
 export const dynamic = "force-dynamic";
@@ -298,12 +304,119 @@ function setGuestSessionCookie(response: NextResponse, sessionId: string) {
   });
 }
 
+function dbCartToRedisItems(
+  cart: CartWithItems,
+  userId?: string,
+  sessionId?: string,
+): CartItemRedis[] {
+  return cart.items.map((item) => ({
+    itemId: item.id,
+    cartId: (cart as unknown as { id: string }).id,
+    userId: userId ?? "",
+    sessionId: sessionId ?? "",
+    productId: item.product.id,
+    productName: (item.product as unknown as { name: string }).name ?? "",
+    productDescription:
+      (item.product as unknown as { description: string }).description ?? "",
+    productPrice: Number(
+      (item.product as unknown as { price: number }).price ?? 0,
+    ),
+    productImage: (item.product as unknown as { image: string }).image ?? "",
+    productCategory:
+      (item.product as unknown as { category: string }).category ?? "",
+    productStock: Number(
+      (item.product as unknown as { stock: number }).stock ?? 0,
+    ),
+    variationId: item.variation
+      ? (item.variation as unknown as { id: string }).id
+      : null,
+    variationName: item.variation
+      ? ((item.variation as unknown as { name: string }).name ?? null)
+      : null,
+    variationPriceModifier: item.variation
+      ? Number(
+          (item.variation as unknown as { priceModifier: number })
+            .priceModifier ?? 0,
+        )
+      : null,
+    variationStock: item.variation
+      ? Number((item.variation as unknown as { stock: number }).stock ?? 0)
+      : null,
+    quantity: item.quantity,
+    createdAt: toISOString(item.createdAt),
+    updatedAt: toISOString(item.updatedAt),
+  }));
+}
+
+function redisItemsToCartResponse(items: CartItemRedis[]) {
+  if (items.length === 0) return null;
+  const first = items[0];
+  return {
+    id: first.cartId,
+    createdAt: first.createdAt,
+    updatedAt: first.updatedAt,
+    items: items.map((item) => ({
+      id: item.itemId,
+      cartId: item.cartId,
+      productId: item.productId,
+      variationId: item.variationId,
+      quantity: item.quantity,
+      createdAt: item.createdAt,
+      updatedAt: item.updatedAt,
+      product: {
+        id: item.productId,
+        name: item.productName,
+        description: item.productDescription,
+        price: item.productPrice,
+        image: item.productImage,
+        category: item.productCategory,
+        stock: item.productStock,
+        createdAt: item.createdAt,
+        updatedAt: item.updatedAt,
+        variations: item.variationId
+          ? [
+              {
+                id: item.variationId,
+                name: item.variationName,
+                priceModifier: item.variationPriceModifier,
+                stock: item.variationStock,
+                createdAt: item.createdAt,
+                updatedAt: item.updatedAt,
+              },
+            ]
+          : [],
+      },
+      variation: item.variationId
+        ? {
+            id: item.variationId,
+            name: item.variationName,
+            priceModifier: item.variationPriceModifier,
+            stock: item.variationStock,
+            createdAt: item.createdAt,
+            updatedAt: item.updatedAt,
+          }
+        : null,
+    })),
+  };
+}
+
 export async function GET(request: NextRequest) {
   try {
     const session = await auth();
     const { userId, sessionId } = getCartIdentity(request, session);
-    const cacheKey = getCartCacheKey(userId, sessionId);
 
+    if (!userId && !sessionId) {
+      return NextResponse.json({ cart: null });
+    }
+
+    const redisItems = await fetchCartFromRedis(userId, sessionId);
+    if (redisItems && redisItems.length > 0) {
+      return NextResponse.json({
+        cart: redisItemsToCartResponse(redisItems),
+      });
+    }
+
+    const cacheKey = getCartCacheKey(userId, sessionId);
     if (!cacheKey) {
       return NextResponse.json({ cart: null });
     }
@@ -319,9 +432,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ cart: null });
     }
 
-    return NextResponse.json({
-      cart: serializeCart(cart as unknown as CartWithItems),
-    });
+    const serialized = serializeCart(cart as unknown as CartWithItems);
+
+    backfillCartToRedis(
+      dbCartToRedisItems(cart as unknown as CartWithItems, userId, sessionId),
+    );
+
+    return NextResponse.json({ cart: serialized });
   } catch (error) {
     logError({ error, context: "cart_fetch" });
     return NextResponse.json(
@@ -408,6 +525,15 @@ export async function POST(request: NextRequest) {
     } = {
       cart: serializeCart(updatedCart as unknown as CartWithItems),
     };
+
+    backfillCartToRedis(
+      dbCartToRedisItems(
+        updatedCart as unknown as CartWithItems,
+        session?.user?.id,
+        sessionId,
+      ),
+    );
+
     if (stockWarning) {
       responseBody.warning = stockWarning.warning;
       responseBody.adjustedQuantity = stockWarning.adjustedQuantity;
@@ -442,6 +568,7 @@ export async function DELETE(request: NextRequest) {
       await Promise.all([
         drizzleDb.delete(carts).where(eq(carts.id, cart.id)),
         invalidateCartCache(userId, sessionId),
+        removeCartItemsByCartId(cart.id, userId, sessionId),
       ]);
     } else {
       await invalidateCartCache(userId, sessionId);

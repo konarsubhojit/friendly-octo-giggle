@@ -29,9 +29,7 @@ vi.mock("@/lib/logger", () => ({ logError: vi.fn() }));
 vi.mock("@/lib/email", () => ({
   sendOrderStatusUpdateEmail: vi.fn(),
 }));
-vi.mock("@/lib/search", () => ({
-  indexOrder: vi.fn(),
-}));
+vi.mock("@/lib/search", () => ({}));
 vi.mock("@/lib/env", () => ({
   env: {
     NEXT_PUBLIC_APP_URL: "http://localhost:3000",

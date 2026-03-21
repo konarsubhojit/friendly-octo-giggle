@@ -3,20 +3,14 @@ import { auth } from "@/lib/auth";
 import { drizzleDb } from "@/lib/db";
 import { products } from "@/lib/schema";
 import { isNull } from "drizzle-orm";
-import {
-  isSearchAvailable,
-  resetIndex,
-  indexProducts,
-  indexOrders,
-} from "@/lib/search";
+import { isSearchAvailable, resetIndex, indexProducts } from "@/lib/search";
 
 /**
  * POST /api/admin/search/reindex
  *
- * Full reindex of products and/or orders into Upstash Search.
- * Body: { "target": "products" | "orders" | "all" }
+ * Full reindex of products into Upstash Search.
  */
-export async function POST(request: Request) {
+export async function POST(_request: Request) {
   const session = await auth();
   if (!session?.user) {
     return apiError("Not authenticated", 401);
@@ -30,61 +24,25 @@ export async function POST(request: Request) {
   }
 
   try {
-    const body = await request.json();
-    const target = body.target ?? "all";
+    await resetIndex("products");
 
-    if (!["products", "orders", "all"].includes(target)) {
-      return apiError(
-        "Invalid target. Must be 'products', 'orders', or 'all'",
-        400,
-      );
-    }
+    const allProducts = await drizzleDb.query.products.findMany({
+      where: isNull(products.deletedAt),
+    });
 
-    const results: Record<string, number> = {};
+    await indexProducts(
+      allProducts.map((p) => ({
+        id: p.id,
+        name: p.name,
+        description: p.description,
+        category: p.category,
+        price: p.price,
+        stock: p.stock,
+        image: p.image,
+      })),
+    );
 
-    if (target === "products" || target === "all") {
-      await resetIndex("products");
-
-      const allProducts = await drizzleDb.query.products.findMany({
-        where: isNull(products.deletedAt),
-      });
-
-      await indexProducts(
-        allProducts.map((p) => ({
-          id: p.id,
-          name: p.name,
-          description: p.description,
-          category: p.category,
-          price: p.price,
-          stock: p.stock,
-          image: p.image,
-        })),
-      );
-
-      results.products = allProducts.length;
-    }
-
-    if (target === "orders" || target === "all") {
-      await resetIndex("orders");
-
-      const allOrders = await drizzleDb.query.orders.findMany();
-
-      await indexOrders(
-        allOrders.map((o) => ({
-          id: o.id,
-          customerName: o.customerName,
-          customerEmail: o.customerEmail,
-          customerAddress: o.customerAddress,
-          status: o.status,
-          totalAmount: o.totalAmount,
-          createdAt: o.createdAt.toISOString(),
-        })),
-      );
-
-      results.orders = allOrders.length;
-    }
-
-    return apiSuccess({ reindexed: results });
+    return apiSuccess({ reindexed: { products: allProducts.length } });
   } catch (error) {
     return handleApiError(error);
   }

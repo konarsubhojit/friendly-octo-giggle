@@ -7,6 +7,10 @@ import { UpdateCartItemSchema } from "@/lib/validations";
 import { handleValidationError } from "@/lib/api-utils";
 import { logError } from "@/lib/logger";
 import { invalidateCartCache } from "@/lib/cache";
+import {
+  updateCartItemQuantityInRedis,
+  removeCartItemFromRedis,
+} from "@/lib/cart-redis";
 
 export const dynamic = "force-dynamic";
 
@@ -70,7 +74,10 @@ export async function PATCH(
       .set({ quantity: body.quantity, updatedAt: new Date() })
       .where(eq(cartItems.id, id));
 
-    await invalidateCartCache(session?.user?.id, sessionId);
+    await Promise.all([
+      invalidateCartCache(session?.user?.id, sessionId),
+      updateCartItemQuantityInRedis(id, body.quantity),
+    ]);
 
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -115,7 +122,10 @@ export async function DELETE(
 
     await drizzleDb.delete(cartItems).where(eq(cartItems.id, id));
 
-    await invalidateCartCache(session?.user?.id, sessionId);
+    await Promise.all([
+      invalidateCartCache(session?.user?.id, sessionId),
+      removeCartItemFromRedis(id),
+    ]);
 
     return NextResponse.json({ success: true });
   } catch (error) {

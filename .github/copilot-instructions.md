@@ -12,7 +12,7 @@ This is a highly scalable e-commerce website built with Next.js 16, TypeScript, 
 - **State Management**: Redux Toolkit 2.11 (cart, orders, admin, wishlist slices)
 - **Currency**: CurrencyContext with INR default, `useCurrency()` hook
 - **Theme**: ThemeContext with default/baby-pink themes, `useTheme()` hook
-- **Cache**: Redis (ioredis 5.9) with stampede prevention
+- **Cache**: Redis (@upstash/redis 1.37, HTTP-based) with stampede prevention and Redis Search for orders
 - **Authentication**: NextAuth.js v5 (beta.30) with Google OAuth + credentials (email/password), DrizzleAdapter
 - **Password**: bcryptjs 3.0 with password history tracking (`lib/password.ts`)
 - **Email**: Nodemailer 7.0 + SendGrid, modular email system (`lib/email/` — providers, templates, retry, failed-emails)

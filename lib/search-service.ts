@@ -6,30 +6,8 @@
  * caller to fall back to database search.
  */
 
-import { isSearchAvailable, searchOrders, searchProducts } from "./search";
+import { isSearchAvailable, searchProducts } from "./search";
 import { logError } from "./logger";
-
-/**
- * Search orders via Upstash. Returns IDs on success, null for DB fallback.
- */
-export async function searchOrderIds(
-  query: string,
-  options?: { limit?: number; status?: string },
-): Promise<string[] | null> {
-  if (!isSearchAvailable()) return null;
-
-  try {
-    const results = await searchOrders(query, options);
-    return results.map((r) => r.id);
-  } catch (error) {
-    logError({
-      error,
-      context: "search-service",
-      additionalInfo: { operation: "searchOrderIds", query },
-    });
-    return null;
-  }
-}
 
 /**
  * Search products via Upstash. Returns IDs on success, null for DB fallback.
