@@ -1,22 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 
-const {
-  mockFindMany,
-  mockFindFirst,
-  mockInsertReturning,
-  mockInsert,
-} = vi.hoisted(() => {
-  const mockInsertReturning = vi.fn();
-  const mockInsertValues = vi.fn(() => ({ returning: mockInsertReturning }));
-  const mockInsert = vi.fn(() => ({ values: mockInsertValues }));
-  return {
-    mockFindMany: vi.fn(),
-    mockFindFirst: vi.fn(),
-    mockInsertReturning,
-    mockInsert,
-  };
-});
+const { mockFindMany, mockFindFirst, mockInsertReturning, mockInsert } =
+  vi.hoisted(() => {
+    const mockInsertReturning = vi.fn();
+    const mockInsertValues = vi.fn(() => ({ returning: mockInsertReturning }));
+    const mockInsert = vi.fn(() => ({ values: mockInsertValues }));
+    return {
+      mockFindMany: vi.fn(),
+      mockFindFirst: vi.fn(),
+      mockInsertReturning,
+      mockInsert,
+    };
+  });
 
 vi.mock("@/lib/db", () => ({
   drizzleDb: {
@@ -42,7 +38,10 @@ vi.mock("@/lib/auth", () => ({ auth: vi.fn() }));
 vi.mock("@/lib/api-middleware", () => ({
   withLogging: vi.fn((handler) => handler),
 }));
-vi.mock("@/lib/validations", async () => await vi.importActual("@/lib/validations"));
+vi.mock(
+  "@/lib/validations",
+  async () => await vi.importActual("@/lib/validations"),
+);
 vi.mock("@/lib/logger", () => ({ logError: vi.fn() }));
 
 import { GET, POST } from "@/app/api/reviews/route";
@@ -126,7 +125,11 @@ describe("Reviews API", () => {
     it("returns 401 when not authenticated", async () => {
       mockAuth.mockResolvedValue(null as never);
       const response = await POST(
-        makePostRequest({ productId: "prod001", rating: 5, comment: "Great product!" }),
+        makePostRequest({
+          productId: "prod001",
+          rating: 5,
+          comment: "Great product!",
+        }),
       );
       const data = await response.json();
       expect(response.status).toBe(401);
@@ -206,7 +209,9 @@ describe("Reviews API", () => {
         expires: new Date(Date.now() + 86400000).toISOString(),
       } as never);
       mockFindFirst.mockResolvedValue(null);
-      const dbError = new Error("duplicate key value violates unique constraint");
+      const dbError = new Error(
+        "duplicate key value violates unique constraint",
+      );
       (dbError as unknown as Record<string, unknown>).code = "23505";
       mockInsertReturning.mockRejectedValue(dbError);
 
