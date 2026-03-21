@@ -28,6 +28,10 @@ vi.mock(
 );
 vi.mock("@/lib/logger", () => ({ logError: vi.fn() }));
 vi.mock("@/lib/cache", () => ({ invalidateCartCache: vi.fn() }));
+vi.mock("@/lib/cart-redis", () => ({
+  updateCartItemQuantityInRedis: vi.fn(() => Promise.resolve()),
+  removeCartItemFromRedis: vi.fn(() => Promise.resolve()),
+}));
 
 const mockAuth = vi.mocked(auth);
 const mockFindFirst = vi.mocked(drizzleDb.query.cartItems.findFirst);

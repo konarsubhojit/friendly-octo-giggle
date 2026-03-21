@@ -27,6 +27,10 @@ vi.mock("drizzle-orm", () => ({
 vi.mock("@/lib/auth", () => ({ auth: vi.fn() }));
 vi.mock("@/lib/serializers", () => ({ serializeOrders: vi.fn((o) => o) }));
 vi.mock("@/lib/logger", () => ({ logError: vi.fn() }));
+vi.mock("@/actions/orders", () => ({
+  searchAllOrdersRedis: vi.fn(() => Promise.resolve(null)),
+  createOrder: vi.fn(),
+}));
 
 import { GET } from "@/app/api/admin/orders/route";
 import { auth } from "@/lib/auth";

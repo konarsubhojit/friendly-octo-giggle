@@ -42,6 +42,17 @@ vi.mock("@/lib/logger", () => ({ logError: vi.fn() }));
 
 vi.mock("@/lib/redis", () => ({
   getCachedData: vi.fn(),
+  getRedisClient: vi.fn(() => null),
+}));
+
+vi.mock("@/lib/cart-redis", () => ({
+  fetchCartFromRedis: vi.fn(() => Promise.resolve(null)),
+  backfillCartToRedis: vi.fn(),
+  removeCartItemsByCartId: vi.fn(() => Promise.resolve()),
+  writeCartItemToRedis: vi.fn(() => Promise.resolve()),
+  writeCartItemsToRedis: vi.fn(() => Promise.resolve()),
+  updateCartItemQuantityInRedis: vi.fn(() => Promise.resolve()),
+  removeCartItemFromRedis: vi.fn(() => Promise.resolve()),
 }));
 
 vi.mock("@/lib/cache", () => ({
