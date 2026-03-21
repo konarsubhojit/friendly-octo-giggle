@@ -297,11 +297,7 @@ export const cacheShareResolve = async <T>(
     const result = await fetcher();
 
     if (result !== null) {
-      await redisClient.setex(
-        cacheKey,
-        CACHE_TTL.SHARE_RESOLVE,
-        result,
-      );
+      await redisClient.setex(cacheKey, CACHE_TTL.SHARE_RESOLVE, result);
       logCacheOperation({
         operation: "set",
         key: cacheKey,
