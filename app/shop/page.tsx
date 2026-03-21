@@ -43,7 +43,7 @@ const ShopPage = async () => {
   return (
     <div className="min-h-screen bg-warm-gradient">
       <section
-        className="pt-28 pb-4 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto"
+        className="pt-8 pb-4 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto"
         aria-labelledby="shop-heading"
       >
         <h1
