@@ -102,7 +102,9 @@ describe("ProductGrid", () => {
 
   it("renders category in filter dropdown", () => {
     renderGrid([makeProduct({ category: "Flowers" })], ["Flowers"]);
-    const select = screen.getByRole("combobox", { name: /filter by category/i });
+    const select = screen.getByRole("combobox", {
+      name: /filter by category/i,
+    });
     expect(select).toBeTruthy();
     const elements = screen.getAllByText("Flowers");
     expect(elements.length).toBeGreaterThan(0);
@@ -144,14 +146,18 @@ describe("ProductGrid", () => {
   });
   it("renders category filter dropdown with all options", () => {
     renderGrid([], ALL_CATEGORIES);
-    const select = screen.getByRole("combobox", { name: /filter by category/i });
+    const select = screen.getByRole("combobox", {
+      name: /filter by category/i,
+    });
     expect(select).toBeTruthy();
     expect(screen.getByRole("option", { name: "All" })).toBeTruthy();
     expect(screen.getByRole("option", { name: "Handbag" })).toBeTruthy();
     expect(screen.getByRole("option", { name: "Flowers" })).toBeTruthy();
     expect(screen.getByRole("option", { name: "Flower Pots" })).toBeTruthy();
     expect(screen.getByRole("option", { name: "Keychains" })).toBeTruthy();
-    expect(screen.getByRole("option", { name: "Hair Accessories" })).toBeTruthy();
+    expect(
+      screen.getByRole("option", { name: "Hair Accessories" }),
+    ).toBeTruthy();
   });
 
   it("filters products by search query", () => {
@@ -173,7 +179,9 @@ describe("ProductGrid", () => {
       ],
       ["Flowers", "Handbag"],
     );
-    const select = screen.getByRole("combobox", { name: /filter by category/i });
+    const select = screen.getByRole("combobox", {
+      name: /filter by category/i,
+    });
     fireEvent.change(select, { target: { value: "Handbag" } });
     expect(screen.getByText("Tote Bag")).toBeTruthy();
     expect(screen.queryByText("Red Rose")).toBeNull();
