@@ -61,4 +61,4 @@ export const GET = async (request: NextRequest) => {
   } catch (error) {
     return handleApiError(error);
   }
-}
+};

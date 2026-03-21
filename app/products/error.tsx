@@ -54,5 +54,5 @@ const ProductsError = ({ error, reset }: ErrorProps) => {
       </div>
     </div>
   );
-}
+};
 export default ProductsError;

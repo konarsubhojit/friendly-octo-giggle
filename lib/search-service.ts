@@ -29,7 +29,7 @@ export const searchOrderIds = async (
     });
     return null;
   }
-}
+};
 
 /**
  * Search products via Upstash. Returns IDs on success, null for DB fallback.
@@ -51,4 +51,4 @@ export const searchProductIds = async (
     });
     return null;
   }
-}
+};

@@ -265,5 +265,5 @@ const VariationList = ({
       )}
     </section>
   );
-}
+};
 export default VariationList;

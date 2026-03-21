@@ -80,7 +80,7 @@ export const PUT = async (request: Request, { params }: RouteParams) => {
   } catch (error) {
     return handleApiError(error);
   }
-}
+};
 
 export const DELETE = async (_request: Request, { params }: RouteParams) => {
   const session = await auth();
@@ -109,4 +109,4 @@ export const DELETE = async (_request: Request, { params }: RouteParams) => {
   } catch (error) {
     return handleApiError(error);
   }
-}
+};

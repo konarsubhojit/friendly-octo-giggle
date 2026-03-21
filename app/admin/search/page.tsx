@@ -24,5 +24,5 @@ const AdminSearchPage = () => {
       <SearchReindexClient configured={configured} />
     </main>
   );
-}
+};
 export default AdminSearchPage;

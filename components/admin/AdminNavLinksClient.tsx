@@ -98,7 +98,7 @@ const getAllNavItems = (failedEmailCount: number): NavItem[] => {
     }
   }
   return items;
-}
+};
 
 const DropdownGroup = ({
   group,
@@ -125,7 +125,7 @@ const DropdownGroup = ({
       ) {
         setOpen(false);
       }
-    }
+    };
     if (open) {
       document.addEventListener("mousedown", handleClickOutside);
     }
@@ -206,7 +206,7 @@ const DropdownGroup = ({
         )}
     </div>
   );
-}
+};
 
 const CommandPalette = ({
   open,
@@ -360,7 +360,7 @@ const CommandPalette = ({
       </dialog>
     </div>
   );
-}
+};
 
 export const AdminNavLinksClient = ({
   failedEmailCount,
@@ -373,7 +373,7 @@ export const AdminNavLinksClient = ({
         e.preventDefault();
         setPaletteOpen((o) => !o);
       }
-    }
+    };
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, []);
@@ -439,4 +439,4 @@ export const AdminNavLinksClient = ({
       />
     </>
   );
-}
+};

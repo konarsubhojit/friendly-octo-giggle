@@ -25,4 +25,4 @@ export const CtaButton = ({ text, href, onClick }: CtaButtonProps) => {
     );
   }
   return null;
-}
+};

@@ -87,7 +87,7 @@ const ContactInfoSection = () => {
       </div>
     </div>
   );
-}
+};
 
 const ContactPage = () => {
   return (
@@ -113,5 +113,5 @@ const ContactPage = () => {
       <Footer />
     </div>
   );
-}
+};
 export default ContactPage;

@@ -18,4 +18,4 @@ export const StockBadge = ({ stock }: { readonly stock: number }) => {
       Out of Stock
     </span>
   );
-}
+};

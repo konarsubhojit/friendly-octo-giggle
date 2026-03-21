@@ -46,5 +46,5 @@ const ProductsLoading = () => {
       </main>
     </div>
   );
-}
+};
 export default ProductsLoading;

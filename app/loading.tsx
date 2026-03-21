@@ -33,7 +33,7 @@ const FooterSkeleton = () => {
       </div>
     </footer>
   );
-}
+};
 
 const Loading = () => {
   return (
@@ -54,5 +54,5 @@ const Loading = () => {
       <FooterSkeleton />
     </div>
   );
-}
+};
 export default Loading;

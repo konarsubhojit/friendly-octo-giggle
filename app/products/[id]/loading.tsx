@@ -13,7 +13,7 @@ const ImageSkeleton = () => {
       <div className="absolute -bottom-6 -left-6 w-40 h-40 bg-gradient-to-r from-[var(--accent-sage)] to-[var(--accent-cream)] rounded-full blur-3xl opacity-30 -z-10" />
     </div>
   );
-}
+};
 
 const DetailsSkeleton = () => {
   return (
@@ -74,7 +74,7 @@ const DetailsSkeleton = () => {
       </div>
     </div>
   );
-}
+};
 
 const ProductDetailLoading = () => {
   return (
@@ -94,5 +94,5 @@ const ProductDetailLoading = () => {
       </main>
     </div>
   );
-}
+};
 export default ProductDetailLoading;

@@ -1,17 +1,31 @@
-'use client';
+"use client";
 
-import { PasswordToggleButton } from '@/components/auth/PasswordToggleButton';
-import { BASE_INPUT, borderCls, type TextInputProps } from '@/components/ui/DynamicFormTypes';
+import { PasswordToggleButton } from "@/components/auth/PasswordToggleButton";
+import {
+  BASE_INPUT,
+  borderCls,
+  type TextInputProps,
+} from "@/components/ui/DynamicFormTypes";
 
-export const TextInput = ({ field, value, describedBy, error, showPassword, onChange, onTogglePassword, onBlur }: TextInputProps) => {
-  const isPassword = field.type === 'password';
+export const TextInput = ({
+  field,
+  value,
+  describedBy,
+  error,
+  showPassword,
+  onChange,
+  onTogglePassword,
+  onBlur,
+}: TextInputProps) => {
+  const isPassword = field.type === "password";
   const hasToggle = isPassword && field.showPasswordToggle;
-  const passwordType = showPassword ? 'text' : 'password';
+  const passwordType = showPassword ? "text" : "password";
   const resolvedType = isPassword ? passwordType : field.type;
-  const labelStr = typeof field.label === 'string' ? field.label.toLowerCase() : 'password';
+  const labelStr =
+    typeof field.label === "string" ? field.label.toLowerCase() : "password";
 
   return (
-    <div className={hasToggle ? 'relative' : undefined}>
+    <div className={hasToggle ? "relative" : undefined}>
       <input
         id={field.id}
         type={resolvedType}
@@ -25,7 +39,7 @@ export const TextInput = ({ field, value, describedBy, error, showPassword, onCh
         step={field.step}
         aria-describedby={describedBy}
         onBlur={onBlur}
-        className={`${BASE_INPUT}${hasToggle ? ' pr-12' : ''} ${borderCls(Boolean(error))}`}
+        className={`${BASE_INPUT}${hasToggle ? " pr-12" : ""} ${borderCls(Boolean(error))}`}
       />
       {hasToggle && (
         <PasswordToggleButton
@@ -36,4 +50,4 @@ export const TextInput = ({ field, value, describedBy, error, showPassword, onCh
       )}
     </div>
   );
-}
+};

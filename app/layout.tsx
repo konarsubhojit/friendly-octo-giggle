@@ -19,7 +19,7 @@ const AppProviders = ({ children }: { readonly children: React.ReactNode }) => {
       </ThemeProvider>
     </StoreProvider>
   );
-}
+};
 
 const nunito = Nunito({
   subsets: ["latin"],
@@ -71,5 +71,5 @@ const RootLayout = ({
       </body>
     </html>
   );
-}
+};
 export default RootLayout;

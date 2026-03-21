@@ -44,7 +44,7 @@ const fetchAllProducts = async (): Promise<Product[]> => {
     });
 
   return _fetchPromise;
-}
+};
 
 // ─── Highlight matching text ─────────────────────────────
 
@@ -77,7 +77,7 @@ const HighlightText = ({
       })}
     </>
   );
-}
+};
 
 // ─── Component ───────────────────────────────────────────
 
@@ -114,7 +114,7 @@ const ProductSearch = ({ onNavigate }: ProductSearchProps) => {
     if (!open) return;
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") closeDialog();
-    }
+    };
     document.addEventListener("keydown", handleKey);
     return () => document.removeEventListener("keydown", handleKey);
   }, [open, closeDialog]);
@@ -126,7 +126,7 @@ const ProductSearch = ({ onNavigate }: ProductSearchProps) => {
         e.preventDefault();
         setOpen((prev) => !prev);
       }
-    }
+    };
     document.addEventListener("keydown", handleKey);
     return () => document.removeEventListener("keydown", handleKey);
   }, []);
@@ -373,5 +373,5 @@ const ProductSearch = ({ onNavigate }: ProductSearchProps) => {
         )}
     </>
   );
-}
+};
 export default ProductSearch;

@@ -72,7 +72,7 @@ const verifyProductStock = async (
   }
 
   return { product, availableStock };
-}
+};
 
 // Helper: Get or create cart for user/guest
 const getOrCreateCart = async (
@@ -124,7 +124,7 @@ const getOrCreateCart = async (
 
   // Guest user
   return createGuestCart(sessionId);
-}
+};
 
 // Helper: Add or update cart item, auto-capping to available stock
 const addOrUpdateCartItem = async (
@@ -188,13 +188,13 @@ const addOrUpdateCartItem = async (
   }
 
   return null;
-}
+};
 
 // Safely convert Date or string to ISO string (handles DB Date and Redis cached string)
 const toISOString = (value: Date | string): string => {
   if (typeof value === "string") return value;
   return value.toISOString();
-}
+};
 
 // Helper: Serialize cart for JSON response
 const serializeCart = (cart: CartWithItems) => {
@@ -225,7 +225,7 @@ const serializeCart = (cart: CartWithItems) => {
         : null,
     })),
   };
-}
+};
 
 // Helper: Fetch cart from DB
 const fetchCartFromDB = (userId?: string, sessionId?: string) => {
@@ -268,7 +268,7 @@ const fetchCartFromDB = (userId?: string, sessionId?: string) => {
     });
   }
   return Promise.resolve(undefined);
-}
+};
 
 // Helper: Resolve cart identity from request
 const getCartIdentity = (
@@ -278,14 +278,17 @@ const getCartIdentity = (
   const userId = session?.user?.id;
   const sessionId = request.cookies.get("cart_session")?.value;
   return { userId, sessionId };
-}
+};
 
 // Helper: Build cache key for cart
-const getCartCacheKey = (userId?: string, sessionId?: string): string | null => {
+const getCartCacheKey = (
+  userId?: string,
+  sessionId?: string,
+): string | null => {
   if (userId) return CACHE_KEYS.CART_BY_USER(userId);
   if (sessionId) return CACHE_KEYS.CART_BY_SESSION(sessionId);
   return null;
-}
+};
 
 // Helper: Find cart for deletion
 const findCartForDeletion = (userId?: string, sessionId?: string) => {
@@ -298,7 +301,7 @@ const findCartForDeletion = (userId?: string, sessionId?: string) => {
     });
   }
   return Promise.resolve(undefined);
-}
+};
 
 // Helper: Set guest session cookie on response
 const setGuestSessionCookie = (response: NextResponse, sessionId: string) => {
@@ -308,7 +311,7 @@ const setGuestSessionCookie = (response: NextResponse, sessionId: string) => {
     sameSite: "lax",
     maxAge: 60 * 60 * 24 * 30,
   });
-}
+};
 
 // Get cart for current user/session
 export const GET = async (request: NextRequest) => {
@@ -342,7 +345,7 @@ export const GET = async (request: NextRequest) => {
       { status: 500 },
     );
   }
-}
+};
 
 // Add item to cart
 export const POST = async (request: NextRequest) => {
@@ -449,7 +452,7 @@ export const POST = async (request: NextRequest) => {
       { status: 500 },
     );
   }
-}
+};
 
 // Clear cart (for after order is placed)
 export const DELETE = async (request: NextRequest) => {
@@ -487,4 +490,4 @@ export const DELETE = async (request: NextRequest) => {
       { status: 500 },
     );
   }
-}
+};

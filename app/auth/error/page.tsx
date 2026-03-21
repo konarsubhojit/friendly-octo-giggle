@@ -18,7 +18,7 @@ const ErrorIcon = () => {
       </svg>
     </div>
   );
-}
+};
 
 const ErrorActions = () => {
   return (
@@ -37,15 +37,13 @@ const ErrorActions = () => {
       </Link>
     </div>
   );
-}
+};
 
 interface AuthErrorPageProps {
   readonly searchParams: Promise<{ error?: string }>;
 }
 
-const AuthErrorPage = async ({
-  searchParams,
-}: AuthErrorPageProps) => {
+const AuthErrorPage = async ({ searchParams }: AuthErrorPageProps) => {
   const params = await searchParams;
   const error = params.error;
 
@@ -75,5 +73,5 @@ const AuthErrorPage = async ({
       </div>
     </div>
   );
-}
+};
 export default AuthErrorPage;

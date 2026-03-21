@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import type { ChangeEvent } from 'react';
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
-import ConfirmDialog from '@/components/ui/ConfirmDialog';
+import { useState } from "react";
+import type { ChangeEvent } from "react";
+import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
 interface AdminUser {
   readonly id: string;
@@ -15,18 +15,27 @@ interface AdminUser {
 interface RoleActionProps {
   readonly user: AdminUser;
   readonly isUpdating: boolean;
-  readonly onRoleChange: (userId: string, newRole: 'ADMIN' | 'CUSTOMER') => void;
+  readonly onRoleChange: (
+    userId: string,
+    newRole: "ADMIN" | "CUSTOMER",
+  ) => void;
 }
 
-export const RoleAction = ({ user, isUpdating, onRoleChange }: RoleActionProps) => {
-  const [pendingRole, setPendingRole] = useState<'ADMIN' | 'CUSTOMER' | null>(null);
+export const RoleAction = ({
+  user,
+  isUpdating,
+  onRoleChange,
+}: RoleActionProps) => {
+  const [pendingRole, setPendingRole] = useState<"ADMIN" | "CUSTOMER" | null>(
+    null,
+  );
 
   if (isUpdating) {
     return <LoadingSpinner size="h-4 w-4" />;
   }
 
   const handleSelectChange = (e: ChangeEvent<HTMLSelectElement>) => {
-    const newRole = e.target.value as 'ADMIN' | 'CUSTOMER';
+    const newRole = e.target.value as "ADMIN" | "CUSTOMER";
     if (newRole !== user.role) {
       setPendingRole(newRole);
     }
@@ -44,7 +53,7 @@ export const RoleAction = ({ user, isUpdating, onRoleChange }: RoleActionProps) 
       <ConfirmDialog
         isOpen={pendingRole !== null}
         title="Change User Role"
-        message={`Change ${user.name || user.email}'s role from "${user.role}" to "${pendingRole ?? ''}"?`}
+        message={`Change ${user.name || user.email}'s role from "${user.role}" to "${pendingRole ?? ""}"?`}
         confirmLabel="Yes, change role"
         variant="warning"
         loading={isUpdating}
@@ -62,4 +71,4 @@ export const RoleAction = ({ user, isUpdating, onRoleChange }: RoleActionProps) 
       </select>
     </>
   );
-}
+};

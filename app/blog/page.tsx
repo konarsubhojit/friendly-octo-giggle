@@ -72,5 +72,5 @@ const BlogPage = () => {
       <Footer />
     </div>
   );
-}
+};
 export default BlogPage;

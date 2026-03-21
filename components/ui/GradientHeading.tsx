@@ -41,4 +41,4 @@ export const GradientHeading = ({
       {children}
     </Tag>
   );
-}
+};

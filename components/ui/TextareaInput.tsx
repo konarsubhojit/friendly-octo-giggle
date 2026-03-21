@@ -1,8 +1,18 @@
-'use client';
+"use client";
 
-import { BASE_INPUT, borderCls, type InputSubProps } from '@/components/ui/DynamicFormTypes';
+import {
+  BASE_INPUT,
+  borderCls,
+  type InputSubProps,
+} from "@/components/ui/DynamicFormTypes";
 
-export const TextareaInput = ({ field, value, describedBy, error, onChange }: InputSubProps) => {
+export const TextareaInput = ({
+  field,
+  value,
+  describedBy,
+  error,
+  onChange,
+}: InputSubProps) => {
   return (
     <textarea
       id={field.id}
@@ -15,4 +25,4 @@ export const TextareaInput = ({ field, value, describedBy, error, onChange }: In
       className={`${BASE_INPUT} resize-none ${borderCls(Boolean(error))}`}
     />
   );
-}
+};

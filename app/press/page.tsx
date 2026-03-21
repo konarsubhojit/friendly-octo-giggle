@@ -83,5 +83,5 @@ const PressPage = () => {
       <Footer />
     </div>
   );
-}
+};
 export default PressPage;

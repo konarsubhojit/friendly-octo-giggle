@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
+import Link from "next/link";
 
 interface ErrorProps {
   readonly error: Error & { digest?: string };
@@ -8,7 +8,6 @@ interface ErrorProps {
 }
 
 const CartError = ({ error, reset }: ErrorProps) => {
-
   return (
     <div className="min-h-[50vh] flex items-center justify-center px-4">
       <div className="max-w-md w-full bg-[var(--surface)] rounded-2xl shadow-warm-lg border border-[var(--border-warm)] p-8 text-center">
@@ -31,10 +30,12 @@ const CartError = ({ error, reset }: ErrorProps) => {
           Error Loading Cart
         </h2>
         <p className="text-[var(--text-secondary)] mb-4">
-          {error.message || 'Failed to load your shopping cart'}
+          {error.message || "Failed to load your shopping cart"}
         </p>
         {error.digest && (
-          <p className="text-xs text-[var(--text-muted)] mb-4">Error ID: {error.digest}</p>
+          <p className="text-xs text-[var(--text-muted)] mb-4">
+            Error ID: {error.digest}
+          </p>
         )}
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <button
@@ -53,5 +54,5 @@ const CartError = ({ error, reset }: ErrorProps) => {
       </div>
     </div>
   );
-}
+};
 export default CartError;

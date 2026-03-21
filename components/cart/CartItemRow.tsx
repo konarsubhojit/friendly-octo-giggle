@@ -131,4 +131,4 @@ export const CartItemRow = ({
       </div>
     </div>
   );
-}
+};

@@ -31,7 +31,7 @@ const SignInHeader = () => {
       </p>
     </div>
   );
-}
+};
 
 interface SignInPageProps {
   readonly searchParams: Promise<{ callbackUrl?: string }>;
@@ -42,7 +42,7 @@ const SignInPage = ({ searchParams }: SignInPageProps) => {
     "use server";
     const params = await searchParams;
     await signIn("google", { redirectTo: params.callbackUrl || "/" });
-  }
+  };
 
   const handleMicrosoftSignIn = async () => {
     "use server";
@@ -50,7 +50,7 @@ const SignInPage = ({ searchParams }: SignInPageProps) => {
     await signIn("microsoft-entra-id", {
       redirectTo: params.callbackUrl || "/",
     });
-  }
+  };
 
   return (
     <div className="min-h-screen bg-warm-gradient flex items-center justify-center px-4 sm:px-6 lg:px-8">
@@ -138,5 +138,5 @@ const SignInPage = ({ searchParams }: SignInPageProps) => {
       </main>
     </div>
   );
-}
+};
 export default SignInPage;

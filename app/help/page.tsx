@@ -68,7 +68,7 @@ const FAQSection = ({ items }: { readonly items: readonly FAQItem[] }) => {
       </div>
     </section>
   );
-}
+};
 
 const HelpContactSection = () => {
   return (
@@ -95,7 +95,7 @@ const HelpContactSection = () => {
       </div>
     </section>
   );
-}
+};
 
 const HelpPage = () => {
   return (
@@ -115,5 +115,5 @@ const HelpPage = () => {
       <Footer />
     </div>
   );
-}
+};
 export default HelpPage;

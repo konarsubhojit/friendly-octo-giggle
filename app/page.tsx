@@ -15,5 +15,5 @@ const Home = async () => {
       <Hero />
     </div>
   );
-}
+};
 export default Home;

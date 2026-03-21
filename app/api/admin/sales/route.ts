@@ -128,4 +128,4 @@ export const GET = async () => {
   } catch (error) {
     return handleApiError(error);
   }
-}
+};

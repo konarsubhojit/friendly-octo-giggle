@@ -60,7 +60,7 @@ export const Badge = ({
       {children}
     </span>
   );
-}
+};
 
 // ─── Convenience helpers for common domain patterns ───────────────────────────
 
@@ -74,9 +74,9 @@ export const orderStatusVariant = (status: string): BadgeVariant => {
     CANCELLED: "error",
   };
   return map[status.toUpperCase()] ?? "neutral";
-}
+};
 
 /** Maps a user-role string to the appropriate `BadgeVariant`. */
 export const roleVariant = (role: string): BadgeVariant => {
   return role.toUpperCase() === "ADMIN" ? "primary" : "success";
-}
+};

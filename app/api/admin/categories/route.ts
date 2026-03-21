@@ -32,7 +32,7 @@ export const GET = async () => {
   } catch (error) {
     return handleApiError(error);
   }
-}
+};
 
 export const POST = async (request: Request) => {
   const session = await auth();
@@ -103,4 +103,4 @@ export const POST = async (request: Request) => {
   } catch (error) {
     return handleApiError(error);
   }
-}
+};

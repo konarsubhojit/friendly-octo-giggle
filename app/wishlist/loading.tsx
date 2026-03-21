@@ -20,5 +20,5 @@ const WishlistLoading = () => {
       </main>
     </div>
   );
-}
+};
 export default WishlistLoading;

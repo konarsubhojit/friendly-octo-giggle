@@ -44,5 +44,5 @@ const GlobalError = ({ error, reset }: ErrorProps) => {
       </div>
     </div>
   );
-}
+};
 export default GlobalError;

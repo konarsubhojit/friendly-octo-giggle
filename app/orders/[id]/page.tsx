@@ -68,7 +68,7 @@ const CancelOrderDialog = ({
       </div>
     </dialog>
   );
-}
+};
 
 interface OrderDetailPageProps {
   readonly params: Promise<{ id: string }>;
@@ -94,7 +94,7 @@ const STATUS_STEP_INDEX: Record<string, number> = {
 
 const getStepIndex = (status: string): number => {
   return STATUS_STEP_INDEX[status] ?? -1;
-}
+};
 
 const STEP_CLASSES = {
   completed: {
@@ -181,7 +181,7 @@ const StatusTimeline = ({ currentStep, isCancelled }: StatusTimelineProps) => {
       })}
     </div>
   );
-}
+};
 
 interface OrderItemRowItem {
   readonly id: string;
@@ -254,7 +254,7 @@ const OrderItemRow = ({ item, formatPrice }: OrderItemRowProps) => {
       {sections.customization}
     </div>
   );
-}
+};
 
 interface OrderSummaryHeaderProps {
   readonly orderId: string;
@@ -308,7 +308,7 @@ const OrderSummaryHeader = ({
       </div>
     </div>
   );
-}
+};
 
 const OrderDetailPage = ({ params }: OrderDetailPageProps) => {
   const { id } = use(params);
@@ -512,5 +512,5 @@ const OrderDetailPage = ({ params }: OrderDetailPageProps) => {
       </main>
     </div>
   );
-}
+};
 export default OrderDetailPage;

@@ -69,7 +69,7 @@ export const isSearchAvailable = (): boolean => {
     process.env.UPSTASH_SEARCH_REST_URL &&
     process.env.UPSTASH_SEARCH_REST_TOKEN,
   );
-}
+};
 
 const getClient = (): Search => {
   if (searchClient) return searchClient;
@@ -80,7 +80,7 @@ const getClient = (): Search => {
   });
 
   return searchClient;
-}
+};
 
 // ─── Product indexing ────────────────────────────────────
 
@@ -119,7 +119,7 @@ export const indexProduct = async (product: {
       additionalInfo: { operation: "indexProduct", id: product.id },
     });
   }
-}
+};
 
 export const indexProducts = async (
   products: Array<{
@@ -164,7 +164,7 @@ export const indexProducts = async (
       additionalInfo: { operation: "indexProducts" },
     });
   }
-}
+};
 
 export const removeProduct = async (productId: string): Promise<void> => {
   if (!isSearchAvailable()) return;
@@ -180,7 +180,7 @@ export const removeProduct = async (productId: string): Promise<void> => {
       additionalInfo: { operation: "removeProduct", id: productId },
     });
   }
-}
+};
 
 // ─── Order indexing ──────────────────────────────────────
 
@@ -220,7 +220,7 @@ export const indexOrder = async (order: {
       additionalInfo: { operation: "indexOrder", id: order.id },
     });
   }
-}
+};
 
 export const indexOrders = async (
   ordersList: Array<{
@@ -266,7 +266,7 @@ export const indexOrders = async (
       additionalInfo: { operation: "indexOrders" },
     });
   }
-}
+};
 
 // ─── Search queries ──────────────────────────────────────
 
@@ -319,7 +319,7 @@ export const searchProducts = async (
     content: r.content,
     metadata: r.metadata ?? { image: "" },
   }));
-}
+};
 
 export const searchOrders = async (
   query: string,
@@ -350,7 +350,7 @@ export const searchOrders = async (
     content: r.content,
     metadata: r.metadata ?? { createdAt: "" },
   }));
-}
+};
 
 // ─── Admin: reset indexes ────────────────────────────────
 
@@ -362,4 +362,4 @@ export const resetIndex = async (
   const client = getClient();
   const index = client.index(indexName);
   await index.reset();
-}
+};

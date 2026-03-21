@@ -7,26 +7,29 @@
  * returns 404, and the route is never bundled into the production build because
  * of the early `NODE_ENV` guard.
  */
-import { NextRequest, NextResponse } from 'next/server';
-import { encode } from 'next-auth/jwt';
+import { NextRequest, NextResponse } from "next/server";
+import { encode } from "next-auth/jwt";
 
 const COPILOT_DEV_KEY = process.env.COPILOT_DEV_KEY;
-const COOKIE_NAME = 'next-auth.session-token';
+const COOKIE_NAME = "next-auth.session-token";
 
 export const GET = async (request: NextRequest) => {
   // Hard environment guard — this endpoint must only be reachable in development.
-  if (process.env.NODE_ENV !== 'development') {
-    return NextResponse.json({ error: 'Not Found' }, { status: 404 });
+  if (process.env.NODE_ENV !== "development") {
+    return NextResponse.json({ error: "Not Found" }, { status: 404 });
   }
 
-  const key = request.headers.get('x-copilot-dev-key');
+  const key = request.headers.get("x-copilot-dev-key");
   if (!COPILOT_DEV_KEY || key !== COPILOT_DEV_KEY) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const secret = process.env.NEXTAUTH_SECRET;
   if (!secret) {
-    return NextResponse.json({ error: 'NEXTAUTH_SECRET not configured' }, { status: 500 });
+    return NextResponse.json(
+      { error: "NEXTAUTH_SECRET not configured" },
+      { status: 500 },
+    );
   }
 
   const now = Math.floor(Date.now() / 1000);
@@ -36,15 +39,15 @@ export const GET = async (request: NextRequest) => {
   // key from HKDF(secret, salt)).
   const sessionToken = await encode({
     token: {
-      sub: 'dev-copilot-admin',
-      id: 'dev-copilot-admin',
-      name: 'Copilot Admin',
-      email: 'copilot@dev.local',
+      sub: "dev-copilot-admin",
+      id: "dev-copilot-admin",
+      name: "Copilot Admin",
+      email: "copilot@dev.local",
       picture: null,
-      role: 'ADMIN',
+      role: "ADMIN",
       iat: now,
       exp: now + 86_400, // 24 h
-      jti: 'copilot-dev-jti',
+      jti: "copilot-dev-jti",
     },
     secret,
     salt: COOKIE_NAME,
@@ -53,10 +56,10 @@ export const GET = async (request: NextRequest) => {
   const response = NextResponse.json({ ok: true });
   response.cookies.set(COOKIE_NAME, sessionToken, {
     httpOnly: true,
-    sameSite: 'lax',
-    path: '/',
+    sameSite: "lax",
+    path: "/",
     secure: false, // HTTP in dev
     maxAge: 86_400,
   });
   return response;
-}
+};

@@ -14,5 +14,5 @@ const HeaderSkeleton = () => {
       </div>
     </header>
   );
-}
+};
 export default HeaderSkeleton;

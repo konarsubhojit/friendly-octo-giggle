@@ -75,7 +75,7 @@ const ShippingOptionsSection = () => {
       </div>
     </section>
   );
-}
+};
 
 const OrderProcessingSection = () => {
   return (
@@ -95,7 +95,7 @@ const OrderProcessingSection = () => {
       </p>
     </section>
   );
-}
+};
 
 const TrackingSection = () => {
   return (
@@ -112,7 +112,7 @@ const TrackingSection = () => {
       </p>
     </section>
   );
-}
+};
 
 const ShippingPage = () => {
   return (
@@ -132,5 +132,5 @@ const ShippingPage = () => {
       <Footer />
     </div>
   );
-}
+};
 export default ShippingPage;

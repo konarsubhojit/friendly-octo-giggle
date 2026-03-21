@@ -37,9 +37,7 @@ const TARGET_OPTIONS: {
   },
 ];
 
-const SearchReindexClient = ({
-  configured,
-}: SearchReindexClientProps) => {
+const SearchReindexClient = ({ configured }: SearchReindexClientProps) => {
   const [loading, setLoading] = useState(false);
   const [confirmTarget, setConfirmTarget] = useState<ReindexTarget | null>(
     null,
@@ -216,5 +214,5 @@ const SearchReindexClient = ({
       />
     </>
   );
-}
+};
 export default SearchReindexClient;

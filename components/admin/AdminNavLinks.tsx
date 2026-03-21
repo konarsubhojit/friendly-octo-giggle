@@ -19,4 +19,4 @@ export const AdminNavLinks = async () => {
   const failedCount = await fetchFailedEmailCount();
 
   return <AdminNavLinksClient failedEmailCount={failedCount} />;
-}
+};

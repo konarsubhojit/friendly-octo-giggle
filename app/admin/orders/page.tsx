@@ -368,5 +368,5 @@ const OrdersManagement = () => {
       )}
     </main>
   );
-}
+};
 export default OrdersManagement;

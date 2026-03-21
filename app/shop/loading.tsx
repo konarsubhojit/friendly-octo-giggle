@@ -38,5 +38,5 @@ const ShopLoading = () => {
       </main>
     </div>
   );
-}
+};
 export default ShopLoading;

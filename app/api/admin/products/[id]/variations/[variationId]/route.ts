@@ -134,7 +134,7 @@ export const PUT = async (
   } catch (error) {
     return handleApiError(error);
   }
-}
+};
 
 /**
  * DELETE /api/admin/products/[id]/variations/[variationId]
@@ -178,4 +178,4 @@ export const DELETE = async (
   } catch (error) {
     return handleApiError(error);
   }
-}
+};

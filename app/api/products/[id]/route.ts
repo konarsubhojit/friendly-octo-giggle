@@ -1,11 +1,11 @@
-import { NextRequest } from 'next/server';
-import { db } from '@/lib/db';
-import { apiSuccess, apiError, handleApiError } from '@/lib/api-utils';
-import { cacheProductById } from '@/lib/cache';
+import { NextRequest } from "next/server";
+import { db } from "@/lib/db";
+import { apiSuccess, apiError, handleApiError } from "@/lib/api-utils";
+import { cacheProductById } from "@/lib/cache";
 
 export const GET = async (
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) => {
   try {
     const { id } = await params;
@@ -13,11 +13,11 @@ export const GET = async (
     const product = await cacheProductById(id, () => db.products.findById(id));
 
     if (!product) {
-      return apiError('Product not found', 404);
+      return apiError("Product not found", 404);
     }
 
     return apiSuccess({ product });
   } catch (error) {
     return handleApiError(error);
   }
-}
+};

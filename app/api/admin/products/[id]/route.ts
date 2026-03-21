@@ -44,7 +44,7 @@ export const PUT = async (
   } catch (error) {
     return handleApiError(error);
   }
-}
+};
 
 export const DELETE = async (
   request: NextRequest,
@@ -78,4 +78,4 @@ export const DELETE = async (
   } catch (error) {
     return handleApiError(error);
   }
-}
+};

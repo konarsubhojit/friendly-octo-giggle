@@ -36,5 +36,5 @@ const AdminCategoriesPage = async () => {
       <CategoriesClient initialCategories={serialized} />
     </main>
   );
-}
+};
 export default AdminCategoriesPage;

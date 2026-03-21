@@ -13,5 +13,5 @@ const HeroSkeleton = () => {
       </div>
     </section>
   );
-}
+};
 export default HeroSkeleton;

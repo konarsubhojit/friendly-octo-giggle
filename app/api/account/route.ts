@@ -46,7 +46,7 @@ export const GET = async () => {
   } catch (error) {
     return handleApiError(error);
   }
-}
+};
 
 export const PATCH = async (request: NextRequest) => {
   try {
@@ -111,4 +111,4 @@ export const PATCH = async (request: NextRequest) => {
   } catch (error) {
     return handleApiError(error);
   }
-}
+};

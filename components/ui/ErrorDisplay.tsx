@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 export const ErrorDisplay = ({ error }: Readonly<{ error: string | null }>) => {
   if (!error) return null;
@@ -24,4 +24,4 @@ export const ErrorDisplay = ({ error }: Readonly<{ error: string | null }>) => {
       </div>
     </div>
   );
-}
+};

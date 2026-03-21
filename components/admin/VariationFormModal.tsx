@@ -40,7 +40,7 @@ const convertCurrency = (
 ): number => {
   const amountInBase = amount / rates[from];
   return Number((amountInBase * rates[to]).toFixed(2));
-}
+};
 
 const uploadImage = async (file: File): Promise<string> => {
   const body = new FormData();
@@ -52,7 +52,7 @@ const uploadImage = async (file: File): Promise<string> => {
   }
   const data = await res.json();
   return data.data.url;
-}
+};
 
 const VariationFormModal = ({
   productId,
@@ -555,5 +555,5 @@ const VariationFormModal = ({
       </div>
     </div>
   );
-}
+};
 export default VariationFormModal;

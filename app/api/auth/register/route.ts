@@ -1,11 +1,11 @@
-import { NextRequest } from 'next/server';
-import { registerSchema } from '@/lib/validations';
-import { apiSuccess, apiError, handleApiError } from '@/lib/api-utils';
-import { hashPassword, savePasswordToHistory } from '@/lib/password';
-import { drizzleDb } from '@/lib/db';
-import { users } from '@/lib/schema';
-import { eq, or } from 'drizzle-orm';
-import { logAuthEvent } from '@/lib/logger';
+import { NextRequest } from "next/server";
+import { registerSchema } from "@/lib/validations";
+import { apiSuccess, apiError, handleApiError } from "@/lib/api-utils";
+import { hashPassword, savePasswordToHistory } from "@/lib/password";
+import { drizzleDb } from "@/lib/db";
+import { users } from "@/lib/schema";
+import { eq, or } from "drizzle-orm";
+import { logAuthEvent } from "@/lib/logger";
 
 export const POST = async (request: NextRequest) => {
   try {
@@ -15,13 +15,13 @@ export const POST = async (request: NextRequest) => {
     if (!parseResult.success) {
       const details = parseResult.error.issues.reduce(
         (acc, err) => {
-          const path = err.path.join('.');
+          const path = err.path.join(".");
           acc[path] = err.message;
           return acc;
         },
         {} as Record<string, string>,
       );
-      return apiError('Validation failed', 400, details);
+      return apiError("Validation failed", 400, details);
     }
 
     const { name, email, phoneNumber, password } = parseResult.data;
@@ -37,8 +37,7 @@ export const POST = async (request: NextRequest) => {
     });
 
     if (existingUser) {
-      const field =
-        existingUser.email === email ? 'email' : 'phone number';
+      const field = existingUser.email === email ? "email" : "phone number";
       return apiError(`A user with this ${field} already exists`, 409);
     }
 
@@ -57,7 +56,7 @@ export const POST = async (request: NextRequest) => {
     await savePasswordToHistory(newUser.id, passwordHash);
 
     logAuthEvent({
-      event: 'register',
+      event: "register",
       userId: newUser.id,
       email,
       success: true,
@@ -67,4 +66,4 @@ export const POST = async (request: NextRequest) => {
   } catch (error) {
     return handleApiError(error);
   }
-}
+};

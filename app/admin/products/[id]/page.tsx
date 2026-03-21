@@ -88,5 +88,5 @@ const AdminProductEditPage = async ({ params }: PageProps) => {
       />
     </main>
   );
-}
+};
 export default AdminProductEditPage;

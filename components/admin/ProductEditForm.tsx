@@ -64,5 +64,5 @@ const ProductEditForm = ({ product }: ProductEditFormProps) => {
       </div>
     </div>
   );
-}
+};
 export default ProductEditForm;

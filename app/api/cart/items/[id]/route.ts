@@ -87,7 +87,7 @@ export const PATCH = async (
       { status: 500 },
     );
   }
-}
+};
 
 // Delete cart item
 export const DELETE = async (
@@ -137,4 +137,4 @@ export const DELETE = async (
       { status: 500 },
     );
   }
-}
+};

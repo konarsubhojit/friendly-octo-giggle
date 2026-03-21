@@ -23,7 +23,7 @@ const VALID_CODES = new Set<string>(Object.keys(CURRENCIES));
 
 export const isValidCurrencyCode = (code: string): code is CurrencyCode => {
   return VALID_CODES.has(code);
-}
+};
 
 /**
  * Format a price stored in INR to the target currency string.
@@ -41,4 +41,4 @@ export const formatPriceForCurrency = (
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(converted);
-}
+};

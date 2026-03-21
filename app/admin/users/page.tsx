@@ -141,5 +141,5 @@ const UsersManagement = () => {
       )}
     </main>
   );
-}
+};
 export default UsersManagement;

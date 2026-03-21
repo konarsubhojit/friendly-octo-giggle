@@ -56,4 +56,4 @@ export const ProductStockBadge = ({ stock }: { readonly stock: number }) => {
       Out of Stock
     </span>
   );
-}
+};

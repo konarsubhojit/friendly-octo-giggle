@@ -47,7 +47,7 @@ const convertCurrency = (
 ): number => {
   const amountInBase = amount / rates[from];
   return Number((amountInBase * rates[to]).toFixed(2));
-}
+};
 
 interface AdditionalImageRowProps {
   readonly idx: number;
@@ -62,7 +62,7 @@ interface AdditionalImageRowProps {
 
 const PendingFileNotice = ({ fileName }: { readonly fileName: string }) => {
   return <p className="text-xs text-green-600 mt-1">Selected: {fileName}</p>;
-}
+};
 
 const AdditionalImageRow = ({
   idx,
@@ -125,7 +125,7 @@ const AdditionalImageRow = ({
       </button>
     </div>
   );
-}
+};
 
 interface PriceFieldProps {
   readonly priceCurrency: CurrencyCode;
@@ -188,7 +188,7 @@ const PriceField = ({
       )}
     </div>
   );
-}
+};
 
 const validateName = (v: string): string | undefined => {
   if (!v.trim()) return PRODUCT_ERRORS.NAME_REQUIRED;
@@ -805,5 +805,5 @@ const ProductFormModal = ({
       </div>
     </div>
   );
-}
+};
 export default ProductFormModal;

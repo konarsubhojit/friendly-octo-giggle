@@ -202,7 +202,7 @@ const UserMenu = ({ user, menuOpen, setMenuOpen, menuRef }: UserMenuProps) => {
       )}
     </div>
   );
-}
+};
 
 interface MobileNavProps {
   readonly isLoggedIn: boolean;
@@ -326,7 +326,7 @@ const MobileNav = ({
       </nav>
     </div>
   );
-}
+};
 
 const Header = () => {
   const { data: session } = useSession();
@@ -340,7 +340,7 @@ const Header = () => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setMenuOpen(false);
       }
-    }
+    };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
@@ -473,5 +473,5 @@ const Header = () => {
       />
     </>
   );
-}
+};
 export default Header;

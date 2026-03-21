@@ -88,7 +88,7 @@ const ReturnPolicySection = () => {
       </ul>
     </section>
   );
-}
+};
 
 const RETURN_STEPS = [
   "Sign in to your account and go to My Orders.",
@@ -117,7 +117,7 @@ const ReturnStepsSection = () => {
       </ol>
     </section>
   );
-}
+};
 
 const NonReturnableSection = () => {
   return (
@@ -146,7 +146,7 @@ const NonReturnableSection = () => {
       </p>
     </section>
   );
-}
+};
 
 const ReturnsPage = () => {
   return (
@@ -167,5 +167,5 @@ const ReturnsPage = () => {
       <Footer />
     </div>
   );
-}
+};
 export default ReturnsPage;

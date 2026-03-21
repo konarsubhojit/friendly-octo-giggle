@@ -87,4 +87,4 @@ export const QuickAddButton = ({ product }: { readonly product: Product }) => {
       )}
     </button>
   );
-}
+};

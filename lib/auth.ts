@@ -29,7 +29,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             },
             async authorize(credentials) {
               const token = credentials?.devToken as string | undefined;
-              if (!process.env.COPILOT_DEV_KEY || token !== process.env.COPILOT_DEV_KEY) return null;
+              if (
+                !process.env.COPILOT_DEV_KEY ||
+                token !== process.env.COPILOT_DEV_KEY
+              )
+                return null;
               return {
                 id: "dev-copilot-admin",
                 name: "Copilot Admin",

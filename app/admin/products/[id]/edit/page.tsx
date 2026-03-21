@@ -68,5 +68,5 @@ const AdminProductEditFormPage = async ({ params }: PageProps) => {
       <ProductEditPageForm product={serializedProduct} />
     </main>
   );
-}
+};
 export default AdminProductEditFormPage;

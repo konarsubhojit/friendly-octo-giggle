@@ -368,5 +368,5 @@ const CartPage = () => {
       </main>
     </div>
   );
-}
+};
 export default CartPage;

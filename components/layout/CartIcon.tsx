@@ -29,5 +29,5 @@ const CartIcon = () => {
       )}
     </Link>
   );
-}
+};
 export default CartIcon;

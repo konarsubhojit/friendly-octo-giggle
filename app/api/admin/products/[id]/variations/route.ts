@@ -62,7 +62,7 @@ export const GET = async (
   } catch (error) {
     return handleApiError(error);
   }
-}
+};
 
 /**
  * POST /api/admin/products/[id]/variations
@@ -166,4 +166,4 @@ export const POST = async (
   } catch (error) {
     return handleApiError(error);
   }
-}
+};

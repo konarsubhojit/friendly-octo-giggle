@@ -384,5 +384,5 @@ const ProductsManagement = () => {
       )}
     </main>
   );
-}
+};
 export default ProductsManagement;

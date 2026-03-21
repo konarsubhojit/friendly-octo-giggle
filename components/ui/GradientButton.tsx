@@ -72,4 +72,4 @@ export const GradientButton = ({
       {loading && loadingText ? loadingText : children}
     </button>
   );
-}
+};

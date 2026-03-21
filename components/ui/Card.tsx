@@ -29,4 +29,4 @@ export const Card = ({ children, className = "" }: CardProps) => {
       {children}
     </div>
   );
-}
+};

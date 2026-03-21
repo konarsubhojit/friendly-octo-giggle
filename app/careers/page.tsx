@@ -136,5 +136,5 @@ const CareersPage = () => {
       <Footer />
     </div>
   );
-}
+};
 export default CareersPage;
