@@ -303,8 +303,9 @@ const useProductForm = (
         try {
           const url = await uploadSingleImage(file);
           if (url) additionalUrls.push(url);
-        } catch {
-          // eslint-disable-next-line no-empty
+        } catch (err) {
+          logError({ error: err, context: "uploadAdditionalImages" });
+          toast.error("Failed to upload one or more additional images");
         } finally {
           setUploading(false);
         }
@@ -353,7 +354,6 @@ const useProductForm = (
     try {
       const primaryUrl = await resolveImageUrl();
       if (!primaryUrl) {
-        setSaving(false);
         return;
       }
       const additionalUrls = await uploadAdditionalImages();
