@@ -23,7 +23,7 @@ export const CopilotDevLoginButton = ({ onSuccess }: CopilotDevLoginButtonProps)
     setLoading(true);
     try {
       const result = await signIn('copilot-dev', {
-        devToken: 'copilot-dev-admin-2026',
+        devToken: process.env.NEXT_PUBLIC_COPILOT_DEV_KEY,
         redirect: false,
       });
       if (result?.ok) {

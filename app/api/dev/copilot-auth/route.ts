@@ -10,7 +10,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { encode } from 'next-auth/jwt';
 
-const COPILOT_DEV_KEY = 'copilot-dev-admin-2026';
+const COPILOT_DEV_KEY = process.env.COPILOT_DEV_KEY;
 const COOKIE_NAME = 'next-auth.session-token';
 
 export const GET = async (request: NextRequest) => {
@@ -20,7 +20,7 @@ export const GET = async (request: NextRequest) => {
   }
 
   const key = request.headers.get('x-copilot-dev-key');
-  if (key !== COPILOT_DEV_KEY) {
+  if (!COPILOT_DEV_KEY || key !== COPILOT_DEV_KEY) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

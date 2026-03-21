@@ -1,0 +1,15 @@
+{
+  "servers": {
+    "sonarqube": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "oe-sonar-mcp@latest"],
+      "env": {
+        "SONARQUBE_URL": "https://sonarcloud.io",
+        "SONARQUBE_TOKEN": "${env:COPILOT_MCP_SONARQUBE_TOKEN}",
+        "SONARQUBE_ORGANIZATION": "${env:COPILOT_MCP_SONARQUBE_ORG}",
+        "LOG_LEVEL": "INFO"
+      }
+    }
+  }
+}

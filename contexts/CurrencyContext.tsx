@@ -41,7 +41,7 @@ interface CurrencyContextValue {
 
 const CurrencyContext = createContext<CurrencyContextValue | null>(null);
 
-export function CurrencyProvider({ children }: Readonly<{ children: ReactNode }>) {
+export const CurrencyProvider = ({ children }: Readonly<{ children: ReactNode }>) => {
   const [currency, setCurrency] = useState<CurrencyCode>('INR');
   const [rates, setRates] = useState<Record<CurrencyCode, number>>(FALLBACK_RATES);
   const [ratesLoading, setRatesLoading] = useState(true);
@@ -119,12 +119,12 @@ export function CurrencyProvider({ children }: Readonly<{ children: ReactNode }>
       {children}
     </CurrencyContext.Provider>
   );
-}
+};
 
-export function useCurrency(): CurrencyContextValue {
+export const useCurrency = (): CurrencyContextValue => {
   const ctx = useContext(CurrencyContext);
   if (!ctx) {
     throw new Error('useCurrency must be used within a CurrencyProvider');
   }
   return ctx;
-}
+};
