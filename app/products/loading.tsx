@@ -14,7 +14,7 @@ export default function ProductsLoading() {
   ] as const;
   return (
     <div className="min-h-screen bg-warm-gradient">
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
         {/* Page Title Skeleton */}
         <div className="mb-8">
           <div className="h-10 w-64 bg-gradient-to-r from-[var(--accent-warm)] to-[var(--accent-rose)] rounded-lg animate-pulse mb-4" />

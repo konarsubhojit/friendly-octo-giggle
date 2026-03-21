@@ -222,7 +222,7 @@ function MobileNav({
     >
       <nav className="max-w-7xl mx-auto px-4 py-4 flex flex-col gap-1">
         <div className="px-4 py-2">
-          <ProductSearch />
+          <ProductSearch onNavigate={closeMobileNav} />
         </div>
         <Link
           href="/"

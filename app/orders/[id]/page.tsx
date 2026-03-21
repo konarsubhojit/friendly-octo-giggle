@@ -287,7 +287,7 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
   if (authStatus === 'loading' || loading) {
     return (
       <div className="min-h-screen bg-warm-gradient">
-        <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
+        <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
           <div className="flex items-center justify-center py-20">
             <LoadingSpinner />
           </div>
@@ -299,7 +299,7 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
   if (!session?.user) {
     return (
       <div className="min-h-screen bg-warm-gradient">
-        <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
+        <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
           <AuthRequiredState
             callbackUrl={`/orders/${id}`}
             message="Please sign in to view order details."
@@ -312,7 +312,7 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
   if (error || !order) {
     return (
       <div className="min-h-screen bg-warm-gradient">
-        <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
+        <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
           <Card className="p-12 text-center">
             <h2 className="text-2xl font-bold text-[var(--foreground)] mb-2">{error || 'Order not found'}</h2>
             <Link href="/orders" className="mt-4 inline-block text-[var(--accent-rose)] hover:underline font-medium">
@@ -329,7 +329,7 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
 
   return (
     <div className="min-h-screen bg-warm-gradient">
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
         {/* Back link */}
         <Link href="/orders" className="inline-flex items-center gap-2 text-[var(--text-secondary)] hover:text-[var(--accent-rose)] transition-colors mb-6">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

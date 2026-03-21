@@ -6,7 +6,7 @@ export default function ShopLoading() {
   return (
     <div className="min-h-screen bg-warm-gradient">
       {/* Page header skeleton */}
-      <section className="pt-28 pb-4 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+      <section className="pt-8 pb-4 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
         <div className="h-12 w-32 bg-gradient-to-r from-[var(--accent-warm)] to-[var(--accent-rose)] rounded-xl animate-pulse mb-3" />
         <div className="h-5 w-72 bg-[var(--accent-blush)] rounded animate-pulse" />
       </section>

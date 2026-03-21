@@ -27,7 +27,7 @@ const pressReleases = [
 export default function PressPage() {
   return (
     <div className="min-h-screen bg-warm-gradient">
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
         <h1 className="text-4xl font-bold text-[var(--foreground)] mb-4">Press</h1>
         <p className="text-[var(--text-muted)] text-lg mb-12">News, press releases, and media resources from Craft &amp; Cozy.</p>
 

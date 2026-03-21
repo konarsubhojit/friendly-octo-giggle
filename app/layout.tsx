@@ -54,7 +54,7 @@ export default function RootLayout({
       <body className="antialiased">
         <AppProviders>
           <HeaderWrapper />
-          <main className="relative">{children}</main>
+          <div className="relative">{children}</div>
           <Toaster
             position="top-right"
             toastOptions={{

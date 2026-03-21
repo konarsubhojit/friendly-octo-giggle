@@ -86,7 +86,7 @@ function NonReturnableSection() {
 export default function ReturnsPage() {
   return (
     <div className="min-h-screen bg-warm-gradient">
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
         <h1 className="text-4xl font-bold text-[var(--foreground)] mb-4">Returns & Refunds</h1>
         <p className="text-[var(--text-muted)] text-lg mb-12">We want you to be 100% satisfied. Our return process is simple and hassle-free.</p>
 
