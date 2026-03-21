@@ -1,15 +1,40 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { Product } from "@/lib/types";
 import Footer from "@/components/layout/Footer";
-import ProductGrid from "@/components/sections/ProductGrid";
+import ProductGrid, {
+  type ProductGridItem,
+} from "@/components/sections/ProductGrid";
 import { db, drizzleDb } from "@/lib/db";
-import { categories as categoriesTable } from "@/lib/schema";
-import { isNull, asc } from "drizzle-orm";
+import {
+  categories as categoriesTable,
+  products as productsTable,
+} from "@/lib/schema";
+import { isNull, asc, and, count, eq, ilike, or, type SQL } from "drizzle-orm";
 import { logError } from "@/lib/logger";
 
 export const revalidate = 60;
+
+const SHOP_PAGE_SIZE = 24;
+
+interface ShopPageProps {
+  readonly searchParams?: Promise<{
+    q?: string | string[];
+    category?: string | string[];
+    page?: string | string[];
+  }>;
+}
+
+function getSingleValue(value?: string | string[]) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+function getPageNumber(value?: string | string[]) {
+  const rawValue = getSingleValue(value);
+  const page = Number.parseInt(rawValue ?? "1", 10);
+
+  return Number.isFinite(page) && page > 0 ? page : 1;
+}
 
 export const metadata: Metadata = {
   title: "Shop | The Kiyon Store",
@@ -17,28 +42,79 @@ export const metadata: Metadata = {
     "Browse our full collection of handmade crochet flowers, bags, keychains, hair accessories, and more.",
 };
 
-const ShopPage = async () => {
-  let products: Product[] = [];
-  let bestsellers: Product[] = [];
-  let categoryNames: string[] = [];
+const ShopPage = async ({ searchParams }: ShopPageProps) => {
+  const resolvedSearchParams = (await searchParams) ?? {};
+  const search = getSingleValue(resolvedSearchParams.q)?.trim() ?? "";
+  const selectedCategory =
+    getSingleValue(resolvedSearchParams.category)?.trim() ?? "All";
+  const page = getPageNumber(resolvedSearchParams.page);
+  const offset = (page - 1) * SHOP_PAGE_SIZE;
+
+  let shopData: {
+    products: ProductGridItem[];
+    bestsellers: ProductGridItem[];
+    categoryNames: string[];
+    totalCount: number;
+    hasNextPage: boolean;
+  } = {
+    products: [],
+    bestsellers: [],
+    categoryNames: [],
+    totalCount: 0,
+    hasNextPage: false,
+  };
 
   try {
-    const [allProducts, topProducts, cats] = await Promise.all([
-      db.products.findAll({ withCache: true }),
+    const productFilters: SQL[] = [isNull(productsTable.deletedAt)];
+
+    if (search) {
+      productFilters.push(
+        or(
+          ilike(productsTable.name, `%${search}%`),
+          ilike(productsTable.description, `%${search}%`),
+        ) as SQL,
+      );
+    }
+
+    if (selectedCategory !== "All") {
+      productFilters.push(eq(productsTable.category, selectedCategory));
+    }
+
+    const productWhereClause =
+      productFilters.length === 1 ? productFilters[0] : and(...productFilters);
+
+    const [allProducts, topProducts, cats, totalRows] = await Promise.all([
+      db.products.findAllMinimal({
+        limit: SHOP_PAGE_SIZE + 1,
+        offset,
+        search,
+        category: selectedCategory === "All" ? undefined : selectedCategory,
+      }),
       db.products.findBestsellers(),
       drizzleDb
         .select({ name: categoriesTable.name })
         .from(categoriesTable)
         .where(isNull(categoriesTable.deletedAt))
         .orderBy(asc(categoriesTable.sortOrder), asc(categoriesTable.name)),
+      drizzleDb
+        .select({ value: count() })
+        .from(productsTable)
+        .where(productWhereClause),
     ]);
 
-    products = allProducts;
-    bestsellers = topProducts;
-    categoryNames = cats.map((c) => c.name);
+    shopData = {
+      products: allProducts.slice(0, SHOP_PAGE_SIZE),
+      bestsellers: topProducts,
+      categoryNames: cats.map((c) => c.name),
+      totalCount: Number(totalRows[0]?.value ?? 0),
+      hasNextPage: allProducts.length > SHOP_PAGE_SIZE,
+    };
   } catch (error) {
     logError({ error, context: "shop_products_fetch" });
   }
+
+  const { products, bestsellers, categoryNames, totalCount, hasNextPage } =
+    shopData;
 
   return (
     <div className="min-h-screen bg-warm-gradient">
@@ -112,7 +188,16 @@ const ShopPage = async () => {
         )}
       </section>
 
-      <ProductGrid products={products} categories={categoryNames} />
+      <ProductGrid
+        products={products}
+        categories={categoryNames}
+        search={search}
+        selectedCategory={selectedCategory}
+        page={page}
+        totalCount={totalCount}
+        hasNextPage={hasNextPage}
+        hasPreviousPage={page > 1}
+      />
 
       <Footer />
     </div>

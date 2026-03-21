@@ -6,12 +6,18 @@ const { mockFindMany, mockCreate } = vi.hoisted(() => ({
   mockFindMany: vi.fn(),
   mockCreate: vi.fn(),
 }));
+const mockSelectWhere = vi.hoisted(() => vi.fn());
+const mockSelectFrom = vi.hoisted(() =>
+  vi.fn(() => ({ where: mockSelectWhere })),
+);
+const mockSelect = vi.hoisted(() => vi.fn(() => ({ from: mockSelectFrom })));
 
 vi.mock("@/lib/db", () => ({
   drizzleDb: {
     query: {
       products: { findMany: mockFindMany },
     },
+    select: mockSelect,
   },
   db: {
     products: {
@@ -30,6 +36,7 @@ vi.mock("@/lib/schema", () => ({
 }));
 
 vi.mock("drizzle-orm", () => ({
+  count: vi.fn(),
   desc: vi.fn((col) => col),
   lt: vi.fn(),
   ilike: vi.fn(),
@@ -75,6 +82,7 @@ const makeRequest = (params?: Record<string, string>) => {
 describe("Admin Products API", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockSelectWhere.mockResolvedValue([{ value: 0 }]);
   });
 
   describe("GET /api/admin/products", () => {
@@ -116,6 +124,7 @@ describe("Admin Products API", () => {
         expires: new Date().toISOString(),
       } as never);
       mockFindMany.mockResolvedValue(mockProducts);
+      mockSelectWhere.mockResolvedValue([{ value: 1 }]);
 
       const response = await GET(makeRequest());
       const data = await response.json();
@@ -125,6 +134,7 @@ describe("Admin Products API", () => {
       expect(data.data.products).toHaveLength(1);
       expect(data.data).toHaveProperty("hasMore");
       expect(data.data).toHaveProperty("nextCursor");
+      expect(data.data.totalCount).toBe(1);
     });
   });
 

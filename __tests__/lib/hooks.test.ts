@@ -688,4 +688,90 @@ describe("useCursorPagination", () => {
     const lastCall = mockFetch.mock.calls.at(-1)?.[0] as string;
     expect(lastCall).toContain("search=test+query");
   });
+
+  it("exposes totalCount and totalPages from the response", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            orders: mockOrders,
+            nextCursor: "cursor-2",
+            hasMore: true,
+            totalCount: 25,
+          }),
+      }),
+    );
+
+    const { result } = renderHook(() =>
+      useCursorPagination({ url: "/api/orders", dataKey: "orders" }),
+    );
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(result.current.totalCount).toBe(25);
+    expect(result.current.totalPages).toBe(3);
+  });
+
+  it("handlePageSelect jumps directly to a later page", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              orders: mockOrders,
+              nextCursor: "cursor-2",
+              hasMore: true,
+              totalCount: 25,
+            }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              orders: mockOrders,
+              nextCursor: "cursor-2",
+              hasMore: true,
+              totalCount: 25,
+            }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              orders: mockOrders,
+              nextCursor: "cursor-3",
+              hasMore: true,
+              totalCount: 25,
+            }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              orders: [mockOrders[0]],
+              nextCursor: null,
+              hasMore: false,
+              totalCount: 25,
+            }),
+        }),
+    );
+
+    const { result } = renderHook(() =>
+      useCursorPagination({ url: "/api/orders", dataKey: "orders" }),
+    );
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    act(() => {
+      result.current.handlePageSelect(3);
+    });
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.currentPage).toBe(3);
+  });
 });

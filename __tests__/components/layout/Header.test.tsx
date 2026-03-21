@@ -58,6 +58,7 @@ describe("Header", () => {
     vi.mocked(useSession).mockReturnValue({
       data: null,
       status: "unauthenticated",
+      update: vi.fn(),
     });
     render(<Header />);
     expect(screen.getByText("The Kiyon Store")).toBeTruthy();
@@ -67,6 +68,7 @@ describe("Header", () => {
     vi.mocked(useSession).mockReturnValue({
       data: null,
       status: "unauthenticated",
+      update: vi.fn(),
     });
     render(<Header />);
     const loginButton = screen.getByText("Login");
@@ -77,6 +79,7 @@ describe("Header", () => {
     vi.mocked(useSession).mockReturnValue({
       data: null,
       status: "unauthenticated",
+      update: vi.fn(),
     });
     render(<Header />);
     expect(screen.queryByTestId("login-modal")).toBeNull();
@@ -90,6 +93,7 @@ describe("Header", () => {
     vi.mocked(useSession).mockReturnValue({
       data: null,
       status: "unauthenticated",
+      update: vi.fn(),
     });
     render(<Header />);
     expect(screen.getByText("Home")).toBeTruthy();
@@ -101,6 +105,7 @@ describe("Header", () => {
     vi.mocked(useSession).mockReturnValue({
       data: {
         user: {
+          id: "user1",
           name: "Alice",
           email: "alice@example.com",
           image: null,
@@ -109,6 +114,7 @@ describe("Header", () => {
         expires: "",
       },
       status: "authenticated",
+      update: vi.fn(),
     });
     render(<Header />);
     expect(screen.getByText("A")).toBeTruthy();
@@ -118,6 +124,7 @@ describe("Header", () => {
     vi.mocked(useSession).mockReturnValue({
       data: {
         user: {
+          id: "user1",
           name: "Alice",
           email: "alice@example.com",
           image: null,
@@ -126,6 +133,7 @@ describe("Header", () => {
         expires: "",
       },
       status: "authenticated",
+      update: vi.fn(),
     });
     render(<Header />);
     expect(screen.queryByText("My Orders")).toBeNull();
@@ -136,6 +144,7 @@ describe("Header", () => {
     vi.mocked(useSession).mockReturnValue({
       data: {
         user: {
+          id: "admin1",
           name: "Admin",
           email: "admin@example.com",
           image: null,
@@ -144,6 +153,7 @@ describe("Header", () => {
         expires: "",
       },
       status: "authenticated",
+      update: vi.fn(),
     });
     render(<Header />);
     act(() => {
@@ -156,6 +166,7 @@ describe("Header", () => {
     vi.mocked(useSession).mockReturnValue({
       data: {
         user: {
+          id: "user1",
           name: "Alice",
           email: "alice@example.com",
           image: null,
@@ -164,6 +175,7 @@ describe("Header", () => {
         expires: "",
       },
       status: "authenticated",
+      update: vi.fn(),
     });
     render(<Header />);
     const menuButton = screen.getByLabelText("User menu");
@@ -183,6 +195,7 @@ describe("Header", () => {
     vi.mocked(useSession).mockReturnValue({
       data: {
         user: {
+          id: "user1",
           name: "Alice",
           email: "alice@example.com",
           image: null,
@@ -191,6 +204,7 @@ describe("Header", () => {
         expires: "",
       },
       status: "authenticated",
+      update: vi.fn(),
     });
     render(<Header />);
 
@@ -209,6 +223,7 @@ describe("Header", () => {
     vi.mocked(useSession).mockReturnValue({
       data: null,
       status: "unauthenticated",
+      update: vi.fn(),
     });
     render(<Header />);
     expect(screen.getByTestId("cart-icon")).toBeTruthy();
@@ -218,6 +233,7 @@ describe("Header", () => {
     vi.mocked(useSession).mockReturnValue({
       data: {
         user: {
+          id: "user1",
           name: "Alice",
           email: "alice@example.com",
           image: "https://example.com/avatar.jpg",
@@ -226,6 +242,7 @@ describe("Header", () => {
         expires: "",
       },
       status: "authenticated",
+      update: vi.fn(),
     });
     render(<Header />);
     const menuButton = screen.getByLabelText("User menu");
@@ -239,6 +256,7 @@ describe("Header", () => {
     vi.mocked(useSession).mockReturnValue({
       data: {
         user: {
+          id: "user1",
           name: "Alice",
           email: "alice@example.com",
           image: null,
@@ -247,6 +265,7 @@ describe("Header", () => {
         expires: "",
       },
       status: "authenticated",
+      update: vi.fn(),
     });
     const signOutMock = vi.mocked(signOut);
     render(<Header />);
@@ -267,6 +286,7 @@ describe("Header", () => {
     vi.mocked(useSession).mockReturnValue({
       data: {
         user: {
+          id: "user1",
           name: "Alice",
           email: "alice@example.com",
           image: null,
@@ -275,6 +295,7 @@ describe("Header", () => {
         expires: "",
       },
       status: "authenticated",
+      update: vi.fn(),
     });
     render(<Header />);
 
@@ -296,6 +317,7 @@ describe("Header", () => {
     vi.mocked(useSession).mockReturnValue({
       data: {
         user: {
+          id: "admin1",
           name: "Admin",
           email: "admin@example.com",
           image: null,
@@ -304,6 +326,7 @@ describe("Header", () => {
         expires: "",
       },
       status: "authenticated",
+      update: vi.fn(),
     });
     render(<Header />);
 
@@ -323,6 +346,7 @@ describe("Header", () => {
     vi.mocked(useSession).mockReturnValue({
       data: {
         user: {
+          id: "user1",
           name: "Alice",
           email: "alice@example.com",
           image: null,
@@ -331,6 +355,7 @@ describe("Header", () => {
         expires: "",
       },
       status: "authenticated",
+      update: vi.fn(),
     });
     render(<Header />);
 
@@ -347,6 +372,7 @@ describe("Header", () => {
     vi.mocked(useSession).mockReturnValue({
       data: null,
       status: "unauthenticated",
+      update: vi.fn(),
     });
     render(<Header />);
     act(() => {
@@ -361,6 +387,7 @@ describe("Header", () => {
     vi.mocked(useSession).mockReturnValue({
       data: null,
       status: "unauthenticated",
+      update: vi.fn(),
     });
     render(<Header />);
     const hamburger = screen.getByLabelText("Open menu");
@@ -377,6 +404,7 @@ describe("Header", () => {
     vi.mocked(useSession).mockReturnValue({
       data: null,
       status: "unauthenticated",
+      update: vi.fn(),
     });
     render(<Header />);
     act(() => {

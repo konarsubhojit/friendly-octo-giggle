@@ -12,7 +12,7 @@ import { GradientHeading } from "@/components/ui/GradientHeading";
 import { OrderListCard } from "@/components/orders/OrderListCard";
 import { OrdersSearchForm } from "@/components/orders/OrdersSearchForm";
 import { CursorPaginationBar } from "@/components/ui/CursorPaginationBar";
-
+export const dynamic = "force-dynamic";
 interface OrderSummary {
   id: string;
   status: string;
@@ -68,12 +68,16 @@ export default function OrdersPage() {
     search,
     searchInput,
     hasMore,
-    cursorHistoryLength,
     currentPage,
+    totalCount,
+    totalPages,
     setSearchInput,
     handleSearch,
+    handleFirst,
     handleNext,
     handlePrev,
+    handleLast,
+    handlePageSelect,
     handleRefresh,
   } = useCursorPagination<OrderSummary>({
     url: "/api/orders",
@@ -130,11 +134,16 @@ export default function OrdersPage() {
 
         <CursorPaginationBar
           currentPage={currentPage}
+          totalCount={totalCount}
+          pageSize={10}
           hasMore={hasMore}
           loading={loading}
-          cursorHistoryLength={cursorHistoryLength}
+          totalPages={totalPages}
+          onFirst={handleFirst}
           onPrev={handlePrev}
           onNext={handleNext}
+          onLast={handleLast}
+          onPageSelect={handlePageSelect}
           variant="warm"
         />
       </>

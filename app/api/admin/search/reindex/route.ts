@@ -3,14 +3,26 @@ import { auth } from "@/lib/auth";
 import { drizzleDb } from "@/lib/db";
 import { products } from "@/lib/schema";
 import { isNull } from "drizzle-orm";
-import { isSearchAvailable, resetIndex, indexProducts } from "@/lib/search";
+import {
+  getIndexInfo,
+  indexProducts,
+  isSearchAvailable,
+  resetIndex,
+} from "@/lib/search";
+import { z } from "zod";
+
+const reindexRequestSchema = z
+  .object({
+    target: z.string().optional(),
+  })
+  .optional();
 
 /**
  * POST /api/admin/search/reindex
  *
  * Full reindex of products into Upstash Search.
  */
-export async function POST(_request: Request) {
+export async function POST(request: Request) {
   const session = await auth();
   if (!session?.user) {
     return apiError("Not authenticated", 401);
@@ -24,6 +36,17 @@ export async function POST(_request: Request) {
   }
 
   try {
+    const body = reindexRequestSchema.parse(
+      await request.json().catch(() => ({})),
+    );
+
+    if (body?.target && body.target !== "products") {
+      return apiError(
+        "Only product search can be reindexed here. Orders search is managed in Redis Search.",
+        400,
+      );
+    }
+
     await resetIndex("products");
 
     const allProducts = await drizzleDb.query.products.findMany({
@@ -40,7 +63,12 @@ export async function POST(_request: Request) {
         stock: p.stock,
         image: p.image,
       })),
+      { throwOnError: true },
     );
+
+    if (allProducts.length > 0) {
+      await getIndexInfo("products");
+    }
 
     return apiSuccess({ reindexed: { products: allProducts.length } });
   } catch (error) {

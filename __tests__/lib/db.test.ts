@@ -115,6 +115,8 @@ vi.mock("drizzle-orm", () => ({
   desc: vi.fn((col: unknown) => ({ op: "desc", col })),
   and: vi.fn((...args: unknown[]) => ({ op: "and", args })),
   isNull: vi.fn((col: unknown) => ({ op: "isNull", col })),
+  ilike: vi.fn((...args: unknown[]) => ({ op: "ilike", args })),
+  or: vi.fn((...args: unknown[]) => ({ op: "or", args })),
 }));
 import { db } from "@/lib/db";
 const now = new Date("2025-01-15T10:00:00.000Z");
@@ -233,6 +235,7 @@ describe("db.products", () => {
     const minimalRow = {
       id: "abc1234",
       name: "Test Product",
+      description: "A test product",
       price: 29.99,
       stock: 10,
       category: "Electronics",
@@ -266,6 +269,19 @@ describe("db.products", () => {
       const result = await db.products.findAllMinimal({
         withCache: true,
         limit: 5,
+      });
+
+      expect(result).toEqual([minimalRow]);
+      expect(mockCacheProductsList).not.toHaveBeenCalled();
+    });
+
+    it("skips cache when filters are provided", async () => {
+      mockFindMany.mockResolvedValue([minimalRow]);
+
+      const result = await db.products.findAllMinimal({
+        withCache: true,
+        search: "test",
+        category: "Electronics",
       });
 
       expect(result).toEqual([minimalRow]);

@@ -1,17 +1,42 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-// Mock @upstash/search before importing the module under test
-const mockUpsert = vi.fn().mockResolvedValue("Success");
-const mockDelete = vi.fn().mockResolvedValue({ deleted: 1 });
-const mockSearch = vi.fn().mockResolvedValue({ results: [] });
-const mockReset = vi.fn().mockResolvedValue(undefined);
+const {
+  mockDelete,
+  mockIndex,
+  mockInfo,
+  mockReset,
+  mockSearch,
+  mockSelect,
+  mockUpsert,
+} = vi.hoisted(() => {
+  const hoistedMockUpsert = vi.fn().mockResolvedValue("Success");
+  const hoistedMockDelete = vi.fn().mockResolvedValue({ deleted: 1 });
+  const hoistedMockSearch = vi.fn().mockResolvedValue({ results: [] });
+  const hoistedMockReset = vi.fn().mockResolvedValue(undefined);
+  const hoistedMockInfo = vi.fn().mockResolvedValue({ name: "products" });
+  const hoistedMockWhere = vi
+    .fn()
+    .mockResolvedValue([{ name: "Handbag" }, { name: "Flowers" }]);
+  const hoistedMockFrom = vi.fn(() => ({ where: hoistedMockWhere }));
+  const hoistedMockSelect = vi.fn(() => ({ from: hoistedMockFrom }));
+  const hoistedMockIndex = vi.fn(() => ({
+    upsert: hoistedMockUpsert,
+    delete: hoistedMockDelete,
+    search: hoistedMockSearch,
+    reset: hoistedMockReset,
+    info: hoistedMockInfo,
+  }));
 
-const mockIndex = vi.fn(() => ({
-  upsert: mockUpsert,
-  delete: mockDelete,
-  search: mockSearch,
-  reset: mockReset,
-}));
+  return {
+    mockDelete: hoistedMockDelete,
+    mockIndex: hoistedMockIndex,
+    mockInfo: hoistedMockInfo,
+    mockReset: hoistedMockReset,
+    mockSearch: hoistedMockSearch,
+    mockSelect: hoistedMockSelect,
+    mockUpsert: hoistedMockUpsert,
+  };
+});
 
 vi.mock("@upstash/search", () => ({
   Search: vi.fn().mockImplementation(function () {
@@ -23,15 +48,9 @@ vi.mock("@/lib/logger", () => ({
   logError: vi.fn(),
 }));
 
-const mockWhere = vi
-  .fn()
-  .mockResolvedValue([{ name: "Handbag" }, { name: "Flowers" }]);
-const mockFrom = vi.fn(() => ({ where: mockWhere }));
-const mockSelect = vi.fn(() => ({ from: mockFrom }));
-
 vi.mock("@/lib/db", () => ({
   drizzleDb: {
-    select: (...args: unknown[]) => mockSelect(...args),
+    select: mockSelect,
   },
 }));
 vi.mock("@/lib/schema", () => ({
@@ -48,11 +67,24 @@ import {
   removeProduct,
   searchProducts,
   resetIndex,
+  getIndexInfo,
 } from "@/lib/search";
 
 describe("lib/search", () => {
   let origUrl: string | undefined;
   let origToken: string | undefined;
+
+  const restoreEnvValue = (
+    key: "UPSTASH_SEARCH_REST_URL" | "UPSTASH_SEARCH_REST_TOKEN",
+    value: string | undefined,
+  ) => {
+    if (value == null) {
+      delete process.env[key];
+      return;
+    }
+
+    process.env[key] = value;
+  };
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -65,16 +97,8 @@ describe("lib/search", () => {
 
   afterEach(() => {
     // Restore original env vars
-    if (origUrl !== undefined) {
-      process.env.UPSTASH_SEARCH_REST_URL = origUrl;
-    } else {
-      delete process.env.UPSTASH_SEARCH_REST_URL;
-    }
-    if (origToken !== undefined) {
-      process.env.UPSTASH_SEARCH_REST_TOKEN = origToken;
-    } else {
-      delete process.env.UPSTASH_SEARCH_REST_TOKEN;
-    }
+    restoreEnvValue("UPSTASH_SEARCH_REST_URL", origUrl);
+    restoreEnvValue("UPSTASH_SEARCH_REST_TOKEN", origToken);
   });
 
   // ─── isSearchAvailable ──────────────────────────────────
@@ -96,15 +120,17 @@ describe("lib/search", () => {
 
   describe("indexProduct", () => {
     it("upserts a single product document", async () => {
-      await indexProduct({
-        id: "abc1234",
-        name: "Cotton Shirt",
-        description: "Soft cotton shirt",
-        category: "Clothing",
-        price: 29.99,
-        stock: 50,
-        image: "https://example.com/shirt.jpg",
-      });
+      await expect(
+        indexProduct({
+          id: "abc1234",
+          name: "Cotton Shirt",
+          description: "Soft cotton shirt",
+          category: "Clothing",
+          price: 29.99,
+          stock: 50,
+          image: "https://example.com/shirt.jpg",
+        }),
+      ).resolves.toBe(true);
 
       expect(mockIndex).toHaveBeenCalledWith("products");
       expect(mockUpsert).toHaveBeenCalledWith({
@@ -126,17 +152,39 @@ describe("lib/search", () => {
       delete process.env.UPSTASH_SEARCH_REST_URL;
       delete process.env.UPSTASH_SEARCH_REST_TOKEN;
 
-      await indexProduct({
-        id: "abc1234",
-        name: "Test",
-        description: "Test",
-        category: "Test",
-        price: 10,
-        stock: 1,
-        image: "https://example.com/test.jpg",
-      });
+      await expect(
+        indexProduct({
+          id: "abc1234",
+          name: "Test",
+          description: "Test",
+          category: "Test",
+          price: 10,
+          stock: 1,
+          image: "https://example.com/test.jpg",
+        }),
+      ).resolves.toBe(false);
 
       expect(mockUpsert).not.toHaveBeenCalled();
+    });
+
+    it("throws when requested and indexing fails", async () => {
+      const error = new Error("Upstash failure");
+      mockUpsert.mockRejectedValueOnce(error);
+
+      await expect(
+        indexProduct(
+          {
+            id: "abc1234",
+            name: "Test",
+            description: "Test",
+            category: "Test",
+            price: 10,
+            stock: 1,
+            image: "https://example.com/test.jpg",
+          },
+          { throwOnError: true },
+        ),
+      ).rejects.toThrow("Upstash failure");
     });
   });
 
@@ -165,7 +213,7 @@ describe("lib/search", () => {
         },
       ];
 
-      await indexProducts(products);
+      await expect(indexProducts(products)).resolves.toBe(true);
 
       expect(mockUpsert).toHaveBeenCalledWith(
         products.map((p) => ({
@@ -183,8 +231,47 @@ describe("lib/search", () => {
     });
 
     it("skips when list is empty", async () => {
-      await indexProducts([]);
+      await expect(indexProducts([])).resolves.toBe(true);
       expect(mockUpsert).not.toHaveBeenCalled();
+    });
+
+    it("splits writes into batches of 100", async () => {
+      const products = Array.from({ length: 101 }, (_, index) => ({
+        id: `p${index + 1}`,
+        name: `Product ${index + 1}`,
+        description: `Desc ${index + 1}`,
+        category: "Cat A",
+        price: 10 + index,
+        stock: 5 + index,
+        image: `https://example.com/${index + 1}.jpg`,
+      }));
+
+      await expect(indexProducts(products)).resolves.toBe(true);
+
+      expect(mockUpsert).toHaveBeenCalledTimes(2);
+      expect(mockUpsert.mock.calls[0]?.[0]).toHaveLength(100);
+      expect(mockUpsert.mock.calls[1]?.[0]).toHaveLength(1);
+    });
+
+    it("throws when requested and batch indexing fails", async () => {
+      mockUpsert.mockRejectedValueOnce(new Error("Batch failure"));
+
+      await expect(
+        indexProducts(
+          [
+            {
+              id: "p1",
+              name: "Product 1",
+              description: "Desc 1",
+              category: "Cat A",
+              price: 10,
+              stock: 5,
+              image: "https://example.com/1.jpg",
+            },
+          ],
+          { throwOnError: true },
+        ),
+      ).rejects.toThrow("Batch failure");
     });
   });
 
@@ -260,6 +347,16 @@ describe("lib/search", () => {
 
       expect(mockIndex).toHaveBeenCalledWith("products");
       expect(mockReset).toHaveBeenCalled();
+    });
+  });
+
+  describe("getIndexInfo", () => {
+    it("returns index metadata", async () => {
+      await expect(getIndexInfo("products")).resolves.toEqual({
+        name: "products",
+      });
+
+      expect(mockInfo).toHaveBeenCalled();
     });
   });
 });

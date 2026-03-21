@@ -17,7 +17,8 @@ export default function AdminSearchPage() {
           Search Index
         </h2>
         <p className="text-gray-600 dark:text-gray-400 mt-1">
-          Manage Upstash Search indexes for products and orders
+          Manage the Upstash Search index for products. Orders search is handled
+          separately in Redis Search.
         </p>
       </div>
 

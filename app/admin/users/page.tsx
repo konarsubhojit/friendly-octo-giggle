@@ -41,12 +41,16 @@ export default function UsersManagement() {
     search,
     searchInput,
     hasMore,
-    cursorHistoryLength,
     currentPage,
+    totalCount,
+    totalPages,
     setSearchInput,
     handleSearch,
+    handleFirst,
     handleNext,
     handlePrev,
+    handleLast,
+    handlePageSelect,
     handleRefresh,
   } = useCursorPagination<AdminUser>({
     url: "/api/admin/users",
@@ -86,11 +90,16 @@ export default function UsersManagement() {
         />
         <CursorPaginationBar
           currentPage={currentPage}
+          totalCount={totalCount}
+          pageSize={10}
           hasMore={hasMore}
           loading={loading}
-          cursorHistoryLength={cursorHistoryLength}
+          totalPages={totalPages}
+          onFirst={handleFirst}
           onPrev={handlePrev}
           onNext={handleNext}
+          onLast={handleLast}
+          onPageSelect={handlePageSelect}
         />
       </>
     );

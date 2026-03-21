@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { Product } from "@/lib/types";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { GradientHeading } from "@/components/ui/GradientHeading";
@@ -12,19 +12,55 @@ import { QuickAddButton } from "@/components/sections/QuickAddButton";
 import { FlowerAccent } from "@/components/ui/DecorativeElements";
 import { WishlistButton } from "@/components/ui/WishlistButton";
 
+export type ProductGridItem = Pick<
+  Product,
+  "id" | "name" | "description" | "price" | "image" | "stock" | "category"
+>;
+
 interface ProductGridProps {
-  readonly products: Product[];
+  readonly products: ProductGridItem[];
   readonly categories?: string[];
+  readonly search?: string;
+  readonly selectedCategory?: string;
+  readonly page?: number;
+  readonly totalCount?: number;
+  readonly hasNextPage?: boolean;
+  readonly hasPreviousPage?: boolean;
 }
 
 interface ProductCardProps {
-  readonly product: Product;
+  readonly product: ProductGridItem;
   readonly formatPrice: (amount: number) => string;
   readonly index: number;
 }
 
 interface ProductImageAreaProps {
-  readonly product: Product;
+  readonly product: ProductGridItem;
+}
+
+const DEFAULT_CATEGORY = "All";
+
+function createPageHref(
+  page: number,
+  search: string,
+  selectedCategory: string,
+) {
+  const params = new URLSearchParams();
+
+  if (search) {
+    params.set("q", search);
+  }
+
+  if (selectedCategory !== DEFAULT_CATEGORY) {
+    params.set("category", selectedCategory);
+  }
+
+  if (page > 1) {
+    params.set("page", String(page));
+  }
+
+  const queryString = params.toString();
+  return queryString ? `/shop?${queryString}#products` : "/shop#products";
 }
 
 const ProductImageArea = ({ product }: ProductImageAreaProps) => {
@@ -78,37 +114,26 @@ const ProductCard = ({ product, formatPrice, index }: ProductCardProps) => {
   );
 };
 
-const ProductGrid = ({ products, categories = [] }: ProductGridProps) => {
+const ProductGrid = ({
+  products,
+  categories = [],
+  search = "",
+  selectedCategory = DEFAULT_CATEGORY,
+  page = 1,
+  totalCount = products.length,
+  hasNextPage = false,
+  hasPreviousPage = false,
+}: ProductGridProps) => {
   const { formatPrice } = useCurrency();
-  const [search, setSearch] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("All");
+  const router = useRouter();
 
-  const categoryFilters = ["All", ...categories];
-
-  const handleSearchChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => setSearch(e.target.value),
-    [],
-  );
-
-  const handleCategoryChange = useCallback(
-    (category: string) => setSelectedCategory(category),
-    [],
-  );
-
-  const filtered = useMemo(() => {
-    const searchLower = search.toLowerCase();
-    const categoryLower = selectedCategory.toLowerCase();
-    return products.filter((p) => {
-      const matchesSearch = p.name.toLowerCase().includes(searchLower);
-      const matchesCategory =
-        selectedCategory === "All" ||
-        p.category?.toLowerCase() === categoryLower;
-      return matchesSearch && matchesCategory;
-    });
-  }, [products, search, selectedCategory]);
+  const categoryFilters = [DEFAULT_CATEGORY, ...categories];
+  const totalPages = Math.max(1, Math.ceil(totalCount / 24));
+  const rangeStart = totalCount === 0 ? 0 : (page - 1) * 24 + 1;
+  const rangeEnd = totalCount === 0 ? 0 : Math.min(page * 24, totalCount);
 
   const emptyMessage =
-    search || selectedCategory !== "All"
+    search || selectedCategory !== DEFAULT_CATEGORY
       ? "Try adjusting your search or category filter."
       : undefined;
 
@@ -125,10 +150,15 @@ const ProductGrid = ({ products, categories = [] }: ProductGridProps) => {
         <FlowerAccent className="w-6 h-6 opacity-70" />
       </div>
       <p className="text-[var(--text-muted)] text-sm mb-8">
-        Browse our complete handmade collection — crafted fresh for you.
+        Browse our complete handmade collection — {totalCount} items crafted
+        fresh for you.
       </p>
 
-      <div className="mb-8 flex flex-col sm:flex-row gap-3">
+      <form
+        action="/shop#products"
+        method="get"
+        className="mb-8 flex flex-col sm:flex-row gap-3 items-start"
+      >
         <div className="relative flex-1 max-w-md">
           <svg
             className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--accent-rose)]"
@@ -146,11 +176,11 @@ const ProductGrid = ({ products, categories = [] }: ProductGridProps) => {
           </svg>
           <input
             type="search"
+            name="q"
             placeholder="Search products..."
-            value={search}
-            onChange={handleSearchChange}
+            defaultValue={search}
             className="w-full pl-11 pr-4 py-3 border border-[var(--border-warm)] rounded-full focus:outline-none focus:ring-2 focus:ring-[var(--accent-rose)]/30 focus:border-[var(--accent-rose)] bg-[var(--surface)] text-[var(--foreground)] placeholder-[var(--text-muted)] shadow-warm transition-all duration-200"
-            aria-label="Search products by name"
+            aria-label="Search products"
           />
         </div>
 
@@ -177,8 +207,8 @@ const ProductGrid = ({ products, categories = [] }: ProductGridProps) => {
           </label>
           <select
             id="category-filter"
-            value={selectedCategory}
-            onChange={(e) => handleCategoryChange(e.target.value)}
+            name="category"
+            defaultValue={selectedCategory}
             className="px-3 py-2.5 border border-[var(--border-warm)] rounded-full bg-[var(--surface)] text-[var(--foreground)] text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[var(--accent-rose)]/30 focus:border-[var(--accent-rose)] shadow-warm cursor-pointer transition-all duration-200"
             aria-label="Filter by category"
           >
@@ -189,21 +219,149 @@ const ProductGrid = ({ products, categories = [] }: ProductGridProps) => {
             ))}
           </select>
         </div>
-      </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            type="submit"
+            className="px-4 py-2.5 rounded-full bg-[var(--btn-primary)] text-white text-sm font-semibold shadow-warm hover:shadow-warm-lg transition-all duration-200"
+          >
+            Apply
+          </button>
+          {(search || selectedCategory !== DEFAULT_CATEGORY) && (
+            <Link
+              href="/shop#products"
+              className="px-4 py-2.5 rounded-full border border-[var(--border-warm)] bg-[var(--surface)] text-[var(--foreground)] text-sm font-semibold shadow-warm hover:border-[var(--accent-rose)] transition-colors duration-200"
+            >
+              Reset
+            </Link>
+          )}
+        </div>
+      </form>
 
-      {filtered.length === 0 ? (
+      {products.length === 0 ? (
         <EmptyState title="No products found" message={emptyMessage} />
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filtered.map((product, index) => (
-            <ProductCard
-              key={product.id}
-              product={product}
-              formatPrice={formatPrice}
-              index={index}
-            />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {products.map((product, index) => (
+              <ProductCard
+                key={product.id}
+                product={product}
+                formatPrice={formatPrice}
+                index={index}
+              />
+            ))}
+          </div>
+
+          {totalCount > 0 && (
+            <div className="mt-8 flex flex-col gap-3 border-t border-[var(--border-warm)] pt-4 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex items-center gap-2 self-start lg:self-auto">
+                {hasPreviousPage ? (
+                  <Link
+                    href={createPageHref(1, search, selectedCategory)}
+                    className="px-4 py-2.5 rounded-full border border-[var(--border-warm)] bg-[var(--surface)] text-[var(--foreground)] text-sm font-semibold shadow-warm hover:border-[var(--accent-rose)] transition-colors duration-200"
+                  >
+                    « First
+                  </Link>
+                ) : (
+                  <button
+                    type="button"
+                    disabled
+                    className="px-4 py-2.5 rounded-full border border-[var(--border-warm)] bg-[var(--surface)] text-[var(--foreground)] text-sm font-semibold shadow-warm opacity-40 cursor-not-allowed"
+                  >
+                    « First
+                  </button>
+                )}
+
+                {hasPreviousPage ? (
+                  <Link
+                    href={createPageHref(page - 1, search, selectedCategory)}
+                    className="px-4 py-2.5 rounded-full border border-[var(--border-warm)] bg-[var(--surface)] text-[var(--foreground)] text-sm font-semibold shadow-warm hover:border-[var(--accent-rose)] transition-colors duration-200"
+                  >
+                    ← Previous
+                  </Link>
+                ) : (
+                  <button
+                    type="button"
+                    disabled
+                    className="px-4 py-2.5 rounded-full border border-[var(--border-warm)] bg-[var(--surface)] text-[var(--foreground)] text-sm font-semibold shadow-warm opacity-40 cursor-not-allowed"
+                  >
+                    ← Previous
+                  </button>
+                )}
+              </div>
+
+              <div className="flex flex-col items-start gap-2 lg:items-center">
+                <p className="text-sm font-medium text-[var(--text-muted)]">
+                  Showing {rangeStart}-{rangeEnd} of {totalCount}
+                </p>
+                <label className="flex items-center gap-2 text-sm font-medium text-[var(--text-muted)]">
+                  <span>Jump to page</span>
+                  <select
+                    value={page}
+                    onChange={(event) => {
+                      const targetPage = Number.parseInt(
+                        event.target.value,
+                        10,
+                      );
+                      if (Number.isFinite(targetPage)) {
+                        router.push(
+                          createPageHref(targetPage, search, selectedCategory),
+                        );
+                      }
+                    }}
+                    className="px-3 py-2 border border-[var(--border-warm)] rounded-full bg-[var(--surface)] text-[var(--foreground)] text-sm font-medium shadow-warm focus:outline-none focus:ring-2 focus:ring-[var(--accent-rose)]/30"
+                    aria-label="Jump to page"
+                  >
+                    {Array.from({ length: totalPages }, (_, index) => {
+                      const targetPage = index + 1;
+                      return (
+                        <option key={targetPage} value={targetPage}>
+                          Page {targetPage} of {totalPages}
+                        </option>
+                      );
+                    })}
+                  </select>
+                </label>
+              </div>
+
+              <div className="flex items-center gap-2 self-start lg:self-auto">
+                {hasNextPage ? (
+                  <Link
+                    href={createPageHref(page + 1, search, selectedCategory)}
+                    className="px-4 py-2.5 rounded-full border border-[var(--border-warm)] bg-[var(--surface)] text-[var(--foreground)] text-sm font-semibold shadow-warm hover:border-[var(--accent-rose)] transition-colors duration-200"
+                  >
+                    Next →
+                  </Link>
+                ) : (
+                  <button
+                    type="button"
+                    disabled
+                    className="px-4 py-2.5 rounded-full border border-[var(--border-warm)] bg-[var(--surface)] text-[var(--foreground)] text-sm font-semibold shadow-warm opacity-40 cursor-not-allowed"
+                  >
+                    Next →
+                  </button>
+                )}
+
+                {hasNextPage ? (
+                  <Link
+                    href={createPageHref(totalPages, search, selectedCategory)}
+                    className="px-4 py-2.5 rounded-full border border-[var(--border-warm)] bg-[var(--surface)] text-[var(--foreground)] text-sm font-semibold shadow-warm hover:border-[var(--accent-rose)] transition-colors duration-200"
+                  >
+                    Last »
+                  </Link>
+                ) : (
+                  <button
+                    type="button"
+                    disabled
+                    className="px-4 py-2.5 rounded-full border border-[var(--border-warm)] bg-[var(--surface)] text-[var(--foreground)] text-sm font-semibold shadow-warm opacity-40 cursor-not-allowed"
+                  >
+                    Last »
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+        </>
       )}
     </main>
   );

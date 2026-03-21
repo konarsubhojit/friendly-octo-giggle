@@ -32,6 +32,7 @@ vi.mock("@/lib/auth", () => ({
 vi.mock("@/lib/redis", () => ({
   getCachedData: vi.fn(),
   invalidateCache: vi.fn(),
+  getRedisClient: vi.fn(() => null),
 }));
 
 vi.mock("@/lib/cache", () => ({

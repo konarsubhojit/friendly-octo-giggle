@@ -43,6 +43,7 @@ describe("GET /api/products/[id]", () => {
     price: 29.99,
     stock: 100,
     image: "https://example.com/image.jpg",
+    images: [],
     category: "Electronics",
     deletedAt: null,
     createdAt: "2024-01-01T00:00:00.000Z",

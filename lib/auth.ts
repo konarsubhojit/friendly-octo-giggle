@@ -18,34 +18,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     verificationTokensTable: verificationTokens,
   }) as Adapter,
   providers: [
-    // DEV-ONLY: Copilot admin bypass — enabled only in development
-    ...(process.env.NODE_ENV === "development"
-      ? [
-          Credentials({
-            id: "copilot-dev",
-            name: "Copilot Admin (Dev Only)",
-            credentials: {
-              devToken: { label: "Dev Token", type: "text" },
-            },
-            async authorize(credentials) {
-              const token = credentials?.devToken as string | undefined;
-              if (
-                !process.env.COPILOT_DEV_KEY ||
-                token !== process.env.COPILOT_DEV_KEY
-              )
-                return null;
-              return {
-                id: "dev-copilot-admin",
-                name: "Copilot Admin",
-                email: "copilot@dev.local",
-                image: null,
-                role: "ADMIN" as const,
-                phoneNumber: null,
-              };
-            },
-          }),
-        ]
-      : []),
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID
         ? process.env.GOOGLE_CLIENT_ID
@@ -149,9 +121,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   callbacks: {
     session({ session, token }) {
       if (session.user) {
-        session.user.id = token.id;
-        session.user.role = token.role || "CUSTOMER";
-        session.user.phoneNumber = token.phoneNumber || undefined;
+        session.user.id = token.id as string;
+        session.user.role = (token.role as "ADMIN" | "CUSTOMER") || "CUSTOMER";
+        session.user.phoneNumber =
+          (token.phoneNumber as string | null | undefined) || undefined;
       }
       return session;
     },

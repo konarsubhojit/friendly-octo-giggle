@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { drizzleDb } from "@/lib/db";
 import { users } from "@/lib/schema";
-import { desc, lt, ilike, and, or, SQL } from "drizzle-orm";
+import { desc, lt, ilike, and, or, SQL, count } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { apiSuccess, apiError, handleApiError } from "@/lib/api-utils";
 
@@ -79,20 +79,26 @@ export const GET = async (request: NextRequest) => {
     const limit = parseLimit(searchParams.get("limit"), PAGE_SIZE);
 
     const conditions = buildWhereConditions(cursor, search);
+    const countConditions = buildWhereConditions(null, search);
     const whereClause = resolveWhereClause(conditions);
+    const countWhereClause = resolveWhereClause(countConditions);
 
-    const rows = await drizzleDb.query.users.findMany({
-      where: whereClause,
-      orderBy: [desc(users.createdAt)],
-      limit: limit + 1,
-      with: { orders: { columns: { id: true } } },
-    });
+    const [rows, totalRows] = await Promise.all([
+      drizzleDb.query.users.findMany({
+        where: whereClause,
+        orderBy: [desc(users.createdAt)],
+        limit: limit + 1,
+        with: { orders: { columns: { id: true } } },
+      }),
+      drizzleDb.select({ value: count() }).from(users).where(countWhereClause),
+    ]);
 
     const hasMore = rows.length > limit;
     const pageItems = hasMore ? rows.slice(0, limit) : rows;
     const lastItem = pageItems.at(-1);
     const nextCursor =
       hasMore && lastItem ? lastItem.createdAt.toISOString() : null;
+    const totalCount = Number(totalRows[0]?.value ?? 0);
 
     const userList = pageItems.map((user) => ({
       id: user.id,
@@ -112,7 +118,7 @@ export const GET = async (request: NextRequest) => {
       _count: { orders: user.orders.length },
     }));
 
-    return apiSuccess({ users: userList, nextCursor, hasMore });
+    return apiSuccess({ users: userList, nextCursor, hasMore, totalCount });
   } catch (error) {
     return handleApiError(error);
   }

@@ -11,6 +11,7 @@ import ProductGrid from "@/components/sections/ProductGrid";
 import { CurrencyProvider } from "@/contexts/CurrencyContext";
 import type { Product } from "@/lib/types";
 import toast from "react-hot-toast";
+import type { ProductGridItem } from "@/components/sections/ProductGrid";
 
 vi.mock("next/link", () => ({
   default: ({
@@ -36,10 +37,15 @@ vi.mock("next/image", () => ({
 }));
 
 const mockDispatch = vi.fn();
+const mockRouterPush = vi.fn();
 
 vi.mock("react-redux", () => ({
   useDispatch: () => mockDispatch,
   useSelector: vi.fn(() => []),
+}));
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: mockRouterPush }),
 }));
 
 vi.mock("next-auth/react", () => ({
@@ -50,18 +56,36 @@ vi.mock("react-hot-toast", () => ({
   default: { success: vi.fn(), error: vi.fn() },
 }));
 
-const makeProduct = (overrides: Partial<Product> = {}): Product => ({
-  id: "1",
-  name: "Test Product",
-  description: "A nice product",
-  price: 10,
-  image: "/img.jpg",
-  stock: 10,
-  category: "Flowers",
-  deletedAt: null,
-  createdAt: "2024-01-01",
-  updatedAt: "2024-01-01",
-  ...overrides,
+const makeProduct = (overrides: Partial<Product> = {}): Product => {
+  const product = {
+    id: "1",
+    name: "Test Product",
+    description: "A nice product",
+    price: 10,
+    image: "/img.jpg",
+    images: [],
+    stock: 10,
+    category: "Flowers",
+    deletedAt: null,
+    createdAt: "2024-01-01",
+    updatedAt: "2024-01-01",
+    ...overrides,
+  };
+
+  return {
+    ...product,
+    images: product.images ?? [],
+  };
+};
+
+const toGridItem = (product: Product): ProductGridItem => ({
+  id: product.id,
+  name: product.name,
+  description: product.description,
+  price: product.price,
+  image: product.image,
+  stock: product.stock,
+  category: product.category,
 });
 
 const ALL_CATEGORIES = [
@@ -72,10 +96,18 @@ const ALL_CATEGORIES = [
   "Hair Accessories",
 ];
 
-function renderGrid(products: Product[], categories?: string[]) {
+function renderGrid(
+  products: Product[],
+  categories?: string[],
+  props?: Partial<React.ComponentProps<typeof ProductGrid>>,
+) {
   return render(
     <CurrencyProvider>
-      <ProductGrid products={products} categories={categories} />
+      <ProductGrid
+        products={products.map(toGridItem)}
+        categories={categories}
+        {...props}
+      />
     </CurrencyProvider>,
   );
 }
@@ -161,40 +193,68 @@ describe("ProductGrid", () => {
   });
 
   it("filters products by search query", () => {
-    renderGrid([
-      makeProduct({ id: "1", name: "Red Rose" }),
-      makeProduct({ id: "2", name: "Blue Handbag" }),
-    ]);
-    const searchInput = screen.getByPlaceholderText("Search products...");
-    fireEvent.change(searchInput, { target: { value: "Rose" } });
-    expect(screen.getByText("Red Rose")).toBeTruthy();
-    expect(screen.queryByText("Blue Handbag")).toBeNull();
+    renderGrid([makeProduct()], undefined, { search: "Rose" });
+    expect(screen.getByDisplayValue("Rose")).toBeTruthy();
   });
 
   it("filters products by category", () => {
-    renderGrid(
-      [
-        makeProduct({ id: "1", name: "Red Rose", category: "Flowers" }),
-        makeProduct({ id: "2", name: "Tote Bag", category: "Handbag" }),
-      ],
-      ["Flowers", "Handbag"],
-    );
+    renderGrid([makeProduct({ category: "Handbag" })], ["Flowers", "Handbag"], {
+      selectedCategory: "Handbag",
+    });
     const select = screen.getByRole("combobox", {
       name: /filter by category/i,
     });
-    fireEvent.change(select, { target: { value: "Handbag" } });
-    expect(screen.getByText("Tote Bag")).toBeTruthy();
-    expect(screen.queryByText("Red Rose")).toBeNull();
+    expect(select).toHaveValue("Handbag");
   });
 
   it("shows contextual empty message when search yields no results", () => {
-    renderGrid([makeProduct({ name: "Bouquet" })]);
-    fireEvent.change(screen.getByPlaceholderText("Search products..."), {
-      target: { value: "xyz-no-match" },
-    });
+    renderGrid([], undefined, { search: "xyz-no-match" });
     expect(
       screen.getByText(/Try adjusting your search or category filter/i),
     ).toBeTruthy();
+  });
+
+  it("renders next page link with current filters", () => {
+    renderGrid([makeProduct()], ["Flowers"], {
+      search: "rose",
+      selectedCategory: "Flowers",
+      page: 2,
+      totalCount: 50,
+      hasNextPage: true,
+      hasPreviousPage: true,
+    });
+
+    expect(
+      screen.getByRole("link", { name: /Next/i }).getAttribute("href"),
+    ).toBe("/shop?q=rose&category=Flowers&page=3#products");
+    expect(
+      screen.getByRole("link", { name: /Previous/i }).getAttribute("href"),
+    ).toBe("/shop?q=rose&category=Flowers#products");
+    expect(
+      screen.getByRole("link", { name: /First/i }).getAttribute("href"),
+    ).toBe("/shop?q=rose&category=Flowers#products");
+    expect(
+      screen.getByRole("link", { name: /Last/i }).getAttribute("href"),
+    ).toBe("/shop?q=rose&category=Flowers&page=3#products");
+    expect(screen.getByText("Showing 25-48 of 50")).toBeTruthy();
+  });
+
+  it("navigates with the quick page selector", () => {
+    renderGrid([makeProduct()], ["Flowers"], {
+      search: "rose",
+      selectedCategory: "Flowers",
+      page: 1,
+      totalCount: 50,
+      hasNextPage: true,
+    });
+
+    fireEvent.change(screen.getByRole("combobox", { name: /jump to page/i }), {
+      target: { value: "3" },
+    });
+
+    expect(mockRouterPush).toHaveBeenCalledWith(
+      "/shop?q=rose&category=Flowers&page=3#products",
+    );
   });
   it("renders quick add button for in-stock product", () => {
     renderGrid([makeProduct({ stock: 5 })]);

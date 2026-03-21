@@ -2,14 +2,15 @@
 
 import { waitUntil } from "@vercel/functions";
 import { drizzleDb } from "@/lib/db";
-import { orders, orderItems } from "@/lib/schema";
-import { eq, desc } from "drizzle-orm";
-import { getRedisClient } from "@/lib/redis";
+import { orders, orderItems, products } from "@/lib/schema";
+import { eq, desc, inArray } from "drizzle-orm";
+import { getRedisClient, invalidateCache } from "@/lib/redis";
 import { generateOrderId } from "@/lib/short-id";
 import { logError, logBusinessEvent } from "@/lib/logger";
 import { OrderStatusEnum } from "@/lib/validations";
 import { z } from "zod";
 import { s } from "@upstash/redis";
+import { invalidateUserOrderCaches } from "@/lib/cache";
 
 type ActionResult<T> =
   | { success: true; data: T }
@@ -33,6 +34,7 @@ export interface OrderSummary {
   status: string;
   items: OrderItemRecord[];
   createdAt: string;
+  productNames?: string;
 }
 
 const OrderItemInputSchema = z.object({
@@ -45,7 +47,7 @@ const OrderItemInputSchema = z.object({
 
 const CreateOrderActionSchema = z.object({
   customerName: z.string().min(1).max(200),
-  customerEmail: z.string().email(),
+  customerEmail: z.email({ message: "Invalid email address" }),
   customerAddress: z.string().min(10).max(500),
   items: z.array(OrderItemInputSchema).min(1),
 });
@@ -55,7 +57,7 @@ type CreateOrderActionInput = z.infer<typeof CreateOrderActionSchema>;
 const redisOrderKey = (orderId: string) => `order:${orderId}`;
 const redisUserOrdersKey = (userId: string) => `user:orders:${userId}`;
 
-const writeOrderToRedis = async (order: OrderSummary): Promise<void> => {
+export const writeOrderToRedis = async (order: OrderSummary): Promise<void> => {
   const redis = getRedisClient();
   if (!redis) return;
 
@@ -71,6 +73,7 @@ const writeOrderToRedis = async (order: OrderSummary): Promise<void> => {
       total: String(order.total),
       status: order.status,
       createdAt: order.createdAt,
+      productNames: order.productNames ?? "",
     });
     if (order.userId) {
       pipeline.sadd(redisUserOrdersKey(order.userId), order.id);
@@ -88,7 +91,7 @@ const writeOrderToRedis = async (order: OrderSummary): Promise<void> => {
 const parseRedisHash = (hash: Record<string, unknown>): OrderSummary | null => {
   if (!hash.id || typeof hash.id !== "string") return null;
   return {
-    id: hash.id as string,
+    id: hash.id,
     userId: (hash.userId as string) || null,
     customerName: (hash.customerName as string) ?? "",
     customerEmail: (hash.customerEmail as string) ?? "",
@@ -180,6 +183,30 @@ export const createOrder = async (
     return { success: false, error: "Failed to create order" };
   }
 
+  const productIds = [...new Set(items.map((item) => item.productId))];
+  const productRows = await drizzleDb.query.products.findMany({
+    where: inArray(products.id, productIds),
+    columns: { id: true, name: true },
+    with: { variations: { columns: { id: true, name: true } } },
+  });
+  const productNameMap = new Map(productRows.map((p) => [p.id, p.name]));
+  const variationNameMap = new Map(
+    productRows.flatMap((p) => p.variations.map((v) => [v.id, v.name])),
+  );
+  const productNamesStr = [
+    ...new Set(
+      items.map((item) => {
+        const productName = productNameMap.get(item.productId) ?? "";
+        const variationName = item.variationId
+          ? variationNameMap.get(item.variationId)
+          : undefined;
+        return variationName
+          ? `${productName} - ${variationName}`
+          : productName;
+      }),
+    ),
+  ].join(", ");
+
   waitUntil(
     writeOrderToRedis({
       id: orderId,
@@ -191,6 +218,7 @@ export const createOrder = async (
       status: "PENDING",
       items,
       createdAt,
+      productNames: productNamesStr,
     }),
   );
 
@@ -199,6 +227,15 @@ export const createOrder = async (
     details: { orderId, userId, total },
     success: true,
   });
+
+  waitUntil(
+    Promise.all([
+      invalidateCache("products:*"),
+      invalidateCache("admin:orders:*"),
+      invalidateUserOrderCaches(userId),
+      ...items.map((item) => invalidateCache(`product:${item.productId}`)),
+    ]),
+  );
 
   return { success: true, data: { orderId } };
 };
@@ -359,6 +396,7 @@ const ORDER_SEARCH_SCHEMA = s.object({
   userId: s.string().noTokenize(),
   total: s.string().noTokenize(),
   createdAt: s.string().noTokenize(),
+  productNames: s.string(),
 });
 
 const searchOrdersViaIndex = async (
@@ -384,6 +422,7 @@ const searchOrdersViaIndex = async (
           { customerEmail: searchTerm, ...userFilter },
           { id: searchTerm, ...userFilter },
           { status: searchTerm, ...userFilter },
+          { productNames: searchTerm, ...userFilter },
         ],
       },
       select: {},

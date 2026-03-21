@@ -4,12 +4,18 @@ import { NextRequest } from "next/server";
 const { mockFindMany } = vi.hoisted(() => ({
   mockFindMany: vi.fn(),
 }));
+const mockSelectWhere = vi.hoisted(() => vi.fn());
+const mockSelectFrom = vi.hoisted(() =>
+  vi.fn(() => ({ where: mockSelectWhere })),
+);
+const mockSelect = vi.hoisted(() => vi.fn(() => ({ from: mockSelectFrom })));
 
 vi.mock("@/lib/db", () => ({
   drizzleDb: {
     query: {
       orders: { findMany: mockFindMany },
     },
+    select: mockSelect,
   },
 }));
 vi.mock("@/lib/schema", () => ({
@@ -22,6 +28,7 @@ vi.mock("@/lib/schema", () => ({
   },
 }));
 vi.mock("drizzle-orm", () => ({
+  count: vi.fn(),
   desc: vi.fn((col) => col),
   lt: vi.fn(),
   eq: vi.fn(),
@@ -54,6 +61,7 @@ const makeRequest = (params?: Record<string, string>) => {
 describe("GET /api/admin/orders", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockSelectWhere.mockResolvedValue([{ value: 0 }]);
   });
 
   it("returns 401 when not authenticated", async () => {
@@ -92,6 +100,7 @@ describe("GET /api/admin/orders", () => {
       expires: new Date(Date.now() + 86400000).toISOString(),
     } as never);
     mockFindMany.mockResolvedValue(mockOrders);
+    mockSelectWhere.mockResolvedValue([{ value: 1 }]);
 
     const response = await GET(makeRequest());
     const data = await response.json();
@@ -102,6 +111,7 @@ describe("GET /api/admin/orders", () => {
     expect(data.data.orders[0].id).toBe("order1");
     expect(data.data).toHaveProperty("hasMore");
     expect(data.data).toHaveProperty("nextCursor");
+    expect(data.data.totalCount).toBe(1);
   });
 
   it("returns 500 on database error", async () => {

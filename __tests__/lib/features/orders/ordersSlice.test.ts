@@ -117,6 +117,7 @@ describe("ordersSlice extraReducers", () => {
 describe("orders selectors", () => {
   const rootState = {
     cart: {} as never,
+    wishlist: {} as never,
     orders: {
       ...initialState,
       orders: [{ id: "o1" }] as never[],
