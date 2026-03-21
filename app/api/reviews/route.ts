@@ -102,7 +102,9 @@ const handlePost = async (request: NextRequest) => {
       error instanceof Error &&
       ("code" in error || "constraint" in error) &&
       (String(dbError.code) === "23505" ||
-        String(dbError.constraint ?? "").includes("userId_productId"));
+        String(
+          typeof dbError.constraint === "string" ? dbError.constraint : "",
+        ).includes("userId_productId"));
     if (isUniqueViolation) {
       return apiError("You have already reviewed this product", 409);
     }

@@ -120,7 +120,7 @@ export const GET = async (request: NextRequest) => {
     }
 
     const rows = await drizzleDb.query.orders.findMany({
-      where: resolveWhereClause(conditions) as SQL | undefined,
+      where: resolveWhereClause(conditions),
       orderBy: [desc(orders.createdAt)],
       limit: limit + 1,
       with: { items: { with: { product: true, variation: true } } },

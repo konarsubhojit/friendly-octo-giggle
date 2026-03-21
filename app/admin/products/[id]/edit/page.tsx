@@ -34,7 +34,7 @@ export default async function AdminProductEditFormPage({ params }: PageProps) {
     description: product.description,
     price: product.price,
     image: product.image,
-    images: (product.images as string[]) ?? [],
+    images: product.images ?? [],
     stock: product.stock,
     category: product.category,
     deletedAt: null,

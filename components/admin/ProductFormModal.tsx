@@ -38,7 +38,35 @@ interface ProductFormModalProps {
 
 const DEFAULT_PRICE_CURRENCY: CurrencyCode = "INR";
 
-/** Convert an amount from one currency to another using the provided live rates. */
+const buildInitialFormData = (
+  product: Product | null,
+  rates: Record<CurrencyCode, number>,
+): ProductFormData =>
+  product
+    ? {
+        name: product.name,
+        description: product.description,
+        price: convertCurrency(
+          product.price,
+          "INR",
+          DEFAULT_PRICE_CURRENCY,
+          rates,
+        ),
+        stock: product.stock,
+        category: product.category,
+        image: product.image,
+        images: product.images ?? [],
+      }
+    : {
+        name: "",
+        description: "",
+        price: 0,
+        stock: 0,
+        category: "",
+        image: "",
+        images: [],
+      };
+
 function convertCurrency(
   amount: number,
   from: CurrencyCode,
@@ -224,31 +252,8 @@ export default function ProductFormModal({
   const [priceCurrency, setPriceCurrency] = useState<CurrencyCode>(
     DEFAULT_PRICE_CURRENCY,
   );
-  const [formData, setFormData] = useState<ProductFormData>(
-    editingProduct
-      ? {
-          name: editingProduct.name,
-          description: editingProduct.description,
-          price: convertCurrency(
-            editingProduct.price,
-            "INR",
-            DEFAULT_PRICE_CURRENCY,
-            rates,
-          ),
-          stock: editingProduct.stock,
-          category: editingProduct.category,
-          image: editingProduct.image,
-          images: editingProduct.images ?? [],
-        }
-      : {
-          name: "",
-          description: "",
-          price: 0,
-          stock: 0,
-          category: "",
-          image: "",
-          images: [],
-        },
+  const [formData, setFormData] = useState<ProductFormData>(() =>
+    buildInitialFormData(editingProduct, rates),
   );
   const [stockInput, setStockInput] = useState(
     String(editingProduct ? editingProduct.stock : 0),

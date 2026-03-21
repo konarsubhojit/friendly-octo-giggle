@@ -139,7 +139,8 @@ const ImageCarousel = ({
       {/* Main image container */}
       <section
         ref={containerRef}
-        tabIndex={0}
+        tabIndex={-1}
+        aria-roledescription="carousel"
         aria-label={`Image carousel for ${productName}. Use arrow keys or mouse wheel to navigate.`}
         className="relative aspect-square w-full rounded-2xl overflow-hidden shadow-2xl border-4 border-[var(--border-warm)] bg-[var(--accent-blush)]/30 group focus:outline-none focus:ring-2 focus:ring-[var(--accent-warm)]"
       >

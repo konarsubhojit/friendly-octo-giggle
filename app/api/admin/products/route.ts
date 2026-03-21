@@ -91,7 +91,7 @@ export const GET = async (request: NextRequest) => {
       conditions.length === 1 ? conditions[0] : and(...conditions);
 
     const rows = await drizzleDb.query.products.findMany({
-      where: whereClause as SQL | undefined,
+      where: whereClause,
       orderBy: [desc(products.createdAt)],
       limit: limit + 1,
       with: { variations: true },
@@ -111,7 +111,7 @@ export const GET = async (request: NextRequest) => {
       variations: p.variations.map((v) => ({
         ...v,
         image: v.image ?? null,
-        images: (v.images as string[]) ?? [],
+        images: v.images ?? [],
         createdAt: v.createdAt.toISOString(),
         updatedAt: v.updatedAt.toISOString(),
       })),
