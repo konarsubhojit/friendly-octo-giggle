@@ -39,14 +39,12 @@ import {
 
 export const dynamic = "force-dynamic";
 
-// Type for products with variations
 type ProductWithVariations = Awaited<
   ReturnType<typeof drizzleDb.query.products.findMany>
 >[number] & {
   variations: Array<{ id: string; priceModifier: number; stock: number }>;
 };
 
-// Validation result type
 type ValidationResult =
   | {
       valid: true;
@@ -56,7 +54,6 @@ type ValidationResult =
     }
   | { valid: false; error: string; status: number; reason: string };
 
-// Stock check result type
 type StockCheckResult =
   | { valid: true; totalAmount: number }
   | {
@@ -323,7 +320,6 @@ const handlePost = async (request: NextRequest) => {
   try {
     const session = await auth();
 
-    // Auth guard first — before any other validation
     if (!session?.user?.id) {
       logBusinessEvent({
         event: "order_create_failed",
@@ -335,7 +331,7 @@ const handlePost = async (request: NextRequest) => {
         { status: 401 },
       );
     }
-    // userId is guaranteed non-null after the guard above
+
     const userId = session.user.id;
 
     const body: CreateOrderInput = await request.json();
@@ -366,7 +362,6 @@ const handlePost = async (request: NextRequest) => {
     }
     const { customerName, customerEmail, customerAddress } = customerValidation;
 
-    // Fetch products with variations
     const productIds = body.items.map((item) => item.productId);
     const productList = (await drizzleDb.query.products.findMany({
       where: and(inArray(products.id, productIds), isNull(products.deletedAt)),
@@ -393,7 +388,6 @@ const handlePost = async (request: NextRequest) => {
       );
     }
 
-    // Validate stock and calculate total
     const stockResult = validateStockAndCalculateTotal(body.items, productList);
     if (!stockResult.valid) {
       logBusinessEvent({
@@ -408,9 +402,7 @@ const handlePost = async (request: NextRequest) => {
     }
     const { totalAmount } = stockResult;
 
-    // Create order and update stock in a transaction
     const order = await drizzleDb.transaction(async (tx) => {
-      // Create order with userId
       const [newOrder] = await tx
         .insert(orders)
         .values({
@@ -424,12 +416,10 @@ const handlePost = async (request: NextRequest) => {
         })
         .returning();
 
-      // Create order items using extracted helper (reduces complexity)
       await tx
         .insert(orderItems)
         .values(buildOrderItemValues(body.items, productList, newOrder.id));
 
-      // Update product/variation stock
       for (const item of body.items) {
         if (item.variationId) {
           await tx
@@ -452,7 +442,6 @@ const handlePost = async (request: NextRequest) => {
       return newOrder;
     });
 
-    // Re-fetch order with items, product, and variation details
     const fullOrder = await drizzleDb.query.orders.findFirst({
       where: eq(orders.id, order.id),
       with: { items: { with: { product: true, variation: true } } },
@@ -465,10 +454,8 @@ const handlePost = async (request: NextRequest) => {
       );
     }
 
-    // Infer order item type from the full order result
     type OrderItem = (typeof fullOrder.items)[number];
 
-    // Log successful order creation
     logBusinessEvent({
       event: "order_created",
       details: {
@@ -480,7 +467,6 @@ const handlePost = async (request: NextRequest) => {
       success: true,
     });
 
-    // Index order in Upstash Search (fire-and-forget)
     void indexOrder({
       id: fullOrder.id,
       customerName: fullOrder.customerName,
@@ -491,7 +477,6 @@ const handlePost = async (request: NextRequest) => {
       createdAt: fullOrder.createdAt.toISOString(),
     });
 
-    // Invalidate caches in parallel to reduce order response latency.
     const productCacheKeys = [
       ...new Set(body.items.map((item) => item.productId)),
     ];
@@ -506,7 +491,6 @@ const handlePost = async (request: NextRequest) => {
 
     const workerUrl = `${env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/api/services/email`;
 
-    // Look up user's currency preference for email formatting
     const userRecord = await drizzleDb.query.users.findFirst({
       where: eq(users.id, userId),
       columns: { currencyPreference: true },

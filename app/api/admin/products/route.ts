@@ -64,7 +64,6 @@ export const GET = async (request: NextRequest) => {
       100,
     );
 
-    // Build Drizzle where conditions
     const conditions: SQL[] = [isNull(products.deletedAt)];
 
     if (cursor) {
@@ -132,19 +131,14 @@ export const POST = async (request: NextRequest) => {
   try {
     const body = await request.json();
 
-    // Validate input with Zod
     const validated = ProductInputSchema.parse(body);
 
-    // Cache invalidation is handled automatically in db.products.create
     const product = await db.products.create(validated);
 
-    // Revalidate Next.js cache tags (with empty config for immediate revalidation)
     revalidateTag("products", {});
 
-    // Invalidate Redis caches (public + admin)
     await invalidateProductCaches();
 
-    // Index in Upstash Search (fire-and-forget)
     void indexProduct(product);
 
     return apiSuccess({ product }, 201);

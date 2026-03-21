@@ -40,7 +40,6 @@ export async function PUT(request: Request, { params }: RouteParams) {
 
     const { name, sortOrder } = parsed.data;
 
-    // Check name uniqueness if changing name
     if (name && name.trim() !== existing[0].name) {
       const duplicate = await drizzleDb
         .select({ id: categories.id })

@@ -69,7 +69,6 @@ export const PATCH = async (
 
     await invalidateAdminOrderCaches(id, order.userId);
 
-    // Update search index (fire-and-forget)
     void indexOrder({
       id: order.id,
       customerName: order.customerName,

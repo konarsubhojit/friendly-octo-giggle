@@ -91,7 +91,6 @@ export async function POST(
     }
     const validated = parseResult.data;
 
-    // Effective price check
     const effectivePrice = product.price + validated.priceModifier;
     if (effectivePrice <= 0) {
       return apiError(
@@ -100,7 +99,6 @@ export async function POST(
       );
     }
 
-    // Check 25-variation limit (active only)
     const activeCount = await drizzleDb.query.productVariations.findMany({
       where: and(
         eq(productVariations.productId, id),
@@ -112,7 +110,6 @@ export async function POST(
       return apiError("Maximum of 25 variations per product reached", 400);
     }
 
-    // Check name uniqueness (including archived — DB has unique constraint on productId+name)
     const existingByName = await drizzleDb.query.productVariations.findFirst({
       where: and(
         eq(productVariations.productId, id),
@@ -132,7 +129,6 @@ export async function POST(
       );
     }
 
-    // Insert
     const [variation] = await drizzleDb
       .insert(productVariations)
       .values({
@@ -146,7 +142,6 @@ export async function POST(
       })
       .returning();
 
-    // Invalidate caches
     revalidateTag("products", {});
     await invalidateProductCaches(id);
 

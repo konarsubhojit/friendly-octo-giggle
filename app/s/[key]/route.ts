@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 
-// GET /s/[key] — resolves a share token and redirects to the product page,
-// pre-selecting the variation via the ?v= query parameter when present.
 export const GET = async (
   request: NextRequest,
   { params }: { params: Promise<{ key: string }> },

@@ -48,7 +48,6 @@ export async function POST(request: Request) {
 
     const { name, sortOrder } = parsed.data;
 
-    // Check for duplicate (including soft-deleted — can reactivate)
     const existing = await drizzleDb
       .select()
       .from(categories)
@@ -58,7 +57,6 @@ export async function POST(request: Request) {
     if (existing.length > 0) {
       const cat = existing[0];
       if (cat.deletedAt) {
-        // Reactivate soft-deleted category
         const [reactivated] = await drizzleDb
           .update(categories)
           .set({

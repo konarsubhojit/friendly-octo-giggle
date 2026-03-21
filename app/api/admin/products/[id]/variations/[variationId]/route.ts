@@ -161,13 +161,11 @@ export async function DELETE(
       return apiError("Variation not found", 404);
     }
 
-    // Soft-delete
     await drizzleDb
       .update(productVariations)
       .set({ deletedAt: new Date(), updatedAt: new Date() })
       .where(eq(productVariations.id, variationId));
 
-    // Invalidate caches
     revalidateTag("products", {});
     await invalidateProductCaches(id);
 

@@ -21,8 +21,6 @@ import {
   API_ERRORS,
 } from "@/lib/constants/error-messages";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
 interface UserProfile {
   id: string;
   name: string | null;
@@ -35,13 +33,9 @@ interface UserProfile {
   createdAt: string;
 }
 
-// ─── Regexes ──────────────────────────────────────────────────────────────────
-
 const EMAIL_RE =
   /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
 const PHONE_RE = /^\+?[1-9]\d{6,14}$/;
-
-// ─── Exported pure helpers (for unit tests) ───────────────────────────────────
 
 export const isPasswordStrong = (password: string): boolean =>
   PASSWORD_REQUIREMENTS.every((req) => req.test(password));
@@ -87,8 +81,6 @@ export const validatePasswordFields = (
   return errors;
 };
 
-// ─── Profile field definitions ────────────────────────────────────────────────
-
 const PHONE_LABEL: ReactNode = (
   <>
     Phone Number <span className="text-[var(--text-muted)]">(optional)</span>
@@ -129,8 +121,6 @@ const PROFILE_FIELDS: ReadonlyArray<FieldDef> = [
       v && !PHONE_RE.test(v) ? PROFILE_ERRORS.PHONE_INVALID : undefined,
   },
 ];
-
-// ─── ProfileSection ────────────────────────────────────────────────────────────
 
 interface ProfileSectionProps {
   readonly profile: UserProfile;
@@ -328,8 +318,6 @@ const PASSWORD_FIELDS: ReadonlyArray<FieldDef> = [
   },
 ];
 
-// ─── PasswordSection ──────────────────────────────────────────────────────────
-
 const PasswordSection = () => {
   const [isChanging, setIsChanging] = useState(false);
   const [success, setSuccess] = useState("");
@@ -437,8 +425,6 @@ const PasswordSection = () => {
   );
 };
 
-// ─── PreferencesSection ───────────────────────────────────────────────────────
-
 interface PreferencesSectionProps {
   readonly profile: UserProfile | null;
 }
@@ -447,7 +433,6 @@ const PreferencesSection = ({ profile }: PreferencesSectionProps) => {
   const { currency, setCurrency } = useCurrency();
   const [saving, setSaving] = useState(false);
 
-  // Sync CurrencyContext with the profile's saved preference on load
   useEffect(() => {
     if (
       profile?.currencyPreference &&
@@ -470,7 +455,6 @@ const PreferencesSection = ({ profile }: PreferencesSectionProps) => {
           body: JSON.stringify({ currencyPreference: code }),
         });
       } catch {
-        // Silently keep the local preference even if the save fails
       } finally {
         setSaving(false);
       }
@@ -549,8 +533,6 @@ const PreferencesSection = ({ profile }: PreferencesSectionProps) => {
     </Card>
   );
 };
-
-// ─── Main page ────────────────────────────────────────────────────────────────
 
 const AccountPage = () => {
   const { data: session, status: authStatus } = useSession();

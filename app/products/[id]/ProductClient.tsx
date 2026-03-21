@@ -21,8 +21,6 @@ interface ProductClientProps {
   readonly initialVariationId: string | null;
 }
 
-// ─── Pure module-level helpers ────────────────────────────
-
 const getVariationImages = (variation: ProductVariation): string[] =>
   [
     ...(variation.image ? [variation.image] : []),
@@ -61,8 +59,6 @@ const getClampedQtyState = (
     return { qty: stock, message: `Only ${stock} available` };
   return { qty: quantity, message: "" };
 };
-
-// ─── Small button-content helpers ────────────────────────
 
 const AddingSpinner = () => (
   <span className="flex items-center justify-center gap-2">
@@ -192,8 +188,6 @@ const OutOfStockPanel = ({
   </div>
 );
 
-// ─── Product Info sub-components ─────────────────────────
-
 interface PriceModifierDisplayProps {
   readonly product: Product;
   readonly selectedVariation: ProductVariation | null;
@@ -289,8 +283,6 @@ const VariationSelector = ({
   );
 };
 
-// ─── Image Section ────────────────────────────────────────
-
 interface ProductImageSectionProps {
   readonly images: string[];
   readonly productName: string;
@@ -305,8 +297,6 @@ const ProductImageSection = ({
     <ButterflyAccent className="absolute -top-4 -left-4 w-10 h-10 opacity-30 hidden sm:block animate-float-gentle" />
   </div>
 );
-
-// ─── Info Card ────────────────────────────────────────────
 
 interface ProductInfoCardProps {
   readonly product: Product;
@@ -376,8 +366,6 @@ const ProductInfoCard = ({
     </div>
   );
 };
-
-// ─── Add-to-Cart Section ──────────────────────────────────
 
 interface AddToCartSectionProps {
   readonly error: string;
@@ -577,8 +565,6 @@ const AddToCartSection = ({
   );
 };
 
-// ─── Main Component ───────────────────────────────────────
-
 export default function ProductClient({
   product,
   initialVariationId,
@@ -587,7 +573,7 @@ export default function ProductClient({
   const { formatPrice } = useCurrency();
   const cart = useSelector((state: RootState) => state.cart.cart);
   const { trackProduct } = useRecentlyViewed();
-  // Use a ref so the effect only depends on product.id, not on trackProduct identity
+
   const trackProductRef = useRef(trackProduct);
   trackProductRef.current = trackProduct;
   const [quantity, setQuantity] = useState(1);
@@ -601,12 +587,10 @@ export default function ProductClient({
   const [error, setError] = useState("");
   const [stockWarning, setStockWarning] = useState("");
 
-  // Fetch cart on mount so we can show "already in cart" indicators
   useEffect(() => {
     dispatch(fetchCart());
   }, [dispatch]);
 
-  // Build a map of variationId (or "__base__") -> quantity in cart for this product
   const cartQuantities = useMemo(() => {
     const map: Record<string, number> = {};
     if (!cart?.items) return map;
@@ -622,7 +606,6 @@ export default function ProductClient({
   const currentCartQuantity =
     cartQuantities[selectedVariation?.id ?? "__base__"] ?? 0;
 
-  // Track this product as recently viewed when product.id changes
   useEffect(() => {
     trackProductRef.current({
       id: product.id,
@@ -648,10 +631,8 @@ export default function ProductClient({
     ? selectedVariation.stock
     : product.stock;
 
-  // Remaining stock accounts for items already in the user's cart
   const remainingStock = Math.max(0, effectiveStock - currentCartQuantity);
 
-  // Clamp quantity when remaining stock changes (e.g. variation switch, cart update)
   useEffect(() => {
     const { qty, message } = getClampedQtyState(quantity, remainingStock);
     if (qty !== quantity) setQuantity(qty);
@@ -673,14 +654,13 @@ export default function ProductClient({
       const result = await dispatch(
         addToCart({
           productId: product.id,
-          // null = base product (no variation); each variationId is a distinct cart line
+
           variationId: selectedVariation?.id ?? null,
           quantity,
         }),
       ).unwrap();
 
       if (result.warning) {
-        // Auto-adjust quantity dropdown to max available
         if (result.adjustedQuantity) {
           setQuantity(Math.min(result.adjustedQuantity, remainingStock));
         }

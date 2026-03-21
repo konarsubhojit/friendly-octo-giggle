@@ -28,12 +28,10 @@ export async function PATCH(
 
     const validated = UpdateUserRoleSchema.parse(body);
 
-    // Prevent users from changing their own role
     if (id === authCheck.userId) {
       return apiError("Cannot modify your own role", 403);
     }
 
-    // Update user role
     const [user] = await drizzleDb
       .update(users)
       .set({ role: validated.role, updatedAt: new Date() })
@@ -49,7 +47,6 @@ export async function PATCH(
         image: users.image,
       });
 
-    // Invalidate user caches (list + individual user)
     await invalidateAdminUserCaches(id);
 
     return apiSuccess({ user });

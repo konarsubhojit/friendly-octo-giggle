@@ -42,8 +42,6 @@ const RATING_FILTERS = [
   { label: "1 ★", value: "1" },
 ];
 
-// ─── ReviewRow component (defined before use) ────────────
-
 const ReviewRow = ({ review }: { readonly review: AdminReview }) => {
   const displayName =
     review.isAnonymous || !review.user
@@ -88,8 +86,6 @@ const ReviewRow = ({ review }: { readonly review: AdminReview }) => {
   );
 };
 
-// ─── ReviewMeta subcomponent (extracted to reduce nesting) ─
-
 const ReviewMeta = ({
   review,
   displayName,
@@ -116,8 +112,6 @@ const ReviewMeta = ({
     </span>
   </div>
 );
-
-// ─── Main page component ─────────────────────────────────
 
 const AdminReviewsPage = () => {
   const [reviews, setReviews] = useState<AdminReview[]>([]);
@@ -221,8 +215,6 @@ const AdminReviewsPage = () => {
 };
 
 export default AdminReviewsPage;
-
-// ─── Extracted subcomponents ──────────────────────────────
 
 const ReviewsHeader = ({
   total,

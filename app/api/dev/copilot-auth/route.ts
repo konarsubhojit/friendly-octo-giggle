@@ -14,7 +14,6 @@ const COPILOT_DEV_KEY = process.env.COPILOT_DEV_KEY;
 const COOKIE_NAME = "next-auth.session-token";
 
 export const GET = async (request: NextRequest) => {
-  // Hard environment guard — this endpoint must only be reachable in development.
   if (process.env.NODE_ENV !== "development") {
     return NextResponse.json({ error: "Not Found" }, { status: 404 });
   }
@@ -34,9 +33,6 @@ export const GET = async (request: NextRequest) => {
 
   const now = Math.floor(Date.now() / 1000);
 
-  // Build a JWT payload that matches what NextAuth's jwt() callback produces.
-  // The `salt` must equal the cookie name (NextAuth v5 derives the encryption
-  // key from HKDF(secret, salt)).
   const sessionToken = await encode({
     token: {
       sub: "dev-copilot-admin",
@@ -46,7 +42,7 @@ export const GET = async (request: NextRequest) => {
       picture: null,
       role: "ADMIN",
       iat: now,
-      exp: now + 86_400, // 24 h
+      exp: now + 86_400,
       jti: "copilot-dev-jti",
     },
     secret,
@@ -58,7 +54,7 @@ export const GET = async (request: NextRequest) => {
     httpOnly: true,
     sameSite: "lax",
     path: "/",
-    secure: false, // HTTP in dev
+    secure: false,
     maxAge: 86_400,
   });
   return response;

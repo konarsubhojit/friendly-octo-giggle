@@ -14,7 +14,6 @@ import { withLogging } from "@/lib/api-middleware";
 
 export const dynamic = "force-dynamic";
 
-// GET /api/reviews?productId=xxx  — public, returns reviews for a product
 const handleGet = async (request: NextRequest) => {
   const { searchParams } = new URL(request.url);
   const productId = searchParams.get("productId");
@@ -30,7 +29,6 @@ const handleGet = async (request: NextRequest) => {
       with: { user: { columns: { name: true, image: true } } },
     });
 
-    // Mask user name for anonymous reviews
     const serialized = productReviews.map((r) => ({
       ...r,
       createdAt: r.createdAt.toISOString(),
@@ -44,7 +42,6 @@ const handleGet = async (request: NextRequest) => {
   }
 };
 
-// POST /api/reviews  — authenticated users only
 const handlePost = async (request: NextRequest) => {
   const session = await auth();
   if (!session?.user) {
@@ -61,7 +58,6 @@ const handlePost = async (request: NextRequest) => {
     const { productId, orderId, rating, comment, isAnonymous } =
       parseResult.data;
 
-    // Check for duplicate review (same user + product)
     const existing = await drizzleDb.query.reviews.findFirst({
       where: and(
         eq(reviews.userId, session.user.id),

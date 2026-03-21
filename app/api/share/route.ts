@@ -10,7 +10,6 @@ import { withLogging } from "@/lib/api-middleware";
 
 export const dynamic = "force-dynamic";
 
-// POST /api/share — creates a shareable short link for a product + optional variation
 const handlePost = async (request: NextRequest) => {
   try {
     const body = await request.json();
