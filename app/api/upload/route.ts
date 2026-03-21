@@ -1,36 +1,25 @@
 import { NextResponse } from "next/server";
 import { put } from "@vercel/blob";
-import { auth } from "@/lib/auth";
 import {
   isValidImageType,
   MAX_FILE_SIZE,
   VALID_IMAGE_TYPES_DISPLAY,
 } from "@/lib/upload-constants";
 import { logError } from "@/lib/logger";
+import { checkAdminAuth } from "@/lib/admin-auth";
 
 export async function POST(request: Request) {
   let fileName = "unknown";
   let userId = "unknown";
 
   try {
-    const session = await auth();
-    userId = session?.user?.id ?? "unknown";
-
-    const errorMap: Record<string, { message: string; status: number }> = {
-      unauthorized: { message: "Unauthorized", status: 401 },
-      forbidden: { message: "Forbidden: Admin access required", status: 403 },
-    };
-
-    let errorKey: string | null = null;
-    if (!session?.user) {
-      errorKey = "unauthorized";
-    } else if (session.user.role !== "ADMIN") {
-      errorKey = "forbidden";
-    }
-
-    if (errorKey) {
-      const { message, status } = errorMap[errorKey];
-      return NextResponse.json({ error: message }, { status });
+    const authCheck = await checkAdminAuth();
+    userId = authCheck.authorized ? authCheck.userId : "unknown";
+    if (!authCheck.authorized) {
+      return NextResponse.json(
+        { error: authCheck.error },
+        { status: authCheck.status },
+      );
     }
 
     const formData = await request.formData();
