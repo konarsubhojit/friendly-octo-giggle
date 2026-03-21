@@ -89,7 +89,7 @@ export default function ProductSearch({ onNavigate }: ProductSearchProps) {
   const [products, setProducts] = useState<Product[]>([]);
   const [activeIndex, setActiveIndex] = useState(-1);
   const inputRef = useRef<HTMLInputElement>(null);
-  const listRef = useRef<HTMLUListElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -285,14 +285,14 @@ export default function ProductSearch({ onNavigate }: ProductSearchProps) {
                 )}
 
                 {results.length > 0 && (
-                  <ul
+                  <div
                     ref={listRef}
                     id="search-results-list"
                     role="listbox"
                     className="py-2"
                   >
                     {results.map((product, i) => (
-                      <li
+                      <div
                         key={product.id}
                         id={`search-result-${i}`}
                         role="option"
@@ -333,9 +333,9 @@ export default function ProductSearch({ onNavigate }: ProductSearchProps) {
                         <span className="text-sm font-semibold text-[var(--btn-primary)] shrink-0">
                           {formatPrice(product.price)}
                         </span>
-                      </li>
+                      </div>
                     ))}
-                  </ul>
+                  </div>
                 )}
 
                 {!query.trim() && (

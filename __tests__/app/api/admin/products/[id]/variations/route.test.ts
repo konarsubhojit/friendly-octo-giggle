@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 
-// Mock Drizzle DB with chainable query methods
 const mockFindFirst = vi.fn();
 const mockFindMany = vi.fn();
 const _mockInsert = vi.fn();
@@ -254,9 +253,9 @@ describe("POST /api/admin/products/[id]/variations", () => {
   it("returns 400 when 25-variation limit reached", async () => {
     mockAuth.mockResolvedValue(adminSession);
     mockFindFirst
-      .mockResolvedValueOnce(mockProduct) // findProduct
-      .mockResolvedValueOnce(null); // name uniqueness (no duplicate)
-    mockFindMany.mockResolvedValueOnce(Array(25).fill({ id: "x" })); // activeCount
+      .mockResolvedValueOnce(mockProduct)
+      .mockResolvedValueOnce(null);
+    mockFindMany.mockResolvedValueOnce(Array(25).fill({ id: "x" }));
     const res = await POST(
       makeRequest(
         "http://localhost/api/admin/products/abc1234/variations",
@@ -272,9 +271,9 @@ describe("POST /api/admin/products/[id]/variations", () => {
 
   it("returns 409 for duplicate name", async () => {
     mockAuth.mockResolvedValue(adminSession);
-    mockFindFirst.mockResolvedValueOnce(mockProduct); // findProduct
-    mockFindMany.mockResolvedValueOnce(Array(5).fill({ id: "x" })); // activeCount < 25
-    mockFindFirst.mockResolvedValueOnce({ ...mockVariation, deletedAt: null }); // name check - duplicate active
+    mockFindFirst.mockResolvedValueOnce(mockProduct);
+    mockFindMany.mockResolvedValueOnce(Array(5).fill({ id: "x" }));
+    mockFindFirst.mockResolvedValueOnce({ ...mockVariation, deletedAt: null });
     const res = await POST(
       makeRequest(
         "http://localhost/api/admin/products/abc1234/variations",
@@ -293,7 +292,7 @@ describe("POST /api/admin/products/[id]/variations", () => {
     mockFindFirst.mockResolvedValueOnce({
       ...mockVariation,
       deletedAt: new Date(),
-    }); // archived
+    });
     const res = await POST(
       makeRequest(
         "http://localhost/api/admin/products/abc1234/variations",
@@ -310,8 +309,8 @@ describe("POST /api/admin/products/[id]/variations", () => {
   it("returns 201 on successful creation", async () => {
     mockAuth.mockResolvedValue(adminSession);
     mockFindFirst.mockResolvedValueOnce(mockProduct);
-    mockFindMany.mockResolvedValueOnce([]); // no existing variations
-    mockFindFirst.mockResolvedValueOnce(null); // no name conflict
+    mockFindMany.mockResolvedValueOnce([]);
+    mockFindFirst.mockResolvedValueOnce(null);
     mockReturning.mockResolvedValueOnce([mockVariation]);
     const res = await POST(
       makeRequest(

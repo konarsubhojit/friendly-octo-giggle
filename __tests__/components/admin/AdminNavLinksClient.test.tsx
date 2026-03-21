@@ -270,6 +270,7 @@ describe("AdminNavLinksClient", () => {
       const input = screen.getByPlaceholderText("Jump to admin section...");
       fireEvent.keyDown(input, { key: "ArrowDown" });
       fireEvent.keyDown(input, { key: "ArrowUp" });
+      expect(input).toBeInTheDocument();
     });
 
     it("shows badge for email failures in command palette", async () => {

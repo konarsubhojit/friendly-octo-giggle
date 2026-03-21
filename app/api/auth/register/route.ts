@@ -1,11 +1,11 @@
-import { NextRequest } from 'next/server';
-import { registerSchema } from '@/lib/validations';
-import { apiSuccess, apiError, handleApiError } from '@/lib/api-utils';
-import { hashPassword, savePasswordToHistory } from '@/lib/password';
-import { drizzleDb } from '@/lib/db';
-import { users } from '@/lib/schema';
-import { eq, or } from 'drizzle-orm';
-import { logAuthEvent } from '@/lib/logger';
+import { NextRequest } from "next/server";
+import { registerSchema } from "@/lib/validations";
+import { apiSuccess, apiError, handleApiError } from "@/lib/api-utils";
+import { hashPassword, savePasswordToHistory } from "@/lib/password";
+import { drizzleDb } from "@/lib/db";
+import { users } from "@/lib/schema";
+import { eq, or } from "drizzle-orm";
+import { logAuthEvent } from "@/lib/logger";
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,18 +15,17 @@ export async function POST(request: NextRequest) {
     if (!parseResult.success) {
       const details = parseResult.error.issues.reduce(
         (acc, err) => {
-          const path = err.path.join('.');
+          const path = err.path.join(".");
           acc[path] = err.message;
           return acc;
         },
         {} as Record<string, string>,
       );
-      return apiError('Validation failed', 400, details);
+      return apiError("Validation failed", 400, details);
     }
 
     const { name, email, phoneNumber, password } = parseResult.data;
 
-    // Check for duplicate email or phone
     const conditions = [eq(users.email, email)];
     if (phoneNumber) {
       conditions.push(eq(users.phoneNumber, phoneNumber));
@@ -37,8 +36,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (existingUser) {
-      const field =
-        existingUser.email === email ? 'email' : 'phone number';
+      const field = existingUser.email === email ? "email" : "phone number";
       return apiError(`A user with this ${field} already exists`, 409);
     }
 
@@ -57,7 +55,7 @@ export async function POST(request: NextRequest) {
     await savePasswordToHistory(newUser.id, passwordHash);
 
     logAuthEvent({
-      event: 'register',
+      event: "register",
       userId: newUser.id,
       email,
       success: true,

@@ -18,7 +18,6 @@ export const GET = async (request: NextRequest) => {
     const productId = searchParams.get("productId");
     const ratingStr = searchParams.get("rating");
 
-    // Build where conditions at DB level
     const conditions: SQL[] = [];
     if (productId) {
       conditions.push(eq(reviews.productId, productId));
@@ -47,7 +46,6 @@ export const GET = async (request: NextRequest) => {
       ...r,
       createdAt: r.createdAt.toISOString(),
       updatedAt: r.updatedAt.toISOString(),
-      // Admin always sees the user info regardless of anonymous flag
     }));
 
     return apiSuccess({ reviews: serialized, total: serialized.length });

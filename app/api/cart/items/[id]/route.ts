@@ -10,7 +10,6 @@ import { invalidateCartCache } from "@/lib/cache";
 
 export const dynamic = "force-dynamic";
 
-// Update cart item quantity
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
@@ -21,14 +20,12 @@ export async function PATCH(
     const sessionId = request.cookies.get("cart_session")?.value;
     const rawBody = await request.json();
 
-    // Validate input with Zod
     const parseResult = UpdateCartItemSchema.safeParse(rawBody);
     if (!parseResult.success) {
       return handleValidationError(parseResult.error);
     }
     const body = parseResult.data;
 
-    // Get cart item
     const cartItem = await drizzleDb.query.cartItems.findFirst({
       where: eq(cartItems.id, id),
       with: {
@@ -49,7 +46,6 @@ export async function PATCH(
       );
     }
 
-    // Verify cart ownership
     const isOwner = session?.user?.id
       ? cartItem.cart.userId === session.user.id
       : cartItem.cart.sessionId === sessionId;
@@ -58,7 +54,6 @@ export async function PATCH(
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
-    // Check stock
     const availableStock = cartItem.variationId
       ? cartItem.variation?.stock || 0
       : cartItem.product.stock;
@@ -70,13 +65,11 @@ export async function PATCH(
       );
     }
 
-    // Update quantity
     await drizzleDb
       .update(cartItems)
       .set({ quantity: body.quantity, updatedAt: new Date() })
       .where(eq(cartItems.id, id));
 
-    // Invalidate cart cache
     await invalidateCartCache(session?.user?.id, sessionId);
 
     return NextResponse.json({ success: true });
@@ -89,7 +82,6 @@ export async function PATCH(
   }
 }
 
-// Delete cart item
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
@@ -99,7 +91,6 @@ export async function DELETE(
     const session = await auth();
     const sessionId = request.cookies.get("cart_session")?.value;
 
-    // Get cart item
     const cartItem = await drizzleDb.query.cartItems.findFirst({
       where: eq(cartItems.id, id),
       with: {
@@ -114,7 +105,6 @@ export async function DELETE(
       );
     }
 
-    // Verify cart ownership
     const isOwner = session?.user?.id
       ? cartItem.cart.userId === session.user.id
       : cartItem.cart.sessionId === sessionId;
@@ -123,10 +113,8 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
-    // Delete item
     await drizzleDb.delete(cartItems).where(eq(cartItems.id, id));
 
-    // Invalidate cart cache
     await invalidateCartCache(session?.user?.id, sessionId);
 
     return NextResponse.json({ success: true });

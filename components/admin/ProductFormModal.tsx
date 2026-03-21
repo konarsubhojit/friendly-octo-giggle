@@ -1,52 +1,19 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import Image from "next/image";
-import { Product } from "@/lib/types";
-import toast from "react-hot-toast";
-import { logError } from "@/lib/logger";
+import { type Product } from "@/lib/types";
 import {
-  isValidImageType,
   MAX_FILE_SIZE,
   VALID_IMAGE_TYPES_DISPLAY,
 } from "@/lib/upload-constants";
-import {
-  useCurrency,
-  CURRENCIES,
-  type CurrencyCode,
-} from "@/contexts/CurrencyContext";
-import { PRODUCT_ERRORS, API_ERRORS } from "@/lib/constants/error-messages";
-
-const MAX_IMAGES = 10;
-
-interface ProductFormData {
-  name: string;
-  description: string;
-  price: number;
-  stock: number;
-  category: string;
-  image: string;
-  images: string[];
-}
+import { CURRENCIES, type CurrencyCode } from "@/contexts/CurrencyContext";
+import useProductForm, { MAX_IMAGES } from "./useProductForm";
 
 interface ProductFormModalProps {
   readonly editingProduct: Product | null;
   readonly onClose: () => void;
   readonly onSuccess: (product: Product) => void;
   readonly layout?: "modal" | "page";
-}
-
-const DEFAULT_PRICE_CURRENCY: CurrencyCode = "INR";
-
-/** Convert an amount from one currency to another using the provided live rates. */
-function convertCurrency(
-  amount: number,
-  from: CurrencyCode,
-  to: CurrencyCode,
-  rates: Record<CurrencyCode, number>,
-): number {
-  const amountInBase = amount / rates[from];
-  return Number((amountInBase * rates[to]).toFixed(2));
 }
 
 interface AdditionalImageRowProps {
@@ -60,17 +27,17 @@ interface AdditionalImageRowProps {
   readonly onRemove: (idx: number) => void;
 }
 
-function PendingFileNotice({ fileName }: { readonly fileName: string }) {
-  return <p className="text-xs text-green-600 mt-1">Selected: {fileName}</p>;
-}
+const PendingFileNotice = ({ fileName }: { readonly fileName: string }) => (
+  <p className="text-xs text-green-600 mt-1">Selected: {fileName}</p>
+);
 
-function AdditionalImageRow({
+const AdditionalImageRow = ({
   idx,
   imgUrl,
   pendingFile,
   onFileChange,
   onRemove,
-}: AdditionalImageRowProps) {
+}: AdditionalImageRowProps) => {
   const showCurrent = Boolean(imgUrl) && pendingFile === null;
   const labelText = `Image ${idx + 2}${showCurrent ? " (current)" : ""}`;
   return (
@@ -125,7 +92,7 @@ function AdditionalImageRow({
       </button>
     </div>
   );
-}
+};
 
 interface PriceFieldProps {
   readonly priceCurrency: CurrencyCode;
@@ -136,392 +103,89 @@ interface PriceFieldProps {
   readonly onPriceChange: (value: number) => void;
 }
 
-function PriceField({
+const PriceField = ({
   priceCurrency,
   priceValue,
   error,
   availableCurrencies,
   onCurrencyChange,
   onPriceChange,
-}: PriceFieldProps) {
-  return (
-    <div>
-      <label
-        htmlFor="product-price"
-        className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+}: PriceFieldProps) => (
+  <div>
+    <label
+      htmlFor="product-price"
+      className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+    >
+      Price
+    </label>
+    <div className="flex gap-2">
+      <select
+        id="product-price-currency"
+        value={priceCurrency}
+        onChange={(e) => onCurrencyChange(e.target.value as CurrencyCode)}
+        aria-label="Price currency"
+        className="px-2 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
       >
-        Price
-      </label>
-      <div className="flex gap-2">
-        <select
-          id="product-price-currency"
-          value={priceCurrency}
-          onChange={(e) => onCurrencyChange(e.target.value as CurrencyCode)}
-          aria-label="Price currency"
-          className="px-2 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
-        >
-          {availableCurrencies.map((code) => (
-            <option key={code} value={code}>
-              {code} ({CURRENCIES[code].symbol})
-            </option>
-          ))}
-        </select>
-        <input
-          id="product-price"
-          type="number"
-          value={priceValue}
-          onChange={(e) => {
-            const value = Number.parseFloat(e.target.value);
-            if (!Number.isNaN(value)) onPriceChange(value);
-          }}
-          required
-          min="0.01"
-          step="0.01"
-          aria-describedby={error ? "product-price-error" : undefined}
-          className={`flex-1 min-w-0 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white dark:bg-gray-700 ${error ? "border-red-400 dark:border-red-500" : "border-gray-300 dark:border-gray-600"}`}
-        />
-      </div>
-      {error && (
-        <p id="product-price-error" className="text-xs text-red-600 mt-1">
-          {error}
-        </p>
-      )}
+        {availableCurrencies.map((code) => (
+          <option key={code} value={code}>
+            {code} ({CURRENCIES[code].symbol})
+          </option>
+        ))}
+      </select>
+      <input
+        id="product-price"
+        type="number"
+        value={priceValue}
+        onChange={(e) => {
+          const value = Number.parseFloat(e.target.value);
+          if (!Number.isNaN(value)) onPriceChange(value);
+        }}
+        required
+        min="0.01"
+        step="0.01"
+        aria-describedby={error ? "product-price-error" : undefined}
+        className={`flex-1 min-w-0 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white dark:bg-gray-700 ${error ? "border-red-400 dark:border-red-500" : "border-gray-300 dark:border-gray-600"}`}
+      />
     </div>
-  );
-}
+    {error && (
+      <p id="product-price-error" className="text-xs text-red-600 mt-1">
+        {error}
+      </p>
+    )}
+  </div>
+);
 
-const validateName = (v: string): string | undefined => {
-  if (!v.trim()) return PRODUCT_ERRORS.NAME_REQUIRED;
-  if (v.trim().length < 2) return PRODUCT_ERRORS.NAME_TOO_SHORT;
-  return undefined;
-};
-
-const validateDescription = (v: string): string | undefined =>
-  v.trim() ? undefined : PRODUCT_ERRORS.DESCRIPTION_REQUIRED;
-
-const validatePrice = (v: number): string | undefined =>
-  !v || v <= 0 ? PRODUCT_ERRORS.PRICE_POSITIVE : undefined;
-
-const validateStock = (v: number): string | undefined =>
-  v < 0 || !Number.isInteger(v) ? PRODUCT_ERRORS.STOCK_INVALID : undefined;
-
-const validateCategory = (v: string): string | undefined =>
-  v.trim() ? undefined : PRODUCT_ERRORS.CATEGORY_REQUIRED;
-
-const validateImage = (
-  hasExisting: boolean,
-  hasFile: boolean,
-): string | undefined =>
-  !hasExisting && !hasFile ? PRODUCT_ERRORS.IMAGE_REQUIRED : undefined;
-
-export default function ProductFormModal({
+const ProductFormModal = ({
   editingProduct,
   onClose,
   onSuccess,
   layout = "modal",
-}: ProductFormModalProps) {
-  const { availableCurrencies, rates } = useCurrency();
-  const [priceCurrency, setPriceCurrency] = useState<CurrencyCode>(
-    DEFAULT_PRICE_CURRENCY,
-  );
-  const [formData, setFormData] = useState<ProductFormData>(
-    editingProduct
-      ? {
-          name: editingProduct.name,
-          description: editingProduct.description,
-          price: convertCurrency(
-            editingProduct.price,
-            "INR",
-            DEFAULT_PRICE_CURRENCY,
-            rates,
-          ),
-          stock: editingProduct.stock,
-          category: editingProduct.category,
-          image: editingProduct.image,
-          images: editingProduct.images ?? [],
-        }
-      : {
-          name: "",
-          description: "",
-          price: 0,
-          stock: 0,
-          category: "",
-          image: "",
-          images: [],
-        },
-  );
-  const [stockInput, setStockInput] = useState(
-    String(editingProduct ? editingProduct.stock : 0),
-  );
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  // Additional image files to upload (paired with formData.images slots)
-  const [additionalFiles, setAdditionalFiles] = useState<(File | null)[]>(() =>
-    new Array((editingProduct?.images ?? []).length).fill(null),
-  );
-  // Stable IDs for additional image slots (avoids React index-key warnings)
-  const [slotIds, setSlotIds] = useState<string[]>(() =>
-    (editingProduct?.images ?? []).map(() => crypto.randomUUID()),
-  );
-  const [uploading, setUploading] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [fieldErrors, setFieldErrors] = useState<
-    Partial<Record<keyof ProductFormData, string>>
-  >({});
-
-  // Dynamic categories fetched from API
-  const [categoryList, setCategoryList] = useState<string[]>([]);
-  useEffect(() => {
-    fetch("/api/categories")
-      .then((r) => r.json())
-      .then((json) => {
-        const items: { name: string }[] = json.data ?? [];
-        setCategoryList(items.map((c) => c.name));
-      })
-      .catch(() => {
-        // Fallback — keep empty; the select will just show no options
-      });
-  }, []);
-
-  const totalImages =
-    (formData.image || imageFile ? 1 : 0) + formData.images.length;
+}: ProductFormModalProps) => {
+  const {
+    formData,
+    setFormData,
+    stockInput,
+    imageFile,
+    additionalFiles,
+    slotIds,
+    uploading,
+    saving,
+    fieldErrors,
+    categoryList,
+    priceCurrency,
+    availableCurrencies,
+    totalImages,
+    submitButtonText,
+    clearFieldError,
+    handlePriceCurrencyChange,
+    handleImageChange,
+    handleAdditionalImageChange,
+    addImageSlot,
+    removeAdditionalImage,
+    handleStockChange,
+    handleSubmit,
+  } = useProductForm(editingProduct, onClose, onSuccess);
   const isPageLayout = layout === "page";
-
-  /** Validate all fields and return true if there are no errors. */
-  const validate = (): boolean => {
-    const errors: Partial<Record<keyof ProductFormData, string>> = {
-      name: validateName(formData.name),
-      description: validateDescription(formData.description),
-      price: validatePrice(formData.price),
-      stock: validateStock(formData.stock),
-      category: validateCategory(formData.category),
-      image: editingProduct
-        ? undefined
-        : validateImage(Boolean(formData.image), Boolean(imageFile)),
-    };
-    const filtered = Object.fromEntries(
-      Object.entries(errors).filter(([, v]) => v !== undefined),
-    ) as Partial<Record<keyof ProductFormData, string>>;
-    setFieldErrors(filtered);
-    return Object.keys(filtered).length === 0;
-  };
-
-  const clearFieldError = (field: keyof ProductFormData) => {
-    if (fieldErrors[field]) {
-      setFieldErrors((prev) => ({ ...prev, [field]: undefined }));
-    }
-  };
-
-  const handlePriceCurrencyChange = (newCurrency: CurrencyCode) => {
-    setFormData({
-      ...formData,
-      price: convertCurrency(formData.price, priceCurrency, newCurrency, rates),
-    });
-    setPriceCurrency(newCurrency);
-  };
-
-  const validateImageFile = (file: File): string | null => {
-    if (!isValidImageType(file.type)) {
-      return PRODUCT_ERRORS.IMAGE_TYPE_INVALID(VALID_IMAGE_TYPES_DISPLAY);
-    }
-    if (file.size > MAX_FILE_SIZE) {
-      return PRODUCT_ERRORS.IMAGE_SIZE_EXCEEDED(MAX_FILE_SIZE / 1024 / 1024);
-    }
-    return null;
-  };
-
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const err = validateImageFile(file);
-    if (err) {
-      setFieldErrors((prev) => ({ ...prev, image: err }));
-      return;
-    }
-    setFieldErrors((prev) => ({ ...prev, image: undefined }));
-    setImageFile(file);
-  };
-
-  const handleAdditionalImageChange = (
-    idx: number,
-    e: React.ChangeEvent<HTMLInputElement>,
-  ) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const err = validateImageFile(file);
-    if (err) {
-      toast.error(err);
-      return;
-    }
-    const newFiles = [...additionalFiles];
-    newFiles[idx] = file;
-    setAdditionalFiles(newFiles);
-  };
-
-  const addImageSlot = () => {
-    if (totalImages >= MAX_IMAGES) {
-      toast.error(`Maximum ${MAX_IMAGES} images allowed`);
-      return;
-    }
-    setFormData((prev) => ({ ...prev, images: [...prev.images, ""] }));
-    setAdditionalFiles((prev) => [...prev, null]);
-    setSlotIds((prev) => [...prev, crypto.randomUUID()]);
-  };
-
-  const removeAdditionalImage = (idx: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      images: prev.images.filter((_, i) => i !== idx),
-    }));
-    setAdditionalFiles((prev) => prev.filter((_, i) => i !== idx));
-    setSlotIds((prev) => prev.filter((_, i) => i !== idx));
-  };
-
-  const uploadSingleImage = async (file: File): Promise<string | null> => {
-    const formDataUpload = new FormData();
-    formDataUpload.append("file", file);
-    const res = await fetch("/api/upload", {
-      method: "POST",
-      body: formDataUpload,
-    });
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(error.error || "Failed to upload image");
-    }
-    const data = await res.json();
-    return data.data.url;
-  };
-
-  const getSubmitButtonText = (): string => {
-    if (uploading) return "Uploading...";
-    if (saving) return "Saving...";
-    return editingProduct ? "Update Product" : "Create Product";
-  };
-
-  const getApiEndpoint = () =>
-    editingProduct
-      ? {
-          url: `/api/admin/products/${editingProduct.id}`,
-          method: "PUT" as const,
-        }
-      : { url: "/api/admin/products", method: "POST" as const };
-
-  const saveProductToApi = async (
-    imageUrl: string,
-    additionalImages: string[],
-  ) => {
-    const productData = {
-      ...formData,
-      price: convertCurrency(formData.price, priceCurrency, "INR", rates),
-      image: imageUrl,
-      images: additionalImages,
-    };
-    const { url, method } = getApiEndpoint();
-    const res = await fetch(url, {
-      method,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(productData),
-    });
-    if (!res.ok) {
-      const errorBody = await res.json();
-      throw new Error(
-        (errorBody as { error?: string }).error ?? "Failed to save product",
-      );
-    }
-    const saved = (await res.json()) as {
-      data?: { product?: Product };
-      product?: Product;
-    };
-    return (
-      saved.data?.product ?? saved.product ?? (saved as unknown as Product)
-    );
-  };
-
-  const handleStockChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value;
-    setStockInput(raw);
-    if (raw === "") {
-      setFormData({ ...formData, stock: 0 });
-      clearFieldError("stock");
-      return;
-    }
-    const value = Number.parseInt(raw, 10);
-    if (!Number.isNaN(value) && value >= 0) {
-      setFormData({ ...formData, stock: value });
-      clearFieldError("stock");
-    }
-  };
-
-  const resolveImageUrl = async (): Promise<string | null> => {
-    if (imageFile) {
-      setUploading(true);
-      try {
-        return await uploadSingleImage(imageFile);
-      } catch (err) {
-        logError({ error: err, context: "resolveImageUrl" });
-        toast.error(API_ERRORS.IMAGE_UPLOAD);
-        return null;
-      } finally {
-        setUploading(false);
-      }
-    }
-    if (!formData.image) {
-      setFieldErrors((prev) => ({
-        ...prev,
-        image: PRODUCT_ERRORS.IMAGE_REQUIRED,
-      }));
-      return null;
-    }
-    return formData.image;
-  };
-
-  const uploadAdditionalImages = async (): Promise<string[]> => {
-    const additionalUrls: string[] = [];
-    for (let i = 0; i < formData.images.length; i++) {
-      const file = additionalFiles[i];
-      if (file) {
-        setUploading(true);
-        try {
-          const url = await uploadSingleImage(file);
-          if (url) additionalUrls.push(url);
-        } catch {
-          // skip failed uploads
-        } finally {
-          setUploading(false);
-        }
-      } else if (formData.images[i]) {
-        additionalUrls.push(formData.images[i]);
-      }
-    }
-    return additionalUrls;
-  };
-
-  const handleSubmit = async (e: React.BaseSyntheticEvent) => {
-    e.preventDefault();
-    if (!validate()) return;
-    setSaving(true);
-    try {
-      const primaryUrl = await resolveImageUrl();
-      if (!primaryUrl) {
-        setSaving(false);
-        return;
-      }
-
-      const additionalUrls = await uploadAdditionalImages();
-      const savedProduct = await saveProductToApi(primaryUrl, additionalUrls);
-      toast.success(
-        editingProduct
-          ? "Product updated successfully"
-          : "Product created successfully",
-      );
-      onSuccess(savedProduct);
-      onClose();
-    } catch (err) {
-      logError({ error: err, context: "handleSubmit" });
-      toast.error(API_ERRORS.PRODUCT_SAVE);
-    } finally {
-      setSaving(false);
-    }
-  };
 
   const formBody = (
     <>
@@ -783,7 +447,7 @@ export default function ProductFormModal({
             disabled={saving || uploading}
             className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 transition"
           >
-            {getSubmitButtonText()}
+            {submitButtonText}
           </button>
         </div>
       </form>
@@ -805,4 +469,6 @@ export default function ProductFormModal({
       </div>
     </div>
   );
-}
+};
+
+export default ProductFormModal;

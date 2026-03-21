@@ -14,7 +14,6 @@ import { AlertBanner } from "@/components/ui/AlertBanner";
 import { EmptyState } from "@/components/ui/EmptyState";
 import AdminBreadcrumbs from "@/components/admin/AdminBreadcrumbs";
 
-// Lazy-load heavy modal components to reduce initial bundle size
 const ProductFormModal = lazy(
   () => import("@/components/admin/ProductFormModal"),
 );

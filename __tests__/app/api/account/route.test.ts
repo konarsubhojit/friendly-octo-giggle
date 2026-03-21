@@ -134,7 +134,7 @@ describe("PATCH /api/account", () => {
 
   it("updates profile successfully", async () => {
     mockAuth.mockResolvedValue({ user: { id: "user-1" } });
-    mockFindFirst.mockResolvedValue(null); // no duplicate
+    mockFindFirst.mockResolvedValue(null);
 
     const req = new NextRequest("http://localhost/api/account", {
       method: "PATCH",
@@ -150,7 +150,10 @@ describe("PATCH /api/account", () => {
 
   it("returns 409 when email is already taken", async () => {
     mockAuth.mockResolvedValue({ user: { id: "user-1" } });
-    mockFindFirst.mockResolvedValue({ id: "user-2", email: "taken@example.com" });
+    mockFindFirst.mockResolvedValue({
+      id: "user-2",
+      email: "taken@example.com",
+    });
 
     const req = new NextRequest("http://localhost/api/account", {
       method: "PATCH",
@@ -179,8 +182,8 @@ describe("PATCH /api/account", () => {
   it("returns 409 when phone number is already taken", async () => {
     mockAuth.mockResolvedValue({ user: { id: "user-1" } });
     mockFindFirst
-      .mockResolvedValueOnce(null) // no email duplicate
-      .mockResolvedValueOnce({ id: "user-3", phoneNumber: "+9999999999" }); // phone duplicate
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ id: "user-3", phoneNumber: "+9999999999" });
 
     const req = new NextRequest("http://localhost/api/account", {
       method: "PATCH",
@@ -199,7 +202,7 @@ describe("PATCH /api/account", () => {
 
   it("updates phone number only", async () => {
     mockAuth.mockResolvedValue({ user: { id: "user-1" } });
-    mockFindFirst.mockResolvedValue(null); // no duplicate
+    mockFindFirst.mockResolvedValue(null);
 
     const req = new NextRequest("http://localhost/api/account", {
       method: "PATCH",

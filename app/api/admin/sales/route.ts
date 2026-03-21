@@ -20,7 +20,6 @@ export async function GET() {
       const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
       const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
 
-      // Total revenue and order count (all time)
       const [totalStats] = await drizzleDb
         .select({
           totalRevenue: sql<number>`coalesce(sum(${orders.totalAmount}), 0)`,
@@ -29,7 +28,6 @@ export async function GET() {
         .from(orders)
         .where(ne(orders.status, "CANCELLED"));
 
-      // Today's revenue
       const [todayStats] = await drizzleDb
         .select({
           revenue: sql<number>`coalesce(sum(${orders.totalAmount}), 0)`,
@@ -40,7 +38,6 @@ export async function GET() {
           and(gte(orders.createdAt, today), ne(orders.status, "CANCELLED")),
         );
 
-      // This month's revenue
       const [monthStats] = await drizzleDb
         .select({
           revenue: sql<number>`coalesce(sum(${orders.totalAmount}), 0)`,
@@ -51,7 +48,6 @@ export async function GET() {
           and(gte(orders.createdAt, thisMonth), ne(orders.status, "CANCELLED")),
         );
 
-      // Last month's revenue (for comparison)
       const [lastMonthStats] = await drizzleDb
         .select({
           revenue: sql<number>`coalesce(sum(${orders.totalAmount}), 0)`,
@@ -66,7 +62,6 @@ export async function GET() {
           ),
         );
 
-      // Orders by status (excluding cancelled to match totals)
       const statusCounts = await drizzleDb
         .select({
           status: orders.status,
@@ -76,7 +71,6 @@ export async function GET() {
         .where(ne(orders.status, "CANCELLED"))
         .groupBy(orders.status);
 
-      // Top selling products
       const topProducts = await drizzleDb
         .select({
           productId: orderItems.productId,
@@ -92,7 +86,6 @@ export async function GET() {
         .orderBy(sql`sum(${orderItems.quantity}) desc`)
         .limit(5);
 
-      // Total customers
       const [customerCount] = await drizzleDb
         .select({ count: count() })
         .from(users)

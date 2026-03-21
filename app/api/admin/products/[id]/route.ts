@@ -24,20 +24,16 @@ export async function PUT(
 
     const validated = ProductUpdateSchema.parse(body);
 
-    // Cache invalidation is handled automatically in db.products.update
     const product = await db.products.update(id, validated);
 
     if (!product) {
       return apiError("Product not found", 404);
     }
 
-    // Revalidate Next.js cache tags (with empty config for immediate revalidation)
     revalidateTag("products", {});
 
-    // Invalidate Redis caches (public + admin)
     await invalidateProductCaches(id);
 
-    // Update search index (fire-and-forget)
     void indexProduct(product);
 
     return apiSuccess({ product });
@@ -58,20 +54,16 @@ export async function DELETE(
   try {
     const { id } = await params;
 
-    // Cache invalidation is handled automatically in db.products.delete
     const deleted = await db.products.delete(id);
 
     if (!deleted) {
       return apiError("Product not found", 404);
     }
 
-    // Revalidate Next.js cache tags (with empty config for immediate revalidation)
     revalidateTag("products", {});
 
-    // Invalidate Redis caches (public + admin)
     await invalidateProductCaches(id);
 
-    // Remove from search index (fire-and-forget)
     void removeProduct(id);
 
     return apiSuccess({ message: "Product deleted", id });

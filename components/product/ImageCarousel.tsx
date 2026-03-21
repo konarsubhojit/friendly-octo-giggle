@@ -137,9 +137,11 @@ const ImageCarousel = ({
   return (
     <div className="relative select-none">
       {/* Main image container */}
+      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex */}
       <section
         ref={containerRef}
         tabIndex={0}
+        aria-roledescription="carousel"
         aria-label={`Image carousel for ${productName}. Use arrow keys or mouse wheel to navigate.`}
         className="relative aspect-square w-full rounded-2xl overflow-hidden shadow-2xl border-4 border-[var(--border-warm)] bg-[var(--accent-blush)]/30 group focus:outline-none focus:ring-2 focus:ring-[var(--accent-warm)]"
       >

@@ -101,7 +101,6 @@ export default function CartPage() {
     [cart?.items],
   );
 
-  // Extracted helper: handles the API call to create an order (JS-R1005)
   const handleCustomizationChange = useCallback(
     (itemId: string, note: string) => {
       setCustomizationNotes((prev) => ({ ...prev, [itemId]: note }));
@@ -178,9 +177,6 @@ export default function CartPage() {
   const CART_SUBMIT_BTN =
     "w-full bg-gradient-to-r from-[var(--accent-rose)] to-[var(--accent-pink)] text-white py-3.5 rounded-full font-bold text-base hover:from-[var(--accent-pink)] hover:to-[var(--accent-rose)] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-warm hover:shadow-warm-lg focus-warm";
 
-  // Show the full-page spinner only on the very first load (cart not yet fetched).
-  // Background re-fetches triggered by quantity updates / removals must not
-  // replace the visible cart with a blank spinner – that is the bug we are fixing.
   if ((loading && cart === null) || status === "loading") {
     return (
       <div className="min-h-screen bg-warm-gradient">

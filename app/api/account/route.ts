@@ -72,7 +72,6 @@ export async function PATCH(request: NextRequest) {
 
     const { name, email, phoneNumber, currencyPreference } = parseResult.data;
 
-    // Check for duplicate email if changing
     if (email) {
       const existingByEmail = await drizzleDb.query.users.findFirst({
         where: and(eq(users.email, email), ne(users.id, session.user.id)),
@@ -82,7 +81,6 @@ export async function PATCH(request: NextRequest) {
       }
     }
 
-    // Check for duplicate phone if changing
     if (phoneNumber) {
       const existingByPhone = await drizzleDb.query.users.findFirst({
         where: and(

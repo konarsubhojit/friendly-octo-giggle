@@ -4,37 +4,15 @@ import { products } from "@/lib/schema";
 import { desc, lt, ilike, and, isNull, inArray, SQL } from "drizzle-orm";
 import { ProductInputSchema } from "@/lib/validations";
 import { apiSuccess, apiError, handleApiError } from "@/lib/api-utils";
-import { auth } from "@/lib/auth";
 import { revalidateTag } from "next/cache";
 import { invalidateProductCaches } from "@/lib/cache";
 import { indexProduct } from "@/lib/search";
 import { searchProductIds } from "@/lib/search-service";
+import { checkAdminAuth } from "@/lib/admin-auth";
 
 export const dynamic = "force-dynamic";
 
 const PAGE_SIZE = 20;
-
-const checkAdminAuth = async () => {
-  const session = await auth();
-
-  if (!session?.user) {
-    return {
-      authorized: false,
-      error: "Not authenticated",
-      status: 401 as const,
-    };
-  }
-
-  if (session.user.role !== "ADMIN") {
-    return {
-      authorized: false,
-      error: "Not authorized - Admin access required",
-      status: 403 as const,
-    };
-  }
-
-  return { authorized: true };
-};
 
 /**
  * GET /api/admin/products
@@ -64,7 +42,6 @@ export const GET = async (request: NextRequest) => {
       100,
     );
 
-    // Build Drizzle where conditions
     const conditions: SQL[] = [isNull(products.deletedAt)];
 
     if (cursor) {
@@ -91,7 +68,7 @@ export const GET = async (request: NextRequest) => {
       conditions.length === 1 ? conditions[0] : and(...conditions);
 
     const rows = await drizzleDb.query.products.findMany({
-      where: whereClause as SQL | undefined,
+      where: whereClause,
       orderBy: [desc(products.createdAt)],
       limit: limit + 1,
       with: { variations: true },
@@ -111,7 +88,7 @@ export const GET = async (request: NextRequest) => {
       variations: p.variations.map((v) => ({
         ...v,
         image: v.image ?? null,
-        images: (v.images as string[]) ?? [],
+        images: v.images ?? [],
         createdAt: v.createdAt.toISOString(),
         updatedAt: v.updatedAt.toISOString(),
       })),
@@ -132,19 +109,14 @@ export const POST = async (request: NextRequest) => {
   try {
     const body = await request.json();
 
-    // Validate input with Zod
     const validated = ProductInputSchema.parse(body);
 
-    // Cache invalidation is handled automatically in db.products.create
     const product = await db.products.create(validated);
 
-    // Revalidate Next.js cache tags (with empty config for immediate revalidation)
     revalidateTag("products", {});
 
-    // Invalidate Redis caches (public + admin)
     await invalidateProductCaches();
 
-    // Index in Upstash Search (fire-and-forget)
     void indexProduct(product);
 
     return apiSuccess({ product }, 201);

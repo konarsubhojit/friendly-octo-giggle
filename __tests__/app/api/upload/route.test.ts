@@ -47,7 +47,7 @@ describe("POST /api/upload", () => {
     const res = await POST(makeRequest());
     expect(res.status).toBe(401);
     const body = await res.json();
-    expect(body.error).toBe("Unauthorized");
+    expect(body.error).toBe("Not authenticated");
   });
 
   it("returns 403 when not admin", async () => {
@@ -55,7 +55,7 @@ describe("POST /api/upload", () => {
     const res = await POST(makeRequest());
     expect(res.status).toBe(403);
     const body = await res.json();
-    expect(body.error).toBe("Forbidden: Admin access required");
+    expect(body.error).toBe("Not authorized - Admin access required");
   });
 
   it("returns 400 when no file provided", async () => {

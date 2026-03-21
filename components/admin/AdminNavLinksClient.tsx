@@ -172,7 +172,7 @@ function DropdownGroup({
         </svg>
       </button>
       {open &&
-        typeof window !== "undefined" &&
+        typeof globalThis.window !== "undefined" &&
         createPortal(
           <div
             ref={menuRef}
