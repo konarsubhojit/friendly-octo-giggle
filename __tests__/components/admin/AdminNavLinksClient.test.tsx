@@ -45,9 +45,7 @@ describe("AdminNavLinksClient", () => {
     expect(
       screen.getByRole("button", { name: /Management/i }),
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /System/i }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /System/i })).toBeInTheDocument();
   });
 
   it("renders Jump to... quick navigation button", () => {
@@ -186,7 +184,9 @@ describe("AdminNavLinksClient", () => {
   describe("CommandPalette", () => {
     it("opens command palette when Jump to button is clicked", async () => {
       render(<AdminNavLinksClient failedEmailCount={0} />);
-      fireEvent.click(screen.getByRole("button", { name: /Quick navigation/i }));
+      fireEvent.click(
+        screen.getByRole("button", { name: /Quick navigation/i }),
+      );
       await waitFor(() => {
         expect(
           screen.getByRole("dialog", { name: /Admin quick navigation/i }),
@@ -196,7 +196,9 @@ describe("AdminNavLinksClient", () => {
 
     it("shows all nav items in command palette", async () => {
       render(<AdminNavLinksClient failedEmailCount={0} />);
-      fireEvent.click(screen.getByRole("button", { name: /Quick navigation/i }));
+      fireEvent.click(
+        screen.getByRole("button", { name: /Quick navigation/i }),
+      );
       const dialog = await screen.findByRole("dialog");
       expect(dialog).toBeInTheDocument();
       expect(dialog.textContent).toContain("Dashboard");
@@ -207,7 +209,9 @@ describe("AdminNavLinksClient", () => {
 
     it("filters items when typing in command palette", async () => {
       render(<AdminNavLinksClient failedEmailCount={0} />);
-      fireEvent.click(screen.getByRole("button", { name: /Quick navigation/i }));
+      fireEvent.click(
+        screen.getByRole("button", { name: /Quick navigation/i }),
+      );
       await waitFor(() => screen.getByRole("dialog"));
       const input = screen.getByPlaceholderText("Jump to admin section...");
       fireEvent.change(input, { target: { value: "order" } });
@@ -219,7 +223,9 @@ describe("AdminNavLinksClient", () => {
 
     it("shows 'No matching sections' when filter has no results", async () => {
       render(<AdminNavLinksClient failedEmailCount={0} />);
-      fireEvent.click(screen.getByRole("button", { name: /Quick navigation/i }));
+      fireEvent.click(
+        screen.getByRole("button", { name: /Quick navigation/i }),
+      );
       await waitFor(() => screen.getByRole("dialog"));
       const input = screen.getByPlaceholderText("Jump to admin section...");
       fireEvent.change(input, { target: { value: "xyznonexistent" } });
@@ -230,9 +236,13 @@ describe("AdminNavLinksClient", () => {
 
     it("closes command palette when backdrop is clicked", async () => {
       render(<AdminNavLinksClient failedEmailCount={0} />);
-      fireEvent.click(screen.getByRole("button", { name: /Quick navigation/i }));
+      fireEvent.click(
+        screen.getByRole("button", { name: /Quick navigation/i }),
+      );
       await waitFor(() => screen.getByRole("dialog"));
-      fireEvent.click(screen.getByRole("button", { name: /Close navigation/i }));
+      fireEvent.click(
+        screen.getByRole("button", { name: /Close navigation/i }),
+      );
       await waitFor(() => {
         expect(screen.queryByRole("dialog")).toBeNull();
       });
@@ -240,7 +250,9 @@ describe("AdminNavLinksClient", () => {
 
     it("closes command palette on Escape key", async () => {
       render(<AdminNavLinksClient failedEmailCount={0} />);
-      fireEvent.click(screen.getByRole("button", { name: /Quick navigation/i }));
+      fireEvent.click(
+        screen.getByRole("button", { name: /Quick navigation/i }),
+      );
       await waitFor(() => screen.getByRole("dialog"));
       const input = screen.getByPlaceholderText("Jump to admin section...");
       fireEvent.keyDown(input, { key: "Escape" });
@@ -251,7 +263,9 @@ describe("AdminNavLinksClient", () => {
 
     it("ArrowDown and ArrowUp navigate through items", async () => {
       render(<AdminNavLinksClient failedEmailCount={0} />);
-      fireEvent.click(screen.getByRole("button", { name: /Quick navigation/i }));
+      fireEvent.click(
+        screen.getByRole("button", { name: /Quick navigation/i }),
+      );
       await waitFor(() => screen.getByRole("dialog"));
       const input = screen.getByPlaceholderText("Jump to admin section...");
       fireEvent.keyDown(input, { key: "ArrowDown" });
@@ -260,7 +274,9 @@ describe("AdminNavLinksClient", () => {
 
     it("shows badge for email failures in command palette", async () => {
       render(<AdminNavLinksClient failedEmailCount={3} />);
-      fireEvent.click(screen.getByRole("button", { name: /Quick navigation/i }));
+      fireEvent.click(
+        screen.getByRole("button", { name: /Quick navigation/i }),
+      );
       await waitFor(() => screen.getByRole("dialog"));
       expect(screen.getByText("3")).toBeInTheDocument();
     });
