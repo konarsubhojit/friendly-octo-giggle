@@ -1,5 +1,6 @@
 "use server";
 
+import { waitUntil } from "@vercel/functions";
 import { drizzleDb } from "@/lib/db";
 import { orders, orderItems } from "@/lib/schema";
 import { eq, desc } from "drizzle-orm";
@@ -178,7 +179,7 @@ export const createOrder = async (
     return { success: false, error: "Failed to create order" };
   }
 
-  void writeOrderToRedis({
+  waitUntil(writeOrderToRedis({
     id: orderId,
     userId,
     customerName,
@@ -188,7 +189,7 @@ export const createOrder = async (
     status: "PENDING",
     items,
     createdAt,
-  });
+  }));
 
   logBusinessEvent({
     event: "order_created",
@@ -311,7 +312,7 @@ export const getUserOrders = async (
                 createdAt: row.createdAt.toISOString(),
               };
               validOrders.push(summary);
-              void writeOrderToRedis(summary);
+              waitUntil(writeOrderToRedis(summary));
             }
           } catch (error) {
             logError({
