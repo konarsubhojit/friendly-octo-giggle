@@ -130,7 +130,9 @@ describe("app/wishlist/loading.tsx – Wishlist Loading", () => {
   it("contains animate-pulse elements", async () => {
     const { default: WishlistLoading } = await import("@/app/wishlist/loading");
     const { container } = render(<WishlistLoading />);
-    expect(container.querySelectorAll(".animate-pulse").length).toBeGreaterThan(0);
+    expect(container.querySelectorAll(".animate-pulse").length).toBeGreaterThan(
+      0,
+    );
   });
 });
 
@@ -152,7 +154,9 @@ describe("app/shop/loading.tsx – Shop Loading", () => {
   it("contains animate-pulse elements", async () => {
     const { default: ShopLoading } = await import("@/app/shop/loading");
     const { container } = render(<ShopLoading />);
-    expect(container.querySelectorAll(".animate-pulse").length).toBeGreaterThan(0);
+    expect(container.querySelectorAll(".animate-pulse").length).toBeGreaterThan(
+      0,
+    );
   });
 });
 
@@ -166,11 +170,11 @@ describe("Spacing consistency – pt-8 on all loading skeletons", () => {
   });
 
   it("product detail loading uses pt-8", async () => {
-    const { default: ProductDetailLoading } = await import("@/app/products/[id]/loading");
+    const { default: ProductDetailLoading } =
+      await import("@/app/products/[id]/loading");
     const { container } = render(<ProductDetailLoading />);
     const main = container.querySelector("main");
     expect(main?.className).toContain("pt-8");
     expect(main?.className).not.toContain("pt-28");
   });
 });
-

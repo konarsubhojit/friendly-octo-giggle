@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, act, waitFor } from "@testing-library/react";
+import {
+  render,
+  screen,
+  fireEvent,
+  act,
+  waitFor,
+} from "@testing-library/react";
 import SignInClient from "@/app/auth/signin/SignInClient";
 
 const mockSignIn = vi.hoisted(() => vi.fn());
@@ -62,7 +68,9 @@ describe("SignInClient", () => {
     });
 
     act(() => {
-      fireEvent.submit(screen.getByText("Login").closest("form") as HTMLFormElement);
+      fireEvent.submit(
+        screen.getByText("Login").closest("form") as HTMLFormElement,
+      );
     });
 
     await waitFor(() => {
@@ -88,7 +96,9 @@ describe("SignInClient", () => {
     });
 
     act(() => {
-      fireEvent.submit(screen.getByText("Login").closest("form") as HTMLFormElement);
+      fireEvent.submit(
+        screen.getByText("Login").closest("form") as HTMLFormElement,
+      );
     });
 
     await waitFor(() => {
@@ -111,7 +121,9 @@ describe("SignInClient", () => {
     });
 
     act(() => {
-      fireEvent.submit(screen.getByText("Login").closest("form") as HTMLFormElement);
+      fireEvent.submit(
+        screen.getByText("Login").closest("form") as HTMLFormElement,
+      );
     });
 
     await waitFor(() => {
@@ -138,7 +150,9 @@ describe("SignInClient", () => {
     });
 
     act(() => {
-      fireEvent.submit(screen.getByText("Login").closest("form") as HTMLFormElement);
+      fireEvent.submit(
+        screen.getByText("Login").closest("form") as HTMLFormElement,
+      );
     });
 
     expect(screen.getByText("Logging in...")).toBeTruthy();

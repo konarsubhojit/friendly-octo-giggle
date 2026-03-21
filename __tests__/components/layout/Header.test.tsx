@@ -55,20 +55,29 @@ describe("Header", () => {
   });
 
   it("renders brand name", () => {
-    vi.mocked(useSession).mockReturnValue({ data: null, status: "unauthenticated" });
+    vi.mocked(useSession).mockReturnValue({
+      data: null,
+      status: "unauthenticated",
+    });
     render(<Header />);
     expect(screen.getByText("The Kiyon Store")).toBeTruthy();
   });
 
   it("shows Login button when not authenticated", () => {
-    vi.mocked(useSession).mockReturnValue({ data: null, status: "unauthenticated" });
+    vi.mocked(useSession).mockReturnValue({
+      data: null,
+      status: "unauthenticated",
+    });
     render(<Header />);
     const loginButton = screen.getByText("Login");
     expect(loginButton.tagName).toBe("BUTTON");
   });
 
   it("opens login modal when Login button is clicked", () => {
-    vi.mocked(useSession).mockReturnValue({ data: null, status: "unauthenticated" });
+    vi.mocked(useSession).mockReturnValue({
+      data: null,
+      status: "unauthenticated",
+    });
     render(<Header />);
     expect(screen.queryByTestId("login-modal")).toBeNull();
     act(() => {
@@ -78,7 +87,10 @@ describe("Header", () => {
   });
 
   it("shows navigation links", () => {
-    vi.mocked(useSession).mockReturnValue({ data: null, status: "unauthenticated" });
+    vi.mocked(useSession).mockReturnValue({
+      data: null,
+      status: "unauthenticated",
+    });
     render(<Header />);
     expect(screen.getByText("Home")).toBeTruthy();
     expect(screen.getByText("About")).toBeTruthy();
@@ -88,7 +100,12 @@ describe("Header", () => {
   it("shows user menu when authenticated", () => {
     vi.mocked(useSession).mockReturnValue({
       data: {
-        user: { name: "Alice", email: "alice@example.com", image: null, role: "CUSTOMER" },
+        user: {
+          name: "Alice",
+          email: "alice@example.com",
+          image: null,
+          role: "CUSTOMER",
+        },
         expires: "",
       },
       status: "authenticated",
@@ -100,7 +117,12 @@ describe("Header", () => {
   it("does not show My Orders or Wishlist in main nav", () => {
     vi.mocked(useSession).mockReturnValue({
       data: {
-        user: { name: "Alice", email: "alice@example.com", image: null, role: "CUSTOMER" },
+        user: {
+          name: "Alice",
+          email: "alice@example.com",
+          image: null,
+          role: "CUSTOMER",
+        },
         expires: "",
       },
       status: "authenticated",
@@ -113,7 +135,12 @@ describe("Header", () => {
   it("shows Admin Dashboard link for ADMIN role", () => {
     vi.mocked(useSession).mockReturnValue({
       data: {
-        user: { name: "Admin", email: "admin@example.com", image: null, role: "ADMIN" },
+        user: {
+          name: "Admin",
+          email: "admin@example.com",
+          image: null,
+          role: "ADMIN",
+        },
         expires: "",
       },
       status: "authenticated",
@@ -128,7 +155,12 @@ describe("Header", () => {
   it("opens and closes user menu on click", () => {
     vi.mocked(useSession).mockReturnValue({
       data: {
-        user: { name: "Alice", email: "alice@example.com", image: null, role: "CUSTOMER" },
+        user: {
+          name: "Alice",
+          email: "alice@example.com",
+          image: null,
+          role: "CUSTOMER",
+        },
         expires: "",
       },
       status: "authenticated",
@@ -150,7 +182,12 @@ describe("Header", () => {
   it("closes menu when clicking outside", () => {
     vi.mocked(useSession).mockReturnValue({
       data: {
-        user: { name: "Alice", email: "alice@example.com", image: null, role: "CUSTOMER" },
+        user: {
+          name: "Alice",
+          email: "alice@example.com",
+          image: null,
+          role: "CUSTOMER",
+        },
         expires: "",
       },
       status: "authenticated",
@@ -169,7 +206,10 @@ describe("Header", () => {
   });
 
   it("renders CartIcon", () => {
-    vi.mocked(useSession).mockReturnValue({ data: null, status: "unauthenticated" });
+    vi.mocked(useSession).mockReturnValue({
+      data: null,
+      status: "unauthenticated",
+    });
     render(<Header />);
     expect(screen.getByTestId("cart-icon")).toBeTruthy();
   });
@@ -177,7 +217,12 @@ describe("Header", () => {
   it("renders user profile image when session.user.image is provided", () => {
     vi.mocked(useSession).mockReturnValue({
       data: {
-        user: { name: "Alice", email: "alice@example.com", image: "https://example.com/avatar.jpg", role: "CUSTOMER" },
+        user: {
+          name: "Alice",
+          email: "alice@example.com",
+          image: "https://example.com/avatar.jpg",
+          role: "CUSTOMER",
+        },
         expires: "",
       },
       status: "authenticated",
@@ -193,7 +238,12 @@ describe("Header", () => {
   it("calls signOut and closes menu when Sign Out is clicked", () => {
     vi.mocked(useSession).mockReturnValue({
       data: {
-        user: { name: "Alice", email: "alice@example.com", image: null, role: "CUSTOMER" },
+        user: {
+          name: "Alice",
+          email: "alice@example.com",
+          image: null,
+          role: "CUSTOMER",
+        },
         expires: "",
       },
       status: "authenticated",
@@ -216,7 +266,12 @@ describe("Header", () => {
   it("closes menu when clicking My Orders link in dropdown", () => {
     vi.mocked(useSession).mockReturnValue({
       data: {
-        user: { name: "Alice", email: "alice@example.com", image: null, role: "CUSTOMER" },
+        user: {
+          name: "Alice",
+          email: "alice@example.com",
+          image: null,
+          role: "CUSTOMER",
+        },
         expires: "",
       },
       status: "authenticated",
@@ -240,7 +295,12 @@ describe("Header", () => {
   it("closes menu when clicking Admin Dashboard link", () => {
     vi.mocked(useSession).mockReturnValue({
       data: {
-        user: { name: "Admin", email: "admin@example.com", image: null, role: "ADMIN" },
+        user: {
+          name: "Admin",
+          email: "admin@example.com",
+          image: null,
+          role: "ADMIN",
+        },
         expires: "",
       },
       status: "authenticated",
@@ -262,7 +322,12 @@ describe("Header", () => {
   it("shows My Account link in user menu", () => {
     vi.mocked(useSession).mockReturnValue({
       data: {
-        user: { name: "Alice", email: "alice@example.com", image: null, role: "CUSTOMER" },
+        user: {
+          name: "Alice",
+          email: "alice@example.com",
+          image: null,
+          role: "CUSTOMER",
+        },
         expires: "",
       },
       status: "authenticated",
@@ -279,7 +344,10 @@ describe("Header", () => {
   });
 
   it("opens mobile nav when hamburger is clicked", () => {
-    vi.mocked(useSession).mockReturnValue({ data: null, status: "unauthenticated" });
+    vi.mocked(useSession).mockReturnValue({
+      data: null,
+      status: "unauthenticated",
+    });
     render(<Header />);
     act(() => {
       fireEvent.click(screen.getByLabelText("Open menu"));
@@ -290,20 +358,32 @@ describe("Header", () => {
   });
 
   it("closes mobile nav when hamburger is clicked again", () => {
-    vi.mocked(useSession).mockReturnValue({ data: null, status: "unauthenticated" });
+    vi.mocked(useSession).mockReturnValue({
+      data: null,
+      status: "unauthenticated",
+    });
     render(<Header />);
     const hamburger = screen.getByLabelText("Open menu");
-    act(() => { fireEvent.click(hamburger); });
-    act(() => { fireEvent.click(screen.getByLabelText("Close menu")); });
+    act(() => {
+      fireEvent.click(hamburger);
+    });
+    act(() => {
+      fireEvent.click(screen.getByLabelText("Close menu"));
+    });
     expect(screen.queryByLabelText("Close menu")).toBeNull();
   });
 
   it("renders ProductSearch with onNavigate in mobile nav", () => {
-    vi.mocked(useSession).mockReturnValue({ data: null, status: "unauthenticated" });
+    vi.mocked(useSession).mockReturnValue({
+      data: null,
+      status: "unauthenticated",
+    });
     render(<Header />);
     act(() => {
       fireEvent.click(screen.getByLabelText("Open menu"));
     });
-    expect(screen.getAllByTestId("product-search").length).toBeGreaterThanOrEqual(1);
+    expect(
+      screen.getAllByTestId("product-search").length,
+    ).toBeGreaterThanOrEqual(1);
   });
 });

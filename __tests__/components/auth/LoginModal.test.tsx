@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeAll, beforeEach } from "vitest";
-import { render, screen, fireEvent, act, waitFor } from "@testing-library/react";
+import {
+  render,
+  screen,
+  fireEvent,
+  act,
+  waitFor,
+} from "@testing-library/react";
 import React from "react";
 import LoginModal from "@/components/auth/LoginModal";
 
@@ -32,7 +38,9 @@ vi.mock("next/link", () => ({
 }));
 
 beforeAll(() => {
-  HTMLDialogElement.prototype.showModal = vi.fn(function (this: HTMLDialogElement) {
+  HTMLDialogElement.prototype.showModal = vi.fn(function (
+    this: HTMLDialogElement,
+  ) {
     this.setAttribute("open", "");
     this.setAttribute("aria-modal", "true");
   });
@@ -71,7 +79,8 @@ describe("LoginModal", () => {
   it("closes on backdrop click", () => {
     const onClose = vi.fn();
     render(<LoginModal isOpen={true} onClose={onClose} />);
-    const backdrop = screen.getByText("Welcome Back")
+    const backdrop = screen
+      .getByText("Welcome Back")
       .closest("dialog")
       ?.querySelector('[aria-hidden="true"]');
     if (backdrop) {
@@ -162,7 +171,9 @@ describe("LoginModal", () => {
     });
 
     act(() => {
-      fireEvent.submit(screen.getByText("Login").closest("form") as HTMLFormElement);
+      fireEvent.submit(
+        screen.getByText("Login").closest("form") as HTMLFormElement,
+      );
     });
 
     await waitFor(() => {
@@ -188,7 +199,9 @@ describe("LoginModal", () => {
     });
 
     act(() => {
-      fireEvent.submit(screen.getByText("Login").closest("form") as HTMLFormElement);
+      fireEvent.submit(
+        screen.getByText("Login").closest("form") as HTMLFormElement,
+      );
     });
 
     await waitFor(() => {
@@ -211,7 +224,9 @@ describe("LoginModal", () => {
     });
 
     act(() => {
-      fireEvent.submit(screen.getByText("Login").closest("form") as HTMLFormElement);
+      fireEvent.submit(
+        screen.getByText("Login").closest("form") as HTMLFormElement,
+      );
     });
 
     await waitFor(() => {

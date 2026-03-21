@@ -4,7 +4,10 @@ import React from "react";
 
 vi.mock("next/font/google", () => ({
   Nunito: () => ({ className: "nunito" }),
-  Playfair_Display: () => ({ className: "playfair", variable: "--font-display" }),
+  Playfair_Display: () => ({
+    className: "playfair",
+    variable: "--font-display",
+  }),
 }));
 
 vi.mock("@/components/layout/HeaderWrapper", () => ({
@@ -16,15 +19,21 @@ vi.mock("@/components/providers/StoreProvider", () => ({
 }));
 
 vi.mock("@/contexts/ThemeContext", () => ({
-  ThemeProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  ThemeProvider: ({ children }: { children: React.ReactNode }) => (
+    <>{children}</>
+  ),
 }));
 
 vi.mock("@/contexts/CurrencyContext", () => ({
-  CurrencyProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  CurrencyProvider: ({ children }: { children: React.ReactNode }) => (
+    <>{children}</>
+  ),
 }));
 
 vi.mock("@/components/providers/SessionProvider", () => ({
-  SessionProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  SessionProvider: ({ children }: { children: React.ReactNode }) => (
+    <>{children}</>
+  ),
 }));
 
 vi.mock("react-hot-toast", () => ({
