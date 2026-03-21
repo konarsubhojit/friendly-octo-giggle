@@ -45,7 +45,7 @@ function ContactInfoSection() {
 export default function ContactPage() {
   return (
     <div className="min-h-screen bg-warm-gradient">
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
         <h1 className="text-4xl font-bold text-[var(--foreground)] mb-4">Contact Us</h1>
         <p className="text-[var(--text-muted)] text-lg mb-12">We&apos;d love to hear from you. Send us a message and we&apos;ll get back to you as soon as possible.</p>
 

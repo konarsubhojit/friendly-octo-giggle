@@ -160,7 +160,7 @@ const AboutIllustration = () => (
 
 const AboutPage = () => (
   <div className="min-h-screen bg-warm-gradient">
-    <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16 relative">
+    <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 relative">
       <ScatteredFlowers />
       <MushroomAccent className="absolute top-36 right-6 w-12 h-12 opacity-20 hidden sm:block animate-float-slow" />
       <div className="relative z-10">

@@ -100,8 +100,10 @@ describe("ProductGrid", () => {
     expect(screen.getByText("Beautiful flowers")).toBeTruthy();
   });
 
-  it("renders category in filter pills", () => {
+  it("renders category in filter dropdown", () => {
     renderGrid([makeProduct({ category: "Flowers" })], ["Flowers"]);
+    const select = screen.getByRole("combobox", { name: /filter by category/i });
+    expect(select).toBeTruthy();
     const elements = screen.getAllByText("Flowers");
     expect(elements.length).toBeGreaterThan(0);
   });
@@ -140,14 +142,16 @@ describe("ProductGrid", () => {
     renderGrid([]);
     expect(screen.getByText(/All Products/i)).toBeTruthy();
   });
-  it("renders category filter buttons", () => {
+  it("renders category filter dropdown with all options", () => {
     renderGrid([], ALL_CATEGORIES);
-    expect(screen.getByText("All")).toBeTruthy();
-    expect(screen.getByText("Handbag")).toBeTruthy();
-    expect(screen.getByText("Flowers")).toBeTruthy();
-    expect(screen.getByText("Flower Pots")).toBeTruthy();
-    expect(screen.getByText("Keychains")).toBeTruthy();
-    expect(screen.getByText("Hair Accessories")).toBeTruthy();
+    const select = screen.getByRole("combobox", { name: /filter by category/i });
+    expect(select).toBeTruthy();
+    expect(screen.getByRole("option", { name: "All" })).toBeTruthy();
+    expect(screen.getByRole("option", { name: "Handbag" })).toBeTruthy();
+    expect(screen.getByRole("option", { name: "Flowers" })).toBeTruthy();
+    expect(screen.getByRole("option", { name: "Flower Pots" })).toBeTruthy();
+    expect(screen.getByRole("option", { name: "Keychains" })).toBeTruthy();
+    expect(screen.getByRole("option", { name: "Hair Accessories" })).toBeTruthy();
   });
 
   it("filters products by search query", () => {
@@ -169,8 +173,8 @@ describe("ProductGrid", () => {
       ],
       ["Flowers", "Handbag"],
     );
-    const handbagBtn = screen.getByRole("button", { name: "Handbag" });
-    fireEvent.click(handbagBtn);
+    const select = screen.getByRole("combobox", { name: /filter by category/i });
+    fireEvent.change(select, { target: { value: "Handbag" } });
     expect(screen.getByText("Tote Bag")).toBeTruthy();
     expect(screen.queryByText("Red Rose")).toBeNull();
   });

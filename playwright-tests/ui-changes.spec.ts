@@ -246,11 +246,10 @@ test.describe('Shop page', () => {
     await expect(page.getByRole('heading', { name: /^Shop$/i }).first()).toBeVisible();
   });
 
-  test('shop page has category filter buttons', async ({ page }) => {
+  test('shop page has category filter dropdown', async ({ page }) => {
     await page.goto('/shop');
-    for (const cat of ['All', 'Handbag', 'Flowers', 'Flower Pots', 'Keychains', 'Hair Accessories']) {
-      await expect(page.getByRole('button', { name: cat }).first()).toBeVisible();
-    }
+    const select = page.getByRole('combobox', { name: /filter by category/i });
+    await expect(select).toBeVisible();
   });
 
   test('shop page has search input', async ({ page }) => {
@@ -346,30 +345,24 @@ test.describe('ProductGrid – search and category filter', () => {
     await page.screenshot({ path: screenshotPath('home-search-input') });
   });
 
-  test('all category filter buttons are present on homepage', async ({ page }) => {
+  test('category filter dropdown is present on homepage', async ({ page }) => {
     await page.goto('/');
-    // Verify every category pill exists
-    for (const cat of ['All', 'Handbag', 'Flowers', 'Flower Pots', 'Keychains', 'Hair Accessories']) {
-      await expect(page.getByRole('button', { name: cat }).first()).toBeVisible();
-    }
-    await page.screenshot({ path: screenshotPath('home-category-pills') });
+    const select = page.getByRole('combobox', { name: /filter by category/i });
+    await expect(select).toBeVisible();
+    await page.screenshot({ path: screenshotPath('home-category-filter') });
   });
 
-  test('"All" category pill has active style (selected by default)', async ({ page }) => {
+  test('"All" is selected by default in category dropdown', async ({ page }) => {
     await page.goto('/');
-    const allBtn = page.getByRole('button', { name: 'All' }).first();
-    await expect(allBtn).toHaveAttribute('aria-pressed', 'true');
+    const select = page.getByRole('combobox', { name: /filter by category/i });
+    await expect(select).toHaveValue('All');
   });
 
-  test('clicking a category pill updates aria-pressed', async ({ page }) => {
+  test('selecting a category in dropdown filters products', async ({ page }) => {
     await page.goto('/');
-    const handbagBtn = page.getByRole('button', { name: 'Handbag' }).first();
-    await expect(handbagBtn).toHaveAttribute('aria-pressed', 'false');
-    await handbagBtn.click();
-    await expect(handbagBtn).toHaveAttribute('aria-pressed', 'true');
-    // "All" should now be deselected
-    const allBtn = page.getByRole('button', { name: 'All' }).first();
-    await expect(allBtn).toHaveAttribute('aria-pressed', 'false');
+    const select = page.getByRole('combobox', { name: /filter by category/i });
+    await select.selectOption('Handbag');
+    await expect(select).toHaveValue('Handbag');
   });
 
   test('search input accepts text and filters results', async ({ page }, testInfo) => {

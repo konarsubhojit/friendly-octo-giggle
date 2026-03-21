@@ -128,10 +128,8 @@ const ProductGrid = ({ products, categories = [] }: ProductGridProps) => {
         Browse our complete handmade collection — crafted fresh for you.
       </p>
 
-      {/* Search + Category filters */}
-      <div className="mb-8 space-y-4">
-        {/* Search bar */}
-        <div className="relative max-w-md">
+      <div className="mb-8 flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1 max-w-md">
           <svg
             className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--accent-rose)]"
             fill="none"
@@ -156,27 +154,41 @@ const ProductGrid = ({ products, categories = [] }: ProductGridProps) => {
           />
         </div>
 
-        {/* Category pills */}
-        <fieldset
-          className="flex flex-wrap gap-2"
-          aria-label="Filter by category"
-        >
-          <legend className="sr-only">Filter by category</legend>
-          {categoryFilters.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => handleCategoryChange(cat)}
-              className={`px-4 py-1.5 rounded-full text-sm font-semibold border transition-all duration-200 ${
-                selectedCategory === cat
-                  ? "bg-gradient-to-r from-[var(--accent-rose)] to-[var(--accent-pink)] text-white border-[var(--accent-rose)] shadow-warm"
-                  : "bg-[var(--surface)] text-[var(--text-secondary)] border-[var(--border-warm)] hover:border-[var(--accent-rose)] hover:text-[var(--accent-rose)] hover:bg-[var(--accent-blush)]"
-              }`}
-              aria-pressed={selectedCategory === cat}
-            >
-              {cat}
-            </button>
-          ))}
-        </fieldset>
+        <div className="flex items-center gap-2 shrink-0">
+          <svg
+            className="w-4 h-4 text-[var(--accent-rose)] shrink-0"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z"
+            />
+          </svg>
+          <label
+            htmlFor="category-filter"
+            className="text-sm font-semibold text-[var(--text-secondary)] shrink-0"
+          >
+            Category
+          </label>
+          <select
+            id="category-filter"
+            value={selectedCategory}
+            onChange={(e) => handleCategoryChange(e.target.value)}
+            className="px-3 py-2.5 border border-[var(--border-warm)] rounded-full bg-[var(--surface)] text-[var(--foreground)] text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[var(--accent-rose)]/30 focus:border-[var(--accent-rose)] shadow-warm cursor-pointer transition-all duration-200"
+            aria-label="Filter by category"
+          >
+            {categoryFilters.map((cat) => (
+              <option key={cat} value={cat}>
+                {cat}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {filtered.length === 0 ? (
