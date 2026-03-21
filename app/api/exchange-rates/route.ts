@@ -20,12 +20,12 @@ class UpstreamApiError extends Error {
 }
 
 /** Returns today's date as a UTC string "YYYY-MM-DD", used as the cache key suffix. */
-function getUtcDateString(): string {
+const getUtcDateString = (): string => {
   return new Date().toISOString().slice(0, 10);
 }
 
 /** Seconds remaining until the next UTC midnight — the natural TTL for daily rates. */
-function secondsUntilMidnightUtc(): number {
+const secondsUntilMidnightUtc = (): number => {
   const now = new Date();
   const midnight = new Date(
     Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1),
@@ -47,7 +47,7 @@ function secondsUntilMidnightUtc(): number {
  * When base_code is USD: conversion_rates.INR = ~91.87, which yields the
  *   correct 1/91.87 rate for USD.
  */
-async function fetchAndNormaliseRates(): Promise<Record<string, number>> {
+const fetchAndNormaliseRates = async (): Promise<Record<string, number>> => {
   const apiKey = process.env.EXCHANGE_RATE_API_KEY;
   if (!apiKey) {
     throw new Error('Exchange rate API key not configured');
@@ -85,7 +85,7 @@ async function fetchAndNormaliseRates(): Promise<Record<string, number>> {
   return rates;
 }
 
-export async function GET() {
+export const GET = async () => {
   if (!process.env.EXCHANGE_RATE_API_KEY) {
     return apiError('Exchange rate API key not configured', 503);
   }

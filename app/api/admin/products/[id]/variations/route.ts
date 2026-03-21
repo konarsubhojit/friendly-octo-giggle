@@ -26,10 +26,10 @@ const findProduct = (productId: string) =>
  * GET /api/admin/products/[id]/variations
  * List all active (non-deleted) variations for a product
  */
-export async function GET(
+export const GET = async (
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
-) {
+) => {
   const authCheck = await checkAdminAuth();
   if (!authCheck.authorized) {
     return apiError(authCheck.error ?? "Unauthorized", authCheck.status);
@@ -68,10 +68,10 @@ export async function GET(
  * POST /api/admin/products/[id]/variations
  * Create a new variation for a product
  */
-export async function POST(
+export const POST = async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
-) {
+) => {
   const authCheck = await checkAdminAuth();
   if (!authCheck.authorized) {
     return apiError(authCheck.error ?? "Unauthorized", authCheck.status);

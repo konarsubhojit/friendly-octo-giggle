@@ -39,12 +39,12 @@ interface ProductFormModalProps {
 const DEFAULT_PRICE_CURRENCY: CurrencyCode = "INR";
 
 /** Convert an amount from one currency to another using the provided live rates. */
-function convertCurrency(
+const convertCurrency = (
   amount: number,
   from: CurrencyCode,
   to: CurrencyCode,
   rates: Record<CurrencyCode, number>,
-): number {
+): number => {
   const amountInBase = amount / rates[from];
   return Number((amountInBase * rates[to]).toFixed(2));
 }
@@ -60,17 +60,17 @@ interface AdditionalImageRowProps {
   readonly onRemove: (idx: number) => void;
 }
 
-function PendingFileNotice({ fileName }: { readonly fileName: string }) {
+const PendingFileNotice = ({ fileName }: { readonly fileName: string }) => {
   return <p className="text-xs text-green-600 mt-1">Selected: {fileName}</p>;
 }
 
-function AdditionalImageRow({
+const AdditionalImageRow = ({
   idx,
   imgUrl,
   pendingFile,
   onFileChange,
   onRemove,
-}: AdditionalImageRowProps) {
+}: AdditionalImageRowProps) => {
   const showCurrent = Boolean(imgUrl) && pendingFile === null;
   const labelText = `Image ${idx + 2}${showCurrent ? " (current)" : ""}`;
   return (
@@ -136,14 +136,14 @@ interface PriceFieldProps {
   readonly onPriceChange: (value: number) => void;
 }
 
-function PriceField({
+const PriceField = ({
   priceCurrency,
   priceValue,
   error,
   availableCurrencies,
   onCurrencyChange,
   onPriceChange,
-}: PriceFieldProps) {
+}: PriceFieldProps) => {
   return (
     <div>
       <label
@@ -214,12 +214,12 @@ const validateImage = (
 ): string | undefined =>
   !hasExisting && !hasFile ? PRODUCT_ERRORS.IMAGE_REQUIRED : undefined;
 
-export default function ProductFormModal({
+const ProductFormModal = ({
   editingProduct,
   onClose,
   onSuccess,
   layout = "modal",
-}: ProductFormModalProps) {
+}: ProductFormModalProps) => {
   const { availableCurrencies, rates } = useCurrency();
   const [priceCurrency, setPriceCurrency] = useState<CurrencyCode>(
     DEFAULT_PRICE_CURRENCY,
@@ -806,3 +806,4 @@ export default function ProductFormModal({
     </div>
   );
 }
+export default ProductFormModal;

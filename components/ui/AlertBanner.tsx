@@ -34,12 +34,12 @@ const ICON_PATHS: Record<AlertVariant, string> = {
  * <AlertBanner message="Saved!" variant="success" />
  * ```
  */
-export function AlertBanner({
+export const AlertBanner = ({
   message,
   variant = 'error',
   onDismiss,
   className = '',
-}: AlertBannerProps) {
+}: AlertBannerProps) => {
   return (
     <div
       className={`p-4 rounded-xl border flex items-start gap-3 ${VARIANT_STYLES[variant]} ${className}`}

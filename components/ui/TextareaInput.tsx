@@ -2,7 +2,7 @@
 
 import { BASE_INPUT, borderCls, type InputSubProps } from '@/components/ui/DynamicFormTypes';
 
-export function TextareaInput({ field, value, describedBy, error, onChange }: InputSubProps) {
+export const TextareaInput = ({ field, value, describedBy, error, onChange }: InputSubProps) => {
   return (
     <textarea
       id={field.id}

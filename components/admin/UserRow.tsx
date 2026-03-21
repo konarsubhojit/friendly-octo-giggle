@@ -20,7 +20,7 @@ interface UserRowProps {
   readonly onRoleChange: (userId: string, newRole: 'ADMIN' | 'CUSTOMER') => void;
 }
 
-export function UserRow({ user, updatingUserId, onRoleChange }: UserRowProps) {
+export const UserRow = ({ user, updatingUserId, onRoleChange }: UserRowProps) => {
   return (
     <tr className="hover:bg-gray-50 dark:hover:bg-gray-700">
       <td className="px-6 py-4 whitespace-nowrap">

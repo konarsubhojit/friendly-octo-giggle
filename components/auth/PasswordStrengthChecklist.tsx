@@ -8,7 +8,7 @@ interface PasswordStrengthChecklistProps {
   readonly password: string;
 }
 
-export function PasswordStrengthChecklist({ password }: PasswordStrengthChecklistProps) {
+export const PasswordStrengthChecklist = ({ password }: PasswordStrengthChecklistProps) => {
   if (!password) return null;
 
   return (

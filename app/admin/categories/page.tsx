@@ -6,7 +6,7 @@ import AdminBreadcrumbs from "@/components/admin/AdminBreadcrumbs";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminCategoriesPage() {
+const AdminCategoriesPage = async () => {
   const list = await drizzleDb
     .select()
     .from(categories)
@@ -37,3 +37,4 @@ export default async function AdminCategoriesPage() {
     </main>
   );
 }
+export default AdminCategoriesPage;

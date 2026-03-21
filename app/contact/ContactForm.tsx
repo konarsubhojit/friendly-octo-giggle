@@ -61,7 +61,7 @@ const SUBMIT_BTN =
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export default function ContactForm() {
+const ContactForm = () => {
   const [submitted, setSubmitted] = useState(false);
 
   const handleSubmit = useCallback((): SubmitResult => {
@@ -102,3 +102,4 @@ export default function ContactForm() {
     </>
   );
 }
+export default ContactForm;

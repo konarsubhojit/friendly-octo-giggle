@@ -24,7 +24,7 @@ interface UserMenuProps {
   readonly menuRef: React.RefObject<HTMLDivElement | null>;
 }
 
-function UserMenu({ user, menuOpen, setMenuOpen, menuRef }: UserMenuProps) {
+const UserMenu = ({ user, menuOpen, setMenuOpen, menuRef }: UserMenuProps) => {
   return (
     <div className="relative" ref={menuRef}>
       <button
@@ -210,11 +210,11 @@ interface MobileNavProps {
   readonly onLoginClick: () => void;
 }
 
-function MobileNav({
+const MobileNav = ({
   isLoggedIn,
   closeMobileNav,
   onLoginClick,
-}: MobileNavProps) {
+}: MobileNavProps) => {
   return (
     <div
       id="mobile-nav-drawer"
@@ -328,7 +328,7 @@ function MobileNav({
   );
 }
 
-export default function Header() {
+const Header = () => {
   const { data: session } = useSession();
   const [menuOpen, setMenuOpen] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -336,7 +336,7 @@ export default function Header() {
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
+    const handleClickOutside = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setMenuOpen(false);
       }
@@ -474,3 +474,4 @@ export default function Header() {
     </>
   );
 }
+export default Header;

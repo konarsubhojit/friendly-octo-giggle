@@ -23,7 +23,7 @@ interface ProductSearchProps {
 let _productCache: Product[] | null = null;
 let _fetchPromise: Promise<Product[]> | null = null;
 
-async function fetchAllProducts(): Promise<Product[]> {
+const fetchAllProducts = async (): Promise<Product[]> => {
   if (_productCache) return _productCache;
   if (_fetchPromise) return _fetchPromise;
 
@@ -48,13 +48,13 @@ async function fetchAllProducts(): Promise<Product[]> {
 
 // ─── Highlight matching text ─────────────────────────────
 
-function HighlightText({
+const HighlightText = ({
   text,
   query,
 }: {
   readonly text: string;
   readonly query: string;
-}) {
+}) => {
   if (!query.trim()) return <>{text}</>;
   const escapedQuery = query.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
   const regex = new RegExp(`(${escapedQuery})`, "gi");
@@ -81,7 +81,7 @@ function HighlightText({
 
 // ─── Component ───────────────────────────────────────────
 
-export default function ProductSearch({ onNavigate }: ProductSearchProps) {
+const ProductSearch = ({ onNavigate }: ProductSearchProps) => {
   const router = useRouter();
   const { formatPrice } = useCurrency();
   const [open, setOpen] = useState(false);
@@ -112,7 +112,7 @@ export default function ProductSearch({ onNavigate }: ProductSearchProps) {
   // Close on Escape
   useEffect(() => {
     if (!open) return;
-    function handleKey(e: KeyboardEvent) {
+    const handleKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") closeDialog();
     }
     document.addEventListener("keydown", handleKey);
@@ -121,7 +121,7 @@ export default function ProductSearch({ onNavigate }: ProductSearchProps) {
 
   // Cmd/Ctrl+K shortcut to open
   useEffect(() => {
-    function handleKey(e: KeyboardEvent) {
+    const handleKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault();
         setOpen((prev) => !prev);
@@ -374,3 +374,4 @@ export default function ProductSearch({ onNavigate }: ProductSearchProps) {
     </>
   );
 }
+export default ProductSearch;

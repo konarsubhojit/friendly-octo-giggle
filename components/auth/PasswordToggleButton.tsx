@@ -9,7 +9,7 @@ interface PasswordToggleButtonProps {
   readonly label?: string;
 }
 
-export function PasswordToggleButton({ showPassword, onToggle, label }: PasswordToggleButtonProps) {
+export const PasswordToggleButton = ({ showPassword, onToggle, label }: PasswordToggleButtonProps) => {
   return (
     <button
       type="button"

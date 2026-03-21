@@ -4,7 +4,7 @@ interface OrdersByStatusCardProps {
   readonly ordersByStatus: Record<string, number>;
 }
 
-export function OrdersByStatusCard({ ordersByStatus }: OrdersByStatusCardProps) {
+export const OrdersByStatusCard = ({ ordersByStatus }: OrdersByStatusCardProps) => {
   if (Object.keys(ordersByStatus).length === 0) {
     return (
       <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">

@@ -111,7 +111,7 @@ const parseRegisterError = (data: { details?: Record<string, string>; error?: st
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-export default function RegisterPage() {
+const RegisterPage = () => {
   const router = useRouter();
 
   const handleSubmit = useCallback(
@@ -163,4 +163,4 @@ export default function RegisterPage() {
     </div>
   );
 }
-
+export default RegisterPage;

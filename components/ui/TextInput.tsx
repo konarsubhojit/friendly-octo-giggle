@@ -3,7 +3,7 @@
 import { PasswordToggleButton } from '@/components/auth/PasswordToggleButton';
 import { BASE_INPUT, borderCls, type TextInputProps } from '@/components/ui/DynamicFormTypes';
 
-export function TextInput({ field, value, describedBy, error, showPassword, onChange, onTogglePassword, onBlur }: TextInputProps) {
+export const TextInput = ({ field, value, describedBy, error, showPassword, onChange, onTogglePassword, onBlur }: TextInputProps) => {
   const isPassword = field.type === 'password';
   const hasToggle = isPassword && field.showPasswordToggle;
   const passwordType = showPassword ? 'text' : 'password';

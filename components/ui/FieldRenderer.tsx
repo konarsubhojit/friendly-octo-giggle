@@ -6,7 +6,7 @@ import { SelectInput } from '@/components/ui/SelectInput';
 import { TextInput } from '@/components/ui/TextInput';
 import type { FieldRendererProps } from '@/components/ui/DynamicFormTypes';
 
-export function FieldRenderer({
+export const FieldRenderer = ({
   field,
   value,
   error,
@@ -14,7 +14,7 @@ export function FieldRenderer({
   onChange,
   onTogglePassword,
   onBlur,
-}: FieldRendererProps) {
+}: FieldRendererProps) => {
   const errorId = `${field.id}-error`;
   const describedBy = error ? errorId : undefined;
   const subProps = { field, value, describedBy, error, onChange };

@@ -40,7 +40,7 @@ const VARIANT_CLASSES: Record<ButtonVariant, string> = {
  * <GradientButton variant="danger" size="sm">Delete</GradientButton>
  * ```
  */
-export function GradientButton({
+export const GradientButton = ({
   children,
   size = "md",
   variant = "primary",
@@ -51,7 +51,7 @@ export function GradientButton({
   className = "",
   type = "button",
   ...rest
-}: Readonly<GradientButtonProps>) {
+}: Readonly<GradientButtonProps>) => {
   const isDisabled = disabled ?? loading;
 
   return (

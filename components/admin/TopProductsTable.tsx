@@ -17,7 +17,7 @@ interface TopProductRowProps {
   readonly formatPrice: (price: number) => string;
 }
 
-function TopProductRow({ product, formatPrice }: TopProductRowProps) {
+const TopProductRow = ({ product, formatPrice }: TopProductRowProps) => {
   return (
     <tr className="border-b border-gray-100 dark:border-gray-700 last:border-0">
       <td className="py-2 text-sm text-gray-900 dark:text-white">{product.name}</td>
@@ -27,7 +27,7 @@ function TopProductRow({ product, formatPrice }: TopProductRowProps) {
   );
 }
 
-function TopProductsTableHeader() {
+const TopProductsTableHeader = () => {
   return (
     <thead>
       <tr className="border-b border-gray-200 dark:border-gray-700">
@@ -39,7 +39,7 @@ function TopProductsTableHeader() {
   );
 }
 
-export function TopProductsTable({ products, formatPrice }: TopProductsTableProps) {
+export const TopProductsTable = ({ products, formatPrice }: TopProductsTableProps) => {
   if (products.length === 0) {
     return <p className="text-gray-400 dark:text-gray-500 text-sm">No product sales yet</p>;
   }

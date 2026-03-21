@@ -9,10 +9,11 @@ export const metadata: Metadata = {
     "Handmade crochet flowers, bags, keychains, and accessories — crafted with love, delivered to your door.",
 };
 
-export default async function Home() {
+const Home = async () => {
   return (
     <div className="bg-warm-gradient flex flex-col">
       <Hero />
     </div>
   );
 }
+export default Home;

@@ -4,7 +4,7 @@ import { auth } from '@/lib/auth';
 import { isValidImageType, MAX_FILE_SIZE, VALID_IMAGE_TYPES_DISPLAY } from '@/lib/upload-constants';
 import { logError } from '@/lib/logger';
 
-export async function POST(request: Request) {
+export const POST = async (request: Request) => {
   let fileName = 'unknown';
   let userId = 'unknown';
   

@@ -9,7 +9,7 @@ interface ProductEditFormProps {
   readonly product: Product;
 }
 
-export default function ProductEditForm({ product }: ProductEditFormProps) {
+const ProductEditForm = ({ product }: ProductEditFormProps) => {
   const { formatPrice } = useCurrency();
 
   return (
@@ -65,3 +65,4 @@ export default function ProductEditForm({ product }: ProductEditFormProps) {
     </div>
   );
 }
+export default ProductEditForm;

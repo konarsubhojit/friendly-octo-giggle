@@ -1,6 +1,6 @@
 import ProductCardSkeleton from "@/components/skeletons/ProductCardSkeleton";
 
-export default function ProductsLoading() {
+const ProductsLoading = () => {
   const PRODUCT_SKELETONS = [
     "p1",
     "p2",
@@ -47,3 +47,4 @@ export default function ProductsLoading() {
     </div>
   );
 }
+export default ProductsLoading;

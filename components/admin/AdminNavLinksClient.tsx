@@ -79,7 +79,7 @@ const NAV_GROUPS: readonly NavGroup[] = [
   },
 ];
 
-function getAllNavItems(failedEmailCount: number): NavItem[] {
+const getAllNavItems = (failedEmailCount: number): NavItem[] => {
   const items: NavItem[] = [];
   for (const group of NAV_GROUPS) {
     if (group.href) {
@@ -100,13 +100,13 @@ function getAllNavItems(failedEmailCount: number): NavItem[] {
   return items;
 }
 
-function DropdownGroup({
+const DropdownGroup = ({
   group,
   failedEmailCount,
 }: {
   readonly group: NavGroup;
   readonly failedEmailCount: number;
-}) {
+}) => {
   const [open, setOpen] = useState(false);
   const [menuStyle, setMenuStyle] = useState<{ top: number; left: number }>({
     top: 0,
@@ -116,7 +116,7 @@ function DropdownGroup({
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
+    const handleClickOutside = (e: MouseEvent) => {
       if (
         menuRef.current &&
         !menuRef.current.contains(e.target as Node) &&
@@ -208,7 +208,7 @@ function DropdownGroup({
   );
 }
 
-function CommandPalette({
+const CommandPalette = ({
   open,
   onClose,
   failedEmailCount,
@@ -216,7 +216,7 @@ function CommandPalette({
   readonly open: boolean;
   readonly onClose: () => void;
   readonly failedEmailCount: number;
-}) {
+}) => {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -362,13 +362,13 @@ function CommandPalette({
   );
 }
 
-export function AdminNavLinksClient({
+export const AdminNavLinksClient = ({
   failedEmailCount,
-}: AdminNavLinksClientProps) {
+}: AdminNavLinksClientProps) => {
   const [paletteOpen, setPaletteOpen] = useState(false);
 
   useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent) {
+    const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault();
         setPaletteOpen((o) => !o);

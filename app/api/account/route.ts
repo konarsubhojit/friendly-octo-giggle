@@ -6,7 +6,7 @@ import { users } from "@/lib/schema";
 import { eq, and, ne } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 
-export async function GET() {
+export const GET = async () => {
   try {
     const session = await auth();
     if (!session?.user?.id) {
@@ -48,7 +48,7 @@ export async function GET() {
   }
 }
 
-export async function PATCH(request: NextRequest) {
+export const PATCH = async (request: NextRequest) => {
   try {
     const session = await auth();
     if (!session?.user?.id) {

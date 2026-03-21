@@ -24,7 +24,7 @@ const DeleteConfirmModal = lazy(
 
 const PAGE_SIZE = 20;
 
-export default function ProductsManagement() {
+const ProductsManagement = () => {
   const { formatPrice } = useCurrency();
   const dispatch = useDispatch<AppDispatch>();
 
@@ -385,3 +385,4 @@ export default function ProductsManagement() {
     </main>
   );
 }
+export default ProductsManagement;

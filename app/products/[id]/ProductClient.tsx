@@ -579,10 +579,10 @@ const AddToCartSection = ({
 
 // ─── Main Component ───────────────────────────────────────
 
-export default function ProductClient({
+const ProductClient = ({
   product,
   initialVariationId,
-}: ProductClientProps) {
+}: ProductClientProps) => {
   const dispatch = useDispatch<AppDispatch>();
   const { formatPrice } = useCurrency();
   const cart = useSelector((state: RootState) => state.cart.cart);
@@ -760,3 +760,4 @@ export default function ProductClient({
     </div>
   );
 }
+export default ProductClient;

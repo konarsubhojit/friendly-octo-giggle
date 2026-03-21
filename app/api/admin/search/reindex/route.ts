@@ -16,7 +16,7 @@ import {
  * Full reindex of products and/or orders into Upstash Search.
  * Body: { "target": "products" | "orders" | "all" }
  */
-export async function POST(request: Request) {
+export const POST = async (request: Request) => {
   const session = await auth();
   if (!session?.user) {
     return apiError("Not authenticated", 401);

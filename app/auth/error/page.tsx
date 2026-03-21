@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-function ErrorIcon() {
+const ErrorIcon = () => {
   return (
     <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-500/10 mb-4">
       <svg
@@ -20,7 +20,7 @@ function ErrorIcon() {
   );
 }
 
-function ErrorActions() {
+const ErrorActions = () => {
   return (
     <div className="space-y-3">
       <Link
@@ -43,9 +43,9 @@ interface AuthErrorPageProps {
   readonly searchParams: Promise<{ error?: string }>;
 }
 
-export default async function AuthErrorPage({
+const AuthErrorPage = async ({
   searchParams,
-}: AuthErrorPageProps) {
+}: AuthErrorPageProps) => {
   const params = await searchParams;
   const error = params.error;
 
@@ -76,3 +76,4 @@ export default async function AuthErrorPage({
     </div>
   );
 }
+export default AuthErrorPage;

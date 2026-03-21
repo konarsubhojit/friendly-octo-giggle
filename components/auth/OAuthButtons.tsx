@@ -8,10 +8,10 @@ interface OAuthButtonsProps {
   readonly onMicrosoftClick: () => void;
 }
 
-export function OAuthButtons({
+export const OAuthButtons = ({
   onGoogleClick,
   onMicrosoftClick,
-}: OAuthButtonsProps) {
+}: OAuthButtonsProps) => {
   return (
     <div className="space-y-3">
       <button

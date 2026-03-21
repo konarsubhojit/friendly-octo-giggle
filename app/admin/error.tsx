@@ -7,7 +7,7 @@ interface ErrorProps {
   readonly reset: () => void;
 }
 
-export default function AdminError({ error, reset }: ErrorProps) {
+const AdminError = ({ error, reset }: ErrorProps) => {
 
   return (
     <div className="min-h-[50vh] flex items-center justify-center px-4">
@@ -54,3 +54,4 @@ export default function AdminError({ error, reset }: ErrorProps) {
     </div>
   );
 }
+export default AdminError;

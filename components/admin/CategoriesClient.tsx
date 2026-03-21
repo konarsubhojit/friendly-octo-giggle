@@ -17,9 +17,9 @@ interface CategoriesClientProps {
   readonly initialCategories: Category[];
 }
 
-export default function CategoriesClient({
+const CategoriesClient = ({
   initialCategories,
-}: CategoriesClientProps) {
+}: CategoriesClientProps) => {
   const [cats, setCats] = useState<Category[]>(initialCategories);
   const [loading, setLoading] = useState(false);
 
@@ -324,3 +324,4 @@ export default function CategoriesClient({
     </>
   );
 }
+export default CategoriesClient;

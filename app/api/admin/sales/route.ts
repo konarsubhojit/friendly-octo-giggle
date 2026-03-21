@@ -7,7 +7,7 @@ import { cacheAdminSales } from "@/lib/cache";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export const GET = async () => {
   const authCheck = await checkAdminAuth();
   if (!authCheck.authorized) {
     return apiError(authCheck.error, authCheck.status);

@@ -14,12 +14,12 @@ interface CopilotDevLoginButtonProps {
  * at build time by Next.js / webpack, so the component is dead-code-
  * eliminated from the production bundle entirely.
  */
-export function CopilotDevLoginButton({ onSuccess }: CopilotDevLoginButtonProps) {
+export const CopilotDevLoginButton = ({ onSuccess }: CopilotDevLoginButtonProps) => {
   const [loading, setLoading] = useState(false);
 
   if (process.env.NODE_ENV !== 'development') return null;
 
-  async function handleClick() {
+  const handleClick = async () => {
     setLoading(true);
     try {
       const result = await signIn('copilot-dev', {

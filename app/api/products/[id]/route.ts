@@ -3,10 +3,10 @@ import { db } from '@/lib/db';
 import { apiSuccess, apiError, handleApiError } from '@/lib/api-utils';
 import { cacheProductById } from '@/lib/cache';
 
-export async function GET(
+export const GET = async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   try {
     const { id } = await params;
 

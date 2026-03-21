@@ -21,7 +21,7 @@ const DEFAULT_SUBMIT_BTN =
 /**
  * A self-managing form component driven by field definitions.
  */
-export function DynamicForm({
+export const DynamicForm = ({
   fields,
   onSubmit,
   initialValues,
@@ -33,7 +33,7 @@ export function DynamicForm({
   serverSuccess,
   formClassName,
   submitButtonClassName = DEFAULT_SUBMIT_BTN,
-}: DynamicFormProps) {
+}: DynamicFormProps) => {
   const [values, setValues] = useState<Record<string, string>>(() => {
     const init: Record<string, string> = {};
     for (const f of fields) {

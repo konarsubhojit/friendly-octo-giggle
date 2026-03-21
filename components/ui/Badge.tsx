@@ -47,12 +47,12 @@ const SIZE_CLASSES = {
  * <Badge variant="primary">ADMIN</Badge>
  * ```
  */
-export function Badge({
+export const Badge = ({
   children,
   variant = "neutral",
   size = "md",
   className = "",
-}: BadgeProps) {
+}: BadgeProps) => {
   return (
     <span
       className={`inline-flex items-center rounded-full font-semibold ${VARIANT_CLASSES[variant]} ${SIZE_CLASSES[size]} ${className}`}
@@ -65,7 +65,7 @@ export function Badge({
 // ─── Convenience helpers for common domain patterns ───────────────────────────
 
 /** Maps an order-status string to the appropriate `BadgeVariant`. */
-export function orderStatusVariant(status: string): BadgeVariant {
+export const orderStatusVariant = (status: string): BadgeVariant => {
   const map: Record<string, BadgeVariant> = {
     PENDING: "warning",
     PROCESSING: "info",
@@ -77,6 +77,6 @@ export function orderStatusVariant(status: string): BadgeVariant {
 }
 
 /** Maps a user-role string to the appropriate `BadgeVariant`. */
-export function roleVariant(role: string): BadgeVariant {
+export const roleVariant = (role: string): BadgeVariant => {
   return role.toUpperCase() === "ADMIN" ? "primary" : "success";
 }

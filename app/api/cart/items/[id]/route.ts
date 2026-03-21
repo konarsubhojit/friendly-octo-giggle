@@ -11,10 +11,10 @@ import { invalidateCartCache } from "@/lib/cache";
 export const dynamic = "force-dynamic";
 
 // Update cart item quantity
-export async function PATCH(
+export const PATCH = async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
-) {
+) => {
   try {
     const { id } = await params;
     const session = await auth();
@@ -90,10 +90,10 @@ export async function PATCH(
 }
 
 // Delete cart item
-export async function DELETE(
+export const DELETE = async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
-) {
+) => {
   try {
     const { id } = await params;
     const session = await auth();

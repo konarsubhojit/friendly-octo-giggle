@@ -30,7 +30,7 @@ const normalizeUser = (user: AdminUser): AdminUser => ({
   orderCount: user._count?.orders ?? user.orderCount ?? 0,
 });
 
-export default function UsersManagement() {
+const UsersManagement = () => {
   const dispatch = useDispatch<AppDispatch>();
   const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
 
@@ -142,3 +142,4 @@ export default function UsersManagement() {
     </main>
   );
 }
+export default UsersManagement;

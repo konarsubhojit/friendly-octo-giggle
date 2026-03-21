@@ -6,11 +6,11 @@ interface DeleteConfirmModalProps {
   readonly loading?: boolean;
 }
 
-export default function DeleteConfirmModal({
+const DeleteConfirmModal = ({
   onConfirm,
   onCancel,
   loading = false,
-}: DeleteConfirmModalProps) {
+}: DeleteConfirmModalProps) => {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full p-6">
@@ -50,3 +50,4 @@ export default function DeleteConfirmModal({
     </div>
   );
 }
+export default DeleteConfirmModal;

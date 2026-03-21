@@ -17,12 +17,12 @@ interface AuthRequiredStateProps {
  * <AuthRequiredState callbackUrl="/cart" message="Sign in to view your cart." />
  * ```
  */
-export function AuthRequiredState({
+export const AuthRequiredState = ({
   callbackUrl,
   title = 'Sign In Required',
   message = 'Please sign in to continue.',
   ctaText = 'Sign In',
-}: AuthRequiredStateProps) {
+}: AuthRequiredStateProps) => {
   return (
     <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/50 p-12 text-center">
       <svg

@@ -28,12 +28,12 @@ interface CancelOrderDialogProps {
   readonly onConfirm: () => void;
 }
 
-function CancelOrderDialog({
+const CancelOrderDialog = ({
   dialogRef,
   cancelling,
   onClose,
   onConfirm,
-}: CancelOrderDialogProps) {
+}: CancelOrderDialogProps) => {
   return (
     <dialog
       ref={dialogRef}
@@ -92,7 +92,7 @@ const STATUS_STEP_INDEX: Record<string, number> = {
   DELIVERED: 3,
 };
 
-function getStepIndex(status: string): number {
+const getStepIndex = (status: string): number => {
   return STATUS_STEP_INDEX[status] ?? -1;
 }
 
@@ -116,7 +116,7 @@ interface StatusTimelineProps {
   readonly isCancelled: boolean;
 }
 
-function StatusTimeline({ currentStep, isCancelled }: StatusTimelineProps) {
+const StatusTimeline = ({ currentStep, isCancelled }: StatusTimelineProps) => {
   if (isCancelled) {
     return (
       <div className="flex items-center gap-3 p-4 bg-red-50 rounded-xl border border-red-200">
@@ -203,7 +203,7 @@ interface OrderItemRowProps {
   readonly formatPrice: (amount: number) => string;
 }
 
-function OrderItemRow({ item, formatPrice }: OrderItemRowProps) {
+const OrderItemRow = ({ item, formatPrice }: OrderItemRowProps) => {
   const image = item.variation?.image || item.product?.image;
   const sections: Record<string, ReactElement | null> = {
     image: image ? (
@@ -266,7 +266,7 @@ interface OrderSummaryHeaderProps {
   readonly onCancelClick: () => void;
 }
 
-function OrderSummaryHeader({
+const OrderSummaryHeader = ({
   orderId,
   createdAt,
   totalAmount,
@@ -274,7 +274,7 @@ function OrderSummaryHeader({
   cancelling,
   formatPrice,
   onCancelClick,
-}: OrderSummaryHeaderProps) {
+}: OrderSummaryHeaderProps) => {
   return (
     <div className="flex justify-between items-start flex-wrap gap-4">
       <div>
@@ -310,7 +310,7 @@ function OrderSummaryHeader({
   );
 }
 
-export default function OrderDetailPage({ params }: OrderDetailPageProps) {
+const OrderDetailPage = ({ params }: OrderDetailPageProps) => {
   const { id } = use(params);
   const { data: session, status: authStatus } = useSession();
   const { formatPrice } = useCurrency();
@@ -513,3 +513,4 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
     </div>
   );
 }
+export default OrderDetailPage;

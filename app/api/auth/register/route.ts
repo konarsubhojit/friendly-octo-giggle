@@ -7,7 +7,7 @@ import { users } from '@/lib/schema';
 import { eq, or } from 'drizzle-orm';
 import { logAuthEvent } from '@/lib/logger';
 
-export async function POST(request: NextRequest) {
+export const POST = async (request: NextRequest) => {
   try {
     const body = await request.json();
     const parseResult = registerSchema.safeParse(body);

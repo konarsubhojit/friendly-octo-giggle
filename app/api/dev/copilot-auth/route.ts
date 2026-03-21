@@ -13,7 +13,7 @@ import { encode } from 'next-auth/jwt';
 const COPILOT_DEV_KEY = 'copilot-dev-admin-2026';
 const COOKIE_NAME = 'next-auth.session-token';
 
-export async function GET(request: NextRequest) {
+export const GET = async (request: NextRequest) => {
   // Hard environment guard — this endpoint must only be reachable in development.
   if (process.env.NODE_ENV !== 'development') {
     return NextResponse.json({ error: 'Not Found' }, { status: 404 });

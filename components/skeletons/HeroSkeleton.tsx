@@ -2,7 +2,7 @@
  * Shared hero section skeleton component
  * Used in the home page loading state
  */
-export default function HeroSkeleton() {
+const HeroSkeleton = () => {
   return (
     <section className="relative pt-24 pb-16 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto text-center">
@@ -14,3 +14,4 @@ export default function HeroSkeleton() {
     </section>
   );
 }
+export default HeroSkeleton;

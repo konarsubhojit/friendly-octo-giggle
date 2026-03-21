@@ -1,4 +1,4 @@
-export function MicrosoftIcon() {
+export const MicrosoftIcon = () => {
   return (
     <svg className="w-5 h-5" viewBox="0 0 23 23" aria-hidden="true">
       <path fill="#f35325" d="M1 1h10v10H1z" />

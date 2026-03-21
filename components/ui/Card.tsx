@@ -21,7 +21,7 @@ interface CardProps {
  * <Card className="p-4 mb-6">…</Card>
  * ```
  */
-export function Card({ children, className = "" }: CardProps) {
+export const Card = ({ children, className = "" }: CardProps) => {
   return (
     <div
       className={`bg-[var(--surface)] backdrop-blur-lg rounded-2xl shadow-warm border border-[var(--border-warm)] ${className}`}

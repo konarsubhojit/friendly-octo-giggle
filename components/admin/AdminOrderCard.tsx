@@ -50,7 +50,7 @@ interface OrderItemRowProps {
   readonly formatPrice: (amount: number) => string;
 }
 
-function OrderItemRow({ item, formatPrice }: OrderItemRowProps) {
+const OrderItemRow = ({ item, formatPrice }: OrderItemRowProps) => {
   return (
     <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700 last:border-b-0">
       <div className="flex-1">
@@ -84,7 +84,7 @@ interface ShippingInfoSectionProps {
   readonly onSaveShipping: AdminOrderCardProps['onSaveShipping'];
 }
 
-function ShippingInfoSection({
+const ShippingInfoSection = ({
   orderId,
   orderStatus,
   order,
@@ -92,7 +92,7 @@ function ShippingInfoSection({
   savingShippingId,
   onShippingFieldChange,
   onSaveShipping,
-}: ShippingInfoSectionProps) {
+}: ShippingInfoSectionProps) => {
   return (
     <div className="mb-4 p-4 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg">
       <h4 className="font-semibold text-sm text-gray-700 dark:text-gray-300 mb-2">Shipping Information</h4>
@@ -135,7 +135,7 @@ function ShippingInfoSection({
   );
 }
 
-export function AdminOrderCard({
+export const AdminOrderCard = ({
   order,
   updatingOrderId,
   savingShippingId,
@@ -144,7 +144,7 @@ export function AdminOrderCard({
   onStatusChange,
   onShippingFieldChange,
   onSaveShipping,
-}: AdminOrderCardProps) {
+}: AdminOrderCardProps) => {
   const hasTracking = Boolean(order.trackingNumber || order.shippingProvider);
   const [pendingStatus, setPendingStatus] = useState<OrderStatus | null>(null);
 

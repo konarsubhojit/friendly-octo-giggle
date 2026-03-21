@@ -29,7 +29,7 @@ interface EmptyStateProps {
  * />
  * ```
  */
-export function EmptyState({
+export const EmptyState = ({
   icon,
   title,
   message,
@@ -37,7 +37,7 @@ export function EmptyState({
   ctaHref,
   onCtaClick,
   className = "",
-}: EmptyStateProps) {
+}: EmptyStateProps) => {
   return (
     <div
       className={`py-16 text-center bg-[var(--surface)] rounded-3xl border border-[var(--border-warm)] ${className}`}

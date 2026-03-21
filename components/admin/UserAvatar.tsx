@@ -8,7 +8,7 @@ interface UserAvatarProps {
   readonly image: string | null;
 }
 
-export function UserAvatar({ name, email, image }: UserAvatarProps) {
+export const UserAvatar = ({ name, email, image }: UserAvatarProps) => {
   if (image) {
     return (
       <Image src={image} alt={name || 'User'} width={40} height={40} className="rounded-full" />

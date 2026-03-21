@@ -18,7 +18,7 @@ interface UserMenuProps {
   readonly onLoginClick?: () => void;
 }
 
-export function UserMenu({ session, onLoginClick }: UserMenuProps) {
+export const UserMenu = ({ session, onLoginClick }: UserMenuProps) => {
   if (!session?.user) {
     if (onLoginClick) {
       return (

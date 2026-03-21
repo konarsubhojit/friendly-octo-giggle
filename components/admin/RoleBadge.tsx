@@ -6,6 +6,6 @@ interface RoleBadgeProps {
   readonly role: string;
 }
 
-export function RoleBadge({ role }: RoleBadgeProps) {
+export const RoleBadge = ({ role }: RoleBadgeProps) => {
   return <Badge variant={roleVariant(role)}>{role}</Badge>;
 }

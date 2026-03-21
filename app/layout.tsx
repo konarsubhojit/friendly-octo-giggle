@@ -9,7 +9,7 @@ import { Toaster } from "react-hot-toast";
 import { Analytics } from "@vercel/analytics/next";
 import HeaderWrapper from "@/components/layout/HeaderWrapper";
 
-function AppProviders({ children }: { readonly children: React.ReactNode }) {
+const AppProviders = ({ children }: { readonly children: React.ReactNode }) => {
   return (
     <StoreProvider>
       <ThemeProvider>
@@ -41,11 +41,11 @@ export const metadata: Metadata = {
     "Handmade crochet flowers, bags, keychains, and accessories — crafted with love, delivered to your door.",
 };
 
-export default function RootLayout({
+const RootLayout = ({
   children,
 }: Readonly<{
   children: React.ReactNode;
-}>) {
+}>) => {
   return (
     <html
       lang="en"
@@ -72,3 +72,4 @@ export default function RootLayout({
     </html>
   );
 }
+export default RootLayout;

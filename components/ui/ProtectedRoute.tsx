@@ -18,11 +18,11 @@ interface ProtectedRouteProps {
   readonly requiredRole?: 'ADMIN' | 'CUSTOMER';
 }
 
-export function ProtectedRoute({
+export const ProtectedRoute = ({
   children,
   session,
   requiredRole,
-}: ProtectedRouteProps) {
+}: ProtectedRouteProps) => {
   if (!session?.user) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">

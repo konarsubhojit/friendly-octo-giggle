@@ -13,7 +13,7 @@ import { eq } from 'drizzle-orm';
 import { auth } from '@/lib/auth';
 import { logAuthEvent } from '@/lib/logger';
 
-export async function POST(request: NextRequest) {
+export const POST = async (request: NextRequest) => {
   try {
     const session = await auth();
     if (!session?.user?.id) {

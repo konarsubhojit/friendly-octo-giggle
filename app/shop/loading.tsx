@@ -2,7 +2,7 @@ import ProductCardSkeleton from "@/components/skeletons/ProductCardSkeleton";
 
 const SKELETON_IDS = ["s1", "s2", "s3", "s4", "s5", "s6"] as const;
 
-export default function ShopLoading() {
+const ShopLoading = () => {
   return (
     <div className="min-h-screen bg-warm-gradient">
       {/* Page header skeleton */}
@@ -39,3 +39,4 @@ export default function ShopLoading() {
     </div>
   );
 }
+export default ShopLoading;

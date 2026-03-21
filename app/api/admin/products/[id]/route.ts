@@ -9,10 +9,10 @@ import { indexProduct, removeProduct } from "@/lib/search";
 
 export const dynamic = "force-dynamic";
 
-export async function PUT(
+export const PUT = async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
-) {
+) => {
   const authCheck = await checkAdminAuth();
   if (!authCheck.authorized) {
     return apiError(authCheck.error, authCheck.status);
@@ -46,10 +46,10 @@ export async function PUT(
   }
 }
 
-export async function DELETE(
+export const DELETE = async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
-) {
+) => {
   const authCheck = await checkAdminAuth();
   if (!authCheck.authorized) {
     return apiError(authCheck.error, authCheck.status);

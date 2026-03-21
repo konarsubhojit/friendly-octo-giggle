@@ -2,7 +2,7 @@
 
 import { BASE_INPUT, borderCls, type InputSubProps } from '@/components/ui/DynamicFormTypes';
 
-export function SelectInput({ field, value, describedBy, error, onChange }: InputSubProps) {
+export const SelectInput = ({ field, value, describedBy, error, onChange }: InputSubProps) => {
   return (
     <select
       id={field.id}

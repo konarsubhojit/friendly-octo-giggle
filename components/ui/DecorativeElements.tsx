@@ -4,11 +4,11 @@
  */
 
 /** Small 5-petal flower — use as accent next to headings or between nav items */
-export function FlowerAccent({
+export const FlowerAccent = ({
   className = "w-5 h-5",
 }: {
   readonly className?: string;
-}) {
+}) => {
   return (
     <svg
       className={className}
@@ -62,11 +62,11 @@ export function FlowerAccent({
 }
 
 /** Small decorative leaf — pairs well with text elements */
-export function LeafAccent({
+export const LeafAccent = ({
   className = "w-4 h-4",
 }: {
   readonly className?: string;
-}) {
+}) => {
   return (
     <svg
       className={className}
@@ -93,11 +93,11 @@ export function LeafAccent({
 }
 
 /** Tiny sparkle/diamond for subtle emphasis */
-export function SparkleAccent({
+export const SparkleAccent = ({
   className = "w-3 h-3",
 }: {
   readonly className?: string;
-}) {
+}) => {
   return (
     <svg
       className={className}
@@ -115,11 +115,11 @@ export function SparkleAccent({
 }
 
 /** Decorative vine/scroll divider — use between sections */
-export function VineDivider({
+export const VineDivider = ({
   className = "",
 }: {
   readonly className?: string;
-}) {
+}) => {
   return (
     <div
       className={`flex items-center justify-center gap-3 py-4 ${className}`}
@@ -153,11 +153,11 @@ export function VineDivider({
 }
 
 /** Floating scattered flowers for hero/background decoration */
-export function ScatteredFlowers({
+export const ScatteredFlowers = ({
   className = "",
 }: {
   readonly className?: string;
-}) {
+}) => {
   return (
     <div
       className={`absolute inset-0 pointer-events-none overflow-hidden ${className}`}
@@ -189,11 +189,11 @@ export function ScatteredFlowers({
 }
 
 /** Flower bullet icon — use in lists like About page values */
-export function FlowerBullet({
+export const FlowerBullet = ({
   className = "w-5 h-5 flex-shrink-0",
 }: {
   readonly className?: string;
-}) {
+}) => {
   return (
     <svg
       className={className}
@@ -211,11 +211,11 @@ export function FlowerBullet({
 }
 
 /** Floral cart icon — decorative shopping bag with flower accent */
-export function FloralCartIcon({
+export const FloralCartIcon = ({
   className = "w-6 h-6",
 }: {
   readonly className?: string;
-}) {
+}) => {
   return (
     <svg
       className={className}
@@ -274,11 +274,11 @@ export function FloralCartIcon({
 }
 
 /** Butterfly accent — whimsical decorative element for product/detail pages */
-export function ButterflyAccent({
+export const ButterflyAccent = ({
   className = "w-8 h-8",
 }: {
   readonly className?: string;
-}) {
+}) => {
   return (
     <svg
       className={className}
@@ -348,11 +348,11 @@ export function ButterflyAccent({
 }
 
 /** Mushroom accent — cottagecore decorative element for about/cart pages */
-export function MushroomAccent({
+export const MushroomAccent = ({
   className = "w-8 h-8",
 }: {
   readonly className?: string;
-}) {
+}) => {
   return (
     <svg
       className={className}
@@ -394,11 +394,11 @@ export function MushroomAccent({
 }
 
 /** Floral border — section divider with simplified variant below 640px */
-export function FloralBorder({
+export const FloralBorder = ({
   className = "",
 }: {
   readonly className?: string;
-}) {
+}) => {
   return (
     <div
       className={`flex items-center justify-center py-6 ${className}`}

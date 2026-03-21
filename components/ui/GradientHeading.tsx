@@ -30,12 +30,12 @@ const GRADIENT =
  * <GradientHeading as="h2" size="md" className="mb-4">Section Title</GradientHeading>
  * ```
  */
-export function GradientHeading({
+export const GradientHeading = ({
   children,
   as: Tag = "h1",
   size = "lg",
   className = "",
-}: GradientHeadingProps) {
+}: GradientHeadingProps) => {
   return (
     <Tag className={`${SIZE_CLASSES[size]} ${GRADIENT} ${className}`}>
       {children}

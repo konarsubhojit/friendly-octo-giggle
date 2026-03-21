@@ -39,12 +39,12 @@ interface CartWithItems {
 }
 
 // Helper: Verify product exists and return available stock
-async function verifyProductStock(
+const verifyProductStock = async (
   body: AddToCartInput,
 ): Promise<
   | { product: ProductWithVariations; availableStock: number }
   | { error: string; status: number }
-> {
+> => {
   const product = await drizzleDb.query.products.findFirst({
     where: and(eq(products.id, body.productId), isNull(products.deletedAt)),
     with: {
@@ -75,10 +75,10 @@ async function verifyProductStock(
 }
 
 // Helper: Get or create cart for user/guest
-async function getOrCreateCart(
+const getOrCreateCart = async (
   session: Session | null,
   sessionId: string | undefined,
-): Promise<{ cart: { id: string }; sessionId: string | undefined }> {
+): Promise<{ cart: { id: string }; sessionId: string | undefined }> => {
   const createGuestCart = async (providedSessionId?: string) => {
     const guestSessionId =
       providedSessionId ?? `guest_${Date.now()}_${crypto.randomUUID()}`;
@@ -127,7 +127,7 @@ async function getOrCreateCart(
 }
 
 // Helper: Add or update cart item, auto-capping to available stock
-async function addOrUpdateCartItem(
+const addOrUpdateCartItem = async (
   cartId: string,
   body: AddToCartInput,
   availableStock: number,
@@ -135,7 +135,7 @@ async function addOrUpdateCartItem(
   | { error: string; status: number }
   | { warning: string; adjustedQuantity: number }
   | null
-> {
+> => {
   const existingItem = await drizzleDb.query.cartItems.findFirst({
     where: and(
       eq(cartItems.cartId, cartId),
@@ -191,13 +191,13 @@ async function addOrUpdateCartItem(
 }
 
 // Safely convert Date or string to ISO string (handles DB Date and Redis cached string)
-function toISOString(value: Date | string): string {
+const toISOString = (value: Date | string): string => {
   if (typeof value === "string") return value;
   return value.toISOString();
 }
 
 // Helper: Serialize cart for JSON response
-function serializeCart(cart: CartWithItems) {
+const serializeCart = (cart: CartWithItems) => {
   return {
     ...cart,
     createdAt: toISOString(cart.createdAt),
@@ -228,7 +228,7 @@ function serializeCart(cart: CartWithItems) {
 }
 
 // Helper: Fetch cart from DB
-function fetchCartFromDB(userId?: string, sessionId?: string) {
+const fetchCartFromDB = (userId?: string, sessionId?: string) => {
   if (userId) {
     return drizzleDb.query.carts.findFirst({
       where: eq(carts.userId, userId),
@@ -271,24 +271,24 @@ function fetchCartFromDB(userId?: string, sessionId?: string) {
 }
 
 // Helper: Resolve cart identity from request
-function getCartIdentity(
+const getCartIdentity = (
   request: NextRequest,
   session: { user?: { id?: string } } | null,
-) {
+) => {
   const userId = session?.user?.id;
   const sessionId = request.cookies.get("cart_session")?.value;
   return { userId, sessionId };
 }
 
 // Helper: Build cache key for cart
-function getCartCacheKey(userId?: string, sessionId?: string): string | null {
+const getCartCacheKey = (userId?: string, sessionId?: string): string | null => {
   if (userId) return CACHE_KEYS.CART_BY_USER(userId);
   if (sessionId) return CACHE_KEYS.CART_BY_SESSION(sessionId);
   return null;
 }
 
 // Helper: Find cart for deletion
-function findCartForDeletion(userId?: string, sessionId?: string) {
+const findCartForDeletion = (userId?: string, sessionId?: string) => {
   if (userId) {
     return drizzleDb.query.carts.findFirst({ where: eq(carts.userId, userId) });
   }
@@ -301,7 +301,7 @@ function findCartForDeletion(userId?: string, sessionId?: string) {
 }
 
 // Helper: Set guest session cookie on response
-function setGuestSessionCookie(response: NextResponse, sessionId: string) {
+const setGuestSessionCookie = (response: NextResponse, sessionId: string) => {
   response.cookies.set("cart_session", sessionId, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
@@ -311,7 +311,7 @@ function setGuestSessionCookie(response: NextResponse, sessionId: string) {
 }
 
 // Get cart for current user/session
-export async function GET(request: NextRequest) {
+export const GET = async (request: NextRequest) => {
   try {
     const session = await auth();
     const { userId, sessionId } = getCartIdentity(request, session);
@@ -345,7 +345,7 @@ export async function GET(request: NextRequest) {
 }
 
 // Add item to cart
-export async function POST(request: NextRequest) {
+export const POST = async (request: NextRequest) => {
   try {
     // Parallelize auth and body parsing (independent I/O)
     const [session, rawBody] = await Promise.all([auth(), request.json()]);
@@ -452,7 +452,7 @@ export async function POST(request: NextRequest) {
 }
 
 // Clear cart (for after order is placed)
-export async function DELETE(request: NextRequest) {
+export const DELETE = async (request: NextRequest) => {
   try {
     const session = await auth();
     const { userId, sessionId } = getCartIdentity(request, session);

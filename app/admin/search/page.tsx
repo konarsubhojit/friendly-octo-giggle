@@ -4,7 +4,7 @@ import AdminBreadcrumbs from "@/components/admin/AdminBreadcrumbs";
 
 export const dynamic = "force-dynamic";
 
-export default function AdminSearchPage() {
+const AdminSearchPage = () => {
   const configured = isSearchAvailable();
 
   return (
@@ -25,3 +25,4 @@ export default function AdminSearchPage() {
     </main>
   );
 }
+export default AdminSearchPage;

@@ -20,7 +20,7 @@ interface UsersTableProps {
 
 const TABLE_HEADERS = ['User', 'Email', 'Role', 'Orders', 'Joined', 'Actions'];
 
-export function UsersTable({ users, updatingUserId, onRoleChange }: UsersTableProps) {
+export const UsersTable = ({ users, updatingUserId, onRoleChange }: UsersTableProps) => {
   return (
     <div className="bg-white dark:bg-gray-800 shadow-md rounded-lg overflow-hidden overflow-x-auto">
       <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">

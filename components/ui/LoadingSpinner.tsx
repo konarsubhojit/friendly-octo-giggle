@@ -22,11 +22,11 @@ const SIZE_MAP: Record<string, string> = {
  * <LoadingSpinner size="lg" />
  * ```
  */
-export function LoadingSpinner({
+export const LoadingSpinner = ({
   size = 'h-8 w-8',
   color = 'text-blue-600',
   label = 'Loading',
-}: LoadingSpinnerProps) {
+}: LoadingSpinnerProps) => {
   const sizeClass = SIZE_MAP[size] ?? size;
   return (
     <span role="status" aria-live="polite">

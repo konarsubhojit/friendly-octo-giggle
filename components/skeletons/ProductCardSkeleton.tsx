@@ -2,7 +2,7 @@
  * Shared product card skeleton component
  * Used in product listing pages for consistency
  */
-export default function ProductCardSkeleton() {
+const ProductCardSkeleton = () => {
   return (
     <div className="bg-[var(--accent-cream)]/80 rounded-2xl shadow-warm overflow-hidden border-2 border-[var(--border-warm)]">
       {/* Image Skeleton */}
@@ -32,3 +32,4 @@ export default function ProductCardSkeleton() {
     </div>
   );
 }
+export default ProductCardSkeleton;

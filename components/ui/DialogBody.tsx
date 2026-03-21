@@ -18,11 +18,11 @@ export interface DialogBodyProps {
   readonly onConfirm: () => void;
 }
 
-export function DialogBody({
+export const DialogBody = ({
   titleId, messageId, title, message, iconBg, icon,
   cancelLabel, confirmLabel, loading, buttonClass, cancelBtnRef,
   onCancel, onConfirm,
-}: DialogBodyProps) {
+}: DialogBodyProps) => {
   return (
     <div className="relative bg-[var(--surface)] rounded-2xl shadow-warm-lg border border-[var(--border-warm)] max-w-sm w-full p-6">
       <div className="flex items-start gap-4 mb-4">

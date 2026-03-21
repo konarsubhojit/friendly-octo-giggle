@@ -5,7 +5,7 @@ import { isNull, asc } from "drizzle-orm";
 
 export const revalidate = 60;
 
-export async function GET() {
+export const GET = async () => {
   try {
     const list = await drizzleDb
       .select({ id: categories.id, name: categories.name })

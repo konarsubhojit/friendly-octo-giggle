@@ -8,7 +8,7 @@ import { addToCart } from "@/lib/features/cart/cartSlice";
 import toast from "react-hot-toast";
 import type { Product } from "@/lib/types";
 
-export function QuickAddButton({ product }: { readonly product: Product }) {
+export const QuickAddButton = ({ product }: { readonly product: Product }) => {
   const dispatch = useDispatch<AppDispatch>();
   const [adding, setAdding] = useState(false);
 

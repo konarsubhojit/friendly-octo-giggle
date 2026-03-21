@@ -5,7 +5,7 @@ interface ErrorProps {
   readonly reset: () => void;
 }
 
-export default function GlobalError({ error, reset }: ErrorProps) {
+const GlobalError = ({ error, reset }: ErrorProps) => {
   return (
     <div className="min-h-[50vh] flex items-center justify-center px-4">
       <div className="max-w-md w-full bg-[var(--accent-cream)] rounded-2xl shadow-warm-lg border border-[var(--border-warm)] p-8 text-center">
@@ -45,3 +45,4 @@ export default function GlobalError({ error, reset }: ErrorProps) {
     </div>
   );
 }
+export default GlobalError;

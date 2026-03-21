@@ -1,4 +1,4 @@
-export function StockBadge({ stock }: { readonly stock: number }) {
+export const StockBadge = ({ stock }: { readonly stock: number }) => {
   if (stock > 5) {
     return (
       <span className="bg-[#EEF2E9] text-[#366132] px-3 py-1 rounded-full font-semibold text-xs">

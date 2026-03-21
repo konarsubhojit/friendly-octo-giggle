@@ -8,9 +8,9 @@ interface AdminLayoutProps {
   readonly children: React.ReactNode;
 }
 
-export default async function AdminLayout({
+const AdminLayout = async ({
   children,
-}: AdminLayoutProps) {
+}: AdminLayoutProps) => {
   const session = await auth();
 
   if (!session?.user) {
@@ -47,4 +47,4 @@ export default async function AdminLayout({
     </div>
   );
 }
-
+export default AdminLayout;

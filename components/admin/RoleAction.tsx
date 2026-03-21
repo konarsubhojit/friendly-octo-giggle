@@ -18,7 +18,7 @@ interface RoleActionProps {
   readonly onRoleChange: (userId: string, newRole: 'ADMIN' | 'CUSTOMER') => void;
 }
 
-export function RoleAction({ user, isUpdating, onRoleChange }: RoleActionProps) {
+export const RoleAction = ({ user, isUpdating, onRoleChange }: RoleActionProps) => {
   const [pendingRole, setPendingRole] = useState<'ADMIN' | 'CUSTOMER' | null>(null);
 
   if (isUpdating) {

@@ -1,6 +1,6 @@
 const VARIATION_SKELETONS = ["v1", "v2", "v3", "v4"] as const;
 
-function ImageSkeleton() {
+const ImageSkeleton = () => {
   return (
     <div className="relative">
       <div className="relative h-96 md:h-[600px] w-full rounded-2xl overflow-hidden shadow-warm-lg border-2 border-[var(--border-warm)] bg-gradient-to-br from-[var(--accent-peach)] to-[var(--accent-blush)] animate-pulse">
@@ -15,7 +15,7 @@ function ImageSkeleton() {
   );
 }
 
-function DetailsSkeleton() {
+const DetailsSkeleton = () => {
   return (
     <div className="flex flex-col">
       <div className="bg-[var(--surface)]/80 backdrop-blur-lg rounded-2xl shadow-warm border border-[var(--border-warm)] p-8 mb-6">
@@ -76,7 +76,7 @@ function DetailsSkeleton() {
   );
 }
 
-export default function ProductDetailLoading() {
+const ProductDetailLoading = () => {
   return (
     <div className="min-h-screen bg-warm-gradient">
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
@@ -95,3 +95,4 @@ export default function ProductDetailLoading() {
     </div>
   );
 }
+export default ProductDetailLoading;

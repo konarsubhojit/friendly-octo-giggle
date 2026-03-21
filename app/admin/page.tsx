@@ -44,14 +44,14 @@ const NAV_CARDS = [
   },
 ];
 
-export default function AdminDashboard() {
+const AdminDashboard = () => {
   const [sales, setSales] = useState<SalesData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { formatPrice } = useCurrency();
 
   useEffect(() => {
-    async function fetchData() {
+    const fetchData = async () => {
       try {
         const res = await fetch('/api/admin/sales');
         if (res.ok) {
@@ -138,3 +138,4 @@ export default function AdminDashboard() {
     </main>
   );
 }
+export default AdminDashboard;

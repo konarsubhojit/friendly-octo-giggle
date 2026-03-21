@@ -7,7 +7,7 @@ export const metadata = {
     "Get in touch with The Kiyon Store support team. We'd love to hear from you.",
 };
 
-function ContactInfoSection() {
+const ContactInfoSection = () => {
   return (
     <div className="space-y-6">
       <div className="bg-[var(--surface)]/80 backdrop-blur-sm rounded-2xl shadow-warm border border-[var(--border-warm)] p-6">
@@ -89,7 +89,7 @@ function ContactInfoSection() {
   );
 }
 
-export default function ContactPage() {
+const ContactPage = () => {
   return (
     <div className="min-h-screen bg-warm-gradient">
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
@@ -114,3 +114,4 @@ export default function ContactPage() {
     </div>
   );
 }
+export default ContactPage;
