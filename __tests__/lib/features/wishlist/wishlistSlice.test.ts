@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { configureStore } from "@reduxjs/toolkit";
+import type { Product } from "@/lib/types";
 import wishlistReducer, {
   optimisticToggle,
   fetchWishlist,
@@ -21,7 +22,7 @@ function makeStore(preloaded?: object) {
   });
 }
 
-const mockProduct = {
+const mockProduct: Product = {
   id: "prod001",
   name: "Test Product",
   description: "A test product",
@@ -30,6 +31,7 @@ const mockProduct = {
   images: [],
   stock: 10,
   category: "test",
+  deletedAt: null,
   createdAt: "2024-01-01T00:00:00.000Z",
   updatedAt: "2024-01-01T00:00:00.000Z",
 };

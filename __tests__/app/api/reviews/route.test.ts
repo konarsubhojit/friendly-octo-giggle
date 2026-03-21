@@ -207,7 +207,7 @@ describe("Reviews API", () => {
       } as never);
       mockFindFirst.mockResolvedValue(null);
       const dbError = new Error("duplicate key value violates unique constraint");
-      (dbError as Record<string, unknown>).code = "23505";
+      (dbError as unknown as Record<string, unknown>).code = "23505";
       mockInsertReturning.mockRejectedValue(dbError);
 
       const response = await POST(
