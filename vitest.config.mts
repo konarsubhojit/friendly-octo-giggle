@@ -16,7 +16,17 @@ export default defineConfig({
       provider: "v8",
       reporter: ["text", "lcov"],
       include: ["lib/**", "contexts/**", "components/**", "app/**"],
-      exclude: [],
+      exclude: [
+        "app/**/page.tsx",
+        "app/**/layout.tsx",
+        "app/**/loading.tsx",
+        "app/**/error.tsx",
+        "lib/schema.ts",
+        "lib/db.ts",
+        "lib/email/providers.ts",
+        "lib/constants/categories.ts",
+        "lib/search-service.ts",
+      ],
     },
   },
 });
