@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, act, waitFor } from "@testing-library/react";
+import SignInClient from "@/app/auth/signin/SignInClient";
 
-const mockSignIn = vi.fn();
+const mockSignIn = vi.hoisted(() => vi.fn());
 vi.mock("next-auth/react", () => ({
   signIn: mockSignIn,
 }));
@@ -25,12 +26,8 @@ vi.mock("@/components/auth/PasswordToggleButton", () => ({
 }));
 
 describe("SignInClient", () => {
-  let SignInClient: typeof import("@/app/auth/signin/SignInClient").default;
-
-  beforeEach(async () => {
+  beforeEach(() => {
     vi.clearAllMocks();
-    vi.resetModules();
-    SignInClient = (await import("@/app/auth/signin/SignInClient")).default;
   });
 
   it("renders the login form with identifier and password fields", () => {
