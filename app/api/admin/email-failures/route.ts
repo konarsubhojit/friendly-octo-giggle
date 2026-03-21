@@ -43,9 +43,7 @@ const parseStatusList = (statusParam: string): FailedEmailStatus[] => {
   return statusParam
     .split(",")
     .map((s) => s.trim())
-    .filter((s): s is FailedEmailStatus =>
-      valid.has(s as FailedEmailStatus),
-    );
+    .filter((s): s is FailedEmailStatus => valid.has(s as FailedEmailStatus));
 };
 
 const extractQueryParams = (url: URL) => ({

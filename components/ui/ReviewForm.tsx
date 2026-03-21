@@ -11,7 +11,11 @@ interface ReviewFormProps {
   readonly onSuccess?: () => void;
 }
 
-export const ReviewForm = ({ productId, orderId, onSuccess }: ReviewFormProps) => {
+export const ReviewForm = ({
+  productId,
+  orderId,
+  onSuccess,
+}: ReviewFormProps) => {
   const { data: session } = useSession();
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
@@ -31,8 +35,19 @@ export const ReviewForm = ({ productId, orderId, onSuccess }: ReviewFormProps) =
   if (success) {
     return (
       <div className="flex items-center gap-2 text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 rounded-xl p-4">
-        <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+        <svg
+          className="w-5 h-5 shrink-0"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M5 13l4 4L19 7"
+          />
         </svg>
         <span className="text-sm font-medium">Thank you for your review!</span>
       </div>
@@ -85,7 +100,10 @@ export const ReviewForm = ({ productId, orderId, onSuccess }: ReviewFormProps) =
       {/* Star rating selector */}
       <div>
         <p className="block text-sm font-semibold text-[var(--foreground)] mb-2">
-          Your Rating <span aria-hidden="true" className="text-[var(--accent-rose)]">*</span>
+          Your Rating{" "}
+          <span aria-hidden="true" className="text-[var(--accent-rose)]">
+            *
+          </span>
         </p>
         <StarRating
           rating={rating}
@@ -98,8 +116,14 @@ export const ReviewForm = ({ productId, orderId, onSuccess }: ReviewFormProps) =
 
       {/* Comment */}
       <div>
-        <label htmlFor="review-comment" className="block text-sm font-semibold text-[var(--foreground)] mb-2">
-          Your Review <span aria-hidden="true" className="text-[var(--accent-rose)]">*</span>
+        <label
+          htmlFor="review-comment"
+          className="block text-sm font-semibold text-[var(--foreground)] mb-2"
+        >
+          Your Review{" "}
+          <span aria-hidden="true" className="text-[var(--accent-rose)]">
+            *
+          </span>
         </label>
         <textarea
           id="review-comment"
@@ -125,7 +149,10 @@ export const ReviewForm = ({ productId, orderId, onSuccess }: ReviewFormProps) =
           onChange={(e) => setIsAnonymous(e.target.checked)}
           className="w-4 h-4 rounded border-[var(--border-warm)] text-[var(--accent-rose)] focus:ring-[var(--accent-rose)]/30"
         />
-        <label htmlFor="review-anonymous" className="text-sm text-[var(--text-secondary)] cursor-pointer">
+        <label
+          htmlFor="review-anonymous"
+          className="text-sm text-[var(--text-secondary)] cursor-pointer"
+        >
           Submit anonymously
         </label>
       </div>

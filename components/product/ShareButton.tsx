@@ -102,7 +102,7 @@ const ShareUrlPanel = ({
   }, []);
 
   const handleCopy = async () => {
-      await navigator.clipboard.writeText(shareUrl).catch(() => {});
+    await navigator.clipboard.writeText(shareUrl).catch(() => {});
     if (copyTimeoutRef.current !== null) {
       clearTimeout(copyTimeoutRef.current);
     }
@@ -295,7 +295,9 @@ export const ShareButton = ({ productId, variationId }: ShareButtonProps) => {
   const ariaLabelWhenNotLoading = isError
     ? "Failed to share – click to retry"
     : "Share this product";
-  const buttonAriaLabel = isLoading ? "Generating share link…" : ariaLabelWhenNotLoading;
+  const buttonAriaLabel = isLoading
+    ? "Generating share link…"
+    : ariaLabelWhenNotLoading;
 
   const buttonClassName = [
     "flex items-center justify-center p-2.5 border-2 rounded-xl transition-all duration-300 focus-warm disabled:opacity-50 disabled:cursor-not-allowed",

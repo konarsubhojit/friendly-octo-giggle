@@ -79,7 +79,9 @@ export const StarRating = ({
   if (interactive) {
     return (
       <fieldset className="flex items-center gap-0.5 border-none p-0 m-0">
-        <legend className="sr-only">{label ?? `Rate out of ${maxStars} stars`}</legend>
+        <legend className="sr-only">
+          {label ?? `Rate out of ${maxStars} stars`}
+        </legend>
         {stars}
       </fieldset>
     );

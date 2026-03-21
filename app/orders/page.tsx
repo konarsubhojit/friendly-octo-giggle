@@ -113,31 +113,32 @@ export default function OrdersPage() {
     );
   }
 
-  const ordersContent = orders.length === 0 ? (
-    <OrdersEmptyState search={search} />
-  ) : (
-    <>
-      <div className="space-y-4 mb-8">
-        {orders.map((order) => (
-          <OrderListCard
-            key={order.id}
-            order={order}
-            formatPrice={formatPrice}
-          />
-        ))}
-      </div>
+  const ordersContent =
+    orders.length === 0 ? (
+      <OrdersEmptyState search={search} />
+    ) : (
+      <>
+        <div className="space-y-4 mb-8">
+          {orders.map((order) => (
+            <OrderListCard
+              key={order.id}
+              order={order}
+              formatPrice={formatPrice}
+            />
+          ))}
+        </div>
 
-      <CursorPaginationBar
-        currentPage={currentPage}
-        hasMore={hasMore}
-        loading={loading}
-        cursorHistoryLength={cursorHistoryLength}
-        onPrev={handlePrev}
-        onNext={handleNext}
-        variant="warm"
-      />
-    </>
-  );
+        <CursorPaginationBar
+          currentPage={currentPage}
+          hasMore={hasMore}
+          loading={loading}
+          cursorHistoryLength={cursorHistoryLength}
+          onPrev={handlePrev}
+          onNext={handleNext}
+          variant="warm"
+        />
+      </>
+    );
 
   return (
     <div className="min-h-screen bg-warm-gradient">
@@ -160,7 +161,9 @@ export default function OrdersPage() {
           <div className="flex items-center justify-center py-16">
             <LoadingSpinner />
           </div>
-        ) : ordersContent}
+        ) : (
+          ordersContent
+        )}
       </main>
     </div>
   );

@@ -57,7 +57,10 @@ export const GET = async (request: NextRequest) => {
     const search = searchParams.get("search")?.trim() ?? "";
 
     const limit = Math.min(
-      Math.max(1, Number.parseInt(limitParam ?? String(PAGE_SIZE), 10) || PAGE_SIZE),
+      Math.max(
+        1,
+        Number.parseInt(limitParam ?? String(PAGE_SIZE), 10) || PAGE_SIZE,
+      ),
       100,
     );
 

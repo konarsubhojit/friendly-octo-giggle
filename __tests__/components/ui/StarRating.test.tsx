@@ -20,7 +20,9 @@ describe("StarRating", () => {
 
   it("renders with default aria-label", () => {
     render(<StarRating rating={4} />);
-    expect(screen.getByLabelText("Rating: 4 out of 5 stars")).toBeInTheDocument();
+    expect(
+      screen.getByLabelText("Rating: 4 out of 5 stars"),
+    ).toBeInTheDocument();
   });
 
   it("renders with custom label", () => {
@@ -30,14 +32,18 @@ describe("StarRating", () => {
 
   it("renders interactive buttons when interactive is true", () => {
     const onChange = vi.fn();
-    const { container } = render(<StarRating rating={2} interactive onChange={onChange} />);
+    const { container } = render(
+      <StarRating rating={2} interactive onChange={onChange} />,
+    );
     const buttons = container.querySelectorAll("button");
     expect(buttons).toHaveLength(5);
   });
 
   it("calls onChange with correct value when clicked", () => {
     const onChange = vi.fn();
-    const { container } = render(<StarRating rating={0} interactive onChange={onChange} />);
+    const { container } = render(
+      <StarRating rating={0} interactive onChange={onChange} />,
+    );
     const buttons = container.querySelectorAll("button");
     fireEvent.click(buttons[3]); // Click 4th star
     expect(onChange).toHaveBeenCalledWith(4);

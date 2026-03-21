@@ -287,7 +287,12 @@ export default function ProductSearch() {
               )}
 
               {results.length > 0 && (
-                <ul ref={listRef} id="search-results-list" role="listbox" className="py-2">
+                <ul
+                  ref={listRef}
+                  id="search-results-list"
+                  role="listbox"
+                  className="py-2"
+                >
                   {results.map((product, i) => (
                     <li
                       key={product.id}

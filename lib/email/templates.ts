@@ -194,8 +194,12 @@ export const orderStatusUpdateTemplate = (data: OrderStatusUpdateData) => {
       Thank you for your patience. We appreciate your business! 🌸
     </p>`;
 
-  const trackingLine = data.trackingNumber ? `\nTracking: ${data.trackingNumber}` : "";
-  const carrierLine = data.shippingProvider ? `\nCarrier: ${data.shippingProvider}` : "";
+  const trackingLine = data.trackingNumber
+    ? `\nTracking: ${data.trackingNumber}`
+    : "";
+  const carrierLine = data.shippingProvider
+    ? `\nCarrier: ${data.shippingProvider}`
+    : "";
 
   return {
     subject: `Your Order #${data.orderId.toUpperCase()} is now ${info.label} ${info.emoji}`,

@@ -165,92 +165,93 @@ export default function ProductsManagement() {
 
   const currentPage = cursorHistory.length + 1;
 
-  const productsListContent = products.length === 0 ? (
-    <EmptyState
-      title="No products found"
-      message={search ? "Try a different search term." : undefined}
-    />
-  ) : (
-    <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            {products.map((product) => (
-              <div
-                key={product.id}
-                className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden flex flex-col"
-              >
-                <div className="aspect-square relative bg-gray-100 dark:bg-gray-700">
-                  <Image
-                    src={product.image}
-                    alt={product.name}
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                  />
+  const productsListContent =
+    products.length === 0 ? (
+      <EmptyState
+        title="No products found"
+        message={search ? "Try a different search term." : undefined}
+      />
+    ) : (
+      <>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+          {products.map((product) => (
+            <div
+              key={product.id}
+              className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden flex flex-col"
+            >
+              <div className="aspect-square relative bg-gray-100 dark:bg-gray-700">
+                <Image
+                  src={product.image}
+                  alt={product.name}
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                />
+              </div>
+              <div className="p-4 flex flex-col flex-1">
+                <h3 className="font-bold text-lg mb-1 text-gray-900 dark:text-white">
+                  {product.name}
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 line-clamp-2">
+                  {product.description}
+                </p>
+                <div className="flex justify-between items-center mb-3">
+                  <span className="text-lg font-bold text-gray-900 dark:text-white">
+                    {formatPrice(product.price)}
+                  </span>
+                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                    Stock: {product.stock}
+                  </span>
                 </div>
-                <div className="p-4 flex flex-col flex-1">
-                  <h3 className="font-bold text-lg mb-1 text-gray-900 dark:text-white">
-                    {product.name}
-                  </h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 line-clamp-2">
-                    {product.description}
-                  </p>
-                  <div className="flex justify-between items-center mb-3">
-                    <span className="text-lg font-bold text-gray-900 dark:text-white">
-                      {formatPrice(product.price)}
-                    </span>
-                    <span className="text-sm text-gray-600 dark:text-gray-400">
-                      Stock: {product.stock}
-                    </span>
-                  </div>
-                  <div className="mb-3">
-                    <span className="inline-block px-2 py-1 bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 text-xs font-semibold rounded">
-                      {product.category}
-                    </span>
-                  </div>
-                  <div className="flex gap-2 mt-auto pt-2">
-                    <Link
-                      href={`/admin/products/${product.id}`}
-                      className="flex-1 px-3 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition text-center"
-                    >
-                      Edit
-                    </Link>
-                    <button
-                      onClick={() => handleDelete(product.id)}
-                      disabled={deleting}
-                      className="flex-1 px-3 py-2 bg-red-600 text-white text-sm rounded-md hover:bg-red-700 disabled:bg-red-400 disabled:cursor-not-allowed transition"
-                    >
-                      Delete
-                    </button>
-                  </div>
+                <div className="mb-3">
+                  <span className="inline-block px-2 py-1 bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 text-xs font-semibold rounded">
+                    {product.category}
+                  </span>
+                </div>
+                <div className="flex gap-2 mt-auto pt-2">
+                  <Link
+                    href={`/admin/products/${product.id}`}
+                    className="flex-1 px-3 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition text-center"
+                  >
+                    Edit
+                  </Link>
+                  <button
+                    onClick={() => handleDelete(product.id)}
+                    disabled={deleting}
+                    className="flex-1 px-3 py-2 bg-red-600 text-white text-sm rounded-md hover:bg-red-700 disabled:bg-red-400 disabled:cursor-not-allowed transition"
+                  >
+                    Delete
+                  </button>
                 </div>
               </div>
-            ))}
-          </div>
-
-          {/* Cursor Pagination */}
-          <div className="flex items-center justify-between border-t border-gray-200 dark:border-gray-700 pt-4">
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              Page {currentPage}
-            </p>
-            <div className="flex gap-2">
-              <button
-                onClick={handlePrev}
-                disabled={cursorHistory.length === 0 || loading}
-                className="px-4 py-2 text-sm font-medium bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-40 disabled:cursor-not-allowed transition"
-              >
-                ← Previous
-              </button>
-              <button
-                onClick={handleNext}
-                disabled={!hasMore || loading}
-                className="px-4 py-2 text-sm font-medium bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition"
-              >
-                Next →
-              </button>
             </div>
+          ))}
+        </div>
+
+        {/* Cursor Pagination */}
+        <div className="flex items-center justify-between border-t border-gray-200 dark:border-gray-700 pt-4">
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            Page {currentPage}
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={handlePrev}
+              disabled={cursorHistory.length === 0 || loading}
+              className="px-4 py-2 text-sm font-medium bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-40 disabled:cursor-not-allowed transition"
+            >
+              ← Previous
+            </button>
+            <button
+              onClick={handleNext}
+              disabled={!hasMore || loading}
+              className="px-4 py-2 text-sm font-medium bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition"
+            >
+              Next →
+            </button>
           </div>
-    </>
-  );
+        </div>
+      </>
+    );
 
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -342,7 +343,9 @@ export default function ProductsManagement() {
         <div className="flex items-center justify-center py-16">
           <LoadingSpinner />
         </div>
-      ) : productsListContent}
+      ) : (
+        productsListContent
+      )}
 
       {showModal && (
         <Suspense
