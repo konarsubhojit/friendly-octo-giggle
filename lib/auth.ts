@@ -123,7 +123,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (session.user) {
         session.user.id = token.id as string;
         session.user.role = (token.role as "ADMIN" | "CUSTOMER") || "CUSTOMER";
-        session.user.phoneNumber = (token.phoneNumber as string | null | undefined) || undefined;
+        session.user.phoneNumber =
+          (token.phoneNumber as string | null | undefined) || undefined;
       }
       return session;
     },
