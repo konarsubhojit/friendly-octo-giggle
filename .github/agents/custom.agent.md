@@ -38,43 +38,51 @@ For bug fixes, single-file changes, refactors, or tasks where speckit overhead i
 ## Speckit Workflow — Exact Step-by-Step Execution
 
 ### Step 1: `speckit.specify`
+
 - Run `#runSubagent speckit.specify` with the full feature description and codebase context
 - Saves spec to `specs/NNN-feature-name/spec.md`
 - **Do not proceed until spec.md exists**
 
 ### Step 2: `speckit.clarify`
+
 - Run `#runSubagent speckit.clarify` referencing the generated spec.md
 - Encodes any architectural decisions, DB schema choices, UX decisions into the spec
 - **Do not proceed until spec.md is updated with clarifications**
 
 ### Step 3: `speckit.plan`
+
 - Run `#runSubagent speckit.plan` referencing spec.md + any key decisions from clarify
 - Saves to `specs/NNN-feature-name/plan.md` (plus data-model.md, API contracts, etc.)
 - **Do not proceed until plan.md exists**
 
 ### Step 4: `speckit.tasks`
+
 - Run `#runSubagent speckit.tasks` referencing spec.md + plan.md
 - Saves to `specs/NNN-feature-name/tasks.md` with dependency-ordered tasks
 - **analyze MUST run after tasks** — tasks.md must exist for analyze to work
 - **Do not proceed until tasks.md exists**
 
 ### Step 5: `speckit.analyze`
+
 - Run `#runSubagent speckit.analyze` referencing all three artifacts (spec, plan, tasks)
 - Catches cross-artifact inconsistencies, architecture conflicts, coverage gaps
 - Updates spec.md, plan.md, and tasks.md in-place with fixes
 - **Do not proceed until all Critical/High findings are resolved**
 
 ### Step 6: Commit spec artifacts
+
 - Run `report_progress` to commit spec artifacts to the PR **before** starting implementation
 - Commit message: `feat: add [feature-name] specs (spec, plan, tasks)`
 - **Never start implementation without committing specs first**
 
 ### Step 7: `speckit.implement`
+
 - Run `#runSubagent speckit.implement` with full context: spec, plan, tasks, AND all project coding standards
 - Executes all tasks in phase order
 - **Do not commit code without running lint + tests**
 
 ### Step 8: Validate & commit
+
 - Run `npm run lint` — must pass with 0 errors
 - Run `npm run test` — all tests must pass
 - Run `npm run build` — must produce clean output
@@ -83,6 +91,8 @@ For bug fixes, single-file changes, refactors, or tasks where speckit overhead i
 ## Execution Rules
 
 ALWAYS use `#runSubagent`. Context window is limited. Work in discrete steps via subagents. Chain multiple subagents for larger tasks. Parallelize when possible.
+
+ALWAYS use ContextStream MCP as the **first** tool for any code search or context retrieval. Prefer `mcp_contextstream_search` (mode: `auto`) over `semantic_search`, `grep_search`, or `file_search`. Use `mcp_contextstream_init` at conversation start to bootstrap session context. Fall back to built-in search tools only if ContextStream returns no results or is unavailable.
 
 ALWAYS use `#context7` MCP Server to read relevant documentation before working with any language, framework, or library. Never assume knowledge is current.
 
