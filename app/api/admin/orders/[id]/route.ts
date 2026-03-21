@@ -73,9 +73,11 @@ export const PATCH = async (
     const redis = getRedisClient();
     if (redis) {
       waitUntil(
-        redis.hset(`order:${id}`, { status: parseResult.data.status }).catch(
-          (err) => logError({ error: err, context: "admin_order_redis_update" }),
-        ),
+        redis
+          .hset(`order:${id}`, { status: parseResult.data.status })
+          .catch((err) =>
+            logError({ error: err, context: "admin_order_redis_update" }),
+          ),
       );
     }
 

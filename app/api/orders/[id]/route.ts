@@ -101,9 +101,11 @@ export async function PATCH(
     const redis = getRedisClient();
     if (redis) {
       waitUntil(
-        redis.hset(`order:${id}`, { status: "CANCELLED" }).catch((err) =>
-          logError({ error: err, context: "order_cancel_redis_update" }),
-        ),
+        redis
+          .hset(`order:${id}`, { status: "CANCELLED" })
+          .catch((err) =>
+            logError({ error: err, context: "order_cancel_redis_update" }),
+          ),
       );
     }
 
