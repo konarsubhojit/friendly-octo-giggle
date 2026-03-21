@@ -156,48 +156,6 @@ const main = async () => {
   });
   console.log("  Search index 'orders' created (prefix: order:, type: hash)");
 
-  console.log("\n--- Creating cartitems search index ---");
-  try {
-    const existingCartIndex = redisClient.search.index({ name: "cartitems" });
-    const cartInfo = await existingCartIndex.describe();
-    if (cartInfo) {
-      console.log("  Dropping existing 'cartitems' index...");
-      await existingCartIndex.drop();
-    }
-  } catch {
-    // index doesn't exist
-  }
-
-  await redisClient.search.createIndex({
-    name: "cartitems",
-    dataType: "hash",
-    prefix: "cartitem:",
-    existsOk: true,
-    schema: s.object({
-      itemId: s.string().noTokenize(),
-      cartId: s.string().noTokenize(),
-      userId: s.string().noTokenize(),
-      sessionId: s.string().noTokenize(),
-      productId: s.string().noTokenize(),
-      productName: s.string(),
-      productDescription: s.string(),
-      productPrice: s.string().noTokenize(),
-      productImage: s.string().noTokenize(),
-      productCategory: s.string().noTokenize(),
-      productStock: s.string().noTokenize(),
-      variationId: s.string().noTokenize(),
-      variationName: s.string().noTokenize(),
-      variationPriceModifier: s.string().noTokenize(),
-      variationStock: s.string().noTokenize(),
-      quantity: s.string().noTokenize(),
-      createdAt: s.string().noTokenize(),
-      updatedAt: s.string().noTokenize(),
-    }),
-  });
-  console.log(
-    "  Search index 'cartitems' created (prefix: cartitem:, type: hash)",
-  );
-
   await seedRedis(redisClient, allOrders, itemsByOrder);
 
   console.log("\nDone.");

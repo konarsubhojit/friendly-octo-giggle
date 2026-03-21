@@ -1,32 +1,10 @@
 import { getRedisClient } from "./redis";
 import { logError, logCacheOperation } from "./logger";
-import { s } from "@upstash/redis";
 import { waitUntil } from "@vercel/functions";
 
 const CART_ITEM_PREFIX = "cartitem:";
-const CART_INDEX_NAME = "cartitems";
+const CART_OWNER_PREFIX = "cartowner:";
 const CART_ITEM_TTL_SECONDS = 86400;
-
-const CART_ITEM_SCHEMA = s.object({
-  itemId: s.string().noTokenize(),
-  cartId: s.string().noTokenize(),
-  userId: s.string().noTokenize(),
-  sessionId: s.string().noTokenize(),
-  productId: s.string().noTokenize(),
-  productName: s.string(),
-  productDescription: s.string(),
-  productPrice: s.string().noTokenize(),
-  productImage: s.string().noTokenize(),
-  productCategory: s.string().noTokenize(),
-  productStock: s.string().noTokenize(),
-  variationId: s.string().noTokenize(),
-  variationName: s.string().noTokenize(),
-  variationPriceModifier: s.string().noTokenize(),
-  variationStock: s.string().noTokenize(),
-  quantity: s.string().noTokenize(),
-  createdAt: s.string().noTokenize(),
-  updatedAt: s.string().noTokenize(),
-});
 
 export interface CartItemRedis {
   itemId: string;
@@ -50,6 +28,12 @@ export interface CartItemRedis {
 }
 
 const redisCartItemKey = (itemId: string) => `${CART_ITEM_PREFIX}${itemId}`;
+
+const cartOwnerKey = (userId?: string, sessionId?: string): string | null => {
+  if (userId) return `${CART_OWNER_PREFIX}user:${userId}`;
+  if (sessionId) return `${CART_OWNER_PREFIX}session:${sessionId}`;
+  return null;
+};
 
 const toHashFields = (item: CartItemRedis): Record<string, string> => ({
   itemId: item.itemId,
@@ -106,9 +90,17 @@ export const writeCartItemToRedis = async (
 
   try {
     const key = redisCartItemKey(item.itemId);
+    const ownerSetKey = cartOwnerKey(
+      item.userId || undefined,
+      item.sessionId || undefined,
+    );
     const pipeline = redis.pipeline();
     pipeline.hset(key, toHashFields(item));
     pipeline.expire(key, CART_ITEM_TTL_SECONDS);
+    if (ownerSetKey) {
+      pipeline.sadd(ownerSetKey, item.itemId);
+      pipeline.expire(ownerSetKey, CART_ITEM_TTL_SECONDS);
+    }
     await pipeline.exec();
   } catch (error) {
     logError({
@@ -127,11 +119,31 @@ export const writeCartItemsToRedis = async (
 
   try {
     const pipeline = redis.pipeline();
+    const ownerSets = new Map<string, string[]>();
+
     for (const item of items) {
       const key = redisCartItemKey(item.itemId);
       pipeline.hset(key, toHashFields(item));
       pipeline.expire(key, CART_ITEM_TTL_SECONDS);
+
+      const ownerSetKey = cartOwnerKey(
+        item.userId || undefined,
+        item.sessionId || undefined,
+      );
+      if (ownerSetKey) {
+        const existing = ownerSets.get(ownerSetKey) ?? [];
+        existing.push(item.itemId);
+        ownerSets.set(ownerSetKey, existing);
+      }
     }
+
+    for (const [ownerSetKey, itemIds] of ownerSets) {
+      for (const itemId of itemIds) {
+        pipeline.sadd(ownerSetKey, itemId);
+      }
+      pipeline.expire(ownerSetKey, CART_ITEM_TTL_SECONDS);
+    }
+
     await pipeline.exec();
     logCacheOperation({
       operation: "set",
@@ -173,16 +185,18 @@ export const removeCartItemsByCartId = async (
   if (!redis) return;
 
   try {
-    const items = await fetchCartFromRedis(userId, sessionId);
-    if (items && items.length > 0) {
-      const pipeline = redis.pipeline();
-      for (const item of items) {
-        if (item.cartId === cartId) {
-          pipeline.del(redisCartItemKey(item.itemId));
-        }
-      }
-      await pipeline.exec();
+    const ownerSetKey = cartOwnerKey(userId, sessionId);
+    if (!ownerSetKey) return;
+
+    const itemIds = await redis.smembers(ownerSetKey);
+    if (!itemIds || itemIds.length === 0) return;
+
+    const pipeline = redis.pipeline();
+    for (const itemId of itemIds) {
+      pipeline.del(redisCartItemKey(itemId));
     }
+    pipeline.del(ownerSetKey);
+    await pipeline.exec();
   } catch (error) {
     logError({
       error,
@@ -222,38 +236,43 @@ export const fetchCartFromRedis = async (
   const redis = getRedisClient();
   if (!redis) return null;
 
-  let ownerField: string | null = null;
-  if (userId) {
-    ownerField = "userId";
-  } else if (sessionId) {
-    ownerField = "sessionId";
-  }
-  const ownerValue = userId ?? sessionId;
-  if (!ownerField || !ownerValue) return null;
+  const ownerSetKey = cartOwnerKey(userId, sessionId);
+  if (!ownerSetKey) return null;
 
   try {
-    const index = redis.search.index({
-      name: CART_INDEX_NAME,
-      schema: CART_ITEM_SCHEMA,
-    });
+    const itemIds = await redis.smembers(ownerSetKey);
+    if (!itemIds || itemIds.length === 0) return null;
 
-    const results = await index.query({
-      filter: { [ownerField]: ownerValue },
-      limit: 50,
-    });
-
-    if (results.length === 0) return null;
+    const pipeline = redis.pipeline();
+    for (const itemId of itemIds) {
+      pipeline.hgetall(redisCartItemKey(itemId));
+    }
+    const results = await pipeline.exec();
 
     const items: CartItemRedis[] = [];
-    for (const result of results) {
-      const data = result.data as unknown as Record<string, string>;
-      const parsed = fromHashFields(data);
+    const expiredIds: string[] = [];
+
+    for (let index = 0; index < results.length; index++) {
+      const hash = results[index] as Record<string, string> | null;
+      if (!hash || Object.keys(hash).length === 0) {
+        expiredIds.push(itemIds[index]);
+        continue;
+      }
+      const parsed = fromHashFields(hash);
       if (parsed) items.push(parsed);
+    }
+
+    if (expiredIds.length > 0) {
+      const cleanupPipeline = redis.pipeline();
+      for (const expiredId of expiredIds) {
+        cleanupPipeline.srem(ownerSetKey, expiredId);
+      }
+      cleanupPipeline.exec().catch(() => {});
     }
 
     logCacheOperation({
       operation: "hit",
-      key: `cart:${ownerField}:${ownerValue}`,
+      key: `cart:${userId ? "user" : "session"}:${userId ?? sessionId}`,
       success: true,
     });
 
@@ -261,8 +280,8 @@ export const fetchCartFromRedis = async (
   } catch (error) {
     logError({
       error,
-      context: "cart_redis_search",
-      additionalInfo: { ownerField, ownerValue },
+      context: "cart_redis_fetch",
+      additionalInfo: { ownerSetKey },
     });
     return null;
   }
