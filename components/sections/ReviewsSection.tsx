@@ -151,6 +151,23 @@ export const ReviewsSection = ({ productId }: ReviewsSectionProps) => {
     fetchReviews();
   };
 
+  const reviewsContent = reviews.length === 0 ? (
+    <div className="text-center py-8">
+      <p className="text-[var(--text-muted)] text-sm">
+        No reviews yet. Be the first to share your thoughts!
+      </p>
+    </div>
+  ) : (
+    <>
+      <RatingSummary reviews={reviews} />
+      <div>
+        {reviews.map((review) => (
+          <ReviewCard key={review.id} review={review} />
+        ))}
+      </div>
+    </>
+  );
+
   return (
     <section aria-labelledby="reviews-heading" className="mt-12">
       <Card className="p-6 sm:p-8">
@@ -196,22 +213,7 @@ export const ReviewsSection = ({ productId }: ReviewsSectionProps) => {
           <div className="flex justify-center py-8">
             <div className="animate-spin rounded-full h-6 w-6 border-2 border-[var(--accent-rose)] border-t-transparent" aria-label="Loading reviews" />
           </div>
-        ) : reviews.length === 0 ? (
-          <div className="text-center py-8">
-            <p className="text-[var(--text-muted)] text-sm">
-              No reviews yet. Be the first to share your thoughts!
-            </p>
-          </div>
-        ) : (
-          <>
-            <RatingSummary reviews={reviews} />
-            <div>
-              {reviews.map((review) => (
-                <ReviewCard key={review.id} review={review} />
-              ))}
-            </div>
-          </>
-        )}
+        ) : reviewsContent}
       </Card>
     </section>
   );

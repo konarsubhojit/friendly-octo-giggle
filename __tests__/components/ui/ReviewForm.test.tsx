@@ -30,7 +30,7 @@ describe("ReviewForm", () => {
       data: { user: { id: "user1", name: "Jane" } },
     });
     render(<ReviewForm productId="prod001" />);
-    expect(screen.getByLabelText("Select star rating")).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Select star rating" })).toBeInTheDocument();
     expect(screen.getByLabelText(/your review/i)).toBeInTheDocument();
     expect(screen.getByText("Submit Review")).toBeInTheDocument();
   });

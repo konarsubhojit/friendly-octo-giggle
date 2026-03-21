@@ -172,6 +172,19 @@ const AdminReviewsPage = () => {
         filtered.length
       : 0;
 
+  const filteredContent = filtered.length === 0 ? (
+    <EmptyState
+      title="No reviews found"
+      message="No reviews match your current filters."
+    />
+  ) : (
+    <div className="space-y-4">
+      {filtered.map((review) => (
+        <ReviewRow key={review.id} review={review} />
+      ))}
+    </div>
+  );
+
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <AdminBreadcrumbs
@@ -199,18 +212,7 @@ const AdminReviewsPage = () => {
         <div className="flex items-center justify-center py-16">
           <LoadingSpinner />
         </div>
-      ) : filtered.length === 0 ? (
-        <EmptyState
-          title="No reviews found"
-          message="No reviews match your current filters."
-        />
-      ) : (
-        <div className="space-y-4">
-          {filtered.map((review) => (
-            <ReviewRow key={review.id} review={review} />
-          ))}
-        </div>
-      )}
+      ) : filteredContent}
     </main>
   );
 };

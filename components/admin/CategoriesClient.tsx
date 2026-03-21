@@ -35,7 +35,7 @@ export default function CategoriesClient({
   // Delete confirmation
   const [deleteTarget, setDeleteTarget] = useState<Category | null>(null);
 
-  const handleAdd = async (e: React.FormEvent) => {
+  const handleAdd = async (e: React.BaseSyntheticEvent) => {
     e.preventDefault();
     const trimmed = newName.trim();
     if (!trimmed) return;

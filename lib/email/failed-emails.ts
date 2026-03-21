@@ -249,4 +249,4 @@ export const countPendingFailedEmails = async (): Promise<number> => {
   return rows[0]?.value ?? 0;
 };
 
-export type { EmailAttemptRecord };
+export type { EmailAttemptRecord } from "@/lib/schema";

@@ -101,7 +101,7 @@ export default function OrdersManagement() {
     fetchOrders(cursor, search, filter);
   }, [fetchOrders, cursor, search, filter]);
 
-  const handleSearch = (e: React.FormEvent) => {
+  const handleSearch = (e: React.BaseSyntheticEvent) => {
     e.preventDefault();
     setCursor(null);
     setCursorHistory([]);
@@ -213,6 +213,54 @@ export default function OrdersManagement() {
 
   const currentPage = cursorHistory.length + 1;
 
+  const ordersListContent = orders.length === 0 ? (
+    <EmptyState
+      title="No orders found"
+      message={search ? "Try a different search term." : undefined}
+    />
+  ) : (
+    <>
+          <div className="space-y-4 mb-8">
+            {orders.map((order) => (
+              <AdminOrderCard
+                key={order.id}
+                order={order}
+                updatingOrderId={updatingOrderId}
+                savingShippingId={savingShippingId}
+                edit={getShippingEdit(order.id, order)}
+                formatPrice={formatPrice}
+                onStatusChange={handleStatusChange}
+                onShippingFieldChange={setShippingField}
+                onSaveShipping={handleSaveShipping}
+              />
+            ))}
+          </div>
+
+          {/* Cursor Pagination */}
+          <div className="flex items-center justify-between border-t border-gray-200 dark:border-gray-700 pt-4">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Page {currentPage}
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={handlePrev}
+                disabled={cursorHistory.length === 0 || loading}
+                className="px-4 py-2 text-sm font-medium bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-40 disabled:cursor-not-allowed transition"
+              >
+                ← Previous
+              </button>
+              <button
+                onClick={handleNext}
+                disabled={!hasMore || loading}
+                className="px-4 py-2 text-sm font-medium bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition"
+              >
+                Next →
+              </button>
+            </div>
+          </div>
+    </>
+  );
+
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <AdminBreadcrumbs
@@ -314,53 +362,7 @@ export default function OrdersManagement() {
         <div className="flex items-center justify-center py-16">
           <LoadingSpinner />
         </div>
-      ) : orders.length === 0 ? (
-        <EmptyState
-          title="No orders found"
-          message={search ? "Try a different search term." : undefined}
-        />
-      ) : (
-        <>
-          <div className="space-y-4 mb-8">
-            {orders.map((order) => (
-              <AdminOrderCard
-                key={order.id}
-                order={order}
-                updatingOrderId={updatingOrderId}
-                savingShippingId={savingShippingId}
-                edit={getShippingEdit(order.id, order)}
-                formatPrice={formatPrice}
-                onStatusChange={handleStatusChange}
-                onShippingFieldChange={setShippingField}
-                onSaveShipping={handleSaveShipping}
-              />
-            ))}
-          </div>
-
-          {/* Cursor Pagination */}
-          <div className="flex items-center justify-between border-t border-gray-200 dark:border-gray-700 pt-4">
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              Page {currentPage}
-            </p>
-            <div className="flex gap-2">
-              <button
-                onClick={handlePrev}
-                disabled={cursorHistory.length === 0 || loading}
-                className="px-4 py-2 text-sm font-medium bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-40 disabled:cursor-not-allowed transition"
-              >
-                ← Previous
-              </button>
-              <button
-                onClick={handleNext}
-                disabled={!hasMore || loading}
-                className="px-4 py-2 text-sm font-medium bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition"
-              >
-                Next →
-              </button>
-            </div>
-          </div>
-        </>
-      )}
+      ) : ordersListContent}
     </main>
   );
 }

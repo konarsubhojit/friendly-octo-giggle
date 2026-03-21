@@ -63,7 +63,7 @@ export async function PUT(
 ) {
   const authCheck = await checkAdminAuth();
   if (!authCheck.authorized) {
-    return apiError(authCheck.error!, authCheck.status);
+    return apiError(authCheck.error ?? "Unauthorized", authCheck.status);
   }
 
   try {
@@ -146,7 +146,7 @@ export async function DELETE(
 ) {
   const authCheck = await checkAdminAuth();
   if (!authCheck.authorized) {
-    return apiError(authCheck.error!, authCheck.status);
+    return apiError(authCheck.error ?? "Unauthorized", authCheck.status);
   }
 
   try {

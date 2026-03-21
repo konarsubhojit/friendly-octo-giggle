@@ -7,7 +7,6 @@ import {
   useRef,
   type Dispatch,
   type SetStateAction,
-  type FormEvent,
 } from "react";
 import { logError } from "@/lib/logger";
 
@@ -298,7 +297,7 @@ export interface UseCursorPaginationResult<T> {
   readonly cursorHistoryLength: number;
   readonly currentPage: number;
   readonly setSearchInput: Dispatch<SetStateAction<string>>;
-  readonly handleSearch: (e: FormEvent<HTMLFormElement>) => void;
+  readonly handleSearch: (e: React.BaseSyntheticEvent) => void;
   readonly handleNext: () => void;
   readonly handlePrev: () => void;
   readonly handleRefresh: () => void;
@@ -397,7 +396,7 @@ export const useCursorPagination = <T>({
   }, [enabled, cursor, search, doFetch]);
 
   const handleSearch = useCallback(
-    (e: FormEvent<HTMLFormElement>) => {
+    (e: React.BaseSyntheticEvent) => {
       e.preventDefault();
       setCursor(null);
       setCursorHistory([]);

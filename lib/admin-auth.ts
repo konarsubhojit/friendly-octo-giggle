@@ -16,5 +16,5 @@ export const checkAdminAuth = async (): Promise<AdminAuthResult> => {
       status: 403,
     };
   }
-  return { authorized: true, userId: session.user.id! };
+  return { authorized: true, userId: session.user.id ?? "" };
 };

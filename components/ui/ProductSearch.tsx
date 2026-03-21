@@ -217,13 +217,12 @@ export default function ProductSearch() {
       {open && (
         <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[15vh] px-4">
           {/* Backdrop */}
-          <div
-            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm cursor-default"
             onClick={() => closeDialog()}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") closeDialog();
-            }}
-            role="presentation"
+            aria-label="Close search"
+            tabIndex={-1}
           />
 
           {/* Dialog content */}
@@ -288,11 +287,14 @@ export default function ProductSearch() {
               )}
 
               {results.length > 0 && (
-                <ul ref={listRef} id="search-results-list" className="py-2">
+                <ul ref={listRef} id="search-results-list" role="listbox" className="py-2">
                   {results.map((product, i) => (
                     <li
                       key={product.id}
                       id={`search-result-${i}`}
+                      role="option"
+                      aria-selected={clampedIndex === i}
+                      tabIndex={-1}
                       className={`flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors ${
                         clampedIndex === i
                           ? "bg-[var(--accent-blush)]"

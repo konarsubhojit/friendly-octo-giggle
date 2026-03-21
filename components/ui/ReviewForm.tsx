@@ -39,7 +39,7 @@ export const ReviewForm = ({ productId, orderId, onSuccess }: ReviewFormProps) =
     );
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.BaseSyntheticEvent) => {
     e.preventDefault();
     setError(null);
 
@@ -67,11 +67,11 @@ export const ReviewForm = ({ productId, orderId, onSuccess }: ReviewFormProps) =
       });
 
       const data = await res.json();
-      if (!res.ok) {
-        setError(data.error ?? "Failed to submit review. Please try again.");
-      } else {
+      if (res.ok) {
         setSuccess(true);
         onSuccess?.();
+      } else {
+        setError(data.error ?? "Failed to submit review. Please try again.");
       }
     } catch {
       setError("Network error. Please try again.");
@@ -84,9 +84,9 @@ export const ReviewForm = ({ productId, orderId, onSuccess }: ReviewFormProps) =
     <form onSubmit={handleSubmit} className="space-y-4" noValidate>
       {/* Star rating selector */}
       <div>
-        <label className="block text-sm font-semibold text-[var(--foreground)] mb-2">
+        <p className="block text-sm font-semibold text-[var(--foreground)] mb-2">
           Your Rating <span aria-hidden="true" className="text-[var(--accent-rose)]">*</span>
-        </label>
+        </p>
         <StarRating
           rating={rating}
           interactive

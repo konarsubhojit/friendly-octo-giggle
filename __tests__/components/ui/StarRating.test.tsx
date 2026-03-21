@@ -44,8 +44,8 @@ describe("StarRating", () => {
   });
 
   it("uses group role for interactive mode", () => {
-    const { container } = render(<StarRating rating={2} interactive />);
-    const group = container.querySelector("[role='group']");
+    render(<StarRating rating={2} interactive />);
+    const group = screen.getByRole("group");
     expect(group).toBeInTheDocument();
   });
 

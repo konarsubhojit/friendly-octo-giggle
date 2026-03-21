@@ -129,7 +129,7 @@ const ImageCarousel = ({
   return (
     <div className="relative select-none">
       {/* Main image container */}
-      <div
+      <section
         ref={containerRef}
         tabIndex={0}
         aria-label={`Image carousel for ${productName}. Use arrow keys or mouse wheel to navigate.`}
@@ -203,7 +203,7 @@ const ImageCarousel = ({
         <div className="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-black/40 text-white text-xs font-semibold backdrop-blur-sm">
           {currentIndex + 1} / {total}
         </div>
-      </div>
+      </section>
 
       {/* Dot indicators */}
       <div

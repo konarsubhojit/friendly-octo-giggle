@@ -102,17 +102,7 @@ const ShareUrlPanel = ({
   }, []);
 
   const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(shareUrl);
-    } catch {
-      // Fallback for browsers that block clipboard API
-      const input = document.createElement("input");
-      input.value = shareUrl;
-      document.body.appendChild(input);
-      input.select();
-      document.execCommand("copy");
-      document.body.removeChild(input);
-    }
+      await navigator.clipboard.writeText(shareUrl).catch(() => {});
     if (copyTimeoutRef.current !== null) {
       clearTimeout(copyTimeoutRef.current);
     }
@@ -121,10 +111,9 @@ const ShareUrlPanel = ({
   };
 
   return (
-    <div
+    <section
       style={style}
       className="p-4 bg-[var(--surface)] border border-[var(--border-warm)] rounded-xl shadow-warm"
-      role="region"
       aria-label="Share link"
     >
       <div className="flex items-center justify-between mb-2">
@@ -178,24 +167,14 @@ const ShareUrlPanel = ({
           )}
         </button>
       </div>
-    </div>
+    </section>
   );
 };
 
 // ─── Helpers ──────────────────────────────────────────────
 
-const copyTextToClipboard = async (text: string): Promise<void> => {
-  try {
-    await navigator.clipboard.writeText(text);
-  } catch {
-    // Fallback for browsers that block the Clipboard API
-    const input = document.createElement("input");
-    input.value = text;
-    document.body.appendChild(input);
-    input.select();
-    document.execCommand("copy");
-    document.body.removeChild(input);
-  }
+const copyTextToClipboard = (text: string): void => {
+  navigator.clipboard.writeText(text).catch(() => {});
 };
 
 const computePanelStyle = (rect: DOMRect): CSSProperties => {
@@ -313,11 +292,10 @@ export const ShareButton = ({ productId, variationId }: ShareButtonProps) => {
   const isLoading = shareState === "loading";
   const isError = shareState === "error";
 
-  const buttonAriaLabel = isLoading
-    ? "Generating share link…"
-    : isError
-      ? "Failed to share – click to retry"
-      : "Share this product";
+  const ariaLabelWhenNotLoading = isError
+    ? "Failed to share – click to retry"
+    : "Share this product";
+  const buttonAriaLabel = isLoading ? "Generating share link…" : ariaLabelWhenNotLoading;
 
   const buttonClassName = [
     "flex items-center justify-center p-2.5 border-2 rounded-xl transition-all duration-300 focus-warm disabled:opacity-50 disabled:cursor-not-allowed",

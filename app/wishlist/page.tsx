@@ -124,6 +124,12 @@ const WishlistPage = () => {
     );
   }
 
+  const plural = products.length === 1 ? "" : "s";
+  const wishlistCountText =
+    products.length === 0
+      ? "Your wishlist is empty"
+      : `${products.length} saved item${plural}`;
+
   return (
     <div className="min-h-screen bg-warm-gradient">
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
@@ -132,9 +138,7 @@ const WishlistPage = () => {
             My Wishlist
           </GradientHeading>
           <p className="text-[var(--text-muted)] mt-1">
-            {products.length === 0
-              ? "Your wishlist is empty"
-              : `${products.length} saved item${products.length !== 1 ? "s" : ""}`}
+            {wishlistCountText}
           </p>
         </div>
 

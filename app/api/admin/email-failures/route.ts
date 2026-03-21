@@ -39,12 +39,12 @@ const checkAdminAuth = async () => {
 };
 
 const parseStatusList = (statusParam: string): FailedEmailStatus[] => {
-  const valid: FailedEmailStatus[] = ["pending", "failed", "sent"];
+  const valid = new Set<FailedEmailStatus>(["pending", "failed", "sent"]);
   return statusParam
     .split(",")
     .map((s) => s.trim())
     .filter((s): s is FailedEmailStatus =>
-      valid.includes(s as FailedEmailStatus),
+      valid.has(s as FailedEmailStatus),
     );
 };
 

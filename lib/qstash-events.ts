@@ -10,7 +10,7 @@ const OrderCreatedEventSchema = z.object({
   type: z.literal("order.created"),
   data: z.object({
     orderId: z.string().min(1),
-    customerEmail: z.string().email(),
+    customerEmail: z.email(),
     customerName: z.string().min(1),
     customerAddress: z.string().min(1),
     totalAmount: z.number().positive(),
@@ -23,7 +23,7 @@ const OrderStatusChangedEventSchema = z.object({
   type: z.literal("order.status_changed"),
   data: z.object({
     orderId: z.string().min(1),
-    customerEmail: z.string().email(),
+    customerEmail: z.email(),
     customerName: z.string().min(1),
     newStatus: z.enum([
       "PENDING",

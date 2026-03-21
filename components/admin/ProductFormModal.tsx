@@ -256,7 +256,7 @@ export default function ProductFormModal({
   const [imageFile, setImageFile] = useState<File | null>(null);
   // Additional image files to upload (paired with formData.images slots)
   const [additionalFiles, setAdditionalFiles] = useState<(File | null)[]>(() =>
-    Array((editingProduct?.images ?? []).length).fill(null),
+    new Array((editingProduct?.images ?? []).length).fill(null),
   );
   // Stable IDs for additional image slots (avoids React index-key warnings)
   const [slotIds, setSlotIds] = useState<string[]>(() =>

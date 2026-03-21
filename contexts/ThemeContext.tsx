@@ -52,8 +52,8 @@ export const ThemeProvider = ({
 }: {
   readonly children: ReactNode;
 }) => {
-  const [theme, setThemeState] = useState<ThemeId>(() => {
-    if (typeof window === "undefined") return "default";
+  const [theme, setTheme] = useState<ThemeId>(() => {
+    if (typeof globalThis.window === "undefined") return "default";
     try {
       const stored = globalThis.localStorage.getItem(THEME_STORAGE_KEY);
       if (stored === "baby-pink") return "baby-pink";
@@ -72,18 +72,18 @@ export const ThemeProvider = ({
     }
   }, [theme]);
 
-  const setTheme = useCallback((next: ThemeId) => {
+  const handleThemeChange = useCallback((next: ThemeId) => {
     try {
       localStorage.setItem(THEME_STORAGE_KEY, next);
     } catch {
       // localStorage unavailable — continue without persistence
     }
-    setThemeState(next);
+    setTheme(next);
   }, []);
 
   const value = useMemo<ThemeContextValue>(
-    () => ({ theme, setTheme, themes: THEMES }),
-    [theme, setTheme],
+    () => ({ theme, setTheme: handleThemeChange, themes: THEMES }),
+    [theme, handleThemeChange],
   );
 
   return (
