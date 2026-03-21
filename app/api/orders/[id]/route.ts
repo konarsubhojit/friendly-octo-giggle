@@ -13,6 +13,8 @@ import { auth } from "@/lib/auth";
 import { serializeOrder } from "@/lib/serializers";
 import { getCachedData, invalidateCache, getRedisClient } from "@/lib/redis";
 import { CACHE_KEYS, CACHE_TTL, invalidateUserOrderCaches } from "@/lib/cache";
+import { logError } from "@/lib/logger";
+import { waitUntil } from "@vercel/functions";
 
 export const dynamic = "force-dynamic";
 
@@ -98,7 +100,11 @@ export async function PATCH(
 
     const redis = getRedisClient();
     if (redis) {
-      redis.hset(`order:${id}`, { status: "CANCELLED" }).catch(() => {});
+      waitUntil(
+        redis.hset(`order:${id}`, { status: "CANCELLED" }).catch((err) =>
+          logError({ error: err, context: "order_cancel_redis_update" }),
+        ),
+      );
     }
 
     await Promise.allSettled([

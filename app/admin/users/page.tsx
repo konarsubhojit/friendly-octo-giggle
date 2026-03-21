@@ -91,7 +91,7 @@ export default function UsersManagement() {
         <CursorPaginationBar
           currentPage={currentPage}
           totalCount={totalCount}
-          pageSize={20}
+          pageSize={10}
           hasMore={hasMore}
           loading={loading}
           totalPages={totalPages}

@@ -40,11 +40,11 @@ export default async function globalSetup() {
     const page = await context.newPage();
 
     await page.goto("/auth/signin");
-    await page.waitForSelector('input[type="email"], input[name="email"]', {
+    await page.waitForSelector('input[name="identifier"]', {
       timeout: 15000,
     });
 
-    await page.fill('input[type="email"], input[name="email"]', email);
+    await page.fill('input[name="identifier"]', email);
     await page.fill('input[type="password"], input[name="password"]', password);
     await page.click('button[type="submit"]');
 
