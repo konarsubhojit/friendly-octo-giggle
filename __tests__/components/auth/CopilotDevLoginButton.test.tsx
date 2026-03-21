@@ -1,4 +1,10 @@
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CopilotDevLoginButton } from "@/components/auth/CopilotDevLoginButton";
 
@@ -28,7 +34,9 @@ describe("CopilotDevLoginButton", () => {
     render(<CopilotDevLoginButton />);
 
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: /sign in as copilot admin/i }));
+      fireEvent.click(
+        screen.getByRole("button", { name: /sign in as copilot admin/i }),
+      );
     });
 
     await waitFor(() => {
@@ -45,7 +53,9 @@ describe("CopilotDevLoginButton", () => {
     render(<CopilotDevLoginButton onSuccess={onSuccess} />);
 
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: /sign in as copilot admin/i }));
+      fireEvent.click(
+        screen.getByRole("button", { name: /sign in as copilot admin/i }),
+      );
     });
 
     await waitFor(() => {
