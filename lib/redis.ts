@@ -1,33 +1,14 @@
-import Redis from "ioredis";
-import type { RedisOptions } from "ioredis";
+import { Redis } from "@upstash/redis";
 import { logCacheOperation, logError, Timer } from "./logger";
 import { env } from "./env";
 
-// Singleton Redis connection for serverless
 let redis: Redis | null = null;
 
-export const isRedisAvailable = (): boolean => Boolean(env.REDIS_URL);
-
-const parseRedisUrl = (redisUrl: string): RedisOptions => {
-  const parsedUrl = new URL(redisUrl);
-  const dbStr = parsedUrl.pathname.slice(1);
-  const dbNum = dbStr ? Number.parseInt(dbStr, 10) : 0;
-  return {
-    host: parsedUrl.hostname,
-    port: Number.parseInt(parsedUrl.port || "6379", 10),
-    password: parsedUrl.password || undefined,
-    username: parsedUrl.username || undefined,
-    db: Number.isNaN(dbNum) ? 0 : dbNum,
-    tls: parsedUrl.protocol === "rediss:" ? {} : undefined,
-    maxRetriesPerRequest: 3,
-    enableReadyCheck: false,
-    lazyConnect: true,
-  };
-};
+export const isRedisAvailable = (): boolean =>
+  Boolean(env.UPSTASH_REDIS_REST_URL && env.UPSTASH_REDIS_REST_TOKEN);
 
 export const getRedisClient = (): Redis | null => {
-  const redisUrl = env.REDIS_URL;
-  if (!redisUrl) {
+  if (!env.UPSTASH_REDIS_REST_URL || !env.UPSTASH_REDIS_REST_TOKEN) {
     return null;
   }
 
@@ -35,18 +16,17 @@ export const getRedisClient = (): Redis | null => {
     return redis;
   }
 
-  redis = new Redis(parseRedisUrl(redisUrl));
+  redis = new Redis({
+    url: env.UPSTASH_REDIS_REST_URL,
+    token: env.UPSTASH_REDIS_REST_TOKEN,
+  });
 
   return redis;
 };
 
-// ─── Stampede Prevention ────────────────────────────────
-// SRP: Lock acquisition/release is isolated from cache read/write logic.
-
 const LOCK_TTL_SECONDS = 10;
 const LOCK_RETRY_DELAY_MS = 100;
 
-// Lua script to release lock only if we still own it (atomic check-and-delete)
 const RELEASE_LOCK_SCRIPT = `
   if redis.call("get", KEYS[1]) == ARGV[1] then
     return redis.call("del", KEYS[1])
@@ -64,13 +44,10 @@ const fetchWithStampedePrevention = async <T>(
 ): Promise<T> => {
   const lockKey = `lock:${key}`;
   const lockValue = crypto.randomUUID();
-  const lockAcquired = await redisClient.set(
-    lockKey,
-    lockValue,
-    "EX",
-    LOCK_TTL_SECONDS,
-    "NX",
-  );
+  const lockAcquired = await redisClient.set(lockKey, lockValue, {
+    ex: LOCK_TTL_SECONDS,
+    nx: true,
+  });
 
   if (lockAcquired) {
     try {
@@ -85,22 +62,18 @@ const fetchWithStampedePrevention = async <T>(
       });
       return fresh;
     } finally {
-      await redisClient.eval(RELEASE_LOCK_SCRIPT, 1, lockKey, lockValue);
+      await redisClient.eval(RELEASE_LOCK_SCRIPT, [lockKey], [lockValue]);
     }
   }
 
-  // Another process holds the lock — wait briefly then check cache
   await new Promise((resolve) => setTimeout(resolve, LOCK_RETRY_DELAY_MS));
-  const retryData = await redisClient.get(key);
+  const retryData = await redisClient.get<string>(key);
   if (retryData) {
-    return JSON.parse(retryData).value as T;
+    return (JSON.parse(retryData) as { value: T }).value;
   }
 
-  // Fallback: fetch without caching (lock failed, no cached data appeared)
   return await fetcher();
 };
-
-// ─── Cache Read with Stale-While-Revalidate ─────────────
 
 export const getCachedData = async <T>(
   key: string,
@@ -116,13 +89,12 @@ export const getCachedData = async <T>(
   const timer = new Timer(`cache.get.${key}`);
 
   try {
-    const cached = await redisClient.get(key);
+    const cached = await redisClient.get<string>(key);
 
     if (cached) {
       const data = JSON.parse(cached) as { value: T; timestamp: number };
       const age = Date.now() - data.timestamp;
 
-      // Fresh data — return immediately
       if (age < ttl * 1000) {
         timer.end({ cacheHit: true, age });
         logCacheOperation({ operation: "hit", key, success: true });
@@ -161,7 +133,6 @@ export const getCachedData = async <T>(
       }
     }
 
-    // Cache miss — fetch with stampede prevention
     logCacheOperation({ operation: "miss", key, success: true });
     const result = await fetchWithStampedePrevention(
       redisClient,
@@ -182,49 +153,38 @@ export const getCachedData = async <T>(
 export const invalidateCache = async (pattern: string): Promise<void> => {
   const redisClient = getRedisClient();
 
-  // If Redis is not available, nothing to invalidate
   if (!redisClient) {
     return;
   }
 
   const timer = new Timer(`cache.invalidate.${pattern}`);
   try {
-    // Use SCAN instead of KEYS to avoid blocking Redis
-    const stream = redisClient.scanStream({
-      match: pattern,
-      count: 100,
-    });
-
     const keysToDelete: string[] = [];
+    let cursor = 0;
 
-    stream.on("data", (keys: string[]) => {
-      keysToDelete.push(...keys);
-    });
-
-    await new Promise<void>((resolve, reject) => {
-      stream.on("end", async () => {
-        try {
-          if (keysToDelete.length > 0) {
-            // Delete in batches to avoid overwhelming Redis
-            const batchSize = 100;
-            for (let i = 0; i < keysToDelete.length; i += batchSize) {
-              const batch = keysToDelete.slice(i, i + batchSize);
-              await redisClient.del(...batch);
-            }
-            logCacheOperation({
-              operation: "invalidate",
-              key: pattern,
-              success: true,
-            });
-          }
-          timer.end({ keysDeleted: keysToDelete.length });
-          resolve();
-        } catch (err) {
-          reject(err);
-        }
+    do {
+      const [nextCursor, keys] = await redisClient.scan(cursor, {
+        match: pattern,
+        count: 100,
       });
-      stream.on("error", reject);
-    });
+      cursor = Number(nextCursor);
+      keysToDelete.push(...(keys as string[]));
+    } while (cursor !== 0);
+
+    if (keysToDelete.length > 0) {
+      const batchSize = 100;
+      for (let index = 0; index < keysToDelete.length; index += batchSize) {
+        const batch = keysToDelete.slice(index, index + batchSize);
+        await redisClient.del(...batch);
+      }
+      logCacheOperation({
+        operation: "invalidate",
+        key: pattern,
+        success: true,
+      });
+    }
+
+    timer.end({ keysDeleted: keysToDelete.length });
   } catch (error) {
     timer.end({ error: true });
     logError({
@@ -234,3 +194,4 @@ export const invalidateCache = async (pattern: string): Promise<void> => {
     });
   }
 };
+

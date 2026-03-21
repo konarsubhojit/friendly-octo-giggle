@@ -287,7 +287,7 @@ export const cacheShareResolve = async <T>(
 
   const cacheKey = CACHE_KEYS.SHARE_RESOLVE_BY_KEY(key);
   try {
-    const cached = await redisClient.get(cacheKey);
+    const cached = await redisClient.get<string>(cacheKey);
     if (cached !== null) {
       logCacheOperation({ operation: "hit", key: cacheKey, success: true });
       return JSON.parse(cached) as T;
