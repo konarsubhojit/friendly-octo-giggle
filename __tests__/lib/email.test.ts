@@ -21,17 +21,21 @@ vi.mock("mailersend", () => ({
     email: { send: mockMailerSendSend },
   })),
   EmailParams: vi.fn().mockImplementation(() => {
-    const params: Record<string, unknown> = {};
-    const self = {
-      setFrom: vi.fn().mockReturnValue(self),
-      setTo: vi.fn().mockReturnValue(self),
-      setReplyTo: vi.fn().mockReturnValue(self),
-      setSubject: vi.fn().mockReturnValue(self),
-      setHtml: vi.fn().mockReturnValue(self),
-      setText: vi.fn().mockReturnValue(self),
-      ...params,
+    const builder = {
+      setFrom: vi.fn(),
+      setTo: vi.fn(),
+      setReplyTo: vi.fn(),
+      setSubject: vi.fn(),
+      setHtml: vi.fn(),
+      setText: vi.fn(),
     };
-    return self;
+    builder.setFrom.mockReturnValue(builder);
+    builder.setTo.mockReturnValue(builder);
+    builder.setReplyTo.mockReturnValue(builder);
+    builder.setSubject.mockReturnValue(builder);
+    builder.setHtml.mockReturnValue(builder);
+    builder.setText.mockReturnValue(builder);
+    return builder;
   }),
   Sender: vi.fn(),
   Recipient: vi.fn(),

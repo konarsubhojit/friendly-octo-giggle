@@ -121,9 +121,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   callbacks: {
     session({ session, token }) {
       if (session.user) {
-        session.user.id = token.id;
-        session.user.role = token.role || "CUSTOMER";
-        session.user.phoneNumber = token.phoneNumber || undefined;
+        session.user.id = token.id as string;
+        session.user.role = (token.role as "ADMIN" | "CUSTOMER") || "CUSTOMER";
+        session.user.phoneNumber =
+          (token.phoneNumber as string | null | undefined) || undefined;
       }
       return session;
     },

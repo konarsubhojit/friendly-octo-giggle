@@ -137,7 +137,6 @@ const ImageCarousel = ({
   return (
     <div className="relative select-none">
       {/* Main image container */}
-      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex */}
       <section
         ref={containerRef}
         tabIndex={0}
