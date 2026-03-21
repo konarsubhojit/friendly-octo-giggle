@@ -13,7 +13,13 @@ vi.mock("@/lib/db", () => ({
   },
 }));
 vi.mock("@/lib/schema", () => ({
-  orders: { createdAt: "createdAt", status: "status", customerName: "customerName", customerEmail: "customerEmail", id: "id" },
+  orders: {
+    createdAt: "createdAt",
+    status: "status",
+    customerName: "customerName",
+    customerEmail: "customerEmail",
+    id: "id",
+  },
 }));
 vi.mock("drizzle-orm", () => ({
   desc: vi.fn((col) => col),
