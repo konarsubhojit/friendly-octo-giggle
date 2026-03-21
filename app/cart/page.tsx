@@ -2,16 +2,10 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useSelector, useDispatch } from "react-redux";
 import { CartItemWithProduct } from "@/lib/types";
 import { useCurrency } from "@/contexts/CurrencyContext";
-import {
-  DynamicForm,
-  type FieldDef,
-  type SubmitResult,
-} from "@/components/ui/DynamicForm";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { AlertBanner } from "@/components/ui/AlertBanner";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -22,16 +16,15 @@ import {
   fetchCart,
   updateCartItem,
   removeCartItem,
-  clearCart,
   selectCart,
   selectCartLoading,
 } from "@/lib/features/cart/cartSlice";
 import type { AppDispatch } from "@/lib/store";
 import { CartItemRow } from "@/components/cart/CartItemRow";
+import { CheckoutForm } from "@/components/cart/CheckoutForm";
 import { LeafAccent } from "@/components/ui/DecorativeElements";
 
 export default function CartPage() {
-  const router = useRouter();
   const { data: session, status } = useSession();
   const dispatch = useDispatch<AppDispatch>();
   const cart = useSelector(selectCart);
@@ -41,7 +34,6 @@ export default function CartPage() {
   const [customizationNotes, setCustomizationNotes] = useState<
     Record<string, string>
   >({});
-  const [orderSuccess, setOrderSuccess] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -108,75 +100,6 @@ export default function CartPage() {
     [],
   );
 
-  const submitOrderToApi = useCallback(
-    async (address: string, notes: Record<string, string>): Promise<void> => {
-      const orderData = {
-        customerAddress: address,
-        items: (cart?.items ?? []).map((item) => ({
-          productId: item.productId,
-          variationId: item.variationId,
-          quantity: item.quantity,
-          price: item.variation
-            ? item.product.price + item.variation.priceModifier
-            : item.product.price,
-          customizationNote: notes[item.id] || null,
-        })),
-      };
-
-      const res = await fetch("/api/orders", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(orderData),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to place order");
-      }
-
-      await dispatch(clearCart()).unwrap();
-      setOrderSuccess(true);
-      setTimeout(() => {
-        router.push("/orders");
-      }, 2000);
-    },
-    [cart, dispatch, router],
-  );
-
-  const handleOrderSubmit = useCallback(
-    async (values: Readonly<Record<string, string>>): Promise<SubmitResult> => {
-      if (!session?.user) {
-        router.push("/auth/signin?callbackUrl=/cart");
-        return;
-      }
-      if (!cart?.items.length) return "Your cart is empty.";
-      try {
-        await submitOrderToApi(values.customerAddress, customizationNotes);
-      } catch (err: unknown) {
-        return err instanceof Error
-          ? err.message
-          : "Something went wrong. Please try again.";
-      }
-    },
-    [session, router, submitOrderToApi, customizationNotes, cart],
-  );
-
-  const ADDRESS_FIELDS: ReadonlyArray<FieldDef> = [
-    {
-      id: "shipping-address",
-      name: "customerAddress",
-      label: "Shipping Address",
-      type: "textarea",
-      rows: 3,
-      placeholder: "Enter your shipping address",
-      validate: (v) =>
-        v.trim() ? undefined : "Please enter a shipping address.",
-    },
-  ];
-
-  const CART_SUBMIT_BTN =
-    "w-full bg-gradient-to-r from-[var(--accent-rose)] to-[var(--accent-pink)] text-white py-3.5 rounded-full font-bold text-base hover:from-[var(--accent-pink)] hover:to-[var(--accent-rose)] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-warm hover:shadow-warm-lg focus-warm";
-
   if ((loading && cart === null) || status === "loading") {
     return (
       <div className="min-h-screen bg-warm-gradient">
@@ -213,7 +136,6 @@ export default function CartPage() {
   return (
     <div className="min-h-screen bg-warm-gradient">
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 relative">
-        {/* Decorative leaf accents */}
         <LeafAccent className="absolute top-32 right-4 w-8 h-8 opacity-20 hidden sm:block animate-float-gentle" />
         <LeafAccent className="absolute bottom-20 left-2 w-10 h-10 opacity-15 hidden sm:block animate-float-slow" />
 
@@ -225,23 +147,6 @@ export default function CartPage() {
             variant="error"
             onDismiss={() => setError("")}
             className="mb-6"
-          />
-        )}
-
-        {orderSuccess && (
-          <AlertBanner
-            variant="success"
-            className="mb-6"
-            message={
-              <div>
-                <div className="font-bold text-lg">
-                  Order Placed Successfully!
-                </div>
-                <div className="text-sm">
-                  Thank you for your order. Redirecting to your orders...
-                </div>
-              </div>
-            }
           />
         )}
 
@@ -273,7 +178,6 @@ export default function CartPage() {
           </Card>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Cart Items */}
             <div className="lg:col-span-2">
               <Card className="overflow-hidden">
                 {cart.items.map((item: CartItemWithProduct, index: number) => (
@@ -312,7 +216,6 @@ export default function CartPage() {
               </Link>
             </div>
 
-            {/* Order Summary Sidebar */}
             <div className="lg:col-span-1">
               <Card className="p-6 sticky top-28">
                 <h2 className="text-lg font-bold text-[var(--foreground)] mb-4">
@@ -342,21 +245,13 @@ export default function CartPage() {
                   </div>
                 </div>
 
-                {/* Payment placeholder */}
                 <div className="mb-4 p-3 bg-[var(--accent-blush)]/50 rounded-lg border border-[var(--border-warm)] text-center">
                   <p className="text-xs text-[var(--text-muted)]">
                     Payment integration coming soon
                   </p>
                 </div>
 
-                {/* Shipping address + Place Order */}
-                <DynamicForm
-                  fields={ADDRESS_FIELDS}
-                  onSubmit={handleOrderSubmit}
-                  submitLabel="Place Order"
-                  submittingLabel="Processing..."
-                  submitButtonClassName={CART_SUBMIT_BTN}
-                />
+                <CheckoutForm customizationNotes={customizationNotes} />
               </Card>
             </div>
           </div>

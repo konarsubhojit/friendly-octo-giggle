@@ -8,23 +8,17 @@ import toast from "react-hot-toast";
 import { createOrder } from "@/actions/orders";
 import { clearCart, selectCart } from "@/lib/features/cart/cartSlice";
 import type { AppDispatch } from "@/lib/store";
-import { useCurrency } from "@/contexts/CurrencyContext";
 import { GradientButton } from "@/components/ui/GradientButton";
 
 interface CheckoutFormProps {
   readonly customizationNotes: Record<string, string>;
-  readonly cartTotal: number;
 }
 
-export const CheckoutForm = ({
-  customizationNotes,
-  cartTotal,
-}: CheckoutFormProps) => {
+export const CheckoutForm = ({ customizationNotes }: CheckoutFormProps) => {
   const router = useRouter();
   const { data: session } = useSession();
   const dispatch = useDispatch<AppDispatch>();
   const cart = useSelector(selectCart);
-  const { formatPrice } = useCurrency();
   const [isPending, startTransition] = useTransition();
   const [address, setAddress] = useState("");
   const [addressError, setAddressError] = useState<string | null>(null);
@@ -104,13 +98,6 @@ export const CheckoutForm = ({
             {addressError}
           </p>
         )}
-      </div>
-
-      <div className="flex justify-between items-center border-t border-[var(--border-warm)] pt-3 text-sm">
-        <span className="text-[var(--text-secondary)]">Total</span>
-        <span className="text-xl font-bold text-warm-heading">
-          {formatPrice(cartTotal)}
-        </span>
       </div>
 
       <GradientButton
