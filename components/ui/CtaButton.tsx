@@ -9,7 +9,7 @@ interface CtaButtonProps {
   readonly onClick?: () => void;
 }
 
-export const CtaButton = ({ text, href, onClick }: CtaButtonProps) => {
+export function CtaButton({ text, href, onClick }: CtaButtonProps) {
   if (href) {
     return (
       <Link href={href} className={CTA_BTN}>
@@ -25,4 +25,4 @@ export const CtaButton = ({ text, href, onClick }: CtaButtonProps) => {
     );
   }
   return null;
-};
+}

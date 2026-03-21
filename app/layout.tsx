@@ -9,7 +9,7 @@ import { Toaster } from "react-hot-toast";
 import { Analytics } from "@vercel/analytics/next";
 import HeaderWrapper from "@/components/layout/HeaderWrapper";
 
-const AppProviders = ({ children }: { readonly children: React.ReactNode }) => {
+function AppProviders({ children }: { readonly children: React.ReactNode }) {
   return (
     <StoreProvider>
       <ThemeProvider>
@@ -19,7 +19,7 @@ const AppProviders = ({ children }: { readonly children: React.ReactNode }) => {
       </ThemeProvider>
     </StoreProvider>
   );
-};
+}
 
 const nunito = Nunito({
   subsets: ["latin"],
@@ -41,11 +41,11 @@ export const metadata: Metadata = {
     "Handmade crochet flowers, bags, keychains, and accessories — crafted with love, delivered to your door.",
 };
 
-const RootLayout = ({
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
-}>) => {
+}>) {
   return (
     <html
       lang="en"
@@ -71,5 +71,4 @@ const RootLayout = ({
       </body>
     </html>
   );
-};
-export default RootLayout;
+}

@@ -21,18 +21,18 @@ const CURRENCIES: Record<CurrencyCode, CurrencyConfig> = {
 
 const VALID_CODES = new Set<string>(Object.keys(CURRENCIES));
 
-export const isValidCurrencyCode = (code: string): code is CurrencyCode => {
+export function isValidCurrencyCode(code: string): code is CurrencyCode {
   return VALID_CODES.has(code);
-};
+}
 
 /**
  * Format a price stored in INR to the target currency string.
  * Uses hardcoded fallback rates (same as the client-side defaults).
  */
-export const formatPriceForCurrency = (
+export function formatPriceForCurrency(
   priceInINR: number,
   currencyCode: CurrencyCode,
-): string => {
+): string {
   const config = CURRENCIES[currencyCode];
   const converted = priceInINR * config.rate;
   return new Intl.NumberFormat(config.locale, {
@@ -41,4 +41,4 @@ export const formatPriceForCurrency = (
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(converted);
-};
+}

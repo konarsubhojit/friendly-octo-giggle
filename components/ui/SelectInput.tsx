@@ -1,18 +1,8 @@
-"use client";
+'use client';
 
-import {
-  BASE_INPUT,
-  borderCls,
-  type InputSubProps,
-} from "@/components/ui/DynamicFormTypes";
+import { BASE_INPUT, borderCls, type InputSubProps } from '@/components/ui/DynamicFormTypes';
 
-export const SelectInput = ({
-  field,
-  value,
-  describedBy,
-  error,
-  onChange,
-}: InputSubProps) => {
+export function SelectInput({ field, value, describedBy, error, onChange }: InputSubProps) {
   return (
     <select
       id={field.id}
@@ -29,4 +19,4 @@ export const SelectInput = ({
       ))}
     </select>
   );
-};
+}

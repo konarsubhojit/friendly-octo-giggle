@@ -6,7 +6,7 @@ export const metadata = {
     "Learn about our shipping options, delivery times, and policies.",
 };
 
-const ShippingOptionsSection = () => {
+function ShippingOptionsSection() {
   return (
     <section className="bg-[var(--surface)]/80 backdrop-blur-sm rounded-2xl shadow-warm border border-[var(--border-warm)] p-8 mb-8">
       <h2 className="text-2xl font-semibold text-[var(--foreground)] mb-6">
@@ -75,9 +75,9 @@ const ShippingOptionsSection = () => {
       </div>
     </section>
   );
-};
+}
 
-const OrderProcessingSection = () => {
+function OrderProcessingSection() {
   return (
     <section className="bg-[var(--surface)]/80 backdrop-blur-sm rounded-2xl shadow-warm border border-[var(--border-warm)] p-8 mb-8">
       <h2 className="text-2xl font-semibold text-[var(--foreground)] mb-4">
@@ -95,9 +95,9 @@ const OrderProcessingSection = () => {
       </p>
     </section>
   );
-};
+}
 
-const TrackingSection = () => {
+function TrackingSection() {
   return (
     <section className="bg-[var(--surface)]/80 backdrop-blur-sm rounded-2xl shadow-warm border border-[var(--border-warm)] p-8">
       <h2 className="text-2xl font-semibold text-[var(--foreground)] mb-4">
@@ -112,9 +112,9 @@ const TrackingSection = () => {
       </p>
     </section>
   );
-};
+}
 
-const ShippingPage = () => {
+export default function ShippingPage() {
   return (
     <div className="min-h-screen bg-warm-gradient">
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
@@ -132,5 +132,4 @@ const ShippingPage = () => {
       <Footer />
     </div>
   );
-};
-export default ShippingPage;
+}

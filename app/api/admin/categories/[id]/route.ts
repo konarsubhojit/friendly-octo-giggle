@@ -14,7 +14,7 @@ interface RouteParams {
   params: Promise<{ id: string }>;
 }
 
-export const PUT = async (request: Request, { params }: RouteParams) => {
+export async function PUT(request: Request, { params }: RouteParams) {
   const session = await auth();
   if (!session?.user) return apiError("Not authenticated", 401);
   if (session.user.role !== "ADMIN") return apiError("Not authorized", 403);
@@ -80,9 +80,9 @@ export const PUT = async (request: Request, { params }: RouteParams) => {
   } catch (error) {
     return handleApiError(error);
   }
-};
+}
 
-export const DELETE = async (_request: Request, { params }: RouteParams) => {
+export async function DELETE(_request: Request, { params }: RouteParams) {
   const session = await auth();
   if (!session?.user) return apiError("Not authenticated", 401);
   if (session.user.role !== "ADMIN") return apiError("Not authorized", 403);
@@ -109,4 +109,4 @@ export const DELETE = async (_request: Request, { params }: RouteParams) => {
   } catch (error) {
     return handleApiError(error);
   }
-};
+}

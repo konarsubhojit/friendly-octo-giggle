@@ -20,10 +20,10 @@ const OrderActionSchema = z.object({
   action: z.literal("cancel"),
 });
 
-export const GET = async (
+export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
-) => {
+) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
@@ -59,12 +59,12 @@ export const GET = async (
   } catch (error) {
     return handleApiError(error);
   }
-};
+}
 
-export const PATCH = async (
+export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
-) => {
+) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
@@ -123,4 +123,4 @@ export const PATCH = async (
   } catch (error) {
     return handleApiError(error);
   }
-};
+}

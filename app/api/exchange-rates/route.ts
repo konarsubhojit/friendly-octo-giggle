@@ -1,7 +1,7 @@
-import { apiSuccess, apiError, handleApiError } from "@/lib/api-utils";
-import { getCachedData } from "@/lib/redis";
-import { CACHE_KEYS } from "@/lib/cache";
-import { logError } from "@/lib/logger";
+import { apiSuccess, apiError, handleApiError } from '@/lib/api-utils';
+import { getCachedData } from '@/lib/redis';
+import { CACHE_KEYS } from '@/lib/cache';
+import { logError } from '@/lib/logger';
 
 type ExchangeRateApiResponse = {
   result: string;
@@ -9,29 +9,29 @@ type ExchangeRateApiResponse = {
   conversion_rates: Record<string, number>;
 };
 
-const SUPPORTED_CURRENCIES = ["USD", "EUR", "GBP"] as const;
+const SUPPORTED_CURRENCIES = ['USD', 'EUR', 'GBP'] as const;
 
 /** Signals that the external exchange-rate API returned an unexpected response. */
 class UpstreamApiError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = "UpstreamApiError";
+    this.name = 'UpstreamApiError';
   }
 }
 
 /** Returns today's date as a UTC string "YYYY-MM-DD", used as the cache key suffix. */
-const getUtcDateString = (): string => {
+function getUtcDateString(): string {
   return new Date().toISOString().slice(0, 10);
-};
+}
 
 /** Seconds remaining until the next UTC midnight — the natural TTL for daily rates. */
-const secondsUntilMidnightUtc = (): number => {
+function secondsUntilMidnightUtc(): number {
   const now = new Date();
   const midnight = new Date(
     Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1),
   );
   return Math.floor((midnight.getTime() - now.getTime()) / 1000);
-};
+}
 
 /**
  * Fetch raw rates from the external API and normalise them to an INR base.
@@ -47,32 +47,30 @@ const secondsUntilMidnightUtc = (): number => {
  * When base_code is USD: conversion_rates.INR = ~91.87, which yields the
  *   correct 1/91.87 rate for USD.
  */
-const fetchAndNormaliseRates = async (): Promise<Record<string, number>> => {
+async function fetchAndNormaliseRates(): Promise<Record<string, number>> {
   const apiKey = process.env.EXCHANGE_RATE_API_KEY;
   if (!apiKey) {
-    throw new Error("Exchange rate API key not configured");
+    throw new Error('Exchange rate API key not configured');
   }
 
   const res = await fetch(
     `https://v6.exchangerate-api.com/v6/${apiKey}/latest/INR`,
   );
   if (!res.ok) {
-    throw new UpstreamApiError(
-      `External API responded with status ${res.status}`,
-    );
+    throw new UpstreamApiError(`External API responded with status ${res.status}`);
   }
 
   const data = (await res.json()) as ExchangeRateApiResponse;
-  if (data.result !== "success") {
-    throw new UpstreamApiError("Exchange rate API returned an error response");
+  if (data.result !== 'success') {
+    throw new UpstreamApiError('Exchange rate API returned an error response');
   }
 
   // Denominator: how many units of the API's base equal 1 INR.
   // If base is already INR this is 1; otherwise we cross-divide.
-  const inrRate = data.conversion_rates["INR"];
+  const inrRate = data.conversion_rates['INR'];
   if (inrRate == null || inrRate === 0) {
     throw new UpstreamApiError(
-      "Exchange rate API response is missing a valid INR conversion rate",
+      'Exchange rate API response is missing a valid INR conversion rate',
     );
   }
 
@@ -85,11 +83,11 @@ const fetchAndNormaliseRates = async (): Promise<Record<string, number>> => {
   }
 
   return rates;
-};
+}
 
-export const GET = async () => {
+export async function GET() {
   if (!process.env.EXCHANGE_RATE_API_KEY) {
-    return apiError("Exchange rate API key not configured", 503);
+    return apiError('Exchange rate API key not configured', 503);
   }
 
   try {
@@ -107,9 +105,9 @@ export const GET = async () => {
     return apiSuccess({ rates });
   } catch (error) {
     if (error instanceof UpstreamApiError) {
-      logError({ error, context: "exchange_rates" });
+      logError({ error, context: 'exchange_rates' });
       return apiError(error.message, 502);
     }
     return handleApiError(error);
   }
-};
+}

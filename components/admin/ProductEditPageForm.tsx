@@ -8,7 +8,9 @@ interface ProductEditPageFormProps {
   readonly product: Product;
 }
 
-const ProductEditPageForm = ({ product }: ProductEditPageFormProps) => {
+export default function ProductEditPageForm({
+  product,
+}: ProductEditPageFormProps) {
   const router = useRouter();
 
   const handleCancel = () => {
@@ -28,5 +30,4 @@ const ProductEditPageForm = ({ product }: ProductEditPageFormProps) => {
       onSuccess={handleSuccess}
     />
   );
-};
-export default ProductEditPageForm;
+}

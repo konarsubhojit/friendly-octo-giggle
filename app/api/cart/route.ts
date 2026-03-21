@@ -39,12 +39,12 @@ interface CartWithItems {
 }
 
 // Helper: Verify product exists and return available stock
-const verifyProductStock = async (
+async function verifyProductStock(
   body: AddToCartInput,
 ): Promise<
   | { product: ProductWithVariations; availableStock: number }
   | { error: string; status: number }
-> => {
+> {
   const product = await drizzleDb.query.products.findFirst({
     where: and(eq(products.id, body.productId), isNull(products.deletedAt)),
     with: {
@@ -72,13 +72,13 @@ const verifyProductStock = async (
   }
 
   return { product, availableStock };
-};
+}
 
 // Helper: Get or create cart for user/guest
-const getOrCreateCart = async (
+async function getOrCreateCart(
   session: Session | null,
   sessionId: string | undefined,
-): Promise<{ cart: { id: string }; sessionId: string | undefined }> => {
+): Promise<{ cart: { id: string }; sessionId: string | undefined }> {
   const createGuestCart = async (providedSessionId?: string) => {
     const guestSessionId =
       providedSessionId ?? `guest_${Date.now()}_${crypto.randomUUID()}`;
@@ -124,10 +124,10 @@ const getOrCreateCart = async (
 
   // Guest user
   return createGuestCart(sessionId);
-};
+}
 
 // Helper: Add or update cart item, auto-capping to available stock
-const addOrUpdateCartItem = async (
+async function addOrUpdateCartItem(
   cartId: string,
   body: AddToCartInput,
   availableStock: number,
@@ -135,7 +135,7 @@ const addOrUpdateCartItem = async (
   | { error: string; status: number }
   | { warning: string; adjustedQuantity: number }
   | null
-> => {
+> {
   const existingItem = await drizzleDb.query.cartItems.findFirst({
     where: and(
       eq(cartItems.cartId, cartId),
@@ -188,16 +188,16 @@ const addOrUpdateCartItem = async (
   }
 
   return null;
-};
+}
 
 // Safely convert Date or string to ISO string (handles DB Date and Redis cached string)
-const toISOString = (value: Date | string): string => {
+function toISOString(value: Date | string): string {
   if (typeof value === "string") return value;
   return value.toISOString();
-};
+}
 
 // Helper: Serialize cart for JSON response
-const serializeCart = (cart: CartWithItems) => {
+function serializeCart(cart: CartWithItems) {
   return {
     ...cart,
     createdAt: toISOString(cart.createdAt),
@@ -225,10 +225,10 @@ const serializeCart = (cart: CartWithItems) => {
         : null,
     })),
   };
-};
+}
 
 // Helper: Fetch cart from DB
-const fetchCartFromDB = (userId?: string, sessionId?: string) => {
+function fetchCartFromDB(userId?: string, sessionId?: string) {
   if (userId) {
     return drizzleDb.query.carts.findFirst({
       where: eq(carts.userId, userId),
@@ -268,30 +268,27 @@ const fetchCartFromDB = (userId?: string, sessionId?: string) => {
     });
   }
   return Promise.resolve(undefined);
-};
+}
 
 // Helper: Resolve cart identity from request
-const getCartIdentity = (
+function getCartIdentity(
   request: NextRequest,
   session: { user?: { id?: string } } | null,
-) => {
+) {
   const userId = session?.user?.id;
   const sessionId = request.cookies.get("cart_session")?.value;
   return { userId, sessionId };
-};
+}
 
 // Helper: Build cache key for cart
-const getCartCacheKey = (
-  userId?: string,
-  sessionId?: string,
-): string | null => {
+function getCartCacheKey(userId?: string, sessionId?: string): string | null {
   if (userId) return CACHE_KEYS.CART_BY_USER(userId);
   if (sessionId) return CACHE_KEYS.CART_BY_SESSION(sessionId);
   return null;
-};
+}
 
 // Helper: Find cart for deletion
-const findCartForDeletion = (userId?: string, sessionId?: string) => {
+function findCartForDeletion(userId?: string, sessionId?: string) {
   if (userId) {
     return drizzleDb.query.carts.findFirst({ where: eq(carts.userId, userId) });
   }
@@ -301,20 +298,20 @@ const findCartForDeletion = (userId?: string, sessionId?: string) => {
     });
   }
   return Promise.resolve(undefined);
-};
+}
 
 // Helper: Set guest session cookie on response
-const setGuestSessionCookie = (response: NextResponse, sessionId: string) => {
+function setGuestSessionCookie(response: NextResponse, sessionId: string) {
   response.cookies.set("cart_session", sessionId, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     maxAge: 60 * 60 * 24 * 30,
   });
-};
+}
 
 // Get cart for current user/session
-export const GET = async (request: NextRequest) => {
+export async function GET(request: NextRequest) {
   try {
     const session = await auth();
     const { userId, sessionId } = getCartIdentity(request, session);
@@ -345,10 +342,10 @@ export const GET = async (request: NextRequest) => {
       { status: 500 },
     );
   }
-};
+}
 
 // Add item to cart
-export const POST = async (request: NextRequest) => {
+export async function POST(request: NextRequest) {
   try {
     // Parallelize auth and body parsing (independent I/O)
     const [session, rawBody] = await Promise.all([auth(), request.json()]);
@@ -452,10 +449,10 @@ export const POST = async (request: NextRequest) => {
       { status: 500 },
     );
   }
-};
+}
 
 // Clear cart (for after order is placed)
-export const DELETE = async (request: NextRequest) => {
+export async function DELETE(request: NextRequest) {
   try {
     const session = await auth();
     const { userId, sessionId } = getCartIdentity(request, session);
@@ -490,4 +487,4 @@ export const DELETE = async (request: NextRequest) => {
       { status: 500 },
     );
   }
-};
+}

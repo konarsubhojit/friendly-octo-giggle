@@ -1,16 +1,14 @@
-"use client";
+'use client';
 
-import { PASSWORD_REQUIREMENTS } from "@/lib/validations";
-import { CheckIcon } from "@/components/icons/CheckIcon";
-import { CircleIcon } from "@/components/icons/CircleIcon";
+import { PASSWORD_REQUIREMENTS } from '@/lib/validations';
+import { CheckIcon } from '@/components/icons/CheckIcon';
+import { CircleIcon } from '@/components/icons/CircleIcon';
 
 interface PasswordStrengthChecklistProps {
   readonly password: string;
 }
 
-export const PasswordStrengthChecklist = ({
-  password,
-}: PasswordStrengthChecklistProps) => {
+export function PasswordStrengthChecklist({ password }: PasswordStrengthChecklistProps) {
   if (!password) return null;
 
   return (
@@ -18,10 +16,7 @@ export const PasswordStrengthChecklist = ({
       {PASSWORD_REQUIREMENTS.map((req) => {
         const met = req.test(password);
         return (
-          <li
-            key={req.label}
-            className={`text-xs flex items-center gap-1.5 ${met ? "text-green-600" : "text-gray-400"}`}
-          >
+          <li key={req.label} className={`text-xs flex items-center gap-1.5 ${met ? 'text-green-600' : 'text-gray-400'}`}>
             {met ? <CheckIcon /> : <CircleIcon />}
             {req.label}
           </li>
@@ -29,4 +24,4 @@ export const PasswordStrengthChecklist = ({
       })}
     </ul>
   );
-};
+}

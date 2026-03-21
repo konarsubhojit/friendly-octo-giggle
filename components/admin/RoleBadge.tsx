@@ -1,11 +1,11 @@
-"use client";
+'use client';
 
-import { Badge, roleVariant } from "@/components/ui/Badge";
+import { Badge, roleVariant } from '@/components/ui/Badge';
 
 interface RoleBadgeProps {
   readonly role: string;
 }
 
-export const RoleBadge = ({ role }: RoleBadgeProps) => {
+export function RoleBadge({ role }: RoleBadgeProps) {
   return <Badge variant={roleVariant(role)}>{role}</Badge>;
-};
+}

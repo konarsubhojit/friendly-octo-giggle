@@ -13,10 +13,10 @@ const UpdateUserRoleSchema = z.object({
   role: z.enum(["ADMIN", "CUSTOMER"]),
 });
 
-export const PATCH = async (
+export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
-) => {
+) {
   try {
     const authCheck = await checkAdminAuth();
     if (!authCheck.authorized) {
@@ -56,12 +56,12 @@ export const PATCH = async (
   } catch (error) {
     return handleApiError(error);
   }
-};
+}
 
-export const GET = async (
+export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
-) => {
+) {
   try {
     const authCheck = await checkAdminAuth();
     if (!authCheck.authorized) {
@@ -100,4 +100,4 @@ export const GET = async (
   } catch (error) {
     return handleApiError(error);
   }
-};
+}

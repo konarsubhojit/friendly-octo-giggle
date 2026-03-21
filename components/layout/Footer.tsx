@@ -2,7 +2,7 @@ import Link from "next/link";
 import NewsletterForm from "@/components/ui/NewsletterForm";
 import { FlowerAccent, VineDivider } from "@/components/ui/DecorativeElements";
 
-const Footer = () => {
+export default function Footer() {
   return (
     <footer
       aria-label="Site footer"
@@ -221,5 +221,4 @@ const Footer = () => {
       </div>
     </footer>
   );
-};
-export default Footer;
+}

@@ -6,7 +6,7 @@ import { users } from "@/lib/schema";
 import { eq, and, ne } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 
-export const GET = async () => {
+export async function GET() {
   try {
     const session = await auth();
     if (!session?.user?.id) {
@@ -46,9 +46,9 @@ export const GET = async () => {
   } catch (error) {
     return handleApiError(error);
   }
-};
+}
 
-export const PATCH = async (request: NextRequest) => {
+export async function PATCH(request: NextRequest) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
@@ -111,4 +111,4 @@ export const PATCH = async (request: NextRequest) => {
   } catch (error) {
     return handleApiError(error);
   }
-};
+}

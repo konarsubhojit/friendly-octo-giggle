@@ -1,23 +1,23 @@
-import { NextRequest } from "next/server";
-import { changePasswordSchema } from "@/lib/validations";
-import { apiSuccess, apiError, handleApiError } from "@/lib/api-utils";
+import { NextRequest } from 'next/server';
+import { changePasswordSchema } from '@/lib/validations';
+import { apiSuccess, apiError, handleApiError } from '@/lib/api-utils';
 import {
   hashPassword,
   verifyPassword,
   checkPasswordHistory,
   savePasswordToHistory,
-} from "@/lib/password";
-import { drizzleDb } from "@/lib/db";
-import { users } from "@/lib/schema";
-import { eq } from "drizzle-orm";
-import { auth } from "@/lib/auth";
-import { logAuthEvent } from "@/lib/logger";
+} from '@/lib/password';
+import { drizzleDb } from '@/lib/db';
+import { users } from '@/lib/schema';
+import { eq } from 'drizzle-orm';
+import { auth } from '@/lib/auth';
+import { logAuthEvent } from '@/lib/logger';
 
-export const POST = async (request: NextRequest) => {
+export async function POST(request: NextRequest) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
-      return apiError("Authentication required", 401);
+      return apiError('Authentication required', 401);
     }
 
     const body = await request.json();
@@ -26,13 +26,13 @@ export const POST = async (request: NextRequest) => {
     if (!parseResult.success) {
       const details = parseResult.error.issues.reduce(
         (acc, err) => {
-          const path = err.path.join(".");
+          const path = err.path.join('.');
           acc[path] = err.message;
           return acc;
         },
         {} as Record<string, string>,
       );
-      return apiError("Validation failed", 400, details);
+      return apiError('Validation failed', 400, details);
     }
 
     const { currentPassword, newPassword } = parseResult.data;
@@ -42,7 +42,7 @@ export const POST = async (request: NextRequest) => {
     });
 
     if (!user?.passwordHash) {
-      return apiError("Password change not available for this account", 400);
+      return apiError('Password change not available for this account', 400);
     }
 
     const isCurrentValid = await verifyPassword(
@@ -50,7 +50,7 @@ export const POST = async (request: NextRequest) => {
       user.passwordHash,
     );
     if (!isCurrentValid) {
-      return apiError("Current password is incorrect", 400);
+      return apiError('Current password is incorrect', 400);
     }
 
     // Check if password was recently used
@@ -60,7 +60,7 @@ export const POST = async (request: NextRequest) => {
     );
     if (wasRecentlyUsed) {
       return apiError(
-        "New password must be different from your last 2 passwords",
+        'New password must be different from your last 2 passwords',
         400,
       );
     }
@@ -75,14 +75,14 @@ export const POST = async (request: NextRequest) => {
     await savePasswordToHistory(session.user.id, newHash);
 
     logAuthEvent({
-      event: "password_change",
+      event: 'password_change',
       userId: session.user.id,
       email: user.email,
       success: true,
     });
 
-    return apiSuccess({ message: "Password changed successfully" });
+    return apiSuccess({ message: 'Password changed successfully' });
   } catch (error) {
     return handleApiError(error);
   }
-};
+}

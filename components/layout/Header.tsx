@@ -24,7 +24,7 @@ interface UserMenuProps {
   readonly menuRef: React.RefObject<HTMLDivElement | null>;
 }
 
-const UserMenu = ({ user, menuOpen, setMenuOpen, menuRef }: UserMenuProps) => {
+function UserMenu({ user, menuOpen, setMenuOpen, menuRef }: UserMenuProps) {
   return (
     <div className="relative" ref={menuRef}>
       <button
@@ -202,7 +202,7 @@ const UserMenu = ({ user, menuOpen, setMenuOpen, menuRef }: UserMenuProps) => {
       )}
     </div>
   );
-};
+}
 
 interface MobileNavProps {
   readonly isLoggedIn: boolean;
@@ -210,11 +210,11 @@ interface MobileNavProps {
   readonly onLoginClick: () => void;
 }
 
-const MobileNav = ({
+function MobileNav({
   isLoggedIn,
   closeMobileNav,
   onLoginClick,
-}: MobileNavProps) => {
+}: MobileNavProps) {
   return (
     <div
       id="mobile-nav-drawer"
@@ -326,9 +326,9 @@ const MobileNav = ({
       </nav>
     </div>
   );
-};
+}
 
-const Header = () => {
+export default function Header() {
   const { data: session } = useSession();
   const [menuOpen, setMenuOpen] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -336,11 +336,11 @@ const Header = () => {
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
+    function handleClickOutside(e: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setMenuOpen(false);
       }
-    };
+    }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
@@ -473,5 +473,4 @@ const Header = () => {
       />
     </>
   );
-};
-export default Header;
+}

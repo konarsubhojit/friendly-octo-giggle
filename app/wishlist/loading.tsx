@@ -2,7 +2,7 @@ import ProductCardSkeleton from "@/components/skeletons/ProductCardSkeleton";
 
 const SKELETON_IDS = ["w1", "w2", "w3", "w4"] as const;
 
-const WishlistLoading = () => {
+export default function WishlistLoading() {
   return (
     <div className="min-h-screen bg-warm-gradient">
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
@@ -20,5 +20,4 @@ const WishlistLoading = () => {
       </main>
     </div>
   );
-};
-export default WishlistLoading;
+}

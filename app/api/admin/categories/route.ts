@@ -10,7 +10,7 @@ const CreateCategorySchema = z.object({
   sortOrder: z.number().int().min(0).optional(),
 });
 
-export const GET = async () => {
+export async function GET() {
   const session = await auth();
   if (!session?.user) return apiError("Not authenticated", 401);
   if (session.user.role !== "ADMIN") return apiError("Not authorized", 403);
@@ -32,9 +32,9 @@ export const GET = async () => {
   } catch (error) {
     return handleApiError(error);
   }
-};
+}
 
-export const POST = async (request: Request) => {
+export async function POST(request: Request) {
   const session = await auth();
   if (!session?.user) return apiError("Not authenticated", 401);
   if (session.user.role !== "ADMIN") return apiError("Not authorized", 403);
@@ -103,4 +103,4 @@ export const POST = async (request: Request) => {
   } catch (error) {
     return handleApiError(error);
   }
-};
+}

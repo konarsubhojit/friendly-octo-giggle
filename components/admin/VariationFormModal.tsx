@@ -32,17 +32,17 @@ interface FormData {
   stock: string;
 }
 
-const convertCurrency = (
+function convertCurrency(
   amount: number,
   from: CurrencyCode,
   to: CurrencyCode,
   rates: Record<CurrencyCode, number>,
-): number => {
+): number {
   const amountInBase = amount / rates[from];
   return Number((amountInBase * rates[to]).toFixed(2));
-};
+}
 
-const uploadImage = async (file: File): Promise<string> => {
+async function uploadImage(file: File): Promise<string> {
   const body = new FormData();
   body.append("file", file);
   const res = await fetch("/api/upload", { method: "POST", body });
@@ -52,15 +52,15 @@ const uploadImage = async (file: File): Promise<string> => {
   }
   const data = await res.json();
   return data.data.url;
-};
+}
 
-const VariationFormModal = ({
+export default function VariationFormModal({
   productId,
   productPrice,
   variation,
   onClose,
   onSuccess,
-}: VariationFormModalProps) => {
+}: VariationFormModalProps) {
   const isEditing = !!variation;
   const { availableCurrencies, currency, rates } = useCurrency();
   const [priceCurrency, setPriceCurrency] = useState<CurrencyCode>(currency);
@@ -555,5 +555,4 @@ const VariationFormModal = ({
       </div>
     </div>
   );
-};
-export default VariationFormModal;
+}

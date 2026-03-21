@@ -45,7 +45,7 @@ interface AdminOrder {
 const STATUS_FILTERS = ["ALL", ...Object.values(OrderStatus)] as const;
 const PAGE_SIZE = 20;
 
-const OrdersManagement = () => {
+export default function OrdersManagement() {
   const { formatPrice } = useCurrency();
   const dispatch = useDispatch<AppDispatch>();
 
@@ -368,5 +368,4 @@ const OrdersManagement = () => {
       )}
     </main>
   );
-};
-export default OrdersManagement;
+}

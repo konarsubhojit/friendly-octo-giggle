@@ -19,7 +19,7 @@ const SearchQuerySchema = z.object({
  * - `type=products` is public
  * - `type=orders` requires admin authentication
  */
-export const GET = async (request: NextRequest) => {
+export async function GET(request: NextRequest) {
   if (!isSearchAvailable()) {
     return apiError("Search is not configured", 503);
   }
@@ -61,4 +61,4 @@ export const GET = async (request: NextRequest) => {
   } catch (error) {
     return handleApiError(error);
   }
-};
+}

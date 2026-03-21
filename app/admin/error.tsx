@@ -1,13 +1,14 @@
-"use client";
+'use client';
 
-import Link from "next/link";
+import Link from 'next/link';
 
 interface ErrorProps {
   readonly error: Error & { digest?: string };
   readonly reset: () => void;
 }
 
-const AdminError = ({ error, reset }: ErrorProps) => {
+export default function AdminError({ error, reset }: ErrorProps) {
+
   return (
     <div className="min-h-[50vh] flex items-center justify-center px-4">
       <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8 text-center">
@@ -30,7 +31,7 @@ const AdminError = ({ error, reset }: ErrorProps) => {
           Admin Panel Error
         </h2>
         <p className="text-gray-600 mb-4">
-          {error.message || "An error occurred in the admin panel"}
+          {error.message || 'An error occurred in the admin panel'}
         </p>
         {error.digest && (
           <p className="text-xs text-gray-400 mb-4">Error ID: {error.digest}</p>
@@ -52,5 +53,4 @@ const AdminError = ({ error, reset }: ErrorProps) => {
       </div>
     </div>
   );
-};
-export default AdminError;
+}

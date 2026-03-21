@@ -1,12 +1,12 @@
-"use client";
+'use client';
 
-import { PasswordStrengthChecklist } from "@/components/auth/PasswordStrengthChecklist";
-import { TextareaInput } from "@/components/ui/TextareaInput";
-import { SelectInput } from "@/components/ui/SelectInput";
-import { TextInput } from "@/components/ui/TextInput";
-import type { FieldRendererProps } from "@/components/ui/DynamicFormTypes";
+import { PasswordStrengthChecklist } from '@/components/auth/PasswordStrengthChecklist';
+import { TextareaInput } from '@/components/ui/TextareaInput';
+import { SelectInput } from '@/components/ui/SelectInput';
+import { TextInput } from '@/components/ui/TextInput';
+import type { FieldRendererProps } from '@/components/ui/DynamicFormTypes';
 
-export const FieldRenderer = ({
+export function FieldRenderer({
   field,
   value,
   error,
@@ -14,13 +14,11 @@ export const FieldRenderer = ({
   onChange,
   onTogglePassword,
   onBlur,
-}: FieldRendererProps) => {
+}: FieldRendererProps) {
   const errorId = `${field.id}-error`;
   const describedBy = error ? errorId : undefined;
   const subProps = { field, value, describedBy, error, onChange };
-  const handleBlur = field.validateOnBlur
-    ? () => onBlur(field.name)
-    : undefined;
+  const handleBlur = field.validateOnBlur ? () => onBlur(field.name) : undefined;
 
   return (
     <div>
@@ -30,9 +28,9 @@ export const FieldRenderer = ({
       >
         {field.label}
       </label>
-      {field.type === "textarea" && <TextareaInput {...subProps} />}
-      {field.type === "select" && <SelectInput {...subProps} />}
-      {field.type !== "textarea" && field.type !== "select" && (
+      {field.type === 'textarea' && <TextareaInput {...subProps} />}
+      {field.type === 'select' && <SelectInput {...subProps} />}
+      {field.type !== 'textarea' && field.type !== 'select' && (
         <TextInput
           {...subProps}
           showPassword={showPassword}
@@ -45,9 +43,9 @@ export const FieldRenderer = ({
           {error}
         </p>
       )}
-      {field.type === "password" && field.showStrengthChecklist && (
+      {field.type === 'password' && field.showStrengthChecklist && (
         <PasswordStrengthChecklist password={value} />
       )}
     </div>
   );
-};
+}

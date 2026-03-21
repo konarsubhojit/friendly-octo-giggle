@@ -18,11 +18,11 @@ interface VariationListProps {
   readonly initialVariations: ProductVariation[];
 }
 
-const VariationList = ({
+export default function VariationList({
   productId,
   productPrice,
   initialVariations,
-}: VariationListProps) => {
+}: VariationListProps) {
   const [variations, setVariations] =
     useState<ProductVariation[]>(initialVariations);
   const { formatPrice } = useCurrency();
@@ -265,5 +265,4 @@ const VariationList = ({
       )}
     </section>
   );
-};
-export default VariationList;
+}

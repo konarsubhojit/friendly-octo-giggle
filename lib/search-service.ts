@@ -12,10 +12,10 @@ import { logError } from "./logger";
 /**
  * Search orders via Upstash. Returns IDs on success, null for DB fallback.
  */
-export const searchOrderIds = async (
+export async function searchOrderIds(
   query: string,
   options?: { limit?: number; status?: string },
-): Promise<string[] | null> => {
+): Promise<string[] | null> {
   if (!isSearchAvailable()) return null;
 
   try {
@@ -29,15 +29,15 @@ export const searchOrderIds = async (
     });
     return null;
   }
-};
+}
 
 /**
  * Search products via Upstash. Returns IDs on success, null for DB fallback.
  */
-export const searchProductIds = async (
+export async function searchProductIds(
   query: string,
   options?: { limit?: number; category?: string },
-): Promise<string[] | null> => {
+): Promise<string[] | null> {
   if (!isSearchAvailable()) return null;
 
   try {
@@ -51,4 +51,4 @@ export const searchProductIds = async (
     });
     return null;
   }
-};
+}

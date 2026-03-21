@@ -57,7 +57,7 @@ const OrdersEmptyState = ({ search }: { readonly search: string }) => (
   </Card>
 );
 
-const OrdersPage = () => {
+export default function OrdersPage() {
   const { data: session, status: authStatus } = useSession();
   const { formatPrice } = useCurrency();
 
@@ -167,5 +167,4 @@ const OrdersPage = () => {
       </main>
     </div>
   );
-};
-export default OrdersPage;
+}

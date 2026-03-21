@@ -4,7 +4,7 @@ import SignInClient from "./SignInClient";
 
 export const dynamic = "force-dynamic";
 
-const SignInHeader = () => {
+function SignInHeader() {
   return (
     <div className="text-center mb-6">
       <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-r from-[var(--accent-blush)] to-[var(--accent-cream)] mb-3">
@@ -31,26 +31,26 @@ const SignInHeader = () => {
       </p>
     </div>
   );
-};
+}
 
 interface SignInPageProps {
   readonly searchParams: Promise<{ callbackUrl?: string }>;
 }
 
-const SignInPage = ({ searchParams }: SignInPageProps) => {
-  const handleGoogleSignIn = async () => {
+export default function SignInPage({ searchParams }: SignInPageProps) {
+  async function handleGoogleSignIn() {
     "use server";
     const params = await searchParams;
     await signIn("google", { redirectTo: params.callbackUrl || "/" });
-  };
+  }
 
-  const handleMicrosoftSignIn = async () => {
+  async function handleMicrosoftSignIn() {
     "use server";
     const params = await searchParams;
     await signIn("microsoft-entra-id", {
       redirectTo: params.callbackUrl || "/",
     });
-  };
+  }
 
   return (
     <div className="min-h-screen bg-warm-gradient flex items-center justify-center px-4 sm:px-6 lg:px-8">
@@ -138,5 +138,4 @@ const SignInPage = ({ searchParams }: SignInPageProps) => {
       </main>
     </div>
   );
-};
-export default SignInPage;
+}

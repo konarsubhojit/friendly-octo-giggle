@@ -12,7 +12,7 @@ interface PageProps {
   readonly params: Promise<{ id: string }>;
 }
 
-const AdminProductEditFormPage = async ({ params }: PageProps) => {
+export default async function AdminProductEditFormPage({ params }: PageProps) {
   const session = await auth();
   if (session?.user?.role !== "ADMIN") {
     redirect("/auth/signin");
@@ -68,5 +68,4 @@ const AdminProductEditFormPage = async ({ params }: PageProps) => {
       <ProductEditPageForm product={serializedProduct} />
     </main>
   );
-};
-export default AdminProductEditFormPage;
+}

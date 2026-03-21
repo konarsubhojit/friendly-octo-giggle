@@ -1,8 +1,6 @@
-"use client";
+'use client';
 
-export const SuccessDisplay = ({
-  message,
-}: Readonly<{ message: string | null }>) => {
+export function SuccessDisplay({ message }: Readonly<{ message: string | null }>) {
   if (!message) return null;
 
   return (
@@ -26,4 +24,4 @@ export const SuccessDisplay = ({
       </div>
     </div>
   );
-};
+}

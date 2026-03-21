@@ -1,16 +1,8 @@
-"use client";
+'use client';
 
-import {
-  createContext,
-  useContext,
-  useState,
-  useCallback,
-  useMemo,
-  useEffect,
-  type ReactNode,
-} from "react";
+import { createContext, useContext, useState, useCallback, useMemo, useEffect, type ReactNode } from 'react';
 
-export type CurrencyCode = "INR" | "USD" | "EUR" | "GBP";
+export type CurrencyCode = 'INR' | 'USD' | 'EUR' | 'GBP';
 
 interface CurrencyConfig {
   code: CurrencyCode;
@@ -20,10 +12,10 @@ interface CurrencyConfig {
 }
 
 export const CURRENCIES: Record<CurrencyCode, CurrencyConfig> = {
-  INR: { code: "INR", symbol: "₹", locale: "en-IN", rate: 1 },
-  USD: { code: "USD", symbol: "$", locale: "en-US", rate: 1 / 83.5 },
-  EUR: { code: "EUR", symbol: "€", locale: "de-DE", rate: 0.92 / 83.5 },
-  GBP: { code: "GBP", symbol: "£", locale: "en-GB", rate: 0.79 / 83.5 },
+  INR: { code: 'INR', symbol: '₹', locale: 'en-IN', rate: 1 },
+  USD: { code: 'USD', symbol: '$', locale: 'en-US', rate: 1 / 83.5 },
+  EUR: { code: 'EUR', symbol: '€', locale: 'de-DE', rate: 0.92 / 83.5 },
+  GBP: { code: 'GBP', symbol: '£', locale: 'en-GB', rate: 0.79 / 83.5 },
 } as const;
 
 // Hardcoded fallback rates (INR-based) used until live rates are available
@@ -49,33 +41,28 @@ interface CurrencyContextValue {
 
 const CurrencyContext = createContext<CurrencyContextValue | null>(null);
 
-export const CurrencyProvider = ({
-  children,
-}: Readonly<{ children: ReactNode }>) => {
-  const [currency, setCurrency] = useState<CurrencyCode>("INR");
-  const [rates, setRates] =
-    useState<Record<CurrencyCode, number>>(FALLBACK_RATES);
+export function CurrencyProvider({ children }: Readonly<{ children: ReactNode }>) {
+  const [currency, setCurrency] = useState<CurrencyCode>('INR');
+  const [rates, setRates] = useState<Record<CurrencyCode, number>>(FALLBACK_RATES);
   const [ratesLoading, setRatesLoading] = useState(true);
 
   // Fetch live rates once on mount; silently keep fallback rates on failure
   useEffect(() => {
     let cancelled = false;
 
-    fetch("/api/exchange-rates")
+    fetch('/api/exchange-rates')
       .then((res) => {
         if (!res.ok) return null;
-        return res.json() as Promise<{
-          data?: { rates?: Record<string, number> };
-        }>;
+        return res.json() as Promise<{ data?: { rates?: Record<string, number> } }>;
       })
       .then((body) => {
         if (!cancelled && body?.data?.rates) {
           const fetched = body.data.rates;
           setRates({
-            INR: fetched["INR"] ?? FALLBACK_RATES.INR,
-            USD: fetched["USD"] ?? FALLBACK_RATES.USD,
-            EUR: fetched["EUR"] ?? FALLBACK_RATES.EUR,
-            GBP: fetched["GBP"] ?? FALLBACK_RATES.GBP,
+            INR: fetched['INR'] ?? FALLBACK_RATES.INR,
+            USD: fetched['USD'] ?? FALLBACK_RATES.USD,
+            EUR: fetched['EUR'] ?? FALLBACK_RATES.EUR,
+            GBP: fetched['GBP'] ?? FALLBACK_RATES.GBP,
           });
         }
       })
@@ -104,7 +91,7 @@ export const CurrencyProvider = ({
     (priceInINR: number): string => {
       const converted = priceInINR * rates[currency];
       return new Intl.NumberFormat(config.locale, {
-        style: "currency",
+        style: 'currency',
         currency: config.code,
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
@@ -124,15 +111,7 @@ export const CurrencyProvider = ({
       rates,
       ratesLoading,
     }),
-    [
-      currency,
-      setCurrency,
-      formatPrice,
-      convertPrice,
-      config.symbol,
-      rates,
-      ratesLoading,
-    ],
+    [currency, setCurrency, formatPrice, convertPrice, config.symbol, rates, ratesLoading],
   );
 
   return (
@@ -140,12 +119,12 @@ export const CurrencyProvider = ({
       {children}
     </CurrencyContext.Provider>
   );
-};
+}
 
-export const useCurrency = (): CurrencyContextValue => {
+export function useCurrency(): CurrencyContextValue {
   const ctx = useContext(CurrencyContext);
   if (!ctx) {
-    throw new Error("useCurrency must be used within a CurrencyProvider");
+    throw new Error('useCurrency must be used within a CurrencyProvider');
   }
   return ctx;
-};
+}

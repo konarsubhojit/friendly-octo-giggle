@@ -7,7 +7,7 @@ import { fetchCart, selectCartItemCount } from "@/lib/features/cart/cartSlice";
 import type { AppDispatch } from "@/lib/store";
 import { FloralCartIcon } from "@/components/ui/DecorativeElements";
 
-const CartIcon = () => {
+export default function CartIcon() {
   const dispatch = useDispatch<AppDispatch>();
   const itemCount = useSelector(selectCartItemCount);
 
@@ -29,5 +29,4 @@ const CartIcon = () => {
       )}
     </Link>
   );
-};
-export default CartIcon;
+}

@@ -79,7 +79,7 @@ const NAV_GROUPS: readonly NavGroup[] = [
   },
 ];
 
-const getAllNavItems = (failedEmailCount: number): NavItem[] => {
+function getAllNavItems(failedEmailCount: number): NavItem[] {
   const items: NavItem[] = [];
   for (const group of NAV_GROUPS) {
     if (group.href) {
@@ -98,15 +98,15 @@ const getAllNavItems = (failedEmailCount: number): NavItem[] => {
     }
   }
   return items;
-};
+}
 
-const DropdownGroup = ({
+function DropdownGroup({
   group,
   failedEmailCount,
 }: {
   readonly group: NavGroup;
   readonly failedEmailCount: number;
-}) => {
+}) {
   const [open, setOpen] = useState(false);
   const [menuStyle, setMenuStyle] = useState<{ top: number; left: number }>({
     top: 0,
@@ -116,7 +116,7 @@ const DropdownGroup = ({
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
+    function handleClickOutside(e: MouseEvent) {
       if (
         menuRef.current &&
         !menuRef.current.contains(e.target as Node) &&
@@ -125,7 +125,7 @@ const DropdownGroup = ({
       ) {
         setOpen(false);
       }
-    };
+    }
     if (open) {
       document.addEventListener("mousedown", handleClickOutside);
     }
@@ -206,9 +206,9 @@ const DropdownGroup = ({
         )}
     </div>
   );
-};
+}
 
-const CommandPalette = ({
+function CommandPalette({
   open,
   onClose,
   failedEmailCount,
@@ -216,7 +216,7 @@ const CommandPalette = ({
   readonly open: boolean;
   readonly onClose: () => void;
   readonly failedEmailCount: number;
-}) => {
+}) {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -360,20 +360,20 @@ const CommandPalette = ({
       </dialog>
     </div>
   );
-};
+}
 
-export const AdminNavLinksClient = ({
+export function AdminNavLinksClient({
   failedEmailCount,
-}: AdminNavLinksClientProps) => {
+}: AdminNavLinksClientProps) {
   const [paletteOpen, setPaletteOpen] = useState(false);
 
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
+    function handleKeyDown(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault();
         setPaletteOpen((o) => !o);
       }
-    };
+    }
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, []);
@@ -439,4 +439,4 @@ export const AdminNavLinksClient = ({
       />
     </>
   );
-};
+}

@@ -15,8 +15,8 @@ const fetchFailedEmailCount = async (): Promise<number> => {
   }
 };
 
-export const AdminNavLinks = async () => {
+export async function AdminNavLinks() {
   const failedCount = await fetchFailedEmailCount();
 
   return <AdminNavLinksClient failedEmailCount={failedCount} />;
-};
+}

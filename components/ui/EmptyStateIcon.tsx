@@ -1,4 +1,4 @@
-export const EmptyStateIcon = () => {
+export function EmptyStateIcon() {
   return (
     <svg
       className="w-16 h-16 text-gray-300"
@@ -15,4 +15,4 @@ export const EmptyStateIcon = () => {
       />
     </svg>
   );
-};
+}

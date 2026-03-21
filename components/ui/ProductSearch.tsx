@@ -23,7 +23,7 @@ interface ProductSearchProps {
 let _productCache: Product[] | null = null;
 let _fetchPromise: Promise<Product[]> | null = null;
 
-const fetchAllProducts = async (): Promise<Product[]> => {
+async function fetchAllProducts(): Promise<Product[]> {
   if (_productCache) return _productCache;
   if (_fetchPromise) return _fetchPromise;
 
@@ -44,17 +44,17 @@ const fetchAllProducts = async (): Promise<Product[]> => {
     });
 
   return _fetchPromise;
-};
+}
 
 // ─── Highlight matching text ─────────────────────────────
 
-const HighlightText = ({
+function HighlightText({
   text,
   query,
 }: {
   readonly text: string;
   readonly query: string;
-}) => {
+}) {
   if (!query.trim()) return <>{text}</>;
   const escapedQuery = query.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
   const regex = new RegExp(`(${escapedQuery})`, "gi");
@@ -77,11 +77,11 @@ const HighlightText = ({
       })}
     </>
   );
-};
+}
 
 // ─── Component ───────────────────────────────────────────
 
-const ProductSearch = ({ onNavigate }: ProductSearchProps) => {
+export default function ProductSearch({ onNavigate }: ProductSearchProps) {
   const router = useRouter();
   const { formatPrice } = useCurrency();
   const [open, setOpen] = useState(false);
@@ -112,21 +112,21 @@ const ProductSearch = ({ onNavigate }: ProductSearchProps) => {
   // Close on Escape
   useEffect(() => {
     if (!open) return;
-    const handleKey = (e: KeyboardEvent) => {
+    function handleKey(e: KeyboardEvent) {
       if (e.key === "Escape") closeDialog();
-    };
+    }
     document.addEventListener("keydown", handleKey);
     return () => document.removeEventListener("keydown", handleKey);
   }, [open, closeDialog]);
 
   // Cmd/Ctrl+K shortcut to open
   useEffect(() => {
-    const handleKey = (e: KeyboardEvent) => {
+    function handleKey(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault();
         setOpen((prev) => !prev);
       }
-    };
+    }
     document.addEventListener("keydown", handleKey);
     return () => document.removeEventListener("keydown", handleKey);
   }, []);
@@ -373,5 +373,4 @@ const ProductSearch = ({ onNavigate }: ProductSearchProps) => {
         )}
     </>
   );
-};
-export default ProductSearch;
+}

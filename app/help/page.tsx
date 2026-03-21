@@ -45,7 +45,7 @@ interface FAQItem {
   readonly answer: string;
 }
 
-const FAQSection = ({ items }: { readonly items: readonly FAQItem[] }) => {
+function FAQSection({ items }: { readonly items: readonly FAQItem[] }) {
   return (
     <section className="bg-[var(--surface)]/80 backdrop-blur-sm rounded-2xl shadow-warm border border-[var(--border-warm)] p-8 mb-8">
       <h2 className="text-2xl font-semibold text-[var(--foreground)] mb-6">
@@ -68,9 +68,9 @@ const FAQSection = ({ items }: { readonly items: readonly FAQItem[] }) => {
       </div>
     </section>
   );
-};
+}
 
-const HelpContactSection = () => {
+function HelpContactSection() {
   return (
     <section className="bg-[var(--surface)]/80 backdrop-blur-sm rounded-2xl shadow-warm border border-[var(--border-warm)] p-8">
       <h2 className="text-xl font-semibold text-[var(--foreground)] mb-4">
@@ -95,9 +95,9 @@ const HelpContactSection = () => {
       </div>
     </section>
   );
-};
+}
 
-const HelpPage = () => {
+export default function HelpPage() {
   return (
     <div className="min-h-screen bg-warm-gradient">
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
@@ -115,5 +115,4 @@ const HelpPage = () => {
       <Footer />
     </div>
   );
-};
-export default HelpPage;
+}

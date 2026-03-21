@@ -39,15 +39,15 @@ interface ProductFormModalProps {
 const DEFAULT_PRICE_CURRENCY: CurrencyCode = "INR";
 
 /** Convert an amount from one currency to another using the provided live rates. */
-const convertCurrency = (
+function convertCurrency(
   amount: number,
   from: CurrencyCode,
   to: CurrencyCode,
   rates: Record<CurrencyCode, number>,
-): number => {
+): number {
   const amountInBase = amount / rates[from];
   return Number((amountInBase * rates[to]).toFixed(2));
-};
+}
 
 interface AdditionalImageRowProps {
   readonly idx: number;
@@ -60,17 +60,17 @@ interface AdditionalImageRowProps {
   readonly onRemove: (idx: number) => void;
 }
 
-const PendingFileNotice = ({ fileName }: { readonly fileName: string }) => {
+function PendingFileNotice({ fileName }: { readonly fileName: string }) {
   return <p className="text-xs text-green-600 mt-1">Selected: {fileName}</p>;
-};
+}
 
-const AdditionalImageRow = ({
+function AdditionalImageRow({
   idx,
   imgUrl,
   pendingFile,
   onFileChange,
   onRemove,
-}: AdditionalImageRowProps) => {
+}: AdditionalImageRowProps) {
   const showCurrent = Boolean(imgUrl) && pendingFile === null;
   const labelText = `Image ${idx + 2}${showCurrent ? " (current)" : ""}`;
   return (
@@ -125,7 +125,7 @@ const AdditionalImageRow = ({
       </button>
     </div>
   );
-};
+}
 
 interface PriceFieldProps {
   readonly priceCurrency: CurrencyCode;
@@ -136,14 +136,14 @@ interface PriceFieldProps {
   readonly onPriceChange: (value: number) => void;
 }
 
-const PriceField = ({
+function PriceField({
   priceCurrency,
   priceValue,
   error,
   availableCurrencies,
   onCurrencyChange,
   onPriceChange,
-}: PriceFieldProps) => {
+}: PriceFieldProps) {
   return (
     <div>
       <label
@@ -188,7 +188,7 @@ const PriceField = ({
       )}
     </div>
   );
-};
+}
 
 const validateName = (v: string): string | undefined => {
   if (!v.trim()) return PRODUCT_ERRORS.NAME_REQUIRED;
@@ -214,12 +214,12 @@ const validateImage = (
 ): string | undefined =>
   !hasExisting && !hasFile ? PRODUCT_ERRORS.IMAGE_REQUIRED : undefined;
 
-const ProductFormModal = ({
+export default function ProductFormModal({
   editingProduct,
   onClose,
   onSuccess,
   layout = "modal",
-}: ProductFormModalProps) => {
+}: ProductFormModalProps) {
   const { availableCurrencies, rates } = useCurrency();
   const [priceCurrency, setPriceCurrency] = useState<CurrencyCode>(
     DEFAULT_PRICE_CURRENCY,
@@ -805,5 +805,4 @@ const ProductFormModal = ({
       </div>
     </div>
   );
-};
-export default ProductFormModal;
+}

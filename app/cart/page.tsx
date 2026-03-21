@@ -30,7 +30,7 @@ import type { AppDispatch } from "@/lib/store";
 import { CartItemRow } from "@/components/cart/CartItemRow";
 import { LeafAccent } from "@/components/ui/DecorativeElements";
 
-const CartPage = () => {
+export default function CartPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
   const dispatch = useDispatch<AppDispatch>();
@@ -368,5 +368,4 @@ const CartPage = () => {
       </main>
     </div>
   );
-};
-export default CartPage;
+}

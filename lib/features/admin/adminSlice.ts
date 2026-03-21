@@ -81,11 +81,11 @@ type AdminApiResponse = Record<string, unknown> & {
   data?: Record<string, unknown>;
 };
 
-const extractList = <T>(data: AdminApiResponse, key: string): T[] => {
+function extractList<T>(data: AdminApiResponse, key: string): T[] {
   const nested = data.data?.[key];
   const top = data[key];
   return (nested ?? top ?? []) as T[];
-};
+}
 
 export const fetchAdminProducts = createAsyncThunk(
   "admin/fetchProducts",

@@ -7,7 +7,7 @@ import { cacheAdminSales } from "@/lib/cache";
 
 export const dynamic = "force-dynamic";
 
-export const GET = async () => {
+export async function GET() {
   const authCheck = await checkAdminAuth();
   if (!authCheck.authorized) {
     return apiError(authCheck.error, authCheck.status);
@@ -128,4 +128,4 @@ export const GET = async () => {
   } catch (error) {
     return handleApiError(error);
   }
-};
+}

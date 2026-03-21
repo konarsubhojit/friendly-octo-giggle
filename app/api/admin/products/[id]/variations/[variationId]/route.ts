@@ -57,10 +57,10 @@ const checkVariationNameUniqueness = async (
   };
 };
 
-export const PUT = async (
+export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; variationId: string }> },
-) => {
+) {
   const authCheck = await checkAdminAuth();
   if (!authCheck.authorized) {
     return apiError(authCheck.error ?? "Unauthorized", authCheck.status);
@@ -134,16 +134,16 @@ export const PUT = async (
   } catch (error) {
     return handleApiError(error);
   }
-};
+}
 
 /**
  * DELETE /api/admin/products/[id]/variations/[variationId]
  * Soft-delete a variation
  */
-export const DELETE = async (
+export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string; variationId: string }> },
-) => {
+) {
   const authCheck = await checkAdminAuth();
   if (!authCheck.authorized) {
     return apiError(authCheck.error ?? "Unauthorized", authCheck.status);
@@ -178,4 +178,4 @@ export const DELETE = async (
   } catch (error) {
     return handleApiError(error);
   }
-};
+}

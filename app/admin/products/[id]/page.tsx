@@ -13,7 +13,7 @@ interface PageProps {
   readonly params: Promise<{ id: string }>;
 }
 
-const AdminProductEditPage = async ({ params }: PageProps) => {
+export default async function AdminProductEditPage({ params }: PageProps) {
   const session = await auth();
   if (session?.user?.role !== "ADMIN") {
     redirect("/auth/signin");
@@ -88,5 +88,4 @@ const AdminProductEditPage = async ({ params }: PageProps) => {
       />
     </main>
   );
-};
-export default AdminProductEditPage;
+}

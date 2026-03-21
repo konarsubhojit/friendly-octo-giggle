@@ -28,12 +28,12 @@ interface CancelOrderDialogProps {
   readonly onConfirm: () => void;
 }
 
-const CancelOrderDialog = ({
+function CancelOrderDialog({
   dialogRef,
   cancelling,
   onClose,
   onConfirm,
-}: CancelOrderDialogProps) => {
+}: CancelOrderDialogProps) {
   return (
     <dialog
       ref={dialogRef}
@@ -68,7 +68,7 @@ const CancelOrderDialog = ({
       </div>
     </dialog>
   );
-};
+}
 
 interface OrderDetailPageProps {
   readonly params: Promise<{ id: string }>;
@@ -92,9 +92,9 @@ const STATUS_STEP_INDEX: Record<string, number> = {
   DELIVERED: 3,
 };
 
-const getStepIndex = (status: string): number => {
+function getStepIndex(status: string): number {
   return STATUS_STEP_INDEX[status] ?? -1;
-};
+}
 
 const STEP_CLASSES = {
   completed: {
@@ -116,7 +116,7 @@ interface StatusTimelineProps {
   readonly isCancelled: boolean;
 }
 
-const StatusTimeline = ({ currentStep, isCancelled }: StatusTimelineProps) => {
+function StatusTimeline({ currentStep, isCancelled }: StatusTimelineProps) {
   if (isCancelled) {
     return (
       <div className="flex items-center gap-3 p-4 bg-red-50 rounded-xl border border-red-200">
@@ -181,7 +181,7 @@ const StatusTimeline = ({ currentStep, isCancelled }: StatusTimelineProps) => {
       })}
     </div>
   );
-};
+}
 
 interface OrderItemRowItem {
   readonly id: string;
@@ -203,7 +203,7 @@ interface OrderItemRowProps {
   readonly formatPrice: (amount: number) => string;
 }
 
-const OrderItemRow = ({ item, formatPrice }: OrderItemRowProps) => {
+function OrderItemRow({ item, formatPrice }: OrderItemRowProps) {
   const image = item.variation?.image || item.product?.image;
   const sections: Record<string, ReactElement | null> = {
     image: image ? (
@@ -254,7 +254,7 @@ const OrderItemRow = ({ item, formatPrice }: OrderItemRowProps) => {
       {sections.customization}
     </div>
   );
-};
+}
 
 interface OrderSummaryHeaderProps {
   readonly orderId: string;
@@ -266,7 +266,7 @@ interface OrderSummaryHeaderProps {
   readonly onCancelClick: () => void;
 }
 
-const OrderSummaryHeader = ({
+function OrderSummaryHeader({
   orderId,
   createdAt,
   totalAmount,
@@ -274,7 +274,7 @@ const OrderSummaryHeader = ({
   cancelling,
   formatPrice,
   onCancelClick,
-}: OrderSummaryHeaderProps) => {
+}: OrderSummaryHeaderProps) {
   return (
     <div className="flex justify-between items-start flex-wrap gap-4">
       <div>
@@ -308,9 +308,9 @@ const OrderSummaryHeader = ({
       </div>
     </div>
   );
-};
+}
 
-const OrderDetailPage = ({ params }: OrderDetailPageProps) => {
+export default function OrderDetailPage({ params }: OrderDetailPageProps) {
   const { id } = use(params);
   const { data: session, status: authStatus } = useSession();
   const { formatPrice } = useCurrency();
@@ -512,5 +512,4 @@ const OrderDetailPage = ({ params }: OrderDetailPageProps) => {
       </main>
     </div>
   );
-};
-export default OrderDetailPage;
+}

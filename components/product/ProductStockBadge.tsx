@@ -1,6 +1,6 @@
 "use client";
 
-export const ProductStockBadge = ({ stock }: { readonly stock: number }) => {
+export function ProductStockBadge({ stock }: { readonly stock: number }) {
   if (stock > 5) {
     return (
       <span className="inline-flex items-center gap-2 bg-[var(--accent-sage)]/20 text-[var(--accent-sage)] px-4 py-2 rounded-full font-semibold shadow-warm">
@@ -56,4 +56,4 @@ export const ProductStockBadge = ({ stock }: { readonly stock: number }) => {
       Out of Stock
     </span>
   );
-};
+}

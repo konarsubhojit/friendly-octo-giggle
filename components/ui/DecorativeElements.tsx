@@ -4,11 +4,11 @@
  */
 
 /** Small 5-petal flower — use as accent next to headings or between nav items */
-export const FlowerAccent = ({
+export function FlowerAccent({
   className = "w-5 h-5",
 }: {
   readonly className?: string;
-}) => {
+}) {
   return (
     <svg
       className={className}
@@ -17,38 +17,10 @@ export const FlowerAccent = ({
       aria-hidden="true"
     >
       <circle cx="12" cy="12" r="3" fill="var(--accent-warm, #e8a87c)" />
-      <ellipse
-        cx="12"
-        cy="5"
-        rx="3"
-        ry="4"
-        fill="var(--accent-peach, #f8c8a8)"
-        opacity="0.8"
-      />
-      <ellipse
-        cx="12"
-        cy="19"
-        rx="3"
-        ry="4"
-        fill="var(--accent-peach, #f8c8a8)"
-        opacity="0.8"
-      />
-      <ellipse
-        cx="5"
-        cy="12"
-        rx="4"
-        ry="3"
-        fill="var(--accent-peach, #f8c8a8)"
-        opacity="0.8"
-      />
-      <ellipse
-        cx="19"
-        cy="12"
-        rx="4"
-        ry="3"
-        fill="var(--accent-peach, #f8c8a8)"
-        opacity="0.8"
-      />
+      <ellipse cx="12" cy="5" rx="3" ry="4" fill="var(--accent-peach, #f8c8a8)" opacity="0.8" />
+      <ellipse cx="12" cy="19" rx="3" ry="4" fill="var(--accent-peach, #f8c8a8)" opacity="0.8" />
+      <ellipse cx="5" cy="12" rx="4" ry="3" fill="var(--accent-peach, #f8c8a8)" opacity="0.8" />
+      <ellipse cx="19" cy="12" rx="4" ry="3" fill="var(--accent-peach, #f8c8a8)" opacity="0.8" />
       <ellipse
         cx="7"
         cy="7"
@@ -87,14 +59,14 @@ export const FlowerAccent = ({
       />
     </svg>
   );
-};
+}
 
 /** Small decorative leaf — pairs well with text elements */
-export const LeafAccent = ({
+export function LeafAccent({
   className = "w-4 h-4",
 }: {
   readonly className?: string;
-}) => {
+}) {
   return (
     <svg
       className={className}
@@ -118,14 +90,14 @@ export const LeafAccent = ({
       />
     </svg>
   );
-};
+}
 
 /** Tiny sparkle/diamond for subtle emphasis */
-export const SparkleAccent = ({
+export function SparkleAccent({
   className = "w-3 h-3",
 }: {
   readonly className?: string;
-}) => {
+}) {
   return (
     <svg
       className={className}
@@ -140,14 +112,14 @@ export const SparkleAccent = ({
       />
     </svg>
   );
-};
+}
 
 /** Decorative vine/scroll divider — use between sections */
-export const VineDivider = ({
+export function VineDivider({
   className = "",
 }: {
   readonly className?: string;
-}) => {
+}) {
   return (
     <div
       className={`flex items-center justify-center gap-3 py-4 ${className}`}
@@ -161,20 +133,8 @@ export const VineDivider = ({
           fill="none"
           opacity="0.5"
         />
-        <circle
-          cx="16"
-          cy="2"
-          r="2"
-          fill="var(--accent-peach, #f8c8a8)"
-          opacity="0.6"
-        />
-        <circle
-          cx="48"
-          cy="2"
-          r="2"
-          fill="var(--accent-peach, #f8c8a8)"
-          opacity="0.6"
-        />
+        <circle cx="16" cy="2" r="2" fill="var(--accent-peach, #f8c8a8)" opacity="0.6" />
+        <circle cx="48" cy="2" r="2" fill="var(--accent-peach, #f8c8a8)" opacity="0.6" />
       </svg>
       <FlowerAccent className="w-5 h-5" />
       <svg className="w-16 h-4" viewBox="0 0 64 16" fill="none">
@@ -185,31 +145,19 @@ export const VineDivider = ({
           fill="none"
           opacity="0.5"
         />
-        <circle
-          cx="16"
-          cy="14"
-          r="2"
-          fill="var(--accent-peach, #f8c8a8)"
-          opacity="0.6"
-        />
-        <circle
-          cx="48"
-          cy="14"
-          r="2"
-          fill="var(--accent-peach, #f8c8a8)"
-          opacity="0.6"
-        />
+        <circle cx="16" cy="14" r="2" fill="var(--accent-peach, #f8c8a8)" opacity="0.6" />
+        <circle cx="48" cy="14" r="2" fill="var(--accent-peach, #f8c8a8)" opacity="0.6" />
       </svg>
     </div>
   );
-};
+}
 
 /** Floating scattered flowers for hero/background decoration */
-export const ScatteredFlowers = ({
+export function ScatteredFlowers({
   className = "",
 }: {
   readonly className?: string;
-}) => {
+}) {
   return (
     <div
       className={`absolute inset-0 pointer-events-none overflow-hidden ${className}`}
@@ -238,14 +186,14 @@ export const ScatteredFlowers = ({
       <SparkleAccent className="absolute top-1/2 right-[4%] w-2 h-2 opacity-30" />
     </div>
   );
-};
+}
 
 /** Flower bullet icon — use in lists like About page values */
-export const FlowerBullet = ({
+export function FlowerBullet({
   className = "w-5 h-5 flex-shrink-0",
 }: {
   readonly className?: string;
-}) => {
+}) {
   return (
     <svg
       className={className}
@@ -254,44 +202,20 @@ export const FlowerBullet = ({
       aria-hidden="true"
     >
       <circle cx="10" cy="10" r="3" fill="var(--accent-rose, #d4856b)" />
-      <circle
-        cx="10"
-        cy="4"
-        r="3"
-        fill="var(--accent-peach, #f8c8a8)"
-        opacity="0.7"
-      />
-      <circle
-        cx="10"
-        cy="16"
-        r="3"
-        fill="var(--accent-peach, #f8c8a8)"
-        opacity="0.7"
-      />
-      <circle
-        cx="4"
-        cy="10"
-        r="3"
-        fill="var(--accent-peach, #f8c8a8)"
-        opacity="0.7"
-      />
-      <circle
-        cx="16"
-        cy="10"
-        r="3"
-        fill="var(--accent-peach, #f8c8a8)"
-        opacity="0.7"
-      />
+      <circle cx="10" cy="4" r="3" fill="var(--accent-peach, #f8c8a8)" opacity="0.7" />
+      <circle cx="10" cy="16" r="3" fill="var(--accent-peach, #f8c8a8)" opacity="0.7" />
+      <circle cx="4" cy="10" r="3" fill="var(--accent-peach, #f8c8a8)" opacity="0.7" />
+      <circle cx="16" cy="10" r="3" fill="var(--accent-peach, #f8c8a8)" opacity="0.7" />
     </svg>
   );
-};
+}
 
 /** Floral cart icon — decorative shopping bag with flower accent */
-export const FloralCartIcon = ({
+export function FloralCartIcon({
   className = "w-6 h-6",
 }: {
   readonly className?: string;
-}) => {
+}) {
   return (
     <svg
       className={className}
@@ -347,14 +271,14 @@ export const FloralCartIcon = ({
       />
     </svg>
   );
-};
+}
 
 /** Butterfly accent — whimsical decorative element for product/detail pages */
-export const ButterflyAccent = ({
+export function ButterflyAccent({
   className = "w-8 h-8",
 }: {
   readonly className?: string;
-}) => {
+}) {
   return (
     <svg
       className={className}
@@ -401,14 +325,7 @@ export const ButterflyAccent = ({
         transform="rotate(15 22 12)"
       />
       {/* Body */}
-      <ellipse
-        cx="16"
-        cy="16"
-        rx="1.5"
-        ry="8"
-        fill="var(--accent-rose, #d4856b)"
-        opacity="0.7"
-      />
+      <ellipse cx="16" cy="16" rx="1.5" ry="8" fill="var(--accent-rose, #d4856b)" opacity="0.7" />
       {/* Antennae */}
       <path
         d="M15 8C13 4 11 3 10 3"
@@ -424,30 +341,18 @@ export const ButterflyAccent = ({
         strokeLinecap="round"
         opacity="0.5"
       />
-      <circle
-        cx="10"
-        cy="3"
-        r="1"
-        fill="var(--accent-warm, #e8a87c)"
-        opacity="0.6"
-      />
-      <circle
-        cx="22"
-        cy="3"
-        r="1"
-        fill="var(--accent-warm, #e8a87c)"
-        opacity="0.6"
-      />
+      <circle cx="10" cy="3" r="1" fill="var(--accent-warm, #e8a87c)" opacity="0.6" />
+      <circle cx="22" cy="3" r="1" fill="var(--accent-warm, #e8a87c)" opacity="0.6" />
     </svg>
   );
-};
+}
 
 /** Mushroom accent — cottagecore decorative element for about/cart pages */
-export const MushroomAccent = ({
+export function MushroomAccent({
   className = "w-8 h-8",
 }: {
   readonly className?: string;
-}) => {
+}) {
   return (
     <svg
       className={className}
@@ -456,14 +361,7 @@ export const MushroomAccent = ({
       aria-hidden="true"
     >
       {/* Cap */}
-      <ellipse
-        cx="16"
-        cy="14"
-        rx="12"
-        ry="10"
-        fill="var(--accent-peach, #f8c8a8)"
-        opacity="0.7"
-      />
+      <ellipse cx="16" cy="14" rx="12" ry="10" fill="var(--accent-peach, #f8c8a8)" opacity="0.7" />
       <ellipse
         cx="16"
         cy="14"
@@ -475,27 +373,9 @@ export const MushroomAccent = ({
         opacity="0.5"
       />
       {/* Spots */}
-      <circle
-        cx="11"
-        cy="10"
-        r="2.5"
-        fill="var(--accent-blush, #fde8d8)"
-        opacity="0.8"
-      />
-      <circle
-        cx="20"
-        cy="8"
-        r="2"
-        fill="var(--accent-blush, #fde8d8)"
-        opacity="0.8"
-      />
-      <circle
-        cx="16"
-        cy="13"
-        r="1.5"
-        fill="var(--accent-blush, #fde8d8)"
-        opacity="0.6"
-      />
+      <circle cx="11" cy="10" r="2.5" fill="var(--accent-blush, #fde8d8)" opacity="0.8" />
+      <circle cx="20" cy="8" r="2" fill="var(--accent-blush, #fde8d8)" opacity="0.8" />
+      <circle cx="16" cy="13" r="1.5" fill="var(--accent-blush, #fde8d8)" opacity="0.6" />
       {/* Stem */}
       <rect
         x="13"
@@ -508,24 +388,17 @@ export const MushroomAccent = ({
         strokeWidth="0.8"
       />
       {/* Ground */}
-      <ellipse
-        cx="16"
-        cy="28"
-        rx="8"
-        ry="1.5"
-        fill="var(--accent-sage, #b8c9a3)"
-        opacity="0.3"
-      />
+      <ellipse cx="16" cy="28" rx="8" ry="1.5" fill="var(--accent-sage, #b8c9a3)" opacity="0.3" />
     </svg>
   );
-};
+}
 
 /** Floral border — section divider with simplified variant below 640px */
-export const FloralBorder = ({
+export function FloralBorder({
   className = "",
 }: {
   readonly className?: string;
-}) => {
+}) {
   return (
     <div
       className={`flex items-center justify-center py-6 ${className}`}
@@ -540,20 +413,8 @@ export const FloralBorder = ({
             strokeWidth="1.2"
             opacity="0.4"
           />
-          <circle
-            cx="20"
-            cy="4"
-            r="2.5"
-            fill="var(--accent-peach, #f8c8a8)"
-            opacity="0.5"
-          />
-          <circle
-            cx="60"
-            cy="4"
-            r="2.5"
-            fill="var(--accent-peach, #f8c8a8)"
-            opacity="0.5"
-          />
+          <circle cx="20" cy="4" r="2.5" fill="var(--accent-peach, #f8c8a8)" opacity="0.5" />
+          <circle cx="60" cy="4" r="2.5" fill="var(--accent-peach, #f8c8a8)" opacity="0.5" />
         </svg>
         <FlowerAccent className="w-6 h-6" />
         <LeafAccent className="w-5 h-5 -scale-x-100" />
@@ -567,20 +428,8 @@ export const FloralBorder = ({
             strokeWidth="1.2"
             opacity="0.4"
           />
-          <circle
-            cx="20"
-            cy="20"
-            r="2.5"
-            fill="var(--accent-peach, #f8c8a8)"
-            opacity="0.5"
-          />
-          <circle
-            cx="60"
-            cy="20"
-            r="2.5"
-            fill="var(--accent-peach, #f8c8a8)"
-            opacity="0.5"
-          />
+          <circle cx="20" cy="20" r="2.5" fill="var(--accent-peach, #f8c8a8)" opacity="0.5" />
+          <circle cx="60" cy="20" r="2.5" fill="var(--accent-peach, #f8c8a8)" opacity="0.5" />
         </svg>
       </div>
       {/* Simplified version — shown only on mobile */}
@@ -591,4 +440,4 @@ export const FloralBorder = ({
       </div>
     </div>
   );
-};
+}

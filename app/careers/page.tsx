@@ -40,7 +40,7 @@ const openings = [
   },
 ];
 
-const CareersPage = () => {
+export default function CareersPage() {
   return (
     <div className="min-h-screen bg-warm-gradient">
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
@@ -136,5 +136,4 @@ const CareersPage = () => {
       <Footer />
     </div>
   );
-};
-export default CareersPage;
+}

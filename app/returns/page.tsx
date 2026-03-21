@@ -6,7 +6,7 @@ export const metadata = {
   description: "Learn about our hassle-free return and refund policy.",
 };
 
-const ReturnPolicySection = () => {
+function ReturnPolicySection() {
   return (
     <section className="bg-[var(--surface)]/80 backdrop-blur-sm rounded-2xl shadow-warm border border-[var(--border-warm)] p-8 mb-8">
       <h2 className="text-2xl font-semibold text-[var(--foreground)] mb-4">
@@ -88,7 +88,7 @@ const ReturnPolicySection = () => {
       </ul>
     </section>
   );
-};
+}
 
 const RETURN_STEPS = [
   "Sign in to your account and go to My Orders.",
@@ -99,7 +99,7 @@ const RETURN_STEPS = [
   "Once received and inspected, your refund will be issued.",
 ] as const;
 
-const ReturnStepsSection = () => {
+function ReturnStepsSection() {
   return (
     <section className="bg-[var(--surface)]/80 backdrop-blur-sm rounded-2xl shadow-warm border border-[var(--border-warm)] p-8 mb-8">
       <h2 className="text-2xl font-semibold text-[var(--foreground)] mb-4">
@@ -117,9 +117,9 @@ const ReturnStepsSection = () => {
       </ol>
     </section>
   );
-};
+}
 
-const NonReturnableSection = () => {
+function NonReturnableSection() {
   return (
     <section className="bg-[var(--surface)]/80 backdrop-blur-sm rounded-2xl shadow-warm border border-[var(--border-warm)] p-8">
       <h2 className="text-xl font-semibold text-[var(--foreground)] mb-4">
@@ -146,9 +146,9 @@ const NonReturnableSection = () => {
       </p>
     </section>
   );
-};
+}
 
-const ReturnsPage = () => {
+export default function ReturnsPage() {
   return (
     <div className="min-h-screen bg-warm-gradient">
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
@@ -167,5 +167,4 @@ const ReturnsPage = () => {
       <Footer />
     </div>
   );
-};
-export default ReturnsPage;
+}

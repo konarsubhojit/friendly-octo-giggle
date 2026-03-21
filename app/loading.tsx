@@ -4,7 +4,7 @@ import ProductCardSkeleton from "@/components/skeletons/ProductCardSkeleton";
 const LINK_SKELETONS = ["l1", "l2", "l3", "l4"] as const;
 const PRODUCT_SKELETONS = ["p1", "p2", "p3", "p4", "p5", "p6"] as const;
 
-const FooterSkeleton = () => {
+function FooterSkeleton() {
   return (
     <footer className="bg-gradient-to-b from-[var(--accent-blush)] to-[var(--accent-peach)] border-t border-[var(--border-warm)] py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -33,9 +33,9 @@ const FooterSkeleton = () => {
       </div>
     </footer>
   );
-};
+}
 
-const Loading = () => {
+export default function Loading() {
   return (
     <div className="min-h-screen bg-warm-gradient">
       <HeroSkeleton />
@@ -54,5 +54,4 @@ const Loading = () => {
       <FooterSkeleton />
     </div>
   );
-};
-export default Loading;
+}

@@ -64,14 +64,14 @@ let searchClient: Search | null = null;
 /**
  * Returns true when Upstash Search is configured via env vars.
  */
-export const isSearchAvailable = (): boolean => {
+export function isSearchAvailable(): boolean {
   return Boolean(
     process.env.UPSTASH_SEARCH_REST_URL &&
     process.env.UPSTASH_SEARCH_REST_TOKEN,
   );
-};
+}
 
-const getClient = (): Search => {
+function getClient(): Search {
   if (searchClient) return searchClient;
 
   searchClient = new Search({
@@ -80,11 +80,11 @@ const getClient = (): Search => {
   });
 
   return searchClient;
-};
+}
 
 // ─── Product indexing ────────────────────────────────────
 
-export const indexProduct = async (product: {
+export async function indexProduct(product: {
   id: string;
   name: string;
   description: string;
@@ -92,7 +92,7 @@ export const indexProduct = async (product: {
   price: number;
   stock: number;
   image: string;
-}): Promise<void> => {
+}): Promise<void> {
   if (!isSearchAvailable()) return;
 
   try {
@@ -119,9 +119,9 @@ export const indexProduct = async (product: {
       additionalInfo: { operation: "indexProduct", id: product.id },
     });
   }
-};
+}
 
-export const indexProducts = async (
+export async function indexProducts(
   products: Array<{
     id: string;
     name: string;
@@ -131,7 +131,7 @@ export const indexProducts = async (
     stock: number;
     image: string;
   }>,
-): Promise<void> => {
+): Promise<void> {
   if (!isSearchAvailable() || products.length === 0) return;
 
   try {
@@ -164,9 +164,9 @@ export const indexProducts = async (
       additionalInfo: { operation: "indexProducts" },
     });
   }
-};
+}
 
-export const removeProduct = async (productId: string): Promise<void> => {
+export async function removeProduct(productId: string): Promise<void> {
   if (!isSearchAvailable()) return;
 
   try {
@@ -180,11 +180,11 @@ export const removeProduct = async (productId: string): Promise<void> => {
       additionalInfo: { operation: "removeProduct", id: productId },
     });
   }
-};
+}
 
 // ─── Order indexing ──────────────────────────────────────
 
-export const indexOrder = async (order: {
+export async function indexOrder(order: {
   id: string;
   customerName: string;
   customerEmail: string;
@@ -192,7 +192,7 @@ export const indexOrder = async (order: {
   status: string;
   totalAmount: number;
   createdAt: string;
-}): Promise<void> => {
+}): Promise<void> {
   if (!isSearchAvailable()) return;
 
   try {
@@ -220,9 +220,9 @@ export const indexOrder = async (order: {
       additionalInfo: { operation: "indexOrder", id: order.id },
     });
   }
-};
+}
 
-export const indexOrders = async (
+export async function indexOrders(
   ordersList: Array<{
     id: string;
     customerName: string;
@@ -232,7 +232,7 @@ export const indexOrders = async (
     totalAmount: number;
     createdAt: string;
   }>,
-): Promise<void> => {
+): Promise<void> {
   if (!isSearchAvailable() || ordersList.length === 0) return;
 
   try {
@@ -266,7 +266,7 @@ export const indexOrders = async (
       additionalInfo: { operation: "indexOrders" },
     });
   }
-};
+}
 
 // ─── Search queries ──────────────────────────────────────
 
@@ -284,10 +284,10 @@ export interface OrderSearchResult {
   metadata: OrderMetadata;
 }
 
-export const searchProducts = async (
+export async function searchProducts(
   query: string,
   options: { limit?: number; category?: string } = {},
-): Promise<ProductSearchResult[]> => {
+): Promise<ProductSearchResult[]> {
   if (!isSearchAvailable()) return [];
 
   const { limit = 20, category } = options;
@@ -319,12 +319,12 @@ export const searchProducts = async (
     content: r.content,
     metadata: r.metadata ?? { image: "" },
   }));
-};
+}
 
-export const searchOrders = async (
+export async function searchOrders(
   query: string,
   options: { limit?: number; status?: string } = {},
-): Promise<OrderSearchResult[]> => {
+): Promise<OrderSearchResult[]> {
   if (!isSearchAvailable()) return [];
 
   const { limit = 20, status } = options;
@@ -350,16 +350,16 @@ export const searchOrders = async (
     content: r.content,
     metadata: r.metadata ?? { createdAt: "" },
   }));
-};
+}
 
 // ─── Admin: reset indexes ────────────────────────────────
 
-export const resetIndex = async (
+export async function resetIndex(
   indexName: "products" | "orders",
-): Promise<void> => {
+): Promise<void> {
   if (!isSearchAvailable()) return;
 
   const client = getClient();
   const index = client.index(indexName);
   await index.reset();
-};
+}
