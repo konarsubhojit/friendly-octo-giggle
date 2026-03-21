@@ -8,7 +8,9 @@ import { invalidateUserOrderCaches } from "@/lib/cache";
 import { logBusinessEvent, logError } from "@/lib/logger";
 
 const mockCountWhere = vi.hoisted(() => vi.fn());
-const mockCountFrom = vi.hoisted(() => vi.fn(() => ({ where: mockCountWhere })));
+const mockCountFrom = vi.hoisted(() =>
+  vi.fn(() => ({ where: mockCountWhere })),
+);
 const mockSelect = vi.hoisted(() => vi.fn(() => ({ from: mockCountFrom })));
 
 vi.mock("@/lib/db", () => ({

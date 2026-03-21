@@ -7,7 +7,9 @@ const { mockFindMany, mockCreate } = vi.hoisted(() => ({
   mockCreate: vi.fn(),
 }));
 const mockSelectWhere = vi.hoisted(() => vi.fn());
-const mockSelectFrom = vi.hoisted(() => vi.fn(() => ({ where: mockSelectWhere })));
+const mockSelectFrom = vi.hoisted(() =>
+  vi.fn(() => ({ where: mockSelectWhere })),
+);
 const mockSelect = vi.hoisted(() => vi.fn(() => ({ from: mockSelectFrom })));
 
 vi.mock("@/lib/db", () => ({

@@ -4,7 +4,9 @@ import { NextRequest } from "next/server";
 const mockAuth = vi.hoisted(() => vi.fn());
 const mockFindMany = vi.hoisted(() => vi.fn());
 const mockSelectWhere = vi.hoisted(() => vi.fn());
-const mockSelectFrom = vi.hoisted(() => vi.fn(() => ({ where: mockSelectWhere })));
+const mockSelectFrom = vi.hoisted(() =>
+  vi.fn(() => ({ where: mockSelectWhere })),
+);
 const mockSelect = vi.hoisted(() => vi.fn(() => ({ from: mockSelectFrom })));
 
 vi.mock("@/lib/auth", () => ({ auth: mockAuth }));
