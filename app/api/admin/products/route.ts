@@ -4,37 +4,15 @@ import { products } from "@/lib/schema";
 import { desc, lt, ilike, and, isNull, inArray, SQL } from "drizzle-orm";
 import { ProductInputSchema } from "@/lib/validations";
 import { apiSuccess, apiError, handleApiError } from "@/lib/api-utils";
-import { auth } from "@/lib/auth";
 import { revalidateTag } from "next/cache";
 import { invalidateProductCaches } from "@/lib/cache";
 import { indexProduct } from "@/lib/search";
 import { searchProductIds } from "@/lib/search-service";
+import { checkAdminAuth } from "@/lib/admin-auth";
 
 export const dynamic = "force-dynamic";
 
 const PAGE_SIZE = 20;
-
-const checkAdminAuth = async () => {
-  const session = await auth();
-
-  if (!session?.user) {
-    return {
-      authorized: false,
-      error: "Not authenticated",
-      status: 401 as const,
-    };
-  }
-
-  if (session.user.role !== "ADMIN") {
-    return {
-      authorized: false,
-      error: "Not authorized - Admin access required",
-      status: 403 as const,
-    };
-  }
-
-  return { authorized: true };
-};
 
 /**
  * GET /api/admin/products

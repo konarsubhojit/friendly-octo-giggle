@@ -455,6 +455,7 @@ const PreferencesSection = ({ profile }: PreferencesSectionProps) => {
           body: JSON.stringify({ currencyPreference: code }),
         });
       } catch {
+        // eslint-disable-next-line no-empty
       } finally {
         setSaving(false);
       }
