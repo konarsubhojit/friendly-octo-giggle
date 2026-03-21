@@ -2,7 +2,12 @@ import { NextRequest } from "next/server";
 import { drizzleDb } from "@/lib/db";
 import { reviews } from "@/lib/schema";
 import { eq, desc, and } from "drizzle-orm";
-import { apiSuccess, apiError, handleApiError, handleValidationError } from "@/lib/api-utils";
+import {
+  apiSuccess,
+  apiError,
+  handleApiError,
+  handleValidationError,
+} from "@/lib/api-utils";
 import { auth } from "@/lib/auth";
 import { CreateReviewSchema } from "@/lib/validations";
 import { withLogging } from "@/lib/api-middleware";
@@ -92,12 +97,12 @@ const handlePost = async (request: NextRequest) => {
       201,
     );
   } catch (error) {
-    // Catch unique-constraint violation (concurrent duplicate review)
+    const dbError = error as Error & { code?: unknown; constraint?: unknown };
     const isUniqueViolation =
       error instanceof Error &&
       ("code" in error || "constraint" in error) &&
-      (String((error as Record<string, unknown>).code) === "23505" ||
-        String((error as Record<string, unknown>).constraint ?? "").includes("userId_productId"));
+      (String(dbError.code) === "23505" ||
+        String(dbError.constraint ?? "").includes("userId_productId"));
     if (isUniqueViolation) {
       return apiError("You have already reviewed this product", 409);
     }

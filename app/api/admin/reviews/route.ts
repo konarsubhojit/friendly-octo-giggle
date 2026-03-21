@@ -24,21 +24,18 @@ export const GET = async (request: NextRequest) => {
       conditions.push(eq(reviews.productId, productId));
     }
     if (ratingStr) {
-      const rating = parseInt(ratingStr, 10);
-      if (!isNaN(rating) && rating >= 1 && rating <= 5) {
+      const rating = Number.parseInt(ratingStr, 10);
+      if (!Number.isNaN(rating) && rating >= 1 && rating <= 5) {
         conditions.push(eq(reviews.rating, rating));
       }
     }
 
-    const whereClause =
-      conditions.length === 0
-        ? undefined
-        : conditions.length === 1
-          ? conditions[0]
-          : and(...conditions);
+    const singleOrCombined =
+      conditions.length === 1 ? conditions[0] : and(...conditions);
+    const whereClause = conditions.length === 0 ? undefined : singleOrCombined;
 
     const allReviews = await drizzleDb.query.reviews.findMany({
-      where: whereClause as SQL | undefined,
+      where: whereClause,
       orderBy: [desc(reviews.createdAt)],
       with: {
         user: { columns: { id: true, name: true, email: true, image: true } },

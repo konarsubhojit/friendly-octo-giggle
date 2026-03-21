@@ -133,11 +133,11 @@ export const EnvSchema = z
     QSTASH_TOKEN: z.string().optional(),
     QSTASH_CURRENT_SIGNING_KEY: z.string().optional(),
     QSTASH_NEXT_SIGNING_KEY: z.string().optional(),
-    NEXT_PUBLIC_APP_URL: z.string().url().optional(),
-    UPSTASH_SEARCH_REST_URL: z.string().url().optional(),
+    NEXT_PUBLIC_APP_URL: z.url().optional(),
+    UPSTASH_SEARCH_REST_URL: z.url().optional(),
     UPSTASH_SEARCH_REST_TOKEN: z.string().optional(),
     UPSTASH_SEARCH_REST_READONLY_TOKEN: z.string().optional(),
-    NEXT_PUBLIC_UPSTASH_SEARCH_REST_URL: z.string().url().optional(),
+    NEXT_PUBLIC_UPSTASH_SEARCH_REST_URL: z.url().optional(),
     NEXT_PUBLIC_UPSTASH_SEARCH_REST_READONLY_TOKEN: z.string().optional(),
   })
   .superRefine((data, ctx) => {
@@ -147,7 +147,7 @@ export const EnvSchema = z
       QSTASH_REQUIRED_KEYS.forEach((key) => {
         if (!data[key]) {
           ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: "custom",
             path: [key],
             message: `${key} is required in production`,
           });

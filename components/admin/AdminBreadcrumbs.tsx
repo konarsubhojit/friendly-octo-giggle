@@ -41,7 +41,7 @@ export default function AdminBreadcrumbs({ items }: AdminBreadcrumbsProps) {
                 </span>
               )}
 
-              {!isLast ? (
+              {isLast ? null : (
                 <svg
                   className="w-4 h-4 text-gray-400"
                   fill="none"
@@ -56,7 +56,7 @@ export default function AdminBreadcrumbs({ items }: AdminBreadcrumbsProps) {
                     d="M9 5l7 7-7 7"
                   />
                 </svg>
-              ) : null}
+              )}
             </li>
           );
         })}

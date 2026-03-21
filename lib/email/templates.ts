@@ -134,10 +134,17 @@ export const orderConfirmationTemplate = (data: OrderConfirmationData) => {
       You'll receive another email once your order has been shipped. ✨
     </p>`;
 
+  const itemLines = data.items
+    .map((item) => {
+      const variationStr = item.variation ? ` (${item.variation})` : "";
+      return `- ${item.name} x${item.quantity}: ${item.price}${variationStr}`;
+    })
+    .join("\n");
+
   return {
     subject: `Order Confirmed — #${data.orderId.toUpperCase()} 🌸`,
     html: emailWrapper(bodyHtml),
-    text: `Hi ${data.customerName},\n\nYour order #${data.orderId.toUpperCase()} has been confirmed!\nTotal: ${data.totalAmount}\n\nItems:\n${data.items.map((item) => `- ${item.name} x${item.quantity}: ${item.price}${item.variation ? ` (${item.variation})` : ""}`).join("\n")}\n\nShipping to:\n${data.shippingAddress}\n\nThank you for shopping with The Kiyon Store!`,
+    text: `Hi ${data.customerName},\n\nYour order #${data.orderId.toUpperCase()} has been confirmed!\nTotal: ${data.totalAmount}\n\nItems:\n${itemLines}\n\nShipping to:\n${data.shippingAddress}\n\nThank you for shopping with The Kiyon Store!`,
   };
 };
 
@@ -148,12 +155,19 @@ export const orderStatusUpdateTemplate = (data: OrderStatusUpdateData) => {
     color: "#5C4A44",
   };
 
+  const carrierHtml = data.shippingProvider
+    ? `<p style="margin:0 0 4px;color:#7a5543;font-size:14px;"><strong>Carrier:</strong> ${escapeHtml(data.shippingProvider)}</p>`
+    : "";
+  const trackingHtml = data.trackingNumber
+    ? `<p style="margin:0;color:#7a5543;font-size:14px;"><strong>Tracking #:</strong> <span style="font-family:monospace;color:#2563eb;">${escapeHtml(data.trackingNumber)}</span></p>`
+    : "";
+
   const trackingSection =
     data.status === "SHIPPED" && (data.trackingNumber || data.shippingProvider)
       ? `<div style="background:#F0F7FF;border-radius:12px;padding:16px 20px;margin-top:20px;">
           <h3 style="margin:0 0 8px;color:#5C4A44;font-size:15px;">Tracking Information</h3>
-          ${data.shippingProvider ? `<p style="margin:0 0 4px;color:#7a5543;font-size:14px;"><strong>Carrier:</strong> ${escapeHtml(data.shippingProvider)}</p>` : ""}
-          ${data.trackingNumber ? `<p style="margin:0;color:#7a5543;font-size:14px;"><strong>Tracking #:</strong> <span style="font-family:monospace;color:#2563eb;">${escapeHtml(data.trackingNumber)}</span></p>` : ""}
+          ${carrierHtml}
+          ${trackingHtml}
         </div>`
       : "";
 
@@ -180,9 +194,16 @@ export const orderStatusUpdateTemplate = (data: OrderStatusUpdateData) => {
       Thank you for your patience. We appreciate your business! 🌸
     </p>`;
 
+  const trackingLine = data.trackingNumber
+    ? `\nTracking: ${data.trackingNumber}`
+    : "";
+  const carrierLine = data.shippingProvider
+    ? `\nCarrier: ${data.shippingProvider}`
+    : "";
+
   return {
     subject: `Your Order #${data.orderId.toUpperCase()} is now ${info.label} ${info.emoji}`,
     html: emailWrapper(bodyHtml),
-    text: `Hi ${data.customerName},\n\nYour order #${data.orderId.toUpperCase()} status has been updated to: ${info.label}\n${data.trackingNumber ? `\nTracking: ${data.trackingNumber}` : ""}${data.shippingProvider ? `\nCarrier: ${data.shippingProvider}` : ""}\n\nThank you for shopping with The Kiyon Store!`,
+    text: `Hi ${data.customerName},\n\nYour order #${data.orderId.toUpperCase()} status has been updated to: ${info.label}\n${trackingLine}${carrierLine}\n\nThank you for shopping with The Kiyon Store!`,
   };
 };

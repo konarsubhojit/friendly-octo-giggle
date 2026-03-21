@@ -1,12 +1,12 @@
 "use client";
 
-import type { FormEvent, Dispatch, SetStateAction } from "react";
+import type { Dispatch, SetStateAction } from "react";
 
 interface AdminSearchFormProps {
   readonly searchInput: string;
   readonly setSearchInput: Dispatch<SetStateAction<string>>;
   readonly search: string;
-  readonly onSearch: (e: FormEvent<HTMLFormElement>) => void;
+  readonly onSearch: (e: React.BaseSyntheticEvent) => void;
   readonly onClear: () => void;
   readonly placeholder?: string;
   readonly ariaLabel?: string;

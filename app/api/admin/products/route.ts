@@ -1,8 +1,7 @@
 import { NextRequest } from "next/server";
-import { drizzleDb } from "@/lib/db";
+import { drizzleDb, db } from "@/lib/db";
 import { products } from "@/lib/schema";
 import { desc, lt, ilike, and, isNull, inArray, SQL } from "drizzle-orm";
-import { db } from "@/lib/db";
 import { ProductInputSchema } from "@/lib/validations";
 import { apiSuccess, apiError, handleApiError } from "@/lib/api-utils";
 import { auth } from "@/lib/auth";
@@ -58,7 +57,10 @@ export const GET = async (request: NextRequest) => {
     const search = searchParams.get("search")?.trim() ?? "";
 
     const limit = Math.min(
-      Math.max(1, parseInt(limitParam ?? String(PAGE_SIZE), 10) || PAGE_SIZE),
+      Math.max(
+        1,
+        Number.parseInt(limitParam ?? String(PAGE_SIZE), 10) || PAGE_SIZE,
+      ),
       100,
     );
 
@@ -67,7 +69,7 @@ export const GET = async (request: NextRequest) => {
 
     if (cursor) {
       const cursorDate = new Date(cursor);
-      if (!isNaN(cursorDate.getTime())) {
+      if (!Number.isNaN(cursorDate.getTime())) {
         conditions.push(lt(products.createdAt, cursorDate));
       }
     }
@@ -98,7 +100,7 @@ export const GET = async (request: NextRequest) => {
     const hasMore = rows.length > limit;
     const pageItems = hasMore ? rows.slice(0, limit) : rows;
     const nextCursor = hasMore
-      ? pageItems[pageItems.length - 1].createdAt.toISOString()
+      ? pageItems.at(-1)!.createdAt.toISOString()
       : null;
 
     const serialized = pageItems.map((p) => ({

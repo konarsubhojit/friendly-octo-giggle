@@ -190,7 +190,9 @@ describe("POST /api/services/email", () => {
 
   it("returns 500 for transient email send error", async () => {
     mockIsNonRetriableError.mockReturnValue(false);
-    mockSendOrderConfirmationEmail.mockRejectedValue(new Error("SMTP timeout"));
+    mockSendOrderConfirmationEmail.mockImplementation(() => {
+      throw new Error("SMTP timeout");
+    });
     const req = makeRequest(validOrderCreatedBody);
     const res = await POST(req);
     expect(res.status).toBe(500);
@@ -198,9 +200,9 @@ describe("POST /api/services/email", () => {
 
   it("returns 400 for non-retryable email send error", async () => {
     mockIsNonRetriableError.mockReturnValue(true);
-    mockSendOrderConfirmationEmail.mockRejectedValue(
-      new Error("invalid address"),
-    );
+    mockSendOrderConfirmationEmail.mockImplementation(() => {
+      throw new Error("invalid address");
+    });
     const req = makeRequest(validOrderCreatedBody);
     const res = await POST(req);
     expect(res.status).toBe(400);

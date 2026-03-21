@@ -190,6 +190,30 @@ function PriceField({
   );
 }
 
+const validateName = (v: string): string | undefined => {
+  if (!v.trim()) return PRODUCT_ERRORS.NAME_REQUIRED;
+  if (v.trim().length < 2) return PRODUCT_ERRORS.NAME_TOO_SHORT;
+  return undefined;
+};
+
+const validateDescription = (v: string): string | undefined =>
+  v.trim() ? undefined : PRODUCT_ERRORS.DESCRIPTION_REQUIRED;
+
+const validatePrice = (v: number): string | undefined =>
+  !v || v <= 0 ? PRODUCT_ERRORS.PRICE_POSITIVE : undefined;
+
+const validateStock = (v: number): string | undefined =>
+  v < 0 || !Number.isInteger(v) ? PRODUCT_ERRORS.STOCK_INVALID : undefined;
+
+const validateCategory = (v: string): string | undefined =>
+  v.trim() ? undefined : PRODUCT_ERRORS.CATEGORY_REQUIRED;
+
+const validateImage = (
+  hasExisting: boolean,
+  hasFile: boolean,
+): string | undefined =>
+  !hasExisting && !hasFile ? PRODUCT_ERRORS.IMAGE_REQUIRED : undefined;
+
 export default function ProductFormModal({
   editingProduct,
   onClose,
@@ -232,7 +256,7 @@ export default function ProductFormModal({
   const [imageFile, setImageFile] = useState<File | null>(null);
   // Additional image files to upload (paired with formData.images slots)
   const [additionalFiles, setAdditionalFiles] = useState<(File | null)[]>(() =>
-    Array((editingProduct?.images ?? []).length).fill(null),
+    new Array((editingProduct?.images ?? []).length).fill(null),
   );
   // Stable IDs for additional image slots (avoids React index-key warnings)
   const [slotIds, setSlotIds] = useState<string[]>(() =>
@@ -261,23 +285,6 @@ export default function ProductFormModal({
   const totalImages =
     (formData.image || imageFile ? 1 : 0) + formData.images.length;
   const isPageLayout = layout === "page";
-
-  /** Per-field validators — each returns an error string or undefined. */
-  const validateName = (v: string) => {
-    if (!v.trim()) return PRODUCT_ERRORS.NAME_REQUIRED;
-    if (v.trim().length < 2) return PRODUCT_ERRORS.NAME_TOO_SHORT;
-    return undefined;
-  };
-  const validateDescription = (v: string) =>
-    v.trim() ? undefined : PRODUCT_ERRORS.DESCRIPTION_REQUIRED;
-  const validatePrice = (v: number) =>
-    !v || v <= 0 ? PRODUCT_ERRORS.PRICE_POSITIVE : undefined;
-  const validateStock = (v: number) =>
-    v < 0 || !Number.isInteger(v) ? PRODUCT_ERRORS.STOCK_INVALID : undefined;
-  const validateCategory = (v: string) =>
-    v.trim() ? undefined : PRODUCT_ERRORS.CATEGORY_REQUIRED;
-  const validateImage = (hasExisting: boolean, hasFile: boolean) =>
-    !hasExisting && !hasFile ? PRODUCT_ERRORS.IMAGE_REQUIRED : undefined;
 
   /** Validate all fields and return true if there are no errors. */
   const validate = (): boolean => {

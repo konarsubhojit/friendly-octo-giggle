@@ -26,7 +26,11 @@ interface WishlistCardProps {
   readonly onRemove: (productId: string) => void;
 }
 
-const WishlistCard = ({ product, formatPrice, onRemove }: WishlistCardProps) => (
+const WishlistCard = ({
+  product,
+  formatPrice,
+  onRemove,
+}: WishlistCardProps) => (
   <div className="bg-[var(--surface)] rounded-3xl shadow-warm overflow-hidden border border-[var(--border-warm)] group hover:shadow-warm-lg hover:scale-[1.02] hover:-translate-y-1 hover:border-[var(--accent-rose)] transition-all duration-300 relative">
     <Link
       href={`/products/${product.id}`}
@@ -93,10 +97,13 @@ const WishlistPage = () => {
     }
   }, [authStatus, dispatch]);
 
-  const handleRemove = useCallback((productId: string) => {
-    dispatch(optimisticToggle(productId));
-    dispatch(removeFromWishlist(productId));
-  }, [dispatch]);
+  const handleRemove = useCallback(
+    (productId: string) => {
+      dispatch(optimisticToggle(productId));
+      dispatch(removeFromWishlist(productId));
+    },
+    [dispatch],
+  );
 
   if (authStatus === "loading" || loading) {
     return (
@@ -124,6 +131,12 @@ const WishlistPage = () => {
     );
   }
 
+  const plural = products.length === 1 ? "" : "s";
+  const wishlistCountText =
+    products.length === 0
+      ? "Your wishlist is empty"
+      : `${products.length} saved item${plural}`;
+
   return (
     <div className="min-h-screen bg-warm-gradient">
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
@@ -131,11 +144,7 @@ const WishlistPage = () => {
           <GradientHeading as="h1" size="xl">
             My Wishlist
           </GradientHeading>
-          <p className="text-[var(--text-muted)] mt-1">
-            {products.length === 0
-              ? "Your wishlist is empty"
-              : `${products.length} saved item${products.length !== 1 ? "s" : ""}`}
-          </p>
+          <p className="text-[var(--text-muted)] mt-1">{wishlistCountText}</p>
         </div>
 
         {error && (

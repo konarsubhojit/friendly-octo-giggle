@@ -25,9 +25,10 @@ interface ReviewsSectionProps {
 }
 
 const ReviewCard = ({ review }: { readonly review: Review }) => {
-  const displayName = review.isAnonymous || !review.user
-    ? "Anonymous"
-    : (review.user.name ?? "Customer");
+  const displayName =
+    review.isAnonymous || !review.user
+      ? "Anonymous"
+      : (review.user.name ?? "Customer");
 
   return (
     <div className="flex gap-4 py-5 border-b border-[var(--border-warm)] last:border-0">
@@ -43,7 +44,10 @@ const ReviewCard = ({ review }: { readonly review: Review }) => {
           />
         ) : (
           <div className="w-10 h-10 rounded-full bg-[var(--accent-blush)] flex items-center justify-center">
-            <span className="text-sm font-bold text-[var(--accent-rose)]" aria-hidden="true">
+            <span
+              className="text-sm font-bold text-[var(--accent-rose)]"
+              aria-hidden="true"
+            >
               {displayName[0]?.toUpperCase()}
             </span>
           </div>
@@ -76,8 +80,7 @@ const ReviewCard = ({ review }: { readonly review: Review }) => {
 const RatingSummary = ({ reviews }: { readonly reviews: Review[] }) => {
   if (reviews.length === 0) return null;
 
-  const avg =
-    reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
+  const avg = reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
 
   const counts = [5, 4, 3, 2, 1].map((star) => ({
     star,
@@ -108,7 +111,9 @@ const RatingSummary = ({ reviews }: { readonly reviews: Review[] }) => {
               <div
                 className="h-full bg-amber-400 rounded-full transition-all duration-500"
                 style={{
-                  width: reviews.length ? `${(count / reviews.length) * 100}%` : "0%",
+                  width: reviews.length
+                    ? `${(count / reviews.length) * 100}%`
+                    : "0%",
                 }}
               />
             </div>
@@ -151,6 +156,24 @@ export const ReviewsSection = ({ productId }: ReviewsSectionProps) => {
     fetchReviews();
   };
 
+  const reviewsContent =
+    reviews.length === 0 ? (
+      <div className="text-center py-8">
+        <p className="text-[var(--text-muted)] text-sm">
+          No reviews yet. Be the first to share your thoughts!
+        </p>
+      </div>
+    ) : (
+      <>
+        <RatingSummary reviews={reviews} />
+        <div>
+          {reviews.map((review) => (
+            <ReviewCard key={review.id} review={review} />
+          ))}
+        </div>
+      </>
+    );
+
   return (
     <section aria-labelledby="reviews-heading" className="mt-12">
       <Card className="p-6 sm:p-8">
@@ -178,10 +201,7 @@ export const ReviewsSection = ({ productId }: ReviewsSectionProps) => {
             <h3 className="text-base font-semibold text-[var(--foreground)] mb-4">
               Share Your Experience
             </h3>
-            <ReviewForm
-              productId={productId}
-              onSuccess={handleReviewSuccess}
-            />
+            <ReviewForm productId={productId} onSuccess={handleReviewSuccess} />
             <button
               type="button"
               onClick={() => setShowForm(false)}
@@ -194,23 +214,13 @@ export const ReviewsSection = ({ productId }: ReviewsSectionProps) => {
 
         {loading ? (
           <div className="flex justify-center py-8">
-            <div className="animate-spin rounded-full h-6 w-6 border-2 border-[var(--accent-rose)] border-t-transparent" aria-label="Loading reviews" />
-          </div>
-        ) : reviews.length === 0 ? (
-          <div className="text-center py-8">
-            <p className="text-[var(--text-muted)] text-sm">
-              No reviews yet. Be the first to share your thoughts!
-            </p>
+            <div
+              className="animate-spin rounded-full h-6 w-6 border-2 border-[var(--accent-rose)] border-t-transparent"
+              aria-label="Loading reviews"
+            />
           </div>
         ) : (
-          <>
-            <RatingSummary reviews={reviews} />
-            <div>
-              {reviews.map((review) => (
-                <ReviewCard key={review.id} review={review} />
-              ))}
-            </div>
-          </>
+          reviewsContent
         )}
       </Card>
     </section>

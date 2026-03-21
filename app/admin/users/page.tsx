@@ -71,6 +71,30 @@ export default function UsersManagement() {
     }
   };
 
+  const usersContent =
+    users.length === 0 ? (
+      <EmptyState
+        title={search ? "No users found" : "No items found"}
+        message={search ? "Try a different search term." : undefined}
+      />
+    ) : (
+      <>
+        <UsersTable
+          users={users}
+          updatingUserId={updatingUserId}
+          onRoleChange={handleRoleChange}
+        />
+        <CursorPaginationBar
+          currentPage={currentPage}
+          hasMore={hasMore}
+          loading={loading}
+          cursorHistoryLength={cursorHistoryLength}
+          onPrev={handlePrev}
+          onNext={handleNext}
+        />
+      </>
+    );
+
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <AdminBreadcrumbs
@@ -112,27 +136,8 @@ export default function UsersManagement() {
         <div className="flex items-center justify-center py-12">
           <LoadingSpinner />
         </div>
-      ) : users.length === 0 ? (
-        <EmptyState
-          title={search ? "No users found" : "No items found"}
-          message={search ? "Try a different search term." : undefined}
-        />
       ) : (
-        <>
-          <UsersTable
-            users={users}
-            updatingUserId={updatingUserId}
-            onRoleChange={handleRoleChange}
-          />
-          <CursorPaginationBar
-            currentPage={currentPage}
-            hasMore={hasMore}
-            loading={loading}
-            cursorHistoryLength={cursorHistoryLength}
-            onPrev={handlePrev}
-            onNext={handleNext}
-          />
-        </>
+        usersContent
       )}
     </main>
   );
