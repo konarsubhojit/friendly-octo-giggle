@@ -91,7 +91,7 @@ export default function OrdersPage() {
   if (isInitialLoading) {
     return (
       <div className="min-h-screen bg-warm-gradient">
-        <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
+        <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
           <div className="flex items-center justify-center py-20">
             <LoadingSpinner />
           </div>
@@ -103,7 +103,7 @@ export default function OrdersPage() {
   if (!session?.user) {
     return (
       <div className="min-h-screen bg-warm-gradient">
-        <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
+        <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
           <AuthRequiredState
             callbackUrl="/orders"
             message="Please sign in to view your orders."
@@ -142,7 +142,7 @@ export default function OrdersPage() {
 
   return (
     <div className="min-h-screen bg-warm-gradient">
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
         <GradientHeading className="mb-6">My Orders</GradientHeading>
 
         <OrdersSearchForm

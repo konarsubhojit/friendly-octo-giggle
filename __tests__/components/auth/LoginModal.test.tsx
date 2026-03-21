@@ -1,8 +1,15 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, act, waitFor } from "@testing-library/react";
+import { describe, it, expect, vi, beforeAll, beforeEach } from "vitest";
+import {
+  render,
+  screen,
+  fireEvent,
+  act,
+  waitFor,
+} from "@testing-library/react";
 import React from "react";
+import LoginModal from "@/components/auth/LoginModal";
 
-const mockSignIn = vi.fn();
+const mockSignIn = vi.hoisted(() => vi.fn());
 vi.mock("next-auth/react", () => ({
   signIn: mockSignIn,
 }));
@@ -30,20 +37,21 @@ vi.mock("next/link", () => ({
   ),
 }));
 
-describe("LoginModal", () => {
-  let LoginModal: typeof import("@/components/auth/LoginModal").default;
+beforeAll(() => {
+  HTMLDialogElement.prototype.showModal = vi.fn(function (
+    this: HTMLDialogElement,
+  ) {
+    this.setAttribute("open", "");
+    this.setAttribute("aria-modal", "true");
+  });
+  HTMLDialogElement.prototype.close = vi.fn(function (this: HTMLDialogElement) {
+    this.removeAttribute("open");
+  });
+});
 
-  beforeEach(async () => {
+describe("LoginModal", () => {
+  beforeEach(() => {
     vi.clearAllMocks();
-    vi.resetModules();
-    HTMLDialogElement.prototype.showModal = vi.fn(function (this: HTMLDialogElement) {
-      this.setAttribute("open", "");
-      this.setAttribute("aria-modal", "true");
-    });
-    HTMLDialogElement.prototype.close = vi.fn(function (this: HTMLDialogElement) {
-      this.removeAttribute("open");
-    });
-    LoginModal = (await import("@/components/auth/LoginModal")).default;
   });
 
   it("renders nothing when not open", () => {
@@ -71,7 +79,8 @@ describe("LoginModal", () => {
   it("closes on backdrop click", () => {
     const onClose = vi.fn();
     render(<LoginModal isOpen={true} onClose={onClose} />);
-    const backdrop = screen.getByText("Welcome Back")
+    const backdrop = screen
+      .getByText("Welcome Back")
       .closest("dialog")
       ?.querySelector('[aria-hidden="true"]');
     if (backdrop) {
@@ -162,7 +171,9 @@ describe("LoginModal", () => {
     });
 
     act(() => {
-      fireEvent.submit(screen.getByText("Login").closest("form") as HTMLFormElement);
+      fireEvent.submit(
+        screen.getByText("Login").closest("form") as HTMLFormElement,
+      );
     });
 
     await waitFor(() => {
@@ -188,7 +199,9 @@ describe("LoginModal", () => {
     });
 
     act(() => {
-      fireEvent.submit(screen.getByText("Login").closest("form") as HTMLFormElement);
+      fireEvent.submit(
+        screen.getByText("Login").closest("form") as HTMLFormElement,
+      );
     });
 
     await waitFor(() => {
@@ -211,7 +224,9 @@ describe("LoginModal", () => {
     });
 
     act(() => {
-      fireEvent.submit(screen.getByText("Login").closest("form") as HTMLFormElement);
+      fireEvent.submit(
+        screen.getByText("Login").closest("form") as HTMLFormElement,
+      );
     });
 
     await waitFor(() => {

@@ -79,7 +79,7 @@ function DetailsSkeleton() {
 export default function ProductDetailLoading() {
   return (
     <div className="min-h-screen bg-warm-gradient">
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
         {/* Breadcrumb Skeleton */}
         <nav className="mb-6 flex items-center gap-2">
           <div className="h-4 w-12 bg-[var(--accent-blush)] rounded animate-pulse" />

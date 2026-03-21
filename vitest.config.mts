@@ -6,12 +6,17 @@ export default defineConfig({
   plugins: [tsconfigPaths(), react()],
   test: {
     environment: "jsdom",
+    pool: "threads",
     maxConcurrency: 128,
     globals: true,
     maxWorkers: 8,
     fileParallelism: true,
     setupFiles: ["__tests__/setup.ts"],
     include: ["__tests__/**/*.test.{ts,tsx}"],
+    environmentMatchGlobs: [
+      ["__tests__/lib/**/*.test.ts", "node"],
+      ["__tests__/app/api/**/*.test.ts", "node"],
+    ],
     coverage: {
       provider: "v8",
       reporter: ["text", "lcov"],

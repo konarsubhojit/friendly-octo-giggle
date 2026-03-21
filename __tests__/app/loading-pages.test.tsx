@@ -111,3 +111,70 @@ describe("app/products/[id]/loading.tsx – Product Detail Loading", () => {
     expect(pulseElements.length).toBeGreaterThan(0);
   });
 });
+
+describe("app/wishlist/loading.tsx – Wishlist Loading", () => {
+  it("renders without crashing", async () => {
+    const { default: WishlistLoading } = await import("@/app/wishlist/loading");
+    const { container } = render(<WishlistLoading />);
+    expect(container).toBeTruthy();
+  });
+
+  it("uses pt-8 spacing (not pt-28)", async () => {
+    const { default: WishlistLoading } = await import("@/app/wishlist/loading");
+    const { container } = render(<WishlistLoading />);
+    const main = container.querySelector("main");
+    expect(main?.className).toContain("pt-8");
+    expect(main?.className).not.toContain("pt-28");
+  });
+
+  it("contains animate-pulse elements", async () => {
+    const { default: WishlistLoading } = await import("@/app/wishlist/loading");
+    const { container } = render(<WishlistLoading />);
+    expect(container.querySelectorAll(".animate-pulse").length).toBeGreaterThan(
+      0,
+    );
+  });
+});
+
+describe("app/shop/loading.tsx – Shop Loading", () => {
+  it("renders without crashing", async () => {
+    const { default: ShopLoading } = await import("@/app/shop/loading");
+    const { container } = render(<ShopLoading />);
+    expect(container).toBeTruthy();
+  });
+
+  it("uses pt-8 spacing (not pt-28)", async () => {
+    const { default: ShopLoading } = await import("@/app/shop/loading");
+    const { container } = render(<ShopLoading />);
+    const section = container.querySelector("section");
+    expect(section?.className).toContain("pt-8");
+    expect(section?.className).not.toContain("pt-28");
+  });
+
+  it("contains animate-pulse elements", async () => {
+    const { default: ShopLoading } = await import("@/app/shop/loading");
+    const { container } = render(<ShopLoading />);
+    expect(container.querySelectorAll(".animate-pulse").length).toBeGreaterThan(
+      0,
+    );
+  });
+});
+
+describe("Spacing consistency – pt-8 on all loading skeletons", () => {
+  it("products loading uses pt-8", async () => {
+    const { default: ProductsLoading } = await import("@/app/products/loading");
+    const { container } = render(<ProductsLoading />);
+    const main = container.querySelector("main");
+    expect(main?.className).toContain("pt-8");
+    expect(main?.className).not.toContain("pt-28");
+  });
+
+  it("product detail loading uses pt-8", async () => {
+    const { default: ProductDetailLoading } =
+      await import("@/app/products/[id]/loading");
+    const { container } = render(<ProductDetailLoading />);
+    const main = container.querySelector("main");
+    expect(main?.className).toContain("pt-8");
+    expect(main?.className).not.toContain("pt-28");
+  });
+});

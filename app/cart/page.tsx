@@ -184,7 +184,7 @@ export default function CartPage() {
   if ((loading && cart === null) || status === "loading") {
     return (
       <div className="min-h-screen bg-warm-gradient">
-        <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
+        <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
           <div className="flex items-center justify-center py-20">
             <LoadingSpinner />
           </div>
@@ -196,7 +196,7 @@ export default function CartPage() {
   if (!session?.user) {
     return (
       <div className="min-h-screen bg-warm-gradient">
-        <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
+        <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
           <AuthRequiredState
             callbackUrl="/cart"
             message="Please sign in to view your cart and place orders."
@@ -216,7 +216,7 @@ export default function CartPage() {
 
   return (
     <div className="min-h-screen bg-warm-gradient">
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16 relative">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 relative">
         {/* Decorative leaf accents */}
         <LeafAccent className="absolute top-32 right-4 w-8 h-8 opacity-20 hidden sm:block animate-float-gentle" />
         <LeafAccent className="absolute bottom-20 left-2 w-10 h-10 opacity-15 hidden sm:block animate-float-slow" />
