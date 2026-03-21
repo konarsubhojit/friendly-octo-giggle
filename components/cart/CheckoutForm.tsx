@@ -92,9 +92,7 @@ export const CheckoutForm = ({
           rows={3}
           placeholder="Enter your shipping address"
           disabled={isPending}
-          aria-describedby={
-            addressError ? "checkout-address-error" : undefined
-          }
+          aria-describedby={addressError ? "checkout-address-error" : undefined}
           className="w-full px-3 py-2 border border-[var(--border-warm)] rounded-xl text-sm text-[var(--foreground)] bg-[var(--surface)]/50 placeholder-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-warm)]/40 focus:border-[var(--accent-warm)] disabled:opacity-50 disabled:cursor-not-allowed resize-none transition-colors"
         />
         {addressError && (

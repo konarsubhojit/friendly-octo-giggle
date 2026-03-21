@@ -179,17 +179,19 @@ export const createOrder = async (
     return { success: false, error: "Failed to create order" };
   }
 
-  waitUntil(writeOrderToRedis({
-    id: orderId,
-    userId,
-    customerName,
-    customerEmail,
-    customerAddress,
-    total,
-    status: "PENDING",
-    items,
-    createdAt,
-  }));
+  waitUntil(
+    writeOrderToRedis({
+      id: orderId,
+      userId,
+      customerName,
+      customerEmail,
+      customerAddress,
+      total,
+      status: "PENDING",
+      items,
+      createdAt,
+    }),
+  );
 
   logBusinessEvent({
     event: "order_created",
