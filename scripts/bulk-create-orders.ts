@@ -3,7 +3,7 @@ import { config } from "dotenv";
 config({ path: ".env.local" });
 config({ path: ".env", override: false });
 
-import { randomBytes } from "node:crypto";
+import { randomBytes, randomInt as cryptoRandomInt } from "node:crypto";
 import { Pool } from "@neondatabase/serverless";
 
 type QueryableClient = Pick<Pool, "query">;
@@ -98,7 +98,7 @@ const createWord = (minLength: number, maxLength: number): string => {
 };
 
 const randomInt = (min: number, max: number): number =>
-  Math.floor(Math.random() * (max - min + 1)) + min;
+  cryptoRandomInt(min, max + 1);
 
 const randomDateWithinLast180Days = (): Date => {
   const now = Date.now();
@@ -107,12 +107,12 @@ const randomDateWithinLast180Days = (): Date => {
 };
 
 const weightedStatus = (): string => {
-  const roll = Math.random();
+  const roll = cryptoRandomInt(0, 100);
 
-  if (roll < 0.35) return "DELIVERED";
-  if (roll < 0.6) return "SHIPPED";
-  if (roll < 0.8) return "PROCESSING";
-  if (roll < 0.97) return "PENDING";
+  if (roll < 35) return "DELIVERED";
+  if (roll < 60) return "SHIPPED";
+  if (roll < 80) return "PROCESSING";
+  if (roll < 97) return "PENDING";
   return "CANCELLED";
 };
 
@@ -136,7 +136,7 @@ const createRandomAddress = (): string =>
 const pickVariation = (
   product: ProductRow,
 ): { id: string; name: string; priceModifier: number } | null => {
-  if (product.variations.length === 0 || Math.random() >= 0.65) {
+  if (product.variations.length === 0 || cryptoRandomInt(0, 100) >= 65) {
     return null;
   }
 
