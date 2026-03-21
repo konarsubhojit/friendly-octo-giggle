@@ -1,17 +1,25 @@
-'use client';
+"use client";
 
-import { useEffect, useState, useRef, useCallback, use } from 'react';
-import type { ReactElement } from 'react';
-import Link from 'next/link';
-import Image from 'next/image';
-import { useSession } from 'next-auth/react';
-import { useSelector, useDispatch } from 'react-redux';
-import { useCurrency } from '@/contexts/CurrencyContext';
-import { fetchOrderById, cancelOrder, selectCurrentOrder, selectOrderDetailLoading, selectOrdersError, selectOrderCancelling, clearCurrentOrder } from '@/lib/features/orders/ordersSlice';
-import type { AppDispatch } from '@/lib/store';
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
-import { AuthRequiredState } from '@/components/ui/AuthRequiredState';
-import { Card } from '@/components/ui/Card';
+import { useEffect, useState, useRef, useCallback, use } from "react";
+import type { ReactElement } from "react";
+import Link from "next/link";
+import Image from "next/image";
+import { useSession } from "next-auth/react";
+import { useSelector, useDispatch } from "react-redux";
+import { useCurrency } from "@/contexts/CurrencyContext";
+import {
+  fetchOrderById,
+  cancelOrder,
+  selectCurrentOrder,
+  selectOrderDetailLoading,
+  selectOrdersError,
+  selectOrderCancelling,
+  clearCurrentOrder,
+} from "@/lib/features/orders/ordersSlice";
+import type { AppDispatch } from "@/lib/store";
+import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import { AuthRequiredState } from "@/components/ui/AuthRequiredState";
+import { Card } from "@/components/ui/Card";
 
 interface CancelOrderDialogProps {
   readonly dialogRef: React.RefObject<HTMLDialogElement | null>;
@@ -20,7 +28,12 @@ interface CancelOrderDialogProps {
   readonly onConfirm: () => void;
 }
 
-function CancelOrderDialog({ dialogRef, cancelling, onClose, onConfirm }: CancelOrderDialogProps) {
+function CancelOrderDialog({
+  dialogRef,
+  cancelling,
+  onClose,
+  onConfirm,
+}: CancelOrderDialogProps) {
   return (
     <dialog
       ref={dialogRef}
@@ -28,8 +41,15 @@ function CancelOrderDialog({ dialogRef, cancelling, onClose, onConfirm }: Cancel
       onClose={onClose}
       className="backdrop:bg-black/40 backdrop:backdrop-blur-sm bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 max-w-sm w-full mx-4"
     >
-      <h3 id="cancel-dialog-title" className="text-lg font-bold text-[var(--foreground)] mb-2">Cancel Order?</h3>
-      <p className="text-sm text-[var(--text-secondary)] mb-6">This action cannot be undone. Your order will be cancelled immediately.</p>
+      <h3
+        id="cancel-dialog-title"
+        className="text-lg font-bold text-[var(--foreground)] mb-2"
+      >
+        Cancel Order?
+      </h3>
+      <p className="text-sm text-[var(--text-secondary)] mb-6">
+        This action cannot be undone. Your order will be cancelled immediately.
+      </p>
       <div className="flex gap-3 justify-end">
         <button
           onClick={onClose}
@@ -43,7 +63,7 @@ function CancelOrderDialog({ dialogRef, cancelling, onClose, onConfirm }: Cancel
           disabled={cancelling}
           className="px-4 py-2 text-sm font-semibold text-white bg-red-600 rounded-xl hover:bg-red-700 transition-colors disabled:opacity-50"
         >
-          {cancelling ? 'Cancelling...' : 'Yes, Cancel'}
+          {cancelling ? "Cancelling..." : "Yes, Cancel"}
         </button>
       </div>
     </dialog>
@@ -54,14 +74,14 @@ interface OrderDetailPageProps {
   readonly params: Promise<{ id: string }>;
 }
 
-const STATUS_STEPS = ['PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED'] as const;
+const STATUS_STEPS = ["PENDING", "PROCESSING", "SHIPPED", "DELIVERED"] as const;
 
 const STATUS_LABELS: Record<string, string> = {
-  PENDING: 'Order Placed',
-  PROCESSING: 'Processing',
-  SHIPPED: 'Shipped',
-  DELIVERED: 'Delivered',
-  CANCELLED: 'Cancelled',
+  PENDING: "Order Placed",
+  PROCESSING: "Processing",
+  SHIPPED: "Shipped",
+  DELIVERED: "Delivered",
+  CANCELLED: "Cancelled",
 };
 
 const STATUS_STEP_INDEX: Record<string, number> = {
@@ -78,14 +98,16 @@ function getStepIndex(status: string): number {
 
 const STEP_CLASSES = {
   completed: {
-    status: 'bg-gradient-to-r from-[var(--accent-rose)] to-[var(--accent-pink)] text-white shadow-lg',
-    text: 'text-[var(--accent-rose)]',
-    connector: 'bg-gradient-to-r from-[var(--accent-rose)] to-[var(--accent-pink)]',
+    status:
+      "bg-gradient-to-r from-[var(--accent-rose)] to-[var(--accent-pink)] text-white shadow-lg",
+    text: "text-[var(--accent-rose)]",
+    connector:
+      "bg-gradient-to-r from-[var(--accent-rose)] to-[var(--accent-pink)]",
   },
   default: {
-    status: 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400',
-    text: 'text-gray-400 dark:text-gray-500',
-    connector: 'bg-gray-200 dark:bg-gray-700',
+    status: "bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400",
+    text: "text-gray-400 dark:text-gray-500",
+    connector: "bg-gray-200 dark:bg-gray-700",
   },
 } as const;
 
@@ -98,10 +120,20 @@ function StatusTimeline({ currentStep, isCancelled }: StatusTimelineProps) {
   if (isCancelled) {
     return (
       <div className="flex items-center gap-3 p-4 bg-red-50 rounded-xl border border-red-200">
-        <svg className="w-6 h-6 text-red-500" fill="currentColor" viewBox="0 0 20 20">
-          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+        <svg
+          className="w-6 h-6 text-red-500"
+          fill="currentColor"
+          viewBox="0 0 20 20"
+        >
+          <path
+            fillRule="evenodd"
+            d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+            clipRule="evenodd"
+          />
         </svg>
-        <span className="font-semibold text-red-700">This order has been cancelled</span>
+        <span className="font-semibold text-red-700">
+          This order has been cancelled
+        </span>
       </div>
     );
   }
@@ -111,17 +143,25 @@ function StatusTimeline({ currentStep, isCancelled }: StatusTimelineProps) {
       {STATUS_STEPS.map((step, index) => {
         const isCompleted = index <= currentStep;
         const isCurrent = index === currentStep;
-        const classes = STEP_CLASSES[isCompleted ? 'completed' : 'default'];
-        const connectorKey = index < currentStep ? 'completed' : 'default';
+        const classes = STEP_CLASSES[isCompleted ? "completed" : "default"];
+        const connectorKey = index < currentStep ? "completed" : "default";
         return (
           <div key={step} className="flex items-center flex-1">
             <div className="flex flex-col items-center flex-shrink-0">
               <div
-                className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all ${classes.status}${isCurrent ? ' ring-4 ring-[var(--accent-blush)]' : ''}`}
+                className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all ${classes.status}${isCurrent ? " ring-4 ring-[var(--accent-blush)]" : ""}`}
               >
                 {isCompleted ? (
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  <svg
+                    className="w-5 h-5"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                      clipRule="evenodd"
+                    />
                   </svg>
                 ) : (
                   index + 1
@@ -150,7 +190,12 @@ interface OrderItemRowItem {
   readonly price: number;
   readonly customizationNote?: string | null;
   readonly product?: { id: string; name: string; image: string; price: number };
-  readonly variation?: { id: string; name: string; image?: string; priceModifier: number } | null;
+  readonly variation?: {
+    id: string;
+    name: string;
+    image?: string;
+    priceModifier: number;
+  } | null;
 }
 
 interface OrderItemRowProps {
@@ -163,7 +208,13 @@ function OrderItemRow({ item, formatPrice }: OrderItemRowProps) {
   const sections: Record<string, ReactElement | null> = {
     image: image ? (
       <div className="relative w-16 h-16 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700">
-        <Image src={image} alt={item.product?.name || 'Order item'} fill sizes="80px" className="object-cover" />
+        <Image
+          src={image}
+          alt={item.product?.name || "Order item"}
+          fill
+          sizes="80px"
+          className="object-cover"
+        />
       </div>
     ) : null,
     variation: item.variation ? (
@@ -174,11 +225,11 @@ function OrderItemRow({ item, formatPrice }: OrderItemRowProps) {
     customization: item.customizationNote ? (
       <div className="mt-2 ml-20 p-2 bg-amber-50 border border-amber-200 rounded-lg">
         <p className="text-xs text-amber-800">
-          <span className="font-semibold">✏️ Customization:</span>{' '}
+          <span className="font-semibold">✏️ Customization:</span>{" "}
           {item.customizationNote}
         </p>
       </div>
-    ) : null
+    ) : null,
   };
   return (
     <div className="py-3 border-b border-[var(--border-warm)] last:border-0">
@@ -192,9 +243,13 @@ function OrderItemRow({ item, formatPrice }: OrderItemRowProps) {
             {item.product?.name}
           </Link>
           {sections.variation}
-          <p className="text-xs text-[var(--text-muted)]">Qty: {item.quantity}</p>
+          <p className="text-xs text-[var(--text-muted)]">
+            Qty: {item.quantity}
+          </p>
         </div>
-        <p className="text-sm font-bold text-[var(--foreground)]">{formatPrice(item.price * item.quantity)}</p>
+        <p className="text-sm font-bold text-[var(--foreground)]">
+          {formatPrice(item.price * item.quantity)}
+        </p>
       </div>
       {sections.customization}
     </div>
@@ -211,16 +266,29 @@ interface OrderSummaryHeaderProps {
   readonly onCancelClick: () => void;
 }
 
-function OrderSummaryHeader({ orderId, createdAt, totalAmount, status, cancelling, formatPrice, onCancelClick }: OrderSummaryHeaderProps) {
+function OrderSummaryHeader({
+  orderId,
+  createdAt,
+  totalAmount,
+  status,
+  cancelling,
+  formatPrice,
+  onCancelClick,
+}: OrderSummaryHeaderProps) {
   return (
     <div className="flex justify-between items-start flex-wrap gap-4">
       <div>
-        <h1 className="text-2xl font-bold text-[var(--foreground)]">Order #{orderId}</h1>
+        <h1 className="text-2xl font-bold text-[var(--foreground)]">
+          Order #{orderId}
+        </h1>
         <p className="text-sm text-[var(--text-muted)] mt-1">
-          Placed on{' '}
-          {new Date(createdAt).toLocaleDateString('en-US', {
-            year: 'numeric', month: 'long', day: 'numeric',
-            hour: '2-digit', minute: '2-digit',
+          Placed on{" "}
+          {new Date(createdAt).toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
           })}
         </p>
       </div>
@@ -228,7 +296,7 @@ function OrderSummaryHeader({ orderId, createdAt, totalAmount, status, cancellin
         <p className="text-2xl font-bold bg-gradient-to-r from-[var(--accent-rose)] to-[var(--accent-pink)] bg-clip-text text-transparent">
           {formatPrice(totalAmount)}
         </p>
-        {status === 'PENDING' && (
+        {status === "PENDING" && (
           <button
             onClick={onCancelClick}
             disabled={cancelling}
@@ -276,7 +344,7 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
   }, [showCancelConfirm]);
 
   useEffect(() => {
-    if (authStatus === 'authenticated') {
+    if (authStatus === "authenticated") {
       dispatch(fetchOrderById(id));
     }
     return () => {
@@ -284,7 +352,7 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
     };
   }, [authStatus, id, dispatch]);
 
-  if (authStatus === 'loading' || loading) {
+  if (authStatus === "loading" || loading) {
     return (
       <div className="min-h-screen bg-warm-gradient">
         <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
@@ -314,8 +382,13 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
       <div className="min-h-screen bg-warm-gradient">
         <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
           <Card className="p-12 text-center">
-            <h2 className="text-2xl font-bold text-[var(--foreground)] mb-2">{error || 'Order not found'}</h2>
-            <Link href="/orders" className="mt-4 inline-block text-[var(--accent-rose)] hover:underline font-medium">
+            <h2 className="text-2xl font-bold text-[var(--foreground)] mb-2">
+              {error || "Order not found"}
+            </h2>
+            <Link
+              href="/orders"
+              className="mt-4 inline-block text-[var(--accent-rose)] hover:underline font-medium"
+            >
               Back to My Orders
             </Link>
           </Card>
@@ -325,15 +398,28 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
   }
 
   const currentStep = getStepIndex(order.status);
-  const isCancelled = order.status === 'CANCELLED';
+  const isCancelled = order.status === "CANCELLED";
 
   return (
     <div className="min-h-screen bg-warm-gradient">
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
         {/* Back link */}
-        <Link href="/orders" className="inline-flex items-center gap-2 text-[var(--text-secondary)] hover:text-[var(--accent-rose)] transition-colors mb-6">
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+        <Link
+          href="/orders"
+          className="inline-flex items-center gap-2 text-[var(--text-secondary)] hover:text-[var(--accent-rose)] transition-colors mb-6"
+        >
+          <svg
+            className="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M10 19l-7-7m0 0l7-7m-7 7h18"
+            />
           </svg>
           Back to My Orders
         </Link>
@@ -360,16 +446,25 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
 
           {/* Status Timeline */}
           <div className="mt-8">
-            <StatusTimeline currentStep={currentStep} isCancelled={isCancelled} />
+            <StatusTimeline
+              currentStep={currentStep}
+              isCancelled={isCancelled}
+            />
           </div>
         </Card>
 
         {/* Order Items */}
         <Card className="p-8 mb-6">
-          <h2 className="text-lg font-bold text-[var(--foreground)] mb-4">Items</h2>
+          <h2 className="text-lg font-bold text-[var(--foreground)] mb-4">
+            Items
+          </h2>
           <div className="space-y-4">
             {order.items.map((item) => (
-              <OrderItemRow key={item.id} item={item} formatPrice={formatPrice} />
+              <OrderItemRow
+                key={item.id}
+                item={item}
+                formatPrice={formatPrice}
+              />
             ))}
           </div>
         </Card>
@@ -377,18 +472,28 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
         {/* Tracking Info */}
         {(order.trackingNumber || order.shippingProvider) && (
           <Card className="p-8 mb-6">
-            <h2 className="text-lg font-bold text-[var(--foreground)] mb-3">📦 Shipping &amp; Tracking</h2>
+            <h2 className="text-lg font-bold text-[var(--foreground)] mb-3">
+              📦 Shipping &amp; Tracking
+            </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {order.shippingProvider && (
                 <div>
-                  <p className="text-xs font-semibold text-[var(--text-muted)] uppercase">Shipping Provider</p>
-                  <p className="text-sm text-[var(--foreground)] font-medium">{order.shippingProvider}</p>
+                  <p className="text-xs font-semibold text-[var(--text-muted)] uppercase">
+                    Shipping Provider
+                  </p>
+                  <p className="text-sm text-[var(--foreground)] font-medium">
+                    {order.shippingProvider}
+                  </p>
                 </div>
               )}
               {order.trackingNumber && (
                 <div>
-                  <p className="text-xs font-semibold text-[var(--text-muted)] uppercase">Tracking Number</p>
-                  <p className="text-sm text-[var(--foreground)] font-medium font-mono">{order.trackingNumber}</p>
+                  <p className="text-xs font-semibold text-[var(--text-muted)] uppercase">
+                    Tracking Number
+                  </p>
+                  <p className="text-sm text-[var(--foreground)] font-medium font-mono">
+                    {order.trackingNumber}
+                  </p>
                 </div>
               )}
             </div>
@@ -397,8 +502,12 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
 
         {/* Shipping Address */}
         <Card className="p-8">
-          <h2 className="text-lg font-bold text-[var(--foreground)] mb-3">Shipping Address</h2>
-          <p className="text-sm text-[var(--text-secondary)] whitespace-pre-line">{order.customerAddress}</p>
+          <h2 className="text-lg font-bold text-[var(--foreground)] mb-3">
+            Shipping Address
+          </h2>
+          <p className="text-sm text-[var(--text-secondary)] whitespace-pre-line">
+            {order.customerAddress}
+          </p>
         </Card>
       </main>
     </div>
