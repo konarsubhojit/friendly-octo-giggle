@@ -46,10 +46,7 @@ import {
   indexProduct,
   indexProducts,
   removeProduct,
-  indexOrder,
-  // indexOrders is tested indirectly via indexOrder batch pattern
   searchProducts,
-  searchOrders,
   resetIndex,
 } from "@/lib/search";
 
@@ -202,38 +199,6 @@ describe("lib/search", () => {
     });
   });
 
-  // ─── indexOrder ─────────────────────────────────────────
-
-  describe("indexOrder", () => {
-    it("upserts an order document", async () => {
-      await indexOrder({
-        id: "ORD-123456",
-        customerName: "John Doe",
-        customerEmail: "john@example.com",
-        customerAddress: "123 Main St",
-        status: "PENDING",
-        totalAmount: 99.99,
-        createdAt: "2025-01-01T00:00:00.000Z",
-      });
-
-      expect(mockIndex).toHaveBeenCalledWith("orders");
-      expect(mockUpsert).toHaveBeenCalledWith({
-        id: "ORD-123456",
-        content: {
-          orderId: "ORD-123456",
-          customerName: "John Doe",
-          customerEmail: "john@example.com",
-          customerAddress: "123 Main St",
-          status: "PENDING",
-          totalAmount: 99.99,
-        },
-        metadata: {
-          createdAt: "2025-01-01T00:00:00.000Z",
-        },
-      });
-    });
-  });
-
   // ─── searchProducts ─────────────────────────────────────
 
   describe("searchProducts", () => {
@@ -284,23 +249,6 @@ describe("lib/search", () => {
 
       const results = await searchProducts("anything");
       expect(results).toEqual([]);
-    });
-  });
-
-  // ─── searchOrders ───────────────────────────────────────
-
-  describe("searchOrders", () => {
-    it("calls search with query and status filter", async () => {
-      mockSearch.mockResolvedValueOnce([]);
-
-      await searchOrders("john", { status: "PENDING" });
-
-      expect(mockIndex).toHaveBeenCalledWith("orders");
-      expect(mockSearch).toHaveBeenCalledWith({
-        query: "john",
-        limit: 20,
-        filter: "status = 'PENDING'",
-      });
     });
   });
 

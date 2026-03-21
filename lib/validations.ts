@@ -120,6 +120,8 @@ export const EnvSchema = z
   .object({
     DATABASE_URL: z.string(),
     REDIS_URL: z.string().optional(),
+    UPSTASH_REDIS_REST_URL: z.url().optional(),
+    UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
     NODE_ENV: z.enum(["development", "production", "test"]).optional(),
     EXCHANGE_RATE_API_KEY: z.string().optional(),
     MAILERSEND_API_KEY: z.string().optional(),

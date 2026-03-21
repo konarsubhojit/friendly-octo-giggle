@@ -1,8 +1,7 @@
 /**
- * Upstash Search integration for products and orders.
+ * Upstash Search integration for products.
  *
  * Uses @upstash/search for AI-powered full-text search.
- * Products and orders live in separate indexes.
  *
  * Requires UPSTASH_SEARCH_REST_URL and UPSTASH_SEARCH_REST_TOKEN
  * environment variables. When not configured, search operations
@@ -15,14 +14,6 @@ import { drizzleDb } from "./db";
 import { categories as categoriesTable } from "./schema";
 import { isNull } from "drizzle-orm";
 
-const VALID_ORDER_STATUSES = [
-  "PENDING",
-  "PROCESSING",
-  "SHIPPED",
-  "DELIVERED",
-  "CANCELLED",
-] as const;
-
 // ─── Content types (searchable + filterable) ─────────────
 
 export type ProductContent = {
@@ -33,29 +24,15 @@ export type ProductContent = {
   stock: number;
 };
 
-export type OrderContent = {
-  orderId: string;
-  customerName: string;
-  customerEmail: string;
-  customerAddress: string;
-  status: string;
-  totalAmount: number;
-};
-
 // ─── Metadata types (not searchable, returned with results)
 
 export type ProductMetadata = {
   image: string;
 };
 
-export type OrderMetadata = {
-  createdAt: string;
-};
-
 // ─── Index names ─────────────────────────────────────────
 
 const PRODUCTS_INDEX = "products";
-const ORDERS_INDEX = "orders";
 
 // ─── Client singleton ────────────────────────────────────
 
@@ -182,92 +159,6 @@ export async function removeProduct(productId: string): Promise<void> {
   }
 }
 
-// ─── Order indexing ──────────────────────────────────────
-
-export async function indexOrder(order: {
-  id: string;
-  customerName: string;
-  customerEmail: string;
-  customerAddress: string;
-  status: string;
-  totalAmount: number;
-  createdAt: string;
-}): Promise<void> {
-  if (!isSearchAvailable()) return;
-
-  try {
-    const client = getClient();
-    const index = client.index<OrderContent, OrderMetadata>(ORDERS_INDEX);
-
-    await index.upsert({
-      id: order.id,
-      content: {
-        orderId: order.id,
-        customerName: order.customerName,
-        customerEmail: order.customerEmail,
-        customerAddress: order.customerAddress,
-        status: order.status,
-        totalAmount: order.totalAmount,
-      },
-      metadata: {
-        createdAt: order.createdAt,
-      },
-    });
-  } catch (error) {
-    logError({
-      error,
-      context: "search",
-      additionalInfo: { operation: "indexOrder", id: order.id },
-    });
-  }
-}
-
-export async function indexOrders(
-  ordersList: Array<{
-    id: string;
-    customerName: string;
-    customerEmail: string;
-    customerAddress: string;
-    status: string;
-    totalAmount: number;
-    createdAt: string;
-  }>,
-): Promise<void> {
-  if (!isSearchAvailable() || ordersList.length === 0) return;
-
-  try {
-    const client = getClient();
-    const index = client.index<OrderContent, OrderMetadata>(ORDERS_INDEX);
-
-    const BATCH_SIZE = 1000;
-    for (let i = 0; i < ordersList.length; i += BATCH_SIZE) {
-      const batch = ordersList.slice(i, i + BATCH_SIZE);
-      await index.upsert(
-        batch.map((o) => ({
-          id: o.id,
-          content: {
-            orderId: o.id,
-            customerName: o.customerName,
-            customerEmail: o.customerEmail,
-            customerAddress: o.customerAddress,
-            status: o.status,
-            totalAmount: o.totalAmount,
-          },
-          metadata: {
-            createdAt: o.createdAt,
-          },
-        })),
-      );
-    }
-  } catch (error) {
-    logError({
-      error,
-      context: "search",
-      additionalInfo: { operation: "indexOrders" },
-    });
-  }
-}
-
 // ─── Search queries ──────────────────────────────────────
 
 export interface ProductSearchResult {
@@ -275,13 +166,6 @@ export interface ProductSearchResult {
   score: number;
   content: ProductContent;
   metadata: ProductMetadata;
-}
-
-export interface OrderSearchResult {
-  id: string;
-  score: number;
-  content: OrderContent;
-  metadata: OrderMetadata;
 }
 
 export async function searchProducts(
@@ -321,42 +205,9 @@ export async function searchProducts(
   }));
 }
 
-export async function searchOrders(
-  query: string,
-  options: { limit?: number; status?: string } = {},
-): Promise<OrderSearchResult[]> {
-  if (!isSearchAvailable()) return [];
-
-  const { limit = 20, status } = options;
-
-  const client = getClient();
-  const index = client.index<OrderContent, OrderMetadata>(ORDERS_INDEX);
-
-  const validStatus =
-    status && (VALID_ORDER_STATUSES as readonly string[]).includes(status)
-      ? status
-      : undefined;
-  const filter = validStatus ? `status = '${validStatus}'` : undefined;
-
-  const results = await index.search({
-    query,
-    limit,
-    ...(filter ? { filter } : {}),
-  });
-
-  return results.map((r) => ({
-    id: String(r.id),
-    score: r.score,
-    content: r.content,
-    metadata: r.metadata ?? { createdAt: "" },
-  }));
-}
-
 // ─── Admin: reset indexes ────────────────────────────────
 
-export async function resetIndex(
-  indexName: "products" | "orders",
-): Promise<void> {
+export async function resetIndex(indexName: "products"): Promise<void> {
   if (!isSearchAvailable()) return;
 
   const client = getClient();

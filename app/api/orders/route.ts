@@ -29,8 +29,8 @@ import { sendOrderConfirmationEmail } from "@/lib/email";
 import { getQStashClient } from "@/lib/qstash";
 import type { OrderCreatedEvent } from "@/lib/qstash-events";
 import { env } from "@/lib/env";
-import { indexOrder } from "@/lib/search";
-import { searchOrderIds } from "@/lib/search-service";
+
+import { searchUserOrdersRedis } from "@/actions/orders";
 import {
   formatPriceForCurrency,
   isValidCurrencyCode,
@@ -217,21 +217,25 @@ const handleGet = async (request: NextRequest) => {
     );
 
     if (search) {
-      const matchedIds = await searchOrderIds(search, { limit: limit * 5 });
-
-      if (matchedIds === null) {
+      const redisIds = await searchUserOrdersRedis(
+        session.user.id,
+        search,
+        limit * 5,
+      );
+      if (redisIds !== null) {
+        if (redisIds.length === 0) {
+          return NextResponse.json({
+            orders: [],
+            nextCursor: null,
+            hasMore: false,
+          });
+        }
+        conditions.push(inArray(orders.id, redisIds));
+      } else {
         const pattern = `%${search}%`;
         conditions.push(
           or(ilike(orders.id, pattern), ilike(orders.status, pattern)) as SQL,
         );
-      } else if (matchedIds.length === 0) {
-        return NextResponse.json({
-          orders: [],
-          nextCursor: null,
-          hasMore: false,
-        });
-      } else {
-        conditions.push(inArray(orders.id, matchedIds));
       }
     }
 
@@ -465,16 +469,6 @@ const handlePost = async (request: NextRequest) => {
         customerEmail: fullOrder.customerEmail,
       },
       success: true,
-    });
-
-    void indexOrder({
-      id: fullOrder.id,
-      customerName: fullOrder.customerName,
-      customerEmail: fullOrder.customerEmail,
-      customerAddress: fullOrder.customerAddress,
-      status: fullOrder.status,
-      totalAmount: fullOrder.totalAmount,
-      createdAt: fullOrder.createdAt.toISOString(),
     });
 
     const productCacheKeys = [

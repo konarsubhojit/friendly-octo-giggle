@@ -6,7 +6,7 @@ import { apiSuccess, apiError, handleApiError } from "@/lib/api-utils";
 import { checkAdminAuth } from "@/lib/admin-auth";
 import { serializeOrders } from "@/lib/serializers";
 import { OrderStatus } from "@/lib/types";
-import { searchOrderIds } from "@/lib/search-service";
+import { searchAllOrdersRedis } from "@/actions/orders";
 
 export const dynamic = "force-dynamic";
 
@@ -58,25 +58,21 @@ const buildStatusCondition = (
 const buildSearchCondition = async (
   search: string,
   limit: number,
-  statusFilter: string,
 ): Promise<{ condition: SQL | null; empty: boolean }> => {
-  const matchedIds = await searchOrderIds(search, {
-    limit: limit * 5,
-    status: statusFilter && statusFilter !== "ALL" ? statusFilter : undefined,
-  });
-  if (matchedIds === null) {
-    const pattern = `%${search}%`;
-    return {
-      condition: or(
-        ilike(orders.customerName, pattern),
-        ilike(orders.customerEmail, pattern),
-        ilike(orders.id, pattern),
-      ) as SQL,
-      empty: false,
-    };
+  const redisIds = await searchAllOrdersRedis(search, limit * 5);
+  if (redisIds !== null) {
+    if (redisIds.length === 0) return { condition: null, empty: true };
+    return { condition: inArray(orders.id, redisIds), empty: false };
   }
-  if (matchedIds.length === 0) return { condition: null, empty: true };
-  return { condition: inArray(orders.id, matchedIds), empty: false };
+  const pattern = `%${search}%`;
+  return {
+    condition: or(
+      ilike(orders.customerName, pattern),
+      ilike(orders.customerEmail, pattern),
+      ilike(orders.id, pattern),
+    ) as SQL,
+    empty: false,
+  };
 };
 
 const resolveWhereClause = (conditions: SQL[]): SQL | undefined => {
@@ -112,7 +108,6 @@ export const GET = async (request: NextRequest) => {
       const { condition: searchCond, empty } = await buildSearchCondition(
         search,
         limit,
-        statusFilter,
       );
       if (empty)
         return apiSuccess({ orders: [], nextCursor: null, hasMore: false });
