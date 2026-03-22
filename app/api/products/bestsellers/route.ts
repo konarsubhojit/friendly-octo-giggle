@@ -3,6 +3,7 @@ import { apiSuccess, handleApiError } from '@/lib/api-utils';
 import { withLogging } from '@/lib/api-middleware';
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
+import { cacheProductsBestsellers } from '@/lib/cache';
 
 /**
  * GET /api/products/bestsellers
@@ -25,10 +26,9 @@ const handleGet = async (request: NextRequest) => {
       limit: request.nextUrl.searchParams.get('limit') ?? undefined,
     });
 
-    const products = await db.products.findBestsellers({
-      limit: parsed.limit,
-      withCache: true,
-    });
+    const products = await cacheProductsBestsellers(
+      () => db.products.findBestsellers({ limit: parsed.limit })
+    );
 
     const response = apiSuccess({ products });
     response.headers.set('Cache-Control', 's-maxage=120, stale-while-revalidate=60');

@@ -51,11 +51,9 @@ import { Product, ProductInput } from "./types";
 import { env } from "./env";
 import {
   cacheProductById,
-  cacheProductsBestsellers,
   invalidateProductCaches,
   cacheShareResolve,
 } from "./cache";
-import { getCachedData } from "./redis";
 import { serializeProduct, serializeVariation } from "./serializers";
 
 // All schema tables and relations collected into one object for Drizzle relational queries
@@ -174,90 +172,82 @@ export const db = {
      * @param options - Pagination and cache options
      * @returns Array of products sorted by sales volume descending
      */
-    findBestsellers: (options: ProductListOptions = {}): Promise<Product[]> => {
-      const { limit = 5, withCache = false } = options;
+    findBestsellers: async (
+      options: ProductListOptions = {},
+    ): Promise<Product[]> => {
+      const { limit = 5 } = options;
 
-      const fetcher = async () => {
-        // Single SQL query: LEFT JOIN a sales-aggregate subquery so products
-        // with no sales still appear (totalSold = 0), then sort + limit in DB.
-        const salesSubquery = drizzleDb
-          .select({
-            productId: orderItems.productId,
-            totalSold:
-              sql<number>`cast(coalesce(sum(${orderItems.quantity}), 0) as int)`.as(
-                "total_sold",
-              ),
-          })
-          .from(orderItems)
-          .innerJoin(
-            orders,
-            and(
-              eq(orders.id, orderItems.orderId),
-              ne(orders.status, "CANCELLED"),
+      // Single SQL query: LEFT JOIN a sales-aggregate subquery so products
+      // with no sales still appear (totalSold = 0), then sort + limit in DB.
+      const salesSubquery = drizzleDb
+        .select({
+          productId: orderItems.productId,
+          totalSold:
+            sql<number>`cast(coalesce(sum(${orderItems.quantity}), 0) as int)`.as(
+              "total_sold",
             ),
-          )
-          .groupBy(orderItems.productId)
-          .as("sales");
+        })
+        .from(orderItems)
+        .innerJoin(
+          orders,
+          and(
+            eq(orders.id, orderItems.orderId),
+            ne(orders.status, "CANCELLED"),
+          ),
+        )
+        .groupBy(orderItems.productId)
+        .as("sales");
 
-        let bestsellerQuery = drizzleDb
-          .select({
-            id: products.id,
-            name: products.name,
-            description: products.description,
-            price: products.price,
-            image: products.image,
-            images: products.images,
-            stock: products.stock,
-            category: products.category,
-            deletedAt: products.deletedAt,
-            createdAt: products.createdAt,
-            updatedAt: products.updatedAt,
-          })
-          .from(products)
-          .leftJoin(salesSubquery, eq(products.id, salesSubquery.productId))
-          .where(isNull(products.deletedAt))
-          .orderBy(
-            desc(sql`coalesce(${salesSubquery.totalSold}, 0)`),
-            desc(products.createdAt),
-          )
-          .$dynamic();
+      let bestsellerQuery = drizzleDb
+        .select({
+          id: products.id,
+          name: products.name,
+          description: products.description,
+          price: products.price,
+          image: products.image,
+          images: products.images,
+          stock: products.stock,
+          category: products.category,
+          deletedAt: products.deletedAt,
+          createdAt: products.createdAt,
+          updatedAt: products.updatedAt,
+        })
+        .from(products)
+        .leftJoin(salesSubquery, eq(products.id, salesSubquery.productId))
+        .where(isNull(products.deletedAt))
+        .orderBy(
+          desc(sql`coalesce(${salesSubquery.totalSold}, 0)`),
+          desc(products.createdAt),
+        )
+        .$dynamic();
 
-        if (limit) {
-          bestsellerQuery = bestsellerQuery.limit(limit);
-        }
-
-        const rows = await bestsellerQuery;
-
-        if (rows.length === 0) return [];
-
-        // Fetch variations only for the products that made the cut
-        const productIds = rows.map((r) => r.id);
-        const varRows = await drizzleDb.query.productVariations.findMany({
-          where: (pv, { inArray, and, isNull }) =>
-            and(inArray(pv.productId, productIds), isNull(pv.deletedAt)),
-        });
-
-        // Group variations by productId for O(1) lookup
-        const varsByProduct = new Map<string, typeof varRows>();
-        for (const v of varRows) {
-          const list = varsByProduct.get(v.productId) ?? [];
-          list.push(v);
-          varsByProduct.set(v.productId, list);
-        }
-
-        return rows.map((p) => ({
-          ...serializeProduct(p),
-          variations: (varsByProduct.get(p.id) ?? []).map(serializeVariation),
-        }));
-      };
-
-      // Only cache when there is no pagination — a limited result set would
-      // collide with the full-catalog entry under the same cache key.
-      if (withCache && !limit) {
-        return cacheProductsBestsellers(fetcher);
+      if (limit) {
+        bestsellerQuery = bestsellerQuery.limit(limit);
       }
 
-      return fetcher();
+      const rows = await bestsellerQuery;
+
+      if (rows.length === 0) return [];
+
+      // Fetch variations only for the products that made the cut
+      const productIds = rows.map((r) => r.id);
+      const varRows = await drizzleDb.query.productVariations.findMany({
+        where: (pv, { inArray, and, isNull }) =>
+          and(inArray(pv.productId, productIds), isNull(pv.deletedAt)),
+      });
+
+      // Group variations by productId for O(1) lookup
+      const varsByProduct = new Map<string, typeof varRows>();
+      for (const v of varRows) {
+        const list = varsByProduct.get(v.productId) ?? [];
+        list.push(v);
+        varsByProduct.set(v.productId, list);
+      }
+
+      return rows.map((p) => ({
+        ...serializeProduct(p),
+        variations: (varsByProduct.get(p.id) ?? []).map(serializeVariation),
+      }));
     },
 
     /**
