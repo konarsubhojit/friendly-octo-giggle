@@ -7,6 +7,7 @@ import { CurrencyProvider } from "@/contexts/CurrencyContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { Toaster } from "react-hot-toast";
 import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import HeaderWrapper from "@/components/layout/HeaderWrapper";
 
 function AppProviders({ children }: { readonly children: React.ReactNode }) {
@@ -68,6 +69,7 @@ export default function RootLayout({
           />
         </AppProviders>
         <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );
