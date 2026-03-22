@@ -13,6 +13,7 @@ const {
   mockCacheProductById,
   mockInvalidateProductCaches,
   mockCacheShareResolve,
+  mockGetCachedData,
 } = vi.hoisted(() => {
   const mockReturningInsert = vi.fn();
   const mockValues = vi.fn(() => ({ returning: mockReturningInsert }));
@@ -37,6 +38,7 @@ const {
     mockCacheProductById: vi.fn(),
     mockInvalidateProductCaches: vi.fn(),
     mockCacheShareResolve: vi.fn(),
+    mockGetCachedData: vi.fn((key, ttl, fetcher) => fetcher()),
   };
 });
 vi.mock("@neondatabase/serverless", () => ({
@@ -108,6 +110,34 @@ vi.mock("@/lib/cache", () => ({
   cacheProductById: mockCacheProductById,
   invalidateProductCaches: mockInvalidateProductCaches,
   cacheShareResolve: mockCacheShareResolve,
+  CACHE_KEYS: {
+    PRODUCTS_ALL: "products:all",
+  },
+  CACHE_TTL: {
+    PRODUCTS_LIST: 60,
+    STALE_TIME: 10,
+  },
+}));
+
+vi.mock("@/lib/redis", () => ({
+  getCachedData: mockGetCachedData,
+}));
+
+vi.mock("@/lib/serializers", () => ({
+  serializeProduct: vi.fn((p) => ({
+    ...p,
+    createdAt: p.createdAt?.toISOString?.() || p.createdAt,
+    updatedAt: p.updatedAt?.toISOString?.() || p.updatedAt,
+    deletedAt: p.deletedAt?.toISOString?.() || p.deletedAt || null,
+  })),
+  serializeVariation: vi.fn((v) => ({
+    ...v,
+    image: v.image ?? null,
+    images: v.images ?? [],
+    createdAt: v.createdAt?.toISOString?.() || v.createdAt,
+    updatedAt: v.updatedAt?.toISOString?.() || v.updatedAt,
+    deletedAt: v.deletedAt?.toISOString?.() || v.deletedAt || null,
+  })),
 }));
 
 vi.mock("drizzle-orm", () => ({
@@ -252,15 +282,13 @@ describe("db.products", () => {
     });
 
     it("uses cache when withCache is true and no pagination", async () => {
-      mockCacheProductsList.mockImplementation((fn: () => Promise<unknown>) =>
-        fn(),
-      );
       mockFindMany.mockResolvedValue([minimalRow]);
 
       const result = await db.products.findAllMinimal({ withCache: true });
 
       expect(result).toEqual([minimalRow]);
-      expect(mockCacheProductsList).toHaveBeenCalledOnce();
+      expect(mockGetCachedData).toHaveBeenCalledOnce();
+      expect(mockGetCachedData.mock.calls[0][0]).toBe("products:all");
     });
 
     it("skips cache when limit is provided", async () => {
@@ -272,7 +300,8 @@ describe("db.products", () => {
       });
 
       expect(result).toEqual([minimalRow]);
-      expect(mockCacheProductsList).not.toHaveBeenCalled();
+      expect(mockGetCachedData).toHaveBeenCalledOnce();
+      expect(mockGetCachedData.mock.calls[0][0]).toBe("products:all:5:0");
     });
 
     it("skips cache when filters are provided", async () => {
@@ -285,7 +314,7 @@ describe("db.products", () => {
       });
 
       expect(result).toEqual([minimalRow]);
-      expect(mockCacheProductsList).not.toHaveBeenCalled();
+      expect(mockGetCachedData).not.toHaveBeenCalled();
     });
   });
   describe("findById", () => {

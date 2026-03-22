@@ -31,6 +31,7 @@ async function handleGet(request: NextRequest) {
       offset,
       search,
       category,
+      withCache: !search && !category && offset === 0,
     });
 
     const response = apiSuccess({ products });

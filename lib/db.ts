@@ -55,7 +55,14 @@ import {
   cacheProductsBestsellers,
   invalidateProductCaches,
   cacheShareResolve,
+  CACHE_KEYS,
+  CACHE_TTL,
 } from "./cache";
+import { getCachedData } from "./redis";
+import {
+  serializeProduct,
+  serializeVariation,
+} from "./serializers";
 
 // All schema tables and relations collected into one object for Drizzle relational queries
 const schema = {
@@ -153,18 +160,8 @@ export const db = {
         const rows = await query;
 
         return rows.map((p) => ({
-          ...p,
-          deletedAt: null,
-          createdAt: p.createdAt.toISOString(),
-          updatedAt: p.updatedAt.toISOString(),
-          variations: p.variations.map((v) => ({
-            ...v,
-            image: v.image ?? null,
-            images: v.images ?? [],
-            deletedAt: null,
-            createdAt: v.createdAt.toISOString(),
-            updatedAt: v.updatedAt.toISOString(),
-          })),
+          ...serializeProduct(p),
+          variations: p.variations.map(serializeVariation),
         }));
       };
 
@@ -265,18 +262,8 @@ export const db = {
         }
 
         return rows.map((p) => ({
-          ...p,
-          deletedAt: null,
-          createdAt: p.createdAt.toISOString(),
-          updatedAt: p.updatedAt.toISOString(),
-          variations: (varsByProduct.get(p.id) ?? []).map((v) => ({
-            ...v,
-            image: v.image ?? null,
-            images: v.images ?? [],
-            deletedAt: null,
-            createdAt: v.createdAt.toISOString(),
-            updatedAt: v.updatedAt.toISOString(),
-          })),
+          ...serializeProduct(p),
+          variations: (varsByProduct.get(p.id) ?? []).map(serializeVariation),
         }));
       };
 
@@ -351,9 +338,17 @@ export const db = {
         return rows;
       };
 
-      // Use cache only if explicitly requested and no pagination
-      if (withCache && !limit && !offset && !search && !category) {
-        return cacheProductsList(fetcher);
+      if (withCache && !search && !category) {
+        const cacheKey =
+          limit || offset
+            ? `${CACHE_KEYS.PRODUCTS_ALL}:${limit ?? "all"}:${offset ?? 0}`
+            : CACHE_KEYS.PRODUCTS_ALL;
+        return getCachedData(
+          cacheKey,
+          CACHE_TTL.PRODUCTS_LIST,
+          fetcher,
+          CACHE_TTL.STALE_TIME,
+        );
       }
 
       return fetcher();
@@ -380,18 +375,8 @@ export const db = {
         });
         if (!row) return null;
         return {
-          ...row,
-          deletedAt: null,
-          createdAt: row.createdAt.toISOString(),
-          updatedAt: row.updatedAt.toISOString(),
-          variations: row.variations.map((v) => ({
-            ...v,
-            image: v.image ?? null,
-            images: v.images ?? [],
-            deletedAt: null,
-            createdAt: v.createdAt.toISOString(),
-            updatedAt: v.updatedAt.toISOString(),
-          })),
+          ...serializeProduct(row),
+          variations: row.variations.map(serializeVariation),
         };
       };
 
@@ -411,12 +396,7 @@ export const db = {
       // Invalidate product caches after creation
       await invalidateProductCaches();
 
-      return {
-        ...row,
-        deletedAt: row.deletedAt?.toISOString() ?? null,
-        createdAt: row.createdAt.toISOString(),
-        updatedAt: row.updatedAt.toISOString(),
-      };
+      return serializeProduct(row);
     },
 
     update: async (
@@ -492,18 +472,8 @@ export const db = {
       return rows
         .filter((r) => r.product !== null && !r.product.deletedAt)
         .map((r) => ({
-          ...r.product,
-          deletedAt: null,
-          createdAt: r.product.createdAt.toISOString(),
-          updatedAt: r.product.updatedAt.toISOString(),
-          variations: r.product.variations.map((v) => ({
-            ...v,
-            image: v.image ?? null,
-            images: v.images ?? [],
-            deletedAt: null,
-            createdAt: v.createdAt.toISOString(),
-            updatedAt: v.updatedAt.toISOString(),
-          })),
+          ...serializeProduct(r.product),
+          variations: r.product.variations.map(serializeVariation),
         }));
     },
 

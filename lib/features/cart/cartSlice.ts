@@ -30,7 +30,7 @@ const initialState: CartState = {
 
 export const fetchCart = createAsyncThunk(
   "cart/fetchCart",
-  async (options?: { force?: boolean }) => {
+  async (_options?: { force?: boolean }) => {
     const data = await apiClient.get<{ cart: Cart | null }>("/api/cart");
     return data.cart;
   },

@@ -10,6 +10,7 @@ import cartReducer, {
 const initialState = {
   cart: null,
   loading: false,
+  lastFetchedAt: null,
   error: null,
   stockWarning: null,
   adjustedQuantity: null,

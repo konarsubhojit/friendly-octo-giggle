@@ -15,6 +15,7 @@ describe("Redux store", () => {
     expect(store.getState().cart).toEqual({
       cart: null,
       loading: false,
+      lastFetchedAt: null,
       error: null,
       stockWarning: null,
       adjustedQuantity: null,
