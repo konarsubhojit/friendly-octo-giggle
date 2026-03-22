@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { apiSuccess, handleApiError } from "@/lib/api-utils";
 import { withLogging } from "@/lib/api-middleware";
+import { cacheProductsList } from "@/lib/cache";
 
 const DEFAULT_LIMIT = 24;
 const MAX_LIMIT = 100;
@@ -26,13 +27,10 @@ async function handleGet(request: NextRequest) {
       Number.parseInt(searchParams.get("offset") ?? "0", 10) || 0,
     );
 
-    const products = await db.products.findAllMinimal({
-      limit,
-      offset,
-      search,
-      category,
-      withCache: !search && !category && offset === 0,
-    });
+    const products = await cacheProductsList(
+      () => db.products.findAllMinimal({ limit, offset, search, category }),
+      { limit, offset, search, category },
+    );
 
     const response = apiSuccess({ products });
     response.headers.set(

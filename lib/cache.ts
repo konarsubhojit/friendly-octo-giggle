@@ -81,13 +81,65 @@ export const CACHE_TTL = {
   SHARE_RESOLVE: 31536000, // 1 year in seconds
 } as const;
 
-export const cacheProductsList = <T>(fetcher: () => Promise<T>): Promise<T> =>
-  getCachedData(
-    CACHE_KEYS.PRODUCTS_ALL,
+/**
+ * Build a normalized cache key for product list queries.
+ * Creates unique keys based on pagination and filter parameters to avoid cache collisions.
+ *
+ * @param options - Query parameters that affect the result set
+ * @returns A normalized cache key string
+ */
+export const buildProductsListCacheKey = (options?: {
+  limit?: number;
+  offset?: number;
+  search?: string;
+  category?: string;
+}): string => {
+  if (!options) return CACHE_KEYS.PRODUCTS_ALL;
+
+  const { limit, offset, search, category } = options;
+
+  // Don't cache filtered results (search/category) - they're too variable
+  if (search || category) {
+    return ""; // Empty key signals "don't cache"
+  }
+
+  // Build parameterized key for pagination
+  if (limit !== undefined || offset !== undefined) {
+    return `${CACHE_KEYS.PRODUCTS_ALL}:${limit ?? "all"}:${offset ?? 0}`;
+  }
+
+  return CACHE_KEYS.PRODUCTS_ALL;
+};
+
+/**
+ * Cache products list with parameterized cache keys.
+ * Automatically builds cache key from query options to avoid collisions.
+ *
+ * @param fetcher - Async function that fetches the data
+ * @param options - Query parameters for cache key generation
+ * @returns Cached or fresh data
+ */
+export const cacheProductsList = <T>(
+  fetcher: () => Promise<T>,
+  options?: {
+    limit?: number;
+    offset?: number;
+    search?: string;
+    category?: string;
+  },
+): Promise<T> => {
+  const cacheKey = buildProductsListCacheKey(options);
+
+  // Skip caching for filtered queries
+  if (!cacheKey) return fetcher();
+
+  return getCachedData(
+    cacheKey,
     CACHE_TTL.PRODUCTS_LIST,
     fetcher,
     CACHE_TTL.STALE_TIME,
   );
+};
 
 export const cacheProductById = <T>(
   id: string,

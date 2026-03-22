@@ -19,6 +19,7 @@ vi.mock("@/lib/logger", () => ({
 import {
   CACHE_KEYS,
   CACHE_TTL,
+  buildProductsListCacheKey,
   cacheProductsList,
   cacheProductById,
   cacheProductsBestsellers,
@@ -176,8 +177,54 @@ describe("CACHE_TTL", () => {
   });
 });
 
+describe("buildProductsListCacheKey", () => {
+  it("returns base key when no options provided", () => {
+    expect(buildProductsListCacheKey()).toBe("products:all");
+  });
+
+  it("returns base key when empty options object provided", () => {
+    expect(buildProductsListCacheKey({})).toBe("products:all");
+  });
+
+  it("returns empty string when search is provided", () => {
+    expect(buildProductsListCacheKey({ search: "laptop" })).toBe("");
+  });
+
+  it("returns empty string when category is provided", () => {
+    expect(buildProductsListCacheKey({ category: "electronics" })).toBe("");
+  });
+
+  it("returns empty string when both search and category provided", () => {
+    expect(buildProductsListCacheKey({ search: "laptop", category: "electronics" })).toBe("");
+  });
+
+  it("builds parameterized key with limit only", () => {
+    expect(buildProductsListCacheKey({ limit: 10 })).toBe("products:all:10:0");
+  });
+
+  it("builds parameterized key with offset only", () => {
+    expect(buildProductsListCacheKey({ offset: 5 })).toBe("products:all:all:5");
+  });
+
+  it("builds parameterized key with limit and offset", () => {
+    expect(buildProductsListCacheKey({ limit: 10, offset: 20 })).toBe("products:all:10:20");
+  });
+
+  it("uses 'all' for limit when undefined", () => {
+    expect(buildProductsListCacheKey({ offset: 10 })).toBe("products:all:all:10");
+  });
+
+  it("uses 0 for offset when undefined", () => {
+    expect(buildProductsListCacheKey({ limit: 5 })).toBe("products:all:5:0");
+  });
+
+  it("returns empty string when limit, offset, and search provided", () => {
+    expect(buildProductsListCacheKey({ limit: 10, offset: 0, search: "laptop" })).toBe("");
+  });
+});
+
 describe("cacheProductsList", () => {
-  it("calls getCachedData with correct arguments", async () => {
+  it("calls getCachedData with base key when no options provided", async () => {
     const fetcher = vi.fn().mockResolvedValue([{ id: "1", name: "Product" }]);
     mockGetCachedData.mockResolvedValue([{ id: "1", name: "Product" }]);
 
@@ -191,11 +238,47 @@ describe("cacheProductsList", () => {
     );
   });
 
-  it("returns the result from getCachedData", async () => {
+  it("calls getCachedData with parameterized key when limit/offset provided", async () => {
+    const fetcher = vi.fn().mockResolvedValue([{ id: "1" }]);
+    mockGetCachedData.mockResolvedValue([{ id: "1" }]);
+
+    await cacheProductsList(fetcher, { limit: 10, offset: 20 });
+
+    expect(mockGetCachedData).toHaveBeenCalledWith(
+      "products:all:10:20",
+      60,
+      fetcher,
+      10,
+    );
+  });
+
+  it("skips cache and calls fetcher directly when search provided", async () => {
+    const data = [{ id: "1" }];
+    const fetcher = vi.fn().mockResolvedValue(data);
+
+    const result = await cacheProductsList(fetcher, { search: "laptop" });
+
+    expect(result).toBe(data);
+    expect(fetcher).toHaveBeenCalledOnce();
+    expect(mockGetCachedData).not.toHaveBeenCalled();
+  });
+
+  it("skips cache and calls fetcher directly when category provided", async () => {
+    const data = [{ id: "1" }];
+    const fetcher = vi.fn().mockResolvedValue(data);
+
+    const result = await cacheProductsList(fetcher, { category: "electronics" });
+
+    expect(result).toBe(data);
+    expect(fetcher).toHaveBeenCalledOnce();
+    expect(mockGetCachedData).not.toHaveBeenCalled();
+  });
+
+  it("returns the result from getCachedData when caching", async () => {
     const data = [{ id: "1" }];
     mockGetCachedData.mockResolvedValue(data);
 
-    const result = await cacheProductsList(vi.fn());
+    const result = await cacheProductsList(vi.fn(), { limit: 10 });
 
     expect(result).toBe(data);
   });

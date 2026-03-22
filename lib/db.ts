@@ -50,13 +50,10 @@ import {
 import { Product, ProductInput } from "./types";
 import { env } from "./env";
 import {
-  cacheProductsList,
   cacheProductById,
   cacheProductsBestsellers,
   invalidateProductCaches,
   cacheShareResolve,
-  CACHE_KEYS,
-  CACHE_TTL,
 } from "./cache";
 import { getCachedData } from "./redis";
 import { serializeProduct, serializeVariation } from "./serializers";
@@ -126,7 +123,6 @@ export type DrizzleDb = typeof drizzleDb;
 export interface ProductListOptions {
   limit?: number;
   offset?: number;
-  withCache?: boolean;
   search?: string;
   category?: string;
 }
@@ -134,40 +130,31 @@ export interface ProductListOptions {
 export const db = {
   products: {
     /**
-     * Find all products with optional pagination and caching
-     * @param options - Pagination and cache options
+     * Find all products with optional pagination
+     * @param options - Pagination options
      * @returns Array of products with full details including variations
      */
     findAll: async (options: ProductListOptions = {}): Promise<Product[]> => {
-      const { limit, offset, withCache = false } = options;
+      const { limit, offset } = options;
 
-      const fetcher = async () => {
-        const query = drizzleDb.query.products.findMany({
-          where: isNull(products.deletedAt),
-          orderBy: [desc(products.createdAt)],
-          with: {
-            variations: {
-              where: (v, { isNull }) => isNull(v.deletedAt),
-            },
+      const query = drizzleDb.query.products.findMany({
+        where: isNull(products.deletedAt),
+        orderBy: [desc(products.createdAt)],
+        with: {
+          variations: {
+            where: (v, { isNull }) => isNull(v.deletedAt),
           },
-          limit,
-          offset,
-        });
+        },
+        limit,
+        offset,
+      });
 
-        const rows = await query;
+      const rows = await query;
 
-        return rows.map((p) => ({
-          ...serializeProduct(p),
-          variations: p.variations.map(serializeVariation),
-        }));
-      };
-
-      // Use cache only if explicitly requested and no pagination
-      if (withCache && !limit && !offset) {
-        return cacheProductsList(fetcher);
-      }
-
-      return fetcher();
+      return rows.map((p) => ({
+        ...serializeProduct(p),
+        variations: p.variations.map(serializeVariation),
+      }));
     },
 
     /**
@@ -275,7 +262,7 @@ export const db = {
 
     /**
      * Find products for list views (minimal fields for performance)
-     * @param options - Pagination options
+     * @param options - Pagination and filter options
      * @returns Array of products with only essential fields for list views
      */
     findAllMinimal: async (
@@ -294,61 +281,44 @@ export const db = {
         >
       >
     > => {
-      const { limit, offset, withCache = false, search, category } = options;
+      const { limit, offset, search, category } = options;
 
-      const fetcher = async () => {
-        const filters: SQL[] = [isNull(products.deletedAt)];
-        const normalizedSearch = search?.trim();
-        const normalizedCategory = category?.trim();
+      const filters: SQL[] = [isNull(products.deletedAt)];
+      const normalizedSearch = search?.trim();
+      const normalizedCategory = category?.trim();
 
-        if (normalizedSearch) {
-          filters.push(
-            or(
-              ilike(products.name, `%${normalizedSearch}%`),
-              ilike(products.description, `%${normalizedSearch}%`),
-            ) as SQL,
-          );
-        }
-
-        if (normalizedCategory) {
-          filters.push(eq(products.category, normalizedCategory));
-        }
-
-        const whereClause = filters.length === 1 ? filters[0] : and(...filters);
-
-        const rows = await drizzleDb.query.products.findMany({
-          where: whereClause,
-          orderBy: [desc(products.createdAt)],
-          columns: {
-            id: true,
-            name: true,
-            description: true,
-            price: true,
-            stock: true,
-            category: true,
-            image: true,
-          },
-          limit,
-          offset,
-        });
-
-        return rows;
-      };
-
-      if (withCache && !search && !category) {
-        const cacheKey =
-          limit || offset
-            ? `${CACHE_KEYS.PRODUCTS_ALL}:${limit ?? "all"}:${offset ?? 0}`
-            : CACHE_KEYS.PRODUCTS_ALL;
-        return getCachedData(
-          cacheKey,
-          CACHE_TTL.PRODUCTS_LIST,
-          fetcher,
-          CACHE_TTL.STALE_TIME,
+      if (normalizedSearch) {
+        filters.push(
+          or(
+            ilike(products.name, `%${normalizedSearch}%`),
+            ilike(products.description, `%${normalizedSearch}%`),
+          ) as SQL,
         );
       }
 
-      return fetcher();
+      if (normalizedCategory) {
+        filters.push(eq(products.category, normalizedCategory));
+      }
+
+      const whereClause = filters.length === 1 ? filters[0] : and(...filters);
+
+      const rows = await drizzleDb.query.products.findMany({
+        where: whereClause,
+        orderBy: [desc(products.createdAt)],
+        columns: {
+          id: true,
+          name: true,
+          description: true,
+          price: true,
+          stock: true,
+          category: true,
+          image: true,
+        },
+        limit,
+        offset,
+      });
+
+      return rows;
     },
 
     /**

@@ -9,6 +9,14 @@ vi.mock("@/lib/db", () => ({
   },
 }));
 
+vi.mock("@/lib/cache", () => ({
+  cacheProductsList: vi.fn(
+    async (fetcher: () => Promise<unknown>, _options?: unknown) => {
+      return await fetcher();
+    },
+  ),
+}));
+
 vi.mock("@/lib/redis", () => ({
   getCachedData: vi.fn(
     async (

@@ -218,7 +218,7 @@ beforeEach(() => {
 
 describe("db.products", () => {
   describe("findAll", () => {
-    it("returns serialized products without cache", async () => {
+    it("returns serialized products without caching", async () => {
       mockFindMany.mockResolvedValue([makeDbRow()]);
 
       const result = await db.products.findAll();
@@ -228,23 +228,10 @@ describe("db.products", () => {
       expect(mockCacheProductsList).not.toHaveBeenCalled();
     });
 
-    it("uses cache when withCache is true and no pagination", async () => {
-      mockCacheProductsList.mockImplementation((fn: () => Promise<unknown>) =>
-        fn(),
-      );
-      mockFindMany.mockResolvedValue([makeDbRow()]);
-
-      const result = await db.products.findAll({ withCache: true });
-
-      expect(result).toEqual([expectedSerialized()]);
-      expect(mockCacheProductsList).toHaveBeenCalledOnce();
-    });
-
-    it("skips cache when pagination is provided even if withCache is true", async () => {
+    it("respects pagination parameters", async () => {
       mockFindMany.mockResolvedValue([makeDbRow()]);
 
       const result = await db.products.findAll({
-        withCache: true,
         limit: 10,
         offset: 0,
       });
@@ -281,34 +268,28 @@ describe("db.products", () => {
       expect(mockCacheProductsList).not.toHaveBeenCalled();
     });
 
-    it("uses cache when withCache is true and no pagination", async () => {
+    it("fetches minimal products without caching", async () => {
       mockFindMany.mockResolvedValue([minimalRow]);
 
-      const result = await db.products.findAllMinimal({ withCache: true });
+      const result = await db.products.findAllMinimal();
 
       expect(result).toEqual([minimalRow]);
-      expect(mockGetCachedData).toHaveBeenCalledOnce();
-      expect(mockGetCachedData.mock.calls[0][0]).toBe("products:all");
+      expect(mockGetCachedData).not.toHaveBeenCalled();
     });
 
-    it("skips cache when limit is provided", async () => {
+    it("respects limit parameter", async () => {
+      mockFindMany.mockResolvedValue([minimalRow]);
+
+      const result = await db.products.findAllMinimal({ limit: 5 });
+
+      expect(result).toEqual([minimalRow]);
+      expect(mockGetCachedData).not.toHaveBeenCalled();
+    });
+
+    it("respects search and category filters", async () => {
       mockFindMany.mockResolvedValue([minimalRow]);
 
       const result = await db.products.findAllMinimal({
-        withCache: true,
-        limit: 5,
-      });
-
-      expect(result).toEqual([minimalRow]);
-      expect(mockGetCachedData).toHaveBeenCalledOnce();
-      expect(mockGetCachedData.mock.calls[0][0]).toBe("products:all:5:0");
-    });
-
-    it("skips cache when filters are provided", async () => {
-      mockFindMany.mockResolvedValue([minimalRow]);
-
-      const result = await db.products.findAllMinimal({
-        withCache: true,
         search: "test",
         category: "Electronics",
       });
