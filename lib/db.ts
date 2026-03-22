@@ -59,10 +59,7 @@ import {
   CACHE_TTL,
 } from "./cache";
 import { getCachedData } from "./redis";
-import {
-  serializeProduct,
-  serializeVariation,
-} from "./serializers";
+import { serializeProduct, serializeVariation } from "./serializers";
 
 // All schema tables and relations collected into one object for Drizzle relational queries
 const schema = {
