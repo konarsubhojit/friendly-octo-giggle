@@ -81,9 +81,51 @@ export const CACHE_TTL = {
   SHARE_RESOLVE: 31536000, // 1 year in seconds
 } as const;
 
-export const cacheProductsList = <T>(fetcher: () => Promise<T>): Promise<T> =>
+export interface ProductsListCacheOptions {
+  limit?: number;
+  offset?: number;
+  search?: string | null;
+  category?: string | null;
+}
+
+const normalizeCacheSegment = (value?: string | null) =>
+  value ? encodeURIComponent(value.trim().toLowerCase()) : "";
+
+export const buildProductsListCacheKey = (
+  options: ProductsListCacheOptions,
+): string => {
+  const normalizedSearch = normalizeCacheSegment(options.search);
+  const normalizedCategory = normalizeCacheSegment(options.category);
+  const limitSegment =
+    options.limit !== undefined ? options.limit : "default_limit";
+  const offsetSegment =
+    options.offset !== undefined ? options.offset : "default_offset";
+
+  const hasFilters =
+    options.limit !== undefined ||
+    options.offset !== undefined ||
+    normalizedSearch !== "" ||
+    normalizedCategory !== "";
+
+  if (!hasFilters) {
+    return CACHE_KEYS.PRODUCTS_ALL;
+  }
+
+  return [
+    "products:list",
+    `limit=${limitSegment}`,
+    `offset=${offsetSegment}`,
+    `search=${normalizedSearch}`,
+    `category=${normalizedCategory}`,
+  ].join(":");
+};
+
+export const cacheProductsList = <T>(
+  fetcher: () => Promise<T>,
+  options: ProductsListCacheOptions = {},
+): Promise<T> =>
   getCachedData(
-    CACHE_KEYS.PRODUCTS_ALL,
+    buildProductsListCacheKey(options),
     CACHE_TTL.PRODUCTS_LIST,
     fetcher,
     CACHE_TTL.STALE_TIME,

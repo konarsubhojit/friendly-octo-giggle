@@ -20,6 +20,7 @@ import {
   CACHE_KEYS,
   CACHE_TTL,
   cacheProductsList,
+  buildProductsListCacheKey,
   cacheProductById,
   cacheProductsBestsellers,
   invalidateProductCaches,
@@ -176,6 +177,25 @@ describe("CACHE_TTL", () => {
   });
 });
 
+describe("buildProductsListCacheKey", () => {
+  it("returns base key when no filters are provided", () => {
+    expect(buildProductsListCacheKey({})).toBe("products:all");
+  });
+
+  it("includes filters in the cache key", () => {
+    expect(
+      buildProductsListCacheKey({
+        limit: 12,
+        offset: 5,
+        search: " Phone ",
+        category: "Electronics",
+      }),
+    ).toBe(
+      "products:list:limit=12:offset=5:search=phone:category=electronics",
+    );
+  });
+});
+
 describe("cacheProductsList", () => {
   it("calls getCachedData with correct arguments", async () => {
     const fetcher = vi.fn().mockResolvedValue([{ id: "1", name: "Product" }]);
@@ -185,6 +205,25 @@ describe("cacheProductsList", () => {
 
     expect(mockGetCachedData).toHaveBeenCalledWith(
       "products:all",
+      60,
+      fetcher,
+      10,
+    );
+  });
+
+  it("uses parameterized cache key when filters are provided", async () => {
+    const fetcher = vi.fn().mockResolvedValue([{ id: "2" }]);
+    mockGetCachedData.mockResolvedValue([{ id: "2" }]);
+
+    await cacheProductsList(fetcher, {
+      limit: 10,
+      offset: 20,
+      search: "Laptop ",
+      category: "Gadgets",
+    });
+
+    expect(mockGetCachedData).toHaveBeenCalledWith(
+      "products:list:limit=10:offset=20:search=laptop:category=gadgets",
       60,
       fetcher,
       10,

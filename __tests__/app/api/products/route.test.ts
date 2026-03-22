@@ -1,39 +1,26 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { NextRequest } from "next/server";
 
+const mockCacheProductsList = vi.hoisted(() =>
+  vi.fn(async (fetcher: () => Promise<unknown>, _options?: unknown) =>
+    fetcher(),
+  ),
+);
+
 vi.mock("@/lib/db", () => ({
   db: {
     products: {
-      findAll: vi.fn(),
+      findAllMinimal: vi.fn(),
     },
   },
 }));
 
-vi.mock("@/lib/redis", () => ({
-  getCachedData: vi.fn(
-    async (
-      _key: string,
-      _ttl: number,
-      fetcher: () => Promise<unknown>,
-      _staleTime?: number,
-    ) => {
-      return await fetcher();
-    },
-  ),
+vi.mock("@/lib/cache", () => ({
+  cacheProductsList: mockCacheProductsList,
 }));
 
 vi.mock("@/lib/api-middleware", () => ({
   withLogging: (fn: unknown) => fn,
-}));
-
-vi.mock("@/lib/logger", () => ({
-  createLogger: () => ({
-    info: vi.fn(),
-    error: vi.fn(),
-    warn: vi.fn(),
-    debug: vi.fn(),
-  }),
-  logError: vi.fn(),
 }));
 
 import { GET } from "@/app/api/products/route";
@@ -74,7 +61,7 @@ describe("GET /api/products", () => {
   });
 
   it("returns products on success", async () => {
-    vi.mocked(db.products.findAll).mockResolvedValue(mockProducts);
+    vi.mocked(db.products.findAllMinimal).mockResolvedValue(mockProducts);
 
     const response = await GET(
       new NextRequest("http://localhost/api/products"),
@@ -83,11 +70,25 @@ describe("GET /api/products", () => {
 
     const body = await response.json();
     expect(body).toEqual({ success: true, data: { products: mockProducts } });
-    expect(db.products.findAll).toHaveBeenCalledOnce();
+    expect(db.products.findAllMinimal).toHaveBeenCalledWith({
+      limit: 24,
+      offset: 0,
+      search: undefined,
+      category: undefined,
+    });
+    expect(mockCacheProductsList).toHaveBeenCalledWith(
+      expect.any(Function),
+      {
+        limit: 24,
+        offset: 0,
+        search: undefined,
+        category: undefined,
+      },
+    );
   });
 
   it("sets Cache-Control header", async () => {
-    vi.mocked(db.products.findAll).mockResolvedValue(mockProducts);
+    vi.mocked(db.products.findAllMinimal).mockResolvedValue(mockProducts);
 
     const response = await GET(
       new NextRequest("http://localhost/api/products"),
@@ -98,7 +99,9 @@ describe("GET /api/products", () => {
   });
 
   it("returns 500 on error", async () => {
-    vi.mocked(db.products.findAll).mockRejectedValue(new Error("DB error"));
+    vi.mocked(db.products.findAllMinimal).mockRejectedValue(
+      new Error("DB error"),
+    );
 
     const response = await GET(
       new NextRequest("http://localhost/api/products"),

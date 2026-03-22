@@ -10,6 +10,7 @@ import cartReducer, {
 const initialState = {
   cart: null,
   loading: false,
+  lastFetchedAt: null,
   error: null,
   stockWarning: null,
   adjustedQuantity: null,
@@ -43,6 +44,7 @@ describe("cartSlice extraReducers", () => {
     });
     expect(result.loading).toBe(false);
     expect(result.cart).toEqual(cart);
+    expect(typeof result.lastFetchedAt).toBe("number");
   });
 
   it("sets error on fetchCart.rejected", () => {
@@ -107,6 +109,7 @@ describe("cartSlice extraReducers", () => {
     };
     const result = cartReducer(state, { type: "cart/clearCart/fulfilled" });
     expect(result.cart).toBeNull();
+    expect(typeof result.lastFetchedAt).toBe("number");
   });
 });
 
