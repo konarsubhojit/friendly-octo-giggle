@@ -1,50 +1,26 @@
 "use client";
 
-import {
-  useState,
-  useEffect,
-  useRef,
-  useCallback,
-  useMemo,
-  Fragment,
-} from "react";
+import { useState, useEffect, useRef, useCallback, Fragment } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useCurrency } from "@/contexts/CurrencyContext";
-import type { Product } from "@/lib/types";
 
 interface ProductSearchProps {
   readonly onNavigate?: () => void;
 }
 
-// ─── Product cache (shared across instances) ────────────
-
-let _productCache: Product[] | null = null;
-let _fetchPromise: Promise<Product[]> | null = null;
-
-async function fetchAllProducts(): Promise<Product[]> {
-  if (_productCache) return _productCache;
-  if (_fetchPromise) return _fetchPromise;
-
-  _fetchPromise = fetch("/api/products")
-    .then((res) => {
-      if (!res.ok) throw new Error("Failed to fetch products");
-      return res.json();
-    })
-    .then((data) => {
-      const products: Product[] = data.products ?? data.data?.products ?? [];
-      _productCache = products;
-      _fetchPromise = null;
-      return products;
-    })
-    .catch(() => {
-      _fetchPromise = null;
-      return [];
-    });
-
-  return _fetchPromise;
+interface SearchResult {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  image: string;
+  category: string;
 }
+
+const SEARCH_DEBOUNCE_MS = 250;
+const SEARCH_RESULTS_LIMIT = 8;
 
 // ─── Highlight matching text ─────────────────────────────
 
@@ -86,18 +62,58 @@ export default function ProductSearch({ onNavigate }: ProductSearchProps) {
   const { formatPrice } = useCurrency();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const [products, setProducts] = useState<Product[]>([]);
+  const [results, setResults] = useState<SearchResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (open) {
-      fetchAllProducts().then(setProducts);
       requestAnimationFrame(() => inputRef.current?.focus());
+    } else {
+      setResults([]);
+      setIsSearching(false);
     }
   }, [open]);
+
+  useEffect(() => {
+    const clearDebounce = () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+
+    clearDebounce();
+
+    const trimmed = query.trim();
+    if (!trimmed) {
+      setResults([]);
+      setIsSearching(false);
+      return;
+    }
+
+    setIsSearching(true);
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const params = new URLSearchParams({
+          q: trimmed,
+          limit: String(SEARCH_RESULTS_LIMIT),
+        });
+        const res = await fetch(`/api/search?${params}`);
+        if (!res.ok) throw new Error("search failed");
+        const data = await res.json();
+        const items: SearchResult[] = data.data?.results ?? data.results ?? [];
+        setResults(items.slice(0, SEARCH_RESULTS_LIMIT));
+      } catch {
+        setResults([]);
+      } finally {
+        setIsSearching(false);
+      }
+    }, SEARCH_DEBOUNCE_MS);
+
+    return clearDebounce;
+  }, [query]);
 
   const openDialog = useCallback(() => {
     setOpen(true);
@@ -130,21 +146,6 @@ export default function ProductSearch({ onNavigate }: ProductSearchProps) {
     document.addEventListener("keydown", handleKey);
     return () => document.removeEventListener("keydown", handleKey);
   }, []);
-
-  // Filter products
-  const results = useMemo(() => {
-    if (!query.trim()) return [];
-    const q = query.toLowerCase();
-    return products
-      .filter(
-        (p) =>
-          !p.deletedAt &&
-          (p.name.toLowerCase().includes(q) ||
-            p.description.toLowerCase().includes(q) ||
-            p.category?.toLowerCase().includes(q)),
-      )
-      .slice(0, 8);
-  }, [query, products]);
 
   // Clamp activeIndex — automatically resets when results shrink
   const clampedIndex = activeIndex >= results.length ? -1 : activeIndex;
@@ -278,13 +279,19 @@ export default function ProductSearch({ onNavigate }: ProductSearchProps) {
               </div>
 
               <div className="max-h-[50vh] overflow-y-auto overscroll-contain">
-                {query.trim() && results.length === 0 && (
+                {isSearching && (
+                  <div className="px-4 py-8 text-center text-sm text-[var(--text-muted)]">
+                    Searching...
+                  </div>
+                )}
+
+                {!isSearching && query.trim() && results.length === 0 && (
                   <div className="px-4 py-8 text-center text-sm text-[var(--text-muted)]">
                     No products found for &ldquo;{query}&rdquo;
                   </div>
                 )}
 
-                {results.length > 0 && (
+                {!isSearching && results.length > 0 && (
                   <div
                     ref={listRef}
                     id="search-results-list"

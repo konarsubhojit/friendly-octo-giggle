@@ -36,6 +36,7 @@ export const GET = async (request: NextRequest) => {
     const allReviews = await drizzleDb.query.reviews.findMany({
       where: whereClause,
       orderBy: [desc(reviews.createdAt)],
+      limit: 200,
       with: {
         user: { columns: { id: true, name: true, email: true, image: true } },
         product: { columns: { id: true, name: true, image: true } },

@@ -155,9 +155,10 @@ const validateStockAndCalculateTotal = (
   products: ProductWithVariations[],
 ): StockCheckResult => {
   let totalAmount = 0;
+  const productMap = new Map(products.map((p) => [p.id, p]));
 
   for (const item of items) {
-    const product = products.find((p) => p.id === item.productId);
+    const product = productMap.get(item.productId);
     if (!product) {
       return {
         valid: false,
@@ -331,15 +332,25 @@ const buildOrderItemValues = (
   price: number;
   customizationNote: string | null;
 }> => {
+  const productMap = new Map(
+    productList.map((p) => [
+      p.id,
+      {
+        price: p.price,
+        variationPriceMap: new Map(
+          p.variations.map((v) => [v.id, v.priceModifier]),
+        ),
+      },
+    ]),
+  );
+
   return items.map((item) => {
-    const product = productList.find((p) => p.id === item.productId);
+    const product = productMap.get(item.productId);
     if (!product)
       throw new Error(`Product with id ${item.productId} not found`);
-    const variationMap = new Map(
-      product.variations.map((v) => [v.id, v.priceModifier]),
-    );
     const price =
-      product.price + (variationMap.get(item.variationId ?? "") ?? 0);
+      product.price +
+      (product.variationPriceMap.get(item.variationId ?? "") ?? 0);
     return {
       orderId,
       productId: item.productId,
@@ -455,24 +466,28 @@ const handlePost = async (request: NextRequest) => {
         .insert(orderItems)
         .values(buildOrderItemValues(body.items, productList, newOrder.id));
 
-      for (const item of body.items) {
-        if (item.variationId) {
-          await tx
-            .update(productVariations)
+      await Promise.all([
+        ...body.items.map((item) =>
+          tx
+            .update(products)
             .set({
-              stock: sql`${productVariations.stock} - ${item.quantity}`,
+              stock: sql`${products.stock} - ${item.quantity}`,
               updatedAt: new Date(),
             })
-            .where(eq(productVariations.id, item.variationId));
-        }
-        await tx
-          .update(products)
-          .set({
-            stock: sql`${products.stock} - ${item.quantity}`,
-            updatedAt: new Date(),
-          })
-          .where(eq(products.id, item.productId));
-      }
+            .where(eq(products.id, item.productId)),
+        ),
+        ...body.items
+          .filter((item) => item.variationId != null)
+          .map((item) =>
+            tx
+              .update(productVariations)
+              .set({
+                stock: sql`${productVariations.stock} - ${item.quantity}`,
+                updatedAt: new Date(),
+              })
+              .where(eq(productVariations.id, item.variationId!)),
+          ),
+      ]);
 
       return newOrder;
     });
