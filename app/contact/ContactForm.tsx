@@ -17,7 +17,8 @@ const CONTACT_FIELDS: ReadonlyArray<FieldDef> = [
     label: "Name",
     type: "text",
     placeholder: "Your name",
-    validate: (v) => (v.trim() ? undefined : "Name is required"),
+    validate: (v) =>
+      v.trim() ? undefined : "Tell us your name so we know how to address you.",
   },
   {
     id: "contact-email",
@@ -26,8 +27,9 @@ const CONTACT_FIELDS: ReadonlyArray<FieldDef> = [
     type: "email",
     placeholder: "you@example.com",
     validate: (v) => {
-      if (!v.trim()) return "Email is required";
-      if (!EMAIL_RE.test(v)) return "Enter a valid email";
+      if (!v.trim()) return "Enter the email address where we should reply.";
+      if (!EMAIL_RE.test(v))
+        return "Enter a valid email address, like you@example.com.";
       return undefined;
     },
   },
@@ -43,7 +45,8 @@ const CONTACT_FIELDS: ReadonlyArray<FieldDef> = [
       { value: "product", label: "Product Question" },
       { value: "other", label: "Other" },
     ],
-    validate: (v) => (v ? undefined : "Please select a subject"),
+    validate: (v) =>
+      v ? undefined : "Choose the topic that best matches your message.",
   },
   {
     id: "contact-message",
@@ -52,7 +55,10 @@ const CONTACT_FIELDS: ReadonlyArray<FieldDef> = [
     type: "textarea",
     rows: 5,
     placeholder: "How can we help you?",
-    validate: (v) => (v.trim() ? undefined : "Message is required"),
+    validate: (v) =>
+      v.trim()
+        ? undefined
+        : "Share a few details so our team can help you faster.",
   },
 ];
 

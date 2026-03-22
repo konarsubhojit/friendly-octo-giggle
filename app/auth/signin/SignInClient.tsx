@@ -17,7 +17,9 @@ const SIGNIN_FIELDS: ReadonlyArray<FieldDef> = [
     placeholder: "you@example.com or +1234567890",
     autoComplete: "username",
     validate: (v) =>
-      v.trim() ? undefined : "Email or phone number is required.",
+      v.trim()
+        ? undefined
+        : "Enter the email address or phone number linked to your account.",
   },
   {
     id: "signin-password",
@@ -27,7 +29,7 @@ const SIGNIN_FIELDS: ReadonlyArray<FieldDef> = [
     placeholder: "Enter your password",
     autoComplete: "current-password",
     showPasswordToggle: true,
-    validate: (v) => (v ? undefined : "Password is required."),
+    validate: (v) => (v ? undefined : "Enter your password to continue."),
   },
 ];
 
@@ -43,11 +45,12 @@ const SignInClient = () => {
           password: values.password,
           redirect: false,
         });
-        if (result?.error) return "Invalid email/phone or password";
+        if (result?.error)
+          return "We couldn't sign you in with those details. Double-check your email, phone number, and password, then try again.";
         globalThis.location.href = "/";
         return undefined;
       } catch {
-        return "An unexpected error occurred";
+        return "We hit a temporary issue while signing you in. Please try again.";
       }
     },
     [],

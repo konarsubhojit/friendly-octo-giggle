@@ -53,8 +53,8 @@ export default function SignInPage({ searchParams }: SignInPageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-warm-gradient flex items-center justify-center px-4 sm:px-6 lg:px-8">
-      <main className="max-w-md w-full bg-[var(--surface)]/80 backdrop-blur-sm rounded-xl shadow-warm border border-[var(--border-warm)] p-6 sm:p-8">
+    <div className="min-h-screen bg-warm-gradient px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
+      <main className="mx-auto w-full max-w-md bg-[var(--surface)]/80 backdrop-blur-sm rounded-xl shadow-warm border border-[var(--border-warm)] p-6 sm:p-8">
         <SignInHeader />
 
         {/* Client-side credentials form */}

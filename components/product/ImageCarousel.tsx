@@ -12,10 +12,6 @@ interface ImageCarouselProps {
 // Auto-scroll every 5 seconds by default
 const DEFAULT_INTERVAL = 5000;
 
-// Keys that move the carousel forward / backward
-const NEXT_KEYS = new Set(["ArrowRight", "ArrowDown"]);
-const PREV_KEYS = new Set(["ArrowLeft", "ArrowUp"]);
-
 // Derive slide-in animation class from direction + in-progress flag
 const getAnimationClass = (
   direction: "next" | "prev",
@@ -59,22 +55,6 @@ const ImageCarousel = ({
     goToIndex((currentIndex - 1 + total) % total, "prev");
   }, [currentIndex, total, goToIndex]);
 
-  // Keyboard navigation handler — defined as useCallback so it can be used as
-  // a stable event listener reference in the useEffect below.
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      if (!containerRef.current) return;
-      if (NEXT_KEYS.has(e.key)) {
-        e.preventDefault();
-        goNext();
-      } else if (PREV_KEYS.has(e.key)) {
-        e.preventDefault();
-        goPrev();
-      }
-    },
-    [goNext, goPrev],
-  );
-
   // Auto-scroll — always returns a cleanup so the return type is consistent
   useEffect(() => {
     let id: ReturnType<typeof setTimeout> | undefined;
@@ -86,13 +66,6 @@ const ImageCarousel = ({
       if (id !== undefined) clearTimeout(id);
     };
   }, [currentIndex, goNext, autoScrollInterval, total]);
-
-  // Keyboard navigation
-  useEffect(() => {
-    const container = containerRef.current;
-    container?.addEventListener("keydown", handleKeyDown);
-    return () => container?.removeEventListener("keydown", handleKeyDown);
-  }, [handleKeyDown]);
 
   // Mouse wheel navigation
   useEffect(() => {
@@ -115,7 +88,7 @@ const ImageCarousel = ({
   // Single image — no carousel needed, just render image with contain
   if (total === 1) {
     return (
-      <div className="relative">
+      <div className="relative overflow-hidden">
         <div className="relative aspect-square w-full rounded-2xl overflow-hidden shadow-2xl border-4 border-[var(--border-warm)] bg-[var(--accent-blush)]/30">
           <Image
             src={images[0]}
@@ -135,13 +108,12 @@ const ImageCarousel = ({
   const animationClass = getAnimationClass(direction, isAnimating);
 
   return (
-    <div className="relative select-none">
+    <div className="relative select-none overflow-hidden">
       {/* Main image container */}
       <section
         ref={containerRef}
-        tabIndex={0}
         aria-roledescription="carousel"
-        aria-label={`Image carousel for ${productName}. Use arrow keys or mouse wheel to navigate.`}
+        aria-label={`Image carousel for ${productName}. Use the previous and next buttons to navigate.`}
         className="relative aspect-square w-full rounded-2xl overflow-hidden shadow-2xl border-4 border-[var(--border-warm)] bg-[var(--accent-blush)]/30 group focus:outline-none focus:ring-2 focus:ring-[var(--accent-warm)]"
       >
         <div className={`relative w-full h-full ${animationClass}`}>

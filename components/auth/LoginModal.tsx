@@ -26,7 +26,9 @@ const LOGIN_FIELDS: ReadonlyArray<FieldDef> = [
     autoComplete: "username",
     autoFocus: true,
     validate: (v) =>
-      v.trim() ? undefined : "Email or phone number is required.",
+      v.trim()
+        ? undefined
+        : "Enter the email address or phone number linked to your account.",
   },
   {
     id: "login-password",
@@ -36,7 +38,7 @@ const LOGIN_FIELDS: ReadonlyArray<FieldDef> = [
     placeholder: "Enter your password",
     autoComplete: "current-password",
     showPasswordToggle: true,
-    validate: (v) => (v ? undefined : "Password is required."),
+    validate: (v) => (v ? undefined : "Enter your password to continue."),
   },
 ];
 
@@ -75,12 +77,13 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
           password: values.password,
           redirect: false,
         });
-        if (result?.error) return "Invalid email/phone or password";
+        if (result?.error)
+          return "We couldn't sign you in with those details. Double-check your email, phone number, and password, then try again.";
         onClose();
         router.refresh();
         return undefined;
       } catch {
-        return "An unexpected error occurred";
+        return "We hit a temporary issue while signing you in. Please try again.";
       }
     },
     [onClose, router],

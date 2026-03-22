@@ -6,9 +6,9 @@ interface AdminHeaderNavProps {
 
 export const AdminHeaderNav = ({ userName }: AdminHeaderNavProps) => {
   return (
-    <div className="flex flex-wrap gap-3 items-center">
+    <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-2 text-right sm:text-left">
       <span
-        className="text-sm text-gray-600 dark:text-gray-400 truncate max-w-[120px] sm:max-w-none"
+        className="max-w-[180px] truncate text-sm text-gray-600 dark:text-gray-400 sm:max-w-none"
         title={userName}
       >
         {userName}

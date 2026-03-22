@@ -33,7 +33,10 @@ const REGISTER_FIELDS: ReadonlyArray<FieldDef> = [
     type: "text",
     placeholder: "Your full name",
     autoComplete: "name",
-    validate: (v) => (v.trim() ? undefined : "Name is required."),
+    validate: (v) =>
+      v.trim()
+        ? undefined
+        : "Enter the name you'd like to use on your account.",
   },
   {
     id: "register-email",
@@ -68,9 +71,9 @@ const REGISTER_FIELDS: ReadonlyArray<FieldDef> = [
     showPasswordToggle: true,
     showStrengthChecklist: true,
     validate: (v) => {
-      if (!v) return "Password is required.";
+      if (!v) return "Create a password for your new account.";
       if (!isPasswordStrong(v))
-        return "Password does not meet the requirements below.";
+        return "Choose a stronger password using the checklist below.";
       return undefined;
     },
   },
@@ -82,8 +85,8 @@ const REGISTER_FIELDS: ReadonlyArray<FieldDef> = [
     placeholder: "Confirm your password",
     autoComplete: "new-password",
     validate: (v, all) => {
-      if (!v) return "Please confirm your password.";
-      if (v !== all.password) return "Passwords don't match.";
+      if (!v) return "Re-enter your password so we can confirm it matches.";
+      if (v !== all.password) return "The two passwords need to match exactly.";
       return undefined;
     },
     validateOnBlur: true,
@@ -123,7 +126,10 @@ const parseRegisterError = (data: {
   error?: string;
 }): SubmitResult => {
   if (data.details) return data.details;
-  return data.error ?? "Registration failed";
+  return (
+    data.error ??
+    "We couldn't create your account right now. Please review the form and try again."
+  );
 };
 
 export default function RegisterPage() {
@@ -148,7 +154,7 @@ export default function RegisterPage() {
         router.push("/auth/signin?registered=true");
         return undefined;
       } catch {
-        return "An unexpected error occurred";
+        return "We couldn't create your account right now. Please try again in a moment.";
       }
     },
     [router],

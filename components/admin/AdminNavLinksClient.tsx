@@ -137,9 +137,14 @@ function DropdownGroup({
   const handleToggle = () => {
     if (!open && buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
+      const menuWidth = 176;
+      const viewportPadding = 12;
       setMenuStyle({
         top: rect.bottom + window.scrollY,
-        left: rect.left + window.scrollX,
+        left: Math.min(
+          rect.left + window.scrollX,
+          window.scrollX + window.innerWidth - menuWidth - viewportPadding,
+        ),
       });
     }
     setOpen((o) => !o);
@@ -172,7 +177,7 @@ function DropdownGroup({
         </svg>
       </button>
       {open &&
-        typeof globalThis.window !== "undefined" &&
+        globalThis.window !== undefined &&
         createPortal(
           <div
             ref={menuRef}
@@ -182,7 +187,7 @@ function DropdownGroup({
               top: menuStyle.top,
               left: menuStyle.left,
             }}
-            className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-1 min-w-[160px] z-50"
+            className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-1 min-w-[160px] max-w-[calc(100vw-24px)] z-50"
           >
             {group.items.map((item) => (
               <Link
@@ -381,27 +386,31 @@ export function AdminNavLinksClient({
   return (
     <>
       <nav className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-6 py-3 whitespace-nowrap">
-            {NAV_GROUPS.map((group) =>
-              group.href ? (
-                <Link
-                  key={group.label}
-                  href={group.href}
-                  className="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition"
-                >
-                  {group.label}
-                </Link>
-              ) : (
-                <DropdownGroup
-                  key={group.label}
-                  group={group}
-                  failedEmailCount={failedEmailCount}
-                />
-              ),
-            )}
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center gap-3 py-3">
+            <div className="min-w-0 flex-1 overflow-x-auto">
+              <div className="flex min-w-max items-center gap-4 whitespace-nowrap pr-2 sm:gap-6">
+                {NAV_GROUPS.map((group) =>
+                  group.href ? (
+                    <Link
+                      key={group.label}
+                      href={group.href}
+                      className="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition"
+                    >
+                      {group.label}
+                    </Link>
+                  ) : (
+                    <DropdownGroup
+                      key={group.label}
+                      group={group}
+                      failedEmailCount={failedEmailCount}
+                    />
+                  ),
+                )}
+              </div>
+            </div>
 
-            <div className="ml-auto">
+            <div className="shrink-0">
               <button
                 type="button"
                 onClick={() => setPaletteOpen(true)}

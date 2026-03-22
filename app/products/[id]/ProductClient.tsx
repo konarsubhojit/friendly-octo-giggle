@@ -319,9 +319,9 @@ const ProductInfoCard = ({
   cartQuantities,
 }: ProductInfoCardProps) => {
   return (
-    <div className="bg-[var(--surface)]/80 backdrop-blur-lg rounded-2xl shadow-warm border border-[var(--border-warm)] p-8 mb-6">
+    <div className="mb-6 rounded-2xl border border-[var(--border-warm)] bg-[var(--surface)]/80 p-6 shadow-warm backdrop-blur-lg sm:p-8">
       <div className="flex items-start justify-between gap-4 mb-4">
-        <h1 className="text-4xl font-display font-bold text-warm-heading italic">
+        <h1 className="text-3xl font-display font-bold italic text-warm-heading sm:text-4xl">
           {product.name}
         </h1>
         <ShareButton
@@ -340,8 +340,8 @@ const ProductInfoCard = ({
         {product.description}
       </p>
 
-      <div className="mb-6 p-4 bg-gradient-to-r from-[var(--accent-blush)] to-[var(--border-warm)] rounded-xl border border-[var(--border-warm)]">
-        <span className="text-5xl font-bold text-warm-heading">
+      <div className="mb-6 rounded-xl border border-[var(--border-warm)] bg-gradient-to-r from-[var(--accent-blush)] to-[var(--border-warm)] p-4">
+        <span className="text-4xl font-bold text-warm-heading sm:text-5xl">
           {formatPrice(effectivePrice)}
         </span>
         <PriceModifierDisplay
@@ -398,7 +398,7 @@ const AddToCartSection = ({
   currentCartQuantity,
 }: AddToCartSectionProps) => {
   return (
-    <div className="bg-[var(--surface)]/80 backdrop-blur-lg rounded-2xl shadow-warm border border-[var(--border-warm)] p-8">
+    <div className="rounded-2xl border border-[var(--border-warm)] bg-[var(--surface)]/80 p-6 shadow-warm backdrop-blur-lg sm:p-8">
       {currentCartQuantity > 0 && (
         <div className="mb-4 p-3 bg-blue-50 text-blue-700 rounded-xl border border-blue-200 flex items-center gap-3">
           <svg
@@ -524,16 +524,16 @@ const AddToCartSection = ({
         )}
       </div>
 
-      <div className="flex justify-between items-center mb-5 p-3 bg-gradient-to-r from-[var(--accent-blush)] to-[var(--border-warm)] rounded-xl">
+      <div className="mb-5 flex items-center justify-between gap-3 rounded-xl bg-gradient-to-r from-[var(--accent-blush)] to-[var(--border-warm)] p-3">
         <span className="text-sm font-semibold text-[var(--text-secondary)]">
           Total:
         </span>
-        <span className="text-2xl font-bold bg-gradient-to-r from-[var(--accent-warm)] to-[var(--accent-rose)] bg-clip-text text-transparent">
+        <span className="text-right text-xl font-bold bg-gradient-to-r from-[var(--accent-warm)] to-[var(--accent-rose)] bg-clip-text text-transparent sm:text-2xl">
           {formatPrice(effectivePrice * quantity)}
         </span>
       </div>
 
-      <div className="flex gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row">
         <button
           onClick={handleAddToCart}
           disabled={addingToCart}
@@ -544,7 +544,7 @@ const AddToCartSection = ({
 
         <Link
           href="/cart"
-          className="flex-shrink-0 bg-[var(--accent-blush)] hover:bg-[var(--accent-peach)]/50 text-[var(--text-secondary)] px-5 py-4 rounded-xl font-bold transition-all duration-300 flex items-center gap-2 focus-warm"
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--accent-blush)] px-5 py-4 font-bold text-[var(--text-secondary)] transition-all duration-300 hover:bg-[var(--accent-peach)]/50 focus-warm sm:w-auto sm:flex-shrink-0"
         >
           <svg
             className="w-6 h-6"

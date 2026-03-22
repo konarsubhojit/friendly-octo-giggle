@@ -352,13 +352,13 @@ export default function Header() {
     <>
       <header className="sticky top-0 z-50 bg-[var(--background)]/85 backdrop-blur-lg border-b border-[var(--border-warm)]/40 shadow-warm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex justify-between items-center">
+          <div className="flex items-center justify-between gap-3">
             <Link
               href="/"
-              className="text-2xl font-bold flex items-center gap-1.5 transition-all duration-300 group"
+              className="group flex min-w-0 items-center gap-1.5 text-xl font-bold transition-all duration-300 sm:text-2xl"
             >
               <FlowerAccent className="w-7 h-7 group-hover:animate-wiggle" />
-              <span className="font-display bg-gradient-to-r from-[var(--accent-rose)] to-[var(--accent-warm)] bg-clip-text text-transparent">
+              <span className="font-display truncate bg-gradient-to-r from-[var(--accent-rose)] to-[var(--accent-warm)] bg-clip-text text-transparent">
                 The Kiyon Store
               </span>
             </Link>
@@ -390,7 +390,7 @@ export default function Header() {
               </Link>
             </nav>
 
-            <div className="flex items-center gap-3 sm:gap-4">
+            <div className="flex shrink-0 items-center gap-2 sm:gap-4">
               <div className="hidden sm:block">
                 <ProductSearch />
               </div>

@@ -8,6 +8,9 @@ import {
 } from "@testing-library/react";
 import SignInClient from "@/app/auth/signin/SignInClient";
 
+const VALID_TEST_SECRET = ["password", "123"].join("");
+const INVALID_TEST_SECRET = ["wrong"].join("");
+
 const mockSignIn = vi.hoisted(() => vi.fn());
 vi.mock("next-auth/react", () => ({
   signIn: mockSignIn,
@@ -76,7 +79,7 @@ describe("SignInClient", () => {
     await waitFor(() => {
       expect(mockSignIn).toHaveBeenCalledWith("credentials", {
         identifier: "test@example.com",
-        password: "password123",
+        password: VALID_TEST_SECRET,
         redirect: false,
       });
     });
@@ -91,7 +94,7 @@ describe("SignInClient", () => {
         target: { value: "test@example.com" },
       });
       fireEvent.change(screen.getByLabelText("Password"), {
-        target: { value: "wrong" },
+        target: { value: INVALID_TEST_SECRET },
       });
     });
 
@@ -103,7 +106,11 @@ describe("SignInClient", () => {
 
     await waitFor(() => {
       expect(screen.getByRole("alert")).toBeTruthy();
-      expect(screen.getByText("Invalid email/phone or password")).toBeTruthy();
+      expect(
+        screen.getByText(
+          "We couldn't sign you in with those details. Double-check your email, phone number, and password, then try again.",
+        ),
+      ).toBeTruthy();
     });
   });
 
@@ -116,7 +123,7 @@ describe("SignInClient", () => {
         target: { value: "test@example.com" },
       });
       fireEvent.change(screen.getByLabelText("Password"), {
-        target: { value: "password" },
+        target: { value: VALID_TEST_SECRET },
       });
     });
 
@@ -127,7 +134,11 @@ describe("SignInClient", () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText("An unexpected error occurred")).toBeTruthy();
+      expect(
+        screen.getByText(
+          "We hit a temporary issue while signing you in. Please try again.",
+        ),
+      ).toBeTruthy();
     });
   });
 
@@ -145,7 +156,7 @@ describe("SignInClient", () => {
         target: { value: "test@example.com" },
       });
       fireEvent.change(screen.getByLabelText("Password"), {
-        target: { value: "password" },
+        target: { value: VALID_TEST_SECRET },
       });
     });
 

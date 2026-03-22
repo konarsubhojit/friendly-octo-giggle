@@ -6,12 +6,16 @@
  * can skip the sign-in flow entirely.
  */
 import { chromium } from "@playwright/test";
-import * as path from "path";
-import * as fs from "fs";
-import { fileURLToPath } from "url";
+import * as path from "node:path";
+import * as fs from "node:fs";
+import { fileURLToPath } from "node:url";
+import { config as loadEnv } from "dotenv";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+loadEnv({ path: path.resolve(process.cwd(), ".env") });
+loadEnv({ path: path.resolve(process.cwd(), ".env.local"), override: true });
 
 export const AUTH_STATE_PATH = path.join(__dirname, ".auth", "admin.json");
 const BASE_URL = "https://localhost:3000";
@@ -25,6 +29,9 @@ export default async function globalSetup() {
   const email = process.env.COPILOT_DEV_EMAIL;
   const password = process.env.COPILOT_DEV_PASS;
   if (!email || !password) {
+    if (fs.existsSync(AUTH_STATE_PATH)) {
+      return;
+    }
     throw new Error(
       "COPILOT_DEV_EMAIL and COPILOT_DEV_PASS must be set in .env for Playwright auth",
     );
