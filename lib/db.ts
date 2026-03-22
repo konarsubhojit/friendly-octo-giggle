@@ -50,12 +50,11 @@ import {
 import { Product, ProductInput } from "./types";
 import { env } from "./env";
 import {
-  cacheProductsList,
   cacheProductById,
-  cacheProductsBestsellers,
   invalidateProductCaches,
   cacheShareResolve,
 } from "./cache";
+import { serializeProduct, serializeVariation } from "./serializers";
 
 // All schema tables and relations collected into one object for Drizzle relational queries
 const schema = {
@@ -122,7 +121,6 @@ export type DrizzleDb = typeof drizzleDb;
 export interface ProductListOptions {
   limit?: number;
   offset?: number;
-  withCache?: boolean;
   search?: string;
   category?: string;
 }
@@ -130,50 +128,31 @@ export interface ProductListOptions {
 export const db = {
   products: {
     /**
-     * Find all products with optional pagination and caching
-     * @param options - Pagination and cache options
+     * Find all products with optional pagination
+     * @param options - Pagination options
      * @returns Array of products with full details including variations
      */
     findAll: async (options: ProductListOptions = {}): Promise<Product[]> => {
-      const { limit, offset, withCache = false } = options;
+      const { limit, offset } = options;
 
-      const fetcher = async () => {
-        const query = drizzleDb.query.products.findMany({
-          where: isNull(products.deletedAt),
-          orderBy: [desc(products.createdAt)],
-          with: {
-            variations: {
-              where: (v, { isNull }) => isNull(v.deletedAt),
-            },
+      const query = drizzleDb.query.products.findMany({
+        where: isNull(products.deletedAt),
+        orderBy: [desc(products.createdAt)],
+        with: {
+          variations: {
+            where: (v, { isNull }) => isNull(v.deletedAt),
           },
-          limit,
-          offset,
-        });
+        },
+        limit,
+        offset,
+      });
 
-        const rows = await query;
+      const rows = await query;
 
-        return rows.map((p) => ({
-          ...p,
-          deletedAt: null,
-          createdAt: p.createdAt.toISOString(),
-          updatedAt: p.updatedAt.toISOString(),
-          variations: p.variations.map((v) => ({
-            ...v,
-            image: v.image ?? null,
-            images: v.images ?? [],
-            deletedAt: null,
-            createdAt: v.createdAt.toISOString(),
-            updatedAt: v.updatedAt.toISOString(),
-          })),
-        }));
-      };
-
-      // Use cache only if explicitly requested and no pagination
-      if (withCache && !limit && !offset) {
-        return cacheProductsList(fetcher);
-      }
-
-      return fetcher();
+      return rows.map((p) => ({
+        ...serializeProduct(p),
+        variations: p.variations.map(serializeVariation),
+      }));
     },
 
     /**
@@ -193,105 +172,87 @@ export const db = {
      * @param options - Pagination and cache options
      * @returns Array of products sorted by sales volume descending
      */
-    findBestsellers: (options: ProductListOptions = {}): Promise<Product[]> => {
-      const { limit = 5, withCache = false } = options;
+    findBestsellers: async (
+      options: ProductListOptions = {},
+    ): Promise<Product[]> => {
+      const { limit = 5 } = options;
 
-      const fetcher = async () => {
-        // Single SQL query: LEFT JOIN a sales-aggregate subquery so products
-        // with no sales still appear (totalSold = 0), then sort + limit in DB.
-        const salesSubquery = drizzleDb
-          .select({
-            productId: orderItems.productId,
-            totalSold:
-              sql<number>`cast(coalesce(sum(${orderItems.quantity}), 0) as int)`.as(
-                "total_sold",
-              ),
-          })
-          .from(orderItems)
-          .innerJoin(
-            orders,
-            and(
-              eq(orders.id, orderItems.orderId),
-              ne(orders.status, "CANCELLED"),
+      // Single SQL query: LEFT JOIN a sales-aggregate subquery so products
+      // with no sales still appear (totalSold = 0), then sort + limit in DB.
+      const salesSubquery = drizzleDb
+        .select({
+          productId: orderItems.productId,
+          totalSold:
+            sql<number>`cast(coalesce(sum(${orderItems.quantity}), 0) as int)`.as(
+              "total_sold",
             ),
-          )
-          .groupBy(orderItems.productId)
-          .as("sales");
+        })
+        .from(orderItems)
+        .innerJoin(
+          orders,
+          and(
+            eq(orders.id, orderItems.orderId),
+            ne(orders.status, "CANCELLED"),
+          ),
+        )
+        .groupBy(orderItems.productId)
+        .as("sales");
 
-        let bestsellerQuery = drizzleDb
-          .select({
-            id: products.id,
-            name: products.name,
-            description: products.description,
-            price: products.price,
-            image: products.image,
-            images: products.images,
-            stock: products.stock,
-            category: products.category,
-            deletedAt: products.deletedAt,
-            createdAt: products.createdAt,
-            updatedAt: products.updatedAt,
-          })
-          .from(products)
-          .leftJoin(salesSubquery, eq(products.id, salesSubquery.productId))
-          .where(isNull(products.deletedAt))
-          .orderBy(
-            desc(sql`coalesce(${salesSubquery.totalSold}, 0)`),
-            desc(products.createdAt),
-          )
-          .$dynamic();
+      let bestsellerQuery = drizzleDb
+        .select({
+          id: products.id,
+          name: products.name,
+          description: products.description,
+          price: products.price,
+          image: products.image,
+          images: products.images,
+          stock: products.stock,
+          category: products.category,
+          deletedAt: products.deletedAt,
+          createdAt: products.createdAt,
+          updatedAt: products.updatedAt,
+        })
+        .from(products)
+        .leftJoin(salesSubquery, eq(products.id, salesSubquery.productId))
+        .where(isNull(products.deletedAt))
+        .orderBy(
+          desc(sql`coalesce(${salesSubquery.totalSold}, 0)`),
+          desc(products.createdAt),
+        )
+        .$dynamic();
 
-        if (limit) {
-          bestsellerQuery = bestsellerQuery.limit(limit);
-        }
-
-        const rows = await bestsellerQuery;
-
-        if (rows.length === 0) return [];
-
-        // Fetch variations only for the products that made the cut
-        const productIds = rows.map((r) => r.id);
-        const varRows = await drizzleDb.query.productVariations.findMany({
-          where: (pv, { inArray, and, isNull }) =>
-            and(inArray(pv.productId, productIds), isNull(pv.deletedAt)),
-        });
-
-        // Group variations by productId for O(1) lookup
-        const varsByProduct = new Map<string, typeof varRows>();
-        for (const v of varRows) {
-          const list = varsByProduct.get(v.productId) ?? [];
-          list.push(v);
-          varsByProduct.set(v.productId, list);
-        }
-
-        return rows.map((p) => ({
-          ...p,
-          deletedAt: null,
-          createdAt: p.createdAt.toISOString(),
-          updatedAt: p.updatedAt.toISOString(),
-          variations: (varsByProduct.get(p.id) ?? []).map((v) => ({
-            ...v,
-            image: v.image ?? null,
-            images: v.images ?? [],
-            deletedAt: null,
-            createdAt: v.createdAt.toISOString(),
-            updatedAt: v.updatedAt.toISOString(),
-          })),
-        }));
-      };
-
-      // Only cache when there is no pagination — a limited result set would
-      // collide with the full-catalog entry under the same cache key.
-      if (withCache && !limit) {
-        return cacheProductsBestsellers(fetcher);
+      if (limit) {
+        bestsellerQuery = bestsellerQuery.limit(limit);
       }
 
-      return fetcher();
+      const rows = await bestsellerQuery;
+
+      if (rows.length === 0) return [];
+
+      // Fetch variations only for the products that made the cut
+      const productIds = rows.map((r) => r.id);
+      const varRows = await drizzleDb.query.productVariations.findMany({
+        where: (pv, { inArray, and, isNull }) =>
+          and(inArray(pv.productId, productIds), isNull(pv.deletedAt)),
+      });
+
+      // Group variations by productId for O(1) lookup
+      const varsByProduct = new Map<string, typeof varRows>();
+      for (const v of varRows) {
+        const list = varsByProduct.get(v.productId) ?? [];
+        list.push(v);
+        varsByProduct.set(v.productId, list);
+      }
+
+      return rows.map((p) => ({
+        ...serializeProduct(p),
+        variations: (varsByProduct.get(p.id) ?? []).map(serializeVariation),
+      }));
     },
 
     /**
      * Find products for list views (minimal fields for performance)
-     * @param options - Pagination options
+     * @param options - Pagination and filter options
      * @returns Array of products with only essential fields for list views
      */
     findAllMinimal: async (
@@ -310,53 +271,44 @@ export const db = {
         >
       >
     > => {
-      const { limit, offset, withCache = false, search, category } = options;
+      const { limit, offset, search, category } = options;
 
-      const fetcher = async () => {
-        const filters: SQL[] = [isNull(products.deletedAt)];
-        const normalizedSearch = search?.trim();
-        const normalizedCategory = category?.trim();
+      const filters: SQL[] = [isNull(products.deletedAt)];
+      const normalizedSearch = search?.trim();
+      const normalizedCategory = category?.trim();
 
-        if (normalizedSearch) {
-          filters.push(
-            or(
-              ilike(products.name, `%${normalizedSearch}%`),
-              ilike(products.description, `%${normalizedSearch}%`),
-            ) as SQL,
-          );
-        }
-
-        if (normalizedCategory) {
-          filters.push(eq(products.category, normalizedCategory));
-        }
-
-        const whereClause = filters.length === 1 ? filters[0] : and(...filters);
-
-        const rows = await drizzleDb.query.products.findMany({
-          where: whereClause,
-          orderBy: [desc(products.createdAt)],
-          columns: {
-            id: true,
-            name: true,
-            description: true,
-            price: true,
-            stock: true,
-            category: true,
-            image: true,
-          },
-          limit,
-          offset,
-        });
-
-        return rows;
-      };
-
-      // Use cache only if explicitly requested and no pagination
-      if (withCache && !limit && !offset && !search && !category) {
-        return cacheProductsList(fetcher);
+      if (normalizedSearch) {
+        filters.push(
+          or(
+            ilike(products.name, `%${normalizedSearch}%`),
+            ilike(products.description, `%${normalizedSearch}%`),
+          ) as SQL,
+        );
       }
 
-      return fetcher();
+      if (normalizedCategory) {
+        filters.push(eq(products.category, normalizedCategory));
+      }
+
+      const whereClause = filters.length === 1 ? filters[0] : and(...filters);
+
+      const rows = await drizzleDb.query.products.findMany({
+        where: whereClause,
+        orderBy: [desc(products.createdAt)],
+        columns: {
+          id: true,
+          name: true,
+          description: true,
+          price: true,
+          stock: true,
+          category: true,
+          image: true,
+        },
+        limit,
+        offset,
+      });
+
+      return rows;
     },
 
     /**
@@ -380,18 +332,8 @@ export const db = {
         });
         if (!row) return null;
         return {
-          ...row,
-          deletedAt: null,
-          createdAt: row.createdAt.toISOString(),
-          updatedAt: row.updatedAt.toISOString(),
-          variations: row.variations.map((v) => ({
-            ...v,
-            image: v.image ?? null,
-            images: v.images ?? [],
-            deletedAt: null,
-            createdAt: v.createdAt.toISOString(),
-            updatedAt: v.updatedAt.toISOString(),
-          })),
+          ...serializeProduct(row),
+          variations: row.variations.map(serializeVariation),
         };
       };
 
@@ -411,12 +353,7 @@ export const db = {
       // Invalidate product caches after creation
       await invalidateProductCaches();
 
-      return {
-        ...row,
-        deletedAt: row.deletedAt?.toISOString() ?? null,
-        createdAt: row.createdAt.toISOString(),
-        updatedAt: row.updatedAt.toISOString(),
-      };
+      return serializeProduct(row);
     },
 
     update: async (
@@ -492,18 +429,8 @@ export const db = {
       return rows
         .filter((r) => r.product !== null && !r.product.deletedAt)
         .map((r) => ({
-          ...r.product,
-          deletedAt: null,
-          createdAt: r.product.createdAt.toISOString(),
-          updatedAt: r.product.updatedAt.toISOString(),
-          variations: r.product.variations.map((v) => ({
-            ...v,
-            image: v.image ?? null,
-            images: v.images ?? [],
-            deletedAt: null,
-            createdAt: v.createdAt.toISOString(),
-            updatedAt: v.updatedAt.toISOString(),
-          })),
+          ...serializeProduct(r.product),
+          variations: r.product.variations.map(serializeVariation),
         }));
     },
 

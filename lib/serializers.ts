@@ -18,24 +18,41 @@ const toISOString = (value: Date | string): string => {
   return value.toISOString();
 };
 
+export const serializeProduct = <T extends DbProduct>(product: T) => ({
+  ...product,
+  createdAt: toISOString(product.createdAt),
+  updatedAt: toISOString(product.updatedAt),
+  deletedAt: product.deletedAt ? toISOString(product.deletedAt) : null,
+});
+
+export const serializeVariation = <T extends DbProductVariation>(
+  variation: T,
+) => ({
+  ...variation,
+  image: variation.image ?? null,
+  images: variation.images ?? [],
+  createdAt: toISOString(variation.createdAt),
+  updatedAt: toISOString(variation.updatedAt),
+  deletedAt: variation.deletedAt ? toISOString(variation.deletedAt) : null,
+});
+
+export const serializeProductWithVariations = <
+  T extends DbProduct & { variations: DbProductVariation[] },
+>(
+  product: T,
+) => ({
+  ...serializeProduct(product),
+  variations: product.variations.map(serializeVariation),
+});
+
 export const serializeOrder = (order: OrderWithItems) => ({
   ...order,
   createdAt: toISOString(order.createdAt),
   updatedAt: toISOString(order.updatedAt),
   items: order.items.map((item) => ({
     ...item,
-    product: {
-      ...item.product,
-      createdAt: toISOString(item.product.createdAt),
-      updatedAt: toISOString(item.product.updatedAt),
-    },
-    variation: item.variation
-      ? {
-          ...item.variation,
-          createdAt: toISOString(item.variation.createdAt),
-          updatedAt: toISOString(item.variation.updatedAt),
-        }
-      : null,
+    product: serializeProduct(item.product),
+    variation: item.variation ? serializeVariation(item.variation) : null,
   })),
 });
 

@@ -8,7 +8,7 @@ import { Product, ProductVariation } from "@/lib/types";
 import { addToCart, fetchCart } from "@/lib/features/cart/cartSlice";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import type { AppDispatch, RootState } from "@/lib/store";
-import { ProductStockBadge } from "@/components/product/ProductStockBadge";
+import { StockBadge } from "@/components/sections/StockBadge";
 import { VariationButton } from "@/components/product/VariationButton";
 import { ShareButton } from "@/components/product/ShareButton";
 import { ButterflyAccent } from "@/components/ui/DecorativeElements";
@@ -352,7 +352,7 @@ const ProductInfoCard = ({
       </div>
 
       <div className="mb-6">
-        <ProductStockBadge stock={effectiveStock} />
+        <StockBadge stock={effectiveStock} showIcon size="md" />
       </div>
 
       <VariationSelector

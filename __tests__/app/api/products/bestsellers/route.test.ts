@@ -9,6 +9,12 @@ vi.mock("@/lib/db", () => ({
   },
 }));
 
+vi.mock("@/lib/cache", () => ({
+  cacheProductsBestsellers: vi.fn(async (fetcher: () => Promise<unknown>) => {
+    return await fetcher();
+  }),
+}));
+
 vi.mock("@/lib/api-middleware", () => ({
   withLogging: (fn: unknown) => fn,
 }));
@@ -72,7 +78,6 @@ describe("GET /api/products/bestsellers", () => {
     expect(body).toEqual({ success: true, data: { products: mockProducts } });
     expect(db.products.findBestsellers).toHaveBeenCalledWith({
       limit: 5,
-      withCache: true,
     });
   });
 
@@ -86,7 +91,6 @@ describe("GET /api/products/bestsellers", () => {
     expect(response.status).toBe(200);
     expect(db.products.findBestsellers).toHaveBeenCalledWith({
       limit: 8,
-      withCache: true,
     });
   });
 
