@@ -280,7 +280,11 @@ describe("ProductSearch", () => {
     });
 
     await waitFor(() => {
-      const title = screen.getByText("Bag Bag", { selector: "p" });
+      const resultButton = screen.getByRole("button", { name: /Bag Bag/i });
+      const title = resultButton.querySelector("p");
+      if (!title) {
+        throw new Error("Expected search result title to be rendered");
+      }
       expect(title.querySelectorAll("mark")).toHaveLength(2);
     });
   });
