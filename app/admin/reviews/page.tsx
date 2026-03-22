@@ -5,7 +5,7 @@ import Image from "next/image";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { AlertBanner } from "@/components/ui/AlertBanner";
 import { EmptyState } from "@/components/ui/EmptyState";
-import AdminBreadcrumbs from "@/components/admin/AdminBreadcrumbs";
+import { AdminPageShell, AdminPanel } from "@/components/admin/AdminPageShell";
 import { StarRating } from "@/components/ui/StarRating";
 import { Badge } from "@/components/ui/Badge";
 
@@ -49,10 +49,10 @@ const ReviewRow = ({ review }: { readonly review: AdminReview }) => {
       : (review.user.name ?? review.user.email);
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-5">
+    <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-[0_20px_44px_-34px_rgba(15,23,42,0.4)]">
       <div className="flex items-start gap-4">
         {review.product && (
-          <div className="relative w-14 h-14 shrink-0 rounded-md overflow-hidden bg-gray-100 dark:bg-gray-700">
+          <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-2xl bg-slate-100">
             <Image
               src={review.product.image}
               alt={review.product.name}
@@ -63,10 +63,10 @@ const ReviewRow = ({ review }: { readonly review: AdminReview }) => {
           </div>
         )}
         <div className="flex-1 min-w-0">
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mb-2">
+          <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1">
             <StarRating rating={review.rating} size="sm" />
             {review.product && (
-              <span className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+              <span className="truncate text-sm font-semibold text-slate-950">
                 {review.product.name}
               </span>
             )}
@@ -76,7 +76,7 @@ const ReviewRow = ({ review }: { readonly review: AdminReview }) => {
               </Badge>
             )}
           </div>
-          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed mb-3">
+          <p className="mb-3 text-sm leading-relaxed text-slate-700">
             {review.comment}
           </p>
           <ReviewMeta review={review} displayName={displayName} />
@@ -93,12 +93,9 @@ const ReviewMeta = ({
   readonly review: AdminReview;
   readonly displayName: string;
 }) => (
-  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
+  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
     <span>
-      By:{" "}
-      <strong className="text-gray-700 dark:text-gray-300">
-        {displayName}
-      </strong>
+      By: <strong className="text-slate-700">{displayName}</strong>
     </span>
     {!review.isAnonymous && review.user?.email && (
       <span>{review.user.email}</span>
@@ -181,75 +178,74 @@ const AdminReviewsPage = () => {
     );
 
   return (
-    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <AdminBreadcrumbs
-        items={[{ label: "Admin", href: "/admin" }, { label: "Reviews" }]}
-      />
-      <ReviewsHeader
-        total={total}
-        avgRating={avgRating}
-        loading={loading}
-        onRefresh={fetchReviews}
-      />
+    <AdminPageShell
+      breadcrumbs={[{ label: "Admin", href: "/admin" }, { label: "Reviews" }]}
+      eyebrow="Customer feedback"
+      title="Reviews surfaced in a cleaner moderation flow."
+      description="Search feedback, narrow by rating, and spot sentiment changes without a noisy moderation screen."
+      actions={
+        <button
+          onClick={fetchReviews}
+          disabled={loading}
+          className="inline-flex items-center rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+        >
+          Refresh
+        </button>
+      }
+      metrics={[
+        {
+          label: "Total reviews",
+          value: String(total),
+          hint: "Records returned from the admin reviews feed.",
+          tone: "sky",
+        },
+        {
+          label: "Average rating",
+          value: avgRating > 0 ? `${avgRating.toFixed(1)} / 5` : "No data",
+          hint: "Calculated from the currently visible result set.",
+          tone: "amber",
+        },
+        {
+          label: "Visible results",
+          value: String(filtered.length),
+          hint: "Reviews matching the current search and rating filter.",
+          tone: "emerald",
+        },
+      ]}
+    >
+      {error ? (
+        <AlertBanner message={error} variant="error" className="mb-0" />
+      ) : null}
 
-      {error && (
-        <AlertBanner message={error} variant="error" className="mb-4" />
-      )}
+      <AdminPanel
+        title="Filter feedback"
+        description="Search by product, customer, or comment text, then narrow the view by rating."
+      >
+        <ReviewsFilters
+          search={search}
+          onSearchChange={setSearch}
+          ratingFilter={ratingFilter}
+          onRatingChange={setRatingFilter}
+        />
+      </AdminPanel>
 
-      <ReviewsFilters
-        search={search}
-        onSearchChange={setSearch}
-        ratingFilter={ratingFilter}
-        onRatingChange={setRatingFilter}
-      />
-
-      {loading ? (
-        <div className="flex items-center justify-center py-16">
-          <LoadingSpinner />
-        </div>
-      ) : (
-        filteredContent
-      )}
-    </main>
+      <AdminPanel
+        title="Review feed"
+        description="Inspect recent comments, verify attribution, and scan sentiment without leaving the admin space."
+      >
+        {loading ? (
+          <div className="flex items-center justify-center py-16">
+            <LoadingSpinner />
+          </div>
+        ) : (
+          filteredContent
+        )}
+      </AdminPanel>
+    </AdminPageShell>
   );
 };
 
 export default AdminReviewsPage;
-
-const ReviewsHeader = ({
-  total,
-  avgRating,
-  loading,
-  onRefresh,
-}: {
-  readonly total: number;
-  readonly avgRating: number;
-  readonly loading: boolean;
-  readonly onRefresh: () => void;
-}) => (
-  <div className="mb-6 flex flex-wrap justify-between items-start gap-4">
-    <div>
-      <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-        Reviews &amp; Feedback
-      </h2>
-      <p className="text-gray-600 dark:text-gray-400 mt-1">
-        {total} total reviews
-        {avgRating > 0 && (
-          <span className="ml-3 inline-flex items-center gap-1 text-amber-500 font-semibold">
-            {avgRating.toFixed(1)} ★ avg
-          </span>
-        )}
-      </p>
-    </div>
-    <button
-      onClick={onRefresh}
-      disabled={loading}
-      className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 transition text-sm"
-    >
-      Refresh
-    </button>
-  </div>
-);
 
 const ReviewsFilters = ({
   search,
@@ -262,10 +258,10 @@ const ReviewsFilters = ({
   readonly ratingFilter: string;
   readonly onRatingChange: (val: string) => void;
 }) => (
-  <div className="mb-6 flex flex-col sm:flex-row gap-3">
-    <div className="relative flex-1 max-w-md">
+  <div className="flex flex-col gap-3 sm:flex-row">
+    <div className="relative max-w-2xl flex-1">
       <svg
-        className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
+        className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"
@@ -283,19 +279,19 @@ const ReviewsFilters = ({
         placeholder="Search by product, user, or comment…"
         value={search}
         onChange={(e) => onSearchChange(e.target.value)}
-        className="w-full pl-9 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="w-full rounded-2xl border border-slate-200 bg-slate-50/80 py-3 pl-11 pr-4 text-sm text-slate-950 shadow-inner shadow-white/40 outline-none transition placeholder:text-slate-400 focus:border-sky-400 focus:bg-white focus:ring-4 focus:ring-sky-100"
         aria-label="Search reviews"
       />
     </div>
-    <div className="flex gap-2 flex-wrap">
+    <div className="flex flex-wrap gap-2">
       {RATING_FILTERS.map(({ label, value }) => (
         <button
           key={value}
           onClick={() => onRatingChange(value)}
-          className={`px-3 py-2 rounded-md text-sm font-medium whitespace-nowrap transition ${
+          className={`rounded-full px-4 py-2 text-sm font-semibold whitespace-nowrap transition ${
             ratingFilter === value
-              ? "bg-blue-600 text-white"
-              : "bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 border border-gray-300 dark:border-gray-600"
+              ? "bg-slate-950 text-white"
+              : "border border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-950"
           }`}
           aria-pressed={ratingFilter === value}
         >

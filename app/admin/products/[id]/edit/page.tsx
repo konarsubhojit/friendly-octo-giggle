@@ -1,7 +1,9 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { notFound, redirect } from "next/navigation";
-import AdminBreadcrumbs from "@/components/admin/AdminBreadcrumbs";
+import Link from "next/link";
+import { AdminPageShell } from "@/components/admin/AdminPageShell";
 import ProductEditPageForm from "@/components/admin/ProductEditPageForm";
+import VariationList from "@/components/admin/VariationList";
 import { auth } from "@/lib/auth";
 import { drizzleDb } from "@/lib/db";
 import { products } from "@/lib/schema";
@@ -22,6 +24,11 @@ export default async function AdminProductEditFormPage({ params }: PageProps) {
 
   const product = await drizzleDb.query.products.findFirst({
     where: and(eq(products.id, id), isNull(products.deletedAt)),
+    with: {
+      variations: {
+        where: (v, { isNull }) => isNull(v.deletedAt),
+      },
+    },
   });
 
   if (!product) {
@@ -42,30 +49,73 @@ export default async function AdminProductEditFormPage({ params }: PageProps) {
     updatedAt: product.updatedAt.toISOString(),
   };
 
+  const serializedVariations = product.variations.map((variation) => ({
+    id: variation.id,
+    productId: variation.productId,
+    name: variation.name,
+    designName: variation.designName,
+    image: variation.image ?? null,
+    images: variation.images ?? [],
+    priceModifier: variation.priceModifier,
+    stock: variation.stock,
+    deletedAt: null,
+    createdAt: variation.createdAt.toISOString(),
+    updatedAt: variation.updatedAt.toISOString(),
+  }));
+
+  const variationsInStock = serializedVariations.filter(
+    (variation) => variation.stock > 0,
+  ).length;
+
   return (
-    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <AdminBreadcrumbs
-        items={[
-          { label: "Admin", href: "/admin" },
-          { label: "Products", href: "/admin/products" },
-          {
-            label: serializedProduct.name,
-            href: `/admin/products/${serializedProduct.id}`,
-          },
-          { label: "Edit Product" },
-        ]}
-      />
-
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-          Edit Product
-        </h1>
-        <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-          Update the product details and return to the product management view.
-        </p>
-      </div>
-
+    <AdminPageShell
+      breadcrumbs={[
+        { label: "Admin", href: "/admin" },
+        { label: "Products", href: "/admin/products" },
+        {
+          label: serializedProduct.name,
+          href: `/admin/products/${serializedProduct.id}`,
+        },
+        { label: "Edit Product" },
+      ]}
+      eyebrow="Catalog editing"
+      title="Edit product details and variations"
+      description="Update the base product information, then adjust variation pricing, stock, and imagery from the same workspace without bouncing between routes."
+      actions={
+        <Link
+          href={`/admin/products/${serializedProduct.id}`}
+          className="inline-flex items-center rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:text-slate-950"
+        >
+          Back to Overview
+        </Link>
+      }
+      metrics={[
+        {
+          label: "Base stock",
+          value: String(serializedProduct.stock),
+          hint: "Shared inventory before variation-level adjustments.",
+          tone: serializedProduct.stock > 0 ? "sky" : "rose",
+        },
+        {
+          label: "Variations",
+          value: String(serializedVariations.length),
+          hint: "Active variation options tied to this product.",
+          tone: "amber",
+        },
+        {
+          label: "In stock",
+          value: String(variationsInStock),
+          hint: "Variation entries currently sellable.",
+          tone: variationsInStock > 0 ? "emerald" : "rose",
+        },
+      ]}
+    >
       <ProductEditPageForm product={serializedProduct} />
-    </main>
+      <VariationList
+        productId={serializedProduct.id}
+        productPrice={serializedProduct.price}
+        initialVariations={serializedVariations}
+      />
+    </AdminPageShell>
   );
 }

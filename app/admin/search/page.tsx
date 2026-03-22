@@ -1,6 +1,6 @@
 import { isSearchAvailable } from "@/lib/search";
+import { AdminPageShell, AdminPanel } from "@/components/admin/AdminPageShell";
 import SearchReindexClient from "@/components/admin/SearchReindexClient";
-import AdminBreadcrumbs from "@/components/admin/AdminBreadcrumbs";
 
 export const dynamic = "force-dynamic";
 
@@ -8,21 +8,31 @@ export default function AdminSearchPage() {
   const configured = isSearchAvailable();
 
   return (
-    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <AdminBreadcrumbs
-        items={[{ label: "Admin", href: "/admin" }, { label: "Search Index" }]}
-      />
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-          Search Index
-        </h2>
-        <p className="text-gray-600 dark:text-gray-400 mt-1">
-          Manage the Upstash Search index for products. Orders search is handled
-          separately in Redis Search.
-        </p>
-      </div>
-
-      <SearchReindexClient configured={configured} />
-    </main>
+    <AdminPageShell
+      breadcrumbs={[
+        { label: "Admin", href: "/admin" },
+        { label: "Search Index" },
+      ]}
+      eyebrow="Search infrastructure"
+      title="Search indexing with clearer operational guardrails."
+      description="Manage the Upstash product search index from a dedicated admin surface while keeping operational risk obvious."
+      metrics={[
+        {
+          label: "Index status",
+          value: configured ? "Configured" : "Missing config",
+          hint: configured
+            ? "Reindex operations are available."
+            : "Environment variables still need to be set.",
+          tone: configured ? "emerald" : "amber",
+        },
+      ]}
+    >
+      <AdminPanel
+        title="Search reindex controls"
+        description="Rebuild product search after imports, migrations, or stale index incidents."
+      >
+        <SearchReindexClient configured={configured} />
+      </AdminPanel>
+    </AdminPageShell>
   );
 }

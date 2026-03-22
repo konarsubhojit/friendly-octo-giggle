@@ -1,11 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import React from "react";
 import VariationList from "@/components/admin/VariationList";
 import type { ProductVariation } from "@/lib/types";
 
 vi.mock("react-hot-toast", () => ({
   default: { error: vi.fn(), success: vi.fn() },
+  error: vi.fn(),
+  success: vi.fn(),
 }));
 
 vi.mock("next/image", () => ({
@@ -20,7 +22,7 @@ vi.mock("@/contexts/CurrencyContext", () => ({
     formatPrice: (n: number) => `$${n.toFixed(2)}`,
     currency: "USD",
     availableCurrencies: ["USD"],
-    rates: { USD: 1 },
+    rates: { INR: 1, USD: 1 },
     setCurrency: vi.fn(),
   }),
 }));
@@ -32,7 +34,7 @@ const mockVariation: ProductVariation = {
   designName: "Classic Logo",
   image: "https://example.com/red.jpg",
   images: [],
-  priceModifier: 5.0,
+  priceModifier: 5,
   stock: 25,
   deletedAt: null,
   createdAt: "2025-01-01T00:00:00.000Z",
@@ -49,6 +51,7 @@ const mockVariationNoImage: ProductVariation = {
 describe("VariationList", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubGlobal("fetch", vi.fn());
   });
 
   it("renders empty state when no variations", () => {
@@ -121,5 +124,53 @@ describe("VariationList", () => {
       />,
     );
     expect(screen.getByText("Add Variation")).toBeInTheDocument();
+  });
+
+  it("saves inline quick edits for stock and price modifier", async () => {
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        data: {
+          variation: {
+            ...mockVariation,
+            stock: 30,
+            priceModifier: 7,
+            updatedAt: "2025-01-02T00:00:00.000Z",
+          },
+        },
+      }),
+    });
+    vi.stubGlobal("fetch", mockFetch);
+
+    render(
+      <VariationList
+        productId="abc1234"
+        productPrice={29.99}
+        initialVariations={[mockVariation]}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText("Modifier for Red - Large"), {
+      target: { value: "7" },
+    });
+    fireEvent.change(screen.getByLabelText("Stock for Red - Large"), {
+      target: { value: "30" },
+    });
+    fireEvent.click(screen.getByText("Save quick edit"));
+
+    await waitFor(() => {
+      expect(mockFetch).toHaveBeenCalledWith(
+        "/api/admin/variations/var1234",
+        expect.objectContaining({
+          method: "PUT",
+          body: JSON.stringify({ priceModifier: 7, stock: 30 }),
+        }),
+      );
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText("Stock: 30")).toBeInTheDocument();
+      expect(screen.getByText("$36.99")).toBeInTheDocument();
+    });
   });
 });

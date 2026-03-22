@@ -21,11 +21,11 @@ export const AdminSearchForm = ({
   placeholder = "Search\u2026",
   ariaLabel = "Search",
 }: AdminSearchFormProps) => (
-  <form onSubmit={onSearch} className="mb-6">
-    <div className="flex gap-2 max-w-md">
+  <form onSubmit={onSearch} className="space-y-3">
+    <div className="flex max-w-2xl flex-col gap-3 sm:flex-row">
       <div className="relative flex-1">
         <svg
-          className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
+          className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -43,28 +43,30 @@ export const AdminSearchForm = ({
           placeholder={placeholder}
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
-          className="w-full pl-9 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full rounded-2xl border border-slate-200 bg-slate-50/80 py-3 pl-11 pr-4 text-sm text-slate-950 shadow-inner shadow-white/40 outline-none transition placeholder:text-slate-400 focus:border-sky-400 focus:bg-white focus:ring-4 focus:ring-sky-100 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-50 dark:shadow-none dark:placeholder:text-slate-500 dark:focus:border-sky-500 dark:focus:bg-slate-900 dark:focus:ring-sky-500/20"
           aria-label={ariaLabel}
         />
       </div>
-      <button
-        type="submit"
-        className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition"
-      >
-        Search
-      </button>
-      {search && (
+      <div className="flex gap-3">
         <button
-          type="button"
-          onClick={onClear}
-          className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg text-sm hover:bg-gray-300 dark:hover:bg-gray-600 transition"
+          type="submit"
+          className="inline-flex min-w-[6.5rem] items-center justify-center rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 dark:bg-sky-500 dark:text-slate-950 dark:hover:bg-sky-400"
         >
-          Clear
+          Search
         </button>
-      )}
+        {search ? (
+          <button
+            type="button"
+            onClick={onClear}
+            className="inline-flex min-w-[6.5rem] items-center justify-center rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-950 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:text-slate-50"
+          >
+            Clear
+          </button>
+        ) : null}
+      </div>
     </div>
     {search && (
-      <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+      <p className="text-sm text-slate-500 dark:text-slate-400">
         Showing results for &ldquo;<strong>{search}</strong>&rdquo;
       </p>
     )}

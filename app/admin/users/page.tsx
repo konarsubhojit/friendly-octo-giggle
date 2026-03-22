@@ -8,7 +8,7 @@ import { logError } from "@/lib/logger";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { AlertBanner } from "@/components/ui/AlertBanner";
 import { EmptyState } from "@/components/ui/EmptyState";
-import AdminBreadcrumbs from "@/components/admin/AdminBreadcrumbs";
+import { AdminPageShell, AdminPanel } from "@/components/admin/AdminPageShell";
 import { UsersTable } from "@/components/admin/UsersTable";
 import { CursorPaginationBar } from "@/components/ui/CursorPaginationBar";
 import { AdminSearchForm } from "@/components/admin/AdminSearchForm";
@@ -104,50 +104,76 @@ export default function UsersManagement() {
       </>
     );
 
+  const adminCount = users.filter((user) => user.role === "ADMIN").length;
+  const customerCount = users.filter((user) => user.role === "CUSTOMER").length;
+
   return (
-    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <AdminBreadcrumbs
-        items={[{ label: "Admin", href: "/admin" }, { label: "Users" }]}
-      />
-      <div className="mb-6 flex justify-between items-center flex-wrap gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-            User Management
-          </h2>
-          <p className="text-gray-600 dark:text-gray-400 mt-2">
-            Manage user roles and permissions
-          </p>
-        </div>
+    <AdminPageShell
+      breadcrumbs={[{ label: "Admin", href: "/admin" }, { label: "Users" }]}
+      eyebrow="Access control"
+      title="User management with clearer role oversight."
+      description="Search accounts, review role distribution, and update permissions from a single workspace built for fast admin decisions."
+      actions={
         <button
           onClick={handleRefresh}
           disabled={loading}
-          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 transition text-sm"
+          className="inline-flex items-center rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
         >
           Refresh
         </button>
-      </div>
+      }
+      metrics={[
+        {
+          label: "Total users",
+          value: String(totalCount),
+          hint: "Matching the current query and pagination state.",
+          tone: "sky",
+        },
+        {
+          label: "Admins shown",
+          value: String(adminCount),
+          hint: "Visible on the current page.",
+          tone: "amber",
+        },
+        {
+          label: "Customers shown",
+          value: String(customerCount),
+          hint: "Visible on the current page.",
+          tone: "emerald",
+        },
+      ]}
+    >
+      <AdminPanel
+        title="Find a user"
+        description="Search by name or email to quickly jump to the account you need to review."
+      >
+        <AdminSearchForm
+          searchInput={searchInput}
+          setSearchInput={setSearchInput}
+          search={search}
+          onSearch={handleSearch}
+          onClear={handleRefresh}
+          placeholder="Search by name or email…"
+          ariaLabel="Search users"
+        />
+      </AdminPanel>
 
-      <AdminSearchForm
-        searchInput={searchInput}
-        setSearchInput={setSearchInput}
-        search={search}
-        onSearch={handleSearch}
-        onClear={handleRefresh}
-        placeholder="Search by name or email\u2026"
-        ariaLabel="Search users"
-      />
+      {error ? (
+        <AlertBanner message={error} variant="error" className="mb-0" />
+      ) : null}
 
-      {error && (
-        <AlertBanner message={error} variant="error" className="mb-4" />
-      )}
-
-      {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <LoadingSpinner />
-        </div>
-      ) : (
-        usersContent
-      )}
-    </main>
+      <AdminPanel
+        title="User directory"
+        description="Review recent accounts, promote or demote roles, and keep the access model under control."
+      >
+        {loading ? (
+          <div className="flex items-center justify-center py-16">
+            <LoadingSpinner />
+          </div>
+        ) : (
+          usersContent
+        )}
+      </AdminPanel>
+    </AdminPageShell>
   );
 }

@@ -1,4 +1,6 @@
-'use client';
+"use client";
+
+import Link from "next/link";
 
 interface TopProduct {
   productId: string;
@@ -8,7 +10,7 @@ interface TopProduct {
 }
 
 interface TopProductsTableProps {
-  readonly products: TopProduct[];
+  readonly products: readonly TopProduct[];
   readonly formatPrice: (price: number) => string;
 }
 
@@ -19,10 +21,21 @@ interface TopProductRowProps {
 
 function TopProductRow({ product, formatPrice }: TopProductRowProps) {
   return (
-    <tr className="border-b border-gray-100 dark:border-gray-700 last:border-0">
-      <td className="py-2 text-sm text-gray-900 dark:text-white">{product.name}</td>
-      <td className="py-2 text-sm text-gray-900 dark:text-white text-right">{product.totalQuantity}</td>
-      <td className="py-2 text-sm text-gray-900 dark:text-white text-right">{formatPrice(product.totalRevenue)}</td>
+    <tr className="border-b border-slate-100 last:border-0">
+      <td className="py-3 pr-4 text-sm font-medium text-slate-950">
+        <Link
+          href={`/admin/products/${product.productId}`}
+          className="transition hover:text-emerald-700"
+        >
+          {product.name}
+        </Link>
+      </td>
+      <td className="py-3 text-right text-sm text-slate-600">
+        {product.totalQuantity}
+      </td>
+      <td className="py-3 text-right text-sm font-semibold text-slate-950">
+        {formatPrice(product.totalRevenue)}
+      </td>
     </tr>
   );
 }
@@ -30,18 +43,27 @@ function TopProductRow({ product, formatPrice }: TopProductRowProps) {
 function TopProductsTableHeader() {
   return (
     <thead>
-      <tr className="border-b border-gray-200 dark:border-gray-700">
-        <th className="pb-2 text-sm font-medium text-gray-500 dark:text-gray-400">Product</th>
-        <th className="pb-2 text-sm font-medium text-gray-500 dark:text-gray-400 text-right">Qty Sold</th>
-        <th className="pb-2 text-sm font-medium text-gray-500 dark:text-gray-400 text-right">Revenue</th>
+      <tr className="border-b border-slate-200">
+        <th className="pb-3 text-left text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">
+          Product
+        </th>
+        <th className="pb-3 text-right text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">
+          Qty sold
+        </th>
+        <th className="pb-3 text-right text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">
+          Revenue
+        </th>
       </tr>
     </thead>
   );
 }
 
-export function TopProductsTable({ products, formatPrice }: TopProductsTableProps) {
+export function TopProductsTable({
+  products,
+  formatPrice,
+}: TopProductsTableProps) {
   if (products.length === 0) {
-    return <p className="text-gray-400 dark:text-gray-500 text-sm">No product sales yet</p>;
+    return <p className="text-sm text-slate-500">No product sales yet.</p>;
   }
 
   return (
@@ -50,7 +72,11 @@ export function TopProductsTable({ products, formatPrice }: TopProductsTableProp
         <TopProductsTableHeader />
         <tbody>
           {products.map((product) => (
-            <TopProductRow key={product.productId} product={product} formatPrice={formatPrice} />
+            <TopProductRow
+              key={product.productId}
+              product={product}
+              formatPrice={formatPrice}
+            />
           ))}
         </tbody>
       </table>

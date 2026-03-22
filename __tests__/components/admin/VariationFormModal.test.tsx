@@ -143,8 +143,18 @@ describe("VariationFormModal", () => {
 
     await waitFor(() => {
       expect(mockFetch).toHaveBeenCalledWith(
-        "/api/admin/products/abc1234/variations",
-        expect.objectContaining({ method: "POST" }),
+        "/api/admin/variations",
+        expect.objectContaining({
+          method: "POST",
+          body: JSON.stringify({
+            name: "Blue",
+            designName: "Modern",
+            priceModifier: 2,
+            stock: 10,
+            productId: "abc1234",
+            image: null,
+          }),
+        }),
       );
       expect(onSuccess).toHaveBeenCalled();
     });
@@ -175,7 +185,7 @@ describe("VariationFormModal", () => {
 
     await waitFor(() => {
       expect(mockFetch).toHaveBeenCalledWith(
-        "/api/admin/products/abc1234/variations/var1234",
+        "/api/admin/variations/var1234",
         expect.objectContaining({ method: "PUT" }),
       );
       expect(onSuccess).toHaveBeenCalled();

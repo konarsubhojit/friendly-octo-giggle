@@ -1,8 +1,8 @@
 import { drizzleDb } from "@/lib/db";
 import { categories } from "@/lib/schema";
 import { isNull, asc } from "drizzle-orm";
+import { AdminPageShell, AdminPanel } from "@/components/admin/AdminPageShell";
 import CategoriesClient from "@/components/admin/CategoriesClient";
-import AdminBreadcrumbs from "@/components/admin/AdminBreadcrumbs";
 
 export const dynamic = "force-dynamic";
 
@@ -21,19 +21,29 @@ export default async function AdminCategoriesPage() {
   }));
 
   return (
-    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <AdminBreadcrumbs
-        items={[{ label: "Admin", href: "/admin" }, { label: "Categories" }]}
-      />
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-          Categories
-        </h2>
-        <p className="text-gray-600 dark:text-gray-400 mt-1">
-          Add, edit, or remove product categories
-        </p>
-      </div>
-      <CategoriesClient initialCategories={serialized} />
-    </main>
+    <AdminPageShell
+      breadcrumbs={[
+        { label: "Admin", href: "/admin" },
+        { label: "Categories" },
+      ]}
+      eyebrow="Catalog structure"
+      title="Category controls with less friction."
+      description="Keep product classification tidy with a dedicated workspace for adding, sorting, and retiring categories."
+      metrics={[
+        {
+          label: "Active categories",
+          value: String(serialized.length),
+          hint: "Visible in admin and storefront filters.",
+          tone: "sky",
+        },
+      ]}
+    >
+      <AdminPanel
+        title="Manage category taxonomy"
+        description="Create new groups, adjust sort order, and clean up unused categories without leaving the admin workspace."
+      >
+        <CategoriesClient initialCategories={serialized} />
+      </AdminPanel>
+    </AdminPageShell>
   );
 }

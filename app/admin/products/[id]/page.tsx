@@ -3,7 +3,8 @@ import { auth } from "@/lib/auth";
 import { drizzleDb } from "@/lib/db";
 import { products } from "@/lib/schema";
 import { eq, and, isNull } from "drizzle-orm";
-import AdminBreadcrumbs from "@/components/admin/AdminBreadcrumbs";
+import Link from "next/link";
+import { AdminPageShell } from "@/components/admin/AdminPageShell";
 import VariationList from "@/components/admin/VariationList";
 import ProductEditForm from "@/components/admin/ProductEditForm";
 
@@ -64,28 +65,50 @@ export default async function AdminProductEditPage({ params }: PageProps) {
   };
 
   return (
-    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <AdminBreadcrumbs
-        items={[
-          { label: "Admin", href: "/admin" },
-          { label: "Products", href: "/admin/products" },
-          { label: serializedProduct.name },
-        ]}
-      />
-
-      <div className="mb-6">
-        <p className="text-sm uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400">
-          Product Overview
-        </p>
-      </div>
-
+    <AdminPageShell
+      breadcrumbs={[
+        { label: "Admin", href: "/admin" },
+        { label: "Products", href: "/admin/products" },
+        { label: serializedProduct.name },
+      ]}
+      eyebrow="Product overview"
+      title={serializedProduct.name}
+      description="Review core product details, confirm pricing and stock, and manage associated variations from one place."
+      actions={
+        <Link
+          href={`/admin/products/${serializedProduct.id}/edit`}
+          className="inline-flex items-center rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+        >
+          Open Editing Workspace
+        </Link>
+      }
+      metrics={[
+        {
+          label: "Base price",
+          value: `$${serializedProduct.price.toFixed(2)}`,
+          hint: "Stored in USD before display conversion.",
+          tone: "emerald",
+        },
+        {
+          label: "Base stock",
+          value: String(serializedProduct.stock),
+          hint: "Inventory before variation-level stock overrides.",
+          tone: serializedProduct.stock > 0 ? "sky" : "rose",
+        },
+        {
+          label: "Variations",
+          value: String(serializedVariations.length),
+          hint: "Active product options currently available.",
+          tone: "amber",
+        },
+      ]}
+    >
       <ProductEditForm product={serializedProduct} />
-
       <VariationList
         productId={product.id}
         productPrice={product.price}
         initialVariations={serializedVariations}
       />
-    </main>
+    </AdminPageShell>
   );
 }

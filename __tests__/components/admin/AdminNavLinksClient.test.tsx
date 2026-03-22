@@ -25,8 +25,8 @@ vi.mock("next/navigation", () => ({
 describe("AdminNavLinksClient", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    Object.defineProperty(window, "scrollY", { value: 0, writable: true });
-    Object.defineProperty(window, "scrollX", { value: 0, writable: true });
+    Object.defineProperty(globalThis, "scrollY", { value: 0, writable: true });
+    Object.defineProperty(globalThis, "scrollX", { value: 0, writable: true });
   });
 
   it("renders the Dashboard link", () => {
@@ -75,6 +75,95 @@ describe("AdminNavLinksClient", () => {
     expect(
       screen.getByRole("menuitem", { name: "Categories" }),
     ).toHaveAttribute("href", "/admin/categories");
+  });
+
+  it("positions the dropdown using viewport coordinates when the page is scrolled", async () => {
+    Object.defineProperty(globalThis, "scrollY", {
+      value: 320,
+      writable: true,
+    });
+    Object.defineProperty(globalThis, "scrollX", { value: 48, writable: true });
+    Object.defineProperty(globalThis, "innerWidth", {
+      value: 1280,
+      writable: true,
+    });
+
+    const rectSpy = vi
+      .spyOn(HTMLButtonElement.prototype, "getBoundingClientRect")
+      .mockReturnValue({
+        x: 24,
+        y: 180,
+        top: 180,
+        left: 24,
+        right: 116,
+        bottom: 218,
+        width: 92,
+        height: 38,
+        toJSON: () => ({}),
+      });
+
+    render(<AdminNavLinksClient failedEmailCount={0} />);
+    fireEvent.click(screen.getByRole("button", { name: /Catalog/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("menu")).toHaveStyle({
+        top: "218px",
+        left: "24px",
+      });
+    });
+
+    rectSpy.mockRestore();
+  });
+
+  it("repositions an open dropdown when the viewport scrolls", async () => {
+    Object.defineProperty(globalThis, "innerWidth", {
+      value: 1280,
+      writable: true,
+    });
+
+    let currentRect = {
+      x: 24,
+      y: 180,
+      top: 180,
+      left: 24,
+      right: 116,
+      bottom: 218,
+      width: 92,
+      height: 38,
+      toJSON: () => ({}),
+    };
+
+    const rectSpy = vi
+      .spyOn(HTMLButtonElement.prototype, "getBoundingClientRect")
+      .mockImplementation(() => currentRect);
+
+    render(<AdminNavLinksClient failedEmailCount={0} />);
+    fireEvent.click(screen.getByRole("button", { name: /Catalog/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("menu")).toHaveStyle({
+        top: "218px",
+        left: "24px",
+      });
+    });
+
+    currentRect = {
+      ...currentRect,
+      y: 12,
+      top: 12,
+      bottom: 50,
+    };
+
+    fireEvent.scroll(globalThis);
+
+    await waitFor(() => {
+      expect(screen.getByRole("menu")).toHaveStyle({
+        top: "50px",
+        left: "24px",
+      });
+    });
+
+    rectSpy.mockRestore();
   });
 
   it("Catalog dropdown button has aria-expanded=false initially", () => {

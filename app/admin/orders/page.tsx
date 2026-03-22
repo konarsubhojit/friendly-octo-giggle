@@ -9,8 +9,9 @@ import type { AppDispatch } from "@/lib/store";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { AlertBanner } from "@/components/ui/AlertBanner";
 import { EmptyState } from "@/components/ui/EmptyState";
-import AdminBreadcrumbs from "@/components/admin/AdminBreadcrumbs";
+import { AdminPageShell, AdminPanel } from "@/components/admin/AdminPageShell";
 import { AdminOrderCard } from "@/components/admin/AdminOrderCard";
+import { AdminSearchForm } from "@/components/admin/AdminSearchForm";
 import { CursorPaginationBar } from "@/components/ui/CursorPaginationBar";
 
 type ShippingEdits = Record<
@@ -120,12 +121,8 @@ export default function OrdersManagement() {
   useEffect(() => {
     const pendingOffset = pendingOffsetRef.current;
     pendingOffsetRef.current = null;
-    fetchOrders(
-      pendingOffset !== null ? null : cursor,
-      search,
-      filter,
-      pendingOffset ?? undefined,
-    );
+    const effectiveCursor = pendingOffset === null ? cursor : null;
+    fetchOrders(effectiveCursor, search, filter, pendingOffset ?? undefined);
   }, [fetchOrders, cursor, search, filter]);
 
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
@@ -160,13 +157,14 @@ export default function OrdersManagement() {
   const handlePrev = () => {
     if (currentPage === 1) return;
     const prevCursor = pageCursorsRef.current[currentPage - 2];
-    if (prevCursor !== undefined) {
-      setCurrentPage((prev) => prev - 1);
-      setCursor(prevCursor);
-    } else {
+    if (prevCursor === undefined) {
       pendingOffsetRef.current = (currentPage - 2) * PAGE_SIZE;
       setCurrentPage((prev) => prev - 1);
+      return;
     }
+
+    setCurrentPage((prev) => prev - 1);
+    setCursor(prevCursor);
   };
 
   const handlePageSelect = (page: number) => {
@@ -320,110 +318,98 @@ export default function OrdersManagement() {
       </>
     );
 
+  const trackedOrders = orders.filter(
+    (order) => order.trackingNumber || order.shippingProvider,
+  ).length;
+  const visibleRevenue = orders.reduce(
+    (total, order) => total + order.totalAmount,
+    0,
+  );
+
   return (
-    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <AdminBreadcrumbs
-        items={[{ label: "Admin", href: "/admin" }, { label: "Orders" }]}
-      />
-      {/* Header */}
-      <div className="mb-6 flex justify-between items-center flex-wrap gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Order Management
-          </h2>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">
-            View and manage all customer orders
-          </p>
-        </div>
+    <AdminPageShell
+      breadcrumbs={[{ label: "Admin", href: "/admin" }, { label: "Orders" }]}
+      eyebrow="Fulfilment operations"
+      title="Orders workspace tuned for faster exception handling."
+      description="Search the order book, narrow by status, and move through fulfilment updates without hopping between views."
+      actions={
         <button
           onClick={handleRefresh}
           disabled={loading}
-          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 transition text-sm"
+          className="inline-flex items-center rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
         >
           Refresh
         </button>
-      </div>
+      }
+      metrics={[
+        {
+          label: "Matching orders",
+          value: String(totalCount),
+          hint: "Total orders under the current query and filter.",
+          tone: "sky",
+        },
+        {
+          label: "Visible revenue",
+          value: formatPrice(visibleRevenue),
+          hint: "Revenue represented on the current page.",
+          tone: "emerald",
+        },
+        {
+          label: "Tracking attached",
+          value: String(trackedOrders),
+          hint: "Orders with tracking or provider details filled in.",
+          tone: "amber",
+        },
+      ]}
+    >
+      <AdminPanel
+        title="Search and filter"
+        description="Search by customer, email, or order ID, then narrow the queue by fulfilment status."
+      >
+        <AdminSearchForm
+          searchInput={searchInput}
+          setSearchInput={setSearchInput}
+          search={search}
+          onSearch={handleSearch}
+          onClear={handleRefresh}
+          placeholder="Search by name, email, or order ID…"
+          ariaLabel="Search orders"
+        />
 
-      {/* Search */}
-      <form onSubmit={handleSearch} className="mb-6">
-        <div className="flex gap-2 max-w-md">
-          <div className="relative flex-1">
-            <svg
-              className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              aria-hidden="true"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-              />
-            </svg>
-            <input
-              type="search"
-              placeholder="Search by name, email, or order ID…"
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              aria-label="Search orders"
-            />
-          </div>
-          <button
-            type="submit"
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition"
-          >
-            Search
-          </button>
-          {search && (
+        <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
+          {STATUS_FILTERS.map((status) => (
             <button
-              type="button"
-              onClick={handleRefresh}
-              className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg text-sm hover:bg-gray-300 dark:hover:bg-gray-600 transition"
+              key={status}
+              onClick={() => handleFilterChange(status)}
+              className={`rounded-full px-4 py-2 text-sm font-semibold whitespace-nowrap transition ${
+                filter === status
+                  ? "bg-slate-950 text-white"
+                  : "border border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-950"
+              }`}
+              aria-pressed={filter === status}
             >
-              Clear
+              {status}
             </button>
-          )}
+          ))}
         </div>
-        {search && (
-          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-            Showing results for &ldquo;<strong>{search}</strong>&rdquo;
-          </p>
+      </AdminPanel>
+
+      {error ? (
+        <AlertBanner message={error} variant="error" className="mb-0" />
+      ) : null}
+
+      <AdminPanel
+        title="Order queue"
+        description="Review the current page of orders, update status, and save shipping data inline."
+      >
+        {loading ? (
+          <div className="flex items-center justify-center py-16">
+            <LoadingSpinner />
+          </div>
+        ) : (
+          ordersListContent
         )}
-      </form>
-
-      {error && (
-        <AlertBanner message={error} variant="error" className="mb-4" />
-      )}
-
-      {/* Status Filter Tabs */}
-      <div className="mb-6 flex gap-2 overflow-x-auto">
-        {STATUS_FILTERS.map((status) => (
-          <button
-            key={status}
-            onClick={() => handleFilterChange(status)}
-            className={`px-4 py-2 rounded-md font-medium whitespace-nowrap transition ${
-              filter === status
-                ? "bg-blue-600 text-white"
-                : "bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600"
-            }`}
-            aria-pressed={filter === status}
-          >
-            {status}
-          </button>
-        ))}
-      </div>
-
-      {/* Orders list */}
-      {loading ? (
-        <div className="flex items-center justify-center py-16">
-          <LoadingSpinner />
-        </div>
-      ) : (
-        ordersListContent
-      )}
-    </main>
+      </AdminPanel>
+    </AdminPageShell>
   );
 }

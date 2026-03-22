@@ -1,29 +1,63 @@
-'use client';
+"use client";
 
 interface OrdersByStatusCardProps {
   readonly ordersByStatus: Record<string, number>;
 }
 
-export function OrdersByStatusCard({ ordersByStatus }: OrdersByStatusCardProps) {
-  if (Object.keys(ordersByStatus).length === 0) {
+export function OrdersByStatusCard({
+  ordersByStatus,
+}: OrdersByStatusCardProps) {
+  const entries = Object.entries(ordersByStatus).sort(
+    ([, leftCount], [, rightCount]) => rightCount - leftCount,
+  );
+  const totalOrders = entries.reduce((total, [, count]) => total + count, 0);
+
+  if (entries.length === 0) {
     return (
-      <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
-        <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Orders by Status</p>
-        <p className="text-gray-400 dark:text-gray-500 text-sm">No orders yet</p>
+      <div className="rounded-[1.25rem] border border-dashed border-slate-300 bg-slate-50 p-5">
+        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
+          Orders by status
+        </p>
+        <p className="mt-2 text-sm text-slate-500">No active orders yet.</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
-      <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Orders by Status</p>
-      <ul className="space-y-1">
-        {Object.entries(ordersByStatus).map(([status, count]) => (
-          <li key={status} className="flex justify-between text-sm">
-            <span className="capitalize text-gray-700 dark:text-gray-300">{status}</span>
-            <span className="font-semibold text-gray-900 dark:text-white">{count}</span>
-          </li>
-        ))}
+    <div>
+      <div className="mb-4 flex items-end justify-between gap-4">
+        <div>
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
+            Orders by status
+          </p>
+          <p className="mt-1 text-sm text-slate-500">
+            A quick view of the current fulfilment mix.
+          </p>
+        </div>
+        <p className="text-sm font-semibold text-slate-950">
+          {totalOrders} active orders
+        </p>
+      </div>
+
+      <ul className="space-y-3">
+        {entries.map(([status, count]) => {
+          const share = totalOrders > 0 ? (count / totalOrders) * 100 : 0;
+
+          return (
+            <li key={status} className="rounded-2xl bg-slate-50 p-3">
+              <div className="mb-2 flex items-center justify-between gap-3 text-sm">
+                <span className="font-semibold text-slate-800">{status}</span>
+                <span className="text-slate-500">{count}</span>
+              </div>
+              <div className="h-2 rounded-full bg-slate-200">
+                <div
+                  className="h-2 rounded-full bg-gradient-to-r from-emerald-500 to-cyan-500"
+                  style={{ width: `${Math.max(share, count > 0 ? 8 : 0)}%` }}
+                />
+              </div>
+            </li>
+          );
+        })}
       </ul>
     </div>
   );

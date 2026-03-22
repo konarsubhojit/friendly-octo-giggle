@@ -183,7 +183,9 @@ test.describe("Admin Orders", () => {
     await mockAdminRoutes(page);
     await page.goto("/admin/orders");
     await expect(
-      page.getByRole("heading", { name: /order management/i }),
+      page.getByRole("heading", {
+        name: /orders workspace tuned for faster exception handling/i,
+      }),
     ).toBeVisible();
 
     // All customers should appear
@@ -283,6 +285,62 @@ test.describe("Admin layout", () => {
     await mockAdminRoutes(page);
     await page.goto("/admin");
     await expect(page.getByText(/copilot admin/i)).toBeVisible();
+  });
+
+  test("dropdown menus stay attached to the trigger after scrolling", async ({
+    page,
+  }) => {
+    await mockAdminRoutes(page);
+    await page.goto("/admin/orders");
+    await expect(
+      page.getByRole("heading", {
+        name: /orders workspace tuned for faster exception handling/i,
+      }),
+    ).toBeVisible();
+
+    const trigger = page.getByRole("button", { name: "Catalog" });
+    await trigger.click();
+
+    await page.evaluate(() => window.scrollTo(0, 500));
+
+    const menu = page.getByRole("menu");
+    await expect(menu).toBeVisible();
+
+    const [triggerBox, menuBox] = await Promise.all([
+      trigger.boundingBox(),
+      menu.boundingBox(),
+    ]);
+
+    expect(triggerBox).not.toBeNull();
+    expect(menuBox).not.toBeNull();
+
+    if (!triggerBox || !menuBox) {
+      throw new Error(
+        "Expected dropdown trigger and menu to have layout boxes",
+      );
+    }
+
+    expect(
+      Math.abs(menuBox.y - (triggerBox.y + triggerBox.height)),
+    ).toBeLessThanOrEqual(1);
+  });
+
+  test("quick navigation filters admin destinations", async ({ page }) => {
+    await mockAdminRoutes(page);
+    await page.goto("/admin");
+
+    await page.getByRole("button", { name: /quick navigation/i }).click();
+    const dialog = page.getByRole("dialog", {
+      name: /admin quick navigation/i,
+    });
+    await expect(dialog).toBeVisible();
+
+    await page.getByPlaceholder("Jump to admin section...").fill("email");
+    await expect(dialog.getByText("Email Failures")).toBeVisible();
+    await expect(dialog.getByText("No matching sections")).not.toBeVisible();
+
+    await page.keyboard.press("Escape");
+    await expect(dialog).not.toBeVisible();
   });
 
   test("nav links are scrollable on mobile", async ({ page }, testInfo) => {

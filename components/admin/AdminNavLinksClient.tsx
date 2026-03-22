@@ -115,6 +115,22 @@ function DropdownGroup({
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
+  const updateMenuPosition = useCallback(() => {
+    if (!buttonRef.current) return;
+
+    const rect = buttonRef.current.getBoundingClientRect();
+    const menuWidth = 176;
+    const viewportPadding = 12;
+
+    setMenuStyle({
+      top: rect.bottom,
+      left: Math.max(
+        viewportPadding,
+        Math.min(rect.left, window.innerWidth - menuWidth - viewportPadding),
+      ),
+    });
+  }, []);
+
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (
@@ -132,20 +148,26 @@ function DropdownGroup({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [open]);
 
+  useEffect(() => {
+    if (!open) return;
+
+    updateMenuPosition();
+
+    const handleViewportChange = () => updateMenuPosition();
+    window.addEventListener("scroll", handleViewportChange, { passive: true });
+    window.addEventListener("resize", handleViewportChange);
+
+    return () => {
+      window.removeEventListener("scroll", handleViewportChange);
+      window.removeEventListener("resize", handleViewportChange);
+    };
+  }, [open, updateMenuPosition]);
+
   if (!group.items) return null;
 
   const handleToggle = () => {
-    if (!open && buttonRef.current) {
-      const rect = buttonRef.current.getBoundingClientRect();
-      const menuWidth = 176;
-      const viewportPadding = 12;
-      setMenuStyle({
-        top: rect.bottom + window.scrollY,
-        left: Math.min(
-          rect.left + window.scrollX,
-          window.scrollX + window.innerWidth - menuWidth - viewportPadding,
-        ),
-      });
+    if (!open) {
+      updateMenuPosition();
     }
     setOpen((o) => !o);
   };
@@ -158,7 +180,7 @@ function DropdownGroup({
         onClick={handleToggle}
         aria-expanded={open}
         aria-haspopup="menu"
-        className="flex items-center gap-1 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition"
+        className="flex items-center gap-1 rounded-full border border-transparent px-3 py-2 text-sm font-medium text-slate-600 transition hover:border-slate-200 hover:bg-white hover:text-slate-950 dark:text-slate-300 dark:hover:border-slate-700 dark:hover:bg-slate-900 dark:hover:text-slate-50"
       >
         {group.label}
         <svg
@@ -187,7 +209,7 @@ function DropdownGroup({
               top: menuStyle.top,
               left: menuStyle.left,
             }}
-            className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-1 min-w-[160px] max-w-[calc(100vw-24px)] z-50"
+            className="z-50 min-w-[176px] max-w-[calc(100vw-24px)] rounded-2xl border border-slate-200 bg-white/95 py-2 shadow-[0_24px_60px_-32px_rgba(15,23,42,0.48)] backdrop-blur dark:border-slate-700 dark:bg-slate-900/95 dark:shadow-[0_24px_60px_-32px_rgba(2,6,23,0.9)]"
           >
             {group.items.map((item) => (
               <Link
@@ -195,7 +217,7 @@ function DropdownGroup({
                 href={item.href}
                 role="menuitem"
                 onClick={() => setOpen(false)}
-                className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-950 dark:text-slate-200 dark:hover:bg-slate-800 dark:hover:text-slate-50"
               >
                 {item.label}
                 {item.href === "/admin/email-failures" &&
@@ -289,19 +311,19 @@ function CommandPalette({
     <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[15vh]">
       <button
         type="button"
-        className="fixed inset-0 bg-black/50 cursor-default"
+        className="fixed inset-0 bg-black/50 cursor-default dark:bg-slate-950/70"
         onClick={onClose}
         aria-label="Close navigation"
         tabIndex={-1}
       />
       <dialog
         open
-        className="relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md mx-4 overflow-hidden border border-gray-200 dark:border-gray-700 p-0"
+        className="relative mx-4 w-full max-w-xl overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white/95 p-0 shadow-[0_30px_90px_-42px_rgba(15,23,42,0.68)] backdrop-blur dark:border-slate-700 dark:bg-slate-900/95 dark:shadow-[0_30px_90px_-42px_rgba(2,6,23,0.95)]"
         aria-label="Admin quick navigation"
       >
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center gap-3 border-b border-slate-200 px-5 py-4 dark:border-slate-700">
           <svg
-            className="w-5 h-5 text-gray-400"
+            className="h-5 w-5 text-slate-400 dark:text-slate-500"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -321,15 +343,15 @@ function CommandPalette({
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Jump to admin section..."
-            className="flex-1 bg-transparent text-sm text-gray-900 dark:text-white placeholder-gray-400 outline-none"
+            className="flex-1 bg-transparent text-sm text-slate-950 outline-none placeholder:text-slate-400 dark:text-slate-50 dark:placeholder:text-slate-500"
           />
-          <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium text-gray-400 bg-gray-100 dark:bg-gray-700 rounded">
+          <kbd className="hidden items-center rounded-full border border-slate-200 bg-slate-100 px-2 py-1 text-[10px] font-medium text-slate-500 sm:inline-flex dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">
             ESC
           </kbd>
         </div>
         <ul className="max-h-[300px] overflow-y-auto py-1">
           {filtered.length === 0 ? (
-            <li className="px-4 py-8 text-center text-sm text-gray-500">
+            <li className="px-4 py-8 text-center text-sm text-slate-500 dark:text-slate-400">
               No matching sections
             </li>
           ) : (
@@ -340,8 +362,8 @@ function CommandPalette({
                   onClick={onClose}
                   className={`flex items-center justify-between px-4 py-2.5 text-sm transition ${
                     i === selectedIndex
-                      ? "bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
-                      : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                      ? "bg-sky-50 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300"
+                      : "text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800"
                   }`}
                 >
                   <span>{item.label}</span>
@@ -352,7 +374,7 @@ function CommandPalette({
                       </span>
                     )}
                     {i === selectedIndex && (
-                      <kbd className="text-[10px] text-gray-400 bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded">
+                      <kbd className="rounded-full border border-slate-200 bg-slate-100 px-2 py-1 text-[10px] text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">
                         ↵
                       </kbd>
                     )}
@@ -385,17 +407,17 @@ export function AdminNavLinksClient({
 
   return (
     <>
-      <nav className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
+      <nav className="sticky top-0 z-20 overflow-x-auto border-b border-white/70 bg-white/70 backdrop-blur-xl dark:border-slate-800/80 dark:bg-slate-950/70">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3 py-3">
             <div className="min-w-0 flex-1 overflow-x-auto">
-              <div className="flex min-w-max items-center gap-4 whitespace-nowrap pr-2 sm:gap-6">
+              <div className="flex min-w-max items-center gap-3 whitespace-nowrap pr-2 sm:gap-4">
                 {NAV_GROUPS.map((group) =>
                   group.href ? (
                     <Link
                       key={group.label}
                       href={group.href}
-                      className="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition"
+                      className="rounded-full border border-transparent px-3 py-2 text-sm font-medium text-slate-600 transition hover:border-slate-200 hover:bg-white hover:text-slate-950 dark:text-slate-300 dark:hover:border-slate-700 dark:hover:bg-slate-900 dark:hover:text-slate-50"
                     >
                       {group.label}
                     </Link>
@@ -414,7 +436,7 @@ export function AdminNavLinksClient({
               <button
                 type="button"
                 onClick={() => setPaletteOpen(true)}
-                className="flex items-center gap-2 text-sm text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition bg-gray-100 dark:bg-gray-700 rounded-lg px-3 py-1.5"
+                className="flex items-center gap-2 rounded-full border border-slate-200 bg-white/90 px-4 py-2 text-sm font-medium text-slate-500 transition hover:border-slate-300 hover:text-slate-950 dark:border-slate-700 dark:bg-slate-900/90 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:text-slate-50"
                 aria-label="Quick navigation"
               >
                 <svg
@@ -432,7 +454,7 @@ export function AdminNavLinksClient({
                   />
                 </svg>
                 <span className="hidden sm:inline">Jump to...</span>
-                <kbd className="hidden sm:inline-flex items-center text-[10px] font-medium text-gray-400 ml-1">
+                <kbd className="ml-1 hidden items-center text-[10px] font-medium text-slate-400 dark:text-slate-500 sm:inline-flex">
                   ⌘K
                 </kbd>
               </button>

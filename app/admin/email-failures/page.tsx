@@ -1,8 +1,8 @@
 import { drizzleDb } from "@/lib/db";
 import { failedEmails } from "@/lib/schema";
 import { desc, inArray } from "drizzle-orm";
+import { AdminPageShell, AdminPanel } from "@/components/admin/AdminPageShell";
 import { EmailFailuresClient } from "@/components/admin/EmailFailuresClient";
-import AdminBreadcrumbs from "@/components/admin/AdminBreadcrumbs";
 
 export const dynamic = "force-dynamic";
 
@@ -18,25 +18,50 @@ const fetchEmailFailures = async () => {
 
 const EmailFailuresPage = async () => {
   const records = await fetchEmailFailures();
+  const pendingCount = records.filter(
+    (record) => record.status === "pending",
+  ).length;
+  const failedCount = records.filter(
+    (record) => record.status === "failed",
+  ).length;
 
   return (
-    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <AdminBreadcrumbs
-        items={[
-          { label: "Admin", href: "/admin" },
-          { label: "Email Failures" },
-        ]}
-      />
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-          Email Failures
-        </h2>
-        <p className="text-gray-600 dark:text-gray-400 mt-1">
-          View and retry failed email deliveries
-        </p>
-      </div>
-      <EmailFailuresClient initialRecords={records} />
-    </main>
+    <AdminPageShell
+      breadcrumbs={[
+        { label: "Admin", href: "/admin" },
+        { label: "Email Failures" },
+      ]}
+      eyebrow="Messaging reliability"
+      title="Failed delivery triage without leaving the admin flow."
+      description="Track pending retries, inspect repeated failures, and retry stuck transactional emails from a focused queue."
+      metrics={[
+        {
+          label: "Retry queue",
+          value: String(records.length),
+          hint: "Pending and failed deliveries still needing attention.",
+          tone: "rose",
+        },
+        {
+          label: "Pending",
+          value: String(pendingCount),
+          hint: "Queued for another delivery attempt.",
+          tone: "amber",
+        },
+        {
+          label: "Failed",
+          value: String(failedCount),
+          hint: "Requires closer review or manual retry.",
+          tone: "slate",
+        },
+      ]}
+    >
+      <AdminPanel
+        title="Email failure queue"
+        description="Inspect delivery errors, retry individual emails, and keep transactional communication healthy."
+      >
+        <EmailFailuresClient initialRecords={records} />
+      </AdminPanel>
+    </AdminPageShell>
   );
 };
 
