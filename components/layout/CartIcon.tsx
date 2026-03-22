@@ -2,18 +2,21 @@
 
 import Link from "next/link";
 import { useEffect } from "react";
+import { useSession } from "next-auth/react";
 import { useSelector, useDispatch } from "react-redux";
 import { fetchCart, selectCartItemCount } from "@/lib/features/cart/cartSlice";
 import type { AppDispatch } from "@/lib/store";
 import { FloralCartIcon } from "@/components/ui/DecorativeElements";
 
 export default function CartIcon() {
+  const { status } = useSession();
   const dispatch = useDispatch<AppDispatch>();
   const itemCount = useSelector(selectCartItemCount);
 
   useEffect(() => {
+    if (status !== "authenticated") return;
     dispatch(fetchCart());
-  }, [dispatch]);
+  }, [dispatch, status]);
 
   return (
     <Link

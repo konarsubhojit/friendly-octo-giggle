@@ -44,6 +44,40 @@ describe("cartSlice async thunks (fetch bodies)", () => {
     await store.dispatch(fetchCart());
     expect(store.getState().cart.cart).toEqual(mockCart);
     expect(store.getState().cart.loading).toBe(false);
+    expect(store.getState().cart.lastFetchedAt).toBeTypeOf("number");
+  });
+
+  it("fetchCart skips duplicate requests while the cart is fresh and refetches after the ttl", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ cart: mockCart }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    let now = 1_000;
+    vi.spyOn(Date, "now").mockImplementation(() => now);
+
+    const store = makeStore();
+    await store.dispatch(fetchCart());
+    await store.dispatch(fetchCart());
+    now = 61_001;
+    await store.dispatch(fetchCart());
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("fetchCart can still be forced while the cart is fresh", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ cart: mockCart }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    vi.spyOn(Date, "now").mockReturnValue(5_000);
+
+    const store = makeStore();
+    await store.dispatch(fetchCart());
+    await store.dispatch(fetchCart({ force: true }));
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it("fetchCart rejected sets error", async () => {
@@ -165,7 +199,14 @@ describe("cartSlice async thunks (fetch bodies)", () => {
       }),
     );
     const store = makeStore({
-      cart: { cart: mockCart, loading: false, error: null },
+      cart: {
+        cart: mockCart,
+        loading: false,
+        lastFetchedAt: 1_000,
+        error: null,
+        stockWarning: null,
+        adjustedQuantity: null,
+      },
     });
     await store.dispatch(clearCart());
     expect(store.getState().cart.cart).toBeNull();

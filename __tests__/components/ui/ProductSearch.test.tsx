@@ -25,7 +25,17 @@ vi.mock("@/contexts/CurrencyContext", () => ({
   useCurrency: () => ({ formatPrice: (p: number) => `₹${p}` }),
 }));
 
-const MOCK_PRODUCTS = [
+interface MockProduct {
+  readonly id: string;
+  readonly name: string;
+  readonly description: string;
+  readonly category: string;
+  readonly price: number;
+  readonly image: string;
+  readonly deletedAt?: string | null;
+}
+
+const MOCK_PRODUCTS: readonly MockProduct[] = [
   {
     id: "prod001",
     name: "Crochet Bag",
@@ -46,15 +56,33 @@ const MOCK_PRODUCTS = [
   },
 ];
 
+function createSearchResponse(
+  products: readonly MockProduct[] = MOCK_PRODUCTS,
+) {
+  return vi.fn().mockImplementation((input: RequestInfo | URL) => {
+    const requestUrl = typeof input === "string" ? input : input.toString();
+    const url = new URL(requestUrl, "http://localhost");
+    const query = url.searchParams.get("q")?.trim().toLowerCase() ?? "";
+    const filteredProducts = products.filter((product) => {
+      if (product.deletedAt) {
+        return false;
+      }
+
+      const searchableText =
+        `${product.name} ${product.category} ${product.description}`.toLowerCase();
+      return searchableText.includes(query);
+    });
+
+    return Promise.resolve({
+      ok: true,
+      json: () => Promise.resolve({ results: filteredProducts }),
+    });
+  });
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.stubGlobal(
-    "fetch",
-    vi.fn().mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({ products: MOCK_PRODUCTS }),
-    }),
-  );
+  vi.stubGlobal("fetch", createSearchResponse());
 });
 
 describe("ProductSearch", () => {
@@ -149,12 +177,12 @@ describe("ProductSearch", () => {
     });
     await waitFor(() =>
       expect(
-        screen.getByRole("combobox", { name: "Search products" }),
+        screen.getByRole("searchbox", { name: "Search products" }),
       ).toBeTruthy(),
     );
     act(() => {
       fireEvent.change(
-        screen.getByRole("combobox", { name: "Search products" }),
+        screen.getByRole("searchbox", { name: "Search products" }),
         {
           target: { value: "bag" },
         },
@@ -163,10 +191,10 @@ describe("ProductSearch", () => {
     await waitFor(
       () => {
         expect(
-          screen.getByRole("option", { name: /Crochet Bag/i }),
+          screen.getByRole("button", { name: /Crochet Bag/i }),
         ).toBeTruthy();
         expect(
-          screen.queryByRole("option", { name: /Flower Keychain/i }),
+          screen.queryByRole("button", { name: /Flower Keychain/i }),
         ).toBeNull();
       },
       { timeout: 3000 },
@@ -180,12 +208,12 @@ describe("ProductSearch", () => {
     });
     await waitFor(() =>
       expect(
-        screen.getByRole("combobox", { name: "Search products" }),
+        screen.getByRole("searchbox", { name: "Search products" }),
       ).toBeTruthy(),
     );
     act(() => {
       fireEvent.change(
-        screen.getByRole("combobox", { name: "Search products" }),
+        screen.getByRole("searchbox", { name: "Search products" }),
         {
           target: { value: "xyznotexist" },
         },
@@ -196,6 +224,47 @@ describe("ProductSearch", () => {
     });
   });
 
+  it("highlights repeated matches consistently", async () => {
+    vi.stubGlobal(
+      "fetch",
+      createSearchResponse([
+        {
+          id: "prod-repeat",
+          name: "Bag Bag",
+          description: "Repeated bag match",
+          category: "Bags",
+          price: 200,
+          image: "/repeat.jpg",
+          deletedAt: null,
+        },
+      ]),
+    );
+
+    render(<ProductSearch />);
+    act(() => {
+      fireEvent.click(screen.getByRole("button", { name: "Search products" }));
+    });
+    await waitFor(() =>
+      expect(
+        screen.getByRole("searchbox", { name: "Search products" }),
+      ).toBeTruthy(),
+    );
+
+    act(() => {
+      fireEvent.change(
+        screen.getByRole("searchbox", { name: "Search products" }),
+        {
+          target: { value: "bag" },
+        },
+      );
+    });
+
+    await waitFor(() => {
+      const title = screen.getByText("Bag Bag", { selector: "p" });
+      expect(title.querySelectorAll("mark")).toHaveLength(2);
+    });
+  });
+
   it("navigates to product page when result is clicked", async () => {
     render(<ProductSearch />);
     act(() => {
@@ -203,12 +272,12 @@ describe("ProductSearch", () => {
     });
     await waitFor(() =>
       expect(
-        screen.getByRole("combobox", { name: "Search products" }),
+        screen.getByRole("searchbox", { name: "Search products" }),
       ).toBeTruthy(),
     );
     act(() => {
       fireEvent.change(
-        screen.getByRole("combobox", { name: "Search products" }),
+        screen.getByRole("searchbox", { name: "Search products" }),
         {
           target: { value: "bag" },
         },
@@ -217,12 +286,12 @@ describe("ProductSearch", () => {
     await waitFor(
       () =>
         expect(
-          screen.getByRole("option", { name: /Crochet Bag/i }),
+          screen.getByRole("button", { name: /Crochet Bag/i }),
         ).toBeTruthy(),
       { timeout: 3000 },
     );
     act(() => {
-      fireEvent.click(screen.getByRole("option", { name: /Crochet Bag/i }));
+      fireEvent.click(screen.getByRole("button", { name: /Crochet Bag/i }));
     });
     expect(mockPush).toHaveBeenCalledWith("/products/prod001");
     await waitFor(() => {
@@ -240,12 +309,12 @@ describe("ProductSearch", () => {
     });
     await waitFor(() =>
       expect(
-        screen.getByRole("combobox", { name: "Search products" }),
+        screen.getByRole("searchbox", { name: "Search products" }),
       ).toBeTruthy(),
     );
     act(() => {
       fireEvent.change(
-        screen.getByRole("combobox", { name: "Search products" }),
+        screen.getByRole("searchbox", { name: "Search products" }),
         {
           target: { value: "bag" },
         },
@@ -254,12 +323,12 @@ describe("ProductSearch", () => {
     await waitFor(
       () =>
         expect(
-          screen.getByRole("option", { name: /Crochet Bag/i }),
+          screen.getByRole("button", { name: /Crochet Bag/i }),
         ).toBeTruthy(),
       { timeout: 3000 },
     );
     act(() => {
-      fireEvent.click(screen.getByRole("option", { name: /Crochet Bag/i }));
+      fireEvent.click(screen.getByRole("button", { name: /Crochet Bag/i }));
     });
     expect(onNavigate).toHaveBeenCalledOnce();
   });
@@ -296,24 +365,18 @@ describe("ProductSearch", () => {
   it("excludes deleted products from results", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValue({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            products: [
-              ...MOCK_PRODUCTS,
-              {
-                id: "prod003",
-                name: "Deleted Item",
-                description: "gone",
-                category: "Other",
-                price: 100,
-                image: "/del.jpg",
-                deletedAt: "2024-01-01",
-              },
-            ],
-          }),
-      }),
+      createSearchResponse([
+        ...MOCK_PRODUCTS,
+        {
+          id: "prod003",
+          name: "Deleted Item",
+          description: "gone",
+          category: "Other",
+          price: 100,
+          image: "/del.jpg",
+          deletedAt: "2024-01-01",
+        },
+      ]),
     );
     render(<ProductSearch />);
     act(() => {
@@ -326,7 +389,7 @@ describe("ProductSearch", () => {
     );
     act(() => {
       fireEvent.change(
-        screen.getByRole("combobox", { name: "Search products" }),
+        screen.getByRole("searchbox", { name: "Search products" }),
         {
           target: { value: "deleted" },
         },

@@ -37,6 +37,7 @@ interface ProductCardProps {
 
 interface ProductImageAreaProps {
   readonly product: ProductGridItem;
+  readonly eagerLoad: boolean;
 }
 
 const DEFAULT_CATEGORY = "All";
@@ -64,23 +65,27 @@ function createPageHref(
   return queryString ? `/shop?${queryString}#products` : "/shop#products";
 }
 
-const ProductImageArea = memo(({ product }: ProductImageAreaProps) => {
-  return (
-    <div className="relative w-full aspect-square bg-gradient-to-br from-[var(--accent-cream)] to-[var(--accent-blush)] overflow-hidden">
-      <Image
-        src={product.image}
-        alt={product.name}
-        fill
-        className="object-contain p-4 group-hover:scale-108 transition-transform duration-500"
-        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-      />
-      <WishlistButton productId={product.id} productName={product.name} />
-      <div className="absolute bottom-3 left-3">
-        <StockBadge stock={product.stock} />
+const ProductImageArea = memo(
+  ({ product, eagerLoad }: ProductImageAreaProps) => {
+    return (
+      <div className="relative w-full aspect-square bg-gradient-to-br from-[var(--accent-cream)] to-[var(--accent-blush)] overflow-hidden">
+        <Image
+          src={product.image}
+          alt={product.name}
+          fill
+          className="object-contain p-4 group-hover:scale-108 transition-transform duration-500"
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          loading={eagerLoad ? "eager" : undefined}
+          fetchPriority={eagerLoad ? "high" : undefined}
+        />
+        <WishlistButton productId={product.id} productName={product.name} />
+        <div className="absolute bottom-3 left-3">
+          <StockBadge stock={product.stock} />
+        </div>
       </div>
-    </div>
-  );
-});
+    );
+  },
+);
 
 ProductImageArea.displayName = "ProductImageArea";
 
@@ -96,7 +101,7 @@ const ProductCard = memo(
           className="block"
           aria-label={product.name}
         >
-          <ProductImageArea product={product} />
+          <ProductImageArea product={product} eagerLoad={index < 3} />
 
           <div className="p-5">
             <h3 className="text-base font-bold text-[var(--foreground)] mb-1.5 line-clamp-1 group-hover:text-[var(--accent-rose)] transition-colors duration-200">

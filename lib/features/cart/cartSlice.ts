@@ -11,23 +11,45 @@ interface AddToCartResponse {
 interface CartState {
   cart: Cart | null;
   loading: boolean;
+  lastFetchedAt: number | null;
   error: string | null;
   stockWarning: string | null;
   adjustedQuantity: number | null;
 }
 
+const CART_REFRESH_TTL_MS = 60_000;
+
 const initialState: CartState = {
   cart: null,
   loading: false,
+  lastFetchedAt: null,
   error: null,
   stockWarning: null,
   adjustedQuantity: null,
 };
 
-export const fetchCart = createAsyncThunk("cart/fetchCart", async () => {
-  const data = await apiClient.get<{ cart: Cart | null }>("/api/cart");
-  return data.cart;
-});
+export const fetchCart = createAsyncThunk(
+  "cart/fetchCart",
+  async (options?: { force?: boolean }) => {
+    const data = await apiClient.get<{ cart: Cart | null }>("/api/cart");
+    return data.cart;
+  },
+  {
+    condition: (options, { getState }) => {
+      const state = (getState() as { cart: CartState }).cart;
+      if (state.loading) {
+        return false;
+      }
+
+      const force = options?.force ?? false;
+      if (force || state.lastFetchedAt === null) {
+        return true;
+      }
+
+      return Date.now() - state.lastFetchedAt >= CART_REFRESH_TTL_MS;
+    },
+  },
+);
 
 export const addToCart = createAsyncThunk(
   "cart/addToCart",
@@ -50,7 +72,7 @@ export const updateCartItem = createAsyncThunk(
   ) => {
     try {
       await apiClient.patch(`/api/cart/items/${itemId}`, { quantity });
-      return dispatch(fetchCart()).unwrap();
+      return dispatch(fetchCart({ force: true })).unwrap();
     } catch (error) {
       if (error instanceof ApiError) return rejectWithValue(error.message);
       return rejectWithValue("Failed to update item");
@@ -63,7 +85,7 @@ export const removeCartItem = createAsyncThunk(
   async (itemId: string, { dispatch, rejectWithValue }) => {
     try {
       await apiClient.delete(`/api/cart/items/${itemId}`);
-      return dispatch(fetchCart()).unwrap();
+      return dispatch(fetchCart({ force: true })).unwrap();
     } catch (error) {
       if (error instanceof ApiError) return rejectWithValue(error.message);
       return rejectWithValue("Failed to remove item");
@@ -104,6 +126,7 @@ const cartSlice = createSlice({
       })
       .addCase(fetchCart.fulfilled, (state, action) => {
         state.loading = false;
+        state.lastFetchedAt = Date.now();
         state.cart = action.payload;
       })
       .addCase(fetchCart.rejected, (state, action) => {
@@ -115,6 +138,7 @@ const cartSlice = createSlice({
     builder
       .addCase(addToCart.fulfilled, (state, action) => {
         state.cart = action.payload.cart;
+        state.lastFetchedAt = Date.now();
         state.error = null;
         state.stockWarning = action.payload.warning ?? null;
         state.adjustedQuantity = action.payload.adjustedQuantity ?? null;
@@ -149,6 +173,7 @@ const cartSlice = createSlice({
     builder
       .addCase(clearCart.fulfilled, (state) => {
         state.cart = null;
+        state.lastFetchedAt = Date.now();
         state.error = null;
       })
       .addCase(clearCart.rejected, (state, action) => {

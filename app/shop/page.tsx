@@ -168,6 +168,7 @@ const ShopPage = async ({ searchParams }: ShopPageProps) => {
                     fill
                     className="object-contain p-3 group-hover:scale-105 transition-transform duration-300"
                     sizes="(max-width: 1024px) 50vw, 20vw"
+                    priority={index < 3}
                   />
                   <span className="absolute top-2 left-2 inline-flex items-center justify-center w-7 h-7 rounded-full bg-[var(--btn-primary)] text-white text-xs font-bold">
                     {index + 1}

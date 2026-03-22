@@ -344,6 +344,13 @@ const extractPaginatedResponse = <T>(
   };
 };
 
+type PaginatedResponse<T> = {
+  items: T[];
+  nextCursor: string | null;
+  hasMore: boolean;
+  totalCount: number;
+};
+
 export const useCursorPagination = <T>({
   url,
   pageSize = DEFAULT_CURSOR_PAGE_SIZE,
@@ -365,6 +372,9 @@ export const useCursorPagination = <T>({
   const transformRef = useRef(transform);
   const pageCursorsRef = useRef<Array<string | null>>([null]);
   const pendingOffsetRef = useRef<number | null>(null);
+  const pendingPaginationRequestsRef = useRef<
+    Map<string, Promise<PaginatedResponse<T>>>
+  >(new Map());
   transformRef.current = transform;
 
   const syncPageCursors = useCallback((nextValue: Array<string | null>) => {
@@ -384,19 +394,36 @@ export const useCursorPagination = <T>({
         pageSize,
         offset,
       );
-      const res = await fetch(fetchUrl);
-      if (!res.ok) {
-        const errData = (await res.json().catch(() => ({}))) as Record<
-          string,
-          unknown
-        >;
-        throw new Error(
-          (errData.error as string) || `Failed to load ${dataKey}`,
-        );
+      const requestKey = `${dataKey}:${fetchUrl}`;
+      const pendingPaginationRequests = pendingPaginationRequestsRef.current;
+      const existingRequest = pendingPaginationRequests.get(requestKey);
+      if (existingRequest) {
+        return existingRequest;
       }
 
-      const raw = (await res.json()) as Record<string, unknown>;
-      return extractPaginatedResponse<T>(raw, dataKey);
+      const requestPromise = (async () => {
+        const res = await fetch(fetchUrl);
+        if (!res.ok) {
+          const errData = (await res.json().catch(() => ({}))) as Record<
+            string,
+            unknown
+          >;
+          throw new Error(
+            (errData.error as string) || `Failed to load ${dataKey}`,
+          );
+        }
+
+        const raw = (await res.json()) as Record<string, unknown>;
+        return extractPaginatedResponse<T>(raw, dataKey);
+      })();
+
+      pendingPaginationRequests.set(requestKey, requestPromise);
+
+      try {
+        return await requestPromise;
+      } finally {
+        pendingPaginationRequests.delete(requestKey);
+      }
     },
     [url, pageSize, dataKey],
   );
@@ -437,22 +464,24 @@ export const useCursorPagination = <T>({
   );
 
   useEffect(() => {
-    if (enabled) {
-      const pendingOffset = pendingOffsetRef.current;
-      pendingOffsetRef.current = null;
-      doFetch(
-        pendingOffset !== null ? null : cursor,
-        search,
-        currentPage,
-        pendingOffset ?? undefined,
-      );
-    }
+    if (!enabled) return;
+
+    const pendingOffset = pendingOffsetRef.current;
+    pendingOffsetRef.current = null;
+
+    doFetch(
+      pendingOffset === null ? cursor : null,
+      search,
+      currentPage,
+      pendingOffset ?? undefined,
+    );
   }, [enabled, cursor, search, currentPage, doFetch]);
 
+  const trailingPageCount = hasMore ? 1 : 0;
   const totalPages =
     totalCount > 0
       ? Math.max(1, Math.ceil(totalCount / pageSize))
-      : currentPage + (hasMore ? 1 : 0);
+      : currentPage + trailingPageCount;
 
   const handleSearch = useCallback(
     (e: React.BaseSyntheticEvent) => {
@@ -479,14 +508,16 @@ export const useCursorPagination = <T>({
 
   const handlePrev = useCallback(() => {
     if (currentPage === 1) return;
+
     const prevCursor = pageCursorsRef.current[currentPage - 2];
-    if (prevCursor !== undefined) {
-      setCurrentPage((prev) => prev - 1);
-      setCursor(prevCursor);
-    } else {
+    if (prevCursor === undefined) {
       pendingOffsetRef.current = (currentPage - 2) * pageSize;
       setCurrentPage((prev) => prev - 1);
+      return;
     }
+
+    setCurrentPage((prev) => prev - 1);
+    setCursor(prevCursor);
   }, [currentPage, pageSize]);
 
   const handlePageSelect = useCallback(
@@ -500,14 +531,14 @@ export const useCursorPagination = <T>({
       }
 
       const knownCursor = pageCursorsRef.current[targetPage - 1];
-      if (knownCursor !== undefined) {
+      if (knownCursor === undefined) {
+        pendingOffsetRef.current = (targetPage - 1) * pageSize;
         setCurrentPage(targetPage);
-        setCursor(knownCursor);
         return;
       }
 
-      pendingOffsetRef.current = (targetPage - 1) * pageSize;
       setCurrentPage(targetPage);
+      setCursor(knownCursor);
     },
     [currentPage, handleFirst, pageSize, totalPages],
   );

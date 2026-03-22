@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 import { useDispatch, useSelector } from "react-redux";
 import { Product, ProductVariation } from "@/lib/types";
 import { addToCart, fetchCart } from "@/lib/features/cart/cartSlice";
@@ -569,6 +570,7 @@ export default function ProductClient({
   product,
   initialVariationId,
 }: ProductClientProps) {
+  const { status } = useSession();
   const dispatch = useDispatch<AppDispatch>();
   const { formatPrice } = useCurrency();
   const cart = useSelector((state: RootState) => state.cart.cart);
@@ -588,8 +590,9 @@ export default function ProductClient({
   const [stockWarning, setStockWarning] = useState("");
 
   useEffect(() => {
+    if (status !== "authenticated") return;
     dispatch(fetchCart());
-  }, [dispatch]);
+  }, [dispatch, status]);
 
   const cartQuantities = useMemo(() => {
     const map: Record<string, number> = {};

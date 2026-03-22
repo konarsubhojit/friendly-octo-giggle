@@ -28,19 +28,20 @@ function HighlightText({
   text,
   query,
 }: {
-  readonly text: string;
+  readonly text?: string | null;
   readonly query: string;
 }) {
-  if (!query.trim()) return <>{text}</>;
+  const safeText = text ?? "";
+
+  if (!query.trim()) return <>{safeText}</>;
   const escapedQuery = query.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
   const regex = new RegExp(`(${escapedQuery})`, "gi");
-  const parts = text.split(regex);
-  let counter = 0;
+  const parts = safeText.split(regex);
   return (
     <>
-      {parts.map((part) => {
-        const key = `${part}-${counter++}`;
-        return regex.test(part) ? (
+      {parts.map((part, index) => {
+        const key = `${part}-${index}`;
+        return index % 2 === 1 ? (
           <mark
             key={key}
             className="bg-transparent text-[var(--accent-rose)] font-semibold"
@@ -66,7 +67,7 @@ export default function ProductSearch({ onNavigate }: ProductSearchProps) {
   const [isSearching, setIsSearching] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const inputRef = useRef<HTMLInputElement>(null);
-  const listRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLUListElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -84,6 +85,8 @@ export default function ProductSearch({ onNavigate }: ProductSearchProps) {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
 
+    const abortController = new AbortController();
+
     clearDebounce();
 
     const trimmed = query.trim();
@@ -100,19 +103,29 @@ export default function ProductSearch({ onNavigate }: ProductSearchProps) {
           q: trimmed,
           limit: String(SEARCH_RESULTS_LIMIT),
         });
-        const res = await fetch(`/api/search?${params}`);
+        const res = await fetch(`/api/search?${params}`, {
+          signal: abortController.signal,
+        });
         if (!res.ok) throw new Error("search failed");
         const data = await res.json();
         const items: SearchResult[] = data.data?.results ?? data.results ?? [];
         setResults(items.slice(0, SEARCH_RESULTS_LIMIT));
-      } catch {
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return;
+        }
         setResults([]);
       } finally {
-        setIsSearching(false);
+        if (!abortController.signal.aborted) {
+          setIsSearching(false);
+        }
       }
     }, SEARCH_DEBOUNCE_MS);
 
-    return clearDebounce;
+    return () => {
+      clearDebounce();
+      abortController.abort();
+    };
   }, [query]);
 
   const openDialog = useCallback(() => {
@@ -122,6 +135,7 @@ export default function ProductSearch({ onNavigate }: ProductSearchProps) {
   const closeDialog = useCallback(() => {
     setOpen(false);
     setQuery("");
+    setResults([]);
     setActiveIndex(-1);
   }, []);
 
@@ -257,15 +271,6 @@ export default function ProductSearch({ onNavigate }: ProductSearchProps) {
                   onKeyDown={handleKeyDown}
                   className="flex-1 bg-transparent text-[var(--foreground)] placeholder:text-[var(--text-muted)] text-sm outline-none"
                   aria-label="Search products"
-                  aria-activedescendant={
-                    clampedIndex >= 0
-                      ? `search-result-${clampedIndex}`
-                      : undefined
-                  }
-                  role="combobox"
-                  aria-expanded={results.length > 0}
-                  aria-controls="search-results-list"
-                  aria-autocomplete="list"
                 />
                 <button
                   onClick={closeDialog}
@@ -292,57 +297,68 @@ export default function ProductSearch({ onNavigate }: ProductSearchProps) {
                 )}
 
                 {!isSearching && results.length > 0 && (
-                  <div
+                  <ul
                     ref={listRef}
                     id="search-results-list"
-                    role="listbox"
+                    aria-label="Search results"
                     className="py-2"
                   >
                     {results.map((product, i) => (
-                      <div
-                        key={product.id}
-                        id={`search-result-${i}`}
-                        role="option"
-                        aria-selected={clampedIndex === i}
-                        tabIndex={-1}
-                        className={`flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors ${
-                          clampedIndex === i
-                            ? "bg-[var(--accent-blush)]"
-                            : "hover:bg-[var(--accent-blush)]/50"
-                        }`}
-                        onClick={() => navigate(product.id)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === " ")
-                            navigate(product.id);
-                        }}
-                        onMouseEnter={() => setActiveIndex(i)}
-                      >
-                        <div className="relative w-10 h-10 rounded-lg bg-gradient-to-br from-[var(--accent-cream)] to-[var(--accent-blush)] overflow-hidden shrink-0">
-                          <Image
-                            src={product.image}
-                            alt=""
-                            fill
-                            className="object-contain p-1"
-                            sizes="40px"
-                          />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-[var(--foreground)] truncate">
-                            <HighlightText text={product.name} query={query} />
-                          </p>
-                          <p className="text-xs text-[var(--text-muted)] truncate">
-                            <HighlightText
-                              text={product.category}
-                              query={query}
-                            />
-                          </p>
-                        </div>
-                        <span className="text-sm font-semibold text-[var(--btn-primary)] shrink-0">
-                          {formatPrice(product.price)}
-                        </span>
-                      </div>
+                      <li key={product.id}>
+                        <button
+                          type="button"
+                          tabIndex={-1}
+                          className={`flex w-full items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors ${
+                            clampedIndex === i
+                              ? "bg-[var(--accent-blush)]"
+                              : "hover:bg-[var(--accent-blush)]/50"
+                          }`}
+                          onClick={() => navigate(product.id)}
+                          onMouseEnter={() => setActiveIndex(i)}
+                        >
+                          <div className="relative flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--accent-cream)] to-[var(--accent-blush)] overflow-hidden shrink-0">
+                            {product.image ? (
+                              <Image
+                                src={product.image}
+                                alt=""
+                                fill
+                                className="object-contain p-1"
+                                sizes="40px"
+                              />
+                            ) : (
+                              <span
+                                aria-hidden="true"
+                                className="text-xs font-semibold uppercase text-[var(--accent-rose)]"
+                              >
+                                {(
+                                  product.name ||
+                                  product.category ||
+                                  "?"
+                                ).slice(0, 1)}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0 text-left">
+                            <p className="text-sm font-medium text-[var(--foreground)] truncate">
+                              <HighlightText
+                                text={product.name}
+                                query={query}
+                              />
+                            </p>
+                            <p className="text-xs text-[var(--text-muted)] truncate">
+                              <HighlightText
+                                text={product.category}
+                                query={query}
+                              />
+                            </p>
+                          </div>
+                          <span className="text-sm font-semibold text-[var(--btn-primary)] shrink-0">
+                            {formatPrice(product.price)}
+                          </span>
+                        </button>
+                      </li>
                     ))}
-                  </div>
+                  </ul>
                 )}
 
                 {!query.trim() && (

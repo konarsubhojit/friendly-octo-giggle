@@ -8,6 +8,7 @@ import {
   useFormState,
   useDebounce,
   useLocalStorage,
+  useCursorPagination,
 } from "@/lib/hooks";
 
 describe("useFetch", () => {
@@ -326,8 +327,6 @@ describe("useLocalStorage", () => {
     ).not.toThrow();
   });
 });
-
-import { useCursorPagination } from "@/lib/hooks";
 
 describe("useCursorPagination", () => {
   const mockOrders = [
@@ -712,6 +711,43 @@ describe("useCursorPagination", () => {
 
     expect(result.current.totalCount).toBe(25);
     expect(result.current.totalPages).toBe(3);
+  });
+
+  it("does not share pending requests across hook instances", async () => {
+    let resolveFetch:
+      | ((value: { ok: boolean; json: () => Promise<unknown> }) => void)
+      | undefined;
+    const fetchMock = vi.fn(
+      () =>
+        new Promise<{ ok: boolean; json: () => Promise<unknown> }>(
+          (resolve) => {
+            resolveFetch = resolve;
+          },
+        ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    renderHook(() =>
+      useCursorPagination({ url: "/api/orders", dataKey: "orders" }),
+    );
+    renderHook(() =>
+      useCursorPagination({ url: "/api/orders", dataKey: "orders" }),
+    );
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+
+    await act(async () => {
+      resolveFetch?.({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            orders: mockOrders,
+            nextCursor: null,
+            hasMore: false,
+            totalCount: mockOrders.length,
+          }),
+      });
+    });
   });
 
   it("handlePageSelect jumps directly to a later page", async () => {

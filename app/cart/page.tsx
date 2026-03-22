@@ -37,8 +37,9 @@ export default function CartPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
+    if (status !== "authenticated") return;
     dispatch(fetchCart());
-  }, [dispatch]);
+  }, [dispatch, status]);
 
   const handleUpdateQuantity = useCallback(
     async (itemId: string, quantity: number) => {

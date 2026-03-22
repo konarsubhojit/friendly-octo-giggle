@@ -30,9 +30,24 @@ vi.mock("next/link", () => ({
 }));
 
 vi.mock("next/image", () => ({
-  default: ({ alt, src }: { alt: string; src: string }) => (
+  default: ({
+    alt,
+    src,
+    loading,
+    fetchPriority,
+  }: {
+    alt: string;
+    src: string;
+    loading?: string;
+    fetchPriority?: string;
+  }) => (
     // eslint-disable-next-line @next/next/no-img-element
-    <img alt={alt} src={src} />
+    <img
+      alt={alt}
+      src={src}
+      data-loading={loading}
+      data-fetch-priority={fetchPriority}
+    />
   ),
 }));
 
@@ -170,6 +185,26 @@ describe("ProductGrid", () => {
     ]);
     expect(screen.getByText("Product A")).toBeTruthy();
     expect(screen.getByText("Product B")).toBeTruthy();
+  });
+
+  it("eager loads the first visible product row for faster LCP", () => {
+    renderGrid([
+      makeProduct({ id: "1", name: "Product A", image: "/a.jpg" }),
+      makeProduct({ id: "2", name: "Product B", image: "/b.jpg" }),
+      makeProduct({ id: "3", name: "Product C", image: "/c.jpg" }),
+      makeProduct({ id: "4", name: "Product D", image: "/d.jpg" }),
+    ]);
+
+    const firstImage = screen.getByAltText("Product A");
+    const secondImage = screen.getByAltText("Product B");
+    const thirdImage = screen.getByAltText("Product C");
+    const fourthImage = screen.getByAltText("Product D");
+
+    expect(firstImage).toHaveAttribute("data-loading", "eager");
+    expect(firstImage).toHaveAttribute("data-fetch-priority", "high");
+    expect(secondImage).toHaveAttribute("data-loading", "eager");
+    expect(thirdImage).toHaveAttribute("data-loading", "eager");
+    expect(fourthImage).not.toHaveAttribute("data-loading", "eager");
   });
 
   it("renders all products heading", () => {
