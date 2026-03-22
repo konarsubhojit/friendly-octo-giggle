@@ -13,7 +13,7 @@ import {
   SQL,
   count,
 } from "drizzle-orm";
-import { apiSuccess, apiError, handleApiError } from "@/lib/api-utils";
+import { apiSuccess, apiError, handleApiError, parseOffsetParam } from "@/lib/api-utils";
 import { checkAdminAuth } from "@/lib/admin-auth";
 import { serializeOrders } from "@/lib/serializers";
 import { OrderStatus } from "@/lib/types";
@@ -108,14 +108,19 @@ export const GET = async (request: NextRequest) => {
   try {
     const { searchParams } = new URL(request.url);
     const cursor = searchParams.get("cursor");
+    const offsetParam = searchParams.get("offset");
+    const useOffset = offsetParam !== null;
+    const offset = useOffset ? parseOffsetParam(offsetParam) : 0;
     const search = searchParams.get("search")?.trim() ?? "";
     const statusFilter = searchParams.get("status") ?? "";
     const limit = parseLimit(searchParams.get("limit"));
 
     const conditions: SQL[] = [];
 
-    const cursorCond = buildCursorCondition(cursor);
-    if (cursorCond) conditions.push(cursorCond);
+    if (!useOffset) {
+      const cursorCond = buildCursorCondition(cursor);
+      if (cursorCond) conditions.push(cursorCond);
+    }
 
     const countConditions: SQL[] = [];
 
@@ -150,6 +155,7 @@ export const GET = async (request: NextRequest) => {
         where: resolveWhereClause(conditions),
         orderBy: [desc(orders.createdAt)],
         limit: limit + 1,
+        offset: useOffset ? offset : undefined,
         with: { items: { with: { product: true, variation: true } } },
       }),
       drizzleDb

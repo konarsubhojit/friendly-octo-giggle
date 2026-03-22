@@ -61,24 +61,7 @@ export const CursorPaginationBar = ({
     <div
       className={`flex flex-col gap-3 border-t ${borderClass} pt-4 lg:flex-row lg:items-center lg:justify-between`}
     >
-      <div className="flex items-center gap-2 self-start lg:self-auto">
-        <button
-          onClick={onFirst}
-          disabled={!canGoBack || loading}
-          className={`px-4 py-2 text-sm font-medium ${prevClass} disabled:opacity-40 disabled:cursor-not-allowed transition`}
-        >
-          « First
-        </button>
-        <button
-          onClick={onPrev}
-          disabled={!canGoBack || loading}
-          className={`px-4 py-2 text-sm font-medium ${prevClass} disabled:opacity-40 disabled:cursor-not-allowed transition`}
-        >
-          ← Previous
-        </button>
-      </div>
-
-      <div className="flex flex-col items-start gap-2 lg:items-center">
+      <div className="flex flex-col items-start gap-2">
         <p className={`text-sm ${pageTextClass}`}>
           Showing {rangeStart}-{rangeEnd} of {totalCount}
         </p>
@@ -109,6 +92,20 @@ export const CursorPaginationBar = ({
       </div>
 
       <div className="flex items-center gap-2 self-start lg:self-auto">
+        <button
+          onClick={onFirst}
+          disabled={!canGoBack || loading}
+          className={`px-4 py-2 text-sm font-medium ${prevClass} disabled:opacity-40 disabled:cursor-not-allowed transition`}
+        >
+          « First
+        </button>
+        <button
+          onClick={onPrev}
+          disabled={!canGoBack || loading}
+          className={`px-4 py-2 text-sm font-medium ${prevClass} disabled:opacity-40 disabled:cursor-not-allowed transition`}
+        >
+          ← Previous
+        </button>
         <button
           onClick={onNext}
           disabled={!canGoForward || loading}

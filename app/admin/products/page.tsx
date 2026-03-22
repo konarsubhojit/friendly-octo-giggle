@@ -53,18 +53,23 @@ export default function ProductsManagement() {
   const [deleting, setDeleting] = useState(false);
 
   const pageCursorsRef = useRef<Array<string | null>>([null]);
+  const pendingOffsetRef = useRef<number | null>(null);
 
   const syncPageCursors = useCallback((nextValue: Array<string | null>) => {
     pageCursorsRef.current = nextValue;
   }, []);
 
   const fetchProducts = useCallback(
-    async (cursorParam: string | null, searchQuery: string) => {
+    async (cursorParam: string | null, searchQuery: string, offsetVal?: number) => {
       setLoading(true);
       setError(null);
       try {
         const params = new URLSearchParams({ limit: String(PAGE_SIZE) });
-        if (cursorParam) params.set("cursor", cursorParam);
+        if (offsetVal !== undefined && offsetVal > 0) {
+          params.set("offset", String(offsetVal));
+        } else if (cursorParam) {
+          params.set("cursor", cursorParam);
+        }
         if (searchQuery) params.set("search", searchQuery);
 
         const res = await fetch(`/api/admin/products?${params.toString()}`);
@@ -93,7 +98,13 @@ export default function ProductsManagement() {
   );
 
   useEffect(() => {
-    fetchProducts(cursor, search);
+    const pendingOffset = pendingOffsetRef.current;
+    pendingOffsetRef.current = null;
+    fetchProducts(
+      pendingOffset !== null ? null : cursor,
+      search,
+      pendingOffset ?? undefined,
+    );
   }, [fetchProducts, cursor, search]);
 
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
@@ -120,85 +131,34 @@ export default function ProductsManagement() {
 
   const handlePrev = () => {
     if (currentPage === 1) return;
-    const prevCursor = pageCursorsRef.current[currentPage - 2] ?? null;
-    setCurrentPage((prev) => prev - 1);
-    setCursor(prevCursor);
+    const prevCursor = pageCursorsRef.current[currentPage - 2];
+    if (prevCursor !== undefined) {
+      setCurrentPage((prev) => prev - 1);
+      setCursor(prevCursor);
+    } else {
+      pendingOffsetRef.current = (currentPage - 2) * PAGE_SIZE;
+      setCurrentPage((prev) => prev - 1);
+    }
   };
 
-  const ensureCursorForPage = useCallback(
-    async (targetPage: number) => {
-      let knownCursors = pageCursorsRef.current;
-      if (knownCursors[targetPage - 1] !== undefined) {
-        return knownCursors[targetPage - 1];
-      }
-
-      let pageNumber = knownCursors.length;
-      let cursorValue = knownCursors.at(-1) ?? null;
-
-      while (pageNumber < targetPage) {
-        const params = new URLSearchParams({ limit: String(PAGE_SIZE) });
-        if (cursorValue) params.set("cursor", cursorValue);
-        if (search) params.set("search", search);
-
-        const res = await fetch(`/api/admin/products?${params.toString()}`);
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          throw new Error(data.error || "Failed to load products");
-        }
-
-        const data = await res.json();
-        const discoveredCursor =
-          (data.data?.nextCursor as string | null | undefined) ??
-          (data.nextCursor as string | null | undefined);
-
-        if (!discoveredCursor) {
-          return undefined;
-        }
-
-        knownCursors = [...knownCursors, discoveredCursor];
-        syncPageCursors(knownCursors);
-        cursorValue = discoveredCursor;
-        pageNumber += 1;
-      }
-
-      return knownCursors[targetPage - 1];
-    },
-    [search, syncPageCursors],
-  );
-
   const handlePageSelect = (page: number) => {
-    void (async () => {
-      const targetPage = Math.min(Math.max(1, page), totalPages);
-      if (targetPage === currentPage) return;
+    const targetPage = Math.min(Math.max(1, page), totalPages);
+    if (targetPage === currentPage) return;
 
-      if (targetPage === 1) {
-        handleFirst();
-        return;
-      }
+    if (targetPage === 1) {
+      handleFirst();
+      return;
+    }
 
-      const knownCursor = pageCursorsRef.current[targetPage - 1];
-      if (knownCursor !== undefined) {
-        setCurrentPage(targetPage);
-        setCursor(knownCursor);
-        return;
-      }
+    const knownCursor = pageCursorsRef.current[targetPage - 1];
+    if (knownCursor !== undefined) {
+      setCurrentPage(targetPage);
+      setCursor(knownCursor);
+      return;
+    }
 
-      setLoading(true);
-      setError(null);
-      try {
-        const discoveredCursor = await ensureCursorForPage(targetPage);
-        if (discoveredCursor === undefined) {
-          setLoading(false);
-          return;
-        }
-
-        setCurrentPage(targetPage);
-        setCursor(discoveredCursor);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Something went wrong");
-        setLoading(false);
-      }
-    })();
+    pendingOffsetRef.current = (targetPage - 1) * PAGE_SIZE;
+    setCurrentPage(targetPage);
   };
 
   const handleLast = () => {
