@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  useState,
-  useEffect,
-  useRef,
-  useCallback,
-  Fragment,
-} from "react";
+import { useState, useEffect, useRef, useCallback, Fragment } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -102,7 +96,10 @@ export default function ProductSearch({ onNavigate }: ProductSearchProps) {
     setIsSearching(true);
     debounceRef.current = setTimeout(async () => {
       try {
-        const params = new URLSearchParams({ q: trimmed, limit: String(SEARCH_RESULTS_LIMIT) });
+        const params = new URLSearchParams({
+          q: trimmed,
+          limit: String(SEARCH_RESULTS_LIMIT),
+        });
         const res = await fetch(`/api/search?${params}`);
         if (!res.ok) throw new Error("search failed");
         const data = await res.json();
