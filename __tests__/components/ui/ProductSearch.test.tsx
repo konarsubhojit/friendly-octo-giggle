@@ -35,6 +35,19 @@ interface MockProduct {
   readonly deletedAt?: string | null;
 }
 
+interface MockSearchHit {
+  readonly id: string;
+  readonly content: {
+    readonly name: string;
+    readonly description: string;
+    readonly category: string;
+    readonly price: number;
+  };
+  readonly metadata?: {
+    readonly image?: string;
+  };
+}
+
 const MOCK_PRODUCTS: readonly MockProduct[] = [
   {
     id: "prod001",
@@ -77,6 +90,13 @@ function createSearchResponse(
       ok: true,
       json: () => Promise.resolve({ results: filteredProducts }),
     });
+  });
+}
+
+function createNestedSearchResponse(hits: readonly MockSearchHit[]) {
+  return vi.fn().mockResolvedValue({
+    ok: true,
+    json: () => Promise.resolve({ results: hits }),
   });
 }
 
@@ -262,6 +282,51 @@ describe("ProductSearch", () => {
     await waitFor(() => {
       const title = screen.getByText("Bag Bag", { selector: "p" });
       expect(title.querySelectorAll("mark")).toHaveLength(2);
+    });
+  });
+
+  it("renders nested search hit results without NaN prices", async () => {
+    vi.stubGlobal(
+      "fetch",
+      createNestedSearchResponse([
+        {
+          id: "prod-nested",
+          content: {
+            name: "Gajra",
+            description: "Fresh floral accessory",
+            category: "Flowers",
+            price: 120,
+          },
+          metadata: {
+            image: "/gajra.jpg",
+          },
+        },
+      ]),
+    );
+
+    render(<ProductSearch />);
+    act(() => {
+      fireEvent.click(screen.getByRole("button", { name: "Search products" }));
+    });
+    await waitFor(() =>
+      expect(
+        screen.getByRole("searchbox", { name: "Search products" }),
+      ).toBeTruthy(),
+    );
+
+    act(() => {
+      fireEvent.change(
+        screen.getByRole("searchbox", { name: "Search products" }),
+        {
+          target: { value: "gaj" },
+        },
+      );
+    });
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /Gajra/i })).toBeTruthy();
+      expect(screen.getByText("₹120")).toBeTruthy();
+      expect(screen.queryByText("₹NaN")).toBeNull();
     });
   });
 

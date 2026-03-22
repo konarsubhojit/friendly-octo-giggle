@@ -19,8 +19,52 @@ interface SearchResult {
   category: string;
 }
 
+interface SearchResultHit {
+  readonly id: string;
+  readonly content?: Partial<
+    Pick<SearchResult, "name" | "description" | "price" | "category">
+  >;
+  readonly metadata?: {
+    readonly image?: string;
+  };
+}
+
 const SEARCH_DEBOUNCE_MS = 250;
 const SEARCH_RESULTS_LIMIT = 8;
+
+function isSearchResultHit(
+  item: SearchResult | SearchResultHit,
+): item is SearchResultHit {
+  return "content" in item;
+}
+
+function normalizeSearchResult(
+  item: SearchResult | SearchResultHit,
+): SearchResult | null {
+  const content = isSearchResultHit(item)
+    ? item.content
+    : {
+        name: item.name,
+        description: item.description,
+        price: item.price,
+        category: item.category,
+      };
+  const rawPrice = content?.price;
+  const price = typeof rawPrice === "number" ? rawPrice : Number(rawPrice);
+
+  if (!content?.name || !Number.isFinite(price)) {
+    return null;
+  }
+
+  return {
+    id: item.id,
+    name: content.name,
+    description: content.description ?? "",
+    price,
+    image: (isSearchResultHit(item) ? item.metadata?.image : item.image) ?? "",
+    category: content.category ?? "",
+  };
+}
 
 // ─── Highlight matching text ─────────────────────────────
 
@@ -108,8 +152,15 @@ export default function ProductSearch({ onNavigate }: ProductSearchProps) {
         });
         if (!res.ok) throw new Error("search failed");
         const data = await res.json();
-        const items: SearchResult[] = data.data?.results ?? data.results ?? [];
-        setResults(items.slice(0, SEARCH_RESULTS_LIMIT));
+        const rawItems = (data.data?.results ?? data.results ?? []) as Array<
+          SearchResult | SearchResultHit
+        >;
+        setResults(
+          rawItems
+            .map((item) => normalizeSearchResult(item))
+            .filter((item): item is SearchResult => item !== null)
+            .slice(0, SEARCH_RESULTS_LIMIT),
+        );
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") {
           return;
