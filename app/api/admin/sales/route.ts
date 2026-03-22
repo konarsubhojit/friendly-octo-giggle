@@ -20,76 +20,89 @@ export async function GET() {
       const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
       const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
 
-      const [totalStats] = await drizzleDb
-        .select({
-          totalRevenue: sql<number>`coalesce(sum(${orders.totalAmount}), 0)`,
-          totalOrders: count(),
-        })
-        .from(orders)
-        .where(ne(orders.status, "CANCELLED"));
+      const [
+        [totalStats],
+        [todayStats],
+        [monthStats],
+        [lastMonthStats],
+        statusCounts,
+        topProducts,
+        [customerCount],
+      ] = await Promise.all([
+        drizzleDb
+          .select({
+            totalRevenue: sql<number>`coalesce(sum(${orders.totalAmount}), 0)`,
+            totalOrders: count(),
+          })
+          .from(orders)
+          .where(ne(orders.status, "CANCELLED")),
 
-      const [todayStats] = await drizzleDb
-        .select({
-          revenue: sql<number>`coalesce(sum(${orders.totalAmount}), 0)`,
-          orderCount: count(),
-        })
-        .from(orders)
-        .where(
-          and(gte(orders.createdAt, today), ne(orders.status, "CANCELLED")),
-        );
-
-      const [monthStats] = await drizzleDb
-        .select({
-          revenue: sql<number>`coalesce(sum(${orders.totalAmount}), 0)`,
-          orderCount: count(),
-        })
-        .from(orders)
-        .where(
-          and(gte(orders.createdAt, thisMonth), ne(orders.status, "CANCELLED")),
-        );
-
-      const [lastMonthStats] = await drizzleDb
-        .select({
-          revenue: sql<number>`coalesce(sum(${orders.totalAmount}), 0)`,
-          orderCount: count(),
-        })
-        .from(orders)
-        .where(
-          and(
-            gte(orders.createdAt, lastMonth),
-            lt(orders.createdAt, thisMonth),
-            ne(orders.status, "CANCELLED"),
+        drizzleDb
+          .select({
+            revenue: sql<number>`coalesce(sum(${orders.totalAmount}), 0)`,
+            orderCount: count(),
+          })
+          .from(orders)
+          .where(
+            and(gte(orders.createdAt, today), ne(orders.status, "CANCELLED")),
           ),
-        );
 
-      const statusCounts = await drizzleDb
-        .select({
-          status: orders.status,
-          count: count(),
-        })
-        .from(orders)
-        .where(ne(orders.status, "CANCELLED"))
-        .groupBy(orders.status);
+        drizzleDb
+          .select({
+            revenue: sql<number>`coalesce(sum(${orders.totalAmount}), 0)`,
+            orderCount: count(),
+          })
+          .from(orders)
+          .where(
+            and(
+              gte(orders.createdAt, thisMonth),
+              ne(orders.status, "CANCELLED"),
+            ),
+          ),
 
-      const topProducts = await drizzleDb
-        .select({
-          productId: orderItems.productId,
-          productName: products.name,
-          totalQuantity: sql<number>`cast(sum(${orderItems.quantity}) as int)`,
-          totalRevenue: sql<number>`sum(${orderItems.price} * ${orderItems.quantity})`,
-        })
-        .from(orderItems)
-        .innerJoin(products, eq(orderItems.productId, products.id))
-        .innerJoin(orders, eq(orderItems.orderId, orders.id))
-        .where(ne(orders.status, "CANCELLED"))
-        .groupBy(orderItems.productId, products.name)
-        .orderBy(sql`sum(${orderItems.quantity}) desc`)
-        .limit(5);
+        drizzleDb
+          .select({
+            revenue: sql<number>`coalesce(sum(${orders.totalAmount}), 0)`,
+            orderCount: count(),
+          })
+          .from(orders)
+          .where(
+            and(
+              gte(orders.createdAt, lastMonth),
+              lt(orders.createdAt, thisMonth),
+              ne(orders.status, "CANCELLED"),
+            ),
+          ),
 
-      const [customerCount] = await drizzleDb
-        .select({ count: count() })
-        .from(users)
-        .where(eq(users.role, "CUSTOMER"));
+        drizzleDb
+          .select({
+            status: orders.status,
+            count: count(),
+          })
+          .from(orders)
+          .where(ne(orders.status, "CANCELLED"))
+          .groupBy(orders.status),
+
+        drizzleDb
+          .select({
+            productId: orderItems.productId,
+            productName: products.name,
+            totalQuantity: sql<number>`cast(sum(${orderItems.quantity}) as int)`,
+            totalRevenue: sql<number>`sum(${orderItems.price} * ${orderItems.quantity})`,
+          })
+          .from(orderItems)
+          .innerJoin(products, eq(orderItems.productId, products.id))
+          .innerJoin(orders, eq(orderItems.orderId, orders.id))
+          .where(ne(orders.status, "CANCELLED"))
+          .groupBy(orderItems.productId, products.name)
+          .orderBy(sql`sum(${orderItems.quantity}) desc`)
+          .limit(5),
+
+        drizzleDb
+          .select({ count: count() })
+          .from(users)
+          .where(eq(users.role, "CUSTOMER")),
+      ]);
 
       return {
         totalRevenue: Number(totalStats.totalRevenue),

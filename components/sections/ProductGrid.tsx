@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -63,7 +64,7 @@ function createPageHref(
   return queryString ? `/shop?${queryString}#products` : "/shop#products";
 }
 
-const ProductImageArea = ({ product }: ProductImageAreaProps) => {
+const ProductImageArea = memo(({ product }: ProductImageAreaProps) => {
   return (
     <div className="relative w-full aspect-square bg-gradient-to-br from-[var(--accent-cream)] to-[var(--accent-blush)] overflow-hidden">
       <Image
@@ -79,9 +80,11 @@ const ProductImageArea = ({ product }: ProductImageAreaProps) => {
       </div>
     </div>
   );
-};
+});
 
-const ProductCard = ({ product, formatPrice, index }: ProductCardProps) => {
+ProductImageArea.displayName = "ProductImageArea";
+
+const ProductCard = memo(({ product, formatPrice, index }: ProductCardProps) => {
   return (
     <div
       className="bg-[var(--surface)] rounded-3xl shadow-warm overflow-hidden border border-[var(--border-warm)] group hover:shadow-warm-lg hover:scale-[1.02] hover:-translate-y-1 hover:border-[var(--accent-rose)] transition-all duration-300 relative animate-fade-in-up"
@@ -94,7 +97,6 @@ const ProductCard = ({ product, formatPrice, index }: ProductCardProps) => {
       >
         <ProductImageArea product={product} />
 
-        {/* Product info */}
         <div className="p-5">
           <h3 className="text-base font-bold text-[var(--foreground)] mb-1.5 line-clamp-1 group-hover:text-[var(--accent-rose)] transition-colors duration-200">
             {product.name}
@@ -112,7 +114,9 @@ const ProductCard = ({ product, formatPrice, index }: ProductCardProps) => {
       <QuickAddButton product={product} />
     </div>
   );
-};
+});
+
+ProductCard.displayName = "ProductCard";
 
 const ProductGrid = ({
   products,
