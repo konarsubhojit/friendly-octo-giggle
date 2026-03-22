@@ -56,7 +56,7 @@ const OrdersEmptyState = ({ search }: { readonly search: string }) => (
 );
 
 export default function OrdersClient() {
-  const { formatPrice } = useCurrency();
+  useCurrency();
   const {
     items: orders,
     loading,
@@ -88,11 +88,7 @@ export default function OrdersClient() {
       <>
         <div className="space-y-4 mb-8">
           {orders.map((order) => (
-            <OrderListCard
-              key={order.id}
-              order={order}
-              formatPrice={formatPrice}
-            />
+            <OrderListCard key={order.id} order={order} />
           ))}
         </div>
 

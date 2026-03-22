@@ -32,6 +32,7 @@ export default defineConfig({
         "**/ui-changes.spec.ts",
         "**/fixed-background.spec.ts",
         "**/ux-audit.spec.ts",
+        "**/orders-list.spec.ts",
       ],
     },
     {
@@ -41,6 +42,7 @@ export default defineConfig({
         "**/ui-changes.spec.ts",
         "**/fixed-background.spec.ts",
         "**/ux-audit.spec.ts",
+        "**/orders-list.spec.ts",
       ],
     },
     // Password validation — desktop

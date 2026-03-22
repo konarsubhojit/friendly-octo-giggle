@@ -103,6 +103,42 @@ const parseRedisHash = (hash: Record<string, unknown>): OrderSummary | null => {
   };
 };
 
+interface OrderWithItemsRow {
+  readonly id: string;
+  readonly userId: string | null;
+  readonly customerName: string;
+  readonly customerEmail: string;
+  readonly customerAddress: string;
+  readonly totalAmount: number;
+  readonly status: string;
+  readonly createdAt: Date;
+  readonly items: ReadonlyArray<{
+    readonly productId: string;
+    readonly variationId: string | null;
+    readonly quantity: number;
+    readonly price: number;
+    readonly customizationNote: string | null;
+  }>;
+}
+
+const mapOrderRowToSummary = (row: OrderWithItemsRow): OrderSummary => ({
+  id: row.id,
+  userId: row.userId,
+  customerName: row.customerName,
+  customerEmail: row.customerEmail,
+  customerAddress: row.customerAddress,
+  total: row.totalAmount,
+  status: row.status,
+  items: row.items.map((item) => ({
+    productId: item.productId,
+    variationId: item.variationId ?? null,
+    quantity: item.quantity,
+    price: item.price,
+    customizationNote: item.customizationNote ?? null,
+  })),
+  createdAt: row.createdAt.toISOString(),
+});
+
 const fetchOrdersFromDb = async (userId: string): Promise<OrderSummary[]> => {
   const rows = await drizzleDb.query.orders.findMany({
     where: eq(orders.userId, userId),
@@ -110,24 +146,224 @@ const fetchOrdersFromDb = async (userId: string): Promise<OrderSummary[]> => {
     with: { items: true },
   });
 
-  return rows.map((row) => ({
-    id: row.id,
-    userId: row.userId,
-    customerName: row.customerName,
-    customerEmail: row.customerEmail,
-    customerAddress: row.customerAddress,
-    total: row.totalAmount,
-    status: row.status,
-    items: row.items.map((item) => ({
-      productId: item.productId,
-      variationId: item.variationId ?? null,
-      quantity: item.quantity,
-      price: item.price,
-      customizationNote: item.customizationNote ?? null,
-    })),
-    createdAt: row.createdAt.toISOString(),
-  }));
+  return rows.map(mapOrderRowToSummary);
 };
+
+const fetchOrdersByIdsFromDb = async (
+  orderIds: string[],
+): Promise<OrderSummary[]> => {
+  if (orderIds.length === 0) {
+    return [];
+  }
+
+  const rows = await drizzleDb.query.orders.findMany({
+    where: (orderTable, { inArray: inArrayOperator }) =>
+      inArrayOperator(orderTable.id, orderIds),
+    with: { items: true },
+  });
+
+  return rows.map(mapOrderRowToSummary);
+};
+
+const fetchRedisOrderHashes = async (
+  redis: NonNullable<ReturnType<typeof getRedisClient>>,
+  orderIds: string[],
+): Promise<(Record<string, unknown> | null)[]> => {
+  const pipeline = redis.pipeline();
+  for (const orderId of orderIds) {
+    pipeline.hgetall(redisOrderKey(orderId));
+  }
+
+  return pipeline.exec<(Record<string, unknown> | null)[]>();
+};
+
+const splitRedisOrders = (
+  orderIds: string[],
+  hashes: (Record<string, unknown> | null)[],
+): {
+  validOrders: OrderSummary[];
+  missingIds: string[];
+} => {
+  const validOrders: OrderSummary[] = [];
+  const missingIds: string[] = [];
+
+  hashes.forEach((hash, index) => {
+    const parsed = hash ? parseRedisHash(hash) : null;
+    if (parsed) {
+      validOrders.push(parsed);
+      return;
+    }
+
+    missingIds.push(orderIds[index]);
+  });
+
+  return { validOrders, missingIds };
+};
+
+const hydrateMissingRedisOrders = async (
+  userId: string,
+  missingIds: string[],
+): Promise<OrderSummary[]> => {
+  if (missingIds.length === 0) {
+    return [];
+  }
+
+  try {
+    const dbOrders = await fetchOrdersByIdsFromDb(missingIds);
+    for (const order of dbOrders) {
+      waitUntil(writeOrderToRedis(order));
+    }
+    return dbOrders;
+  } catch (error) {
+    logError({
+      error,
+      context: "get_orders_redis_orphan_pg_fallback",
+      additionalInfo: { userId },
+    });
+    return [];
+  }
+};
+
+const getUserOrdersFromRedis = async (
+  userId: string,
+  redis: NonNullable<ReturnType<typeof getRedisClient>>,
+): Promise<OrderSummary[] | null> => {
+  try {
+    const orderIds = await redis.smembers(redisUserOrdersKey(userId));
+    if (orderIds.length === 0) {
+      return [];
+    }
+
+    const results = await fetchRedisOrderHashes(redis, orderIds);
+    const { validOrders, missingIds } = splitRedisOrders(orderIds, results);
+    const hydratedOrders = await hydrateMissingRedisOrders(userId, missingIds);
+
+    return [...validOrders, ...hydratedOrders];
+  } catch (error) {
+    logError({
+      error,
+      context: "get_orders_redis",
+      additionalInfo: { userId },
+    });
+    return null;
+  }
+};
+
+const calculateOrderTotal = (items: CreateOrderActionInput["items"]) =>
+  items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+const insertOrderRecords = async (
+  userId: string,
+  orderId: string,
+  customerName: string,
+  customerEmail: string,
+  customerAddress: string,
+  items: CreateOrderActionInput["items"],
+  total: number,
+) => {
+  await drizzleDb.transaction(async (tx) => {
+    await tx.insert(orders).values({
+      id: orderId,
+      userId,
+      customerName,
+      customerEmail,
+      customerAddress,
+      totalAmount: total,
+      status: "PENDING",
+      updatedAt: new Date(),
+    });
+
+    await tx.insert(orderItems).values(
+      items.map((item) => ({
+        orderId,
+        productId: item.productId,
+        variationId: item.variationId ?? null,
+        quantity: item.quantity,
+        price: item.price,
+        customizationNote: item.customizationNote ?? null,
+      })),
+    );
+  });
+};
+
+const buildProductNamesString = async (
+  items: CreateOrderActionInput["items"],
+): Promise<string> => {
+  const productIds = [...new Set(items.map((item) => item.productId))];
+  const productRows = await drizzleDb.query.products.findMany({
+    where: inArray(products.id, productIds),
+    columns: { id: true, name: true },
+    with: { variations: { columns: { id: true, name: true } } },
+  });
+
+  const productNameMap = new Map(
+    productRows.map((product) => [product.id, product.name]),
+  );
+  const variationNameMap = new Map(
+    productRows.flatMap((product) =>
+      product.variations.map((variation) => [variation.id, variation.name]),
+    ),
+  );
+
+  return [
+    ...new Set(
+      items.map((item) => {
+        const productName = productNameMap.get(item.productId) ?? "";
+        const variationName = item.variationId
+          ? variationNameMap.get(item.variationId)
+          : undefined;
+
+        return variationName
+          ? `${productName} - ${variationName}`
+          : productName;
+      }),
+    ),
+  ].join(", ");
+};
+
+const buildOrderSummary = ({
+  orderId,
+  userId,
+  customerName,
+  customerEmail,
+  customerAddress,
+  total,
+  items,
+  createdAt,
+  productNames,
+}: {
+  orderId: string;
+  userId: string;
+  customerName: string;
+  customerEmail: string;
+  customerAddress: string;
+  total: number;
+  items: CreateOrderActionInput["items"];
+  createdAt: string;
+  productNames: string;
+}): OrderSummary => ({
+  id: orderId,
+  userId,
+  customerName,
+  customerEmail,
+  customerAddress,
+  total,
+  status: "PENDING",
+  items,
+  createdAt,
+  productNames,
+});
+
+const invalidateOrderCaches = (
+  userId: string,
+  items: CreateOrderActionInput["items"],
+) =>
+  Promise.all([
+    invalidateCache("products:*"),
+    invalidateCache("admin:orders:*"),
+    invalidateUserOrderCaches(userId),
+    ...items.map((item) => invalidateCache(`product:${item.productId}`)),
+  ]);
 
 export const createOrder = async (
   userId: string,
@@ -143,37 +379,20 @@ export const createOrder = async (
 
   const { customerName, customerEmail, customerAddress, items } =
     parseResult.data;
-  const total = items.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0,
-  );
+  const total = calculateOrderTotal(items);
   const orderId = generateOrderId();
   const createdAt = new Date().toISOString();
 
   try {
-    await drizzleDb.transaction(async (tx) => {
-      await tx.insert(orders).values({
-        id: orderId,
-        userId,
-        customerName,
-        customerEmail,
-        customerAddress,
-        totalAmount: total,
-        status: "PENDING",
-        updatedAt: new Date(),
-      });
-
-      await tx.insert(orderItems).values(
-        items.map((item) => ({
-          orderId,
-          productId: item.productId,
-          variationId: item.variationId ?? null,
-          quantity: item.quantity,
-          price: item.price,
-          customizationNote: item.customizationNote ?? null,
-        })),
-      );
-    });
+    await insertOrderRecords(
+      userId,
+      orderId,
+      customerName,
+      customerEmail,
+      customerAddress,
+      items,
+      total,
+    );
   } catch (error) {
     logError({
       error,
@@ -183,44 +402,20 @@ export const createOrder = async (
     return { success: false, error: "Failed to create order" };
   }
 
-  const productIds = [...new Set(items.map((item) => item.productId))];
-  const productRows = await drizzleDb.query.products.findMany({
-    where: inArray(products.id, productIds),
-    columns: { id: true, name: true },
-    with: { variations: { columns: { id: true, name: true } } },
+  const productNamesStr = await buildProductNamesString(items);
+  const orderSummary = buildOrderSummary({
+    orderId,
+    userId,
+    customerName,
+    customerEmail,
+    customerAddress,
+    total,
+    items,
+    createdAt,
+    productNames: productNamesStr,
   });
-  const productNameMap = new Map(productRows.map((p) => [p.id, p.name]));
-  const variationNameMap = new Map(
-    productRows.flatMap((p) => p.variations.map((v) => [v.id, v.name])),
-  );
-  const productNamesStr = [
-    ...new Set(
-      items.map((item) => {
-        const productName = productNameMap.get(item.productId) ?? "";
-        const variationName = item.variationId
-          ? variationNameMap.get(item.variationId)
-          : undefined;
-        return variationName
-          ? `${productName} - ${variationName}`
-          : productName;
-      }),
-    ),
-  ].join(", ");
 
-  waitUntil(
-    writeOrderToRedis({
-      id: orderId,
-      userId,
-      customerName,
-      customerEmail,
-      customerAddress,
-      total,
-      status: "PENDING",
-      items,
-      createdAt,
-      productNames: productNamesStr,
-    }),
-  );
+  waitUntil(writeOrderToRedis(orderSummary));
 
   logBusinessEvent({
     event: "order_created",
@@ -228,14 +423,7 @@ export const createOrder = async (
     success: true,
   });
 
-  waitUntil(
-    Promise.all([
-      invalidateCache("products:*"),
-      invalidateCache("admin:orders:*"),
-      invalidateUserOrderCaches(userId),
-      ...items.map((item) => invalidateCache(`product:${item.productId}`)),
-    ]),
-  );
+  waitUntil(invalidateOrderCaches(userId, items));
 
   return { success: true, data: { orderId } };
 };
@@ -298,79 +486,9 @@ export const getUserOrders = async (
   const redis = getRedisClient();
 
   if (redis) {
-    try {
-      const orderIds = await redis.smembers(redisUserOrdersKey(userId));
-
-      if (orderIds.length > 0) {
-        const pipeline = redis.pipeline();
-        for (const orderId of orderIds) {
-          pipeline.hgetall(redisOrderKey(orderId));
-        }
-        const results =
-          await pipeline.exec<(Record<string, unknown> | null)[]>();
-
-        const validOrders: OrderSummary[] = [];
-        const missingIds: string[] = [];
-
-        for (let index = 0; index < results.length; index++) {
-          const hash = results[index];
-          if (hash) {
-            const parsed = parseRedisHash(hash);
-            if (parsed) {
-              validOrders.push(parsed);
-            } else {
-              missingIds.push(orderIds[index]);
-            }
-          } else {
-            missingIds.push(orderIds[index]);
-          }
-        }
-
-        if (missingIds.length > 0) {
-          try {
-            const dbOrders = await drizzleDb.query.orders.findMany({
-              where: (o, { inArray }) => inArray(o.id, missingIds),
-              with: { items: true },
-            });
-
-            for (const row of dbOrders) {
-              const summary: OrderSummary = {
-                id: row.id,
-                userId: row.userId,
-                customerName: row.customerName,
-                customerEmail: row.customerEmail,
-                customerAddress: row.customerAddress,
-                total: row.totalAmount,
-                status: row.status,
-                items: row.items.map((item) => ({
-                  productId: item.productId,
-                  variationId: item.variationId ?? null,
-                  quantity: item.quantity,
-                  price: item.price,
-                  customizationNote: item.customizationNote ?? null,
-                })),
-                createdAt: row.createdAt.toISOString(),
-              };
-              validOrders.push(summary);
-              waitUntil(writeOrderToRedis(summary));
-            }
-          } catch (error) {
-            logError({
-              error,
-              context: "get_orders_redis_orphan_pg_fallback",
-              additionalInfo: { userId },
-            });
-          }
-        }
-
-        return { success: true, data: validOrders };
-      }
-    } catch (error) {
-      logError({
-        error,
-        context: "get_orders_redis",
-        additionalInfo: { userId },
-      });
+    const redisOrders = await getUserOrdersFromRedis(userId, redis);
+    if (redisOrders) {
+      return { success: true, data: redisOrders };
     }
   }
 
@@ -390,7 +508,7 @@ export const getUserOrders = async (
 const ORDER_SEARCH_SCHEMA = s.object({
   id: s.string().noTokenize(),
   customerName: s.string(),
-  customerEmail: s.string().noTokenize(),
+  customerEmail: s.string(),
   customerAddress: s.string(),
   status: s.keyword(),
   userId: s.string().noTokenize(),
@@ -403,6 +521,7 @@ const searchOrdersViaIndex = async (
   searchTerm: string,
   limit: number,
   userId?: string,
+  status?: string,
 ): Promise<string[] | null> => {
   const redis = getRedisClient();
   if (!redis) return null;
@@ -413,16 +532,20 @@ const searchOrdersViaIndex = async (
       schema: ORDER_SEARCH_SCHEMA,
     });
 
-    const userFilter = userId ? { userId } : {};
+    const baseFilter = {
+      ...(userId ? { userId } : {}),
+      ...(status ? { status } : {}),
+    };
 
     const results = await index.query({
       filter: {
         $should: [
-          { customerName: searchTerm, ...userFilter },
-          { customerEmail: searchTerm, ...userFilter },
-          { id: searchTerm, ...userFilter },
-          { status: searchTerm, ...userFilter },
-          { productNames: searchTerm, ...userFilter },
+          { customerName: searchTerm, ...baseFilter },
+          { customerEmail: searchTerm, ...baseFilter },
+          { customerAddress: searchTerm, ...baseFilter },
+          { id: searchTerm, ...baseFilter },
+          { status: searchTerm, ...baseFilter },
+          { productNames: searchTerm, ...baseFilter },
         ],
       },
       select: {},
@@ -437,7 +560,7 @@ const searchOrdersViaIndex = async (
     logError({
       error,
       context: "search_orders_redis_ft",
-      additionalInfo: { searchTerm, userId },
+      additionalInfo: { searchTerm, userId, status },
     });
     return null;
   }
@@ -447,9 +570,13 @@ export const searchUserOrdersRedis = async (
   userId: string,
   searchTerm: string,
   limit: number = 100,
-): Promise<string[] | null> => searchOrdersViaIndex(searchTerm, limit, userId);
+  status?: string,
+): Promise<string[] | null> =>
+  searchOrdersViaIndex(searchTerm, limit, userId, status);
 
 export const searchAllOrdersRedis = async (
   searchTerm: string,
   limit: number = 100,
-): Promise<string[] | null> => searchOrdersViaIndex(searchTerm, limit);
+  status?: string,
+): Promise<string[] | null> =>
+  searchOrdersViaIndex(searchTerm, limit, undefined, status);

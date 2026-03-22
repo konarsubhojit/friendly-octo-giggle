@@ -6,34 +6,25 @@ import ProductGrid, {
   type ProductGridItem,
 } from "@/components/sections/ProductGrid";
 import { db, drizzleDb } from "@/lib/db";
-import {
-  categories as categoriesTable,
-  products as productsTable,
-} from "@/lib/schema";
-import { isNull, asc, and, count, eq, ilike, or, type SQL } from "drizzle-orm";
+import { cacheCategoriesList, cacheProductsBestsellers } from "@/lib/cache";
+import { searchProductIdsCached } from "@/lib/search-service";
+import { categories as categoriesTable } from "@/lib/schema";
+import { isNull, asc } from "drizzle-orm";
 import { logError } from "@/lib/logger";
 
 export const revalidate = 60;
 
-const SHOP_PAGE_SIZE = 24;
+const SHOP_PAGE_SIZE = 15;
 
 interface ShopPageProps {
   readonly searchParams?: Promise<{
     q?: string | string[];
     category?: string | string[];
-    page?: string | string[];
   }>;
 }
 
 function getSingleValue(value?: string | string[]) {
   return Array.isArray(value) ? value[0] : value;
-}
-
-function getPageNumber(value?: string | string[]) {
-  const rawValue = getSingleValue(value);
-  const page = Number.parseInt(rawValue ?? "1", 10);
-
-  return Number.isFinite(page) && page > 0 ? page : 1;
 }
 
 export const metadata: Metadata = {
@@ -47,74 +38,95 @@ const ShopPage = async ({ searchParams }: ShopPageProps) => {
   const search = getSingleValue(resolvedSearchParams.q)?.trim() ?? "";
   const selectedCategory =
     getSingleValue(resolvedSearchParams.category)?.trim() ?? "All";
-  const page = getPageNumber(resolvedSearchParams.page);
-  const offset = (page - 1) * SHOP_PAGE_SIZE;
 
   let shopData: {
     products: ProductGridItem[];
     bestsellers: ProductGridItem[];
     categoryNames: string[];
-    totalCount: number;
     hasNextPage: boolean;
   } = {
     products: [],
     bestsellers: [],
     categoryNames: [],
-    totalCount: 0,
     hasNextPage: false,
   };
 
   try {
-    const productFilters: SQL[] = [isNull(productsTable.deletedAt)];
+    const selectedCategoryFilter =
+      selectedCategory === "All" ? undefined : selectedCategory;
 
-    if (search) {
-      productFilters.push(
-        or(
-          ilike(productsTable.name, `%${search}%`),
-          ilike(productsTable.description, `%${search}%`),
-        ) as SQL,
-      );
-    }
-
-    if (selectedCategory !== "All") {
-      productFilters.push(eq(productsTable.category, selectedCategory));
-    }
-
-    const productWhereClause =
-      productFilters.length === 1 ? productFilters[0] : and(...productFilters);
-
-    const [allProducts, topProducts, cats, totalRows] = await Promise.all([
-      db.products.findAllMinimal({
-        limit: SHOP_PAGE_SIZE + 1,
-        offset,
-        search,
-        category: selectedCategory === "All" ? undefined : selectedCategory,
-      }),
-      db.products.findBestsellers(),
-      drizzleDb
-        .select({ name: categoriesTable.name })
-        .from(categoriesTable)
-        .where(isNull(categoriesTable.deletedAt))
-        .orderBy(asc(categoriesTable.sortOrder), asc(categoriesTable.name)),
-      drizzleDb
-        .select({ value: count() })
-        .from(productsTable)
-        .where(productWhereClause),
+    const [topProducts, cats] = await Promise.all([
+      cacheProductsBestsellers(() => db.products.findBestsellers(), 5),
+      cacheCategoriesList(() =>
+        drizzleDb
+          .select({ name: categoriesTable.name })
+          .from(categoriesTable)
+          .where(isNull(categoriesTable.deletedAt))
+          .orderBy(asc(categoriesTable.sortOrder), asc(categoriesTable.name)),
+      ),
     ]);
 
-    shopData = {
-      products: allProducts.slice(0, SHOP_PAGE_SIZE),
-      bestsellers: topProducts,
-      categoryNames: cats.map((c) => c.name),
-      totalCount: Number(totalRows[0]?.value ?? 0),
-      hasNextPage: allProducts.length > SHOP_PAGE_SIZE,
-    };
+    if (search) {
+      const matchedIds = await searchProductIdsCached(search, {
+        category: selectedCategoryFilter,
+        limit: SHOP_PAGE_SIZE + 1,
+      });
+
+      if (matchedIds === null) {
+        const allProducts = await db.products.findAllMinimal({
+          limit: SHOP_PAGE_SIZE + 1,
+          offset: 0,
+          search,
+          category: selectedCategoryFilter,
+        });
+
+        shopData = {
+          products: allProducts.slice(0, SHOP_PAGE_SIZE),
+          bestsellers: topProducts,
+          categoryNames: cats.map((c) => c.name),
+          hasNextPage: allProducts.length > SHOP_PAGE_SIZE,
+        };
+      } else {
+        const pageIds = matchedIds.slice(0, SHOP_PAGE_SIZE);
+        const matchedProducts = await db.products.findMinimalByIds(
+          pageIds,
+          selectedCategoryFilter,
+        );
+        const productsById = new Map(
+          matchedProducts.map((product) => [product.id, product]),
+        );
+        const orderedProducts = pageIds.flatMap((id) => {
+          const product = productsById.get(id);
+          return product ? [product] : [];
+        });
+
+        shopData = {
+          products: orderedProducts,
+          bestsellers: topProducts,
+          categoryNames: cats.map((c) => c.name),
+          hasNextPage: matchedIds.length > SHOP_PAGE_SIZE,
+        };
+      }
+    } else {
+      const allProducts = await db.products.findAllMinimal({
+        limit: SHOP_PAGE_SIZE + 1,
+        offset: 0,
+        search,
+        category: selectedCategoryFilter,
+      });
+
+      shopData = {
+        products: allProducts.slice(0, SHOP_PAGE_SIZE),
+        bestsellers: topProducts,
+        categoryNames: cats.map((c) => c.name),
+        hasNextPage: allProducts.length > SHOP_PAGE_SIZE,
+      };
+    }
   } catch (error) {
     logError({ error, context: "shop_products_fetch" });
   }
 
-  const { products, bestsellers, categoryNames, totalCount, hasNextPage } =
-    shopData;
+  const { products, bestsellers, categoryNames, hasNextPage } = shopData;
 
   return (
     <div className="min-h-screen bg-warm-gradient">
@@ -194,10 +206,8 @@ const ShopPage = async ({ searchParams }: ShopPageProps) => {
         categories={categoryNames}
         search={search}
         selectedCategory={selectedCategory}
-        page={page}
-        totalCount={totalCount}
         hasNextPage={hasNextPage}
-        hasPreviousPage={page > 1}
+        batchSize={SHOP_PAGE_SIZE}
       />
 
       <Footer />

@@ -32,23 +32,23 @@ vi.mock("drizzle-orm", () => ({
   desc: vi.fn((col) => col),
   lt: vi.fn(),
   eq: vi.fn(),
-  ilike: vi.fn(),
-  or: vi.fn(),
   and: vi.fn(),
+  inArray: vi.fn(),
   SQL: vi.fn(),
 }));
-vi.mock("@/lib/auth", () => ({ auth: vi.fn() }));
+vi.mock("@/lib/admin-auth", () => ({ checkAdminAuth: vi.fn() }));
 vi.mock("@/lib/serializers", () => ({ serializeOrders: vi.fn((o) => o) }));
 vi.mock("@/lib/logger", () => ({ logError: vi.fn() }));
-vi.mock("@/actions/orders", () => ({
-  searchAllOrdersRedis: vi.fn(() => Promise.resolve(null)),
-  createOrder: vi.fn(),
+vi.mock("@/lib/order-search", () => ({
+  searchOrderIds: vi.fn(),
 }));
 
 import { GET } from "@/app/api/admin/orders/route";
-import { auth } from "@/lib/auth";
+import { checkAdminAuth } from "@/lib/admin-auth";
+import { searchOrderIds } from "@/lib/order-search";
 
-const mockAuth = vi.mocked(auth);
+const mockCheckAdminAuth = vi.mocked(checkAdminAuth);
+const mockSearchOrderIds = vi.mocked(searchOrderIds);
 
 const makeRequest = (params?: Record<string, string>) => {
   const url = new URL("http://localhost/api/admin/orders");
@@ -62,10 +62,15 @@ describe("GET /api/admin/orders", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockSelectWhere.mockResolvedValue([{ value: 0 }]);
+    mockSearchOrderIds.mockResolvedValue(null);
   });
 
   it("returns 401 when not authenticated", async () => {
-    mockAuth.mockResolvedValue(null as never);
+    mockCheckAdminAuth.mockResolvedValue({
+      authorized: false,
+      error: "Not authenticated",
+      status: 401,
+    });
     const response = await GET(makeRequest());
     const data = await response.json();
     expect(response.status).toBe(401);
@@ -73,10 +78,11 @@ describe("GET /api/admin/orders", () => {
   });
 
   it("returns 403 when user is not admin", async () => {
-    mockAuth.mockResolvedValue({
-      user: { id: "1", role: "CUSTOMER", email: "user@test.com" },
-      expires: new Date(Date.now() + 86400000).toISOString(),
-    } as never);
+    mockCheckAdminAuth.mockResolvedValue({
+      authorized: false,
+      error: "Not authorized - Admin access required",
+      status: 403,
+    });
     const response = await GET(makeRequest());
     const data = await response.json();
     expect(response.status).toBe(403);
@@ -95,10 +101,7 @@ describe("GET /api/admin/orders", () => {
       },
     ];
 
-    mockAuth.mockResolvedValue({
-      user: { id: "1", role: "ADMIN", email: "admin@test.com" },
-      expires: new Date(Date.now() + 86400000).toISOString(),
-    } as never);
+    mockCheckAdminAuth.mockResolvedValue({ authorized: true });
     mockFindMany.mockResolvedValue(mockOrders);
     mockSelectWhere.mockResolvedValue([{ value: 1 }]);
 
@@ -115,10 +118,7 @@ describe("GET /api/admin/orders", () => {
   });
 
   it("returns 500 on database error", async () => {
-    mockAuth.mockResolvedValue({
-      user: { id: "1", role: "ADMIN", email: "admin@test.com" },
-      expires: new Date(Date.now() + 86400000).toISOString(),
-    } as never);
+    mockCheckAdminAuth.mockResolvedValue({ authorized: true });
     mockFindMany.mockRejectedValue(new Error("Database error"));
 
     const response = await GET(makeRequest());
@@ -126,5 +126,19 @@ describe("GET /api/admin/orders", () => {
 
     expect(response.status).toBe(500);
     expect(data.error).toBeDefined();
+  });
+
+  it("uses shared order search ids when search is provided", async () => {
+    mockCheckAdminAuth.mockResolvedValue({ authorized: true });
+    mockSearchOrderIds.mockResolvedValue(["order1", "order2"]);
+    mockFindMany.mockResolvedValue([]);
+
+    const response = await GET(makeRequest({ search: "rose" }));
+
+    expect(response.status).toBe(200);
+    expect(mockSearchOrderIds).toHaveBeenCalledWith("rose", {
+      status: undefined,
+      limit: 1000,
+    });
   });
 });

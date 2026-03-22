@@ -56,6 +56,12 @@ describe("CACHE_KEYS", () => {
       expect(CACHE_KEYS.PRODUCTS_BESTSELLERS).toBe("products:bestsellers");
     });
 
+    it("has correct PRODUCTS_BESTSELLERS_PATTERN key", () => {
+      expect(CACHE_KEYS.PRODUCTS_BESTSELLERS_PATTERN).toBe(
+        "products:bestsellers*",
+      );
+    });
+
     it("has correct PRODUCTS_PATTERN key", () => {
       expect(CACHE_KEYS.PRODUCTS_PATTERN).toBe("products:*");
     });
@@ -190,14 +196,22 @@ describe("buildProductsListCacheKey", () => {
     expect(buildProductsListCacheKey({ search: "laptop" })).toBe("");
   });
 
-  it("returns empty string when category is provided", () => {
-    expect(buildProductsListCacheKey({ category: "electronics" })).toBe("");
+  it("builds a category-specific key when category is provided", () => {
+    expect(buildProductsListCacheKey({ category: "electronics" })).toBe(
+      "products:all:category:electronics",
+    );
   });
 
   it("returns empty string when both search and category provided", () => {
     expect(
       buildProductsListCacheKey({ search: "laptop", category: "electronics" }),
     ).toBe("");
+  });
+
+  it("builds a paginated key for category-filtered lists", () => {
+    expect(
+      buildProductsListCacheKey({ category: "electronics", limit: 12 }),
+    ).toBe("products:all:category:electronics:12:0");
   });
 
   it("builds parameterized key with limit only", () => {
@@ -271,17 +285,22 @@ describe("cacheProductsList", () => {
     expect(mockGetCachedData).not.toHaveBeenCalled();
   });
 
-  it("skips cache and calls fetcher directly when category provided", async () => {
+  it("caches category-filtered lists with a category-specific key", async () => {
     const data = [{ id: "1" }];
     const fetcher = vi.fn().mockResolvedValue(data);
+    mockGetCachedData.mockResolvedValue(data);
 
     const result = await cacheProductsList(fetcher, {
       category: "electronics",
     });
 
     expect(result).toBe(data);
-    expect(fetcher).toHaveBeenCalledOnce();
-    expect(mockGetCachedData).not.toHaveBeenCalled();
+    expect(mockGetCachedData).toHaveBeenCalledWith(
+      "products:all:category:electronics",
+      60,
+      fetcher,
+      10,
+    );
   });
 
   it("returns the result from getCachedData when caching", async () => {
@@ -449,6 +468,20 @@ describe("cacheProductsBestsellers", () => {
     );
   });
 
+  it("uses a limit-specific cache key when limit differs from default", async () => {
+    const fetcher = vi.fn().mockResolvedValue([{ id: "1", name: "Product" }]);
+    mockGetCachedData.mockResolvedValue([{ id: "1", name: "Product" }]);
+
+    await cacheProductsBestsellers(fetcher, 12);
+
+    expect(mockGetCachedData).toHaveBeenCalledWith(
+      "products:bestsellers:12",
+      120,
+      fetcher,
+      20,
+    );
+  });
+
   it("returns the result from getCachedData", async () => {
     const data = [{ id: "1" }];
     mockGetCachedData.mockResolvedValue(data);
@@ -497,7 +530,7 @@ describe("invalidateAdminOrderCaches", () => {
 
     expect(mockInvalidateCache).toHaveBeenCalledWith("admin:orders:*");
     expect(mockInvalidateCache).toHaveBeenCalledWith("admin:order:o1");
-    expect(mockInvalidateCache).toHaveBeenCalledWith("products:bestsellers");
+    expect(mockInvalidateCache).toHaveBeenCalledWith("products:bestsellers*");
     expect(mockInvalidateCache).toHaveBeenCalledWith("admin:sales:*");
   });
 
@@ -506,7 +539,7 @@ describe("invalidateAdminOrderCaches", () => {
 
     expect(mockInvalidateCache).toHaveBeenCalledWith("admin:orders:*");
     expect(mockInvalidateCache).toHaveBeenCalledWith("admin:order:o1");
-    expect(mockInvalidateCache).toHaveBeenCalledWith("products:bestsellers");
+    expect(mockInvalidateCache).toHaveBeenCalledWith("products:bestsellers*");
     expect(mockInvalidateCache).toHaveBeenCalledWith("admin:sales:*");
     expect(mockInvalidateCache).toHaveBeenCalledWith("orders:user:u1");
     expect(mockInvalidateCache).toHaveBeenCalledWith("order:u1:*");

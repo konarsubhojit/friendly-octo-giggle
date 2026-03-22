@@ -286,6 +286,15 @@ describe("invalidateCache", () => {
     expect(mockRedisInstance.del).not.toHaveBeenCalled();
   });
 
+  it("deletes exact keys without scanning the keyspace", async () => {
+    mockRedisInstance.del.mockResolvedValueOnce(1);
+
+    await invalidateCache("product:abc1234");
+
+    expect(mockRedisInstance.del).toHaveBeenCalledWith("product:abc1234");
+    expect(mockRedisInstance.scan).not.toHaveBeenCalled();
+  });
+
   it("handles scan errors gracefully", async () => {
     mockRedisInstance.scan.mockRejectedValueOnce(new Error("scan failed"));
 

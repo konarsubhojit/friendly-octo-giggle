@@ -65,8 +65,8 @@ const validOrderData = {
   customerEmail: "alice@example.com",
   customerAddress: "123 Main Street, London, UK",
   items: [
-    { productId: "prod001", quantity: 2, price: 25.0 },
-    { productId: "prod002", variationId: "var001", quantity: 1, price: 50.0 },
+    { productId: "prod001", quantity: 2, price: 25 },
+    { productId: "prod002", variationId: "var001", quantity: 1, price: 50 },
   ],
 };
 
@@ -266,7 +266,7 @@ describe("getUserOrders", () => {
     customerName: "Alice Smith",
     customerEmail: "alice@example.com",
     customerAddress: "123 Main Street, London, UK",
-    items: JSON.stringify([{ productId: "prod001", quantity: 1, price: 25.0 }]),
+    items: JSON.stringify([{ productId: "prod001", quantity: 1, price: 25 }]),
     total: "25",
     status: "PENDING",
     createdAt: "2026-01-01T00:00:00.000Z",
@@ -319,7 +319,7 @@ describe("getUserOrders", () => {
       customerName: "Alice Smith",
       customerEmail: "alice@example.com",
       customerAddress: "123 Main Street, London, UK",
-      totalAmount: 50.0,
+      totalAmount: 50,
       status: "PENDING" as const,
       trackingNumber: null,
       shippingProvider: null,
@@ -332,7 +332,7 @@ describe("getUserOrders", () => {
           productId: "prod001",
           variationId: null,
           quantity: 2,
-          price: 25.0,
+          price: 25,
           customizationNote: null,
         },
       ],
@@ -346,7 +346,7 @@ describe("getUserOrders", () => {
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data).toHaveLength(1);
-      expect(result.data[0].total).toBe(50.0);
+      expect(result.data[0].total).toBe(50);
     }
   });
 
@@ -384,7 +384,7 @@ describe("getUserOrders", () => {
       customerName: "Alice Smith",
       customerEmail: "alice@example.com",
       customerAddress: "123 Main Street, London, UK",
-      totalAmount: 30.0,
+      totalAmount: 30,
       status: "SHIPPED" as const,
       trackingNumber: null,
       shippingProvider: null,

@@ -45,6 +45,7 @@ import {
   ne,
   ilike,
   or,
+  inArray,
   type SQL,
 } from "drizzle-orm";
 import { Product, ProductInput } from "./types";
@@ -309,6 +310,49 @@ export const db = {
       });
 
       return rows;
+    },
+
+    /**
+     * Fetch minimal product records for a known list of product IDs.
+     * Returns rows in database order; callers should reorder if needed.
+     */
+    findMinimalByIds: async (
+      ids: string[],
+      category?: string,
+    ): Promise<
+      Array<
+        Pick<
+          Product,
+          | "id"
+          | "name"
+          | "description"
+          | "price"
+          | "stock"
+          | "category"
+          | "image"
+        >
+      >
+    > => {
+      if (ids.length === 0) {
+        return [];
+      }
+
+      return drizzleDb.query.products.findMany({
+        where: and(
+          inArray(products.id, ids),
+          isNull(products.deletedAt),
+          category ? eq(products.category, category) : undefined,
+        ),
+        columns: {
+          id: true,
+          name: true,
+          description: true,
+          price: true,
+          stock: true,
+          category: true,
+          image: true,
+        },
+      });
     },
 
     /**

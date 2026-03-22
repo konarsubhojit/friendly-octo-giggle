@@ -326,7 +326,11 @@ describe("lib/search", () => {
       expect(mockSearch).toHaveBeenCalledWith({
         query: "shirt",
         limit: 20,
-        filter: "category = 'Handbag'",
+        filter: {
+          category: {
+            equals: "Handbag",
+          },
+        },
       });
     });
 

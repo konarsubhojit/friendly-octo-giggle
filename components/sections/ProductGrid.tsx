@@ -1,9 +1,8 @@
 "use client";
 
-import { memo } from "react";
+import { memo, startTransition, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
 import { Product } from "@/lib/types";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { GradientHeading } from "@/components/ui/GradientHeading";
@@ -23,10 +22,8 @@ interface ProductGridProps {
   readonly categories?: string[];
   readonly search?: string;
   readonly selectedCategory?: string;
-  readonly page?: number;
-  readonly totalCount?: number;
   readonly hasNextPage?: boolean;
-  readonly hasPreviousPage?: boolean;
+  readonly batchSize?: number;
 }
 
 interface ProductCardProps {
@@ -41,9 +38,11 @@ interface ProductImageAreaProps {
 }
 
 const DEFAULT_CATEGORY = "All";
+const DEFAULT_BATCH_SIZE = 15;
 
-function createPageHref(
-  page: number,
+function createProductsApiHref(
+  offset: number,
+  limit: number,
   search: string,
   selectedCategory: string,
 ) {
@@ -57,12 +56,28 @@ function createPageHref(
     params.set("category", selectedCategory);
   }
 
-  if (page > 1) {
-    params.set("page", String(page));
-  }
+  params.set("limit", String(limit));
+  params.set("offset", String(offset));
 
   const queryString = params.toString();
-  return queryString ? `/shop?${queryString}#products` : "/shop#products";
+  return queryString ? `/api/products?${queryString}` : "/api/products";
+}
+
+function mergeProducts(
+  existingProducts: ProductGridItem[],
+  nextProducts: ProductGridItem[],
+) {
+  const productsById = new Map(
+    existingProducts.map((product) => [product.id, product]),
+  );
+
+  for (const product of nextProducts) {
+    if (!productsById.has(product.id)) {
+      productsById.set(product.id, product);
+    }
+  }
+
+  return Array.from(productsById.values());
 }
 
 const ProductImageArea = memo(
@@ -130,23 +145,122 @@ const ProductGrid = ({
   categories = [],
   search = "",
   selectedCategory = DEFAULT_CATEGORY,
-  page = 1,
-  totalCount = products.length,
   hasNextPage = false,
-  hasPreviousPage = false,
+  batchSize = DEFAULT_BATCH_SIZE,
 }: ProductGridProps) => {
   const { formatPrice } = useCurrency();
-  const router = useRouter();
+  const [visibleProducts, setVisibleProducts] = useState(products);
+  const [canLoadMore, setCanLoadMore] = useState(hasNextPage);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [hasUserScrolled, setHasUserScrolled] = useState(false);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   const categoryFilters = [DEFAULT_CATEGORY, ...categories];
-  const totalPages = Math.max(1, Math.ceil(totalCount / 24));
-  const rangeStart = totalCount === 0 ? 0 : (page - 1) * 24 + 1;
-  const rangeEnd = totalCount === 0 ? 0 : Math.min(page * 24, totalCount);
 
   const emptyMessage =
     search || selectedCategory !== DEFAULT_CATEGORY
       ? "Try adjusting your search or category filter."
       : undefined;
+
+  useEffect(() => {
+    setVisibleProducts(products);
+    setCanLoadMore(hasNextPage);
+    setIsLoadingMore(false);
+    setLoadError(null);
+    setHasUserScrolled(false);
+  }, [products, hasNextPage, search, selectedCategory]);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (globalThis.scrollY > 0) {
+        setHasUserScrolled(true);
+      }
+    };
+
+    globalThis.addEventListener("scroll", handleScroll, { passive: true });
+    return () => {
+      globalThis.removeEventListener("scroll", handleScroll);
+    };
+  }, []);
+
+  const loadMoreProducts = async () => {
+    if (isLoadingMore || !canLoadMore) {
+      return;
+    }
+
+    setIsLoadingMore(true);
+    setLoadError(null);
+
+    try {
+      const response = await fetch(
+        createProductsApiHref(
+          visibleProducts.length,
+          batchSize,
+          search,
+          selectedCategory,
+        ),
+        { method: "GET", headers: { Accept: "application/json" } },
+      );
+
+      const payload = (await response.json()) as {
+        readonly success?: boolean;
+        readonly error?: string;
+        readonly data?: {
+          readonly products?: ProductGridItem[];
+          readonly hasMore?: boolean;
+        };
+      };
+
+      if (!response.ok || !payload.success) {
+        throw new Error(payload.error ?? "Unable to load more products.");
+      }
+
+      const nextProducts = payload.data?.products ?? [];
+      const nextHasMore = Boolean(payload.data?.hasMore);
+
+      startTransition(() => {
+        setVisibleProducts((currentProducts) =>
+          mergeProducts(currentProducts, nextProducts),
+        );
+        setCanLoadMore(nextHasMore);
+      });
+    } catch {
+      setLoadError("Could not load more products. Please try again.");
+    } finally {
+      setIsLoadingMore(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!canLoadMore || !sentinelRef.current || !hasUserScrolled) {
+      return;
+    }
+
+    if (typeof IntersectionObserver === "undefined") {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          void loadMoreProducts();
+        }
+      },
+      { rootMargin: "300px 0px" },
+    );
+
+    observer.observe(sentinelRef.current);
+    return () => observer.disconnect();
+  }, [
+    batchSize,
+    canLoadMore,
+    hasUserScrolled,
+    isLoadingMore,
+    search,
+    selectedCategory,
+    visibleProducts.length,
+  ]);
 
   return (
     <main
@@ -161,8 +275,8 @@ const ProductGrid = ({
         <FlowerAccent className="w-6 h-6 opacity-70" />
       </div>
       <p className="text-[var(--text-muted)] text-sm mb-8">
-        Browse our complete handmade collection — {totalCount} items crafted
-        fresh for you.
+        Browse our complete handmade collection — {visibleProducts.length}
+        {canLoadMore ? "+" : ""} items loaded for you.
       </p>
 
       <form
@@ -248,12 +362,12 @@ const ProductGrid = ({
         </div>
       </form>
 
-      {products.length === 0 ? (
+      {visibleProducts.length === 0 ? (
         <EmptyState title="No products found" message={emptyMessage} />
       ) : (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {products.map((product, index) => (
+            {visibleProducts.map((product, index) => (
               <ProductCard
                 key={product.id}
                 product={product}
@@ -263,115 +377,37 @@ const ProductGrid = ({
             ))}
           </div>
 
-          {totalCount > 0 && (
-            <div className="mt-8 flex flex-col gap-3 border-t border-[var(--border-warm)] pt-4 lg:flex-row lg:items-center lg:justify-between">
-              <div className="flex items-center gap-2 self-start lg:self-auto">
-                {hasPreviousPage ? (
-                  <Link
-                    href={createPageHref(1, search, selectedCategory)}
-                    className="px-4 py-2.5 rounded-full border border-[var(--border-warm)] bg-[var(--surface)] text-[var(--foreground)] text-sm font-semibold shadow-warm hover:border-[var(--accent-rose)] transition-colors duration-200"
-                  >
-                    « First
-                  </Link>
-                ) : (
-                  <button
-                    type="button"
-                    disabled
-                    className="px-4 py-2.5 rounded-full border border-[var(--border-warm)] bg-[var(--surface)] text-[var(--foreground)] text-sm font-semibold shadow-warm opacity-40 cursor-not-allowed"
-                  >
-                    « First
-                  </button>
-                )}
-
-                {hasPreviousPage ? (
-                  <Link
-                    href={createPageHref(page - 1, search, selectedCategory)}
-                    className="px-4 py-2.5 rounded-full border border-[var(--border-warm)] bg-[var(--surface)] text-[var(--foreground)] text-sm font-semibold shadow-warm hover:border-[var(--accent-rose)] transition-colors duration-200"
-                  >
-                    ← Previous
-                  </Link>
-                ) : (
-                  <button
-                    type="button"
-                    disabled
-                    className="px-4 py-2.5 rounded-full border border-[var(--border-warm)] bg-[var(--surface)] text-[var(--foreground)] text-sm font-semibold shadow-warm opacity-40 cursor-not-allowed"
-                  >
-                    ← Previous
-                  </button>
-                )}
-              </div>
-
-              <div className="flex flex-col items-start gap-2 lg:items-center">
-                <p className="text-sm font-medium text-[var(--text-muted)]">
-                  Showing {rangeStart}-{rangeEnd} of {totalCount}
-                </p>
-                <label className="flex items-center gap-2 text-sm font-medium text-[var(--text-muted)]">
-                  <span>Jump to page</span>
-                  <select
-                    value={page}
-                    onChange={(event) => {
-                      const targetPage = Number.parseInt(
-                        event.target.value,
-                        10,
-                      );
-                      if (Number.isFinite(targetPage)) {
-                        router.push(
-                          createPageHref(targetPage, search, selectedCategory),
-                        );
-                      }
-                    }}
-                    className="px-3 py-2 border border-[var(--border-warm)] rounded-full bg-[var(--surface)] text-[var(--foreground)] text-sm font-medium shadow-warm focus:outline-none focus:ring-2 focus:ring-[var(--accent-rose)]/30"
-                    aria-label="Jump to page"
-                  >
-                    {Array.from({ length: totalPages }, (_, index) => {
-                      const targetPage = index + 1;
-                      return (
-                        <option key={targetPage} value={targetPage}>
-                          Page {targetPage} of {totalPages}
-                        </option>
-                      );
-                    })}
-                  </select>
-                </label>
-              </div>
-
-              <div className="flex items-center gap-2 self-start lg:self-auto">
-                {hasNextPage ? (
-                  <Link
-                    href={createPageHref(page + 1, search, selectedCategory)}
-                    className="px-4 py-2.5 rounded-full border border-[var(--border-warm)] bg-[var(--surface)] text-[var(--foreground)] text-sm font-semibold shadow-warm hover:border-[var(--accent-rose)] transition-colors duration-200"
-                  >
-                    Next →
-                  </Link>
-                ) : (
-                  <button
-                    type="button"
-                    disabled
-                    className="px-4 py-2.5 rounded-full border border-[var(--border-warm)] bg-[var(--surface)] text-[var(--foreground)] text-sm font-semibold shadow-warm opacity-40 cursor-not-allowed"
-                  >
-                    Next →
-                  </button>
-                )}
-
-                {hasNextPage ? (
-                  <Link
-                    href={createPageHref(totalPages, search, selectedCategory)}
-                    className="px-4 py-2.5 rounded-full border border-[var(--border-warm)] bg-[var(--surface)] text-[var(--foreground)] text-sm font-semibold shadow-warm hover:border-[var(--accent-rose)] transition-colors duration-200"
-                  >
-                    Last »
-                  </Link>
-                ) : (
-                  <button
-                    type="button"
-                    disabled
-                    className="px-4 py-2.5 rounded-full border border-[var(--border-warm)] bg-[var(--surface)] text-[var(--foreground)] text-sm font-semibold shadow-warm opacity-40 cursor-not-allowed"
-                  >
-                    Last »
-                  </button>
-                )}
-              </div>
+          <div className="mt-8 border-t border-[var(--border-warm)] pt-6">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm font-medium text-[var(--text-muted)]">
+                Showing {visibleProducts.length} product
+                {visibleProducts.length === 1 ? "" : "s"}
+                {canLoadMore ? " so far" : ""}.
+              </p>
+              {canLoadMore ? (
+                <button
+                  type="button"
+                  onClick={() => void loadMoreProducts()}
+                  disabled={isLoadingMore}
+                  className="px-5 py-3 rounded-full bg-[var(--btn-primary)] text-white text-sm font-semibold shadow-warm hover:shadow-warm-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                >
+                  {isLoadingMore ? "Loading more..." : `Load ${batchSize} more`}
+                </button>
+              ) : (
+                <span className="text-sm font-medium text-[var(--text-muted)]">
+                  You have reached the end of this result set.
+                </span>
+              )}
             </div>
-          )}
+
+            {loadError ? (
+              <p role="alert" className="mt-3 text-sm font-medium text-red-600">
+                {loadError}
+              </p>
+            ) : null}
+
+            <div ref={sentinelRef} aria-hidden="true" className="h-1 w-full" />
+          </div>
         </>
       )}
     </main>

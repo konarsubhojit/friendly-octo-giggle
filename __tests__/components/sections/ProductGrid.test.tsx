@@ -51,15 +51,10 @@ vi.mock("next/image", () => ({
 }));
 
 const mockDispatch = vi.fn();
-const mockRouterPush = vi.fn();
 
 vi.mock("react-redux", () => ({
   useDispatch: () => mockDispatch,
   useSelector: vi.fn(() => []),
-}));
-
-vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: mockRouterPush }),
 }));
 
 vi.mock("next-auth/react", () => ({
@@ -130,6 +125,16 @@ describe("ProductGrid", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockDispatch.mockReturnValue({ unwrap: () => Promise.resolve({}) });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({
+          success: true,
+          rates: { INR: 83.12, USD: 1, EUR: 0.92, GBP: 0.79 },
+        }),
+      })),
+    );
   });
   it("shows empty state when no products", () => {
     renderGrid([]);
@@ -248,47 +253,65 @@ describe("ProductGrid", () => {
     ).toBeTruthy();
   });
 
-  it("renders next page link with current filters", () => {
+  it("shows the load more control when more products are available", () => {
     renderGrid([makeProduct()], ["Flowers"], {
       search: "rose",
       selectedCategory: "Flowers",
-      page: 2,
-      totalCount: 50,
       hasNextPage: true,
-      hasPreviousPage: true,
+      batchSize: 15,
     });
 
-    expect(
-      screen.getByRole("link", { name: /Next/i }).getAttribute("href"),
-    ).toBe("/shop?q=rose&category=Flowers&page=3#products");
-    expect(
-      screen.getByRole("link", { name: /Previous/i }).getAttribute("href"),
-    ).toBe("/shop?q=rose&category=Flowers#products");
-    expect(
-      screen.getByRole("link", { name: /First/i }).getAttribute("href"),
-    ).toBe("/shop?q=rose&category=Flowers#products");
-    expect(
-      screen.getByRole("link", { name: /Last/i }).getAttribute("href"),
-    ).toBe("/shop?q=rose&category=Flowers&page=3#products");
-    expect(screen.getByText("Showing 25-48 of 50")).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Load 15 more/i })).toBeTruthy();
+    expect(screen.getByText("Showing 1 product so far.")).toBeTruthy();
   });
 
-  it("navigates with the quick page selector", () => {
+  it("loads another batch of products from the API", async () => {
+    vi.mocked(fetch).mockImplementation(async (input) => {
+      if (String(input).startsWith("/api/products")) {
+        return {
+          ok: true,
+          json: async () => ({
+            success: true,
+            data: {
+              products: [
+                toGridItem(makeProduct({ id: "2", name: "Loaded Product" })),
+              ],
+              hasMore: false,
+            },
+          }),
+        } as Response;
+      }
+
+      return {
+        ok: true,
+        json: async () => ({
+          success: true,
+          rates: { INR: 83.12, USD: 1, EUR: 0.92, GBP: 0.79 },
+        }),
+      } as Response;
+    });
+
     renderGrid([makeProduct()], ["Flowers"], {
       search: "rose",
       selectedCategory: "Flowers",
-      page: 1,
-      totalCount: 50,
       hasNextPage: true,
+      batchSize: 15,
     });
 
-    fireEvent.change(screen.getByRole("combobox", { name: /jump to page/i }), {
-      target: { value: "3" },
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /Load 15 more/i }));
     });
 
-    expect(mockRouterPush).toHaveBeenCalledWith(
-      "/shop?q=rose&category=Flowers&page=3#products",
+    await waitFor(() => {
+      expect(screen.getByText("Loaded Product")).toBeTruthy();
+    });
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/products?q=rose&category=Flowers&limit=15&offset=1",
+      { method: "GET", headers: { Accept: "application/json" } },
     );
+    expect(
+      screen.getByText("You have reached the end of this result set."),
+    ).toBeTruthy();
   });
   it("renders quick add button for in-stock product", () => {
     renderGrid([makeProduct({ stock: 5 })]);

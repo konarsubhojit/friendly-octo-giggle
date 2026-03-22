@@ -21,31 +21,60 @@ const order = {
       product: { id: "prod-1", name: "Rose Gift Box", image: "/rose.jpg" },
       variation: { id: "var-1", name: "Large", priceModifier: 10 },
     },
+    {
+      id: "item-2",
+      quantity: 1,
+      price: 49.5,
+      product: { id: "prod-2", name: "Lily Vase", image: "/lily.jpg" },
+      variation: null,
+    },
+    {
+      id: "item-3",
+      quantity: 1,
+      price: 0,
+      product: { id: "prod-3", name: "Tulip Candle", image: "/tulip.jpg" },
+      variation: null,
+    },
   ],
 };
 
 describe("AdminOrderCard", () => {
-  it("renders order, customer, and line item details", () => {
+  it("renders a collapsed summary first and expands into details", () => {
     render(
       <AdminOrderCard
         order={order}
         updatingOrderId={null}
         savingShippingId={null}
         edit={{ trackingNumber: "TRK-123", shippingProvider: "BlueDart" }}
-        formatPrice={(amount) => `$${amount.toFixed(2)}`}
         onStatusChange={vi.fn()}
         onShippingFieldChange={vi.fn()}
         onSaveShipping={vi.fn()}
       />,
     );
 
+    expect(
+      screen.getByText("Rose Gift Box, Lily Vase and 1 more"),
+    ).toBeInTheDocument();
     expect(screen.getByText("Order #ORD1234")).toBeInTheDocument();
-    expect(screen.getByText("Riya Sen")).toBeInTheDocument();
-    expect(screen.getByText("riya@example.com")).toBeInTheDocument();
+    expect(screen.getByText("Show details")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Expand to edit shipping, review the address, and inspect line items.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Pricing in order details")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Tracking Number")).not.toBeInTheDocument();
+    expect(screen.queryByText("$149.50")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /show details/i }));
+
+    expect(screen.getAllByText("Riya Sen")).toHaveLength(2);
+    expect(screen.getAllByText("riya@example.com")).toHaveLength(2);
     expect(screen.getByText("Rose Gift Box")).toBeInTheDocument();
     expect(screen.getByText("Large")).toBeInTheDocument();
     expect(screen.getByText("✏️ Gift wrap")).toBeInTheDocument();
-    expect(screen.getByText("$149.50")).toBeInTheDocument();
+    expect(screen.getByText("Pricing in order details")).toBeInTheDocument();
+    expect(screen.getByLabelText("Tracking Number")).toBeInTheDocument();
   });
 
   it("opens confirm dialog and forwards status changes", async () => {
@@ -57,12 +86,13 @@ describe("AdminOrderCard", () => {
         updatingOrderId={null}
         savingShippingId={null}
         edit={{ trackingNumber: "TRK-123", shippingProvider: "BlueDart" }}
-        formatPrice={(amount) => `$${amount.toFixed(2)}`}
         onStatusChange={onStatusChange}
         onShippingFieldChange={vi.fn()}
         onSaveShipping={vi.fn()}
       />,
     );
+
+    fireEvent.click(screen.getByRole("button", { name: /show details/i }));
 
     fireEvent.change(screen.getByLabelText("Change status for order ord1234"), {
       target: { value: OrderStatus.SHIPPED },
@@ -89,12 +119,13 @@ describe("AdminOrderCard", () => {
         updatingOrderId={null}
         savingShippingId={null}
         edit={{ trackingNumber: "TRK-123", shippingProvider: "BlueDart" }}
-        formatPrice={(amount) => `$${amount.toFixed(2)}`}
         onStatusChange={vi.fn()}
         onShippingFieldChange={onShippingFieldChange}
         onSaveShipping={onSaveShipping}
       />,
     );
+
+    fireEvent.click(screen.getByRole("button", { name: /show details/i }));
 
     fireEvent.change(screen.getByLabelText("Tracking Number"), {
       target: { value: "TRK-999" },

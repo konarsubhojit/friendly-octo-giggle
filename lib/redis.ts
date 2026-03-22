@@ -27,6 +27,7 @@ export const getRedisClient = (): Redis | null => {
 
 const LOCK_TTL_SECONDS = 10;
 const LOCK_RETRY_DELAY_MS = 100;
+const REDIS_GLOB_PATTERN = /[*?[\]]/;
 
 const RELEASE_LOCK_SCRIPT = `
   if redis.call("get", KEYS[1]) == ARGV[1] then
@@ -157,6 +158,21 @@ export const invalidateCache = async (pattern: string): Promise<void> => {
 
   const timer = new Timer(`cache.invalidate.${pattern}`);
   try {
+    if (!REDIS_GLOB_PATTERN.test(pattern)) {
+      const deletedCount = await redisClient.del(pattern);
+
+      if (deletedCount > 0) {
+        logCacheOperation({
+          operation: "invalidate",
+          key: pattern,
+          success: true,
+        });
+      }
+
+      timer.end({ keysDeleted: deletedCount });
+      return;
+    }
+
     const keysToDelete: string[] = [];
     let cursor = 0;
 
@@ -166,7 +182,7 @@ export const invalidateCache = async (pattern: string): Promise<void> => {
         count: 100,
       });
       cursor = Number(nextCursor);
-      keysToDelete.push(...(keys as string[]));
+      keysToDelete.push(...keys);
     } while (cursor !== 0);
 
     if (keysToDelete.length > 0) {

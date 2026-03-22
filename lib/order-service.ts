@@ -15,8 +15,6 @@ import {
   and,
   isNull,
   lt,
-  ilike,
-  or,
   SQL,
 } from "drizzle-orm";
 import { invalidateCache } from "@/lib/redis";
@@ -29,7 +27,8 @@ import { getQStashClient } from "@/lib/qstash";
 import type { OrderCreatedEvent } from "@/lib/qstash-events";
 import { env } from "@/lib/env";
 import { waitUntil } from "@vercel/functions";
-import { searchUserOrdersRedis, writeOrderToRedis } from "@/actions/orders";
+import { writeOrderToRedis } from "@/actions/orders";
+import { searchOrderIds } from "@/lib/order-search";
 import {
   formatPriceForCurrency,
   isValidCurrencyCode,
@@ -402,56 +401,53 @@ export const getUserOrders = async ({
     useOffset,
   );
   const countConditions = buildOrderConditions(userId, null, false);
+  let totalCountFromSearch: number | null = null;
 
   if (search) {
-    const redisIds = await searchUserOrdersRedis(userId, search, limit * 5);
-    if (redisIds && redisIds.length > 0) {
-      const redisFilter = inArray(orders.id, redisIds);
-      if (redisFilter) {
-        conditions.push(redisFilter);
-        countConditions.push(redisFilter);
-      }
-    } else {
-      const pattern = `%${search}%`;
-      const searchCondition = or(
-        ilike(orders.id, pattern),
-        sql`${orders.status}::text ILIKE ${pattern}`,
-        ilike(orders.customerName, pattern),
-        ilike(orders.customerEmail, pattern),
-        sql`EXISTS (
-          SELECT 1 FROM "OrderItem" oi
-          JOIN "Product" p ON p.id = oi."productId"
-          LEFT JOIN "ProductVariation" pv ON pv.id = oi."variationId"
-          WHERE oi."orderId" = ${orders.id}
-          AND (p.name ILIKE ${pattern} OR pv.name ILIKE ${pattern})
-        )`,
-      );
-      if (searchCondition) {
-        conditions.push(searchCondition);
-        countConditions.push(searchCondition);
-      }
+    const matchedIds = await searchOrderIds(search, {
+      userId,
+      limit: 1000,
+    });
+
+    if (matchedIds?.length === 0) {
+      return {
+        orders: [],
+        nextCursor: null,
+        hasMore: false,
+        totalCount: 0,
+      };
+    }
+
+    if (matchedIds && matchedIds.length > 0) {
+      const searchIds: string[] = matchedIds;
+      const searchCondition = inArray(orders.id, searchIds);
+      conditions.push(searchCondition);
+      totalCountFromSearch = searchIds.length;
     }
   }
 
-  const [rows, totalRows] = await Promise.all([
-    drizzleDb.query.orders.findMany({
-      where: and(...conditions),
-      with: { items: { with: { product: true, variation: true } } },
-      orderBy: [desc(orders.createdAt)],
-      limit: limit + 1,
-      offset: useOffset ? offset : undefined,
-    }),
-    drizzleDb
-      .select({ value: count() })
-      .from(orders)
-      .where(and(...countConditions)),
-  ]);
+  const rows = await drizzleDb.query.orders.findMany({
+    where: and(...conditions),
+    with: { items: { with: { product: true, variation: true } } },
+    orderBy: [desc(orders.createdAt)],
+    limit: limit + 1,
+    offset: useOffset ? offset : undefined,
+  });
 
   const serialized = serializeOrderList(rows as HydratedOrder[], limit);
 
   return {
     ...serialized,
-    totalCount: Number(totalRows[0]?.value ?? 0),
+    totalCount:
+      totalCountFromSearch ??
+      Number(
+        (
+          await drizzleDb
+            .select({ value: count() })
+            .from(orders)
+            .where(and(...countConditions))
+        )[0]?.value ?? 0,
+      ),
   };
 };
 

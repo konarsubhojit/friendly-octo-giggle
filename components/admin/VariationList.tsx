@@ -24,6 +24,28 @@ interface QuickEditDraft {
   stock: string;
 }
 
+interface QuickEditUiState {
+  readonly hasDraftChanges: boolean;
+  readonly hasValidModifier: boolean;
+  readonly isQuickSaveDisabled: boolean;
+  readonly previewLabel: string;
+  readonly quickEffectivePrice: number;
+  readonly showModifierError: boolean;
+  readonly showStockError: boolean;
+}
+
+interface VariationQuickEditPanelProps {
+  readonly currency: string;
+  readonly draft: QuickEditDraft;
+  readonly onModifierChange: (value: string) => void;
+  readonly onReset: () => void;
+  readonly onSave: () => void;
+  readonly onStockChange: (value: string) => void;
+  readonly saving: boolean;
+  readonly state: QuickEditUiState;
+  readonly variationName: string;
+}
+
 function convertCurrency(
   amount: number,
   fromRate: number,
@@ -31,6 +53,152 @@ function convertCurrency(
 ): number {
   const amountInInr = amount / fromRate;
   return Number((amountInInr * toRate).toFixed(2));
+}
+
+function getQuickEditUiState({
+  currency,
+  draft,
+  formatPrice,
+  getDefaultDraft,
+  productPrice,
+  rates,
+  saving,
+  variation,
+}: {
+  readonly currency: string;
+  readonly draft: QuickEditDraft;
+  readonly formatPrice: (amount: number) => string;
+  readonly getDefaultDraft: (variation: ProductVariation) => QuickEditDraft;
+  readonly productPrice: number;
+  readonly rates: Record<string, number>;
+  readonly saving: boolean;
+  readonly variation: ProductVariation;
+}): QuickEditUiState {
+  const defaultDraft = getDefaultDraft(variation);
+  const modifierValue = Number.parseFloat(draft.priceModifier);
+  const modifierInInr = Number.isNaN(modifierValue)
+    ? Number.NaN
+    : convertCurrency(modifierValue, rates[currency], rates.INR);
+  const stockValue = Number.parseInt(draft.stock, 10);
+  const quickEffectivePrice = Number.isNaN(modifierInInr)
+    ? Number.NaN
+    : productPrice + modifierInInr;
+  const hasDraftChanges =
+    draft.priceModifier !== defaultDraft.priceModifier ||
+    draft.stock !== defaultDraft.stock;
+  const hasValidStock = Number.isInteger(stockValue) && stockValue >= 0;
+  const hasValidModifier = !Number.isNaN(modifierValue);
+
+  return {
+    hasDraftChanges,
+    hasValidModifier,
+    isQuickSaveDisabled:
+      !hasDraftChanges ||
+      !hasValidStock ||
+      !hasValidModifier ||
+      Number.isNaN(quickEffectivePrice) ||
+      quickEffectivePrice <= 0 ||
+      saving,
+    previewLabel:
+      hasValidModifier && !Number.isNaN(quickEffectivePrice)
+        ? formatPrice(quickEffectivePrice)
+        : "Enter valid values",
+    quickEffectivePrice,
+    showModifierError: hasValidModifier === false,
+    showStockError: hasValidStock === false,
+  };
+}
+
+function VariationQuickEditPanel({
+  currency,
+  draft,
+  onModifierChange,
+  onReset,
+  onSave,
+  onStockChange,
+  saving,
+  state,
+  variationName,
+}: VariationQuickEditPanelProps) {
+  return (
+    <div className="mt-4 rounded-[1.25rem] border border-slate-200 bg-slate-50/70 p-4 dark:border-slate-700 dark:bg-slate-950/55">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700 dark:text-sky-300">
+            Quick edit
+          </p>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            Adjust stock and modifier here for a faster row-level update.
+          </p>
+        </div>
+        <p className="text-xs text-slate-500 dark:text-slate-400">
+          Preview after save: {state.previewLabel}
+        </p>
+      </div>
+
+      <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_10rem_auto]">
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+          <span>Modifier ({currency})</span>
+          <input
+            type="number"
+            step="0.01"
+            value={draft.priceModifier}
+            onChange={(event) => onModifierChange(event.target.value)}
+            aria-label={`Modifier for ${variationName}`}
+            className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-950 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100 dark:border-slate-700 dark:bg-slate-950/80 dark:text-slate-50 dark:focus:border-sky-500 dark:focus:ring-sky-500/20"
+          />
+        </label>
+
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+          <span>Stock</span>
+          <input
+            type="number"
+            min="0"
+            step="1"
+            value={draft.stock}
+            onChange={(event) => onStockChange(event.target.value)}
+            aria-label={`Stock for ${variationName}`}
+            className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-950 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100 dark:border-slate-700 dark:bg-slate-950/80 dark:text-slate-50 dark:focus:border-sky-500 dark:focus:ring-sky-500/20"
+          />
+        </label>
+
+        <div className="flex gap-2 lg:justify-end">
+          <button
+            type="button"
+            onClick={onReset}
+            disabled={!state.hasDraftChanges || saving}
+            className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-950 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:text-slate-50"
+          >
+            Reset
+          </button>
+          <button
+            type="button"
+            onClick={onSave}
+            disabled={state.isQuickSaveDisabled}
+            className="inline-flex items-center justify-center rounded-full bg-sky-500 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-sky-400 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 dark:bg-sky-500 dark:text-slate-950 dark:hover:bg-sky-400 dark:disabled:bg-slate-700 dark:disabled:text-slate-400"
+          >
+            {saving ? "Saving..." : "Save"}
+          </button>
+        </div>
+      </div>
+
+      {state.showModifierError ? (
+        <p className="mt-3 text-xs font-medium text-rose-500 dark:text-rose-400">
+          Enter a valid modifier amount.
+        </p>
+      ) : null}
+      {state.showStockError ? (
+        <p className="mt-3 text-xs font-medium text-rose-500 dark:text-rose-400">
+          Stock must be a non-negative integer.
+        </p>
+      ) : null}
+      {state.hasValidModifier && state.quickEffectivePrice <= 0 ? (
+        <p className="mt-3 text-xs font-medium text-rose-500 dark:text-rose-400">
+          Effective price must stay above zero.
+        </p>
+      ) : null}
+    </div>
+  );
 }
 
 export default function VariationList({
@@ -55,6 +223,9 @@ export default function VariationList({
   const [savingVariationId, setSavingVariationId] = useState<string | null>(
     null,
   );
+  const [expandedVariationId, setExpandedVariationId] = useState<string | null>(
+    null,
+  );
 
   const totalVariationStock = variations.reduce(
     (sum, variation) => sum + variation.stock,
@@ -69,9 +240,10 @@ export default function VariationList({
     setShowFormModal(true);
   };
 
-  const handleEditClick = (variation: ProductVariation) => {
-    setEditingVariation(variation);
-    setShowFormModal(true);
+  const handleQuickEditToggle = (variationId: string) => {
+    setExpandedVariationId((currentId) =>
+      currentId === variationId ? null : variationId,
+    );
   };
 
   const handleFormClose = () => {
@@ -179,6 +351,7 @@ export default function VariationList({
       handleFormSuccess(data.data.variation);
       toast.success("Variation updated");
       resetQuickDraft(variation);
+      setExpandedVariationId(null);
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Failed to update variation",
@@ -322,34 +495,18 @@ export default function VariationList({
       <div className="space-y-4">
         {variations.map((variation) => {
           const draft = getDraft(variation);
+          const isExpanded = expandedVariationId === variation.id;
           const effectivePrice = productPrice + variation.priceModifier;
-          const quickModifierValue = Number.parseFloat(draft.priceModifier);
-          const quickModifierInInr = Number.isNaN(quickModifierValue)
-            ? Number.NaN
-            : convertCurrency(quickModifierValue, rates[currency], rates.INR);
-          const quickStockValue = Number.parseInt(draft.stock, 10);
-          const quickEffectivePrice = Number.isNaN(quickModifierInInr)
-            ? Number.NaN
-            : productPrice + quickModifierInInr;
-          const hasDraftChanges =
-            draft.priceModifier !== getDefaultDraft(variation).priceModifier ||
-            draft.stock !== getDefaultDraft(variation).stock;
-          const hasValidStock =
-            Number.isInteger(quickStockValue) && quickStockValue >= 0;
-          const hasValidModifier = !Number.isNaN(quickModifierValue);
-          const showModifierError = hasValidModifier === false;
-          const showStockError = hasValidStock === false;
-          const quickPreviewLabel =
-            hasValidModifier && !Number.isNaN(quickEffectivePrice)
-              ? formatPrice(quickEffectivePrice)
-              : "Enter valid values";
-          const isQuickSaveDisabled =
-            !hasDraftChanges ||
-            !hasValidStock ||
-            !hasValidModifier ||
-            Number.isNaN(quickEffectivePrice) ||
-            quickEffectivePrice <= 0 ||
-            savingVariationId === variation.id;
+          const quickEditState = getQuickEditUiState({
+            currency,
+            draft,
+            formatPrice,
+            getDefaultDraft,
+            productPrice,
+            rates,
+            saving: savingVariationId === variation.id,
+            variation,
+          });
 
           return (
             <div
@@ -441,118 +598,69 @@ export default function VariationList({
                       Stock: {variation.stock}
                     </p>
 
-                    <div className="mt-4 rounded-[1.25rem] border border-slate-200 bg-slate-50/70 p-4 dark:border-slate-700 dark:bg-slate-950/55">
-                      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-                        <div>
-                          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700 dark:text-sky-300">
-                            Quick update
-                          </p>
-                          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                            Adjust stock and modifier here. Open the editor for
-                            naming or media changes.
-                          </p>
-                        </div>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">
-                          Preview after save: {quickPreviewLabel}
-                        </p>
-                      </div>
-
-                      <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_10rem_auto]">
-                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-                          <span>Modifier ({currency})</span>
-                          <input
-                            type="number"
-                            step="0.01"
-                            value={draft.priceModifier}
-                            onChange={(event) =>
-                              updateQuickDraft(
-                                variation.id,
-                                "priceModifier",
-                                event.target.value,
-                              )
-                            }
-                            aria-label={`Modifier for ${variation.name}`}
-                            className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-950 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100 dark:border-slate-700 dark:bg-slate-950/80 dark:text-slate-50 dark:focus:border-sky-500 dark:focus:ring-sky-500/20"
-                          />
-                        </label>
-
-                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-                          <span>Stock</span>
-                          <input
-                            type="number"
-                            min="0"
-                            step="1"
-                            value={draft.stock}
-                            onChange={(event) =>
-                              updateQuickDraft(
-                                variation.id,
-                                "stock",
-                                event.target.value,
-                              )
-                            }
-                            aria-label={`Stock for ${variation.name}`}
-                            className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-950 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100 dark:border-slate-700 dark:bg-slate-950/80 dark:text-slate-50 dark:focus:border-sky-500 dark:focus:ring-sky-500/20"
-                          />
-                        </label>
-
-                        <div className="flex gap-2 lg:justify-end">
-                          <button
-                            type="button"
-                            onClick={() => resetQuickDraft(variation)}
-                            disabled={
-                              !hasDraftChanges ||
-                              savingVariationId === variation.id
-                            }
-                            className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-950 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:text-slate-50"
-                          >
-                            Reset
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleQuickSave(variation)}
-                            disabled={isQuickSaveDisabled}
-                            className="inline-flex items-center justify-center rounded-full bg-sky-500 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-sky-400 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 dark:bg-sky-500 dark:text-slate-950 dark:hover:bg-sky-400 dark:disabled:bg-slate-700 dark:disabled:text-slate-400"
-                          >
-                            {savingVariationId === variation.id
-                              ? "Saving..."
-                              : "Save quick edit"}
-                          </button>
-                        </div>
-                      </div>
-
-                      {showModifierError ? (
-                        <p className="mt-3 text-xs font-medium text-rose-500 dark:text-rose-400">
-                          Enter a valid modifier amount.
-                        </p>
-                      ) : null}
-                      {showStockError ? (
-                        <p className="mt-3 text-xs font-medium text-rose-500 dark:text-rose-400">
-                          Stock must be a non-negative integer.
-                        </p>
-                      ) : null}
-                      {hasValidModifier && quickEffectivePrice <= 0 ? (
-                        <p className="mt-3 text-xs font-medium text-rose-500 dark:text-rose-400">
-                          Effective price must stay above zero.
-                        </p>
-                      ) : null}
-                    </div>
+                    {isExpanded ? (
+                      <VariationQuickEditPanel
+                        currency={currency}
+                        draft={draft}
+                        onModifierChange={(value) =>
+                          updateQuickDraft(variation.id, "priceModifier", value)
+                        }
+                        onReset={() => resetQuickDraft(variation)}
+                        onSave={() => handleQuickSave(variation)}
+                        onStockChange={(value) =>
+                          updateQuickDraft(variation.id, "stock", value)
+                        }
+                        saving={savingVariationId === variation.id}
+                        state={quickEditState}
+                        variationName={variation.name}
+                      />
+                    ) : null}
                   </div>
                 </div>
 
-                <div className="flex gap-3 lg:w-[220px] lg:flex-col">
+                <div className="flex gap-3 lg:w-auto lg:flex-col lg:items-end">
                   <button
                     type="button"
-                    onClick={() => handleEditClick(variation)}
-                    className="flex-1 rounded-full bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
+                    onClick={() => handleQuickEditToggle(variation.id)}
+                    aria-label={`${isExpanded ? "Close quick edit for" : "Open quick edit for"} ${variation.name}`}
+                    aria-expanded={isExpanded}
+                    className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-slate-950 text-white transition hover:bg-slate-800"
                   >
-                    Edit
+                    <svg
+                      className="h-4 w-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={1.8}
+                        d="M16.862 4.487a2.1 2.1 0 113.03 2.902L9.91 17.37 6 18l.63-3.91 10.232-9.603z"
+                      />
+                    </svg>
                   </button>
                   <button
                     type="button"
                     onClick={() => handleDeleteClick(variation)}
-                    className="flex-1 rounded-full border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm font-semibold text-rose-700 transition hover:border-rose-300 hover:bg-rose-100"
+                    aria-label={`Delete ${variation.name}`}
+                    className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-rose-200 bg-rose-50 text-rose-700 transition hover:border-rose-300 hover:bg-rose-100"
                   >
-                    Delete
+                    <svg
+                      className="h-4 w-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={1.8}
+                        d="M6 7h12m-9 0V5.5A1.5 1.5 0 0110.5 4h3A1.5 1.5 0 0115 5.5V7m-7.5 0l.75 11.25A1.5 1.5 0 009.75 19.5h4.5a1.5 1.5 0 001.5-1.25L16.5 7m-6 3v5m3-5v5"
+                      />
+                    </svg>
                   </button>
                 </div>
               </div>

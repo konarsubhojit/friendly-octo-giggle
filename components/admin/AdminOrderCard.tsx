@@ -1,11 +1,12 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import type { ChangeEvent } from 'react';
-import { OrderStatus } from '@/lib/types';
-import { Badge, orderStatusVariant } from '@/components/ui/Badge';
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
-import ConfirmDialog from '@/components/ui/ConfirmDialog';
+import { useState } from "react";
+import type { ChangeEvent } from "react";
+import { OrderStatus } from "@/lib/types";
+import { Badge, orderStatusVariant } from "@/components/ui/Badge";
+import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import { countOrderUnits, summarizeOrderProducts } from "@/lib/order-summary";
 
 interface AdminOrderItem {
   id: string;
@@ -34,41 +35,47 @@ interface AdminOrderCardProps {
   readonly updatingOrderId: string | null;
   readonly savingShippingId: string | null;
   readonly edit: { trackingNumber: string; shippingProvider: string };
-  readonly formatPrice: (amount: number) => string;
   readonly onStatusChange: (orderId: string, status: OrderStatus) => void;
   readonly onShippingFieldChange: (
     orderId: string,
-    field: 'trackingNumber' | 'shippingProvider',
+    field: "trackingNumber" | "shippingProvider",
     value: string,
     order: AdminOrder,
   ) => void;
-  readonly onSaveShipping: (orderId: string, status: string, order: AdminOrder) => void;
+  readonly onSaveShipping: (
+    orderId: string,
+    status: string,
+    order: AdminOrder,
+  ) => void;
 }
 
 interface OrderItemRowProps {
   readonly item: AdminOrderItem;
-  readonly formatPrice: (amount: number) => string;
 }
 
-function OrderItemRow({ item, formatPrice }: OrderItemRowProps) {
+function OrderItemRow({ item }: OrderItemRowProps) {
   return (
-    <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700 last:border-b-0">
-      <div className="flex-1">
-        <p className="font-medium text-sm text-gray-900 dark:text-white">{item.product?.name || 'Unknown Product'}</p>
-        {item.variation && (
-          <p className="text-xs text-blue-600 dark:text-blue-400">{item.variation.name}</p>
-        )}
-        <p className="text-xs text-gray-500 dark:text-gray-400">
-          {formatPrice(item.price)} × {item.quantity}
+    <div className="rounded-xl border border-slate-200 bg-slate-50/70 px-4 py-3 dark:border-slate-700 dark:bg-slate-900/40">
+      <div className="flex flex-wrap items-center gap-2">
+        <p className="text-sm font-medium text-gray-900 dark:text-white">
+          {item.product?.name || "Unknown Product"}
         </p>
+        <Badge variant="neutral" size="sm">
+          Qty {item.quantity}
+        </Badge>
+      </div>
+      <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
+        {item.variation && (
+          <p className="text-blue-600 dark:text-blue-400">
+            {item.variation.name}
+          </p>
+        )}
+        <p>{item.quantity === 1 ? "Single unit" : `${item.quantity} units`}</p>
         {item.customizationNote && (
-          <p className="text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 inline-block mt-1 px-2 py-0.5 rounded">
+          <p className="inline-block rounded bg-amber-50 px-2 py-0.5 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
             ✏️ {item.customizationNote}
           </p>
         )}
-      </div>
-      <div className="text-right">
-        <p className="font-semibold text-gray-900 dark:text-white">{formatPrice(item.price * item.quantity)}</p>
       </div>
     </div>
   );
@@ -80,8 +87,8 @@ interface ShippingInfoSectionProps {
   readonly order: AdminOrder;
   readonly edit: { trackingNumber: string; shippingProvider: string };
   readonly savingShippingId: string | null;
-  readonly onShippingFieldChange: AdminOrderCardProps['onShippingFieldChange'];
-  readonly onSaveShipping: AdminOrderCardProps['onSaveShipping'];
+  readonly onShippingFieldChange: AdminOrderCardProps["onShippingFieldChange"];
+  readonly onSaveShipping: AdminOrderCardProps["onSaveShipping"];
 }
 
 function ShippingInfoSection({
@@ -95,30 +102,52 @@ function ShippingInfoSection({
 }: ShippingInfoSectionProps) {
   return (
     <div className="mb-4 p-4 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg">
-      <h4 className="font-semibold text-sm text-gray-700 dark:text-gray-300 mb-2">Shipping Information</h4>
+      <h4 className="font-semibold text-sm text-gray-700 dark:text-gray-300 mb-2">
+        Shipping Information
+      </h4>
       <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-end">
         <div className="flex-1 w-full">
-          <label htmlFor={`tracking-${orderId}`} className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+          <label
+            htmlFor={`tracking-${orderId}`}
+            className="block text-xs text-gray-500 dark:text-gray-400 mb-1"
+          >
             Tracking Number
           </label>
           <input
             id={`tracking-${orderId}`}
             type="text"
             value={edit.trackingNumber}
-            onChange={(e) => onShippingFieldChange(orderId, 'trackingNumber', e.target.value, order)}
+            onChange={(e) =>
+              onShippingFieldChange(
+                orderId,
+                "trackingNumber",
+                e.target.value,
+                order,
+              )
+            }
             placeholder="e.g. 1Z999AA10123456784"
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm text-gray-900 dark:text-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
         <div className="flex-1 w-full">
-          <label htmlFor={`provider-${orderId}`} className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+          <label
+            htmlFor={`provider-${orderId}`}
+            className="block text-xs text-gray-500 dark:text-gray-400 mb-1"
+          >
             Shipping Provider
           </label>
           <input
             id={`provider-${orderId}`}
             type="text"
             value={edit.shippingProvider}
-            onChange={(e) => onShippingFieldChange(orderId, 'shippingProvider', e.target.value, order)}
+            onChange={(e) =>
+              onShippingFieldChange(
+                orderId,
+                "shippingProvider",
+                e.target.value,
+                order,
+              )
+            }
             placeholder="e.g. FedEx, UPS, USPS"
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm text-gray-900 dark:text-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
@@ -128,7 +157,7 @@ function ShippingInfoSection({
           disabled={savingShippingId === orderId}
           className="px-4 py-2 bg-purple-600 text-white rounded-md text-sm font-medium hover:bg-purple-700 disabled:bg-gray-400 transition whitespace-nowrap"
         >
-          {savingShippingId === orderId ? 'Saving…' : 'Save Shipping'}
+          {savingShippingId === orderId ? "Saving…" : "Save Shipping"}
         </button>
       </div>
     </div>
@@ -140,13 +169,15 @@ export function AdminOrderCard({
   updatingOrderId,
   savingShippingId,
   edit,
-  formatPrice,
   onStatusChange,
   onShippingFieldChange,
   onSaveShipping,
 }: AdminOrderCardProps) {
   const hasTracking = Boolean(order.trackingNumber || order.shippingProvider);
   const [pendingStatus, setPendingStatus] = useState<OrderStatus | null>(null);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const itemCount = countOrderUnits(order.items);
+  const productSummary = summarizeOrderProducts(order.items);
 
   const handleSelectChange = (e: ChangeEvent<HTMLSelectElement>) => {
     const newStatus = e.target.value as OrderStatus;
@@ -163,13 +194,14 @@ export function AdminOrderCard({
   };
 
   const handleCancelStatus = () => setPendingStatus(null);
+  const detailsId = `order-details-${order.id}`;
 
   return (
-    <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
+    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-gray-800">
       <ConfirmDialog
         isOpen={pendingStatus !== null}
         title="Change Order Status"
-        message={`Update this order from "${order.status}" to "${pendingStatus ?? ''}"?`}
+        message={`Update this order from "${order.status}" to "${pendingStatus ?? ""}"?`}
         confirmLabel="Yes, update"
         variant="warning"
         loading={updatingOrderId === order.id}
@@ -177,23 +209,53 @@ export function AdminOrderCard({
         onCancel={handleCancelStatus}
       />
 
-      <div className="flex justify-between items-start mb-4">
-        <div>
-          <h3 className="font-bold text-lg text-gray-900 dark:text-white">
-            {hasTracking && <span role="img" aria-label="Tracking info available" title="Tracking info available" className="mr-1">📦</span>}
-            Order #{order.id.toUpperCase()}
+      <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0 flex-1">
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            <Badge variant={orderStatusVariant(order.status)}>
+              {order.status}
+            </Badge>
+            {hasTracking ? (
+              <Badge variant="sage" size="sm">
+                Tracking attached
+              </Badge>
+            ) : (
+              <Badge variant="neutral" size="sm">
+                Shipping pending
+              </Badge>
+            )}
+          </div>
+          <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+            {hasTracking && (
+              <span
+                role="img"
+                aria-label="Tracking info available"
+                title="Tracking info available"
+                className="mr-1"
+              >
+                📦
+              </span>
+            )}
+            {productSummary}
           </h3>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            {new Date(order.createdAt).toLocaleString('en-US', {
-              dateStyle: 'medium',
-              timeStyle: 'short',
+          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-600 dark:text-gray-400">
+            <span className="font-medium text-gray-900 dark:text-white">
+              {order.customerName}
+            </span>
+            <span>{order.customerEmail}</span>
+            <span>
+              {itemCount} {itemCount === 1 ? "item" : "items"}
+            </span>
+            <span>Order #{order.id.toUpperCase()}</span>
+          </div>
+          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+            {new Date(order.createdAt).toLocaleString("en-US", {
+              dateStyle: "medium",
+              timeStyle: "short",
             })}
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <Badge variant={orderStatusVariant(order.status)}>
-            {order.status}
-          </Badge>
+        <div className="flex flex-wrap items-center gap-3 self-start lg:self-auto">
           {updatingOrderId === order.id ? (
             <LoadingSpinner size="h-5 w-5" />
           ) : (
@@ -205,47 +267,93 @@ export function AdminOrderCard({
               aria-label={`Change status for order ${order.id}`}
             >
               {Object.values(OrderStatus).map((status) => (
-                <option key={status} value={status}>{status}</option>
+                <option key={status} value={status}>
+                  {status}
+                </option>
               ))}
             </select>
           )}
+          <button
+            type="button"
+            onClick={() => setIsExpanded((current) => !current)}
+            aria-expanded={isExpanded}
+            aria-controls={detailsId}
+            className="inline-flex items-center gap-2 rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:text-slate-950 dark:border-slate-600 dark:text-slate-200 dark:hover:border-slate-500 dark:hover:text-white"
+          >
+            {isExpanded ? "Hide details" : "Show details"}
+            <svg
+              className={`h-4 w-4 transition-transform ${isExpanded ? "rotate-180" : ""}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 9l-7 7-7-7"
+              />
+            </svg>
+          </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-        <div>
-          <h4 className="font-semibold text-sm text-gray-700 dark:text-gray-300 mb-1">Customer</h4>
-          <p className="text-sm text-gray-900 dark:text-white">{order.customerName}</p>
-          <p className="text-sm text-gray-600 dark:text-gray-400">{order.customerEmail}</p>
-        </div>
-        <div>
-          <h4 className="font-semibold text-sm text-gray-700 dark:text-gray-300 mb-1">Shipping Address</h4>
-          <p className="text-sm text-gray-600 dark:text-gray-400">{order.customerAddress}</p>
-        </div>
-      </div>
+      {isExpanded ? (
+        <div id={detailsId} className="space-y-4">
+          <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div>
+              <h4 className="mb-1 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                Customer
+              </h4>
+              <p className="text-sm text-gray-900 dark:text-white">
+                {order.customerName}
+              </p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                {order.customerEmail}
+              </p>
+            </div>
+            <div>
+              <h4 className="mb-1 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                Shipping Address
+              </h4>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                {order.customerAddress}
+              </p>
+            </div>
+          </div>
 
-      <ShippingInfoSection
-        orderId={order.id}
-        orderStatus={order.status}
-        order={order}
-        edit={edit}
-        savingShippingId={savingShippingId}
-        onShippingFieldChange={onShippingFieldChange}
-        onSaveShipping={onSaveShipping}
-      />
+          <ShippingInfoSection
+            orderId={order.id}
+            orderStatus={order.status}
+            order={order}
+            edit={edit}
+            savingShippingId={savingShippingId}
+            onShippingFieldChange={onShippingFieldChange}
+            onSaveShipping={onSaveShipping}
+          />
 
-      <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-        <h4 className="font-semibold mb-3 text-gray-900 dark:text-white">Items ({order.items.length})</h4>
-        <div className="space-y-2">
-          {order.items.map((item) => (
-            <OrderItemRow key={item.id} item={item} formatPrice={formatPrice} />
-          ))}
+          <div className="border-t border-gray-200 pt-4 dark:border-gray-700">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <h4 className="font-semibold text-gray-900 dark:text-white">
+                Ordered products
+              </h4>
+              <p className="text-xs uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400">
+                Pricing in order details
+              </p>
+            </div>
+            <div className="space-y-2">
+              {order.items.map((item) => (
+                <OrderItemRow key={item.id} item={item} />
+              ))}
+            </div>
+          </div>
         </div>
-        <div className="border-t border-gray-200 dark:border-gray-700 mt-3 pt-3 flex justify-between items-center">
-          <span className="font-bold text-lg text-gray-900 dark:text-white">Total</span>
-          <span className="font-bold text-xl text-gray-900 dark:text-white">{formatPrice(order.totalAmount)}</span>
-        </div>
-      </div>
+      ) : (
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          Expand to edit shipping, review the address, and inspect line items.
+        </p>
+      )}
     </div>
   );
 }

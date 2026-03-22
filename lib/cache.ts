@@ -17,6 +17,10 @@ export const CACHE_KEYS = {
   // Products
   PRODUCTS_ALL: "products:all",
   PRODUCTS_BESTSELLERS: "products:bestsellers",
+  PRODUCTS_BESTSELLERS_BY_LIMIT: (limit: number) =>
+    `products:bestsellers:${limit}`,
+  PRODUCTS_BESTSELLERS_PATTERN: "products:bestsellers*",
+  CATEGORIES_ALL: "categories:all",
   PRODUCT_BY_ID: (id: string) => `product:${id}`,
   PRODUCTS_PATTERN: "products:*",
   PRODUCT_PATTERN: "product:*",
@@ -57,6 +61,8 @@ export const CACHE_TTL = {
   PRODUCTS_LIST: 60, // 1 minute for product lists
   PRODUCTS_BESTSELLERS: 120, // 2 minutes for bestsellers (rankings change with new orders)
   PRODUCTS_BESTSELLERS_STALE: 20,
+  CATEGORIES_LIST: 300,
+  CATEGORIES_LIST_STALE: 30,
   PRODUCT_DETAIL: 300, // 5 minutes for individual products
   STALE_TIME: 10, // Extra time to serve stale data while revalidating
   CART: 30, // 30 seconds for cart (frequently mutated)
@@ -98,17 +104,21 @@ export const buildProductsListCacheKey = (options?: {
 
   const { limit, offset, search, category } = options;
 
-  // Don't cache filtered results (search/category) - they're too variable
-  if (search || category) {
+  // Search queries are too variable to cache effectively.
+  if (search) {
     return ""; // Empty key signals "don't cache"
   }
 
+  const baseKey = category
+    ? `${CACHE_KEYS.PRODUCTS_ALL}:category:${encodeURIComponent(category)}`
+    : CACHE_KEYS.PRODUCTS_ALL;
+
   // Build parameterized key for pagination
   if (limit !== undefined || offset !== undefined) {
-    return `${CACHE_KEYS.PRODUCTS_ALL}:${limit ?? "all"}:${offset ?? 0}`;
+    return `${baseKey}:${limit ?? "all"}:${offset ?? 0}`;
   }
 
-  return CACHE_KEYS.PRODUCTS_ALL;
+  return baseKey;
 };
 
 /**
@@ -158,12 +168,26 @@ export const cacheProductById = <T>(
  */
 export const cacheProductsBestsellers = <T>(
   fetcher: () => Promise<T>,
+  limit = 5,
 ): Promise<T> => {
   return getCachedData(
-    CACHE_KEYS.PRODUCTS_BESTSELLERS,
+    limit === 5
+      ? CACHE_KEYS.PRODUCTS_BESTSELLERS
+      : CACHE_KEYS.PRODUCTS_BESTSELLERS_BY_LIMIT(limit),
     CACHE_TTL.PRODUCTS_BESTSELLERS,
     fetcher,
     CACHE_TTL.PRODUCTS_BESTSELLERS_STALE,
+  );
+};
+
+export const cacheCategoriesList = <T>(
+  fetcher: () => Promise<T>,
+): Promise<T> => {
+  return getCachedData(
+    CACHE_KEYS.CATEGORIES_ALL,
+    CACHE_TTL.CATEGORIES_LIST,
+    fetcher,
+    CACHE_TTL.CATEGORIES_LIST_STALE,
   );
 };
 
@@ -255,7 +279,7 @@ export const invalidateAdminOrderCaches = async (
   try {
     await invalidateCachePattern(CACHE_KEYS.ADMIN_ORDERS_PATTERN);
     await invalidateCachePattern(CACHE_KEYS.ADMIN_ORDER_BY_ID(orderId));
-    await invalidateCachePattern(CACHE_KEYS.PRODUCTS_BESTSELLERS);
+    await invalidateCachePattern(CACHE_KEYS.PRODUCTS_BESTSELLERS_PATTERN);
     await invalidateCachePattern(CACHE_KEYS.ADMIN_SALES_PATTERN);
     if (userId) {
       await invalidateUserOrderCaches(userId);

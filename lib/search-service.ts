@@ -8,6 +8,19 @@
 
 import { isSearchAvailable, searchProducts } from "./search";
 import { logError } from "./logger";
+import { getCachedData } from "./redis";
+
+const PRODUCT_SEARCH_TTL_SECONDS = 60;
+const PRODUCT_SEARCH_STALE_SECONDS = 10;
+
+const buildProductSearchCacheKey = (
+  query: string,
+  options?: { limit?: number; category?: string },
+) => {
+  const normalizedQuery = query.trim().toLowerCase();
+  const normalizedCategory = options?.category?.trim().toLowerCase() ?? "all";
+  return `search:products:${encodeURIComponent(normalizedQuery)}:${encodeURIComponent(normalizedCategory)}:${options?.limit ?? 20}`;
+};
 
 /**
  * Search products via Upstash. Returns IDs on success, null for DB fallback.
@@ -29,4 +42,25 @@ export async function searchProductIds(
     });
     return null;
   }
+}
+
+export async function searchProductIdsCached(
+  query: string,
+  options?: { limit?: number; category?: string },
+): Promise<string[] | null> {
+  const normalizedQuery = query.trim();
+  if (!normalizedQuery) {
+    return [];
+  }
+
+  if (!isSearchAvailable()) {
+    return null;
+  }
+
+  return getCachedData(
+    buildProductSearchCacheKey(normalizedQuery, options),
+    PRODUCT_SEARCH_TTL_SECONDS,
+    () => searchProductIds(normalizedQuery, options),
+    PRODUCT_SEARCH_STALE_SECONDS,
+  );
 }

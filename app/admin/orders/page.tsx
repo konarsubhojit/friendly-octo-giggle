@@ -294,7 +294,6 @@ export default function OrdersManagement() {
               updatingOrderId={updatingOrderId}
               savingShippingId={savingShippingId}
               edit={getShippingEdit(order.id, order)}
-              formatPrice={formatPrice}
               onStatusChange={handleStatusChange}
               onShippingFieldChange={setShippingField}
               onSaveShipping={handleSaveShipping}

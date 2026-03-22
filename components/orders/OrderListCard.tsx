@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { Badge, orderStatusVariant } from "@/components/ui/Badge";
+import { countOrderUnits, summarizeOrderProducts } from "@/lib/order-summary";
 
 const STATUS_CONFIG: Record<string, { label: string }> = {
   PENDING: { label: "Pending" },
@@ -26,40 +26,26 @@ interface OrderSummary {
   readonly id: string;
   readonly status: string;
   readonly createdAt: string;
-  readonly totalAmount: number;
   readonly items: OrderItem[];
 }
 
 interface OrderListCardProps {
   readonly order: OrderSummary;
-  readonly formatPrice: (amount: number) => string;
 }
 
-export const OrderListCard = ({ order, formatPrice }: OrderListCardProps) => {
+export const OrderListCard = ({ order }: OrderListCardProps) => {
   const statusInfo = STATUS_CONFIG[order.status] ?? STATUS_CONFIG.PENDING;
-  const itemCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
-  const firstItem = order.items[0];
-  const firstImage = firstItem?.product?.image;
+  const itemCount = countOrderUnits(order.items);
+  const productSummary = summarizeOrderProducts(order.items);
 
   return (
     <Link
       href={`/orders/${order.id}`}
-      className="block bg-[var(--surface)] backdrop-blur-lg rounded-xl shadow-warm border border-[var(--border-warm)] p-6 hover:shadow-warm-lg hover:scale-[1.01] transition-all duration-300"
+      className="block rounded-2xl border border-[var(--border-warm)] bg-[var(--surface)] p-6 shadow-warm transition-all duration-300 hover:scale-[1.01] hover:shadow-warm-lg"
     >
-      <div className="flex items-center gap-6">
-        {firstImage && (
-          <div className="relative w-16 h-16 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700">
-            <Image
-              src={firstImage}
-              alt={firstItem?.product?.name || "Order item"}
-              fill
-              sizes="48px"
-              className="object-cover"
-            />
-          </div>
-        )}
-        <div className="flex-grow min-w-0">
-          <div className="flex items-center gap-3 mb-1">
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0 flex-1">
+          <div className="mb-3 flex flex-wrap items-center gap-3">
             <Badge variant={orderStatusVariant(order.status)} size="sm">
               {statusInfo.label}
             </Badge>
@@ -71,35 +57,39 @@ export const OrderListCard = ({ order, formatPrice }: OrderListCardProps) => {
               })}
             </span>
           </div>
-          <p className="text-sm text-[var(--text-secondary)] truncate">
-            {firstItem?.product?.name}
-            {order.items.length > 1 && ` and ${order.items.length - 1} more`}
+          <p className="truncate text-base font-semibold text-[var(--foreground)] sm:text-lg">
+            {productSummary}
           </p>
-          <p className="text-xs text-[var(--text-muted)] mt-1">
-            {itemCount} {itemCount === 1 ? "item" : "items"}
-          </p>
+          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-[var(--text-secondary)]">
+            <span>
+              {itemCount} {itemCount === 1 ? "item" : "items"}
+            </span>
+            <span className="text-[var(--text-muted)]">Order #{order.id}</span>
+          </div>
         </div>
-        <div className="flex-shrink-0 text-right">
-          <p className="text-lg font-bold text-[var(--foreground)]">
-            {formatPrice(order.totalAmount)}
+        <div className="flex items-center gap-3 pl-2">
+          <p className="hidden text-xs uppercase tracking-[0.24em] text-[var(--text-muted)] sm:block">
+            View
           </p>
-          <p className="text-xs text-[var(--text-muted)]">Order #{order.id}</p>
+          <svg
+            className="h-5 w-5 flex-shrink-0 text-[var(--text-muted)]"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9 5l7 7-7 7"
+            />
+          </svg>
         </div>
-        <svg
-          className="w-5 h-5 text-[var(--text-muted)] flex-shrink-0"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-          aria-hidden="true"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M9 5l7 7-7 7"
-          />
-        </svg>
       </div>
+      <p className="mt-3 text-xs text-[var(--text-muted)]">
+        Open the order to review pricing, shipping address, and full item details.
+      </p>
     </Link>
   );
 };

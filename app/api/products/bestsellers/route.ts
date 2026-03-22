@@ -26,8 +26,9 @@ const handleGet = async (request: NextRequest) => {
       limit: request.nextUrl.searchParams.get("limit") ?? undefined,
     });
 
-    const products = await cacheProductsBestsellers(() =>
-      db.products.findBestsellers({ limit: parsed.limit }),
+    const products = await cacheProductsBestsellers(
+      () => db.products.findBestsellers({ limit: parsed.limit }),
+      parsed.limit,
     );
 
     const response = apiSuccess({ products });

@@ -1,18 +1,7 @@
 import { NextRequest } from "next/server";
+import { desc, lt, and, eq, inArray, SQL, count } from "drizzle-orm";
 import { drizzleDb } from "@/lib/db";
 import { orders } from "@/lib/schema";
-import {
-  desc,
-  lt,
-  ilike,
-  or,
-  and,
-  eq,
-  inArray,
-  sql,
-  SQL,
-  count,
-} from "drizzle-orm";
 import {
   apiSuccess,
   apiError,
@@ -20,9 +9,9 @@ import {
   parseOffsetParam,
 } from "@/lib/api-utils";
 import { checkAdminAuth } from "@/lib/admin-auth";
+import { searchOrderIds } from "@/lib/order-search";
 import { serializeOrders } from "@/lib/serializers";
 import { OrderStatus } from "@/lib/types";
-import { searchAllOrdersRedis } from "@/actions/orders";
 
 export const dynamic = "force-dynamic";
 
@@ -39,6 +28,7 @@ const parseLimit = (limitParam: string | null): number =>
 
 const buildCursorCondition = (cursor: string | null): SQL | null => {
   if (!cursor) return null;
+
   const cursorDate = new Date(cursor);
   return Number.isNaN(cursorDate.getTime())
     ? null
@@ -47,54 +37,29 @@ const buildCursorCondition = (cursor: string | null): SQL | null => {
 
 const buildStatusCondition = (
   statusFilter: string,
-): { condition: SQL | null; error: string | null } => {
-  if (!statusFilter || statusFilter === "ALL")
-    return { condition: null, error: null };
-  const VALID_STATUSES = Object.values(OrderStatus) as string[];
-  if (!VALID_STATUSES.includes(statusFilter)) {
+): {
+  condition: SQL | null;
+  error: string | null;
+  status: OrderStatus | null;
+} => {
+  if (!statusFilter || statusFilter === "ALL") {
+    return { condition: null, error: null, status: null };
+  }
+
+  const validStatuses = Object.values(OrderStatus) as string[];
+  if (!validStatuses.includes(statusFilter)) {
     return {
       condition: null,
-      error: `Invalid status filter. Must be one of: ${VALID_STATUSES.join(", ")}`,
+      error: `Invalid status filter. Must be one of: ${validStatuses.join(", ")}`,
+      status: null,
     };
   }
-  return {
-    condition: eq(
-      orders.status,
-      statusFilter as
-        | "PENDING"
-        | "PROCESSING"
-        | "SHIPPED"
-        | "DELIVERED"
-        | "CANCELLED",
-    ),
-    error: null,
-  };
-};
 
-const buildSearchCondition = async (
-  search: string,
-  limit: number,
-): Promise<{ condition: SQL | null; empty: boolean }> => {
-  const redisIds = await searchAllOrdersRedis(search, limit * 5);
-  if (redisIds && redisIds.length > 0) {
-    return { condition: inArray(orders.id, redisIds), empty: false };
-  }
-  const pattern = `%${search}%`;
+  const status = statusFilter as OrderStatus;
   return {
-    condition: or(
-      ilike(orders.customerName, pattern),
-      ilike(orders.customerEmail, pattern),
-      ilike(orders.id, pattern),
-      sql`${orders.status}::text ILIKE ${pattern}`,
-      sql`EXISTS (
-        SELECT 1 FROM "OrderItem" oi
-        JOIN "Product" p ON p.id = oi."productId"
-        LEFT JOIN "ProductVariation" pv ON pv.id = oi."variationId"
-        WHERE oi."orderId" = ${orders.id}
-        AND (p.name ILIKE ${pattern} OR pv.name ILIKE ${pattern})
-      )`,
-    ) as SQL,
-    empty: false,
+    condition: eq(orders.status, status),
+    error: null,
+    status,
   };
 };
 
@@ -102,6 +67,52 @@ const resolveWhereClause = (conditions: SQL[]): SQL | undefined => {
   if (conditions.length === 0) return undefined;
   if (conditions.length === 1) return conditions[0];
   return and(...conditions);
+};
+
+const getOrdersTotalCount = async (
+  countConditions: SQL[],
+  totalCountFromSearch: number | null,
+): Promise<number> => {
+  if (totalCountFromSearch !== null) {
+    return totalCountFromSearch;
+  }
+
+  const countRows = await drizzleDb
+    .select({ value: count() })
+    .from(orders)
+    .where(resolveWhereClause(countConditions));
+
+  return Number(countRows[0]?.value ?? 0);
+};
+
+const applySearchFilter = async ({
+  search,
+  status,
+  conditions,
+}: {
+  search: string;
+  status: OrderStatus | null;
+  conditions: SQL[];
+}): Promise<{ totalCountFromSearch: number | null; empty: boolean }> => {
+  if (!search) {
+    return { totalCountFromSearch: null, empty: false };
+  }
+
+  const matchedIds = await searchOrderIds(search, {
+    status: status ?? undefined,
+    limit: 1000,
+  });
+
+  if (matchedIds?.length === 0) {
+    return { totalCountFromSearch: 0, empty: true };
+  }
+
+  if ((matchedIds?.length ?? 0) > 0) {
+    conditions.push(inArray(orders.id, matchedIds));
+    return { totalCountFromSearch: matchedIds.length, empty: false };
+  }
+
+  return { totalCountFromSearch: null, empty: false };
 };
 
 export const GET = async (request: NextRequest) => {
@@ -121,66 +132,63 @@ export const GET = async (request: NextRequest) => {
     const limit = parseLimit(searchParams.get("limit"));
 
     const conditions: SQL[] = [];
-
     if (!useOffset) {
-      const cursorCond = buildCursorCondition(cursor);
-      if (cursorCond) conditions.push(cursorCond);
-    }
-
-    const countConditions: SQL[] = [];
-
-    const { condition: statusCond, error: statusError } =
-      buildStatusCondition(statusFilter);
-    if (statusError) return apiError(statusError, 400);
-    if (statusCond) {
-      conditions.push(statusCond);
-      countConditions.push(statusCond);
-    }
-
-    if (search) {
-      const { condition: searchCond, empty } = await buildSearchCondition(
-        search,
-        limit,
-      );
-      if (empty)
-        return apiSuccess({
-          orders: [],
-          nextCursor: null,
-          hasMore: false,
-          totalCount: 0,
-        });
-      if (searchCond) {
-        conditions.push(searchCond);
-        countConditions.push(searchCond);
+      const cursorCondition = buildCursorCondition(cursor);
+      if (cursorCondition) {
+        conditions.push(cursorCondition);
       }
     }
 
-    const [rows, totalRows] = await Promise.all([
-      drizzleDb.query.orders.findMany({
-        where: resolveWhereClause(conditions),
-        orderBy: [desc(orders.createdAt)],
-        limit: limit + 1,
-        offset: useOffset ? offset : undefined,
-        with: { items: { with: { product: true, variation: true } } },
-      }),
-      drizzleDb
-        .select({ value: count() })
-        .from(orders)
-        .where(resolveWhereClause(countConditions)),
-    ]);
+    const countConditions: SQL[] = [];
+    const {
+      condition: statusCondition,
+      error: statusError,
+      status,
+    } = buildStatusCondition(statusFilter);
+    if (statusError) {
+      return apiError(statusError, 400);
+    }
+    if (statusCondition) {
+      conditions.push(statusCondition);
+      countConditions.push(statusCondition);
+    }
+
+    const { totalCountFromSearch, empty } = await applySearchFilter({
+      search,
+      status,
+      conditions,
+    });
+    if (empty) {
+      return apiSuccess({
+        orders: [],
+        nextCursor: null,
+        hasMore: false,
+        totalCount: 0,
+      });
+    }
+
+    const rows = await drizzleDb.query.orders.findMany({
+      where: resolveWhereClause(conditions),
+      orderBy: [desc(orders.createdAt)],
+      limit: limit + 1,
+      offset: useOffset ? offset : undefined,
+      with: { items: { with: { product: true, variation: true } } },
+    });
 
     const hasMore = rows.length > limit;
     const pageItems = hasMore ? rows.slice(0, limit) : rows;
     const nextCursor = hasMore
       ? pageItems.at(-1)!.createdAt.toISOString()
       : null;
-    const totalCount = Number(totalRows[0]?.value ?? 0);
 
     return apiSuccess({
       orders: serializeOrders(pageItems),
       nextCursor,
       hasMore,
-      totalCount,
+      totalCount: await getOrdersTotalCount(
+        countConditions,
+        totalCountFromSearch,
+      ),
     });
   } catch (error) {
     return handleApiError(error);

@@ -192,6 +192,12 @@ test.describe("Admin Orders", () => {
     for (const order of MOCK_ORDERS) {
       await expect(page.getByText(order.customerName)).toBeVisible();
     }
+    await expect(
+      page.getByText("Hand-knitted Flower Bouquet, Cozy Wool Muffler"),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: /show details/i }).first(),
+    ).toBeVisible();
     await page.screenshot({
       path: screenshotPath("admin-orders"),
       fullPage: true,
@@ -368,7 +374,11 @@ test.describe("Admin Orders - status change confirmation", () => {
     await mockAdminRoutes(page);
     await page.goto("/admin/orders");
     // Wait for orders to load
-    await expect(page.getByText("Order Management")).toBeVisible();
+    await expect(
+      page.getByRole("heading", {
+        name: /orders workspace tuned for faster exception handling/i,
+      }),
+    ).toBeVisible();
 
     // Find the first status select and change it to a different value
     const statusSelect = page.getByLabel(/change status for order/i).first();
@@ -388,7 +398,11 @@ test.describe("Admin Orders - status change confirmation", () => {
   }) => {
     await mockAdminRoutes(page);
     await page.goto("/admin/orders");
-    await expect(page.getByText("Order Management")).toBeVisible();
+    await expect(
+      page.getByRole("heading", {
+        name: /orders workspace tuned for faster exception handling/i,
+      }),
+    ).toBeVisible();
 
     const statusSelect = page.getByLabel(/change status for order/i).first();
     const originalStatus = await statusSelect.inputValue();

@@ -110,8 +110,14 @@ describe("VariationList", () => {
         initialVariations={[mockVariation]}
       />,
     );
-    expect(screen.getByText("Edit")).toBeInTheDocument();
-    expect(screen.getByText("Delete")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", {
+        name: "Open quick edit for Red - Large",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Delete Red - Large" }),
+    ).toBeInTheDocument();
   });
 
   it("renders Add Variation button when variations exist", () => {
@@ -123,6 +129,45 @@ describe("VariationList", () => {
       />,
     );
     expect(screen.getByText("Add Variation")).toBeInTheDocument();
+  });
+
+  it("keeps quick edit fields collapsed until edit is opened", () => {
+    render(
+      <VariationList
+        productId="abc1234"
+        productPrice={29.99}
+        initialVariations={[mockVariation]}
+      />,
+    );
+
+    expect(
+      screen.queryByLabelText("Modifier for Red - Large"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByLabelText("Stock for Red - Large"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("expands quick edit fields when the edit action is clicked", () => {
+    render(
+      <VariationList
+        productId="abc1234"
+        productPrice={29.99}
+        initialVariations={[mockVariation]}
+      />,
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Open quick edit for Red - Large",
+      }),
+    );
+
+    expect(
+      screen.getByLabelText("Modifier for Red - Large"),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText("Stock for Red - Large")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save" })).toBeInTheDocument();
   });
 
   it("saves inline quick edits for stock and price modifier", async () => {
@@ -149,13 +194,19 @@ describe("VariationList", () => {
       />,
     );
 
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Open quick edit for Red - Large",
+      }),
+    );
+
     fireEvent.change(screen.getByLabelText("Modifier for Red - Large"), {
       target: { value: "7" },
     });
     fireEvent.change(screen.getByLabelText("Stock for Red - Large"), {
       target: { value: "30" },
     });
-    fireEvent.click(screen.getByText("Save quick edit"));
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => {
       expect(mockFetch).toHaveBeenCalledWith(

@@ -9,10 +9,7 @@
  */
 
 import { Search } from "@upstash/search";
-import { isNull } from "drizzle-orm";
-import { drizzleDb } from "./db";
 import { logError } from "./logger";
-import { categories as categoriesTable } from "./schema";
 
 export type ProductContent = {
   name: string;
@@ -183,22 +180,13 @@ export async function searchProducts(
 
   const { limit = 20, category } = options;
   const index = getProductsIndex();
-
-  let validCategory: string | undefined;
-  if (category) {
-    const dbCategories = await drizzleDb
-      .select({ name: categoriesTable.name })
-      .from(categoriesTable)
-      .where(isNull(categoriesTable.deletedAt));
-    const categoryNames = dbCategories.map((dbCategory) => dbCategory.name);
-    validCategory = categoryNames.includes(category) ? category : undefined;
-  }
-
-  const filter = validCategory ? `category = '${validCategory}'` : undefined;
+  const normalizedCategory = category?.trim();
   const results = await index.search({
     query,
     limit,
-    ...(filter ? { filter } : {}),
+    ...(normalizedCategory
+      ? { filter: { category: { equals: normalizedCategory } } }
+      : {}),
   });
 
   return results.map((result) => ({

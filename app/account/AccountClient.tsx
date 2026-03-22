@@ -11,6 +11,7 @@ import { API_ERRORS } from "@/lib/constants/error-messages";
 import { ProfileSection } from "@/app/account/ProfileSection";
 import { PreferencesSection } from "@/app/account/PreferencesSection";
 import { PasswordSection } from "@/app/account/PasswordSection";
+import { RecentOrdersSection } from "@/app/account/RecentOrdersSection";
 import type { UserProfile } from "@/app/account/account-shared";
 
 export default function AccountClient() {
@@ -80,6 +81,8 @@ export default function AccountClient() {
         {profile && (
           <ProfileSection profile={profile} onProfileUpdated={fetchProfile} />
         )}
+
+        <RecentOrdersSection />
 
         <PreferencesSection profile={profile} />
 

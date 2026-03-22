@@ -5,6 +5,7 @@ vi.mock("@/lib/db", () => ({
   db: {
     products: {
       findAllMinimal: vi.fn(),
+      findMinimalByIds: vi.fn(),
     },
   },
 }));
@@ -15,6 +16,18 @@ vi.mock("@/lib/cache", () => ({
       return await fetcher();
     },
   ),
+}));
+
+vi.mock("@/lib/search-service", () => ({
+  searchProductIds: vi.fn(),
+}));
+
+vi.mock("@/lib/schema", () => ({
+  products: {
+    id: "id",
+    deletedAt: "deletedAt",
+    category: "category",
+  },
 }));
 
 vi.mock("@/lib/redis", () => ({
@@ -46,6 +59,7 @@ vi.mock("@/lib/logger", () => ({
 
 import { GET } from "@/app/api/products/route";
 import { db } from "@/lib/db";
+import { searchProductIds } from "@/lib/search-service";
 
 describe("GET /api/products", () => {
   const mockProducts = [
@@ -82,6 +96,7 @@ describe("GET /api/products", () => {
   });
 
   it("returns products on success", async () => {
+    vi.mocked(searchProductIds).mockResolvedValue(null);
     vi.mocked(db.products.findAllMinimal).mockResolvedValue(mockProducts);
 
     const response = await GET(
@@ -90,11 +105,15 @@ describe("GET /api/products", () => {
     expect(response.status).toBe(200);
 
     const body = await response.json();
-    expect(body).toEqual({ success: true, data: { products: mockProducts } });
+    expect(body).toEqual({
+      success: true,
+      data: { products: mockProducts, hasMore: false },
+    });
     expect(db.products.findAllMinimal).toHaveBeenCalledOnce();
   });
 
   it("sets Cache-Control header", async () => {
+    vi.mocked(searchProductIds).mockResolvedValue(null);
     vi.mocked(db.products.findAllMinimal).mockResolvedValue(mockProducts);
 
     const response = await GET(
@@ -106,6 +125,7 @@ describe("GET /api/products", () => {
   });
 
   it("returns 500 on error", async () => {
+    vi.mocked(searchProductIds).mockResolvedValue(null);
     vi.mocked(db.products.findAllMinimal).mockRejectedValue(
       new Error("DB error"),
     );
@@ -117,5 +137,52 @@ describe("GET /api/products", () => {
 
     const body = await response.json();
     expect(body).toHaveProperty("error");
+  });
+
+  it("uses Upstash search results when search is provided", async () => {
+    vi.mocked(searchProductIds).mockResolvedValue(["prod002", "prod001"]);
+    vi.mocked(db.products.findMinimalByIds).mockResolvedValue([
+      mockProducts[0],
+      mockProducts[1],
+    ]);
+
+    const response = await GET(
+      new NextRequest("http://localhost/api/products?q=flowers"),
+    );
+    expect(response.status).toBe(200);
+
+    const body = await response.json();
+    expect(body).toEqual({
+      success: true,
+      data: { products: [mockProducts[1], mockProducts[0]], hasMore: false },
+    });
+    expect(db.products.findAllMinimal).not.toHaveBeenCalled();
+    expect(db.products.findMinimalByIds).toHaveBeenCalledWith(
+      ["prod002", "prod001"],
+      undefined,
+    );
+  });
+
+  it("reports hasMore when the backing query returns an extra item", async () => {
+    vi.mocked(searchProductIds).mockResolvedValue(null);
+    vi.mocked(db.products.findAllMinimal).mockResolvedValue([
+      ...mockProducts,
+      {
+        ...mockProducts[0],
+        id: "prod003",
+        name: "Test Product 3",
+      },
+    ]);
+
+    const response = await GET(
+      new NextRequest("http://localhost/api/products?limit=2"),
+    );
+
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body).toEqual({
+      success: true,
+      data: { products: mockProducts, hasMore: true },
+    });
   });
 });
