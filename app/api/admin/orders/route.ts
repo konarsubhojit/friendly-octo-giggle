@@ -107,7 +107,7 @@ const applySearchFilter = async ({
     return { totalCountFromSearch: 0, empty: true };
   }
 
-  if ((matchedIds?.length ?? 0) > 0) {
+  if (matchedIds && matchedIds.length > 0) {
     conditions.push(inArray(orders.id, matchedIds));
     return { totalCountFromSearch: matchedIds.length, empty: false };
   }

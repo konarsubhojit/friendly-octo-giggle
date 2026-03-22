@@ -220,7 +220,7 @@ function MobileNav({
       id="mobile-nav-drawer"
       className="md:hidden bg-[var(--background)]/95 backdrop-blur-lg border-t border-[var(--border-warm)]/40 shadow-warm animate-fade-in"
     >
-      <nav className="max-w-7xl mx-auto px-4 py-4 flex flex-col gap-1">
+      <nav className="mx-auto flex w-full max-w-[96rem] flex-col gap-1 px-4 py-4 sm:px-6">
         <div className="px-4 py-2">
           <ProductSearch onNavigate={closeMobileNav} />
         </div>
@@ -351,7 +351,7 @@ export default function Header() {
   return (
     <>
       <header className="sticky top-0 z-50 bg-[var(--background)]/85 backdrop-blur-lg border-b border-[var(--border-warm)]/40 shadow-warm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div className="mx-auto w-full max-w-[96rem] px-4 py-4 sm:px-6 lg:px-8 xl:px-10 2xl:px-12">
           <div className="flex items-center justify-between gap-3">
             <Link
               href="/"
@@ -363,7 +363,7 @@ export default function Header() {
               </span>
             </Link>
 
-            <nav className="hidden md:flex gap-8 items-center">
+            <nav className="hidden items-center gap-4 md:flex xl:gap-8">
               <Link
                 href="/"
                 className="text-[var(--text-secondary)] hover:text-[var(--accent-rose)] transition-all duration-300 font-semibold px-3 py-1.5 rounded-full hover:bg-[var(--accent-blush)]/50"
@@ -390,7 +390,7 @@ export default function Header() {
               </Link>
             </nav>
 
-            <div className="flex shrink-0 items-center gap-2 sm:gap-4">
+            <div className="flex min-w-0 shrink-0 items-center gap-2 sm:gap-4">
               <div className="hidden sm:block">
                 <ProductSearch />
               </div>

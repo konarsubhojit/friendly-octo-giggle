@@ -131,7 +131,7 @@ const ShopPage = async ({ searchParams }: ShopPageProps) => {
   return (
     <div className="min-h-screen bg-warm-gradient">
       <section
-        className="pt-8 pb-4 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto"
+        className="mx-auto w-full max-w-[96rem] px-4 pb-4 pt-8 sm:px-6 lg:px-8 xl:px-10 2xl:px-12"
         aria-labelledby="shop-heading"
       >
         <h1
@@ -146,7 +146,7 @@ const ShopPage = async ({ searchParams }: ShopPageProps) => {
       </section>
 
       <section
-        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6"
+        className="mx-auto w-full max-w-[96rem] px-4 pb-6 sm:px-6 lg:px-8 xl:px-10 2xl:px-12"
         aria-labelledby="shop-bestsellers-heading"
       >
         <div className="flex items-center justify-between gap-3 mb-4">
@@ -165,7 +165,7 @@ const ShopPage = async ({ searchParams }: ShopPageProps) => {
         </p>
 
         {bestsellers.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
             {bestsellers.map((product, index) => (
               <Link
                 key={product.id}

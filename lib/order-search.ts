@@ -55,7 +55,12 @@ const searchOrderIdsViaDatabase = async (
     Math.max(options.limit ?? ORDER_SEARCH_LIMIT, 1),
     ORDER_SEARCH_LIMIT,
   );
-  const conditions: SQL[] = [buildOrderDatabaseSearchCondition(searchTerm)];
+  const conditions: SQL[] = [];
+  const searchCondition = buildOrderDatabaseSearchCondition(searchTerm);
+
+  if (searchCondition) {
+    conditions.push(searchCondition);
+  }
 
   if (options.userId) {
     conditions.push(eq(orders.userId, options.userId));

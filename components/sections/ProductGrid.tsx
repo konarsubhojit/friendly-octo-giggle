@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, startTransition, useEffect, useRef, useState } from "react";
+import { memo, startTransition, useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Product } from "@/lib/types";
@@ -83,13 +83,13 @@ function mergeProducts(
 const ProductImageArea = memo(
   ({ product, eagerLoad }: ProductImageAreaProps) => {
     return (
-      <div className="relative w-full aspect-square bg-gradient-to-br from-[var(--accent-cream)] to-[var(--accent-blush)] overflow-hidden">
+      <div className="relative aspect-square w-full overflow-hidden bg-gradient-to-br from-[var(--accent-cream)] to-[var(--accent-blush)]">
         <Image
           src={product.image}
           alt={product.name}
           fill
-          className="object-contain p-4 group-hover:scale-108 transition-transform duration-500"
-          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          className="object-contain p-4 transition-transform duration-500 group-hover:scale-108"
+          sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 25vw"
           loading={eagerLoad ? "eager" : undefined}
           fetchPriority={eagerLoad ? "high" : undefined}
         />
@@ -108,7 +108,7 @@ const ProductCard = memo(
   ({ product, formatPrice, index }: ProductCardProps) => {
     return (
       <div
-        className="bg-[var(--surface)] rounded-3xl shadow-warm overflow-hidden border border-[var(--border-warm)] group hover:shadow-warm-lg hover:scale-[1.02] hover:-translate-y-1 hover:border-[var(--accent-rose)] transition-all duration-300 relative animate-fade-in-up"
+        className="group relative overflow-hidden rounded-3xl border border-[var(--border-warm)] bg-[var(--surface)] shadow-warm transition-all duration-300 hover:-translate-y-1 hover:scale-[1.02] hover:border-[var(--accent-rose)] hover:shadow-warm-lg"
         style={{ animationDelay: `${index * 80}ms` }}
       >
         <Link
@@ -119,10 +119,10 @@ const ProductCard = memo(
           <ProductImageArea product={product} eagerLoad={index < 3} />
 
           <div className="p-5">
-            <h3 className="text-base font-bold text-[var(--foreground)] mb-1.5 line-clamp-1 group-hover:text-[var(--accent-rose)] transition-colors duration-200">
+            <h3 className="mb-1.5 line-clamp-1 text-base font-bold text-[var(--foreground)] transition-colors duration-200 group-hover:text-[var(--accent-rose)]">
               {product.name}
             </h3>
-            <p className="text-[var(--text-muted)] text-sm mb-4 line-clamp-2 leading-relaxed">
+            <p className="mb-4 line-clamp-2 text-sm leading-relaxed text-[var(--text-muted)]">
               {product.description}
             </p>
             <div className="flex items-center">
@@ -153,8 +153,6 @@ const ProductGrid = ({
   const [canLoadMore, setCanLoadMore] = useState(hasNextPage);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [hasUserScrolled, setHasUserScrolled] = useState(false);
-  const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   const categoryFilters = [DEFAULT_CATEGORY, ...categories];
 
@@ -168,21 +166,7 @@ const ProductGrid = ({
     setCanLoadMore(hasNextPage);
     setIsLoadingMore(false);
     setLoadError(null);
-    setHasUserScrolled(false);
   }, [products, hasNextPage, search, selectedCategory]);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      if (globalThis.scrollY > 0) {
-        setHasUserScrolled(true);
-      }
-    };
-
-    globalThis.addEventListener("scroll", handleScroll, { passive: true });
-    return () => {
-      globalThis.removeEventListener("scroll", handleScroll);
-    };
-  }, []);
 
   const loadMoreProducts = async () => {
     if (isLoadingMore || !canLoadMore) {
@@ -232,49 +216,18 @@ const ProductGrid = ({
     }
   };
 
-  useEffect(() => {
-    if (!canLoadMore || !sentinelRef.current || !hasUserScrolled) {
-      return;
-    }
-
-    if (typeof IntersectionObserver === "undefined") {
-      return;
-    }
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((entry) => entry.isIntersecting)) {
-          void loadMoreProducts();
-        }
-      },
-      { rootMargin: "300px 0px" },
-    );
-
-    observer.observe(sentinelRef.current);
-    return () => observer.disconnect();
-  }, [
-    batchSize,
-    canLoadMore,
-    hasUserScrolled,
-    isLoadingMore,
-    search,
-    selectedCategory,
-    visibleProducts.length,
-  ]);
-
   return (
     <main
       id="products"
-      className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16"
+      className="mx-auto w-full max-w-[96rem] px-4 py-12 sm:px-6 lg:px-8 xl:px-10 2xl:px-12"
     >
-      {/* Section header */}
-      <div className="flex items-center gap-3 mb-2">
+      <div className="mb-2 flex items-center gap-3">
         <GradientHeading as="h2" size="xl">
           All Products
         </GradientHeading>
-        <FlowerAccent className="w-6 h-6 opacity-70" />
+        <FlowerAccent className="h-6 w-6 opacity-70" />
       </div>
-      <p className="text-[var(--text-muted)] text-sm mb-8">
+      <p className="mb-8 text-sm text-[var(--text-muted)]">
         Browse our complete handmade collection — {visibleProducts.length}
         {canLoadMore ? "+" : ""} items loaded for you.
       </p>
@@ -282,11 +235,11 @@ const ProductGrid = ({
       <form
         action="/shop#products"
         method="get"
-        className="mb-8 flex flex-col sm:flex-row gap-3 items-start"
+        className="mb-8 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between"
       >
-        <div className="relative flex-1 max-w-md">
+        <div className="relative w-full lg:max-w-xl lg:flex-1">
           <svg
-            className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--accent-rose)]"
+            className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--accent-rose)]"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -304,61 +257,64 @@ const ProductGrid = ({
             name="q"
             placeholder="Search products..."
             defaultValue={search}
-            className="w-full pl-11 pr-4 py-3 border border-[var(--border-warm)] rounded-full focus:outline-none focus:ring-2 focus:ring-[var(--accent-rose)]/30 focus:border-[var(--accent-rose)] bg-[var(--surface)] text-[var(--foreground)] placeholder-[var(--text-muted)] shadow-warm transition-all duration-200"
+            className="w-full rounded-full border border-[var(--border-warm)] bg-[var(--surface)] py-3 pl-11 pr-4 text-[var(--foreground)] shadow-warm transition-all duration-200 placeholder-[var(--text-muted)] focus:border-[var(--accent-rose)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-rose)]/30"
             aria-label="Search products"
           />
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
-          <svg
-            className="w-4 h-4 text-[var(--accent-rose)] shrink-0"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            aria-hidden="true"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z"
-            />
-          </svg>
-          <label
-            htmlFor="category-filter"
-            className="text-sm font-semibold text-[var(--text-secondary)] shrink-0"
-          >
-            Category
-          </label>
-          <select
-            id="category-filter"
-            name="category"
-            defaultValue={selectedCategory}
-            className="px-3 py-2.5 border border-[var(--border-warm)] rounded-full bg-[var(--surface)] text-[var(--foreground)] text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[var(--accent-rose)]/30 focus:border-[var(--accent-rose)] shadow-warm cursor-pointer transition-all duration-200"
-            aria-label="Filter by category"
-          >
-            {categoryFilters.map((cat) => (
-              <option key={cat} value={cat}>
-                {cat}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <button
-            type="submit"
-            className="px-4 py-2.5 rounded-full bg-[var(--btn-primary)] text-white text-sm font-semibold shadow-warm hover:shadow-warm-lg transition-all duration-200"
-          >
-            Apply
-          </button>
-          {(search || selectedCategory !== DEFAULT_CATEGORY) && (
-            <Link
-              href="/shop#products"
-              className="px-4 py-2.5 rounded-full border border-[var(--border-warm)] bg-[var(--surface)] text-[var(--foreground)] text-sm font-semibold shadow-warm hover:border-[var(--accent-rose)] transition-colors duration-200"
+        <div className="flex w-full flex-col gap-3 sm:flex-row sm:flex-wrap lg:w-auto lg:justify-end">
+          <div className="flex w-full min-w-0 items-center gap-2 rounded-[1.75rem] border border-[var(--border-warm)] bg-[var(--surface)] px-4 py-2.5 shadow-warm sm:w-auto">
+            <svg
+              className="h-4 w-4 shrink-0 text-[var(--accent-rose)]"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
             >
-              Reset
-            </Link>
-          )}
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z"
+              />
+            </svg>
+            <label
+              htmlFor="category-filter"
+              className="shrink-0 text-sm font-semibold text-[var(--text-secondary)]"
+            >
+              Category
+            </label>
+            <select
+              id="category-filter"
+              name="category"
+              defaultValue={selectedCategory}
+              className="min-w-0 flex-1 bg-transparent pr-6 text-sm font-medium text-[var(--foreground)] focus:outline-none"
+              aria-label="Filter by category"
+            >
+              {categoryFilters.map((cat) => (
+                <option key={cat} value={cat}>
+                  {cat}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:flex-nowrap">
+            <button
+              type="submit"
+              className="flex-1 rounded-full bg-[var(--btn-primary)] px-4 py-2.5 text-sm font-semibold text-white shadow-warm transition-all duration-200 hover:shadow-warm-lg sm:flex-none"
+            >
+              Apply
+            </button>
+            {(search || selectedCategory !== DEFAULT_CATEGORY) && (
+              <Link
+                href="/shop#products"
+                className="flex-1 rounded-full border border-[var(--border-warm)] bg-[var(--surface)] px-4 py-2.5 text-center text-sm font-semibold text-[var(--foreground)] shadow-warm transition-colors duration-200 hover:border-[var(--accent-rose)] sm:flex-none"
+              >
+                Reset
+              </Link>
+            )}
+          </div>
         </div>
       </form>
 
@@ -366,7 +322,7 @@ const ProductGrid = ({
         <EmptyState title="No products found" message={emptyMessage} />
       ) : (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
             {visibleProducts.map((product, index) => (
               <ProductCard
                 key={product.id}
@@ -382,14 +338,14 @@ const ProductGrid = ({
               <p className="text-sm font-medium text-[var(--text-muted)]">
                 Showing {visibleProducts.length} product
                 {visibleProducts.length === 1 ? "" : "s"}
-                {canLoadMore ? " so far" : ""}.
+                {canLoadMore ? " so far" : "."}
               </p>
               {canLoadMore ? (
                 <button
                   type="button"
                   onClick={() => void loadMoreProducts()}
                   disabled={isLoadingMore}
-                  className="px-5 py-3 rounded-full bg-[var(--btn-primary)] text-white text-sm font-semibold shadow-warm hover:shadow-warm-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                  className="rounded-full bg-[var(--btn-primary)] px-5 py-3 text-sm font-semibold text-white shadow-warm transition-all duration-200 hover:shadow-warm-lg disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {isLoadingMore ? "Loading more..." : `Load ${batchSize} more`}
                 </button>
@@ -405,8 +361,6 @@ const ProductGrid = ({
                 {loadError}
               </p>
             ) : null}
-
-            <div ref={sentinelRef} aria-hidden="true" className="h-1 w-full" />
           </div>
         </>
       )}
