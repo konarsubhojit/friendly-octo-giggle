@@ -1,10 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import React from "react";
-import {
-  UserMenu,
-  ProtectedRoute,
-} from "@/components/ui/AuthComponents";
+import { UserMenu, ProtectedRoute } from "@/components/ui/AuthComponents";
 
 vi.mock("next-auth/react", () => ({
   signOut: vi.fn(),
@@ -22,7 +19,6 @@ vi.mock("next/link", () => ({
 
 vi.mock("next/image", () => ({
   default: (props: React.ImgHTMLAttributes<HTMLImageElement>) => (
-    // eslint-disable-next-line @next/next/no-img-element
     <img {...props} alt={props.alt ?? ""} />
   ),
 }));
@@ -85,15 +81,20 @@ describe("UserMenu", () => {
     };
     render(<UserMenu session={session} />);
     const badges = screen.getAllByText("Admin");
-    const adminBadge = badges.find(
-      (el) => el.classList.contains("bg-purple-100"),
+    const adminBadge = badges.find((el) =>
+      el.classList.contains("bg-purple-100"),
     );
     expect(adminBadge).toBeTruthy();
   });
 
   it("does not show Admin badge for regular users", () => {
     const session = {
-      user: { name: "Bob", email: "bob@example.com", image: null, role: "CUSTOMER" },
+      user: {
+        name: "Bob",
+        email: "bob@example.com",
+        image: null,
+        role: "CUSTOMER",
+      },
     };
     render(<UserMenu session={session} />);
     expect(screen.queryByText("Admin")).toBeNull();

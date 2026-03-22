@@ -12,6 +12,7 @@ const VALID_TEST_SECRET = ["password", "123"].join("");
 const INVALID_TEST_SECRET = ["wrong"].join("");
 
 const mockSignIn = vi.hoisted(() => vi.fn());
+const mockLocationAssign = vi.hoisted(() => vi.fn());
 vi.mock("next-auth/react", () => ({
   signIn: mockSignIn,
 }));
@@ -37,6 +38,12 @@ vi.mock("@/components/auth/PasswordToggleButton", () => ({
 describe("SignInClient", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    Object.defineProperty(globalThis, "location", {
+      configurable: true,
+      value: {
+        assign: mockLocationAssign,
+      },
+    });
   });
 
   it("renders the login form with identifier and password fields", () => {
@@ -58,8 +65,8 @@ describe("SignInClient", () => {
   });
 
   it("calls signIn with credentials on form submit", async () => {
-    mockSignIn.mockResolvedValue({ error: null });
-    render(<SignInClient />);
+    mockSignIn.mockResolvedValue({ error: null, url: "/orders" });
+    render(<SignInClient callbackUrl="/orders" />);
 
     act(() => {
       fireEvent.change(screen.getByLabelText("Email or Phone Number"), {
@@ -80,8 +87,35 @@ describe("SignInClient", () => {
       expect(mockSignIn).toHaveBeenCalledWith("credentials", {
         identifier: "test@example.com",
         password: VALID_TEST_SECRET,
+        callbackUrl: "/orders",
         redirect: false,
       });
+    });
+
+    expect(mockLocationAssign).toHaveBeenCalledWith("/orders");
+  });
+
+  it("falls back to the provided callbackUrl when signIn omits a URL", async () => {
+    mockSignIn.mockResolvedValue({ error: null, url: null });
+    render(<SignInClient callbackUrl="/account" />);
+
+    act(() => {
+      fireEvent.change(screen.getByLabelText("Email or Phone Number"), {
+        target: { value: "test@example.com" },
+      });
+      fireEvent.change(screen.getByLabelText("Password"), {
+        target: { value: VALID_TEST_SECRET },
+      });
+    });
+
+    act(() => {
+      fireEvent.submit(
+        screen.getByText("Login").closest("form") as HTMLFormElement,
+      );
+    });
+
+    await waitFor(() => {
+      expect(mockLocationAssign).toHaveBeenCalledWith("/account");
     });
   });
 

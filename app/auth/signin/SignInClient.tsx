@@ -36,24 +36,31 @@ const SIGNIN_FIELDS: ReadonlyArray<FieldDef> = [
 const SUBMIT_BTN =
   "w-full py-3 bg-[var(--btn-primary)] bg-gradient-to-r from-[var(--accent-rose)] to-[var(--accent-pink)] text-white rounded-full font-semibold hover:from-[var(--accent-pink)] hover:to-[var(--accent-rose)] transition-all duration-300 shadow-warm hover:shadow-warm-lg disabled:opacity-50 disabled:cursor-not-allowed focus-warm";
 
-const SignInClient = () => {
+interface SignInClientProps {
+  readonly callbackUrl?: string;
+}
+
+const SignInClient = ({ callbackUrl = "/" }: SignInClientProps) => {
   const handleSubmit = useCallback(
     async (values: Readonly<Record<string, string>>): Promise<SubmitResult> => {
       try {
         const result = await signIn("credentials", {
           identifier: values.identifier,
           password: values.password,
+          callbackUrl,
           redirect: false,
         });
         if (result?.error)
           return "We couldn't sign you in with those details. Double-check your email, phone number, and password, then try again.";
-        globalThis.location.href = "/";
+
+        const redirectTarget = result?.url ?? callbackUrl;
+        globalThis.location.assign(redirectTarget);
         return undefined;
       } catch {
         return "We hit a temporary issue while signing you in. Please try again.";
       }
     },
-    [],
+    [callbackUrl],
   );
 
   return (

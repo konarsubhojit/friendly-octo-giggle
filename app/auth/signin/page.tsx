@@ -37,18 +37,19 @@ interface SignInPageProps {
   readonly searchParams: Promise<{ callbackUrl?: string }>;
 }
 
-export default function SignInPage({ searchParams }: SignInPageProps) {
+export default async function SignInPage({ searchParams }: SignInPageProps) {
+  const params = await searchParams;
+  const callbackUrl = params.callbackUrl || "/";
+
   async function handleGoogleSignIn() {
     "use server";
-    const params = await searchParams;
-    await signIn("google", { redirectTo: params.callbackUrl || "/" });
+    await signIn("google", { redirectTo: callbackUrl });
   }
 
   async function handleMicrosoftSignIn() {
     "use server";
-    const params = await searchParams;
     await signIn("microsoft-entra-id", {
-      redirectTo: params.callbackUrl || "/",
+      redirectTo: callbackUrl,
     });
   }
 
@@ -58,7 +59,7 @@ export default function SignInPage({ searchParams }: SignInPageProps) {
         <SignInHeader />
 
         {/* Client-side credentials form */}
-        <SignInClient />
+        <SignInClient callbackUrl={callbackUrl} />
 
         {/* Divider */}
         <div className="relative my-6">

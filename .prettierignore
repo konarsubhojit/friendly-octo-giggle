@@ -1,0 +1,8 @@
+.next
+coverage
+dist
+drizzle/meta
+node_modules
+playwright-tests/report
+public
+test-results

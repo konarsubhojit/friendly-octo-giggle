@@ -23,7 +23,6 @@ vi.mock("react-hot-toast", () => ({
 
 vi.mock("next/image", () => ({
   default: ({ alt, src }: { alt: string; src: string }) => (
-    // eslint-disable-next-line @next/next/no-img-element
     <img alt={alt} src={src} />
   ),
 }));
@@ -255,7 +254,7 @@ describe("ProductFormModal", () => {
 
     const form = container.querySelector("form");
     expect(form).not.toBeNull();
-    await act(() => {
+    act(() => {
       fireEvent.submit(form as HTMLFormElement);
     });
     await waitFor(() => {
@@ -286,7 +285,7 @@ describe("ProductFormModal", () => {
 
     const form = container.querySelector("form");
     expect(form).not.toBeNull();
-    await act(() => {
+    act(() => {
       fireEvent.submit(form as HTMLFormElement);
     });
 
@@ -308,7 +307,7 @@ describe("ProductFormModal", () => {
     const { container } = renderModal({ editingProduct: mockProduct });
     const form = container.querySelector("form");
     expect(form).not.toBeNull();
-    await act(() => {
+    act(() => {
       fireEvent.submit(form as HTMLFormElement);
     });
     await waitFor(() => {
@@ -366,7 +365,7 @@ describe("ProductFormModal", () => {
 
     const form = container.querySelector("form");
     expect(form).not.toBeNull();
-    await act(() => {
+    act(() => {
       fireEvent.submit(form as HTMLFormElement);
     });
 
@@ -484,7 +483,7 @@ describe("ProductFormModal", () => {
 
     const form = container.querySelector("form");
     expect(form).not.toBeNull();
-    await act(() => {
+    act(() => {
       fireEvent.submit(form as HTMLFormElement);
     });
 
@@ -562,7 +561,7 @@ describe("ProductFormModal", () => {
     const { container } = renderModal();
     const form = container.querySelector("form");
     expect(form).not.toBeNull();
-    await act(() => {
+    act(() => {
       fireEvent.submit(form as HTMLFormElement);
     });
     await waitFor(() => {
@@ -578,7 +577,7 @@ describe("ProductFormModal", () => {
       target: { value: "My Product" },
     });
     const form = container.querySelector("form");
-    await act(() => {
+    act(() => {
       fireEvent.submit(form as HTMLFormElement);
     });
     await waitFor(() => {
@@ -597,7 +596,7 @@ describe("ProductFormModal", () => {
       target: { value: "Desc" },
     });
     const form = container.querySelector("form");
-    await act(() => {
+    act(() => {
       fireEvent.submit(form as HTMLFormElement);
     });
     await waitFor(() => {
@@ -610,7 +609,7 @@ describe("ProductFormModal", () => {
   it("clears inline error when name is corrected", async () => {
     const { container } = renderModal();
     const form = container.querySelector("form");
-    await act(() => {
+    act(() => {
       fireEvent.submit(form as HTMLFormElement);
     });
     await waitFor(() => {
@@ -634,7 +633,7 @@ describe("ProductFormModal", () => {
     fireEvent.change(screen.getByLabelText("Price"), {
       target: { value: "0" },
     });
-    await act(() => {
+    act(() => {
       fireEvent.submit(form as HTMLFormElement);
     });
     await waitFor(() => {
@@ -656,7 +655,7 @@ describe("ProductFormModal", () => {
     const { container } = renderModal();
     fireEvent.change(screen.getByLabelText("Name"), { target: { value: "A" } });
     const form = container.querySelector("form");
-    await act(() => {
+    act(() => {
       fireEvent.submit(form as HTMLFormElement);
     });
     await waitFor(() => {
@@ -669,7 +668,7 @@ describe("ProductFormModal", () => {
   it("shows red border on name input when validation fails", async () => {
     const { container } = renderModal();
     const form = container.querySelector("form");
-    await act(() => {
+    act(() => {
       fireEvent.submit(form as HTMLFormElement);
     });
     await waitFor(() => {

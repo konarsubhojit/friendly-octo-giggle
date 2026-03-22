@@ -1,4 +1,4 @@
-import nextPlugin from 'eslint-config-next/core-web-vitals';
+import nextPlugin from "eslint-config-next/core-web-vitals";
 
 /**
  * ESLint flat config (ESLint 9 / Next.js 16)
@@ -16,41 +16,42 @@ const config = [
   // General rule overrides (all files)
   {
     rules: {
-      'no-console': 'error',
-      'no-implicit-globals': 'error',
-      'no-var': 'error',
+      "no-console": "error",
+      "no-implicit-globals": "error",
+      "no-var": "error",
     },
   },
 
   // TypeScript-specific rule overrides (must be scoped to TS files where the plugin is registered)
   {
-    files: ['**/*.ts', '**/*.tsx'],
+    files: ["**/*.ts", "**/*.tsx"],
     rules: {
-      '@typescript-eslint/no-unused-vars': [
-        'error',
+      "@typescript-eslint/no-unused-vars": [
+        "error",
         {
-          argsIgnorePattern: '^_',
-          varsIgnorePattern: '^_',
-          caughtErrorsIgnorePattern: '^_',
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
         },
       ],
-      '@typescript-eslint/no-explicit-any': 'warn',
+      "@typescript-eslint/no-explicit-any": "error",
     },
   },
 
   // Allow console.* in startup files that run before the logger is available
   {
-    files: ['lib/env.ts'],
+    files: ["lib/env.ts"],
     rules: {
-      'no-console': 'off',
+      "no-console": "off",
     },
   },
 
   // Allow console.* in test files (e.g. muting React error boundaries)
   {
-    files: ['__tests__/**'],
+    files: ["__tests__/**"],
     rules: {
-      'no-console': 'off',
+      "no-console": "off",
+      "@next/next/no-img-element": "off",
     },
   },
 ];
