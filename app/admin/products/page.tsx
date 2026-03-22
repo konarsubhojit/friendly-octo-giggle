@@ -60,7 +60,11 @@ export default function ProductsManagement() {
   }, []);
 
   const fetchProducts = useCallback(
-    async (cursorParam: string | null, searchQuery: string, offsetVal?: number) => {
+    async (
+      cursorParam: string | null,
+      searchQuery: string,
+      offsetVal?: number,
+    ) => {
       setLoading(true);
       setError(null);
       try {

@@ -372,7 +372,11 @@ export const useCursorPagination = <T>({
   }, []);
 
   const fetchPageData = useCallback(
-    async (cursorValue: string | null, searchQuery: string, offset?: number) => {
+    async (
+      cursorValue: string | null,
+      searchQuery: string,
+      offset?: number,
+    ) => {
       const fetchUrl = buildPaginatedUrl(
         url,
         cursorValue,

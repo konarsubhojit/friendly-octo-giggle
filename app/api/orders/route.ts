@@ -185,7 +185,11 @@ const parseOrderLimit = (param: string | null): number =>
     100,
   );
 
-const buildOrderConditions = (userId: string, cursor: string | null, useOffset: boolean): SQL[] => {
+const buildOrderConditions = (
+  userId: string,
+  cursor: string | null,
+  useOffset: boolean,
+): SQL[] => {
   const conditions: SQL[] = [eq(orders.userId, userId)];
 
   if (!useOffset && cursor) {
