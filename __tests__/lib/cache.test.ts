@@ -195,7 +195,9 @@ describe("buildProductsListCacheKey", () => {
   });
 
   it("returns empty string when both search and category provided", () => {
-    expect(buildProductsListCacheKey({ search: "laptop", category: "electronics" })).toBe("");
+    expect(
+      buildProductsListCacheKey({ search: "laptop", category: "electronics" }),
+    ).toBe("");
   });
 
   it("builds parameterized key with limit only", () => {
@@ -207,11 +209,15 @@ describe("buildProductsListCacheKey", () => {
   });
 
   it("builds parameterized key with limit and offset", () => {
-    expect(buildProductsListCacheKey({ limit: 10, offset: 20 })).toBe("products:all:10:20");
+    expect(buildProductsListCacheKey({ limit: 10, offset: 20 })).toBe(
+      "products:all:10:20",
+    );
   });
 
   it("uses 'all' for limit when undefined", () => {
-    expect(buildProductsListCacheKey({ offset: 10 })).toBe("products:all:all:10");
+    expect(buildProductsListCacheKey({ offset: 10 })).toBe(
+      "products:all:all:10",
+    );
   });
 
   it("uses 0 for offset when undefined", () => {
@@ -219,7 +225,9 @@ describe("buildProductsListCacheKey", () => {
   });
 
   it("returns empty string when limit, offset, and search provided", () => {
-    expect(buildProductsListCacheKey({ limit: 10, offset: 0, search: "laptop" })).toBe("");
+    expect(
+      buildProductsListCacheKey({ limit: 10, offset: 0, search: "laptop" }),
+    ).toBe("");
   });
 });
 
@@ -267,7 +275,9 @@ describe("cacheProductsList", () => {
     const data = [{ id: "1" }];
     const fetcher = vi.fn().mockResolvedValue(data);
 
-    const result = await cacheProductsList(fetcher, { category: "electronics" });
+    const result = await cacheProductsList(fetcher, {
+      category: "electronics",
+    });
 
     expect(result).toBe(data);
     expect(fetcher).toHaveBeenCalledOnce();
