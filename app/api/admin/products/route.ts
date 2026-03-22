@@ -3,7 +3,12 @@ import { drizzleDb, db } from "@/lib/db";
 import { products } from "@/lib/schema";
 import { desc, lt, ilike, and, isNull, inArray, SQL, count } from "drizzle-orm";
 import { ProductInputSchema } from "@/lib/validations";
-import { apiSuccess, apiError, handleApiError } from "@/lib/api-utils";
+import {
+  apiSuccess,
+  apiError,
+  handleApiError,
+  parseOffsetParam,
+} from "@/lib/api-utils";
 import { revalidateTag } from "next/cache";
 import { invalidateProductCaches } from "@/lib/cache";
 import { indexProduct } from "@/lib/search";
@@ -32,6 +37,8 @@ export const GET = async (request: NextRequest) => {
     const { searchParams } = new URL(request.url);
     const cursor = searchParams.get("cursor");
     const limitParam = searchParams.get("limit");
+    const offsetParam = searchParams.get("offset");
+    const useOffset = offsetParam !== null;
     const search = searchParams.get("search")?.trim() ?? "";
 
     const limit = Math.min(
@@ -42,10 +49,12 @@ export const GET = async (request: NextRequest) => {
       100,
     );
 
+    const offset = useOffset ? parseOffsetParam(offsetParam) : 0;
+
     const conditions: SQL[] = [isNull(products.deletedAt)];
     const countConditions: SQL[] = [isNull(products.deletedAt)];
 
-    if (cursor) {
+    if (!useOffset && cursor) {
       const cursorDate = new Date(cursor);
       if (!Number.isNaN(cursorDate.getTime())) {
         conditions.push(lt(products.createdAt, cursorDate));
@@ -86,6 +95,7 @@ export const GET = async (request: NextRequest) => {
         where: whereClause,
         orderBy: [desc(products.createdAt)],
         limit: limit + 1,
+        offset: useOffset ? offset : undefined,
         with: { variations: true },
       }),
       drizzleDb

@@ -24,6 +24,7 @@ import { invalidateCache } from "@/lib/redis";
 import { invalidateUserOrderCaches } from "@/lib/cache";
 import { CreateOrderInput, OrderItemInput } from "@/lib/types";
 import { withLogging } from "@/lib/api-middleware";
+import { parseOffsetParam } from "@/lib/api-utils";
 import { logBusinessEvent, logError } from "@/lib/logger";
 import { auth } from "@/lib/auth";
 import { sendOrderConfirmationEmail } from "@/lib/email";
@@ -184,10 +185,14 @@ const parseOrderLimit = (param: string | null): number =>
     100,
   );
 
-const buildOrderConditions = (userId: string, cursor: string | null): SQL[] => {
+const buildOrderConditions = (
+  userId: string,
+  cursor: string | null,
+  useOffset: boolean,
+): SQL[] => {
   const conditions: SQL[] = [eq(orders.userId, userId)];
 
-  if (cursor) {
+  if (!useOffset && cursor) {
     const cursorDate = new Date(cursor);
     if (!Number.isNaN(cursorDate.getTime())) {
       conditions.push(lt(orders.createdAt, cursorDate));
@@ -213,11 +218,15 @@ const handleGet = async (request: NextRequest) => {
     const { searchParams } = new URL(request.url);
     const limit = parseOrderLimit(searchParams.get("limit"));
     const search = searchParams.get("search")?.trim() ?? "";
+    const offsetParam = searchParams.get("offset");
+    const useOffset = offsetParam !== null;
+    const offset = useOffset ? parseOffsetParam(offsetParam) : 0;
     const conditions = buildOrderConditions(
       session.user.id,
       searchParams.get("cursor"),
+      useOffset,
     );
-    const countConditions = buildOrderConditions(session.user.id, null);
+    const countConditions = buildOrderConditions(session.user.id, null, false);
 
     if (search) {
       const redisIds = await searchUserOrdersRedis(
@@ -254,6 +263,7 @@ const handleGet = async (request: NextRequest) => {
         with: { items: { with: { product: true, variation: true } } },
         orderBy: [desc(orders.createdAt)],
         limit: limit + 1,
+        offset: useOffset ? offset : undefined,
       }),
       drizzleDb
         .select({ value: count() })

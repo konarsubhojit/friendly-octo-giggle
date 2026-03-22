@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 import { logError } from "@/lib/logger";
 
+export const parseOffsetParam = (offsetParam: string | null): number => {
+  const parsed = Number.parseInt(offsetParam ?? "0", 10);
+  return Number.isNaN(parsed) ? 0 : Math.max(0, parsed);
+};
+
 export const apiSuccess = <T>(data: T, status = 200) =>
   NextResponse.json({ success: true, data }, { status });
 
