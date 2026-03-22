@@ -76,15 +76,12 @@ describe("GET /api/products", () => {
       search: undefined,
       category: undefined,
     });
-    expect(mockCacheProductsList).toHaveBeenCalledWith(
-      expect.any(Function),
-      {
-        limit: 24,
-        offset: 0,
-        search: undefined,
-        category: undefined,
-      },
-    );
+    expect(mockCacheProductsList).toHaveBeenCalledWith(expect.any(Function), {
+      limit: 24,
+      offset: 0,
+      search: undefined,
+      category: undefined,
+    });
   });
 
   it("sets Cache-Control header", async () => {

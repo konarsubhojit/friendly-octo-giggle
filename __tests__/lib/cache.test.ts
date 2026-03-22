@@ -190,9 +190,7 @@ describe("buildProductsListCacheKey", () => {
         search: " Phone ",
         category: "Electronics",
       }),
-    ).toBe(
-      "products:list:limit=12:offset=5:search=phone:category=electronics",
-    );
+    ).toBe("products:list:limit=12:offset=5:search=phone:category=electronics");
   });
 });
 
