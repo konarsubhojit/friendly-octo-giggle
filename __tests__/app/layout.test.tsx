@@ -44,6 +44,10 @@ vi.mock("@vercel/analytics/next", () => ({
   Analytics: () => null,
 }));
 
+vi.mock("@vercel/speed-insights/next", () => ({
+  SpeedInsights: () => null,
+}));
+
 describe("app/layout.tsx", () => {
   it("wraps children in a div, not a main element", async () => {
     const { default: RootLayout } = await import("@/app/layout");
