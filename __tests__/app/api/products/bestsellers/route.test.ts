@@ -10,11 +10,9 @@ vi.mock("@/lib/db", () => ({
 }));
 
 vi.mock("@/lib/cache", () => ({
-  cacheProductsBestsellers: vi.fn(
-    async (fetcher: () => Promise<unknown>) => {
-      return await fetcher();
-    },
-  ),
+  cacheProductsBestsellers: vi.fn(async (fetcher: () => Promise<unknown>) => {
+    return await fetcher();
+  }),
 }));
 
 vi.mock("@/lib/api-middleware", () => ({

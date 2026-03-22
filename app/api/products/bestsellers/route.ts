@@ -1,9 +1,9 @@
-import { db } from '@/lib/db';
-import { apiSuccess, handleApiError } from '@/lib/api-utils';
-import { withLogging } from '@/lib/api-middleware';
-import { NextRequest } from 'next/server';
-import { z } from 'zod';
-import { cacheProductsBestsellers } from '@/lib/cache';
+import { db } from "@/lib/db";
+import { apiSuccess, handleApiError } from "@/lib/api-utils";
+import { withLogging } from "@/lib/api-middleware";
+import { NextRequest } from "next/server";
+import { z } from "zod";
+import { cacheProductsBestsellers } from "@/lib/cache";
 
 /**
  * GET /api/products/bestsellers
@@ -23,19 +23,22 @@ const BestsellersQuerySchema = z.object({
 const handleGet = async (request: NextRequest) => {
   try {
     const parsed = BestsellersQuerySchema.parse({
-      limit: request.nextUrl.searchParams.get('limit') ?? undefined,
+      limit: request.nextUrl.searchParams.get("limit") ?? undefined,
     });
 
-    const products = await cacheProductsBestsellers(
-      () => db.products.findBestsellers({ limit: parsed.limit })
+    const products = await cacheProductsBestsellers(() =>
+      db.products.findBestsellers({ limit: parsed.limit }),
     );
 
     const response = apiSuccess({ products });
-    response.headers.set('Cache-Control', 's-maxage=120, stale-while-revalidate=60');
+    response.headers.set(
+      "Cache-Control",
+      "s-maxage=120, stale-while-revalidate=60",
+    );
     return response;
   } catch (error) {
     return handleApiError(error);
   }
-}
+};
 
 export const GET = withLogging(handleGet);
