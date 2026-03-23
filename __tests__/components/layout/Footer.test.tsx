@@ -14,8 +14,8 @@ describe("Footer", () => {
     expect(screen.getByText(/The Kiyon Store/)).toBeTruthy();
   });
 
-  it("renders copyright text with all rights reserved", () => {
+  it("renders the 2024–Present range in copyright", () => {
     render(<Footer />);
-    expect(screen.getByText(/All rights reserved/)).toBeTruthy();
+    expect(screen.getByText(/2024–Present/)).toBeTruthy();
   });
 });

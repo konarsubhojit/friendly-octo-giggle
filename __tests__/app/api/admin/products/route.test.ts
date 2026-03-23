@@ -53,6 +53,14 @@ vi.mock("@/lib/cache", () => ({
   invalidateProductCaches: vi.fn(),
 }));
 
+vi.mock("@/lib/search-service", () => ({
+  searchProductIds: vi.fn().mockResolvedValue(null),
+}));
+
+vi.mock("@/lib/search", () => ({
+  indexProduct: vi.fn(),
+}));
+
 vi.mock(
   "@/lib/validations",
   async () => await vi.importActual("@/lib/validations"),

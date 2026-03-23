@@ -6,7 +6,7 @@ const mockGetCachedData = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/auth", () => ({ auth: mockAuth }));
 vi.mock("@/lib/redis", () => ({ getCachedData: mockGetCachedData }));
 vi.mock("@/lib/db", () => ({
-  drizzleDb: { select: vi.fn() },
+  drizzleDb: { select: vi.fn(), execute: vi.fn() },
 }));
 vi.mock("@/lib/schema", () => ({
   orders: {},
@@ -130,70 +130,29 @@ describe("GET /api/admin/sales", () => {
 
     const { drizzleDb } = await import("@/lib/db");
 
-    const totalStatsResult = { totalRevenue: 5000, totalOrders: 25 };
-    const todayStatsResult = { revenue: 200, orderCount: 3 };
-    const monthStatsResult = { revenue: 1500, orderCount: 12 };
-    const lastMonthStatsResult = { revenue: 1200, orderCount: 10 };
-    const statusCountsResult = [
-      { status: "PENDING", count: 5 },
-      { status: "PROCESSING", count: 10 },
-    ];
-    const topProductsResult = [
-      {
-        productId: "p1",
-        productName: "Product 1",
-        totalQuantity: 50,
-        totalRevenue: 2500,
-      },
-    ];
-    const customerCountResult = { count: 15 };
-    let callCount = 0;
-    (drizzleDb.select as ReturnType<typeof vi.fn>).mockImplementation(() => {
-      callCount++;
-      if (callCount <= 4) {
-        const results = [
-          [totalStatsResult],
-          [todayStatsResult],
-          [monthStatsResult],
-          [lastMonthStatsResult],
-        ];
-        return {
-          from: vi.fn(() => ({
-            where: vi.fn().mockResolvedValue(results[callCount - 1]),
-          })),
-        };
-      }
-      if (callCount === 5) {
-        return {
-          from: vi.fn(() => ({
-            where: vi.fn(() => ({
-              groupBy: vi.fn().mockResolvedValue(statusCountsResult),
-            })),
-          })),
-        };
-      }
-      if (callCount === 6) {
-        return {
-          from: vi.fn(() => ({
-            innerJoin: vi.fn(() => ({
-              innerJoin: vi.fn(() => ({
-                where: vi.fn(() => ({
-                  groupBy: vi.fn(() => ({
-                    orderBy: vi.fn(() => ({
-                      limit: vi.fn().mockResolvedValue(topProductsResult),
-                    })),
-                  })),
-                })),
-              })),
-            })),
-          })),
-        };
-      }
-      return {
-        from: vi.fn(() => ({
-          where: vi.fn().mockResolvedValue([customerCountResult]),
-        })),
-      };
+    const dashboardRow = {
+      totalRevenue: 5000,
+      totalOrders: 25,
+      todayRevenue: 200,
+      todayOrders: 3,
+      monthRevenue: 1500,
+      monthOrders: 12,
+      lastMonthRevenue: 1200,
+      lastMonthOrders: 10,
+      ordersByStatus: JSON.stringify({ PENDING: 5, PROCESSING: 10 }),
+      topProducts: JSON.stringify([
+        {
+          productId: "p1",
+          name: "Product 1",
+          totalQuantity: 50,
+          totalRevenue: 2500,
+        },
+      ]),
+      recentSales: JSON.stringify([]),
+      totalCustomers: 15,
+    };
+    (drizzleDb.execute as ReturnType<typeof vi.fn>).mockResolvedValue({
+      rows: [dashboardRow],
     });
 
     const response = await GET();
