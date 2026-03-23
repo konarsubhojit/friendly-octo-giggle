@@ -1,6 +1,13 @@
 "use client";
 
-import { memo, startTransition, useCallback, useEffect, useRef, useState } from "react";
+import {
+  memo,
+  startTransition,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Product } from "@/lib/types";

@@ -328,9 +328,7 @@ describe("ProductGrid", () => {
       "/api/products?q=rose&category=Flowers&limit=20&offset=1",
       { method: "GET", headers: { Accept: "application/json" } },
     );
-    expect(
-      screen.getByText("You've seen all products."),
-    ).toBeTruthy();
+    expect(screen.getByText("You've seen all products.")).toBeTruthy();
   });
   it("renders quick add button for in-stock product", () => {
     renderGrid([makeProduct({ stock: 5 })]);
