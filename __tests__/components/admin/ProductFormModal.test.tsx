@@ -177,12 +177,19 @@ describe("ProductFormModal", () => {
 
   it("updates category when selected", async () => {
     renderModal();
-    await waitFor(() => {
-      expect(screen.getByRole("option", { name: "Keychains" })).toBeTruthy();
-    });
     const catSelect = screen.getByLabelText("Category");
+
+    await waitFor(() => {
+      expect(
+        Array.from(catSelect.options).some(
+          (option) => option.value === "Keychains",
+        ),
+      ).toBe(true);
+    });
+
     fireEvent.change(catSelect, { target: { value: "Keychains" } });
-    expect((catSelect as HTMLSelectElement).value).toBe("Keychains");
+
+    expect(catSelect.value).toBe("Keychains");
   });
 
   it("shows existing image when editing", () => {
@@ -545,7 +552,7 @@ describe("ProductFormModal", () => {
 
     const form = container.querySelector("form");
     expect(form).not.toBeNull();
-    await act(() => {
+    act(() => {
       fireEvent.submit(form as HTMLFormElement);
     });
 
