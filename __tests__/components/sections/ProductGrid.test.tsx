@@ -105,6 +105,20 @@ const ALL_CATEGORIES = [
   "Hair Accessories",
 ];
 
+let intersectionCallback: IntersectionObserverCallback | null = null;
+
+const mockIntersectionObserver = vi.fn(function (
+  this: unknown,
+  callback: IntersectionObserverCallback,
+) {
+  intersectionCallback = callback;
+  return {
+    observe: vi.fn(),
+    unobserve: vi.fn(),
+    disconnect: vi.fn(),
+  };
+});
+
 function renderGrid(
   products: Product[],
   categories?: string[],
@@ -124,7 +138,9 @@ function renderGrid(
 describe("ProductGrid", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    intersectionCallback = null;
     mockDispatch.mockReturnValue({ unwrap: () => Promise.resolve({}) });
+    vi.stubGlobal("IntersectionObserver", mockIntersectionObserver);
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => ({
@@ -253,19 +269,19 @@ describe("ProductGrid", () => {
     ).toBeTruthy();
   });
 
-  it("shows the load more control when more products are available", () => {
+  it("shows the product count and sets up IntersectionObserver when more products are available", () => {
     renderGrid([makeProduct()], ["Flowers"], {
       search: "rose",
       selectedCategory: "Flowers",
       hasNextPage: true,
-      batchSize: 15,
+      batchSize: 20,
     });
 
-    expect(screen.getByRole("button", { name: /Load 15 more/i })).toBeTruthy();
-    expect(screen.getByText("Showing 1 product so far.")).toBeTruthy();
+    expect(screen.getByText("Showing 1 product so far")).toBeTruthy();
+    expect(mockIntersectionObserver).toHaveBeenCalled();
   });
 
-  it("loads another batch of products from the API", async () => {
+  it("loads another batch of products from the API via infinite scroll", async () => {
     vi.mocked(fetch).mockImplementation(async (input) => {
       if (String(input).startsWith("/api/products")) {
         return {
@@ -295,23 +311,24 @@ describe("ProductGrid", () => {
       search: "rose",
       selectedCategory: "Flowers",
       hasNextPage: true,
-      batchSize: 15,
+      batchSize: 20,
     });
 
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: /Load 15 more/i }));
+      intersectionCallback?.(
+        [{ isIntersecting: true } as IntersectionObserverEntry],
+        {} as IntersectionObserver,
+      );
     });
 
     await waitFor(() => {
       expect(screen.getByText("Loaded Product")).toBeTruthy();
     });
     expect(fetch).toHaveBeenCalledWith(
-      "/api/products?q=rose&category=Flowers&limit=15&offset=1",
+      "/api/products?q=rose&category=Flowers&limit=20&offset=1",
       { method: "GET", headers: { Accept: "application/json" } },
     );
-    expect(
-      screen.getByText("You have reached the end of this result set."),
-    ).toBeTruthy();
+    expect(screen.getByText("You've seen all products.")).toBeTruthy();
   });
   it("renders quick add button for in-stock product", () => {
     renderGrid([makeProduct({ stock: 5 })]);

@@ -14,7 +14,8 @@ import { logError } from "@/lib/logger";
 
 export const revalidate = 60;
 
-const SHOP_PAGE_SIZE = 15;
+const SHOP_INITIAL_SIZE = 24;
+const SHOP_BATCH_SIZE = 20;
 
 interface ShopPageProps {
   readonly searchParams?: Promise<{
@@ -69,25 +70,25 @@ const ShopPage = async ({ searchParams }: ShopPageProps) => {
     if (search) {
       const matchedIds = await searchProductIdsCached(search, {
         category: selectedCategoryFilter,
-        limit: SHOP_PAGE_SIZE + 1,
+        limit: SHOP_INITIAL_SIZE + 1,
       });
 
       if (matchedIds === null) {
         const allProducts = await db.products.findAllMinimal({
-          limit: SHOP_PAGE_SIZE + 1,
+          limit: SHOP_INITIAL_SIZE + 1,
           offset: 0,
           search,
           category: selectedCategoryFilter,
         });
 
         shopData = {
-          products: allProducts.slice(0, SHOP_PAGE_SIZE),
+          products: allProducts.slice(0, SHOP_INITIAL_SIZE),
           bestsellers: topProducts,
           categoryNames: cats.map((c) => c.name),
-          hasNextPage: allProducts.length > SHOP_PAGE_SIZE,
+          hasNextPage: allProducts.length > SHOP_INITIAL_SIZE,
         };
       } else {
-        const pageIds = matchedIds.slice(0, SHOP_PAGE_SIZE);
+        const pageIds = matchedIds.slice(0, SHOP_INITIAL_SIZE);
         const matchedProducts = await db.products.findMinimalByIds(
           pageIds,
           selectedCategoryFilter,
@@ -104,22 +105,22 @@ const ShopPage = async ({ searchParams }: ShopPageProps) => {
           products: orderedProducts,
           bestsellers: topProducts,
           categoryNames: cats.map((c) => c.name),
-          hasNextPage: matchedIds.length > SHOP_PAGE_SIZE,
+          hasNextPage: matchedIds.length > SHOP_INITIAL_SIZE,
         };
       }
     } else {
       const allProducts = await db.products.findAllMinimal({
-        limit: SHOP_PAGE_SIZE + 1,
+        limit: SHOP_INITIAL_SIZE + 1,
         offset: 0,
         search,
         category: selectedCategoryFilter,
       });
 
       shopData = {
-        products: allProducts.slice(0, SHOP_PAGE_SIZE),
+        products: allProducts.slice(0, SHOP_INITIAL_SIZE),
         bestsellers: topProducts,
         categoryNames: cats.map((c) => c.name),
-        hasNextPage: allProducts.length > SHOP_PAGE_SIZE,
+        hasNextPage: allProducts.length > SHOP_INITIAL_SIZE,
       };
     }
   } catch (error) {
@@ -207,7 +208,7 @@ const ShopPage = async ({ searchParams }: ShopPageProps) => {
         search={search}
         selectedCategory={selectedCategory}
         hasNextPage={hasNextPage}
-        batchSize={SHOP_PAGE_SIZE}
+        batchSize={SHOP_BATCH_SIZE}
       />
 
       <Footer />
