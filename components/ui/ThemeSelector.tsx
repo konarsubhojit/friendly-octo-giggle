@@ -1,36 +1,38 @@
 "use client";
 
-import { useTheme, type ThemeId } from "@/contexts/ThemeContext";
-
-const THEME_SWATCHES: Record<ThemeId, string> = {
-  default: "#C0524A",
-  "baby-pink": "#C04E72",
-};
+import { useTheme } from "@/contexts/ThemeContext";
 
 export const ThemeSelector = () => {
   const { theme, setTheme, themes } = useTheme();
+  const activeTheme = themes.find((option) => option.id === theme) ?? themes[0];
 
   return (
-    <div className="relative flex items-center">
+    <label className="flex items-center gap-2 text-[var(--foreground)]">
+      <span className="sr-only">Select colour theme</span>
+      <span
+        className="h-3.5 w-3.5 rounded-full border border-[var(--border-warm)] shadow-sm"
+        style={{
+          background: `linear-gradient(135deg, ${activeTheme.bgPreview} 0%, ${activeTheme.accentPreview} 100%)`,
+        }}
+        aria-hidden="true"
+      />
       <select
         value={theme}
-        onChange={(e) => setTheme(e.target.value as ThemeId)}
-        className="bg-[var(--surface)] border border-[var(--border-warm)] text-[var(--foreground)] rounded-md pl-7 pr-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent-rose)] cursor-pointer appearance-none"
+        onChange={(e) =>
+          setTheme(e.target.value as (typeof themes)[number]["id"])
+        }
+        className="cursor-pointer appearance-none rounded-md border border-[var(--border-warm)] bg-[var(--surface)] px-3 py-1.5 text-sm text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-rose)]"
         aria-label="Select colour theme"
       >
-        {themes.map((t) => (
-          <option key={t.id} value={t.id}>
-            {t.label}
+        {themes.map((themeOption) => (
+          <option key={themeOption.id} value={themeOption.id}>
+            {themeOption.label}
           </option>
         ))}
       </select>
-
-      {/* Colour swatch preview — positioned inside the select left edge */}
-      <span
-        className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full border border-[var(--border-warm)]"
-        style={{ backgroundColor: THEME_SWATCHES[theme] }}
-        aria-hidden="true"
-      />
-    </div>
+      <span className="hidden text-xs text-[var(--text-muted)] md:inline">
+        {activeTheme.description}
+      </span>
+    </label>
   );
 };

@@ -1,1 +1,0 @@
-ALTER TABLE "User" ADD COLUMN "currencyPreference" varchar(3) DEFAULT 'INR' NOT NULL;

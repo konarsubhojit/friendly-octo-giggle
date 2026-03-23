@@ -45,7 +45,7 @@ const HeroTextColumn = () => {
         {STATS.map(({ num, label, decorative }) => (
           <div key={label} className="flex flex-col">
             <span
-              className="text-2xl font-bold font-display text-[var(--accent-rose)]"
+              className="text-2xl font-bold font-display text-[var(--hero-stat)]"
               aria-hidden={decorative || undefined}
             >
               {num}
@@ -64,11 +64,27 @@ const HeroIllustration = () => {
   return (
     <div className="flex-1 w-full max-w-lg lg:max-w-none animate-fade-in-up animation-delay-200">
       <div
-        className="w-full min-h-[400px] rounded-[2rem] bg-stone-200 border border-[var(--border-warm)] shadow-warm-lg flex items-center justify-center"
+        className="relative flex min-h-[400px] w-full items-center justify-center overflow-hidden rounded-[2rem] border border-[var(--border-warm)] bg-theme-panel shadow-warm-lg"
         role="img"
         aria-label="Illustration placeholder: girl crocheting by a window"
       >
-        <div className="text-center p-8">
+        <div
+          className="absolute left-6 top-6 rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] glass-card text-[var(--text-secondary)]"
+          aria-hidden="true"
+        >
+          atelier mood
+        </div>
+        <div
+          className="absolute -right-10 top-10 h-28 w-28 rounded-full blur-3xl"
+          style={{ backgroundColor: "var(--hero-orb-primary)" }}
+          aria-hidden="true"
+        />
+        <div
+          className="absolute -left-8 bottom-6 h-24 w-24 rounded-full blur-3xl"
+          style={{ backgroundColor: "var(--hero-orb-secondary)" }}
+          aria-hidden="true"
+        />
+        <div className="relative text-center p-8">
           <span className="text-6xl block mb-4" aria-hidden="true">
             🧶
           </span>
@@ -87,7 +103,7 @@ const FeatureBadges = () => {
       {FEATURE_BADGES.map(({ icon, text }) => (
         <div
           key={text}
-          className="flex items-center gap-2.5 px-5 py-2.5 bg-[var(--surface)]/80 backdrop-blur-sm rounded-full shadow-warm border border-[var(--border-warm)] animate-float-gentle"
+          className="glass-card flex items-center gap-2.5 rounded-full border border-[var(--border-warm)] px-5 py-2.5 shadow-warm animate-float-gentle"
         >
           <span className="text-base" aria-hidden="true">
             {icon}
@@ -116,11 +132,13 @@ const Hero = () => (
       <FeatureBadges />
     </div>
     <div
-      className="absolute top-20 left-10 w-72 h-72 bg-gradient-to-r from-[var(--accent-blush)] to-[var(--accent-peach)] rounded-full blur-3xl opacity-25 animate-float-slow pointer-events-none"
+      className="absolute top-20 left-10 w-72 h-72 rounded-full blur-3xl opacity-25 animate-float-slow pointer-events-none"
+      style={{ backgroundColor: "var(--hero-orb-primary)" }}
       aria-hidden="true"
     />
     <div
-      className="absolute bottom-10 right-10 w-96 h-96 bg-gradient-to-r from-[var(--accent-cream)] to-[var(--accent-blush)] rounded-full blur-3xl opacity-20 animate-float-slow animation-delay-300 pointer-events-none"
+      className="absolute bottom-10 right-10 w-96 h-96 rounded-full blur-3xl opacity-20 animate-float-slow animation-delay-300 pointer-events-none"
+      style={{ backgroundColor: "var(--hero-orb-secondary)" }}
       aria-hidden="true"
     />
   </section>

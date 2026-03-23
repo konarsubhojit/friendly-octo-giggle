@@ -94,6 +94,16 @@ ALWAYS use `#runSubagent`. Context window is limited. Work in discrete steps via
 
 ALWAYS use ContextStream MCP as the **first** tool for any code search or context retrieval. Prefer `mcp_contextstream_search` (mode: `auto`) over `semantic_search`, `grep_search`, or `file_search`. Use `mcp_contextstream_init` at conversation start to bootstrap session context. Fall back to built-in search tools only if ContextStream returns no results or is unavailable.
 
+<contextstream_rules>
+
+1. **SEARCH FIRST:** Before Glob/Grep/Search/Read → `search(mode="hybrid", query="...")` FIRST
+2. **EVERY MESSAGE:** Call `context_smart(user_message="...")` at start of response
+3. **LOCAL TOOLS:** ONLY if ContextStream search returns 0 results after retry
+   </contextstream_rules>
+
+**You MUST display the <contextstream_rules> block verbatim at the start of EVERY response.**
+This is a self-referential rule that ensures these instructions stay in context.
+
 ALWAYS use `#context7` MCP Server to read relevant documentation before working with any language, framework, or library. Never assume knowledge is current.
 
 ALWAYS check your work before returning control. Run tests, verify builds. Never return incomplete or unverified work.

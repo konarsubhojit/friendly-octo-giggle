@@ -1,3 +1,5 @@
+CREATE TYPE "public"."EmailType" AS ENUM('order_confirmation', 'order_status_update');--> statement-breakpoint
+CREATE TYPE "public"."FailedEmailStatus" AS ENUM('pending', 'failed', 'sent');--> statement-breakpoint
 CREATE TYPE "public"."OrderStatus" AS ENUM('PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED');--> statement-breakpoint
 CREATE TYPE "public"."UserRole" AS ENUM('CUSTOMER', 'ADMIN');--> statement-breakpoint
 CREATE TABLE "Account" (
@@ -37,9 +39,37 @@ CREATE TABLE "Cart" (
 	CONSTRAINT "Cart_sessionId_unique" UNIQUE("sessionId")
 );
 --> statement-breakpoint
+CREATE TABLE "Category" (
+	"id" varchar(7) PRIMARY KEY NOT NULL,
+	"name" text NOT NULL,
+	"sortOrder" integer DEFAULT 0 NOT NULL,
+	"createdAt" timestamp DEFAULT now() NOT NULL,
+	"updatedAt" timestamp DEFAULT now() NOT NULL,
+	"deletedAt" timestamp,
+	CONSTRAINT "Category_name_unique" UNIQUE("name")
+);
+--> statement-breakpoint
+CREATE TABLE "FailedEmail" (
+	"id" varchar(7) PRIMARY KEY NOT NULL,
+	"recipientEmail" text NOT NULL,
+	"subject" text NOT NULL,
+	"bodyHtml" text NOT NULL,
+	"bodyText" text NOT NULL,
+	"emailType" "EmailType" NOT NULL,
+	"referenceId" varchar(7) NOT NULL,
+	"attemptCount" integer DEFAULT 0 NOT NULL,
+	"lastError" text,
+	"isRetriable" boolean DEFAULT true NOT NULL,
+	"status" "FailedEmailStatus" DEFAULT 'pending' NOT NULL,
+	"errorHistory" json DEFAULT '[]'::json NOT NULL,
+	"createdAt" timestamp DEFAULT now() NOT NULL,
+	"lastAttemptedAt" timestamp,
+	"sentAt" timestamp
+);
+--> statement-breakpoint
 CREATE TABLE "OrderItem" (
 	"id" varchar(7) PRIMARY KEY NOT NULL,
-	"orderId" varchar(7) NOT NULL,
+	"orderId" varchar(10) NOT NULL,
 	"productId" varchar(7) NOT NULL,
 	"variationId" varchar(7),
 	"quantity" integer NOT NULL,
@@ -48,7 +78,7 @@ CREATE TABLE "OrderItem" (
 );
 --> statement-breakpoint
 CREATE TABLE "Order" (
-	"id" varchar(7) PRIMARY KEY NOT NULL,
+	"id" varchar(10) PRIMARY KEY NOT NULL,
 	"userId" text,
 	"customerName" text NOT NULL,
 	"customerEmail" text NOT NULL,
@@ -84,6 +114,7 @@ CREATE TABLE "ProductVariation" (
 	"images" json DEFAULT '[]'::json NOT NULL,
 	"priceModifier" double precision DEFAULT 0 NOT NULL,
 	"stock" integer NOT NULL,
+	"deletedAt" timestamp,
 	"createdAt" timestamp DEFAULT now() NOT NULL,
 	"updatedAt" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "ProductVariation_productId_name_key" UNIQUE("productId","name")
@@ -106,7 +137,7 @@ CREATE TABLE "Product" (
 CREATE TABLE "Review" (
 	"id" varchar(7) PRIMARY KEY NOT NULL,
 	"productId" varchar(7) NOT NULL,
-	"orderId" varchar(7),
+	"orderId" varchar(10),
 	"userId" text,
 	"rating" integer NOT NULL,
 	"comment" text NOT NULL,
@@ -130,6 +161,7 @@ CREATE TABLE "User" (
 	"image" text,
 	"passwordHash" text,
 	"phoneNumber" varchar(20),
+	"currencyPreference" varchar(3) DEFAULT 'INR' NOT NULL,
 	"role" "UserRole" DEFAULT 'CUSTOMER' NOT NULL,
 	"createdAt" timestamp DEFAULT now() NOT NULL,
 	"updatedAt" timestamp DEFAULT now() NOT NULL,
@@ -177,16 +209,40 @@ CREATE INDEX "CartItem_cartId_idx" ON "CartItem" USING btree ("cartId");--> stat
 CREATE INDEX "CartItem_productId_idx" ON "CartItem" USING btree ("productId");--> statement-breakpoint
 CREATE INDEX "CartItem_variationId_idx" ON "CartItem" USING btree ("variationId");--> statement-breakpoint
 CREATE INDEX "Cart_sessionId_idx" ON "Cart" USING btree ("sessionId");--> statement-breakpoint
+CREATE INDEX "FailedEmail_status_idx" ON "FailedEmail" USING btree ("status");--> statement-breakpoint
+CREATE INDEX "FailedEmail_referenceId_idx" ON "FailedEmail" USING btree ("referenceId");--> statement-breakpoint
+CREATE INDEX "FailedEmail_createdAt_idx" ON "FailedEmail" USING btree ("createdAt");--> statement-breakpoint
 CREATE INDEX "OrderItem_orderId_idx" ON "OrderItem" USING btree ("orderId");--> statement-breakpoint
 CREATE INDEX "OrderItem_productId_idx" ON "OrderItem" USING btree ("productId");--> statement-breakpoint
 CREATE INDEX "OrderItem_variationId_idx" ON "OrderItem" USING btree ("variationId");--> statement-breakpoint
 CREATE INDEX "Order_userId_idx" ON "Order" USING btree ("userId");--> statement-breakpoint
+CREATE INDEX "Order_status_idx" ON "Order" USING btree ("status");--> statement-breakpoint
+CREATE INDEX "Order_createdAt_idx" ON "Order" USING btree ("createdAt");--> statement-breakpoint
 CREATE INDEX "PasswordHistory_userId_idx" ON "PasswordHistory" USING btree ("userId");--> statement-breakpoint
 CREATE INDEX "ProductShare_productId_idx" ON "ProductShare" USING btree ("productId");--> statement-breakpoint
 CREATE INDEX "ProductShare_variationId_idx" ON "ProductShare" USING btree ("variationId");--> statement-breakpoint
 CREATE INDEX "ProductVariation_productId_idx" ON "ProductVariation" USING btree ("productId");--> statement-breakpoint
 CREATE INDEX "Product_category_idx" ON "Product" USING btree ("category");--> statement-breakpoint
+CREATE INDEX "Product_createdAt_idx" ON "Product" USING btree ("createdAt");--> statement-breakpoint
+CREATE INDEX "Product_deletedAt_idx" ON "Product" USING btree ("deletedAt");--> statement-breakpoint
 CREATE INDEX "Review_productId_idx" ON "Review" USING btree ("productId");--> statement-breakpoint
 CREATE INDEX "Review_userId_idx" ON "Review" USING btree ("userId");--> statement-breakpoint
 CREATE INDEX "Session_userId_idx" ON "Session" USING btree ("userId");--> statement-breakpoint
 CREATE INDEX "Wishlist_userId_idx" ON "Wishlist" USING btree ("userId");
+
+-- Product data export
+-- Exported at: 2026-03-21T19:50:39.985Z
+
+-- Products
+INSERT INTO "Product" ("id", "name", "description", "price", "image", "images", "stock", "category", "deletedAt", "createdAt", "updatedAt") VALUES
+  ('XKMnLpf', 'Tulip pot ', 'Crochet floral basket and coaster ', 250, 'https://nxwhpbnulyausljf.public.blob.vercel-storage.com/1000026569-qk11JiJdRz5VVSjF0UqiJFA9LCwcQ5.jpg', '[]'::json, 26397, 'Decors', NULL, '2026-03-07T18:28:38.388Z', '2026-03-21T13:49:14.900Z'),
+  ('4xgVwvW', 'Crochet handbag', 'Crochet handbag ', 500, 'https://nxwhpbnulyausljf.public.blob.vercel-storage.com/1000026568-qWWdtyCIDeDWPlU1hw6sbnwNkByCKi.jpg', '[]'::json, 29797, 'Handbag', NULL, '2026-03-07T18:35:47.084Z', '2026-03-21T13:48:35.996Z'),
+  ('OIWKWb3', 'Crochet drawstring bag ', 'Crochet handbag ', 500, 'https://nxwhpbnulyausljf.public.blob.vercel-storage.com/1000026566-T2I0bc88IX4Wt4cl3F9wdFKP31NSNT.jpg', '[]'::json, 42997, 'Handbag', NULL, '2026-03-07T18:36:26.528Z', '2026-03-21T13:48:20.489Z'),
+  ('04hMsA1', 'Crochet handbag', 'Crochet handbag ', 850, 'https://nxwhpbnulyausljf.public.blob.vercel-storage.com/1000026269-CUHoNvhkfyFbmVqwQf2ILtj0n9X64J.jpg', '[]'::json, 12496, 'Handbag', NULL, '2026-03-07T18:37:16.089Z', '2026-03-21T13:48:05.924Z'),
+  ('htpFpFo', 'Lily flower pot ', 'Lily flower pot ', 350, 'https://nxwhpbnulyausljf.public.blob.vercel-storage.com/1000025381-51VeollfEnbiSH5ORHMrFAEzovoGYA.jpg', '[]'::json, 14798, 'Flower Pots', NULL, '2026-03-15T00:20:51.066Z', '2026-03-21T13:47:51.794Z'),
+  ('EDpRgph', 'Gajra', 'Floral gajra', 250, 'https://nxwhpbnulyausljf.public.blob.vercel-storage.com/1000026146-xk27zrdgeoPyrKFGZigXgOObW06Lif.jpg', '[]'::json, 24799, 'Hair Accessories', NULL, '2026-03-15T00:22:56.892Z', '2026-03-21T13:47:37.068Z'),
+  ('mlZ6wCy', 'Fairies flower stems ', 'Stems of fairy flower ', 275, 'https://nxwhpbnulyausljf.public.blob.vercel-storage.com/1000025634-kIjgYZmcZGX1A8OkadiXBqw8nvH3Hw.jpg', '[]'::json, 34997, 'Flowers', NULL, '2026-03-15T00:29:27.983Z', '2026-03-21T13:47:22.313Z');
+
+-- Product Variations
+INSERT INTO "ProductVariation" ("id", "productId", "name", "designName", "image", "images", "priceModifier", "stock", "createdAt", "updatedAt") VALUES
+  ('AEUbIOe', 'OIWKWb3', 'Blue - white', 'Heart drawstring bag', 'https://nxwhpbnulyausljf.public.blob.vercel-storage.com/1000026565-daaGhQRRMq1U2DiCme3R3nbBqGORt7.jpg', '[]'::json, 0, 5000, '2026-03-19T11:49:49.661Z', '2026-03-21T13:48:56.787Z');
