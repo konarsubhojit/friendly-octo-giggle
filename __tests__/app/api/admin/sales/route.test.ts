@@ -125,7 +125,8 @@ describe("GET /api/admin/sales", () => {
       user: { id: "admin-1", role: "ADMIN" },
     });
     mockGetCachedData.mockImplementation(
-      async (_key: string, _ttl: number, fetcher: () => Promise<unknown>) => fetcher(),
+      async (_key: string, _ttl: number, fetcher: () => Promise<unknown>) =>
+        fetcher(),
     );
 
     const { drizzleDb } = await import("@/lib/db");
