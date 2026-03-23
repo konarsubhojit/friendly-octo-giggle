@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, startTransition, useEffect, useState } from "react";
+import { memo, startTransition, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Product } from "@/lib/types";
@@ -38,14 +38,14 @@ interface ProductImageAreaProps {
 }
 
 const DEFAULT_CATEGORY = "All";
-const DEFAULT_BATCH_SIZE = 15;
+const DEFAULT_BATCH_SIZE = 20;
 
-function createProductsApiHref(
+const createProductsApiHref = (
   offset: number,
   limit: number,
   search: string,
   selectedCategory: string,
-) {
+) => {
   const params = new URLSearchParams();
 
   if (search) {
@@ -61,12 +61,12 @@ function createProductsApiHref(
 
   const queryString = params.toString();
   return queryString ? `/api/products?${queryString}` : "/api/products";
-}
+};
 
-function mergeProducts(
+const mergeProducts = (
   existingProducts: ProductGridItem[],
   nextProducts: ProductGridItem[],
-) {
+) => {
   const productsById = new Map(
     existingProducts.map((product) => [product.id, product]),
   );
@@ -78,7 +78,7 @@ function mergeProducts(
   }
 
   return Array.from(productsById.values());
-}
+};
 
 const ProductImageArea = memo(
   ({ product, eagerLoad }: ProductImageAreaProps) => {
@@ -153,6 +153,13 @@ const ProductGrid = ({
   const [canLoadMore, setCanLoadMore] = useState(hasNextPage);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const isLoadingRef = useRef(false);
+  const canLoadMoreRef = useRef(hasNextPage);
+  const visibleCountRef = useRef(products.length);
+  const searchRef = useRef(search);
+  const categoryRef = useRef(selectedCategory);
+  const batchSizeRef = useRef(batchSize);
 
   const categoryFilters = [DEFAULT_CATEGORY, ...categories];
 
@@ -164,25 +171,35 @@ const ProductGrid = ({
   useEffect(() => {
     setVisibleProducts(products);
     setCanLoadMore(hasNextPage);
+    canLoadMoreRef.current = hasNextPage;
+    visibleCountRef.current = products.length;
     setIsLoadingMore(false);
+    isLoadingRef.current = false;
     setLoadError(null);
   }, [products, hasNextPage, search, selectedCategory]);
 
-  const loadMoreProducts = async () => {
-    if (isLoadingMore || !canLoadMore) {
-      return;
-    }
+  useEffect(() => {
+    searchRef.current = search;
+    categoryRef.current = selectedCategory;
+    batchSizeRef.current = batchSize;
+  }, [search, selectedCategory, batchSize]);
 
+  const loadMore = useCallback(async () => {
+    if (isLoadingRef.current || !canLoadMoreRef.current) return;
+
+    isLoadingRef.current = true;
     setIsLoadingMore(true);
     setLoadError(null);
+
+    const currentOffset = visibleCountRef.current;
 
     try {
       const response = await fetch(
         createProductsApiHref(
-          visibleProducts.length,
-          batchSize,
-          search,
-          selectedCategory,
+          currentOffset,
+          batchSizeRef.current,
+          searchRef.current,
+          categoryRef.current,
         ),
         { method: "GET", headers: { Accept: "application/json" } },
       );
@@ -204,17 +221,43 @@ const ProductGrid = ({
       const nextHasMore = Boolean(payload.data?.hasMore);
 
       startTransition(() => {
-        setVisibleProducts((currentProducts) =>
-          mergeProducts(currentProducts, nextProducts),
-        );
+        setVisibleProducts((currentProducts) => {
+          const merged = mergeProducts(currentProducts, nextProducts);
+          visibleCountRef.current = merged.length;
+          return merged;
+        });
         setCanLoadMore(nextHasMore);
+        canLoadMoreRef.current = nextHasMore;
       });
     } catch {
       setLoadError("Could not load more products. Please try again.");
     } finally {
       setIsLoadingMore(false);
+      isLoadingRef.current = false;
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (
+          entry?.isIntersecting &&
+          canLoadMoreRef.current &&
+          !isLoadingRef.current
+        ) {
+          void loadMore();
+        }
+      },
+      { rootMargin: "200px" },
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [loadMore]);
 
   return (
     <main
@@ -334,27 +377,11 @@ const ProductGrid = ({
           </div>
 
           <div className="mt-8 border-t border-[var(--border-warm)] pt-6">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-sm font-medium text-[var(--text-muted)]">
-                Showing {visibleProducts.length} product
-                {visibleProducts.length === 1 ? "" : "s"}
-                {canLoadMore ? " so far" : "."}
-              </p>
-              {canLoadMore ? (
-                <button
-                  type="button"
-                  onClick={() => void loadMoreProducts()}
-                  disabled={isLoadingMore}
-                  className="rounded-full bg-[var(--btn-primary)] px-5 py-3 text-sm font-semibold text-white shadow-warm transition-all duration-200 hover:shadow-warm-lg disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {isLoadingMore ? "Loading more..." : `Load ${batchSize} more`}
-                </button>
-              ) : (
-                <span className="text-sm font-medium text-[var(--text-muted)]">
-                  You have reached the end of this result set.
-                </span>
-              )}
-            </div>
+            <p className="text-sm font-medium text-[var(--text-muted)]">
+              Showing {visibleProducts.length} product
+              {visibleProducts.length === 1 ? "" : "s"}
+              {canLoadMore ? " so far" : "."}
+            </p>
 
             {loadError ? (
               <p role="alert" className="mt-3 text-sm font-medium text-red-600">
@@ -362,6 +389,20 @@ const ProductGrid = ({
               </p>
             ) : null}
           </div>
+
+          <div ref={sentinelRef} className="h-4" aria-hidden="true" />
+
+          {isLoadingMore && (
+            <div className="mt-4 flex justify-center py-4" aria-live="polite">
+              <div className="h-7 w-7 animate-spin rounded-full border-2 border-[var(--accent-rose)] border-t-transparent" />
+            </div>
+          )}
+
+          {!canLoadMore && visibleProducts.length > 0 && (
+            <p className="mt-2 text-center text-sm text-[var(--text-muted)]">
+              You&apos;ve seen all products.
+            </p>
+          )}
         </>
       )}
     </main>

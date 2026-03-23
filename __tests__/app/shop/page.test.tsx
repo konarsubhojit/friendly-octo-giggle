@@ -126,7 +126,7 @@ describe("app/shop/page", () => {
 
     expect(mockSearchProductIdsCached).toHaveBeenCalledWith("flowers", {
       category: undefined,
-      limit: 16,
+      limit: 25,
     });
     expect(mockFindMinimalByIds).toHaveBeenCalledWith(
       ["prod002", "prod001"],
@@ -136,6 +136,6 @@ describe("app/shop/page", () => {
     expect(screen.getByText("Lily Basket")).toBeInTheDocument();
     expect(screen.getByText("Rose Bouquet")).toBeInTheDocument();
     expect(screen.getByText("Grid count: 2")).toBeInTheDocument();
-    expect(screen.getByText("Grid batch: 15")).toBeInTheDocument();
+    expect(screen.getByText("Grid batch: 20")).toBeInTheDocument();
   });
 });
