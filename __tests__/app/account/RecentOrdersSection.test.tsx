@@ -50,9 +50,13 @@ describe("RecentOrdersSection", () => {
     render(<RecentOrdersSection />);
 
     expect(
-      await screen.findByText("Rose Gift Box, Lily Vase and 1 more", {}, {
-        timeout: 15000,
-      }),
+      await screen.findByText(
+        "Rose Gift Box, Lily Vase and 1 more",
+        {},
+        {
+          timeout: 15000,
+        },
+      ),
     ).toBeInTheDocument();
 
     expect(screen.getByText("Recent Orders")).toBeInTheDocument();

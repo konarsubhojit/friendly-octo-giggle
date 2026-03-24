@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 
-const decodeSecret = (value: string) => Buffer.from(value, "base64").toString("utf8");
+const decodeSecret = (value: string) =>
+  Buffer.from(value, "base64").toString("utf8");
 const STRONG_PASSWORD = decodeSecret("U3Ryb25nUGFzczEh");
 const WEAK_PASSWORD = decodeSecret("d2Vhaw==");
 const MISMATCH_PASSWORD = decodeSecret("ZGlmZmVyZW50");

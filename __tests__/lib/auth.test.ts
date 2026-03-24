@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, beforeAll } from "vitest";
 
-const decodeSecret = (value: string) => Buffer.from(value, "base64").toString("utf8");
+const decodeSecret = (value: string) =>
+  Buffer.from(value, "base64").toString("utf8");
 const TEST_HASH = decodeSecret("aGFzaGVkLXBhc3M=");
 const TEST_PASSWORD = decodeSecret("cGFzcw==");
 const TEST_PASSWORD_ALT = decodeSecret("cGFzczEyMw==");

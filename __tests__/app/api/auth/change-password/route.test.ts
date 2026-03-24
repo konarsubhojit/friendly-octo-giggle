@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 
-const decodeSecret = (value: string) => Buffer.from(value, "base64").toString("utf8");
+const decodeSecret = (value: string) =>
+  Buffer.from(value, "base64").toString("utf8");
 const HASH_COLUMN = "pwHashColumn";
 const OLD_HASH = decodeSecret("b2xkLWhhc2g=");
 const OLD_PASSWORD = decodeSecret("T2xkUGFzczEh");
@@ -79,17 +80,14 @@ describe("POST /api/auth/change-password", () => {
   it("returns 401 when not authenticated", async () => {
     mockAuth.mockResolvedValue(null);
 
-    const req = new NextRequest(
-      "http://localhost/api/auth/change-password",
-      {
-        method: "POST",
-        body: JSON.stringify({
-          currentPassword: OLD_PASSWORD,
-          newPassword: NEW_PASSWORD,
-          confirmNewPassword: NEW_PASSWORD,
-        }),
-      },
-    );
+    const req = new NextRequest("http://localhost/api/auth/change-password", {
+      method: "POST",
+      body: JSON.stringify({
+        currentPassword: OLD_PASSWORD,
+        newPassword: NEW_PASSWORD,
+        confirmNewPassword: NEW_PASSWORD,
+      }),
+    });
 
     const res = await POST(req);
     expect(res.status).toBe(401);
@@ -107,17 +105,14 @@ describe("POST /api/auth/change-password", () => {
     mockHashPassword.mockResolvedValue("new-hash");
     mockSavePasswordToHistory.mockResolvedValue(undefined);
 
-    const req = new NextRequest(
-      "http://localhost/api/auth/change-password",
-      {
-        method: "POST",
-        body: JSON.stringify({
-          currentPassword: OLD_PASSWORD,
-          newPassword: NEW_STRONG_PASSWORD,
-          confirmNewPassword: NEW_STRONG_PASSWORD,
-        }),
-      },
-    );
+    const req = new NextRequest("http://localhost/api/auth/change-password", {
+      method: "POST",
+      body: JSON.stringify({
+        currentPassword: OLD_PASSWORD,
+        newPassword: NEW_STRONG_PASSWORD,
+        confirmNewPassword: NEW_STRONG_PASSWORD,
+      }),
+    });
 
     const res = await POST(req);
     const data = await res.json();
@@ -135,17 +130,14 @@ describe("POST /api/auth/change-password", () => {
     });
     mockVerifyPassword.mockResolvedValue(false);
 
-    const req = new NextRequest(
-      "http://localhost/api/auth/change-password",
-      {
-        method: "POST",
-        body: JSON.stringify({
-          currentPassword: WRONG_PASSWORD,
-          newPassword: NEW_STRONG_PASSWORD,
-          confirmNewPassword: NEW_STRONG_PASSWORD,
-        }),
-      },
-    );
+    const req = new NextRequest("http://localhost/api/auth/change-password", {
+      method: "POST",
+      body: JSON.stringify({
+        currentPassword: WRONG_PASSWORD,
+        newPassword: NEW_STRONG_PASSWORD,
+        confirmNewPassword: NEW_STRONG_PASSWORD,
+      }),
+    });
 
     const res = await POST(req);
     const data = await res.json();
@@ -164,17 +156,14 @@ describe("POST /api/auth/change-password", () => {
     mockVerifyPassword.mockResolvedValue(true);
     mockCheckPasswordHistory.mockResolvedValue(true);
 
-    const req = new NextRequest(
-      "http://localhost/api/auth/change-password",
-      {
-        method: "POST",
-        body: JSON.stringify({
-          currentPassword: OLD_PASSWORD,
-          newPassword: REUSED_PASSWORD,
-          confirmNewPassword: REUSED_PASSWORD,
-        }),
-      },
-    );
+    const req = new NextRequest("http://localhost/api/auth/change-password", {
+      method: "POST",
+      body: JSON.stringify({
+        currentPassword: OLD_PASSWORD,
+        newPassword: REUSED_PASSWORD,
+        confirmNewPassword: REUSED_PASSWORD,
+      }),
+    });
 
     const res = await POST(req);
     const data = await res.json();
@@ -186,17 +175,14 @@ describe("POST /api/auth/change-password", () => {
   it("returns 400 when validation fails (weak password)", async () => {
     mockAuth.mockResolvedValue({ user: { id: "user-1" } });
 
-    const req = new NextRequest(
-      "http://localhost/api/auth/change-password",
-      {
-        method: "POST",
-        body: JSON.stringify({
-          currentPassword: OLD_PASSWORD,
-          newPassword: WEAK_PASSWORD,
-          confirmNewPassword: WEAK_PASSWORD,
-        }),
-      },
-    );
+    const req = new NextRequest("http://localhost/api/auth/change-password", {
+      method: "POST",
+      body: JSON.stringify({
+        currentPassword: OLD_PASSWORD,
+        newPassword: WEAK_PASSWORD,
+        confirmNewPassword: WEAK_PASSWORD,
+      }),
+    });
 
     const res = await POST(req);
     expect(res.status).toBe(400);
@@ -212,17 +198,14 @@ describe("POST /api/auth/change-password", () => {
       passwordHash: null,
     });
 
-    const req = new NextRequest(
-      "http://localhost/api/auth/change-password",
-      {
-        method: "POST",
-        body: JSON.stringify({
-          currentPassword: OLD_PASSWORD,
-          newPassword: NEW_STRONG_PASSWORD,
-          confirmNewPassword: NEW_STRONG_PASSWORD,
-        }),
-      },
-    );
+    const req = new NextRequest("http://localhost/api/auth/change-password", {
+      method: "POST",
+      body: JSON.stringify({
+        currentPassword: OLD_PASSWORD,
+        newPassword: NEW_STRONG_PASSWORD,
+        confirmNewPassword: NEW_STRONG_PASSWORD,
+      }),
+    });
 
     const res = await POST(req);
     expect(res.status).toBe(400);
@@ -234,17 +217,14 @@ describe("POST /api/auth/change-password", () => {
     mockAuth.mockResolvedValue({ user: { id: "user-1" } });
     mockFindFirst.mockResolvedValue(null);
 
-    const req = new NextRequest(
-      "http://localhost/api/auth/change-password",
-      {
-        method: "POST",
-        body: JSON.stringify({
-          currentPassword: OLD_PASSWORD,
-          newPassword: NEW_STRONG_PASSWORD,
-          confirmNewPassword: NEW_STRONG_PASSWORD,
-        }),
-      },
-    );
+    const req = new NextRequest("http://localhost/api/auth/change-password", {
+      method: "POST",
+      body: JSON.stringify({
+        currentPassword: OLD_PASSWORD,
+        newPassword: NEW_STRONG_PASSWORD,
+        confirmNewPassword: NEW_STRONG_PASSWORD,
+      }),
+    });
 
     const res = await POST(req);
     expect(res.status).toBe(400);
