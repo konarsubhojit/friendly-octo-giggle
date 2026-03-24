@@ -21,6 +21,14 @@ describe("env", () => {
     expect(env.REDIS_URL).toBe("redis://localhost:6379");
   });
 
+  it("exports READ_DATABASE_URL when provided", async () => {
+    vi.stubEnv("DATABASE_URL", "postgresql://localhost/write");
+    vi.stubEnv("READ_DATABASE_URL", "postgresql://localhost/read");
+    vi.stubEnv("NODE_ENV", "test");
+    const { env } = await import("@/lib/env");
+    expect(env.READ_DATABASE_URL).toBe("postgresql://localhost/read");
+  });
+
   it("REDIS_URL is optional (may be undefined)", async () => {
     vi.stubEnv("DATABASE_URL", "postgresql://localhost/test");
     vi.stubEnv("NODE_ENV", "test");
@@ -31,6 +39,8 @@ describe("env", () => {
   it("throws when NODE_ENV has invalid value", async () => {
     vi.stubEnv("DATABASE_URL", "postgresql://localhost/test");
     vi.stubEnv("NODE_ENV", "staging" as "development");
-    await expect(import("@/lib/env")).rejects.toThrow("Invalid environment variables");
+    await expect(import("@/lib/env")).rejects.toThrow(
+      "Invalid environment variables",
+    );
   });
 });

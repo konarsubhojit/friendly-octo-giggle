@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { registerSchema } from "@/lib/validations";
 import { apiSuccess, apiError, handleApiError } from "@/lib/api-utils";
 import { hashPassword, savePasswordToHistory } from "@/lib/password";
-import { drizzleDb } from "@/lib/db";
+import { primaryDrizzleDb } from "@/lib/db";
 import { users } from "@/lib/schema";
 import { eq, or } from "drizzle-orm";
 import { logAuthEvent } from "@/lib/logger";
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
       conditions.push(eq(users.phoneNumber, phoneNumber));
     }
 
-    const existingUser = await drizzleDb.query.users.findFirst({
+    const existingUser = await primaryDrizzleDb.query.users.findFirst({
       where: or(...conditions),
     });
 
@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
 
     const passwordHash = await hashPassword(password);
 
-    const [newUser] = await drizzleDb
+    const [newUser] = await primaryDrizzleDb
       .insert(users)
       .values({
         name,

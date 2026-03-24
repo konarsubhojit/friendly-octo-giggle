@@ -48,6 +48,7 @@ import {
   inArray,
   type SQL,
 } from "drizzle-orm";
+import { withReplicas } from "drizzle-orm/pg-core";
 import { Product, ProductInput } from "./types";
 import { env } from "./env";
 import {
@@ -98,21 +99,30 @@ const schema = {
 // ─── Connection Pool (singleton for serverless) ─────────
 
 const globalForDb = globalThis as unknown as {
-  pool: Pool | undefined;
+  writePool: Pool | undefined;
+  readPool: Pool | undefined;
 };
 
-const createPool = () =>
+const createPool = (connectionString: string) =>
   new Pool({
-    connectionString: env.DATABASE_URL,
+    connectionString,
   });
 
-// Using ??= pattern for singleton to avoid recreating pools on hot reloads
-const pool = (globalForDb.pool ??= createPool());
-if (env.NODE_ENV === "development") globalForDb.pool = pool;
+const writePool = (globalForDb.writePool ??= createPool(env.DATABASE_URL));
+const readPool = (globalForDb.readPool ??= createPool(
+  env.READ_DATABASE_URL ?? env.DATABASE_URL,
+));
+
+if (env.NODE_ENV === "development") {
+  globalForDb.writePool = writePool;
+  globalForDb.readPool = readPool;
+}
 
 // ─── Drizzle Instance ───────────────────────────────────
 
-export const drizzleDb = drizzle(pool, { schema });
+export const primaryDrizzleDb = drizzle(writePool, { schema });
+export const readDrizzleDb = drizzle(readPool, { schema });
+export const drizzleDb = withReplicas(primaryDrizzleDb, [readDrizzleDb]);
 
 // Export type for use in other files
 export type DrizzleDb = typeof drizzleDb;
@@ -389,7 +399,7 @@ export const db = {
     },
 
     create: async (input: ProductInput): Promise<Product> => {
-      const [row] = await drizzleDb
+      const [row] = await primaryDrizzleDb
         .insert(products)
         .values({ ...input, updatedAt: new Date() })
         .returning();
@@ -404,7 +414,7 @@ export const db = {
       id: string,
       input: Partial<ProductInput>,
     ): Promise<Product | null> => {
-      const [row] = await drizzleDb
+      const [row] = await primaryDrizzleDb
         .update(products)
         .set({ ...input, updatedAt: new Date() })
         .where(eq(products.id, id))
@@ -425,7 +435,7 @@ export const db = {
 
     delete: async (id: string): Promise<boolean> => {
       // Soft delete: set deletedAt timestamp instead of removing the row
-      const result = await drizzleDb
+      const result = await primaryDrizzleDb
         .update(products)
         .set({ deletedAt: new Date(), updatedAt: new Date() })
         .where(and(eq(products.id, id), isNull(products.deletedAt)))
@@ -485,7 +495,7 @@ export const db = {
       userId: string,
       productId: string,
     ): Promise<{ userId: string; productId: string }> => {
-      const [row] = await drizzleDb
+      const [row] = await primaryDrizzleDb
         .insert(wishlists)
         .values({ userId, productId })
         .onConflictDoNothing()
@@ -501,7 +511,7 @@ export const db = {
      * Remove a product from the user's wishlist
      */
     remove: async (userId: string, productId: string): Promise<boolean> => {
-      const result = await drizzleDb
+      const result = await primaryDrizzleDb
         .delete(wishlists)
         .where(
           and(eq(wishlists.userId, userId), eq(wishlists.productId, productId)),
@@ -535,7 +545,7 @@ export const db = {
       productId: string,
       variationId: string | null,
     ): Promise<string> => {
-      const [row] = await drizzleDb
+      const [row] = await primaryDrizzleDb
         .insert(productShares)
         .values({ productId, variationId: variationId ?? null })
         .returning({ key: productShares.key });

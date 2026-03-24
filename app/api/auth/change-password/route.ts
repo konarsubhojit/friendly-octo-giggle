@@ -7,7 +7,7 @@ import {
   checkPasswordHistory,
   savePasswordToHistory,
 } from "@/lib/password";
-import { drizzleDb } from "@/lib/db";
+import { primaryDrizzleDb } from "@/lib/db";
 import { users } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import { auth } from "@/lib/auth";
@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
 
     const { currentPassword, newPassword } = parseResult.data;
 
-    const user = await drizzleDb.query.users.findFirst({
+    const user = await primaryDrizzleDb.query.users.findFirst({
       where: eq(users.id, session.user.id),
     });
 
@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
 
     const newHash = await hashPassword(newPassword);
 
-    await drizzleDb
+    await primaryDrizzleDb
       .update(users)
       .set({ passwordHash: newHash, updatedAt: new Date() })
       .where(eq(users.id, session.user.id));

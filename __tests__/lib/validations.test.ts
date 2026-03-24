@@ -313,6 +313,14 @@ describe("EnvSchema", () => {
     expect(result.DATABASE_URL).toBe("postgres://localhost/db");
   });
 
+  it("accepts optional READ_DATABASE_URL", () => {
+    const result = EnvSchema.parse({
+      DATABASE_URL: "postgres://localhost/write",
+      READ_DATABASE_URL: "postgres://localhost/read",
+    });
+    expect(result.READ_DATABASE_URL).toBe("postgres://localhost/read");
+  });
+
   it("rejects missing DATABASE_URL", () => {
     expect(() => EnvSchema.parse({})).toThrow();
   });

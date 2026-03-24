@@ -3,7 +3,7 @@ import Google from "next-auth/providers/google";
 import MicrosoftEntraId from "next-auth/providers/microsoft-entra-id";
 import Credentials from "next-auth/providers/credentials";
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
-import { drizzleDb } from "@/lib/db";
+import { primaryDrizzleDb } from "@/lib/db";
 import { users, accounts, sessions, verificationTokens } from "@/lib/schema";
 import type { Adapter } from "next-auth/adapters";
 import { logAuthEvent } from "./logger";
@@ -11,7 +11,7 @@ import { verifyPassword } from "./password";
 import { eq, or } from "drizzle-orm";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
-  adapter: DrizzleAdapter(drizzleDb, {
+  adapter: DrizzleAdapter(primaryDrizzleDb, {
     usersTable: users,
     accountsTable: accounts,
     sessionsTable: sessions,
@@ -52,7 +52,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         if (!identifier || !password) return null;
 
         // Look up user by email first, then by phoneNumber
-        const user = await drizzleDb.query.users.findFirst({
+        const user = await primaryDrizzleDb.query.users.findFirst({
           where: or(
             eq(users.email, identifier),
             eq(users.phoneNumber, identifier),

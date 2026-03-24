@@ -119,6 +119,7 @@ const QSTASH_REQUIRED_KEYS = [
 export const EnvSchema = z
   .object({
     DATABASE_URL: z.string(),
+    READ_DATABASE_URL: z.string().optional(),
     REDIS_URL: z.string().optional(),
     UPSTASH_REDIS_REST_URL: z.url().optional(),
     UPSTASH_REDIS_REST_TOKEN: z.string().optional(),

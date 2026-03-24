@@ -1,5 +1,5 @@
 import bcrypt from "bcryptjs";
-import { drizzleDb } from "@/lib/db";
+import { primaryDrizzleDb } from "@/lib/db";
 import { passwordHistory } from "@/lib/schema";
 import { eq, desc, inArray } from "drizzle-orm";
 
@@ -18,7 +18,7 @@ export const checkPasswordHistory = async (
   userId: string,
   newPlainText: string,
 ): Promise<boolean> => {
-  const recentEntries = await drizzleDb
+  const recentEntries = await primaryDrizzleDb
     .select({ passwordHash: passwordHistory.passwordHash })
     .from(passwordHistory)
     .where(eq(passwordHistory.userId, userId))
@@ -37,13 +37,13 @@ export const savePasswordToHistory = async (
   userId: string,
   hash: string,
 ): Promise<void> => {
-  await drizzleDb.insert(passwordHistory).values({
+  await primaryDrizzleDb.insert(passwordHistory).values({
     userId,
     passwordHash: hash,
   });
 
   // Get all entries ordered by newest first, then delete any beyond the limit
-  const allEntries = await drizzleDb
+  const allEntries = await primaryDrizzleDb
     .select({ id: passwordHistory.id })
     .from(passwordHistory)
     .where(eq(passwordHistory.userId, userId))
@@ -51,7 +51,7 @@ export const savePasswordToHistory = async (
 
   const toDelete = allEntries.slice(MAX_HISTORY_ENTRIES);
   if (toDelete.length > 0) {
-    await drizzleDb.delete(passwordHistory).where(
+    await primaryDrizzleDb.delete(passwordHistory).where(
       inArray(
         passwordHistory.id,
         toDelete.map((entry) => entry.id),
