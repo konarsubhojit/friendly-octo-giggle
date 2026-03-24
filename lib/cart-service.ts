@@ -1,4 +1,4 @@
-import { drizzleDb } from "@/lib/db";
+import { primaryDrizzleDb as drizzleDb } from "@/lib/db";
 import { products, carts, cartItems, users } from "@/lib/schema";
 import { eq, and, isNull } from "drizzle-orm";
 import { logError } from "@/lib/logger";
@@ -421,9 +421,7 @@ function redisItemsToCartResponse(items: CartItemRedis[]) {
   };
 }
 
-export async function getCart(
-  identity: CartIdentity,
-): Promise<{
+export async function getCart(identity: CartIdentity): Promise<{
   cart:
     | ReturnType<typeof serializeCart>
     | ReturnType<typeof redisItemsToCartResponse>

@@ -1,13 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 import { GET, PATCH } from "@/app/api/orders/[id]/route";
-import { drizzleDb } from "@/lib/db";
+import { primaryDrizzleDb as drizzleDb } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { getCachedData, invalidateCache } from "@/lib/redis";
 import { invalidateUserOrderCaches } from "@/lib/cache";
 
 vi.mock("@/lib/db", () => ({
-  drizzleDb: {
+  primaryDrizzleDb: {
     query: { orders: { findFirst: vi.fn() } },
     update: vi.fn(() => ({
       set: vi.fn(() => ({

@@ -46,6 +46,7 @@
     "@upstash/search-ui": "^0.1.5",
     "@vercel/analytics": "^1.6.1",
     "@vercel/blob": "^2.2.0",
+    "@vercel/edge-config": "^1.4.3",
     "@vercel/functions": "^3.4.3",
     "@vercel/speed-insights": "^2.0.0",
     "autoprefixer": "^10.4.24",

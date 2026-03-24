@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { drizzleDb } from "@/lib/db";
+import { primaryDrizzleDb as drizzleDb } from "@/lib/db";
 import { orders } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import {

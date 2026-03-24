@@ -3,7 +3,7 @@ import { NextRequest } from "next/server";
 import { PATCH, GET } from "@/app/api/admin/users/[id]/route";
 
 vi.mock("@/lib/db", () => ({
-  drizzleDb: {
+  primaryDrizzleDb: {
     query: { users: { findFirst: vi.fn() } },
     update: vi.fn(() => ({
       set: vi.fn(() => ({
@@ -17,19 +17,19 @@ vi.mock("@/lib/db", () => ({
 vi.mock("@/lib/schema", () => ({ users: { id: "id", role: "role" } }));
 vi.mock("drizzle-orm", () => ({ eq: vi.fn() }));
 vi.mock("@/lib/auth", () => ({ auth: vi.fn() }));
-vi.mock("@/lib/redis", () => ({
-  getCachedData: vi.fn(),
-  invalidateCache: vi.fn(),
+vi.mock("@/lib/cache", () => ({
+  cacheAdminUserById: vi.fn(),
+  invalidateAdminUserCaches: vi.fn(),
 }));
 vi.mock("@/lib/logger", () => ({ logError: vi.fn() }));
 
-import { drizzleDb } from "@/lib/db";
+import { primaryDrizzleDb as drizzleDb } from "@/lib/db";
 import { auth } from "@/lib/auth";
-import { getCachedData, invalidateCache } from "@/lib/redis";
+import { cacheAdminUserById, invalidateAdminUserCaches } from "@/lib/cache";
 
 const mockAuth = vi.mocked(auth);
-const mockGetCachedData = vi.mocked(getCachedData);
-const mockInvalidateCache = vi.mocked(invalidateCache);
+const mockCacheAdminUserById = vi.mocked(cacheAdminUserById);
+const mockInvalidateAdminUserCaches = vi.mocked(invalidateAdminUserCaches);
 
 const adminSession = { user: { id: "admin1", role: "ADMIN" } };
 
@@ -92,7 +92,7 @@ describe("PATCH /api/admin/users/[id]", () => {
     const where = vi.fn(() => ({ returning }));
     const set = vi.fn(() => ({ where }));
     vi.mocked(drizzleDb.update).mockReturnValue({ set } as never);
-    mockInvalidateCache.mockResolvedValue(undefined as never);
+    mockInvalidateAdminUserCaches.mockResolvedValue(undefined as never);
 
     const res = await PATCH(makeRequest({ role: "ADMIN" }), makeParams());
     const data = await res.json();
@@ -100,7 +100,7 @@ describe("PATCH /api/admin/users/[id]", () => {
     expect(res.status).toBe(200);
     expect(data.data.user).toEqual(updatedUser);
     expect(drizzleDb.update).toHaveBeenCalled();
-    expect(mockInvalidateCache).toHaveBeenCalledWith("admin:users:*");
+    expect(mockInvalidateAdminUserCaches).toHaveBeenCalledWith("user1");
   });
 });
 
@@ -117,7 +117,7 @@ describe("GET /api/admin/users/[id]", () => {
 
   it("returns 404 when user not found", async () => {
     mockAuth.mockResolvedValue(adminSession as never);
-    mockGetCachedData.mockResolvedValue(null as never);
+    mockCacheAdminUserById.mockResolvedValue(null as never);
     const res = await GET(makeRequest(), makeParams());
     expect(res.status).toBe(404);
   });
@@ -135,18 +135,16 @@ describe("GET /api/admin/users/[id]", () => {
       image: null,
       _count: { orders: 2, sessions: 1 },
     };
-    mockGetCachedData.mockResolvedValue(user as never);
+    mockCacheAdminUserById.mockResolvedValue(user as never);
 
     const res = await GET(makeRequest(), makeParams());
     const data = await res.json();
 
     expect(res.status).toBe(200);
     expect(data.data.user).toEqual(user);
-    expect(mockGetCachedData).toHaveBeenCalledWith(
-      "admin:user:user1",
-      300,
+    expect(mockCacheAdminUserById).toHaveBeenCalledWith(
+      "user1",
       expect.any(Function),
-      30,
     );
   });
 
@@ -174,12 +172,12 @@ describe("GET /api/admin/users/[id]", () => {
       sessions: [{ sessionToken: "s1" }],
     };
 
-    mockGetCachedData.mockImplementation(
-      async (_key: string, _ttl: number, fetcher: () => Promise<unknown>) => fetcher(),
+    mockCacheAdminUserById.mockImplementation(
+      async (_id: string, fetcher: () => Promise<unknown>) => fetcher(),
     );
-    (drizzleDb.query.users.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(
-      mockUserData,
-    );
+    (
+      drizzleDb.query.users.findFirst as ReturnType<typeof vi.fn>
+    ).mockResolvedValue(mockUserData);
 
     const res = await GET(makeRequest(), makeParams());
     const data = await res.json();
@@ -193,12 +191,12 @@ describe("GET /api/admin/users/[id]", () => {
   it("exercises getCachedData fetcher callback when user is not found", async () => {
     mockAuth.mockResolvedValue(adminSession as never);
 
-    mockGetCachedData.mockImplementation(
-      async (_key: string, _ttl: number, fetcher: () => Promise<unknown>) => fetcher(),
+    mockCacheAdminUserById.mockImplementation(
+      async (_id: string, fetcher: () => Promise<unknown>) => fetcher(),
     );
-    (drizzleDb.query.users.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(
-      null,
-    );
+    (
+      drizzleDb.query.users.findFirst as ReturnType<typeof vi.fn>
+    ).mockResolvedValue(null);
 
     const res = await GET(makeRequest(), makeParams());
     const data = await res.json();
@@ -219,7 +217,7 @@ describe("GET /api/admin/users/[id]", () => {
 
   it("returns 500 on error in GET", async () => {
     mockAuth.mockResolvedValue(adminSession as never);
-    mockGetCachedData.mockRejectedValue(new Error("Cache error"));
+    mockCacheAdminUserById.mockRejectedValue(new Error("Cache error"));
 
     const res = await GET(makeRequest(), makeParams());
     expect(res.status).toBe(500);

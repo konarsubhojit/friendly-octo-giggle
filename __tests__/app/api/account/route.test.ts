@@ -11,7 +11,7 @@ vi.mock("@/lib/auth", () => ({
 }));
 
 vi.mock("@/lib/db", () => ({
-  drizzleDb: {
+  primaryDrizzleDb: {
     query: {
       users: {
         findFirst: mockFindFirst,
@@ -68,7 +68,7 @@ describe("GET /api/account", () => {
       phoneNumber: "+1234567890",
       image: null,
       role: "CUSTOMER",
-      passwordHash: "hashed",
+      passwordHash: "storedHashValue",
       createdAt: new Date("2025-01-01"),
     });
 

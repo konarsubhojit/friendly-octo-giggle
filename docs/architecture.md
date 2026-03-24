@@ -1,916 +1,444 @@
 # Architecture Documentation
 
 ## Table of Contents
-1. [System Overview](#system-overview)
-2. [Tech Stack](#tech-stack)
-3. [Database Schema](#database-schema)
-4. [Caching Strategy](#caching-strategy)
-5. [Authentication Flow](#authentication-flow)
-6. [Data Flow](#data-flow)
-7. [Performance Optimizations](#performance-optimizations)
-8. [Security Measures](#security-measures)
-9. [Serverless Architecture](#serverless-architecture)
-10. [Product Variations](#product-variations)
-11. [Cart Implementation](#cart-implementation)
-12. [Order Processing](#order-processing)
+
+1. [Current Status Snapshot](#1-current-status-snapshot)
+2. [System Overview](#2-system-overview)
+3. [Tech Stack](#3-tech-stack)
+4. [Data Layer](#4-data-layer)
+5. [Authentication and Access Control](#5-authentication-and-access-control)
+6. [Request and Data Flows](#6-request-and-data-flows)
+7. [Caching, Search, and State](#7-caching-search-and-state)
+8. [Async Work, Email, and Scheduled Jobs](#8-async-work-email-and-scheduled-jobs)
+9. [Security, Configuration, and Deployment](#9-security-configuration-and-deployment)
+10. [Performance Characteristics](#10-performance-characteristics)
 
 ---
 
-## 1. System Overview
+## 1. Current Status Snapshot
 
-This is a modern e-commerce platform built on Next.js 16 with App Router, designed for serverless deployment on platforms like Vercel. The architecture follows a three-tier pattern optimized for edge computing:
+As of March 2026, the project is a Next.js 16 App Router storefront running primarily as a server-rendered application with ISR for public pages and dynamic route handlers for user- and admin-specific data.
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                     Client Layer (React 19)                  │
-│  • Server Components (default)                               │
-│  • Client Components (user interactions)                     │
-│  • Dynamic Rendering (force-dynamic)                         │
-└─────────────────────────────────────────────────────────────┘
-                              ↓
-┌─────────────────────────────────────────────────────────────┐
-│              Application Layer (Next.js API Routes)          │
-│  • /api/products  → Product CRUD operations                  │
-│  • /api/orders    → Order creation & management              │
-│  • /api/cart      → Cart operations (guest + user)           │
-│  • /api/admin/*   → Admin-only endpoints (RBAC)              │
-│  • /api/auth/*    → NextAuth.js OAuth handlers               │
-└─────────────────────────────────────────────────────────────┘
-                              ↓
-┌─────────────────────────────────────────────────────────────┐
-│                   Data Layer (Distributed)                   │
-│  ┌─────────────────┐  ┌──────────────────┐  ┌─────────────┐│
-│  │   PostgreSQL    │  │   Redis Cache    │  │ Vercel Blob ││
-│  │   (Primary DB)  │  │ (Performance)    │  │  (Files)    ││
-│  │  via Drizzle    │  │  60s TTL + SWR   │  │             ││
-│  └─────────────────┘  └──────────────────┘  └─────────────┘│
-└─────────────────────────────────────────────────────────────┘
-```
+Key current-state points:
 
-**Architecture Principles:**
-- **Serverless-First:** Singleton patterns, connection pooling, lazy initialization
-- **Edge-Optimized:** Redis caching at edge locations, dynamic rendering
-- **Type-Safe:** End-to-end TypeScript with Drizzle & Zod validation
-- **Observable:** Structured logging with Pino, request tracing, performance metrics
+- Public pages such as the home page and shop page use `revalidate = 60` instead of forcing every request dynamic.
+- The application uses Neon PostgreSQL through Drizzle with a primary connection plus an optional read replica via `withReplicas`.
+- Authentication is handled by NextAuth v5 with Google OAuth, Microsoft Entra ID, and credentials-based login.
+- Sessions use JWT strategy with secure cookies, while the Drizzle adapter persists auth-related records such as users, accounts, and verification tokens.
+- Redis, Upstash Search, QStash, MailerSend, Google SMTP, and Vercel Edge Config are all optional integrations; the codebase degrades gracefully when those environment variables are absent.
+- Email delivery is asynchronous and event-driven, with failed-email persistence plus retry cron jobs.
+- Exchange rates are refreshed on a schedule and cached by UTC date.
 
 ---
 
-## 2. Tech Stack
+## 2. System Overview
 
-### Frontend Technologies
-| Technology | Version | Purpose |
-|------------|---------|---------|
-| **React** | 19.2.4 | UI library with server components |
-| **Next.js** | 16.1.6 | Full-stack framework with App Router |
-| **TypeScript** | 5.9.3 | Type safety and developer experience |
-| **Tailwind CSS** | 4.1.18 | Utility-first styling with JIT compiler |
-| **PostCSS** | Latest | CSS processing pipeline |
+The architecture is a serverless-first e-commerce system built around a small number of stable layers:
 
-### Backend Technologies
-| Technology | Version | Purpose |
-|------------|---------|---------|
-| **Node.js** | 18+ | JavaScript runtime |
-| **NextAuth.js** | 5.0 | Authentication with OAuth providers |
-| **Drizzle ORM** | 0.45.1 | Type-safe ORM with migrations |
-| **PostgreSQL** | 15+ | Primary relational database |
-| **Redis (ioRedis)** | 5.9.3 | Caching layer with stampede prevention |
-| **Zod** | 4.3.6 | Runtime schema validation |
-| **Pino** | 10.3.1 | High-performance structured logging |
+```
+┌──────────────────────────────────────────────────────────────┐
+│                    Presentation Layer                        │
+│  Next.js App Router                                          │
+│  • Server Components by default                              │
+│  • Client Components for interactivity                       │
+│  • Root providers: Redux, Theme, Currency, Session, Toast    │
+│  • Vercel Analytics + Speed Insights                         │
+└──────────────────────────────────────────────────────────────┘
+                               ↓
+┌──────────────────────────────────────────────────────────────┐
+│                    Application Layer                         │
+│  • Route handlers under app/api                              │
+│  • Server Actions for some order and Redis workflows         │
+│  • Domain services in lib/                                   │
+│  • Zod validation + structured logging                       │
+└──────────────────────────────────────────────────────────────┘
+                               ↓
+┌──────────────────────────────────────────────────────────────┐
+│                    Data and Service Layer                    │
+│  • Neon PostgreSQL via Drizzle ORM                           │
+│  • Optional Upstash Redis cache                              │
+│  • Optional Upstash Search index                             │
+│  • Optional QStash delivery for async email events           │
+│  • Optional Vercel Edge Config for feature/shipping config   │
+│  • Vercel Blob for product images                            │
+└──────────────────────────────────────────────────────────────┘
+```
 
-### Infrastructure & Deployment
-- **Vercel:** Serverless deployment platform
-- **Vercel Blob:** File storage for product images
-- **Neon/Railway:** Managed PostgreSQL with connection pooling
-- **Upstash:** Managed Redis with global edge replication
+The dominant design principles in the current code are:
 
-### Key Libraries
-- `drizzle-orm`: PostgreSQL ORM with TypeScript support
-- `@auth/drizzle-adapter`: Drizzle integration for NextAuth
-- `pg`: Node.js PostgreSQL client
-- `pino-pretty`: Human-readable logs in development
+- Server Components perform direct database reads where possible.
+- User- and admin-scoped mutations go through route handlers or server-side services.
+- Infra dependencies are treated as optional accelerators, not hard runtime requirements.
+- Shared concerns such as logging, validation, caching, and serialization live in `lib/`.
 
 ---
 
-## 3. Database Schema
+## 3. Tech Stack
 
-> **Note:** This project uses Drizzle ORM. The schema examples below use SQL-like notation for readability, but the actual implementation is in `lib/schema.ts` using Drizzle's `pgTable` syntax.
+### Frontend
 
-### Authentication Models
+| Technology    | Version | Purpose                                               |
+| ------------- | ------- | ----------------------------------------------------- |
+| React         | 19.2.4  | Rendering, client interactivity, server components    |
+| Next.js       | 16.1.6  | App Router, route handlers, ISR, image optimization   |
+| TypeScript    | 5.9.3   | Static typing across app, services, and tests         |
+| Tailwind CSS  | 4.1.18  | Styling system and design tokens                      |
+| Redux Toolkit | 2.11.2  | Shared client state for cart, orders, admin, wishlist |
 
-**User**
-```sql
-model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String    @unique
-  emailVerified DateTime?
-  image         String?
-  role          UserRole  @default(CUSTOMER)  // CUSTOMER | ADMIN
-  accounts      Account[]  // OAuth accounts
-  sessions      Session[]  // Database sessions
-  orders        Order[]    // Purchase history
-  cart          Cart?      // One-to-one cart relationship
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-}
-```
+### Backend and Domain Services
 
-**Account** - OAuth provider accounts (Google, GitHub, etc.)
-- Stores provider-specific tokens and metadata
-- Linked to User via `userId` foreign key
+| Technology      | Version       | Purpose                                               |
+| --------------- | ------------- | ----------------------------------------------------- |
+| NextAuth        | 5.0.0-beta.30 | Authentication and session management                 |
+| Drizzle ORM     | 0.45.1        | Type-safe PostgreSQL access                           |
+| Neon Serverless | 0.10.0        | PostgreSQL connection pools for Vercel-style runtimes |
+| Zod             | 4.3.6         | Runtime validation for inputs and env                 |
+| Pino            | 10.3.1        | Structured logging and event tracing                  |
 
-**Session** - Database-backed session storage
-- Token-based with expiration
-- Provides better security than JWT-only approach
+### Edge and Supporting Services
 
-### E-Commerce Models
-
-**Product** - Base product entity
-```sql
-model Product {
-  id          String             @id @default(cuid())
-  name        String
-  description String
-  price       Float              // Base price (variations add modifiers)
-  image       String             // Primary product image URL
-  stock       Int                // Total stock (sum of all variations)
-  category    String             // For filtering/organization
-  variations  ProductVariation[] // Size/color/design options
-  orderItems  OrderItem[]
-  cartItems   CartItem[]
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
-}
-```
-
-**ProductVariation** - SKU-level variants
-```sql
-model ProductVariation {
-  id            String   @id @default(cuid())
-  productId     String
-  name          String   // "Large", "Blue", "Design A"
-  designName    String   // "Classic", "Modern", "Vintage"
-  image         String?  // Override product image
-  priceModifier Float    @default(0)  // +/- from base price
-  stock         Int      // Independent stock tracking
-  product       Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  
-  @@unique([productId, name])  // Prevent duplicate variations
-}
-```
-
-**Order** - Customer orders
-```sql
-model Order {
-  id              String      @id @default(cuid())
-  userId          String?     // Null for guest checkouts
-  customerName    String
-  customerEmail   String
-  customerAddress String
-  totalAmount     Float       // Calculated total (captured at order time)
-  status          OrderStatus @default(PENDING)
-  items           OrderItem[]
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
-}
-
-enum OrderStatus {
-  PENDING      // Order created, payment pending
-  PROCESSING   // Payment confirmed, preparing shipment
-  SHIPPED      // Order dispatched
-  DELIVERED    // Order completed
-  CANCELLED    // Order cancelled by customer/admin
-}
-```
-
-**OrderItem** - Line items in orders
-```sql
-model OrderItem {
-  id          String            @id @default(cuid())
-  orderId     String
-  productId   String
-  variationId String?           // Selected variation (optional)
-  quantity    Int
-  price       Float             // Price snapshot at order time
-  order       Order             @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product     Product           @relation(fields: [productId], references: [id])
-  variation   ProductVariation? @relation(fields: [variationId], references: [id])
-}
-```
-
-**Cart & CartItem** - Shopping cart system
-```sql
-model Cart {
-  id        String     @id @default(cuid())
-  userId    String?    @unique  // For authenticated users
-  sessionId String?    @unique  // For guest users
-  items     CartItem[]
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-}
-
-model CartItem {
-  id          String            @id @default(cuid())
-  cartId      String
-  productId   String
-  variationId String?
-  quantity    Int
-  cart        Cart              @relation(fields: [cartId], references: [id], onDelete: Cascade)
-  product     Product           @relation(fields: [productId], references: [id])
-  variation   ProductVariation? @relation(fields: [variationId], references: [id])
-  
-  @@unique([cartId, productId, variationId])  // Prevent duplicate cart items
-}
-```
-
-### Relationships Summary
-- **User → Cart:** One-to-one (users have a single active cart)
-- **User → Orders:** One-to-many (purchase history)
-- **Product → Variations:** One-to-many (multiple SKUs per product)
-- **Order → OrderItems:** One-to-many with cascade delete
-- **Cart → CartItems:** One-to-many with cascade delete
+| Service                           | Purpose                                                 |
+| --------------------------------- | ------------------------------------------------------- |
+| Upstash Redis                     | Cache, stale-while-revalidate, lightweight shared state |
+| Upstash Search                    | Product search index with DB fallback                   |
+| Upstash QStash                    | Signed async email event delivery                       |
+| Vercel Blob                       | Hosted media storage                                    |
+| Vercel Edge Config                | Feature flags and shipping configuration                |
+| Vercel Analytics / Speed Insights | Runtime telemetry                                       |
+| MailerSend / Google SMTP          | Email delivery backends                                 |
 
 ---
 
-## 4. Caching Strategy
+## 4. Data Layer
 
-### Redis Implementation with Stampede Prevention
+### Database Topology
 
-The caching layer uses a **stale-while-revalidate (SWR)** pattern to prevent cache stampede under high load:
+The codebase uses three Drizzle exports from `lib/db.ts`:
 
-```typescript
-// lib/redis.ts core logic
-export async function getCachedData<T>(
-  key: string,
-  ttl: number,        // Cache freshness period (seconds)
-  fetcher: () => Promise<T>,
-  staleTime = 5       // Extra time to serve stale data
-): Promise<T> {
-  const cached = await redis.get(key);
-  
-  if (cached) {
-    const data = JSON.parse(cached) as { value: T; timestamp: number };
-    const age = Date.now() - data.timestamp;
-    
-    // 1. Fresh data: Return immediately
-    if (age < ttl * 1000) {
-      return data.value;
-    }
-    
-    // 2. Stale data: Return immediately + background revalidation
-    if (age < (ttl + staleTime) * 1000) {
-      setImmediate(async () => {
-        const fresh = await fetcher();
-        await redis.setex(key, ttl + staleTime, JSON.stringify({
-          value: fresh,
-          timestamp: Date.now(),
-        }));
-      });
-      return data.value;  // Return stale data without waiting
-    }
-  }
-  
-  // 3. Cache miss: Use distributed lock to prevent stampede
-  const lockKey = `lock:${key}`;
-  const lockValue = Math.random().toString(36);
-  const lockAcquired = await redis.set(lockKey, lockValue, 'EX', 10, 'NX');
-  
-  if (lockAcquired) {
-    try {
-      const fresh = await fetcher();
-      await redis.setex(key, ttl + staleTime, JSON.stringify({
-        value: fresh,
-        timestamp: Date.now(),
-      }));
-      return fresh;
-    } finally {
-      // Release lock with Lua script (atomic check-and-delete)
-      const script = `
-        if redis.call("get", KEYS[1]) == ARGV[1] then
-          return redis.call("del", KEYS[1])
-        else
-          return 0
-        end
-      `;
-      await redis.eval(script, 1, lockKey, lockValue);
-    }
-  } else {
-    // Another process is fetching; wait briefly and retry
-    await new Promise(resolve => setTimeout(resolve, 100));
-    const retryData = await redis.get(key);
-    if (retryData) return JSON.parse(retryData).value as T;
-    
-    // Fallback: fetch without caching
-    return await fetcher();
-  }
-}
-```
+| Export             | Backing connection                 | Current role                                  |
+| ------------------ | ---------------------------------- | --------------------------------------------- |
+| `primaryDrizzleDb` | Primary Neon connection            | Writes, auth, and consistency-sensitive reads |
+| `readDrizzleDb`    | Optional read replica              | Replica-only reads                            |
+| `drizzleDb`        | `withReplicas(primary, [replica])` | Default read path for most queries            |
 
-### Cache Keys & TTL Strategy
-- **`products:all`** - All products list (60s TTL)
-- **`product:{id}`** - Single product details (120s TTL)
-- **`admin:orders:*`** - Order lists (30s TTL)
-- **`lock:{key}`** - Distributed lock (10s expiry)
+`READ_DATABASE_URL` is optional. When it is absent, both read and write traffic use `DATABASE_URL`.
 
-### Cache Invalidation
-Pattern-based invalidation using `SCAN` (non-blocking):
-```typescript
-// Invalidate all product caches after order creation
-await invalidateCache('products:*');
-await invalidateCache('product:abc123');
-```
+### Identifier Strategy
 
-### Benefits
-- **Stampede Prevention:** Only one request fetches data during cache miss
-- **Minimal Latency:** Stale data served instantly while revalidating
-- **High Availability:** Graceful degradation on Redis failures
-- **Serverless-Friendly:** No in-memory state required
+The project no longer assumes generic CUID-style IDs for domain tables. Current patterns are:
+
+- Auth tables such as `User`, `Account`, and `PasswordHistory` use text UUID-style values.
+- Store domain entities such as products, categories, variations, carts, wishlists, reviews, and failed emails use short base62-style IDs.
+- Orders use a dedicated short order ID format.
+
+### Core Domain Tables
+
+Current schema highlights:
+
+- `User`: email, optional password hash, optional phone number, role, currency preference, image metadata.
+- `Product`: base product record with `image`, `images`, category label, stock, and soft-delete timestamp.
+- `ProductVariation`: per-variation stock, image set, name, design name, price modifier, soft-delete timestamp.
+- `Category`: standalone category table with sort order and soft-delete support.
+- `Order`: user association, customer snapshot fields, status, tracking number, shipping provider, timestamps.
+- `OrderItem`: product snapshot with optional variation and `customizationNote`.
+- `Cart` and `CartItem`: authenticated and guest cart support.
+- `Wishlist` and `Review`: user engagement features.
+- `ProductShare`: immutable short-link mapping for shareable product URLs.
+- `FailedEmail`: retry queue and delivery history for email workflows.
+
+### Relationship Model
+
+- Users have many orders, accounts, password history rows, and wishlist entries.
+- Products have many variations, order items, cart items, wishlist entries, and reviews.
+- Orders own their line items via cascade delete.
+- Carts own cart items via cascade delete.
+- Product shares optionally bind a product and a chosen variation.
+
+### Soft Deletes
+
+Products, variations, and categories use `deletedAt` instead of hard deletes for normal removal paths. Most public queries explicitly filter out soft-deleted rows.
 
 ---
 
-## 5. Authentication Flow
+## 5. Authentication and Access Control
 
-### NextAuth.js with Google OAuth
+### Providers and Session Model
 
-**Configuration** (`lib/auth.ts`):
-```typescript
-export const { handlers, signIn, signOut, auth } = NextAuth({
-  adapter: DrizzleAdapter(drizzleDb, {
-    usersTable: users,
-    accountsTable: accounts,
-    sessionsTable: sessions,
-    verificationTokensTable: verificationTokens,
-  }),  // Database session storage
-  providers: [
-    Google({
-      clientId: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      authorization: {
-        params: {
-          prompt: 'consent',
-          access_type: 'offline',
-          response_type: 'code',
-        },
-      },
-    }),
-  ],
-  callbacks: {
-    async session({ session, user }) {
-      session.user.id = user.id;
-      session.user.role = user.role || 'CUSTOMER';
-      return session;
-    },
-    async jwt({ token, user }) {
-      if (user) {
-        token.id = user.id;
-        token.role = user.role || 'CUSTOMER';
-      }
-      return token;
-    },
-  },
-  session: {
-    strategy: 'database',  // More secure than JWT-only
-  },
-  pages: {
-    signIn: '/auth/signin',
-    error: '/auth/error',
-  },
-});
-```
+The current auth layer uses NextAuth v5 with these providers:
 
-### Authentication Flow Diagram
-```
-User clicks "Sign in with Google"
-           ↓
-Next.js redirects to Google OAuth consent screen
-           ↓
-User grants permissions
-           ↓
-Google redirects back with authorization code
-           ↓
-NextAuth exchanges code for access token
-           ↓
-NextAuth fetches user profile from Google
-           ↓
-Drizzle Adapter creates/updates User + Account records
-           ↓
-Session stored in database with expiry
-           ↓
-Session cookie set (httpOnly, secure, sameSite)
-           ↓
-Subsequent requests validated via session token
-```
+- Google OAuth
+- Microsoft Entra ID
+- Credentials login using email or phone number plus password
 
-### Role-Based Access Control (RBAC)
-- **CUSTOMER:** Default role, can browse products and place orders
-- **ADMIN:** Elevated privileges, access to `/admin/*` routes
+The adapter uses `primaryDrizzleDb` so auth flows always hit the primary database. Session handling currently uses:
 
-Middleware protection example:
-```typescript
-// Check admin access in API routes
-const session = await auth();
-if (!session?.user || session.user.role !== 'ADMIN') {
-  return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
-}
-```
+- JWT session strategy
+- secure cookie names in production
+- `httpOnly`, `sameSite=lax`, and `secure` in production
+
+Although NextAuth tables such as `Session` still exist in the schema, the active runtime session strategy is JWT, not database sessions.
+
+### Credentials Flow
+
+The credentials provider supports:
+
+- email or phone number lookup
+- bcrypt-based password verification
+- rejection of OAuth-only accounts without a password hash
+- auth event logging for successful and failed logins
+
+### Authorization
+
+Role-based access control is enforced with the `role` field on the session user object:
+
+- `CUSTOMER` for storefront and account access
+- `ADMIN` for admin APIs and admin screens
+
+Replica lag is treated as a real concern. Consistency-sensitive auth and account flows use the primary database directly instead of the replica-aware composite client.
 
 ---
 
-## 6. Data Flow
+## 6. Request and Data Flows
 
-### Product Listing Flow
-```
-Client Request → /
-         ↓
-Server Component: app/page.tsx
-         ↓
-Direct DB Query: db.products.findAll() [bypasses HTTP/API]
-         ↓
-Drizzle Query with Relations: with: { variations: true }
-         ↓
-PostgreSQL: SELECT * FROM Product JOIN ProductVariation
-         ↓
-Data Serialization: Convert Date objects to ISO strings
-         ↓
-Response: HTML sent to client (rendered on-demand)
-```
+### Public Read Flow
 
-### Order Creation Flow (Transactional)
-```
-POST /api/orders
-         ↓
-1. Validate Request Body
-   ├─ customerName, email, address required
-   └─ items[] array with productId, variationId, quantity
-         ↓
-2. Load Products with Variations
-   ├─ drizzleDb.query.products.findMany({ with: { variations: true } })
-   └─ Verify all products exist
-         ↓
-3. Calculate Total & Check Stock
-   ├─ For each item:
-   │  ├─ Get base price + variation priceModifier
-   │  ├─ Check product.stock or variation.stock
-   │  └─ totalAmount += price * quantity
-   └─ Abort if insufficient stock
-         ↓
-4. Atomic Transaction (drizzleDb.transaction)
-   ├─ Create Order + OrderItems (price snapshots)
-   ├─ Decrement product.stock (always)
-   └─ Decrement variation.stock (if variationId present)
-         ↓
-5. Cache Invalidation
-   ├─ invalidateCache('products:*')
-   ├─ invalidateCache('product:{id}')
-   └─ invalidateCache('admin:orders:*')
-         ↓
-6. Business Event Logging
-   ├─ logBusinessEvent({ event: 'order_created', details: {...} })
-   └─ Structured logs for analytics/monitoring
-         ↓
-7. Response: Serialized order with items
-```
+The current public read path prefers Server Components and direct DB access.
 
-### Cart Management Flow
-```
-Authenticated User               Guest User
-       ↓                              ↓
-  userId: abc123               sessionId: guest_1234567890
-       ↓                              ↓
-Cart.upsert({ userId })      Cart.upsert({ sessionId })
-       ↓                              ↓
-   CartItem.create/update         CartItem.create/update
-       ↓                              ↓
-Session stored in DB          Cookie: cart_session (30 days)
-       ↓                              ↓
-   Persistent across devices     Local to browser
-```
+Example pattern:
+
+1. A page such as `/shop` renders on the server.
+2. It fetches categories and bestsellers directly from Drizzle.
+3. It optionally uses Upstash Search to resolve matching product IDs.
+4. It falls back to DB search when the search service is unavailable.
+5. It returns pre-rendered HTML plus the minimum client logic required for interactivity.
+
+### Products API Flow
+
+`GET /api/products` now behaves as a layered read path:
+
+1. Parse pagination, category, and search params.
+2. If a search term exists, try Upstash Search first.
+3. If search is available, fetch matched IDs and hydrate products in ID order.
+4. Otherwise fall back to DB search through Drizzle helpers.
+5. Return `Cache-Control` headers using `s-maxage` and `stale-while-revalidate`.
+
+### Order Read/Write Flow
+
+Authenticated order routes are dynamic and session-aware:
+
+1. `auth()` resolves the current user.
+2. `GET /api/orders` rejects anonymous access.
+3. `POST /api/orders` validates the caller and delegates to `lib/order-service`.
+4. Service code handles validation, pricing, stock checks, persistence, cache invalidation, and downstream events.
+
+### Cart Model
+
+The current cart architecture still supports two ownership modes:
+
+- authenticated carts keyed by `userId`
+- guest carts keyed by `sessionId`
+
+The database remains the source of truth, while Redis can cache cart results when configured.
+
+### Product Variation and Pricing Model
+
+Variation behavior in the live codebase is more capable than the earlier document described:
+
+- variations can override image and image gallery content
+- each variation has independent stock
+- price is base product price plus variation price modifier
+- order items snapshot unit price at order time
+- order items can carry a `customizationNote`
 
 ---
 
-## 7. Performance Optimizations
+## 7. Caching, Search, and State
 
-### 1. Dynamic Rendering with Direct Database Access
-**Homepage (`app/page.tsx`):**
-```typescript
-export const dynamic = 'force-dynamic';  // Always render on-demand
+### Redis Caching Strategy
 
-export default async function Home() {
-  const products = await db.products.findAll();  // Direct DB access
-  return <ProductGrid products={products} />;
-}
-```
-- Always renders on-demand (no static generation)
-- Direct database access from Server Components
-- Fresh data on every request
+The cache layer in `lib/redis.ts` is optional and implements:
 
-### 2. Redis Caching with SWR
-- Product API endpoints cache responses for 60s
-- Stale-while-revalidate serves stale data during revalidation
-- Distributed locks prevent cache stampede (thundering herd problem)
+- fresh-hit reads
+- stale-while-revalidate behavior
+- distributed lock acquisition with a 10-second TTL
+- `waitUntil()` background refresh on stale hits
+- graceful fetch-through behavior when Redis is unavailable
 
-### 3. Database Connection Pooling
-```typescript
-// lib/db.ts
-const pool = new pg.Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { 
-    rejectUnauthorized: false,
-    checkServerIdentity: () => undefined,
-  },
-  connectionTimeoutMillis: 10000,
-  idleTimeoutMillis: 30000,
-});
-const drizzleDb = drizzle(pool, { schema });
-```
-- Reuses database connections across requests
-- Critical for serverless (no persistent connections)
-- Enhanced SSL configuration accepts self-signed certificates
+Cache invalidation supports both exact-key deletes and glob-based invalidation through Redis `SCAN`.
 
-### 4. Singleton Pattern for Clients
-```typescript
-// Prevent multiple pool/Redis instances in serverless
-const globalForDb = globalThis as { pool?: pg.Pool };
-export const pool = globalForDb.pool ?? createPool();
-if (process.env.NODE_ENV !== 'production') globalForDb.pool = pool;
-```
+Representative cache families include:
 
-### 5. Optimized Queries
-- **Selective Relations:** Only load relations when needed
-  ```typescript
-  with: { variations: true }  // Load variations
-  ```
-- **Indexed Fields:** Database indexes on foreign keys, category, sessionId
-- **Pagination:** Use `limit` and `offset` for large datasets
+- product lists and product detail pages
+- bestseller lists
+- category lists
+- cart snapshots
+- user order lists and order detail records
+- admin lists for products, orders, users, and sales
+- daily exchange-rate snapshots
+- product-share resolution
 
-### 6. Image Optimization
-- Next.js `<Image>` component with automatic optimization
-- Lazy loading with blur placeholders
-- Responsive image sizing with `srcSet`
+### Search Architecture
 
-### Performance Metrics
-- **Time to First Byte (TTFB):** < 300ms (dynamic rendering + Redis cache)
-- **Largest Contentful Paint (LCP):** < 2.5s
-- **Cache Hit Ratio:** > 80% for product listings (Redis layer)
-- **Database Query Time:** < 50ms (with connection pooling)
+Product search is split into two layers:
+
+1. Upstash Search, when configured, provides indexed lookup by query and optional category.
+2. Drizzle/SQL fallback preserves functionality when search infra is missing or degraded.
+
+Order search follows a similar hybrid strategy:
+
+- try Redis-backed order search helpers first
+- fall back to direct SQL search against orders, product names, and variation names
+- cache successful DB search results for short periods
+
+### Client State and Providers
+
+The root layout composes these providers in the browser:
+
+- Redux store
+- theme provider
+- currency provider
+- NextAuth session provider
+- toast notifications
+
+This means user identity, theme selection, currency formatting, and shared UI state are available globally without turning the whole app into a client-rendered shell.
 
 ---
 
-## 8. Security Measures
+## 8. Async Work, Email, and Scheduled Jobs
 
-### 1. SSL/TLS Encryption
-- **Database:** PostgreSQL connections use SSL (`sslmode=require`)
-- **API:** All production traffic over HTTPS (enforced by Vercel)
-- **Redis:** TLS encryption for cache connections
+### Async Email Delivery
 
-### 2. Input Validation with Zod
-```typescript
-// lib/validations.ts
-export const createOrderSchema = z.object({
-  customerName: z.string().min(1).max(100),
-  customerEmail: z.string().email(),
-  customerAddress: z.string().min(10).max(500),
-  items: z.array(z.object({
-    productId: z.string().cuid(),
-    variationId: z.string().cuid().optional(),
-    quantity: z.number().int().min(1).max(100),
-  })).min(1),
-});
+Email dispatch is event-driven.
 
-// Usage in API routes
-const validated = createOrderSchema.parse(requestBody);
-```
+The current flow is:
 
-### 3. Authentication & Authorization
-- **Session Security:**
-  - `httpOnly: true` (prevents XSS attacks)
-  - `secure: true` in production (HTTPS-only)
-  - `sameSite: 'lax'` (CSRF protection)
-- **RBAC:** Admin routes protected with role checks
-- **Database Sessions:** More secure than client-side JWT
+1. Domain code emits a QStash-compatible event payload.
+2. `POST /api/services/email` receives the event.
+3. The route optionally verifies the QStash signature.
+4. It validates the payload with Zod.
+5. It prevents duplicate sends by checking `FailedEmail` for already-sent records of the same reference.
+6. It dispatches either order confirmation or order status update email logic.
 
-### 4. SQL Injection Prevention
-- Drizzle ORM uses parameterized queries (no raw SQL concatenation)
-- Type-safe query builder prevents injection attacks
+### Email Providers
 
-### 5. Rate Limiting & DDoS Protection
-- Vercel edge network provides automatic DDoS mitigation
-- Redis distributed locks prevent cache stampede attacks
+Email delivery currently prefers Google SMTP when configured and falls back to MailerSend when available. If neither provider is configured, the app logs a skipped email event rather than crashing the request.
 
-### 6. Content Security Policy (CSP)
-```typescript
-// next.config.ts
-headers: [
-  {
-    source: '/(.*)',
-    headers: [
-      {
-        key: 'X-Content-Type-Options',
-        value: 'nosniff',
-      },
-      {
-        key: 'X-Frame-Options',
-        value: 'DENY',
-      },
-    ],
-  },
-],
-```
+### Failed Email Persistence and Retry
 
-### 7. Secrets Management
-- Environment variables for sensitive data (never in code)
-- `.env` files excluded from version control
-- Vercel encrypted environment variables
+Non-successful sends are tracked in the `FailedEmail` table with:
 
-### 8. Data Sanitization
-- Automatic date serialization prevents prototype pollution
-- Zod validation sanitizes user inputs
-- No dangerouslySetInnerHTML usage
+- attempt count
+- retriable flag
+- current status (`pending`, `failed`, `sent`)
+- full error history
+- timestamps for created, last attempted, and sent
+
+Retry behavior currently caps cron retries at 20 records per run and 5 attempts per record.
+
+### Scheduled Jobs
+
+Vercel cron is now part of the architecture:
+
+- `/api/cron/retry-emails` every 15 minutes
+- `/api/cron/refresh-rates` every 6 hours
+
+Both routes require either:
+
+- `Authorization: Bearer <CRON_SECRET>` when a secret is configured, or
+- the expected `vercel-cron` user agent fallback
+
+### Exchange Rate Refresh
+
+The exchange-rate cron job:
+
+- fetches INR-based rates from an external API
+- normalizes supported currencies (`USD`, `EUR`, `GBP`) against INR
+- stores the result in cache using a date-scoped key
+- uses TTL until the next UTC midnight, with a stale window for safe refresh
 
 ---
 
-## 9. Serverless Architecture
+## 9. Security, Configuration, and Deployment
 
-### Optimizations for Serverless Deployment
+### Runtime Security Controls
 
-**1. Cold Start Minimization**
-- Singleton pattern for clients (Drizzle, Redis)
-- Lazy initialization (connect on first use)
-- Tree-shaking and code splitting
+Current security controls visible in code include:
 
-**2. Connection Pooling**
-```typescript
-const pool = new pg.Pool({
-  connectionString: process.env.DATABASE_URL,
-  max: 10,                    // Max connections
-  idleTimeoutMillis: 30000,   // Close idle connections
-  connectionTimeoutMillis: 2000,
-});
-```
+- HTTPS redirect in production via `proxy.ts`
+- `Strict-Transport-Security` header on all routes
+- a CSP that whitelists Google, Microsoft, Vercel Analytics, and approved image hosts
+- `Referrer-Policy` and `Permissions-Policy` headers
+- secure auth cookies in production
+- request validation with Zod across env and API inputs
+- QStash signature verification for async email entry points
 
-**3. Stateless Design**
-- No in-memory session storage (uses database)
-- Redis for shared state across function instances
-- Idempotent API endpoints (safe to retry)
+### Environment Validation
 
-**4. Edge Deployment**
-- Redis with global replication (Upstash)
-- Images served from Vercel Blob (CDN)
-- API routes at edge locations
+Environment variables are parsed at import time through a Zod schema in `lib/env.ts`. Invalid configuration fails fast during startup rather than producing partial runtime behavior.
 
-**5. Function Timeout Management**
-- Keep API routes under 10s execution time
-- Background jobs via `setImmediate()` (non-blocking)
-- Webhook callbacks for long-running tasks
+### Optional Edge Configuration
 
-**6. Memory Efficiency**
-- Stream large datasets instead of loading into memory
-- Use `SCAN` for Redis key iteration (non-blocking)
-- Limit query result sizes with `take`
+`lib/edge-config.ts` exposes optional remote config for:
 
-**7. Cost Optimization**
-- Connection pooling reduces database connections
-- Redis caching reduces database queries by 80%
-- Efficient query patterns minimize compute time
+- feature flags such as maintenance mode, sale mode, wishlist, and reviews
+- shipping settings such as free-shipping threshold and delivery estimates
+
+When Vercel Edge Config is not configured, the app uses hard-coded safe defaults.
+
+### Deployment Shape
+
+The project is designed for Vercel-style serverless deployment with:
+
+- App Router pages and route handlers
+- cron routes declared in `vercel.json`
+- Blob-hosted assets whitelisted in `next.config.ts`
+- analytics and performance instrumentation built into the root layout
 
 ---
 
-## 10. Product Variations
+## 10. Performance Characteristics
 
-### How Variations Work
+### Rendering Strategy
 
-**Concept:**
-A single product (e.g., "T-Shirt") can have multiple variations (sizes, colors, designs) with:
-- Independent stock tracking per variation
-- Price modifiers (add/subtract from base price)
-- Unique images per variation (optional)
+The current storefront is not universally dynamic. Public pages now lean on ISR where appropriate:
 
-**Example Schema:**
-```
-Product: Classic T-Shirt
-├─ Base Price: $20.00
-├─ Total Stock: 100
-└─ Variations:
-   ├─ Small / Blue / Classic Design
-   │  ├─ Price Modifier: $0 → Final Price: $20.00
-   │  ├─ Stock: 30
-   │  └─ Image: blue-classic.jpg
-   ├─ Large / Red / Modern Design
-   │  ├─ Price Modifier: +$5 → Final Price: $25.00
-   │  ├─ Stock: 50
-   │  └─ Image: red-modern.jpg
-   └─ XL / Green / Vintage Design
-      ├─ Price Modifier: +$8 → Final Price: $28.00
-      ├─ Stock: 20
-      └─ Image: green-vintage.jpg
-```
+- home page: `revalidate = 60`
+- shop page: `revalidate = 60`
+- user- and admin-specific APIs: dynamic route handlers where personalization is required
 
-### Variation Selection Flow
-```
-1. User views product page
-         ↓
-2. Dropdown/buttons for variation selection (size, color, design)
-         ↓
-3. User selects "Large / Red / Modern Design"
-         ↓
-4. Frontend calculates display price: base + variation.priceModifier
-         ↓
-5. "Add to Cart" sends: { productId, variationId, quantity }
-         ↓
-6. Backend validates:
-   ├─ Variation exists for product
-   ├─ variation.stock >= quantity
-   └─ Creates CartItem with variationId
-         ↓
-7. Order creation:
-   ├─ Price snapshot: product.price + variation.priceModifier
-   ├─ Decrement product.stock (total stock)
-   └─ Decrement variation.stock (SKU stock)
-```
+### Query and Read Optimization
 
-### Stock Management
-- **Product.stock:** Aggregate stock across all variations
-- **ProductVariation.stock:** Stock for specific SKU
-- Both updated atomically in transaction during order creation
-- Stock checks validate variation-level availability
+The main read-path optimizations are:
 
----
+- direct DB access from Server Components
+- read-replica routing via `drizzleDb`
+- primary DB pinning for consistency-sensitive paths
+- targeted relation loading instead of over-fetching
+- SQL-level bestseller ranking instead of in-memory sorting
 
-## 11. Cart Implementation
+### Cache and Search Optimization
 
-### Session-Based vs User-Based Carts
+- product and category reads are cached behind Redis when available
+- search uses indexed lookup first and SQL fallback second
+- order lookups reuse Redis hashes and sets where configured
+- background cache refresh avoids blocking stale responses
 
-**Guest Users (Session-Based):**
-```typescript
-// Generate unique session ID
-const sessionId = `guest_${Date.now()}_${Math.random().toString(36)}`;
+### Failure Tolerance as a Performance Feature
 
-// Store in httpOnly cookie (30-day expiry)
-response.cookies.set('cart_session', sessionId, {
-  httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
-  sameSite: 'lax',
-  maxAge: 60 * 60 * 24 * 30,  // 30 days
-});
+A notable current architectural trait is graceful degradation:
 
-// Query cart by sessionId
-const cart = await drizzleDb.query.carts.findFirst({
-  where: eq(schema.carts.sessionId, sessionId),
-  with: { items: true },
-});
-```
+- no Redis means direct fetches still work
+- no Search means DB search still works
+- no Edge Config means defaults are returned
+- no email provider means order flows do not fail purely because email infra is absent
 
-**Authenticated Users (User-Based):**
-```typescript
-const session = await auth();
-const cart = await drizzleDb.query.carts.findFirst({
-  where: eq(schema.carts.userId, session.user.id),
-  with: { items: true },
-});
-```
-
-### Cart Operations
-
-**Add to Cart:**
-1. Validate product and variation exist
-2. Check stock availability
-3. Find existing cart or create new one
-4. Upsert cart item:
-   - If exists: increment quantity
-   - If new: create cart item
-5. Return updated cart with all items
-
-**Update Quantity:**
-- Use unique constraint: `[cartId, productId, variationId]`
-- Prevents duplicate items for same product+variation combo
-
-**Remove from Cart:**
-```typescript
-DELETE /api/cart/items/{cartItemId}
-```
-
-**Clear Cart:**
-```typescript
-DELETE /api/cart
-// Cascade deletes all CartItems
-// Removes cart_session cookie for guests
-```
-
-### Cart Persistence
-- **Guest Carts:** Expire with cookie (30 days)
-- **User Carts:** Persist indefinitely until checkout or manual clear
-- **Cart Migration:** When guest user logs in, can merge guest cart into user cart (future feature)
-
----
-
-## 12. Order Processing
-
-### Order Lifecycle
-
-```
-PENDING → PROCESSING → SHIPPED → DELIVERED
-    ↓
-CANCELLED (terminal state)
-```
-
-**Status Descriptions:**
-- **PENDING:** Order created, awaiting payment/confirmation
-- **PROCESSING:** Payment confirmed, preparing for shipment
-- **SHIPPED:** Order dispatched, tracking number assigned
-- **DELIVERED:** Order received by customer
-- **CANCELLED:** Order cancelled by customer or admin
-
-### Order Creation Process (Atomic Transaction)
-
-```typescript
-const order = await drizzleDb.transaction(async (tx) => {
-  // Step 1: Create Order + OrderItems
-  const [newOrder] = await tx.insert(schema.orders).values({
-    customerName,
-    customerEmail,
-    customerAddress,
-    totalAmount,
-    status: 'PENDING',
-  }).returning();
-
-  await tx.insert(schema.orderItems).values(
-    items.map(item => ({
-      orderId: newOrder.id,
-      productId: item.productId,
-      variationId: item.variationId,
-      quantity: item.quantity,
-      price: calculatePrice(item),  // Snapshot price
-    }))
-  );
-
-  // Step 2: Decrement Stock (atomic)
-  for (const item of items) {
-    if (item.variationId) {
-      await tx.update(schema.productVariations)
-        .set({ stock: sql`stock - ${item.quantity}` })
-        .where(eq(schema.productVariations.id, item.variationId));
-    }
-    await tx.update(schema.products)
-      .set({ stock: sql`stock - ${item.quantity}` })
-      .where(eq(schema.products.id, item.productId));
-  }
-
-  return newOrder;
-});
-```
-
-### Price Snapshot Strategy
-- Order items store **price at time of order**
-- Prevents discrepancies if product prices change later
-- Formula: `price = product.price + (variation?.priceModifier || 0)`
-
-### Stock Validation
-1. **Pre-Transaction Check:** Validate stock before transaction
-2. **Atomic Decrement:** Use Drizzle SQL expressions for atomic operations
-3. **Rollback on Failure:** Transaction ensures consistency
-
-### Post-Order Actions
-1. **Cache Invalidation:** Clear product and order caches
-2. **Business Event Logging:**
-   ```typescript
-   logBusinessEvent({
-     event: 'order_created',
-     details: {
-       orderId: order.id,
-       totalAmount: order.totalAmount,
-       itemCount: order.items.length,
-       customerEmail: order.customerEmail,
-     },
-   });
-   ```
-3. **Email Notifications:** (Future) Send order confirmation email
-4. **Inventory Alerts:** (Future) Notify admins if stock below threshold
-
-### Admin Order Management
-- **List Orders:** `/api/admin/orders` (paginated, filterable by status)
-- **View Order Details:** `/api/admin/orders/{id}`
-- **Update Status:** `PATCH /api/admin/orders/{id}` (status transitions)
-- **Cancel Order:** Set status to CANCELLED (does NOT restore stock)
-
-### Error Handling
-- **Insufficient Stock:** Return 400 with specific product name
-- **Product Not Found:** Return 404 before transaction
-- **Transaction Failure:** Automatic rollback, no partial orders created
-- **Concurrent Orders:** Database constraints prevent overselling
+This keeps the storefront operational even when optional edge services are unavailable.
 
 ---
 
 ## Summary
 
-This architecture provides:
-✅ **High Performance** - Dynamic rendering, Redis caching, connection pooling
-✅ **Scalability** - Serverless design, edge deployment, stateless functions
-✅ **Security** - Input validation, SSL, RBAC, secure sessions
-✅ **Type Safety** - End-to-end TypeScript with Drizzle & Zod
-✅ **Observability** - Structured logging, performance metrics, request tracing
-✅ **Developer Experience** - Hot reload, type checking, auto-generated types
-✅ **E-Commerce Features** - Product variations, guest carts, atomic transactions
-✅ **Production-Ready** - Error handling, cache invalidation, transaction rollbacks
+The current architecture is a replica-aware, serverless-first Next.js commerce application with optional edge accelerators layered around a stable PostgreSQL core. The biggest differences from earlier versions are the move to ISR-first public pages, JWT-based auth sessions, richer domain schema, optional search and edge-config infrastructure, and the addition of asynchronous email plus scheduled maintenance jobs.
 
-For deployment instructions, see [docs/deployment.md](./deployment.md).
-For getting started, see [docs/getting-started.md](./getting-started.md).
+For deployment details, see [docs/deployment.md](./deployment.md).
+For setup guidance, see [docs/getting-started.md](./getting-started.md).

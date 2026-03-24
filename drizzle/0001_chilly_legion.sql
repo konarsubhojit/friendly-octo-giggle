@@ -1,1 +1,0 @@
-ALTER TABLE "ProductVariation" ADD COLUMN "deletedAt" timestamp;

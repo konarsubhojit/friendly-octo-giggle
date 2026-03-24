@@ -14,6 +14,7 @@ const {
   mockInvalidateProductCaches,
   mockCacheShareResolve,
   mockGetCachedData,
+  mockWithReplicas,
 } = vi.hoisted(() => {
   const mockReturningInsert = vi.fn();
   const mockValues = vi.fn(() => ({ returning: mockReturningInsert }));
@@ -39,6 +40,7 @@ const {
     mockInvalidateProductCaches: vi.fn(),
     mockCacheShareResolve: vi.fn(),
     mockGetCachedData: vi.fn((key, ttl, fetcher) => fetcher()),
+    mockWithReplicas: vi.fn((primary) => primary),
   };
 });
 vi.mock("@neondatabase/serverless", () => ({
@@ -101,6 +103,7 @@ vi.mock("@/lib/schema", () => ({
 vi.mock("@/lib/env", () => ({
   env: {
     DATABASE_URL: "postgres://fake:fake@localhost:5432/fakedb",
+    READ_DATABASE_URL: "postgres://fake:fake@localhost:5432/read-replica",
     NODE_ENV: "test",
   },
 }));
@@ -147,6 +150,10 @@ vi.mock("drizzle-orm", () => ({
   isNull: vi.fn((col: unknown) => ({ op: "isNull", col })),
   ilike: vi.fn((...args: unknown[]) => ({ op: "ilike", args })),
   or: vi.fn((...args: unknown[]) => ({ op: "or", args })),
+}));
+
+vi.mock("drizzle-orm/pg-core", () => ({
+  withReplicas: mockWithReplicas,
 }));
 import { db } from "@/lib/db";
 const now = new Date("2025-01-15T10:00:00.000Z");

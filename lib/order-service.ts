@@ -1,4 +1,4 @@
-import { drizzleDb } from "@/lib/db";
+import { primaryDrizzleDb as drizzleDb } from "@/lib/db";
 import {
   orders,
   orderItems,

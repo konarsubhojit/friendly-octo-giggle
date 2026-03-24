@@ -1,7 +1,7 @@
 import { drizzleDb } from "@/lib/db";
 import { failedEmails } from "@/lib/schema";
 import type { EmailAttemptRecord } from "@/lib/schema";
-import { eq, inArray, count, desc, asc } from "drizzle-orm";
+import { eq, and, inArray, count, desc, asc } from "drizzle-orm";
 import { logError, logBusinessEvent } from "@/lib/logger";
 import { sendEmail } from "./providers";
 import type { EmailMessage } from "./providers";
@@ -247,6 +247,27 @@ export const countPendingFailedEmails = async (): Promise<number> => {
     .from(failedEmails)
     .where(inArray(failedEmails.status, ["pending", "failed"]));
   return rows[0]?.value ?? 0;
+};
+
+const MAX_CRON_RETRY_BATCH = 20;
+const MAX_CRON_RETRY_ATTEMPTS = 5;
+
+export const getRetriableFailedEmails = async (): Promise<FailedEmail[]> => {
+  const rows = await drizzleDb
+    .select()
+    .from(failedEmails)
+    .where(
+      and(
+        inArray(failedEmails.status, ["pending", "failed"]),
+        eq(failedEmails.isRetriable, true),
+      ),
+    )
+    .orderBy(asc(failedEmails.createdAt))
+    .limit(MAX_CRON_RETRY_BATCH);
+
+  return rows.filter(
+    (row) => row.attemptCount < MAX_CRON_RETRY_ATTEMPTS,
+  ) as FailedEmail[];
 };
 
 export type { EmailAttemptRecord } from "@/lib/schema";
