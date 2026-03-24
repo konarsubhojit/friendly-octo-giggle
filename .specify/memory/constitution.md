@@ -1,23 +1,23 @@
 <!--
   Sync Impact Report
   ==================
-  Version change: 1.0.0 → 1.1.0
-  Bump rationale: MINOR — new principle section added (VIII),
-    new architectural constraints documented (search, QStash,
-    admin-auth module), no existing principles removed or
-    redefined.
+  Version change: 1.1.0 → 1.2.0
+  Bump rationale: MINOR — new architectural constraints added
+    (Edge Config, Vercel Cron Jobs, CRON_SECRET auth pattern),
+    no existing principles removed or redefined.
   Modified principles:
     - IV. Serverless & Caching Architecture — expanded to cover
-      background work pattern (void IIFE instead of setImmediate)
-    - V. Security by Default — added admin auth centralization
-      requirement via lib/admin-auth.ts
+      Edge Config for ultra-low-latency configuration reads and
+      Vercel Cron Jobs for scheduled tasks.
+    - V. Security by Default — added CRON_SECRET bearer token
+      requirement for cron endpoints.
   Added sections:
-    - Principle VIII. DRY Shared Utilities
-    - Search infrastructure (Upstash + DB fallback) in
-      Technology & Architecture Constraints
-    - QStash background jobs in Technology & Architecture
-      Constraints
-    - Categories table reference
+    - Edge Config (lib/edge-config.ts) in Technology &
+      Architecture Constraints for feature flags and shipping
+      configuration.
+    - Cron Jobs (vercel.json) in Technology & Architecture
+      Constraints for scheduled email retries and exchange
+      rate refresh.
   Removed sections: None
   Templates requiring updates:
     - .specify/templates/plan-template.md — ✅ aligned
@@ -26,7 +26,7 @@
     - .specify/templates/spec-template.md — ✅ aligned (no
       constitution-specific references)
     - .specify/templates/tasks-template.md — ✅ aligned (phase
-      structure compatible with new principle)
+      structure compatible with new constraints)
     - .specify/templates/checklist-template.md — ✅ aligned
   Follow-up TODOs: None
 -->
@@ -79,6 +79,12 @@ include appropriate `Cache-Control` headers. Static pages MUST
 use ISR with `revalidate` instead of `force-dynamic` where
 possible. Deferred background jobs (email, webhooks) MUST use
 QStash via `lib/qstash.ts` rather than in-process execution.
+Runtime configuration that is read often but changes rarely
+(feature flags, shipping rates) MUST use Vercel Edge Config
+via `lib/edge-config.ts` for sub-millisecond reads — with
+hardcoded defaults as fallback when `EDGE_CONFIG` is unavailable.
+Scheduled recurring tasks (email retries, rate refresh) MUST
+use Vercel Cron Jobs configured in `vercel.json`.
 
 ### V. Security by Default
 
@@ -88,7 +94,10 @@ Drizzle ORM). Sensitive routes MUST check authentication via
 `auth()` from `lib/auth.ts` and enforce RBAC (CUSTOMER / ADMIN).
 Admin routes MUST use the shared `checkAdminAuth()` from
 `lib/admin-auth.ts` — inline auth checks in individual route
-files are prohibited. API routes MUST return `401` for
+files are prohibited. Cron job endpoints (`app/api/cron/`) MUST
+verify requests via `CRON_SECRET` bearer token when the env var
+is set, falling back to `vercel-cron` user-agent validation.
+API routes MUST return `401` for
 unauthenticated and `403` for unauthorized access. Secrets MUST
 reside in `.env.local` and MUST NOT be committed. HTTPS MUST be
 enforced in production. All components MUST follow OWASP Top 10
@@ -157,6 +166,16 @@ files to isolate dependency graphs.
   under `app/api/services/`.
 - **Admin Auth**: Centralized in `lib/admin-auth.ts`. All admin
   API routes MUST import `checkAdminAuth` from this module.
+- **Edge Config**: Vercel Edge Config via `lib/edge-config.ts`
+  for feature flags (`featureFlags`) and shipping configuration
+  (`shippingConfig`). All reads MUST fall back to hardcoded
+  defaults when `EDGE_CONFIG` env var is absent. Edge Config
+  MUST NOT be used for frequently-changing data (use Redis
+  instead).
+- **Cron Jobs**: Scheduled tasks configured in `vercel.json`.
+  Cron routes live under `app/api/cron/` and MUST validate
+  `CRON_SECRET` or `vercel-cron` user-agent. Current schedules:
+  email retry (every 15 min), exchange rate refresh (every 6 hrs).
 - **Accessibility**: Semantic HTML, ARIA attributes (`aria-expanded`,
   `role="menu"`, `aria-haspopup`), and `rel="noopener noreferrer"`
   on external links are mandatory on all interactive components.
@@ -197,4 +216,4 @@ project documentation. Amendments require:
 Runtime development guidance is maintained in
 `.github/copilot-instructions.md` and `docs/development.md`.
 
-**Version**: 1.1.0 | **Ratified**: 2026-03-19 | **Last Amended**: 2026-03-21
+**Version**: 1.2.0 | **Ratified**: 2026-03-19 | **Last Amended**: 2026-03-24
