@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { drizzleDb } from "@/lib/db";
+import { primaryDrizzleDb as drizzleDb } from "@/lib/db";
 import { users } from "@/lib/schema";
 import { desc, lt, ilike, and, or, SQL, count } from "drizzle-orm";
 import { auth } from "@/lib/auth";

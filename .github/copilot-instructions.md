@@ -95,6 +95,12 @@ export async function POST(request: NextRequest) {
 ### Database (Drizzle ORM)
 
 - Always use Drizzle client from `lib/db.ts`
+- `lib/db.ts` exposes three clients:
+  - `drizzleDb` — read-replica composite (default for Server Components and public reads)
+  - `primaryDrizzleDb` — primary/writer (use for auth, account, cart mutations, order status, admin writes, any read-after-write flow)
+  - `readDrizzleDb` — replica reader (rarely imported directly; `drizzleDb` routes reads here automatically)
+- For consistency-sensitive route handlers, import as: `import { primaryDrizzleDb as drizzleDb } from "@/lib/db";`
+- `READ_DATABASE_URL` env var is optional; falls back to `DATABASE_URL`
 - Use transactions for multi-step operations
 - Include relations when needed with `with`
 - Use proper indexing in schema

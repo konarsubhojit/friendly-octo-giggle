@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 
 vi.mock("@/lib/db", () => ({
-  drizzleDb: {
+  primaryDrizzleDb: {
     query: { orders: { findFirst: vi.fn() } },
     update: vi.fn(() => ({ set: vi.fn(() => ({ where: vi.fn() })) })),
   },
@@ -45,7 +45,7 @@ vi.mock("@/lib/qstash", () => ({
 
 import { PATCH, GET } from "@/app/api/admin/orders/[id]/route";
 import { auth } from "@/lib/auth";
-import { drizzleDb } from "@/lib/db";
+import { primaryDrizzleDb as drizzleDb } from "@/lib/db";
 import { cacheAdminOrderById, invalidateAdminOrderCaches } from "@/lib/cache";
 
 const mockAuth = vi.mocked(auth);

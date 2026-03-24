@@ -1,6 +1,7 @@
 # Architecture Documentation
 
 ## Table of Contents
+
 1. [System Overview](#system-overview)
 2. [Tech Stack](#tech-stack)
 3. [Database Schema](#database-schema)
@@ -41,13 +42,15 @@ This is a modern e-commerce platform built on Next.js 16 with App Router, design
 │                   Data Layer (Distributed)                   │
 │  ┌─────────────────┐  ┌──────────────────┐  ┌─────────────┐│
 │  │   PostgreSQL    │  │   Redis Cache    │  │ Vercel Blob ││
-│  │   (Primary DB)  │  │ (Performance)    │  │  (Files)    ││
-│  │  via Drizzle    │  │  60s TTL + SWR   │  │             ││
+│  │ Primary + Read  │  │ (Performance)    │  │  (Files)    ││
+│  │   Replica (Neon)│  │  60s TTL + SWR   │  │             ││
+│  │  via Drizzle    │  │                  │  │             ││
 │  └─────────────────┘  └──────────────────┘  └─────────────┘│
 └─────────────────────────────────────────────────────────────┘
 ```
 
 **Architecture Principles:**
+
 - **Serverless-First:** Singleton patterns, connection pooling, lazy initialization
 - **Edge-Optimized:** Redis caching at edge locations, dynamic rendering
 - **Type-Safe:** End-to-end TypeScript with Drizzle & Zod validation
@@ -58,32 +61,36 @@ This is a modern e-commerce platform built on Next.js 16 with App Router, design
 ## 2. Tech Stack
 
 ### Frontend Technologies
-| Technology | Version | Purpose |
-|------------|---------|---------|
-| **React** | 19.2.4 | UI library with server components |
-| **Next.js** | 16.1.6 | Full-stack framework with App Router |
-| **TypeScript** | 5.9.3 | Type safety and developer experience |
-| **Tailwind CSS** | 4.1.18 | Utility-first styling with JIT compiler |
-| **PostCSS** | Latest | CSS processing pipeline |
+
+| Technology       | Version | Purpose                                 |
+| ---------------- | ------- | --------------------------------------- |
+| **React**        | 19.2.4  | UI library with server components       |
+| **Next.js**      | 16.1.6  | Full-stack framework with App Router    |
+| **TypeScript**   | 5.9.3   | Type safety and developer experience    |
+| **Tailwind CSS** | 4.1.18  | Utility-first styling with JIT compiler |
+| **PostCSS**      | Latest  | CSS processing pipeline                 |
 
 ### Backend Technologies
-| Technology | Version | Purpose |
-|------------|---------|---------|
-| **Node.js** | 18+ | JavaScript runtime |
-| **NextAuth.js** | 5.0 | Authentication with OAuth providers |
-| **Drizzle ORM** | 0.45.1 | Type-safe ORM with migrations |
-| **PostgreSQL** | 15+ | Primary relational database |
-| **Redis (ioRedis)** | 5.9.3 | Caching layer with stampede prevention |
-| **Zod** | 4.3.6 | Runtime schema validation |
-| **Pino** | 10.3.1 | High-performance structured logging |
+
+| Technology          | Version | Purpose                                |
+| ------------------- | ------- | -------------------------------------- |
+| **Node.js**         | 18+     | JavaScript runtime                     |
+| **NextAuth.js**     | 5.0     | Authentication with OAuth providers    |
+| **Drizzle ORM**     | 0.45.1  | Type-safe ORM with migrations          |
+| **PostgreSQL**      | 15+     | Primary relational database            |
+| **Redis (ioRedis)** | 5.9.3   | Caching layer with stampede prevention |
+| **Zod**             | 4.3.6   | Runtime schema validation              |
+| **Pino**            | 10.3.1  | High-performance structured logging    |
 
 ### Infrastructure & Deployment
+
 - **Vercel:** Serverless deployment platform
 - **Vercel Blob:** File storage for product images
-- **Neon/Railway:** Managed PostgreSQL with connection pooling
+- **Neon:** Managed PostgreSQL with connection pooling and read replicas
 - **Upstash:** Managed Redis with global edge replication
 
 ### Key Libraries
+
 - `drizzle-orm`: PostgreSQL ORM with TypeScript support
 - `@auth/drizzle-adapter`: Drizzle integration for NextAuth
 - `pg`: Node.js PostgreSQL client
@@ -98,6 +105,7 @@ This is a modern e-commerce platform built on Next.js 16 with App Router, design
 ### Authentication Models
 
 **User**
+
 ```sql
 model User {
   id            String    @id @default(cuid())
@@ -116,16 +124,19 @@ model User {
 ```
 
 **Account** - OAuth provider accounts (Google, GitHub, etc.)
+
 - Stores provider-specific tokens and metadata
 - Linked to User via `userId` foreign key
 
 **Session** - Database-backed session storage
+
 - Token-based with expiration
 - Provides better security than JWT-only approach
 
 ### E-Commerce Models
 
 **Product** - Base product entity
+
 ```sql
 model Product {
   id          String             @id @default(cuid())
@@ -144,6 +155,7 @@ model Product {
 ```
 
 **ProductVariation** - SKU-level variants
+
 ```sql
 model ProductVariation {
   id            String   @id @default(cuid())
@@ -154,12 +166,13 @@ model ProductVariation {
   priceModifier Float    @default(0)  // +/- from base price
   stock         Int      // Independent stock tracking
   product       Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  
+
   @@unique([productId, name])  // Prevent duplicate variations
 }
 ```
 
 **Order** - Customer orders
+
 ```sql
 model Order {
   id              String      @id @default(cuid())
@@ -184,6 +197,7 @@ enum OrderStatus {
 ```
 
 **OrderItem** - Line items in orders
+
 ```sql
 model OrderItem {
   id          String            @id @default(cuid())
@@ -199,6 +213,7 @@ model OrderItem {
 ```
 
 **Cart & CartItem** - Shopping cart system
+
 ```sql
 model Cart {
   id        String     @id @default(cuid())
@@ -218,12 +233,13 @@ model CartItem {
   cart        Cart              @relation(fields: [cartId], references: [id], onDelete: Cascade)
   product     Product           @relation(fields: [productId], references: [id])
   variation   ProductVariation? @relation(fields: [variationId], references: [id])
-  
+
   @@unique([cartId, productId, variationId])  // Prevent duplicate cart items
 }
 ```
 
 ### Relationships Summary
+
 - **User → Cart:** One-to-one (users have a single active cart)
 - **User → Orders:** One-to-many (purchase history)
 - **Product → Variations:** One-to-many (multiple SKUs per product)
@@ -242,46 +258,54 @@ The caching layer uses a **stale-while-revalidate (SWR)** pattern to prevent cac
 // lib/redis.ts core logic
 export async function getCachedData<T>(
   key: string,
-  ttl: number,        // Cache freshness period (seconds)
+  ttl: number, // Cache freshness period (seconds)
   fetcher: () => Promise<T>,
-  staleTime = 5       // Extra time to serve stale data
+  staleTime = 5, // Extra time to serve stale data
 ): Promise<T> {
   const cached = await redis.get(key);
-  
+
   if (cached) {
     const data = JSON.parse(cached) as { value: T; timestamp: number };
     const age = Date.now() - data.timestamp;
-    
+
     // 1. Fresh data: Return immediately
     if (age < ttl * 1000) {
       return data.value;
     }
-    
+
     // 2. Stale data: Return immediately + background revalidation
     if (age < (ttl + staleTime) * 1000) {
       setImmediate(async () => {
         const fresh = await fetcher();
-        await redis.setex(key, ttl + staleTime, JSON.stringify({
-          value: fresh,
-          timestamp: Date.now(),
-        }));
+        await redis.setex(
+          key,
+          ttl + staleTime,
+          JSON.stringify({
+            value: fresh,
+            timestamp: Date.now(),
+          }),
+        );
       });
-      return data.value;  // Return stale data without waiting
+      return data.value; // Return stale data without waiting
     }
   }
-  
+
   // 3. Cache miss: Use distributed lock to prevent stampede
   const lockKey = `lock:${key}`;
   const lockValue = Math.random().toString(36);
-  const lockAcquired = await redis.set(lockKey, lockValue, 'EX', 10, 'NX');
-  
+  const lockAcquired = await redis.set(lockKey, lockValue, "EX", 10, "NX");
+
   if (lockAcquired) {
     try {
       const fresh = await fetcher();
-      await redis.setex(key, ttl + staleTime, JSON.stringify({
-        value: fresh,
-        timestamp: Date.now(),
-      }));
+      await redis.setex(
+        key,
+        ttl + staleTime,
+        JSON.stringify({
+          value: fresh,
+          timestamp: Date.now(),
+        }),
+      );
       return fresh;
     } finally {
       // Release lock with Lua script (atomic check-and-delete)
@@ -296,10 +320,10 @@ export async function getCachedData<T>(
     }
   } else {
     // Another process is fetching; wait briefly and retry
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise((resolve) => setTimeout(resolve, 100));
     const retryData = await redis.get(key);
     if (retryData) return JSON.parse(retryData).value as T;
-    
+
     // Fallback: fetch without caching
     return await fetcher();
   }
@@ -307,20 +331,24 @@ export async function getCachedData<T>(
 ```
 
 ### Cache Keys & TTL Strategy
+
 - **`products:all`** - All products list (60s TTL)
 - **`product:{id}`** - Single product details (120s TTL)
 - **`admin:orders:*`** - Order lists (30s TTL)
 - **`lock:{key}`** - Distributed lock (10s expiry)
 
 ### Cache Invalidation
+
 Pattern-based invalidation using `SCAN` (non-blocking):
+
 ```typescript
 // Invalidate all product caches after order creation
-await invalidateCache('products:*');
-await invalidateCache('product:abc123');
+await invalidateCache("products:*");
+await invalidateCache("product:abc123");
 ```
 
 ### Benefits
+
 - **Stampede Prevention:** Only one request fetches data during cache miss
 - **Minimal Latency:** Stale data served instantly while revalidating
 - **High Availability:** Graceful degradation on Redis failures
@@ -333,6 +361,7 @@ await invalidateCache('product:abc123');
 ### NextAuth.js with Google OAuth
 
 **Configuration** (`lib/auth.ts`):
+
 ```typescript
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: DrizzleAdapter(drizzleDb, {
@@ -340,16 +369,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     accountsTable: accounts,
     sessionsTable: sessions,
     verificationTokensTable: verificationTokens,
-  }),  // Database session storage
+  }), // Database session storage
   providers: [
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
       authorization: {
         params: {
-          prompt: 'consent',
-          access_type: 'offline',
-          response_type: 'code',
+          prompt: "consent",
+          access_type: "offline",
+          response_type: "code",
         },
       },
     }),
@@ -357,28 +386,29 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   callbacks: {
     async session({ session, user }) {
       session.user.id = user.id;
-      session.user.role = user.role || 'CUSTOMER';
+      session.user.role = user.role || "CUSTOMER";
       return session;
     },
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
-        token.role = user.role || 'CUSTOMER';
+        token.role = user.role || "CUSTOMER";
       }
       return token;
     },
   },
   session: {
-    strategy: 'database',  // More secure than JWT-only
+    strategy: "database", // More secure than JWT-only
   },
   pages: {
-    signIn: '/auth/signin',
-    error: '/auth/error',
+    signIn: "/auth/signin",
+    error: "/auth/error",
   },
 });
 ```
 
 ### Authentication Flow Diagram
+
 ```
 User clicks "Sign in with Google"
            ↓
@@ -402,15 +432,17 @@ Subsequent requests validated via session token
 ```
 
 ### Role-Based Access Control (RBAC)
+
 - **CUSTOMER:** Default role, can browse products and place orders
 - **ADMIN:** Elevated privileges, access to `/admin/*` routes
 
 Middleware protection example:
+
 ```typescript
 // Check admin access in API routes
 const session = await auth();
-if (!session?.user || session.user.role !== 'ADMIN') {
-  return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+if (!session?.user || session.user.role !== "ADMIN") {
+  return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
 }
 ```
 
@@ -419,6 +451,7 @@ if (!session?.user || session.user.role !== 'ADMIN') {
 ## 6. Data Flow
 
 ### Product Listing Flow
+
 ```
 Client Request → /
          ↓
@@ -436,6 +469,7 @@ Response: HTML sent to client (rendered on-demand)
 ```
 
 ### Order Creation Flow (Transactional)
+
 ```
 POST /api/orders
          ↓
@@ -472,6 +506,7 @@ POST /api/orders
 ```
 
 ### Cart Management Flow
+
 ```
 Authenticated User               Guest User
        ↓                              ↓
@@ -491,7 +526,9 @@ Session stored in DB          Cookie: cart_session (30 days)
 ## 7. Performance Optimizations
 
 ### 1. Dynamic Rendering with Direct Database Access
+
 **Homepage (`app/page.tsx`):**
+
 ```typescript
 export const dynamic = 'force-dynamic';  // Always render on-demand
 
@@ -500,42 +537,50 @@ export default async function Home() {
   return <ProductGrid products={products} />;
 }
 ```
+
 - Always renders on-demand (no static generation)
 - Direct database access from Server Components
 - Fresh data on every request
 
 ### 2. Redis Caching with SWR
+
 - Product API endpoints cache responses for 60s
 - Stale-while-revalidate serves stale data during revalidation
 - Distributed locks prevent cache stampede (thundering herd problem)
 
-### 3. Database Connection Pooling
+### 3. Database Connection Pooling & Read Replicas
+
+The project uses Drizzle's `withReplicas` to split reads and writes across separate Neon database endpoints.
+
+| Export             | Connection             | When to use                                                                          |
+| ------------------ | ---------------------- | ------------------------------------------------------------------------------------ |
+| `drizzleDb`        | Read-replica composite | Default for Server Components, product listings, public reads                        |
+| `primaryDrizzleDb` | Primary (writer)       | Auth, account, cart mutations, order status, admin writes, any read-after-write flow |
+| `readDrizzleDb`    | Replica (reader)       | Rarely imported directly; `drizzleDb` routes reads here automatically                |
+
+**Environment variable:** `READ_DATABASE_URL` (optional; falls back to `DATABASE_URL` when absent).
+
 ```typescript
-// lib/db.ts
-const pool = new pg.Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { 
-    rejectUnauthorized: false,
-    checkServerIdentity: () => undefined,
-  },
-  connectionTimeoutMillis: 10000,
-  idleTimeoutMillis: 30000,
-});
-const drizzleDb = drizzle(pool, { schema });
+import { primaryDrizzleDb as drizzleDb } from "@/lib/db";
 ```
+
+Use the aliased primary import in any route handler where replica lag could cause stale ownership checks, stale post-update reads, or incorrect auth decisions.
+
 - Reuses database connections across requests
 - Critical for serverless (no persistent connections)
 - Enhanced SSL configuration accepts self-signed certificates
 
 ### 4. Singleton Pattern for Clients
+
 ```typescript
 // Prevent multiple pool/Redis instances in serverless
 const globalForDb = globalThis as { pool?: pg.Pool };
 export const pool = globalForDb.pool ?? createPool();
-if (process.env.NODE_ENV !== 'production') globalForDb.pool = pool;
+if (process.env.NODE_ENV !== "production") globalForDb.pool = pool;
 ```
 
 ### 5. Optimized Queries
+
 - **Selective Relations:** Only load relations when needed
   ```typescript
   with: { variations: true }  // Load variations
@@ -544,11 +589,13 @@ if (process.env.NODE_ENV !== 'production') globalForDb.pool = pool;
 - **Pagination:** Use `limit` and `offset` for large datasets
 
 ### 6. Image Optimization
+
 - Next.js `<Image>` component with automatic optimization
 - Lazy loading with blur placeholders
 - Responsive image sizing with `srcSet`
 
 ### Performance Metrics
+
 - **Time to First Byte (TTFB):** < 300ms (dynamic rendering + Redis cache)
 - **Largest Contentful Paint (LCP):** < 2.5s
 - **Cache Hit Ratio:** > 80% for product listings (Redis layer)
@@ -559,22 +606,28 @@ if (process.env.NODE_ENV !== 'production') globalForDb.pool = pool;
 ## 8. Security Measures
 
 ### 1. SSL/TLS Encryption
+
 - **Database:** PostgreSQL connections use SSL (`sslmode=require`)
 - **API:** All production traffic over HTTPS (enforced by Vercel)
 - **Redis:** TLS encryption for cache connections
 
 ### 2. Input Validation with Zod
+
 ```typescript
 // lib/validations.ts
 export const createOrderSchema = z.object({
   customerName: z.string().min(1).max(100),
   customerEmail: z.string().email(),
   customerAddress: z.string().min(10).max(500),
-  items: z.array(z.object({
-    productId: z.string().cuid(),
-    variationId: z.string().cuid().optional(),
-    quantity: z.number().int().min(1).max(100),
-  })).min(1),
+  items: z
+    .array(
+      z.object({
+        productId: z.string().cuid(),
+        variationId: z.string().cuid().optional(),
+        quantity: z.number().int().min(1).max(100),
+      }),
+    )
+    .min(1),
 });
 
 // Usage in API routes
@@ -582,6 +635,7 @@ const validated = createOrderSchema.parse(requestBody);
 ```
 
 ### 3. Authentication & Authorization
+
 - **Session Security:**
   - `httpOnly: true` (prevents XSS attacks)
   - `secure: true` in production (HTTPS-only)
@@ -590,14 +644,17 @@ const validated = createOrderSchema.parse(requestBody);
 - **Database Sessions:** More secure than client-side JWT
 
 ### 4. SQL Injection Prevention
+
 - Drizzle ORM uses parameterized queries (no raw SQL concatenation)
 - Type-safe query builder prevents injection attacks
 
 ### 5. Rate Limiting & DDoS Protection
+
 - Vercel edge network provides automatic DDoS mitigation
 - Redis distributed locks prevent cache stampede attacks
 
 ### 6. Content Security Policy (CSP)
+
 ```typescript
 // next.config.ts
 headers: [
@@ -618,11 +675,13 @@ headers: [
 ```
 
 ### 7. Secrets Management
+
 - Environment variables for sensitive data (never in code)
 - `.env` files excluded from version control
 - Vercel encrypted environment variables
 
 ### 8. Data Sanitization
+
 - Automatic date serialization prevents prototype pollution
 - Zod validation sanitizes user inputs
 - No dangerouslySetInnerHTML usage
@@ -634,41 +693,48 @@ headers: [
 ### Optimizations for Serverless Deployment
 
 **1. Cold Start Minimization**
+
 - Singleton pattern for clients (Drizzle, Redis)
 - Lazy initialization (connect on first use)
 - Tree-shaking and code splitting
 
 **2. Connection Pooling**
+
 ```typescript
 const pool = new pg.Pool({
   connectionString: process.env.DATABASE_URL,
-  max: 10,                    // Max connections
-  idleTimeoutMillis: 30000,   // Close idle connections
+  max: 10, // Max connections
+  idleTimeoutMillis: 30000, // Close idle connections
   connectionTimeoutMillis: 2000,
 });
 ```
 
 **3. Stateless Design**
+
 - No in-memory session storage (uses database)
 - Redis for shared state across function instances
 - Idempotent API endpoints (safe to retry)
 
 **4. Edge Deployment**
+
 - Redis with global replication (Upstash)
 - Images served from Vercel Blob (CDN)
 - API routes at edge locations
 
 **5. Function Timeout Management**
+
 - Keep API routes under 10s execution time
 - Background jobs via `setImmediate()` (non-blocking)
 - Webhook callbacks for long-running tasks
 
 **6. Memory Efficiency**
+
 - Stream large datasets instead of loading into memory
 - Use `SCAN` for Redis key iteration (non-blocking)
 - Limit query result sizes with `take`
 
 **7. Cost Optimization**
+
 - Connection pooling reduces database connections
 - Redis caching reduces database queries by 80%
 - Efficient query patterns minimize compute time
@@ -681,11 +747,13 @@ const pool = new pg.Pool({
 
 **Concept:**
 A single product (e.g., "T-Shirt") can have multiple variations (sizes, colors, designs) with:
+
 - Independent stock tracking per variation
 - Price modifiers (add/subtract from base price)
 - Unique images per variation (optional)
 
 **Example Schema:**
+
 ```
 Product: Classic T-Shirt
 ├─ Base Price: $20.00
@@ -706,6 +774,7 @@ Product: Classic T-Shirt
 ```
 
 ### Variation Selection Flow
+
 ```
 1. User views product page
          ↓
@@ -729,6 +798,7 @@ Product: Classic T-Shirt
 ```
 
 ### Stock Management
+
 - **Product.stock:** Aggregate stock across all variations
 - **ProductVariation.stock:** Stock for specific SKU
 - Both updated atomically in transaction during order creation
@@ -741,16 +811,17 @@ Product: Classic T-Shirt
 ### Session-Based vs User-Based Carts
 
 **Guest Users (Session-Based):**
+
 ```typescript
 // Generate unique session ID
 const sessionId = `guest_${Date.now()}_${Math.random().toString(36)}`;
 
 // Store in httpOnly cookie (30-day expiry)
-response.cookies.set('cart_session', sessionId, {
+response.cookies.set("cart_session", sessionId, {
   httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
-  sameSite: 'lax',
-  maxAge: 60 * 60 * 24 * 30,  // 30 days
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "lax",
+  maxAge: 60 * 60 * 24 * 30, // 30 days
 });
 
 // Query cart by sessionId
@@ -761,6 +832,7 @@ const cart = await drizzleDb.query.carts.findFirst({
 ```
 
 **Authenticated Users (User-Based):**
+
 ```typescript
 const session = await auth();
 const cart = await drizzleDb.query.carts.findFirst({
@@ -772,6 +844,7 @@ const cart = await drizzleDb.query.carts.findFirst({
 ### Cart Operations
 
 **Add to Cart:**
+
 1. Validate product and variation exist
 2. Check stock availability
 3. Find existing cart or create new one
@@ -781,22 +854,26 @@ const cart = await drizzleDb.query.carts.findFirst({
 5. Return updated cart with all items
 
 **Update Quantity:**
+
 - Use unique constraint: `[cartId, productId, variationId]`
 - Prevents duplicate items for same product+variation combo
 
 **Remove from Cart:**
+
 ```typescript
-DELETE /api/cart/items/{cartItemId}
+DELETE / api / cart / items / { cartItemId };
 ```
 
 **Clear Cart:**
+
 ```typescript
-DELETE /api/cart
+DELETE / api / cart;
 // Cascade deletes all CartItems
 // Removes cart_session cookie for guests
 ```
 
 ### Cart Persistence
+
 - **Guest Carts:** Expire with cookie (30 days)
 - **User Carts:** Persist indefinitely until checkout or manual clear
 - **Cart Migration:** When guest user logs in, can merge guest cart into user cart (future feature)
@@ -814,6 +891,7 @@ CANCELLED (terminal state)
 ```
 
 **Status Descriptions:**
+
 - **PENDING:** Order created, awaiting payment/confirmation
 - **PROCESSING:** Payment confirmed, preparing for shipment
 - **SHIPPED:** Order dispatched, tracking number assigned
@@ -825,32 +903,37 @@ CANCELLED (terminal state)
 ```typescript
 const order = await drizzleDb.transaction(async (tx) => {
   // Step 1: Create Order + OrderItems
-  const [newOrder] = await tx.insert(schema.orders).values({
-    customerName,
-    customerEmail,
-    customerAddress,
-    totalAmount,
-    status: 'PENDING',
-  }).returning();
+  const [newOrder] = await tx
+    .insert(schema.orders)
+    .values({
+      customerName,
+      customerEmail,
+      customerAddress,
+      totalAmount,
+      status: "PENDING",
+    })
+    .returning();
 
   await tx.insert(schema.orderItems).values(
-    items.map(item => ({
+    items.map((item) => ({
       orderId: newOrder.id,
       productId: item.productId,
       variationId: item.variationId,
       quantity: item.quantity,
-      price: calculatePrice(item),  // Snapshot price
-    }))
+      price: calculatePrice(item), // Snapshot price
+    })),
   );
 
   // Step 2: Decrement Stock (atomic)
   for (const item of items) {
     if (item.variationId) {
-      await tx.update(schema.productVariations)
+      await tx
+        .update(schema.productVariations)
         .set({ stock: sql`stock - ${item.quantity}` })
         .where(eq(schema.productVariations.id, item.variationId));
     }
-    await tx.update(schema.products)
+    await tx
+      .update(schema.products)
       .set({ stock: sql`stock - ${item.quantity}` })
       .where(eq(schema.products.id, item.productId));
   }
@@ -860,21 +943,24 @@ const order = await drizzleDb.transaction(async (tx) => {
 ```
 
 ### Price Snapshot Strategy
+
 - Order items store **price at time of order**
 - Prevents discrepancies if product prices change later
 - Formula: `price = product.price + (variation?.priceModifier || 0)`
 
 ### Stock Validation
+
 1. **Pre-Transaction Check:** Validate stock before transaction
 2. **Atomic Decrement:** Use Drizzle SQL expressions for atomic operations
 3. **Rollback on Failure:** Transaction ensures consistency
 
 ### Post-Order Actions
+
 1. **Cache Invalidation:** Clear product and order caches
 2. **Business Event Logging:**
    ```typescript
    logBusinessEvent({
-     event: 'order_created',
+     event: "order_created",
      details: {
        orderId: order.id,
        totalAmount: order.totalAmount,
@@ -887,12 +973,14 @@ const order = await drizzleDb.transaction(async (tx) => {
 4. **Inventory Alerts:** (Future) Notify admins if stock below threshold
 
 ### Admin Order Management
+
 - **List Orders:** `/api/admin/orders` (paginated, filterable by status)
 - **View Order Details:** `/api/admin/orders/{id}`
 - **Update Status:** `PATCH /api/admin/orders/{id}` (status transitions)
 - **Cancel Order:** Set status to CANCELLED (does NOT restore stock)
 
 ### Error Handling
+
 - **Insufficient Stock:** Return 400 with specific product name
 - **Product Not Found:** Return 404 before transaction
 - **Transaction Failure:** Automatic rollback, no partial orders created
