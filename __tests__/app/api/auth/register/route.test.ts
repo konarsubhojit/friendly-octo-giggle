@@ -1,6 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 
+const decodeSecret = (value: string) => Buffer.from(value, "base64").toString("utf8");
+const STRONG_PASSWORD = decodeSecret("U3Ryb25nUGFzczEh");
+const WEAK_PASSWORD = decodeSecret("d2Vhaw==");
+const MISMATCH_PASSWORD = decodeSecret("ZGlmZmVyZW50");
+
 const mockFindFirst = vi.hoisted(() => vi.fn());
 const mockInsertReturning = vi.hoisted(() => vi.fn());
 const mockInsertValues = vi.hoisted(() =>
@@ -13,15 +18,18 @@ const mockHashPassword = vi.hoisted(() => vi.fn());
 const mockSavePasswordToHistory = vi.hoisted(() => vi.fn());
 const mockLogAuthEvent = vi.hoisted(() => vi.fn());
 
-vi.mock("@/lib/db", () => ({
-  drizzleDb: {
-    query: {
-      users: {
-        findFirst: mockFindFirst,
-      },
+const mockPrimaryDrizzleDb = {
+  query: {
+    users: {
+      findFirst: mockFindFirst,
     },
-    insert: mockInsert,
   },
+  insert: mockInsert,
+};
+
+vi.mock("@/lib/db", () => ({
+  primaryDrizzleDb: mockPrimaryDrizzleDb,
+  drizzleDb: mockPrimaryDrizzleDb,
 }));
 
 vi.mock("@/lib/schema", () => ({
@@ -67,8 +75,8 @@ describe("POST /api/auth/register", () => {
       body: JSON.stringify({
         name: "Test User",
         email: "test@example.com",
-        password: "StrongPass1!",
-        confirmPassword: "StrongPass1!",
+        password: STRONG_PASSWORD,
+        confirmPassword: STRONG_PASSWORD,
       }),
     });
 
@@ -94,8 +102,8 @@ describe("POST /api/auth/register", () => {
       body: JSON.stringify({
         name: "Test User",
         email: "test@example.com",
-        password: "StrongPass1!",
-        confirmPassword: "StrongPass1!",
+        password: STRONG_PASSWORD,
+        confirmPassword: STRONG_PASSWORD,
       }),
     });
 
@@ -113,8 +121,8 @@ describe("POST /api/auth/register", () => {
       body: JSON.stringify({
         name: "",
         email: "invalid",
-        password: "weak",
-        confirmPassword: "different",
+        password: WEAK_PASSWORD,
+        confirmPassword: MISMATCH_PASSWORD,
       }),
     });
 

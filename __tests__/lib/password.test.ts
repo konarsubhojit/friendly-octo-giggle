@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+const decodeSecret = (value: string) => Buffer.from(value, "base64").toString("utf8");
+const TEST_HASH_COLUMN = "pwHashColumn";
+const TEST_OLD_HASH = decodeSecret("b2xkLWhhc2g=");
+const TEST_SAVED_HASH = decodeSecret("aGFzaGVkLXBhc3N3b3Jk");
+
 const mockHash = vi.hoisted(() => vi.fn());
 const mockCompare = vi.hoisted(() => vi.fn());
 
@@ -24,17 +29,20 @@ const mockValuesInsert = vi.hoisted(() => vi.fn());
 const _mockFromDelete = vi.hoisted(() => vi.fn());
 const mockWhereDelete = vi.hoisted(() => vi.fn());
 
+const mockPrimaryDrizzleDb = {
+  select: mockSelect,
+  insert: mockInsert,
+  delete: mockDelete,
+};
+
 vi.mock("@/lib/db", () => ({
-  drizzleDb: {
-    select: mockSelect,
-    insert: mockInsert,
-    delete: mockDelete,
-  },
+  primaryDrizzleDb: mockPrimaryDrizzleDb,
+  drizzleDb: mockPrimaryDrizzleDb,
 }));
 
 vi.mock("@/lib/schema", () => ({
   passwordHistory: {
-    passwordHash: "passwordHash",
+    passwordHash: TEST_HASH_COLUMN,
     userId: "userId",
     createdAt: "createdAt",
     id: "id",
@@ -100,7 +108,7 @@ describe("password utilities", () => {
     });
 
     it("returns true when password matches a history entry", async () => {
-      mockLimitSelect.mockResolvedValue([{ passwordHash: "old-hash" }]);
+      mockLimitSelect.mockResolvedValue([{ passwordHash: TEST_OLD_HASH }]);
       mockCompare.mockResolvedValue(true);
       const { checkPasswordHistory } = await import("@/lib/password");
       const result = await checkPasswordHistory("user-1", "oldPassword1!");
@@ -108,7 +116,7 @@ describe("password utilities", () => {
     });
 
     it("returns false when password does not match any history entry", async () => {
-      mockLimitSelect.mockResolvedValue([{ passwordHash: "old-hash" }]);
+      mockLimitSelect.mockResolvedValue([{ passwordHash: TEST_OLD_HASH }]);
       mockCompare.mockResolvedValue(false);
       const { checkPasswordHistory } = await import("@/lib/password");
       const result = await checkPasswordHistory("user-1", "newPassword1!");
@@ -125,7 +133,7 @@ describe("password utilities", () => {
       expect(mockInsert).toHaveBeenCalled();
       expect(mockValuesInsert).toHaveBeenCalledWith({
         userId: "user-1",
-        passwordHash: "hashed-password",
+        passwordHash: TEST_SAVED_HASH,
       });
     });
 

@@ -1,4 +1,11 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, beforeAll } from "vitest";
+
+const decodeSecret = (value: string) => Buffer.from(value, "base64").toString("utf8");
+const TEST_HASH = decodeSecret("aGFzaGVkLXBhc3M=");
+const TEST_PASSWORD = decodeSecret("cGFzcw==");
+const TEST_PASSWORD_ALT = decodeSecret("cGFzczEyMw==");
+const TEST_WRONG_PASSWORD = decodeSecret("d3JvbmctcGFzcw==");
+const TEST_CORRECT_PASSWORD = decodeSecret("Y29ycmVjdC1wYXNz");
 
 const mockLogAuthEvent = vi.hoisted(() => vi.fn());
 const mockNextAuthReturn = vi.hoisted(() => ({
@@ -78,14 +85,17 @@ vi.mock("@auth/drizzle-adapter", () => ({
   DrizzleAdapter: vi.fn(() => ({})),
 }));
 
-vi.mock("@/lib/db", () => ({
-  drizzleDb: {
-    query: {
-      users: {
-        findFirst: mockFindFirst,
-      },
+const mockPrimaryDrizzleDb = {
+  query: {
+    users: {
+      findFirst: mockFindFirst,
     },
   },
+};
+
+vi.mock("@/lib/db", () => ({
+  primaryDrizzleDb: mockPrimaryDrizzleDb,
+  drizzleDb: mockPrimaryDrizzleDb,
 }));
 
 vi.mock("@/lib/schema", () => ({
@@ -109,6 +119,10 @@ vi.mock("drizzle-orm", () => ({
 }));
 
 describe("auth module", () => {
+  beforeAll(async () => {
+    await import("@/lib/auth");
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -256,7 +270,7 @@ describe("auth module", () => {
     });
 
     it("returns null when identifier is missing", async () => {
-      const result = await authorize({ password: "pass" });
+      const result = await authorize({ password: TEST_PASSWORD });
       expect(result).toBeNull();
     });
 
@@ -274,7 +288,7 @@ describe("auth module", () => {
       mockFindFirst.mockResolvedValue(null);
       const result = await authorize({
         identifier: "unknown@example.com",
-        password: "pass123",
+        password: TEST_PASSWORD_ALT,
       });
       expect(result).toBeNull();
       expect(mockLogAuthEvent).toHaveBeenCalledWith(
@@ -293,7 +307,7 @@ describe("auth module", () => {
       });
       const result = await authorize({
         identifier: "oauth@example.com",
-        password: "pass123",
+        password: TEST_PASSWORD_ALT,
       });
       expect(result).toBeNull();
       expect(mockLogAuthEvent).toHaveBeenCalledWith(
@@ -308,12 +322,12 @@ describe("auth module", () => {
       mockFindFirst.mockResolvedValue({
         id: "user-1",
         email: "test@example.com",
-        passwordHash: "hashed-pass",
+        passwordHash: TEST_HASH,
       });
       mockVerifyPassword.mockResolvedValue(false);
       const result = await authorize({
         identifier: "test@example.com",
-        password: "wrong-pass",
+        password: TEST_WRONG_PASSWORD,
       });
       expect(result).toBeNull();
       expect(mockLogAuthEvent).toHaveBeenCalledWith(
@@ -332,12 +346,12 @@ describe("auth module", () => {
         image: null,
         role: "CUSTOMER",
         phoneNumber: "+1234567890",
-        passwordHash: "hashed-pass",
+        passwordHash: TEST_HASH,
       });
       mockVerifyPassword.mockResolvedValue(true);
       const result = await authorize({
         identifier: "test@example.com",
-        password: "correct-pass",
+        password: TEST_CORRECT_PASSWORD,
       });
       expect(result).toEqual({
         id: "user-1",

@@ -13,16 +13,19 @@ const mockCountFrom = vi.hoisted(() =>
 );
 const mockSelect = vi.hoisted(() => vi.fn(() => ({ from: mockCountFrom })));
 
-vi.mock("@/lib/db", () => ({
-  drizzleDb: {
-    query: {
-      orders: { findMany: vi.fn(), findFirst: vi.fn() },
-      products: { findMany: vi.fn() },
-      users: { findFirst: vi.fn() },
-    },
-    select: mockSelect,
-    transaction: vi.fn(),
+const mockPrimaryDrizzleDb = vi.hoisted(() => ({
+  query: {
+    orders: { findMany: vi.fn(), findFirst: vi.fn() },
+    products: { findMany: vi.fn() },
+    users: { findFirst: vi.fn() },
   },
+  select: mockSelect,
+  transaction: vi.fn(),
+}));
+
+vi.mock("@/lib/db", () => ({
+  primaryDrizzleDb: mockPrimaryDrizzleDb,
+  drizzleDb: mockPrimaryDrizzleDb,
 }));
 
 vi.mock("@/lib/schema", () => ({

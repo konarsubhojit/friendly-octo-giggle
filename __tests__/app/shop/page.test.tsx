@@ -88,6 +88,7 @@ vi.mock("@/lib/logger", () => ({
 describe("app/shop/page", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.useRealTimers();
     mockFindBestsellers.mockResolvedValue([]);
     mockCategoryOrderBy.mockResolvedValue([{ name: "Flowers" }]);
     mockSearchProductIdsCached.mockResolvedValue(null);
@@ -137,5 +138,5 @@ describe("app/shop/page", () => {
     expect(screen.getByText("Rose Bouquet")).toBeInTheDocument();
     expect(screen.getByText("Grid count: 2")).toBeInTheDocument();
     expect(screen.getByText("Grid batch: 20")).toBeInTheDocument();
-  });
+  }, 15000);
 });

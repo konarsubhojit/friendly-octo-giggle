@@ -17,10 +17,10 @@ CREATE TABLE "Account" (
 );
 --> statement-breakpoint
 CREATE TABLE "CartItem" (
-	"id" varchar2(7) PRIMARY KEY NOT NULL,
-	"cartId" varchar2(7) NOT NULL,
-	"productId" varchar2(7) NOT NULL,
-	"variationId" varchar2(7),
+	"id" varchar(7) PRIMARY KEY NOT NULL,
+	"cartId" varchar(7) NOT NULL,
+	"productId" varchar(7) NOT NULL,
+	"variationId" varchar(7),
 	"quantity" integer NOT NULL,
 	"createdAt" timestamp DEFAULT now() NOT NULL,
 	"updatedAt" timestamp DEFAULT now() NOT NULL,
@@ -28,7 +28,7 @@ CREATE TABLE "CartItem" (
 );
 --> statement-breakpoint
 CREATE TABLE "Cart" (
-	"id" varchar2(7) PRIMARY KEY NOT NULL,
+	"id" varchar(7) PRIMARY KEY NOT NULL,
 	"userId" text,
 	"sessionId" text,
 	"createdAt" timestamp DEFAULT now() NOT NULL,
@@ -38,17 +38,17 @@ CREATE TABLE "Cart" (
 );
 --> statement-breakpoint
 CREATE TABLE "OrderItem" (
-	"id" varchar2(7) PRIMARY KEY NOT NULL,
-	"orderId" varchar2(7) NOT NULL,
-	"productId" varchar2(7) NOT NULL,
-	"variationId" varchar2(7),
+	"id" varchar(7) PRIMARY KEY NOT NULL,
+	"orderId" varchar(7) NOT NULL,
+	"productId" varchar(7) NOT NULL,
+	"variationId" varchar(7),
 	"quantity" integer NOT NULL,
 	"price" double precision NOT NULL,
 	"customizationNote" text
 );
 --> statement-breakpoint
 CREATE TABLE "Order" (
-	"id" varchar2(7) PRIMARY KEY NOT NULL,
+	"id" varchar(7) PRIMARY KEY NOT NULL,
 	"userId" text,
 	"customerName" text NOT NULL,
 	"customerEmail" text NOT NULL,
@@ -69,15 +69,15 @@ CREATE TABLE "PasswordHistory" (
 );
 --> statement-breakpoint
 CREATE TABLE "ProductShare" (
-	"key" varchar2(7) PRIMARY KEY NOT NULL,
-	"productId" varchar2(7) NOT NULL,
-	"variationId" varchar2(7),
+	"key" varchar(7) PRIMARY KEY NOT NULL,
+	"productId" varchar(7) NOT NULL,
+	"variationId" varchar(7),
 	"createdAt" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "ProductVariation" (
-	"id" varchar2(7) PRIMARY KEY NOT NULL,
-	"productId" varchar2(7) NOT NULL,
+	"id" varchar(7) PRIMARY KEY NOT NULL,
+	"productId" varchar(7) NOT NULL,
 	"name" text NOT NULL,
 	"designName" text NOT NULL,
 	"image" text,
@@ -90,7 +90,7 @@ CREATE TABLE "ProductVariation" (
 );
 --> statement-breakpoint
 CREATE TABLE "Product" (
-	"id" varchar2(7) PRIMARY KEY NOT NULL,
+	"id" varchar(7) PRIMARY KEY NOT NULL,
 	"name" text NOT NULL,
 	"description" text NOT NULL,
 	"price" double precision NOT NULL,
@@ -104,9 +104,9 @@ CREATE TABLE "Product" (
 );
 --> statement-breakpoint
 CREATE TABLE "Review" (
-	"id" varchar2(7) PRIMARY KEY NOT NULL,
-	"productId" varchar2(7) NOT NULL,
-	"orderId" varchar2(7),
+	"id" varchar(7) PRIMARY KEY NOT NULL,
+	"productId" varchar(7) NOT NULL,
+	"orderId" varchar(7),
 	"userId" text,
 	"rating" integer NOT NULL,
 	"comment" text NOT NULL,
@@ -129,7 +129,7 @@ CREATE TABLE "User" (
 	"emailVerified" timestamp,
 	"image" text,
 	"passwordHash" text,
-	"phoneNumber" varchar2(20),
+	"phoneNumber" varchar(20),
 	"role" "UserRole" DEFAULT 'CUSTOMER' NOT NULL,
 	"createdAt" timestamp DEFAULT now() NOT NULL,
 	"updatedAt" timestamp DEFAULT now() NOT NULL,
@@ -146,9 +146,9 @@ CREATE TABLE "VerificationToken" (
 );
 --> statement-breakpoint
 CREATE TABLE "Wishlist" (
-	"id" varchar2(7) PRIMARY KEY NOT NULL,
+	"id" varchar(7) PRIMARY KEY NOT NULL,
 	"userId" text NOT NULL,
-	"productId" varchar2(7) NOT NULL,
+	"productId" varchar(7) NOT NULL,
 	"createdAt" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "Wishlist_userId_productId_key" UNIQUE("userId","productId")
 );

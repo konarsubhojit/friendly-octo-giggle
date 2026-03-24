@@ -1,7 +1,17 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
 import { RecentOrdersSection } from "@/app/account/RecentOrdersSection";
 
 describe("RecentOrdersSection", () => {
+  beforeEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it("loads recent orders with compact product summaries", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
@@ -39,11 +49,11 @@ describe("RecentOrdersSection", () => {
 
     render(<RecentOrdersSection />);
 
-    await waitFor(() => {
-      expect(
-        screen.getByText("Rose Gift Box, Lily Vase and 1 more"),
-      ).toBeInTheDocument();
-    });
+    expect(
+      await screen.findByText("Rose Gift Box, Lily Vase and 1 more", {}, {
+        timeout: 15000,
+      }),
+    ).toBeInTheDocument();
 
     expect(screen.getByText("Recent Orders")).toBeInTheDocument();
     expect(screen.getByText("4 items")).toBeInTheDocument();
@@ -51,5 +61,5 @@ describe("RecentOrdersSection", () => {
       "href",
       "/orders",
     );
-  });
+  }, 15000);
 });

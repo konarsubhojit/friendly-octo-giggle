@@ -5,18 +5,21 @@ const VALID_PRODUCT_ID = "prod001";
 const VALID_CART_ID = "cart001";
 const VALID_ITEM_ID = "item001";
 
-vi.mock("@/lib/db", () => ({
-  drizzleDb: {
-    query: {
-      products: { findFirst: vi.fn() },
-      carts: { findFirst: vi.fn() },
-      cartItems: { findFirst: vi.fn() },
-      users: { findFirst: vi.fn() },
-    },
-    insert: vi.fn(() => ({ values: vi.fn(() => ({ returning: vi.fn() })) })),
-    update: vi.fn(() => ({ set: vi.fn(() => ({ where: vi.fn() })) })),
-    delete: vi.fn(() => ({ where: vi.fn() })),
+const mockPrimaryDrizzleDb = vi.hoisted(() => ({
+  query: {
+    products: { findFirst: vi.fn() },
+    carts: { findFirst: vi.fn() },
+    cartItems: { findFirst: vi.fn() },
+    users: { findFirst: vi.fn() },
   },
+  insert: vi.fn(() => ({ values: vi.fn(() => ({ returning: vi.fn() })) })),
+  update: vi.fn(() => ({ set: vi.fn(() => ({ where: vi.fn() })) })),
+  delete: vi.fn(() => ({ where: vi.fn() })),
+}));
+
+vi.mock("@/lib/db", () => ({
+  primaryDrizzleDb: mockPrimaryDrizzleDb,
+  drizzleDb: mockPrimaryDrizzleDb,
 }));
 
 vi.mock("@/lib/schema", () => ({
