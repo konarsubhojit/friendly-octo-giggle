@@ -1,42 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { withLogging } from "@/lib/api-middleware";
+import { auth } from "@/lib/auth";
 import {
   enqueueCheckoutForUser,
   isCheckoutRequestError,
 } from "@/lib/checkout-service";
+import { withLogging } from "@/lib/api-middleware";
 import { logBusinessEvent, logError } from "@/lib/logger";
-import { auth } from "@/lib/auth";
-import { getUserOrders, isOrderRequestError } from "@/lib/order-service";
 
 export const dynamic = "force-dynamic";
-
-const handleGet = async (request: NextRequest) => {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: "Authentication required" },
-        { status: 401 },
-      );
-    }
-
-    const result = await getUserOrders({
-      requestUrl: request.url,
-      userId: session.user.id,
-    });
-
-    return NextResponse.json(result);
-  } catch (error) {
-    logError({
-      error,
-      context: "fetch_user_orders",
-    });
-    return NextResponse.json(
-      { error: "Failed to fetch orders" },
-      { status: 500 },
-    );
-  }
-};
 
 const handlePost = async (request: NextRequest) => {
   try {
@@ -44,7 +15,7 @@ const handlePost = async (request: NextRequest) => {
 
     if (!session?.user?.id) {
       logBusinessEvent({
-        event: "order_create_failed",
+        event: "checkout_request_failed",
         details: { reason: "not_authenticated" },
         success: false,
       });
@@ -73,16 +44,9 @@ const handlePost = async (request: NextRequest) => {
       );
     }
 
-    if (isOrderRequestError(error)) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: error.status },
-      );
-    }
-
     logError({
       error,
-      context: "order_checkout_enqueue",
+      context: "checkout_request_creation",
       additionalInfo: {
         path: request.nextUrl.pathname,
       },
@@ -94,5 +58,4 @@ const handlePost = async (request: NextRequest) => {
   }
 };
 
-export const GET = withLogging(handleGet);
 export const POST = withLogging(handlePost);

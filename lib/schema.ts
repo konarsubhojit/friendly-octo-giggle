@@ -37,6 +37,13 @@ export const orderStatusEnum = pgEnum("OrderStatus", [
   "CANCELLED",
 ]);
 
+export const checkoutRequestStatusEnum = pgEnum("CheckoutRequestStatus", [
+  "PENDING",
+  "PROCESSING",
+  "COMPLETED",
+  "FAILED",
+]);
+
 // ─── Auth Tables (NextAuth compatible) ───────────────────
 
 export const users = pgTable("User", {
@@ -191,6 +198,38 @@ export const productVariations = pgTable(
 
 // ─── Order Tables ────────────────────────────────────────
 
+export interface CheckoutRequestItemRecord {
+  productId: string;
+  variationId?: string | null;
+  quantity: number;
+  customizationNote?: string | null;
+}
+
+export const checkoutRequests = pgTable(
+  "CheckoutRequest",
+  {
+    id: varchar("id", { length: 7 })
+      .primaryKey()
+      .$defaultFn(() => generateShortId()),
+    userId: text("userId")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    customerName: text("customerName").notNull(),
+    customerEmail: text("customerEmail").notNull(),
+    customerAddress: text("customerAddress").notNull(),
+    items: json("items").$type<CheckoutRequestItemRecord[]>().notNull(),
+    status: checkoutRequestStatusEnum("status").default("PENDING").notNull(),
+    errorMessage: text("errorMessage"),
+    createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt", { mode: "date" }).defaultNow().notNull(),
+  },
+  (t) => [
+    index("CheckoutRequest_userId_idx").on(t.userId),
+    index("CheckoutRequest_status_idx").on(t.status),
+    index("CheckoutRequest_createdAt_idx").on(t.createdAt),
+  ],
+);
+
 export const orders = pgTable(
   "Order",
   {
@@ -201,6 +240,10 @@ export const orders = pgTable(
     customerName: text("customerName").notNull(),
     customerEmail: text("customerEmail").notNull(),
     customerAddress: text("customerAddress").notNull(),
+    checkoutRequestId: varchar("checkoutRequestId", { length: 7 }).references(
+      () => checkoutRequests.id,
+      { onDelete: "set null" },
+    ),
     totalAmount: doublePrecision("totalAmount").notNull(),
     status: orderStatusEnum("status").default("PENDING").notNull(),
     trackingNumber: text("trackingNumber"),
@@ -212,6 +255,7 @@ export const orders = pgTable(
     index("Order_userId_idx").on(t.userId),
     index("Order_status_idx").on(t.status),
     index("Order_createdAt_idx").on(t.createdAt),
+    unique("Order_checkoutRequestId_key").on(t.checkoutRequestId),
   ],
 );
 
@@ -368,6 +412,7 @@ export const productShares = pgTable(
 export const usersRelations = relations(users, ({ many, one }) => ({
   accounts: many(accounts),
   sessions: many(sessions),
+  checkoutRequests: many(checkoutRequests),
   orders: many(orders),
   cart: one(carts),
   passwordHistory: many(passwordHistory),
@@ -412,8 +457,26 @@ export const productVariationsRelations = relations(
   }),
 );
 
+export const checkoutRequestsRelations = relations(
+  checkoutRequests,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [checkoutRequests.userId],
+      references: [users.id],
+    }),
+    order: one(orders, {
+      fields: [checkoutRequests.id],
+      references: [orders.checkoutRequestId],
+    }),
+  }),
+);
+
 export const ordersRelations = relations(orders, ({ one, many }) => ({
   user: one(users, { fields: [orders.userId], references: [users.id] }),
+  checkoutRequest: one(checkoutRequests, {
+    fields: [orders.checkoutRequestId],
+    references: [checkoutRequests.id],
+  }),
   items: many(orderItems),
 }));
 

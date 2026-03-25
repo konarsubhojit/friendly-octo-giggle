@@ -37,11 +37,19 @@ NEXTAUTH_URL=http://localhost:3000
 GOOGLE_CLIENT_ID=your-google-client-id
 GOOGLE_CLIENT_SECRET=your-google-client-secret
 LOG_LEVEL=debug  # development only - high log volume, impacts performance
+QSTASH_TOKEN=your-qstash-token
+QSTASH_CURRENT_SIGNING_KEY=your-qstash-current-signing-key
+QSTASH_NEXT_SIGNING_KEY=your-qstash-next-signing-key
+NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
 > **Note**: `REDIS_URL` is optional for local development. When absent, the app skips caching and fetches data directly from the database. For production, always configure Redis for optimal performance.
 
 > **Note**: `LOG_LEVEL=debug` logs all cache hits, database queries, and detailed operations. This is useful for development debugging but creates excessive log volume and may impact performance in production. Always use `info` or `warn` level in production.
+
+> **Note**: Checkout orchestration and email delivery are intentionally separate. Checkout requests are persisted and sent to Vercel Queues, while emails still use the QStash worker route. If Vercel Queue publishing is unavailable in local development, the checkout service falls back to inline background processing so local checkout still works.
+
+> **Note**: Recovery for transient checkout worker failures is automatic in the consumer. The queue retries transient failures, and after the retry threshold is exhausted the consumer marks the checkout request as failed with the last recovery message for admin visibility.
 
 ### Development Commands
 
@@ -58,6 +66,20 @@ npm run db:generate # Generate Drizzle migrations
 npm run db:migrate  # Apply migrations
 npm run db:seed     # Seed database
 ```
+
+### Queue and Worker Setup
+
+For local or preview environments where you want to test the real Vercel Queue path:
+
+```bash
+npm i -g vercel
+vercel link
+vercel env pull
+```
+
+- The checkout worker handler lives at `/api/queue/checkout-orders` and is bound by the `checkout-orders` trigger in `vercel.json`.
+- The email worker remains separate at `/api/services/email` and still requires the QStash keys above.
+- Admin queue visibility is available at `/admin/checkout-requests`.
 
 ---
 
@@ -98,10 +120,10 @@ const total: number = 100;
 interface User {
   id: string;
   email: string;
-  role: 'CUSTOMER' | 'ADMIN';
+  role: "CUSTOMER" | "ADMIN";
 }
 
-type ApiResponse<T> = 
+type ApiResponse<T> =
   | { success: true; data: T }
   | { success: false; error: string };
 
@@ -109,18 +131,18 @@ type ApiResponse<T> =
 type User = {
   id: string;
   email: string;
-}
+};
 ```
 
 **Use const assertions for literal types**
 
 ```typescript
 // ✅ Good
-const ORDER_STATUSES = ['PENDING', 'PROCESSING', 'SHIPPED'] as const;
-type OrderStatus = typeof ORDER_STATUSES[number];
+const ORDER_STATUSES = ["PENDING", "PROCESSING", "SHIPPED"] as const;
+type OrderStatus = (typeof ORDER_STATUSES)[number];
 
 // ❌ Bad
-const ORDER_STATUSES = ['PENDING', 'PROCESSING', 'SHIPPED'];
+const ORDER_STATUSES = ["PENDING", "PROCESSING", "SHIPPED"];
 ```
 
 ### React/Next.js Conventions
@@ -146,7 +168,7 @@ export function AddToCartButton({ productId }: { productId: string }) {
 
 ```typescript
 // lib/actions.ts
-'use server';
+"use server";
 
 export async function createProduct(data: ProductInput) {
   const validated = ProductInputSchema.parse(data);
@@ -255,7 +277,7 @@ export function Product({ product }) {
 </ProductCard>
 
 // ❌ Bad - Props drilling
-<ProductCard 
+<ProductCard
   image={product.image}
   title={product.name}
   price={product.price}
@@ -281,7 +303,7 @@ export const products = pgTable("products", {
   name: text("name").notNull(),
   description: text("description").notNull(),
   price: doublePrecision("price").notNull(),
-  featured: boolean("featured").default(false),  // New field
+  featured: boolean("featured").default(false), // New field
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -346,13 +368,17 @@ npm run db:migrate
 
 ```typescript
 // In lib/schema.ts - add indexes to pgTable
-export const products = pgTable("products", {
-  category: text("category").notNull(),
-  price: doublePrecision("price").notNull(),
-}, (table) => [
-  index("idx_products_category").on(table.category),
-  index("idx_products_category_price").on(table.category, table.price),
-]);
+export const products = pgTable(
+  "products",
+  {
+    category: text("category").notNull(),
+    price: doublePrecision("price").notNull(),
+  },
+  (table) => [
+    index("idx_products_category").on(table.category),
+    index("idx_products_category_price").on(table.category, table.price),
+  ],
+);
 ```
 
 **Adding relations**
@@ -446,9 +472,9 @@ curl -X POST http://localhost:3000/api/cart \
 
 ```typescript
 // Check Redis cache
-import { redis } from '@/lib/redis';
-const cached = await redis.get('products:all');
-console.log('Cached data:', cached);
+import { redis } from "@/lib/redis";
+const cached = await redis.get("products:all");
+console.log("Cached data:", cached);
 ```
 
 ### Testing Framework
@@ -488,15 +514,15 @@ Logs should be **meaningful signals, not noise**. In production, the default `in
 Import from `@/lib/logger`:
 
 ```typescript
-import { 
+import {
   logApiRequest,
   logDatabaseOperation,
   logAuthEvent,
   logBusinessEvent,
   logError,
   logPerformance,
-  Timer 
-} from '@/lib/logger';
+  Timer,
+} from "@/lib/logger";
 ```
 
 ### Log Types
@@ -504,7 +530,7 @@ import {
 **API Requests** (automatic with `withLogging`)
 
 ```typescript
-import { withLogging } from '@/lib/api-middleware';
+import { withLogging } from "@/lib/api-middleware";
 
 async function handleGet(request: NextRequest) {
   const products = await db.products.findAll();
@@ -520,8 +546,8 @@ export const GET = withLogging(handleGet);
 
 ```typescript
 logBusinessEvent({
-  event: 'order_created',
-  userId: 'user_123',
+  event: "order_created",
+  userId: "user_123",
   details: {
     orderId: order.id,
     totalAmount: 99.99,
@@ -539,7 +565,7 @@ try {
 } catch (error) {
   logError({
     error,
-    context: 'order_processing',
+    context: "order_processing",
     userId: session?.user?.id,
     additionalInfo: { orderId: data.orderId },
   });
@@ -550,15 +576,15 @@ try {
 **Performance Tracking**
 
 ```typescript
-const timer = new Timer('expensive_operation');
+const timer = new Timer("expensive_operation");
 // ... do work ...
 const duration = timer.end({ recordCount: 1000 });
 
 // Or manually
 logPerformance({
-  operation: 'data_export',
+  operation: "data_export",
   duration: 1500,
-  metadata: { fileSize: '2MB' },
+  metadata: { fileSize: "2MB" },
 });
 ```
 
@@ -577,15 +603,15 @@ Set via `LOG_LEVEL` env variable:
 
 Auth events are logged by `logAuthEvent()`. Key events and their levels:
 
-| Event | Level | When |
-|---|---|---|
-| `login` | `info` | User successfully authenticated |
-| `logout` | `info` | User signed out |
-| `register` | `info` | New account created |
-| `failed_login` | `warn` | Authentication attempt failed |
-| `password_change` | `info` | Password updated |
+| Event             | Level   | When                               |
+| ----------------- | ------- | ---------------------------------- |
+| `login`           | `info`  | User successfully authenticated    |
+| `logout`          | `info`  | User signed out                    |
+| `register`        | `info`  | New account created                |
+| `failed_login`    | `warn`  | Authentication attempt failed      |
+| `password_change` | `info`  | Password updated                   |
 | `session_created` | `debug` | Session token read (every request) |
-| `session_expired` | `debug` | Session token expired |
+| `session_expired` | `debug` | Session token expired              |
 
 > **Important:** Do **not** log inside the NextAuth `session()` callback. It fires on every authenticated request and would generate one log entry per page/API call. Auth events should only be logged for user-initiated actions (login, logout, register).
 
@@ -594,18 +620,18 @@ Auth events are logged by `logAuthEvent()`. Key events and their levels:
 ```typescript
 // ✅ Good - Structured, contextual
 logBusinessEvent({
-  event: 'payment_processed',
-  userId: 'user_123',
+  event: "payment_processed",
+  userId: "user_123",
   details: {
-    orderId: 'order_456',
+    orderId: "order_456",
     amount: 99.99,
-    lastFour: '1234',
+    lastFour: "1234",
   },
   success: true,
 });
 
 // ❌ Bad - Unstructured string
-console.log('Payment processed for order order_456');
+console.log("Payment processed for order order_456");
 
 // ❌ Bad - Logging in session() callback (fires on every request)
 // session({ session, token }) {
@@ -614,10 +640,10 @@ console.log('Payment processed for order order_456');
 
 // ❌ Never log sensitive data
 logBusinessEvent({
-  details: { 
-    creditCard: '1234567890123456', // NEVER!
-    cvv: '123' // NEVER!
-  }
+  details: {
+    creditCard: "1234567890123456", // NEVER!
+    cvv: "123", // NEVER!
+  },
 });
 ```
 
@@ -631,11 +657,11 @@ logBusinessEvent({
 
 ```typescript
 // app/api/reviews/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import { withLogging } from '@/lib/api-middleware';
-import { apiSuccess, handleApiError } from '@/lib/api-utils';
-import { db } from '@/lib/db';
-import { z } from 'zod';
+import { NextRequest, NextResponse } from "next/server";
+import { withLogging } from "@/lib/api-middleware";
+import { apiSuccess, handleApiError } from "@/lib/api-utils";
+import { db } from "@/lib/db";
+import { z } from "zod";
 
 const ReviewSchema = z.object({
   productId: z.string().cuid(),
@@ -647,9 +673,9 @@ async function handlePost(request: NextRequest) {
   try {
     const body = await request.json();
     const validated = ReviewSchema.parse(body);
-    
+
     const review = await db.reviews.create(validated);
-    
+
     return apiSuccess(review, 201);
   } catch (error) {
     return handleApiError(error);
@@ -706,7 +732,7 @@ export const db = {
 **Success responses**
 
 ```typescript
-import { apiSuccess } from '@/lib/api-utils';
+import { apiSuccess } from "@/lib/api-utils";
 
 return apiSuccess({ user }, 200);
 // Returns: { success: true, data: { user } }
@@ -715,16 +741,16 @@ return apiSuccess({ user }, 200);
 **Error responses**
 
 ```typescript
-import { apiError } from '@/lib/api-utils';
+import { apiError } from "@/lib/api-utils";
 
-return apiError('Product not found', 404);
+return apiError("Product not found", 404);
 // Returns: { success: false, error: 'Product not found' }
 ```
 
 **Validation error handling**
 
 ```typescript
-import { handleApiError } from '@/lib/api-utils';
+import { handleApiError } from "@/lib/api-utils";
 
 try {
   const validated = ProductSchema.parse(data);
@@ -737,19 +763,19 @@ try {
 ### Authentication in API Routes
 
 ```typescript
-import { auth } from '@/lib/auth';
+import { auth } from "@/lib/auth";
 
 async function handlePost(request: NextRequest) {
   const session = await auth();
-  
+
   if (!session?.user) {
-    return apiError('Unauthorized', 401);
+    return apiError("Unauthorized", 401);
   }
-  
-  if (session.user.role !== 'ADMIN') {
-    return apiError('Forbidden', 403);
+
+  if (session.user.role !== "ADMIN") {
+    return apiError("Forbidden", 403);
   }
-  
+
   // Proceed with authenticated logic
 }
 ```
@@ -771,7 +797,7 @@ async function handlePost(request: NextRequest) {
   } catch (error) {
     logError({
       error,
-      context: 'data_processing',
+      context: "data_processing",
       additionalInfo: { path: request.nextUrl.pathname },
     });
     return handleApiError(error);
@@ -782,7 +808,7 @@ async function handlePost(request: NextRequest) {
 **Validation errors**
 
 ```typescript
-import { ZodError } from 'zod';
+import { ZodError } from "zod";
 
 try {
   const validated = ProductInputSchema.parse(data);
@@ -801,7 +827,7 @@ try {
 class ProductNotFoundError extends Error {
   constructor(productId: string) {
     super(`Product ${productId} not found`);
-    this.name = 'ProductNotFoundError';
+    this.name = "ProductNotFoundError";
   }
 }
 
@@ -847,17 +873,17 @@ export class ErrorBoundary extends React.Component<Props, State> {
 ```typescript
 async function fetchProducts() {
   try {
-    const response = await fetch('/api/products');
-    
+    const response = await fetch("/api/products");
+
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.error || 'Failed to fetch products');
+      throw new Error(error.error || "Failed to fetch products");
     }
-    
+
     const data = await response.json();
     return data.data;
   } catch (error) {
-    console.error('Fetch error:', error);
+    console.error("Fetch error:", error);
     return [];
   }
 }
@@ -893,17 +919,20 @@ git commit -m "WIP"
 ### Pull Request Process
 
 1. **Create feature branch**
+
    ```bash
    git checkout -b feature/add-reviews
    ```
 
 2. **Make changes and commit**
+
    ```bash
    git add .
    git commit -m "Add review system for products"
    ```
 
 3. **Push to remote**
+
    ```bash
    git push origin feature/add-reviews
    ```
@@ -942,13 +971,17 @@ const products = await drizzleDb.query.products.findMany();
 
 ```typescript
 // In lib/schema.ts
-export const products = pgTable("products", {
-  category: text("category").notNull(),
-  price: doublePrecision("price").notNull(),
-}, (table) => [
-  index("idx_products_category").on(table.category),
-  index("idx_products_price").on(table.price),
-]);
+export const products = pgTable(
+  "products",
+  {
+    category: text("category").notNull(),
+    price: doublePrecision("price").notNull(),
+  },
+  (table) => [
+    index("idx_products_category").on(table.category),
+    index("idx_products_price").on(table.price),
+  ],
+);
 ```
 
 **Use pagination**
@@ -966,24 +999,24 @@ const products = await drizzleDb.query.products.findMany({
 **Cache expensive queries**
 
 ```typescript
-import { getCachedData } from '@/lib/redis';
+import { getCachedData } from "@/lib/redis";
 
 const products = await getCachedData(
-  'products:all',
+  "products:all",
   60, // TTL in seconds
   async () => await db.products.findAll(),
-  10  // Stale-while-revalidate
+  10, // Stale-while-revalidate
 );
 ```
 
 **Cache invalidation**
 
 ```typescript
-import { invalidateCache } from '@/lib/redis';
+import { invalidateCache } from "@/lib/redis";
 
 // After creating/updating product
 await db.products.create(data);
-await invalidateCache('products:*');
+await invalidateCache("products:*");
 ```
 
 ### Next.js Optimization
@@ -1026,8 +1059,8 @@ import Image from 'next/image';
 ```typescript
 const response = apiSuccess({ products });
 response.headers.set(
-  'Cache-Control',
-  's-maxage=60, stale-while-revalidate=120'
+  "Cache-Control",
+  "s-maxage=60, stale-while-revalidate=120",
 );
 return response;
 ```
@@ -1039,11 +1072,13 @@ return response;
 ### Tools
 
 **Chrome DevTools**
+
 - Console: Check for errors
 - Network: Inspect API calls
 - React DevTools: Inspect component tree
 
 **VS Code**
+
 - Set breakpoints in TypeScript code
 - Use debugger console for variable inspection
 
@@ -1079,18 +1114,18 @@ GET products:all
 
 ```typescript
 // Add detailed logging
-console.log('Request body:', body);
-console.log('Validated data:', validated);
-console.log('Database result:', result);
+console.log("Request body:", body);
+console.log("Validated data:", validated);
+console.log("Database result:", result);
 ```
 
 **Check request ID for tracing**
 
 ```typescript
 // Returned in X-Request-ID header
-const response = await fetch('/api/products');
-const requestId = response.headers.get('X-Request-ID');
-console.log('Request ID:', requestId);
+const response = await fetch("/api/products");
+const requestId = response.headers.get("X-Request-ID");
+console.log("Request ID:", requestId);
 
 // Search logs for this request ID
 ```
@@ -1111,17 +1146,17 @@ console.log('Request ID:', requestId);
 
 ```typescript
 async function createProduct(data: ProductInput) {
-  const response = await fetch('/api/products', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+  const response = await fetch("/api/products", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
-  
+
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.error);
   }
-  
+
   const result = await response.json();
   return result.data;
 }
@@ -1131,14 +1166,14 @@ async function createProduct(data: ProductInput) {
 
 ```typescript
 // lib/actions.ts
-'use server';
+"use server";
 
 export async function addToCart(productId: string, quantity: number) {
   const session = await auth();
   if (!session?.user) {
-    return { error: 'Unauthorized' };
+    return { error: "Unauthorized" };
   }
-  
+
   try {
     const cart = await db.cart.addItem({
       userId: session.user.id,
@@ -1147,7 +1182,7 @@ export async function addToCart(productId: string, quantity: number) {
     });
     return { data: cart };
   } catch (error) {
-    return { error: 'Failed to add to cart' };
+    return { error: "Failed to add to cart" };
   }
 }
 ```
@@ -1161,11 +1196,11 @@ import { redirect } from 'next/navigation';
 
 export default async function AdminPage() {
   const session = await auth();
-  
+
   if (!session?.user || session.user.role !== 'ADMIN') {
     redirect('/');
   }
-  
+
   return <AdminDashboard />;
 }
 ```
@@ -1194,12 +1229,12 @@ export default async function ProductsPage() {
 
 export function ProductForm() {
   const [errors, setErrors] = useState<Record<string, string>>({});
-  
+
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const data = Object.fromEntries(formData);
-    
+
     try {
       const validated = ProductInputSchema.parse(data);
       await createProduct(validated);
@@ -1213,7 +1248,7 @@ export function ProductForm() {
       }
     }
   }
-  
+
   return <form onSubmit={handleSubmit}>{/* form fields */}</form>;
 }
 ```
@@ -1236,28 +1271,29 @@ export function ProductForm() {
 
 ```typescript
 // Database
-import { db } from '@/lib/db';
+import { db } from "@/lib/db";
 
 // Cache
-import { getCachedData, invalidateCache } from '@/lib/redis';
+import { getCachedData, invalidateCache } from "@/lib/redis";
 
 // Auth
-import { auth } from '@/lib/auth';
+import { auth } from "@/lib/auth";
 
 // Logging
-import { logError, logBusinessEvent, Timer } from '@/lib/logger';
+import { logError, logBusinessEvent, Timer } from "@/lib/logger";
 
 // API
-import { apiSuccess, apiError, handleApiError } from '@/lib/api-utils';
-import { withLogging } from '@/lib/api-middleware';
+import { apiSuccess, apiError, handleApiError } from "@/lib/api-utils";
+import { withLogging } from "@/lib/api-middleware";
 
 // Validation
-import { ProductInputSchema } from '@/lib/validations';
+import { ProductInputSchema } from "@/lib/validations";
 ```
 
 ### Environment Variables
 
 Required for development:
+
 - `DATABASE_URL` - PostgreSQL connection string
 - `REDIS_URL` - Redis connection string
 - `NEXTAUTH_SECRET` - NextAuth secret key
@@ -1265,12 +1301,14 @@ Required for development:
 - `GOOGLE_CLIENT_SECRET` - Google OAuth secret
 
 Optional:
+
 - `LOG_LEVEL` - debug, info, warn, error (default: info)
 - `NODE_ENV` - development, production, test
 
 ---
 
 For more details, see:
+
 - [Migrations Guide](../MIGRATIONS.md)
 - [Logging Guide](../LOGGING_GUIDE.md)
 - [Project README](../README.md)

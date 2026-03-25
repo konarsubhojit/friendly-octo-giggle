@@ -1,4 +1,5 @@
 [![Board Status](https://subhojitkonar.visualstudio.com/b392f6f8-0ee4-4da2-ac9e-6e8add712a92/40b0e944-0490-4024-8f04-cd17b1baacc8/_apis/work/boardbadge/3f6e9f2d-cc17-48a8-afe6-58e9fd3a8a21)](https://subhojitkonar.visualstudio.com/b392f6f8-0ee4-4da2-ac9e-6e8add712a92/_boards/board/t/40b0e944-0490-4024-8f04-cd17b1baacc8/Microsoft.RequirementCategory)
+
 # E-Commerce Platform
 
 A highly scalable, serverless-first e-commerce platform built with Next.js 16, PostgreSQL, and Redis.
@@ -44,27 +45,28 @@ Complete documentation is available in the [`/docs`](./docs) folder:
 
 ## 🛠️ Tech Stack
 
-| Technology | Purpose |
-|------------|---------|
-| **Next.js 16** | React framework with App Router |
-| **TypeScript** | Type-safe development |
-| **PostgreSQL** | Primary database |
-| **Drizzle ORM** | Database toolkit |
-| **Redis** | Caching layer |
-| **NextAuth.js v5** | Authentication |
-| **Tailwind CSS v4** | Styling |
-| **Pino** | Structured logging |
-| **Vercel Blob** | Image storage |
+| Technology          | Purpose                         |
+| ------------------- | ------------------------------- |
+| **Next.js 16**      | React framework with App Router |
+| **TypeScript**      | Type-safe development           |
+| **PostgreSQL**      | Primary database                |
+| **Drizzle ORM**     | Database toolkit                |
+| **Redis**           | Caching layer                   |
+| **NextAuth.js v5**  | Authentication                  |
+| **Tailwind CSS v4** | Styling                         |
+| **Pino**            | Structured logging              |
+| **Vercel Blob**     | Image storage                   |
 
 ## 📋 Requirements
 
 - **Node.js**: 18.0.0 or higher
-- **PostgreSQL**: 12.0 or higher  
+- **PostgreSQL**: 12.0 or higher
 - **Redis**: 6.0 or higher (optional for local dev; recommended for production)
 
 ## 🎯 Features Overview
 
 ### For Customers
+
 - Browse and search products
 - View product details with variations
 - Add items to cart (session-based for guests, persistent for logged-in users)
@@ -73,6 +75,7 @@ Complete documentation is available in the [`/docs`](./docs) folder:
 - View order history (linked to account)
 
 ### For Administrators
+
 - Product management (CRUD operations)
 - Order management and status updates
 - User role management
@@ -92,6 +95,8 @@ npm run dev:https
 # Database commands
 npm run db:generate    # Generate Drizzle migrations
 npm run db:migrate     # Run migrations
+npm run db:bootstrap   # Idempotent bootstrap for partially initialized databases
+npm run redis:orders:index # Create/backfill the Redis orders search index
 npm run db:seed        # Seed test data
 
 # Testing
@@ -128,6 +133,7 @@ See [Deployment Guide](./docs/deployment.md) for detailed instructions.
 ## 🤝 Contributing
 
 Contributions are welcome! Please read the [Development Guide](./docs/development.md) for:
+
 - Code style guidelines
 - Development workflow
 - Testing procedures

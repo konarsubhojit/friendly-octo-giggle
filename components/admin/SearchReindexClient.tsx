@@ -4,30 +4,47 @@ import { useState } from "react";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import toast from "react-hot-toast";
 
-type ReindexTarget = "products";
+type ReindexTarget = "products" | "orders";
 
 interface ReindexResult {
   products?: number;
+  orders?: number;
 }
 
 interface SearchReindexClientProps {
-  readonly configured: boolean;
+  readonly productsConfigured: boolean;
+  readonly ordersConfigured: boolean;
 }
 
 const TARGET_OPTIONS: {
   value: ReindexTarget;
   label: string;
   description: string;
+  configuredProp: keyof SearchReindexClientProps;
+  confirmMessage: string;
 }[] = [
   {
     value: "products",
     label: "Products",
     description: "Rebuild the products search index from the database",
+    configuredProp: "productsConfigured",
+    confirmMessage:
+      "This will reset and rebuild the products search index. Existing product search results will be temporarily unavailable during the process. Continue?",
+  },
+  {
+    value: "orders",
+    label: "Orders",
+    description:
+      "Create the Redis orders index if needed and backfill all orders from PostgreSQL",
+    configuredProp: "ordersConfigured",
+    confirmMessage:
+      "This will create the Redis orders search index if it is missing and backfill all existing orders into Redis. Continue?",
   },
 ];
 
 export default function SearchReindexClient({
-  configured,
+  productsConfigured,
+  ordersConfigured,
 }: SearchReindexClientProps) {
   const [loading, setLoading] = useState(false);
   const [confirmTarget, setConfirmTarget] = useState<ReindexTarget | null>(
@@ -35,7 +52,7 @@ export default function SearchReindexClient({
   );
   const [lastResult, setLastResult] = useState<ReindexResult | null>(null);
 
-  if (!configured) {
+  if (!productsConfigured && !ordersConfigured) {
     return (
       <div className="rounded-lg border border-yellow-300 bg-yellow-50 dark:border-yellow-700 dark:bg-yellow-900/20 p-6">
         <div className="flex items-start gap-3">
@@ -55,10 +72,11 @@ export default function SearchReindexClient({
           </svg>
           <div>
             <h3 className="font-semibold text-yellow-800 dark:text-yellow-200">
-              Search Not Configured
+              Search Infrastructure Not Configured
             </h3>
             <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
-              Upstash Search environment variables are missing. Set{" "}
+              Search controls need either Upstash Search or Upstash Redis
+              credentials. Set{" "}
               <code className="text-xs bg-yellow-100 dark:bg-yellow-900/40 px-1 py-0.5 rounded">
                 UPSTASH_SEARCH_REST_URL
               </code>{" "}
@@ -66,7 +84,15 @@ export default function SearchReindexClient({
               <code className="text-xs bg-yellow-100 dark:bg-yellow-900/40 px-1 py-0.5 rounded">
                 UPSTASH_SEARCH_REST_TOKEN
               </code>{" "}
-              to enable search indexing.
+              for products, and{" "}
+              <code className="text-xs bg-yellow-100 dark:bg-yellow-900/40 px-1 py-0.5 rounded">
+                UPSTASH_REDIS_REST_URL
+              </code>{" "}
+              plus{" "}
+              <code className="text-xs bg-yellow-100 dark:bg-yellow-900/40 px-1 py-0.5 rounded">
+                UPSTASH_REDIS_REST_TOKEN
+              </code>{" "}
+              for orders.
             </p>
           </div>
         </div>
@@ -97,6 +123,7 @@ export default function SearchReindexClient({
 
       const parts: string[] = [];
       if (result.products != null) parts.push(`${result.products} products`);
+      if (result.orders != null) parts.push(`${result.orders} orders`);
       toast.success(
         parts.length > 0
           ? `Reindexed ${parts.join(" and ")}`
@@ -113,50 +140,70 @@ export default function SearchReindexClient({
   return (
     <>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {TARGET_OPTIONS.map(({ value, label, description }) => (
-          <div
-            key={value}
-            className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 flex flex-col"
-          >
-            <div className="flex items-center gap-2 mb-2">
-              <svg
-                className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                />
-              </svg>
-              <h3 className="font-semibold text-gray-900 dark:text-white">
-                {label}
-              </h3>
-            </div>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 flex-1">
-              {description}
-            </p>
+        {TARGET_OPTIONS.map(({ value, label, description, configuredProp }) => {
+          let isConfigured = ordersConfigured;
 
-            {lastResult?.[value] != null && (
-              <p className="text-xs text-green-600 dark:text-green-400 mb-3">
-                Last run: {lastResult[value]} records indexed
-              </p>
-            )}
+          if (configuredProp === "productsConfigured") {
+            isConfigured = productsConfigured;
+          }
 
-            <button
-              type="button"
-              disabled={loading}
-              onClick={() => setConfirmTarget(value)}
-              className="w-full px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed rounded-md transition"
+          let buttonLabel = `${label} unavailable`;
+
+          if (loading) {
+            buttonLabel = "Reindexing…";
+          } else if (isConfigured) {
+            buttonLabel = `Reindex ${label}`;
+          }
+
+          return (
+            <div
+              key={value}
+              className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 flex flex-col"
             >
-              {loading ? "Reindexing…" : `Reindex ${label}`}
-            </button>
-          </div>
-        ))}
+              <div className="flex items-center gap-2 mb-2">
+                <svg
+                  className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                  />
+                </svg>
+                <h3 className="font-semibold text-gray-900 dark:text-white">
+                  {label}
+                </h3>
+              </div>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 flex-1">
+                {description}
+              </p>
+
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                Status: {isConfigured ? "configured" : "missing config"}
+              </p>
+
+              {lastResult?.[value] != null && (
+                <p className="text-xs text-green-600 dark:text-green-400 mb-3">
+                  Last run: {lastResult[value]} records indexed
+                </p>
+              )}
+
+              <button
+                type="button"
+                disabled={loading || !isConfigured}
+                onClick={() => setConfirmTarget(value)}
+                className="w-full px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed rounded-md transition"
+              >
+                {buttonLabel}
+              </button>
+            </div>
+          );
+        })}
       </div>
 
       <div className="mt-6 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5">
@@ -165,20 +212,20 @@ export default function SearchReindexClient({
         </h3>
         <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1 list-disc list-inside">
           <li>
-            Reindexing resets the products index and rebuilds it from the
-            database.
+            Product reindexing resets the Upstash Search index and rebuilds it
+            from the database.
           </li>
           <li>
             Products are indexed into Upstash Search during normal admin create
             and update operations.
           </li>
           <li>
-            Use a full reindex after bulk imports, data migrations, or if search
-            results seem stale.
+            Order reindexing creates the Redis Search index when needed and
+            backfills all current orders into Redis hashes.
           </li>
           <li>
-            Orders search is managed separately in Redis Search and is not
-            rebuilt from this screen.
+            Use a full reindex after bulk imports, data migrations, or if search
+            results seem stale.
           </li>
           <li>
             The process runs server-side and may take a few seconds for large
@@ -190,7 +237,10 @@ export default function SearchReindexClient({
       <ConfirmDialog
         isOpen={confirmTarget !== null}
         title="Confirm Reindex"
-        message="This will reset and rebuild the products search index. Existing product search results will be temporarily unavailable during the process. Continue?"
+        message={
+          TARGET_OPTIONS.find((option) => option.value === confirmTarget)
+            ?.confirmMessage ?? "Continue?"
+        }
         confirmLabel="Reindex"
         cancelLabel="Cancel"
         variant="warning"

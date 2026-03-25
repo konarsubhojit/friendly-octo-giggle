@@ -59,6 +59,7 @@ BLOB_READ_WRITE_TOKEN=your-vercel-blob-token
 7. Copy Client ID and Client Secret to `.env`
 
 For production, add your production domain:
+
 ```
 https://your-domain.com/api/auth/callback/google
 ```
@@ -205,6 +206,7 @@ friendly-octo-giggle/
 **Cause**: Environment variables not loaded
 
 **Solution**:
+
 1. Ensure `.env` file exists in root directory
 2. Verify `DATABASE_URL` is set correctly
 3. Check PostgreSQL is running
@@ -215,6 +217,7 @@ friendly-octo-giggle/
 **Cause**: Redis not configured
 
 **Solution**:
+
 1. Install Redis locally: `brew install redis` (Mac) or use Upstash
 2. Start Redis: `redis-server`
 3. Add `REDIS_URL` to `.env`
@@ -225,6 +228,7 @@ friendly-octo-giggle/
 **Cause**: OAuth credentials incorrect or redirect URI mismatch
 
 **Solution**:
+
 1. Verify Client ID and Secret in `.env`
 2. Check redirect URI is exactly: `http://localhost:3000/api/auth/callback/google`
 3. Ensure Google+ API is enabled
@@ -235,6 +239,7 @@ friendly-octo-giggle/
 **Cause**: Drizzle migrations not applied
 
 **Solution**:
+
 ```bash
 npm run db:generate
 # Restart dev server
@@ -247,6 +252,7 @@ npm run dev
 
 **Solution**:
 The app automatically accepts self-signed certificates. If you need to disable SSL:
+
 ```env
 DATABASE_URL=postgresql://...?sslmode=disable
 ```
@@ -258,6 +264,7 @@ See [Troubleshooting](./troubleshooting.md#database-ssl-issues) for more details
 **Cause**: Database schema out of sync
 
 **Solution**:
+
 ```bash
 # Check migration status
 npm run db:migrate
@@ -327,6 +334,7 @@ Products can have multiple variations (e.g., colors, sizes):
 ### Hot Reload
 
 Next.js automatically reloads on file changes:
+
 - **Components**: Instant Fast Refresh
 - **API routes**: Restart on save
 - **Database schema**: Requires migration
@@ -334,11 +342,13 @@ Next.js automatically reloads on file changes:
 ### Caching Behavior
 
 Products are cached in Redis:
+
 - **First request**: Fetches from database
 - **Next 60 seconds**: Serves from cache
 - **After 60 seconds**: Revalidates in background (stale-while-revalidate)
 
 Clear cache manually:
+
 ```bash
 redis-cli FLUSHALL
 ```
@@ -369,6 +379,7 @@ When modifying the schema:
 **Client-side logs**: Check browser console
 
 **Database queries**: Enable Drizzle logging in `lib/db.ts`:
+
 ```typescript
 // Set LOG_LEVEL=debug in .env to enable query logging via Pino
 ```
