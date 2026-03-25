@@ -22,17 +22,21 @@ Comprehensive troubleshooting guide for common issues, errors, and solutions.
 ### Environment Variables Not Loaded
 
 **Symptoms:**
+
 ```
 Error: Environment variable DATABASE_URL is not set
 ```
 
 **Solutions:**
+
 1. Create `.env.local` from `.env.example`:
+
    ```bash
    cp .env.example .env.local
    ```
 
 2. Verify file exists and has correct values:
+
    ```bash
    cat .env.local
    ```
@@ -45,13 +49,16 @@ Error: Environment variable DATABASE_URL is not set
 ### Dependencies Installation Failed
 
 **Symptoms:**
+
 ```
 npm ERR! code ERESOLVE
 npm ERR! ERESOLVE unable to resolve dependency tree
 ```
 
 **Solutions:**
+
 1. Clear npm cache:
+
    ```bash
    rm -rf node_modules package-lock.json
    npm cache clean --force
@@ -59,6 +66,7 @@ npm ERR! ERESOLVE unable to resolve dependency tree
    ```
 
 2. Use correct Node.js version (18.x or higher):
+
    ```bash
    node --version  # Should be >= 18.0.0
    ```
@@ -71,16 +79,19 @@ npm ERR! ERESOLVE unable to resolve dependency tree
 ### Port Already in Use
 
 **Symptoms:**
+
 ```
 Error: listen EADDRINUSE: address already in use :::3000
 ```
 
 **Solutions:**
+
 1. Kill process on port 3000:
+
    ```bash
    # Linux/Mac
    lsof -ti:3000 | xargs kill -9
-   
+
    # Windows
    netstat -ano | findstr :3000
    taskkill /PID <PID> /F
@@ -98,6 +109,7 @@ Error: listen EADDRINUSE: address already in use :::3000
 ### SSL Certificate Error
 
 **Symptoms:**
+
 ```
 Error opening a TLS connection: self-signed certificate in certificate chain
 Error: self-signed certificate in certificate chain
@@ -113,18 +125,21 @@ PostgreSQL databases (especially Neon, Supabase, Railway) use self-signed SSL ce
 
 **Option 1: Accept Self-Signed Certificates (Recommended)**
 The app now automatically accepts self-signed certificates. The `lib/db.ts` file has enhanced SSL configuration:
+
 ```typescript
 function createPool() {
-  const connectionString = process.env.DATABASE_URL || '';
-  const isSSL = !connectionString.includes('sslmode=disable') && !connectionString.includes('localhost');
-  
+  const connectionString = process.env.DATABASE_URL || "";
+  const isSSL =
+    !connectionString.includes("sslmode=disable") &&
+    !connectionString.includes("localhost");
+
   const sslConfig = isSSL
     ? {
         rejectUnauthorized: false,
         checkServerIdentity: () => undefined,
       }
     : false;
-  
+
   return new pg.Pool({
     connectionString,
     ssl: sslConfig,
@@ -135,27 +150,32 @@ function createPool() {
 ```
 
 Just use a standard connection string:
+
 ```bash
 DATABASE_URL=postgresql://user:pass@host:5432/db?schema=public
 ```
 
 **Option 2: Disable SSL Completely (Local Development Only)**
+
 ```bash
 DATABASE_URL=postgresql://user:pass@localhost:5432/db?schema=public&sslmode=disable
 ```
 
 **Option 3: Verify Configuration**
 Check that `lib/db.ts` has the enhanced SSL configuration shown above with:
+
 - `rejectUnauthorized: false` - Accepts self-signed certificates
 - `checkServerIdentity: () => undefined` - Explicitly bypasses certificate validation
 - Connection timeouts - Improves reliability in serverless environments
 
 **Key Points:**
+
 - `checkServerIdentity: () => undefined` is **required** for managed PostgreSQL services (Neon, Supabase, Railway) in serverless environments
 - For production with proper CA certificates, you can remove `checkServerIdentity` and set `rejectUnauthorized: true`
 - This configuration fixes database connection errors for both data fetching and authentication
 
 **Testing:**
+
 ```bash
 # Test connection
 npm run build
@@ -166,6 +186,7 @@ npm run build
 ### Connection Timeout
 
 **Symptoms:**
+
 ```
 Error: Connection timeout
 P1001: Can't reach database server at `host:5432`
@@ -174,17 +195,20 @@ P1001: Can't reach database server at `host:5432`
 **Solutions:**
 
 1. **Verify database is running:**
+
    ```bash
    psql "$DATABASE_URL"
    ```
 
 2. **Check network connectivity:**
+
    ```bash
    # Test connection
    telnet host 5432
    ```
 
 3. **Verify credentials:**
+
    ```bash
    echo $DATABASE_URL
    # Should show: postgresql://user:pass@host:5432/db
@@ -198,6 +222,7 @@ P1001: Can't reach database server at `host:5432`
 ### Migration Failures
 
 **Symptoms:**
+
 ```
 Error: P3006: Migration failed to apply
 Error: relation "Product" already exists
@@ -206,6 +231,7 @@ Error: relation "Product" already exists
 **Solutions:**
 
 1. **Reset database (development only):**
+
    ```bash
    npx drizzle-kit drop
    npm run db:migrate
@@ -213,18 +239,28 @@ Error: relation "Product" already exists
    ```
 
 2. **Apply pending migrations:**
+
    ```bash
    npm run db:migrate
    ```
 
-3. **Resolve migration conflicts:**
+3. **Bootstrap a partially initialized database:**
+
+   ```bash
+   npm run db:bootstrap
+   ```
+
+   Use this when the database already contains some of the app tables, enums, or indexes, but `drizzle.__drizzle_migrations` is missing or incomplete. The bootstrap SQL is idempotent and also inserts the expected migration rows into `drizzle.__drizzle_migrations` so later `npm run db:migrate` runs stay clean.
+
+4. **Resolve migration conflicts:**
+
    ```bash
    # Review and manually fix migration SQL in drizzle/ directory
    # Then re-apply
    npm run db:migrate
    ```
 
-4. **Production migration:**
+5. **Production migration:**
    ```bash
    npx drizzle-kit migrate
    ```
@@ -232,6 +268,7 @@ Error: relation "Product" already exists
 ### "Too Many Connections" Error
 
 **Symptoms:**
+
 ```
 Error: P1001: Too many connections
 remaining connection slots are reserved
@@ -240,6 +277,7 @@ remaining connection slots are reserved
 **Solutions:**
 
 1. **Connection pooling is already configured** in `lib/db.ts`:
+
    ```typescript
    const pool = new pg.Pool({
      connectionString: process.env.DATABASE_URL,
@@ -248,10 +286,11 @@ remaining connection slots are reserved
    ```
 
 2. **Close unused connections:**
+
    ```bash
    # PostgreSQL
-   SELECT pg_terminate_backend(pid) 
-   FROM pg_stat_activity 
+   SELECT pg_terminate_backend(pid)
+   FROM pg_stat_activity
    WHERE datname = 'your_db' AND pid <> pg_backend_pid();
    ```
 
@@ -267,6 +306,7 @@ remaining connection slots are reserved
 ### Connection Failed
 
 **Symptoms:**
+
 ```
 Error: REDIS_URL environment variable is not set
 Error: connect ECONNREFUSED 127.0.0.1:6379
@@ -275,22 +315,24 @@ Error: connect ECONNREFUSED 127.0.0.1:6379
 **Solutions:**
 
 1. **Set REDIS_URL:**
+
    ```bash
    # .env.local
    REDIS_URL=redis://localhost:6379
-   
+
    # Or Upstash (recommended for serverless)
    REDIS_URL=rediss://default:token@host:port
    ```
 
 2. **Start local Redis:**
+
    ```bash
    # macOS
    brew services start redis
-   
+
    # Linux
    sudo systemctl start redis
-   
+
    # Docker
    docker run -d -p 6379:6379 redis:alpine
    ```
@@ -304,6 +346,7 @@ Error: connect ECONNREFUSED 127.0.0.1:6379
 ### Cache Not Working
 
 **Symptoms:**
+
 - Slow response times
 - No cache hits in logs
 - Data always fetched from database
@@ -311,23 +354,26 @@ Error: connect ECONNREFUSED 127.0.0.1:6379
 **Solutions:**
 
 1. **Check Redis logs:**
+
    ```bash
    # Enable debug logging
    LOG_LEVEL=debug npm run dev
-   
+
    # Look for cache operations
    # Should see: "Cache hit", "Cache miss", etc.
    ```
 
 2. **Verify cache function usage:**
+
    ```typescript
    // Correct usage
-   const data = await getCachedData('key', 60, async () => {
+   const data = await getCachedData("key", 60, async () => {
      return await fetchData();
    });
    ```
 
 3. **Clear cache manually:**
+
    ```bash
    redis-cli FLUSHDB
    ```
@@ -335,12 +381,13 @@ Error: connect ECONNREFUSED 127.0.0.1:6379
 4. **Check TTL settings:**
    ```typescript
    // TTL in seconds (not milliseconds)
-   await getCachedData('key', 60, fetcher); // 60 seconds
+   await getCachedData("key", 60, fetcher); // 60 seconds
    ```
 
 ### Redis Memory Issues
 
 **Symptoms:**
+
 ```
 Error: OOM command not allowed when used memory > 'maxmemory'
 ```
@@ -348,16 +395,19 @@ Error: OOM command not allowed when used memory > 'maxmemory'
 **Solutions:**
 
 1. **Check memory usage:**
+
    ```bash
    redis-cli INFO memory
    ```
 
 2. **Set eviction policy:**
+
    ```bash
    redis-cli CONFIG SET maxmemory-policy allkeys-lru
    ```
 
 3. **Increase memory limit** (if self-hosted):
+
    ```bash
    redis-cli CONFIG SET maxmemory 256mb
    ```
@@ -374,6 +424,7 @@ Error: OOM command not allowed when used memory > 'maxmemory'
 ### Google OAuth Error: Redirect URI Mismatch
 
 **Symptoms:**
+
 ```
 Error 400: redirect_uri_mismatch
 The redirect URI in the request does not match
@@ -382,19 +433,21 @@ The redirect URI in the request does not match
 **Solutions:**
 
 1. **Add authorized redirect URIs in Google Cloud Console:**
+
    ```
    Development:
    http://localhost:3000/api/auth/callback/google
-   
+
    Production:
    https://yourdomain.com/api/auth/callback/google
    ```
 
 2. **Verify NEXTAUTH_URL:**
+
    ```bash
    # .env.local
    NEXTAUTH_URL=http://localhost:3000
-   
+
    # Production
    NEXTAUTH_URL=https://yourdomain.com
    ```
@@ -404,6 +457,7 @@ The redirect URI in the request does not match
 ### "NEXTAUTH_SECRET is not set"
 
 **Symptoms:**
+
 ```
 Error: Please define NEXTAUTH_SECRET environment variable
 ```
@@ -411,11 +465,13 @@ Error: Please define NEXTAUTH_SECRET environment variable
 **Solutions:**
 
 1. **Generate secret:**
+
    ```bash
    openssl rand -base64 32
    ```
 
 2. **Add to .env.local:**
+
    ```bash
    NEXTAUTH_SECRET=your-generated-secret-here
    ```
@@ -428,18 +484,21 @@ Error: Please define NEXTAUTH_SECRET environment variable
 ### Session Expired Prematurely
 
 **Symptoms:**
+
 - User logged out unexpectedly
 - "Session expired" errors in logs
 
 **Solutions:**
 
 1. **Check session logs:**
+
    ```bash
    # Look for session_expired events
    grep "session_expired" logs/*.log
    ```
 
 2. **Verify database sessions table:**
+
    ```sql
    SELECT * FROM "Session" WHERE expires < NOW();
    ```
@@ -454,6 +513,7 @@ Error: Please define NEXTAUTH_SECRET environment variable
 ### "Invalid Credentials" Error
 
 **Symptoms:**
+
 ```
 Error: Sign in failed
 Credentials do not match our records
@@ -462,6 +522,7 @@ Credentials do not match our records
 **Solutions:**
 
 1. **Verify Google OAuth credentials:**
+
    ```bash
    echo $GOOGLE_CLIENT_ID
    echo $GOOGLE_CLIENT_SECRET
@@ -480,6 +541,7 @@ Credentials do not match our records
 ### "Authentication required to place orders"
 
 **Symptoms:**
+
 ```
 POST /api/orders 401 Unauthorized
 Error: Authentication required. Please sign in to place orders.
@@ -487,6 +549,7 @@ Error: Authentication required. Please sign in to place orders.
 
 **Root Cause:**
 As of the latest update, customers must be authenticated to place orders. This ensures:
+
 - Orders are linked to user accounts
 - Better order tracking and history
 - Improved security and fraud prevention
@@ -499,18 +562,20 @@ As of the latest update, customers must be authenticated to place orders. This e
    - User info (name, email) is auto-filled from session
 
 2. **Verify session is active:**
+
    ```typescript
    // Check if user is authenticated
    const { data: session } = useSession();
    if (!session?.user) {
      // Redirect to sign-in
-     router.push('/auth/signin?callbackUrl=/cart');
+     router.push("/auth/signin?callbackUrl=/cart");
    }
    ```
 
 3. **SessionProvider is configured:**
    - Root layout must wrap children with `<SessionProvider>`
    - This enables `useSession()` hook throughout the app
+
    ```typescript
    // app/layout.tsx
    <SessionProvider>{children}</SessionProvider>
@@ -522,13 +587,14 @@ As of the latest update, customers must be authenticated to place orders. This e
    const session = await auth();
    if (!session?.user) {
      return NextResponse.json(
-       { error: 'Authentication required' },
-       { status: 401 }
+       { error: "Authentication required" },
+       { status: 401 },
      );
    }
    ```
 
 **Testing:**
+
 ```bash
 # 1. Try to access cart without auth (should redirect to sign-in)
 curl http://localhost:3000/cart
@@ -545,6 +611,7 @@ curl http://localhost:3000/cart
 ### TypeScript Errors
 
 **Symptoms:**
+
 ```
 Type error: Property 'X' does not exist on type 'Y'
 TS2339: Property does not exist
@@ -553,12 +620,14 @@ TS2339: Property does not exist
 **Solutions:**
 
 1. **Check type definitions:**
+
    ```bash
    # Regenerate Drizzle types by running migration generate
    npm run db:generate
    ```
 
 2. **Clear TypeScript cache:**
+
    ```bash
    rm -rf .next
    rm -rf node_modules/.cache
@@ -579,6 +648,7 @@ TS2339: Property does not exist
 ### Next.js Build Failed
 
 **Symptoms:**
+
 ```
 Error: Build failed with exit code 1
 Failed to compile
@@ -587,19 +657,21 @@ Failed to compile
 **Solutions:**
 
 1. **Check build logs:**
+
    ```bash
    npm run build 2>&1 | tee build.log
    ```
 
 2. **Common fixes:**
+
    ```bash
    # Clear cache
    rm -rf .next
-   
+
    # Reinstall dependencies
    rm -rf node_modules
    npm install
-   
+
    # Rebuild
    npm run build
    ```
@@ -612,6 +684,7 @@ Failed to compile
 ### Dependency Version Conflicts
 
 **Symptoms:**
+
 ```
 npm ERR! peer dependency conflict
 Could not resolve dependency
@@ -620,6 +693,7 @@ Could not resolve dependency
 **Solutions:**
 
 1. **Check package.json versions:**
+
    ```json
    {
      "dependencies": {
@@ -630,6 +704,7 @@ Could not resolve dependency
    ```
 
 2. **Update dependencies:**
+
    ```bash
    npm update
    npm audit fix
@@ -651,6 +726,7 @@ Could not resolve dependency
 ### API Route 500 Errors
 
 **Symptoms:**
+
 ```
 POST /api/products 500 Internal Server Error
 Error: Unexpected error in API handler
@@ -659,16 +735,18 @@ Error: Unexpected error in API handler
 **Solutions:**
 
 1. **Check server logs:**
+
    ```bash
    # Development
    npm run dev
    # Look for error stack traces
-   
+
    # Production
    # Check Vercel logs or server logs
    ```
 
 2. **Enable debug logging:**
+
    ```bash
    LOG_LEVEL=debug npm run dev
    ```
@@ -684,10 +762,10 @@ Error: Unexpected error in API handler
    try {
      // Your code
    } catch (error) {
-     logError({ error, context: 'api_route' });
+     logError({ error, context: "api_route" });
      return NextResponse.json(
-       { error: 'Internal server error' },
-       { status: 500 }
+       { error: "Internal server error" },
+       { status: 500 },
      );
    }
    ```
@@ -695,6 +773,7 @@ Error: Unexpected error in API handler
 ### Component Hydration Errors
 
 **Symptoms:**
+
 ```
 Error: Hydration failed
 Text content does not match server-rendered HTML
@@ -703,15 +782,17 @@ Text content does not match server-rendered HTML
 **Solutions:**
 
 1. **Check for dynamic content:**
+
    ```typescript
    // ❌ Bad: Uses Date.now() on server and client
    <div>{Date.now()}</div>
-   
+
    // ✅ Good: Client-side only
    <div suppressHydrationWarning>{Date.now()}</div>
    ```
 
 2. **Use useEffect for client-only code:**
+
    ```typescript
    const [mounted, setMounted] = useState(false);
    useEffect(() => setMounted(true), []);
@@ -721,14 +802,14 @@ Text content does not match server-rendered HTML
 3. **Check localStorage/sessionStorage:**
    ```typescript
    // Only access on client
-   const data = typeof window !== 'undefined' 
-     ? localStorage.getItem('key')
-     : null;
+   const data =
+     typeof window !== "undefined" ? localStorage.getItem("key") : null;
    ```
 
 ### Image Upload Failures
 
 **Symptoms:**
+
 ```
 Error: Blob upload failed
 Failed to upload image
@@ -737,22 +818,24 @@ Failed to upload image
 **Solutions:**
 
 1. **Verify Vercel Blob token:**
+
    ```bash
    echo $BLOB_READ_WRITE_TOKEN
    ```
 
 2. **Check file size limits** (Vercel Blob: 4.5MB):
+
    ```typescript
    if (file.size > 4.5 * 1024 * 1024) {
-     return { error: 'File too large' };
+     return { error: "File too large" };
    }
    ```
 
 3. **Verify content type:**
    ```typescript
-   const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
+   const validTypes = ["image/jpeg", "image/png", "image/webp"];
    if (!validTypes.includes(file.type)) {
-     return { error: 'Invalid file type' };
+     return { error: "Invalid file type" };
    }
    ```
 
@@ -763,6 +846,7 @@ Failed to upload image
 ### Slow Database Queries
 
 **Symptoms:**
+
 ```
 WARN: Slow query detected: 2500ms
 Database operation took too long
@@ -771,42 +855,49 @@ Database operation took too long
 **Solutions:**
 
 1. **Check query logs:**
+
    ```bash
    # Look for slow query warnings
    grep "Slow query" logs/*.log
    ```
 
 2. **Add database indexes:**
+
    ```typescript
    // In lib/schema.ts - add indexes to pgTable
-   export const products = pgTable("products", {
-     id: uuid("id").defaultRandom().primaryKey(),
-     name: text("name").notNull(),
-     category: text("category").notNull(),
-     price: doublePrecision("price").notNull(),
-   }, (table) => [
-     index("idx_products_category").on(table.category),
-     index("idx_products_price").on(table.price),
-   ]);
+   export const products = pgTable(
+     "products",
+     {
+       id: uuid("id").defaultRandom().primaryKey(),
+       name: text("name").notNull(),
+       category: text("category").notNull(),
+       price: doublePrecision("price").notNull(),
+     },
+     (table) => [
+       index("idx_products_category").on(table.category),
+       index("idx_products_price").on(table.price),
+     ],
+   );
    ```
 
 3. **Use query optimization:**
+
    ```typescript
    // ❌ Bad: N+1 queries
    const products = await db.products.findMany();
    for (const p of products) {
      const reviews = await db.reviews.findMany({ where: { productId: p.id } });
    }
-   
+
    // ✅ Good: Single query with include
    const products = await db.products.findMany({
-     include: { reviews: true }
+     include: { reviews: true },
    });
    ```
 
 4. **Implement caching:**
    ```typescript
-   const products = await getCachedData('products:all', 60, async () => {
+   const products = await getCachedData("products:all", 60, async () => {
      return await db.products.findMany();
    });
    ```
@@ -814,6 +905,7 @@ Database operation took too long
 ### High Memory Usage
 
 **Symptoms:**
+
 ```
 FATAL ERROR: Reached heap limit
 JavaScript heap out of memory
@@ -822,20 +914,23 @@ JavaScript heap out of memory
 **Solutions:**
 
 1. **Increase Node.js memory:**
+
    ```bash
    NODE_OPTIONS="--max-old-space-size=4096" npm run dev
    ```
 
 2. **Check for memory leaks:**
+
    ```typescript
    // Close database connections when needed
    // (Drizzle uses connection pooling via @neondatabase/serverless)
-   
+
    // Clear large arrays
    largeArray.length = 0;
    ```
 
 3. **Stream large responses:**
+
    ```typescript
    // Instead of loading all at once
    const stream = db.products.findMany().stream();
@@ -852,6 +947,7 @@ JavaScript heap out of memory
 ### Slow Page Loads
 
 **Symptoms:**
+
 - First page load > 3 seconds
 - TTI (Time to Interactive) high
 
@@ -863,8 +959,9 @@ JavaScript heap out of memory
    - CDN for assets
 
 2. **Optimize images:**
+
    ```typescript
-   <Image 
+   <Image
      src="/product.jpg"
      alt="Product"
      width={500}
@@ -874,6 +971,7 @@ JavaScript heap out of memory
    ```
 
 3. **Use loading states:**
+
    ```typescript
    <Suspense fallback={<LoadingSpinner />}>
      <ProductList />
@@ -893,6 +991,7 @@ JavaScript heap out of memory
 ### Vercel Build Failures
 
 **Symptoms:**
+
 ```
 Error: Build failed on Vercel
 Command "npm run build" exited with 1
@@ -910,6 +1009,7 @@ Command "npm run build" exited with 1
    - Look for specific error messages
 
 3. **Test build locally:**
+
    ```bash
    npm run build
    # Should succeed locally first
@@ -923,6 +1023,7 @@ Command "npm run build" exited with 1
 ### Database Connection in Serverless
 
 **Symptoms:**
+
 ```
 Error: Too many database connections
 Connection pool exhausted
@@ -931,6 +1032,7 @@ Connection pool exhausted
 **Solutions:**
 
 1. **Connection pooling configured** in `lib/db.ts`:
+
    ```typescript
    const pool = new pg.Pool({
      connectionString: process.env.DATABASE_URL,
@@ -953,6 +1055,7 @@ Connection pool exhausted
 ### Cold Start Issues
 
 **Symptoms:**
+
 - First request slow (>5 seconds)
 - Timeout on initial load
 
@@ -964,6 +1067,7 @@ Connection pool exhausted
    - Minimal bundle size
 
 2. **Warm-up endpoints:**
+
    ```bash
    # Cron job to ping API
    curl https://yourdomain.com/api/health
@@ -971,7 +1075,7 @@ Connection pool exhausted
 
 3. **Use edge runtime** where possible:
    ```typescript
-   export const runtime = 'edge';
+   export const runtime = "edge";
    ```
 
 ---
@@ -991,12 +1095,14 @@ LOG_LEVEL=debug in environment variables
 ### View Logs
 
 **Development:**
+
 ```bash
 # Console output with colors
 npm run dev
 ```
 
 **Production (Vercel):**
+
 1. Dashboard → Your Project → Logs
 2. Filter by level: error, warn, info
 3. Search by request ID or user ID
@@ -1004,12 +1110,14 @@ npm run dev
 ### Request Tracing
 
 Each request has unique ID in header:
+
 ```bash
 curl -I https://yourdomain.com/api/products
 # X-Request-ID: req_1234567890_abc123
 ```
 
 Search logs:
+
 ```bash
 grep "req_1234567890_abc123" logs/*.log
 ```
@@ -1017,17 +1125,20 @@ grep "req_1234567890_abc123" logs/*.log
 ### Performance Monitoring
 
 **Check slow operations:**
+
 ```bash
 grep "Slow" logs/*.log
 # Shows: Slow query detected, Slow operation, etc.
 ```
 
 **Database metrics:**
+
 ```bash
 grep "database_operation" logs/*.log | grep "duration"
 ```
 
 **Cache hit rate:**
+
 ```bash
 grep "cache_operation" logs/*.log | grep -c "hit"
 grep "cache_operation" logs/*.log | grep -c "miss"
@@ -1042,7 +1153,7 @@ curl https://yourdomain.com/api/health
 # Database connection
 curl https://yourdomain.com/api/health/db
 
-# Redis connection  
+# Redis connection
 curl https://yourdomain.com/api/health/redis
 ```
 
@@ -1058,6 +1169,7 @@ Committed secrets to Git repository.
 **Solutions:**
 
 1. **Remove from Git history:**
+
    ```bash
    git filter-branch --force --index-filter \
      "git rm --cached --ignore-unmatch .env.local" \
@@ -1079,10 +1191,11 @@ Committed secrets to Git repository.
 ### SQL Injection Prevention
 
 **Already protected** by Drizzle ORM:
+
 ```typescript
 // ✅ Safe: Parameterized queries
 await db.products.findMany({
-  where: { name: userInput }
+  where: { name: userInput },
 });
 
 // ❌ Never use raw SQL with user input
@@ -1092,6 +1205,7 @@ await db.$queryRaw`SELECT * FROM products WHERE name = ${userInput}`;
 ### XSS Protection
 
 **React automatically escapes** HTML:
+
 ```typescript
 // ✅ Safe
 <div>{userInput}</div>
@@ -1115,7 +1229,7 @@ const requests = new Map<string, number>();
 export function rateLimit(ip: string, limit = 100) {
   const count = requests.get(ip) || 0;
   if (count >= limit) {
-    throw new Error('Rate limit exceeded');
+    throw new Error("Rate limit exceeded");
   }
   requests.set(ip, count + 1);
   setTimeout(() => requests.delete(ip), 60000); // Reset after 1 min

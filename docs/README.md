@@ -5,31 +5,37 @@ Welcome to the comprehensive documentation for the e-commerce platform built wit
 ## 📚 Documentation Structure
 
 ### Getting Started
+
 - **[Getting Started Guide](./getting-started.md)** - Setup, installation, and first-time configuration
 - **[Quick Start](./getting-started.md#quick-start)** - Get running in 5 minutes
 
 ### Architecture & Design
+
 - **[System Architecture](./architecture.md)** - Technical design, data flow, and system components
 - **[Database Schema](./architecture.md#database-schema)** - Entity relationships and data models
 - **[Caching Strategy](./architecture.md#caching-strategy)** - Redis caching implementation
 
 ### Development
+
 - **[Development Guide](./development.md)** - Development workflows, best practices, and coding standards
 - **[Database Migrations](./development.md#database-migrations)** - Managing schema changes with Drizzle
 - **[Testing](./development.md#testing)** - Testing strategies and examples
 - **[Logging](./development.md#logging)** - Server-side logging and monitoring
 
 ### API Reference
+
 - **[API Documentation](./api-reference.md)** - Complete API endpoint reference
 - **[Authentication](./api-reference.md#authentication)** - Auth flows and session management
 - **[Error Handling](./api-reference.md#error-handling)** - Error responses and codes
 
 ### Deployment
+
 - **[Deployment Guide](./deployment.md)** - Platform-specific deployment instructions
 - **[Environment Variables](./deployment.md#environment-variables)** - Configuration reference
 - **[Production Checklist](./deployment.md#production-checklist)** - Pre-launch verification
 
 ### Operations
+
 - **[Troubleshooting](./troubleshooting.md)** - Common issues and solutions
 - **[Monitoring](./troubleshooting.md#monitoring)** - Performance monitoring and logging
 - **[Security](./troubleshooting.md#security)** - Security best practices
@@ -37,18 +43,21 @@ Welcome to the comprehensive documentation for the e-commerce platform built wit
 ## 🚀 Quick Links
 
 ### For Developers
+
 - [Setup Instructions](./getting-started.md#setup-instructions)
 - [Development Workflow](./development.md#development-workflow)
 - [Code Style Guide](./development.md#code-style-guide)
 - [API Endpoints](./api-reference.md#endpoints)
 
 ### For DevOps
+
 - [Deploy to Vercel](./deployment.md#vercel)
 - [Environment Configuration](./deployment.md#environment-variables)
 - [Database Setup](./deployment.md#database-setup)
 - [Monitoring Setup](./troubleshooting.md#monitoring)
 
 ### For Product Managers
+
 - [Feature Overview](./architecture.md#features)
 - [User Flows](./architecture.md#user-flows)
 - [Admin Panel](./api-reference.md#admin-apis)
@@ -58,6 +67,7 @@ Welcome to the comprehensive documentation for the e-commerce platform built wit
 This is a highly scalable e-commerce platform designed for serverless deployment with the following key characteristics:
 
 ### Core Features
+
 - **Product Management**: Full CRUD with images, variations, and stock tracking
 - **Order Processing**: Complete order lifecycle management
 - **User Authentication**: Google OAuth with NextAuth.js v5
@@ -66,6 +76,7 @@ This is a highly scalable e-commerce platform designed for serverless deployment
 - **Admin Panel**: Product, order, and user management
 
 ### Technical Highlights
+
 - **Serverless-First**: Optimized for platforms like Vercel, AWS Lambda
 - **Performance**: Redis caching with stampede prevention
 - **Type Safety**: Full TypeScript with Zod validation
@@ -75,17 +86,17 @@ This is a highly scalable e-commerce platform designed for serverless deployment
 
 ## 📦 Technology Stack
 
-| Category | Technology |
-|----------|-----------|
-| **Framework** | Next.js 16 with App Router |
-| **Language** | TypeScript (strict mode) |
-| **Database** | PostgreSQL with Drizzle ORM |
-| **Cache** | Redis (ioredis) |
-| **Authentication** | NextAuth.js v5 |
-| **Validation** | Zod |
-| **Styling** | Tailwind CSS v4 |
-| **Logging** | Pino |
-| **Image Storage** | Vercel Blob |
+| Category           | Technology                  |
+| ------------------ | --------------------------- |
+| **Framework**      | Next.js 16 with App Router  |
+| **Language**       | TypeScript (strict mode)    |
+| **Database**       | PostgreSQL with Drizzle ORM |
+| **Cache**          | Redis (ioredis)             |
+| **Authentication** | NextAuth.js v5              |
+| **Validation**     | Zod                         |
+| **Styling**        | Tailwind CSS v4             |
+| **Logging**        | Pino                        |
+| **Image Storage**  | Vercel Blob                 |
 
 ## 🔧 System Requirements
 
@@ -107,6 +118,7 @@ This documentation is maintained as the single source of truth for the project. 
 ## 🤝 Contributing
 
 When contributing to this project:
+
 1. Read the [Development Guide](./development.md)
 2. Follow the [Code Style Guide](./development.md#code-style-guide)
 3. Update documentation for any new features or changes
@@ -120,5 +132,5 @@ When contributing to this project:
 
 ## 🗺️ Navigation
 
-- **← [Back to Repository](../)** 
+- **← [Back to Repository](../)**
 - **→ [Get Started](./getting-started.md)**

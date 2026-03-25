@@ -454,9 +454,11 @@ export const getUserOrders = async ({
 export const createOrderForUser = async ({
   body,
   user,
+  checkoutRequestId,
 }: {
   body: CreateOrderInput;
   user: OrderSessionUser;
+  checkoutRequestId?: string;
 }) => {
   if (!body.items || body.items.length === 0) {
     logFailedOrderCreation(
@@ -534,6 +536,7 @@ export const createOrderForUser = async ({
         customerName,
         customerEmail,
         customerAddress,
+        checkoutRequestId: checkoutRequestId ?? null,
         totalAmount: stockDetails.totalAmount,
         status: "PENDING",
         updatedAt: new Date(),

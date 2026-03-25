@@ -1,12 +1,24 @@
 {
+  "functions": {
+    "app/api/queue/checkout-orders/route.ts": {
+      "experimentalTriggers": [
+        {
+          "type": "queue/v2beta",
+          "topic": "checkout-orders",
+          "retryAfterSeconds": 60,
+          "initialDelaySeconds": 0
+        }
+      ]
+    }
+  },
   "crons": [
     {
       "path": "/api/cron/retry-emails",
-      "schedule": "0 22 * * *"
+      "schedule": "30 2 * * *"
     },
     {
       "path": "/api/cron/refresh-rates",
-      "schedule": "0 22 * * *"
+      "schedule": "0 3 * * *"
     }
   ]
 }

@@ -43,6 +43,13 @@ export const OrderStatusEnum = z.enum([
   "CANCELLED",
 ]);
 
+export const CheckoutRequestStatusEnum = z.enum([
+  "PENDING",
+  "PROCESSING",
+  "COMPLETED",
+  "FAILED",
+]);
+
 export const OrderItemSchema = z.object({
   productId: z.string().regex(SHORT_ID_REGEX, "Invalid product ID"),
   quantity: z.number().int().positive("Quantity must be positive"),
@@ -61,6 +68,37 @@ export const CreateOrderSchema = z.object({
     .min(10, "Address must be at least 10 characters")
     .max(500),
   items: z.array(OrderItemSchema).min(1, "At least one item is required"),
+});
+
+export const CheckoutOrderItemSchema = z.object({
+  productId: z.string().regex(SHORT_ID_REGEX, "Invalid product ID"),
+  variationId: z
+    .string()
+    .regex(SHORT_ID_REGEX, "Invalid variation ID")
+    .nullish(),
+  quantity: z.number().int().positive("Quantity must be positive"),
+  customizationNote: z
+    .string()
+    .max(500, "Customization note must be under 500 characters")
+    .nullish(),
+});
+
+export const SubmitCheckoutSchema = z.object({
+  customerName: z.string().min(1, "Name is required").max(200),
+  customerEmail: z.string().regex(EMAIL_REGEX, "Invalid email address"),
+  customerAddress: z
+    .string()
+    .min(10, "Address must be at least 10 characters")
+    .max(500),
+  items: z
+    .array(CheckoutOrderItemSchema)
+    .min(1, "At least one item is required"),
+});
+
+export const CheckoutQueueMessageSchema = z.object({
+  checkoutRequestId: z
+    .string()
+    .regex(SHORT_ID_REGEX, "Invalid checkout request ID"),
 });
 
 export const UpdateOrderStatusSchema = z.object({
@@ -92,6 +130,7 @@ export const ApiErrorSchema = z.object({
 export type ProductInput = z.infer<typeof ProductInputSchema>;
 export type ProductUpdate = z.infer<typeof ProductUpdateSchema>;
 export type CreateOrderInput = z.infer<typeof CreateOrderSchema>;
+export type SubmitCheckoutInput = z.infer<typeof SubmitCheckoutSchema>;
 export type OrderStatusType = z.infer<typeof OrderStatusEnum>;
 
 // Utility type for async function results

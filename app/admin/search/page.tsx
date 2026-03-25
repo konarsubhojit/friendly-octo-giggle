@@ -1,11 +1,13 @@
 import { isSearchAvailable } from "@/lib/search";
+import { areOrdersSearchControlsAvailable } from "@/lib/orders-search-index";
 import { AdminPageShell, AdminPanel } from "@/components/admin/AdminPageShell";
 import SearchReindexClient from "@/components/admin/SearchReindexClient";
 
 export const dynamic = "force-dynamic";
 
 export default function AdminSearchPage() {
-  const configured = isSearchAvailable();
+  const productsConfigured = isSearchAvailable();
+  const ordersConfigured = areOrdersSearchControlsAvailable();
 
   return (
     <AdminPageShell
@@ -15,23 +17,34 @@ export default function AdminSearchPage() {
       ]}
       eyebrow="Search infrastructure"
       title="Search indexing with clearer operational guardrails."
-      description="Manage the Upstash product search index from a dedicated admin surface while keeping operational risk obvious."
+      description="Manage product and order search indexes from a dedicated admin surface while keeping operational risk obvious."
       metrics={[
         {
-          label: "Index status",
-          value: configured ? "Configured" : "Missing config",
-          hint: configured
-            ? "Reindex operations are available."
-            : "Environment variables still need to be set.",
-          tone: configured ? "emerald" : "amber",
+          label: "Products index",
+          value: productsConfigured ? "Configured" : "Missing config",
+          hint: productsConfigured
+            ? "Upstash Search product reindex is available."
+            : "Set Upstash Search variables to enable product reindexing.",
+          tone: productsConfigured ? "emerald" : "amber",
+        },
+        {
+          label: "Orders index",
+          value: ordersConfigured ? "Configured" : "Missing config",
+          hint: ordersConfigured
+            ? "Redis-backed order search backfill is available."
+            : "Set Upstash Redis variables to enable order indexing.",
+          tone: ordersConfigured ? "emerald" : "amber",
         },
       ]}
     >
       <AdminPanel
         title="Search reindex controls"
-        description="Rebuild product search after imports, migrations, or stale index incidents."
+        description="Rebuild product or order search after imports, migrations, or stale index incidents."
       >
-        <SearchReindexClient configured={configured} />
+        <SearchReindexClient
+          productsConfigured={productsConfigured}
+          ordersConfigured={ordersConfigured}
+        />
       </AdminPanel>
     </AdminPageShell>
   );

@@ -92,6 +92,22 @@ export interface CreateOrderInput {
   items: OrderItemInput[];
 }
 
+export type CheckoutRequestStatus =
+  | "PENDING"
+  | "PROCESSING"
+  | "COMPLETED"
+  | "FAILED";
+
+export interface CheckoutEnqueueResponse {
+  checkoutRequestId: string;
+  status: CheckoutRequestStatus;
+}
+
+export interface CheckoutRequestStatusResponse extends CheckoutEnqueueResponse {
+  orderId: string | null;
+  error: string | null;
+}
+
 export interface Cart {
   id: string;
   userId?: string | null;

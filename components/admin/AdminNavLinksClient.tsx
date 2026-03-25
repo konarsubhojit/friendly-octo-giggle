@@ -75,6 +75,11 @@ const NAV_GROUPS: readonly NavGroup[] = [
         label: "Email Failures",
         keywords: ["notifications", "errors", "emails"],
       },
+      {
+        href: "/admin/checkout-requests",
+        label: "Checkout Queue",
+        keywords: ["checkout", "queue", "orders", "worker"],
+      },
     ],
   },
 ];

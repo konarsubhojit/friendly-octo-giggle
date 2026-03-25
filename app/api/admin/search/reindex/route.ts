@@ -9,18 +9,22 @@ import {
   isSearchAvailable,
   resetIndex,
 } from "@/lib/search";
+import {
+  areOrdersSearchControlsAvailable,
+  createOrRefreshOrdersSearchIndex,
+} from "@/lib/orders-search-index";
 import { z } from "zod";
 
 const reindexRequestSchema = z
   .object({
-    target: z.string().optional(),
+    target: z.enum(["products", "orders"]).optional(),
   })
   .optional();
 
 /**
  * POST /api/admin/search/reindex
  *
- * Full reindex of products into Upstash Search.
+ * Rebuild search indexes for products or orders.
  */
 export async function POST(request: Request) {
   const session = await auth();
@@ -31,20 +35,27 @@ export async function POST(request: Request) {
     return apiError("Not authorized - Admin access required", 403);
   }
 
-  if (!isSearchAvailable()) {
-    return apiError("Search is not configured", 503);
-  }
-
   try {
     const body = reindexRequestSchema.parse(
       await request.json().catch(() => ({})),
     );
+    const target = body?.target ?? "products";
 
-    if (body?.target && body.target !== "products") {
-      return apiError(
-        "Only product search can be reindexed here. Orders search is managed in Redis Search.",
-        400,
-      );
+    if (target === "orders") {
+      if (!areOrdersSearchControlsAvailable()) {
+        return apiError("Redis Search is not configured", 503);
+      }
+
+      const result = await createOrRefreshOrdersSearchIndex();
+
+      return apiSuccess({
+        reindexed: { orders: result.indexedOrders },
+        details: { ordersIndexCreated: result.indexCreated },
+      });
+    }
+
+    if (!isSearchAvailable()) {
+      return apiError("Search is not configured", 503);
     }
 
     await resetIndex("products");

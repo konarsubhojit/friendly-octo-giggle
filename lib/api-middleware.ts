@@ -78,6 +78,44 @@ const createLoggingWrapper = (options: LoggingOptions = {}) => {
 export const withApiLogging = (handler: ApiHandler) =>
   createLoggingWrapper({ requireAuth: true })(handler);
 
-export const withLogging = (
-  handler: (request: NextRequest) => Promise<NextResponse>,
-) => createLoggingWrapper({ requireAuth: false })(handler);
+export const withLogging = <TArgs extends unknown[]>(
+  handler: (request: NextRequest, ...args: TArgs) => Promise<NextResponse>,
+) => {
+  return async (
+    request: NextRequest,
+    ...args: TArgs
+  ): Promise<NextResponse> => {
+    const requestId = generateRequestId();
+    const timer = new Timer(
+      `api.${request.method}.${request.nextUrl.pathname}`,
+    );
+
+    try {
+      const response = await handler(request, ...args);
+      const duration = timer.end({ statusCode: response.status });
+
+      logApiRequest({
+        method: request.method,
+        path: request.nextUrl.pathname,
+        requestId,
+        duration,
+        statusCode: response.status,
+      });
+
+      response.headers.set("X-Request-ID", requestId);
+      return response;
+    } catch (error) {
+      const duration = timer.end({ error: true });
+
+      logApiRequest({
+        method: request.method,
+        path: request.nextUrl.pathname,
+        requestId,
+        duration,
+        statusCode: 500,
+      });
+
+      throw error;
+    }
+  };
+};

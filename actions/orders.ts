@@ -9,8 +9,8 @@ import { generateOrderId } from "@/lib/short-id";
 import { logError, logBusinessEvent } from "@/lib/logger";
 import { OrderStatusEnum } from "@/lib/validations";
 import { z } from "zod";
-import { s } from "@upstash/redis";
 import { invalidateUserOrderCaches } from "@/lib/cache";
+import { ORDER_SEARCH_SCHEMA } from "@/lib/orders-search-index";
 
 type ActionResult<T> =
   | { success: true; data: T }
@@ -504,18 +504,6 @@ export const getUserOrders = async (
     return { success: false, error: "Failed to retrieve orders" };
   }
 };
-
-const ORDER_SEARCH_SCHEMA = s.object({
-  id: s.string().noTokenize(),
-  customerName: s.string(),
-  customerEmail: s.string(),
-  customerAddress: s.string(),
-  status: s.keyword(),
-  userId: s.string().noTokenize(),
-  total: s.string().noTokenize(),
-  createdAt: s.string().noTokenize(),
-  productNames: s.string(),
-});
 
 const searchOrdersViaIndex = async (
   searchTerm: string,
