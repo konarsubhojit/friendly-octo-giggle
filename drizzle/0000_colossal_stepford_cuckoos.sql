@@ -1,3 +1,5 @@
+CREATE TYPE "public"."EmailType" AS ENUM('order_confirmation', 'order_status_update');--> statement-breakpoint
+CREATE TYPE "public"."FailedEmailStatus" AS ENUM('pending', 'failed', 'sent');--> statement-breakpoint
 CREATE TYPE "public"."OrderStatus" AS ENUM('PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED');--> statement-breakpoint
 CREATE TYPE "public"."UserRole" AS ENUM('CUSTOMER', 'ADMIN');--> statement-breakpoint
 CREATE TABLE "Account" (
@@ -37,9 +39,37 @@ CREATE TABLE "Cart" (
 	CONSTRAINT "Cart_sessionId_unique" UNIQUE("sessionId")
 );
 --> statement-breakpoint
+CREATE TABLE "Category" (
+	"id" varchar(7) PRIMARY KEY NOT NULL,
+	"name" text NOT NULL,
+	"sortOrder" integer DEFAULT 0 NOT NULL,
+	"createdAt" timestamp DEFAULT now() NOT NULL,
+	"updatedAt" timestamp DEFAULT now() NOT NULL,
+	"deletedAt" timestamp,
+	CONSTRAINT "Category_name_unique" UNIQUE("name")
+);
+--> statement-breakpoint
+CREATE TABLE "FailedEmail" (
+	"id" varchar(7) PRIMARY KEY NOT NULL,
+	"recipientEmail" text NOT NULL,
+	"subject" text NOT NULL,
+	"bodyHtml" text NOT NULL,
+	"bodyText" text NOT NULL,
+	"emailType" "EmailType" NOT NULL,
+	"referenceId" varchar(7) NOT NULL,
+	"attemptCount" integer DEFAULT 0 NOT NULL,
+	"lastError" text,
+	"isRetriable" boolean DEFAULT true NOT NULL,
+	"status" "FailedEmailStatus" DEFAULT 'pending' NOT NULL,
+	"errorHistory" json DEFAULT '[]'::json NOT NULL,
+	"createdAt" timestamp DEFAULT now() NOT NULL,
+	"lastAttemptedAt" timestamp,
+	"sentAt" timestamp
+);
+--> statement-breakpoint
 CREATE TABLE "OrderItem" (
 	"id" varchar(7) PRIMARY KEY NOT NULL,
-	"orderId" varchar(7) NOT NULL,
+	"orderId" varchar(10) NOT NULL,
 	"productId" varchar(7) NOT NULL,
 	"variationId" varchar(7),
 	"quantity" integer NOT NULL,
@@ -48,7 +78,7 @@ CREATE TABLE "OrderItem" (
 );
 --> statement-breakpoint
 CREATE TABLE "Order" (
-	"id" varchar(7) PRIMARY KEY NOT NULL,
+	"id" varchar(10) PRIMARY KEY NOT NULL,
 	"userId" text,
 	"customerName" text NOT NULL,
 	"customerEmail" text NOT NULL,
@@ -84,6 +114,7 @@ CREATE TABLE "ProductVariation" (
 	"images" json DEFAULT '[]'::json NOT NULL,
 	"priceModifier" double precision DEFAULT 0 NOT NULL,
 	"stock" integer NOT NULL,
+	"deletedAt" timestamp,
 	"createdAt" timestamp DEFAULT now() NOT NULL,
 	"updatedAt" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "ProductVariation_productId_name_key" UNIQUE("productId","name")
@@ -106,7 +137,7 @@ CREATE TABLE "Product" (
 CREATE TABLE "Review" (
 	"id" varchar(7) PRIMARY KEY NOT NULL,
 	"productId" varchar(7) NOT NULL,
-	"orderId" varchar(7),
+	"orderId" varchar(10),
 	"userId" text,
 	"rating" integer NOT NULL,
 	"comment" text NOT NULL,
@@ -130,6 +161,7 @@ CREATE TABLE "User" (
 	"image" text,
 	"passwordHash" text,
 	"phoneNumber" varchar(20),
+	"currencyPreference" varchar(3) DEFAULT 'INR' NOT NULL,
 	"role" "UserRole" DEFAULT 'CUSTOMER' NOT NULL,
 	"createdAt" timestamp DEFAULT now() NOT NULL,
 	"updatedAt" timestamp DEFAULT now() NOT NULL,
@@ -177,15 +209,22 @@ CREATE INDEX "CartItem_cartId_idx" ON "CartItem" USING btree ("cartId");--> stat
 CREATE INDEX "CartItem_productId_idx" ON "CartItem" USING btree ("productId");--> statement-breakpoint
 CREATE INDEX "CartItem_variationId_idx" ON "CartItem" USING btree ("variationId");--> statement-breakpoint
 CREATE INDEX "Cart_sessionId_idx" ON "Cart" USING btree ("sessionId");--> statement-breakpoint
+CREATE INDEX "FailedEmail_status_idx" ON "FailedEmail" USING btree ("status");--> statement-breakpoint
+CREATE INDEX "FailedEmail_referenceId_idx" ON "FailedEmail" USING btree ("referenceId");--> statement-breakpoint
+CREATE INDEX "FailedEmail_createdAt_idx" ON "FailedEmail" USING btree ("createdAt");--> statement-breakpoint
 CREATE INDEX "OrderItem_orderId_idx" ON "OrderItem" USING btree ("orderId");--> statement-breakpoint
 CREATE INDEX "OrderItem_productId_idx" ON "OrderItem" USING btree ("productId");--> statement-breakpoint
 CREATE INDEX "OrderItem_variationId_idx" ON "OrderItem" USING btree ("variationId");--> statement-breakpoint
 CREATE INDEX "Order_userId_idx" ON "Order" USING btree ("userId");--> statement-breakpoint
+CREATE INDEX "Order_status_idx" ON "Order" USING btree ("status");--> statement-breakpoint
+CREATE INDEX "Order_createdAt_idx" ON "Order" USING btree ("createdAt");--> statement-breakpoint
 CREATE INDEX "PasswordHistory_userId_idx" ON "PasswordHistory" USING btree ("userId");--> statement-breakpoint
 CREATE INDEX "ProductShare_productId_idx" ON "ProductShare" USING btree ("productId");--> statement-breakpoint
 CREATE INDEX "ProductShare_variationId_idx" ON "ProductShare" USING btree ("variationId");--> statement-breakpoint
 CREATE INDEX "ProductVariation_productId_idx" ON "ProductVariation" USING btree ("productId");--> statement-breakpoint
 CREATE INDEX "Product_category_idx" ON "Product" USING btree ("category");--> statement-breakpoint
+CREATE INDEX "Product_createdAt_idx" ON "Product" USING btree ("createdAt");--> statement-breakpoint
+CREATE INDEX "Product_deletedAt_idx" ON "Product" USING btree ("deletedAt");--> statement-breakpoint
 CREATE INDEX "Review_productId_idx" ON "Review" USING btree ("productId");--> statement-breakpoint
 CREATE INDEX "Review_userId_idx" ON "Review" USING btree ("userId");--> statement-breakpoint
 CREATE INDEX "Session_userId_idx" ON "Session" USING btree ("userId");--> statement-breakpoint
