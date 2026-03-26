@@ -34,6 +34,8 @@ import {
   invalidateAdminUserCaches,
   cacheAdminSales,
   cacheShareResolve,
+  cacheUserSession,
+  invalidateUserSessionCache,
 } from "@/lib/cache";
 import { getCachedData, invalidateCache } from "@/lib/redis";
 import { logCacheOperation, logError } from "@/lib/logger";
@@ -634,9 +636,21 @@ describe("CACHE_KEYS share", () => {
   });
 });
 
+describe("CACHE_KEYS session", () => {
+  it("SESSION_BY_USER returns correct key", () => {
+    expect(CACHE_KEYS.SESSION_BY_USER("user-123")).toBe("session:user:user-123");
+  });
+});
+
 describe("CACHE_TTL share", () => {
   it("has correct SHARE_RESOLVE TTL of 1 year in seconds", () => {
     expect(CACHE_TTL.SHARE_RESOLVE).toBe(31536000);
+  });
+});
+
+describe("CACHE_TTL session", () => {
+  it("has correct SESSION TTL of 5 minutes in seconds", () => {
+    expect(CACHE_TTL.SESSION).toBe(300);
   });
 });
 
@@ -696,5 +710,88 @@ describe("cacheShareResolve", () => {
 
     expect(result).toEqual(shareData);
     expect(fetcher).toHaveBeenCalledOnce();
+  });
+});
+
+describe("cacheUserSession", () => {
+  beforeEach(() => {
+    mockRedisClient.get.mockReset();
+    mockRedisClient.setex.mockReset();
+  });
+
+  it("returns cached value without calling builder on cache hit", async () => {
+    const userData = { id: "u1", role: "CUSTOMER", phoneNumber: undefined };
+    mockRedisClient.get.mockResolvedValue(userData);
+    const builder = vi.fn();
+
+    const result = await cacheUserSession("u1", builder);
+
+    expect(result).toEqual(userData);
+    expect(builder).not.toHaveBeenCalled();
+    expect(mockRedisClient.get).toHaveBeenCalledWith("session:user:u1");
+    expect(mockRedisClient.setex).not.toHaveBeenCalled();
+  });
+
+  it("calls builder, caches with SESSION TTL, and returns result on cache miss", async () => {
+    const userData = { id: "u1", role: "ADMIN", phoneNumber: "+1234567890" };
+    mockRedisClient.get.mockResolvedValue(null);
+    mockRedisClient.setex.mockResolvedValue("OK");
+    const builder = vi.fn().mockReturnValue(userData);
+
+    const result = await cacheUserSession("u1", builder);
+
+    expect(result).toEqual(userData);
+    expect(builder).toHaveBeenCalledOnce();
+    expect(mockRedisClient.setex).toHaveBeenCalledWith(
+      "session:user:u1",
+      300,
+      userData,
+    );
+  });
+
+  it("falls back to builder when Redis throws", async () => {
+    const userData = { id: "u2", role: "CUSTOMER" };
+    mockRedisClient.get.mockRejectedValue(new Error("Redis down"));
+    const builder = vi.fn().mockReturnValue(userData);
+
+    const result = await cacheUserSession("u2", builder);
+
+    expect(result).toEqual(userData);
+    expect(builder).toHaveBeenCalledOnce();
+    expect(mockRedisClient.setex).not.toHaveBeenCalled();
+  });
+
+  it("calls builder directly when Redis is unavailable", async () => {
+    const { getRedisClient } = await import("@/lib/redis");
+    vi.mocked(getRedisClient).mockReturnValueOnce(null);
+
+    const userData = { id: "u3", role: "CUSTOMER" };
+    const builder = vi.fn().mockReturnValue(userData);
+
+    const result = await cacheUserSession("u3", builder);
+
+    expect(result).toEqual(userData);
+    expect(builder).toHaveBeenCalledOnce();
+    expect(mockRedisClient.get).not.toHaveBeenCalled();
+  });
+});
+
+describe("invalidateUserSessionCache", () => {
+  it("calls invalidateCache with the correct session key", async () => {
+    await invalidateUserSessionCache("user-123");
+
+    expect(mockInvalidateCache).toHaveBeenCalledWith("session:user:user-123");
+  });
+
+  it("handles errors by calling logError", async () => {
+    const error = new Error("Redis down");
+    mockInvalidateCache.mockRejectedValueOnce(error);
+
+    await invalidateUserSessionCache("user-123");
+
+    expect(mockLogError).toHaveBeenCalledWith({
+      error,
+      context: "session_cache_invalidation",
+    });
   });
 });

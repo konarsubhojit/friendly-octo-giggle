@@ -9,6 +9,10 @@ import type { Adapter } from "next-auth/adapters";
 import { logAuthEvent } from "./logger";
 import { verifyPassword } from "./password";
 import { eq, or } from "drizzle-orm";
+import {
+  cacheUserSession,
+  invalidateUserSessionCache,
+} from "@/lib/cache";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: DrizzleAdapter(primaryDrizzleDb, {
@@ -119,13 +123,23 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
   },
   callbacks: {
-    session({ session, token }) {
-      if (session.user) {
-        session.user.id = token.id as string;
-        session.user.role = (token.role as "ADMIN" | "CUSTOMER") || "CUSTOMER";
-        session.user.phoneNumber =
-          (token.phoneNumber as string | null | undefined) || undefined;
+    async session({ session, token }) {
+      const userId = token.id as string;
+      if (!session.user || !userId) {
+        return session;
       }
+
+      const userData = await cacheUserSession(userId, () => ({
+        id: userId,
+        role: (token.role as "ADMIN" | "CUSTOMER") || "CUSTOMER",
+        phoneNumber:
+          (token.phoneNumber as string | null | undefined) || undefined,
+      }));
+
+      session.user.id = userData.id;
+      session.user.role = userData.role;
+      session.user.phoneNumber = userData.phoneNumber;
+
       return session;
     },
     jwt({ token, user }) {
@@ -151,7 +165,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
   },
   events: {
-    signOut() {
+    async signOut(message) {
+      if ("token" in message && message.token?.id) {
+        await invalidateUserSessionCache(message.token.id as string);
+      }
       // Log sign-out (user ID not available in signOut event)
       logAuthEvent({
         event: "logout",
@@ -165,5 +182,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   },
   session: {
     strategy: "jwt",
+    maxAge: 24 * 60 * 60,
   },
 });
