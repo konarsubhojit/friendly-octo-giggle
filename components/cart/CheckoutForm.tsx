@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition, useState } from "react";
+import { useMemo, useTransition, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useSelector, useDispatch } from "react-redux";
@@ -13,6 +13,12 @@ import type {
   CheckoutRequestStatusResponse,
 } from "@/lib/types";
 import { GradientButton } from "@/components/ui/GradientButton";
+import {
+  buildCheckoutPricingSummaryFromLineItems,
+  buildCheckoutSummaryLineItems,
+} from "@/lib/order-summary";
+import { useCurrency } from "@/contexts/CurrencyContext";
+import { OrderPolicyConfirmDialog } from "@/components/cart/OrderPolicyConfirmDialog";
 
 const CHECKOUT_POLL_INTERVAL_MS = 1500;
 const CHECKOUT_POLL_MAX_ATTEMPTS = 40;
@@ -31,10 +37,31 @@ export const CheckoutForm = ({ customizationNotes }: CheckoutFormProps) => {
   const { data: session } = useSession();
   const dispatch = useDispatch<AppDispatch>();
   const cart = useSelector(selectCart);
+  const { formatPrice } = useCurrency();
   const [isPending, startTransition] = useTransition();
   const [address, setAddress] = useState("");
   const [addressError, setAddressError] = useState<string | null>(null);
   const [checkoutMessage, setCheckoutMessage] = useState<string | null>(null);
+  const [isPolicyDialogOpen, setIsPolicyDialogOpen] = useState(false);
+  const [isPolicyAcknowledged, setIsPolicyAcknowledged] = useState(false);
+
+  const cartItems = cart?.items ?? [];
+  const checkoutItems = useMemo(
+    () =>
+      cartItems.map((item) => ({
+        ...item,
+        customizationNote: customizationNotes[item.id] ?? null,
+      })),
+    [cartItems, customizationNotes],
+  );
+  const lineItems = useMemo(
+    () => buildCheckoutSummaryLineItems(checkoutItems),
+    [checkoutItems],
+  );
+  const pricingSummary = useMemo(
+    () => buildCheckoutPricingSummaryFromLineItems(lineItems),
+    [lineItems],
+  );
 
   const pollCheckoutRequest = async (
     checkoutRequestId: string,
@@ -66,25 +93,33 @@ export const CheckoutForm = ({ customizationNotes }: CheckoutFormProps) => {
     );
   };
 
-  const handleSubmit: NonNullable<React.ComponentProps<"form">["onSubmit"]> = (
-    e,
-  ) => {
-    e.preventDefault();
-
+  const validateCheckout = () => {
     if (!session?.user?.id || !session.user.email) {
       router.push("/auth/signin?callbackUrl=/cart");
-      return;
+      return false;
     }
 
     const trimmedAddress = address.trim();
     if (trimmedAddress.length < 10) {
       setAddressError("Please enter a valid shipping address.");
-      return;
+      return false;
     }
     setAddressError(null);
 
-    if (!cart?.items.length) {
+    if (!cartItems.length) {
       toast.error("Your cart is empty.");
+      return false;
+    }
+
+    return true;
+  };
+
+  const submitCheckout = () => {
+    const trimmedAddress = address.trim();
+    const sessionUser = session?.user;
+
+    if (!sessionUser?.email) {
+      router.push("/auth/signin?callbackUrl=/cart");
       return;
     }
 
@@ -95,10 +130,10 @@ export const CheckoutForm = ({ customizationNotes }: CheckoutFormProps) => {
         const enqueueResult = await apiClient.post<CheckoutEnqueueResponse>(
           "/api/checkout",
           {
-            customerName: session.user.name ?? "Customer",
-            customerEmail: session.user.email,
+            customerName: sessionUser.name ?? "Customer",
+            customerEmail: sessionUser.email,
             customerAddress: trimmedAddress,
-            items: cart.items.map((item) => ({
+            items: cartItems.map((item) => ({
               productId: item.productId,
               variationId: item.variationId ?? undefined,
               quantity: item.quantity,
@@ -116,6 +151,8 @@ export const CheckoutForm = ({ customizationNotes }: CheckoutFormProps) => {
         }
 
         await dispatch(clearCart()).unwrap();
+        setIsPolicyDialogOpen(false);
+        setIsPolicyAcknowledged(false);
         toast.success(`Order ${status.orderId} placed successfully!`);
         router.push("/orders");
       } catch (error) {
@@ -126,6 +163,28 @@ export const CheckoutForm = ({ customizationNotes }: CheckoutFormProps) => {
         setCheckoutMessage(null);
       }
     });
+  };
+
+  const handleSubmit: NonNullable<React.ComponentProps<"form">["onSubmit"]> = (
+    e,
+  ) => {
+    e.preventDefault();
+
+    if (!validateCheckout()) {
+      return;
+    }
+
+    setIsPolicyAcknowledged(false);
+    setIsPolicyDialogOpen(true);
+  };
+
+  const handlePolicyDialogCancel = () => {
+    if (isPending) {
+      return;
+    }
+
+    setIsPolicyDialogOpen(false);
+    setIsPolicyAcknowledged(false);
   };
 
   return (
@@ -164,7 +223,7 @@ export const CheckoutForm = ({ customizationNotes }: CheckoutFormProps) => {
         fullWidth
         loading={isPending}
         loadingText={checkoutMessage ?? "Processing..."}
-        disabled={isPending || !cart?.items.length}
+        disabled={isPending || !cartItems.length}
       >
         Place Order
       </GradientButton>
@@ -174,6 +233,18 @@ export const CheckoutForm = ({ customizationNotes }: CheckoutFormProps) => {
           {checkoutMessage}
         </output>
       ) : null}
+
+      <OrderPolicyConfirmDialog
+        isOpen={isPolicyDialogOpen}
+        lineItems={lineItems}
+        pricingSummary={pricingSummary}
+        isAcknowledged={isPolicyAcknowledged}
+        onAcknowledgedChange={setIsPolicyAcknowledged}
+        onCancel={handlePolicyDialogCancel}
+        onConfirm={submitCheckout}
+        isSubmitting={isPending}
+        formatPrice={formatPrice}
+      />
     </form>
   );
 };

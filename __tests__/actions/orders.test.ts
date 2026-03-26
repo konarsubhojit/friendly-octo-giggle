@@ -315,6 +315,7 @@ describe("getUserOrders", () => {
 
     const dbRow = {
       id: "ORD1234567",
+      checkoutRequestId: "chk-1234567",
       userId: "user-123",
       customerName: "Alice Smith",
       customerEmail: "alice@example.com",
@@ -380,6 +381,7 @@ describe("getUserOrders", () => {
 
     const orphanRow = {
       id: "ORD_ORPHAN",
+      checkoutRequestId: "chk-orphan-001",
       userId: "user-123",
       customerName: "Alice Smith",
       customerEmail: "alice@example.com",

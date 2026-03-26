@@ -66,6 +66,7 @@ vi.mock("drizzle-orm/neon-serverless", () => ({
 vi.mock("@/lib/schema", () => ({
   userRoleEnum: {},
   orderStatusEnum: {},
+  checkoutRequestStatusEnum: {},
   emailTypeEnum: {},
   failedEmailStatusEnum: {},
   users: {},

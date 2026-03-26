@@ -154,7 +154,7 @@ describe("AdminNavLinksClient", () => {
       bottom: 50,
     };
 
-    fireEvent.scroll(globalThis);
+    fireEvent.scroll(window);
 
     await waitFor(() => {
       expect(screen.getByRole("menu")).toHaveStyle({

@@ -177,7 +177,7 @@ describe("ProductFormModal", () => {
 
   it("updates category when selected", async () => {
     renderModal();
-    const catSelect = screen.getByLabelText("Category");
+    const catSelect = screen.getByLabelText("Category") as HTMLSelectElement;
 
     await waitFor(() => {
       expect(
