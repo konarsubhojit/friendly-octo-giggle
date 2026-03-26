@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import React from "react";
 import { OrderPolicyConfirmDialog } from "@/components/cart/OrderPolicyConfirmDialog";
@@ -29,6 +29,18 @@ const mockPricingSummary = {
   total: 5297,
 } as const;
 
+beforeAll(() => {
+  HTMLDialogElement.prototype.showModal = vi.fn(function (
+    this: HTMLDialogElement,
+  ) {
+    this.setAttribute("open", "");
+    this.setAttribute("aria-modal", "true");
+  });
+  HTMLDialogElement.prototype.close = vi.fn(function (this: HTMLDialogElement) {
+    this.removeAttribute("open");
+  });
+});
+
 describe("OrderPolicyConfirmDialog", () => {
   it("renders selected items, totals, and policy sections", () => {
     render(
@@ -46,15 +58,17 @@ describe("OrderPolicyConfirmDialog", () => {
 
     expect(screen.getByRole("dialog")).toBeInTheDocument();
     expect(screen.getByText("Review Order Policy")).toBeInTheDocument();
+    expect(screen.getByText("Order Policy")).toBeInTheDocument();
+    expect(screen.getByText("Order Summary")).toBeInTheDocument();
+    expect(screen.getByText("Selected Products")).toBeInTheDocument();
     expect(screen.getByText("Hand-knitted Flower Bouquet")).toBeInTheDocument();
     expect(screen.getByText("Macramé Wall Hanging")).toBeInTheDocument();
-    expect(screen.getByText("Order Policy")).toBeInTheDocument();
     expect(screen.getByText("Cancellation")).toBeInTheDocument();
     expect(screen.getByText("Returns")).toBeInTheDocument();
     expect(screen.getByText("Refunds")).toBeInTheDocument();
     expect(screen.getByText("Damaged Items")).toBeInTheDocument();
     expect(screen.getAllByText(/support@estore.example.com/i).length).toBe(2);
-    expect(screen.getByText(/₹5297/)).toBeInTheDocument();
+    expect(screen.getAllByText(/₹5297/).length).toBeGreaterThan(0);
   });
 
   it("requires acknowledgment before confirm is enabled", () => {
