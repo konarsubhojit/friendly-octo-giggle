@@ -84,13 +84,20 @@ const mockCartRoutes = async (
 ): Promise<void> => {
   await mockExchangeRates(page);
 
-  // GET /api/cart — serve current state
+  // GET /api/cart — serve current state; DELETE /api/cart clears it
   await page.route("**/api/cart", async (route) => {
-    if (route.request().method() !== "GET") {
-      await route.continue();
+    if (route.request().method() === "GET") {
+      await route.fulfill({ json: { cart: cartState.current } });
       return;
     }
-    await route.fulfill({ json: { cart: cartState.current } });
+
+    if (route.request().method() === "DELETE") {
+      cartState.current = null;
+      await route.fulfill({ json: { success: true } });
+      return;
+    }
+
+    await route.continue();
   });
 
   // PATCH or DELETE /api/cart/items/:id — mutate state, return { success: true }
@@ -111,11 +118,23 @@ const mockCartRoutes = async (
     }
   });
 
-  // POST /api/orders — accept order placement
-  await page.route("**/api/orders**", (route) =>
+  // POST /api/checkout — accept checkout request creation
+  await page.route("**/api/checkout", (route) =>
     route.fulfill({
-      json: { success: true, data: { order: { id: "ord-test-001" } } },
-      status: 201,
+      json: { checkoutRequestId: "chk-test-001", status: "PENDING" },
+      status: 202,
+    }),
+  );
+
+  // GET /api/checkout/:id — complete immediately for deterministic E2E coverage
+  await page.route("**/api/checkout/**", (route) =>
+    route.fulfill({
+      json: {
+        checkoutRequestId: "chk-test-001",
+        status: "COMPLETED",
+        orderId: "ord-test-001",
+        error: null,
+      },
     }),
   );
 };
@@ -397,7 +416,7 @@ test.describe("Cart page – order summary", () => {
     ).toBeVisible();
   });
 
-  test("successfully places order with valid shipping address", async ({
+  test("opens the policy dialog before checkout submission", async ({
     page,
   }) => {
     const cartState = { current: { ...MOCK_CART } };
@@ -410,10 +429,34 @@ test.describe("Cart page – order summary", () => {
       .fill("42 MG Road, Bengaluru, Karnataka 560001");
     await page.getByRole("button", { name: /place order/i }).click();
 
-    // Success banner should appear
-    await expect(page.getByText(/order placed successfully/i)).toBeVisible({
-      timeout: 5000,
-    });
+    await expect(
+      page.getByRole("heading", { name: /review order policy/i }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: /confirm and place order/i }),
+    ).toBeDisabled();
+
+    await page.screenshot({ path: screenshotPath("cart-policy-dialog") });
+  });
+
+  test("successfully places order after policy acknowledgment", async ({
+    page,
+  }) => {
+    const cartState = { current: { ...MOCK_CART } };
+    await mockCartRoutes(page, cartState);
+
+    await page.goto("/cart");
+
+    await page
+      .getByLabel(/shipping address/i)
+      .fill("42 MG Road, Bengaluru, Karnataka 560001");
+    await page.getByRole("button", { name: /place order/i }).click();
+    await page.getByRole("checkbox").check();
+    await page
+      .getByRole("button", { name: /confirm and place order/i })
+      .click();
+
+    await expect(page).toHaveURL(/\/orders$/);
 
     await page.screenshot({ path: screenshotPath("cart-order-placed") });
   });

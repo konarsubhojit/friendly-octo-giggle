@@ -24,6 +24,8 @@ import { CartItemRow } from "@/components/cart/CartItemRow";
 import { CheckoutForm } from "@/components/cart/CheckoutForm";
 import CartGlyph from "@/components/icons/CartGlyph";
 import { LeafAccent } from "@/components/ui/DecorativeElements";
+import { buildCheckoutPricingSummary } from "@/lib/order-summary";
+import { CartPricingSummary } from "@/components/cart/CartPricingSummary";
 
 export default function CartPage() {
   const { data: session, status } = useSession();
@@ -80,18 +82,8 @@ export default function CartPage() {
     [dispatch],
   );
 
-  const cartTotal = useMemo(() => {
-    if (!cart?.items) return 0;
-    return cart.items.reduce((total, item) => {
-      const price = item.variation
-        ? item.product.price + item.variation.priceModifier
-        : item.product.price;
-      return total + price * item.quantity;
-    }, 0);
-  }, [cart?.items]);
-
-  const cartItemCount = useMemo(
-    () => cart?.items?.reduce((s, i) => s + i.quantity, 0) ?? 0,
+  const pricingSummary = useMemo(
+    () => buildCheckoutPricingSummary(cart?.items ?? []),
     [cart?.items],
   );
 
@@ -211,28 +203,17 @@ export default function CartPage() {
                   Order Summary
                 </h2>
 
-                <div className="space-y-3 mb-4 text-sm">
-                  <div className="flex justify-between text-[var(--text-secondary)]">
-                    <span>Subtotal ({cartItemCount} items)</span>
-                    <span className="font-medium">
-                      {formatPrice(cartTotal)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-[var(--text-secondary)]">
-                    <span>Shipping</span>
-                    <span className="text-[var(--accent-sage)] font-medium">
-                      Free
-                    </span>
-                  </div>
-                  <div className="border-t border-[var(--border-warm)] pt-3 flex justify-between">
-                    <span className="font-bold text-[var(--foreground)]">
-                      Total
-                    </span>
-                    <span className="text-xl font-bold text-warm-heading">
-                      {formatPrice(cartTotal)}
-                    </span>
-                  </div>
-                </div>
+                <CartPricingSummary
+                  className="mb-4"
+                  itemCount={pricingSummary.itemCount}
+                  subtotal={formatPrice(pricingSummary.subtotal)}
+                  shipping={
+                    pricingSummary.shippingAmount === 0
+                      ? "Free"
+                      : formatPrice(pricingSummary.shippingAmount)
+                  }
+                  total={formatPrice(pricingSummary.total)}
+                />
 
                 <div className="mb-4 p-3 bg-[var(--accent-blush)]/50 rounded-lg border border-[var(--border-warm)] text-center">
                   <p className="text-xs text-[var(--text-muted)]">

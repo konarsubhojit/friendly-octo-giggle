@@ -1,11 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import React from "react";
+import type { Session } from "next-auth";
 import { Provider } from "react-redux";
 import { makeStore } from "@/lib/store";
 import CartIcon from "@/components/layout/CartIcon";
 
-const mockUseSession = vi.fn(() => ({ data: null, status: "unauthenticated" }));
+const mockUseSession = vi.fn<
+  () => { data: Session | null; status: "authenticated" | "unauthenticated" }
+>(() => ({ data: null, status: "unauthenticated" }));
 
 vi.mock("next/link", () => ({
   default: ({
@@ -114,7 +117,10 @@ describe("CartIcon", () => {
 
   it("fetches cart after authentication", async () => {
     mockUseSession.mockReturnValue({
-      data: { user: { id: "user-1" } },
+      data: {
+        user: { id: "user-1", role: "CUSTOMER" },
+        expires: "2099-01-01T00:00:00.000Z",
+      },
       status: "authenticated",
     });
     vi.stubGlobal(

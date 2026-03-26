@@ -1,5 +1,10 @@
 import Footer from "@/components/layout/Footer";
 import Link from "next/link";
+import {
+  CHECKOUT_POLICIES,
+  SUPPORT_EMAIL,
+  type CheckoutPolicySection,
+} from "@/lib/constants/checkout-policies";
 
 export const metadata = {
   title: "Help Center | The Kiyon Store",
@@ -16,7 +21,7 @@ const faqs = [
   {
     question: "Can I change or cancel my order?",
     answer:
-      "Orders can be modified or cancelled within 1 hour of placement. After that, please contact our support team and we will do our best to help.",
+      "Orders can only be cancelled before they are shipped. Once an order has shipped, it cannot be cancelled and no refund will be issued.",
   },
   {
     question: "What payment methods do you accept?",
@@ -30,8 +35,7 @@ const faqs = [
   },
   {
     question: "What is your return policy?",
-    answer:
-      "We accept returns within 30 days of delivery for most items. Products must be in original condition. Visit our Returns page for full details.",
+    answer: `Orders cannot be returned unless the product arrives damaged. Email ${SUPPORT_EMAIL} with detailed photos and a description of the issue for review.`,
   },
   {
     question: "How do I reset my password?",
@@ -97,6 +101,40 @@ function HelpContactSection() {
   );
 }
 
+function PolicySnapshotSection() {
+  return (
+    <section className="bg-[var(--surface)]/80 backdrop-blur-sm rounded-2xl shadow-warm border border-[var(--border-warm)] p-8 mb-8">
+      <h2 className="text-2xl font-semibold text-[var(--foreground)] mb-6">
+        Order Policy Snapshot
+      </h2>
+      <div className="space-y-6">
+        {Object.values(CHECKOUT_POLICIES).map(
+          (section: CheckoutPolicySection) => (
+            <div key={section.title}>
+              <h3 className="font-semibold text-[var(--foreground)] mb-2">
+                {section.title}
+              </h3>
+              <ul className="space-y-2 text-sm text-[var(--text-secondary)]">
+                {section.items.map((item: string) => (
+                  <li key={item} className="flex gap-2">
+                    <span
+                      aria-hidden="true"
+                      className="mt-1 text-[var(--accent-rose)]"
+                    >
+                      •
+                    </span>
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ),
+        )}
+      </div>
+    </section>
+  );
+}
+
 export default function HelpPage() {
   return (
     <div className="min-h-screen bg-warm-gradient">
@@ -109,6 +147,7 @@ export default function HelpPage() {
         </p>
 
         <FAQSection items={faqs} />
+        <PolicySnapshotSection />
 
         <HelpContactSection />
       </main>

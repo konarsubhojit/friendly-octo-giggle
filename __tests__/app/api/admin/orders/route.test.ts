@@ -101,7 +101,10 @@ describe("GET /api/admin/orders", () => {
       },
     ];
 
-    mockCheckAdminAuth.mockResolvedValue({ authorized: true });
+    mockCheckAdminAuth.mockResolvedValue({
+      authorized: true,
+      userId: "admin-user",
+    });
     mockFindMany.mockResolvedValue(mockOrders);
     mockSelectWhere.mockResolvedValue([{ value: 1 }]);
 
@@ -118,7 +121,10 @@ describe("GET /api/admin/orders", () => {
   });
 
   it("returns 500 on database error", async () => {
-    mockCheckAdminAuth.mockResolvedValue({ authorized: true });
+    mockCheckAdminAuth.mockResolvedValue({
+      authorized: true,
+      userId: "admin-user",
+    });
     mockFindMany.mockRejectedValue(new Error("Database error"));
 
     const response = await GET(makeRequest());
@@ -129,7 +135,10 @@ describe("GET /api/admin/orders", () => {
   });
 
   it("uses shared order search ids when search is provided", async () => {
-    mockCheckAdminAuth.mockResolvedValue({ authorized: true });
+    mockCheckAdminAuth.mockResolvedValue({
+      authorized: true,
+      userId: "admin-user",
+    });
     mockSearchOrderIds.mockResolvedValue(["order1", "order2"]);
     mockFindMany.mockResolvedValue([]);
 

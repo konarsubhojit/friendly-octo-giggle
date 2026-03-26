@@ -1,9 +1,15 @@
 import Footer from "@/components/layout/Footer";
 import Link from "next/link";
+import {
+  CHECKOUT_POLICIES,
+  SUPPORT_EMAIL,
+  type CheckoutPolicySection,
+} from "@/lib/constants/checkout-policies";
 
 export const metadata = {
   title: "Returns & Refunds | The Kiyon Store",
-  description: "Learn about our hassle-free return and refund policy.",
+  description:
+    "Learn about our damaged-item replacement process and order policy.",
 };
 
 function ReturnPolicySection() {
@@ -12,98 +18,55 @@ function ReturnPolicySection() {
       <h2 className="text-2xl font-semibold text-[var(--foreground)] mb-4">
         Return Policy
       </h2>
-      <ul className="space-y-3 text-[var(--text-secondary)]">
-        <li className="flex gap-3">
-          <svg
-            className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            aria-hidden="true"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M5 13l4 4L19 7"
-            />
-          </svg>
-          Returns accepted within <strong>30 days</strong> of delivery for most
-          items.
-        </li>
-        <li className="flex gap-3">
-          <svg
-            className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            aria-hidden="true"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M5 13l4 4L19 7"
-            />
-          </svg>
-          Items must be in <strong>original, unused condition</strong> with all
-          original packaging.
-        </li>
-        <li className="flex gap-3">
-          <svg
-            className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            aria-hidden="true"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M5 13l4 4L19 7"
-            />
-          </svg>
-          <strong>Free return shipping</strong> on all orders — we provide a
-          prepaid label.
-        </li>
-        <li className="flex gap-3">
-          <svg
-            className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            aria-hidden="true"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M5 13l4 4L19 7"
-            />
-          </svg>
-          Refunds are processed within <strong>3–5 business days</strong> of
-          receiving the return.
-        </li>
-      </ul>
+      <div className="space-y-6">
+        {Object.values(CHECKOUT_POLICIES).map(
+          (section: CheckoutPolicySection) => (
+            <div key={section.title}>
+              <h3 className="font-semibold text-[var(--foreground)] mb-2">
+                {section.title}
+              </h3>
+              <ul className="space-y-2 text-[var(--text-secondary)]">
+                {section.items.map((item: string) => (
+                  <li key={item} className="flex gap-3">
+                    <svg
+                      className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M5 13l4 4L19 7"
+                      />
+                    </svg>
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ),
+        )}
+      </div>
     </section>
   );
 }
 
 const RETURN_STEPS = [
-  "Sign in to your account and go to My Orders.",
-  "Select the order and item(s) you wish to return.",
-  "Choose your return reason and submit the request.",
-  "We will email you a prepaid return shipping label within 24 hours.",
-  "Pack the item(s) securely and drop off at any carrier location.",
-  "Once received and inspected, your refund will be issued.",
+  `Email ${SUPPORT_EMAIL} with detailed photos and a description of the issue.`,
+  "Wait for our team to review the damage claim and respond with next steps.",
+  "If approved, send the damaged product back using a shipment you arrange and pay for.",
+  "After the returned item is received and reviewed, we will send a replacement product.",
+  "We do not charge shipping for sending the replacement product to you.",
 ] as const;
 
 function ReturnStepsSection() {
   return (
     <section className="bg-[var(--surface)]/80 backdrop-blur-sm rounded-2xl shadow-warm border border-[var(--border-warm)] p-8 mb-8">
       <h2 className="text-2xl font-semibold text-[var(--foreground)] mb-4">
-        How to Start a Return
+        Damaged-Item Process
       </h2>
       <ol className="space-y-4">
         {RETURN_STEPS.map((step, i) => (
@@ -123,17 +86,12 @@ function NonReturnableSection() {
   return (
     <section className="bg-[var(--surface)]/80 backdrop-blur-sm rounded-2xl shadow-warm border border-[var(--border-warm)] p-8">
       <h2 className="text-xl font-semibold text-[var(--foreground)] mb-4">
-        Non-Returnable Items
+        Important Reminder
       </h2>
       <p className="text-[var(--text-secondary)] mb-4">
-        The following items cannot be returned:
+        Orders are not returnable unless the product arrives damaged. Refunds
+        are not issued.
       </p>
-      <ul className="list-disc list-inside space-y-1 text-[var(--text-secondary)] text-sm">
-        <li>Perishable goods (food, flowers, etc.)</li>
-        <li>Digital products and software licenses</li>
-        <li>Customized or personalized items</li>
-        <li>Items marked as Final Sale</li>
-      </ul>
       <p className="mt-6 text-[var(--text-secondary)] text-sm">
         Questions?{" "}
         <Link
@@ -142,7 +100,7 @@ function NonReturnableSection() {
         >
           Contact our support team
         </Link>{" "}
-        and we&apos;ll be happy to help.
+        or email {SUPPORT_EMAIL} and we&apos;ll help review damaged-item claims.
       </p>
     </section>
   );
@@ -156,8 +114,8 @@ export default function ReturnsPage() {
           Returns & Refunds
         </h1>
         <p className="text-[var(--text-muted)] text-lg mb-12">
-          We want you to be 100% satisfied. Our return process is simple and
-          hassle-free.
+          Review our cancellation, damaged-item, and replacement guidance before
+          reaching out for support.
         </p>
 
         <ReturnPolicySection />
