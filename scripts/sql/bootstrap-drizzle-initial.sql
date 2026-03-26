@@ -564,21 +564,31 @@ CREATE INDEX IF NOT EXISTS "Product_createdAt_idx" ON public."Product" USING btr
 CREATE INDEX IF NOT EXISTS "Product_deletedAt_idx" ON public."Product" USING btree ("deletedAt");
 
 UPDATE drizzle.__drizzle_migrations
-SET hash = 'd93aa197d881a0ed6e53efd815b572ae17bf5718ecdf45634cc476eec6fbb732'
+SET hash = '23de57cb932c16a3b710011ab47a0c4a7321566561dc9c358f8eff1b2257dded'
 WHERE created_at = 1774355279555;
 
 INSERT INTO drizzle.__drizzle_migrations (hash, created_at)
-SELECT 'd93aa197d881a0ed6e53efd815b572ae17bf5718ecdf45634cc476eec6fbb732', 1774355279555
+SELECT '23de57cb932c16a3b710011ab47a0c4a7321566561dc9c358f8eff1b2257dded', 1774355279555
 WHERE NOT EXISTS (
   SELECT 1 FROM drizzle.__drizzle_migrations WHERE created_at = 1774355279555
 );
 
 UPDATE drizzle.__drizzle_migrations
-SET hash = '3c69e516a03a9ae4c594d64e857c4ce6c04e7f59f38f696c773207c40c869e01'
+SET hash = '23de57cb932c16a3b710011ab47a0c4a7321566561dc9c358f8eff1b2257dded'
+WHERE created_at = 1774381250472;
+
+INSERT INTO drizzle.__drizzle_migrations (hash, created_at)
+SELECT '23de57cb932c16a3b710011ab47a0c4a7321566561dc9c358f8eff1b2257dded', 1774381250472
+WHERE NOT EXISTS (
+  SELECT 1 FROM drizzle.__drizzle_migrations WHERE created_at = 1774381250472
+);
+
+UPDATE drizzle.__drizzle_migrations
+SET hash = '2969dd7391cd493d76e0c438ef878b36482fc49038d4bf76a07cab797e517d9b'
 WHERE created_at = 1774378815410;
 
 INSERT INTO drizzle.__drizzle_migrations (hash, created_at)
-SELECT '3c69e516a03a9ae4c594d64e857c4ce6c04e7f59f38f696c773207c40c869e01', 1774378815410
+SELECT '2969dd7391cd493d76e0c438ef878b36482fc49038d4bf76a07cab797e517d9b', 1774378815410
 WHERE NOT EXISTS (
   SELECT 1 FROM drizzle.__drizzle_migrations WHERE created_at = 1774378815410
 );
