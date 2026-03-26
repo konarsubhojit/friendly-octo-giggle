@@ -17,7 +17,9 @@ const mockNextAuthReturn = vi.hoisted(() => ({
 }));
 
 const mockCacheUserSession = vi.hoisted(() =>
-  vi.fn((_userId: string, builder: () => unknown) => Promise.resolve(builder())),
+  vi.fn((_userId: string, builder: () => unknown) =>
+    Promise.resolve(builder()),
+  ),
 );
 const mockInvalidateUserSessionCache = vi.hoisted(() => vi.fn());
 

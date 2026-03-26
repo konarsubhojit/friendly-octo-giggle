@@ -638,7 +638,9 @@ describe("CACHE_KEYS share", () => {
 
 describe("CACHE_KEYS session", () => {
   it("SESSION_BY_USER returns correct key", () => {
-    expect(CACHE_KEYS.SESSION_BY_USER("user-123")).toBe("session:user:user-123");
+    expect(CACHE_KEYS.SESSION_BY_USER("user-123")).toBe(
+      "session:user:user-123",
+    );
   });
 });
 

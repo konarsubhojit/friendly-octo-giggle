@@ -9,10 +9,7 @@ import type { Adapter } from "next-auth/adapters";
 import { logAuthEvent } from "./logger";
 import { verifyPassword } from "./password";
 import { eq, or } from "drizzle-orm";
-import {
-  cacheUserSession,
-  invalidateUserSessionCache,
-} from "@/lib/cache";
+import { cacheUserSession, invalidateUserSessionCache } from "@/lib/cache";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: DrizzleAdapter(primaryDrizzleDb, {
