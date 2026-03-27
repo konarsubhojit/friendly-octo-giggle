@@ -54,6 +54,8 @@ export const CACHE_KEYS = {
   EXCHANGE_RATES_BY_DATE: (date: string) => `exchange-rates:${date}`,
   // Product shares (immutable token → productId + variationId mapping)
   SHARE_RESOLVE_BY_KEY: (key: string) => `share:${key}`,
+  // Session data (per-user, short TTL to reflect role/data changes quickly)
+  SESSION_BY_USER: (userId: string) => `session:user:${userId}`,
 } as const;
 
 // Cache TTL configuration (in seconds)
@@ -85,6 +87,8 @@ export const CACHE_TTL = {
   ADMIN_SALES_STALE: 30,
   // Share resolution: immutable once created — cache for 1 year with no stale window
   SHARE_RESOLVE: 31536000, // 1 year in seconds
+  // Session data: short TTL so role/profile changes propagate within minutes
+  SESSION: 300, // 5 minutes
 } as const;
 
 /**
@@ -390,5 +394,66 @@ export const cacheShareResolve = async <T>(
       additionalInfo: { key: cacheKey },
     });
     return fetcher();
+  }
+};
+
+/**
+ * Cache session user data (id, role, phoneNumber) by user ID.
+ * Avoids rebuilding session fields from the JWT token on every auth() call.
+ * Uses a short TTL so role or profile changes propagate within minutes.
+ *
+ * @param userId - User ID used as the cache key
+ * @param builder - Synchronous function that constructs the session data from the token
+ * @returns Cached or freshly built session data
+ */
+export const cacheUserSession = async <T>(
+  userId: string,
+  builder: () => T,
+): Promise<T> => {
+  const redisClient = getRedisClient();
+  const cacheKey = CACHE_KEYS.SESSION_BY_USER(userId);
+
+  if (!redisClient) return builder();
+
+  try {
+    const cached = await redisClient.get<T>(cacheKey);
+    if (cached !== null) {
+      logCacheOperation({ operation: "hit", key: cacheKey, success: true });
+      return cached;
+    }
+
+    logCacheOperation({ operation: "miss", key: cacheKey, success: true });
+    const result = builder();
+    await redisClient.setex(cacheKey, CACHE_TTL.SESSION, result);
+    logCacheOperation({
+      operation: "set",
+      key: cacheKey,
+      ttl: CACHE_TTL.SESSION,
+      success: true,
+    });
+    return result;
+  } catch (error) {
+    logError({
+      error,
+      context: "session_cache_operation",
+      additionalInfo: { userId },
+    });
+    return builder();
+  }
+};
+
+/**
+ * Invalidate the cached session data for a specific user.
+ * Called on sign-out to ensure stale session data is not served.
+ *
+ * @param userId - The user ID whose session cache should be cleared
+ */
+export const invalidateUserSessionCache = async (
+  userId: string,
+): Promise<void> => {
+  try {
+    await invalidateCachePattern(CACHE_KEYS.SESSION_BY_USER(userId));
+  } catch (error) {
+    logError({ error, context: "session_cache_invalidation" });
   }
 };

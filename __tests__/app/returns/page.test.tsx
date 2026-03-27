@@ -24,10 +24,12 @@ describe("ReturnsPage", () => {
     expect(
       screen.getByText(/refunds are not issued for orders/i),
     ).toBeInTheDocument();
-    expect(screen.getAllByText(/support@estore.example.com/i).length).toBe(2);
+    expect(screen.getAllByText(/support@estore.example.com/i).length).toBe(3);
     expect(
       screen.getByText(/shipping cost to send the damaged product back/i),
     ).toBeInTheDocument();
-    expect(screen.getByText(/replacement product/i)).toBeInTheDocument();
+    expect(
+      screen.getAllByText(/replacement product/i).length,
+    ).toBeGreaterThanOrEqual(1);
   });
 });

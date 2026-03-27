@@ -16,8 +16,15 @@ const mockNextAuthReturn = vi.hoisted(() => ({
   auth: vi.fn(),
 }));
 
+const mockCacheUserSession = vi.hoisted(() =>
+  vi.fn((_userId: string, builder: () => unknown) =>
+    Promise.resolve(builder()),
+  ),
+);
+const mockInvalidateUserSessionCache = vi.hoisted(() => vi.fn());
+
 interface NextAuthConfig {
-  session: { strategy: string };
+  session: { strategy: string; maxAge: number };
   pages: { signIn: string; error: string };
   providers: Array<{
     id: string;
@@ -29,7 +36,7 @@ interface NextAuthConfig {
     session: (params: {
       session: { user: Record<string, unknown> };
       token: Record<string, unknown>;
-    }) => { user: Record<string, unknown> };
+    }) => Promise<{ user: Record<string, unknown> }>;
     jwt: (params: {
       token: Record<string, unknown>;
       user?: Record<string, unknown>;
@@ -40,7 +47,7 @@ interface NextAuthConfig {
     }) => boolean;
   };
   events: {
-    signOut: () => void;
+    signOut: (message?: Record<string, unknown>) => Promise<void>;
   };
   cookies: {
     sessionToken: {
@@ -119,6 +126,11 @@ vi.mock("drizzle-orm", () => ({
   or: vi.fn((...args: unknown[]) => ({ op: "or", args })),
 }));
 
+vi.mock("@/lib/cache", () => ({
+  cacheUserSession: mockCacheUserSession,
+  invalidateUserSessionCache: mockInvalidateUserSessionCache,
+}));
+
 describe("auth module", () => {
   beforeAll(async () => {
     await import("@/lib/auth");
@@ -138,7 +150,7 @@ describe("auth module", () => {
 
   it("calls NextAuth with jwt strategy and custom pages", () => {
     expect(capturedConfig).toBeDefined();
-    expect(capturedConfig.session).toEqual({ strategy: "jwt" });
+    expect(capturedConfig.session).toEqual({ strategy: "jwt", maxAge: 86400 });
     expect(capturedConfig.pages).toEqual({
       signIn: "/auth/signin",
       error: "/auth/error",
@@ -146,25 +158,47 @@ describe("auth module", () => {
   });
 
   describe("callbacks.session", () => {
-    it("sets user.id and user.role from token", () => {
+    it("sets user.id and user.role from token", async () => {
       const session = { user: { id: "", role: "", email: "test@example.com" } };
       const token = { id: "user-123", role: "ADMIN" };
 
-      const result = capturedConfig.callbacks.session({ session, token });
+      const result = await capturedConfig.callbacks.session({ session, token });
 
       expect(result.user.id).toBe("user-123");
       expect(result.user.role).toBe("ADMIN");
       expect(mockLogAuthEvent).not.toHaveBeenCalled();
     });
 
-    it("defaults role to CUSTOMER when token.role is missing", () => {
+    it("defaults role to CUSTOMER when token.role is missing", async () => {
       const session = { user: { id: "", role: "", email: null } };
       const token = { id: "user-456" };
 
-      const result = capturedConfig.callbacks.session({ session, token });
+      const result = await capturedConfig.callbacks.session({ session, token });
 
       expect(result.user.role).toBe("CUSTOMER");
       expect(mockLogAuthEvent).not.toHaveBeenCalled();
+    });
+
+    it("uses cacheUserSession to cache session user data", async () => {
+      const session = { user: { id: "", role: "", email: "test@example.com" } };
+      const token = { id: "user-123", role: "CUSTOMER" };
+
+      await capturedConfig.callbacks.session({ session, token });
+
+      expect(mockCacheUserSession).toHaveBeenCalledWith(
+        "user-123",
+        expect.any(Function),
+      );
+    });
+
+    it("returns session unchanged when userId is missing from token", async () => {
+      const session = { user: { id: "", role: "", email: "test@example.com" } };
+      const token = {};
+
+      const result = await capturedConfig.callbacks.session({ session, token });
+
+      expect(result).toEqual(session);
+      expect(mockCacheUserSession).not.toHaveBeenCalled();
     });
   });
 
@@ -207,13 +241,35 @@ describe("auth module", () => {
   });
 
   describe("events.signOut", () => {
-    it("calls logAuthEvent with logout event", () => {
-      capturedConfig.events.signOut();
+    it("calls logAuthEvent with logout event", async () => {
+      await capturedConfig.events.signOut({});
 
       expect(mockLogAuthEvent).toHaveBeenCalledWith({
         event: "logout",
         success: true,
       });
+    });
+
+    it("invalidates session cache when token with id is provided", async () => {
+      await capturedConfig.events.signOut({ token: { id: "user-xyz" } });
+
+      expect(mockInvalidateUserSessionCache).toHaveBeenCalledWith("user-xyz");
+      expect(mockLogAuthEvent).toHaveBeenCalledWith({
+        event: "logout",
+        success: true,
+      });
+    });
+
+    it("does not call invalidateUserSessionCache when token has no id", async () => {
+      await capturedConfig.events.signOut({ token: {} });
+
+      expect(mockInvalidateUserSessionCache).not.toHaveBeenCalled();
+    });
+
+    it("does not call invalidateUserSessionCache when message has no token", async () => {
+      await capturedConfig.events.signOut({});
+
+      expect(mockInvalidateUserSessionCache).not.toHaveBeenCalled();
     });
   });
 
@@ -369,7 +425,7 @@ describe("auth module", () => {
   });
 
   describe("callbacks.session phoneNumber", () => {
-    it("sets phoneNumber from token when present", () => {
+    it("sets phoneNumber from token when present", async () => {
       const session = { user: { id: "", role: "", email: "test@example.com" } };
       const token = {
         id: "user-123",
@@ -377,16 +433,16 @@ describe("auth module", () => {
         phoneNumber: "+1234567890",
       };
 
-      const result = capturedConfig.callbacks.session({ session, token });
+      const result = await capturedConfig.callbacks.session({ session, token });
 
       expect(result.user.phoneNumber).toBe("+1234567890");
     });
 
-    it("sets phoneNumber to undefined when missing from token", () => {
+    it("sets phoneNumber to undefined when missing from token", async () => {
       const session = { user: { id: "", role: "", email: "test@example.com" } };
       const token = { id: "user-123", role: "CUSTOMER" };
 
-      const result = capturedConfig.callbacks.session({ session, token });
+      const result = await capturedConfig.callbacks.session({ session, token });
 
       expect(result.user.phoneNumber).toBeUndefined();
     });

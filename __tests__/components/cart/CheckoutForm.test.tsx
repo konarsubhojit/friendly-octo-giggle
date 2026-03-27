@@ -114,6 +114,16 @@ function renderCheckoutForm() {
 describe("CheckoutForm", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    HTMLDialogElement.prototype.showModal = vi
+      .fn()
+      .mockImplementation(function (this: HTMLDialogElement) {
+        this.setAttribute("open", "");
+      });
+    HTMLDialogElement.prototype.close = vi.fn().mockImplementation(function (
+      this: HTMLDialogElement,
+    ) {
+      this.removeAttribute("open");
+    });
     mockUseSession.mockReturnValue({
       data: {
         user: {
