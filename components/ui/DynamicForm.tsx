@@ -16,7 +16,7 @@ export type {
 import type { DynamicFormProps } from "@/components/ui/DynamicFormTypes";
 
 const DEFAULT_SUBMIT_BTN =
-  "px-6 py-2 text-sm font-semibold bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed";
+  "w-full sm:w-auto px-6 py-2 text-sm font-semibold bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed";
 
 /**
  * A self-managing form component driven by field definitions.
@@ -169,7 +169,7 @@ export function DynamicForm({
         <button
           type="submit"
           disabled={submitting}
-          className={`${submitButtonClassName} w-full sm:w-auto`}
+          className={submitButtonClassName}
         >
           {submitting ? submittingLabel : submitLabel}
         </button>

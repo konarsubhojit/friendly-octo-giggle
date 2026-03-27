@@ -97,8 +97,7 @@ const ProductImageArea = memo(
           fill
           className="object-contain p-4 transition-transform duration-500 group-hover:scale-108"
           sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 25vw"
-          loading={eagerLoad ? "eager" : undefined}
-          fetchPriority={eagerLoad ? "high" : undefined}
+          priority={eagerLoad}
         />
         <WishlistButton productId={product.id} productName={product.name} />
         <div className="absolute bottom-3 left-3">

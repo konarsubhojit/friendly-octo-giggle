@@ -33,20 +33,13 @@ vi.mock("next/image", () => ({
   default: ({
     alt,
     src,
-    loading,
-    fetchPriority,
+    priority,
   }: {
     alt: string;
     src: string;
-    loading?: string;
-    fetchPriority?: string;
+    priority?: boolean;
   }) => (
-    <img
-      alt={alt}
-      src={src}
-      data-loading={loading}
-      data-fetch-priority={fetchPriority}
-    />
+    <img alt={alt} src={src} data-priority={priority ? "true" : undefined} />
   ),
 }));
 
@@ -220,11 +213,10 @@ describe("ProductGrid", () => {
     const thirdImage = screen.getByAltText("Product C");
     const fourthImage = screen.getByAltText("Product D");
 
-    expect(firstImage).toHaveAttribute("data-loading", "eager");
-    expect(firstImage).toHaveAttribute("data-fetch-priority", "high");
-    expect(secondImage).toHaveAttribute("data-loading", "eager");
-    expect(thirdImage).toHaveAttribute("data-loading", "eager");
-    expect(fourthImage).not.toHaveAttribute("data-loading", "eager");
+    expect(firstImage).toHaveAttribute("data-priority", "true");
+    expect(secondImage).toHaveAttribute("data-priority", "true");
+    expect(thirdImage).toHaveAttribute("data-priority", "true");
+    expect(fourthImage).not.toHaveAttribute("data-priority", "true");
   });
 
   it("renders all products heading", () => {
