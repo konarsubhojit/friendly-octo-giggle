@@ -164,10 +164,13 @@ export default async function AdminCheckoutRequestsPage({
 
         {search || status ? (
           <p className="mb-4 text-sm text-slate-500 dark:text-slate-400">
-            Showing {records.length} checkout request
-            {records.length === 1 ? "" : "s"}
-            {search ? ` matching "${search}"` : ""}
-            {status ? `${search ? " and" : " with"} status ${status}` : ""}.
+            {(() => {
+              const statusConjunction = search ? " and" : " with";
+              const statusText = status
+                ? `${statusConjunction} status ${status}`
+                : "";
+              return `Showing ${records.length} checkout request${records.length === 1 ? "" : "s"}${search ? ` matching "${search}"` : ""}${statusText}.`;
+            })()}
           </p>
         ) : null}
 

@@ -247,7 +247,7 @@ export const ShareButton = ({ productId, variationId }: ShareButtonProps) => {
         }
 
         // Auto-copy to clipboard immediately
-        await copyTextToClipboard(url);
+        copyTextToClipboard(url);
         setAutoCopied(true);
         setShareUrl(url);
         setShareState("ready");
