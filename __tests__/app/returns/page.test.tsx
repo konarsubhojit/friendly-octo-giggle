@@ -28,6 +28,8 @@ describe("ReturnsPage", () => {
     expect(
       screen.getByText(/shipping cost to send the damaged product back/i),
     ).toBeInTheDocument();
-    expect(screen.getAllByText(/replacement product/i).length).toBeGreaterThanOrEqual(1);
+    expect(
+      screen.getAllByText(/replacement product/i).length,
+    ).toBeGreaterThanOrEqual(1);
   });
 });
