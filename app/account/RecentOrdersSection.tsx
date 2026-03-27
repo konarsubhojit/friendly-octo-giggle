@@ -122,6 +122,34 @@ export function RecentOrdersSection() {
     };
   }, []);
 
+  function renderOrdersContent() {
+    if (loading) {
+      return (
+        <div className="flex items-center justify-center py-12">
+          <LoadingSpinner />
+        </div>
+      );
+    }
+    if (orders.length === 0) {
+      return (
+        <EmptyState
+          title="No orders yet"
+          message="Once you place an order, the latest updates will appear here."
+          ctaText="Browse Products"
+          ctaHref="/shop"
+          className="py-4"
+        />
+      );
+    }
+    return (
+      <div className="space-y-3">
+        {orders.map((order) => (
+          <RecentOrderRow key={order.id} order={order} />
+        ))}
+      </div>
+    );
+  }
+
   return (
     <Card className="p-6 sm:p-8">
       <div className="mb-5 flex items-start justify-between gap-4">
@@ -143,25 +171,7 @@ export function RecentOrdersSection() {
 
       {error ? <AlertBanner message={error} variant="error" /> : null}
 
-      {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <LoadingSpinner />
-        </div>
-      ) : orders.length === 0 ? (
-        <EmptyState
-          title="No orders yet"
-          message="Once you place an order, the latest updates will appear here."
-          ctaText="Browse Products"
-          ctaHref="/shop"
-          className="py-4"
-        />
-      ) : (
-        <div className="space-y-3">
-          {orders.map((order) => (
-            <RecentOrderRow key={order.id} order={order} />
-          ))}
-        </div>
-      )}
+      {renderOrdersContent()}
     </Card>
   );
 }

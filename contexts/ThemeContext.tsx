@@ -53,7 +53,7 @@ export const ThemeProvider = ({
   readonly children: ReactNode;
 }) => {
   const [theme, setTheme] = useState<ThemeId>(() => {
-    if (typeof globalThis.window === "undefined") return "default";
+    if (globalThis.window === undefined) return "default";
     try {
       const stored = globalThis.localStorage.getItem(THEME_STORAGE_KEY);
       if (stored === "baby-pink") return "baby-pink";

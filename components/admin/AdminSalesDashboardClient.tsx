@@ -33,16 +33,17 @@ function formatDelta(delta: number | null, suffix: string): string {
   return `${delta > 0 ? "+" : "-"}${absoluteDelta}% vs last ${suffix}`;
 }
 
+function getDeltaBadgeClass(delta: number | null): string {
+  if (delta === null) return "bg-violet-100 text-violet-700";
+  if (delta >= 0) return "bg-emerald-100 text-emerald-700";
+  return "bg-rose-100 text-rose-700";
+}
+
 function DeltaBadge({
   delta,
   suffix,
 }: Readonly<{ delta: number | null; suffix: string }>) {
-  const badgeClassName =
-    delta === null
-      ? "bg-violet-100 text-violet-700"
-      : delta >= 0
-        ? "bg-emerald-100 text-emerald-700"
-        : "bg-rose-100 text-rose-700";
+  const badgeClassName = getDeltaBadgeClass(delta);
 
   return (
     <span

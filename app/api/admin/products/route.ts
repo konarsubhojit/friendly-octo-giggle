@@ -19,6 +19,44 @@ export const dynamic = "force-dynamic";
 
 const PAGE_SIZE = 20;
 
+type SearchFilterResult =
+  | { type: "conditions"; condition: SQL }
+  | { type: "empty" };
+
+async function resolveSearchFilter(
+  search: string,
+  limit: number,
+): Promise<SearchFilterResult | null> {
+  if (!search) return null;
+  const matchedIds = await searchProductIds(search, { limit: limit * 5 });
+  if (matchedIds === null) {
+    return {
+      type: "conditions",
+      condition: ilike(products.name, `%${search}%`),
+    };
+  }
+  if (matchedIds.length === 0) {
+    return { type: "empty" };
+  }
+  return { type: "conditions", condition: inArray(products.id, matchedIds) };
+}
+
+function applyCursorFilter(
+  conditions: SQL[],
+  cursor: string | null,
+  useOffset: boolean,
+): void {
+  if (useOffset || !cursor) return;
+  const cursorDate = new Date(cursor);
+  if (!Number.isNaN(cursorDate.getTime())) {
+    conditions.push(lt(products.createdAt, cursorDate));
+  }
+}
+
+function toWhereClause(conditions: SQL[]): SQL {
+  return conditions.length === 1 ? conditions[0]! : and(...conditions)!;
+}
+
 /**
  * GET /api/admin/products
  * Supports cursor-based pagination + search.
@@ -54,41 +92,24 @@ export const GET = async (request: NextRequest) => {
     const conditions: SQL[] = [isNull(products.deletedAt)];
     const countConditions: SQL[] = [isNull(products.deletedAt)];
 
-    if (!useOffset && cursor) {
-      const cursorDate = new Date(cursor);
-      if (!Number.isNaN(cursorDate.getTime())) {
-        conditions.push(lt(products.createdAt, cursorDate));
-      }
+    applyCursorFilter(conditions, cursor, useOffset);
+
+    const searchFilter = await resolveSearchFilter(search, limit);
+    if (searchFilter?.type === "empty") {
+      return apiSuccess({
+        products: [],
+        nextCursor: null,
+        hasMore: false,
+        totalCount: 0,
+      });
+    }
+    if (searchFilter?.type === "conditions") {
+      conditions.push(searchFilter.condition);
+      countConditions.push(searchFilter.condition);
     }
 
-    if (search) {
-      const matchedIds = await searchProductIds(search, { limit: limit * 5 });
-
-      if (matchedIds === null) {
-        const pattern = `%${search}%`;
-        const searchCondition = ilike(products.name, pattern);
-        conditions.push(searchCondition);
-        countConditions.push(searchCondition);
-      } else if (matchedIds.length === 0) {
-        return apiSuccess({
-          products: [],
-          nextCursor: null,
-          hasMore: false,
-          totalCount: 0,
-        });
-      } else {
-        const searchCondition = inArray(products.id, matchedIds);
-        conditions.push(searchCondition);
-        countConditions.push(searchCondition);
-      }
-    }
-
-    const whereClause =
-      conditions.length === 1 ? conditions[0] : and(...conditions);
-    const countWhereClause =
-      countConditions.length === 1
-        ? countConditions[0]
-        : and(...countConditions);
+    const whereClause = toWhereClause(conditions);
+    const countWhereClause = toWhereClause(countConditions);
 
     const [rows, totalRows] = await Promise.all([
       drizzleDb.query.products.findMany({

@@ -22,6 +22,7 @@ function formatCompactValue(value: number): string {
 
 export function SalesTrendChart({ points }: SalesTrendChartProps) {
   const gradientId = useId();
+  const chartTitleId = `${gradientId}-title`;
   const { formatPrice, convertPrice } = useCurrency();
 
   if (points.length === 0) {
@@ -85,14 +86,14 @@ export function SalesTrendChart({ points }: SalesTrendChartProps) {
               className="h-2.5 w-2.5 rounded-full bg-emerald-500"
               aria-hidden="true"
             />
-            Revenue
+            <span>Revenue</span>
           </span>
           <span className="inline-flex items-center gap-2">
             <span
               className="h-2.5 w-2.5 rounded-full bg-cyan-600"
               aria-hidden="true"
             />
-            Orders
+            <span>Orders</span>
           </span>
         </div>
       </div>
@@ -101,8 +102,11 @@ export function SalesTrendChart({ points }: SalesTrendChartProps) {
         viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}
         className="h-auto w-full"
         role="img"
-        aria-label="Seven day sales trend showing revenue and order volume"
+        aria-labelledby={chartTitleId}
       >
+        <title id={chartTitleId}>
+          Seven day sales trend showing revenue and order volume
+        </title>
         <defs>
           <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="#10b981" stopOpacity="0.35" />
