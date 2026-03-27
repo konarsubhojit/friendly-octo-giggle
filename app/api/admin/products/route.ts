@@ -30,7 +30,10 @@ async function resolveSearchFilter(
   if (!search) return null;
   const matchedIds = await searchProductIds(search, { limit: limit * 5 });
   if (matchedIds === null) {
-    return { type: "conditions", condition: ilike(products.name, `%${search}%`) };
+    return {
+      type: "conditions",
+      condition: ilike(products.name, `%${search}%`),
+    };
   }
   if (matchedIds.length === 0) {
     return { type: "empty" };
