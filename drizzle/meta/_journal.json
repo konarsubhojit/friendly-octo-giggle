@@ -15,6 +15,13 @@
       "when": 1774378815410,
       "tag": "0001_polite_reaper",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1774618645201,
+      "tag": "0002_ensure_checkout_request_id",
+      "breakpoints": true
     }
   ]
 }

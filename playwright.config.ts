@@ -115,6 +115,16 @@ export default defineConfig({
       testMatch: "**/accessibility.spec.ts",
       grep: /authenticated pages/,
     },
+    // Live orders E2E — authenticated, hits real database (no mocking)
+    {
+      name: "orders-live",
+      use: {
+        ...devices["Desktop Chrome"],
+        viewport: { width: 1280, height: 800 },
+        storageState: "./playwright-tests/.auth/admin.json",
+      },
+      testMatch: "**/orders-live.spec.ts",
+    },
   ],
   reporter: [
     ["list"],
