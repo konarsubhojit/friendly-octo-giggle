@@ -4,6 +4,7 @@ import { users } from "@/lib/schema";
 import { desc, lt, ilike, and, or, SQL, count } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { apiSuccess, apiError, handleApiError } from "@/lib/api-utils";
+import { cacheAdminUsersList } from "@/lib/cache";
 
 export const dynamic = "force-dynamic";
 
@@ -83,42 +84,55 @@ export const GET = async (request: NextRequest) => {
     const whereClause = resolveWhereClause(conditions);
     const countWhereClause = resolveWhereClause(countConditions);
 
-    const [rows, totalRows] = await Promise.all([
-      drizzleDb.query.users.findMany({
-        where: whereClause,
-        orderBy: [desc(users.createdAt)],
-        limit: limit + 1,
-        with: { orders: { columns: { id: true } } },
-      }),
-      drizzleDb.select({ value: count() }).from(users).where(countWhereClause),
-    ]);
+    const fetcher = async () => {
+      const [rows, totalRows] = await Promise.all([
+        drizzleDb.query.users.findMany({
+          where: whereClause,
+          orderBy: [desc(users.createdAt)],
+          limit: limit + 1,
+          with: { orders: { columns: { id: true } } },
+        }),
+        drizzleDb
+          .select({ value: count() })
+          .from(users)
+          .where(countWhereClause),
+      ]);
 
-    const hasMore = rows.length > limit;
-    const pageItems = hasMore ? rows.slice(0, limit) : rows;
-    const lastItem = pageItems.at(-1);
-    const nextCursor =
-      hasMore && lastItem ? lastItem.createdAt.toISOString() : null;
-    const totalCount = Number(totalRows[0]?.value ?? 0);
+      const hasMore = rows.length > limit;
+      const pageItems = hasMore ? rows.slice(0, limit) : rows;
+      const lastItem = pageItems.at(-1);
+      const nextCursor =
+        hasMore && lastItem ? lastItem.createdAt.toISOString() : null;
+      const totalCount = Number(totalRows[0]?.value ?? 0);
 
-    const userList = pageItems.map((user) => ({
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      emailVerified: user.emailVerified,
-      createdAt:
-        user.createdAt instanceof Date
-          ? user.createdAt.toISOString()
-          : user.createdAt,
-      updatedAt:
-        user.updatedAt instanceof Date
-          ? user.updatedAt.toISOString()
-          : user.updatedAt,
-      image: user.image,
-      _count: { orders: user.orders.length },
-    }));
+      const userList = pageItems.map((user) => ({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        emailVerified: user.emailVerified,
+        createdAt:
+          user.createdAt instanceof Date
+            ? user.createdAt.toISOString()
+            : user.createdAt,
+        updatedAt:
+          user.updatedAt instanceof Date
+            ? user.updatedAt.toISOString()
+            : user.updatedAt,
+        image: user.image,
+        _count: { orders: user.orders.length },
+      }));
 
-    return apiSuccess({ users: userList, nextCursor, hasMore, totalCount });
+      return { users: userList, nextCursor, hasMore, totalCount };
+    };
+
+    const result = await cacheAdminUsersList(fetcher, {
+      search,
+      cursor,
+      limit,
+    });
+
+    return apiSuccess(result);
   } catch (error) {
     return handleApiError(error);
   }

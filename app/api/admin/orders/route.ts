@@ -12,6 +12,7 @@ import { checkAdminAuth } from "@/lib/admin-auth";
 import { searchOrderIds } from "@/lib/order-search";
 import { serializeOrders } from "@/lib/serializers";
 import { OrderStatus } from "@/lib/types";
+import { cacheAdminOrdersList } from "@/lib/cache";
 
 export const dynamic = "force-dynamic";
 
@@ -167,29 +168,41 @@ export const GET = async (request: NextRequest) => {
       });
     }
 
-    const rows = await drizzleDb.query.orders.findMany({
-      where: resolveWhereClause(conditions),
-      orderBy: [desc(orders.createdAt)],
-      limit: limit + 1,
-      offset: useOffset ? offset : undefined,
-      with: { items: { with: { product: true, variation: true } } },
+    const fetcher = async () => {
+      const rows = await drizzleDb.query.orders.findMany({
+        where: resolveWhereClause(conditions),
+        orderBy: [desc(orders.createdAt)],
+        limit: limit + 1,
+        offset: useOffset ? offset : undefined,
+        with: { items: { with: { product: true, variation: true } } },
+      });
+
+      const hasMore = rows.length > limit;
+      const pageItems = hasMore ? rows.slice(0, limit) : rows;
+      const nextCursor = hasMore
+        ? pageItems.at(-1)!.createdAt.toISOString()
+        : null;
+
+      return {
+        orders: serializeOrders(pageItems),
+        nextCursor,
+        hasMore,
+        totalCount: await getOrdersTotalCount(
+          countConditions,
+          totalCountFromSearch,
+        ),
+      };
+    };
+
+    const result = await cacheAdminOrdersList(fetcher, {
+      search,
+      status: statusFilter,
+      cursor,
+      offset,
+      limit,
     });
 
-    const hasMore = rows.length > limit;
-    const pageItems = hasMore ? rows.slice(0, limit) : rows;
-    const nextCursor = hasMore
-      ? pageItems.at(-1)!.createdAt.toISOString()
-      : null;
-
-    return apiSuccess({
-      orders: serializeOrders(pageItems),
-      nextCursor,
-      hasMore,
-      totalCount: await getOrdersTotalCount(
-        countConditions,
-        totalCountFromSearch,
-      ),
-    });
+    return apiSuccess(result);
   } catch (error) {
     return handleApiError(error);
   }

@@ -45,7 +45,7 @@ export const CheckoutForm = ({ customizationNotes }: CheckoutFormProps) => {
   const [isPolicyDialogOpen, setIsPolicyDialogOpen] = useState(false);
   const [isPolicyAcknowledged, setIsPolicyAcknowledged] = useState(false);
 
-  const cartItems = cart?.items ?? [];
+  const cartItems = useMemo(() => cart?.items ?? [], [cart?.items]);
   const checkoutItems = useMemo(
     () =>
       cartItems.map((item) => ({

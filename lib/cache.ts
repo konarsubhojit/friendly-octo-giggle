@@ -32,7 +32,7 @@ export const CACHE_KEYS = {
   ORDERS_BY_USER: (userId: string) => `orders:user:${userId}`,
   ORDER_BY_ID: (userId: string, orderId: string) =>
     `order:${userId}:${orderId}`,
-  ORDERS_USER_PATTERN: (userId: string) => `orders:user:${userId}`,
+  ORDERS_USER_PATTERN: (userId: string) => `orders:user:${userId}*`,
   ORDER_USER_PATTERN: (userId: string) => `order:${userId}:*`,
   // Admin products
   ADMIN_PRODUCTS_ALL: "admin:products:all",
@@ -246,11 +246,33 @@ export const invalidateUserOrderCaches = async (
 /**
  * Cache admin orders list with stampede prevention
  */
+export const buildAdminOrdersCacheKey = (params: {
+  search?: string;
+  status?: string;
+  cursor?: string | null;
+  offset?: number;
+  limit?: number;
+}): string => {
+  if (params.search) return "";
+  const parts = [CACHE_KEYS.ADMIN_ORDERS_ALL];
+  if (params.status && params.status !== "ALL")
+    parts.push(`s:${params.status}`);
+  if (params.cursor) parts.push(`c:${params.cursor}`);
+  else if (params.offset) parts.push(`o:${params.offset}`);
+  if (params.limit) parts.push(`l:${params.limit}`);
+  return parts.join(":");
+};
+
 export const cacheAdminOrdersList = <T>(
   fetcher: () => Promise<T>,
+  params?: Parameters<typeof buildAdminOrdersCacheKey>[0],
 ): Promise<T> => {
+  const cacheKey = params
+    ? buildAdminOrdersCacheKey(params)
+    : CACHE_KEYS.ADMIN_ORDERS_ALL;
+  if (!cacheKey) return fetcher();
   return getCachedData(
-    CACHE_KEYS.ADMIN_ORDERS_ALL,
+    cacheKey,
     CACHE_TTL.ADMIN_ORDERS,
     fetcher,
     CACHE_TTL.ADMIN_ORDERS_STALE,
@@ -296,11 +318,28 @@ export const invalidateAdminOrderCaches = async (
 /**
  * Cache admin users list with stampede prevention
  */
+export const buildAdminUsersCacheKey = (params: {
+  search?: string;
+  cursor?: string | null;
+  limit?: number;
+}): string => {
+  if (params.search) return "";
+  const parts = [CACHE_KEYS.ADMIN_USERS_ALL];
+  if (params.cursor) parts.push(`c:${params.cursor}`);
+  if (params.limit) parts.push(`l:${params.limit}`);
+  return parts.join(":");
+};
+
 export const cacheAdminUsersList = <T>(
   fetcher: () => Promise<T>,
+  params?: Parameters<typeof buildAdminUsersCacheKey>[0],
 ): Promise<T> => {
+  const cacheKey = params
+    ? buildAdminUsersCacheKey(params)
+    : CACHE_KEYS.ADMIN_USERS_ALL;
+  if (!cacheKey) return fetcher();
   return getCachedData(
-    CACHE_KEYS.ADMIN_USERS_ALL,
+    cacheKey,
     CACHE_TTL.ADMIN_USERS,
     fetcher,
     CACHE_TTL.ADMIN_USERS_STALE,
@@ -340,6 +379,65 @@ export const invalidateAdminUserCaches = async (
 /**
  * Cache admin sales summary with stampede prevention
  */
+export const buildAdminProductsCacheKey = (params: {
+  search?: string;
+  cursor?: string | null;
+  offset?: number;
+  limit?: number;
+}): string => {
+  if (params.search) return "";
+  const parts = [CACHE_KEYS.ADMIN_PRODUCTS_ALL];
+  if (params.cursor) parts.push(`c:${params.cursor}`);
+  else if (params.offset) parts.push(`o:${params.offset}`);
+  if (params.limit) parts.push(`l:${params.limit}`);
+  return parts.join(":");
+};
+
+export const cacheAdminProductsList = <T>(
+  fetcher: () => Promise<T>,
+  params?: Parameters<typeof buildAdminProductsCacheKey>[0],
+): Promise<T> => {
+  const cacheKey = params
+    ? buildAdminProductsCacheKey(params)
+    : CACHE_KEYS.ADMIN_PRODUCTS_ALL;
+  if (!cacheKey) return fetcher();
+  return getCachedData(
+    cacheKey,
+    CACHE_TTL.ADMIN_PRODUCTS,
+    fetcher,
+    CACHE_TTL.ADMIN_PRODUCTS_STALE,
+  );
+};
+
+export const buildUserOrdersCacheKey = (params: {
+  userId: string;
+  search?: string;
+  cursor?: string | null;
+  offset?: number;
+  limit?: number;
+}): string => {
+  if (params.search) return "";
+  const parts = [CACHE_KEYS.ORDERS_BY_USER(params.userId)];
+  if (params.cursor) parts.push(`c:${params.cursor}`);
+  else if (params.offset) parts.push(`o:${params.offset}`);
+  if (params.limit) parts.push(`l:${params.limit}`);
+  return parts.join(":");
+};
+
+export const cacheUserOrdersList = <T>(
+  fetcher: () => Promise<T>,
+  params: Parameters<typeof buildUserOrdersCacheKey>[0],
+): Promise<T> => {
+  const cacheKey = buildUserOrdersCacheKey(params);
+  if (!cacheKey) return fetcher();
+  return getCachedData(
+    cacheKey,
+    CACHE_TTL.USER_ORDERS,
+    fetcher,
+    CACHE_TTL.USER_ORDERS_STALE,
+  );
+};
+
 export const cacheAdminSales = <T>(fetcher: () => Promise<T>): Promise<T> => {
   return getCachedData(
     CACHE_KEYS.ADMIN_SALES,

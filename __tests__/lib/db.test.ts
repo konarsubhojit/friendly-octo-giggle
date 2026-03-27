@@ -312,20 +312,20 @@ describe("db.products", () => {
     it("returns serialized product without cache", async () => {
       mockFindFirst.mockResolvedValue(makeDbRow());
 
-      const result = await db.products.findById("abc1234");
+      const result = await db.products.findById("abc1234", false);
 
       expect(result).toEqual(expectedSerialized());
       expect(mockFindFirst).toHaveBeenCalledOnce();
       expect(mockCacheProductById).not.toHaveBeenCalled();
     });
 
-    it("uses cache when withCache is true", async () => {
+    it("uses cache by default", async () => {
       mockCacheProductById.mockImplementation(
         (_id: string, fn: () => Promise<unknown>) => fn(),
       );
       mockFindFirst.mockResolvedValue(makeDbRow());
 
-      const result = await db.products.findById("abc1234", true);
+      const result = await db.products.findById("abc1234");
 
       expect(result).toEqual(expectedSerialized());
       expect(mockCacheProductById).toHaveBeenCalledWith(

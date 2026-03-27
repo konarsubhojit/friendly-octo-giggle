@@ -377,10 +377,7 @@ export const db = {
      * @param withCache - Whether to use Redis cache
      * @returns Product with full details or null if not found
      */
-    findById: async (
-      id: string,
-      withCache = false,
-    ): Promise<Product | null> => {
+    findById: async (id: string, withCache = true): Promise<Product | null> => {
       const fetcher = async () => {
         const row = await drizzleDb.query.products.findFirst({
           where: and(eq(products.id, id), isNull(products.deletedAt)),

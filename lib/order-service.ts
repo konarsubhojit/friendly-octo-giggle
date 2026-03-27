@@ -18,7 +18,7 @@ import {
   SQL,
 } from "drizzle-orm";
 import { invalidateCache } from "@/lib/redis";
-import { invalidateUserOrderCaches } from "@/lib/cache";
+import { invalidateUserOrderCaches, cacheUserOrdersList } from "@/lib/cache";
 import { CreateOrderInput, OrderItemInput } from "@/lib/types";
 import { parseOffsetParam } from "@/lib/api-utils";
 import { logBusinessEvent, logError } from "@/lib/logger";
@@ -392,63 +392,71 @@ export const getUserOrders = async ({
   const { searchParams } = new URL(requestUrl);
   const limit = parseOrderLimit(searchParams.get("limit"));
   const search = searchParams.get("search")?.trim() ?? "";
+  const cursor = searchParams.get("cursor");
   const offsetParam = searchParams.get("offset");
   const useOffset = offsetParam !== null;
   const offset = useOffset ? parseOffsetParam(offsetParam) : 0;
-  const conditions = buildOrderConditions(
-    userId,
-    searchParams.get("cursor"),
-    useOffset,
-  );
-  const countConditions = buildOrderConditions(userId, null, false);
-  let totalCountFromSearch: number | null = null;
 
-  if (search) {
-    const matchedIds = await searchOrderIds(search, {
-      userId,
-      limit: 1000,
+  const fetcher = async () => {
+    const conditions = buildOrderConditions(userId, cursor, useOffset);
+    const countConditions = buildOrderConditions(userId, null, false);
+    let totalCountFromSearch: number | null = null;
+
+    if (search) {
+      const matchedIds = await searchOrderIds(search, {
+        userId,
+        limit: 1000,
+      });
+
+      if (matchedIds?.length === 0) {
+        return {
+          orders: [],
+          nextCursor: null,
+          hasMore: false,
+          totalCount: 0,
+        };
+      }
+
+      if (matchedIds && matchedIds.length > 0) {
+        const searchIds: string[] = matchedIds;
+        const searchCondition = inArray(orders.id, searchIds);
+        conditions.push(searchCondition);
+        totalCountFromSearch = searchIds.length;
+      }
+    }
+
+    const rows = await drizzleDb.query.orders.findMany({
+      where: and(...conditions),
+      with: { items: { with: { product: true, variation: true } } },
+      orderBy: [desc(orders.createdAt)],
+      limit: limit + 1,
+      offset: useOffset ? offset : undefined,
     });
 
-    if (matchedIds?.length === 0) {
-      return {
-        orders: [],
-        nextCursor: null,
-        hasMore: false,
-        totalCount: 0,
-      };
-    }
+    const serialized = serializeOrderList(rows as HydratedOrder[], limit);
 
-    if (matchedIds && matchedIds.length > 0) {
-      const searchIds: string[] = matchedIds;
-      const searchCondition = inArray(orders.id, searchIds);
-      conditions.push(searchCondition);
-      totalCountFromSearch = searchIds.length;
-    }
-  }
-
-  const rows = await drizzleDb.query.orders.findMany({
-    where: and(...conditions),
-    with: { items: { with: { product: true, variation: true } } },
-    orderBy: [desc(orders.createdAt)],
-    limit: limit + 1,
-    offset: useOffset ? offset : undefined,
-  });
-
-  const serialized = serializeOrderList(rows as HydratedOrder[], limit);
-
-  return {
-    ...serialized,
-    totalCount:
-      totalCountFromSearch ??
-      Number(
-        (
-          await drizzleDb
-            .select({ value: count() })
-            .from(orders)
-            .where(and(...countConditions))
-        )[0]?.value ?? 0,
-      ),
+    return {
+      ...serialized,
+      totalCount:
+        totalCountFromSearch ??
+        Number(
+          (
+            await drizzleDb
+              .select({ value: count() })
+              .from(orders)
+              .where(and(...countConditions))
+          )[0]?.value ?? 0,
+        ),
+    };
   };
+
+  return cacheUserOrdersList(fetcher, {
+    userId,
+    search,
+    cursor,
+    offset,
+    limit,
+  });
 };
 
 export const createOrderForUser = async ({

@@ -48,7 +48,7 @@ const config = [
 
   // Allow console.* in test files (e.g. muting React error boundaries)
   {
-    files: ["__tests__/**"],
+    files: ["__tests__/**", "playwright-tests/**"],
     rules: {
       "no-console": "off",
       "@next/next/no-img-element": "off",

@@ -10,7 +10,7 @@ import {
   parseOffsetParam,
 } from "@/lib/api-utils";
 import { revalidateTag } from "next/cache";
-import { invalidateProductCaches } from "@/lib/cache";
+import { invalidateProductCaches, cacheAdminProductsList } from "@/lib/cache";
 import { indexProduct } from "@/lib/search";
 import { searchProductIds } from "@/lib/search-service";
 import { checkAdminAuth } from "@/lib/admin-auth";
@@ -54,7 +54,7 @@ function applyCursorFilter(
 }
 
 function toWhereClause(conditions: SQL[]): SQL {
-  return conditions.length === 1 ? conditions[0]! : and(...conditions)!;
+  return conditions.length === 1 ? conditions[0] : and(...conditions)!;
 }
 
 /**
@@ -111,47 +111,58 @@ export const GET = async (request: NextRequest) => {
     const whereClause = toWhereClause(conditions);
     const countWhereClause = toWhereClause(countConditions);
 
-    const [rows, totalRows] = await Promise.all([
-      drizzleDb.query.products.findMany({
-        where: whereClause,
-        orderBy: [desc(products.createdAt)],
-        limit: limit + 1,
-        offset: useOffset ? offset : undefined,
-        with: { variations: true },
-      }),
-      drizzleDb
-        .select({ value: count() })
-        .from(products)
-        .where(countWhereClause),
-    ]);
+    const fetcher = async () => {
+      const [rows, totalRows] = await Promise.all([
+        drizzleDb.query.products.findMany({
+          where: whereClause,
+          orderBy: [desc(products.createdAt)],
+          limit: limit + 1,
+          offset: useOffset ? offset : undefined,
+          with: { variations: true },
+        }),
+        drizzleDb
+          .select({ value: count() })
+          .from(products)
+          .where(countWhereClause),
+      ]);
 
-    const hasMore = rows.length > limit;
-    const pageItems = hasMore ? rows.slice(0, limit) : rows;
-    const nextCursor = hasMore
-      ? pageItems.at(-1)!.createdAt.toISOString()
-      : null;
-    const totalCount = Number(totalRows[0]?.value ?? 0);
+      const hasMore = rows.length > limit;
+      const pageItems = hasMore ? rows.slice(0, limit) : rows;
+      const nextCursor = hasMore
+        ? pageItems.at(-1)!.createdAt.toISOString()
+        : null;
+      const totalCount = Number(totalRows[0]?.value ?? 0);
 
-    const serialized = pageItems.map((p) => ({
-      ...p,
-      deletedAt: null,
-      createdAt: p.createdAt.toISOString(),
-      updatedAt: p.updatedAt.toISOString(),
-      variations: p.variations.map((v) => ({
-        ...v,
-        image: v.image ?? null,
-        images: v.images ?? [],
-        createdAt: v.createdAt.toISOString(),
-        updatedAt: v.updatedAt.toISOString(),
-      })),
-    }));
+      const serialized = pageItems.map((p) => ({
+        ...p,
+        deletedAt: null,
+        createdAt: p.createdAt.toISOString(),
+        updatedAt: p.updatedAt.toISOString(),
+        variations: p.variations.map((v) => ({
+          ...v,
+          image: v.image ?? null,
+          images: v.images ?? [],
+          createdAt: v.createdAt.toISOString(),
+          updatedAt: v.updatedAt.toISOString(),
+        })),
+      }));
 
-    return apiSuccess({
-      products: serialized,
-      nextCursor,
-      hasMore,
-      totalCount,
+      return {
+        products: serialized,
+        nextCursor,
+        hasMore,
+        totalCount,
+      };
+    };
+
+    const result = await cacheAdminProductsList(fetcher, {
+      search,
+      cursor,
+      offset,
+      limit,
     });
+
+    return apiSuccess(result);
   } catch (error) {
     return handleApiError(error);
   }
