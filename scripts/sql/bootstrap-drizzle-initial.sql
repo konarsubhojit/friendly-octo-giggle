@@ -593,6 +593,16 @@ WHERE NOT EXISTS (
   SELECT 1 FROM drizzle.__drizzle_migrations WHERE created_at = 1774378815410
 );
 
+UPDATE drizzle.__drizzle_migrations
+SET hash = 'ce645b00b54c7e4a2b9ddc721d34a279212da02e0232c0d88a358deb66d88c28'
+WHERE created_at = 1774618645201;
+
+INSERT INTO drizzle.__drizzle_migrations (hash, created_at)
+SELECT 'ce645b00b54c7e4a2b9ddc721d34a279212da02e0232c0d88a358deb66d88c28', 1774618645201
+WHERE NOT EXISTS (
+  SELECT 1 FROM drizzle.__drizzle_migrations WHERE created_at = 1774618645201
+);
+
 DROP FUNCTION drizzle.ensure_public_enum(text, text);
 
 COMMIT;
