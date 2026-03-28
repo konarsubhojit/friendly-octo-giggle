@@ -6,7 +6,7 @@
 **Input**: User description: "I want the to show details about order cancellation, return process and refund for orders when use clicks the Place Order button. A dialog with the items selected, the return policy and other details should popup and user should confirm that to proceed. Build the details from below points.
 
 1. Order cancellation is allowed only before an order is shipped. Once shipped it should not be cancelled and no refund will be issued.
-2. Orders cannot be returned except if the product is damaged. User should contact us through email with the detailed photos and the issue and will get back to you with the details.
+2. Orders cannot be returned except if the product is damaged. User should contact us through email with detailed photos, a short video, and the issue and will get back to you with the details.
 3. No refunds will be issued. If your received product is damaged will ask you to send the product back to us and then will send you a new one.
 4. Delivery charges of the product back to us should be beared upon by the customer. We wont charge any shipping fee to send the replacement."
 
@@ -64,7 +64,7 @@ As a shopper, I want to understand what to do if a delivered product is damaged 
 
 **Acceptance Scenarios**:
 
-1. **Given** the confirmation dialog is shown, **When** the shopper reads the damaged-product instructions, **Then** it tells them to contact the business by email with detailed photos and a description of the issue.
+1. **Given** the confirmation dialog is shown, **When** the shopper reads the damaged-product instructions, **Then** it tells them to contact the business by email with detailed photos, a short video, and a description of the issue.
 2. **Given** the confirmation dialog is shown, **When** the shopper reads the damaged-product instructions, **Then** it states that the customer pays to send the damaged product back and the business covers shipping for the replacement.
 
 ### Edge Cases
@@ -87,7 +87,7 @@ As a shopper, I want to understand what to do if a delivered product is damaged 
 - **FR-005**: The confirmation step MUST state that orders are not returnable except when a product is received in damaged condition.
 - **FR-006**: The confirmation step MUST state that refunds are not issued for orders.
 - **FR-007**: The confirmation step MUST state that damaged products are handled through review and replacement rather than refund.
-- **FR-008**: The confirmation step MUST tell shoppers that damaged-product claims require contacting the business by email with detailed photos and a description of the issue, and it MUST display the support email address explicitly.
+- **FR-008**: The confirmation step MUST tell shoppers that damaged-product claims require contacting the business by email with detailed photos, a short video, and a description of the issue, and it MUST display the support email address explicitly.
 - **FR-009**: The confirmation step MUST state that the customer is responsible for the cost of shipping a damaged product back.
 - **FR-010**: The confirmation step MUST state that the business will not charge shipping for sending the replacement product.
 - **FR-011**: The system MUST require the shopper to explicitly confirm the displayed policy details before the order can proceed.

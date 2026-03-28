@@ -25,6 +25,7 @@ describe("ReturnsPage", () => {
       screen.getByText(/refunds are not issued for orders/i),
     ).toBeInTheDocument();
     expect(screen.getAllByText(/support@estore.example.com/i).length).toBe(3);
+    expect(screen.getAllByText(/short video/i).length).toBeGreaterThan(0);
     expect(
       screen.getByText(/shipping cost to send the damaged product back/i),
     ).toBeInTheDocument();
