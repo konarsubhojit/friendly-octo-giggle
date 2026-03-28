@@ -9,7 +9,7 @@ export default function CurrencySelector() {
     <select
       value={currency}
       onChange={(e) => setCurrency(e.target.value as CurrencyCode)}
-      className="bg-[var(--surface)] border border-[var(--border-warm)] text-[var(--foreground)] rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent-rose)] cursor-pointer"
+      className="w-full cursor-pointer rounded-md border border-[var(--border-warm)] bg-[var(--surface)] px-3 py-1.5 text-sm text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-rose)] sm:w-52"
       aria-label="Select currency"
     >
       {availableCurrencies.map((code) => (

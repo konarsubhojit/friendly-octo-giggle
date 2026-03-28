@@ -36,6 +36,24 @@
   /* Typography */
   --font-display: "Playfair Display", serif;
   --font-body: "Nunito", sans-serif;
+
+  --page-glow-primary: #f4d8cb;
+  --page-glow-secondary: #efe2cf;
+  --hero-gradient-start: #fff8f2;
+  --hero-gradient-mid: #fff0e8;
+  --hero-gradient-end: #f6efe6;
+  --hero-panel-start: #f7e6dc;
+  --hero-panel-end: #ead7ca;
+  --hero-chip-surface: #fffaf6;
+  --hero-stat: #c0524a;
+  --hero-orb-primary: #fde8de;
+  --hero-orb-secondary: #fff0e8;
+  --card-gradient-start: #fffdfb;
+  --card-gradient-end: #fff6ef;
+  --card-image-start: #fff1e9;
+  --card-image-end: #fde8de;
+  --shadow-color-primary: #f2a69a;
+  --shadow-color-secondary: #e89588;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -67,6 +85,24 @@
        Verified: #C0524A on dark bg #1A1210 → white text contrast 4.63:1 ≥ WCAG AA */
     --btn-primary: #c0524a;
     --btn-primary-hover: #a84640;
+
+    --page-glow-primary: #5e2d2b;
+    --page-glow-secondary: #46352e;
+    --hero-gradient-start: #221714;
+    --hero-gradient-mid: #2a1f1b;
+    --hero-gradient-end: #201714;
+    --hero-panel-start: #342723;
+    --hero-panel-end: #241b17;
+    --hero-chip-surface: #2b211d;
+    --hero-stat: #f2a69a;
+    --hero-orb-primary: #4a2d26;
+    --hero-orb-secondary: #3b2a24;
+    --card-gradient-start: #241b18;
+    --card-gradient-end: #1e1714;
+    --card-image-start: #342520;
+    --card-image-end: #2b1f1a;
+    --shadow-color-primary: #f2a69a;
+    --shadow-color-secondary: #d09078;
   }
 }
 
@@ -114,11 +150,198 @@
   /* Typography */
   --font-display: "Playfair Display", serif;
   --font-body: "Nunito", sans-serif;
+
+  --page-glow-primary: #ffd4df;
+  --page-glow-secondary: #fff3b7;
+  --hero-gradient-start: #fffdf0;
+  --hero-gradient-mid: #fff5d8;
+  --hero-gradient-end: #ffe8ef;
+  --hero-panel-start: #fff0cf;
+  --hero-panel-end: #ffdce5;
+  --hero-chip-surface: #fff9ef;
+  --hero-stat: #c04e72;
+  --hero-orb-primary: #ffdbe5;
+  --hero-orb-secondary: #fff5b8;
+  --card-gradient-start: #ffffff;
+  --card-gradient-end: #fff2eb;
+  --card-image-start: #fff7cb;
+  --card-image-end: #ffe1ea;
+  --shadow-color-primary: #ffb6c1;
+  --shadow-color-secondary: #ff9bad;
+}
+
+/* ─── Simple Linen Theme ────────────────────────────────────────────────
+   A neutral, low-noise palette for shoppers who want a clean storefront.
+   ─────────────────────────────────────────────────────────────────────── */
+
+[data-theme="simple"] {
+  --background: #f5f2ec;
+  --surface: #fffdfa;
+  --surface-raised: #ffffff;
+
+  --foreground: #2f2a26;
+  --text-secondary: #4d4742;
+  --text-muted: #6b655f;
+
+  --accent-rose: #7a8798;
+  --accent-warm: #5e6c84;
+  --accent-peach: #d8e0e7;
+  --accent-cream: #f0ebe2;
+  --accent-blush: #ece8e0;
+  --accent-sage: #8ba181;
+  --accent-pink: #b9c3d0;
+  --accent-lavender: #b5b1c9;
+
+  --border-warm: #ddd4c8;
+
+  --btn-primary: #5e6c84;
+  --btn-primary-hover: #4c586d;
+
+  --font-display: "Playfair Display", serif;
+  --font-body: "Nunito", sans-serif;
+
+  --page-glow-primary: #dbd6ce;
+  --page-glow-secondary: #c8d1dc;
+  --hero-gradient-start: #faf7f1;
+  --hero-gradient-mid: #f1ece4;
+  --hero-gradient-end: #ebe5dd;
+  --hero-panel-start: #ede7de;
+  --hero-panel-end: #dbd4cb;
+  --hero-chip-surface: #fbf8f2;
+  --hero-stat: #5e6c84;
+  --hero-orb-primary: #e7e0d6;
+  --hero-orb-secondary: #d9e0e7;
+  --card-gradient-start: #fffdfa;
+  --card-gradient-end: #f5f0e9;
+  --card-image-start: #ebe5dd;
+  --card-image-end: #dde4ea;
+  --shadow-color-primary: #b9c3d0;
+  --shadow-color-secondary: #8f9aad;
+}
+
+/* ─── Ocean Breeze Theme ────────────────────────────────────────────────
+   Bright aquatic accents balanced against pale seafoam surfaces.
+   ─────────────────────────────────────────────────────────────────────── */
+
+[data-theme="ocean-breeze"] {
+  --background: #f2fbfd;
+  --surface: #ffffff;
+  --surface-raised: #ebf8fb;
+
+  --foreground: #1f4d57;
+  --text-secondary: #356874;
+  --text-muted: #53808a;
+
+  --accent-rose: #57c7d4;
+  --accent-warm: #0f9fb6;
+  --accent-peach: #cceef2;
+  --accent-cream: #e7f7fa;
+  --accent-blush: #dff3f6;
+  --accent-sage: #7fb79f;
+  --accent-pink: #83d5e1;
+  --accent-lavender: #8cb9d8;
+
+  --border-warm: #c9e4e8;
+
+  --btn-primary: #117f91;
+  --btn-primary-hover: #0d6776;
+
+  --font-display: "Playfair Display", serif;
+  --font-body: "Nunito", sans-serif;
+
+  --page-glow-primary: #ccf2f6;
+  --page-glow-secondary: #d6eff1;
+  --hero-gradient-start: #f5fdff;
+  --hero-gradient-mid: #e9f9fb;
+  --hero-gradient-end: #dff3f6;
+  --hero-panel-start: #dff5f7;
+  --hero-panel-end: #cfecee;
+  --hero-chip-surface: #f8feff;
+  --hero-stat: #117f91;
+  --hero-orb-primary: #cdeef2;
+  --hero-orb-secondary: #e7f7fa;
+  --card-gradient-start: #ffffff;
+  --card-gradient-end: #edf9fb;
+  --card-image-start: #e8f9fb;
+  --card-image-end: #d3f0f4;
+  --shadow-color-primary: #57c7d4;
+  --shadow-color-secondary: #0f9fb6;
+}
+
+/* ─── Midnight Bloom Theme ──────────────────────────────────────────────
+   Deep ink surfaces with vivid florals for a more dramatic storefront.
+   ─────────────────────────────────────────────────────────────────────── */
+
+[data-theme="midnight-bloom"] {
+  --background: #161a2d;
+  --surface: #1f2440;
+  --surface-raised: #262d4f;
+
+  --foreground: #edf2ff;
+  --text-secondary: #d0d9f5;
+  --text-muted: #aeb8d9;
+
+  --accent-rose: #d75cf6;
+  --accent-warm: #ff8c78;
+  --accent-peach: #3a315a;
+  --accent-cream: #252942;
+  --accent-blush: #31285a;
+  --accent-sage: #6dd3b6;
+  --accent-pink: #ef89ff;
+  --accent-lavender: #9e8cff;
+
+  --border-warm: #3a4065;
+
+  --btn-primary: #d75cf6;
+  --btn-primary-hover: #b644d3;
+
+  --font-display: "Playfair Display", serif;
+  --font-body: "Nunito", sans-serif;
+
+  --page-glow-primary: #352a63;
+  --page-glow-secondary: #1d5f6d;
+  --hero-gradient-start: #171b33;
+  --hero-gradient-mid: #1d2244;
+  --hero-gradient-end: #14182d;
+  --hero-panel-start: #2a2f56;
+  --hero-panel-end: #1f2444;
+  --hero-chip-surface: #232849;
+  --hero-stat: #ef89ff;
+  --hero-orb-primary: #4b2f73;
+  --hero-orb-secondary: #1f6070;
+  --card-gradient-start: #202547;
+  --card-gradient-end: #181d38;
+  --card-image-start: #2c3260;
+  --card-image-end: #1f2750;
+  --shadow-color-primary: #d75cf6;
+  --shadow-color-secondary: #6dd3b6;
 }
 
 body {
   color: var(--foreground);
-  background: var(--background);
+  background:
+    radial-gradient(
+      circle at top left,
+      color-mix(in srgb, var(--page-glow-primary) 22%, transparent) 0%,
+      transparent 34%
+    ),
+    radial-gradient(
+      circle at top right,
+      color-mix(in srgb, var(--page-glow-secondary) 18%, transparent) 0%,
+      transparent 28%
+    ),
+    var(--background);
+  transition:
+    background-color 180ms ease,
+    color 180ms ease;
+}
+
+body,
+button,
+input,
+select,
+textarea {
+  font-family: var(--font-body);
 }
 
 @utility text-balance {
@@ -279,12 +502,23 @@ body {
 /* ─── Warm Theme Utilities ────────────────────────────────────────────── */
 
 @utility bg-warm-gradient {
-  background: linear-gradient(
-    145deg,
-    var(--background) 0%,
-    color-mix(in srgb, var(--accent-blush) 40%, var(--background)) 40%,
-    color-mix(in srgb, var(--accent-cream) 50%, var(--background)) 100%
-  );
+  background:
+    radial-gradient(
+      circle at 10% 0%,
+      color-mix(in srgb, var(--page-glow-primary) 24%, transparent) 0%,
+      transparent 28%
+    ),
+    radial-gradient(
+      circle at 90% 10%,
+      color-mix(in srgb, var(--page-glow-secondary) 20%, transparent) 0%,
+      transparent 24%
+    ),
+    linear-gradient(
+      145deg,
+      var(--background) 0%,
+      color-mix(in srgb, var(--hero-gradient-mid) 35%, var(--background)) 46%,
+      color-mix(in srgb, var(--hero-gradient-end) 50%, var(--background)) 100%
+    );
 }
 
 @utility text-warm-heading {
@@ -305,14 +539,16 @@ body {
 
 @utility shadow-warm {
   box-shadow:
-    0 4px 20px color-mix(in srgb, var(--accent-rose) 12%, transparent),
-    0 1px 4px color-mix(in srgb, var(--accent-warm) 10%, transparent);
+    0 10px 30px color-mix(in srgb, var(--shadow-color-primary) 16%, transparent),
+    0 2px 10px
+      color-mix(in srgb, var(--shadow-color-secondary) 12%, transparent);
 }
 
 @utility shadow-warm-lg {
   box-shadow:
-    0 8px 40px color-mix(in srgb, var(--accent-rose) 16%, transparent),
-    0 2px 12px color-mix(in srgb, var(--accent-warm) 12%, transparent);
+    0 20px 60px color-mix(in srgb, var(--shadow-color-primary) 22%, transparent),
+    0 4px 18px
+      color-mix(in srgb, var(--shadow-color-secondary) 16%, transparent);
 }
 
 /* ─── Typography Display Utility ──────────────────────────────────────── */
@@ -340,20 +576,63 @@ body {
 /* ─── Hero gradient — CSS-variable aware, dark-mode safe ─────────────── */
 
 @utility bg-hero-gradient {
-  background: linear-gradient(
-    150deg,
-    color-mix(in srgb, var(--accent-blush) 60%, var(--background)) 0%,
-    color-mix(in srgb, var(--accent-cream) 50%, var(--background)) 35%,
-    color-mix(in srgb, var(--accent-sage) 10%, var(--background)) 100%
-  );
+  background:
+    radial-gradient(
+      circle at top left,
+      color-mix(in srgb, var(--hero-orb-primary) 28%, transparent) 0%,
+      transparent 34%
+    ),
+    radial-gradient(
+      circle at bottom right,
+      color-mix(in srgb, var(--hero-orb-secondary) 25%, transparent) 0%,
+      transparent 36%
+    ),
+    linear-gradient(
+      150deg,
+      var(--hero-gradient-start) 0%,
+      var(--hero-gradient-mid) 45%,
+      var(--hero-gradient-end) 100%
+    );
 }
 
 /* ─── Glassmorphism card surface ─────────────────────────────────────── */
 
 @utility glass-card {
-  background: color-mix(in srgb, var(--surface) 85%, transparent);
+  background: color-mix(in srgb, var(--hero-chip-surface) 88%, transparent);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
+}
+
+@utility bg-theme-panel {
+  background: linear-gradient(
+    160deg,
+    var(--hero-panel-start) 0%,
+    var(--hero-panel-end) 100%
+  );
+}
+
+@utility bg-theme-card {
+  background: linear-gradient(
+    180deg,
+    var(--card-gradient-start) 0%,
+    var(--card-gradient-end) 100%
+  );
+}
+
+@utility bg-theme-card-overlay {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--accent-peach) 38%, transparent) 0%,
+    transparent 100%
+  );
+}
+
+@utility bg-theme-image {
+  background: linear-gradient(
+    160deg,
+    var(--card-image-start) 0%,
+    var(--card-image-end) 100%
+  );
 }
 
 /* ─── Reduced Motion ──────────────────────────────────────────────────── */

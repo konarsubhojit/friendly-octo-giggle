@@ -89,14 +89,14 @@ export function PreferencesSection({ profile }: PreferencesSectionProps) {
           Choose your preferred currency. This will also be used in order
           emails.
         </p>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <select
             value={currency}
             onChange={(e) =>
               handleCurrencyChange(e.target.value as CurrencyCode)
             }
             disabled={saving}
-            className="bg-[var(--surface)] border border-[var(--border-warm)] text-[var(--foreground)] rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent-rose)] cursor-pointer disabled:opacity-50"
+            className="w-full cursor-pointer rounded-md border border-[var(--border-warm)] bg-[var(--surface)] px-3 py-1.5 text-sm text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-rose)] disabled:opacity-50 sm:w-52"
             aria-label="Select currency"
           >
             {(["INR", "USD", "EUR", "GBP"] as const).map((code) => (
