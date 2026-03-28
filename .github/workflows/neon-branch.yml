@@ -87,12 +87,12 @@ jobs:
             -H "Authorization: Bearer ${{ secrets.NEON_API_KEY }}" | jq -r '.uri')
           echo "DB_URL=$DB_URL" >> "$GITHUB_ENV"
 
-      - name: Set COPILOT_DATABASE_URL as secret in Copilot environment
+      - name: Set COPILOT_DATABASE_URL as secret in copilot environment
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh secret set COPILOT_DATABASE_URL \
-            --env Copilot \
+            --env copilot \
             --body "$DB_URL" \
             --repo "${{ github.repository }}"
 
@@ -109,11 +109,11 @@ jobs:
           branch: preview/pr-${{ github.event.number }}-${{ needs.setup.outputs.branch }}
           api_key: ${{ secrets.NEON_API_KEY }}
 
-      - name: Delete COPILOT_DATABASE_URL secret from Copilot environment if it exists
+      - name: Delete COPILOT_DATABASE_URL secret from copilot environment if it exists
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh secret delete COPILOT_DATABASE_URL \
-            --env Copilot \
+            --env copilot \
             --repo "${{ github.repository }}" 2>/dev/null \
             || echo "COPILOT_DATABASE_URL does not exist; skipping deletion."
