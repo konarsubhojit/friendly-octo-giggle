@@ -1,8 +1,10 @@
 'use client';
 
+import { useState } from 'react';
 import { signOut } from 'next-auth/react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 
 interface Session {
   user?: {
@@ -19,6 +21,13 @@ interface UserMenuProps {
 }
 
 export function UserMenu({ session, onLoginClick }: UserMenuProps) {
+  const [signingOut, setSigningOut] = useState(false);
+
+  async function handleSignOut() {
+    setSigningOut(true);
+    await signOut({ callbackUrl: '/' });
+  }
+
   if (!session?.user) {
     if (onLoginClick) {
       return (
@@ -75,11 +84,15 @@ export function UserMenu({ session, onLoginClick }: UserMenuProps) {
           )}
         </div>
         <button
-          onClick={() => signOut({ callbackUrl: '/' })}
-          className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
+          onClick={handleSignOut}
+          disabled={signingOut}
+          className="flex items-center gap-2 w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 disabled:opacity-60 disabled:cursor-not-allowed"
           role="menuitem"
         >
-          Sign Out
+          {signingOut && (
+            <LoadingSpinner size="h-4 w-4" color="text-red-600" label="Signing out…" />
+          )}
+          {signingOut ? 'Signing out…' : 'Sign Out'}
         </button>
       </div>
     </div>
