@@ -90,7 +90,7 @@ const mergeProducts = (
 const ProductImageArea = memo(
   ({ product, eagerLoad }: ProductImageAreaProps) => {
     return (
-      <div className="relative aspect-square w-full overflow-hidden bg-gradient-to-br from-[var(--accent-cream)] to-[var(--accent-blush)]">
+      <div className="bg-theme-image relative aspect-square w-full overflow-hidden">
         <Image
           src={product.image}
           alt={product.name}
@@ -114,9 +114,17 @@ const ProductCard = memo(
   ({ product, formatPrice, index }: ProductCardProps) => {
     return (
       <div
-        className="group relative overflow-hidden rounded-3xl border border-[var(--border-warm)] bg-[var(--surface)] shadow-warm transition-all duration-300 hover:-translate-y-1 hover:scale-[1.02] hover:border-[var(--accent-rose)] hover:shadow-warm-lg"
+        className="bg-theme-card group relative overflow-hidden rounded-3xl border border-[var(--border-warm)] shadow-warm transition-all duration-300 hover:-translate-y-1 hover:scale-[1.02] hover:border-[var(--accent-rose)] hover:shadow-warm-lg"
         style={{ animationDelay: `${index * 80}ms` }}
       >
+        <div
+          className="pointer-events-none absolute inset-x-0 top-0 h-24 opacity-80"
+          style={{
+            background:
+              "linear-gradient(180deg, color-mix(in srgb, var(--accent-peach) 38%, transparent) 0%, transparent 100%)",
+          }}
+          aria-hidden="true"
+        />
         <Link
           href={`/products/${product.id}`}
           className="block"
@@ -306,13 +314,13 @@ const ProductGrid = ({
             name="q"
             placeholder="Search products..."
             defaultValue={search}
-            className="w-full rounded-full border border-[var(--border-warm)] bg-[var(--surface)] py-3 pl-11 pr-4 text-[var(--foreground)] shadow-warm transition-all duration-200 placeholder-[var(--text-muted)] focus:border-[var(--accent-rose)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-rose)]/30"
+            className="glass-card w-full rounded-full border border-[var(--border-warm)] py-3 pl-11 pr-4 text-[var(--foreground)] shadow-warm transition-all duration-200 placeholder-[var(--text-muted)] focus:border-[var(--accent-rose)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-rose)]/30"
             aria-label="Search products"
           />
         </div>
 
         <div className="flex w-full flex-col gap-3 sm:flex-row sm:flex-wrap lg:w-auto lg:justify-end">
-          <div className="flex w-full min-w-0 items-center gap-2 rounded-[1.75rem] border border-[var(--border-warm)] bg-[var(--surface)] px-4 py-2.5 shadow-warm sm:w-auto">
+          <div className="glass-card flex w-full min-w-0 items-center gap-2 rounded-[1.75rem] border border-[var(--border-warm)] px-4 py-2.5 shadow-warm sm:w-auto">
             <svg
               className="h-4 w-4 shrink-0 text-[var(--accent-rose)]"
               fill="none"
