@@ -33,6 +33,20 @@ vi.mock("@/components/layout/Footer", () => ({
   default: () => <div>Footer</div>,
 }));
 
+vi.mock("@/components/sections/BestsellersScroller", () => ({
+  BestsellersScroller: ({
+    bestsellers,
+  }: {
+    bestsellers: Array<{ id: string; name: string }>;
+  }) => (
+    <div>
+      {bestsellers.map((p) => (
+        <div key={p.id}>{p.name}</div>
+      ))}
+    </div>
+  ),
+}));
+
 vi.mock("@/components/sections/ProductGrid", () => ({
   __esModule: true,
   default: ({
