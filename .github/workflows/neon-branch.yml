@@ -81,21 +81,11 @@ jobs:
           branch: preview/pr-${{ github.event.number }}
           api_key: ${{ secrets.NEON_API_KEY }}
 
-      - name: Delete COPILOT_DATABASE_URL secret from copilot environment if it exists
+      - name: Clear COPILOT_DATABASE_URL secret in copilot environment
         env:
           GH_TOKEN: ${{ secrets.GH_SECRET_MANAGE }}
         run: |
-          secret_name=$(gh secret list \
+          gh secret set COPILOT_DATABASE_URL \
             --env copilot \
-            --repo "${{ github.repository }}" \
-            --json name \
-            --jq '.[] | select(.name=="COPILOT_DATABASE_URL") | .name')
-
-          if [ -z "$secret_name" ]; then
-            echo "COPILOT_DATABASE_URL does not exist; skipping deletion."
-            exit 0
-          fi
-
-          gh secret delete COPILOT_DATABASE_URL \
-            --env copilot \
+            --body "" \
             --repo "${{ github.repository }}"
