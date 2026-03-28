@@ -118,11 +118,7 @@ const ProductCard = memo(
         style={{ animationDelay: `${index * 80}ms` }}
       >
         <div
-          className="pointer-events-none absolute inset-x-0 top-0 h-24 opacity-80"
-          style={{
-            background:
-              "linear-gradient(180deg, color-mix(in srgb, var(--accent-peach) 38%, transparent) 0%, transparent 100%)",
-          }}
+          className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-theme-card-overlay opacity-80"
           aria-hidden="true"
         />
         <Link

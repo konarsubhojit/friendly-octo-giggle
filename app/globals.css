@@ -619,6 +619,14 @@ textarea {
   );
 }
 
+@utility bg-theme-card-overlay {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--accent-peach) 38%, transparent) 0%,
+    transparent 100%
+  );
+}
+
 @utility bg-theme-image {
   background: linear-gradient(
     160deg,
