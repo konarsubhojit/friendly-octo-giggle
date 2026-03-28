@@ -6,9 +6,7 @@ import { useSession } from "next-auth/react";
 import { useSelector } from "react-redux";
 import { selectCart } from "@/lib/features/cart/cartSlice";
 import { GradientButton } from "@/components/ui/GradientButton";
-import {
-  buildCheckoutSummaryLineItems,
-} from "@/lib/order-summary";
+import { buildCheckoutSummaryLineItems } from "@/lib/order-summary";
 import toast from "react-hot-toast";
 
 const PENDING_CHECKOUT_KEY = "pending_checkout";

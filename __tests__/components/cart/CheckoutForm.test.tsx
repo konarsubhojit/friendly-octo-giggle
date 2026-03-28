@@ -128,7 +128,9 @@ describe("CheckoutForm", () => {
     fireEvent.change(screen.getByLabelText(/shipping address/i), {
       target: { value: "42 MG Road, Bengaluru, Karnataka 560001" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /review.*place order/i }));
+    fireEvent.click(
+      screen.getByRole("button", { name: /review.*place order/i }),
+    );
 
     expect(sessionStorage.setItem).toHaveBeenCalledWith(
       "pending_checkout",
@@ -143,7 +145,9 @@ describe("CheckoutForm", () => {
     fireEvent.change(screen.getByLabelText(/shipping address/i), {
       target: { value: "Short" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /review.*place order/i }));
+    fireEvent.click(
+      screen.getByRole("button", { name: /review.*place order/i }),
+    );
 
     expect(screen.getByRole("alert")).toBeInTheDocument();
     expect(mockPush).not.toHaveBeenCalledWith("/checkout/review");
@@ -160,7 +164,9 @@ describe("CheckoutForm", () => {
     fireEvent.change(screen.getByLabelText(/shipping address/i), {
       target: { value: "42 MG Road, Bengaluru, Karnataka 560001" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /review.*place order/i }));
+    fireEvent.click(
+      screen.getByRole("button", { name: /review.*place order/i }),
+    );
 
     expect(mockPush).toHaveBeenCalledWith("/auth/signin?callbackUrl=/cart");
   });

@@ -1,10 +1,7 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import { Cart, AddToCartInput } from "@/lib/types";
 import { apiClient, ApiError } from "@/lib/api-client";
-import {
-  getPendingCartItems,
-  clearPendingCartItems,
-} from "@/lib/pending-cart";
+import { getPendingCartItems, clearPendingCartItems } from "@/lib/pending-cart";
 
 interface AddToCartResponse {
   cart: Cart;

@@ -104,8 +104,7 @@ export default function CheckoutReviewPage() {
     () =>
       cartItems.map((item) => ({
         ...item,
-        customizationNote:
-          pendingCheckout?.customizationNotes[item.id] ?? null,
+        customizationNote: pendingCheckout?.customizationNotes[item.id] ?? null,
       })),
     [cartItems, pendingCheckout],
   );
@@ -130,10 +129,9 @@ export default function CheckoutReviewPage() {
     checkoutRequestId: string,
   ): Promise<CheckoutRequestStatusResponse> => {
     for (let attempt = 0; attempt < CHECKOUT_POLL_MAX_ATTEMPTS; attempt++) {
-      const checkoutStatus =
-        await apiClient.get<CheckoutRequestStatusResponse>(
-          `/api/checkout/${checkoutRequestId}`,
-        );
+      const checkoutStatus = await apiClient.get<CheckoutRequestStatusResponse>(
+        `/api/checkout/${checkoutRequestId}`,
+      );
 
       if (checkoutStatus.status === "COMPLETED") {
         return checkoutStatus;
@@ -196,7 +194,9 @@ export default function CheckoutReviewPage() {
 
         await dispatch(clearCart()).unwrap();
         clearPendingCheckout();
-        toast.success(`Order ${completedCheckout.orderId} placed successfully!`);
+        toast.success(
+          `Order ${completedCheckout.orderId} placed successfully!`,
+        );
         router.push("/orders");
       } catch (error) {
         toast.error(
