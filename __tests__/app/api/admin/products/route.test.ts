@@ -51,6 +51,7 @@ vi.mock("@/lib/auth", () => ({
 
 vi.mock("@/lib/cache", () => ({
   invalidateProductCaches: vi.fn(),
+  cacheAdminProductsList: vi.fn((fetcher: () => Promise<unknown>) => fetcher()),
 }));
 
 vi.mock("@/lib/search-service", () => ({

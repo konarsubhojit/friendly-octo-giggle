@@ -10,6 +10,7 @@ on:
 
 permissions:
   contents: read
+  variables: write
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -28,8 +29,8 @@ jobs:
   create_neon_branch:
     name: Create Neon Branch
     outputs:
-      db_url: ${{ steps.create_neon_branch_encode.outputs.db_url }}
-      db_url_with_pooler: ${{ steps.create_neon_branch_encode.outputs.db_url_with_pooler }}
+      db_url: ${{ steps.create_neon_branch.outputs.db_url }}
+      db_url_with_pooler: ${{ steps.create_neon_branch.outputs.db_url_with_pooler }}
     needs: setup
     if: |
       github.event_name == 'pull_request' && (
@@ -41,6 +42,7 @@ jobs:
       - name: Get branch expiration date as an env variable (2 weeks from now)
         id: get_expiration_date
         run: echo "EXPIRES_AT=$(date -u --date '+14 days' +'%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_ENV"
+
       - name: Create Neon Branch
         id: create_neon_branch
         uses: neondatabase/create-branch-action@v6
@@ -49,6 +51,17 @@ jobs:
           branch_name: preview/pr-${{ github.event.number }}-${{ needs.setup.outputs.branch }}
           api_key: ${{ secrets.NEON_API_KEY }}
           expires_at: ${{ env.EXPIRES_AT }}
+
+      - name: Create or update COPILOT_DATABASE_URL in Copilot environment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DB_URL: ${{ steps.create_neon_branch.outputs.db_url_with_pooler }}
+        run: |
+          gh api \
+            --method PUT \
+            /repos/${{ github.repository }}/environments/Copilot/variables/COPILOT_DATABASE_URL \
+            -f name=COPILOT_DATABASE_URL \
+            -f value="$DB_URL"
 
   delete_neon_branch:
     name: Delete Neon Branch
@@ -62,3 +75,15 @@ jobs:
           project_id: ${{ vars.NEON_PROJECT_ID }}
           branch: preview/pr-${{ github.event.number }}-${{ needs.setup.outputs.branch }}
           api_key: ${{ secrets.NEON_API_KEY }}
+
+      - name: Delete COPILOT_DATABASE_URL from Copilot environment if it exists
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh api /repos/${{ github.repository }}/environments/Copilot/variables/COPILOT_DATABASE_URL >/dev/null 2>&1; then
+            gh api \
+              --method DELETE \
+              /repos/${{ github.repository }}/environments/Copilot/variables/COPILOT_DATABASE_URL
+          else
+            echo "COPILOT_DATABASE_URL does not exist; skipping deletion."
+          fi

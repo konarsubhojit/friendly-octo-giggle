@@ -43,4 +43,13 @@ describe("env", () => {
       "Invalid environment variables",
     );
   });
+
+  it("allows missing DATABASE_URL during production build phase", async () => {
+    vi.stubEnv("NEXT_PHASE", "phase-production-build");
+    vi.stubEnv("NODE_ENV", "production");
+    const { env } = await import("@/lib/env");
+    expect(env.DATABASE_URL).toBe(
+      "postgresql://BUILD_TIME_PLACEHOLDER_DO_NOT_USE",
+    );
+  });
 });

@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import { Cart, AddToCartInput } from "@/lib/types";
 import { apiClient, ApiError } from "@/lib/api-client";
+import { getPendingCartItems, clearPendingCartItems } from "@/lib/pending-cart";
 
 interface AddToCartResponse {
   cart: Cart;
@@ -102,6 +103,28 @@ export const clearCart = createAsyncThunk(
       if (error instanceof ApiError) return rejectWithValue(error.message);
       return rejectWithValue("Failed to clear cart");
     }
+  },
+);
+
+export const syncPendingCartItems = createAsyncThunk(
+  "cart/syncPendingCartItems",
+  async (_, { dispatch }) => {
+    const items = getPendingCartItems();
+    if (items.length === 0) return;
+
+    await Promise.allSettled(
+      items.map((item) =>
+        dispatch(
+          addToCart({
+            productId: item.productId,
+            variationId: item.variationId ?? undefined,
+            quantity: item.quantity,
+          }),
+        ),
+      ),
+    );
+
+    clearPendingCartItems();
   },
 );
 

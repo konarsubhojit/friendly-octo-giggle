@@ -37,6 +37,9 @@ vi.mock("drizzle-orm", () => ({
   SQL: vi.fn(),
 }));
 vi.mock("@/lib/admin-auth", () => ({ checkAdminAuth: vi.fn() }));
+vi.mock("@/lib/cache", () => ({
+  cacheAdminOrdersList: vi.fn((fetcher: () => Promise<unknown>) => fetcher()),
+}));
 vi.mock("@/lib/serializers", () => ({ serializeOrders: vi.fn((o) => o) }));
 vi.mock("@/lib/logger", () => ({ logError: vi.fn() }));
 vi.mock("@/lib/order-search", () => ({

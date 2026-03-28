@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import { useDispatch, useSelector } from "react-redux";
 import { Product, ProductVariation } from "@/lib/types";
 import { addToCart, fetchCart } from "@/lib/features/cart/cartSlice";
+import { addPendingCartItem } from "@/lib/pending-cart";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import type { AppDispatch, RootState } from "@/lib/store";
 import { StockBadge } from "@/components/sections/StockBadge";
@@ -654,6 +655,17 @@ export default function ProductClient({
     setStockWarning("");
 
     try {
+      if (status !== "authenticated") {
+        addPendingCartItem({
+          productId: product.id,
+          variationId: selectedVariation?.id ?? null,
+          quantity,
+        });
+        setCartSuccess(true);
+        setTimeout(() => setCartSuccess(false), 3000);
+        return;
+      }
+
       const result = await dispatch(
         addToCart({
           productId: product.id,

@@ -1,32 +1,15 @@
 "use client";
 
-import { useMemo, useTransition, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { useSelector, useDispatch } from "react-redux";
-import toast from "react-hot-toast";
-import { clearCart, selectCart } from "@/lib/features/cart/cartSlice";
-import { apiClient } from "@/lib/api-client";
-import type { AppDispatch } from "@/lib/store";
-import type {
-  CheckoutEnqueueResponse,
-  CheckoutRequestStatusResponse,
-} from "@/lib/types";
+import { useSelector } from "react-redux";
+import { selectCart } from "@/lib/features/cart/cartSlice";
 import { GradientButton } from "@/components/ui/GradientButton";
-import {
-  buildCheckoutPricingSummaryFromLineItems,
-  buildCheckoutSummaryLineItems,
-} from "@/lib/order-summary";
-import { useCurrency } from "@/contexts/CurrencyContext";
-import { OrderPolicyConfirmDialog } from "@/components/cart/OrderPolicyConfirmDialog";
+import { buildCheckoutSummaryLineItems } from "@/lib/order-summary";
+import toast from "react-hot-toast";
 
-const CHECKOUT_POLL_INTERVAL_MS = 1500;
-const CHECKOUT_POLL_MAX_ATTEMPTS = 40;
-
-const delay = (ms: number) =>
-  new Promise<void>((resolve) => {
-    globalThis.setTimeout(resolve, ms);
-  });
+const PENDING_CHECKOUT_KEY = "pending_checkout";
 
 interface CheckoutFormProps {
   readonly customizationNotes: Record<string, string>;
@@ -35,15 +18,10 @@ interface CheckoutFormProps {
 export const CheckoutForm = ({ customizationNotes }: CheckoutFormProps) => {
   const router = useRouter();
   const { data: session } = useSession();
-  const dispatch = useDispatch<AppDispatch>();
   const cart = useSelector(selectCart);
-  const { formatPrice } = useCurrency();
-  const [isPending, startTransition] = useTransition();
+
   const [address, setAddress] = useState("");
   const [addressError, setAddressError] = useState<string | null>(null);
-  const [checkoutMessage, setCheckoutMessage] = useState<string | null>(null);
-  const [isPolicyDialogOpen, setIsPolicyDialogOpen] = useState(false);
-  const [isPolicyAcknowledged, setIsPolicyAcknowledged] = useState(false);
 
   const cartItems = useMemo(() => cart?.items ?? [], [cart?.items]);
   const checkoutItems = useMemo(
@@ -58,133 +36,40 @@ export const CheckoutForm = ({ customizationNotes }: CheckoutFormProps) => {
     () => buildCheckoutSummaryLineItems(checkoutItems),
     [checkoutItems],
   );
-  const pricingSummary = useMemo(
-    () => buildCheckoutPricingSummaryFromLineItems(lineItems),
-    [lineItems],
-  );
-
-  const pollCheckoutRequest = async (
-    checkoutRequestId: string,
-  ): Promise<CheckoutRequestStatusResponse> => {
-    for (let attempt = 0; attempt < CHECKOUT_POLL_MAX_ATTEMPTS; attempt++) {
-      const status = await apiClient.get<CheckoutRequestStatusResponse>(
-        `/api/checkout/${checkoutRequestId}`,
-      );
-
-      if (status.status === "COMPLETED") {
-        return status;
-      }
-
-      if (status.status === "FAILED") {
-        throw new Error(status.error ?? "Checkout failed");
-      }
-
-      setCheckoutMessage(
-        status.status === "PROCESSING"
-          ? "Finalizing your order..."
-          : "Queueing your order...",
-      );
-
-      await delay(CHECKOUT_POLL_INTERVAL_MS);
-    }
-
-    throw new Error(
-      "Checkout is taking longer than expected. Please check your orders shortly.",
-    );
-  };
-
-  const validateCheckout = () => {
-    if (!session?.user?.id || !session.user.email) {
-      router.push("/auth/signin?callbackUrl=/cart");
-      return false;
-    }
-
-    const trimmedAddress = address.trim();
-    if (trimmedAddress.length < 10) {
-      setAddressError("Please enter a valid shipping address.");
-      return false;
-    }
-    setAddressError(null);
-
-    if (!cartItems.length) {
-      toast.error("Your cart is empty.");
-      return false;
-    }
-
-    return true;
-  };
-
-  const submitCheckout = () => {
-    const trimmedAddress = address.trim();
-    const sessionUser = session?.user;
-
-    if (!sessionUser?.email) {
-      router.push("/auth/signin?callbackUrl=/cart");
-      return;
-    }
-
-    startTransition(async () => {
-      try {
-        setCheckoutMessage("Submitting your order...");
-
-        const enqueueResult = await apiClient.post<CheckoutEnqueueResponse>(
-          "/api/checkout",
-          {
-            customerName: sessionUser.name ?? "Customer",
-            customerEmail: sessionUser.email,
-            customerAddress: trimmedAddress,
-            items: cartItems.map((item) => ({
-              productId: item.productId,
-              variationId: item.variationId ?? undefined,
-              quantity: item.quantity,
-              customizationNote: customizationNotes[item.id] ?? undefined,
-            })),
-          },
-        );
-
-        const status = await pollCheckoutRequest(
-          enqueueResult.checkoutRequestId,
-        );
-
-        if (!status.orderId) {
-          throw new Error("Checkout completed without an order reference.");
-        }
-
-        await dispatch(clearCart()).unwrap();
-        setIsPolicyDialogOpen(false);
-        setIsPolicyAcknowledged(false);
-        toast.success(`Order ${status.orderId} placed successfully!`);
-        router.push("/orders");
-      } catch (error) {
-        toast.error(
-          error instanceof Error ? error.message : "Failed to place order",
-        );
-      } finally {
-        setCheckoutMessage(null);
-      }
-    });
-  };
 
   const handleSubmit: NonNullable<React.ComponentProps<"form">["onSubmit"]> = (
     e,
   ) => {
     e.preventDefault();
 
-    if (!validateCheckout()) {
+    if (!session?.user?.id || !session.user.email) {
+      router.push("/auth/signin?callbackUrl=/cart");
       return;
     }
 
-    setIsPolicyAcknowledged(false);
-    setIsPolicyDialogOpen(true);
-  };
+    const trimmedAddress = address.trim();
+    if (trimmedAddress.length < 10) {
+      setAddressError("Please enter a valid shipping address.");
+      return;
+    }
+    setAddressError(null);
 
-  const handlePolicyDialogCancel = () => {
-    if (isPending) {
+    if (!cartItems.length) {
+      toast.error("Your cart is empty.");
       return;
     }
 
-    setIsPolicyDialogOpen(false);
-    setIsPolicyAcknowledged(false);
+    try {
+      sessionStorage.setItem(
+        PENDING_CHECKOUT_KEY,
+        JSON.stringify({ address: trimmedAddress, customizationNotes }),
+      );
+    } catch {
+      toast.error("Unable to proceed. Please try again.");
+      return;
+    }
+
+    router.push("/checkout/review");
   };
 
   return (
@@ -202,9 +87,8 @@ export const CheckoutForm = ({ customizationNotes }: CheckoutFormProps) => {
           onChange={(e) => setAddress(e.target.value)}
           rows={3}
           placeholder="Enter your shipping address"
-          disabled={isPending}
           aria-describedby={addressError ? "checkout-address-error" : undefined}
-          className="w-full px-3 py-2 border border-[var(--border-warm)] rounded-xl text-sm text-[var(--foreground)] bg-[var(--surface)]/50 placeholder-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-warm)]/40 focus:border-[var(--accent-warm)] disabled:opacity-50 disabled:cursor-not-allowed resize-none transition-colors"
+          className="w-full px-3 py-2 border border-[var(--border-warm)] rounded-xl text-sm text-[var(--foreground)] bg-[var(--surface)]/50 placeholder-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-warm)]/40 focus:border-[var(--accent-warm)] resize-none transition-colors"
         />
         {addressError && (
           <p
@@ -217,34 +101,21 @@ export const CheckoutForm = ({ customizationNotes }: CheckoutFormProps) => {
         )}
       </div>
 
+      {lineItems.length > 0 && (
+        <p className="text-xs text-[var(--text-muted)]">
+          {lineItems.length} item{lineItems.length !== 1 ? "s" : ""} · Review
+          policies before placing order
+        </p>
+      )}
+
       <GradientButton
         type="submit"
         size="lg"
         fullWidth
-        loading={isPending}
-        loadingText={checkoutMessage ?? "Processing..."}
-        disabled={isPending || !cartItems.length}
+        disabled={!cartItems.length}
       >
-        Place Order
+        Review & Place Order
       </GradientButton>
-
-      {checkoutMessage ? (
-        <output className="text-xs text-[var(--text-muted)]" aria-live="polite">
-          {checkoutMessage}
-        </output>
-      ) : null}
-
-      <OrderPolicyConfirmDialog
-        isOpen={isPolicyDialogOpen}
-        lineItems={lineItems}
-        pricingSummary={pricingSummary}
-        isAcknowledged={isPolicyAcknowledged}
-        onAcknowledgedChange={setIsPolicyAcknowledged}
-        onCancel={handlePolicyDialogCancel}
-        onConfirm={submitCheckout}
-        isSubmitting={isPending}
-        formatPrice={formatPrice}
-      />
     </form>
   );
 };
