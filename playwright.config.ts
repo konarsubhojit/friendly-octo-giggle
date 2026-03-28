@@ -54,7 +54,7 @@ export default defineConfig({
       },
       testMatch: "**/password-validation.spec.ts",
     },
-    // Account page password validation — authenticated as Copilot admin (desktop)
+    // Account page password validation — authenticated admin session (desktop)
     {
       name: "account-password-validation",
       use: {
@@ -64,7 +64,7 @@ export default defineConfig({
       },
       testMatch: "**/account-password-validation.spec.ts",
     },
-    // Admin views — authenticated as Copilot admin (desktop)
+    // Admin views — authenticated admin session (desktop)
     {
       name: "admin-desktop",
       use: {
@@ -74,7 +74,7 @@ export default defineConfig({
       },
       testMatch: ["**/admin-views.spec.ts", "**/ux-audit.spec.ts"],
     },
-    // Admin views — authenticated as Copilot admin (mobile)
+    // Admin views — authenticated admin session (mobile)
     {
       name: "admin-mobile",
       use: {
@@ -84,7 +84,7 @@ export default defineConfig({
       },
       testMatch: ["**/admin-views.spec.ts", "**/ux-audit.spec.ts"],
     },
-    // Cart tests — authenticated as Copilot admin (desktop)
+    // Cart tests — authenticated admin session (desktop)
     {
       name: "cart",
       use: {

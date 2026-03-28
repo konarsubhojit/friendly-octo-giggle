@@ -1,7 +1,7 @@
 /**
  * Account page – confirm new password field validation tests.
  *
- * Runs as the Copilot admin account (storageState from global-setup).
+ * Runs as an authenticated admin account (storageState from global-setup).
  * The /api/account endpoint is mocked so that hasPassword: true is returned,
  * making the Password section visible regardless of the real DB state.
  *

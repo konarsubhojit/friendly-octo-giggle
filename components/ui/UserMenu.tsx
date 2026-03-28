@@ -25,7 +25,11 @@ export function UserMenu({ session, onLoginClick }: UserMenuProps) {
 
   async function handleSignOut() {
     setSigningOut(true);
-    await signOut({ callbackUrl: "/" });
+    try {
+      await signOut({ callbackUrl: "/" });
+    } finally {
+      setSigningOut(false);
+    }
   }
 
   if (!session?.user) {
@@ -108,15 +112,12 @@ export function UserMenu({ session, onLoginClick }: UserMenuProps) {
         <button
           onClick={handleSignOut}
           disabled={signingOut}
+          aria-busy={signingOut}
           className="flex items-center gap-2 w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 disabled:opacity-60 disabled:cursor-not-allowed"
           role="menuitem"
         >
           {signingOut && (
-            <LoadingSpinner
-              size="h-4 w-4"
-              color="text-red-600"
-              label="Signing out…"
-            />
+            <LoadingSpinner size="h-4 w-4" color="text-red-600" />
           )}
           {signingOut ? "Signing out…" : "Sign Out"}
         </button>

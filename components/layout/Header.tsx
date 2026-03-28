@@ -31,7 +31,11 @@ function UserMenu({ user, menuOpen, setMenuOpen, menuRef }: UserMenuProps) {
   async function handleSignOut() {
     setMenuOpen(false);
     setSigningOut(true);
-    await signOut({ callbackUrl: "/" });
+    try {
+      await signOut({ callbackUrl: "/" });
+    } finally {
+      setSigningOut(false);
+    }
   }
 
   return (
@@ -185,15 +189,12 @@ function UserMenu({ user, menuOpen, setMenuOpen, menuRef }: UserMenuProps) {
             <button
               onClick={handleSignOut}
               disabled={signingOut}
+              aria-busy={signingOut}
               className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-red-500 hover:bg-red-50/50 transition-colors rounded-lg mx-1 disabled:opacity-60 disabled:cursor-not-allowed"
               role="menuitem"
             >
               {signingOut ? (
-                <LoadingSpinner
-                  size="h-4 w-4"
-                  color="text-red-500"
-                  label="Signing out…"
-                />
+                <LoadingSpinner size="h-4 w-4" color="text-red-500" />
               ) : (
                 <svg
                   className="w-4 h-4"

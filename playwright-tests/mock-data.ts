@@ -1,5 +1,5 @@
 /**
- * Dummy data used by the Copilot admin Playwright tests.
+ * Dummy data used by authenticated admin Playwright tests.
  * Covers every admin view: dashboard (sales), products, orders, users.
  * All data is realistic but fictional — it never touches the database.
  */

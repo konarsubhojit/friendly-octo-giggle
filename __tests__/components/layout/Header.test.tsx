@@ -251,7 +251,7 @@ describe("Header", () => {
     expect(screen.queryByText("A")).toBeNull();
   });
 
-  it("calls signOut and closes menu when Sign Out is clicked", () => {
+  it("calls signOut and closes menu when Sign Out is clicked", async () => {
     vi.mocked(useSession).mockReturnValue({
       data: {
         user: {
@@ -274,7 +274,7 @@ describe("Header", () => {
     });
     expect(screen.getByRole("menu")).toBeTruthy();
 
-    act(() => {
+    await act(async () => {
       fireEvent.click(screen.getByText("Sign Out"));
     });
     expect(signOutMock).toHaveBeenCalled();
