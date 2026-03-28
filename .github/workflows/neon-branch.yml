@@ -14,6 +14,7 @@ on:
 permissions:
   contents: read
   pull-requests: read
+  secrets: write
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -51,9 +52,6 @@ jobs:
 
   create_neon_branch:
     name: Create Neon Branch
-    outputs:
-      db_url: ${{ steps.create_neon_branch.outputs.db_url }}
-      db_url_with_pooler: ${{ steps.create_neon_branch.outputs.db_url_with_pooler }}
     needs: setup
     if: |
       (
@@ -81,16 +79,22 @@ jobs:
           api_key: ${{ secrets.NEON_API_KEY }}
           expires_at: ${{ env.EXPIRES_AT }}
 
-      - name: Create or update COPILOT_DATABASE_URL in Copilot environment
+      - name: Fetch connection URI from Neon API
+        id: get_db_url
+        run: |
+          DB_URL=$(curl -sf \
+            "https://console.neon.tech/api/v2/projects/${{ vars.NEON_PROJECT_ID }}/connection_uri?branch_id=${{ steps.create_neon_branch.outputs.branch_id }}&role_name=neondb_owner&database_name=neondb&pooled=true" \
+            -H "Authorization: Bearer ${{ secrets.NEON_API_KEY }}" | jq -r '.uri')
+          echo "DB_URL=$DB_URL" >> "$GITHUB_ENV"
+
+      - name: Set COPILOT_DATABASE_URL as secret in Copilot environment
         env:
           GH_TOKEN: ${{ github.token }}
-          DB_URL: ${{ steps.create_neon_branch.outputs.db_url_with_pooler }}
         run: |
-          gh api \
-            --method PUT \
-            /repos/${{ github.repository }}/environments/Copilot/variables/COPILOT_DATABASE_URL \
-            -f name=COPILOT_DATABASE_URL \
-            -f value="$DB_URL"
+          gh secret set COPILOT_DATABASE_URL \
+            --env Copilot \
+            --body "$DB_URL" \
+            --repo "${{ github.repository }}"
 
   delete_neon_branch:
     name: Delete Neon Branch
@@ -105,14 +109,11 @@ jobs:
           branch: preview/pr-${{ github.event.number }}-${{ needs.setup.outputs.branch }}
           api_key: ${{ secrets.NEON_API_KEY }}
 
-      - name: Delete COPILOT_DATABASE_URL from Copilot environment if it exists
+      - name: Delete COPILOT_DATABASE_URL secret from Copilot environment if it exists
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if gh api /repos/${{ github.repository }}/environments/Copilot/variables/COPILOT_DATABASE_URL >/dev/null 2>&1; then
-            gh api \
-              --method DELETE \
-              /repos/${{ github.repository }}/environments/Copilot/variables/COPILOT_DATABASE_URL
-          else
-            echo "COPILOT_DATABASE_URL does not exist; skipping deletion."
-          fi
+          gh secret delete COPILOT_DATABASE_URL \
+            --env Copilot \
+            --repo "${{ github.repository }}" 2>/dev/null \
+            || echo "COPILOT_DATABASE_URL does not exist; skipping deletion."
