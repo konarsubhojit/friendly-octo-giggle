@@ -29,9 +29,7 @@ describe("HelpPage", () => {
         /orders cannot be returned unless the product arrives damaged/i,
       ).length,
     ).toBeGreaterThan(0);
-    expect(
-      screen.getAllByText(/short video/i).length,
-    ).toBeGreaterThan(0);
+    expect(screen.getAllByText(/short video/i).length).toBeGreaterThan(0);
     expect(screen.getByRole("link", { name: /email us/i })).toHaveAttribute(
       "href",
       "mailto:support@estore.example.com",
