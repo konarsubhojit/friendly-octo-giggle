@@ -9,9 +9,7 @@ interface BestsellersScrollerProps {
   readonly bestsellers: ProductGridItem[];
 }
 
-export function BestsellersScroller({
-  bestsellers,
-}: BestsellersScrollerProps) {
+export function BestsellersScroller({ bestsellers }: BestsellersScrollerProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const scroll = useCallback((direction: "left" | "right") => {
