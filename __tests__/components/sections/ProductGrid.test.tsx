@@ -51,7 +51,13 @@ vi.mock("react-redux", () => ({
 }));
 
 vi.mock("next-auth/react", () => ({
-  useSession: vi.fn(() => ({ data: null, status: "unauthenticated" })),
+  useSession: vi.fn(() => ({
+    data: {
+      user: { id: "user-1", name: "Alice", email: "alice@example.com" },
+      expires: "",
+    },
+    status: "authenticated",
+  })),
 }));
 
 vi.mock("react-hot-toast", () => ({

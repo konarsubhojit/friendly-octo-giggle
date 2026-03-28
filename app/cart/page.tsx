@@ -18,6 +18,7 @@ import {
   removeCartItem,
   selectCart,
   selectCartLoading,
+  syncPendingCartItems,
 } from "@/lib/features/cart/cartSlice";
 import type { AppDispatch } from "@/lib/store";
 import { CartItemRow } from "@/components/cart/CartItemRow";
@@ -41,7 +42,9 @@ export default function CartPage() {
 
   useEffect(() => {
     if (status !== "authenticated") return;
-    dispatch(fetchCart());
+    dispatch(syncPendingCartItems()).finally(() => {
+      dispatch(fetchCart({ force: true }));
+    });
   }, [dispatch, status]);
 
   const handleUpdateQuantity = useCallback(

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import React from "react";
 import { Provider } from "react-redux";
 import { configureStore } from "@reduxjs/toolkit";
@@ -7,10 +7,6 @@ import { CheckoutForm } from "@/components/cart/CheckoutForm";
 import cartReducer from "@/lib/features/cart/cartSlice";
 
 const mockPush = vi.fn();
-const mockPost = vi.fn();
-const mockGet = vi.fn();
-const mockDelete = vi.fn();
-const mockToastSuccess = vi.fn();
 const mockToastError = vi.fn();
 const mockUseSession = vi.fn();
 
@@ -24,21 +20,13 @@ vi.mock("next-auth/react", () => ({
 
 vi.mock("react-hot-toast", () => ({
   default: {
-    success: (message: string) => mockToastSuccess(message),
+    success: vi.fn(),
     error: (message: string) => mockToastError(message),
   },
 }));
 
 vi.mock("@/contexts/CurrencyContext", () => ({
   useCurrency: () => ({ formatPrice: (amount: number) => `₹${amount}` }),
-}));
-
-vi.mock("@/lib/api-client", () => ({
-  apiClient: {
-    post: (...args: unknown[]) => mockPost(...args),
-    get: (...args: unknown[]) => mockGet(...args),
-    delete: (...args: unknown[]) => mockDelete(...args),
-  },
 }));
 
 const mockCart = {
@@ -114,16 +102,6 @@ function renderCheckoutForm() {
 describe("CheckoutForm", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    HTMLDialogElement.prototype.showModal = vi
-      .fn()
-      .mockImplementation(function (this: HTMLDialogElement) {
-        this.setAttribute("open", "");
-      });
-    HTMLDialogElement.prototype.close = vi.fn().mockImplementation(function (
-      this: HTMLDialogElement,
-    ) {
-      this.removeAttribute("open");
-    });
     mockUseSession.mockReturnValue({
       data: {
         user: {
@@ -136,66 +114,39 @@ describe("CheckoutForm", () => {
       status: "authenticated",
       update: vi.fn(),
     });
-    mockPost.mockResolvedValue({
-      checkoutRequestId: "chk_1",
-      status: "PENDING",
+    // Provide a basic sessionStorage mock
+    vi.stubGlobal("sessionStorage", {
+      setItem: vi.fn(),
+      getItem: vi.fn(),
+      removeItem: vi.fn(),
     });
-    mockGet.mockResolvedValue({
-      checkoutRequestId: "chk_1",
-      status: "COMPLETED",
-      orderId: "ord_1",
-      error: null,
-    });
-    mockDelete.mockResolvedValue({ success: true });
   });
 
-  it("opens the review dialog and does not submit before confirmation", async () => {
+  it("navigates to review page with valid address", () => {
     renderCheckoutForm();
 
     fireEvent.change(screen.getByLabelText(/shipping address/i), {
       target: { value: "42 MG Road, Bengaluru, Karnataka 560001" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /place order/i }));
+    fireEvent.click(screen.getByRole("button", { name: /review.*place order/i }));
 
-    expect(screen.getByRole("dialog")).toBeInTheDocument();
-    expect(mockPost).not.toHaveBeenCalled();
-  });
-
-  it("submits only after acknowledgment and confirm action", async () => {
-    renderCheckoutForm();
-
-    fireEvent.change(screen.getByLabelText(/shipping address/i), {
-      target: { value: "42 MG Road, Bengaluru, Karnataka 560001" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: /place order/i }));
-
-    fireEvent.click(screen.getByRole("checkbox"));
-    fireEvent.click(
-      screen.getByRole("button", { name: /confirm and place order/i }),
+    expect(sessionStorage.setItem).toHaveBeenCalledWith(
+      "pending_checkout",
+      expect.stringContaining("42 MG Road"),
     );
+    expect(mockPush).toHaveBeenCalledWith("/checkout/review");
+  });
 
-    await waitFor(() => {
-      expect(mockPost).toHaveBeenCalledWith("/api/checkout", {
-        customerName: "Alice",
-        customerEmail: "alice@example.com",
-        customerAddress: "42 MG Road, Bengaluru, Karnataka 560001",
-        items: [
-          {
-            productId: "prd0001",
-            variationId: "var0001",
-            quantity: 2,
-            customizationNote: "Use a satin ribbon",
-          },
-        ],
-      });
-    });
+  it("shows address error when address is too short", () => {
+    renderCheckoutForm();
 
-    await waitFor(() => {
-      expect(mockToastSuccess).toHaveBeenCalledWith(
-        "Order ord_1 placed successfully!",
-      );
-      expect(mockPush).toHaveBeenCalledWith("/orders");
+    fireEvent.change(screen.getByLabelText(/shipping address/i), {
+      target: { value: "Short" },
     });
+    fireEvent.click(screen.getByRole("button", { name: /review.*place order/i }));
+
+    expect(screen.getByRole("alert")).toBeInTheDocument();
+    expect(mockPush).not.toHaveBeenCalledWith("/checkout/review");
   });
 
   it("redirects unauthenticated users to sign in", () => {
@@ -209,9 +160,8 @@ describe("CheckoutForm", () => {
     fireEvent.change(screen.getByLabelText(/shipping address/i), {
       target: { value: "42 MG Road, Bengaluru, Karnataka 560001" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /place order/i }));
+    fireEvent.click(screen.getByRole("button", { name: /review.*place order/i }));
 
     expect(mockPush).toHaveBeenCalledWith("/auth/signin?callbackUrl=/cart");
-    expect(mockPost).not.toHaveBeenCalled();
   });
 });

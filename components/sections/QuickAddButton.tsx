@@ -3,8 +3,10 @@
 import { useState, useCallback } from "react";
 import type { MouseEvent } from "react";
 import { useDispatch } from "react-redux";
+import { useSession } from "next-auth/react";
 import type { AppDispatch } from "@/lib/store";
 import { addToCart } from "@/lib/features/cart/cartSlice";
+import { addPendingCartItem } from "@/lib/pending-cart";
 import toast from "react-hot-toast";
 import type { Product } from "@/lib/types";
 
@@ -16,6 +18,7 @@ export function QuickAddButton({
   readonly product: QuickAddProduct;
 }) {
   const dispatch = useDispatch<AppDispatch>();
+  const { status } = useSession();
   const [adding, setAdding] = useState(false);
 
   const handleQuickAdd = useCallback(
@@ -24,6 +27,16 @@ export function QuickAddButton({
       e.stopPropagation();
       setAdding(true);
       try {
+        if (status !== "authenticated") {
+          addPendingCartItem({
+            productId: product.id,
+            variationId: null,
+            quantity: 1,
+          });
+          toast.success(`${product.name} saved! Sign in to checkout.`);
+          return;
+        }
+
         const result = await dispatch(
           addToCart({ productId: product.id, quantity: 1 }),
         ).unwrap();
@@ -42,7 +55,7 @@ export function QuickAddButton({
         setAdding(false);
       }
     },
-    [dispatch, product],
+    [dispatch, product, status],
   );
 
   if (product.stock === 0) return null;
