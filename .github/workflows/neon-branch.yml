@@ -34,9 +34,28 @@ jobs:
       - name: Fetch connection URI from Neon API
         id: get_db_url
         run: |
-          DB_URL=$(curl -sf \
+          response_file=$(mktemp)
+          http_status=$(curl -sS \
+            -o "$response_file" \
+            -w "%{http_code}" \
             "https://console.neon.tech/api/v2/projects/${{ vars.NEON_PROJECT_ID }}/connection_uri?branch_id=${{ steps.create_neon_branch.outputs.branch_id }}&role_name=neondb_owner&database_name=neondb&pooled=true" \
-            -H "Authorization: Bearer ${{ secrets.NEON_API_KEY }}" | jq -r '.uri')
+            -H "Authorization: Bearer ${{ secrets.NEON_API_KEY }}")
+
+          if [ "$http_status" != "200" ]; then
+            echo "Failed to resolve a Neon pooled connection URI (HTTP $http_status)."
+            cat "$response_file"
+            rm -f "$response_file"
+            exit 1
+          fi
+
+          DB_URL=$(jq -r '.uri' "$response_file")
+          rm -f "$response_file"
+
+          if [ -z "$DB_URL" ] || [ "$DB_URL" = "null" ]; then
+            echo "Failed to resolve a Neon pooled connection URI."
+            exit 1
+          fi
+
           echo "DB_URL=$DB_URL" >> "$GITHUB_ENV"
 
       - name: Set COPILOT_DATABASE_URL as secret in copilot environment
@@ -64,7 +83,17 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GH_SECRET_MANAGE }}
         run: |
+          secret_name=$(gh secret list \
+            --env copilot \
+            --repo "${{ github.repository }}" \
+            --json name \
+            --jq '.[] | select(.name=="COPILOT_DATABASE_URL") | .name')
+
+          if [ -z "$secret_name" ]; then
+            echo "COPILOT_DATABASE_URL does not exist; skipping deletion."
+            exit 0
+          fi
+
           gh secret delete COPILOT_DATABASE_URL \
             --env copilot \
-            --repo "${{ github.repository }}" 2>/dev/null \
-            || echo "COPILOT_DATABASE_URL does not exist; skipping deletion."
+            --repo "${{ github.repository }}"
