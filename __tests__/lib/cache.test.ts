@@ -130,7 +130,7 @@ describe("CACHE_KEYS", () => {
 
     it("ORDERS_USER_PATTERN returns correct key", () => {
       expect(CACHE_KEYS.ORDERS_USER_PATTERN("user-1")).toBe(
-        "orders:user:user-1",
+        "orders:user:user-1*",
       );
     });
 

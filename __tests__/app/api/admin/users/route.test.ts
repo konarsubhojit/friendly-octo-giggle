@@ -10,6 +10,9 @@ const mockSelectFrom = vi.hoisted(() =>
 const mockSelect = vi.hoisted(() => vi.fn(() => ({ from: mockSelectFrom })));
 
 vi.mock("@/lib/auth", () => ({ auth: mockAuth }));
+vi.mock("@/lib/cache", () => ({
+  cacheAdminUsersList: vi.fn((fetcher: () => Promise<unknown>) => fetcher()),
+}));
 vi.mock("@/lib/db", () => ({
   primaryDrizzleDb: {
     query: { users: { findMany: mockFindMany } },

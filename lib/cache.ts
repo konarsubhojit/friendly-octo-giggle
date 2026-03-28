@@ -254,7 +254,7 @@ export const buildAdminOrdersCacheKey = (params: {
   limit?: number;
 }): string => {
   if (params.search) return "";
-  const parts = [CACHE_KEYS.ADMIN_ORDERS_ALL];
+  const parts: string[] = [CACHE_KEYS.ADMIN_ORDERS_ALL];
   if (params.status && params.status !== "ALL")
     parts.push(`s:${params.status}`);
   if (params.cursor) parts.push(`c:${params.cursor}`);
@@ -324,7 +324,7 @@ export const buildAdminUsersCacheKey = (params: {
   limit?: number;
 }): string => {
   if (params.search) return "";
-  const parts = [CACHE_KEYS.ADMIN_USERS_ALL];
+  const parts: string[] = [CACHE_KEYS.ADMIN_USERS_ALL];
   if (params.cursor) parts.push(`c:${params.cursor}`);
   if (params.limit) parts.push(`l:${params.limit}`);
   return parts.join(":");
@@ -386,7 +386,7 @@ export const buildAdminProductsCacheKey = (params: {
   limit?: number;
 }): string => {
   if (params.search) return "";
-  const parts = [CACHE_KEYS.ADMIN_PRODUCTS_ALL];
+  const parts: string[] = [CACHE_KEYS.ADMIN_PRODUCTS_ALL];
   if (params.cursor) parts.push(`c:${params.cursor}`);
   else if (params.offset) parts.push(`o:${params.offset}`);
   if (params.limit) parts.push(`l:${params.limit}`);
@@ -417,7 +417,7 @@ export const buildUserOrdersCacheKey = (params: {
   limit?: number;
 }): string => {
   if (params.search) return "";
-  const parts = [CACHE_KEYS.ORDERS_BY_USER(params.userId)];
+  const parts: string[] = [CACHE_KEYS.ORDERS_BY_USER(params.userId)];
   if (params.cursor) parts.push(`c:${params.cursor}`);
   else if (params.offset) parts.push(`o:${params.offset}`);
   if (params.limit) parts.push(`l:${params.limit}`);
