@@ -55,7 +55,7 @@ function ReturnPolicySection() {
 }
 
 const RETURN_STEPS = [
-  `Email ${SUPPORT_EMAIL} with detailed photos and a description of the issue.`,
+  `Email ${SUPPORT_EMAIL} with detailed photos, a short video, and a description of the issue.`,
   "Wait for our team to review the damage claim and respond with next steps.",
   "If approved, send the damaged product back using a shipment you arrange and pay for.",
   "After the returned item is received and reviewed, we will send a replacement product.",

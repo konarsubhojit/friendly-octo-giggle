@@ -21,6 +21,7 @@ describe("checkout policies", () => {
     expect(CHECKOUT_POLICIES.returns.items.join(" ")).toContain(
       "cannot be returned unless the product is received in damaged condition",
     );
+    expect(CHECKOUT_POLICIES.returns.items.join(" ")).toContain("short video");
   });
 
   it("includes the no-refund and replacement guidance", () => {
@@ -35,6 +36,7 @@ describe("checkout policies", () => {
   it("includes damaged-item contact and shipping responsibilities", () => {
     const damagedItems = CHECKOUT_POLICIES.damagedItems.items.join(" ");
     expect(damagedItems).toContain(SUPPORT_EMAIL);
+    expect(damagedItems).toContain("short video");
     expect(damagedItems).toContain(
       "shipping cost to send the damaged product back",
     );

@@ -35,7 +35,7 @@ const faqs = [
   },
   {
     question: "What is your return policy?",
-    answer: `Orders cannot be returned unless the product arrives damaged. Email ${SUPPORT_EMAIL} with detailed photos and a description of the issue for review.`,
+    answer: `Orders cannot be returned unless the product arrives damaged. Email ${SUPPORT_EMAIL} with detailed photos, a short video, and a description of the issue for review.`,
   },
   {
     question: "How do I reset my password?",

@@ -24,7 +24,7 @@ export const CHECKOUT_POLICIES: CheckoutPolicies = {
     title: "Returns",
     items: [
       "Orders cannot be returned unless the product is received in damaged condition.",
-      "Shoppers must contact support with detailed photos and a description of the issue before any damaged-item return is reviewed.",
+      "Shoppers must contact support with detailed photos, a short video, and a description of the issue before any damaged-item return is reviewed.",
     ],
   },
   refunds: {
@@ -37,7 +37,7 @@ export const CHECKOUT_POLICIES: CheckoutPolicies = {
   damagedItems: {
     title: "Damaged Items",
     items: [
-      `Email ${SUPPORT_EMAIL} with detailed photos and a description of the damage.`,
+      `Email ${SUPPORT_EMAIL} with detailed photos, a short video, and a description of the damage.`,
       "If the damage claim is approved, you will be asked to send the product back before a replacement is sent.",
       "You are responsible for the shipping cost to send the damaged product back.",
       "We do not charge shipping for sending the replacement product.",
