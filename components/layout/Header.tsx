@@ -189,7 +189,11 @@ function UserMenu({ user, menuOpen, setMenuOpen, menuRef }: UserMenuProps) {
               role="menuitem"
             >
               {signingOut ? (
-                <LoadingSpinner size="h-4 w-4" color="text-red-500" label="Signing out…" />
+                <LoadingSpinner
+                  size="h-4 w-4"
+                  color="text-red-500"
+                  label="Signing out…"
+                />
               ) : (
                 <svg
                   className="w-4 h-4"

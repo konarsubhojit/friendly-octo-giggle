@@ -37,7 +37,11 @@ export const AdminHeaderNav = ({ userName }: AdminHeaderNavProps) => {
         className="inline-flex items-center gap-2 rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-medium text-rose-700 transition hover:border-rose-300 hover:bg-rose-100 disabled:opacity-60 disabled:cursor-not-allowed dark:border-rose-900/70 dark:bg-rose-950/60 dark:text-rose-200 dark:hover:border-rose-800 dark:hover:bg-rose-950/80"
       >
         {signingOut && (
-          <LoadingSpinner size="h-4 w-4" color="text-rose-700" label="Signing out…" />
+          <LoadingSpinner
+            size="h-4 w-4"
+            color="text-rose-700"
+            label="Signing out…"
+          />
         )}
         {signingOut ? "Signing out…" : "Sign Out"}
       </button>
