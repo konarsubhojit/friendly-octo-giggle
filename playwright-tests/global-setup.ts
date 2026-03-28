@@ -60,6 +60,22 @@ export default async function globalSetup() {
     });
 
     await context.storageState({ path: AUTH_STATE_PATH });
+  } catch (err) {
+    // Authentication can fail when the database is unavailable (e.g. the Neon
+    // preview branch hasn't been created yet for this PR).  In that case we
+    // emit a warning and write an empty storage-state file so unauthenticated
+    // test projects can still run.  Authenticated projects will skip or fail
+    // individually, which is the expected behaviour without a live database.
+    console.warn(
+      `⚠️  Playwright auth failed (database may be unavailable): ${err instanceof Error ? err.message : String(err)}\n` +
+        "   Unauthenticated tests will still run.  Authenticated tests require a live database.",
+    );
+    if (!fs.existsSync(AUTH_STATE_PATH)) {
+      fs.writeFileSync(
+        AUTH_STATE_PATH,
+        JSON.stringify({ cookies: [], origins: [] }),
+      );
+    }
   } finally {
     await browser.close();
   }
