@@ -141,11 +141,7 @@ export default function CheckoutReviewPage() {
         throw new Error(checkoutStatus.error ?? "Checkout failed");
       }
 
-      setCheckoutMessage(
-        checkoutStatus.status === "PROCESSING"
-          ? "Finalizing your order..."
-          : "Queueing your order...",
-      );
+      setCheckoutMessage("Processing your order...");
 
       await delay(CHECKOUT_POLL_INTERVAL_MS);
     }
