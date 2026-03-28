@@ -82,7 +82,9 @@ if (!resolved["DATABASE_URL"]) {
 // never committed.
 if (!resolved["NEXTAUTH_SECRET"]) {
   const raw = `dev-secret::${resolved["DATABASE_URL"]}`;
-  resolved["NEXTAUTH_SECRET"] = Buffer.from(raw).toString("base64").slice(0, 44);
+  resolved["NEXTAUTH_SECRET"] = Buffer.from(raw)
+    .toString("base64")
+    .slice(0, 44);
 }
 
 // ---------------------------------------------------------------------------
