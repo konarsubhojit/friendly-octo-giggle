@@ -1,5 +1,5 @@
 /**
- * Admin view tests — run as the Copilot admin account using the stored
+ * Admin view tests — run as an authenticated admin account using the stored
  * session state from global-setup.ts.
  *
  * Every admin API call is intercepted by Playwright route mocks so the

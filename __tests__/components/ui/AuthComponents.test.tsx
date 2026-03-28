@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, act } from "@testing-library/react";
 import React from "react";
 import { UserMenu, ProtectedRoute } from "@/components/ui/AuthComponents";
 
@@ -106,7 +106,9 @@ describe("UserMenu", () => {
       user: { name: "Alice", email: "alice@example.com", image: null },
     };
     render(<UserMenu session={session} />);
-    fireEvent.click(screen.getByText("Sign Out"));
+    await act(async () => {
+      fireEvent.click(screen.getByText("Sign Out"));
+    });
     expect(signOut).toHaveBeenCalledWith({ callbackUrl: "/" });
   });
 

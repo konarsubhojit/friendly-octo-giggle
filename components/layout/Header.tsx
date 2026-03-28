@@ -9,6 +9,7 @@ import LoginModal from "@/components/auth/LoginModal";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { FlowerAccent } from "@/components/ui/DecorativeElements";
 import ProductSearch from "@/components/ui/ProductSearch";
+import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 
 interface UserMenuUser {
   readonly name?: string | null;
@@ -25,6 +26,18 @@ interface UserMenuProps {
 }
 
 function UserMenu({ user, menuOpen, setMenuOpen, menuRef }: UserMenuProps) {
+  const [signingOut, setSigningOut] = useState(false);
+
+  async function handleSignOut() {
+    setMenuOpen(false);
+    setSigningOut(true);
+    try {
+      await signOut({ callbackUrl: "/" });
+    } finally {
+      setSigningOut(false);
+    }
+  }
+
   return (
     <div className="relative" ref={menuRef}>
       <button
@@ -174,28 +187,31 @@ function UserMenu({ user, menuOpen, setMenuOpen, menuRef }: UserMenuProps) {
           )}
           <div className="border-t border-[var(--border-warm)] mt-1 pt-1">
             <button
-              onClick={() => {
-                setMenuOpen(false);
-                signOut();
-              }}
-              className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-red-500 hover:bg-red-50/50 transition-colors rounded-lg mx-1"
+              onClick={handleSignOut}
+              disabled={signingOut}
+              aria-busy={signingOut}
+              className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-red-500 hover:bg-red-50/50 transition-colors rounded-lg mx-1 disabled:opacity-60 disabled:cursor-not-allowed"
               role="menuitem"
             >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-                />
-              </svg>
-              Sign Out
+              {signingOut ? (
+                <LoadingSpinner size="h-4 w-4" color="text-red-500" />
+              ) : (
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                  />
+                </svg>
+              )}
+              {signingOut ? "Signing out…" : "Sign Out"}
             </button>
           </div>
         </div>

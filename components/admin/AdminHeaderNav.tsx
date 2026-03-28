@@ -1,10 +1,26 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
+import { signOut } from "next-auth/react";
+import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 
 interface AdminHeaderNavProps {
   readonly userName: string;
 }
 
 export const AdminHeaderNav = ({ userName }: AdminHeaderNavProps) => {
+  const [signingOut, setSigningOut] = useState(false);
+
+  async function handleSignOut() {
+    setSigningOut(true);
+    try {
+      await signOut({ callbackUrl: "/" });
+    } finally {
+      setSigningOut(false);
+    }
+  }
+
   return (
     <div className="flex flex-wrap items-center justify-end gap-2 text-right sm:text-left">
       <span
@@ -19,14 +35,15 @@ export const AdminHeaderNav = ({ userName }: AdminHeaderNavProps) => {
       >
         View Store
       </Link>
-      <form action="/api/auth/signout" method="POST">
-        <button
-          type="submit"
-          className="inline-flex items-center rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-medium text-rose-700 transition hover:border-rose-300 hover:bg-rose-100 dark:border-rose-900/70 dark:bg-rose-950/60 dark:text-rose-200 dark:hover:border-rose-800 dark:hover:bg-rose-950/80"
-        >
-          Sign Out
-        </button>
-      </form>
+      <button
+        onClick={handleSignOut}
+        disabled={signingOut}
+        aria-busy={signingOut}
+        className="inline-flex items-center gap-2 rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-medium text-rose-700 transition hover:border-rose-300 hover:bg-rose-100 disabled:opacity-60 disabled:cursor-not-allowed dark:border-rose-900/70 dark:bg-rose-950/60 dark:text-rose-200 dark:hover:border-rose-800 dark:hover:bg-rose-950/80"
+      >
+        {signingOut && <LoadingSpinner size="h-4 w-4" color="text-rose-700" />}
+        {signingOut ? "Signing out…" : "Sign Out"}
+      </button>
     </div>
   );
 };
