@@ -14,7 +14,7 @@ vi.mock("@/lib/cache", () => ({
   cacheAdminUsersList: vi.fn((fetcher: () => Promise<unknown>) => fetcher()),
 }));
 vi.mock("@/lib/db", () => ({
-  primaryDrizzleDb: {
+  drizzleDb: {
     query: { users: { findMany: mockFindMany } },
     select: mockSelect,
   },

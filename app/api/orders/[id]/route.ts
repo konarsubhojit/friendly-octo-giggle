@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
-import { primaryDrizzleDb as drizzleDb } from "@/lib/db";
+import { drizzleDb, primaryDrizzleDb } from "@/lib/db";
 import { orders } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import {
@@ -81,7 +81,7 @@ export async function PATCH(
 
     const { id } = await params;
 
-    const order = await drizzleDb.query.orders.findFirst({
+    const order = await primaryDrizzleDb.query.orders.findFirst({
       where: eq(orders.id, id),
     });
 
@@ -93,7 +93,7 @@ export async function PATCH(
       return apiError("Only pending orders can be cancelled", 400);
     }
 
-    await drizzleDb
+    await primaryDrizzleDb
       .update(orders)
       .set({ status: "CANCELLED", updatedAt: new Date() })
       .where(eq(orders.id, id));
@@ -116,7 +116,7 @@ export async function PATCH(
       invalidateCache(CACHE_KEYS.PRODUCTS_BESTSELLERS_PATTERN),
     ]);
 
-    const updatedOrder = await drizzleDb.query.orders.findFirst({
+    const updatedOrder = await primaryDrizzleDb.query.orders.findFirst({
       where: eq(orders.id, id),
       with: {
         items: {

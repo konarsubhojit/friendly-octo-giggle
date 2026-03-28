@@ -1,4 +1,4 @@
-import { primaryDrizzleDb as drizzleDb } from "@/lib/db";
+import { drizzleDb, primaryDrizzleDb } from "@/lib/db";
 import { products, carts, cartItems, users } from "@/lib/schema";
 import { eq, and, isNull } from "drizzle-orm";
 import { logError } from "@/lib/logger";
@@ -127,11 +127,11 @@ async function getOrCreateCart(
   const createGuestCart = async (providedSessionId?: string) => {
     const guestSessionId =
       providedSessionId ?? `guest_${Date.now()}_${crypto.randomUUID()}`;
-    let cart = await drizzleDb.query.carts.findFirst({
+    let cart = await primaryDrizzleDb.query.carts.findFirst({
       where: eq(carts.sessionId, guestSessionId),
     });
     if (!cart) {
-      [cart] = await drizzleDb
+      [cart] = await primaryDrizzleDb
         .insert(carts)
         .values({ sessionId: guestSessionId, updatedAt: new Date() })
         .returning();
@@ -140,11 +140,11 @@ async function getOrCreateCart(
   };
 
   if (session?.user?.id) {
-    let cart = await drizzleDb.query.carts.findFirst({
+    let cart = await primaryDrizzleDb.query.carts.findFirst({
       where: eq(carts.userId, session.user.id),
     });
     if (!cart) {
-      const userRecord = await drizzleDb.query.users.findFirst({
+      const userRecord = await primaryDrizzleDb.query.users.findFirst({
         where: eq(users.id, session.user.id),
         columns: { id: true },
       });
@@ -159,7 +159,7 @@ async function getOrCreateCart(
         return createGuestCart(sessionId);
       }
 
-      [cart] = await drizzleDb
+      [cart] = await primaryDrizzleDb
         .insert(carts)
         .values({ userId: session.user.id, updatedAt: new Date() })
         .returning();
@@ -175,7 +175,7 @@ async function addOrUpdateCartItem(
   body: AddToCartInput,
   availableStock: number,
 ): Promise<CartMutationWarning> {
-  const existingItem = await drizzleDb.query.cartItems.findFirst({
+  const existingItem = await primaryDrizzleDb.query.cartItems.findFirst({
     where: and(
       eq(cartItems.cartId, cartId),
       eq(cartItems.productId, body.productId),
@@ -202,7 +202,7 @@ async function addOrUpdateCartItem(
       adjustedQuantity = newQuantity;
       warning = `Only ${availableStock} items available. Added ${canAdd} instead of ${body.quantity} (you already had ${existingItem.quantity} in your cart).`;
     }
-    await drizzleDb
+    await primaryDrizzleDb
       .update(cartItems)
       .set({ quantity: newQuantity, updatedAt: new Date() })
       .where(eq(cartItems.id, existingItem.id));
@@ -213,7 +213,7 @@ async function addOrUpdateCartItem(
       adjustedQuantity = quantity;
       warning = `Only ${availableStock} items available. Added ${availableStock} to your cart.`;
     }
-    await drizzleDb.insert(cartItems).values({
+    await primaryDrizzleDb.insert(cartItems).values({
       cartId,
       productId: body.productId,
       variationId: body.variationId ?? null,
@@ -522,7 +522,7 @@ export async function clearCart(identity: CartIdentity): Promise<void> {
   const cart = await findCartForDeletion(userId, sessionId);
   if (cart) {
     await Promise.all([
-      drizzleDb.delete(carts).where(eq(carts.id, cart.id)),
+      primaryDrizzleDb.delete(carts).where(eq(carts.id, cart.id)),
       invalidateCartCache(userId, sessionId),
       removeCartItemsByCartId(cart.id, userId, sessionId),
     ]);

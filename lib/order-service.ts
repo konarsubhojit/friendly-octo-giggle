@@ -1,4 +1,4 @@
-import { primaryDrizzleDb as drizzleDb } from "@/lib/db";
+import { drizzleDb, primaryDrizzleDb } from "@/lib/db";
 import {
   orders,
   orderItems,
@@ -493,7 +493,7 @@ export const createOrderForUser = async ({
   const requestedProductIds = [
     ...new Set(body.items.map((item) => item.productId)),
   ];
-  const productList = (await drizzleDb.query.products.findMany({
+  const productList = (await primaryDrizzleDb.query.products.findMany({
     where: and(
       inArray(products.id, requestedProductIds),
       isNull(products.deletedAt),
@@ -536,7 +536,7 @@ export const createOrderForUser = async ({
       item.variationId != null,
   );
 
-  const order = await drizzleDb.transaction(async (tx) => {
+  const order = await primaryDrizzleDb.transaction(async (tx) => {
     const [newOrder] = await tx
       .insert(orders)
       .values({
@@ -579,7 +579,7 @@ export const createOrderForUser = async ({
     return newOrder;
   });
 
-  const fullOrder = await drizzleDb.query.orders.findFirst({
+  const fullOrder = await primaryDrizzleDb.query.orders.findFirst({
     where: eq(orders.id, order.id),
     with: { items: { with: { product: true, variation: true } } },
   });

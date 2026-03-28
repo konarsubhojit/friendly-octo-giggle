@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { updateProfileSchema } from "@/lib/validations";
 import { apiSuccess, apiError, handleApiError } from "@/lib/api-utils";
-import { primaryDrizzleDb as drizzleDb } from "@/lib/db";
+import { drizzleDb, primaryDrizzleDb } from "@/lib/db";
 import { users } from "@/lib/schema";
 import { eq, and, ne } from "drizzle-orm";
 import { auth } from "@/lib/auth";
@@ -73,7 +73,7 @@ export async function PATCH(request: NextRequest) {
     const { name, email, phoneNumber, currencyPreference } = parseResult.data;
 
     if (email) {
-      const existingByEmail = await drizzleDb.query.users.findFirst({
+      const existingByEmail = await primaryDrizzleDb.query.users.findFirst({
         where: and(eq(users.email, email), ne(users.id, session.user.id)),
       });
       if (existingByEmail) {
@@ -82,7 +82,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     if (phoneNumber) {
-      const existingByPhone = await drizzleDb.query.users.findFirst({
+      const existingByPhone = await primaryDrizzleDb.query.users.findFirst({
         where: and(
           eq(users.phoneNumber, phoneNumber),
           ne(users.id, session.user.id),
@@ -100,7 +100,7 @@ export async function PATCH(request: NextRequest) {
     if (currencyPreference !== undefined)
       updateData.currencyPreference = currencyPreference;
 
-    await drizzleDb
+    await primaryDrizzleDb
       .update(users)
       .set(updateData)
       .where(eq(users.id, session.user.id));
