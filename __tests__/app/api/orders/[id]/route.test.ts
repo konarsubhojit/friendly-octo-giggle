@@ -1,20 +1,23 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 import { GET, PATCH } from "@/app/api/orders/[id]/route";
-import { primaryDrizzleDb as drizzleDb } from "@/lib/db";
+import { primaryDrizzleDb } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { getCachedData, invalidateCache } from "@/lib/redis";
 import { invalidateUserOrderCaches } from "@/lib/cache";
 
-vi.mock("@/lib/db", () => ({
-  primaryDrizzleDb: {
-    query: { orders: { findFirst: vi.fn() } },
-    update: vi.fn(() => ({
-      set: vi.fn(() => ({
-        where: vi.fn(),
-      })),
+const mockDb = vi.hoisted(() => ({
+  query: { orders: { findFirst: vi.fn() } },
+  update: vi.fn(() => ({
+    set: vi.fn(() => ({
+      where: vi.fn(),
     })),
-  },
+  })),
+}));
+
+vi.mock("@/lib/db", () => ({
+  primaryDrizzleDb: mockDb,
+  drizzleDb: mockDb,
 }));
 
 vi.mock("@/lib/schema", () => ({
@@ -54,8 +57,8 @@ const mockAuth = vi.mocked(auth);
 const mockGetCachedData = vi.mocked(getCachedData);
 const mockInvalidateCache = vi.mocked(invalidateCache);
 const mockInvalidateUserOrderCaches = vi.mocked(invalidateUserOrderCaches);
-const mockFindFirst = vi.mocked(drizzleDb.query.orders.findFirst);
-const mockUpdate = vi.mocked(drizzleDb.update);
+const mockFindFirst = vi.mocked(primaryDrizzleDb.query.orders.findFirst);
+const mockUpdate = vi.mocked(primaryDrizzleDb.update);
 
 describe("GET /api/orders/[id]", () => {
   const mockOrder = {

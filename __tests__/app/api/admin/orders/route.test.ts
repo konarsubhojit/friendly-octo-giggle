@@ -11,7 +11,7 @@ const mockSelectFrom = vi.hoisted(() =>
 const mockSelect = vi.hoisted(() => vi.fn(() => ({ from: mockSelectFrom })));
 
 vi.mock("@/lib/db", () => ({
-  primaryDrizzleDb: {
+  drizzleDb: {
     query: {
       orders: { findMany: mockFindMany },
     },

@@ -23,6 +23,18 @@ vi.mock("@/lib/db", () => ({
       }),
     })),
   },
+  drizzleDb: {
+    query: {
+      users: {
+        findFirst: mockFindFirst,
+      },
+    },
+    update: vi.fn(() => ({
+      set: mockUpdateSet.mockReturnValue({
+        where: mockUpdateWhere.mockResolvedValue(undefined),
+      }),
+    })),
+  },
 }));
 
 vi.mock("@/lib/schema", () => ({

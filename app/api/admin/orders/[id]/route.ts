@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { primaryDrizzleDb as drizzleDb } from "@/lib/db";
+import { drizzleDb, primaryDrizzleDb } from "@/lib/db";
 import { orders } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import {
@@ -54,12 +54,12 @@ export const PATCH = async (
       return handleValidationError(parseResult.error);
     }
 
-    await drizzleDb
+    await primaryDrizzleDb
       .update(orders)
       .set(buildUpdateData(parseResult.data))
       .where(eq(orders.id, id));
 
-    const order = await drizzleDb.query.orders.findFirst({
+    const order = await primaryDrizzleDb.query.orders.findFirst({
       where: eq(orders.id, id),
       with: { items: { with: { product: true, variation: true } } },
     });

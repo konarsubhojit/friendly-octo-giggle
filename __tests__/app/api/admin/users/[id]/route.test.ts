@@ -2,17 +2,22 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 import { PATCH, GET } from "@/app/api/admin/users/[id]/route";
 
-vi.mock("@/lib/db", () => ({
-  primaryDrizzleDb: {
-    query: { users: { findFirst: vi.fn() } },
-    update: vi.fn(() => ({
-      set: vi.fn(() => ({
-        where: vi.fn(() => ({
-          returning: vi.fn(),
-        })),
+const mockDb = vi.hoisted(() => ({
+  query: {
+    users: { findFirst: vi.fn() },
+  },
+  update: vi.fn(() => ({
+    set: vi.fn(() => ({
+      where: vi.fn(() => ({
+        returning: vi.fn(),
       })),
     })),
-  },
+  })),
+}));
+
+vi.mock("@/lib/db", () => ({
+  primaryDrizzleDb: mockDb,
+  drizzleDb: mockDb,
 }));
 vi.mock("@/lib/schema", () => ({ users: { id: "id", role: "role" } }));
 vi.mock("drizzle-orm", () => ({ eq: vi.fn() }));
@@ -23,7 +28,7 @@ vi.mock("@/lib/cache", () => ({
 }));
 vi.mock("@/lib/logger", () => ({ logError: vi.fn() }));
 
-import { primaryDrizzleDb as drizzleDb } from "@/lib/db";
+import { primaryDrizzleDb } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { cacheAdminUserById, invalidateAdminUserCaches } from "@/lib/cache";
 
@@ -91,7 +96,7 @@ describe("PATCH /api/admin/users/[id]", () => {
     const returning = vi.fn().mockResolvedValue([updatedUser]);
     const where = vi.fn(() => ({ returning }));
     const set = vi.fn(() => ({ where }));
-    vi.mocked(drizzleDb.update).mockReturnValue({ set } as never);
+    vi.mocked(primaryDrizzleDb.update).mockReturnValue({ set } as never);
     mockInvalidateAdminUserCaches.mockResolvedValue(undefined as never);
 
     const res = await PATCH(makeRequest({ role: "ADMIN" }), makeParams());
@@ -99,7 +104,7 @@ describe("PATCH /api/admin/users/[id]", () => {
 
     expect(res.status).toBe(200);
     expect(data.data.user).toEqual(updatedUser);
-    expect(drizzleDb.update).toHaveBeenCalled();
+    expect(primaryDrizzleDb.update).toHaveBeenCalled();
     expect(mockInvalidateAdminUserCaches).toHaveBeenCalledWith("user1");
   });
 });
@@ -176,7 +181,7 @@ describe("GET /api/admin/users/[id]", () => {
       async (_id: string, fetcher: () => Promise<unknown>) => fetcher(),
     );
     (
-      drizzleDb.query.users.findFirst as ReturnType<typeof vi.fn>
+      primaryDrizzleDb.query.users.findFirst as ReturnType<typeof vi.fn>
     ).mockResolvedValue(mockUserData);
 
     const res = await GET(makeRequest(), makeParams());
@@ -195,7 +200,7 @@ describe("GET /api/admin/users/[id]", () => {
       async (_id: string, fetcher: () => Promise<unknown>) => fetcher(),
     );
     (
-      drizzleDb.query.users.findFirst as ReturnType<typeof vi.fn>
+      primaryDrizzleDb.query.users.findFirst as ReturnType<typeof vi.fn>
     ).mockResolvedValue(null);
 
     const res = await GET(makeRequest(), makeParams());
@@ -207,7 +212,7 @@ describe("GET /api/admin/users/[id]", () => {
 
   it("returns 500 on error in PATCH", async () => {
     mockAuth.mockResolvedValue(adminSession as never);
-    vi.mocked(drizzleDb.update).mockImplementation(() => {
+    vi.mocked(primaryDrizzleDb.update).mockImplementation(() => {
       throw new Error("DB error");
     });
 

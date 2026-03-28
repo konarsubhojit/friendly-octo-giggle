@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { primaryDrizzleDb as drizzleDb } from "@/lib/db";
+import { drizzleDb, primaryDrizzleDb } from "@/lib/db";
 import { users } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import { apiSuccess, apiError, handleApiError } from "@/lib/api-utils";
@@ -32,7 +32,7 @@ export async function PATCH(
       return apiError("Cannot modify your own role", 403);
     }
 
-    const [user] = await drizzleDb
+    const [user] = await primaryDrizzleDb
       .update(users)
       .set({ role: validated.role, updatedAt: new Date() })
       .where(eq(users.id, id))

@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { desc, lt, and, eq, inArray, SQL, count } from "drizzle-orm";
-import { primaryDrizzleDb as drizzleDb } from "@/lib/db";
+import { drizzleDb } from "@/lib/db";
 import { orders } from "@/lib/schema";
 import {
   apiSuccess,

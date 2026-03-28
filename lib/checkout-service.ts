@@ -1,6 +1,6 @@
 import { waitUntil } from "@vercel/functions";
 import { desc, eq } from "drizzle-orm";
-import { primaryDrizzleDb as drizzleDb } from "@/lib/db";
+import { drizzleDb, primaryDrizzleDb } from "@/lib/db";
 import { createOrderForUser, isOrderRequestError } from "@/lib/order-service";
 import { send } from "@/lib/queue";
 import { logBusinessEvent, logError } from "@/lib/logger";
@@ -119,7 +119,7 @@ const updateCheckoutRequestStatus = async (
   status: CheckoutRequestStatus,
   errorMessage: string | null,
 ) => {
-  await drizzleDb
+  await primaryDrizzleDb
     .update(checkoutRequests)
     .set({
       status,
@@ -251,7 +251,7 @@ export const enqueueCheckoutForUser = async ({
 }): Promise<CheckoutEnqueueResponse> => {
   const normalized = getNormalizedCheckoutInput(body, user);
 
-  const [checkoutRequest] = await drizzleDb
+  const [checkoutRequest] = await primaryDrizzleDb
     .insert(checkoutRequests)
     .values({
       userId: user.id,
