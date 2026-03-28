@@ -127,7 +127,8 @@ describe("db connection fallback (READ_DATABASE_URL not set)", () => {
 
     expect(PoolMock).toHaveBeenCalledTimes(2);
     const connectionStrings = PoolMock.mock.calls.map(
-      (call: unknown[]) => (call[0] as { connectionString: string }).connectionString,
+      (call: unknown[]) =>
+        (call[0] as { connectionString: string }).connectionString,
     );
     // Both pools should fall back to DATABASE_URL
     expect(connectionStrings[0]).toBe("postgres://write:pass@primary:5432/db");
@@ -150,7 +151,8 @@ describe("db connection fallback (READ_DATABASE_URL not set)", () => {
 
     expect(PoolMock).toHaveBeenCalledTimes(2);
     const connectionStrings = PoolMock.mock.calls.map(
-      (call: unknown[]) => (call[0] as { connectionString: string }).connectionString,
+      (call: unknown[]) =>
+        (call[0] as { connectionString: string }).connectionString,
     );
     // Write pool uses DATABASE_URL, read pool uses READ_DATABASE_URL
     expect(connectionStrings[0]).toBe("postgres://write:pass@primary:5432/db");
