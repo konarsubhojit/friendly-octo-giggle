@@ -182,9 +182,12 @@ export const productVariations = pgTable(
       .references(() => products.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     designName: text("designName").notNull(),
+    variationType: text("variationType", { enum: ["styling", "colour"] })
+      .default("styling")
+      .notNull(),
     image: text("image"),
     images: json("images").$type<string[]>().default([]).notNull(),
-    priceModifier: doublePrecision("priceModifier").default(0).notNull(),
+    price: doublePrecision("price").notNull(),
     stock: integer("stock").notNull(),
     deletedAt: timestamp("deletedAt", { mode: "date" }),
     createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),

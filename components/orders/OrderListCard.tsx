@@ -18,7 +18,7 @@ interface OrderItem {
   readonly variation?: {
     id: string;
     name: string;
-    priceModifier: number;
+    price: number;
   } | null;
 }
 

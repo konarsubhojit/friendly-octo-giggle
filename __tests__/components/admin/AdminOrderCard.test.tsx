@@ -19,7 +19,7 @@ const order = {
       price: 50,
       customizationNote: "Gift wrap",
       product: { id: "prod-1", name: "Rose Gift Box", image: "/rose.jpg" },
-      variation: { id: "var-1", name: "Large", priceModifier: 10 },
+      variation: { id: "var-1", name: "Large", price: 110 },
     },
     {
       id: "item-2",

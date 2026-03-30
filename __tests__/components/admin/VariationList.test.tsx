@@ -33,7 +33,8 @@ const mockVariation: ProductVariation = {
   designName: "Classic Logo",
   image: "https://example.com/red.jpg",
   images: [],
-  priceModifier: 5,
+  price: 150,
+  variationType: "styling" as const,
   stock: 25,
   deletedAt: null,
   createdAt: "2025-01-01T00:00:00.000Z",
@@ -79,7 +80,7 @@ describe("VariationList", () => {
     expect(screen.getByText("Variations (1)")).toBeInTheDocument();
   });
 
-  it("displays effective price", () => {
+  it("displays variation price", () => {
     render(
       <VariationList
         productId="abc1234"
@@ -87,8 +88,8 @@ describe("VariationList", () => {
         initialVariations={[mockVariation]}
       />,
     );
-    // Effective price = 29.99 + 5.0 = 34.99
-    expect(screen.getByText("$34.99")).toBeInTheDocument();
+    // mockVariation.price = 150
+    expect(screen.getByText("$150.00")).toBeInTheDocument();
   });
 
   it("shows placeholder for variations without image", () => {
@@ -141,7 +142,7 @@ describe("VariationList", () => {
     );
 
     expect(
-      screen.queryByLabelText("Modifier for Red - Large"),
+      screen.queryByLabelText("Price for Red - Large"),
     ).not.toBeInTheDocument();
     expect(
       screen.queryByLabelText("Stock for Red - Large"),
@@ -164,13 +165,13 @@ describe("VariationList", () => {
     );
 
     expect(
-      screen.getByLabelText("Modifier for Red - Large"),
+      screen.getByLabelText("Price for Red - Large"),
     ).toBeInTheDocument();
     expect(screen.getByLabelText("Stock for Red - Large")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Save" })).toBeInTheDocument();
   });
 
-  it("saves inline quick edits for stock and price modifier", async () => {
+  it("saves inline quick edits for stock and price", async () => {
     const mockFetch = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
@@ -178,7 +179,7 @@ describe("VariationList", () => {
           variation: {
             ...mockVariation,
             stock: 30,
-            priceModifier: 7,
+            price: 200,
             updatedAt: "2025-01-02T00:00:00.000Z",
           },
         },
@@ -200,8 +201,8 @@ describe("VariationList", () => {
       }),
     );
 
-    fireEvent.change(screen.getByLabelText("Modifier for Red - Large"), {
-      target: { value: "7" },
+    fireEvent.change(screen.getByLabelText("Price for Red - Large"), {
+      target: { value: "200" },
     });
     fireEvent.change(screen.getByLabelText("Stock for Red - Large"), {
       target: { value: "30" },
@@ -213,14 +214,14 @@ describe("VariationList", () => {
         "/api/admin/variations/var1234",
         expect.objectContaining({
           method: "PUT",
-          body: JSON.stringify({ priceModifier: 7, stock: 30 }),
+          body: JSON.stringify({ price: 200, stock: 30 }),
         }),
       );
     });
 
     await waitFor(() => {
       expect(screen.getByText("Stock: 30")).toBeInTheDocument();
-      expect(screen.getByText("$36.99")).toBeInTheDocument();
+      expect(screen.getByText("$200.00")).toBeInTheDocument();
     });
   });
 });

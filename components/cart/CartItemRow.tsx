@@ -27,7 +27,7 @@ export function CartItemRow({
   onCustomizationChange,
 }: CartItemRowProps) {
   const price = item.variation
-    ? item.product.price + item.variation.priceModifier
+    ? item.variation.price
     : item.product.price;
   const image = item.variation?.image || item.product.image;
 

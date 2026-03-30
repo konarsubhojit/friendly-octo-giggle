@@ -197,22 +197,16 @@ const OutOfStockPanel = ({
 );
 
 interface PriceModifierDisplayProps {
-  readonly product: Product;
   readonly selectedVariation: ProductVariation | null;
-  readonly formatPrice: (amount: number) => string;
 }
 
 const PriceModifierDisplay = ({
-  product,
   selectedVariation,
-  formatPrice,
 }: PriceModifierDisplayProps) => {
-  if (!selectedVariation || selectedVariation.priceModifier === 0) return null;
-  const sign = selectedVariation.priceModifier > 0 ? "+" : "-";
+  if (!selectedVariation) return null;
   return (
     <div className="mt-2 text-sm text-[var(--text-secondary)]">
-      Base: {formatPrice(product.price)} {sign}
-      {formatPrice(Math.abs(selectedVariation.priceModifier))}
+      Variation price — independently set
     </div>
   );
 };
@@ -235,6 +229,42 @@ const baseButtonClass = (isSelected: boolean) => {
     : `${base} border-[var(--border-warm)] hover:border-[var(--accent-warm)] hover:shadow-warm hover:scale-105 bg-[var(--accent-cream)]/50`;
 };
 
+const VariationGroup = ({
+  label,
+  icon,
+  variations,
+  selectedVariation,
+  formatPrice,
+  onSelect,
+  cartQuantities,
+}: {
+  readonly label: string;
+  readonly icon: string;
+  readonly variations: ProductVariation[];
+  readonly selectedVariation: ProductVariation | null;
+  readonly formatPrice: (amount: number) => string;
+  readonly onSelect: (v: ProductVariation) => void;
+  readonly cartQuantities: Record<string, number>;
+}) => (
+  <div>
+    <span className="block text-sm font-semibold text-[var(--text-secondary)] mb-2">
+      {icon} {label}
+    </span>
+    <div className="grid grid-cols-2 gap-3">
+      {variations.map((variation) => (
+        <VariationButton
+          key={variation.id}
+          variation={variation}
+          isSelected={selectedVariation?.id === variation.id}
+          formatPrice={formatPrice}
+          onSelect={onSelect}
+          cartQuantity={cartQuantities[variation.id] ?? 0}
+        />
+      ))}
+    </div>
+  </div>
+);
+
 const VariationSelector = ({
   variations,
   selectedVariation,
@@ -246,47 +276,73 @@ const VariationSelector = ({
 }: VariationSelectorProps) => {
   if (!variations || variations.length === 0) return null;
   const baseInCart = cartQuantities["__base__"] ?? 0;
+  const stylingVariations = variations.filter(
+    (v) => v.variationType === "styling",
+  );
+  const colourVariations = variations.filter(
+    (v) => v.variationType === "colour",
+  );
   return (
-    <div className="mb-6">
+    <div className="mb-6 space-y-5">
       <span
-        className="block text-lg font-semibold text-[var(--foreground)] mb-3"
+        className="block text-lg font-semibold text-[var(--foreground)]"
         id="variation-selector-label"
       >
-        Select Design
+        Choose Your Options
       </span>
-      <div className="grid grid-cols-2 gap-3">
-        <button
-          onClick={onSelectBase}
-          aria-label="Select standard base design"
-          aria-pressed={selectedVariation === null}
-          className={baseButtonClass(selectedVariation === null)}
-        >
-          <div className="text-sm font-bold text-[var(--foreground)]">
-            Standard
-          </div>
-          <div className="text-xs text-[var(--text-secondary)] mt-1">
-            Base design
-          </div>
-          <div className="text-xs font-semibold text-[var(--accent-warm)] mt-1">
-            {formatPrice(basePrice)}
-          </div>
-          {baseInCart > 0 && (
-            <div className="text-xs font-semibold text-blue-600 mt-1">
-              {baseInCart} in cart
+
+      {/* Styling Options */}
+      <div>
+        <span className="block text-sm font-semibold text-[var(--text-secondary)] mb-2">
+          🎨 Styling Options
+        </span>
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            onClick={onSelectBase}
+            aria-label="Select standard base design"
+            aria-pressed={selectedVariation === null}
+            className={baseButtonClass(selectedVariation === null)}
+          >
+            <div className="text-sm font-bold text-[var(--foreground)]">
+              Standard
             </div>
-          )}
-        </button>
-        {variations.map((variation) => (
-          <VariationButton
-            key={variation.id}
-            variation={variation}
-            isSelected={selectedVariation?.id === variation.id}
-            formatPrice={formatPrice}
-            onSelect={onSelect}
-            cartQuantity={cartQuantities[variation.id] ?? 0}
-          />
-        ))}
+            <div className="text-xs text-[var(--text-secondary)] mt-1">
+              Base design
+            </div>
+            <div className="text-xs font-semibold text-[var(--accent-warm)] mt-1">
+              {formatPrice(basePrice)}
+            </div>
+            {baseInCart > 0 && (
+              <div className="text-xs font-semibold text-blue-600 mt-1">
+                {baseInCart} in cart
+              </div>
+            )}
+          </button>
+          {stylingVariations.map((variation) => (
+            <VariationButton
+              key={variation.id}
+              variation={variation}
+              isSelected={selectedVariation?.id === variation.id}
+              formatPrice={formatPrice}
+              onSelect={onSelect}
+              cartQuantity={cartQuantities[variation.id] ?? 0}
+            />
+          ))}
+        </div>
       </div>
+
+      {/* Colour Options */}
+      {colourVariations.length > 0 && (
+        <VariationGroup
+          label="Colour Options"
+          icon="🌈"
+          variations={colourVariations}
+          selectedVariation={selectedVariation}
+          formatPrice={formatPrice}
+          onSelect={onSelect}
+          cartQuantities={cartQuantities}
+        />
+      )}
     </div>
   );
 };
@@ -352,9 +408,7 @@ const ProductInfoCard = ({
           {formatPrice(effectivePrice)}
         </span>
         <PriceModifierDisplay
-          product={product}
           selectedVariation={selectedVariation}
-          formatPrice={formatPrice}
         />
       </div>
 
@@ -634,7 +688,7 @@ export default function ProductClient({
   ]);
 
   const effectivePrice = selectedVariation
-    ? product.price + selectedVariation.priceModifier
+    ? selectedVariation.price
     : product.price;
 
   const effectiveStock = selectedVariation

@@ -92,7 +92,8 @@ const mockVariation = {
   designName: "Classic",
   image: null,
   images: [],
-  priceModifier: 5.0,
+  price: 150.0,
+  variationType: "styling",
   stock: 10,
   deletedAt: null,
   createdAt: new Date("2025-01-01"),
@@ -187,7 +188,7 @@ describe("POST /api/admin/products/[id]/variations", () => {
   const validBody = {
     name: "Blue",
     designName: "Modern",
-    priceModifier: 3.0,
+    price: 150.0,
     stock: 50,
   };
 
@@ -231,7 +232,7 @@ describe("POST /api/admin/products/[id]/variations", () => {
     expect(res.status).toBe(400);
   });
 
-  it("returns 400 when effective price <= 0", async () => {
+  it("returns 400 when price <= 0", async () => {
     mockAuth.mockResolvedValue(adminSession);
     mockFindFirst.mockResolvedValueOnce(mockProduct);
     const res = await POST(
@@ -240,14 +241,12 @@ describe("POST /api/admin/products/[id]/variations", () => {
         "POST",
         {
           ...validBody,
-          priceModifier: -100,
+          price: 0,
         },
       ),
       { params: Promise.resolve({ id: "abc1234" }) },
     );
     expect(res.status).toBe(400);
-    const json = await res.json();
-    expect(json.error).toContain("Effective price");
   });
 
   it("returns 400 when 25-variation limit reached", async () => {

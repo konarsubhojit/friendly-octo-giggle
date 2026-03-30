@@ -60,7 +60,7 @@ export const isOrderRequestError = (
 type ProductWithVariations = Awaited<
   ReturnType<typeof drizzleDb.query.products.findMany>
 >[number] & {
-  variations: Array<{ id: string; priceModifier: number; stock: number }>;
+  variations: Array<{ id: string; price: number; stock: number }>;
 };
 
 type ValidationResult =
@@ -195,7 +195,7 @@ const checkStockForItem = (
         reason: "variation_not_found",
       };
     }
-    price = product.price + variation.priceModifier;
+    price = variation.price;
     stockToCheck = variation.stock;
   }
 
@@ -276,7 +276,7 @@ const buildOrderItemValues = (
         variationPriceMap: new Map(
           product.variations.map((variation) => [
             variation.id,
-            variation.priceModifier,
+            variation.price,
           ]),
         ),
       },
@@ -289,9 +289,8 @@ const buildOrderItemValues = (
       throw new Error(`Product with id ${item.productId} not found`);
     }
 
-    const price =
-      product.price +
-      (product.variationPriceMap.get(item.variationId ?? "") ?? 0);
+    const variationPrice = product.variationPriceMap.get(item.variationId ?? "");
+    const price = variationPrice !== undefined ? variationPrice : product.price;
 
     return {
       orderId,
