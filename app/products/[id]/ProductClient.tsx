@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useSession } from "next-auth/react";
 import { useDispatch, useSelector } from "react-redux";
 import { Product, ProductVariation } from "@/lib/types";
@@ -17,6 +18,11 @@ import ImageCarousel from "@/components/product/ImageCarousel";
 import { useRecentlyViewed } from "@/lib/hooks";
 import RecentlyViewed from "@/components/sections/RecentlyViewed";
 import { ReviewsSection } from "@/components/sections/ReviewsSection";
+
+const ProductAssistant = dynamic(
+  () => import("@/components/product/ProductAssistant"),
+  { ssr: false },
+);
 
 interface ProductClientProps {
   readonly product: Product;
@@ -745,6 +751,11 @@ export default function ProductClient({
           </div>
         </div>
       </main>
+
+      {/* Product Assistant */}
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
+        <ProductAssistant productId={product.id} productName={product.name} />
+      </div>
 
       {/* Reviews Section */}
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
