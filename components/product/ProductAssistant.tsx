@@ -21,7 +21,7 @@ export default function ProductAssistant({
 }: ProductAssistantProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState("");
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
 
   const transport = useMemo(
     () =>
@@ -36,7 +36,10 @@ export default function ProductAssistant({
   const isStreaming = status === "streaming";
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView?.({ behavior: "smooth" });
+    const container = messagesContainerRef.current;
+    if (container) {
+      container.scrollTop = container.scrollHeight;
+    }
   }, [messages]);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -89,12 +92,12 @@ export default function ProductAssistant({
 
   return (
     <div
-      className="rounded-2xl border border-[var(--border-warm)] bg-[var(--surface)]/80 shadow-warm backdrop-blur-lg overflow-hidden"
+      className="flex flex-col rounded-2xl border border-[var(--border-warm)] bg-[var(--surface)]/80 shadow-warm backdrop-blur-lg overflow-hidden max-h-[32rem]"
       role="region"
       aria-label="Product assistant"
     >
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-[var(--border-warm)] bg-gradient-to-r from-[var(--accent-warm)]/10 to-[var(--accent-rose)]/10 px-6 py-4">
+      <div className="flex shrink-0 items-center justify-between border-b border-[var(--border-warm)] bg-gradient-to-r from-[var(--accent-warm)]/10 to-[var(--accent-rose)]/10 px-6 py-4">
         <div className="flex items-center gap-3">
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-r from-[var(--accent-warm)] to-[var(--accent-rose)]">
             <svg
@@ -138,7 +141,10 @@ export default function ProductAssistant({
       </div>
 
       {/* Messages */}
-      <div className="max-h-80 overflow-y-auto px-6 py-4 space-y-4">
+      <div
+        ref={messagesContainerRef}
+        className="min-h-0 flex-1 overflow-y-auto px-6 py-4 space-y-4"
+      >
         {messages.length === 0 && (
           <div className="space-y-3">
             <p className="text-sm text-[var(--text-secondary)]">
@@ -186,14 +192,12 @@ export default function ProductAssistant({
             </div>
           </div>
         )}
-
-        <div ref={messagesEndRef} />
       </div>
 
       {/* Input */}
       <form
         onSubmit={handleSubmit}
-        className="flex items-center gap-2 border-t border-[var(--border-warm)] px-4 py-3"
+        className="flex shrink-0 items-center gap-2 border-t border-[var(--border-warm)] px-4 py-3"
       >
         <textarea
           value={input}

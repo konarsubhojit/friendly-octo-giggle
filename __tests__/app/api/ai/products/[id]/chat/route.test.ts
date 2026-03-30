@@ -46,6 +46,7 @@ vi.mock("@/lib/logger", () => ({
     debug: vi.fn(),
   }),
   logError: vi.fn(),
+  logBusinessEvent: vi.fn(),
 }));
 
 vi.mock("@/lib/redis", () => ({
@@ -57,6 +58,7 @@ vi.mock("@/lib/redis", () => ({
 
 import { db } from "@/lib/db";
 import { streamText } from "ai";
+import { logError, logBusinessEvent } from "@/lib/logger";
 import { POST } from "@/app/api/ai/products/[id]/chat/route";
 
 const mockProduct = {
@@ -149,6 +151,39 @@ describe("POST /api/ai/products/[id]/chat", () => {
         messages: validBody.messages,
         maxOutputTokens: 512,
         abortSignal: expect.anything(),
+      }),
+    );
+    expect(logBusinessEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: "ai_chat_request",
+        success: true,
+        details: expect.objectContaining({ productId: "abc1234" }),
+      }),
+    );
+  });
+
+  it("logs error with product context on failure", async () => {
+    const testError = new Error("Gateway timeout");
+    vi.mocked(db.products.findById).mockRejectedValue(testError);
+
+    const request = new NextRequest(
+      "http://localhost/api/ai/products/abc1234/chat",
+      {
+        method: "POST",
+        body: JSON.stringify(validBody),
+      },
+    );
+
+    const response = await POST(request, {
+      params: Promise.resolve({ id: "abc1234" }),
+    });
+
+    expect(response.status).toBe(500);
+    expect(logError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        error: testError,
+        context: "ai_product_chat",
+        additionalInfo: expect.objectContaining({ productId: "abc1234" }),
       }),
     );
   });

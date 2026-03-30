@@ -5,6 +5,7 @@ import { getChatModel, getAiConfigCached } from "@/lib/ai/gateway";
 import { buildProductContext } from "@/lib/ai/product-rag";
 import { db } from "@/lib/db";
 import { apiError, handleApiError } from "@/lib/api-utils";
+import { logError, logBusinessEvent } from "@/lib/logger";
 
 const ChatRequestSchema = z.object({
   messages: z.array(
@@ -34,8 +35,12 @@ export const POST = async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) => {
+  let productId: string | undefined;
+  let chatModel: string | undefined;
+
   try {
     const { id } = await params;
+    productId = id;
     const product = await db.products.findById(id);
 
     if (!product) {
@@ -50,6 +55,7 @@ export const POST = async (
     }
 
     const aiConfig = await getAiConfigCached();
+    chatModel = aiConfig.chatModel;
     const model = getChatModel(aiConfig.chatModel);
     const systemPrompt = SYSTEM_PROMPT_PREFIX + buildProductContext(product);
 
@@ -57,6 +63,8 @@ export const POST = async (
       -aiConfig.maxHistoryMessages,
     ) as UIMessage[];
     const messages = convertToModelMessages(trimmed);
+
+    const messageCount = trimmed.length;
 
     const result = streamText({
       model,
@@ -66,8 +74,19 @@ export const POST = async (
       abortSignal: request.signal,
     });
 
+    logBusinessEvent({
+      event: "ai_chat_request",
+      details: { productId: id, chatModel: aiConfig.chatModel, messageCount },
+      success: true,
+    });
+
     return result.toUIMessageStreamResponse();
   } catch (error) {
+    logError({
+      error,
+      context: "ai_product_chat",
+      additionalInfo: { productId, chatModel },
+    });
     return handleApiError(error);
   }
 };
