@@ -164,9 +164,7 @@ describe("VariationList", () => {
       }),
     );
 
-    expect(
-      screen.getByLabelText("Price for Red - Large"),
-    ).toBeInTheDocument();
+    expect(screen.getByLabelText("Price for Red - Large")).toBeInTheDocument();
     expect(screen.getByLabelText("Stock for Red - Large")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Save" })).toBeInTheDocument();
   });

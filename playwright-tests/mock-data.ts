@@ -446,7 +446,7 @@ export const MOCK_CART_ITEM_1 = {
     productId: "prd0001",
     name: "Small (15 cm)",
     designName: "Rose Red",
-        variationType: "styling" as const,
+    variationType: "styling" as const,
     image:
       "https://images.unsplash.com/photo-1487530811015-780be3b5e83e?w=600&q=80",
     price: 100,

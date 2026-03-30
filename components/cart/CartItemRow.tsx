@@ -26,9 +26,7 @@ export function CartItemRow({
   onRemoveItem,
   onCustomizationChange,
 }: CartItemRowProps) {
-  const price = item.variation
-    ? item.variation.price
-    : item.product.price;
+  const price = item.variation ? item.variation.price : item.product.price;
   const image = item.variation?.image || item.product.image;
 
   return (

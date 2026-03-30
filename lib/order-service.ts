@@ -289,7 +289,9 @@ const buildOrderItemValues = (
       throw new Error(`Product with id ${item.productId} not found`);
     }
 
-    const variationPrice = product.variationPriceMap.get(item.variationId ?? "");
+    const variationPrice = product.variationPriceMap.get(
+      item.variationId ?? "",
+    );
     const price = variationPrice !== undefined ? variationPrice : product.price;
 
     return {

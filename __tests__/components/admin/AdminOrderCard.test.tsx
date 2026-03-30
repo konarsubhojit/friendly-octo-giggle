@@ -62,7 +62,9 @@ describe("AdminOrderCard", () => {
         "Expand to edit shipping, review the address, and inspect line items.",
       ),
     ).toBeInTheDocument();
-    expect(screen.queryByText("Pricing in order details")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Pricing in order details"),
+    ).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Tracking Number")).not.toBeInTheDocument();
     expect(screen.queryByText("$149.50")).not.toBeInTheDocument();
 

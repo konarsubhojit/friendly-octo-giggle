@@ -407,9 +407,7 @@ const ProductInfoCard = ({
         <span className="text-4xl font-bold text-warm-heading sm:text-5xl">
           {formatPrice(effectivePrice)}
         </span>
-        <PriceModifierDisplay
-          selectedVariation={selectedVariation}
-        />
+        <PriceModifierDisplay selectedVariation={selectedVariation} />
       </div>
 
       <div className="mb-6">

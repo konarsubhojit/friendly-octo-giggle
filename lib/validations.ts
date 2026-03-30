@@ -334,9 +334,7 @@ export const CreateVariationSchema = z.object({
     .string()
     .min(1, "Design name is required")
     .max(100, "Design name must be under 100 characters"),
-  variationType: z
-    .enum(["styling", "colour"])
-    .default("styling"),
+  variationType: z.enum(["styling", "colour"]).default("styling"),
   price: z
     .number({ message: "Price is required" })
     .positive("Price must be greater than zero"),

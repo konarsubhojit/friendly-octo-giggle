@@ -150,12 +150,7 @@ export default function VariationFormModal({
     designName: variation?.designName ?? "",
     variationType: variation?.variationType ?? "styling",
     price: variation
-      ? convertCurrency(
-          variation.price,
-          "INR",
-          currency,
-          rates,
-        ).toString()
+      ? convertCurrency(variation.price, "INR", currency, rates).toString()
       : "",
     stock: variation?.stock?.toString() ?? "",
   });
@@ -710,7 +705,7 @@ export default function VariationFormModal({
                   Pricing preview
                 </p>
                 <div className="mt-4 space-y-3 text-sm">
-                   <div className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3 dark:bg-slate-950/65">
+                  <div className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3 dark:bg-slate-950/65">
                     <span className="text-slate-500 dark:text-slate-400">
                       Variation type
                     </span>
