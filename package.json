@@ -102,6 +102,6 @@
     "typescript": "^5.9.3",
     "vite-tsconfig-paths": "^6.1.1",
     "vitest": "^4.1.1",
-    "ws": "^8.18.0"
+    "ws": "^8.20.0"
   }
 }
