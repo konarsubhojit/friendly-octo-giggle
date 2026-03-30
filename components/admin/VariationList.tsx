@@ -26,11 +26,11 @@ interface QuickEditDraft {
 
 interface QuickEditUiState {
   readonly hasDraftChanges: boolean;
-  readonly hasValidModifier: boolean;
+  readonly hasValidPrice: boolean;
   readonly isQuickSaveDisabled: boolean;
   readonly previewLabel: string;
   readonly quickEffectivePrice: number;
-  readonly showModifierError: boolean;
+  readonly showPriceError: boolean;
   readonly showStockError: boolean;
 }
 
@@ -85,7 +85,7 @@ function getQuickEditUiState({
 
   return {
     hasDraftChanges,
-    hasValidModifier: hasValidPrice,
+    hasValidPrice,
     isQuickSaveDisabled:
       !hasDraftChanges ||
       !hasValidStock ||
@@ -98,7 +98,7 @@ function getQuickEditUiState({
         ? formatPrice(priceInInr)
         : "Enter valid values",
     quickEffectivePrice: priceInInr,
-    showModifierError: hasValidPrice === false,
+    showPriceError: hasValidPrice === false,
     showStockError: hasValidStock === false,
   };
 }
@@ -177,7 +177,7 @@ function VariationQuickEditPanel({
         </div>
       </div>
 
-      {state.showModifierError ? (
+      {state.showPriceError ? (
         <p className="mt-3 text-xs font-medium text-rose-500 dark:text-rose-400">
           Enter a valid price greater than zero.
         </p>
@@ -187,7 +187,7 @@ function VariationQuickEditPanel({
           Stock must be a non-negative integer.
         </p>
       ) : null}
-      {state.hasValidModifier && state.quickEffectivePrice <= 0 ? (
+      {state.hasValidPrice && state.quickEffectivePrice <= 0 ? (
         <p className="mt-3 text-xs font-medium text-rose-500 dark:text-rose-400">
           Price must be greater than zero.
         </p>

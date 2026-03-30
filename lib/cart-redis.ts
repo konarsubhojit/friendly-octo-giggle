@@ -72,7 +72,12 @@ const fromHashFields = (hash: Record<string, string>): CartItemRedis | null => {
     productStock: Number(hash.productStock ?? 0),
     variationId: hash.variationId || null,
     variationName: hash.variationName || null,
-    variationPrice: hash.variationPrice ? Number(hash.variationPrice) : null,
+    variationPrice:
+      hash.variationPrice !== undefined
+        ? Number(hash.variationPrice)
+        : hash.variationPriceModifier
+          ? Number(hash.variationPriceModifier)
+          : null,
     variationStock: hash.variationStock ? Number(hash.variationStock) : null,
     quantity: Number(hash.quantity ?? 0),
     createdAt: hash.createdAt ?? "",
