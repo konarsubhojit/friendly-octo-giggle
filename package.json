@@ -48,7 +48,7 @@
     "@upstash/redis": "^1.37.0",
     "@upstash/search": "^0.1.7",
     "@upstash/search-ui": "^0.1.5",
-    "@vercel/analytics": "^1.6.1",
+    "@vercel/analytics": "^2.0.1",
     "@vercel/blob": "^2.2.0",
     "@vercel/edge-config": "^1.4.3",
     "@vercel/functions": "^3.4.3",
