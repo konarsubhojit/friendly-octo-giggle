@@ -16,9 +16,18 @@ export interface ShippingConfig {
   readonly estimatedDeliveryDays: number;
 }
 
+export interface AiConfig {
+  readonly chatModel: string;
+  readonly embeddingModel: string;
+  readonly maxResponseTokens: number;
+  readonly maxContextChunks: number;
+  readonly maxHistoryMessages: number;
+}
+
 export interface EdgeConfigData {
   readonly featureFlags: FeatureFlags;
   readonly shippingConfig: ShippingConfig;
+  readonly aiConfig: AiConfig;
 }
 
 const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
@@ -34,6 +43,14 @@ const DEFAULT_SHIPPING_CONFIG: ShippingConfig = {
   standardShippingRate: 49,
   expressShippingRate: 149,
   estimatedDeliveryDays: 5,
+};
+
+const DEFAULT_AI_CONFIG: AiConfig = {
+  chatModel: "openai/gpt-5-nano",
+  embeddingModel: "openai/text-embedding-3-small",
+  maxResponseTokens: 512,
+  maxContextChunks: 3,
+  maxHistoryMessages: 10,
 };
 
 const isEdgeConfigAvailable = (): boolean => !!process.env.EDGE_CONFIG;
@@ -62,11 +79,24 @@ export const getShippingConfig = async (): Promise<ShippingConfig> => {
   }
 };
 
+export const getAiConfig = async (): Promise<AiConfig> => {
+  if (!isEdgeConfigAvailable()) return DEFAULT_AI_CONFIG;
+
+  try {
+    const config = await get<AiConfig>("aiConfig");
+    return config ?? DEFAULT_AI_CONFIG;
+  } catch (error) {
+    logError({ error, context: "edge_config_ai" });
+    return DEFAULT_AI_CONFIG;
+  }
+};
+
 export const getAllEdgeConfig = async (): Promise<EdgeConfigData> => {
   if (!isEdgeConfigAvailable()) {
     return {
       featureFlags: DEFAULT_FEATURE_FLAGS,
       shippingConfig: DEFAULT_SHIPPING_CONFIG,
+      aiConfig: DEFAULT_AI_CONFIG,
     };
   }
 
@@ -74,7 +104,8 @@ export const getAllEdgeConfig = async (): Promise<EdgeConfigData> => {
     const data = await getAll<{
       featureFlags: FeatureFlags;
       shippingConfig: ShippingConfig;
-    }>(["featureFlags", "shippingConfig"]);
+      aiConfig: AiConfig;
+    }>(["featureFlags", "shippingConfig", "aiConfig"]);
 
     logBusinessEvent({
       event: "edge_config_read",
@@ -85,12 +116,14 @@ export const getAllEdgeConfig = async (): Promise<EdgeConfigData> => {
     return {
       featureFlags: data.featureFlags ?? DEFAULT_FEATURE_FLAGS,
       shippingConfig: data.shippingConfig ?? DEFAULT_SHIPPING_CONFIG,
+      aiConfig: data.aiConfig ?? DEFAULT_AI_CONFIG,
     };
   } catch (error) {
     logError({ error, context: "edge_config_get_all" });
     return {
       featureFlags: DEFAULT_FEATURE_FLAGS,
       shippingConfig: DEFAULT_SHIPPING_CONFIG,
+      aiConfig: DEFAULT_AI_CONFIG,
     };
   }
 };
@@ -105,4 +138,4 @@ export const isSaleActive = async (): Promise<boolean> => {
   return flags.saleMode;
 };
 
-export { DEFAULT_FEATURE_FLAGS, DEFAULT_SHIPPING_CONFIG };
+export { DEFAULT_FEATURE_FLAGS, DEFAULT_SHIPPING_CONFIG, DEFAULT_AI_CONFIG };

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { logApiRequest, generateRequestId, Timer } from "./logger";
 import { auth } from "./auth";
 
@@ -11,7 +11,7 @@ export interface ApiContext {
 export type ApiHandler = (
   request: NextRequest,
   context: ApiContext,
-) => Promise<NextResponse>;
+) => Promise<Response>;
 
 interface LoggingOptions {
   requireAuth?: boolean;
@@ -21,9 +21,9 @@ const createLoggingWrapper = (options: LoggingOptions = {}) => {
   const { requireAuth = false } = options;
 
   return (
-    handler: ApiHandler | ((request: NextRequest) => Promise<NextResponse>),
+    handler: ApiHandler | ((request: NextRequest) => Promise<Response>),
   ) => {
-    return async (request: NextRequest): Promise<NextResponse> => {
+    return async (request: NextRequest): Promise<Response> => {
       const requestId = generateRequestId();
       const timer = new Timer(
         `api.${request.method}.${request.nextUrl.pathname}`,
@@ -40,7 +40,7 @@ const createLoggingWrapper = (options: LoggingOptions = {}) => {
       try {
         const response = requireAuth
           ? await (handler as ApiHandler)(request, context)
-          : await (handler as (request: NextRequest) => Promise<NextResponse>)(
+          : await (handler as (request: NextRequest) => Promise<Response>)(
               request,
             );
 
@@ -79,12 +79,9 @@ export const withApiLogging = (handler: ApiHandler) =>
   createLoggingWrapper({ requireAuth: true })(handler);
 
 export const withLogging = <TArgs extends unknown[]>(
-  handler: (request: NextRequest, ...args: TArgs) => Promise<NextResponse>,
+  handler: (request: NextRequest, ...args: TArgs) => Promise<Response>,
 ) => {
-  return async (
-    request: NextRequest,
-    ...args: TArgs
-  ): Promise<NextResponse> => {
+  return async (request: NextRequest, ...args: TArgs): Promise<Response> => {
     const requestId = generateRequestId();
     const timer = new Timer(
       `api.${request.method}.${request.nextUrl.pathname}`,
