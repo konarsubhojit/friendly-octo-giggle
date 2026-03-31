@@ -14,7 +14,7 @@ interface CheckoutPriceItem {
   readonly variation?: {
     readonly name: string;
     readonly designName?: string | null;
-    readonly priceModifier: number;
+    readonly price: number;
   } | null;
   readonly customizationNote?: string | null;
 }
@@ -99,7 +99,7 @@ export function buildCheckoutSummaryLineItems(
   return items.map((item) => {
     const quantity = item.quantity ?? 0;
     const basePrice = item.product?.price ?? 0;
-    const unitPrice = basePrice + (item.variation?.priceModifier ?? 0);
+    const unitPrice = item.variation?.price ?? basePrice;
 
     return {
       name: item.product?.name ?? "Product unavailable",

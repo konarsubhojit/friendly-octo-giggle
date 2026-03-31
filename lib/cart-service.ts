@@ -22,7 +22,7 @@ interface ProductWithVariations {
 interface CartVariationRecord {
   id?: string;
   name?: string | null;
-  priceModifier?: number | null;
+  price?: number | null;
   stock?: number | null;
   createdAt: Date | string;
   updatedAt: Date | string;
@@ -360,7 +360,7 @@ function dbCartToRedisItems(
     productStock: Number(item.product.stock ?? 0),
     variationId: item.variation?.id ?? null,
     variationName: item.variation?.name ?? null,
-    variationPriceModifier: item.variation?.priceModifier ?? null,
+    variationPrice: item.variation?.price ?? null,
     variationStock: item.variation?.stock ?? null,
     quantity: item.quantity,
     createdAt: toISOString(item.createdAt),
@@ -399,7 +399,7 @@ function redisItemsToCartResponse(items: CartItemRedis[]) {
               {
                 id: item.variationId,
                 name: item.variationName,
-                priceModifier: item.variationPriceModifier,
+                price: item.variationPrice,
                 stock: item.variationStock,
                 createdAt: item.createdAt,
                 updatedAt: item.updatedAt,
@@ -411,7 +411,7 @@ function redisItemsToCartResponse(items: CartItemRedis[]) {
         ? {
             id: item.variationId,
             name: item.variationName,
-            priceModifier: item.variationPriceModifier,
+            price: item.variationPrice,
             stock: item.variationStock,
             createdAt: item.createdAt,
             updatedAt: item.updatedAt,

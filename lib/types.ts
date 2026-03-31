@@ -16,15 +16,18 @@ export interface Product {
 export interface ProductVariation {
   id: string;
   productId: string;
+  styleId: string | null;
   name: string;
   designName: string;
+  variationType: "styling" | "colour";
   image: string | null;
   images: string[];
-  priceModifier: number;
+  price: number;
   stock: number;
   deletedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  colours?: ProductVariation[];
 }
 
 export interface ProductInput {

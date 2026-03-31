@@ -108,6 +108,7 @@ describe("edge-config", () => {
       expect(mockGetAll).toHaveBeenCalledWith([
         "featureFlags",
         "shippingConfig",
+        "aiConfig",
       ]);
     });
 
