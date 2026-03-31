@@ -29,7 +29,9 @@ describe("SalesTrendChart", () => {
     expect(screen.getByText("Revenue")).toBeInTheDocument();
     expect(screen.getByText("Orders")).toBeInTheDocument();
     expect(
-      screen.getByText("Seven day sales trend showing revenue and order volume"),
+      screen.getByText(
+        "Seven day sales trend showing revenue and order volume",
+      ),
     ).toBeInTheDocument();
     expect(screen.getByText("Mon")).toBeInTheDocument();
     expect(screen.getByText("Sun")).toBeInTheDocument();

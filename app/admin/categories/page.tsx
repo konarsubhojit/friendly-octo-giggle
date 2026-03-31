@@ -38,10 +38,7 @@ export default async function AdminCategoriesPage() {
         },
       ]}
     >
-      <AdminPanel
-        title=""
-        description=""
-      >
+      <AdminPanel title="" description="">
         <CategoriesClient initialCategories={serialized} />
       </AdminPanel>
     </AdminPageShell>

@@ -143,10 +143,7 @@ export default function UsersManagement() {
         },
       ]}
     >
-      <AdminPanel
-        title="Search"
-        description="Filter by name or email."
-      >
+      <AdminPanel title="Search" description="Filter by name or email.">
         <AdminSearchForm
           searchInput={searchInput}
           setSearchInput={setSearchInput}
@@ -162,10 +159,7 @@ export default function UsersManagement() {
         <AlertBanner message={error} variant="error" className="mb-0" />
       ) : null}
 
-      <AdminPanel
-        title="Users"
-        description=""
-      >
+      <AdminPanel title="Users" description="">
         {loading ? (
           <div className="flex items-center justify-center py-16">
             <LoadingSpinner />

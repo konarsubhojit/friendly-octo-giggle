@@ -55,10 +55,7 @@ const EmailFailuresPage = async () => {
         },
       ]}
     >
-      <AdminPanel
-        title="Failed Emails"
-        description=""
-      >
+      <AdminPanel title="Failed Emails" description="">
         <EmailFailuresClient initialRecords={records} />
       </AdminPanel>
     </AdminPageShell>

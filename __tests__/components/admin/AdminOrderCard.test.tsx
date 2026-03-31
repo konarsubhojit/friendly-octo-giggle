@@ -57,11 +57,7 @@ describe("AdminOrderCard", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("Order #ORD1234")).toBeInTheDocument();
     expect(screen.getByText("Show details")).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        "Expand for details.",
-      ),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Expand for details.")).toBeInTheDocument();
     expect(
       screen.queryByText("Pricing in order details"),
     ).not.toBeInTheDocument();

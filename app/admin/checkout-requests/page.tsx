@@ -109,10 +109,7 @@ export default async function AdminCheckoutRequestsPage({
         },
       ]}
     >
-      <AdminPanel
-        title="Queue"
-        description=""
-      >
+      <AdminPanel title="Queue" description="">
         <form
           method="GET"
           className="mb-6 grid gap-3 lg:grid-cols-[minmax(0,1fr)_14rem_auto_auto]"

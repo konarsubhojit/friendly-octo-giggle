@@ -217,10 +217,7 @@ const AdminReviewsPage = () => {
         <AlertBanner message={error} variant="error" className="mb-0" />
       ) : null}
 
-      <AdminPanel
-        title="Filter"
-        description=""
-      >
+      <AdminPanel title="Filter" description="">
         <ReviewsFilters
           search={search}
           onSearchChange={setSearch}
@@ -229,10 +226,7 @@ const AdminReviewsPage = () => {
         />
       </AdminPanel>
 
-      <AdminPanel
-        title="Reviews"
-        description=""
-      >
+      <AdminPanel title="Reviews" description="">
         {loading ? (
           <div className="flex items-center justify-center py-16">
             <LoadingSpinner />

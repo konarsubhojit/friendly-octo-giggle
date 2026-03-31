@@ -36,8 +36,7 @@ const TARGET_OPTIONS: {
     label: "Orders",
     description: "Rebuild the orders search index from the database",
     configuredProp: "ordersConfigured",
-    confirmMessage:
-      "This will rebuild the orders search index. Continue?",
+    confirmMessage: "This will rebuild the orders search index. Continue?",
   },
 ];
 
@@ -74,7 +73,8 @@ export default function SearchReindexClient({
               Search Not Configured
             </h3>
             <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
-              Search is not configured. Contact your system administrator to enable search capabilities.
+              Search is not configured. Contact your system administrator to
+              enable search capabilities.
             </p>
           </div>
         </div>
@@ -193,10 +193,14 @@ export default function SearchReindexClient({
           Information
         </h3>
         <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1 list-disc list-inside">
-          <li>Product reindexing rebuilds search from current catalogue data.</li>
+          <li>
+            Product reindexing rebuilds search from current catalogue data.
+          </li>
           <li>Products are indexed automatically on create and update.</li>
           <li>Order reindexing rebuilds the search index from all orders.</li>
-          <li>Reindex after bulk imports or if search results appear incomplete.</li>
+          <li>
+            Reindex after bulk imports or if search results appear incomplete.
+          </li>
           <li>Reindexing may take time for large datasets.</li>
         </ul>
       </div>

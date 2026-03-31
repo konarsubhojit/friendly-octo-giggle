@@ -397,10 +397,7 @@ export default function OrdersManagement() {
         <AlertBanner message={error} variant="error" className="mb-0" />
       ) : null}
 
-      <AdminPanel
-        title="Orders"
-        description=""
-      >
+      <AdminPanel title="Orders" description="">
         {loading ? (
           <div className="flex items-center justify-center py-16">
             <LoadingSpinner />

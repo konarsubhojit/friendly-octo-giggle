@@ -368,10 +368,7 @@ export default function ProductsManagement() {
         },
       ]}
     >
-      <AdminPanel
-        title="Search"
-        description="Filter by product name."
-      >
+      <AdminPanel title="Search" description="Filter by product name.">
         <AdminSearchForm
           searchInput={searchInput}
           setSearchInput={setSearchInput}

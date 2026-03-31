@@ -663,7 +663,8 @@ export default function VariationFormModal({
                     Media
                   </h4>
                   <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                    Upload a primary image and optional gallery images for this variation.
+                    Upload a primary image and optional gallery images for this
+                    variation.
                   </p>
                 </div>
 
