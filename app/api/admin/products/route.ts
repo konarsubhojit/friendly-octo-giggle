@@ -140,6 +140,7 @@ export const GET = async (request: NextRequest) => {
         updatedAt: p.updatedAt.toISOString(),
         variations: p.variations.map((v) => ({
           ...v,
+          styleId: v.styleId ?? null,
           image: v.image ?? null,
           images: v.images ?? [],
           createdAt: v.createdAt.toISOString(),

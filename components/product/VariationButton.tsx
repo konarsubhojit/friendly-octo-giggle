@@ -33,12 +33,9 @@ export function VariationButton({
       <div className="text-xs text-[var(--text-secondary)] mt-1">
         {variation.name}
       </div>
-      {variation.priceModifier !== 0 && (
-        <div className="text-xs font-semibold text-[var(--accent-rose)] mt-1">
-          {variation.priceModifier > 0 ? "+" : "-"}
-          {formatPrice(Math.abs(variation.priceModifier))}
-        </div>
-      )}
+      <div className="text-xs font-semibold text-[var(--accent-warm)] mt-1">
+        {formatPrice(variation.price)}
+      </div>
       {variation.stock > 0 && variation.stock < 6 && (
         <div className="text-xs text-[var(--accent-rose)] font-medium mt-1">
           Only {variation.stock} left

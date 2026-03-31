@@ -572,7 +572,7 @@ describe("CreateVariationSchema", () => {
   const validVariation = {
     name: "Red - Large",
     designName: "Classic Logo",
-    priceModifier: 2.5,
+    price: 150.0,
     stock: 100,
   };
 
@@ -593,10 +593,10 @@ describe("CreateVariationSchema", () => {
     expect(result.success).toBe(true);
   });
 
-  it("accepts negative priceModifier", () => {
+  it("accepts price equal to base product price", () => {
     const result = CreateVariationSchema.safeParse({
       ...validVariation,
-      priceModifier: -5.0,
+      price: 100.0,
     });
     expect(result.success).toBe(true);
   });
@@ -659,8 +659,8 @@ describe("CreateVariationSchema", () => {
     expect(result.success).toBe(false);
   });
 
-  it("rejects missing priceModifier", () => {
-    const { priceModifier: _priceModifier, ...rest } = validVariation;
+  it("rejects missing price", () => {
+    const { price: _price, ...rest } = validVariation;
     const result = CreateVariationSchema.safeParse(rest);
     expect(result.success).toBe(false);
   });

@@ -19,7 +19,8 @@ const mockVariation = {
   designName: "Classic Logo",
   image: null,
   images: [],
-  priceModifier: 5,
+  price: 150,
+  variationType: "styling" as const,
   stock: 0,
   deletedAt: new Date("2025-06-01"),
   createdAt: new Date("2025-01-01"),
@@ -53,7 +54,7 @@ describe("FR-011: Order History Preservation after Soft-Delete", () => {
   it("soft-deleted variation retains all original fields", () => {
     expect(mockVariation.name).toBe("Red - Large");
     expect(mockVariation.designName).toBe("Classic Logo");
-    expect(mockVariation.priceModifier).toBe(5);
+    expect(mockVariation.price).toBe(150);
     expect(mockVariation.productId).toBe("abc1234");
   });
 
