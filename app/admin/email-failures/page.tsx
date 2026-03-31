@@ -32,32 +32,32 @@ const EmailFailuresPage = async () => {
         { label: "Email Failures" },
       ]}
       eyebrow="Messaging reliability"
-      title="Failed delivery triage without leaving the admin flow."
-      description="Track pending retries, inspect repeated failures, and retry stuck transactional emails from a focused queue."
+      title="Email Failures"
+      description="Monitor and retry failed email deliveries."
       metrics={[
         {
           label: "Retry queue",
           value: String(records.length),
-          hint: "Pending and failed deliveries still needing attention.",
+          hint: "Pending and failed deliveries.",
           tone: "rose",
         },
         {
           label: "Pending",
           value: String(pendingCount),
-          hint: "Queued for another delivery attempt.",
+          hint: "Scheduled for retry.",
           tone: "amber",
         },
         {
           label: "Failed",
           value: String(failedCount),
-          hint: "Requires closer review or manual retry.",
+          hint: "Requires manual review.",
           tone: "slate",
         },
       ]}
     >
       <AdminPanel
-        title="Email failure queue"
-        description="Inspect delivery errors, retry individual emails, and keep transactional communication healthy."
+        title="Failed Emails"
+        description=""
       >
         <EmailFailuresClient initialRecords={records} />
       </AdminPanel>

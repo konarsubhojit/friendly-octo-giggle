@@ -44,7 +44,7 @@ describe("AdminSearchPage", () => {
 
     expect(
       screen.getByRole("heading", {
-        name: "Search indexing with clearer operational guardrails.",
+        name: "Search Index Management",
       }),
     ).toBeInTheDocument();
     expect(screen.getByText("Products index")).toBeInTheDocument();

@@ -82,7 +82,7 @@ describe("AdminProductEditFormPage", () => {
 
     expect(
       screen.getByRole("heading", {
-        name: "Edit product details and variations",
+        name: "Edit Product",
       }),
     ).toBeInTheDocument();
     expect(screen.getByText("Product form: Rose Box")).toBeInTheDocument();

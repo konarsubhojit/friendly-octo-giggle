@@ -351,7 +351,7 @@ export function AdminOrderCard({
         </div>
       ) : (
         <p className="text-sm text-gray-500 dark:text-gray-400">
-          Expand to edit shipping, review the address, and inspect line items.
+          Expand for details.
         </p>
       )}
     </div>

@@ -79,39 +79,39 @@ export default async function AdminCheckoutRequestsPage({
         { label: "Admin", href: "/admin" },
         { label: "Checkout Queue" },
       ]}
-      eyebrow="Order orchestration"
-      title="Checkout queue visibility without touching the email pipeline."
-      description="Inspect queued, processing, failed, and completed checkout requests while keeping order creation on Vercel Queues and transactional email on the separate QStash worker path."
+      eyebrow="Order processing"
+      title="Checkout Requests"
+      description="Monitor queued, processing, failed, and completed checkout requests."
       metrics={[
         {
           label: "Queued",
           value: String(queuedCount),
-          hint: "Waiting to be claimed by the queue worker.",
+          hint: "Awaiting processing.",
           tone: "amber",
         },
         {
           label: "Processing",
           value: String(processingCount),
-          hint: "Currently being turned into persisted orders.",
+          hint: "Currently being processed.",
           tone: "sky",
         },
         {
           label: "Failed",
           value: String(failedCount),
-          hint: "Needs investigation before the customer retries.",
+          hint: "Requires investigation.",
           tone: "rose",
         },
         {
           label: "Completed",
           value: String(completedCount),
-          hint: "Order records successfully created.",
+          hint: "Orders successfully created.",
           tone: "emerald",
         },
       ]}
     >
       <AdminPanel
-        title="Recent checkout requests"
-        description="This queue view is for checkout orchestration only. Recovery for transient worker failures is automatic in the consumer, while email delivery remains decoupled and is monitored separately in the Email Failures section."
+        title="Queue"
+        description=""
       >
         <form
           method="GET"
@@ -119,7 +119,7 @@ export default async function AdminCheckoutRequestsPage({
         >
           <label className="block">
             <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-              Search queue
+              Search
             </span>
             <input
               type="search"

@@ -190,6 +190,7 @@ describe("POST /api/admin/products/[id]/variations", () => {
     designName: "Modern",
     price: 150.0,
     stock: 50,
+    variationType: "colour" as const,
   };
 
   it("returns 401 when unauthenticated", async () => {

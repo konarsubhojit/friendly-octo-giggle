@@ -11,7 +11,7 @@ export const buildProductContext = (product: Product): string => {
     `Category: ${product.category}`,
     `Description: ${truncate(product.description)}`,
     `Price: $${product.price.toFixed(2)}`,
-    `Stock: ${product.stock > 0 ? String(product.stock) + " units" : "Out of stock"}`,
+    `Stock: ${product.stock > 0 ? product.stock + " units" : "Out of stock"}`,
   ];
 
   if (product.variations?.length) {

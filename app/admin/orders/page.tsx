@@ -329,8 +329,8 @@ export default function OrdersManagement() {
     <AdminPageShell
       breadcrumbs={[{ label: "Admin", href: "/admin" }, { label: "Orders" }]}
       eyebrow="Fulfilment operations"
-      title="Orders workspace tuned for faster exception handling."
-      description="Search the order book, narrow by status, and move through fulfilment updates without hopping between views."
+      title="Order Management"
+      description="Search and manage orders, update fulfilment status, and track shipping."
       actions={
         <button
           onClick={handleRefresh}
@@ -344,26 +344,26 @@ export default function OrdersManagement() {
         {
           label: "Matching orders",
           value: String(totalCount),
-          hint: "Total orders under the current query and filter.",
+          hint: "Total orders matching current filters.",
           tone: "sky",
         },
         {
           label: "Visible revenue",
           value: formatPrice(visibleRevenue),
-          hint: "Revenue represented on the current page.",
+          hint: "Revenue on the current page.",
           tone: "emerald",
         },
         {
           label: "Tracking attached",
           value: String(trackedOrders),
-          hint: "Orders with tracking or provider details filled in.",
+          hint: "Orders with tracking details.",
           tone: "amber",
         },
       ]}
     >
       <AdminPanel
-        title="Search and filter"
-        description="Search by customer, email, or order ID, then narrow the queue by fulfilment status."
+        title="Search"
+        description="Filter by customer, email, or order ID."
       >
         <AdminSearchForm
           searchInput={searchInput}
@@ -398,8 +398,8 @@ export default function OrdersManagement() {
       ) : null}
 
       <AdminPanel
-        title="Order queue"
-        description="Review the current page of orders, update status, and save shipping data inline."
+        title="Orders"
+        description=""
       >
         {loading ? (
           <div className="flex items-center justify-center py-16">

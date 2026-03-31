@@ -82,7 +82,7 @@ export default function ProductAssistant({
               Ask about this product
             </span>
             <span className="text-sm text-[var(--text-secondary)]">
-              Get instant answers from our AI assistant
+              Product questions answered
             </span>
           </div>
         </div>
@@ -187,7 +187,7 @@ export default function ProductAssistant({
         {isStreaming && messages[messages.length - 1]?.role !== "assistant" && (
           <div className="flex justify-start">
             <div className="rounded-2xl bg-[var(--accent-cream)] border border-[var(--border-warm)] px-4 py-3 text-sm text-[var(--text-secondary)]">
-              Thinking...
+              Generating response...
             </div>
           </div>
         )}

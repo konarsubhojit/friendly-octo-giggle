@@ -122,7 +122,7 @@ function VariationQuickEditPanel({
             Quick edit
           </p>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Adjust price and stock for a faster row-level update.
+            Adjust price and stock.
           </p>
         </div>
         <p className="text-xs text-slate-500 dark:text-slate-400">

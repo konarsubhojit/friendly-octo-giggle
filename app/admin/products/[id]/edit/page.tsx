@@ -83,8 +83,8 @@ export default async function AdminProductEditFormPage({ params }: PageProps) {
         { label: "Edit Product" },
       ]}
       eyebrow="Catalog editing"
-      title="Edit product details and variations"
-      description="Update the base product information, then adjust variation pricing, stock, and imagery from the same workspace without bouncing between routes."
+      title="Edit Product"
+      description="Update product information, pricing, stock, and variations."
       actions={
         <Link
           href={`/admin/products/${serializedProduct.id}`}
@@ -97,19 +97,19 @@ export default async function AdminProductEditFormPage({ params }: PageProps) {
         {
           label: "Base stock",
           value: String(serializedProduct.stock),
-          hint: "Shared inventory before variation-level adjustments.",
+          hint: "Base stock level.",
           tone: serializedProduct.stock > 0 ? "sky" : "rose",
         },
         {
           label: "Variations",
           value: String(serializedVariations.length),
-          hint: "Active variation options tied to this product.",
+          hint: "Active product variations.",
           tone: "amber",
         },
         {
           label: "In stock",
           value: String(variationsInStock),
-          hint: "Variation entries currently sellable.",
+          hint: "Variations with available stock.",
           tone: variationsInStock > 0 ? "emerald" : "rose",
         },
       ]}

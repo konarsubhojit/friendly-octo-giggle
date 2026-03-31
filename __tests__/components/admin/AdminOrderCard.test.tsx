@@ -59,7 +59,7 @@ describe("AdminOrderCard", () => {
     expect(screen.getByText("Show details")).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Expand to edit shipping, review the address, and inspect line items.",
+        "Expand for details.",
       ),
     ).toBeInTheDocument();
     expect(

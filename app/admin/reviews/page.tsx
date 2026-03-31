@@ -181,8 +181,8 @@ const AdminReviewsPage = () => {
     <AdminPageShell
       breadcrumbs={[{ label: "Admin", href: "/admin" }, { label: "Reviews" }]}
       eyebrow="Customer feedback"
-      title="Reviews surfaced in a cleaner moderation flow."
-      description="Search feedback, narrow by rating, and spot sentiment changes without a noisy moderation screen."
+      title="Review Management"
+      description="View, search, and moderate customer product reviews."
       actions={
         <button
           onClick={fetchReviews}
@@ -196,19 +196,19 @@ const AdminReviewsPage = () => {
         {
           label: "Total reviews",
           value: String(total),
-          hint: "Records returned from the admin reviews feed.",
+          hint: "Total reviews submitted.",
           tone: "sky",
         },
         {
           label: "Average rating",
           value: avgRating > 0 ? `${avgRating.toFixed(1)} / 5` : "No data",
-          hint: "Calculated from the currently visible result set.",
+          hint: "Average across visible results.",
           tone: "amber",
         },
         {
           label: "Visible results",
           value: String(filtered.length),
-          hint: "Reviews matching the current search and rating filter.",
+          hint: "Matching current filters.",
           tone: "emerald",
         },
       ]}
@@ -218,8 +218,8 @@ const AdminReviewsPage = () => {
       ) : null}
 
       <AdminPanel
-        title="Filter feedback"
-        description="Search by product, customer, or comment text, then narrow the view by rating."
+        title="Filter"
+        description=""
       >
         <ReviewsFilters
           search={search}
@@ -230,8 +230,8 @@ const AdminReviewsPage = () => {
       </AdminPanel>
 
       <AdminPanel
-        title="Review feed"
-        description="Inspect recent comments, verify attribution, and scan sentiment without leaving the admin space."
+        title="Reviews"
+        description=""
       >
         {loading ? (
           <div className="flex items-center justify-center py-16">

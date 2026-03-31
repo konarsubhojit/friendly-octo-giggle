@@ -54,7 +54,7 @@ describe("EmailFailuresPage", () => {
 
     expect(
       screen.getByRole("heading", {
-        name: "Failed delivery triage without leaving the admin flow.",
+        name: "Email Failures",
       }),
     ).toBeInTheDocument();
     expect(screen.getByText("Retry queue")).toBeInTheDocument();

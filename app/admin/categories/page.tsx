@@ -27,20 +27,20 @@ export default async function AdminCategoriesPage() {
         { label: "Categories" },
       ]}
       eyebrow="Catalog structure"
-      title="Category controls with less friction."
-      description="Keep product classification tidy with a dedicated workspace for adding, sorting, and retiring categories."
+      title="Category Management"
+      description="Add, organise, and delete product categories."
       metrics={[
         {
           label: "Active categories",
           value: String(serialized.length),
-          hint: "Visible in admin and storefront filters.",
+          hint: "Active categories in the catalogue.",
           tone: "sky",
         },
       ]}
     >
       <AdminPanel
-        title="Manage category taxonomy"
-        description="Create new groups, adjust sort order, and clean up unused categories without leaving the admin workspace."
+        title=""
+        description=""
       >
         <CategoriesClient initialCategories={serialized} />
       </AdminPanel>

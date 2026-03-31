@@ -398,8 +398,7 @@ export default function VariationFormModal({
                 {isEditing ? "Edit Variation" : "Add Variation"}
               </h3>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300">
-                Update naming, pricing, stock, and media for this variation
-                without leaving the product editing workspace.
+                Update naming, pricing, stock, and media for this variation.
               </p>
             </div>
             <button
@@ -422,8 +421,7 @@ export default function VariationFormModal({
                     Core details
                   </h4>
                   <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                    Give each variation a customer-facing name and a clear
-                    internal design label.
+                    Enter a name and design label for this variation.
                   </p>
                 </div>
 
@@ -486,8 +484,8 @@ export default function VariationFormModal({
                   </h4>
                   <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                     {isStyle
-                      ? "Styles group colours together. They have no price or stock of their own."
-                      : "Colours are purchasable items. Set price, stock, and optionally assign to a style."}
+                      ? "Styles group colours. They have no price or stock of their own."
+                      : "Colours are purchasable options. Set price, stock, and optionally assign to a style."}
                   </p>
                 </div>
 
@@ -665,8 +663,7 @@ export default function VariationFormModal({
                     Media
                   </h4>
                   <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                    Use a strong lead image and optional gallery images so the
-                    variation is easy to identify in the storefront and admin.
+                    Upload a primary image and optional gallery images for this variation.
                   </p>
                 </div>
 
