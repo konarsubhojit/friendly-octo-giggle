@@ -20,24 +20,24 @@ interface VariationListProps {
 }
 
 interface QuickEditDraft {
-  priceModifier: string;
+  price: string;
   stock: string;
 }
 
 interface QuickEditUiState {
   readonly hasDraftChanges: boolean;
-  readonly hasValidModifier: boolean;
+  readonly hasValidPrice: boolean;
   readonly isQuickSaveDisabled: boolean;
   readonly previewLabel: string;
   readonly quickEffectivePrice: number;
-  readonly showModifierError: boolean;
+  readonly showPriceError: boolean;
   readonly showStockError: boolean;
 }
 
 interface VariationQuickEditPanelProps {
   readonly currency: string;
   readonly draft: QuickEditDraft;
-  readonly onModifierChange: (value: string) => void;
+  readonly onPriceChange: (value: string) => void;
   readonly onReset: () => void;
   readonly onSave: () => void;
   readonly onStockChange: (value: string) => void;
@@ -60,7 +60,6 @@ function getQuickEditUiState({
   draft,
   formatPrice,
   getDefaultDraft,
-  productPrice,
   rates,
   saving,
   variation,
@@ -69,42 +68,37 @@ function getQuickEditUiState({
   readonly draft: QuickEditDraft;
   readonly formatPrice: (amount: number) => string;
   readonly getDefaultDraft: (variation: ProductVariation) => QuickEditDraft;
-  readonly productPrice: number;
   readonly rates: Record<string, number>;
   readonly saving: boolean;
   readonly variation: ProductVariation;
 }): QuickEditUiState {
   const defaultDraft = getDefaultDraft(variation);
-  const modifierValue = Number.parseFloat(draft.priceModifier);
-  const modifierInInr = Number.isNaN(modifierValue)
+  const priceValue = Number.parseFloat(draft.price);
+  const priceInInr = Number.isNaN(priceValue)
     ? Number.NaN
-    : convertCurrency(modifierValue, rates[currency], rates.INR);
+    : convertCurrency(priceValue, rates[currency], rates.INR);
   const stockValue = Number.parseInt(draft.stock, 10);
-  const quickEffectivePrice = Number.isNaN(modifierInInr)
-    ? Number.NaN
-    : productPrice + modifierInInr;
   const hasDraftChanges =
-    draft.priceModifier !== defaultDraft.priceModifier ||
-    draft.stock !== defaultDraft.stock;
+    draft.price !== defaultDraft.price || draft.stock !== defaultDraft.stock;
   const hasValidStock = Number.isInteger(stockValue) && stockValue >= 0;
-  const hasValidModifier = !Number.isNaN(modifierValue);
+  const hasValidPrice = !Number.isNaN(priceValue) && priceValue > 0;
 
   return {
     hasDraftChanges,
-    hasValidModifier,
+    hasValidPrice,
     isQuickSaveDisabled:
       !hasDraftChanges ||
       !hasValidStock ||
-      !hasValidModifier ||
-      Number.isNaN(quickEffectivePrice) ||
-      quickEffectivePrice <= 0 ||
+      !hasValidPrice ||
+      Number.isNaN(priceInInr) ||
+      priceInInr <= 0 ||
       saving,
     previewLabel:
-      hasValidModifier && !Number.isNaN(quickEffectivePrice)
-        ? formatPrice(quickEffectivePrice)
+      hasValidPrice && !Number.isNaN(priceInInr)
+        ? formatPrice(priceInInr)
         : "Enter valid values",
-    quickEffectivePrice,
-    showModifierError: hasValidModifier === false,
+    quickEffectivePrice: priceInInr,
+    showPriceError: hasValidPrice === false,
     showStockError: hasValidStock === false,
   };
 }
@@ -112,7 +106,7 @@ function getQuickEditUiState({
 function VariationQuickEditPanel({
   currency,
   draft,
-  onModifierChange,
+  onPriceChange,
   onReset,
   onSave,
   onStockChange,
@@ -128,7 +122,7 @@ function VariationQuickEditPanel({
             Quick edit
           </p>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Adjust stock and modifier here for a faster row-level update.
+            Adjust price and stock for a faster row-level update.
           </p>
         </div>
         <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -138,13 +132,14 @@ function VariationQuickEditPanel({
 
       <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_10rem_auto]">
         <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-          <span>Modifier ({currency})</span>
+          <span>Price ({currency})</span>
           <input
             type="number"
             step="0.01"
-            value={draft.priceModifier}
-            onChange={(event) => onModifierChange(event.target.value)}
-            aria-label={`Modifier for ${variationName}`}
+            min="0.01"
+            value={draft.price}
+            onChange={(event) => onPriceChange(event.target.value)}
+            aria-label={`Price for ${variationName}`}
             className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-950 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100 dark:border-slate-700 dark:bg-slate-950/80 dark:text-slate-50 dark:focus:border-sky-500 dark:focus:ring-sky-500/20"
           />
         </label>
@@ -182,9 +177,9 @@ function VariationQuickEditPanel({
         </div>
       </div>
 
-      {state.showModifierError ? (
+      {state.showPriceError ? (
         <p className="mt-3 text-xs font-medium text-rose-500 dark:text-rose-400">
-          Enter a valid modifier amount.
+          Enter a valid price greater than zero.
         </p>
       ) : null}
       {state.showStockError ? (
@@ -192,9 +187,9 @@ function VariationQuickEditPanel({
           Stock must be a non-negative integer.
         </p>
       ) : null}
-      {state.hasValidModifier && state.quickEffectivePrice <= 0 ? (
+      {state.hasValidPrice && state.quickEffectivePrice <= 0 ? (
         <p className="mt-3 text-xs font-medium text-rose-500 dark:text-rose-400">
-          Effective price must stay above zero.
+          Price must be greater than zero.
         </p>
       ) : null}
     </div>
@@ -270,8 +265,8 @@ export default function VariationList({
   };
 
   const getDefaultDraft = (variation: ProductVariation): QuickEditDraft => ({
-    priceModifier: convertCurrency(
-      variation.priceModifier,
+    price: convertCurrency(
+      variation.price,
       rates.INR,
       rates[currency],
     ).toString(),
@@ -289,7 +284,7 @@ export default function VariationList({
     setQuickEdits((prev) => ({
       ...prev,
       [variationId]: {
-        ...(prev[variationId] ?? { priceModifier: "", stock: "" }),
+        ...(prev[variationId] ?? { price: "", stock: "" }),
         [field]: value,
       },
     }));
@@ -305,11 +300,11 @@ export default function VariationList({
 
   const handleQuickSave = async (variation: ProductVariation) => {
     const draft = getDraft(variation);
-    const modifierValue = Number.parseFloat(draft.priceModifier);
+    const priceValue = Number.parseFloat(draft.price);
     const stockValue = Number.parseInt(draft.stock, 10);
 
-    if (Number.isNaN(modifierValue)) {
-      toast.error("Price modifier must be a number");
+    if (Number.isNaN(priceValue) || priceValue <= 0) {
+      toast.error("Price must be a positive number");
       return;
     }
 
@@ -318,15 +313,10 @@ export default function VariationList({
       return;
     }
 
-    const modifierInInr = convertCurrency(
-      modifierValue,
-      rates[currency],
-      rates.INR,
-    );
-    const effectivePrice = productPrice + modifierInInr;
+    const priceInInr = convertCurrency(priceValue, rates[currency], rates.INR);
 
-    if (effectivePrice <= 0) {
-      toast.error("Effective price must be greater than zero");
+    if (priceInInr <= 0) {
+      toast.error("Price must be greater than zero");
       return;
     }
 
@@ -337,7 +327,7 @@ export default function VariationList({
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          priceModifier: modifierInInr,
+          price: priceInInr,
           stock: stockValue,
         }),
       });
@@ -496,13 +486,11 @@ export default function VariationList({
         {variations.map((variation) => {
           const draft = getDraft(variation);
           const isExpanded = expandedVariationId === variation.id;
-          const effectivePrice = productPrice + variation.priceModifier;
           const quickEditState = getQuickEditUiState({
             currency,
             draft,
             formatPrice,
             getDefaultDraft,
-            productPrice,
             rates,
             saving: savingVariationId === variation.id,
             variation,
@@ -569,19 +557,20 @@ export default function VariationList({
                     <div className="mt-4 grid gap-3 sm:grid-cols-3">
                       <div className="rounded-2xl bg-white px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] dark:bg-slate-950/70 dark:shadow-none">
                         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-                          Modifier
+                          Type
                         </p>
                         <p className="mt-2 text-base font-bold text-slate-950 dark:text-slate-50">
-                          {variation.priceModifier >= 0 ? "+" : ""}
-                          {formatPrice(variation.priceModifier)}
+                          {variation.variationType === "colour"
+                            ? "🌈 Colour"
+                            : "🎨 Styling"}
                         </p>
                       </div>
                       <div className="rounded-2xl bg-white px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] dark:bg-slate-950/70 dark:shadow-none">
                         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-                          Effective price
+                          Price
                         </p>
                         <p className="mt-2 text-base font-bold text-slate-950 dark:text-slate-50">
-                          {formatPrice(effectivePrice)}
+                          {formatPrice(variation.price)}
                         </p>
                       </div>
                       <div className="rounded-2xl bg-white px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] dark:bg-slate-950/70 dark:shadow-none">
@@ -602,8 +591,8 @@ export default function VariationList({
                       <VariationQuickEditPanel
                         currency={currency}
                         draft={draft}
-                        onModifierChange={(value) =>
-                          updateQuickDraft(variation.id, "priceModifier", value)
+                        onPriceChange={(value) =>
+                          updateQuickDraft(variation.id, "price", value)
                         }
                         onReset={() => resetQuickDraft(variation)}
                         onSave={() => handleQuickSave(variation)}

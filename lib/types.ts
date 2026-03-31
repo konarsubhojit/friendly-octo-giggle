@@ -18,9 +18,10 @@ export interface ProductVariation {
   productId: string;
   name: string;
   designName: string;
+  variationType: "styling" | "colour";
   image: string | null;
   images: string[];
-  priceModifier: number;
+  price: number;
   stock: number;
   deletedAt: string | null;
   createdAt: string;

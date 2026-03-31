@@ -17,12 +17,11 @@ export const buildProductContext = (product: Product): string => {
   if (product.variations?.length) {
     lines.push(`Variations (${product.variations.length}):`);
     for (const v of product.variations) {
-      const modifier =
-        v.priceModifier === 0
-          ? ""
-          : ` (${v.priceModifier > 0 ? "+" : ""}$${v.priceModifier.toFixed(2)})`;
       const stock = v.stock > 0 ? `${v.stock} in stock` : "out of stock";
-      lines.push(`- ${v.name} / ${v.designName}: ${stock}${modifier}`);
+      const type = v.variationType === "colour" ? "Colour" : "Styling";
+      lines.push(
+        `- [${type}] ${v.name} / ${v.designName}: $${v.price.toFixed(2)}, ${stock}`,
+      );
     }
   }
 

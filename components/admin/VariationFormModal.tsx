@@ -28,14 +28,16 @@ interface VariationFormModalProps {
 interface FormData {
   name: string;
   designName: string;
-  priceModifier: string;
+  variationType: "styling" | "colour";
+  price: string;
   stock: string;
 }
 
 interface VariationPayload {
   name: string;
   designName: string;
-  priceModifier: number;
+  variationType: "styling" | "colour";
+  price: number;
   stock: number;
   productId?: string;
   image?: string | null;
@@ -132,7 +134,6 @@ async function parseVariationMutationResponse(
 
 export default function VariationFormModal({
   productId,
-  productPrice,
   variation,
   onClose,
   onSuccess,
@@ -147,14 +148,10 @@ export default function VariationFormModal({
   const [formData, setFormData] = useState<FormData>({
     name: variation?.name ?? "",
     designName: variation?.designName ?? "",
-    priceModifier: variation
-      ? convertCurrency(
-          variation.priceModifier,
-          "INR",
-          currency,
-          rates,
-        ).toString()
-      : "0",
+    variationType: variation?.variationType ?? "styling",
+    price: variation
+      ? convertCurrency(variation.price, "INR", currency, rates).toString()
+      : "",
     stock: variation?.stock?.toString() ?? "",
   });
   const [submitting, setSubmitting] = useState(false);
@@ -170,21 +167,9 @@ export default function VariationFormModal({
     (File | null)[]
   >((variation?.images ?? []).map(() => null));
 
-  const priceModifierNum = Number.parseFloat(formData.priceModifier) || 0;
-  const priceModifierInInr = convertCurrency(
-    priceModifierNum,
-    priceCurrency,
-    "INR",
-    rates,
-  );
-  const effectivePriceInInr = productPrice + priceModifierInInr;
-  const effectivePriceDisplay = convertCurrency(
-    effectivePriceInInr,
-    "INR",
-    priceCurrency,
-    rates,
-  );
-  const effectivePriceWarning = effectivePriceInInr <= 0;
+  const priceNum = Number.parseFloat(formData.price) || 0;
+  const priceInInr = convertCurrency(priceNum, priceCurrency, "INR", rates);
+  const priceWarning = formData.price !== "" && priceInInr <= 0;
   const currentPrimaryImagePreview = primaryImageFile
     ? URL.createObjectURL(primaryImageFile)
     : primaryImageUrl;
@@ -208,10 +193,11 @@ export default function VariationFormModal({
       errs.designName = "Design name is required";
     else if (formData.designName.length > 100)
       errs.designName = "Design name must be under 100 characters";
-    if (formData.priceModifier === "")
-      errs.priceModifier = "Price modifier is required";
-    else if (Number.isNaN(Number.parseFloat(formData.priceModifier)))
-      errs.priceModifier = "Must be a number";
+    if (formData.price === "") errs.price = "Price is required";
+    else if (Number.isNaN(Number.parseFloat(formData.price)))
+      errs.price = "Must be a number";
+    else if (Number.parseFloat(formData.price) <= 0)
+      errs.price = "Price must be greater than zero";
     if (formData.stock === "") errs.stock = "Stock is required";
     else if (
       !Number.isInteger(Number(formData.stock)) ||
@@ -233,9 +219,9 @@ export default function VariationFormModal({
   };
 
   const handlePriceCurrencyChange = (newCurrency: CurrencyCode) => {
-    const currentModifier = Number.parseFloat(formData.priceModifier) || 0;
-    const convertedModifier = convertCurrency(
-      currentModifier,
+    const currentPrice = Number.parseFloat(formData.price) || 0;
+    const convertedPrice = convertCurrency(
+      currentPrice,
       priceCurrency,
       newCurrency,
       rates,
@@ -244,11 +230,11 @@ export default function VariationFormModal({
     setPriceCurrency(newCurrency);
     setFormData((prev) => ({
       ...prev,
-      priceModifier: convertedModifier.toString(),
+      price: convertedPrice.toString(),
     }));
     setErrors((prev) => {
       const next = { ...prev };
-      delete next.priceModifier;
+      delete next.price;
       return next;
     });
   };
@@ -303,7 +289,8 @@ export default function VariationFormModal({
     const payload: VariationPayload = {
       name: formData.name.trim(),
       designName: formData.designName.trim(),
-      priceModifier: priceModifierInInr,
+      variationType: formData.variationType,
+      price: priceInInr,
       stock: Number.parseInt(formData.stock, 10),
     };
 
@@ -475,25 +462,62 @@ export default function VariationFormModal({
                 </div>
               </section>
 
-              {/* Price Modifier */}
+              {/* Variation Type & Price */}
               <section className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-[0_18px_44px_-34px_rgba(15,23,42,0.28)] dark:border-slate-700 dark:bg-slate-900/88 dark:shadow-[0_18px_44px_-34px_rgba(2,6,23,0.92)]">
                 <div className="mb-4">
                   <h4 className="text-lg font-bold text-slate-950 dark:text-slate-50">
-                    Pricing and stock
+                    Variation Type &amp; Pricing
                   </h4>
                   <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                    Adjust the modifier relative to the product base price and
-                    keep stock aligned with what is actually sellable.
+                    Choose whether this is a styling or colour option, then set
+                    its independent price.
                   </p>
                 </div>
 
                 <div className="space-y-4">
+                  {/* Variation Type */}
+                  <div>
+                    <p className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                      Variation Type <span className="text-red-500">*</span>
+                    </p>
+                    <div className="flex gap-3">
+                      {(["styling", "colour"] as const).map((type) => (
+                        <label
+                          key={type}
+                          className={`flex flex-1 cursor-pointer items-center gap-3 rounded-2xl border px-4 py-3 transition ${
+                            formData.variationType === type
+                              ? "border-sky-500 bg-sky-50 dark:bg-sky-500/10"
+                              : "border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-950/80"
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            name="variationType"
+                            value={type}
+                            checked={formData.variationType === type}
+                            onChange={() =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                variationType: type,
+                              }))
+                            }
+                            className="h-4 w-4 accent-sky-500"
+                          />
+                          <span className="text-sm font-medium capitalize text-slate-950 dark:text-slate-50">
+                            {type === "styling" ? "🎨 Styling" : "🌈 Colour"}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Price */}
                   <div>
                     <label
-                      htmlFor="var-priceModifier"
+                      htmlFor="var-price"
                       className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300"
                     >
-                      Price Modifier <span className="text-red-500">*</span>
+                      Price <span className="text-red-500">*</span>
                     </label>
                     <div className="flex gap-2">
                       <select
@@ -504,7 +528,7 @@ export default function VariationFormModal({
                             e.target.value as CurrencyCode,
                           )
                         }
-                        aria-label="Price modifier currency"
+                        aria-label="Price currency"
                         className="rounded-2xl border border-slate-300 bg-white px-3 py-3 text-slate-950 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100 dark:border-slate-700 dark:bg-slate-950/80 dark:text-slate-50 dark:focus:border-sky-500 dark:focus:ring-sky-500/20"
                       >
                         {availableCurrencies.map((code) => (
@@ -514,27 +538,28 @@ export default function VariationFormModal({
                         ))}
                       </select>
                       <input
-                        id="var-priceModifier"
+                        id="var-price"
                         type="number"
-                        name="priceModifier"
-                        value={formData.priceModifier}
+                        name="price"
+                        value={formData.price}
                         onChange={handleChange}
                         step="0.01"
+                        min="0.01"
                         className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-950 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100 dark:border-slate-700 dark:bg-slate-950/80 dark:text-slate-50 dark:focus:border-sky-500 dark:focus:ring-sky-500/20"
+                        placeholder="e.g. 150.00"
                       />
                     </div>
-                    {errors.priceModifier && (
+                    {errors.price && (
                       <p className="text-sm text-red-500 mt-1">
-                        {errors.priceModifier}
+                        {errors.price}
                       </p>
                     )}
                     <p
-                      className={`mt-2 text-sm ${effectivePriceWarning ? "font-medium text-red-500 dark:text-red-400" : "text-slate-500 dark:text-slate-400"}`}
+                      className={`mt-2 text-sm ${priceWarning ? "font-medium text-red-500 dark:text-red-400" : "text-slate-500 dark:text-slate-400"}`}
                     >
-                      Effective price: {effectivePriceDisplay.toFixed(2)}{" "}
-                      {priceCurrency}
-                      {effectivePriceWarning &&
-                        ` — must be greater than 0.00 ${priceCurrency}`}
+                      {priceWarning
+                        ? `Price must be greater than 0.00 ${priceCurrency}`
+                        : `This price is set independently from the base product price.`}
                     </p>
                   </div>
 
@@ -682,33 +707,20 @@ export default function VariationFormModal({
                 <div className="mt-4 space-y-3 text-sm">
                   <div className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3 dark:bg-slate-950/65">
                     <span className="text-slate-500 dark:text-slate-400">
-                      Base price
+                      Variation type
                     </span>
-                    <strong className="text-slate-950 dark:text-slate-50">
-                      {convertCurrency(
-                        productPrice,
-                        "INR",
-                        priceCurrency,
-                        rates,
-                      ).toFixed(2)}{" "}
-                      {priceCurrency}
-                    </strong>
-                  </div>
-                  <div className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3 dark:bg-slate-950/65">
-                    <span className="text-slate-500 dark:text-slate-400">
-                      Modifier
-                    </span>
-                    <strong className="text-slate-950 dark:text-slate-50">
-                      {priceModifierNum >= 0 ? "+" : ""}
-                      {priceModifierNum.toFixed(2)} {priceCurrency}
+                    <strong className="capitalize text-slate-950 dark:text-slate-50">
+                      {formData.variationType === "styling"
+                        ? "🎨 Styling"
+                        : "🌈 Colour"}
                     </strong>
                   </div>
                   <div className="rounded-2xl bg-emerald-50 px-4 py-4 dark:bg-emerald-950/45">
                     <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">
-                      Effective price
+                      Variation price
                     </p>
                     <p className="mt-2 text-2xl font-black tracking-tight text-slate-950 dark:text-slate-50">
-                      {effectivePriceDisplay.toFixed(2)} {priceCurrency}
+                      {priceNum > 0 ? priceNum.toFixed(2) : "—"} {priceCurrency}
                     </p>
                   </div>
                 </div>
@@ -749,7 +761,7 @@ export default function VariationFormModal({
               </button>
               <button
                 type="submit"
-                disabled={submitting || effectivePriceWarning}
+                disabled={submitting || priceWarning}
                 className="inline-flex items-center justify-center gap-2 rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400 dark:bg-sky-500 dark:text-slate-950 dark:hover:bg-sky-400 dark:disabled:bg-slate-700 dark:disabled:text-slate-400"
               >
                 {submitting ? (

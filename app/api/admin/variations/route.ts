@@ -46,12 +46,8 @@ export async function POST(request: NextRequest) {
       return apiError("Product not found", 404);
     }
 
-    const effectivePrice = product.price + validated.priceModifier;
-    if (effectivePrice <= 0) {
-      return apiError(
-        "Effective price (base + modifier) must be greater than zero",
-        400,
-      );
+    if (validated.price <= 0) {
+      return apiError("Variation price must be greater than zero", 400);
     }
 
     const activeCount = await drizzleDb.query.productVariations.findMany({
@@ -90,7 +86,8 @@ export async function POST(request: NextRequest) {
         productId,
         name: validated.name,
         designName: validated.designName,
-        priceModifier: validated.priceModifier,
+        variationType: validated.variationType,
+        price: validated.price,
         stock: validated.stock,
         image: validated.image ?? null,
         images: validated.images ?? [],
