@@ -29,6 +29,7 @@ export const serializeVariation = <T extends DbProductVariation>(
   variation: T,
 ) => ({
   ...variation,
+  styleId: variation.styleId ?? null,
   image: variation.image ?? null,
   images: variation.images ?? [],
   createdAt: toISOString(variation.createdAt),

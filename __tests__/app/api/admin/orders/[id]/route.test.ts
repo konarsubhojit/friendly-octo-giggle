@@ -52,7 +52,6 @@ vi.mock("@/lib/qstash", () => ({
 
 import { PATCH, GET } from "@/app/api/admin/orders/[id]/route";
 import { auth } from "@/lib/auth";
-import { primaryDrizzleDb } from "@/lib/db";
 import { cacheAdminOrderById, invalidateAdminOrderCaches } from "@/lib/cache";
 
 const mockAuth = vi.mocked(auth);

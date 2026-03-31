@@ -18,7 +18,7 @@ interface OrderItem {
   variation?: {
     id: string;
     name: string;
-    priceModifier: number;
+    price: number;
   } | null;
 }
 

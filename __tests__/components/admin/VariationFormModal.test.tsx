@@ -41,7 +41,8 @@ const mockVariation: ProductVariation = {
   designName: "Classic Logo",
   image: null,
   images: [],
-  priceModifier: 5,
+  price: 150,
+  variationType: "styling" as const,
   stock: 25,
   deletedAt: null,
   createdAt: "2025-01-01T00:00:00.000Z",
@@ -88,22 +89,22 @@ describe("VariationFormModal", () => {
     });
   });
 
-  it("shows effective price warning when price <= 0", () => {
+  it("shows price warning when price <= 0", () => {
     render(<VariationFormModal {...defaultProps} />);
-    const priceInput = screen.getByLabelText(/Price Modifier/);
+    const priceInput = screen.getByRole("spinbutton", { name: /price/i });
     fireEvent.change(priceInput, {
-      target: { name: "priceModifier", value: "-50" },
+      target: { name: "price", value: "-50" },
     });
     expect(
       screen.getByText(/must be greater than 0.00 INR/),
     ).toBeInTheDocument();
   });
 
-  it("disables submit when effective price is invalid", () => {
+  it("disables submit when price is invalid", () => {
     render(<VariationFormModal {...defaultProps} />);
-    const priceInput = screen.getByLabelText(/Price Modifier/);
+    const priceInput = screen.getByRole("spinbutton", { name: /price/i });
     fireEvent.change(priceInput, {
-      target: { name: "priceModifier", value: "-100" },
+      target: { name: "price", value: "-100" },
     });
     expect(screen.getByText("Create")).toBeDisabled();
   });
@@ -131,8 +132,8 @@ describe("VariationFormModal", () => {
     fireEvent.change(screen.getByLabelText(/Design Name/), {
       target: { name: "designName", value: "Modern" },
     });
-    fireEvent.change(screen.getByLabelText(/Price Modifier/), {
-      target: { name: "priceModifier", value: "2" },
+    fireEvent.change(screen.getByRole("spinbutton", { name: /price/i }), {
+      target: { name: "price", value: "150" },
     });
     fireEvent.change(screen.getByLabelText(/Stock/), {
       target: { name: "stock", value: "10" },
@@ -148,7 +149,8 @@ describe("VariationFormModal", () => {
           body: JSON.stringify({
             name: "Blue",
             designName: "Modern",
-            priceModifier: 2,
+            variationType: "styling",
+            price: 150,
             stock: 10,
             productId: "abc1234",
             image: null,

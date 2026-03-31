@@ -129,8 +129,9 @@ describe("schema", () => {
     expect(cols).toContain("productId");
     expect(cols).toContain("name");
     expect(cols).toContain("designName");
+    expect(cols).toContain("variationType");
     expect(cols).toContain("image");
-    expect(cols).toContain("priceModifier");
+    expect(cols).toContain("price");
     expect(cols).toContain("stock");
   });
 
