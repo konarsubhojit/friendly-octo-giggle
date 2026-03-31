@@ -27,6 +27,16 @@ const findProduct = (productId: string) =>
     where: and(eq(products.id, productId), isNull(products.deletedAt)),
   });
 
+const findStyleById = (styleId: string, productId: string) =>
+  drizzleDb.query.productVariations.findFirst({
+    where: and(
+      eq(productVariations.id, styleId),
+      eq(productVariations.productId, productId),
+      eq(productVariations.variationType, "styling"),
+      isNull(productVariations.deletedAt),
+    ),
+  });
+
 export async function POST(request: NextRequest) {
   const authCheck = await checkAdminAuth();
   if (!authCheck.authorized) {
@@ -46,8 +56,20 @@ export async function POST(request: NextRequest) {
       return apiError("Product not found", 404);
     }
 
-    if (validated.price <= 0) {
-      return apiError("Variation price must be greater than zero", 400);
+    // Validate style reference for colours
+    if (validated.variationType === "colour" && validated.styleId) {
+      const parentStyle = await findStyleById(validated.styleId, productId);
+      if (!parentStyle) {
+        return apiError(
+          "Parent style not found or does not belong to this product",
+          404,
+        );
+      }
+    }
+
+    // Colour price validation
+    if (validated.variationType === "colour" && validated.price <= 0) {
+      return apiError("Colour price must be greater than zero", 400);
     }
 
     const activeCount = await drizzleDb.query.productVariations.findMany({
@@ -84,6 +106,7 @@ export async function POST(request: NextRequest) {
       .insert(productVariations)
       .values({
         productId,
+        styleId: validated.styleId ?? null,
         name: validated.name,
         designName: validated.designName,
         variationType: validated.variationType,
@@ -101,6 +124,7 @@ export async function POST(request: NextRequest) {
       {
         variation: {
           ...variation,
+          styleId: variation.styleId ?? null,
           image: variation.image ?? null,
           images: variation.images ?? [],
           deletedAt: null,

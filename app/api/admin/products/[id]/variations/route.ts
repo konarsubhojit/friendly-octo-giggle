@@ -51,6 +51,7 @@ export async function GET(
 
     const serialized = variations.map((v) => ({
       ...v,
+      styleId: v.styleId ?? null,
       image: v.image ?? null,
       images: v.images ?? [],
       deletedAt: null,
@@ -91,8 +92,26 @@ export async function POST(
     }
     const validated = parseResult.data;
 
-    if (validated.price <= 0) {
-      return apiError("Variation price must be greater than zero", 400);
+    if (validated.variationType === "colour" && validated.price <= 0) {
+      return apiError("Colour price must be greater than zero", 400);
+    }
+
+    // Validate style reference for colours
+    if (validated.variationType === "colour" && validated.styleId) {
+      const parentStyle = await drizzleDb.query.productVariations.findFirst({
+        where: and(
+          eq(productVariations.id, validated.styleId),
+          eq(productVariations.productId, id),
+          eq(productVariations.variationType, "styling"),
+          isNull(productVariations.deletedAt),
+        ),
+      });
+      if (!parentStyle) {
+        return apiError(
+          "Parent style not found or does not belong to this product",
+          404,
+        );
+      }
     }
 
     const activeCount = await drizzleDb.query.productVariations.findMany({
@@ -129,6 +148,7 @@ export async function POST(
       .insert(productVariations)
       .values({
         productId: id,
+        styleId: validated.styleId ?? null,
         name: validated.name,
         designName: validated.designName,
         variationType: validated.variationType,
@@ -146,6 +166,7 @@ export async function POST(
       {
         variation: {
           ...variation,
+          styleId: variation.styleId ?? null,
           image: variation.image ?? null,
           images: variation.images ?? [],
           deletedAt: null,

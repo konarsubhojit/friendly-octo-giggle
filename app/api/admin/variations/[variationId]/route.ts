@@ -28,6 +28,16 @@ const findProduct = (productId: string) =>
     where: and(eq(products.id, productId), isNull(products.deletedAt)),
   });
 
+const findStyleById = (styleId: string, productId: string) =>
+  drizzleDb.query.productVariations.findFirst({
+    where: and(
+      eq(productVariations.id, styleId),
+      eq(productVariations.productId, productId),
+      eq(productVariations.variationType, "styling"),
+      isNull(productVariations.deletedAt),
+    ),
+  });
+
 const checkVariationNameUniqueness = async (
   productId: string,
   name: string,
@@ -64,6 +74,18 @@ const checkVariationNameUniqueness = async (
   };
 };
 
+function serializeVariation(v: typeof productVariations.$inferSelect) {
+  return {
+    ...v,
+    styleId: v.styleId ?? null,
+    image: v.image ?? null,
+    images: v.images ?? [],
+    deletedAt: v.deletedAt?.toISOString() ?? null,
+    createdAt: v.createdAt.toISOString(),
+    updatedAt: v.updatedAt.toISOString(),
+  };
+}
+
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ variationId: string }> },
@@ -97,7 +119,25 @@ export async function PUT(
     }
 
     if (validated.price !== undefined && validated.price <= 0) {
-      return apiError("Variation price must be greater than zero", 400);
+      // Only colours need positive price; styles must be 0
+      const effectiveType = validated.variationType ?? existing.variationType;
+      if (effectiveType === "colour" && validated.price <= 0) {
+        return apiError("Colour price must be greater than zero", 400);
+      }
+    }
+
+    // Validate styleId reference if being set
+    if (validated.styleId !== undefined && validated.styleId !== null) {
+      const parentStyle = await findStyleById(
+        validated.styleId,
+        existing.productId,
+      );
+      if (!parentStyle) {
+        return apiError(
+          "Parent style not found or does not belong to this product",
+          404,
+        );
+      }
     }
 
     if (validated.name !== undefined) {
@@ -125,14 +165,7 @@ export async function PUT(
     await invalidateProductCaches(existing.productId);
 
     return apiSuccess({
-      variation: {
-        ...updated,
-        image: updated.image ?? null,
-        images: updated.images ?? [],
-        deletedAt: null,
-        createdAt: updated.createdAt.toISOString(),
-        updatedAt: updated.updatedAt.toISOString(),
-      },
+      variation: serializeVariation(updated),
     });
   } catch (error) {
     return handleApiError(error);

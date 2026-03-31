@@ -196,6 +196,193 @@ function VariationQuickEditPanel({
   );
 }
 
+interface ColourCardProps {
+  readonly variation: ProductVariation;
+  readonly currency: string;
+  readonly draft: QuickEditDraft;
+  readonly expandedVariationId: string | null;
+  readonly formatPrice: (amount: number) => string;
+  readonly getDefaultDraft: (variation: ProductVariation) => QuickEditDraft;
+  readonly handleDeleteClick: (variation: ProductVariation) => void;
+  readonly handleQuickEditToggle: (variationId: string) => void;
+  readonly handleQuickSave: (variation: ProductVariation) => void;
+  readonly rates: Record<string, number>;
+  readonly resetQuickDraft: (variation: ProductVariation) => void;
+  readonly savingVariationId: string | null;
+  readonly updateQuickDraft: (
+    variationId: string,
+    field: keyof QuickEditDraft,
+    value: string,
+  ) => void;
+}
+
+function ColourCard({
+  variation,
+  currency,
+  draft,
+  expandedVariationId,
+  formatPrice,
+  getDefaultDraft,
+  handleDeleteClick,
+  handleQuickEditToggle,
+  handleQuickSave,
+  rates,
+  resetQuickDraft,
+  savingVariationId,
+  updateQuickDraft,
+}: ColourCardProps) {
+  const isExpanded = expandedVariationId === variation.id;
+  const quickEditState = getQuickEditUiState({
+    currency,
+    draft,
+    formatPrice,
+    getDefaultDraft,
+    rates,
+    saving: savingVariationId === variation.id,
+    variation,
+  });
+
+  return (
+    <div className="rounded-[1.5rem] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-4 shadow-[0_18px_44px_-34px_rgba(15,23,42,0.38)] transition hover:border-slate-300 hover:shadow-[0_24px_54px_-34px_rgba(15,23,42,0.42)] sm:p-5 dark:border-slate-700 dark:bg-[linear-gradient(180deg,rgba(15,23,42,0.98)_0%,rgba(15,23,42,0.88)_100%)] dark:hover:border-slate-600 dark:hover:shadow-[0_24px_54px_-34px_rgba(2,6,23,0.92)]">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
+        <div className="flex min-w-0 flex-1 gap-4">
+          <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-[1.25rem] bg-slate-100 dark:bg-slate-800">
+            {variation.image ? (
+              <Image
+                src={variation.image}
+                alt={variation.name}
+                fill
+                className="object-cover"
+                sizes="96px"
+              />
+            ) : (
+              <div className="flex h-full items-center justify-center text-slate-400 dark:text-slate-500">
+                <svg
+                  className="h-8 w-8"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                  />
+                </svg>
+              </div>
+            )}
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0">
+                <h3 className="truncate text-lg font-semibold text-slate-950 dark:text-slate-50">
+                  {variation.name}
+                </h3>
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                  {variation.designName}
+                </p>
+              </div>
+              <span className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                Updated{" "}
+                {new Date(variation.updatedAt).toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                })}
+              </span>
+            </div>
+
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <div className="rounded-2xl bg-white px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] dark:bg-slate-950/70 dark:shadow-none">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+                  Price
+                </p>
+                <p className="mt-2 text-base font-bold text-slate-950 dark:text-slate-50">
+                  {formatPrice(variation.price)}
+                </p>
+              </div>
+              <div className="rounded-2xl bg-white px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] dark:bg-slate-950/70 dark:shadow-none">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+                  Stock
+                </p>
+                <p className="mt-2 text-base font-bold text-slate-950 dark:text-slate-50">
+                  {variation.stock}
+                </p>
+              </div>
+            </div>
+
+            {isExpanded ? (
+              <VariationQuickEditPanel
+                currency={currency}
+                draft={draft}
+                onPriceChange={(value) =>
+                  updateQuickDraft(variation.id, "price", value)
+                }
+                onReset={() => resetQuickDraft(variation)}
+                onSave={() => handleQuickSave(variation)}
+                onStockChange={(value) =>
+                  updateQuickDraft(variation.id, "stock", value)
+                }
+                saving={savingVariationId === variation.id}
+                state={quickEditState}
+                variationName={variation.name}
+              />
+            ) : null}
+          </div>
+        </div>
+
+        <div className="flex gap-3 lg:w-auto lg:flex-col lg:items-end">
+          <button
+            type="button"
+            onClick={() => handleQuickEditToggle(variation.id)}
+            aria-label={`${isExpanded ? "Close quick edit for" : "Open quick edit for"} ${variation.name}`}
+            aria-expanded={isExpanded}
+            className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-slate-950 text-white transition hover:bg-slate-800"
+          >
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={1.8}
+                d="M16.862 4.487a2.1 2.1 0 113.03 2.902L9.91 17.37 6 18l.63-3.91 10.232-9.603z"
+              />
+            </svg>
+          </button>
+          <button
+            type="button"
+            onClick={() => handleDeleteClick(variation)}
+            aria-label={`Delete ${variation.name}`}
+            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-rose-200 bg-rose-50 text-rose-700 transition hover:border-rose-300 hover:bg-rose-100"
+          >
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={1.8}
+                d="M6 7h12m-9 0V5.5A1.5 1.5 0 0110.5 4h3A1.5 1.5 0 0115 5.5V7m-7.5 0l.75 11.25A1.5 1.5 0 009.75 19.5h4.5a1.5 1.5 0 001.5-1.25L16.5 7m-6 3v5m3-5v5"
+              />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function VariationList({
   productId,
   productPrice,
@@ -222,11 +409,29 @@ export default function VariationList({
     null,
   );
 
-  const totalVariationStock = variations.reduce(
+  // Separate styles and colours
+  const styleVariations = variations.filter(
+    (v) => v.variationType === "styling",
+  );
+  const colourVariations = variations.filter(
+    (v) => v.variationType === "colour",
+  );
+  const baseProductColours = colourVariations.filter((c) => !c.styleId);
+  const coloursByStyleId = new Map<string, ProductVariation[]>();
+  for (const colour of colourVariations) {
+    if (colour.styleId) {
+      const existing = coloursByStyleId.get(colour.styleId) ?? [];
+      existing.push(colour);
+      coloursByStyleId.set(colour.styleId, existing);
+    }
+  }
+
+  // Only count colours for stock stats (styles are groupings)
+  const totalVariationStock = colourVariations.reduce(
     (sum, variation) => sum + variation.stock,
     0,
   );
-  const stockedVariations = variations.filter(
+  const stockedVariations = colourVariations.filter(
     (variation) => variation.stock > 0,
   ).length;
 
@@ -436,6 +641,7 @@ export default function VariationList({
               productId={productId}
               productPrice={productPrice}
               variation={editingVariation}
+              styles={styleVariations}
               onClose={handleFormClose}
               onSuccess={handleFormSuccess}
             />
@@ -482,141 +688,77 @@ export default function VariationList({
         </div>
       </div>
 
-      <div className="space-y-4">
-        {variations.map((variation) => {
-          const draft = getDraft(variation);
-          const isExpanded = expandedVariationId === variation.id;
-          const quickEditState = getQuickEditUiState({
-            currency,
-            draft,
-            formatPrice,
-            getDefaultDraft,
-            rates,
-            saving: savingVariationId === variation.id,
-            variation,
-          });
+      <div className="space-y-6">
+        {/* Base product colours (colours without a parent style) */}
+        {baseProductColours.length > 0 && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-3 border-b border-slate-200 pb-3 dark:border-slate-700">
+              <span className="text-lg">🏠</span>
+              <h3 className="text-lg font-bold text-slate-950 dark:text-slate-50">
+                Base Product Colours
+              </h3>
+              <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                {baseProductColours.length}
+              </span>
+            </div>
+            <div className="space-y-3 pl-4">
+              {baseProductColours.map((colour) => (
+                <ColourCard
+                  key={colour.id}
+                  variation={colour}
+                  currency={currency}
+                  draft={getDraft(colour)}
+                  expandedVariationId={expandedVariationId}
+                  formatPrice={formatPrice}
+                  getDefaultDraft={getDefaultDraft}
+                  handleDeleteClick={handleDeleteClick}
+                  handleQuickEditToggle={handleQuickEditToggle}
+                  handleQuickSave={handleQuickSave}
+                  rates={rates}
+                  resetQuickDraft={resetQuickDraft}
+                  savingVariationId={savingVariationId}
+                  updateQuickDraft={updateQuickDraft}
+                />
+              ))}
+            </div>
+          </div>
+        )}
 
+        {/* Named styles with their colours */}
+        {styleVariations.map((style) => {
+          const styleColours = coloursByStyleId.get(style.id) ?? [];
           return (
-            <div
-              key={variation.id}
-              className="rounded-[1.5rem] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-4 shadow-[0_18px_44px_-34px_rgba(15,23,42,0.38)] transition hover:border-slate-300 hover:shadow-[0_24px_54px_-34px_rgba(15,23,42,0.42)] sm:p-5 dark:border-slate-700 dark:bg-[linear-gradient(180deg,rgba(15,23,42,0.98)_0%,rgba(15,23,42,0.88)_100%)] dark:hover:border-slate-600 dark:hover:shadow-[0_24px_54px_-34px_rgba(2,6,23,0.92)]"
-            >
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
-                <div className="flex min-w-0 flex-1 gap-4">
-                  <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-[1.25rem] bg-slate-100 dark:bg-slate-800">
-                    {variation.image ? (
-                      <Image
-                        src={variation.image}
-                        alt={variation.name}
-                        fill
-                        className="object-cover"
-                        sizes="96px"
-                      />
-                    ) : (
-                      <div className="flex h-full items-center justify-center text-slate-400 dark:text-slate-500">
-                        <svg
-                          className="h-8 w-8"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                          aria-hidden="true"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={1.5}
-                            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                          />
-                        </svg>
-                      </div>
+            <div key={style.id} className="space-y-3">
+              <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 dark:border-slate-700 dark:bg-slate-800/60">
+                <div className="flex items-center gap-3">
+                  <span className="text-lg">🎨</span>
+                  <div>
+                    <h3 className="text-lg font-bold text-slate-950 dark:text-slate-50">
+                      {style.name}
+                    </h3>
+                    {style.designName && (
+                      <p className="text-sm text-slate-500 dark:text-slate-400">
+                        {style.designName}
+                      </p>
                     )}
                   </div>
-
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                      <div className="min-w-0">
-                        <h3 className="truncate text-lg font-semibold text-slate-950 dark:text-slate-50">
-                          {variation.name}
-                        </h3>
-                        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                          {variation.designName}
-                        </p>
-                      </div>
-                      <span className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:bg-slate-800 dark:text-slate-400">
-                        Updated{" "}
-                        {new Date(variation.updatedAt).toLocaleDateString(
-                          "en-US",
-                          {
-                            month: "short",
-                            day: "numeric",
-                          },
-                        )}
-                      </span>
-                    </div>
-
-                    <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                      <div className="rounded-2xl bg-white px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] dark:bg-slate-950/70 dark:shadow-none">
-                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-                          Type
-                        </p>
-                        <p className="mt-2 text-base font-bold text-slate-950 dark:text-slate-50">
-                          {variation.variationType === "colour"
-                            ? "🌈 Colour"
-                            : "🎨 Styling"}
-                        </p>
-                      </div>
-                      <div className="rounded-2xl bg-white px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] dark:bg-slate-950/70 dark:shadow-none">
-                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-                          Price
-                        </p>
-                        <p className="mt-2 text-base font-bold text-slate-950 dark:text-slate-50">
-                          {formatPrice(variation.price)}
-                        </p>
-                      </div>
-                      <div className="rounded-2xl bg-white px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] dark:bg-slate-950/70 dark:shadow-none">
-                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-                          Stock
-                        </p>
-                        <p className="mt-2 text-base font-bold text-slate-950 dark:text-slate-50">
-                          {variation.stock}
-                        </p>
-                      </div>
-                    </div>
-
-                    <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
-                      Stock: {variation.stock}
-                    </p>
-
-                    {isExpanded ? (
-                      <VariationQuickEditPanel
-                        currency={currency}
-                        draft={draft}
-                        onPriceChange={(value) =>
-                          updateQuickDraft(variation.id, "price", value)
-                        }
-                        onReset={() => resetQuickDraft(variation)}
-                        onSave={() => handleQuickSave(variation)}
-                        onStockChange={(value) =>
-                          updateQuickDraft(variation.id, "stock", value)
-                        }
-                        saving={savingVariationId === variation.id}
-                        state={quickEditState}
-                        variationName={variation.name}
-                      />
-                    ) : null}
-                  </div>
+                  <span className="rounded-full bg-slate-200 px-2.5 py-0.5 text-xs font-semibold text-slate-600 dark:bg-slate-700 dark:text-slate-300">
+                    {styleColours.length} colour
+                    {styleColours.length !== 1 ? "s" : ""}
+                  </span>
                 </div>
-
-                <div className="flex gap-3 lg:w-auto lg:flex-col lg:items-end">
+                <div className="flex gap-2">
                   <button
                     type="button"
-                    onClick={() => handleQuickEditToggle(variation.id)}
-                    aria-label={`${isExpanded ? "Close quick edit for" : "Open quick edit for"} ${variation.name}`}
-                    aria-expanded={isExpanded}
-                    className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-slate-950 text-white transition hover:bg-slate-800"
+                    onClick={() => {
+                      setEditingVariation(style);
+                      setShowFormModal(true);
+                    }}
+                    aria-label={`Edit style ${style.name}`}
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-slate-950 text-white transition hover:bg-slate-800"
                   >
                     <svg
-                      className="h-4 w-4"
+                      className="h-3.5 w-3.5"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -632,12 +774,12 @@ export default function VariationList({
                   </button>
                   <button
                     type="button"
-                    onClick={() => handleDeleteClick(variation)}
-                    aria-label={`Delete ${variation.name}`}
-                    className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-rose-200 bg-rose-50 text-rose-700 transition hover:border-rose-300 hover:bg-rose-100"
+                    onClick={() => handleDeleteClick(style)}
+                    aria-label={`Delete style ${style.name}`}
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-rose-200 bg-rose-50 text-rose-700 transition hover:border-rose-300 hover:bg-rose-100"
                   >
                     <svg
-                      className="h-4 w-4"
+                      className="h-3.5 w-3.5"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -653,6 +795,32 @@ export default function VariationList({
                   </button>
                 </div>
               </div>
+              {styleColours.length > 0 ? (
+                <div className="space-y-3 pl-6">
+                  {styleColours.map((colour) => (
+                    <ColourCard
+                      key={colour.id}
+                      variation={colour}
+                      currency={currency}
+                      draft={getDraft(colour)}
+                      expandedVariationId={expandedVariationId}
+                      formatPrice={formatPrice}
+                      getDefaultDraft={getDefaultDraft}
+                      handleDeleteClick={handleDeleteClick}
+                      handleQuickEditToggle={handleQuickEditToggle}
+                      handleQuickSave={handleQuickSave}
+                      rates={rates}
+                      resetQuickDraft={resetQuickDraft}
+                      savingVariationId={savingVariationId}
+                      updateQuickDraft={updateQuickDraft}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="ml-6 rounded-xl border border-dashed border-slate-300 bg-slate-50/60 px-4 py-3 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-950/40 dark:text-slate-400">
+                  No colours added to this style yet
+                </div>
+              )}
             </div>
           );
         })}
@@ -664,6 +832,7 @@ export default function VariationList({
             productId={productId}
             productPrice={productPrice}
             variation={editingVariation}
+            styles={styleVariations}
             onClose={handleFormClose}
             onSuccess={handleFormSuccess}
           />

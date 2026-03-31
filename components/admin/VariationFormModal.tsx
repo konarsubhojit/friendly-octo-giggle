@@ -21,6 +21,7 @@ interface VariationFormModalProps {
   readonly productId: string;
   readonly productPrice: number;
   readonly variation?: ProductVariation;
+  readonly styles?: ProductVariation[];
   readonly onClose: () => void;
   readonly onSuccess: (variation: ProductVariation) => void;
 }
@@ -29,6 +30,7 @@ interface FormData {
   name: string;
   designName: string;
   variationType: "styling" | "colour";
+  styleId: string;
   price: string;
   stock: string;
 }
@@ -37,6 +39,7 @@ interface VariationPayload {
   name: string;
   designName: string;
   variationType: "styling" | "colour";
+  styleId?: string | null;
   price: number;
   stock: number;
   productId?: string;
@@ -135,6 +138,7 @@ async function parseVariationMutationResponse(
 export default function VariationFormModal({
   productId,
   variation,
+  styles = [],
   onClose,
   onSuccess,
 }: VariationFormModalProps) {
@@ -149,6 +153,7 @@ export default function VariationFormModal({
     name: variation?.name ?? "",
     designName: variation?.designName ?? "",
     variationType: variation?.variationType ?? "styling",
+    styleId: variation?.styleId ?? "",
     price: variation
       ? convertCurrency(variation.price, "INR", currency, rates).toString()
       : "",
@@ -167,9 +172,12 @@ export default function VariationFormModal({
     (File | null)[]
   >((variation?.images ?? []).map(() => null));
 
-  const priceNum = Number.parseFloat(formData.price) || 0;
-  const priceInInr = convertCurrency(priceNum, priceCurrency, "INR", rates);
-  const priceWarning = formData.price !== "" && priceInInr <= 0;
+  const isStyle = formData.variationType === "styling";
+  const priceNum = isStyle ? 0 : Number.parseFloat(formData.price) || 0;
+  const priceInInr = isStyle
+    ? 0
+    : convertCurrency(priceNum, priceCurrency, "INR", rates);
+  const priceWarning = !isStyle && formData.price !== "" && priceInInr <= 0;
   const currentPrimaryImagePreview = primaryImageFile
     ? URL.createObjectURL(primaryImageFile)
     : primaryImageUrl;
@@ -193,17 +201,20 @@ export default function VariationFormModal({
       errs.designName = "Design name is required";
     else if (formData.designName.length > 100)
       errs.designName = "Design name must be under 100 characters";
-    if (formData.price === "") errs.price = "Price is required";
-    else if (Number.isNaN(Number.parseFloat(formData.price)))
-      errs.price = "Must be a number";
-    else if (Number.parseFloat(formData.price) <= 0)
-      errs.price = "Price must be greater than zero";
-    if (formData.stock === "") errs.stock = "Stock is required";
-    else if (
-      !Number.isInteger(Number(formData.stock)) ||
-      Number(formData.stock) < 0
-    ) {
-      errs.stock = "Stock must be a non-negative integer";
+    // Styles don't need price/stock validation
+    if (!isStyle) {
+      if (formData.price === "") errs.price = "Price is required";
+      else if (Number.isNaN(Number.parseFloat(formData.price)))
+        errs.price = "Must be a number";
+      else if (Number.parseFloat(formData.price) <= 0)
+        errs.price = "Price must be greater than zero";
+      if (formData.stock === "") errs.stock = "Stock is required";
+      else if (
+        !Number.isInteger(Number(formData.stock)) ||
+        Number(formData.stock) < 0
+      ) {
+        errs.stock = "Stock must be a non-negative integer";
+      }
     }
     return errs;
   };
@@ -290,9 +301,14 @@ export default function VariationFormModal({
       name: formData.name.trim(),
       designName: formData.designName.trim(),
       variationType: formData.variationType,
-      price: priceInInr,
-      stock: Number.parseInt(formData.stock, 10),
+      price: isStyle ? 0 : priceInInr,
+      stock: isStyle ? 0 : Number.parseInt(formData.stock, 10),
     };
+
+    // Include styleId for colours
+    if (formData.variationType === "colour") {
+      payload.styleId = formData.styleId || null;
+    }
 
     if (!isEditing) {
       payload.productId = productId;
@@ -469,8 +485,9 @@ export default function VariationFormModal({
                     Variation Type &amp; Pricing
                   </h4>
                   <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                    Choose whether this is a styling or colour option, then set
-                    its independent price.
+                    {isStyle
+                      ? "Styles group colours together. They have no price or stock of their own."
+                      : "Colours are purchasable items. Set price, stock, and optionally assign to a style."}
                   </p>
                 </div>
 
@@ -499,95 +516,145 @@ export default function VariationFormModal({
                               setFormData((prev) => ({
                                 ...prev,
                                 variationType: type,
+                                // Reset styleId when switching to styling
+                                styleId: type === "styling" ? "" : prev.styleId,
                               }))
                             }
                             className="h-4 w-4 accent-sky-500"
                           />
                           <span className="text-sm font-medium capitalize text-slate-950 dark:text-slate-50">
-                            {type === "styling" ? "🎨 Styling" : "🌈 Colour"}
+                            {type === "styling" ? "🎨 Style" : "🌈 Colour"}
                           </span>
                         </label>
                       ))}
                     </div>
                   </div>
 
-                  {/* Price */}
-                  <div>
-                    <label
-                      htmlFor="var-price"
-                      className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300"
-                    >
-                      Price <span className="text-red-500">*</span>
-                    </label>
-                    <div className="flex gap-2">
-                      <select
-                        id="var-priceCurrency"
-                        value={priceCurrency}
-                        onChange={(e) =>
-                          handlePriceCurrencyChange(
-                            e.target.value as CurrencyCode,
-                          )
-                        }
-                        aria-label="Price currency"
-                        className="rounded-2xl border border-slate-300 bg-white px-3 py-3 text-slate-950 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100 dark:border-slate-700 dark:bg-slate-950/80 dark:text-slate-50 dark:focus:border-sky-500 dark:focus:ring-sky-500/20"
+                  {/* Style selector — only for colours */}
+                  {formData.variationType === "colour" && (
+                    <div>
+                      <label
+                        htmlFor="var-styleId"
+                        className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300"
                       >
-                        {availableCurrencies.map((code) => (
-                          <option key={code} value={code}>
-                            {code} ({CURRENCIES[code].symbol})
+                        Parent Style
+                      </label>
+                      <select
+                        id="var-styleId"
+                        value={formData.styleId}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            styleId: e.target.value,
+                          }))
+                        }
+                        aria-label="Parent style"
+                        className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-950 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100 dark:border-slate-700 dark:bg-slate-950/80 dark:text-slate-50 dark:focus:border-sky-500 dark:focus:ring-sky-500/20"
+                      >
+                        <option value="">Base Product (no style)</option>
+                        {styles.map((s) => (
+                          <option key={s.id} value={s.id}>
+                            {s.name} — {s.designName}
                           </option>
                         ))}
                       </select>
-                      <input
-                        id="var-price"
-                        type="number"
-                        name="price"
-                        value={formData.price}
-                        onChange={handleChange}
-                        step="0.01"
-                        min="0.01"
-                        className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-950 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100 dark:border-slate-700 dark:bg-slate-950/80 dark:text-slate-50 dark:focus:border-sky-500 dark:focus:ring-sky-500/20"
-                        placeholder="e.g. 150.00"
-                      />
+                      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                        Leave as &quot;Base Product&quot; for colours that
+                        belong directly to the product.
+                      </p>
                     </div>
-                    {errors.price && (
-                      <p className="text-sm text-red-500 mt-1">
-                        {errors.price}
-                      </p>
-                    )}
-                    <p
-                      className={`mt-2 text-sm ${priceWarning ? "font-medium text-red-500 dark:text-red-400" : "text-slate-500 dark:text-slate-400"}`}
-                    >
-                      {priceWarning
-                        ? `Price must be greater than 0.00 ${priceCurrency}`
-                        : `This price is set independently from the base product price.`}
-                    </p>
-                  </div>
+                  )}
 
-                  {/* Stock */}
-                  <div>
-                    <label
-                      htmlFor="var-stock"
-                      className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300"
-                    >
-                      Stock <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      id="var-stock"
-                      type="number"
-                      name="stock"
-                      value={formData.stock}
-                      onChange={handleChange}
-                      min="0"
-                      step="1"
-                      className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-950 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100 dark:border-slate-700 dark:bg-slate-950/80 dark:text-slate-50 dark:focus:border-sky-500 dark:focus:ring-sky-500/20"
-                      placeholder="0"
-                    />
-                    {errors.stock && (
-                      <p className="text-sm text-red-500 mt-1">
-                        {errors.stock}
+                  {/* Style info banner */}
+                  {isStyle && (
+                    <div className="rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
+                      <strong>Styles are grouping-only.</strong> Price and stock
+                      are set on each colour within this style. After creating
+                      the style, add colours to it.
+                    </div>
+                  )}
+
+                  {/* Price — only for colours */}
+                  {!isStyle && (
+                    <div>
+                      <label
+                        htmlFor="var-price"
+                        className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                      >
+                        Price <span className="text-red-500">*</span>
+                      </label>
+                      <div className="flex gap-2">
+                        <select
+                          id="var-priceCurrency"
+                          value={priceCurrency}
+                          onChange={(e) =>
+                            handlePriceCurrencyChange(
+                              e.target.value as CurrencyCode,
+                            )
+                          }
+                          aria-label="Price currency"
+                          className="rounded-2xl border border-slate-300 bg-white px-3 py-3 text-slate-950 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100 dark:border-slate-700 dark:bg-slate-950/80 dark:text-slate-50 dark:focus:border-sky-500 dark:focus:ring-sky-500/20"
+                        >
+                          {availableCurrencies.map((code) => (
+                            <option key={code} value={code}>
+                              {code} ({CURRENCIES[code].symbol})
+                            </option>
+                          ))}
+                        </select>
+                        <input
+                          id="var-price"
+                          type="number"
+                          name="price"
+                          value={formData.price}
+                          onChange={handleChange}
+                          step="0.01"
+                          min="0.01"
+                          className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-950 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100 dark:border-slate-700 dark:bg-slate-950/80 dark:text-slate-50 dark:focus:border-sky-500 dark:focus:ring-sky-500/20"
+                          placeholder="e.g. 150.00"
+                        />
+                      </div>
+                      {errors.price && (
+                        <p className="text-sm text-red-500 mt-1">
+                          {errors.price}
+                        </p>
+                      )}
+                      <p
+                        className={`mt-2 text-sm ${priceWarning ? "font-medium text-red-500 dark:text-red-400" : "text-slate-500 dark:text-slate-400"}`}
+                      >
+                        {priceWarning
+                          ? `Price must be greater than 0.00 ${priceCurrency}`
+                          : `This price is set independently from the base product price.`}
                       </p>
-                    )}
-                  </div>
+                    </div>
+                  )}
+
+                  {/* Stock — only for colours */}
+                  {!isStyle && (
+                    <div>
+                      <label
+                        htmlFor="var-stock"
+                        className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                      >
+                        Stock <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        id="var-stock"
+                        type="number"
+                        name="stock"
+                        value={formData.stock}
+                        onChange={handleChange}
+                        min="0"
+                        step="1"
+                        className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-950 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100 dark:border-slate-700 dark:bg-slate-950/80 dark:text-slate-50 dark:focus:border-sky-500 dark:focus:ring-sky-500/20"
+                        placeholder="0"
+                      />
+                      {errors.stock && (
+                        <p className="text-sm text-red-500 mt-1">
+                          {errors.stock}
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
               </section>
 
@@ -702,27 +769,53 @@ export default function VariationFormModal({
             <aside className="space-y-4">
               <section className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-[0_18px_44px_-34px_rgba(15,23,42,0.28)] dark:border-slate-700 dark:bg-slate-900/88 dark:shadow-[0_18px_44px_-34px_rgba(2,6,23,0.92)]">
                 <p className="text-[0.72rem] font-semibold uppercase tracking-[0.28em] text-sky-700">
-                  Pricing preview
+                  Preview
                 </p>
                 <div className="mt-4 space-y-3 text-sm">
                   <div className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3 dark:bg-slate-950/65">
                     <span className="text-slate-500 dark:text-slate-400">
-                      Variation type
+                      Type
                     </span>
                     <strong className="capitalize text-slate-950 dark:text-slate-50">
                       {formData.variationType === "styling"
-                        ? "🎨 Styling"
+                        ? "🎨 Style (group)"
                         : "🌈 Colour"}
                     </strong>
                   </div>
-                  <div className="rounded-2xl bg-emerald-50 px-4 py-4 dark:bg-emerald-950/45">
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">
-                      Variation price
-                    </p>
-                    <p className="mt-2 text-2xl font-black tracking-tight text-slate-950 dark:text-slate-50">
-                      {priceNum > 0 ? priceNum.toFixed(2) : "—"} {priceCurrency}
-                    </p>
-                  </div>
+                  {formData.variationType === "colour" && (
+                    <div className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3 dark:bg-slate-950/65">
+                      <span className="text-slate-500 dark:text-slate-400">
+                        Parent style
+                      </span>
+                      <strong className="text-slate-950 dark:text-slate-50">
+                        {formData.styleId
+                          ? (styles.find((s) => s.id === formData.styleId)
+                              ?.name ?? "—")
+                          : "Base product"}
+                      </strong>
+                    </div>
+                  )}
+                  {!isStyle && (
+                    <div className="rounded-2xl bg-emerald-50 px-4 py-4 dark:bg-emerald-950/45">
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">
+                        Colour price
+                      </p>
+                      <p className="mt-2 text-2xl font-black tracking-tight text-slate-950 dark:text-slate-50">
+                        {priceNum > 0 ? priceNum.toFixed(2) : "—"}{" "}
+                        {priceCurrency}
+                      </p>
+                    </div>
+                  )}
+                  {isStyle && (
+                    <div className="rounded-2xl bg-amber-50 px-4 py-4 dark:bg-amber-950/45">
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700">
+                        Grouping only
+                      </p>
+                      <p className="mt-2 text-sm text-amber-800 dark:text-amber-200">
+                        Add colours to this style after creation.
+                      </p>
+                    </div>
+                  )}
                 </div>
               </section>
 

@@ -29,6 +29,13 @@
       "when": 1774891975344,
       "tag": "0003_overjoyed_nomad",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1774930099907,
+      "tag": "0004_daily_the_renegades",
+      "breakpoints": true
     }
   ]
 }

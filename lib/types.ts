@@ -16,6 +16,7 @@ export interface Product {
 export interface ProductVariation {
   id: string;
   productId: string;
+  styleId: string | null;
   name: string;
   designName: string;
   variationType: "styling" | "colour";
@@ -26,6 +27,7 @@ export interface ProductVariation {
   deletedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  colours?: ProductVariation[];
 }
 
 export interface ProductInput {

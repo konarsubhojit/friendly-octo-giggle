@@ -180,6 +180,7 @@ export const productVariations = pgTable(
     productId: varchar("productId", { length: 7 })
       .notNull()
       .references(() => products.id, { onDelete: "cascade" }),
+    styleId: varchar("styleId", { length: 7 }), // Self-ref: null for styles & base-product colours; set for colours under a style
     name: text("name").notNull(),
     designName: text("designName").notNull(),
     variationType: text("variationType", { enum: ["styling", "colour"] })
@@ -195,6 +196,7 @@ export const productVariations = pgTable(
   },
   (t) => [
     index("ProductVariation_productId_idx").on(t.productId),
+    index("ProductVariation_styleId_idx").on(t.styleId),
     unique("ProductVariation_productId_name_key").on(t.productId, t.name),
   ],
 );
@@ -455,6 +457,12 @@ export const productVariationsRelations = relations(
       fields: [productVariations.productId],
       references: [products.id],
     }),
+    style: one(productVariations, {
+      fields: [productVariations.styleId],
+      references: [productVariations.id],
+      relationName: "styleColours",
+    }),
+    colours: many(productVariations, { relationName: "styleColours" }),
     orderItems: many(orderItems),
     cartItems: many(cartItems),
   }),
