@@ -18,7 +18,7 @@ interface OrderItem {
   readonly variation?: {
     id: string;
     name: string;
-    priceModifier: number;
+    price: number;
   } | null;
 }
 
@@ -88,7 +88,8 @@ export const OrderListCard = ({ order }: OrderListCardProps) => {
         </div>
       </div>
       <p className="mt-3 text-xs text-[var(--text-muted)]">
-        Open the order to review pricing, shipping address, and full item details.
+        Open the order to review pricing, shipping address, and full item
+        details.
       </p>
     </Link>
   );

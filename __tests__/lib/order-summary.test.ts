@@ -37,7 +37,7 @@ describe("order-summary", () => {
           variation: {
             name: "Large",
             designName: "Ruby",
-            priceModifier: 250,
+            price: 1250,
           },
           customizationNote: "Add ribbon",
         },
@@ -59,7 +59,7 @@ describe("order-summary", () => {
       {
         quantity: 2,
         product: { name: "Rose Box", price: 1000 },
-        variation: { name: "Large", designName: null, priceModifier: 250 },
+        variation: { name: "Large", designName: null, price: 1250 },
         customizationNote: null,
       },
       {

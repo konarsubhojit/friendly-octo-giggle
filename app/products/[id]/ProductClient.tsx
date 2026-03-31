@@ -197,22 +197,16 @@ const OutOfStockPanel = ({
 );
 
 interface PriceModifierDisplayProps {
-  readonly product: Product;
   readonly selectedVariation: ProductVariation | null;
-  readonly formatPrice: (amount: number) => string;
 }
 
 const PriceModifierDisplay = ({
-  product,
   selectedVariation,
-  formatPrice,
 }: PriceModifierDisplayProps) => {
-  if (!selectedVariation || selectedVariation.priceModifier === 0) return null;
-  const sign = selectedVariation.priceModifier > 0 ? "+" : "-";
+  if (!selectedVariation) return null;
   return (
     <div className="mt-2 text-sm text-[var(--text-secondary)]">
-      Base: {formatPrice(product.price)} {sign}
-      {formatPrice(Math.abs(selectedVariation.priceModifier))}
+      Variation price — independently set
     </div>
   );
 };
@@ -245,48 +239,187 @@ const VariationSelector = ({
   cartQuantities,
 }: VariationSelectorProps) => {
   if (!variations || variations.length === 0) return null;
-  const baseInCart = cartQuantities["__base__"] ?? 0;
+
+  const styles = variations.filter((v) => v.variationType === "styling");
+  const colours = variations.filter((v) => v.variationType === "colour");
+
+  // Group colours by their parent style
+  const baseColours = colours.filter((c) => !c.styleId);
+  const coloursByStyle = new Map<string, ProductVariation[]>();
+  for (const c of colours) {
+    if (c.styleId) {
+      const list = coloursByStyle.get(c.styleId) ?? [];
+      list.push(c);
+      coloursByStyle.set(c.styleId, list);
+    }
+  }
+
+  // If there are no colours at all, fall back to the flat rendering
+  // (backward compat with products that only have styling-type variations)
+  if (colours.length === 0 && styles.length > 0) {
+    return (
+      <div className="mb-6 space-y-5">
+        <span
+          className="block text-lg font-semibold text-[var(--foreground)]"
+          id="variation-selector-label"
+        >
+          Choose Your Option
+        </span>
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            onClick={onSelectBase}
+            aria-label="Select standard base design"
+            aria-pressed={selectedVariation === null}
+            className={baseButtonClass(selectedVariation === null)}
+          >
+            <div className="text-sm font-bold text-[var(--foreground)]">
+              Standard
+            </div>
+            <div className="text-xs text-[var(--text-secondary)] mt-1">
+              Base design
+            </div>
+            <div className="text-xs font-semibold text-[var(--accent-warm)] mt-1">
+              {formatPrice(basePrice)}
+            </div>
+          </button>
+          {styles.map((v) => (
+            <VariationButton
+              key={v.id}
+              variation={v}
+              isSelected={selectedVariation?.id === v.id}
+              formatPrice={formatPrice}
+              onSelect={onSelect}
+              cartQuantity={cartQuantities[v.id] ?? 0}
+            />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Determine the active style: find the style that owns the currently selected colour,
+  // or default to base if no colour is selected
+  const activeStyleId = selectedVariation?.styleId ?? null;
+
+  // Derive the colour list for the active style
+  const activeColours =
+    activeStyleId === null
+      ? baseColours
+      : (coloursByStyle.get(activeStyleId) ?? []);
+
+  // Determine if we have more than just base colours (i.e. named styles exist)
+  const hasNamedStyles = styles.length > 0;
+
   return (
-    <div className="mb-6">
+    <div className="mb-6 space-y-5">
       <span
-        className="block text-lg font-semibold text-[var(--foreground)] mb-3"
+        className="block text-lg font-semibold text-[var(--foreground)]"
         id="variation-selector-label"
       >
-        Select Design
+        Choose Your Options
       </span>
-      <div className="grid grid-cols-2 gap-3">
-        <button
-          onClick={onSelectBase}
-          aria-label="Select standard base design"
-          aria-pressed={selectedVariation === null}
-          className={baseButtonClass(selectedVariation === null)}
-        >
-          <div className="text-sm font-bold text-[var(--foreground)]">
-            Standard
+
+      {/* Style tabs — only show if there are named styles */}
+      {hasNamedStyles && (
+        <div>
+          <span className="block text-sm font-semibold text-[var(--text-secondary)] mb-2">
+            🎨 Style
+          </span>
+          <div className="flex flex-wrap gap-2">
+            {/* Base style tab */}
+            {baseColours.length > 0 && (
+              <button
+                onClick={() => {
+                  // Select the first base colour, or go to base
+                  if (baseColours.length > 0) {
+                    onSelect(baseColours[0]);
+                  } else {
+                    onSelectBase();
+                  }
+                }}
+                aria-pressed={activeStyleId === null}
+                className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
+                  activeStyleId === null
+                    ? "bg-[var(--accent-warm)] text-white shadow-warm"
+                    : "bg-[var(--accent-cream)] text-[var(--text-secondary)] border border-[var(--border-warm)] hover:border-[var(--accent-warm)]"
+                }`}
+              >
+                Base
+              </button>
+            )}
+            {styles.map((style) => {
+              const styleColourCount =
+                coloursByStyle.get(style.id)?.length ?? 0;
+              return (
+                <button
+                  key={style.id}
+                  onClick={() => {
+                    const styleColours = coloursByStyle.get(style.id);
+                    if (styleColours && styleColours.length > 0) {
+                      onSelect(styleColours[0]);
+                    }
+                  }}
+                  aria-pressed={activeStyleId === style.id}
+                  disabled={styleColourCount === 0}
+                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
+                    activeStyleId === style.id
+                      ? "bg-[var(--accent-warm)] text-white shadow-warm"
+                      : styleColourCount === 0
+                        ? "bg-slate-100 text-slate-400 cursor-not-allowed"
+                        : "bg-[var(--accent-cream)] text-[var(--text-secondary)] border border-[var(--border-warm)] hover:border-[var(--accent-warm)]"
+                  }`}
+                >
+                  {style.name}
+                  {styleColourCount === 0 && (
+                    <span className="ml-1 text-xs">(no colours)</span>
+                  )}
+                </button>
+              );
+            })}
           </div>
-          <div className="text-xs text-[var(--text-secondary)] mt-1">
-            Base design
+        </div>
+      )}
+
+      {/* Colour options for the active style */}
+      {activeColours.length > 0 ? (
+        <div>
+          <span className="block text-sm font-semibold text-[var(--text-secondary)] mb-2">
+            🌈 Colour
+          </span>
+          <div className="grid grid-cols-2 gap-3">
+            {activeColours.map((colour) => (
+              <VariationButton
+                key={colour.id}
+                variation={colour}
+                isSelected={selectedVariation?.id === colour.id}
+                formatPrice={formatPrice}
+                onSelect={onSelect}
+                cartQuantity={cartQuantities[colour.id] ?? 0}
+              />
+            ))}
           </div>
-          <div className="text-xs font-semibold text-[var(--accent-warm)] mt-1">
-            {formatPrice(basePrice)}
-          </div>
-          {baseInCart > 0 && (
-            <div className="text-xs font-semibold text-blue-600 mt-1">
-              {baseInCart} in cart
+        </div>
+      ) : !hasNamedStyles ? (
+        /* No styles and no colours — just show base option */
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            onClick={onSelectBase}
+            aria-label="Select standard base design"
+            aria-pressed={selectedVariation === null}
+            className={baseButtonClass(selectedVariation === null)}
+          >
+            <div className="text-sm font-bold text-[var(--foreground)]">
+              Standard
             </div>
-          )}
-        </button>
-        {variations.map((variation) => (
-          <VariationButton
-            key={variation.id}
-            variation={variation}
-            isSelected={selectedVariation?.id === variation.id}
-            formatPrice={formatPrice}
-            onSelect={onSelect}
-            cartQuantity={cartQuantities[variation.id] ?? 0}
-          />
-        ))}
-      </div>
+            <div className="text-xs text-[var(--text-secondary)] mt-1">
+              Base design
+            </div>
+            <div className="text-xs font-semibold text-[var(--accent-warm)] mt-1">
+              {formatPrice(basePrice)}
+            </div>
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 };
@@ -351,11 +484,7 @@ const ProductInfoCard = ({
         <span className="text-4xl font-bold text-warm-heading sm:text-5xl">
           {formatPrice(effectivePrice)}
         </span>
-        <PriceModifierDisplay
-          product={product}
-          selectedVariation={selectedVariation}
-          formatPrice={formatPrice}
-        />
+        <PriceModifierDisplay selectedVariation={selectedVariation} />
       </div>
 
       <div className="mb-6">
@@ -634,7 +763,7 @@ export default function ProductClient({
   ]);
 
   const effectivePrice = selectedVariation
-    ? product.price + selectedVariation.priceModifier
+    ? selectedVariation.price
     : product.price;
 
   const effectiveStock = selectedVariation
