@@ -574,6 +574,7 @@ describe("CreateVariationSchema", () => {
     designName: "Classic Logo",
     price: 150.0,
     stock: 100,
+    variationType: "colour" as const,
   };
 
   it("accepts valid variation with required fields only", () => {

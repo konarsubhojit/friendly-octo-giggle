@@ -75,32 +75,32 @@ export default async function AdminProductEditPage({ params }: PageProps) {
       ]}
       eyebrow="Product overview"
       title={serializedProduct.name}
-      description="Review core product details, confirm pricing and stock, and manage associated variations from one place."
+      description="View product details, pricing, stock, and variations."
       actions={
         <Link
           href={`/admin/products/${serializedProduct.id}/edit`}
           className="inline-flex items-center rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
         >
-          Open Editing Workspace
+          Edit Product
         </Link>
       }
       metrics={[
         {
           label: "Base price",
           value: `$${serializedProduct.price.toFixed(2)}`,
-          hint: "Stored in USD before display conversion.",
+          hint: "Base price in INR.",
           tone: "emerald",
         },
         {
           label: "Base stock",
           value: String(serializedProduct.stock),
-          hint: "Inventory before variation-level stock overrides.",
+          hint: "Base stock level.",
           tone: serializedProduct.stock > 0 ? "sky" : "rose",
         },
         {
           label: "Variations",
           value: String(serializedVariations.length),
-          hint: "Active product options currently available.",
+          hint: "Active product variations.",
           tone: "amber",
         },
       ]}

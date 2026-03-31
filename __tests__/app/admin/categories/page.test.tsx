@@ -55,12 +55,11 @@ describe("AdminCategoriesPage", () => {
 
     expect(
       screen.getByRole("heading", {
-        name: "Category controls with less friction.",
+        name: "Category Management",
       }),
     ).toBeInTheDocument();
     expect(screen.getByText("Active categories")).toBeInTheDocument();
     expect(screen.getByText("2")).toBeInTheDocument();
-    expect(screen.getByText("Manage category taxonomy")).toBeInTheDocument();
     expect(screen.getByText("Categories client: 2")).toBeInTheDocument();
   });
 });

@@ -15,31 +15,31 @@ export default function AdminSearchPage() {
         { label: "Admin", href: "/admin" },
         { label: "Search Index" },
       ]}
-      eyebrow="Search infrastructure"
-      title="Search indexing with clearer operational guardrails."
-      description="Manage product and order search indexes from a dedicated admin surface while keeping operational risk obvious."
+      eyebrow="Search configuration"
+      title="Search Index Management"
+      description="Manage and rebuild product and order search indexes."
       metrics={[
         {
           label: "Products index",
           value: productsConfigured ? "Configured" : "Missing config",
           hint: productsConfigured
-            ? "Upstash Search product reindex is available."
-            : "Set Upstash Search variables to enable product reindexing.",
+            ? "Product search index is available."
+            : "Configuration required.",
           tone: productsConfigured ? "emerald" : "amber",
         },
         {
           label: "Orders index",
           value: ordersConfigured ? "Configured" : "Missing config",
           hint: ordersConfigured
-            ? "Redis-backed order search backfill is available."
-            : "Set Upstash Redis variables to enable order indexing.",
+            ? "Order search index is available."
+            : "Configuration required.",
           tone: ordersConfigured ? "emerald" : "amber",
         },
       ]}
     >
       <AdminPanel
-        title="Search reindex controls"
-        description="Rebuild product or order search after imports, migrations, or stale index incidents."
+        title="Reindex"
+        description="Rebuild search indexes after bulk imports or data changes."
       >
         <SearchReindexClient
           productsConfigured={productsConfigured}

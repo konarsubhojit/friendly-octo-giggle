@@ -53,9 +53,7 @@ describe("AdminCheckoutRequestsPage", () => {
     render(await AdminCheckoutRequestsPage({}));
 
     expect(
-      screen.getByRole("heading", {
-        name: "Checkout queue visibility without touching the email pipeline.",
-      }),
+      screen.getByRole("heading", { level: 1, name: "Checkout Requests" }),
     ).toBeInTheDocument();
     expect(screen.getByText("Queued")).toBeInTheDocument();
     expect(screen.getByText("Processing")).toBeInTheDocument();

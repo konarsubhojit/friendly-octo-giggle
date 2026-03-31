@@ -82,7 +82,7 @@ export default function ProductAssistant({
               Ask about this product
             </span>
             <span className="text-sm text-[var(--text-secondary)]">
-              Get instant answers from our AI assistant
+              Product questions answered
             </span>
           </div>
         </div>
@@ -91,9 +91,8 @@ export default function ProductAssistant({
   }
 
   return (
-    <div
+    <section
       className="flex flex-col rounded-2xl border border-[var(--border-warm)] bg-[var(--surface)]/80 shadow-warm backdrop-blur-lg overflow-hidden max-h-[32rem]"
-      role="region"
       aria-label="Product assistant"
     >
       {/* Header */}
@@ -178,8 +177,8 @@ export default function ProductAssistant({
             >
               {msg.parts
                 ?.filter((p) => p.type === "text")
-                .map((p, i) => (
-                  <span key={i}>{p.text}</span>
+                .map((p) => (
+                  <span key={p.text}>{p.text}</span>
                 ))}
             </div>
           </div>
@@ -188,7 +187,7 @@ export default function ProductAssistant({
         {isStreaming && messages[messages.length - 1]?.role !== "assistant" && (
           <div className="flex justify-start">
             <div className="rounded-2xl bg-[var(--accent-cream)] border border-[var(--border-warm)] px-4 py-3 text-sm text-[var(--text-secondary)]">
-              Thinking...
+              Generating response...
             </div>
           </div>
         )}
@@ -247,6 +246,6 @@ export default function ProductAssistant({
           </button>
         )}
       </form>
-    </div>
+    </section>
   );
 }

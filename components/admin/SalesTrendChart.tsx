@@ -101,7 +101,6 @@ export function SalesTrendChart({ points }: SalesTrendChartProps) {
       <svg
         viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}
         className="h-auto w-full"
-        role="img"
         aria-labelledby={chartTitleId}
       >
         <title id={chartTitleId}>

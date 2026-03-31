@@ -34,7 +34,7 @@ const mockVariation: ProductVariation = {
   image: "https://example.com/red.jpg",
   images: [],
   price: 150,
-  variationType: "styling" as const,
+  variationType: "colour" as const,
   stock: 25,
   deletedAt: null,
   createdAt: "2025-01-01T00:00:00.000Z",
@@ -76,7 +76,8 @@ describe("VariationList", () => {
     );
     expect(screen.getByText("Red - Large")).toBeInTheDocument();
     expect(screen.getByText("Classic Logo")).toBeInTheDocument();
-    expect(screen.getByText("Stock: 25")).toBeInTheDocument();
+    expect(screen.getByText("Stock")).toBeInTheDocument();
+    expect(screen.getAllByText("25").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("Variations (1)")).toBeInTheDocument();
   });
 
@@ -218,7 +219,7 @@ describe("VariationList", () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText("Stock: 30")).toBeInTheDocument();
+      expect(screen.getAllByText("30").length).toBeGreaterThanOrEqual(1);
       expect(screen.getByText("$200.00")).toBeInTheDocument();
     });
   });

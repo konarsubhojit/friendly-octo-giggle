@@ -328,8 +328,8 @@ export default function ProductsManagement() {
     <AdminPageShell
       breadcrumbs={[{ label: "Admin", href: "/admin" }, { label: "Products" }]}
       eyebrow="Catalog operations"
-      title="Product management with faster inventory triage."
-      description="Search the catalog, spot stock risks, and jump into product detail or creation flows without losing context."
+      title="Product Management"
+      description="Manage the product catalogue, review stock levels, and update product details."
       actions={
         <>
           <button
@@ -351,27 +351,24 @@ export default function ProductsManagement() {
         {
           label: "Catalog size",
           value: String(totalCount),
-          hint: "Total products matching the current query.",
+          hint: "Total products in the catalogue.",
           tone: "sky",
         },
         {
           label: "In stock",
           value: String(inStockProducts),
-          hint: "Visible products ready to sell.",
+          hint: "Products with available stock.",
           tone: "emerald",
         },
         {
           label: "Low stock",
           value: String(lowStockProducts),
-          hint: "Visible products at 5 units or fewer.",
+          hint: "Products at 5 units or fewer.",
           tone: lowStockProducts > 0 ? "amber" : "slate",
         },
       ]}
     >
-      <AdminPanel
-        title="Find products quickly"
-        description="Search by product name to move directly into editing, stock review, or deletion flows."
-      >
+      <AdminPanel title="Search" description="Filter by product name.">
         <AdminSearchForm
           searchInput={searchInput}
           setSearchInput={setSearchInput}
@@ -388,8 +385,8 @@ export default function ProductsManagement() {
       ) : null}
 
       <AdminPanel
-        title="Catalog results"
-        description="Browse the current result set and jump into product detail pages for deeper edits."
+        title="Results"
+        description="Click a product to view details and edit."
       >
         {loading ? (
           <div className="flex items-center justify-center py-16">

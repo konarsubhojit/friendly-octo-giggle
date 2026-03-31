@@ -34,11 +34,9 @@ const TARGET_OPTIONS: {
   {
     value: "orders",
     label: "Orders",
-    description:
-      "Create the Redis orders index if needed and backfill all orders from PostgreSQL",
+    description: "Rebuild the orders search index from the database",
     configuredProp: "ordersConfigured",
-    confirmMessage:
-      "This will create the Redis orders search index if it is missing and backfill all existing orders into Redis. Continue?",
+    confirmMessage: "This will rebuild the orders search index. Continue?",
   },
 ];
 
@@ -72,27 +70,11 @@ export default function SearchReindexClient({
           </svg>
           <div>
             <h3 className="font-semibold text-yellow-800 dark:text-yellow-200">
-              Search Infrastructure Not Configured
+              Search Not Configured
             </h3>
             <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
-              Search controls need either Upstash Search or Upstash Redis
-              credentials. Set{" "}
-              <code className="text-xs bg-yellow-100 dark:bg-yellow-900/40 px-1 py-0.5 rounded">
-                UPSTASH_SEARCH_REST_URL
-              </code>{" "}
-              and{" "}
-              <code className="text-xs bg-yellow-100 dark:bg-yellow-900/40 px-1 py-0.5 rounded">
-                UPSTASH_SEARCH_REST_TOKEN
-              </code>{" "}
-              for products, and{" "}
-              <code className="text-xs bg-yellow-100 dark:bg-yellow-900/40 px-1 py-0.5 rounded">
-                UPSTASH_REDIS_REST_URL
-              </code>{" "}
-              plus{" "}
-              <code className="text-xs bg-yellow-100 dark:bg-yellow-900/40 px-1 py-0.5 rounded">
-                UPSTASH_REDIS_REST_TOKEN
-              </code>{" "}
-              for orders.
+              Search is not configured. Contact your system administrator to
+              enable search capabilities.
             </p>
           </div>
         </div>
@@ -208,29 +190,18 @@ export default function SearchReindexClient({
 
       <div className="mt-6 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5">
         <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
-          How it works
+          Information
         </h3>
         <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1 list-disc list-inside">
           <li>
-            Product reindexing resets the Upstash Search index and rebuilds it
-            from the database.
+            Product reindexing rebuilds search from current catalogue data.
           </li>
+          <li>Products are indexed automatically on create and update.</li>
+          <li>Order reindexing rebuilds the search index from all orders.</li>
           <li>
-            Products are indexed into Upstash Search during normal admin create
-            and update operations.
+            Reindex after bulk imports or if search results appear incomplete.
           </li>
-          <li>
-            Order reindexing creates the Redis Search index when needed and
-            backfills all current orders into Redis hashes.
-          </li>
-          <li>
-            Use a full reindex after bulk imports, data migrations, or if search
-            results seem stale.
-          </li>
-          <li>
-            The process runs server-side and may take a few seconds for large
-            datasets.
-          </li>
+          <li>Reindexing may take time for large datasets.</li>
         </ul>
       </div>
 

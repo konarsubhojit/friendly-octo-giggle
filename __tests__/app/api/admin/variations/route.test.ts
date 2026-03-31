@@ -132,7 +132,7 @@ describe("POST /api/admin/variations", () => {
         name: "Blue",
         designName: "Modern",
         price: 150,
-        variationType: "styling",
+        variationType: "colour",
         stock: 10,
       }),
     );

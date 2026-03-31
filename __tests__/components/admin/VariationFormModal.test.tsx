@@ -80,6 +80,7 @@ describe("VariationFormModal", () => {
 
   it("shows validation errors for empty required fields", async () => {
     render(<VariationFormModal {...defaultProps} />);
+    fireEvent.click(screen.getByRole("radio", { name: /🌈 Colour/ }));
     fireEvent.click(screen.getByText("Create"));
 
     await waitFor(() => {
@@ -91,6 +92,7 @@ describe("VariationFormModal", () => {
 
   it("shows price warning when price <= 0", () => {
     render(<VariationFormModal {...defaultProps} />);
+    fireEvent.click(screen.getByRole("radio", { name: /🌈 Colour/ }));
     const priceInput = screen.getByRole("spinbutton", { name: /price/i });
     fireEvent.change(priceInput, {
       target: { name: "price", value: "-50" },
@@ -102,6 +104,7 @@ describe("VariationFormModal", () => {
 
   it("disables submit when price is invalid", () => {
     render(<VariationFormModal {...defaultProps} />);
+    fireEvent.click(screen.getByRole("radio", { name: /🌈 Colour/ }));
     const priceInput = screen.getByRole("spinbutton", { name: /price/i });
     fireEvent.change(priceInput, {
       target: { name: "price", value: "-100" },
@@ -126,6 +129,8 @@ describe("VariationFormModal", () => {
 
     render(<VariationFormModal {...defaultProps} onSuccess={onSuccess} />);
 
+    fireEvent.click(screen.getByRole("radio", { name: /🌈 Colour/ }));
+
     fireEvent.change(screen.getByLabelText(/^Name/), {
       target: { name: "name", value: "Blue" },
     });
@@ -149,9 +154,10 @@ describe("VariationFormModal", () => {
           body: JSON.stringify({
             name: "Blue",
             designName: "Modern",
-            variationType: "styling",
+            variationType: "colour",
             price: 150,
             stock: 10,
+            styleId: null,
             productId: "abc1234",
             image: null,
           }),

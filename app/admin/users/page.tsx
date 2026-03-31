@@ -111,8 +111,8 @@ export default function UsersManagement() {
     <AdminPageShell
       breadcrumbs={[{ label: "Admin", href: "/admin" }, { label: "Users" }]}
       eyebrow="Access control"
-      title="User management with clearer role oversight."
-      description="Search accounts, review role distribution, and update permissions from a single workspace built for fast admin decisions."
+      title="User Management"
+      description="Search accounts and manage user roles and permissions."
       actions={
         <button
           onClick={handleRefresh}
@@ -126,27 +126,24 @@ export default function UsersManagement() {
         {
           label: "Total users",
           value: String(totalCount),
-          hint: "Matching the current query and pagination state.",
+          hint: "Total registered accounts.",
           tone: "sky",
         },
         {
           label: "Admins shown",
           value: String(adminCount),
-          hint: "Visible on the current page.",
+          hint: "Admins on current page.",
           tone: "amber",
         },
         {
           label: "Customers shown",
           value: String(customerCount),
-          hint: "Visible on the current page.",
+          hint: "Customers on current page.",
           tone: "emerald",
         },
       ]}
     >
-      <AdminPanel
-        title="Find a user"
-        description="Search by name or email to quickly jump to the account you need to review."
-      >
+      <AdminPanel title="Search" description="Filter by name or email.">
         <AdminSearchForm
           searchInput={searchInput}
           setSearchInput={setSearchInput}
@@ -162,10 +159,7 @@ export default function UsersManagement() {
         <AlertBanner message={error} variant="error" className="mb-0" />
       ) : null}
 
-      <AdminPanel
-        title="User directory"
-        description="Review recent accounts, promote or demote roles, and keep the access model under control."
-      >
+      <AdminPanel title="Users" description="">
         {loading ? (
           <div className="flex items-center justify-center py-16">
             <LoadingSpinner />
