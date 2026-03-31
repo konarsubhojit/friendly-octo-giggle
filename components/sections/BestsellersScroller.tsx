@@ -10,7 +10,7 @@ interface BestsellersScrollerProps {
 }
 
 export function BestsellersScroller({ bestsellers }: BestsellersScrollerProps) {
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLUListElement>(null);
 
   const scroll = useCallback((direction: "left" | "right") => {
     const container = scrollRef.current;
@@ -56,21 +56,19 @@ export function BestsellersScroller({ bestsellers }: BestsellersScrollerProps) {
       </button>
 
       {/* Scroll container */}
-      <div
+      <ul
         ref={scrollRef}
-        className="flex gap-4 overflow-x-auto pb-3 snap-x snap-mandatory scroll-smooth scrollbar-hide"
+        className="flex gap-4 overflow-x-auto pb-3 snap-x snap-mandatory scroll-smooth scrollbar-hide list-none"
         style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
         aria-label="Bestsellers horizontal list"
-        role="list"
       >
         {bestsellers.map((product, index) => (
-          <Link
-            key={product.id}
-            href={`/products/${product.id}`}
-            role="listitem"
-            aria-label={`View bestseller ${product.name}`}
-            className="group snap-start flex-none w-48 sm:w-52 rounded-2xl border border-[var(--border-warm)] bg-[var(--surface)] shadow-warm hover:shadow-warm-lg transition-all duration-300 overflow-hidden"
-          >
+          <li key={product.id} className="snap-start flex-none w-48 sm:w-52">
+            <Link
+              href={`/products/${product.id}`}
+              aria-label={`View bestseller ${product.name}`}
+              className="group block rounded-2xl border border-[var(--border-warm)] bg-[var(--surface)] shadow-warm hover:shadow-warm-lg transition-all duration-300 overflow-hidden"
+            >
             <div className="relative aspect-square bg-gradient-to-br from-[var(--accent-cream)] to-[var(--accent-blush)]">
               <Image
                 src={product.image}
@@ -90,8 +88,9 @@ export function BestsellersScroller({ bestsellers }: BestsellersScrollerProps) {
               </h3>
             </div>
           </Link>
+          </li>
         ))}
-      </div>
+      </ul>
 
       {/* Right arrow */}
       <button

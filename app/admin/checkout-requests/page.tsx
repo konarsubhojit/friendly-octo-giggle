@@ -169,7 +169,8 @@ export default async function AdminCheckoutRequestsPage({
               const statusText = status
                 ? `${statusConjunction} status ${status}`
                 : "";
-              return `Showing ${records.length} checkout request${records.length === 1 ? "" : "s"}${search ? ` matching "${search}"` : ""}${statusText}.`;
+              const searchText = search ? ` matching "${search}"` : "";
+              return `Showing ${records.length} checkout request${records.length === 1 ? "" : "s"}${searchText}${statusText}.`;
             })()}
           </p>
         ) : null}

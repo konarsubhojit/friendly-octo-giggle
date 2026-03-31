@@ -91,9 +91,8 @@ export default function ProductAssistant({
   }
 
   return (
-    <div
+    <section
       className="flex flex-col rounded-2xl border border-[var(--border-warm)] bg-[var(--surface)]/80 shadow-warm backdrop-blur-lg overflow-hidden max-h-[32rem]"
-      role="region"
       aria-label="Product assistant"
     >
       {/* Header */}
@@ -178,8 +177,8 @@ export default function ProductAssistant({
             >
               {msg.parts
                 ?.filter((p) => p.type === "text")
-                .map((p, i) => (
-                  <span key={i}>{p.text}</span>
+                .map((p) => (
+                  <span key={p.text}>{p.text}</span>
                 ))}
             </div>
           </div>
@@ -247,6 +246,6 @@ export default function ProductAssistant({
           </button>
         )}
       </form>
-    </div>
+    </section>
   );
 }
