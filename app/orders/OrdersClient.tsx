@@ -19,7 +19,7 @@ interface OrderSummary {
   items: Array<{
     quantity: number;
     product?: { name: string; image: string } | null;
-    variation?: { id: string; name: string; priceModifier: number } | null;
+    variation?: { id: string; name: string; price: number } | null;
   }>;
 }
 

@@ -22,6 +22,20 @@
       "when": 1774618645201,
       "tag": "0002_ensure_checkout_request_id",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1774891975344,
+      "tag": "0003_overjoyed_nomad",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1774930099907,
+      "tag": "0004_daily_the_renegades",
+      "breakpoints": true
     }
   ]
 }

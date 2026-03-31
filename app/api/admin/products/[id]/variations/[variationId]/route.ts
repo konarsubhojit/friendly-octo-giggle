@@ -89,14 +89,8 @@ export async function PUT(
       return apiError("No fields to update", 400);
     }
 
-    if (validated.priceModifier !== undefined) {
-      const effectivePrice = product.price + validated.priceModifier;
-      if (effectivePrice <= 0) {
-        return apiError(
-          "Effective price (base + modifier) must be greater than zero",
-          400,
-        );
-      }
+    if (validated.price !== undefined && validated.price <= 0) {
+      return apiError("Variation price must be greater than zero", 400);
     }
 
     if (validated.name !== undefined) {

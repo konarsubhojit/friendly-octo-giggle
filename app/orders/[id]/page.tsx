@@ -194,7 +194,7 @@ interface OrderItemRowItem {
     id: string;
     name: string;
     image?: string;
-    priceModifier: number;
+    price: number;
   } | null;
 }
 
