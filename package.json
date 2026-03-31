@@ -99,7 +99,7 @@
     "jsdom": "^29.0.1",
     "prettier": "^3.8.1",
     "tsx": "^4.21.0",
-    "typescript": "^5.9.3",
+    "typescript": "^6.0.2",
     "vite-tsconfig-paths": "^6.1.1",
     "vitest": "^4.1.1",
     "ws": "^8.18.0"
