@@ -61,6 +61,7 @@ const mockCart = {
       variation: {
         id: "var0001",
         productId: "prd0001",
+        styleId: null,
         name: "Small (15 cm)",
         designName: "Rose Red",
         variationType: "styling" as const,

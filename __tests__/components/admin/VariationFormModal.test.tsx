@@ -37,6 +37,7 @@ vi.mock("@/contexts/CurrencyContext", () => ({
 const mockVariation: ProductVariation = {
   id: "var1234",
   productId: "abc1234",
+  styleId: null,
   name: "Red - Large",
   designName: "Classic Logo",
   image: null,
