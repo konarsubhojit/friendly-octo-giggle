@@ -19,7 +19,10 @@ import type { AppDispatch } from "@/lib/store";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { AlertBanner } from "@/components/ui/AlertBanner";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { AdminPageShell, AdminPanel } from "@/features/admin/components/AdminPageShell";
+import {
+  AdminPageShell,
+  AdminPanel,
+} from "@/features/admin/components/AdminPageShell";
 import { AdminSearchForm } from "@/features/admin/components/AdminSearchForm";
 import { CursorPaginationBar } from "@/components/ui/CursorPaginationBar";
 

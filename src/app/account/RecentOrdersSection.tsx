@@ -7,7 +7,10 @@ import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { AlertBanner } from "@/components/ui/AlertBanner";
-import { countOrderUnits, summarizeOrderProducts } from "@/features/orders/services/order-summary";
+import {
+  countOrderUnits,
+  summarizeOrderProducts,
+} from "@/features/orders/services/order-summary";
 
 interface RecentOrderItem {
   readonly quantity: number;

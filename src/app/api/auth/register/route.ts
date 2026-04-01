@@ -1,7 +1,10 @@
 import { NextRequest } from "next/server";
 import { registerSchema } from "@/lib/validations";
 import { apiSuccess, apiError, handleApiError } from "@/lib/api-utils";
-import { hashPassword, savePasswordToHistory } from "@/features/auth/services/password";
+import {
+  hashPassword,
+  savePasswordToHistory,
+} from "@/features/auth/services/password";
 import { primaryDrizzleDb } from "@/lib/db";
 import { users } from "@/lib/schema";
 import { eq, or } from "drizzle-orm";

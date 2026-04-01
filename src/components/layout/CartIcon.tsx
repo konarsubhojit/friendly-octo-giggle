@@ -4,7 +4,10 @@ import Link from "next/link";
 import { useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useSelector, useDispatch } from "react-redux";
-import { fetchCart, selectCartItemCount } from "@/features/cart/store/cartSlice";
+import {
+  fetchCart,
+  selectCartItemCount,
+} from "@/features/cart/store/cartSlice";
 import type { AppDispatch } from "@/lib/store";
 import { FloralCartIcon } from "@/components/ui/DecorativeElements";
 

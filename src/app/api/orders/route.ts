@@ -6,7 +6,10 @@ import {
 } from "@/features/cart/services/checkout-service";
 import { logBusinessEvent, logError } from "@/lib/logger";
 import { auth } from "@/lib/auth";
-import { getUserOrders, isOrderRequestError } from "@/features/orders/services/order-service";
+import {
+  getUserOrders,
+  isOrderRequestError,
+} from "@/features/orders/services/order-service";
 
 export const dynamic = "force-dynamic";
 

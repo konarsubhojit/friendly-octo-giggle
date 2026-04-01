@@ -6,7 +6,10 @@ import { OrderStatus } from "@/lib/types";
 import { Badge, orderStatusVariant } from "@/components/ui/Badge";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
-import { countOrderUnits, summarizeOrderProducts } from "@/features/orders/services/order-summary";
+import {
+  countOrderUnits,
+  summarizeOrderProducts,
+} from "@/features/orders/services/order-summary";
 
 interface AdminOrderItem {
   id: string;

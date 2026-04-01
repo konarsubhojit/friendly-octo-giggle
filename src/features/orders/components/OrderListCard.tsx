@@ -2,7 +2,10 @@
 
 import Link from "next/link";
 import { Badge, orderStatusVariant } from "@/components/ui/Badge";
-import { countOrderUnits, summarizeOrderProducts } from "@/features/orders/services/order-summary";
+import {
+  countOrderUnits,
+  summarizeOrderProducts,
+} from "@/features/orders/services/order-summary";
 
 const STATUS_CONFIG: Record<string, { label: string }> = {
   PENDING: { label: "Pending" },

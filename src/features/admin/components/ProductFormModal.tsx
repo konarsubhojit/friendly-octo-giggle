@@ -7,7 +7,9 @@ import {
   VALID_IMAGE_TYPES_DISPLAY,
 } from "@/lib/upload-constants";
 import { CURRENCIES, type CurrencyCode } from "@/contexts/CurrencyContext";
-import useProductForm, { MAX_IMAGES } from "@/features/admin/hooks/useProductForm";
+import useProductForm, {
+  MAX_IMAGES,
+} from "@/features/admin/hooks/useProductForm";
 
 interface ProductFormModalProps {
   readonly editingProduct: Product | null;

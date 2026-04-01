@@ -5,12 +5,7 @@ import DeleteConfirmModal from "@/features/admin/components/DeleteConfirmModal";
 
 describe("DeleteConfirmModal", () => {
   it("renders the modal with heading and message", () => {
-    render(
-      <DeleteConfirmModal
-        onConfirm={vi.fn()}
-        onCancel={vi.fn()}
-      />,
-    );
+    render(<DeleteConfirmModal onConfirm={vi.fn()} onCancel={vi.fn()} />);
     expect(screen.getByText("Confirm Delete")).toBeTruthy();
     expect(
       screen.getByText(/Are you sure you want to delete this product/),
@@ -19,24 +14,14 @@ describe("DeleteConfirmModal", () => {
 
   it("calls onCancel when Cancel is clicked", () => {
     const onCancel = vi.fn();
-    render(
-      <DeleteConfirmModal
-        onConfirm={vi.fn()}
-        onCancel={onCancel}
-      />,
-    );
+    render(<DeleteConfirmModal onConfirm={vi.fn()} onCancel={onCancel} />);
     fireEvent.click(screen.getByText("Cancel"));
     expect(onCancel).toHaveBeenCalledOnce();
   });
 
   it("calls onConfirm when Delete is clicked", () => {
     const onConfirm = vi.fn();
-    render(
-      <DeleteConfirmModal
-        onConfirm={onConfirm}
-        onCancel={vi.fn()}
-      />,
-    );
+    render(<DeleteConfirmModal onConfirm={onConfirm} onCancel={vi.fn()} />);
     fireEvent.click(screen.getByText("Delete"));
     expect(onConfirm).toHaveBeenCalledOnce();
   });

@@ -1,5 +1,8 @@
 import Link from "next/link";
-import { AdminPageShell, AdminPanel } from "@/features/admin/components/AdminPageShell";
+import {
+  AdminPageShell,
+  AdminPanel,
+} from "@/features/admin/components/AdminPageShell";
 import {
   getRecentCheckoutRequests,
   type AdminCheckoutRequestRecord,

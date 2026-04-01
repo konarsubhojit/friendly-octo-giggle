@@ -1,7 +1,10 @@
 import { waitUntil } from "@vercel/functions";
 import { desc, eq } from "drizzle-orm";
 import { drizzleDb, primaryDrizzleDb } from "@/lib/db";
-import { createOrderForUser, isOrderRequestError } from "@/features/orders/services/order-service";
+import {
+  createOrderForUser,
+  isOrderRequestError,
+} from "@/features/orders/services/order-service";
 import { send } from "@/lib/queue";
 import { logBusinessEvent, logError } from "@/lib/logger";
 import { checkoutRequests, orders } from "@/lib/schema";

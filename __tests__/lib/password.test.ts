@@ -76,7 +76,8 @@ describe("password utilities", () => {
   describe("hashPassword", () => {
     it("hashes password with bcryptjs using salt rounds 12", async () => {
       mockHash.mockResolvedValue("hashed-password");
-      const { hashPassword } = await import("@/features/auth/services/password");
+      const { hashPassword } =
+        await import("@/features/auth/services/password");
       const result = await hashPassword("MyPassword1!");
       expect(mockHash).toHaveBeenCalledWith("MyPassword1!", 12);
       expect(result).toBe("hashed-password");
@@ -86,7 +87,8 @@ describe("password utilities", () => {
   describe("verifyPassword", () => {
     it("returns true for matching password", async () => {
       mockCompare.mockResolvedValue(true);
-      const { verifyPassword } = await import("@/features/auth/services/password");
+      const { verifyPassword } =
+        await import("@/features/auth/services/password");
       const result = await verifyPassword("MyPassword1!", "hashed");
       expect(mockCompare).toHaveBeenCalledWith("MyPassword1!", "hashed");
       expect(result).toBe(true);
@@ -94,7 +96,8 @@ describe("password utilities", () => {
 
     it("returns false for non-matching password", async () => {
       mockCompare.mockResolvedValue(false);
-      const { verifyPassword } = await import("@/features/auth/services/password");
+      const { verifyPassword } =
+        await import("@/features/auth/services/password");
       const result = await verifyPassword("wrong", "hashed");
       expect(result).toBe(false);
     });
@@ -103,7 +106,8 @@ describe("password utilities", () => {
   describe("checkPasswordHistory", () => {
     it("returns false when no history entries exist", async () => {
       mockLimitSelect.mockResolvedValue([]);
-      const { checkPasswordHistory } = await import("@/features/auth/services/password");
+      const { checkPasswordHistory } =
+        await import("@/features/auth/services/password");
       const result = await checkPasswordHistory("user-1", "newPass1!");
       expect(result).toBe(false);
     });
@@ -111,7 +115,8 @@ describe("password utilities", () => {
     it("returns true when password matches a history entry", async () => {
       mockLimitSelect.mockResolvedValue([{ passwordHash: TEST_OLD_HASH }]);
       mockCompare.mockResolvedValue(true);
-      const { checkPasswordHistory } = await import("@/features/auth/services/password");
+      const { checkPasswordHistory } =
+        await import("@/features/auth/services/password");
       const result = await checkPasswordHistory("user-1", "oldPassword1!");
       expect(result).toBe(true);
     });
@@ -119,7 +124,8 @@ describe("password utilities", () => {
     it("returns false when password does not match any history entry", async () => {
       mockLimitSelect.mockResolvedValue([{ passwordHash: TEST_OLD_HASH }]);
       mockCompare.mockResolvedValue(false);
-      const { checkPasswordHistory } = await import("@/features/auth/services/password");
+      const { checkPasswordHistory } =
+        await import("@/features/auth/services/password");
       const result = await checkPasswordHistory("user-1", "newPassword1!");
       expect(result).toBe(false);
     });
@@ -129,7 +135,8 @@ describe("password utilities", () => {
     it("inserts a new history entry", async () => {
       mockLimitSelect.mockResolvedValue([]);
       mockOrderBySelect.mockReturnValue(Promise.resolve([{ id: "entry-1" }]));
-      const { savePasswordToHistory } = await import("@/features/auth/services/password");
+      const { savePasswordToHistory } =
+        await import("@/features/auth/services/password");
       await savePasswordToHistory("user-1", "hashed-password");
       expect(mockInsert).toHaveBeenCalled();
       expect(mockValuesInsert).toHaveBeenCalledWith({
@@ -146,7 +153,8 @@ describe("password utilities", () => {
           { id: "entry-1" },
         ]),
       );
-      const { savePasswordToHistory } = await import("@/features/auth/services/password");
+      const { savePasswordToHistory } =
+        await import("@/features/auth/services/password");
       await savePasswordToHistory("user-1", "new-hash");
       expect(mockDelete).toHaveBeenCalled();
     });
