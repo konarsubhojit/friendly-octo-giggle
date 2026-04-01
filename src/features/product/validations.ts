@@ -70,31 +70,9 @@ export const CreateVariationSchema = z
       .nonnegative("Stock must be non-negative"),
   })
   .superRefine((data, ctx) => {
-    // Styles are groupings — price/stock must be 0
     if (data.variationType === "styling") {
-      if (data.price !== 0) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["price"],
-          message: "Styles are grouping-only; price must be 0",
-        });
-      }
-      if (data.stock !== 0) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["stock"],
-          message: "Styles are grouping-only; stock must be 0",
-        });
-      }
-      if (data.styleId) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["styleId"],
-          message: "Styles cannot be nested under another style",
-        });
-      }
+      validateStylingVariation(data, ctx);
     }
-    // Colours must have a positive price
     if (data.variationType === "colour" && data.price <= 0) {
       ctx.addIssue({
         code: "custom",
@@ -103,6 +81,34 @@ export const CreateVariationSchema = z
       });
     }
   });
+
+// Extracted helper to keep superRefine complexity low.
+function validateStylingVariation(
+  data: { price: number; stock: number; styleId?: string | null },
+  ctx: z.RefinementCtx,
+) {
+  if (data.price !== 0) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["price"],
+      message: "Styles are grouping-only; price must be 0",
+    });
+  }
+  if (data.stock !== 0) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["stock"],
+      message: "Styles are grouping-only; stock must be 0",
+    });
+  }
+  if (data.styleId) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["styleId"],
+      message: "Styles cannot be nested under another style",
+    });
+  }
+}
 
 export const UpdateVariationSchema = z
   .object({
