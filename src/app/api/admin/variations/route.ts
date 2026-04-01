@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { drizzleDb } from "@/lib/db";
 import { products, productVariations } from "@/lib/schema";
 import { eq, and, isNull } from "drizzle-orm";
-import { CreateVariationSchema } from "@/lib/validations";
+import { CreateVariationSchema } from "@/features/product/validations";
 import { z } from "zod";
 import {
   apiSuccess,

@@ -3,7 +3,7 @@ import {
   recoverCheckoutRequestAfterRetryExhaustion,
 } from "@/features/cart/services/checkout-service";
 import { handleCallback } from "@/lib/queue";
-import { CheckoutQueueMessageSchema } from "@/lib/validations";
+import { CheckoutQueueMessageSchema } from "@/features/cart/validations";
 
 const MAX_CHECKOUT_CONSUMER_ATTEMPTS = 5;
 

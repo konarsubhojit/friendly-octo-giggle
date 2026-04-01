@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { AddToCartSchema } from "@/lib/validations";
+import { AddToCartSchema } from "@/features/cart/validations";
 import { handleValidationError } from "@/lib/api-utils";
 import { logError } from "@/lib/logger";
 import {

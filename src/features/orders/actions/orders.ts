@@ -7,7 +7,7 @@ import { eq, desc, inArray } from "drizzle-orm";
 import { getRedisClient, invalidateCache } from "@/lib/redis";
 import { generateOrderId } from "@/lib/short-id";
 import { logError, logBusinessEvent } from "@/lib/logger";
-import { OrderStatusEnum } from "@/lib/validations";
+import { OrderStatusEnum } from "@/features/orders/validations";
 import { z } from "zod";
 import { invalidateUserOrderCaches } from "@/lib/cache";
 import { ORDER_SEARCH_SCHEMA } from "@/features/orders/services/orders-search-index";

@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { drizzleDb } from "@/lib/db";
 import { products, productVariations } from "@/lib/schema";
 import { eq, and, isNull, ne } from "drizzle-orm";
-import { UpdateVariationSchema } from "@/lib/validations";
+import { UpdateVariationSchema } from "@/features/product/validations";
 import {
   apiSuccess,
   apiError,

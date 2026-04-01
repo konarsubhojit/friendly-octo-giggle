@@ -7,7 +7,7 @@ import {
   getRecentCheckoutRequests,
   type AdminCheckoutRequestRecord,
 } from "@/features/cart/services/checkout-service";
-import { CheckoutRequestStatusEnum } from "@/lib/validations";
+import { CheckoutRequestStatusEnum } from "@/features/orders/validations";
 
 export const dynamic = "force-dynamic";
 

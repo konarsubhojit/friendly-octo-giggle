@@ -1,6 +1,6 @@
 "use client";
 
-import { PASSWORD_REQUIREMENTS } from "@/lib/validations";
+import { PASSWORD_REQUIREMENTS } from "@/lib/validations/primitives";
 import { CheckIcon } from "@/components/icons/CheckIcon";
 import { CircleIcon } from "@/components/icons/CircleIcon";
 

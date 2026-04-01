@@ -11,7 +11,7 @@ import {
   type CartItemRedis,
 } from "@/features/cart/services/cart-redis";
 import type { Session } from "next-auth";
-import type { AddToCartInput } from "@/lib/validations";
+import type { AddToCartInput } from "@/features/cart/validations";
 
 interface ProductWithVariations {
   id: string;

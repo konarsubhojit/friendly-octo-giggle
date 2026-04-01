@@ -3,7 +3,7 @@ import { primaryDrizzleDb as drizzleDb } from "@/lib/db";
 import { cartItems } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import { auth } from "@/lib/auth";
-import { UpdateCartItemSchema } from "@/lib/validations";
+import { UpdateCartItemSchema } from "@/features/cart/validations";
 import { handleValidationError } from "@/lib/api-utils";
 import { logError } from "@/lib/logger";
 import { invalidateCartCache } from "@/lib/cache";

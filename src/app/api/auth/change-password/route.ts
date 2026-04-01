@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { changePasswordSchema } from "@/lib/validations";
+import { changePasswordSchema } from "@/features/auth/validations";
 import { apiSuccess, apiError, handleApiError } from "@/lib/api-utils";
 import {
   hashPassword,

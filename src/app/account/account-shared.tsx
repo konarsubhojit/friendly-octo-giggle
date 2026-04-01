@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import type { FieldDef } from "@/components/ui/DynamicForm";
-import { PASSWORD_REQUIREMENTS } from "@/lib/validations";
+import { PASSWORD_REQUIREMENTS } from "@/lib/validations/primitives";
 import {
   PROFILE_ERRORS,
   PASSWORD_ERRORS,
