@@ -82,7 +82,7 @@ export const CreateVariationSchema = z
     }
   });
 
-// Extracted helper to keep superRefine complexity low.
+// Validates that styling variations have zero price/stock and are not nested.
 function validateStylingVariation(
   data: { price: number; stock: number; styleId?: string | null },
   ctx: z.RefinementCtx,
