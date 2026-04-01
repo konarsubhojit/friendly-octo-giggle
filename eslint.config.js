@@ -40,7 +40,7 @@ const config = [
 
   // Allow console.* in startup files that run before the logger is available
   {
-    files: ["lib/env.ts"],
+    files: ["src/lib/env.ts"],
     rules: {
       "no-console": "off",
     },

@@ -9,7 +9,7 @@ config({ path: '.env.local' });
 config({ path: '.env', override: false });
 
 export default defineConfig({
-  schema: './lib/schema.ts',
+  schema: './src/lib/schema.ts',
   out: './drizzle',
   dialect: 'postgresql',
   dbCredentials: {

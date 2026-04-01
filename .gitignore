@@ -54,3 +54,4 @@ test-results/
 playwright-tests/.auth/
 .playwright-mcp/**.log
 .contextstream/
+vitest-report.json
