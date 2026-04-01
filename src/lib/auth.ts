@@ -7,7 +7,7 @@ import { primaryDrizzleDb } from "@/lib/db";
 import { users, accounts, sessions, verificationTokens } from "@/lib/schema";
 import type { Adapter } from "next-auth/adapters";
 import { logAuthEvent } from "./logger";
-import { verifyPassword } from "./password";
+import { verifyPassword } from "@/features/auth/services/password";
 import { eq, or } from "drizzle-orm";
 import { cacheUserSession, invalidateUserSessionCache } from "@/lib/cache";
 

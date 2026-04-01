@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { OrderListCard } from "@/components/orders/OrderListCard";
+import { OrderListCard } from "@/features/orders/components/OrderListCard";
 
 describe("OrderListCard", () => {
   it("shows up to two product names and hides total pricing in the list view", () => {

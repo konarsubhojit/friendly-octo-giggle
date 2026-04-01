@@ -18,7 +18,7 @@ vi.mock("@/lib/auth", () => ({
   auth: mockAuth,
 }));
 
-vi.mock("@/lib/checkout-service", () => ({
+vi.mock("@/features/cart/services/checkout-service", () => ({
   enqueueCheckoutForUser: mockEnqueueCheckoutForUser,
   getCheckoutRequestStatusForUser: mockGetCheckoutRequestStatusForUser,
   isCheckoutRequestError: mockIsCheckoutRequestError,

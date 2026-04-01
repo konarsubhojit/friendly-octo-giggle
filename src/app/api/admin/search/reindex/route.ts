@@ -12,7 +12,7 @@ import {
 import {
   areOrdersSearchControlsAvailable,
   createOrRefreshOrdersSearchIndex,
-} from "@/lib/orders-search-index";
+} from "@/features/orders/services/orders-search-index";
 import { z } from "zod";
 
 const reindexRequestSchema = z

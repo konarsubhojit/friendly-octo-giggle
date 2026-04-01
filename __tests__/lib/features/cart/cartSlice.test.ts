@@ -5,7 +5,7 @@ import cartReducer, {
   selectCartLoading,
   selectCartError,
   selectCartItemCount,
-} from "@/lib/features/cart/cartSlice";
+} from "@/features/cart/store/cartSlice";
 
 const initialState = {
   cart: null,

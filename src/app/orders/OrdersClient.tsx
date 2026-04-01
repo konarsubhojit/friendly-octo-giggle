@@ -7,8 +7,8 @@ import { AlertBanner } from "@/components/ui/AlertBanner";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Card } from "@/components/ui/Card";
 import { GradientHeading } from "@/components/ui/GradientHeading";
-import { OrderListCard } from "@/components/orders/OrderListCard";
-import { OrdersSearchForm } from "@/components/orders/OrdersSearchForm";
+import { OrderListCard } from "@/features/orders/components/OrderListCard";
+import { OrdersSearchForm } from "@/features/orders/components/OrdersSearchForm";
 import { CursorPaginationBar } from "@/components/ui/CursorPaginationBar";
 
 interface OrderSummary {

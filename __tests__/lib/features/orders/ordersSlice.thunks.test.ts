@@ -7,7 +7,7 @@ import ordersReducer, {
   fetchOrders,
   fetchOrderById,
   cancelOrder,
-} from "@/lib/features/orders/ordersSlice";
+} from "@/features/orders/store/ordersSlice";
 
 function makeStore() {
   return configureStore({ reducer: { orders: ordersReducer } });

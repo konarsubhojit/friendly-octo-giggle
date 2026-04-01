@@ -15,11 +15,11 @@ vi.mock("@/lib/search", () => ({
   isSearchAvailable: () => isSearchAvailable(),
 }));
 
-vi.mock("@/lib/orders-search-index", () => ({
+vi.mock("@/features/orders/services/orders-search-index", () => ({
   areOrdersSearchControlsAvailable: () => areOrdersSearchControlsAvailable(),
 }));
 
-vi.mock("@/components/admin/SearchReindexClient", () => ({
+vi.mock("@/features/admin/components/SearchReindexClient", () => ({
   default: ({
     productsConfigured,
     ordersConfigured,

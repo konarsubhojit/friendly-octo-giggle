@@ -15,7 +15,7 @@ import {
   selectOrdersError,
   selectOrderCancelling,
   clearCurrentOrder,
-} from "@/lib/features/orders/ordersSlice";
+} from "@/features/orders/store/ordersSlice";
 import type { AppDispatch } from "@/lib/store";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { AuthRequiredState } from "@/components/ui/AuthRequiredState";

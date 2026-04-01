@@ -6,7 +6,7 @@ import {
   VALID_IMAGE_TYPES_DISPLAY,
 } from "@/lib/upload-constants";
 import { logError } from "@/lib/logger";
-import { checkAdminAuth } from "@/lib/admin-auth";
+import { checkAdminAuth } from "@/features/admin/services/admin-auth";
 
 export async function POST(request: Request) {
   let fileName = "unknown";

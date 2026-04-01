@@ -41,7 +41,7 @@ vi.mock("@/lib/db", () => ({
   },
 }));
 
-vi.mock("@/components/admin/CategoriesClient", () => ({
+vi.mock("@/features/admin/components/CategoriesClient", () => ({
   default: ({
     initialCategories,
   }: {

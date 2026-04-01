@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
-import { SalesTrendChart } from "@/components/admin/SalesTrendChart";
-import type { SalesTrendPoint } from "@/lib/admin-sales";
+import { SalesTrendChart } from "@/features/admin/components/SalesTrendChart";
+import type { SalesTrendPoint } from "@/features/admin/services/admin-sales";
 
 vi.mock("@/contexts/CurrencyContext", () => ({
   useCurrency: () => ({

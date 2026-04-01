@@ -40,7 +40,7 @@ vi.mock("@/lib/db", () => ({
   },
 }));
 
-vi.mock("@/components/admin/EmailFailuresClient", () => ({
+vi.mock("@/features/admin/components/EmailFailuresClient", () => ({
   EmailFailuresClient: ({
     initialRecords,
   }: {

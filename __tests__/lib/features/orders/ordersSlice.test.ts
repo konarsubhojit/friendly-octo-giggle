@@ -8,7 +8,7 @@ import ordersReducer, {
   selectCurrentOrder,
   selectOrderDetailLoading,
   selectOrderCancelling,
-} from "@/lib/features/orders/ordersSlice";
+} from "@/features/orders/store/ordersSlice";
 
 const initialState = {
   orders: [],

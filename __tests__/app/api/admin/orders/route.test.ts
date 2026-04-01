@@ -36,19 +36,19 @@ vi.mock("drizzle-orm", () => ({
   inArray: vi.fn(),
   SQL: vi.fn(),
 }));
-vi.mock("@/lib/admin-auth", () => ({ checkAdminAuth: vi.fn() }));
+vi.mock("@/features/admin/services/admin-auth", () => ({ checkAdminAuth: vi.fn() }));
 vi.mock("@/lib/cache", () => ({
   cacheAdminOrdersList: vi.fn((fetcher: () => Promise<unknown>) => fetcher()),
 }));
 vi.mock("@/lib/serializers", () => ({ serializeOrders: vi.fn((o) => o) }));
 vi.mock("@/lib/logger", () => ({ logError: vi.fn() }));
-vi.mock("@/lib/order-search", () => ({
+vi.mock("@/features/orders/services/order-search", () => ({
   searchOrderIds: vi.fn(),
 }));
 
 import { GET } from "@/app/api/admin/orders/route";
-import { checkAdminAuth } from "@/lib/admin-auth";
-import { searchOrderIds } from "@/lib/order-search";
+import { checkAdminAuth } from "@/features/admin/services/admin-auth";
+import { searchOrderIds } from "@/features/orders/services/order-search";
 
 const mockCheckAdminAuth = vi.mocked(checkAdminAuth);
 const mockSearchOrderIds = vi.mocked(searchOrderIds);

@@ -4,7 +4,7 @@ import React from "react";
 import StoreProvider from "@/components/providers/StoreProvider";
 import { SessionProvider } from "@/components/providers/SessionProvider";
 import { useSelector } from "react-redux";
-import { selectCartItemCount } from "@/lib/features/cart/cartSlice";
+import { selectCartItemCount } from "@/features/cart/store/cartSlice";
 
 vi.mock("next-auth/react", () => ({
   SessionProvider: ({ children }: { children: React.ReactNode }) => (

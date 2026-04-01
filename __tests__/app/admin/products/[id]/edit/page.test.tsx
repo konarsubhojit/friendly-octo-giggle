@@ -58,13 +58,13 @@ vi.mock("@/lib/db", () => ({
   },
 }));
 
-vi.mock("@/components/admin/ProductEditPageForm", () => ({
+vi.mock("@/features/admin/components/ProductEditPageForm", () => ({
   default: ({ product }: { product: { name: string } }) => (
     <div>Product form: {product.name}</div>
   ),
 }));
 
-vi.mock("@/components/admin/VariationList", () => ({
+vi.mock("@/features/admin/components/VariationList", () => ({
   default: ({
     initialVariations,
   }: {

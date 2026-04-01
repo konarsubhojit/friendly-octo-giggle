@@ -11,7 +11,7 @@ vi.mock("@vercel/queue", () => ({
   },
 }));
 
-vi.mock("@/lib/checkout-service", () => ({
+vi.mock("@/features/cart/services/checkout-service", () => ({
   processCheckoutRequestById: mockProcessCheckoutRequestById,
   recoverCheckoutRequestAfterRetryExhaustion:
     mockRecoverCheckoutRequestAfterRetryExhaustion,

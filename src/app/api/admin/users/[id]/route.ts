@@ -3,7 +3,7 @@ import { drizzleDb, primaryDrizzleDb } from "@/lib/db";
 import { users } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import { apiSuccess, apiError, handleApiError } from "@/lib/api-utils";
-import { checkAdminAuth } from "@/lib/admin-auth";
+import { checkAdminAuth } from "@/features/admin/services/admin-auth";
 import { cacheAdminUserById, invalidateAdminUserCaches } from "@/lib/cache";
 import { z } from "zod";
 

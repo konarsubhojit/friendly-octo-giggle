@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import React from "react";
-import DeleteConfirmModal from "@/components/admin/DeleteConfirmModal";
+import DeleteConfirmModal from "@/features/admin/components/DeleteConfirmModal";
 
 describe("DeleteConfirmModal", () => {
   it("renders the modal with heading and message", () => {

@@ -6,21 +6,21 @@ import dynamic from "next/dynamic";
 import { useSession } from "next-auth/react";
 import { useDispatch, useSelector } from "react-redux";
 import { Product, ProductVariation } from "@/lib/types";
-import { addToCart, fetchCart } from "@/lib/features/cart/cartSlice";
-import { addPendingCartItem } from "@/lib/pending-cart";
+import { addToCart, fetchCart } from "@/features/cart/store/cartSlice";
+import { addPendingCartItem } from "@/features/cart/services/pending-cart";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import type { AppDispatch, RootState } from "@/lib/store";
-import { StockBadge } from "@/components/sections/StockBadge";
-import { VariationButton } from "@/components/product/VariationButton";
-import { ShareButton } from "@/components/product/ShareButton";
+import { StockBadge } from "@/features/product/components/StockBadge";
+import { VariationButton } from "@/features/product/components/VariationButton";
+import { ShareButton } from "@/features/product/components/ShareButton";
 import { ButterflyAccent } from "@/components/ui/DecorativeElements";
-import ImageCarousel from "@/components/product/ImageCarousel";
-import { useRecentlyViewed } from "@/lib/hooks";
-import RecentlyViewed from "@/components/sections/RecentlyViewed";
-import { ReviewsSection } from "@/components/sections/ReviewsSection";
+import ImageCarousel from "@/features/product/components/ImageCarousel";
+import { useRecentlyViewed } from "@/features/product/hooks/useRecentlyViewed";
+import RecentlyViewed from "@/features/product/components/RecentlyViewed";
+import { ReviewsSection } from "@/features/product/components/ReviewsSection";
 
 const ProductAssistant = dynamic(
-  () => import("@/components/product/ProductAssistant"),
+  () => import("@/features/product/components/ProductAssistant"),
   { ssr: false },
 );
 

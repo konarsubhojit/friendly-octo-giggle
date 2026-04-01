@@ -17,7 +17,7 @@ vi.mock("next-auth/react", () => ({
   signIn: mockSignIn,
 }));
 
-vi.mock("@/components/auth/PasswordToggleButton", () => ({
+vi.mock("@/features/auth/components/PasswordToggleButton", () => ({
   PasswordToggleButton: ({
     showPassword,
     onToggle,

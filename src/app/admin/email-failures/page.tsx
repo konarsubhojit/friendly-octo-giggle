@@ -1,8 +1,8 @@
 import { drizzleDb } from "@/lib/db";
 import { failedEmails } from "@/lib/schema";
 import { desc, inArray } from "drizzle-orm";
-import { AdminPageShell, AdminPanel } from "@/components/admin/AdminPageShell";
-import { EmailFailuresClient } from "@/components/admin/EmailFailuresClient";
+import { AdminPageShell, AdminPanel } from "@/features/admin/components/AdminPageShell";
+import { EmailFailuresClient } from "@/features/admin/components/EmailFailuresClient";
 
 export const dynamic = "force-dynamic";
 

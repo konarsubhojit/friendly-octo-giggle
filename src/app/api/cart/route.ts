@@ -10,7 +10,7 @@ import {
   getCart,
   getCartIdentity,
   isCartRequestError,
-} from "@/lib/cart-service";
+} from "@/features/cart/services/cart-service";
 
 export const dynamic = "force-dynamic";
 

@@ -39,7 +39,7 @@ vi.mock("next/link", () => ({
   ),
 }));
 
-vi.mock("@/lib/checkout-service", () => ({
+vi.mock("@/features/cart/services/checkout-service", () => ({
   getRecentCheckoutRequests: mockGetRecentCheckoutRequests,
 }));
 

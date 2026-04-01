@@ -9,7 +9,7 @@ import {
   handleApiError,
   handleValidationError,
 } from "@/lib/api-utils";
-import { checkAdminAuth } from "@/lib/admin-auth";
+import { checkAdminAuth } from "@/features/admin/services/admin-auth";
 import { invalidateProductCaches } from "@/lib/cache";
 import { revalidateTag } from "next/cache";
 

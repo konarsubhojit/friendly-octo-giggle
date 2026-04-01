@@ -4,14 +4,14 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { OrderStatus } from "@/lib/types";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { useDispatch } from "react-redux";
-import { updateAdminOrderStatus } from "@/lib/features/admin/adminSlice";
+import { updateAdminOrderStatus } from "@/features/admin/store/adminSlice";
 import type { AppDispatch } from "@/lib/store";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { AlertBanner } from "@/components/ui/AlertBanner";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { AdminPageShell, AdminPanel } from "@/components/admin/AdminPageShell";
-import { AdminOrderCard } from "@/components/admin/AdminOrderCard";
-import { AdminSearchForm } from "@/components/admin/AdminSearchForm";
+import { AdminPageShell, AdminPanel } from "@/features/admin/components/AdminPageShell";
+import { AdminOrderCard } from "@/features/admin/components/AdminOrderCard";
+import { AdminSearchForm } from "@/features/admin/components/AdminSearchForm";
 import { CursorPaginationBar } from "@/components/ui/CursorPaginationBar";
 
 type ShippingEdits = Record<

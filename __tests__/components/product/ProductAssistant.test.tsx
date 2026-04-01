@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
-import ProductAssistant from "@/components/product/ProductAssistant";
+import ProductAssistant from "@/features/product/components/ProductAssistant";
 
 const mockSendMessage = vi.fn();
 const mockStop = vi.fn();

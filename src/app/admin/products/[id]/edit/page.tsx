@@ -1,9 +1,9 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
-import { AdminPageShell } from "@/components/admin/AdminPageShell";
-import ProductEditPageForm from "@/components/admin/ProductEditPageForm";
-import VariationList from "@/components/admin/VariationList";
+import { AdminPageShell } from "@/features/admin/components/AdminPageShell";
+import ProductEditPageForm from "@/features/admin/components/ProductEditPageForm";
+import VariationList from "@/features/admin/components/VariationList";
 import { auth } from "@/lib/auth";
 import { drizzleDb } from "@/lib/db";
 import { products } from "@/lib/schema";

@@ -14,9 +14,9 @@ vi.mock("@/lib/validations", () => ({
   ],
 }));
 
-import { PasswordToggleButton } from "@/components/auth/PasswordToggleButton";
-import { PasswordStrengthChecklist } from "@/components/auth/PasswordStrengthChecklist";
-import { OAuthButtons } from "@/components/auth/OAuthButtons";
+import { PasswordToggleButton } from "@/features/auth/components/PasswordToggleButton";
+import { PasswordStrengthChecklist } from "@/features/auth/components/PasswordStrengthChecklist";
+import { OAuthButtons } from "@/features/auth/components/OAuthButtons";
 
 describe("PasswordToggleButton", () => {
   it('renders with "Show password" label when hidden', () => {

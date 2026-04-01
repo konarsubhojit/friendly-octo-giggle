@@ -49,7 +49,7 @@ vi.mock("@/lib/search", () => ({
   resetIndex: mockResetIndex,
 }));
 
-vi.mock("@/lib/orders-search-index", () => ({
+vi.mock("@/features/orders/services/orders-search-index", () => ({
   areOrdersSearchControlsAvailable: mockOrdersSearchAvailable,
   createOrRefreshOrdersSearchIndex: mockCreateOrRefreshOrdersSearchIndex,
 }));

@@ -47,7 +47,7 @@ vi.mock("@/components/sections/BestsellersScroller", () => ({
   ),
 }));
 
-vi.mock("@/components/sections/ProductGrid", () => ({
+vi.mock("@/features/product/components/ProductGrid", () => ({
   __esModule: true,
   default: ({
     products,

@@ -10,7 +10,7 @@ import adminReducer, {
   selectAdminOrdersLoading,
   selectAdminUsersLoading,
   selectAdminError,
-} from "@/lib/features/admin/adminSlice";
+} from "@/features/admin/store/adminSlice";
 
 const initialState = {
   products: [],

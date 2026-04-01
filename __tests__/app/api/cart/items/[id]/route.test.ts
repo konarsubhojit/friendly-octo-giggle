@@ -28,7 +28,7 @@ vi.mock(
 );
 vi.mock("@/lib/logger", () => ({ logError: vi.fn() }));
 vi.mock("@/lib/cache", () => ({ invalidateCartCache: vi.fn() }));
-vi.mock("@/lib/cart-redis", () => ({
+vi.mock("@/features/cart/services/cart-redis", () => ({
   updateCartItemQuantityInRedis: vi.fn(() => Promise.resolve()),
   removeCartItemFromRedis: vi.fn(() => Promise.resolve()),
 }));

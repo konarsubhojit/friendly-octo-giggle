@@ -10,7 +10,7 @@ import {
   fetchWishlist,
   removeFromWishlist,
   optimisticToggle,
-} from "@/lib/features/wishlist/wishlistSlice";
+} from "@/features/wishlist/store/wishlistSlice";
 import type { RootState, AppDispatch } from "@/lib/store";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { EmptyState } from "@/components/ui/EmptyState";

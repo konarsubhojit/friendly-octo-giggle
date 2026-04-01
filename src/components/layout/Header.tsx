@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useSession, signOut } from "next-auth/react";
 import CartIcon from "@/components/layout/CartIcon";
-import LoginModal from "@/components/auth/LoginModal";
+import LoginModal from "@/features/auth/components/LoginModal";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { FlowerAccent } from "@/components/ui/DecorativeElements";
 import ProductSearch from "@/components/ui/ProductSearch";

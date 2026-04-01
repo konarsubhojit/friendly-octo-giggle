@@ -39,7 +39,7 @@ vi.mock("@/components/ui/CurrencySelector", () => ({
   default: () => <div data-testid="currency-selector" />,
 }));
 
-vi.mock("@/components/auth/LoginModal", () => ({
+vi.mock("@/features/auth/components/LoginModal", () => ({
   default: ({ isOpen }: { isOpen: boolean }) =>
     isOpen ? <div data-testid="login-modal" /> : null,
 }));

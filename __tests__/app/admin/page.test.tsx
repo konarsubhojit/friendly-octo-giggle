@@ -1,15 +1,15 @@
 import { render, screen } from "@testing-library/react";
-import type { AdminSalesDashboardData } from "@/lib/admin-sales";
+import type { AdminSalesDashboardData } from "@/features/admin/services/admin-sales";
 import * as AdminPageModule from "@/app/admin/page";
 
 const getAdminSalesDashboardData =
   vi.fn<() => Promise<AdminSalesDashboardData>>();
 
-vi.mock("@/lib/admin-sales", () => ({
+vi.mock("@/features/admin/services/admin-sales", () => ({
   getAdminSalesDashboardData: () => getAdminSalesDashboardData(),
 }));
 
-vi.mock("@/components/admin/AdminSalesDashboardClient", () => ({
+vi.mock("@/features/admin/components/AdminSalesDashboardClient", () => ({
   AdminSalesDashboardClient: ({
     sales,
   }: {

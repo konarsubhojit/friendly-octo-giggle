@@ -7,7 +7,7 @@ import {
   waitFor,
 } from "@testing-library/react";
 import React from "react";
-import LoginModal from "@/components/auth/LoginModal";
+import LoginModal from "@/features/auth/components/LoginModal";
 
 const VALID_TEST_SECRET = ["password", "123"].join("");
 const INVALID_TEST_SECRET = ["wrong"].join("");

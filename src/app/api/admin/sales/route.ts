@@ -1,6 +1,6 @@
 import { apiSuccess, apiError, handleApiError } from "@/lib/api-utils";
-import { checkAdminAuth } from "@/lib/admin-auth";
-import { getAdminSalesDashboardData } from "@/lib/admin-sales";
+import { checkAdminAuth } from "@/features/admin/services/admin-auth";
+import { getAdminSalesDashboardData } from "@/features/admin/services/admin-sales";
 
 export const dynamic = "force-dynamic";
 

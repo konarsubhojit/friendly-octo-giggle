@@ -19,14 +19,14 @@ import {
   selectCart,
   selectCartLoading,
   syncPendingCartItems,
-} from "@/lib/features/cart/cartSlice";
+} from "@/features/cart/store/cartSlice";
 import type { AppDispatch } from "@/lib/store";
-import { CartItemRow } from "@/components/cart/CartItemRow";
-import { CheckoutForm } from "@/components/cart/CheckoutForm";
+import { CartItemRow } from "@/features/cart/components/CartItemRow";
+import { CheckoutForm } from "@/features/cart/components/CheckoutForm";
 import CartGlyph from "@/components/icons/CartGlyph";
 import { LeafAccent } from "@/components/ui/DecorativeElements";
-import { buildCheckoutPricingSummary } from "@/lib/order-summary";
-import { CartPricingSummary } from "@/components/cart/CartPricingSummary";
+import { buildCheckoutPricingSummary } from "@/features/orders/services/order-summary";
+import { CartPricingSummary } from "@/features/cart/components/CartPricingSummary";
 
 export default function CartPage() {
   const { data: session, status } = useSession();

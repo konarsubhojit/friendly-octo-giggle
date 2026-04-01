@@ -57,7 +57,7 @@ import {
   createOrder,
   updateOrderStatus,
   getUserOrders,
-} from "@/actions/orders";
+} from "@/features/orders/actions/orders";
 import { drizzleDb } from "@/lib/db";
 
 const validOrderData = {

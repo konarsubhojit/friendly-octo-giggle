@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
-import { ReviewsSection } from "@/components/sections/ReviewsSection";
+import { ReviewsSection } from "@/features/product/components/ReviewsSection";
 
 vi.mock("@/components/ui/ReviewForm", () => ({
   ReviewForm: ({ productId }: { productId: string }) => (
