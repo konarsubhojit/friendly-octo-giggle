@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import { Component, ReactNode } from 'react';
+import { Component, ReactNode } from "react";
 
 // Re-export from their own files for backwards compatibility
-export { ErrorDisplay } from '@/components/ui/ErrorDisplay';
-export { SuccessDisplay } from '@/components/ui/SuccessDisplay';
-export { LoadingSpinner } from '@/components/ui/LoadingSpinner';
-export { LoadingOverlay } from '@/components/ui/LoadingOverlay';
+export { ErrorDisplay } from "@/components/ui/ErrorDisplay";
+export { SuccessDisplay } from "@/components/ui/SuccessDisplay";
+export { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+export { LoadingOverlay } from "@/components/ui/LoadingOverlay";
 
 interface Props {
   children: ReactNode;
@@ -46,7 +46,7 @@ export class ErrorBoundary extends Component<Props, State> {
               Oops! Something went wrong
             </h2>
             <p className="text-gray-700 mb-4">
-              {this.state.error?.message || 'An unexpected error occurred'}
+              {this.state.error?.message || "An unexpected error occurred"}
             </p>
             <button
               onClick={() => this.setState({ hasError: false, error: null })}

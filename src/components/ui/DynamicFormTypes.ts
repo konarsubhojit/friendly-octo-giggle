@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { ReactNode } from "react";
 
 export type FieldValidateFn = (
   value: string,
@@ -13,13 +13,13 @@ export interface SelectOption {
 }
 
 export type FieldType =
-  | 'text'
-  | 'email'
-  | 'tel'
-  | 'password'
-  | 'number'
-  | 'textarea'
-  | 'select';
+  | "text"
+  | "email"
+  | "tel"
+  | "password"
+  | "number"
+  | "textarea"
+  | "select";
 
 export interface FieldDef {
   readonly id: string;
@@ -59,10 +59,10 @@ export interface DynamicFormProps {
 
 // Shared style constants used by DynamicForm sub-components
 export const BASE_INPUT =
-  'w-full px-4 py-3 text-base border rounded-xl focus:ring-2 focus:ring-[var(--accent-rose)] focus:border-transparent transition-all bg-[var(--surface)] text-[var(--foreground)] placeholder-[var(--text-muted)]';
+  "w-full px-4 py-3 text-base border rounded-xl focus:ring-2 focus:ring-[var(--accent-rose)] focus:border-transparent transition-all bg-[var(--surface)] text-[var(--foreground)] placeholder-[var(--text-muted)]";
 
 export const borderCls = (hasError: boolean) =>
-  hasError ? 'border-red-400' : 'border-[var(--border-warm)]';
+  hasError ? "border-red-400" : "border-[var(--border-warm)]";
 
 // Shared prop interfaces for input sub-components
 export interface InputSubProps {

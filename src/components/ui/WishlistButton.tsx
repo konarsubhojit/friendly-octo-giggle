@@ -28,7 +28,8 @@ export const WishlistButton = ({
     (state: RootState) => state.wishlist.productIds,
   );
   const wishlistLoaded = useSelector(
-    (state: RootState) => !state.wishlist.loading && state.wishlist.productIds !== undefined,
+    (state: RootState) =>
+      !state.wishlist.loading && state.wishlist.productIds !== undefined,
   );
   const isWishlisted = productIds.includes(productId);
 

@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from "next/link";
 
 interface AuthRequiredStateProps {
   /** The URL to redirect back to after sign-in (e.g. '/cart'). */
@@ -19,9 +19,9 @@ interface AuthRequiredStateProps {
  */
 export function AuthRequiredState({
   callbackUrl,
-  title = 'Sign In Required',
-  message = 'Please sign in to continue.',
-  ctaText = 'Sign In',
+  title = "Sign In Required",
+  message = "Please sign in to continue.",
+  ctaText = "Sign In",
 }: AuthRequiredStateProps) {
   return (
     <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/50 p-12 text-center">

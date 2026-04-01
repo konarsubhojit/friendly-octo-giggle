@@ -1,10 +1,10 @@
-import { notFound } from 'next/navigation';
-import type { Metadata } from 'next';
-import { Product } from '@/lib/types';
-import ProductClient from './ProductClient';
-import { db } from '@/lib/db';
+import { notFound } from "next/navigation";
+import type { Metadata } from "next";
+import { Product } from "@/lib/types";
+import ProductClient from "./ProductClient";
+import { db } from "@/lib/db";
 
-import { logError } from '@/lib/logger';
+import { logError } from "@/lib/logger";
 
 export const revalidate = 60;
 
@@ -15,7 +15,7 @@ export const generateMetadata = async ({
 }): Promise<Metadata> => {
   const { id } = await params;
   const product = await db.products.findById(id);
-  if (!product) return { title: 'Product Not Found' };
+  if (!product) return { title: "Product Not Found" };
   return {
     title: `${product.name} | The Kiyon Store`,
     description: product.description?.slice(0, 160),
@@ -27,7 +27,7 @@ const getProduct = async (id: string): Promise<Product | null> => {
     const product = await db.products.findById(id);
     return product;
   } catch (error) {
-    logError({ error, context: 'product_fetch', additionalInfo: { id } });
+    logError({ error, context: "product_fetch", additionalInfo: { id } });
     return null;
   }
 };
@@ -58,4 +58,3 @@ const ProductPage = async ({
 };
 
 export default ProductPage;
-

@@ -7,9 +7,9 @@ interface LoadingSpinnerProps {
 }
 
 const SIZE_MAP: Record<string, string> = {
-  sm: 'h-4 w-4',
-  md: 'h-8 w-8',
-  lg: 'h-12 w-12',
+  sm: "h-4 w-4",
+  md: "h-8 w-8",
+  lg: "h-12 w-12",
 };
 
 /**
@@ -23,9 +23,9 @@ const SIZE_MAP: Record<string, string> = {
  * ```
  */
 export function LoadingSpinner({
-  size = 'h-8 w-8',
-  color = 'text-blue-600',
-  label = 'Loading',
+  size = "h-8 w-8",
+  color = "text-blue-600",
+  label = "Loading",
 }: LoadingSpinnerProps) {
   const sizeClass = SIZE_MAP[size] ?? size;
   return (

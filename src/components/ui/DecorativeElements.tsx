@@ -17,10 +17,38 @@ export function FlowerAccent({
       aria-hidden="true"
     >
       <circle cx="12" cy="12" r="3" fill="var(--accent-warm, #e8a87c)" />
-      <ellipse cx="12" cy="5" rx="3" ry="4" fill="var(--accent-peach, #f8c8a8)" opacity="0.8" />
-      <ellipse cx="12" cy="19" rx="3" ry="4" fill="var(--accent-peach, #f8c8a8)" opacity="0.8" />
-      <ellipse cx="5" cy="12" rx="4" ry="3" fill="var(--accent-peach, #f8c8a8)" opacity="0.8" />
-      <ellipse cx="19" cy="12" rx="4" ry="3" fill="var(--accent-peach, #f8c8a8)" opacity="0.8" />
+      <ellipse
+        cx="12"
+        cy="5"
+        rx="3"
+        ry="4"
+        fill="var(--accent-peach, #f8c8a8)"
+        opacity="0.8"
+      />
+      <ellipse
+        cx="12"
+        cy="19"
+        rx="3"
+        ry="4"
+        fill="var(--accent-peach, #f8c8a8)"
+        opacity="0.8"
+      />
+      <ellipse
+        cx="5"
+        cy="12"
+        rx="4"
+        ry="3"
+        fill="var(--accent-peach, #f8c8a8)"
+        opacity="0.8"
+      />
+      <ellipse
+        cx="19"
+        cy="12"
+        rx="4"
+        ry="3"
+        fill="var(--accent-peach, #f8c8a8)"
+        opacity="0.8"
+      />
       <ellipse
         cx="7"
         cy="7"
@@ -133,8 +161,20 @@ export function VineDivider({
           fill="none"
           opacity="0.5"
         />
-        <circle cx="16" cy="2" r="2" fill="var(--accent-peach, #f8c8a8)" opacity="0.6" />
-        <circle cx="48" cy="2" r="2" fill="var(--accent-peach, #f8c8a8)" opacity="0.6" />
+        <circle
+          cx="16"
+          cy="2"
+          r="2"
+          fill="var(--accent-peach, #f8c8a8)"
+          opacity="0.6"
+        />
+        <circle
+          cx="48"
+          cy="2"
+          r="2"
+          fill="var(--accent-peach, #f8c8a8)"
+          opacity="0.6"
+        />
       </svg>
       <FlowerAccent className="w-5 h-5" />
       <svg className="w-16 h-4" viewBox="0 0 64 16" fill="none">
@@ -145,8 +185,20 @@ export function VineDivider({
           fill="none"
           opacity="0.5"
         />
-        <circle cx="16" cy="14" r="2" fill="var(--accent-peach, #f8c8a8)" opacity="0.6" />
-        <circle cx="48" cy="14" r="2" fill="var(--accent-peach, #f8c8a8)" opacity="0.6" />
+        <circle
+          cx="16"
+          cy="14"
+          r="2"
+          fill="var(--accent-peach, #f8c8a8)"
+          opacity="0.6"
+        />
+        <circle
+          cx="48"
+          cy="14"
+          r="2"
+          fill="var(--accent-peach, #f8c8a8)"
+          opacity="0.6"
+        />
       </svg>
     </div>
   );
@@ -202,10 +254,34 @@ export function FlowerBullet({
       aria-hidden="true"
     >
       <circle cx="10" cy="10" r="3" fill="var(--accent-rose, #d4856b)" />
-      <circle cx="10" cy="4" r="3" fill="var(--accent-peach, #f8c8a8)" opacity="0.7" />
-      <circle cx="10" cy="16" r="3" fill="var(--accent-peach, #f8c8a8)" opacity="0.7" />
-      <circle cx="4" cy="10" r="3" fill="var(--accent-peach, #f8c8a8)" opacity="0.7" />
-      <circle cx="16" cy="10" r="3" fill="var(--accent-peach, #f8c8a8)" opacity="0.7" />
+      <circle
+        cx="10"
+        cy="4"
+        r="3"
+        fill="var(--accent-peach, #f8c8a8)"
+        opacity="0.7"
+      />
+      <circle
+        cx="10"
+        cy="16"
+        r="3"
+        fill="var(--accent-peach, #f8c8a8)"
+        opacity="0.7"
+      />
+      <circle
+        cx="4"
+        cy="10"
+        r="3"
+        fill="var(--accent-peach, #f8c8a8)"
+        opacity="0.7"
+      />
+      <circle
+        cx="16"
+        cy="10"
+        r="3"
+        fill="var(--accent-peach, #f8c8a8)"
+        opacity="0.7"
+      />
     </svg>
   );
 }
@@ -325,7 +401,14 @@ export function ButterflyAccent({
         transform="rotate(15 22 12)"
       />
       {/* Body */}
-      <ellipse cx="16" cy="16" rx="1.5" ry="8" fill="var(--accent-rose, #d4856b)" opacity="0.7" />
+      <ellipse
+        cx="16"
+        cy="16"
+        rx="1.5"
+        ry="8"
+        fill="var(--accent-rose, #d4856b)"
+        opacity="0.7"
+      />
       {/* Antennae */}
       <path
         d="M15 8C13 4 11 3 10 3"
@@ -341,8 +424,20 @@ export function ButterflyAccent({
         strokeLinecap="round"
         opacity="0.5"
       />
-      <circle cx="10" cy="3" r="1" fill="var(--accent-warm, #e8a87c)" opacity="0.6" />
-      <circle cx="22" cy="3" r="1" fill="var(--accent-warm, #e8a87c)" opacity="0.6" />
+      <circle
+        cx="10"
+        cy="3"
+        r="1"
+        fill="var(--accent-warm, #e8a87c)"
+        opacity="0.6"
+      />
+      <circle
+        cx="22"
+        cy="3"
+        r="1"
+        fill="var(--accent-warm, #e8a87c)"
+        opacity="0.6"
+      />
     </svg>
   );
 }
@@ -361,7 +456,14 @@ export function MushroomAccent({
       aria-hidden="true"
     >
       {/* Cap */}
-      <ellipse cx="16" cy="14" rx="12" ry="10" fill="var(--accent-peach, #f8c8a8)" opacity="0.7" />
+      <ellipse
+        cx="16"
+        cy="14"
+        rx="12"
+        ry="10"
+        fill="var(--accent-peach, #f8c8a8)"
+        opacity="0.7"
+      />
       <ellipse
         cx="16"
         cy="14"
@@ -373,9 +475,27 @@ export function MushroomAccent({
         opacity="0.5"
       />
       {/* Spots */}
-      <circle cx="11" cy="10" r="2.5" fill="var(--accent-blush, #fde8d8)" opacity="0.8" />
-      <circle cx="20" cy="8" r="2" fill="var(--accent-blush, #fde8d8)" opacity="0.8" />
-      <circle cx="16" cy="13" r="1.5" fill="var(--accent-blush, #fde8d8)" opacity="0.6" />
+      <circle
+        cx="11"
+        cy="10"
+        r="2.5"
+        fill="var(--accent-blush, #fde8d8)"
+        opacity="0.8"
+      />
+      <circle
+        cx="20"
+        cy="8"
+        r="2"
+        fill="var(--accent-blush, #fde8d8)"
+        opacity="0.8"
+      />
+      <circle
+        cx="16"
+        cy="13"
+        r="1.5"
+        fill="var(--accent-blush, #fde8d8)"
+        opacity="0.6"
+      />
       {/* Stem */}
       <rect
         x="13"
@@ -388,7 +508,14 @@ export function MushroomAccent({
         strokeWidth="0.8"
       />
       {/* Ground */}
-      <ellipse cx="16" cy="28" rx="8" ry="1.5" fill="var(--accent-sage, #b8c9a3)" opacity="0.3" />
+      <ellipse
+        cx="16"
+        cy="28"
+        rx="8"
+        ry="1.5"
+        fill="var(--accent-sage, #b8c9a3)"
+        opacity="0.3"
+      />
     </svg>
   );
 }
@@ -413,8 +540,20 @@ export function FloralBorder({
             strokeWidth="1.2"
             opacity="0.4"
           />
-          <circle cx="20" cy="4" r="2.5" fill="var(--accent-peach, #f8c8a8)" opacity="0.5" />
-          <circle cx="60" cy="4" r="2.5" fill="var(--accent-peach, #f8c8a8)" opacity="0.5" />
+          <circle
+            cx="20"
+            cy="4"
+            r="2.5"
+            fill="var(--accent-peach, #f8c8a8)"
+            opacity="0.5"
+          />
+          <circle
+            cx="60"
+            cy="4"
+            r="2.5"
+            fill="var(--accent-peach, #f8c8a8)"
+            opacity="0.5"
+          />
         </svg>
         <FlowerAccent className="w-6 h-6" />
         <LeafAccent className="w-5 h-5 -scale-x-100" />
@@ -428,8 +567,20 @@ export function FloralBorder({
             strokeWidth="1.2"
             opacity="0.4"
           />
-          <circle cx="20" cy="20" r="2.5" fill="var(--accent-peach, #f8c8a8)" opacity="0.5" />
-          <circle cx="60" cy="20" r="2.5" fill="var(--accent-peach, #f8c8a8)" opacity="0.5" />
+          <circle
+            cx="20"
+            cy="20"
+            r="2.5"
+            fill="var(--accent-peach, #f8c8a8)"
+            opacity="0.5"
+          />
+          <circle
+            cx="60"
+            cy="20"
+            r="2.5"
+            fill="var(--accent-peach, #f8c8a8)"
+            opacity="0.5"
+          />
         </svg>
       </div>
       {/* Simplified version — shown only on mobile */}

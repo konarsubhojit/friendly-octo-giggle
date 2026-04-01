@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 export function ErrorDisplay({ error }: Readonly<{ error: string | null }>) {
   if (!error) return null;
