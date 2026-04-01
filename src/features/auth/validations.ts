@@ -1,5 +1,9 @@
 import { z } from "zod";
-import { EMAIL_REGEX, PHONE_REGEX, PASSWORD_REGEX } from "@/lib/validations/primitives";
+import {
+  EMAIL_REGEX,
+  PHONE_REGEX,
+  PASSWORD_REGEX,
+} from "@/lib/validations/primitives";
 
 // ─── Auth Validation Schemas ─────────────────────────────
 

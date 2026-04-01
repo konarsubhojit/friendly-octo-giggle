@@ -11,10 +11,7 @@ export {
   PASSWORD_REGEX,
 } from "@/lib/validations/primitives";
 
-export {
-  ApiSuccessSchema,
-  ApiErrorSchema,
-} from "@/lib/validations/api";
+export { ApiSuccessSchema, ApiErrorSchema } from "@/lib/validations/api";
 export type { AsyncResult, PaginatedResponse } from "@/lib/validations/api";
 
 export { EnvSchema } from "@/lib/validations/env";
