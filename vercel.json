@@ -1,6 +1,6 @@
 {
   "functions": {
-    "app/api/queue/checkout-orders/route.ts": {
+    "src/app/api/queue/checkout-orders/route.ts": {
       "experimentalTriggers": [
         {
           "type": "queue/v2beta",

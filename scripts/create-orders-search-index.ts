@@ -8,7 +8,7 @@ config({ path: ".env.local" });
 config({ path: ".env", override: false });
 
 const { createOrRefreshOrdersSearchIndex } =
-  await import("../lib/orders-search-index");
+  await import("../src/lib/orders-search-index");
 
 try {
   const result = await createOrRefreshOrdersSearchIndex();
