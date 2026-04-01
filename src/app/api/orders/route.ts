@@ -3,10 +3,13 @@ import { withLogging } from "@/lib/api-middleware";
 import {
   enqueueCheckoutForUser,
   isCheckoutRequestError,
-} from "@/lib/checkout-service";
+} from "@/features/cart/services/checkout-service";
 import { logBusinessEvent, logError } from "@/lib/logger";
 import { auth } from "@/lib/auth";
-import { getUserOrders, isOrderRequestError } from "@/lib/order-service";
+import {
+  getUserOrders,
+  isOrderRequestError,
+} from "@/features/orders/services/order-service";
 
 export const dynamic = "force-dynamic";
 

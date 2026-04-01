@@ -8,8 +8,8 @@ import {
   handleApiError,
   parseOffsetParam,
 } from "@/lib/api-utils";
-import { checkAdminAuth } from "@/lib/admin-auth";
-import { searchOrderIds } from "@/lib/order-search";
+import { checkAdminAuth } from "@/features/admin/services/admin-auth";
+import { searchOrderIds } from "@/features/orders/services/order-search";
 import { serializeOrders } from "@/lib/serializers";
 import { OrderStatus } from "@/lib/types";
 import { cacheAdminOrdersList } from "@/lib/cache";

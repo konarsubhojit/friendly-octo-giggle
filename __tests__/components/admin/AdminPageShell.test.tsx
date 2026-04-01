@@ -1,6 +1,9 @@
 import { render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { AdminPageShell, AdminPanel } from "@/components/admin/AdminPageShell";
+import {
+  AdminPageShell,
+  AdminPanel,
+} from "@/features/admin/components/AdminPageShell";
 
 vi.mock("next/link", () => ({
   default: ({ children, href }: { children: ReactNode; href: string }) => (

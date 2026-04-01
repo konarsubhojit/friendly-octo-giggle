@@ -1,5 +1,5 @@
-import { AdminSalesDashboardClient } from "@/components/admin/AdminSalesDashboardClient";
-import { getAdminSalesDashboardData } from "@/lib/admin-sales";
+import { AdminSalesDashboardClient } from "@/features/admin/components/AdminSalesDashboardClient";
+import { getAdminSalesDashboardData } from "@/features/admin/services/admin-sales";
 
 export const dynamic = "force-dynamic";
 

@@ -1,7 +1,7 @@
 import {
   processCheckoutRequestById,
   recoverCheckoutRequestAfterRetryExhaustion,
-} from "@/lib/checkout-service";
+} from "@/features/cart/services/checkout-service";
 import { handleCallback } from "@/lib/queue";
 import { CheckoutQueueMessageSchema } from "@/lib/validations";
 

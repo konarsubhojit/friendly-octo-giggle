@@ -14,30 +14,24 @@ vi.mock("@/lib/validations", () => ({
   ],
 }));
 
-import { PasswordToggleButton } from "@/components/auth/PasswordToggleButton";
-import { PasswordStrengthChecklist } from "@/components/auth/PasswordStrengthChecklist";
-import { OAuthButtons } from "@/components/auth/OAuthButtons";
+import { PasswordToggleButton } from "@/features/auth/components/PasswordToggleButton";
+import { PasswordStrengthChecklist } from "@/features/auth/components/PasswordStrengthChecklist";
+import { OAuthButtons } from "@/features/auth/components/OAuthButtons";
 
 describe("PasswordToggleButton", () => {
   it('renders with "Show password" label when hidden', () => {
-    render(
-      <PasswordToggleButton showPassword={false} onToggle={vi.fn()} />,
-    );
+    render(<PasswordToggleButton showPassword={false} onToggle={vi.fn()} />);
     expect(screen.getByLabelText("Show password")).toBeTruthy();
   });
 
   it('renders with "Hide password" label when visible', () => {
-    render(
-      <PasswordToggleButton showPassword={true} onToggle={vi.fn()} />,
-    );
+    render(<PasswordToggleButton showPassword={true} onToggle={vi.fn()} />);
     expect(screen.getByLabelText("Hide password")).toBeTruthy();
   });
 
   it("calls onToggle when clicked", () => {
     const onToggle = vi.fn();
-    render(
-      <PasswordToggleButton showPassword={false} onToggle={onToggle} />,
-    );
+    render(<PasswordToggleButton showPassword={false} onToggle={onToggle} />);
     act(() => {
       fireEvent.click(screen.getByLabelText("Show password"));
     });
@@ -94,9 +88,7 @@ describe("PasswordStrengthChecklist", () => {
 
 describe("OAuthButtons", () => {
   it("renders Google and Microsoft buttons", () => {
-    render(
-      <OAuthButtons onGoogleClick={vi.fn()} onMicrosoftClick={vi.fn()} />,
-    );
+    render(<OAuthButtons onGoogleClick={vi.fn()} onMicrosoftClick={vi.fn()} />);
     expect(screen.getByText("Continue with Google")).toBeTruthy();
     expect(screen.getByText("Continue with Microsoft")).toBeTruthy();
   });
@@ -115,7 +107,10 @@ describe("OAuthButtons", () => {
   it("calls onMicrosoftClick when Microsoft button is clicked", () => {
     const onMicrosoftClick = vi.fn();
     render(
-      <OAuthButtons onGoogleClick={vi.fn()} onMicrosoftClick={onMicrosoftClick} />,
+      <OAuthButtons
+        onGoogleClick={vi.fn()}
+        onMicrosoftClick={onMicrosoftClick}
+      />,
     );
     act(() => {
       fireEvent.click(screen.getByText("Continue with Microsoft"));

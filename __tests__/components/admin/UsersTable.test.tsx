@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { UsersTable } from "@/components/admin/UsersTable";
+import { UsersTable } from "@/features/admin/components/UsersTable";
 
 vi.mock("next/image", () => ({
   default: ({ alt, src }: { alt: string; src: string }) => (

@@ -3,8 +3,8 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import React from "react";
 import { Provider } from "react-redux";
 import { configureStore } from "@reduxjs/toolkit";
-import { CheckoutForm } from "@/components/cart/CheckoutForm";
-import cartReducer from "@/lib/features/cart/cartSlice";
+import { CheckoutForm } from "@/features/cart/components/CheckoutForm";
+import cartReducer from "@/features/cart/store/cartSlice";
 
 const mockPush = vi.fn();
 const mockToastError = vi.fn();

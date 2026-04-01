@@ -9,7 +9,7 @@ import cartReducer, {
   updateCartItem,
   removeCartItem,
   clearCart,
-} from "@/lib/features/cart/cartSlice";
+} from "@/features/cart/store/cartSlice";
 
 function makeStore(preloaded?: object) {
   return configureStore({

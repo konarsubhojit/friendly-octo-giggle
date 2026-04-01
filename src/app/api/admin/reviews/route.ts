@@ -3,7 +3,7 @@ import { drizzleDb } from "@/lib/db";
 import { reviews } from "@/lib/schema";
 import { desc, eq, and, SQL } from "drizzle-orm";
 import { apiSuccess, apiError, handleApiError } from "@/lib/api-utils";
-import { checkAdminAuth } from "@/lib/admin-auth";
+import { checkAdminAuth } from "@/features/admin/services/admin-auth";
 
 export const dynamic = "force-dynamic";
 

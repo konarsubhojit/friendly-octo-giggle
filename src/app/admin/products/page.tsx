@@ -14,20 +14,23 @@ import { Product } from "@/lib/types";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import toast from "react-hot-toast";
 import { useDispatch } from "react-redux";
-import { upsertProduct } from "@/lib/features/admin/adminSlice";
+import { upsertProduct } from "@/features/admin/store/adminSlice";
 import type { AppDispatch } from "@/lib/store";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { AlertBanner } from "@/components/ui/AlertBanner";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { AdminPageShell, AdminPanel } from "@/components/admin/AdminPageShell";
-import { AdminSearchForm } from "@/components/admin/AdminSearchForm";
+import {
+  AdminPageShell,
+  AdminPanel,
+} from "@/features/admin/components/AdminPageShell";
+import { AdminSearchForm } from "@/features/admin/components/AdminSearchForm";
 import { CursorPaginationBar } from "@/components/ui/CursorPaginationBar";
 
 const ProductFormModal = lazy(
-  () => import("@/components/admin/ProductFormModal"),
+  () => import("@/features/admin/components/ProductFormModal"),
 );
 const DeleteConfirmModal = lazy(
-  () => import("@/components/admin/DeleteConfirmModal"),
+  () => import("@/features/admin/components/DeleteConfirmModal"),
 );
 
 const PAGE_SIZE = 20;

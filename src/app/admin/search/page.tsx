@@ -1,7 +1,10 @@
 import { isSearchAvailable } from "@/lib/search";
-import { areOrdersSearchControlsAvailable } from "@/lib/orders-search-index";
-import { AdminPageShell, AdminPanel } from "@/components/admin/AdminPageShell";
-import SearchReindexClient from "@/components/admin/SearchReindexClient";
+import { areOrdersSearchControlsAvailable } from "@/features/orders/services/orders-search-index";
+import {
+  AdminPageShell,
+  AdminPanel,
+} from "@/features/admin/components/AdminPageShell";
+import SearchReindexClient from "@/features/admin/components/SearchReindexClient";
 
 export const dynamic = "force-dynamic";
 

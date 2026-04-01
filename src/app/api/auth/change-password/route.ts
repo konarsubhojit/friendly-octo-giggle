@@ -6,7 +6,7 @@ import {
   verifyPassword,
   checkPasswordHistory,
   savePasswordToHistory,
-} from "@/lib/password";
+} from "@/features/auth/services/password";
 import { primaryDrizzleDb } from "@/lib/db";
 import { users } from "@/lib/schema";
 import { eq } from "drizzle-orm";

@@ -4,9 +4,9 @@ import { drizzleDb } from "@/lib/db";
 import { products } from "@/lib/schema";
 import { eq, and, isNull } from "drizzle-orm";
 import Link from "next/link";
-import { AdminPageShell } from "@/components/admin/AdminPageShell";
-import VariationList from "@/components/admin/VariationList";
-import ProductEditForm from "@/components/admin/ProductEditForm";
+import { AdminPageShell } from "@/features/admin/components/AdminPageShell";
+import VariationList from "@/features/admin/components/VariationList";
+import ProductEditForm from "@/features/admin/components/ProductEditForm";
 
 export const dynamic = "force-dynamic";
 

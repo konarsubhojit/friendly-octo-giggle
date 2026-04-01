@@ -48,7 +48,7 @@ vi.mock("@/lib/redis", () => ({
   getRedisClient: vi.fn(() => null),
 }));
 
-vi.mock("@/lib/cart-redis", () => ({
+vi.mock("@/features/cart/services/cart-redis", () => ({
   fetchCartFromRedis: vi.fn(() => Promise.resolve(null)),
   backfillCartToRedis: vi.fn(),
   removeCartItemsByCartId: vi.fn(() => Promise.resolve()),

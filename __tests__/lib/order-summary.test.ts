@@ -5,7 +5,7 @@ import {
   buildCheckoutSummaryLineItems,
   countOrderUnits,
   summarizeOrderProducts,
-} from "@/lib/order-summary";
+} from "@/features/orders/services/order-summary";
 
 describe("order-summary", () => {
   it("summarizes unique product names and counts hidden products", () => {

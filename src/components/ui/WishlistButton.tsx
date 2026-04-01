@@ -9,7 +9,7 @@ import {
   addToWishlist,
   removeFromWishlist,
   optimisticToggle,
-} from "@/lib/features/wishlist/wishlistSlice";
+} from "@/features/wishlist/store/wishlistSlice";
 
 interface WishlistButtonProps {
   readonly productId: string;

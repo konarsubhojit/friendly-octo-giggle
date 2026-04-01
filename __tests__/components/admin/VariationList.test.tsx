@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import React from "react";
-import VariationList from "@/components/admin/VariationList";
+import VariationList from "@/features/admin/components/VariationList";
 import type { ProductVariation } from "@/lib/types";
 
 vi.mock("react-hot-toast", () => ({

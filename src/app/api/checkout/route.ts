@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth";
 import {
   enqueueCheckoutForUser,
   isCheckoutRequestError,
-} from "@/lib/checkout-service";
+} from "@/features/cart/services/checkout-service";
 import { withLogging } from "@/lib/api-middleware";
 import { logBusinessEvent, logError } from "@/lib/logger";
 

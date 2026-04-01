@@ -117,7 +117,7 @@ vi.mock("@/lib/logger", () => ({
   logAuthEvent: mockLogAuthEvent,
 }));
 
-vi.mock("@/lib/password", () => ({
+vi.mock("@/features/auth/services/password", () => ({
   verifyPassword: mockVerifyPassword,
 }));
 

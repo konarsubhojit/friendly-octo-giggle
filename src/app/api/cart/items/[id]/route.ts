@@ -10,7 +10,7 @@ import { invalidateCartCache } from "@/lib/cache";
 import {
   updateCartItemQuantityInRedis,
   removeCartItemFromRedis,
-} from "@/lib/cart-redis";
+} from "@/features/cart/services/cart-redis";
 
 export const dynamic = "force-dynamic";
 

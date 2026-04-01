@@ -10,7 +10,7 @@ import adminReducer, {
   fetchAdminUsers,
   updateAdminOrderStatus,
   updateAdminUserRole,
-} from "@/lib/features/admin/adminSlice";
+} from "@/features/admin/store/adminSlice";
 
 function makeStore() {
   return configureStore({ reducer: { admin: adminReducer } });

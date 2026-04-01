@@ -1,8 +1,8 @@
 import { configureStore } from "@reduxjs/toolkit";
-import cartReducer from "./features/cart/cartSlice";
-import ordersReducer from "./features/orders/ordersSlice";
-import adminReducer from "./features/admin/adminSlice";
-import wishlistReducer from "./features/wishlist/wishlistSlice";
+import cartReducer from "@/features/cart/store/cartSlice";
+import ordersReducer from "@/features/orders/store/ordersSlice";
+import adminReducer from "@/features/admin/store/adminSlice";
+import wishlistReducer from "@/features/wishlist/store/wishlistSlice";
 
 export const makeStore = () =>
   configureStore({

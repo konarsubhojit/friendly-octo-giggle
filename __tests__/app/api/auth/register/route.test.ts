@@ -41,7 +41,7 @@ vi.mock("@/lib/schema", () => ({
   },
 }));
 
-vi.mock("@/lib/password", () => ({
+vi.mock("@/features/auth/services/password", () => ({
   hashPassword: mockHashPassword,
   savePasswordToHistory: mockSavePasswordToHistory,
 }));

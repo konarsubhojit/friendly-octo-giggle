@@ -7,11 +7,11 @@ import {
   act,
 } from "@testing-library/react";
 import React from "react";
-import ProductGrid from "@/components/sections/ProductGrid";
+import ProductGrid from "@/features/product/components/ProductGrid";
 import { CurrencyProvider } from "@/contexts/CurrencyContext";
 import type { Product } from "@/lib/types";
 import toast from "react-hot-toast";
-import type { ProductGridItem } from "@/components/sections/ProductGrid";
+import type { ProductGridItem } from "@/features/product/components/ProductGrid";
 
 vi.mock("next/link", () => ({
   default: ({

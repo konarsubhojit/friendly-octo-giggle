@@ -6,7 +6,7 @@ import wishlistReducer, {
   fetchWishlist,
   addToWishlist,
   removeFromWishlist,
-} from "@/lib/features/wishlist/wishlistSlice";
+} from "@/features/wishlist/store/wishlistSlice";
 
 const initialState = {
   productIds: [],

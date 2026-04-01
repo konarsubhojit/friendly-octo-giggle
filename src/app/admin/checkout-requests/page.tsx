@@ -1,9 +1,12 @@
 import Link from "next/link";
-import { AdminPageShell, AdminPanel } from "@/components/admin/AdminPageShell";
+import {
+  AdminPageShell,
+  AdminPanel,
+} from "@/features/admin/components/AdminPageShell";
 import {
   getRecentCheckoutRequests,
   type AdminCheckoutRequestRecord,
-} from "@/lib/checkout-service";
+} from "@/features/cart/services/checkout-service";
 import { CheckoutRequestStatusEnum } from "@/lib/validations";
 
 export const dynamic = "force-dynamic";

@@ -1,8 +1,8 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { AdminHeaderNav } from "@/components/admin/AdminHeaderNav";
-import { AdminNavLinks } from "@/components/admin/AdminNavLinks";
+import { AdminHeaderNav } from "@/features/admin/components/AdminHeaderNav";
+import { AdminNavLinks } from "@/features/admin/components/AdminNavLinks";
 
 interface AdminLayoutProps {
   readonly children: React.ReactNode;

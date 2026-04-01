@@ -1,8 +1,11 @@
 import { drizzleDb } from "@/lib/db";
 import { categories } from "@/lib/schema";
 import { isNull, asc } from "drizzle-orm";
-import { AdminPageShell, AdminPanel } from "@/components/admin/AdminPageShell";
-import CategoriesClient from "@/components/admin/CategoriesClient";
+import {
+  AdminPageShell,
+  AdminPanel,
+} from "@/features/admin/components/AdminPageShell";
+import CategoriesClient from "@/features/admin/components/CategoriesClient";
 
 export const dynamic = "force-dynamic";
 

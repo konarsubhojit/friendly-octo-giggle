@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import React from "react";
-import { OrderPolicyConfirmDialog } from "@/components/cart/OrderPolicyConfirmDialog";
+import { OrderPolicyConfirmDialog } from "@/features/cart/components/OrderPolicyConfirmDialog";
 
 const mockLineItems = [
   {

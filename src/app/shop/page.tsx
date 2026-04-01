@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import Footer from "@/components/layout/Footer";
 import ProductGrid, {
   type ProductGridItem,
-} from "@/components/sections/ProductGrid";
-import { BestsellersScroller } from "@/components/sections/BestsellersScroller";
+} from "@/features/product/components/ProductGrid";
+import { BestsellersScroller } from "@/features/product/components/BestsellersScroller";
 import { db, drizzleDb } from "@/lib/db";
 import { cacheCategoriesList, cacheProductsBestsellers } from "@/lib/cache";
 import { searchProductIdsCached } from "@/lib/search-service";

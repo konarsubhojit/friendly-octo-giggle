@@ -18,12 +18,12 @@ vi.mock("@/lib/auth", () => ({
   auth: mockAuth,
 }));
 
-vi.mock("@/lib/order-service", () => ({
+vi.mock("@/features/orders/services/order-service", () => ({
   getUserOrders: mockGetUserOrders,
   isOrderRequestError: mockIsOrderRequestError,
 }));
 
-vi.mock("@/lib/checkout-service", () => ({
+vi.mock("@/features/cart/services/checkout-service", () => ({
   enqueueCheckoutForUser: mockEnqueueCheckoutForUser,
   isCheckoutRequestError: mockIsCheckoutRequestError,
 }));

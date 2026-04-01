@@ -2,16 +2,19 @@
 
 import { useState } from "react";
 import { useDispatch } from "react-redux";
-import { updateAdminUserRole } from "@/lib/features/admin/adminSlice";
+import { updateAdminUserRole } from "@/features/admin/store/adminSlice";
 import type { AppDispatch } from "@/lib/store";
 import { logError } from "@/lib/logger";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { AlertBanner } from "@/components/ui/AlertBanner";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { AdminPageShell, AdminPanel } from "@/components/admin/AdminPageShell";
-import { UsersTable } from "@/components/admin/UsersTable";
+import {
+  AdminPageShell,
+  AdminPanel,
+} from "@/features/admin/components/AdminPageShell";
+import { UsersTable } from "@/features/admin/components/UsersTable";
 import { CursorPaginationBar } from "@/components/ui/CursorPaginationBar";
-import { AdminSearchForm } from "@/components/admin/AdminSearchForm";
+import { AdminSearchForm } from "@/features/admin/components/AdminSearchForm";
 import { useCursorPagination } from "@/lib/hooks";
 
 interface AdminUser {

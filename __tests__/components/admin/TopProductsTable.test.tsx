@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { TopProductsTable } from "@/components/admin/TopProductsTable";
+import { TopProductsTable } from "@/features/admin/components/TopProductsTable";
 
 vi.mock("next/link", () => ({
   default: ({ children, href }: { children: ReactNode; href: string }) => (

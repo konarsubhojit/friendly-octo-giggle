@@ -7,7 +7,7 @@ import {
   act,
 } from "@testing-library/react";
 import React from "react";
-import ProductFormModal from "@/components/admin/ProductFormModal";
+import ProductFormModal from "@/features/admin/components/ProductFormModal";
 import { PRODUCT_ERRORS, API_ERRORS } from "@/lib/constants/error-messages";
 import { CurrencyProvider } from "@/contexts/CurrencyContext";
 import type { Product } from "@/lib/types";

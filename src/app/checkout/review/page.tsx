@@ -10,7 +10,7 @@ import {
   clearCart,
   selectCart,
   fetchCart,
-} from "@/lib/features/cart/cartSlice";
+} from "@/features/cart/store/cartSlice";
 import { apiClient } from "@/lib/api-client";
 import type { AppDispatch } from "@/lib/store";
 import type {
@@ -20,7 +20,7 @@ import type {
 import {
   buildCheckoutPricingSummaryFromLineItems,
   buildCheckoutSummaryLineItems,
-} from "@/lib/order-summary";
+} from "@/features/orders/services/order-summary";
 import {
   CHECKOUT_POLICIES,
   CHECKOUT_POLICY_ACKNOWLEDGMENT,
@@ -28,7 +28,7 @@ import {
   SUPPORT_EMAIL,
   type CheckoutPolicySection,
 } from "@/lib/constants/checkout-policies";
-import { CartPricingSummary } from "@/components/cart/CartPricingSummary";
+import { CartPricingSummary } from "@/features/cart/components/CartPricingSummary";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { GradientHeading } from "@/components/ui/GradientHeading";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";

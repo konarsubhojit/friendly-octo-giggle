@@ -1,6 +1,6 @@
 "use client";
 
-import { PasswordToggleButton } from "@/components/auth/PasswordToggleButton";
+import { PasswordToggleButton } from "@/features/auth/components/PasswordToggleButton";
 import {
   BASE_INPUT,
   borderCls,

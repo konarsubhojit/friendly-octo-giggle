@@ -1,6 +1,6 @@
 "use client";
 
-import { PasswordStrengthChecklist } from "@/components/auth/PasswordStrengthChecklist";
+import { PasswordStrengthChecklist } from "@/features/auth/components/PasswordStrengthChecklist";
 import { TextareaInput } from "@/components/ui/TextareaInput";
 import { SelectInput } from "@/components/ui/SelectInput";
 import { TextInput } from "@/components/ui/TextInput";

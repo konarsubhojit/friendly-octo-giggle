@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
-import { AdminSalesDashboardClient } from "@/components/admin/AdminSalesDashboardClient";
-import type { AdminSalesDashboardData } from "@/lib/admin-sales";
+import { AdminSalesDashboardClient } from "@/features/admin/components/AdminSalesDashboardClient";
+import type { AdminSalesDashboardData } from "@/features/admin/services/admin-sales";
 
 vi.mock("@/contexts/CurrencyContext", () => ({
   useCurrency: () => ({

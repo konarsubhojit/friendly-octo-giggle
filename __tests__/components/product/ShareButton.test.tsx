@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { ShareButton } from "@/components/product/ShareButton";
+import { ShareButton } from "@/features/product/components/ShareButton";
 
 const mockFetch = vi.fn();
 vi.stubGlobal("fetch", mockFetch);

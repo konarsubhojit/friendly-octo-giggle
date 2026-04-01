@@ -8,7 +8,7 @@ import {
   handleApiError,
   handleValidationError,
 } from "@/lib/api-utils";
-import { checkAdminAuth } from "@/lib/admin-auth";
+import { checkAdminAuth } from "@/features/admin/services/admin-auth";
 import { cacheAdminOrderById, invalidateAdminOrderCaches } from "@/lib/cache";
 import { serializeOrder } from "@/lib/serializers";
 import { UpdateOrderStatusSchema } from "@/lib/validations";

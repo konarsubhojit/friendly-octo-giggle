@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { ProductUpdateSchema } from "@/lib/validations";
 import { apiSuccess, apiError, handleApiError } from "@/lib/api-utils";
-import { checkAdminAuth } from "@/lib/admin-auth";
+import { checkAdminAuth } from "@/features/admin/services/admin-auth";
 import { revalidateTag } from "next/cache";
 import { invalidateProductCaches } from "@/lib/cache";
 import { indexProduct, removeProduct } from "@/lib/search";

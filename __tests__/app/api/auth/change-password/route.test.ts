@@ -52,7 +52,7 @@ vi.mock("@/lib/schema", () => ({
   },
 }));
 
-vi.mock("@/lib/password", () => ({
+vi.mock("@/features/auth/services/password", () => ({
   verifyPassword: mockVerifyPassword,
   checkPasswordHistory: mockCheckPasswordHistory,
   hashPassword: mockHashPassword,
