@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
-import { ProductUpdateSchema } from "@/lib/validations";
+import { ProductUpdateSchema } from "@/features/product/validations";
 import { apiSuccess, apiError, handleApiError } from "@/lib/api-utils";
 import { checkAdminAuth } from "@/features/admin/services/admin-auth";
 import { revalidateTag } from "next/cache";

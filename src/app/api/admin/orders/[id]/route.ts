@@ -11,7 +11,7 @@ import {
 import { checkAdminAuth } from "@/features/admin/services/admin-auth";
 import { cacheAdminOrderById, invalidateAdminOrderCaches } from "@/lib/cache";
 import { serializeOrder } from "@/lib/serializers";
-import { UpdateOrderStatusSchema } from "@/lib/validations";
+import { UpdateOrderStatusSchema } from "@/features/orders/validations";
 import { sendOrderStatusUpdateEmail } from "@/lib/email";
 import { getQStashClient } from "@/lib/qstash";
 import type { OrderStatusChangedEvent } from "@/lib/qstash-events";

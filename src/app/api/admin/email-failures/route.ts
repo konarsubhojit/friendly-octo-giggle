@@ -15,7 +15,7 @@ import type { FailedEmailStatus } from "@/lib/email/failed-emails";
 import {
   FailedEmailQuerySchema,
   ManualRetryBodySchema,
-} from "@/lib/validations";
+} from "@/features/admin/validations";
 
 export const dynamic = "force-dynamic";
 

@@ -1,4 +1,4 @@
-import { EnvSchema, type Env } from "./validations";
+import { EnvSchema, type Env } from "./validations/env";
 
 const isProductionBuildPhase =
   process.env.NEXT_PHASE === "phase-production-build";

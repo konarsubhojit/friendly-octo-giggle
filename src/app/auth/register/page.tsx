@@ -8,7 +8,7 @@ import {
   type FieldDef,
   type SubmitResult,
 } from "@/components/ui/DynamicForm";
-import { PASSWORD_REQUIREMENTS } from "@/lib/validations";
+import { PASSWORD_REQUIREMENTS } from "@/lib/validations/primitives";
 import { PROFILE_ERRORS } from "@/lib/constants/error-messages";
 
 const EMAIL_RE =

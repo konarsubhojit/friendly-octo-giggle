@@ -17,7 +17,7 @@ import {
   CheckoutQueueMessageSchema,
   SubmitCheckoutSchema,
   type SubmitCheckoutInput,
-} from "@/lib/validations";
+} from "@/features/cart/validations";
 
 export const CHECKOUT_QUEUE_TOPIC = "checkout-orders";
 

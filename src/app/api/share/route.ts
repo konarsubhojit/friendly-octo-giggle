@@ -5,7 +5,7 @@ import {
   handleApiError,
   handleValidationError,
 } from "@/lib/api-utils";
-import { CreateShareSchema } from "@/lib/validations";
+import { CreateShareSchema } from "@/features/product/validations";
 import { withLogging } from "@/lib/api-middleware";
 
 export const dynamic = "force-dynamic";

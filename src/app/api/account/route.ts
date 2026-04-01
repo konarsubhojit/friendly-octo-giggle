@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { updateProfileSchema } from "@/lib/validations";
+import { updateProfileSchema } from "@/features/auth/validations";
 import { apiSuccess, apiError, handleApiError } from "@/lib/api-utils";
 import { drizzleDb, primaryDrizzleDb } from "@/lib/db";
 import { users } from "@/lib/schema";

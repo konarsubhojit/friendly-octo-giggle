@@ -9,7 +9,7 @@ import {
   handleValidationError,
 } from "@/lib/api-utils";
 import { auth } from "@/lib/auth";
-import { CreateReviewSchema } from "@/lib/validations";
+import { CreateReviewSchema } from "@/features/product/validations";
 import { withLogging } from "@/lib/api-middleware";
 
 export const dynamic = "force-dynamic";
