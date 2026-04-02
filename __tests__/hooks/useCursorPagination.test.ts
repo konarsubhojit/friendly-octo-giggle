@@ -23,9 +23,11 @@ describe("useCursorPagination", () => {
   it("fetches first page on mount", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValue(
-        mockResponse([{ id: 1 }, { id: 2 }], "cursor-2", true, 20),
-      ),
+      vi
+        .fn()
+        .mockResolvedValue(
+          mockResponse([{ id: 1 }, { id: 2 }], "cursor-2", true, 20),
+        ),
     );
 
     const { result } = renderHook(() =>
@@ -66,9 +68,11 @@ describe("useCursorPagination", () => {
   it("applies transform function to items", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValue(
-        mockResponse([{ id: 1, name: "test" }], null, false, 1),
-      ),
+      vi
+        .fn()
+        .mockResolvedValue(
+          mockResponse([{ id: 1, name: "test" }], null, false, 1),
+        ),
     );
 
     const { result } = renderHook(() =>
@@ -132,9 +136,7 @@ describe("useCursorPagination", () => {
   it("calculates totalPages from totalCount and pageSize", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValue(
-        mockResponse([{ id: 1 }], "c2", true, 25),
-      ),
+      vi.fn().mockResolvedValue(mockResponse([{ id: 1 }], "c2", true, 25)),
     );
 
     const { result } = renderHook(() =>
@@ -153,9 +155,9 @@ describe("useCursorPagination", () => {
   });
 
   it("handleSearch resets to page 1 and updates search", async () => {
-    const mockFetch = vi.fn().mockResolvedValue(
-      mockResponse([{ id: 1 }], null, false, 1),
-    );
+    const mockFetch = vi
+      .fn()
+      .mockResolvedValue(mockResponse([{ id: 1 }], null, false, 1));
     vi.stubGlobal("fetch", mockFetch);
 
     const { result } = renderHook(() =>
@@ -187,9 +189,7 @@ describe("useCursorPagination", () => {
   it("handleRefresh resets all state", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValue(
-        mockResponse([{ id: 1 }], null, false, 1),
-      ),
+      vi.fn().mockResolvedValue(mockResponse([{ id: 1 }], null, false, 1)),
     );
 
     const { result } = renderHook(() =>
@@ -213,9 +213,9 @@ describe("useCursorPagination", () => {
   });
 
   it("handleFirst does nothing when already on page 1", async () => {
-    const mockFetch = vi.fn().mockResolvedValue(
-      mockResponse([{ id: 1 }], "c2", true, 10),
-    );
+    const mockFetch = vi
+      .fn()
+      .mockResolvedValue(mockResponse([{ id: 1 }], "c2", true, 10));
     vi.stubGlobal("fetch", mockFetch);
 
     const { result } = renderHook(() =>
@@ -239,9 +239,9 @@ describe("useCursorPagination", () => {
   });
 
   it("handleNext does nothing when no more pages", async () => {
-    const mockFetch = vi.fn().mockResolvedValue(
-      mockResponse([{ id: 1 }], null, false, 1),
-    );
+    const mockFetch = vi
+      .fn()
+      .mockResolvedValue(mockResponse([{ id: 1 }], null, false, 1));
     vi.stubGlobal("fetch", mockFetch);
 
     const { result } = renderHook(() =>

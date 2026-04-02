@@ -38,7 +38,9 @@ describe("buildProductContext", () => {
     const product = { ...baseProduct, description: longDesc };
     const context = buildProductContext(product);
 
-    const descLine = context.split("\n").find((l) => l.startsWith("Description:"));
+    const descLine = context
+      .split("\n")
+      .find((l) => l.startsWith("Description:"));
     expect(descLine).toBeDefined();
     expect(descLine!.length).toBeLessThan(420);
     expect(descLine).toContain("…");

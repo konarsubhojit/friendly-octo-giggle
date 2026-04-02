@@ -51,9 +51,7 @@ describe("useMutation", () => {
   });
 
   it("sets error on failure and re-throws", async () => {
-    const mutationFn = vi
-      .fn()
-      .mockRejectedValue(new Error("Network error"));
+    const mutationFn = vi.fn().mockRejectedValue(new Error("Network error"));
     const { result } = renderHook(() =>
       useMutation<unknown, string>(mutationFn),
     );

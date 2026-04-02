@@ -178,9 +178,7 @@ describe("CartItemRow", () => {
     );
 
     expect(screen.getByTestId("loading-spinner")).toBeTruthy();
-    expect(
-      screen.queryByLabelText("Quantity for Handmade Basket"),
-    ).toBeNull();
+    expect(screen.queryByLabelText("Quantity for Handmade Basket")).toBeNull();
   });
 
   it("renders variation details when present", () => {

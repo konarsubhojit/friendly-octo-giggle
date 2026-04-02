@@ -15,25 +15,19 @@ describe("useLocalStorage", () => {
   });
 
   it("returns the initial value when localStorage is empty", () => {
-    const { result } = renderHook(() =>
-      useLocalStorage("test-key", "default"),
-    );
+    const { result } = renderHook(() => useLocalStorage("test-key", "default"));
     expect(result.current[0]).toBe("default");
   });
 
   it("reads existing value from localStorage", () => {
     localStorage.setItem("test-key", JSON.stringify("stored-value"));
 
-    const { result } = renderHook(() =>
-      useLocalStorage("test-key", "default"),
-    );
+    const { result } = renderHook(() => useLocalStorage("test-key", "default"));
     expect(result.current[0]).toBe("stored-value");
   });
 
   it("updates value and writes to localStorage", () => {
-    const { result } = renderHook(() =>
-      useLocalStorage("test-key", "initial"),
-    );
+    const { result } = renderHook(() => useLocalStorage("test-key", "initial"));
 
     act(() => {
       result.current[1]("updated");
@@ -66,9 +60,7 @@ describe("useLocalStorage", () => {
   });
 
   it("works with array values", () => {
-    const { result } = renderHook(() =>
-      useLocalStorage<string[]>("items", []),
-    );
+    const { result } = renderHook(() => useLocalStorage<string[]>("items", []));
 
     act(() => {
       result.current[1](["a", "b"]);
@@ -80,9 +72,7 @@ describe("useLocalStorage", () => {
   it("logs error on read failure and returns initial value", () => {
     localStorage.setItem("bad-key", "not-json{{{");
 
-    const { result } = renderHook(() =>
-      useLocalStorage("bad-key", "fallback"),
-    );
+    const { result } = renderHook(() => useLocalStorage("bad-key", "fallback"));
 
     expect(result.current[0]).toBe("fallback");
     expect(logError).toHaveBeenCalledWith(
@@ -96,9 +86,7 @@ describe("useLocalStorage", () => {
       throw new Error("Storage full");
     };
 
-    const { result } = renderHook(() =>
-      useLocalStorage("test-key", "initial"),
-    );
+    const { result } = renderHook(() => useLocalStorage("test-key", "initial"));
 
     act(() => {
       result.current[1]("new-value");

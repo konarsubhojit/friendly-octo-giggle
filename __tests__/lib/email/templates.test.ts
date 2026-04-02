@@ -21,7 +21,7 @@ describe("escapeHtml", () => {
   });
 
   it("escapes quotes", () => {
-    expect(escapeHtml('"double" and \'single\'')).toBe(
+    expect(escapeHtml("\"double\" and 'single'")).toBe(
       "&quot;double&quot; and &#39;single&#39;",
     );
   });
@@ -35,7 +35,7 @@ describe("escapeHtml", () => {
   });
 
   it("handles multiple special chars", () => {
-    expect(escapeHtml("<b>Tom & Jerry's \"show\"</b>")).toBe(
+    expect(escapeHtml('<b>Tom & Jerry\'s "show"</b>')).toBe(
       "&lt;b&gt;Tom &amp; Jerry&#39;s &quot;show&quot;&lt;/b&gt;",
     );
   });
