@@ -8,7 +8,7 @@ import CartIcon from "@/components/layout/CartIcon";
 import LoginModal from "@/features/auth/components/LoginModal";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { FlowerAccent } from "@/components/ui/DecorativeElements";
-import ProductSearch from "@/components/ui/ProductSearch";
+import ProductSearch from "@/features/product/components/ProductSearch";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 
 interface UserMenuUser {

@@ -44,7 +44,7 @@ vi.mock("@/features/auth/components/LoginModal", () => ({
     isOpen ? <div data-testid="login-modal" /> : null,
 }));
 
-vi.mock("@/components/ui/ProductSearch", () => ({
+vi.mock("@/features/product/components/ProductSearch", () => ({
   default: () => <div data-testid="product-search" />,
 }));
 

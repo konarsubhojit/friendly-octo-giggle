@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { ReviewForm } from "@/components/ui/ReviewForm";
+import { ReviewForm } from "@/features/product/components/ReviewForm";
 
 const mockSession = vi.hoisted(() => vi.fn());
 vi.mock("next-auth/react", () => ({

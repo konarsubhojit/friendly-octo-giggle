@@ -1,7 +1,8 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent, act } from "@testing-library/react";
 import React from "react";
-import { UserMenu, ProtectedRoute } from "@/components/ui/AuthComponents";
+import { UserMenu } from "@/components/ui/UserMenu";
+import { ProtectedRoute } from "@/components/ui/ProtectedRoute";
 
 vi.mock("next-auth/react", () => ({
   signOut: vi.fn(),

@@ -17,7 +17,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { StockBadge } from "@/features/product/components/StockBadge";
 import { QuickAddButton } from "@/features/product/components/QuickAddButton";
 import { FlowerAccent } from "@/components/ui/DecorativeElements";
-import { WishlistButton } from "@/components/ui/WishlistButton";
+import { WishlistButton } from "@/features/wishlist/components/WishlistButton";
 
 export type ProductGridItem = Pick<
   Product,
