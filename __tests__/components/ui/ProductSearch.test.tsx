@@ -7,7 +7,7 @@ import {
   waitFor,
 } from "@testing-library/react";
 import React from "react";
-import ProductSearch from "@/components/ui/ProductSearch";
+import ProductSearch from "@/features/product/components/ProductSearch";
 
 const mockPush = vi.fn();
 vi.mock("next/navigation", () => ({

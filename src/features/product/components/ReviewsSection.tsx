@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { StarRating } from "@/components/ui/StarRating";
-import { ReviewForm } from "@/components/ui/ReviewForm";
+import { ReviewForm } from "@/features/product/components/ReviewForm";
 import { Card } from "@/components/ui/Card";
 import Image from "next/image";
 
