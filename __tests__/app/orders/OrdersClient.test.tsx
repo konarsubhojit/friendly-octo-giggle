@@ -23,13 +23,7 @@ vi.mock("@/components/ui/AlertBanner", () => ({
 }));
 
 vi.mock("@/components/ui/EmptyState", () => ({
-  EmptyState: ({
-    title,
-    message,
-  }: {
-    title: string;
-    message: string;
-  }) => (
+  EmptyState: ({ title, message }: { title: string; message: string }) => (
     <div data-testid="empty-state">
       <p>{title}</p>
       <p>{message}</p>
@@ -52,11 +46,9 @@ vi.mock("@/components/ui/Card", () => ({
 }));
 
 vi.mock("@/components/ui/GradientHeading", () => ({
-  GradientHeading: ({
-    children,
-  }: {
-    children: React.ReactNode;
-  }) => <h1 data-testid="gradient-heading">{children}</h1>,
+  GradientHeading: ({ children }: { children: React.ReactNode }) => (
+    <h1 data-testid="gradient-heading">{children}</h1>
+  ),
 }));
 
 vi.mock("@/features/orders/components/OrderListCard", () => ({
@@ -145,8 +137,20 @@ describe("OrdersClient", () => {
 
   it("renders order cards when orders exist", () => {
     const orders = [
-      { id: "ord1", status: "PENDING", createdAt: "2024-01-01", totalAmount: 100, items: [] },
-      { id: "ord2", status: "DELIVERED", createdAt: "2024-01-02", totalAmount: 200, items: [] },
+      {
+        id: "ord1",
+        status: "PENDING",
+        createdAt: "2024-01-01",
+        totalAmount: 100,
+        items: [],
+      },
+      {
+        id: "ord2",
+        status: "DELIVERED",
+        createdAt: "2024-01-02",
+        totalAmount: 200,
+        items: [],
+      },
     ];
     mockUseCursorPagination.mockReturnValue({
       ...defaultPaginationResult,
@@ -160,7 +164,15 @@ describe("OrdersClient", () => {
   it("renders pagination bar when orders exist", () => {
     mockUseCursorPagination.mockReturnValue({
       ...defaultPaginationResult,
-      items: [{ id: "ord1", status: "PENDING", createdAt: "2024-01-01", totalAmount: 100, items: [] }],
+      items: [
+        {
+          id: "ord1",
+          status: "PENDING",
+          createdAt: "2024-01-01",
+          totalAmount: 100,
+          items: [],
+        },
+      ],
     });
     render(<OrdersClient />);
     expect(screen.getByTestId("pagination-bar")).toBeInTheDocument();

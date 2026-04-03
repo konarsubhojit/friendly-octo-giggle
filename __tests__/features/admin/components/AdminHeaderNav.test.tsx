@@ -91,7 +91,7 @@ describe("AdminHeaderNav", () => {
       () =>
         new Promise<void>((resolve) => {
           resolveSignOut = resolve;
-        })
+        }),
     );
     render(<AdminHeaderNav userName="Admin User" />);
 
@@ -104,7 +104,9 @@ describe("AdminHeaderNav", () => {
     resolveSignOut();
 
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: "Sign Out" })).not.toBeDisabled();
+      expect(
+        screen.getByRole("button", { name: "Sign Out" }),
+      ).not.toBeDisabled();
     });
   });
 });

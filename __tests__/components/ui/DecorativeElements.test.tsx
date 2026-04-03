@@ -63,8 +63,12 @@ describe("DecorativeElements", () => {
   });
 
   it("ScatteredFlowers applies custom className to container", () => {
-    const { container } = render(<ScatteredFlowers className="scattered-cls" />);
-    expect(container.firstElementChild?.classList.contains("scattered-cls")).toBe(true);
+    const { container } = render(
+      <ScatteredFlowers className="scattered-cls" />,
+    );
+    expect(
+      container.firstElementChild?.classList.contains("scattered-cls"),
+    ).toBe(true);
   });
 
   it("renders FlowerBullet as SVG", () => {
@@ -115,9 +119,9 @@ describe("DecorativeElements", () => {
 
   it("FloralBorder applies custom className", () => {
     const { container } = render(<FloralBorder className="border-cls" />);
-    expect(
-      container.firstElementChild?.classList.contains("border-cls"),
-    ).toBe(true);
+    expect(container.firstElementChild?.classList.contains("border-cls")).toBe(
+      true,
+    );
   });
 
   it("FloralBorder contains both full and simplified versions", () => {

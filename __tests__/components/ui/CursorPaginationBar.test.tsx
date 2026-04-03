@@ -69,11 +69,7 @@ describe("CursorPaginationBar", () => {
 
   it("disables Next and Last when on last page with no more data", () => {
     render(
-      <CursorPaginationBar
-        {...defaultProps}
-        currentPage={5}
-        hasMore={false}
-      />,
+      <CursorPaginationBar {...defaultProps} currentPage={5} hasMore={false} />,
     );
     expect(screen.getByText("Next →")).toBeDisabled();
     expect(screen.getByText("Last »")).toBeDisabled();
@@ -143,11 +139,7 @@ describe("CursorPaginationBar", () => {
 
   it("disables the page selector when totalPages <= 1", () => {
     render(
-      <CursorPaginationBar
-        {...defaultProps}
-        totalPages={1}
-        hasMore={false}
-      />,
+      <CursorPaginationBar {...defaultProps} totalPages={1} hasMore={false} />,
     );
     const select = screen.getByLabelText("Jump to page");
     expect(select).toBeDisabled();
@@ -163,9 +155,7 @@ describe("CursorPaginationBar", () => {
   });
 
   it("renders with default variant when variant is not specified", () => {
-    const { container } = render(
-      <CursorPaginationBar {...defaultProps} />,
-    );
+    const { container } = render(<CursorPaginationBar {...defaultProps} />);
     expect(container.querySelector(".border-gray-200")).toBeTruthy();
   });
 });
