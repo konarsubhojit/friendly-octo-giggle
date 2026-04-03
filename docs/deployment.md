@@ -127,7 +127,7 @@ service: ecommerce-app
 
 provider:
   name: aws
-  runtime: nodejs18.x
+  runtime: nodejs22.x
   region: us-east-1
   environment:
     DATABASE_URL: ${env:DATABASE_URL}
@@ -162,7 +162,7 @@ serverless deploy
 **Step 1: Create Dockerfile**
 
 ```dockerfile
-FROM node:18-alpine
+FROM node:22-alpine
 
 WORKDIR /app
 
@@ -331,7 +331,7 @@ curl -H "Authorization: Bearer YOUR_TOKEN" \
 
 ### Build Failures
 
-- Check Node.js version (18+)
+- Check Node.js version (22+)
 - Ensure all dependencies installed
 - Verify Drizzle migrations applied successfully
 

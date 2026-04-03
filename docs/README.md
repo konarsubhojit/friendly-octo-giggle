@@ -68,39 +68,54 @@ This is a highly scalable e-commerce platform designed for serverless deployment
 
 ### Core Features
 
-- **Product Management**: Full CRUD with images, variations, and stock tracking
-- **Order Processing**: Complete order lifecycle management
-- **User Authentication**: Google OAuth with NextAuth.js v5
+- **Product Management**: Full CRUD with images, variations, categories, and stock tracking
+- **Product Search**: Upstash Search with automatic DB fallback
+- **Order Processing**: Queue-based checkout with complete order lifecycle management
+- **User Authentication**: Google OAuth, Microsoft Entra ID, and email/password with NextAuth.js v5
 - **Role-Based Access**: Customer and Admin roles
-- **Shopping Cart**: Session-based for guests, persistent for logged-in users
-- **Admin Panel**: Product, order, and user management
+- **Shopping Cart**: Session-based for guests, persistent for logged-in users, with guest-to-user cart merge
+- **Wishlist**: Per-user product wishlist
+- **AI Product Assistant**: AI-powered product Q&A via AI SDK and RAG
+- **Admin Panel**: Product, order, user, category, review, and email-failure management
+- **Checkout Flow**: Policy confirmation, address collection, Vercel Queue-backed order creation
+- **Email System**: Async delivery via QStash with retry and failed-email tracking
+- **Feature Flags**: Vercel Edge Config for maintenance mode, sale mode, and shipping settings
 
 ### Technical Highlights
 
 - **Serverless-First**: Optimized for platforms like Vercel, AWS Lambda
+- **Feature-Based Architecture**: Domain code organized in `src/features/` (admin, auth, cart, orders, product, wishlist)
 - **Performance**: Redis caching with stampede prevention
 - **Type Safety**: Full TypeScript with Zod validation
 - **Modern Stack**: Next.js 16, Drizzle ORM, Tailwind CSS v4
-- **Scalable**: Connection pooling, edge-ready architecture
+- **AI Integration**: Product assistant powered by AI SDK and RAG
+- **Queue-Based Checkout**: Vercel Queues for reliable order processing
+- **Scalable**: Connection pooling, read replicas, edge-ready architecture
 - **Observable**: Structured logging with Pino
 
 ## 📦 Technology Stack
 
-| Category           | Technology                  |
-| ------------------ | --------------------------- |
-| **Framework**      | Next.js 16 with App Router  |
-| **Language**       | TypeScript (strict mode)    |
-| **Database**       | PostgreSQL with Drizzle ORM |
-| **Cache**          | Redis (ioredis)             |
-| **Authentication** | NextAuth.js v5              |
-| **Validation**     | Zod                         |
-| **Styling**        | Tailwind CSS v4             |
-| **Logging**        | Pino                        |
-| **Image Storage**  | Vercel Blob                 |
+| Category           | Technology                           |
+| ------------------ | ------------------------------------ |
+| **Framework**      | Next.js 16 with App Router           |
+| **Language**       | TypeScript 6.x (strict mode)         |
+| **Database**       | PostgreSQL (Neon) with Drizzle ORM   |
+| **Cache**          | Redis (Upstash, HTTP-based)          |
+| **Authentication** | NextAuth.js v5                       |
+| **Validation**     | Zod 4.x                              |
+| **Styling**        | Tailwind CSS v4                      |
+| **State**          | Redux Toolkit 2.x                    |
+| **Logging**        | Pino                                 |
+| **Image Storage**  | Vercel Blob                          |
+| **Search**         | Upstash Search (with DB fallback)    |
+| **Queues**         | Vercel Queues (checkout)             |
+| **AI**             | AI SDK (product assistant)           |
+| **Email**          | MailerSend / Google SMTP via QStash  |
+| **Feature Flags**  | Vercel Edge Config                   |
 
 ## 🔧 System Requirements
 
-- **Node.js**: 18.0.0 or higher
+- **Node.js**: 22.0.0 or higher
 - **PostgreSQL**: 12.0 or higher
 - **Redis**: 6.0 or higher (optional for local dev; Upstash recommended for production)
 
@@ -113,7 +128,7 @@ This documentation is maintained as the single source of truth for the project. 
 3. Do not create standalone MD files in the root directory
 4. Follow the established structure
 
-**Last Updated**: 2026-02-15
+**Last Updated**: 2026-04-03
 
 ## 🤝 Contributing
 
@@ -128,7 +143,7 @@ When contributing to this project:
 
 - **Issues**: [GitHub Issues](https://github.com/konarsubhojit/friendly-octo-giggle/issues)
 - **Documentation**: This docs folder
-- **Code Examples**: See `/app`, `/lib`, and `/components` directories
+- **Code Examples**: See `src/app`, `src/lib`, `src/components`, and `src/features` directories
 
 ## 🗺️ Navigation
 

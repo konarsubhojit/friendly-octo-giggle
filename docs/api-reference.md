@@ -31,13 +31,45 @@ Admin endpoints require authentication via NextAuth session with ADMIN role.
 **Public Endpoints**: No authentication required
 - `/api/products` (GET)
 - `/api/products/[id]` (GET)
+- `/api/products/bestsellers` (GET)
+- `/api/categories` (GET)
 - `/api/cart` (GET, POST, DELETE)
 - `/api/cart/items/[id]` (PATCH, DELETE)
-- `/api/orders` (POST)
+- `/api/checkout` (POST)
+- `/api/checkout/[id]` (GET)
+- `/api/orders` (GET, POST)
+- `/api/orders/[id]` (GET)
+- `/api/reviews` (GET, POST)
+- `/api/wishlist` (GET, POST)
+- `/api/wishlist/[productId]` (DELETE)
+- `/api/search` (GET)
+- `/api/share` (POST)
+- `/api/exchange-rates` (GET)
+- `/api/health` (GET)
+- `/api/ai/products/[id]/chat` (POST)
 
 **Protected Endpoints**: Require ADMIN role
-- `/api/admin/*` (all methods)
+- `/api/admin/products` (GET, POST)
+- `/api/admin/products/[id]` (PUT, DELETE)
+- `/api/admin/orders` (GET)
+- `/api/admin/orders/[id]` (GET, PATCH)
+- `/api/admin/users` (GET)
+- `/api/admin/users/[id]` (GET, PATCH)
+- `/api/admin/categories` (GET, POST)
+- `/api/admin/categories/[id]` (PUT, DELETE)
+- `/api/admin/variations` (GET)
+- `/api/admin/variations/[variationId]` (PUT, DELETE)
+- `/api/admin/reviews` (GET, DELETE)
+- `/api/admin/sales` (GET)
+- `/api/admin/email-failures` (GET)
+- `/api/admin/search/reindex` (POST)
 - `/api/upload` (POST)
+
+**Service Endpoints**: Internal use (QStash, cron, queues)
+- `/api/services/email` (POST) — QStash email worker
+- `/api/cron/retry-emails` (GET) — Retry failed emails
+- `/api/cron/refresh-rates` (GET) — Refresh exchange rates
+- `/api/queue/checkout-orders` (POST) — Vercel Queue consumer
 
 ## Public APIs
 
@@ -55,7 +87,7 @@ Retrieve all products with caching.
   "data": {
     "products": [
       {
-        "id": "clx1234567890",
+        "id": "Ab12xYz",
         "name": "Product Name",
         "description": "Product description",
         "price": 29.99,
@@ -66,7 +98,7 @@ Retrieve all products with caching.
         "updatedAt": "2024-01-15T10:30:00.000Z",
         "variations": [
           {
-            "id": "clv1234567890",
+            "id": "Kd93mNp",
             "name": "Red",
             "designName": "red-variant",
             "image": "https://blob.vercel-storage.com/red.jpg",
@@ -97,7 +129,7 @@ console.log(data.products);
 Retrieve single product by ID.
 
 **Parameters**:
-- `id` (path): Product CUID
+- `id` (path): Product ID (7-char base62)
 
 **Response**: Same structure as single product above
 
@@ -117,24 +149,24 @@ Get cart for current user/session. Returns null if no cart exists.
 ```json
 {
   "cart": {
-    "id": "clc1234567890",
-    "userId": "clu1234567890",
+    "id": "Rt45wQe",
+    "userId": "user-uuid-1234",
     "sessionId": null,
     "items": [
       {
-        "id": "cli1234567890",
-        "productId": "clp1234567890",
-        "variationId": "clv1234567890",
+        "id": "Gh78jKl",
+        "productId": "Mn56oPq",
+        "variationId": "Kd93mNp",
         "quantity": 2,
         "product": {
-          "id": "clp1234567890",
+          "id": "Mn56oPq",
           "name": "Product Name",
           "price": 29.99,
           "image": "https://...",
           "stock": 100
         },
         "variation": {
-          "id": "clv1234567890",
+          "id": "Kd93mNp",
           "name": "Red",
           "priceModifier": 5.00,
           "stock": 50
@@ -153,8 +185,8 @@ Add item to cart or update quantity if exists.
 **Request Body**:
 ```json
 {
-  "productId": "clp1234567890",
-  "variationId": "clv1234567890",
+  "productId": "Mn56oPq",
+  "variationId": "Kd93mNp",
   "quantity": 2
 }
 ```
@@ -183,7 +215,7 @@ Clear entire cart.
 Update cart item quantity.
 
 **Parameters**:
-- `id` (path): Cart item CUID
+- `id` (path): Cart item ID (7-char base62)
 
 **Request Body**:
 ```json
@@ -202,7 +234,7 @@ Update cart item quantity.
 Remove specific item from cart.
 
 **Parameters**:
-- `id` (path): Cart item CUID
+- `id` (path): Cart item ID (7-char base62)
 
 **Response**:
 ```json
@@ -226,8 +258,8 @@ Create new order with stock validation and atomic updates.
   "customerAddress": "123 Main St, City, State 12345",
   "items": [
     {
-      "productId": "clp1234567890",
-      "variationId": "clv1234567890",
+      "productId": "Mn56oPq",
+      "variationId": "Kd93mNp",
       "quantity": 2
     }
   ]
@@ -238,7 +270,7 @@ Create new order with stock validation and atomic updates.
 ```json
 {
   "order": {
-    "id": "clo1234567890",
+    "id": "Wx23yZa",
     "customerName": "John Doe",
     "customerEmail": "john@example.com",
     "customerAddress": "123 Main St, City, State 12345",
@@ -246,9 +278,9 @@ Create new order with stock validation and atomic updates.
     "status": "PENDING",
     "items": [
       {
-        "id": "cloi1234567890",
-        "productId": "clp1234567890",
-        "variationId": "clv1234567890",
+        "id": "Bc34dEf",
+        "productId": "Mn56oPq",
+        "variationId": "Kd93mNp",
         "quantity": 2,
         "price": 34.99,
         "product": { /* full product object */ }
@@ -281,7 +313,7 @@ curl -X POST https://your-domain.com/api/orders \
     "customerName": "John Doe",
     "customerEmail": "john@example.com",
     "customerAddress": "123 Main St, City, State 12345",
-    "items": [{"productId": "clp123", "quantity": 2}]
+    "items": [{"productId": "Mn56oPq", "quantity": 2}]
   }'
 ```
 
@@ -345,7 +377,7 @@ Update existing product.
 **Authentication**: Required (ADMIN)
 
 **Parameters**:
-- `id` (path): Product CUID
+- `id` (path): Product ID (7-char base62)
 
 **Request Body**: Same as POST (all fields required)
 
@@ -357,7 +389,7 @@ Delete product.
 **Authentication**: Required (ADMIN)
 
 **Parameters**:
-- `id` (path): Product CUID
+- `id` (path): Product ID (7-char base62)
 
 **Response**:
 ```json
@@ -387,7 +419,7 @@ Get all orders with items and products.
   "data": {
     "orders": [
       {
-        "id": "clo1234567890",
+        "id": "Wx23yZa",
         "customerName": "John Doe",
         "customerEmail": "john@example.com",
         "totalAmount": 69.98,
@@ -408,7 +440,7 @@ Get single order details.
 **Authentication**: Required (ADMIN)
 
 **Parameters**:
-- `id` (path): Order CUID
+- `id` (path): Order ID (7-char base62)
 
 **Cache**: 30s TTL
 
@@ -421,7 +453,7 @@ Update order status.
 **Authentication**: Required (ADMIN)
 
 **Parameters**:
-- `id` (path): Order CUID
+- `id` (path): Order ID (7-char base62)
 
 **Request Body**:
 ```json
@@ -457,10 +489,10 @@ Get all users.
   "data": {
     "users": [
       {
-        "id": "clu1234567890",
+        "id": "user-uuid-1234",
         "email": "user@example.com",
         "name": "User Name",
-        "role": "USER",
+        "role": "CUSTOMER",
         "createdAt": "2024-01-10T08:00:00.000Z"
       }
     ]
@@ -474,7 +506,7 @@ Get single user details.
 **Authentication**: Required (ADMIN)
 
 **Parameters**:
-- `id` (path): User CUID
+- `id` (path): User ID
 
 **Errors**:
 - `404`: User not found
@@ -485,7 +517,7 @@ Update user role.
 **Authentication**: Required (ADMIN)
 
 **Parameters**:
-- `id` (path): User CUID
+- `id` (path): User ID
 
 **Request Body**:
 ```json
@@ -494,7 +526,7 @@ Update user role.
 }
 ```
 
-**Valid Roles**: `USER`, `ADMIN`
+**Valid Roles**: `CUSTOMER`, `ADMIN`
 
 **Cache Invalidation**: `admin:users:*`, `admin:user:{id}`
 
@@ -704,8 +736,8 @@ const response = await fetch('/api/cart', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
-    productId: 'clp1234567890',
-    variationId: 'clv1234567890',
+    productId: 'Mn56oPq',
+    variationId: 'Kd93mNp',
     quantity: 2
   })
 });
@@ -724,8 +756,8 @@ curl -X POST https://your-domain.com/api/orders \
     "customerAddress": "456 Oak Ave, Town, State 54321",
     "items": [
       {
-        "productId": "clp1234567890",
-        "variationId": "clv1234567890",
+        "productId": "Mn56oPq",
+        "variationId": "Kd93mNp",
         "quantity": 1
       }
     ]
@@ -790,11 +822,11 @@ console.log('Image uploaded:', data.url);
 ## Additional Notes
 
 ### TypeScript Support
-All types are defined in `/lib/types.ts`:
-- `Product`, `ProductVariation`
-- `Order`, `OrderItem`, `OrderStatus`
-- `Cart`, `CartItem`
-- `CreateOrderInput`, `AddToCartInput`
+All types are defined across multiple files following feature-based organization:
+- Core types: `src/lib/types.ts` — `Product`, `ProductVariation`, `Order`, `OrderItem`, `OrderStatus`, `Cart`, `CartItem`
+- Validation schemas: `src/lib/validations/` (shared), `src/features/*/validations.ts` (feature-specific)
+- API utilities: `src/lib/api-utils.ts` — `apiSuccess`, `apiError`, `handleApiError`
+- The `src/lib/validations.ts` file is a backward-compat re-export shim
 
 ### Logging
 All endpoints use structured logging:
