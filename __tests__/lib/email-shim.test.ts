@@ -1,4 +1,12 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
+
+vi.mock("@/lib/email/retry", () => ({
+  sendWithRetry: vi.fn(),
+}));
+
+vi.mock("@/lib/email/failed-emails", () => ({
+  saveFailedEmail: vi.fn(),
+}));
 
 import {
   sendOrderConfirmationEmail,
