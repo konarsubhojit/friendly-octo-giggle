@@ -6,18 +6,18 @@ const {
   mockSelect,
   mockInsert,
   mockDelete,
-  mockOrderBy,
-  mockLimit,
-  mockWhere,
+  _mockOrderBy,
+  _mockLimit,
+  _mockWhere,
 } = vi.hoisted(() => ({
   mockHash: vi.fn(),
   mockCompare: vi.fn(),
   mockSelect: vi.fn(),
   mockInsert: vi.fn(),
   mockDelete: vi.fn(),
-  mockOrderBy: vi.fn(),
-  mockLimit: vi.fn(),
-  mockWhere: vi.fn(),
+  _mockOrderBy: vi.fn(),
+  _mockLimit: vi.fn(),
+  _mockWhere: vi.fn(),
 }));
 
 vi.mock("bcryptjs", () => ({

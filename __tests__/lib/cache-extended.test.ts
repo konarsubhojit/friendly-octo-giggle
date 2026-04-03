@@ -32,7 +32,7 @@ import {
   CACHE_KEYS,
 } from "@/lib/cache";
 import { getCachedData, invalidateCache } from "@/lib/redis";
-import { logError, logCacheOperation } from "@/lib/logger";
+import { logError } from "@/lib/logger";
 
 const mockGetCachedData = vi.mocked(getCachedData);
 const mockInvalidateCache = vi.mocked(invalidateCache);
