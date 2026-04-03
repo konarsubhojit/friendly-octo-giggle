@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render } from "@testing-library/react";
 import {
   FlowerAccent,
   LeafAccent,
@@ -46,14 +46,17 @@ describe("DecorativeElements", () => {
 
   it("renders VineDivider as SVG with aria-hidden", () => {
     const { container } = render(<VineDivider />);
-    const svg = container.querySelector("svg");
-    expect(svg).toBeTruthy();
-    expect(svg?.getAttribute("aria-hidden")).toBe("true");
+    const wrapper = container.firstElementChild;
+    expect(wrapper).toBeTruthy();
+    expect(wrapper?.getAttribute("aria-hidden")).toBe("true");
+    expect(wrapper?.querySelectorAll("svg").length).toBeGreaterThan(0);
   });
 
   it("VineDivider applies custom className", () => {
     const { container } = render(<VineDivider className="vine-cls" />);
-    expect(container.querySelector("svg.vine-cls")).toBeTruthy();
+    expect(container.firstElementChild?.classList.contains("vine-cls")).toBe(
+      true,
+    );
   });
 
   it("renders ScatteredFlowers with multiple SVGs", () => {
