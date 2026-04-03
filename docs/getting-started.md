@@ -6,7 +6,7 @@ Get the e-commerce platform running locally in minutes!
 
 Before you begin, ensure you have:
 
-- **Node.js 18+**: [Download here](https://nodejs.org/)
+- **Node.js 22+**: [Download here](https://nodejs.org/)
 - **PostgreSQL**: Local installation or cloud service (Supabase, Neon, etc.)
 - **Redis**: Optional for local dev; recommended for production (Upstash, Redis Labs, etc.)
 - **Google Cloud Account**: For OAuth credentials
@@ -175,28 +175,80 @@ npx drizzle-kit drop
 
 ```
 friendly-octo-giggle/
-├── app/                    # Next.js App Router
-│   ├── admin/             # Admin panel pages
-│   ├── api/               # API routes
-│   ├── auth/              # Authentication pages
-│   ├── cart/              # Shopping cart
-│   ├── products/          # Product pages
-│   └── page.tsx           # Homepage
-├── components/            # React components
-│   ├── layout/           # Header, Footer, Navigation
-│   ├── sections/         # Hero, ProductGrid
-│   └── ui/               # Reusable UI components
-├── lib/                   # Utilities and configuration
-│   ├── auth.ts           # NextAuth configuration
-│   ├── db.ts             # Drizzle client
-│   ├── redis.ts          # Redis client
-│   ├── logger.ts         # Logging utility
-│   ├── types.ts          # TypeScript types
-│   └── validations.ts    # Zod schemas
-├── drizzle/              # Database migrations
-│   └── *.sql             # Migration SQL files
-├── docs/                 # Documentation
-└── .env                  # Environment variables (not committed)
+├── src/                       # All source code lives under src/
+│   ├── app/                   # Next.js App Router
+│   │   ├── admin/             # Admin panel (dashboard, products, orders, users, reviews,
+│   │   │                      #   categories, checkout-requests, email-failures, search)
+│   │   ├── api/               # API routes
+│   │   │   ├── admin/         # Admin APIs (products, orders, users, reviews, sales,
+│   │   │   │                  #   categories, email-failures, search, variations)
+│   │   │   ├── auth/          # Auth endpoints (nextauth, register, change-password)
+│   │   │   ├── cart/          # Cart APIs
+│   │   │   ├── categories/    # Public categories API
+│   │   │   ├── checkout/      # Checkout orchestration API
+│   │   │   ├── cron/          # Scheduled jobs (retry-emails, refresh-rates)
+│   │   │   ├── orders/        # Order APIs
+│   │   │   ├── products/      # Product APIs (list, detail, bestsellers)
+│   │   │   ├── queue/         # Vercel Queue consumer (checkout-orders)
+│   │   │   ├── reviews/       # Reviews API
+│   │   │   ├── search/        # Product search API
+│   │   │   ├── services/      # Service endpoints (email worker)
+│   │   │   ├── ai/            # AI product assistant API
+│   │   │   ├── wishlist/      # Wishlist APIs
+│   │   │   ├── share/         # Short-link sharing API
+│   │   │   ├── exchange-rates/ # Currency exchange rates
+│   │   │   ├── upload/        # Image upload to Vercel Blob
+│   │   │   └── health/        # Health check
+│   │   ├── auth/              # Sign-in, register pages
+│   │   ├── cart/              # Shopping cart page
+│   │   ├── checkout/          # Checkout review page
+│   │   ├── products/          # Product listing and detail pages
+│   │   ├── orders/            # Order listing and detail pages
+│   │   ├── shop/              # Shop page
+│   │   ├── wishlist/          # Wishlist page
+│   │   ├── account/           # User account/profile page
+│   │   ├── s/[key]/           # Short-link redirects
+│   │   ├── contact/, about/, blog/, careers/, help/, press/, returns/, shipping/
+│   │   └── page.tsx           # Homepage
+│   ├── components/            # Shared React components
+│   │   ├── icons/             # SVG icon components
+│   │   ├── layout/            # Header, HeaderWrapper, Footer, CartIcon
+│   │   ├── providers/         # StoreProvider, SessionProvider
+│   │   ├── sections/          # Hero section
+│   │   ├── skeletons/         # Loading skeleton components
+│   │   └── ui/                # Generic reusable UI (Badge, Card, forms, dialogs, etc.)
+│   ├── contexts/              # React context providers (Currency, Theme)
+│   ├── features/              # Feature-scoped modules
+│   │   ├── admin/             # Admin components, hooks, services, store, validations
+│   │   ├── auth/              # Auth components, services, validations
+│   │   ├── cart/              # Cart components, services, store, validations
+│   │   ├── orders/            # Order actions, components, services, store, validations
+│   │   ├── product/           # Product components, hooks, validations
+│   │   └── wishlist/          # Wishlist components, store
+│   ├── hooks/                 # Shared custom hooks (useDebounce, useFetch, useFormState, etc.)
+│   ├── lib/                   # Utilities and configuration
+│   │   ├── ai/               # AI gateway and product RAG
+│   │   ├── constants/        # Categories, checkout policies, error messages
+│   │   ├── email/            # Email system (providers, templates, retry, failed-emails)
+│   │   ├── validations/      # Shared validation schemas (primitives, api, env)
+│   │   ├── auth.ts           # NextAuth configuration
+│   │   ├── db.ts             # Drizzle client (primary + read replica)
+│   │   ├── redis.ts          # Upstash Redis client
+│   │   ├── edge-config.ts    # Vercel Edge Config (feature flags, shipping)
+│   │   ├── logger.ts         # Pino structured logging
+│   │   ├── schema.ts         # Drizzle database schema
+│   │   ├── search-service.ts # Upstash Search integration
+│   │   ├── search.ts         # Search helpers
+│   │   ├── store.ts          # Redux store configuration
+│   │   └── ...               # api-utils, cache, env, serializers, short-id, etc.
+│   └── types/                 # TypeScript type augmentations (next-auth.d.ts)
+├── __tests__/                 # Unit tests (mirrors src/ structure)
+├── playwright-tests/          # E2E tests with Playwright + axe-core
+├── drizzle/                   # Database migration SQL files
+├── docs/                      # Project documentation
+├── scripts/                   # Utility scripts (seed, export, import, bootstrap)
+├── specs/                     # Feature specifications (speckit workflow)
+└── .env                       # Environment variables (not committed)
 ```
 
 ## Common Issues

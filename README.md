@@ -59,7 +59,7 @@ Complete documentation is available in the [`/docs`](./docs) folder:
 
 ## 📋 Requirements
 
-- **Node.js**: 18.0.0 or higher
+- **Node.js**: 22.0.0 or higher
 - **PostgreSQL**: 12.0 or higher
 - **Redis**: 6.0 or higher (optional for local dev; recommended for production)
 
