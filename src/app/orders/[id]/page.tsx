@@ -1,12 +1,12 @@
-"use client";
+'use client'
 
-import { useEffect, useState, useRef, useCallback, use } from "react";
-import type { ReactElement } from "react";
-import Link from "next/link";
-import Image from "next/image";
-import { useSession } from "next-auth/react";
-import { useSelector, useDispatch } from "react-redux";
-import { useCurrency } from "@/contexts/CurrencyContext";
+import { useEffect, useState, useRef, useCallback, use } from 'react'
+import type { ReactElement } from 'react'
+import Link from 'next/link'
+import Image from 'next/image'
+import { useSession } from 'next-auth/react'
+import { useSelector, useDispatch } from 'react-redux'
+import { useCurrency } from '@/contexts/CurrencyContext'
 import {
   fetchOrderById,
   cancelOrder,
@@ -15,17 +15,17 @@ import {
   selectOrdersError,
   selectOrderCancelling,
   clearCurrentOrder,
-} from "@/features/orders/store/ordersSlice";
-import type { AppDispatch } from "@/lib/store";
-import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
-import { AuthRequiredState } from "@/components/ui/AuthRequiredState";
-import { Card } from "@/components/ui/Card";
+} from '@/features/orders/store/ordersSlice'
+import type { AppDispatch } from '@/lib/store'
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
+import { AuthRequiredState } from '@/components/ui/AuthRequiredState'
+import { Card } from '@/components/ui/Card'
 
 interface CancelOrderDialogProps {
-  readonly dialogRef: React.RefObject<HTMLDialogElement | null>;
-  readonly cancelling: boolean;
-  readonly onClose: () => void;
-  readonly onConfirm: () => void;
+  readonly dialogRef: React.RefObject<HTMLDialogElement | null>
+  readonly cancelling: boolean
+  readonly onClose: () => void
+  readonly onConfirm: () => void
 }
 
 function CancelOrderDialog({
@@ -63,26 +63,26 @@ function CancelOrderDialog({
           disabled={cancelling}
           className="px-4 py-2 text-sm font-semibold text-white bg-red-600 rounded-xl hover:bg-red-700 transition-colors disabled:opacity-50"
         >
-          {cancelling ? "Cancelling..." : "Yes, Cancel"}
+          {cancelling ? 'Cancelling...' : 'Yes, Cancel'}
         </button>
       </div>
     </dialog>
-  );
+  )
 }
 
 interface OrderDetailPageProps {
-  readonly params: Promise<{ id: string }>;
+  readonly params: Promise<{ id: string }>
 }
 
-const STATUS_STEPS = ["PENDING", "PROCESSING", "SHIPPED", "DELIVERED"] as const;
+const STATUS_STEPS = ['PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED'] as const
 
 const STATUS_LABELS: Record<string, string> = {
-  PENDING: "Order Placed",
-  PROCESSING: "Processing",
-  SHIPPED: "Shipped",
-  DELIVERED: "Delivered",
-  CANCELLED: "Cancelled",
-};
+  PENDING: 'Order Placed',
+  PROCESSING: 'Processing',
+  SHIPPED: 'Shipped',
+  DELIVERED: 'Delivered',
+  CANCELLED: 'Cancelled',
+}
 
 const STATUS_STEP_INDEX: Record<string, number> = {
   CANCELLED: -1,
@@ -90,30 +90,30 @@ const STATUS_STEP_INDEX: Record<string, number> = {
   PROCESSING: 1,
   SHIPPED: 2,
   DELIVERED: 3,
-};
+}
 
 function getStepIndex(status: string): number {
-  return STATUS_STEP_INDEX[status] ?? -1;
+  return STATUS_STEP_INDEX[status] ?? -1
 }
 
 const STEP_CLASSES = {
   completed: {
     status:
-      "bg-gradient-to-r from-[var(--accent-rose)] to-[var(--accent-pink)] text-white shadow-lg",
-    text: "text-[var(--accent-rose)]",
+      'bg-gradient-to-r from-[var(--accent-rose)] to-[var(--accent-pink)] text-white shadow-lg',
+    text: 'text-[var(--accent-rose)]',
     connector:
-      "bg-gradient-to-r from-[var(--accent-rose)] to-[var(--accent-pink)]",
+      'bg-gradient-to-r from-[var(--accent-rose)] to-[var(--accent-pink)]',
   },
   default: {
-    status: "bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400",
-    text: "text-gray-400 dark:text-gray-500",
-    connector: "bg-gray-200 dark:bg-gray-700",
+    status: 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400',
+    text: 'text-gray-400 dark:text-gray-500',
+    connector: 'bg-gray-200 dark:bg-gray-700',
   },
-} as const;
+} as const
 
 interface StatusTimelineProps {
-  readonly currentStep: number;
-  readonly isCancelled: boolean;
+  readonly currentStep: number
+  readonly isCancelled: boolean
 }
 
 function StatusTimeline({ currentStep, isCancelled }: StatusTimelineProps) {
@@ -135,21 +135,21 @@ function StatusTimeline({ currentStep, isCancelled }: StatusTimelineProps) {
           This order has been cancelled
         </span>
       </div>
-    );
+    )
   }
 
   return (
     <div className="flex items-center justify-between">
       {STATUS_STEPS.map((step, index) => {
-        const isCompleted = index <= currentStep;
-        const isCurrent = index === currentStep;
-        const classes = STEP_CLASSES[isCompleted ? "completed" : "default"];
-        const connectorKey = index < currentStep ? "completed" : "default";
+        const isCompleted = index <= currentStep
+        const isCurrent = index === currentStep
+        const classes = STEP_CLASSES[isCompleted ? 'completed' : 'default']
+        const connectorKey = index < currentStep ? 'completed' : 'default'
         return (
           <div key={step} className="flex items-center flex-1">
             <div className="flex flex-col items-center flex-shrink-0">
               <div
-                className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all ${classes.status}${isCurrent ? " ring-4 ring-[var(--accent-blush)]" : ""}`}
+                className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all ${classes.status}${isCurrent ? ' ring-4 ring-[var(--accent-blush)]' : ''}`}
               >
                 {isCompleted ? (
                   <svg
@@ -177,40 +177,40 @@ function StatusTimeline({ currentStep, isCancelled }: StatusTimelineProps) {
               />
             )}
           </div>
-        );
+        )
       })}
     </div>
-  );
+  )
 }
 
 interface OrderItemRowItem {
-  readonly id: string;
-  readonly productId: string;
-  readonly quantity: number;
-  readonly price: number;
-  readonly customizationNote?: string | null;
-  readonly product?: { id: string; name: string; image: string; price: number };
+  readonly id: string
+  readonly productId: string
+  readonly quantity: number
+  readonly price: number
+  readonly customizationNote?: string | null
+  readonly product?: { id: string; name: string; image: string; price: number }
   readonly variation?: {
-    id: string;
-    name: string;
-    image?: string;
-    price: number;
-  } | null;
+    id: string
+    name: string
+    image?: string
+    price: number
+  } | null
 }
 
 interface OrderItemRowProps {
-  readonly item: OrderItemRowItem;
-  readonly formatPrice: (amount: number) => string;
+  readonly item: OrderItemRowItem
+  readonly formatPrice: (amount: number) => string
 }
 
 function OrderItemRow({ item, formatPrice }: OrderItemRowProps) {
-  const image = item.variation?.image || item.product?.image;
+  const image = item.variation?.image || item.product?.image
   const sections: Record<string, ReactElement | null> = {
     image: image ? (
       <div className="relative w-16 h-16 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700">
         <Image
           src={image}
-          alt={item.product?.name || "Order item"}
+          alt={item.product?.name || 'Order item'}
           fill
           sizes="80px"
           className="object-cover"
@@ -225,12 +225,12 @@ function OrderItemRow({ item, formatPrice }: OrderItemRowProps) {
     customization: item.customizationNote ? (
       <div className="mt-2 ml-20 p-2 bg-amber-50 border border-amber-200 rounded-lg">
         <p className="text-xs text-amber-800">
-          <span className="font-semibold">✏️ Customization:</span>{" "}
+          <span className="font-semibold">✏️ Customization:</span>{' '}
           {item.customizationNote}
         </p>
       </div>
     ) : null,
-  };
+  }
   return (
     <div className="py-3 border-b border-[var(--border-warm)] last:border-0">
       <div className="flex items-center gap-4">
@@ -253,17 +253,17 @@ function OrderItemRow({ item, formatPrice }: OrderItemRowProps) {
       </div>
       {sections.customization}
     </div>
-  );
+  )
 }
 
 interface OrderSummaryHeaderProps {
-  readonly orderId: string;
-  readonly createdAt: string;
-  readonly totalAmount: number;
-  readonly status: string;
-  readonly cancelling: boolean;
-  readonly formatPrice: (amount: number) => string;
-  readonly onCancelClick: () => void;
+  readonly orderId: string
+  readonly createdAt: string
+  readonly totalAmount: number
+  readonly status: string
+  readonly cancelling: boolean
+  readonly formatPrice: (amount: number) => string
+  readonly onCancelClick: () => void
 }
 
 function OrderSummaryHeader({
@@ -282,13 +282,13 @@ function OrderSummaryHeader({
           Order #{orderId}
         </h1>
         <p className="text-sm text-[var(--text-muted)] mt-1">
-          Placed on{" "}
-          {new Date(createdAt).toLocaleDateString("en-US", {
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
+          Placed on{' '}
+          {new Date(createdAt).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
           })}
         </p>
       </div>
@@ -296,7 +296,7 @@ function OrderSummaryHeader({
         <p className="text-2xl font-bold bg-gradient-to-r from-[var(--accent-rose)] to-[var(--accent-pink)] bg-clip-text text-transparent">
           {formatPrice(totalAmount)}
         </p>
-        {status === "PENDING" && (
+        {status === 'PENDING' && (
           <button
             onClick={onCancelClick}
             disabled={cancelling}
@@ -307,52 +307,52 @@ function OrderSummaryHeader({
         )}
       </div>
     </div>
-  );
+  )
 }
 
 export default function OrderDetailPage({ params }: OrderDetailPageProps) {
-  const { id } = use(params);
-  const { data: session, status: authStatus } = useSession();
-  const { formatPrice } = useCurrency();
-  const dispatch = useDispatch<AppDispatch>();
-  const order = useSelector(selectCurrentOrder);
-  const loading = useSelector(selectOrderDetailLoading);
-  const error = useSelector(selectOrdersError);
-  const cancelling = useSelector(selectOrderCancelling);
-  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
-  const cancelDialogRef = useRef<HTMLDialogElement>(null);
+  const { id } = use(params)
+  const { data: session, status: authStatus } = useSession()
+  const { formatPrice } = useCurrency()
+  const dispatch = useDispatch<AppDispatch>()
+  const order = useSelector(selectCurrentOrder)
+  const loading = useSelector(selectOrderDetailLoading)
+  const error = useSelector(selectOrdersError)
+  const cancelling = useSelector(selectOrderCancelling)
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false)
+  const cancelDialogRef = useRef<HTMLDialogElement>(null)
 
   const closeCancelDialog = useCallback(() => {
-    setShowCancelConfirm(false);
-  }, []);
+    setShowCancelConfirm(false)
+  }, [])
 
   const handleCancelOrder = () => {
     dispatch(cancelOrder(id))
       .unwrap()
       .then(() => closeCancelDialog())
-      .catch(() => {});
-  };
+      .catch(() => {})
+  }
 
   useEffect(() => {
-    const dialog = cancelDialogRef.current;
-    if (!dialog) return;
+    const dialog = cancelDialogRef.current
+    if (!dialog) return
     if (showCancelConfirm) {
-      dialog.showModal();
+      dialog.showModal()
     } else {
-      dialog.close();
+      dialog.close()
     }
-  }, [showCancelConfirm]);
+  }, [showCancelConfirm])
 
   useEffect(() => {
-    if (authStatus === "authenticated") {
-      dispatch(fetchOrderById(id));
+    if (authStatus === 'authenticated') {
+      dispatch(fetchOrderById(id))
     }
     return () => {
-      dispatch(clearCurrentOrder());
-    };
-  }, [authStatus, id, dispatch]);
+      dispatch(clearCurrentOrder())
+    }
+  }, [authStatus, id, dispatch])
 
-  if (authStatus === "loading" || loading) {
+  if (authStatus === 'loading' || loading) {
     return (
       <div className="min-h-screen bg-warm-gradient">
         <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
@@ -361,7 +361,7 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
           </div>
         </main>
       </div>
-    );
+    )
   }
 
   if (!session?.user) {
@@ -374,7 +374,7 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
           />
         </main>
       </div>
-    );
+    )
   }
 
   if (error || !order) {
@@ -383,7 +383,7 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
         <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
           <Card className="p-12 text-center">
             <h2 className="text-2xl font-bold text-[var(--foreground)] mb-2">
-              {error || "Order not found"}
+              {error || 'Order not found'}
             </h2>
             <Link
               href="/orders"
@@ -394,11 +394,11 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
           </Card>
         </main>
       </div>
-    );
+    )
   }
 
-  const currentStep = getStepIndex(order.status);
-  const isCancelled = order.status === "CANCELLED";
+  const currentStep = getStepIndex(order.status)
+  const isCancelled = order.status === 'CANCELLED'
 
   return (
     <div className="min-h-screen bg-warm-gradient">
@@ -511,5 +511,5 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
         </Card>
       </main>
     </div>
-  );
+  )
 }

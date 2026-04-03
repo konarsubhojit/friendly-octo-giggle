@@ -1,22 +1,22 @@
-"use client";
+'use client'
 
-import Link from "next/link";
+import Link from 'next/link'
 
 interface TopProduct {
-  productId: string;
-  name: string;
-  totalQuantity: number;
-  totalRevenue: number;
+  productId: string
+  name: string
+  totalQuantity: number
+  totalRevenue: number
 }
 
 interface TopProductsTableProps {
-  readonly products: readonly TopProduct[];
-  readonly formatPrice: (price: number) => string;
+  readonly products: readonly TopProduct[]
+  readonly formatPrice: (price: number) => string
 }
 
 interface TopProductRowProps {
-  readonly product: TopProduct;
-  readonly formatPrice: (price: number) => string;
+  readonly product: TopProduct
+  readonly formatPrice: (price: number) => string
 }
 
 function TopProductRow({ product, formatPrice }: TopProductRowProps) {
@@ -37,7 +37,7 @@ function TopProductRow({ product, formatPrice }: TopProductRowProps) {
         {formatPrice(product.totalRevenue)}
       </td>
     </tr>
-  );
+  )
 }
 
 function TopProductsTableHeader() {
@@ -55,7 +55,7 @@ function TopProductsTableHeader() {
         </th>
       </tr>
     </thead>
-  );
+  )
 }
 
 export function TopProductsTable({
@@ -63,7 +63,7 @@ export function TopProductsTable({
   formatPrice,
 }: TopProductsTableProps) {
   if (products.length === 0) {
-    return <p className="text-sm text-slate-500">No product sales yet.</p>;
+    return <p className="text-sm text-slate-500">No product sales yet.</p>
   }
 
   return (
@@ -81,5 +81,5 @@ export function TopProductsTable({
         </tbody>
       </table>
     </div>
-  );
+  )
 }

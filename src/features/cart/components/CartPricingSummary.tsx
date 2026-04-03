@@ -1,29 +1,29 @@
 interface CartPricingSummaryProps {
-  readonly itemCount: number;
-  readonly subtotalLabel?: string;
-  readonly shippingLabel?: string;
-  readonly totalLabel?: string;
-  readonly subtotal: string;
-  readonly shipping: string;
-  readonly total: string;
-  readonly className?: string;
+  readonly itemCount: number
+  readonly subtotalLabel?: string
+  readonly shippingLabel?: string
+  readonly totalLabel?: string
+  readonly subtotal: string
+  readonly shipping: string
+  readonly total: string
+  readonly className?: string
 }
 
 export function CartPricingSummary({
   itemCount,
-  subtotalLabel = "Subtotal",
-  shippingLabel = "Shipping",
-  totalLabel = "Total",
+  subtotalLabel = 'Subtotal',
+  shippingLabel = 'Shipping',
+  totalLabel = 'Total',
   subtotal,
   shipping,
   total,
   className,
 }: CartPricingSummaryProps) {
   return (
-    <div className={className ?? "space-y-3 text-sm"}>
+    <div className={className ?? 'space-y-3 text-sm'}>
       <div className="flex justify-between text-[var(--text-secondary)]">
         <span>
-          {subtotalLabel} ({itemCount} {itemCount === 1 ? "item" : "items"})
+          {subtotalLabel} ({itemCount} {itemCount === 1 ? 'item' : 'items'})
         </span>
         <span className="font-medium">{subtotal}</span>
       </div>
@@ -38,5 +38,5 @@ export function CartPricingSummary({
         <span className="text-xl font-bold text-warm-heading">{total}</span>
       </div>
     </div>
-  );
+  )
 }

@@ -1,49 +1,49 @@
-"use client";
+'use client'
 
-import { useCallback, useState } from "react";
-import { DynamicForm, type SubmitResult } from "@/components/ui/DynamicForm";
-import { Card } from "@/components/ui/Card";
-import { API_ERRORS } from "@/lib/constants/error-messages";
-import { PROFILE_FIELDS, type UserProfile } from "@/app/account/account-shared";
+import { useCallback, useState } from 'react'
+import { DynamicForm, type SubmitResult } from '@/components/ui/DynamicForm'
+import { Card } from '@/components/ui/Card'
+import { API_ERRORS } from '@/lib/constants/error-messages'
+import { PROFILE_FIELDS, type UserProfile } from '@/app/account/account-shared'
 
 interface ProfileSectionProps {
-  readonly profile: UserProfile;
-  readonly onProfileUpdated: () => void;
+  readonly profile: UserProfile
+  readonly onProfileUpdated: () => void
 }
 
 export function ProfileSection({
   profile,
   onProfileUpdated,
 }: ProfileSectionProps) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [success, setSuccess] = useState("");
+  const [isEditing, setIsEditing] = useState(false)
+  const [success, setSuccess] = useState('')
 
   const handleSubmit = useCallback(
     async (values: Readonly<Record<string, string>>): Promise<SubmitResult> => {
       try {
-        const res = await fetch("/api/account", {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
+        const res = await fetch('/api/account', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             name: values.name || undefined,
             email: values.email || undefined,
             phoneNumber: values.phoneNumber || null,
           }),
-        });
-        const data = await res.json();
+        })
+        const data = await res.json()
         if (res.ok) {
-          setSuccess("Profile updated successfully.");
-          setIsEditing(false);
-          onProfileUpdated();
+          setSuccess('Profile updated successfully.')
+          setIsEditing(false)
+          onProfileUpdated()
         } else {
-          return data.error ?? API_ERRORS.PROFILE_UPDATE;
+          return data.error ?? API_ERRORS.PROFILE_UPDATE
         }
       } catch {
-        return API_ERRORS.PROFILE_UPDATE;
+        return API_ERRORS.PROFILE_UPDATE
       }
     },
-    [onProfileUpdated],
-  );
+    [onProfileUpdated]
+  )
 
   return (
     <Card className="p-6 sm:p-8 mb-6">
@@ -71,8 +71,8 @@ export function ProfileSection({
           <button
             type="button"
             onClick={() => {
-              setSuccess("");
-              setIsEditing(true);
+              setSuccess('')
+              setIsEditing(true)
             }}
             className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-[var(--accent-rose)] bg-[var(--accent-blush)] rounded-lg hover:bg-[var(--accent-cream)] transition"
             aria-label="Edit profile"
@@ -133,11 +133,11 @@ export function ProfileSection({
             </dd>
           </div>
           <div className="text-xs text-[var(--text-muted)] pt-1">
-            Member since{" "}
-            {new Date(profile.createdAt).toLocaleDateString("en-US", {
-              year: "numeric",
-              month: "long",
-              day: "numeric",
+            Member since{' '}
+            {new Date(profile.createdAt).toLocaleDateString('en-US', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
             })}
           </div>
         </dl>
@@ -148,9 +148,9 @@ export function ProfileSection({
           fields={PROFILE_FIELDS}
           onSubmit={handleSubmit}
           initialValues={{
-            name: profile.name ?? "",
+            name: profile.name ?? '',
             email: profile.email,
-            phoneNumber: profile.phoneNumber ?? "",
+            phoneNumber: profile.phoneNumber ?? '',
           }}
           submitLabel="Save Changes"
           submittingLabel="Saving…"
@@ -158,5 +158,5 @@ export function ProfileSection({
         />
       )}
     </Card>
-  );
+  )
 }

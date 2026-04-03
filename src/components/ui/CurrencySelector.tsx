@@ -1,9 +1,9 @@
-"use client";
+'use client'
 
-import { useCurrency, type CurrencyCode } from "@/contexts/CurrencyContext";
+import { useCurrency, type CurrencyCode } from '@/contexts/CurrencyContext'
 
 export default function CurrencySelector() {
-  const { currency, setCurrency, availableCurrencies } = useCurrency();
+  const { currency, setCurrency, availableCurrencies } = useCurrency()
 
   return (
     <select
@@ -18,5 +18,5 @@ export default function CurrencySelector() {
         </option>
       ))}
     </select>
-  );
+  )
 }

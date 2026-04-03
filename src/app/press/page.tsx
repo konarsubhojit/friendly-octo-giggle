@@ -1,33 +1,33 @@
-import Footer from "@/components/layout/Footer";
-import Link from "next/link";
+import Footer from '@/components/layout/Footer'
+import Link from 'next/link'
 
 export const metadata = {
-  title: "Press | The Kiyon Store",
+  title: 'Press | The Kiyon Store',
   description:
-    "Latest press releases, media mentions, and press resources for The Kiyon Store.",
-};
+    'Latest press releases, media mentions, and press resources for The Kiyon Store.',
+}
 
 const pressReleases = [
   {
-    date: "February 15, 2026",
-    title: "Craft & Cozy Reaches 100,000 Customers Milestone",
+    date: 'February 15, 2026',
+    title: 'Craft & Cozy Reaches 100,000 Customers Milestone',
     summary:
-      "Craft & Cozy today announced it has served over 100,000 customers since its launch, reflecting strong demand for its handmade flower bouquets, keyrings, hand warmers, mufflers, and scarves.",
+      'Craft & Cozy today announced it has served over 100,000 customers since its launch, reflecting strong demand for its handmade flower bouquets, keyrings, hand warmers, mufflers, and scarves.',
   },
   {
-    date: "January 10, 2026",
+    date: 'January 10, 2026',
     title:
-      "Craft & Cozy Launches Same-Day Delivery in San Francisco and New York",
+      'Craft & Cozy Launches Same-Day Delivery in San Francisco and New York',
     summary:
-      "Customers in select metro areas can now receive orders placed before 2pm on the same day, powered by our new logistics partnership.",
+      'Customers in select metro areas can now receive orders placed before 2pm on the same day, powered by our new logistics partnership.',
   },
   {
-    date: "December 5, 2025",
-    title: "Craft & Cozy Announces Series A Funding Round",
+    date: 'December 5, 2025',
+    title: 'Craft & Cozy Announces Series A Funding Round',
     summary:
-      "Craft & Cozy has closed a $12M Series A round led by Apex Ventures, with participation from leading angel investors in the handmade crafts space.",
+      'Craft & Cozy has closed a $12M Series A round led by Apex Ventures, with participation from leading angel investors in the handmade crafts space.',
   },
-];
+]
 
 export default function PressPage() {
   return (
@@ -82,5 +82,5 @@ export default function PressPage() {
       </main>
       <Footer />
     </div>
-  );
+  )
 }

@@ -1,40 +1,40 @@
-"use client";
+'use client'
 
-import { useCallback, useState } from "react";
-import { DynamicForm, type SubmitResult } from "@/components/ui/DynamicForm";
-import { Card } from "@/components/ui/Card";
-import { API_ERRORS } from "@/lib/constants/error-messages";
-import { PASSWORD_FIELDS } from "@/app/account/account-shared";
+import { useCallback, useState } from 'react'
+import { DynamicForm, type SubmitResult } from '@/components/ui/DynamicForm'
+import { Card } from '@/components/ui/Card'
+import { API_ERRORS } from '@/lib/constants/error-messages'
+import { PASSWORD_FIELDS } from '@/app/account/account-shared'
 
 export function PasswordSection() {
-  const [isChanging, setIsChanging] = useState(false);
-  const [success, setSuccess] = useState("");
+  const [isChanging, setIsChanging] = useState(false)
+  const [success, setSuccess] = useState('')
 
   const handleSubmit = useCallback(
     async (values: Readonly<Record<string, string>>): Promise<SubmitResult> => {
       try {
-        const res = await fetch("/api/auth/change-password", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
+        const res = await fetch('/api/auth/change-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             currentPassword: values.currentPassword,
             newPassword: values.newPassword,
             confirmNewPassword: values.confirmNewPassword,
           }),
-        });
-        const data = await res.json();
+        })
+        const data = await res.json()
         if (res.ok) {
-          setSuccess("Password changed successfully.");
-          setIsChanging(false);
+          setSuccess('Password changed successfully.')
+          setIsChanging(false)
         } else {
-          return data.error || API_ERRORS.AUTH_CHANGE_FAILED;
+          return data.error || API_ERRORS.AUTH_CHANGE_FAILED
         }
       } catch {
-        return API_ERRORS.AUTH_CHANGE_FAILED;
+        return API_ERRORS.AUTH_CHANGE_FAILED
       }
     },
-    [],
-  );
+    []
+  )
 
   return (
     <Card className="p-6 sm:p-8">
@@ -62,8 +62,8 @@ export function PasswordSection() {
           <button
             type="button"
             onClick={() => {
-              setSuccess("");
-              setIsChanging(true);
+              setSuccess('')
+              setIsChanging(true)
             }}
             className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-[var(--accent-rose)] bg-[var(--accent-blush)] rounded-lg hover:bg-[var(--accent-cream)] transition"
             aria-label="Change password"
@@ -110,5 +110,5 @@ export function PasswordSection() {
         />
       )}
     </Card>
-  );
+  )
 }

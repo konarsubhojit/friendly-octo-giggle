@@ -1,40 +1,40 @@
-"use client";
+'use client'
 
-import { useState, useRef, useEffect, useCallback } from "react";
-import Link from "next/link";
-import Image from "next/image";
-import { useSession, signOut } from "next-auth/react";
-import CartIcon from "@/components/layout/CartIcon";
-import LoginModal from "@/features/auth/components/LoginModal";
-import { GradientButton } from "@/components/ui/GradientButton";
-import { FlowerAccent } from "@/components/ui/DecorativeElements";
-import ProductSearch from "@/features/product/components/ProductSearch";
-import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import { useState, useRef, useEffect, useCallback } from 'react'
+import Link from 'next/link'
+import Image from 'next/image'
+import { useSession, signOut } from 'next-auth/react'
+import CartIcon from '@/components/layout/CartIcon'
+import LoginModal from '@/features/auth/components/LoginModal'
+import { GradientButton } from '@/components/ui/GradientButton'
+import { FlowerAccent } from '@/components/ui/DecorativeElements'
+import ProductSearch from '@/features/product/components/ProductSearch'
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 
 interface UserMenuUser {
-  readonly name?: string | null;
-  readonly email?: string | null;
-  readonly image?: string | null;
-  readonly role?: string;
+  readonly name?: string | null
+  readonly email?: string | null
+  readonly image?: string | null
+  readonly role?: string
 }
 
 interface UserMenuProps {
-  readonly user: UserMenuUser;
-  readonly menuOpen: boolean;
-  readonly setMenuOpen: (open: boolean) => void;
-  readonly menuRef: React.RefObject<HTMLDivElement | null>;
+  readonly user: UserMenuUser
+  readonly menuOpen: boolean
+  readonly setMenuOpen: (open: boolean) => void
+  readonly menuRef: React.RefObject<HTMLDivElement | null>
 }
 
 function UserMenu({ user, menuOpen, setMenuOpen, menuRef }: UserMenuProps) {
-  const [signingOut, setSigningOut] = useState(false);
+  const [signingOut, setSigningOut] = useState(false)
 
   async function handleSignOut() {
-    setMenuOpen(false);
-    setSigningOut(true);
+    setMenuOpen(false)
+    setSigningOut(true)
     try {
-      await signOut({ callbackUrl: "/" });
+      await signOut({ callbackUrl: '/' })
     } finally {
-      setSigningOut(false);
+      setSigningOut(false)
     }
   }
 
@@ -57,7 +57,7 @@ function UserMenu({ user, menuOpen, setMenuOpen, menuRef }: UserMenuProps) {
           />
         ) : (
           <div className="w-8 h-8 rounded-full bg-gradient-to-r from-[var(--accent-warm)] to-[var(--accent-rose)] flex items-center justify-center text-white text-sm font-bold">
-            {user.name?.[0]?.toUpperCase() || "U"}
+            {user.name?.[0]?.toUpperCase() || 'U'}
           </div>
         )}
         <svg
@@ -155,7 +155,7 @@ function UserMenu({ user, menuOpen, setMenuOpen, menuRef }: UserMenuProps) {
             </svg>
             My Wishlist
           </Link>
-          {user.role === "ADMIN" && (
+          {user.role === 'ADMIN' && (
             <Link
               href="/admin"
               onClick={() => setMenuOpen(false)}
@@ -211,19 +211,19 @@ function UserMenu({ user, menuOpen, setMenuOpen, menuRef }: UserMenuProps) {
                   />
                 </svg>
               )}
-              {signingOut ? "Signing out…" : "Sign Out"}
+              {signingOut ? 'Signing out…' : 'Sign Out'}
             </button>
           </div>
         </div>
       )}
     </div>
-  );
+  )
 }
 
 interface MobileNavProps {
-  readonly isLoggedIn: boolean;
-  readonly closeMobileNav: () => void;
-  readonly onLoginClick: () => void;
+  readonly isLoggedIn: boolean
+  readonly closeMobileNav: () => void
+  readonly onLoginClick: () => void
 }
 
 function MobileNav({
@@ -328,8 +328,8 @@ function MobileNav({
           <div className="pt-2 border-t border-[var(--border-warm)] mt-2">
             <GradientButton
               onClick={() => {
-                closeMobileNav();
-                onLoginClick();
+                closeMobileNav()
+                onLoginClick()
               }}
               size="lg"
               fullWidth
@@ -341,28 +341,28 @@ function MobileNav({
         )}
       </nav>
     </div>
-  );
+  )
 }
 
 export default function Header() {
-  const { data: session } = useSession();
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const [loginModalOpen, setLoginModalOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
+  const { data: session } = useSession()
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
+  const [loginModalOpen, setLoginModalOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuOpen(false);
+        setMenuOpen(false)
       }
     }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   // Close mobile nav when route changes (click on link)
-  const closeMobileNav = useCallback(() => setMobileNavOpen(false), []);
+  const closeMobileNav = useCallback(() => setMobileNavOpen(false), [])
 
   return (
     <>
@@ -434,7 +434,7 @@ export default function Header() {
                 id="mobile-nav-toggle"
                 onClick={() => setMobileNavOpen(!mobileNavOpen)}
                 className="md:hidden flex items-center justify-center w-9 h-9 rounded-lg text-[var(--text-secondary)] hover:bg-[var(--accent-blush)] transition-colors"
-                aria-label={mobileNavOpen ? "Close menu" : "Open menu"}
+                aria-label={mobileNavOpen ? 'Close menu' : 'Open menu'}
                 aria-expanded={mobileNavOpen}
                 aria-haspopup="menu"
                 aria-controls="mobile-nav-drawer"
@@ -488,5 +488,5 @@ export default function Header() {
         onClose={() => setLoginModalOpen(false)}
       />
     </>
-  );
+  )
 }

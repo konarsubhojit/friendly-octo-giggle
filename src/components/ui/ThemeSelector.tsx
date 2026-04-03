@@ -1,13 +1,13 @@
-"use client";
+'use client'
 
-import { useTheme } from "@/contexts/ThemeContext";
+import { useTheme } from '@/contexts/ThemeContext'
 
 export const ThemeSelector = () => {
-  const { theme, setTheme, themes } = useTheme();
+  const { theme, setTheme, themes } = useTheme()
   const activeTheme =
     themes.find((option) => option.id === theme) ??
-    themes.find((option) => option.id === "default") ??
-    themes[0];
+    themes.find((option) => option.id === 'default') ??
+    themes[0]
 
   return (
     <label className="flex w-full items-center gap-2 text-[var(--foreground)] sm:w-auto">
@@ -22,7 +22,7 @@ export const ThemeSelector = () => {
       <select
         value={theme}
         onChange={(e) =>
-          setTheme(e.target.value as (typeof themes)[number]["id"])
+          setTheme(e.target.value as (typeof themes)[number]['id'])
         }
         className="w-full flex-1 cursor-pointer appearance-none rounded-md border border-[var(--border-warm)] bg-[var(--surface)] px-3 py-1.5 text-sm text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-rose)] sm:w-52 sm:flex-none"
         aria-label="Select colour theme"
@@ -37,5 +37,5 @@ export const ThemeSelector = () => {
         {activeTheme.description}
       </span>
     </label>
-  );
-};
+  )
+}

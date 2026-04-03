@@ -1,38 +1,38 @@
-import { NextRequest } from "next/server";
-import { z } from "zod";
-import { drizzleDb, primaryDrizzleDb } from "@/lib/db";
-import { orders } from "@/lib/schema";
-import { eq } from "drizzle-orm";
+import { NextRequest } from 'next/server'
+import { z } from 'zod'
+import { drizzleDb, primaryDrizzleDb } from '@/lib/db'
+import { orders } from '@/lib/schema'
+import { eq } from 'drizzle-orm'
 import {
   apiSuccess,
   apiError,
   handleApiError,
   handleValidationError,
-} from "@/lib/api-utils";
-import { auth } from "@/lib/auth";
-import { serializeOrder } from "@/lib/serializers";
-import { getCachedData, invalidateCache, getRedisClient } from "@/lib/redis";
-import { CACHE_KEYS, CACHE_TTL, invalidateUserOrderCaches } from "@/lib/cache";
-import { logError } from "@/lib/logger";
-import { waitUntil } from "@vercel/functions";
+} from '@/lib/api-utils'
+import { auth } from '@/lib/auth'
+import { serializeOrder } from '@/lib/serializers'
+import { getCachedData, invalidateCache, getRedisClient } from '@/lib/redis'
+import { CACHE_KEYS, CACHE_TTL, invalidateUserOrderCaches } from '@/lib/cache'
+import { logError } from '@/lib/logger'
+import { waitUntil } from '@vercel/functions'
 
-export const dynamic = "force-dynamic";
+export const dynamic = 'force-dynamic'
 
 const OrderActionSchema = z.object({
-  action: z.literal("cancel"),
-});
+  action: z.literal('cancel'),
+})
 
 export async function GET(
   _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth();
+    const session = await auth()
     if (!session?.user?.id) {
-      return apiError("Authentication required", 401);
+      return apiError('Authentication required', 401)
     }
 
-    const { id } = await params;
+    const { id } = await params
 
     const order = await getCachedData(
       CACHE_KEYS.ORDER_BY_ID(session.user.id, id),
@@ -48,73 +48,73 @@ export async function GET(
               },
             },
           },
-        });
+        })
       },
-      CACHE_TTL.ORDER_DETAIL_STALE,
-    );
+      CACHE_TTL.ORDER_DETAIL_STALE
+    )
 
     if (order?.userId !== session.user.id) {
-      return apiError("Order not found", 404);
+      return apiError('Order not found', 404)
     }
 
-    return apiSuccess({ order: serializeOrder(order) });
+    return apiSuccess({ order: serializeOrder(order) })
   } catch (error) {
-    return handleApiError(error);
+    return handleApiError(error)
   }
 }
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth();
+    const session = await auth()
     if (!session?.user?.id) {
-      return apiError("Authentication required", 401);
+      return apiError('Authentication required', 401)
     }
 
-    const body = await request.json();
-    const parseResult = OrderActionSchema.safeParse(body);
+    const body = await request.json()
+    const parseResult = OrderActionSchema.safeParse(body)
     if (!parseResult.success) {
-      return handleValidationError(parseResult.error);
+      return handleValidationError(parseResult.error)
     }
 
-    const { id } = await params;
+    const { id } = await params
 
     const order = await primaryDrizzleDb.query.orders.findFirst({
       where: eq(orders.id, id),
-    });
+    })
 
     if (order?.userId !== session.user.id) {
-      return apiError("Order not found", 404);
+      return apiError('Order not found', 404)
     }
 
-    if (order.status !== "PENDING") {
-      return apiError("Only pending orders can be cancelled", 400);
+    if (order.status !== 'PENDING') {
+      return apiError('Only pending orders can be cancelled', 400)
     }
 
     await primaryDrizzleDb
       .update(orders)
-      .set({ status: "CANCELLED", updatedAt: new Date() })
-      .where(eq(orders.id, id));
+      .set({ status: 'CANCELLED', updatedAt: new Date() })
+      .where(eq(orders.id, id))
 
-    const redis = getRedisClient();
+    const redis = getRedisClient()
     if (redis) {
       waitUntil(
         redis
-          .hset(`order:${id}`, { status: "CANCELLED" })
+          .hset(`order:${id}`, { status: 'CANCELLED' })
           .catch((err) =>
-            logError({ error: err, context: "order_cancel_redis_update" }),
-          ),
-      );
+            logError({ error: err, context: 'order_cancel_redis_update' })
+          )
+      )
     }
 
     await Promise.allSettled([
       invalidateUserOrderCaches(session.user.id),
-      invalidateCache("admin:orders:*"),
+      invalidateCache('admin:orders:*'),
       invalidateCache(`admin:order:${id}`),
       invalidateCache(CACHE_KEYS.PRODUCTS_BESTSELLERS_PATTERN),
-    ]);
+    ])
 
     const updatedOrder = await primaryDrizzleDb.query.orders.findFirst({
       where: eq(orders.id, id),
@@ -126,14 +126,14 @@ export async function PATCH(
           },
         },
       },
-    });
+    })
 
     if (!updatedOrder) {
-      return apiError("Order not found after update", 500);
+      return apiError('Order not found after update', 500)
     }
 
-    return apiSuccess({ order: serializeOrder(updatedOrder) });
+    return apiSuccess({ order: serializeOrder(updatedOrder) })
   } catch (error) {
-    return handleApiError(error);
+    return handleApiError(error)
   }
 }

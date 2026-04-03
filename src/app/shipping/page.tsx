@@ -1,10 +1,10 @@
-import Footer from "@/components/layout/Footer";
+import Footer from '@/components/layout/Footer'
 
 export const metadata = {
-  title: "Shipping Information | The Kiyon Store",
+  title: 'Shipping Information | The Kiyon Store',
   description:
-    "Learn about our shipping options, delivery times, and policies.",
-};
+    'Learn about our shipping options, delivery times, and policies.',
+}
 
 function ShippingOptionsSection() {
   return (
@@ -74,7 +74,7 @@ function ShippingOptionsSection() {
         </table>
       </div>
     </section>
-  );
+  )
 }
 
 function OrderProcessingSection() {
@@ -94,7 +94,7 @@ function OrderProcessingSection() {
         order has shipped.
       </p>
     </section>
-  );
+  )
 }
 
 function TrackingSection() {
@@ -105,13 +105,13 @@ function TrackingSection() {
       </h2>
       <p className="text-[var(--text-secondary)] leading-relaxed">
         Once your order ships, you will receive a tracking number via email. You
-        can also check the status of your order in the{" "}
+        can also check the status of your order in the{' '}
         <strong>My Orders</strong> section of your account. Please allow up to
         24 hours for tracking information to update after you receive your
         shipping confirmation.
       </p>
     </section>
-  );
+  )
 }
 
 export default function ShippingPage() {
@@ -131,5 +131,5 @@ export default function ShippingPage() {
       </main>
       <Footer />
     </div>
-  );
+  )
 }

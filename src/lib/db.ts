@@ -1,5 +1,5 @@
-import { Pool } from "@neondatabase/serverless";
-import { drizzle } from "drizzle-orm/neon-serverless";
+import { Pool } from '@neondatabase/serverless'
+import { drizzle } from 'drizzle-orm/neon-serverless'
 import {
   products,
   productVariations,
@@ -38,9 +38,9 @@ import {
   reviewsRelations,
   productSharesRelations,
   categoriesRelations,
-} from "./schema";
-import { withReplicas } from "drizzle-orm/pg-core";
-import { env } from "./env";
+} from './schema'
+import { withReplicas } from 'drizzle-orm/pg-core'
+import { env } from './env'
 
 // All schema tables and relations collected into one object for Drizzle relational queries
 const schema = {
@@ -81,39 +81,39 @@ const schema = {
   reviews,
   reviewsRelations,
   productSharesRelations,
-};
+}
 
 // ─── Connection Pool (singleton for serverless) ─────────
 
 const globalForDb = globalThis as unknown as {
-  writePool: Pool | undefined;
-  readPool: Pool | undefined;
-};
+  writePool: Pool | undefined
+  readPool: Pool | undefined
+}
 
 const createPool = (connectionString: string) =>
   new Pool({
     connectionString,
-  });
+  })
 
-const writePool = (globalForDb.writePool ??= createPool(env.DATABASE_URL));
+const writePool = (globalForDb.writePool ??= createPool(env.DATABASE_URL))
 const readPool = (globalForDb.readPool ??= createPool(
-  env.READ_DATABASE_URL ?? env.DATABASE_URL,
-));
+  env.READ_DATABASE_URL ?? env.DATABASE_URL
+))
 
-if (env.NODE_ENV === "development") {
-  globalForDb.writePool = writePool;
-  globalForDb.readPool = readPool;
+if (env.NODE_ENV === 'development') {
+  globalForDb.writePool = writePool
+  globalForDb.readPool = readPool
 }
 
 // ─── Drizzle Instance ───────────────────────────────────
 
-export const primaryDrizzleDb = drizzle(writePool, { schema });
-export const readDrizzleDb = drizzle(readPool, { schema });
-export const drizzleDb = withReplicas(primaryDrizzleDb, [readDrizzleDb]);
+export const primaryDrizzleDb = drizzle(writePool, { schema })
+export const readDrizzleDb = drizzle(readPool, { schema })
+export const drizzleDb = withReplicas(primaryDrizzleDb, [readDrizzleDb])
 
 // Export type for use in other files
-export type DrizzleDb = typeof drizzleDb;
+export type DrizzleDb = typeof drizzleDb
 
 // Re-export query helpers for backward compatibility
-export { db } from "./db-queries";
-export type { ProductListOptions } from "./db-queries";
+export { db } from './db-queries'
+export type { ProductListOptions } from './db-queries'

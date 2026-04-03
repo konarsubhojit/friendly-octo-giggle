@@ -1,58 +1,58 @@
-"use client";
+'use client'
 
-import { useState, lazy, Suspense } from "react";
-import Image from "next/image";
-import type { ProductVariation } from "@/lib/types";
-import toast from "react-hot-toast";
-import { useCurrency } from "@/contexts/CurrencyContext";
+import { useState, lazy, Suspense } from 'react'
+import Image from 'next/image'
+import type { ProductVariation } from '@/lib/types'
+import toast from 'react-hot-toast'
+import { useCurrency } from '@/contexts/CurrencyContext'
 
 const VariationFormModal = lazy(
-  () => import("@/features/admin/components/VariationFormModal"),
-);
+  () => import('@/features/admin/components/VariationFormModal')
+)
 const DeleteConfirmModal = lazy(
-  () => import("@/features/admin/components/DeleteConfirmModal"),
-);
+  () => import('@/features/admin/components/DeleteConfirmModal')
+)
 
 interface VariationListProps {
-  readonly productId: string;
-  readonly productPrice: number;
-  readonly initialVariations: ProductVariation[];
+  readonly productId: string
+  readonly productPrice: number
+  readonly initialVariations: ProductVariation[]
 }
 
 interface QuickEditDraft {
-  price: string;
-  stock: string;
+  price: string
+  stock: string
 }
 
 interface QuickEditUiState {
-  readonly hasDraftChanges: boolean;
-  readonly hasValidPrice: boolean;
-  readonly isQuickSaveDisabled: boolean;
-  readonly previewLabel: string;
-  readonly quickEffectivePrice: number;
-  readonly showPriceError: boolean;
-  readonly showStockError: boolean;
+  readonly hasDraftChanges: boolean
+  readonly hasValidPrice: boolean
+  readonly isQuickSaveDisabled: boolean
+  readonly previewLabel: string
+  readonly quickEffectivePrice: number
+  readonly showPriceError: boolean
+  readonly showStockError: boolean
 }
 
 interface VariationQuickEditPanelProps {
-  readonly currency: string;
-  readonly draft: QuickEditDraft;
-  readonly onPriceChange: (value: string) => void;
-  readonly onReset: () => void;
-  readonly onSave: () => void;
-  readonly onStockChange: (value: string) => void;
-  readonly saving: boolean;
-  readonly state: QuickEditUiState;
-  readonly variationName: string;
+  readonly currency: string
+  readonly draft: QuickEditDraft
+  readonly onPriceChange: (value: string) => void
+  readonly onReset: () => void
+  readonly onSave: () => void
+  readonly onStockChange: (value: string) => void
+  readonly saving: boolean
+  readonly state: QuickEditUiState
+  readonly variationName: string
 }
 
 function convertCurrency(
   amount: number,
   fromRate: number,
-  toRate: number,
+  toRate: number
 ): number {
-  const amountInInr = amount / fromRate;
-  return Number((amountInInr * toRate).toFixed(2));
+  const amountInInr = amount / fromRate
+  return Number((amountInInr * toRate).toFixed(2))
 }
 
 function getQuickEditUiState({
@@ -64,24 +64,24 @@ function getQuickEditUiState({
   saving,
   variation,
 }: {
-  readonly currency: string;
-  readonly draft: QuickEditDraft;
-  readonly formatPrice: (amount: number) => string;
-  readonly getDefaultDraft: (variation: ProductVariation) => QuickEditDraft;
-  readonly rates: Record<string, number>;
-  readonly saving: boolean;
-  readonly variation: ProductVariation;
+  readonly currency: string
+  readonly draft: QuickEditDraft
+  readonly formatPrice: (amount: number) => string
+  readonly getDefaultDraft: (variation: ProductVariation) => QuickEditDraft
+  readonly rates: Record<string, number>
+  readonly saving: boolean
+  readonly variation: ProductVariation
 }): QuickEditUiState {
-  const defaultDraft = getDefaultDraft(variation);
-  const priceValue = Number.parseFloat(draft.price);
+  const defaultDraft = getDefaultDraft(variation)
+  const priceValue = Number.parseFloat(draft.price)
   const priceInInr = Number.isNaN(priceValue)
     ? Number.NaN
-    : convertCurrency(priceValue, rates[currency], rates.INR);
-  const stockValue = Number.parseInt(draft.stock, 10);
+    : convertCurrency(priceValue, rates[currency], rates.INR)
+  const stockValue = Number.parseInt(draft.stock, 10)
   const hasDraftChanges =
-    draft.price !== defaultDraft.price || draft.stock !== defaultDraft.stock;
-  const hasValidStock = Number.isInteger(stockValue) && stockValue >= 0;
-  const hasValidPrice = !Number.isNaN(priceValue) && priceValue > 0;
+    draft.price !== defaultDraft.price || draft.stock !== defaultDraft.stock
+  const hasValidStock = Number.isInteger(stockValue) && stockValue >= 0
+  const hasValidPrice = !Number.isNaN(priceValue) && priceValue > 0
 
   return {
     hasDraftChanges,
@@ -96,11 +96,11 @@ function getQuickEditUiState({
     previewLabel:
       hasValidPrice && !Number.isNaN(priceInInr)
         ? formatPrice(priceInInr)
-        : "Enter valid values",
+        : 'Enter valid values',
     quickEffectivePrice: priceInInr,
     showPriceError: hasValidPrice === false,
     showStockError: hasValidStock === false,
-  };
+  }
 }
 
 function VariationQuickEditPanel({
@@ -172,7 +172,7 @@ function VariationQuickEditPanel({
             disabled={state.isQuickSaveDisabled}
             className="inline-flex items-center justify-center rounded-full bg-sky-500 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-sky-400 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 dark:bg-sky-500 dark:text-slate-950 dark:hover:bg-sky-400 dark:disabled:bg-slate-700 dark:disabled:text-slate-400"
           >
-            {saving ? "Saving..." : "Save"}
+            {saving ? 'Saving...' : 'Save'}
           </button>
         </div>
       </div>
@@ -193,27 +193,27 @@ function VariationQuickEditPanel({
         </p>
       ) : null}
     </div>
-  );
+  )
 }
 
 interface ColourCardProps {
-  readonly variation: ProductVariation;
-  readonly currency: string;
-  readonly draft: QuickEditDraft;
-  readonly expandedVariationId: string | null;
-  readonly formatPrice: (amount: number) => string;
-  readonly getDefaultDraft: (variation: ProductVariation) => QuickEditDraft;
-  readonly handleDeleteClick: (variation: ProductVariation) => void;
-  readonly handleQuickEditToggle: (variationId: string) => void;
-  readonly handleQuickSave: (variation: ProductVariation) => void;
-  readonly rates: Record<string, number>;
-  readonly resetQuickDraft: (variation: ProductVariation) => void;
-  readonly savingVariationId: string | null;
+  readonly variation: ProductVariation
+  readonly currency: string
+  readonly draft: QuickEditDraft
+  readonly expandedVariationId: string | null
+  readonly formatPrice: (amount: number) => string
+  readonly getDefaultDraft: (variation: ProductVariation) => QuickEditDraft
+  readonly handleDeleteClick: (variation: ProductVariation) => void
+  readonly handleQuickEditToggle: (variationId: string) => void
+  readonly handleQuickSave: (variation: ProductVariation) => void
+  readonly rates: Record<string, number>
+  readonly resetQuickDraft: (variation: ProductVariation) => void
+  readonly savingVariationId: string | null
   readonly updateQuickDraft: (
     variationId: string,
     field: keyof QuickEditDraft,
-    value: string,
-  ) => void;
+    value: string
+  ) => void
 }
 
 function ColourCard({
@@ -231,7 +231,7 @@ function ColourCard({
   savingVariationId,
   updateQuickDraft,
 }: ColourCardProps) {
-  const isExpanded = expandedVariationId === variation.id;
+  const isExpanded = expandedVariationId === variation.id
   const quickEditState = getQuickEditUiState({
     currency,
     draft,
@@ -240,7 +240,7 @@ function ColourCard({
     rates,
     saving: savingVariationId === variation.id,
     variation,
-  });
+  })
 
   return (
     <div className="rounded-[1.5rem] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-4 shadow-[0_18px_44px_-34px_rgba(15,23,42,0.38)] transition hover:border-slate-300 hover:shadow-[0_24px_54px_-34px_rgba(15,23,42,0.42)] sm:p-5 dark:border-slate-700 dark:bg-[linear-gradient(180deg,rgba(15,23,42,0.98)_0%,rgba(15,23,42,0.88)_100%)] dark:hover:border-slate-600 dark:hover:shadow-[0_24px_54px_-34px_rgba(2,6,23,0.92)]">
@@ -286,10 +286,10 @@ function ColourCard({
                 </p>
               </div>
               <span className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:bg-slate-800 dark:text-slate-400">
-                Updated{" "}
-                {new Date(variation.updatedAt).toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
+                Updated{' '}
+                {new Date(variation.updatedAt).toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
                 })}
               </span>
             </div>
@@ -318,12 +318,12 @@ function ColourCard({
                 currency={currency}
                 draft={draft}
                 onPriceChange={(value) =>
-                  updateQuickDraft(variation.id, "price", value)
+                  updateQuickDraft(variation.id, 'price', value)
                 }
                 onReset={() => resetQuickDraft(variation)}
                 onSave={() => handleQuickSave(variation)}
                 onStockChange={(value) =>
-                  updateQuickDraft(variation.id, "stock", value)
+                  updateQuickDraft(variation.id, 'stock', value)
                 }
                 saving={savingVariationId === variation.id}
                 state={quickEditState}
@@ -337,7 +337,7 @@ function ColourCard({
           <button
             type="button"
             onClick={() => handleQuickEditToggle(variation.id)}
-            aria-label={`${isExpanded ? "Close quick edit for" : "Open quick edit for"} ${variation.name}`}
+            aria-label={`${isExpanded ? 'Close quick edit for' : 'Open quick edit for'} ${variation.name}`}
             aria-expanded={isExpanded}
             className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-slate-950 text-white transition hover:bg-slate-800"
           >
@@ -380,7 +380,7 @@ function ColourCard({
         </div>
       </div>
     </div>
-  );
+  )
 }
 
 export default function VariationList({
@@ -389,192 +389,192 @@ export default function VariationList({
   initialVariations,
 }: VariationListProps) {
   const [variations, setVariations] =
-    useState<ProductVariation[]>(initialVariations);
-  const { currency, formatPrice, rates } = useCurrency();
-  const [showFormModal, setShowFormModal] = useState(false);
+    useState<ProductVariation[]>(initialVariations)
+  const { currency, formatPrice, rates } = useCurrency()
+  const [showFormModal, setShowFormModal] = useState(false)
   const [editingVariation, setEditingVariation] = useState<
     ProductVariation | undefined
-  >(undefined);
+  >(undefined)
   const [deleteTarget, setDeleteTarget] = useState<ProductVariation | null>(
-    null,
-  );
-  const [deleting, setDeleting] = useState(false);
+    null
+  )
+  const [deleting, setDeleting] = useState(false)
   const [quickEdits, setQuickEdits] = useState<Record<string, QuickEditDraft>>(
-    {},
-  );
+    {}
+  )
   const [savingVariationId, setSavingVariationId] = useState<string | null>(
-    null,
-  );
+    null
+  )
   const [expandedVariationId, setExpandedVariationId] = useState<string | null>(
-    null,
-  );
+    null
+  )
 
   // Separate styles and colours
   const styleVariations = variations.filter(
-    (v) => v.variationType === "styling",
-  );
+    (v) => v.variationType === 'styling'
+  )
   const colourVariations = variations.filter(
-    (v) => v.variationType === "colour",
-  );
-  const baseProductColours = colourVariations.filter((c) => !c.styleId);
-  const coloursByStyleId = new Map<string, ProductVariation[]>();
+    (v) => v.variationType === 'colour'
+  )
+  const baseProductColours = colourVariations.filter((c) => !c.styleId)
+  const coloursByStyleId = new Map<string, ProductVariation[]>()
   for (const colour of colourVariations) {
     if (colour.styleId) {
-      const existing = coloursByStyleId.get(colour.styleId) ?? [];
-      existing.push(colour);
-      coloursByStyleId.set(colour.styleId, existing);
+      const existing = coloursByStyleId.get(colour.styleId) ?? []
+      existing.push(colour)
+      coloursByStyleId.set(colour.styleId, existing)
     }
   }
 
   // Only count colours for stock stats (styles are groupings)
   const totalVariationStock = colourVariations.reduce(
     (sum, variation) => sum + variation.stock,
-    0,
-  );
+    0
+  )
   const stockedVariations = colourVariations.filter(
-    (variation) => variation.stock > 0,
-  ).length;
+    (variation) => variation.stock > 0
+  ).length
 
   const handleAddClick = () => {
-    setEditingVariation(undefined);
-    setShowFormModal(true);
-  };
+    setEditingVariation(undefined)
+    setShowFormModal(true)
+  }
 
   const handleQuickEditToggle = (variationId: string) => {
     setExpandedVariationId((currentId) =>
-      currentId === variationId ? null : variationId,
-    );
-  };
+      currentId === variationId ? null : variationId
+    )
+  }
 
   const handleFormClose = () => {
-    setShowFormModal(false);
-    setEditingVariation(undefined);
-  };
+    setShowFormModal(false)
+    setEditingVariation(undefined)
+  }
 
   const handleFormSuccess = (saved: ProductVariation) => {
     setVariations((prev) => {
-      const idx = prev.findIndex((v) => v.id === saved.id);
+      const idx = prev.findIndex((v) => v.id === saved.id)
       if (idx >= 0) {
-        const updated = [...prev];
-        updated[idx] = saved;
-        return updated;
+        const updated = [...prev]
+        updated[idx] = saved
+        return updated
       }
-      return [...prev, saved];
-    });
-    setShowFormModal(false);
-    setEditingVariation(undefined);
-  };
+      return [...prev, saved]
+    })
+    setShowFormModal(false)
+    setEditingVariation(undefined)
+  }
 
   const handleDeleteClick = (variation: ProductVariation) => {
-    setDeleteTarget(variation);
-  };
+    setDeleteTarget(variation)
+  }
 
   const getDefaultDraft = (variation: ProductVariation): QuickEditDraft => ({
     price: convertCurrency(
       variation.price,
       rates.INR,
-      rates[currency],
+      rates[currency]
     ).toString(),
     stock: variation.stock.toString(),
-  });
+  })
 
   const getDraft = (variation: ProductVariation) =>
-    quickEdits[variation.id] ?? getDefaultDraft(variation);
+    quickEdits[variation.id] ?? getDefaultDraft(variation)
 
   const updateQuickDraft = (
     variationId: string,
     field: keyof QuickEditDraft,
-    value: string,
+    value: string
   ) => {
     setQuickEdits((prev) => ({
       ...prev,
       [variationId]: {
-        ...(prev[variationId] ?? { price: "", stock: "" }),
+        ...(prev[variationId] ?? { price: '', stock: '' }),
         [field]: value,
       },
-    }));
-  };
+    }))
+  }
 
   const resetQuickDraft = (variation: ProductVariation) => {
     setQuickEdits((prev) => {
-      const next = { ...prev };
-      delete next[variation.id];
-      return next;
-    });
-  };
+      const next = { ...prev }
+      delete next[variation.id]
+      return next
+    })
+  }
 
   const handleQuickSave = async (variation: ProductVariation) => {
-    const draft = getDraft(variation);
-    const priceValue = Number.parseFloat(draft.price);
-    const stockValue = Number.parseInt(draft.stock, 10);
+    const draft = getDraft(variation)
+    const priceValue = Number.parseFloat(draft.price)
+    const stockValue = Number.parseInt(draft.stock, 10)
 
     if (Number.isNaN(priceValue) || priceValue <= 0) {
-      toast.error("Price must be a positive number");
-      return;
+      toast.error('Price must be a positive number')
+      return
     }
 
     if (!Number.isInteger(stockValue) || stockValue < 0) {
-      toast.error("Stock must be a non-negative integer");
-      return;
+      toast.error('Stock must be a non-negative integer')
+      return
     }
 
-    const priceInInr = convertCurrency(priceValue, rates[currency], rates.INR);
+    const priceInInr = convertCurrency(priceValue, rates[currency], rates.INR)
 
     if (priceInInr <= 0) {
-      toast.error("Price must be greater than zero");
-      return;
+      toast.error('Price must be greater than zero')
+      return
     }
 
-    setSavingVariationId(variation.id);
+    setSavingVariationId(variation.id)
 
     try {
       const res = await fetch(`/api/admin/variations/${variation.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           price: priceInInr,
           stock: stockValue,
         }),
-      });
+      })
 
-      const data = await res.json().catch(() => ({}));
+      const data = await res.json().catch(() => ({}))
 
       if (!res.ok) {
-        throw new Error(data.error || "Failed to update variation");
+        throw new Error(data.error || 'Failed to update variation')
       }
 
-      handleFormSuccess(data.data.variation);
-      toast.success("Variation updated");
-      resetQuickDraft(variation);
-      setExpandedVariationId(null);
+      handleFormSuccess(data.data.variation)
+      toast.success('Variation updated')
+      resetQuickDraft(variation)
+      setExpandedVariationId(null)
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Failed to update variation",
-      );
+        error instanceof Error ? error.message : 'Failed to update variation'
+      )
     } finally {
-      setSavingVariationId(null);
+      setSavingVariationId(null)
     }
-  };
+  }
 
   const confirmDelete = async () => {
-    if (!deleteTarget || deleting) return;
-    setDeleting(true);
+    if (!deleteTarget || deleting) return
+    setDeleting(true)
     try {
       const res = await fetch(`/api/admin/variations/${deleteTarget.id}`, {
-        method: "DELETE",
-      });
+        method: 'DELETE',
+      })
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || "Failed to delete variation");
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || 'Failed to delete variation')
       }
-      setVariations((prev) => prev.filter((v) => v.id !== deleteTarget.id));
-      setDeleteTarget(null);
+      setVariations((prev) => prev.filter((v) => v.id !== deleteTarget.id))
+      setDeleteTarget(null)
     } catch {
       // Toast is optional here — error is visible via alert or could be added later
     } finally {
-      setDeleting(false);
+      setDeleting(false)
     }
-  };
+  }
 
   const addButton = (
     <button
@@ -584,7 +584,7 @@ export default function VariationList({
     >
       Add Variation
     </button>
-  );
+  )
 
   const modalFallback = (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm dark:bg-slate-950/70">
@@ -592,7 +592,7 @@ export default function VariationList({
         <div className="h-6 w-6 animate-spin rounded-full border-2 border-sky-600 border-t-transparent" />
       </div>
     </div>
-  );
+  )
 
   if (variations.length === 0) {
     return (
@@ -648,7 +648,7 @@ export default function VariationList({
           </Suspense>
         )}
       </section>
-    );
+    )
   }
 
   return (
@@ -726,7 +726,7 @@ export default function VariationList({
 
         {/* Named styles with their colours */}
         {styleVariations.map((style) => {
-          const styleColours = coloursByStyleId.get(style.id) ?? [];
+          const styleColours = coloursByStyleId.get(style.id) ?? []
           return (
             <div key={style.id} className="space-y-3">
               <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 dark:border-slate-700 dark:bg-slate-800/60">
@@ -744,15 +744,15 @@ export default function VariationList({
                   </div>
                   <span className="rounded-full bg-slate-200 px-2.5 py-0.5 text-xs font-semibold text-slate-600 dark:bg-slate-700 dark:text-slate-300">
                     {styleColours.length} colour
-                    {styleColours.length !== 1 ? "s" : ""}
+                    {styleColours.length !== 1 ? 's' : ''}
                   </span>
                 </div>
                 <div className="flex gap-2">
                   <button
                     type="button"
                     onClick={() => {
-                      setEditingVariation(style);
-                      setShowFormModal(true);
+                      setEditingVariation(style)
+                      setShowFormModal(true)
                     }}
                     aria-label={`Edit style ${style.name}`}
                     className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-slate-950 text-white transition hover:bg-slate-800"
@@ -822,7 +822,7 @@ export default function VariationList({
                 </div>
               )}
             </div>
-          );
+          )
         })}
       </div>
 
@@ -849,5 +849,5 @@ export default function VariationList({
         </Suspense>
       )}
     </section>
-  );
+  )
 }

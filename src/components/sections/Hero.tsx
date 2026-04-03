@@ -1,21 +1,21 @@
-import Link from "next/link";
+import Link from 'next/link'
 import {
   ScatteredFlowers,
   VineDivider,
-} from "@/components/ui/DecorativeElements";
+} from '@/components/ui/DecorativeElements'
 
 const STATS = [
-  { num: "100%", label: "Handmade", decorative: false },
-  { num: "50+", label: "Products", decorative: false },
-  { num: "❤️", label: "Made with love", decorative: true },
-] as const;
+  { num: '100%', label: 'Handmade', decorative: false },
+  { num: '50+', label: 'Products', decorative: false },
+  { num: '❤️', label: 'Made with love', decorative: true },
+] as const
 
 const FEATURE_BADGES = [
-  { icon: "🌸", text: "Crochet flowers" },
-  { icon: "🎀", text: "Hair accessories" },
-  { icon: "🧶", text: "Handmade knitwear" },
-  { icon: "🚚", text: "Free shipping" },
-] as const;
+  { icon: '🌸', text: 'Crochet flowers' },
+  { icon: '🎀', text: 'Hair accessories' },
+  { icon: '🧶', text: 'Handmade knitwear' },
+  { icon: '🚚', text: 'Free shipping' },
+] as const
 
 const HeroTextColumn = () => {
   return (
@@ -57,8 +57,8 @@ const HeroTextColumn = () => {
         ))}
       </div>
     </div>
-  );
-};
+  )
+}
 
 const HeroIllustration = () => {
   return (
@@ -76,12 +76,12 @@ const HeroIllustration = () => {
         </div>
         <div
           className="absolute -right-10 top-10 h-28 w-28 rounded-full blur-3xl"
-          style={{ backgroundColor: "var(--hero-orb-primary)" }}
+          style={{ backgroundColor: 'var(--hero-orb-primary)' }}
           aria-hidden="true"
         />
         <div
           className="absolute -left-8 bottom-6 h-24 w-24 rounded-full blur-3xl"
-          style={{ backgroundColor: "var(--hero-orb-secondary)" }}
+          style={{ backgroundColor: 'var(--hero-orb-secondary)' }}
           aria-hidden="true"
         />
         <div className="relative text-center p-8">
@@ -94,8 +94,8 @@ const HeroIllustration = () => {
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
 const FeatureBadges = () => {
   return (
@@ -114,8 +114,8 @@ const FeatureBadges = () => {
         </div>
       ))}
     </div>
-  );
-};
+  )
+}
 
 const Hero = () => (
   <section
@@ -133,15 +133,15 @@ const Hero = () => (
     </div>
     <div
       className="absolute top-20 left-10 w-72 h-72 rounded-full blur-3xl opacity-25 animate-float-slow pointer-events-none"
-      style={{ backgroundColor: "var(--hero-orb-primary)" }}
+      style={{ backgroundColor: 'var(--hero-orb-primary)' }}
       aria-hidden="true"
     />
     <div
       className="absolute bottom-10 right-10 w-96 h-96 rounded-full blur-3xl opacity-20 animate-float-slow animation-delay-300 pointer-events-none"
-      style={{ backgroundColor: "var(--hero-orb-secondary)" }}
+      style={{ backgroundColor: 'var(--hero-orb-secondary)' }}
       aria-hidden="true"
     />
   </section>
-);
+)
 
-export default Hero;
+export default Hero

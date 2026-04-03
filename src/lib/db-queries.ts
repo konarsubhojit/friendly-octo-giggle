@@ -9,30 +9,30 @@ import {
   or,
   inArray,
   type SQL,
-} from "drizzle-orm";
+} from 'drizzle-orm'
 import {
   products,
   productShares,
   wishlists,
   orders,
   orderItems,
-} from "./schema";
-import { drizzleDb, primaryDrizzleDb } from "./db";
-import { Product, ProductInput } from "./types";
+} from './schema'
+import { drizzleDb, primaryDrizzleDb } from './db'
+import { Product, ProductInput } from './types'
 import {
   cacheProductById,
   invalidateProductCaches,
   cacheShareResolve,
-} from "./cache";
-import { serializeProduct, serializeVariation } from "./serializers";
+} from './cache'
+import { serializeProduct, serializeVariation } from './serializers'
 
 // ─── Product Helpers (with date serialization) ──────────
 
 export interface ProductListOptions {
-  limit?: number;
-  offset?: number;
-  search?: string;
-  category?: string;
+  limit?: number
+  offset?: number
+  search?: string
+  category?: string
 }
 
 export const db = {
@@ -43,7 +43,7 @@ export const db = {
      * @returns Array of products with full details including variations
      */
     findAll: async (options: ProductListOptions = {}): Promise<Product[]> => {
-      const { limit, offset } = options;
+      const { limit, offset } = options
 
       const query = drizzleDb.query.products.findMany({
         where: isNull(products.deletedAt),
@@ -55,14 +55,14 @@ export const db = {
         },
         limit,
         offset,
-      });
+      })
 
-      const rows = await query;
+      const rows = await query
 
       return rows.map((p) => ({
         ...serializeProduct(p),
         variations: p.variations.map(serializeVariation),
-      }));
+      }))
     },
 
     /**
@@ -83,9 +83,9 @@ export const db = {
      * @returns Array of products sorted by sales volume descending
      */
     findBestsellers: async (
-      options: ProductListOptions = {},
+      options: ProductListOptions = {}
     ): Promise<Product[]> => {
-      const { limit = 5 } = options;
+      const { limit = 5 } = options
 
       // Single SQL query: LEFT JOIN a sales-aggregate subquery so products
       // with no sales still appear (totalSold = 0), then sort + limit in DB.
@@ -94,19 +94,16 @@ export const db = {
           productId: orderItems.productId,
           totalSold:
             sql<number>`cast(coalesce(sum(${orderItems.quantity}), 0) as int)`.as(
-              "total_sold",
+              'total_sold'
             ),
         })
         .from(orderItems)
         .innerJoin(
           orders,
-          and(
-            eq(orders.id, orderItems.orderId),
-            ne(orders.status, "CANCELLED"),
-          ),
+          and(eq(orders.id, orderItems.orderId), ne(orders.status, 'CANCELLED'))
         )
         .groupBy(orderItems.productId)
-        .as("sales");
+        .as('sales')
 
       let bestsellerQuery = drizzleDb
         .select({
@@ -127,37 +124,37 @@ export const db = {
         .where(isNull(products.deletedAt))
         .orderBy(
           desc(sql`coalesce(${salesSubquery.totalSold}, 0)`),
-          desc(products.createdAt),
+          desc(products.createdAt)
         )
-        .$dynamic();
+        .$dynamic()
 
       if (limit) {
-        bestsellerQuery = bestsellerQuery.limit(limit);
+        bestsellerQuery = bestsellerQuery.limit(limit)
       }
 
-      const rows = await bestsellerQuery;
+      const rows = await bestsellerQuery
 
-      if (rows.length === 0) return [];
+      if (rows.length === 0) return []
 
       // Fetch variations only for the products that made the cut
-      const productIds = rows.map((r) => r.id);
+      const productIds = rows.map((r) => r.id)
       const varRows = await drizzleDb.query.productVariations.findMany({
         where: (pv, { inArray, and, isNull }) =>
           and(inArray(pv.productId, productIds), isNull(pv.deletedAt)),
-      });
+      })
 
       // Group variations by productId for O(1) lookup
-      const varsByProduct = new Map<string, typeof varRows>();
+      const varsByProduct = new Map<string, typeof varRows>()
       for (const v of varRows) {
-        const list = varsByProduct.get(v.productId) ?? [];
-        list.push(v);
-        varsByProduct.set(v.productId, list);
+        const list = varsByProduct.get(v.productId) ?? []
+        list.push(v)
+        varsByProduct.set(v.productId, list)
       }
 
       return rows.map((p) => ({
         ...serializeProduct(p),
         variations: (varsByProduct.get(p.id) ?? []).map(serializeVariation),
-      }));
+      }))
     },
 
     /**
@@ -166,41 +163,41 @@ export const db = {
      * @returns Array of products with only essential fields for list views
      */
     findAllMinimal: async (
-      options: ProductListOptions = {},
+      options: ProductListOptions = {}
     ): Promise<
       Array<
         Pick<
           Product,
-          | "id"
-          | "name"
-          | "description"
-          | "price"
-          | "stock"
-          | "category"
-          | "image"
+          | 'id'
+          | 'name'
+          | 'description'
+          | 'price'
+          | 'stock'
+          | 'category'
+          | 'image'
         >
       >
     > => {
-      const { limit, offset, search, category } = options;
+      const { limit, offset, search, category } = options
 
-      const filters: SQL[] = [isNull(products.deletedAt)];
-      const normalizedSearch = search?.trim();
-      const normalizedCategory = category?.trim();
+      const filters: SQL[] = [isNull(products.deletedAt)]
+      const normalizedSearch = search?.trim()
+      const normalizedCategory = category?.trim()
 
       if (normalizedSearch) {
         filters.push(
           or(
             ilike(products.name, `%${normalizedSearch}%`),
-            ilike(products.description, `%${normalizedSearch}%`),
-          ) as SQL,
-        );
+            ilike(products.description, `%${normalizedSearch}%`)
+          ) as SQL
+        )
       }
 
       if (normalizedCategory) {
-        filters.push(eq(products.category, normalizedCategory));
+        filters.push(eq(products.category, normalizedCategory))
       }
 
-      const whereClause = filters.length === 1 ? filters[0] : and(...filters);
+      const whereClause = filters.length === 1 ? filters[0] : and(...filters)
 
       const rows = await drizzleDb.query.products.findMany({
         where: whereClause,
@@ -216,9 +213,9 @@ export const db = {
         },
         limit,
         offset,
-      });
+      })
 
-      return rows;
+      return rows
     },
 
     /**
@@ -227,30 +224,30 @@ export const db = {
      */
     findMinimalByIds: async (
       ids: string[],
-      category?: string,
+      category?: string
     ): Promise<
       Array<
         Pick<
           Product,
-          | "id"
-          | "name"
-          | "description"
-          | "price"
-          | "stock"
-          | "category"
-          | "image"
+          | 'id'
+          | 'name'
+          | 'description'
+          | 'price'
+          | 'stock'
+          | 'category'
+          | 'image'
         >
       >
     > => {
       if (ids.length === 0) {
-        return [];
+        return []
       }
 
       return drizzleDb.query.products.findMany({
         where: and(
           inArray(products.id, ids),
           isNull(products.deletedAt),
-          category ? eq(products.category, category) : undefined,
+          category ? eq(products.category, category) : undefined
         ),
         columns: {
           id: true,
@@ -261,7 +258,7 @@ export const db = {
           category: true,
           image: true,
         },
-      });
+      })
     },
 
     /**
@@ -279,54 +276,54 @@ export const db = {
               where: (v, { isNull }) => isNull(v.deletedAt),
             },
           },
-        });
-        if (!row) return null;
+        })
+        if (!row) return null
         return {
           ...serializeProduct(row),
           variations: row.variations.map(serializeVariation),
-        };
-      };
-
-      if (withCache) {
-        return cacheProductById(id, fetcher);
+        }
       }
 
-      return fetcher();
+      if (withCache) {
+        return cacheProductById(id, fetcher)
+      }
+
+      return fetcher()
     },
 
     create: async (input: ProductInput): Promise<Product> => {
       const [row] = await primaryDrizzleDb
         .insert(products)
         .values({ ...input, updatedAt: new Date() })
-        .returning();
+        .returning()
 
       // Invalidate product caches after creation
-      await invalidateProductCaches();
+      await invalidateProductCaches()
 
-      return serializeProduct(row);
+      return serializeProduct(row)
     },
 
     update: async (
       id: string,
-      input: Partial<ProductInput>,
+      input: Partial<ProductInput>
     ): Promise<Product | null> => {
       const [row] = await primaryDrizzleDb
         .update(products)
         .set({ ...input, updatedAt: new Date() })
         .where(eq(products.id, id))
-        .returning();
+        .returning()
 
-      if (!row) return null;
+      if (!row) return null
 
       // Invalidate product caches after update
-      await invalidateProductCaches(id);
+      await invalidateProductCaches(id)
 
       return {
         ...row,
         deletedAt: row.deletedAt?.toISOString() ?? null,
         createdAt: row.createdAt.toISOString(),
         updatedAt: row.updatedAt.toISOString(),
-      };
+      }
     },
 
     delete: async (id: string): Promise<boolean> => {
@@ -335,15 +332,15 @@ export const db = {
         .update(products)
         .set({ deletedAt: new Date(), updatedAt: new Date() })
         .where(and(eq(products.id, id), isNull(products.deletedAt)))
-        .returning({ id: products.id });
+        .returning({ id: products.id })
 
-      const success = result.length > 0;
+      const success = result.length > 0
 
       if (success) {
-        await invalidateProductCaches(id);
+        await invalidateProductCaches(id)
       }
 
-      return success;
+      return success
     },
   },
 
@@ -355,8 +352,8 @@ export const db = {
       const rows = await drizzleDb
         .select({ productId: wishlists.productId })
         .from(wishlists)
-        .where(eq(wishlists.userId, userId));
-      return rows.map((r) => r.productId);
+        .where(eq(wishlists.userId, userId))
+      return rows.map((r) => r.productId)
     },
 
     /**
@@ -374,14 +371,14 @@ export const db = {
             },
           },
         },
-      });
+      })
 
       return rows
         .filter((r) => r.product !== null && !r.product.deletedAt)
         .map((r) => ({
           ...serializeProduct(r.product),
           variations: r.product.variations.map(serializeVariation),
-        }));
+        }))
     },
 
     /**
@@ -389,7 +386,7 @@ export const db = {
      */
     add: async (
       userId: string,
-      productId: string,
+      productId: string
     ): Promise<{ userId: string; productId: string }> => {
       const [row] = await primaryDrizzleDb
         .insert(wishlists)
@@ -398,9 +395,9 @@ export const db = {
         .returning({
           userId: wishlists.userId,
           productId: wishlists.productId,
-        });
+        })
 
-      return row ?? { userId, productId };
+      return row ?? { userId, productId }
     },
 
     /**
@@ -410,11 +407,11 @@ export const db = {
       const result = await primaryDrizzleDb
         .delete(wishlists)
         .where(
-          and(eq(wishlists.userId, userId), eq(wishlists.productId, productId)),
+          and(eq(wishlists.userId, userId), eq(wishlists.productId, productId))
         )
-        .returning({ id: wishlists.id });
+        .returning({ id: wishlists.id })
 
-      return result.length > 0;
+      return result.length > 0
     },
 
     /**
@@ -424,11 +421,11 @@ export const db = {
       const row = await drizzleDb.query.wishlists.findFirst({
         where: and(
           eq(wishlists.userId, userId),
-          eq(wishlists.productId, productId),
+          eq(wishlists.productId, productId)
         ),
         columns: { id: true },
-      });
-      return row !== undefined;
+      })
+      return row !== undefined
     },
   },
 
@@ -439,13 +436,13 @@ export const db = {
      */
     create: async (
       productId: string,
-      variationId: string | null,
+      variationId: string | null
     ): Promise<string> => {
       const [row] = await primaryDrizzleDb
         .insert(productShares)
         .values({ productId, variationId: variationId ?? null })
-        .returning({ key: productShares.key });
-      return row.key;
+        .returning({ key: productShares.key })
+      return row.key
     },
 
     /**
@@ -456,16 +453,16 @@ export const db = {
      * Returns null if the key does not exist.
      */
     resolve: (
-      key: string,
+      key: string
     ): Promise<{ productId: string; variationId: string | null } | null> => {
       return cacheShareResolve(key, async () => {
         const row = await drizzleDb.query.productShares.findFirst({
           where: eq(productShares.key, key),
           columns: { productId: true, variationId: true },
-        });
-        if (!row) return null;
-        return { productId: row.productId, variationId: row.variationId };
-      });
+        })
+        if (!row) return null
+        return { productId: row.productId, variationId: row.variationId }
+      })
     },
   },
-};
+}

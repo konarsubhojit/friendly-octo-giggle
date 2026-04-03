@@ -1,73 +1,73 @@
-"use client";
+'use client'
 
-import { area, curveMonotoneX, line, max, scaleLinear, scalePoint } from "d3";
-import { useId } from "react";
-import { useCurrency } from "@/contexts/CurrencyContext";
-import type { SalesTrendPoint } from "@/features/admin/services/admin-sales";
+import { area, curveMonotoneX, line, max, scaleLinear, scalePoint } from 'd3'
+import { useId } from 'react'
+import { useCurrency } from '@/contexts/CurrencyContext'
+import type { SalesTrendPoint } from '@/features/admin/services/admin-sales'
 
 interface SalesTrendChartProps {
-  readonly points: readonly SalesTrendPoint[];
+  readonly points: readonly SalesTrendPoint[]
 }
 
-const CHART_WIDTH = 720;
-const CHART_HEIGHT = 320;
-const CHART_MARGIN = { top: 20, right: 16, bottom: 42, left: 56 } as const;
+const CHART_WIDTH = 720
+const CHART_HEIGHT = 320
+const CHART_MARGIN = { top: 20, right: 16, bottom: 42, left: 56 } as const
 
 function formatCompactValue(value: number): string {
-  return new Intl.NumberFormat("en-US", {
-    notation: "compact",
+  return new Intl.NumberFormat('en-US', {
+    notation: 'compact',
     maximumFractionDigits: value >= 1000 ? 1 : 0,
-  }).format(value);
+  }).format(value)
 }
 
 export function SalesTrendChart({ points }: SalesTrendChartProps) {
-  const gradientId = useId();
-  const chartTitleId = `${gradientId}-title`;
-  const { formatPrice, convertPrice } = useCurrency();
+  const gradientId = useId()
+  const chartTitleId = `${gradientId}-title`
+  const { formatPrice, convertPrice } = useCurrency()
 
   if (points.length === 0) {
     return (
       <p className="text-sm text-slate-500">No recent sales trend available.</p>
-    );
+    )
   }
 
-  const innerWidth = CHART_WIDTH - CHART_MARGIN.left - CHART_MARGIN.right;
-  const innerHeight = CHART_HEIGHT - CHART_MARGIN.top - CHART_MARGIN.bottom;
-  const revenueMax = max(points, (point) => point.revenue) ?? 0;
-  const ordersMax = max(points, (point) => point.orders) ?? 0;
-  const safeRevenueMax = revenueMax > 0 ? revenueMax : 1;
-  const safeOrdersMax = ordersMax > 0 ? ordersMax : 1;
+  const innerWidth = CHART_WIDTH - CHART_MARGIN.left - CHART_MARGIN.right
+  const innerHeight = CHART_HEIGHT - CHART_MARGIN.top - CHART_MARGIN.bottom
+  const revenueMax = max(points, (point) => point.revenue) ?? 0
+  const ordersMax = max(points, (point) => point.orders) ?? 0
+  const safeRevenueMax = revenueMax > 0 ? revenueMax : 1
+  const safeOrdersMax = ordersMax > 0 ? ordersMax : 1
 
   const xScale = scalePoint<string>()
     .domain(points.map((point) => point.label))
     .range([CHART_MARGIN.left, CHART_MARGIN.left + innerWidth])
-    .padding(0.5);
+    .padding(0.5)
 
   const revenueScale = scaleLinear()
     .domain([0, safeRevenueMax * 1.15])
-    .range([CHART_MARGIN.top + innerHeight, CHART_MARGIN.top]);
+    .range([CHART_MARGIN.top + innerHeight, CHART_MARGIN.top])
 
   const ordersScale = scaleLinear()
     .domain([0, safeOrdersMax * 1.2])
-    .range([CHART_MARGIN.top + innerHeight, CHART_MARGIN.top]);
+    .range([CHART_MARGIN.top + innerHeight, CHART_MARGIN.top])
 
   const revenueArea = area<SalesTrendPoint>()
     .x((point) => xScale(point.label) ?? 0)
     .y0(CHART_MARGIN.top + innerHeight)
     .y1((point) => revenueScale(point.revenue))
-    .curve(curveMonotoneX);
+    .curve(curveMonotoneX)
 
   const revenueLine = line<SalesTrendPoint>()
     .x((point) => xScale(point.label) ?? 0)
     .y((point) => revenueScale(point.revenue))
-    .curve(curveMonotoneX);
+    .curve(curveMonotoneX)
 
   const ordersLine = line<SalesTrendPoint>()
     .x((point) => xScale(point.label) ?? 0)
     .y((point) => ordersScale(point.orders))
-    .curve(curveMonotoneX);
+    .curve(curveMonotoneX)
 
-  const revenueTicks = revenueScale.ticks(4);
+  const revenueTicks = revenueScale.ticks(4)
 
   return (
     <div>
@@ -114,7 +114,7 @@ export function SalesTrendChart({ points }: SalesTrendChartProps) {
         </defs>
 
         {revenueTicks.map((tick) => {
-          const y = revenueScale(tick);
+          const y = revenueScale(tick)
 
           return (
             <g key={tick}>
@@ -135,18 +135,18 @@ export function SalesTrendChart({ points }: SalesTrendChartProps) {
                 {formatCompactValue(convertPrice(tick))}
               </text>
             </g>
-          );
+          )
         })}
 
-        <path d={revenueArea(points) ?? ""} fill={`url(#${gradientId})`} />
+        <path d={revenueArea(points) ?? ''} fill={`url(#${gradientId})`} />
         <path
-          d={revenueLine(points) ?? ""}
+          d={revenueLine(points) ?? ''}
           fill="none"
           stroke="#10b981"
           strokeWidth="3"
         />
         <path
-          d={ordersLine(points) ?? ""}
+          d={ordersLine(points) ?? ''}
           fill="none"
           stroke="#0891b2"
           strokeWidth="2.5"
@@ -154,9 +154,9 @@ export function SalesTrendChart({ points }: SalesTrendChartProps) {
         />
 
         {points.map((point) => {
-          const x = xScale(point.label) ?? 0;
-          const revenueY = revenueScale(point.revenue);
-          const ordersY = ordersScale(point.orders);
+          const x = xScale(point.label) ?? 0
+          const revenueY = revenueScale(point.revenue)
+          const ordersY = ordersScale(point.orders)
 
           return (
             <g key={point.date}>
@@ -175,9 +175,9 @@ export function SalesTrendChart({ points }: SalesTrendChartProps) {
                 {point.label}
               </text>
             </g>
-          );
+          )
         })}
       </svg>
     </div>
-  );
+  )
 }

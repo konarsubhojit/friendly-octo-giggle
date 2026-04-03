@@ -1,20 +1,20 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-const mockAuth = vi.hoisted(() => vi.fn());
-const mockGetCachedData = vi.hoisted(() => vi.fn());
+const mockAuth = vi.hoisted(() => vi.fn())
+const mockGetCachedData = vi.hoisted(() => vi.fn())
 
-vi.mock("@/lib/auth", () => ({ auth: mockAuth }));
-vi.mock("@/lib/redis", () => ({ getCachedData: mockGetCachedData }));
-vi.mock("@/lib/db", () => ({
+vi.mock('@/lib/auth', () => ({ auth: mockAuth }))
+vi.mock('@/lib/redis', () => ({ getCachedData: mockGetCachedData }))
+vi.mock('@/lib/db', () => ({
   drizzleDb: { select: vi.fn(), execute: vi.fn() },
-}));
-vi.mock("@/lib/schema", () => ({
+}))
+vi.mock('@/lib/schema', () => ({
   orders: {},
   orderItems: {},
   products: {},
   users: {},
-}));
-vi.mock("drizzle-orm", () => ({
+}))
+vi.mock('drizzle-orm', () => ({
   sql: vi.fn(),
   eq: vi.fn(),
   count: vi.fn(),
@@ -22,10 +22,10 @@ vi.mock("drizzle-orm", () => ({
   gte: vi.fn(),
   lt: vi.fn(),
   ne: vi.fn(),
-}));
-vi.mock("@/lib/logger", () => ({ logError: vi.fn() }));
+}))
+vi.mock('@/lib/logger', () => ({ logError: vi.fn() }))
 
-import { GET } from "@/app/api/admin/sales/route";
+import { GET } from '@/app/api/admin/sales/route'
 
 const MOCK_SALES = {
   totalRevenue: 10000,
@@ -39,97 +39,97 @@ const MOCK_SALES = {
   ordersByStatus: { PENDING: 5, PROCESSING: 10, SHIPPED: 20, DELIVERED: 15 },
   topProducts: [
     {
-      productId: "p1",
-      name: "Product 1",
+      productId: 'p1',
+      name: 'Product 1',
       totalQuantity: 100,
       totalRevenue: 2999,
     },
   ],
   totalCustomers: 30,
-};
+}
 
-describe("GET /api/admin/sales", () => {
+describe('GET /api/admin/sales', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-  });
+    vi.clearAllMocks()
+  })
 
-  it("returns 401 when not authenticated", async () => {
-    mockAuth.mockResolvedValue(null);
+  it('returns 401 when not authenticated', async () => {
+    mockAuth.mockResolvedValue(null)
 
-    const response = await GET();
-    const body = await response.json();
+    const response = await GET()
+    const body = await response.json()
 
-    expect(response.status).toBe(401);
-    expect(body.success).toBe(false);
-    expect(body.error).toBe("Not authenticated");
-  });
+    expect(response.status).toBe(401)
+    expect(body.success).toBe(false)
+    expect(body.error).toBe('Not authenticated')
+  })
 
-  it("returns 403 when user is not admin", async () => {
+  it('returns 403 when user is not admin', async () => {
     mockAuth.mockResolvedValue({
-      user: { id: "user-1", role: "USER" },
-    });
+      user: { id: 'user-1', role: 'USER' },
+    })
 
-    const response = await GET();
-    const body = await response.json();
+    const response = await GET()
+    const body = await response.json()
 
-    expect(response.status).toBe(403);
-    expect(body.success).toBe(false);
-    expect(body.error).toBe("Not authorized - Admin access required");
-  });
+    expect(response.status).toBe(403)
+    expect(body.success).toBe(false)
+    expect(body.error).toBe('Not authorized - Admin access required')
+  })
 
-  it("returns sales summary on success", async () => {
+  it('returns sales summary on success', async () => {
     mockAuth.mockResolvedValue({
-      user: { id: "admin-1", role: "ADMIN" },
-    });
-    mockGetCachedData.mockResolvedValue(MOCK_SALES);
+      user: { id: 'admin-1', role: 'ADMIN' },
+    })
+    mockGetCachedData.mockResolvedValue(MOCK_SALES)
 
-    const response = await GET();
-    const body = await response.json();
+    const response = await GET()
+    const body = await response.json()
 
-    expect(response.status).toBe(200);
-    expect(body.success).toBe(true);
-    expect(body.data.sales).toEqual(MOCK_SALES);
+    expect(response.status).toBe(200)
+    expect(body.success).toBe(true)
+    expect(body.data.sales).toEqual(MOCK_SALES)
     expect(mockGetCachedData).toHaveBeenCalledWith(
-      "admin:sales:summary",
+      'admin:sales:summary',
       120,
       expect.any(Function),
-      30,
-    );
-  });
+      30
+    )
+  })
 
-  it("returns 500 on error", async () => {
+  it('returns 500 on error', async () => {
     mockAuth.mockResolvedValue({
-      user: { id: "admin-1", role: "ADMIN" },
-    });
-    mockGetCachedData.mockRejectedValue(new Error("Redis failure"));
+      user: { id: 'admin-1', role: 'ADMIN' },
+    })
+    mockGetCachedData.mockRejectedValue(new Error('Redis failure'))
 
-    const response = await GET();
-    const body = await response.json();
+    const response = await GET()
+    const body = await response.json()
 
-    expect(response.status).toBe(500);
-    expect(body.success).toBe(false);
-  });
+    expect(response.status).toBe(500)
+    expect(body.success).toBe(false)
+  })
 
-  it("returns 401 when session has no user", async () => {
-    mockAuth.mockResolvedValue({ user: null });
+  it('returns 401 when session has no user', async () => {
+    mockAuth.mockResolvedValue({ user: null })
 
-    const response = await GET();
-    const body = await response.json();
+    const response = await GET()
+    const body = await response.json()
 
-    expect(response.status).toBe(401);
-    expect(body.success).toBe(false);
-  });
+    expect(response.status).toBe(401)
+    expect(body.success).toBe(false)
+  })
 
-  it("executes the fetcher callback and returns sales data", async () => {
+  it('executes the fetcher callback and returns sales data', async () => {
     mockAuth.mockResolvedValue({
-      user: { id: "admin-1", role: "ADMIN" },
-    });
+      user: { id: 'admin-1', role: 'ADMIN' },
+    })
     mockGetCachedData.mockImplementation(
       async (_key: string, _ttl: number, fetcher: () => Promise<unknown>) =>
-        fetcher(),
-    );
+        fetcher()
+    )
 
-    const { drizzleDb } = await import("@/lib/db");
+    const { drizzleDb } = await import('@/lib/db')
 
     const dashboardRow = {
       totalRevenue: 5000,
@@ -143,35 +143,35 @@ describe("GET /api/admin/sales", () => {
       ordersByStatus: JSON.stringify({ PENDING: 5, PROCESSING: 10 }),
       topProducts: JSON.stringify([
         {
-          productId: "p1",
-          name: "Product 1",
+          productId: 'p1',
+          name: 'Product 1',
           totalQuantity: 50,
           totalRevenue: 2500,
         },
       ]),
       recentSales: JSON.stringify([]),
       totalCustomers: 15,
-    };
-    (drizzleDb.execute as ReturnType<typeof vi.fn>).mockResolvedValue({
+    }
+    ;(drizzleDb.execute as ReturnType<typeof vi.fn>).mockResolvedValue({
       rows: [dashboardRow],
-    });
+    })
 
-    const response = await GET();
-    const body = await response.json();
+    const response = await GET()
+    const body = await response.json()
 
-    expect(response.status).toBe(200);
-    expect(body.success).toBe(true);
-    expect(body.data.sales.totalRevenue).toBe(5000);
-    expect(body.data.sales.totalOrders).toBe(25);
-    expect(body.data.sales.todayRevenue).toBe(200);
-    expect(body.data.sales.monthRevenue).toBe(1500);
-    expect(body.data.sales.lastMonthRevenue).toBe(1200);
-    expect(body.data.sales.totalCustomers).toBe(15);
+    expect(response.status).toBe(200)
+    expect(body.success).toBe(true)
+    expect(body.data.sales.totalRevenue).toBe(5000)
+    expect(body.data.sales.totalOrders).toBe(25)
+    expect(body.data.sales.todayRevenue).toBe(200)
+    expect(body.data.sales.monthRevenue).toBe(1500)
+    expect(body.data.sales.lastMonthRevenue).toBe(1200)
+    expect(body.data.sales.totalCustomers).toBe(15)
     expect(body.data.sales.ordersByStatus).toEqual({
       PENDING: 5,
       PROCESSING: 10,
-    });
-    expect(body.data.sales.topProducts).toHaveLength(1);
-    expect(body.data.sales.topProducts[0].name).toBe("Product 1");
-  });
-});
+    })
+    expect(body.data.sales.topProducts).toHaveLength(1)
+    expect(body.data.sales.topProducts[0].name).toBe('Product 1')
+  })
+})

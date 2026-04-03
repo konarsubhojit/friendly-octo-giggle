@@ -1,13 +1,13 @@
-"use client";
+'use client'
 
-import { ProductVariation } from "@/lib/types";
+import { ProductVariation } from '@/lib/types'
 
 interface VariationButtonProps {
-  readonly variation: ProductVariation;
-  readonly isSelected: boolean;
-  readonly formatPrice: (amount: number) => string;
-  readonly onSelect: (variation: ProductVariation) => void;
-  readonly cartQuantity?: number;
+  readonly variation: ProductVariation
+  readonly isSelected: boolean
+  readonly formatPrice: (amount: number) => string
+  readonly onSelect: (variation: ProductVariation) => void
+  readonly cartQuantity?: number
 }
 
 export function VariationButton({
@@ -18,8 +18,8 @@ export function VariationButton({
   cartQuantity = 0,
 }: VariationButtonProps) {
   const className = isSelected
-    ? "p-4 border-2 rounded-xl transition-all duration-300 border-[var(--accent-warm)] bg-[var(--accent-cream)] shadow-warm scale-105"
-    : "p-4 border-2 rounded-xl transition-all duration-300 border-[var(--border-warm)] hover:border-[var(--accent-warm)] hover:shadow-warm hover:scale-105 bg-[var(--accent-cream)]/50";
+    ? 'p-4 border-2 rounded-xl transition-all duration-300 border-[var(--accent-warm)] bg-[var(--accent-cream)] shadow-warm scale-105'
+    : 'p-4 border-2 rounded-xl transition-all duration-300 border-[var(--border-warm)] hover:border-[var(--accent-warm)] hover:shadow-warm hover:scale-105 bg-[var(--accent-cream)]/50'
 
   return (
     <button
@@ -47,5 +47,5 @@ export function VariationButton({
         </div>
       )}
     </button>
-  );
+  )
 }

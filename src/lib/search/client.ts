@@ -8,58 +8,57 @@
  * are no-ops and the existing Drizzle ilike() queries remain.
  */
 
-import { Search } from "@upstash/search";
-import { logError } from "../logger";
+import { Search } from '@upstash/search'
+import { logError } from '../logger'
 
 export type ProductContent = {
-  name: string;
-  description: string;
-  category: string;
-  price: number;
-  stock: number;
-};
+  name: string
+  description: string
+  category: string
+  price: number
+  stock: number
+}
 
 export type ProductMetadata = {
-  image: string;
-};
+  image: string
+}
 
 type ProductIndexDocument = {
-  id: string;
-  name: string;
-  description: string;
-  category: string;
-  price: number;
-  stock: number;
-  image: string;
-};
+  id: string
+  name: string
+  description: string
+  category: string
+  price: number
+  stock: number
+  image: string
+}
 
-const PRODUCTS_INDEX = "products";
-const SEARCH_WRITE_BATCH_SIZE = 100;
+const PRODUCTS_INDEX = 'products'
+const SEARCH_WRITE_BATCH_SIZE = 100
 
-let searchClient: Search | null = null;
+let searchClient: Search | null = null
 
 export function isSearchAvailable(): boolean {
   return Boolean(
-    process.env.UPSTASH_SEARCH_REST_URL &&
-    process.env.UPSTASH_SEARCH_REST_TOKEN,
-  );
+    process.env.UPSTASH_SEARCH_REST_URL && process.env.UPSTASH_SEARCH_REST_TOKEN
+  )
 }
 
 function getClient(): Search {
   if (searchClient) {
-    return searchClient;
+    return searchClient
   }
 
   searchClient = new Search({
     url: process.env.UPSTASH_SEARCH_REST_URL,
     token: process.env.UPSTASH_SEARCH_REST_TOKEN,
-  });
+  })
 
-  return searchClient;
+  return searchClient
 }
 
 function getProductsIndex() {
-  return getClient().index<ProductContent, ProductMetadata>(PRODUCTS_INDEX);
+  return getClient().index<ProductContent, ProductMetadata>(PRODUCTS_INDEX)
 }
 
 function toIndexedProduct(product: ProductIndexDocument) {
@@ -75,49 +74,49 @@ function toIndexedProduct(product: ProductIndexDocument) {
     metadata: {
       image: product.image,
     },
-  };
+  }
 }
 
 export async function indexProduct(
   product: ProductIndexDocument,
-  options: { readonly throwOnError?: boolean } = {},
+  options: { readonly throwOnError?: boolean } = {}
 ): Promise<boolean> {
   if (!isSearchAvailable()) {
-    return false;
+    return false
   }
 
   try {
-    await getProductsIndex().upsert(toIndexedProduct(product));
-    return true;
+    await getProductsIndex().upsert(toIndexedProduct(product))
+    return true
   } catch (error) {
     logError({
       error,
-      context: "search",
-      additionalInfo: { operation: "indexProduct", id: product.id },
-    });
+      context: 'search',
+      additionalInfo: { operation: 'indexProduct', id: product.id },
+    })
 
     if (options.throwOnError) {
-      throw error;
+      throw error
     }
 
-    return false;
+    return false
   }
 }
 
 export async function indexProducts(
   products: ProductIndexDocument[],
-  options: { readonly throwOnError?: boolean } = {},
+  options: { readonly throwOnError?: boolean } = {}
 ): Promise<boolean> {
   if (!isSearchAvailable()) {
-    return false;
+    return false
   }
 
   if (products.length === 0) {
-    return true;
+    return true
   }
 
   try {
-    const index = getProductsIndex();
+    const index = getProductsIndex()
 
     for (
       let indexOffset = 0;
@@ -126,89 +125,89 @@ export async function indexProducts(
     ) {
       const batch = products.slice(
         indexOffset,
-        indexOffset + SEARCH_WRITE_BATCH_SIZE,
-      );
-      await index.upsert(batch.map((product) => toIndexedProduct(product)));
+        indexOffset + SEARCH_WRITE_BATCH_SIZE
+      )
+      await index.upsert(batch.map((product) => toIndexedProduct(product)))
     }
 
-    return true;
+    return true
   } catch (error) {
     logError({
       error,
-      context: "search",
-      additionalInfo: { operation: "indexProducts" },
-    });
+      context: 'search',
+      additionalInfo: { operation: 'indexProducts' },
+    })
 
     if (options.throwOnError) {
-      throw error;
+      throw error
     }
 
-    return false;
+    return false
   }
 }
 
 export async function removeProduct(productId: string): Promise<void> {
   if (!isSearchAvailable()) {
-    return;
+    return
   }
 
   try {
-    await getClient().index(PRODUCTS_INDEX).delete(productId);
+    await getClient().index(PRODUCTS_INDEX).delete(productId)
   } catch (error) {
     logError({
       error,
-      context: "search",
-      additionalInfo: { operation: "removeProduct", id: productId },
-    });
+      context: 'search',
+      additionalInfo: { operation: 'removeProduct', id: productId },
+    })
   }
 }
 
 export interface ProductSearchResult {
-  id: string;
-  score: number;
-  content: ProductContent;
-  metadata: ProductMetadata;
+  id: string
+  score: number
+  content: ProductContent
+  metadata: ProductMetadata
 }
 
 export async function searchProducts(
   query: string,
-  options: { limit?: number; category?: string } = {},
+  options: { limit?: number; category?: string } = {}
 ): Promise<ProductSearchResult[]> {
   if (!isSearchAvailable()) {
-    return [];
+    return []
   }
 
-  const { limit = 20, category } = options;
-  const index = getProductsIndex();
-  const normalizedCategory = category?.trim();
+  const { limit = 20, category } = options
+  const index = getProductsIndex()
+  const normalizedCategory = category?.trim()
   const results = await index.search({
     query,
     limit,
     ...(normalizedCategory
       ? { filter: { category: { equals: normalizedCategory } } }
       : {}),
-  });
+  })
 
   return results.map((result) => ({
     id: String(result.id),
     score: result.score,
     content: result.content,
-    metadata: result.metadata ?? { image: "" },
-  }));
+    metadata: result.metadata ?? { image: '' },
+  }))
 }
 
-export async function resetIndex(indexName: "products"): Promise<void> {
+export async function resetIndex(indexName: 'products'): Promise<void> {
   if (!isSearchAvailable()) {
-    return;
+    return
   }
 
-  await getClient().index(indexName).reset();
+  await getClient().index(indexName).reset()
 }
 
-export async function getIndexInfo(indexName: "products"): Promise<unknown> {
+export async function getIndexInfo(indexName: 'products'): Promise<unknown> {
   if (!isSearchAvailable()) {
-    throw new Error("Search is not configured");
+    throw new Error('Search is not configured')
   }
 
-  return getClient().index(indexName).info();
+  return getClient().index(indexName).info()
 }

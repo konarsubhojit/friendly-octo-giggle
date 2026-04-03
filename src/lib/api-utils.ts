@@ -1,90 +1,90 @@
-import { NextResponse } from "next/server";
-import { ZodError } from "zod";
-import { logError } from "@/lib/logger";
+import { NextResponse } from 'next/server'
+import { ZodError } from 'zod'
+import { logError } from '@/lib/logger'
 
 export const parseOffsetParam = (offsetParam: string | null): number => {
-  const parsed = Number.parseInt(offsetParam ?? "0", 10);
-  return Number.isNaN(parsed) ? 0 : Math.max(0, parsed);
-};
+  const parsed = Number.parseInt(offsetParam ?? '0', 10)
+  return Number.isNaN(parsed) ? 0 : Math.max(0, parsed)
+}
 
 export const apiSuccess = <T>(data: T, status = 200) =>
-  NextResponse.json({ success: true, data }, { status });
+  NextResponse.json({ success: true, data }, { status })
 
 export const apiError = (
   error: string,
   status = 500,
-  details?: Record<string, unknown>,
-) => NextResponse.json({ success: false, error, details }, { status });
+  details?: Record<string, unknown>
+) => NextResponse.json({ success: false, error, details }, { status })
 
 export const handleValidationError = (error: ZodError<unknown>) => {
   const details = error.issues.reduce(
     (acc, err) => {
-      const path = err.path.join(".");
-      acc[path] = err.message;
-      return acc;
+      const path = err.path.join('.')
+      acc[path] = err.message
+      return acc
     },
-    {} as Record<string, string>,
-  );
+    {} as Record<string, string>
+  )
 
-  return apiError("Validation failed", 400, details);
-};
+  return apiError('Validation failed', 400, details)
+}
 
 export const handleApiError = (error: unknown) => {
-  logError({ error, context: "api_error" });
+  logError({ error, context: 'api_error' })
 
   if (error instanceof ZodError) {
-    return handleValidationError(error);
+    return handleValidationError(error)
   }
 
   if (error instanceof Error) {
-    return apiError(error.message);
+    return apiError(error.message)
   }
 
-  return apiError("An unexpected error occurred");
-};
+  return apiError('An unexpected error occurred')
+}
 
 export const safeFetch = async <T>(
   url: string,
-  options?: RequestInit,
+  options?: RequestInit
 ): Promise<{ data?: T; error?: string }> => {
   try {
-    const response = await fetch(url, options);
+    const response = await fetch(url, options)
 
     const handlers: Record<
       string,
       () => Promise<{ data?: T; error?: string }>
     > = {
       true: async () => {
-        const data = await response.json();
-        return { data: data.data || data };
+        const data = await response.json()
+        return { data: data.data || data }
       },
       false: async () => {
-        const errorData = await response.json().catch(() => ({}));
-        return { error: errorData.error || "Request failed" };
+        const errorData = await response.json().catch(() => ({}))
+        return { error: errorData.error || 'Request failed' }
       },
-    };
+    }
 
-    return handlers[response.ok.toString()]();
+    return handlers[response.ok.toString()]()
   } catch (error) {
-    return { error: error instanceof Error ? error.message : "Network error" };
+    return { error: error instanceof Error ? error.message : 'Network error' }
   }
-};
+}
 
 export const isApiSuccess = <T>(
-  response: unknown,
+  response: unknown
 ): response is { success: true; data: T } =>
-  typeof response === "object" &&
+  typeof response === 'object' &&
   response !== null &&
-  "success" in response &&
+  'success' in response &&
   response.success === true &&
-  "data" in response;
+  'data' in response
 
 export const asyncHandler =
   <T extends unknown[], R>(handler: (...args: T) => Promise<R>) =>
   async (...args: T): Promise<R | NextResponse> => {
     try {
-      return await handler(...args);
+      return await handler(...args)
     } catch (error) {
-      return handleApiError(error);
+      return handleApiError(error)
     }
-  };
+  }

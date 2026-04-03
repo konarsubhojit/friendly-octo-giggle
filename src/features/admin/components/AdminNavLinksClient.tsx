@@ -1,140 +1,140 @@
-"use client";
+'use client'
 
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { createPortal } from "react-dom";
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { createPortal } from 'react-dom'
 
 interface NavItem {
-  readonly href: string;
-  readonly label: string;
-  readonly badge?: number;
-  readonly keywords?: readonly string[];
+  readonly href: string
+  readonly label: string
+  readonly badge?: number
+  readonly keywords?: readonly string[]
 }
 
 interface NavGroup {
-  readonly label: string;
-  readonly href?: string;
-  readonly items?: readonly NavItem[];
+  readonly label: string
+  readonly href?: string
+  readonly items?: readonly NavItem[]
 }
 
 interface AdminNavLinksClientProps {
-  readonly failedEmailCount: number;
+  readonly failedEmailCount: number
 }
 
 const NAV_GROUPS: readonly NavGroup[] = [
   {
-    label: "Dashboard",
-    href: "/admin",
+    label: 'Dashboard',
+    href: '/admin',
   },
   {
-    label: "Catalog",
+    label: 'Catalog',
     items: [
       {
-        href: "/admin/products",
-        label: "Products",
-        keywords: ["inventory", "stock", "items"],
+        href: '/admin/products',
+        label: 'Products',
+        keywords: ['inventory', 'stock', 'items'],
       },
       {
-        href: "/admin/categories",
-        label: "Categories",
-        keywords: ["tags", "groups"],
+        href: '/admin/categories',
+        label: 'Categories',
+        keywords: ['tags', 'groups'],
       },
     ],
   },
   {
-    label: "Management",
+    label: 'Management',
     items: [
       {
-        href: "/admin/orders",
-        label: "Orders",
-        keywords: ["purchases", "transactions", "sales"],
+        href: '/admin/orders',
+        label: 'Orders',
+        keywords: ['purchases', 'transactions', 'sales'],
       },
       {
-        href: "/admin/users",
-        label: "Users",
-        keywords: ["customers", "accounts", "people"],
+        href: '/admin/users',
+        label: 'Users',
+        keywords: ['customers', 'accounts', 'people'],
       },
       {
-        href: "/admin/reviews",
-        label: "Reviews",
-        keywords: ["ratings", "feedback"],
+        href: '/admin/reviews',
+        label: 'Reviews',
+        keywords: ['ratings', 'feedback'],
       },
     ],
   },
   {
-    label: "System",
+    label: 'System',
     items: [
       {
-        href: "/admin/search",
-        label: "Search",
-        keywords: ["reindex", "indexing"],
+        href: '/admin/search',
+        label: 'Search',
+        keywords: ['reindex', 'indexing'],
       },
       {
-        href: "/admin/email-failures",
-        label: "Email Failures",
-        keywords: ["notifications", "errors", "emails"],
+        href: '/admin/email-failures',
+        label: 'Email Failures',
+        keywords: ['notifications', 'errors', 'emails'],
       },
       {
-        href: "/admin/checkout-requests",
-        label: "Checkout Queue",
-        keywords: ["checkout", "queue", "orders", "worker"],
+        href: '/admin/checkout-requests',
+        label: 'Checkout Queue',
+        keywords: ['checkout', 'queue', 'orders', 'worker'],
       },
     ],
   },
-];
+]
 
 function getAllNavItems(failedEmailCount: number): NavItem[] {
-  const items: NavItem[] = [];
+  const items: NavItem[] = []
   for (const group of NAV_GROUPS) {
     if (group.href) {
-      items.push({ href: group.href, label: group.label });
+      items.push({ href: group.href, label: group.label })
     }
     if (group.items) {
       for (const item of group.items) {
         items.push({
           ...item,
           badge:
-            item.href === "/admin/email-failures"
+            item.href === '/admin/email-failures'
               ? failedEmailCount
               : undefined,
-        });
+        })
       }
     }
   }
-  return items;
+  return items
 }
 
 function DropdownGroup({
   group,
   failedEmailCount,
 }: {
-  readonly group: NavGroup;
-  readonly failedEmailCount: number;
+  readonly group: NavGroup
+  readonly failedEmailCount: number
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(false)
   const [menuStyle, setMenuStyle] = useState<{ top: number; left: number }>({
     top: 0,
     left: 0,
-  });
-  const buttonRef = useRef<HTMLButtonElement>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
+  })
+  const buttonRef = useRef<HTMLButtonElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
 
   const updateMenuPosition = useCallback(() => {
-    if (!buttonRef.current) return;
+    if (!buttonRef.current) return
 
-    const rect = buttonRef.current.getBoundingClientRect();
-    const menuWidth = 176;
-    const viewportPadding = 12;
+    const rect = buttonRef.current.getBoundingClientRect()
+    const menuWidth = 176
+    const viewportPadding = 12
 
     setMenuStyle({
       top: rect.bottom,
       left: Math.max(
         viewportPadding,
-        Math.min(rect.left, window.innerWidth - menuWidth - viewportPadding),
+        Math.min(rect.left, window.innerWidth - menuWidth - viewportPadding)
       ),
-    });
-  }, []);
+    })
+  }, [])
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -144,38 +144,38 @@ function DropdownGroup({
         buttonRef.current &&
         !buttonRef.current.contains(e.target as Node)
       ) {
-        setOpen(false);
+        setOpen(false)
       }
     }
     if (open) {
-      document.addEventListener("mousedown", handleClickOutside);
+      document.addEventListener('mousedown', handleClickOutside)
     }
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [open]);
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [open])
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) return
 
-    updateMenuPosition();
+    updateMenuPosition()
 
-    const handleViewportChange = () => updateMenuPosition();
-    window.addEventListener("scroll", handleViewportChange, { passive: true });
-    window.addEventListener("resize", handleViewportChange);
+    const handleViewportChange = () => updateMenuPosition()
+    window.addEventListener('scroll', handleViewportChange, { passive: true })
+    window.addEventListener('resize', handleViewportChange)
 
     return () => {
-      window.removeEventListener("scroll", handleViewportChange);
-      window.removeEventListener("resize", handleViewportChange);
-    };
-  }, [open, updateMenuPosition]);
+      window.removeEventListener('scroll', handleViewportChange)
+      window.removeEventListener('resize', handleViewportChange)
+    }
+  }, [open, updateMenuPosition])
 
-  if (!group.items) return null;
+  if (!group.items) return null
 
   const handleToggle = () => {
     if (!open) {
-      updateMenuPosition();
+      updateMenuPosition()
     }
-    setOpen((o) => !o);
-  };
+    setOpen((o) => !o)
+  }
 
   return (
     <div className="relative">
@@ -189,7 +189,7 @@ function DropdownGroup({
       >
         {group.label}
         <svg
-          className={`w-3.5 h-3.5 transition-transform ${open ? "rotate-180" : ""}`}
+          className={`w-3.5 h-3.5 transition-transform ${open ? 'rotate-180' : ''}`}
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -210,7 +210,7 @@ function DropdownGroup({
             ref={menuRef}
             role="menu"
             style={{
-              position: "fixed",
+              position: 'fixed',
               top: menuStyle.top,
               left: menuStyle.left,
             }}
@@ -225,19 +225,19 @@ function DropdownGroup({
                 className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-950 dark:text-slate-200 dark:hover:bg-slate-800 dark:hover:text-slate-50"
               >
                 {item.label}
-                {item.href === "/admin/email-failures" &&
+                {item.href === '/admin/email-failures' &&
                   failedEmailCount > 0 && (
                     <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-white bg-red-600 rounded-full min-w-[1.25rem]">
-                      {failedEmailCount > 99 ? "99+" : failedEmailCount}
+                      {failedEmailCount > 99 ? '99+' : failedEmailCount}
                     </span>
                   )}
               </Link>
             ))}
           </div>,
-          document.body,
+          document.body
         )}
     </div>
-  );
+  )
 }
 
 function CommandPalette({
@@ -245,72 +245,72 @@ function CommandPalette({
   onClose,
   failedEmailCount,
 }: {
-  readonly open: boolean;
-  readonly onClose: () => void;
-  readonly failedEmailCount: number;
+  readonly open: boolean
+  readonly onClose: () => void
+  readonly failedEmailCount: number
 }) {
-  const router = useRouter();
-  const [query, setQuery] = useState("");
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [selectedIndex, setSelectedIndex] = useState(0);
-  const [prevOpen, setPrevOpen] = useState(open);
+  const router = useRouter()
+  const [query, setQuery] = useState('')
+  const inputRef = useRef<HTMLInputElement>(null)
+  const [selectedIndex, setSelectedIndex] = useState(0)
+  const [prevOpen, setPrevOpen] = useState(open)
   const allItems = useMemo(
     () => getAllNavItems(failedEmailCount),
-    [failedEmailCount],
-  );
+    [failedEmailCount]
+  )
 
   const filtered = useMemo(() => {
-    if (!query.trim()) return allItems;
-    const q = query.toLowerCase();
+    if (!query.trim()) return allItems
+    const q = query.toLowerCase()
     return allItems.filter(
       (item) =>
         item.label.toLowerCase().includes(q) ||
         item.href.toLowerCase().includes(q) ||
-        item.keywords?.some((kw) => kw.includes(q)),
-    );
-  }, [query, allItems]);
+        item.keywords?.some((kw) => kw.includes(q))
+    )
+  }, [query, allItems])
 
   // Reset state when the dialog opens (state-based prev tracking)
   if (open && !prevOpen) {
-    setQuery("");
-    setSelectedIndex(0);
+    setQuery('')
+    setSelectedIndex(0)
   }
   if (open !== prevOpen) {
-    setPrevOpen(open);
+    setPrevOpen(open)
   }
 
   useEffect(() => {
     if (open) {
-      requestAnimationFrame(() => inputRef.current?.focus());
+      requestAnimationFrame(() => inputRef.current?.focus())
     }
-  }, [open]);
+  }, [open])
 
-  const [prevFilteredLen, setPrevFilteredLen] = useState(filtered.length);
+  const [prevFilteredLen, setPrevFilteredLen] = useState(filtered.length)
   if (filtered.length !== prevFilteredLen) {
-    setSelectedIndex(0);
-    setPrevFilteredLen(filtered.length);
+    setSelectedIndex(0)
+    setPrevFilteredLen(filtered.length)
   }
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      if (e.key === "ArrowDown") {
-        e.preventDefault();
-        setSelectedIndex((i) => (i + 1) % filtered.length);
-      } else if (e.key === "ArrowUp") {
-        e.preventDefault();
-        setSelectedIndex((i) => (i - 1 + filtered.length) % filtered.length);
-      } else if (e.key === "Enter" && filtered[selectedIndex]) {
-        e.preventDefault();
-        onClose();
-        router.push(filtered[selectedIndex].href);
-      } else if (e.key === "Escape") {
-        onClose();
+      if (e.key === 'ArrowDown') {
+        e.preventDefault()
+        setSelectedIndex((i) => (i + 1) % filtered.length)
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault()
+        setSelectedIndex((i) => (i - 1 + filtered.length) % filtered.length)
+      } else if (e.key === 'Enter' && filtered[selectedIndex]) {
+        e.preventDefault()
+        onClose()
+        router.push(filtered[selectedIndex].href)
+      } else if (e.key === 'Escape') {
+        onClose()
       }
     },
-    [filtered, selectedIndex, onClose, router],
-  );
+    [filtered, selectedIndex, onClose, router]
+  )
 
-  if (!open) return null;
+  if (!open) return null
 
   return (
     <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[15vh]">
@@ -367,15 +367,15 @@ function CommandPalette({
                   onClick={onClose}
                   className={`flex items-center justify-between px-4 py-2.5 text-sm transition ${
                     i === selectedIndex
-                      ? "bg-sky-50 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300"
-                      : "text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800"
+                      ? 'bg-sky-50 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300'
+                      : 'text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800'
                   }`}
                 >
                   <span>{item.label}</span>
                   <span className="flex items-center gap-2">
                     {item.badge !== undefined && item.badge > 0 && (
                       <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-white bg-red-600 rounded-full min-w-[1.25rem]">
-                        {item.badge > 99 ? "99+" : item.badge}
+                        {item.badge > 99 ? '99+' : item.badge}
                       </span>
                     )}
                     {i === selectedIndex && (
@@ -391,24 +391,24 @@ function CommandPalette({
         </ul>
       </dialog>
     </div>
-  );
+  )
 }
 
 export function AdminNavLinksClient({
   failedEmailCount,
 }: AdminNavLinksClientProps) {
-  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false)
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
-      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
-        e.preventDefault();
-        setPaletteOpen((o) => !o);
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault()
+        setPaletteOpen((o) => !o)
       }
     }
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, []);
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [])
 
   return (
     <>
@@ -432,7 +432,7 @@ export function AdminNavLinksClient({
                       group={group}
                       failedEmailCount={failedEmailCount}
                     />
-                  ),
+                  )
                 )}
               </div>
             </div>
@@ -474,5 +474,5 @@ export function AdminNavLinksClient({
         failedEmailCount={failedEmailCount}
       />
     </>
-  );
+  )
 }

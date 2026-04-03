@@ -1,41 +1,41 @@
-"use client";
+'use client'
 
-import { useState } from "react";
-import { useDispatch } from "react-redux";
-import { updateAdminUserRole } from "@/features/admin/store/adminSlice";
-import type { AppDispatch } from "@/lib/store";
-import { logError } from "@/lib/logger";
-import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
-import { AlertBanner } from "@/components/ui/AlertBanner";
-import { EmptyState } from "@/components/ui/EmptyState";
+import { useState } from 'react'
+import { useDispatch } from 'react-redux'
+import { updateAdminUserRole } from '@/features/admin/store/adminSlice'
+import type { AppDispatch } from '@/lib/store'
+import { logError } from '@/lib/logger'
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
+import { AlertBanner } from '@/components/ui/AlertBanner'
+import { EmptyState } from '@/components/ui/EmptyState'
 import {
   AdminPageShell,
   AdminPanel,
-} from "@/features/admin/components/AdminPageShell";
-import { UsersTable } from "@/features/admin/components/UsersTable";
-import { CursorPaginationBar } from "@/components/ui/CursorPaginationBar";
-import { AdminSearchForm } from "@/features/admin/components/AdminSearchForm";
-import { useCursorPagination } from "@/hooks/useCursorPagination";
+} from '@/features/admin/components/AdminPageShell'
+import { UsersTable } from '@/features/admin/components/UsersTable'
+import { CursorPaginationBar } from '@/components/ui/CursorPaginationBar'
+import { AdminSearchForm } from '@/features/admin/components/AdminSearchForm'
+import { useCursorPagination } from '@/hooks/useCursorPagination'
 
 interface AdminUser {
-  readonly id: string;
-  readonly name: string | null;
-  readonly email: string;
-  readonly image: string | null;
-  readonly role: string;
-  readonly orderCount?: number;
-  readonly createdAt: string;
-  readonly _count?: { orders: number };
+  readonly id: string
+  readonly name: string | null
+  readonly email: string
+  readonly image: string | null
+  readonly role: string
+  readonly orderCount?: number
+  readonly createdAt: string
+  readonly _count?: { orders: number }
 }
 
 const normalizeUser = (user: AdminUser): AdminUser => ({
   ...user,
   orderCount: user._count?.orders ?? user.orderCount ?? 0,
-});
+})
 
 export default function UsersManagement() {
-  const dispatch = useDispatch<AppDispatch>();
-  const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
+  const dispatch = useDispatch<AppDispatch>()
+  const [updatingUserId, setUpdatingUserId] = useState<string | null>(null)
 
   const {
     items: users,
@@ -56,33 +56,33 @@ export default function UsersManagement() {
     handlePageSelect,
     handleRefresh,
   } = useCursorPagination<AdminUser>({
-    url: "/api/admin/users",
-    dataKey: "users",
+    url: '/api/admin/users',
+    dataKey: 'users',
     transform: normalizeUser,
-  });
+  })
 
   const handleRoleChange = async (
     userId: string,
-    newRole: "ADMIN" | "CUSTOMER",
+    newRole: 'ADMIN' | 'CUSTOMER'
   ) => {
-    setUpdatingUserId(userId);
+    setUpdatingUserId(userId)
     try {
       await dispatch(
-        updateAdminUserRole({ id: userId, role: newRole }),
-      ).unwrap();
-      handleRefresh();
+        updateAdminUserRole({ id: userId, role: newRole })
+      ).unwrap()
+      handleRefresh()
     } catch (err) {
-      logError({ error: err, context: "handleRoleChange" });
+      logError({ error: err, context: 'handleRoleChange' })
     } finally {
-      setUpdatingUserId(null);
+      setUpdatingUserId(null)
     }
-  };
+  }
 
   const usersContent =
     users.length === 0 ? (
       <EmptyState
-        title={search ? "No users found" : "No items found"}
-        message={search ? "Try a different search term." : undefined}
+        title={search ? 'No users found' : 'No items found'}
+        message={search ? 'Try a different search term.' : undefined}
       />
     ) : (
       <>
@@ -105,14 +105,14 @@ export default function UsersManagement() {
           onPageSelect={handlePageSelect}
         />
       </>
-    );
+    )
 
-  const adminCount = users.filter((user) => user.role === "ADMIN").length;
-  const customerCount = users.filter((user) => user.role === "CUSTOMER").length;
+  const adminCount = users.filter((user) => user.role === 'ADMIN').length
+  const customerCount = users.filter((user) => user.role === 'CUSTOMER').length
 
   return (
     <AdminPageShell
-      breadcrumbs={[{ label: "Admin", href: "/admin" }, { label: "Users" }]}
+      breadcrumbs={[{ label: 'Admin', href: '/admin' }, { label: 'Users' }]}
       eyebrow="Access control"
       title="User Management"
       description="Search accounts and manage user roles and permissions."
@@ -127,22 +127,22 @@ export default function UsersManagement() {
       }
       metrics={[
         {
-          label: "Total users",
+          label: 'Total users',
           value: String(totalCount),
-          hint: "Total registered accounts.",
-          tone: "sky",
+          hint: 'Total registered accounts.',
+          tone: 'sky',
         },
         {
-          label: "Admins shown",
+          label: 'Admins shown',
           value: String(adminCount),
-          hint: "Admins on current page.",
-          tone: "amber",
+          hint: 'Admins on current page.',
+          tone: 'amber',
         },
         {
-          label: "Customers shown",
+          label: 'Customers shown',
           value: String(customerCount),
-          hint: "Customers on current page.",
-          tone: "emerald",
+          hint: 'Customers on current page.',
+          tone: 'emerald',
         },
       ]}
     >
@@ -172,5 +172,5 @@ export default function UsersManagement() {
         )}
       </AdminPanel>
     </AdminPageShell>
-  );
+  )
 }

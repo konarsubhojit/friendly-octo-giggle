@@ -18,7 +18,7 @@ export default function AccountLoading() {
 
         {/* Form fields skeleton */}
         <div className="p-6 bg-[var(--surface)] rounded-xl border border-[var(--border-warm)] space-y-6">
-          {(["f1", "f2", "f3"] as const).map((id) => (
+          {(['f1', 'f2', 'f3'] as const).map((id) => (
             <div key={id} className="space-y-2">
               <div className="h-4 w-24 bg-[var(--accent-blush)] rounded animate-pulse" />
               <div className="h-10 w-full bg-[var(--accent-peach)]/50 rounded-lg border border-[var(--border-warm)] animate-pulse" />
@@ -28,5 +28,5 @@ export default function AccountLoading() {
         </div>
       </main>
     </div>
-  );
+  )
 }

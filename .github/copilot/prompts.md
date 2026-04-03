@@ -5,6 +5,7 @@ This file contains reusable prompts for common tasks in this project.
 ## API Development
 
 ### Create a New API Endpoint
+
 ```
 Create a new API endpoint at /api/[name] that:
 - Validates input using Zod schema
@@ -16,6 +17,7 @@ Create a new API endpoint at /api/[name] that:
 ```
 
 ### Add Cache to Endpoint
+
 ```
 Add Redis caching to the [endpoint] API route:
 - Use getCachedData from lib/redis.ts
@@ -27,6 +29,7 @@ Add Redis caching to the [endpoint] API route:
 ## Database Operations
 
 ### Create New Model
+
 ```
 Add a new Prisma model for [entity]:
 - Include proper relations
@@ -37,6 +40,7 @@ Add a new Prisma model for [entity]:
 ```
 
 ### Add Migration
+
 ```
 Create a Prisma migration to:
 - [describe changes]
@@ -48,6 +52,7 @@ Create a Prisma migration to:
 ## Authentication & Authorization
 
 ### Protect Route with Auth
+
 ```
 Add authentication to [route/component]:
 - Check session with auth() from lib/auth.ts
@@ -57,6 +62,7 @@ Add authentication to [route/component]:
 ```
 
 ### Add Role-Based Access
+
 ```
 Implement role-based access control for [feature]:
 - Check user.role (ADMIN or CUSTOMER)
@@ -68,6 +74,7 @@ Implement role-based access control for [feature]:
 ## UI Components
 
 ### Create Form Component
+
 ```
 Create a form component for [entity]:
 - Use 'use client' directive
@@ -79,6 +86,7 @@ Create a form component for [entity]:
 ```
 
 ### Add Loading State
+
 ```
 Add loading and error states to [component]:
 - Use Suspense for async data
@@ -91,6 +99,7 @@ Add loading and error states to [component]:
 ## Server Actions
 
 ### Create Server Action
+
 ```
 Create a Server Action for [operation]:
 - Add to lib/actions.ts
@@ -102,6 +111,7 @@ Create a Server Action for [operation]:
 ```
 
 ### Convert API to Server Action
+
 ```
 Convert [API route] to a Server Action:
 - Move logic to lib/actions.ts
@@ -114,6 +124,7 @@ Convert [API route] to a Server Action:
 ## Testing & Validation
 
 ### Add Input Validation
+
 ```
 Add Zod validation for [input]:
 - Define schema in lib/validations.ts
@@ -124,6 +135,7 @@ Add Zod validation for [input]:
 ```
 
 ### Test Authentication Flow
+
 ```
 Test the authentication flow for [feature]:
 - Sign in with Google
@@ -136,6 +148,7 @@ Test the authentication flow for [feature]:
 ## Performance Optimization
 
 ### Optimize Database Query
+
 ```
 Optimize the database query in [location]:
 - Add proper indexes in Prisma schema
@@ -146,6 +159,7 @@ Optimize the database query in [location]:
 ```
 
 ### Add Pagination
+
 ```
 Add pagination to [endpoint/component]:
 - Accept page and pageSize parameters
@@ -158,6 +172,7 @@ Add pagination to [endpoint/component]:
 ## Debugging & Troubleshooting
 
 ### Debug Cache Issues
+
 ```
 Debug caching issue in [endpoint]:
 - Check Redis connection
@@ -168,6 +183,7 @@ Debug caching issue in [endpoint]:
 ```
 
 ### Fix TypeScript Errors
+
 ```
 Fix TypeScript errors in [file]:
 - Check type definitions
@@ -180,6 +196,7 @@ Fix TypeScript errors in [file]:
 ## Deployment & DevOps
 
 ### Prepare for Deployment
+
 ```
 Prepare [feature] for deployment:
 - Run build locally to check for errors
@@ -190,6 +207,7 @@ Prepare [feature] for deployment:
 ```
 
 ### Add Environment Variable
+
 ```
 Add new environment variable [NAME]:
 - Update .env.example with description
@@ -202,6 +220,7 @@ Add new environment variable [NAME]:
 ## Code Refactoring
 
 ### Extract Reusable Logic
+
 ```
 Extract reusable logic from [component/function]:
 - Create utility function in lib/
@@ -212,6 +231,7 @@ Extract reusable logic from [component/function]:
 ```
 
 ### Modernize Component
+
 ```
 Modernize [component] with latest patterns:
 - Convert to Server Component if possible
@@ -225,6 +245,7 @@ Modernize [component] with latest patterns:
 ## Common Fixes
 
 ### Fix Build Error
+
 ```
 I'm getting a build error: [error message]
 Help me fix this by:
@@ -235,6 +256,7 @@ Help me fix this by:
 ```
 
 ### Improve Error Handling
+
 ```
 Improve error handling in [location]:
 - Catch specific error types
@@ -247,29 +269,32 @@ Improve error handling in [location]:
 ## Quick Reference
 
 ### Type-Safe API Call
+
 ```typescript
 // From client component
-const { data, error } = await safeFetch<Product>('/api/products/123');
-if (error) handleError(error);
-else processData(data);
+const { data, error } = await safeFetch<Product>('/api/products/123')
+if (error) handleError(error)
+else processData(data)
 ```
 
 ### Server Action with Validation
+
 ```typescript
 'use server'
 export async function myAction(input: MyInput): Promise<AsyncResult<MyOutput>> {
-  const validated = MySchema.parse(input);
+  const validated = MySchema.parse(input)
   // ... logic
-  return { success: true, data: result };
+  return { success: true, data: result }
 }
 ```
 
 ### Protected API Route
+
 ```typescript
 export async function GET(request: NextRequest) {
-  const session = await auth();
+  const session = await auth()
   if (!session || session.user.role !== 'ADMIN') {
-    return apiError('Unauthorized', 401);
+    return apiError('Unauthorized', 401)
   }
   // ... logic
 }

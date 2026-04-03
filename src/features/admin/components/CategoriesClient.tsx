@@ -1,149 +1,149 @@
-"use client";
+'use client'
 
-import { useState } from "react";
-import toast from "react-hot-toast";
-import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import { useState } from 'react'
+import toast from 'react-hot-toast'
+import ConfirmDialog from '@/components/ui/ConfirmDialog'
 
 interface Category {
-  id: string;
-  name: string;
-  sortOrder: number;
-  createdAt: string;
-  updatedAt: string;
-  deletedAt: string | null;
+  id: string
+  name: string
+  sortOrder: number
+  createdAt: string
+  updatedAt: string
+  deletedAt: string | null
 }
 
 interface CategoriesClientProps {
-  readonly initialCategories: Category[];
+  readonly initialCategories: Category[]
 }
 
 export default function CategoriesClient({
   initialCategories,
 }: CategoriesClientProps) {
-  const [cats, setCats] = useState<Category[]>(initialCategories);
-  const [loading, setLoading] = useState(false);
+  const [cats, setCats] = useState<Category[]>(initialCategories)
+  const [loading, setLoading] = useState(false)
 
   // Add form state
-  const [newName, setNewName] = useState("");
-  const [newSortOrder, setNewSortOrder] = useState(0);
+  const [newName, setNewName] = useState('')
+  const [newSortOrder, setNewSortOrder] = useState(0)
 
   // Edit state
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editName, setEditName] = useState("");
-  const [editSortOrder, setEditSortOrder] = useState(0);
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editName, setEditName] = useState('')
+  const [editSortOrder, setEditSortOrder] = useState(0)
 
   // Delete confirmation
-  const [deleteTarget, setDeleteTarget] = useState<Category | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Category | null>(null)
 
   const handleAdd = async (e: React.BaseSyntheticEvent) => {
-    e.preventDefault();
-    const trimmed = newName.trim();
-    if (!trimmed) return;
+    e.preventDefault()
+    const trimmed = newName.trim()
+    if (!trimmed) return
 
-    setLoading(true);
+    setLoading(true)
     try {
-      const res = await fetch("/api/admin/categories", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const res = await fetch('/api/admin/categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: trimmed, sortOrder: newSortOrder }),
-      });
-      const data = await res.json();
+      })
+      const data = await res.json()
 
       if (!res.ok) {
-        throw new Error(data.error ?? "Failed to create category");
+        throw new Error(data.error ?? 'Failed to create category')
       }
 
-      const created = data.data?.category ?? data.category;
+      const created = data.data?.category ?? data.category
       setCats((prev) =>
         [...prev, created].sort(
-          (a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name),
-        ),
-      );
-      setNewName("");
-      setNewSortOrder(0);
-      toast.success(`Category "${created.name}" created`);
+          (a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name)
+        )
+      )
+      setNewName('')
+      setNewSortOrder(0)
+      toast.success(`Category "${created.name}" created`)
     } catch (err) {
       toast.error(
-        err instanceof Error ? err.message : "Failed to create category",
-      );
+        err instanceof Error ? err.message : 'Failed to create category'
+      )
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const startEdit = (cat: Category) => {
-    setEditingId(cat.id);
-    setEditName(cat.name);
-    setEditSortOrder(cat.sortOrder);
-  };
+    setEditingId(cat.id)
+    setEditName(cat.name)
+    setEditSortOrder(cat.sortOrder)
+  }
 
   const cancelEdit = () => {
-    setEditingId(null);
-    setEditName("");
-    setEditSortOrder(0);
-  };
+    setEditingId(null)
+    setEditName('')
+    setEditSortOrder(0)
+  }
 
   const handleUpdate = async (id: string) => {
-    const trimmed = editName.trim();
-    if (!trimmed) return;
+    const trimmed = editName.trim()
+    if (!trimmed) return
 
-    setLoading(true);
+    setLoading(true)
     try {
       const res = await fetch(`/api/admin/categories/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: trimmed, sortOrder: editSortOrder }),
-      });
-      const data = await res.json();
+      })
+      const data = await res.json()
 
       if (!res.ok) {
-        throw new Error(data.error ?? "Failed to update category");
+        throw new Error(data.error ?? 'Failed to update category')
       }
 
-      const updated = data.data?.category ?? data.category;
+      const updated = data.data?.category ?? data.category
       setCats((prev) =>
         prev
           .map((c) => (c.id === id ? updated : c))
           .sort(
-            (a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name),
-          ),
-      );
-      cancelEdit();
-      toast.success(`Category "${updated.name}" updated`);
+            (a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name)
+          )
+      )
+      cancelEdit()
+      toast.success(`Category "${updated.name}" updated`)
     } catch (err) {
       toast.error(
-        err instanceof Error ? err.message : "Failed to update category",
-      );
+        err instanceof Error ? err.message : 'Failed to update category'
+      )
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const handleDelete = async () => {
-    if (!deleteTarget) return;
+    if (!deleteTarget) return
 
-    setLoading(true);
+    setLoading(true)
     try {
       const res = await fetch(`/api/admin/categories/${deleteTarget.id}`, {
-        method: "DELETE",
-      });
+        method: 'DELETE',
+      })
 
       if (!res.ok) {
-        const data = await res.json().catch(() => null);
-        throw new Error(data?.error ?? "Failed to delete category");
+        const data = await res.json().catch(() => null)
+        throw new Error(data?.error ?? 'Failed to delete category')
       }
 
-      setCats((prev) => prev.filter((c) => c.id !== deleteTarget.id));
-      toast.success(`Category "${deleteTarget.name}" deleted`);
+      setCats((prev) => prev.filter((c) => c.id !== deleteTarget.id))
+      toast.success(`Category "${deleteTarget.name}" deleted`)
     } catch (err) {
       toast.error(
-        err instanceof Error ? err.message : "Failed to delete category",
-      );
+        err instanceof Error ? err.message : 'Failed to delete category'
+      )
     } finally {
-      setDeleteTarget(null);
-      setLoading(false);
+      setDeleteTarget(null)
+      setLoading(false)
     }
-  };
+  }
 
   return (
     <>
@@ -196,7 +196,7 @@ export default function CategoriesClient({
               disabled={loading || !newName.trim()}
               className="px-5 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed rounded-md transition whitespace-nowrap"
             >
-              {loading ? "Adding…" : "Add Category"}
+              {loading ? 'Adding…' : 'Add Category'}
             </button>
           </div>
         </div>
@@ -322,5 +322,5 @@ export default function CategoriesClient({
         onCancel={() => setDeleteTarget(null)}
       />
     </>
-  );
+  )
 }

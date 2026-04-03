@@ -1,71 +1,71 @@
-"use client";
+'use client'
 
-import { useEffect } from "react";
-import { useSession } from "next-auth/react";
-import { useSelector, useDispatch } from "react-redux";
-import type { RootState, AppDispatch } from "@/lib/store";
+import { useEffect } from 'react'
+import { useSession } from 'next-auth/react'
+import { useSelector, useDispatch } from 'react-redux'
+import type { RootState, AppDispatch } from '@/lib/store'
 import {
   fetchWishlist,
   addToWishlist,
   removeFromWishlist,
   optimisticToggle,
-} from "@/features/wishlist/store/wishlistSlice";
+} from '@/features/wishlist/store/wishlistSlice'
 
 interface WishlistButtonProps {
-  readonly productId: string;
-  readonly productName: string;
-  readonly className?: string;
+  readonly productId: string
+  readonly productName: string
+  readonly className?: string
 }
 
 export const WishlistButton = ({
   productId,
   productName,
-  className = "",
+  className = '',
 }: WishlistButtonProps) => {
-  const { data: session } = useSession();
-  const dispatch = useDispatch<AppDispatch>();
+  const { data: session } = useSession()
+  const dispatch = useDispatch<AppDispatch>()
   const productIds = useSelector(
-    (state: RootState) => state.wishlist.productIds,
-  );
+    (state: RootState) => state.wishlist.productIds
+  )
   const wishlistLoaded = useSelector(
     (state: RootState) =>
-      !state.wishlist.loading && state.wishlist.productIds !== undefined,
-  );
-  const isWishlisted = productIds.includes(productId);
+      !state.wishlist.loading && state.wishlist.productIds !== undefined
+  )
+  const isWishlisted = productIds.includes(productId)
 
   // Fetch wishlist once when user is authenticated and not yet loaded
   useEffect(() => {
     if (session?.user?.id && !wishlistLoaded) {
-      dispatch(fetchWishlist());
+      dispatch(fetchWishlist())
     }
-  }, [session?.user?.id, wishlistLoaded, dispatch]);
+  }, [session?.user?.id, wishlistLoaded, dispatch])
 
   const handleToggle = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+    e.preventDefault()
+    e.stopPropagation()
 
     if (!session?.user?.id) {
       // Not logged in — do nothing (could open login modal in future)
-      return;
+      return
     }
 
     // Optimistic update for instant UI feedback
-    dispatch(optimisticToggle(productId));
+    dispatch(optimisticToggle(productId))
 
     if (isWishlisted) {
-      await dispatch(removeFromWishlist(productId));
+      await dispatch(removeFromWishlist(productId))
     } else {
-      await dispatch(addToWishlist(productId));
+      await dispatch(addToWishlist(productId))
     }
-  };
+  }
 
   return (
     <button
       type="button"
       className={`absolute top-3 right-3 z-10 w-9 h-9 rounded-full bg-[var(--surface)]/90 backdrop-blur-sm border flex items-center justify-center transition-all duration-200 shadow-warm focus-warm ${
         isWishlisted
-          ? "bg-[var(--accent-blush)] border-[var(--accent-pink)] text-[var(--accent-pink)] scale-110"
-          : "border-[var(--border-warm)] text-[var(--accent-pink)] hover:bg-[var(--accent-blush)] hover:scale-110 hover:border-[var(--accent-pink)]"
+          ? 'bg-[var(--accent-blush)] border-[var(--accent-pink)] text-[var(--accent-pink)] scale-110'
+          : 'border-[var(--border-warm)] text-[var(--accent-pink)] hover:bg-[var(--accent-blush)] hover:scale-110 hover:border-[var(--accent-pink)]'
       } ${className}`}
       aria-label={
         isWishlisted
@@ -77,7 +77,7 @@ export const WishlistButton = ({
     >
       <svg
         className="w-5 h-5"
-        fill={isWishlisted ? "currentColor" : "none"}
+        fill={isWishlisted ? 'currentColor' : 'none'}
         stroke="currentColor"
         viewBox="0 0 24 24"
         aria-hidden="true"
@@ -90,5 +90,5 @@ export const WishlistButton = ({
         />
       </svg>
     </button>
-  );
-};
+  )
+}

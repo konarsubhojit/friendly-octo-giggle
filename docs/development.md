@@ -92,12 +92,12 @@ vercel env pull
 ```typescript
 // ✅ Good - Explicit types
 function calculateTotal(items: OrderItem[]): number {
-  return items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  return items.reduce((sum, item) => sum + item.price * item.quantity, 0)
 }
 
 // ❌ Bad - Implicit any
 function calculateTotal(items) {
-  return items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  return items.reduce((sum, item) => sum + item.price * item.quantity, 0)
 }
 ```
 
@@ -105,12 +105,12 @@ function calculateTotal(items) {
 
 ```typescript
 // ✅ Good - Let TypeScript infer
-const products = await db.products.findAll();
-const total = 100;
+const products = await db.products.findAll()
+const total = 100
 
 // ❌ Bad - Redundant type annotation
-const products: Product[] = await db.products.findAll();
-const total: number = 100;
+const products: Product[] = await db.products.findAll()
+const total: number = 100
 ```
 
 **Prefer interfaces for object shapes, types for unions**
@@ -118,31 +118,31 @@ const total: number = 100;
 ```typescript
 // ✅ Good
 interface User {
-  id: string;
-  email: string;
-  role: "CUSTOMER" | "ADMIN";
+  id: string
+  email: string
+  role: 'CUSTOMER' | 'ADMIN'
 }
 
 type ApiResponse<T> =
   | { success: true; data: T }
-  | { success: false; error: string };
+  | { success: false; error: string }
 
 // ❌ Bad - Using type for simple objects
 type User = {
-  id: string;
-  email: string;
-};
+  id: string
+  email: string
+}
 ```
 
 **Use const assertions for literal types**
 
 ```typescript
 // ✅ Good
-const ORDER_STATUSES = ["PENDING", "PROCESSING", "SHIPPED"] as const;
-type OrderStatus = (typeof ORDER_STATUSES)[number];
+const ORDER_STATUSES = ['PENDING', 'PROCESSING', 'SHIPPED'] as const
+type OrderStatus = (typeof ORDER_STATUSES)[number]
 
 // ❌ Bad
-const ORDER_STATUSES = ["PENDING", "PROCESSING", "SHIPPED"];
+const ORDER_STATUSES = ['PENDING', 'PROCESSING', 'SHIPPED']
 ```
 
 ### React/Next.js Conventions
@@ -168,11 +168,11 @@ export function AddToCartButton({ productId }: { productId: string }) {
 
 ```typescript
 // lib/actions.ts
-"use server";
+'use server'
 
 export async function createProduct(data: ProductInput) {
-  const validated = ProductInputSchema.parse(data);
-  return await db.products.create(validated);
+  const validated = ProductInputSchema.parse(data)
+  return await db.products.create(validated)
 }
 ```
 
@@ -298,15 +298,15 @@ export function Product({ product }) {
 
 ```typescript
 // lib/schema.ts
-export const products = pgTable("products", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  name: text("name").notNull(),
-  description: text("description").notNull(),
-  price: doublePrecision("price").notNull(),
-  featured: boolean("featured").default(false), // New field
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+export const products = pgTable('products', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  name: text('name').notNull(),
+  description: text('description').notNull(),
+  price: doublePrecision('price').notNull(),
+  featured: boolean('featured').default(false), // New field
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+})
 ```
 
 **2. Generate migration**
@@ -340,9 +340,9 @@ Use two-step migration:
 
 ```typescript
 // Step 1: Add as optional in lib/schema.ts
-export const products = pgTable("products", {
-  sku: text("sku"),
-});
+export const products = pgTable('products', {
+  sku: text('sku'),
+})
 ```
 
 ```bash
@@ -354,9 +354,9 @@ npx tsx scripts/populate-sku.ts
 
 ```typescript
 // Step 2: Make required in lib/schema.ts
-export const products = pgTable("products", {
-  sku: text("sku").notNull(),
-});
+export const products = pgTable('products', {
+  sku: text('sku').notNull(),
+})
 ```
 
 ```bash
@@ -369,35 +369,35 @@ npm run db:migrate
 ```typescript
 // In lib/schema.ts - add indexes to pgTable
 export const products = pgTable(
-  "products",
+  'products',
   {
-    category: text("category").notNull(),
-    price: doublePrecision("price").notNull(),
+    category: text('category').notNull(),
+    price: doublePrecision('price').notNull(),
   },
   (table) => [
-    index("idx_products_category").on(table.category),
-    index("idx_products_category_price").on(table.category, table.price),
-  ],
-);
+    index('idx_products_category').on(table.category),
+    index('idx_products_category_price').on(table.category, table.price),
+  ]
+)
 ```
 
 **Adding relations**
 
 ```typescript
 // In lib/schema.ts
-export const categories = pgTable("categories", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  name: text("name").notNull().unique(),
-});
+export const categories = pgTable('categories', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  name: text('name').notNull().unique(),
+})
 
-export const products = pgTable("products", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  categoryId: uuid("category_id").references(() => categories.id),
-});
+export const products = pgTable('products', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  categoryId: uuid('category_id').references(() => categories.id),
+})
 
 export const categoriesRelations = relations(categories, ({ many }) => ({
   products: many(products),
-}));
+}))
 ```
 
 ### Production Deployment
@@ -472,9 +472,9 @@ curl -X POST http://localhost:3000/api/cart \
 
 ```typescript
 // Check Redis cache
-import { redis } from "@/lib/redis";
-const cached = await redis.get("products:all");
-console.log("Cached data:", cached);
+import { redis } from '@/lib/redis'
+const cached = await redis.get('products:all')
+console.log('Cached data:', cached)
 ```
 
 ### Testing Framework
@@ -522,7 +522,7 @@ import {
   logError,
   logPerformance,
   Timer,
-} from "@/lib/logger";
+} from '@/lib/logger'
 ```
 
 ### Log Types
@@ -530,14 +530,14 @@ import {
 **API Requests** (automatic with `withLogging`)
 
 ```typescript
-import { withLogging } from "@/lib/api-middleware";
+import { withLogging } from '@/lib/api-middleware'
 
 async function handleGet(request: NextRequest) {
-  const products = await db.products.findAll();
-  return NextResponse.json({ products });
+  const products = await db.products.findAll()
+  return NextResponse.json({ products })
 }
 
-export const GET = withLogging(handleGet);
+export const GET = withLogging(handleGet)
 // Logs at: debug (2xx/3xx), warn (4xx), error (5xx)
 // Successful requests are debug-only — not visible in production by default
 ```
@@ -546,46 +546,46 @@ export const GET = withLogging(handleGet);
 
 ```typescript
 logBusinessEvent({
-  event: "order_created",
-  userId: "user_123",
+  event: 'order_created',
+  userId: 'user_123',
   details: {
     orderId: order.id,
     totalAmount: 99.99,
     itemCount: 3,
   },
   success: true,
-});
+})
 ```
 
 **Error Logging**
 
 ```typescript
 try {
-  await processOrder(data);
+  await processOrder(data)
 } catch (error) {
   logError({
     error,
-    context: "order_processing",
+    context: 'order_processing',
     userId: session?.user?.id,
     additionalInfo: { orderId: data.orderId },
-  });
-  throw error;
+  })
+  throw error
 }
 ```
 
 **Performance Tracking**
 
 ```typescript
-const timer = new Timer("expensive_operation");
+const timer = new Timer('expensive_operation')
 // ... do work ...
-const duration = timer.end({ recordCount: 1000 });
+const duration = timer.end({ recordCount: 1000 })
 
 // Or manually
 logPerformance({
-  operation: "data_export",
+  operation: 'data_export',
   duration: 1500,
-  metadata: { fileSize: "2MB" },
-});
+  metadata: { fileSize: '2MB' },
+})
 ```
 
 ### Log Levels
@@ -620,18 +620,18 @@ Auth events are logged by `logAuthEvent()`. Key events and their levels:
 ```typescript
 // ✅ Good - Structured, contextual
 logBusinessEvent({
-  event: "payment_processed",
-  userId: "user_123",
+  event: 'payment_processed',
+  userId: 'user_123',
   details: {
-    orderId: "order_456",
+    orderId: 'order_456',
     amount: 99.99,
-    lastFour: "1234",
+    lastFour: '1234',
   },
   success: true,
-});
+})
 
 // ❌ Bad - Unstructured string
-console.log("Payment processed for order order_456");
+console.log('Payment processed for order order_456')
 
 // ❌ Bad - Logging in session() callback (fires on every request)
 // session({ session, token }) {
@@ -641,10 +641,10 @@ console.log("Payment processed for order order_456");
 // ❌ Never log sensitive data
 logBusinessEvent({
   details: {
-    creditCard: "1234567890123456", // NEVER!
-    cvv: "123", // NEVER!
+    creditCard: '1234567890123456', // NEVER!
+    cvv: '123', // NEVER!
   },
-});
+})
 ```
 
 ---
@@ -657,42 +657,42 @@ logBusinessEvent({
 
 ```typescript
 // app/api/reviews/route.ts
-import { NextRequest, NextResponse } from "next/server";
-import { withLogging } from "@/lib/api-middleware";
-import { apiSuccess, handleApiError } from "@/lib/api-utils";
-import { db } from "@/lib/db";
-import { z } from "zod";
+import { NextRequest, NextResponse } from 'next/server'
+import { withLogging } from '@/lib/api-middleware'
+import { apiSuccess, handleApiError } from '@/lib/api-utils'
+import { db } from '@/lib/db'
+import { z } from 'zod'
 
 const ReviewSchema = z.object({
   productId: z.string().cuid(),
   rating: z.number().min(1).max(5),
   comment: z.string().min(10).max(1000),
-});
+})
 
 async function handlePost(request: NextRequest) {
   try {
-    const body = await request.json();
-    const validated = ReviewSchema.parse(body);
+    const body = await request.json()
+    const validated = ReviewSchema.parse(body)
 
-    const review = await db.reviews.create(validated);
+    const review = await db.reviews.create(validated)
 
-    return apiSuccess(review, 201);
+    return apiSuccess(review, 201)
   } catch (error) {
-    return handleApiError(error);
+    return handleApiError(error)
   }
 }
 
 async function handleGet() {
   try {
-    const reviews = await db.reviews.findAll();
-    return apiSuccess({ reviews });
+    const reviews = await db.reviews.findAll()
+    return apiSuccess({ reviews })
   } catch (error) {
-    return handleApiError(error);
+    return handleApiError(error)
   }
 }
 
-export const GET = withLogging(handleGet);
-export const POST = withLogging(handlePost);
+export const GET = withLogging(handleGet)
+export const POST = withLogging(handlePost)
 ```
 
 **2. Add validation schema**
@@ -703,9 +703,9 @@ export const ReviewSchema = z.object({
   productId: z.string().cuid(),
   rating: z.number().int().min(1).max(5),
   comment: z.string().min(10).max(1000),
-});
+})
 
-export type ReviewInput = z.infer<typeof ReviewSchema>;
+export type ReviewInput = z.infer<typeof ReviewSchema>
 ```
 
 **3. Add database method**
@@ -715,16 +715,16 @@ export type ReviewInput = z.infer<typeof ReviewSchema>;
 export const db = {
   reviews: {
     async create(data: ReviewInput) {
-      return await drizzleDb.insert(schema.reviews).values(data).returning();
+      return await drizzleDb.insert(schema.reviews).values(data).returning()
     },
     async findAll() {
       return await drizzleDb.query.reviews.findMany({
         with: { product: true, user: true },
         orderBy: desc(schema.reviews.createdAt),
-      });
+      })
     },
   },
-};
+}
 ```
 
 ### API Utilities
@@ -732,30 +732,30 @@ export const db = {
 **Success responses**
 
 ```typescript
-import { apiSuccess } from "@/lib/api-utils";
+import { apiSuccess } from '@/lib/api-utils'
 
-return apiSuccess({ user }, 200);
+return apiSuccess({ user }, 200)
 // Returns: { success: true, data: { user } }
 ```
 
 **Error responses**
 
 ```typescript
-import { apiError } from "@/lib/api-utils";
+import { apiError } from '@/lib/api-utils'
 
-return apiError("Product not found", 404);
+return apiError('Product not found', 404)
 // Returns: { success: false, error: 'Product not found' }
 ```
 
 **Validation error handling**
 
 ```typescript
-import { handleApiError } from "@/lib/api-utils";
+import { handleApiError } from '@/lib/api-utils'
 
 try {
-  const validated = ProductSchema.parse(data);
+  const validated = ProductSchema.parse(data)
 } catch (error) {
-  return handleApiError(error);
+  return handleApiError(error)
   // Auto-formats Zod validation errors with 400 status
 }
 ```
@@ -763,17 +763,17 @@ try {
 ### Authentication in API Routes
 
 ```typescript
-import { auth } from "@/lib/auth";
+import { auth } from '@/lib/auth'
 
 async function handlePost(request: NextRequest) {
-  const session = await auth();
+  const session = await auth()
 
   if (!session?.user) {
-    return apiError("Unauthorized", 401);
+    return apiError('Unauthorized', 401)
   }
 
-  if (session.user.role !== "ADMIN") {
-    return apiError("Forbidden", 403);
+  if (session.user.role !== 'ADMIN') {
+    return apiError('Forbidden', 403)
   }
 
   // Proceed with authenticated logic
@@ -791,16 +791,16 @@ async function handlePost(request: NextRequest) {
 ```typescript
 async function handlePost(request: NextRequest) {
   try {
-    const body = await request.json();
-    const result = await processData(body);
-    return apiSuccess(result);
+    const body = await request.json()
+    const result = await processData(body)
+    return apiSuccess(result)
   } catch (error) {
     logError({
       error,
-      context: "data_processing",
+      context: 'data_processing',
       additionalInfo: { path: request.nextUrl.pathname },
-    });
-    return handleApiError(error);
+    })
+    return handleApiError(error)
   }
 }
 ```
@@ -808,16 +808,16 @@ async function handlePost(request: NextRequest) {
 **Validation errors**
 
 ```typescript
-import { ZodError } from "zod";
+import { ZodError } from 'zod'
 
 try {
-  const validated = ProductInputSchema.parse(data);
+  const validated = ProductInputSchema.parse(data)
 } catch (error) {
   if (error instanceof ZodError) {
     // Returns 400 with field-specific errors
-    return handleValidationError(error);
+    return handleValidationError(error)
   }
-  throw error;
+  throw error
 }
 ```
 
@@ -826,19 +826,19 @@ try {
 ```typescript
 class ProductNotFoundError extends Error {
   constructor(productId: string) {
-    super(`Product ${productId} not found`);
-    this.name = "ProductNotFoundError";
+    super(`Product ${productId} not found`)
+    this.name = 'ProductNotFoundError'
   }
 }
 
 try {
-  const product = await db.products.findById(id);
-  if (!product) throw new ProductNotFoundError(id);
+  const product = await db.products.findById(id)
+  if (!product) throw new ProductNotFoundError(id)
 } catch (error) {
   if (error instanceof ProductNotFoundError) {
-    return apiError(error.message, 404);
+    return apiError(error.message, 404)
   }
-  return handleApiError(error);
+  return handleApiError(error)
 }
 ```
 
@@ -873,18 +873,18 @@ export class ErrorBoundary extends React.Component<Props, State> {
 ```typescript
 async function fetchProducts() {
   try {
-    const response = await fetch("/api/products");
+    const response = await fetch('/api/products')
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || "Failed to fetch products");
+      const error = await response.json()
+      throw new Error(error.error || 'Failed to fetch products')
     }
 
-    const data = await response.json();
-    return data.data;
+    const data = await response.json()
+    return data.data
   } catch (error) {
-    console.error("Fetch error:", error);
-    return [];
+    console.error('Fetch error:', error)
+    return []
   }
 }
 ```
@@ -961,10 +961,10 @@ git commit -m "WIP"
 // ✅ Good
 const products = await drizzleDb.query.products.findMany({
   columns: { id: true, name: true, price: true },
-});
+})
 
 // ❌ Bad - Fetches all fields
-const products = await drizzleDb.query.products.findMany();
+const products = await drizzleDb.query.products.findMany()
 ```
 
 **Add indexes for frequent queries**
@@ -972,16 +972,16 @@ const products = await drizzleDb.query.products.findMany();
 ```typescript
 // In lib/schema.ts
 export const products = pgTable(
-  "products",
+  'products',
   {
-    category: text("category").notNull(),
-    price: doublePrecision("price").notNull(),
+    category: text('category').notNull(),
+    price: doublePrecision('price').notNull(),
   },
   (table) => [
-    index("idx_products_category").on(table.category),
-    index("idx_products_price").on(table.price),
-  ],
-);
+    index('idx_products_category').on(table.category),
+    index('idx_products_price').on(table.price),
+  ]
+)
 ```
 
 **Use pagination**
@@ -991,7 +991,7 @@ const products = await drizzleDb.query.products.findMany({
   limit: 20,
   offset: page * 20,
   orderBy: desc(schema.products.createdAt),
-});
+})
 ```
 
 ### Redis Caching
@@ -999,24 +999,24 @@ const products = await drizzleDb.query.products.findMany({
 **Cache expensive queries**
 
 ```typescript
-import { getCachedData } from "@/lib/redis";
+import { getCachedData } from '@/lib/redis'
 
 const products = await getCachedData(
-  "products:all",
+  'products:all',
   60, // TTL in seconds
   async () => await db.products.findAll(),
-  10, // Stale-while-revalidate
-);
+  10 // Stale-while-revalidate
+)
 ```
 
 **Cache invalidation**
 
 ```typescript
-import { invalidateCache } from "@/lib/redis";
+import { invalidateCache } from '@/lib/redis'
 
 // After creating/updating product
-await db.products.create(data);
-await invalidateCache("products:*");
+await db.products.create(data)
+await invalidateCache('products:*')
 ```
 
 ### Next.js Optimization
@@ -1057,12 +1057,9 @@ import Image from 'next/image';
 **Set cache headers**
 
 ```typescript
-const response = apiSuccess({ products });
-response.headers.set(
-  "Cache-Control",
-  "s-maxage=60, stale-while-revalidate=120",
-);
-return response;
+const response = apiSuccess({ products })
+response.headers.set('Cache-Control', 's-maxage=60, stale-while-revalidate=120')
+return response
 ```
 
 ---
@@ -1114,18 +1111,18 @@ GET products:all
 
 ```typescript
 // Add detailed logging
-console.log("Request body:", body);
-console.log("Validated data:", validated);
-console.log("Database result:", result);
+console.log('Request body:', body)
+console.log('Validated data:', validated)
+console.log('Database result:', result)
 ```
 
 **Check request ID for tracing**
 
 ```typescript
 // Returned in X-Request-ID header
-const response = await fetch("/api/products");
-const requestId = response.headers.get("X-Request-ID");
-console.log("Request ID:", requestId);
+const response = await fetch('/api/products')
+const requestId = response.headers.get('X-Request-ID')
+console.log('Request ID:', requestId)
 
 // Search logs for this request ID
 ```
@@ -1146,19 +1143,19 @@ console.log("Request ID:", requestId);
 
 ```typescript
 async function createProduct(data: ProductInput) {
-  const response = await fetch("/api/products", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
+  const response = await fetch('/api/products', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
-  });
+  })
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error);
+    const error = await response.json()
+    throw new Error(error.error)
   }
 
-  const result = await response.json();
-  return result.data;
+  const result = await response.json()
+  return result.data
 }
 ```
 
@@ -1166,12 +1163,12 @@ async function createProduct(data: ProductInput) {
 
 ```typescript
 // lib/actions.ts
-"use server";
+'use server'
 
 export async function addToCart(productId: string, quantity: number) {
-  const session = await auth();
+  const session = await auth()
   if (!session?.user) {
-    return { error: "Unauthorized" };
+    return { error: 'Unauthorized' }
   }
 
   try {
@@ -1179,10 +1176,10 @@ export async function addToCart(productId: string, quantity: number) {
       userId: session.user.id,
       productId,
       quantity,
-    });
-    return { data: cart };
+    })
+    return { data: cart }
   } catch (error) {
-    return { error: "Failed to add to cart" };
+    return { error: 'Failed to add to cart' }
   }
 }
 ```
@@ -1271,23 +1268,23 @@ export function ProductForm() {
 
 ```typescript
 // Database
-import { db } from "@/lib/db";
+import { db } from '@/lib/db'
 
 // Cache
-import { getCachedData, invalidateCache } from "@/lib/redis";
+import { getCachedData, invalidateCache } from '@/lib/redis'
 
 // Auth
-import { auth } from "@/lib/auth";
+import { auth } from '@/lib/auth'
 
 // Logging
-import { logError, logBusinessEvent, Timer } from "@/lib/logger";
+import { logError, logBusinessEvent, Timer } from '@/lib/logger'
 
 // API
-import { apiSuccess, apiError, handleApiError } from "@/lib/api-utils";
-import { withLogging } from "@/lib/api-middleware";
+import { apiSuccess, apiError, handleApiError } from '@/lib/api-utils'
+import { withLogging } from '@/lib/api-middleware'
 
 // Validation
-import { ProductInputSchema } from "@/lib/validations";
+import { ProductInputSchema } from '@/lib/validations'
 ```
 
 ### Environment Variables

@@ -7,11 +7,11 @@ export {
   searchProducts,
   resetIndex,
   getIndexInfo,
-} from "./client";
+} from './client'
 export type {
   ProductSearchResult,
   ProductContent,
   ProductMetadata,
-} from "./client";
+} from './client'
 
-export { searchProductIds, searchProductIdsCached } from "./product-search";
+export { searchProductIds, searchProductIdsCached } from './product-search'

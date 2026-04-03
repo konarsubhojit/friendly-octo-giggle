@@ -128,24 +128,24 @@ The app now automatically accepts self-signed certificates. The `lib/db.ts` file
 
 ```typescript
 function createPool() {
-  const connectionString = process.env.DATABASE_URL || "";
+  const connectionString = process.env.DATABASE_URL || ''
   const isSSL =
-    !connectionString.includes("sslmode=disable") &&
-    !connectionString.includes("localhost");
+    !connectionString.includes('sslmode=disable') &&
+    !connectionString.includes('localhost')
 
   const sslConfig = isSSL
     ? {
         rejectUnauthorized: false,
         checkServerIdentity: () => undefined,
       }
-    : false;
+    : false
 
   return new pg.Pool({
     connectionString,
     ssl: sslConfig,
     connectionTimeoutMillis: 10000,
     idleTimeoutMillis: 30000,
-  });
+  })
 }
 ```
 
@@ -282,7 +282,7 @@ remaining connection slots are reserved
    const pool = new pg.Pool({
      connectionString: process.env.DATABASE_URL,
      max: 10, // Maximum connections
-   });
+   })
    ```
 
 2. **Close unused connections:**
@@ -367,9 +367,9 @@ Error: connect ECONNREFUSED 127.0.0.1:6379
 
    ```typescript
    // Correct usage
-   const data = await getCachedData("key", 60, async () => {
-     return await fetchData();
-   });
+   const data = await getCachedData('key', 60, async () => {
+     return await fetchData()
+   })
    ```
 
 3. **Clear cache manually:**
@@ -381,7 +381,7 @@ Error: connect ECONNREFUSED 127.0.0.1:6379
 4. **Check TTL settings:**
    ```typescript
    // TTL in seconds (not milliseconds)
-   await getCachedData("key", 60, fetcher); // 60 seconds
+   await getCachedData('key', 60, fetcher) // 60 seconds
    ```
 
 ### Redis Memory Issues
@@ -565,10 +565,10 @@ As of the latest update, customers must be authenticated to place orders. This e
 
    ```typescript
    // Check if user is authenticated
-   const { data: session } = useSession();
+   const { data: session } = useSession()
    if (!session?.user) {
      // Redirect to sign-in
-     router.push("/auth/signin?callbackUrl=/cart");
+     router.push('/auth/signin?callbackUrl=/cart')
    }
    ```
 
@@ -584,12 +584,12 @@ As of the latest update, customers must be authenticated to place orders. This e
 4. **Order API authentication check:**
    The `/api/orders` endpoint now requires authentication:
    ```typescript
-   const session = await auth();
+   const session = await auth()
    if (!session?.user) {
      return NextResponse.json(
-       { error: "Authentication required" },
-       { status: 401 },
-     );
+       { error: 'Authentication required' },
+       { status: 401 }
+     )
    }
    ```
 
@@ -762,11 +762,11 @@ Error: Unexpected error in API handler
    try {
      // Your code
    } catch (error) {
-     logError({ error, context: "api_route" });
+     logError({ error, context: 'api_route' })
      return NextResponse.json(
-       { error: "Internal server error" },
-       { status: 500 },
-     );
+       { error: 'Internal server error' },
+       { status: 500 }
+     )
    }
    ```
 
@@ -794,16 +794,16 @@ Text content does not match server-rendered HTML
 2. **Use useEffect for client-only code:**
 
    ```typescript
-   const [mounted, setMounted] = useState(false);
-   useEffect(() => setMounted(true), []);
-   if (!mounted) return null;
+   const [mounted, setMounted] = useState(false)
+   useEffect(() => setMounted(true), [])
+   if (!mounted) return null
    ```
 
 3. **Check localStorage/sessionStorage:**
    ```typescript
    // Only access on client
    const data =
-     typeof window !== "undefined" ? localStorage.getItem("key") : null;
+     typeof window !== 'undefined' ? localStorage.getItem('key') : null
    ```
 
 ### Image Upload Failures
@@ -827,15 +827,15 @@ Failed to upload image
 
    ```typescript
    if (file.size > 4.5 * 1024 * 1024) {
-     return { error: "File too large" };
+     return { error: 'File too large' }
    }
    ```
 
 3. **Verify content type:**
    ```typescript
-   const validTypes = ["image/jpeg", "image/png", "image/webp"];
+   const validTypes = ['image/jpeg', 'image/png', 'image/webp']
    if (!validTypes.includes(file.type)) {
-     return { error: "Invalid file type" };
+     return { error: 'Invalid file type' }
    }
    ```
 
@@ -866,40 +866,40 @@ Database operation took too long
    ```typescript
    // In lib/schema.ts - add indexes to pgTable
    export const products = pgTable(
-     "products",
+     'products',
      {
-       id: uuid("id").defaultRandom().primaryKey(),
-       name: text("name").notNull(),
-       category: text("category").notNull(),
-       price: doublePrecision("price").notNull(),
+       id: uuid('id').defaultRandom().primaryKey(),
+       name: text('name').notNull(),
+       category: text('category').notNull(),
+       price: doublePrecision('price').notNull(),
      },
      (table) => [
-       index("idx_products_category").on(table.category),
-       index("idx_products_price").on(table.price),
-     ],
-   );
+       index('idx_products_category').on(table.category),
+       index('idx_products_price').on(table.price),
+     ]
+   )
    ```
 
 3. **Use query optimization:**
 
    ```typescript
    // ❌ Bad: N+1 queries
-   const products = await db.products.findMany();
+   const products = await db.products.findMany()
    for (const p of products) {
-     const reviews = await db.reviews.findMany({ where: { productId: p.id } });
+     const reviews = await db.reviews.findMany({ where: { productId: p.id } })
    }
 
    // ✅ Good: Single query with include
    const products = await db.products.findMany({
      include: { reviews: true },
-   });
+   })
    ```
 
 4. **Implement caching:**
    ```typescript
-   const products = await getCachedData("products:all", 60, async () => {
-     return await db.products.findMany();
-   });
+   const products = await getCachedData('products:all', 60, async () => {
+     return await db.products.findMany()
+   })
    ```
 
 ### High Memory Usage
@@ -926,14 +926,14 @@ JavaScript heap out of memory
    // (Drizzle uses connection pooling via @neondatabase/serverless)
 
    // Clear large arrays
-   largeArray.length = 0;
+   largeArray.length = 0
    ```
 
 3. **Stream large responses:**
 
    ```typescript
    // Instead of loading all at once
-   const stream = db.products.findMany().stream();
+   const stream = db.products.findMany().stream()
    ```
 
 4. **Use pagination:**
@@ -941,7 +941,7 @@ JavaScript heap out of memory
    const products = await db.products.findMany({
      take: 20,
      skip: page * 20,
-   });
+   })
    ```
 
 ### Slow Page Loads
@@ -1037,7 +1037,7 @@ Connection pool exhausted
    const pool = new pg.Pool({
      connectionString: process.env.DATABASE_URL,
      max: 10,
-   });
+   })
    ```
 
 2. **Use external pooler:**
@@ -1075,7 +1075,7 @@ Connection pool exhausted
 
 3. **Use edge runtime** where possible:
    ```typescript
-   export const runtime = "edge";
+   export const runtime = 'edge'
    ```
 
 ---
@@ -1196,10 +1196,10 @@ Committed secrets to Git repository.
 // ✅ Safe: Parameterized queries
 await db.products.findMany({
   where: { name: userInput },
-});
+})
 
 // ❌ Never use raw SQL with user input
-await db.$queryRaw`SELECT * FROM products WHERE name = ${userInput}`;
+await db.$queryRaw`SELECT * FROM products WHERE name = ${userInput}`
 ```
 
 ### XSS Protection
@@ -1224,15 +1224,15 @@ await db.$queryRaw`SELECT * FROM products WHERE name = ${userInput}`;
 
 ```typescript
 // Example: Simple rate limiting
-const requests = new Map<string, number>();
+const requests = new Map<string, number>()
 
 export function rateLimit(ip: string, limit = 100) {
-  const count = requests.get(ip) || 0;
+  const count = requests.get(ip) || 0
   if (count >= limit) {
-    throw new Error("Rate limit exceeded");
+    throw new Error('Rate limit exceeded')
   }
-  requests.set(ip, count + 1);
-  setTimeout(() => requests.delete(ip), 60000); // Reset after 1 min
+  requests.set(ip, count + 1)
+  setTimeout(() => requests.delete(ip), 60000) // Reset after 1 min
 }
 ```
 

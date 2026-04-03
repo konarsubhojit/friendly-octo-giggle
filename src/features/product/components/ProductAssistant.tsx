@@ -1,57 +1,57 @@
-"use client";
+'use client'
 
-import { useChat } from "@ai-sdk/react";
-import { DefaultChatTransport } from "ai";
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useChat } from '@ai-sdk/react'
+import { DefaultChatTransport } from 'ai'
+import { useState, useRef, useEffect, useMemo } from 'react'
 
 interface ProductAssistantProps {
-  readonly productId: string;
-  readonly productName: string;
+  readonly productId: string
+  readonly productName: string
 }
 
 const STARTER_PROMPTS = [
-  "Is this product in stock?",
-  "What variations are available?",
-  "Tell me more about this product",
-];
+  'Is this product in stock?',
+  'What variations are available?',
+  'Tell me more about this product',
+]
 
 export default function ProductAssistant({
   productId,
   productName,
 }: ProductAssistantProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [input, setInput] = useState("");
-  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const [isOpen, setIsOpen] = useState(false)
+  const [input, setInput] = useState('')
+  const messagesContainerRef = useRef<HTMLDivElement>(null)
 
   const transport = useMemo(
     () =>
       new DefaultChatTransport({
         api: `/api/ai/products/${productId}/chat`,
       }),
-    [productId],
-  );
+    [productId]
+  )
 
-  const { messages, sendMessage, status, stop } = useChat({ transport });
+  const { messages, sendMessage, status, stop } = useChat({ transport })
 
-  const isStreaming = status === "streaming";
+  const isStreaming = status === 'streaming'
 
   useEffect(() => {
-    const container = messagesContainerRef.current;
+    const container = messagesContainerRef.current
     if (container) {
-      container.scrollTop = container.scrollHeight;
+      container.scrollTop = container.scrollHeight
     }
-  }, [messages]);
+  }, [messages])
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim()) return;
-    sendMessage({ text: input });
-    setInput("");
-  };
+    e.preventDefault()
+    if (!input.trim()) return
+    sendMessage({ text: input })
+    setInput('')
+  }
 
   const handleStarterClick = (prompt: string) => {
-    sendMessage({ text: prompt });
-  };
+    sendMessage({ text: prompt })
+  }
 
   if (!isOpen) {
     return (
@@ -87,7 +87,7 @@ export default function ProductAssistant({
           </div>
         </div>
       </button>
-    );
+    )
   }
 
   return (
@@ -166,17 +166,17 @@ export default function ProductAssistant({
         {messages.map((msg) => (
           <div
             key={msg.id}
-            className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+            className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
           >
             <div
               className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
-                msg.role === "user"
-                  ? "bg-gradient-to-r from-[var(--accent-warm)] to-[var(--accent-rose)] text-white"
-                  : "bg-[var(--accent-cream)] text-[var(--foreground)] border border-[var(--border-warm)]"
+                msg.role === 'user'
+                  ? 'bg-gradient-to-r from-[var(--accent-warm)] to-[var(--accent-rose)] text-white'
+                  : 'bg-[var(--accent-cream)] text-[var(--foreground)] border border-[var(--border-warm)]'
               }`}
             >
               {msg.parts
-                ?.filter((p) => p.type === "text")
+                ?.filter((p) => p.type === 'text')
                 .map((p) => (
                   <span key={p.text}>{p.text}</span>
                 ))}
@@ -184,7 +184,7 @@ export default function ProductAssistant({
           </div>
         ))}
 
-        {isStreaming && messages[messages.length - 1]?.role !== "assistant" && (
+        {isStreaming && messages[messages.length - 1]?.role !== 'assistant' && (
           <div className="flex justify-start">
             <div className="rounded-2xl bg-[var(--accent-cream)] border border-[var(--border-warm)] px-4 py-3 text-sm text-[var(--text-secondary)]">
               Generating response...
@@ -202,9 +202,9 @@ export default function ProductAssistant({
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              handleSubmit(e);
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault()
+              handleSubmit(e)
             }
           }}
           placeholder="Ask about this product..."
@@ -247,5 +247,5 @@ export default function ProductAssistant({
         )}
       </form>
     </section>
-  );
+  )
 }

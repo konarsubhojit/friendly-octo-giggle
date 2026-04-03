@@ -1,28 +1,28 @@
-import { render, screen } from "@testing-library/react";
-import type { AdminSalesDashboardData } from "@/features/admin/services/admin-sales";
-import * as AdminPageModule from "@/app/admin/page";
+import { render, screen } from '@testing-library/react'
+import type { AdminSalesDashboardData } from '@/features/admin/services/admin-sales'
+import * as AdminPageModule from '@/app/admin/page'
 
 const getAdminSalesDashboardData =
-  vi.fn<() => Promise<AdminSalesDashboardData>>();
+  vi.fn<() => Promise<AdminSalesDashboardData>>()
 
-vi.mock("@/features/admin/services/admin-sales", () => ({
+vi.mock('@/features/admin/services/admin-sales', () => ({
   getAdminSalesDashboardData: () => getAdminSalesDashboardData(),
-}));
+}))
 
-vi.mock("@/features/admin/components/AdminSalesDashboardClient", () => ({
+vi.mock('@/features/admin/components/AdminSalesDashboardClient', () => ({
   AdminSalesDashboardClient: ({
     sales,
   }: {
-    sales: AdminSalesDashboardData;
+    sales: AdminSalesDashboardData
   }) => <div>Sales dashboard: {sales.totalOrders}</div>,
-}));
+}))
 
-describe("AdminDashboard", () => {
-  it("forces dynamic rendering for the admin dashboard", () => {
-    expect(AdminPageModule.dynamic).toBe("force-dynamic");
-  });
+describe('AdminDashboard', () => {
+  it('forces dynamic rendering for the admin dashboard', () => {
+    expect(AdminPageModule.dynamic).toBe('force-dynamic')
+  })
 
-  it("loads dashboard data and renders the client view", async () => {
+  it('loads dashboard data and renders the client view', async () => {
     getAdminSalesDashboardData.mockResolvedValue({
       totalRevenue: 1250,
       totalOrders: 8,
@@ -41,11 +41,11 @@ describe("AdminDashboard", () => {
       topProducts: [],
       recentSales: [],
       totalCustomers: 14,
-    });
+    })
 
-    render(await AdminPageModule.default());
+    render(await AdminPageModule.default())
 
-    expect(getAdminSalesDashboardData).toHaveBeenCalledTimes(1);
-    expect(screen.getByText("Sales dashboard: 8")).toBeInTheDocument();
-  });
-});
+    expect(getAdminSalesDashboardData).toHaveBeenCalledTimes(1)
+    expect(screen.getByText('Sales dashboard: 8')).toBeInTheDocument()
+  })
+})

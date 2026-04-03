@@ -1,25 +1,22 @@
-"use client";
+'use client'
 
-import Link from "next/link";
-import { useEffect } from "react";
-import { useSession } from "next-auth/react";
-import { useSelector, useDispatch } from "react-redux";
-import {
-  fetchCart,
-  selectCartItemCount,
-} from "@/features/cart/store/cartSlice";
-import type { AppDispatch } from "@/lib/store";
-import { FloralCartIcon } from "@/components/ui/DecorativeElements";
+import Link from 'next/link'
+import { useEffect } from 'react'
+import { useSession } from 'next-auth/react'
+import { useSelector, useDispatch } from 'react-redux'
+import { fetchCart, selectCartItemCount } from '@/features/cart/store/cartSlice'
+import type { AppDispatch } from '@/lib/store'
+import { FloralCartIcon } from '@/components/ui/DecorativeElements'
 
 export default function CartIcon() {
-  const { status } = useSession();
-  const dispatch = useDispatch<AppDispatch>();
-  const itemCount = useSelector(selectCartItemCount);
+  const { status } = useSession()
+  const dispatch = useDispatch<AppDispatch>()
+  const itemCount = useSelector(selectCartItemCount)
 
   useEffect(() => {
-    if (status !== "authenticated") return;
-    dispatch(fetchCart());
-  }, [dispatch, status]);
+    if (status !== 'authenticated') return
+    dispatch(fetchCart())
+  }, [dispatch, status])
 
   return (
     <Link
@@ -34,5 +31,5 @@ export default function CartIcon() {
         </span>
       )}
     </Link>
-  );
+  )
 }

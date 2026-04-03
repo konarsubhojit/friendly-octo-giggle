@@ -1,10 +1,10 @@
-"use client";
+'use client'
 
-import Link from "next/link";
+import Link from 'next/link'
 
 interface ErrorProps {
-  readonly error: Error & { digest?: string };
-  readonly reset: () => void;
+  readonly error: Error & { digest?: string }
+  readonly reset: () => void
 }
 
 export default function CheckoutError({ error, reset }: ErrorProps) {
@@ -30,7 +30,7 @@ export default function CheckoutError({ error, reset }: ErrorProps) {
           Checkout Error
         </h2>
         <p className="text-[var(--text-secondary)] mb-4">
-          {error.message || "Something went wrong during checkout"}
+          {error.message || 'Something went wrong during checkout'}
         </p>
         {error.digest && (
           <p className="text-xs text-[var(--text-muted)] mb-4">
@@ -53,5 +53,5 @@ export default function CheckoutError({ error, reset }: ErrorProps) {
         </div>
       </div>
     </div>
-  );
+  )
 }

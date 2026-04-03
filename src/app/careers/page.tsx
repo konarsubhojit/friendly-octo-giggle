@@ -1,44 +1,44 @@
-import Footer from "@/components/layout/Footer";
-import Link from "next/link";
+import Footer from '@/components/layout/Footer'
+import Link from 'next/link'
 
 export const metadata = {
-  title: "Careers | The Kiyon Store",
+  title: 'Careers | The Kiyon Store',
   description:
-    "Join The Kiyon Store team. Explore open positions and opportunities.",
-};
+    'Join The Kiyon Store team. Explore open positions and opportunities.',
+}
 
 const openings = [
   {
-    title: "Senior Frontend Engineer",
-    team: "Engineering",
-    location: "Remote",
-    type: "Full-time",
+    title: 'Senior Frontend Engineer',
+    team: 'Engineering',
+    location: 'Remote',
+    type: 'Full-time',
   },
   {
-    title: "Backend Engineer (Node.js)",
-    team: "Engineering",
-    location: "Remote",
-    type: "Full-time",
+    title: 'Backend Engineer (Node.js)',
+    team: 'Engineering',
+    location: 'Remote',
+    type: 'Full-time',
   },
   {
-    title: "Product Designer",
-    team: "Design",
-    location: "San Francisco, CA",
-    type: "Full-time",
+    title: 'Product Designer',
+    team: 'Design',
+    location: 'San Francisco, CA',
+    type: 'Full-time',
   },
   {
-    title: "Customer Success Manager",
-    team: "Support",
-    location: "Remote",
-    type: "Full-time",
+    title: 'Customer Success Manager',
+    team: 'Support',
+    location: 'Remote',
+    type: 'Full-time',
   },
   {
-    title: "Growth Marketing Specialist",
-    team: "Marketing",
-    location: "Remote",
-    type: "Full-time",
+    title: 'Growth Marketing Specialist',
+    team: 'Marketing',
+    location: 'Remote',
+    type: 'Full-time',
   },
-];
+]
 
 export default function CareersPage() {
   return (
@@ -58,20 +58,20 @@ export default function CareersPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {[
               {
-                title: "Remote-First Culture",
-                desc: "Work from anywhere in the world with flexible hours.",
+                title: 'Remote-First Culture',
+                desc: 'Work from anywhere in the world with flexible hours.',
               },
               {
-                title: "Competitive Pay",
-                desc: "Top-of-market salaries and equity for everyone.",
+                title: 'Competitive Pay',
+                desc: 'Top-of-market salaries and equity for everyone.',
               },
               {
-                title: "Learning & Growth",
-                desc: "Annual learning budget and clear career paths.",
+                title: 'Learning & Growth',
+                desc: 'Annual learning budget and clear career paths.',
               },
               {
-                title: "Great Benefits",
-                desc: "Health, dental, vision, and generous PTO.",
+                title: 'Great Benefits',
+                desc: 'Health, dental, vision, and generous PTO.',
               },
             ].map((item) => (
               <div key={item.title} className="flex gap-3">
@@ -135,5 +135,5 @@ export default function CareersPage() {
       </main>
       <Footer />
     </div>
-  );
+  )
 }

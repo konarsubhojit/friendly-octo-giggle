@@ -30,5 +30,5 @@ export default function ProductCardSkeleton() {
         <div className="h-7 w-24 bg-gradient-to-r from-[var(--accent-peach)] to-[var(--accent-blush)] rounded-full animate-pulse" />
       </div>
     </div>
-  );
+  )
 }

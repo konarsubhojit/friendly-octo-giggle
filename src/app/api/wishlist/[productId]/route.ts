@@ -1,10 +1,10 @@
-import { NextRequest } from "next/server";
-import { auth } from "@/lib/auth";
-import { db } from "@/lib/db";
-import { apiSuccess, apiError, handleApiError } from "@/lib/api-utils";
-import { logError } from "@/lib/logger";
+import { NextRequest } from 'next/server'
+import { auth } from '@/lib/auth'
+import { db } from '@/lib/db'
+import { apiSuccess, apiError, handleApiError } from '@/lib/api-utils'
+import { logError } from '@/lib/logger'
 
-export const dynamic = "force-dynamic";
+export const dynamic = 'force-dynamic'
 
 /**
  * DELETE /api/wishlist/[productId]
@@ -12,25 +12,25 @@ export const dynamic = "force-dynamic";
  */
 export const DELETE = async (
   _req: NextRequest,
-  { params }: { params: Promise<{ productId: string }> },
+  { params }: { params: Promise<{ productId: string }> }
 ) => {
   try {
-    const session = await auth();
+    const session = await auth()
     if (!session?.user?.id) {
-      return apiError("Unauthorized", 401);
+      return apiError('Unauthorized', 401)
     }
 
-    const { productId } = await params;
+    const { productId } = await params
 
     if (!productId) {
-      return apiError("productId is required", 400);
+      return apiError('productId is required', 400)
     }
 
-    await db.wishlists.remove(session.user.id, productId);
+    await db.wishlists.remove(session.user.id, productId)
 
-    return apiSuccess({ productId });
+    return apiSuccess({ productId })
   } catch (error) {
-    logError({ error, context: "wishlist_remove" });
-    return handleApiError(error);
+    logError({ error, context: 'wishlist_remove' })
+    return handleApiError(error)
   }
-};
+}

@@ -1,54 +1,54 @@
-import type { ReactNode } from "react";
+import type { ReactNode } from 'react'
 import AdminBreadcrumbs, {
   type BreadcrumbItem,
-} from "@/features/admin/components/AdminBreadcrumbs";
+} from '@/features/admin/components/AdminBreadcrumbs'
 
-type AdminTone = "slate" | "sky" | "emerald" | "amber" | "rose";
+type AdminTone = 'slate' | 'sky' | 'emerald' | 'amber' | 'rose'
 
 const METRIC_TONE_STYLES: Record<AdminTone, string> = {
-  slate: "from-slate-950 to-slate-800 text-white",
-  sky: "from-sky-500 to-cyan-500 text-white",
-  emerald: "from-emerald-500 to-teal-500 text-white",
-  amber: "from-amber-400 to-orange-500 text-slate-950",
-  rose: "from-rose-500 to-pink-500 text-white",
-};
+  slate: 'from-slate-950 to-slate-800 text-white',
+  sky: 'from-sky-500 to-cyan-500 text-white',
+  emerald: 'from-emerald-500 to-teal-500 text-white',
+  amber: 'from-amber-400 to-orange-500 text-slate-950',
+  rose: 'from-rose-500 to-pink-500 text-white',
+}
 
 export interface AdminMetric {
-  readonly label: string;
-  readonly value: string;
-  readonly hint?: string;
-  readonly tone?: AdminTone;
+  readonly label: string
+  readonly value: string
+  readonly hint?: string
+  readonly tone?: AdminTone
 }
 
 interface AdminPageShellProps {
-  readonly breadcrumbs: readonly BreadcrumbItem[];
-  readonly eyebrow?: string;
-  readonly title: string;
-  readonly description: string;
-  readonly actions?: ReactNode;
-  readonly metrics?: readonly AdminMetric[];
-  readonly children: ReactNode;
+  readonly breadcrumbs: readonly BreadcrumbItem[]
+  readonly eyebrow?: string
+  readonly title: string
+  readonly description: string
+  readonly actions?: ReactNode
+  readonly metrics?: readonly AdminMetric[]
+  readonly children: ReactNode
 }
 
 interface AdminPanelProps {
-  readonly title?: string;
-  readonly description?: string;
-  readonly actions?: ReactNode;
-  readonly children: ReactNode;
-  readonly className?: string;
+  readonly title?: string
+  readonly description?: string
+  readonly actions?: ReactNode
+  readonly children: ReactNode
+  readonly className?: string
 }
 
 export function AdminMetricGrid({
   metrics,
 }: Readonly<{ metrics: readonly AdminMetric[] }>) {
   if (metrics.length === 0) {
-    return null;
+    return null
   }
 
   return (
     <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       {metrics.map((metric) => {
-        const tone = METRIC_TONE_STYLES[metric.tone ?? "slate"];
+        const tone = METRIC_TONE_STYLES[metric.tone ?? 'slate']
 
         return (
           <article
@@ -67,10 +67,10 @@ export function AdminMetricGrid({
               ) : null}
             </div>
           </article>
-        );
+        )
       })}
     </section>
-  );
+  )
 }
 
 export function AdminPanel({
@@ -83,11 +83,11 @@ export function AdminPanel({
   return (
     <section
       className={[
-        "rounded-[1.75rem] border border-slate-200/80 bg-white/92 p-6 shadow-[0_24px_60px_-42px_rgba(15,23,42,0.5)] backdrop-blur dark:border-slate-700/70 dark:bg-slate-900/88 dark:shadow-[0_24px_60px_-42px_rgba(2,6,23,0.92)]",
+        'rounded-[1.75rem] border border-slate-200/80 bg-white/92 p-6 shadow-[0_24px_60px_-42px_rgba(15,23,42,0.5)] backdrop-blur dark:border-slate-700/70 dark:bg-slate-900/88 dark:shadow-[0_24px_60px_-42px_rgba(2,6,23,0.92)]',
         className,
       ]
         .filter(Boolean)
-        .join(" ")}
+        .join(' ')}
     >
       {title || description || actions ? (
         <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
@@ -108,7 +108,7 @@ export function AdminPanel({
       ) : null}
       {children}
     </section>
-  );
+  )
 }
 
 export function AdminPageShell({
@@ -150,5 +150,5 @@ export function AdminPageShell({
 
       <div className="space-y-6">{children}</div>
     </main>
-  );
+  )
 }

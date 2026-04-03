@@ -1,21 +1,21 @@
-"use client";
+'use client'
 
-import Link from "next/link";
-import type { ReactElement, ReactNode } from "react";
+import Link from 'next/link'
+import type { ReactElement, ReactNode } from 'react'
 
 interface Session {
   user?: {
-    name?: string | null;
-    email?: string | null;
-    image?: string | null;
-    role?: string;
-  };
+    name?: string | null
+    email?: string | null
+    image?: string | null
+    role?: string
+  }
 }
 
 interface ProtectedRouteProps {
-  readonly children: ReactNode;
-  readonly session: Session | null;
-  readonly requiredRole?: "ADMIN" | "CUSTOMER";
+  readonly children: ReactNode
+  readonly session: Session | null
+  readonly requiredRole?: 'ADMIN' | 'CUSTOMER'
 }
 
 export function ProtectedRoute({
@@ -41,7 +41,7 @@ export function ProtectedRoute({
           </Link>
         </div>
       </div>
-    );
+    )
   }
 
   if (requiredRole && session.user.role !== requiredRole) {
@@ -62,8 +62,8 @@ export function ProtectedRoute({
           </Link>
         </div>
       </div>
-    );
+    )
   }
 
-  return children as ReactElement;
+  return children as ReactElement
 }

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const {
   mockHash,
@@ -18,88 +18,88 @@ const {
   _mockOrderBy: vi.fn(),
   _mockLimit: vi.fn(),
   _mockWhere: vi.fn(),
-}));
+}))
 
-vi.mock("bcryptjs", () => ({
+vi.mock('bcryptjs', () => ({
   default: {
     hash: mockHash,
     compare: mockCompare,
   },
-}));
+}))
 
-vi.mock("@/lib/db", () => ({
+vi.mock('@/lib/db', () => ({
   primaryDrizzleDb: {
     select: mockSelect,
     insert: mockInsert,
     delete: mockDelete,
   },
-}));
+}))
 
-vi.mock("@/lib/schema", () => ({
+vi.mock('@/lib/schema', () => ({
   passwordHistory: {
-    id: "id",
-    userId: "userId",
-    passwordHash: "passwordHash",
-    createdAt: "createdAt",
+    id: 'id',
+    userId: 'userId',
+    passwordHash: 'passwordHash',
+    createdAt: 'createdAt',
   },
-}));
+}))
 
-vi.mock("drizzle-orm", () => ({
+vi.mock('drizzle-orm', () => ({
   eq: vi.fn((...args: unknown[]) => args),
   desc: vi.fn(),
   inArray: vi.fn((...args: unknown[]) => args),
-}));
+}))
 
 import {
   hashPassword,
   verifyPassword,
   checkPasswordHistory,
   savePasswordToHistory,
-} from "@/features/auth/services/password";
+} from '@/features/auth/services/password'
 
-describe("password service", () => {
+describe('password service', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-  });
+    vi.clearAllMocks()
+  })
 
-  describe("hashPassword", () => {
-    it("hashes password with 12 salt rounds", async () => {
-      mockHash.mockResolvedValue("hashed_value");
+  describe('hashPassword', () => {
+    it('hashes password with 12 salt rounds', async () => {
+      mockHash.mockResolvedValue('hashed_value')
 
-      const result = await hashPassword("my-password");
+      const result = await hashPassword('my-password')
 
-      expect(result).toBe("hashed_value");
-      expect(mockHash).toHaveBeenCalledWith("my-password", 12);
-    });
+      expect(result).toBe('hashed_value')
+      expect(mockHash).toHaveBeenCalledWith('my-password', 12)
+    })
 
-    it("propagates bcrypt errors", async () => {
-      mockHash.mockRejectedValue(new Error("hash failure"));
+    it('propagates bcrypt errors', async () => {
+      mockHash.mockRejectedValue(new Error('hash failure'))
 
-      await expect(hashPassword("test")).rejects.toThrow("hash failure");
-    });
-  });
+      await expect(hashPassword('test')).rejects.toThrow('hash failure')
+    })
+  })
 
-  describe("verifyPassword", () => {
-    it("returns true when passwords match", async () => {
-      mockCompare.mockResolvedValue(true);
+  describe('verifyPassword', () => {
+    it('returns true when passwords match', async () => {
+      mockCompare.mockResolvedValue(true)
 
-      const result = await verifyPassword("plain", "hashed");
+      const result = await verifyPassword('plain', 'hashed')
 
-      expect(result).toBe(true);
-      expect(mockCompare).toHaveBeenCalledWith("plain", "hashed");
-    });
+      expect(result).toBe(true)
+      expect(mockCompare).toHaveBeenCalledWith('plain', 'hashed')
+    })
 
-    it("returns false when passwords do not match", async () => {
-      mockCompare.mockResolvedValue(false);
+    it('returns false when passwords do not match', async () => {
+      mockCompare.mockResolvedValue(false)
 
-      const result = await verifyPassword("wrong", "hashed");
+      const result = await verifyPassword('wrong', 'hashed')
 
-      expect(result).toBe(false);
-    });
-  });
+      expect(result).toBe(false)
+    })
+  })
 
-  describe("checkPasswordHistory", () => {
-    it("returns true when new password matches a recent entry", async () => {
+  describe('checkPasswordHistory', () => {
+    it('returns true when new password matches a recent entry', async () => {
       const selectChain = {
         from: vi.fn().mockReturnThis(),
         where: vi.fn().mockReturnThis(),
@@ -107,50 +107,50 @@ describe("password service", () => {
         limit: vi
           .fn()
           .mockResolvedValue([
-            { passwordHash: "old_hash_1" },
-            { passwordHash: "old_hash_2" },
+            { passwordHash: 'old_hash_1' },
+            { passwordHash: 'old_hash_2' },
           ]),
-      };
-      mockSelect.mockReturnValue(selectChain);
-      mockCompare.mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+      }
+      mockSelect.mockReturnValue(selectChain)
+      mockCompare.mockResolvedValueOnce(false).mockResolvedValueOnce(true)
 
-      const result = await checkPasswordHistory("user1", "reused-password");
+      const result = await checkPasswordHistory('user1', 'reused-password')
 
-      expect(result).toBe(true);
-      expect(mockCompare).toHaveBeenCalledTimes(2);
-    });
+      expect(result).toBe(true)
+      expect(mockCompare).toHaveBeenCalledTimes(2)
+    })
 
-    it("returns false when new password does not match any entry", async () => {
+    it('returns false when new password does not match any entry', async () => {
       const selectChain = {
         from: vi.fn().mockReturnThis(),
         where: vi.fn().mockReturnThis(),
         orderBy: vi.fn().mockReturnThis(),
-        limit: vi.fn().mockResolvedValue([{ passwordHash: "old_hash_1" }]),
-      };
-      mockSelect.mockReturnValue(selectChain);
-      mockCompare.mockResolvedValue(false);
+        limit: vi.fn().mockResolvedValue([{ passwordHash: 'old_hash_1' }]),
+      }
+      mockSelect.mockReturnValue(selectChain)
+      mockCompare.mockResolvedValue(false)
 
-      const result = await checkPasswordHistory("user1", "new-password");
+      const result = await checkPasswordHistory('user1', 'new-password')
 
-      expect(result).toBe(false);
-    });
+      expect(result).toBe(false)
+    })
 
-    it("returns false when no history entries exist", async () => {
+    it('returns false when no history entries exist', async () => {
       const selectChain = {
         from: vi.fn().mockReturnThis(),
         where: vi.fn().mockReturnThis(),
         orderBy: vi.fn().mockReturnThis(),
         limit: vi.fn().mockResolvedValue([]),
-      };
-      mockSelect.mockReturnValue(selectChain);
+      }
+      mockSelect.mockReturnValue(selectChain)
 
-      const result = await checkPasswordHistory("user1", "any-password");
+      const result = await checkPasswordHistory('user1', 'any-password')
 
-      expect(result).toBe(false);
-      expect(mockCompare).not.toHaveBeenCalled();
-    });
+      expect(result).toBe(false)
+      expect(mockCompare).not.toHaveBeenCalled()
+    })
 
-    it("returns true on first matching entry without checking rest", async () => {
+    it('returns true on first matching entry without checking rest', async () => {
       const selectChain = {
         from: vi.fn().mockReturnThis(),
         where: vi.fn().mockReturnThis(),
@@ -158,26 +158,26 @@ describe("password service", () => {
         limit: vi
           .fn()
           .mockResolvedValue([
-            { passwordHash: "match_hash" },
-            { passwordHash: "other_hash" },
+            { passwordHash: 'match_hash' },
+            { passwordHash: 'other_hash' },
           ]),
-      };
-      mockSelect.mockReturnValue(selectChain);
-      mockCompare.mockResolvedValueOnce(true);
+      }
+      mockSelect.mockReturnValue(selectChain)
+      mockCompare.mockResolvedValueOnce(true)
 
-      const result = await checkPasswordHistory("user1", "reused");
+      const result = await checkPasswordHistory('user1', 'reused')
 
-      expect(result).toBe(true);
-      expect(mockCompare).toHaveBeenCalledTimes(1);
-    });
-  });
+      expect(result).toBe(true)
+      expect(mockCompare).toHaveBeenCalledTimes(1)
+    })
+  })
 
-  describe("savePasswordToHistory", () => {
-    it("inserts new entry and trims old entries beyond limit", async () => {
+  describe('savePasswordToHistory', () => {
+    it('inserts new entry and trims old entries beyond limit', async () => {
       const insertChain = {
         values: vi.fn().mockResolvedValue(undefined),
-      };
-      mockInsert.mockReturnValue(insertChain);
+      }
+      mockInsert.mockReturnValue(insertChain)
 
       const selectChain = {
         from: vi.fn().mockReturnThis(),
@@ -185,63 +185,63 @@ describe("password service", () => {
         orderBy: vi
           .fn()
           .mockResolvedValue([
-            { id: "entry1" },
-            { id: "entry2" },
-            { id: "entry3" },
+            { id: 'entry1' },
+            { id: 'entry2' },
+            { id: 'entry3' },
           ]),
-      };
-      mockSelect.mockReturnValue(selectChain);
+      }
+      mockSelect.mockReturnValue(selectChain)
 
       const deleteChain = {
         where: vi.fn().mockResolvedValue(undefined),
-      };
-      mockDelete.mockReturnValue(deleteChain);
+      }
+      mockDelete.mockReturnValue(deleteChain)
 
-      await savePasswordToHistory("user1", "new_hash");
+      await savePasswordToHistory('user1', 'new_hash')
 
       expect(insertChain.values).toHaveBeenCalledWith({
-        userId: "user1",
-        passwordHash: "new_hash",
-      });
-      expect(mockDelete).toHaveBeenCalled();
-    });
+        userId: 'user1',
+        passwordHash: 'new_hash',
+      })
+      expect(mockDelete).toHaveBeenCalled()
+    })
 
-    it("does not delete when entries are within limit", async () => {
+    it('does not delete when entries are within limit', async () => {
       const insertChain = {
         values: vi.fn().mockResolvedValue(undefined),
-      };
-      mockInsert.mockReturnValue(insertChain);
+      }
+      mockInsert.mockReturnValue(insertChain)
 
       const selectChain = {
         from: vi.fn().mockReturnThis(),
         where: vi.fn().mockReturnThis(),
         orderBy: vi
           .fn()
-          .mockResolvedValue([{ id: "entry1" }, { id: "entry2" }]),
-      };
-      mockSelect.mockReturnValue(selectChain);
+          .mockResolvedValue([{ id: 'entry1' }, { id: 'entry2' }]),
+      }
+      mockSelect.mockReturnValue(selectChain)
 
-      await savePasswordToHistory("user1", "new_hash");
+      await savePasswordToHistory('user1', 'new_hash')
 
-      expect(mockDelete).not.toHaveBeenCalled();
-    });
+      expect(mockDelete).not.toHaveBeenCalled()
+    })
 
-    it("does not delete when only one entry exists", async () => {
+    it('does not delete when only one entry exists', async () => {
       const insertChain = {
         values: vi.fn().mockResolvedValue(undefined),
-      };
-      mockInsert.mockReturnValue(insertChain);
+      }
+      mockInsert.mockReturnValue(insertChain)
 
       const selectChain = {
         from: vi.fn().mockReturnThis(),
         where: vi.fn().mockReturnThis(),
-        orderBy: vi.fn().mockResolvedValue([{ id: "entry1" }]),
-      };
-      mockSelect.mockReturnValue(selectChain);
+        orderBy: vi.fn().mockResolvedValue([{ id: 'entry1' }]),
+      }
+      mockSelect.mockReturnValue(selectChain)
 
-      await savePasswordToHistory("user1", "hash");
+      await savePasswordToHistory('user1', 'hash')
 
-      expect(mockDelete).not.toHaveBeenCalled();
-    });
-  });
-});
+      expect(mockDelete).not.toHaveBeenCalled()
+    })
+  })
+})

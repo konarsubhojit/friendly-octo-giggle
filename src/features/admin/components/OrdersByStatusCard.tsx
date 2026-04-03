@@ -1,16 +1,16 @@
-"use client";
+'use client'
 
 interface OrdersByStatusCardProps {
-  readonly ordersByStatus: Record<string, number>;
+  readonly ordersByStatus: Record<string, number>
 }
 
 export function OrdersByStatusCard({
   ordersByStatus,
 }: OrdersByStatusCardProps) {
   const entries = Object.entries(ordersByStatus).sort(
-    ([, leftCount], [, rightCount]) => rightCount - leftCount,
-  );
-  const totalOrders = entries.reduce((total, [, count]) => total + count, 0);
+    ([, leftCount], [, rightCount]) => rightCount - leftCount
+  )
+  const totalOrders = entries.reduce((total, [, count]) => total + count, 0)
 
   if (entries.length === 0) {
     return (
@@ -20,7 +20,7 @@ export function OrdersByStatusCard({
         </p>
         <p className="mt-2 text-sm text-slate-500">No active orders yet.</p>
       </div>
-    );
+    )
   }
 
   return (
@@ -41,7 +41,7 @@ export function OrdersByStatusCard({
 
       <ul className="space-y-3">
         {entries.map(([status, count]) => {
-          const share = totalOrders > 0 ? (count / totalOrders) * 100 : 0;
+          const share = totalOrders > 0 ? (count / totalOrders) * 100 : 0
 
           return (
             <li key={status} className="rounded-2xl bg-slate-50 p-3">
@@ -56,9 +56,9 @@ export function OrdersByStatusCard({
                 />
               </div>
             </li>
-          );
+          )
         })}
       </ul>
     </div>
-  );
+  )
 }

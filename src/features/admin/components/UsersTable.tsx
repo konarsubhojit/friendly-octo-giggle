@@ -1,27 +1,24 @@
-"use client";
+'use client'
 
-import { UserRow } from "@/features/admin/components/UserRow";
+import { UserRow } from '@/features/admin/components/UserRow'
 
 interface AdminUser {
-  readonly id: string;
-  readonly name: string | null;
-  readonly email: string;
-  readonly image: string | null;
-  readonly role: string;
-  readonly orderCount?: number;
-  readonly createdAt: string;
+  readonly id: string
+  readonly name: string | null
+  readonly email: string
+  readonly image: string | null
+  readonly role: string
+  readonly orderCount?: number
+  readonly createdAt: string
 }
 
 interface UsersTableProps {
-  readonly users: readonly AdminUser[];
-  readonly updatingUserId: string | null;
-  readonly onRoleChange: (
-    userId: string,
-    newRole: "ADMIN" | "CUSTOMER",
-  ) => void;
+  readonly users: readonly AdminUser[]
+  readonly updatingUserId: string | null
+  readonly onRoleChange: (userId: string, newRole: 'ADMIN' | 'CUSTOMER') => void
 }
 
-const TABLE_HEADERS = ["User", "Email", "Role", "Orders", "Joined", "Actions"];
+const TABLE_HEADERS = ['User', 'Email', 'Role', 'Orders', 'Joined', 'Actions']
 
 export function UsersTable({
   users,
@@ -55,5 +52,5 @@ export function UsersTable({
         </tbody>
       </table>
     </div>
-  );
+  )
 }

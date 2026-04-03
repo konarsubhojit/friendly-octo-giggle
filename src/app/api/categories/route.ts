@@ -1,9 +1,9 @@
-import { NextResponse } from "next/server";
-import { drizzleDb } from "@/lib/db";
-import { categories } from "@/lib/schema";
-import { isNull, asc } from "drizzle-orm";
+import { NextResponse } from 'next/server'
+import { drizzleDb } from '@/lib/db'
+import { categories } from '@/lib/schema'
+import { isNull, asc } from 'drizzle-orm'
 
-export const revalidate = 60;
+export const revalidate = 60
 
 export async function GET() {
   try {
@@ -11,20 +11,20 @@ export async function GET() {
       .select({ id: categories.id, name: categories.name })
       .from(categories)
       .where(isNull(categories.deletedAt))
-      .orderBy(asc(categories.sortOrder), asc(categories.name));
+      .orderBy(asc(categories.sortOrder), asc(categories.name))
 
     return NextResponse.json(
       { data: list },
       {
         headers: {
-          "Cache-Control": "public, s-maxage=60, stale-while-revalidate=30",
+          'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=30',
         },
-      },
-    );
+      }
+    )
   } catch {
     return NextResponse.json(
-      { error: "Failed to fetch categories" },
-      { status: 500 },
-    );
+      { error: 'Failed to fetch categories' },
+      { status: 500 }
+    )
   }
 }

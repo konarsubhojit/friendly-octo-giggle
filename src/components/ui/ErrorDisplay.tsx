@@ -1,7 +1,7 @@
-"use client";
+'use client'
 
 export function ErrorDisplay({ error }: Readonly<{ error: string | null }>) {
-  if (!error) return null;
+  if (!error) return null
 
   return (
     <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
@@ -23,5 +23,5 @@ export function ErrorDisplay({ error }: Readonly<{ error: string | null }>) {
         </div>
       </div>
     </div>
-  );
+  )
 }

@@ -1,34 +1,34 @@
-"use client";
+'use client'
 
-import { useState, useEffect, useCallback } from "react";
-import { StarRating } from "@/components/ui/StarRating";
-import { ReviewForm } from "@/features/product/components/ReviewForm";
-import { Card } from "@/components/ui/Card";
-import Image from "next/image";
+import { useState, useEffect, useCallback } from 'react'
+import { StarRating } from '@/components/ui/StarRating'
+import { ReviewForm } from '@/features/product/components/ReviewForm'
+import { Card } from '@/components/ui/Card'
+import Image from 'next/image'
 
 interface ReviewUser {
-  name: string | null;
-  image: string | null;
+  name: string | null
+  image: string | null
 }
 
 interface Review {
-  id: string;
-  rating: number;
-  comment: string;
-  isAnonymous: boolean;
-  createdAt: string;
-  user: ReviewUser | null;
+  id: string
+  rating: number
+  comment: string
+  isAnonymous: boolean
+  createdAt: string
+  user: ReviewUser | null
 }
 
 interface ReviewsSectionProps {
-  readonly productId: string;
+  readonly productId: string
 }
 
 const ReviewCard = ({ review }: { readonly review: Review }) => {
   const displayName =
     review.isAnonymous || !review.user
-      ? "Anonymous"
-      : (review.user.name ?? "Customer");
+      ? 'Anonymous'
+      : (review.user.name ?? 'Customer')
 
   return (
     <div className="flex gap-4 py-5 border-b border-[var(--border-warm)] last:border-0">
@@ -66,26 +66,26 @@ const ReviewCard = ({ review }: { readonly review: Review }) => {
           {review.comment}
         </p>
         <p className="text-xs text-[var(--text-muted)] mt-2">
-          {new Date(review.createdAt).toLocaleDateString("en-US", {
-            year: "numeric",
-            month: "short",
-            day: "numeric",
+          {new Date(review.createdAt).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
           })}
         </p>
       </div>
     </div>
-  );
-};
+  )
+}
 
 const RatingSummary = ({ reviews }: { readonly reviews: Review[] }) => {
-  if (reviews.length === 0) return null;
+  if (reviews.length === 0) return null
 
-  const avg = reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
+  const avg = reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
 
   const counts = [5, 4, 3, 2, 1].map((star) => ({
     star,
     count: reviews.filter((r) => r.rating === star).length,
-  }));
+  }))
 
   return (
     <div className="flex gap-6 items-start mb-6 pb-6 border-b border-[var(--border-warm)]">
@@ -96,7 +96,7 @@ const RatingSummary = ({ reviews }: { readonly reviews: Review[] }) => {
         </p>
         <StarRating rating={Math.round(avg)} size="md" />
         <p className="text-xs text-[var(--text-muted)] mt-1">
-          {reviews.length} {reviews.length === 1 ? "review" : "reviews"}
+          {reviews.length} {reviews.length === 1 ? 'review' : 'reviews'}
         </p>
       </div>
 
@@ -113,7 +113,7 @@ const RatingSummary = ({ reviews }: { readonly reviews: Review[] }) => {
                 style={{
                   width: reviews.length
                     ? `${(count / reviews.length) * 100}%`
-                    : "0%",
+                    : '0%',
                 }}
               />
             </div>
@@ -124,37 +124,37 @@ const RatingSummary = ({ reviews }: { readonly reviews: Review[] }) => {
         ))}
       </div>
     </div>
-  );
-};
+  )
+}
 
 export const ReviewsSection = ({ productId }: ReviewsSectionProps) => {
-  const [reviews, setReviews] = useState<Review[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
+  const [reviews, setReviews] = useState<Review[]>([])
+  const [loading, setLoading] = useState(true)
+  const [showForm, setShowForm] = useState(false)
 
   const fetchReviews = useCallback(async () => {
     try {
-      const params = new URLSearchParams({ productId });
-      const res = await fetch(`/api/reviews?${params.toString()}`);
+      const params = new URLSearchParams({ productId })
+      const res = await fetch(`/api/reviews?${params.toString()}`)
       if (res.ok) {
-        const data = await res.json();
-        setReviews(data.data?.reviews ?? data.reviews ?? []);
+        const data = await res.json()
+        setReviews(data.data?.reviews ?? data.reviews ?? [])
       }
     } catch {
       // Reviews are non-critical
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  }, [productId]);
+  }, [productId])
 
   useEffect(() => {
-    fetchReviews();
-  }, [fetchReviews]);
+    fetchReviews()
+  }, [fetchReviews])
 
   const handleReviewSuccess = () => {
-    setShowForm(false);
-    fetchReviews();
-  };
+    setShowForm(false)
+    fetchReviews()
+  }
 
   const reviewsContent =
     reviews.length === 0 ? (
@@ -172,7 +172,7 @@ export const ReviewsSection = ({ productId }: ReviewsSectionProps) => {
           ))}
         </div>
       </>
-    );
+    )
 
   return (
     <section aria-labelledby="reviews-heading" className="mt-12">
@@ -224,5 +224,5 @@ export const ReviewsSection = ({ productId }: ReviewsSectionProps) => {
         )}
       </Card>
     </section>
-  );
-};
+  )
+}

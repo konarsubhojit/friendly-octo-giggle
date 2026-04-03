@@ -1,6 +1,6 @@
 ---
 name: contextstream-workflow
-description: "Manage persistent AI memory across sessions with ContextStream MCP."
+description: 'Manage persistent AI memory across sessions with ContextStream MCP.'
 ---
 
 # ContextStream Workflow Skill

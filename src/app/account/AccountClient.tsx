@@ -1,50 +1,50 @@
-"use client";
+'use client'
 
-import { useCallback, useEffect, useState } from "react";
-import { useSession } from "next-auth/react";
-import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
-import { AlertBanner } from "@/components/ui/AlertBanner";
-import { AuthRequiredState } from "@/components/ui/AuthRequiredState";
-import { Card } from "@/components/ui/Card";
-import { GradientHeading } from "@/components/ui/GradientHeading";
-import { API_ERRORS } from "@/lib/constants/error-messages";
-import { ProfileSection } from "@/app/account/ProfileSection";
-import { PreferencesSection } from "@/app/account/PreferencesSection";
-import { PasswordSection } from "@/app/account/PasswordSection";
-import { RecentOrdersSection } from "@/app/account/RecentOrdersSection";
-import type { UserProfile } from "@/app/account/account-shared";
+import { useCallback, useEffect, useState } from 'react'
+import { useSession } from 'next-auth/react'
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
+import { AlertBanner } from '@/components/ui/AlertBanner'
+import { AuthRequiredState } from '@/components/ui/AuthRequiredState'
+import { Card } from '@/components/ui/Card'
+import { GradientHeading } from '@/components/ui/GradientHeading'
+import { API_ERRORS } from '@/lib/constants/error-messages'
+import { ProfileSection } from '@/app/account/ProfileSection'
+import { PreferencesSection } from '@/app/account/PreferencesSection'
+import { PasswordSection } from '@/app/account/PasswordSection'
+import { RecentOrdersSection } from '@/app/account/RecentOrdersSection'
+import type { UserProfile } from '@/app/account/account-shared'
 
 export default function AccountClient() {
-  const { data: session, status: authStatus } = useSession();
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const { data: session, status: authStatus } = useSession()
+  const [profile, setProfile] = useState<UserProfile | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
   const fetchProfile = useCallback(async () => {
     try {
-      const res = await fetch("/api/account");
-      const data = await res.json();
+      const res = await fetch('/api/account')
+      const data = await res.json()
       if (data.success) {
-        setProfile(data.data);
+        setProfile(data.data)
       } else {
-        setError(API_ERRORS.PROFILE_LOAD);
+        setError(API_ERRORS.PROFILE_LOAD)
       }
     } catch {
-      setError(API_ERRORS.PROFILE_LOAD);
+      setError(API_ERRORS.PROFILE_LOAD)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  }, []);
+  }, [])
 
   useEffect(() => {
-    if (authStatus === "authenticated") {
-      fetchProfile();
-    } else if (authStatus === "unauthenticated") {
-      setLoading(false);
+    if (authStatus === 'authenticated') {
+      fetchProfile()
+    } else if (authStatus === 'unauthenticated') {
+      setLoading(false)
     }
-  }, [authStatus, fetchProfile]);
+  }, [authStatus, fetchProfile])
 
-  if (authStatus === "loading" || loading) {
+  if (authStatus === 'loading' || loading) {
     return (
       <div className="min-h-screen bg-warm-gradient">
         <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
@@ -53,7 +53,7 @@ export default function AccountClient() {
           </div>
         </main>
       </div>
-    );
+    )
   }
 
   if (!session?.user) {
@@ -66,7 +66,7 @@ export default function AccountClient() {
           />
         </main>
       </div>
-    );
+    )
   }
 
   return (
@@ -101,5 +101,5 @@ export default function AccountClient() {
         )}
       </main>
     </div>
-  );
+  )
 }

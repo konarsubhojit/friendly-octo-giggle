@@ -1,8 +1,8 @@
-"use client";
+'use client'
 
 interface ErrorProps {
-  readonly error: Error & { digest?: string };
-  readonly reset: () => void;
+  readonly error: Error & { digest?: string }
+  readonly reset: () => void
 }
 
 export default function ShopError({ error, reset }: ErrorProps) {
@@ -28,7 +28,7 @@ export default function ShopError({ error, reset }: ErrorProps) {
           Shop Error
         </h2>
         <p className="text-[var(--text-secondary)] mb-4">
-          {error.message || "Something went wrong loading the shop"}
+          {error.message || 'Something went wrong loading the shop'}
         </p>
         {error.digest && (
           <p className="text-xs text-[var(--text-muted)] mb-4">
@@ -43,5 +43,5 @@ export default function ShopError({ error, reset }: ErrorProps) {
         </button>
       </div>
     </div>
-  );
+  )
 }

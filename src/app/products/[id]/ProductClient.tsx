@@ -1,72 +1,72 @@
-"use client";
+'use client'
 
-import { useState, useEffect, useMemo, useRef } from "react";
-import Link from "next/link";
-import dynamic from "next/dynamic";
-import { useSession } from "next-auth/react";
-import { useDispatch, useSelector } from "react-redux";
-import { Product, ProductVariation } from "@/lib/types";
-import { addToCart, fetchCart } from "@/features/cart/store/cartSlice";
-import { addPendingCartItem } from "@/features/cart/services/pending-cart";
-import { useCurrency } from "@/contexts/CurrencyContext";
-import type { AppDispatch, RootState } from "@/lib/store";
-import { StockBadge } from "@/features/product/components/StockBadge";
-import { VariationButton } from "@/features/product/components/VariationButton";
-import { ShareButton } from "@/features/product/components/ShareButton";
-import { ButterflyAccent } from "@/components/ui/DecorativeElements";
-import ImageCarousel from "@/features/product/components/ImageCarousel";
-import { useRecentlyViewed } from "@/features/product/hooks/useRecentlyViewed";
-import RecentlyViewed from "@/features/product/components/RecentlyViewed";
-import { ReviewsSection } from "@/features/product/components/ReviewsSection";
+import { useState, useEffect, useMemo, useRef } from 'react'
+import Link from 'next/link'
+import dynamic from 'next/dynamic'
+import { useSession } from 'next-auth/react'
+import { useDispatch, useSelector } from 'react-redux'
+import { Product, ProductVariation } from '@/lib/types'
+import { addToCart, fetchCart } from '@/features/cart/store/cartSlice'
+import { addPendingCartItem } from '@/features/cart/services/pending-cart'
+import { useCurrency } from '@/contexts/CurrencyContext'
+import type { AppDispatch, RootState } from '@/lib/store'
+import { StockBadge } from '@/features/product/components/StockBadge'
+import { VariationButton } from '@/features/product/components/VariationButton'
+import { ShareButton } from '@/features/product/components/ShareButton'
+import { ButterflyAccent } from '@/components/ui/DecorativeElements'
+import ImageCarousel from '@/features/product/components/ImageCarousel'
+import { useRecentlyViewed } from '@/features/product/hooks/useRecentlyViewed'
+import RecentlyViewed from '@/features/product/components/RecentlyViewed'
+import { ReviewsSection } from '@/features/product/components/ReviewsSection'
 
 const ProductAssistant = dynamic(
-  () => import("@/features/product/components/ProductAssistant"),
-  { ssr: false },
-);
+  () => import('@/features/product/components/ProductAssistant'),
+  { ssr: false }
+)
 
 interface ProductClientProps {
-  readonly product: Product;
-  readonly initialVariationId: string | null;
+  readonly product: Product
+  readonly initialVariationId: string | null
 }
 
 const getVariationImages = (variation: ProductVariation): string[] =>
   [
     ...(variation.image ? [variation.image] : []),
     ...(variation.images ?? []),
-  ].filter(Boolean);
+  ].filter(Boolean)
 
 const getProductImages = (product: Product): string[] =>
-  [product.image, ...(product.images ?? [])].filter(Boolean);
+  [product.image, ...(product.images ?? [])].filter(Boolean)
 
 const getCarouselImages = (
   product: Product,
-  selectedVariation: ProductVariation | null,
+  selectedVariation: ProductVariation | null
 ): string[] => {
   if (selectedVariation) {
-    const imgs = getVariationImages(selectedVariation);
-    if (imgs.length > 0) return imgs;
+    const imgs = getVariationImages(selectedVariation)
+    if (imgs.length > 0) return imgs
   }
-  return getProductImages(product);
-};
+  return getProductImages(product)
+}
 
 const resolveInitialVariation = (
   product: Product,
-  variationId: string | null,
+  variationId: string | null
 ): ProductVariation | null => {
-  if (!variationId) return null;
-  const variations = product.variations ?? [];
-  return variations.find((v) => v.id === variationId) ?? null;
-};
+  if (!variationId) return null
+  const variations = product.variations ?? []
+  return variations.find((v) => v.id === variationId) ?? null
+}
 
 const getClampedQtyState = (
   quantity: number,
-  stock: number,
+  stock: number
 ): { qty: number; message: string } => {
-  if (stock === 0) return { qty: quantity, message: "" };
+  if (stock === 0) return { qty: quantity, message: '' }
   if (quantity > stock)
-    return { qty: stock, message: `Only ${stock} available` };
-  return { qty: quantity, message: "" };
-};
+    return { qty: stock, message: `Only ${stock} available` }
+  return { qty: quantity, message: '' }
+}
 
 const AddingSpinner = () => (
   <span className="flex items-center justify-center gap-2">
@@ -87,7 +87,7 @@ const AddingSpinner = () => (
     </svg>
     Adding...
   </span>
-);
+)
 
 const CartButtonLabel = () => (
   <span className="flex items-center justify-center gap-2">
@@ -106,7 +106,7 @@ const CartButtonLabel = () => (
     </svg>
     Add to Cart
   </span>
-);
+)
 
 const BreadcrumbNav = ({ productName }: { readonly productName: string }) => (
   <nav className="mb-6 text-sm">
@@ -123,12 +123,12 @@ const BreadcrumbNav = ({ productName }: { readonly productName: string }) => (
       </span>
     </div>
   </nav>
-);
+)
 
 const OutOfStockPanel = ({
   currentCartQuantity,
 }: {
-  readonly currentCartQuantity: number;
+  readonly currentCartQuantity: number
 }) => (
   <div className="bg-[var(--surface)]/80 backdrop-blur-lg rounded-2xl shadow-warm border border-[var(--border-warm)] p-8">
     {currentCartQuantity > 0 ? (
@@ -151,8 +151,8 @@ const OutOfStockPanel = ({
           <span className="text-lg font-bold">All Available Stock in Cart</span>
         </div>
         <p className="mt-2 text-sm text-[var(--text-secondary)]">
-          You have all {currentCartQuantity} available{" "}
-          {currentCartQuantity === 1 ? "item" : "items"} in your cart. No more
+          You have all {currentCartQuantity} available{' '}
+          {currentCartQuantity === 1 ? 'item' : 'items'} in your cart. No more
           can be added.
         </p>
         <Link
@@ -194,40 +194,40 @@ const OutOfStockPanel = ({
       </>
     )}
   </div>
-);
+)
 
 interface PriceModifierDisplayProps {
-  readonly selectedVariation: ProductVariation | null;
+  readonly selectedVariation: ProductVariation | null
 }
 
 const PriceModifierDisplay = ({
   selectedVariation,
 }: PriceModifierDisplayProps) => {
-  if (!selectedVariation) return null;
+  if (!selectedVariation) return null
   return (
     <div className="mt-2 text-sm text-[var(--text-secondary)]">
       Variation price — independently set
     </div>
-  );
-};
+  )
+}
 
 interface VariationSelectorProps {
-  readonly variations: ProductVariation[] | null | undefined;
-  readonly selectedVariation: ProductVariation | null;
-  readonly formatPrice: (amount: number) => string;
-  readonly onSelect: (v: ProductVariation) => void;
-  readonly onSelectBase: () => void;
-  readonly basePrice: number;
-  readonly cartQuantities: Record<string, number>;
+  readonly variations: ProductVariation[] | null | undefined
+  readonly selectedVariation: ProductVariation | null
+  readonly formatPrice: (amount: number) => string
+  readonly onSelect: (v: ProductVariation) => void
+  readonly onSelectBase: () => void
+  readonly basePrice: number
+  readonly cartQuantities: Record<string, number>
 }
 
 const baseButtonClass = (isSelected: boolean) => {
   const base =
-    "p-4 border-2 rounded-xl transition-all duration-300 focus-warm text-left";
+    'p-4 border-2 rounded-xl transition-all duration-300 focus-warm text-left'
   return isSelected
     ? `${base} border-[var(--accent-warm)] bg-[var(--accent-cream)] shadow-warm scale-105`
-    : `${base} border-[var(--border-warm)] hover:border-[var(--accent-warm)] hover:shadow-warm hover:scale-105 bg-[var(--accent-cream)]/50`;
-};
+    : `${base} border-[var(--border-warm)] hover:border-[var(--accent-warm)] hover:shadow-warm hover:scale-105 bg-[var(--accent-cream)]/50`
+}
 
 const VariationSelector = ({
   variations,
@@ -238,19 +238,19 @@ const VariationSelector = ({
   basePrice,
   cartQuantities,
 }: VariationSelectorProps) => {
-  if (!variations || variations.length === 0) return null;
+  if (!variations || variations.length === 0) return null
 
-  const styles = variations.filter((v) => v.variationType === "styling");
-  const colours = variations.filter((v) => v.variationType === "colour");
+  const styles = variations.filter((v) => v.variationType === 'styling')
+  const colours = variations.filter((v) => v.variationType === 'colour')
 
   // Group colours by their parent style
-  const baseColours = colours.filter((c) => !c.styleId);
-  const coloursByStyle = new Map<string, ProductVariation[]>();
+  const baseColours = colours.filter((c) => !c.styleId)
+  const coloursByStyle = new Map<string, ProductVariation[]>()
   for (const c of colours) {
     if (c.styleId) {
-      const list = coloursByStyle.get(c.styleId) ?? [];
-      list.push(c);
-      coloursByStyle.set(c.styleId, list);
+      const list = coloursByStyle.get(c.styleId) ?? []
+      list.push(c)
+      coloursByStyle.set(c.styleId, list)
     }
   }
 
@@ -294,21 +294,21 @@ const VariationSelector = ({
           ))}
         </div>
       </div>
-    );
+    )
   }
 
   // Determine the active style: find the style that owns the currently selected colour,
   // or default to base if no colour is selected
-  const activeStyleId = selectedVariation?.styleId ?? null;
+  const activeStyleId = selectedVariation?.styleId ?? null
 
   // Derive the colour list for the active style
   const activeColours =
     activeStyleId === null
       ? baseColours
-      : (coloursByStyle.get(activeStyleId) ?? []);
+      : (coloursByStyle.get(activeStyleId) ?? [])
 
   // Determine if we have more than just base colours (i.e. named styles exist)
-  const hasNamedStyles = styles.length > 0;
+  const hasNamedStyles = styles.length > 0
 
   return (
     <div className="mb-6 space-y-5">
@@ -332,41 +332,40 @@ const VariationSelector = ({
                 onClick={() => {
                   // Select the first base colour, or go to base
                   if (baseColours.length > 0) {
-                    onSelect(baseColours[0]);
+                    onSelect(baseColours[0])
                   } else {
-                    onSelectBase();
+                    onSelectBase()
                   }
                 }}
                 aria-pressed={activeStyleId === null}
                 className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
                   activeStyleId === null
-                    ? "bg-[var(--accent-warm)] text-white shadow-warm"
-                    : "bg-[var(--accent-cream)] text-[var(--text-secondary)] border border-[var(--border-warm)] hover:border-[var(--accent-warm)]"
+                    ? 'bg-[var(--accent-warm)] text-white shadow-warm'
+                    : 'bg-[var(--accent-cream)] text-[var(--text-secondary)] border border-[var(--border-warm)] hover:border-[var(--accent-warm)]'
                 }`}
               >
                 Base
               </button>
             )}
             {styles.map((style) => {
-              const styleColourCount =
-                coloursByStyle.get(style.id)?.length ?? 0;
+              const styleColourCount = coloursByStyle.get(style.id)?.length ?? 0
               return (
                 <button
                   key={style.id}
                   onClick={() => {
-                    const styleColours = coloursByStyle.get(style.id);
+                    const styleColours = coloursByStyle.get(style.id)
                     if (styleColours && styleColours.length > 0) {
-                      onSelect(styleColours[0]);
+                      onSelect(styleColours[0])
                     }
                   }}
                   aria-pressed={activeStyleId === style.id}
                   disabled={styleColourCount === 0}
                   className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
                     activeStyleId === style.id
-                      ? "bg-[var(--accent-warm)] text-white shadow-warm"
+                      ? 'bg-[var(--accent-warm)] text-white shadow-warm'
                       : styleColourCount === 0
-                        ? "bg-slate-100 text-slate-400 cursor-not-allowed"
-                        : "bg-[var(--accent-cream)] text-[var(--text-secondary)] border border-[var(--border-warm)] hover:border-[var(--accent-warm)]"
+                        ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                        : 'bg-[var(--accent-cream)] text-[var(--text-secondary)] border border-[var(--border-warm)] hover:border-[var(--accent-warm)]'
                   }`}
                 >
                   {style.name}
@@ -374,7 +373,7 @@ const VariationSelector = ({
                     <span className="ml-1 text-xs">(no colours)</span>
                   )}
                 </button>
-              );
+              )
             })}
           </div>
         </div>
@@ -421,12 +420,12 @@ const VariationSelector = ({
         </div>
       ) : null}
     </div>
-  );
-};
+  )
+}
 
 interface ProductImageSectionProps {
-  readonly images: string[];
-  readonly productName: string;
+  readonly images: string[]
+  readonly productName: string
 }
 
 const ProductImageSection = ({
@@ -437,16 +436,16 @@ const ProductImageSection = ({
     <ImageCarousel images={images} productName={productName} />
     <ButterflyAccent className="absolute -top-4 -left-4 w-10 h-10 opacity-30 hidden sm:block animate-float-gentle" />
   </div>
-);
+)
 
 interface ProductInfoCardProps {
-  readonly product: Product;
-  readonly formatPrice: (amount: number) => string;
-  readonly effectivePrice: number;
-  readonly selectedVariation: ProductVariation | null;
-  readonly setSelectedVariation: (v: ProductVariation | null) => void;
-  readonly effectiveStock: number;
-  readonly cartQuantities: Record<string, number>;
+  readonly product: Product
+  readonly formatPrice: (amount: number) => string
+  readonly effectivePrice: number
+  readonly selectedVariation: ProductVariation | null
+  readonly setSelectedVariation: (v: ProductVariation | null) => void
+  readonly effectiveStock: number
+  readonly cartQuantities: Record<string, number>
 }
 
 const ProductInfoCard = ({
@@ -501,22 +500,22 @@ const ProductInfoCard = ({
         cartQuantities={cartQuantities}
       />
     </div>
-  );
-};
+  )
+}
 
 interface AddToCartSectionProps {
-  readonly error: string;
-  readonly cartSuccess: boolean;
-  readonly stockWarning: string;
-  readonly quantity: number;
-  readonly quantityMessage: string;
-  readonly setQuantity: (q: number) => void;
-  readonly effectiveStock: number;
-  readonly effectivePrice: number;
-  readonly addingToCart: boolean;
-  readonly handleAddToCart: () => void;
-  readonly formatPrice: (amount: number) => string;
-  readonly currentCartQuantity: number;
+  readonly error: string
+  readonly cartSuccess: boolean
+  readonly stockWarning: string
+  readonly quantity: number
+  readonly quantityMessage: string
+  readonly setQuantity: (q: number) => void
+  readonly effectiveStock: number
+  readonly effectivePrice: number
+  readonly addingToCart: boolean
+  readonly handleAddToCart: () => void
+  readonly formatPrice: (amount: number) => string
+  readonly currentCartQuantity: number
 }
 
 const AddToCartSection = ({
@@ -553,7 +552,7 @@ const AddToCartSection = ({
           </svg>
           <span className="font-medium text-sm">
             You already have <strong>{currentCartQuantity}</strong> of this item
-            in your{" "}
+            in your{' '}
             <Link href="/cart" className="underline font-semibold">
               cart
             </Link>
@@ -624,12 +623,12 @@ const AddToCartSection = ({
           value={quantity}
           onChange={(e) => setQuantity(Number(e.target.value))}
           aria-label="Select quantity"
-          aria-describedby={quantityMessage ? "quantity-message" : undefined}
+          aria-describedby={quantityMessage ? 'quantity-message' : undefined}
           className="w-full px-3 py-2.5 border-2 border-[var(--border-warm)] rounded-lg text-base font-semibold text-[var(--foreground)] bg-[var(--surface)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-warm)] focus:border-transparent transition-colors cursor-pointer"
         >
           {Array.from(
             { length: Math.min(effectiveStock, 10) },
-            (_, i) => i + 1,
+            (_, i) => i + 1
           ).map((n) => (
             <option key={n} value={n}>
               {n}
@@ -699,51 +698,51 @@ const AddToCartSection = ({
         </Link>
       </div>
     </div>
-  );
-};
+  )
+}
 
 export default function ProductClient({
   product,
   initialVariationId,
 }: ProductClientProps) {
-  const { status } = useSession();
-  const dispatch = useDispatch<AppDispatch>();
-  const { formatPrice } = useCurrency();
-  const cart = useSelector((state: RootState) => state.cart.cart);
-  const { trackProduct } = useRecentlyViewed();
+  const { status } = useSession()
+  const dispatch = useDispatch<AppDispatch>()
+  const { formatPrice } = useCurrency()
+  const cart = useSelector((state: RootState) => state.cart.cart)
+  const { trackProduct } = useRecentlyViewed()
 
-  const trackProductRef = useRef(trackProduct);
-  trackProductRef.current = trackProduct;
-  const [quantity, setQuantity] = useState(1);
-  const [quantityMessage, setQuantityMessage] = useState("");
+  const trackProductRef = useRef(trackProduct)
+  trackProductRef.current = trackProduct
+  const [quantity, setQuantity] = useState(1)
+  const [quantityMessage, setQuantityMessage] = useState('')
   const [selectedVariation, setSelectedVariation] =
     useState<ProductVariation | null>(() =>
-      resolveInitialVariation(product, initialVariationId),
-    );
-  const [addingToCart, setAddingToCart] = useState(false);
-  const [cartSuccess, setCartSuccess] = useState(false);
-  const [error, setError] = useState("");
-  const [stockWarning, setStockWarning] = useState("");
+      resolveInitialVariation(product, initialVariationId)
+    )
+  const [addingToCart, setAddingToCart] = useState(false)
+  const [cartSuccess, setCartSuccess] = useState(false)
+  const [error, setError] = useState('')
+  const [stockWarning, setStockWarning] = useState('')
 
   useEffect(() => {
-    if (status !== "authenticated") return;
-    dispatch(fetchCart());
-  }, [dispatch, status]);
+    if (status !== 'authenticated') return
+    dispatch(fetchCart())
+  }, [dispatch, status])
 
   const cartQuantities = useMemo(() => {
-    const map: Record<string, number> = {};
-    if (!cart?.items) return map;
+    const map: Record<string, number> = {}
+    if (!cart?.items) return map
     for (const item of cart.items) {
       if (item.productId === product.id) {
-        const key = item.variationId ?? "__base__";
-        map[key] = (map[key] ?? 0) + item.quantity;
+        const key = item.variationId ?? '__base__'
+        map[key] = (map[key] ?? 0) + item.quantity
       }
     }
-    return map;
-  }, [cart?.items, product.id]);
+    return map
+  }, [cart?.items, product.id])
 
   const currentCartQuantity =
-    cartQuantities[selectedVariation?.id ?? "__base__"] ?? 0;
+    cartQuantities[selectedVariation?.id ?? '__base__'] ?? 0
 
   useEffect(() => {
     trackProductRef.current({
@@ -753,52 +752,46 @@ export default function ProductClient({
       price: product.price,
       category: product.category,
       viewedAt: Date.now(),
-    });
-  }, [
-    product.id,
-    product.name,
-    product.image,
-    product.price,
-    product.category,
-  ]);
+    })
+  }, [product.id, product.name, product.image, product.price, product.category])
 
   const effectivePrice = selectedVariation
     ? selectedVariation.price
-    : product.price;
+    : product.price
 
   const effectiveStock = selectedVariation
     ? selectedVariation.stock
-    : product.stock;
+    : product.stock
 
-  const remainingStock = Math.max(0, effectiveStock - currentCartQuantity);
+  const remainingStock = Math.max(0, effectiveStock - currentCartQuantity)
 
   useEffect(() => {
-    const { qty, message } = getClampedQtyState(quantity, remainingStock);
-    if (qty !== quantity) setQuantity(qty);
-    setQuantityMessage(message);
-  }, [remainingStock, quantity]);
+    const { qty, message } = getClampedQtyState(quantity, remainingStock)
+    if (qty !== quantity) setQuantity(qty)
+    setQuantityMessage(message)
+  }, [remainingStock, quantity])
 
   const carouselImages = useMemo(
     () => getCarouselImages(product, selectedVariation),
-    [product, selectedVariation],
-  );
+    [product, selectedVariation]
+  )
 
   const handleAddToCart = async () => {
-    setAddingToCart(true);
-    setError("");
-    setCartSuccess(false);
-    setStockWarning("");
+    setAddingToCart(true)
+    setError('')
+    setCartSuccess(false)
+    setStockWarning('')
 
     try {
-      if (status !== "authenticated") {
+      if (status !== 'authenticated') {
         addPendingCartItem({
           productId: product.id,
           variationId: selectedVariation?.id ?? null,
           quantity,
-        });
-        setCartSuccess(true);
-        setTimeout(() => setCartSuccess(false), 3000);
-        return;
+        })
+        setCartSuccess(true)
+        setTimeout(() => setCartSuccess(false), 3000)
+        return
       }
 
       const result = await dispatch(
@@ -807,33 +800,33 @@ export default function ProductClient({
 
           variationId: selectedVariation?.id ?? null,
           quantity,
-        }),
-      ).unwrap();
+        })
+      ).unwrap()
 
       if (result.warning) {
         if (result.adjustedQuantity) {
-          setQuantity(Math.min(result.adjustedQuantity, remainingStock));
+          setQuantity(Math.min(result.adjustedQuantity, remainingStock))
         }
-        setStockWarning(result.warning);
-        setCartSuccess(true);
+        setStockWarning(result.warning)
+        setCartSuccess(true)
         setTimeout(() => {
-          setCartSuccess(false);
-          setStockWarning("");
-        }, 5000);
+          setCartSuccess(false)
+          setStockWarning('')
+        }, 5000)
       } else {
-        setCartSuccess(true);
-        setTimeout(() => setCartSuccess(false), 3000);
+        setCartSuccess(true)
+        setTimeout(() => setCartSuccess(false), 3000)
       }
     } catch (err) {
       setError(
-        typeof err === "string"
+        typeof err === 'string'
           ? err
-          : "Something went wrong. Please try again.",
-      );
+          : 'Something went wrong. Please try again.'
+      )
     } finally {
-      setAddingToCart(false);
+      setAddingToCart(false)
     }
-  };
+  }
 
   return (
     <div className="min-h-screen bg-warm-gradient">
@@ -893,5 +886,5 @@ export default function ProductClient({
 
       <RecentlyViewed />
     </div>
-  );
+  )
 }

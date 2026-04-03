@@ -7,6 +7,6 @@ const Footer = () => (
       © 2024–Present The Kiyon Store. All rights reserved.
     </p>
   </footer>
-);
+)
 
-export default Footer;
+export default Footer

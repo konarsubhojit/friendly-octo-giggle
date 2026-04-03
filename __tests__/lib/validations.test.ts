@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from 'vitest'
 import {
   ProductSchema,
   ProductInputSchema,
@@ -18,696 +18,692 @@ import {
   CreateShareSchema,
   CreateVariationSchema,
   UpdateVariationSchema,
-} from "@/lib/validations";
+} from '@/lib/validations'
 
-const validUUID = "550e8400-e29b-41d4-a716-446655440000";
-const validShortId = "abc1234"; // Base62 7-char short ID used for products, variations, carts, orders
-const validISO = "2024-01-01T00:00:00.000Z";
+const validUUID = '550e8400-e29b-41d4-a716-446655440000'
+const validShortId = 'abc1234' // Base62 7-char short ID used for products, variations, carts, orders
+const validISO = '2024-01-01T00:00:00.000Z'
 
-describe("ProductSchema", () => {
+describe('ProductSchema', () => {
   const validProduct = {
     id: validShortId,
-    name: "Test Product",
-    description: "A test product description",
+    name: 'Test Product',
+    description: 'A test product description',
     price: 29.99,
-    image: "https://example.com/image.jpg",
+    image: 'https://example.com/image.jpg',
     stock: 10,
-    category: "Electronics",
+    category: 'Electronics',
     createdAt: validISO,
     updatedAt: validISO,
-  };
+  }
 
-  it("accepts valid product", () => {
+  it('accepts valid product', () => {
     expect(ProductSchema.parse(validProduct)).toEqual({
       ...validProduct,
       images: [],
-    });
-  });
+    })
+  })
 
-  it("rejects invalid product ID", () => {
+  it('rejects invalid product ID', () => {
     expect(() =>
-      ProductSchema.parse({ ...validProduct, id: "not-valid-id" }),
-    ).toThrow();
-  });
+      ProductSchema.parse({ ...validProduct, id: 'not-valid-id' })
+    ).toThrow()
+  })
 
-  it("rejects empty name", () => {
-    expect(() => ProductSchema.parse({ ...validProduct, name: "" })).toThrow();
-  });
+  it('rejects empty name', () => {
+    expect(() => ProductSchema.parse({ ...validProduct, name: '' })).toThrow()
+  })
 
-  it("rejects negative price", () => {
-    expect(() => ProductSchema.parse({ ...validProduct, price: -5 })).toThrow();
-  });
+  it('rejects negative price', () => {
+    expect(() => ProductSchema.parse({ ...validProduct, price: -5 })).toThrow()
+  })
 
-  it("rejects zero price", () => {
-    expect(() => ProductSchema.parse({ ...validProduct, price: 0 })).toThrow();
-  });
+  it('rejects zero price', () => {
+    expect(() => ProductSchema.parse({ ...validProduct, price: 0 })).toThrow()
+  })
 
-  it("rejects negative stock", () => {
-    expect(() => ProductSchema.parse({ ...validProduct, stock: -1 })).toThrow();
-  });
+  it('rejects negative stock', () => {
+    expect(() => ProductSchema.parse({ ...validProduct, stock: -1 })).toThrow()
+  })
 
-  it("accepts zero stock", () => {
-    expect(ProductSchema.parse({ ...validProduct, stock: 0 }).stock).toBe(0);
-  });
+  it('accepts zero stock', () => {
+    expect(ProductSchema.parse({ ...validProduct, stock: 0 }).stock).toBe(0)
+  })
 
-  it("rejects non-integer stock", () => {
+  it('rejects non-integer stock', () => {
+    expect(() => ProductSchema.parse({ ...validProduct, stock: 1.5 })).toThrow()
+  })
+
+  it('rejects invalid image URL', () => {
     expect(() =>
-      ProductSchema.parse({ ...validProduct, stock: 1.5 }),
-    ).toThrow();
-  });
+      ProductSchema.parse({ ...validProduct, image: 'not-a-url' })
+    ).toThrow()
+  })
 
-  it("rejects invalid image URL", () => {
+  it('rejects invalid datetime format', () => {
     expect(() =>
-      ProductSchema.parse({ ...validProduct, image: "not-a-url" }),
-    ).toThrow();
-  });
+      ProductSchema.parse({ ...validProduct, createdAt: '2024-01-01' })
+    ).toThrow()
+  })
 
-  it("rejects invalid datetime format", () => {
+  it('rejects name exceeding 200 chars', () => {
     expect(() =>
-      ProductSchema.parse({ ...validProduct, createdAt: "2024-01-01" }),
-    ).toThrow();
-  });
+      ProductSchema.parse({ ...validProduct, name: 'x'.repeat(201) })
+    ).toThrow()
+  })
+})
 
-  it("rejects name exceeding 200 chars", () => {
-    expect(() =>
-      ProductSchema.parse({ ...validProduct, name: "x".repeat(201) }),
-    ).toThrow();
-  });
-});
-
-describe("ProductInputSchema", () => {
-  it("accepts valid input without id/timestamps", () => {
+describe('ProductInputSchema', () => {
+  it('accepts valid input without id/timestamps', () => {
     const input = {
-      name: "New Product",
-      description: "Description",
+      name: 'New Product',
+      description: 'Description',
       price: 9.99,
-      image: "https://example.com/img.png",
+      image: 'https://example.com/img.png',
       stock: 5,
-      category: "Books",
-    };
-    expect(ProductInputSchema.parse(input)).toEqual({ ...input, images: [] });
-  });
+      category: 'Books',
+    }
+    expect(ProductInputSchema.parse(input)).toEqual({ ...input, images: [] })
+  })
 
-  it("rejects extra id field", () => {
+  it('rejects extra id field', () => {
     const input = {
       id: validUUID,
-      name: "Product",
-      description: "Desc",
+      name: 'Product',
+      description: 'Desc',
       price: 10,
-      image: "https://example.com/img.png",
+      image: 'https://example.com/img.png',
       stock: 5,
-      category: "Books",
-    };
-    const parsed = ProductInputSchema.parse(input);
-    expect(parsed).not.toHaveProperty("id");
-  });
-});
+      category: 'Books',
+    }
+    const parsed = ProductInputSchema.parse(input)
+    expect(parsed).not.toHaveProperty('id')
+  })
+})
 
-describe("ProductUpdateSchema", () => {
-  it("accepts partial update", () => {
-    expect(ProductUpdateSchema.parse({ name: "Updated" })).toEqual({
-      name: "Updated",
+describe('ProductUpdateSchema', () => {
+  it('accepts partial update', () => {
+    expect(ProductUpdateSchema.parse({ name: 'Updated' })).toEqual({
+      name: 'Updated',
       images: [],
-    });
-  });
+    })
+  })
 
-  it("accepts empty object", () => {
-    expect(ProductUpdateSchema.parse({})).toEqual({ images: [] });
-  });
-});
+  it('accepts empty object', () => {
+    expect(ProductUpdateSchema.parse({})).toEqual({ images: [] })
+  })
+})
 
-describe("OrderStatusEnum", () => {
-  it.each(["PENDING", "PROCESSING", "SHIPPED", "DELIVERED", "CANCELLED"])(
-    "accepts %s",
+describe('OrderStatusEnum', () => {
+  it.each(['PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED'])(
+    'accepts %s',
     (status) => {
-      expect(OrderStatusEnum.parse(status)).toBe(status);
-    },
-  );
+      expect(OrderStatusEnum.parse(status)).toBe(status)
+    }
+  )
 
-  it("rejects invalid status", () => {
-    expect(() => OrderStatusEnum.parse("UNKNOWN")).toThrow();
-  });
-});
+  it('rejects invalid status', () => {
+    expect(() => OrderStatusEnum.parse('UNKNOWN')).toThrow()
+  })
+})
 
-describe("OrderItemSchema", () => {
+describe('OrderItemSchema', () => {
   const validItem = {
     productId: validShortId,
     quantity: 2,
     price: 19.99,
-  };
+  }
 
-  it("accepts valid order item", () => {
+  it('accepts valid order item', () => {
     expect(OrderItemSchema.parse(validItem)).toEqual({
       ...validItem,
       customizationNote: undefined,
-    });
-  });
+    })
+  })
 
-  it("accepts item with customization note", () => {
-    const item = { ...validItem, customizationNote: "Gift wrap please" };
+  it('accepts item with customization note', () => {
+    const item = { ...validItem, customizationNote: 'Gift wrap please' }
     expect(OrderItemSchema.parse(item).customizationNote).toBe(
-      "Gift wrap please",
-    );
-  });
+      'Gift wrap please'
+    )
+  })
 
-  it("accepts null customization note", () => {
-    const item = { ...validItem, customizationNote: null };
-    expect(OrderItemSchema.parse(item).customizationNote).toBeNull();
-  });
+  it('accepts null customization note', () => {
+    const item = { ...validItem, customizationNote: null }
+    expect(OrderItemSchema.parse(item).customizationNote).toBeNull()
+  })
 
-  it("rejects zero quantity", () => {
+  it('rejects zero quantity', () => {
+    expect(() => OrderItemSchema.parse({ ...validItem, quantity: 0 })).toThrow()
+  })
+
+  it('rejects negative quantity', () => {
     expect(() =>
-      OrderItemSchema.parse({ ...validItem, quantity: 0 }),
-    ).toThrow();
-  });
+      OrderItemSchema.parse({ ...validItem, quantity: -1 })
+    ).toThrow()
+  })
 
-  it("rejects negative quantity", () => {
+  it('rejects non-integer quantity', () => {
     expect(() =>
-      OrderItemSchema.parse({ ...validItem, quantity: -1 }),
-    ).toThrow();
-  });
+      OrderItemSchema.parse({ ...validItem, quantity: 1.5 })
+    ).toThrow()
+  })
 
-  it("rejects non-integer quantity", () => {
-    expect(() =>
-      OrderItemSchema.parse({ ...validItem, quantity: 1.5 }),
-    ).toThrow();
-  });
-
-  it("rejects customization note exceeding 500 chars", () => {
+  it('rejects customization note exceeding 500 chars', () => {
     expect(() =>
       OrderItemSchema.parse({
         ...validItem,
-        customizationNote: "x".repeat(501),
-      }),
-    ).toThrow();
-  });
-});
+        customizationNote: 'x'.repeat(501),
+      })
+    ).toThrow()
+  })
+})
 
-describe("CreateOrderSchema", () => {
+describe('CreateOrderSchema', () => {
   const validOrder = {
-    customerName: "John Doe",
-    customerEmail: "john@example.com",
-    customerAddress: "123 Main Street, Anytown, USA 12345",
+    customerName: 'John Doe',
+    customerEmail: 'john@example.com',
+    customerAddress: '123 Main Street, Anytown, USA 12345',
     items: [{ productId: validShortId, quantity: 1, price: 29.99 }],
-  };
+  }
 
-  it("accepts valid order", () => {
-    const parsed = CreateOrderSchema.parse(validOrder);
-    expect(parsed.customerName).toBe("John Doe");
-  });
+  it('accepts valid order', () => {
+    const parsed = CreateOrderSchema.parse(validOrder)
+    expect(parsed.customerName).toBe('John Doe')
+  })
 
-  it("rejects empty items array", () => {
+  it('rejects empty items array', () => {
     expect(() =>
-      CreateOrderSchema.parse({ ...validOrder, items: [] }),
-    ).toThrow();
-  });
+      CreateOrderSchema.parse({ ...validOrder, items: [] })
+    ).toThrow()
+  })
 
-  it("rejects invalid email", () => {
+  it('rejects invalid email', () => {
     expect(() =>
-      CreateOrderSchema.parse({ ...validOrder, customerEmail: "not-email" }),
-    ).toThrow();
-  });
+      CreateOrderSchema.parse({ ...validOrder, customerEmail: 'not-email' })
+    ).toThrow()
+  })
 
-  it("rejects short address", () => {
+  it('rejects short address', () => {
     expect(() =>
-      CreateOrderSchema.parse({ ...validOrder, customerAddress: "short" }),
-    ).toThrow();
-  });
+      CreateOrderSchema.parse({ ...validOrder, customerAddress: 'short' })
+    ).toThrow()
+  })
 
-  it("rejects empty name", () => {
+  it('rejects empty name', () => {
     expect(() =>
-      CreateOrderSchema.parse({ ...validOrder, customerName: "" }),
-    ).toThrow();
-  });
-});
+      CreateOrderSchema.parse({ ...validOrder, customerName: '' })
+    ).toThrow()
+  })
+})
 
-describe("UpdateOrderStatusSchema", () => {
-  it("accepts valid status update", () => {
-    const result = UpdateOrderStatusSchema.parse({ status: "SHIPPED" });
-    expect(result.status).toBe("SHIPPED");
-  });
+describe('UpdateOrderStatusSchema', () => {
+  it('accepts valid status update', () => {
+    const result = UpdateOrderStatusSchema.parse({ status: 'SHIPPED' })
+    expect(result.status).toBe('SHIPPED')
+  })
 
-  it("accepts with optional tracking fields", () => {
+  it('accepts with optional tracking fields', () => {
     const result = UpdateOrderStatusSchema.parse({
-      status: "SHIPPED",
-      trackingNumber: "TRK123",
-      shippingProvider: "FedEx",
-    });
-    expect(result.trackingNumber).toBe("TRK123");
-  });
-});
+      status: 'SHIPPED',
+      trackingNumber: 'TRK123',
+      shippingProvider: 'FedEx',
+    })
+    expect(result.trackingNumber).toBe('TRK123')
+  })
+})
 
-describe("AddToCartSchema", () => {
-  it("accepts valid input", () => {
+describe('AddToCartSchema', () => {
+  it('accepts valid input', () => {
     const result = AddToCartSchema.parse({
       productId: validShortId,
       quantity: 1,
-    });
-    expect(result.productId).toBe(validShortId);
-  });
+    })
+    expect(result.productId).toBe(validShortId)
+  })
 
-  it("accepts with variationId", () => {
+  it('accepts with variationId', () => {
     const result = AddToCartSchema.parse({
       productId: validShortId,
       variationId: validShortId,
       quantity: 2,
-    });
-    expect(result.variationId).toBe(validShortId);
-  });
+    })
+    expect(result.variationId).toBe(validShortId)
+  })
 
-  it("accepts null variationId", () => {
+  it('accepts null variationId', () => {
     const result = AddToCartSchema.parse({
       productId: validShortId,
       variationId: null,
       quantity: 1,
-    });
-    expect(result.variationId).toBeNull();
-  });
+    })
+    expect(result.variationId).toBeNull()
+  })
 
-  it("rejects non-integer quantity", () => {
+  it('rejects non-integer quantity', () => {
     expect(() =>
-      AddToCartSchema.parse({ productId: validShortId, quantity: 1.5 }),
-    ).toThrow();
-  });
+      AddToCartSchema.parse({ productId: validShortId, quantity: 1.5 })
+    ).toThrow()
+  })
 
-  it("rejects zero quantity", () => {
+  it('rejects zero quantity', () => {
     expect(() =>
-      AddToCartSchema.parse({ productId: validShortId, quantity: 0 }),
-    ).toThrow();
-  });
-});
+      AddToCartSchema.parse({ productId: validShortId, quantity: 0 })
+    ).toThrow()
+  })
+})
 
-describe("UpdateCartItemSchema", () => {
-  it("accepts valid quantity", () => {
-    expect(UpdateCartItemSchema.parse({ quantity: 3 }).quantity).toBe(3);
-  });
+describe('UpdateCartItemSchema', () => {
+  it('accepts valid quantity', () => {
+    expect(UpdateCartItemSchema.parse({ quantity: 3 }).quantity).toBe(3)
+  })
 
-  it("rejects zero quantity", () => {
-    expect(() => UpdateCartItemSchema.parse({ quantity: 0 })).toThrow();
-  });
-});
+  it('rejects zero quantity', () => {
+    expect(() => UpdateCartItemSchema.parse({ quantity: 0 })).toThrow()
+  })
+})
 
-describe("EnvSchema", () => {
-  it("accepts valid env", () => {
-    const result = EnvSchema.parse({ DATABASE_URL: "postgres://localhost/db" });
-    expect(result.DATABASE_URL).toBe("postgres://localhost/db");
-  });
+describe('EnvSchema', () => {
+  it('accepts valid env', () => {
+    const result = EnvSchema.parse({ DATABASE_URL: 'postgres://localhost/db' })
+    expect(result.DATABASE_URL).toBe('postgres://localhost/db')
+  })
 
-  it("accepts optional READ_DATABASE_URL", () => {
+  it('accepts optional READ_DATABASE_URL', () => {
     const result = EnvSchema.parse({
-      DATABASE_URL: "postgres://localhost/write",
-      READ_DATABASE_URL: "postgres://localhost/read",
-    });
-    expect(result.READ_DATABASE_URL).toBe("postgres://localhost/read");
-  });
+      DATABASE_URL: 'postgres://localhost/write',
+      READ_DATABASE_URL: 'postgres://localhost/read',
+    })
+    expect(result.READ_DATABASE_URL).toBe('postgres://localhost/read')
+  })
 
-  it("rejects missing DATABASE_URL", () => {
-    expect(() => EnvSchema.parse({})).toThrow();
-  });
+  it('rejects missing DATABASE_URL', () => {
+    expect(() => EnvSchema.parse({})).toThrow()
+  })
 
-  it("accepts optional NODE_ENV", () => {
+  it('accepts optional NODE_ENV', () => {
     const result = EnvSchema.parse({
-      DATABASE_URL: "postgres://localhost/db",
-      NODE_ENV: "test",
-    });
-    expect(result.NODE_ENV).toBe("test");
-  });
+      DATABASE_URL: 'postgres://localhost/db',
+      NODE_ENV: 'test',
+    })
+    expect(result.NODE_ENV).toBe('test')
+  })
 
-  it("rejects invalid NODE_ENV", () => {
+  it('rejects invalid NODE_ENV', () => {
     expect(() =>
       EnvSchema.parse({
-        DATABASE_URL: "postgres://localhost/db",
-        NODE_ENV: "staging",
-      }),
-    ).toThrow();
-  });
-});
+        DATABASE_URL: 'postgres://localhost/db',
+        NODE_ENV: 'staging',
+      })
+    ).toThrow()
+  })
+})
 
-describe("ApiErrorSchema", () => {
-  it("accepts valid error response", () => {
+describe('ApiErrorSchema', () => {
+  it('accepts valid error response', () => {
     const result = ApiErrorSchema.parse({
-      error: "Something failed",
+      error: 'Something failed',
       success: false,
-    });
-    expect(result.error).toBe("Something failed");
-  });
+    })
+    expect(result.error).toBe('Something failed')
+  })
 
-  it("accepts with details", () => {
+  it('accepts with details', () => {
     const result = ApiErrorSchema.parse({
-      error: "Validation failed",
+      error: 'Validation failed',
       success: false,
-      details: { name: "Required" },
-    });
-    expect(result.details).toEqual({ name: "Required" });
-  });
+      details: { name: 'Required' },
+    })
+    expect(result.details).toEqual({ name: 'Required' })
+  })
 
-  it("rejects success: true", () => {
+  it('rejects success: true', () => {
     expect(() =>
-      ApiErrorSchema.parse({ error: "fail", success: true }),
-    ).toThrow();
-  });
-});
+      ApiErrorSchema.parse({ error: 'fail', success: true })
+    ).toThrow()
+  })
+})
 
-describe("registerSchema", () => {
+describe('registerSchema', () => {
   const validRegistration = {
-    name: "Test User",
-    email: "test@example.com",
-    password: "StrongPass1!",
-    confirmPassword: "StrongPass1!",
-  };
+    name: 'Test User',
+    email: 'test@example.com',
+    password: 'StrongPass1!',
+    confirmPassword: 'StrongPass1!',
+  }
 
-  it("accepts valid registration data", () => {
-    const result = registerSchema.safeParse(validRegistration);
-    expect(result.success).toBe(true);
-  });
+  it('accepts valid registration data', () => {
+    const result = registerSchema.safeParse(validRegistration)
+    expect(result.success).toBe(true)
+  })
 
-  it("accepts registration with phone number", () => {
+  it('accepts registration with phone number', () => {
     const result = registerSchema.safeParse({
       ...validRegistration,
-      phoneNumber: "+1234567890",
-    });
-    expect(result.success).toBe(true);
-  });
+      phoneNumber: '+1234567890',
+    })
+    expect(result.success).toBe(true)
+  })
 
-  it("rejects empty name", () => {
-    const result = registerSchema.safeParse({ ...validRegistration, name: "" });
-    expect(result.success).toBe(false);
-  });
+  it('rejects empty name', () => {
+    const result = registerSchema.safeParse({ ...validRegistration, name: '' })
+    expect(result.success).toBe(false)
+  })
 
-  it("rejects invalid email", () => {
+  it('rejects invalid email', () => {
     const result = registerSchema.safeParse({
       ...validRegistration,
-      email: "invalid",
-    });
-    expect(result.success).toBe(false);
-  });
+      email: 'invalid',
+    })
+    expect(result.success).toBe(false)
+  })
 
-  it("rejects weak password", () => {
+  it('rejects weak password', () => {
     const result = registerSchema.safeParse({
       ...validRegistration,
-      password: "weak",
-      confirmPassword: "weak",
-    });
-    expect(result.success).toBe(false);
-  });
+      password: 'weak',
+      confirmPassword: 'weak',
+    })
+    expect(result.success).toBe(false)
+  })
 
-  it("rejects mismatched passwords", () => {
+  it('rejects mismatched passwords', () => {
     const result = registerSchema.safeParse({
       ...validRegistration,
-      confirmPassword: "Different1!",
-    });
-    expect(result.success).toBe(false);
-  });
+      confirmPassword: 'Different1!',
+    })
+    expect(result.success).toBe(false)
+  })
 
-  it("rejects invalid phone number format", () => {
+  it('rejects invalid phone number format', () => {
     const result = registerSchema.safeParse({
       ...validRegistration,
-      phoneNumber: "abc",
-    });
-    expect(result.success).toBe(false);
-  });
-});
+      phoneNumber: 'abc',
+    })
+    expect(result.success).toBe(false)
+  })
+})
 
-describe("credentialsLoginSchema", () => {
-  it("accepts valid login data", () => {
+describe('credentialsLoginSchema', () => {
+  it('accepts valid login data', () => {
     const result = credentialsLoginSchema.safeParse({
-      identifier: "test@example.com",
-      password: "password123",
-    });
-    expect(result.success).toBe(true);
-  });
+      identifier: 'test@example.com',
+      password: 'password123',
+    })
+    expect(result.success).toBe(true)
+  })
 
-  it("rejects empty identifier", () => {
+  it('rejects empty identifier', () => {
     const result = credentialsLoginSchema.safeParse({
-      identifier: "",
-      password: "password123",
-    });
-    expect(result.success).toBe(false);
-  });
+      identifier: '',
+      password: 'password123',
+    })
+    expect(result.success).toBe(false)
+  })
 
-  it("rejects empty password", () => {
+  it('rejects empty password', () => {
     const result = credentialsLoginSchema.safeParse({
-      identifier: "test@example.com",
-      password: "",
-    });
-    expect(result.success).toBe(false);
-  });
-});
+      identifier: 'test@example.com',
+      password: '',
+    })
+    expect(result.success).toBe(false)
+  })
+})
 
-describe("changePasswordSchema", () => {
+describe('changePasswordSchema', () => {
   const validChangePassword = {
-    currentPassword: "OldPass1!",
-    newPassword: "NewStrong1!",
-    confirmNewPassword: "NewStrong1!",
-  };
+    currentPassword: 'OldPass1!',
+    newPassword: 'NewStrong1!',
+    confirmNewPassword: 'NewStrong1!',
+  }
 
-  it("accepts valid change password data", () => {
-    const result = changePasswordSchema.safeParse(validChangePassword);
-    expect(result.success).toBe(true);
-  });
+  it('accepts valid change password data', () => {
+    const result = changePasswordSchema.safeParse(validChangePassword)
+    expect(result.success).toBe(true)
+  })
 
-  it("rejects weak new password", () => {
+  it('rejects weak new password', () => {
     const result = changePasswordSchema.safeParse({
       ...validChangePassword,
-      newPassword: "weak",
-      confirmNewPassword: "weak",
-    });
-    expect(result.success).toBe(false);
-  });
+      newPassword: 'weak',
+      confirmNewPassword: 'weak',
+    })
+    expect(result.success).toBe(false)
+  })
 
-  it("rejects mismatched new passwords", () => {
+  it('rejects mismatched new passwords', () => {
     const result = changePasswordSchema.safeParse({
       ...validChangePassword,
-      confirmNewPassword: "Different1!",
-    });
-    expect(result.success).toBe(false);
-  });
-});
+      confirmNewPassword: 'Different1!',
+    })
+    expect(result.success).toBe(false)
+  })
+})
 
-describe("updateProfileSchema", () => {
-  it("accepts valid profile update with name only", () => {
-    const result = updateProfileSchema.safeParse({ name: "New Name" });
-    expect(result.success).toBe(true);
-  });
+describe('updateProfileSchema', () => {
+  it('accepts valid profile update with name only', () => {
+    const result = updateProfileSchema.safeParse({ name: 'New Name' })
+    expect(result.success).toBe(true)
+  })
 
-  it("accepts valid profile update with email", () => {
-    const result = updateProfileSchema.safeParse({ email: "new@example.com" });
-    expect(result.success).toBe(true);
-  });
+  it('accepts valid profile update with email', () => {
+    const result = updateProfileSchema.safeParse({ email: 'new@example.com' })
+    expect(result.success).toBe(true)
+  })
 
-  it("accepts valid profile update with phone", () => {
+  it('accepts valid profile update with phone', () => {
     const result = updateProfileSchema.safeParse({
-      phoneNumber: "+1234567890",
-    });
-    expect(result.success).toBe(true);
-  });
+      phoneNumber: '+1234567890',
+    })
+    expect(result.success).toBe(true)
+  })
 
-  it("accepts empty object (all fields optional)", () => {
-    const result = updateProfileSchema.safeParse({});
-    expect(result.success).toBe(true);
-  });
+  it('accepts empty object (all fields optional)', () => {
+    const result = updateProfileSchema.safeParse({})
+    expect(result.success).toBe(true)
+  })
 
-  it("rejects invalid email", () => {
-    const result = updateProfileSchema.safeParse({ email: "invalid" });
-    expect(result.success).toBe(false);
-  });
+  it('rejects invalid email', () => {
+    const result = updateProfileSchema.safeParse({ email: 'invalid' })
+    expect(result.success).toBe(false)
+  })
 
-  it("rejects invalid phone number", () => {
-    const result = updateProfileSchema.safeParse({ phoneNumber: "abc" });
-    expect(result.success).toBe(false);
-  });
-});
+  it('rejects invalid phone number', () => {
+    const result = updateProfileSchema.safeParse({ phoneNumber: 'abc' })
+    expect(result.success).toBe(false)
+  })
+})
 
-describe("CreateShareSchema", () => {
-  it("accepts valid productId without variationId", () => {
-    const result = CreateShareSchema.safeParse({ productId: validShortId });
-    expect(result.success).toBe(true);
-    if (result.success) expect(result.data.productId).toBe(validShortId);
-  });
+describe('CreateShareSchema', () => {
+  it('accepts valid productId without variationId', () => {
+    const result = CreateShareSchema.safeParse({ productId: validShortId })
+    expect(result.success).toBe(true)
+    if (result.success) expect(result.data.productId).toBe(validShortId)
+  })
 
-  it("accepts valid productId with valid variationId", () => {
+  it('accepts valid productId with valid variationId', () => {
     const result = CreateShareSchema.safeParse({
       productId: validShortId,
-      variationId: "xyz1234",
-    });
-    expect(result.success).toBe(true);
-    if (result.success) expect(result.data.variationId).toBe("xyz1234");
-  });
+      variationId: 'xyz1234',
+    })
+    expect(result.success).toBe(true)
+    if (result.success) expect(result.data.variationId).toBe('xyz1234')
+  })
 
-  it("accepts null variationId", () => {
+  it('accepts null variationId', () => {
     const result = CreateShareSchema.safeParse({
       productId: validShortId,
       variationId: null,
-    });
-    expect(result.success).toBe(true);
-  });
+    })
+    expect(result.success).toBe(true)
+  })
 
-  it("accepts missing variationId (nullish)", () => {
-    const result = CreateShareSchema.safeParse({ productId: validShortId });
-    expect(result.success).toBe(true);
-  });
+  it('accepts missing variationId (nullish)', () => {
+    const result = CreateShareSchema.safeParse({ productId: validShortId })
+    expect(result.success).toBe(true)
+  })
 
-  it("rejects missing productId", () => {
-    const result = CreateShareSchema.safeParse({});
-    expect(result.success).toBe(false);
-  });
+  it('rejects missing productId', () => {
+    const result = CreateShareSchema.safeParse({})
+    expect(result.success).toBe(false)
+  })
 
-  it("rejects invalid productId (wrong format)", () => {
-    const result = CreateShareSchema.safeParse({ productId: "bad!" });
-    expect(result.success).toBe(false);
-  });
+  it('rejects invalid productId (wrong format)', () => {
+    const result = CreateShareSchema.safeParse({ productId: 'bad!' })
+    expect(result.success).toBe(false)
+  })
 
-  it("rejects invalid variationId (too long)", () => {
+  it('rejects invalid variationId (too long)', () => {
     const result = CreateShareSchema.safeParse({
       productId: validShortId,
-      variationId: "toolongid",
-    });
-    expect(result.success).toBe(false);
-  });
-});
+      variationId: 'toolongid',
+    })
+    expect(result.success).toBe(false)
+  })
+})
 
 // ─── CreateVariationSchema ───────────────────────────────
 
-describe("CreateVariationSchema", () => {
+describe('CreateVariationSchema', () => {
   const validVariation = {
-    name: "Red - Large",
-    designName: "Classic Logo",
+    name: 'Red - Large',
+    designName: 'Classic Logo',
     price: 150.0,
     stock: 100,
-    variationType: "colour" as const,
-  };
+    variationType: 'colour' as const,
+  }
 
-  it("accepts valid variation with required fields only", () => {
-    const result = CreateVariationSchema.safeParse(validVariation);
-    expect(result.success).toBe(true);
+  it('accepts valid variation with required fields only', () => {
+    const result = CreateVariationSchema.safeParse(validVariation)
+    expect(result.success).toBe(true)
     if (result.success) {
-      expect(result.data.images).toEqual([]);
+      expect(result.data.images).toEqual([])
     }
-  });
+  })
 
-  it("accepts valid variation with optional image fields", () => {
+  it('accepts valid variation with optional image fields', () => {
     const result = CreateVariationSchema.safeParse({
       ...validVariation,
-      image: "https://example.com/img.jpg",
-      images: ["https://example.com/a.jpg", "https://example.com/b.jpg"],
-    });
-    expect(result.success).toBe(true);
-  });
+      image: 'https://example.com/img.jpg',
+      images: ['https://example.com/a.jpg', 'https://example.com/b.jpg'],
+    })
+    expect(result.success).toBe(true)
+  })
 
-  it("accepts price equal to base product price", () => {
+  it('accepts price equal to base product price', () => {
     const result = CreateVariationSchema.safeParse({
       ...validVariation,
       price: 100.0,
-    });
-    expect(result.success).toBe(true);
-  });
+    })
+    expect(result.success).toBe(true)
+  })
 
-  it("accepts zero stock", () => {
+  it('accepts zero stock', () => {
     const result = CreateVariationSchema.safeParse({
       ...validVariation,
       stock: 0,
-    });
-    expect(result.success).toBe(true);
-  });
+    })
+    expect(result.success).toBe(true)
+  })
 
-  it("rejects missing name", () => {
-    const { name: _name, ...rest } = validVariation;
-    const result = CreateVariationSchema.safeParse(rest);
-    expect(result.success).toBe(false);
-  });
+  it('rejects missing name', () => {
+    const { name: _name, ...rest } = validVariation
+    const result = CreateVariationSchema.safeParse(rest)
+    expect(result.success).toBe(false)
+  })
 
-  it("rejects empty name", () => {
+  it('rejects empty name', () => {
     const result = CreateVariationSchema.safeParse({
       ...validVariation,
-      name: "",
-    });
-    expect(result.success).toBe(false);
-  });
+      name: '',
+    })
+    expect(result.success).toBe(false)
+  })
 
-  it("rejects name over 100 characters", () => {
+  it('rejects name over 100 characters', () => {
     const result = CreateVariationSchema.safeParse({
       ...validVariation,
-      name: "x".repeat(101),
-    });
-    expect(result.success).toBe(false);
-  });
+      name: 'x'.repeat(101),
+    })
+    expect(result.success).toBe(false)
+  })
 
-  it("rejects missing designName", () => {
-    const { designName: _designName, ...rest } = validVariation;
-    const result = CreateVariationSchema.safeParse(rest);
-    expect(result.success).toBe(false);
-  });
+  it('rejects missing designName', () => {
+    const { designName: _designName, ...rest } = validVariation
+    const result = CreateVariationSchema.safeParse(rest)
+    expect(result.success).toBe(false)
+  })
 
-  it("rejects missing stock", () => {
-    const { stock: _stock, ...rest } = validVariation;
-    const result = CreateVariationSchema.safeParse(rest);
-    expect(result.success).toBe(false);
-  });
+  it('rejects missing stock', () => {
+    const { stock: _stock, ...rest } = validVariation
+    const result = CreateVariationSchema.safeParse(rest)
+    expect(result.success).toBe(false)
+  })
 
-  it("rejects negative stock", () => {
+  it('rejects negative stock', () => {
     const result = CreateVariationSchema.safeParse({
       ...validVariation,
       stock: -1,
-    });
-    expect(result.success).toBe(false);
-  });
+    })
+    expect(result.success).toBe(false)
+  })
 
-  it("rejects non-integer stock", () => {
+  it('rejects non-integer stock', () => {
     const result = CreateVariationSchema.safeParse({
       ...validVariation,
       stock: 1.5,
-    });
-    expect(result.success).toBe(false);
-  });
+    })
+    expect(result.success).toBe(false)
+  })
 
-  it("rejects missing price", () => {
-    const { price: _price, ...rest } = validVariation;
-    const result = CreateVariationSchema.safeParse(rest);
-    expect(result.success).toBe(false);
-  });
+  it('rejects missing price', () => {
+    const { price: _price, ...rest } = validVariation
+    const result = CreateVariationSchema.safeParse(rest)
+    expect(result.success).toBe(false)
+  })
 
-  it("rejects invalid image URL", () => {
+  it('rejects invalid image URL', () => {
     const result = CreateVariationSchema.safeParse({
       ...validVariation,
-      image: "not-a-url",
-    });
-    expect(result.success).toBe(false);
-  });
+      image: 'not-a-url',
+    })
+    expect(result.success).toBe(false)
+  })
 
-  it("rejects more than 10 additional images", () => {
+  it('rejects more than 10 additional images', () => {
     const result = CreateVariationSchema.safeParse({
       ...validVariation,
-      images: Array(11).fill("https://example.com/img.jpg"),
-    });
-    expect(result.success).toBe(false);
-  });
-});
+      images: Array(11).fill('https://example.com/img.jpg'),
+    })
+    expect(result.success).toBe(false)
+  })
+})
 
 // ─── UpdateVariationSchema ───────────────────────────────
 
-describe("UpdateVariationSchema", () => {
-  it("accepts partial update with just name", () => {
-    const result = UpdateVariationSchema.safeParse({ name: "Blue" });
-    expect(result.success).toBe(true);
-  });
+describe('UpdateVariationSchema', () => {
+  it('accepts partial update with just name', () => {
+    const result = UpdateVariationSchema.safeParse({ name: 'Blue' })
+    expect(result.success).toBe(true)
+  })
 
-  it("accepts partial update with just stock", () => {
-    const result = UpdateVariationSchema.safeParse({ stock: 50 });
-    expect(result.success).toBe(true);
-  });
+  it('accepts partial update with just stock', () => {
+    const result = UpdateVariationSchema.safeParse({ stock: 50 })
+    expect(result.success).toBe(true)
+  })
 
-  it("accepts empty object", () => {
-    const result = UpdateVariationSchema.safeParse({});
-    expect(result.success).toBe(true);
-  });
+  it('accepts empty object', () => {
+    const result = UpdateVariationSchema.safeParse({})
+    expect(result.success).toBe(true)
+  })
 
-  it("rejects invalid stock in partial update", () => {
-    const result = UpdateVariationSchema.safeParse({ stock: -1 });
-    expect(result.success).toBe(false);
-  });
+  it('rejects invalid stock in partial update', () => {
+    const result = UpdateVariationSchema.safeParse({ stock: -1 })
+    expect(result.success).toBe(false)
+  })
 
-  it("rejects invalid image URL in partial update", () => {
-    const result = UpdateVariationSchema.safeParse({ image: "bad" });
-    expect(result.success).toBe(false);
-  });
-});
+  it('rejects invalid image URL in partial update', () => {
+    const result = UpdateVariationSchema.safeParse({ image: 'bad' })
+    expect(result.success).toBe(false)
+  })
+})

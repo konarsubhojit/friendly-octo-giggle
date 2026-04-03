@@ -1,13 +1,13 @@
-"use client";
+'use client'
 
-import type { Dispatch, SetStateAction } from "react";
+import type { Dispatch, SetStateAction } from 'react'
 
 interface OrdersSearchFormProps {
-  readonly searchInput: string;
-  readonly setSearchInput: Dispatch<SetStateAction<string>>;
-  readonly search: string;
-  readonly onSearch: (e: React.BaseSyntheticEvent) => void;
-  readonly onClear: () => void;
+  readonly searchInput: string
+  readonly setSearchInput: Dispatch<SetStateAction<string>>
+  readonly search: string
+  readonly onSearch: (e: React.BaseSyntheticEvent) => void
+  readonly onClear: () => void
 }
 
 export const OrdersSearchForm = ({
@@ -65,4 +65,4 @@ export const OrdersSearchForm = ({
       </p>
     )}
   </form>
-);
+)

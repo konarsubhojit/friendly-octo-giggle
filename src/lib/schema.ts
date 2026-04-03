@@ -10,407 +10,407 @@ import {
   unique,
   json,
   boolean,
-} from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
-import type { AdapterAccountType } from "@auth/core/adapters";
-import { generateShortId, generateOrderId } from "./short-id";
+} from 'drizzle-orm/pg-core'
+import { relations } from 'drizzle-orm'
+import type { AdapterAccountType } from '@auth/core/adapters'
+import { generateShortId, generateOrderId } from './short-id'
 
 // ─── Enums ───────────────────────────────────────────────
 
-export const userRoleEnum = pgEnum("UserRole", ["CUSTOMER", "ADMIN"]);
+export const userRoleEnum = pgEnum('UserRole', ['CUSTOMER', 'ADMIN'])
 
-export const emailTypeEnum = pgEnum("EmailType", [
-  "order_confirmation",
-  "order_status_update",
-]);
+export const emailTypeEnum = pgEnum('EmailType', [
+  'order_confirmation',
+  'order_status_update',
+])
 
-export const failedEmailStatusEnum = pgEnum("FailedEmailStatus", [
-  "pending",
-  "failed",
-  "sent",
-]);
-export const orderStatusEnum = pgEnum("OrderStatus", [
-  "PENDING",
-  "PROCESSING",
-  "SHIPPED",
-  "DELIVERED",
-  "CANCELLED",
-]);
+export const failedEmailStatusEnum = pgEnum('FailedEmailStatus', [
+  'pending',
+  'failed',
+  'sent',
+])
+export const orderStatusEnum = pgEnum('OrderStatus', [
+  'PENDING',
+  'PROCESSING',
+  'SHIPPED',
+  'DELIVERED',
+  'CANCELLED',
+])
 
-export const checkoutRequestStatusEnum = pgEnum("CheckoutRequestStatus", [
-  "PENDING",
-  "PROCESSING",
-  "COMPLETED",
-  "FAILED",
-]);
+export const checkoutRequestStatusEnum = pgEnum('CheckoutRequestStatus', [
+  'PENDING',
+  'PROCESSING',
+  'COMPLETED',
+  'FAILED',
+])
 
 // ─── Auth Tables (NextAuth compatible) ───────────────────
 
-export const users = pgTable("User", {
-  id: text("id")
+export const users = pgTable('User', {
+  id: text('id')
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
-  name: text("name"),
-  email: text("email").notNull().unique(),
-  emailVerified: timestamp("emailVerified", { mode: "date" }),
-  image: text("image"),
-  passwordHash: text("passwordHash"),
-  phoneNumber: varchar("phoneNumber", { length: 20 }).unique(),
-  currencyPreference: varchar("currencyPreference", { length: 3 })
-    .default("INR")
+  name: text('name'),
+  email: text('email').notNull().unique(),
+  emailVerified: timestamp('emailVerified', { mode: 'date' }),
+  image: text('image'),
+  passwordHash: text('passwordHash'),
+  phoneNumber: varchar('phoneNumber', { length: 20 }).unique(),
+  currencyPreference: varchar('currencyPreference', { length: 3 })
+    .default('INR')
     .notNull(),
-  role: userRoleEnum("role").default("CUSTOMER").notNull(),
-  createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt", { mode: "date" }).defaultNow().notNull(),
-});
+  role: userRoleEnum('role').default('CUSTOMER').notNull(),
+  createdAt: timestamp('createdAt', { mode: 'date' }).defaultNow().notNull(),
+  updatedAt: timestamp('updatedAt', { mode: 'date' }).defaultNow().notNull(),
+})
 
 export const accounts = pgTable(
-  "Account",
+  'Account',
   {
-    id: text("id")
+    id: text('id')
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
-    userId: text("userId")
+    userId: text('userId')
       .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    type: text("type").$type<AdapterAccountType>().notNull(),
-    provider: text("provider").notNull(),
-    providerAccountId: text("providerAccountId").notNull(),
-    refresh_token: text("refresh_token"),
-    access_token: text("access_token"),
-    expires_at: integer("expires_at"),
-    token_type: text("token_type"),
-    scope: text("scope"),
-    id_token: text("id_token"),
-    session_state: text("session_state"),
+      .references(() => users.id, { onDelete: 'cascade' }),
+    type: text('type').$type<AdapterAccountType>().notNull(),
+    provider: text('provider').notNull(),
+    providerAccountId: text('providerAccountId').notNull(),
+    refresh_token: text('refresh_token'),
+    access_token: text('access_token'),
+    expires_at: integer('expires_at'),
+    token_type: text('token_type'),
+    scope: text('scope'),
+    id_token: text('id_token'),
+    session_state: text('session_state'),
   },
   (t) => [
-    unique("Account_provider_providerAccountId_key").on(
+    unique('Account_provider_providerAccountId_key').on(
       t.provider,
-      t.providerAccountId,
+      t.providerAccountId
     ),
-    index("Account_userId_idx").on(t.userId),
-  ],
-);
+    index('Account_userId_idx').on(t.userId),
+  ]
+)
 
 export const sessions = pgTable(
-  "Session",
+  'Session',
   {
-    sessionToken: text("sessionToken").primaryKey(),
-    userId: text("userId")
+    sessionToken: text('sessionToken').primaryKey(),
+    userId: text('userId')
       .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    expires: timestamp("expires", { mode: "date" }).notNull(),
+      .references(() => users.id, { onDelete: 'cascade' }),
+    expires: timestamp('expires', { mode: 'date' }).notNull(),
   },
-  (t) => [index("Session_userId_idx").on(t.userId)],
-);
+  (t) => [index('Session_userId_idx').on(t.userId)]
+)
 
 export const verificationTokens = pgTable(
-  "VerificationToken",
+  'VerificationToken',
   {
-    identifier: text("identifier").notNull(),
-    token: text("token").notNull().unique(),
-    expires: timestamp("expires", { mode: "date" }).notNull(),
+    identifier: text('identifier').notNull(),
+    token: text('token').notNull().unique(),
+    expires: timestamp('expires', { mode: 'date' }).notNull(),
   },
   (t) => [
-    unique("VerificationToken_identifier_token_key").on(t.identifier, t.token),
-  ],
-);
+    unique('VerificationToken_identifier_token_key').on(t.identifier, t.token),
+  ]
+)
 
 // ─── Password History Table ──────────────────────────────
 
 export const passwordHistory = pgTable(
-  "PasswordHistory",
+  'PasswordHistory',
   {
-    id: text("id")
+    id: text('id')
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
-    userId: text("userId")
+    userId: text('userId')
       .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    passwordHash: text("passwordHash").notNull(),
-    createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
+      .references(() => users.id, { onDelete: 'cascade' }),
+    passwordHash: text('passwordHash').notNull(),
+    createdAt: timestamp('createdAt', { mode: 'date' }).defaultNow().notNull(),
   },
-  (t) => [index("PasswordHistory_userId_idx").on(t.userId)],
-);
+  (t) => [index('PasswordHistory_userId_idx').on(t.userId)]
+)
 
 // ─── Product Tables ──────────────────────────────────────
 
-export const categories = pgTable("Category", {
-  id: varchar("id", { length: 7 })
+export const categories = pgTable('Category', {
+  id: varchar('id', { length: 7 })
     .primaryKey()
     .$defaultFn(() => generateShortId()),
-  name: text("name").notNull().unique(),
-  sortOrder: integer("sortOrder").notNull().default(0),
-  createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt", { mode: "date" }).defaultNow().notNull(),
-  deletedAt: timestamp("deletedAt", { mode: "date" }),
-});
+  name: text('name').notNull().unique(),
+  sortOrder: integer('sortOrder').notNull().default(0),
+  createdAt: timestamp('createdAt', { mode: 'date' }).defaultNow().notNull(),
+  updatedAt: timestamp('updatedAt', { mode: 'date' }).defaultNow().notNull(),
+  deletedAt: timestamp('deletedAt', { mode: 'date' }),
+})
 
 export const products = pgTable(
-  "Product",
+  'Product',
   {
-    id: varchar("id", { length: 7 })
+    id: varchar('id', { length: 7 })
       .primaryKey()
       .$defaultFn(() => generateShortId()),
-    name: text("name").notNull(),
-    description: text("description").notNull(),
-    price: doublePrecision("price").notNull(),
-    image: text("image").notNull(),
-    images: json("images").$type<string[]>().default([]).notNull(),
-    stock: integer("stock").notNull(),
-    category: text("category").notNull(),
-    deletedAt: timestamp("deletedAt", { mode: "date" }),
-    createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
-    updatedAt: timestamp("updatedAt", { mode: "date" }).defaultNow().notNull(),
+    name: text('name').notNull(),
+    description: text('description').notNull(),
+    price: doublePrecision('price').notNull(),
+    image: text('image').notNull(),
+    images: json('images').$type<string[]>().default([]).notNull(),
+    stock: integer('stock').notNull(),
+    category: text('category').notNull(),
+    deletedAt: timestamp('deletedAt', { mode: 'date' }),
+    createdAt: timestamp('createdAt', { mode: 'date' }).defaultNow().notNull(),
+    updatedAt: timestamp('updatedAt', { mode: 'date' }).defaultNow().notNull(),
   },
   (t) => [
-    index("Product_category_idx").on(t.category),
-    index("Product_createdAt_idx").on(t.createdAt),
-    index("Product_deletedAt_idx").on(t.deletedAt),
-  ],
-);
+    index('Product_category_idx').on(t.category),
+    index('Product_createdAt_idx').on(t.createdAt),
+    index('Product_deletedAt_idx').on(t.deletedAt),
+  ]
+)
 
 export const productVariations = pgTable(
-  "ProductVariation",
+  'ProductVariation',
   {
-    id: varchar("id", { length: 7 })
+    id: varchar('id', { length: 7 })
       .primaryKey()
       .$defaultFn(() => generateShortId()),
-    productId: varchar("productId", { length: 7 })
+    productId: varchar('productId', { length: 7 })
       .notNull()
-      .references(() => products.id, { onDelete: "cascade" }),
-    styleId: varchar("styleId", { length: 7 }), // Self-ref: null for styles & base-product colours; set for colours under a style
-    name: text("name").notNull(),
-    designName: text("designName").notNull(),
-    variationType: text("variationType", { enum: ["styling", "colour"] })
-      .default("styling")
+      .references(() => products.id, { onDelete: 'cascade' }),
+    styleId: varchar('styleId', { length: 7 }), // Self-ref: null for styles & base-product colours; set for colours under a style
+    name: text('name').notNull(),
+    designName: text('designName').notNull(),
+    variationType: text('variationType', { enum: ['styling', 'colour'] })
+      .default('styling')
       .notNull(),
-    image: text("image"),
-    images: json("images").$type<string[]>().default([]).notNull(),
-    price: doublePrecision("price").notNull(),
-    stock: integer("stock").notNull(),
-    deletedAt: timestamp("deletedAt", { mode: "date" }),
-    createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
-    updatedAt: timestamp("updatedAt", { mode: "date" }).defaultNow().notNull(),
+    image: text('image'),
+    images: json('images').$type<string[]>().default([]).notNull(),
+    price: doublePrecision('price').notNull(),
+    stock: integer('stock').notNull(),
+    deletedAt: timestamp('deletedAt', { mode: 'date' }),
+    createdAt: timestamp('createdAt', { mode: 'date' }).defaultNow().notNull(),
+    updatedAt: timestamp('updatedAt', { mode: 'date' }).defaultNow().notNull(),
   },
   (t) => [
-    index("ProductVariation_productId_idx").on(t.productId),
-    index("ProductVariation_styleId_idx").on(t.styleId),
-    unique("ProductVariation_productId_name_key").on(t.productId, t.name),
-  ],
-);
+    index('ProductVariation_productId_idx').on(t.productId),
+    index('ProductVariation_styleId_idx').on(t.styleId),
+    unique('ProductVariation_productId_name_key').on(t.productId, t.name),
+  ]
+)
 
 // ─── Order Tables ────────────────────────────────────────
 
 export interface CheckoutRequestItemRecord {
-  productId: string;
-  variationId?: string | null;
-  quantity: number;
-  customizationNote?: string | null;
+  productId: string
+  variationId?: string | null
+  quantity: number
+  customizationNote?: string | null
 }
 
 export const checkoutRequests = pgTable(
-  "CheckoutRequest",
+  'CheckoutRequest',
   {
-    id: varchar("id", { length: 7 })
+    id: varchar('id', { length: 7 })
       .primaryKey()
       .$defaultFn(() => generateShortId()),
-    userId: text("userId")
+    userId: text('userId')
       .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    customerName: text("customerName").notNull(),
-    customerEmail: text("customerEmail").notNull(),
-    customerAddress: text("customerAddress").notNull(),
-    items: json("items").$type<CheckoutRequestItemRecord[]>().notNull(),
-    status: checkoutRequestStatusEnum("status").default("PENDING").notNull(),
-    errorMessage: text("errorMessage"),
-    createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
-    updatedAt: timestamp("updatedAt", { mode: "date" }).defaultNow().notNull(),
+      .references(() => users.id, { onDelete: 'cascade' }),
+    customerName: text('customerName').notNull(),
+    customerEmail: text('customerEmail').notNull(),
+    customerAddress: text('customerAddress').notNull(),
+    items: json('items').$type<CheckoutRequestItemRecord[]>().notNull(),
+    status: checkoutRequestStatusEnum('status').default('PENDING').notNull(),
+    errorMessage: text('errorMessage'),
+    createdAt: timestamp('createdAt', { mode: 'date' }).defaultNow().notNull(),
+    updatedAt: timestamp('updatedAt', { mode: 'date' }).defaultNow().notNull(),
   },
   (t) => [
-    index("CheckoutRequest_userId_idx").on(t.userId),
-    index("CheckoutRequest_status_idx").on(t.status),
-    index("CheckoutRequest_createdAt_idx").on(t.createdAt),
-  ],
-);
+    index('CheckoutRequest_userId_idx').on(t.userId),
+    index('CheckoutRequest_status_idx').on(t.status),
+    index('CheckoutRequest_createdAt_idx').on(t.createdAt),
+  ]
+)
 
 export const orders = pgTable(
-  "Order",
+  'Order',
   {
-    id: varchar("id", { length: 10 })
+    id: varchar('id', { length: 10 })
       .primaryKey()
       .$defaultFn(() => generateOrderId()),
-    userId: text("userId").references(() => users.id),
-    customerName: text("customerName").notNull(),
-    customerEmail: text("customerEmail").notNull(),
-    customerAddress: text("customerAddress").notNull(),
-    checkoutRequestId: varchar("checkoutRequestId", { length: 7 }).references(
+    userId: text('userId').references(() => users.id),
+    customerName: text('customerName').notNull(),
+    customerEmail: text('customerEmail').notNull(),
+    customerAddress: text('customerAddress').notNull(),
+    checkoutRequestId: varchar('checkoutRequestId', { length: 7 }).references(
       () => checkoutRequests.id,
-      { onDelete: "set null" },
+      { onDelete: 'set null' }
     ),
-    totalAmount: doublePrecision("totalAmount").notNull(),
-    status: orderStatusEnum("status").default("PENDING").notNull(),
-    trackingNumber: text("trackingNumber"),
-    shippingProvider: text("shippingProvider"),
-    createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
-    updatedAt: timestamp("updatedAt", { mode: "date" }).defaultNow().notNull(),
+    totalAmount: doublePrecision('totalAmount').notNull(),
+    status: orderStatusEnum('status').default('PENDING').notNull(),
+    trackingNumber: text('trackingNumber'),
+    shippingProvider: text('shippingProvider'),
+    createdAt: timestamp('createdAt', { mode: 'date' }).defaultNow().notNull(),
+    updatedAt: timestamp('updatedAt', { mode: 'date' }).defaultNow().notNull(),
   },
   (t) => [
-    index("Order_userId_idx").on(t.userId),
-    index("Order_status_idx").on(t.status),
-    index("Order_createdAt_idx").on(t.createdAt),
-    unique("Order_checkoutRequestId_key").on(t.checkoutRequestId),
-  ],
-);
+    index('Order_userId_idx').on(t.userId),
+    index('Order_status_idx').on(t.status),
+    index('Order_createdAt_idx').on(t.createdAt),
+    unique('Order_checkoutRequestId_key').on(t.checkoutRequestId),
+  ]
+)
 
 export const orderItems = pgTable(
-  "OrderItem",
+  'OrderItem',
   {
-    id: varchar("id", { length: 7 })
+    id: varchar('id', { length: 7 })
       .primaryKey()
       .$defaultFn(() => generateShortId()),
-    orderId: varchar("orderId", { length: 10 })
+    orderId: varchar('orderId', { length: 10 })
       .notNull()
-      .references(() => orders.id, { onDelete: "cascade" }),
-    productId: varchar("productId", { length: 7 })
+      .references(() => orders.id, { onDelete: 'cascade' }),
+    productId: varchar('productId', { length: 7 })
       .notNull()
       .references(() => products.id),
-    variationId: varchar("variationId", { length: 7 }).references(
-      () => productVariations.id,
+    variationId: varchar('variationId', { length: 7 }).references(
+      () => productVariations.id
     ),
-    quantity: integer("quantity").notNull(),
-    price: doublePrecision("price").notNull(),
-    customizationNote: text("customizationNote"),
+    quantity: integer('quantity').notNull(),
+    price: doublePrecision('price').notNull(),
+    customizationNote: text('customizationNote'),
   },
   (t) => [
-    index("OrderItem_orderId_idx").on(t.orderId),
-    index("OrderItem_productId_idx").on(t.productId),
-    index("OrderItem_variationId_idx").on(t.variationId),
-  ],
-);
+    index('OrderItem_orderId_idx').on(t.orderId),
+    index('OrderItem_productId_idx').on(t.productId),
+    index('OrderItem_variationId_idx').on(t.variationId),
+  ]
+)
 
 // ─── Cart Tables ─────────────────────────────────────────
 
 export const carts = pgTable(
-  "Cart",
+  'Cart',
   {
-    id: varchar("id", { length: 7 })
+    id: varchar('id', { length: 7 })
       .primaryKey()
       .$defaultFn(() => generateShortId()),
-    userId: text("userId")
+    userId: text('userId')
       .unique()
-      .references(() => users.id, { onDelete: "cascade" }),
-    sessionId: text("sessionId").unique(),
-    createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
-    updatedAt: timestamp("updatedAt", { mode: "date" }).defaultNow().notNull(),
+      .references(() => users.id, { onDelete: 'cascade' }),
+    sessionId: text('sessionId').unique(),
+    createdAt: timestamp('createdAt', { mode: 'date' }).defaultNow().notNull(),
+    updatedAt: timestamp('updatedAt', { mode: 'date' }).defaultNow().notNull(),
   },
-  (t) => [index("Cart_sessionId_idx").on(t.sessionId)],
-);
+  (t) => [index('Cart_sessionId_idx').on(t.sessionId)]
+)
 
 export const cartItems = pgTable(
-  "CartItem",
+  'CartItem',
   {
-    id: varchar("id", { length: 7 })
+    id: varchar('id', { length: 7 })
       .primaryKey()
       .$defaultFn(() => generateShortId()),
-    cartId: varchar("cartId", { length: 7 })
+    cartId: varchar('cartId', { length: 7 })
       .notNull()
-      .references(() => carts.id, { onDelete: "cascade" }),
-    productId: varchar("productId", { length: 7 })
+      .references(() => carts.id, { onDelete: 'cascade' }),
+    productId: varchar('productId', { length: 7 })
       .notNull()
       .references(() => products.id),
-    variationId: varchar("variationId", { length: 7 }).references(
-      () => productVariations.id,
+    variationId: varchar('variationId', { length: 7 }).references(
+      () => productVariations.id
     ),
-    quantity: integer("quantity").notNull(),
-    createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
-    updatedAt: timestamp("updatedAt", { mode: "date" }).defaultNow().notNull(),
+    quantity: integer('quantity').notNull(),
+    createdAt: timestamp('createdAt', { mode: 'date' }).defaultNow().notNull(),
+    updatedAt: timestamp('updatedAt', { mode: 'date' }).defaultNow().notNull(),
   },
   (t) => [
-    unique("CartItem_cartId_productId_variationId_key").on(
+    unique('CartItem_cartId_productId_variationId_key').on(
       t.cartId,
       t.productId,
-      t.variationId,
+      t.variationId
     ),
-    index("CartItem_cartId_idx").on(t.cartId),
-    index("CartItem_productId_idx").on(t.productId),
-    index("CartItem_variationId_idx").on(t.variationId),
-  ],
-);
+    index('CartItem_cartId_idx').on(t.cartId),
+    index('CartItem_productId_idx').on(t.productId),
+    index('CartItem_variationId_idx').on(t.variationId),
+  ]
+)
 
 // ─── Wishlist Table ──────────────────────────────────────
 
 export const wishlists = pgTable(
-  "Wishlist",
+  'Wishlist',
   {
-    id: varchar("id", { length: 7 })
+    id: varchar('id', { length: 7 })
       .primaryKey()
       .$defaultFn(() => generateShortId()),
-    userId: text("userId")
+    userId: text('userId')
       .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    productId: varchar("productId", { length: 7 })
+      .references(() => users.id, { onDelete: 'cascade' }),
+    productId: varchar('productId', { length: 7 })
       .notNull()
-      .references(() => products.id, { onDelete: "cascade" }),
-    createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
+      .references(() => products.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('createdAt', { mode: 'date' }).defaultNow().notNull(),
   },
   (t) => [
-    unique("Wishlist_userId_productId_key").on(t.userId, t.productId),
-    index("Wishlist_userId_idx").on(t.userId),
-  ],
-);
+    unique('Wishlist_userId_productId_key').on(t.userId, t.productId),
+    index('Wishlist_userId_idx').on(t.userId),
+  ]
+)
 
 // ─── Review Tables ───────────────────────────────────────
 
 export const reviews = pgTable(
-  "Review",
+  'Review',
   {
-    id: varchar("id", { length: 7 })
+    id: varchar('id', { length: 7 })
       .primaryKey()
       .$defaultFn(() => generateShortId()),
-    productId: varchar("productId", { length: 7 })
+    productId: varchar('productId', { length: 7 })
       .notNull()
-      .references(() => products.id, { onDelete: "cascade" }),
-    orderId: varchar("orderId", { length: 10 }).references(() => orders.id, {
-      onDelete: "set null",
+      .references(() => products.id, { onDelete: 'cascade' }),
+    orderId: varchar('orderId', { length: 10 }).references(() => orders.id, {
+      onDelete: 'set null',
     }),
-    userId: text("userId").references(() => users.id, { onDelete: "set null" }),
-    rating: integer("rating").notNull(),
-    comment: text("comment").notNull(),
-    isAnonymous: boolean("isAnonymous").default(false).notNull(),
-    createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
-    updatedAt: timestamp("updatedAt", { mode: "date" }).defaultNow().notNull(),
+    userId: text('userId').references(() => users.id, { onDelete: 'set null' }),
+    rating: integer('rating').notNull(),
+    comment: text('comment').notNull(),
+    isAnonymous: boolean('isAnonymous').default(false).notNull(),
+    createdAt: timestamp('createdAt', { mode: 'date' }).defaultNow().notNull(),
+    updatedAt: timestamp('updatedAt', { mode: 'date' }).defaultNow().notNull(),
   },
   (t) => [
-    index("Review_productId_idx").on(t.productId),
-    index("Review_userId_idx").on(t.userId),
-    unique("Review_userId_productId_key").on(t.userId, t.productId),
-  ],
-);
+    index('Review_productId_idx').on(t.productId),
+    index('Review_userId_idx').on(t.userId),
+    unique('Review_userId_productId_key').on(t.userId, t.productId),
+  ]
+)
 
 // ─── Product Share Table ─────────────────────────────────
 
 export const productShares = pgTable(
-  "ProductShare",
+  'ProductShare',
   {
-    key: varchar("key", { length: 7 })
+    key: varchar('key', { length: 7 })
       .primaryKey()
       .$defaultFn(() => generateShortId()),
-    productId: varchar("productId", { length: 7 })
+    productId: varchar('productId', { length: 7 })
       .notNull()
-      .references(() => products.id, { onDelete: "cascade" }),
-    variationId: varchar("variationId", { length: 7 }).references(
+      .references(() => products.id, { onDelete: 'cascade' }),
+    variationId: varchar('variationId', { length: 7 }).references(
       () => productVariations.id,
-      { onDelete: "set null" },
+      { onDelete: 'set null' }
     ),
-    createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
+    createdAt: timestamp('createdAt', { mode: 'date' }).defaultNow().notNull(),
   },
   (t) => [
-    index("ProductShare_productId_idx").on(t.productId),
-    index("ProductShare_variationId_idx").on(t.variationId),
-  ],
-);
+    index('ProductShare_productId_idx').on(t.productId),
+    index('ProductShare_variationId_idx').on(t.variationId),
+  ]
+)
 
 // ─── Relations ───────────────────────────────────────────
 
@@ -422,11 +422,11 @@ export const usersRelations = relations(users, ({ many, one }) => ({
   cart: one(carts),
   passwordHistory: many(passwordHistory),
   wishlists: many(wishlists),
-}));
+}))
 
 export const accountsRelations = relations(accounts, ({ one }) => ({
   user: one(users, { fields: [accounts.userId], references: [users.id] }),
-}));
+}))
 
 export const passwordHistoryRelations = relations(
   passwordHistory,
@@ -435,12 +435,12 @@ export const passwordHistoryRelations = relations(
       fields: [passwordHistory.userId],
       references: [users.id],
     }),
-  }),
-);
+  })
+)
 
 export const sessionsRelations = relations(sessions, ({ one }) => ({
   user: one(users, { fields: [sessions.userId], references: [users.id] }),
-}));
+}))
 
 export const productsRelations = relations(products, ({ many }) => ({
   variations: many(productVariations),
@@ -448,7 +448,7 @@ export const productsRelations = relations(products, ({ many }) => ({
   cartItems: many(cartItems),
   wishlists: many(wishlists),
   reviews: many(reviews),
-}));
+}))
 
 export const productVariationsRelations = relations(
   productVariations,
@@ -460,13 +460,13 @@ export const productVariationsRelations = relations(
     style: one(productVariations, {
       fields: [productVariations.styleId],
       references: [productVariations.id],
-      relationName: "styleColours",
+      relationName: 'styleColours',
     }),
-    colours: many(productVariations, { relationName: "styleColours" }),
+    colours: many(productVariations, { relationName: 'styleColours' }),
     orderItems: many(orderItems),
     cartItems: many(cartItems),
-  }),
-);
+  })
+)
 
 export const checkoutRequestsRelations = relations(
   checkoutRequests,
@@ -479,8 +479,8 @@ export const checkoutRequestsRelations = relations(
       fields: [checkoutRequests.id],
       references: [orders.checkoutRequestId],
     }),
-  }),
-);
+  })
+)
 
 export const ordersRelations = relations(orders, ({ one, many }) => ({
   user: one(users, { fields: [orders.userId], references: [users.id] }),
@@ -489,7 +489,7 @@ export const ordersRelations = relations(orders, ({ one, many }) => ({
     references: [checkoutRequests.id],
   }),
   items: many(orderItems),
-}));
+}))
 
 export const orderItemsRelations = relations(orderItems, ({ one }) => ({
   order: one(orders, { fields: [orderItems.orderId], references: [orders.id] }),
@@ -501,12 +501,12 @@ export const orderItemsRelations = relations(orderItems, ({ one }) => ({
     fields: [orderItems.variationId],
     references: [productVariations.id],
   }),
-}));
+}))
 
 export const cartsRelations = relations(carts, ({ one, many }) => ({
   user: one(users, { fields: [carts.userId], references: [users.id] }),
   items: many(cartItems),
-}));
+}))
 
 export const cartItemsRelations = relations(cartItems, ({ one }) => ({
   cart: one(carts, { fields: [cartItems.cartId], references: [carts.id] }),
@@ -518,7 +518,7 @@ export const cartItemsRelations = relations(cartItems, ({ one }) => ({
     fields: [cartItems.variationId],
     references: [productVariations.id],
   }),
-}));
+}))
 
 export const wishlistsRelations = relations(wishlists, ({ one }) => ({
   user: one(users, { fields: [wishlists.userId], references: [users.id] }),
@@ -526,7 +526,7 @@ export const wishlistsRelations = relations(wishlists, ({ one }) => ({
     fields: [wishlists.productId],
     references: [products.id],
   }),
-}));
+}))
 
 export const reviewsRelations = relations(reviews, ({ one }) => ({
   product: one(products, {
@@ -535,7 +535,7 @@ export const reviewsRelations = relations(reviews, ({ one }) => ({
   }),
   order: one(orders, { fields: [reviews.orderId], references: [orders.id] }),
   user: one(users, { fields: [reviews.userId], references: [users.id] }),
-}));
+}))
 
 export const productSharesRelations = relations(productShares, ({ one }) => ({
   product: one(products, {
@@ -546,48 +546,48 @@ export const productSharesRelations = relations(productShares, ({ one }) => ({
     fields: [productShares.variationId],
     references: [productVariations.id],
   }),
-}));
+}))
 
-export const categoriesRelations = relations(categories, () => ({}));
+export const categoriesRelations = relations(categories, () => ({}))
 
 // ─── Failed Email Types ──────────────────────────────────
 
 export interface EmailAttemptRecord {
-  attempt: number;
-  timestamp: string;
-  error: string;
-  provider: string;
+  attempt: number
+  timestamp: string
+  error: string
+  provider: string
 }
 
 // ─── Failed Email Table ──────────────────────────────────
 
 export const failedEmails = pgTable(
-  "FailedEmail",
+  'FailedEmail',
   {
-    id: varchar("id", { length: 7 })
+    id: varchar('id', { length: 7 })
       .primaryKey()
       .$defaultFn(() => generateShortId()),
-    recipientEmail: text("recipientEmail").notNull(),
-    subject: text("subject").notNull(),
-    bodyHtml: text("bodyHtml").notNull(),
-    bodyText: text("bodyText").notNull(),
-    emailType: emailTypeEnum("emailType").notNull(),
-    referenceId: varchar("referenceId", { length: 7 }).notNull(),
-    attemptCount: integer("attemptCount").notNull().default(0),
-    lastError: text("lastError"),
-    isRetriable: boolean("isRetriable").notNull().default(true),
-    status: failedEmailStatusEnum("status").notNull().default("pending"),
-    errorHistory: json("errorHistory")
+    recipientEmail: text('recipientEmail').notNull(),
+    subject: text('subject').notNull(),
+    bodyHtml: text('bodyHtml').notNull(),
+    bodyText: text('bodyText').notNull(),
+    emailType: emailTypeEnum('emailType').notNull(),
+    referenceId: varchar('referenceId', { length: 7 }).notNull(),
+    attemptCount: integer('attemptCount').notNull().default(0),
+    lastError: text('lastError'),
+    isRetriable: boolean('isRetriable').notNull().default(true),
+    status: failedEmailStatusEnum('status').notNull().default('pending'),
+    errorHistory: json('errorHistory')
       .$type<EmailAttemptRecord[]>()
       .notNull()
       .default([]),
-    createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
-    lastAttemptedAt: timestamp("lastAttemptedAt", { mode: "date" }),
-    sentAt: timestamp("sentAt", { mode: "date" }),
+    createdAt: timestamp('createdAt', { mode: 'date' }).defaultNow().notNull(),
+    lastAttemptedAt: timestamp('lastAttemptedAt', { mode: 'date' }),
+    sentAt: timestamp('sentAt', { mode: 'date' }),
   },
   (t) => [
-    index("FailedEmail_status_idx").on(t.status),
-    index("FailedEmail_referenceId_idx").on(t.referenceId),
-    index("FailedEmail_createdAt_idx").on(t.createdAt),
-  ],
-);
+    index('FailedEmail_status_idx').on(t.status),
+    index('FailedEmail_referenceId_idx').on(t.referenceId),
+    index('FailedEmail_createdAt_idx').on(t.createdAt),
+  ]
+)

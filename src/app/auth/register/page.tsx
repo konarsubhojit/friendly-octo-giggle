@@ -1,100 +1,100 @@
-"use client";
+'use client'
 
-import { useCallback } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useCallback } from 'react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import {
   DynamicForm,
   type FieldDef,
   type SubmitResult,
-} from "@/components/ui/DynamicForm";
-import { PASSWORD_REQUIREMENTS } from "@/lib/validations/primitives";
-import { PROFILE_ERRORS } from "@/lib/constants/error-messages";
+} from '@/components/ui/DynamicForm'
+import { PASSWORD_REQUIREMENTS } from '@/lib/validations/primitives'
+import { PROFILE_ERRORS } from '@/lib/constants/error-messages'
 
 const EMAIL_RE =
-  /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
-const PHONE_RE = /^\+?[1-9]\d{6,14}$/;
+  /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/
+const PHONE_RE = /^\+?[1-9]\d{6,14}$/
 
 const isPasswordStrong = (p: string) =>
-  PASSWORD_REQUIREMENTS.every((r) => r.test(p));
+  PASSWORD_REQUIREMENTS.every((r) => r.test(p))
 
 const PHONE_LABEL = (
   <>
-    Phone Number{" "}
+    Phone Number{' '}
     <span className="text-[var(--text-secondary)]">(optional)</span>
   </>
-);
+)
 
 const REGISTER_FIELDS: ReadonlyArray<FieldDef> = [
   {
-    id: "register-name",
-    name: "name",
-    label: "Name",
-    type: "text",
-    placeholder: "Your full name",
-    autoComplete: "name",
+    id: 'register-name',
+    name: 'name',
+    label: 'Name',
+    type: 'text',
+    placeholder: 'Your full name',
+    autoComplete: 'name',
     validate: (v) =>
       v.trim()
         ? undefined
         : "Enter the name you'd like to use on your account.",
   },
   {
-    id: "register-email",
-    name: "email",
-    label: "Email",
-    type: "email",
-    placeholder: "you@example.com",
-    autoComplete: "email",
+    id: 'register-email',
+    name: 'email',
+    label: 'Email',
+    type: 'email',
+    placeholder: 'you@example.com',
+    autoComplete: 'email',
     validate: (v) => {
-      if (!v.trim()) return PROFILE_ERRORS.EMAIL_REQUIRED;
-      if (!EMAIL_RE.test(v)) return PROFILE_ERRORS.EMAIL_INVALID;
-      return undefined;
+      if (!v.trim()) return PROFILE_ERRORS.EMAIL_REQUIRED
+      if (!EMAIL_RE.test(v)) return PROFILE_ERRORS.EMAIL_INVALID
+      return undefined
     },
   },
   {
-    id: "register-phone",
-    name: "phoneNumber",
+    id: 'register-phone',
+    name: 'phoneNumber',
     label: PHONE_LABEL,
-    type: "tel",
-    placeholder: "+1234567890",
-    autoComplete: "tel",
+    type: 'tel',
+    placeholder: '+1234567890',
+    autoComplete: 'tel',
     validate: (v) =>
       v && !PHONE_RE.test(v) ? PROFILE_ERRORS.PHONE_INVALID : undefined,
   },
   {
-    id: "register-password",
-    name: "password",
-    label: "Password",
-    type: "password",
-    placeholder: "Create a password",
-    autoComplete: "new-password",
+    id: 'register-password',
+    name: 'password',
+    label: 'Password',
+    type: 'password',
+    placeholder: 'Create a password',
+    autoComplete: 'new-password',
     showPasswordToggle: true,
     showStrengthChecklist: true,
     validate: (v) => {
-      if (!v) return "Create a password for your new account.";
+      if (!v) return 'Create a password for your new account.'
       if (!isPasswordStrong(v))
-        return "Choose a stronger password using the checklist below.";
-      return undefined;
+        return 'Choose a stronger password using the checklist below.'
+      return undefined
     },
   },
   {
-    id: "register-confirm-password",
-    name: "confirmPassword",
-    label: "Confirm Password",
-    type: "password",
-    placeholder: "Confirm your password",
-    autoComplete: "new-password",
+    id: 'register-confirm-password',
+    name: 'confirmPassword',
+    label: 'Confirm Password',
+    type: 'password',
+    placeholder: 'Confirm your password',
+    autoComplete: 'new-password',
     validate: (v, all) => {
-      if (!v) return "Re-enter your password so we can confirm it matches.";
-      if (v !== all.password) return "The two passwords need to match exactly.";
-      return undefined;
+      if (!v) return 'Re-enter your password so we can confirm it matches.'
+      if (v !== all.password) return 'The two passwords need to match exactly.'
+      return undefined
     },
     validateOnBlur: true,
   },
-];
+]
 
 const SUBMIT_BTN =
-  "w-full py-3 bg-[var(--btn-primary)] bg-gradient-to-r from-[var(--accent-rose)] to-[var(--accent-pink)] text-white rounded-full font-semibold hover:from-[var(--accent-pink)] hover:to-[var(--accent-rose)] transition-all duration-300 shadow-warm hover:shadow-warm-lg disabled:opacity-50 disabled:cursor-not-allowed focus-warm";
+  'w-full py-3 bg-[var(--btn-primary)] bg-gradient-to-r from-[var(--accent-rose)] to-[var(--accent-pink)] text-white rounded-full font-semibold hover:from-[var(--accent-pink)] hover:to-[var(--accent-rose)] transition-all duration-300 shadow-warm hover:shadow-warm-lg disabled:opacity-50 disabled:cursor-not-allowed focus-warm'
 
 const RegisterPageHeader = () => (
   <div className="text-center mb-6">
@@ -119,28 +119,28 @@ const RegisterPageHeader = () => (
     </h1>
     <p className="text-[var(--text-secondary)]">Join us and start shopping</p>
   </div>
-);
+)
 
 const parseRegisterError = (data: {
-  details?: Record<string, string>;
-  error?: string;
+  details?: Record<string, string>
+  error?: string
 }): SubmitResult => {
-  if (data.details) return data.details;
+  if (data.details) return data.details
   return (
     data.error ??
     "We couldn't create your account right now. Please review the form and try again."
-  );
-};
+  )
+}
 
 export default function RegisterPage() {
-  const router = useRouter();
+  const router = useRouter()
 
   const handleSubmit = useCallback(
     async (values: Readonly<Record<string, string>>): Promise<SubmitResult> => {
       try {
-        const res = await fetch("/api/auth/register", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
+        const res = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             name: values.name,
             email: values.email,
@@ -148,17 +148,17 @@ export default function RegisterPage() {
             password: values.password,
             confirmPassword: values.confirmPassword,
           }),
-        });
-        const data = await res.json();
-        if (!res.ok) return parseRegisterError(data);
-        router.push("/auth/signin?registered=true");
-        return undefined;
+        })
+        const data = await res.json()
+        if (!res.ok) return parseRegisterError(data)
+        router.push('/auth/signin?registered=true')
+        return undefined
       } catch {
-        return "We couldn't create your account right now. Please try again in a moment.";
+        return "We couldn't create your account right now. Please try again in a moment."
       }
     },
-    [router],
-  );
+    [router]
+  )
 
   return (
     <div className="min-h-screen bg-warm-gradient flex items-center justify-center px-4 sm:px-6 lg:px-8 py-12">
@@ -175,7 +175,7 @@ export default function RegisterPage() {
         />
 
         <p className="text-center text-sm text-[var(--text-secondary)] mt-6">
-          Already have an account?{" "}
+          Already have an account?{' '}
           <Link
             href="/auth/signin"
             className="font-semibold text-[var(--btn-primary)] hover:text-[var(--btn-primary-hover)]"
@@ -185,5 +185,5 @@ export default function RegisterPage() {
         </p>
       </div>
     </div>
-  );
+  )
 }

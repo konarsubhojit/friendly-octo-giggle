@@ -1,18 +1,18 @@
 interface StockBadgeProps {
-  readonly stock: number;
-  readonly showIcon?: boolean;
-  readonly size?: "sm" | "md";
+  readonly stock: number
+  readonly showIcon?: boolean
+  readonly size?: 'sm' | 'md'
 }
 
 export function StockBadge({
   stock,
   showIcon = false,
-  size = "sm",
+  size = 'sm',
 }: StockBadgeProps) {
   const baseClasses =
-    size === "sm"
-      ? "px-3 py-1 text-xs"
-      : "px-4 py-2 text-sm shadow-warm inline-flex items-center gap-2";
+    size === 'sm'
+      ? 'px-3 py-1 text-xs'
+      : 'px-4 py-2 text-sm shadow-warm inline-flex items-center gap-2'
 
   if (stock > 5) {
     return (
@@ -35,7 +35,7 @@ export function StockBadge({
         )}
         In Stock
       </span>
-    );
+    )
   }
   if (stock > 0) {
     return (
@@ -56,13 +56,13 @@ export function StockBadge({
             />
           </svg>
         )}
-        Only {stock} left{showIcon && " in stock"}
+        Only {stock} left{showIcon && ' in stock'}
       </span>
-    );
+    )
   }
   return (
     <span
-      className={`${baseClasses} bg-red-500/10 text-red-${showIcon ? "500" : "700"} rounded-full font-semibold`}
+      className={`${baseClasses} bg-red-500/10 text-red-${showIcon ? '500' : '700'} rounded-full font-semibold`}
     >
       {showIcon && (
         <svg
@@ -80,5 +80,5 @@ export function StockBadge({
       )}
       Out of Stock
     </span>
-  );
+  )
 }

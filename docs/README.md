@@ -95,23 +95,23 @@ This is a highly scalable e-commerce platform designed for serverless deployment
 
 ## 📦 Technology Stack
 
-| Category           | Technology                           |
-| ------------------ | ------------------------------------ |
-| **Framework**      | Next.js 16 with App Router           |
-| **Language**       | TypeScript 6.x (strict mode)         |
-| **Database**       | PostgreSQL (Neon) with Drizzle ORM   |
-| **Cache**          | Redis (Upstash, HTTP-based)          |
-| **Authentication** | NextAuth.js v5                       |
-| **Validation**     | Zod 4.x                              |
-| **Styling**        | Tailwind CSS v4                      |
-| **State**          | Redux Toolkit 2.x                    |
-| **Logging**        | Pino                                 |
-| **Image Storage**  | Vercel Blob                          |
-| **Search**         | Upstash Search (with DB fallback)    |
-| **Queues**         | Vercel Queues (checkout)             |
-| **AI**             | AI SDK (product assistant)           |
-| **Email**          | MailerSend / Google SMTP via QStash  |
-| **Feature Flags**  | Vercel Edge Config                   |
+| Category           | Technology                          |
+| ------------------ | ----------------------------------- |
+| **Framework**      | Next.js 16 with App Router          |
+| **Language**       | TypeScript 6.x (strict mode)        |
+| **Database**       | PostgreSQL (Neon) with Drizzle ORM  |
+| **Cache**          | Redis (Upstash, HTTP-based)         |
+| **Authentication** | NextAuth.js v5                      |
+| **Validation**     | Zod 4.x                             |
+| **Styling**        | Tailwind CSS v4                     |
+| **State**          | Redux Toolkit 2.x                   |
+| **Logging**        | Pino                                |
+| **Image Storage**  | Vercel Blob                         |
+| **Search**         | Upstash Search (with DB fallback)   |
+| **Queues**         | Vercel Queues (checkout)            |
+| **AI**             | AI SDK (product assistant)          |
+| **Email**          | MailerSend / Google SMTP via QStash |
+| **Feature Flags**  | Vercel Edge Config                  |
 
 ## 🔧 System Requirements
 

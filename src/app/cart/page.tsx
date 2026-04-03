@@ -1,17 +1,17 @@
-"use client";
+'use client'
 
-import { useState, useEffect, useCallback, useMemo } from "react";
-import Link from "next/link";
-import { useSession } from "next-auth/react";
-import { useSelector, useDispatch } from "react-redux";
-import { CartItemWithProduct } from "@/lib/types";
-import { useCurrency } from "@/contexts/CurrencyContext";
-import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
-import { AlertBanner } from "@/components/ui/AlertBanner";
-import { EmptyState } from "@/components/ui/EmptyState";
-import { AuthRequiredState } from "@/components/ui/AuthRequiredState";
-import { Card } from "@/components/ui/Card";
-import { GradientHeading } from "@/components/ui/GradientHeading";
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import Link from 'next/link'
+import { useSession } from 'next-auth/react'
+import { useSelector, useDispatch } from 'react-redux'
+import { CartItemWithProduct } from '@/lib/types'
+import { useCurrency } from '@/contexts/CurrencyContext'
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
+import { AlertBanner } from '@/components/ui/AlertBanner'
+import { EmptyState } from '@/components/ui/EmptyState'
+import { AuthRequiredState } from '@/components/ui/AuthRequiredState'
+import { Card } from '@/components/ui/Card'
+import { GradientHeading } from '@/components/ui/GradientHeading'
 import {
   fetchCart,
   updateCartItem,
@@ -19,85 +19,85 @@ import {
   selectCart,
   selectCartLoading,
   syncPendingCartItems,
-} from "@/features/cart/store/cartSlice";
-import type { AppDispatch } from "@/lib/store";
-import { CartItemRow } from "@/features/cart/components/CartItemRow";
-import { CheckoutForm } from "@/features/cart/components/CheckoutForm";
-import CartGlyph from "@/components/icons/CartGlyph";
-import { LeafAccent } from "@/components/ui/DecorativeElements";
-import { buildCheckoutPricingSummary } from "@/features/orders/services/order-summary";
-import { CartPricingSummary } from "@/features/cart/components/CartPricingSummary";
+} from '@/features/cart/store/cartSlice'
+import type { AppDispatch } from '@/lib/store'
+import { CartItemRow } from '@/features/cart/components/CartItemRow'
+import { CheckoutForm } from '@/features/cart/components/CheckoutForm'
+import CartGlyph from '@/components/icons/CartGlyph'
+import { LeafAccent } from '@/components/ui/DecorativeElements'
+import { buildCheckoutPricingSummary } from '@/features/orders/services/order-summary'
+import { CartPricingSummary } from '@/features/cart/components/CartPricingSummary'
 
 export default function CartPage() {
-  const { data: session, status } = useSession();
-  const dispatch = useDispatch<AppDispatch>();
-  const cart = useSelector(selectCart);
-  const loading = useSelector(selectCartLoading);
-  const { formatPrice } = useCurrency();
-  const [updating, setUpdating] = useState<string | null>(null);
+  const { data: session, status } = useSession()
+  const dispatch = useDispatch<AppDispatch>()
+  const cart = useSelector(selectCart)
+  const loading = useSelector(selectCartLoading)
+  const { formatPrice } = useCurrency()
+  const [updating, setUpdating] = useState<string | null>(null)
   const [customizationNotes, setCustomizationNotes] = useState<
     Record<string, string>
-  >({});
-  const [error, setError] = useState("");
+  >({})
+  const [error, setError] = useState('')
 
   useEffect(() => {
-    if (status !== "authenticated") return;
+    if (status !== 'authenticated') return
     dispatch(syncPendingCartItems()).finally(() => {
-      dispatch(fetchCart({ force: true }));
-    });
-  }, [dispatch, status]);
+      dispatch(fetchCart({ force: true }))
+    })
+  }, [dispatch, status])
 
   const handleUpdateQuantity = useCallback(
     async (itemId: string, quantity: number) => {
-      if (quantity < 1) return;
+      if (quantity < 1) return
 
-      setUpdating(itemId);
+      setUpdating(itemId)
       try {
-        await dispatch(updateCartItem({ itemId, quantity })).unwrap();
+        await dispatch(updateCartItem({ itemId, quantity })).unwrap()
       } catch (err) {
         setError(
-          typeof err === "string"
+          typeof err === 'string'
             ? err
-            : "Something went wrong. Please try again.",
-        );
+            : 'Something went wrong. Please try again.'
+        )
       } finally {
-        setUpdating(null);
+        setUpdating(null)
       }
     },
-    [dispatch],
-  );
+    [dispatch]
+  )
 
   const handleRemoveItem = useCallback(
     async (itemId: string) => {
-      setUpdating(itemId);
+      setUpdating(itemId)
       try {
-        await dispatch(removeCartItem(itemId)).unwrap();
+        await dispatch(removeCartItem(itemId)).unwrap()
       } catch (err) {
         setError(
-          typeof err === "string"
+          typeof err === 'string'
             ? err
-            : "Something went wrong. Please try again.",
-        );
+            : 'Something went wrong. Please try again.'
+        )
       } finally {
-        setUpdating(null);
+        setUpdating(null)
       }
     },
-    [dispatch],
-  );
+    [dispatch]
+  )
 
   const pricingSummary = useMemo(
     () => buildCheckoutPricingSummary(cart?.items ?? []),
-    [cart?.items],
-  );
+    [cart?.items]
+  )
 
   const handleCustomizationChange = useCallback(
     (itemId: string, note: string) => {
-      setCustomizationNotes((prev) => ({ ...prev, [itemId]: note }));
+      setCustomizationNotes((prev) => ({ ...prev, [itemId]: note }))
     },
-    [],
-  );
+    []
+  )
 
-  if ((loading && cart === null) || status === "loading") {
+  if ((loading && cart === null) || status === 'loading') {
     return (
       <div className="min-h-screen bg-warm-gradient">
         <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
@@ -106,7 +106,7 @@ export default function CartPage() {
           </div>
         </main>
       </div>
-    );
+    )
   }
 
   if (!session?.user) {
@@ -125,10 +125,10 @@ export default function CartPage() {
           </Link>
         </main>
       </div>
-    );
+    )
   }
 
-  const isEmpty = !cart?.items || cart.items.length === 0;
+  const isEmpty = !cart?.items || cart.items.length === 0
 
   return (
     <div className="min-h-screen bg-warm-gradient">
@@ -142,7 +142,7 @@ export default function CartPage() {
           <AlertBanner
             message={error}
             variant="error"
-            onDismiss={() => setError("")}
+            onDismiss={() => setError('')}
             className="mb-6"
           />
         )}
@@ -170,7 +170,7 @@ export default function CartPage() {
                     item={item}
                     isLast={index === cart.items.length - 1}
                     updating={updating}
-                    customizationNote={customizationNotes[item.id] || ""}
+                    customizationNote={customizationNotes[item.id] || ''}
                     formatPrice={formatPrice}
                     onUpdateQuantity={handleUpdateQuantity}
                     onRemoveItem={handleRemoveItem}
@@ -212,7 +212,7 @@ export default function CartPage() {
                   subtotal={formatPrice(pricingSummary.subtotal)}
                   shipping={
                     pricingSummary.shippingAmount === 0
-                      ? "Free"
+                      ? 'Free'
                       : formatPrice(pricingSummary.shippingAmount)
                   }
                   total={formatPrice(pricingSummary.total)}
@@ -231,5 +231,5 @@ export default function CartPage() {
         )}
       </main>
     </div>
-  );
+  )
 }

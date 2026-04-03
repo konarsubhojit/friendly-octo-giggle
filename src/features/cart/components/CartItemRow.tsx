@@ -1,19 +1,19 @@
-"use client";
+'use client'
 
-import Link from "next/link";
-import Image from "next/image";
-import { CartItemWithProduct } from "@/lib/types";
-import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import Link from 'next/link'
+import Image from 'next/image'
+import { CartItemWithProduct } from '@/lib/types'
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 
 interface CartItemRowProps {
-  readonly item: CartItemWithProduct;
-  readonly isLast: boolean;
-  readonly updating: string | null;
-  readonly customizationNote: string;
-  readonly formatPrice: (amount: number) => string;
-  readonly onUpdateQuantity: (itemId: string, quantity: number) => void;
-  readonly onRemoveItem: (itemId: string) => void;
-  readonly onCustomizationChange: (itemId: string, note: string) => void;
+  readonly item: CartItemWithProduct
+  readonly isLast: boolean
+  readonly updating: string | null
+  readonly customizationNote: string
+  readonly formatPrice: (amount: number) => string
+  readonly onUpdateQuantity: (itemId: string, quantity: number) => void
+  readonly onRemoveItem: (itemId: string) => void
+  readonly onCustomizationChange: (itemId: string, note: string) => void
 }
 
 export function CartItemRow({
@@ -26,12 +26,12 @@ export function CartItemRow({
   onRemoveItem,
   onCustomizationChange,
 }: CartItemRowProps) {
-  const price = item.variation ? item.variation.price : item.product.price;
-  const image = item.variation?.image || item.product.image;
+  const price = item.variation ? item.variation.price : item.product.price
+  const image = item.variation?.image || item.product.image
 
   return (
     <div
-      className={`flex gap-5 p-6 items-start${isLast ? "" : " border-b border-[var(--border-warm)]"}`}
+      className={`flex gap-5 p-6 items-start${isLast ? '' : ' border-b border-[var(--border-warm)]'}`}
     >
       <div className="relative w-24 h-24 flex-shrink-0 bg-[var(--accent-cream)] rounded-xl overflow-hidden border border-[var(--border-warm)]">
         <Image
@@ -87,10 +87,10 @@ export function CartItemRow({
                   {
                     length: Math.min(
                       item.variation?.stock ?? item.product.stock,
-                      10,
+                      10
                     ),
                   },
-                  (_, i) => i + 1,
+                  (_, i) => i + 1
                 ).map((n) => (
                   <option key={n} value={n}>
                     {n}
@@ -128,5 +128,5 @@ export function CartItemRow({
         </p>
       </div>
     </div>
-  );
+  )
 }

@@ -1,49 +1,49 @@
-"use client";
+'use client'
 
-import Link from "next/link";
-import { useCurrency } from "@/contexts/CurrencyContext";
-import type { AdminSalesDashboardData } from "@/features/admin/services/admin-sales";
-import { OrdersByStatusCard } from "@/features/admin/components/OrdersByStatusCard";
-import { SalesTrendChart } from "@/features/admin/components/SalesTrendChart";
-import { TopProductsTable } from "@/features/admin/components/TopProductsTable";
+import Link from 'next/link'
+import { useCurrency } from '@/contexts/CurrencyContext'
+import type { AdminSalesDashboardData } from '@/features/admin/services/admin-sales'
+import { OrdersByStatusCard } from '@/features/admin/components/OrdersByStatusCard'
+import { SalesTrendChart } from '@/features/admin/components/SalesTrendChart'
+import { TopProductsTable } from '@/features/admin/components/TopProductsTable'
 
 interface AdminSalesDashboardClientProps {
-  readonly sales: AdminSalesDashboardData;
+  readonly sales: AdminSalesDashboardData
 }
 
 interface DashboardStatCard {
-  readonly label: string;
-  readonly value: string;
-  readonly detail: string;
-  readonly tone: string;
-  readonly glow: string;
+  readonly label: string
+  readonly value: string
+  readonly detail: string
+  readonly tone: string
+  readonly glow: string
 }
 
 function formatDelta(delta: number | null, suffix: string): string {
   if (delta === null) {
-    return `New ${suffix}`;
+    return `New ${suffix}`
   }
 
-  const absoluteDelta = Math.abs(delta).toFixed(1);
+  const absoluteDelta = Math.abs(delta).toFixed(1)
 
   if (delta === 0) {
-    return `Flat vs last ${suffix}`;
+    return `Flat vs last ${suffix}`
   }
 
-  return `${delta > 0 ? "+" : "-"}${absoluteDelta}% vs last ${suffix}`;
+  return `${delta > 0 ? '+' : '-'}${absoluteDelta}% vs last ${suffix}`
 }
 
 function getDeltaBadgeClass(delta: number | null): string {
-  if (delta === null) return "bg-violet-100 text-violet-700";
-  if (delta >= 0) return "bg-emerald-100 text-emerald-700";
-  return "bg-rose-100 text-rose-700";
+  if (delta === null) return 'bg-violet-100 text-violet-700'
+  if (delta >= 0) return 'bg-emerald-100 text-emerald-700'
+  return 'bg-rose-100 text-rose-700'
 }
 
 function DeltaBadge({
   delta,
   suffix,
 }: Readonly<{ delta: number | null; suffix: string }>) {
-  const badgeClassName = getDeltaBadgeClass(delta);
+  const badgeClassName = getDeltaBadgeClass(delta)
 
   return (
     <span
@@ -51,68 +51,68 @@ function DeltaBadge({
     >
       {formatDelta(delta, suffix)}
     </span>
-  );
+  )
 }
 
 const NAV_CARDS = [
   {
-    href: "/admin/products",
-    title: "Products",
+    href: '/admin/products',
+    title: 'Products',
     description:
-      "Adjust pricing, inventory, and catalog details before demand spikes hit.",
-    accent: "from-sky-500/15 via-sky-500/5 to-transparent",
+      'Adjust pricing, inventory, and catalog details before demand spikes hit.',
+    accent: 'from-sky-500/15 via-sky-500/5 to-transparent',
   },
   {
-    href: "/admin/orders",
-    title: "Orders",
+    href: '/admin/orders',
+    title: 'Orders',
     description:
-      "Review pipeline health, unblock fulfilment, and handle exceptions quickly.",
-    accent: "from-emerald-500/15 via-emerald-500/5 to-transparent",
+      'Review pipeline health, unblock fulfilment, and handle exceptions quickly.',
+    accent: 'from-emerald-500/15 via-emerald-500/5 to-transparent',
   },
   {
-    href: "/admin/users",
-    title: "Users",
+    href: '/admin/users',
+    title: 'Users',
     description:
-      "Check customer growth and keep admin access and permissions under control.",
-    accent: "from-amber-500/15 via-amber-500/5 to-transparent",
+      'Check customer growth and keep admin access and permissions under control.',
+    accent: 'from-amber-500/15 via-amber-500/5 to-transparent',
   },
-] as const;
+] as const
 
 export function AdminSalesDashboardClient({
   sales,
 }: AdminSalesDashboardClientProps) {
-  const { formatPrice } = useCurrency();
+  const { formatPrice } = useCurrency()
 
   const summaryCards: readonly DashboardStatCard[] = [
     {
-      label: "Total revenue",
+      label: 'Total revenue',
       value: formatPrice(sales.totalRevenue),
       detail: `${sales.totalOrders} lifetime non-cancelled orders`,
-      tone: "text-emerald-700",
-      glow: "bg-emerald-500/10",
+      tone: 'text-emerald-700',
+      glow: 'bg-emerald-500/10',
     },
     {
-      label: "This month",
+      label: 'This month',
       value: formatPrice(sales.monthRevenue),
       detail: `${sales.monthOrders} orders this month`,
-      tone: "text-sky-700",
-      glow: "bg-sky-500/10",
+      tone: 'text-sky-700',
+      glow: 'bg-sky-500/10',
     },
     {
-      label: "Average order",
+      label: 'Average order',
       value: formatPrice(sales.averageOrderValue),
       detail: `${formatPrice(sales.todayRevenue)} revenue today`,
-      tone: "text-violet-700",
-      glow: "bg-violet-500/10",
+      tone: 'text-violet-700',
+      glow: 'bg-violet-500/10',
     },
     {
-      label: "Customers",
+      label: 'Customers',
       value: String(sales.totalCustomers),
       detail: `${sales.pendingOrders} orders still in flight`,
-      tone: "text-amber-700",
-      glow: "bg-amber-500/10",
+      tone: 'text-amber-700',
+      glow: 'bg-amber-500/10',
     },
-  ];
+  ]
 
   return (
     <main className="mx-auto flex max-w-7xl flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8">
@@ -273,5 +273,5 @@ export function AdminSalesDashboardClient({
         </div>
       </section>
     </main>
-  );
+  )
 }

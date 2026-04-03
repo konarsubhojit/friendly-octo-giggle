@@ -1,34 +1,34 @@
-"use client";
+'use client'
 
-import { useCallback, useRef } from "react";
-import Image from "next/image";
-import Link from "next/link";
-import type { ProductGridItem } from "@/features/product/components/ProductGrid";
+import { useCallback, useRef } from 'react'
+import Image from 'next/image'
+import Link from 'next/link'
+import type { ProductGridItem } from '@/features/product/components/ProductGrid'
 
 interface BestsellersScrollerProps {
-  readonly bestsellers: ProductGridItem[];
+  readonly bestsellers: ProductGridItem[]
 }
 
 export function BestsellersScroller({ bestsellers }: BestsellersScrollerProps) {
-  const scrollRef = useRef<HTMLUListElement>(null);
+  const scrollRef = useRef<HTMLUListElement>(null)
 
-  const scroll = useCallback((direction: "left" | "right") => {
-    const container = scrollRef.current;
-    if (!container) return;
-    const cardWidth = container.querySelector("a")?.offsetWidth ?? 220;
-    const gap = 16;
+  const scroll = useCallback((direction: 'left' | 'right') => {
+    const container = scrollRef.current
+    if (!container) return
+    const cardWidth = container.querySelector('a')?.offsetWidth ?? 220
+    const gap = 16
     container.scrollBy({
-      left: direction === "right" ? cardWidth + gap : -(cardWidth + gap),
-      behavior: "smooth",
-    });
-  }, []);
+      left: direction === 'right' ? cardWidth + gap : -(cardWidth + gap),
+      behavior: 'smooth',
+    })
+  }, [])
 
   if (bestsellers.length === 0) {
     return (
       <p className="text-sm text-[var(--text-muted)]">
         No bestseller data yet.
       </p>
-    );
+    )
   }
 
   return (
@@ -37,7 +37,7 @@ export function BestsellersScroller({ bestsellers }: BestsellersScrollerProps) {
       <button
         type="button"
         aria-label="Scroll bestsellers left"
-        onClick={() => scroll("left")}
+        onClick={() => scroll('left')}
         className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 z-10 hidden sm:flex items-center justify-center w-9 h-9 rounded-full bg-[var(--surface)] border border-[var(--border-warm)] shadow-warm text-[var(--foreground)] opacity-0 group-hover/scroller:opacity-100 transition-opacity duration-200 hover:bg-[var(--accent-blush)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-rose)]"
       >
         <svg
@@ -59,7 +59,7 @@ export function BestsellersScroller({ bestsellers }: BestsellersScrollerProps) {
       <ul
         ref={scrollRef}
         className="flex gap-4 overflow-x-auto pb-3 snap-x snap-mandatory scroll-smooth scrollbar-hide list-none"
-        style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         aria-label="Bestsellers horizontal list"
       >
         {bestsellers.map((product, index) => (
@@ -96,7 +96,7 @@ export function BestsellersScroller({ bestsellers }: BestsellersScrollerProps) {
       <button
         type="button"
         aria-label="Scroll bestsellers right"
-        onClick={() => scroll("right")}
+        onClick={() => scroll('right')}
         className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1 z-10 hidden sm:flex items-center justify-center w-9 h-9 rounded-full bg-[var(--surface)] border border-[var(--border-warm)] shadow-warm text-[var(--foreground)] opacity-0 group-hover/scroller:opacity-100 transition-opacity duration-200 hover:bg-[var(--accent-blush)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-rose)]"
       >
         <svg
@@ -114,5 +114,5 @@ export function BestsellersScroller({ bestsellers }: BestsellersScrollerProps) {
         </svg>
       </button>
     </div>
-  );
+  )
 }

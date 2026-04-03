@@ -1,37 +1,37 @@
-"use client";
+'use client'
 
-import Image from "next/image";
-import { type Product } from "@/lib/types";
+import Image from 'next/image'
+import { type Product } from '@/lib/types'
 import {
   MAX_FILE_SIZE,
   VALID_IMAGE_TYPES_DISPLAY,
-} from "@/lib/upload-constants";
-import { CURRENCIES, type CurrencyCode } from "@/contexts/CurrencyContext";
+} from '@/lib/upload-constants'
+import { CURRENCIES, type CurrencyCode } from '@/contexts/CurrencyContext'
 import useProductForm, {
   MAX_IMAGES,
-} from "@/features/admin/hooks/useProductForm";
+} from '@/features/admin/hooks/useProductForm'
 
 interface ProductFormModalProps {
-  readonly editingProduct: Product | null;
-  readonly onClose: () => void;
-  readonly onSuccess: (product: Product) => void;
-  readonly layout?: "modal" | "page";
+  readonly editingProduct: Product | null
+  readonly onClose: () => void
+  readonly onSuccess: (product: Product) => void
+  readonly layout?: 'modal' | 'page'
 }
 
 interface AdditionalImageRowProps {
-  readonly idx: number;
-  readonly imgUrl: string;
-  readonly pendingFile: File | null;
+  readonly idx: number
+  readonly imgUrl: string
+  readonly pendingFile: File | null
   readonly onFileChange: (
     idx: number,
-    e: React.ChangeEvent<HTMLInputElement>,
-  ) => void;
-  readonly onRemove: (idx: number) => void;
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => void
+  readonly onRemove: (idx: number) => void
 }
 
 const PendingFileNotice = ({ fileName }: { readonly fileName: string }) => (
   <p className="text-xs text-green-600 mt-1">Selected: {fileName}</p>
-);
+)
 
 const AdditionalImageRow = ({
   idx,
@@ -40,8 +40,8 @@ const AdditionalImageRow = ({
   onFileChange,
   onRemove,
 }: AdditionalImageRowProps) => {
-  const showCurrent = Boolean(imgUrl) && pendingFile === null;
-  const labelText = `Image ${idx + 2}${showCurrent ? " (current)" : ""}`;
+  const showCurrent = Boolean(imgUrl) && pendingFile === null
+  const labelText = `Image ${idx + 2}${showCurrent ? ' (current)' : ''}`
   return (
     <div className="flex items-start gap-3 p-3 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700">
       {showCurrent && (
@@ -93,16 +93,16 @@ const AdditionalImageRow = ({
         </svg>
       </button>
     </div>
-  );
-};
+  )
+}
 
 interface PriceFieldProps {
-  readonly priceCurrency: CurrencyCode;
-  readonly priceValue: number;
-  readonly error?: string;
-  readonly availableCurrencies: CurrencyCode[];
-  readonly onCurrencyChange: (code: CurrencyCode) => void;
-  readonly onPriceChange: (value: number) => void;
+  readonly priceCurrency: CurrencyCode
+  readonly priceValue: number
+  readonly error?: string
+  readonly availableCurrencies: CurrencyCode[]
+  readonly onCurrencyChange: (code: CurrencyCode) => void
+  readonly onPriceChange: (value: number) => void
 }
 
 const PriceField = ({
@@ -139,14 +139,14 @@ const PriceField = ({
         type="number"
         value={priceValue}
         onChange={(e) => {
-          const value = Number.parseFloat(e.target.value);
-          if (!Number.isNaN(value)) onPriceChange(value);
+          const value = Number.parseFloat(e.target.value)
+          if (!Number.isNaN(value)) onPriceChange(value)
         }}
         required
         min="0.01"
         step="0.01"
-        aria-describedby={error ? "product-price-error" : undefined}
-        className={`flex-1 min-w-0 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white dark:bg-gray-700 ${error ? "border-red-400 dark:border-red-500" : "border-gray-300 dark:border-gray-600"}`}
+        aria-describedby={error ? 'product-price-error' : undefined}
+        className={`flex-1 min-w-0 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white dark:bg-gray-700 ${error ? 'border-red-400 dark:border-red-500' : 'border-gray-300 dark:border-gray-600'}`}
       />
     </div>
     {error && (
@@ -155,13 +155,13 @@ const PriceField = ({
       </p>
     )}
   </div>
-);
+)
 
 const ProductFormModal = ({
   editingProduct,
   onClose,
   onSuccess,
-  layout = "modal",
+  layout = 'modal',
 }: ProductFormModalProps) => {
   const {
     formData,
@@ -186,13 +186,13 @@ const ProductFormModal = ({
     removeAdditionalImage,
     handleStockChange,
     handleSubmit,
-  } = useProductForm(editingProduct, onClose, onSuccess);
-  const isPageLayout = layout === "page";
+  } = useProductForm(editingProduct, onClose, onSuccess)
+  const isPageLayout = layout === 'page'
 
   const formBody = (
     <>
       <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">
-        {editingProduct ? "Edit Product" : "Add Product"}
+        {editingProduct ? 'Edit Product' : 'Add Product'}
       </h3>
 
       <form onSubmit={handleSubmit}>
@@ -209,15 +209,15 @@ const ProductFormModal = ({
               type="text"
               value={formData.name}
               onChange={(e) => {
-                setFormData({ ...formData, name: e.target.value });
-                clearFieldError("name");
+                setFormData({ ...formData, name: e.target.value })
+                clearFieldError('name')
               }}
               required
               maxLength={200}
               aria-describedby={
-                fieldErrors.name ? "product-name-error" : undefined
+                fieldErrors.name ? 'product-name-error' : undefined
               }
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white dark:bg-gray-700 ${fieldErrors.name ? "border-red-400 dark:border-red-500" : "border-gray-300 dark:border-gray-600"}`}
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white dark:bg-gray-700 ${fieldErrors.name ? 'border-red-400 dark:border-red-500' : 'border-gray-300 dark:border-gray-600'}`}
             />
             {fieldErrors.name && (
               <p id="product-name-error" className="text-xs text-red-600 mt-1">
@@ -237,18 +237,18 @@ const ProductFormModal = ({
               id="product-description"
               value={formData.description}
               onChange={(e) => {
-                setFormData({ ...formData, description: e.target.value });
-                clearFieldError("description");
+                setFormData({ ...formData, description: e.target.value })
+                clearFieldError('description')
               }}
               required
               maxLength={2000}
               rows={4}
               aria-describedby={
                 fieldErrors.description
-                  ? "product-description-error"
+                  ? 'product-description-error'
                   : undefined
               }
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white dark:bg-gray-700 ${fieldErrors.description ? "border-red-400 dark:border-red-500" : "border-gray-300 dark:border-gray-600"}`}
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white dark:bg-gray-700 ${fieldErrors.description ? 'border-red-400 dark:border-red-500' : 'border-gray-300 dark:border-gray-600'}`}
             />
             {fieldErrors.description && (
               <p
@@ -268,8 +268,8 @@ const ProductFormModal = ({
               availableCurrencies={availableCurrencies}
               onCurrencyChange={handlePriceCurrencyChange}
               onPriceChange={(value) => {
-                setFormData({ ...formData, price: value });
-                clearFieldError("price");
+                setFormData({ ...formData, price: value })
+                clearFieldError('price')
               }}
             />
 
@@ -289,9 +289,9 @@ const ProductFormModal = ({
                 min="0"
                 step="1"
                 aria-describedby={
-                  fieldErrors.stock ? "product-stock-error" : undefined
+                  fieldErrors.stock ? 'product-stock-error' : undefined
                 }
-                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white dark:bg-gray-700 ${fieldErrors.stock ? "border-red-400 dark:border-red-500" : "border-gray-300 dark:border-gray-600"}`}
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white dark:bg-gray-700 ${fieldErrors.stock ? 'border-red-400 dark:border-red-500' : 'border-gray-300 dark:border-gray-600'}`}
               />
               {fieldErrors.stock && (
                 <p
@@ -315,14 +315,14 @@ const ProductFormModal = ({
               id="product-category"
               value={formData.category}
               onChange={(e) => {
-                setFormData({ ...formData, category: e.target.value });
-                clearFieldError("category");
+                setFormData({ ...formData, category: e.target.value })
+                clearFieldError('category')
               }}
               required
               aria-describedby={
-                fieldErrors.category ? "product-category-error" : undefined
+                fieldErrors.category ? 'product-category-error' : undefined
               }
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${fieldErrors.category ? "border-red-400 dark:border-red-500" : "border-gray-300 dark:border-gray-600"}`}
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${fieldErrors.category ? 'border-red-400 dark:border-red-500' : 'border-gray-300 dark:border-gray-600'}`}
             >
               <option value="">Select a category</option>
               {categoryList.map((cat) => (
@@ -347,7 +347,7 @@ const ProductFormModal = ({
               htmlFor="product-image"
               className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
             >
-              Primary Image{" "}
+              Primary Image{' '}
               <span className="text-gray-400 dark:text-gray-500 font-normal">
                 (required)
               </span>
@@ -369,15 +369,15 @@ const ProductFormModal = ({
               accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
               onChange={handleImageChange}
               aria-describedby={
-                fieldErrors.image ? "product-image-error" : undefined
+                fieldErrors.image ? 'product-image-error' : undefined
               }
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-gray-300 dark:bg-gray-700 ${fieldErrors.image ? "border-red-400 dark:border-red-500" : "border-gray-300 dark:border-gray-600"}`}
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-gray-300 dark:bg-gray-700 ${fieldErrors.image ? 'border-red-400 dark:border-red-500' : 'border-gray-300 dark:border-gray-600'}`}
             />
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
               {editingProduct
-                ? "Leave empty to keep current image. "
-                : "Required. "}
-              Max {MAX_FILE_SIZE / 1024 / 1024}MB. Formats:{" "}
+                ? 'Leave empty to keep current image. '
+                : 'Required. '}
+              Max {MAX_FILE_SIZE / 1024 / 1024}MB. Formats:{' '}
               {VALID_IMAGE_TYPES_DISPLAY}
             </p>
             {fieldErrors.image && (
@@ -396,9 +396,9 @@ const ProductFormModal = ({
           <div>
             <div className="flex items-center justify-between mb-2">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Additional Images{" "}
+                Additional Images{' '}
                 <span className="text-gray-400 dark:text-gray-500 font-normal">
-                  ({formData.images.length}/{MAX_IMAGES - 1} extra,{" "}
+                  ({formData.images.length}/{MAX_IMAGES - 1} extra,{' '}
                   {totalImages}/{MAX_IMAGES} total)
                 </span>
               </label>
@@ -454,14 +454,14 @@ const ProductFormModal = ({
         </div>
       </form>
     </>
-  );
+  )
 
   if (isPageLayout) {
     return (
       <section className="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-6">
         {formBody}
       </section>
-    );
+    )
   }
 
   return (
@@ -470,7 +470,7 @@ const ProductFormModal = ({
         <div className="p-6">{formBody}</div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default ProductFormModal;
+export default ProductFormModal

@@ -1,114 +1,113 @@
-import Link from "next/link";
+import Link from 'next/link'
 import {
   AdminPageShell,
   AdminPanel,
-} from "@/features/admin/components/AdminPageShell";
+} from '@/features/admin/components/AdminPageShell'
 import {
   getRecentCheckoutRequests,
   type AdminCheckoutRequestRecord,
-} from "@/features/cart/services/checkout-service";
-import { CheckoutRequestStatusEnum } from "@/features/orders/validations";
+} from '@/features/cart/services/checkout-service'
+import { CheckoutRequestStatusEnum } from '@/features/orders/validations'
 
-export const dynamic = "force-dynamic";
+export const dynamic = 'force-dynamic'
 
 interface AdminCheckoutRequestsPageProps {
   readonly searchParams?: Promise<{
-    search?: string;
-    status?: string;
-  }>;
+    search?: string
+    status?: string
+  }>
 }
 
-const STATUS_STYLES: Record<AdminCheckoutRequestRecord["status"], string> = {
+const STATUS_STYLES: Record<AdminCheckoutRequestRecord['status'], string> = {
   PENDING:
-    "bg-amber-100 text-amber-900 ring-1 ring-inset ring-amber-300 dark:bg-amber-500/10 dark:text-amber-200 dark:ring-amber-400/30",
+    'bg-amber-100 text-amber-900 ring-1 ring-inset ring-amber-300 dark:bg-amber-500/10 dark:text-amber-200 dark:ring-amber-400/30',
   PROCESSING:
-    "bg-sky-100 text-sky-900 ring-1 ring-inset ring-sky-300 dark:bg-sky-500/10 dark:text-sky-200 dark:ring-sky-400/30",
+    'bg-sky-100 text-sky-900 ring-1 ring-inset ring-sky-300 dark:bg-sky-500/10 dark:text-sky-200 dark:ring-sky-400/30',
   COMPLETED:
-    "bg-emerald-100 text-emerald-900 ring-1 ring-inset ring-emerald-300 dark:bg-emerald-500/10 dark:text-emerald-200 dark:ring-emerald-400/30",
+    'bg-emerald-100 text-emerald-900 ring-1 ring-inset ring-emerald-300 dark:bg-emerald-500/10 dark:text-emerald-200 dark:ring-emerald-400/30',
   FAILED:
-    "bg-rose-100 text-rose-900 ring-1 ring-inset ring-rose-300 dark:bg-rose-500/10 dark:text-rose-200 dark:ring-rose-400/30",
-};
+    'bg-rose-100 text-rose-900 ring-1 ring-inset ring-rose-300 dark:bg-rose-500/10 dark:text-rose-200 dark:ring-rose-400/30',
+}
 
-const dateFormatter = new Intl.DateTimeFormat("en-IN", {
-  dateStyle: "medium",
-  timeStyle: "short",
-});
+const dateFormatter = new Intl.DateTimeFormat('en-IN', {
+  dateStyle: 'medium',
+  timeStyle: 'short',
+})
 
-const formatTimestamp = (value: string) =>
-  dateFormatter.format(new Date(value));
+const formatTimestamp = (value: string) => dateFormatter.format(new Date(value))
 
 const truncate = (value: string, maxLength: number) =>
-  value.length > maxLength ? `${value.slice(0, maxLength - 1)}…` : value;
+  value.length > maxLength ? `${value.slice(0, maxLength - 1)}…` : value
 
 const normalizeSearchParam = (value: string | string[] | undefined): string =>
-  typeof value === "string" ? value.trim() : "";
+  typeof value === 'string' ? value.trim() : ''
 
 const normalizeStatusParam = (
-  value: string | string[] | undefined,
-): AdminCheckoutRequestRecord["status"] | undefined => {
-  const candidate = typeof value === "string" ? value : undefined;
-  const parsed = CheckoutRequestStatusEnum.safeParse(candidate);
-  return parsed.success ? parsed.data : undefined;
-};
+  value: string | string[] | undefined
+): AdminCheckoutRequestRecord['status'] | undefined => {
+  const candidate = typeof value === 'string' ? value : undefined
+  const parsed = CheckoutRequestStatusEnum.safeParse(candidate)
+  return parsed.success ? parsed.data : undefined
+}
 
 export default async function AdminCheckoutRequestsPage({
   searchParams,
 }: AdminCheckoutRequestsPageProps) {
-  const resolvedSearchParams = (await searchParams) ?? {};
-  const search = normalizeSearchParam(resolvedSearchParams.search);
-  const status = normalizeStatusParam(resolvedSearchParams.status);
+  const resolvedSearchParams = (await searchParams) ?? {}
+  const search = normalizeSearchParam(resolvedSearchParams.search)
+  const status = normalizeStatusParam(resolvedSearchParams.status)
 
   const records = await getRecentCheckoutRequests({
     limit: 50,
     search,
     status,
-  });
+  })
   const queuedCount = records.filter(
-    (record) => record.status === "PENDING",
-  ).length;
+    (record) => record.status === 'PENDING'
+  ).length
   const processingCount = records.filter(
-    (record) => record.status === "PROCESSING",
-  ).length;
+    (record) => record.status === 'PROCESSING'
+  ).length
   const failedCount = records.filter(
-    (record) => record.status === "FAILED",
-  ).length;
+    (record) => record.status === 'FAILED'
+  ).length
   const completedCount = records.filter(
-    (record) => record.status === "COMPLETED",
-  ).length;
+    (record) => record.status === 'COMPLETED'
+  ).length
 
   return (
     <AdminPageShell
       breadcrumbs={[
-        { label: "Admin", href: "/admin" },
-        { label: "Checkout Queue" },
+        { label: 'Admin', href: '/admin' },
+        { label: 'Checkout Queue' },
       ]}
       eyebrow="Order processing"
       title="Checkout Requests"
       description="Monitor queued, processing, failed, and completed checkout requests."
       metrics={[
         {
-          label: "Queued",
+          label: 'Queued',
           value: String(queuedCount),
-          hint: "Awaiting processing.",
-          tone: "amber",
+          hint: 'Awaiting processing.',
+          tone: 'amber',
         },
         {
-          label: "Processing",
+          label: 'Processing',
           value: String(processingCount),
-          hint: "Currently being processed.",
-          tone: "sky",
+          hint: 'Currently being processed.',
+          tone: 'sky',
         },
         {
-          label: "Failed",
+          label: 'Failed',
           value: String(failedCount),
-          hint: "Requires investigation.",
-          tone: "rose",
+          hint: 'Requires investigation.',
+          tone: 'rose',
         },
         {
-          label: "Completed",
+          label: 'Completed',
           value: String(completedCount),
-          hint: "Orders successfully created.",
-          tone: "emerald",
+          hint: 'Orders successfully created.',
+          tone: 'emerald',
         },
       ]}
     >
@@ -135,7 +134,7 @@ export default async function AdminCheckoutRequestsPage({
             </span>
             <select
               name="status"
-              defaultValue={status ?? ""}
+              defaultValue={status ?? ''}
               className="w-full rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3 text-sm text-slate-950 outline-none transition focus:border-sky-400 focus:bg-white focus:ring-4 focus:ring-sky-100 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-50 dark:focus:border-sky-500 dark:focus:bg-slate-900 dark:focus:ring-sky-500/20"
             >
               <option value="">All states</option>
@@ -165,12 +164,12 @@ export default async function AdminCheckoutRequestsPage({
         {search || status ? (
           <p className="mb-4 text-sm text-slate-500 dark:text-slate-400">
             {(() => {
-              const statusConjunction = search ? " and" : " with";
+              const statusConjunction = search ? ' and' : ' with'
               const statusText = status
                 ? `${statusConjunction} status ${status}`
-                : "";
-              const searchText = search ? ` matching "${search}"` : "";
-              return `Showing ${records.length} checkout request${records.length === 1 ? "" : "s"}${searchText}${statusText}.`;
+                : ''
+              const searchText = search ? ` matching "${search}"` : ''
+              return `Showing ${records.length} checkout request${records.length === 1 ? '' : 's'}${searchText}${statusText}.`
             })()}
           </p>
         ) : null}
@@ -178,8 +177,8 @@ export default async function AdminCheckoutRequestsPage({
         {records.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-6 py-10 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-300">
             {search || status
-              ? "No checkout requests matched the current filters."
-              : "No checkout requests have been recorded yet."}
+              ? 'No checkout requests matched the current filters.'
+              : 'No checkout requests have been recorded yet.'}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -209,7 +208,7 @@ export default async function AdminCheckoutRequestsPage({
                       </div>
                       <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                         {record.itemCount} item
-                        {record.itemCount === 1 ? "" : "s"}
+                        {record.itemCount === 1 ? '' : 's'}
                       </div>
                     </td>
                     <td className="px-3 py-4">
@@ -268,5 +267,5 @@ export default async function AdminCheckoutRequestsPage({
         )}
       </AdminPanel>
     </AdminPageShell>
-  );
+  )
 }

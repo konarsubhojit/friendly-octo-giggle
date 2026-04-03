@@ -9,30 +9,30 @@
 export class ApiError extends Error {
   constructor(
     message: string,
-    public readonly status: number,
+    public readonly status: number
   ) {
-    super(message);
-    this.name = "ApiError";
+    super(message)
+    this.name = 'ApiError'
   }
 }
 
 const parseErrorResponse = async (res: Response): Promise<string> => {
   try {
-    const data = await res.json();
-    return data.error || data.message || `Request failed (${res.status})`;
+    const data = await res.json()
+    return data.error || data.message || `Request failed (${res.status})`
   } catch {
-    return `Request failed (${res.status})`;
+    return `Request failed (${res.status})`
   }
-};
+}
 
 const request = async <T>(url: string, options?: RequestInit): Promise<T> => {
-  const res = await fetch(url, options);
+  const res = await fetch(url, options)
   if (!res.ok) {
-    const message = await parseErrorResponse(res);
-    throw new ApiError(message, res.status);
+    const message = await parseErrorResponse(res)
+    throw new ApiError(message, res.status)
   }
-  return res.json() as Promise<T>;
-};
+  return res.json() as Promise<T>
+}
 
 // ─── Public Methods ─────────────────────────────────────
 
@@ -41,17 +41,17 @@ export const apiClient = {
 
   post: <T>(url: string, body: unknown) =>
     request<T>(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     }),
 
   patch: <T>(url: string, body: unknown) =>
     request<T>(url, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     }),
 
-  delete: <T>(url: string) => request<T>(url, { method: "DELETE" }),
-};
+  delete: <T>(url: string) => request<T>(url, { method: 'DELETE' }),
+}

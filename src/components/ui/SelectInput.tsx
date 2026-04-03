@@ -1,10 +1,10 @@
-"use client";
+'use client'
 
 import {
   BASE_INPUT,
   borderCls,
   type InputSubProps,
-} from "@/components/ui/DynamicFormTypes";
+} from '@/components/ui/DynamicFormTypes'
 
 export function SelectInput({
   field,
@@ -29,5 +29,5 @@ export function SelectInput({
         </option>
       ))}
     </select>
-  );
+  )
 }

@@ -1,9 +1,9 @@
-"use client";
+'use client'
 
 interface DeleteConfirmModalProps {
-  readonly onConfirm: () => void;
-  readonly onCancel: () => void;
-  readonly loading?: boolean;
+  readonly onConfirm: () => void
+  readonly onCancel: () => void
+  readonly loading?: boolean
 }
 
 export default function DeleteConfirmModal({
@@ -60,11 +60,11 @@ export default function DeleteConfirmModal({
                 Deleting...
               </>
             ) : (
-              "Delete"
+              'Delete'
             )}
           </button>
         </div>
       </div>
     </div>
-  );
+  )
 }

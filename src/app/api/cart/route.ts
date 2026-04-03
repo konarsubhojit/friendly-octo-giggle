@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
-import { AddToCartSchema } from "@/features/cart/validations";
-import { handleValidationError } from "@/lib/api-utils";
-import { logError } from "@/lib/logger";
+import { NextRequest, NextResponse } from 'next/server'
+import { auth } from '@/lib/auth'
+import { AddToCartSchema } from '@/features/cart/validations'
+import { handleValidationError } from '@/lib/api-utils'
+import { logError } from '@/lib/logger'
 import {
   addItemToCart,
   buildGuestSessionCookieOptions,
@@ -10,45 +10,42 @@ import {
   getCart,
   getCartIdentity,
   isCartRequestError,
-} from "@/features/cart/services/cart-service";
+} from '@/features/cart/services/cart-service'
 
-export const dynamic = "force-dynamic";
+export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await auth();
+    const session = await auth()
     const identity = getCartIdentity(
       session,
-      request.cookies.get("cart_session")?.value,
-    );
-    const result = await getCart(identity);
+      request.cookies.get('cart_session')?.value
+    )
+    const result = await getCart(identity)
 
-    return NextResponse.json(result);
+    return NextResponse.json(result)
   } catch (error) {
-    logError({ error, context: "cart_fetch" });
-    return NextResponse.json(
-      { error: "Failed to fetch cart" },
-      { status: 500 },
-    );
+    logError({ error, context: 'cart_fetch' })
+    return NextResponse.json({ error: 'Failed to fetch cart' }, { status: 500 })
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const [session, rawBody] = await Promise.all([auth(), request.json()]);
+    const [session, rawBody] = await Promise.all([auth(), request.json()])
 
-    const parseResult = AddToCartSchema.safeParse(rawBody);
+    const parseResult = AddToCartSchema.safeParse(rawBody)
 
     if (!parseResult.success) {
-      return handleValidationError(parseResult.error);
+      return handleValidationError(parseResult.error)
     }
 
-    const body = parseResult.data;
+    const body = parseResult.data
     const result = await addItemToCart(
       session,
       body,
-      request.cookies.get("cart_session")?.value,
-    );
+      request.cookies.get('cart_session')?.value
+    )
 
     const responseBody = {
       cart: result.cart,
@@ -58,55 +55,52 @@ export async function POST(request: NextRequest) {
             adjustedQuantity: result.adjustedQuantity,
           }
         : {}),
-    };
-    const response = NextResponse.json(responseBody, { status: 201 });
+    }
+    const response = NextResponse.json(responseBody, { status: 201 })
 
     if (result.sessionId) {
       response.cookies.set(
-        "cart_session",
+        'cart_session',
         result.sessionId,
-        buildGuestSessionCookieOptions(),
-      );
+        buildGuestSessionCookieOptions()
+      )
     }
 
-    return response;
+    return response
   } catch (error) {
     if (isCartRequestError(error)) {
       return NextResponse.json(
         { error: error.message },
-        { status: error.status },
-      );
+        { status: error.status }
+      )
     }
 
-    logError({ error, context: "cart_add" });
+    logError({ error, context: 'cart_add' })
     return NextResponse.json(
-      { error: "Failed to add to cart" },
-      { status: 500 },
-    );
+      { error: 'Failed to add to cart' },
+      { status: 500 }
+    )
   }
 }
 
 export async function DELETE(request: NextRequest) {
   try {
-    const session = await auth();
+    const session = await auth()
     const identity = getCartIdentity(
       session,
-      request.cookies.get("cart_session")?.value,
-    );
-    await clearCart(identity);
+      request.cookies.get('cart_session')?.value
+    )
+    await clearCart(identity)
 
-    const response = NextResponse.json({ success: true });
+    const response = NextResponse.json({ success: true })
 
     if (!identity.userId && identity.sessionId) {
-      response.cookies.delete("cart_session");
+      response.cookies.delete('cart_session')
     }
 
-    return response;
+    return response
   } catch (error) {
-    logError({ error, context: "cart_clear" });
-    return NextResponse.json(
-      { error: "Failed to clear cart" },
-      { status: 500 },
-    );
+    logError({ error, context: 'cart_clear' })
+    return NextResponse.json({ error: 'Failed to clear cart' }, { status: 500 })
   }
 }

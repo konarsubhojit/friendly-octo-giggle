@@ -1,26 +1,23 @@
-"use client";
+'use client'
 
-import { UserAvatar } from "@/features/admin/components/UserAvatar";
-import { RoleBadge } from "@/features/admin/components/RoleBadge";
-import { RoleAction } from "@/features/admin/components/RoleAction";
+import { UserAvatar } from '@/features/admin/components/UserAvatar'
+import { RoleBadge } from '@/features/admin/components/RoleBadge'
+import { RoleAction } from '@/features/admin/components/RoleAction'
 
 interface AdminUser {
-  readonly id: string;
-  readonly name: string | null;
-  readonly email: string;
-  readonly image: string | null;
-  readonly role: string;
-  readonly orderCount?: number;
-  readonly createdAt: string;
+  readonly id: string
+  readonly name: string | null
+  readonly email: string
+  readonly image: string | null
+  readonly role: string
+  readonly orderCount?: number
+  readonly createdAt: string
 }
 
 interface UserRowProps {
-  readonly user: AdminUser;
-  readonly updatingUserId: string | null;
-  readonly onRoleChange: (
-    userId: string,
-    newRole: "ADMIN" | "CUSTOMER",
-  ) => void;
+  readonly user: AdminUser
+  readonly updatingUserId: string | null
+  readonly onRoleChange: (userId: string, newRole: 'ADMIN' | 'CUSTOMER') => void
 }
 
 export function UserRow({ user, updatingUserId, onRoleChange }: UserRowProps) {
@@ -30,7 +27,7 @@ export function UserRow({ user, updatingUserId, onRoleChange }: UserRowProps) {
         <div className="flex items-center">
           <UserAvatar name={user.name} email={user.email} image={user.image} />
           <span className="ml-4 text-sm font-medium text-gray-900 dark:text-white">
-            {user.name || "No name"}
+            {user.name || 'No name'}
           </span>
         </div>
       </td>
@@ -54,5 +51,5 @@ export function UserRow({ user, updatingUserId, onRoleChange }: UserRowProps) {
         />
       </td>
     </tr>
-  );
+  )
 }

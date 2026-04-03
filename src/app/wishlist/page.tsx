@@ -1,29 +1,29 @@
-"use client";
+'use client'
 
-import { useEffect, useCallback } from "react";
-import Link from "next/link";
-import Image from "next/image";
-import { useSession } from "next-auth/react";
-import { useSelector, useDispatch } from "react-redux";
-import { useCurrency } from "@/contexts/CurrencyContext";
+import { useEffect, useCallback } from 'react'
+import Link from 'next/link'
+import Image from 'next/image'
+import { useSession } from 'next-auth/react'
+import { useSelector, useDispatch } from 'react-redux'
+import { useCurrency } from '@/contexts/CurrencyContext'
 import {
   fetchWishlist,
   removeFromWishlist,
   optimisticToggle,
-} from "@/features/wishlist/store/wishlistSlice";
-import type { RootState, AppDispatch } from "@/lib/store";
-import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
-import { EmptyState } from "@/components/ui/EmptyState";
-import { AuthRequiredState } from "@/components/ui/AuthRequiredState";
-import { GradientHeading } from "@/components/ui/GradientHeading";
-import { AlertBanner } from "@/components/ui/AlertBanner";
-import { Product } from "@/lib/types";
-import Footer from "@/components/layout/Footer";
+} from '@/features/wishlist/store/wishlistSlice'
+import type { RootState, AppDispatch } from '@/lib/store'
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
+import { EmptyState } from '@/components/ui/EmptyState'
+import { AuthRequiredState } from '@/components/ui/AuthRequiredState'
+import { GradientHeading } from '@/components/ui/GradientHeading'
+import { AlertBanner } from '@/components/ui/AlertBanner'
+import { Product } from '@/lib/types'
+import Footer from '@/components/layout/Footer'
 
 interface WishlistCardProps {
-  readonly product: Product;
-  readonly formatPrice: (amount: number) => string;
-  readonly onRemove: (productId: string) => void;
+  readonly product: Product
+  readonly formatPrice: (amount: number) => string
+  readonly onRemove: (productId: string) => void
 }
 
 const WishlistCard = ({
@@ -81,31 +81,31 @@ const WishlistCard = ({
       </button>
     </div>
   </div>
-);
+)
 
 const WishlistPage = () => {
-  const { data: session, status: authStatus } = useSession();
-  const { formatPrice } = useCurrency();
-  const dispatch = useDispatch<AppDispatch>();
-  const products = useSelector((state: RootState) => state.wishlist.products);
-  const loading = useSelector((state: RootState) => state.wishlist.loading);
-  const error = useSelector((state: RootState) => state.wishlist.error);
+  const { data: session, status: authStatus } = useSession()
+  const { formatPrice } = useCurrency()
+  const dispatch = useDispatch<AppDispatch>()
+  const products = useSelector((state: RootState) => state.wishlist.products)
+  const loading = useSelector((state: RootState) => state.wishlist.loading)
+  const error = useSelector((state: RootState) => state.wishlist.error)
 
   useEffect(() => {
-    if (authStatus === "authenticated") {
-      dispatch(fetchWishlist());
+    if (authStatus === 'authenticated') {
+      dispatch(fetchWishlist())
     }
-  }, [authStatus, dispatch]);
+  }, [authStatus, dispatch])
 
   const handleRemove = useCallback(
     (productId: string) => {
-      dispatch(optimisticToggle(productId));
-      dispatch(removeFromWishlist(productId));
+      dispatch(optimisticToggle(productId))
+      dispatch(removeFromWishlist(productId))
     },
-    [dispatch],
-  );
+    [dispatch]
+  )
 
-  if (authStatus === "loading" || loading) {
+  if (authStatus === 'loading' || loading) {
     return (
       <div className="min-h-screen bg-warm-gradient">
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
@@ -114,7 +114,7 @@ const WishlistPage = () => {
           </div>
         </main>
       </div>
-    );
+    )
   }
 
   if (!session?.user) {
@@ -128,14 +128,14 @@ const WishlistPage = () => {
         </main>
         <Footer />
       </div>
-    );
+    )
   }
 
-  const plural = products.length === 1 ? "" : "s";
+  const plural = products.length === 1 ? '' : 's'
   const wishlistCountText =
     products.length === 0
-      ? "Your wishlist is empty"
-      : `${products.length} saved item${plural}`;
+      ? 'Your wishlist is empty'
+      : `${products.length} saved item${plural}`
 
   return (
     <div className="min-h-screen bg-warm-gradient">
@@ -192,7 +192,7 @@ const WishlistPage = () => {
       </main>
       <Footer />
     </div>
-  );
-};
+  )
+}
 
-export default WishlistPage;
+export default WishlistPage

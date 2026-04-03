@@ -1,81 +1,81 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
-import React from "react";
-import { Provider } from "react-redux";
-import { configureStore } from "@reduxjs/toolkit";
-import { CheckoutForm } from "@/features/cart/components/CheckoutForm";
-import cartReducer from "@/features/cart/store/cartSlice";
+import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { fireEvent, render, screen } from '@testing-library/react'
+import React from 'react'
+import { Provider } from 'react-redux'
+import { configureStore } from '@reduxjs/toolkit'
+import { CheckoutForm } from '@/features/cart/components/CheckoutForm'
+import cartReducer from '@/features/cart/store/cartSlice'
 
-const mockPush = vi.fn();
-const mockToastError = vi.fn();
-const mockUseSession = vi.fn();
+const mockPush = vi.fn()
+const mockToastError = vi.fn()
+const mockUseSession = vi.fn()
 
-vi.mock("next/navigation", () => ({
+vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockPush }),
-}));
+}))
 
-vi.mock("next-auth/react", () => ({
+vi.mock('next-auth/react', () => ({
   useSession: () => mockUseSession(),
-}));
+}))
 
-vi.mock("react-hot-toast", () => ({
+vi.mock('react-hot-toast', () => ({
   default: {
     success: vi.fn(),
     error: (message: string) => mockToastError(message),
   },
-}));
+}))
 
-vi.mock("@/contexts/CurrencyContext", () => ({
+vi.mock('@/contexts/CurrencyContext', () => ({
   useCurrency: () => ({ formatPrice: (amount: number) => `₹${amount}` }),
-}));
+}))
 
 const mockCart = {
-  id: "cart0001",
-  userId: "user-1",
+  id: 'cart0001',
+  userId: 'user-1',
   sessionId: null,
-  createdAt: "2026-03-01T00:00:00.000Z",
-  updatedAt: "2026-03-01T00:00:00.000Z",
+  createdAt: '2026-03-01T00:00:00.000Z',
+  updatedAt: '2026-03-01T00:00:00.000Z',
   items: [
     {
-      id: "citem0001",
-      cartId: "cart0001",
-      productId: "prd0001",
-      variationId: "var0001",
+      id: 'citem0001',
+      cartId: 'cart0001',
+      productId: 'prd0001',
+      variationId: 'var0001',
       quantity: 2,
-      createdAt: "2026-03-01T00:00:00.000Z",
-      updatedAt: "2026-03-01T00:00:00.000Z",
+      createdAt: '2026-03-01T00:00:00.000Z',
+      updatedAt: '2026-03-01T00:00:00.000Z',
       customizationNote: null,
       product: {
-        id: "prd0001",
-        name: "Hand-knitted Flower Bouquet",
-        description: "Bouquet",
+        id: 'prd0001',
+        name: 'Hand-knitted Flower Bouquet',
+        description: 'Bouquet',
         price: 1499,
-        image: "/flower.jpg",
+        image: '/flower.jpg',
         images: [],
         stock: 10,
-        category: "Flowers",
+        category: 'Flowers',
         deletedAt: null,
-        createdAt: "2026-03-01T00:00:00.000Z",
-        updatedAt: "2026-03-01T00:00:00.000Z",
+        createdAt: '2026-03-01T00:00:00.000Z',
+        updatedAt: '2026-03-01T00:00:00.000Z',
       },
       variation: {
-        id: "var0001",
-        productId: "prd0001",
+        id: 'var0001',
+        productId: 'prd0001',
         styleId: null,
-        name: "Small (15 cm)",
-        designName: "Rose Red",
-        variationType: "styling" as const,
+        name: 'Small (15 cm)',
+        designName: 'Rose Red',
+        variationType: 'styling' as const,
         image: null,
         images: [],
         price: 100,
         stock: 10,
         deletedAt: null,
-        createdAt: "2026-03-01T00:00:00.000Z",
-        updatedAt: "2026-03-01T00:00:00.000Z",
+        createdAt: '2026-03-01T00:00:00.000Z',
+        updatedAt: '2026-03-01T00:00:00.000Z',
       },
     },
   ],
-};
+}
 
 function renderCheckoutForm() {
   const store = configureStore({
@@ -92,84 +92,84 @@ function renderCheckoutForm() {
         adjustedQuantity: null,
       },
     },
-  });
+  })
 
   return render(
     <Provider store={store}>
-      <CheckoutForm customizationNotes={{ citem0001: "Use a satin ribbon" }} />
-    </Provider>,
-  );
+      <CheckoutForm customizationNotes={{ citem0001: 'Use a satin ribbon' }} />
+    </Provider>
+  )
 }
 
-describe("CheckoutForm", () => {
+describe('CheckoutForm', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.clearAllMocks()
     mockUseSession.mockReturnValue({
       data: {
         user: {
-          id: "user-1",
-          name: "Alice",
-          email: "alice@example.com",
+          id: 'user-1',
+          name: 'Alice',
+          email: 'alice@example.com',
         },
-        expires: "",
+        expires: '',
       },
-      status: "authenticated",
+      status: 'authenticated',
       update: vi.fn(),
-    });
+    })
     // Provide a basic sessionStorage mock
-    vi.stubGlobal("sessionStorage", {
+    vi.stubGlobal('sessionStorage', {
       setItem: vi.fn(),
       getItem: vi.fn(),
       removeItem: vi.fn(),
-    });
-  });
+    })
+  })
 
-  it("navigates to review page with valid address", () => {
-    renderCheckoutForm();
+  it('navigates to review page with valid address', () => {
+    renderCheckoutForm()
 
     fireEvent.change(screen.getByLabelText(/shipping address/i), {
-      target: { value: "42 MG Road, Bengaluru, Karnataka 560001" },
-    });
+      target: { value: '42 MG Road, Bengaluru, Karnataka 560001' },
+    })
     fireEvent.click(
-      screen.getByRole("button", { name: /review.*place order/i }),
-    );
+      screen.getByRole('button', { name: /review.*place order/i })
+    )
 
     expect(sessionStorage.setItem).toHaveBeenCalledWith(
-      "pending_checkout",
-      expect.stringContaining("42 MG Road"),
-    );
-    expect(mockPush).toHaveBeenCalledWith("/checkout/review");
-  });
+      'pending_checkout',
+      expect.stringContaining('42 MG Road')
+    )
+    expect(mockPush).toHaveBeenCalledWith('/checkout/review')
+  })
 
-  it("shows address error when address is too short", () => {
-    renderCheckoutForm();
+  it('shows address error when address is too short', () => {
+    renderCheckoutForm()
 
     fireEvent.change(screen.getByLabelText(/shipping address/i), {
-      target: { value: "Short" },
-    });
+      target: { value: 'Short' },
+    })
     fireEvent.click(
-      screen.getByRole("button", { name: /review.*place order/i }),
-    );
+      screen.getByRole('button', { name: /review.*place order/i })
+    )
 
-    expect(screen.getByRole("alert")).toBeInTheDocument();
-    expect(mockPush).not.toHaveBeenCalledWith("/checkout/review");
-  });
+    expect(screen.getByRole('alert')).toBeInTheDocument()
+    expect(mockPush).not.toHaveBeenCalledWith('/checkout/review')
+  })
 
-  it("redirects unauthenticated users to sign in", () => {
+  it('redirects unauthenticated users to sign in', () => {
     mockUseSession.mockReturnValue({
       data: null,
-      status: "unauthenticated",
+      status: 'unauthenticated',
       update: vi.fn(),
-    });
+    })
 
-    renderCheckoutForm();
+    renderCheckoutForm()
     fireEvent.change(screen.getByLabelText(/shipping address/i), {
-      target: { value: "42 MG Road, Bengaluru, Karnataka 560001" },
-    });
+      target: { value: '42 MG Road, Bengaluru, Karnataka 560001' },
+    })
     fireEvent.click(
-      screen.getByRole("button", { name: /review.*place order/i }),
-    );
+      screen.getByRole('button', { name: /review.*place order/i })
+    )
 
-    expect(mockPush).toHaveBeenCalledWith("/auth/signin?callbackUrl=/cart");
-  });
-});
+    expect(mockPush).toHaveBeenCalledWith('/auth/signin?callbackUrl=/cart')
+  })
+})

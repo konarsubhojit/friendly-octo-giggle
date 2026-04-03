@@ -1,21 +1,21 @@
-"use client";
+'use client'
 
-import type { RefObject, ReactNode } from "react";
+import type { RefObject, ReactNode } from 'react'
 
 export interface DialogBodyProps {
-  readonly titleId: string;
-  readonly messageId: string;
-  readonly title: string;
-  readonly message: string;
-  readonly iconBg: string;
-  readonly icon: ReactNode;
-  readonly cancelLabel: string;
-  readonly confirmLabel: string;
-  readonly loading: boolean;
-  readonly buttonClass: string;
-  readonly cancelBtnRef: RefObject<HTMLButtonElement | null>;
-  readonly onCancel: () => void;
-  readonly onConfirm: () => void;
+  readonly titleId: string
+  readonly messageId: string
+  readonly title: string
+  readonly message: string
+  readonly iconBg: string
+  readonly icon: ReactNode
+  readonly cancelLabel: string
+  readonly confirmLabel: string
+  readonly loading: boolean
+  readonly buttonClass: string
+  readonly cancelBtnRef: RefObject<HTMLButtonElement | null>
+  readonly onCancel: () => void
+  readonly onConfirm: () => void
 }
 
 export function DialogBody({
@@ -98,5 +98,5 @@ export function DialogBody({
         </button>
       </div>
     </div>
-  );
+  )
 }

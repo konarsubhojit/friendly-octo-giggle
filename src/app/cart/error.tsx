@@ -1,11 +1,11 @@
-"use client";
+'use client'
 
-import Link from "next/link";
-import CartGlyph from "@/components/icons/CartGlyph";
+import Link from 'next/link'
+import CartGlyph from '@/components/icons/CartGlyph'
 
 interface ErrorProps {
-  readonly error: Error & { digest?: string };
-  readonly reset: () => void;
+  readonly error: Error & { digest?: string }
+  readonly reset: () => void
 }
 
 export default function CartError({ error, reset }: ErrorProps) {
@@ -19,7 +19,7 @@ export default function CartError({ error, reset }: ErrorProps) {
           Error Loading Cart
         </h2>
         <p className="text-[var(--text-secondary)] mb-4">
-          {error.message || "Failed to load your shopping cart"}
+          {error.message || 'Failed to load your shopping cart'}
         </p>
         {error.digest && (
           <p className="text-xs text-[var(--text-muted)] mb-4">
@@ -42,5 +42,5 @@ export default function CartError({ error, reset }: ErrorProps) {
         </div>
       </div>
     </div>
-  );
+  )
 }

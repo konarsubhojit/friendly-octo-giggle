@@ -1,30 +1,30 @@
-"use client";
+'use client'
 
-import { useEffect, useId, useRef } from "react";
+import { useEffect, useId, useRef } from 'react'
 import {
   CHECKOUT_POLICIES,
   CHECKOUT_POLICY_ACKNOWLEDGMENT,
   CHECKOUT_POLICY_ERROR_MESSAGE,
   SUPPORT_EMAIL,
   type CheckoutPolicySection,
-} from "@/lib/constants/checkout-policies";
+} from '@/lib/constants/checkout-policies'
 import type {
   CheckoutPricingSummary,
   CheckoutSummaryLineItem,
-} from "@/features/orders/services/order-summary";
-import { CartPricingSummary } from "@/features/cart/components/CartPricingSummary";
+} from '@/features/orders/services/order-summary'
+import { CartPricingSummary } from '@/features/cart/components/CartPricingSummary'
 
 interface OrderPolicyConfirmDialogProps {
-  readonly isOpen: boolean;
-  readonly lineItems: readonly CheckoutSummaryLineItem[];
-  readonly pricingSummary: CheckoutPricingSummary;
-  readonly isAcknowledged: boolean;
-  readonly onAcknowledgedChange: (checked: boolean) => void;
-  readonly onCancel: () => void;
-  readonly onConfirm: () => void;
-  readonly isSubmitting?: boolean;
-  readonly errorMessage?: string | null;
-  readonly formatPrice: (amount: number) => string;
+  readonly isOpen: boolean
+  readonly lineItems: readonly CheckoutSummaryLineItem[]
+  readonly pricingSummary: CheckoutPricingSummary
+  readonly isAcknowledged: boolean
+  readonly onAcknowledgedChange: (checked: boolean) => void
+  readonly onCancel: () => void
+  readonly onConfirm: () => void
+  readonly isSubmitting?: boolean
+  readonly errorMessage?: string | null
+  readonly formatPrice: (amount: number) => string
 }
 
 export function OrderPolicyConfirmDialog({
@@ -39,39 +39,39 @@ export function OrderPolicyConfirmDialog({
   errorMessage,
   formatPrice,
 }: OrderPolicyConfirmDialogProps) {
-  const titleId = useId();
-  const descriptionId = useId();
-  const acknowledgmentId = useId();
-  const dialogRef = useRef<HTMLDialogElement | null>(null);
+  const titleId = useId()
+  const descriptionId = useId()
+  const acknowledgmentId = useId()
+  const dialogRef = useRef<HTMLDialogElement | null>(null)
   const policyUnavailable =
     Boolean(errorMessage) ||
     lineItems.length === 0 ||
     Object.values(CHECKOUT_POLICIES).some(
-      (section) => section.items.length === 0,
-    );
+      (section) => section.items.length === 0
+    )
   const resolvedError =
-    errorMessage ?? (policyUnavailable ? CHECKOUT_POLICY_ERROR_MESSAGE : null);
+    errorMessage ?? (policyUnavailable ? CHECKOUT_POLICY_ERROR_MESSAGE : null)
 
   useEffect(() => {
-    const dialog = dialogRef.current;
+    const dialog = dialogRef.current
 
     if (!isOpen || !dialog) {
-      return;
+      return
     }
 
     if (!dialog.open) {
-      dialog.showModal();
+      dialog.showModal()
     }
 
     return () => {
       if (dialog.open) {
-        dialog.close();
+        dialog.close()
       }
-    };
-  }, [isOpen]);
+    }
+  }, [isOpen])
 
   if (!isOpen) {
-    return null;
+    return null
   }
 
   return (
@@ -82,8 +82,8 @@ export function OrderPolicyConfirmDialog({
       aria-describedby={descriptionId}
       className="fixed inset-0 z-[70] m-0 flex h-screen w-screen items-center justify-center border-none bg-transparent p-4"
       onCancel={(event) => {
-        event.preventDefault();
-        onCancel();
+        event.preventDefault()
+        onCancel()
       }}
     >
       <div
@@ -155,7 +155,7 @@ export function OrderPolicyConfirmDialog({
                         ))}
                       </ul>
                     </div>
-                  ),
+                  )
                 )}
               </div>
 
@@ -176,7 +176,7 @@ export function OrderPolicyConfirmDialog({
                   <div className="space-y-4">
                     {lineItems.map((item) => (
                       <article
-                        key={`${item.name}-${item.variationLabel ?? "default"}`}
+                        key={`${item.name}-${item.variationLabel ?? 'default'}`}
                         className="rounded-2xl border border-[var(--border-warm)] bg-white/60 px-4 py-3"
                       >
                         <div className="flex items-start justify-between gap-4">
@@ -215,7 +215,7 @@ export function OrderPolicyConfirmDialog({
                     subtotal={formatPrice(pricingSummary.subtotal)}
                     shipping={
                       pricingSummary.shippingAmount === 0
-                        ? "Free"
+                        ? 'Free'
                         : formatPrice(pricingSummary.shippingAmount)
                     }
                     total={formatPrice(pricingSummary.total)}
@@ -259,11 +259,11 @@ export function OrderPolicyConfirmDialog({
               }
               className="rounded-xl bg-gradient-to-r from-[var(--accent-warm)] to-[var(--accent-rose)] px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {isSubmitting ? "Submitting..." : "Confirm and Place Order"}
+              {isSubmitting ? 'Submitting...' : 'Confirm and Place Order'}
             </button>
           </div>
         </section>
       </div>
     </dialog>
-  );
+  )
 }

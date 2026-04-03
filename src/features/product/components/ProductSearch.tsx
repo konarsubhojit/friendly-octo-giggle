@@ -1,45 +1,45 @@
-"use client";
+'use client'
 
-import { useState, useEffect, useRef, useCallback, Fragment } from "react";
-import { createPortal } from "react-dom";
-import { useRouter } from "next/navigation";
-import Image from "next/image";
-import { useCurrency } from "@/contexts/CurrencyContext";
+import { useState, useEffect, useRef, useCallback, Fragment } from 'react'
+import { createPortal } from 'react-dom'
+import { useRouter } from 'next/navigation'
+import Image from 'next/image'
+import { useCurrency } from '@/contexts/CurrencyContext'
 
 interface ProductSearchProps {
-  readonly onNavigate?: () => void;
+  readonly onNavigate?: () => void
 }
 
 interface SearchResult {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  image: string;
-  category: string;
+  id: string
+  name: string
+  description: string
+  price: number
+  image: string
+  category: string
 }
 
 interface SearchResultHit {
-  readonly id: string;
+  readonly id: string
   readonly content?: Partial<
-    Pick<SearchResult, "name" | "description" | "price" | "category">
-  >;
+    Pick<SearchResult, 'name' | 'description' | 'price' | 'category'>
+  >
   readonly metadata?: {
-    readonly image?: string;
-  };
+    readonly image?: string
+  }
 }
 
-const SEARCH_DEBOUNCE_MS = 250;
-const SEARCH_RESULTS_LIMIT = 8;
+const SEARCH_DEBOUNCE_MS = 250
+const SEARCH_RESULTS_LIMIT = 8
 
 function isSearchResultHit(
-  item: SearchResult | SearchResultHit,
+  item: SearchResult | SearchResultHit
 ): item is SearchResultHit {
-  return "content" in item;
+  return 'content' in item
 }
 
 function normalizeSearchResult(
-  item: SearchResult | SearchResultHit,
+  item: SearchResult | SearchResultHit
 ): SearchResult | null {
   const content = isSearchResultHit(item)
     ? item.content
@@ -48,22 +48,22 @@ function normalizeSearchResult(
         description: item.description,
         price: item.price,
         category: item.category,
-      };
-  const rawPrice = content?.price;
-  const price = typeof rawPrice === "number" ? rawPrice : Number(rawPrice);
+      }
+  const rawPrice = content?.price
+  const price = typeof rawPrice === 'number' ? rawPrice : Number(rawPrice)
 
   if (!content?.name || !Number.isFinite(price)) {
-    return null;
+    return null
   }
 
   return {
     id: item.id,
     name: content.name,
-    description: content.description ?? "",
+    description: content.description ?? '',
     price,
-    image: (isSearchResultHit(item) ? item.metadata?.image : item.image) ?? "",
-    category: content.category ?? "",
-  };
+    image: (isSearchResultHit(item) ? item.metadata?.image : item.image) ?? '',
+    category: content.category ?? '',
+  }
 }
 
 // ─── Highlight matching text ─────────────────────────────
@@ -72,19 +72,19 @@ function HighlightText({
   text,
   query,
 }: {
-  readonly text?: string | null;
-  readonly query: string;
+  readonly text?: string | null
+  readonly query: string
 }) {
-  const safeText = text ?? "";
+  const safeText = text ?? ''
 
-  if (!query.trim()) return <>{safeText}</>;
-  const escapedQuery = query.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
-  const regex = new RegExp(`(${escapedQuery})`, "gi");
-  const parts = safeText.split(regex);
+  if (!query.trim()) return <>{safeText}</>
+  const escapedQuery = query.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`)
+  const regex = new RegExp(`(${escapedQuery})`, 'gi')
+  const parts = safeText.split(regex)
   return (
     <>
       {parts.map((part, index) => {
-        const key = `${part}-${index}`;
+        const key = `${part}-${index}`
         return index % 2 === 1 ? (
           <mark
             key={key}
@@ -94,165 +94,165 @@ function HighlightText({
           </mark>
         ) : (
           <Fragment key={key}>{part}</Fragment>
-        );
+        )
       })}
     </>
-  );
+  )
 }
 
 // ─── Component ───────────────────────────────────────────
 
 export default function ProductSearch({ onNavigate }: ProductSearchProps) {
-  const router = useRouter();
-  const { formatPrice } = useCurrency();
-  const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState("");
-  const [results, setResults] = useState<SearchResult[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
-  const [activeIndex, setActiveIndex] = useState(-1);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const listRef = useRef<HTMLUListElement>(null);
-  const dialogRef = useRef<HTMLDivElement>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const router = useRouter()
+  const { formatPrice } = useCurrency()
+  const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState('')
+  const [results, setResults] = useState<SearchResult[]>([])
+  const [isSearching, setIsSearching] = useState(false)
+  const [activeIndex, setActiveIndex] = useState(-1)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const listRef = useRef<HTMLUListElement>(null)
+  const dialogRef = useRef<HTMLDivElement>(null)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     if (open) {
-      requestAnimationFrame(() => inputRef.current?.focus());
+      requestAnimationFrame(() => inputRef.current?.focus())
     } else {
-      setResults([]);
-      setIsSearching(false);
+      setResults([])
+      setIsSearching(false)
     }
-  }, [open]);
+  }, [open])
 
   useEffect(() => {
     const clearDebounce = () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-
-    const abortController = new AbortController();
-
-    clearDebounce();
-
-    const trimmed = query.trim();
-    if (!trimmed) {
-      setResults([]);
-      setIsSearching(false);
-      return;
+      if (debounceRef.current) clearTimeout(debounceRef.current)
     }
 
-    setIsSearching(true);
+    const abortController = new AbortController()
+
+    clearDebounce()
+
+    const trimmed = query.trim()
+    if (!trimmed) {
+      setResults([])
+      setIsSearching(false)
+      return
+    }
+
+    setIsSearching(true)
     debounceRef.current = setTimeout(async () => {
       try {
         const params = new URLSearchParams({
           q: trimmed,
           limit: String(SEARCH_RESULTS_LIMIT),
-        });
+        })
         const res = await fetch(`/api/search?${params}`, {
           signal: abortController.signal,
-        });
-        if (!res.ok) throw new Error("search failed");
-        const data = await res.json();
+        })
+        if (!res.ok) throw new Error('search failed')
+        const data = await res.json()
         const rawItems = (data.data?.results ?? data.results ?? []) as Array<
           SearchResult | SearchResultHit
-        >;
+        >
         setResults(
           rawItems
             .map((item) => normalizeSearchResult(item))
             .filter((item): item is SearchResult => item !== null)
-            .slice(0, SEARCH_RESULTS_LIMIT),
-        );
+            .slice(0, SEARCH_RESULTS_LIMIT)
+        )
       } catch (error) {
-        if (error instanceof DOMException && error.name === "AbortError") {
-          return;
+        if (error instanceof DOMException && error.name === 'AbortError') {
+          return
         }
-        setResults([]);
+        setResults([])
       } finally {
         if (!abortController.signal.aborted) {
-          setIsSearching(false);
+          setIsSearching(false)
         }
       }
-    }, SEARCH_DEBOUNCE_MS);
+    }, SEARCH_DEBOUNCE_MS)
 
     return () => {
-      clearDebounce();
-      abortController.abort();
-    };
-  }, [query]);
+      clearDebounce()
+      abortController.abort()
+    }
+  }, [query])
 
   const openDialog = useCallback(() => {
-    setOpen(true);
-  }, []);
+    setOpen(true)
+  }, [])
 
   const closeDialog = useCallback(() => {
-    setOpen(false);
-    setQuery("");
-    setResults([]);
-    setActiveIndex(-1);
-  }, []);
+    setOpen(false)
+    setQuery('')
+    setResults([])
+    setActiveIndex(-1)
+  }, [])
 
   // Close on Escape
   useEffect(() => {
-    if (!open) return;
+    if (!open) return
     function handleKey(e: KeyboardEvent) {
-      if (e.key === "Escape") closeDialog();
+      if (e.key === 'Escape') closeDialog()
     }
-    document.addEventListener("keydown", handleKey);
-    return () => document.removeEventListener("keydown", handleKey);
-  }, [open, closeDialog]);
+    document.addEventListener('keydown', handleKey)
+    return () => document.removeEventListener('keydown', handleKey)
+  }, [open, closeDialog])
 
   // Cmd/Ctrl+K shortcut to open
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
-      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
-        e.preventDefault();
-        setOpen((prev) => !prev);
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault()
+        setOpen((prev) => !prev)
       }
     }
-    document.addEventListener("keydown", handleKey);
-    return () => document.removeEventListener("keydown", handleKey);
-  }, []);
+    document.addEventListener('keydown', handleKey)
+    return () => document.removeEventListener('keydown', handleKey)
+  }, [])
 
   // Clamp activeIndex — automatically resets when results shrink
-  const clampedIndex = activeIndex >= results.length ? -1 : activeIndex;
+  const clampedIndex = activeIndex >= results.length ? -1 : activeIndex
 
   const navigate = useCallback(
     (productId: string) => {
-      closeDialog();
-      onNavigate?.();
-      router.push(`/products/${productId}`);
+      closeDialog()
+      onNavigate?.()
+      router.push(`/products/${productId}`)
     },
-    [router, closeDialog, onNavigate],
-  );
+    [router, closeDialog, onNavigate]
+  )
 
   // Keyboard navigation
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      if (e.key === "ArrowDown") {
-        e.preventDefault();
-        setActiveIndex((prev) => (prev < results.length - 1 ? prev + 1 : 0));
-      } else if (e.key === "ArrowUp") {
-        e.preventDefault();
-        setActiveIndex((prev) => (prev > 0 ? prev - 1 : results.length - 1));
+      if (e.key === 'ArrowDown') {
+        e.preventDefault()
+        setActiveIndex((prev) => (prev < results.length - 1 ? prev + 1 : 0))
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault()
+        setActiveIndex((prev) => (prev > 0 ? prev - 1 : results.length - 1))
       } else if (
-        e.key === "Enter" &&
+        e.key === 'Enter' &&
         clampedIndex >= 0 &&
         results[clampedIndex]
       ) {
-        e.preventDefault();
-        navigate(results[clampedIndex].id);
+        e.preventDefault()
+        navigate(results[clampedIndex].id)
       }
     },
-    [results, clampedIndex, navigate],
-  );
+    [results, clampedIndex, navigate]
+  )
 
   // Scroll active item into view
   useEffect(() => {
-    if (clampedIndex < 0 || !listRef.current) return;
+    if (clampedIndex < 0 || !listRef.current) return
     const item = listRef.current.children[clampedIndex] as
       | HTMLElement
-      | undefined;
-    item?.scrollIntoView({ block: "nearest" });
-  }, [clampedIndex]);
+      | undefined
+    item?.scrollIntoView({ block: 'nearest' })
+  }, [clampedIndex])
 
   return (
     <>
@@ -361,8 +361,8 @@ export default function ProductSearch({ onNavigate }: ProductSearchProps) {
                           tabIndex={-1}
                           className={`flex w-full items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors ${
                             clampedIndex === i
-                              ? "bg-[var(--accent-blush)]"
-                              : "hover:bg-[var(--accent-blush)]/50"
+                              ? 'bg-[var(--accent-blush)]'
+                              : 'hover:bg-[var(--accent-blush)]/50'
                           }`}
                           onClick={() => navigate(product.id)}
                           onMouseEnter={() => setActiveIndex(i)}
@@ -384,7 +384,7 @@ export default function ProductSearch({ onNavigate }: ProductSearchProps) {
                                 {(
                                   product.name ||
                                   product.category ||
-                                  "?"
+                                  '?'
                                 ).slice(0, 1)}
                               </span>
                             )}
@@ -424,27 +424,27 @@ export default function ProductSearch({ onNavigate }: ProductSearchProps) {
                   <span className="flex items-center gap-1">
                     <kbd className="inline-flex items-center rounded border border-[var(--border-warm)] bg-[var(--background)] px-1 py-0.5 font-medium">
                       ↑↓
-                    </kbd>{" "}
+                    </kbd>{' '}
                     navigate
                   </span>
                   <span className="flex items-center gap-1">
                     <kbd className="inline-flex items-center rounded border border-[var(--border-warm)] bg-[var(--background)] px-1 py-0.5 font-medium">
                       ↵
-                    </kbd>{" "}
+                    </kbd>{' '}
                     select
                   </span>
                   <span className="flex items-center gap-1">
                     <kbd className="inline-flex items-center rounded border border-[var(--border-warm)] bg-[var(--background)] px-1 py-0.5 font-medium">
                       esc
-                    </kbd>{" "}
+                    </kbd>{' '}
                     close
                   </span>
                 </div>
               )}
             </div>
           </div>,
-          document.body,
+          document.body
         )}
     </>
-  );
+  )
 }

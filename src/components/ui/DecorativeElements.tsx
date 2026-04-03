@@ -5,9 +5,9 @@
 
 /** Small 5-petal flower — use as accent next to headings or between nav items */
 export function FlowerAccent({
-  className = "w-5 h-5",
+  className = 'w-5 h-5',
 }: {
-  readonly className?: string;
+  readonly className?: string
 }) {
   return (
     <svg
@@ -86,14 +86,14 @@ export function FlowerAccent({
         transform="rotate(45 7 17)"
       />
     </svg>
-  );
+  )
 }
 
 /** Small decorative leaf — pairs well with text elements */
 export function LeafAccent({
-  className = "w-4 h-4",
+  className = 'w-4 h-4',
 }: {
-  readonly className?: string;
+  readonly className?: string
 }) {
   return (
     <svg
@@ -117,14 +117,14 @@ export function LeafAccent({
         strokeLinecap="round"
       />
     </svg>
-  );
+  )
 }
 
 /** Tiny sparkle/diamond for subtle emphasis */
 export function SparkleAccent({
-  className = "w-3 h-3",
+  className = 'w-3 h-3',
 }: {
-  readonly className?: string;
+  readonly className?: string
 }) {
   return (
     <svg
@@ -139,14 +139,14 @@ export function SparkleAccent({
         opacity="0.7"
       />
     </svg>
-  );
+  )
 }
 
 /** Decorative vine/scroll divider — use between sections */
 export function VineDivider({
-  className = "",
+  className = '',
 }: {
-  readonly className?: string;
+  readonly className?: string
 }) {
   return (
     <div
@@ -201,14 +201,14 @@ export function VineDivider({
         />
       </svg>
     </div>
-  );
+  )
 }
 
 /** Floating scattered flowers for hero/background decoration */
 export function ScatteredFlowers({
-  className = "",
+  className = '',
 }: {
-  readonly className?: string;
+  readonly className?: string
 }) {
   return (
     <div
@@ -237,14 +237,14 @@ export function ScatteredFlowers({
       <LeafAccent className="absolute top-1/3 left-[3%] w-5 h-5 opacity-20 animate-float-gentle animation-delay-300" />
       <SparkleAccent className="absolute top-1/2 right-[4%] w-2 h-2 opacity-30" />
     </div>
-  );
+  )
 }
 
 /** Flower bullet icon — use in lists like About page values */
 export function FlowerBullet({
-  className = "w-5 h-5 flex-shrink-0",
+  className = 'w-5 h-5 flex-shrink-0',
 }: {
-  readonly className?: string;
+  readonly className?: string
 }) {
   return (
     <svg
@@ -283,14 +283,14 @@ export function FlowerBullet({
         opacity="0.7"
       />
     </svg>
-  );
+  )
 }
 
 /** Floral cart icon — decorative shopping bag with flower accent */
 export function FloralCartIcon({
-  className = "w-6 h-6",
+  className = 'w-6 h-6',
 }: {
-  readonly className?: string;
+  readonly className?: string
 }) {
   return (
     <svg
@@ -346,14 +346,14 @@ export function FloralCartIcon({
         opacity="0.8"
       />
     </svg>
-  );
+  )
 }
 
 /** Butterfly accent — whimsical decorative element for product/detail pages */
 export function ButterflyAccent({
-  className = "w-8 h-8",
+  className = 'w-8 h-8',
 }: {
-  readonly className?: string;
+  readonly className?: string
 }) {
   return (
     <svg
@@ -439,14 +439,14 @@ export function ButterflyAccent({
         opacity="0.6"
       />
     </svg>
-  );
+  )
 }
 
 /** Mushroom accent — cottagecore decorative element for about/cart pages */
 export function MushroomAccent({
-  className = "w-8 h-8",
+  className = 'w-8 h-8',
 }: {
-  readonly className?: string;
+  readonly className?: string
 }) {
   return (
     <svg
@@ -517,14 +517,14 @@ export function MushroomAccent({
         opacity="0.3"
       />
     </svg>
-  );
+  )
 }
 
 /** Floral border — section divider with simplified variant below 640px */
 export function FloralBorder({
-  className = "",
+  className = '',
 }: {
-  readonly className?: string;
+  readonly className?: string
 }) {
   return (
     <div
@@ -590,5 +590,5 @@ export function FloralBorder({
         <div className="h-px flex-1 bg-gradient-to-r from-transparent via-[var(--accent-peach)] to-transparent opacity-50" />
       </div>
     </div>
-  );
+  )
 }

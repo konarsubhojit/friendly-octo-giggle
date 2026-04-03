@@ -1,16 +1,16 @@
-"use client";
+'use client'
 
-import Link from "next/link";
-import Image from "next/image";
-import { useRecentlyViewed } from "@/features/product/hooks/useRecentlyViewed";
-import { useCurrency } from "@/contexts/CurrencyContext";
-import { GradientHeading } from "@/components/ui/GradientHeading";
+import Link from 'next/link'
+import Image from 'next/image'
+import { useRecentlyViewed } from '@/features/product/hooks/useRecentlyViewed'
+import { useCurrency } from '@/contexts/CurrencyContext'
+import { GradientHeading } from '@/components/ui/GradientHeading'
 
 const RecentlyViewed = () => {
-  const { recentlyViewed } = useRecentlyViewed();
-  const { formatPrice } = useCurrency();
+  const { recentlyViewed } = useRecentlyViewed()
+  const { formatPrice } = useCurrency()
 
-  if (recentlyViewed.length === 0) return null;
+  if (recentlyViewed.length === 0) return null
 
   return (
     <section
@@ -52,7 +52,7 @@ const RecentlyViewed = () => {
         ))}
       </div>
     </section>
-  );
-};
+  )
+}
 
-export default RecentlyViewed;
+export default RecentlyViewed

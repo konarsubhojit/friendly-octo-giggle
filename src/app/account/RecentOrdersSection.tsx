@@ -1,40 +1,40 @@
-"use client";
+'use client'
 
-import Link from "next/link";
-import { useEffect, useState } from "react";
-import { Badge, orderStatusVariant } from "@/components/ui/Badge";
-import { Card } from "@/components/ui/Card";
-import { EmptyState } from "@/components/ui/EmptyState";
-import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
-import { AlertBanner } from "@/components/ui/AlertBanner";
+import Link from 'next/link'
+import { useEffect, useState } from 'react'
+import { Badge, orderStatusVariant } from '@/components/ui/Badge'
+import { Card } from '@/components/ui/Card'
+import { EmptyState } from '@/components/ui/EmptyState'
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
+import { AlertBanner } from '@/components/ui/AlertBanner'
 import {
   countOrderUnits,
   summarizeOrderProducts,
-} from "@/features/orders/services/order-summary";
+} from '@/features/orders/services/order-summary'
 
 interface RecentOrderItem {
-  readonly quantity: number;
-  readonly product?: { readonly name: string } | null;
-  readonly variation?: { readonly name: string } | null;
+  readonly quantity: number
+  readonly product?: { readonly name: string } | null
+  readonly variation?: { readonly name: string } | null
 }
 
 interface RecentOrder {
-  readonly id: string;
-  readonly status: string;
-  readonly createdAt: string;
-  readonly items: readonly RecentOrderItem[];
+  readonly id: string
+  readonly status: string
+  readonly createdAt: string
+  readonly items: readonly RecentOrderItem[]
 }
 
 interface OrdersResponse {
-  readonly orders?: RecentOrder[];
+  readonly orders?: RecentOrder[]
   readonly data?: {
-    readonly orders?: RecentOrder[];
-  };
+    readonly orders?: RecentOrder[]
+  }
 }
 
 function RecentOrderRow({ order }: Readonly<{ order: RecentOrder }>) {
-  const itemCount = countOrderUnits(order.items);
-  const productSummary = summarizeOrderProducts(order.items);
+  const itemCount = countOrderUnits(order.items)
+  const productSummary = summarizeOrderProducts(order.items)
 
   return (
     <Link
@@ -48,10 +48,10 @@ function RecentOrderRow({ order }: Readonly<{ order: RecentOrder }>) {
               {order.status}
             </Badge>
             <span className="text-xs text-[var(--text-muted)]">
-              {new Date(order.createdAt).toLocaleDateString("en-US", {
-                year: "numeric",
-                month: "short",
-                day: "numeric",
+              {new Date(order.createdAt).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
               })}
             </span>
           </div>
@@ -60,7 +60,7 @@ function RecentOrderRow({ order }: Readonly<{ order: RecentOrder }>) {
           </p>
           <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--text-secondary)]">
             <span>
-              {itemCount} {itemCount === 1 ? "item" : "items"}
+              {itemCount} {itemCount === 1 ? 'item' : 'items'}
             </span>
             <span className="text-[var(--text-muted)]">Order #{order.id}</span>
           </div>
@@ -81,49 +81,49 @@ function RecentOrderRow({ order }: Readonly<{ order: RecentOrder }>) {
         </svg>
       </div>
     </Link>
-  );
+  )
 }
 
 export function RecentOrdersSection() {
-  const [orders, setOrders] = useState<RecentOrder[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [orders, setOrders] = useState<RecentOrder[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
   useEffect(() => {
-    let isMounted = true;
+    let isMounted = true
 
     async function loadOrders() {
       try {
-        const response = await fetch("/api/orders?limit=3");
-        const payload = (await response.json()) as OrdersResponse;
+        const response = await fetch('/api/orders?limit=3')
+        const payload = (await response.json()) as OrdersResponse
 
         if (!response.ok) {
-          throw new Error("Failed to load recent orders");
+          throw new Error('Failed to load recent orders')
         }
 
-        const nextOrders = payload.data?.orders ?? payload.orders ?? [];
+        const nextOrders = payload.data?.orders ?? payload.orders ?? []
         if (isMounted) {
-          setOrders(nextOrders);
+          setOrders(nextOrders)
         }
       } catch {
         if (isMounted) {
-          setError("We couldn’t load your recent orders right now.");
+          setError('We couldn’t load your recent orders right now.')
         }
       } finally {
         if (isMounted) {
-          setLoading(false);
+          setLoading(false)
         }
       }
     }
 
     loadOrders().catch(() => {
       /* errors handled inside loadOrders */
-    });
+    })
 
     return () => {
-      isMounted = false;
-    };
-  }, []);
+      isMounted = false
+    }
+  }, [])
 
   function renderOrdersContent() {
     if (loading) {
@@ -131,7 +131,7 @@ export function RecentOrdersSection() {
         <div className="flex items-center justify-center py-12">
           <LoadingSpinner />
         </div>
-      );
+      )
     }
     if (orders.length === 0) {
       return (
@@ -142,7 +142,7 @@ export function RecentOrdersSection() {
           ctaHref="/shop"
           className="py-4"
         />
-      );
+      )
     }
     return (
       <div className="space-y-3">
@@ -150,7 +150,7 @@ export function RecentOrdersSection() {
           <RecentOrderRow key={order.id} order={order} />
         ))}
       </div>
-    );
+    )
   }
 
   return (
@@ -176,5 +176,5 @@ export function RecentOrdersSection() {
 
       {renderOrdersContent()}
     </Card>
-  );
+  )
 }

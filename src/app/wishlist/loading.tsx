@@ -1,6 +1,6 @@
-import ProductCardSkeleton from "@/components/skeletons/ProductCardSkeleton";
+import ProductCardSkeleton from '@/components/skeletons/ProductCardSkeleton'
 
-const SKELETON_IDS = ["w1", "w2", "w3", "w4"] as const;
+const SKELETON_IDS = ['w1', 'w2', 'w3', 'w4'] as const
 
 export default function WishlistLoading() {
   return (
@@ -19,5 +19,5 @@ export default function WishlistLoading() {
         </div>
       </main>
     </div>
-  );
+  )
 }

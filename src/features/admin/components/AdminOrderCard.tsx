@@ -1,59 +1,59 @@
-"use client";
+'use client'
 
-import { useState } from "react";
-import type { ChangeEvent } from "react";
-import { OrderStatus } from "@/lib/types";
-import { Badge, orderStatusVariant } from "@/components/ui/Badge";
-import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
-import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import { useState } from 'react'
+import type { ChangeEvent } from 'react'
+import { OrderStatus } from '@/lib/types'
+import { Badge, orderStatusVariant } from '@/components/ui/Badge'
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
+import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import {
   countOrderUnits,
   summarizeOrderProducts,
-} from "@/features/orders/services/order-summary";
+} from '@/features/orders/services/order-summary'
 
 interface AdminOrderItem {
-  id: string;
-  quantity: number;
-  price: number;
-  customizationNote?: string | null;
-  product?: { id: string; name: string; image: string };
-  variation?: { id: string; name: string; price: number } | null;
+  id: string
+  quantity: number
+  price: number
+  customizationNote?: string | null
+  product?: { id: string; name: string; image: string }
+  variation?: { id: string; name: string; price: number } | null
 }
 
 interface AdminOrder {
-  id: string;
-  customerName: string;
-  customerEmail: string;
-  customerAddress: string;
-  totalAmount: number;
-  status: string;
-  trackingNumber?: string | null;
-  shippingProvider?: string | null;
-  createdAt: string;
-  items: AdminOrderItem[];
+  id: string
+  customerName: string
+  customerEmail: string
+  customerAddress: string
+  totalAmount: number
+  status: string
+  trackingNumber?: string | null
+  shippingProvider?: string | null
+  createdAt: string
+  items: AdminOrderItem[]
 }
 
 interface AdminOrderCardProps {
-  readonly order: AdminOrder;
-  readonly updatingOrderId: string | null;
-  readonly savingShippingId: string | null;
-  readonly edit: { trackingNumber: string; shippingProvider: string };
-  readonly onStatusChange: (orderId: string, status: OrderStatus) => void;
+  readonly order: AdminOrder
+  readonly updatingOrderId: string | null
+  readonly savingShippingId: string | null
+  readonly edit: { trackingNumber: string; shippingProvider: string }
+  readonly onStatusChange: (orderId: string, status: OrderStatus) => void
   readonly onShippingFieldChange: (
     orderId: string,
-    field: "trackingNumber" | "shippingProvider",
+    field: 'trackingNumber' | 'shippingProvider',
     value: string,
-    order: AdminOrder,
-  ) => void;
+    order: AdminOrder
+  ) => void
   readonly onSaveShipping: (
     orderId: string,
     status: string,
-    order: AdminOrder,
-  ) => void;
+    order: AdminOrder
+  ) => void
 }
 
 interface OrderItemRowProps {
-  readonly item: AdminOrderItem;
+  readonly item: AdminOrderItem
 }
 
 function OrderItemRow({ item }: OrderItemRowProps) {
@@ -61,7 +61,7 @@ function OrderItemRow({ item }: OrderItemRowProps) {
     <div className="rounded-xl border border-slate-200 bg-slate-50/70 px-4 py-3 dark:border-slate-700 dark:bg-slate-900/40">
       <div className="flex flex-wrap items-center gap-2">
         <p className="text-sm font-medium text-gray-900 dark:text-white">
-          {item.product?.name || "Unknown Product"}
+          {item.product?.name || 'Unknown Product'}
         </p>
         <Badge variant="neutral" size="sm">
           Qty {item.quantity}
@@ -73,7 +73,7 @@ function OrderItemRow({ item }: OrderItemRowProps) {
             {item.variation.name}
           </p>
         )}
-        <p>{item.quantity === 1 ? "Single unit" : `${item.quantity} units`}</p>
+        <p>{item.quantity === 1 ? 'Single unit' : `${item.quantity} units`}</p>
         {item.customizationNote && (
           <p className="inline-block rounded bg-amber-50 px-2 py-0.5 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
             ✏️ {item.customizationNote}
@@ -81,17 +81,17 @@ function OrderItemRow({ item }: OrderItemRowProps) {
         )}
       </div>
     </div>
-  );
+  )
 }
 
 interface ShippingInfoSectionProps {
-  readonly orderId: string;
-  readonly orderStatus: string;
-  readonly order: AdminOrder;
-  readonly edit: { trackingNumber: string; shippingProvider: string };
-  readonly savingShippingId: string | null;
-  readonly onShippingFieldChange: AdminOrderCardProps["onShippingFieldChange"];
-  readonly onSaveShipping: AdminOrderCardProps["onSaveShipping"];
+  readonly orderId: string
+  readonly orderStatus: string
+  readonly order: AdminOrder
+  readonly edit: { trackingNumber: string; shippingProvider: string }
+  readonly savingShippingId: string | null
+  readonly onShippingFieldChange: AdminOrderCardProps['onShippingFieldChange']
+  readonly onSaveShipping: AdminOrderCardProps['onSaveShipping']
 }
 
 function ShippingInfoSection({
@@ -123,9 +123,9 @@ function ShippingInfoSection({
             onChange={(e) =>
               onShippingFieldChange(
                 orderId,
-                "trackingNumber",
+                'trackingNumber',
                 e.target.value,
-                order,
+                order
               )
             }
             placeholder="e.g. 1Z999AA10123456784"
@@ -146,9 +146,9 @@ function ShippingInfoSection({
             onChange={(e) =>
               onShippingFieldChange(
                 orderId,
-                "shippingProvider",
+                'shippingProvider',
                 e.target.value,
-                order,
+                order
               )
             }
             placeholder="e.g. FedEx, UPS, USPS"
@@ -160,11 +160,11 @@ function ShippingInfoSection({
           disabled={savingShippingId === orderId}
           className="px-4 py-2 bg-purple-600 text-white rounded-md text-sm font-medium hover:bg-purple-700 disabled:bg-gray-400 transition whitespace-nowrap"
         >
-          {savingShippingId === orderId ? "Saving…" : "Save Shipping"}
+          {savingShippingId === orderId ? 'Saving…' : 'Save Shipping'}
         </button>
       </div>
     </div>
-  );
+  )
 }
 
 export function AdminOrderCard({
@@ -176,35 +176,35 @@ export function AdminOrderCard({
   onShippingFieldChange,
   onSaveShipping,
 }: AdminOrderCardProps) {
-  const hasTracking = Boolean(order.trackingNumber || order.shippingProvider);
-  const [pendingStatus, setPendingStatus] = useState<OrderStatus | null>(null);
-  const [isExpanded, setIsExpanded] = useState(false);
-  const itemCount = countOrderUnits(order.items);
-  const productSummary = summarizeOrderProducts(order.items);
+  const hasTracking = Boolean(order.trackingNumber || order.shippingProvider)
+  const [pendingStatus, setPendingStatus] = useState<OrderStatus | null>(null)
+  const [isExpanded, setIsExpanded] = useState(false)
+  const itemCount = countOrderUnits(order.items)
+  const productSummary = summarizeOrderProducts(order.items)
 
   const handleSelectChange = (e: ChangeEvent<HTMLSelectElement>) => {
-    const newStatus = e.target.value as OrderStatus;
+    const newStatus = e.target.value as OrderStatus
     if (newStatus !== order.status) {
-      setPendingStatus(newStatus);
+      setPendingStatus(newStatus)
     }
-  };
+  }
 
   const handleConfirmStatus = () => {
     if (pendingStatus) {
-      onStatusChange(order.id, pendingStatus);
-      setPendingStatus(null);
+      onStatusChange(order.id, pendingStatus)
+      setPendingStatus(null)
     }
-  };
+  }
 
-  const handleCancelStatus = () => setPendingStatus(null);
-  const detailsId = `order-details-${order.id}`;
+  const handleCancelStatus = () => setPendingStatus(null)
+  const detailsId = `order-details-${order.id}`
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-gray-800">
       <ConfirmDialog
         isOpen={pendingStatus !== null}
         title="Change Order Status"
-        message={`Update this order from "${order.status}" to "${pendingStatus ?? ""}"?`}
+        message={`Update this order from "${order.status}" to "${pendingStatus ?? ''}"?`}
         confirmLabel="Yes, update"
         variant="warning"
         loading={updatingOrderId === order.id}
@@ -247,14 +247,14 @@ export function AdminOrderCard({
             </span>
             <span>{order.customerEmail}</span>
             <span>
-              {itemCount} {itemCount === 1 ? "item" : "items"}
+              {itemCount} {itemCount === 1 ? 'item' : 'items'}
             </span>
             <span>Order #{order.id.toUpperCase()}</span>
           </div>
           <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-            {new Date(order.createdAt).toLocaleString("en-US", {
-              dateStyle: "medium",
-              timeStyle: "short",
+            {new Date(order.createdAt).toLocaleString('en-US', {
+              dateStyle: 'medium',
+              timeStyle: 'short',
             })}
           </p>
         </div>
@@ -283,9 +283,9 @@ export function AdminOrderCard({
             aria-controls={detailsId}
             className="inline-flex items-center gap-2 rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:text-slate-950 dark:border-slate-600 dark:text-slate-200 dark:hover:border-slate-500 dark:hover:text-white"
           >
-            {isExpanded ? "Hide details" : "Show details"}
+            {isExpanded ? 'Hide details' : 'Show details'}
             <svg
-              className={`h-4 w-4 transition-transform ${isExpanded ? "rotate-180" : ""}`}
+              className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -358,5 +358,5 @@ export function AdminOrderCard({
         </p>
       )}
     </div>
-  );
+  )
 }

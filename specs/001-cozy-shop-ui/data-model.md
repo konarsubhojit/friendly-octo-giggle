@@ -89,16 +89,16 @@ These are the canonical token values. Components MUST reference these via `var(-
 
 ```typescript
 export const PRODUCT_CATEGORIES = [
-  "Handbag",
-  "Flowers",
-  "Flower Pots",
-  "Keychains",
-  "Hair Accessories",
-] as const;
+  'Handbag',
+  'Flowers',
+  'Flower Pots',
+  'Keychains',
+  'Hair Accessories',
+] as const
 
-export const CATEGORY_FILTERS = ["All", ...PRODUCT_CATEGORIES] as const;
+export const CATEGORY_FILTERS = ['All', ...PRODUCT_CATEGORIES] as const
 
-export type ProductCategory = (typeof PRODUCT_CATEGORIES)[number];
+export type ProductCategory = (typeof PRODUCT_CATEGORIES)[number]
 ```
 
 **Usage**:

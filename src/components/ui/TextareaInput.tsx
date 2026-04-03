@@ -1,10 +1,10 @@
-"use client";
+'use client'
 
 import {
   BASE_INPUT,
   borderCls,
   type InputSubProps,
-} from "@/components/ui/DynamicFormTypes";
+} from '@/components/ui/DynamicFormTypes'
 
 export function TextareaInput({
   field,
@@ -25,5 +25,5 @@ export function TextareaInput({
       aria-describedby={describedBy}
       className={`${BASE_INPUT} resize-none ${borderCls(Boolean(error))}`}
     />
-  );
+  )
 }

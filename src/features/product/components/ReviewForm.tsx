@@ -1,14 +1,14 @@
-"use client";
+'use client'
 
-import { useState } from "react";
-import { useSession } from "next-auth/react";
-import { StarRating } from "@/components/ui/StarRating";
-import { GradientButton } from "@/components/ui/GradientButton";
+import { useState } from 'react'
+import { useSession } from 'next-auth/react'
+import { StarRating } from '@/components/ui/StarRating'
+import { GradientButton } from '@/components/ui/GradientButton'
 
 interface ReviewFormProps {
-  readonly productId: string;
-  readonly orderId?: string | null;
-  readonly onSuccess?: () => void;
+  readonly productId: string
+  readonly orderId?: string | null
+  readonly onSuccess?: () => void
 }
 
 export const ReviewForm = ({
@@ -16,20 +16,20 @@ export const ReviewForm = ({
   orderId,
   onSuccess,
 }: ReviewFormProps) => {
-  const { data: session } = useSession();
-  const [rating, setRating] = useState(0);
-  const [comment, setComment] = useState("");
-  const [isAnonymous, setIsAnonymous] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
+  const { data: session } = useSession()
+  const [rating, setRating] = useState(0)
+  const [comment, setComment] = useState('')
+  const [isAnonymous, setIsAnonymous] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState(false)
 
   if (!session?.user) {
     return (
       <p className="text-sm text-[var(--text-muted)] italic">
         Please sign in to leave a review.
       </p>
-    );
+    )
   }
 
   if (success) {
@@ -51,27 +51,27 @@ export const ReviewForm = ({
         </svg>
         <span className="text-sm font-medium">Thank you for your review!</span>
       </div>
-    );
+    )
   }
 
   const handleSubmit = async (e: React.BaseSyntheticEvent) => {
-    e.preventDefault();
-    setError(null);
+    e.preventDefault()
+    setError(null)
 
     if (rating === 0) {
-      setError("Please select a star rating.");
-      return;
+      setError('Please select a star rating.')
+      return
     }
     if (comment.trim().length < 10) {
-      setError("Review must be at least 10 characters.");
-      return;
+      setError('Review must be at least 10 characters.')
+      return
     }
 
-    setSubmitting(true);
+    setSubmitting(true)
     try {
-      const res = await fetch("/api/reviews", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const res = await fetch('/api/reviews', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           productId,
           orderId: orderId ?? null,
@@ -79,28 +79,28 @@ export const ReviewForm = ({
           comment: comment.trim(),
           isAnonymous,
         }),
-      });
+      })
 
-      const data = await res.json();
+      const data = await res.json()
       if (res.ok) {
-        setSuccess(true);
-        onSuccess?.();
+        setSuccess(true)
+        onSuccess?.()
       } else {
-        setError(data.error ?? "Failed to submit review. Please try again.");
+        setError(data.error ?? 'Failed to submit review. Please try again.')
       }
     } catch {
-      setError("Network error. Please try again.");
+      setError('Network error. Please try again.')
     } finally {
-      setSubmitting(false);
+      setSubmitting(false)
     }
-  };
+  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4" noValidate>
       {/* Star rating selector */}
       <div>
         <p className="block text-sm font-semibold text-[var(--foreground)] mb-2">
-          Your Rating{" "}
+          Your Rating{' '}
           <span aria-hidden="true" className="text-[var(--accent-rose)]">
             *
           </span>
@@ -120,7 +120,7 @@ export const ReviewForm = ({
           htmlFor="review-comment"
           className="block text-sm font-semibold text-[var(--foreground)] mb-2"
         >
-          Your Review{" "}
+          Your Review{' '}
           <span aria-hidden="true" className="text-[var(--accent-rose)]">
             *
           </span>
@@ -169,8 +169,8 @@ export const ReviewForm = ({
         disabled={submitting}
         className="w-full sm:w-auto"
       >
-        {submitting ? "Submitting…" : "Submit Review"}
+        {submitting ? 'Submitting…' : 'Submit Review'}
       </GradientButton>
     </form>
-  );
-};
+  )
+}

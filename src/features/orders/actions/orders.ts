@@ -1,4 +1,4 @@
-"use server";
+'use server'
 
 // Architecture note: Order reads and Redis search helpers use server actions
 // for direct server-side execution without an HTTP roundtrip. Cart checkout
@@ -6,41 +6,41 @@
 // because checkout requires durable, retryable processing with idempotency
 // guarantees that a queue provides but server actions do not.
 
-import { waitUntil } from "@vercel/functions";
-import { drizzleDb } from "@/lib/db";
-import { orders, orderItems, products } from "@/lib/schema";
-import { eq, desc, inArray } from "drizzle-orm";
-import { getRedisClient, invalidateCache } from "@/lib/redis";
-import { generateOrderId } from "@/lib/short-id";
-import { logError, logBusinessEvent } from "@/lib/logger";
-import { OrderStatusEnum } from "@/features/orders/validations";
-import { z } from "zod";
-import { invalidateUserOrderCaches } from "@/lib/cache";
-import { ORDER_SEARCH_SCHEMA } from "@/features/orders/services/orders-search-index";
+import { waitUntil } from '@vercel/functions'
+import { drizzleDb } from '@/lib/db'
+import { orders, orderItems, products } from '@/lib/schema'
+import { eq, desc, inArray } from 'drizzle-orm'
+import { getRedisClient, invalidateCache } from '@/lib/redis'
+import { generateOrderId } from '@/lib/short-id'
+import { logError, logBusinessEvent } from '@/lib/logger'
+import { OrderStatusEnum } from '@/features/orders/validations'
+import { z } from 'zod'
+import { invalidateUserOrderCaches } from '@/lib/cache'
+import { ORDER_SEARCH_SCHEMA } from '@/features/orders/services/orders-search-index'
 
 type ActionResult<T> =
   | { success: true; data: T }
-  | { success: false; error: string };
+  | { success: false; error: string }
 
 interface OrderItemRecord {
-  productId: string;
-  variationId?: string | null;
-  quantity: number;
-  price: number;
-  customizationNote?: string | null;
+  productId: string
+  variationId?: string | null
+  quantity: number
+  price: number
+  customizationNote?: string | null
 }
 
 export interface OrderSummary {
-  id: string;
-  userId: string | null;
-  customerName: string;
-  customerEmail: string;
-  customerAddress: string;
-  total: number;
-  status: string;
-  items: OrderItemRecord[];
-  createdAt: string;
-  productNames?: string;
+  id: string
+  userId: string | null
+  customerName: string
+  customerEmail: string
+  customerAddress: string
+  total: number
+  status: string
+  items: OrderItemRecord[]
+  createdAt: string
+  productNames?: string
 }
 
 const OrderItemInputSchema = z.object({
@@ -49,29 +49,29 @@ const OrderItemInputSchema = z.object({
   quantity: z.number().int().positive(),
   price: z.number().positive(),
   customizationNote: z.string().max(500).nullish(),
-});
+})
 
 const CreateOrderActionSchema = z.object({
   customerName: z.string().min(1).max(200),
-  customerEmail: z.email({ message: "Invalid email address" }),
+  customerEmail: z.email({ message: 'Invalid email address' }),
   customerAddress: z.string().min(10).max(500),
   items: z.array(OrderItemInputSchema).min(1),
-});
+})
 
-type CreateOrderActionInput = z.infer<typeof CreateOrderActionSchema>;
+type CreateOrderActionInput = z.infer<typeof CreateOrderActionSchema>
 
-const redisOrderKey = (orderId: string) => `order:${orderId}`;
-const redisUserOrdersKey = (userId: string) => `user:orders:${userId}`;
+const redisOrderKey = (orderId: string) => `order:${orderId}`
+const redisUserOrdersKey = (userId: string) => `user:orders:${userId}`
 
 export const writeOrderToRedis = async (order: OrderSummary): Promise<void> => {
-  const redis = getRedisClient();
-  if (!redis) return;
+  const redis = getRedisClient()
+  if (!redis) return
 
   try {
-    const pipeline = redis.pipeline();
+    const pipeline = redis.pipeline()
     pipeline.hset(redisOrderKey(order.id), {
       id: order.id,
-      userId: order.userId ?? "",
+      userId: order.userId ?? '',
       customerName: order.customerName,
       customerEmail: order.customerEmail,
       customerAddress: order.customerAddress,
@@ -79,52 +79,52 @@ export const writeOrderToRedis = async (order: OrderSummary): Promise<void> => {
       total: String(order.total),
       status: order.status,
       createdAt: order.createdAt,
-      productNames: order.productNames ?? "",
-    });
+      productNames: order.productNames ?? '',
+    })
     if (order.userId) {
-      pipeline.sadd(redisUserOrdersKey(order.userId), order.id);
+      pipeline.sadd(redisUserOrdersKey(order.userId), order.id)
     }
-    await pipeline.exec();
+    await pipeline.exec()
   } catch (error) {
     logError({
       error,
-      context: "order_redis_write",
+      context: 'order_redis_write',
       additionalInfo: { orderId: order.id },
-    });
+    })
   }
-};
+}
 
 const parseRedisHash = (hash: Record<string, unknown>): OrderSummary | null => {
-  if (!hash.id || typeof hash.id !== "string") return null;
+  if (!hash.id || typeof hash.id !== 'string') return null
   return {
     id: hash.id,
     userId: (hash.userId as string) || null,
-    customerName: (hash.customerName as string) ?? "",
-    customerEmail: (hash.customerEmail as string) ?? "",
-    customerAddress: (hash.customerAddress as string) ?? "",
+    customerName: (hash.customerName as string) ?? '',
+    customerEmail: (hash.customerEmail as string) ?? '',
+    customerAddress: (hash.customerAddress as string) ?? '',
     total: Number(hash.total ?? 0),
-    status: (hash.status as string) ?? "PENDING",
-    items: JSON.parse((hash.items as string) ?? "[]") as OrderItemRecord[],
-    createdAt: (hash.createdAt as string) ?? "",
-  };
-};
+    status: (hash.status as string) ?? 'PENDING',
+    items: JSON.parse((hash.items as string) ?? '[]') as OrderItemRecord[],
+    createdAt: (hash.createdAt as string) ?? '',
+  }
+}
 
 interface OrderWithItemsRow {
-  readonly id: string;
-  readonly userId: string | null;
-  readonly customerName: string;
-  readonly customerEmail: string;
-  readonly customerAddress: string;
-  readonly totalAmount: number;
-  readonly status: string;
-  readonly createdAt: Date;
+  readonly id: string
+  readonly userId: string | null
+  readonly customerName: string
+  readonly customerEmail: string
+  readonly customerAddress: string
+  readonly totalAmount: number
+  readonly status: string
+  readonly createdAt: Date
   readonly items: ReadonlyArray<{
-    readonly productId: string;
-    readonly variationId: string | null;
-    readonly quantity: number;
-    readonly price: number;
-    readonly customizationNote: string | null;
-  }>;
+    readonly productId: string
+    readonly variationId: string | null
+    readonly quantity: number
+    readonly price: number
+    readonly customizationNote: string | null
+  }>
 }
 
 const mapOrderRowToSummary = (row: OrderWithItemsRow): OrderSummary => ({
@@ -143,120 +143,120 @@ const mapOrderRowToSummary = (row: OrderWithItemsRow): OrderSummary => ({
     customizationNote: item.customizationNote ?? null,
   })),
   createdAt: row.createdAt.toISOString(),
-});
+})
 
 const fetchOrdersFromDb = async (userId: string): Promise<OrderSummary[]> => {
   const rows = await drizzleDb.query.orders.findMany({
     where: eq(orders.userId, userId),
     orderBy: [desc(orders.createdAt)],
     with: { items: true },
-  });
+  })
 
-  return rows.map(mapOrderRowToSummary);
-};
+  return rows.map(mapOrderRowToSummary)
+}
 
 const fetchOrdersByIdsFromDb = async (
-  orderIds: string[],
+  orderIds: string[]
 ): Promise<OrderSummary[]> => {
   if (orderIds.length === 0) {
-    return [];
+    return []
   }
 
   const rows = await drizzleDb.query.orders.findMany({
     where: (orderTable, { inArray: inArrayOperator }) =>
       inArrayOperator(orderTable.id, orderIds),
     with: { items: true },
-  });
+  })
 
-  return rows.map(mapOrderRowToSummary);
-};
+  return rows.map(mapOrderRowToSummary)
+}
 
 const fetchRedisOrderHashes = async (
   redis: NonNullable<ReturnType<typeof getRedisClient>>,
-  orderIds: string[],
+  orderIds: string[]
 ): Promise<(Record<string, unknown> | null)[]> => {
-  const pipeline = redis.pipeline();
+  const pipeline = redis.pipeline()
   for (const orderId of orderIds) {
-    pipeline.hgetall(redisOrderKey(orderId));
+    pipeline.hgetall(redisOrderKey(orderId))
   }
 
-  return pipeline.exec<(Record<string, unknown> | null)[]>();
-};
+  return pipeline.exec<(Record<string, unknown> | null)[]>()
+}
 
 const splitRedisOrders = (
   orderIds: string[],
-  hashes: (Record<string, unknown> | null)[],
+  hashes: (Record<string, unknown> | null)[]
 ): {
-  validOrders: OrderSummary[];
-  missingIds: string[];
+  validOrders: OrderSummary[]
+  missingIds: string[]
 } => {
-  const validOrders: OrderSummary[] = [];
-  const missingIds: string[] = [];
+  const validOrders: OrderSummary[] = []
+  const missingIds: string[] = []
 
   hashes.forEach((hash, index) => {
-    const parsed = hash ? parseRedisHash(hash) : null;
+    const parsed = hash ? parseRedisHash(hash) : null
     if (parsed) {
-      validOrders.push(parsed);
-      return;
+      validOrders.push(parsed)
+      return
     }
 
-    missingIds.push(orderIds[index]);
-  });
+    missingIds.push(orderIds[index])
+  })
 
-  return { validOrders, missingIds };
-};
+  return { validOrders, missingIds }
+}
 
 const hydrateMissingRedisOrders = async (
   userId: string,
-  missingIds: string[],
+  missingIds: string[]
 ): Promise<OrderSummary[]> => {
   if (missingIds.length === 0) {
-    return [];
+    return []
   }
 
   try {
-    const dbOrders = await fetchOrdersByIdsFromDb(missingIds);
+    const dbOrders = await fetchOrdersByIdsFromDb(missingIds)
     for (const order of dbOrders) {
-      waitUntil(writeOrderToRedis(order));
+      waitUntil(writeOrderToRedis(order))
     }
-    return dbOrders;
+    return dbOrders
   } catch (error) {
     logError({
       error,
-      context: "get_orders_redis_orphan_pg_fallback",
+      context: 'get_orders_redis_orphan_pg_fallback',
       additionalInfo: { userId },
-    });
-    return [];
+    })
+    return []
   }
-};
+}
 
 const getUserOrdersFromRedis = async (
   userId: string,
-  redis: NonNullable<ReturnType<typeof getRedisClient>>,
+  redis: NonNullable<ReturnType<typeof getRedisClient>>
 ): Promise<OrderSummary[] | null> => {
   try {
-    const orderIds = await redis.smembers(redisUserOrdersKey(userId));
+    const orderIds = await redis.smembers(redisUserOrdersKey(userId))
     if (orderIds.length === 0) {
-      return [];
+      return []
     }
 
-    const results = await fetchRedisOrderHashes(redis, orderIds);
-    const { validOrders, missingIds } = splitRedisOrders(orderIds, results);
-    const hydratedOrders = await hydrateMissingRedisOrders(userId, missingIds);
+    const results = await fetchRedisOrderHashes(redis, orderIds)
+    const { validOrders, missingIds } = splitRedisOrders(orderIds, results)
+    const hydratedOrders = await hydrateMissingRedisOrders(userId, missingIds)
 
-    return [...validOrders, ...hydratedOrders];
+    return [...validOrders, ...hydratedOrders]
   } catch (error) {
     logError({
       error,
-      context: "get_orders_redis",
+      context: 'get_orders_redis',
       additionalInfo: { userId },
-    });
-    return null;
+    })
+    return null
   }
-};
+}
 
-const calculateOrderTotal = (items: CreateOrderActionInput["items"]) =>
-  items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+const calculateOrderTotal = (items: CreateOrderActionInput['items']) =>
+  items.reduce((sum, item) => sum + item.price * item.quantity, 0)
 
 const insertOrderRecords = async (
   userId: string,
@@ -264,8 +264,8 @@ const insertOrderRecords = async (
   customerName: string,
   customerEmail: string,
   customerAddress: string,
-  items: CreateOrderActionInput["items"],
-  total: number,
+  items: CreateOrderActionInput['items'],
+  total: number
 ) => {
   await drizzleDb.transaction(async (tx) => {
     await tx.insert(orders).values({
@@ -275,9 +275,9 @@ const insertOrderRecords = async (
       customerEmail,
       customerAddress,
       totalAmount: total,
-      status: "PENDING",
+      status: 'PENDING',
       updatedAt: new Date(),
-    });
+    })
 
     await tx.insert(orderItems).values(
       items.map((item) => ({
@@ -287,45 +287,43 @@ const insertOrderRecords = async (
         quantity: item.quantity,
         price: item.price,
         customizationNote: item.customizationNote ?? null,
-      })),
-    );
-  });
-};
+      }))
+    )
+  })
+}
 
 const buildProductNamesString = async (
-  items: CreateOrderActionInput["items"],
+  items: CreateOrderActionInput['items']
 ): Promise<string> => {
-  const productIds = [...new Set(items.map((item) => item.productId))];
+  const productIds = [...new Set(items.map((item) => item.productId))]
   const productRows = await drizzleDb.query.products.findMany({
     where: inArray(products.id, productIds),
     columns: { id: true, name: true },
     with: { variations: { columns: { id: true, name: true } } },
-  });
+  })
 
   const productNameMap = new Map(
-    productRows.map((product) => [product.id, product.name]),
-  );
+    productRows.map((product) => [product.id, product.name])
+  )
   const variationNameMap = new Map(
     productRows.flatMap((product) =>
-      product.variations.map((variation) => [variation.id, variation.name]),
-    ),
-  );
+      product.variations.map((variation) => [variation.id, variation.name])
+    )
+  )
 
   return [
     ...new Set(
       items.map((item) => {
-        const productName = productNameMap.get(item.productId) ?? "";
+        const productName = productNameMap.get(item.productId) ?? ''
         const variationName = item.variationId
           ? variationNameMap.get(item.variationId)
-          : undefined;
+          : undefined
 
-        return variationName
-          ? `${productName} - ${variationName}`
-          : productName;
-      }),
+        return variationName ? `${productName} - ${variationName}` : productName
+      })
     ),
-  ].join(", ");
-};
+  ].join(', ')
+}
 
 const buildOrderSummary = ({
   orderId,
@@ -338,15 +336,15 @@ const buildOrderSummary = ({
   createdAt,
   productNames,
 }: {
-  orderId: string;
-  userId: string;
-  customerName: string;
-  customerEmail: string;
-  customerAddress: string;
-  total: number;
-  items: CreateOrderActionInput["items"];
-  createdAt: string;
-  productNames: string;
+  orderId: string
+  userId: string
+  customerName: string
+  customerEmail: string
+  customerAddress: string
+  total: number
+  items: CreateOrderActionInput['items']
+  createdAt: string
+  productNames: string
 }): OrderSummary => ({
   id: orderId,
   userId,
@@ -354,40 +352,40 @@ const buildOrderSummary = ({
   customerEmail,
   customerAddress,
   total,
-  status: "PENDING",
+  status: 'PENDING',
   items,
   createdAt,
   productNames,
-});
+})
 
 const invalidateOrderCaches = (
   userId: string,
-  items: CreateOrderActionInput["items"],
+  items: CreateOrderActionInput['items']
 ) =>
   Promise.all([
-    invalidateCache("products:*"),
-    invalidateCache("admin:orders:*"),
+    invalidateCache('products:*'),
+    invalidateCache('admin:orders:*'),
     invalidateUserOrderCaches(userId),
     ...items.map((item) => invalidateCache(`product:${item.productId}`)),
-  ]);
+  ])
 
 export const createOrder = async (
   userId: string,
-  orderData: CreateOrderActionInput,
+  orderData: CreateOrderActionInput
 ): Promise<ActionResult<{ orderId: string }>> => {
-  const parseResult = CreateOrderActionSchema.safeParse(orderData);
+  const parseResult = CreateOrderActionSchema.safeParse(orderData)
   if (!parseResult.success) {
     return {
       success: false,
-      error: parseResult.error.issues[0]?.message ?? "Invalid order data",
-    };
+      error: parseResult.error.issues[0]?.message ?? 'Invalid order data',
+    }
   }
 
   const { customerName, customerEmail, customerAddress, items } =
-    parseResult.data;
-  const total = calculateOrderTotal(items);
-  const orderId = generateOrderId();
-  const createdAt = new Date().toISOString();
+    parseResult.data
+  const total = calculateOrderTotal(items)
+  const orderId = generateOrderId()
+  const createdAt = new Date().toISOString()
 
   try {
     await insertOrderRecords(
@@ -397,18 +395,18 @@ export const createOrder = async (
       customerEmail,
       customerAddress,
       items,
-      total,
-    );
+      total
+    )
   } catch (error) {
     logError({
       error,
-      context: "create_order_pg",
+      context: 'create_order_pg',
       additionalInfo: { userId },
-    });
-    return { success: false, error: "Failed to create order" };
+    })
+    return { success: false, error: 'Failed to create order' }
   }
 
-  const productNamesStr = await buildProductNamesString(items);
+  const productNamesStr = await buildProductNamesString(items)
   const orderSummary = buildOrderSummary({
     orderId,
     userId,
@@ -419,117 +417,117 @@ export const createOrder = async (
     items,
     createdAt,
     productNames: productNamesStr,
-  });
+  })
 
-  waitUntil(writeOrderToRedis(orderSummary));
+  waitUntil(writeOrderToRedis(orderSummary))
 
   logBusinessEvent({
-    event: "order_created",
+    event: 'order_created',
     details: { orderId, userId, total },
     success: true,
-  });
+  })
 
-  waitUntil(invalidateOrderCaches(userId, items));
+  waitUntil(invalidateOrderCaches(userId, items))
 
-  return { success: true, data: { orderId } };
-};
+  return { success: true, data: { orderId } }
+}
 
 export const updateOrderStatus = async (
   orderId: string,
-  newStatus: string,
+  newStatus: string
 ): Promise<ActionResult<{ orderId: string }>> => {
-  const parseResult = OrderStatusEnum.safeParse(newStatus);
+  const parseResult = OrderStatusEnum.safeParse(newStatus)
   if (!parseResult.success) {
-    return { success: false, error: "Invalid order status" };
+    return { success: false, error: 'Invalid order status' }
   }
 
-  const status = parseResult.data;
+  const status = parseResult.data
 
   try {
     const updated = await drizzleDb
       .update(orders)
       .set({ status, updatedAt: new Date() })
       .where(eq(orders.id, orderId))
-      .returning({ id: orders.id });
+      .returning({ id: orders.id })
 
     if (updated.length === 0) {
-      return { success: false, error: "Order not found" };
+      return { success: false, error: 'Order not found' }
     }
   } catch (error) {
     logError({
       error,
-      context: "update_order_status_pg",
+      context: 'update_order_status_pg',
       additionalInfo: { orderId, status },
-    });
-    return { success: false, error: "Failed to update order status" };
+    })
+    return { success: false, error: 'Failed to update order status' }
   }
 
-  const redis = getRedisClient();
+  const redis = getRedisClient()
   if (redis) {
     try {
-      await redis.hset(redisOrderKey(orderId), { status });
+      await redis.hset(redisOrderKey(orderId), { status })
     } catch (error) {
       logError({
         error,
-        context: "update_order_status_redis",
+        context: 'update_order_status_redis',
         additionalInfo: { orderId, status },
-      });
+      })
     }
   }
 
   logBusinessEvent({
-    event: "order_status_updated",
+    event: 'order_status_updated',
     details: { orderId, status },
     success: true,
-  });
+  })
 
-  return { success: true, data: { orderId } };
-};
+  return { success: true, data: { orderId } }
+}
 
 export const getUserOrders = async (
-  userId: string,
+  userId: string
 ): Promise<ActionResult<OrderSummary[]>> => {
-  const redis = getRedisClient();
+  const redis = getRedisClient()
 
   if (redis) {
-    const redisOrders = await getUserOrdersFromRedis(userId, redis);
+    const redisOrders = await getUserOrdersFromRedis(userId, redis)
     if (redisOrders) {
-      return { success: true, data: redisOrders };
+      return { success: true, data: redisOrders }
     }
   }
 
   try {
-    const data = await fetchOrdersFromDb(userId);
-    return { success: true, data };
+    const data = await fetchOrdersFromDb(userId)
+    return { success: true, data }
   } catch (error) {
     logError({
       error,
-      context: "get_orders_pg",
+      context: 'get_orders_pg',
       additionalInfo: { userId },
-    });
-    return { success: false, error: "Failed to retrieve orders" };
+    })
+    return { success: false, error: 'Failed to retrieve orders' }
   }
-};
+}
 
 const searchOrdersViaIndex = async (
   searchTerm: string,
   limit: number,
   userId?: string,
-  status?: string,
+  status?: string
 ): Promise<string[] | null> => {
-  const redis = getRedisClient();
-  if (!redis) return null;
+  const redis = getRedisClient()
+  if (!redis) return null
 
   try {
     const index = redis.search.index({
-      name: "orders",
+      name: 'orders',
       schema: ORDER_SEARCH_SCHEMA,
-    });
+    })
 
     const baseFilter = {
       ...(userId ? { userId } : {}),
       ...(status ? { status } : {}),
-    };
+    }
 
     const results = await index.query({
       filter: {
@@ -544,33 +542,33 @@ const searchOrdersViaIndex = async (
       },
       select: {},
       limit,
-    });
+    })
 
     return results.map((result) => {
-      const key = String(result.key);
-      return key.startsWith("order:") ? key.slice(6) : key;
-    });
+      const key = String(result.key)
+      return key.startsWith('order:') ? key.slice(6) : key
+    })
   } catch (error) {
     logError({
       error,
-      context: "search_orders_redis_ft",
+      context: 'search_orders_redis_ft',
       additionalInfo: { searchTerm, userId, status },
-    });
-    return null;
+    })
+    return null
   }
-};
+}
 
 export const searchUserOrdersRedis = async (
   userId: string,
   searchTerm: string,
   limit: number = 100,
-  status?: string,
+  status?: string
 ): Promise<string[] | null> =>
-  searchOrdersViaIndex(searchTerm, limit, userId, status);
+  searchOrdersViaIndex(searchTerm, limit, userId, status)
 
 export const searchAllOrdersRedis = async (
   searchTerm: string,
   limit: number = 100,
-  status?: string,
+  status?: string
 ): Promise<string[] | null> =>
-  searchOrdersViaIndex(searchTerm, limit, undefined, status);
+  searchOrdersViaIndex(searchTerm, limit, undefined, status)

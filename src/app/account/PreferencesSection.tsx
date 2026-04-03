@@ -1,46 +1,46 @@
-"use client";
+'use client'
 
-import { useCallback, useEffect, useState } from "react";
-import { Card } from "@/components/ui/Card";
-import { ThemeSelector } from "@/components/ui/ThemeSelector";
-import { useCurrency, type CurrencyCode } from "@/contexts/CurrencyContext";
-import type { UserProfile } from "@/app/account/account-shared";
+import { useCallback, useEffect, useState } from 'react'
+import { Card } from '@/components/ui/Card'
+import { ThemeSelector } from '@/components/ui/ThemeSelector'
+import { useCurrency, type CurrencyCode } from '@/contexts/CurrencyContext'
+import type { UserProfile } from '@/app/account/account-shared'
 
 interface PreferencesSectionProps {
-  readonly profile: UserProfile | null;
+  readonly profile: UserProfile | null
 }
 
 export function PreferencesSection({ profile }: PreferencesSectionProps) {
-  const { currency, setCurrency } = useCurrency();
-  const [saving, setSaving] = useState(false);
+  const { currency, setCurrency } = useCurrency()
+  const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     if (
       profile?.currencyPreference &&
-      (["INR", "USD", "EUR", "GBP"] as string[]).includes(
-        profile.currencyPreference,
+      (['INR', 'USD', 'EUR', 'GBP'] as string[]).includes(
+        profile.currencyPreference
       )
     ) {
-      setCurrency(profile.currencyPreference as CurrencyCode);
+      setCurrency(profile.currencyPreference as CurrencyCode)
     }
-  }, [profile?.currencyPreference, setCurrency]);
+  }, [profile?.currencyPreference, setCurrency])
 
   const handleCurrencyChange = useCallback(
     async (code: CurrencyCode) => {
-      setCurrency(code);
-      setSaving(true);
+      setCurrency(code)
+      setSaving(true)
       try {
-        await fetch("/api/account", {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
+        await fetch('/api/account', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ currencyPreference: code }),
-        });
+        })
       } finally {
-        setSaving(false);
+        setSaving(false)
       }
     },
-    [setCurrency],
-  );
+    [setCurrency]
+  )
 
   return (
     <Card className="p-6 sm:p-8 mb-6">
@@ -99,7 +99,7 @@ export function PreferencesSection({ profile }: PreferencesSectionProps) {
             className="w-full cursor-pointer rounded-md border border-[var(--border-warm)] bg-[var(--surface)] px-3 py-1.5 text-sm text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-rose)] disabled:opacity-50 sm:w-52"
             aria-label="Select currency"
           >
-            {(["INR", "USD", "EUR", "GBP"] as const).map((code) => (
+            {(['INR', 'USD', 'EUR', 'GBP'] as const).map((code) => (
               <option key={code} value={code}>
                 {code}
               </option>
@@ -111,5 +111,5 @@ export function PreferencesSection({ profile }: PreferencesSectionProps) {
         </div>
       </div>
     </Card>
-  );
+  )
 }

@@ -138,7 +138,7 @@ functions:
     handler: .next/standalone/index.handler
     events:
       - http: ANY /
-      - http: "ANY /{proxy+}"
+      - http: 'ANY /{proxy+}'
 
 plugins:
   - serverless-nextjs-plugin

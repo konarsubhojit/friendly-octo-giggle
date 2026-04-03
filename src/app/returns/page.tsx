@@ -1,16 +1,16 @@
-import Footer from "@/components/layout/Footer";
-import Link from "next/link";
+import Footer from '@/components/layout/Footer'
+import Link from 'next/link'
 import {
   CHECKOUT_POLICIES,
   SUPPORT_EMAIL,
   type CheckoutPolicySection,
-} from "@/lib/constants/checkout-policies";
+} from '@/lib/constants/checkout-policies'
 
 export const metadata = {
-  title: "Returns & Refunds | The Kiyon Store",
+  title: 'Returns & Refunds | The Kiyon Store',
   description:
-    "Learn about our damaged-item replacement process and order policy.",
-};
+    'Learn about our damaged-item replacement process and order policy.',
+}
 
 function ReturnPolicySection() {
   return (
@@ -47,20 +47,20 @@ function ReturnPolicySection() {
                 ))}
               </ul>
             </div>
-          ),
+          )
         )}
       </div>
     </section>
-  );
+  )
 }
 
 const RETURN_STEPS = [
   `Email ${SUPPORT_EMAIL} with detailed photos, a short video, and a description of the issue.`,
-  "Wait for our team to review the damage claim and respond with next steps.",
-  "If approved, send the damaged product back using a shipment you arrange and pay for.",
-  "After the returned item is received and reviewed, we will send a replacement product.",
-  "We do not charge shipping for sending the replacement product to you.",
-] as const;
+  'Wait for our team to review the damage claim and respond with next steps.',
+  'If approved, send the damaged product back using a shipment you arrange and pay for.',
+  'After the returned item is received and reviewed, we will send a replacement product.',
+  'We do not charge shipping for sending the replacement product to you.',
+] as const
 
 function ReturnStepsSection() {
   return (
@@ -79,7 +79,7 @@ function ReturnStepsSection() {
         ))}
       </ol>
     </section>
-  );
+  )
 }
 
 function NonReturnableSection() {
@@ -93,17 +93,17 @@ function NonReturnableSection() {
         are not issued.
       </p>
       <p className="mt-6 text-[var(--text-secondary)] text-sm">
-        Questions?{" "}
+        Questions?{' '}
         <Link
           href="/contact"
           className="text-[var(--btn-primary)] hover:underline"
         >
           Contact our support team
-        </Link>{" "}
+        </Link>{' '}
         or email {SUPPORT_EMAIL} and we&apos;ll help review damaged-item claims.
       </p>
     </section>
-  );
+  )
 }
 
 export default function ReturnsPage() {
@@ -124,5 +124,5 @@ export default function ReturnsPage() {
       </main>
       <Footer />
     </div>
-  );
+  )
 }

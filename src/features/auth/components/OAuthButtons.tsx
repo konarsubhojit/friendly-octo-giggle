@@ -1,11 +1,11 @@
-"use client";
+'use client'
 
-import { GoogleIcon } from "@/components/icons/GoogleIcon";
-import { MicrosoftIcon } from "@/components/icons/MicrosoftIcon";
+import { GoogleIcon } from '@/components/icons/GoogleIcon'
+import { MicrosoftIcon } from '@/components/icons/MicrosoftIcon'
 
 interface OAuthButtonsProps {
-  readonly onGoogleClick: () => void;
-  readonly onMicrosoftClick: () => void;
+  readonly onGoogleClick: () => void
+  readonly onMicrosoftClick: () => void
 }
 
 export function OAuthButtons({
@@ -32,5 +32,5 @@ export function OAuthButtons({
         Continue with Microsoft
       </button>
     </div>
-  );
+  )
 }

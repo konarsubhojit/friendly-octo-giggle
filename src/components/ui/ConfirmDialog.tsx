@@ -1,35 +1,35 @@
-"use client";
+'use client'
 
-import { useId, useEffect, useRef } from "react";
-import type { ReactNode } from "react";
-import { DialogBody } from "@/components/ui/DialogBody";
+import { useId, useEffect, useRef } from 'react'
+import type { ReactNode } from 'react'
+import { DialogBody } from '@/components/ui/DialogBody'
 
 export interface ConfirmDialogProps {
-  readonly isOpen: boolean;
-  readonly title: string;
-  readonly message: string;
-  readonly confirmLabel?: string;
-  readonly cancelLabel?: string;
-  readonly variant?: "danger" | "warning" | "info";
-  readonly loading?: boolean;
-  readonly onConfirm: () => void;
-  readonly onCancel: () => void;
+  readonly isOpen: boolean
+  readonly title: string
+  readonly message: string
+  readonly confirmLabel?: string
+  readonly cancelLabel?: string
+  readonly variant?: 'danger' | 'warning' | 'info'
+  readonly loading?: boolean
+  readonly onConfirm: () => void
+  readonly onCancel: () => void
 }
 
 const VARIANT_STYLES = {
   danger: {
-    iconBg: "bg-red-100",
-    button: "bg-red-600 hover:bg-red-700 disabled:bg-red-400",
+    iconBg: 'bg-red-100',
+    button: 'bg-red-600 hover:bg-red-700 disabled:bg-red-400',
   },
   warning: {
-    iconBg: "bg-yellow-100",
-    button: "bg-yellow-600 hover:bg-yellow-700 disabled:bg-yellow-400",
+    iconBg: 'bg-yellow-100',
+    button: 'bg-yellow-600 hover:bg-yellow-700 disabled:bg-yellow-400',
   },
   info: {
-    iconBg: "bg-blue-100",
-    button: "bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400",
+    iconBg: 'bg-blue-100',
+    button: 'bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400',
   },
-} as const;
+} as const
 
 const VARIANT_ICONS: Record<string, ReactNode> = {
   danger: (
@@ -80,82 +80,82 @@ const VARIANT_ICONS: Record<string, ReactNode> = {
       />
     </svg>
   ),
-};
+}
 
 /** Focusable element selectors for focus-trap cycling. */
 const FOCUSABLE_SELECTORS = [
-  "button:not([disabled])",
-  "a[href]",
-  "input:not([disabled])",
-  "select:not([disabled])",
-  "textarea:not([disabled])",
+  'button:not([disabled])',
+  'a[href]',
+  'input:not([disabled])',
+  'select:not([disabled])',
+  'textarea:not([disabled])',
   '[tabindex]:not([tabindex="-1"])',
-].join(",");
+].join(',')
 
 const ConfirmDialog = ({
   isOpen,
   title,
   message,
-  confirmLabel = "Confirm",
-  cancelLabel = "Cancel",
-  variant = "warning",
+  confirmLabel = 'Confirm',
+  cancelLabel = 'Cancel',
+  variant = 'warning',
   loading = false,
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) => {
-  const uid = useId();
-  const titleId = `${uid}-title`;
-  const messageId = `${uid}-message`;
+  const uid = useId()
+  const titleId = `${uid}-title`
+  const messageId = `${uid}-message`
 
-  const dialogRef = useRef<HTMLDialogElement>(null);
-  const cancelBtnRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLDialogElement>(null)
+  const cancelBtnRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) return
 
     const frame = requestAnimationFrame(() => {
-      cancelBtnRef.current?.focus();
-    });
+      cancelBtnRef.current?.focus()
+    })
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (!dialogRef.current?.contains(document.activeElement)) return;
+      if (!dialogRef.current?.contains(document.activeElement)) return
 
-      if (e.key === "Escape" && !loading) {
-        onCancel();
-        return;
+      if (e.key === 'Escape' && !loading) {
+        onCancel()
+        return
       }
-      if (e.key !== "Tab") return;
+      if (e.key !== 'Tab') return
 
-      const dialog = dialogRef.current;
-      if (!dialog) return;
+      const dialog = dialogRef.current
+      if (!dialog) return
 
       const focusable = Array.from(
-        dialog.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTORS),
-      );
-      if (focusable.length === 0) return;
+        dialog.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTORS)
+      )
+      if (focusable.length === 0) return
 
-      const first = focusable[0];
-      const last = focusable.at(-1) as HTMLElement;
+      const first = focusable[0]
+      const last = focusable.at(-1) as HTMLElement
 
       if (e.shiftKey && document.activeElement === first) {
-        e.preventDefault();
-        last.focus();
+        e.preventDefault()
+        last.focus()
       } else if (!e.shiftKey && document.activeElement === last) {
-        e.preventDefault();
-        first.focus();
+        e.preventDefault()
+        first.focus()
       }
-    };
+    }
 
-    document.addEventListener("keydown", handleKeyDown);
+    document.addEventListener('keydown', handleKeyDown)
     return () => {
-      cancelAnimationFrame(frame);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isOpen, loading, onCancel]);
+      cancelAnimationFrame(frame)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [isOpen, loading, onCancel])
 
-  if (!isOpen) return null;
+  if (!isOpen) return null
 
-  const styles = VARIANT_STYLES[variant];
+  const styles = VARIANT_STYLES[variant]
 
   return (
     <dialog
@@ -187,7 +187,7 @@ const ConfirmDialog = ({
         onConfirm={onConfirm}
       />
     </dialog>
-  );
-};
+  )
+}
 
-export default ConfirmDialog;
+export default ConfirmDialog

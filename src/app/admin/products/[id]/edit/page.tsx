@@ -1,26 +1,26 @@
-import { and, eq, isNull } from "drizzle-orm";
-import { notFound, redirect } from "next/navigation";
-import Link from "next/link";
-import { AdminPageShell } from "@/features/admin/components/AdminPageShell";
-import ProductEditPageForm from "@/features/admin/components/ProductEditPageForm";
-import VariationList from "@/features/admin/components/VariationList";
-import { auth } from "@/lib/auth";
-import { drizzleDb } from "@/lib/db";
-import { products } from "@/lib/schema";
+import { and, eq, isNull } from 'drizzle-orm'
+import { notFound, redirect } from 'next/navigation'
+import Link from 'next/link'
+import { AdminPageShell } from '@/features/admin/components/AdminPageShell'
+import ProductEditPageForm from '@/features/admin/components/ProductEditPageForm'
+import VariationList from '@/features/admin/components/VariationList'
+import { auth } from '@/lib/auth'
+import { drizzleDb } from '@/lib/db'
+import { products } from '@/lib/schema'
 
-export const dynamic = "force-dynamic";
+export const dynamic = 'force-dynamic'
 
 interface PageProps {
-  readonly params: Promise<{ id: string }>;
+  readonly params: Promise<{ id: string }>
 }
 
 export default async function AdminProductEditFormPage({ params }: PageProps) {
-  const session = await auth();
-  if (session?.user?.role !== "ADMIN") {
-    redirect("/auth/signin");
+  const session = await auth()
+  if (session?.user?.role !== 'ADMIN') {
+    redirect('/auth/signin')
   }
 
-  const { id } = await params;
+  const { id } = await params
 
   const product = await drizzleDb.query.products.findFirst({
     where: and(eq(products.id, id), isNull(products.deletedAt)),
@@ -29,10 +29,10 @@ export default async function AdminProductEditFormPage({ params }: PageProps) {
         where: (v, { isNull }) => isNull(v.deletedAt),
       },
     },
-  });
+  })
 
   if (!product) {
-    notFound();
+    notFound()
   }
 
   const serializedProduct = {
@@ -47,16 +47,16 @@ export default async function AdminProductEditFormPage({ params }: PageProps) {
     deletedAt: null,
     createdAt: product.createdAt.toISOString(),
     updatedAt: product.updatedAt.toISOString(),
-  };
+  }
 
   const serializedVariations = product.variations.map((variation) => ({
     id: variation.id,
     productId: variation.productId,
     name: variation.name,
     designName: variation.designName,
-    variationType: (variation.variationType ?? "styling") as
-      | "styling"
-      | "colour",
+    variationType: (variation.variationType ?? 'styling') as
+      | 'styling'
+      | 'colour',
     styleId: variation.styleId ?? null,
     image: variation.image ?? null,
     images: variation.images ?? [],
@@ -65,22 +65,22 @@ export default async function AdminProductEditFormPage({ params }: PageProps) {
     deletedAt: null,
     createdAt: variation.createdAt.toISOString(),
     updatedAt: variation.updatedAt.toISOString(),
-  }));
+  }))
 
   const variationsInStock = serializedVariations.filter(
-    (variation) => variation.stock > 0,
-  ).length;
+    (variation) => variation.stock > 0
+  ).length
 
   return (
     <AdminPageShell
       breadcrumbs={[
-        { label: "Admin", href: "/admin" },
-        { label: "Products", href: "/admin/products" },
+        { label: 'Admin', href: '/admin' },
+        { label: 'Products', href: '/admin/products' },
         {
           label: serializedProduct.name,
           href: `/admin/products/${serializedProduct.id}`,
         },
-        { label: "Edit Product" },
+        { label: 'Edit Product' },
       ]}
       eyebrow="Catalog editing"
       title="Edit Product"
@@ -95,22 +95,22 @@ export default async function AdminProductEditFormPage({ params }: PageProps) {
       }
       metrics={[
         {
-          label: "Base stock",
+          label: 'Base stock',
           value: String(serializedProduct.stock),
-          hint: "Base stock level.",
-          tone: serializedProduct.stock > 0 ? "sky" : "rose",
+          hint: 'Base stock level.',
+          tone: serializedProduct.stock > 0 ? 'sky' : 'rose',
         },
         {
-          label: "Variations",
+          label: 'Variations',
           value: String(serializedVariations.length),
-          hint: "Active product variations.",
-          tone: "amber",
+          hint: 'Active product variations.',
+          tone: 'amber',
         },
         {
-          label: "In stock",
+          label: 'In stock',
           value: String(variationsInStock),
-          hint: "Variations with available stock.",
-          tone: variationsInStock > 0 ? "emerald" : "rose",
+          hint: 'Variations with available stock.',
+          tone: variationsInStock > 0 ? 'emerald' : 'rose',
         },
       ]}
     >
@@ -121,5 +121,5 @@ export default async function AdminProductEditFormPage({ params }: PageProps) {
         initialVariations={serializedVariations}
       />
     </AdminPageShell>
-  );
+  )
 }

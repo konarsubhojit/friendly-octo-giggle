@@ -1,26 +1,26 @@
-"use client";
+'use client'
 
-import { useCurrency } from "@/contexts/CurrencyContext";
-import { useCursorPagination } from "@/hooks/useCursorPagination";
-import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
-import { AlertBanner } from "@/components/ui/AlertBanner";
-import { EmptyState } from "@/components/ui/EmptyState";
-import { Card } from "@/components/ui/Card";
-import { GradientHeading } from "@/components/ui/GradientHeading";
-import { OrderListCard } from "@/features/orders/components/OrderListCard";
-import { OrdersSearchForm } from "@/features/orders/components/OrdersSearchForm";
-import { CursorPaginationBar } from "@/components/ui/CursorPaginationBar";
+import { useCurrency } from '@/contexts/CurrencyContext'
+import { useCursorPagination } from '@/hooks/useCursorPagination'
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
+import { AlertBanner } from '@/components/ui/AlertBanner'
+import { EmptyState } from '@/components/ui/EmptyState'
+import { Card } from '@/components/ui/Card'
+import { GradientHeading } from '@/components/ui/GradientHeading'
+import { OrderListCard } from '@/features/orders/components/OrderListCard'
+import { OrdersSearchForm } from '@/features/orders/components/OrdersSearchForm'
+import { CursorPaginationBar } from '@/components/ui/CursorPaginationBar'
 
 interface OrderSummary {
-  id: string;
-  status: string;
-  createdAt: string;
-  totalAmount: number;
+  id: string
+  status: string
+  createdAt: string
+  totalAmount: number
   items: Array<{
-    quantity: number;
-    product?: { name: string; image: string } | null;
-    variation?: { id: string; name: string; price: number } | null;
-  }>;
+    quantity: number
+    product?: { name: string; image: string } | null
+    variation?: { id: string; name: string; price: number } | null
+  }>
 }
 
 const OrdersEmptyState = ({ search }: { readonly search: string }) => (
@@ -42,21 +42,21 @@ const OrdersEmptyState = ({ search }: { readonly search: string }) => (
           />
         </svg>
       }
-      title={search ? "No matching orders" : "No orders yet"}
+      title={search ? 'No matching orders' : 'No orders yet'}
       message={
         search
-          ? "Try a different search term."
-          : "Start shopping and your orders will appear here."
+          ? 'Try a different search term.'
+          : 'Start shopping and your orders will appear here.'
       }
-      ctaText={search ? undefined : "Browse Products"}
-      ctaHref={search ? undefined : "/shop"}
+      ctaText={search ? undefined : 'Browse Products'}
+      ctaHref={search ? undefined : '/shop'}
       className="py-0"
     />
   </Card>
-);
+)
 
 export default function OrdersClient() {
-  useCurrency();
+  useCurrency()
   const {
     items: orders,
     loading,
@@ -76,10 +76,10 @@ export default function OrdersClient() {
     handlePageSelect,
     handleRefresh,
   } = useCursorPagination<OrderSummary>({
-    url: "/api/orders",
-    dataKey: "orders",
+    url: '/api/orders',
+    dataKey: 'orders',
     enabled: true,
-  });
+  })
 
   const ordersContent =
     orders.length === 0 ? (
@@ -107,7 +107,7 @@ export default function OrdersClient() {
           variant="warm"
         />
       </>
-    );
+    )
 
   return (
     <div className="min-h-screen bg-warm-gradient">
@@ -135,5 +135,5 @@ export default function OrdersClient() {
         )}
       </main>
     </div>
-  );
+  )
 }

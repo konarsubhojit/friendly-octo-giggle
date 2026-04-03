@@ -1,251 +1,244 @@
-"use client";
+'use client'
 
-import {
-  useState,
-  useEffect,
-  useCallback,
-  lazy,
-  Suspense,
-  useRef,
-} from "react";
-import Image from "next/image";
-import Link from "next/link";
-import { Product } from "@/lib/types";
-import { useCurrency } from "@/contexts/CurrencyContext";
-import toast from "react-hot-toast";
-import { useDispatch } from "react-redux";
-import { upsertProduct } from "@/features/admin/store/adminSlice";
-import type { AppDispatch } from "@/lib/store";
-import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
-import { AlertBanner } from "@/components/ui/AlertBanner";
-import { EmptyState } from "@/components/ui/EmptyState";
+import { useState, useEffect, useCallback, lazy, Suspense, useRef } from 'react'
+import Image from 'next/image'
+import Link from 'next/link'
+import { Product } from '@/lib/types'
+import { useCurrency } from '@/contexts/CurrencyContext'
+import toast from 'react-hot-toast'
+import { useDispatch } from 'react-redux'
+import { upsertProduct } from '@/features/admin/store/adminSlice'
+import type { AppDispatch } from '@/lib/store'
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
+import { AlertBanner } from '@/components/ui/AlertBanner'
+import { EmptyState } from '@/components/ui/EmptyState'
 import {
   AdminPageShell,
   AdminPanel,
-} from "@/features/admin/components/AdminPageShell";
-import { AdminSearchForm } from "@/features/admin/components/AdminSearchForm";
-import { CursorPaginationBar } from "@/components/ui/CursorPaginationBar";
+} from '@/features/admin/components/AdminPageShell'
+import { AdminSearchForm } from '@/features/admin/components/AdminSearchForm'
+import { CursorPaginationBar } from '@/components/ui/CursorPaginationBar'
 
 const ProductFormModal = lazy(
-  () => import("@/features/admin/components/ProductFormModal"),
-);
+  () => import('@/features/admin/components/ProductFormModal')
+)
 const DeleteConfirmModal = lazy(
-  () => import("@/features/admin/components/DeleteConfirmModal"),
-);
+  () => import('@/features/admin/components/DeleteConfirmModal')
+)
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 20
 
 export default function ProductsManagement() {
-  const { formatPrice } = useCurrency();
-  const dispatch = useDispatch<AppDispatch>();
+  const { formatPrice } = useCurrency()
+  const dispatch = useDispatch<AppDispatch>()
 
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [search, setSearch] = useState("");
-  const [searchInput, setSearchInput] = useState("");
-  const [cursor, setCursor] = useState<string | null>(null);
-  const [nextCursor, setNextCursor] = useState<string | null>(null);
-  const [hasMore, setHasMore] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalCount, setTotalCount] = useState(0);
+  const [products, setProducts] = useState<Product[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [search, setSearch] = useState('')
+  const [searchInput, setSearchInput] = useState('')
+  const [cursor, setCursor] = useState<string | null>(null)
+  const [nextCursor, setNextCursor] = useState<string | null>(null)
+  const [hasMore, setHasMore] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalCount, setTotalCount] = useState(0)
 
-  const [showModal, setShowModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [productToDelete, setProductToDelete] = useState<string | null>(null);
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [deleting, setDeleting] = useState(false);
+  const [showModal, setShowModal] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [productToDelete, setProductToDelete] = useState<string | null>(null)
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
-  const pageCursorsRef = useRef<Array<string | null>>([null]);
-  const pendingOffsetRef = useRef<number | null>(null);
+  const pageCursorsRef = useRef<Array<string | null>>([null])
+  const pendingOffsetRef = useRef<number | null>(null)
 
   const syncPageCursors = useCallback((nextValue: Array<string | null>) => {
-    pageCursorsRef.current = nextValue;
-  }, []);
+    pageCursorsRef.current = nextValue
+  }, [])
 
   const fetchProducts = useCallback(
     async (
       cursorParam: string | null,
       searchQuery: string,
-      offsetVal?: number,
+      offsetVal?: number
     ) => {
-      setLoading(true);
-      setError(null);
+      setLoading(true)
+      setError(null)
       try {
-        const params = new URLSearchParams({ limit: String(PAGE_SIZE) });
+        const params = new URLSearchParams({ limit: String(PAGE_SIZE) })
         if (offsetVal !== undefined && offsetVal > 0) {
-          params.set("offset", String(offsetVal));
+          params.set('offset', String(offsetVal))
         } else if (cursorParam) {
-          params.set("cursor", cursorParam);
+          params.set('cursor', cursorParam)
         }
-        if (searchQuery) params.set("search", searchQuery);
+        if (searchQuery) params.set('search', searchQuery)
 
-        const res = await fetch(`/api/admin/products?${params.toString()}`);
+        const res = await fetch(`/api/admin/products?${params.toString()}`)
         if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          throw new Error(data.error || "Failed to load products");
+          const data = await res.json().catch(() => ({}))
+          throw new Error(data.error || 'Failed to load products')
         }
-        const data = await res.json();
-        const items: Product[] = data.data?.products ?? data.products ?? [];
-        setProducts(items);
-        setNextCursor(data.data?.nextCursor ?? null);
-        setHasMore(data.data?.hasMore ?? false);
-        setTotalCount(Number(data.data?.totalCount ?? data.totalCount ?? 0));
-        const discoveredCursors = pageCursorsRef.current.slice(0, currentPage);
+        const data = await res.json()
+        const items: Product[] = data.data?.products ?? data.products ?? []
+        setProducts(items)
+        setNextCursor(data.data?.nextCursor ?? null)
+        setHasMore(data.data?.hasMore ?? false)
+        setTotalCount(Number(data.data?.totalCount ?? data.totalCount ?? 0))
+        const discoveredCursors = pageCursorsRef.current.slice(0, currentPage)
         if (data.data?.nextCursor) {
-          discoveredCursors[currentPage] = data.data.nextCursor;
+          discoveredCursors[currentPage] = data.data.nextCursor
         }
-        syncPageCursors(discoveredCursors);
+        syncPageCursors(discoveredCursors)
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Something went wrong");
+        setError(err instanceof Error ? err.message : 'Something went wrong')
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
     },
-    [currentPage, syncPageCursors],
-  );
+    [currentPage, syncPageCursors]
+  )
 
   useEffect(() => {
-    const pendingOffset = pendingOffsetRef.current;
-    pendingOffsetRef.current = null;
-    const effectiveCursor = pendingOffset === null ? cursor : null;
-    fetchProducts(effectiveCursor, search, pendingOffset ?? undefined);
-  }, [fetchProducts, cursor, search]);
+    const pendingOffset = pendingOffsetRef.current
+    pendingOffsetRef.current = null
+    const effectiveCursor = pendingOffset === null ? cursor : null
+    fetchProducts(effectiveCursor, search, pendingOffset ?? undefined)
+  }, [fetchProducts, cursor, search])
 
-  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
 
   const handleSearch = (e: React.BaseSyntheticEvent) => {
-    e.preventDefault();
-    syncPageCursors([null]);
-    setCurrentPage(1);
-    setCursor(null);
-    setSearch(searchInput.trim());
-  };
+    e.preventDefault()
+    syncPageCursors([null])
+    setCurrentPage(1)
+    setCursor(null)
+    setSearch(searchInput.trim())
+  }
 
   const handleFirst = () => {
-    if (currentPage === 1) return;
-    setCurrentPage(1);
-    setCursor(null);
-  };
+    if (currentPage === 1) return
+    setCurrentPage(1)
+    setCursor(null)
+  }
 
   const handleNext = () => {
-    if (!nextCursor || currentPage >= totalPages) return;
-    setCurrentPage((prev) => prev + 1);
-    setCursor(nextCursor);
-  };
+    if (!nextCursor || currentPage >= totalPages) return
+    setCurrentPage((prev) => prev + 1)
+    setCursor(nextCursor)
+  }
 
   const handlePrev = () => {
-    if (currentPage === 1) return;
-    const prevCursor = pageCursorsRef.current[currentPage - 2];
+    if (currentPage === 1) return
+    const prevCursor = pageCursorsRef.current[currentPage - 2]
     if (prevCursor === undefined) {
-      pendingOffsetRef.current = (currentPage - 2) * PAGE_SIZE;
-      setCurrentPage((prev) => prev - 1);
-      return;
+      pendingOffsetRef.current = (currentPage - 2) * PAGE_SIZE
+      setCurrentPage((prev) => prev - 1)
+      return
     }
 
-    setCurrentPage((prev) => prev - 1);
-    setCursor(prevCursor);
-  };
+    setCurrentPage((prev) => prev - 1)
+    setCursor(prevCursor)
+  }
 
   const handlePageSelect = (page: number) => {
-    const targetPage = Math.min(Math.max(1, page), totalPages);
-    if (targetPage === currentPage) return;
+    const targetPage = Math.min(Math.max(1, page), totalPages)
+    if (targetPage === currentPage) return
 
     if (targetPage === 1) {
-      handleFirst();
-      return;
+      handleFirst()
+      return
     }
 
-    const knownCursor = pageCursorsRef.current[targetPage - 1];
+    const knownCursor = pageCursorsRef.current[targetPage - 1]
     if (knownCursor !== undefined) {
-      setCurrentPage(targetPage);
-      setCursor(knownCursor);
-      return;
+      setCurrentPage(targetPage)
+      setCursor(knownCursor)
+      return
     }
 
-    pendingOffsetRef.current = (targetPage - 1) * PAGE_SIZE;
-    setCurrentPage(targetPage);
-  };
+    pendingOffsetRef.current = (targetPage - 1) * PAGE_SIZE
+    setCurrentPage(targetPage)
+  }
 
   const handleLast = () => {
-    handlePageSelect(totalPages);
-  };
+    handlePageSelect(totalPages)
+  }
 
   const handleReset = () => {
-    syncPageCursors([null]);
-    setCurrentPage(1);
-    setCursor(null);
-    setNextCursor(null);
-    setHasMore(false);
-    setTotalCount(0);
-    setSearch("");
-    setSearchInput("");
-  };
+    syncPageCursors([null])
+    setCurrentPage(1)
+    setCursor(null)
+    setNextCursor(null)
+    setHasMore(false)
+    setTotalCount(0)
+    setSearch('')
+    setSearchInput('')
+  }
 
   const handleOpenModal = (product?: Product) => {
-    setEditingProduct(product || null);
-    setShowModal(true);
-  };
+    setEditingProduct(product || null)
+    setShowModal(true)
+  }
 
   const handleCloseModal = () => {
-    setShowModal(false);
-    setEditingProduct(null);
-  };
+    setShowModal(false)
+    setEditingProduct(null)
+  }
 
   const handleProductSaved = (product: Product) => {
-    dispatch(upsertProduct(product));
+    dispatch(upsertProduct(product))
     setProducts((prev) => {
-      const idx = prev.findIndex((p) => p.id === product.id);
+      const idx = prev.findIndex((p) => p.id === product.id)
       if (idx >= 0) {
-        const updated = [...prev];
-        updated[idx] = product;
-        return updated;
+        const updated = [...prev]
+        updated[idx] = product
+        return updated
       }
-      return [product, ...prev];
-    });
-  };
+      return [product, ...prev]
+    })
+  }
 
   const handleDelete = (id: string) => {
-    setProductToDelete(id);
-    setShowDeleteModal(true);
-  };
+    setProductToDelete(id)
+    setShowDeleteModal(true)
+  }
 
   const confirmDelete = async () => {
-    if (!productToDelete || deleting) return;
-    setDeleting(true);
+    if (!productToDelete || deleting) return
+    setDeleting(true)
     try {
       const res = await fetch(`/api/admin/products/${productToDelete}`, {
-        method: "DELETE",
-      });
+        method: 'DELETE',
+      })
       if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Failed to delete product");
+        const err = await res.json()
+        throw new Error(err.error || 'Failed to delete product')
       }
-      toast.success("Product deleted successfully");
-      setProducts((prev) => prev.filter((p) => p.id !== productToDelete));
-      setShowDeleteModal(false);
-      setProductToDelete(null);
+      toast.success('Product deleted successfully')
+      setProducts((prev) => prev.filter((p) => p.id !== productToDelete))
+      setShowDeleteModal(false)
+      setProductToDelete(null)
     } catch (err) {
       toast.error(
         err instanceof Error
           ? err.message
-          : "Something went wrong. Please try again.",
-      );
+          : 'Something went wrong. Please try again.'
+      )
     } finally {
-      setDeleting(false);
+      setDeleting(false)
     }
-  };
+  }
 
   const cancelDelete = () => {
-    setShowDeleteModal(false);
-    setProductToDelete(null);
-  };
+    setShowDeleteModal(false)
+    setProductToDelete(null)
+  }
 
   const productsListContent =
     products.length === 0 ? (
       <EmptyState
         title="No products found"
-        message={search ? "Try a different search term." : undefined}
+        message={search ? 'Try a different search term.' : undefined}
       />
     ) : (
       <>
@@ -318,18 +311,16 @@ export default function ProductsManagement() {
           onPageSelect={handlePageSelect}
         />
       </>
-    );
+    )
 
-  const inStockProducts = products.filter(
-    (product) => product.stock > 0,
-  ).length;
+  const inStockProducts = products.filter((product) => product.stock > 0).length
   const lowStockProducts = products.filter(
-    (product) => product.stock > 0 && product.stock <= 5,
-  ).length;
+    (product) => product.stock > 0 && product.stock <= 5
+  ).length
 
   return (
     <AdminPageShell
-      breadcrumbs={[{ label: "Admin", href: "/admin" }, { label: "Products" }]}
+      breadcrumbs={[{ label: 'Admin', href: '/admin' }, { label: 'Products' }]}
       eyebrow="Catalog operations"
       title="Product Management"
       description="Manage the product catalogue, review stock levels, and update product details."
@@ -352,22 +343,22 @@ export default function ProductsManagement() {
       }
       metrics={[
         {
-          label: "Catalog size",
+          label: 'Catalog size',
           value: String(totalCount),
-          hint: "Total products in the catalogue.",
-          tone: "sky",
+          hint: 'Total products in the catalogue.',
+          tone: 'sky',
         },
         {
-          label: "In stock",
+          label: 'In stock',
           value: String(inStockProducts),
-          hint: "Products with available stock.",
-          tone: "emerald",
+          hint: 'Products with available stock.',
+          tone: 'emerald',
         },
         {
-          label: "Low stock",
+          label: 'Low stock',
           value: String(lowStockProducts),
-          hint: "Products at 5 units or fewer.",
-          tone: lowStockProducts > 0 ? "amber" : "slate",
+          hint: 'Products at 5 units or fewer.',
+          tone: lowStockProducts > 0 ? 'amber' : 'slate',
         },
       ]}
     >
@@ -436,5 +427,5 @@ export default function ProductsManagement() {
         </Suspense>
       )}
     </AdminPageShell>
-  );
+  )
 }

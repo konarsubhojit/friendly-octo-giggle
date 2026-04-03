@@ -1,17 +1,17 @@
-import { describe, it, expect } from "vitest";
-import { makeStore } from "@/lib/store";
+import { describe, it, expect } from 'vitest'
+import { makeStore } from '@/lib/store'
 
-describe("Redux store", () => {
-  it("creates a store with correct slices", () => {
-    const store = makeStore();
-    const state = store.getState();
-    expect(state).toHaveProperty("cart");
-    expect(state).toHaveProperty("orders");
-    expect(state).toHaveProperty("admin");
-  });
+describe('Redux store', () => {
+  it('creates a store with correct slices', () => {
+    const store = makeStore()
+    const state = store.getState()
+    expect(state).toHaveProperty('cart')
+    expect(state).toHaveProperty('orders')
+    expect(state).toHaveProperty('admin')
+  })
 
-  it("cart initial state", () => {
-    const store = makeStore();
+  it('cart initial state', () => {
+    const store = makeStore()
     expect(store.getState().cart).toEqual({
       cart: null,
       loading: false,
@@ -19,11 +19,11 @@ describe("Redux store", () => {
       error: null,
       stockWarning: null,
       adjustedQuantity: null,
-    });
-  });
+    })
+  })
 
-  it("orders initial state", () => {
-    const store = makeStore();
+  it('orders initial state', () => {
+    const store = makeStore()
     expect(store.getState().orders).toEqual({
       orders: [],
       currentOrder: null,
@@ -31,11 +31,11 @@ describe("Redux store", () => {
       detailLoading: false,
       cancelling: false,
       error: null,
-    });
-  });
+    })
+  })
 
-  it("admin initial state", () => {
-    const store = makeStore();
+  it('admin initial state', () => {
+    const store = makeStore()
     expect(store.getState().admin).toEqual({
       products: [],
       orders: [],
@@ -44,12 +44,12 @@ describe("Redux store", () => {
       ordersLoading: false,
       usersLoading: false,
       error: null,
-    });
-  });
+    })
+  })
 
-  it("creates independent store instances", () => {
-    const store1 = makeStore();
-    const store2 = makeStore();
-    expect(store1).not.toBe(store2);
-  });
-});
+  it('creates independent store instances', () => {
+    const store1 = makeStore()
+    const store2 = makeStore()
+    expect(store1).not.toBe(store2)
+  })
+})

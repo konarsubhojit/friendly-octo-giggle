@@ -8,7 +8,7 @@ export default function CartLoading() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Cart items skeleton */}
           <div className="lg:col-span-2 space-y-4">
-            {(["c1", "c2", "c3"] as const).map((id) => (
+            {(['c1', 'c2', 'c3'] as const).map((id) => (
               <div
                 key={id}
                 className="flex gap-4 p-4 bg-[var(--surface)] rounded-xl border border-[var(--border-warm)]"
@@ -44,5 +44,5 @@ export default function CartLoading() {
         </div>
       </main>
     </div>
-  );
+  )
 }

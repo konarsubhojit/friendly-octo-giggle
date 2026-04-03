@@ -1,52 +1,52 @@
-import Footer from "@/components/layout/Footer";
-import Link from "next/link";
+import Footer from '@/components/layout/Footer'
+import Link from 'next/link'
 import {
   CHECKOUT_POLICIES,
   SUPPORT_EMAIL,
   type CheckoutPolicySection,
-} from "@/lib/constants/checkout-policies";
+} from '@/lib/constants/checkout-policies'
 
 export const metadata = {
-  title: "Help Center | The Kiyon Store",
+  title: 'Help Center | The Kiyon Store',
   description:
-    "Find answers to common questions about orders, shipping, returns, and your account.",
-};
+    'Find answers to common questions about orders, shipping, returns, and your account.',
+}
 
 const faqs = [
   {
-    question: "How do I track my order?",
+    question: 'How do I track my order?',
     answer:
-      "Once your order ships, you will receive an email with a tracking number. You can also view order status in My Orders after signing in.",
+      'Once your order ships, you will receive an email with a tracking number. You can also view order status in My Orders after signing in.',
   },
   {
-    question: "Can I change or cancel my order?",
+    question: 'Can I change or cancel my order?',
     answer:
-      "Orders can only be cancelled before they are shipped. Once an order has shipped, it cannot be cancelled and no refund will be issued.",
+      'Orders can only be cancelled before they are shipped. Once an order has shipped, it cannot be cancelled and no refund will be issued.',
   },
   {
-    question: "What payment methods do you accept?",
+    question: 'What payment methods do you accept?',
     answer:
-      "We accept all major credit cards (Visa, Mastercard, Amex), debit cards, and digital wallets. All transactions are secured with industry-standard encryption.",
+      'We accept all major credit cards (Visa, Mastercard, Amex), debit cards, and digital wallets. All transactions are secured with industry-standard encryption.',
   },
   {
-    question: "How long does delivery take?",
+    question: 'How long does delivery take?',
     answer:
-      "Standard delivery takes 3–7 business days. Express delivery (1–2 days) is available at checkout for most locations.",
+      'Standard delivery takes 3–7 business days. Express delivery (1–2 days) is available at checkout for most locations.',
   },
   {
-    question: "What is your return policy?",
+    question: 'What is your return policy?',
     answer: `Orders cannot be returned unless the product arrives damaged. Email ${SUPPORT_EMAIL} with detailed photos, a short video, and a description of the issue for review.`,
   },
   {
-    question: "How do I reset my password?",
+    question: 'How do I reset my password?',
     answer:
       'Click "Sign In", then "Forgot password?". Enter your email and we will send you a reset link within a few minutes.',
   },
-];
+]
 
 interface FAQItem {
-  readonly question: string;
-  readonly answer: string;
+  readonly question: string
+  readonly answer: string
 }
 
 function FAQSection({ items }: { readonly items: readonly FAQItem[] }) {
@@ -71,7 +71,7 @@ function FAQSection({ items }: { readonly items: readonly FAQItem[] }) {
         ))}
       </div>
     </section>
-  );
+  )
 }
 
 function HelpContactSection() {
@@ -98,7 +98,7 @@ function HelpContactSection() {
         </a>
       </div>
     </section>
-  );
+  )
 }
 
 function PolicySnapshotSection() {
@@ -128,11 +128,11 @@ function PolicySnapshotSection() {
                 ))}
               </ul>
             </div>
-          ),
+          )
         )}
       </div>
     </section>
-  );
+  )
 }
 
 export default function HelpPage() {
@@ -153,5 +153,5 @@ export default function HelpPage() {
       </main>
       <Footer />
     </div>
-  );
+  )
 }

@@ -1,70 +1,70 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next'
 
-const isDev = process.env.NODE_ENV === "development";
+const isDev = process.env.NODE_ENV === 'development'
 
 const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       {
-        protocol: "https",
-        hostname: "images.unsplash.com",
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
       },
       {
         // ** matches multi-level subdomains in Next.js remotePatterns
-        protocol: "https",
-        hostname: "**.public.blob.vercel-storage.com",
+        protocol: 'https',
+        hostname: '**.public.blob.vercel-storage.com',
       },
       {
-        protocol: "https",
-        hostname: "lh3.googleusercontent.com",
+        protocol: 'https',
+        hostname: 'lh3.googleusercontent.com',
       },
     ],
   },
   async headers() {
     return [
       {
-        source: "/:path*",
+        source: '/:path*',
         headers: [
           {
-            key: "Strict-Transport-Security",
-            value: "max-age=31536000; includeSubDomains",
+            key: 'Strict-Transport-Security',
+            value: 'max-age=31536000; includeSubDomains',
           },
           {
-            key: "Content-Security-Policy",
+            key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
               // unsafe-eval only in dev (React dev tools / HMR); stripped in production
-              `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://va.vercel-scripts.com`,
+              `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ''} https://va.vercel-scripts.com`,
               "style-src 'self' 'unsafe-inline'",
               // CSP * already matches multi-level subdomains (unlike Next.js remotePatterns)
               "img-src 'self' data: blob: https://images.unsplash.com https://*.public.blob.vercel-storage.com https://lh3.googleusercontent.com",
               "font-src 'self'",
               "connect-src 'self' https://va.vercel-scripts.com https://accounts.google.com https://login.microsoftonline.com https://graph.microsoft.com",
               "frame-src 'self' https://accounts.google.com https://login.microsoftonline.com",
-            ].join("; "),
+            ].join('; '),
           },
           {
-            key: "Referrer-Policy",
-            value: "strict-origin-when-cross-origin",
+            key: 'Referrer-Policy',
+            value: 'strict-origin-when-cross-origin',
           },
           {
-            key: "Permissions-Policy",
+            key: 'Permissions-Policy',
             value:
-              "camera=(), microphone=(), geolocation=(), interest-cohort=()",
+              'camera=(), microphone=(), geolocation=(), interest-cohort=()',
           },
         ],
       },
       {
-        source: "/images/:path*",
+        source: '/images/:path*',
         headers: [
           {
-            key: "Cache-Control",
-            value: "public, max-age=86400, immutable",
+            key: 'Cache-Control',
+            value: 'public, max-age=86400, immutable',
           },
         ],
       },
-    ];
+    ]
   },
-};
+}
 
-export default nextConfig;
+export default nextConfig

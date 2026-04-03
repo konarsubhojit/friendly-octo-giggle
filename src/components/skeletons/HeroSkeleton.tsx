@@ -12,5 +12,5 @@ export default function HeroSkeleton() {
         <div className="h-12 w-40 mx-auto bg-gradient-to-r from-[var(--accent-warm)] to-[var(--accent-rose)] rounded-full animate-pulse" />
       </div>
     </section>
-  );
+  )
 }

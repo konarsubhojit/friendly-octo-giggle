@@ -34,8 +34,8 @@ All customer-facing components MUST use these CSS variables (never hardcoded hex
   --text-muted: #b89a85;
 
   /* Typography */
-  --font-display: "Playfair Display", serif;
-  --font-body: "Nunito", sans-serif;
+  --font-display: 'Playfair Display', serif;
+  --font-body: 'Nunito', sans-serif;
 }
 ```
 

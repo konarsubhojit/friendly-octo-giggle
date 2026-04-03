@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from 'next/link'
 
 function ErrorIcon() {
   return (
@@ -17,7 +17,7 @@ function ErrorIcon() {
         />
       </svg>
     </div>
-  );
+  )
 }
 
 function ErrorActions() {
@@ -36,30 +36,30 @@ function ErrorActions() {
         Back to Home
       </Link>
     </div>
-  );
+  )
 }
 
 interface AuthErrorPageProps {
-  readonly searchParams: Promise<{ error?: string }>;
+  readonly searchParams: Promise<{ error?: string }>
 }
 
 export default async function AuthErrorPage({
   searchParams,
 }: AuthErrorPageProps) {
-  const params = await searchParams;
-  const error = params.error;
+  const params = await searchParams
+  const error = params.error
 
   const errorMessages: Record<string, string> = {
-    Configuration: "There is a problem with the server configuration.",
-    AccessDenied: "You do not have permission to sign in.",
+    Configuration: 'There is a problem with the server configuration.',
+    AccessDenied: 'You do not have permission to sign in.',
     Verification:
-      "The verification token has expired or has already been used.",
-    Default: "An error occurred during authentication.",
-  };
+      'The verification token has expired or has already been used.',
+    Default: 'An error occurred during authentication.',
+  }
 
   const errorMessage = error
     ? errorMessages[error] || errorMessages.Default
-    : errorMessages.Default;
+    : errorMessages.Default
 
   return (
     <div className="min-h-screen bg-warm-gradient flex items-center justify-center px-4">
@@ -74,5 +74,5 @@ export default async function AuthErrorPage({
         </div>
       </div>
     </div>
-  );
+  )
 }

@@ -1,35 +1,35 @@
-import { NextRequest } from "next/server";
-import { drizzleDb, primaryDrizzleDb } from "@/lib/db";
-import { users } from "@/lib/schema";
-import { eq } from "drizzle-orm";
-import { apiSuccess, apiError, handleApiError } from "@/lib/api-utils";
-import { checkAdminAuth } from "@/features/admin/services/admin-auth";
-import { cacheAdminUserById, invalidateAdminUserCaches } from "@/lib/cache";
-import { z } from "zod";
+import { NextRequest } from 'next/server'
+import { drizzleDb, primaryDrizzleDb } from '@/lib/db'
+import { users } from '@/lib/schema'
+import { eq } from 'drizzle-orm'
+import { apiSuccess, apiError, handleApiError } from '@/lib/api-utils'
+import { checkAdminAuth } from '@/features/admin/services/admin-auth'
+import { cacheAdminUserById, invalidateAdminUserCaches } from '@/lib/cache'
+import { z } from 'zod'
 
-export const dynamic = "force-dynamic";
+export const dynamic = 'force-dynamic'
 
 const UpdateUserRoleSchema = z.object({
-  role: z.enum(["ADMIN", "CUSTOMER"]),
-});
+  role: z.enum(['ADMIN', 'CUSTOMER']),
+})
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const authCheck = await checkAdminAuth();
+    const authCheck = await checkAdminAuth()
     if (!authCheck.authorized) {
-      return apiError(authCheck.error, authCheck.status);
+      return apiError(authCheck.error, authCheck.status)
     }
 
-    const { id } = await params;
-    const body = await request.json();
+    const { id } = await params
+    const body = await request.json()
 
-    const validated = UpdateUserRoleSchema.parse(body);
+    const validated = UpdateUserRoleSchema.parse(body)
 
     if (id === authCheck.userId) {
-      return apiError("Cannot modify your own role", 403);
+      return apiError('Cannot modify your own role', 403)
     }
 
     const [user] = await primaryDrizzleDb
@@ -45,34 +45,34 @@ export async function PATCH(
         createdAt: users.createdAt,
         updatedAt: users.updatedAt,
         image: users.image,
-      });
+      })
 
-    await invalidateAdminUserCaches(id);
+    await invalidateAdminUserCaches(id)
 
-    return apiSuccess({ user });
+    return apiSuccess({ user })
   } catch (error) {
-    return handleApiError(error);
+    return handleApiError(error)
   }
 }
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const authCheck = await checkAdminAuth();
+    const authCheck = await checkAdminAuth()
     if (!authCheck.authorized) {
-      return apiError(authCheck.error, authCheck.status);
+      return apiError(authCheck.error, authCheck.status)
     }
 
-    const { id } = await params;
+    const { id } = await params
 
     const user = await cacheAdminUserById(id, async () => {
       const found = await drizzleDb.query.users.findFirst({
         where: eq(users.id, id),
         with: { orders: true, sessions: true },
-      });
-      if (!found) return null;
+      })
+      if (!found) return null
       return {
         id: found.id,
         name: found.name,
@@ -86,15 +86,15 @@ export async function GET(
           orders: found.orders.length,
           sessions: found.sessions.length,
         },
-      };
-    });
+      }
+    })
 
     if (!user) {
-      return apiError("User not found", 404);
+      return apiError('User not found', 404)
     }
 
-    return apiSuccess({ user });
+    return apiSuccess({ user })
   } catch (error) {
-    return handleApiError(error);
+    return handleApiError(error)
   }
 }

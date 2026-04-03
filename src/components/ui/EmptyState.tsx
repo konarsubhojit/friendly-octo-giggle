@@ -1,19 +1,19 @@
-import type { ReactNode } from "react";
-import { EmptyStateIcon } from "@/components/ui/EmptyStateIcon";
-import { CtaButton } from "@/components/ui/CtaButton";
+import type { ReactNode } from 'react'
+import { EmptyStateIcon } from '@/components/ui/EmptyStateIcon'
+import { CtaButton } from '@/components/ui/CtaButton'
 
 interface EmptyStateProps {
   /** SVG icon rendered in the empty-state circle. Defaults to a generic empty-box icon. */
-  readonly icon?: ReactNode;
-  readonly title: string;
-  readonly message?: string;
+  readonly icon?: ReactNode
+  readonly title: string
+  readonly message?: string
   /** Text for the optional call-to-action link button. */
-  readonly ctaText?: string;
+  readonly ctaText?: string
   /** href for the optional call-to-action link. Takes precedence over `onCtaClick`. */
-  readonly ctaHref?: string;
+  readonly ctaHref?: string
   /** Click handler for the optional call-to-action button (used when there is no href). */
-  readonly onCtaClick?: () => void;
-  readonly className?: string;
+  readonly onCtaClick?: () => void
+  readonly className?: string
 }
 
 /**
@@ -36,7 +36,7 @@ export function EmptyState({
   ctaText,
   ctaHref,
   onCtaClick,
-  className = "",
+  className = '',
 }: EmptyStateProps) {
   return (
     <div
@@ -55,5 +55,5 @@ export function EmptyState({
         <CtaButton text={ctaText} href={ctaHref} onClick={onCtaClick} />
       )}
     </div>
-  );
+  )
 }

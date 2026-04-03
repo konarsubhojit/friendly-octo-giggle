@@ -1,8 +1,8 @@
-import Link from "next/link";
-import { signIn } from "@/lib/auth";
-import SignInClient from "./SignInClient";
+import Link from 'next/link'
+import { signIn } from '@/lib/auth'
+import SignInClient from './SignInClient'
 
-export const dynamic = "force-dynamic";
+export const dynamic = 'force-dynamic'
 
 function SignInHeader() {
   return (
@@ -30,27 +30,27 @@ function SignInHeader() {
         Sign in to continue shopping
       </p>
     </div>
-  );
+  )
 }
 
 interface SignInPageProps {
-  readonly searchParams: Promise<{ callbackUrl?: string }>;
+  readonly searchParams: Promise<{ callbackUrl?: string }>
 }
 
 export default async function SignInPage({ searchParams }: SignInPageProps) {
-  const params = await searchParams;
-  const callbackUrl = params.callbackUrl || "/";
+  const params = await searchParams
+  const callbackUrl = params.callbackUrl || '/'
 
   async function handleGoogleSignIn() {
-    "use server";
-    await signIn("google", { redirectTo: callbackUrl });
+    'use server'
+    await signIn('google', { redirectTo: callbackUrl })
   }
 
   async function handleMicrosoftSignIn() {
-    "use server";
-    await signIn("microsoft-entra-id", {
+    'use server'
+    await signIn('microsoft-entra-id', {
       redirectTo: callbackUrl,
-    });
+    })
   }
 
   return (
@@ -121,7 +121,7 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
         {/* Links */}
         <div className="mt-6 text-center space-y-3">
           <p className="text-sm text-[var(--text-secondary)]">
-            Don&apos;t have an account?{" "}
+            Don&apos;t have an account?{' '}
             <Link
               href="/auth/register"
               className="font-semibold text-[var(--btn-primary)] hover:text-[var(--btn-primary-hover)]"
@@ -138,5 +138,5 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
         </div>
       </main>
     </div>
-  );
+  )
 }

@@ -1,88 +1,88 @@
-import { NextRequest } from "next/server";
-import { drizzleDb } from "@/lib/db";
-import { users } from "@/lib/schema";
-import { desc, lt, ilike, and, or, SQL, count } from "drizzle-orm";
-import { auth } from "@/lib/auth";
-import { apiSuccess, apiError, handleApiError } from "@/lib/api-utils";
-import { cacheAdminUsersList } from "@/lib/cache";
+import { NextRequest } from 'next/server'
+import { drizzleDb } from '@/lib/db'
+import { users } from '@/lib/schema'
+import { desc, lt, ilike, and, or, SQL, count } from 'drizzle-orm'
+import { auth } from '@/lib/auth'
+import { apiSuccess, apiError, handleApiError } from '@/lib/api-utils'
+import { cacheAdminUsersList } from '@/lib/cache'
 
-export const dynamic = "force-dynamic";
+export const dynamic = 'force-dynamic'
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 20
 
 const checkAdminAuth = async () => {
-  const session = await auth();
+  const session = await auth()
 
   if (!session?.user) {
     return {
       authorized: false,
-      error: "Not authenticated",
+      error: 'Not authenticated',
       status: 401 as const,
-    };
+    }
   }
 
-  if (session.user.role !== "ADMIN") {
+  if (session.user.role !== 'ADMIN') {
     return {
       authorized: false,
-      error: "Not authorized - Admin access required",
+      error: 'Not authorized - Admin access required',
       status: 403 as const,
-    };
+    }
   }
 
-  return { authorized: true, userId: session.user.id };
-};
+  return { authorized: true, userId: session.user.id }
+}
 
 const parseLimit = (param: string | null, defaultSize: number): number =>
   Math.min(
     Math.max(
       1,
-      Number.parseInt(param ?? String(defaultSize), 10) || defaultSize,
+      Number.parseInt(param ?? String(defaultSize), 10) || defaultSize
     ),
-    100,
-  );
+    100
+  )
 
 const buildWhereConditions = (cursor: string | null, search: string): SQL[] => {
-  const conditions: SQL[] = [];
+  const conditions: SQL[] = []
 
   if (cursor) {
-    const cursorDate = new Date(cursor);
+    const cursorDate = new Date(cursor)
     if (!Number.isNaN(cursorDate.getTime())) {
-      conditions.push(lt(users.createdAt, cursorDate));
+      conditions.push(lt(users.createdAt, cursorDate))
     }
   }
 
   if (search) {
-    const pattern = `%${search}%`;
+    const pattern = `%${search}%`
     conditions.push(
-      or(ilike(users.name, pattern), ilike(users.email, pattern)) as SQL,
-    );
+      or(ilike(users.name, pattern), ilike(users.email, pattern)) as SQL
+    )
   }
 
-  return conditions;
-};
+  return conditions
+}
 
 const resolveWhereClause = (conditions: SQL[]) => {
-  if (conditions.length === 0) return undefined;
-  if (conditions.length === 1) return conditions[0];
-  return and(...conditions);
-};
+  if (conditions.length === 0) return undefined
+  if (conditions.length === 1) return conditions[0]
+  return and(...conditions)
+}
 
 export const GET = async (request: NextRequest) => {
-  const authCheck = await checkAdminAuth();
+  const authCheck = await checkAdminAuth()
   if (!authCheck.authorized) {
-    return apiError(authCheck.error ?? "Unknown error", authCheck.status);
+    return apiError(authCheck.error ?? 'Unknown error', authCheck.status)
   }
 
   try {
-    const { searchParams } = new URL(request.url);
-    const cursor = searchParams.get("cursor");
-    const search = searchParams.get("search")?.trim() ?? "";
-    const limit = parseLimit(searchParams.get("limit"), PAGE_SIZE);
+    const { searchParams } = new URL(request.url)
+    const cursor = searchParams.get('cursor')
+    const search = searchParams.get('search')?.trim() ?? ''
+    const limit = parseLimit(searchParams.get('limit'), PAGE_SIZE)
 
-    const conditions = buildWhereConditions(cursor, search);
-    const countConditions = buildWhereConditions(null, search);
-    const whereClause = resolveWhereClause(conditions);
-    const countWhereClause = resolveWhereClause(countConditions);
+    const conditions = buildWhereConditions(cursor, search)
+    const countConditions = buildWhereConditions(null, search)
+    const whereClause = resolveWhereClause(conditions)
+    const countWhereClause = resolveWhereClause(countConditions)
 
     const fetcher = async () => {
       const [rows, totalRows] = await Promise.all([
@@ -96,14 +96,14 @@ export const GET = async (request: NextRequest) => {
           .select({ value: count() })
           .from(users)
           .where(countWhereClause),
-      ]);
+      ])
 
-      const hasMore = rows.length > limit;
-      const pageItems = hasMore ? rows.slice(0, limit) : rows;
-      const lastItem = pageItems.at(-1);
+      const hasMore = rows.length > limit
+      const pageItems = hasMore ? rows.slice(0, limit) : rows
+      const lastItem = pageItems.at(-1)
       const nextCursor =
-        hasMore && lastItem ? lastItem.createdAt.toISOString() : null;
-      const totalCount = Number(totalRows[0]?.value ?? 0);
+        hasMore && lastItem ? lastItem.createdAt.toISOString() : null
+      const totalCount = Number(totalRows[0]?.value ?? 0)
 
       const userList = pageItems.map((user) => ({
         id: user.id,
@@ -121,19 +121,19 @@ export const GET = async (request: NextRequest) => {
             : user.updatedAt,
         image: user.image,
         _count: { orders: user.orders.length },
-      }));
+      }))
 
-      return { users: userList, nextCursor, hasMore, totalCount };
-    };
+      return { users: userList, nextCursor, hasMore, totalCount }
+    }
 
     const result = await cacheAdminUsersList(fetcher, {
       search,
       cursor,
       limit,
-    });
+    })
 
-    return apiSuccess(result);
+    return apiSuccess(result)
   } catch (error) {
-    return handleApiError(error);
+    return handleApiError(error)
   }
-};
+}

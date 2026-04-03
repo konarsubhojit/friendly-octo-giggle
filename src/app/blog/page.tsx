@@ -1,40 +1,40 @@
-import Footer from "@/components/layout/Footer";
+import Footer from '@/components/layout/Footer'
 
 export const metadata = {
-  title: "Blog | The Kiyon Store",
-  description: "Latest news, tips, and stories from The Kiyon Store team.",
-};
+  title: 'Blog | The Kiyon Store',
+  description: 'Latest news, tips, and stories from The Kiyon Store team.',
+}
 
 const posts = [
   {
-    title: "Top 10 Shopping Tips to Save More This Season",
-    date: "February 20, 2026",
-    category: "Tips & Tricks",
+    title: 'Top 10 Shopping Tips to Save More This Season',
+    date: 'February 20, 2026',
+    category: 'Tips & Tricks',
     excerpt:
-      "Discover smart strategies for getting the best deals and maximizing your savings on every order.",
+      'Discover smart strategies for getting the best deals and maximizing your savings on every order.',
   },
   {
-    title: "Introducing Same-Day Delivery in Select Cities",
-    date: "February 10, 2026",
-    category: "News",
+    title: 'Introducing Same-Day Delivery in Select Cities',
+    date: 'February 10, 2026',
+    category: 'News',
     excerpt:
-      "We are excited to announce same-day delivery is now available for orders placed before 2pm in select metro areas.",
+      'We are excited to announce same-day delivery is now available for orders placed before 2pm in select metro areas.',
   },
   {
-    title: "How We Keep Your Data Safe",
-    date: "January 28, 2026",
-    category: "Security",
+    title: 'How We Keep Your Data Safe',
+    date: 'January 28, 2026',
+    category: 'Security',
     excerpt:
-      "A deep dive into the security practices we use to protect your personal information and payment details.",
+      'A deep dive into the security practices we use to protect your personal information and payment details.',
   },
   {
-    title: "Behind the Scenes: How We Pick Our Products",
-    date: "January 15, 2026",
-    category: "Our Story",
+    title: 'Behind the Scenes: How We Pick Our Products',
+    date: 'January 15, 2026',
+    category: 'Our Story',
     excerpt:
-      "Our product curation team shares the rigorous process we use to ensure every item meets our quality standards.",
+      'Our product curation team shares the rigorous process we use to ensure every item meets our quality standards.',
   },
-];
+]
 
 export default function BlogPage() {
   return (
@@ -71,5 +71,5 @@ export default function BlogPage() {
       </main>
       <Footer />
     </div>
-  );
+  )
 }

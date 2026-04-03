@@ -1,4 +1,4 @@
-const VARIATION_SKELETONS = ["v1", "v2", "v3", "v4"] as const;
+const VARIATION_SKELETONS = ['v1', 'v2', 'v3', 'v4'] as const
 
 function ImageSkeleton() {
   return (
@@ -12,7 +12,7 @@ function ImageSkeleton() {
       <div className="absolute -top-6 -right-6 w-32 h-32 bg-gradient-to-r from-[var(--accent-peach)] to-[var(--accent-blush)] rounded-full blur-3xl opacity-30 -z-10" />
       <div className="absolute -bottom-6 -left-6 w-40 h-40 bg-gradient-to-r from-[var(--accent-sage)] to-[var(--accent-cream)] rounded-full blur-3xl opacity-30 -z-10" />
     </div>
-  );
+  )
 }
 
 function DetailsSkeleton() {
@@ -73,7 +73,7 @@ function DetailsSkeleton() {
         </div>
       </div>
     </div>
-  );
+  )
 }
 
 export default function ProductDetailLoading() {
@@ -93,5 +93,5 @@ export default function ProductDetailLoading() {
         </div>
       </main>
     </div>
-  );
+  )
 }

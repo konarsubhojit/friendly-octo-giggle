@@ -1,138 +1,138 @@
-"use client";
+'use client'
 
-import { useState } from "react";
-import Image from "next/image";
-import type { ProductVariation } from "@/lib/types";
-import toast from "react-hot-toast";
+import { useState } from 'react'
+import Image from 'next/image'
+import type { ProductVariation } from '@/lib/types'
+import toast from 'react-hot-toast'
 import {
   CURRENCIES,
   type CurrencyCode,
   useCurrency,
-} from "@/contexts/CurrencyContext";
+} from '@/contexts/CurrencyContext'
 import {
   isValidImageType,
   MAX_FILE_SIZE,
   VALID_IMAGE_TYPES_DISPLAY,
-} from "@/lib/upload-constants";
+} from '@/lib/upload-constants'
 
-const MAX_ADDITIONAL_IMAGES = 10;
+const MAX_ADDITIONAL_IMAGES = 10
 
 interface VariationFormModalProps {
-  readonly productId: string;
-  readonly productPrice: number;
-  readonly variation?: ProductVariation;
-  readonly styles?: ProductVariation[];
-  readonly onClose: () => void;
-  readonly onSuccess: (variation: ProductVariation) => void;
+  readonly productId: string
+  readonly productPrice: number
+  readonly variation?: ProductVariation
+  readonly styles?: ProductVariation[]
+  readonly onClose: () => void
+  readonly onSuccess: (variation: ProductVariation) => void
 }
 
 interface FormData {
-  name: string;
-  designName: string;
-  variationType: "styling" | "colour";
-  styleId: string;
-  price: string;
-  stock: string;
+  name: string
+  designName: string
+  variationType: 'styling' | 'colour'
+  styleId: string
+  price: string
+  stock: string
 }
 
 interface VariationPayload {
-  name: string;
-  designName: string;
-  variationType: "styling" | "colour";
-  styleId?: string | null;
-  price: number;
-  stock: number;
-  productId?: string;
-  image?: string | null;
-  images?: string[];
+  name: string
+  designName: string
+  variationType: 'styling' | 'colour'
+  styleId?: string | null
+  price: number
+  stock: number
+  productId?: string
+  image?: string | null
+  images?: string[]
 }
 
 function convertCurrency(
   amount: number,
   from: CurrencyCode,
   to: CurrencyCode,
-  rates: Record<CurrencyCode, number>,
+  rates: Record<CurrencyCode, number>
 ): number {
-  const amountInBase = amount / rates[from];
-  return Number((amountInBase * rates[to]).toFixed(2));
+  const amountInBase = amount / rates[from]
+  return Number((amountInBase * rates[to]).toFixed(2))
 }
 
 async function uploadImage(file: File): Promise<string> {
-  const body = new FormData();
-  body.append("file", file);
-  const res = await fetch("/api/upload", { method: "POST", body });
+  const body = new FormData()
+  body.append('file', file)
+  const res = await fetch('/api/upload', { method: 'POST', body })
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || "Failed to upload image");
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.error || 'Failed to upload image')
   }
-  const data = await res.json();
-  return data.data.url;
+  const data = await res.json()
+  return data.data.url
 }
 
 async function resolveAdditionalImageUrls(
   existingUrls: string[],
-  pendingFiles: (File | null)[],
+  pendingFiles: (File | null)[]
 ): Promise<string[]> {
-  const resolvedUrls: string[] = [];
+  const resolvedUrls: string[] = []
 
   for (const [index, existingUrl] of existingUrls.entries()) {
-    const pendingFile = pendingFiles[index];
+    const pendingFile = pendingFiles[index]
     if (pendingFile) {
-      resolvedUrls.push(await uploadImage(pendingFile));
-      continue;
+      resolvedUrls.push(await uploadImage(pendingFile))
+      continue
     }
 
     if (existingUrl) {
-      resolvedUrls.push(existingUrl);
+      resolvedUrls.push(existingUrl)
     }
   }
 
-  return resolvedUrls;
+  return resolvedUrls
 }
 
 function getVariationMutationConfig(
   isEditing: boolean,
-  variationId: string | undefined,
+  variationId: string | undefined
 ) {
   return {
-    method: isEditing ? "PUT" : "POST",
+    method: isEditing ? 'PUT' : 'POST',
     url:
       isEditing && variationId
         ? `/api/admin/variations/${variationId}`
-        : "/api/admin/variations",
+        : '/api/admin/variations',
     fallbackError: isEditing
-      ? "Failed to update variation"
-      : "Failed to create variation",
-    successMessage: isEditing ? "Variation updated" : "Variation created",
-  };
+      ? 'Failed to update variation'
+      : 'Failed to create variation',
+    successMessage: isEditing ? 'Variation updated' : 'Variation created',
+  }
 }
 
 async function parseVariationMutationResponse(
   response: Response,
-  fallbackError: string,
+  fallbackError: string
 ): Promise<ProductVariation> {
-  const data = await response.json().catch(() => null);
+  const data = await response.json().catch(() => null)
 
   if (!response.ok) {
     const message =
-      data && typeof data === "object" && "error" in data
+      data && typeof data === 'object' && 'error' in data
         ? String(data.error)
-        : fallbackError;
-    throw new Error(message);
+        : fallbackError
+    throw new Error(message)
   }
 
   if (
     !data ||
-    typeof data !== "object" ||
-    !("data" in data) ||
+    typeof data !== 'object' ||
+    !('data' in data) ||
     !data.data ||
-    typeof data.data !== "object" ||
-    !("variation" in data.data)
+    typeof data.data !== 'object' ||
+    !('variation' in data.data)
   ) {
-    throw new Error("Unexpected variation response from server");
+    throw new Error('Unexpected variation response from server')
   }
 
-  return data.data.variation as ProductVariation;
+  return data.data.variation as ProductVariation
 }
 
 export default function VariationFormModal({
@@ -142,160 +142,159 @@ export default function VariationFormModal({
   onClose,
   onSuccess,
 }: VariationFormModalProps) {
-  const isEditing = !!variation;
-  const { availableCurrencies, currency, rates } = useCurrency();
-  const [priceCurrency, setPriceCurrency] = useState<CurrencyCode>(currency);
+  const isEditing = !!variation
+  const { availableCurrencies, currency, rates } = useCurrency()
+  const [priceCurrency, setPriceCurrency] = useState<CurrencyCode>(currency)
   const [additionalImageSlotIds, setAdditionalImageSlotIds] = useState<
     string[]
-  >(() => (variation?.images ?? []).map(() => crypto.randomUUID()));
+  >(() => (variation?.images ?? []).map(() => crypto.randomUUID()))
 
   const [formData, setFormData] = useState<FormData>({
-    name: variation?.name ?? "",
-    designName: variation?.designName ?? "",
-    variationType: variation?.variationType ?? "styling",
-    styleId: variation?.styleId ?? "",
+    name: variation?.name ?? '',
+    designName: variation?.designName ?? '',
+    variationType: variation?.variationType ?? 'styling',
+    styleId: variation?.styleId ?? '',
     price: variation
-      ? convertCurrency(variation.price, "INR", currency, rates).toString()
-      : "",
-    stock: variation?.stock?.toString() ?? "",
-  });
-  const [submitting, setSubmitting] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
+      ? convertCurrency(variation.price, 'INR', currency, rates).toString()
+      : '',
+    stock: variation?.stock?.toString() ?? '',
+  })
+  const [submitting, setSubmitting] = useState(false)
+  const [errors, setErrors] = useState<Record<string, string>>({})
 
   // Image state
-  const primaryImageUrl = variation?.image ?? null;
-  const [primaryImageFile, setPrimaryImageFile] = useState<File | null>(null);
+  const primaryImageUrl = variation?.image ?? null
+  const [primaryImageFile, setPrimaryImageFile] = useState<File | null>(null)
   const [additionalImageUrls, setAdditionalImageUrls] = useState<string[]>(
-    variation?.images ?? [],
-  );
+    variation?.images ?? []
+  )
   const [additionalImageFiles, setAdditionalImageFiles] = useState<
     (File | null)[]
-  >((variation?.images ?? []).map(() => null));
+  >((variation?.images ?? []).map(() => null))
 
-  const isStyle = formData.variationType === "styling";
-  const priceNum = isStyle ? 0 : Number.parseFloat(formData.price) || 0;
+  const isStyle = formData.variationType === 'styling'
+  const priceNum = isStyle ? 0 : Number.parseFloat(formData.price) || 0
   const priceInInr = isStyle
     ? 0
-    : convertCurrency(priceNum, priceCurrency, "INR", rates);
-  const priceWarning = !isStyle && formData.price !== "" && priceInInr <= 0;
+    : convertCurrency(priceNum, priceCurrency, 'INR', rates)
+  const priceWarning = !isStyle && formData.price !== '' && priceInInr <= 0
   const currentPrimaryImagePreview = primaryImageFile
     ? URL.createObjectURL(primaryImageFile)
-    : primaryImageUrl;
+    : primaryImageUrl
 
   const validateImageFile = (file: File): string | null => {
     if (!isValidImageType(file.type)) {
-      return `Invalid type. Allowed: ${VALID_IMAGE_TYPES_DISPLAY}`;
+      return `Invalid type. Allowed: ${VALID_IMAGE_TYPES_DISPLAY}`
     }
     if (file.size > MAX_FILE_SIZE) {
-      return `File too large. Max ${MAX_FILE_SIZE / 1024 / 1024}MB`;
+      return `File too large. Max ${MAX_FILE_SIZE / 1024 / 1024}MB`
     }
-    return null;
-  };
+    return null
+  }
 
   const validate = (): Record<string, string> => {
-    const errs: Record<string, string> = {};
-    if (!formData.name.trim()) errs.name = "Name is required";
+    const errs: Record<string, string> = {}
+    if (!formData.name.trim()) errs.name = 'Name is required'
     else if (formData.name.length > 100)
-      errs.name = "Name must be under 100 characters";
-    if (!formData.designName.trim())
-      errs.designName = "Design name is required";
+      errs.name = 'Name must be under 100 characters'
+    if (!formData.designName.trim()) errs.designName = 'Design name is required'
     else if (formData.designName.length > 100)
-      errs.designName = "Design name must be under 100 characters";
+      errs.designName = 'Design name must be under 100 characters'
     // Styles don't need price/stock validation
     if (!isStyle) {
-      if (formData.price === "") errs.price = "Price is required";
+      if (formData.price === '') errs.price = 'Price is required'
       else if (Number.isNaN(Number.parseFloat(formData.price)))
-        errs.price = "Must be a number";
+        errs.price = 'Must be a number'
       else if (Number.parseFloat(formData.price) <= 0)
-        errs.price = "Price must be greater than zero";
-      if (formData.stock === "") errs.stock = "Stock is required";
+        errs.price = 'Price must be greater than zero'
+      if (formData.stock === '') errs.stock = 'Stock is required'
       else if (
         !Number.isInteger(Number(formData.stock)) ||
         Number(formData.stock) < 0
       ) {
-        errs.stock = "Stock must be a non-negative integer";
+        errs.stock = 'Stock must be a non-negative integer'
       }
     }
-    return errs;
-  };
+    return errs
+  }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    const { name, value } = e.target
+    setFormData((prev) => ({ ...prev, [name]: value }))
     setErrors((prev) => {
-      const next = { ...prev };
-      delete next[name];
-      return next;
-    });
-  };
+      const next = { ...prev }
+      delete next[name]
+      return next
+    })
+  }
 
   const handlePriceCurrencyChange = (newCurrency: CurrencyCode) => {
-    const currentPrice = Number.parseFloat(formData.price) || 0;
+    const currentPrice = Number.parseFloat(formData.price) || 0
     const convertedPrice = convertCurrency(
       currentPrice,
       priceCurrency,
       newCurrency,
-      rates,
-    );
+      rates
+    )
 
-    setPriceCurrency(newCurrency);
+    setPriceCurrency(newCurrency)
     setFormData((prev) => ({
       ...prev,
       price: convertedPrice.toString(),
-    }));
+    }))
     setErrors((prev) => {
-      const next = { ...prev };
-      delete next.price;
-      return next;
-    });
-  };
+      const next = { ...prev }
+      delete next.price
+      return next
+    })
+  }
 
   const handlePrimaryImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const err = validateImageFile(file);
+    const file = e.target.files?.[0]
+    if (!file) return
+    const err = validateImageFile(file)
     if (err) {
-      toast.error(err);
-      return;
+      toast.error(err)
+      return
     }
-    setPrimaryImageFile(file);
-  };
+    setPrimaryImageFile(file)
+  }
 
   const handleAdditionalImageChange = (
     idx: number,
-    e: React.ChangeEvent<HTMLInputElement>,
+    e: React.ChangeEvent<HTMLInputElement>
   ) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const err = validateImageFile(file);
+    const file = e.target.files?.[0]
+    if (!file) return
+    const err = validateImageFile(file)
     if (err) {
-      toast.error(err);
-      return;
+      toast.error(err)
+      return
     }
-    const newFiles = [...additionalImageFiles];
-    newFiles[idx] = file;
-    setAdditionalImageFiles(newFiles);
-  };
+    const newFiles = [...additionalImageFiles]
+    newFiles[idx] = file
+    setAdditionalImageFiles(newFiles)
+  }
 
   const addImageSlot = () => {
     if (additionalImageUrls.length >= MAX_ADDITIONAL_IMAGES) {
-      toast.error(`Maximum ${MAX_ADDITIONAL_IMAGES} additional images`);
-      return;
+      toast.error(`Maximum ${MAX_ADDITIONAL_IMAGES} additional images`)
+      return
     }
-    setAdditionalImageUrls((prev) => [...prev, ""]);
-    setAdditionalImageFiles((prev) => [...prev, null]);
-    setAdditionalImageSlotIds((prev) => [...prev, crypto.randomUUID()]);
-  };
+    setAdditionalImageUrls((prev) => [...prev, ''])
+    setAdditionalImageFiles((prev) => [...prev, null])
+    setAdditionalImageSlotIds((prev) => [...prev, crypto.randomUUID()])
+  }
 
   const removeAdditionalImage = (idx: number) => {
-    setAdditionalImageUrls((prev) => prev.filter((_, i) => i !== idx));
-    setAdditionalImageFiles((prev) => prev.filter((_, i) => i !== idx));
-    setAdditionalImageSlotIds((prev) => prev.filter((_, i) => i !== idx));
-  };
+    setAdditionalImageUrls((prev) => prev.filter((_, i) => i !== idx))
+    setAdditionalImageFiles((prev) => prev.filter((_, i) => i !== idx))
+    setAdditionalImageSlotIds((prev) => prev.filter((_, i) => i !== idx))
+  }
 
   const buildPayload = (
     imageUrl: string | null | undefined,
-    finalAdditionalUrls: string[],
+    finalAdditionalUrls: string[]
   ): VariationPayload => {
     const payload: VariationPayload = {
       name: formData.name.trim(),
@@ -303,79 +302,79 @@ export default function VariationFormModal({
       variationType: formData.variationType,
       price: isStyle ? 0 : priceInInr,
       stock: isStyle ? 0 : Number.parseInt(formData.stock, 10),
-    };
+    }
 
     // Include styleId for colours
-    if (formData.variationType === "colour") {
-      payload.styleId = formData.styleId || null;
+    if (formData.variationType === 'colour') {
+      payload.styleId = formData.styleId || null
     }
 
     if (!isEditing) {
-      payload.productId = productId;
+      payload.productId = productId
     }
 
     if (imageUrl !== undefined) {
-      payload.image = imageUrl;
+      payload.image = imageUrl
     }
 
     if (
       finalAdditionalUrls.length > 0 ||
       (variation && variation.images.length > 0)
     ) {
-      payload.images = finalAdditionalUrls;
+      payload.images = finalAdditionalUrls
     }
 
-    return payload;
-  };
+    return payload
+  }
 
   const handleSubmit = async (e: React.BaseSyntheticEvent) => {
-    e.preventDefault();
-    const validationErrors = validate();
+    e.preventDefault()
+    const validationErrors = validate()
     if (Object.keys(validationErrors).length > 0) {
-      setErrors(validationErrors);
-      return;
+      setErrors(validationErrors)
+      return
     }
 
-    setSubmitting(true);
+    setSubmitting(true)
     try {
-      let imageUrl: string | null | undefined = primaryImageUrl;
+      let imageUrl: string | null | undefined = primaryImageUrl
       if (primaryImageFile) {
-        imageUrl = await uploadImage(primaryImageFile);
+        imageUrl = await uploadImage(primaryImageFile)
       }
 
       const finalAdditionalUrls = await resolveAdditionalImageUrls(
         additionalImageUrls,
-        additionalImageFiles,
-      );
-      const payload = buildPayload(imageUrl, finalAdditionalUrls);
+        additionalImageFiles
+      )
+      const payload = buildPayload(imageUrl, finalAdditionalUrls)
       const { url, method, fallbackError, successMessage } =
-        getVariationMutationConfig(isEditing, variation?.id);
+        getVariationMutationConfig(isEditing, variation?.id)
 
       const res = await fetch(url, {
         method,
-        headers: { "Content-Type": "application/json" },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
-      });
+      })
 
       const savedVariation = await parseVariationMutationResponse(
         res,
-        fallbackError,
-      );
+        fallbackError
+      )
 
-      toast.success(successMessage);
-      onSuccess(savedVariation);
+      toast.success(successMessage)
+      onSuccess(savedVariation)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Something went wrong");
+      toast.error(err instanceof Error ? err.message : 'Something went wrong')
     } finally {
-      setSubmitting(false);
+      setSubmitting(false)
     }
-  };
+  }
 
-  let submitButtonLabel = "Create";
+  let submitButtonLabel = 'Create'
   if (submitting) {
-    submitButtonLabel = "Saving...";
+    submitButtonLabel = 'Saving...'
   } else if (isEditing) {
-    submitButtonLabel = "Update";
+    submitButtonLabel = 'Update'
   }
 
   return (
@@ -395,7 +394,7 @@ export default function VariationFormModal({
                 id="variation-modal-title"
                 className="mt-3 text-2xl font-black tracking-tight text-slate-950 dark:text-slate-50"
               >
-                {isEditing ? "Edit Variation" : "Add Variation"}
+                {isEditing ? 'Edit Variation' : 'Add Variation'}
               </h3>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300">
                 Update naming, pricing, stock, and media for this variation.
@@ -484,8 +483,8 @@ export default function VariationFormModal({
                   </h4>
                   <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                     {isStyle
-                      ? "Styles group colours. They have no price or stock of their own."
-                      : "Colours are purchasable options. Set price, stock, and optionally assign to a style."}
+                      ? 'Styles group colours. They have no price or stock of their own.'
+                      : 'Colours are purchasable options. Set price, stock, and optionally assign to a style.'}
                   </p>
                 </div>
 
@@ -496,13 +495,13 @@ export default function VariationFormModal({
                       Variation Type <span className="text-red-500">*</span>
                     </p>
                     <div className="flex gap-3">
-                      {(["styling", "colour"] as const).map((type) => (
+                      {(['styling', 'colour'] as const).map((type) => (
                         <label
                           key={type}
                           className={`flex flex-1 cursor-pointer items-center gap-3 rounded-2xl border px-4 py-3 transition ${
                             formData.variationType === type
-                              ? "border-sky-500 bg-sky-50 dark:bg-sky-500/10"
-                              : "border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-950/80"
+                              ? 'border-sky-500 bg-sky-50 dark:bg-sky-500/10'
+                              : 'border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-950/80'
                           }`}
                         >
                           <input
@@ -515,13 +514,13 @@ export default function VariationFormModal({
                                 ...prev,
                                 variationType: type,
                                 // Reset styleId when switching to styling
-                                styleId: type === "styling" ? "" : prev.styleId,
+                                styleId: type === 'styling' ? '' : prev.styleId,
                               }))
                             }
                             className="h-4 w-4 accent-sky-500"
                           />
                           <span className="text-sm font-medium capitalize text-slate-950 dark:text-slate-50">
-                            {type === "styling" ? "🎨 Style" : "🌈 Colour"}
+                            {type === 'styling' ? '🎨 Style' : '🌈 Colour'}
                           </span>
                         </label>
                       ))}
@@ -529,7 +528,7 @@ export default function VariationFormModal({
                   </div>
 
                   {/* Style selector — only for colours */}
-                  {formData.variationType === "colour" && (
+                  {formData.variationType === 'colour' && (
                     <div>
                       <label
                         htmlFor="var-styleId"
@@ -587,7 +586,7 @@ export default function VariationFormModal({
                           value={priceCurrency}
                           onChange={(e) =>
                             handlePriceCurrencyChange(
-                              e.target.value as CurrencyCode,
+                              e.target.value as CurrencyCode
                             )
                           }
                           aria-label="Price currency"
@@ -617,7 +616,7 @@ export default function VariationFormModal({
                         </p>
                       )}
                       <p
-                        className={`mt-2 text-sm ${priceWarning ? "font-medium text-red-500 dark:text-red-400" : "text-slate-500 dark:text-slate-400"}`}
+                        className={`mt-2 text-sm ${priceWarning ? 'font-medium text-red-500 dark:text-red-400' : 'text-slate-500 dark:text-slate-400'}`}
                       >
                         {priceWarning
                           ? `Price must be greater than 0.00 ${priceCurrency}`
@@ -716,10 +715,10 @@ export default function VariationFormModal({
                       </button>
                     </div>
                     {additionalImageUrls.map((url, idx) => {
-                      const pendingFile = additionalImageFiles[idx] ?? null;
+                      const pendingFile = additionalImageFiles[idx] ?? null
                       const previewSrc = pendingFile
                         ? URL.createObjectURL(pendingFile)
-                        : url;
+                        : url
 
                       return (
                         <div
@@ -757,7 +756,7 @@ export default function VariationFormModal({
                             &times;
                           </button>
                         </div>
-                      );
+                      )
                     })}
                   </div>
                 </div>
@@ -775,12 +774,12 @@ export default function VariationFormModal({
                       Type
                     </span>
                     <strong className="capitalize text-slate-950 dark:text-slate-50">
-                      {formData.variationType === "styling"
-                        ? "🎨 Style (group)"
-                        : "🌈 Colour"}
+                      {formData.variationType === 'styling'
+                        ? '🎨 Style (group)'
+                        : '🌈 Colour'}
                     </strong>
                   </div>
-                  {formData.variationType === "colour" && (
+                  {formData.variationType === 'colour' && (
                     <div className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3 dark:bg-slate-950/65">
                       <span className="text-slate-500 dark:text-slate-400">
                         Parent style
@@ -788,8 +787,8 @@ export default function VariationFormModal({
                       <strong className="text-slate-950 dark:text-slate-50">
                         {formData.styleId
                           ? (styles.find((s) => s.id === formData.styleId)
-                              ?.name ?? "—")
-                          : "Base product"}
+                              ?.name ?? '—')
+                          : 'Base product'}
                       </strong>
                     </div>
                   )}
@@ -799,7 +798,7 @@ export default function VariationFormModal({
                         Colour price
                       </p>
                       <p className="mt-2 text-2xl font-black tracking-tight text-slate-950 dark:text-slate-50">
-                        {priceNum > 0 ? priceNum.toFixed(2) : "—"}{" "}
+                        {priceNum > 0 ? priceNum.toFixed(2) : '—'}{' '}
                         {priceCurrency}
                       </p>
                     </div>
@@ -887,5 +886,5 @@ export default function VariationFormModal({
         </form>
       </dialog>
     </div>
-  );
+  )
 }

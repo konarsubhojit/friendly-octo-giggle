@@ -1,50 +1,50 @@
-import { NextRequest } from "next/server";
-import { logApiRequest, generateRequestId, Timer } from "./logger";
-import { auth } from "./auth";
+import { NextRequest } from 'next/server'
+import { logApiRequest, generateRequestId, Timer } from './logger'
+import { auth } from './auth'
 
 export interface ApiContext {
-  requestId: string;
-  userId?: string;
-  timer: Timer;
+  requestId: string
+  userId?: string
+  timer: Timer
 }
 
 export type ApiHandler = (
   request: NextRequest,
-  context: ApiContext,
-) => Promise<Response>;
+  context: ApiContext
+) => Promise<Response>
 
 interface LoggingOptions {
-  requireAuth?: boolean;
+  requireAuth?: boolean
 }
 
 const createLoggingWrapper = (options: LoggingOptions = {}) => {
-  const { requireAuth = false } = options;
+  const { requireAuth = false } = options
 
   return (
-    handler: ApiHandler | ((request: NextRequest) => Promise<Response>),
+    handler: ApiHandler | ((request: NextRequest) => Promise<Response>)
   ) => {
     return async (request: NextRequest): Promise<Response> => {
-      const requestId = generateRequestId();
+      const requestId = generateRequestId()
       const timer = new Timer(
-        `api.${request.method}.${request.nextUrl.pathname}`,
-      );
+        `api.${request.method}.${request.nextUrl.pathname}`
+      )
 
-      let userId: string | undefined;
+      let userId: string | undefined
       if (requireAuth) {
-        const session = await auth();
-        userId = session?.user?.id;
+        const session = await auth()
+        userId = session?.user?.id
       }
 
-      const context: ApiContext = { requestId, userId, timer };
+      const context: ApiContext = { requestId, userId, timer }
 
       try {
         const response = requireAuth
           ? await (handler as ApiHandler)(request, context)
           : await (handler as (request: NextRequest) => Promise<Response>)(
-              request,
-            );
+              request
+            )
 
-        const duration = timer.end({ statusCode: response.status, userId });
+        const duration = timer.end({ statusCode: response.status, userId })
 
         logApiRequest({
           method: request.method,
@@ -53,12 +53,12 @@ const createLoggingWrapper = (options: LoggingOptions = {}) => {
           userId,
           duration,
           statusCode: response.status,
-        });
+        })
 
-        response.headers.set("X-Request-ID", requestId);
-        return response;
+        response.headers.set('X-Request-ID', requestId)
+        return response
       } catch (error) {
-        const duration = timer.end({ error: true });
+        const duration = timer.end({ error: true })
 
         logApiRequest({
           method: request.method,
@@ -67,29 +67,27 @@ const createLoggingWrapper = (options: LoggingOptions = {}) => {
           userId,
           duration,
           statusCode: 500,
-        });
+        })
 
-        throw error;
+        throw error
       }
-    };
-  };
-};
+    }
+  }
+}
 
 export const withApiLogging = (handler: ApiHandler) =>
-  createLoggingWrapper({ requireAuth: true })(handler);
+  createLoggingWrapper({ requireAuth: true })(handler)
 
 export const withLogging = <TArgs extends unknown[]>(
-  handler: (request: NextRequest, ...args: TArgs) => Promise<Response>,
+  handler: (request: NextRequest, ...args: TArgs) => Promise<Response>
 ) => {
   return async (request: NextRequest, ...args: TArgs): Promise<Response> => {
-    const requestId = generateRequestId();
-    const timer = new Timer(
-      `api.${request.method}.${request.nextUrl.pathname}`,
-    );
+    const requestId = generateRequestId()
+    const timer = new Timer(`api.${request.method}.${request.nextUrl.pathname}`)
 
     try {
-      const response = await handler(request, ...args);
-      const duration = timer.end({ statusCode: response.status });
+      const response = await handler(request, ...args)
+      const duration = timer.end({ statusCode: response.status })
 
       logApiRequest({
         method: request.method,
@@ -97,12 +95,12 @@ export const withLogging = <TArgs extends unknown[]>(
         requestId,
         duration,
         statusCode: response.status,
-      });
+      })
 
-      response.headers.set("X-Request-ID", requestId);
-      return response;
+      response.headers.set('X-Request-ID', requestId)
+      return response
     } catch (error) {
-      const duration = timer.end({ error: true });
+      const duration = timer.end({ error: true })
 
       logApiRequest({
         method: request.method,
@@ -110,9 +108,9 @@ export const withLogging = <TArgs extends unknown[]>(
         requestId,
         duration,
         statusCode: 500,
-      });
+      })
 
-      throw error;
+      throw error
     }
-  };
-};
+  }
+}

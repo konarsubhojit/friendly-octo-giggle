@@ -1,6 +1,6 @@
-import ProductCardSkeleton from "@/components/skeletons/ProductCardSkeleton";
+import ProductCardSkeleton from '@/components/skeletons/ProductCardSkeleton'
 
-const SKELETON_IDS = ["s1", "s2", "s3", "s4", "s5", "s6"] as const;
+const SKELETON_IDS = ['s1', 's2', 's3', 's4', 's5', 's6'] as const
 
 export default function ShopLoading() {
   return (
@@ -20,7 +20,7 @@ export default function ShopLoading() {
         <div className="mb-8 space-y-4">
           <div className="h-12 w-72 bg-[var(--surface)] rounded-full border border-[var(--border-warm)] animate-pulse" />
           <div className="flex gap-2 flex-wrap">
-            {["c1", "c2", "c3", "c4", "c5"].map((id) => (
+            {['c1', 'c2', 'c3', 'c4', 'c5'].map((id) => (
               <div
                 key={id}
                 className="h-8 w-20 bg-[var(--surface)] rounded-full border border-[var(--border-warm)] animate-pulse"
@@ -37,5 +37,5 @@ export default function ShopLoading() {
         </div>
       </main>
     </div>
-  );
+  )
 }

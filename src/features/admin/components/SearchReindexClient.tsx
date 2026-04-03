@@ -1,54 +1,52 @@
-"use client";
+'use client'
 
-import { useState } from "react";
-import ConfirmDialog from "@/components/ui/ConfirmDialog";
-import toast from "react-hot-toast";
+import { useState } from 'react'
+import ConfirmDialog from '@/components/ui/ConfirmDialog'
+import toast from 'react-hot-toast'
 
-type ReindexTarget = "products" | "orders";
+type ReindexTarget = 'products' | 'orders'
 
 interface ReindexResult {
-  products?: number;
-  orders?: number;
+  products?: number
+  orders?: number
 }
 
 interface SearchReindexClientProps {
-  readonly productsConfigured: boolean;
-  readonly ordersConfigured: boolean;
+  readonly productsConfigured: boolean
+  readonly ordersConfigured: boolean
 }
 
 const TARGET_OPTIONS: {
-  value: ReindexTarget;
-  label: string;
-  description: string;
-  configuredProp: keyof SearchReindexClientProps;
-  confirmMessage: string;
+  value: ReindexTarget
+  label: string
+  description: string
+  configuredProp: keyof SearchReindexClientProps
+  confirmMessage: string
 }[] = [
   {
-    value: "products",
-    label: "Products",
-    description: "Rebuild the products search index from the database",
-    configuredProp: "productsConfigured",
+    value: 'products',
+    label: 'Products',
+    description: 'Rebuild the products search index from the database',
+    configuredProp: 'productsConfigured',
     confirmMessage:
-      "This will reset and rebuild the products search index. Existing product search results will be temporarily unavailable during the process. Continue?",
+      'This will reset and rebuild the products search index. Existing product search results will be temporarily unavailable during the process. Continue?',
   },
   {
-    value: "orders",
-    label: "Orders",
-    description: "Rebuild the orders search index from the database",
-    configuredProp: "ordersConfigured",
-    confirmMessage: "This will rebuild the orders search index. Continue?",
+    value: 'orders',
+    label: 'Orders',
+    description: 'Rebuild the orders search index from the database',
+    configuredProp: 'ordersConfigured',
+    confirmMessage: 'This will rebuild the orders search index. Continue?',
   },
-];
+]
 
 export default function SearchReindexClient({
   productsConfigured,
   ordersConfigured,
 }: SearchReindexClientProps) {
-  const [loading, setLoading] = useState(false);
-  const [confirmTarget, setConfirmTarget] = useState<ReindexTarget | null>(
-    null,
-  );
-  const [lastResult, setLastResult] = useState<ReindexResult | null>(null);
+  const [loading, setLoading] = useState(false)
+  const [confirmTarget, setConfirmTarget] = useState<ReindexTarget | null>(null)
+  const [lastResult, setLastResult] = useState<ReindexResult | null>(null)
 
   if (!productsConfigured && !ordersConfigured) {
     return (
@@ -79,62 +77,62 @@ export default function SearchReindexClient({
           </div>
         </div>
       </div>
-    );
+    )
   }
 
   const handleReindex = async (target: ReindexTarget) => {
-    setConfirmTarget(null);
-    setLoading(true);
-    setLastResult(null);
+    setConfirmTarget(null)
+    setLoading(true)
+    setLastResult(null)
 
     try {
-      const res = await fetch("/api/admin/search/reindex", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const res = await fetch('/api/admin/search/reindex', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ target }),
-      });
+      })
 
       if (!res.ok) {
-        const data = await res.json().catch(() => null);
-        throw new Error(data?.error ?? `Reindex failed (${res.status})`);
+        const data = await res.json().catch(() => null)
+        throw new Error(data?.error ?? `Reindex failed (${res.status})`)
       }
 
-      const data = await res.json();
-      const result = data.data?.reindexed ?? data.reindexed ?? {};
-      setLastResult(result);
+      const data = await res.json()
+      const result = data.data?.reindexed ?? data.reindexed ?? {}
+      setLastResult(result)
 
-      const parts: string[] = [];
-      if (result.products != null) parts.push(`${result.products} products`);
-      if (result.orders != null) parts.push(`${result.orders} orders`);
+      const parts: string[] = []
+      if (result.products != null) parts.push(`${result.products} products`)
+      if (result.orders != null) parts.push(`${result.orders} orders`)
       toast.success(
         parts.length > 0
-          ? `Reindexed ${parts.join(" and ")}`
-          : "Reindex completed",
-      );
+          ? `Reindexed ${parts.join(' and ')}`
+          : 'Reindex completed'
+      )
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Reindex failed";
-      toast.error(message);
+      const message = err instanceof Error ? err.message : 'Reindex failed'
+      toast.error(message)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   return (
     <>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {TARGET_OPTIONS.map(({ value, label, description, configuredProp }) => {
-          let isConfigured = ordersConfigured;
+          let isConfigured = ordersConfigured
 
-          if (configuredProp === "productsConfigured") {
-            isConfigured = productsConfigured;
+          if (configuredProp === 'productsConfigured') {
+            isConfigured = productsConfigured
           }
 
-          let buttonLabel = `${label} unavailable`;
+          let buttonLabel = `${label} unavailable`
 
           if (loading) {
-            buttonLabel = "Reindexing…";
+            buttonLabel = 'Reindexing…'
           } else if (isConfigured) {
-            buttonLabel = `Reindex ${label}`;
+            buttonLabel = `Reindex ${label}`
           }
 
           return (
@@ -166,7 +164,7 @@ export default function SearchReindexClient({
               </p>
 
               <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-                Status: {isConfigured ? "configured" : "missing config"}
+                Status: {isConfigured ? 'configured' : 'missing config'}
               </p>
 
               {lastResult?.[value] != null && (
@@ -184,7 +182,7 @@ export default function SearchReindexClient({
                 {buttonLabel}
               </button>
             </div>
-          );
+          )
         })}
       </div>
 
@@ -210,7 +208,7 @@ export default function SearchReindexClient({
         title="Confirm Reindex"
         message={
           TARGET_OPTIONS.find((option) => option.value === confirmTarget)
-            ?.confirmMessage ?? "Continue?"
+            ?.confirmMessage ?? 'Continue?'
         }
         confirmLabel="Reindex"
         cancelLabel="Cancel"
@@ -220,5 +218,5 @@ export default function SearchReindexClient({
         onCancel={() => setConfirmTarget(null)}
       />
     </>
-  );
+  )
 }

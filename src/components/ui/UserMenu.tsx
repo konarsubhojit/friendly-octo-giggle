@@ -1,34 +1,34 @@
-"use client";
+'use client'
 
-import { useState } from "react";
-import { signOut } from "next-auth/react";
-import Link from "next/link";
-import Image from "next/image";
-import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import { useState } from 'react'
+import { signOut } from 'next-auth/react'
+import Link from 'next/link'
+import Image from 'next/image'
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 
 interface Session {
   user?: {
-    name?: string | null;
-    email?: string | null;
-    image?: string | null;
-    role?: string;
-  };
+    name?: string | null
+    email?: string | null
+    image?: string | null
+    role?: string
+  }
 }
 
 interface UserMenuProps {
-  readonly session: Session | null;
-  readonly onLoginClick?: () => void;
+  readonly session: Session | null
+  readonly onLoginClick?: () => void
 }
 
 export function UserMenu({ session, onLoginClick }: UserMenuProps) {
-  const [signingOut, setSigningOut] = useState(false);
+  const [signingOut, setSigningOut] = useState(false)
 
   async function handleSignOut() {
-    setSigningOut(true);
+    setSigningOut(true)
     try {
-      await signOut({ callbackUrl: "/" });
+      await signOut({ callbackUrl: '/' })
     } finally {
-      setSigningOut(false);
+      setSigningOut(false)
     }
   }
 
@@ -41,7 +41,7 @@ export function UserMenu({ session, onLoginClick }: UserMenuProps) {
         >
           Login
         </button>
-      );
+      )
     }
     return (
       <Link
@@ -50,7 +50,7 @@ export function UserMenu({ session, onLoginClick }: UserMenuProps) {
       >
         Login
       </Link>
-    );
+    )
   }
 
   return (
@@ -63,7 +63,7 @@ export function UserMenu({ session, onLoginClick }: UserMenuProps) {
         {session.user.image ? (
           <Image
             src={session.user.image}
-            alt={session.user.name || "User"}
+            alt={session.user.name || 'User'}
             width={32}
             height={32}
             className="rounded-full"
@@ -73,7 +73,7 @@ export function UserMenu({ session, onLoginClick }: UserMenuProps) {
             <span className="text-gray-600 font-medium">
               {session.user.name?.charAt(0) ||
                 session.user.email?.charAt(0) ||
-                "?"}
+                '?'}
             </span>
           </div>
         )}
@@ -103,7 +103,7 @@ export function UserMenu({ session, onLoginClick }: UserMenuProps) {
         <div className="px-4 py-2 text-sm text-gray-700 border-b">
           <p className="font-medium">{session.user.name}</p>
           <p className="text-xs text-gray-500">{session.user.email}</p>
-          {session.user.role === "ADMIN" && (
+          {session.user.role === 'ADMIN' && (
             <span className="inline-block mt-1 px-2 py-0.5 text-xs bg-purple-100 text-purple-800 rounded">
               Admin
             </span>
@@ -117,9 +117,9 @@ export function UserMenu({ session, onLoginClick }: UserMenuProps) {
           role="menuitem"
         >
           {signingOut && <LoadingSpinner size="h-4 w-4" color="text-red-600" />}
-          {signingOut ? "Signing out…" : "Sign Out"}
+          {signingOut ? 'Signing out…' : 'Sign Out'}
         </button>
       </div>
     </div>
-  );
+  )
 }

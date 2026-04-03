@@ -1,17 +1,17 @@
-import ProductCardSkeleton from "@/components/skeletons/ProductCardSkeleton";
+import ProductCardSkeleton from '@/components/skeletons/ProductCardSkeleton'
 
 export default function ProductsLoading() {
   const PRODUCT_SKELETONS = [
-    "p1",
-    "p2",
-    "p3",
-    "p4",
-    "p5",
-    "p6",
-    "p7",
-    "p8",
-    "p9",
-  ] as const;
+    'p1',
+    'p2',
+    'p3',
+    'p4',
+    'p5',
+    'p6',
+    'p7',
+    'p8',
+    'p9',
+  ] as const
   return (
     <div className="min-h-screen bg-warm-gradient">
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
@@ -45,5 +45,5 @@ export default function ProductsLoading() {
         </div>
       </main>
     </div>
-  );
+  )
 }

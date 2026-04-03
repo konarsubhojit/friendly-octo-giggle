@@ -12,5 +12,5 @@ export function CircleIcon() {
         clipRule="evenodd"
       />
     </svg>
-  );
+  )
 }

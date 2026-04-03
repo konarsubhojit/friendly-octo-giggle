@@ -1,8 +1,8 @@
-import HeroSkeleton from "@/components/skeletons/HeroSkeleton";
-import ProductCardSkeleton from "@/components/skeletons/ProductCardSkeleton";
+import HeroSkeleton from '@/components/skeletons/HeroSkeleton'
+import ProductCardSkeleton from '@/components/skeletons/ProductCardSkeleton'
 
-const LINK_SKELETONS = ["l1", "l2", "l3", "l4"] as const;
-const PRODUCT_SKELETONS = ["p1", "p2", "p3", "p4", "p5", "p6"] as const;
+const LINK_SKELETONS = ['l1', 'l2', 'l3', 'l4'] as const
+const PRODUCT_SKELETONS = ['p1', 'p2', 'p3', 'p4', 'p5', 'p6'] as const
 
 function FooterSkeleton() {
   return (
@@ -32,7 +32,7 @@ function FooterSkeleton() {
         </div>
       </div>
     </footer>
-  );
+  )
 }
 
 export default function Loading() {
@@ -53,5 +53,5 @@ export default function Loading() {
 
       <FooterSkeleton />
     </div>
-  );
+  )
 }

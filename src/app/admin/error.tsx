@@ -1,10 +1,10 @@
-"use client";
+'use client'
 
-import Link from "next/link";
+import Link from 'next/link'
 
 interface ErrorProps {
-  readonly error: Error & { digest?: string };
-  readonly reset: () => void;
+  readonly error: Error & { digest?: string }
+  readonly reset: () => void
 }
 
 export default function AdminError({ error, reset }: ErrorProps) {
@@ -33,7 +33,7 @@ export default function AdminError({ error, reset }: ErrorProps) {
           Admin Panel Error
         </h2>
         <p className="mt-3 text-sm leading-6 text-slate-600 dark:text-slate-300 sm:text-base">
-          {error.message || "An error occurred in the admin panel"}
+          {error.message || 'An error occurred in the admin panel'}
         </p>
         {error.digest && (
           <p className="mt-4 text-xs text-slate-400 dark:text-slate-500">
@@ -56,5 +56,5 @@ export default function AdminError({ error, reset }: ErrorProps) {
         </div>
       </div>
     </div>
-  );
+  )
 }

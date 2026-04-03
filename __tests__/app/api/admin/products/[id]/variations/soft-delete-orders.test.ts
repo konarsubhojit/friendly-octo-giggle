@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 /**
  * Integration test: FR-011 Order History Preservation
@@ -13,69 +13,69 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
  */
 
 const mockVariation = {
-  id: "var1234",
-  productId: "abc1234",
-  name: "Red - Large",
-  designName: "Classic Logo",
+  id: 'var1234',
+  productId: 'abc1234',
+  name: 'Red - Large',
+  designName: 'Classic Logo',
   image: null,
   images: [],
   price: 150,
-  variationType: "styling" as const,
+  variationType: 'styling' as const,
   stock: 0,
-  deletedAt: new Date("2025-06-01"),
-  createdAt: new Date("2025-01-01"),
-  updatedAt: new Date("2025-06-01"),
-};
+  deletedAt: new Date('2025-06-01'),
+  createdAt: new Date('2025-01-01'),
+  updatedAt: new Date('2025-06-01'),
+}
 
 const mockOrderItem = {
-  id: "oi12345",
-  orderId: "ord1234",
-  productId: "abc1234",
-  variationId: "var1234",
+  id: 'oi12345',
+  orderId: 'ord1234',
+  productId: 'abc1234',
+  variationId: 'var1234',
   quantity: 2,
   price: 34.99,
   customizationNote: null,
   variation: mockVariation,
-};
+}
 
-describe("FR-011: Order History Preservation after Soft-Delete", () => {
+describe('FR-011: Order History Preservation after Soft-Delete', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-  });
+    vi.clearAllMocks()
+  })
 
-  it("order items still reference soft-deleted variation data", () => {
-    expect(mockOrderItem.variation).toBeDefined();
-    expect(mockOrderItem.variation.id).toBe("var1234");
-    expect(mockOrderItem.variation.name).toBe("Red - Large");
-    expect(mockOrderItem.variation.designName).toBe("Classic Logo");
-    expect(mockOrderItem.variation.deletedAt).not.toBeNull();
-  });
+  it('order items still reference soft-deleted variation data', () => {
+    expect(mockOrderItem.variation).toBeDefined()
+    expect(mockOrderItem.variation.id).toBe('var1234')
+    expect(mockOrderItem.variation.name).toBe('Red - Large')
+    expect(mockOrderItem.variation.designName).toBe('Classic Logo')
+    expect(mockOrderItem.variation.deletedAt).not.toBeNull()
+  })
 
-  it("soft-deleted variation retains all original fields", () => {
-    expect(mockVariation.name).toBe("Red - Large");
-    expect(mockVariation.designName).toBe("Classic Logo");
-    expect(mockVariation.price).toBe(150);
-    expect(mockVariation.productId).toBe("abc1234");
-  });
+  it('soft-deleted variation retains all original fields', () => {
+    expect(mockVariation.name).toBe('Red - Large')
+    expect(mockVariation.designName).toBe('Classic Logo')
+    expect(mockVariation.price).toBe(150)
+    expect(mockVariation.productId).toBe('abc1234')
+  })
 
-  it("active variation queries filter out soft-deleted variations", () => {
+  it('active variation queries filter out soft-deleted variations', () => {
     const allVariations = [
-      { ...mockVariation, id: "active1", deletedAt: null },
+      { ...mockVariation, id: 'active1', deletedAt: null },
       mockVariation,
-    ];
+    ]
 
-    const activeOnly = allVariations.filter((v) => v.deletedAt === null);
-    expect(activeOnly).toHaveLength(1);
-    expect(activeOnly[0].id).toBe("active1");
-  });
+    const activeOnly = allVariations.filter((v) => v.deletedAt === null)
+    expect(activeOnly).toHaveLength(1)
+    expect(activeOnly[0].id).toBe('active1')
+  })
 
-  it("order queries do NOT filter out soft-deleted variations", () => {
-    const orderItems = [mockOrderItem];
+  it('order queries do NOT filter out soft-deleted variations', () => {
+    const orderItems = [mockOrderItem]
 
     const variationNames = orderItems
       .filter((item) => item.variation)
-      .map((item) => item.variation.name);
+      .map((item) => item.variation.name)
 
-    expect(variationNames).toContain("Red - Large");
-  });
-});
+    expect(variationNames).toContain('Red - Large')
+  })
+})

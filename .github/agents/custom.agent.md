@@ -1,6 +1,6 @@
 ---
-name: "Custom"
-description: "Writes code for LLMs, not humans. Optimize for model reasoning, regeneration, and debugging."
+name: 'Custom'
+description: 'Writes code for LLMs, not humans. Optimize for model reasoning, regeneration, and debugging.'
 handoffs:
   - label: Generate Checklist
     agent: speckit.checklist

@@ -1,135 +1,135 @@
-import { sql } from "drizzle-orm";
-import { drizzleDb } from "@/lib/db";
-import { cacheAdminSales } from "@/lib/cache";
+import { sql } from 'drizzle-orm'
+import { drizzleDb } from '@/lib/db'
+import { cacheAdminSales } from '@/lib/cache'
 
-const RECENT_SALES_DAY_COUNT = 7;
+const RECENT_SALES_DAY_COUNT = 7
 
-type SqlNumericValue = number | string | null;
+type SqlNumericValue = number | string | null
 
 interface AggregatedDashboardRow {
-  readonly totalRevenue: SqlNumericValue;
-  readonly totalOrders: SqlNumericValue;
-  readonly todayRevenue: SqlNumericValue;
-  readonly todayOrders: SqlNumericValue;
-  readonly monthRevenue: SqlNumericValue;
-  readonly monthOrders: SqlNumericValue;
-  readonly lastMonthRevenue: SqlNumericValue;
-  readonly lastMonthOrders: SqlNumericValue;
-  readonly ordersByStatus: unknown;
-  readonly topProducts: unknown;
-  readonly recentSales: unknown;
-  readonly totalCustomers: SqlNumericValue;
+  readonly totalRevenue: SqlNumericValue
+  readonly totalOrders: SqlNumericValue
+  readonly todayRevenue: SqlNumericValue
+  readonly todayOrders: SqlNumericValue
+  readonly monthRevenue: SqlNumericValue
+  readonly monthOrders: SqlNumericValue
+  readonly lastMonthRevenue: SqlNumericValue
+  readonly lastMonthOrders: SqlNumericValue
+  readonly ordersByStatus: unknown
+  readonly topProducts: unknown
+  readonly recentSales: unknown
+  readonly totalCustomers: SqlNumericValue
 }
 
 export interface SalesTrendPoint {
-  readonly date: string;
-  readonly label: string;
-  readonly revenue: number;
-  readonly orders: number;
+  readonly date: string
+  readonly label: string
+  readonly revenue: number
+  readonly orders: number
 }
 
 export interface SalesTopProduct {
-  readonly productId: string;
-  readonly name: string;
-  readonly totalQuantity: number;
-  readonly totalRevenue: number;
+  readonly productId: string
+  readonly name: string
+  readonly totalQuantity: number
+  readonly totalRevenue: number
 }
 
 export interface AdminSalesDashboardData {
-  readonly totalRevenue: number;
-  readonly totalOrders: number;
-  readonly todayRevenue: number;
-  readonly todayOrders: number;
-  readonly monthRevenue: number;
-  readonly monthOrders: number;
-  readonly lastMonthRevenue: number;
-  readonly lastMonthOrders: number;
-  readonly monthRevenueChange: number | null;
-  readonly monthOrdersChange: number | null;
-  readonly averageOrderValue: number;
-  readonly fulfillmentRate: number;
-  readonly pendingOrders: number;
-  readonly ordersByStatus: Record<string, number>;
-  readonly topProducts: readonly SalesTopProduct[];
-  readonly recentSales: readonly SalesTrendPoint[];
-  readonly totalCustomers: number;
+  readonly totalRevenue: number
+  readonly totalOrders: number
+  readonly todayRevenue: number
+  readonly todayOrders: number
+  readonly monthRevenue: number
+  readonly monthOrders: number
+  readonly lastMonthRevenue: number
+  readonly lastMonthOrders: number
+  readonly monthRevenueChange: number | null
+  readonly monthOrdersChange: number | null
+  readonly averageOrderValue: number
+  readonly fulfillmentRate: number
+  readonly pendingOrders: number
+  readonly ordersByStatus: Record<string, number>
+  readonly topProducts: readonly SalesTopProduct[]
+  readonly recentSales: readonly SalesTrendPoint[]
+  readonly totalCustomers: number
 }
 
 function startOfDay(date: Date): Date {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate())
 }
 
 function startOfMonth(date: Date): Date {
-  return new Date(date.getFullYear(), date.getMonth(), 1);
+  return new Date(date.getFullYear(), date.getMonth(), 1)
 }
 
 function addDays(date: Date, days: number): Date {
-  const result = new Date(date);
-  result.setDate(result.getDate() + days);
-  return result;
+  const result = new Date(date)
+  result.setDate(result.getDate() + days)
+  return result
 }
 
 function formatDateKey(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
 }
 
 function formatShortDayLabel(date: Date): string {
-  return new Intl.DateTimeFormat("en-US", { weekday: "short" }).format(date);
+  return new Intl.DateTimeFormat('en-US', { weekday: 'short' }).format(date)
 }
 
 function calculatePercentChange(
   current: number,
-  previous: number,
+  previous: number
 ): number | null {
   if (previous === 0) {
-    return current === 0 ? 0 : null;
+    return current === 0 ? 0 : null
   }
 
-  return ((current - previous) / previous) * 100;
+  return ((current - previous) / previous) * 100
 }
 
 function parseNumberValue(value: SqlNumericValue | undefined): number {
-  if (typeof value === "number") {
-    return value;
+  if (typeof value === 'number') {
+    return value
   }
 
-  if (typeof value === "string") {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : 0;
+  if (typeof value === 'string') {
+    const parsed = Number(value)
+    return Number.isFinite(parsed) ? parsed : 0
   }
 
-  return 0;
+  return 0
 }
 
 function parseJsonValue<T>(value: unknown, fallback: T): T {
   if (value === null || value === undefined) {
-    return fallback;
+    return fallback
   }
 
-  if (typeof value === "string") {
+  if (typeof value === 'string') {
     try {
-      return JSON.parse(value) as T;
+      return JSON.parse(value) as T
     } catch {
-      return fallback;
+      return fallback
     }
   }
 
-  return value as T;
+  return value as T
 }
 
 export const getAdminSalesDashboardData =
   async (): Promise<AdminSalesDashboardData> => {
     return cacheAdminSales(async () => {
-      const now = new Date();
-      const today = startOfDay(now);
-      const thisMonth = startOfMonth(now);
+      const now = new Date()
+      const today = startOfDay(now)
+      const thisMonth = startOfMonth(now)
       const lastMonth = startOfMonth(
-        new Date(now.getFullYear(), now.getMonth() - 1, 1),
-      );
-      const recentSalesStart = addDays(today, -(RECENT_SALES_DAY_COUNT - 1));
+        new Date(now.getFullYear(), now.getMonth() - 1, 1)
+      )
+      const recentSalesStart = addDays(today, -(RECENT_SALES_DAY_COUNT - 1))
 
       const dashboardResult = await drizzleDb.execute(sql`
         with active_orders as (
@@ -226,67 +226,67 @@ export const getAdminSalesDashboardData =
         cross join status_counts
         cross join recent_sales
         cross join top_products
-      `);
+      `)
 
       const dashboardRow = dashboardResult.rows[0] as unknown as
         | AggregatedDashboardRow
-        | undefined;
+        | undefined
 
-      const totalRevenue = parseNumberValue(dashboardRow?.totalRevenue);
-      const totalOrders = parseNumberValue(dashboardRow?.totalOrders);
-      const todayRevenue = parseNumberValue(dashboardRow?.todayRevenue);
-      const todayOrders = parseNumberValue(dashboardRow?.todayOrders);
-      const monthRevenue = parseNumberValue(dashboardRow?.monthRevenue);
-      const monthOrders = parseNumberValue(dashboardRow?.monthOrders);
-      const lastMonthRevenue = parseNumberValue(dashboardRow?.lastMonthRevenue);
-      const lastMonthOrders = parseNumberValue(dashboardRow?.lastMonthOrders);
+      const totalRevenue = parseNumberValue(dashboardRow?.totalRevenue)
+      const totalOrders = parseNumberValue(dashboardRow?.totalOrders)
+      const todayRevenue = parseNumberValue(dashboardRow?.todayRevenue)
+      const todayOrders = parseNumberValue(dashboardRow?.todayOrders)
+      const monthRevenue = parseNumberValue(dashboardRow?.monthRevenue)
+      const monthOrders = parseNumberValue(dashboardRow?.monthOrders)
+      const lastMonthRevenue = parseNumberValue(dashboardRow?.lastMonthRevenue)
+      const lastMonthOrders = parseNumberValue(dashboardRow?.lastMonthOrders)
 
       const ordersByStatus = parseJsonValue<Record<string, number>>(
         dashboardRow?.ordersByStatus,
-        {},
-      );
+        {}
+      )
 
       const topProducts = parseJsonValue<readonly SalesTopProduct[]>(
         dashboardRow?.topProducts,
-        [],
+        []
       ).map((product) => ({
         productId: product.productId,
         name: product.name,
         totalQuantity: parseNumberValue(product.totalQuantity),
         totalRevenue: parseNumberValue(product.totalRevenue),
-      }));
+      }))
 
       const recentSalesByDate = new Map(
         parseJsonValue<
-          readonly Pick<SalesTrendPoint, "date" | "revenue" | "orders">[]
+          readonly Pick<SalesTrendPoint, 'date' | 'revenue' | 'orders'>[]
         >(dashboardRow?.recentSales, []).map((point) => [
           point.date,
           {
             revenue: parseNumberValue(point.revenue),
             orders: parseNumberValue(point.orders),
           },
-        ]),
-      );
+        ])
+      )
 
       const recentSales = Array.from(
         { length: RECENT_SALES_DAY_COUNT },
         (_, index) => {
-          const currentDate = addDays(recentSalesStart, index);
-          const dateKey = formatDateKey(currentDate);
-          const point = recentSalesByDate.get(dateKey);
+          const currentDate = addDays(recentSalesStart, index)
+          const dateKey = formatDateKey(currentDate)
+          const point = recentSalesByDate.get(dateKey)
 
           return {
             date: dateKey,
             label: formatShortDayLabel(currentDate),
             revenue: point?.revenue ?? 0,
             orders: point?.orders ?? 0,
-          };
-        },
-      );
+          }
+        }
+      )
 
-      const deliveredOrders = ordersByStatus.DELIVERED ?? 0;
+      const deliveredOrders = ordersByStatus.DELIVERED ?? 0
       const pendingOrders =
-        (ordersByStatus.PENDING ?? 0) + (ordersByStatus.PROCESSING ?? 0);
+        (ordersByStatus.PENDING ?? 0) + (ordersByStatus.PROCESSING ?? 0)
 
       return {
         totalRevenue,
@@ -299,7 +299,7 @@ export const getAdminSalesDashboardData =
         lastMonthOrders,
         monthRevenueChange: calculatePercentChange(
           monthRevenue,
-          lastMonthRevenue,
+          lastMonthRevenue
         ),
         monthOrdersChange: calculatePercentChange(monthOrders, lastMonthOrders),
         averageOrderValue: totalOrders > 0 ? totalRevenue / totalOrders : 0,
@@ -310,6 +310,6 @@ export const getAdminSalesDashboardData =
         topProducts,
         recentSales,
         totalCustomers: parseNumberValue(dashboardRow?.totalCustomers),
-      };
-    });
-  };
+      }
+    })
+  }

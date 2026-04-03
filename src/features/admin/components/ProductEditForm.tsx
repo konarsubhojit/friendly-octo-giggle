@@ -1,15 +1,15 @@
-"use client";
+'use client'
 
-import Image from "next/image";
-import type { Product } from "@/lib/types";
-import { useCurrency } from "@/contexts/CurrencyContext";
+import Image from 'next/image'
+import type { Product } from '@/lib/types'
+import { useCurrency } from '@/contexts/CurrencyContext'
 
 interface ProductEditFormProps {
-  readonly product: Product;
+  readonly product: Product
 }
 
 export default function ProductEditForm({ product }: ProductEditFormProps) {
-  const { formatPrice } = useCurrency();
+  const { formatPrice } = useCurrency()
 
   return (
     <section className="rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-[0_24px_60px_-42px_rgba(15,23,42,0.5)]">
@@ -66,5 +66,5 @@ export default function ProductEditForm({ product }: ProductEditFormProps) {
         </div>
       </div>
     </section>
-  );
+  )
 }

@@ -1,8 +1,8 @@
-"use client";
+'use client'
 
 interface ErrorProps {
-  readonly error: Error & { digest?: string };
-  readonly reset: () => void;
+  readonly error: Error & { digest?: string }
+  readonly reset: () => void
 }
 
 export default function GlobalError({ error, reset }: ErrorProps) {
@@ -28,7 +28,7 @@ export default function GlobalError({ error, reset }: ErrorProps) {
           Something went wrong!
         </h2>
         <p className="text-[var(--text-secondary)] mb-4">
-          {error.message || "An unexpected error occurred"}
+          {error.message || 'An unexpected error occurred'}
         </p>
         {error.digest && (
           <p className="text-xs text-[var(--text-muted)] mb-4">
@@ -43,5 +43,5 @@ export default function GlobalError({ error, reset }: ErrorProps) {
         </button>
       </div>
     </div>
-  );
+  )
 }

@@ -1,77 +1,77 @@
-"use client";
+'use client'
 
-import { useState, useCallback } from "react";
+import { useState, useCallback } from 'react'
 import {
   DynamicForm,
   type FieldDef,
   type SubmitResult,
-} from "@/components/ui/DynamicForm";
+} from '@/components/ui/DynamicForm'
 
 const EMAIL_RE =
-  /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+  /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/
 
 const CONTACT_FIELDS: ReadonlyArray<FieldDef> = [
   {
-    id: "contact-name",
-    name: "name",
-    label: "Name",
-    type: "text",
-    placeholder: "Your name",
+    id: 'contact-name',
+    name: 'name',
+    label: 'Name',
+    type: 'text',
+    placeholder: 'Your name',
     validate: (v) =>
-      v.trim() ? undefined : "Tell us your name so we know how to address you.",
+      v.trim() ? undefined : 'Tell us your name so we know how to address you.',
   },
   {
-    id: "contact-email",
-    name: "email",
-    label: "Email",
-    type: "email",
-    placeholder: "you@example.com",
+    id: 'contact-email',
+    name: 'email',
+    label: 'Email',
+    type: 'email',
+    placeholder: 'you@example.com',
     validate: (v) => {
-      if (!v.trim()) return "Enter the email address where we should reply.";
+      if (!v.trim()) return 'Enter the email address where we should reply.'
       if (!EMAIL_RE.test(v))
-        return "Enter a valid email address, like you@example.com.";
-      return undefined;
+        return 'Enter a valid email address, like you@example.com.'
+      return undefined
     },
   },
   {
-    id: "contact-subject",
-    name: "subject",
-    label: "Subject",
-    type: "select",
+    id: 'contact-subject',
+    name: 'subject',
+    label: 'Subject',
+    type: 'select',
     options: [
-      { value: "order", label: "Order Inquiry" },
-      { value: "return", label: "Return / Refund" },
-      { value: "shipping", label: "Shipping Question" },
-      { value: "product", label: "Product Question" },
-      { value: "other", label: "Other" },
+      { value: 'order', label: 'Order Inquiry' },
+      { value: 'return', label: 'Return / Refund' },
+      { value: 'shipping', label: 'Shipping Question' },
+      { value: 'product', label: 'Product Question' },
+      { value: 'other', label: 'Other' },
     ],
     validate: (v) =>
-      v ? undefined : "Choose the topic that best matches your message.",
+      v ? undefined : 'Choose the topic that best matches your message.',
   },
   {
-    id: "contact-message",
-    name: "message",
-    label: "Message",
-    type: "textarea",
+    id: 'contact-message',
+    name: 'message',
+    label: 'Message',
+    type: 'textarea',
     rows: 5,
-    placeholder: "How can we help you?",
+    placeholder: 'How can we help you?',
     validate: (v) =>
       v.trim()
         ? undefined
-        : "Share a few details so our team can help you faster.",
+        : 'Share a few details so our team can help you faster.',
   },
-];
+]
 
 const SUBMIT_BTN =
-  "w-full bg-[var(--btn-primary)] bg-gradient-to-r from-[var(--accent-rose)] to-[var(--accent-pink)] text-white py-3 rounded-full font-semibold hover:from-[var(--accent-pink)] hover:to-[var(--accent-rose)] transition-all duration-300 shadow-warm hover:shadow-warm-lg disabled:opacity-50 disabled:cursor-not-allowed focus-warm";
+  'w-full bg-[var(--btn-primary)] bg-gradient-to-r from-[var(--accent-rose)] to-[var(--accent-pink)] text-white py-3 rounded-full font-semibold hover:from-[var(--accent-pink)] hover:to-[var(--accent-rose)] transition-all duration-300 shadow-warm hover:shadow-warm-lg disabled:opacity-50 disabled:cursor-not-allowed focus-warm'
 
 export default function ContactForm() {
-  const [submitted, setSubmitted] = useState(false);
+  const [submitted, setSubmitted] = useState(false)
 
   const handleSubmit = useCallback((): SubmitResult => {
-    setSubmitted(true);
-    return undefined;
-  }, []);
+    setSubmitted(true)
+    return undefined
+  }, [])
 
   if (submitted) {
     return (
@@ -106,7 +106,7 @@ export default function ContactForm() {
           Send another message
         </button>
       </div>
-    );
+    )
   }
 
   return (
@@ -122,5 +122,5 @@ export default function ContactForm() {
         formClassName="space-y-5"
       />
     </>
-  );
+  )
 }

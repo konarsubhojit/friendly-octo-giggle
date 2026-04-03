@@ -1,21 +1,21 @@
-import { auth } from "@/lib/auth";
-import { redirect } from "next/navigation";
-import Link from "next/link";
-import { AdminHeaderNav } from "@/features/admin/components/AdminHeaderNav";
-import { AdminNavLinks } from "@/features/admin/components/AdminNavLinks";
+import { auth } from '@/lib/auth'
+import { redirect } from 'next/navigation'
+import Link from 'next/link'
+import { AdminHeaderNav } from '@/features/admin/components/AdminHeaderNav'
+import { AdminNavLinks } from '@/features/admin/components/AdminNavLinks'
 
 interface AdminLayoutProps {
-  readonly children: React.ReactNode;
+  readonly children: React.ReactNode
 }
 
 export default async function AdminLayout({ children }: AdminLayoutProps) {
-  const session = await auth();
+  const session = await auth()
 
   if (!session?.user) {
-    redirect("/auth/signin?callbackUrl=/admin");
+    redirect('/auth/signin?callbackUrl=/admin')
   }
 
-  if (session.user.role !== "ADMIN") {
+  if (session.user.role !== 'ADMIN') {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.16),_transparent_28%),linear-gradient(180deg,_#f8fafc,_#eef2ff)] px-4 text-slate-950 dark:bg-[radial-gradient(circle_at_top,_rgba(14,165,233,0.2),_transparent_24%),linear-gradient(180deg,_#020617,_#0f172a_52%,_#111827)] dark:text-slate-100">
         <div className="w-full max-w-xl rounded-[2rem] border border-white/80 bg-white/90 p-8 text-center shadow-[0_28px_80px_-44px_rgba(15,23,42,0.55)] backdrop-blur dark:border-slate-700/80 dark:bg-slate-900/90 dark:shadow-[0_28px_80px_-44px_rgba(2,6,23,0.9)]">
@@ -36,7 +36,7 @@ export default async function AdminLayout({ children }: AdminLayoutProps) {
           </Link>
         </div>
       </div>
-    );
+    )
   }
 
   return (
@@ -61,7 +61,7 @@ export default async function AdminLayout({ children }: AdminLayoutProps) {
                 </p>
               </div>
               <AdminHeaderNav
-                userName={session.user.name || session.user.email || ""}
+                userName={session.user.name || session.user.email || ''}
               />
             </div>
           </div>
@@ -70,5 +70,5 @@ export default async function AdminLayout({ children }: AdminLayoutProps) {
       <AdminNavLinks />
       {children}
     </div>
-  );
+  )
 }

@@ -41,11 +41,11 @@ This is a highly scalable e-commerce website built with Next.js 16, TypeScript, 
 const config = {
   timeout: 5000,
   retries: 3,
-} as const satisfies ConfigType;
+} as const satisfies ConfigType
 
 // Use Zod for validation
-const schema = z.object({ name: z.string() });
-type Input = z.infer<typeof schema>;
+const schema = z.object({ name: z.string() })
+type Input = z.infer<typeof schema>
 ```
 
 ### React & Next.js
@@ -82,12 +82,12 @@ export function InteractiveButton() {
 ```typescript
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const validated = MySchema.parse(body);
-    const result = await processData(validated);
-    return apiSuccess({ result });
+    const body = await request.json()
+    const validated = MySchema.parse(body)
+    const result = await processData(validated)
+    return apiSuccess({ result })
   } catch (error) {
-    return handleApiError(error);
+    return handleApiError(error)
   }
 }
 ```
@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
 const result = await drizzleDb.query.products.findMany({
   where: gt(schema.products.stock, 0),
   with: { variations: true },
-});
+})
 ```
 
 #### Database Migrations
@@ -160,11 +160,11 @@ npm run db:generate
 
 ```typescript
 const data = await getCachedData(
-  "cache:key",
+  'cache:key',
   60, // TTL in seconds
   async () => await fetchFromDB(),
-  10, // Stale time
-);
+  10 // Stale time
+)
 ```
 
 ### Authentication
@@ -179,12 +179,12 @@ const data = await getCachedData(
 - Password history tracked via `lib/password.ts` (prevents reuse of last 2 passwords)
 
 ```typescript
-import { auth } from "@/lib/auth";
+import { auth } from '@/lib/auth'
 
 export default async function AdminPage() {
-  const session = await auth();
-  if (session?.user?.role !== "ADMIN") {
-    redirect("/");
+  const session = await auth()
+  if (session?.user?.role !== 'ADMIN') {
+    redirect('/')
   }
   // Admin content
 }
@@ -399,25 +399,25 @@ This project implements several Next.js 16 performance optimizations:
 
 ```typescript
 // ISR with revalidation
-export const revalidate = 60;
+export const revalidate = 60
 
 // Direct database queries in Server Components
-const products = await drizzleDb.query.products.findMany();
+const products = await drizzleDb.query.products.findMany()
 
 // API routes with cache headers
 return NextResponse.json(data, {
   headers: {
-    "Cache-Control": "public, s-maxage=60, stale-while-revalidate=30",
+    'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=30',
   },
-});
+})
 
 // Static params generation
 export async function generateStaticParams() {
   const products = await drizzleDb.query.products.findMany({
     limit: 20,
     orderBy: asc(schema.products.id),
-  });
-  return products.map((product) => ({ id: product.id }));
+  })
+  return products.map((product) => ({ id: product.id }))
 }
 ```
 
@@ -671,8 +671,8 @@ Always use readonly interfaces for component props:
 
 ```typescript
 interface MyComponentProps {
-  readonly data: Data;
-  readonly onAction?: () => void;
+  readonly data: Data
+  readonly onAction?: () => void
 }
 
 export default function MyComponent({ data, onAction }: MyComponentProps) {
@@ -691,8 +691,8 @@ Environment variables are validated at startup using `lib/env.ts`:
 Import validated env vars:
 
 ```typescript
-import { env } from "@/lib/env";
-console.log(env.DATABASE_URL); // Typed and validated
+import { env } from '@/lib/env'
+console.log(env.DATABASE_URL) // Typed and validated
 ```
 
 ## API Route Patterns
@@ -707,16 +707,16 @@ console.log(env.DATABASE_URL); // Typed and validated
 Always use Zod schemas for request body validation:
 
 ```typescript
-import { AddToCartSchema } from "@/lib/validations";
-import { apiError, handleValidationError } from "@/lib/api-utils";
+import { AddToCartSchema } from '@/lib/validations'
+import { apiError, handleValidationError } from '@/lib/api-utils'
 
 export async function POST(request: NextRequest) {
-  const body = await request.json();
-  const parseResult = AddToCartSchema.safeParse(body);
+  const body = await request.json()
+  const parseResult = AddToCartSchema.safeParse(body)
   if (!parseResult.success) {
-    return handleValidationError(parseResult.error);
+    return handleValidationError(parseResult.error)
   }
-  const validated = parseResult.data;
+  const validated = parseResult.data
   // ...
 }
 ```

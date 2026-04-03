@@ -3,36 +3,36 @@ export {
   type OrderConfirmationData,
   type OrderStatusUpdateData,
   escapeHtml,
-} from "./templates";
+} from './templates'
 
-export { sendEmail, type EmailMessage } from "./providers";
+export { sendEmail, type EmailMessage } from './providers'
 
-export { sendWithRetry } from "./retry";
+export { sendWithRetry } from './retry'
 
-import { sendWithRetry } from "./retry";
+import { sendWithRetry } from './retry'
 import {
   orderConfirmationTemplate,
   orderStatusUpdateTemplate,
   type OrderConfirmationData,
   type OrderStatusUpdateData,
-} from "./templates";
+} from './templates'
 
 export const sendOrderConfirmationEmail = (
-  data: OrderConfirmationData,
+  data: OrderConfirmationData
 ): void => {
-  const template = orderConfirmationTemplate(data);
+  const template = orderConfirmationTemplate(data)
   sendWithRetry(
     { to: data.to, ...template },
-    { emailType: "order_confirmation", referenceId: data.orderId },
-  );
-};
+    { emailType: 'order_confirmation', referenceId: data.orderId }
+  )
+}
 
 export const sendOrderStatusUpdateEmail = (
-  data: OrderStatusUpdateData,
+  data: OrderStatusUpdateData
 ): void => {
-  const template = orderStatusUpdateTemplate(data);
+  const template = orderStatusUpdateTemplate(data)
   sendWithRetry(
     { to: data.to, ...template },
-    { emailType: "order_status_update", referenceId: data.orderId },
-  );
-};
+    { emailType: 'order_status_update', referenceId: data.orderId }
+  )
+}

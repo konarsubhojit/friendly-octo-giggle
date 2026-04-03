@@ -1,95 +1,95 @@
-"use client";
+'use client'
 
-import { useEffect, useRef, useCallback } from "react";
-import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
+import { useEffect, useRef, useCallback } from 'react'
+import { signIn } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import {
   DynamicForm,
   type FieldDef,
   type SubmitResult,
-} from "@/components/ui/DynamicForm";
-import { OAuthButtons } from "@/features/auth/components/OAuthButtons";
+} from '@/components/ui/DynamicForm'
+import { OAuthButtons } from '@/features/auth/components/OAuthButtons'
 
 interface LoginModalProps {
-  readonly isOpen: boolean;
-  readonly onClose: () => void;
+  readonly isOpen: boolean
+  readonly onClose: () => void
 }
 
 const LOGIN_FIELDS: ReadonlyArray<FieldDef> = [
   {
-    id: "login-identifier",
-    name: "identifier",
-    label: "Email or Phone Number",
-    type: "text",
-    placeholder: "you@example.com or +1234567890",
-    autoComplete: "username",
+    id: 'login-identifier',
+    name: 'identifier',
+    label: 'Email or Phone Number',
+    type: 'text',
+    placeholder: 'you@example.com or +1234567890',
+    autoComplete: 'username',
     autoFocus: true,
     validate: (v) =>
       v.trim()
         ? undefined
-        : "Enter the email address or phone number linked to your account.",
+        : 'Enter the email address or phone number linked to your account.',
   },
   {
-    id: "login-password",
-    name: "password",
-    label: "Password",
-    type: "password",
-    placeholder: "Enter your password",
-    autoComplete: "current-password",
+    id: 'login-password',
+    name: 'password',
+    label: 'Password',
+    type: 'password',
+    placeholder: 'Enter your password',
+    autoComplete: 'current-password',
     showPasswordToggle: true,
-    validate: (v) => (v ? undefined : "Enter your password to continue."),
+    validate: (v) => (v ? undefined : 'Enter your password to continue.'),
   },
-];
+]
 
 const SUBMIT_BTN =
-  "w-full py-3 bg-[var(--btn-primary)] bg-gradient-to-r from-[var(--accent-warm)] to-[var(--accent-rose)] text-white rounded-lg font-semibold hover:from-[var(--accent-rose)] hover:to-[var(--accent-warm)] transition-all duration-300 shadow-warm hover:shadow-warm-lg disabled:opacity-50 disabled:cursor-not-allowed focus-warm";
+  'w-full py-3 bg-[var(--btn-primary)] bg-gradient-to-r from-[var(--accent-warm)] to-[var(--accent-rose)] text-white rounded-lg font-semibold hover:from-[var(--accent-rose)] hover:to-[var(--accent-warm)] transition-all duration-300 shadow-warm hover:shadow-warm-lg disabled:opacity-50 disabled:cursor-not-allowed focus-warm'
 
 export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
-  const dialogRef = useRef<HTMLDialogElement>(null);
-  const router = useRouter();
+  const dialogRef = useRef<HTMLDialogElement>(null)
+  const router = useRouter()
 
   // Open dialog as modal and handle native cancel (Escape) event
   useEffect(() => {
-    const dialog = dialogRef.current;
-    if (!isOpen || !dialog) return;
+    const dialog = dialogRef.current
+    if (!isOpen || !dialog) return
 
-    document.body.style.overflow = "hidden";
-    dialog.showModal();
+    document.body.style.overflow = 'hidden'
+    dialog.showModal()
 
     function handleCancel(e: Event) {
-      e.preventDefault();
-      onClose();
+      e.preventDefault()
+      onClose()
     }
 
-    dialog.addEventListener("cancel", handleCancel);
+    dialog.addEventListener('cancel', handleCancel)
     return () => {
-      dialog.removeEventListener("cancel", handleCancel);
-      document.body.style.overflow = "";
-    };
-  }, [isOpen, onClose]);
+      dialog.removeEventListener('cancel', handleCancel)
+      document.body.style.overflow = ''
+    }
+  }, [isOpen, onClose])
 
   const handleSubmit = useCallback(
     async (values: Readonly<Record<string, string>>): Promise<SubmitResult> => {
       try {
-        const result = await signIn("credentials", {
+        const result = await signIn('credentials', {
           identifier: values.identifier,
           password: values.password,
           redirect: false,
-        });
+        })
         if (result?.error)
-          return "We couldn't sign you in with those details. Double-check your email, phone number, and password, then try again.";
-        onClose();
-        router.refresh();
-        return undefined;
+          return "We couldn't sign you in with those details. Double-check your email, phone number, and password, then try again."
+        onClose()
+        router.refresh()
+        return undefined
       } catch {
-        return "We hit a temporary issue while signing you in. Please try again.";
+        return 'We hit a temporary issue while signing you in. Please try again.'
       }
     },
-    [onClose, router],
-  );
+    [onClose, router]
+  )
 
-  if (!isOpen) return null;
+  if (!isOpen) return null
 
   return (
     <dialog
@@ -184,13 +184,13 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
 
           {/* OAuth buttons */}
           <OAuthButtons
-            onGoogleClick={() => signIn("google")}
-            onMicrosoftClick={() => signIn("microsoft-entra-id")}
+            onGoogleClick={() => signIn('google')}
+            onMicrosoftClick={() => signIn('microsoft-entra-id')}
           />
 
           {/* Register link */}
           <p className="text-center text-sm text-[var(--text-secondary)] mt-6">
-            Don&apos;t have an account?{" "}
+            Don&apos;t have an account?{' '}
             <Link
               href="/auth/register"
               onClick={onClose}
@@ -202,5 +202,5 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
         </div>
       </div>
     </dialog>
-  );
+  )
 }

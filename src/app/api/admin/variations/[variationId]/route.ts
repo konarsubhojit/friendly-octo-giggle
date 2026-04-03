@@ -1,78 +1,78 @@
-import { NextRequest } from "next/server";
-import { drizzleDb } from "@/lib/db";
-import { products, productVariations } from "@/lib/schema";
-import { eq, and, isNull, ne } from "drizzle-orm";
-import { UpdateVariationSchema } from "@/features/product/validations";
+import { NextRequest } from 'next/server'
+import { drizzleDb } from '@/lib/db'
+import { products, productVariations } from '@/lib/schema'
+import { eq, and, isNull, ne } from 'drizzle-orm'
+import { UpdateVariationSchema } from '@/features/product/validations'
 import {
   apiSuccess,
   apiError,
   handleApiError,
   handleValidationError,
-} from "@/lib/api-utils";
-import { checkAdminAuth } from "@/features/admin/services/admin-auth";
-import { invalidateProductCaches } from "@/lib/cache";
-import { revalidateTag } from "next/cache";
+} from '@/lib/api-utils'
+import { checkAdminAuth } from '@/features/admin/services/admin-auth'
+import { invalidateProductCaches } from '@/lib/cache'
+import { revalidateTag } from 'next/cache'
 
-export const dynamic = "force-dynamic";
+export const dynamic = 'force-dynamic'
 
 const findVariationById = (variationId: string) =>
   drizzleDb.query.productVariations.findFirst({
     where: and(
       eq(productVariations.id, variationId),
-      isNull(productVariations.deletedAt),
+      isNull(productVariations.deletedAt)
     ),
-  });
+  })
 
 const findProduct = (productId: string) =>
   drizzleDb.query.products.findFirst({
     where: and(eq(products.id, productId), isNull(products.deletedAt)),
-  });
+  })
 
 const findStyleById = (styleId: string, productId: string) =>
   drizzleDb.query.productVariations.findFirst({
     where: and(
       eq(productVariations.id, styleId),
       eq(productVariations.productId, productId),
-      eq(productVariations.variationType, "styling"),
-      isNull(productVariations.deletedAt),
+      eq(productVariations.variationType, 'styling'),
+      isNull(productVariations.deletedAt)
     ),
-  });
+  })
 
 const checkVariationNameUniqueness = async (
   productId: string,
   name: string,
   variationId: string,
-  existingName: string,
+  existingName: string
 ): Promise<{ error: string; status: 409 } | null> => {
   if (name === existingName) {
-    return null;
+    return null
   }
 
   const duplicate = await drizzleDb.query.productVariations.findFirst({
     where: and(
       eq(productVariations.productId, productId),
       eq(productVariations.name, name),
-      ne(productVariations.id, variationId),
+      ne(productVariations.id, variationId)
     ),
-  });
+  })
 
   if (!duplicate) {
-    return null;
+    return null
   }
 
   if (duplicate.deletedAt) {
     return {
       error:
-        "A variation with this name was previously archived. Please use a different name.",
+        'A variation with this name was previously archived. Please use a different name.',
       status: 409,
-    };
+    }
   }
 
   return {
-    error: "A variation with this name already exists for this product",
+    error: 'A variation with this name already exists for this product',
     status: 409,
-  };
-};
+  }
+}
 
 function serializeVariation(v: typeof productVariations.$inferSelect) {
   return {
@@ -83,46 +83,46 @@ function serializeVariation(v: typeof productVariations.$inferSelect) {
     deletedAt: v.deletedAt?.toISOString() ?? null,
     createdAt: v.createdAt.toISOString(),
     updatedAt: v.updatedAt.toISOString(),
-  };
+  }
 }
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: Promise<{ variationId: string }> },
+  { params }: { params: Promise<{ variationId: string }> }
 ) {
-  const authCheck = await checkAdminAuth();
+  const authCheck = await checkAdminAuth()
   if (!authCheck.authorized) {
-    return apiError(authCheck.error ?? "Unauthorized", authCheck.status);
+    return apiError(authCheck.error ?? 'Unauthorized', authCheck.status)
   }
 
   try {
-    const { variationId } = await params;
-    const existing = await findVariationById(variationId);
+    const { variationId } = await params
+    const existing = await findVariationById(variationId)
     if (!existing) {
-      return apiError("Variation not found", 404);
+      return apiError('Variation not found', 404)
     }
 
-    const product = await findProduct(existing.productId);
+    const product = await findProduct(existing.productId)
     if (!product) {
-      return apiError("Product not found", 404);
+      return apiError('Product not found', 404)
     }
 
-    const body = await request.json();
-    const parseResult = UpdateVariationSchema.safeParse(body);
+    const body = await request.json()
+    const parseResult = UpdateVariationSchema.safeParse(body)
     if (!parseResult.success) {
-      return handleValidationError(parseResult.error);
+      return handleValidationError(parseResult.error)
     }
 
-    const validated = parseResult.data;
+    const validated = parseResult.data
     if (Object.keys(validated).length === 0) {
-      return apiError("No fields to update", 400);
+      return apiError('No fields to update', 400)
     }
 
     if (validated.price !== undefined && validated.price <= 0) {
       // Only colours need positive price; styles must be 0
-      const effectiveType = validated.variationType ?? existing.variationType;
-      if (effectiveType === "colour" && validated.price <= 0) {
-        return apiError("Colour price must be greater than zero", 400);
+      const effectiveType = validated.variationType ?? existing.variationType
+      if (effectiveType === 'colour' && validated.price <= 0) {
+        return apiError('Colour price must be greater than zero', 400)
       }
     }
 
@@ -130,13 +130,13 @@ export async function PUT(
     if (validated.styleId !== undefined && validated.styleId !== null) {
       const parentStyle = await findStyleById(
         validated.styleId,
-        existing.productId,
-      );
+        existing.productId
+      )
       if (!parentStyle) {
         return apiError(
-          "Parent style not found or does not belong to this product",
-          404,
-        );
+          'Parent style not found or does not belong to this product',
+          404
+        )
       }
     }
 
@@ -145,10 +145,10 @@ export async function PUT(
         existing.productId,
         validated.name,
         variationId,
-        existing.name,
-      );
+        existing.name
+      )
       if (nameError) {
-        return apiError(nameError.error, nameError.status);
+        return apiError(nameError.error, nameError.status)
       }
     }
 
@@ -159,53 +159,53 @@ export async function PUT(
         updatedAt: new Date(),
       })
       .where(eq(productVariations.id, variationId))
-      .returning();
+      .returning()
 
-    revalidateTag("products", {});
-    await invalidateProductCaches(existing.productId);
+    revalidateTag('products', {})
+    await invalidateProductCaches(existing.productId)
 
     return apiSuccess({
       variation: serializeVariation(updated),
-    });
+    })
   } catch (error) {
-    return handleApiError(error);
+    return handleApiError(error)
   }
 }
 
 export async function DELETE(
   _request: NextRequest,
-  { params }: { params: Promise<{ variationId: string }> },
+  { params }: { params: Promise<{ variationId: string }> }
 ) {
-  const authCheck = await checkAdminAuth();
+  const authCheck = await checkAdminAuth()
   if (!authCheck.authorized) {
-    return apiError(authCheck.error ?? "Unauthorized", authCheck.status);
+    return apiError(authCheck.error ?? 'Unauthorized', authCheck.status)
   }
 
   try {
-    const { variationId } = await params;
-    const existing = await findVariationById(variationId);
+    const { variationId } = await params
+    const existing = await findVariationById(variationId)
     if (!existing) {
-      return apiError("Variation not found", 404);
+      return apiError('Variation not found', 404)
     }
 
-    const product = await findProduct(existing.productId);
+    const product = await findProduct(existing.productId)
     if (!product) {
-      return apiError("Product not found", 404);
+      return apiError('Product not found', 404)
     }
 
     await drizzleDb
       .update(productVariations)
       .set({ deletedAt: new Date(), updatedAt: new Date() })
-      .where(eq(productVariations.id, variationId));
+      .where(eq(productVariations.id, variationId))
 
-    revalidateTag("products", {});
-    await invalidateProductCaches(existing.productId);
+    revalidateTag('products', {})
+    await invalidateProductCaches(existing.productId)
 
     return apiSuccess({
-      message: "Variation soft-deleted successfully",
+      message: 'Variation soft-deleted successfully',
       id: variationId,
-    });
+    })
   } catch (error) {
-    return handleApiError(error);
+    return handleApiError(error)
   }
 }

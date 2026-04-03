@@ -1,18 +1,18 @@
-"use client";
+'use client'
 
 interface CursorPaginationBarProps {
-  readonly currentPage: number;
-  readonly totalCount: number;
-  readonly pageSize: number;
-  readonly hasMore: boolean;
-  readonly loading: boolean;
-  readonly totalPages: number;
-  readonly onFirst: () => void;
-  readonly onPrev: () => void;
-  readonly onNext: () => void;
-  readonly onLast: () => void;
-  readonly onPageSelect: (page: number) => void;
-  readonly variant?: "warm" | "default";
+  readonly currentPage: number
+  readonly totalCount: number
+  readonly pageSize: number
+  readonly hasMore: boolean
+  readonly loading: boolean
+  readonly totalPages: number
+  readonly onFirst: () => void
+  readonly onPrev: () => void
+  readonly onNext: () => void
+  readonly onLast: () => void
+  readonly onPageSelect: (page: number) => void
+  readonly variant?: 'warm' | 'default'
 }
 
 export const CursorPaginationBar = ({
@@ -27,35 +27,35 @@ export const CursorPaginationBar = ({
   onNext,
   onLast,
   onPageSelect,
-  variant = "default",
+  variant = 'default',
 }: CursorPaginationBarProps) => {
-  const isWarm = variant === "warm";
-  const safeTotalPages = Math.max(1, totalPages);
-  const canGoBack = currentPage > 1;
-  const canGoForward = hasMore && currentPage < safeTotalPages;
-  const rangeStart = totalCount === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const isWarm = variant === 'warm'
+  const safeTotalPages = Math.max(1, totalPages)
+  const canGoBack = currentPage > 1
+  const canGoForward = hasMore && currentPage < safeTotalPages
+  const rangeStart = totalCount === 0 ? 0 : (currentPage - 1) * pageSize + 1
   const rangeEnd =
-    totalCount === 0 ? 0 : Math.min(currentPage * pageSize, totalCount);
+    totalCount === 0 ? 0 : Math.min(currentPage * pageSize, totalCount)
 
   const borderClass = isWarm
-    ? "border-[var(--border-warm)]"
-    : "border-gray-200 dark:border-gray-700";
+    ? 'border-[var(--border-warm)]'
+    : 'border-gray-200 dark:border-gray-700'
 
   const pageTextClass = isWarm
-    ? "text-[var(--text-muted)]"
-    : "text-gray-600 dark:text-gray-400";
+    ? 'text-[var(--text-muted)]'
+    : 'text-gray-600 dark:text-gray-400'
 
   const prevClass = isWarm
-    ? "bg-[var(--surface)] border border-[var(--border-warm)] text-[var(--text-secondary)] rounded-full hover:bg-[var(--border-warm)]"
-    : "bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600";
+    ? 'bg-[var(--surface)] border border-[var(--border-warm)] text-[var(--text-secondary)] rounded-full hover:bg-[var(--border-warm)]'
+    : 'bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600'
 
   const nextClass = isWarm
-    ? "bg-[var(--accent-rose)] text-white rounded-full hover:opacity-90"
-    : "bg-blue-600 text-white rounded-md hover:bg-blue-700";
+    ? 'bg-[var(--accent-rose)] text-white rounded-full hover:opacity-90'
+    : 'bg-blue-600 text-white rounded-md hover:bg-blue-700'
 
   const jumpClass = isWarm
-    ? "border border-[var(--border-warm)] bg-[var(--surface)] text-[var(--text-secondary)] rounded-full"
-    : "border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-md";
+    ? 'border border-[var(--border-warm)] bg-[var(--surface)] text-[var(--text-secondary)] rounded-full'
+    : 'border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-md'
 
   return (
     <div
@@ -70,9 +70,9 @@ export const CursorPaginationBar = ({
           <select
             value={currentPage}
             onChange={(event) => {
-              const page = Number.parseInt(event.target.value, 10);
+              const page = Number.parseInt(event.target.value, 10)
               if (Number.isFinite(page)) {
-                onPageSelect(page);
+                onPageSelect(page)
               }
             }}
             disabled={loading || safeTotalPages <= 1}
@@ -80,12 +80,12 @@ export const CursorPaginationBar = ({
             aria-label="Jump to page"
           >
             {Array.from({ length: safeTotalPages }, (_, index) => {
-              const page = index + 1;
+              const page = index + 1
               return (
                 <option key={page} value={page}>
                   Page {page} of {safeTotalPages}
                 </option>
-              );
+              )
             })}
           </select>
         </label>
@@ -122,5 +122,5 @@ export const CursorPaginationBar = ({
         </button>
       </div>
     </div>
-  );
-};
+  )
+}

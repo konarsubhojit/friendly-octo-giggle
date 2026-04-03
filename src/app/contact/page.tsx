@@ -1,11 +1,11 @@
-import Footer from "@/components/layout/Footer";
-import ContactForm from "./ContactForm";
+import Footer from '@/components/layout/Footer'
+import ContactForm from './ContactForm'
 
 export const metadata = {
-  title: "Contact Us | The Kiyon Store",
+  title: 'Contact Us | The Kiyon Store',
   description:
     "Get in touch with The Kiyon Store support team. We'd love to hear from you.",
-};
+}
 
 function ContactInfoSection() {
   return (
@@ -86,7 +86,7 @@ function ContactInfoSection() {
         </p>
       </div>
     </div>
-  );
+  )
 }
 
 export default function ContactPage() {
@@ -112,5 +112,5 @@ export default function ContactPage() {
       </main>
       <Footer />
     </div>
-  );
+  )
 }

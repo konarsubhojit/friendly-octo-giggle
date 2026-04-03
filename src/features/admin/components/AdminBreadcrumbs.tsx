@@ -1,12 +1,12 @@
-import Link from "next/link";
+import Link from 'next/link'
 
 export interface BreadcrumbItem {
-  readonly label: string;
-  readonly href?: string;
+  readonly label: string
+  readonly href?: string
 }
 
 interface AdminBreadcrumbsProps {
-  readonly items: BreadcrumbItem[];
+  readonly items: BreadcrumbItem[]
 }
 
 export default function AdminBreadcrumbs({ items }: AdminBreadcrumbsProps) {
@@ -14,7 +14,7 @@ export default function AdminBreadcrumbs({ items }: AdminBreadcrumbsProps) {
     <nav aria-label="Breadcrumb">
       <ol className="flex flex-wrap items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
         {items.map((item, index) => {
-          const isLast = index === items.length - 1;
+          const isLast = index === items.length - 1
 
           return (
             <li
@@ -32,10 +32,10 @@ export default function AdminBreadcrumbs({ items }: AdminBreadcrumbsProps) {
                 <span
                   className={
                     isLast
-                      ? "rounded-full bg-slate-950 px-3 py-1 font-medium text-white dark:bg-sky-500 dark:text-slate-950"
+                      ? 'rounded-full bg-slate-950 px-3 py-1 font-medium text-white dark:bg-sky-500 dark:text-slate-950'
                       : undefined
                   }
-                  aria-current={isLast ? "page" : undefined}
+                  aria-current={isLast ? 'page' : undefined}
                 >
                   {item.label}
                 </span>
@@ -58,9 +58,9 @@ export default function AdminBreadcrumbs({ items }: AdminBreadcrumbsProps) {
                 </svg>
               )}
             </li>
-          );
+          )
         })}
       </ol>
     </nav>
-  );
+  )
 }

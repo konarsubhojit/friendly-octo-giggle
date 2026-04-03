@@ -1,104 +1,104 @@
-"use client";
+'use client'
 
-import { useId, useMemo, useState, useTransition, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
-import { useSelector, useDispatch } from "react-redux";
-import Link from "next/link";
-import toast from "react-hot-toast";
+import { useId, useMemo, useState, useTransition, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
+import { useSelector, useDispatch } from 'react-redux'
+import Link from 'next/link'
+import toast from 'react-hot-toast'
 import {
   clearCart,
   selectCart,
   fetchCart,
-} from "@/features/cart/store/cartSlice";
-import { apiClient } from "@/lib/api-client";
-import type { AppDispatch } from "@/lib/store";
+} from '@/features/cart/store/cartSlice'
+import { apiClient } from '@/lib/api-client'
+import type { AppDispatch } from '@/lib/store'
 import type {
   CheckoutEnqueueResponse,
   CheckoutRequestStatusResponse,
-} from "@/lib/types";
+} from '@/lib/types'
 import {
   buildCheckoutPricingSummaryFromLineItems,
   buildCheckoutSummaryLineItems,
-} from "@/features/orders/services/order-summary";
+} from '@/features/orders/services/order-summary'
 import {
   CHECKOUT_POLICIES,
   CHECKOUT_POLICY_ACKNOWLEDGMENT,
   CHECKOUT_POLICY_ERROR_MESSAGE,
   SUPPORT_EMAIL,
   type CheckoutPolicySection,
-} from "@/lib/constants/checkout-policies";
-import { CartPricingSummary } from "@/features/cart/components/CartPricingSummary";
-import { GradientButton } from "@/components/ui/GradientButton";
-import { GradientHeading } from "@/components/ui/GradientHeading";
-import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
-import { useCurrency } from "@/contexts/CurrencyContext";
+} from '@/lib/constants/checkout-policies'
+import { CartPricingSummary } from '@/features/cart/components/CartPricingSummary'
+import { GradientButton } from '@/components/ui/GradientButton'
+import { GradientHeading } from '@/components/ui/GradientHeading'
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
+import { useCurrency } from '@/contexts/CurrencyContext'
 
-const CHECKOUT_POLL_INTERVAL_MS = 1500;
-const CHECKOUT_POLL_MAX_ATTEMPTS = 40;
-const PENDING_CHECKOUT_KEY = "pending_checkout";
+const CHECKOUT_POLL_INTERVAL_MS = 1500
+const CHECKOUT_POLL_MAX_ATTEMPTS = 40
+const PENDING_CHECKOUT_KEY = 'pending_checkout'
 
 interface PendingCheckout {
-  address: string;
-  customizationNotes: Record<string, string>;
+  address: string
+  customizationNotes: Record<string, string>
 }
 
 const delay = (ms: number) =>
   new Promise<void>((resolve) => {
-    globalThis.setTimeout(resolve, ms);
-  });
+    globalThis.setTimeout(resolve, ms)
+  })
 
 function readPendingCheckout(): PendingCheckout | null {
-  if (typeof window === "undefined") return null;
+  if (typeof window === 'undefined') return null
   try {
-    const raw = sessionStorage.getItem(PENDING_CHECKOUT_KEY);
-    return raw ? (JSON.parse(raw) as PendingCheckout) : null;
+    const raw = sessionStorage.getItem(PENDING_CHECKOUT_KEY)
+    return raw ? (JSON.parse(raw) as PendingCheckout) : null
   } catch {
-    return null;
+    return null
   }
 }
 
 function clearPendingCheckout(): void {
-  if (typeof window === "undefined") return;
-  sessionStorage.removeItem(PENDING_CHECKOUT_KEY);
+  if (typeof window === 'undefined') return
+  sessionStorage.removeItem(PENDING_CHECKOUT_KEY)
 }
 
 const SECTION_CLASS =
-  "rounded-2xl border border-[var(--border-warm)] bg-[var(--surface)] p-5 sm:p-6";
+  'rounded-2xl border border-[var(--border-warm)] bg-[var(--surface)] p-5 sm:p-6'
 
 export default function CheckoutReviewPage() {
-  const router = useRouter();
-  const { data: session, status } = useSession();
-  const dispatch = useDispatch<AppDispatch>();
-  const cart = useSelector(selectCart);
-  const { formatPrice } = useCurrency();
+  const router = useRouter()
+  const { data: session, status } = useSession()
+  const dispatch = useDispatch<AppDispatch>()
+  const cart = useSelector(selectCart)
+  const { formatPrice } = useCurrency()
 
-  const [isPending, startTransition] = useTransition();
-  const [isAcknowledged, setIsAcknowledged] = useState(false);
-  const [checkoutMessage, setCheckoutMessage] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition()
+  const [isAcknowledged, setIsAcknowledged] = useState(false)
+  const [checkoutMessage, setCheckoutMessage] = useState<string | null>(null)
   const [pendingCheckout, setPendingCheckout] =
-    useState<PendingCheckout | null>(null);
-  const [isHydrated, setIsHydrated] = useState(false);
+    useState<PendingCheckout | null>(null)
+  const [isHydrated, setIsHydrated] = useState(false)
 
-  const acknowledgmentId = useId();
+  const acknowledgmentId = useId()
 
   useEffect(() => {
-    const data = readPendingCheckout();
+    const data = readPendingCheckout()
     if (!data) {
-      router.replace("/cart");
-      return;
+      router.replace('/cart')
+      return
     }
-    setPendingCheckout(data);
-    setIsHydrated(true);
-  }, [router]);
+    setPendingCheckout(data)
+    setIsHydrated(true)
+  }, [router])
 
   useEffect(() => {
-    if (status === "authenticated") {
-      dispatch(fetchCart());
+    if (status === 'authenticated') {
+      dispatch(fetchCart())
     }
-  }, [dispatch, status]);
+  }, [dispatch, status])
 
-  const cartItems = useMemo(() => cart?.items ?? [], [cart?.items]);
+  const cartItems = useMemo(() => cart?.items ?? [], [cart?.items])
 
   const checkoutItems = useMemo(
     () =>
@@ -106,68 +106,68 @@ export default function CheckoutReviewPage() {
         ...item,
         customizationNote: pendingCheckout?.customizationNotes[item.id] ?? null,
       })),
-    [cartItems, pendingCheckout],
-  );
+    [cartItems, pendingCheckout]
+  )
 
   const lineItems = useMemo(
     () => buildCheckoutSummaryLineItems(checkoutItems),
-    [checkoutItems],
-  );
+    [checkoutItems]
+  )
 
   const pricingSummary = useMemo(
     () => buildCheckoutPricingSummaryFromLineItems(lineItems),
-    [lineItems],
-  );
+    [lineItems]
+  )
 
   const policyUnavailable =
     lineItems.length === 0 ||
     Object.values(CHECKOUT_POLICIES).some(
-      (section) => section.items.length === 0,
-    );
+      (section) => section.items.length === 0
+    )
 
   const pollCheckoutRequest = async (
-    checkoutRequestId: string,
+    checkoutRequestId: string
   ): Promise<CheckoutRequestStatusResponse> => {
     for (let attempt = 0; attempt < CHECKOUT_POLL_MAX_ATTEMPTS; attempt++) {
       const checkoutStatus = await apiClient.get<CheckoutRequestStatusResponse>(
-        `/api/checkout/${checkoutRequestId}`,
-      );
+        `/api/checkout/${checkoutRequestId}`
+      )
 
-      if (checkoutStatus.status === "COMPLETED") {
-        return checkoutStatus;
+      if (checkoutStatus.status === 'COMPLETED') {
+        return checkoutStatus
       }
 
-      if (checkoutStatus.status === "FAILED") {
-        throw new Error(checkoutStatus.error ?? "Checkout failed");
+      if (checkoutStatus.status === 'FAILED') {
+        throw new Error(checkoutStatus.error ?? 'Checkout failed')
       }
 
-      setCheckoutMessage("Processing your order...");
+      setCheckoutMessage('Processing your order...')
 
-      await delay(CHECKOUT_POLL_INTERVAL_MS);
+      await delay(CHECKOUT_POLL_INTERVAL_MS)
     }
 
     throw new Error(
-      "Checkout is taking longer than expected. Please check your orders shortly.",
-    );
-  };
+      'Checkout is taking longer than expected. Please check your orders shortly.'
+    )
+  }
 
   const handleConfirm = () => {
-    if (!pendingCheckout) return;
-    const sessionUser = session?.user;
+    if (!pendingCheckout) return
+    const sessionUser = session?.user
 
     if (!sessionUser?.email) {
-      router.push("/auth/signin?callbackUrl=/checkout/review");
-      return;
+      router.push('/auth/signin?callbackUrl=/checkout/review')
+      return
     }
 
     startTransition(async () => {
       try {
-        setCheckoutMessage("Submitting your order...");
+        setCheckoutMessage('Submitting your order...')
 
         const enqueueResult = await apiClient.post<CheckoutEnqueueResponse>(
-          "/api/checkout",
+          '/api/checkout',
           {
-            customerName: sessionUser.name ?? "Customer",
+            customerName: sessionUser.name ?? 'Customer',
             customerEmail: sessionUser.email,
             customerAddress: pendingCheckout.address.trim(),
             items: cartItems.map((item) => ({
@@ -177,44 +177,42 @@ export default function CheckoutReviewPage() {
               customizationNote:
                 pendingCheckout.customizationNotes[item.id] ?? undefined,
             })),
-          },
-        );
+          }
+        )
 
         const completedCheckout = await pollCheckoutRequest(
-          enqueueResult.checkoutRequestId,
-        );
+          enqueueResult.checkoutRequestId
+        )
 
         if (!completedCheckout.orderId) {
-          throw new Error("Checkout completed without an order reference.");
+          throw new Error('Checkout completed without an order reference.')
         }
 
-        await dispatch(clearCart()).unwrap();
-        clearPendingCheckout();
-        toast.success(
-          `Order ${completedCheckout.orderId} placed successfully!`,
-        );
-        router.push("/orders");
+        await dispatch(clearCart()).unwrap()
+        clearPendingCheckout()
+        toast.success(`Order ${completedCheckout.orderId} placed successfully!`)
+        router.push('/orders')
       } catch (error) {
         toast.error(
-          error instanceof Error ? error.message : "Failed to place order",
-        );
+          error instanceof Error ? error.message : 'Failed to place order'
+        )
       } finally {
-        setCheckoutMessage(null);
+        setCheckoutMessage(null)
       }
-    });
-  };
+    })
+  }
 
-  if (!isHydrated || status === "loading") {
+  if (!isHydrated || status === 'loading') {
     return (
       <div className="min-h-screen bg-warm-gradient flex items-center justify-center">
         <LoadingSpinner />
       </div>
-    );
+    )
   }
 
   if (!session?.user) {
-    router.replace("/auth/signin?callbackUrl=/checkout/review");
-    return null;
+    router.replace('/auth/signin?callbackUrl=/checkout/review')
+    return null
   }
 
   return (
@@ -269,7 +267,7 @@ export default function CheckoutReviewPage() {
                       ))}
                     </ul>
                   </div>
-                ),
+                )
               )}
             </div>
             <p className="mt-5 text-sm text-[var(--text-secondary)]">
@@ -299,7 +297,7 @@ export default function CheckoutReviewPage() {
                   <div className="space-y-3">
                     {lineItems.map((item) => (
                       <article
-                        key={`${item.name}-${item.variationLabel ?? "default"}`}
+                        key={`${item.name}-${item.variationLabel ?? 'default'}`}
                         className="rounded-2xl border border-[var(--border-warm)] bg-[var(--surface-raised)] px-4 py-3"
                       >
                         <div className="flex items-start justify-between gap-4">
@@ -338,7 +336,7 @@ export default function CheckoutReviewPage() {
                     subtotal={formatPrice(pricingSummary.subtotal)}
                     shipping={
                       pricingSummary.shippingAmount === 0
-                        ? "Free"
+                        ? 'Free'
                         : formatPrice(pricingSummary.shippingAmount)
                     }
                     total={formatPrice(pricingSummary.total)}
@@ -386,7 +384,7 @@ export default function CheckoutReviewPage() {
                 onClick={handleConfirm}
                 disabled={!isAcknowledged || isPending || policyUnavailable}
                 loading={isPending}
-                loadingText={checkoutMessage ?? "Processing..."}
+                loadingText={checkoutMessage ?? 'Processing...'}
               >
                 Confirm and Place Order
               </GradientButton>
@@ -395,5 +393,5 @@ export default function CheckoutReviewPage() {
         </div>
       </main>
     </div>
-  );
+  )
 }

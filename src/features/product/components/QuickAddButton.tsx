@@ -1,64 +1,64 @@
-"use client";
+'use client'
 
-import { useState, useCallback } from "react";
-import type { MouseEvent } from "react";
-import { useDispatch } from "react-redux";
-import { useSession } from "next-auth/react";
-import type { AppDispatch } from "@/lib/store";
-import { addToCart } from "@/features/cart/store/cartSlice";
-import { addPendingCartItem } from "@/features/cart/services/pending-cart";
-import toast from "react-hot-toast";
-import type { Product } from "@/lib/types";
+import { useState, useCallback } from 'react'
+import type { MouseEvent } from 'react'
+import { useDispatch } from 'react-redux'
+import { useSession } from 'next-auth/react'
+import type { AppDispatch } from '@/lib/store'
+import { addToCart } from '@/features/cart/store/cartSlice'
+import { addPendingCartItem } from '@/features/cart/services/pending-cart'
+import toast from 'react-hot-toast'
+import type { Product } from '@/lib/types'
 
-type QuickAddProduct = Pick<Product, "id" | "name" | "stock">;
+type QuickAddProduct = Pick<Product, 'id' | 'name' | 'stock'>
 
 export function QuickAddButton({
   product,
 }: {
-  readonly product: QuickAddProduct;
+  readonly product: QuickAddProduct
 }) {
-  const dispatch = useDispatch<AppDispatch>();
-  const { status } = useSession();
-  const [adding, setAdding] = useState(false);
+  const dispatch = useDispatch<AppDispatch>()
+  const { status } = useSession()
+  const [adding, setAdding] = useState(false)
 
   const handleQuickAdd = useCallback(
     async (e: MouseEvent<HTMLButtonElement>) => {
-      e.preventDefault();
-      e.stopPropagation();
-      setAdding(true);
+      e.preventDefault()
+      e.stopPropagation()
+      setAdding(true)
       try {
-        if (status !== "authenticated") {
+        if (status !== 'authenticated') {
           addPendingCartItem({
             productId: product.id,
             variationId: null,
             quantity: 1,
-          });
-          toast.success(`${product.name} saved! Sign in to checkout.`);
-          return;
+          })
+          toast.success(`${product.name} saved! Sign in to checkout.`)
+          return
         }
 
         const result = await dispatch(
-          addToCart({ productId: product.id, quantity: 1 }),
-        ).unwrap();
+          addToCart({ productId: product.id, quantity: 1 })
+        ).unwrap()
         if (result.warning) {
-          toast(result.warning, { icon: "⚠️" });
+          toast(result.warning, { icon: '⚠️' })
         } else {
-          toast.success(`${product.name} added to cart!`);
+          toast.success(`${product.name} added to cart!`)
         }
       } catch (err) {
         toast.error(
-          typeof err === "string"
+          typeof err === 'string'
             ? err
-            : "Failed to add to cart. Please try again.",
-        );
+            : 'Failed to add to cart. Please try again.'
+        )
       } finally {
-        setAdding(false);
+        setAdding(false)
       }
     },
-    [dispatch, product, status],
-  );
+    [dispatch, product, status]
+  )
 
-  if (product.stock === 0) return null;
+  if (product.stock === 0) return null
 
   return (
     <button
@@ -105,5 +105,5 @@ export function QuickAddButton({
         </svg>
       )}
     </button>
-  );
+  )
 }

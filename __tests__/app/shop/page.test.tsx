@@ -1,23 +1,23 @@
-import { render, screen } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { render, screen } from '@testing-library/react'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const mockFindAllMinimal = vi.fn();
-const mockFindBestsellers = vi.fn();
-const mockFindMinimalByIds = vi.fn();
-const mockSearchProductIdsCached = vi.fn();
-const mockCategoryOrderBy = vi.fn();
-const mockCategoryWhere = vi.fn(() => ({ orderBy: mockCategoryOrderBy }));
-const mockCategoryFrom = vi.fn(() => ({ where: mockCategoryWhere }));
-const mockCategorySelect = vi.fn(() => ({ from: mockCategoryFrom }));
+const mockFindAllMinimal = vi.fn()
+const mockFindBestsellers = vi.fn()
+const mockFindMinimalByIds = vi.fn()
+const mockSearchProductIdsCached = vi.fn()
+const mockCategoryOrderBy = vi.fn()
+const mockCategoryWhere = vi.fn(() => ({ orderBy: mockCategoryOrderBy }))
+const mockCategoryFrom = vi.fn(() => ({ where: mockCategoryWhere }))
+const mockCategorySelect = vi.fn(() => ({ from: mockCategoryFrom }))
 
-vi.mock("next/image", () => ({
+vi.mock('next/image', () => ({
   default: ({
-    alt = "",
+    alt = '',
     ...props
   }: React.ImgHTMLAttributes<HTMLImageElement>) => <img alt={alt} {...props} />,
-}));
+}))
 
-vi.mock("next/link", () => ({
+vi.mock('next/link', () => ({
   default: ({
     href,
     children,
@@ -27,17 +27,17 @@ vi.mock("next/link", () => ({
       {children}
     </a>
   ),
-}));
+}))
 
-vi.mock("@/components/layout/Footer", () => ({
+vi.mock('@/components/layout/Footer', () => ({
   default: () => <div>Footer</div>,
-}));
+}))
 
-vi.mock("@/components/sections/BestsellersScroller", () => ({
+vi.mock('@/components/sections/BestsellersScroller', () => ({
   BestsellersScroller: ({
     bestsellers,
   }: {
-    bestsellers: Array<{ id: string; name: string }>;
+    bestsellers: Array<{ id: string; name: string }>
   }) => (
     <div>
       {bestsellers.map((p) => (
@@ -45,18 +45,18 @@ vi.mock("@/components/sections/BestsellersScroller", () => ({
       ))}
     </div>
   ),
-}));
+}))
 
-vi.mock("@/features/product/components/ProductGrid", () => ({
+vi.mock('@/features/product/components/ProductGrid', () => ({
   __esModule: true,
   default: ({
     products,
     hasNextPage,
     batchSize,
   }: {
-    products: Array<{ name: string }>;
-    hasNextPage: boolean;
-    batchSize: number;
+    products: Array<{ name: string }>
+    hasNextPage: boolean
+    batchSize: number
   }) => (
     <div>
       <div>Grid count: {products.length}</div>
@@ -67,9 +67,9 @@ vi.mock("@/features/product/components/ProductGrid", () => ({
       ))}
     </div>
   ),
-}));
+}))
 
-vi.mock("@/lib/db", () => ({
+vi.mock('@/lib/db', () => ({
   db: {
     products: {
       findAllMinimal: mockFindAllMinimal,
@@ -80,77 +80,77 @@ vi.mock("@/lib/db", () => ({
   drizzleDb: {
     select: mockCategorySelect,
   },
-}));
+}))
 
-vi.mock("@/lib/cache", () => ({
+vi.mock('@/lib/cache', () => ({
   cacheCategoriesList: vi.fn(async (fetcher: () => Promise<unknown>) =>
-    fetcher(),
+    fetcher()
   ),
   cacheProductsBestsellers: vi.fn(async (fetcher: () => Promise<unknown>) =>
-    fetcher(),
+    fetcher()
   ),
-}));
+}))
 
-vi.mock("@/lib/search", () => ({
+vi.mock('@/lib/search', () => ({
   searchProductIdsCached: mockSearchProductIdsCached,
-}));
+}))
 
-vi.mock("@/lib/logger", () => ({
+vi.mock('@/lib/logger', () => ({
   logError: vi.fn(),
-}));
+}))
 
-describe("app/shop/page", () => {
+describe('app/shop/page', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-    vi.useRealTimers();
-    mockFindBestsellers.mockResolvedValue([]);
-    mockCategoryOrderBy.mockResolvedValue([{ name: "Flowers" }]);
-    mockSearchProductIdsCached.mockResolvedValue(null);
-    mockFindAllMinimal.mockResolvedValue([]);
-  });
+    vi.clearAllMocks()
+    vi.useRealTimers()
+    mockFindBestsellers.mockResolvedValue([])
+    mockCategoryOrderBy.mockResolvedValue([{ name: 'Flowers' }])
+    mockSearchProductIdsCached.mockResolvedValue(null)
+    mockFindAllMinimal.mockResolvedValue([])
+  })
 
-  it("uses cached Upstash ids for shop search before falling back to database search", async () => {
-    mockSearchProductIdsCached.mockResolvedValue(["prod002", "prod001"]);
+  it('uses cached Upstash ids for shop search before falling back to database search', async () => {
+    mockSearchProductIdsCached.mockResolvedValue(['prod002', 'prod001'])
     mockFindMinimalByIds.mockResolvedValue([
       {
-        id: "prod001",
-        name: "Rose Bouquet",
-        description: "desc",
+        id: 'prod001',
+        name: 'Rose Bouquet',
+        description: 'desc',
         price: 10,
         stock: 1,
-        category: "Flowers",
-        image: "/rose.jpg",
+        category: 'Flowers',
+        image: '/rose.jpg',
       },
       {
-        id: "prod002",
-        name: "Lily Basket",
-        description: "desc",
+        id: 'prod002',
+        name: 'Lily Basket',
+        description: 'desc',
         price: 12,
         stock: 2,
-        category: "Flowers",
-        image: "/lily.jpg",
+        category: 'Flowers',
+        image: '/lily.jpg',
       },
-    ]);
+    ])
 
-    const { default: ShopPage } = await import("@/app/shop/page");
+    const { default: ShopPage } = await import('@/app/shop/page')
     const view = await ShopPage({
-      searchParams: Promise.resolve({ q: "flowers" }),
-    });
+      searchParams: Promise.resolve({ q: 'flowers' }),
+    })
 
-    render(view);
+    render(view)
 
-    expect(mockSearchProductIdsCached).toHaveBeenCalledWith("flowers", {
+    expect(mockSearchProductIdsCached).toHaveBeenCalledWith('flowers', {
       category: undefined,
       limit: 25,
-    });
+    })
     expect(mockFindMinimalByIds).toHaveBeenCalledWith(
-      ["prod002", "prod001"],
-      undefined,
-    );
-    expect(mockFindAllMinimal).not.toHaveBeenCalled();
-    expect(screen.getByText("Lily Basket")).toBeInTheDocument();
-    expect(screen.getByText("Rose Bouquet")).toBeInTheDocument();
-    expect(screen.getByText("Grid count: 2")).toBeInTheDocument();
-    expect(screen.getByText("Grid batch: 20")).toBeInTheDocument();
-  }, 15000);
-});
+      ['prod002', 'prod001'],
+      undefined
+    )
+    expect(mockFindAllMinimal).not.toHaveBeenCalled()
+    expect(screen.getByText('Lily Basket')).toBeInTheDocument()
+    expect(screen.getByText('Rose Bouquet')).toBeInTheDocument()
+    expect(screen.getByText('Grid count: 2')).toBeInTheDocument()
+    expect(screen.getByText('Grid batch: 20')).toBeInTheDocument()
+  }, 15000)
+})

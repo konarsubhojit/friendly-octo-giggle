@@ -10,7 +10,7 @@ export default function OrdersLoading() {
 
         {/* Order cards skeleton */}
         <div className="space-y-4">
-          {(["o1", "o2", "o3"] as const).map((id) => (
+          {(['o1', 'o2', 'o3'] as const).map((id) => (
             <div
               key={id}
               className="p-6 bg-[var(--surface)] rounded-xl border border-[var(--border-warm)] space-y-3"
@@ -33,5 +33,5 @@ export default function OrdersLoading() {
         </div>
       </main>
     </div>
-  );
+  )
 }

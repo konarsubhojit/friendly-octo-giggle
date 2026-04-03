@@ -1,9 +1,9 @@
-"use client";
+'use client'
 
-import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 
 export function LoadingOverlay({
-  message = "Loading...",
+  message = 'Loading...',
 }: Readonly<{ message?: string }>) {
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
@@ -14,5 +14,5 @@ export function LoadingOverlay({
         </p>
       </div>
     </div>
-  );
+  )
 }

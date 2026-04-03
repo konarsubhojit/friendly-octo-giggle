@@ -1,4 +1,4 @@
-"use client";
+'use client'
 
 import {
   memo,
@@ -7,85 +7,85 @@ import {
   useEffect,
   useRef,
   useState,
-} from "react";
-import Link from "next/link";
-import Image from "next/image";
-import { Product } from "@/lib/types";
-import { useCurrency } from "@/contexts/CurrencyContext";
-import { GradientHeading } from "@/components/ui/GradientHeading";
-import { EmptyState } from "@/components/ui/EmptyState";
-import { StockBadge } from "@/features/product/components/StockBadge";
-import { QuickAddButton } from "@/features/product/components/QuickAddButton";
-import { FlowerAccent } from "@/components/ui/DecorativeElements";
-import { WishlistButton } from "@/features/wishlist/components/WishlistButton";
+} from 'react'
+import Link from 'next/link'
+import Image from 'next/image'
+import { Product } from '@/lib/types'
+import { useCurrency } from '@/contexts/CurrencyContext'
+import { GradientHeading } from '@/components/ui/GradientHeading'
+import { EmptyState } from '@/components/ui/EmptyState'
+import { StockBadge } from '@/features/product/components/StockBadge'
+import { QuickAddButton } from '@/features/product/components/QuickAddButton'
+import { FlowerAccent } from '@/components/ui/DecorativeElements'
+import { WishlistButton } from '@/features/wishlist/components/WishlistButton'
 
 export type ProductGridItem = Pick<
   Product,
-  "id" | "name" | "description" | "price" | "image" | "stock" | "category"
->;
+  'id' | 'name' | 'description' | 'price' | 'image' | 'stock' | 'category'
+>
 
 interface ProductGridProps {
-  readonly products: ProductGridItem[];
-  readonly categories?: string[];
-  readonly search?: string;
-  readonly selectedCategory?: string;
-  readonly hasNextPage?: boolean;
-  readonly batchSize?: number;
+  readonly products: ProductGridItem[]
+  readonly categories?: string[]
+  readonly search?: string
+  readonly selectedCategory?: string
+  readonly hasNextPage?: boolean
+  readonly batchSize?: number
 }
 
 interface ProductCardProps {
-  readonly product: ProductGridItem;
-  readonly formatPrice: (amount: number) => string;
-  readonly index: number;
+  readonly product: ProductGridItem
+  readonly formatPrice: (amount: number) => string
+  readonly index: number
 }
 
 interface ProductImageAreaProps {
-  readonly product: ProductGridItem;
-  readonly eagerLoad: boolean;
+  readonly product: ProductGridItem
+  readonly eagerLoad: boolean
 }
 
-const DEFAULT_CATEGORY = "All";
-const DEFAULT_BATCH_SIZE = 20;
+const DEFAULT_CATEGORY = 'All'
+const DEFAULT_BATCH_SIZE = 20
 
 const createProductsApiHref = (
   offset: number,
   limit: number,
   search: string,
-  selectedCategory: string,
+  selectedCategory: string
 ) => {
-  const params = new URLSearchParams();
+  const params = new URLSearchParams()
 
   if (search) {
-    params.set("q", search);
+    params.set('q', search)
   }
 
   if (selectedCategory !== DEFAULT_CATEGORY) {
-    params.set("category", selectedCategory);
+    params.set('category', selectedCategory)
   }
 
-  params.set("limit", String(limit));
-  params.set("offset", String(offset));
+  params.set('limit', String(limit))
+  params.set('offset', String(offset))
 
-  const queryString = params.toString();
-  return queryString ? `/api/products?${queryString}` : "/api/products";
-};
+  const queryString = params.toString()
+  return queryString ? `/api/products?${queryString}` : '/api/products'
+}
 
 const mergeProducts = (
   existingProducts: ProductGridItem[],
-  nextProducts: ProductGridItem[],
+  nextProducts: ProductGridItem[]
 ) => {
   const productsById = new Map(
-    existingProducts.map((product) => [product.id, product]),
-  );
+    existingProducts.map((product) => [product.id, product])
+  )
 
   for (const product of nextProducts) {
     if (!productsById.has(product.id)) {
-      productsById.set(product.id, product);
+      productsById.set(product.id, product)
     }
   }
 
-  return Array.from(productsById.values());
-};
+  return Array.from(productsById.values())
+}
 
 const ProductImageArea = memo(
   ({ product, eagerLoad }: ProductImageAreaProps) => {
@@ -104,11 +104,11 @@ const ProductImageArea = memo(
           <StockBadge stock={product.stock} />
         </div>
       </div>
-    );
-  },
-);
+    )
+  }
+)
 
-ProductImageArea.displayName = "ProductImageArea";
+ProductImageArea.displayName = 'ProductImageArea'
 
 const ProductCard = memo(
   ({ product, formatPrice, index }: ProductCardProps) => {
@@ -144,64 +144,64 @@ const ProductCard = memo(
         </Link>
         <QuickAddButton product={product} />
       </div>
-    );
-  },
-);
+    )
+  }
+)
 
-ProductCard.displayName = "ProductCard";
+ProductCard.displayName = 'ProductCard'
 
 const ProductGrid = ({
   products,
   categories = [],
-  search = "",
+  search = '',
   selectedCategory = DEFAULT_CATEGORY,
   hasNextPage = false,
   batchSize = DEFAULT_BATCH_SIZE,
 }: ProductGridProps) => {
-  const { formatPrice } = useCurrency();
-  const [visibleProducts, setVisibleProducts] = useState(products);
-  const [canLoadMore, setCanLoadMore] = useState(hasNextPage);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const sentinelRef = useRef<HTMLDivElement | null>(null);
-  const isLoadingRef = useRef(false);
-  const canLoadMoreRef = useRef(hasNextPage);
-  const visibleCountRef = useRef(products.length);
-  const searchRef = useRef(search);
-  const categoryRef = useRef(selectedCategory);
-  const batchSizeRef = useRef(batchSize);
+  const { formatPrice } = useCurrency()
+  const [visibleProducts, setVisibleProducts] = useState(products)
+  const [canLoadMore, setCanLoadMore] = useState(hasNextPage)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const sentinelRef = useRef<HTMLDivElement | null>(null)
+  const isLoadingRef = useRef(false)
+  const canLoadMoreRef = useRef(hasNextPage)
+  const visibleCountRef = useRef(products.length)
+  const searchRef = useRef(search)
+  const categoryRef = useRef(selectedCategory)
+  const batchSizeRef = useRef(batchSize)
 
-  const categoryFilters = [DEFAULT_CATEGORY, ...categories];
+  const categoryFilters = [DEFAULT_CATEGORY, ...categories]
 
   const emptyMessage =
     search || selectedCategory !== DEFAULT_CATEGORY
-      ? "Try adjusting your search or category filter."
-      : undefined;
+      ? 'Try adjusting your search or category filter.'
+      : undefined
 
   useEffect(() => {
-    setVisibleProducts(products);
-    setCanLoadMore(hasNextPage);
-    canLoadMoreRef.current = hasNextPage;
-    visibleCountRef.current = products.length;
-    setIsLoadingMore(false);
-    isLoadingRef.current = false;
-    setLoadError(null);
-  }, [products, hasNextPage, search, selectedCategory]);
+    setVisibleProducts(products)
+    setCanLoadMore(hasNextPage)
+    canLoadMoreRef.current = hasNextPage
+    visibleCountRef.current = products.length
+    setIsLoadingMore(false)
+    isLoadingRef.current = false
+    setLoadError(null)
+  }, [products, hasNextPage, search, selectedCategory])
 
   useEffect(() => {
-    searchRef.current = search;
-    categoryRef.current = selectedCategory;
-    batchSizeRef.current = batchSize;
-  }, [search, selectedCategory, batchSize]);
+    searchRef.current = search
+    categoryRef.current = selectedCategory
+    batchSizeRef.current = batchSize
+  }, [search, selectedCategory, batchSize])
 
   const loadMore = useCallback(async () => {
-    if (isLoadingRef.current || !canLoadMoreRef.current) return;
+    if (isLoadingRef.current || !canLoadMoreRef.current) return
 
-    isLoadingRef.current = true;
-    setIsLoadingMore(true);
-    setLoadError(null);
+    isLoadingRef.current = true
+    setIsLoadingMore(true)
+    setLoadError(null)
 
-    const currentOffset = visibleCountRef.current;
+    const currentOffset = visibleCountRef.current
 
     try {
       const response = await fetch(
@@ -209,65 +209,65 @@ const ProductGrid = ({
           currentOffset,
           batchSizeRef.current,
           searchRef.current,
-          categoryRef.current,
+          categoryRef.current
         ),
-        { method: "GET", headers: { Accept: "application/json" } },
-      );
+        { method: 'GET', headers: { Accept: 'application/json' } }
+      )
 
       const payload = (await response.json()) as {
-        readonly success?: boolean;
-        readonly error?: string;
+        readonly success?: boolean
+        readonly error?: string
         readonly data?: {
-          readonly products?: ProductGridItem[];
-          readonly hasMore?: boolean;
-        };
-      };
-
-      if (!response.ok || !payload.success) {
-        throw new Error(payload.error ?? "Unable to load more products.");
+          readonly products?: ProductGridItem[]
+          readonly hasMore?: boolean
+        }
       }
 
-      const nextProducts = payload.data?.products ?? [];
-      const nextHasMore = Boolean(payload.data?.hasMore);
+      if (!response.ok || !payload.success) {
+        throw new Error(payload.error ?? 'Unable to load more products.')
+      }
+
+      const nextProducts = payload.data?.products ?? []
+      const nextHasMore = Boolean(payload.data?.hasMore)
 
       startTransition(() => {
         setVisibleProducts((currentProducts) => {
-          const merged = mergeProducts(currentProducts, nextProducts);
-          visibleCountRef.current = merged.length;
-          return merged;
-        });
-        setCanLoadMore(nextHasMore);
-        canLoadMoreRef.current = nextHasMore;
-      });
+          const merged = mergeProducts(currentProducts, nextProducts)
+          visibleCountRef.current = merged.length
+          return merged
+        })
+        setCanLoadMore(nextHasMore)
+        canLoadMoreRef.current = nextHasMore
+      })
     } catch {
-      setLoadError("Could not load more products. Please try again.");
+      setLoadError('Could not load more products. Please try again.')
     } finally {
-      setIsLoadingMore(false);
-      isLoadingRef.current = false;
+      setIsLoadingMore(false)
+      isLoadingRef.current = false
     }
-  }, []);
+  }, [])
 
   useEffect(() => {
-    const sentinel = sentinelRef.current;
-    if (!sentinel) return;
+    const sentinel = sentinelRef.current
+    if (!sentinel) return
 
     const observer = new IntersectionObserver(
       (entries) => {
-        const entry = entries[0];
+        const entry = entries[0]
         if (
           entry?.isIntersecting &&
           canLoadMoreRef.current &&
           !isLoadingRef.current
         ) {
-          void loadMore();
+          void loadMore()
         }
       },
-      { rootMargin: "200px" },
-    );
+      { rootMargin: '200px' }
+    )
 
-    observer.observe(sentinel);
-    return () => observer.disconnect();
-  }, [loadMore]);
+    observer.observe(sentinel)
+    return () => observer.disconnect()
+  }, [loadMore])
 
   return (
     <main
@@ -282,7 +282,7 @@ const ProductGrid = ({
       </div>
       <p className="mb-8 text-sm text-[var(--text-muted)]">
         Browse our complete handmade collection — {visibleProducts.length}
-        {canLoadMore ? "+" : ""} items loaded for you.
+        {canLoadMore ? '+' : ''} items loaded for you.
       </p>
 
       <form
@@ -389,8 +389,8 @@ const ProductGrid = ({
           <div className="mt-8 border-t border-[var(--border-warm)] pt-6">
             <p className="text-sm font-medium text-[var(--text-muted)]">
               Showing {visibleProducts.length} product
-              {visibleProducts.length === 1 ? "" : "s"}
-              {canLoadMore ? " so far" : "."}
+              {visibleProducts.length === 1 ? '' : 's'}
+              {canLoadMore ? ' so far' : '.'}
             </p>
 
             {loadError ? (
@@ -416,7 +416,7 @@ const ProductGrid = ({
         </>
       )}
     </main>
-  );
-};
+  )
+}
 
-export default ProductGrid;
+export default ProductGrid

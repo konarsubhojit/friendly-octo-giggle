@@ -1,45 +1,45 @@
-"use client";
+'use client'
 
-import Link from "next/link";
-import { Badge, orderStatusVariant } from "@/components/ui/Badge";
+import Link from 'next/link'
+import { Badge, orderStatusVariant } from '@/components/ui/Badge'
 import {
   countOrderUnits,
   summarizeOrderProducts,
-} from "@/features/orders/services/order-summary";
+} from '@/features/orders/services/order-summary'
 
 const STATUS_CONFIG: Record<string, { label: string }> = {
-  PENDING: { label: "Pending" },
-  PROCESSING: { label: "Processing" },
-  SHIPPED: { label: "Shipped" },
-  DELIVERED: { label: "Delivered" },
-  CANCELLED: { label: "Cancelled" },
-};
+  PENDING: { label: 'Pending' },
+  PROCESSING: { label: 'Processing' },
+  SHIPPED: { label: 'Shipped' },
+  DELIVERED: { label: 'Delivered' },
+  CANCELLED: { label: 'Cancelled' },
+}
 
 interface OrderItem {
-  readonly quantity: number;
-  readonly product?: { name: string; image: string } | null;
+  readonly quantity: number
+  readonly product?: { name: string; image: string } | null
   readonly variation?: {
-    id: string;
-    name: string;
-    price: number;
-  } | null;
+    id: string
+    name: string
+    price: number
+  } | null
 }
 
 interface OrderSummary {
-  readonly id: string;
-  readonly status: string;
-  readonly createdAt: string;
-  readonly items: OrderItem[];
+  readonly id: string
+  readonly status: string
+  readonly createdAt: string
+  readonly items: OrderItem[]
 }
 
 interface OrderListCardProps {
-  readonly order: OrderSummary;
+  readonly order: OrderSummary
 }
 
 export const OrderListCard = ({ order }: OrderListCardProps) => {
-  const statusInfo = STATUS_CONFIG[order.status] ?? STATUS_CONFIG.PENDING;
-  const itemCount = countOrderUnits(order.items);
-  const productSummary = summarizeOrderProducts(order.items);
+  const statusInfo = STATUS_CONFIG[order.status] ?? STATUS_CONFIG.PENDING
+  const itemCount = countOrderUnits(order.items)
+  const productSummary = summarizeOrderProducts(order.items)
 
   return (
     <Link
@@ -53,10 +53,10 @@ export const OrderListCard = ({ order }: OrderListCardProps) => {
               {statusInfo.label}
             </Badge>
             <span className="text-xs text-[var(--text-muted)]">
-              {new Date(order.createdAt).toLocaleDateString("en-US", {
-                year: "numeric",
-                month: "short",
-                day: "numeric",
+              {new Date(order.createdAt).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
               })}
             </span>
           </div>
@@ -65,7 +65,7 @@ export const OrderListCard = ({ order }: OrderListCardProps) => {
           </p>
           <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-[var(--text-secondary)]">
             <span>
-              {itemCount} {itemCount === 1 ? "item" : "items"}
+              {itemCount} {itemCount === 1 ? 'item' : 'items'}
             </span>
             <span className="text-[var(--text-muted)]">Order #{order.id}</span>
           </div>
@@ -95,5 +95,5 @@ export const OrderListCard = ({ order }: OrderListCardProps) => {
         details.
       </p>
     </Link>
-  );
-};
+  )
+}

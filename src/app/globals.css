@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 /* ─── Bloom & Thread Design System ───────────────────────────────────────
    A rich artisan palette for handcrafted crochet, flowers, and accessories.
@@ -34,8 +34,8 @@
   --btn-primary-hover: #a84640;
 
   /* Typography */
-  --font-display: "Playfair Display", serif;
-  --font-body: "Nunito", sans-serif;
+  --font-display: 'Playfair Display', serif;
+  --font-body: 'Nunito', sans-serif;
 
   --page-glow-primary: #f4d8cb;
   --page-glow-secondary: #efe2cf;
@@ -119,7 +119,7 @@
    All tokens verified for WCAG 2.1 AA contrast compliance (4.5:1+ normal text).
    ─────────────────────────────────────────────────────────────────────── */
 
-[data-theme="baby-pink"] {
+[data-theme='baby-pink'] {
   /* Page & surface backgrounds */
   --background: #fefce8; /* soft light yellow */
   --surface: #ffffff; /* white card surface */
@@ -148,8 +148,8 @@
   --btn-primary-hover: #a83c60;
 
   /* Typography */
-  --font-display: "Playfair Display", serif;
-  --font-body: "Nunito", sans-serif;
+  --font-display: 'Playfair Display', serif;
+  --font-body: 'Nunito', sans-serif;
 
   --page-glow-primary: #ffd4df;
   --page-glow-secondary: #fff3b7;
@@ -174,7 +174,7 @@
    A neutral, low-noise palette for shoppers who want a clean storefront.
    ─────────────────────────────────────────────────────────────────────── */
 
-[data-theme="simple"] {
+[data-theme='simple'] {
   --background: #f5f2ec;
   --surface: #fffdfa;
   --surface-raised: #ffffff;
@@ -197,8 +197,8 @@
   --btn-primary: #5e6c84;
   --btn-primary-hover: #4c586d;
 
-  --font-display: "Playfair Display", serif;
-  --font-body: "Nunito", sans-serif;
+  --font-display: 'Playfair Display', serif;
+  --font-body: 'Nunito', sans-serif;
 
   --page-glow-primary: #dbd6ce;
   --page-glow-secondary: #c8d1dc;
@@ -223,7 +223,7 @@
    Bright aquatic accents balanced against pale seafoam surfaces.
    ─────────────────────────────────────────────────────────────────────── */
 
-[data-theme="ocean-breeze"] {
+[data-theme='ocean-breeze'] {
   --background: #f2fbfd;
   --surface: #ffffff;
   --surface-raised: #ebf8fb;
@@ -246,8 +246,8 @@
   --btn-primary: #117f91;
   --btn-primary-hover: #0d6776;
 
-  --font-display: "Playfair Display", serif;
-  --font-body: "Nunito", sans-serif;
+  --font-display: 'Playfair Display', serif;
+  --font-body: 'Nunito', sans-serif;
 
   --page-glow-primary: #ccf2f6;
   --page-glow-secondary: #d6eff1;
@@ -272,7 +272,7 @@
    Deep ink surfaces with vivid florals for a more dramatic storefront.
    ─────────────────────────────────────────────────────────────────────── */
 
-[data-theme="midnight-bloom"] {
+[data-theme='midnight-bloom'] {
   --background: #161a2d;
   --surface: #1f2440;
   --surface-raised: #262d4f;
@@ -295,8 +295,8 @@
   --btn-primary: #d75cf6;
   --btn-primary-hover: #b644d3;
 
-  --font-display: "Playfair Display", serif;
-  --font-body: "Nunito", sans-serif;
+  --font-display: 'Playfair Display', serif;
+  --font-body: 'Nunito', sans-serif;
 
   --page-glow-primary: #352a63;
   --page-glow-secondary: #1d5f6d;

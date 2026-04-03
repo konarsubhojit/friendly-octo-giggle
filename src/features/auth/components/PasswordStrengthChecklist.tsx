@@ -1,1 +1,1 @@
-export { PasswordStrengthChecklist } from "@/components/ui/PasswordStrengthChecklist";
+export { PasswordStrengthChecklist } from '@/components/ui/PasswordStrengthChecklist'

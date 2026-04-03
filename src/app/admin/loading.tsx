@@ -7,7 +7,7 @@ export default function AdminLoading() {
 
         {/* Stats grid skeleton */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {(["s1", "s2", "s3", "s4"] as const).map((id) => (
+          {(['s1', 's2', 's3', 's4'] as const).map((id) => (
             <div
               key={id}
               className="p-6 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 space-y-3"
@@ -24,7 +24,7 @@ export default function AdminLoading() {
             <div className="h-6 w-40 bg-slate-200 dark:bg-slate-800 rounded animate-pulse" />
           </div>
           <div className="divide-y divide-slate-200 dark:divide-slate-800">
-            {(["r1", "r2", "r3", "r4", "r5"] as const).map((id) => (
+            {(['r1', 'r2', 'r3', 'r4', 'r5'] as const).map((id) => (
               <div key={id} className="flex items-center gap-4 p-4">
                 <div className="h-10 w-10 bg-slate-200 dark:bg-slate-800 rounded-lg animate-pulse shrink-0" />
                 <div className="flex-1 space-y-2">
@@ -38,5 +38,5 @@ export default function AdminLoading() {
         </div>
       </main>
     </div>
-  );
+  )
 }

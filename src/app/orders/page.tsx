@@ -1,10 +1,10 @@
-import { auth } from "@/lib/auth";
-import { AuthRequiredState } from "@/components/ui/AuthRequiredState";
-import OrdersClient from "@/app/orders/OrdersClient";
+import { auth } from '@/lib/auth'
+import { AuthRequiredState } from '@/components/ui/AuthRequiredState'
+import OrdersClient from '@/app/orders/OrdersClient'
 
-export const dynamic = "force-dynamic";
+export const dynamic = 'force-dynamic'
 export default async function OrdersPage() {
-  const session = await auth();
+  const session = await auth()
 
   if (!session?.user?.id) {
     return (
@@ -16,8 +16,8 @@ export default async function OrdersPage() {
           />
         </main>
       </div>
-    );
+    )
   }
 
-  return <OrdersClient />;
+  return <OrdersClient />
 }

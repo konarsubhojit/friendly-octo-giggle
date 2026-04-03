@@ -1,59 +1,59 @@
-import type { Metadata } from "next";
-import Footer from "@/components/layout/Footer";
+import type { Metadata } from 'next'
+import Footer from '@/components/layout/Footer'
 import ProductGrid, {
   type ProductGridItem,
-} from "@/features/product/components/ProductGrid";
-import { BestsellersScroller } from "@/features/product/components/BestsellersScroller";
-import { db, drizzleDb } from "@/lib/db";
-import { cacheCategoriesList, cacheProductsBestsellers } from "@/lib/cache";
-import { searchProductIdsCached } from "@/lib/search";
-import { categories as categoriesTable } from "@/lib/schema";
-import { isNull, asc } from "drizzle-orm";
-import { logError } from "@/lib/logger";
+} from '@/features/product/components/ProductGrid'
+import { BestsellersScroller } from '@/features/product/components/BestsellersScroller'
+import { db, drizzleDb } from '@/lib/db'
+import { cacheCategoriesList, cacheProductsBestsellers } from '@/lib/cache'
+import { searchProductIdsCached } from '@/lib/search'
+import { categories as categoriesTable } from '@/lib/schema'
+import { isNull, asc } from 'drizzle-orm'
+import { logError } from '@/lib/logger'
 
-export const revalidate = 60;
+export const revalidate = 60
 
-const SHOP_INITIAL_SIZE = 24;
-const SHOP_BATCH_SIZE = 20;
+const SHOP_INITIAL_SIZE = 24
+const SHOP_BATCH_SIZE = 20
 
 interface ShopPageProps {
   readonly searchParams?: Promise<{
-    q?: string | string[];
-    category?: string | string[];
-  }>;
+    q?: string | string[]
+    category?: string | string[]
+  }>
 }
 
 function getSingleValue(value?: string | string[]) {
-  return Array.isArray(value) ? value[0] : value;
+  return Array.isArray(value) ? value[0] : value
 }
 
 export const metadata: Metadata = {
-  title: "Shop | The Kiyon Store",
+  title: 'Shop | The Kiyon Store',
   description:
-    "Browse our full collection of handmade crochet flowers, bags, keychains, hair accessories, and more.",
-};
+    'Browse our full collection of handmade crochet flowers, bags, keychains, hair accessories, and more.',
+}
 
 const ShopPage = async ({ searchParams }: ShopPageProps) => {
-  const resolvedSearchParams = (await searchParams) ?? {};
-  const search = getSingleValue(resolvedSearchParams.q)?.trim() ?? "";
+  const resolvedSearchParams = (await searchParams) ?? {}
+  const search = getSingleValue(resolvedSearchParams.q)?.trim() ?? ''
   const selectedCategory =
-    getSingleValue(resolvedSearchParams.category)?.trim() ?? "All";
+    getSingleValue(resolvedSearchParams.category)?.trim() ?? 'All'
 
   let shopData: {
-    products: ProductGridItem[];
-    bestsellers: ProductGridItem[];
-    categoryNames: string[];
-    hasNextPage: boolean;
+    products: ProductGridItem[]
+    bestsellers: ProductGridItem[]
+    categoryNames: string[]
+    hasNextPage: boolean
   } = {
     products: [],
     bestsellers: [],
     categoryNames: [],
     hasNextPage: false,
-  };
+  }
 
   try {
     const selectedCategoryFilter =
-      selectedCategory === "All" ? undefined : selectedCategory;
+      selectedCategory === 'All' ? undefined : selectedCategory
 
     const [topProducts, cats] = await Promise.all([
       cacheProductsBestsellers(() => db.products.findBestsellers(), 5),
@@ -62,15 +62,15 @@ const ShopPage = async ({ searchParams }: ShopPageProps) => {
           .select({ name: categoriesTable.name })
           .from(categoriesTable)
           .where(isNull(categoriesTable.deletedAt))
-          .orderBy(asc(categoriesTable.sortOrder), asc(categoriesTable.name)),
+          .orderBy(asc(categoriesTable.sortOrder), asc(categoriesTable.name))
       ),
-    ]);
+    ])
 
     if (search) {
       const matchedIds = await searchProductIdsCached(search, {
         category: selectedCategoryFilter,
         limit: SHOP_INITIAL_SIZE + 1,
-      });
+      })
 
       if (matchedIds === null) {
         const allProducts = await db.products.findAllMinimal({
@@ -78,34 +78,34 @@ const ShopPage = async ({ searchParams }: ShopPageProps) => {
           offset: 0,
           search,
           category: selectedCategoryFilter,
-        });
+        })
 
         shopData = {
           products: allProducts.slice(0, SHOP_INITIAL_SIZE),
           bestsellers: topProducts,
           categoryNames: cats.map((c) => c.name),
           hasNextPage: allProducts.length > SHOP_INITIAL_SIZE,
-        };
+        }
       } else {
-        const pageIds = matchedIds.slice(0, SHOP_INITIAL_SIZE);
+        const pageIds = matchedIds.slice(0, SHOP_INITIAL_SIZE)
         const matchedProducts = await db.products.findMinimalByIds(
           pageIds,
-          selectedCategoryFilter,
-        );
+          selectedCategoryFilter
+        )
         const productsById = new Map(
-          matchedProducts.map((product) => [product.id, product]),
-        );
+          matchedProducts.map((product) => [product.id, product])
+        )
         const orderedProducts = pageIds.flatMap((id) => {
-          const product = productsById.get(id);
-          return product ? [product] : [];
-        });
+          const product = productsById.get(id)
+          return product ? [product] : []
+        })
 
         shopData = {
           products: orderedProducts,
           bestsellers: topProducts,
           categoryNames: cats.map((c) => c.name),
           hasNextPage: matchedIds.length > SHOP_INITIAL_SIZE,
-        };
+        }
       }
     } else {
       const allProducts = await db.products.findAllMinimal({
@@ -113,20 +113,20 @@ const ShopPage = async ({ searchParams }: ShopPageProps) => {
         offset: 0,
         search,
         category: selectedCategoryFilter,
-      });
+      })
 
       shopData = {
         products: allProducts.slice(0, SHOP_INITIAL_SIZE),
         bestsellers: topProducts,
         categoryNames: cats.map((c) => c.name),
         hasNextPage: allProducts.length > SHOP_INITIAL_SIZE,
-      };
+      }
     }
   } catch (error) {
-    logError({ error, context: "shop_products_fetch" });
+    logError({ error, context: 'shop_products_fetch' })
   }
 
-  const { products, bestsellers, categoryNames, hasNextPage } = shopData;
+  const { products, bestsellers, categoryNames, hasNextPage } = shopData
 
   return (
     <div className="min-h-screen bg-warm-gradient">
@@ -178,7 +178,7 @@ const ShopPage = async ({ searchParams }: ShopPageProps) => {
 
       <Footer />
     </div>
-  );
-};
+  )
+}
 
-export default ShopPage;
+export default ShopPage

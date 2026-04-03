@@ -1,22 +1,22 @@
-import Footer from "@/components/layout/Footer";
+import Footer from '@/components/layout/Footer'
 import {
   VineDivider,
   ScatteredFlowers,
   MushroomAccent,
-} from "@/components/ui/DecorativeElements";
+} from '@/components/ui/DecorativeElements'
 
 export const metadata = {
-  title: "About Us | The Kiyon Store",
+  title: 'About Us | The Kiyon Store',
   description:
-    "Learn more about The Kiyon Store, our mission, values, and the team behind our handmade decorations and wearables.",
-};
+    'Learn more about The Kiyon Store, our mission, values, and the team behind our handmade decorations and wearables.',
+}
 
 const FEATURES = [
-  { emoji: "🧶", text: "Handmade with love" },
-  { emoji: "🌿", text: "Small batch" },
-  { emoji: "♻️", text: "Eco-friendly" },
-  { emoji: "💝", text: "Made for you" },
-] as const;
+  { emoji: '🧶', text: 'Handmade with love' },
+  { emoji: '🌿', text: 'Small batch' },
+  { emoji: '♻️', text: 'Eco-friendly' },
+  { emoji: '💝', text: 'Made for you' },
+] as const
 
 const MissionSection = () => (
   <section className="bg-[var(--surface)]/80 backdrop-blur-sm rounded-[2rem] shadow-warm border border-[var(--border-warm)] p-8 mb-8 animate-fade-in-up animation-delay-100">
@@ -35,15 +35,15 @@ const MissionSection = () => (
       can shop with confidence anytime, anywhere.
     </p>
   </section>
-);
+)
 
 interface ValueCardProps {
-  readonly icon: React.ReactNode;
-  readonly title: string;
-  readonly description: string;
-  readonly bgClass: string;
-  readonly iconBgClass: string;
-  readonly iconBorderClass: string;
+  readonly icon: React.ReactNode
+  readonly title: string
+  readonly description: string
+  readonly bgClass: string
+  readonly iconBgClass: string
+  readonly iconBorderClass: string
 }
 
 const ValueCard = ({
@@ -63,7 +63,7 @@ const ValueCard = ({
     <h3 className="font-bold text-[var(--foreground)] mb-2">{title}</h3>
     <p className="text-sm text-[var(--text-secondary)]">{description}</p>
   </div>
-);
+)
 
 const ValuesSection = () => (
   <section className="bg-[var(--surface)]/80 backdrop-blur-sm rounded-[2rem] shadow-warm border border-[var(--border-warm)] p-8 mb-8 animate-fade-in-up animation-delay-300">
@@ -142,34 +142,34 @@ const ValuesSection = () => (
       />
     </div>
   </section>
-);
+)
 
 interface CraftStep {
-  emoji: string;
-  title: string;
-  description: string;
+  emoji: string
+  title: string
+  description: string
 }
 
 const CRAFT_STEPS: CraftStep[] = [
   {
-    emoji: "🧶",
-    title: "Our Story",
+    emoji: '🧶',
+    title: 'Our Story',
     description:
-      "Every piece begins with carefully selected yarns and materials, chosen for quality and color harmony.",
+      'Every piece begins with carefully selected yarns and materials, chosen for quality and color harmony.',
   },
   {
-    emoji: "🌸",
-    title: "Made with Love",
+    emoji: '🌸',
+    title: 'Made with Love',
     description:
-      "Each stitch is placed by hand with patience and care — no machines, no shortcuts, just love.",
+      'Each stitch is placed by hand with patience and care — no machines, no shortcuts, just love.',
   },
   {
-    emoji: "🎁",
-    title: "From Our Hands to Yours",
+    emoji: '🎁',
+    title: 'From Our Hands to Yours',
     description:
-      "Wrapped with care and shipped with a personal touch — because every order deserves to feel special.",
+      'Wrapped with care and shipped with a personal touch — because every order deserves to feel special.',
   },
-];
+]
 
 const CraftStepCard = ({ emoji, title, description }: CraftStep) => (
   <div className="text-center p-6 rounded-2xl bg-[var(--accent-cream)]/50 border border-[var(--border-warm)]">
@@ -183,7 +183,7 @@ const CraftStepCard = ({ emoji, title, description }: CraftStep) => (
       {description}
     </p>
   </div>
-);
+)
 
 const CraftingProcessSection = () => (
   <section className="bg-[var(--surface)]/80 backdrop-blur-sm rounded-[2rem] shadow-warm border border-[var(--border-warm)] p-8 mb-8 animate-fade-in-up animation-delay-300">
@@ -196,7 +196,7 @@ const CraftingProcessSection = () => (
       ))}
     </div>
   </section>
-);
+)
 
 const AboutHeroLeft = () => (
   <div className="flex-1 min-w-0">
@@ -221,7 +221,7 @@ const AboutHeroLeft = () => (
       ))}
     </ul>
   </div>
-);
+)
 
 const AboutIllustration = () => (
   <div className="flex-1 w-full animate-fade-in-up animation-delay-200">
@@ -236,7 +236,7 @@ const AboutIllustration = () => (
       </div>
     </div>
   </div>
-);
+)
 
 const AboutPage = () => (
   <div className="min-h-screen bg-warm-gradient">
@@ -256,6 +256,6 @@ const AboutPage = () => (
     </main>
     <Footer />
   </div>
-);
+)
 
-export default AboutPage;
+export default AboutPage

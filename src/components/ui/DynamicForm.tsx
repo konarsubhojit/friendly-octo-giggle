@@ -1,7 +1,7 @@
-"use client";
+'use client'
 
-import { useState, useCallback } from "react";
-import { FieldRenderer } from "@/components/ui/FieldRenderer";
+import { useState, useCallback } from 'react'
+import { FieldRenderer } from '@/components/ui/FieldRenderer'
 
 // Re-export public types from DynamicFormTypes for backwards compatibility
 export type {
@@ -11,12 +11,12 @@ export type {
   FieldType,
   FieldDef,
   DynamicFormProps,
-} from "@/components/ui/DynamicFormTypes";
+} from '@/components/ui/DynamicFormTypes'
 
-import type { DynamicFormProps } from "@/components/ui/DynamicFormTypes";
+import type { DynamicFormProps } from '@/components/ui/DynamicFormTypes'
 
 const DEFAULT_SUBMIT_BTN =
-  "w-full sm:w-auto px-6 py-2 text-sm font-semibold bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed";
+  'w-full sm:w-auto px-6 py-2 text-sm font-semibold bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed'
 
 /**
  * A self-managing form component driven by field definitions.
@@ -25,88 +25,88 @@ export function DynamicForm({
   fields,
   onSubmit,
   initialValues,
-  submitLabel = "Submit",
-  submittingLabel = "Submitting\u2026",
+  submitLabel = 'Submit',
+  submittingLabel = 'Submitting\u2026',
   onCancel,
-  cancelLabel = "Cancel",
+  cancelLabel = 'Cancel',
   serverError: externalServerError,
   serverSuccess,
   formClassName,
   submitButtonClassName = DEFAULT_SUBMIT_BTN,
 }: DynamicFormProps) {
   const [values, setValues] = useState<Record<string, string>>(() => {
-    const init: Record<string, string> = {};
+    const init: Record<string, string> = {}
     for (const f of fields) {
-      init[f.name] = initialValues?.[f.name] ?? f.defaultValue ?? "";
+      init[f.name] = initialValues?.[f.name] ?? f.defaultValue ?? ''
     }
-    return init;
-  });
+    return init
+  })
 
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [submitting, setSubmitting] = useState(false);
-  const [internalServerError, setInternalServerError] = useState("");
-  const [showPassword, setShowPassword] = useState<Record<string, boolean>>({});
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+  const [submitting, setSubmitting] = useState(false)
+  const [internalServerError, setInternalServerError] = useState('')
+  const [showPassword, setShowPassword] = useState<Record<string, boolean>>({})
   const fieldErrorEntries = Object.entries(fieldErrors).filter(([, error]) =>
-    Boolean(error),
-  );
+    Boolean(error)
+  )
 
   const handleChange = useCallback((name: string, value: string) => {
-    setValues((prev) => ({ ...prev, [name]: value }));
-    setFieldErrors((prev) => (prev[name] ? { ...prev, [name]: "" } : prev));
-  }, []);
+    setValues((prev) => ({ ...prev, [name]: value }))
+    setFieldErrors((prev) => (prev[name] ? { ...prev, [name]: '' } : prev))
+  }, [])
 
   const handleBlur = useCallback(
     (name: string) => {
-      const field = fields.find((f) => f.name === name);
-      if (!field?.validate) return;
+      const field = fields.find((f) => f.name === name)
+      if (!field?.validate) return
       setValues((currentValues) => {
-        const err = field.validate?.(currentValues[name] ?? "", currentValues);
-        setFieldErrors((prev) => ({ ...prev, [name]: err ?? "" }));
-        return currentValues;
-      });
+        const err = field.validate?.(currentValues[name] ?? '', currentValues)
+        setFieldErrors((prev) => ({ ...prev, [name]: err ?? '' }))
+        return currentValues
+      })
     },
-    [fields],
-  );
+    [fields]
+  )
 
   const togglePasswordVisibility = useCallback((id: string) => {
-    setShowPassword((prev) => ({ ...prev, [id]: !prev[id] }));
-  }, []);
+    setShowPassword((prev) => ({ ...prev, [id]: !prev[id] }))
+  }, [])
 
   const handleSubmit = useCallback(
     async (e: React.SyntheticEvent<HTMLFormElement>) => {
-      e.preventDefault();
-      setInternalServerError("");
+      e.preventDefault()
+      setInternalServerError('')
 
-      const errors: Record<string, string> = {};
+      const errors: Record<string, string> = {}
       for (const field of fields) {
-        const err = field.validate?.(values[field.name] ?? "", values);
-        if (err) errors[field.name] = err;
+        const err = field.validate?.(values[field.name] ?? '', values)
+        if (err) errors[field.name] = err
       }
       if (Object.keys(errors).length > 0) {
-        setFieldErrors(errors);
-        return;
+        setFieldErrors(errors)
+        return
       }
 
-      setSubmitting(true);
+      setSubmitting(true)
       try {
-        const result = await onSubmit(values);
-        if (typeof result === "string") {
-          setInternalServerError(result);
-        } else if (typeof result === "object" && result !== null) {
-          setFieldErrors(result);
+        const result = await onSubmit(values)
+        if (typeof result === 'string') {
+          setInternalServerError(result)
+        } else if (typeof result === 'object' && result !== null) {
+          setFieldErrors(result)
         }
       } catch {
         setInternalServerError(
-          "An unexpected error occurred. Please try again.",
-        );
+          'An unexpected error occurred. Please try again.'
+        )
       } finally {
-        setSubmitting(false);
+        setSubmitting(false)
       }
     },
-    [fields, values, onSubmit],
-  );
+    [fields, values, onSubmit]
+  )
 
-  const displayServerError = externalServerError ?? internalServerError;
+  const displayServerError = externalServerError ?? internalServerError
 
   return (
     <form onSubmit={handleSubmit} noValidate className={formClassName}>
@@ -118,7 +118,7 @@ export function DynamicForm({
         >
           <p className="font-semibold">
             {fieldErrorEntries.length === 1
-              ? "Please correct the highlighted field."
+              ? 'Please correct the highlighted field.'
               : `Please correct ${fieldErrorEntries.length} highlighted fields.`}
           </p>
           <p className="mt-1 text-red-700/90">
@@ -146,7 +146,7 @@ export function DynamicForm({
           <FieldRenderer
             key={field.id}
             field={field}
-            value={values[field.name] ?? ""}
+            value={values[field.name] ?? ''}
             error={fieldErrors[field.name]}
             showPassword={!!showPassword[field.id]}
             onChange={handleChange}
@@ -175,5 +175,5 @@ export function DynamicForm({
         </button>
       </div>
     </form>
-  );
+  )
 }

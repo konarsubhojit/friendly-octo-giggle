@@ -1,89 +1,89 @@
-"use client";
+'use client'
 
-import { useState, useEffect, useRef, useCallback } from "react";
-import Image from "next/image";
+import { useState, useEffect, useRef, useCallback } from 'react'
+import Image from 'next/image'
 
 interface ImageCarouselProps {
-  readonly images: string[];
-  readonly productName: string;
-  readonly autoScrollInterval?: number;
+  readonly images: string[]
+  readonly productName: string
+  readonly autoScrollInterval?: number
 }
 
 // Auto-scroll every 5 seconds by default
-const DEFAULT_INTERVAL = 5000;
+const DEFAULT_INTERVAL = 5000
 
 // Derive slide-in animation class from direction + in-progress flag
 const getAnimationClass = (
-  direction: "next" | "prev",
-  isAnimating: boolean,
+  direction: 'next' | 'prev',
+  isAnimating: boolean
 ): string => {
-  if (!isAnimating) return "";
-  return direction === "next"
-    ? "animate-slide-in-right"
-    : "animate-slide-in-left";
-};
+  if (!isAnimating) return ''
+  return direction === 'next'
+    ? 'animate-slide-in-right'
+    : 'animate-slide-in-left'
+}
 
 const ImageCarousel = ({
   images,
   productName,
   autoScrollInterval = DEFAULT_INTERVAL,
 }: ImageCarouselProps) => {
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [isAnimating, setIsAnimating] = useState(false);
-  const [direction, setDirection] = useState<"next" | "prev">("next");
-  const autoScrollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const [currentIndex, setCurrentIndex] = useState(0)
+  const [isAnimating, setIsAnimating] = useState(false)
+  const [direction, setDirection] = useState<'next' | 'prev'>('next')
+  const autoScrollRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
 
-  const total = images.length;
+  const total = images.length
 
   const goToIndex = useCallback(
-    (index: number, dir: "next" | "prev" = "next") => {
-      if (isAnimating || index === currentIndex) return;
-      setDirection(dir);
-      setIsAnimating(true);
-      setCurrentIndex(index);
-      setTimeout(() => setIsAnimating(false), 400);
+    (index: number, dir: 'next' | 'prev' = 'next') => {
+      if (isAnimating || index === currentIndex) return
+      setDirection(dir)
+      setIsAnimating(true)
+      setCurrentIndex(index)
+      setTimeout(() => setIsAnimating(false), 400)
     },
-    [isAnimating, currentIndex],
-  );
+    [isAnimating, currentIndex]
+  )
 
   const goNext = useCallback(() => {
-    goToIndex((currentIndex + 1) % total, "next");
-  }, [currentIndex, total, goToIndex]);
+    goToIndex((currentIndex + 1) % total, 'next')
+  }, [currentIndex, total, goToIndex])
 
   const goPrev = useCallback(() => {
-    goToIndex((currentIndex - 1 + total) % total, "prev");
-  }, [currentIndex, total, goToIndex]);
+    goToIndex((currentIndex - 1 + total) % total, 'prev')
+  }, [currentIndex, total, goToIndex])
 
   // Auto-scroll — always returns a cleanup so the return type is consistent
   useEffect(() => {
-    let id: ReturnType<typeof setTimeout> | undefined;
+    let id: ReturnType<typeof setTimeout> | undefined
     if (total > 1) {
-      id = setTimeout(goNext, autoScrollInterval);
-      autoScrollRef.current = id ?? null;
+      id = setTimeout(goNext, autoScrollInterval)
+      autoScrollRef.current = id ?? null
     }
     return () => {
-      if (id !== undefined) clearTimeout(id);
-    };
-  }, [currentIndex, goNext, autoScrollInterval, total]);
+      if (id !== undefined) clearTimeout(id)
+    }
+  }, [currentIndex, goNext, autoScrollInterval, total])
 
   // Mouse wheel navigation
   useEffect(() => {
     const handleWheel = (e: WheelEvent) => {
-      e.preventDefault();
+      e.preventDefault()
       if (e.deltaY > 0) {
-        goNext();
+        goNext()
       } else {
-        goPrev();
+        goPrev()
       }
-    };
+    }
 
-    const container = containerRef.current;
-    container?.addEventListener("wheel", handleWheel, { passive: false });
-    return () => container?.removeEventListener("wheel", handleWheel);
-  }, [goNext, goPrev]);
+    const container = containerRef.current
+    container?.addEventListener('wheel', handleWheel, { passive: false })
+    return () => container?.removeEventListener('wheel', handleWheel)
+  }, [goNext, goPrev])
 
-  if (total === 0) return null;
+  if (total === 0) return null
 
   // Single image — no carousel needed, just render image with contain
   if (total === 1) {
@@ -102,10 +102,10 @@ const ImageCarousel = ({
         <div className="absolute -top-6 -right-6 w-32 h-32 bg-gradient-to-r from-[var(--accent-peach)] to-[var(--accent-blush)] rounded-full blur-3xl opacity-30 -z-10" />
         <div className="absolute -bottom-6 -left-6 w-40 h-40 bg-gradient-to-r from-[var(--accent-sage)] to-[var(--accent-cream)] rounded-full blur-3xl opacity-30 -z-10" />
       </div>
-    );
+    )
   }
 
-  const animationClass = getAnimationClass(direction, isAnimating);
+  const animationClass = getAnimationClass(direction, isAnimating)
 
   return (
     <div className="relative select-none overflow-hidden">
@@ -133,8 +133,8 @@ const ImageCarousel = ({
         {/* Prev button */}
         <button
           onClick={(e) => {
-            e.stopPropagation();
-            goPrev();
+            e.stopPropagation()
+            goPrev()
           }}
           aria-label="Previous image"
           className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-[var(--surface)]/90 backdrop-blur-sm border border-[var(--border-warm)] shadow-warm flex items-center justify-center text-[var(--foreground)] hover:bg-[var(--accent-peach)] transition-all duration-200 opacity-0 group-hover:opacity-100 z-10"
@@ -158,8 +158,8 @@ const ImageCarousel = ({
         {/* Next button */}
         <button
           onClick={(e) => {
-            e.stopPropagation();
-            goNext();
+            e.stopPropagation()
+            goNext()
           }}
           aria-label="Next image"
           className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-[var(--surface)]/90 backdrop-blur-sm border border-[var(--border-warm)] shadow-warm flex items-center justify-center text-[var(--foreground)] hover:bg-[var(--accent-peach)] transition-all duration-200 opacity-0 group-hover:opacity-100 z-10"
@@ -198,11 +198,11 @@ const ImageCarousel = ({
             role="tab"
             aria-selected={idx === currentIndex}
             aria-label={`Go to image ${idx + 1}`}
-            onClick={() => goToIndex(idx, idx > currentIndex ? "next" : "prev")}
+            onClick={() => goToIndex(idx, idx > currentIndex ? 'next' : 'prev')}
             className={`rounded-full transition-all duration-300 ${
               idx === currentIndex
-                ? "w-6 h-2.5 bg-[var(--accent-warm)]"
-                : "w-2.5 h-2.5 bg-[var(--accent-blush)] hover:bg-[var(--accent-peach)]"
+                ? 'w-6 h-2.5 bg-[var(--accent-warm)]'
+                : 'w-2.5 h-2.5 bg-[var(--accent-blush)] hover:bg-[var(--accent-peach)]'
             }`}
           />
         ))}
@@ -215,13 +215,13 @@ const ImageCarousel = ({
             <button
               key={`thumb-${src}`}
               onClick={() =>
-                goToIndex(idx, idx > currentIndex ? "next" : "prev")
+                goToIndex(idx, idx > currentIndex ? 'next' : 'prev')
               }
               aria-label={`View image ${idx + 1}`}
               className={`relative flex-shrink-0 w-14 h-14 rounded-lg overflow-hidden border-2 transition-all duration-200 ${
                 idx === currentIndex
-                  ? "border-[var(--accent-warm)] shadow-warm scale-105"
-                  : "border-[var(--border-warm)] opacity-60 hover:opacity-100 hover:border-[var(--accent-peach)]"
+                  ? 'border-[var(--accent-warm)] shadow-warm scale-105'
+                  : 'border-[var(--border-warm)] opacity-60 hover:opacity-100 hover:border-[var(--accent-peach)]'
               }`}
             >
               <Image
@@ -240,7 +240,7 @@ const ImageCarousel = ({
       <div className="absolute -top-6 -right-6 w-32 h-32 bg-gradient-to-r from-[var(--accent-peach)] to-[var(--accent-blush)] rounded-full blur-3xl opacity-30 -z-10 pointer-events-none" />
       <div className="absolute -bottom-6 -left-6 w-40 h-40 bg-gradient-to-r from-[var(--accent-sage)] to-[var(--accent-cream)] rounded-full blur-3xl opacity-30 -z-10 pointer-events-none" />
     </div>
-  );
-};
+  )
+}
 
-export default ImageCarousel;
+export default ImageCarousel

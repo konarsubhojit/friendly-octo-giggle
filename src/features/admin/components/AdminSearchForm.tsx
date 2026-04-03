@@ -1,15 +1,15 @@
-"use client";
+'use client'
 
-import type { Dispatch, SetStateAction } from "react";
+import type { Dispatch, SetStateAction } from 'react'
 
 interface AdminSearchFormProps {
-  readonly searchInput: string;
-  readonly setSearchInput: Dispatch<SetStateAction<string>>;
-  readonly search: string;
-  readonly onSearch: (e: React.BaseSyntheticEvent) => void;
-  readonly onClear: () => void;
-  readonly placeholder?: string;
-  readonly ariaLabel?: string;
+  readonly searchInput: string
+  readonly setSearchInput: Dispatch<SetStateAction<string>>
+  readonly search: string
+  readonly onSearch: (e: React.BaseSyntheticEvent) => void
+  readonly onClear: () => void
+  readonly placeholder?: string
+  readonly ariaLabel?: string
 }
 
 export const AdminSearchForm = ({
@@ -18,8 +18,8 @@ export const AdminSearchForm = ({
   search,
   onSearch,
   onClear,
-  placeholder = "Search\u2026",
-  ariaLabel = "Search",
+  placeholder = 'Search\u2026',
+  ariaLabel = 'Search',
 }: AdminSearchFormProps) => (
   <form onSubmit={onSearch} className="space-y-3">
     <div className="flex max-w-2xl flex-col gap-3 sm:flex-row">
@@ -71,4 +71,4 @@ export const AdminSearchForm = ({
       </p>
     )}
   </form>
-);
+)

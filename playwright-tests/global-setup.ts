@@ -5,62 +5,62 @@
  * and saves the resulting session state so authenticated test projects
  * can skip the sign-in flow entirely.
  */
-import { chromium } from "@playwright/test";
-import * as path from "node:path";
-import * as fs from "node:fs";
-import { fileURLToPath } from "node:url";
-import { config as loadEnv } from "dotenv";
+import { chromium } from '@playwright/test'
+import * as path from 'node:path'
+import * as fs from 'node:fs'
+import { fileURLToPath } from 'node:url'
+import { config as loadEnv } from 'dotenv'
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
-loadEnv({ path: path.resolve(process.cwd(), ".env") });
-loadEnv({ path: path.resolve(process.cwd(), ".env.local"), override: true });
+loadEnv({ path: path.resolve(process.cwd(), '.env') })
+loadEnv({ path: path.resolve(process.cwd(), '.env.local'), override: true })
 
-export const AUTH_STATE_PATH = path.join(__dirname, ".auth", "admin.json");
-const BASE_URL = "https://localhost:3000";
+export const AUTH_STATE_PATH = path.join(__dirname, '.auth', 'admin.json')
+const BASE_URL = 'https://localhost:3000'
 
 export default async function globalSetup() {
-  const authDir = path.dirname(AUTH_STATE_PATH);
+  const authDir = path.dirname(AUTH_STATE_PATH)
   if (!fs.existsSync(authDir)) {
-    fs.mkdirSync(authDir, { recursive: true });
+    fs.mkdirSync(authDir, { recursive: true })
   }
 
-  const email = process.env.COPILOT_DEV_EMAIL;
-  const password = process.env.COPILOT_DEV_PASS;
+  const email = process.env.COPILOT_DEV_EMAIL
+  const password = process.env.COPILOT_DEV_PASS
   if (!email || !password) {
     if (fs.existsSync(AUTH_STATE_PATH)) {
-      return;
+      return
     }
     throw new Error(
-      "COPILOT_DEV_EMAIL and COPILOT_DEV_PASS must be set in .env for Playwright auth",
-    );
+      'COPILOT_DEV_EMAIL and COPILOT_DEV_PASS must be set in .env for Playwright auth'
+    )
   }
 
-  const browser = await chromium.launch();
+  const browser = await chromium.launch()
   const context = await browser.newContext({
     baseURL: BASE_URL,
     ignoreHTTPSErrors: true,
-  });
+  })
 
   try {
-    const page = await context.newPage();
+    const page = await context.newPage()
 
-    await page.goto("/auth/signin");
+    await page.goto('/auth/signin')
     await page.waitForSelector('input[name="identifier"]', {
       timeout: 15000,
-    });
+    })
 
-    await page.fill('input[name="identifier"]', email);
-    await page.fill('input[type="password"], input[name="password"]', password);
-    await page.click('button[type="submit"]');
+    await page.fill('input[name="identifier"]', email)
+    await page.fill('input[type="password"], input[name="password"]', password)
+    await page.click('button[type="submit"]')
 
-    await page.waitForURL((url) => !url.pathname.includes("/auth/signin"), {
+    await page.waitForURL((url) => !url.pathname.includes('/auth/signin'), {
       timeout: 15000,
-    });
+    })
 
-    await context.storageState({ path: AUTH_STATE_PATH });
+    await context.storageState({ path: AUTH_STATE_PATH })
   } finally {
-    await browser.close();
+    await browser.close()
   }
 }

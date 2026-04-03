@@ -1,11 +1,11 @@
-"use client";
+'use client'
 
 export default function NewsletterForm() {
   return (
     <form
       className="mt-4"
       onSubmit={(e) => {
-        e.preventDefault();
+        e.preventDefault()
         // Newsletter subscription is handled by the form action
       }}
     >
@@ -32,5 +32,5 @@ export default function NewsletterForm() {
         </button>
       </div>
     </form>
-  );
+  )
 }

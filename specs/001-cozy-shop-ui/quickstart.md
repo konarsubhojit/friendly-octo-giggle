@@ -113,11 +113,11 @@ The design token system and foundational components are complete:
 
 ```tsx
 // ❌ BAD — hardcoded light-only colors
-className = "bg-white text-gray-700 bg-[#fef7f2] text-[#4a3728]";
+className = 'bg-white text-gray-700 bg-[#fef7f2] text-[#4a3728]'
 
 // ✅ GOOD — token-based
-className = "bg-[var(--surface)] text-[var(--foreground)]";
-className = "bg-[var(--background)] text-[var(--text-secondary)]";
+className = 'bg-[var(--surface)] text-[var(--foreground)]'
+className = 'bg-[var(--background)] text-[var(--text-secondary)]'
 ```
 
 ## Static Assets
