@@ -45,6 +45,7 @@ describe('env', () => {
   })
 
   it('allows missing DATABASE_URL during production build phase', async () => {
+    delete process.env.DATABASE_URL
     vi.stubEnv('NEXT_PHASE', 'phase-production-build')
     vi.stubEnv('NODE_ENV', 'production')
     const { env } = await import('@/lib/env')
