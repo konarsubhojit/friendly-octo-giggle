@@ -125,7 +125,9 @@ describe("RecentlyViewed", () => {
 
     render(<RecentlyViewed />);
     const links = screen.getAllByRole("link");
-    const productLink = links.find((l) => l.getAttribute("href") === "/products/abc1234");
+    const productLink = links.find(
+      (l) => l.getAttribute("href") === "/products/abc1234",
+    );
     expect(productLink).toBeTruthy();
   });
 
