@@ -44,7 +44,9 @@ import {
 import { getRedisClient } from "@/lib/redis";
 import { logError } from "@/lib/logger";
 
-const createCartItem = (overrides: Partial<CartItemRedis> = {}): CartItemRedis => ({
+const createCartItem = (
+  overrides: Partial<CartItemRedis> = {},
+): CartItemRedis => ({
   itemId: "item1",
   cartId: "cart1",
   userId: "user1",
@@ -206,7 +208,9 @@ describe("cart-redis", () => {
 
       await removeCartItemsByCartId("cart1", undefined, "sess1");
 
-      expect(mockRedisClient.smembers).toHaveBeenCalledWith("cartowner:session:sess1");
+      expect(mockRedisClient.smembers).toHaveBeenCalledWith(
+        "cartowner:session:sess1",
+      );
     });
   });
 
@@ -346,7 +350,9 @@ describe("cart-redis", () => {
 
       await fetchCartFromRedis(undefined, "sess1");
 
-      expect(mockRedisClient.smembers).toHaveBeenCalledWith("cartowner:session:sess1");
+      expect(mockRedisClient.smembers).toHaveBeenCalledWith(
+        "cartowner:session:sess1",
+      );
     });
   });
 

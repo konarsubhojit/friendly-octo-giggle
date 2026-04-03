@@ -239,9 +239,11 @@ describe("checkout-service", () => {
       const checkoutSelectChain = {
         from: vi.fn().mockReturnThis(),
         where: vi.fn().mockReturnThis(),
-        limit: vi.fn().mockResolvedValue([
-          { id: "cr1ab23", userId: "user1", status: "COMPLETED" },
-        ]),
+        limit: vi
+          .fn()
+          .mockResolvedValue([
+            { id: "cr1ab23", userId: "user1", status: "COMPLETED" },
+          ]),
       };
       const orderSelectChain = {
         from: vi.fn().mockReturnThis(),
@@ -329,7 +331,9 @@ describe("checkout-service", () => {
           },
         ]),
       };
-      mockDrizzleDbSelect.mockReturnValue({ from: vi.fn().mockReturnValue(selectChain) });
+      mockDrizzleDbSelect.mockReturnValue({
+        from: vi.fn().mockReturnValue(selectChain),
+      });
 
       const result = await getRecentCheckoutRequests({
         status: "PENDING",
@@ -359,7 +363,9 @@ describe("checkout-service", () => {
           },
         ]),
       };
-      mockDrizzleDbSelect.mockReturnValue({ from: vi.fn().mockReturnValue(selectChain) });
+      mockDrizzleDbSelect.mockReturnValue({
+        from: vi.fn().mockReturnValue(selectChain),
+      });
 
       const result = await getRecentCheckoutRequests({ search: "alice" });
 

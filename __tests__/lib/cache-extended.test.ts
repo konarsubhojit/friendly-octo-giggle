@@ -93,9 +93,9 @@ describe("cache - extended coverage", () => {
 
   describe("buildUserOrdersCacheKey", () => {
     it("returns empty string for search queries", () => {
-      expect(
-        buildUserOrdersCacheKey({ userId: "u1", search: "test" }),
-      ).toBe("");
+      expect(buildUserOrdersCacheKey({ userId: "u1", search: "test" })).toBe(
+        "",
+      );
     });
 
     it("includes userId in key", () => {
@@ -109,15 +109,15 @@ describe("cache - extended coverage", () => {
     });
 
     it("includes offset when no cursor", () => {
-      expect(
-        buildUserOrdersCacheKey({ userId: "u1", offset: 10 }),
-      ).toContain("o:10");
+      expect(buildUserOrdersCacheKey({ userId: "u1", offset: 10 })).toContain(
+        "o:10",
+      );
     });
 
     it("includes limit", () => {
-      expect(
-        buildUserOrdersCacheKey({ userId: "u1", limit: 25 }),
-      ).toContain("l:25");
+      expect(buildUserOrdersCacheKey({ userId: "u1", limit: 25 })).toContain(
+        "l:25",
+      );
     });
   });
 

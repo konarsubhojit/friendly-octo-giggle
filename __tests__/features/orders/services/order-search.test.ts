@@ -76,14 +76,23 @@ describe("order-search", () => {
       mockSearchAllOrdersRedis.mockResolvedValue(["ord1", "ord2"]);
       const result = await searchOrderIds("test");
       expect(result).toEqual(["ord1", "ord2"]);
-      expect(mockSearchAllOrdersRedis).toHaveBeenCalledWith("test", 1000, undefined);
+      expect(mockSearchAllOrdersRedis).toHaveBeenCalledWith(
+        "test",
+        1000,
+        undefined,
+      );
     });
 
     it("returns Redis results for specific user", async () => {
       mockSearchUserOrdersRedis.mockResolvedValue(["ord1"]);
       const result = await searchOrderIds("test", { userId: "user1" });
       expect(result).toEqual(["ord1"]);
-      expect(mockSearchUserOrdersRedis).toHaveBeenCalledWith("user1", "test", 1000, undefined);
+      expect(mockSearchUserOrdersRedis).toHaveBeenCalledWith(
+        "user1",
+        "test",
+        1000,
+        undefined,
+      );
     });
 
     it("falls back to cached database search when Redis returns null", async () => {
@@ -117,7 +126,11 @@ describe("order-search", () => {
     it("passes status filter to Redis", async () => {
       mockSearchAllOrdersRedis.mockResolvedValue([]);
       await searchOrderIds("test", { status: "PENDING" });
-      expect(mockSearchAllOrdersRedis).toHaveBeenCalledWith("test", 1000, "PENDING");
+      expect(mockSearchAllOrdersRedis).toHaveBeenCalledWith(
+        "test",
+        1000,
+        "PENDING",
+      );
     });
   });
 });

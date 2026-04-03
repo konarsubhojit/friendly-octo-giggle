@@ -171,9 +171,9 @@ describe("admin/categories API", () => {
       const selectChain = {
         from: vi.fn().mockReturnThis(),
         where: vi.fn().mockReturnThis(),
-        limit: vi.fn().mockResolvedValue([
-          { id: "1", name: "Existing", deletedAt: null },
-        ]),
+        limit: vi
+          .fn()
+          .mockResolvedValue([{ id: "1", name: "Existing", deletedAt: null }]),
       };
       mockDrizzleDb.select.mockReturnValue(selectChain);
 

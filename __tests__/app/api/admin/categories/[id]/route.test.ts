@@ -137,9 +137,7 @@ describe("admin/categories/[id] API", () => {
       const existingChain = {
         from: vi.fn().mockReturnThis(),
         where: vi.fn().mockReturnThis(),
-        limit: vi.fn().mockResolvedValue([
-          { id: "cat1", name: "Old Name" },
-        ]),
+        limit: vi.fn().mockResolvedValue([{ id: "cat1", name: "Old Name" }]),
       };
 
       const duplicateChain = {
@@ -195,9 +193,11 @@ describe("admin/categories/[id] API", () => {
       const selectChain = {
         from: vi.fn().mockReturnThis(),
         where: vi.fn().mockReturnThis(),
-        limit: vi.fn().mockResolvedValue([
-          { id: "cat1", name: "To Delete", deletedAt: null },
-        ]),
+        limit: vi
+          .fn()
+          .mockResolvedValue([
+            { id: "cat1", name: "To Delete", deletedAt: null },
+          ]),
       };
       mockDrizzleDb.select.mockReturnValue(selectChain);
 

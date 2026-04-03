@@ -93,9 +93,7 @@ describe("product/validations", () => {
       expect(result.success).toBe(false);
       if (!result.success) {
         const messages = result.error.issues.map((i: z.ZodIssue) => i.message);
-        expect(messages).toContain(
-          "Colour price must be greater than zero",
-        );
+        expect(messages).toContain("Colour price must be greater than zero");
       }
     });
 
