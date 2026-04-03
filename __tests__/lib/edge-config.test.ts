@@ -26,11 +26,13 @@ vi.mock('@/lib/logger', () => ({
 import {
   getFeatureFlags,
   getShippingConfig,
+  getAiConfig,
   getAllEdgeConfig,
   isMaintenanceMode,
   isSaleActive,
   DEFAULT_FEATURE_FLAGS,
   DEFAULT_SHIPPING_CONFIG,
+  DEFAULT_AI_CONFIG,
 } from '@/lib/edge-config'
 
 describe('edge-config', () => {
@@ -87,6 +89,51 @@ describe('edge-config', () => {
       mockGet.mockResolvedValue(custom)
       const config = await getShippingConfig()
       expect(config.freeShippingThreshold).toBe(500)
+    })
+
+    it('returns defaults when edge config returns null', async () => {
+      vi.stubEnv('EDGE_CONFIG', 'https://edge-config.vercel.com/ecfg_test')
+      mockGet.mockResolvedValue(null)
+      const config = await getShippingConfig()
+      expect(config).toEqual(DEFAULT_SHIPPING_CONFIG)
+    })
+
+    it('returns defaults on error', async () => {
+      vi.stubEnv('EDGE_CONFIG', 'https://edge-config.vercel.com/ecfg_test')
+      mockGet.mockRejectedValue(new Error('Network error'))
+      const config = await getShippingConfig()
+      expect(config).toEqual(DEFAULT_SHIPPING_CONFIG)
+    })
+  })
+
+  describe('getAiConfig', () => {
+    it('returns defaults when EDGE_CONFIG is not set', async () => {
+      const config = await getAiConfig()
+      expect(config).toEqual(DEFAULT_AI_CONFIG)
+      expect(mockGet).not.toHaveBeenCalled()
+    })
+
+    it('reads custom AI config from edge config', async () => {
+      vi.stubEnv('EDGE_CONFIG', 'https://edge-config.vercel.com/ecfg_test')
+      const custom = { ...DEFAULT_AI_CONFIG, chatModel: 'gpt-5-turbo' }
+      mockGet.mockResolvedValue(custom)
+      const config = await getAiConfig()
+      expect(config.chatModel).toBe('gpt-5-turbo')
+      expect(mockGet).toHaveBeenCalledWith('aiConfig')
+    })
+
+    it('returns defaults when edge config returns null', async () => {
+      vi.stubEnv('EDGE_CONFIG', 'https://edge-config.vercel.com/ecfg_test')
+      mockGet.mockResolvedValue(null)
+      const config = await getAiConfig()
+      expect(config).toEqual(DEFAULT_AI_CONFIG)
+    })
+
+    it('returns defaults on error', async () => {
+      vi.stubEnv('EDGE_CONFIG', 'https://edge-config.vercel.com/ecfg_test')
+      mockGet.mockRejectedValue(new Error('Network error'))
+      const config = await getAiConfig()
+      expect(config).toEqual(DEFAULT_AI_CONFIG)
     })
   })
 
