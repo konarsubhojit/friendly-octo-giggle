@@ -62,7 +62,7 @@ export const POST = async (
     const trimmed = parsed.data.messages.slice(
       -aiConfig.maxHistoryMessages
     ) as UIMessage[]
-    const messages = convertToModelMessages(trimmed)
+    const messages = await convertToModelMessages(trimmed)
 
     const messageCount = trimmed.length
 

@@ -54,7 +54,7 @@
     "@vercel/functions": "^3.4.3",
     "@vercel/queue": "0.1.4",
     "@vercel/speed-insights": "^2.0.0",
-    "ai": "5.0.160",
+    "ai": "^6.0.145",
     "autoprefixer": "^10.4.24",
     "bcryptjs": "^3.0.3",
     "d3": "^7.9.0",
