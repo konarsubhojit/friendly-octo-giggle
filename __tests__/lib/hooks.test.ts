@@ -2,14 +2,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
 import React from "react";
-import {
-  useFetch,
-  useMutation,
-  useFormState,
-  useDebounce,
-  useLocalStorage,
-  useCursorPagination,
-} from "@/lib/hooks";
+import { useFetch } from "@/hooks/useFetch";
+import { useMutation } from "@/hooks/useMutation";
+import { useFormState } from "@/hooks/useFormState";
+import { useDebounce } from "@/hooks/useDebounce";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { useCursorPagination } from "@/hooks/useCursorPagination";
 
 describe("useFetch", () => {
   beforeEach(() => {

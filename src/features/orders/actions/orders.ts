@@ -1,5 +1,11 @@
 "use server";
 
+// Architecture note: Order reads and Redis search helpers use server actions
+// for direct server-side execution without an HTTP roundtrip. Cart checkout
+// uses API routes + Vercel Queue instead (see cart/services/checkout-service.ts)
+// because checkout requires durable, retryable processing with idempotency
+// guarantees that a queue provides but server actions do not.
+
 import { waitUntil } from "@vercel/functions";
 import { drizzleDb } from "@/lib/db";
 import { orders, orderItems, products } from "@/lib/schema";

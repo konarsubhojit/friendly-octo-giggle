@@ -15,7 +15,7 @@ import {
 import { UsersTable } from "@/features/admin/components/UsersTable";
 import { CursorPaginationBar } from "@/components/ui/CursorPaginationBar";
 import { AdminSearchForm } from "@/features/admin/components/AdminSearchForm";
-import { useCursorPagination } from "@/lib/hooks";
+import { useCursorPagination } from "@/hooks/useCursorPagination";
 
 interface AdminUser {
   readonly id: string;

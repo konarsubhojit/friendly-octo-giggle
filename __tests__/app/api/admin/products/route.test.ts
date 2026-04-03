@@ -54,11 +54,8 @@ vi.mock("@/lib/cache", () => ({
   cacheAdminProductsList: vi.fn((fetcher: () => Promise<unknown>) => fetcher()),
 }));
 
-vi.mock("@/lib/search-service", () => ({
-  searchProductIds: vi.fn().mockResolvedValue(null),
-}));
-
 vi.mock("@/lib/search", () => ({
+  searchProductIds: vi.fn().mockResolvedValue(null),
   indexProduct: vi.fn(),
 }));
 

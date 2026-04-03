@@ -36,8 +36,8 @@
   "dependencies": {
     "@ai-sdk/gateway": "2.0.64",
     "@ai-sdk/react": "2.0.162",
-    "@auth/core": "^0.41.0",
-    "@auth/drizzle-adapter": "^1.11.1",
+    "@auth/core": "0.41.1",
+    "@auth/drizzle-adapter": "1.11.1",
     "@neondatabase/serverless": "^0.10.0",
     "@reduxjs/toolkit": "^2.11.2",
     "@tailwindcss/postcss": "^4.1.18",
@@ -52,7 +52,7 @@
     "@vercel/blob": "^2.2.0",
     "@vercel/edge-config": "^1.4.3",
     "@vercel/functions": "^3.4.3",
-    "@vercel/queue": "^0.1.4",
+    "@vercel/queue": "0.1.4",
     "@vercel/speed-insights": "^2.0.0",
     "ai": "5.0.160",
     "autoprefixer": "^10.4.24",
@@ -61,7 +61,7 @@
     "drizzle-orm": "^0.45.1",
     "mailersend": "^2.6.0",
     "next": "^16.2.1",
-    "next-auth": "^5.0.0-beta.30",
+    "next-auth": "5.0.0-beta.30",
     "nodemailer": "^8.0.3",
     "pg": "^8.16.3",
     "pino": "^10.3.1",
@@ -72,7 +72,7 @@
     "react-hot-toast": "^2.6.0",
     "react-redux": "^9.2.0",
     "tailwindcss": "^4.1.18",
-    "zod": "^4.3.6"
+    "zod": "4.3.6"
   },
   "overrides": {
     "@esbuild-kit/core-utils": {
@@ -99,7 +99,7 @@
     "jsdom": "^29.0.1",
     "prettier": "^3.8.1",
     "tsx": "^4.21.0",
-    "typescript": "^6.0.2",
+    "typescript": "5.9.3",
     "vite-tsconfig-paths": "^6.1.1",
     "vitest": "^4.1.1",
     "ws": "^8.20.0"

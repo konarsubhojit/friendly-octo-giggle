@@ -6,7 +6,7 @@ import ProductGrid, {
 import { BestsellersScroller } from "@/features/product/components/BestsellersScroller";
 import { db, drizzleDb } from "@/lib/db";
 import { cacheCategoriesList, cacheProductsBestsellers } from "@/lib/cache";
-import { searchProductIdsCached } from "@/lib/search-service";
+import { searchProductIdsCached } from "@/lib/search";
 import { categories as categoriesTable } from "@/lib/schema";
 import { isNull, asc } from "drizzle-orm";
 import { logError } from "@/lib/logger";

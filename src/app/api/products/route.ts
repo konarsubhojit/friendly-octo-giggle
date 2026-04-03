@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { apiSuccess, handleApiError } from "@/lib/api-utils";
 import { withLogging } from "@/lib/api-middleware";
 import { cacheProductsList } from "@/lib/cache";
-import { searchProductIds } from "@/lib/search-service";
+import { searchProductIds } from "@/lib/search";
 
 const DEFAULT_LIMIT = 24;
 const MAX_LIMIT = 100;

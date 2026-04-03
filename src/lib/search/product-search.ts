@@ -6,9 +6,9 @@
  * caller to fall back to database search.
  */
 
-import { isSearchAvailable, searchProducts } from "./search";
-import { logError } from "./logger";
-import { getCachedData } from "./redis";
+import { isSearchAvailable, searchProducts } from "./client";
+import { logError } from "../logger";
+import { getCachedData } from "../redis";
 
 const PRODUCT_SEARCH_TTL_SECONDS = 60;
 const PRODUCT_SEARCH_STALE_SECONDS = 10;

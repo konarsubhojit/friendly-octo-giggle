@@ -12,7 +12,7 @@ import {
 import { revalidateTag } from "next/cache";
 import { invalidateProductCaches, cacheAdminProductsList } from "@/lib/cache";
 import { indexProduct } from "@/lib/search";
-import { searchProductIds } from "@/lib/search-service";
+import { searchProductIds } from "@/lib/search";
 import { checkAdminAuth } from "@/features/admin/services/admin-auth";
 
 export const dynamic = "force-dynamic";

@@ -18,7 +18,7 @@ vi.mock("@/lib/cache", () => ({
   ),
 }));
 
-vi.mock("@/lib/search-service", () => ({
+vi.mock("@/lib/search", () => ({
   searchProductIds: vi.fn(),
 }));
 
@@ -59,7 +59,7 @@ vi.mock("@/lib/logger", () => ({
 
 import { GET } from "@/app/api/products/route";
 import { db } from "@/lib/db";
-import { searchProductIds } from "@/lib/search-service";
+import { searchProductIds } from "@/lib/search";
 
 describe("GET /api/products", () => {
   const mockProducts = [

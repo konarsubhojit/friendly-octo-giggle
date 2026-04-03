@@ -9,13 +9,13 @@ export {
   EMAIL_REGEX,
   PHONE_REGEX,
   PASSWORD_REGEX,
-} from "@/lib/validations/primitives";
+} from "./primitives";
 
-export { ApiSuccessSchema, ApiErrorSchema } from "@/lib/validations/api";
-export type { AsyncResult, PaginatedResponse } from "@/lib/validations/api";
+export { ApiSuccessSchema, ApiErrorSchema } from "./api";
+export type { AsyncResult, PaginatedResponse } from "./api";
 
-export { EnvSchema } from "@/lib/validations/env";
-export type { Env } from "@/lib/validations/env";
+export { EnvSchema } from "./env";
+export type { Env } from "./env";
 
 export {
   ProductSchema,

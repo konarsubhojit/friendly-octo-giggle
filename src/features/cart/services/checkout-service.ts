@@ -1,3 +1,10 @@
+// Architecture note: Checkout uses API routes + Vercel Queue rather than
+// server actions. The queue provides durable delivery, automatic retries,
+// and idempotency via checkout request IDs — critical for payment-adjacent
+// workflows where exactly-once processing matters. See also
+// features/orders/actions/orders.ts for the server action counterpart used
+// for simpler order reads and search operations.
+
 import { waitUntil } from "@vercel/functions";
 import { desc, eq } from "drizzle-orm";
 import { drizzleDb, primaryDrizzleDb } from "@/lib/db";

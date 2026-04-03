@@ -9,7 +9,7 @@
  */
 
 import { Search } from "@upstash/search";
-import { logError } from "./logger";
+import { logError } from "../logger";
 
 export type ProductContent = {
   name: string;

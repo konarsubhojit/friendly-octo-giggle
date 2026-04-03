@@ -1,7 +1,7 @@
 "use client";
 
 import { useCurrency } from "@/contexts/CurrencyContext";
-import { useCursorPagination } from "@/lib/hooks";
+import { useCursorPagination } from "@/hooks/useCursorPagination";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { AlertBanner } from "@/components/ui/AlertBanner";
 import { EmptyState } from "@/components/ui/EmptyState";

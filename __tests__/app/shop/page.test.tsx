@@ -91,7 +91,7 @@ vi.mock("@/lib/cache", () => ({
   ),
 }));
 
-vi.mock("@/lib/search-service", () => ({
+vi.mock("@/lib/search", () => ({
   searchProductIdsCached: mockSearchProductIdsCached,
 }));
 
