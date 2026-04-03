@@ -8,7 +8,7 @@ vi.mock('@/contexts/CurrencyContext', () => ({
   useCurrency: () => ({ formatPrice: (p: number) => `₹${p}` }),
 }))
 
-vi.mock('@/lib/hooks', () => ({
+vi.mock('@/hooks/useCursorPagination', () => ({
   useCursorPagination: (...args: unknown[]) => mockUseCursorPagination(...args),
 }))
 

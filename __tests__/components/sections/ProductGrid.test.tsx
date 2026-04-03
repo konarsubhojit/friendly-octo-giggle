@@ -2,7 +2,6 @@ import { describe, it, vi, expect, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import React from 'react'
 import ProductGrid from '@/features/product/components/ProductGrid'
-import { CurrencyProvider } from '@/contexts/CurrencyContext'
 import type { Product } from '@/lib/types'
 import toast from 'react-hot-toast'
 import type { ProductGridItem } from '@/features/product/components/ProductGrid'
@@ -56,6 +55,25 @@ vi.mock('next-auth/react', () => ({
 
 vi.mock('react-hot-toast', () => ({
   default: { success: vi.fn(), error: vi.fn() },
+}))
+
+vi.mock('@/contexts/CurrencyContext', () => ({
+  useCurrency: () => ({
+    currency: 'INR' as const,
+    setCurrency: vi.fn(),
+    formatPrice: (v: number) =>
+      new Intl.NumberFormat('en-IN', {
+        style: 'currency',
+        currency: 'INR',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }).format(v),
+    convertPrice: (v: number) => v,
+    currencySymbol: '₹',
+    availableCurrencies: ['INR', 'USD', 'EUR', 'GBP'],
+    rates: { INR: 1, USD: 1 / 83.5, EUR: 0.92 / 83.5, GBP: 0.79 / 83.5 },
+    ratesLoading: false,
+  }),
 }))
 
 const makeProduct = (overrides: Partial<Product> = {}): Product => {
@@ -118,13 +136,11 @@ function renderGrid(
   props?: Partial<React.ComponentProps<typeof ProductGrid>>
 ) {
   return render(
-    <CurrencyProvider>
-      <ProductGrid
-        products={products.map(toGridItem)}
-        categories={categories}
-        {...props}
-      />
-    </CurrencyProvider>
+    <ProductGrid
+      products={products.map(toGridItem)}
+      categories={categories}
+      {...props}
+    />
   )
 }
 
@@ -134,16 +150,7 @@ describe('ProductGrid', () => {
     intersectionCallback = null
     mockDispatch.mockReturnValue({ unwrap: () => Promise.resolve({}) })
     vi.stubGlobal('IntersectionObserver', mockIntersectionObserver)
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async () => ({
-        ok: true,
-        json: async () => ({
-          success: true,
-          rates: { INR: 83.12, USD: 1, EUR: 0.92, GBP: 0.79 },
-        }),
-      }))
-    )
+    vi.stubGlobal('fetch', vi.fn())
   })
   it('shows empty state when no products', () => {
     renderGrid([])

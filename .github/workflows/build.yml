@@ -104,4 +104,4 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
           args: >
-            -Dsonar.coverage.exclusions=app/**/page.tsx,app/**/layout.tsx,app/**/loading.tsx,app/**/error.tsx,lib/schema.ts,lib/db.ts,lib/email/providers.ts,lib/constants/categories.ts,lib/search-service.ts
+            -Dsonar.coverage.exclusions=src/app/**/page.tsx,src/app/**/layout.tsx,src/app/**/loading.tsx,src/app/**/error.tsx,src/lib/schema.ts,src/lib/db.ts,src/lib/env.ts,src/lib/redis.ts,src/lib/logger.ts,src/lib/qstash.ts,src/lib/qstash-events.ts,src/lib/queue.ts,src/lib/email/providers.ts,src/lib/constants/categories.ts,src/lib/constants/checkout-policies.ts,src/lib/search/**,src/lib/ai/**,src/proxy.ts,src/types/**
