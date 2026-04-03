@@ -86,6 +86,47 @@ function serializeVariation(v: typeof productVariations.$inferSelect) {
   }
 }
 
+async function validateUpdateFields(
+  validated: Record<string, unknown>,
+  existing: typeof productVariations.$inferSelect,
+  variationId: string
+) {
+  if (validated.price !== undefined && (validated.price as number) <= 0) {
+    const effectiveType =
+      (validated.variationType as string) ?? existing.variationType
+    if (effectiveType === 'colour') {
+      return apiError('Colour price must be greater than zero', 400)
+    }
+  }
+
+  if (validated.styleId !== undefined && validated.styleId !== null) {
+    const parentStyle = await findStyleById(
+      validated.styleId as string,
+      existing.productId
+    )
+    if (!parentStyle) {
+      return apiError(
+        'Parent style not found or does not belong to this product',
+        404
+      )
+    }
+  }
+
+  if (validated.name !== undefined) {
+    const nameError = await checkVariationNameUniqueness(
+      existing.productId,
+      validated.name as string,
+      variationId,
+      existing.name
+    )
+    if (nameError) {
+      return apiError(nameError.error, nameError.status)
+    }
+  }
+
+  return null
+}
+
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ variationId: string }> }
@@ -118,38 +159,13 @@ export async function PUT(
       return apiError('No fields to update', 400)
     }
 
-    if (validated.price !== undefined && validated.price <= 0) {
-      // Only colours need positive price; styles must be 0
-      const effectiveType = validated.variationType ?? existing.variationType
-      if (effectiveType === 'colour' && validated.price <= 0) {
-        return apiError('Colour price must be greater than zero', 400)
-      }
-    }
-
-    // Validate styleId reference if being set
-    if (validated.styleId !== undefined && validated.styleId !== null) {
-      const parentStyle = await findStyleById(
-        validated.styleId,
-        existing.productId
-      )
-      if (!parentStyle) {
-        return apiError(
-          'Parent style not found or does not belong to this product',
-          404
-        )
-      }
-    }
-
-    if (validated.name !== undefined) {
-      const nameError = await checkVariationNameUniqueness(
-        existing.productId,
-        validated.name,
-        variationId,
-        existing.name
-      )
-      if (nameError) {
-        return apiError(nameError.error, nameError.status)
-      }
+    const validationError = await validateUpdateFields(
+      validated,
+      existing,
+      variationId
+    )
+    if (validationError) {
+      return validationError
     }
 
     const [updated] = await drizzleDb

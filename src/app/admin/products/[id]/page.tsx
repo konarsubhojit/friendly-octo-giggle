@@ -40,7 +40,7 @@ export default async function AdminProductEditPage({ params }: PageProps) {
     productId: v.productId,
     name: v.name,
     designName: v.designName,
-    variationType: (v.variationType ?? 'styling') as 'styling' | 'colour',
+    variationType: v.variationType ?? 'styling',
     styleId: v.styleId ?? null,
     image: v.image ?? null,
     images: v.images ?? [],

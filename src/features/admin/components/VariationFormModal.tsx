@@ -19,7 +19,6 @@ const MAX_ADDITIONAL_IMAGES = 10
 
 interface VariationFormModalProps {
   readonly productId: string
-  readonly productPrice: number
   readonly variation?: ProductVariation
   readonly styles?: ProductVariation[]
   readonly onClose: () => void
@@ -135,6 +134,49 @@ async function parseVariationMutationResponse(
   return data.data.variation as ProductVariation
 }
 
+function validateImageFile(file: File): string | null {
+  if (!isValidImageType(file.type)) {
+    return `Invalid type. Allowed: ${VALID_IMAGE_TYPES_DISPLAY}`
+  }
+  if (file.size > MAX_FILE_SIZE) {
+    return `File too large. Max ${MAX_FILE_SIZE / 1024 / 1024}MB`
+  }
+  return null
+}
+
+function validateFormData(
+  formData: FormData,
+  isStyle: boolean
+): Record<string, string> {
+  const errs: Record<string, string> = {}
+  if (!formData.name.trim()) errs.name = 'Name is required'
+  else if (formData.name.length > 100)
+    errs.name = 'Name must be under 100 characters'
+  if (!formData.designName.trim()) errs.designName = 'Design name is required'
+  else if (formData.designName.length > 100)
+    errs.designName = 'Design name must be under 100 characters'
+  if (!isStyle) {
+    if (formData.price === '') errs.price = 'Price is required'
+    else if (Number.isNaN(Number.parseFloat(formData.price)))
+      errs.price = 'Must be a number'
+    else if (Number.parseFloat(formData.price) <= 0)
+      errs.price = 'Price must be greater than zero'
+    if (formData.stock === '') errs.stock = 'Stock is required'
+    else if (
+      !Number.isInteger(Number(formData.stock)) ||
+      Number(formData.stock) < 0
+    ) {
+      errs.stock = 'Stock must be a non-negative integer'
+    }
+  }
+  return errs
+}
+
+function getSubmitButtonLabel(submitting: boolean, isEditing: boolean): string {
+  if (submitting) return 'Saving...'
+  return isEditing ? 'Update' : 'Create'
+}
+
 export default function VariationFormModal({
   productId,
   variation,
@@ -181,42 +223,6 @@ export default function VariationFormModal({
   const currentPrimaryImagePreview = primaryImageFile
     ? URL.createObjectURL(primaryImageFile)
     : primaryImageUrl
-
-  const validateImageFile = (file: File): string | null => {
-    if (!isValidImageType(file.type)) {
-      return `Invalid type. Allowed: ${VALID_IMAGE_TYPES_DISPLAY}`
-    }
-    if (file.size > MAX_FILE_SIZE) {
-      return `File too large. Max ${MAX_FILE_SIZE / 1024 / 1024}MB`
-    }
-    return null
-  }
-
-  const validate = (): Record<string, string> => {
-    const errs: Record<string, string> = {}
-    if (!formData.name.trim()) errs.name = 'Name is required'
-    else if (formData.name.length > 100)
-      errs.name = 'Name must be under 100 characters'
-    if (!formData.designName.trim()) errs.designName = 'Design name is required'
-    else if (formData.designName.length > 100)
-      errs.designName = 'Design name must be under 100 characters'
-    // Styles don't need price/stock validation
-    if (!isStyle) {
-      if (formData.price === '') errs.price = 'Price is required'
-      else if (Number.isNaN(Number.parseFloat(formData.price)))
-        errs.price = 'Must be a number'
-      else if (Number.parseFloat(formData.price) <= 0)
-        errs.price = 'Price must be greater than zero'
-      if (formData.stock === '') errs.stock = 'Stock is required'
-      else if (
-        !Number.isInteger(Number(formData.stock)) ||
-        Number(formData.stock) < 0
-      ) {
-        errs.stock = 'Stock must be a non-negative integer'
-      }
-    }
-    return errs
-  }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -329,7 +335,7 @@ export default function VariationFormModal({
 
   const handleSubmit = async (e: React.BaseSyntheticEvent) => {
     e.preventDefault()
-    const validationErrors = validate()
+    const validationErrors = validateFormData(formData, isStyle)
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors)
       return
@@ -370,12 +376,7 @@ export default function VariationFormModal({
     }
   }
 
-  let submitButtonLabel = 'Create'
-  if (submitting) {
-    submitButtonLabel = 'Saving...'
-  } else if (isEditing) {
-    submitButtonLabel = 'Update'
-  }
+  const submitButtonLabel = getSubmitButtonLabel(submitting, isEditing)
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm dark:bg-slate-950/78">

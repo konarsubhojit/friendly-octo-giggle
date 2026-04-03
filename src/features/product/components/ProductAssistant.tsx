@@ -42,7 +42,7 @@ export default function ProductAssistant({
     }
   }, [messages])
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.SyntheticEvent) => {
     e.preventDefault()
     if (!input.trim()) return
     sendMessage({ text: input })
@@ -184,7 +184,7 @@ export default function ProductAssistant({
           </div>
         ))}
 
-        {isStreaming && messages[messages.length - 1]?.role !== 'assistant' && (
+        {isStreaming && messages.at(-1)?.role !== 'assistant' && (
           <div className="flex justify-start">
             <div className="rounded-2xl bg-[var(--accent-cream)] border border-[var(--border-warm)] px-4 py-3 text-sm text-[var(--text-secondary)]">
               Generating response...

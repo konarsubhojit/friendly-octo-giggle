@@ -385,7 +385,7 @@ function ColourCard({
 
 export default function VariationList({
   productId,
-  productPrice,
+  productPrice: _productPrice,
   initialVariations,
 }: VariationListProps) {
   const [variations, setVariations] =
@@ -639,7 +639,6 @@ export default function VariationList({
           <Suspense fallback={modalFallback}>
             <VariationFormModal
               productId={productId}
-              productPrice={productPrice}
               variation={editingVariation}
               styles={styleVariations}
               onClose={handleFormClose}
@@ -744,7 +743,7 @@ export default function VariationList({
                   </div>
                   <span className="rounded-full bg-slate-200 px-2.5 py-0.5 text-xs font-semibold text-slate-600 dark:bg-slate-700 dark:text-slate-300">
                     {styleColours.length} colour
-                    {styleColours.length !== 1 ? 's' : ''}
+                    {styleColours.length === 1 ? '' : 's'}
                   </span>
                 </div>
                 <div className="flex gap-2">
@@ -830,7 +829,6 @@ export default function VariationList({
         <Suspense fallback={modalFallback}>
           <VariationFormModal
             productId={productId}
-            productPrice={productPrice}
             variation={editingVariation}
             styles={styleVariations}
             onClose={handleFormClose}

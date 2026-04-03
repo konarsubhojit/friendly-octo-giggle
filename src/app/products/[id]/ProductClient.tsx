@@ -221,6 +221,12 @@ interface VariationSelectorProps {
   readonly cartQuantities: Record<string, number>
 }
 
+function getStyleButtonClass(isActive: boolean, isDisabled: boolean): string {
+  if (isActive) return 'bg-[var(--accent-warm)] text-white shadow-warm'
+  if (isDisabled) return 'bg-slate-100 text-slate-400 cursor-not-allowed'
+  return 'bg-[var(--accent-cream)] text-[var(--text-secondary)] border border-[var(--border-warm)] hover:border-[var(--accent-warm)]'
+}
+
 const baseButtonClass = (isSelected: boolean) => {
   const base =
     'p-4 border-2 rounded-xl transition-all duration-300 focus-warm text-left'
@@ -360,13 +366,7 @@ const VariationSelector = ({
                   }}
                   aria-pressed={activeStyleId === style.id}
                   disabled={styleColourCount === 0}
-                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
-                    activeStyleId === style.id
-                      ? 'bg-[var(--accent-warm)] text-white shadow-warm'
-                      : styleColourCount === 0
-                        ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                        : 'bg-[var(--accent-cream)] text-[var(--text-secondary)] border border-[var(--border-warm)] hover:border-[var(--accent-warm)]'
-                  }`}
+                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${getStyleButtonClass(activeStyleId === style.id, styleColourCount === 0)}`}
                 >
                   {style.name}
                   {styleColourCount === 0 && (
@@ -380,7 +380,7 @@ const VariationSelector = ({
       )}
 
       {/* Colour options for the active style */}
-      {activeColours.length > 0 ? (
+      {activeColours.length > 0 && (
         <div>
           <span className="block text-sm font-semibold text-[var(--text-secondary)] mb-2">
             🌈 Colour
@@ -398,7 +398,9 @@ const VariationSelector = ({
             ))}
           </div>
         </div>
-      ) : !hasNamedStyles ? (
+      )}
+
+      {activeColours.length === 0 && !hasNamedStyles && (
         /* No styles and no colours — just show base option */
         <div className="grid grid-cols-2 gap-3">
           <button
@@ -418,7 +420,7 @@ const VariationSelector = ({
             </div>
           </button>
         </div>
-      ) : null}
+      )}
     </div>
   )
 }

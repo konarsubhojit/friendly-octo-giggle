@@ -287,7 +287,7 @@ const buildOrderItemValues = (
     }
 
     const variationPrice = product.variationPriceMap.get(item.variationId ?? '')
-    const price = variationPrice !== undefined ? variationPrice : product.price
+    const price = variationPrice ?? product.price
 
     return {
       orderId,

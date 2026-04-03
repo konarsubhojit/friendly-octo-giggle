@@ -103,7 +103,7 @@ export const CheckoutForm = ({ customizationNotes }: CheckoutFormProps) => {
 
       {lineItems.length > 0 && (
         <p className="text-xs text-[var(--text-muted)]">
-          {lineItems.length} item{lineItems.length !== 1 ? 's' : ''} · Review
+          {lineItems.length} item{lineItems.length === 1 ? '' : 's'} · Review
           policies before placing order
         </p>
       )}
