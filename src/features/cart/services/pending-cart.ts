@@ -13,7 +13,7 @@ export interface PendingCartItem {
 const PENDING_CART_KEY = 'pending_cart_items'
 
 export function getPendingCartItems(): PendingCartItem[] {
-  if (typeof globalThis.window === 'undefined') return []
+  if (globalThis.window === undefined) return []
   try {
     const raw = localStorage.getItem(PENDING_CART_KEY)
     if (!raw) return []
@@ -26,7 +26,7 @@ export function getPendingCartItems(): PendingCartItem[] {
 }
 
 export function addPendingCartItem(item: PendingCartItem): void {
-  if (typeof globalThis.window === 'undefined') return
+  if (globalThis.window === undefined) return
   const items = getPendingCartItems()
 
   const existing = items.find(
@@ -48,7 +48,7 @@ export function addPendingCartItem(item: PendingCartItem): void {
 }
 
 export function clearPendingCartItems(): void {
-  if (typeof globalThis.window === 'undefined') return
+  if (globalThis.window === undefined) return
   localStorage.removeItem(PENDING_CART_KEY)
 }
 

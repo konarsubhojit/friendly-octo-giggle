@@ -49,7 +49,7 @@ const delay = (ms: number) =>
   })
 
 function readPendingCheckout(): PendingCheckout | null {
-  if (typeof globalThis.window === 'undefined') return null
+  if (globalThis.window === undefined) return null
   try {
     const raw = sessionStorage.getItem(PENDING_CHECKOUT_KEY)
     return raw ? (JSON.parse(raw) as PendingCheckout) : null
