@@ -169,8 +169,9 @@ describe("admin-sales", () => {
             lastMonthRevenue: 500,
             lastMonthOrders: 5,
             ordersByStatus: '{"PENDING":3,"DELIVERED":7}',
-            topProducts: '[{"productId":"p1","name":"A","totalQuantity":"10","totalRevenue":"500"}]',
-            recentSales: '[]',
+            topProducts:
+              '[{"productId":"p1","name":"A","totalQuantity":"10","totalRevenue":"500"}]',
+            recentSales: "[]",
             totalCustomers: 50,
           },
         ],

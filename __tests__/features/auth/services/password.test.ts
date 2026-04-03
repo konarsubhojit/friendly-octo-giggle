@@ -1,16 +1,24 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { mockHash, mockCompare, mockSelect, mockInsert, mockDelete, mockOrderBy, mockLimit, mockWhere } =
-  vi.hoisted(() => ({
-    mockHash: vi.fn(),
-    mockCompare: vi.fn(),
-    mockSelect: vi.fn(),
-    mockInsert: vi.fn(),
-    mockDelete: vi.fn(),
-    mockOrderBy: vi.fn(),
-    mockLimit: vi.fn(),
-    mockWhere: vi.fn(),
-  }));
+const {
+  mockHash,
+  mockCompare,
+  mockSelect,
+  mockInsert,
+  mockDelete,
+  mockOrderBy,
+  mockLimit,
+  mockWhere,
+} = vi.hoisted(() => ({
+  mockHash: vi.fn(),
+  mockCompare: vi.fn(),
+  mockSelect: vi.fn(),
+  mockInsert: vi.fn(),
+  mockDelete: vi.fn(),
+  mockOrderBy: vi.fn(),
+  mockLimit: vi.fn(),
+  mockWhere: vi.fn(),
+}));
 
 vi.mock("bcryptjs", () => ({
   default: {
@@ -96,15 +104,15 @@ describe("password service", () => {
         from: vi.fn().mockReturnThis(),
         where: vi.fn().mockReturnThis(),
         orderBy: vi.fn().mockReturnThis(),
-        limit: vi.fn().mockResolvedValue([
-          { passwordHash: "old_hash_1" },
-          { passwordHash: "old_hash_2" },
-        ]),
+        limit: vi
+          .fn()
+          .mockResolvedValue([
+            { passwordHash: "old_hash_1" },
+            { passwordHash: "old_hash_2" },
+          ]),
       };
       mockSelect.mockReturnValue(selectChain);
-      mockCompare
-        .mockResolvedValueOnce(false)
-        .mockResolvedValueOnce(true);
+      mockCompare.mockResolvedValueOnce(false).mockResolvedValueOnce(true);
 
       const result = await checkPasswordHistory("user1", "reused-password");
 
@@ -117,9 +125,7 @@ describe("password service", () => {
         from: vi.fn().mockReturnThis(),
         where: vi.fn().mockReturnThis(),
         orderBy: vi.fn().mockReturnThis(),
-        limit: vi.fn().mockResolvedValue([
-          { passwordHash: "old_hash_1" },
-        ]),
+        limit: vi.fn().mockResolvedValue([{ passwordHash: "old_hash_1" }]),
       };
       mockSelect.mockReturnValue(selectChain);
       mockCompare.mockResolvedValue(false);
@@ -149,10 +155,12 @@ describe("password service", () => {
         from: vi.fn().mockReturnThis(),
         where: vi.fn().mockReturnThis(),
         orderBy: vi.fn().mockReturnThis(),
-        limit: vi.fn().mockResolvedValue([
-          { passwordHash: "match_hash" },
-          { passwordHash: "other_hash" },
-        ]),
+        limit: vi
+          .fn()
+          .mockResolvedValue([
+            { passwordHash: "match_hash" },
+            { passwordHash: "other_hash" },
+          ]),
       };
       mockSelect.mockReturnValue(selectChain);
       mockCompare.mockResolvedValueOnce(true);
@@ -174,11 +182,13 @@ describe("password service", () => {
       const selectChain = {
         from: vi.fn().mockReturnThis(),
         where: vi.fn().mockReturnThis(),
-        orderBy: vi.fn().mockResolvedValue([
-          { id: "entry1" },
-          { id: "entry2" },
-          { id: "entry3" },
-        ]),
+        orderBy: vi
+          .fn()
+          .mockResolvedValue([
+            { id: "entry1" },
+            { id: "entry2" },
+            { id: "entry3" },
+          ]),
       };
       mockSelect.mockReturnValue(selectChain);
 
@@ -205,10 +215,9 @@ describe("password service", () => {
       const selectChain = {
         from: vi.fn().mockReturnThis(),
         where: vi.fn().mockReturnThis(),
-        orderBy: vi.fn().mockResolvedValue([
-          { id: "entry1" },
-          { id: "entry2" },
-        ]),
+        orderBy: vi
+          .fn()
+          .mockResolvedValue([{ id: "entry1" }, { id: "entry2" }]),
       };
       mockSelect.mockReturnValue(selectChain);
 

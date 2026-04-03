@@ -396,9 +396,7 @@ describe("order-service", () => {
             customerName: "Test",
             customerEmail: "test@test.com",
             customerAddress: "123 St",
-            items: [
-              { productId: "p1", variationId: "v999", quantity: 1 },
-            ],
+            items: [{ productId: "p1", variationId: "v999", quantity: 1 }],
           },
           user: testUser,
         }),

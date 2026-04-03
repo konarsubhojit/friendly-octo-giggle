@@ -136,10 +136,7 @@ describe("cart-service", () => {
 
   describe("getCartIdentity", () => {
     it("returns userId from session", () => {
-      const result = getCartIdentity(
-        { user: { id: "user1" } },
-        "sess1",
-      );
+      const result = getCartIdentity({ user: { id: "user1" } }, "sess1");
 
       expect(result).toEqual({ userId: "user1", sessionId: "sess1" });
     });
