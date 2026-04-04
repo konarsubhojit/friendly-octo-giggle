@@ -185,20 +185,19 @@ describe('QuickAddButton', () => {
     })
   })
 
-  it('prevents event propagation and default', async () => {
-    const mockEvent = {
-      preventDefault: vi.fn(),
-      stopPropagation: vi.fn(),
-    }
+  it('prevents event propagation and default', () => {
+    const preventDefaultSpy = vi.spyOn(Event.prototype, 'preventDefault')
+    const stopPropagationSpy = vi.spyOn(Event.prototype, 'stopPropagation')
 
     render(<QuickAddButton product={mockProduct} />)
     const button = screen.getByLabelText('Add Test Product to cart')
 
-    fireEvent.click(button, mockEvent)
+    fireEvent.click(button)
 
-    await waitFor(() => {
-      expect(mockEvent.preventDefault).toHaveBeenCalled()
-      expect(mockEvent.stopPropagation).toHaveBeenCalled()
-    })
+    expect(preventDefaultSpy).toHaveBeenCalled()
+    expect(stopPropagationSpy).toHaveBeenCalled()
+
+    preventDefaultSpy.mockRestore()
+    stopPropagationSpy.mockRestore()
   })
 })
