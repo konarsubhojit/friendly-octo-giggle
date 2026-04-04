@@ -74,12 +74,7 @@ describe('DynamicForm', () => {
   })
 
   it('renders all fields from the fields prop', () => {
-    render(
-      <DynamicForm
-        fields={[emailField, nameField]}
-        onSubmit={vi.fn()}
-      />
-    )
+    render(<DynamicForm fields={[emailField, nameField]} onSubmit={vi.fn()} />)
     expect(screen.getByTestId('field-email')).toBeInTheDocument()
     expect(screen.getByTestId('field-name')).toBeInTheDocument()
   })
@@ -92,7 +87,9 @@ describe('DynamicForm', () => {
         submitLabel="Save Changes"
       />
     )
-    expect(screen.getByRole('button', { name: 'Save Changes' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Save Changes' })
+    ).toBeInTheDocument()
   })
 
   it('renders cancel button when onCancel is provided', () => {
@@ -159,12 +156,7 @@ describe('DynamicForm', () => {
 
   it('shows validation errors and blocks submit when fields are invalid', async () => {
     const onSubmit = vi.fn()
-    render(
-      <DynamicForm
-        fields={[emailField, nameField]}
-        onSubmit={onSubmit}
-      />
-    )
+    render(<DynamicForm fields={[emailField, nameField]} onSubmit={onSubmit} />)
     // email has validate function, submit with empty values
     await act(async () => {
       fireEvent.submit(document.querySelector('form')!)
@@ -182,18 +174,24 @@ describe('DynamicForm', () => {
       fireEvent.submit(document.querySelector('form')!)
     })
     await waitFor(() => {
-      expect(screen.getByText(/Please correct the highlighted field/)).toBeInTheDocument()
+      expect(
+        screen.getByText(/Please correct the highlighted field/)
+      ).toBeInTheDocument()
     })
   })
 
   it('shows plural error count in summary when multiple fields invalid', async () => {
     const onSubmit = vi.fn()
-    render(<DynamicForm fields={[emailField, passwordField]} onSubmit={onSubmit} />)
+    render(
+      <DynamicForm fields={[emailField, passwordField]} onSubmit={onSubmit} />
+    )
     await act(async () => {
       fireEvent.submit(document.querySelector('form')!)
     })
     await waitFor(() => {
-      expect(screen.getByText(/Please correct 2 highlighted fields/)).toBeInTheDocument()
+      expect(
+        screen.getByText(/Please correct 2 highlighted fields/)
+      ).toBeInTheDocument()
     })
   })
 
@@ -262,7 +260,9 @@ describe('DynamicForm', () => {
       fireEvent.submit(document.querySelector('form')!)
     })
     await waitFor(() => {
-      expect(screen.getByTestId('error-email')).toHaveTextContent('Already taken')
+      expect(screen.getByTestId('error-email')).toHaveTextContent(
+        'Already taken'
+      )
     })
   })
 
@@ -387,7 +387,9 @@ describe('DynamicForm', () => {
     fireEvent.blur(screen.getByTestId('input-email'))
 
     await waitFor(() => {
-      expect(screen.getByTestId('error-email')).toHaveTextContent('Email is required')
+      expect(screen.getByTestId('error-email')).toHaveTextContent(
+        'Email is required'
+      )
     })
   })
 

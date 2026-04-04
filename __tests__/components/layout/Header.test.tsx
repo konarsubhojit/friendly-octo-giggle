@@ -484,9 +484,7 @@ describe('Header', () => {
     })
     // Find the mobile nav Login button (inside the mobile nav only)
     const loginButtons = screen.getAllByText('Login')
-    const mobileNavLoginBtn = loginButtons.find(
-      (el) => el.tagName === 'BUTTON'
-    )
+    const mobileNavLoginBtn = loginButtons.find((el) => el.tagName === 'BUTTON')
     expect(mobileNavLoginBtn).toBeTruthy()
     act(() => {
       fireEvent.click(mobileNavLoginBtn!)

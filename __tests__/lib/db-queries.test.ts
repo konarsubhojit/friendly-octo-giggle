@@ -112,7 +112,11 @@ vi.mock('@/lib/schema', () => ({
   orderItems: { productId: 'productId', quantity: 'quantity' },
   orders: { id: 'id', status: 'status' },
   passwordHistory: {},
-  productShares: { key: 'key', productId: 'productId', variationId: 'variationId' },
+  productShares: {
+    key: 'key',
+    productId: 'productId',
+    variationId: 'variationId',
+  },
   productVariations: {},
   products: {
     id: 'id',
@@ -162,8 +166,12 @@ vi.mock('@/lib/env', () => ({
 }))
 
 vi.mock('@/lib/cache', () => ({
-  cacheProductsList: vi.fn(async (fetcher: () => Promise<unknown>) => fetcher()),
-  cacheProductById: vi.fn(async (_key: string, fetcher: () => Promise<unknown>) => fetcher()),
+  cacheProductsList: vi.fn(async (fetcher: () => Promise<unknown>) =>
+    fetcher()
+  ),
+  cacheProductById: vi.fn(
+    async (_key: string, fetcher: () => Promise<unknown>) => fetcher()
+  ),
   invalidateProductCaches: mockInvalidateProductCaches,
   cacheShareResolve: mockCacheShareResolve,
   CACHE_KEYS: { PRODUCTS_ALL: 'products:all' },
@@ -171,8 +179,9 @@ vi.mock('@/lib/cache', () => ({
 }))
 
 vi.mock('@/lib/redis', () => ({
-  getCachedData: vi.fn(async (_key: string, _ttl: number, fetcher: () => Promise<unknown>) =>
-    fetcher()
+  getCachedData: vi.fn(
+    async (_key: string, _ttl: number, fetcher: () => Promise<unknown>) =>
+      fetcher()
   ),
 }))
 
@@ -195,10 +204,18 @@ vi.mock('@/lib/serializers', () => ({
 
 vi.mock('drizzle-orm', () => {
   const sqlMock = vi.fn((parts: TemplateStringsArray, ...values: unknown[]) => {
-    const result = { op: 'sql', parts, values, as: vi.fn((alias: string) => ({ op: 'sql_alias', alias })) }
+    const result = {
+      op: 'sql',
+      parts,
+      values,
+      as: vi.fn((alias: string) => ({ op: 'sql_alias', alias })),
+    }
     return result
   })
-  ;(sqlMock as unknown as Record<string, unknown>).raw = vi.fn((s: string) => ({ op: 'sql_raw', s }))
+  ;(sqlMock as unknown as Record<string, unknown>).raw = vi.fn((s: string) => ({
+    op: 'sql_raw',
+    s,
+  }))
   return {
     eq: vi.fn((...args: unknown[]) => ({ op: 'eq', args })),
     desc: vi.fn((col: unknown) => ({ op: 'desc', col })),
@@ -262,7 +279,10 @@ describe('db.products.findBestsellers', () => {
   })
 
   it('returns products sorted by sales with their variations', async () => {
-    const productRows = [makeProductRow({ id: 'prod001' }), makeProductRow({ id: 'prod002' })]
+    const productRows = [
+      makeProductRow({ id: 'prod001' }),
+      makeProductRow({ id: 'prod002' }),
+    ]
     const variationRows = [makeVariationRow({ productId: 'prod001' })]
 
     // findBestsellers calls drizzleDb.select() twice (subquery + main)
@@ -323,7 +343,10 @@ describe('db.products.findBestsellers', () => {
   })
 
   it('groups variations by productId correctly', async () => {
-    const productRows = [makeProductRow({ id: 'prodA' }), makeProductRow({ id: 'prodB' })]
+    const productRows = [
+      makeProductRow({ id: 'prodA' }),
+      makeProductRow({ id: 'prodB' }),
+    ]
     const variationRows = [
       makeVariationRow({ id: 'v1', productId: 'prodA' }),
       makeVariationRow({ id: 'v2', productId: 'prodA' }),
@@ -364,8 +387,24 @@ describe('db.products.findMinimalByIds', () => {
 
   it('returns minimal products for given IDs', async () => {
     const minimalProducts = [
-      { id: 'prod001', name: 'Rose', description: 'Roses', price: 500, stock: 10, category: 'Flowers', image: 'rose.jpg' },
-      { id: 'prod002', name: 'Lily', description: 'Lilies', price: 300, stock: 5, category: 'Flowers', image: 'lily.jpg' },
+      {
+        id: 'prod001',
+        name: 'Rose',
+        description: 'Roses',
+        price: 500,
+        stock: 10,
+        category: 'Flowers',
+        image: 'rose.jpg',
+      },
+      {
+        id: 'prod002',
+        name: 'Lily',
+        description: 'Lilies',
+        price: 300,
+        stock: 5,
+        category: 'Flowers',
+        image: 'lily.jpg',
+      },
     ]
     mockProductsFindMany.mockResolvedValue(minimalProducts)
 
