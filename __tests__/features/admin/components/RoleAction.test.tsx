@@ -116,7 +116,9 @@ describe('RoleAction', () => {
     fireEvent.change(select, { target: { value: 'ADMIN' } })
 
     expect(
-      screen.getByText(/Change john@example.com's role from "CUSTOMER" to "ADMIN"/)
+      screen.getByText(
+        /Change john@example.com's role from "CUSTOMER" to "ADMIN"/
+      )
     ).toBeInTheDocument()
   })
 

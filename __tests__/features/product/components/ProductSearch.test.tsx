@@ -3,11 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import React from 'react'
 import userEvent from '@testing-library/user-event'
 
-const {
-  mockPush,
-  mockFormatPrice,
-  mockFetch,
-} = vi.hoisted(() => ({
+const { mockPush, mockFormatPrice, mockFetch } = vi.hoisted(() => ({
   mockPush: vi.fn(),
   mockFormatPrice: vi.fn((price: number) => `$${price.toFixed(2)}`),
   mockFetch: vi.fn(),

@@ -81,7 +81,9 @@ describe('QuickAddButton', () => {
 
     await waitFor(() => {
       expect(mockDispatch).toHaveBeenCalled()
-      expect(mockToastSuccess).toHaveBeenCalledWith('Test Product added to cart!')
+      expect(mockToastSuccess).toHaveBeenCalledWith(
+        'Test Product added to cart!'
+      )
     })
   })
 
@@ -93,7 +95,9 @@ describe('QuickAddButton', () => {
     fireEvent.click(button)
 
     await waitFor(() => {
-      expect(mockToast).toHaveBeenCalledWith('Low stock warning', { icon: '⚠️' })
+      expect(mockToast).toHaveBeenCalledWith('Low stock warning', {
+        icon: '⚠️',
+      })
     })
   })
 

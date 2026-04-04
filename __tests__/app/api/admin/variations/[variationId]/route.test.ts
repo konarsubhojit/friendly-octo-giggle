@@ -111,10 +111,13 @@ describe('PUT /api/admin/variations/[variationId]', () => {
       error: 'Unauthorized',
     })
 
-    const request = new NextRequest('http://localhost/api/admin/variations/var123', {
-      method: 'PUT',
-      body: JSON.stringify({ name: 'Red' }),
-    })
+    const request = new NextRequest(
+      'http://localhost/api/admin/variations/var123',
+      {
+        method: 'PUT',
+        body: JSON.stringify({ name: 'Red' }),
+      }
+    )
 
     const response = await PUT(request, {
       params: Promise.resolve({ variationId: 'var123' }),
@@ -128,10 +131,13 @@ describe('PUT /api/admin/variations/[variationId]', () => {
   it('returns 404 when variation not found', async () => {
     mockFindFirst.mockResolvedValueOnce(null)
 
-    const request = new NextRequest('http://localhost/api/admin/variations/var123', {
-      method: 'PUT',
-      body: JSON.stringify({ name: 'Red' }),
-    })
+    const request = new NextRequest(
+      'http://localhost/api/admin/variations/var123',
+      {
+        method: 'PUT',
+        body: JSON.stringify({ name: 'Red' }),
+      }
+    )
 
     const response = await PUT(request, {
       params: Promise.resolve({ variationId: 'var123' }),
@@ -147,10 +153,13 @@ describe('PUT /api/admin/variations/[variationId]', () => {
       .mockResolvedValueOnce(mockVariation)
       .mockResolvedValueOnce(null)
 
-    const request = new NextRequest('http://localhost/api/admin/variations/var123', {
-      method: 'PUT',
-      body: JSON.stringify({ name: 'Red' }),
-    })
+    const request = new NextRequest(
+      'http://localhost/api/admin/variations/var123',
+      {
+        method: 'PUT',
+        body: JSON.stringify({ name: 'Red' }),
+      }
+    )
 
     const response = await PUT(request, {
       params: Promise.resolve({ variationId: 'var123' }),
@@ -166,10 +175,13 @@ describe('PUT /api/admin/variations/[variationId]', () => {
       .mockResolvedValueOnce(mockVariation)
       .mockResolvedValueOnce(mockProduct)
 
-    const request = new NextRequest('http://localhost/api/admin/variations/var123', {
-      method: 'PUT',
-      body: JSON.stringify({ price: 'invalid' }),
-    })
+    const request = new NextRequest(
+      'http://localhost/api/admin/variations/var123',
+      {
+        method: 'PUT',
+        body: JSON.stringify({ price: 'invalid' }),
+      }
+    )
 
     const response = await PUT(request, {
       params: Promise.resolve({ variationId: 'var123' }),
@@ -185,10 +197,13 @@ describe('PUT /api/admin/variations/[variationId]', () => {
       .mockResolvedValueOnce(mockVariation)
       .mockResolvedValueOnce(mockProduct)
 
-    const request = new NextRequest('http://localhost/api/admin/variations/var123', {
-      method: 'PUT',
-      body: JSON.stringify({}),
-    })
+    const request = new NextRequest(
+      'http://localhost/api/admin/variations/var123',
+      {
+        method: 'PUT',
+        body: JSON.stringify({}),
+      }
+    )
 
     const response = await PUT(request, {
       params: Promise.resolve({ variationId: 'var123' }),
@@ -204,10 +219,13 @@ describe('PUT /api/admin/variations/[variationId]', () => {
       .mockResolvedValueOnce(mockVariation)
       .mockResolvedValueOnce(mockProduct)
 
-    const request = new NextRequest('http://localhost/api/admin/variations/var123', {
-      method: 'PUT',
-      body: JSON.stringify({ price: 0 }),
-    })
+    const request = new NextRequest(
+      'http://localhost/api/admin/variations/var123',
+      {
+        method: 'PUT',
+        body: JSON.stringify({ price: 0 }),
+      }
+    )
 
     const response = await PUT(request, {
       params: Promise.resolve({ variationId: 'var123' }),
@@ -224,10 +242,13 @@ describe('PUT /api/admin/variations/[variationId]', () => {
       .mockResolvedValueOnce(mockProduct)
       .mockResolvedValueOnce(null)
 
-    const request = new NextRequest('http://localhost/api/admin/variations/var123', {
-      method: 'PUT',
-      body: JSON.stringify({ styleId: 'style999' }),
-    })
+    const request = new NextRequest(
+      'http://localhost/api/admin/variations/var123',
+      {
+        method: 'PUT',
+        body: JSON.stringify({ styleId: 'style999' }),
+      }
+    )
 
     const response = await PUT(request, {
       params: Promise.resolve({ variationId: 'var123' }),
@@ -235,7 +256,9 @@ describe('PUT /api/admin/variations/[variationId]', () => {
     const data = await response.json()
 
     expect(response.status).toBe(404)
-    expect(data.error).toBe('Parent style not found or does not belong to this product')
+    expect(data.error).toBe(
+      'Parent style not found or does not belong to this product'
+    )
   })
 
   it('returns 409 when name conflicts with existing variation', async () => {
@@ -244,10 +267,13 @@ describe('PUT /api/admin/variations/[variationId]', () => {
       .mockResolvedValueOnce(mockProduct)
       .mockResolvedValueOnce({ id: 'other-var', name: 'Red', deletedAt: null })
 
-    const request = new NextRequest('http://localhost/api/admin/variations/var123', {
-      method: 'PUT',
-      body: JSON.stringify({ name: 'Red' }),
-    })
+    const request = new NextRequest(
+      'http://localhost/api/admin/variations/var123',
+      {
+        method: 'PUT',
+        body: JSON.stringify({ name: 'Red' }),
+      }
+    )
 
     const response = await PUT(request, {
       params: Promise.resolve({ variationId: 'var123' }),
@@ -255,19 +281,28 @@ describe('PUT /api/admin/variations/[variationId]', () => {
     const data = await response.json()
 
     expect(response.status).toBe(409)
-    expect(data.error).toBe('A variation with this name already exists for this product')
+    expect(data.error).toBe(
+      'A variation with this name already exists for this product'
+    )
   })
 
   it('returns 409 when name conflicts with archived variation', async () => {
     mockFindFirst
       .mockResolvedValueOnce(mockVariation)
       .mockResolvedValueOnce(mockProduct)
-      .mockResolvedValueOnce({ id: 'other-var', name: 'Red', deletedAt: new Date() })
+      .mockResolvedValueOnce({
+        id: 'other-var',
+        name: 'Red',
+        deletedAt: new Date(),
+      })
 
-    const request = new NextRequest('http://localhost/api/admin/variations/var123', {
-      method: 'PUT',
-      body: JSON.stringify({ name: 'Red' }),
-    })
+    const request = new NextRequest(
+      'http://localhost/api/admin/variations/var123',
+      {
+        method: 'PUT',
+        body: JSON.stringify({ name: 'Red' }),
+      }
+    )
 
     const response = await PUT(request, {
       params: Promise.resolve({ variationId: 'var123' }),
@@ -279,17 +314,24 @@ describe('PUT /api/admin/variations/[variationId]', () => {
   })
 
   it('successfully updates variation', async () => {
-    const updatedVariation = { ...mockVariation, name: 'Red', updatedAt: new Date() }
+    const updatedVariation = {
+      ...mockVariation,
+      name: 'Red',
+      updatedAt: new Date(),
+    }
     mockFindFirst
       .mockResolvedValueOnce(mockVariation)
       .mockResolvedValueOnce(mockProduct)
       .mockResolvedValueOnce(null)
     mockReturning.mockResolvedValueOnce([updatedVariation])
 
-    const request = new NextRequest('http://localhost/api/admin/variations/var123', {
-      method: 'PUT',
-      body: JSON.stringify({ name: 'Red', stock: 20 }),
-    })
+    const request = new NextRequest(
+      'http://localhost/api/admin/variations/var123',
+      {
+        method: 'PUT',
+        body: JSON.stringify({ name: 'Red', stock: 20 }),
+      }
+    )
 
     const response = await PUT(request, {
       params: Promise.resolve({ variationId: 'var123' }),
@@ -302,16 +344,23 @@ describe('PUT /api/admin/variations/[variationId]', () => {
   })
 
   it('allows updating to the same name', async () => {
-    const updatedVariation = { ...mockVariation, stock: 20, updatedAt: new Date() }
+    const updatedVariation = {
+      ...mockVariation,
+      stock: 20,
+      updatedAt: new Date(),
+    }
     mockFindFirst
       .mockResolvedValueOnce(mockVariation)
       .mockResolvedValueOnce(mockProduct)
     mockReturning.mockResolvedValueOnce([updatedVariation])
 
-    const request = new NextRequest('http://localhost/api/admin/variations/var123', {
-      method: 'PUT',
-      body: JSON.stringify({ name: 'Blue', stock: 20 }),
-    })
+    const request = new NextRequest(
+      'http://localhost/api/admin/variations/var123',
+      {
+        method: 'PUT',
+        body: JSON.stringify({ name: 'Blue', stock: 20 }),
+      }
+    )
 
     const response = await PUT(request, {
       params: Promise.resolve({ variationId: 'var123' }),
@@ -336,9 +385,12 @@ describe('DELETE /api/admin/variations/[variationId]', () => {
       error: 'Unauthorized',
     })
 
-    const request = new NextRequest('http://localhost/api/admin/variations/var123', {
-      method: 'DELETE',
-    })
+    const request = new NextRequest(
+      'http://localhost/api/admin/variations/var123',
+      {
+        method: 'DELETE',
+      }
+    )
 
     const response = await DELETE(request, {
       params: Promise.resolve({ variationId: 'var123' }),
@@ -352,9 +404,12 @@ describe('DELETE /api/admin/variations/[variationId]', () => {
   it('returns 404 when variation not found', async () => {
     mockFindFirst.mockResolvedValueOnce(null)
 
-    const request = new NextRequest('http://localhost/api/admin/variations/var123', {
-      method: 'DELETE',
-    })
+    const request = new NextRequest(
+      'http://localhost/api/admin/variations/var123',
+      {
+        method: 'DELETE',
+      }
+    )
 
     const response = await DELETE(request, {
       params: Promise.resolve({ variationId: 'var123' }),
@@ -370,9 +425,12 @@ describe('DELETE /api/admin/variations/[variationId]', () => {
       .mockResolvedValueOnce(mockVariation)
       .mockResolvedValueOnce(null)
 
-    const request = new NextRequest('http://localhost/api/admin/variations/var123', {
-      method: 'DELETE',
-    })
+    const request = new NextRequest(
+      'http://localhost/api/admin/variations/var123',
+      {
+        method: 'DELETE',
+      }
+    )
 
     const response = await DELETE(request, {
       params: Promise.resolve({ variationId: 'var123' }),
@@ -388,9 +446,12 @@ describe('DELETE /api/admin/variations/[variationId]', () => {
       .mockResolvedValueOnce(mockVariation)
       .mockResolvedValueOnce(mockProduct)
 
-    const request = new NextRequest('http://localhost/api/admin/variations/var123', {
-      method: 'DELETE',
-    })
+    const request = new NextRequest(
+      'http://localhost/api/admin/variations/var123',
+      {
+        method: 'DELETE',
+      }
+    )
 
     const response = await DELETE(request, {
       params: Promise.resolve({ variationId: 'var123' }),
@@ -408,9 +469,12 @@ describe('DELETE /api/admin/variations/[variationId]', () => {
       .mockResolvedValueOnce(mockVariation)
       .mockResolvedValueOnce(mockProduct)
 
-    const request = new NextRequest('http://localhost/api/admin/variations/var123', {
-      method: 'DELETE',
-    })
+    const request = new NextRequest(
+      'http://localhost/api/admin/variations/var123',
+      {
+        method: 'DELETE',
+      }
+    )
 
     await DELETE(request, {
       params: Promise.resolve({ variationId: 'var123' }),

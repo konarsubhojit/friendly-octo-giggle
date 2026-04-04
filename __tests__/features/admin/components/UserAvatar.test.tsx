@@ -57,9 +57,7 @@ describe('UserAvatar', () => {
   })
 
   it('renders initial from email when name is null', () => {
-    render(
-      <UserAvatar name={null} email="bob@example.com" image={null} />
-    )
+    render(<UserAvatar name={null} email="bob@example.com" image={null} />)
 
     expect(screen.getByText('B')).toBeInTheDocument()
   })

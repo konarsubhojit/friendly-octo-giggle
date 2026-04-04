@@ -90,7 +90,9 @@ describe('OrdersByStatusCard', () => {
     expect(screen.getByText('PENDING')).toBeInTheDocument()
     expect(screen.getByText('25')).toBeInTheDocument()
 
-    const progressBar = screen.getByRole('listitem').querySelector('.bg-gradient-to-r')
+    const progressBar = screen
+      .getByRole('listitem')
+      .querySelector('.bg-gradient-to-r')
     expect(progressBar).toHaveStyle({ width: '100%' })
   })
 
