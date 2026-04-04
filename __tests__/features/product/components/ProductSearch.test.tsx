@@ -66,7 +66,9 @@ describe('ProductSearch', () => {
 
     expect(screen.getByRole('search')).toBeInTheDocument()
 
-    const closeButton = screen.getAllByRole('button', { name: 'Close search' })[1]
+    const closeButton = screen.getAllByRole('button', {
+      name: 'Close search',
+    })[1]
     fireEvent.click(closeButton)
 
     expect(screen.queryByRole('search')).not.toBeInTheDocument()
