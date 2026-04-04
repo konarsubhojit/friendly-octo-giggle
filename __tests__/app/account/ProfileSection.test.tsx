@@ -4,8 +4,16 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { ProfileSection } from '@/app/account/ProfileSection'
 
 vi.mock('@/components/ui/Card', () => ({
-  Card: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="card" className={className}>{children}</div>
+  Card: ({
+    children,
+    className,
+  }: {
+    children: React.ReactNode
+    className?: string
+  }) => (
+    <div data-testid="card" className={className}>
+      {children}
+    </div>
   ),
 }))
 
@@ -68,7 +76,10 @@ describe('ProfileSection', () => {
 
   it('renders profile information in read mode', () => {
     render(
-      <ProfileSection profile={mockProfile} onProfileUpdated={onProfileUpdated} />
+      <ProfileSection
+        profile={mockProfile}
+        onProfileUpdated={onProfileUpdated}
+      />
     )
     expect(screen.getByText('Profile Information')).toBeInTheDocument()
     expect(screen.getByText('Alice')).toBeInTheDocument()
@@ -91,7 +102,10 @@ describe('ProfileSection', () => {
 
   it('switches to edit mode when Edit button is clicked', () => {
     render(
-      <ProfileSection profile={mockProfile} onProfileUpdated={onProfileUpdated} />
+      <ProfileSection
+        profile={mockProfile}
+        onProfileUpdated={onProfileUpdated}
+      />
     )
     fireEvent.click(screen.getByRole('button', { name: /edit profile/i }))
     expect(screen.getByTestId('dynamic-form')).toBeInTheDocument()
@@ -99,7 +113,10 @@ describe('ProfileSection', () => {
 
   it('switches back to read mode when Cancel is clicked', () => {
     render(
-      <ProfileSection profile={mockProfile} onProfileUpdated={onProfileUpdated} />
+      <ProfileSection
+        profile={mockProfile}
+        onProfileUpdated={onProfileUpdated}
+      />
     )
     fireEvent.click(screen.getByRole('button', { name: /edit profile/i }))
     fireEvent.click(screen.getByText('Cancel'))
@@ -117,14 +134,19 @@ describe('ProfileSection', () => {
     )
 
     render(
-      <ProfileSection profile={mockProfile} onProfileUpdated={onProfileUpdated} />
+      <ProfileSection
+        profile={mockProfile}
+        onProfileUpdated={onProfileUpdated}
+      />
     )
 
     fireEvent.click(screen.getByRole('button', { name: /edit profile/i }))
     fireEvent.click(screen.getByText('Save Changes'))
 
     await waitFor(() => {
-      expect(screen.getByText('Profile updated successfully.')).toBeInTheDocument()
+      expect(
+        screen.getByText('Profile updated successfully.')
+      ).toBeInTheDocument()
     })
     expect(onProfileUpdated).toHaveBeenCalled()
   })
@@ -139,7 +161,10 @@ describe('ProfileSection', () => {
     )
 
     render(
-      <ProfileSection profile={mockProfile} onProfileUpdated={onProfileUpdated} />
+      <ProfileSection
+        profile={mockProfile}
+        onProfileUpdated={onProfileUpdated}
+      />
     )
 
     fireEvent.click(screen.getByRole('button', { name: /edit profile/i }))
@@ -159,7 +184,10 @@ describe('ProfileSection', () => {
     )
 
     render(
-      <ProfileSection profile={mockProfile} onProfileUpdated={onProfileUpdated} />
+      <ProfileSection
+        profile={mockProfile}
+        onProfileUpdated={onProfileUpdated}
+      />
     )
 
     fireEvent.click(screen.getByRole('button', { name: /edit profile/i }))

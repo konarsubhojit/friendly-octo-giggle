@@ -12,8 +12,16 @@ vi.mock('@/contexts/CurrencyContext', () => ({
 }))
 
 vi.mock('@/components/ui/Card', () => ({
-  Card: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="card" className={className}>{children}</div>
+  Card: ({
+    children,
+    className,
+  }: {
+    children: React.ReactNode
+    className?: string
+  }) => (
+    <div data-testid="card" className={className}>
+      {children}
+    </div>
   ),
 }))
 
@@ -86,9 +94,12 @@ describe('PreferencesSection', () => {
     expect(mockSetCurrency).toHaveBeenCalledWith('EUR')
 
     await waitFor(() => {
-      expect(mockFetch).toHaveBeenCalledWith('/api/account', expect.objectContaining({
-        method: 'PATCH',
-      }))
+      expect(mockFetch).toHaveBeenCalledWith(
+        '/api/account',
+        expect.objectContaining({
+          method: 'PATCH',
+        })
+      )
     })
   })
 })

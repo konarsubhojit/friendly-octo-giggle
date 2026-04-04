@@ -88,7 +88,9 @@ describe('BestsellersScroller', () => {
 
   it('renders product images', () => {
     render(<BestsellersScroller bestsellers={mockBestsellers} />)
-    expect(screen.getByRole('img', { name: 'Rose Gift Box' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('img', { name: 'Rose Gift Box' })
+    ).toBeInTheDocument()
     expect(screen.getByRole('img', { name: 'Lily Vase' })).toBeInTheDocument()
   })
 

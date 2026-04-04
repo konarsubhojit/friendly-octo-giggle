@@ -24,8 +24,16 @@ vi.mock('@/components/ui/AuthRequiredState', () => ({
 }))
 
 vi.mock('@/components/ui/Card', () => ({
-  Card: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="card" className={className}>{children}</div>
+  Card: ({
+    children,
+    className,
+  }: {
+    children: React.ReactNode
+    className?: string
+  }) => (
+    <div data-testid="card" className={className}>
+      {children}
+    </div>
   ),
 }))
 

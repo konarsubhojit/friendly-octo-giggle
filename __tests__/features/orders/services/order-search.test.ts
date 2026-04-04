@@ -140,7 +140,9 @@ describe('order-search', () => {
         from: vi.fn().mockReturnThis(),
         where: vi.fn().mockReturnThis(),
         orderBy: vi.fn().mockReturnThis(),
-        limit: vi.fn().mockResolvedValue([{ id: 'ord-db1' }, { id: 'ord-db2' }]),
+        limit: vi
+          .fn()
+          .mockResolvedValue([{ id: 'ord-db1' }, { id: 'ord-db2' }]),
       }
       mockSelect.mockReturnValue(mockChain)
 

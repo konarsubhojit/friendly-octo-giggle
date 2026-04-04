@@ -77,12 +77,20 @@ describe('account-shared', () => {
     })
 
     it('returns mismatch error when passwords differ', () => {
-      const errors = validatePasswordFields('old', 'SecurePass1!', 'Different1!')
+      const errors = validatePasswordFields(
+        'old',
+        'SecurePass1!',
+        'Different1!'
+      )
       expect(errors.confirmNewPassword).toBe(PASSWORD_ERRORS.CONFIRM_MISMATCH)
     })
 
     it('returns no errors for valid inputs', () => {
-      const errors = validatePasswordFields('old', 'SecurePass1!', 'SecurePass1!')
+      const errors = validatePasswordFields(
+        'old',
+        'SecurePass1!',
+        'SecurePass1!'
+      )
       expect(Object.keys(errors)).toHaveLength(0)
     })
   })
@@ -174,21 +182,27 @@ describe('account-shared', () => {
     })
 
     it('confirmNewPassword validate returns error for empty', () => {
-      const field = PASSWORD_FIELDS.find((f) => f.name === 'confirmNewPassword')!
+      const field = PASSWORD_FIELDS.find(
+        (f) => f.name === 'confirmNewPassword'
+      )!
       expect(field.validate!('', { newPassword: 'SecurePass1!' })).toBe(
         PASSWORD_ERRORS.CONFIRM_REQUIRED
       )
     })
 
     it('confirmNewPassword validate returns mismatch error', () => {
-      const field = PASSWORD_FIELDS.find((f) => f.name === 'confirmNewPassword')!
-      expect(field.validate!('Different1!', { newPassword: 'SecurePass1!' })).toBe(
-        PASSWORD_ERRORS.CONFIRM_MISMATCH
-      )
+      const field = PASSWORD_FIELDS.find(
+        (f) => f.name === 'confirmNewPassword'
+      )!
+      expect(
+        field.validate!('Different1!', { newPassword: 'SecurePass1!' })
+      ).toBe(PASSWORD_ERRORS.CONFIRM_MISMATCH)
     })
 
     it('confirmNewPassword validate returns undefined when matching', () => {
-      const field = PASSWORD_FIELDS.find((f) => f.name === 'confirmNewPassword')!
+      const field = PASSWORD_FIELDS.find(
+        (f) => f.name === 'confirmNewPassword'
+      )!
       expect(
         field.validate!('SecurePass1!', { newPassword: 'SecurePass1!' })
       ).toBeUndefined()

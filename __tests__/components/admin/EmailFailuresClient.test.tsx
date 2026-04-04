@@ -95,11 +95,7 @@ describe('EmailFailuresClient', () => {
   })
 
   it('does not show Retry button for sent records', () => {
-    render(
-      <EmailFailuresClient
-        initialRecords={[mockRecords[2]]}
-      />
-    )
+    render(<EmailFailuresClient initialRecords={[mockRecords[2]]} />)
     expect(screen.queryByText('Retry')).not.toBeInTheDocument()
   })
 
@@ -184,10 +180,7 @@ describe('EmailFailuresClient', () => {
       resolvePromise = resolve
     })
 
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockReturnValue(pendingPromise)
-    )
+    vi.stubGlobal('fetch', vi.fn().mockReturnValue(pendingPromise))
 
     render(<EmailFailuresClient initialRecords={[mockRecords[0]]} />)
     fireEvent.click(screen.getByText('Retry'))

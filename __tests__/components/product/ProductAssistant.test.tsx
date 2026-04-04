@@ -178,7 +178,9 @@ describe('ProductAssistant', () => {
     )
     expect(screen.getByText('Hello')).toBeInTheDocument()
     expect(screen.getByText('Hi there!')).toBeInTheDocument()
-    expect(screen.queryByText('Is this product in stock?')).not.toBeInTheDocument()
+    expect(
+      screen.queryByText('Is this product in stock?')
+    ).not.toBeInTheDocument()
   })
 
   it('shows streaming indicator when status is streaming', async () => {

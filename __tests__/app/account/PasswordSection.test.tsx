@@ -4,8 +4,16 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { PasswordSection } from '@/app/account/PasswordSection'
 
 vi.mock('@/components/ui/Card', () => ({
-  Card: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="card" className={className}>{children}</div>
+  Card: ({
+    children,
+    className,
+  }: {
+    children: React.ReactNode
+    className?: string
+  }) => (
+    <div data-testid="card" className={className}>
+      {children}
+    </div>
   ),
 }))
 

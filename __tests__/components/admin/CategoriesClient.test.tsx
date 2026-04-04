@@ -57,7 +57,9 @@ describe('CategoriesClient', () => {
 
   it('renders the add category form', () => {
     render(<CategoriesClient initialCategories={[]} />)
-    expect(screen.getByRole('heading', { name: /add category/i })).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { name: /add category/i })
+    ).toBeInTheDocument()
     expect(screen.getByPlaceholderText('e.g. Handbag')).toBeInTheDocument()
   })
 
@@ -97,7 +99,9 @@ describe('CategoriesClient', () => {
     fireEvent.change(screen.getByPlaceholderText('e.g. Handbag'), {
       target: { value: 'Hats' },
     })
-    fireEvent.submit(screen.getByRole('button', { name: /add category/i }).closest('form')!)
+    fireEvent.submit(
+      screen.getByRole('button', { name: /add category/i }).closest('form')!
+    )
 
     await waitFor(() => {
       expect(screen.getByText('Hats')).toBeInTheDocument()
@@ -120,7 +124,9 @@ describe('CategoriesClient', () => {
     fireEvent.change(screen.getByPlaceholderText('e.g. Handbag'), {
       target: { value: 'Bags' },
     })
-    fireEvent.submit(screen.getByRole('button', { name: /add category/i }).closest('form')!)
+    fireEvent.submit(
+      screen.getByRole('button', { name: /add category/i }).closest('form')!
+    )
 
     await waitFor(() => {
       expect(toast.default.error).toHaveBeenCalledWith('Duplicate name')
@@ -130,9 +136,7 @@ describe('CategoriesClient', () => {
   it('enters edit mode when Edit is clicked', () => {
     render(<CategoriesClient initialCategories={mockCategories} />)
     fireEvent.click(screen.getAllByText('Edit')[0])
-    expect(
-      screen.getByDisplayValue('Bags')
-    ).toBeInTheDocument()
+    expect(screen.getByDisplayValue('Bags')).toBeInTheDocument()
     expect(screen.getByText('Save')).toBeInTheDocument()
     expect(screen.getByText('Cancel')).toBeInTheDocument()
   })
