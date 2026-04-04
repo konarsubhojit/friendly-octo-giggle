@@ -433,9 +433,7 @@ describe('PUT /api/admin/variations/[variationId]', () => {
     mockFindFirst
       .mockResolvedValueOnce({ ...mockVariation, variationType: 'colour' })
       .mockResolvedValueOnce(mockProduct)
-    mockReturning.mockResolvedValueOnce([
-      { ...mockVariation, price: 100 },
-    ])
+    mockReturning.mockResolvedValueOnce([{ ...mockVariation, price: 100 }])
 
     const res = await PUT(
       makeRequest('http://localhost/api/admin/variations/var1234', 'PUT', {

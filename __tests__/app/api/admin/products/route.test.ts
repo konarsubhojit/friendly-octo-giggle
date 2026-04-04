@@ -162,7 +162,9 @@ describe('Admin Products API', () => {
       mockFindMany.mockResolvedValue(mockProducts)
       mockSelectWhere.mockResolvedValue([{ value: 1 }])
 
-      const response = await GET(makeRequest({ cursor: '2024-01-01T00:00:00.000Z' }))
+      const response = await GET(
+        makeRequest({ cursor: '2024-01-01T00:00:00.000Z' })
+      )
       const data = await response.json()
 
       expect(response.status).toBe(200)
