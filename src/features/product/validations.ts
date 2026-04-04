@@ -112,7 +112,20 @@ function validateStylingVariation(
 
 export const UpdateVariationSchema = z
   .object({
-    ...BaseVariationFields,
+    name: z
+      .string()
+      .min(1, 'Name is required')
+      .max(100, 'Name must be under 100 characters'),
+    designName: z
+      .string()
+      .min(1, 'Design name is required')
+      .max(100, 'Design name must be under 100 characters'),
+    variationType: z.enum(['styling', 'colour']),
+    styleId: z.string().regex(SHORT_ID_REGEX, 'Invalid style ID').nullish(),
+    image: z.string().regex(URL_REGEX, 'Must be a valid URL').nullish(),
+    images: z
+      .array(z.string().regex(URL_REGEX, 'Each image must be a valid URL'))
+      .max(10, 'Maximum 10 images allowed'),
     price: z
       .number({ message: 'Price is required' })
       .nonnegative('Price must be non-negative'),

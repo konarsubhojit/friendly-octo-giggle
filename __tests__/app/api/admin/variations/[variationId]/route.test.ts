@@ -30,8 +30,8 @@ vi.mock('@/lib/db', () => ({
     update: (...args: unknown[]) => {
       mockUpdate(...args)
       return {
-        set: (setArgs: unknown) => ({
-          where: (whereArgs: unknown) => ({
+        set: (_setArgs: unknown) => ({
+          where: (_whereArgs: unknown) => ({
             returning: () => mockReturning(),
           }),
         }),
@@ -100,7 +100,8 @@ const mockProduct = {
 
 describe('PUT /api/admin/variations/[variationId]', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
+    vi.resetAllMocks()
+    mockCheckAdminAuth.mockResolvedValue({ authorized: true })
     mockFindFirst.mockResolvedValue(null)
   })
 
@@ -189,7 +190,7 @@ describe('PUT /api/admin/variations/[variationId]', () => {
     const data = await response.json()
 
     expect(response.status).toBe(400)
-    expect(data.error).toContain('Expected number')
+    expect(data.error).toBe('Validation failed')
   })
 
   it('returns 400 when no fields to update', async () => {
@@ -246,7 +247,7 @@ describe('PUT /api/admin/variations/[variationId]', () => {
       'http://localhost/api/admin/variations/var123',
       {
         method: 'PUT',
-        body: JSON.stringify({ styleId: 'style999' }),
+        body: JSON.stringify({ styleId: 'aaaaaaa' }),
       }
     )
 
@@ -374,7 +375,8 @@ describe('PUT /api/admin/variations/[variationId]', () => {
 
 describe('DELETE /api/admin/variations/[variationId]', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
+    vi.resetAllMocks()
+    mockCheckAdminAuth.mockResolvedValue({ authorized: true })
     mockFindFirst.mockResolvedValue(null)
   })
 
