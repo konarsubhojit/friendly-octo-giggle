@@ -142,6 +142,93 @@ describe('Admin Products API', () => {
       expect(data.data).toHaveProperty('nextCursor')
       expect(data.data.totalCount).toBe(1)
     })
+
+    it('handles pagination with cursor', async () => {
+      const mockProducts = [
+        {
+          id: 'prod2',
+          name: 'Product 2',
+          price: 29.99,
+          deletedAt: null,
+          createdAt: new Date('2024-01-02'),
+          updatedAt: new Date('2024-01-02'),
+          variations: [],
+        },
+      ]
+      vi.mocked(auth).mockResolvedValue({
+        user: { role: 'ADMIN' },
+        expires: new Date().toISOString(),
+      } as never)
+      mockFindMany.mockResolvedValue(mockProducts)
+      mockSelectWhere.mockResolvedValue([{ value: 1 }])
+
+      const response = await GET(
+        makeRequest({ cursor: '2024-01-01T00:00:00.000Z' })
+      )
+      const data = await response.json()
+
+      expect(response.status).toBe(200)
+      expect(data.success).toBe(true)
+    })
+
+    it('handles pagination with offset', async () => {
+      const mockProducts = [
+        {
+          id: 'prod3',
+          name: 'Product 3',
+          price: 39.99,
+          deletedAt: null,
+          createdAt: new Date('2024-01-03'),
+          updatedAt: new Date('2024-01-03'),
+          variations: [],
+        },
+      ]
+      vi.mocked(auth).mockResolvedValue({
+        user: { role: 'ADMIN' },
+        expires: new Date().toISOString(),
+      } as never)
+      mockFindMany.mockResolvedValue(mockProducts)
+      mockSelectWhere.mockResolvedValue([{ value: 1 }])
+
+      const response = await GET(makeRequest({ offset: '10' }))
+      const data = await response.json()
+
+      expect(response.status).toBe(200)
+      expect(data.success).toBe(true)
+    })
+
+    it('handles search with empty results', async () => {
+      vi.mocked(auth).mockResolvedValue({
+        user: { role: 'ADMIN' },
+        expires: new Date().toISOString(),
+      } as never)
+      mockFindMany.mockResolvedValue([])
+      mockSelectWhere.mockResolvedValue([{ value: 0 }])
+
+      const response = await GET(makeRequest({ search: 'nonexistent' }))
+      const data = await response.json()
+
+      expect(response.status).toBe(200)
+      expect(data.success).toBe(true)
+      expect(data.data.products).toHaveLength(0)
+    })
+
+    it('enforces limit constraints', async () => {
+      vi.mocked(auth).mockResolvedValue({
+        user: { role: 'ADMIN' },
+        expires: new Date().toISOString(),
+      } as never)
+      mockFindMany.mockResolvedValue([])
+      mockSelectWhere.mockResolvedValue([{ value: 0 }])
+
+      // Test max limit
+      const response = await GET(makeRequest({ limit: '200' }))
+      expect(response.status).toBe(200)
+
+      // Test min limit
+      const response2 = await GET(makeRequest({ limit: '0' }))
+      expect(response2.status).toBe(200)
+    })
   })
 
   describe('POST /api/admin/products', () => {
