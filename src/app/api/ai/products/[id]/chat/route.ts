@@ -3,9 +3,14 @@ import { streamText, convertToModelMessages, type UIMessage } from 'ai'
 import { z } from 'zod'
 import { getChatModel, getAiConfigCached } from '@/lib/ai/gateway'
 import { buildProductContext } from '@/lib/ai/product-rag'
-import { db } from '@/lib/db'
+import { db, drizzleDb } from '@/lib/db'
 import { apiError, handleApiError } from '@/lib/api-utils'
 import { logError, logBusinessEvent } from '@/lib/logger'
+import { formatPriceForCurrency, isValidCurrencyCode } from '@/lib/currency'
+import type { CurrencyCode } from '@/lib/currency'
+import { users } from '@/lib/schema'
+import { eq } from 'drizzle-orm'
+import { auth } from '@/lib/auth'
 
 const ChatRequestSchema = z.object({
   messages: z.array(
@@ -54,10 +59,31 @@ export const POST = async (
       return apiError('Invalid request body', 400)
     }
 
+    let currencyCode: CurrencyCode = 'INR'
+    const session = await auth()
+    if (session?.user?.id) {
+      const userRecord = await drizzleDb.query.users.findFirst({
+        where: eq(users.id, session.user.id),
+        columns: { currencyPreference: true },
+      })
+      if (
+        userRecord?.currencyPreference &&
+        isValidCurrencyCode(userRecord.currencyPreference)
+      ) {
+        currencyCode = userRecord.currencyPreference
+      }
+    }
+
     const aiConfig = await getAiConfigCached()
     chatModel = aiConfig.chatModel
     const model = getChatModel(aiConfig.chatModel)
-    const systemPrompt = SYSTEM_PROMPT_PREFIX + buildProductContext(product)
+    const systemPrompt =
+      SYSTEM_PROMPT_PREFIX +
+      buildProductContext(product, {
+        currencyCode,
+        formatPrice: (priceInINR: number) =>
+          formatPriceForCurrency(priceInINR, currencyCode),
+      })
 
     const trimmed = parsed.data.messages.slice(
       -aiConfig.maxHistoryMessages

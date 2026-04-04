@@ -22,7 +22,7 @@ describe('buildProductContext', () => {
 
     expect(context).toContain('Name: Handmade Basket')
     expect(context).toContain('Category: Home Decor')
-    expect(context).toContain('Price: $29.99')
+    expect(context).toContain('Price (INR): ₹29.99')
     expect(context).toContain('Stock: 10 units')
   })
 
@@ -91,15 +91,24 @@ describe('buildProductContext', () => {
 
     const context = buildProductContext(product)
     expect(context).toContain('Variations (2):')
-    expect(context).toContain('[Colour] Red / Crimson: $34.99, 5 in stock')
+    expect(context).toContain('[Colour] Red / Crimson: ₹34.99, 5 in stock')
     expect(context).toContain(
-      '[Styling] Modern / Minimalist: $39.99, out of stock'
+      '[Styling] Modern / Minimalist: ₹39.99, out of stock'
     )
   })
 
   it('does not include variations section when empty', () => {
     const context = buildProductContext(baseProduct)
     expect(context).not.toContain('Variations')
+  })
+
+  it('uses provided currency formatter and code when supplied', () => {
+    const context = buildProductContext(baseProduct, {
+      currencyCode: 'USD',
+      formatPrice: (price) => `USD-${price.toFixed(1)}`,
+    })
+
+    expect(context).toContain('Price (USD): USD-30.0')
   })
 })
 
