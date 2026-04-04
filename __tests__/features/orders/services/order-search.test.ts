@@ -132,5 +132,133 @@ describe('order-search', () => {
         'PENDING'
       )
     })
+
+    it('invokes database fetcher via getCachedData with correct params', async () => {
+      mockSearchAllOrdersRedis.mockResolvedValue(null)
+
+      const mockChain = {
+        from: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        orderBy: vi.fn().mockReturnThis(),
+        limit: vi
+          .fn()
+          .mockResolvedValue([{ id: 'ord-db1' }, { id: 'ord-db2' }]),
+      }
+      mockSelect.mockReturnValue(mockChain)
+
+      mockGetCachedData.mockImplementation(
+        async (
+          _key: string,
+          _ttl: number,
+          fetcher: () => Promise<string[]>
+        ) => {
+          return fetcher()
+        }
+      )
+
+      const result = await searchOrderIds('test')
+      expect(result).toEqual(['ord-db1', 'ord-db2'])
+      expect(mockSelect).toHaveBeenCalled()
+    })
+
+    it('database fetcher applies userId filter', async () => {
+      mockSearchUserOrdersRedis.mockResolvedValue(null)
+
+      const mockChain = {
+        from: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        orderBy: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockResolvedValue([{ id: 'ord-user1' }]),
+      }
+      mockSelect.mockReturnValue(mockChain)
+
+      mockGetCachedData.mockImplementation(
+        async (
+          _key: string,
+          _ttl: number,
+          fetcher: () => Promise<string[]>
+        ) => {
+          return fetcher()
+        }
+      )
+
+      const result = await searchOrderIds('test', { userId: 'user1' })
+      expect(result).toEqual(['ord-user1'])
+    })
+
+    it('database fetcher applies status filter', async () => {
+      mockSearchAllOrdersRedis.mockResolvedValue(null)
+
+      const mockChain = {
+        from: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        orderBy: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockResolvedValue([]),
+      }
+      mockSelect.mockReturnValue(mockChain)
+
+      mockGetCachedData.mockImplementation(
+        async (
+          _key: string,
+          _ttl: number,
+          fetcher: () => Promise<string[]>
+        ) => {
+          return fetcher()
+        }
+      )
+
+      const result = await searchOrderIds('test', { status: 'SHIPPED' })
+      expect(result).toEqual([])
+    })
+
+    it('respects custom limit parameter', async () => {
+      mockSearchAllOrdersRedis.mockResolvedValue(null)
+
+      const mockChain = {
+        from: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        orderBy: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockResolvedValue([]),
+      }
+      mockSelect.mockReturnValue(mockChain)
+
+      mockGetCachedData.mockImplementation(
+        async (
+          _key: string,
+          _ttl: number,
+          fetcher: () => Promise<string[]>
+        ) => {
+          return fetcher()
+        }
+      )
+
+      await searchOrderIds('test', { limit: 10 })
+      expect(mockChain.limit).toHaveBeenCalledWith(10)
+    })
+
+    it('clamps limit to max 1000', async () => {
+      mockSearchAllOrdersRedis.mockResolvedValue(null)
+
+      const mockChain = {
+        from: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        orderBy: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockResolvedValue([]),
+      }
+      mockSelect.mockReturnValue(mockChain)
+
+      mockGetCachedData.mockImplementation(
+        async (
+          _key: string,
+          _ttl: number,
+          fetcher: () => Promise<string[]>
+        ) => {
+          return fetcher()
+        }
+      )
+
+      await searchOrderIds('test', { limit: 5000 })
+      expect(mockChain.limit).toHaveBeenCalledWith(1000)
+    })
   })
 })
