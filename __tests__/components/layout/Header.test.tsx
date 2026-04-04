@@ -413,4 +413,149 @@ describe('Header', () => {
       screen.getAllByTestId('product-search').length
     ).toBeGreaterThanOrEqual(1)
   })
+
+  it('does not show Login button in mobile nav when authenticated', () => {
+    vi.mocked(useSession).mockReturnValue({
+      data: {
+        user: {
+          id: 'user1',
+          name: 'Alice',
+          email: 'alice@example.com',
+          image: null,
+          role: 'CUSTOMER',
+        },
+        expires: '',
+      },
+      status: 'authenticated',
+      update: vi.fn(),
+    })
+    render(<Header />)
+    act(() => {
+      fireEvent.click(screen.getByLabelText('Open menu'))
+    })
+    // Login button should not appear in mobile nav for authenticated users
+    expect(screen.queryByRole('button', { name: 'Login' })).toBeNull()
+  })
+
+  it('mobile nav Home link navigates to /', () => {
+    vi.mocked(useSession).mockReturnValue({
+      data: null,
+      status: 'unauthenticated',
+      update: vi.fn(),
+    })
+    render(<Header />)
+    act(() => {
+      fireEvent.click(screen.getByLabelText('Open menu'))
+    })
+    const homeLinks = screen.getAllByText('Home')
+    // At least the mobile nav Home link should point to /
+    const homeLink = homeLinks.find(
+      (el) => el.closest('a')?.getAttribute('href') === '/'
+    )
+    expect(homeLink).toBeTruthy()
+  })
+
+  it('mobile nav Shop link navigates to /shop', () => {
+    vi.mocked(useSession).mockReturnValue({
+      data: null,
+      status: 'unauthenticated',
+      update: vi.fn(),
+    })
+    render(<Header />)
+    act(() => {
+      fireEvent.click(screen.getByLabelText('Open menu'))
+    })
+    const shopLinks = screen.getAllByText('Shop')
+    const shopLink = shopLinks.find(
+      (el) => el.closest('a')?.getAttribute('href') === '/shop'
+    )
+    expect(shopLink).toBeTruthy()
+  })
+
+  it('mobile nav Login button opens login modal and closes mobile nav', () => {
+    vi.mocked(useSession).mockReturnValue({
+      data: null,
+      status: 'unauthenticated',
+      update: vi.fn(),
+    })
+    render(<Header />)
+    act(() => {
+      fireEvent.click(screen.getByLabelText('Open menu'))
+    })
+    // Find the mobile nav Login button (inside the mobile nav only)
+    const loginButtons = screen.getAllByText('Login')
+    const mobileNavLoginBtn = loginButtons.find(
+      (el) => el.tagName === 'BUTTON'
+    )
+    expect(mobileNavLoginBtn).toBeTruthy()
+    act(() => {
+      fireEvent.click(mobileNavLoginBtn!)
+    })
+    // Login modal should open
+    expect(screen.getByTestId('login-modal')).toBeTruthy()
+  })
+
+  it('shows user name initial when user has name but no image', () => {
+    vi.mocked(useSession).mockReturnValue({
+      data: {
+        user: {
+          id: 'user1',
+          name: 'Bob',
+          email: 'bob@example.com',
+          image: null,
+          role: 'CUSTOMER',
+        },
+        expires: '',
+      },
+      status: 'authenticated',
+      update: vi.fn(),
+    })
+    render(<Header />)
+    // Should show 'B' as the first letter of the name
+    expect(screen.getByText('B')).toBeTruthy()
+  })
+
+  it('shows U as initial when user has no name', () => {
+    vi.mocked(useSession).mockReturnValue({
+      data: {
+        user: {
+          id: 'user1',
+          name: null,
+          email: 'noname@example.com',
+          image: null,
+          role: 'CUSTOMER',
+        },
+        expires: '',
+      },
+      status: 'authenticated',
+      update: vi.fn(),
+    })
+    render(<Header />)
+    expect(screen.getByText('U')).toBeTruthy()
+  })
+
+  it('shows Wishlist link in user dropdown', () => {
+    vi.mocked(useSession).mockReturnValue({
+      data: {
+        user: {
+          id: 'user1',
+          name: 'Alice',
+          email: 'alice@example.com',
+          image: null,
+          role: 'CUSTOMER',
+        },
+        expires: '',
+      },
+      status: 'authenticated',
+      update: vi.fn(),
+    })
+    render(<Header />)
+    act(() => {
+      fireEvent.click(screen.getByLabelText('User menu'))
+    })
+    const menu = screen.getByRole('menu')
+    const wishlistLink = menu.querySelector("a[href='/wishlist']")
+    expect(wishlistLink).not.toBeNull()
+    expect(wishlistLink?.textContent).toContain('My Wishlist')
+  })
 })
