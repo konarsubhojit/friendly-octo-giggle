@@ -200,8 +200,7 @@ describe('ProductClient', () => {
 
     expect(screen.getByRole('heading', { name: 'Rose Bouquet' })).toBeInTheDocument()
     expect(screen.getByText('A beautiful bouquet of red roses.')).toBeInTheDocument()
-    // Price appears in both header and total — use getAllByText
-    expect(screen.getAllByText('₹500.00').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getAllByText('₹500.00')).toHaveLength(2)
     expect(screen.getByText('Flowers')).toBeInTheDocument()
   })
 
@@ -402,8 +401,7 @@ describe('ProductClient', () => {
     const product = makeProduct({ variations: [variation] })
     render(<ProductClient product={product} initialVariationId="var001" />)
 
-    // Variation price appears in both product info and total — use getAllByText
-    expect(screen.getAllByText('₹750.00').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getAllByText('₹750.00')).toHaveLength(2)
   })
 
   it('selecting a variation updates the displayed price', () => {
@@ -413,16 +411,13 @@ describe('ProductClient', () => {
     const product = makeProduct({ price: 500, variations })
     render(<ProductClient product={product} initialVariationId={null} />)
 
-    // Initially shows base price — it appears in both price header and total
-    expect(screen.getAllByText('₹500.00').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getAllByText('₹500.00')).toHaveLength(2)
 
-    // Select variation
     act(() => {
       fireEvent.click(screen.getByTestId('variation-btn-var001'))
     })
 
-    // Now shows variation price
-    expect(screen.getAllByText('₹750.00').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getAllByText('₹750.00')).toHaveLength(2)
   })
 
   it('quantity selector renders with options up to stock (max 10)', () => {
@@ -450,9 +445,12 @@ describe('ProductClient', () => {
     render(<ProductClient product={product} initialVariationId={null} />)
 
     expect(screen.getByText(/You already have/)).toBeInTheDocument()
-    // Check the "2" inside the "You already have" message specifically
-    const cartNotice = screen.getByText(/You already have/)
-    expect(cartNotice.closest('div')).toHaveTextContent('2')
+    // The cart notice contains "2" in a <strong> tag — check via text function
+    expect(
+      screen.getByText((_, el) =>
+        el?.tagName === 'SPAN' && (el?.textContent ?? '').includes('You already have') && (el?.textContent ?? '').includes('2')
+      )
+    ).toBeInTheDocument()
   })
 
   it('shows View Cart link in add-to-cart section', () => {
@@ -464,8 +462,7 @@ describe('ProductClient', () => {
   it('shows total price (quantity × price) in add-to-cart section', () => {
     const product = makeProduct({ price: 500 })
     render(<ProductClient product={product} initialVariationId={null} />)
-    // Default quantity is 1, price ₹500.00 appears in both price header and total
-    expect(screen.getAllByText('₹500.00').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getAllByText('₹500.00')).toHaveLength(2)
   })
 
   it('handles generic error thrown by addToCart', async () => {

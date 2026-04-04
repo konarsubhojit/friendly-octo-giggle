@@ -319,7 +319,6 @@ describe('db.products.findBestsellers', () => {
     const results = await db.products.findBestsellers({ limit: 5 })
 
     expect(results).toEqual([])
-    // productVariations.findMany should not be called when no products found
     expect(mockProductVariationsFindMany).not.toHaveBeenCalled()
   })
 
