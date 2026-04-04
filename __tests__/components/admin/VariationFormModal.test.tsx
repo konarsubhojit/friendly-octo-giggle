@@ -283,7 +283,9 @@ describe('VariationFormModal', () => {
     fireEvent.click(screen.getByText('Create'))
 
     await waitFor(() => {
-      expect(screen.getByText('Name must be under 100 characters')).toBeInTheDocument()
+      expect(
+        screen.getByText('Name must be under 100 characters')
+      ).toBeInTheDocument()
     })
   })
 
@@ -300,7 +302,9 @@ describe('VariationFormModal', () => {
     fireEvent.click(screen.getByText('Create'))
 
     await waitFor(() => {
-      expect(screen.getByText('Design name must be under 100 characters')).toBeInTheDocument()
+      expect(
+        screen.getByText('Design name must be under 100 characters')
+      ).toBeInTheDocument()
     })
   })
 
@@ -318,7 +322,7 @@ describe('VariationFormModal', () => {
     fireEvent.change(screen.getByRole('spinbutton', { name: /price/i }), {
       target: { name: 'price', value: '100' },
     })
-    // Leave stock empty to trigger "Stock is required" error  
+    // Leave stock empty to trigger "Stock is required" error
     fireEvent.click(screen.getByText('Create'))
 
     await waitFor(() => {

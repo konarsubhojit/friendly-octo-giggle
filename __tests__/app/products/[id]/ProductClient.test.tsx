@@ -77,7 +77,9 @@ vi.mock('@/features/cart/services/pending-cart', () => ({
 
 vi.mock('@/features/product/components/StockBadge', () => ({
   StockBadge: ({ stock }: { stock: number }) => (
-    <div data-testid="stock-badge">{stock > 0 ? 'In Stock' : 'Out of Stock'}</div>
+    <div data-testid="stock-badge">
+      {stock > 0 ? 'In Stock' : 'Out of Stock'}
+    </div>
   ),
 }))
 
@@ -111,7 +113,13 @@ vi.mock('@/components/ui/DecorativeElements', () => ({
 }))
 
 vi.mock('@/features/product/components/ImageCarousel', () => ({
-  default: ({ images, productName }: { images: string[]; productName: string }) => (
+  default: ({
+    images,
+    productName,
+  }: {
+    images: string[]
+    productName: string
+  }) => (
     <div data-testid="image-carousel" aria-label={productName}>
       {images.map((img, i) => (
         <img key={i} src={img} alt={`${productName} ${i}`} />
@@ -158,7 +166,9 @@ function makeProduct(overrides: Partial<Product> = {}): Product {
   }
 }
 
-function makeVariation(overrides: Partial<ProductVariation> = {}): ProductVariation {
+function makeVariation(
+  overrides: Partial<ProductVariation> = {}
+): ProductVariation {
   return {
     id: 'var001',
     productId: 'prod001',
@@ -198,8 +208,12 @@ describe('ProductClient', () => {
     const product = makeProduct()
     render(<ProductClient product={product} initialVariationId={null} />)
 
-    expect(screen.getByRole('heading', { name: 'Rose Bouquet' })).toBeInTheDocument()
-    expect(screen.getByText('A beautiful bouquet of red roses.')).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { name: 'Rose Bouquet' })
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText('A beautiful bouquet of red roses.')
+    ).toBeInTheDocument()
     // Price appears in both header and total — use getAllByText
     expect(screen.getAllByText('₹500.00').length).toBeGreaterThanOrEqual(1)
     expect(screen.getByText('Flowers')).toBeInTheDocument()
@@ -209,12 +223,20 @@ describe('ProductClient', () => {
     const product = makeProduct()
     render(<ProductClient product={product} initialVariationId={null} />)
 
-    expect(screen.getByText('Rose Bouquet', { selector: 'span' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Shop' })).toHaveAttribute('href', '/shop')
+    expect(
+      screen.getByText('Rose Bouquet', { selector: 'span' })
+    ).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Shop' })).toHaveAttribute(
+      'href',
+      '/shop'
+    )
   })
 
   it('renders ImageCarousel with product images', () => {
-    const product = makeProduct({ image: 'https://example.com/img.jpg', images: [] })
+    const product = makeProduct({
+      image: 'https://example.com/img.jpg',
+      images: [],
+    })
     render(<ProductClient product={product} initialVariationId={null} />)
 
     expect(screen.getByTestId('image-carousel')).toBeInTheDocument()
@@ -224,7 +246,9 @@ describe('ProductClient', () => {
     const product = makeProduct({ stock: 10 })
     render(<ProductClient product={product} initialVariationId={null} />)
 
-    expect(screen.getByRole('button', { name: /Add to Cart/i })).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: /Add to Cart/i })
+    ).toBeInTheDocument()
     expect(screen.getByLabelText('Select quantity')).toBeInTheDocument()
   })
 
@@ -233,7 +257,9 @@ describe('ProductClient', () => {
     render(<ProductClient product={product} initialVariationId={null} />)
 
     // Out-of-stock panel has a "Browse Products" link
-    expect(screen.getByRole('link', { name: 'Browse Products' })).toHaveAttribute('href', '/shop')
+    expect(
+      screen.getByRole('link', { name: 'Browse Products' })
+    ).toHaveAttribute('href', '/shop')
     expect(screen.queryByRole('button', { name: /Add to Cart/i })).toBeNull()
   })
 
@@ -243,9 +269,7 @@ describe('ProductClient', () => {
       selector({
         cart: {
           cart: {
-            items: [
-              { productId: 'prod001', variationId: null, quantity: 3 },
-            ],
+            items: [{ productId: 'prod001', variationId: null, quantity: 3 }],
           },
         },
       })
@@ -253,7 +277,10 @@ describe('ProductClient', () => {
     render(<ProductClient product={product} initialVariationId={null} />)
 
     expect(screen.getByText('All Available Stock in Cart')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Go to Cart' })).toHaveAttribute('href', '/cart')
+    expect(screen.getByRole('link', { name: 'Go to Cart' })).toHaveAttribute(
+      'href',
+      '/cart'
+    )
   })
 
   it('renders share button', () => {
@@ -279,7 +306,10 @@ describe('ProductClient', () => {
 
   it('dispatches fetchCart on mount when authenticated', () => {
     vi.mocked(useSession).mockReturnValue({
-      data: { user: { id: 'u1', name: 'Alice', email: 'a@a.com', role: 'CUSTOMER' }, expires: '' },
+      data: {
+        user: { id: 'u1', name: 'Alice', email: 'a@a.com', role: 'CUSTOMER' },
+        expires: '',
+      },
       status: 'authenticated',
       update: vi.fn(),
     })
@@ -326,7 +356,10 @@ describe('ProductClient', () => {
 
   it('dispatches addToCart when authenticated', async () => {
     vi.mocked(useSession).mockReturnValue({
-      data: { user: { id: 'u1', name: 'Alice', email: 'a@a.com', role: 'CUSTOMER' }, expires: '' },
+      data: {
+        user: { id: 'u1', name: 'Alice', email: 'a@a.com', role: 'CUSTOMER' },
+        expires: '',
+      },
       status: 'authenticated',
       update: vi.fn(),
     })
@@ -346,7 +379,10 @@ describe('ProductClient', () => {
 
   it('shows error when addToCart rejects', async () => {
     vi.mocked(useSession).mockReturnValue({
-      data: { user: { id: 'u1', name: 'Alice', email: 'a@a.com', role: 'CUSTOMER' }, expires: '' },
+      data: {
+        user: { id: 'u1', name: 'Alice', email: 'a@a.com', role: 'CUSTOMER' },
+        expires: '',
+      },
       status: 'authenticated',
       update: vi.fn(),
     })
@@ -365,7 +401,10 @@ describe('ProductClient', () => {
 
   it('shows stock warning when addToCart returns warning', async () => {
     vi.mocked(useSession).mockReturnValue({
-      data: { user: { id: 'u1', name: 'Alice', email: 'a@a.com', role: 'CUSTOMER' }, expires: '' },
+      data: {
+        user: { id: 'u1', name: 'Alice', email: 'a@a.com', role: 'CUSTOMER' },
+        expires: '',
+      },
       status: 'authenticated',
       update: vi.fn(),
     })
@@ -440,9 +479,7 @@ describe('ProductClient', () => {
       selector({
         cart: {
           cart: {
-            items: [
-              { productId: 'prod001', variationId: null, quantity: 2 },
-            ],
+            items: [{ productId: 'prod001', variationId: null, quantity: 2 }],
           },
         },
       })
@@ -458,7 +495,10 @@ describe('ProductClient', () => {
   it('shows View Cart link in add-to-cart section', () => {
     const product = makeProduct()
     render(<ProductClient product={product} initialVariationId={null} />)
-    expect(screen.getByRole('link', { name: /View Cart/i })).toHaveAttribute('href', '/cart')
+    expect(screen.getByRole('link', { name: /View Cart/i })).toHaveAttribute(
+      'href',
+      '/cart'
+    )
   })
 
   it('shows total price (quantity × price) in add-to-cart section', () => {
@@ -470,7 +510,10 @@ describe('ProductClient', () => {
 
   it('handles generic error thrown by addToCart', async () => {
     vi.mocked(useSession).mockReturnValue({
-      data: { user: { id: 'u1', name: 'Alice', email: 'a@a.com', role: 'CUSTOMER' }, expires: '' },
+      data: {
+        user: { id: 'u1', name: 'Alice', email: 'a@a.com', role: 'CUSTOMER' },
+        expires: '',
+      },
       status: 'authenticated',
       update: vi.fn(),
     })
@@ -483,7 +526,9 @@ describe('ProductClient', () => {
     })
 
     await waitFor(() => {
-      expect(screen.getByText('Something went wrong. Please try again.')).toBeInTheDocument()
+      expect(
+        screen.getByText('Something went wrong. Please try again.')
+      ).toBeInTheDocument()
     })
   })
 })
