@@ -11,7 +11,13 @@ import { CURRENCIES, type CurrencyCode } from '@/contexts/CurrencyContext'
 import useProductForm, {
   MAX_IMAGES,
 } from '@/features/admin/hooks/useProductForm'
-import { TextInput, TextArea, NumberInput, SelectInput, FileInput } from 'zenput'
+import {
+  TextInput,
+  TextArea,
+  NumberInput,
+  SelectInput,
+  FileInput,
+} from 'zenput'
 
 interface ProductFormModalProps {
   readonly editingProduct: Product | null
@@ -146,88 +152,102 @@ const ProductFormModal = ({
       <form onSubmit={handleSubmit}>
         <div className="space-y-4">
           <TextInput
-              label="Name"
-              fullWidth
-              required
-              maxLength={200}
-              value={formData.name}
-              onChange={(e) => {
-                setFormData({ ...formData, name: e.target.value })
-                clearFieldError('name')
-              }}
-              validationState={fieldErrors.name ? 'error' as const : 'default' as const}
-              errorMessage={fieldErrors.name}
-            />
+            label="Name"
+            fullWidth
+            required
+            maxLength={200}
+            value={formData.name}
+            onChange={(e) => {
+              setFormData({ ...formData, name: e.target.value })
+              clearFieldError('name')
+            }}
+            validationState={
+              fieldErrors.name ? ('error' as const) : ('default' as const)
+            }
+            errorMessage={fieldErrors.name}
+          />
 
           <TextArea
-              label="Description"
-              fullWidth
-              required
-              autoResize
-              showCharCount
-              maxLength={2000}
-              rows={4}
-              value={formData.description}
-              onChange={(e) => {
-                setFormData({ ...formData, description: e.target.value })
-                clearFieldError('description')
-              }}
-              validationState={fieldErrors.description ? 'error' as const : 'default' as const}
-              errorMessage={fieldErrors.description}
-            />
+            label="Description"
+            fullWidth
+            required
+            autoResize
+            showCharCount
+            maxLength={2000}
+            rows={4}
+            value={formData.description}
+            onChange={(e) => {
+              setFormData({ ...formData, description: e.target.value })
+              clearFieldError('description')
+            }}
+            validationState={
+              fieldErrors.description
+                ? ('error' as const)
+                : ('default' as const)
+            }
+            errorMessage={fieldErrors.description}
+          />
 
           <div className="flex gap-2">
-              <SelectInput
-                label="Currency"
-                options={currencyOptions}
-                value={priceCurrency}
-                onChange={(e) => handlePriceCurrencyChange(e.target.value as CurrencyCode)}
-              />
-              <NumberInput
-                label="Price"
-                min={0.01}
-                step={0.01}
-                required
-                fullWidth
-                value={formData.price}
-                onChange={(v) => {
-                  setFormData({ ...formData, price: v ?? 0 })
-                  clearFieldError('price')
-                }}
-                validationState={fieldErrors.price ? 'error' as const : 'default' as const}
-                errorMessage={fieldErrors.price}
-              />
-            </div>
-
+            <SelectInput
+              label="Currency"
+              options={currencyOptions}
+              value={priceCurrency}
+              onChange={(e) =>
+                handlePriceCurrencyChange(e.target.value as CurrencyCode)
+              }
+            />
             <NumberInput
-              label="Stock"
-              min={0}
-              step={1}
+              label="Price"
+              min={0.01}
+              step={0.01}
               required
               fullWidth
-              value={formData.stock}
+              value={formData.price}
               onChange={(v) => {
-                setFormData({ ...formData, stock: v ?? 0 })
-                clearFieldError('stock')
+                setFormData({ ...formData, price: v ?? 0 })
+                clearFieldError('price')
               }}
-              validationState={fieldErrors.stock ? 'error' as const : 'default' as const}
-              errorMessage={fieldErrors.stock}
+              validationState={
+                fieldErrors.price ? ('error' as const) : ('default' as const)
+              }
+              errorMessage={fieldErrors.price}
             />
+          </div>
+
+          <NumberInput
+            label="Stock"
+            min={0}
+            step={1}
+            required
+            fullWidth
+            value={formData.stock}
+            onChange={(v) => {
+              setFormData({ ...formData, stock: v ?? 0 })
+              clearFieldError('stock')
+            }}
+            validationState={
+              fieldErrors.stock ? ('error' as const) : ('default' as const)
+            }
+            errorMessage={fieldErrors.stock}
+          />
 
           <SelectInput
-              label="Category"
-              options={categoryList.map((cat) => ({ value: cat, label: cat }))}
-              placeholder="Select a category"
-              required
-              fullWidth
-              value={formData.category}
-              onChange={(e) => {
-                setFormData({ ...formData, category: e.target.value })
-                clearFieldError('category')
-              }}
-              validationState={fieldErrors.category ? 'error' as const : 'default' as const}
-              errorMessage={fieldErrors.category}
-            />
+            label="Category"
+            options={categoryList.map((cat) => ({ value: cat, label: cat }))}
+            placeholder="Select a category"
+            required
+            fullWidth
+            value={formData.category}
+            onChange={(e) => {
+              setFormData({ ...formData, category: e.target.value })
+              clearFieldError('category')
+            }}
+            validationState={
+              fieldErrors.category ? ('error' as const) : ('default' as const)
+            }
+            errorMessage={fieldErrors.category}
+          />
 
           {/* Primary Image */}
           <div>
@@ -249,7 +269,9 @@ const ProductFormModal = ({
               showFileNames
               dropzone
               onChange={handleImageChange}
-              validationState={fieldErrors.image ? 'error' as const : 'default' as const}
+              validationState={
+                fieldErrors.image ? ('error' as const) : ('default' as const)
+              }
               errorMessage={fieldErrors.image}
               helperText={
                 editingProduct

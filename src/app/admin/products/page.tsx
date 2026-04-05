@@ -283,7 +283,9 @@ export default function ProductsManagement() {
         columns={productColumns}
         data={productRows}
         rowKey={(row) => row.id}
-        emptyMessage={search ? 'No products match your search.' : 'No products yet.'}
+        emptyMessage={
+          search ? 'No products match your search.' : 'No products yet.'
+        }
         className="mb-8"
       />
 

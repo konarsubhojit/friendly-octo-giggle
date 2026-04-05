@@ -171,7 +171,10 @@ const validateFormData = (
   return errs
 }
 
-const getSubmitButtonLabel = (submitting: boolean, isEditing: boolean): string => {
+const getSubmitButtonLabel = (
+  submitting: boolean,
+  isEditing: boolean
+): string => {
   if (submitting) return 'Saving...'
   return isEditing ? 'Update' : 'Create'
 }
@@ -433,7 +436,9 @@ const VariationFormModal = ({
                     maxLength={100}
                     value={formData.name}
                     onChange={handleChange}
-                    validationState={errors.name ? 'error' as const : 'default' as const}
+                    validationState={
+                      errors.name ? ('error' as const) : ('default' as const)
+                    }
                     errorMessage={errors.name}
                     placeholder="e.g. Red - Large"
                   />
@@ -446,7 +451,11 @@ const VariationFormModal = ({
                     maxLength={100}
                     value={formData.designName}
                     onChange={handleChange}
-                    validationState={errors.designName ? 'error' as const : 'default' as const}
+                    validationState={
+                      errors.designName
+                        ? ('error' as const)
+                        : ('default' as const)
+                    }
                     errorMessage={errors.designName}
                     placeholder="e.g. Classic Logo"
                   />
@@ -558,7 +567,11 @@ const VariationFormModal = ({
                               return next
                             })
                           }}
-                          validationState={errors.price ? 'error' as const : 'default' as const}
+                          validationState={
+                            errors.price
+                              ? ('error' as const)
+                              : ('default' as const)
+                          }
                           errorMessage={errors.price}
                           placeholder="e.g. 150.00"
                         />
@@ -592,7 +605,9 @@ const VariationFormModal = ({
                           return next
                         })
                       }}
-                      validationState={errors.stock ? 'error' as const : 'default' as const}
+                      validationState={
+                        errors.stock ? ('error' as const) : ('default' as const)
+                      }
                       errorMessage={errors.stock}
                       placeholder="0"
                     />

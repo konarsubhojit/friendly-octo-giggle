@@ -326,7 +326,9 @@ export default function OrdersManagement() {
         columns={orderColumns}
         data={orderRows}
         rowKey={(row) => row.id}
-        emptyMessage={search ? 'No orders match your search.' : 'No orders yet.'}
+        emptyMessage={
+          search ? 'No orders match your search.' : 'No orders yet.'
+        }
         className="mb-8"
       />
 
