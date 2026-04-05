@@ -24,7 +24,7 @@ interface BaseInputProps {
   validationState?: 'default' | 'error' | 'success' | 'warning'
   label?: string
   helperText?: string
-  errorMessage?: string       // shown when validationState === 'error'
+  errorMessage?: string // shown when validationState === 'error'
   required?: boolean
   disabled?: boolean
   readOnly?: boolean
@@ -47,13 +47,18 @@ interface NumberInputProps extends BaseInputProps {
   max?: number
   step?: number
   hideControls?: boolean
-  onChange?: (value: number | undefined) => void   // ← differs from native
+  onChange?: (value: number | undefined) => void // ← differs from native
 }
 import { NumberInput } from 'zenput'
 
 // SelectInput — controlled native <select> with options array
-interface SelectOption { value: string; label: string; disabled?: boolean }
-interface SelectInputProps extends React.SelectHTMLAttributes<HTMLSelectElement>, BaseInputProps {
+interface SelectOption {
+  value: string
+  label: string
+  disabled?: boolean
+}
+interface SelectInputProps
+  extends React.SelectHTMLAttributes<HTMLSelectElement>, BaseInputProps {
   options: SelectOption[]
   placeholder?: string
 }
@@ -134,7 +139,7 @@ map cleanly with `.map(v => ({ value: v, label: v }))` or typed literals.
 ```tsx
 const VARIATION_TYPE_OPTIONS: SelectOption[] = [
   { value: 'styling', label: 'Styling' },
-  { value: 'colour',  label: 'Colour'  },
+  { value: 'colour', label: 'Colour' },
 ]
 ```
 
@@ -217,9 +222,9 @@ interface ProductRow extends DataTableRecord {
   id: string
   name: string
   category: string
-  price: string          // formatted via formatPrice()
+  price: string // formatted via formatPrice()
   stock: number
-  _raw: Product          // non-displayed; accessed in render() for action callbacks
+  _raw: Product // non-displayed; accessed in render() for action callbacks
 }
 ```
 
@@ -302,14 +307,14 @@ TTI regression at 10%.
 
 ## Summary of Resolved Unknowns
 
-| Unknown | Resolution |
-|---------|-----------|
-| zenput API surface | Fully typed; confirmed from `dist/index.d.ts` |
-| NumberInput onChange signature | `(v: number \| undefined) => void` — use `v ?? 0` adapter |
-| SelectInput options format | `SelectOption[]` (`{value, label}`) — inline mapping |
-| FileInput cancel behaviour | Standard ChangeEvent — existing `if (file)` guard suffices |
-| Tailwind v4 style conflicts | No conflicts expected; `wrapperClassName` available as escape hatch |
-| DataTable row typing | Local `interface XRow extends DataTableRecord` per page |
-| AdminOrderCard fate | Retained; opened via "View" action state in orders page |
-| Bundle size | Acceptable; tree-shaken admin-only import |
-| Accessibility | zenput built-in; verify with axe in Playwright |
+| Unknown                        | Resolution                                                          |
+| ------------------------------ | ------------------------------------------------------------------- |
+| zenput API surface             | Fully typed; confirmed from `dist/index.d.ts`                       |
+| NumberInput onChange signature | `(v: number \| undefined) => void` — use `v ?? 0` adapter           |
+| SelectInput options format     | `SelectOption[]` (`{value, label}`) — inline mapping                |
+| FileInput cancel behaviour     | Standard ChangeEvent — existing `if (file)` guard suffices          |
+| Tailwind v4 style conflicts    | No conflicts expected; `wrapperClassName` available as escape hatch |
+| DataTable row typing           | Local `interface XRow extends DataTableRecord` per page             |
+| AdminOrderCard fate            | Retained; opened via "View" action state in orders page             |
+| Bundle size                    | Acceptable; tree-shaken admin-only import                           |
+| Accessibility                  | zenput built-in; verify with axe in Playwright                      |

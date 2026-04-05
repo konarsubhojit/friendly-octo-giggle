@@ -28,7 +28,7 @@ error map:
 
 ```ts
 validationState: fieldErrors.FIELD ? 'error' : 'default'
-errorMessage:    fieldErrors.FIELD           // string | undefined
+errorMessage: fieldErrors.FIELD // string | undefined
 ```
 
 The existing hooks (`useProductForm`, inline state in `VariationFormModal`) produce
@@ -39,16 +39,16 @@ no hook changes required.
 
 ### 1.2 ProductFormModal — field-by-field contract
 
-| Field | zenput Component | Key props | Source state |
-|-------|-----------------|-----------|--------------|
-| Product name | `TextInput` | `value={formData.name}` `onChange={e => { setFormData({...formData, name: e.target.value}); clearFieldError('name') }}` `label="Product Name"` `required` `fullWidth` `validationState` `errorMessage` | `formData.name`, `fieldErrors.name` |
-| Description | `TextArea` | `value={formData.description}` `onChange={e => { ... clearFieldError('description') }}` `label="Description"` `required` `fullWidth` `validationState` `errorMessage` | `formData.description`, `fieldErrors.description` |
-| Price (numeric only) | `NumberInput` | `value={formData.price}` `onChange={(v) => { setFormData({...formData, price: v ?? 0}); clearFieldError('price') }}` `min={0}` `step={0.01}` `label="Price"` `required` `fullWidth` `validationState` `errorMessage` | `formData.price`, `fieldErrors.price` |
-| Price currency | native `<select>` | **Unchanged by design** (FR-003, A-007) | `priceCurrency` |
-| Stock quantity | `NumberInput` | `value={formData.stock}` `onChange={(v) => { setFormData({...formData, stock: v ?? 0}); clearFieldError('stock') }}` `min={0}` `step={1}` `label="Stock"` `required` `fullWidth` `validationState` `errorMessage` | `formData.stock`, `fieldErrors.stock` |
-| Category | `SelectInput` | `value={formData.category}` `onChange={e => { setFormData({...formData, category: e.target.value}); clearFieldError('category') }}` `options={categoryOptions}` `placeholder="Select a category"` `label="Category"` `required` `fullWidth` `validationState` `errorMessage` | `formData.category`, `fieldErrors.category`, `categoryList` prop |
-| Primary image | `FileInput` | `accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"` `onChange={e => { const f = e.target.files?.[0]; if (f) { setPendingFile(f); clearFieldError('image') } }}` `label="Product Image"` `showFileNames` `fullWidth` `validationState` `errorMessage` | `pendingImageFile`, `fieldErrors.image` |
-| Additional images | `AdditionalImageRow` (native) | **Out of scope — unchanged** (FR-006, A-005) | — |
+| Field                | zenput Component              | Key props                                                                                                                                                                                                                                                                    | Source state                                                     |
+| -------------------- | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| Product name         | `TextInput`                   | `value={formData.name}` `onChange={e => { setFormData({...formData, name: e.target.value}); clearFieldError('name') }}` `label="Product Name"` `required` `fullWidth` `validationState` `errorMessage`                                                                       | `formData.name`, `fieldErrors.name`                              |
+| Description          | `TextArea`                    | `value={formData.description}` `onChange={e => { ... clearFieldError('description') }}` `label="Description"` `required` `fullWidth` `validationState` `errorMessage`                                                                                                        | `formData.description`, `fieldErrors.description`                |
+| Price (numeric only) | `NumberInput`                 | `value={formData.price}` `onChange={(v) => { setFormData({...formData, price: v ?? 0}); clearFieldError('price') }}` `min={0}` `step={0.01}` `label="Price"` `required` `fullWidth` `validationState` `errorMessage`                                                         | `formData.price`, `fieldErrors.price`                            |
+| Price currency       | native `<select>`             | **Unchanged by design** (FR-003, A-007)                                                                                                                                                                                                                                      | `priceCurrency`                                                  |
+| Stock quantity       | `NumberInput`                 | `value={formData.stock}` `onChange={(v) => { setFormData({...formData, stock: v ?? 0}); clearFieldError('stock') }}` `min={0}` `step={1}` `label="Stock"` `required` `fullWidth` `validationState` `errorMessage`                                                            | `formData.stock`, `fieldErrors.stock`                            |
+| Category             | `SelectInput`                 | `value={formData.category}` `onChange={e => { setFormData({...formData, category: e.target.value}); clearFieldError('category') }}` `options={categoryOptions}` `placeholder="Select a category"` `label="Category"` `required` `fullWidth` `validationState` `errorMessage` | `formData.category`, `fieldErrors.category`, `categoryList` prop |
+| Primary image        | `FileInput`                   | `accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"` `onChange={e => { const f = e.target.files?.[0]; if (f) { setPendingFile(f); clearFieldError('image') } }}` `label="Product Image"` `showFileNames` `fullWidth` `validationState` `errorMessage`              | `pendingImageFile`, `fieldErrors.image`                          |
+| Additional images    | `AdditionalImageRow` (native) | **Out of scope — unchanged** (FR-006, A-005)                                                                                                                                                                                                                                 | —                                                                |
 
 **SelectInput options derivation** (computed once, stable via `useMemo`):
 
@@ -66,17 +66,17 @@ const categoryOptions = useMemo<SelectOption[]>(
 
 ### 1.3 VariationFormModal — field-by-field contract
 
-| Field | zenput Component | Key props | Source state |
-|-------|-----------------|-----------|--------------|
-| Variation name | `TextInput` | `value={formData.name}` `onChange={e => { setFormData({...formData, name: e.target.value}); clearError('name') }}` `label="Variation Name"` `required` `fullWidth` `validationState` `errorMessage` | `formData.name`, `errors.name` |
-| Design name | `TextInput` | Same pattern for `designName` field | `formData.designName`, `errors.designName` |
-| Variation type | `SelectInput` | `value={formData.variationType}` `onChange={e => setFormData({...formData, variationType: e.target.value as 'styling' \| 'colour', styleId: e.target.value === 'styling' ? '' : formData.styleId})}` `options={VARIATION_TYPE_OPTIONS}` `label="Variation Type"` `required` `fullWidth` `validationState` `errorMessage` | `formData.variationType`, `errors.variationType` |
-| Style selector (styling only) | `SelectInput` | Conditionally rendered when `formData.variationType === 'colour'`; `options={styleOptions}` derived from `styles` prop | `formData.styleId`, `errors.styleId`, `styles` prop |
-| Price (numeric only) | `NumberInput` | Same as product price pattern, `min={0}` `step={0.01}` | `formData.price`, `errors.price` |
-| Price currency | native `<select>` | **Unchanged by design** (FR-011, A-007) | `priceCurrency` |
-| Stock | `NumberInput` | `min={0}` `step={1}` | `formData.stock`, `errors.stock` |
-| Primary image | `FileInput` | Same as product image pattern | `pendingFile`, `errors.image` |
-| Additional images | `AdditionalImageRow` (native) | **Out of scope — unchanged** (FR-013, A-005) | — |
+| Field                         | zenput Component              | Key props                                                                                                                                                                                                                                                                                                                | Source state                                        |
+| ----------------------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------- |
+| Variation name                | `TextInput`                   | `value={formData.name}` `onChange={e => { setFormData({...formData, name: e.target.value}); clearError('name') }}` `label="Variation Name"` `required` `fullWidth` `validationState` `errorMessage`                                                                                                                      | `formData.name`, `errors.name`                      |
+| Design name                   | `TextInput`                   | Same pattern for `designName` field                                                                                                                                                                                                                                                                                      | `formData.designName`, `errors.designName`          |
+| Variation type                | `SelectInput`                 | `value={formData.variationType}` `onChange={e => setFormData({...formData, variationType: e.target.value as 'styling' \| 'colour', styleId: e.target.value === 'styling' ? '' : formData.styleId})}` `options={VARIATION_TYPE_OPTIONS}` `label="Variation Type"` `required` `fullWidth` `validationState` `errorMessage` | `formData.variationType`, `errors.variationType`    |
+| Style selector (styling only) | `SelectInput`                 | Conditionally rendered when `formData.variationType === 'colour'`; `options={styleOptions}` derived from `styles` prop                                                                                                                                                                                                   | `formData.styleId`, `errors.styleId`, `styles` prop |
+| Price (numeric only)          | `NumberInput`                 | Same as product price pattern, `min={0}` `step={0.01}`                                                                                                                                                                                                                                                                   | `formData.price`, `errors.price`                    |
+| Price currency                | native `<select>`             | **Unchanged by design** (FR-011, A-007)                                                                                                                                                                                                                                                                                  | `priceCurrency`                                     |
+| Stock                         | `NumberInput`                 | `min={0}` `step={1}`                                                                                                                                                                                                                                                                                                     | `formData.stock`, `errors.stock`                    |
+| Primary image                 | `FileInput`                   | Same as product image pattern                                                                                                                                                                                                                                                                                            | `pendingFile`, `errors.image`                       |
+| Additional images             | `AdditionalImageRow` (native) | **Out of scope — unchanged** (FR-013, A-005)                                                                                                                                                                                                                                                                             | —                                                   |
 
 **Static options constants** (defined at module scope):
 
@@ -85,7 +85,7 @@ import type { SelectOption } from 'zenput'
 
 const VARIATION_TYPE_OPTIONS: SelectOption[] = [
   { value: 'styling', label: 'Styling' },
-  { value: 'colour',  label: 'Colour'  },
+  { value: 'colour', label: 'Colour' },
 ]
 ```
 
@@ -108,12 +108,12 @@ const styleOptions = useMemo<SelectOption[]>(
 import type { DataTableRecord, DataTableColumn } from 'zenput'
 
 interface ProductRow extends DataTableRecord {
-  id: string          // used as rowKey; not displayed as a column
-  name: string        // column: "Product"
-  category: string    // column: "Category"
-  price: string       // column: "Price" — formatted via formatPrice()
-  stock: number       // column: "Stock"
-  _raw: Product       // column: hidden; used in actions render callback only
+  id: string // used as rowKey; not displayed as a column
+  name: string // column: "Product"
+  category: string // column: "Category"
+  price: string // column: "Price" — formatted via formatPrice()
+  stock: number // column: "Stock"
+  _raw: Product // column: hidden; used in actions render callback only
 }
 ```
 
@@ -171,12 +171,12 @@ const productColumns: DataTableColumn<ProductRow>[] = [
 import type { DataTableRecord, DataTableColumn } from 'zenput'
 
 interface OrderRow extends DataTableRecord {
-  id: string            // column: "Order ID"
-  customerName: string  // column: "Customer"
-  status: string        // column: "Status"
-  totalAmount: string   // column: "Total" — formatted via formatPrice()
-  createdAt: string     // column: "Date" — formatted as locale date string
-  _raw: AdminOrder      // hidden; used in View action render callback only
+  id: string // column: "Order ID"
+  customerName: string // column: "Customer"
+  status: string // column: "Status"
+  totalAmount: string // column: "Total" — formatted via formatPrice()
+  createdAt: string // column: "Date" — formatted as locale date string
+  _raw: AdminOrder // hidden; used in View action render callback only
 }
 ```
 
