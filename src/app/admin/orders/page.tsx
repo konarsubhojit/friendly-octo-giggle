@@ -440,8 +440,16 @@ export default function OrdersManagement() {
 
       {selectedOrder !== null && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl bg-white dark:bg-slate-900 shadow-xl">
-            <div className="flex justify-end p-4">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="order-detail-title"
+            className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl bg-white dark:bg-slate-900 shadow-xl"
+          >
+            <div className="flex items-center justify-between p-4">
+              <h3 id="order-detail-title" className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                Order {selectedOrder.id}
+              </h3>
               <button
                 onClick={() => setSelectedOrder(null)}
                 className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:border-slate-300 hover:text-slate-950 transition dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
