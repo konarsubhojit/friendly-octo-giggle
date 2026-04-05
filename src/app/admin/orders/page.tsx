@@ -447,7 +447,10 @@ export default function OrdersManagement() {
             className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl bg-white dark:bg-slate-900 shadow-xl"
           >
             <div className="flex items-center justify-between p-4">
-              <h3 id="order-detail-title" className="text-lg font-bold text-slate-900 dark:text-slate-100">
+              <h3
+                id="order-detail-title"
+                className="text-lg font-bold text-slate-900 dark:text-slate-100"
+              >
                 Order {selectedOrder.id}
               </h3>
               <button
