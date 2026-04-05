@@ -107,8 +107,8 @@ The Orders admin page replaces its card-based layout with a zenput DataTable. Ea
 
 - **FR-007**: The variation name field MUST be replaced with the zenput TextInput component.
 - **FR-008**: The variation design name field MUST be replaced with the zenput TextInput component.
-- **FR-009**: The variation type selector MUST be replaced with the zenput SelectInput component offering the same "styling" and "colour" options.
-- **FR-010**: The style reference selector (shown when variation type is "styling") MUST be replaced with the zenput SelectInput component, listing available styles.
+- **FR-009**: The variation type selector (originally a radio button group) MUST be replaced with the zenput SelectInput component offering the same "styling" and "colour" options. Note: this changes the UX from an always-visible radio group to a dropdown; accepted per requirement to use zenput components for all form fields.
+- **FR-010**: The style reference selector (shown when variation type is "colour") MUST be replaced with the zenput SelectInput component, listing available styles.
 - **FR-011**: The variation price field MUST be replaced with the zenput NumberInput component. The currency selector adjacent to the price field MUST be replaced with the zenput SelectInput component, with all existing currency options available.
 - **FR-012**: The variation stock field MUST be replaced with the zenput NumberInput component.
 - **FR-013**: The variation image upload field MUST be replaced with the zenput FileInput component, retaining the file-type and file-size constraints. Additional image rows (the AdditionalImageRow component) are out of scope and MUST remain as native inputs unchanged.

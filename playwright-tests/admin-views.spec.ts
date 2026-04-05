@@ -149,13 +149,14 @@ test.describe('Admin Products', () => {
     })
   })
 
-  test('product cards show price and stock', async ({ page }) => {
+  test('product table shows price and stock columns', async ({ page }) => {
     await mockAdminRoutes(page)
     await page.goto('/admin/products', { waitUntil: 'domcontentloaded' })
     await expect(
       page.getByRole('heading', { name: /product management/i })
     ).toBeVisible()
-    await expect(page.getByText(/stock:/i).first()).toBeVisible()
+    await expect(page.getByText('Stock').first()).toBeVisible()
+    await expect(page.getByText('Price').first()).toBeVisible()
   })
 
   test('Add Product button is visible', async ({ page }) => {
@@ -166,11 +167,14 @@ test.describe('Admin Products', () => {
     ).toBeVisible()
   })
 
-  test('Edit and Delete buttons on each card', async ({ page }) => {
+  test('Open and Delete buttons in product table', async ({ page }) => {
     await mockAdminRoutes(page)
     await page.goto('/admin/products')
-    const editBtns = page.getByRole('button', { name: /edit/i })
-    await expect(editBtns.first()).toBeVisible()
+    await expect(
+      page.getByText('Hand-knitted Flower Bouquet').first()
+    ).toBeVisible({ timeout: 10_000 })
+    const openLinks = page.getByRole('link', { name: /open/i })
+    await expect(openLinks.first()).toBeVisible()
     const deleteBtns = page.getByRole('button', { name: /delete/i })
     await expect(deleteBtns.first()).toBeVisible()
   })
@@ -184,19 +188,15 @@ test.describe('Admin Orders', () => {
     await page.goto('/admin/orders')
     await expect(
       page.getByRole('heading', {
-        name: /orders workspace tuned for faster exception handling/i,
+        name: /order management/i,
       })
     ).toBeVisible()
 
-    // All customers should appear
     for (const order of MOCK_ORDERS) {
-      await expect(page.getByText(order.customerName)).toBeVisible()
+      await expect(page.getByText(order.customerName).first()).toBeVisible()
     }
     await expect(
-      page.getByText('Hand-knitted Flower Bouquet, Cozy Wool Muffler')
-    ).toBeVisible()
-    await expect(
-      page.getByRole('button', { name: /show details/i }).first()
+      page.getByRole('button', { name: /view/i }).first()
     ).toBeVisible()
     await page.screenshot({
       path: screenshotPath('admin-orders'),
@@ -223,10 +223,10 @@ test.describe('Admin Orders', () => {
     })
   })
 
-  test('shows customer address and email', async ({ page }) => {
+  test('shows customer names in order table', async ({ page }) => {
     await mockAdminRoutes(page)
     await page.goto('/admin/orders')
-    await expect(page.getByText('priya.sharma@example.com')).toBeVisible()
+    await expect(page.getByText('Priya Sharma').first()).toBeVisible()
   })
 })
 
@@ -300,7 +300,7 @@ test.describe('Admin layout', () => {
     await page.goto('/admin/orders')
     await expect(
       page.getByRole('heading', {
-        name: /orders workspace tuned for faster exception handling/i,
+        name: /order management/i,
       })
     ).toBeVisible()
 
@@ -368,21 +368,23 @@ test.describe('Admin layout', () => {
 // ─── Admin Orders – Status Change Confirmation ────────────────────────────────
 
 test.describe('Admin Orders - status change confirmation', () => {
-  test('shows confirm dialog when status is changed', async ({ page }) => {
+  test('shows confirm dialog when status is changed via View modal', async ({
+    page,
+  }) => {
     await mockAdminRoutes(page)
     await page.goto('/admin/orders')
-    // Wait for orders to load
     await expect(
       page.getByRole('heading', {
-        name: /orders workspace tuned for faster exception handling/i,
+        name: /order management/i,
       })
     ).toBeVisible()
 
-    // Find the first status select and change it to a different value
+    await page.getByRole('button', { name: /view/i }).first().click()
+    await expect(page.getByText('Close')).toBeVisible()
+
     const statusSelect = page.getByLabel(/change status for order/i).first()
     await statusSelect.selectOption({ label: 'PROCESSING' })
 
-    // The confirm dialog should appear
     await expect(page.getByRole('dialog')).toBeVisible()
     await expect(page.getByText('Change Order Status')).toBeVisible()
     await page.screenshot({
@@ -398,24 +400,24 @@ test.describe('Admin Orders - status change confirmation', () => {
     await page.goto('/admin/orders')
     await expect(
       page.getByRole('heading', {
-        name: /orders workspace tuned for faster exception handling/i,
+        name: /order management/i,
       })
     ).toBeVisible()
+
+    await page.getByRole('button', { name: /view/i }).first().click()
+    await expect(page.getByText('Close')).toBeVisible()
 
     const statusSelect = page.getByLabel(/change status for order/i).first()
     const originalStatus = await statusSelect.inputValue()
     await statusSelect.selectOption({ index: 1 })
 
-    // Confirm dialog appears; click Cancel
     await expect(page.getByRole('dialog')).toBeVisible()
     await page
       .getByRole('button', { name: /cancel/i })
       .last()
       .click()
 
-    // Dialog should be gone and no PATCH request should have been made
     await expect(page.getByRole('dialog')).not.toBeVisible()
-    // Select should still show original value
     await expect(statusSelect).toHaveValue(originalStatus)
     await page.screenshot({
       path: screenshotPath('admin-order-status-cancelled'),

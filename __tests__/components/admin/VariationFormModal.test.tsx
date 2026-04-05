@@ -62,6 +62,16 @@ const defaultProps = {
   onSuccess: vi.fn(),
 }
 
+const switchToColour = () => {
+  const typeSelect = screen.getByLabelText('Variation Type')
+  fireEvent.change(typeSelect, { target: { value: 'colour' } })
+}
+
+const switchToStyling = () => {
+  const typeSelect = screen.getByLabelText('Variation Type')
+  fireEvent.change(typeSelect, { target: { value: 'styling' } })
+}
+
 describe('VariationFormModal', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -86,7 +96,7 @@ describe('VariationFormModal', () => {
 
   it('shows validation errors for empty required fields', async () => {
     render(<VariationFormModal {...defaultProps} />)
-    fireEvent.click(screen.getByRole('radio', { name: /🌈 Colour/ }))
+    switchToColour()
     fireEvent.click(screen.getByText('Create'))
 
     await waitFor(() => {
@@ -98,11 +108,9 @@ describe('VariationFormModal', () => {
 
   it('shows price warning when price <= 0', () => {
     render(<VariationFormModal {...defaultProps} />)
-    fireEvent.click(screen.getByRole('radio', { name: /🌈 Colour/ }))
-    const priceInput = screen.getByRole('spinbutton', { name: /price/i })
-    fireEvent.change(priceInput, {
-      target: { name: 'price', value: '-50' },
-    })
+    switchToColour()
+    const priceInput = screen.getByLabelText('Price')
+    fireEvent.change(priceInput, { target: { value: '-50' } })
     expect(
       screen.getByText(/must be greater than 0.00 INR/)
     ).toBeInTheDocument()
@@ -110,11 +118,9 @@ describe('VariationFormModal', () => {
 
   it('disables submit when price is invalid', () => {
     render(<VariationFormModal {...defaultProps} />)
-    fireEvent.click(screen.getByRole('radio', { name: /🌈 Colour/ }))
-    const priceInput = screen.getByRole('spinbutton', { name: /price/i })
-    fireEvent.change(priceInput, {
-      target: { name: 'price', value: '-100' },
-    })
+    switchToColour()
+    const priceInput = screen.getByLabelText('Price')
+    fireEvent.change(priceInput, { target: { value: '-100' } })
     expect(screen.getByText('Create')).toBeDisabled()
   })
 
@@ -135,19 +141,19 @@ describe('VariationFormModal', () => {
 
     render(<VariationFormModal {...defaultProps} onSuccess={onSuccess} />)
 
-    fireEvent.click(screen.getByRole('radio', { name: /🌈 Colour/ }))
+    switchToColour()
 
     fireEvent.change(screen.getByLabelText(/^Name/), {
-      target: { name: 'name', value: 'Blue' },
+      target: { value: 'Blue' },
     })
     fireEvent.change(screen.getByLabelText(/Design Name/), {
-      target: { name: 'designName', value: 'Modern' },
+      target: { value: 'Modern' },
     })
-    fireEvent.change(screen.getByRole('spinbutton', { name: /price/i }), {
-      target: { name: 'price', value: '150' },
+    fireEvent.change(screen.getByLabelText('Price'), {
+      target: { value: '150' },
     })
     fireEvent.change(screen.getByLabelText(/Stock/), {
-      target: { name: 'stock', value: '10' },
+      target: { value: '10' },
     })
 
     fireEvent.click(screen.getByText('Create'))
@@ -192,7 +198,7 @@ describe('VariationFormModal', () => {
     )
 
     fireEvent.change(screen.getByLabelText(/^Name/), {
-      target: { name: 'name', value: 'Green' },
+      target: { value: 'Green' },
     })
     fireEvent.click(screen.getByText('Update'))
 
@@ -207,9 +213,10 @@ describe('VariationFormModal', () => {
 
   it('renders in styling type mode and hides price/stock fields', () => {
     render(<VariationFormModal {...defaultProps} />)
-    // Default is 'styling' type
-    expect(screen.getByRole('radio', { name: /🎨 Style/ })).toBeChecked()
-    // Price and stock fields should not be present for styling type
+    const typeSelect = screen.getByLabelText(
+      'Variation Type'
+    ) as HTMLSelectElement
+    expect(typeSelect.value).toBe('styling')
     expect(screen.queryByLabelText(/^Stock/)).not.toBeInTheDocument()
     expect(screen.queryByLabelText(/^Price/)).not.toBeInTheDocument()
   })
@@ -221,8 +228,8 @@ describe('VariationFormModal', () => {
 
   it('shows parent style selector when switching to colour type', () => {
     render(<VariationFormModal {...defaultProps} />)
-    fireEvent.click(screen.getByRole('radio', { name: /🌈 Colour/ }))
-    expect(screen.getByLabelText('Parent style')).toBeInTheDocument()
+    switchToColour()
+    expect(screen.getByLabelText('Parent Style')).toBeInTheDocument()
   })
 
   it('renders parent style options when styles prop is provided', () => {
@@ -236,7 +243,7 @@ describe('VariationFormModal', () => {
       },
     ]
     render(<VariationFormModal {...defaultProps} styles={mockStyles} />)
-    fireEvent.click(screen.getByRole('radio', { name: /🌈 Colour/ }))
+    switchToColour()
     expect(screen.getByText(/Floral/)).toBeInTheDocument()
   })
 
@@ -250,14 +257,12 @@ describe('VariationFormModal', () => {
 
     render(<VariationFormModal {...defaultProps} onSuccess={onSuccess} />)
 
-    // Styling type is the default
     fireEvent.change(screen.getByLabelText(/^Name/), {
-      target: { name: 'name', value: 'Floral Style' },
+      target: { value: 'Floral Style' },
     })
     fireEvent.change(screen.getByLabelText(/Design Name/), {
-      target: { name: 'designName', value: 'Summer' },
+      target: { value: 'Summer' },
     })
-    // No price or stock input needed for styling type
     fireEvent.click(screen.getByText('Create'))
 
     await waitFor(() => {
@@ -274,11 +279,11 @@ describe('VariationFormModal', () => {
 
   it('shows name too long validation error', async () => {
     render(<VariationFormModal {...defaultProps} />)
-    fireEvent.click(screen.getByRole('radio', { name: /🌈 Colour/ }))
+    switchToColour()
 
     const longName = 'A'.repeat(101)
     fireEvent.change(screen.getByLabelText(/^Name/), {
-      target: { name: 'name', value: longName },
+      target: { value: longName },
     })
     fireEvent.click(screen.getByText('Create'))
 
@@ -291,13 +296,13 @@ describe('VariationFormModal', () => {
 
   it('shows design name too long validation error', async () => {
     render(<VariationFormModal {...defaultProps} />)
-    fireEvent.click(screen.getByRole('radio', { name: /🌈 Colour/ }))
+    switchToColour()
 
     fireEvent.change(screen.getByLabelText(/^Name/), {
-      target: { name: 'name', value: 'Red' },
+      target: { value: 'Red' },
     })
     fireEvent.change(screen.getByLabelText(/Design Name/), {
-      target: { name: 'designName', value: 'D'.repeat(101) },
+      target: { value: 'D'.repeat(101) },
     })
     fireEvent.click(screen.getByText('Create'))
 
@@ -310,17 +315,16 @@ describe('VariationFormModal', () => {
 
   it('shows stock validation error for non-integer stock value', async () => {
     render(<VariationFormModal {...defaultProps} />)
-    // Switch to colour type so stock/price fields appear
-    fireEvent.click(screen.getByRole('radio', { name: /🌈 Colour/ }))
+    switchToColour()
 
     fireEvent.change(screen.getByLabelText(/^Name/), {
-      target: { name: 'name', value: 'Red' },
+      target: { value: 'Red' },
     })
     fireEvent.change(screen.getByLabelText(/Design Name/), {
-      target: { name: 'designName', value: 'Classic' },
+      target: { value: 'Classic' },
     })
-    fireEvent.change(screen.getByRole('spinbutton', { name: /price/i }), {
-      target: { name: 'price', value: '100' },
+    fireEvent.change(screen.getByLabelText('Price'), {
+      target: { value: '100' },
     })
     fireEvent.click(screen.getByText('Create'))
 
@@ -337,18 +341,18 @@ describe('VariationFormModal', () => {
     vi.stubGlobal('fetch', mockFetch)
 
     render(<VariationFormModal {...defaultProps} />)
-    fireEvent.click(screen.getByRole('radio', { name: /🌈 Colour/ }))
+    switchToColour()
     fireEvent.change(screen.getByLabelText(/^Name/), {
-      target: { name: 'name', value: 'Red' },
+      target: { value: 'Red' },
     })
     fireEvent.change(screen.getByLabelText(/Design Name/), {
-      target: { name: 'designName', value: 'Classic' },
+      target: { value: 'Classic' },
     })
-    fireEvent.change(screen.getByRole('spinbutton', { name: /price/i }), {
-      target: { name: 'price', value: '100' },
+    fireEvent.change(screen.getByLabelText('Price'), {
+      target: { value: '100' },
     })
     fireEvent.change(screen.getByLabelText(/Stock/), {
-      target: { name: 'stock', value: '10' },
+      target: { value: '10' },
     })
     fireEvent.click(screen.getByText('Create'))
 
@@ -365,18 +369,18 @@ describe('VariationFormModal', () => {
     vi.stubGlobal('fetch', mockFetch)
 
     render(<VariationFormModal {...defaultProps} />)
-    fireEvent.click(screen.getByRole('radio', { name: /🌈 Colour/ }))
+    switchToColour()
     fireEvent.change(screen.getByLabelText(/^Name/), {
-      target: { name: 'name', value: 'Blue' },
+      target: { value: 'Blue' },
     })
     fireEvent.change(screen.getByLabelText(/Design Name/), {
-      target: { name: 'designName', value: 'Summer' },
+      target: { value: 'Summer' },
     })
-    fireEvent.change(screen.getByRole('spinbutton', { name: /price/i }), {
-      target: { name: 'price', value: '150' },
+    fireEvent.change(screen.getByLabelText('Price'), {
+      target: { value: '150' },
     })
     fireEvent.change(screen.getByLabelText(/Stock/), {
-      target: { name: 'stock', value: '5' },
+      target: { value: '5' },
     })
     fireEvent.click(screen.getByText('Create'))
 
@@ -396,16 +400,15 @@ describe('VariationFormModal', () => {
 
   it('switches from styling to colour type and resets styleId', () => {
     render(<VariationFormModal {...defaultProps} />)
-    // Start on styling
-    expect(screen.getByRole('radio', { name: /🎨 Style/ })).toBeChecked()
-    // Switch to colour
-    fireEvent.click(screen.getByRole('radio', { name: /🌈 Colour/ }))
-    expect(screen.getByRole('radio', { name: /🌈 Colour/ })).toBeChecked()
-    // Parent style selector should appear
-    expect(screen.getByLabelText('Parent style')).toBeInTheDocument()
-    // Switch back to styling
-    fireEvent.click(screen.getByRole('radio', { name: /🎨 Style/ }))
-    expect(screen.getByRole('radio', { name: /🎨 Style/ })).toBeChecked()
+    const typeSelect = screen.getByLabelText(
+      'Variation Type'
+    ) as HTMLSelectElement
+    expect(typeSelect.value).toBe('styling')
+    switchToColour()
+    expect(typeSelect.value).toBe('colour')
+    expect(screen.getByLabelText('Parent Style')).toBeInTheDocument()
+    switchToStyling()
+    expect(typeSelect.value).toBe('styling')
   })
 
   it('displays Add Variation title text for create mode', () => {

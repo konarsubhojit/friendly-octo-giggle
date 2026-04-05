@@ -149,7 +149,7 @@ const ProductFormModal = ({
         {editingProduct ? 'Edit Product' : 'Add Product'}
       </h3>
 
-      <form onSubmit={handleSubmit}>
+      <form noValidate onSubmit={handleSubmit}>
         <div className="space-y-4">
           <TextInput
             label="Name"
