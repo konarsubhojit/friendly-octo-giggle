@@ -29,9 +29,7 @@ export const buildProductContext = (
 ): string => {
   const currencyCode = options.currencyCode ?? 'INR'
   const formatPrice = (price: number) =>
-    sanitizeFormattedPrice(
-      (options.formatPrice ?? defaultFormatPrice)(price)
-    )
+    sanitizeFormattedPrice((options.formatPrice ?? defaultFormatPrice)(price))
 
   const lines: string[] = [
     `Name: ${product.name}`,

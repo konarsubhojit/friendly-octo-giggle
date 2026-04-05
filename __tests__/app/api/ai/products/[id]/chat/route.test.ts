@@ -5,9 +5,14 @@ const buildProductContextMock = vi.hoisted(() =>
   vi.fn(
     (
       _product,
-      options?: { currencyCode?: string; formatPrice?: (price: number) => string }
+      options?: {
+        currencyCode?: string
+        formatPrice?: (price: number) => string
+      }
     ) => {
-      const formatted = options?.formatPrice ? options.formatPrice(29.99) : 'no-format'
+      const formatted = options?.formatPrice
+        ? options.formatPrice(29.99)
+        : 'no-format'
       const code = options?.currencyCode ?? 'none'
       return `context-price-${code}-${formatted}`
     }
