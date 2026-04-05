@@ -14,6 +14,7 @@ import {
   MAX_FILE_SIZE,
   VALID_IMAGE_TYPES_DISPLAY,
 } from '@/lib/upload-constants'
+import { TextInput, NumberInput, SelectInput, FileInput } from 'zenput'
 
 const MAX_ADDITIONAL_IMAGES = 10
 
@@ -46,17 +47,17 @@ interface VariationPayload {
   images?: string[]
 }
 
-function convertCurrency(
+const convertCurrency = (
   amount: number,
   from: CurrencyCode,
   to: CurrencyCode,
   rates: Record<CurrencyCode, number>
-): number {
+): number => {
   const amountInBase = amount / rates[from]
   return Number((amountInBase * rates[to]).toFixed(2))
 }
 
-async function uploadImage(file: File): Promise<string> {
+const uploadImage = async (file: File): Promise<string> => {
   const body = new FormData()
   body.append('file', file)
   const res = await fetch('/api/upload', { method: 'POST', body })
@@ -68,10 +69,10 @@ async function uploadImage(file: File): Promise<string> {
   return data.data.url
 }
 
-async function resolveAdditionalImageUrls(
+const resolveAdditionalImageUrls = async (
   existingUrls: string[],
   pendingFiles: (File | null)[]
-): Promise<string[]> {
+): Promise<string[]> => {
   const resolvedUrls: string[] = []
 
   for (const [index, existingUrl] of existingUrls.entries()) {
@@ -89,27 +90,25 @@ async function resolveAdditionalImageUrls(
   return resolvedUrls
 }
 
-function getVariationMutationConfig(
+const getVariationMutationConfig = (
   isEditing: boolean,
   variationId: string | undefined
-) {
-  return {
-    method: isEditing ? 'PUT' : 'POST',
-    url:
-      isEditing && variationId
-        ? `/api/admin/variations/${variationId}`
-        : '/api/admin/variations',
-    fallbackError: isEditing
-      ? 'Failed to update variation'
-      : 'Failed to create variation',
-    successMessage: isEditing ? 'Variation updated' : 'Variation created',
-  }
-}
+) => ({
+  method: isEditing ? 'PUT' : 'POST',
+  url:
+    isEditing && variationId
+      ? `/api/admin/variations/${variationId}`
+      : '/api/admin/variations',
+  fallbackError: isEditing
+    ? 'Failed to update variation'
+    : 'Failed to create variation',
+  successMessage: isEditing ? 'Variation updated' : 'Variation created',
+})
 
-async function parseVariationMutationResponse(
+const parseVariationMutationResponse = async (
   response: Response,
   fallbackError: string
-): Promise<ProductVariation> {
+): Promise<ProductVariation> => {
   const data = await response.json().catch(() => null)
 
   if (!response.ok) {
@@ -134,7 +133,7 @@ async function parseVariationMutationResponse(
   return data.data.variation as ProductVariation
 }
 
-function validateImageFile(file: File): string | null {
+const validateImageFile = (file: File): string | null => {
   if (!isValidImageType(file.type)) {
     return `Invalid type. Allowed: ${VALID_IMAGE_TYPES_DISPLAY}`
   }
@@ -144,10 +143,10 @@ function validateImageFile(file: File): string | null {
   return null
 }
 
-function validateFormData(
+const validateFormData = (
   formData: FormData,
   isStyle: boolean
-): Record<string, string> {
+): Record<string, string> => {
   const errs: Record<string, string> = {}
   if (!formData.name.trim()) errs.name = 'Name is required'
   else if (formData.name.length > 100)
@@ -172,18 +171,18 @@ function validateFormData(
   return errs
 }
 
-function getSubmitButtonLabel(submitting: boolean, isEditing: boolean): string {
+const getSubmitButtonLabel = (submitting: boolean, isEditing: boolean): string => {
   if (submitting) return 'Saving...'
   return isEditing ? 'Update' : 'Create'
 }
 
-export default function VariationFormModal({
+const VariationFormModal = ({
   productId,
   variation,
   styles = [],
   onClose,
   onSuccess,
-}: VariationFormModalProps) {
+}: VariationFormModalProps) => {
   const isEditing = !!variation
   const { availableCurrencies, currency, rates } = useCurrency()
   const [priceCurrency, setPriceCurrency] = useState<CurrencyCode>(currency)
@@ -426,53 +425,31 @@ export default function VariationFormModal({
                 </div>
 
                 <div className="space-y-4">
-                  {/* Name */}
-                  <div>
-                    <label
-                      htmlFor="var-name"
-                      className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300"
-                    >
-                      Name <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      id="var-name"
-                      type="text"
-                      name="name"
-                      value={formData.name}
-                      onChange={handleChange}
-                      maxLength={100}
-                      className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-950 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100 dark:border-slate-700 dark:bg-slate-950/80 dark:text-slate-50 dark:focus:border-sky-500 dark:focus:ring-sky-500/20"
-                      placeholder="e.g. Red - Large"
-                    />
-                    {errors.name && (
-                      <p className="text-sm text-red-500 mt-1">{errors.name}</p>
-                    )}
-                  </div>
+                  <TextInput
+                    label="Name"
+                    fullWidth
+                    required
+                    name="name"
+                    maxLength={100}
+                    value={formData.name}
+                    onChange={handleChange}
+                    validationState={errors.name ? 'error' as const : 'default' as const}
+                    errorMessage={errors.name}
+                    placeholder="e.g. Red - Large"
+                  />
 
-                  {/* Design Name */}
-                  <div>
-                    <label
-                      htmlFor="var-designName"
-                      className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300"
-                    >
-                      Design Name <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      id="var-designName"
-                      type="text"
-                      name="designName"
-                      value={formData.designName}
-                      onChange={handleChange}
-                      maxLength={100}
-                      className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-950 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100 dark:border-slate-700 dark:bg-slate-950/80 dark:text-slate-50 dark:focus:border-sky-500 dark:focus:ring-sky-500/20"
-                      placeholder="e.g. Classic Logo"
-                    />
-                    {errors.designName && (
-                      <p className="text-sm text-red-500 mt-1">
-                        {errors.designName}
-                      </p>
-                    )}
-                  </div>
+                  <TextInput
+                    label="Design Name"
+                    fullWidth
+                    required
+                    name="designName"
+                    maxLength={100}
+                    value={formData.designName}
+                    onChange={handleChange}
+                    validationState={errors.designName ? 'error' as const : 'default' as const}
+                    errorMessage={errors.designName}
+                    placeholder="e.g. Classic Logo"
+                  />
                 </div>
               </section>
 
@@ -490,55 +467,39 @@ export default function VariationFormModal({
                 </div>
 
                 <div className="space-y-4">
-                  {/* Variation Type */}
-                  <div>
-                    <p className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
-                      Variation Type <span className="text-red-500">*</span>
-                    </p>
-                    <div className="flex gap-3">
-                      {(['styling', 'colour'] as const).map((type) => (
-                        <label
-                          key={type}
-                          className={`flex flex-1 cursor-pointer items-center gap-3 rounded-2xl border px-4 py-3 transition ${
-                            formData.variationType === type
-                              ? 'border-sky-500 bg-sky-50 dark:bg-sky-500/10'
-                              : 'border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-950/80'
-                          }`}
-                        >
-                          <input
-                            type="radio"
-                            name="variationType"
-                            value={type}
-                            checked={formData.variationType === type}
-                            onChange={() =>
-                              setFormData((prev) => ({
-                                ...prev,
-                                variationType: type,
-                                // Reset styleId when switching to styling
-                                styleId: type === 'styling' ? '' : prev.styleId,
-                              }))
-                            }
-                            className="h-4 w-4 accent-sky-500"
-                          />
-                          <span className="text-sm font-medium capitalize text-slate-950 dark:text-slate-50">
-                            {type === 'styling' ? '🎨 Style' : '🌈 Colour'}
-                          </span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
+                  <SelectInput
+                    label="Variation Type"
+                    options={[
+                      { value: 'styling', label: 'Styling' },
+                      { value: 'colour', label: 'Colour' },
+                    ]}
+                    fullWidth
+                    required
+                    value={formData.variationType}
+                    onChange={(e) => {
+                      const val = e.target.value
+                      if (val === 'styling' || val === 'colour') {
+                        setFormData((prev) => ({
+                          ...prev,
+                          variationType: val,
+                          styleId: val === 'styling' ? '' : prev.styleId,
+                        }))
+                      }
+                    }}
+                  />
 
-                  {/* Style selector — only for colours */}
                   {formData.variationType === 'colour' && (
                     <div>
-                      <label
-                        htmlFor="var-styleId"
-                        className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300"
-                      >
-                        Parent Style
-                      </label>
-                      <select
-                        id="var-styleId"
+                      <SelectInput
+                        label="Parent Style"
+                        options={[
+                          { value: '', label: 'Base Product (no style)' },
+                          ...styles.map((s) => ({
+                            value: s.id,
+                            label: `${s.name} — ${s.designName}`,
+                          })),
+                        ]}
+                        fullWidth
                         value={formData.styleId}
                         onChange={(e) =>
                           setFormData((prev) => ({
@@ -546,16 +507,7 @@ export default function VariationFormModal({
                             styleId: e.target.value,
                           }))
                         }
-                        aria-label="Parent style"
-                        className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-950 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100 dark:border-slate-700 dark:bg-slate-950/80 dark:text-slate-50 dark:focus:border-sky-500 dark:focus:ring-sky-500/20"
-                      >
-                        <option value="">Base Product (no style)</option>
-                        {styles.map((s) => (
-                          <option key={s.id} value={s.id}>
-                            {s.name} — {s.designName}
-                          </option>
-                        ))}
-                      </select>
+                      />
                       <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                         Leave as &quot;Base Product&quot; for colours that
                         belong directly to the product.
@@ -572,50 +524,45 @@ export default function VariationFormModal({
                     </div>
                   )}
 
-                  {/* Price — only for colours */}
                   {!isStyle && (
                     <div>
-                      <label
-                        htmlFor="var-price"
-                        className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300"
-                      >
-                        Price <span className="text-red-500">*</span>
-                      </label>
                       <div className="flex gap-2">
-                        <select
-                          id="var-priceCurrency"
+                        <SelectInput
+                          label="Currency"
+                          options={availableCurrencies.map((code) => ({
+                            value: code,
+                            label: `${code} (${CURRENCIES[code].symbol})`,
+                          }))}
                           value={priceCurrency}
                           onChange={(e) =>
                             handlePriceCurrencyChange(
                               e.target.value as CurrencyCode
                             )
                           }
-                          aria-label="Price currency"
-                          className="rounded-2xl border border-slate-300 bg-white px-3 py-3 text-slate-950 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100 dark:border-slate-700 dark:bg-slate-950/80 dark:text-slate-50 dark:focus:border-sky-500 dark:focus:ring-sky-500/20"
-                        >
-                          {availableCurrencies.map((code) => (
-                            <option key={code} value={code}>
-                              {code} ({CURRENCIES[code].symbol})
-                            </option>
-                          ))}
-                        </select>
-                        <input
-                          id="var-price"
-                          type="number"
-                          name="price"
-                          value={formData.price}
-                          onChange={handleChange}
-                          step="0.01"
-                          min="0.01"
-                          className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-950 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100 dark:border-slate-700 dark:bg-slate-950/80 dark:text-slate-50 dark:focus:border-sky-500 dark:focus:ring-sky-500/20"
+                        />
+                        <NumberInput
+                          label="Price"
+                          min={0}
+                          step={0.01}
+                          fullWidth
+                          required
+                          value={Number(formData.price) || 0}
+                          onChange={(v) => {
+                            setFormData((prev) => ({
+                              ...prev,
+                              price: String(v ?? 0),
+                            }))
+                            setErrors((prev) => {
+                              const next = { ...prev }
+                              delete next.price
+                              return next
+                            })
+                          }}
+                          validationState={errors.price ? 'error' as const : 'default' as const}
+                          errorMessage={errors.price}
                           placeholder="e.g. 150.00"
                         />
                       </div>
-                      {errors.price && (
-                        <p className="text-sm text-red-500 mt-1">
-                          {errors.price}
-                        </p>
-                      )}
                       <p
                         className={`mt-2 text-sm ${priceWarning ? 'font-medium text-red-500 dark:text-red-400' : 'text-slate-500 dark:text-slate-400'}`}
                       >
@@ -626,32 +573,29 @@ export default function VariationFormModal({
                     </div>
                   )}
 
-                  {/* Stock — only for colours */}
                   {!isStyle && (
-                    <div>
-                      <label
-                        htmlFor="var-stock"
-                        className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300"
-                      >
-                        Stock <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        id="var-stock"
-                        type="number"
-                        name="stock"
-                        value={formData.stock}
-                        onChange={handleChange}
-                        min="0"
-                        step="1"
-                        className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-950 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100 dark:border-slate-700 dark:bg-slate-950/80 dark:text-slate-50 dark:focus:border-sky-500 dark:focus:ring-sky-500/20"
-                        placeholder="0"
-                      />
-                      {errors.stock && (
-                        <p className="text-sm text-red-500 mt-1">
-                          {errors.stock}
-                        </p>
-                      )}
-                    </div>
+                    <NumberInput
+                      label="Stock"
+                      min={0}
+                      step={1}
+                      fullWidth
+                      required
+                      value={Number(formData.stock) || 0}
+                      onChange={(v) => {
+                        setFormData((prev) => ({
+                          ...prev,
+                          stock: String(v ?? 0),
+                        }))
+                        setErrors((prev) => {
+                          const next = { ...prev }
+                          delete next.stock
+                          return next
+                        })
+                      }}
+                      validationState={errors.stock ? 'error' as const : 'default' as const}
+                      errorMessage={errors.stock}
+                      placeholder="0"
+                    />
                   )}
                 </div>
               </section>
@@ -670,12 +614,6 @@ export default function VariationFormModal({
 
                 <div className="space-y-4">
                   <div>
-                    <label
-                      htmlFor="var-image"
-                      className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300"
-                    >
-                      Primary Image
-                    </label>
                     {(primaryImageUrl || primaryImageFile) &&
                       currentPrimaryImagePreview && (
                         <div className="relative mb-3 h-28 w-28 overflow-hidden rounded-[1.25rem] bg-slate-100 dark:bg-slate-800">
@@ -688,12 +626,13 @@ export default function VariationFormModal({
                           />
                         </div>
                       )}
-                    <input
-                      id="var-image"
-                      type="file"
-                      accept="image/*"
+                    <FileInput
+                      label="Primary Image"
+                      accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
+                      fullWidth
+                      showFileNames
+                      dropzone
                       onChange={handlePrimaryImageChange}
-                      className="w-full text-sm text-slate-600 file:mr-4 file:rounded-full file:border-0 file:bg-sky-50 file:px-4 file:py-2.5 file:text-sm file:font-semibold file:text-sky-700 hover:file:bg-sky-100 dark:text-slate-300 dark:file:bg-sky-500/15 dark:file:text-sky-300 dark:hover:file:bg-sky-500/25"
                     />
                   </div>
 
@@ -889,3 +828,5 @@ export default function VariationFormModal({
     </div>
   )
 }
+
+export default VariationFormModal

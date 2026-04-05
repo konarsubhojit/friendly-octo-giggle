@@ -44,7 +44,7 @@ no hook changes required.
 | Product name | `TextInput` | `value={formData.name}` `onChange={e => { setFormData({...formData, name: e.target.value}); clearFieldError('name') }}` `label="Product Name"` `required` `fullWidth` `validationState` `errorMessage` | `formData.name`, `fieldErrors.name` |
 | Description | `TextArea` | `value={formData.description}` `onChange={e => { ... clearFieldError('description') }}` `label="Description"` `required` `fullWidth` `validationState` `errorMessage` | `formData.description`, `fieldErrors.description` |
 | Price (numeric only) | `NumberInput` | `value={formData.price}` `onChange={(v) => { setFormData({...formData, price: v ?? 0}); clearFieldError('price') }}` `min={0}` `step={0.01}` `label="Price"` `required` `fullWidth` `validationState` `errorMessage` | `formData.price`, `fieldErrors.price` |
-| Price currency | native `<select>` | **Unchanged by design** (FR-003, A-007) | `priceCurrency` |
+| Price currency | `SelectInput` | `value={priceCurrency}` `onChange={e => handlePriceCurrencyChange(e.target.value as CurrencyCode)}` `options={currencyOptions}` `label="Currency"` — mapped from `availableCurrencies` as `{ value: code, label: \`${code} (${symbol})\` }` | `priceCurrency`, `availableCurrencies` |
 | Stock quantity | `NumberInput` | `value={formData.stock}` `onChange={(v) => { setFormData({...formData, stock: v ?? 0}); clearFieldError('stock') }}` `min={0}` `step={1}` `label="Stock"` `required` `fullWidth` `validationState` `errorMessage` | `formData.stock`, `fieldErrors.stock` |
 | Category | `SelectInput` | `value={formData.category}` `onChange={e => { setFormData({...formData, category: e.target.value}); clearFieldError('category') }}` `options={categoryOptions}` `placeholder="Select a category"` `label="Category"` `required` `fullWidth` `validationState` `errorMessage` | `formData.category`, `fieldErrors.category`, `categoryList` prop |
 | Primary image | `FileInput` | `accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"` `onChange={e => { const f = e.target.files?.[0]; if (f) { setPendingFile(f); clearFieldError('image') } }}` `label="Product Image"` `showFileNames` `fullWidth` `validationState` `errorMessage` | `pendingImageFile`, `fieldErrors.image` |
@@ -73,7 +73,7 @@ const categoryOptions = useMemo<SelectOption[]>(
 | Variation type | `SelectInput` | `value={formData.variationType}` `onChange={e => setFormData({...formData, variationType: e.target.value as 'styling' \| 'colour', styleId: e.target.value === 'styling' ? '' : formData.styleId})}` `options={VARIATION_TYPE_OPTIONS}` `label="Variation Type"` `required` `fullWidth` `validationState` `errorMessage` | `formData.variationType`, `errors.variationType` |
 | Style selector (styling only) | `SelectInput` | Conditionally rendered when `formData.variationType === 'colour'`; `options={styleOptions}` derived from `styles` prop | `formData.styleId`, `errors.styleId`, `styles` prop |
 | Price (numeric only) | `NumberInput` | Same as product price pattern, `min={0}` `step={0.01}` | `formData.price`, `errors.price` |
-| Price currency | native `<select>` | **Unchanged by design** (FR-011, A-007) | `priceCurrency` |
+| Price currency | `SelectInput` | `value={formData.priceCurrency}` `onChange={e => setFormData({...formData, priceCurrency: e.target.value as CurrencyCode})}` `options={currencyOptions}` `label="Currency"` — mapped from `Object.keys(CURRENCIES)` | `formData.priceCurrency` (or `priceCurrency` state) |
 | Stock | `NumberInput` | `min={0}` `step={1}` | `formData.stock`, `errors.stock` |
 | Primary image | `FileInput` | Same as product image pattern | `pendingFile`, `errors.image` |
 | Additional images | `AdditionalImageRow` (native) | **Out of scope — unchanged** (FR-013, A-005) | — |
@@ -292,7 +292,6 @@ orders DataTable rendered
 The following are explicitly **not modified** by this feature:
 
 - `AdditionalImageRow` — native inputs, out of scope (A-005, FR-006, FR-013)
-- Currency `<select>` elements — native, out of scope (A-007, FR-003, FR-011)
 - `useProductForm` hook — form submission logic, API calls, Redux dispatches
 - `adminSlice` and all Redux state
 - All API route handlers (`/api/admin/products`, `/api/admin/variations`, etc.)

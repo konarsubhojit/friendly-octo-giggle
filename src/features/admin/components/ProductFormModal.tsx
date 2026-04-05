@@ -1,5 +1,6 @@
 'use client'
 
+import { useMemo } from 'react'
 import Image from 'next/image'
 import { type Product } from '@/lib/types'
 import {
@@ -10,6 +11,7 @@ import { CURRENCIES, type CurrencyCode } from '@/contexts/CurrencyContext'
 import useProductForm, {
   MAX_IMAGES,
 } from '@/features/admin/hooks/useProductForm'
+import { TextInput, TextArea, NumberInput, SelectInput, FileInput } from 'zenput'
 
 interface ProductFormModalProps {
   readonly editingProduct: Product | null
@@ -96,67 +98,6 @@ const AdditionalImageRow = ({
   )
 }
 
-interface PriceFieldProps {
-  readonly priceCurrency: CurrencyCode
-  readonly priceValue: number
-  readonly error?: string
-  readonly availableCurrencies: CurrencyCode[]
-  readonly onCurrencyChange: (code: CurrencyCode) => void
-  readonly onPriceChange: (value: number) => void
-}
-
-const PriceField = ({
-  priceCurrency,
-  priceValue,
-  error,
-  availableCurrencies,
-  onCurrencyChange,
-  onPriceChange,
-}: PriceFieldProps) => (
-  <div>
-    <label
-      htmlFor="product-price"
-      className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-    >
-      Price
-    </label>
-    <div className="flex gap-2">
-      <select
-        id="product-price-currency"
-        value={priceCurrency}
-        onChange={(e) => onCurrencyChange(e.target.value as CurrencyCode)}
-        aria-label="Price currency"
-        className="px-2 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
-      >
-        {availableCurrencies.map((code) => (
-          <option key={code} value={code}>
-            {code} ({CURRENCIES[code].symbol})
-          </option>
-        ))}
-      </select>
-      <input
-        id="product-price"
-        type="number"
-        value={priceValue}
-        onChange={(e) => {
-          const value = Number.parseFloat(e.target.value)
-          if (!Number.isNaN(value)) onPriceChange(value)
-        }}
-        required
-        min="0.01"
-        step="0.01"
-        aria-describedby={error ? 'product-price-error' : undefined}
-        className={`flex-1 min-w-0 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white dark:bg-gray-700 ${error ? 'border-red-400 dark:border-red-500' : 'border-gray-300 dark:border-gray-600'}`}
-      />
-    </div>
-    {error && (
-      <p id="product-price-error" className="text-xs text-red-600 mt-1">
-        {error}
-      </p>
-    )}
-  </div>
-)
-
 const ProductFormModal = ({
   editingProduct,
   onClose,
@@ -166,7 +107,6 @@ const ProductFormModal = ({
   const {
     formData,
     setFormData,
-    stockInput,
     imageFile,
     additionalFiles,
     slotIds,
@@ -184,10 +124,18 @@ const ProductFormModal = ({
     handleAdditionalImageChange,
     addImageSlot,
     removeAdditionalImage,
-    handleStockChange,
     handleSubmit,
   } = useProductForm(editingProduct, onClose, onSuccess)
   const isPageLayout = layout === 'page'
+
+  const currencyOptions = useMemo(
+    () =>
+      availableCurrencies.map((code) => ({
+        value: code,
+        label: `${code} (${CURRENCIES[code].symbol})`,
+      })),
+    [availableCurrencies]
+  )
 
   const formBody = (
     <>
@@ -197,161 +145,92 @@ const ProductFormModal = ({
 
       <form onSubmit={handleSubmit}>
         <div className="space-y-4">
-          <div>
-            <label
-              htmlFor="product-name"
-              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-            >
-              Name
-            </label>
-            <input
-              id="product-name"
-              type="text"
+          <TextInput
+              label="Name"
+              fullWidth
+              required
+              maxLength={200}
               value={formData.name}
               onChange={(e) => {
                 setFormData({ ...formData, name: e.target.value })
                 clearFieldError('name')
               }}
-              required
-              maxLength={200}
-              aria-describedby={
-                fieldErrors.name ? 'product-name-error' : undefined
-              }
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white dark:bg-gray-700 ${fieldErrors.name ? 'border-red-400 dark:border-red-500' : 'border-gray-300 dark:border-gray-600'}`}
+              validationState={fieldErrors.name ? 'error' as const : 'default' as const}
+              errorMessage={fieldErrors.name}
             />
-            {fieldErrors.name && (
-              <p id="product-name-error" className="text-xs text-red-600 mt-1">
-                {fieldErrors.name}
-              </p>
-            )}
-          </div>
 
-          <div>
-            <label
-              htmlFor="product-description"
-              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-            >
-              Description
-            </label>
-            <textarea
-              id="product-description"
+          <TextArea
+              label="Description"
+              fullWidth
+              required
+              autoResize
+              showCharCount
+              maxLength={2000}
+              rows={4}
               value={formData.description}
               onChange={(e) => {
                 setFormData({ ...formData, description: e.target.value })
                 clearFieldError('description')
               }}
-              required
-              maxLength={2000}
-              rows={4}
-              aria-describedby={
-                fieldErrors.description
-                  ? 'product-description-error'
-                  : undefined
-              }
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white dark:bg-gray-700 ${fieldErrors.description ? 'border-red-400 dark:border-red-500' : 'border-gray-300 dark:border-gray-600'}`}
-            />
-            {fieldErrors.description && (
-              <p
-                id="product-description-error"
-                className="text-xs text-red-600 mt-1"
-              >
-                {fieldErrors.description}
-              </p>
-            )}
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <PriceField
-              priceCurrency={priceCurrency}
-              priceValue={formData.price}
-              error={fieldErrors.price}
-              availableCurrencies={availableCurrencies}
-              onCurrencyChange={handlePriceCurrencyChange}
-              onPriceChange={(value) => {
-                setFormData({ ...formData, price: value })
-                clearFieldError('price')
-              }}
+              validationState={fieldErrors.description ? 'error' as const : 'default' as const}
+              errorMessage={fieldErrors.description}
             />
 
-            <div>
-              <label
-                htmlFor="product-stock"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-              >
-                Stock
-              </label>
-              <input
-                id="product-stock"
-                type="number"
-                value={stockInput}
-                onChange={handleStockChange}
-                required
-                min="0"
-                step="1"
-                aria-describedby={
-                  fieldErrors.stock ? 'product-stock-error' : undefined
-                }
-                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white dark:bg-gray-700 ${fieldErrors.stock ? 'border-red-400 dark:border-red-500' : 'border-gray-300 dark:border-gray-600'}`}
+          <div className="flex gap-2">
+              <SelectInput
+                label="Currency"
+                options={currencyOptions}
+                value={priceCurrency}
+                onChange={(e) => handlePriceCurrencyChange(e.target.value as CurrencyCode)}
               />
-              {fieldErrors.stock && (
-                <p
-                  id="product-stock-error"
-                  className="text-xs text-red-600 mt-1"
-                >
-                  {fieldErrors.stock}
-                </p>
-              )}
+              <NumberInput
+                label="Price"
+                min={0.01}
+                step={0.01}
+                required
+                fullWidth
+                value={formData.price}
+                onChange={(v) => {
+                  setFormData({ ...formData, price: v ?? 0 })
+                  clearFieldError('price')
+                }}
+                validationState={fieldErrors.price ? 'error' as const : 'default' as const}
+                errorMessage={fieldErrors.price}
+              />
             </div>
-          </div>
 
-          <div>
-            <label
-              htmlFor="product-category"
-              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-            >
-              Category
-            </label>
-            <select
-              id="product-category"
+            <NumberInput
+              label="Stock"
+              min={0}
+              step={1}
+              required
+              fullWidth
+              value={formData.stock}
+              onChange={(v) => {
+                setFormData({ ...formData, stock: v ?? 0 })
+                clearFieldError('stock')
+              }}
+              validationState={fieldErrors.stock ? 'error' as const : 'default' as const}
+              errorMessage={fieldErrors.stock}
+            />
+
+          <SelectInput
+              label="Category"
+              options={categoryList.map((cat) => ({ value: cat, label: cat }))}
+              placeholder="Select a category"
+              required
+              fullWidth
               value={formData.category}
               onChange={(e) => {
                 setFormData({ ...formData, category: e.target.value })
                 clearFieldError('category')
               }}
-              required
-              aria-describedby={
-                fieldErrors.category ? 'product-category-error' : undefined
-              }
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${fieldErrors.category ? 'border-red-400 dark:border-red-500' : 'border-gray-300 dark:border-gray-600'}`}
-            >
-              <option value="">Select a category</option>
-              {categoryList.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
-              ))}
-            </select>
-            {fieldErrors.category && (
-              <p
-                id="product-category-error"
-                className="text-xs text-red-600 mt-1"
-              >
-                {fieldErrors.category}
-              </p>
-            )}
-          </div>
+              validationState={fieldErrors.category ? 'error' as const : 'default' as const}
+              errorMessage={fieldErrors.category}
+            />
 
           {/* Primary Image */}
           <div>
-            <label
-              htmlFor="product-image"
-              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-            >
-              Primary Image{' '}
-              <span className="text-gray-400 dark:text-gray-500 font-normal">
-                (required)
-              </span>
-            </label>
             {formData.image && !imageFile && (
               <div className="mb-2 relative w-20 h-20">
                 <Image
@@ -363,33 +242,21 @@ const ProductFormModal = ({
                 />
               </div>
             )}
-            <input
-              id="product-image"
-              type="file"
+            <FileInput
+              label="Primary Image (required)"
               accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
+              fullWidth
+              showFileNames
+              dropzone
               onChange={handleImageChange}
-              aria-describedby={
-                fieldErrors.image ? 'product-image-error' : undefined
+              validationState={fieldErrors.image ? 'error' as const : 'default' as const}
+              errorMessage={fieldErrors.image}
+              helperText={
+                editingProduct
+                  ? `Leave empty to keep current image. Max ${MAX_FILE_SIZE / 1024 / 1024}MB. Formats: ${VALID_IMAGE_TYPES_DISPLAY}`
+                  : `Required. Max ${MAX_FILE_SIZE / 1024 / 1024}MB. Formats: ${VALID_IMAGE_TYPES_DISPLAY}`
               }
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-gray-300 dark:bg-gray-700 ${fieldErrors.image ? 'border-red-400 dark:border-red-500' : 'border-gray-300 dark:border-gray-600'}`}
             />
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              {editingProduct
-                ? 'Leave empty to keep current image. '
-                : 'Required. '}
-              Max {MAX_FILE_SIZE / 1024 / 1024}MB. Formats:{' '}
-              {VALID_IMAGE_TYPES_DISPLAY}
-            </p>
-            {fieldErrors.image && (
-              <p id="product-image-error" className="text-xs text-red-600 mt-1">
-                {fieldErrors.image}
-              </p>
-            )}
-            {imageFile && !fieldErrors.image && (
-              <p className="text-sm text-green-600 mt-1">
-                Selected: {imageFile.name}
-              </p>
-            )}
           </div>
 
           {/* Additional Images */}

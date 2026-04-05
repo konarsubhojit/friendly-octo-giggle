@@ -8,7 +8,6 @@ import { updateAdminOrderStatus } from '@/features/admin/store/adminSlice'
 import type { AppDispatch } from '@/lib/store'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { AlertBanner } from '@/components/ui/AlertBanner'
-import { EmptyState } from '@/components/ui/EmptyState'
 import {
   AdminPageShell,
   AdminPanel,
@@ -16,6 +15,7 @@ import {
 import { AdminOrderCard } from '@/features/admin/components/AdminOrderCard'
 import { AdminSearchForm } from '@/features/admin/components/AdminSearchForm'
 import { CursorPaginationBar } from '@/components/ui/CursorPaginationBar'
+import { DataTable, type DataTableColumn } from 'zenput'
 
 type ShippingEdits = Record<
   string,
@@ -50,6 +50,15 @@ interface AdminOrder {
 const STATUS_FILTERS = ['ALL', ...Object.values(OrderStatus)] as const
 const PAGE_SIZE = 20
 
+type OrderRow = {
+  id: string
+  customer: string
+  status: string
+  total: string
+  date: string
+  _raw: AdminOrder
+}
+
 export default function OrdersManagement() {
   const { formatPrice } = useCurrency()
   const dispatch = useDispatch<AppDispatch>()
@@ -68,6 +77,7 @@ export default function OrdersManagement() {
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null)
   const [savingShippingId, setSavingShippingId] = useState<string | null>(null)
   const [shippingEdits, setShippingEdits] = useState<ShippingEdits>({})
+  const [selectedOrder, setSelectedOrder] = useState<AdminOrder | null>(null)
 
   const pageCursorsRef = useRef<Array<string | null>>([null])
   const pendingOffsetRef = useRef<number | null>(null)
@@ -281,44 +291,60 @@ export default function OrdersManagement() {
     setSavingShippingId(null)
   }
 
-  const ordersListContent =
-    orders.length === 0 ? (
-      <EmptyState
-        title="No orders found"
-        message={search ? 'Try a different search term.' : undefined}
-      />
-    ) : (
-      <>
-        <div className="space-y-4 mb-8">
-          {orders.map((order) => (
-            <AdminOrderCard
-              key={order.id}
-              order={order}
-              updatingOrderId={updatingOrderId}
-              savingShippingId={savingShippingId}
-              edit={getShippingEdit(order.id, order)}
-              onStatusChange={handleStatusChange}
-              onShippingFieldChange={setShippingField}
-              onSaveShipping={handleSaveShipping}
-            />
-          ))}
-        </div>
+  const orderColumns: DataTableColumn<OrderRow>[] = [
+    { key: 'id', header: 'Order ID' },
+    { key: 'customer', header: 'Customer' },
+    { key: 'status', header: 'Status', filterable: true },
+    { key: 'total', header: 'Total' },
+    { key: 'date', header: 'Date' },
+    {
+      key: 'actions',
+      header: '',
+      render: (_value, row) => (
+        <button
+          onClick={() => setSelectedOrder(row._raw)}
+          className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:border-slate-300 hover:text-slate-950 transition"
+        >
+          View
+        </button>
+      ),
+    },
+  ]
 
-        <CursorPaginationBar
-          currentPage={currentPage}
-          totalCount={totalCount}
-          pageSize={PAGE_SIZE}
-          hasMore={hasMore}
-          loading={loading}
-          totalPages={totalPages}
-          onFirst={handleFirst}
-          onPrev={handlePrev}
-          onNext={handleNext}
-          onLast={handleLast}
-          onPageSelect={handlePageSelect}
-        />
-      </>
-    )
+  const orderRows: OrderRow[] = orders.map((order) => ({
+    id: order.id,
+    customer: order.customerName,
+    status: order.status,
+    total: formatPrice(order.totalAmount),
+    date: new Date(order.createdAt).toLocaleDateString('en-GB'),
+    _raw: order,
+  }))
+
+  const ordersListContent = (
+    <>
+      <DataTable
+        columns={orderColumns}
+        data={orderRows}
+        rowKey={(row) => row.id}
+        emptyMessage={search ? 'No orders match your search.' : 'No orders yet.'}
+        className="mb-8"
+      />
+
+      <CursorPaginationBar
+        currentPage={currentPage}
+        totalCount={totalCount}
+        pageSize={PAGE_SIZE}
+        hasMore={hasMore}
+        loading={loading}
+        totalPages={totalPages}
+        onFirst={handleFirst}
+        onPrev={handlePrev}
+        onNext={handleNext}
+        onLast={handleLast}
+        onPageSelect={handlePageSelect}
+      />
+    </>
+  )
 
   const trackedOrders = orders.filter(
     (order) => order.trackingNumber || order.shippingProvider
@@ -409,6 +435,32 @@ export default function OrdersManagement() {
           ordersListContent
         )}
       </AdminPanel>
+
+      {selectedOrder !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl bg-white dark:bg-slate-900 shadow-xl">
+            <div className="flex justify-end p-4">
+              <button
+                onClick={() => setSelectedOrder(null)}
+                className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:border-slate-300 hover:text-slate-950 transition dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+              >
+                Close
+              </button>
+            </div>
+            <div className="px-4 pb-6">
+              <AdminOrderCard
+                order={selectedOrder}
+                updatingOrderId={updatingOrderId}
+                savingShippingId={savingShippingId}
+                edit={getShippingEdit(selectedOrder.id, selectedOrder)}
+                onStatusChange={handleStatusChange}
+                onShippingFieldChange={setShippingField}
+                onSaveShipping={handleSaveShipping}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </AdminPageShell>
   )
 }
