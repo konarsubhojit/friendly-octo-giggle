@@ -35,6 +35,7 @@ preview on change. This is extra glue code that a proper component would absorb.
 list of upload slots with individual previews and per-slot remove buttons.
 
 **What we want**: A compound component that:
+
 - Renders _N_ image slots (add / remove dynamically)
 - Shows a thumbnail per slot (existing URL or local preview)
 - Reports the full resolved list via `onChange`
@@ -57,6 +58,7 @@ inside a `<div className="flex gap-2">` wrapper to approximate the look of a
 single field.
 
 **What we want**: A single `MoneyInput` component that:
+
 - Renders a leading currency selector (SelectInput) fused visually to the numeric field
 - Exposes `currency`, `onCurrencyChange`, `value`, `onChange` as a unified API
 - Shares one `label` and one `errorMessage` across both sub-inputs
@@ -78,6 +80,7 @@ manually.
 renders all rows passed to it with no pagination controls.
 
 **What we want**: A `pagination` prop accepting:
+
 ```ts
 {
   currentPage: number
@@ -86,6 +89,7 @@ renders all rows passed to it with no pagination controls.
   onPageChange: (page: number) => void
 }
 ```
+
 This is the standard pattern in Tanstack Table, AG Grid, and Ant Design Table.
 
 **Current workaround**: The existing `CursorPaginationBar` component is rendered
@@ -245,17 +249,17 @@ only applied when displaying the price in the table/list view through the
 
 ## Summary Table
 
-| # | Gap | Severity | Affected Components |
-|---|-----|----------|---------------------|
-| 1 | FileInput — no image preview | High | ProductFormModal, VariationFormModal |
-| 2 | FileInput — no multi-image manager | High | ProductFormModal, VariationFormModal |
-| 3 | No compound currency+price input | Medium | ProductFormModal, VariationFormModal |
-| 4 | DataTable — no built-in pagination | High | Products page, Orders page |
-| 5 | DataTable — no sortable columns | Medium | Products page, Orders page |
-| 6 | DataTable — no loading/skeleton state | Medium | Products page, Orders page |
-| 7 | DataTable — no row click / expandable rows | Medium | Orders page |
-| 8 | DataTable — no bulk selection | Low | Products page (future) |
-| 9 | SelectInput — no multi-select mode | Medium | Orders page (status filter) |
-| 10 | TextArea — no rich-text / markdown editor | Low | ProductFormModal |
-| 11 | FileInput — no upload progress indicator | Medium | ProductFormModal, VariationFormModal |
-| 12 | NumberInput — no currency formatting | Low | ProductFormModal, VariationFormModal |
+| #   | Gap                                        | Severity | Affected Components                  |
+| --- | ------------------------------------------ | -------- | ------------------------------------ |
+| 1   | FileInput — no image preview               | High     | ProductFormModal, VariationFormModal |
+| 2   | FileInput — no multi-image manager         | High     | ProductFormModal, VariationFormModal |
+| 3   | No compound currency+price input           | Medium   | ProductFormModal, VariationFormModal |
+| 4   | DataTable — no built-in pagination         | High     | Products page, Orders page           |
+| 5   | DataTable — no sortable columns            | Medium   | Products page, Orders page           |
+| 6   | DataTable — no loading/skeleton state      | Medium   | Products page, Orders page           |
+| 7   | DataTable — no row click / expandable rows | Medium   | Orders page                          |
+| 8   | DataTable — no bulk selection              | Low      | Products page (future)               |
+| 9   | SelectInput — no multi-select mode         | Medium   | Orders page (status filter)          |
+| 10  | TextArea — no rich-text / markdown editor  | Low      | ProductFormModal                     |
+| 11  | FileInput — no upload progress indicator   | Medium   | ProductFormModal, VariationFormModal |
+| 12  | NumberInput — no currency formatting       | Low      | ProductFormModal, VariationFormModal |

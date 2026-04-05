@@ -12,12 +12,12 @@ from the **zenput@1** library, and replaces card-grid / card-list layouts with
 
 **Files changed**:
 
-| File | Change |
-|------|--------|
-| `src/features/admin/components/ProductFormModal.tsx` | 6 native inputs → zenput components |
-| `src/features/admin/components/VariationFormModal.tsx` | 7 native inputs → zenput components |
-| `src/app/admin/products/page.tsx` | card grid → zenput DataTable |
-| `src/app/admin/orders/page.tsx` | AdminOrderCard list → zenput DataTable (card retained) |
+| File                                                   | Change                                                 |
+| ------------------------------------------------------ | ------------------------------------------------------ |
+| `src/features/admin/components/ProductFormModal.tsx`   | 6 native inputs → zenput components                    |
+| `src/features/admin/components/VariationFormModal.tsx` | 7 native inputs → zenput components                    |
+| `src/app/admin/products/page.tsx`                      | card grid → zenput DataTable                           |
+| `src/app/admin/orders/page.tsx`                        | AdminOrderCard list → zenput DataTable (card retained) |
 
 ---
 
@@ -68,20 +68,28 @@ import type { SelectOption, DataTableRecord, DataTableColumn } from 'zenput'
 
 ```tsx
 // Before
-<input
+;<input
   id="product-name"
   type="text"
   value={formData.name}
-  onChange={(e) => { setFormData({...formData, name: e.target.value}); clearFieldError('name') }}
+  onChange={(e) => {
+    setFormData({ ...formData, name: e.target.value })
+    clearFieldError('name')
+  }}
   className={`... ${fieldErrors.name ? 'border-red-400' : 'border-gray-300'}`}
 />
-{fieldErrors.name && <p id="product-name-error">{fieldErrors.name}</p>}
+{
+  fieldErrors.name && <p id="product-name-error">{fieldErrors.name}</p>
+}
 
 // After
-<TextInput
+;<TextInput
   label="Product Name"
   value={formData.name}
-  onChange={(e) => { setFormData({...formData, name: e.target.value}); clearFieldError('name') }}
+  onChange={(e) => {
+    setFormData({ ...formData, name: e.target.value })
+    clearFieldError('name')
+  }}
   validationState={fieldErrors.name ? 'error' : 'default'}
   errorMessage={fieldErrors.name}
   required
@@ -95,7 +103,10 @@ import type { SelectOption, DataTableRecord, DataTableColumn } from 'zenput'
 <TextArea
   label="Description"
   value={formData.description}
-  onChange={(e) => { setFormData({...formData, description: e.target.value}); clearFieldError('description') }}
+  onChange={(e) => {
+    setFormData({ ...formData, description: e.target.value })
+    clearFieldError('description')
+  }}
   validationState={fieldErrors.description ? 'error' : 'default'}
   errorMessage={fieldErrors.description}
   required
@@ -116,14 +127,21 @@ import type { SelectOption, DataTableRecord, DataTableColumn } from 'zenput'
     value={priceCurrency}
     onChange={(e) => onCurrencyChange(e.target.value as CurrencyCode)}
   >
-    {availableCurrencies.map((c) => <option key={c} value={c}>{c}</option>)}
+    {availableCurrencies.map((c) => (
+      <option key={c} value={c}>
+        {c}
+      </option>
+    ))}
   </select>
 
   {/* Price — zenput */}
   <NumberInput
     label="Price"
     value={formData.price}
-    onChange={(v) => { setFormData({...formData, price: v ?? 0}); clearFieldError('price') }}
+    onChange={(v) => {
+      setFormData({ ...formData, price: v ?? 0 })
+      clearFieldError('price')
+    }}
     min={0}
     step={0.01}
     validationState={fieldErrors.price ? 'error' : 'default'}
@@ -140,7 +158,10 @@ import type { SelectOption, DataTableRecord, DataTableColumn } from 'zenput'
 <NumberInput
   label="Stock"
   value={formData.stock}
-  onChange={(v) => { setFormData({...formData, stock: v ?? 0}); clearFieldError('stock') }}
+  onChange={(v) => {
+    setFormData({ ...formData, stock: v ?? 0 })
+    clearFieldError('stock')
+  }}
   min={0}
   step={1}
   validationState={fieldErrors.stock ? 'error' : 'default'}
@@ -346,11 +367,11 @@ All gates must pass before the PR is opened. See constitution §Development Work
 
 ## Common Pitfalls
 
-| Pitfall | Fix |
-|---------|-----|
-| `NumberInput.onChange` receives `undefined` when field is cleared | Always use `v ?? 0` (or domain minimum) |
-| File dialog cancel clears image state | Guard with `if (e.target.files?.[0])` before updating state |
-| SelectInput `value` is `undefined` on mount | Initialize form state with `''` not `undefined` for select fields |
-| `DataTable` `_raw` column visible in table | Do not add `_raw` as a `DataTableColumn`; it is row data only, accessed via `render` |
-| Tailwind classes on zenput wrapper conflict with layout | Use `wrapperClassName` for spacing adjustments; avoid overriding zenput internals |
-| zenput CSS not loading in test environment | Ensure `vitest.config.mts` processes CSS or that zenput's styles don't affect RTL queries |
+| Pitfall                                                           | Fix                                                                                       |
+| ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `NumberInput.onChange` receives `undefined` when field is cleared | Always use `v ?? 0` (or domain minimum)                                                   |
+| File dialog cancel clears image state                             | Guard with `if (e.target.files?.[0])` before updating state                               |
+| SelectInput `value` is `undefined` on mount                       | Initialize form state with `''` not `undefined` for select fields                         |
+| `DataTable` `_raw` column visible in table                        | Do not add `_raw` as a `DataTableColumn`; it is row data only, accessed via `render`      |
+| Tailwind classes on zenput wrapper conflict with layout           | Use `wrapperClassName` for spacing adjustments; avoid overriding zenput internals         |
+| zenput CSS not loading in test environment                        | Ensure `vitest.config.mts` processes CSS or that zenput's styles don't affect RTL queries |
