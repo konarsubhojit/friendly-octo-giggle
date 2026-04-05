@@ -1,10 +1,35 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { NextRequest } from 'next/server'
 
+const buildProductContextMock = vi.hoisted(() =>
+  vi.fn(
+    (
+      _product,
+      options?: {
+        currencyCode?: string
+        formatPrice?: (price: number) => string
+      }
+    ) => {
+      const formatted = options?.formatPrice
+        ? options.formatPrice(29.99)
+        : 'no-format'
+      const code = options?.currencyCode ?? 'none'
+      return `context-price-${code}-${formatted}`
+    }
+  )
+)
+
 vi.mock('@/lib/db', () => ({
   db: {
     products: {
       findById: vi.fn(),
+    },
+  },
+  drizzleDb: {
+    query: {
+      users: {
+        findFirst: vi.fn(),
+      },
     },
   },
 }))
@@ -32,10 +57,7 @@ vi.mock('ai', () => ({
 }))
 
 vi.mock('@/lib/ai/product-rag', () => ({
-  buildProductContext: vi.fn(
-    () =>
-      'Name: Test Product\nCategory: Electronics\nPrice: $29.99\nStock: 100 units'
-  ),
+  buildProductContext: buildProductContextMock,
 }))
 
 vi.mock('@/lib/logger', () => ({
@@ -56,9 +78,22 @@ vi.mock('@/lib/redis', () => ({
   ),
 }))
 
-import { db } from '@/lib/db'
+vi.mock('@/lib/currency', () => ({
+  formatPriceForCurrency: vi.fn(
+    (price: number, currencyCode: string) => `${currencyCode}-${price}`
+  ),
+  isValidCurrencyCode: (code: string) =>
+    ['INR', 'USD', 'EUR', 'GBP'].includes(code),
+}))
+
+vi.mock('@/lib/auth', () => ({
+  auth: vi.fn(),
+}))
+
+import { db, drizzleDb } from '@/lib/db'
 import { streamText } from 'ai'
 import { logError, logBusinessEvent } from '@/lib/logger'
+import { auth } from '@/lib/auth'
 import { POST } from '@/app/api/ai/products/[id]/chat/route'
 
 const mockProduct = {
@@ -89,6 +124,9 @@ const validBody = {
 describe('POST /api/ai/products/[id]/chat', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.mocked(auth).mockResolvedValue(null)
+    vi.mocked(drizzleDb.query.users.findFirst).mockResolvedValue(null)
+    buildProductContextMock.mockClear()
   })
 
   it('returns 404 when product not found', async () => {
@@ -131,6 +169,7 @@ describe('POST /api/ai/products/[id]/chat', () => {
 
   it('streams response for valid request', async () => {
     vi.mocked(db.products.findById).mockResolvedValue(mockProduct)
+    vi.mocked(auth).mockResolvedValue(null)
 
     const request = new NextRequest(
       'http://localhost/api/ai/products/abc1234/chat',
@@ -147,10 +186,17 @@ describe('POST /api/ai/products/[id]/chat', () => {
     expect(response.status).toBe(200)
     expect(streamText).toHaveBeenCalledWith(
       expect.objectContaining({
-        system: expect.stringContaining('Test Product'),
+        system: expect.stringContaining('context-price'),
         messages: validBody.messages,
         maxOutputTokens: 512,
         abortSignal: expect.anything(),
+      })
+    )
+    expect(buildProductContextMock).toHaveBeenCalledWith(
+      mockProduct,
+      expect.objectContaining({
+        currencyCode: 'INR',
+        formatPrice: expect.any(Function),
       })
     )
     expect(logBusinessEvent).toHaveBeenCalledWith(
@@ -160,6 +206,38 @@ describe('POST /api/ai/products/[id]/chat', () => {
         details: expect.objectContaining({ productId: 'abc1234' }),
       })
     )
+  })
+
+  it('formats prices using user currency preference when available', async () => {
+    vi.mocked(db.products.findById).mockResolvedValue(mockProduct)
+    vi.mocked(auth).mockResolvedValue({ user: { id: 'user-123' } } as never)
+    vi.mocked(drizzleDb.query.users.findFirst).mockResolvedValue({
+      currencyPreference: 'EUR',
+    })
+
+    const request = new NextRequest(
+      'http://localhost/api/ai/products/abc1234/chat',
+      {
+        method: 'POST',
+        body: JSON.stringify(validBody),
+      }
+    )
+
+    const response = await POST(request, {
+      params: Promise.resolve({ id: 'abc1234' }),
+    })
+
+    expect(response.status).toBe(200)
+    expect(buildProductContextMock).toHaveBeenCalledWith(
+      mockProduct,
+      expect.objectContaining({
+        currencyCode: 'EUR',
+        formatPrice: expect.any(Function),
+      })
+    )
+    const formatter =
+      buildProductContextMock.mock.calls[0]?.[1]?.formatPrice ?? (() => '')
+    expect(formatter(99)).toBe('EUR-99')
   })
 
   it('logs error with product context on failure', async () => {
