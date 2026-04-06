@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useEffect } from 'react'
+import { useMemo, useEffect, useState } from 'react'
 import Image from 'next/image'
 import { type Product } from '@/lib/types'
 import {
@@ -136,16 +136,20 @@ const ProductFormModal = ({
   } = useProductForm(editingProduct, onClose, onSuccess)
   const isPageLayout = layout === 'page'
 
-  const imagePreviewUrl = useMemo(() => {
-    if (!imageFile) return undefined
-    return URL.createObjectURL(imageFile)
-  }, [imageFile])
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null)
 
   useEffect(() => {
-    return () => {
-      if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl)
+    if (!imageFile) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Synchronizing blob URL state with imageFile; no cascading render concern.
+      setImagePreviewUrl(null)
+      return
     }
-  }, [imagePreviewUrl])
+    const url = URL.createObjectURL(imageFile)
+    setImagePreviewUrl(url)
+    return () => {
+      URL.revokeObjectURL(url)
+    }
+  }, [imageFile])
 
   const moneyInputCurrencies: CurrencyOption[] = useMemo(
     () =>
