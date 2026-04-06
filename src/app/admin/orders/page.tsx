@@ -260,11 +260,11 @@ export default function OrdersManagement() {
   }
 
   const orderColumns: DataTableColumn<OrderRow>[] = [
-    { key: 'id', header: 'Order ID', sortable: true },
-    { key: 'customer', header: 'Customer', sortable: true },
-    { key: 'status', header: 'Status', filterable: true, sortable: true },
+    { key: 'id', header: 'Order ID' },
+    { key: 'customer', header: 'Customer' },
+    { key: 'status', header: 'Status', filterable: true },
     { key: 'total', header: 'Total' },
-    { key: 'date', header: 'Date', sortable: true },
+    { key: 'date', header: 'Date' },
   ]
 
   const orderRows: OrderRow[] = orders.map((order) => ({

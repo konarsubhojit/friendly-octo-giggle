@@ -212,10 +212,10 @@ export default function ProductsManagement() {
   }
 
   const productColumns: DataTableColumn<ProductRow>[] = [
-    { key: 'name', header: 'Name', sortable: true },
-    { key: 'category', header: 'Category', sortable: true },
+    { key: 'name', header: 'Name' },
+    { key: 'category', header: 'Category' },
     { key: 'price', header: 'Price' },
-    { key: 'stock', header: 'Stock', filterable: true, sortable: true },
+    { key: 'stock', header: 'Stock', filterable: true },
     {
       key: 'actions',
       header: 'Actions',

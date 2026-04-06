@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import Image from 'next/image'
 import { type Product } from '@/lib/types'
 import {
@@ -136,6 +136,20 @@ const ProductFormModal = ({
   } = useProductForm(editingProduct, onClose, onSuccess)
   const isPageLayout = layout === 'page'
 
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | undefined>(
+    undefined
+  )
+
+  useEffect(() => {
+    if (!imageFile) {
+      setImagePreviewUrl(undefined)
+      return
+    }
+    const url = URL.createObjectURL(imageFile)
+    setImagePreviewUrl(url)
+    return () => URL.revokeObjectURL(url)
+  }, [imageFile])
+
   const moneyInputCurrencies: CurrencyOption[] = useMemo(
     () =>
       availableCurrencies.map((code) => ({
@@ -253,11 +267,7 @@ const ProductFormModal = ({
             fullWidth
             showFileNames
             dropzone
-            previewSrc={
-              imageFile
-                ? URL.createObjectURL(imageFile)
-                : formData.image || undefined
-            }
+            previewSrc={imagePreviewUrl ?? (formData.image || undefined)}
             onChange={handleImageChange}
             validationState={
               fieldErrors.image ? ('error' as const) : ('default' as const)
