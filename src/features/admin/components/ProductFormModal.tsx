@@ -17,6 +17,8 @@ import {
   NumberInput,
   SelectInput,
   FileInput,
+  MoneyInput,
+  type CurrencyOption,
 } from 'zenput'
 
 interface ProductFormModalProps {
@@ -134,11 +136,12 @@ const ProductFormModal = ({
   } = useProductForm(editingProduct, onClose, onSuccess)
   const isPageLayout = layout === 'page'
 
-  const currencyOptions = useMemo(
+  const moneyInputCurrencies: CurrencyOption[] = useMemo(
     () =>
       availableCurrencies.map((code) => ({
-        value: code,
-        label: `${code} (${CURRENCIES[code].symbol})`,
+        code,
+        symbol: CURRENCIES[code].symbol,
+        label: CURRENCIES[code].symbol,
       })),
     [availableCurrencies]
   )
@@ -188,32 +191,27 @@ const ProductFormModal = ({
             errorMessage={fieldErrors.description}
           />
 
-          <div className="flex gap-2">
-            <SelectInput
-              label="Currency"
-              options={currencyOptions}
-              value={priceCurrency}
-              onChange={(e) =>
-                handlePriceCurrencyChange(e.target.value as CurrencyCode)
-              }
-            />
-            <NumberInput
-              label="Price"
-              min={0.01}
-              step={0.01}
-              required
-              fullWidth
-              value={formData.price}
-              onChange={(v) => {
-                setFormData({ ...formData, price: v ?? 0 })
-                clearFieldError('price')
-              }}
-              validationState={
-                fieldErrors.price ? ('error' as const) : ('default' as const)
-              }
-              errorMessage={fieldErrors.price}
-            />
-          </div>
+          <MoneyInput
+            label="Price"
+            currencies={moneyInputCurrencies}
+            currency={priceCurrency}
+            onCurrencyChange={(code) =>
+              handlePriceCurrencyChange(code as CurrencyCode)
+            }
+            min={0.01}
+            step={0.01}
+            required
+            fullWidth
+            value={formData.price}
+            onChange={(v) => {
+              setFormData({ ...formData, price: v ?? 0 })
+              clearFieldError('price')
+            }}
+            validationState={
+              fieldErrors.price ? ('error' as const) : ('default' as const)
+            }
+            errorMessage={fieldErrors.price}
+          />
 
           <NumberInput
             label="Stock"
@@ -249,37 +247,28 @@ const ProductFormModal = ({
             errorMessage={fieldErrors.category}
           />
 
-          {/* Primary Image */}
-          <div>
-            {formData.image && !imageFile && (
-              <div className="mb-2 relative w-20 h-20">
-                <Image
-                  src={formData.image}
-                  alt="Current product"
-                  fill
-                  sizes="80px"
-                  className="object-contain rounded border bg-gray-50 dark:bg-gray-700"
-                />
-              </div>
-            )}
-            <FileInput
-              label="Primary Image (required)"
-              accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
-              fullWidth
-              showFileNames
-              dropzone
-              onChange={handleImageChange}
-              validationState={
-                fieldErrors.image ? ('error' as const) : ('default' as const)
-              }
-              errorMessage={fieldErrors.image}
-              helperText={
-                editingProduct
-                  ? `Leave empty to keep current image. Max ${MAX_FILE_SIZE / 1024 / 1024}MB. Formats: ${VALID_IMAGE_TYPES_DISPLAY}`
-                  : `Required. Max ${MAX_FILE_SIZE / 1024 / 1024}MB. Formats: ${VALID_IMAGE_TYPES_DISPLAY}`
-              }
-            />
-          </div>
+          <FileInput
+            label="Primary Image (required)"
+            accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
+            fullWidth
+            showFileNames
+            dropzone
+            previewSrc={
+              imageFile
+                ? URL.createObjectURL(imageFile)
+                : formData.image || undefined
+            }
+            onChange={handleImageChange}
+            validationState={
+              fieldErrors.image ? ('error' as const) : ('default' as const)
+            }
+            errorMessage={fieldErrors.image}
+            helperText={
+              editingProduct
+                ? `Leave empty to keep current image. Max ${MAX_FILE_SIZE / 1024 / 1024}MB. Formats: ${VALID_IMAGE_TYPES_DISPLAY}`
+                : `Required. Max ${MAX_FILE_SIZE / 1024 / 1024}MB. Formats: ${VALID_IMAGE_TYPES_DISPLAY}`
+            }
+          />
 
           {/* Additional Images */}
           <div>

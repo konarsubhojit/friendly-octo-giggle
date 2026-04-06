@@ -195,9 +195,6 @@ test.describe('Admin Orders', () => {
     for (const order of MOCK_ORDERS) {
       await expect(page.getByText(order.customerName).first()).toBeVisible()
     }
-    await expect(
-      page.getByRole('button', { name: /view/i }).first()
-    ).toBeVisible()
     await page.screenshot({
       path: screenshotPath('admin-orders'),
       fullPage: true,
@@ -368,7 +365,7 @@ test.describe('Admin layout', () => {
 // ─── Admin Orders – Status Change Confirmation ────────────────────────────────
 
 test.describe('Admin Orders - status change confirmation', () => {
-  test('shows confirm dialog when status is changed via View modal', async ({
+  test('shows confirm dialog when status is changed via row expansion', async ({
     page,
   }) => {
     await mockAdminRoutes(page)
@@ -379,8 +376,7 @@ test.describe('Admin Orders - status change confirmation', () => {
       })
     ).toBeVisible()
 
-    await page.getByRole('button', { name: /view/i }).first().click()
-    await expect(page.getByText('Close')).toBeVisible()
+    await page.getByText(MOCK_ORDERS[0].customerName).click()
 
     const statusSelect = page.getByLabel(/change status for order/i).first()
     await statusSelect.selectOption({ label: 'PROCESSING' })
@@ -404,8 +400,7 @@ test.describe('Admin Orders - status change confirmation', () => {
       })
     ).toBeVisible()
 
-    await page.getByRole('button', { name: /view/i }).first().click()
-    await expect(page.getByText('Close')).toBeVisible()
+    await page.getByText(MOCK_ORDERS[0].customerName).click()
 
     const statusSelect = page.getByLabel(/change status for order/i).first()
     const originalStatus = await statusSelect.inputValue()

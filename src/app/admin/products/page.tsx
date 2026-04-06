@@ -15,7 +15,6 @@ import {
   AdminPanel,
 } from '@/features/admin/components/AdminPageShell'
 import { AdminSearchForm } from '@/features/admin/components/AdminSearchForm'
-import { CursorPaginationBar } from '@/components/ui/CursorPaginationBar'
 import { DataTable, type DataTableColumn } from 'zenput'
 
 const ProductFormModal = lazy(
@@ -45,8 +44,6 @@ export default function ProductsManagement() {
   const [search, setSearch] = useState('')
   const [searchInput, setSearchInput] = useState('')
   const [cursor, setCursor] = useState<string | null>(null)
-  const [nextCursor, setNextCursor] = useState<string | null>(null)
-  const [hasMore, setHasMore] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const [totalCount, setTotalCount] = useState(0)
 
@@ -88,8 +85,6 @@ export default function ProductsManagement() {
         const data = await res.json()
         const items: Product[] = data.data?.products ?? data.products ?? []
         setProducts(items)
-        setNextCursor(data.data?.nextCursor ?? null)
-        setHasMore(data.data?.hasMore ?? false)
         setTotalCount(Number(data.data?.totalCount ?? data.totalCount ?? 0))
         const discoveredCursors = pageCursorsRef.current.slice(0, currentPage)
         if (data.data?.nextCursor) {
@@ -128,25 +123,6 @@ export default function ProductsManagement() {
     setCursor(null)
   }
 
-  const handleNext = () => {
-    if (!nextCursor || currentPage >= totalPages) return
-    setCurrentPage((prev) => prev + 1)
-    setCursor(nextCursor)
-  }
-
-  const handlePrev = () => {
-    if (currentPage === 1) return
-    const prevCursor = pageCursorsRef.current[currentPage - 2]
-    if (prevCursor === undefined) {
-      pendingOffsetRef.current = (currentPage - 2) * PAGE_SIZE
-      setCurrentPage((prev) => prev - 1)
-      return
-    }
-
-    setCurrentPage((prev) => prev - 1)
-    setCursor(prevCursor)
-  }
-
   const handlePageSelect = (page: number) => {
     const targetPage = Math.min(Math.max(1, page), totalPages)
     if (targetPage === currentPage) return
@@ -167,16 +143,10 @@ export default function ProductsManagement() {
     setCurrentPage(targetPage)
   }
 
-  const handleLast = () => {
-    handlePageSelect(totalPages)
-  }
-
   const handleReset = () => {
     syncPageCursors([null])
     setCurrentPage(1)
     setCursor(null)
-    setNextCursor(null)
-    setHasMore(false)
     setTotalCount(0)
     setSearch('')
     setSearchInput('')
@@ -242,10 +212,10 @@ export default function ProductsManagement() {
   }
 
   const productColumns: DataTableColumn<ProductRow>[] = [
-    { key: 'name', header: 'Name' },
-    { key: 'category', header: 'Category' },
+    { key: 'name', header: 'Name', sortable: true },
+    { key: 'category', header: 'Category', sortable: true },
     { key: 'price', header: 'Price' },
-    { key: 'stock', header: 'Stock', filterable: true },
+    { key: 'stock', header: 'Stock', filterable: true, sortable: true },
     {
       key: 'actions',
       header: 'Actions',
@@ -278,31 +248,22 @@ export default function ProductsManagement() {
   }))
 
   const productsListContent = (
-    <>
-      <DataTable
-        columns={productColumns}
-        data={productRows}
-        rowKey={(row) => row.id}
-        emptyMessage={
-          search ? 'No products match your search.' : 'No products yet.'
-        }
-        className="mb-8"
-      />
-
-      <CursorPaginationBar
-        currentPage={currentPage}
-        totalCount={totalCount}
-        pageSize={PAGE_SIZE}
-        hasMore={hasMore}
-        loading={loading}
-        totalPages={totalPages}
-        onFirst={handleFirst}
-        onPrev={handlePrev}
-        onNext={handleNext}
-        onLast={handleLast}
-        onPageSelect={handlePageSelect}
-      />
-    </>
+    <DataTable
+      columns={productColumns}
+      data={productRows}
+      rowKey={(row) => row.id}
+      loading={loading}
+      skeletonRowCount={PAGE_SIZE}
+      emptyMessage={
+        search ? 'No products match your search.' : 'No products yet.'
+      }
+      pagination={{
+        currentPage,
+        pageSize: PAGE_SIZE,
+        totalCount,
+        onPageChange: handlePageSelect,
+      }}
+    />
   )
 
   const inStockProducts = products.filter((product) => product.stock > 0).length
@@ -374,13 +335,7 @@ export default function ProductsManagement() {
         title="Results"
         description="Click a product to view details and edit."
       >
-        {loading ? (
-          <div className="flex items-center justify-center py-16">
-            <LoadingSpinner />
-          </div>
-        ) : (
-          productsListContent
-        )}
+        {productsListContent}
       </AdminPanel>
 
       {showModal && (

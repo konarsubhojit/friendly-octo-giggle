@@ -14,7 +14,14 @@ import {
   MAX_FILE_SIZE,
   VALID_IMAGE_TYPES_DISPLAY,
 } from '@/lib/upload-constants'
-import { TextInput, NumberInput, SelectInput, FileInput } from 'zenput'
+import {
+  TextInput,
+  NumberInput,
+  SelectInput,
+  FileInput,
+  MoneyInput,
+  type CurrencyOption,
+} from 'zenput'
 
 const MAX_ADDITIONAL_IMAGES = 10
 
@@ -539,47 +546,43 @@ const VariationFormModal = ({
 
                   {!isStyle && (
                     <div>
-                      <div className="flex gap-2">
-                        <SelectInput
-                          label="Currency"
-                          options={availableCurrencies.map((code) => ({
-                            value: code,
-                            label: `${code} (${CURRENCIES[code].symbol})`,
-                          }))}
-                          value={priceCurrency}
-                          onChange={(e) =>
-                            handlePriceCurrencyChange(
-                              e.target.value as CurrencyCode
-                            )
-                          }
-                        />
-                        <NumberInput
-                          label="Price"
-                          min={0}
-                          step={0.01}
-                          fullWidth
-                          required
-                          value={Number(formData.price) || 0}
-                          onChange={(v) => {
-                            setFormData((prev) => ({
-                              ...prev,
-                              price: String(v ?? 0),
-                            }))
-                            setErrors((prev) => {
-                              const next = { ...prev }
-                              delete next.price
-                              return next
-                            })
-                          }}
-                          validationState={
-                            errors.price
-                              ? ('error' as const)
-                              : ('default' as const)
-                          }
-                          errorMessage={errors.price}
-                          placeholder="e.g. 150.00"
-                        />
-                      </div>
+                      <MoneyInput
+                        label="Price"
+                        currencies={availableCurrencies.map(
+                          (code): CurrencyOption => ({
+                            code,
+                            symbol: CURRENCIES[code].symbol,
+                            label: CURRENCIES[code].symbol,
+                          })
+                        )}
+                        currency={priceCurrency}
+                        onCurrencyChange={(code) =>
+                          handlePriceCurrencyChange(code as CurrencyCode)
+                        }
+                        min={0}
+                        step={0.01}
+                        fullWidth
+                        required
+                        value={Number(formData.price) || 0}
+                        onChange={(v) => {
+                          setFormData((prev) => ({
+                            ...prev,
+                            price: String(v ?? 0),
+                          }))
+                          setErrors((prev) => {
+                            const next = { ...prev }
+                            delete next.price
+                            return next
+                          })
+                        }}
+                        validationState={
+                          errors.price
+                            ? ('error' as const)
+                            : ('default' as const)
+                        }
+                        errorMessage={errors.price}
+                        placeholder="e.g. 150.00"
+                      />
                       <p
                         className={`mt-2 text-sm ${priceWarning ? 'font-medium text-red-500 dark:text-red-400' : 'text-slate-500 dark:text-slate-400'}`}
                       >
@@ -633,24 +636,13 @@ const VariationFormModal = ({
 
                 <div className="space-y-4">
                   <div>
-                    {(primaryImageUrl || primaryImageFile) &&
-                      currentPrimaryImagePreview && (
-                        <div className="relative mb-3 h-28 w-28 overflow-hidden rounded-[1.25rem] bg-slate-100 dark:bg-slate-800">
-                          <Image
-                            src={currentPrimaryImagePreview}
-                            alt="Variation preview"
-                            fill
-                            className="object-cover"
-                            sizes="112px"
-                          />
-                        </div>
-                      )}
                     <FileInput
                       label="Primary Image"
                       accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
                       fullWidth
                       showFileNames
                       dropzone
+                      previewSrc={currentPrimaryImagePreview ?? undefined}
                       onChange={handlePrimaryImageChange}
                     />
                   </div>

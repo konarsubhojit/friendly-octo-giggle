@@ -109,7 +109,7 @@ describe('VariationFormModal', () => {
   it('shows price warning when price <= 0', () => {
     render(<VariationFormModal {...defaultProps} />)
     switchToColour()
-    const priceInput = screen.getByLabelText('Price')
+    const priceInput = screen.getByRole('spinbutton', { name: 'Price' })
     fireEvent.change(priceInput, { target: { value: '-50' } })
     expect(
       screen.getByText(/must be greater than 0.00 INR/)
@@ -119,7 +119,7 @@ describe('VariationFormModal', () => {
   it('disables submit when price is invalid', () => {
     render(<VariationFormModal {...defaultProps} />)
     switchToColour()
-    const priceInput = screen.getByLabelText('Price')
+    const priceInput = screen.getByRole('spinbutton', { name: 'Price' })
     fireEvent.change(priceInput, { target: { value: '-100' } })
     expect(screen.getByText('Create')).toBeDisabled()
   })
@@ -149,7 +149,7 @@ describe('VariationFormModal', () => {
     fireEvent.change(screen.getByLabelText(/Design Name/), {
       target: { value: 'Modern' },
     })
-    fireEvent.change(screen.getByLabelText('Price'), {
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Price' }), {
       target: { value: '150' },
     })
     fireEvent.change(screen.getByLabelText(/Stock/), {
@@ -323,7 +323,7 @@ describe('VariationFormModal', () => {
     fireEvent.change(screen.getByLabelText(/Design Name/), {
       target: { value: 'Classic' },
     })
-    fireEvent.change(screen.getByLabelText('Price'), {
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Price' }), {
       target: { value: '100' },
     })
     fireEvent.click(screen.getByText('Create'))
@@ -348,7 +348,7 @@ describe('VariationFormModal', () => {
     fireEvent.change(screen.getByLabelText(/Design Name/), {
       target: { value: 'Classic' },
     })
-    fireEvent.change(screen.getByLabelText('Price'), {
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Price' }), {
       target: { value: '100' },
     })
     fireEvent.change(screen.getByLabelText(/Stock/), {
@@ -376,7 +376,7 @@ describe('VariationFormModal', () => {
     fireEvent.change(screen.getByLabelText(/Design Name/), {
       target: { value: 'Summer' },
     })
-    fireEvent.change(screen.getByLabelText('Price'), {
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Price' }), {
       target: { value: '150' },
     })
     fireEvent.change(screen.getByLabelText(/Stock/), {

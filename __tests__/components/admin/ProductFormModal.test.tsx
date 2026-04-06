@@ -232,7 +232,7 @@ describe('ProductFormModal', () => {
 
   it('handles currency change and converts price', () => {
     renderModal({ editingProduct: mockProduct })
-    const currencySelect = screen.getByLabelText('Currency')
+    const currencySelect = screen.getByRole('combobox', { name: 'Price' })
     fireEvent.change(currencySelect, { target: { value: 'USD' } })
     expect((currencySelect as HTMLSelectElement).value).toBe('USD')
   })
@@ -248,7 +248,7 @@ describe('ProductFormModal', () => {
     fireEvent.change(screen.getByLabelText('Category'), {
       target: { value: 'Flowers' },
     })
-    const priceInput = screen.getByLabelText('Price')
+    const priceInput = screen.getByRole('spinbutton', { name: 'Price' })
     fireEvent.change(priceInput, { target: { value: '100' } })
     const stockInput = screen.getByLabelText('Stock')
     fireEvent.change(stockInput, { target: { value: '5' } })
@@ -352,7 +352,7 @@ describe('ProductFormModal', () => {
     fireEvent.change(screen.getByLabelText('Category'), {
       target: { value: 'Flowers' },
     })
-    fireEvent.change(screen.getByLabelText('Price'), {
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Price' }), {
       target: { value: '50' },
     })
     fireEvent.change(screen.getByLabelText('Stock'), {
@@ -470,7 +470,7 @@ describe('ProductFormModal', () => {
     fireEvent.change(screen.getByLabelText('Category'), {
       target: { value: 'Flowers' },
     })
-    fireEvent.change(screen.getByLabelText('Price'), {
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Price' }), {
       target: { value: '50' },
     })
     fireEvent.change(screen.getByLabelText('Stock'), {
@@ -532,7 +532,7 @@ describe('ProductFormModal', () => {
     fireEvent.change(screen.getByLabelText('Category'), {
       target: { value: 'Flowers' },
     })
-    fireEvent.change(screen.getByLabelText('Price'), {
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Price' }), {
       target: { value: '10' },
     })
     fireEvent.change(screen.getByLabelText('Stock'), {
@@ -627,7 +627,7 @@ describe('ProductFormModal', () => {
   it('clears inline error when price is corrected', async () => {
     const { container } = renderModal()
     const form = container.querySelector('form')
-    fireEvent.change(screen.getByLabelText('Price'), {
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Price' }), {
       target: { value: '0' },
     })
     act(() => {
@@ -638,7 +638,7 @@ describe('ProductFormModal', () => {
         screen.getByText(PRODUCT_ERRORS.PRICE_POSITIVE)
       ).toBeInTheDocument()
     })
-    fireEvent.change(screen.getByLabelText('Price'), {
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Price' }), {
       target: { value: '50' },
     })
     await waitFor(() => {
