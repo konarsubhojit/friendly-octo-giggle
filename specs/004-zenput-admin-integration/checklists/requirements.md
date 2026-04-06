@@ -34,4 +34,3 @@
 - All items pass. This specification is ready for `/speckit.clarify` or `/speckit.plan`.
 - Assumption A-005 explicitly scopes out the additional-image rows to keep this feature focused.
 - Assumption A-006 delegates the order inline-edit UX pattern to the planning phase — reviewers should confirm this is acceptable before planning begins.
-- Assumption A-007 documents that the currency selector beside the price field is intentionally out of scope for zenput replacement.

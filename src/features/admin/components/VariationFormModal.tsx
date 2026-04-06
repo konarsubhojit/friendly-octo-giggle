@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import type { ProductVariation } from '@/lib/types'
 import toast from 'react-hot-toast'
@@ -229,9 +229,22 @@ const VariationFormModal = ({
     ? 0
     : convertCurrency(priceNum, priceCurrency, 'INR', rates)
   const priceWarning = !isStyle && formData.price !== '' && priceInInr <= 0
-  const currentPrimaryImagePreview = primaryImageFile
-    ? URL.createObjectURL(primaryImageFile)
-    : primaryImageUrl
+
+  const [primaryImagePreviewUrl, setPrimaryImagePreviewUrl] = useState<
+    string | null
+  >(null)
+
+  useEffect(() => {
+    if (!primaryImageFile) {
+      setPrimaryImagePreviewUrl(null)
+      return
+    }
+    const url = URL.createObjectURL(primaryImageFile)
+    setPrimaryImagePreviewUrl(url)
+    return () => URL.revokeObjectURL(url)
+  }, [primaryImageFile])
+
+  const currentPrimaryImagePreview = primaryImagePreviewUrl ?? primaryImageUrl
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -559,7 +572,7 @@ const VariationFormModal = ({
                         onCurrencyChange={(code) =>
                           handlePriceCurrencyChange(code as CurrencyCode)
                         }
-                        min={0}
+                        min={0.01}
                         step={0.01}
                         fullWidth
                         required

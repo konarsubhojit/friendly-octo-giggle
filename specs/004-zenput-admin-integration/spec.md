@@ -129,12 +129,12 @@ The Orders admin page replaces its card-based layout with a zenput DataTable. Ea
 
 **DataTable — Orders List**
 
-- **FR-022**: The Orders admin page MUST replace the existing AdminOrderCard layout with a zenput DataTable component.
-- **FR-023**: The Orders DataTable MUST define columns for at minimum: order ID, customer name, order status, total amount (formatted via the existing currency formatter), order date, and a read-only actions column containing a "View" button that opens the AdminOrderCard or navigates to the order detail route. The DataTable itself is READ-ONLY; no inline editing of status or shipping fields occurs within the table.
+- **FR-022**: The Orders admin page MUST replace the existing AdminOrderCard-first list layout with a zenput DataTable component while retaining AdminOrderCard as the order detail and editing surface.
+- **FR-023**: The Orders DataTable MUST define columns for at minimum: order ID, customer name, order status, total amount (formatted via the existing currency formatter), and order date. Each row MUST provide a way to reveal the related AdminOrderCard from the table context, such as row expansion or an equivalent view action.
 - **FR-024**: The Orders DataTable MUST receive the currently fetched page of orders as its `data` prop.
 - **FR-025**: The Orders DataTable MUST display the `emptyMessage` configured for the case where no orders are found.
 - **FR-026**: The existing status filter, search input, and cursor-based pagination controls MUST remain functional alongside the DataTable.
-- **FR-027**: The Orders DataTable MUST be read-only. Order status updates and shipping detail edits MUST be performed via the AdminOrderCard, which is retained and accessible by clicking the "View" action on a table row. The AdminOrderCard layout is NOT removed from the codebase; it is decoupled from the list view and reached through the DataTable action.
+- **FR-027**: Order status updates and shipping detail edits MUST continue to be performed via the AdminOrderCard. In the Orders DataTable flow, the AdminOrderCard is retained and may be revealed inline for a row (for example, via row expansion) rather than only through a separate "View" action or route. The AdminOrderCard layout is NOT removed from the codebase; it remains the canonical order detail and editing UI.
 
 **General**
 
