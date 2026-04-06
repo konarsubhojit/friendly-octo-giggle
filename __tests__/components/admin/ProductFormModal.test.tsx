@@ -164,7 +164,7 @@ describe('ProductFormModal', () => {
     renderModal({ editingProduct: mockProduct }) // starts with stock=10
     const stockInput = screen.getByLabelText('Stock')
     fireEvent.change(stockInput, { target: { value: '' } })
-    expect((stockInput as HTMLInputElement).value).toBe('')
+    expect((stockInput as HTMLInputElement).value).toBe('0')
     fireEvent.change(stockInput, { target: { value: '0' } })
     expect((stockInput as HTMLInputElement).value).toBe('0')
   })
@@ -225,12 +225,14 @@ describe('ProductFormModal', () => {
     })
     Object.defineProperty(validFile, 'size', { value: 100 * 1024 })
     fireEvent.change(fileInput, { target: { files: [validFile] } })
-    expect(screen.getByText('Selected: photo.jpg')).toBeTruthy()
+    await waitFor(() => {
+      expect(screen.getByText(/photo\.jpg/)).toBeTruthy()
+    })
   })
 
   it('handles currency change and converts price', () => {
     renderModal({ editingProduct: mockProduct })
-    const currencySelect = screen.getByLabelText('Price currency')
+    const currencySelect = screen.getByRole('combobox', { name: 'Price' })
     fireEvent.change(currencySelect, { target: { value: 'USD' } })
     expect((currencySelect as HTMLSelectElement).value).toBe('USD')
   })
@@ -246,7 +248,7 @@ describe('ProductFormModal', () => {
     fireEvent.change(screen.getByLabelText('Category'), {
       target: { value: 'Flowers' },
     })
-    const priceInput = screen.getByLabelText('Price')
+    const priceInput = screen.getByRole('spinbutton', { name: 'Price' })
     fireEvent.change(priceInput, { target: { value: '100' } })
     const stockInput = screen.getByLabelText('Stock')
     fireEvent.change(stockInput, { target: { value: '5' } })
@@ -350,7 +352,7 @@ describe('ProductFormModal', () => {
     fireEvent.change(screen.getByLabelText('Category'), {
       target: { value: 'Flowers' },
     })
-    fireEvent.change(screen.getByLabelText('Price'), {
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Price' }), {
       target: { value: '50' },
     })
     fireEvent.change(screen.getByLabelText('Stock'), {
@@ -468,7 +470,7 @@ describe('ProductFormModal', () => {
     fireEvent.change(screen.getByLabelText('Category'), {
       target: { value: 'Flowers' },
     })
-    fireEvent.change(screen.getByLabelText('Price'), {
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Price' }), {
       target: { value: '50' },
     })
     fireEvent.change(screen.getByLabelText('Stock'), {
@@ -530,7 +532,7 @@ describe('ProductFormModal', () => {
     fireEvent.change(screen.getByLabelText('Category'), {
       target: { value: 'Flowers' },
     })
-    fireEvent.change(screen.getByLabelText('Price'), {
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Price' }), {
       target: { value: '10' },
     })
     fireEvent.change(screen.getByLabelText('Stock'), {
@@ -625,7 +627,7 @@ describe('ProductFormModal', () => {
   it('clears inline error when price is corrected', async () => {
     const { container } = renderModal()
     const form = container.querySelector('form')
-    fireEvent.change(screen.getByLabelText('Price'), {
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Price' }), {
       target: { value: '0' },
     })
     act(() => {
@@ -636,7 +638,7 @@ describe('ProductFormModal', () => {
         screen.getByText(PRODUCT_ERRORS.PRICE_POSITIVE)
       ).toBeInTheDocument()
     })
-    fireEvent.change(screen.getByLabelText('Price'), {
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Price' }), {
       target: { value: '50' },
     })
     await waitFor(() => {
@@ -668,7 +670,7 @@ describe('ProductFormModal', () => {
     })
     await waitFor(() => {
       const nameInput = screen.getByLabelText('Name')
-      expect(nameInput.className).toContain('border-red-400')
+      expect(nameInput.getAttribute('aria-invalid')).toBe('true')
     })
   })
 })

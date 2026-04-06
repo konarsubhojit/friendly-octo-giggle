@@ -6,16 +6,14 @@ import { useCurrency } from '@/contexts/CurrencyContext'
 import { useDispatch } from 'react-redux'
 import { updateAdminOrderStatus } from '@/features/admin/store/adminSlice'
 import type { AppDispatch } from '@/lib/store'
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { AlertBanner } from '@/components/ui/AlertBanner'
-import { EmptyState } from '@/components/ui/EmptyState'
 import {
   AdminPageShell,
   AdminPanel,
 } from '@/features/admin/components/AdminPageShell'
 import { AdminOrderCard } from '@/features/admin/components/AdminOrderCard'
 import { AdminSearchForm } from '@/features/admin/components/AdminSearchForm'
-import { CursorPaginationBar } from '@/components/ui/CursorPaginationBar'
+import { DataTable, type DataTableColumn } from 'zenput'
 
 type ShippingEdits = Record<
   string,
@@ -50,6 +48,15 @@ interface AdminOrder {
 const STATUS_FILTERS = ['ALL', ...Object.values(OrderStatus)] as const
 const PAGE_SIZE = 20
 
+type OrderRow = {
+  id: string
+  customer: string
+  status: string
+  total: string
+  date: string
+  _raw: AdminOrder
+}
+
 export default function OrdersManagement() {
   const { formatPrice } = useCurrency()
   const dispatch = useDispatch<AppDispatch>()
@@ -61,8 +68,6 @@ export default function OrdersManagement() {
   const [search, setSearch] = useState('')
   const [searchInput, setSearchInput] = useState('')
   const [cursor, setCursor] = useState<string | null>(null)
-  const [nextCursor, setNextCursor] = useState<string | null>(null)
-  const [hasMore, setHasMore] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const [totalCount, setTotalCount] = useState(0)
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null)
@@ -104,8 +109,6 @@ export default function OrdersManagement() {
         const data = await res.json()
         const items: AdminOrder[] = data.data?.orders ?? data.orders ?? []
         setOrders(items)
-        setNextCursor(data.data?.nextCursor ?? null)
-        setHasMore(data.data?.hasMore ?? false)
         setTotalCount(Number(data.data?.totalCount ?? data.totalCount ?? 0))
         const discoveredCursors = pageCursorsRef.current.slice(0, currentPage)
         if (data.data?.nextCursor) {
@@ -151,25 +154,6 @@ export default function OrdersManagement() {
     setCursor(null)
   }
 
-  const handleNext = () => {
-    if (!nextCursor || currentPage >= totalPages) return
-    setCurrentPage((prev) => prev + 1)
-    setCursor(nextCursor)
-  }
-
-  const handlePrev = () => {
-    if (currentPage === 1) return
-    const prevCursor = pageCursorsRef.current[currentPage - 2]
-    if (prevCursor === undefined) {
-      pendingOffsetRef.current = (currentPage - 2) * PAGE_SIZE
-      setCurrentPage((prev) => prev - 1)
-      return
-    }
-
-    setCurrentPage((prev) => prev - 1)
-    setCursor(prevCursor)
-  }
-
   const handlePageSelect = (page: number) => {
     const targetPage = Math.min(Math.max(1, page), totalPages)
     if (targetPage === currentPage) return
@@ -190,16 +174,10 @@ export default function OrdersManagement() {
     setCurrentPage(targetPage)
   }
 
-  const handleLast = () => {
-    handlePageSelect(totalPages)
-  }
-
   const handleRefresh = () => {
     syncPageCursors([null])
     setCurrentPage(1)
     setCursor(null)
-    setNextCursor(null)
-    setHasMore(false)
     setTotalCount(0)
     setSearch('')
     setSearchInput('')
@@ -281,44 +259,52 @@ export default function OrdersManagement() {
     setSavingShippingId(null)
   }
 
-  const ordersListContent =
-    orders.length === 0 ? (
-      <EmptyState
-        title="No orders found"
-        message={search ? 'Try a different search term.' : undefined}
-      />
-    ) : (
-      <>
-        <div className="space-y-4 mb-8">
-          {orders.map((order) => (
-            <AdminOrderCard
-              key={order.id}
-              order={order}
-              updatingOrderId={updatingOrderId}
-              savingShippingId={savingShippingId}
-              edit={getShippingEdit(order.id, order)}
-              onStatusChange={handleStatusChange}
-              onShippingFieldChange={setShippingField}
-              onSaveShipping={handleSaveShipping}
-            />
-          ))}
-        </div>
+  const orderColumns: DataTableColumn<OrderRow>[] = [
+    { key: 'id', header: 'Order ID' },
+    { key: 'customer', header: 'Customer' },
+    { key: 'status', header: 'Status', filterable: true },
+    { key: 'total', header: 'Total' },
+    { key: 'date', header: 'Date' },
+  ]
 
-        <CursorPaginationBar
-          currentPage={currentPage}
-          totalCount={totalCount}
-          pageSize={PAGE_SIZE}
-          hasMore={hasMore}
-          loading={loading}
-          totalPages={totalPages}
-          onFirst={handleFirst}
-          onPrev={handlePrev}
-          onNext={handleNext}
-          onLast={handleLast}
-          onPageSelect={handlePageSelect}
-        />
-      </>
-    )
+  const orderRows: OrderRow[] = orders.map((order) => ({
+    id: order.id,
+    customer: order.customerName,
+    status: order.status,
+    total: formatPrice(order.totalAmount),
+    date: new Date(order.createdAt).toLocaleDateString('en-GB'),
+    _raw: order,
+  }))
+
+  const ordersListContent = (
+    <DataTable
+      columns={orderColumns}
+      data={orderRows}
+      rowKey={(row) => row.id}
+      loading={loading}
+      skeletonRowCount={PAGE_SIZE}
+      emptyMessage={search ? 'No orders match your search.' : 'No orders yet.'}
+      pagination={{
+        currentPage,
+        pageSize: PAGE_SIZE,
+        totalCount,
+        onPageChange: handlePageSelect,
+      }}
+      expandedRowRender={(row) => (
+        <div className="px-4 pb-4">
+          <AdminOrderCard
+            order={row._raw}
+            updatingOrderId={updatingOrderId}
+            savingShippingId={savingShippingId}
+            edit={getShippingEdit(row._raw.id, row._raw)}
+            onStatusChange={handleStatusChange}
+            onShippingFieldChange={setShippingField}
+            onSaveShipping={handleSaveShipping}
+          />
+        </div>
+      )}
+    />
+  )
 
   const trackedOrders = orders.filter(
     (order) => order.trackingNumber || order.shippingProvider
@@ -401,13 +387,7 @@ export default function OrdersManagement() {
       ) : null}
 
       <AdminPanel title="Orders" description="">
-        {loading ? (
-          <div className="flex items-center justify-center py-16">
-            <LoadingSpinner />
-          </div>
-        ) : (
-          ordersListContent
-        )}
+        {ordersListContent}
       </AdminPanel>
     </AdminPageShell>
   )
