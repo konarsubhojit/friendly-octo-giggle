@@ -1,5 +1,7 @@
 import Footer from '@/components/layout/Footer'
 
+export const revalidate = 3600
+
 export const metadata = {
   title: 'Shipping Information | The Kiyon Store',
   description:

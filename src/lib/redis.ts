@@ -186,11 +186,11 @@ export const invalidateCache = async (pattern: string): Promise<void> => {
     } while (cursor !== 0)
 
     if (keysToDelete.length > 0) {
-      const batchSize = 100
-      for (let index = 0; index < keysToDelete.length; index += batchSize) {
-        const batch = keysToDelete.slice(index, index + batchSize)
-        await redisClient.del(...batch)
+      const pipeline = redisClient.pipeline()
+      for (const key of keysToDelete) {
+        pipeline.del(key)
       }
+      await pipeline.exec()
       logCacheOperation({
         operation: 'invalidate',
         key: pattern,

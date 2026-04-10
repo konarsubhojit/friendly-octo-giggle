@@ -27,8 +27,6 @@ import {
   invalidateAdminUserCaches,
   cacheAdminSales,
   cacheShareResolve,
-  cacheUserSession,
-  invalidateUserSessionCache,
   CACHE_KEYS,
 } from '@/lib/cache'
 import { getCachedData, invalidateCache } from '@/lib/redis'
@@ -245,48 +243,6 @@ describe('cache - extended coverage', () => {
     })
   })
 
-  describe('cacheUserSession', () => {
-    it('returns cached session on hit', async () => {
-      mockRedisClient.get.mockResolvedValue({ role: 'ADMIN' })
-      const builder = vi.fn()
-      const result = await cacheUserSession('user1', builder)
-      expect(result).toEqual({ role: 'ADMIN' })
-      expect(builder).not.toHaveBeenCalled()
-    })
-
-    it('builds and caches session on miss', async () => {
-      mockRedisClient.get.mockResolvedValue(null)
-      const builder = vi.fn().mockReturnValue({ role: 'USER' })
-      const result = await cacheUserSession('user1', builder)
-      expect(result).toEqual({ role: 'USER' })
-      expect(mockRedisClient.setex).toHaveBeenCalled()
-    })
-
-    it('falls back to builder on error', async () => {
-      mockRedisClient.get.mockRejectedValue(new Error('Redis error'))
-      const builder = vi.fn().mockReturnValue({ role: 'USER' })
-      const result = await cacheUserSession('user1', builder)
-      expect(result).toEqual({ role: 'USER' })
-    })
-  })
-
-  describe('invalidateUserSessionCache', () => {
-    it('invalidates session cache', async () => {
-      await invalidateUserSessionCache('user1')
-      expect(mockInvalidateCache).toHaveBeenCalledWith(
-        CACHE_KEYS.SESSION_BY_USER('user1')
-      )
-    })
-
-    it('handles errors gracefully', async () => {
-      mockInvalidateCache.mockRejectedValueOnce(new Error('Redis error'))
-      await invalidateUserSessionCache('user1')
-      expect(mockLogError).toHaveBeenCalledWith(
-        expect.objectContaining({ context: 'session_cache_invalidation' })
-      )
-    })
-  })
-
   describe('CACHE_KEYS dynamic functions', () => {
     it('generates correct bestsellers by limit key', () => {
       expect(CACHE_KEYS.PRODUCTS_BESTSELLERS_BY_LIMIT(10)).toBe(
@@ -322,10 +278,6 @@ describe('cache - extended coverage', () => {
 
     it('generates correct share resolve key', () => {
       expect(CACHE_KEYS.SHARE_RESOLVE_BY_KEY('abc')).toBe('share:abc')
-    })
-
-    it('generates correct session by user key', () => {
-      expect(CACHE_KEYS.SESSION_BY_USER('u1')).toBe('session:user:u1')
     })
 
     it('generates correct orders user pattern', () => {

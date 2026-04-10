@@ -5,6 +5,8 @@ import {
   MushroomAccent,
 } from '@/components/ui/DecorativeElements'
 
+export const revalidate = 3600
+
 export const metadata = {
   title: 'About Us | The Kiyon Store',
   description:

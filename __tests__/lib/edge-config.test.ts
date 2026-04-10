@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const mockGet = vi.fn()
 const mockGetAll = vi.fn()
@@ -24,25 +24,21 @@ vi.mock('@/lib/logger', () => ({
 }))
 
 import {
-  getFeatureFlags,
-  getShippingConfig,
-  getAiConfig,
-  getAllEdgeConfig,
-  isMaintenanceMode,
-  isSaleActive,
   DEFAULT_FEATURE_FLAGS,
   DEFAULT_SHIPPING_CONFIG,
   DEFAULT_AI_CONFIG,
 } from '@/lib/edge-config'
 
 describe('edge-config', () => {
-  afterEach(() => {
+  beforeEach(() => {
+    vi.resetModules()
     vi.clearAllMocks()
     vi.unstubAllEnvs()
   })
 
   describe('getFeatureFlags', () => {
     it('returns defaults when EDGE_CONFIG is not set', async () => {
+      const { getFeatureFlags } = await import('@/lib/edge-config')
       const flags = await getFeatureFlags()
       expect(flags).toEqual(DEFAULT_FEATURE_FLAGS)
       expect(mockGet).not.toHaveBeenCalled()
@@ -56,6 +52,7 @@ describe('edge-config', () => {
         saleBannerText: '50% off!',
       }
       mockGet.mockResolvedValue(customFlags)
+      const { getFeatureFlags } = await import('@/lib/edge-config')
       const flags = await getFeatureFlags()
       expect(flags.saleMode).toBe(true)
       expect(flags.saleBannerText).toBe('50% off!')
@@ -65,6 +62,7 @@ describe('edge-config', () => {
     it('returns defaults on edge config error', async () => {
       vi.stubEnv('EDGE_CONFIG', 'https://edge-config.vercel.com/ecfg_test')
       mockGet.mockRejectedValue(new Error('Network error'))
+      const { getFeatureFlags } = await import('@/lib/edge-config')
       const flags = await getFeatureFlags()
       expect(flags).toEqual(DEFAULT_FEATURE_FLAGS)
     })
@@ -72,13 +70,24 @@ describe('edge-config', () => {
     it('returns defaults when edge config returns null', async () => {
       vi.stubEnv('EDGE_CONFIG', 'https://edge-config.vercel.com/ecfg_test')
       mockGet.mockResolvedValue(null)
+      const { getFeatureFlags } = await import('@/lib/edge-config')
       const flags = await getFeatureFlags()
       expect(flags).toEqual(DEFAULT_FEATURE_FLAGS)
+    })
+
+    it('returns cached value on second call within TTL', async () => {
+      vi.stubEnv('EDGE_CONFIG', 'https://edge-config.vercel.com/ecfg_test')
+      mockGet.mockResolvedValue({ ...DEFAULT_FEATURE_FLAGS, saleMode: true })
+      const { getFeatureFlags } = await import('@/lib/edge-config')
+      await getFeatureFlags()
+      await getFeatureFlags()
+      expect(mockGet).toHaveBeenCalledTimes(1)
     })
   })
 
   describe('getShippingConfig', () => {
     it('returns defaults when EDGE_CONFIG is not set', async () => {
+      const { getShippingConfig } = await import('@/lib/edge-config')
       const config = await getShippingConfig()
       expect(config).toEqual(DEFAULT_SHIPPING_CONFIG)
     })
@@ -87,6 +96,7 @@ describe('edge-config', () => {
       vi.stubEnv('EDGE_CONFIG', 'https://edge-config.vercel.com/ecfg_test')
       const custom = { ...DEFAULT_SHIPPING_CONFIG, freeShippingThreshold: 500 }
       mockGet.mockResolvedValue(custom)
+      const { getShippingConfig } = await import('@/lib/edge-config')
       const config = await getShippingConfig()
       expect(config.freeShippingThreshold).toBe(500)
     })
@@ -94,6 +104,7 @@ describe('edge-config', () => {
     it('returns defaults when edge config returns null', async () => {
       vi.stubEnv('EDGE_CONFIG', 'https://edge-config.vercel.com/ecfg_test')
       mockGet.mockResolvedValue(null)
+      const { getShippingConfig } = await import('@/lib/edge-config')
       const config = await getShippingConfig()
       expect(config).toEqual(DEFAULT_SHIPPING_CONFIG)
     })
@@ -101,6 +112,7 @@ describe('edge-config', () => {
     it('returns defaults on error', async () => {
       vi.stubEnv('EDGE_CONFIG', 'https://edge-config.vercel.com/ecfg_test')
       mockGet.mockRejectedValue(new Error('Network error'))
+      const { getShippingConfig } = await import('@/lib/edge-config')
       const config = await getShippingConfig()
       expect(config).toEqual(DEFAULT_SHIPPING_CONFIG)
     })
@@ -108,6 +120,7 @@ describe('edge-config', () => {
 
   describe('getAiConfig', () => {
     it('returns defaults when EDGE_CONFIG is not set', async () => {
+      const { getAiConfig } = await import('@/lib/edge-config')
       const config = await getAiConfig()
       expect(config).toEqual(DEFAULT_AI_CONFIG)
       expect(mockGet).not.toHaveBeenCalled()
@@ -117,6 +130,7 @@ describe('edge-config', () => {
       vi.stubEnv('EDGE_CONFIG', 'https://edge-config.vercel.com/ecfg_test')
       const custom = { ...DEFAULT_AI_CONFIG, chatModel: 'gpt-5-turbo' }
       mockGet.mockResolvedValue(custom)
+      const { getAiConfig } = await import('@/lib/edge-config')
       const config = await getAiConfig()
       expect(config.chatModel).toBe('gpt-5-turbo')
       expect(mockGet).toHaveBeenCalledWith('aiConfig')
@@ -125,6 +139,7 @@ describe('edge-config', () => {
     it('returns defaults when edge config returns null', async () => {
       vi.stubEnv('EDGE_CONFIG', 'https://edge-config.vercel.com/ecfg_test')
       mockGet.mockResolvedValue(null)
+      const { getAiConfig } = await import('@/lib/edge-config')
       const config = await getAiConfig()
       expect(config).toEqual(DEFAULT_AI_CONFIG)
     })
@@ -132,6 +147,7 @@ describe('edge-config', () => {
     it('returns defaults on error', async () => {
       vi.stubEnv('EDGE_CONFIG', 'https://edge-config.vercel.com/ecfg_test')
       mockGet.mockRejectedValue(new Error('Network error'))
+      const { getAiConfig } = await import('@/lib/edge-config')
       const config = await getAiConfig()
       expect(config).toEqual(DEFAULT_AI_CONFIG)
     })
@@ -139,6 +155,7 @@ describe('edge-config', () => {
 
   describe('getAllEdgeConfig', () => {
     it('returns all defaults when EDGE_CONFIG is not set', async () => {
+      const { getAllEdgeConfig } = await import('@/lib/edge-config')
       const data = await getAllEdgeConfig()
       expect(data.featureFlags).toEqual(DEFAULT_FEATURE_FLAGS)
       expect(data.shippingConfig).toEqual(DEFAULT_SHIPPING_CONFIG)
@@ -150,6 +167,7 @@ describe('edge-config', () => {
         featureFlags: { ...DEFAULT_FEATURE_FLAGS, maintenanceMode: true },
         shippingConfig: DEFAULT_SHIPPING_CONFIG,
       })
+      const { getAllEdgeConfig } = await import('@/lib/edge-config')
       const data = await getAllEdgeConfig()
       expect(data.featureFlags.maintenanceMode).toBe(true)
       expect(mockGetAll).toHaveBeenCalledWith([
@@ -162,6 +180,7 @@ describe('edge-config', () => {
     it('returns defaults on error', async () => {
       vi.stubEnv('EDGE_CONFIG', 'https://edge-config.vercel.com/ecfg_test')
       mockGetAll.mockRejectedValue(new Error('Network error'))
+      const { getAllEdgeConfig } = await import('@/lib/edge-config')
       const data = await getAllEdgeConfig()
       expect(data.featureFlags).toEqual(DEFAULT_FEATURE_FLAGS)
     })
@@ -169,10 +188,12 @@ describe('edge-config', () => {
 
   describe('helper functions', () => {
     it('isMaintenanceMode returns false by default', async () => {
+      const { isMaintenanceMode } = await import('@/lib/edge-config')
       expect(await isMaintenanceMode()).toBe(false)
     })
 
     it('isSaleActive returns false by default', async () => {
+      const { isSaleActive } = await import('@/lib/edge-config')
       expect(await isSaleActive()).toBe(false)
     })
 
@@ -182,6 +203,7 @@ describe('edge-config', () => {
         ...DEFAULT_FEATURE_FLAGS,
         maintenanceMode: true,
       })
+      const { isMaintenanceMode } = await import('@/lib/edge-config')
       expect(await isMaintenanceMode()).toBe(true)
     })
   })

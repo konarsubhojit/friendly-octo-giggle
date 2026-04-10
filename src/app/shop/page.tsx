@@ -11,7 +11,7 @@ import { categories as categoriesTable } from '@/lib/schema'
 import { isNull, asc } from 'drizzle-orm'
 import { logError } from '@/lib/logger'
 
-export const revalidate = 60
+export const revalidate = 300
 
 const SHOP_INITIAL_SIZE = 24
 const SHOP_BATCH_SIZE = 20

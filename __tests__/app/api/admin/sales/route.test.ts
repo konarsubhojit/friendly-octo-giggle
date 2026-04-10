@@ -91,9 +91,9 @@ describe('GET /api/admin/sales', () => {
     expect(body.data.sales).toEqual(MOCK_SALES)
     expect(mockGetCachedData).toHaveBeenCalledWith(
       'admin:sales:summary',
-      120,
+      300,
       expect.any(Function),
-      30
+      60
     )
   })
 

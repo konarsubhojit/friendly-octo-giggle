@@ -9,7 +9,6 @@ import type { Adapter } from 'next-auth/adapters'
 import { logAuthEvent } from './logger'
 import { verifyPassword } from '@/features/auth/services/password'
 import { eq, or } from 'drizzle-orm'
-import { cacheUserSession, invalidateUserSessionCache } from '@/lib/cache'
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: DrizzleAdapter(primaryDrizzleDb, {
@@ -126,16 +125,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         return session
       }
 
-      const userData = await cacheUserSession(userId, () => ({
-        id: userId,
-        role: (token.role as 'ADMIN' | 'CUSTOMER') || 'CUSTOMER',
-        phoneNumber:
-          (token.phoneNumber as string | null | undefined) || undefined,
-      }))
-
-      session.user.id = userData.id
-      session.user.role = userData.role
-      session.user.phoneNumber = userData.phoneNumber
+      session.user.id = userId
+      session.user.role =
+        (token.role as 'ADMIN' | 'CUSTOMER') || 'CUSTOMER'
+      session.user.phoneNumber =
+        (token.phoneNumber as string | null | undefined) || undefined
 
       return session
     },
@@ -162,11 +156,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
   },
   events: {
-    async signOut(message) {
-      if ('token' in message && message.token?.id) {
-        await invalidateUserSessionCache(message.token.id as string)
-      }
-      // Log sign-out (user ID not available in signOut event)
+    async signOut() {
       logAuthEvent({
         event: 'logout',
         success: true,

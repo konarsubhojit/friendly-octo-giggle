@@ -8,6 +8,11 @@ vi.mock('@vercel/functions', () => ({
   waitUntil: mockWaitUntil,
 }))
 
+const mockPipeline = {
+  del: vi.fn(),
+  exec: vi.fn().mockResolvedValue([]),
+}
+
 const mockRedisInstance = {
   get: vi.fn(),
   set: vi.fn(),
@@ -15,6 +20,7 @@ const mockRedisInstance = {
   del: vi.fn(),
   eval: vi.fn(),
   scan: vi.fn(),
+  pipeline: vi.fn(() => mockPipeline),
 }
 
 const MockRedis = vi.fn(function () {
@@ -256,12 +262,15 @@ describe('invalidateCache', () => {
 
     mockRedisInstance.del.mockReset()
     mockRedisInstance.scan.mockReset()
+    mockPipeline.del.mockReset()
+    mockPipeline.exec.mockReset()
+    mockPipeline.exec.mockResolvedValue([])
 
     const mod = await import('@/lib/redis')
     invalidateCache = mod.invalidateCache
   })
 
-  it('deletes found keys in batches using cursor-based scan', async () => {
+  it('deletes all found keys via a single pipeline', async () => {
     const keys = Array.from({ length: 150 }, (_, index) => `product:${index}`)
     const batch1 = keys.slice(0, 100)
     const batch2 = keys.slice(100)
@@ -269,21 +278,22 @@ describe('invalidateCache', () => {
     mockRedisInstance.scan
       .mockResolvedValueOnce([42, batch1])
       .mockResolvedValueOnce([0, batch2])
-    mockRedisInstance.del.mockResolvedValue(0)
 
     await invalidateCache('product:*')
 
-    expect(mockRedisInstance.del).toHaveBeenCalledTimes(2)
-    expect(mockRedisInstance.del).toHaveBeenNthCalledWith(1, ...batch1)
-    expect(mockRedisInstance.del).toHaveBeenNthCalledWith(2, ...batch2)
+    expect(mockRedisInstance.pipeline).toHaveBeenCalledOnce()
+    expect(mockPipeline.del).toHaveBeenCalledTimes(150)
+    expect(mockPipeline.exec).toHaveBeenCalledOnce()
+    expect(mockRedisInstance.del).not.toHaveBeenCalled()
   })
 
-  it('does not call del when no keys are found', async () => {
+  it('does not call pipeline when no keys are found', async () => {
     mockRedisInstance.scan.mockResolvedValueOnce([0, []])
 
     await invalidateCache('nonexistent:*')
 
-    expect(mockRedisInstance.del).not.toHaveBeenCalled()
+    expect(mockRedisInstance.pipeline).not.toHaveBeenCalled()
+    expect(mockPipeline.exec).not.toHaveBeenCalled()
   })
 
   it('deletes exact keys without scanning the keyspace', async () => {
@@ -293,6 +303,7 @@ describe('invalidateCache', () => {
 
     expect(mockRedisInstance.del).toHaveBeenCalledWith('product:abc1234')
     expect(mockRedisInstance.scan).not.toHaveBeenCalled()
+    expect(mockRedisInstance.pipeline).not.toHaveBeenCalled()
   })
 
   it('handles scan errors gracefully', async () => {

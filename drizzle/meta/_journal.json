@@ -36,6 +36,13 @@
       "when": 1774930099907,
       "tag": "0004_daily_the_renegades",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1744308180000,
+      "tag": "0005_cost_opt_indexes",
+      "breakpoints": true
     }
   ]
 }
