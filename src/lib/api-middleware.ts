@@ -1,6 +1,7 @@
-import { NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { logApiRequest, generateRequestId, Timer } from './logger'
 import { auth } from './auth'
+import { checkRateLimit } from './rate-limit'
 
 export interface ApiContext {
   requestId: string
@@ -17,6 +18,20 @@ interface LoggingOptions {
   requireAuth?: boolean
 }
 
+const buildRateLimitResponse = (reset: number): NextResponse => {
+  const retryAfter = Math.ceil((reset - Date.now()) / 1000)
+  return NextResponse.json(
+    { error: 'Too Many Requests' },
+    {
+      status: 429,
+      headers: {
+        'Retry-After': String(Math.max(retryAfter, 1)),
+        'X-RateLimit-Reset': String(reset),
+      },
+    }
+  )
+}
+
 const createLoggingWrapper = (options: LoggingOptions = {}) => {
   const { requireAuth = false } = options
 
@@ -28,6 +43,11 @@ const createLoggingWrapper = (options: LoggingOptions = {}) => {
       const timer = new Timer(
         `api.${request.method}.${request.nextUrl.pathname}`
       )
+
+      const rateLimitResult = await checkRateLimit(request)
+      if (rateLimitResult && !rateLimitResult.success) {
+        return buildRateLimitResponse(rateLimitResult.reset)
+      }
 
       let userId: string | undefined
       if (requireAuth) {
@@ -84,6 +104,11 @@ export const withLogging = <TArgs extends unknown[]>(
   return async (request: NextRequest, ...args: TArgs): Promise<Response> => {
     const requestId = generateRequestId()
     const timer = new Timer(`api.${request.method}.${request.nextUrl.pathname}`)
+
+    const rateLimitResult = await checkRateLimit(request)
+    if (rateLimitResult && !rateLimitResult.success) {
+      return buildRateLimitResponse(rateLimitResult.reset)
+    }
 
     try {
       const response = await handler(request, ...args)
