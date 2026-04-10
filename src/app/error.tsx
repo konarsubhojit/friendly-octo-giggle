@@ -1,11 +1,18 @@
 'use client'
 
+import { useEffect } from 'react'
+import * as Sentry from '@sentry/nextjs'
+
 interface ErrorProps {
   readonly error: Error & { digest?: string }
   readonly reset: () => void
 }
 
 export default function GlobalError({ error, reset }: ErrorProps) {
+  useEffect(() => {
+    Sentry.captureException(error)
+  }, [error])
+
   return (
     <div className="min-h-[50vh] flex items-center justify-center px-4">
       <div className="max-w-md w-full bg-[var(--accent-cream)] rounded-2xl shadow-warm-lg border border-[var(--border-warm)] p-8 text-center">

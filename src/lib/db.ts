@@ -93,6 +93,9 @@ const globalForDb = globalThis as unknown as {
 const createPool = (connectionString: string) =>
   new Pool({
     connectionString,
+    max: 10,
+    idleTimeoutMillis: 20000,
+    connectionTimeoutMillis: 5000,
   })
 
 const writePool = (globalForDb.writePool ??= createPool(env.DATABASE_URL))
