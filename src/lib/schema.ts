@@ -260,7 +260,6 @@ export const orders = pgTable(
     index('Order_userId_idx').on(t.userId),
     index('Order_status_idx').on(t.status),
     index('Order_createdAt_idx').on(t.createdAt),
-    index('Order_userId_createdAt_idx').on(t.userId, t.createdAt),
     unique('Order_checkoutRequestId_key').on(t.checkoutRequestId),
   ]
 )
@@ -288,7 +287,6 @@ export const orderItems = pgTable(
     index('OrderItem_orderId_idx').on(t.orderId),
     index('OrderItem_productId_idx').on(t.productId),
     index('OrderItem_variationId_idx').on(t.variationId),
-    index('OrderItem_productId_orderId_idx').on(t.productId, t.orderId),
   ]
 )
 
