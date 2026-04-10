@@ -126,8 +126,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       }
 
       session.user.id = userId
-      session.user.role =
-        (token.role as 'ADMIN' | 'CUSTOMER') || 'CUSTOMER'
+      session.user.role = (token.role as 'ADMIN' | 'CUSTOMER') || 'CUSTOMER'
       session.user.phoneNumber =
         (token.phoneNumber as string | null | undefined) || undefined
 
