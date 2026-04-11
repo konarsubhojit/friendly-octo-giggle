@@ -11,8 +11,7 @@ export const apiSuccess = <T>(
   data: T,
   status = 200,
   headers?: Record<string, string>
-) =>
-  NextResponse.json({ success: true, data }, { status, headers })
+) => NextResponse.json({ success: true, data }, { status, headers })
 
 export const apiError = (
   error: string,

@@ -223,7 +223,9 @@ export const retryFailedEmail = async (
 export const batchRetryFailedEmails = async (
   ids: string[]
 ): Promise<FailedEmailRetryResult[]> => {
-  const results = await Promise.allSettled(ids.map((id) => retryFailedEmail(id)))
+  const results = await Promise.allSettled(
+    ids.map((id) => retryFailedEmail(id))
+  )
   return results.map((result, idx) => {
     if (result.status === 'fulfilled') return result.value
     return {

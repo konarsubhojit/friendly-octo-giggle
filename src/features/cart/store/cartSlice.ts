@@ -226,9 +226,8 @@ export const selectCartItems = createSelector(
   (cart) => cart?.items ?? []
 )
 
-export const selectCartItemCount = createSelector(
-  selectCartItems,
-  (items) => items.reduce((total, item) => total + item.quantity, 0)
+export const selectCartItemCount = createSelector(selectCartItems, (items) =>
+  items.reduce((total, item) => total + item.quantity, 0)
 )
 
 export default cartSlice.reducer
