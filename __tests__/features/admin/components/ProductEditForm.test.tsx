@@ -26,6 +26,7 @@ const mockProduct = {
   description: 'A beautiful vintage dress for all occasions',
   price: 2499,
   image: '/images/dress.jpg',
+  images: [] as string[],
   stock: 15,
   category: 'Dresses',
   deletedAt: null,

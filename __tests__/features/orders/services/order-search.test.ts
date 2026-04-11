@@ -55,6 +55,7 @@ vi.mock('drizzle-orm', () => ({
 }))
 
 import { searchOrderIds } from '@/features/orders/services/order-search'
+import { OrderStatus } from '@/lib/types'
 
 describe('order-search', () => {
   beforeEach(() => {
@@ -125,7 +126,7 @@ describe('order-search', () => {
 
     it('passes status filter to Redis', async () => {
       mockSearchAllOrdersRedis.mockResolvedValue([])
-      await searchOrderIds('test', { status: 'PENDING' })
+      await searchOrderIds('test', { status: OrderStatus.PENDING })
       expect(mockSearchAllOrdersRedis).toHaveBeenCalledWith(
         'test',
         1000,
@@ -207,7 +208,7 @@ describe('order-search', () => {
         }
       )
 
-      const result = await searchOrderIds('test', { status: 'SHIPPED' })
+      const result = await searchOrderIds('test', { status: OrderStatus.SHIPPED })
       expect(result).toEqual([])
     })
 

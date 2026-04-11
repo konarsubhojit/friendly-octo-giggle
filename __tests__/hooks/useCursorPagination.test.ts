@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, waitFor, act } from '@testing-library/react'
+import type React from 'react'
 import { useCursorPagination } from '@/hooks/useCursorPagination'
 
 const mockResponse = (
@@ -176,7 +177,7 @@ describe('useCursorPagination', () => {
     })
 
     act(() => {
-      result.current.handleSearch({ preventDefault: vi.fn() })
+      result.current.handleSearch({ preventDefault: vi.fn() } as unknown as React.BaseSyntheticEvent)
     })
 
     await waitFor(() => {

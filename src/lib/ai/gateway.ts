@@ -1,4 +1,5 @@
 import { createGateway } from '@ai-sdk/gateway'
+import type { JSONValue } from '@ai-sdk/provider'
 import { env } from '@/lib/env'
 import { getAiConfig, type AiConfig } from '@/lib/edge-config'
 
@@ -31,7 +32,7 @@ const getProviderNamespace = (aiConfig: AiConfig): string | undefined => {
 
 export const getProviderOptions = (
   aiConfig: AiConfig
-): Record<string, Record<string, unknown>> | undefined => {
+): Record<string, Record<string, JSONValue>> | undefined => {
   if (!aiConfig.thinkingLevel || aiConfig.thinkingLevel === 'none')
     return undefined
 

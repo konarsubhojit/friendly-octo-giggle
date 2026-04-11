@@ -24,9 +24,9 @@ vi.mock('next/link', () => ({
 }))
 
 const mockBestsellers = [
-  { id: 'prod1', name: 'Rose Gift Box', image: '/img1.jpg', price: 25 },
-  { id: 'prod2', name: 'Lily Vase', image: '/img2.jpg', price: 35 },
-  { id: 'prod3', name: 'Tulip Candle', image: '/img3.jpg', price: 15 },
+  { id: 'prod1', name: 'Rose Gift Box', image: '/img1.jpg', price: 25, description: 'A rose gift box', stock: 10, category: 'Gifts' },
+  { id: 'prod2', name: 'Lily Vase', image: '/img2.jpg', price: 35, description: 'A lily vase', stock: 5, category: 'Decor' },
+  { id: 'prod3', name: 'Tulip Candle', image: '/img3.jpg', price: 15, description: 'A tulip candle', stock: 20, category: 'Candles' },
 ]
 
 describe('BestsellersScroller', () => {
