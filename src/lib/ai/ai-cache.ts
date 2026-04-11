@@ -54,7 +54,12 @@ export async function setCachedAiResponse(
   const key = buildAiCacheKey(productId, question)
   try {
     await redis.setex(key, AI_CACHE_TTL, response)
-    logCacheOperation({ operation: 'set', key, ttl: AI_CACHE_TTL, success: true })
+    logCacheOperation({
+      operation: 'set',
+      key,
+      ttl: AI_CACHE_TTL,
+      success: true,
+    })
   } catch (error) {
     logError({ error, context: 'ai_cache_set', additionalInfo: { key } })
   }
