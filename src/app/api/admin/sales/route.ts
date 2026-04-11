@@ -13,7 +13,9 @@ export async function GET() {
   try {
     const sales = await getAdminSalesDashboardData()
 
-    return apiSuccess({ sales })
+    return apiSuccess({ sales }, 200, {
+      'Cache-Control': 'private, s-maxage=30, stale-while-revalidate=10',
+    })
   } catch (error) {
     return handleApiError(error)
   }

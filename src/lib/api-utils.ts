@@ -7,8 +7,11 @@ export const parseOffsetParam = (offsetParam: string | null): number => {
   return Number.isNaN(parsed) ? 0 : Math.max(0, parsed)
 }
 
-export const apiSuccess = <T>(data: T, status = 200) =>
-  NextResponse.json({ success: true, data }, { status })
+export const apiSuccess = <T>(
+  data: T,
+  status = 200,
+  headers?: Record<string, string>
+) => NextResponse.json({ success: true, data }, { status, headers })
 
 export const apiError = (
   error: string,

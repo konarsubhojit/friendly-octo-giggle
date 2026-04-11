@@ -149,8 +149,30 @@ describe('POST /api/ai/products/[id]/chat', () => {
     buildProductContextMock.mockClear()
   })
 
+  it('returns 401 when user is not authenticated', async () => {
+    vi.mocked(db.products.findById).mockResolvedValue(mockProduct)
+    vi.mocked(auth).mockResolvedValue(null)
+
+    const request = new NextRequest(
+      'http://localhost/api/ai/products/abc1234/chat',
+      {
+        method: 'POST',
+        body: JSON.stringify(validBody),
+      }
+    )
+
+    const response = await POST(request, {
+      params: Promise.resolve({ id: 'abc1234' }),
+    })
+
+    expect(response.status).toBe(401)
+    const data = await response.json()
+    expect(data.error).toBe('Authentication required')
+  })
+
   it('returns 404 when product not found', async () => {
     vi.mocked(db.products.findById).mockResolvedValue(null)
+    vi.mocked(auth).mockResolvedValue({ user: { id: 'user-123' } } as never)
 
     const request = new NextRequest(
       'http://localhost/api/ai/products/notfound/chat',
@@ -171,6 +193,7 @@ describe('POST /api/ai/products/[id]/chat', () => {
 
   it('returns 400 for invalid request body', async () => {
     vi.mocked(db.products.findById).mockResolvedValue(mockProduct)
+    vi.mocked(auth).mockResolvedValue({ user: { id: 'user-123' } } as never)
 
     const request = new NextRequest(
       'http://localhost/api/ai/products/abc1234/chat',
@@ -189,7 +212,7 @@ describe('POST /api/ai/products/[id]/chat', () => {
 
   it('streams response for valid request (cache miss)', async () => {
     vi.mocked(db.products.findById).mockResolvedValue(mockProduct)
-    vi.mocked(auth).mockResolvedValue(null)
+    vi.mocked(auth).mockResolvedValue({ user: { id: 'user-123' } } as never)
     getCachedAiResponseMock.mockResolvedValue(null)
 
     const request = new NextRequest(
@@ -233,7 +256,7 @@ describe('POST /api/ai/products/[id]/chat', () => {
 
   it('returns cached JSON response on cache hit without calling streamText', async () => {
     vi.mocked(db.products.findById).mockResolvedValue(mockProduct)
-    vi.mocked(auth).mockResolvedValue(null)
+    vi.mocked(auth).mockResolvedValue({ user: { id: 'user-123' } } as never)
     getCachedAiResponseMock.mockResolvedValue('Cached AI response')
 
     const request = new NextRequest(
@@ -266,7 +289,7 @@ describe('POST /api/ai/products/[id]/chat', () => {
 
   it('schedules setCachedAiResponse via waitUntil on cache miss', async () => {
     vi.mocked(db.products.findById).mockResolvedValue(mockProduct)
-    vi.mocked(auth).mockResolvedValue(null)
+    vi.mocked(auth).mockResolvedValue({ user: { id: 'user-123' } } as never)
     getCachedAiResponseMock.mockResolvedValue(null)
 
     const request = new NextRequest(
@@ -293,7 +316,7 @@ describe('POST /api/ai/products/[id]/chat', () => {
 
   it('does not cache multi-turn conversation responses', async () => {
     vi.mocked(db.products.findById).mockResolvedValue(mockProduct)
-    vi.mocked(auth).mockResolvedValue(null)
+    vi.mocked(auth).mockResolvedValue({ user: { id: 'user-123' } } as never)
 
     const multiTurnBody = {
       messages: [

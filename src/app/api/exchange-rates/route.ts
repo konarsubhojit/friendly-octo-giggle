@@ -19,6 +19,8 @@ class UpstreamApiError extends Error {
   }
 }
 
+const MIN_CACHE_TTL_SECONDS = 3600
+
 /** Returns today's date as a UTC string "YYYY-MM-DD", used as the cache key suffix. */
 function getUtcDateString(): string {
   return new Date().toISOString().slice(0, 10)
@@ -101,7 +103,10 @@ export async function GET() {
       300
     )
 
-    return apiSuccess({ rates })
+    const ttlSeconds = Math.max(ttl, MIN_CACHE_TTL_SECONDS)
+    return apiSuccess({ rates }, 200, {
+      'Cache-Control': `public, s-maxage=${ttlSeconds}, stale-while-revalidate=${MIN_CACHE_TTL_SECONDS}`,
+    })
   } catch (error) {
     if (error instanceof UpstreamApiError) {
       logError({ error, context: 'exchange_rates' })

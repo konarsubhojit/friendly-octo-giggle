@@ -385,6 +385,7 @@ export const reviews = pgTable(
   (t) => [
     index('Review_productId_idx').on(t.productId),
     index('Review_userId_idx').on(t.userId),
+    index('Review_productId_rating_idx').on(t.productId, t.rating),
     unique('Review_userId_productId_key').on(t.userId, t.productId),
   ]
 )
@@ -589,5 +590,14 @@ export const failedEmails = pgTable(
     index('FailedEmail_status_idx').on(t.status),
     index('FailedEmail_referenceId_idx').on(t.referenceId),
     index('FailedEmail_createdAt_idx').on(t.createdAt),
+    index('FailedEmail_recipientEmail_status_idx').on(
+      t.recipientEmail,
+      t.status
+    ),
+    index('FailedEmail_status_isRetriable_createdAt_idx').on(
+      t.status,
+      t.isRetriable,
+      t.createdAt
+    ),
   ]
 )

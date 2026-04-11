@@ -162,7 +162,9 @@ export const GET = async (request: NextRequest) => {
       limit,
     })
 
-    return apiSuccess(result)
+    return apiSuccess(result, 200, {
+      'Cache-Control': 'private, s-maxage=10, stale-while-revalidate=5',
+    })
   } catch (error) {
     return handleApiError(error)
   }

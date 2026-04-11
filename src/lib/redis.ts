@@ -179,7 +179,7 @@ export const invalidateCache = async (pattern: string): Promise<void> => {
     do {
       const [nextCursor, keys] = await redisClient.scan(cursor, {
         match: pattern,
-        count: 100,
+        count: 1000,
       })
       cursor = Number(nextCursor)
       keysToDelete.push(...keys)

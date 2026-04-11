@@ -49,7 +49,9 @@ export const GET = async (request: NextRequest) => {
       updatedAt: r.updatedAt.toISOString(),
     }))
 
-    return apiSuccess({ reviews: serialized, total: serialized.length })
+    return apiSuccess({ reviews: serialized, total: serialized.length }, 200, {
+      'Cache-Control': 'private, s-maxage=30, stale-while-revalidate=10',
+    })
   } catch (error) {
     return handleApiError(error)
   }

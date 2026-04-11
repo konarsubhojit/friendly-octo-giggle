@@ -61,19 +61,21 @@ export const POST = async (
       return apiError('Invalid request body', 400)
     }
 
-    let currencyCode: CurrencyCode = 'INR'
     const session = await auth()
-    if (session?.user?.id) {
-      const userRecord = await drizzleDb.query.users.findFirst({
-        where: eq(users.id, session.user.id),
-        columns: { currencyPreference: true },
-      })
-      if (
-        userRecord?.currencyPreference &&
-        isValidCurrencyCode(userRecord.currencyPreference)
-      ) {
-        currencyCode = userRecord.currencyPreference
-      }
+    if (!session?.user?.id) {
+      return apiError('Authentication required', 401)
+    }
+
+    let currencyCode: CurrencyCode = 'INR'
+    const userRecord = await drizzleDb.query.users.findFirst({
+      where: eq(users.id, session.user.id),
+      columns: { currencyPreference: true },
+    })
+    if (
+      userRecord?.currencyPreference &&
+      isValidCurrencyCode(userRecord.currencyPreference)
+    ) {
+      currencyCode = userRecord.currencyPreference
     }
 
     const aiConfig = await getAiConfigCached()
