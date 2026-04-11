@@ -20,7 +20,12 @@ vi.mock('@/lib/edge-config', () => ({
   }),
 }))
 
-import { gateway, getAiConfigCached, getChatModel, getProviderOptions } from '@/lib/ai/gateway'
+import {
+  gateway,
+  getAiConfigCached,
+  getChatModel,
+  getProviderOptions,
+} from '@/lib/ai/gateway'
 import { getAiConfig } from '@/lib/edge-config'
 
 const baseAiConfig = {
@@ -72,7 +77,9 @@ describe('lib/ai/gateway', () => {
 
   describe('getProviderOptions', () => {
     it('returns undefined when thinkingLevel is none', () => {
-      expect(getProviderOptions({ ...baseAiConfig, thinkingLevel: 'none' })).toBeUndefined()
+      expect(
+        getProviderOptions({ ...baseAiConfig, thinkingLevel: 'none' })
+      ).toBeUndefined()
     })
 
     it('returns undefined when thinkingLevel is absent', () => {
