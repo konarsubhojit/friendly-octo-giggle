@@ -1,8 +1,10 @@
-import { NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { streamText, convertToModelMessages, type UIMessage } from 'ai'
+import { waitUntil } from '@vercel/functions'
 import { z } from 'zod'
 import { getChatModel, getAiConfigCached } from '@/lib/ai/gateway'
 import { buildProductContext } from '@/lib/ai/product-rag'
+import { getCachedAiResponse, setCachedAiResponse } from '@/lib/ai/ai-cache'
 import { db, drizzleDb } from '@/lib/db'
 import { apiError, handleApiError } from '@/lib/api-utils'
 import { logError, logBusinessEvent } from '@/lib/logger'
@@ -88,6 +90,34 @@ export const POST = async (
     const trimmed = parsed.data.messages.slice(
       -aiConfig.maxHistoryMessages
     ) as UIMessage[]
+
+    // Extract the last user message for cache lookup
+    const lastUserMessage = [...trimmed]
+      .reverse()
+      .find((m) => m.role === 'user')
+    const lastUserText =
+      lastUserMessage?.parts
+        ?.find((p) => p.type === 'text' && 'text' in p)
+        ?.text ?? ''
+
+    // Check cache for single-turn questions
+    if (lastUserText) {
+      const cached = await getCachedAiResponse(id, lastUserText)
+      if (cached !== null) {
+        logBusinessEvent({
+          event: 'ai_chat_request',
+          details: {
+            productId: id,
+            chatModel: aiConfig.chatModel,
+            messageCount: trimmed.length,
+            cached: true,
+          },
+          success: true,
+        })
+        return NextResponse.json({ text: cached })
+      }
+    }
+
     const messages = await convertToModelMessages(trimmed)
 
     const messageCount = trimmed.length
@@ -105,6 +135,15 @@ export const POST = async (
       details: { productId: id, chatModel: aiConfig.chatModel, messageCount },
       success: true,
     })
+
+    // Cache the final assembled text after streaming completes
+    if (lastUserText) {
+      waitUntil(
+        result.text
+          .then((text) => setCachedAiResponse(id, lastUserText, text))
+          .catch(() => {})
+      )
+    }
 
     return result.toUIMessageStreamResponse()
   } catch (error) {

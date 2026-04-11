@@ -9,7 +9,22 @@
  */
 
 import { Search } from '@upstash/search'
-import { logError } from '../logger'
+import { logError, logCacheOperation } from '../logger'
+import { getRedisClient } from '../redis'
+
+const SEARCH_CACHE_TTL = 60 // 60 seconds
+const SEARCH_CACHE_PREFIX = 'search:products:'
+
+function buildSearchCacheKey(
+  query: string,
+  options: { limit?: number; category?: string }
+): string {
+  const normalized = query.toLowerCase().trim().replace(/\s+/g, ' ')
+  const parts = [SEARCH_CACHE_PREFIX + normalized]
+  if (options.category) parts.push(`cat:${options.category}`)
+  if (options.limit) parts.push(`l:${options.limit}`)
+  return parts.join(':')
+}
 
 export type ProductContent = {
   name: string
@@ -177,6 +192,26 @@ export async function searchProducts(
     return []
   }
 
+  const redis = getRedisClient()
+  const cacheKey = buildSearchCacheKey(query, options)
+
+  if (redis) {
+    try {
+      const cached = await redis.get<ProductSearchResult[]>(cacheKey)
+      if (cached !== null) {
+        logCacheOperation({ operation: 'hit', key: cacheKey, success: true })
+        return cached
+      }
+      logCacheOperation({ operation: 'miss', key: cacheKey, success: true })
+    } catch (error) {
+      logError({
+        error,
+        context: 'search',
+        additionalInfo: { operation: 'searchProducts:cacheGet', query },
+      })
+    }
+  }
+
   const { limit = 20, category } = options
   const index = getProductsIndex()
   const normalizedCategory = category?.trim()
@@ -188,12 +223,32 @@ export async function searchProducts(
       : {}),
   })
 
-  return results.map((result) => ({
+  const mapped: ProductSearchResult[] = results.map((result) => ({
     id: String(result.id),
     score: result.score,
     content: result.content,
     metadata: result.metadata ?? { image: '' },
   }))
+
+  if (redis) {
+    try {
+      await redis.setex(cacheKey, SEARCH_CACHE_TTL, JSON.stringify(mapped))
+      logCacheOperation({
+        operation: 'set',
+        key: cacheKey,
+        ttl: SEARCH_CACHE_TTL,
+        success: true,
+      })
+    } catch (error) {
+      logError({
+        error,
+        context: 'search',
+        additionalInfo: { operation: 'searchProducts:cacheSet', query },
+      })
+    }
+  }
+
+  return mapped
 }
 
 export async function resetIndex(indexName: 'products'): Promise<void> {

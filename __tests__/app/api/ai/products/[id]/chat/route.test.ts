@@ -52,12 +52,22 @@ vi.mock('ai', () => ({
     toUIMessageStreamResponse: vi.fn(
       () => new Response('streamed', { status: 200 })
     ),
+    text: Promise.resolve('AI response text'),
   })),
   convertToModelMessages: vi.fn((msgs) => msgs),
 }))
 
 vi.mock('@/lib/ai/product-rag', () => ({
   buildProductContext: buildProductContextMock,
+}))
+
+vi.mock('@/lib/ai/ai-cache', () => ({
+  getCachedAiResponse: vi.fn().mockResolvedValue(null),
+  setCachedAiResponse: vi.fn().mockResolvedValue(undefined),
+}))
+
+vi.mock('@vercel/functions', () => ({
+  waitUntil: vi.fn(),
 }))
 
 vi.mock('@/lib/logger', () => ({

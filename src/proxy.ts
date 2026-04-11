@@ -12,6 +12,9 @@ const RATE_LIMIT_PATHS = [
   '/api/orders',
 ]
 
+const AI_RATE_LIMIT_PATHS = ['/api/ai']
+const AI_RATE_LIMIT_MAX_REQUESTS = 10 // stricter: 10 per minute for AI
+
 const RATE_LIMIT_WINDOW_MS = 60_000
 const RATE_LIMIT_MAX_REQUESTS = 20
 
@@ -21,6 +24,21 @@ const RATE_LIMIT_MAX_REQUESTS = 20
 const rateLimitStore = new Map<string, { count: number; resetAt: number }>()
 
 function isRateLimited(ip: string, pathname: string): boolean {
+  const aiPrefix = AI_RATE_LIMIT_PATHS.find((p) => pathname.startsWith(p))
+  if (aiPrefix) {
+    const key = `${ip}:${aiPrefix}`
+    const now = Date.now()
+    const entry = rateLimitStore.get(key)
+
+    if (!entry || now > entry.resetAt) {
+      rateLimitStore.set(key, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS })
+      return false
+    }
+
+    entry.count += 1
+    return entry.count > AI_RATE_LIMIT_MAX_REQUESTS
+  }
+
   const matchedPrefix = RATE_LIMIT_PATHS.find((p) => pathname.startsWith(p))
   if (!matchedPrefix) return false
 
@@ -153,5 +171,6 @@ export const config = {
     '/api/auth/change-password',
     '/api/checkout/:path*',
     '/api/orders/:path*',
+    '/api/ai/:path*',
   ],
 }
