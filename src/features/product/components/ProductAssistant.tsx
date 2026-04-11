@@ -115,6 +115,15 @@ export default function ProductAssistant({
         }
       }
 
+      const remaining = decoder.decode()
+      if (remaining) {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantId ? { ...m, text: m.text + remaining } : m
+          )
+        )
+      }
+
       setStatus('idle')
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') {

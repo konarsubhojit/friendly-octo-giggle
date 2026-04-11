@@ -646,6 +646,25 @@ describe('ProductClient', () => {
     expect(screen.getAllByText('₹500.00')).toHaveLength(2)
   })
 
+  it('does not render ProductAssistant when aiEnabled is false', () => {
+    const product = makeProduct()
+    render(
+      <ProductClient
+        product={product}
+        initialVariationId={null}
+        aiEnabled={false}
+      />
+    )
+    expect(
+      screen.queryByTestId('product-assistant-component')
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', {
+        name: /Ask a question about/i,
+      })
+    ).not.toBeInTheDocument()
+  })
+
   it('handles generic error thrown by addToCart', async () => {
     vi.mocked(useSession).mockReturnValue({
       data: {

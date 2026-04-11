@@ -3,8 +3,18 @@ import type { GenerateContentConfig } from '@google/genai'
 import { env } from '@/lib/env'
 import { getAiConfig, type AiConfig } from '@/lib/edge-config'
 
+const getApiKey = (): string => {
+  const key = env.GOOGLE_GENERATIVE_AI_API_KEY
+  if (!key) {
+    throw new Error(
+      'GOOGLE_GENERATIVE_AI_API_KEY is not set. AI features require this env var.'
+    )
+  }
+  return key
+}
+
 export const genAI = new GoogleGenAI({
-  apiKey: env.GOOGLE_GENERATIVE_AI_API_KEY,
+  apiKey: getApiKey(),
 })
 
 let cachedConfig: { value: AiConfig; expiresAt: number } | null = null

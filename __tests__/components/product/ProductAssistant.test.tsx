@@ -223,6 +223,25 @@ describe('ProductAssistant', () => {
     expect(screen.getByLabelText('Stop generating')).toBeInTheDocument()
   })
 
+  it('displays streamed text and shows stop button during streaming', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => makeFetchResponse({ stream: 'Hello from stream' }))
+    )
+    render(<ProductAssistant productId="abc1234" productName="Test Product" />)
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Ask a question about Test Product' })
+    )
+    const textarea = screen.getByLabelText('Type your question')
+    fireEvent.change(textarea, { target: { value: 'What is this?' } })
+
+    await act(async () => {
+      fireEvent.submit(textarea.closest('form')!)
+    })
+
+    expect(screen.getByText('Hello from stream')).toBeInTheDocument()
+  })
+
   it('shows error state on non-ok response', async () => {
     vi.stubGlobal(
       'fetch',
