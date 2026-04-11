@@ -49,8 +49,8 @@ const DEFAULT_SHIPPING_CONFIG: ShippingConfig = {
 }
 
 const DEFAULT_AI_CONFIG: AiConfig = {
-  chatModel: 'openai/gpt-5-nano',
-  embeddingModel: 'openai/text-embedding-3-small',
+  chatModel: 'gemini-2.0-flash',
+  embeddingModel: 'text-embedding-004',
   maxResponseTokens: 512,
   maxContextChunks: 3,
   maxHistoryMessages: 10,

@@ -1,19 +1,25 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-vi.mock('@ai-sdk/gateway', () => ({
-  createGateway: vi.fn(() => ({
-    languageModel: vi.fn((modelId: string) => ({ modelId })),
-  })),
+const { mockProvider } = vi.hoisted(() => {
+  const mockFn = vi.fn((modelId: string) => ({ modelId })) as ReturnType<
+    typeof vi.fn
+  > & { languageModel: ReturnType<typeof vi.fn> }
+  mockFn.languageModel = vi.fn((modelId: string) => ({ modelId }))
+  return { mockProvider: mockFn }
+})
+
+vi.mock('@ai-sdk/google', () => ({
+  createGoogleGenerativeAI: vi.fn(() => mockProvider),
 }))
 
 vi.mock('@/lib/env', () => ({
-  env: { VERCEL_AI_API_KEY: 'test-api-key' },
+  env: { GOOGLE_GENERATIVE_AI_API_KEY: 'test-api-key' },
 }))
 
 vi.mock('@/lib/edge-config', () => ({
   getAiConfig: vi.fn().mockResolvedValue({
-    chatModel: 'openai/gpt-4',
-    embeddingModel: 'openai/text-embedding-3-small',
+    chatModel: 'gemini-2.0-flash',
+    embeddingModel: 'text-embedding-004',
     maxResponseTokens: 512,
     maxContextChunks: 3,
     maxHistoryMessages: 10,
@@ -21,7 +27,7 @@ vi.mock('@/lib/edge-config', () => ({
 }))
 
 import {
-  gateway,
+  googleProvider,
   getAiConfigCached,
   getChatModel,
   getProviderOptions,
@@ -29,8 +35,8 @@ import {
 import { getAiConfig } from '@/lib/edge-config'
 
 const baseAiConfig = {
-  chatModel: 'openai/gpt-4',
-  embeddingModel: 'openai/text-embedding-3-small',
+  chatModel: 'gemini-2.0-flash',
+  embeddingModel: 'text-embedding-004',
   maxResponseTokens: 512,
   maxContextChunks: 3,
   maxHistoryMessages: 10,
@@ -44,9 +50,9 @@ describe('lib/ai/gateway', () => {
     vi.clearAllMocks()
   })
 
-  describe('gateway', () => {
+  describe('googleProvider', () => {
     it('is created with the API key', () => {
-      expect(gateway).toBeDefined()
+      expect(googleProvider).toBeDefined()
     })
   })
 
@@ -54,7 +60,7 @@ describe('lib/ai/gateway', () => {
     it('fetches config on first call', async () => {
       const config = await getAiConfigCached()
 
-      expect(config.chatModel).toBe('openai/gpt-4')
+      expect(config.chatModel).toBe('gemini-2.0-flash')
       expect(getAiConfig).toHaveBeenCalledTimes(1)
     })
 
@@ -68,10 +74,17 @@ describe('lib/ai/gateway', () => {
 
   describe('getChatModel', () => {
     it('returns a language model for the given ID', () => {
-      const model = getChatModel('openai/gpt-4')
+      const model = getChatModel('gemini-2.0-flash')
 
       expect(model).toBeDefined()
-      expect(model).toEqual({ modelId: 'openai/gpt-4' })
+      expect(model).toEqual({ modelId: 'gemini-2.0-flash' })
+    })
+
+    it('strips provider prefix from model ID', () => {
+      const model = getChatModel('google/gemini-2.0-flash')
+
+      expect(model).toBeDefined()
+      expect(model).toEqual({ modelId: 'gemini-2.0-flash' })
     })
   })
 
@@ -160,7 +173,7 @@ describe('lib/ai/gateway', () => {
       expect(
         getProviderOptions({
           ...configWithoutNamespace,
-          chatModel: 'gpt-4',
+          chatModel: 'gemini-2.0-flash',
           thinkingLevel: 'medium',
         })
       ).toBeUndefined()
