@@ -49,6 +49,9 @@ interface CurrencyContextValue {
 
 const CurrencyContext = createContext<CurrencyContextValue | null>(null)
 
+const EXCHANGE_RATES_STORAGE_KEY = 'exchange-rates'
+const EXCHANGE_RATES_MAX_AGE_MS = 3600_000 // 1 hour
+
 export function CurrencyProvider({
   children,
 }: Readonly<{ children: ReactNode }>) {
@@ -61,8 +64,8 @@ export function CurrencyProvider({
   useEffect(() => {
     let cancelled = false
 
-    const STORAGE_KEY = 'exchange-rates'
-    const STORAGE_MAX_AGE_MS = 3600_000 // 1 hour
+    const STORAGE_KEY = EXCHANGE_RATES_STORAGE_KEY
+    const STORAGE_MAX_AGE_MS = EXCHANGE_RATES_MAX_AGE_MS
 
     // Try sessionStorage first
     try {
