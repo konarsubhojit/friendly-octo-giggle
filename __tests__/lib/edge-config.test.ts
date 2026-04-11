@@ -27,6 +27,8 @@ import {
   DEFAULT_FEATURE_FLAGS,
   DEFAULT_SHIPPING_CONFIG,
   DEFAULT_AI_CONFIG,
+  normalizeChatModel,
+  SUPPORTED_CHAT_MODELS,
 } from '@/lib/edge-config'
 
 describe('edge-config', () => {
@@ -159,6 +161,39 @@ describe('edge-config', () => {
       const config = await getAiConfig()
       expect(config.enabled).toBe(false)
     })
+
+    it('normalizes provider-prefixed model to bare model name', async () => {
+      vi.stubEnv('EDGE_CONFIG', 'https://edge-config.vercel.com/ecfg_test')
+      mockGet.mockResolvedValue({
+        ...DEFAULT_AI_CONFIG,
+        chatModel: 'google/gemini-2.0-flash',
+      })
+      const { getAiConfig } = await import('@/lib/edge-config')
+      const config = await getAiConfig()
+      expect(config.chatModel).toBe('gemini-2.0-flash')
+    })
+
+    it('falls back to default model when provider-prefixed model is unknown', async () => {
+      vi.stubEnv('EDGE_CONFIG', 'https://edge-config.vercel.com/ecfg_test')
+      mockGet.mockResolvedValue({
+        ...DEFAULT_AI_CONFIG,
+        chatModel: 'google/gemini-3.1-flash-lite-preview',
+      })
+      const { getAiConfig } = await import('@/lib/edge-config')
+      const config = await getAiConfig()
+      expect(config.chatModel).toBe(DEFAULT_AI_CONFIG.chatModel)
+    })
+
+    it('falls back to default model when model name is unsupported', async () => {
+      vi.stubEnv('EDGE_CONFIG', 'https://edge-config.vercel.com/ecfg_test')
+      mockGet.mockResolvedValue({
+        ...DEFAULT_AI_CONFIG,
+        chatModel: 'completely-invalid-model',
+      })
+      const { getAiConfig } = await import('@/lib/edge-config')
+      const config = await getAiConfig()
+      expect(config.chatModel).toBe(DEFAULT_AI_CONFIG.chatModel)
+    })
   })
 
   describe('isAiEnabled', () => {
@@ -227,6 +262,47 @@ describe('edge-config', () => {
       })
       const { isMaintenanceMode } = await import('@/lib/edge-config')
       expect(await isMaintenanceMode()).toBe(true)
+    })
+  })
+
+  describe('normalizeChatModel', () => {
+    it('passes through a valid supported model unchanged', () => {
+      expect(normalizeChatModel('gemini-2.0-flash')).toBe('gemini-2.0-flash')
+    })
+
+    it('strips google/ prefix from a valid model', () => {
+      expect(normalizeChatModel('google/gemini-2.0-flash')).toBe(
+        'gemini-2.0-flash'
+      )
+    })
+
+    it('falls back to default for unknown model after stripping prefix', () => {
+      expect(normalizeChatModel('google/gemini-3.1-flash-lite-preview')).toBe(
+        DEFAULT_AI_CONFIG.chatModel
+      )
+    })
+
+    it('falls back to default for unsupported bare model name', () => {
+      expect(normalizeChatModel('completely-invalid-model')).toBe(
+        DEFAULT_AI_CONFIG.chatModel
+      )
+    })
+
+    it('falls back to default for empty string', () => {
+      expect(normalizeChatModel('')).toBe(DEFAULT_AI_CONFIG.chatModel)
+    })
+
+    it('falls back to default for a trailing-slash-only provider prefix', () => {
+      expect(normalizeChatModel('google/')).toBe(DEFAULT_AI_CONFIG.chatModel)
+    })
+
+    it('SUPPORTED_CHAT_MODELS contains all expected models', () => {
+      expect(SUPPORTED_CHAT_MODELS.has('gemini-2.0-flash')).toBe(true)
+      expect(SUPPORTED_CHAT_MODELS.has('gemini-2.5-flash')).toBe(true)
+      expect(SUPPORTED_CHAT_MODELS.has('gemini-2.5-pro')).toBe(true)
+      expect(SUPPORTED_CHAT_MODELS.has('gemini-3.1-flash-lite-preview')).toBe(
+        false
+      )
     })
   })
 })

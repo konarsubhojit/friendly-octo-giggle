@@ -59,6 +59,27 @@ const DEFAULT_AI_CONFIG: AiConfig = {
   includeThoughts: false,
 }
 
+// Supported Google Gemini model names accepted by the GenAI SDK.
+// Update this list when Google releases new models or deprecates existing ones.
+export const SUPPORTED_CHAT_MODELS = new Set([
+  'gemini-2.0-flash',
+  'gemini-2.0-flash-lite',
+  'gemini-2.5-flash',
+  'gemini-2.5-pro',
+  'gemini-1.5-flash',
+  'gemini-1.5-flash-8b',
+  'gemini-1.5-pro',
+])
+
+export const normalizeChatModel = (model: string): string => {
+  if (!model?.trim()) return DEFAULT_AI_CONFIG.chatModel
+  // Strip provider prefix (e.g. "google/gemini-2.0-flash" → "gemini-2.0-flash")
+  const normalized = model.includes('/') ? (model.split('/').pop() ?? '') : model
+  return SUPPORTED_CHAT_MODELS.has(normalized)
+    ? normalized
+    : DEFAULT_AI_CONFIG.chatModel
+}
+
 const isEdgeConfigAvailable = (): boolean => !!process.env.EDGE_CONFIG
 
 const EDGE_CONFIG_TTL_MS = 60_000
@@ -112,7 +133,8 @@ export const getAiConfig = async (): Promise<AiConfig> => {
 
   try {
     const config = await get<AiConfig>('aiConfig')
-    const result = config ?? DEFAULT_AI_CONFIG
+    const base = config ?? DEFAULT_AI_CONFIG
+    const result = { ...base, chatModel: normalizeChatModel(base.chatModel) }
     cachedAiConfig = { value: result, expiresAt: now + EDGE_CONFIG_TTL_MS }
     return result
   } catch (error) {
@@ -147,10 +169,14 @@ export const getAllEdgeConfig = async (): Promise<EdgeConfigData> => {
       success: true,
     })
 
+    const baseAiConfig = data.aiConfig ?? DEFAULT_AI_CONFIG
     const result = {
       featureFlags: data.featureFlags ?? DEFAULT_FEATURE_FLAGS,
       shippingConfig: data.shippingConfig ?? DEFAULT_SHIPPING_CONFIG,
-      aiConfig: data.aiConfig ?? DEFAULT_AI_CONFIG,
+      aiConfig: {
+        ...baseAiConfig,
+        chatModel: normalizeChatModel(baseAiConfig.chatModel),
+      },
     }
     cachedAllConfig = { value: result, expiresAt: now + EDGE_CONFIG_TTL_MS }
     return result
