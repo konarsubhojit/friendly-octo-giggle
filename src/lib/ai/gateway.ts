@@ -1,10 +1,20 @@
-import { createGateway } from '@ai-sdk/gateway'
-import type { JSONValue } from '@ai-sdk/provider'
+import { GoogleGenAI, ThinkingLevel } from '@google/genai'
+import type { GenerateContentConfig } from '@google/genai'
 import { env } from '@/lib/env'
 import { getAiConfig, type AiConfig } from '@/lib/edge-config'
 
-export const gateway = createGateway({
-  apiKey: env.VERCEL_AI_API_KEY,
+const getApiKey = (): string => {
+  const key = env.GOOGLE_GENERATIVE_AI_API_KEY
+  if (!key) {
+    throw new Error(
+      'GOOGLE_GENERATIVE_AI_API_KEY is not set. AI features require this env var.'
+    )
+  }
+  return key
+}
+
+export const genAI = new GoogleGenAI({
+  apiKey: getApiKey(),
 })
 
 let cachedConfig: { value: AiConfig; expiresAt: number } | null = null
@@ -18,33 +28,27 @@ export const getAiConfigCached = async (): Promise<AiConfig> => {
   return config
 }
 
-export const getChatModel = (modelId: string) => gateway.languageModel(modelId)
-
-const getProviderNamespace = (aiConfig: AiConfig): string | undefined => {
-  const explicitNamespace = aiConfig.providerNamespace?.trim()
-  if (explicitNamespace) return explicitNamespace
-
-  const separatorIndex = aiConfig.chatModel.indexOf('/')
-  if (separatorIndex <= 0) return undefined
-
-  return aiConfig.chatModel.slice(0, separatorIndex).trim() || undefined
+const THINKING_LEVEL_MAP: Record<'low' | 'medium' | 'high', ThinkingLevel> = {
+  low: ThinkingLevel.LOW,
+  medium: ThinkingLevel.MEDIUM,
+  high: ThinkingLevel.HIGH,
 }
 
-export const getProviderOptions = (
-  aiConfig: AiConfig
-): Record<string, Record<string, JSONValue>> | undefined => {
-  if (!aiConfig.thinkingLevel || aiConfig.thinkingLevel === 'none')
-    return undefined
-
-  const namespace = getProviderNamespace(aiConfig)
-  if (!namespace) return undefined
-
-  return {
-    [namespace]: {
-      thinkingConfig: {
-        thinkingLevel: aiConfig.thinkingLevel,
-        includeThoughts: aiConfig.includeThoughts ?? false,
-      },
-    },
+export const buildGenerateConfig = (
+  aiConfig: AiConfig,
+  systemInstruction: string
+): GenerateContentConfig => {
+  const config: GenerateContentConfig = {
+    systemInstruction,
+    maxOutputTokens: aiConfig.maxResponseTokens,
   }
+
+  if (aiConfig.thinkingLevel && aiConfig.thinkingLevel !== 'none') {
+    config.thinkingConfig = {
+      thinkingLevel: THINKING_LEVEL_MAP[aiConfig.thinkingLevel],
+      includeThoughts: aiConfig.includeThoughts ?? false,
+    }
+  }
+
+  return config
 }

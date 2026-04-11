@@ -17,12 +17,12 @@ export interface ShippingConfig {
 }
 
 export interface AiConfig {
+  readonly enabled: boolean
   readonly chatModel: string
   readonly embeddingModel: string
   readonly maxResponseTokens: number
   readonly maxContextChunks: number
   readonly maxHistoryMessages: number
-  readonly providerNamespace?: string
   readonly thinkingLevel?: 'none' | 'low' | 'medium' | 'high'
   readonly includeThoughts?: boolean
 }
@@ -49,8 +49,9 @@ const DEFAULT_SHIPPING_CONFIG: ShippingConfig = {
 }
 
 const DEFAULT_AI_CONFIG: AiConfig = {
-  chatModel: 'openai/gpt-5-nano',
-  embeddingModel: 'openai/text-embedding-3-small',
+  enabled: true,
+  chatModel: 'gemini-2.0-flash',
+  embeddingModel: 'text-embedding-004',
   maxResponseTokens: 512,
   maxContextChunks: 3,
   maxHistoryMessages: 10,
@@ -171,6 +172,11 @@ export const isMaintenanceMode = async (): Promise<boolean> => {
 export const isSaleActive = async (): Promise<boolean> => {
   const flags = await getFeatureFlags()
   return flags.saleMode
+}
+
+export const isAiEnabled = async (): Promise<boolean> => {
+  const config = await getAiConfig()
+  return config.enabled ?? true
 }
 
 export { DEFAULT_FEATURE_FLAGS, DEFAULT_SHIPPING_CONFIG, DEFAULT_AI_CONFIG }

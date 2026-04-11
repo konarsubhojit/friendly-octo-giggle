@@ -1,12 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { streamText, convertToModelMessages, type UIMessage } from 'ai'
 import { waitUntil } from '@vercel/functions'
 import { z } from 'zod'
-import {
-  getChatModel,
-  getAiConfigCached,
-  getProviderOptions,
-} from '@/lib/ai/gateway'
+import { genAI, getAiConfigCached, buildGenerateConfig } from '@/lib/ai/gateway'
 import { buildProductContext } from '@/lib/ai/product-rag'
 import { getCachedAiResponse, setCachedAiResponse } from '@/lib/ai/ai-cache'
 import { db, drizzleDb } from '@/lib/db'
@@ -14,24 +9,21 @@ import { apiError, handleApiError } from '@/lib/api-utils'
 import { logError, logBusinessEvent } from '@/lib/logger'
 import { formatPriceForCurrency, isValidCurrencyCode } from '@/lib/currency'
 import type { CurrencyCode } from '@/lib/currency'
+import type { Content } from '@google/genai'
 import { users } from '@/lib/schema'
 import { eq } from 'drizzle-orm'
 import { auth } from '@/lib/auth'
 
-const ChatRequestSchema = z.object({
-  messages: z.array(
-    z.object({
-      id: z.string(),
-      role: z.enum(['user', 'assistant', 'system']),
-      parts: z.array(
-        z.object({
-          type: z.string(),
-          text: z.string().optional(),
-        })
-      ),
-    })
-  ),
+const ChatMessageSchema = z.object({
+  role: z.enum(['user', 'assistant']),
+  text: z.string(),
 })
+
+const ChatRequestSchema = z.object({
+  messages: z.array(ChatMessageSchema).min(1),
+})
+
+type ChatMessage = z.infer<typeof ChatMessageSchema>
 
 const SYSTEM_PROMPT_PREFIX = `You are a helpful shopping assistant for this specific product.
 Answer questions using only the product information provided below.
@@ -41,6 +33,12 @@ Do not make up facts. Do not discuss other products.
 
 [Product Information]
 `
+
+const toGoogleContents = (messages: ChatMessage[]): Content[] =>
+  messages.map(({ role, text }) => ({
+    role: role === 'assistant' ? 'model' : 'user',
+    parts: [{ text }],
+  }))
 
 export const POST = async (
   request: NextRequest,
@@ -83,8 +81,11 @@ export const POST = async (
     }
 
     const aiConfig = await getAiConfigCached()
+    if (aiConfig.enabled === false) {
+      return apiError('AI features are currently unavailable', 503)
+    }
     chatModel = aiConfig.chatModel
-    const model = getChatModel(aiConfig.chatModel)
+
     const systemPrompt =
       SYSTEM_PROMPT_PREFIX +
       buildProductContext(product, {
@@ -93,18 +94,10 @@ export const POST = async (
           formatPriceForCurrency(priceInINR, currencyCode),
       })
 
-    const trimmed = parsed.data.messages.slice(
-      -aiConfig.maxHistoryMessages
-    ) as UIMessage[]
-
-    // Only cache single-turn (context-free) requests — multi-turn responses
-    // depend on conversation history and cannot be safely cached by question alone.
+    const trimmed = parsed.data.messages.slice(-aiConfig.maxHistoryMessages)
     const isSingleTurn = trimmed.length === 1
-    const lastUserMessage = trimmed.findLast((m) => m.role === 'user')
-    const lastUserText =
-      lastUserMessage?.parts?.find((p) => p.type === 'text')?.text ?? ''
+    const lastUserText = trimmed.findLast((m) => m.role === 'user')?.text ?? ''
 
-    // Check cache for single-turn questions
     if (isSingleTurn && lastUserText) {
       const cached = await getCachedAiResponse(id, lastUserText, currencyCode)
       if (cached !== null) {
@@ -122,32 +115,60 @@ export const POST = async (
       }
     }
 
-    const messages = await convertToModelMessages(trimmed)
-
+    const contents = toGoogleContents(trimmed)
+    const generateConfig = buildGenerateConfig(aiConfig, systemPrompt)
     const messageCount = trimmed.length
 
-    const result = streamText({
-      model,
-      system: systemPrompt,
-      messages,
-      maxOutputTokens: aiConfig.maxResponseTokens,
-      abortSignal: request.signal,
-      providerOptions: getProviderOptions(aiConfig),
+    const stream = await genAI.models.generateContentStream({
+      model: chatModel,
+      contents,
+      config: { ...generateConfig, abortSignal: request.signal },
     })
 
     logBusinessEvent({
       event: 'ai_chat_request',
-      details: { productId: id, chatModel: aiConfig.chatModel, messageCount },
+      details: { productId: id, chatModel, messageCount },
       success: true,
     })
 
-    // Cache the final assembled text after streaming completes (single-turn only)
+    const encoder = new TextEncoder()
+    let resolveFull!: (text: string) => void
+    const fullTextPromise = new Promise<string>((resolve) => {
+      resolveFull = resolve
+    })
+
+    const readable = new ReadableStream<Uint8Array>({
+      async start(controller) {
+        let fullText = ''
+        try {
+          for await (const chunk of stream) {
+            const text = chunk.text
+            if (text) {
+              fullText += text
+              controller.enqueue(encoder.encode(text))
+            }
+          }
+          controller.close()
+          resolveFull(fullText)
+        } catch (error) {
+          if (error instanceof Error && error.name === 'AbortError') {
+            controller.close()
+            resolveFull('')
+          } else {
+            controller.error(error)
+            resolveFull('')
+          }
+        }
+      },
+    })
+
     if (isSingleTurn && lastUserText) {
       waitUntil(
-        Promise.resolve(result.text)
-          .then((text) =>
-            setCachedAiResponse(id, lastUserText, currencyCode, text)
-          )
+        fullTextPromise
+          .then((text) => {
+            if (text)
+              return setCachedAiResponse(id, lastUserText, currencyCode, text)
+          })
           .catch((error) =>
             logError({
               error,
@@ -158,7 +179,9 @@ export const POST = async (
       )
     }
 
-    return result.toUIMessageStreamResponse()
+    return new Response(readable, {
+      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+    })
   } catch (error) {
     logError({
       error,

@@ -128,11 +128,11 @@ describe('edge-config', () => {
 
     it('reads custom AI config from edge config', async () => {
       vi.stubEnv('EDGE_CONFIG', 'https://edge-config.vercel.com/ecfg_test')
-      const custom = { ...DEFAULT_AI_CONFIG, chatModel: 'gpt-5-turbo' }
+      const custom = { ...DEFAULT_AI_CONFIG, chatModel: 'gemini-2.5-flash' }
       mockGet.mockResolvedValue(custom)
       const { getAiConfig } = await import('@/lib/edge-config')
       const config = await getAiConfig()
-      expect(config.chatModel).toBe('gpt-5-turbo')
+      expect(config.chatModel).toBe('gemini-2.5-flash')
       expect(mockGet).toHaveBeenCalledWith('aiConfig')
     })
 
@@ -150,6 +150,28 @@ describe('edge-config', () => {
       const { getAiConfig } = await import('@/lib/edge-config')
       const config = await getAiConfig()
       expect(config).toEqual(DEFAULT_AI_CONFIG)
+    })
+
+    it('respects enabled flag from edge config', async () => {
+      vi.stubEnv('EDGE_CONFIG', 'https://edge-config.vercel.com/ecfg_test')
+      mockGet.mockResolvedValue({ ...DEFAULT_AI_CONFIG, enabled: false })
+      const { getAiConfig } = await import('@/lib/edge-config')
+      const config = await getAiConfig()
+      expect(config.enabled).toBe(false)
+    })
+  })
+
+  describe('isAiEnabled', () => {
+    it('returns true by default', async () => {
+      const { isAiEnabled } = await import('@/lib/edge-config')
+      expect(await isAiEnabled()).toBe(true)
+    })
+
+    it('returns false when disabled via edge config', async () => {
+      vi.stubEnv('EDGE_CONFIG', 'https://edge-config.vercel.com/ecfg_test')
+      mockGet.mockResolvedValue({ ...DEFAULT_AI_CONFIG, enabled: false })
+      const { isAiEnabled } = await import('@/lib/edge-config')
+      expect(await isAiEnabled()).toBe(false)
     })
   })
 

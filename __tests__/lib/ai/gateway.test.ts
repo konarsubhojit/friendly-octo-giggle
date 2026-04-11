@@ -1,40 +1,54 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-vi.mock('@ai-sdk/gateway', () => ({
-  createGateway: vi.fn(() => ({
-    languageModel: vi.fn((modelId: string) => ({ modelId })),
-  })),
+const { mockGenAI } = vi.hoisted(() => ({
+  mockGenAI: {
+    models: {
+      generateContentStream: vi.fn(),
+      generateContent: vi.fn(),
+    },
+  },
+}))
+
+vi.mock('@google/genai', () => ({
+  GoogleGenAI: vi.fn(function () {
+    return mockGenAI
+  }),
+  ThinkingLevel: {
+    THINKING_LEVEL_UNSPECIFIED: 'THINKING_LEVEL_UNSPECIFIED',
+    MINIMAL: 'MINIMAL',
+    LOW: 'LOW',
+    MEDIUM: 'MEDIUM',
+    HIGH: 'HIGH',
+  },
 }))
 
 vi.mock('@/lib/env', () => ({
-  env: { VERCEL_AI_API_KEY: 'test-api-key' },
+  env: { GOOGLE_GENERATIVE_AI_API_KEY: 'test-api-key' },
 }))
 
 vi.mock('@/lib/edge-config', () => ({
   getAiConfig: vi.fn().mockResolvedValue({
-    chatModel: 'openai/gpt-4',
-    embeddingModel: 'openai/text-embedding-3-small',
+    enabled: true,
+    chatModel: 'gemini-2.0-flash',
+    embeddingModel: 'text-embedding-004',
     maxResponseTokens: 512,
     maxContextChunks: 3,
     maxHistoryMessages: 10,
+    thinkingLevel: 'none',
+    includeThoughts: false,
   }),
 }))
 
-import {
-  gateway,
-  getAiConfigCached,
-  getChatModel,
-  getProviderOptions,
-} from '@/lib/ai/gateway'
+import { genAI, getAiConfigCached, buildGenerateConfig } from '@/lib/ai/gateway'
 import { getAiConfig } from '@/lib/edge-config'
 
 const baseAiConfig = {
-  chatModel: 'openai/gpt-4',
-  embeddingModel: 'openai/text-embedding-3-small',
+  enabled: true,
+  chatModel: 'gemini-2.0-flash',
+  embeddingModel: 'text-embedding-004',
   maxResponseTokens: 512,
   maxContextChunks: 3,
   maxHistoryMessages: 10,
-  providerNamespace: 'google' as string,
   thinkingLevel: 'none' as const,
   includeThoughts: false,
 }
@@ -44,9 +58,10 @@ describe('lib/ai/gateway', () => {
     vi.clearAllMocks()
   })
 
-  describe('gateway', () => {
+  describe('genAI', () => {
     it('is created with the API key', () => {
-      expect(gateway).toBeDefined()
+      expect(genAI).toBeDefined()
+      expect(genAI.models).toBeDefined()
     })
   })
 
@@ -54,127 +69,83 @@ describe('lib/ai/gateway', () => {
     it('fetches config on first call', async () => {
       const config = await getAiConfigCached()
 
-      expect(config.chatModel).toBe('openai/gpt-4')
+      expect(config.chatModel).toBe('gemini-2.0-flash')
       expect(getAiConfig).toHaveBeenCalledTimes(1)
     })
 
     it('returns cached config on subsequent calls within TTL', async () => {
       const config1 = await getAiConfigCached()
+      vi.mocked(getAiConfig).mockClear()
       const config2 = await getAiConfigCached()
 
       expect(config1).toEqual(config2)
+      expect(getAiConfig).toHaveBeenCalledTimes(0)
     })
   })
 
-  describe('getChatModel', () => {
-    it('returns a language model for the given ID', () => {
-      const model = getChatModel('openai/gpt-4')
+  describe('buildGenerateConfig', () => {
+    it('builds config with system instruction and maxOutputTokens', () => {
+      const config = buildGenerateConfig(
+        baseAiConfig,
+        'You are a helpful assistant.'
+      )
 
-      expect(model).toBeDefined()
-      expect(model).toEqual({ modelId: 'openai/gpt-4' })
-    })
-  })
-
-  describe('getProviderOptions', () => {
-    it('returns undefined when thinkingLevel is none', () => {
-      expect(
-        getProviderOptions({ ...baseAiConfig, thinkingLevel: 'none' })
-      ).toBeUndefined()
+      expect(config.systemInstruction).toBe('You are a helpful assistant.')
+      expect(config.maxOutputTokens).toBe(512)
+      expect(config.thinkingConfig).toBeUndefined()
     })
 
-    it('returns undefined when thinkingLevel is absent', () => {
+    it('omits thinkingConfig when thinkingLevel is none', () => {
+      const config = buildGenerateConfig(
+        { ...baseAiConfig, thinkingLevel: 'none' },
+        'system'
+      )
+      expect(config.thinkingConfig).toBeUndefined()
+    })
+
+    it('omits thinkingConfig when thinkingLevel is absent', () => {
       const { thinkingLevel: _tl, ...configWithoutThinking } = baseAiConfig
-      expect(getProviderOptions(configWithoutThinking)).toBeUndefined()
+      const config = buildGenerateConfig(configWithoutThinking, 'system')
+      expect(config.thinkingConfig).toBeUndefined()
     })
 
-    it('returns google namespace options when providerNamespace is google', () => {
-      const result = getProviderOptions({
-        ...baseAiConfig,
-        providerNamespace: 'google',
-        thinkingLevel: 'medium',
+    it('sets thinkingConfig with LOW level and includeThoughts', () => {
+      const config = buildGenerateConfig(
+        { ...baseAiConfig, thinkingLevel: 'low', includeThoughts: true },
+        'system'
+      )
+      expect(config.thinkingConfig).toEqual({
+        thinkingLevel: 'LOW',
         includeThoughts: true,
       })
-      expect(result).toEqual({
-        google: {
-          thinkingConfig: {
-            thinkingLevel: 'medium',
-            includeThoughts: true,
-          },
-        },
-      })
     })
 
-    it('returns vertex namespace options when providerNamespace is vertex', () => {
-      const result = getProviderOptions({
-        ...baseAiConfig,
-        providerNamespace: 'vertex',
-        thinkingLevel: 'high',
+    it('sets thinkingConfig with MEDIUM level', () => {
+      const config = buildGenerateConfig(
+        { ...baseAiConfig, thinkingLevel: 'medium', includeThoughts: false },
+        'system'
+      )
+      expect(config.thinkingConfig).toEqual({
+        thinkingLevel: 'MEDIUM',
         includeThoughts: false,
       })
-      expect(result).toEqual({
-        vertex: {
-          thinkingConfig: {
-            thinkingLevel: 'high',
-            includeThoughts: false,
-          },
-        },
-      })
     })
 
-    it('returns anthropic namespace options when providerNamespace is anthropic', () => {
-      const result = getProviderOptions({
-        ...baseAiConfig,
-        providerNamespace: 'anthropic',
-        thinkingLevel: 'low',
-        includeThoughts: true,
-      })
-      expect(result).toEqual({
-        anthropic: {
-          thinkingConfig: {
-            thinkingLevel: 'low',
-            includeThoughts: true,
-          },
-        },
-      })
-    })
-
-    it('derives namespace from chatModel prefix when providerNamespace is absent', () => {
-      const { providerNamespace: _ns, ...configWithoutNamespace } = baseAiConfig
-      const result = getProviderOptions({
-        ...configWithoutNamespace,
-        chatModel: 'google/gemini-3.1-flash-lite-preview',
-        thinkingLevel: 'medium',
-      })
-      expect(result).toEqual({
-        google: {
-          thinkingConfig: {
-            thinkingLevel: 'medium',
-            includeThoughts: false,
-          },
-        },
-      })
-    })
-
-    it('returns undefined when model ID has no slash and providerNamespace is absent', () => {
-      const { providerNamespace: _ns, ...configWithoutNamespace } = baseAiConfig
-      expect(
-        getProviderOptions({
-          ...configWithoutNamespace,
-          chatModel: 'gpt-4',
-          thinkingLevel: 'medium',
-        })
-      ).toBeUndefined()
+    it('sets thinkingConfig with HIGH level', () => {
+      const config = buildGenerateConfig(
+        { ...baseAiConfig, thinkingLevel: 'high' },
+        'system'
+      )
+      expect(config.thinkingConfig?.thinkingLevel).toBe('HIGH')
     })
 
     it('defaults includeThoughts to false when absent', () => {
       const { includeThoughts: _it, ...configWithoutInclude } = baseAiConfig
-      const result = getProviderOptions({
-        ...configWithoutInclude,
-        thinkingLevel: 'medium',
-      })
-      expect(result?.google).toEqual({
-        thinkingConfig: { thinkingLevel: 'medium', includeThoughts: false },
-      })
+      const config = buildGenerateConfig(
+        { ...configWithoutInclude, thinkingLevel: 'medium' },
+        'system'
+      )
+      expect(config.thinkingConfig?.includeThoughts).toBe(false)
     })
   })
 })

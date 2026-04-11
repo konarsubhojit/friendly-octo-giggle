@@ -34,7 +34,7 @@ export const EnvSchema = z
     UPSTASH_SEARCH_REST_READONLY_TOKEN: z.string().optional(),
     NEXT_PUBLIC_UPSTASH_SEARCH_REST_URL: z.url().optional(),
     NEXT_PUBLIC_UPSTASH_SEARCH_REST_READONLY_TOKEN: z.string().optional(),
-    VERCEL_AI_API_KEY: z.string().optional(),
+    GOOGLE_GENERATIVE_AI_API_KEY: z.string().optional(),
     SENTRY_DSN: z.url().optional(),
   })
   .superRefine((data, ctx) => {

@@ -4,7 +4,7 @@ import type { Metadata } from 'next'
 import { Product } from '@/lib/types'
 import ProductClient from './ProductClient'
 import { db } from '@/lib/db'
-
+import { isAiEnabled } from '@/lib/edge-config'
 import { logError } from '@/lib/logger'
 
 export const revalidate = 60
@@ -48,7 +48,10 @@ const ProductPage = async ({
     params,
     searchParams,
   ])
-  const product = await getProduct(id)
+  const [product, aiEnabled] = await Promise.all([
+    getProduct(id),
+    isAiEnabled(),
+  ])
 
   if (!product) {
     notFound()
@@ -58,6 +61,7 @@ const ProductPage = async ({
     <ProductClient
       product={product}
       initialVariationId={initialVariationId ?? null}
+      aiEnabled={aiEnabled}
     />
   )
 }
