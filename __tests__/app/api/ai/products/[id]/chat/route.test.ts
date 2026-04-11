@@ -50,9 +50,12 @@ vi.mock('@/lib/ai/gateway', () => ({
       maxResponseTokens: 512,
       maxContextChunks: 3,
       maxHistoryMessages: 10,
+      thinkingLevel: 'none',
+      includeThoughts: false,
     })
   ),
   getChatModel: vi.fn(() => ({ modelId: 'openai/gpt-5-nano' })),
+  getProviderOptions: vi.fn(() => undefined),
 }))
 
 vi.mock('ai', () => ({

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { streamText, convertToModelMessages, type UIMessage } from 'ai'
 import { waitUntil } from '@vercel/functions'
 import { z } from 'zod'
-import { getChatModel, getAiConfigCached } from '@/lib/ai/gateway'
+import { getChatModel, getAiConfigCached, getProviderOptions } from '@/lib/ai/gateway'
 import { buildProductContext } from '@/lib/ai/product-rag'
 import { getCachedAiResponse, setCachedAiResponse } from '@/lib/ai/ai-cache'
 import { db, drizzleDb } from '@/lib/db'
@@ -128,6 +128,7 @@ export const POST = async (
       messages,
       maxOutputTokens: aiConfig.maxResponseTokens,
       abortSignal: request.signal,
+      providerOptions: getProviderOptions(aiConfig),
     })
 
     logBusinessEvent({

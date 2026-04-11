@@ -18,3 +18,20 @@ export const getAiConfigCached = async (): Promise<AiConfig> => {
 }
 
 export const getChatModel = (modelId: string) => gateway.languageModel(modelId)
+
+export const getProviderOptions = (
+  aiConfig: AiConfig
+): Record<string, Record<string, unknown>> | undefined => {
+  if (!aiConfig.thinkingLevel || aiConfig.thinkingLevel === 'none')
+    return undefined
+  const namespace =
+    aiConfig.providerNamespace ?? aiConfig.chatModel.split('/')[0]
+  return {
+    [namespace]: {
+      thinkingConfig: {
+        thinkingLevel: aiConfig.thinkingLevel,
+        includeThoughts: aiConfig.includeThoughts ?? false,
+      },
+    },
+  }
+}
