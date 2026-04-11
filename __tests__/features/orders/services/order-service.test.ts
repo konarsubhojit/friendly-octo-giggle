@@ -323,6 +323,7 @@ describe('order-service', () => {
         createOrderForUser({
           body: {
             customerName: 'Test',
+            customerEmail: '',
             customerAddress: '123 St',
             items: [{ productId: 'p1', quantity: 1 }],
           },
@@ -666,6 +667,8 @@ describe('order-service', () => {
 
       const result = await createOrderForUser({
         body: {
+          customerName: 'Test User',
+          customerEmail: 'test@example.com',
           customerAddress: '456 Ave',
           items: [{ productId: 'p1', quantity: 1 }],
         },

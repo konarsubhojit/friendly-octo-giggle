@@ -110,7 +110,7 @@ describe('PUT /api/admin/variations/[variationId]', () => {
       authorized: false,
       status: 401,
       error: 'Unauthorized',
-    })
+    } as never)
 
     const request = new NextRequest(
       'http://localhost/api/admin/variations/var123',
@@ -385,7 +385,7 @@ describe('DELETE /api/admin/variations/[variationId]', () => {
       authorized: false,
       status: 401,
       error: 'Unauthorized',
-    })
+    } as never)
 
     const request = new NextRequest(
       'http://localhost/api/admin/variations/var123',

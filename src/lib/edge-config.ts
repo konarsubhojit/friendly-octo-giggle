@@ -22,6 +22,9 @@ export interface AiConfig {
   readonly maxResponseTokens: number
   readonly maxContextChunks: number
   readonly maxHistoryMessages: number
+  readonly providerNamespace?: string
+  readonly thinkingLevel?: 'none' | 'low' | 'medium' | 'high'
+  readonly includeThoughts?: boolean
 }
 
 export interface EdgeConfigData {
@@ -51,6 +54,8 @@ const DEFAULT_AI_CONFIG: AiConfig = {
   maxResponseTokens: 512,
   maxContextChunks: 3,
   maxHistoryMessages: 10,
+  thinkingLevel: 'none',
+  includeThoughts: false,
 }
 
 const isEdgeConfigAvailable = (): boolean => !!process.env.EDGE_CONFIG
