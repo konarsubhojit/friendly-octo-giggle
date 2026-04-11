@@ -87,24 +87,22 @@ describe('AdminSalesDashboardClient', () => {
       CANCELLED: 10,
     },
     recentSales: [
-      { date: '2025-01-01', revenue: 1000 },
-      { date: '2025-01-02', revenue: 1200 },
-      { date: '2025-01-03', revenue: 900 },
+      { date: '2025-01-01', label: 'Jan 1', revenue: 1000, orders: 10 },
+      { date: '2025-01-02', label: 'Jan 2', revenue: 1200, orders: 12 },
+      { date: '2025-01-03', label: 'Jan 3', revenue: 900, orders: 9 },
     ],
     topProducts: [
       {
-        id: 'prod1',
+        productId: 'prod1',
         name: 'Top Product 1',
-        revenue: 5000,
-        unitsSold: 50,
-        stock: 10,
+        totalRevenue: 5000,
+        totalQuantity: 50,
       },
       {
-        id: 'prod2',
+        productId: 'prod2',
         name: 'Top Product 2',
-        revenue: 4000,
-        unitsSold: 40,
-        stock: 20,
+        totalRevenue: 4000,
+        totalQuantity: 40,
       },
     ],
   }

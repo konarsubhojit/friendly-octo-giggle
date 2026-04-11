@@ -142,7 +142,7 @@ describe('POST /api/admin/variations', () => {
   })
 
   it('returns 401 if user is not authenticated', async () => {
-    mockAuth.mockResolvedValue(null)
+    mockAuth.mockResolvedValue(null as never)
 
     const res = await POST(
       makeRequest('http://localhost/api/admin/variations', 'POST', {
@@ -355,7 +355,7 @@ describe('PUT /api/admin/variations/[variationId]', () => {
   })
 
   it('returns 401 if user is not authenticated', async () => {
-    mockAuth.mockResolvedValue(null)
+    mockAuth.mockResolvedValue(null as never)
 
     const res = await PUT(
       makeRequest('http://localhost/api/admin/variations/var1234', 'PUT', {
@@ -473,7 +473,7 @@ describe('DELETE /api/admin/variations/[variationId]', () => {
   })
 
   it('returns 401 if user is not authenticated', async () => {
-    mockAuth.mockResolvedValue(null)
+    mockAuth.mockResolvedValue(null as never)
 
     const res = await DELETE(
       makeRequest('http://localhost/api/admin/variations/var1234', 'DELETE'),

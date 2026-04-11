@@ -31,7 +31,7 @@ describe('useRecentlyViewed', () => {
 
     vi.mocked(useLocalStorage).mockImplementation(() => [
       storedProducts,
-      mockSetValue,
+      mockSetValue as never,
     ])
   })
 
