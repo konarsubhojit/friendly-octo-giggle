@@ -232,7 +232,7 @@ export async function searchProducts(
 
   if (redis) {
     try {
-      await redis.setex(cacheKey, SEARCH_CACHE_TTL, JSON.stringify(mapped))
+      await redis.setex(cacheKey, SEARCH_CACHE_TTL, mapped)
       logCacheOperation({
         operation: 'set',
         key: cacheKey,

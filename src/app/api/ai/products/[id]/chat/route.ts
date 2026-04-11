@@ -92,13 +92,9 @@ export const POST = async (
     ) as UIMessage[]
 
     // Extract the last user message for cache lookup
-    const lastUserMessage = [...trimmed]
-      .reverse()
-      .find((m) => m.role === 'user')
+    const lastUserMessage = trimmed.findLast((m) => m.role === 'user')
     const lastUserText =
-      lastUserMessage?.parts
-        ?.find((p) => p.type === 'text' && 'text' in p)
-        ?.text ?? ''
+      lastUserMessage?.parts?.find((p) => p.type === 'text')?.text ?? ''
 
     // Check cache for single-turn questions
     if (lastUserText) {
@@ -141,7 +137,13 @@ export const POST = async (
       waitUntil(
         result.text
           .then((text) => setCachedAiResponse(id, lastUserText, text))
-          .catch(() => {})
+          .catch((error) =>
+            logError({
+              error,
+              context: 'ai_cache_background_write',
+              additionalInfo: { productId: id },
+            })
+          )
       )
     }
 

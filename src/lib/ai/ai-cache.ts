@@ -12,9 +12,11 @@ const AI_CACHE_PREFIX = 'ai:response:'
 export function buildAiCacheKey(productId: string, question: string): string {
   const normalized = question.toLowerCase().trim().replace(/\s+/g, ' ')
   // Use a simple hash to keep keys short
-  const hash = Array.from(normalized).reduce(
-    (h, c) => (Math.imul(31, h) + c.charCodeAt(0)) | 0,
-    0
+  const hash = Math.abs(
+    Array.from(normalized).reduce(
+      (h, c) => (Math.imul(31, h) + c.charCodeAt(0)) | 0,
+      0
+    )
   )
   return `${AI_CACHE_PREFIX}${productId}:${hash}`
 }
