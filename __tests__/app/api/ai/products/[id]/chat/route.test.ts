@@ -218,7 +218,11 @@ describe('POST /api/ai/products/[id]/chat', () => {
     vi.mocked(db.products.findById).mockResolvedValue(mockProduct)
     vi.mocked(auth).mockResolvedValue({ user: { id: 'user-123' } } as never)
     getCachedAiResponseMock.mockResolvedValue(null)
-    const mockProviderOptions = { openai: { thinkingConfig: { thinkingLevel: 'medium', includeThoughts: false } } }
+    const mockProviderOptions = {
+      openai: {
+        thinkingConfig: { thinkingLevel: 'medium', includeThoughts: false },
+      },
+    }
     vi.mocked(getProviderOptions).mockReturnValue(mockProviderOptions)
 
     const request = new NextRequest(
@@ -235,7 +239,8 @@ describe('POST /api/ai/products/[id]/chat', () => {
 
     expect(response.status).toBe(200)
 
-    const fetchedAiConfig = await vi.mocked(getAiConfigCached).mock.results[0].value
+    const fetchedAiConfig =
+      await vi.mocked(getAiConfigCached).mock.results[0].value
     expect(getProviderOptions).toHaveBeenCalledWith(fetchedAiConfig)
 
     expect(streamText).toHaveBeenCalledWith(
