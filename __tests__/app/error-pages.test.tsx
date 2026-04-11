@@ -1,11 +1,9 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 
-import GlobalError from '@/app/error'
-import OrdersError from '@/app/orders/error'
-import AdminError from '@/app/admin/error'
-import CartError from '@/app/cart/error'
-import ProductsError from '@/app/products/error'
+vi.mock('@sentry/nextjs', () => ({
+  captureException: vi.fn(),
+}))
 
 vi.mock('next/link', () => ({
   default: ({
@@ -16,6 +14,12 @@ vi.mock('next/link', () => ({
     href: string
   }) => <a href={href}>{children}</a>,
 }))
+
+import GlobalError from '@/app/error'
+import OrdersError from '@/app/orders/error'
+import AdminError from '@/app/admin/error'
+import CartError from '@/app/cart/error'
+import ProductsError from '@/app/products/error'
 
 function createError(
   message: string,

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Hero from '@/components/sections/Hero'
 
-export const revalidate = 60
+export const revalidate = 300
 
 export const metadata: Metadata = {
   title: 'The Kiyon Store | Handcrafted with Love',

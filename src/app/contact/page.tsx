@@ -1,6 +1,8 @@
 import Footer from '@/components/layout/Footer'
 import ContactForm from './ContactForm'
 
+export const revalidate = 3600
+
 export const metadata = {
   title: 'Contact Us | The Kiyon Store',
   description:

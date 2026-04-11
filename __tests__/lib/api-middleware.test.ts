@@ -15,6 +15,10 @@ vi.mock('@/lib/auth', () => ({
   auth: vi.fn().mockResolvedValue(null),
 }))
 
+vi.mock('@/lib/rate-limit', () => ({
+  checkRateLimit: vi.fn().mockResolvedValue(null),
+}))
+
 function mockRequest(method = 'GET', pathname = '/api/test'): NextRequest {
   return {
     method,

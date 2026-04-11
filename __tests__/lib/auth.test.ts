@@ -16,11 +16,6 @@ const mockNextAuthReturn = vi.hoisted(() => ({
   auth: vi.fn(),
 }))
 
-const mockCacheUserSession = vi.hoisted(() =>
-  vi.fn((_userId: string, builder: () => unknown) => Promise.resolve(builder()))
-)
-const mockInvalidateUserSessionCache = vi.hoisted(() => vi.fn())
-
 interface NextAuthConfig {
   session: { strategy: string; maxAge: number }
   pages: { signIn: string; error: string }
@@ -124,11 +119,6 @@ vi.mock('drizzle-orm', () => ({
   or: vi.fn((...args: unknown[]) => ({ op: 'or', args })),
 }))
 
-vi.mock('@/lib/cache', () => ({
-  cacheUserSession: mockCacheUserSession,
-  invalidateUserSessionCache: mockInvalidateUserSessionCache,
-}))
-
 describe('auth module', () => {
   beforeAll(async () => {
     await import('@/lib/auth')
@@ -177,18 +167,6 @@ describe('auth module', () => {
       expect(mockLogAuthEvent).not.toHaveBeenCalled()
     })
 
-    it('uses cacheUserSession to cache session user data', async () => {
-      const session = { user: { id: '', role: '', email: 'test@example.com' } }
-      const token = { id: 'user-123', role: 'CUSTOMER' }
-
-      await capturedConfig.callbacks.session({ session, token })
-
-      expect(mockCacheUserSession).toHaveBeenCalledWith(
-        'user-123',
-        expect.any(Function)
-      )
-    })
-
     it('returns session unchanged when userId is missing from token', async () => {
       const session = { user: { id: '', role: '', email: 'test@example.com' } }
       const token = {}
@@ -196,7 +174,6 @@ describe('auth module', () => {
       const result = await capturedConfig.callbacks.session({ session, token })
 
       expect(result).toEqual(session)
-      expect(mockCacheUserSession).not.toHaveBeenCalled()
     })
   })
 
@@ -248,26 +225,13 @@ describe('auth module', () => {
       })
     })
 
-    it('invalidates session cache when token with id is provided', async () => {
+    it('calls logAuthEvent with logout event when token is provided', async () => {
       await capturedConfig.events.signOut({ token: { id: 'user-xyz' } })
 
-      expect(mockInvalidateUserSessionCache).toHaveBeenCalledWith('user-xyz')
       expect(mockLogAuthEvent).toHaveBeenCalledWith({
         event: 'logout',
         success: true,
       })
-    })
-
-    it('does not call invalidateUserSessionCache when token has no id', async () => {
-      await capturedConfig.events.signOut({ token: {} })
-
-      expect(mockInvalidateUserSessionCache).not.toHaveBeenCalled()
-    })
-
-    it('does not call invalidateUserSessionCache when message has no token', async () => {
-      await capturedConfig.events.signOut({})
-
-      expect(mockInvalidateUserSessionCache).not.toHaveBeenCalled()
     })
   })
 

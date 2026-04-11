@@ -54,41 +54,37 @@ export const CACHE_KEYS = {
   EXCHANGE_RATES_BY_DATE: (date: string) => `exchange-rates:${date}`,
   // Product shares (immutable token → productId + variationId mapping)
   SHARE_RESOLVE_BY_KEY: (key: string) => `share:${key}`,
-  // Session data (per-user, short TTL to reflect role/data changes quickly)
-  SESSION_BY_USER: (userId: string) => `session:user:${userId}`,
 } as const
 
 // Cache TTL configuration (in seconds)
 export const CACHE_TTL = {
-  PRODUCTS_LIST: 60, // 1 minute for product lists
-  PRODUCTS_BESTSELLERS: 120, // 2 minutes for bestsellers (rankings change with new orders)
-  PRODUCTS_BESTSELLERS_STALE: 20,
-  CATEGORIES_LIST: 300,
-  CATEGORIES_LIST_STALE: 30,
-  PRODUCT_DETAIL: 300, // 5 minutes for individual products
-  STALE_TIME: 10, // Extra time to serve stale data while revalidating
+  PRODUCTS_LIST: 600,
+  PRODUCTS_BESTSELLERS: 600,
+  PRODUCTS_BESTSELLERS_STALE: 60,
+  CATEGORIES_LIST: 3600,
+  CATEGORIES_LIST_STALE: 120,
+  PRODUCT_DETAIL: 900,
+  STALE_TIME: 30,
   CART: 30, // 30 seconds for cart (frequently mutated)
   CART_STALE: 5,
   USER_ORDERS: 60, // 1 minute for user orders
   USER_ORDERS_STALE: 10,
   ORDER_DETAIL: 120, // 2 minutes for individual order detail
   ORDER_DETAIL_STALE: 10,
-  ADMIN_PRODUCTS: 60,
-  ADMIN_PRODUCTS_STALE: 10,
-  ADMIN_ORDERS: 60, // 1 minute for admin orders list
-  ADMIN_ORDERS_STALE: 10,
+  ADMIN_PRODUCTS: 300,
+  ADMIN_PRODUCTS_STALE: 30,
+  ADMIN_ORDERS: 120,
+  ADMIN_ORDERS_STALE: 20,
   ADMIN_ORDER_DETAIL: 60, // 1 minute for individual admin order
   ADMIN_ORDER_DETAIL_STALE: 10,
-  ADMIN_USERS: 300, // 5 minutes for admin users list
-  ADMIN_USERS_STALE: 30,
+  ADMIN_USERS: 600,
+  ADMIN_USERS_STALE: 60,
   ADMIN_USER_DETAIL: 300, // 5 minutes for individual admin user
   ADMIN_USER_DETAIL_STALE: 30,
-  ADMIN_SALES: 120, // 2 minutes for sales summary
-  ADMIN_SALES_STALE: 30,
+  ADMIN_SALES: 300,
+  ADMIN_SALES_STALE: 60,
   // Share resolution: immutable once created — cache for 1 year with no stale window
   SHARE_RESOLVE: 31536000, // 1 year in seconds
-  // Session data: short TTL so role/profile changes propagate within minutes
-  SESSION: 300, // 5 minutes
 } as const
 
 /**
@@ -491,66 +487,5 @@ export const cacheShareResolve = async <T>(
       additionalInfo: { key: cacheKey },
     })
     return fetcher()
-  }
-}
-
-/**
- * Cache session user data (id, role, phoneNumber) by user ID.
- * Avoids rebuilding session fields from the JWT token on every auth() call.
- * Uses a short TTL so role or profile changes propagate within minutes.
- *
- * @param userId - User ID used as the cache key
- * @param builder - Synchronous function that constructs the session data from the token
- * @returns Cached or freshly built session data
- */
-export const cacheUserSession = async <T>(
-  userId: string,
-  builder: () => T
-): Promise<T> => {
-  const redisClient = getRedisClient()
-  const cacheKey = CACHE_KEYS.SESSION_BY_USER(userId)
-
-  if (!redisClient) return builder()
-
-  try {
-    const cached = await redisClient.get<T>(cacheKey)
-    if (cached !== null) {
-      logCacheOperation({ operation: 'hit', key: cacheKey, success: true })
-      return cached
-    }
-
-    logCacheOperation({ operation: 'miss', key: cacheKey, success: true })
-    const result = builder()
-    await redisClient.setex(cacheKey, CACHE_TTL.SESSION, result)
-    logCacheOperation({
-      operation: 'set',
-      key: cacheKey,
-      ttl: CACHE_TTL.SESSION,
-      success: true,
-    })
-    return result
-  } catch (error) {
-    logError({
-      error,
-      context: 'session_cache_operation',
-      additionalInfo: { userId },
-    })
-    return builder()
-  }
-}
-
-/**
- * Invalidate the cached session data for a specific user.
- * Called on sign-out to ensure stale session data is not served.
- *
- * @param userId - The user ID whose session cache should be cleared
- */
-export const invalidateUserSessionCache = async (
-  userId: string
-): Promise<void> => {
-  try {
-    await invalidateCachePattern(CACHE_KEYS.SESSION_BY_USER(userId))
-  } catch (error) {
-    logError({ error, context: 'session_cache_invalidation' })
   }
 }

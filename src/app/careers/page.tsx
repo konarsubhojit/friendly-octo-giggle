@@ -1,6 +1,8 @@
 import Footer from '@/components/layout/Footer'
 import Link from 'next/link'
 
+export const revalidate = 3600
+
 export const metadata = {
   title: 'Careers | The Kiyon Store',
   description:

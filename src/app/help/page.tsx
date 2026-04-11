@@ -6,6 +6,8 @@ import {
   type CheckoutPolicySection,
 } from '@/lib/constants/checkout-policies'
 
+export const revalidate = 3600
+
 export const metadata = {
   title: 'Help Center | The Kiyon Store',
   description:
