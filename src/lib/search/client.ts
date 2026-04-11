@@ -21,7 +21,7 @@ function buildSearchCacheKey(
 ): string {
   const normalized = query.toLowerCase().trim().replace(/\s+/g, ' ')
   const parts = [SEARCH_CACHE_PREFIX + normalized]
-  if (options.category) parts.push(`cat:${options.category}`)
+  if (options.category) parts.push(`cat:${options.category.trim()}`)
   if (options.limit) parts.push(`l:${options.limit}`)
   return parts.join(':')
 }

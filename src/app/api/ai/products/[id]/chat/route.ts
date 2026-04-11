@@ -91,14 +91,16 @@ export const POST = async (
       -aiConfig.maxHistoryMessages
     ) as UIMessage[]
 
-    // Extract the last user message for cache lookup
+    // Only cache single-turn (context-free) requests — multi-turn responses
+    // depend on conversation history and cannot be safely cached by question alone.
+    const isSingleTurn = trimmed.length === 1
     const lastUserMessage = trimmed.findLast((m) => m.role === 'user')
     const lastUserText =
       lastUserMessage?.parts?.find((p) => p.type === 'text')?.text ?? ''
 
     // Check cache for single-turn questions
-    if (lastUserText) {
-      const cached = await getCachedAiResponse(id, lastUserText)
+    if (isSingleTurn && lastUserText) {
+      const cached = await getCachedAiResponse(id, lastUserText, currencyCode)
       if (cached !== null) {
         logBusinessEvent({
           event: 'ai_chat_request',
@@ -132,11 +134,13 @@ export const POST = async (
       success: true,
     })
 
-    // Cache the final assembled text after streaming completes
-    if (lastUserText) {
+    // Cache the final assembled text after streaming completes (single-turn only)
+    if (isSingleTurn && lastUserText) {
       waitUntil(
-        result.text
-          .then((text) => setCachedAiResponse(id, lastUserText, text))
+        Promise.resolve(result.text)
+          .then((text) =>
+            setCachedAiResponse(id, lastUserText, currencyCode, text)
+          )
           .catch((error) =>
             logError({
               error,

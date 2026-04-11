@@ -1,4 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
+import { Ratelimit } from '@upstash/ratelimit'
+import { Redis } from '@upstash/redis'
 import { auth } from '@/lib/auth'
 import { getFeatureFlags } from '@/lib/edge-config'
 
@@ -19,26 +21,28 @@ const RATE_LIMIT_WINDOW_MS = 60_000
 const RATE_LIMIT_MAX_REQUESTS = 20
 
 // In-memory sliding-window counters keyed by IP + path prefix.
-// This is per-instance only (acceptable for serverless cold-start isolation).
-// For distributed rate limiting, replace with Upstash Ratelimit.
+// Used for non-AI paths and as a fallback when Redis is unavailable.
 const rateLimitStore = new Map<string, { count: number; resetAt: number }>()
 
-function isRateLimited(ip: string, pathname: string): boolean {
-  const aiPrefix = AI_RATE_LIMIT_PATHS.find((p) => pathname.startsWith(p))
-  if (aiPrefix) {
-    const key = `${ip}:${aiPrefix}`
-    const now = Date.now()
-    const entry = rateLimitStore.get(key)
+// Distributed rate limiter for AI routes — enforced across all serverless
+// instances via Upstash Redis to prevent per-instance bypasses.
+let aiLimiter: Ratelimit | null = null
 
-    if (!entry || now > entry.resetAt) {
-      rateLimitStore.set(key, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS })
-      return false
-    }
-
-    entry.count += 1
-    return entry.count > AI_RATE_LIMIT_MAX_REQUESTS
+const getAiLimiter = (): Ratelimit | null => {
+  const url = process.env.UPSTASH_REDIS_REST_URL
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN
+  if (!url || !token) return null
+  if (!aiLimiter) {
+    aiLimiter = new Ratelimit({
+      redis: new Redis({ url, token }),
+      limiter: Ratelimit.slidingWindow(AI_RATE_LIMIT_MAX_REQUESTS, '60 s'),
+      prefix: 'rl:ai',
+    })
   }
+  return aiLimiter
+}
 
+function isRateLimited(ip: string, pathname: string): boolean {
   const matchedPrefix = RATE_LIMIT_PATHS.find((p) => pathname.startsWith(p))
   if (!matchedPrefix) return false
 
@@ -53,6 +57,23 @@ function isRateLimited(ip: string, pathname: string): boolean {
 
   entry.count += 1
   return entry.count > RATE_LIMIT_MAX_REQUESTS
+}
+
+function isInMemoryRateLimited(ip: string, pathname: string): boolean {
+  const aiPrefix = AI_RATE_LIMIT_PATHS.find((p) => pathname.startsWith(p))
+  if (!aiPrefix) return false
+
+  const key = `${ip}:${aiPrefix}`
+  const now = Date.now()
+  const entry = rateLimitStore.get(key)
+
+  if (!entry || now > entry.resetAt) {
+    rateLimitStore.set(key, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS })
+    return false
+  }
+
+  entry.count += 1
+  return entry.count > AI_RATE_LIMIT_MAX_REQUESTS
 }
 
 export async function proxy(request: NextRequest) {
@@ -72,7 +93,29 @@ export async function proxy(request: NextRequest) {
   const ip =
     request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown'
 
-  if (isRateLimited(ip, pathname)) {
+  const isAiPath = AI_RATE_LIMIT_PATHS.some((p) => pathname.startsWith(p))
+  if (isAiPath) {
+    // AI paths: distributed rate limiting via Upstash (works across all instances)
+    const limiter = getAiLimiter()
+    let limited = false
+    if (limiter) {
+      try {
+        const result = await limiter.limit(ip)
+        limited = !result.success
+      } catch {
+        // Redis unavailable — fall back to in-memory limit
+        limited = isInMemoryRateLimited(ip, pathname)
+      }
+    } else {
+      limited = isInMemoryRateLimited(ip, pathname)
+    }
+    if (limited) {
+      return NextResponse.json(
+        { success: false, error: 'Too many requests. Please try again later.' },
+        { status: 429, headers: { 'Retry-After': '60' } }
+      )
+    }
+  } else if (isRateLimited(ip, pathname)) {
     return NextResponse.json(
       { success: false, error: 'Too many requests. Please try again later.' },
       { status: 429, headers: { 'Retry-After': '60' } }

@@ -19,6 +19,12 @@ const buildProductContextMock = vi.hoisted(() =>
   )
 )
 
+const getCachedAiResponseMock = vi.hoisted(() => vi.fn().mockResolvedValue(null))
+const setCachedAiResponseMock = vi.hoisted(() =>
+  vi.fn().mockResolvedValue(undefined)
+)
+const waitUntilMock = vi.hoisted(() => vi.fn())
+
 vi.mock('@/lib/db', () => ({
   db: {
     products: {
@@ -62,12 +68,12 @@ vi.mock('@/lib/ai/product-rag', () => ({
 }))
 
 vi.mock('@/lib/ai/ai-cache', () => ({
-  getCachedAiResponse: vi.fn().mockResolvedValue(null),
-  setCachedAiResponse: vi.fn().mockResolvedValue(undefined),
+  getCachedAiResponse: getCachedAiResponseMock,
+  setCachedAiResponse: setCachedAiResponseMock,
 }))
 
 vi.mock('@vercel/functions', () => ({
-  waitUntil: vi.fn(),
+  waitUntil: waitUntilMock,
 }))
 
 vi.mock('@/lib/logger', () => ({
@@ -136,6 +142,8 @@ describe('POST /api/ai/products/[id]/chat', () => {
     vi.clearAllMocks()
     vi.mocked(auth).mockResolvedValue(null)
     vi.mocked(drizzleDb.query.users.findFirst).mockResolvedValue(null)
+    getCachedAiResponseMock.mockResolvedValue(null)
+    setCachedAiResponseMock.mockResolvedValue(undefined)
     buildProductContextMock.mockClear()
   })
 
@@ -177,9 +185,10 @@ describe('POST /api/ai/products/[id]/chat', () => {
     expect(response.status).toBe(400)
   })
 
-  it('streams response for valid request', async () => {
+  it('streams response for valid request (cache miss)', async () => {
     vi.mocked(db.products.findById).mockResolvedValue(mockProduct)
     vi.mocked(auth).mockResolvedValue(null)
+    getCachedAiResponseMock.mockResolvedValue(null)
 
     const request = new NextRequest(
       'http://localhost/api/ai/products/abc1234/chat',
@@ -216,6 +225,107 @@ describe('POST /api/ai/products/[id]/chat', () => {
         details: expect.objectContaining({ productId: 'abc1234' }),
       })
     )
+    // Should schedule background cache write
+    expect(waitUntilMock).toHaveBeenCalled()
+  })
+
+  it('returns cached JSON response on cache hit without calling streamText', async () => {
+    vi.mocked(db.products.findById).mockResolvedValue(mockProduct)
+    vi.mocked(auth).mockResolvedValue(null)
+    getCachedAiResponseMock.mockResolvedValue('Cached AI response')
+
+    const request = new NextRequest(
+      'http://localhost/api/ai/products/abc1234/chat',
+      {
+        method: 'POST',
+        body: JSON.stringify(validBody),
+      }
+    )
+
+    const response = await POST(request, {
+      params: Promise.resolve({ id: 'abc1234' }),
+    })
+
+    expect(response.status).toBe(200)
+    const data = await response.json()
+    expect(data.text).toBe('Cached AI response')
+    // streamText must NOT be called on a cache hit
+    expect(streamText).not.toHaveBeenCalled()
+    // waitUntil must NOT be called (nothing to cache)
+    expect(waitUntilMock).not.toHaveBeenCalled()
+    expect(logBusinessEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'ai_chat_request',
+        success: true,
+        details: expect.objectContaining({ cached: true }),
+      })
+    )
+  })
+
+  it('schedules setCachedAiResponse via waitUntil on cache miss', async () => {
+    vi.mocked(db.products.findById).mockResolvedValue(mockProduct)
+    vi.mocked(auth).mockResolvedValue(null)
+    getCachedAiResponseMock.mockResolvedValue(null)
+
+    const request = new NextRequest(
+      'http://localhost/api/ai/products/abc1234/chat',
+      {
+        method: 'POST',
+        body: JSON.stringify(validBody),
+      }
+    )
+
+    await POST(request, { params: Promise.resolve({ id: 'abc1234' }) })
+
+    expect(waitUntilMock).toHaveBeenCalledWith(expect.any(Promise))
+    // After the promise resolves, setCachedAiResponse should have been called
+    const waitUntilArg = waitUntilMock.mock.calls[0][0]
+    await waitUntilArg
+    expect(setCachedAiResponseMock).toHaveBeenCalledWith(
+      'abc1234',
+      'Is this product in stock?',
+      'INR',
+      'AI response text'
+    )
+  })
+
+  it('does not cache multi-turn conversation responses', async () => {
+    vi.mocked(db.products.findById).mockResolvedValue(mockProduct)
+    vi.mocked(auth).mockResolvedValue(null)
+
+    const multiTurnBody = {
+      messages: [
+        {
+          id: '1',
+          role: 'user',
+          parts: [{ type: 'text', text: 'What material is this?' }],
+        },
+        {
+          id: '2',
+          role: 'assistant',
+          parts: [{ type: 'text', text: 'It is made of cotton.' }],
+        },
+        {
+          id: '3',
+          role: 'user',
+          parts: [{ type: 'text', text: 'Does it come in blue?' }],
+        },
+      ],
+    }
+
+    const request = new NextRequest(
+      'http://localhost/api/ai/products/abc1234/chat',
+      {
+        method: 'POST',
+        body: JSON.stringify(multiTurnBody),
+      }
+    )
+
+    await POST(request, { params: Promise.resolve({ id: 'abc1234' }) })
+
+    // Should NOT check or write cache for multi-turn
+    expect(getCachedAiResponseMock).not.toHaveBeenCalled()
+    expect(waitUntilMock).not.toHaveBeenCalled()
   })
 
   it('formats prices using user currency preference when available', async () => {
@@ -248,6 +358,12 @@ describe('POST /api/ai/products/[id]/chat', () => {
     const formatter =
       buildProductContextMock.mock.calls[0]?.[1]?.formatPrice ?? (() => '')
     expect(formatter(99)).toBe('EUR-99')
+    // Cache key should include EUR currency
+    expect(getCachedAiResponseMock).toHaveBeenCalledWith(
+      'abc1234',
+      'Is this product in stock?',
+      'EUR'
+    )
   })
 
   it('logs error with product context on failure', async () => {

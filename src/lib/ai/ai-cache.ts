@@ -5,30 +5,29 @@ const AI_CACHE_TTL = 3600 // 1 hour
 const AI_CACHE_PREFIX = 'ai:response:'
 
 /**
- * Generate a normalized cache key from productId and user question.
+ * Generate a collision-free cache key from productId, currencyCode and user question.
  * Normalizes the question by lowercasing, trimming, and collapsing whitespace
  * to maximize cache hit rates for semantically similar questions.
+ * Only used for single-turn (no conversation history) requests.
  */
-export function buildAiCacheKey(productId: string, question: string): string {
+export function buildAiCacheKey(
+  productId: string,
+  question: string,
+  currencyCode: string = 'INR'
+): string {
   const normalized = question.toLowerCase().trim().replace(/\s+/g, ' ')
-  // Use a simple hash to keep keys short
-  const hash = Math.abs(
-    Array.from(normalized).reduce(
-      (h, c) => (Math.imul(31, h) + c.charCodeAt(0)) | 0,
-      0
-    )
-  )
-  return `${AI_CACHE_PREFIX}${productId}:${hash}`
+  return `${AI_CACHE_PREFIX}${productId}:${currencyCode}:${normalized}`
 }
 
 export async function getCachedAiResponse(
   productId: string,
-  question: string
+  question: string,
+  currencyCode: string = 'INR'
 ): Promise<string | null> {
   const redis = getRedisClient()
   if (!redis) return null
 
-  const key = buildAiCacheKey(productId, question)
+  const key = buildAiCacheKey(productId, question, currencyCode)
   try {
     const cached = await redis.get<string>(key)
     if (cached !== null) {
@@ -46,12 +45,13 @@ export async function getCachedAiResponse(
 export async function setCachedAiResponse(
   productId: string,
   question: string,
+  currencyCode: string = 'INR',
   response: string
 ): Promise<void> {
   const redis = getRedisClient()
   if (!redis) return
 
-  const key = buildAiCacheKey(productId, question)
+  const key = buildAiCacheKey(productId, question, currencyCode)
   try {
     await redis.setex(key, AI_CACHE_TTL, response)
     logCacheOperation({
