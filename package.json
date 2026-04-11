@@ -34,7 +34,7 @@
   },
   "homepage": "https://github.com/konarsubhojit/friendly-octo-giggle#readme",
   "dependencies": {
-    "@ai-sdk/gateway": "2.0.64",
+    "@ai-sdk/gateway": "3.0.95",
     "@ai-sdk/react": "3.0.147",
     "@auth/core": "0.41.1",
     "@auth/drizzle-adapter": "1.11.1",
