@@ -17,6 +17,7 @@ export interface ShippingConfig {
 }
 
 export interface AiConfig {
+  readonly enabled: boolean
   readonly chatModel: string
   readonly embeddingModel: string
   readonly maxResponseTokens: number
@@ -49,6 +50,7 @@ const DEFAULT_SHIPPING_CONFIG: ShippingConfig = {
 }
 
 const DEFAULT_AI_CONFIG: AiConfig = {
+  enabled: true,
   chatModel: 'gemini-2.0-flash',
   embeddingModel: 'text-embedding-004',
   maxResponseTokens: 512,
@@ -171,6 +173,11 @@ export const isMaintenanceMode = async (): Promise<boolean> => {
 export const isSaleActive = async (): Promise<boolean> => {
   const flags = await getFeatureFlags()
   return flags.saleMode
+}
+
+export const isAiEnabled = async (): Promise<boolean> => {
+  const config = await getAiConfig()
+  return config.enabled
 }
 
 export { DEFAULT_FEATURE_FLAGS, DEFAULT_SHIPPING_CONFIG, DEFAULT_AI_CONFIG }

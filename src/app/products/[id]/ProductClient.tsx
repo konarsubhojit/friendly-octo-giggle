@@ -27,6 +27,7 @@ const ProductAssistant = dynamic(
 interface ProductClientProps {
   readonly product: Product
   readonly initialVariationId: string | null
+  readonly aiEnabled: boolean
 }
 
 const getVariationImages = (variation: ProductVariation): string[] =>
@@ -706,6 +707,7 @@ const AddToCartSection = ({
 export default function ProductClient({
   product,
   initialVariationId,
+  aiEnabled,
 }: ProductClientProps) {
   const { status } = useSession()
   const dispatch = useDispatch<AppDispatch>()

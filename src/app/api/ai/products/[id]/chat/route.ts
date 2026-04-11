@@ -83,6 +83,9 @@ export const POST = async (
     }
 
     const aiConfig = await getAiConfigCached()
+    if (!aiConfig.enabled) {
+      return apiError('AI features are currently unavailable', 503)
+    }
     chatModel = aiConfig.chatModel
     const model = getChatModel(aiConfig.chatModel)
     const systemPrompt =
