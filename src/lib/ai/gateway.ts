@@ -4,7 +4,7 @@ import { env } from '@/lib/env'
 import { getAiConfig, type AiConfig } from '@/lib/edge-config'
 
 export const genAI = new GoogleGenAI({
-  apiKey: env.GOOGLE_GENERATIVE_AI_API_KEY ?? '',
+  apiKey: env.GOOGLE_GENERATIVE_AI_API_KEY,
 })
 
 let cachedConfig: { value: AiConfig; expiresAt: number } | null = null
