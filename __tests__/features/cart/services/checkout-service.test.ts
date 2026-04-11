@@ -205,7 +205,7 @@ describe('checkout-service', () => {
           },
         ]),
       }
-      mockDrizzleDbSelect.mockReturnValue(selectChain)
+      mockDrizzleDbSelect.mockReturnValue(selectChain as never)
 
       await expect(
         getCheckoutRequestStatusForUser({
@@ -223,7 +223,7 @@ describe('checkout-service', () => {
         where: vi.fn().mockReturnThis(),
         limit: vi.fn().mockResolvedValue([]),
       }
-      mockDrizzleDbSelect.mockReturnValue(selectChain)
+      mockDrizzleDbSelect.mockReturnValue(selectChain as never)
 
       await processCheckoutRequestById('cr1ab23')
 
@@ -252,8 +252,8 @@ describe('checkout-service', () => {
         then: vi.fn().mockResolvedValue(null),
       }
       mockDrizzleDbSelect
-        .mockReturnValueOnce(checkoutSelectChain)
-        .mockReturnValueOnce(orderSelectChain)
+        .mockReturnValueOnce(checkoutSelectChain as never)
+        .mockReturnValueOnce(orderSelectChain as never)
 
       await processCheckoutRequestById('cr1ab23')
 
@@ -289,7 +289,7 @@ describe('checkout-service', () => {
       }
       const fromMock = vi.fn().mockReturnValue(selectChain)
       selectChain.from = fromMock
-      mockDrizzleDbSelect.mockReturnValue({ from: fromMock })
+      mockDrizzleDbSelect.mockReturnValue({ from: fromMock } as never)
 
       const result = await getRecentCheckoutRequests()
 
@@ -333,7 +333,7 @@ describe('checkout-service', () => {
       }
       mockDrizzleDbSelect.mockReturnValue({
         from: vi.fn().mockReturnValue(selectChain),
-      })
+      } as never)
 
       const result = await getRecentCheckoutRequests({
         status: 'PENDING',
@@ -365,7 +365,7 @@ describe('checkout-service', () => {
       }
       mockDrizzleDbSelect.mockReturnValue({
         from: vi.fn().mockReturnValue(selectChain),
-      })
+      } as never)
 
       const result = await getRecentCheckoutRequests({ search: 'alice' })
 
@@ -381,7 +381,7 @@ describe('checkout-service', () => {
         limit: vi.fn().mockReturnThis(),
         then: vi.fn().mockResolvedValue({ id: 'ord1' }),
       }
-      mockDrizzleDbSelect.mockReturnValue(orderSelectChain)
+      mockDrizzleDbSelect.mockReturnValue(orderSelectChain as never)
 
       const updateChain = {
         set: vi.fn().mockReturnThis(),
@@ -407,7 +407,7 @@ describe('checkout-service', () => {
         limit: vi.fn().mockReturnThis(),
         then: vi.fn().mockResolvedValue(null),
       }
-      mockDrizzleDbSelect.mockReturnValue(orderSelectChain)
+      mockDrizzleDbSelect.mockReturnValue(orderSelectChain as never)
 
       const updateChain = {
         set: vi.fn().mockReturnThis(),

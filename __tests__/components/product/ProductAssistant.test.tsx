@@ -168,7 +168,7 @@ describe('ProductAssistant', () => {
       sendMessage: mockSendMessage,
       status: 'ready',
       stop: mockStop,
-    } as ReturnType<typeof useChat>)
+    } as unknown as ReturnType<typeof useChat>)
 
     render(<ProductAssistant productId="abc1234" productName="Test Product" />)
     fireEvent.click(
@@ -196,7 +196,7 @@ describe('ProductAssistant', () => {
       sendMessage: mockSendMessage,
       status: 'streaming',
       stop: mockStop,
-    } as ReturnType<typeof useChat>)
+    } as unknown as ReturnType<typeof useChat>)
 
     render(<ProductAssistant productId="abc1234" productName="Test Product" />)
     fireEvent.click(
@@ -220,7 +220,7 @@ describe('ProductAssistant', () => {
       sendMessage: mockSendMessage,
       status: 'streaming',
       stop: mockStop,
-    } as ReturnType<typeof useChat>)
+    } as unknown as ReturnType<typeof useChat>)
 
     render(<ProductAssistant productId="abc1234" productName="Test Product" />)
     fireEvent.click(

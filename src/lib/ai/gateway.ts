@@ -1,4 +1,5 @@
 import { createGateway } from '@ai-sdk/gateway'
+import type { JSONValue } from '@ai-sdk/provider'
 import { env } from '@/lib/env'
 import { getAiConfig, type AiConfig } from '@/lib/edge-config'
 
@@ -18,3 +19,32 @@ export const getAiConfigCached = async (): Promise<AiConfig> => {
 }
 
 export const getChatModel = (modelId: string) => gateway.languageModel(modelId)
+
+const getProviderNamespace = (aiConfig: AiConfig): string | undefined => {
+  const explicitNamespace = aiConfig.providerNamespace?.trim()
+  if (explicitNamespace) return explicitNamespace
+
+  const separatorIndex = aiConfig.chatModel.indexOf('/')
+  if (separatorIndex <= 0) return undefined
+
+  return aiConfig.chatModel.slice(0, separatorIndex).trim() || undefined
+}
+
+export const getProviderOptions = (
+  aiConfig: AiConfig
+): Record<string, Record<string, JSONValue>> | undefined => {
+  if (!aiConfig.thinkingLevel || aiConfig.thinkingLevel === 'none')
+    return undefined
+
+  const namespace = getProviderNamespace(aiConfig)
+  if (!namespace) return undefined
+
+  return {
+    [namespace]: {
+      thinkingConfig: {
+        thinkingLevel: aiConfig.thinkingLevel,
+        includeThoughts: aiConfig.includeThoughts ?? false,
+      },
+    },
+  }
+}

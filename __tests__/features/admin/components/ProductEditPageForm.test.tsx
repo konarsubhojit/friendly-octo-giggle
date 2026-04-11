@@ -43,6 +43,7 @@ const mockProduct = {
   description: 'A test product',
   price: 1000,
   image: '/img.jpg',
+  images: [] as string[],
   stock: 10,
   category: 'Cat',
   deletedAt: null,
