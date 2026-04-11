@@ -39,6 +39,7 @@
     "@ai-sdk/react": "3.0.147",
     "@auth/core": "0.41.1",
     "@auth/drizzle-adapter": "1.11.1",
+    "@google/genai": "^1.49.0",
     "@neondatabase/serverless": "^0.10.0",
     "@reduxjs/toolkit": "^2.11.2",
     "@sentry/nextjs": "^10.48.0",
