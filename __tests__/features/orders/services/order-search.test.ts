@@ -208,7 +208,9 @@ describe('order-search', () => {
         }
       )
 
-      const result = await searchOrderIds('test', { status: OrderStatus.SHIPPED })
+      const result = await searchOrderIds('test', {
+        status: OrderStatus.SHIPPED,
+      })
       expect(result).toEqual([])
     })
 

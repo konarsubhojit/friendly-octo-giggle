@@ -177,7 +177,9 @@ describe('useCursorPagination', () => {
     })
 
     act(() => {
-      result.current.handleSearch({ preventDefault: vi.fn() } as unknown as React.BaseSyntheticEvent)
+      result.current.handleSearch({
+        preventDefault: vi.fn(),
+      } as unknown as React.BaseSyntheticEvent)
     })
 
     await waitFor(() => {
