@@ -74,7 +74,9 @@ export const SUPPORTED_CHAT_MODELS = new Set([
 export const normalizeChatModel = (model: string): string => {
   if (!model?.trim()) return DEFAULT_AI_CONFIG.chatModel
   // Strip provider prefix (e.g. "google/gemini-2.0-flash" → "gemini-2.0-flash")
-  const normalized = model.includes('/') ? (model.split('/').pop() ?? '') : model
+  const normalized = model.includes('/')
+    ? (model.split('/').pop() ?? '')
+    : model
   return SUPPORTED_CHAT_MODELS.has(normalized)
     ? normalized
     : DEFAULT_AI_CONFIG.chatModel
