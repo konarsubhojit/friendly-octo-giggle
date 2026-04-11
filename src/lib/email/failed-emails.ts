@@ -223,12 +223,18 @@ export const retryFailedEmail = async (
 export const batchRetryFailedEmails = async (
   ids: string[]
 ): Promise<FailedEmailRetryResult[]> => {
-  const results: FailedEmailRetryResult[] = []
-  for (const id of ids) {
-    const result = await retryFailedEmail(id)
-    results.push(result)
-  }
-  return results
+  const results = await Promise.allSettled(ids.map((id) => retryFailedEmail(id)))
+  return results.map((result, idx) => {
+    if (result.status === 'fulfilled') return result.value
+    return {
+      id: ids[idx],
+      success: false,
+      error:
+        result.reason instanceof Error
+          ? result.reason.message
+          : String(result.reason),
+    }
+  })
 }
 
 export const acknowledgePendingEmails = async (

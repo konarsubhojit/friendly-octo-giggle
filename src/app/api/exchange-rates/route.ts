@@ -101,7 +101,10 @@ export async function GET() {
       300
     )
 
-    return apiSuccess({ rates })
+    const ttlSeconds = Math.max(ttl, 3600) // at least 1 hour
+    return apiSuccess({ rates }, 200, {
+      'Cache-Control': `public, s-maxage=${ttlSeconds}, stale-while-revalidate=3600`,
+    })
   } catch (error) {
     if (error instanceof UpstreamApiError) {
       logError({ error, context: 'exchange_rates' })

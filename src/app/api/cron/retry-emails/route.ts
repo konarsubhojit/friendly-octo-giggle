@@ -34,14 +34,26 @@ export const GET = async (request: NextRequest) => {
       return apiSuccess({ retried: 0, results: [] })
     }
 
-    const results: FailedEmailRetryResult[] = []
-    for (const record of retriable) {
-      const result = await retryFailedEmail(record.id)
-      results.push(result)
-    }
+    const results = await Promise.allSettled(
+      retriable.map((record) => retryFailedEmail(record.id))
+    )
 
-    const succeeded = results.filter((r) => r.success).length
-    const failed = results.filter((r) => !r.success).length
+    const settledResults: FailedEmailRetryResult[] = results.map(
+      (result, idx) => {
+        if (result.status === 'fulfilled') return result.value
+        return {
+          id: retriable[idx].id,
+          success: false,
+          error:
+            result.reason instanceof Error
+              ? result.reason.message
+              : String(result.reason),
+        }
+      }
+    )
+
+    const succeeded = settledResults.filter((r) => r.success).length
+    const failed = settledResults.filter((r) => !r.success).length
 
     logBusinessEvent({
       event: 'cron_retry_emails_complete',
@@ -53,7 +65,7 @@ export const GET = async (request: NextRequest) => {
       retried: retriable.length,
       succeeded,
       failed,
-      results,
+      results: settledResults,
     })
   } catch (error) {
     logError({ error, context: 'cron_retry_emails' })
