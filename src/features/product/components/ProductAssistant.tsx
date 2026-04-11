@@ -115,7 +115,7 @@ export default function ProductAssistant({
         }
       }
 
-      const remaining = decoder.decode()
+      const remaining = decoder.decode(undefined, { stream: false })
       if (remaining) {
         setMessages((prev) =>
           prev.map((m) =>

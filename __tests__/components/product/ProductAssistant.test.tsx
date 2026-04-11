@@ -223,7 +223,7 @@ describe('ProductAssistant', () => {
     expect(screen.getByLabelText('Stop generating')).toBeInTheDocument()
   })
 
-  it('displays streamed text and shows stop button during streaming', async () => {
+  it('displays streamed text from a text/plain response', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(() => makeFetchResponse({ stream: 'Hello from stream' }))
