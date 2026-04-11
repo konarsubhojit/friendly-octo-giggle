@@ -16,7 +16,9 @@ export async function GET(
       return apiError('Product not found', 404)
     }
 
-    return apiSuccess({ product })
+    return apiSuccess({ product }, 200, {
+      'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=30',
+    })
   } catch (error) {
     return handleApiError(error)
   }

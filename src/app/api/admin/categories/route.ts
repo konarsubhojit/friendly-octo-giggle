@@ -22,13 +22,19 @@ export async function GET() {
       .where(isNull(categories.deletedAt))
       .orderBy(asc(categories.sortOrder), asc(categories.name))
 
-    return apiSuccess({
-      categories: list.map((c) => ({
-        ...c,
-        createdAt: c.createdAt.toISOString(),
-        updatedAt: c.updatedAt.toISOString(),
-      })),
-    })
+    return apiSuccess(
+      {
+        categories: list.map((c) => ({
+          ...c,
+          createdAt: c.createdAt.toISOString(),
+          updatedAt: c.updatedAt.toISOString(),
+        })),
+      },
+      200,
+      {
+        'Cache-Control': 'private, s-maxage=30, stale-while-revalidate=10',
+      }
+    )
   } catch (error) {
     return handleApiError(error)
   }

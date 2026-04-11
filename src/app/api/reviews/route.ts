@@ -36,7 +36,9 @@ const handleGet = async (request: NextRequest) => {
       user: r.isAnonymous ? null : r.user,
     }))
 
-    return apiSuccess({ reviews: serialized })
+    return apiSuccess({ reviews: serialized }, 200, {
+      'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=30',
+    })
   } catch (error) {
     return handleApiError(error)
   }

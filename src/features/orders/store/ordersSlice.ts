@@ -1,4 +1,4 @@
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
+import { createSlice, createAsyncThunk, createSelector } from '@reduxjs/toolkit'
 import type { RootState } from '@/lib/store'
 import { apiClient, ApiError } from '@/lib/api-client'
 
@@ -173,5 +173,11 @@ export const selectOrderDetailLoading = (state: RootState) =>
   state.orders.detailLoading
 export const selectOrderCancelling = (state: RootState) =>
   state.orders.cancelling
+
+// Memoized derived selectors — prevent unnecessary re-renders
+export const selectOrderCount = createSelector(
+  selectOrders,
+  (orders) => orders.length
+)
 
 export default ordersSlice.reducer

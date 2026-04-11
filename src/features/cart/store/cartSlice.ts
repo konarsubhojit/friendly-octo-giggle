@@ -1,4 +1,4 @@
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
+import { createSlice, createAsyncThunk, createSelector } from '@reduxjs/toolkit'
 import { Cart, AddToCartInput } from '@/lib/types'
 import { apiClient, ApiError } from '@/lib/api-client'
 import {
@@ -219,10 +219,15 @@ export const selectStockWarning = (state: { cart: CartState }) =>
   state.cart.stockWarning
 export const selectAdjustedQuantity = (state: { cart: CartState }) =>
   state.cart.adjustedQuantity
-export const selectCartItemCount = (state: { cart: CartState }) => {
-  const cart = state.cart.cart
-  if (!cart?.items) return 0
-  return cart.items.reduce((total, item) => total + item.quantity, 0)
-}
+
+// Memoized derived selectors — prevent unnecessary re-renders
+export const selectCartItems = createSelector(
+  selectCart,
+  (cart) => cart?.items ?? []
+)
+
+export const selectCartItemCount = createSelector(selectCartItems, (items) =>
+  items.reduce((total, item) => total + item.quantity, 0)
+)
 
 export default cartSlice.reducer

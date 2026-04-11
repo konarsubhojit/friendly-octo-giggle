@@ -49,6 +49,9 @@ interface CurrencyContextValue {
 
 const CurrencyContext = createContext<CurrencyContextValue | null>(null)
 
+const EXCHANGE_RATES_STORAGE_KEY = 'exchange-rates'
+const EXCHANGE_RATES_MAX_AGE_MS = 3600_000 // 1 hour
+
 export function CurrencyProvider({
   children,
 }: Readonly<{ children: ReactNode }>) {
@@ -57,9 +60,36 @@ export function CurrencyProvider({
     useState<Record<CurrencyCode, number>>(FALLBACK_RATES)
   const [ratesLoading, setRatesLoading] = useState(true)
 
-  // Fetch live rates once on mount; silently keep fallback rates on failure
+  // Fetch live rates once on mount; use sessionStorage to cache across navigations
   useEffect(() => {
     let cancelled = false
+
+    const STORAGE_KEY = EXCHANGE_RATES_STORAGE_KEY
+    const STORAGE_MAX_AGE_MS = EXCHANGE_RATES_MAX_AGE_MS
+
+    // Try sessionStorage first
+    try {
+      const stored = sessionStorage.getItem(STORAGE_KEY)
+      if (stored) {
+        const { rates: cached, timestamp } = JSON.parse(stored) as {
+          rates: Record<string, number>
+          timestamp: number
+        }
+        if (Date.now() - timestamp < STORAGE_MAX_AGE_MS && cached) {
+          // eslint-disable-next-line react-hooks/set-state-in-effect -- reading cached sessionStorage on mount is the intended pattern
+          setRates({
+            INR: cached['INR'] ?? FALLBACK_RATES.INR,
+            USD: cached['USD'] ?? FALLBACK_RATES.USD,
+            EUR: cached['EUR'] ?? FALLBACK_RATES.EUR,
+            GBP: cached['GBP'] ?? FALLBACK_RATES.GBP,
+          })
+          setRatesLoading(false)
+          return
+        }
+      }
+    } catch {
+      // sessionStorage unavailable (e.g. SSR, incognito)
+    }
 
     fetch('/api/exchange-rates')
       .then((res) => {
@@ -71,12 +101,21 @@ export function CurrencyProvider({
       .then((body) => {
         if (!cancelled && body?.data?.rates) {
           const fetched = body.data.rates
-          setRates({
+          const newRates = {
             INR: fetched['INR'] ?? FALLBACK_RATES.INR,
             USD: fetched['USD'] ?? FALLBACK_RATES.USD,
             EUR: fetched['EUR'] ?? FALLBACK_RATES.EUR,
             GBP: fetched['GBP'] ?? FALLBACK_RATES.GBP,
-          })
+          }
+          setRates(newRates)
+          try {
+            sessionStorage.setItem(
+              STORAGE_KEY,
+              JSON.stringify({ rates: newRates, timestamp: Date.now() })
+            )
+          } catch {
+            // silently ignore storage errors
+          }
         }
       })
       .catch(() => {
