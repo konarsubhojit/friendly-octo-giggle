@@ -374,7 +374,7 @@ describe('POST /api/ai/products/[id]/chat', () => {
     vi.mocked(auth).mockResolvedValue({ user: { id: 'user-123' } } as never)
     vi.mocked(drizzleDb.query.users.findFirst).mockResolvedValue({
       currencyPreference: 'EUR',
-    })
+    } as never)
 
     const request = new NextRequest(
       'http://localhost/api/ai/products/abc1234/chat',
