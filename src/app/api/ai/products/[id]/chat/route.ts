@@ -151,10 +151,7 @@ export const POST = async (
           controller.close()
           resolveFull(fullText)
         } catch (error) {
-          if (
-            error instanceof Error &&
-            error.name === 'AbortError'
-          ) {
+          if (error instanceof Error && error.name === 'AbortError') {
             controller.close()
             resolveFull('')
           } else {

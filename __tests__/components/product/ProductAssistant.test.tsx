@@ -45,7 +45,9 @@ describe('ProductAssistant', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     uuidCounter = 0
-    vi.spyOn(crypto, 'randomUUID').mockImplementation(mockRandomUUID as () => `${string}-${string}-${string}-${string}-${string}`)
+    vi.spyOn(crypto, 'randomUUID').mockImplementation(
+      mockRandomUUID as () => `${string}-${string}-${string}-${string}-${string}`
+    )
   })
 
   afterEach(() => {
@@ -202,7 +204,10 @@ describe('ProductAssistant', () => {
 
   it('shows stop button during streaming', () => {
     const neverResolve = new Promise<Response>(() => {})
-    vi.stubGlobal('fetch', vi.fn(() => neverResolve))
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => neverResolve)
+    )
 
     render(<ProductAssistant productId="abc1234" productName="Test Product" />)
     fireEvent.click(
