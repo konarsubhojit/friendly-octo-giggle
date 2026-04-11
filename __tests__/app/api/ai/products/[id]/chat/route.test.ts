@@ -19,7 +19,9 @@ const buildProductContextMock = vi.hoisted(() =>
   )
 )
 
-const getCachedAiResponseMock = vi.hoisted(() => vi.fn().mockResolvedValue(null))
+const getCachedAiResponseMock = vi.hoisted(() =>
+  vi.fn().mockResolvedValue(null)
+)
 const setCachedAiResponseMock = vi.hoisted(() =>
   vi.fn().mockResolvedValue(undefined)
 )
