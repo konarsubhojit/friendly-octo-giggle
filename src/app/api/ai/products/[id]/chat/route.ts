@@ -96,8 +96,7 @@ export const POST = async (
       .reverse()
       .find((m) => m.role === 'user')
     const lastUserText =
-      lastUserMessage?.parts
-        ?.find((p) => p.type === 'text' && 'text' in p)
+      lastUserMessage?.parts?.find((p) => p.type === 'text' && 'text' in p)
         ?.text ?? ''
 
     // Check cache for single-turn questions
