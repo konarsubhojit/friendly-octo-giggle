@@ -36,7 +36,7 @@ vi.mock('@/components/ui/GradientHeading', () => ({
     children: React.ReactNode
     as?: string
   }) => {
-    const Element = Tag as keyof JSX.IntrinsicElements
+    const Element = Tag as keyof React.JSX.IntrinsicElements
     return <Element>{children}</Element>
   },
 }))

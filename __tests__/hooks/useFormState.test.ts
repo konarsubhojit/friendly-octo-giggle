@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useFormState } from '@/hooks/useFormState'
 
-interface TestForm {
+interface TestForm extends Record<string, unknown> {
   name: string
   email: string
 }
