@@ -23,7 +23,6 @@ export interface AiConfig {
   readonly maxResponseTokens: number
   readonly maxContextChunks: number
   readonly maxHistoryMessages: number
-  readonly providerNamespace?: string
   readonly thinkingLevel?: 'none' | 'low' | 'medium' | 'high'
   readonly includeThoughts?: boolean
 }
@@ -177,7 +176,7 @@ export const isSaleActive = async (): Promise<boolean> => {
 
 export const isAiEnabled = async (): Promise<boolean> => {
   const config = await getAiConfig()
-  return config.enabled
+  return config.enabled ?? true
 }
 
 export { DEFAULT_FEATURE_FLAGS, DEFAULT_SHIPPING_CONFIG, DEFAULT_AI_CONFIG }

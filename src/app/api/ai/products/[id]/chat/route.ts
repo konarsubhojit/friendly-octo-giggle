@@ -81,7 +81,7 @@ export const POST = async (
     }
 
     const aiConfig = await getAiConfigCached()
-    if (!aiConfig.enabled) {
+    if (aiConfig.enabled === false) {
       return apiError('AI features are currently unavailable', 503)
     }
     chatModel = aiConfig.chatModel
@@ -132,7 +132,7 @@ export const POST = async (
     })
 
     const encoder = new TextEncoder()
-    let resolveFull: (text: string) => void = () => {}
+    let resolveFull!: (text: string) => void
     const fullTextPromise = new Promise<string>((resolve) => {
       resolveFull = resolve
     })
@@ -140,7 +140,6 @@ export const POST = async (
     const readable = new ReadableStream<Uint8Array>({
       async start(controller) {
         let fullText = ''
-        let completed = false
         try {
           for await (const chunk of stream) {
             const text = chunk.text
@@ -149,10 +148,19 @@ export const POST = async (
               controller.enqueue(encoder.encode(text))
             }
           }
-          completed = true
-        } finally {
           controller.close()
-          resolveFull(completed ? fullText : '')
+          resolveFull(fullText)
+        } catch (error) {
+          if (
+            error instanceof Error &&
+            error.name === 'AbortError'
+          ) {
+            controller.close()
+            resolveFull('')
+          } else {
+            controller.error(error)
+            resolveFull('')
+          }
         }
       },
     })

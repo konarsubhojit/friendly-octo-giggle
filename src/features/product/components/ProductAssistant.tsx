@@ -35,6 +35,13 @@ export default function ProductAssistant({
   const isStreaming = status === 'streaming'
 
   useEffect(() => {
+    return () => {
+      abortRef.current?.abort()
+      abortRef.current = null
+    }
+  }, [])
+
+  useEffect(() => {
     const container = messagesContainerRef.current
     if (container) {
       container.scrollTop = container.scrollHeight
