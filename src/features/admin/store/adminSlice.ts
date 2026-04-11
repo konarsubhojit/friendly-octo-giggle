@@ -1,4 +1,4 @@
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
+import { createSlice, createAsyncThunk, createSelector } from '@reduxjs/toolkit'
 import type { RootState } from '@/lib/store'
 import { apiClient, ApiError } from '@/lib/api-client'
 
@@ -275,5 +275,21 @@ export const selectAdminOrdersLoading = (state: RootState) =>
 export const selectAdminUsersLoading = (state: RootState) =>
   state.admin.usersLoading
 export const selectAdminError = (state: RootState) => state.admin.error
+
+// Memoized derived selectors — prevent unnecessary re-renders
+export const selectAdminProductCount = createSelector(
+  selectAdminProducts,
+  (products) => products.length
+)
+
+export const selectAdminOrderCount = createSelector(
+  selectAdminOrders,
+  (orders) => orders.length
+)
+
+export const selectAdminUserCount = createSelector(
+  selectAdminUsers,
+  (users) => users.length
+)
 
 export default adminSlice.reducer

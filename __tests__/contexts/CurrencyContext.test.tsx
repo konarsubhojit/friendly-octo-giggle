@@ -44,6 +44,7 @@ describe('CurrencyProvider', () => {
       'fetch',
       vi.fn().mockRejectedValue(new Error('no network in tests'))
     )
+    sessionStorage.clear()
   })
 
   afterEach(() => {

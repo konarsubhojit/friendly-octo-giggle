@@ -28,6 +28,8 @@ export async function GET() {
         createdAt: c.createdAt.toISOString(),
         updatedAt: c.updatedAt.toISOString(),
       })),
+    }, 200, {
+      'Cache-Control': 'private, s-maxage=30, stale-while-revalidate=10',
     })
   } catch (error) {
     return handleApiError(error)
