@@ -206,7 +206,8 @@ describe('ProductClient', () => {
 
   it('renders product name, price, description, and category', () => {
     const product = makeProduct()
-    render(<ProductClient product={product} initialVariationId={null} />)
+    render(<ProductClient product={product} initialVariationId={null}
+              aiEnabled={true} />)
 
     expect(
       screen.getByRole('heading', { name: 'Rose Bouquet' })
@@ -220,7 +221,8 @@ describe('ProductClient', () => {
 
   it('renders breadcrumb navigation with product name', () => {
     const product = makeProduct()
-    render(<ProductClient product={product} initialVariationId={null} />)
+    render(<ProductClient product={product} initialVariationId={null}
+              aiEnabled={true} />)
 
     expect(
       screen.getByText('Rose Bouquet', { selector: 'span' })
@@ -236,14 +238,16 @@ describe('ProductClient', () => {
       image: 'https://example.com/img.jpg',
       images: [],
     })
-    render(<ProductClient product={product} initialVariationId={null} />)
+    render(<ProductClient product={product} initialVariationId={null}
+              aiEnabled={true} />)
 
     expect(screen.getByTestId('image-carousel')).toBeInTheDocument()
   })
 
   it('renders add-to-cart section when product is in stock', () => {
     const product = makeProduct({ stock: 10 })
-    render(<ProductClient product={product} initialVariationId={null} />)
+    render(<ProductClient product={product} initialVariationId={null}
+              aiEnabled={true} />)
 
     expect(
       screen.getByRole('button', { name: /Add to Cart/i })
@@ -253,7 +257,8 @@ describe('ProductClient', () => {
 
   it('renders out-of-stock panel when product stock is 0', () => {
     const product = makeProduct({ stock: 0 })
-    render(<ProductClient product={product} initialVariationId={null} />)
+    render(<ProductClient product={product} initialVariationId={null}
+              aiEnabled={true} />)
 
     // Out-of-stock panel has a "Browse Products" link
     expect(
@@ -273,7 +278,8 @@ describe('ProductClient', () => {
         },
       })
     )
-    render(<ProductClient product={product} initialVariationId={null} />)
+    render(<ProductClient product={product} initialVariationId={null}
+              aiEnabled={true} />)
 
     expect(screen.getByText('All Available Stock in Cart')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Go to Cart' })).toHaveAttribute(
@@ -284,20 +290,23 @@ describe('ProductClient', () => {
 
   it('renders share button', () => {
     const product = makeProduct()
-    render(<ProductClient product={product} initialVariationId={null} />)
+    render(<ProductClient product={product} initialVariationId={null}
+              aiEnabled={true} />)
     expect(screen.getByTestId('share-button')).toBeInTheDocument()
   })
 
   it('renders reviews section and recently viewed', () => {
     const product = makeProduct()
-    render(<ProductClient product={product} initialVariationId={null} />)
+    render(<ProductClient product={product} initialVariationId={null}
+              aiEnabled={true} />)
     expect(screen.getByTestId('reviews-section')).toBeInTheDocument()
     expect(screen.getByTestId('recently-viewed')).toBeInTheDocument()
   })
 
   it('tracks product view on mount', () => {
     const product = makeProduct()
-    render(<ProductClient product={product} initialVariationId={null} />)
+    render(<ProductClient product={product} initialVariationId={null}
+              aiEnabled={true} />)
     expect(mockTrackProduct).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'prod001', name: 'Rose Bouquet' })
     )
@@ -313,7 +322,8 @@ describe('ProductClient', () => {
       update: vi.fn(),
     })
     const product = makeProduct()
-    render(<ProductClient product={product} initialVariationId={null} />)
+    render(<ProductClient product={product} initialVariationId={null}
+              aiEnabled={true} />)
     expect(mockDispatch).toHaveBeenCalledWith(
       expect.objectContaining({ type: 'cart/fetchCart' })
     )
@@ -321,13 +331,15 @@ describe('ProductClient', () => {
 
   it('does NOT dispatch fetchCart when unauthenticated', () => {
     const product = makeProduct()
-    render(<ProductClient product={product} initialVariationId={null} />)
+    render(<ProductClient product={product} initialVariationId={null}
+              aiEnabled={true} />)
     expect(mockFetchCart).not.toHaveBeenCalled()
   })
 
   it('adds to cart via pending cart when unauthenticated', async () => {
     const product = makeProduct()
-    render(<ProductClient product={product} initialVariationId={null} />)
+    render(<ProductClient product={product} initialVariationId={null}
+              aiEnabled={true} />)
 
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: /Add to Cart/i }))
@@ -342,7 +354,8 @@ describe('ProductClient', () => {
 
   it('shows cart success message after adding to cart', async () => {
     const product = makeProduct()
-    render(<ProductClient product={product} initialVariationId={null} />)
+    render(<ProductClient product={product} initialVariationId={null}
+              aiEnabled={true} />)
 
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: /Add to Cart/i }))
@@ -363,7 +376,8 @@ describe('ProductClient', () => {
       update: vi.fn(),
     })
     const product = makeProduct()
-    render(<ProductClient product={product} initialVariationId={null} />)
+    render(<ProductClient product={product} initialVariationId={null}
+              aiEnabled={true} />)
 
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: /Add to Cart/i }))
@@ -387,7 +401,8 @@ describe('ProductClient', () => {
     })
     mockUnwrap.mockRejectedValue('Out of stock')
     const product = makeProduct()
-    render(<ProductClient product={product} initialVariationId={null} />)
+    render(<ProductClient product={product} initialVariationId={null}
+              aiEnabled={true} />)
 
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: /Add to Cart/i }))
@@ -412,7 +427,8 @@ describe('ProductClient', () => {
       adjustedQuantity: 2,
     })
     const product = makeProduct()
-    render(<ProductClient product={product} initialVariationId={null} />)
+    render(<ProductClient product={product} initialVariationId={null}
+              aiEnabled={true} />)
 
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: /Add to Cart/i }))
@@ -429,7 +445,8 @@ describe('ProductClient', () => {
       makeVariation({ id: 'var002', name: 'Blue', variationType: 'colour' }),
     ]
     const product = makeProduct({ variations })
-    render(<ProductClient product={product} initialVariationId={null} />)
+    render(<ProductClient product={product} initialVariationId={null}
+              aiEnabled={true} />)
 
     expect(screen.getByTestId('variation-btn-var001')).toBeInTheDocument()
     expect(screen.getByTestId('variation-btn-var002')).toBeInTheDocument()
@@ -438,7 +455,7 @@ describe('ProductClient', () => {
   it('selects initial variation from initialVariationId prop', () => {
     const variation = makeVariation({ id: 'var001', name: 'Red', price: 750 })
     const product = makeProduct({ variations: [variation] })
-    render(<ProductClient product={product} initialVariationId="var001" />)
+    render(<ProductClient product={product} initialVariationId="var001" aiEnabled={true} />)
 
     expect(screen.getAllByText('₹750.00')).toHaveLength(2)
   })
@@ -448,7 +465,8 @@ describe('ProductClient', () => {
       makeVariation({ id: 'var001', name: 'Red', price: 750 }),
     ]
     const product = makeProduct({ price: 500, variations })
-    render(<ProductClient product={product} initialVariationId={null} />)
+    render(<ProductClient product={product} initialVariationId={null}
+              aiEnabled={true} />)
 
     expect(screen.getAllByText('₹500.00')).toHaveLength(2)
 
@@ -461,7 +479,8 @@ describe('ProductClient', () => {
 
   it('quantity selector renders with options up to stock (max 10)', () => {
     const product = makeProduct({ stock: 5 })
-    render(<ProductClient product={product} initialVariationId={null} />)
+    render(<ProductClient product={product} initialVariationId={null}
+              aiEnabled={true} />)
 
     const select = screen.getByLabelText('Select quantity')
     // Stock is 5, so options 1-5 should exist
@@ -479,7 +498,8 @@ describe('ProductClient', () => {
         },
       })
     )
-    render(<ProductClient product={product} initialVariationId={null} />)
+    render(<ProductClient product={product} initialVariationId={null}
+              aiEnabled={true} />)
 
     expect(screen.getByText(/You already have/)).toBeInTheDocument()
     // The cart notice contains "2" in a <strong> tag — check via text function
@@ -495,7 +515,8 @@ describe('ProductClient', () => {
 
   it('shows View Cart link in add-to-cart section', () => {
     const product = makeProduct()
-    render(<ProductClient product={product} initialVariationId={null} />)
+    render(<ProductClient product={product} initialVariationId={null}
+              aiEnabled={true} />)
     expect(screen.getByRole('link', { name: /View Cart/i })).toHaveAttribute(
       'href',
       '/cart'
@@ -504,7 +525,8 @@ describe('ProductClient', () => {
 
   it('shows total price (quantity × price) in add-to-cart section', () => {
     const product = makeProduct({ price: 500 })
-    render(<ProductClient product={product} initialVariationId={null} />)
+    render(<ProductClient product={product} initialVariationId={null}
+              aiEnabled={true} />)
     expect(screen.getAllByText('₹500.00')).toHaveLength(2)
   })
 
@@ -519,7 +541,8 @@ describe('ProductClient', () => {
     })
     mockUnwrap.mockRejectedValue(new Error('Network error'))
     const product = makeProduct()
-    render(<ProductClient product={product} initialVariationId={null} />)
+    render(<ProductClient product={product} initialVariationId={null}
+              aiEnabled={true} />)
 
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: /Add to Cart/i }))

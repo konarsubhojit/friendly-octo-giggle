@@ -1,13 +1,19 @@
 'use client'
 
-import { useChat } from '@ai-sdk/react'
-import { DefaultChatTransport } from 'ai'
-import { useState, useRef, useEffect, useMemo } from 'react'
+import { useState, useRef, useEffect } from 'react'
 
 interface ProductAssistantProps {
   readonly productId: string
   readonly productName: string
 }
+
+type Message = {
+  readonly id: string
+  readonly role: 'user' | 'assistant'
+  text: string
+}
+
+type Status = 'idle' | 'streaming' | 'error'
 
 const STARTER_PROMPTS = [
   'Is this product in stock?',
@@ -21,17 +27,10 @@ export default function ProductAssistant({
 }: ProductAssistantProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [input, setInput] = useState('')
+  const [messages, setMessages] = useState<Message[]>([])
+  const [status, setStatus] = useState<Status>('idle')
+  const abortRef = useRef<AbortController | null>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
-
-  const transport = useMemo(
-    () =>
-      new DefaultChatTransport({
-        api: `/api/ai/products/${productId}/chat`,
-      }),
-    [productId]
-  )
-
-  const { messages, sendMessage, status, stop } = useChat({ transport })
 
   const isStreaming = status === 'streaming'
 
@@ -42,15 +41,97 @@ export default function ProductAssistant({
     }
   }, [messages])
 
+  const sendMessage = async (text: string) => {
+    if (isStreaming) return
+
+    const userMsg: Message = { id: crypto.randomUUID(), role: 'user', text }
+    const requestMessages = [...messages, userMsg].map((m) => ({
+      role: m.role,
+      text: m.text,
+    }))
+
+    setMessages((prev) => [...prev, userMsg])
+    setStatus('streaming')
+
+    abortRef.current?.abort()
+    abortRef.current = new AbortController()
+
+    try {
+      const res = await fetch(`/api/ai/products/${productId}/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: requestMessages }),
+        signal: abortRef.current.signal,
+      })
+
+      if (!res.ok) {
+        setStatus('error')
+        return
+      }
+
+      const contentType = res.headers.get('content-type') ?? ''
+
+      if (contentType.includes('application/json')) {
+        const data = (await res.json()) as { text: string }
+        setMessages((prev) => [
+          ...prev,
+          { id: crypto.randomUUID(), role: 'assistant', text: data.text },
+        ])
+        setStatus('idle')
+        return
+      }
+
+      const assistantId = crypto.randomUUID()
+      setMessages((prev) => [
+        ...prev,
+        { id: assistantId, role: 'assistant', text: '' },
+      ])
+
+      const reader = res.body?.getReader()
+      if (!reader) {
+        setStatus('error')
+        return
+      }
+
+      const decoder = new TextDecoder()
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        const chunk = decoder.decode(value, { stream: true })
+        if (chunk) {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantId ? { ...m, text: m.text + chunk } : m
+            )
+          )
+        }
+      }
+
+      setStatus('idle')
+    } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') {
+        setStatus('idle')
+      } else {
+        setStatus('error')
+      }
+    }
+  }
+
+  const stop = () => {
+    abortRef.current?.abort()
+    setStatus('idle')
+  }
+
   const handleSubmit = (e: React.SyntheticEvent) => {
     e.preventDefault()
     if (!input.trim()) return
-    sendMessage({ text: input })
+    void sendMessage(input)
     setInput('')
   }
 
   const handleStarterClick = (prompt: string) => {
-    sendMessage({ text: prompt })
+    void sendMessage(prompt)
   }
 
   if (!isOpen) {
@@ -95,7 +176,6 @@ export default function ProductAssistant({
       className="flex flex-col rounded-2xl border border-[var(--border-warm)] bg-[var(--surface)]/80 shadow-warm backdrop-blur-lg overflow-hidden max-h-[32rem]"
       aria-label="Product assistant"
     >
-      {/* Header */}
       <div className="flex shrink-0 items-center justify-between border-b border-[var(--border-warm)] bg-gradient-to-r from-[var(--accent-warm)]/10 to-[var(--accent-rose)]/10 px-6 py-4">
         <div className="flex items-center gap-3">
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-r from-[var(--accent-warm)] to-[var(--accent-rose)]">
@@ -139,7 +219,6 @@ export default function ProductAssistant({
         </button>
       </div>
 
-      {/* Messages */}
       <div
         ref={messagesContainerRef}
         className="min-h-0 flex-1 overflow-y-auto px-6 py-4 space-y-4"
@@ -175,25 +254,28 @@ export default function ProductAssistant({
                   : 'bg-[var(--accent-cream)] text-[var(--foreground)] border border-[var(--border-warm)]'
               }`}
             >
-              {msg.parts
-                ?.filter((p) => p.type === 'text')
-                .map((p) => (
-                  <span key={p.text}>{p.text}</span>
-                ))}
+              <span>{msg.text}</span>
             </div>
           </div>
         ))}
 
-        {isStreaming && messages.at(-1)?.role !== 'assistant' && (
+        {isStreaming && !messages.at(-1)?.text && (
           <div className="flex justify-start">
             <div className="rounded-2xl bg-[var(--accent-cream)] border border-[var(--border-warm)] px-4 py-3 text-sm text-[var(--text-secondary)]">
               Generating response...
             </div>
           </div>
         )}
+
+        {status === 'error' && (
+          <div className="flex justify-start">
+            <div className="rounded-2xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600">
+              Something went wrong. Please try again.
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Input */}
       <form
         onSubmit={handleSubmit}
         className="flex shrink-0 items-center gap-2 border-t border-[var(--border-warm)] px-4 py-3"

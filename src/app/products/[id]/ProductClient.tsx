@@ -878,10 +878,11 @@ export default function ProductClient({
         </div>
       </main>
 
-      {/* Product Assistant */}
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
-        <ProductAssistant productId={product.id} productName={product.name} />
-      </div>
+      {aiEnabled && (
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
+          <ProductAssistant productId={product.id} productName={product.name} />
+        </div>
+      )}
 
       {/* Reviews Section */}
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
