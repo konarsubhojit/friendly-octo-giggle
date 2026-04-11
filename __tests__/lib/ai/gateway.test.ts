@@ -39,11 +39,7 @@ vi.mock('@/lib/edge-config', () => ({
   }),
 }))
 
-import {
-  genAI,
-  getAiConfigCached,
-  buildGenerateConfig,
-} from '@/lib/ai/gateway'
+import { genAI, getAiConfigCached, buildGenerateConfig } from '@/lib/ai/gateway'
 import { getAiConfig } from '@/lib/edge-config'
 
 const baseAiConfig = {
@@ -89,7 +85,10 @@ describe('lib/ai/gateway', () => {
 
   describe('buildGenerateConfig', () => {
     it('builds config with system instruction and maxOutputTokens', () => {
-      const config = buildGenerateConfig(baseAiConfig, 'You are a helpful assistant.')
+      const config = buildGenerateConfig(
+        baseAiConfig,
+        'You are a helpful assistant.'
+      )
 
       expect(config.systemInstruction).toBe('You are a helpful assistant.')
       expect(config.maxOutputTokens).toBe(512)

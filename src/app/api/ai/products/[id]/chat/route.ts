@@ -161,7 +161,8 @@ export const POST = async (
       waitUntil(
         fullTextPromise
           .then((text) => {
-            if (text) return setCachedAiResponse(id, lastUserText, currencyCode, text)
+            if (text)
+              return setCachedAiResponse(id, lastUserText, currencyCode, text)
           })
           .catch((error) =>
             logError({
