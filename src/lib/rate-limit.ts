@@ -44,7 +44,7 @@ const getIdentifier = (request: NextRequest): string => {
   return ip
 }
 
-const STRICT_PATHS = ['/api/auth', '/api/checkout', '/api/orders']
+const STRICT_PATHS = ['/api/auth', '/api/checkout', '/api/orders', '/api/ai']
 
 const isStrictPath = (pathname: string): boolean =>
   STRICT_PATHS.some((prefix) => pathname.startsWith(prefix))

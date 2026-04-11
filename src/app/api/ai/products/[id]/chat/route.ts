@@ -1,8 +1,10 @@
-import { NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { streamText, convertToModelMessages, type UIMessage } from 'ai'
+import { waitUntil } from '@vercel/functions'
 import { z } from 'zod'
 import { getChatModel, getAiConfigCached } from '@/lib/ai/gateway'
 import { buildProductContext } from '@/lib/ai/product-rag'
+import { getCachedAiResponse, setCachedAiResponse } from '@/lib/ai/ai-cache'
 import { db, drizzleDb } from '@/lib/db'
 import { apiError, handleApiError } from '@/lib/api-utils'
 import { logError, logBusinessEvent } from '@/lib/logger'
@@ -88,6 +90,32 @@ export const POST = async (
     const trimmed = parsed.data.messages.slice(
       -aiConfig.maxHistoryMessages
     ) as UIMessage[]
+
+    // Only cache single-turn (context-free) requests — multi-turn responses
+    // depend on conversation history and cannot be safely cached by question alone.
+    const isSingleTurn = trimmed.length === 1
+    const lastUserMessage = trimmed.findLast((m) => m.role === 'user')
+    const lastUserText =
+      lastUserMessage?.parts?.find((p) => p.type === 'text')?.text ?? ''
+
+    // Check cache for single-turn questions
+    if (isSingleTurn && lastUserText) {
+      const cached = await getCachedAiResponse(id, lastUserText, currencyCode)
+      if (cached !== null) {
+        logBusinessEvent({
+          event: 'ai_chat_request',
+          details: {
+            productId: id,
+            chatModel: aiConfig.chatModel,
+            messageCount: trimmed.length,
+            cached: true,
+          },
+          success: true,
+        })
+        return NextResponse.json({ text: cached })
+      }
+    }
+
     const messages = await convertToModelMessages(trimmed)
 
     const messageCount = trimmed.length
@@ -105,6 +133,23 @@ export const POST = async (
       details: { productId: id, chatModel: aiConfig.chatModel, messageCount },
       success: true,
     })
+
+    // Cache the final assembled text after streaming completes (single-turn only)
+    if (isSingleTurn && lastUserText) {
+      waitUntil(
+        Promise.resolve(result.text)
+          .then((text) =>
+            setCachedAiResponse(id, lastUserText, currencyCode, text)
+          )
+          .catch((error) =>
+            logError({
+              error,
+              context: 'ai_cache_background_write',
+              additionalInfo: { productId: id },
+            })
+          )
+      )
+    }
 
     return result.toUIMessageStreamResponse()
   } catch (error) {

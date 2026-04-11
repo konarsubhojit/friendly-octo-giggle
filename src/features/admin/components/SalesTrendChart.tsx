@@ -1,6 +1,8 @@
 'use client'
 
-import { area, curveMonotoneX, line, max, scaleLinear, scalePoint } from 'd3'
+import { area, curveMonotoneX, line } from 'd3-shape'
+import { max } from 'd3-array'
+import { scaleLinear, scalePoint } from 'd3-scale'
 import { useId } from 'react'
 import { useCurrency } from '@/contexts/CurrencyContext'
 import type { SalesTrendPoint } from '@/features/admin/services/admin-sales'
