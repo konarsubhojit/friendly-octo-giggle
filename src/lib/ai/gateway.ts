@@ -19,13 +19,25 @@ export const getAiConfigCached = async (): Promise<AiConfig> => {
 
 export const getChatModel = (modelId: string) => gateway.languageModel(modelId)
 
+const getProviderNamespace = (aiConfig: AiConfig): string | undefined => {
+  const explicitNamespace = aiConfig.providerNamespace?.trim()
+  if (explicitNamespace) return explicitNamespace
+
+  const separatorIndex = aiConfig.chatModel.indexOf('/')
+  if (separatorIndex <= 0) return undefined
+
+  return aiConfig.chatModel.slice(0, separatorIndex).trim() || undefined
+}
+
 export const getProviderOptions = (
   aiConfig: AiConfig
 ): Record<string, Record<string, unknown>> | undefined => {
   if (!aiConfig.thinkingLevel || aiConfig.thinkingLevel === 'none')
     return undefined
-  const namespace =
-    aiConfig.providerNamespace ?? aiConfig.chatModel.split('/')[0]
+
+  const namespace = getProviderNamespace(aiConfig)
+  if (!namespace) return undefined
+
   return {
     [namespace]: {
       thinkingConfig: {

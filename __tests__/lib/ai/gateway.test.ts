@@ -155,6 +155,17 @@ describe('lib/ai/gateway', () => {
       })
     })
 
+    it('returns undefined when model ID has no slash and providerNamespace is absent', () => {
+      const { providerNamespace: _ns, ...configWithoutNamespace } = baseAiConfig
+      expect(
+        getProviderOptions({
+          ...configWithoutNamespace,
+          chatModel: 'gpt-4',
+          thinkingLevel: 'medium',
+        })
+      ).toBeUndefined()
+    })
+
     it('defaults includeThoughts to false when absent', () => {
       const { includeThoughts: _it, ...configWithoutInclude } = baseAiConfig
       const result = getProviderOptions({

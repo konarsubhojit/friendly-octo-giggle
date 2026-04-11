@@ -115,6 +115,7 @@ import { db, drizzleDb } from '@/lib/db'
 import { streamText } from 'ai'
 import { logError, logBusinessEvent } from '@/lib/logger'
 import { auth } from '@/lib/auth'
+import { getAiConfigCached, getProviderOptions } from '@/lib/ai/gateway'
 import { POST } from '@/app/api/ai/products/[id]/chat/route'
 
 const mockProduct = {
@@ -145,8 +146,8 @@ const validBody = {
 describe('POST /api/ai/products/[id]/chat', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(auth).mockResolvedValue(null)
-    vi.mocked(drizzleDb.query.users.findFirst).mockResolvedValue(null)
+    vi.mocked(auth).mockResolvedValue(null as never)
+    vi.mocked(drizzleDb.query.users.findFirst).mockResolvedValue(null as never)
     getCachedAiResponseMock.mockResolvedValue(null)
     setCachedAiResponseMock.mockResolvedValue(undefined)
     buildProductContextMock.mockClear()
@@ -154,7 +155,7 @@ describe('POST /api/ai/products/[id]/chat', () => {
 
   it('returns 401 when user is not authenticated', async () => {
     vi.mocked(db.products.findById).mockResolvedValue(mockProduct)
-    vi.mocked(auth).mockResolvedValue(null)
+    vi.mocked(auth).mockResolvedValue(null as never)
 
     const request = new NextRequest(
       'http://localhost/api/ai/products/abc1234/chat',
@@ -217,6 +218,8 @@ describe('POST /api/ai/products/[id]/chat', () => {
     vi.mocked(db.products.findById).mockResolvedValue(mockProduct)
     vi.mocked(auth).mockResolvedValue({ user: { id: 'user-123' } } as never)
     getCachedAiResponseMock.mockResolvedValue(null)
+    const mockProviderOptions = { openai: { thinkingConfig: { thinkingLevel: 'medium', includeThoughts: false } } }
+    vi.mocked(getProviderOptions).mockReturnValue(mockProviderOptions)
 
     const request = new NextRequest(
       'http://localhost/api/ai/products/abc1234/chat',
@@ -231,12 +234,17 @@ describe('POST /api/ai/products/[id]/chat', () => {
     })
 
     expect(response.status).toBe(200)
+
+    const fetchedAiConfig = await vi.mocked(getAiConfigCached).mock.results[0].value
+    expect(getProviderOptions).toHaveBeenCalledWith(fetchedAiConfig)
+
     expect(streamText).toHaveBeenCalledWith(
       expect.objectContaining({
         system: expect.stringContaining('context-price'),
         messages: validBody.messages,
         maxOutputTokens: 512,
         abortSignal: expect.anything(),
+        providerOptions: mockProviderOptions,
       })
     )
     expect(buildProductContextMock).toHaveBeenCalledWith(
