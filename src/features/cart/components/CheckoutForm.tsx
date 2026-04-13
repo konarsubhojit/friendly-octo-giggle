@@ -8,25 +8,25 @@ import { selectCart } from '@/features/cart/store/cartSlice'
 import { GradientButton } from '@/components/ui/GradientButton'
 import { buildCheckoutSummaryLineItems } from '@/features/orders/services/order-summary'
 import { formatStructuredAddress } from '@/lib/address-utils'
+import { AddressFormField } from './AddressFormField'
+import { PincodeField } from './PincodeField'
 import toast from 'react-hot-toast'
 
 const PENDING_CHECKOUT_KEY = 'pending_checkout'
 const PINCODE_REGEX = /^\d{6}$/
 
-type IndiaPincodeModule = typeof import('india-pincode/browser')
-type IndiaPincodeInstance = Awaited<
-  ReturnType<IndiaPincodeModule['getIndiaPincode']>
->
+interface PincodeLookupResponse {
+  success: boolean
+  data?: { city: string; state: string }
+}
 
-let cachedPincodeInstance: Promise<IndiaPincodeInstance> | null = null
-
-const getPincodeInstance = (): Promise<IndiaPincodeInstance> => {
-  if (!cachedPincodeInstance) {
-    cachedPincodeInstance = import('india-pincode/browser').then((mod) =>
-      mod.getIndiaPincode()
-    )
-  }
-  return cachedPincodeInstance
+const lookupPincode = async (
+  code: string
+): Promise<{ city: string; state: string } | null> => {
+  const res = await fetch(`/api/pincode/${code}`)
+  if (!res.ok) return null
+  const json: PincodeLookupResponse = await res.json()
+  return json.success && json.data ? json.data : null
 }
 
 interface AddressFields {
@@ -54,6 +54,34 @@ const INPUT_CLASS =
 
 const READONLY_CLASS =
   'w-full px-3 py-2 border border-[var(--border-warm)] rounded-xl text-sm text-[var(--foreground)] bg-[var(--surface-muted)]/60 cursor-not-allowed transition-colors'
+
+const validateAddress = (address: AddressFields): AddressErrors => {
+  const newErrors: AddressErrors = {}
+
+  if (!address.addressLine1.trim()) {
+    newErrors.addressLine1 = 'Address Line 1 is required'
+  }
+  if (!PINCODE_REGEX.test(address.pinCode)) {
+    newErrors.pinCode = 'Pin code must be exactly 6 digits'
+  }
+  if (!address.city.trim()) {
+    newErrors.city = 'City is required'
+  }
+  if (!address.state.trim()) {
+    newErrors.state = 'State is required'
+  }
+
+  return newErrors
+}
+
+const trimAddress = (address: AddressFields): AddressFields => ({
+  addressLine1: address.addressLine1.trim(),
+  addressLine2: address.addressLine2.trim(),
+  addressLine3: address.addressLine3.trim(),
+  pinCode: address.pinCode.trim(),
+  city: address.city.trim(),
+  state: address.state.trim(),
+})
 
 export const CheckoutForm = ({ customizationNotes }: CheckoutFormProps) => {
   const router = useRouter()
@@ -96,6 +124,12 @@ export const CheckoutForm = ({ customizationNotes }: CheckoutFormProps) => {
     []
   )
 
+  const applyPincodeResult = useCallback((city: string, state: string) => {
+    setAddress((prev) => ({ ...prev, city, state }))
+    setPincodeAutoFilled(true)
+    setErrors((prev) => ({ ...prev, city: undefined, state: undefined }))
+  }, [])
+
   const handlePincodeChange = useCallback(
     async (value: string) => {
       latestPincodeRef.current = value
@@ -113,24 +147,12 @@ export const CheckoutForm = ({ customizationNotes }: CheckoutFormProps) => {
 
       setPincodeLoading(true)
       try {
-        const instance = await getPincodeInstance()
+        const result = await lookupPincode(value)
 
         if (latestPincodeRef.current !== value) return
 
-        const result = instance.getPincodeSummary(value)
-
-        if (latestPincodeRef.current !== value) return
-
-        if (result.success && result.data) {
-          const district = result.data.district
-          const stateName = result.data.state
-          setAddress((prev) => ({
-            ...prev,
-            city: district,
-            state: stateName,
-          }))
-          setPincodeAutoFilled(true)
-          setErrors((prev) => ({ ...prev, city: undefined, state: undefined }))
+        if (result) {
+          applyPincodeResult(result.city, result.state)
         } else {
           setPincodeNotice(
             'Could not find location for this pin code. Please enter city and state manually.'
@@ -146,31 +168,8 @@ export const CheckoutForm = ({ customizationNotes }: CheckoutFormProps) => {
         setPincodeLoading(false)
       }
     },
-    [pincodeAutoFilled, updateField]
+    [pincodeAutoFilled, updateField, applyPincodeResult]
   )
-
-  const validateForm = useCallback((): boolean => {
-    const newErrors: AddressErrors = {}
-
-    if (!address.addressLine1.trim()) {
-      newErrors.addressLine1 = 'Address Line 1 is required'
-    }
-
-    if (!PINCODE_REGEX.test(address.pinCode)) {
-      newErrors.pinCode = 'Pin code must be exactly 6 digits'
-    }
-
-    if (!address.city.trim()) {
-      newErrors.city = 'City is required'
-    }
-
-    if (!address.state.trim()) {
-      newErrors.state = 'State is required'
-    }
-
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }, [address])
 
   const handleSubmit: NonNullable<React.ComponentProps<'form'>['onSubmit']> = (
     e
@@ -182,7 +181,9 @@ export const CheckoutForm = ({ customizationNotes }: CheckoutFormProps) => {
       return
     }
 
-    if (!validateForm()) {
+    const validationErrors = validateAddress(address)
+    setErrors(validationErrors)
+    if (Object.keys(validationErrors).length > 0) {
       return
     }
 
@@ -191,19 +192,10 @@ export const CheckoutForm = ({ customizationNotes }: CheckoutFormProps) => {
       return
     }
 
-    const trimmed = {
-      addressLine1: address.addressLine1.trim(),
-      addressLine2: address.addressLine2.trim(),
-      addressLine3: address.addressLine3.trim(),
-      pinCode: address.pinCode.trim(),
-      city: address.city.trim(),
-      state: address.state.trim(),
-    }
-
     try {
       sessionStorage.setItem(
         PENDING_CHECKOUT_KEY,
-        JSON.stringify({ ...trimmed, customizationNotes })
+        JSON.stringify({ ...trimAddress(address), customizationNotes })
       )
     } catch {
       toast.error('Unable to proceed. Please try again.')
@@ -220,6 +212,8 @@ export const CheckoutForm = ({ customizationNotes }: CheckoutFormProps) => {
       })
     : null
 
+  const cityStateClass = pincodeAutoFilled ? READONLY_CLASS : INPUT_CLASS
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4" noValidate>
       <fieldset className="space-y-3">
@@ -227,171 +221,75 @@ export const CheckoutForm = ({ customizationNotes }: CheckoutFormProps) => {
           Shipping Address
         </legend>
 
-        <div>
-          <label
-            htmlFor="checkout-address-line1"
-            className="block text-xs font-medium text-[var(--text-secondary)] mb-1"
-          >
-            Address Line 1 <span className="text-red-400">*</span>
-          </label>
-          <input
-            id="checkout-address-line1"
-            type="text"
-            value={address.addressLine1}
-            onChange={(e) => updateField('addressLine1', e.target.value)}
-            placeholder="Street address, house number"
-            maxLength={200}
-            aria-describedby={
-              errors.addressLine1 ? 'address-line1-error' : undefined
-            }
-            aria-invalid={!!errors.addressLine1}
-            className={INPUT_CLASS}
-          />
-          {errors.addressLine1 && (
-            <p
-              id="address-line1-error"
-              className="mt-1 text-xs text-red-500"
-              role="alert"
-            >
-              {errors.addressLine1}
-            </p>
-          )}
-        </div>
+        <AddressFormField
+          id="checkout-address-line1"
+          label="Address Line 1"
+          value={address.addressLine1}
+          onChange={(v) => updateField('addressLine1', v)}
+          placeholder="Street address, house number"
+          maxLength={200}
+          required
+          error={errors.addressLine1}
+          errorId="address-line1-error"
+          inputClassName={INPUT_CLASS}
+        />
 
-        <div>
-          <label
-            htmlFor="checkout-address-line2"
-            className="block text-xs font-medium text-[var(--text-secondary)] mb-1"
-          >
-            Address Line 2
-          </label>
-          <input
-            id="checkout-address-line2"
-            type="text"
-            value={address.addressLine2}
-            onChange={(e) => updateField('addressLine2', e.target.value)}
-            placeholder="Apartment, suite, floor (optional)"
-            maxLength={200}
-            className={INPUT_CLASS}
-          />
-        </div>
+        <AddressFormField
+          id="checkout-address-line2"
+          label="Address Line 2"
+          value={address.addressLine2}
+          onChange={(v) => updateField('addressLine2', v)}
+          placeholder="Apartment, suite, floor (optional)"
+          maxLength={200}
+          inputClassName={INPUT_CLASS}
+        />
 
-        <div>
-          <label
-            htmlFor="checkout-address-line3"
-            className="block text-xs font-medium text-[var(--text-secondary)] mb-1"
-          >
-            Address Line 3
-          </label>
-          <input
-            id="checkout-address-line3"
-            type="text"
-            value={address.addressLine3}
-            onChange={(e) => updateField('addressLine3', e.target.value)}
-            placeholder="Landmark, area (optional)"
-            maxLength={200}
-            className={INPUT_CLASS}
-          />
-        </div>
+        <AddressFormField
+          id="checkout-address-line3"
+          label="Address Line 3"
+          value={address.addressLine3}
+          onChange={(v) => updateField('addressLine3', v)}
+          placeholder="Landmark, area (optional)"
+          maxLength={200}
+          inputClassName={INPUT_CLASS}
+        />
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div>
-            <label
-              htmlFor="checkout-pincode"
-              className="block text-xs font-medium text-[var(--text-secondary)] mb-1"
-            >
-              Pin Code <span className="text-red-400">*</span>
-            </label>
-            <div className="relative">
-              <input
-                id="checkout-pincode"
-                type="text"
-                inputMode="numeric"
-                value={address.pinCode}
-                onChange={(e) => handlePincodeChange(e.target.value)}
-                placeholder="6-digit pin code"
-                maxLength={6}
-                aria-describedby={errors.pinCode ? 'pincode-error' : undefined}
-                aria-invalid={!!errors.pinCode}
-                className={INPUT_CLASS}
-              />
-              {pincodeLoading && (
-                <span
-                  className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin rounded-full border-2 border-[var(--accent-warm)] border-t-transparent"
-                  aria-label="Looking up pin code"
-                />
-              )}
-            </div>
-            {errors.pinCode && (
-              <p
-                id="pincode-error"
-                className="mt-1 text-xs text-red-500"
-                role="alert"
-              >
-                {errors.pinCode}
-              </p>
-            )}
-          </div>
+          <PincodeField
+            value={address.pinCode}
+            onChange={handlePincodeChange}
+            loading={pincodeLoading}
+            error={errors.pinCode}
+            inputClassName={INPUT_CLASS}
+          />
 
-          <div>
-            <label
-              htmlFor="checkout-city"
-              className="block text-xs font-medium text-[var(--text-secondary)] mb-1"
-            >
-              City <span className="text-red-400">*</span>
-            </label>
-            <input
-              id="checkout-city"
-              type="text"
-              value={address.city}
-              onChange={(e) => updateField('city', e.target.value)}
-              placeholder="City / District"
-              maxLength={100}
-              readOnly={pincodeAutoFilled}
-              aria-describedby={errors.city ? 'city-error' : undefined}
-              aria-invalid={!!errors.city}
-              className={pincodeAutoFilled ? READONLY_CLASS : INPUT_CLASS}
-            />
-            {errors.city && (
-              <p
-                id="city-error"
-                className="mt-1 text-xs text-red-500"
-                role="alert"
-              >
-                {errors.city}
-              </p>
-            )}
-          </div>
+          <AddressFormField
+            id="checkout-city"
+            label="City"
+            value={address.city}
+            onChange={(v) => updateField('city', v)}
+            placeholder="City / District"
+            maxLength={100}
+            required
+            readOnly={pincodeAutoFilled}
+            error={errors.city}
+            errorId="city-error"
+            inputClassName={cityStateClass}
+          />
 
-          <div>
-            <label
-              htmlFor="checkout-state"
-              className="block text-xs font-medium text-[var(--text-secondary)] mb-1"
-            >
-              State <span className="text-red-400">*</span>
-            </label>
-            <input
-              id="checkout-state"
-              type="text"
-              value={address.state}
-              onChange={(e) => updateField('state', e.target.value)}
-              placeholder="State"
-              maxLength={100}
-              readOnly={pincodeAutoFilled}
-              aria-describedby={errors.state ? 'state-error' : undefined}
-              aria-invalid={!!errors.state}
-              className={pincodeAutoFilled ? READONLY_CLASS : INPUT_CLASS}
-            />
-            {errors.state && (
-              <p
-                id="state-error"
-                className="mt-1 text-xs text-red-500"
-                role="alert"
-              >
-                {errors.state}
-              </p>
-            )}
-          </div>
+          <AddressFormField
+            id="checkout-state"
+            label="State"
+            value={address.state}
+            onChange={(v) => updateField('state', v)}
+            placeholder="State"
+            maxLength={100}
+            required
+            readOnly={pincodeAutoFilled}
+            error={errors.state}
+            errorId="state-error"
+            inputClassName={cityStateClass}
+          />
         </div>
 
         {pincodeNotice && (

@@ -13,27 +13,16 @@ export const formatStructuredAddress = (entity: AddressableEntity): string => {
     return entity.customerAddress
   }
 
-  const lines: string[] = [entity.addressLine1]
+  const cityPinParts = [entity.city, entity.pinCode].filter(Boolean)
+  const cityPin = cityPinParts.length > 0 ? cityPinParts.join(' - ') : null
 
-  if (entity.addressLine2) {
-    lines.push(entity.addressLine2)
-  }
-
-  if (entity.addressLine3) {
-    lines.push(entity.addressLine3)
-  }
-
-  if (entity.city && entity.pinCode) {
-    lines.push(`${entity.city} - ${entity.pinCode}`)
-  } else if (entity.city) {
-    lines.push(entity.city)
-  } else if (entity.pinCode) {
-    lines.push(entity.pinCode)
-  }
-
-  if (entity.state) {
-    lines.push(entity.state)
-  }
-
-  return lines.join('\n')
+  return [
+    entity.addressLine1,
+    entity.addressLine2,
+    entity.addressLine3,
+    cityPin,
+    entity.state,
+  ]
+    .filter(Boolean)
+    .join('\n')
 }

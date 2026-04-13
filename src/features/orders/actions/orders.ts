@@ -295,35 +295,45 @@ const getUserOrdersFromRedis = async (
 const calculateOrderTotal = (items: CreateOrderActionInput['items']) =>
   items.reduce((sum, item) => sum + item.price * item.quantity, 0)
 
+const resolveOrderAddress = (input: CreateOrderActionInput) => {
+  const customerAddress =
+    input.customerAddress ||
+    formatStructuredAddress({
+      customerAddress: '',
+      addressLine1: input.addressLine1,
+      addressLine2: input.addressLine2,
+      addressLine3: input.addressLine3,
+      pinCode: input.pinCode,
+      city: input.city,
+      state: input.state,
+    })
+
+  return {
+    customerAddress,
+    addressLine1: input.addressLine1 || null,
+    addressLine2: input.addressLine2 || null,
+    addressLine3: input.addressLine3 || null,
+    pinCode: input.pinCode || null,
+    city: input.city || null,
+    state: input.state || null,
+  }
+}
+
 const insertOrderRecords = async (
   userId: string,
   orderId: string,
   input: CreateOrderActionInput,
   total: number
 ) => {
+  const address = resolveOrderAddress(input)
+
   await drizzleDb.transaction(async (tx) => {
     await tx.insert(orders).values({
       id: orderId,
       userId,
       customerName: input.customerName,
       customerEmail: input.customerEmail,
-      customerAddress:
-        input.customerAddress ||
-        formatStructuredAddress({
-          customerAddress: '',
-          addressLine1: input.addressLine1,
-          addressLine2: input.addressLine2,
-          addressLine3: input.addressLine3,
-          pinCode: input.pinCode,
-          city: input.city,
-          state: input.state,
-        }),
-      addressLine1: input.addressLine1 || null,
-      addressLine2: input.addressLine2 || null,
-      addressLine3: input.addressLine3 || null,
-      pinCode: input.pinCode || null,
-      city: input.city || null,
-      state: input.state || null,
+      ...address,
       totalAmount: total,
       status: 'PENDING',
       updatedAt: new Date(),
@@ -394,23 +404,7 @@ const buildOrderSummary = ({
   userId,
   customerName: input.customerName,
   customerEmail: input.customerEmail,
-  customerAddress:
-    input.customerAddress ||
-    formatStructuredAddress({
-      customerAddress: '',
-      addressLine1: input.addressLine1,
-      addressLine2: input.addressLine2,
-      addressLine3: input.addressLine3,
-      pinCode: input.pinCode,
-      city: input.city,
-      state: input.state,
-    }),
-  addressLine1: input.addressLine1 || null,
-  addressLine2: input.addressLine2 || null,
-  addressLine3: input.addressLine3 || null,
-  pinCode: input.pinCode || null,
-  city: input.city || null,
-  state: input.state || null,
+  ...resolveOrderAddress(input),
   total,
   status: 'PENDING',
   items: input.items,

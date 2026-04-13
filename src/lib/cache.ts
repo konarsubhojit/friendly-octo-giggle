@@ -54,6 +54,8 @@ export const CACHE_KEYS = {
   EXCHANGE_RATES_BY_DATE: (date: string) => `exchange-rates:${date}`,
   // Product shares (immutable token → productId + variationId mapping)
   SHARE_RESOLVE_BY_KEY: (key: string) => `share:${key}`,
+  // Pincode → city/state lookup (practically immutable)
+  PINCODE_LOOKUP: (code: string) => `pincode:${code}`,
 } as const
 
 // Cache TTL configuration (in seconds)
@@ -85,6 +87,8 @@ export const CACHE_TTL = {
   ADMIN_SALES_STALE: 60,
   // Share resolution: immutable once created — cache for 1 year with no stale window
   SHARE_RESOLVE: 31536000, // 1 year in seconds
+  // Pincode lookup: geographic boundaries rarely change — cache for 1 year
+  PINCODE_LOOKUP: 31536000, // 1 year in seconds
 } as const
 
 /**
