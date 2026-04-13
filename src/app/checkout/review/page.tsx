@@ -6,6 +6,7 @@ import { useSession } from 'next-auth/react'
 import { useSelector, useDispatch } from 'react-redux'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
+import { formatStructuredAddress } from '@/lib/address-utils'
 import {
   clearCart,
   selectCart,
@@ -39,7 +40,12 @@ const CHECKOUT_POLL_MAX_ATTEMPTS = 40
 const PENDING_CHECKOUT_KEY = 'pending_checkout'
 
 interface PendingCheckout {
-  address: string
+  addressLine1: string
+  addressLine2: string
+  addressLine3: string
+  pinCode: string
+  city: string
+  state: string
   customizationNotes: Record<string, string>
 }
 
@@ -169,7 +175,12 @@ export default function CheckoutReviewPage() {
           {
             customerName: sessionUser.name ?? 'Customer',
             customerEmail: sessionUser.email,
-            customerAddress: pendingCheckout.address.trim(),
+            addressLine1: pendingCheckout.addressLine1.trim(),
+            addressLine2: pendingCheckout.addressLine2.trim(),
+            addressLine3: pendingCheckout.addressLine3.trim(),
+            pinCode: pendingCheckout.pinCode.trim(),
+            city: pendingCheckout.city.trim(),
+            state: pendingCheckout.state.trim(),
             items: cartItems.map((item) => ({
               productId: item.productId,
               variationId: item.variationId ?? undefined,
@@ -231,7 +242,17 @@ export default function CheckoutReviewPage() {
               Shipping Address
             </h2>
             <p className="whitespace-pre-wrap text-sm text-[var(--text-secondary)]">
-              {pendingCheckout?.address}
+              {pendingCheckout
+                ? formatStructuredAddress({
+                    customerAddress: '',
+                    addressLine1: pendingCheckout.addressLine1,
+                    addressLine2: pendingCheckout.addressLine2,
+                    addressLine3: pendingCheckout.addressLine3,
+                    pinCode: pendingCheckout.pinCode,
+                    city: pendingCheckout.city,
+                    state: pendingCheckout.state,
+                  })
+                : ''}
             </p>
             <Link
               href="/cart"

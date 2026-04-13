@@ -15,6 +15,10 @@ export const ORDER_SEARCH_SCHEMA = s.object({
   customerName: s.string(),
   customerEmail: s.string(),
   customerAddress: s.string(),
+  addressLine1: s.string(),
+  city: s.string(),
+  state: s.string(),
+  pinCode: s.string().noTokenize(),
   status: s.keyword(),
   userId: s.string().noTokenize(),
   total: s.string().noTokenize(),
@@ -28,6 +32,12 @@ interface BackfillableOrder {
   readonly customerName: string
   readonly customerEmail: string
   readonly customerAddress: string
+  readonly addressLine1?: string | null
+  readonly addressLine2?: string | null
+  readonly addressLine3?: string | null
+  readonly pinCode?: string | null
+  readonly city?: string | null
+  readonly state?: string | null
   readonly totalAmount: number
   readonly status: string
   readonly createdAt: Date
@@ -137,6 +147,10 @@ export async function backfillOrdersSearchIndex(): Promise<number> {
         customerName: order.customerName,
         customerEmail: order.customerEmail,
         customerAddress: order.customerAddress,
+        addressLine1: order.addressLine1 ?? '',
+        city: order.city ?? '',
+        state: order.state ?? '',
+        pinCode: order.pinCode ?? '',
         items: JSON.stringify(
           order.items.map((item) => ({
             productId: item.productId,

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import type { ChangeEvent } from 'react'
 import { OrderStatus } from '@/lib/types'
 import { Badge, orderStatusVariant } from '@/components/ui/Badge'
+import { formatStructuredAddress } from '@/lib/address-utils'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import {
@@ -25,6 +26,12 @@ interface AdminOrder {
   customerName: string
   customerEmail: string
   customerAddress: string
+  addressLine1?: string | null
+  addressLine2?: string | null
+  addressLine3?: string | null
+  pinCode?: string | null
+  city?: string | null
+  state?: string | null
   totalAmount: number
   status: string
   trackingNumber?: string | null
@@ -320,8 +327,8 @@ export function AdminOrderCard({
               <h4 className="mb-1 text-sm font-semibold text-gray-700 dark:text-gray-300">
                 Shipping Address
               </h4>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                {order.customerAddress}
+              <p className="whitespace-pre-line text-sm text-gray-600 dark:text-gray-400">
+                {formatStructuredAddress(order)}
               </p>
             </div>
           </div>

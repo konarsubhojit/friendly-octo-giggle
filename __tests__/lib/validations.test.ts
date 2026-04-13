@@ -203,7 +203,12 @@ describe('CreateOrderSchema', () => {
   const validOrder = {
     customerName: 'John Doe',
     customerEmail: 'john@example.com',
-    customerAddress: '123 Main Street, Anytown, USA 12345',
+    addressLine1: '123 Main Street',
+    addressLine2: 'Apt 4B',
+    addressLine3: '',
+    pinCode: '110001',
+    city: 'New Delhi',
+    state: 'Delhi',
     items: [{ productId: validShortId, quantity: 1, price: 29.99 }],
   }
 
@@ -224,9 +229,15 @@ describe('CreateOrderSchema', () => {
     ).toThrow()
   })
 
-  it('rejects short address', () => {
+  it('rejects invalid pincode', () => {
     expect(() =>
-      CreateOrderSchema.parse({ ...validOrder, customerAddress: 'short' })
+      CreateOrderSchema.parse({ ...validOrder, pinCode: '12345' })
+    ).toThrow()
+  })
+
+  it('rejects empty address line 1', () => {
+    expect(() =>
+      CreateOrderSchema.parse({ ...validOrder, addressLine1: '' })
     ).toThrow()
   })
 

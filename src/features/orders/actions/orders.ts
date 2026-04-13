@@ -11,6 +11,7 @@ import { drizzleDb } from '@/lib/db'
 import { orders, orderItems, products } from '@/lib/schema'
 import { eq, desc, inArray } from 'drizzle-orm'
 import { getRedisClient, invalidateCache } from '@/lib/redis'
+import { formatStructuredAddress } from '@/lib/address-utils'
 import { generateOrderId } from '@/lib/short-id'
 import { logError, logBusinessEvent } from '@/lib/logger'
 import { OrderStatusEnum } from '@/features/orders/validations'
@@ -36,6 +37,12 @@ export interface OrderSummary {
   customerName: string
   customerEmail: string
   customerAddress: string
+  addressLine1?: string | null
+  addressLine2?: string | null
+  addressLine3?: string | null
+  pinCode?: string | null
+  city?: string | null
+  state?: string | null
   total: number
   status: string
   items: OrderItemRecord[]
@@ -54,7 +61,13 @@ const OrderItemInputSchema = z.object({
 const CreateOrderActionSchema = z.object({
   customerName: z.string().min(1).max(200),
   customerEmail: z.email({ message: 'Invalid email address' }),
-  customerAddress: z.string().min(10).max(500),
+  customerAddress: z.string().max(500).optional().default(''),
+  addressLine1: z.string().trim().min(1).max(200),
+  addressLine2: z.string().trim().max(200).optional().default(''),
+  addressLine3: z.string().trim().max(200).optional().default(''),
+  pinCode: z.string().regex(/^\d{6}$/),
+  city: z.string().trim().min(1).max(100),
+  state: z.string().trim().min(1).max(100),
   items: z.array(OrderItemInputSchema).min(1),
 })
 
@@ -75,6 +88,12 @@ export const writeOrderToRedis = async (order: OrderSummary): Promise<void> => {
       customerName: order.customerName,
       customerEmail: order.customerEmail,
       customerAddress: order.customerAddress,
+      addressLine1: order.addressLine1 ?? '',
+      addressLine2: order.addressLine2 ?? '',
+      addressLine3: order.addressLine3 ?? '',
+      pinCode: order.pinCode ?? '',
+      city: order.city ?? '',
+      state: order.state ?? '',
       items: JSON.stringify(order.items),
       total: String(order.total),
       status: order.status,
@@ -102,6 +121,12 @@ const parseRedisHash = (hash: Record<string, unknown>): OrderSummary | null => {
     customerName: (hash.customerName as string) ?? '',
     customerEmail: (hash.customerEmail as string) ?? '',
     customerAddress: (hash.customerAddress as string) ?? '',
+    addressLine1: (hash.addressLine1 as string) || null,
+    addressLine2: (hash.addressLine2 as string) || null,
+    addressLine3: (hash.addressLine3 as string) || null,
+    pinCode: (hash.pinCode as string) || null,
+    city: (hash.city as string) || null,
+    state: (hash.state as string) || null,
     total: Number(hash.total ?? 0),
     status: (hash.status as string) ?? 'PENDING',
     items: JSON.parse((hash.items as string) ?? '[]') as OrderItemRecord[],
@@ -115,6 +140,12 @@ interface OrderWithItemsRow {
   readonly customerName: string
   readonly customerEmail: string
   readonly customerAddress: string
+  readonly addressLine1: string | null
+  readonly addressLine2: string | null
+  readonly addressLine3: string | null
+  readonly pinCode: string | null
+  readonly city: string | null
+  readonly state: string | null
   readonly totalAmount: number
   readonly status: string
   readonly createdAt: Date
@@ -133,6 +164,12 @@ const mapOrderRowToSummary = (row: OrderWithItemsRow): OrderSummary => ({
   customerName: row.customerName,
   customerEmail: row.customerEmail,
   customerAddress: row.customerAddress,
+  addressLine1: row.addressLine1,
+  addressLine2: row.addressLine2,
+  addressLine3: row.addressLine3,
+  pinCode: row.pinCode,
+  city: row.city,
+  state: row.state,
   total: row.totalAmount,
   status: row.status,
   items: row.items.map((item) => ({
@@ -261,26 +298,37 @@ const calculateOrderTotal = (items: CreateOrderActionInput['items']) =>
 const insertOrderRecords = async (
   userId: string,
   orderId: string,
-  customerName: string,
-  customerEmail: string,
-  customerAddress: string,
-  items: CreateOrderActionInput['items'],
+  input: CreateOrderActionInput,
   total: number
 ) => {
   await drizzleDb.transaction(async (tx) => {
     await tx.insert(orders).values({
       id: orderId,
       userId,
-      customerName,
-      customerEmail,
-      customerAddress,
+      customerName: input.customerName,
+      customerEmail: input.customerEmail,
+      customerAddress: input.customerAddress || formatStructuredAddress({
+        customerAddress: '',
+        addressLine1: input.addressLine1,
+        addressLine2: input.addressLine2,
+        addressLine3: input.addressLine3,
+        pinCode: input.pinCode,
+        city: input.city,
+        state: input.state,
+      }),
+      addressLine1: input.addressLine1 || null,
+      addressLine2: input.addressLine2 || null,
+      addressLine3: input.addressLine3 || null,
+      pinCode: input.pinCode || null,
+      city: input.city || null,
+      state: input.state || null,
       totalAmount: total,
       status: 'PENDING',
       updatedAt: new Date(),
     })
 
     await tx.insert(orderItems).values(
-      items.map((item) => ({
+      input.items.map((item) => ({
         orderId,
         productId: item.productId,
         variationId: item.variationId ?? null,
@@ -328,32 +376,40 @@ const buildProductNamesString = async (
 const buildOrderSummary = ({
   orderId,
   userId,
-  customerName,
-  customerEmail,
-  customerAddress,
+  input,
   total,
-  items,
   createdAt,
   productNames,
 }: {
   orderId: string
   userId: string
-  customerName: string
-  customerEmail: string
-  customerAddress: string
+  input: CreateOrderActionInput
   total: number
-  items: CreateOrderActionInput['items']
   createdAt: string
   productNames: string
 }): OrderSummary => ({
   id: orderId,
   userId,
-  customerName,
-  customerEmail,
-  customerAddress,
+  customerName: input.customerName,
+  customerEmail: input.customerEmail,
+  customerAddress: input.customerAddress || formatStructuredAddress({
+    customerAddress: '',
+    addressLine1: input.addressLine1,
+    addressLine2: input.addressLine2,
+    addressLine3: input.addressLine3,
+    pinCode: input.pinCode,
+    city: input.city,
+    state: input.state,
+  }),
+  addressLine1: input.addressLine1 || null,
+  addressLine2: input.addressLine2 || null,
+  addressLine3: input.addressLine3 || null,
+  pinCode: input.pinCode || null,
+  city: input.city || null,
+  state: input.state || null,
   total,
   status: 'PENDING',
-  items,
+  items: input.items,
   createdAt,
   productNames,
 })
@@ -381,22 +437,13 @@ export const createOrder = async (
     }
   }
 
-  const { customerName, customerEmail, customerAddress, items } =
-    parseResult.data
-  const total = calculateOrderTotal(items)
+  const validated = parseResult.data
+  const total = calculateOrderTotal(validated.items)
   const orderId = generateOrderId()
   const createdAt = new Date().toISOString()
 
   try {
-    await insertOrderRecords(
-      userId,
-      orderId,
-      customerName,
-      customerEmail,
-      customerAddress,
-      items,
-      total
-    )
+    await insertOrderRecords(userId, orderId, validated, total)
   } catch (error) {
     logError({
       error,
@@ -406,15 +453,12 @@ export const createOrder = async (
     return { success: false, error: 'Failed to create order' }
   }
 
-  const productNamesStr = await buildProductNamesString(items)
+  const productNamesStr = await buildProductNamesString(validated.items)
   const orderSummary = buildOrderSummary({
     orderId,
     userId,
-    customerName,
-    customerEmail,
-    customerAddress,
+    input: validated,
     total,
-    items,
     createdAt,
     productNames: productNamesStr,
   })
@@ -427,7 +471,7 @@ export const createOrder = async (
     success: true,
   })
 
-  waitUntil(invalidateOrderCaches(userId, items))
+  waitUntil(invalidateOrderCaches(userId, validated.items))
 
   return { success: true, data: { orderId } }
 }

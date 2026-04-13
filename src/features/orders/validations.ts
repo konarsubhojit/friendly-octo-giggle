@@ -1,7 +1,36 @@
 import { z } from 'zod'
 import { SHORT_ID_REGEX, EMAIL_REGEX } from '@/lib/validations/primitives'
 
-// ─── Order Validation Schemas ─────────────────────────────
+export const StructuredAddressSchema = z.object({
+  addressLine1: z
+    .string()
+    .trim()
+    .min(1, 'Address Line 1 is required')
+    .max(200, 'Address Line 1 must be under 200 characters'),
+  addressLine2: z
+    .string()
+    .trim()
+    .max(200, 'Address Line 2 must be under 200 characters')
+    .optional()
+    .default(''),
+  addressLine3: z
+    .string()
+    .trim()
+    .max(200, 'Address Line 3 must be under 200 characters')
+    .optional()
+    .default(''),
+  pinCode: z.string().regex(/^\d{6}$/, 'Pin code must be exactly 6 digits'),
+  city: z
+    .string()
+    .trim()
+    .min(1, 'City is required')
+    .max(100, 'City must be under 100 characters'),
+  state: z
+    .string()
+    .trim()
+    .min(1, 'State is required')
+    .max(100, 'State must be under 100 characters'),
+})
 
 export const OrderStatusEnum = z.enum([
   'PENDING',
@@ -31,10 +60,7 @@ export const OrderItemSchema = z.object({
 export const CreateOrderSchema = z.object({
   customerName: z.string().min(1, 'Name is required').max(200),
   customerEmail: z.string().regex(EMAIL_REGEX, 'Invalid email address'),
-  customerAddress: z
-    .string()
-    .min(10, 'Address must be at least 10 characters')
-    .max(500),
+  ...StructuredAddressSchema.shape,
   items: z.array(OrderItemSchema).min(1, 'At least one item is required'),
 })
 

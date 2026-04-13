@@ -77,7 +77,7 @@ const mockCart = {
   ],
 }
 
-function renderCheckoutForm() {
+const renderCheckoutForm = () => {
   const store = configureStore({
     reducer: {
       cart: cartReducer,
@@ -101,6 +101,21 @@ function renderCheckoutForm() {
   )
 }
 
+const fillStructuredAddress = () => {
+  fireEvent.change(screen.getByLabelText(/address line 1/i), {
+    target: { value: '42 MG Road' },
+  })
+  fireEvent.change(screen.getByLabelText(/pin code/i), {
+    target: { value: '560001' },
+  })
+  fireEvent.change(screen.getByLabelText(/city/i), {
+    target: { value: 'Bengaluru' },
+  })
+  fireEvent.change(screen.getByLabelText(/state/i), {
+    target: { value: 'Karnataka' },
+  })
+}
+
 describe('CheckoutForm', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -116,7 +131,6 @@ describe('CheckoutForm', () => {
       status: 'authenticated',
       update: vi.fn(),
     })
-    // Provide a basic sessionStorage mock
     vi.stubGlobal('sessionStorage', {
       setItem: vi.fn(),
       getItem: vi.fn(),
@@ -124,12 +138,21 @@ describe('CheckoutForm', () => {
     })
   })
 
-  it('navigates to review page with valid address', () => {
+  it('renders all structured address fields', () => {
     renderCheckoutForm()
 
-    fireEvent.change(screen.getByLabelText(/shipping address/i), {
-      target: { value: '42 MG Road, Bengaluru, Karnataka 560001' },
-    })
+    expect(screen.getByLabelText(/address line 1/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/address line 2/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/address line 3/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/pin code/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/city/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/state/i)).toBeInTheDocument()
+  })
+
+  it('navigates to review page with valid structured address', () => {
+    renderCheckoutForm()
+    fillStructuredAddress()
+
     fireEvent.click(
       screen.getByRole('button', { name: /review.*place order/i })
     )
@@ -141,17 +164,50 @@ describe('CheckoutForm', () => {
     expect(mockPush).toHaveBeenCalledWith('/checkout/review')
   })
 
-  it('shows address error when address is too short', () => {
+  it('shows error when address line 1 is empty', () => {
     renderCheckoutForm()
 
-    fireEvent.change(screen.getByLabelText(/shipping address/i), {
-      target: { value: 'Short' },
+    fireEvent.change(screen.getByLabelText(/pin code/i), {
+      target: { value: '560001' },
     })
+    fireEvent.change(screen.getByLabelText(/city/i), {
+      target: { value: 'Bengaluru' },
+    })
+    fireEvent.change(screen.getByLabelText(/state/i), {
+      target: { value: 'Karnataka' },
+    })
+
     fireEvent.click(
       screen.getByRole('button', { name: /review.*place order/i })
     )
 
-    expect(screen.getByRole('alert')).toBeInTheDocument()
+    expect(screen.getByText(/address line 1 is required/i)).toBeInTheDocument()
+    expect(mockPush).not.toHaveBeenCalledWith('/checkout/review')
+  })
+
+  it('shows error when pin code is invalid', () => {
+    renderCheckoutForm()
+
+    fireEvent.change(screen.getByLabelText(/address line 1/i), {
+      target: { value: '42 MG Road' },
+    })
+    fireEvent.change(screen.getByLabelText(/pin code/i), {
+      target: { value: '12345' },
+    })
+    fireEvent.change(screen.getByLabelText(/city/i), {
+      target: { value: 'Bengaluru' },
+    })
+    fireEvent.change(screen.getByLabelText(/state/i), {
+      target: { value: 'Karnataka' },
+    })
+
+    fireEvent.click(
+      screen.getByRole('button', { name: /review.*place order/i })
+    )
+
+    expect(
+      screen.getByText(/pin code must be exactly 6 digits/i)
+    ).toBeInTheDocument()
     expect(mockPush).not.toHaveBeenCalledWith('/checkout/review')
   })
 
@@ -163,9 +219,8 @@ describe('CheckoutForm', () => {
     })
 
     renderCheckoutForm()
-    fireEvent.change(screen.getByLabelText(/shipping address/i), {
-      target: { value: '42 MG Road, Bengaluru, Karnataka 560001' },
-    })
+    fillStructuredAddress()
+
     fireEvent.click(
       screen.getByRole('button', { name: /review.*place order/i })
     )

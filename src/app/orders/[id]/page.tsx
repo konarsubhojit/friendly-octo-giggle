@@ -7,6 +7,7 @@ import Image from 'next/image'
 import { useSession } from 'next-auth/react'
 import { useSelector, useDispatch } from 'react-redux'
 import { useCurrency } from '@/contexts/CurrencyContext'
+import { formatStructuredAddress } from '@/lib/address-utils'
 import {
   fetchOrderById,
   cancelOrder,
@@ -506,7 +507,7 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
             Shipping Address
           </h2>
           <p className="text-sm text-[var(--text-secondary)] whitespace-pre-line">
-            {order.customerAddress}
+            {order ? formatStructuredAddress(order) : ''}
           </p>
         </Card>
       </main>
