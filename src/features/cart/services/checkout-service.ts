@@ -15,6 +15,7 @@ import {
 import { send } from '@/lib/queue'
 import { logBusinessEvent, logError } from '@/lib/logger'
 import { checkoutRequests, orders } from '@/lib/schema'
+import { formatStructuredAddress } from '@/lib/address-utils'
 import type {
   CheckoutEnqueueResponse,
   CheckoutRequestStatusResponse,
@@ -86,10 +87,15 @@ const getNormalizedCheckoutInput = (
       typeof rawBody.customerEmail === 'string' && rawBody.customerEmail.trim()
         ? rawBody.customerEmail
         : (user.email ?? ''),
-    customerAddress:
-      typeof rawBody.customerAddress === 'string'
-        ? rawBody.customerAddress
-        : '',
+    addressLine1:
+      typeof rawBody.addressLine1 === 'string' ? rawBody.addressLine1 : '',
+    addressLine2:
+      typeof rawBody.addressLine2 === 'string' ? rawBody.addressLine2 : '',
+    addressLine3:
+      typeof rawBody.addressLine3 === 'string' ? rawBody.addressLine3 : '',
+    pinCode: typeof rawBody.pinCode === 'string' ? rawBody.pinCode : '',
+    city: typeof rawBody.city === 'string' ? rawBody.city : '',
+    state: typeof rawBody.state === 'string' ? rawBody.state : '',
     items: rawBody.items,
   })
 
@@ -267,7 +273,21 @@ export const enqueueCheckoutForUser = async ({
       userId: user.id,
       customerName: normalized.customerName,
       customerEmail: normalized.customerEmail,
-      customerAddress: normalized.customerAddress,
+      customerAddress: formatStructuredAddress({
+        customerAddress: '',
+        addressLine1: normalized.addressLine1,
+        addressLine2: normalized.addressLine2,
+        addressLine3: normalized.addressLine3,
+        pinCode: normalized.pinCode,
+        city: normalized.city,
+        state: normalized.state,
+      }),
+      addressLine1: normalized.addressLine1,
+      addressLine2: normalized.addressLine2 || null,
+      addressLine3: normalized.addressLine3 || null,
+      pinCode: normalized.pinCode,
+      city: normalized.city,
+      state: normalized.state,
       items: normalized.items,
       status: 'PENDING',
       updatedAt: new Date(),
@@ -379,6 +399,12 @@ export const processCheckoutRequestById = async (
         customerName: checkoutRequest.customerName,
         customerEmail: checkoutRequest.customerEmail,
         customerAddress: checkoutRequest.customerAddress,
+        addressLine1: checkoutRequest.addressLine1 ?? '',
+        addressLine2: checkoutRequest.addressLine2 ?? '',
+        addressLine3: checkoutRequest.addressLine3 ?? '',
+        pinCode: checkoutRequest.pinCode ?? '',
+        city: checkoutRequest.city ?? '',
+        state: checkoutRequest.state ?? '',
         items: checkoutRequest.items.map((item) => ({
           productId: item.productId,
           variationId: item.variationId ?? undefined,

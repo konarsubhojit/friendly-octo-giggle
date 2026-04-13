@@ -63,11 +63,26 @@ export interface OrderItemInput {
   customizationNote?: string | null
 }
 
+export interface StructuredAddress {
+  addressLine1: string
+  addressLine2?: string | null
+  addressLine3?: string | null
+  pinCode: string
+  city: string
+  state: string
+}
+
 export interface Order {
   id: string
   customerName: string
   customerEmail: string
   customerAddress: string
+  addressLine1?: string | null
+  addressLine2?: string | null
+  addressLine3?: string | null
+  pinCode?: string | null
+  city?: string | null
+  state?: string | null
   totalAmount: number
   status: OrderStatus
   trackingNumber?: string | null
@@ -92,6 +107,12 @@ export interface CreateOrderInput {
   customerName: string
   customerEmail: string
   customerAddress: string
+  addressLine1: string
+  addressLine2?: string | null
+  addressLine3?: string | null
+  pinCode: string
+  city: string
+  state: string
   items: OrderItemInput[]
 }
 

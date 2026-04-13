@@ -27,6 +27,12 @@ interface Order {
   customerName: string
   customerEmail: string
   customerAddress: string
+  addressLine1?: string | null
+  addressLine2?: string | null
+  addressLine3?: string | null
+  pinCode?: string | null
+  city?: string | null
+  state?: string | null
   totalAmount: number
   status: string
   trackingNumber?: string | null

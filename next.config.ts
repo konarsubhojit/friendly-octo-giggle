@@ -4,6 +4,9 @@ import { withSentryConfig } from '@sentry/nextjs'
 const isDev = process.env.NODE_ENV === 'development'
 
 const nextConfig: NextConfig = {
+  // india-pincode reads data/pincodes.json.gz at runtime via fs —
+  // keep it out of the Turbopack bundle so the data file is resolvable.
+  serverExternalPackages: ['india-pincode'],
   images: {
     remotePatterns: [
       {

@@ -18,6 +18,7 @@ import {
   SQL,
 } from 'drizzle-orm'
 import { invalidateCache } from '@/lib/redis'
+import { formatStructuredAddress } from '@/lib/address-utils'
 import { invalidateUserOrderCaches, cacheUserOrdersList } from '@/lib/cache'
 import { CreateOrderInput, OrderItemInput } from '@/lib/types'
 import { parseOffsetParam } from '@/lib/api-utils'
@@ -69,6 +70,12 @@ type ValidationResult =
       customerName: string
       customerEmail: string
       customerAddress: string
+      addressLine1: string
+      addressLine2: string
+      addressLine3: string
+      pinCode: string
+      city: string
+      state: string
     }
   | { valid: false; error: string; status: number; reason: string }
 
@@ -158,9 +165,15 @@ const validateCustomerInfo = (
     },
   }
 
+  const hasStructuredAddress =
+    body.addressLine1?.trim() &&
+    body.pinCode?.trim() &&
+    body.city?.trim() &&
+    body.state?.trim()
+
   const checks: [boolean, keyof typeof errorMap][] = [
     [!customerEmail, 'missing_email'],
-    [!customerAddress, 'missing_address'],
+    [!customerAddress && !hasStructuredAddress, 'missing_address'],
   ]
   const found = checks.find(([condition]) => condition)
   if (found) {
@@ -173,6 +186,12 @@ const validateCustomerInfo = (
     customerName,
     customerEmail: customerEmail ?? '',
     customerAddress,
+    addressLine1: body.addressLine1?.trim() ?? '',
+    addressLine2: body.addressLine2?.trim() ?? '',
+    addressLine3: body.addressLine3?.trim() ?? '',
+    pinCode: body.pinCode?.trim() ?? '',
+    city: body.city?.trim() ?? '',
+    state: body.state?.trim() ?? '',
   }
 }
 
@@ -485,7 +504,17 @@ export const createOrderForUser = async ({
     { valid: true }
   >
 
-  const { customerName, customerEmail, customerAddress } = customerDetails
+  const {
+    customerName,
+    customerEmail,
+    customerAddress,
+    addressLine1,
+    addressLine2,
+    addressLine3,
+    pinCode,
+    city,
+    state: addressState,
+  } = customerDetails
   const requestedProductIds = [
     ...new Set(body.items.map((item) => item.productId)),
   ]
@@ -536,7 +565,23 @@ export const createOrderForUser = async ({
         userId: user.id,
         customerName,
         customerEmail,
-        customerAddress,
+        customerAddress:
+          customerAddress ||
+          formatStructuredAddress({
+            customerAddress: '',
+            addressLine1,
+            addressLine2,
+            addressLine3,
+            pinCode,
+            city,
+            state: addressState,
+          }),
+        addressLine1: addressLine1 || null,
+        addressLine2: addressLine2 || null,
+        addressLine3: addressLine3 || null,
+        pinCode: pinCode || null,
+        city: city || null,
+        state: addressState || null,
         checkoutRequestId: checkoutRequestId ?? null,
         totalAmount: stockDetails.totalAmount,
         status: 'PENDING',

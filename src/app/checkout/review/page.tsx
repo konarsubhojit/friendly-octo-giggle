@@ -6,6 +6,8 @@ import { useSession } from 'next-auth/react'
 import { useSelector, useDispatch } from 'react-redux'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
+import { z } from 'zod'
+import { formatStructuredAddress } from '@/lib/address-utils'
 import {
   clearCart,
   selectCart,
@@ -38,10 +40,17 @@ const CHECKOUT_POLL_INTERVAL_MS = 1500
 const CHECKOUT_POLL_MAX_ATTEMPTS = 40
 const PENDING_CHECKOUT_KEY = 'pending_checkout'
 
-interface PendingCheckout {
-  address: string
-  customizationNotes: Record<string, string>
-}
+const PendingCheckoutSchema = z.object({
+  addressLine1: z.string().min(1),
+  addressLine2: z.string().default(''),
+  addressLine3: z.string().default(''),
+  pinCode: z.string().min(1),
+  city: z.string().min(1),
+  state: z.string().min(1),
+  customizationNotes: z.record(z.string(), z.string()).default({}),
+})
+
+type PendingCheckout = z.infer<typeof PendingCheckoutSchema>
 
 const delay = (ms: number) =>
   new Promise<void>((resolve) => {
@@ -52,7 +61,14 @@ function readPendingCheckout(): PendingCheckout | null {
   if (globalThis.window === undefined) return null
   try {
     const raw = sessionStorage.getItem(PENDING_CHECKOUT_KEY)
-    return raw ? (JSON.parse(raw) as PendingCheckout) : null
+    if (!raw) return null
+    const parsed: unknown = JSON.parse(raw)
+    const result = PendingCheckoutSchema.safeParse(parsed)
+    if (!result.success) {
+      sessionStorage.removeItem(PENDING_CHECKOUT_KEY)
+      return null
+    }
+    return result.data
   } catch {
     return null
   }
@@ -169,7 +185,12 @@ export default function CheckoutReviewPage() {
           {
             customerName: sessionUser.name ?? 'Customer',
             customerEmail: sessionUser.email,
-            customerAddress: pendingCheckout.address.trim(),
+            addressLine1: pendingCheckout.addressLine1.trim(),
+            addressLine2: pendingCheckout.addressLine2.trim(),
+            addressLine3: pendingCheckout.addressLine3.trim(),
+            pinCode: pendingCheckout.pinCode.trim(),
+            city: pendingCheckout.city.trim(),
+            state: pendingCheckout.state.trim(),
             items: cartItems.map((item) => ({
               productId: item.productId,
               variationId: item.variationId ?? undefined,
@@ -231,7 +252,17 @@ export default function CheckoutReviewPage() {
               Shipping Address
             </h2>
             <p className="whitespace-pre-wrap text-sm text-[var(--text-secondary)]">
-              {pendingCheckout?.address}
+              {pendingCheckout
+                ? formatStructuredAddress({
+                    customerAddress: '',
+                    addressLine1: pendingCheckout.addressLine1,
+                    addressLine2: pendingCheckout.addressLine2,
+                    addressLine3: pendingCheckout.addressLine3,
+                    pinCode: pendingCheckout.pinCode,
+                    city: pendingCheckout.city,
+                    state: pendingCheckout.state,
+                  })
+                : ''}
             </p>
             <Link
               href="/cart"
