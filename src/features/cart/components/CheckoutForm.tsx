@@ -14,7 +14,9 @@ const PENDING_CHECKOUT_KEY = 'pending_checkout'
 const PINCODE_REGEX = /^\d{6}$/
 
 type IndiaPincodeModule = typeof import('india-pincode/browser')
-type IndiaPincodeInstance = Awaited<ReturnType<IndiaPincodeModule['getIndiaPincode']>>
+type IndiaPincodeInstance = Awaited<
+  ReturnType<IndiaPincodeModule['getIndiaPincode']>
+>
 
 let cachedPincodeInstance: Promise<IndiaPincodeInstance> | null = null
 
