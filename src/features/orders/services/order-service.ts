@@ -562,15 +562,17 @@ export const createOrderForUser = async ({
         userId: user.id,
         customerName,
         customerEmail,
-        customerAddress: customerAddress || formatStructuredAddress({
-          customerAddress: '',
-          addressLine1,
-          addressLine2,
-          addressLine3,
-          pinCode,
-          city,
-          state: addressState,
-        }),
+        customerAddress:
+          customerAddress ||
+          formatStructuredAddress({
+            customerAddress: '',
+            addressLine1,
+            addressLine2,
+            addressLine3,
+            pinCode,
+            city,
+            state: addressState,
+          }),
         addressLine1: addressLine1 || null,
         addressLine2: addressLine2 || null,
         addressLine3: addressLine3 || null,

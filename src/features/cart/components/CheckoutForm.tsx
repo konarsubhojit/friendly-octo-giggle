@@ -289,9 +289,7 @@ export const CheckoutForm = ({ customizationNotes }: CheckoutFormProps) => {
                 onChange={(e) => handlePincodeChange(e.target.value)}
                 placeholder="6-digit pin code"
                 maxLength={6}
-                aria-describedby={
-                  errors.pinCode ? 'pincode-error' : undefined
-                }
+                aria-describedby={errors.pinCode ? 'pincode-error' : undefined}
                 aria-invalid={!!errors.pinCode}
                 className={INPUT_CLASS}
               />
@@ -375,13 +373,19 @@ export const CheckoutForm = ({ customizationNotes }: CheckoutFormProps) => {
         </div>
 
         {pincodeNotice && (
-          <p className="text-xs text-amber-600 dark:text-amber-400" role="status">
+          <p
+            className="text-xs text-amber-600 dark:text-amber-400"
+            role="status"
+          >
             {pincodeNotice}
           </p>
         )}
 
         {pincodeAutoFilled && (
-          <p className="text-xs text-emerald-600 dark:text-emerald-400" role="status">
+          <p
+            className="text-xs text-emerald-600 dark:text-emerald-400"
+            role="status"
+          >
             ✓ City and state auto-filled from pin code
           </p>
         )}

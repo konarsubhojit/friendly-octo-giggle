@@ -307,15 +307,17 @@ const insertOrderRecords = async (
       userId,
       customerName: input.customerName,
       customerEmail: input.customerEmail,
-      customerAddress: input.customerAddress || formatStructuredAddress({
-        customerAddress: '',
-        addressLine1: input.addressLine1,
-        addressLine2: input.addressLine2,
-        addressLine3: input.addressLine3,
-        pinCode: input.pinCode,
-        city: input.city,
-        state: input.state,
-      }),
+      customerAddress:
+        input.customerAddress ||
+        formatStructuredAddress({
+          customerAddress: '',
+          addressLine1: input.addressLine1,
+          addressLine2: input.addressLine2,
+          addressLine3: input.addressLine3,
+          pinCode: input.pinCode,
+          city: input.city,
+          state: input.state,
+        }),
       addressLine1: input.addressLine1 || null,
       addressLine2: input.addressLine2 || null,
       addressLine3: input.addressLine3 || null,
@@ -392,15 +394,17 @@ const buildOrderSummary = ({
   userId,
   customerName: input.customerName,
   customerEmail: input.customerEmail,
-  customerAddress: input.customerAddress || formatStructuredAddress({
-    customerAddress: '',
-    addressLine1: input.addressLine1,
-    addressLine2: input.addressLine2,
-    addressLine3: input.addressLine3,
-    pinCode: input.pinCode,
-    city: input.city,
-    state: input.state,
-  }),
+  customerAddress:
+    input.customerAddress ||
+    formatStructuredAddress({
+      customerAddress: '',
+      addressLine1: input.addressLine1,
+      addressLine2: input.addressLine2,
+      addressLine3: input.addressLine3,
+      pinCode: input.pinCode,
+      city: input.city,
+      state: input.state,
+    }),
   addressLine1: input.addressLine1 || null,
   addressLine2: input.addressLine2 || null,
   addressLine3: input.addressLine3 || null,
