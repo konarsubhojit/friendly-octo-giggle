@@ -165,9 +165,12 @@ const validateCustomerInfo = (
     },
   }
 
+  const hasStructuredAddress =
+    body.addressLine1 && body.pinCode && body.city && body.state
+
   const checks: [boolean, keyof typeof errorMap][] = [
     [!customerEmail, 'missing_email'],
-    [!customerAddress && !body.addressLine1, 'missing_address'],
+    [!customerAddress && !hasStructuredAddress, 'missing_address'],
   ]
   const found = checks.find(([condition]) => condition)
   if (found) {

@@ -100,10 +100,12 @@ export const CheckoutForm = ({ customizationNotes }: CheckoutFormProps) => {
         const result = instance.getPincodeSummary(value)
 
         if (result.success && result.data) {
+          const district = result.data.district
+          const stateName = result.data.state
           setAddress((prev) => ({
             ...prev,
-            city: result.data!.district,
-            state: result.data!.state,
+            city: district,
+            state: stateName,
           }))
           setPincodeAutoFilled(true)
           setErrors((prev) => ({ ...prev, city: undefined, state: undefined }))
