@@ -166,7 +166,10 @@ const validateCustomerInfo = (
   }
 
   const hasStructuredAddress =
-    body.addressLine1 && body.pinCode && body.city && body.state
+    body.addressLine1?.trim() &&
+    body.pinCode?.trim() &&
+    body.city?.trim() &&
+    body.state?.trim()
 
   const checks: [boolean, keyof typeof errorMap][] = [
     [!customerEmail, 'missing_email'],
@@ -183,12 +186,12 @@ const validateCustomerInfo = (
     customerName,
     customerEmail: customerEmail ?? '',
     customerAddress,
-    addressLine1: body.addressLine1 ?? '',
-    addressLine2: body.addressLine2 ?? '',
-    addressLine3: body.addressLine3 ?? '',
-    pinCode: body.pinCode ?? '',
-    city: body.city ?? '',
-    state: body.state ?? '',
+    addressLine1: body.addressLine1?.trim() ?? '',
+    addressLine2: body.addressLine2?.trim() ?? '',
+    addressLine3: body.addressLine3?.trim() ?? '',
+    pinCode: body.pinCode?.trim() ?? '',
+    city: body.city?.trim() ?? '',
+    state: body.state?.trim() ?? '',
   }
 }
 

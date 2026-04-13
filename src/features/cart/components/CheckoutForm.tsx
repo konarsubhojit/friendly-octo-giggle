@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { useSelector } from 'react-redux'
@@ -12,6 +12,20 @@ import toast from 'react-hot-toast'
 
 const PENDING_CHECKOUT_KEY = 'pending_checkout'
 const PINCODE_REGEX = /^\d{6}$/
+
+type IndiaPincodeModule = typeof import('india-pincode/browser')
+type IndiaPincodeInstance = Awaited<ReturnType<IndiaPincodeModule['getIndiaPincode']>>
+
+let cachedPincodeInstance: Promise<IndiaPincodeInstance> | null = null
+
+const getPincodeInstance = (): Promise<IndiaPincodeInstance> => {
+  if (!cachedPincodeInstance) {
+    cachedPincodeInstance = import('india-pincode/browser').then((mod) =>
+      mod.getIndiaPincode()
+    )
+  }
+  return cachedPincodeInstance
+}
 
 interface AddressFields {
   addressLine1: string
@@ -43,6 +57,7 @@ export const CheckoutForm = ({ customizationNotes }: CheckoutFormProps) => {
   const router = useRouter()
   const { data: session } = useSession()
   const cart = useSelector(selectCart)
+  const latestPincodeRef = useRef('')
 
   const [address, setAddress] = useState<AddressFields>({
     addressLine1: '',
@@ -81,6 +96,7 @@ export const CheckoutForm = ({ customizationNotes }: CheckoutFormProps) => {
 
   const handlePincodeChange = useCallback(
     async (value: string) => {
+      latestPincodeRef.current = value
       updateField('pinCode', value)
       setPincodeNotice(null)
 
@@ -95,9 +111,13 @@ export const CheckoutForm = ({ customizationNotes }: CheckoutFormProps) => {
 
       setPincodeLoading(true)
       try {
-        const mod = await import('india-pincode/browser')
-        const instance = await mod.getIndiaPincode()
+        const instance = await getPincodeInstance()
+
+        if (latestPincodeRef.current !== value) return
+
         const result = instance.getPincodeSummary(value)
+
+        if (latestPincodeRef.current !== value) return
 
         if (result.success && result.data) {
           const district = result.data.district

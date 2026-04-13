@@ -61,6 +61,10 @@ describe('lib/ai/gateway — lazy initialization', () => {
   it('binds methods to the underlying instance so this is correct', async () => {
     let capturedThis: unknown
     const fakeInstance = {
+      models: {
+        generateContentStream: vi.fn(),
+        generateContent: vi.fn(),
+      },
       doSomething: function (this: unknown) {
         capturedThis = this
       },

@@ -6,6 +6,7 @@ import { useSession } from 'next-auth/react'
 import { useSelector, useDispatch } from 'react-redux'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
+import { z } from 'zod'
 import { formatStructuredAddress } from '@/lib/address-utils'
 import {
   clearCart,
@@ -39,15 +40,17 @@ const CHECKOUT_POLL_INTERVAL_MS = 1500
 const CHECKOUT_POLL_MAX_ATTEMPTS = 40
 const PENDING_CHECKOUT_KEY = 'pending_checkout'
 
-interface PendingCheckout {
-  addressLine1: string
-  addressLine2: string
-  addressLine3: string
-  pinCode: string
-  city: string
-  state: string
-  customizationNotes: Record<string, string>
-}
+const PendingCheckoutSchema = z.object({
+  addressLine1: z.string().min(1),
+  addressLine2: z.string().default(''),
+  addressLine3: z.string().default(''),
+  pinCode: z.string().min(1),
+  city: z.string().min(1),
+  state: z.string().min(1),
+  customizationNotes: z.record(z.string(), z.string()).default({}),
+})
+
+type PendingCheckout = z.infer<typeof PendingCheckoutSchema>
 
 const delay = (ms: number) =>
   new Promise<void>((resolve) => {
@@ -58,7 +61,14 @@ function readPendingCheckout(): PendingCheckout | null {
   if (globalThis.window === undefined) return null
   try {
     const raw = sessionStorage.getItem(PENDING_CHECKOUT_KEY)
-    return raw ? (JSON.parse(raw) as PendingCheckout) : null
+    if (!raw) return null
+    const parsed: unknown = JSON.parse(raw)
+    const result = PendingCheckoutSchema.safeParse(parsed)
+    if (!result.success) {
+      sessionStorage.removeItem(PENDING_CHECKOUT_KEY)
+      return null
+    }
+    return result.data
   } catch {
     return null
   }

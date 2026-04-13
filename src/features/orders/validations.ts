@@ -19,7 +19,10 @@ export const StructuredAddressSchema = z.object({
     .max(200, 'Address Line 3 must be under 200 characters')
     .optional()
     .default(''),
-  pinCode: z.string().regex(/^\d{6}$/, 'Pin code must be exactly 6 digits'),
+  pinCode: z
+    .string()
+    .trim()
+    .regex(/^\d{6}$/, 'Pin code must be exactly 6 digits'),
   city: z
     .string()
     .trim()
