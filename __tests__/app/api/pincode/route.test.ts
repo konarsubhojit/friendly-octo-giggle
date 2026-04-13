@@ -1,8 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { GET } from '@/app/api/pincode/[code]/route'
 import { NextRequest } from 'next/server'
 
-const mockGetPincodeSummary = vi.fn()
+const mockGetPincodeSummary = vi.hoisted(() => vi.fn())
 
 vi.mock('india-pincode', () => ({
   isValidPincode: (code: string) => /^\d{6}$/.test(code),
@@ -26,6 +25,9 @@ vi.mock('@/lib/cache', () => ({
     PINCODE_LOOKUP: 31536000,
   },
 }))
+
+// Import after mocks so module-level getIndiaPincode() uses the mock
+import { GET } from '@/app/api/pincode/[code]/route'
 
 const createRequest = (code: string) =>
   new NextRequest(`http://localhost/api/pincode/${code}`)

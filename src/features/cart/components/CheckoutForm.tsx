@@ -20,13 +20,23 @@ interface PincodeLookupResponse {
   data?: { city: string; state: string }
 }
 
-const lookupPincode = async (
-  code: string
-): Promise<{ city: string; state: string } | null> => {
-  const res = await fetch(`/api/pincode/${code}`)
-  if (!res.ok) return null
-  const json: PincodeLookupResponse = await res.json()
-  return json.success && json.data ? json.data : null
+type PincodeLookupResult =
+  | { status: 'found'; city: string; state: string }
+  | { status: 'not_found' }
+  | { status: 'error' }
+
+const lookupPincode = async (code: string): Promise<PincodeLookupResult> => {
+  try {
+    const res = await fetch(`/api/pincode/${code}`)
+    if (res.status === 404) return { status: 'not_found' }
+    if (!res.ok) return { status: 'error' }
+    const json: PincodeLookupResponse = await res.json()
+    return json.success && json.data
+      ? { status: 'found', city: json.data.city, state: json.data.state }
+      : { status: 'not_found' }
+  } catch {
+    return { status: 'error' }
+  }
 }
 
 interface AddressFields {
@@ -151,11 +161,16 @@ export const CheckoutForm = ({ customizationNotes }: CheckoutFormProps) => {
 
         if (latestPincodeRef.current !== value) return
 
-        if (result) {
+        if (result.status === 'found') {
           applyPincodeResult(result.city, result.state)
-        } else {
+        } else if (result.status === 'not_found') {
           setPincodeNotice(
             'Could not find location for this pin code. Please enter city and state manually.'
+          )
+          setPincodeAutoFilled(false)
+        } else {
+          setPincodeNotice(
+            'Auto-fill unavailable. Please enter city and state manually.'
           )
           setPincodeAutoFilled(false)
         }

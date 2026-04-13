@@ -9,6 +9,9 @@ interface PincodeLookupResult {
   state: string
 }
 
+// getIndiaPincode() returns a cached singleton — safe to call at module level
+const pincode = getIndiaPincode()
+
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ code: string }> }
@@ -22,15 +25,17 @@ export async function GET(
   const result = await getCachedData<PincodeLookupResult | null>(
     CACHE_KEYS.PINCODE_LOOKUP(code),
     CACHE_TTL.PINCODE_LOOKUP,
-    async () => {
-      const instance = getIndiaPincode()
-      const summary = instance.getPincodeSummary(code)
+    () => {
+      const summary = pincode.getPincodeSummary(code)
 
       if (!summary.success || !summary.data) {
-        return null
+        return Promise.resolve(null)
       }
 
-      return { city: summary.data.district, state: summary.data.state }
+      return Promise.resolve({
+        city: summary.data.district,
+        state: summary.data.state,
+      })
     }
   )
 
