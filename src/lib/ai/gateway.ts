@@ -13,14 +13,14 @@ const getApiKey = (): string => {
   return key
 }
 
-let _genAI: GoogleGenAI | undefined
+let genAIInstance: GoogleGenAI | undefined
 
 export const genAI = new Proxy({} as GoogleGenAI, {
   get(_, prop, receiver) {
-    if (!_genAI) {
-      _genAI = new GoogleGenAI({ apiKey: getApiKey() })
+    if (!genAIInstance) {
+      genAIInstance = new GoogleGenAI({ apiKey: getApiKey() })
     }
-    return Reflect.get(_genAI, prop, receiver)
+    return Reflect.get(genAIInstance, prop, receiver)
   },
 })
 
