@@ -3,7 +3,7 @@ import { NextRequest } from 'next/server'
 
 const mockGetPincodeSummary = vi.hoisted(() => vi.fn())
 
-vi.mock('india-pincode', () => ({
+vi.mock('@/lib/pincode-loader', () => ({
   isValidPincode: (code: string) => /^\d{6}$/.test(code),
   getIndiaPincode: () => ({
     getPincodeSummary: mockGetPincodeSummary,
