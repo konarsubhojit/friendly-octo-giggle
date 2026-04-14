@@ -312,8 +312,8 @@ describe('db.products.findBestsellers', () => {
 
     expect(results).toHaveLength(2)
     expect(results[0].id).toBe('prod001')
-    expect(results[0].variations).toHaveLength(1)
-    expect(results[1].variations).toHaveLength(0)
+    expect(results[0].variants).toHaveLength(1)
+    expect(results[1].variants).toHaveLength(0)
   })
 
   it('returns empty array when no bestsellers found', async () => {
@@ -375,8 +375,8 @@ describe('db.products.findBestsellers', () => {
 
     const results = await db.products.findBestsellers({ limit: 2 })
 
-    expect(results[0].variations).toHaveLength(2)
-    expect(results[1].variations).toHaveLength(1)
+    expect(results[0].variants).toHaveLength(2)
+    expect(results[1].variants).toHaveLength(1)
   })
 })
 
@@ -469,7 +469,7 @@ describe('db.wishlists', () => {
           productId: 'prod001',
           product: {
             ...makeProductRow({ id: 'prod001' }),
-            variations: [makeVariationRow()],
+            variants: [makeVariationRow()],
           },
         },
       ]
@@ -479,7 +479,7 @@ describe('db.wishlists', () => {
 
       expect(products).toHaveLength(1)
       expect(products[0].id).toBe('prod001')
-      expect(products[0].variations).toHaveLength(1)
+      expect(products[0].variants).toHaveLength(1)
     })
 
     it('filters out deleted products from wishlist', async () => {
@@ -489,7 +489,7 @@ describe('db.wishlists', () => {
           productId: 'prod001',
           product: {
             ...makeProductRow({ id: 'prod001', deletedAt: now }),
-            variations: [],
+            variants: [],
           },
         },
         {
@@ -497,7 +497,7 @@ describe('db.wishlists', () => {
           productId: 'prod002',
           product: {
             ...makeProductRow({ id: 'prod002' }),
-            variations: [],
+            variants: [],
           },
         },
       ]

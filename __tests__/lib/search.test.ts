@@ -126,8 +126,6 @@ describe('lib/search', () => {
           name: 'Cotton Shirt',
           description: 'Soft cotton shirt',
           category: 'Clothing',
-          price: 29.99,
-          stock: 50,
           image: 'https://example.com/shirt.jpg',
         })
       ).resolves.toBe(true)
@@ -139,8 +137,6 @@ describe('lib/search', () => {
           name: 'Cotton Shirt',
           description: 'Soft cotton shirt',
           category: 'Clothing',
-          price: 29.99,
-          stock: 50,
         },
         metadata: {
           image: 'https://example.com/shirt.jpg',
@@ -158,8 +154,6 @@ describe('lib/search', () => {
           name: 'Test',
           description: 'Test',
           category: 'Test',
-          price: 10,
-          stock: 1,
           image: 'https://example.com/test.jpg',
         })
       ).resolves.toBe(false)
@@ -178,8 +172,6 @@ describe('lib/search', () => {
             name: 'Test',
             description: 'Test',
             category: 'Test',
-            price: 10,
-            stock: 1,
             image: 'https://example.com/test.jpg',
           },
           { throwOnError: true }
@@ -198,8 +190,6 @@ describe('lib/search', () => {
           name: 'Product 1',
           description: 'Desc 1',
           category: 'Cat A',
-          price: 10,
-          stock: 5,
           image: 'https://example.com/1.jpg',
         },
         {
@@ -207,8 +197,6 @@ describe('lib/search', () => {
           name: 'Product 2',
           description: 'Desc 2',
           category: 'Cat B',
-          price: 20,
-          stock: 10,
           image: 'https://example.com/2.jpg',
         },
       ]
@@ -222,8 +210,6 @@ describe('lib/search', () => {
             name: p.name,
             description: p.description,
             category: p.category,
-            price: p.price,
-            stock: p.stock,
           },
           metadata: { image: p.image },
         }))
@@ -241,8 +227,6 @@ describe('lib/search', () => {
         name: `Product ${index + 1}`,
         description: `Desc ${index + 1}`,
         category: 'Cat A',
-        price: 10 + index,
-        stock: 5 + index,
         image: `https://example.com/${index + 1}.jpg`,
       }))
 
@@ -264,8 +248,6 @@ describe('lib/search', () => {
               name: 'Product 1',
               description: 'Desc 1',
               category: 'Cat A',
-              price: 10,
-              stock: 5,
               image: 'https://example.com/1.jpg',
             },
           ],
@@ -298,8 +280,6 @@ describe('lib/search', () => {
             name: 'Cotton Shirt',
             description: 'Soft',
             category: 'Handbag',
-            price: 29.99,
-            stock: 10,
           },
           metadata: { image: 'https://example.com/shirt.jpg' },
         },

@@ -98,7 +98,7 @@ vi.mock('@/features/product/components/VariationButton', () => ({
       aria-pressed={isSelected}
       onClick={() => onSelect(variation)}
     >
-      {variation.name}
+      {variation.id}
     </button>
   ),
 }))
@@ -153,15 +153,26 @@ function makeProduct(overrides: Partial<Product> = {}): Product {
     id: 'prod001',
     name: 'Rose Bouquet',
     description: 'A beautiful bouquet of red roses.',
-    price: 500,
     image: 'https://example.com/rose.jpg',
     images: [],
-    stock: 10,
     category: 'Flowers',
     deletedAt: null,
     createdAt: '2025-01-01T00:00:00.000Z',
     updatedAt: '2025-01-01T00:00:00.000Z',
-    variations: [],
+    variants: [
+      {
+        id: 'default-var',
+        productId: 'prod001',
+        sku: null,
+        price: 500,
+        stock: 10,
+        image: null,
+        images: [],
+        deletedAt: null,
+        createdAt: '2025-01-01T00:00:00.000Z',
+        updatedAt: '2025-01-01T00:00:00.000Z',
+      },
+    ],
     ...overrides,
   }
 }
@@ -172,14 +183,11 @@ function makeVariation(
   return {
     id: 'var001',
     productId: 'prod001',
-    name: 'Red',
-    designName: 'Classic',
+    sku: null,
     image: null,
     images: [],
     price: 600,
-    variationType: 'colour',
     stock: 5,
-    styleId: null,
     deletedAt: null,
     createdAt: '2025-01-01T00:00:00.000Z',
     updatedAt: '2025-01-01T00:00:00.000Z',
@@ -260,7 +268,7 @@ describe('ProductClient', () => {
   })
 
   it('renders add-to-cart section when product is in stock', () => {
-    const product = makeProduct({ stock: 10 })
+    const product = makeProduct({ variants: [makeVariation({ stock: 10 })] })
     render(
       <ProductClient
         product={product}
@@ -276,7 +284,7 @@ describe('ProductClient', () => {
   })
 
   it('renders out-of-stock panel when product stock is 0', () => {
-    const product = makeProduct({ stock: 0 })
+    const product = makeProduct({ variants: [makeVariation({ stock: 0 })] })
     render(
       <ProductClient
         product={product}
@@ -293,7 +301,7 @@ describe('ProductClient', () => {
   })
 
   it('shows "all stock in cart" panel when cart quantity equals stock', () => {
-    const product = makeProduct({ stock: 3 })
+    const product = makeProduct({ variants: [makeVariation({ stock: 3 })] })
     vi.mocked(useSelector).mockImplementation((selector) =>
       selector({
         cart: {
@@ -520,11 +528,11 @@ describe('ProductClient', () => {
   })
 
   it('renders variation buttons for colour variations', () => {
-    const variations = [
-      makeVariation({ id: 'var001', name: 'Red', variationType: 'colour' }),
-      makeVariation({ id: 'var002', name: 'Blue', variationType: 'colour' }),
+    const variants = [
+      makeVariation({ id: 'var001' }),
+      makeVariation({ id: 'var002' }),
     ]
-    const product = makeProduct({ variations })
+    const product = makeProduct({ variants })
     render(
       <ProductClient
         product={product}
@@ -538,8 +546,8 @@ describe('ProductClient', () => {
   })
 
   it('selects initial variation from initialVariantId prop', () => {
-    const variation = makeVariation({ id: 'var001', name: 'Red', price: 750 })
-    const product = makeProduct({ variations: [variation] })
+    const variation = makeVariation({ id: 'var001', price: 750 })
+    const product = makeProduct({ variants: [variation] })
     render(
       <ProductClient
         product={product}
@@ -552,10 +560,11 @@ describe('ProductClient', () => {
   })
 
   it('selecting a variation updates the displayed price', () => {
-    const variations = [
-      makeVariation({ id: 'var001', name: 'Red', price: 750 }),
+    const variants = [
+      makeVariation({ id: 'default-var', price: 500 }),
+      makeVariation({ id: 'var001', price: 750 }),
     ]
-    const product = makeProduct({ price: 500, variations })
+    const product = makeProduct({ variants })
     render(
       <ProductClient
         product={product}
@@ -574,7 +583,7 @@ describe('ProductClient', () => {
   })
 
   it('quantity selector renders with options up to stock (max 10)', () => {
-    const product = makeProduct({ stock: 5 })
+    const product = makeProduct({ variants: [makeVariation({ stock: 5 })] })
     render(
       <ProductClient
         product={product}
@@ -589,7 +598,7 @@ describe('ProductClient', () => {
   })
 
   it('shows already-in-cart notice when items are in cart', () => {
-    const product = makeProduct({ stock: 10 })
+    const product = makeProduct({ variants: [makeVariation({ stock: 10 })] })
     vi.mocked(useSelector).mockImplementation((selector) =>
       selector({
         cart: {
@@ -635,7 +644,7 @@ describe('ProductClient', () => {
   })
 
   it('shows total price (quantity × price) in add-to-cart section', () => {
-    const product = makeProduct({ price: 500 })
+    const product = makeProduct({ variants: [makeVariation({ price: 500 })] })
     render(
       <ProductClient
         product={product}
