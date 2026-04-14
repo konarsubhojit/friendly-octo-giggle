@@ -111,7 +111,7 @@ describe('order-summary', () => {
         {
           quantity: 2,
           product: { name: 'Widget' },
-          variant: { price: 100, name: null, sku: null },
+          variant: { price: 100, sku: null },
           customizationNote: null,
         },
       ]
@@ -224,12 +224,12 @@ describe('order-summary', () => {
         {
           quantity: 2,
           product: { name: 'A' },
-          variant: { price: 100, name: null, sku: null },
+          variant: { price: 100, sku: null },
         },
         {
           quantity: 3,
           product: { name: 'B' },
-          variant: { price: 50, name: null, sku: null },
+          variant: { price: 50, sku: null },
         },
       ]
 

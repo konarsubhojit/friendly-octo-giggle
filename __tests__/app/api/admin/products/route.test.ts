@@ -77,7 +77,6 @@ vi.mock('next/cache', () => ({
 }))
 
 import { db } from '@/lib/db'
-import { auth } from '@/lib/auth'
 import { invalidateProductCaches } from '@/lib/cache'
 import { revalidateTag } from 'next/cache'
 import { checkAdminAuth } from '@/features/admin/services/admin-auth'

@@ -39,12 +39,6 @@ const mockVariant: ProductVariant = {
   updatedAt: '2025-01-01T00:00:00.000Z',
 }
 
-const mockVariantNoImage: ProductVariant = {
-  ...mockVariant,
-  id: 'var5678',
-  sku: 'BLU-SM',
-  image: null,
-}
 
 describe('VariationList', () => {
   beforeEach(() => {

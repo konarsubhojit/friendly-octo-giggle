@@ -23,7 +23,6 @@ vi.mock('next/cache', () => ({ revalidateTag: vi.fn() }))
 vi.mock('@/lib/cache', () => ({ invalidateProductCaches: vi.fn() }))
 
 import { db } from '@/lib/db'
-import { auth } from '@/lib/auth'
 import { revalidateTag } from 'next/cache'
 import { invalidateProductCaches } from '@/lib/cache'
 import { checkAdminAuth } from '@/features/admin/services/admin-auth'
