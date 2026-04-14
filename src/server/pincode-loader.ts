@@ -10,11 +10,13 @@
  * Using `createRequire` produces a CJS-style `require()` call which triggers
  * the `"require"` condition in the package's `exports` map, resolving to
  * `dist/index.js` (CJS build). In that build `__dirname` is always defined.
+ *
+ * This module must never be imported from client-side code.
  */
 import { createRequire } from 'node:module'
 
 const _require = createRequire(import.meta.url)
 
-export const { getIndiaPincode, isValidPincode } = _require(
-  'india-pincode'
-) as typeof import('india-pincode')
+const indiaPincode = _require('india-pincode') as typeof import('india-pincode')
+
+export const { getIndiaPincode, isValidPincode } = indiaPincode

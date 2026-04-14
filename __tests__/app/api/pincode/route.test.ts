@@ -3,7 +3,7 @@ import { NextRequest } from 'next/server'
 
 const mockGetPincodeSummary = vi.hoisted(() => vi.fn())
 
-vi.mock('@/lib/pincode-loader', () => ({
+vi.mock('@/server/pincode-loader', () => ({
   isValidPincode: (code: string) => /^\d{6}$/.test(code),
   getIndiaPincode: () => ({
     getPincodeSummary: mockGetPincodeSummary,
@@ -175,8 +175,8 @@ describe('GET /api/pincode/[code]', () => {
     })
 
     expect(response.status).toBe(404)
-    // Cache-Control should not instruct proxies to cache a not-found response
+    // 404 responses must not carry a long-lived cache directive
     const cacheControl = response.headers.get('Cache-Control')
-    expect(cacheControl).not.toContain('s-maxage=31536000')
+    expect(cacheControl).toBeNull()
   })
 })
