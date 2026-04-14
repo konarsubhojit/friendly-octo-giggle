@@ -85,20 +85,20 @@ vi.mock('@/features/product/components/StockBadge', () => ({
 
 vi.mock('@/features/product/components/VariationButton', () => ({
   VariationButton: ({
-    variation,
+    variant,
     isSelected,
     onSelect,
   }: {
-    variation: ProductVariant
+    variant: ProductVariant
     isSelected: boolean
     onSelect: (v: ProductVariant) => void
   }) => (
     <button
-      data-testid={`variation-btn-${variation.id}`}
+      data-testid={`variation-btn-${variant.id}`}
       aria-pressed={isSelected}
-      onClick={() => onSelect(variation)}
+      onClick={() => onSelect(variant)}
     >
-      {variation.id}
+      {variant.id}
     </button>
   ),
 }))
@@ -301,12 +301,12 @@ describe('ProductClient', () => {
   })
 
   it('shows "all stock in cart" panel when cart quantity equals stock', () => {
-    const product = makeProduct({ variants: [makeVariation({ stock: 3 })] })
+    const product = makeProduct({ variants: [makeVariation({ id: 'var001', stock: 3 })] })
     vi.mocked(useSelector).mockImplementation((selector) =>
       selector({
         cart: {
           cart: {
-            items: [{ productId: 'prod001', variantId: null, quantity: 3 }],
+            items: [{ productId: 'prod001', variantId: 'var001', quantity: 3 }],
           },
         },
       })
@@ -598,12 +598,12 @@ describe('ProductClient', () => {
   })
 
   it('shows already-in-cart notice when items are in cart', () => {
-    const product = makeProduct({ variants: [makeVariation({ stock: 10 })] })
+    const product = makeProduct({ variants: [makeVariation({ id: 'var001', stock: 10 })] })
     vi.mocked(useSelector).mockImplementation((selector) =>
       selector({
         cart: {
           cart: {
-            items: [{ productId: 'prod001', variantId: null, quantity: 2 }],
+            items: [{ productId: 'prod001', variantId: 'var001', quantity: 2 }],
           },
         },
       })

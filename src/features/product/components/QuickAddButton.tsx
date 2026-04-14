@@ -12,6 +12,8 @@ import type { Product } from '@/lib/types'
 
 type QuickAddProduct = Pick<Product, 'id' | 'name'> & {
   variants?: Array<{ id: string; stock: number }>
+  /** Pre-computed total stock (used by ProductGrid items without full variant data) */
+  stock?: number
 }
 
 export function QuickAddButton({
@@ -66,8 +68,11 @@ export function QuickAddButton({
     [dispatch, product, status]
   )
 
-  if ((product.variants?.reduce((sum, v) => sum + v.stock, 0) ?? 0) === 0)
-    return null
+  const totalStock =
+    product.variants?.reduce((sum, v) => sum + v.stock, 0) ??
+    product.stock ??
+    0
+  if (totalStock === 0) return null
 
   return (
     <button

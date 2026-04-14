@@ -121,10 +121,9 @@ vi.mock('@/lib/schema', () => ({
   orderItems: { orderId: 'orderId' },
   products: {
     id: 'id',
-    stock: 'stock',
     deletedAt: 'deletedAt',
   },
-  productVariations: {
+  productVariants: {
     id: 'id',
     stock: 'stock',
     deletedAt: 'deletedAt',
@@ -388,7 +387,7 @@ describe('order-service', () => {
 
     it('throws when insufficient stock', async () => {
       mockPrimaryDrizzleDbQuery.products.findMany.mockResolvedValue([
-        { id: 'p1', name: 'Widget', price: 100, stock: 0, variations: [] },
+        { id: 'p1', name: 'Widget', variants: [{ id: 'v1', price: 100, stock: 0 }] },
       ])
 
       await expect(
@@ -410,14 +409,12 @@ describe('order-service', () => {
       ).rejects.toThrow(OrderRequestError)
     })
 
-    it('throws when variation not found', async () => {
+    it('throws when variant not found', async () => {
       mockPrimaryDrizzleDbQuery.products.findMany.mockResolvedValue([
         {
           id: 'p1',
           name: 'Widget',
-          price: 100,
-          stock: 10,
-          variations: [{ id: 'v1', price: 120, stock: 5 }],
+          variants: [{ id: 'v1', price: 120, stock: 5 }],
         },
       ])
 
@@ -460,7 +457,7 @@ describe('order-service', () => {
       }
 
       mockPrimaryDrizzleDbQuery.products.findMany.mockResolvedValue([
-        { id: 'p1', name: 'Widget', price: 100, stock: 10, variations: [] },
+        { id: 'p1', name: 'Widget', variants: [{ id: 'v1', price: 100, stock: 10 }] },
       ])
 
       mockPrimaryDrizzleDbTransaction.mockImplementation(
@@ -495,7 +492,7 @@ describe('order-service', () => {
               createdAt: new Date('2024-01-01'),
               updatedAt: new Date('2024-01-01'),
             },
-            variation: null,
+            variant: null,
           },
         ],
       }
@@ -556,7 +553,7 @@ describe('order-service', () => {
       }
 
       mockPrimaryDrizzleDbQuery.products.findMany.mockResolvedValue([
-        { id: 'p1', name: 'Widget', price: 100, stock: 10, variations: [] },
+        { id: 'p1', name: 'Widget', variants: [{ id: 'v1', price: 100, stock: 10 }] },
       ])
 
       mockPrimaryDrizzleDbTransaction.mockImplementation(
@@ -591,7 +588,7 @@ describe('order-service', () => {
               createdAt: new Date('2024-01-01'),
               updatedAt: new Date('2024-01-01'),
             },
-            variation: null,
+            variant: null,
           },
         ],
       }
@@ -629,7 +626,7 @@ describe('order-service', () => {
 
     it('throws when order retrieval fails after creation', async () => {
       mockPrimaryDrizzleDbQuery.products.findMany.mockResolvedValue([
-        { id: 'p1', name: 'Widget', price: 100, stock: 10, variations: [] },
+        { id: 'p1', name: 'Widget', variants: [{ id: 'v1', price: 100, stock: 10 }] },
       ])
 
       mockPrimaryDrizzleDbTransaction.mockImplementation(
@@ -673,7 +670,7 @@ describe('order-service', () => {
 
     it('uses user defaults for name and email when body is empty', async () => {
       mockPrimaryDrizzleDbQuery.products.findMany.mockResolvedValue([
-        { id: 'p1', name: 'Widget', price: 50, stock: 10, variations: [] },
+        { id: 'p1', name: 'Widget', variants: [{ id: 'v1', price: 50, stock: 10 }] },
       ])
 
       const newOrder = {
@@ -726,7 +723,7 @@ describe('order-service', () => {
               createdAt: new Date('2024-01-01'),
               updatedAt: new Date('2024-01-01'),
             },
-            variation: null,
+            variant: null,
           },
         ],
       }

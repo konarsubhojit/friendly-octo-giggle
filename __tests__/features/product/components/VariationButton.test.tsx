@@ -20,7 +20,7 @@ const baseVariation: ProductVariant = {
 const mockFormatPrice = (amount: number) => `₹${amount.toFixed(2)}`
 
 describe('VariationButton', () => {
-  it('renders design name and variation name', () => {
+  it('renders label and formatted price', () => {
     render(
       <VariationButton
         variant={baseVariation}
@@ -31,21 +31,7 @@ describe('VariationButton', () => {
       />
     )
 
-    expect(screen.getByText('Crimson Rose')).toBeTruthy()
     expect(screen.getByText('Red')).toBeTruthy()
-  })
-
-  it('renders formatted price', () => {
-    render(
-      <VariationButton
-        variant={baseVariation}
-        label="Red"
-        isSelected={false}
-        formatPrice={mockFormatPrice}
-        onSelect={vi.fn()}
-      />
-    )
-
     expect(screen.getByText('₹499.00')).toBeTruthy()
   })
 
@@ -117,6 +103,7 @@ describe('VariationButton', () => {
         isSelected={false}
         formatPrice={mockFormatPrice}
         onSelect={vi.fn()}
+        cartQuantity={3}
       />
     )
 
@@ -131,6 +118,7 @@ describe('VariationButton', () => {
         isSelected={false}
         formatPrice={mockFormatPrice}
         onSelect={vi.fn()}
+        cartQuantity={0}
       />
     )
 

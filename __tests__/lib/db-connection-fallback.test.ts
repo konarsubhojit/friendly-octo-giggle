@@ -40,7 +40,10 @@ const makeOtherMocks = (PoolMock: ReturnType<typeof makePoolMock>) => {
     orders: {},
     passwordHistory: {},
     productShares: {},
-    productVariations: {},
+    productVariants: {},
+    productOptions: {},
+    productOptionValues: {},
+    productVariantOptionValues: {},
     products: {},
     reviews: {},
     sessions: {},
@@ -56,7 +59,10 @@ const makeOtherMocks = (PoolMock: ReturnType<typeof makePoolMock>) => {
     ordersRelations: {},
     passwordHistoryRelations: {},
     productSharesRelations: {},
-    productVariationsRelations: {},
+    productVariantsRelations: {},
+    productOptionsRelations: {},
+    productOptionValuesRelations: {},
+    productVariantOptionValuesRelations: {},
     productsRelations: {},
     reviewsRelations: {},
     sessionsRelations: {},
@@ -76,7 +82,7 @@ const makeOtherMocks = (PoolMock: ReturnType<typeof makePoolMock>) => {
   }))
   vi.doMock('@/lib/serializers', () => ({
     serializeProduct: vi.fn((p: Record<string, unknown>) => p),
-    serializeVariation: vi.fn((v: Record<string, unknown>) => v),
+    serializeVariant: vi.fn((v: Record<string, unknown>) => v),
   }))
   vi.doMock('drizzle-orm', () => ({
     eq: vi.fn(),

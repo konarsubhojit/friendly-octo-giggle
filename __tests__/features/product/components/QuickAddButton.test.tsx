@@ -119,7 +119,7 @@ describe('QuickAddButton', () => {
     await waitFor(() => {
       expect(mockAddPendingCartItem).toHaveBeenCalledWith({
         productId: 'prod123',
-        variantId: null,
+        variantId: 'var-default',
         quantity: 1,
       })
       expect(mockToastSuccess).toHaveBeenCalledWith(

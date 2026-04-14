@@ -74,7 +74,7 @@ describe('buildProductContext', () => {
         {
           id: 'var1',
           productId: 'abc1234',
-          sku: null,
+          sku: 'RED-SM',
           image: null,
           images: [],
           price: 34.99,
@@ -86,7 +86,7 @@ describe('buildProductContext', () => {
         {
           id: 'var2',
           productId: 'abc1234',
-          sku: null,
+          sku: 'BLU-LG',
           image: null,
           images: [],
           price: 39.99,
@@ -99,16 +99,14 @@ describe('buildProductContext', () => {
     }
 
     const context = buildProductContext(product)
-    expect(context).toContain('Variations (2):')
-    expect(context).toContain('[Colour] Red / Crimson: ₹34.99, 5 in stock')
-    expect(context).toContain(
-      '[Styling] Modern / Minimalist: ₹39.99, out of stock'
-    )
+    expect(context).toContain('Variants (2):')
+    expect(context).toContain('RED-SM: ₹34.99, 5 in stock')
+    expect(context).toContain('BLU-LG: ₹39.99, out of stock')
   })
 
-  it('does not include variations section when empty', () => {
+  it('does not include variations section when single default variant', () => {
     const context = buildProductContext(baseProduct)
-    expect(context).not.toContain('Variations')
+    expect(context).toContain('Variants (1):')
   })
 
   it('uses provided currency formatter and code when supplied', () => {

@@ -242,9 +242,11 @@ describe('AddToCartSchema', () => {
   it('accepts valid input', () => {
     const result = AddToCartSchema.parse({
       productId: validShortId,
+      variantId: validShortId,
       quantity: 1,
     })
     expect(result.productId).toBe(validShortId)
+    expect(result.variantId).toBe(validShortId)
   })
 
   it('accepts with variantId', () => {
@@ -256,24 +258,24 @@ describe('AddToCartSchema', () => {
     expect(result.variantId).toBe(validShortId)
   })
 
-  it('accepts null variantId', () => {
-    const result = AddToCartSchema.parse({
-      productId: validShortId,
-      variantId: null,
-      quantity: 1,
-    })
-    expect(result.variantId).toBeNull()
+  it('rejects missing variantId', () => {
+    expect(() =>
+      AddToCartSchema.parse({
+        productId: validShortId,
+        quantity: 1,
+      })
+    ).toThrow()
   })
 
   it('rejects non-integer quantity', () => {
     expect(() =>
-      AddToCartSchema.parse({ productId: validShortId, quantity: 1.5 })
+      AddToCartSchema.parse({ productId: validShortId, variantId: validShortId, quantity: 1.5 })
     ).toThrow()
   })
 
   it('rejects zero quantity', () => {
     expect(() =>
-      AddToCartSchema.parse({ productId: validShortId, quantity: 0 })
+      AddToCartSchema.parse({ productId: validShortId, variantId: validShortId, quantity: 0 })
     ).toThrow()
   })
 })
