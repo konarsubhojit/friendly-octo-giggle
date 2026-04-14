@@ -387,7 +387,11 @@ describe('order-service', () => {
 
     it('throws when insufficient stock', async () => {
       mockPrimaryDrizzleDbQuery.products.findMany.mockResolvedValue([
-        { id: 'p1', name: 'Widget', variants: [{ id: 'v1', price: 100, stock: 0 }] },
+        {
+          id: 'p1',
+          name: 'Widget',
+          variants: [{ id: 'v1', price: 100, stock: 0 }],
+        },
       ])
 
       await expect(
@@ -457,7 +461,11 @@ describe('order-service', () => {
       }
 
       mockPrimaryDrizzleDbQuery.products.findMany.mockResolvedValue([
-        { id: 'p1', name: 'Widget', variants: [{ id: 'v1', price: 100, stock: 10 }] },
+        {
+          id: 'p1',
+          name: 'Widget',
+          variants: [{ id: 'v1', price: 100, stock: 10 }],
+        },
       ])
 
       mockPrimaryDrizzleDbTransaction.mockImplementation(
@@ -553,7 +561,11 @@ describe('order-service', () => {
       }
 
       mockPrimaryDrizzleDbQuery.products.findMany.mockResolvedValue([
-        { id: 'p1', name: 'Widget', variants: [{ id: 'v1', price: 100, stock: 10 }] },
+        {
+          id: 'p1',
+          name: 'Widget',
+          variants: [{ id: 'v1', price: 100, stock: 10 }],
+        },
       ])
 
       mockPrimaryDrizzleDbTransaction.mockImplementation(
@@ -626,7 +638,11 @@ describe('order-service', () => {
 
     it('throws when order retrieval fails after creation', async () => {
       mockPrimaryDrizzleDbQuery.products.findMany.mockResolvedValue([
-        { id: 'p1', name: 'Widget', variants: [{ id: 'v1', price: 100, stock: 10 }] },
+        {
+          id: 'p1',
+          name: 'Widget',
+          variants: [{ id: 'v1', price: 100, stock: 10 }],
+        },
       ])
 
       mockPrimaryDrizzleDbTransaction.mockImplementation(
@@ -670,7 +686,11 @@ describe('order-service', () => {
 
     it('uses user defaults for name and email when body is empty', async () => {
       mockPrimaryDrizzleDbQuery.products.findMany.mockResolvedValue([
-        { id: 'p1', name: 'Widget', variants: [{ id: 'v1', price: 50, stock: 10 }] },
+        {
+          id: 'p1',
+          name: 'Widget',
+          variants: [{ id: 'v1', price: 50, stock: 10 }],
+        },
       ])
 
       const newOrder = {

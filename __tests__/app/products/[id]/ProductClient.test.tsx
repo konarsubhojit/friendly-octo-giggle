@@ -301,7 +301,9 @@ describe('ProductClient', () => {
   })
 
   it('shows "all stock in cart" panel when cart quantity equals stock', () => {
-    const product = makeProduct({ variants: [makeVariation({ id: 'var001', stock: 3 })] })
+    const product = makeProduct({
+      variants: [makeVariation({ id: 'var001', stock: 3 })],
+    })
     vi.mocked(useSelector).mockImplementation((selector) =>
       selector({
         cart: {
@@ -598,7 +600,9 @@ describe('ProductClient', () => {
   })
 
   it('shows already-in-cart notice when items are in cart', () => {
-    const product = makeProduct({ variants: [makeVariation({ id: 'var001', stock: 10 })] })
+    const product = makeProduct({
+      variants: [makeVariation({ id: 'var001', stock: 10 })],
+    })
     vi.mocked(useSelector).mockImplementation((selector) =>
       selector({
         cart: {

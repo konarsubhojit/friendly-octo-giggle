@@ -269,13 +269,21 @@ describe('AddToCartSchema', () => {
 
   it('rejects non-integer quantity', () => {
     expect(() =>
-      AddToCartSchema.parse({ productId: validShortId, variantId: validShortId, quantity: 1.5 })
+      AddToCartSchema.parse({
+        productId: validShortId,
+        variantId: validShortId,
+        quantity: 1.5,
+      })
     ).toThrow()
   })
 
   it('rejects zero quantity', () => {
     expect(() =>
-      AddToCartSchema.parse({ productId: validShortId, variantId: validShortId, quantity: 0 })
+      AddToCartSchema.parse({
+        productId: validShortId,
+        variantId: validShortId,
+        quantity: 0,
+      })
     ).toThrow()
   })
 })

@@ -76,9 +76,7 @@ describe('VariationList', () => {
 
   it('shows variant id for variations without sku', () => {
     const noSku = { ...mockVariant, sku: null }
-    render(
-      <VariationList productId="abc1234" initialVariants={[noSku]} />
-    )
+    render(<VariationList productId="abc1234" initialVariants={[noSku]} />)
     expect(screen.getByText('var1234')).toBeInTheDocument()
   })
 
@@ -108,12 +106,8 @@ describe('VariationList', () => {
       <VariationList productId="abc1234" initialVariants={[mockVariant]} />
     )
 
-    expect(
-      screen.queryByLabelText('Price for RED-LG')
-    ).not.toBeInTheDocument()
-    expect(
-      screen.queryByLabelText('Stock for RED-LG')
-    ).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Price for RED-LG')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Stock for RED-LG')).not.toBeInTheDocument()
   })
 
   it('expands quick edit fields when the edit action is clicked', () => {

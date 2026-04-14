@@ -69,9 +69,7 @@ export function QuickAddButton({
   )
 
   const totalStock =
-    product.variants?.reduce((sum, v) => sum + v.stock, 0) ??
-    product.stock ??
-    0
+    product.variants?.reduce((sum, v) => sum + v.stock, 0) ?? product.stock ?? 0
   if (totalStock === 0) return null
 
   return (
