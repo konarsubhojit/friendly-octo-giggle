@@ -54,14 +54,12 @@ const createCartItem = (
   productId: 'prod1',
   productName: 'Test Product',
   productDescription: 'A test product',
-  productPrice: 100,
   productImage: 'https://example.com/img.jpg',
   productCategory: 'Test',
-  productStock: 10,
-  variationId: null,
-  variationName: null,
-  variationPrice: null,
-  variationStock: null,
+  variantId: 'v1',
+  variantSku: null,
+  variantPrice: 100,
+  variantStock: 10,
   quantity: 2,
   createdAt: '2024-01-01T00:00:00Z',
   updatedAt: '2024-01-01T00:00:00Z',
@@ -256,14 +254,12 @@ describe('cart-redis', () => {
           productId: 'prod1',
           productName: 'Test',
           productDescription: 'Desc',
-          productPrice: '100',
           productImage: 'img.jpg',
           productCategory: 'Cat',
-          productStock: '10',
-          variationId: '',
-          variationName: '',
-          variationPrice: '0',
-          variationStock: '0',
+          variantId: 'v1',
+          variantSku: '',
+          variantPrice: '100',
+          variantStock: '10',
           quantity: '2',
           createdAt: '2024-01-01',
           updatedAt: '2024-01-01',
@@ -274,7 +270,7 @@ describe('cart-redis', () => {
 
       expect(result).toHaveLength(1)
       expect(result![0].itemId).toBe('item1')
-      expect(result![0].productPrice).toBe(100)
+      expect(result![0].variantPrice).toBe(100)
     })
 
     it('returns null when redis is not available', async () => {
@@ -310,10 +306,10 @@ describe('cart-redis', () => {
           productId: 'p1',
           productName: 'T',
           productDescription: 'D',
-          productPrice: '10',
+          variantPrice: '10',
           productImage: 'i',
           productCategory: 'C',
-          productStock: '5',
+          variantStock: '5',
           quantity: '1',
           createdAt: '2024-01-01',
           updatedAt: '2024-01-01',

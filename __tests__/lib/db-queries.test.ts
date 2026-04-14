@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const {
   mockProductsFindMany,
-  mockProductVariationsFindMany,
+  mockProductVariantsFindMany,
   mockWishlistsFindMany,
   mockWishlistsFindFirst,
   mockWishlistsInsertReturning,
@@ -47,7 +47,7 @@ const {
 
   return {
     mockProductsFindMany: vi.fn(),
-    mockProductVariationsFindMany: vi.fn(),
+    mockProductVariantsFindMany: vi.fn(),
     mockWishlistsFindMany: vi.fn(),
     mockWishlistsFindFirst: vi.fn(),
     mockWishlistsInsertReturning,
@@ -76,7 +76,7 @@ vi.mock('drizzle-orm/neon-serverless', () => ({
         findMany: mockProductsFindMany,
       },
       productVariations: {
-        findMany: mockProductVariationsFindMany,
+        findMany: mockProductVariantsFindMany,
       },
       wishlists: {
         findMany: mockWishlistsFindMany,
@@ -115,7 +115,7 @@ vi.mock('@/lib/schema', () => ({
   productShares: {
     key: 'key',
     productId: 'productId',
-    variationId: 'variationId',
+    variantId: 'variantId',
   },
   productVariations: {},
   products: {
@@ -306,7 +306,7 @@ describe('db.products.findBestsellers', () => {
       .mockReturnValueOnce(subqueryChain)
       .mockReturnValueOnce(mainQueryChain)
 
-    mockProductVariationsFindMany.mockResolvedValue(variationRows)
+    mockProductVariantsFindMany.mockResolvedValue(variationRows)
 
     const results = await db.products.findBestsellers({ limit: 5 })
 
@@ -339,7 +339,7 @@ describe('db.products.findBestsellers', () => {
     const results = await db.products.findBestsellers({ limit: 5 })
 
     expect(results).toEqual([])
-    expect(mockProductVariationsFindMany).not.toHaveBeenCalled()
+    expect(mockProductVariantsFindMany).not.toHaveBeenCalled()
   })
 
   it('groups variations by productId correctly', async () => {
@@ -371,7 +371,7 @@ describe('db.products.findBestsellers', () => {
     mockSelect
       .mockReturnValueOnce(subqueryChain)
       .mockReturnValueOnce(mainQueryChain)
-    mockProductVariationsFindMany.mockResolvedValue(variationRows)
+    mockProductVariantsFindMany.mockResolvedValue(variationRows)
 
     const results = await db.products.findBestsellers({ limit: 2 })
 

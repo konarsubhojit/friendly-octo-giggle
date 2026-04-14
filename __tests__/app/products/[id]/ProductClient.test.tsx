@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import React from 'react'
 import ProductClient from '@/app/products/[id]/ProductClient'
-import type { Product, ProductVariation } from '@/lib/types'
+import type { Product, ProductVariant } from '@/lib/types'
 import { useSession } from 'next-auth/react'
 import { useSelector } from 'react-redux'
 
@@ -89,9 +89,9 @@ vi.mock('@/features/product/components/VariationButton', () => ({
     isSelected,
     onSelect,
   }: {
-    variation: ProductVariation
+    variation: ProductVariant
     isSelected: boolean
-    onSelect: (v: ProductVariation) => void
+    onSelect: (v: ProductVariant) => void
   }) => (
     <button
       data-testid={`variation-btn-${variation.id}`}
@@ -167,8 +167,8 @@ function makeProduct(overrides: Partial<Product> = {}): Product {
 }
 
 function makeVariation(
-  overrides: Partial<ProductVariation> = {}
-): ProductVariation {
+  overrides: Partial<ProductVariant> = {}
+): ProductVariant {
   return {
     id: 'var001',
     productId: 'prod001',
@@ -209,7 +209,7 @@ describe('ProductClient', () => {
     render(
       <ProductClient
         product={product}
-        initialVariationId={null}
+        initialVariantId={null}
         aiEnabled={true}
       />
     )
@@ -229,7 +229,7 @@ describe('ProductClient', () => {
     render(
       <ProductClient
         product={product}
-        initialVariationId={null}
+        initialVariantId={null}
         aiEnabled={true}
       />
     )
@@ -251,7 +251,7 @@ describe('ProductClient', () => {
     render(
       <ProductClient
         product={product}
-        initialVariationId={null}
+        initialVariantId={null}
         aiEnabled={true}
       />
     )
@@ -264,7 +264,7 @@ describe('ProductClient', () => {
     render(
       <ProductClient
         product={product}
-        initialVariationId={null}
+        initialVariantId={null}
         aiEnabled={true}
       />
     )
@@ -280,7 +280,7 @@ describe('ProductClient', () => {
     render(
       <ProductClient
         product={product}
-        initialVariationId={null}
+        initialVariantId={null}
         aiEnabled={true}
       />
     )
@@ -298,7 +298,7 @@ describe('ProductClient', () => {
       selector({
         cart: {
           cart: {
-            items: [{ productId: 'prod001', variationId: null, quantity: 3 }],
+            items: [{ productId: 'prod001', variantId: null, quantity: 3 }],
           },
         },
       })
@@ -306,7 +306,7 @@ describe('ProductClient', () => {
     render(
       <ProductClient
         product={product}
-        initialVariationId={null}
+        initialVariantId={null}
         aiEnabled={true}
       />
     )
@@ -323,7 +323,7 @@ describe('ProductClient', () => {
     render(
       <ProductClient
         product={product}
-        initialVariationId={null}
+        initialVariantId={null}
         aiEnabled={true}
       />
     )
@@ -335,7 +335,7 @@ describe('ProductClient', () => {
     render(
       <ProductClient
         product={product}
-        initialVariationId={null}
+        initialVariantId={null}
         aiEnabled={true}
       />
     )
@@ -348,7 +348,7 @@ describe('ProductClient', () => {
     render(
       <ProductClient
         product={product}
-        initialVariationId={null}
+        initialVariantId={null}
         aiEnabled={true}
       />
     )
@@ -370,7 +370,7 @@ describe('ProductClient', () => {
     render(
       <ProductClient
         product={product}
-        initialVariationId={null}
+        initialVariantId={null}
         aiEnabled={true}
       />
     )
@@ -384,7 +384,7 @@ describe('ProductClient', () => {
     render(
       <ProductClient
         product={product}
-        initialVariationId={null}
+        initialVariantId={null}
         aiEnabled={true}
       />
     )
@@ -396,7 +396,7 @@ describe('ProductClient', () => {
     render(
       <ProductClient
         product={product}
-        initialVariationId={null}
+        initialVariantId={null}
         aiEnabled={true}
       />
     )
@@ -417,7 +417,7 @@ describe('ProductClient', () => {
     render(
       <ProductClient
         product={product}
-        initialVariationId={null}
+        initialVariantId={null}
         aiEnabled={true}
       />
     )
@@ -444,7 +444,7 @@ describe('ProductClient', () => {
     render(
       <ProductClient
         product={product}
-        initialVariationId={null}
+        initialVariantId={null}
         aiEnabled={true}
       />
     )
@@ -474,7 +474,7 @@ describe('ProductClient', () => {
     render(
       <ProductClient
         product={product}
-        initialVariationId={null}
+        initialVariantId={null}
         aiEnabled={true}
       />
     )
@@ -505,7 +505,7 @@ describe('ProductClient', () => {
     render(
       <ProductClient
         product={product}
-        initialVariationId={null}
+        initialVariantId={null}
         aiEnabled={true}
       />
     )
@@ -528,7 +528,7 @@ describe('ProductClient', () => {
     render(
       <ProductClient
         product={product}
-        initialVariationId={null}
+        initialVariantId={null}
         aiEnabled={true}
       />
     )
@@ -537,13 +537,13 @@ describe('ProductClient', () => {
     expect(screen.getByTestId('variation-btn-var002')).toBeInTheDocument()
   })
 
-  it('selects initial variation from initialVariationId prop', () => {
+  it('selects initial variation from initialVariantId prop', () => {
     const variation = makeVariation({ id: 'var001', name: 'Red', price: 750 })
     const product = makeProduct({ variations: [variation] })
     render(
       <ProductClient
         product={product}
-        initialVariationId="var001"
+        initialVariantId="var001"
         aiEnabled={true}
       />
     )
@@ -559,7 +559,7 @@ describe('ProductClient', () => {
     render(
       <ProductClient
         product={product}
-        initialVariationId={null}
+        initialVariantId={null}
         aiEnabled={true}
       />
     )
@@ -578,7 +578,7 @@ describe('ProductClient', () => {
     render(
       <ProductClient
         product={product}
-        initialVariationId={null}
+        initialVariantId={null}
         aiEnabled={true}
       />
     )
@@ -594,7 +594,7 @@ describe('ProductClient', () => {
       selector({
         cart: {
           cart: {
-            items: [{ productId: 'prod001', variationId: null, quantity: 2 }],
+            items: [{ productId: 'prod001', variantId: null, quantity: 2 }],
           },
         },
       })
@@ -602,7 +602,7 @@ describe('ProductClient', () => {
     render(
       <ProductClient
         product={product}
-        initialVariationId={null}
+        initialVariantId={null}
         aiEnabled={true}
       />
     )
@@ -624,7 +624,7 @@ describe('ProductClient', () => {
     render(
       <ProductClient
         product={product}
-        initialVariationId={null}
+        initialVariantId={null}
         aiEnabled={true}
       />
     )
@@ -639,7 +639,7 @@ describe('ProductClient', () => {
     render(
       <ProductClient
         product={product}
-        initialVariationId={null}
+        initialVariantId={null}
         aiEnabled={true}
       />
     )
@@ -651,7 +651,7 @@ describe('ProductClient', () => {
     render(
       <ProductClient
         product={product}
-        initialVariationId={null}
+        initialVariantId={null}
         aiEnabled={false}
       />
     )
@@ -679,7 +679,7 @@ describe('ProductClient', () => {
     render(
       <ProductClient
         product={product}
-        initialVariationId={null}
+        initialVariantId={null}
         aiEnabled={true}
       />
     )

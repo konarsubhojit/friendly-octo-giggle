@@ -34,7 +34,7 @@ const makeOrderItem = (overrides = {}) => ({
   id: '770e8400-e29b-41d4-a716-446655440000',
   orderId: '880e8400-e29b-41d4-a716-446655440000',
   productId: '550e8400-e29b-41d4-a716-446655440000',
-  variationId: null,
+  variantId: null,
   quantity: 2,
   price: 29.99,
   customizationNote: null,

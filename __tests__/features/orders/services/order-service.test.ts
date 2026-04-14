@@ -337,7 +337,7 @@ describe('order-service', () => {
             pinCode: '110001',
             city: 'New Delhi',
             state: 'Delhi',
-            items: [{ productId: 'p1', quantity: 1 }],
+            items: [{ productId: 'p1', variantId: 'v1', quantity: 1 }],
           },
           user: { id: 'user1', name: 'Test', email: null },
         })
@@ -357,7 +357,7 @@ describe('order-service', () => {
             pinCode: '',
             city: '',
             state: '',
-            items: [{ productId: 'p1', quantity: 1 }],
+            items: [{ productId: 'p1', variantId: 'v1', quantity: 1 }],
           },
           user: testUser,
         })
@@ -379,7 +379,7 @@ describe('order-service', () => {
             pinCode: '110001',
             city: 'New Delhi',
             state: 'Delhi',
-            items: [{ productId: 'p1', quantity: 1 }],
+            items: [{ productId: 'p1', variantId: 'v1', quantity: 1 }],
           },
           user: testUser,
         })
@@ -403,7 +403,7 @@ describe('order-service', () => {
             pinCode: '110001',
             city: 'New Delhi',
             state: 'Delhi',
-            items: [{ productId: 'p1', quantity: 5 }],
+            items: [{ productId: 'p1', variantId: 'v1', quantity: 5 }],
           },
           user: testUser,
         })
@@ -433,7 +433,7 @@ describe('order-service', () => {
             pinCode: '110001',
             city: 'New Delhi',
             state: 'Delhi',
-            items: [{ productId: 'p1', variationId: 'v999', quantity: 1 }],
+            items: [{ productId: 'p1', variantId: 'v999', quantity: 1 }],
           },
           user: testUser,
         })
@@ -486,7 +486,7 @@ describe('order-service', () => {
         items: [
           {
             productId: 'p1',
-            variationId: null,
+            variantId: null,
             quantity: 2,
             price: 100,
             customizationNote: null,
@@ -519,7 +519,7 @@ describe('order-service', () => {
           pinCode: '110001',
           city: 'New Delhi',
           state: 'Delhi',
-          items: [{ productId: 'p1', quantity: 2 }],
+          items: [{ productId: 'p1', variantId: 'v1', quantity: 2 }],
         },
         user: testUser,
       })
@@ -582,7 +582,7 @@ describe('order-service', () => {
         items: [
           {
             productId: 'p1',
-            variationId: null,
+            variantId: null,
             quantity: 1,
             price: 100,
             customizationNote: null,
@@ -613,7 +613,7 @@ describe('order-service', () => {
           pinCode: '110001',
           city: 'New Delhi',
           state: 'Delhi',
-          items: [{ productId: 'p1', quantity: 1 }],
+          items: [{ productId: 'p1', variantId: 'v1', quantity: 1 }],
         },
         user: testUser,
       })
@@ -664,7 +664,7 @@ describe('order-service', () => {
             pinCode: '110001',
             city: 'New Delhi',
             state: 'Delhi',
-            items: [{ productId: 'p1', quantity: 1 }],
+            items: [{ productId: 'p1', variantId: 'v1', quantity: 1 }],
           },
           user: testUser,
         })
@@ -717,7 +717,7 @@ describe('order-service', () => {
         items: [
           {
             productId: 'p1',
-            variationId: null,
+            variantId: null,
             quantity: 1,
             price: 50,
             customizationNote: null,
@@ -748,7 +748,7 @@ describe('order-service', () => {
           pinCode: '110001',
           city: 'New Delhi',
           state: 'Delhi',
-          items: [{ productId: 'p1', quantity: 1 }],
+          items: [{ productId: 'p1', variantId: 'v1', quantity: 1 }],
         },
         user: testUser,
       })

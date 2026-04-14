@@ -100,7 +100,7 @@ describe('cartSlice async thunks (fetch bodies)', () => {
     )
     const store = makeStore()
     await store.dispatch(
-      addToCart({ productId: 'p1', quantity: 1, variationId: null })
+      addToCart({ productId: 'p1', quantity: 1, variantId: 'v1' })
     )
     expect(store.getState().cart.cart).toEqual(mockCart)
   })
@@ -114,7 +114,7 @@ describe('cartSlice async thunks (fetch bodies)', () => {
       })
     )
     const store = makeStore()
-    await store.dispatch(addToCart({ productId: 'p1', quantity: 99 }))
+    await store.dispatch(addToCart({ productId: 'p1', variantId: 'v1', quantity: 99 }))
     expect(store.getState().cart.error).toBe('Out of stock')
   })
 
@@ -128,7 +128,7 @@ describe('cartSlice async thunks (fetch bodies)', () => {
       })
     )
     const store = makeStore()
-    await store.dispatch(addToCart({ productId: 'p1', quantity: 1 }))
+    await store.dispatch(addToCart({ productId: 'p1', variantId: 'v1', quantity: 1 }))
     expect(store.getState().cart.error).toBe('Request failed (400)')
   })
 

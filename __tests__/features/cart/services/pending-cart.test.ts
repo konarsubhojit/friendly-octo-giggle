@@ -17,7 +17,7 @@ describe('pending-cart', () => {
     })
 
     it('returns stored items', () => {
-      const items = [{ productId: 'p1', variationId: null, quantity: 2 }]
+      const items = [{ productId: 'p1', variantId: 'v1', quantity: 2 }]
       localStorage.setItem('pending_cart_items', JSON.stringify(items))
 
       expect(getPendingCartItems()).toEqual(items)
@@ -36,20 +36,20 @@ describe('pending-cart', () => {
 
   describe('addPendingCartItem', () => {
     it('adds a new item', () => {
-      addPendingCartItem({ productId: 'p1', variationId: null, quantity: 1 })
+      addPendingCartItem({ productId: 'p1', variantId: 'v1', quantity: 1 })
 
       const stored = getPendingCartItems()
       expect(stored).toHaveLength(1)
       expect(stored[0]).toEqual({
         productId: 'p1',
-        variationId: null,
+        variantId: 'v1',
         quantity: 1,
       })
     })
 
     it('increments quantity for duplicate product+variation', () => {
-      addPendingCartItem({ productId: 'p1', variationId: 'v1', quantity: 2 })
-      addPendingCartItem({ productId: 'p1', variationId: 'v1', quantity: 3 })
+      addPendingCartItem({ productId: 'p1', variantId: 'v1', quantity: 2 })
+      addPendingCartItem({ productId: 'p1', variantId: 'v1', quantity: 3 })
 
       const stored = getPendingCartItems()
       expect(stored).toHaveLength(1)
@@ -57,15 +57,15 @@ describe('pending-cart', () => {
     })
 
     it('adds separate entry for different variation', () => {
-      addPendingCartItem({ productId: 'p1', variationId: 'v1', quantity: 1 })
-      addPendingCartItem({ productId: 'p1', variationId: 'v2', quantity: 1 })
+      addPendingCartItem({ productId: 'p1', variantId: 'v1', quantity: 1 })
+      addPendingCartItem({ productId: 'p1', variantId: 'v2', quantity: 1 })
 
       expect(getPendingCartItems()).toHaveLength(2)
     })
 
     it('adds separate entry for different product', () => {
-      addPendingCartItem({ productId: 'p1', variationId: null, quantity: 1 })
-      addPendingCartItem({ productId: 'p2', variationId: null, quantity: 1 })
+      addPendingCartItem({ productId: 'p1', variantId: 'v1', quantity: 1 })
+      addPendingCartItem({ productId: 'p2', variantId: 'v2', quantity: 1 })
 
       expect(getPendingCartItems()).toHaveLength(2)
     })
@@ -73,7 +73,7 @@ describe('pending-cart', () => {
 
   describe('clearPendingCartItems', () => {
     it('removes all pending cart items', () => {
-      addPendingCartItem({ productId: 'p1', variationId: null, quantity: 1 })
+      addPendingCartItem({ productId: 'p1', variantId: 'v1', quantity: 1 })
       expect(hasPendingCartItems()).toBe(true)
 
       clearPendingCartItems()
@@ -88,7 +88,7 @@ describe('pending-cart', () => {
     })
 
     it('returns true when items exist', () => {
-      addPendingCartItem({ productId: 'p1', variationId: null, quantity: 1 })
+      addPendingCartItem({ productId: 'p1', variantId: 'v1', quantity: 1 })
       expect(hasPendingCartItems()).toBe(true)
     })
   })
