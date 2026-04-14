@@ -14,13 +14,11 @@ export const ProductSchema = z.object({
   id: z.string().regex(SHORT_ID_REGEX, 'Invalid product ID format'),
   name: z.string().min(1, 'Name is required').max(200),
   description: z.string().min(1, 'Description is required').max(2000),
-  price: z.number().positive('Price must be positive'),
   image: z.string().regex(URL_REGEX, 'Must be a valid URL'),
   images: z
     .array(z.string().regex(URL_REGEX, 'Each image must be a valid URL'))
     .max(10, 'Maximum 10 images allowed')
     .default([]),
-  stock: z.number().int().nonnegative('Stock must be non-negative'),
   category: z.string().min(1, 'Category is required').max(100),
   createdAt: z.string().regex(ISO_DATETIME_REGEX, 'Invalid datetime format'),
   updatedAt: z.string().regex(ISO_DATETIME_REGEX, 'Invalid datetime format'),
@@ -37,107 +35,73 @@ export const ProductUpdateSchema = ProductInputSchema.partial()
 export type ProductInput = z.infer<typeof ProductInputSchema>
 export type ProductUpdate = z.infer<typeof ProductUpdateSchema>
 
-// ─── Variation Validation Schemas ─────────────────────────
+// ─── Product Option Validation Schemas ────────────────────
 
-// Base schema fields shared between create and update variations.
-const BaseVariationFields = {
+export const CreateProductOptionSchema = z.object({
   name: z
     .string()
-    .min(1, 'Name is required')
-    .max(100, 'Name must be under 100 characters'),
-  designName: z
+    .min(1, 'Option name is required')
+    .max(100, 'Option name must be under 100 characters'),
+  sortOrder: z.number().int().nonnegative().default(0),
+})
+
+export const CreateOptionValueSchema = z.object({
+  value: z
     .string()
-    .min(1, 'Design name is required')
-    .max(100, 'Design name must be under 100 characters'),
-  variationType: z.enum(['styling', 'colour']).default('styling'),
-  styleId: z.string().regex(SHORT_ID_REGEX, 'Invalid style ID').nullish(),
+    .min(1, 'Option value is required')
+    .max(100, 'Option value must be under 100 characters'),
+  sortOrder: z.number().int().nonnegative().default(0),
+})
+
+export type CreateProductOptionInput = z.infer<typeof CreateProductOptionSchema>
+export type CreateOptionValueInput = z.infer<typeof CreateOptionValueSchema>
+
+// ─── Product Variant Validation Schemas ───────────────────
+
+export const CreateVariantSchema = z.object({
+  sku: z
+    .string()
+    .max(100, 'SKU must be under 100 characters')
+    .nullish(),
+  price: z
+    .number({ message: 'Price is required' })
+    .positive('Price must be greater than zero'),
+  stock: z
+    .number({ message: 'Stock is required' })
+    .int('Stock must be an integer')
+    .nonnegative('Stock must be non-negative'),
   image: z.string().regex(URL_REGEX, 'Must be a valid URL').nullish(),
   images: z
     .array(z.string().regex(URL_REGEX, 'Each image must be a valid URL'))
     .max(10, 'Maximum 10 images allowed')
     .default([]),
-}
+  optionValueIds: z
+    .array(z.string().regex(SHORT_ID_REGEX, 'Invalid option value ID'))
+    .default([]),
+})
 
-export const CreateVariationSchema = z
-  .object({
-    ...BaseVariationFields,
-    price: z
-      .number({ message: 'Price is required' })
-      .nonnegative('Price must be non-negative'),
-    stock: z
-      .number({ message: 'Stock is required' })
-      .int('Stock must be an integer')
-      .nonnegative('Stock must be non-negative'),
-  })
-  .superRefine((data, ctx) => {
-    if (data.variationType === 'styling') {
-      validateStylingVariation(data, ctx)
-    }
-    if (data.variationType === 'colour' && data.price <= 0) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['price'],
-        message: 'Colour price must be greater than zero',
-      })
-    }
-  })
+export const UpdateVariantSchema = z.object({
+  sku: z
+    .string()
+    .max(100, 'SKU must be under 100 characters')
+    .nullish(),
+  price: z
+    .number({ message: 'Price is required' })
+    .positive('Price must be greater than zero'),
+  stock: z
+    .number({ message: 'Stock is required' })
+    .int('Stock must be an integer')
+    .nonnegative('Stock must be non-negative'),
+  image: z.string().regex(URL_REGEX, 'Must be a valid URL').nullish(),
+  images: z
+    .array(z.string().regex(URL_REGEX, 'Each image must be a valid URL'))
+    .max(10, 'Maximum 10 images allowed'),
+  optionValueIds: z
+    .array(z.string().regex(SHORT_ID_REGEX, 'Invalid option value ID')),
+}).partial()
 
-// Validates that styling variations have zero price/stock and are not nested.
-function validateStylingVariation(
-  data: { price: number; stock: number; styleId?: string | null },
-  ctx: z.RefinementCtx
-) {
-  if (data.price !== 0) {
-    ctx.addIssue({
-      code: 'custom',
-      path: ['price'],
-      message: 'Styles are grouping-only; price must be 0',
-    })
-  }
-  if (data.stock !== 0) {
-    ctx.addIssue({
-      code: 'custom',
-      path: ['stock'],
-      message: 'Styles are grouping-only; stock must be 0',
-    })
-  }
-  if (data.styleId) {
-    ctx.addIssue({
-      code: 'custom',
-      path: ['styleId'],
-      message: 'Styles cannot be nested under another style',
-    })
-  }
-}
-
-export const UpdateVariationSchema = z
-  .object({
-    name: z
-      .string()
-      .min(1, 'Name is required')
-      .max(100, 'Name must be under 100 characters'),
-    designName: z
-      .string()
-      .min(1, 'Design name is required')
-      .max(100, 'Design name must be under 100 characters'),
-    variationType: z.enum(['styling', 'colour']),
-    styleId: z.string().regex(SHORT_ID_REGEX, 'Invalid style ID').nullish(),
-    image: z.string().regex(URL_REGEX, 'Must be a valid URL').nullish(),
-    images: z
-      .array(z.string().regex(URL_REGEX, 'Each image must be a valid URL'))
-      .max(10, 'Maximum 10 images allowed'),
-    price: z
-      .number({ message: 'Price is required' })
-      .nonnegative('Price must be non-negative'),
-    stock: z
-      .number({ message: 'Stock is required' })
-      .int('Stock must be an integer')
-      .nonnegative('Stock must be non-negative'),
-  })
-  .partial()
-
-export type CreateVariationInput = z.infer<typeof CreateVariationSchema>
-export type UpdateVariationInput = z.infer<typeof UpdateVariationSchema>
+export type CreateVariantInput = z.infer<typeof CreateVariantSchema>
+export type UpdateVariantInput = z.infer<typeof UpdateVariantSchema>
 
 // ─── Review Validation Schemas ────────────────────────────
 
@@ -162,9 +126,9 @@ export type CreateReviewInput = z.infer<typeof CreateReviewSchema>
 
 export const CreateShareSchema = z.object({
   productId: z.string().regex(SHORT_ID_REGEX, 'Invalid product ID'),
-  variationId: z
+  variantId: z
     .string()
-    .regex(SHORT_ID_REGEX, 'Invalid variation ID')
+    .regex(SHORT_ID_REGEX, 'Invalid variant ID')
     .nullish(),
 })
 

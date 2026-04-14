@@ -4,10 +4,9 @@ import { StructuredAddressSchema } from '@/features/orders/validations'
 
 export const AddToCartSchema = z.object({
   productId: z.string().regex(SHORT_ID_REGEX, 'Invalid product ID'),
-  variationId: z
+  variantId: z
     .string()
-    .regex(SHORT_ID_REGEX, 'Invalid variation ID')
-    .nullish(),
+    .regex(SHORT_ID_REGEX, 'Invalid variant ID'),
   quantity: z
     .number()
     .int('Quantity must be an integer')
@@ -26,10 +25,9 @@ export type UpdateCartItemInput = z.infer<typeof UpdateCartItemSchema>
 
 export const CheckoutOrderItemSchema = z.object({
   productId: z.string().regex(SHORT_ID_REGEX, 'Invalid product ID'),
-  variationId: z
+  variantId: z
     .string()
-    .regex(SHORT_ID_REGEX, 'Invalid variation ID')
-    .nullish(),
+    .regex(SHORT_ID_REGEX, 'Invalid variant ID'),
   quantity: z.number().int().positive('Quantity must be positive'),
   customizationNote: z
     .string()
