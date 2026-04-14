@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
-import type { ProductVariation } from '@/lib/types'
+import type { ProductVariant } from '@/lib/types'
 import toast from 'react-hot-toast'
 import {
   CURRENCIES,
@@ -17,7 +17,6 @@ import {
 import {
   TextInput,
   NumberInput,
-  SelectInput,
   FileInput,
   MoneyInput,
   type CurrencyOption,
@@ -27,26 +26,19 @@ const MAX_ADDITIONAL_IMAGES = 10
 
 interface VariationFormModalProps {
   readonly productId: string
-  readonly variation?: ProductVariation
-  readonly styles?: ProductVariation[]
+  readonly variant?: ProductVariant
   readonly onClose: () => void
-  readonly onSuccess: (variation: ProductVariation) => void
+  readonly onSuccess: (variant: ProductVariant) => void
 }
 
 interface FormData {
-  name: string
-  designName: string
-  variationType: 'styling' | 'colour'
-  styleId: string
+  sku: string
   price: string
   stock: string
 }
 
-interface VariationPayload {
-  name: string
-  designName: string
-  variationType: 'styling' | 'colour'
-  styleId?: string | null
+interface VariantPayload {
+  sku?: string | null
   price: number
   stock: number
   productId?: string
@@ -97,25 +89,25 @@ const resolveAdditionalImageUrls = async (
   return resolvedUrls
 }
 
-const getVariationMutationConfig = (
+const getVariantMutationConfig = (
   isEditing: boolean,
-  variationId: string | undefined
+  variantId: string | undefined
 ) => ({
   method: isEditing ? 'PUT' : 'POST',
   url:
-    isEditing && variationId
-      ? `/api/admin/variations/${variationId}`
+    isEditing && variantId
+      ? `/api/admin/variations/${variantId}`
       : '/api/admin/variations',
   fallbackError: isEditing
-    ? 'Failed to update variation'
-    : 'Failed to create variation',
-  successMessage: isEditing ? 'Variation updated' : 'Variation created',
+    ? 'Failed to update variant'
+    : 'Failed to create variant',
+  successMessage: isEditing ? 'Variant updated' : 'Variant created',
 })
 
-const parseVariationMutationResponse = async (
+const parseVariantMutationResponse = async (
   response: Response,
   fallbackError: string
-): Promise<ProductVariation> => {
+): Promise<ProductVariant> => {
   const data = await response.json().catch(() => null)
 
   if (!response.ok) {
@@ -132,12 +124,12 @@ const parseVariationMutationResponse = async (
     !('data' in data) ||
     !data.data ||
     typeof data.data !== 'object' ||
-    !('variation' in data.data)
+    !('variant' in data.data)
   ) {
-    throw new Error('Unexpected variation response from server')
+    throw new Error('Unexpected variant response from server')
   }
 
-  return data.data.variation as ProductVariation
+  return data.data.variant as ProductVariant
 }
 
 const validateImageFile = (file: File): string | null => {
@@ -151,29 +143,20 @@ const validateImageFile = (file: File): string | null => {
 }
 
 const validateFormData = (
-  formData: FormData,
-  isStyle: boolean
+  formData: FormData
 ): Record<string, string> => {
   const errs: Record<string, string> = {}
-  if (!formData.name.trim()) errs.name = 'Name is required'
-  else if (formData.name.length > 100)
-    errs.name = 'Name must be under 100 characters'
-  if (!formData.designName.trim()) errs.designName = 'Design name is required'
-  else if (formData.designName.length > 100)
-    errs.designName = 'Design name must be under 100 characters'
-  if (!isStyle) {
-    if (formData.price === '') errs.price = 'Price is required'
-    else if (Number.isNaN(Number.parseFloat(formData.price)))
-      errs.price = 'Must be a number'
-    else if (Number.parseFloat(formData.price) <= 0)
-      errs.price = 'Price must be greater than zero'
-    if (formData.stock === '') errs.stock = 'Stock is required'
-    else if (
-      !Number.isInteger(Number(formData.stock)) ||
-      Number(formData.stock) < 0
-    ) {
-      errs.stock = 'Stock must be a non-negative integer'
-    }
+  if (formData.price === '') errs.price = 'Price is required'
+  else if (Number.isNaN(Number.parseFloat(formData.price)))
+    errs.price = 'Must be a number'
+  else if (Number.parseFloat(formData.price) <= 0)
+    errs.price = 'Price must be greater than zero'
+  if (formData.stock === '') errs.stock = 'Stock is required'
+  else if (
+    !Number.isInteger(Number(formData.stock)) ||
+    Number(formData.stock) < 0
+  ) {
+    errs.stock = 'Stock must be a non-negative integer'
   }
   return errs
 }
@@ -188,47 +171,39 @@ const getSubmitButtonLabel = (
 
 const VariationFormModal = ({
   productId,
-  variation,
-  styles = [],
+  variant,
   onClose,
   onSuccess,
 }: VariationFormModalProps) => {
-  const isEditing = !!variation
+  const isEditing = !!variant
   const { availableCurrencies, currency, rates } = useCurrency()
   const [priceCurrency, setPriceCurrency] = useState<CurrencyCode>(currency)
   const [additionalImageSlotIds, setAdditionalImageSlotIds] = useState<
     string[]
-  >(() => (variation?.images ?? []).map(() => crypto.randomUUID()))
+  >(() => (variant?.images ?? []).map(() => crypto.randomUUID()))
 
   const [formData, setFormData] = useState<FormData>({
-    name: variation?.name ?? '',
-    designName: variation?.designName ?? '',
-    variationType: variation?.variationType ?? 'styling',
-    styleId: variation?.styleId ?? '',
-    price: variation
-      ? convertCurrency(variation.price, 'INR', currency, rates).toString()
+    sku: variant?.sku ?? '',
+    price: variant
+      ? convertCurrency(variant.price, 'INR', currency, rates).toString()
       : '',
-    stock: variation?.stock?.toString() ?? '',
+    stock: variant?.stock?.toString() ?? '',
   })
   const [submitting, setSubmitting] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
 
-  // Image state
-  const primaryImageUrl = variation?.image ?? null
+  const primaryImageUrl = variant?.image ?? null
   const [primaryImageFile, setPrimaryImageFile] = useState<File | null>(null)
   const [additionalImageUrls, setAdditionalImageUrls] = useState<string[]>(
-    variation?.images ?? []
+    variant?.images ?? []
   )
   const [additionalImageFiles, setAdditionalImageFiles] = useState<
     (File | null)[]
-  >((variation?.images ?? []).map(() => null))
+  >((variant?.images ?? []).map(() => null))
 
-  const isStyle = formData.variationType === 'styling'
-  const priceNum = isStyle ? 0 : Number.parseFloat(formData.price) || 0
-  const priceInInr = isStyle
-    ? 0
-    : convertCurrency(priceNum, priceCurrency, 'INR', rates)
-  const priceWarning = !isStyle && formData.price !== '' && priceInInr <= 0
+  const priceNum = Number.parseFloat(formData.price) || 0
+  const priceInInr = convertCurrency(priceNum, priceCurrency, 'INR', rates)
+  const priceWarning = formData.price !== '' && priceInInr <= 0
 
   const [primaryImagePreviewUrl, setPrimaryImagePreviewUrl] = useState<
     string | null
@@ -323,18 +298,11 @@ const VariationFormModal = ({
   const buildPayload = (
     imageUrl: string | null | undefined,
     finalAdditionalUrls: string[]
-  ): VariationPayload => {
-    const payload: VariationPayload = {
-      name: formData.name.trim(),
-      designName: formData.designName.trim(),
-      variationType: formData.variationType,
-      price: isStyle ? 0 : priceInInr,
-      stock: isStyle ? 0 : Number.parseInt(formData.stock, 10),
-    }
-
-    // Include styleId for colours
-    if (formData.variationType === 'colour') {
-      payload.styleId = formData.styleId || null
+  ): VariantPayload => {
+    const payload: VariantPayload = {
+      sku: formData.sku.trim() || null,
+      price: priceInInr,
+      stock: Number.parseInt(formData.stock, 10),
     }
 
     if (!isEditing) {
@@ -347,7 +315,7 @@ const VariationFormModal = ({
 
     if (
       finalAdditionalUrls.length > 0 ||
-      (variation && variation.images.length > 0)
+      (variant && variant.images.length > 0)
     ) {
       payload.images = finalAdditionalUrls
     }
@@ -357,7 +325,7 @@ const VariationFormModal = ({
 
   const handleSubmit = async (e: React.BaseSyntheticEvent) => {
     e.preventDefault()
-    const validationErrors = validateFormData(formData, isStyle)
+    const validationErrors = validateFormData(formData)
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors)
       return
@@ -376,7 +344,7 @@ const VariationFormModal = ({
       )
       const payload = buildPayload(imageUrl, finalAdditionalUrls)
       const { url, method, fallbackError, successMessage } =
-        getVariationMutationConfig(isEditing, variation?.id)
+        getVariantMutationConfig(isEditing, variant?.id)
 
       const res = await fetch(url, {
         method,
@@ -384,13 +352,13 @@ const VariationFormModal = ({
         body: JSON.stringify(payload),
       })
 
-      const savedVariation = await parseVariationMutationResponse(
+      const savedVariant = await parseVariantMutationResponse(
         res,
         fallbackError
       )
 
       toast.success(successMessage)
-      onSuccess(savedVariation)
+      onSuccess(savedVariant)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Something went wrong')
     } finally {
@@ -404,30 +372,30 @@ const VariationFormModal = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm dark:bg-slate-950/78">
       <dialog
         open
-        aria-labelledby="variation-modal-title"
+        aria-labelledby="variant-modal-title"
         className="fixed left-1/2 top-1/2 m-0 flex max-h-[92vh] w-[min(calc(100vw-2rem),56rem)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-[2rem] border border-white/70 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-0 shadow-[0_36px_100px_-42px_rgba(15,23,42,0.72)] dark:border-slate-700/80 dark:bg-[linear-gradient(180deg,rgba(15,23,42,0.98)_0%,rgba(15,23,42,0.96)_100%)] dark:shadow-[0_36px_100px_-42px_rgba(2,6,23,0.95)]"
       >
         <div className="border-b border-slate-200/80 px-6 py-5 sm:px-8 dark:border-slate-700/80">
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-[0.72rem] font-semibold uppercase tracking-[0.28em] text-amber-700">
-                Variation editor
+                Variant editor
               </p>
               <h3
-                id="variation-modal-title"
+                id="variant-modal-title"
                 className="mt-3 text-2xl font-black tracking-tight text-slate-950 dark:text-slate-50"
               >
-                {isEditing ? 'Edit Variation' : 'Add Variation'}
+                {isEditing ? 'Edit Variant' : 'Add Variant'}
               </h3>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300">
-                Update naming, pricing, stock, and media for this variation.
+                Update pricing, stock, and media for this variant.
               </p>
             </div>
             <button
               type="button"
               onClick={onClose}
               className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:border-slate-300 hover:text-slate-950 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400 dark:hover:border-slate-600 dark:hover:text-slate-50"
-              aria-label="Close variation editor"
+              aria-label="Close variant editor"
             >
               <span aria-hidden="true">×</span>
             </button>
@@ -447,195 +415,105 @@ const VariationFormModal = ({
                     Core details
                   </h4>
                   <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                    Enter a name and design label for this variation.
+                    Enter an optional SKU for this variant.
                   </p>
                 </div>
 
                 <div className="space-y-4">
                   <TextInput
-                    label="Name"
+                    label="SKU"
                     fullWidth
-                    required
-                    name="name"
+                    name="sku"
                     maxLength={100}
-                    value={formData.name}
+                    value={formData.sku}
                     onChange={handleChange}
-                    validationState={
-                      errors.name ? ('error' as const) : ('default' as const)
-                    }
-                    errorMessage={errors.name}
-                    placeholder="e.g. Red - Large"
-                  />
-
-                  <TextInput
-                    label="Design Name"
-                    fullWidth
-                    required
-                    name="designName"
-                    maxLength={100}
-                    value={formData.designName}
-                    onChange={handleChange}
-                    validationState={
-                      errors.designName
-                        ? ('error' as const)
-                        : ('default' as const)
-                    }
-                    errorMessage={errors.designName}
-                    placeholder="e.g. Classic Logo"
+                    placeholder="e.g. PROD-RED-L"
                   />
                 </div>
               </section>
 
-              {/* Variation Type & Price */}
               <section className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-[0_18px_44px_-34px_rgba(15,23,42,0.28)] dark:border-slate-700 dark:bg-slate-900/88 dark:shadow-[0_18px_44px_-34px_rgba(2,6,23,0.92)]">
                 <div className="mb-4">
                   <h4 className="text-lg font-bold text-slate-950 dark:text-slate-50">
-                    Variation Type &amp; Pricing
+                    Pricing &amp; Stock
                   </h4>
-                  <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                    {isStyle
-                      ? 'Styles group colours. They have no price or stock of their own.'
-                      : 'Colours are purchasable options. Set price, stock, and optionally assign to a style.'}
-                  </p>
                 </div>
 
                 <div className="space-y-4">
-                  <SelectInput
-                    label="Variation Type"
-                    options={[
-                      { value: 'styling', label: 'Styling' },
-                      { value: 'colour', label: 'Colour' },
-                    ]}
-                    fullWidth
-                    required
-                    value={formData.variationType}
-                    onChange={(e) => {
-                      const val = e.target.value
-                      if (val === 'styling' || val === 'colour') {
-                        setFormData((prev) => ({
-                          ...prev,
-                          variationType: val,
-                          styleId: val === 'styling' ? '' : prev.styleId,
-                        }))
+                  <div>
+                    <MoneyInput
+                      label="Price"
+                      currencies={availableCurrencies.map(
+                        (code): CurrencyOption => ({
+                          code,
+                          symbol: CURRENCIES[code].symbol,
+                          label: CURRENCIES[code].symbol,
+                        })
+                      )}
+                      currency={priceCurrency}
+                      onCurrencyChange={(code) =>
+                        handlePriceCurrencyChange(code as CurrencyCode)
                       }
-                    }}
-                  />
-
-                  {formData.variationType === 'colour' && (
-                    <div>
-                      <SelectInput
-                        label="Parent Style"
-                        options={[
-                          { value: '', label: 'Base Product (no style)' },
-                          ...styles.map((s) => ({
-                            value: s.id,
-                            label: `${s.name} — ${s.designName}`,
-                          })),
-                        ]}
-                        fullWidth
-                        value={formData.styleId}
-                        onChange={(e) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            styleId: e.target.value,
-                          }))
-                        }
-                      />
-                      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                        Leave as &quot;Base Product&quot; for colours that
-                        belong directly to the product.
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Style info banner */}
-                  {isStyle && (
-                    <div className="rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
-                      <strong>Styles are grouping-only.</strong> Price and stock
-                      are set on each colour within this style. After creating
-                      the style, add colours to it.
-                    </div>
-                  )}
-
-                  {!isStyle && (
-                    <div>
-                      <MoneyInput
-                        label="Price"
-                        currencies={availableCurrencies.map(
-                          (code): CurrencyOption => ({
-                            code,
-                            symbol: CURRENCIES[code].symbol,
-                            label: CURRENCIES[code].symbol,
-                          })
-                        )}
-                        currency={priceCurrency}
-                        onCurrencyChange={(code) =>
-                          handlePriceCurrencyChange(code as CurrencyCode)
-                        }
-                        min={0.01}
-                        step={0.01}
-                        fullWidth
-                        required
-                        value={Number(formData.price) || 0}
-                        onChange={(v) => {
-                          setFormData((prev) => ({
-                            ...prev,
-                            price: String(v ?? 0),
-                          }))
-                          setErrors((prev) => {
-                            const next = { ...prev }
-                            delete next.price
-                            return next
-                          })
-                        }}
-                        validationState={
-                          errors.price
-                            ? ('error' as const)
-                            : ('default' as const)
-                        }
-                        errorMessage={errors.price}
-                        placeholder="e.g. 150.00"
-                      />
-                      <p
-                        className={`mt-2 text-sm ${priceWarning ? 'font-medium text-red-500 dark:text-red-400' : 'text-slate-500 dark:text-slate-400'}`}
-                      >
-                        {priceWarning
-                          ? `Price must be greater than 0.00 ${priceCurrency}`
-                          : `This price is set independently from the base product price.`}
-                      </p>
-                    </div>
-                  )}
-
-                  {!isStyle && (
-                    <NumberInput
-                      label="Stock"
-                      min={0}
-                      step={1}
+                      min={0.01}
+                      step={0.01}
                       fullWidth
                       required
-                      value={Number(formData.stock) || 0}
+                      value={Number(formData.price) || 0}
                       onChange={(v) => {
                         setFormData((prev) => ({
                           ...prev,
-                          stock: String(v ?? 0),
+                          price: String(v ?? 0),
                         }))
                         setErrors((prev) => {
                           const next = { ...prev }
-                          delete next.stock
+                          delete next.price
                           return next
                         })
                       }}
                       validationState={
-                        errors.stock ? ('error' as const) : ('default' as const)
+                        errors.price
+                          ? ('error' as const)
+                          : ('default' as const)
                       }
-                      errorMessage={errors.stock}
-                      placeholder="0"
+                      errorMessage={errors.price}
+                      placeholder="e.g. 150.00"
                     />
-                  )}
+                    <p
+                      className={`mt-2 text-sm ${priceWarning ? 'font-medium text-red-500 dark:text-red-400' : 'text-slate-500 dark:text-slate-400'}`}
+                    >
+                      {priceWarning
+                        ? `Price must be greater than 0.00 ${priceCurrency}`
+                        : `This price is set independently per variant.`}
+                    </p>
+                  </div>
+
+                  <NumberInput
+                    label="Stock"
+                    min={0}
+                    step={1}
+                    fullWidth
+                    required
+                    value={Number(formData.stock) || 0}
+                    onChange={(v) => {
+                      setFormData((prev) => ({
+                        ...prev,
+                        stock: String(v ?? 0),
+                      }))
+                      setErrors((prev) => {
+                        const next = { ...prev }
+                        delete next.stock
+                        return next
+                      })
+                    }}
+                    validationState={
+                      errors.stock ? ('error' as const) : ('default' as const)
+                    }
+                    errorMessage={errors.stock}
+                    placeholder="0"
+                  />
                 </div>
               </section>
 
-              {/* Primary Image */}
               <section className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-[0_18px_44px_-34px_rgba(15,23,42,0.28)] dark:border-slate-700 dark:bg-slate-900/88 dark:shadow-[0_18px_44px_-34px_rgba(2,6,23,0.92)]">
                 <div className="mb-4">
                   <h4 className="text-lg font-bold text-slate-950 dark:text-slate-50">
@@ -643,7 +521,7 @@ const VariationFormModal = ({
                   </h4>
                   <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                     Upload a primary image and optional gallery images for this
-                    variation.
+                    variant.
                   </p>
                 </div>
 
@@ -660,7 +538,6 @@ const VariationFormModal = ({
                     />
                   </div>
 
-                  {/* Additional Images */}
                   <div>
                     <div className="mb-2 flex items-center justify-between">
                       <span className="block text-sm font-medium text-slate-700 dark:text-slate-300">
@@ -688,7 +565,7 @@ const VariationFormModal = ({
                         <div
                           key={
                             additionalImageSlotIds[idx] ??
-                            `variation-image-slot-${idx}`
+                            `variant-image-slot-${idx}`
                           }
                           className="mb-3 flex items-center gap-3 rounded-[1.25rem] border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-950/65"
                         >
@@ -733,50 +610,25 @@ const VariationFormModal = ({
                   Preview
                 </p>
                 <div className="mt-4 space-y-3 text-sm">
-                  <div className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3 dark:bg-slate-950/65">
-                    <span className="text-slate-500 dark:text-slate-400">
-                      Type
-                    </span>
-                    <strong className="capitalize text-slate-950 dark:text-slate-50">
-                      {formData.variationType === 'styling'
-                        ? '🎨 Style (group)'
-                        : '🌈 Colour'}
-                    </strong>
-                  </div>
-                  {formData.variationType === 'colour' && (
+                  {formData.sku && (
                     <div className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3 dark:bg-slate-950/65">
                       <span className="text-slate-500 dark:text-slate-400">
-                        Parent style
+                        SKU
                       </span>
                       <strong className="text-slate-950 dark:text-slate-50">
-                        {formData.styleId
-                          ? (styles.find((s) => s.id === formData.styleId)
-                              ?.name ?? '—')
-                          : 'Base product'}
+                        {formData.sku}
                       </strong>
                     </div>
                   )}
-                  {!isStyle && (
-                    <div className="rounded-2xl bg-emerald-50 px-4 py-4 dark:bg-emerald-950/45">
-                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">
-                        Colour price
-                      </p>
-                      <p className="mt-2 text-2xl font-black tracking-tight text-slate-950 dark:text-slate-50">
-                        {priceNum > 0 ? priceNum.toFixed(2) : '—'}{' '}
-                        {priceCurrency}
-                      </p>
-                    </div>
-                  )}
-                  {isStyle && (
-                    <div className="rounded-2xl bg-amber-50 px-4 py-4 dark:bg-amber-950/45">
-                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700">
-                        Grouping only
-                      </p>
-                      <p className="mt-2 text-sm text-amber-800 dark:text-amber-200">
-                        Add colours to this style after creation.
-                      </p>
-                    </div>
-                  )}
+                  <div className="rounded-2xl bg-emerald-50 px-4 py-4 dark:bg-emerald-950/45">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">
+                      Variant price
+                    </p>
+                    <p className="mt-2 text-2xl font-black tracking-tight text-slate-950 dark:text-slate-50">
+                      {priceNum > 0 ? priceNum.toFixed(2) : '—'}{' '}
+                      {priceCurrency}
+                    </p>
+                  </div>
                 </div>
               </section>
 
@@ -786,12 +638,7 @@ const VariationFormModal = ({
                 </h4>
                 <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
                   <li>
-                    Name each variation so admins can identify it quickly in
-                    search and order history.
-                  </li>
-                  <li>
-                    Keep design naming consistent so media and stock updates
-                    stay easy to trace.
+                    Each variant has its own price and stock.
                   </li>
                   <li>
                     Use the lead image for the option customers should recognize
@@ -802,7 +649,6 @@ const VariationFormModal = ({
             </aside>
           </div>
 
-          {/* Actions */}
           <div className="border-t border-slate-200/80 bg-white/90 px-6 py-4 sm:px-8 dark:border-slate-700/80 dark:bg-slate-950/85">
             <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
               <button

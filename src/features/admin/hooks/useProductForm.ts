@@ -12,7 +12,6 @@ import {
   MAX_FILE_SIZE,
   VALID_IMAGE_TYPES_DISPLAY,
 } from '@/lib/upload-constants'
-import { useCurrency, type CurrencyCode } from '@/contexts/CurrencyContext'
 import { PRODUCT_ERRORS, API_ERRORS } from '@/lib/constants/error-messages'
 
 export const MAX_IMAGES = 10
@@ -20,40 +19,18 @@ export const MAX_IMAGES = 10
 export interface ProductFormData {
   name: string
   description: string
-  price: number
-  stock: number
   category: string
   image: string
   images: string[]
 }
 
-const DEFAULT_PRICE_CURRENCY: CurrencyCode = 'INR'
-
-const convertCurrency = (
-  amount: number,
-  from: CurrencyCode,
-  to: CurrencyCode,
-  rates: Record<CurrencyCode, number>
-): number => {
-  const amountInBase = amount / rates[from]
-  return Number((amountInBase * rates[to]).toFixed(2))
-}
-
 const buildInitialFormData = (
-  product: Product | null,
-  rates: Record<CurrencyCode, number>
+  product: Product | null
 ): ProductFormData =>
   product
     ? {
         name: product.name,
         description: product.description,
-        price: convertCurrency(
-          product.price,
-          'INR',
-          DEFAULT_PRICE_CURRENCY,
-          rates
-        ),
-        stock: product.stock,
         category: product.category,
         image: product.image,
         images: product.images ?? [],
@@ -61,8 +38,6 @@ const buildInitialFormData = (
     : {
         name: '',
         description: '',
-        price: 0,
-        stock: 0,
         category: '',
         image: '',
         images: [],
@@ -76,12 +51,6 @@ const validateName = (v: string): string | undefined => {
 
 const validateDescription = (v: string): string | undefined =>
   v.trim() ? undefined : PRODUCT_ERRORS.DESCRIPTION_REQUIRED
-
-const validatePrice = (v: number): string | undefined =>
-  !v || v <= 0 ? PRODUCT_ERRORS.PRICE_POSITIVE : undefined
-
-const validateStock = (v: number): string | undefined =>
-  v < 0 || !Number.isInteger(v) ? PRODUCT_ERRORS.STOCK_INVALID : undefined
 
 const validateCategory = (v: string): string | undefined =>
   v.trim() ? undefined : PRODUCT_ERRORS.CATEGORY_REQUIRED
@@ -140,15 +109,8 @@ const useProductForm = (
   onClose: () => void,
   onSuccess: (product: Product) => void
 ) => {
-  const { availableCurrencies, rates } = useCurrency()
-  const [priceCurrency, setPriceCurrency] = useState<CurrencyCode>(
-    DEFAULT_PRICE_CURRENCY
-  )
   const [formData, setFormData] = useState<ProductFormData>(() =>
-    buildInitialFormData(editingProduct, rates)
-  )
-  const [stockInput, setStockInput] = useState(
-    String(editingProduct ? editingProduct.stock : 0)
+    buildInitialFormData(editingProduct)
   )
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [additionalFiles, setAdditionalFiles] = useState<(File | null)[]>(() =>
@@ -181,8 +143,6 @@ const useProductForm = (
     const errors: Partial<Record<keyof ProductFormData, string>> = {
       name: validateName(formData.name),
       description: validateDescription(formData.description),
-      price: validatePrice(formData.price),
-      stock: validateStock(formData.stock),
       category: validateCategory(formData.category),
       image: editingProduct
         ? undefined
@@ -199,14 +159,6 @@ const useProductForm = (
     if (fieldErrors[field]) {
       setFieldErrors((prev) => ({ ...prev, [field]: undefined }))
     }
-  }
-
-  const handlePriceCurrencyChange = (newCurrency: CurrencyCode) => {
-    setFormData({
-      ...formData,
-      price: convertCurrency(formData.price, priceCurrency, newCurrency, rates),
-    })
-    setPriceCurrency(newCurrency)
   }
 
   const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -254,21 +206,6 @@ const useProductForm = (
     }))
     setAdditionalFiles((prev) => prev.filter((_, i) => i !== idx))
     setSlotIds((prev) => prev.filter((_, i) => i !== idx))
-  }
-
-  const handleStockChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value
-    setStockInput(raw)
-    if (raw === '') {
-      setFormData({ ...formData, stock: 0 })
-      clearFieldError('stock')
-      return
-    }
-    const value = Number.parseInt(raw, 10)
-    if (!Number.isNaN(value) && value >= 0) {
-      setFormData({ ...formData, stock: value })
-      clearFieldError('stock')
-    }
   }
 
   const resolveImageUrl = async (): Promise<string | null> => {
@@ -322,7 +259,6 @@ const useProductForm = (
   ) => {
     const productData = {
       ...formData,
-      price: convertCurrency(formData.price, priceCurrency, 'INR', rates),
       image: imageUrl,
       images: additionalImages,
     }
@@ -374,7 +310,6 @@ const useProductForm = (
   return {
     formData,
     setFormData,
-    stockInput,
     imageFile,
     additionalFiles,
     slotIds,
@@ -382,8 +317,6 @@ const useProductForm = (
     saving,
     fieldErrors,
     categoryList,
-    priceCurrency,
-    availableCurrencies,
     totalImages,
     submitButtonText: getSubmitButtonText(
       uploading,
@@ -391,12 +324,10 @@ const useProductForm = (
       Boolean(editingProduct)
     ),
     clearFieldError,
-    handlePriceCurrencyChange,
     handleImageChange,
     handleAdditionalImageChange,
     addImageSlot,
     removeAdditionalImage,
-    handleStockChange,
     handleSubmit,
   }
 }

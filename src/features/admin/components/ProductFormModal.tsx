@@ -1,24 +1,20 @@
 'use client'
 
-import { useMemo, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import { type Product } from '@/lib/types'
 import {
   MAX_FILE_SIZE,
   VALID_IMAGE_TYPES_DISPLAY,
 } from '@/lib/upload-constants'
-import { CURRENCIES, type CurrencyCode } from '@/contexts/CurrencyContext'
 import useProductForm, {
   MAX_IMAGES,
 } from '@/features/admin/hooks/useProductForm'
 import {
   TextInput,
   TextArea,
-  NumberInput,
   SelectInput,
   FileInput,
-  MoneyInput,
-  type CurrencyOption,
 } from 'zenput'
 
 interface ProductFormModalProps {
@@ -122,12 +118,9 @@ const ProductFormModal = ({
     saving,
     fieldErrors,
     categoryList,
-    priceCurrency,
-    availableCurrencies,
     totalImages,
     submitButtonText,
     clearFieldError,
-    handlePriceCurrencyChange,
     handleImageChange,
     handleAdditionalImageChange,
     addImageSlot,
@@ -150,16 +143,6 @@ const ProductFormModal = ({
       URL.revokeObjectURL(url)
     }
   }, [imageFile])
-
-  const moneyInputCurrencies: CurrencyOption[] = useMemo(
-    () =>
-      availableCurrencies.map((code) => ({
-        code,
-        symbol: CURRENCIES[code].symbol,
-        label: CURRENCIES[code].symbol,
-      })),
-    [availableCurrencies]
-  )
 
   const formBody = (
     <>
@@ -204,45 +187,6 @@ const ProductFormModal = ({
                 : ('default' as const)
             }
             errorMessage={fieldErrors.description}
-          />
-
-          <MoneyInput
-            label="Price"
-            currencies={moneyInputCurrencies}
-            currency={priceCurrency}
-            onCurrencyChange={(code) =>
-              handlePriceCurrencyChange(code as CurrencyCode)
-            }
-            min={0.01}
-            step={0.01}
-            required
-            fullWidth
-            value={formData.price}
-            onChange={(v) => {
-              setFormData({ ...formData, price: v ?? 0 })
-              clearFieldError('price')
-            }}
-            validationState={
-              fieldErrors.price ? ('error' as const) : ('default' as const)
-            }
-            errorMessage={fieldErrors.price}
-          />
-
-          <NumberInput
-            label="Stock"
-            min={0}
-            step={1}
-            required
-            fullWidth
-            value={formData.stock}
-            onChange={(v) => {
-              setFormData({ ...formData, stock: v ?? 0 })
-              clearFieldError('stock')
-            }}
-            validationState={
-              fieldErrors.stock ? ('error' as const) : ('default' as const)
-            }
-            errorMessage={fieldErrors.stock}
           />
 
           <SelectInput
