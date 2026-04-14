@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import React from 'react'
 import VariationList from '@/features/admin/components/VariationList'
-import type { ProductVariation } from '@/lib/types'
+import type { ProductVariant } from '@/lib/types'
 
 vi.mock('react-hot-toast', () => ({
   default: { error: vi.fn(), success: vi.fn() },
@@ -26,26 +26,22 @@ vi.mock('@/contexts/CurrencyContext', () => ({
   }),
 }))
 
-const mockVariation: ProductVariation = {
+const mockVariation: ProductVariant = {
   id: 'var1234',
   productId: 'abc1234',
-  styleId: null,
-  name: 'Red - Large',
-  designName: 'Classic Logo',
+  sku: null,
   image: 'https://example.com/red.jpg',
   images: [],
   price: 150,
-  variationType: 'colour' as const,
   stock: 25,
   deletedAt: null,
   createdAt: '2025-01-01T00:00:00.000Z',
   updatedAt: '2025-01-01T00:00:00.000Z',
 }
 
-const mockVariationNoImage: ProductVariation = {
+const mockVariationNoImage: ProductVariant = {
   ...mockVariation,
   id: 'var5678',
-  name: 'Blue - Small',
   image: null,
 }
 
@@ -59,8 +55,7 @@ describe('VariationList', () => {
     render(
       <VariationList
         productId="abc1234"
-        productPrice={29.99}
-        initialVariations={[]}
+        initialVariants={[]}
       />
     )
     expect(screen.getByText('No variations yet')).toBeInTheDocument()
@@ -71,8 +66,7 @@ describe('VariationList', () => {
     render(
       <VariationList
         productId="abc1234"
-        productPrice={29.99}
-        initialVariations={[mockVariation]}
+        initialVariants={[mockVariation]}
       />
     )
     expect(screen.getByText('Red - Large')).toBeInTheDocument()
@@ -86,8 +80,7 @@ describe('VariationList', () => {
     render(
       <VariationList
         productId="abc1234"
-        productPrice={29.99}
-        initialVariations={[mockVariation]}
+        initialVariants={[mockVariation]}
       />
     )
     // mockVariation.price = 150
@@ -98,8 +91,7 @@ describe('VariationList', () => {
     render(
       <VariationList
         productId="abc1234"
-        productPrice={29.99}
-        initialVariations={[mockVariationNoImage]}
+        initialVariants={[mockVariationNoImage]}
       />
     )
     expect(screen.getByText('Blue - Small')).toBeInTheDocument()
@@ -109,8 +101,7 @@ describe('VariationList', () => {
     render(
       <VariationList
         productId="abc1234"
-        productPrice={29.99}
-        initialVariations={[mockVariation]}
+        initialVariants={[mockVariation]}
       />
     )
     expect(
@@ -127,8 +118,7 @@ describe('VariationList', () => {
     render(
       <VariationList
         productId="abc1234"
-        productPrice={29.99}
-        initialVariations={[mockVariation]}
+        initialVariants={[mockVariation]}
       />
     )
     expect(screen.getByText('Add Variation')).toBeInTheDocument()
@@ -138,8 +128,7 @@ describe('VariationList', () => {
     render(
       <VariationList
         productId="abc1234"
-        productPrice={29.99}
-        initialVariations={[mockVariation]}
+        initialVariants={[mockVariation]}
       />
     )
 
@@ -155,8 +144,7 @@ describe('VariationList', () => {
     render(
       <VariationList
         productId="abc1234"
-        productPrice={29.99}
-        initialVariations={[mockVariation]}
+        initialVariants={[mockVariation]}
       />
     )
 
@@ -190,8 +178,7 @@ describe('VariationList', () => {
     render(
       <VariationList
         productId="abc1234"
-        productPrice={29.99}
-        initialVariations={[mockVariation]}
+        initialVariants={[mockVariation]}
       />
     )
 

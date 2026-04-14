@@ -29,10 +29,8 @@ const mockProduct: Product = {
   id: 'prod-1',
   name: 'Test Product',
   description: 'A nice product',
-  price: 500, // ₹500 INR (base currency)
   image: 'https://example.com/image.jpg',
   images: [],
-  stock: 10,
   category: 'Flowers',
   deletedAt: null,
   createdAt: '2024-01-01',
