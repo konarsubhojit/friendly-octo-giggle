@@ -6,14 +6,26 @@ const baseProduct: Product = {
   id: 'abc1234',
   name: 'Handmade Basket',
   description: 'A beautiful handmade basket crafted with care.',
-  price: 29.99,
   image: '/img/basket.jpg',
   images: ['/img/basket.jpg'],
-  stock: 10,
   category: 'Home Decor',
   deletedAt: null,
   createdAt: '2024-01-01T00:00:00Z',
   updatedAt: '2024-01-01T00:00:00Z',
+  variants: [
+    {
+      id: 'default-var',
+      productId: 'abc1234',
+      sku: null,
+      price: 29.99,
+      stock: 10,
+      image: null,
+      images: [],
+      deletedAt: null,
+      createdAt: '2024-01-01T00:00:00Z',
+      updatedAt: '2024-01-01T00:00:00Z',
+    },
+  ],
 }
 
 describe('buildProductContext', () => {
@@ -47,7 +59,10 @@ describe('buildProductContext', () => {
   })
 
   it('shows out of stock message when stock is 0', () => {
-    const product = { ...baseProduct, stock: 0 }
+    const product = {
+      ...baseProduct,
+      variants: [{ ...baseProduct.variants![0], stock: 0 }],
+    }
     const context = buildProductContext(product)
     expect(context).toContain('Out of stock')
   })
@@ -55,14 +70,11 @@ describe('buildProductContext', () => {
   it('includes variations when present', () => {
     const product: Product = {
       ...baseProduct,
-      variations: [
+      variants: [
         {
           id: 'var1',
           productId: 'abc1234',
-          styleId: null,
-          name: 'Red',
-          designName: 'Crimson',
-          variationType: 'colour',
+          sku: null,
           image: null,
           images: [],
           price: 34.99,
@@ -74,10 +86,7 @@ describe('buildProductContext', () => {
         {
           id: 'var2',
           productId: 'abc1234',
-          styleId: null,
-          name: 'Modern',
-          designName: 'Minimalist',
-          variationType: 'styling',
+          sku: null,
           image: null,
           images: [],
           price: 39.99,

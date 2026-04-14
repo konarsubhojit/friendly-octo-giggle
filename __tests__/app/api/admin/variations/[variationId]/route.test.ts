@@ -6,15 +6,19 @@ const {
   mockInvalidateProductCaches,
   mockRevalidateTag,
   mockFindFirst,
+  mockFindMany,
   mockUpdate,
   mockReturning,
+  mockDelete,
 } = vi.hoisted(() => ({
   mockCheckAdminAuth: vi.fn(async () => ({ authorized: true })),
   mockInvalidateProductCaches: vi.fn(),
   mockRevalidateTag: vi.fn(),
   mockFindFirst: vi.fn(),
+  mockFindMany: vi.fn(),
   mockUpdate: vi.fn(),
   mockReturning: vi.fn(),
+  mockDelete: vi.fn(),
 }))
 
 vi.mock('@/lib/db', () => ({
@@ -23,8 +27,9 @@ vi.mock('@/lib/db', () => ({
       products: {
         findFirst: (...args: unknown[]) => mockFindFirst(...args),
       },
-      productVariations: {
+      productVariants: {
         findFirst: (...args: unknown[]) => mockFindFirst(...args),
+        findMany: (...args: unknown[]) => mockFindMany(...args),
       },
     },
     update: (...args: unknown[]) => {
@@ -37,21 +42,28 @@ vi.mock('@/lib/db', () => ({
         }),
       }
     },
+    delete: (...args: unknown[]) => {
+      mockDelete(...args)
+      return {
+        where: vi.fn(),
+      }
+    },
+    insert: () => ({
+      values: () => ({ returning: vi.fn() }),
+    }),
   },
 }))
 
 vi.mock('@/lib/schema', () => ({
   products: { id: 'id', deletedAt: 'deletedAt' },
-  productVariations: {
+  productVariants: {
     id: 'id',
     productId: 'productId',
-    name: 'name',
-    styleId: 'styleId',
     deletedAt: 'deletedAt',
-    variationType: 'variationType',
-    price: 'price',
-    createdAt: 'createdAt',
-    updatedAt: 'updatedAt',
+  },
+  productVariantOptionValues: {
+    variantId: 'variantId',
+    optionValueId: 'optionValueId',
   },
 }))
 
@@ -71,22 +83,41 @@ vi.mock('drizzle-orm', () => ({
   eq: vi.fn((...args: unknown[]) => ({ op: 'eq', args })),
   and: vi.fn((...args: unknown[]) => ({ op: 'and', args })),
   isNull: vi.fn((field: unknown) => ({ op: 'isNull', field })),
-  ne: vi.fn((...args: unknown[]) => ({ op: 'ne', args })),
+}))
+
+vi.mock(
+  '@/features/product/validations',
+  async () => await vi.importActual('@/features/product/validations')
+)
+
+vi.mock('@/lib/serializers', () => ({
+  serializeVariant: (v: Record<string, unknown>) => ({
+    ...v,
+    sku: v.sku ?? null,
+    image: v.image ?? null,
+    images: v.images ?? [],
+    createdAt:
+      v.createdAt instanceof Date ? v.createdAt.toISOString() : v.createdAt,
+    updatedAt:
+      v.updatedAt instanceof Date ? v.updatedAt.toISOString() : v.updatedAt,
+    deletedAt: v.deletedAt
+      ? v.deletedAt instanceof Date
+        ? v.deletedAt.toISOString()
+        : v.deletedAt
+      : null,
+  }),
 }))
 
 import { PUT, DELETE } from '@/app/api/admin/variations/[variationId]/route'
 
-const mockVariation = {
+const mockVariant = {
   id: 'var123',
   productId: 'prod123',
-  styleId: null,
-  name: 'Blue',
-  designName: 'Classic',
+  sku: null,
   image: null,
   images: [],
   price: 100,
   stock: 10,
-  variationType: 'colour' as const,
   deletedAt: null,
   createdAt: new Date('2025-01-01'),
   updatedAt: new Date('2025-01-01'),
@@ -116,7 +147,7 @@ describe('PUT /api/admin/variations/[variationId]', () => {
       'http://localhost/api/admin/variations/var123',
       {
         method: 'PUT',
-        body: JSON.stringify({ name: 'Red' }),
+        body: JSON.stringify({ stock: 20 }),
       }
     )
 
@@ -129,14 +160,14 @@ describe('PUT /api/admin/variations/[variationId]', () => {
     expect(data.error).toBe('Unauthorized')
   })
 
-  it('returns 404 when variation not found', async () => {
+  it('returns 404 when variant not found', async () => {
     mockFindFirst.mockResolvedValueOnce(null)
 
     const request = new NextRequest(
       'http://localhost/api/admin/variations/var123',
       {
         method: 'PUT',
-        body: JSON.stringify({ name: 'Red' }),
+        body: JSON.stringify({ stock: 20 }),
       }
     )
 
@@ -146,19 +177,17 @@ describe('PUT /api/admin/variations/[variationId]', () => {
     const data = await response.json()
 
     expect(response.status).toBe(404)
-    expect(data.error).toBe('Variation not found')
+    expect(data.error).toBe('Variant not found')
   })
 
   it('returns 404 when product not found', async () => {
-    mockFindFirst
-      .mockResolvedValueOnce(mockVariation)
-      .mockResolvedValueOnce(null)
+    mockFindFirst.mockResolvedValueOnce(mockVariant).mockResolvedValueOnce(null)
 
     const request = new NextRequest(
       'http://localhost/api/admin/variations/var123',
       {
         method: 'PUT',
-        body: JSON.stringify({ name: 'Red' }),
+        body: JSON.stringify({ stock: 20 }),
       }
     )
 
@@ -173,7 +202,7 @@ describe('PUT /api/admin/variations/[variationId]', () => {
 
   it('returns validation error for invalid data', async () => {
     mockFindFirst
-      .mockResolvedValueOnce(mockVariation)
+      .mockResolvedValueOnce(mockVariant)
       .mockResolvedValueOnce(mockProduct)
 
     const request = new NextRequest(
@@ -195,7 +224,7 @@ describe('PUT /api/admin/variations/[variationId]', () => {
 
   it('returns 400 when no fields to update', async () => {
     mockFindFirst
-      .mockResolvedValueOnce(mockVariation)
+      .mockResolvedValueOnce(mockVariant)
       .mockResolvedValueOnce(mockProduct)
 
     const request = new NextRequest(
@@ -215,151 +244,22 @@ describe('PUT /api/admin/variations/[variationId]', () => {
     expect(data.error).toBe('No fields to update')
   })
 
-  it('returns 400 for colour with price <= 0', async () => {
-    mockFindFirst
-      .mockResolvedValueOnce(mockVariation)
-      .mockResolvedValueOnce(mockProduct)
-
-    const request = new NextRequest(
-      'http://localhost/api/admin/variations/var123',
-      {
-        method: 'PUT',
-        body: JSON.stringify({ price: 0 }),
-      }
-    )
-
-    const response = await PUT(request, {
-      params: Promise.resolve({ variationId: 'var123' }),
-    })
-    const data = await response.json()
-
-    expect(response.status).toBe(400)
-    expect(data.error).toBe('Colour price must be greater than zero')
-  })
-
-  it('returns 404 when parent style not found', async () => {
-    mockFindFirst
-      .mockResolvedValueOnce(mockVariation)
-      .mockResolvedValueOnce(mockProduct)
-      .mockResolvedValueOnce(null)
-
-    const request = new NextRequest(
-      'http://localhost/api/admin/variations/var123',
-      {
-        method: 'PUT',
-        body: JSON.stringify({ styleId: 'aaaaaaa' }),
-      }
-    )
-
-    const response = await PUT(request, {
-      params: Promise.resolve({ variationId: 'var123' }),
-    })
-    const data = await response.json()
-
-    expect(response.status).toBe(404)
-    expect(data.error).toBe(
-      'Parent style not found or does not belong to this product'
-    )
-  })
-
-  it('returns 409 when name conflicts with existing variation', async () => {
-    mockFindFirst
-      .mockResolvedValueOnce(mockVariation)
-      .mockResolvedValueOnce(mockProduct)
-      .mockResolvedValueOnce({ id: 'other-var', name: 'Red', deletedAt: null })
-
-    const request = new NextRequest(
-      'http://localhost/api/admin/variations/var123',
-      {
-        method: 'PUT',
-        body: JSON.stringify({ name: 'Red' }),
-      }
-    )
-
-    const response = await PUT(request, {
-      params: Promise.resolve({ variationId: 'var123' }),
-    })
-    const data = await response.json()
-
-    expect(response.status).toBe(409)
-    expect(data.error).toBe(
-      'A variation with this name already exists for this product'
-    )
-  })
-
-  it('returns 409 when name conflicts with archived variation', async () => {
-    mockFindFirst
-      .mockResolvedValueOnce(mockVariation)
-      .mockResolvedValueOnce(mockProduct)
-      .mockResolvedValueOnce({
-        id: 'other-var',
-        name: 'Red',
-        deletedAt: new Date(),
-      })
-
-    const request = new NextRequest(
-      'http://localhost/api/admin/variations/var123',
-      {
-        method: 'PUT',
-        body: JSON.stringify({ name: 'Red' }),
-      }
-    )
-
-    const response = await PUT(request, {
-      params: Promise.resolve({ variationId: 'var123' }),
-    })
-    const data = await response.json()
-
-    expect(response.status).toBe(409)
-    expect(data.error).toContain('previously archived')
-  })
-
-  it('successfully updates variation', async () => {
-    const updatedVariation = {
-      ...mockVariation,
-      name: 'Red',
-      updatedAt: new Date(),
-    }
-    mockFindFirst
-      .mockResolvedValueOnce(mockVariation)
-      .mockResolvedValueOnce(mockProduct)
-      .mockResolvedValueOnce(null)
-    mockReturning.mockResolvedValueOnce([updatedVariation])
-
-    const request = new NextRequest(
-      'http://localhost/api/admin/variations/var123',
-      {
-        method: 'PUT',
-        body: JSON.stringify({ name: 'Red', stock: 20 }),
-      }
-    )
-
-    const response = await PUT(request, {
-      params: Promise.resolve({ variationId: 'var123' }),
-    })
-    const data = await response.json()
-
-    expect(response.status).toBe(200)
-    expect(data.success).toBe(true)
-    expect(data.data.variation.name).toBe('Red')
-  })
-
-  it('allows updating to the same name', async () => {
-    const updatedVariation = {
-      ...mockVariation,
+  it('successfully updates variant', async () => {
+    const updatedVariant = {
+      ...mockVariant,
       stock: 20,
       updatedAt: new Date(),
     }
     mockFindFirst
-      .mockResolvedValueOnce(mockVariation)
+      .mockResolvedValueOnce(mockVariant)
       .mockResolvedValueOnce(mockProduct)
-    mockReturning.mockResolvedValueOnce([updatedVariation])
+    mockReturning.mockResolvedValueOnce([updatedVariant])
 
     const request = new NextRequest(
       'http://localhost/api/admin/variations/var123',
       {
         method: 'PUT',
-        body: JSON.stringify({ name: 'Blue', stock: 20 }),
+        body: JSON.stringify({ stock: 20 }),
       }
     )
 
@@ -370,6 +270,7 @@ describe('PUT /api/admin/variations/[variationId]', () => {
 
     expect(response.status).toBe(200)
     expect(data.success).toBe(true)
+    expect(data.data.variant.stock).toBe(20)
   })
 })
 
@@ -403,7 +304,7 @@ describe('DELETE /api/admin/variations/[variationId]', () => {
     expect(data.error).toBe('Unauthorized')
   })
 
-  it('returns 404 when variation not found', async () => {
+  it('returns 404 when variant not found', async () => {
     mockFindFirst.mockResolvedValueOnce(null)
 
     const request = new NextRequest(
@@ -419,13 +320,11 @@ describe('DELETE /api/admin/variations/[variationId]', () => {
     const data = await response.json()
 
     expect(response.status).toBe(404)
-    expect(data.error).toBe('Variation not found')
+    expect(data.error).toBe('Variant not found')
   })
 
   it('returns 404 when product not found', async () => {
-    mockFindFirst
-      .mockResolvedValueOnce(mockVariation)
-      .mockResolvedValueOnce(null)
+    mockFindFirst.mockResolvedValueOnce(mockVariant).mockResolvedValueOnce(null)
 
     const request = new NextRequest(
       'http://localhost/api/admin/variations/var123',
@@ -443,10 +342,11 @@ describe('DELETE /api/admin/variations/[variationId]', () => {
     expect(data.error).toBe('Product not found')
   })
 
-  it('successfully soft-deletes variation', async () => {
+  it('successfully soft-deletes variant', async () => {
     mockFindFirst
-      .mockResolvedValueOnce(mockVariation)
+      .mockResolvedValueOnce(mockVariant)
       .mockResolvedValueOnce(mockProduct)
+    mockFindMany.mockResolvedValueOnce([{ id: 'v1' }, { id: 'v2' }])
 
     const request = new NextRequest(
       'http://localhost/api/admin/variations/var123',
@@ -462,14 +362,15 @@ describe('DELETE /api/admin/variations/[variationId]', () => {
 
     expect(response.status).toBe(200)
     expect(data.success).toBe(true)
-    expect(data.data.message).toBe('Variation soft-deleted successfully')
+    expect(data.data.message).toBe('Variant soft-deleted successfully')
     expect(data.data.id).toBe('var123')
   })
 
   it('invalidates product caches after deletion', async () => {
     mockFindFirst
-      .mockResolvedValueOnce(mockVariation)
+      .mockResolvedValueOnce(mockVariant)
       .mockResolvedValueOnce(mockProduct)
+    mockFindMany.mockResolvedValueOnce([{ id: 'v1' }, { id: 'v2' }])
 
     const request = new NextRequest(
       'http://localhost/api/admin/variations/var123',

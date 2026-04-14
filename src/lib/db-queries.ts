@@ -24,7 +24,7 @@ import {
   invalidateProductCaches,
   cacheShareResolve,
 } from './cache'
-import { serializeProduct, serializeVariation } from './serializers'
+import { serializeProduct, serializeVariant } from './serializers'
 
 // ─── Product Helpers (with date serialization) ──────────
 
@@ -49,7 +49,7 @@ export const db = {
         where: isNull(products.deletedAt),
         orderBy: [desc(products.createdAt)],
         with: {
-          variations: {
+          variants: {
             where: (v, { isNull }) => isNull(v.deletedAt),
           },
         },
@@ -61,7 +61,7 @@ export const db = {
 
       return rows.map((p) => ({
         ...serializeProduct(p),
-        variations: p.variations.map(serializeVariation),
+        variants: p.variants.map(serializeVariant),
       }))
     },
 
@@ -110,10 +110,8 @@ export const db = {
           id: products.id,
           name: products.name,
           description: products.description,
-          price: products.price,
           image: products.image,
           images: products.images,
-          stock: products.stock,
           category: products.category,
           deletedAt: products.deletedAt,
           createdAt: products.createdAt,
@@ -136,14 +134,14 @@ export const db = {
 
       if (rows.length === 0) return []
 
-      // Fetch variations only for the products that made the cut
+      // Fetch variants only for the products that made the cut
       const productIds = rows.map((r) => r.id)
-      const varRows = await drizzleDb.query.productVariations.findMany({
+      const varRows = await drizzleDb.query.productVariants.findMany({
         where: (pv, { inArray, and, isNull }) =>
           and(inArray(pv.productId, productIds), isNull(pv.deletedAt)),
       })
 
-      // Group variations by productId for O(1) lookup
+      // Group variants by productId for O(1) lookup
       const varsByProduct = new Map<string, typeof varRows>()
       for (const v of varRows) {
         const list = varsByProduct.get(v.productId) ?? []
@@ -153,7 +151,7 @@ export const db = {
 
       return rows.map((p) => ({
         ...serializeProduct(p),
-        variations: (varsByProduct.get(p.id) ?? []).map(serializeVariation),
+        variants: (varsByProduct.get(p.id) ?? []).map(serializeVariant),
       }))
     },
 
@@ -165,18 +163,7 @@ export const db = {
     findAllMinimal: async (
       options: ProductListOptions = {}
     ): Promise<
-      Array<
-        Pick<
-          Product,
-          | 'id'
-          | 'name'
-          | 'description'
-          | 'price'
-          | 'stock'
-          | 'category'
-          | 'image'
-        >
-      >
+      Array<Pick<Product, 'id' | 'name' | 'description' | 'category' | 'image'>>
     > => {
       const { limit, offset, search, category } = options
 
@@ -206,8 +193,6 @@ export const db = {
           id: true,
           name: true,
           description: true,
-          price: true,
-          stock: true,
           category: true,
           image: true,
         },
@@ -226,18 +211,7 @@ export const db = {
       ids: string[],
       category?: string
     ): Promise<
-      Array<
-        Pick<
-          Product,
-          | 'id'
-          | 'name'
-          | 'description'
-          | 'price'
-          | 'stock'
-          | 'category'
-          | 'image'
-        >
-      >
+      Array<Pick<Product, 'id' | 'name' | 'description' | 'category' | 'image'>>
     > => {
       if (ids.length === 0) {
         return []
@@ -253,8 +227,6 @@ export const db = {
           id: true,
           name: true,
           description: true,
-          price: true,
-          stock: true,
           category: true,
           image: true,
         },
@@ -272,7 +244,7 @@ export const db = {
         const row = await drizzleDb.query.products.findFirst({
           where: and(eq(products.id, id), isNull(products.deletedAt)),
           with: {
-            variations: {
+            variants: {
               where: (v, { isNull }) => isNull(v.deletedAt),
             },
           },
@@ -280,7 +252,7 @@ export const db = {
         if (!row) return null
         return {
           ...serializeProduct(row),
-          variations: row.variations.map(serializeVariation),
+          variants: row.variants.map(serializeVariant),
         }
       }
 
@@ -365,7 +337,7 @@ export const db = {
         with: {
           product: {
             with: {
-              variations: {
+              variants: {
                 where: (v, { isNull }) => isNull(v.deletedAt),
               },
             },
@@ -377,7 +349,7 @@ export const db = {
         .filter((r) => r.product !== null && !r.product.deletedAt)
         .map((r) => ({
           ...serializeProduct(r.product),
-          variations: r.product.variations.map(serializeVariation),
+          variants: r.product.variants.map(serializeVariant),
         }))
     },
 
@@ -436,11 +408,11 @@ export const db = {
      */
     create: async (
       productId: string,
-      variationId: string | null
+      variantId: string | null
     ): Promise<string> => {
       const [row] = await primaryDrizzleDb
         .insert(productShares)
-        .values({ productId, variationId: variationId ?? null })
+        .values({ productId, variantId: variantId ?? null })
         .returning({ key: productShares.key })
       return row.key
     },
@@ -454,14 +426,14 @@ export const db = {
      */
     resolve: (
       key: string
-    ): Promise<{ productId: string; variationId: string | null } | null> => {
+    ): Promise<{ productId: string; variantId: string | null } | null> => {
       return cacheShareResolve(key, async () => {
         const row = await drizzleDb.query.productShares.findFirst({
           where: eq(productShares.key, key),
-          columns: { productId: true, variationId: true },
+          columns: { productId: true, variantId: true },
         })
         if (!row) return null
-        return { productId: row.productId, variationId: row.variationId }
+        return { productId: row.productId, variantId: row.variantId }
       })
     },
   },

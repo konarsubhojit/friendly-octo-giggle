@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import React from 'react'
 import VariationList from '@/features/admin/components/VariationList'
-import type { ProductVariation } from '@/lib/types'
+import type { ProductVariant } from '@/lib/types'
 
 vi.mock('react-hot-toast', () => ({
   default: { error: vi.fn(), success: vi.fn() },
@@ -26,26 +26,22 @@ vi.mock('@/contexts/CurrencyContext', () => ({
   }),
 }))
 
-const mockVariation: ProductVariation = {
+const mockVariation: ProductVariant = {
   id: 'var1234',
   productId: 'abc1234',
-  styleId: null,
-  name: 'Red - Large',
-  designName: 'Classic Logo',
+  sku: null,
   image: 'https://example.com/red.jpg',
   images: [],
   price: 150,
-  variationType: 'colour' as const,
   stock: 25,
   deletedAt: null,
   createdAt: '2025-01-01T00:00:00.000Z',
   updatedAt: '2025-01-01T00:00:00.000Z',
 }
 
-const mockVariationNoImage: ProductVariation = {
+const mockVariationNoImage: ProductVariant = {
   ...mockVariation,
   id: 'var5678',
-  name: 'Blue - Small',
   image: null,
 }
 
@@ -56,24 +52,14 @@ describe('VariationList', () => {
   })
 
   it('renders empty state when no variations', () => {
-    render(
-      <VariationList
-        productId="abc1234"
-        productPrice={29.99}
-        initialVariations={[]}
-      />
-    )
+    render(<VariationList productId="abc1234" initialVariants={[]} />)
     expect(screen.getByText('No variations yet')).toBeInTheDocument()
     expect(screen.getByText('Add Variation')).toBeInTheDocument()
   })
 
   it('renders variation cards with correct data', () => {
     render(
-      <VariationList
-        productId="abc1234"
-        productPrice={29.99}
-        initialVariations={[mockVariation]}
-      />
+      <VariationList productId="abc1234" initialVariants={[mockVariation]} />
     )
     expect(screen.getByText('Red - Large')).toBeInTheDocument()
     expect(screen.getByText('Classic Logo')).toBeInTheDocument()
@@ -84,11 +70,7 @@ describe('VariationList', () => {
 
   it('displays variation price', () => {
     render(
-      <VariationList
-        productId="abc1234"
-        productPrice={29.99}
-        initialVariations={[mockVariation]}
-      />
+      <VariationList productId="abc1234" initialVariants={[mockVariation]} />
     )
     // mockVariation.price = 150
     expect(screen.getByText('$150.00')).toBeInTheDocument()
@@ -98,8 +80,7 @@ describe('VariationList', () => {
     render(
       <VariationList
         productId="abc1234"
-        productPrice={29.99}
-        initialVariations={[mockVariationNoImage]}
+        initialVariants={[mockVariationNoImage]}
       />
     )
     expect(screen.getByText('Blue - Small')).toBeInTheDocument()
@@ -107,11 +88,7 @@ describe('VariationList', () => {
 
   it('renders Edit and Delete buttons', () => {
     render(
-      <VariationList
-        productId="abc1234"
-        productPrice={29.99}
-        initialVariations={[mockVariation]}
-      />
+      <VariationList productId="abc1234" initialVariants={[mockVariation]} />
     )
     expect(
       screen.getByRole('button', {
@@ -125,22 +102,14 @@ describe('VariationList', () => {
 
   it('renders Add Variation button when variations exist', () => {
     render(
-      <VariationList
-        productId="abc1234"
-        productPrice={29.99}
-        initialVariations={[mockVariation]}
-      />
+      <VariationList productId="abc1234" initialVariants={[mockVariation]} />
     )
     expect(screen.getByText('Add Variation')).toBeInTheDocument()
   })
 
   it('keeps quick edit fields collapsed until edit is opened', () => {
     render(
-      <VariationList
-        productId="abc1234"
-        productPrice={29.99}
-        initialVariations={[mockVariation]}
-      />
+      <VariationList productId="abc1234" initialVariants={[mockVariation]} />
     )
 
     expect(
@@ -153,11 +122,7 @@ describe('VariationList', () => {
 
   it('expands quick edit fields when the edit action is clicked', () => {
     render(
-      <VariationList
-        productId="abc1234"
-        productPrice={29.99}
-        initialVariations={[mockVariation]}
-      />
+      <VariationList productId="abc1234" initialVariants={[mockVariation]} />
     )
 
     fireEvent.click(
@@ -188,11 +153,7 @@ describe('VariationList', () => {
     vi.stubGlobal('fetch', mockFetch)
 
     render(
-      <VariationList
-        productId="abc1234"
-        productPrice={29.99}
-        initialVariations={[mockVariation]}
-      />
+      <VariationList productId="abc1234" initialVariants={[mockVariation]} />
     )
 
     fireEvent.click(

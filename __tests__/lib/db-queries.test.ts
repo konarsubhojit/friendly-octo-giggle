@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const {
   mockProductsFindMany,
-  mockProductVariationsFindMany,
+  mockProductVariantsFindMany,
   mockWishlistsFindMany,
   mockWishlistsFindFirst,
   mockWishlistsInsertReturning,
@@ -47,7 +47,7 @@ const {
 
   return {
     mockProductsFindMany: vi.fn(),
-    mockProductVariationsFindMany: vi.fn(),
+    mockProductVariantsFindMany: vi.fn(),
     mockWishlistsFindMany: vi.fn(),
     mockWishlistsFindFirst: vi.fn(),
     mockWishlistsInsertReturning,
@@ -76,7 +76,7 @@ vi.mock('drizzle-orm/neon-serverless', () => ({
         findMany: mockProductsFindMany,
       },
       productVariations: {
-        findMany: mockProductVariationsFindMany,
+        findMany: mockProductVariantsFindMany,
       },
       wishlists: {
         findMany: mockWishlistsFindMany,
@@ -115,7 +115,7 @@ vi.mock('@/lib/schema', () => ({
   productShares: {
     key: 'key',
     productId: 'productId',
-    variationId: 'variationId',
+    variantId: 'variantId',
   },
   productVariations: {},
   products: {
@@ -306,14 +306,14 @@ describe('db.products.findBestsellers', () => {
       .mockReturnValueOnce(subqueryChain)
       .mockReturnValueOnce(mainQueryChain)
 
-    mockProductVariationsFindMany.mockResolvedValue(variationRows)
+    mockProductVariantsFindMany.mockResolvedValue(variationRows)
 
     const results = await db.products.findBestsellers({ limit: 5 })
 
     expect(results).toHaveLength(2)
     expect(results[0].id).toBe('prod001')
-    expect(results[0].variations).toHaveLength(1)
-    expect(results[1].variations).toHaveLength(0)
+    expect(results[0].variants).toHaveLength(1)
+    expect(results[1].variants).toHaveLength(0)
   })
 
   it('returns empty array when no bestsellers found', async () => {
@@ -339,7 +339,7 @@ describe('db.products.findBestsellers', () => {
     const results = await db.products.findBestsellers({ limit: 5 })
 
     expect(results).toEqual([])
-    expect(mockProductVariationsFindMany).not.toHaveBeenCalled()
+    expect(mockProductVariantsFindMany).not.toHaveBeenCalled()
   })
 
   it('groups variations by productId correctly', async () => {
@@ -371,12 +371,12 @@ describe('db.products.findBestsellers', () => {
     mockSelect
       .mockReturnValueOnce(subqueryChain)
       .mockReturnValueOnce(mainQueryChain)
-    mockProductVariationsFindMany.mockResolvedValue(variationRows)
+    mockProductVariantsFindMany.mockResolvedValue(variationRows)
 
     const results = await db.products.findBestsellers({ limit: 2 })
 
-    expect(results[0].variations).toHaveLength(2)
-    expect(results[1].variations).toHaveLength(1)
+    expect(results[0].variants).toHaveLength(2)
+    expect(results[1].variants).toHaveLength(1)
   })
 })
 
@@ -469,7 +469,7 @@ describe('db.wishlists', () => {
           productId: 'prod001',
           product: {
             ...makeProductRow({ id: 'prod001' }),
-            variations: [makeVariationRow()],
+            variants: [makeVariationRow()],
           },
         },
       ]
@@ -479,7 +479,7 @@ describe('db.wishlists', () => {
 
       expect(products).toHaveLength(1)
       expect(products[0].id).toBe('prod001')
-      expect(products[0].variations).toHaveLength(1)
+      expect(products[0].variants).toHaveLength(1)
     })
 
     it('filters out deleted products from wishlist', async () => {
@@ -489,7 +489,7 @@ describe('db.wishlists', () => {
           productId: 'prod001',
           product: {
             ...makeProductRow({ id: 'prod001', deletedAt: now }),
-            variations: [],
+            variants: [],
           },
         },
         {
@@ -497,7 +497,7 @@ describe('db.wishlists', () => {
           productId: 'prod002',
           product: {
             ...makeProductRow({ id: 'prod002' }),
-            variations: [],
+            variants: [],
           },
         },
       ]

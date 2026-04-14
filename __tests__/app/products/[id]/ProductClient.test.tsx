@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import React from 'react'
 import ProductClient from '@/app/products/[id]/ProductClient'
-import type { Product, ProductVariation } from '@/lib/types'
+import type { Product, ProductVariant } from '@/lib/types'
 import { useSession } from 'next-auth/react'
 import { useSelector } from 'react-redux'
 
@@ -89,16 +89,16 @@ vi.mock('@/features/product/components/VariationButton', () => ({
     isSelected,
     onSelect,
   }: {
-    variation: ProductVariation
+    variation: ProductVariant
     isSelected: boolean
-    onSelect: (v: ProductVariation) => void
+    onSelect: (v: ProductVariant) => void
   }) => (
     <button
       data-testid={`variation-btn-${variation.id}`}
       aria-pressed={isSelected}
       onClick={() => onSelect(variation)}
     >
-      {variation.name}
+      {variation.id}
     </button>
   ),
 }))
@@ -153,33 +153,41 @@ function makeProduct(overrides: Partial<Product> = {}): Product {
     id: 'prod001',
     name: 'Rose Bouquet',
     description: 'A beautiful bouquet of red roses.',
-    price: 500,
     image: 'https://example.com/rose.jpg',
     images: [],
-    stock: 10,
     category: 'Flowers',
     deletedAt: null,
     createdAt: '2025-01-01T00:00:00.000Z',
     updatedAt: '2025-01-01T00:00:00.000Z',
-    variations: [],
+    variants: [
+      {
+        id: 'default-var',
+        productId: 'prod001',
+        sku: null,
+        price: 500,
+        stock: 10,
+        image: null,
+        images: [],
+        deletedAt: null,
+        createdAt: '2025-01-01T00:00:00.000Z',
+        updatedAt: '2025-01-01T00:00:00.000Z',
+      },
+    ],
     ...overrides,
   }
 }
 
 function makeVariation(
-  overrides: Partial<ProductVariation> = {}
-): ProductVariation {
+  overrides: Partial<ProductVariant> = {}
+): ProductVariant {
   return {
     id: 'var001',
     productId: 'prod001',
-    name: 'Red',
-    designName: 'Classic',
+    sku: null,
     image: null,
     images: [],
     price: 600,
-    variationType: 'colour',
     stock: 5,
-    styleId: null,
     deletedAt: null,
     createdAt: '2025-01-01T00:00:00.000Z',
     updatedAt: '2025-01-01T00:00:00.000Z',
@@ -209,7 +217,7 @@ describe('ProductClient', () => {
     render(
       <ProductClient
         product={product}
-        initialVariationId={null}
+        initialVariantId={null}
         aiEnabled={true}
       />
     )
@@ -229,7 +237,7 @@ describe('ProductClient', () => {
     render(
       <ProductClient
         product={product}
-        initialVariationId={null}
+        initialVariantId={null}
         aiEnabled={true}
       />
     )
@@ -251,7 +259,7 @@ describe('ProductClient', () => {
     render(
       <ProductClient
         product={product}
-        initialVariationId={null}
+        initialVariantId={null}
         aiEnabled={true}
       />
     )
@@ -260,11 +268,11 @@ describe('ProductClient', () => {
   })
 
   it('renders add-to-cart section when product is in stock', () => {
-    const product = makeProduct({ stock: 10 })
+    const product = makeProduct({ variants: [makeVariation({ stock: 10 })] })
     render(
       <ProductClient
         product={product}
-        initialVariationId={null}
+        initialVariantId={null}
         aiEnabled={true}
       />
     )
@@ -276,11 +284,11 @@ describe('ProductClient', () => {
   })
 
   it('renders out-of-stock panel when product stock is 0', () => {
-    const product = makeProduct({ stock: 0 })
+    const product = makeProduct({ variants: [makeVariation({ stock: 0 })] })
     render(
       <ProductClient
         product={product}
-        initialVariationId={null}
+        initialVariantId={null}
         aiEnabled={true}
       />
     )
@@ -293,12 +301,12 @@ describe('ProductClient', () => {
   })
 
   it('shows "all stock in cart" panel when cart quantity equals stock', () => {
-    const product = makeProduct({ stock: 3 })
+    const product = makeProduct({ variants: [makeVariation({ stock: 3 })] })
     vi.mocked(useSelector).mockImplementation((selector) =>
       selector({
         cart: {
           cart: {
-            items: [{ productId: 'prod001', variationId: null, quantity: 3 }],
+            items: [{ productId: 'prod001', variantId: null, quantity: 3 }],
           },
         },
       })
@@ -306,7 +314,7 @@ describe('ProductClient', () => {
     render(
       <ProductClient
         product={product}
-        initialVariationId={null}
+        initialVariantId={null}
         aiEnabled={true}
       />
     )
@@ -323,7 +331,7 @@ describe('ProductClient', () => {
     render(
       <ProductClient
         product={product}
-        initialVariationId={null}
+        initialVariantId={null}
         aiEnabled={true}
       />
     )
@@ -335,7 +343,7 @@ describe('ProductClient', () => {
     render(
       <ProductClient
         product={product}
-        initialVariationId={null}
+        initialVariantId={null}
         aiEnabled={true}
       />
     )
@@ -348,7 +356,7 @@ describe('ProductClient', () => {
     render(
       <ProductClient
         product={product}
-        initialVariationId={null}
+        initialVariantId={null}
         aiEnabled={true}
       />
     )
@@ -370,7 +378,7 @@ describe('ProductClient', () => {
     render(
       <ProductClient
         product={product}
-        initialVariationId={null}
+        initialVariantId={null}
         aiEnabled={true}
       />
     )
@@ -384,7 +392,7 @@ describe('ProductClient', () => {
     render(
       <ProductClient
         product={product}
-        initialVariationId={null}
+        initialVariantId={null}
         aiEnabled={true}
       />
     )
@@ -396,7 +404,7 @@ describe('ProductClient', () => {
     render(
       <ProductClient
         product={product}
-        initialVariationId={null}
+        initialVariantId={null}
         aiEnabled={true}
       />
     )
@@ -417,7 +425,7 @@ describe('ProductClient', () => {
     render(
       <ProductClient
         product={product}
-        initialVariationId={null}
+        initialVariantId={null}
         aiEnabled={true}
       />
     )
@@ -444,7 +452,7 @@ describe('ProductClient', () => {
     render(
       <ProductClient
         product={product}
-        initialVariationId={null}
+        initialVariantId={null}
         aiEnabled={true}
       />
     )
@@ -474,7 +482,7 @@ describe('ProductClient', () => {
     render(
       <ProductClient
         product={product}
-        initialVariationId={null}
+        initialVariantId={null}
         aiEnabled={true}
       />
     )
@@ -505,7 +513,7 @@ describe('ProductClient', () => {
     render(
       <ProductClient
         product={product}
-        initialVariationId={null}
+        initialVariantId={null}
         aiEnabled={true}
       />
     )
@@ -520,15 +528,15 @@ describe('ProductClient', () => {
   })
 
   it('renders variation buttons for colour variations', () => {
-    const variations = [
-      makeVariation({ id: 'var001', name: 'Red', variationType: 'colour' }),
-      makeVariation({ id: 'var002', name: 'Blue', variationType: 'colour' }),
+    const variants = [
+      makeVariation({ id: 'var001' }),
+      makeVariation({ id: 'var002' }),
     ]
-    const product = makeProduct({ variations })
+    const product = makeProduct({ variants })
     render(
       <ProductClient
         product={product}
-        initialVariationId={null}
+        initialVariantId={null}
         aiEnabled={true}
       />
     )
@@ -537,13 +545,13 @@ describe('ProductClient', () => {
     expect(screen.getByTestId('variation-btn-var002')).toBeInTheDocument()
   })
 
-  it('selects initial variation from initialVariationId prop', () => {
-    const variation = makeVariation({ id: 'var001', name: 'Red', price: 750 })
-    const product = makeProduct({ variations: [variation] })
+  it('selects initial variation from initialVariantId prop', () => {
+    const variation = makeVariation({ id: 'var001', price: 750 })
+    const product = makeProduct({ variants: [variation] })
     render(
       <ProductClient
         product={product}
-        initialVariationId="var001"
+        initialVariantId="var001"
         aiEnabled={true}
       />
     )
@@ -552,14 +560,15 @@ describe('ProductClient', () => {
   })
 
   it('selecting a variation updates the displayed price', () => {
-    const variations = [
-      makeVariation({ id: 'var001', name: 'Red', price: 750 }),
+    const variants = [
+      makeVariation({ id: 'default-var', price: 500 }),
+      makeVariation({ id: 'var001', price: 750 }),
     ]
-    const product = makeProduct({ price: 500, variations })
+    const product = makeProduct({ variants })
     render(
       <ProductClient
         product={product}
-        initialVariationId={null}
+        initialVariantId={null}
         aiEnabled={true}
       />
     )
@@ -574,11 +583,11 @@ describe('ProductClient', () => {
   })
 
   it('quantity selector renders with options up to stock (max 10)', () => {
-    const product = makeProduct({ stock: 5 })
+    const product = makeProduct({ variants: [makeVariation({ stock: 5 })] })
     render(
       <ProductClient
         product={product}
-        initialVariationId={null}
+        initialVariantId={null}
         aiEnabled={true}
       />
     )
@@ -589,12 +598,12 @@ describe('ProductClient', () => {
   })
 
   it('shows already-in-cart notice when items are in cart', () => {
-    const product = makeProduct({ stock: 10 })
+    const product = makeProduct({ variants: [makeVariation({ stock: 10 })] })
     vi.mocked(useSelector).mockImplementation((selector) =>
       selector({
         cart: {
           cart: {
-            items: [{ productId: 'prod001', variationId: null, quantity: 2 }],
+            items: [{ productId: 'prod001', variantId: null, quantity: 2 }],
           },
         },
       })
@@ -602,7 +611,7 @@ describe('ProductClient', () => {
     render(
       <ProductClient
         product={product}
-        initialVariationId={null}
+        initialVariantId={null}
         aiEnabled={true}
       />
     )
@@ -624,7 +633,7 @@ describe('ProductClient', () => {
     render(
       <ProductClient
         product={product}
-        initialVariationId={null}
+        initialVariantId={null}
         aiEnabled={true}
       />
     )
@@ -635,11 +644,11 @@ describe('ProductClient', () => {
   })
 
   it('shows total price (quantity × price) in add-to-cart section', () => {
-    const product = makeProduct({ price: 500 })
+    const product = makeProduct({ variants: [makeVariation({ price: 500 })] })
     render(
       <ProductClient
         product={product}
-        initialVariationId={null}
+        initialVariantId={null}
         aiEnabled={true}
       />
     )
@@ -651,7 +660,7 @@ describe('ProductClient', () => {
     render(
       <ProductClient
         product={product}
-        initialVariationId={null}
+        initialVariantId={null}
         aiEnabled={false}
       />
     )
@@ -679,7 +688,7 @@ describe('ProductClient', () => {
     render(
       <ProductClient
         product={product}
-        initialVariationId={null}
+        initialVariantId={null}
         aiEnabled={true}
       />
     )

@@ -13,15 +13,14 @@ import {
 import type { Session } from 'next-auth'
 import type { AddToCartInput } from '@/features/cart/validations'
 
-interface ProductWithVariations {
+interface ProductWithVariants {
   id: string
-  stock: number
-  variations: Array<{ id: string; stock: number }>
+  variants: Array<{ id: string; stock: number }>
 }
 
-interface CartVariationRecord {
+interface CartVariantRecord {
   id?: string
-  name?: string | null
+  sku?: string | null
   price?: number | null
   stock?: number | null
   createdAt: Date | string
@@ -32,13 +31,11 @@ interface CartProductRecord {
   id: string
   name?: string
   description?: string
-  price?: number
   image?: string
   category?: string
-  stock?: number
   createdAt: Date | string
   updatedAt: Date | string
-  variations: CartVariationRecord[]
+  variants: CartVariantRecord[]
 }
 
 interface CartItemRecord {
@@ -47,7 +44,7 @@ interface CartItemRecord {
   createdAt: Date | string
   updatedAt: Date | string
   product: CartProductRecord
-  variation: CartVariationRecord | null
+  variant: CartVariantRecord | null
 }
 
 interface CartRecord {
@@ -87,13 +84,13 @@ export function isCartRequestError(error: unknown): error is CartRequestError {
 
 async function verifyProductStock(
   body: AddToCartInput
-): Promise<{ product: ProductWithVariations; availableStock: number }> {
+): Promise<{ product: ProductWithVariants; availableStock: number }> {
   const product = await drizzleDb.query.products.findFirst({
     where: and(eq(products.id, body.productId), isNull(products.deletedAt)),
     with: {
-      variations: {
-        where: (variation, { isNull: isVariationNull }) =>
-          isVariationNull(variation.deletedAt),
+      variants: {
+        where: (variant, { isNull: isVariantNull }) =>
+          isVariantNull(variant.deletedAt),
       },
     },
   })
@@ -102,16 +99,11 @@ async function verifyProductStock(
     throw new CartRequestError('Product not found', 404)
   }
 
-  let availableStock = product.stock
-  if (body.variationId) {
-    const variation = product.variations.find(
-      (item) => item.id === body.variationId
-    )
-    if (!variation) {
-      throw new CartRequestError('Variation not found', 404)
-    }
-    availableStock = variation.stock
+  const variant = product.variants.find((v) => v.id === body.variantId)
+  if (!variant) {
+    throw new CartRequestError('Variant not found', 404)
   }
+  const availableStock = variant.stock
 
   if (availableStock <= 0) {
     throw new CartRequestError('This product is currently out of stock', 400)
@@ -179,9 +171,7 @@ async function addOrUpdateCartItem(
     where: and(
       eq(cartItems.cartId, cartId),
       eq(cartItems.productId, body.productId),
-      body.variationId
-        ? eq(cartItems.variationId, body.variationId)
-        : isNull(cartItems.variationId)
+      eq(cartItems.variantId, body.variantId)
     ),
   })
 
@@ -216,7 +206,7 @@ async function addOrUpdateCartItem(
     await primaryDrizzleDb.insert(cartItems).values({
       cartId,
       productId: body.productId,
-      variationId: body.variationId ?? null,
+      variantId: body.variantId,
       quantity,
       updatedAt: new Date(),
     })
@@ -244,17 +234,17 @@ function serializeCart(cart: CartRecord) {
         ...item.product,
         createdAt: toISOString(item.product.createdAt),
         updatedAt: toISOString(item.product.updatedAt),
-        variations: item.product.variations.map((variation) => ({
-          ...variation,
-          createdAt: toISOString(variation.createdAt),
-          updatedAt: toISOString(variation.updatedAt),
+        variants: item.product.variants.map((variant) => ({
+          ...variant,
+          createdAt: toISOString(variant.createdAt),
+          updatedAt: toISOString(variant.updatedAt),
         })),
       },
-      variation: item.variation
+      variant: item.variant
         ? {
-            ...item.variation,
-            createdAt: toISOString(item.variation.createdAt),
-            updatedAt: toISOString(item.variation.updatedAt),
+            ...item.variant,
+            createdAt: toISOString(item.variant.createdAt),
+            updatedAt: toISOString(item.variant.updatedAt),
           }
         : null,
     })),
@@ -270,13 +260,13 @@ function fetchCartFromDB(userId?: string, sessionId?: string) {
           with: {
             product: {
               with: {
-                variations: {
-                  where: (variation, { isNull: isVariationNull }) =>
-                    isVariationNull(variation.deletedAt),
+                variants: {
+                  where: (variant, { isNull: isVariantNull }) =>
+                    isVariantNull(variant.deletedAt),
                 },
               },
             },
-            variation: true,
+            variant: true,
           },
         },
       },
@@ -291,13 +281,13 @@ function fetchCartFromDB(userId?: string, sessionId?: string) {
           with: {
             product: {
               with: {
-                variations: {
-                  where: (variation, { isNull: isVariationNull }) =>
-                    isVariationNull(variation.deletedAt),
+                variants: {
+                  where: (variant, { isNull: isVariantNull }) =>
+                    isVariantNull(variant.deletedAt),
                 },
               },
             },
-            variation: true,
+            variant: true,
           },
         },
       },
@@ -354,14 +344,12 @@ function dbCartToRedisItems(
     productId: item.product.id,
     productName: item.product.name ?? '',
     productDescription: item.product.description ?? '',
-    productPrice: Number(item.product.price ?? 0),
     productImage: item.product.image ?? '',
     productCategory: item.product.category ?? '',
-    productStock: Number(item.product.stock ?? 0),
-    variationId: item.variation?.id ?? null,
-    variationName: item.variation?.name ?? null,
-    variationPrice: item.variation?.price ?? null,
-    variationStock: item.variation?.stock ?? null,
+    variantId: item.variant?.id ?? '',
+    variantSku: item.variant?.sku ?? null,
+    variantPrice: item.variant?.price ?? 0,
+    variantStock: item.variant?.stock ?? 0,
     quantity: item.quantity,
     createdAt: toISOString(item.createdAt),
     updatedAt: toISOString(item.updatedAt),
@@ -380,7 +368,7 @@ function redisItemsToCartResponse(items: CartItemRedis[]) {
       id: item.itemId,
       cartId: item.cartId,
       productId: item.productId,
-      variationId: item.variationId,
+      variantId: item.variantId,
       quantity: item.quantity,
       createdAt: item.createdAt,
       updatedAt: item.updatedAt,
@@ -388,31 +376,27 @@ function redisItemsToCartResponse(items: CartItemRedis[]) {
         id: item.productId,
         name: item.productName,
         description: item.productDescription,
-        price: item.productPrice,
         image: item.productImage,
         category: item.productCategory,
-        stock: item.productStock,
         createdAt: item.createdAt,
         updatedAt: item.updatedAt,
-        variations: item.variationId
+        variants: item.variantId
           ? [
               {
-                id: item.variationId,
-                name: item.variationName,
-                price: item.variationPrice,
-                stock: item.variationStock,
+                id: item.variantId,
+                price: item.variantPrice,
+                stock: item.variantStock,
                 createdAt: item.createdAt,
                 updatedAt: item.updatedAt,
               },
             ]
           : [],
       },
-      variation: item.variationId
+      variant: item.variantId
         ? {
-            id: item.variationId,
-            name: item.variationName,
-            price: item.variationPrice,
-            stock: item.variationStock,
+            id: item.variantId,
+            price: item.variantPrice,
+            stock: item.variantStock,
             createdAt: item.createdAt,
             updatedAt: item.updatedAt,
           }
@@ -481,13 +465,13 @@ export async function addItemToCart(
           with: {
             product: {
               with: {
-                variations: {
-                  where: (variation, { isNull: isVariationNull }) =>
-                    isVariationNull(variation.deletedAt),
+                variants: {
+                  where: (variant, { isNull: isVariantNull }) =>
+                    isVariantNull(variant.deletedAt),
                 },
               },
             },
-            variation: true,
+            variant: true,
           },
         },
       },

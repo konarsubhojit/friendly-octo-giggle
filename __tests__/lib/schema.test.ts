@@ -6,7 +6,7 @@ import {
   verificationTokens,
   passwordHistory,
   products,
-  productVariations,
+  productVariants,
   orders,
   orderItems,
   carts,
@@ -17,7 +17,7 @@ import {
   passwordHistoryRelations,
   sessionsRelations,
   productsRelations,
-  productVariationsRelations,
+  productVariantsRelations,
   ordersRelations,
   orderItemsRelations,
   cartsRelations,
@@ -35,7 +35,7 @@ describe('schema', () => {
     expect(verificationTokens).toBeDefined()
     expect(passwordHistory).toBeDefined()
     expect(products).toBeDefined()
-    expect(productVariations).toBeDefined()
+    expect(productVariants).toBeDefined()
     expect(orders).toBeDefined()
     expect(orderItems).toBeDefined()
     expect(carts).toBeDefined()
@@ -49,7 +49,7 @@ describe('schema', () => {
     expect(passwordHistoryRelations).toBeDefined()
     expect(sessionsRelations).toBeDefined()
     expect(productsRelations).toBeDefined()
-    expect(productVariationsRelations).toBeDefined()
+    expect(productVariantsRelations).toBeDefined()
     expect(ordersRelations).toBeDefined()
     expect(orderItemsRelations).toBeDefined()
     expect(cartsRelations).toBeDefined()
@@ -73,8 +73,6 @@ describe('schema', () => {
     const cols = Object.keys(products)
     expect(cols).toContain('id')
     expect(cols).toContain('name')
-    expect(cols).toContain('price')
-    expect(cols).toContain('stock')
     expect(cols).toContain('category')
   })
 
@@ -123,13 +121,11 @@ describe('schema', () => {
     expect(cols).toContain('expires')
   })
 
-  it('productVariations table has expected columns', () => {
-    const cols = Object.keys(productVariations)
+  it('productVariants table has expected columns', () => {
+    const cols = Object.keys(productVariants)
     expect(cols).toContain('id')
     expect(cols).toContain('productId')
-    expect(cols).toContain('name')
-    expect(cols).toContain('designName')
-    expect(cols).toContain('variationType')
+    expect(cols).toContain('sku')
     expect(cols).toContain('image')
     expect(cols).toContain('price')
     expect(cols).toContain('stock')
@@ -140,7 +136,7 @@ describe('schema', () => {
     expect(cols).toContain('id')
     expect(cols).toContain('orderId')
     expect(cols).toContain('productId')
-    expect(cols).toContain('variationId')
+    expect(cols).toContain('variantId')
     expect(cols).toContain('quantity')
     expect(cols).toContain('price')
     expect(cols).toContain('customizationNote')
@@ -151,7 +147,7 @@ describe('schema', () => {
     expect(cols).toContain('id')
     expect(cols).toContain('cartId')
     expect(cols).toContain('productId')
-    expect(cols).toContain('variationId')
+    expect(cols).toContain('variantId')
     expect(cols).toContain('quantity')
   })
 
@@ -198,6 +194,6 @@ describe('schema', () => {
     const cols = Object.keys(productShares)
     expect(cols).toContain('key')
     expect(cols).toContain('productId')
-    expect(cols).toContain('variationId')
+    expect(cols).toContain('variantId')
   })
 })

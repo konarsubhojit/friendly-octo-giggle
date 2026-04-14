@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import React from 'react'
 import VariationFormModal from '@/features/admin/components/VariationFormModal'
-import type { ProductVariation } from '@/lib/types'
+import type { ProductVariant } from '@/lib/types'
 
 const { mockToastError, mockToastSuccess } = vi.hoisted(() => ({
   mockToastError: vi.fn(),
@@ -39,16 +39,13 @@ vi.mock('@/contexts/CurrencyContext', () => ({
   }),
 }))
 
-const mockVariation: ProductVariation = {
+const mockVariation: ProductVariant = {
   id: 'var1234',
   productId: 'abc1234',
-  styleId: null,
-  name: 'Red - Large',
-  designName: 'Classic Logo',
+  sku: null,
   image: null,
   images: [],
   price: 150,
-  variationType: 'styling' as const,
   stock: 25,
   deletedAt: null,
   createdAt: '2025-01-01T00:00:00.000Z',
@@ -57,7 +54,6 @@ const mockVariation: ProductVariation = {
 
 const defaultProps = {
   productId: 'abc1234',
-  productPrice: 29.99,
   onClose: vi.fn(),
   onSuccess: vi.fn(),
 }
@@ -87,10 +83,8 @@ describe('VariationFormModal', () => {
   })
 
   it('renders in edit mode with pre-populated fields', () => {
-    render(<VariationFormModal {...defaultProps} variation={mockVariation} />)
+    render(<VariationFormModal {...defaultProps} variant={mockVariation} />)
     expect(screen.getByText('Edit Variation')).toBeInTheDocument()
-    expect(screen.getByLabelText(/^Name/)).toHaveValue('Red - Large')
-    expect(screen.getByLabelText(/Design Name/)).toHaveValue('Classic Logo')
     expect(screen.getByText('Update')).toBeInTheDocument()
   })
 
@@ -192,7 +186,7 @@ describe('VariationFormModal', () => {
     render(
       <VariationFormModal
         {...defaultProps}
-        variation={mockVariation}
+        variant={mockVariation}
         onSuccess={onSuccess}
       />
     )
@@ -232,17 +226,12 @@ describe('VariationFormModal', () => {
     expect(screen.getByLabelText('Parent Style')).toBeInTheDocument()
   })
 
-  it('renders parent style options when styles prop is provided', () => {
-    const mockStyles = [
-      {
-        ...mockVariation,
-        id: 'sty001',
-        name: 'Floral',
-        designName: 'classic',
-        variationType: 'styling' as const,
-      },
-    ]
-    render(<VariationFormModal {...defaultProps} styles={mockStyles} />)
+  it('renders parent style options when variant prop is provided', () => {
+    const mockStyle: ProductVariant = {
+      ...mockVariation,
+      id: 'sty001',
+    }
+    render(<VariationFormModal {...defaultProps} variant={mockStyle} />)
     switchToColour()
     expect(screen.getByText(/Floral/)).toBeInTheDocument()
   })
@@ -418,7 +407,7 @@ describe('VariationFormModal', () => {
   })
 
   it('displays Edit Variation title text for edit mode', () => {
-    render(<VariationFormModal {...defaultProps} variation={mockVariation} />)
+    render(<VariationFormModal {...defaultProps} variant={mockVariation} />)
     expect(screen.getByText('Edit Variation')).toBeInTheDocument()
   })
 })

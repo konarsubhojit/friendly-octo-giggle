@@ -41,7 +41,7 @@ describe('ShareButton', () => {
   })
 
   it('renders the Share button with icon only (no visible text)', () => {
-    render(<ShareButton productId="abc1234" variationId={null} />)
+    render(<ShareButton productId="abc1234" variantId={null} />)
     const btn = screen.getByRole('button', { name: 'Share this product' })
     expect(btn).toBeTruthy()
     // Button must not contain visible text nodes
@@ -68,7 +68,7 @@ describe('ShareButton', () => {
         )
     )
 
-    render(<ShareButton productId="abc1234" variationId={null} />)
+    render(<ShareButton productId="abc1234" variantId={null} />)
     const btn = screen.getByRole('button', { name: 'Share this product' })
     fireEvent.click(btn)
 
@@ -88,7 +88,7 @@ describe('ShareButton', () => {
       }),
     })
 
-    render(<ShareButton productId="abc1234" variationId={null} />)
+    render(<ShareButton productId="abc1234" variantId={null} />)
     fireEvent.click(screen.getByRole('button', { name: 'Share this product' }))
 
     await waitFor(() => {
@@ -107,7 +107,7 @@ describe('ShareButton', () => {
       }),
     })
 
-    render(<ShareButton productId="abc1234" variationId={null} />)
+    render(<ShareButton productId="abc1234" variantId={null} />)
     fireEvent.click(screen.getByRole('button', { name: 'Share this product' }))
 
     await waitFor(() => {
@@ -123,7 +123,7 @@ describe('ShareButton', () => {
       }),
     })
 
-    render(<ShareButton productId="abc1234" variationId={null} />)
+    render(<ShareButton productId="abc1234" variantId={null} />)
     fireEvent.click(screen.getByRole('button', { name: 'Share this product' }))
 
     await waitFor(() => {
@@ -131,7 +131,7 @@ describe('ShareButton', () => {
     })
   })
 
-  it('calls fetch with correct productId and variationId', async () => {
+  it('calls fetch with correct productId and variantId', async () => {
     mockFetch.mockResolvedValue({
       json: () => ({
         success: true,
@@ -139,7 +139,7 @@ describe('ShareButton', () => {
       }),
     })
 
-    render(<ShareButton productId="abc1234" variationId="var5678" />)
+    render(<ShareButton productId="abc1234" variantId="var5678" />)
     fireEvent.click(screen.getByRole('button', { name: 'Share this product' }))
 
     await waitFor(() => {
@@ -149,7 +149,7 @@ describe('ShareButton', () => {
           method: 'POST',
           body: JSON.stringify({
             productId: 'abc1234',
-            variationId: 'var5678',
+            variantId: 'var5678',
           }),
         })
       )
@@ -159,7 +159,7 @@ describe('ShareButton', () => {
   it('shows error aria-label on failed API call', async () => {
     mockFetch.mockRejectedValue(new Error('Network error'))
 
-    render(<ShareButton productId="abc1234" variationId={null} />)
+    render(<ShareButton productId="abc1234" variantId={null} />)
     fireEvent.click(screen.getByRole('button', { name: 'Share this product' }))
 
     await waitFor(() => {
@@ -176,7 +176,7 @@ describe('ShareButton', () => {
       json: () => ({ success: false, error: 'Server error' }),
     })
 
-    render(<ShareButton productId="abc1234" variationId={null} />)
+    render(<ShareButton productId="abc1234" variantId={null} />)
     fireEvent.click(screen.getByRole('button', { name: 'Share this product' }))
 
     await waitFor(() => {
@@ -196,7 +196,7 @@ describe('ShareButton', () => {
       }),
     })
 
-    render(<ShareButton productId="abc1234" variationId={null} />)
+    render(<ShareButton productId="abc1234" variantId={null} />)
     fireEvent.click(screen.getByRole('button', { name: 'Share this product' }))
 
     await waitFor(() => {
@@ -223,7 +223,7 @@ describe('ShareButton', () => {
       }),
     })
 
-    render(<ShareButton productId="abc1234" variationId={null} />)
+    render(<ShareButton productId="abc1234" variantId={null} />)
     fireEvent.click(screen.getByRole('button', { name: 'Share this product' }))
 
     await waitFor(() => {
@@ -246,7 +246,7 @@ describe('ShareButton', () => {
       }),
     })
 
-    render(<ShareButton productId="abc1234" variationId={null} />)
+    render(<ShareButton productId="abc1234" variantId={null} />)
     fireEvent.click(screen.getByRole('button', { name: 'Share this product' }))
 
     await waitFor(() => {

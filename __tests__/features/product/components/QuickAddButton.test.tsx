@@ -49,7 +49,7 @@ describe('QuickAddButton', () => {
   const mockProduct = {
     id: 'prod123',
     name: 'Test Product',
-    stock: 10,
+    variants: [{ id: 'var-default', stock: 10 }],
   }
 
   beforeEach(() => {
@@ -60,7 +60,12 @@ describe('QuickAddButton', () => {
 
   it('does not render when product is out of stock', () => {
     const { container } = render(
-      <QuickAddButton product={{ ...mockProduct, stock: 0 }} />
+      <QuickAddButton
+        product={{
+          ...mockProduct,
+          variants: [{ id: 'var-default', stock: 0 }],
+        }}
+      />
     )
     expect(container.firstChild).toBeNull()
   })
@@ -114,7 +119,7 @@ describe('QuickAddButton', () => {
     await waitFor(() => {
       expect(mockAddPendingCartItem).toHaveBeenCalledWith({
         productId: 'prod123',
-        variationId: null,
+        variantId: null,
         quantity: 1,
       })
       expect(mockToastSuccess).toHaveBeenCalledWith(
