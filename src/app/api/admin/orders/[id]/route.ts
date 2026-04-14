@@ -61,7 +61,7 @@ export const PATCH = async (
 
     const order = await primaryDrizzleDb.query.orders.findFirst({
       where: eq(orders.id, id),
-      with: { items: { with: { product: true, variation: true } } },
+      with: { items: { with: { product: true, variant: true } } },
     })
 
     if (!order) {
@@ -155,7 +155,7 @@ export const GET = async (
     const order = await cacheAdminOrderById(id, () =>
       drizzleDb.query.orders.findFirst({
         where: eq(orders.id, id),
-        with: { items: { with: { product: true, variation: true } } },
+        with: { items: { with: { product: true, variant: true } } },
       })
     )
 

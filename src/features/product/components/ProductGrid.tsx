@@ -21,8 +21,13 @@ import { WishlistButton } from '@/features/wishlist/components/WishlistButton'
 
 export type ProductGridItem = Pick<
   Product,
-  'id' | 'name' | 'description' | 'price' | 'image' | 'stock' | 'category'
->
+  'id' | 'name' | 'description' | 'image' | 'category'
+> & {
+  /** Derived min price from variants; 0 if no variants */
+  price: number
+  /** Derived total stock from variants; 0 if no variants */
+  stock: number
+}
 
 interface ProductGridProps {
   readonly products: ProductGridItem[]

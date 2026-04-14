@@ -20,6 +20,7 @@ interface ProductWithVariants {
 
 interface CartVariantRecord {
   id?: string
+  sku?: string | null
   price?: number | null
   stock?: number | null
   createdAt: Date | string
@@ -343,15 +344,12 @@ function dbCartToRedisItems(
     productId: item.product.id,
     productName: item.product.name ?? '',
     productDescription: item.product.description ?? '',
-    // TODO: Remove productPrice/productStock legacy Redis fields once cache is fully migrated to variant-only model
-    productPrice: 0,
     productImage: item.product.image ?? '',
     productCategory: item.product.category ?? '',
-    productStock: 0,
-    variationId: item.variant?.id ?? null,
-    variationName: null,
-    variationPrice: item.variant?.price ?? null,
-    variationStock: item.variant?.stock ?? null,
+    variantId: item.variant?.id ?? '',
+    variantSku: item.variant?.sku ?? null,
+    variantPrice: item.variant?.price ?? 0,
+    variantStock: item.variant?.stock ?? 0,
     quantity: item.quantity,
     createdAt: toISOString(item.createdAt),
     updatedAt: toISOString(item.updatedAt),
@@ -370,7 +368,7 @@ function redisItemsToCartResponse(items: CartItemRedis[]) {
       id: item.itemId,
       cartId: item.cartId,
       productId: item.productId,
-      variantId: item.variationId,
+      variantId: item.variantId,
       quantity: item.quantity,
       createdAt: item.createdAt,
       updatedAt: item.updatedAt,
@@ -382,23 +380,23 @@ function redisItemsToCartResponse(items: CartItemRedis[]) {
         category: item.productCategory,
         createdAt: item.createdAt,
         updatedAt: item.updatedAt,
-        variants: item.variationId
+        variants: item.variantId
           ? [
               {
-                id: item.variationId,
-                price: item.variationPrice,
-                stock: item.variationStock,
+                id: item.variantId,
+                price: item.variantPrice,
+                stock: item.variantStock,
                 createdAt: item.createdAt,
                 updatedAt: item.updatedAt,
               },
             ]
           : [],
       },
-      variant: item.variationId
+      variant: item.variantId
         ? {
-            id: item.variationId,
-            price: item.variationPrice,
-            stock: item.variationStock,
+            id: item.variantId,
+            price: item.variantPrice,
+            stock: item.variantStock,
             createdAt: item.createdAt,
             updatedAt: item.updatedAt,
           }

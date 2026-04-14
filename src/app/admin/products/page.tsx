@@ -239,12 +239,20 @@ export default function ProductsManagement() {
     },
   ]
 
+  const getMinPrice = (p: Product): number =>
+    p.variants && p.variants.length > 0
+      ? Math.min(...p.variants.map((v) => v.price))
+      : 0
+
+  const getTotalStock = (p: Product): number =>
+    p.variants?.reduce((sum, v) => sum + v.stock, 0) ?? 0
+
   const productRows: ProductRow[] = products.map((p) => ({
     id: p.id,
     name: p.name,
     category: p.category,
-    price: formatPrice(p.price),
-    stock: p.stock,
+    price: formatPrice(getMinPrice(p)),
+    stock: getTotalStock(p),
   }))
 
   const productsListContent = (
@@ -266,9 +274,9 @@ export default function ProductsManagement() {
     />
   )
 
-  const inStockProducts = products.filter((product) => product.stock > 0).length
+  const inStockProducts = products.filter((product) => getTotalStock(product) > 0).length
   const lowStockProducts = products.filter(
-    (product) => product.stock > 0 && product.stock <= 5
+    (product) => getTotalStock(product) > 0 && getTotalStock(product) <= 5
   ).length
 
   return (

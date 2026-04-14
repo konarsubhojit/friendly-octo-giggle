@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { AdminPageShell } from '@/features/admin/components/AdminPageShell'
 import VariationList from '@/features/admin/components/VariationList'
 import ProductEditForm from '@/features/admin/components/ProductEditForm'
+import { serializeVariant } from '@/lib/serializers'
 
 export const dynamic = 'force-dynamic'
 
@@ -25,7 +26,7 @@ export default async function AdminProductEditPage({ params }: PageProps) {
   const product = await drizzleDb.query.products.findFirst({
     where: and(eq(products.id, id), isNull(products.deletedAt)),
     with: {
-      variations: {
+      variants: {
         where: (v, { isNull }) => isNull(v.deletedAt),
       },
     },
@@ -35,35 +36,24 @@ export default async function AdminProductEditPage({ params }: PageProps) {
     notFound()
   }
 
-  const serializedVariations = product.variations.map((v) => ({
-    id: v.id,
-    productId: v.productId,
-    name: v.name,
-    designName: v.designName,
-    variationType: v.variationType ?? 'styling',
-    styleId: v.styleId ?? null,
-    image: v.image ?? null,
-    images: v.images ?? [],
-    price: v.price,
-    stock: v.stock,
-    deletedAt: null,
-    createdAt: v.createdAt.toISOString(),
-    updatedAt: v.updatedAt.toISOString(),
-  }))
+  const serializedVariants = product.variants.map(serializeVariant)
+
+  const minPrice = serializedVariants.length > 0
+    ? Math.min(...serializedVariants.map((v) => v.price))
+    : 0
+  const totalStock = serializedVariants.reduce((sum, v) => sum + v.stock, 0)
 
   const serializedProduct = {
     id: product.id,
     name: product.name,
     description: product.description,
-    price: product.price,
     image: product.image,
     images: product.images ?? [],
-    stock: product.stock,
     category: product.category,
     deletedAt: null,
     createdAt: product.createdAt.toISOString(),
     updatedAt: product.updatedAt.toISOString(),
-    variations: serializedVariations,
+    variants: serializedVariants,
   }
 
   return (
@@ -75,7 +65,7 @@ export default async function AdminProductEditPage({ params }: PageProps) {
       ]}
       eyebrow="Product overview"
       title={serializedProduct.name}
-      description="View product details, pricing, stock, and variations."
+      description="View product details, pricing, stock, and variants."
       actions={
         <Link
           href={`/admin/products/${serializedProduct.id}/edit`}
@@ -86,21 +76,21 @@ export default async function AdminProductEditPage({ params }: PageProps) {
       }
       metrics={[
         {
-          label: 'Base price',
-          value: `$${serializedProduct.price.toFixed(2)}`,
-          hint: 'Base price in INR.',
+          label: 'From price',
+          value: `$${minPrice.toFixed(2)}`,
+          hint: 'Lowest variant price.',
           tone: 'emerald',
         },
         {
-          label: 'Base stock',
-          value: String(serializedProduct.stock),
-          hint: 'Base stock level.',
-          tone: serializedProduct.stock > 0 ? 'sky' : 'rose',
+          label: 'Total stock',
+          value: String(totalStock),
+          hint: 'Combined variant stock.',
+          tone: totalStock > 0 ? 'sky' : 'rose',
         },
         {
-          label: 'Variations',
-          value: String(serializedVariations.length),
-          hint: 'Active product variations.',
+          label: 'Variants',
+          value: String(serializedVariants.length),
+          hint: 'Active product variants.',
           tone: 'amber',
         },
       ]}
@@ -108,8 +98,7 @@ export default async function AdminProductEditPage({ params }: PageProps) {
       <ProductEditForm product={serializedProduct} />
       <VariationList
         productId={product.id}
-        productPrice={product.price}
-        initialVariations={serializedVariations}
+        initialVariants={serializedVariants}
       />
     </AdminPageShell>
   )

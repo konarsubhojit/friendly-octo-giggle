@@ -16,6 +16,24 @@ export const revalidate = 300
 const SHOP_INITIAL_SIZE = 24
 const SHOP_BATCH_SIZE = 20
 
+/** Convert a Product (with variants) to a ProductGridItem with derived price/stock */
+const toGridItem = (p: { id: string; name: string; description: string; image: string; category: string; variants?: Array<{ price: number; stock: number }> }): ProductGridItem => ({
+  id: p.id,
+  name: p.name,
+  description: p.description,
+  image: p.image,
+  category: p.category,
+  price: p.variants && p.variants.length > 0 ? Math.min(...p.variants.map((v) => v.price)) : 0,
+  stock: p.variants?.reduce((sum, v) => sum + v.stock, 0) ?? 0,
+})
+
+/** Convert a minimal product (no variants) to a ProductGridItem */
+const toMinimalGridItem = (p: { id: string; name: string; description: string; image: string; category: string }): ProductGridItem => ({
+  ...p,
+  price: 0,
+  stock: 0,
+})
+
 interface ShopPageProps {
   readonly searchParams?: Promise<{
     q?: string | string[]
@@ -81,8 +99,8 @@ const ShopPage = async ({ searchParams }: ShopPageProps) => {
         })
 
         shopData = {
-          products: allProducts.slice(0, SHOP_INITIAL_SIZE),
-          bestsellers: topProducts,
+          products: allProducts.slice(0, SHOP_INITIAL_SIZE).map(toMinimalGridItem),
+          bestsellers: topProducts.map(toGridItem),
           categoryNames: cats.map((c) => c.name),
           hasNextPage: allProducts.length > SHOP_INITIAL_SIZE,
         }
@@ -101,8 +119,8 @@ const ShopPage = async ({ searchParams }: ShopPageProps) => {
         })
 
         shopData = {
-          products: orderedProducts,
-          bestsellers: topProducts,
+          products: orderedProducts.map(toMinimalGridItem),
+          bestsellers: topProducts.map(toGridItem),
           categoryNames: cats.map((c) => c.name),
           hasNextPage: matchedIds.length > SHOP_INITIAL_SIZE,
         }
@@ -116,8 +134,8 @@ const ShopPage = async ({ searchParams }: ShopPageProps) => {
       })
 
       shopData = {
-        products: allProducts.slice(0, SHOP_INITIAL_SIZE),
-        bestsellers: topProducts,
+        products: allProducts.slice(0, SHOP_INITIAL_SIZE).map(toMinimalGridItem),
+        bestsellers: topProducts.map(toGridItem),
         categoryNames: cats.map((c) => c.name),
         hasNextPage: allProducts.length > SHOP_INITIAL_SIZE,
       }

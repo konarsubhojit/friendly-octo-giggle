@@ -52,7 +52,7 @@ export interface OrderSummary {
 
 const OrderItemInputSchema = z.object({
   productId: z.string().min(1),
-  variantId: z.string().nullish(),
+  variantId: z.string().min(1),
   quantity: z.number().int().positive(),
   price: z.number().positive(),
   customizationNote: z.string().max(500).nullish(),
@@ -343,7 +343,7 @@ const insertOrderRecords = async (
       input.items.map((item) => ({
         orderId,
         productId: item.productId,
-        variantId: item.variantId ?? null,
+        variantId: item.variantId,
         quantity: item.quantity,
         price: item.price,
         customizationNote: item.customizationNote ?? null,

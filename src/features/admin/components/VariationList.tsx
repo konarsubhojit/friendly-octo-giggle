@@ -2,7 +2,7 @@
 
 import { useState, lazy, Suspense } from 'react'
 import Image from 'next/image'
-import type { ProductVariation } from '@/lib/types'
+import type { ProductVariant } from '@/lib/types'
 import toast from 'react-hot-toast'
 import { useCurrency } from '@/contexts/CurrencyContext'
 
@@ -15,8 +15,7 @@ const DeleteConfirmModal = lazy(
 
 interface VariationListProps {
   readonly productId: string
-  readonly productPrice: number
-  readonly initialVariations: ProductVariation[]
+  readonly initialVariants: ProductVariant[]
 }
 
 interface QuickEditDraft {
@@ -28,199 +27,116 @@ interface QuickEditUiState {
   readonly hasDraftChanges: boolean
   readonly hasValidPrice: boolean
   readonly isQuickSaveDisabled: boolean
-  readonly previewLabel: string
-  readonly quickEffectivePrice: number
-  readonly showPriceError: boolean
-  readonly showStockError: boolean
 }
 
-interface VariationQuickEditPanelProps {
-  readonly currency: string
-  readonly draft: QuickEditDraft
-  readonly onPriceChange: (value: string) => void
-  readonly onReset: () => void
-  readonly onSave: () => void
-  readonly onStockChange: (value: string) => void
-  readonly saving: boolean
-  readonly state: QuickEditUiState
-  readonly variationName: string
-}
-
-function convertCurrency(
+const convertCurrency = (
   amount: number,
   fromRate: number,
   toRate: number
-): number {
-  const amountInInr = amount / fromRate
-  return Number((amountInInr * toRate).toFixed(2))
+): number => {
+  if (fromRate <= 0 || toRate <= 0) return amount
+  return Number(((amount / fromRate) * toRate).toFixed(2))
 }
 
-function getQuickEditUiState({
-  currency,
-  draft,
-  formatPrice,
-  getDefaultDraft,
-  rates,
-  saving,
-  variation,
-}: {
-  readonly currency: string
+interface QuickEditPanelProps {
   readonly draft: QuickEditDraft
-  readonly formatPrice: (amount: number) => string
-  readonly getDefaultDraft: (variation: ProductVariation) => QuickEditDraft
-  readonly rates: Record<string, number>
   readonly saving: boolean
-  readonly variation: ProductVariation
-}): QuickEditUiState {
-  const defaultDraft = getDefaultDraft(variation)
-  const priceValue = Number.parseFloat(draft.price)
-  const priceInInr = Number.isNaN(priceValue)
-    ? Number.NaN
-    : convertCurrency(priceValue, rates[currency], rates.INR)
-  const stockValue = Number.parseInt(draft.stock, 10)
-  const hasDraftChanges =
-    draft.price !== defaultDraft.price || draft.stock !== defaultDraft.stock
-  const hasValidStock = Number.isInteger(stockValue) && stockValue >= 0
-  const hasValidPrice = !Number.isNaN(priceValue) && priceValue > 0
-
-  return {
-    hasDraftChanges,
-    hasValidPrice,
-    isQuickSaveDisabled:
-      !hasDraftChanges ||
-      !hasValidStock ||
-      !hasValidPrice ||
-      Number.isNaN(priceInInr) ||
-      priceInInr <= 0 ||
-      saving,
-    previewLabel:
-      hasValidPrice && !Number.isNaN(priceInInr)
-        ? formatPrice(priceInInr)
-        : 'Enter valid values',
-    quickEffectivePrice: priceInInr,
-    showPriceError: hasValidPrice === false,
-    showStockError: hasValidStock === false,
-  }
+  readonly variantSku: string | null
+  readonly onPriceChange: (value: string) => void
+  readonly onStockChange: (value: string) => void
+  readonly onSave: () => void
+  readonly onReset: () => void
+  readonly ui: QuickEditUiState
 }
 
-function VariationQuickEditPanel({
-  currency,
+const QuickEditPanel = ({
   draft,
-  onPriceChange,
-  onReset,
-  onSave,
-  onStockChange,
   saving,
-  state,
-  variationName,
-}: VariationQuickEditPanelProps) {
-  return (
-    <div className="mt-4 rounded-[1.25rem] border border-slate-200 bg-slate-50/70 p-4 dark:border-slate-700 dark:bg-slate-950/55">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700 dark:text-sky-300">
-            Quick edit
-          </p>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Adjust price and stock.
-          </p>
-        </div>
-        <p className="text-xs text-slate-500 dark:text-slate-400">
-          Preview after save: {state.previewLabel}
-        </p>
-      </div>
-
-      <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_10rem_auto]">
-        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-          <span>Price ({currency})</span>
-          <input
-            type="number"
-            step="0.01"
-            min="0.01"
-            value={draft.price}
-            onChange={(event) => onPriceChange(event.target.value)}
-            aria-label={`Price for ${variationName}`}
-            className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-950 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100 dark:border-slate-700 dark:bg-slate-950/80 dark:text-slate-50 dark:focus:border-sky-500 dark:focus:ring-sky-500/20"
-          />
+  variantSku,
+  onPriceChange,
+  onStockChange,
+  onSave,
+  onReset,
+  ui,
+}: QuickEditPanelProps) => (
+  <div className="mt-3 flex flex-col gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/60">
+    <div className="flex flex-wrap gap-3">
+      <div className="flex-1 min-w-[100px]">
+        <label className="mb-1 block text-xs font-semibold text-slate-500">
+          Price
         </label>
-
-        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-          <span>Stock</span>
-          <input
-            type="number"
-            min="0"
-            step="1"
-            value={draft.stock}
-            onChange={(event) => onStockChange(event.target.value)}
-            aria-label={`Stock for ${variationName}`}
-            className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-950 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100 dark:border-slate-700 dark:bg-slate-950/80 dark:text-slate-50 dark:focus:border-sky-500 dark:focus:ring-sky-500/20"
-          />
-        </label>
-
-        <div className="flex gap-2 lg:justify-end">
-          <button
-            type="button"
-            onClick={onReset}
-            disabled={!state.hasDraftChanges || saving}
-            className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-950 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:text-slate-50"
-          >
-            Reset
-          </button>
-          <button
-            type="button"
-            onClick={onSave}
-            disabled={state.isQuickSaveDisabled}
-            className="inline-flex items-center justify-center rounded-full bg-sky-500 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-sky-400 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 dark:bg-sky-500 dark:text-slate-950 dark:hover:bg-sky-400 dark:disabled:bg-slate-700 dark:disabled:text-slate-400"
-          >
-            {saving ? 'Saving...' : 'Save'}
-          </button>
-        </div>
+        <input
+          type="number"
+          step="0.01"
+          min="0"
+          value={draft.price}
+          onChange={(e) => onPriceChange(e.target.value)}
+          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-50"
+          aria-label={`Price for ${variantSku ?? 'variant'}`}
+        />
       </div>
-
-      {state.showPriceError ? (
-        <p className="mt-3 text-xs font-medium text-rose-500 dark:text-rose-400">
-          Enter a valid price greater than zero.
-        </p>
-      ) : null}
-      {state.showStockError ? (
-        <p className="mt-3 text-xs font-medium text-rose-500 dark:text-rose-400">
-          Stock must be a non-negative integer.
-        </p>
-      ) : null}
-      {state.hasValidPrice && state.quickEffectivePrice <= 0 ? (
-        <p className="mt-3 text-xs font-medium text-rose-500 dark:text-rose-400">
-          Price must be greater than zero.
-        </p>
-      ) : null}
+      <div className="flex-1 min-w-[100px]">
+        <label className="mb-1 block text-xs font-semibold text-slate-500">
+          Stock
+        </label>
+        <input
+          type="number"
+          step="1"
+          min="0"
+          value={draft.stock}
+          onChange={(e) => onStockChange(e.target.value)}
+          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-50"
+          aria-label={`Stock for ${variantSku ?? 'variant'}`}
+        />
+      </div>
     </div>
-  )
-}
+    <div className="flex gap-2">
+      <button
+        type="button"
+        disabled={ui.isQuickSaveDisabled}
+        onClick={onSave}
+        className="rounded-full bg-slate-950 px-4 py-2 text-xs font-semibold text-white transition hover:bg-slate-800 disabled:opacity-50"
+      >
+        {saving ? 'Saving…' : 'Save'}
+      </button>
+      {ui.hasDraftChanges && (
+        <button
+          type="button"
+          onClick={onReset}
+          className="rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-100"
+        >
+          Reset
+        </button>
+      )}
+    </div>
+  </div>
+)
 
-interface ColourCardProps {
-  readonly variation: ProductVariation
+interface VariantCardProps {
+  readonly variant: ProductVariant
   readonly currency: string
   readonly draft: QuickEditDraft
-  readonly expandedVariationId: string | null
+  readonly expandedVariantId: string | null
   readonly formatPrice: (amount: number) => string
-  readonly getDefaultDraft: (variation: ProductVariation) => QuickEditDraft
-  readonly handleDeleteClick: (variation: ProductVariation) => void
-  readonly handleQuickEditToggle: (variationId: string) => void
-  readonly handleQuickSave: (variation: ProductVariation) => void
+  readonly getDefaultDraft: (variant: ProductVariant) => QuickEditDraft
+  readonly handleDeleteClick: (variant: ProductVariant) => void
+  readonly handleQuickEditToggle: (variantId: string) => void
+  readonly handleQuickSave: (variant: ProductVariant) => void
   readonly rates: Record<string, number>
-  readonly resetQuickDraft: (variation: ProductVariation) => void
-  readonly savingVariationId: string | null
+  readonly resetQuickDraft: (variant: ProductVariant) => void
+  readonly savingVariantId: string | null
   readonly updateQuickDraft: (
-    variationId: string,
+    variantId: string,
     field: keyof QuickEditDraft,
     value: string
   ) => void
 }
 
-function ColourCard({
-  variation,
+const VariantCard = ({
+  variant,
   currency,
   draft,
-  expandedVariationId,
+  expandedVariantId,
   formatPrice,
   getDefaultDraft,
   handleDeleteClick,
@@ -228,121 +144,99 @@ function ColourCard({
   handleQuickSave,
   rates,
   resetQuickDraft,
-  savingVariationId,
+  savingVariantId,
   updateQuickDraft,
-}: ColourCardProps) {
-  const isExpanded = expandedVariationId === variation.id
-  const quickEditState = getQuickEditUiState({
-    currency,
-    draft,
-    formatPrice,
-    getDefaultDraft,
-    rates,
-    saving: savingVariationId === variation.id,
-    variation,
-  })
+}: VariantCardProps) => {
+  const isExpanded = expandedVariantId === variant.id
+  const defaultDraft = getDefaultDraft(variant)
+
+  const ui: QuickEditUiState = {
+    hasDraftChanges: draft.price !== defaultDraft.price || draft.stock !== defaultDraft.stock,
+    hasValidPrice: !Number.isNaN(Number.parseFloat(draft.price)) && Number.parseFloat(draft.price) > 0,
+    isQuickSaveDisabled:
+      savingVariantId === variant.id ||
+      (draft.price === defaultDraft.price && draft.stock === defaultDraft.stock),
+  }
+
+  const displayLabel = variant.sku ?? variant.id
 
   return (
-    <div className="rounded-[1.5rem] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-4 shadow-[0_18px_44px_-34px_rgba(15,23,42,0.38)] transition hover:border-slate-300 hover:shadow-[0_24px_54px_-34px_rgba(15,23,42,0.42)] sm:p-5 dark:border-slate-700 dark:bg-[linear-gradient(180deg,rgba(15,23,42,0.98)_0%,rgba(15,23,42,0.88)_100%)] dark:hover:border-slate-600 dark:hover:shadow-[0_24px_54px_-34px_rgba(2,6,23,0.92)]">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
-        <div className="flex min-w-0 flex-1 gap-4">
-          <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-[1.25rem] bg-slate-100 dark:bg-slate-800">
-            {variation.image ? (
-              <Image
-                src={variation.image}
-                alt={variation.name}
-                fill
-                className="object-cover"
-                sizes="96px"
-              />
-            ) : (
-              <div className="flex h-full items-center justify-center text-slate-400 dark:text-slate-500">
-                <svg
-                  className="h-8 w-8"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1.5}
-                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                  />
-                </svg>
-              </div>
-            )}
-          </div>
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md dark:border-slate-700 dark:bg-slate-900/80">
+      <div className="flex items-start gap-4">
+        <div className="relative h-14 w-14 flex-shrink-0 overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-800">
+          {variant.image ? (
+            <Image
+              src={variant.image}
+              alt={displayLabel}
+              fill
+              className="object-cover"
+              sizes="56px"
+            />
+          ) : (
+            <div className="flex h-full items-center justify-center text-lg">
+              📦
+            </div>
+          )}
+        </div>
 
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-              <div className="min-w-0">
-                <h3 className="truncate text-lg font-semibold text-slate-950 dark:text-slate-50">
-                  {variation.name}
-                </h3>
-                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                  {variation.designName}
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <p className="text-sm font-semibold text-slate-950 dark:text-slate-50">
+                {displayLabel}
+              </p>
+              {variant.optionValues && variant.optionValues.length > 0 && (
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  {variant.optionValues.map((ov) => ov.value).join(' / ')}
                 </p>
-              </div>
-              <span className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+              )}
+              <p className="mt-0.5 text-[10px] text-slate-400 dark:text-slate-500">
                 Updated{' '}
-                {new Date(variation.updatedAt).toLocaleDateString('en-US', {
+                {new Date(variant.updatedAt).toLocaleDateString('en-US', {
                   month: 'short',
                   day: 'numeric',
                 })}
-              </span>
+              </p>
             </div>
-
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <div className="rounded-2xl bg-white px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] dark:bg-slate-950/70 dark:shadow-none">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-                  Price
-                </p>
-                <p className="mt-2 text-base font-bold text-slate-950 dark:text-slate-50">
-                  {formatPrice(variation.price)}
-                </p>
-              </div>
-              <div className="rounded-2xl bg-white px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] dark:bg-slate-950/70 dark:shadow-none">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-                  Stock
-                </p>
-                <p className="mt-2 text-base font-bold text-slate-950 dark:text-slate-50">
-                  {variation.stock}
-                </p>
-              </div>
+            <div className="text-right">
+              <p className="text-sm font-bold text-slate-950 dark:text-slate-50">
+                {formatPrice(
+                  convertCurrency(variant.price, rates.INR, rates[currency])
+                )}
+              </p>
+              <p className="text-xs text-slate-500">
+                {variant.stock} in stock
+              </p>
             </div>
-
-            {isExpanded ? (
-              <VariationQuickEditPanel
-                currency={currency}
-                draft={draft}
-                onPriceChange={(value) =>
-                  updateQuickDraft(variation.id, 'price', value)
-                }
-                onReset={() => resetQuickDraft(variation)}
-                onSave={() => handleQuickSave(variation)}
-                onStockChange={(value) =>
-                  updateQuickDraft(variation.id, 'stock', value)
-                }
-                saving={savingVariationId === variation.id}
-                state={quickEditState}
-                variationName={variation.name}
-              />
-            ) : null}
           </div>
+
+          {isExpanded && (
+            <QuickEditPanel
+              draft={draft}
+              saving={savingVariantId === variant.id}
+              variantSku={displayLabel}
+              onPriceChange={(value) => updateQuickDraft(variant.id, 'price', value)}
+              onStockChange={(value) => updateQuickDraft(variant.id, 'stock', value)}
+              onSave={() => handleQuickSave(variant)}
+              onReset={() => resetQuickDraft(variant)}
+              ui={ui}
+            />
+          )}
         </div>
 
-        <div className="flex gap-3 lg:w-auto lg:flex-col lg:items-end">
+        <div className="flex flex-col gap-1.5">
           <button
             type="button"
-            onClick={() => handleQuickEditToggle(variation.id)}
-            aria-label={`${isExpanded ? 'Close quick edit for' : 'Open quick edit for'} ${variation.name}`}
-            aria-expanded={isExpanded}
-            className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-slate-950 text-white transition hover:bg-slate-800"
+            onClick={() => handleQuickEditToggle(variant.id)}
+            aria-label={`${isExpanded ? 'Close quick edit for' : 'Open quick edit for'} ${displayLabel}`}
+            className={`inline-flex h-9 w-9 items-center justify-center rounded-full transition ${
+              isExpanded
+                ? 'bg-sky-50 text-sky-700 hover:bg-sky-100 dark:bg-sky-950/40 dark:text-sky-400'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400'
+            }`}
           >
             <svg
-              className="h-4 w-4"
+              className="h-3.5 w-3.5"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -358,12 +252,12 @@ function ColourCard({
           </button>
           <button
             type="button"
-            onClick={() => handleDeleteClick(variation)}
-            aria-label={`Delete ${variation.name}`}
-            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-rose-200 bg-rose-50 text-rose-700 transition hover:border-rose-300 hover:bg-rose-100"
+            onClick={() => handleDeleteClick(variant)}
+            aria-label={`Delete ${displayLabel}`}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-rose-200 bg-rose-50 text-rose-700 transition hover:border-rose-300 hover:bg-rose-100"
           >
             <svg
-              className="h-4 w-4"
+              className="h-3.5 w-3.5"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -385,74 +279,51 @@ function ColourCard({
 
 export default function VariationList({
   productId,
-  productPrice: _productPrice,
-  initialVariations,
+  initialVariants,
 }: VariationListProps) {
-  const [variations, setVariations] =
-    useState<ProductVariation[]>(initialVariations)
+  const [variants, setVariants] =
+    useState<ProductVariant[]>(initialVariants)
   const { currency, formatPrice, rates } = useCurrency()
   const [showFormModal, setShowFormModal] = useState(false)
-  const [editingVariation, setEditingVariation] = useState<
-    ProductVariation | undefined
+  const [editingVariant, setEditingVariant] = useState<
+    ProductVariant | undefined
   >(undefined)
-  const [deleteTarget, setDeleteTarget] = useState<ProductVariation | null>(
-    null
-  )
+  const [deleteTarget, setDeleteTarget] = useState<ProductVariant | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [quickEdits, setQuickEdits] = useState<Record<string, QuickEditDraft>>(
     {}
   )
-  const [savingVariationId, setSavingVariationId] = useState<string | null>(
-    null
-  )
-  const [expandedVariationId, setExpandedVariationId] = useState<string | null>(
+  const [savingVariantId, setSavingVariantId] = useState<string | null>(null)
+  const [expandedVariantId, setExpandedVariantId] = useState<string | null>(
     null
   )
 
-  // Separate styles and colours
-  const styleVariations = variations.filter(
-    (v) => v.variationType === 'styling'
-  )
-  const colourVariations = variations.filter(
-    (v) => v.variationType === 'colour'
-  )
-  const baseProductColours = colourVariations.filter((c) => !c.styleId)
-  const coloursByStyleId = new Map<string, ProductVariation[]>()
-  for (const colour of colourVariations) {
-    if (colour.styleId) {
-      const existing = coloursByStyleId.get(colour.styleId) ?? []
-      existing.push(colour)
-      coloursByStyleId.set(colour.styleId, existing)
-    }
-  }
-
-  // Only count colours for stock stats (styles are groupings)
-  const totalVariationStock = colourVariations.reduce(
-    (sum, variation) => sum + variation.stock,
+  const totalVariantStock = variants.reduce(
+    (sum, variant) => sum + variant.stock,
     0
   )
-  const stockedVariations = colourVariations.filter(
-    (variation) => variation.stock > 0
+  const stockedVariants = variants.filter(
+    (variant) => variant.stock > 0
   ).length
 
   const handleAddClick = () => {
-    setEditingVariation(undefined)
+    setEditingVariant(undefined)
     setShowFormModal(true)
   }
 
-  const handleQuickEditToggle = (variationId: string) => {
-    setExpandedVariationId((currentId) =>
-      currentId === variationId ? null : variationId
+  const handleQuickEditToggle = (variantId: string) => {
+    setExpandedVariantId((currentId) =>
+      currentId === variantId ? null : variantId
     )
   }
 
   const handleFormClose = () => {
     setShowFormModal(false)
-    setEditingVariation(undefined)
+    setEditingVariant(undefined)
   }
 
-  const handleFormSuccess = (saved: ProductVariation) => {
-    setVariations((prev) => {
+  const handleFormSuccess = (saved: ProductVariant) => {
+    setVariants((prev) => {
       const idx = prev.findIndex((v) => v.id === saved.id)
       if (idx >= 0) {
         const updated = [...prev]
@@ -462,49 +333,49 @@ export default function VariationList({
       return [...prev, saved]
     })
     setShowFormModal(false)
-    setEditingVariation(undefined)
+    setEditingVariant(undefined)
   }
 
-  const handleDeleteClick = (variation: ProductVariation) => {
-    setDeleteTarget(variation)
+  const handleDeleteClick = (variant: ProductVariant) => {
+    setDeleteTarget(variant)
   }
 
-  const getDefaultDraft = (variation: ProductVariation): QuickEditDraft => ({
+  const getDefaultDraft = (variant: ProductVariant): QuickEditDraft => ({
     price: convertCurrency(
-      variation.price,
+      variant.price,
       rates.INR,
       rates[currency]
     ).toString(),
-    stock: variation.stock.toString(),
+    stock: variant.stock.toString(),
   })
 
-  const getDraft = (variation: ProductVariation) =>
-    quickEdits[variation.id] ?? getDefaultDraft(variation)
+  const getDraft = (variant: ProductVariant) =>
+    quickEdits[variant.id] ?? getDefaultDraft(variant)
 
   const updateQuickDraft = (
-    variationId: string,
+    variantId: string,
     field: keyof QuickEditDraft,
     value: string
   ) => {
     setQuickEdits((prev) => ({
       ...prev,
-      [variationId]: {
-        ...(prev[variationId] ?? { price: '', stock: '' }),
+      [variantId]: {
+        ...(prev[variantId] ?? { price: '', stock: '' }),
         [field]: value,
       },
     }))
   }
 
-  const resetQuickDraft = (variation: ProductVariation) => {
+  const resetQuickDraft = (variant: ProductVariant) => {
     setQuickEdits((prev) => {
       const next = { ...prev }
-      delete next[variation.id]
+      delete next[variant.id]
       return next
     })
   }
 
-  const handleQuickSave = async (variation: ProductVariation) => {
-    const draft = getDraft(variation)
+  const handleQuickSave = async (variant: ProductVariant) => {
+    const draft = getDraft(variant)
     const priceValue = Number.parseFloat(draft.price)
     const stockValue = Number.parseInt(draft.stock, 10)
 
@@ -525,10 +396,10 @@ export default function VariationList({
       return
     }
 
-    setSavingVariationId(variation.id)
+    setSavingVariantId(variant.id)
 
     try {
-      const res = await fetch(`/api/admin/variations/${variation.id}`, {
+      const res = await fetch(`/api/admin/variations/${variant.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -540,19 +411,19 @@ export default function VariationList({
       const data = await res.json().catch(() => ({}))
 
       if (!res.ok) {
-        throw new Error(data.error || 'Failed to update variation')
+        throw new Error(data.error || 'Failed to update variant')
       }
 
-      handleFormSuccess(data.data.variation)
-      toast.success('Variation updated')
-      resetQuickDraft(variation)
-      setExpandedVariationId(null)
+      handleFormSuccess(data.data.variant)
+      toast.success('Variant updated')
+      resetQuickDraft(variant)
+      setExpandedVariantId(null)
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : 'Failed to update variation'
+        error instanceof Error ? error.message : 'Failed to update variant'
       )
     } finally {
-      setSavingVariationId(null)
+      setSavingVariantId(null)
     }
   }
 
@@ -565,12 +436,12 @@ export default function VariationList({
       })
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
-        throw new Error(data.error || 'Failed to delete variation')
+        throw new Error(data.error || 'Failed to delete variant')
       }
-      setVariations((prev) => prev.filter((v) => v.id !== deleteTarget.id))
+      setVariants((prev) => prev.filter((v) => v.id !== deleteTarget.id))
       setDeleteTarget(null)
     } catch {
-      // Toast is optional here — error is visible via alert or could be added later
+      // Error handled via toast or alert
     } finally {
       setDeleting(false)
     }
@@ -582,7 +453,7 @@ export default function VariationList({
       onClick={handleAddClick}
       className="inline-flex items-center rounded-full bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
     >
-      Add Variation
+      Add Variant
     </button>
   )
 
@@ -594,20 +465,20 @@ export default function VariationList({
     </div>
   )
 
-  if (variations.length === 0) {
+  if (variants.length === 0) {
     return (
       <section className="rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-[0_24px_60px_-42px_rgba(15,23,42,0.5)] dark:border-slate-700/70 dark:bg-slate-900/88 dark:shadow-[0_24px_60px_-42px_rgba(2,6,23,0.92)]">
         <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-[0.72rem] font-semibold uppercase tracking-[0.28em] text-amber-700">
-              Variation management
+              Variant management
             </p>
             <h2 className="mt-3 text-2xl font-black tracking-tight text-slate-950 dark:text-slate-50">
-              Variations
+              Variants
             </h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300">
-              Add sellable options here so pricing, stock, and imagery can be
-              updated without leaving the product editing workspace.
+              Add sellable variants here so pricing, stock, and imagery can be
+              managed per combination.
             </p>
           </div>
           {addButton}
@@ -628,19 +499,17 @@ export default function VariationList({
             />
           </svg>
           <h3 className="mb-1 text-lg font-medium text-slate-950 dark:text-slate-50">
-            No variations yet
+            No variants yet
           </h3>
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            Add a variation to offer different colors, designs, or options for
-            this product.
+            Add a variant to define purchasable options with pricing and stock.
           </p>
         </div>
         {showFormModal && (
           <Suspense fallback={modalFallback}>
             <VariationFormModal
               productId={productId}
-              variation={editingVariation}
-              styles={styleVariations}
+              variant={editingVariant}
               onClose={handleFormClose}
               onSuccess={handleFormSuccess}
             />
@@ -655,14 +524,14 @@ export default function VariationList({
       <div className="mb-6 flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
         <div>
           <p className="text-[0.72rem] font-semibold uppercase tracking-[0.28em] text-amber-700">
-            Variation management
+            Variant management
           </p>
           <h2 className="mt-3 text-2xl font-black tracking-tight text-slate-950 dark:text-slate-50">
-            Variations ({variations.length})
+            Variants ({variants.length})
           </h2>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
-            Review variation pricing, stock, imagery, and design naming in one
-            queue, then open the editor only for the row you need to change.
+            Review variant pricing, stock, and imagery. Use quick edit to update
+            price and stock inline.
           </p>
         </div>
 
@@ -672,7 +541,7 @@ export default function VariationList({
               Total stock
             </p>
             <p className="mt-2 text-lg font-bold text-slate-950 dark:text-slate-50">
-              {totalVariationStock}
+              {totalVariantStock}
             </p>
           </div>
           <div className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm dark:bg-emerald-950/40">
@@ -680,157 +549,39 @@ export default function VariationList({
               In stock
             </p>
             <p className="mt-2 text-lg font-bold text-slate-950 dark:text-slate-50">
-              {stockedVariations}
+              {stockedVariants}
             </p>
           </div>
           {addButton}
         </div>
       </div>
 
-      <div className="space-y-6">
-        {/* Base product colours (colours without a parent style) */}
-        {baseProductColours.length > 0 && (
-          <div className="space-y-3">
-            <div className="flex items-center gap-3 border-b border-slate-200 pb-3 dark:border-slate-700">
-              <span className="text-lg">🏠</span>
-              <h3 className="text-lg font-bold text-slate-950 dark:text-slate-50">
-                Base Product Colours
-              </h3>
-              <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-400">
-                {baseProductColours.length}
-              </span>
-            </div>
-            <div className="space-y-3 pl-4">
-              {baseProductColours.map((colour) => (
-                <ColourCard
-                  key={colour.id}
-                  variation={colour}
-                  currency={currency}
-                  draft={getDraft(colour)}
-                  expandedVariationId={expandedVariationId}
-                  formatPrice={formatPrice}
-                  getDefaultDraft={getDefaultDraft}
-                  handleDeleteClick={handleDeleteClick}
-                  handleQuickEditToggle={handleQuickEditToggle}
-                  handleQuickSave={handleQuickSave}
-                  rates={rates}
-                  resetQuickDraft={resetQuickDraft}
-                  savingVariationId={savingVariationId}
-                  updateQuickDraft={updateQuickDraft}
-                />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Named styles with their colours */}
-        {styleVariations.map((style) => {
-          const styleColours = coloursByStyleId.get(style.id) ?? []
-          return (
-            <div key={style.id} className="space-y-3">
-              <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 dark:border-slate-700 dark:bg-slate-800/60">
-                <div className="flex items-center gap-3">
-                  <span className="text-lg">🎨</span>
-                  <div>
-                    <h3 className="text-lg font-bold text-slate-950 dark:text-slate-50">
-                      {style.name}
-                    </h3>
-                    {style.designName && (
-                      <p className="text-sm text-slate-500 dark:text-slate-400">
-                        {style.designName}
-                      </p>
-                    )}
-                  </div>
-                  <span className="rounded-full bg-slate-200 px-2.5 py-0.5 text-xs font-semibold text-slate-600 dark:bg-slate-700 dark:text-slate-300">
-                    {styleColours.length} colour
-                    {styleColours.length === 1 ? '' : 's'}
-                  </span>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEditingVariation(style)
-                      setShowFormModal(true)
-                    }}
-                    aria-label={`Edit style ${style.name}`}
-                    className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-slate-950 text-white transition hover:bg-slate-800"
-                  >
-                    <svg
-                      className="h-3.5 w-3.5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                      aria-hidden="true"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={1.8}
-                        d="M16.862 4.487a2.1 2.1 0 113.03 2.902L9.91 17.37 6 18l.63-3.91 10.232-9.603z"
-                      />
-                    </svg>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteClick(style)}
-                    aria-label={`Delete style ${style.name}`}
-                    className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-rose-200 bg-rose-50 text-rose-700 transition hover:border-rose-300 hover:bg-rose-100"
-                  >
-                    <svg
-                      className="h-3.5 w-3.5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                      aria-hidden="true"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={1.8}
-                        d="M6 7h12m-9 0V5.5A1.5 1.5 0 0110.5 4h3A1.5 1.5 0 0115 5.5V7m-7.5 0l.75 11.25A1.5 1.5 0 009.75 19.5h4.5a1.5 1.5 0 001.5-1.25L16.5 7m-6 3v5m3-5v5"
-                      />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-              {styleColours.length > 0 ? (
-                <div className="space-y-3 pl-6">
-                  {styleColours.map((colour) => (
-                    <ColourCard
-                      key={colour.id}
-                      variation={colour}
-                      currency={currency}
-                      draft={getDraft(colour)}
-                      expandedVariationId={expandedVariationId}
-                      formatPrice={formatPrice}
-                      getDefaultDraft={getDefaultDraft}
-                      handleDeleteClick={handleDeleteClick}
-                      handleQuickEditToggle={handleQuickEditToggle}
-                      handleQuickSave={handleQuickSave}
-                      rates={rates}
-                      resetQuickDraft={resetQuickDraft}
-                      savingVariationId={savingVariationId}
-                      updateQuickDraft={updateQuickDraft}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div className="ml-6 rounded-xl border border-dashed border-slate-300 bg-slate-50/60 px-4 py-3 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-950/40 dark:text-slate-400">
-                  No colours added to this style yet
-                </div>
-              )}
-            </div>
-          )
-        })}
+      <div className="space-y-3">
+        {variants.map((variant) => (
+          <VariantCard
+            key={variant.id}
+            variant={variant}
+            currency={currency}
+            draft={getDraft(variant)}
+            expandedVariantId={expandedVariantId}
+            formatPrice={formatPrice}
+            getDefaultDraft={getDefaultDraft}
+            handleDeleteClick={handleDeleteClick}
+            handleQuickEditToggle={handleQuickEditToggle}
+            handleQuickSave={handleQuickSave}
+            rates={rates}
+            resetQuickDraft={resetQuickDraft}
+            savingVariantId={savingVariantId}
+            updateQuickDraft={updateQuickDraft}
+          />
+        ))}
       </div>
 
       {showFormModal && (
         <Suspense fallback={modalFallback}>
           <VariationFormModal
             productId={productId}
-            variation={editingVariation}
-            styles={styleVariations}
+            variant={editingVariant}
             onClose={handleFormClose}
             onSuccess={handleFormSuccess}
           />
