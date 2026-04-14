@@ -6,7 +6,7 @@
 
 export interface PendingCartItem {
   readonly productId: string
-  readonly variationId: string | null
+  readonly variantId: string
   readonly quantity: number
 }
 
@@ -30,13 +30,13 @@ export function addPendingCartItem(item: PendingCartItem): void {
   const items = getPendingCartItems()
 
   const existing = items.find(
-    (i) => i.productId === item.productId && i.variationId === item.variationId
+    (i) => i.productId === item.productId && i.variantId === item.variantId
   )
 
   let updated: PendingCartItem[]
   if (existing) {
     updated = items.map((i) =>
-      i.productId === item.productId && i.variationId === item.variationId
+      i.productId === item.productId && i.variantId === item.variantId
         ? { ...i, quantity: i.quantity + item.quantity }
         : i
     )

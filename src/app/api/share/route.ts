@@ -18,9 +18,9 @@ const handlePost = async (request: NextRequest) => {
       return handleValidationError(parseResult.error)
     }
 
-    const { productId, variationId } = parseResult.data
+    const { productId, variantId } = parseResult.data
 
-    const key = await db.shares.create(productId, variationId ?? null)
+    const key = await db.shares.create(productId, variantId ?? null)
 
     const origin = request.nextUrl.origin
     const shareUrl = `${origin}/s/${key}`

@@ -36,10 +36,10 @@ export async function PATCH(
         cart: true,
         product: {
           with: {
-            variations: true,
+            variants: true,
           },
         },
-        variation: true,
+        variant: true,
       },
     })
 
@@ -58,9 +58,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 
-    const availableStock = cartItem.variationId
-      ? cartItem.variation?.stock || 0
-      : cartItem.product.stock
+    const availableStock = cartItem.variant?.stock ?? 0
 
     if (body.quantity > availableStock) {
       return NextResponse.json({ error: 'Insufficient stock' }, { status: 400 })
