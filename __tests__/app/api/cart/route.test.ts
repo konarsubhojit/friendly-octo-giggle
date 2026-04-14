@@ -4,6 +4,7 @@ import { NextRequest } from 'next/server'
 const VALID_PRODUCT_ID = 'prod001'
 const VALID_CART_ID = 'cart001'
 const VALID_ITEM_ID = 'item001'
+const VALID_VARIANT_ID_TOP = 'var0001'
 
 const mockPrimaryDrizzleDb = vi.hoisted(() => ({
   query: {
@@ -29,7 +30,7 @@ vi.mock('@/lib/schema', () => ({
   cartItems: {
     cartId: 'cartId',
     productId: 'productId',
-    variationId: 'variationId',
+    variantId: 'variantId',
     id: 'id',
   },
 }))
@@ -113,9 +114,9 @@ describe('Cart API Route', () => {
               id: 'prod1',
               createdAt: new Date('2024-01-01'),
               updatedAt: new Date('2024-01-02'),
-              variations: [],
+              variants: [],
             },
-            variation: null,
+            variant: null,
           },
         ],
       }
@@ -214,7 +215,7 @@ describe('Cart API Route', () => {
 
       const request = new NextRequest('http://localhost/api/cart', {
         method: 'POST',
-        body: JSON.stringify({ productId: VALID_PRODUCT_ID, quantity: 1 }),
+        body: JSON.stringify({ productId: VALID_PRODUCT_ID, variantId: VALID_VARIANT_ID_TOP, quantity: 1 }),
         headers: { 'content-type': 'application/json' },
       })
       const response = await POST(request)
@@ -228,13 +229,12 @@ describe('Cart API Route', () => {
       ;(auth as Mock).mockResolvedValue({ user: { id: 'user123' } })
       ;(drizzleDb.query.products.findFirst as Mock).mockResolvedValue({
         id: VALID_PRODUCT_ID,
-        stock: 0,
-        variations: [],
+        variants: [{ id: VALID_VARIANT_ID_TOP, stock: 0 }],
       })
 
       const request = new NextRequest('http://localhost/api/cart', {
         method: 'POST',
-        body: JSON.stringify({ productId: VALID_PRODUCT_ID, quantity: 10 }),
+        body: JSON.stringify({ productId: VALID_PRODUCT_ID, variantId: VALID_VARIANT_ID_TOP, quantity: 10 }),
         headers: { 'content-type': 'application/json' },
       })
       const response = await POST(request)
@@ -260,9 +260,9 @@ describe('Cart API Route', () => {
               name: 'Test Product',
               createdAt: new Date('2024-01-01'),
               updatedAt: new Date('2024-01-02'),
-              variations: [],
+              variants: [],
             },
-            variation: null,
+            variant: null,
           },
         ],
       }
@@ -270,8 +270,7 @@ describe('Cart API Route', () => {
       ;(auth as Mock).mockResolvedValue({ user: { id: 'user123' } })
       ;(drizzleDb.query.products.findFirst as Mock).mockResolvedValue({
         id: VALID_PRODUCT_ID,
-        stock: 10,
-        variations: [],
+        variants: [{ id: VALID_VARIANT_ID_TOP, stock: 10 }],
       })
       ;(drizzleDb.query.carts.findFirst as Mock)
         .mockResolvedValueOnce({ id: VALID_CART_ID })
@@ -285,7 +284,7 @@ describe('Cart API Route', () => {
 
       const request = new NextRequest('http://localhost/api/cart', {
         method: 'POST',
-        body: JSON.stringify({ productId: VALID_PRODUCT_ID, quantity: 1 }),
+        body: JSON.stringify({ productId: VALID_PRODUCT_ID, variantId: VALID_VARIANT_ID_TOP, quantity: 1 }),
         headers: { 'content-type': 'application/json' },
       })
       const response = await POST(request)
@@ -308,8 +307,7 @@ describe('Cart API Route', () => {
       ;(auth as Mock).mockResolvedValue(null)
       ;(drizzleDb.query.products.findFirst as Mock).mockResolvedValue({
         id: VALID_PRODUCT_ID,
-        stock: 10,
-        variations: [],
+        variants: [{ id: VALID_VARIANT_ID_TOP, stock: 10 }],
       })
       ;(drizzleDb.query.carts.findFirst as Mock)
         .mockResolvedValueOnce(null)
@@ -325,7 +323,7 @@ describe('Cart API Route', () => {
 
       const request = new NextRequest('http://localhost/api/cart', {
         method: 'POST',
-        body: JSON.stringify({ productId: VALID_PRODUCT_ID, quantity: 1 }),
+        body: JSON.stringify({ productId: VALID_PRODUCT_ID, variantId: VALID_VARIANT_ID_TOP, quantity: 1 }),
         headers: { 'content-type': 'application/json' },
       })
       const response = await POST(request)
@@ -348,8 +346,7 @@ describe('Cart API Route', () => {
       ;(auth as Mock).mockResolvedValue({ user: { id: 'missing-user' } })
       ;(drizzleDb.query.products.findFirst as Mock).mockResolvedValue({
         id: VALID_PRODUCT_ID,
-        stock: 10,
-        variations: [],
+        variants: [{ id: VALID_VARIANT_ID_TOP, stock: 10 }],
       })
 
       ;(drizzleDb.query.carts.findFirst as Mock)
@@ -370,7 +367,7 @@ describe('Cart API Route', () => {
 
       const request = new NextRequest('http://localhost/api/cart', {
         method: 'POST',
-        body: JSON.stringify({ productId: VALID_PRODUCT_ID, quantity: 1 }),
+        body: JSON.stringify({ productId: VALID_PRODUCT_ID, variantId: VALID_VARIANT_ID_TOP, quantity: 1 }),
         headers: { 'content-type': 'application/json' },
       })
       const response = await POST(request)
@@ -390,7 +387,7 @@ describe('Cart API Route', () => {
 
       const request = new NextRequest('http://localhost/api/cart', {
         method: 'POST',
-        body: JSON.stringify({ productId: VALID_PRODUCT_ID, quantity: 1 }),
+        body: JSON.stringify({ productId: VALID_PRODUCT_ID, variantId: VALID_VARIANT_ID_TOP, quantity: 1 }),
         headers: { 'content-type': 'application/json' },
       })
       const response = await POST(request)
@@ -492,23 +489,22 @@ describe('Cart API Route', () => {
   })
 
   describe('POST /api/cart - additional edge cases', () => {
-    const VALID_VARIATION_ID = 'var0001'
+    const VALID_VARIANT_ID = 'var0001'
 
-    it('returns 404 when variation not found', async () => {
+    it('returns 404 when variant not found', async () => {
       ;(auth as Mock).mockResolvedValue({ user: { id: 'user123' } })
       ;(drizzleDb.query.products.findFirst as Mock).mockResolvedValue({
         id: VALID_PRODUCT_ID,
-        stock: 10,
-        variations: [{ id: VALID_VARIATION_ID, stock: 5 }],
+        variants: [{ id: VALID_VARIANT_ID, stock: 5 }],
       })
 
-      const otherVariationId = 'var0002'
+      const otherVariantId = 'var0002'
       const request = new NextRequest('http://localhost/api/cart', {
         method: 'POST',
         body: JSON.stringify({
           productId: VALID_PRODUCT_ID,
           quantity: 1,
-          variationId: otherVariationId,
+          variantId: otherVariantId,
         }),
         headers: { 'content-type': 'application/json' },
       })
@@ -516,7 +512,7 @@ describe('Cart API Route', () => {
       const data = await response.json()
 
       expect(response.status).toBe(404)
-      expect(data).toEqual({ error: 'Variation not found' })
+      expect(data).toEqual({ error: 'Variant not found' })
     })
 
     it('auto-caps quantity when variation stock is insufficient', async () => {
@@ -534,17 +530,17 @@ describe('Cart API Route', () => {
               id: VALID_PRODUCT_ID,
               createdAt: new Date('2024-01-01'),
               updatedAt: new Date('2024-01-02'),
-              variations: [
+              variants: [
                 {
-                  id: VALID_VARIATION_ID,
+                  id: VALID_VARIANT_ID,
                   stock: 2,
                   createdAt: new Date('2024-01-01'),
                   updatedAt: new Date('2024-01-02'),
                 },
               ],
             },
-            variation: {
-              id: VALID_VARIATION_ID,
+            variant: {
+              id: VALID_VARIANT_ID,
               createdAt: new Date('2024-01-01'),
               updatedAt: new Date('2024-01-02'),
             },
@@ -555,8 +551,7 @@ describe('Cart API Route', () => {
       ;(auth as Mock).mockResolvedValue({ user: { id: 'user123' } })
       ;(drizzleDb.query.products.findFirst as Mock).mockResolvedValue({
         id: VALID_PRODUCT_ID,
-        stock: 100,
-        variations: [{ id: VALID_VARIATION_ID, stock: 2 }],
+        variants: [{ id: VALID_VARIANT_ID, stock: 2 }],
       })
       ;(drizzleDb.query.carts.findFirst as Mock)
         .mockResolvedValueOnce({ id: VALID_CART_ID })
@@ -570,7 +565,7 @@ describe('Cart API Route', () => {
         body: JSON.stringify({
           productId: VALID_PRODUCT_ID,
           quantity: 5,
-          variationId: VALID_VARIATION_ID,
+          variantId: VALID_VARIANT_ID,
         }),
         headers: { 'content-type': 'application/json' },
       })
@@ -598,9 +593,9 @@ describe('Cart API Route', () => {
               id: VALID_PRODUCT_ID,
               createdAt: new Date('2024-01-01'),
               updatedAt: new Date('2024-01-02'),
-              variations: [],
+              variants: [],
             },
-            variation: null,
+            variant: null,
           },
         ],
       }
@@ -608,8 +603,7 @@ describe('Cart API Route', () => {
       ;(auth as Mock).mockResolvedValue({ user: { id: 'user123' } })
       ;(drizzleDb.query.products.findFirst as Mock).mockResolvedValue({
         id: VALID_PRODUCT_ID,
-        stock: 10,
-        variations: [],
+        variants: [{ id: VALID_VARIANT_ID_TOP, stock: 10 }],
       })
       ;(drizzleDb.query.carts.findFirst as Mock)
         .mockResolvedValueOnce({ id: VALID_CART_ID })
@@ -617,6 +611,7 @@ describe('Cart API Route', () => {
       ;(drizzleDb.query.cartItems.findFirst as Mock).mockResolvedValue({
         id: VALID_ITEM_ID,
         quantity: 2,
+        variantId: VALID_VARIANT_ID_TOP,
       })
       const updateWhereMock = vi.fn()
       const updateSetMock = vi.fn(() => ({ where: updateWhereMock }))
@@ -624,7 +619,7 @@ describe('Cart API Route', () => {
 
       const request = new NextRequest('http://localhost/api/cart', {
         method: 'POST',
-        body: JSON.stringify({ productId: VALID_PRODUCT_ID, quantity: 1 }),
+        body: JSON.stringify({ productId: VALID_PRODUCT_ID, variantId: VALID_VARIANT_ID_TOP, quantity: 1 }),
         headers: { 'content-type': 'application/json' },
       })
       const response = await POST(request)
@@ -639,8 +634,7 @@ describe('Cart API Route', () => {
       ;(auth as Mock).mockResolvedValue({ user: { id: 'user123' } })
       ;(drizzleDb.query.products.findFirst as Mock).mockResolvedValue({
         id: VALID_PRODUCT_ID,
-        stock: 5,
-        variations: [],
+        variants: [{ id: VALID_VARIANT_ID_TOP, stock: 5 }],
       })
       ;(drizzleDb.query.carts.findFirst as Mock).mockResolvedValueOnce({
         id: VALID_CART_ID,
@@ -648,11 +642,12 @@ describe('Cart API Route', () => {
       ;(drizzleDb.query.cartItems.findFirst as Mock).mockResolvedValue({
         id: VALID_ITEM_ID,
         quantity: 5,
+        variantId: VALID_VARIANT_ID_TOP,
       })
 
       const request = new NextRequest('http://localhost/api/cart', {
         method: 'POST',
-        body: JSON.stringify({ productId: VALID_PRODUCT_ID, quantity: 3 }),
+        body: JSON.stringify({ productId: VALID_PRODUCT_ID, variantId: VALID_VARIANT_ID_TOP, quantity: 3 }),
         headers: { 'content-type': 'application/json' },
       })
       const response = await POST(request)
@@ -666,8 +661,7 @@ describe('Cart API Route', () => {
       ;(auth as Mock).mockResolvedValue({ user: { id: 'user123' } })
       ;(drizzleDb.query.products.findFirst as Mock).mockResolvedValue({
         id: VALID_PRODUCT_ID,
-        stock: 10,
-        variations: [],
+        variants: [{ id: VALID_VARIANT_ID_TOP, stock: 10 }],
       })
       ;(drizzleDb.query.carts.findFirst as Mock)
         .mockResolvedValueOnce({ id: VALID_CART_ID })
@@ -678,7 +672,7 @@ describe('Cart API Route', () => {
 
       const request = new NextRequest('http://localhost/api/cart', {
         method: 'POST',
-        body: JSON.stringify({ productId: VALID_PRODUCT_ID, quantity: 1 }),
+        body: JSON.stringify({ productId: VALID_PRODUCT_ID, variantId: VALID_VARIANT_ID_TOP, quantity: 1 }),
         headers: { 'content-type': 'application/json' },
       })
       const response = await POST(request)
@@ -703,7 +697,7 @@ describe('Cart API Route', () => {
               id: VALID_PRODUCT_ID,
               createdAt: new Date('2024-01-01'),
               updatedAt: new Date('2024-01-02'),
-              variations: [
+              variants: [
                 {
                   id: 'var1',
                   createdAt: new Date('2024-01-01'),
@@ -711,7 +705,7 @@ describe('Cart API Route', () => {
                 },
               ],
             },
-            variation: {
+            variant: {
               id: 'var1',
               createdAt: new Date('2024-01-01'),
               updatedAt: new Date('2024-01-02'),
@@ -728,11 +722,11 @@ describe('Cart API Route', () => {
       const data = await response.json()
 
       expect(response.status).toBe(200)
-      expect(data.cart.items[0].variation).toBeDefined()
-      expect(data.cart.items[0].variation.createdAt).toBe(
+      expect(data.cart.items[0].variant).toBeDefined()
+      expect(data.cart.items[0].variant.createdAt).toBe(
         '2024-01-01T00:00:00.000Z'
       )
-      expect(data.cart.items[0].product.variations[0].createdAt).toBe(
+      expect(data.cart.items[0].product.variants[0].createdAt).toBe(
         '2024-01-01T00:00:00.000Z'
       )
     })
@@ -752,9 +746,9 @@ describe('Cart API Route', () => {
               id: VALID_PRODUCT_ID,
               createdAt: '2024-01-01T00:00:00.000Z',
               updatedAt: '2024-01-02T00:00:00.000Z',
-              variations: [],
+              variants: [],
             },
-            variation: null,
+            variant: null,
           },
         ],
       }
