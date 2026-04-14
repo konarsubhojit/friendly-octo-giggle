@@ -215,7 +215,11 @@ describe('Cart API Route', () => {
 
       const request = new NextRequest('http://localhost/api/cart', {
         method: 'POST',
-        body: JSON.stringify({ productId: VALID_PRODUCT_ID, variantId: VALID_VARIANT_ID_TOP, quantity: 1 }),
+        body: JSON.stringify({
+          productId: VALID_PRODUCT_ID,
+          variantId: VALID_VARIANT_ID_TOP,
+          quantity: 1,
+        }),
         headers: { 'content-type': 'application/json' },
       })
       const response = await POST(request)
@@ -234,7 +238,11 @@ describe('Cart API Route', () => {
 
       const request = new NextRequest('http://localhost/api/cart', {
         method: 'POST',
-        body: JSON.stringify({ productId: VALID_PRODUCT_ID, variantId: VALID_VARIANT_ID_TOP, quantity: 10 }),
+        body: JSON.stringify({
+          productId: VALID_PRODUCT_ID,
+          variantId: VALID_VARIANT_ID_TOP,
+          quantity: 10,
+        }),
         headers: { 'content-type': 'application/json' },
       })
       const response = await POST(request)
@@ -284,7 +292,11 @@ describe('Cart API Route', () => {
 
       const request = new NextRequest('http://localhost/api/cart', {
         method: 'POST',
-        body: JSON.stringify({ productId: VALID_PRODUCT_ID, variantId: VALID_VARIANT_ID_TOP, quantity: 1 }),
+        body: JSON.stringify({
+          productId: VALID_PRODUCT_ID,
+          variantId: VALID_VARIANT_ID_TOP,
+          quantity: 1,
+        }),
         headers: { 'content-type': 'application/json' },
       })
       const response = await POST(request)
@@ -323,7 +335,11 @@ describe('Cart API Route', () => {
 
       const request = new NextRequest('http://localhost/api/cart', {
         method: 'POST',
-        body: JSON.stringify({ productId: VALID_PRODUCT_ID, variantId: VALID_VARIANT_ID_TOP, quantity: 1 }),
+        body: JSON.stringify({
+          productId: VALID_PRODUCT_ID,
+          variantId: VALID_VARIANT_ID_TOP,
+          quantity: 1,
+        }),
         headers: { 'content-type': 'application/json' },
       })
       const response = await POST(request)
@@ -348,12 +364,10 @@ describe('Cart API Route', () => {
         id: VALID_PRODUCT_ID,
         variants: [{ id: VALID_VARIANT_ID_TOP, stock: 10 }],
       })
-
       ;(drizzleDb.query.carts.findFirst as Mock)
         .mockResolvedValueOnce(null)
         .mockResolvedValueOnce(null)
         .mockResolvedValueOnce(mockCart)
-
       ;(drizzleDb.query.users.findFirst as Mock).mockResolvedValue(null)
       ;(drizzleDb.query.cartItems.findFirst as Mock).mockResolvedValue(null)
 
@@ -367,7 +381,11 @@ describe('Cart API Route', () => {
 
       const request = new NextRequest('http://localhost/api/cart', {
         method: 'POST',
-        body: JSON.stringify({ productId: VALID_PRODUCT_ID, variantId: VALID_VARIANT_ID_TOP, quantity: 1 }),
+        body: JSON.stringify({
+          productId: VALID_PRODUCT_ID,
+          variantId: VALID_VARIANT_ID_TOP,
+          quantity: 1,
+        }),
         headers: { 'content-type': 'application/json' },
       })
       const response = await POST(request)
@@ -387,7 +405,11 @@ describe('Cart API Route', () => {
 
       const request = new NextRequest('http://localhost/api/cart', {
         method: 'POST',
-        body: JSON.stringify({ productId: VALID_PRODUCT_ID, variantId: VALID_VARIANT_ID_TOP, quantity: 1 }),
+        body: JSON.stringify({
+          productId: VALID_PRODUCT_ID,
+          variantId: VALID_VARIANT_ID_TOP,
+          quantity: 1,
+        }),
         headers: { 'content-type': 'application/json' },
       })
       const response = await POST(request)
@@ -619,7 +641,11 @@ describe('Cart API Route', () => {
 
       const request = new NextRequest('http://localhost/api/cart', {
         method: 'POST',
-        body: JSON.stringify({ productId: VALID_PRODUCT_ID, variantId: VALID_VARIANT_ID_TOP, quantity: 1 }),
+        body: JSON.stringify({
+          productId: VALID_PRODUCT_ID,
+          variantId: VALID_VARIANT_ID_TOP,
+          quantity: 1,
+        }),
         headers: { 'content-type': 'application/json' },
       })
       const response = await POST(request)
@@ -647,7 +673,11 @@ describe('Cart API Route', () => {
 
       const request = new NextRequest('http://localhost/api/cart', {
         method: 'POST',
-        body: JSON.stringify({ productId: VALID_PRODUCT_ID, variantId: VALID_VARIANT_ID_TOP, quantity: 3 }),
+        body: JSON.stringify({
+          productId: VALID_PRODUCT_ID,
+          variantId: VALID_VARIANT_ID_TOP,
+          quantity: 3,
+        }),
         headers: { 'content-type': 'application/json' },
       })
       const response = await POST(request)
@@ -672,7 +702,11 @@ describe('Cart API Route', () => {
 
       const request = new NextRequest('http://localhost/api/cart', {
         method: 'POST',
-        body: JSON.stringify({ productId: VALID_PRODUCT_ID, variantId: VALID_VARIANT_ID_TOP, quantity: 1 }),
+        body: JSON.stringify({
+          productId: VALID_PRODUCT_ID,
+          variantId: VALID_VARIANT_ID_TOP,
+          quantity: 1,
+        }),
         headers: { 'content-type': 'application/json' },
       })
       const response = await POST(request)

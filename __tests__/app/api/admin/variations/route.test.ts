@@ -66,8 +66,9 @@ vi.mock('@/features/admin/services/admin-auth', () => ({
   checkAdminAuth: mockCheckAdminAuth,
 }))
 
-vi.mock('@/features/product/validations', async () =>
-  await vi.importActual('@/features/product/validations')
+vi.mock(
+  '@/features/product/validations',
+  async () => await vi.importActual('@/features/product/validations')
 )
 vi.mock('@/lib/serializers', () => ({
   serializeVariant: (v: Record<string, unknown>) => ({
@@ -327,9 +328,7 @@ describe('PUT /api/admin/variations/[variationId]', () => {
   })
 
   it('returns 404 if product not found', async () => {
-    mockFindFirst
-      .mockResolvedValueOnce(mockVariant)
-      .mockResolvedValueOnce(null)
+    mockFindFirst.mockResolvedValueOnce(mockVariant).mockResolvedValueOnce(null)
 
     const res = await PUT(
       makeRequest('http://localhost/api/admin/variations/var1234', 'PUT', {
@@ -439,9 +438,7 @@ describe('DELETE /api/admin/variations/[variationId]', () => {
   })
 
   it('returns 404 if product not found', async () => {
-    mockFindFirst
-      .mockResolvedValueOnce(mockVariant)
-      .mockResolvedValueOnce(null)
+    mockFindFirst.mockResolvedValueOnce(mockVariant).mockResolvedValueOnce(null)
 
     const res = await DELETE(
       makeRequest('http://localhost/api/admin/variations/var1234', 'DELETE'),

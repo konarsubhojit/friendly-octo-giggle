@@ -45,8 +45,9 @@ vi.mock('@/features/admin/services/admin-auth', () => ({
   checkAdminAuth: mockCheckAdminAuth,
 }))
 
-vi.mock('@/features/product/validations', async () =>
-  await vi.importActual('@/features/product/validations')
+vi.mock(
+  '@/features/product/validations',
+  async () => await vi.importActual('@/features/product/validations')
 )
 vi.mock('@/lib/serializers', () => ({
   serializeVariant: (v: Record<string, unknown>) => ({

@@ -85,8 +85,9 @@ vi.mock('drizzle-orm', () => ({
   isNull: vi.fn((field: unknown) => ({ op: 'isNull', field })),
 }))
 
-vi.mock('@/features/product/validations', async () =>
-  await vi.importActual('@/features/product/validations')
+vi.mock(
+  '@/features/product/validations',
+  async () => await vi.importActual('@/features/product/validations')
 )
 
 vi.mock('@/lib/serializers', () => ({
@@ -180,9 +181,7 @@ describe('PUT /api/admin/variations/[variationId]', () => {
   })
 
   it('returns 404 when product not found', async () => {
-    mockFindFirst
-      .mockResolvedValueOnce(mockVariant)
-      .mockResolvedValueOnce(null)
+    mockFindFirst.mockResolvedValueOnce(mockVariant).mockResolvedValueOnce(null)
 
     const request = new NextRequest(
       'http://localhost/api/admin/variations/var123',
@@ -325,9 +324,7 @@ describe('DELETE /api/admin/variations/[variationId]', () => {
   })
 
   it('returns 404 when product not found', async () => {
-    mockFindFirst
-      .mockResolvedValueOnce(mockVariant)
-      .mockResolvedValueOnce(null)
+    mockFindFirst.mockResolvedValueOnce(mockVariant).mockResolvedValueOnce(null)
 
     const request = new NextRequest(
       'http://localhost/api/admin/variations/var123',
