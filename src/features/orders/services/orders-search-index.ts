@@ -43,15 +43,15 @@ interface BackfillableOrder {
   readonly createdAt: Date
   readonly items: ReadonlyArray<{
     readonly productId: string
-    readonly variationId: string | null
+    readonly variantId: string | null
     readonly quantity: number
     readonly price: number
     readonly customizationNote: string | null
     readonly product: {
       readonly name: string
     }
-    readonly variation: {
-      readonly name: string
+    readonly variant: {
+      readonly sku: string | null
     } | null
   }>
 }
@@ -62,15 +62,7 @@ const getUserOrdersKey = (userId: string) =>
 
 const buildProductNames = (items: BackfillableOrder['items']): string =>
   [
-    ...new Set(
-      items.map((item) => {
-        const parts = [item.product.name]
-        if (item.variation?.name) {
-          parts.push(item.variation.name)
-        }
-        return parts.join(' - ')
-      })
-    ),
+    ...new Set(items.map((item) => item.product.name)),
   ].join(', ')
 
 const getOrdersIndex = (redis: Redis) =>
@@ -116,8 +108,8 @@ const fetchOrdersForBackfill = async (): Promise<BackfillableOrder[]> => {
           product: {
             columns: { name: true },
           },
-          variation: {
-            columns: { name: true },
+          variant: {
+            columns: { sku: true },
           },
         },
       },
@@ -154,7 +146,7 @@ export async function backfillOrdersSearchIndex(): Promise<number> {
         items: JSON.stringify(
           order.items.map((item) => ({
             productId: item.productId,
-            variationId: item.variationId ?? null,
+            variantId: item.variantId ?? null,
             quantity: item.quantity,
             price: item.price,
             customizationNote: item.customizationNote ?? null,

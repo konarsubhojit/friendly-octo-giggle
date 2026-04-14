@@ -3,7 +3,7 @@ import {
   orders,
   orderItems,
   products,
-  productVariations,
+  productVariants,
   users,
 } from '@/lib/schema'
 import {
@@ -58,10 +58,10 @@ export const isOrderRequestError = (
   error: unknown
 ): error is OrderRequestError => error instanceof OrderRequestError
 
-type ProductWithVariations = Awaited<
+type ProductWithVariants = Awaited<
   ReturnType<typeof drizzleDb.query.products.findMany>
 >[number] & {
-  variations: Array<{ id: string; price: number; stock: number }>
+  variants: Array<{ id: string; price: number; stock: number }>
 }
 
 type ValidationResult =
@@ -91,7 +91,7 @@ type StockCheckResult =
 
 interface HydratedOrderItem {
   productId: string
-  variationId: string | null
+  variantId: string
   quantity: number
   price: number
   customizationNote: string | null
@@ -100,7 +100,6 @@ interface HydratedOrderItem {
     createdAt: Date
     updatedAt: Date
   }
-  variation?: { name: string } | null
 }
 
 interface HydratedOrder {
@@ -197,26 +196,19 @@ const validateCustomerInfo = (
 
 const checkStockForItem = (
   item: OrderItemInput,
-  product: ProductWithVariations
+  product: ProductWithVariants
 ): StockCheckResult => {
-  let price = product.price
-  let stockToCheck = product.stock
-
-  if (item.variationId) {
-    const variation = product.variations.find(
-      (value) => value.id === item.variationId
-    )
-    if (!variation) {
-      return {
-        valid: false,
-        error: `Variation not found for ${product.name}`,
-        status: 404,
-        reason: 'variation_not_found',
-      }
+  const variant = product.variants.find((v) => v.id === item.variantId)
+  if (!variant) {
+    return {
+      valid: false,
+      error: `Variant not found for ${product.name}`,
+      status: 404,
+      reason: 'variant_not_found',
     }
-    price = variation.price
-    stockToCheck = variation.stock
   }
+  const price = variant.price
+  const stockToCheck = variant.stock
 
   if (stockToCheck < item.quantity) {
     return {
@@ -238,7 +230,7 @@ const checkStockForItem = (
 
 const validateStockAndCalculateTotal = (
   items: OrderItemInput[],
-  productList: ProductWithVariations[]
+  productList: ProductWithVariants[]
 ): StockCheckResult => {
   let totalAmount = 0
   const productMap = new Map(
@@ -277,12 +269,12 @@ const sanitizeCustomizationNote = (
 
 const buildOrderItemValues = (
   items: OrderItemInput[],
-  productList: ProductWithVariations[],
+  productList: ProductWithVariants[],
   orderId: string
 ): Array<{
   orderId: string
   productId: string
-  variationId: string | null
+  variantId: string
   quantity: number
   price: number
   customizationNote: string | null
@@ -291,9 +283,8 @@ const buildOrderItemValues = (
     productList.map((product) => [
       product.id,
       {
-        price: product.price,
-        variationPriceMap: new Map(
-          product.variations.map((variation) => [variation.id, variation.price])
+        variantPriceMap: new Map(
+          product.variants.map((variant) => [variant.id, variant.price])
         ),
       },
     ])
@@ -305,13 +296,15 @@ const buildOrderItemValues = (
       throw new Error(`Product with id ${item.productId} not found`)
     }
 
-    const variationPrice = product.variationPriceMap.get(item.variationId ?? '')
-    const price = variationPrice ?? product.price
+    const price = product.variantPriceMap.get(item.variantId)
+    if (price === undefined) {
+      throw new Error(`Variant ${item.variantId} not found for product ${item.productId}`)
+    }
 
     return {
       orderId,
       productId: item.productId,
-      variationId: item.variationId ?? null,
+      variantId: item.variantId,
       quantity: item.quantity,
       price,
       customizationNote: sanitizeCustomizationNote(item.customizationNote),
@@ -442,7 +435,7 @@ export const getUserOrders = async ({
 
     const rows = await drizzleDb.query.orders.findMany({
       where: and(...conditions),
-      with: { items: { with: { product: true, variation: true } } },
+      with: { items: { with: { product: true, variant: true } } },
       orderBy: [desc(orders.createdAt)],
       limit: limit + 1,
       offset: useOffset ? offset : undefined,
@@ -524,11 +517,11 @@ export const createOrderForUser = async ({
       isNull(products.deletedAt)
     ),
     with: {
-      variations: {
-        where: (variation, operators) => operators.isNull(variation.deletedAt),
+      variants: {
+        where: (variant, operators) => operators.isNull(variant.deletedAt),
       },
     },
-  })) as ProductWithVariations[]
+  })) as ProductWithVariants[]
 
   if (productList.length !== requestedProductIds.length) {
     logFailedOrderCreation(
@@ -553,9 +546,9 @@ export const createOrderForUser = async ({
   }
   const stockDetails = stockResult as Extract<StockCheckResult, { valid: true }>
 
-  const itemsWithVariation = body.items.filter(
-    (item): item is OrderItemInput & { variationId: string } =>
-      item.variationId != null
+  const itemsWithVariant = body.items.filter(
+    (item): item is OrderItemInput & { variantId: string } =>
+      item.variantId != null
   )
 
   const order = await primaryDrizzleDb.transaction(async (tx) => {
@@ -593,33 +586,24 @@ export const createOrderForUser = async ({
       .insert(orderItems)
       .values(buildOrderItemValues(body.items, productList, newOrder.id))
 
-    await Promise.all([
-      ...body.items.map((item) =>
+    await Promise.all(
+      itemsWithVariant.map((item) =>
         tx
-          .update(products)
+          .update(productVariants)
           .set({
-            stock: sql`${products.stock} - ${item.quantity}`,
+            stock: sql`${productVariants.stock} - ${item.quantity}`,
             updatedAt: new Date(),
           })
-          .where(eq(products.id, item.productId))
+          .where(eq(productVariants.id, item.variantId))
       ),
-      ...itemsWithVariation.map((item) =>
-        tx
-          .update(productVariations)
-          .set({
-            stock: sql`${productVariations.stock} - ${item.quantity}`,
-            updatedAt: new Date(),
-          })
-          .where(eq(productVariations.id, item.variationId))
-      ),
-    ])
+    )
 
     return newOrder
   })
 
   const fullOrder = await primaryDrizzleDb.query.orders.findFirst({
     where: eq(orders.id, order.id),
-    with: { items: { with: { product: true, variation: true } } },
+    with: { items: { with: { product: true, variant: true } } },
   })
 
   if (!fullOrder) {
@@ -649,7 +633,7 @@ export const createOrderForUser = async ({
       status: hydratedOrder.status,
       items: hydratedOrder.items.map((item) => ({
         productId: item.productId,
-        variationId: item.variationId ?? null,
+        variantId: item.variantId,
         quantity: item.quantity,
         price: item.price,
         customizationNote: item.customizationNote ?? null,
@@ -657,11 +641,7 @@ export const createOrderForUser = async ({
       createdAt: hydratedOrder.createdAt.toISOString(),
       productNames: [
         ...new Set(
-          hydratedOrder.items.map((item) => {
-            const parts = [item.product.name]
-            if (item.variation?.name) parts.push(item.variation.name)
-            return parts.join(' - ')
-          })
+          hydratedOrder.items.map((item) => item.product.name)
         ),
       ].join(', '),
     })
@@ -743,7 +723,7 @@ export const createOrderForUser = async ({
         name: item.product.name,
         quantity: item.quantity,
         price: formatPriceForCurrency(item.price, currencyCode),
-        variation: item.variation?.name ?? null,
+        variation: null,
       })),
     })
   }

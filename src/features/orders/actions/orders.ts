@@ -25,7 +25,7 @@ type ActionResult<T> =
 
 interface OrderItemRecord {
   productId: string
-  variationId?: string | null
+  variantId?: string | null
   quantity: number
   price: number
   customizationNote?: string | null
@@ -52,7 +52,7 @@ export interface OrderSummary {
 
 const OrderItemInputSchema = z.object({
   productId: z.string().min(1),
-  variationId: z.string().nullish(),
+  variantId: z.string().nullish(),
   quantity: z.number().int().positive(),
   price: z.number().positive(),
   customizationNote: z.string().max(500).nullish(),
@@ -151,7 +151,7 @@ interface OrderWithItemsRow {
   readonly createdAt: Date
   readonly items: ReadonlyArray<{
     readonly productId: string
-    readonly variationId: string | null
+    readonly variantId: string | null
     readonly quantity: number
     readonly price: number
     readonly customizationNote: string | null
@@ -174,7 +174,7 @@ const mapOrderRowToSummary = (row: OrderWithItemsRow): OrderSummary => ({
   status: row.status,
   items: row.items.map((item) => ({
     productId: item.productId,
-    variationId: item.variationId ?? null,
+    variantId: item.variantId ?? null,
     quantity: item.quantity,
     price: item.price,
     customizationNote: item.customizationNote ?? null,
@@ -343,7 +343,7 @@ const insertOrderRecords = async (
       input.items.map((item) => ({
         orderId,
         productId: item.productId,
-        variationId: item.variationId ?? null,
+        variantId: item.variantId ?? null,
         quantity: item.quantity,
         price: item.price,
         customizationNote: item.customizationNote ?? null,
@@ -359,28 +359,15 @@ const buildProductNamesString = async (
   const productRows = await drizzleDb.query.products.findMany({
     where: inArray(products.id, productIds),
     columns: { id: true, name: true },
-    with: { variations: { columns: { id: true, name: true } } },
   })
 
   const productNameMap = new Map(
     productRows.map((product) => [product.id, product.name])
   )
-  const variationNameMap = new Map(
-    productRows.flatMap((product) =>
-      product.variations.map((variation) => [variation.id, variation.name])
-    )
-  )
 
   return [
     ...new Set(
-      items.map((item) => {
-        const productName = productNameMap.get(item.productId) ?? ''
-        const variationName = item.variationId
-          ? variationNameMap.get(item.variationId)
-          : undefined
-
-        return variationName ? `${productName} - ${variationName}` : productName
-      })
+      items.map((item) => productNameMap.get(item.productId) ?? '')
     ),
   ].join(', ')
 }
