@@ -58,7 +58,14 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 
-    const availableStock = cartItem.variant?.stock ?? 0
+    if (!cartItem.variant) {
+      return NextResponse.json(
+        { error: 'Cart item variant not found' },
+        { status: 404 }
+      )
+    }
+
+    const availableStock = cartItem.variant.stock ?? 0
 
     if (body.quantity > availableStock) {
       return NextResponse.json({ error: 'Insufficient stock' }, { status: 400 })

@@ -343,6 +343,7 @@ function dbCartToRedisItems(
     productId: item.product.id,
     productName: item.product.name ?? '',
     productDescription: item.product.description ?? '',
+    // TODO: Remove productPrice/productStock legacy Redis fields once cache is fully migrated to variant-only model
     productPrice: 0,
     productImage: item.product.image ?? '',
     productCategory: item.product.category ?? '',
