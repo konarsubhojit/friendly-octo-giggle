@@ -26,8 +26,8 @@ export function CartItemRow({
   onRemoveItem,
   onCustomizationChange,
 }: CartItemRowProps) {
-  const price = item.variation ? item.variation.price : item.product.price
-  const image = item.variation?.image || item.product.image
+  const price = item.variant ? item.variant.price : 0
+  const image = item.variant?.image || item.product.image
 
   return (
     <div
@@ -50,9 +50,9 @@ export function CartItemRow({
         >
           {item.product.name}
         </Link>
-        {item.variation && (
+        {item.variant && (
           <p className="text-xs text-[var(--text-muted)] mt-0.5">
-            {item.variation.designName} - {item.variation.name}
+            {item.variant.sku ?? 'Variant'}
           </p>
         )}
         <p className="text-lg font-bold text-[var(--accent-rose)] mt-1">
@@ -86,7 +86,7 @@ export function CartItemRow({
                 {Array.from(
                   {
                     length: Math.min(
-                      item.variation?.stock ?? item.product.stock,
+                      item.variant?.stock ?? 0,
                       10
                     ),
                   },

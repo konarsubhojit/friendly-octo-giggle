@@ -35,17 +35,16 @@ export const buildProductContext = (
     `Name: ${product.name}`,
     `Category: ${product.category}`,
     `Description: ${truncate(product.description)}`,
-    `Price (${currencyCode}): ${formatPrice(product.price)}`,
-    `Stock: ${product.stock > 0 ? product.stock + ' units' : 'Out of stock'}`,
+    `Price (${currencyCode}): ${formatPrice(Math.min(...(product.variants?.map(v => v.price) ?? [0])))}`,
+    `Stock: ${(product.variants?.reduce((sum, v) => sum + v.stock, 0) ?? 0) > 0 ? (product.variants?.reduce((sum, v) => sum + v.stock, 0) ?? 0) + ' units' : 'Out of stock'}`,
   ]
 
-  if (product.variations?.length) {
-    lines.push(`Variations (${product.variations.length}):`)
-    for (const v of product.variations) {
+  if (product.variants?.length) {
+    lines.push(`Variants (${product.variants.length}):`)
+    for (const v of product.variants) {
       const stock = v.stock > 0 ? `${v.stock} in stock` : 'out of stock'
-      const type = v.variationType === 'colour' ? 'Colour' : 'Styling'
       lines.push(
-        `- [${type}] ${v.name} / ${v.designName}: ${formatPrice(v.price)}, ${stock}`
+        `- ${v.sku ?? 'Variant'}: ${formatPrice(v.price)}, ${stock}`
       )
     }
   }

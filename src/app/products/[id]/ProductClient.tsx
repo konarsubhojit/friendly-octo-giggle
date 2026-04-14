@@ -5,7 +5,7 @@ import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { useSession } from 'next-auth/react'
 import { useDispatch, useSelector } from 'react-redux'
-import { Product, ProductVariation } from '@/lib/types'
+import { Product, ProductVariant } from '@/lib/types'
 import { addToCart, fetchCart } from '@/features/cart/store/cartSlice'
 import { addPendingCartItem } from '@/features/cart/services/pending-cart'
 import { useCurrency } from '@/contexts/CurrencyContext'
@@ -26,14 +26,14 @@ const ProductAssistant = dynamic(
 
 interface ProductClientProps {
   readonly product: Product
-  readonly initialVariationId: string | null
+  readonly initialVariantId: string | null
   readonly aiEnabled: boolean
 }
 
-const getVariationImages = (variation: ProductVariation): string[] =>
+const getVariantImages = (variant: ProductVariant): string[] =>
   [
-    ...(variation.image ? [variation.image] : []),
-    ...(variation.images ?? []),
+    ...(variant.image ? [variant.image] : []),
+    ...(variant.images ?? []),
   ].filter(Boolean)
 
 const getProductImages = (product: Product): string[] =>
@@ -41,22 +41,22 @@ const getProductImages = (product: Product): string[] =>
 
 const getCarouselImages = (
   product: Product,
-  selectedVariation: ProductVariation | null
+  selectedVariant: ProductVariant | null
 ): string[] => {
-  if (selectedVariation) {
-    const imgs = getVariationImages(selectedVariation)
+  if (selectedVariant) {
+    const imgs = getVariantImages(selectedVariant)
     if (imgs.length > 0) return imgs
   }
   return getProductImages(product)
 }
 
-const resolveInitialVariation = (
+const resolveInitialVariant = (
   product: Product,
-  variationId: string | null
-): ProductVariation | null => {
-  if (!variationId) return null
-  const variations = product.variations ?? []
-  return variations.find((v) => v.id === variationId) ?? null
+  variantId: string | null
+): ProductVariant | null => {
+  if (!variantId) return product.variants?.[0] ?? null
+  const variants = product.variants ?? []
+  return variants.find((v) => v.id === variantId) ?? product.variants?.[0] ?? null
 }
 
 const getClampedQtyState = (
@@ -198,72 +198,41 @@ const OutOfStockPanel = ({
 )
 
 interface PriceModifierDisplayProps {
-  readonly selectedVariation: ProductVariation | null
+  readonly selectedVariant: ProductVariant | null
 }
 
 const PriceModifierDisplay = ({
-  selectedVariation,
+  selectedVariant,
 }: PriceModifierDisplayProps) => {
-  if (!selectedVariation) return null
+  if (!selectedVariant) return null
   return (
     <div className="mt-2 text-sm text-[var(--text-secondary)]">
-      Variation price — independently set
+      Variant price
     </div>
   )
 }
 
-interface VariationSelectorProps {
-  readonly variations: ProductVariation[] | null | undefined
-  readonly selectedVariation: ProductVariation | null
+interface VariantSelectorProps {
+  readonly product: Product
+  readonly selectedVariant: ProductVariant | null
   readonly formatPrice: (amount: number) => string
-  readonly onSelect: (v: ProductVariation) => void
-  readonly onSelectBase: () => void
-  readonly basePrice: number
+  readonly onSelect: (v: ProductVariant) => void
   readonly cartQuantities: Record<string, number>
 }
 
-function getStyleButtonClass(isActive: boolean, isDisabled: boolean): string {
-  if (isActive) return 'bg-[var(--accent-warm)] text-white shadow-warm'
-  if (isDisabled) return 'bg-slate-100 text-slate-400 cursor-not-allowed'
-  return 'bg-[var(--accent-cream)] text-[var(--text-secondary)] border border-[var(--border-warm)] hover:border-[var(--accent-warm)]'
-}
-
-const baseButtonClass = (isSelected: boolean) => {
-  const base =
-    'p-4 border-2 rounded-xl transition-all duration-300 focus-warm text-left'
-  return isSelected
-    ? `${base} border-[var(--accent-warm)] bg-[var(--accent-cream)] shadow-warm scale-105`
-    : `${base} border-[var(--border-warm)] hover:border-[var(--accent-warm)] hover:shadow-warm hover:scale-105 bg-[var(--accent-cream)]/50`
-}
-
-const VariationSelector = ({
-  variations,
-  selectedVariation,
+const VariantSelector = ({
+  product,
+  selectedVariant,
   formatPrice,
   onSelect,
-  onSelectBase,
-  basePrice,
   cartQuantities,
-}: VariationSelectorProps) => {
-  if (!variations || variations.length === 0) return null
+}: VariantSelectorProps) => {
+  const variants = product.variants ?? []
+  const options = product.options ?? []
 
-  const styles = variations.filter((v) => v.variationType === 'styling')
-  const colours = variations.filter((v) => v.variationType === 'colour')
+  if (variants.length === 0) return null
 
-  // Group colours by their parent style
-  const baseColours = colours.filter((c) => !c.styleId)
-  const coloursByStyle = new Map<string, ProductVariation[]>()
-  for (const c of colours) {
-    if (c.styleId) {
-      const list = coloursByStyle.get(c.styleId) ?? []
-      list.push(c)
-      coloursByStyle.set(c.styleId, list)
-    }
-  }
-
-  // If there are no colours at all, fall back to the flat rendering
-  // (backward compat with products that only have styling-type variations)
-  if (colours.length === 0 && styles.length > 0) {
+  if (options.length === 0) {
     return (
       <div className="mb-6 space-y-5">
         <span
@@ -273,27 +242,12 @@ const VariationSelector = ({
           Choose Your Option
         </span>
         <div className="grid grid-cols-2 gap-3">
-          <button
-            onClick={onSelectBase}
-            aria-label="Select standard base design"
-            aria-pressed={selectedVariation === null}
-            className={baseButtonClass(selectedVariation === null)}
-          >
-            <div className="text-sm font-bold text-[var(--foreground)]">
-              Standard
-            </div>
-            <div className="text-xs text-[var(--text-secondary)] mt-1">
-              Base design
-            </div>
-            <div className="text-xs font-semibold text-[var(--accent-warm)] mt-1">
-              {formatPrice(basePrice)}
-            </div>
-          </button>
-          {styles.map((v) => (
+          {variants.map((v) => (
             <VariationButton
               key={v.id}
-              variation={v}
-              isSelected={selectedVariation?.id === v.id}
+              variant={v}
+              label={v.sku ?? `Option ${variants.indexOf(v) + 1}`}
+              isSelected={selectedVariant?.id === v.id}
               formatPrice={formatPrice}
               onSelect={onSelect}
               cartQuantity={cartQuantities[v.id] ?? 0}
@@ -304,18 +258,52 @@ const VariationSelector = ({
     )
   }
 
-  // Determine the active style: find the style that owns the currently selected colour,
-  // or default to base if no colour is selected
-  const activeStyleId = selectedVariation?.styleId ?? null
+  const getVariantOptionValues = (variant: ProductVariant) =>
+    variant.optionValues?.map((ov) => ov.id) ?? []
 
-  // Derive the colour list for the active style
-  const activeColours =
-    activeStyleId === null
-      ? baseColours
-      : (coloursByStyle.get(activeStyleId) ?? [])
+  const getVariantLabel = (variant: ProductVariant): string => {
+    if (!variant.optionValues || variant.optionValues.length === 0) {
+      return variant.sku ?? `Variant`
+    }
+    const valueMap = new Map<string, string>()
+    for (const opt of options) {
+      for (const val of opt.values ?? []) {
+        valueMap.set(val.id, val.value)
+      }
+    }
+    const parts = variant.optionValues
+      .map((ov) => valueMap.get(ov.id))
+      .filter(Boolean)
+    return parts.length > 0 ? parts.join(' / ') : (variant.sku ?? 'Variant')
+  }
 
-  // Determine if we have more than just base colours (i.e. named styles exist)
-  const hasNamedStyles = styles.length > 0
+  const selectedOptionValues = new Map<string, string>()
+  if (selectedVariant?.optionValues) {
+    for (const ov of selectedVariant.optionValues) {
+      const ovId = ov.id
+      for (const opt of options) {
+        if (opt.values?.some((v) => v.id === ovId)) {
+          selectedOptionValues.set(opt.id, ovId)
+        }
+      }
+    }
+  }
+
+  const handleOptionChange = (optionId: string, valueId: string) => {
+    const newSelections = new Map(selectedOptionValues)
+    newSelections.set(optionId, valueId)
+
+    const matchingVariant = variants.find((v) => {
+      const variantValueIds = getVariantOptionValues(v)
+      return [...newSelections.values()].every((selectedValueId) =>
+        variantValueIds.includes(selectedValueId)
+      )
+    })
+
+    if (matchingVariant) {
+      onSelect(matchingVariant)
+    }
+  }
 
   return (
     <div className="mb-6 space-y-5">
@@ -326,100 +314,51 @@ const VariationSelector = ({
         Choose Your Options
       </span>
 
-      {/* Style tabs — only show if there are named styles */}
-      {hasNamedStyles && (
-        <div>
+      {options.map((option) => (
+        <div key={option.id}>
           <span className="block text-sm font-semibold text-[var(--text-secondary)] mb-2">
-            🎨 Style
+            {option.name}
           </span>
           <div className="flex flex-wrap gap-2">
-            {/* Base style tab */}
-            {baseColours.length > 0 && (
-              <button
-                onClick={() => {
-                  // Select the first base colour, or go to base
-                  if (baseColours.length > 0) {
-                    onSelect(baseColours[0])
-                  } else {
-                    onSelectBase()
-                  }
-                }}
-                aria-pressed={activeStyleId === null}
-                className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
-                  activeStyleId === null
-                    ? 'bg-[var(--accent-warm)] text-white shadow-warm'
-                    : 'bg-[var(--accent-cream)] text-[var(--text-secondary)] border border-[var(--border-warm)] hover:border-[var(--accent-warm)]'
-                }`}
-              >
-                Base
-              </button>
-            )}
-            {styles.map((style) => {
-              const styleColourCount = coloursByStyle.get(style.id)?.length ?? 0
+            {(option.values ?? []).map((val) => {
+              const isActive = selectedOptionValues.get(option.id) === val.id
               return (
                 <button
-                  key={style.id}
-                  onClick={() => {
-                    const styleColours = coloursByStyle.get(style.id)
-                    if (styleColours && styleColours.length > 0) {
-                      onSelect(styleColours[0])
-                    }
-                  }}
-                  aria-pressed={activeStyleId === style.id}
-                  disabled={styleColourCount === 0}
-                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${getStyleButtonClass(activeStyleId === style.id, styleColourCount === 0)}`}
+                  key={val.id}
+                  onClick={() => handleOptionChange(option.id, val.id)}
+                  aria-pressed={isActive}
+                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
+                    isActive
+                      ? 'bg-[var(--accent-warm)] text-white shadow-warm'
+                      : 'bg-[var(--accent-cream)] text-[var(--text-secondary)] border border-[var(--border-warm)] hover:border-[var(--accent-warm)]'
+                  }`}
                 >
-                  {style.name}
-                  {styleColourCount === 0 && (
-                    <span className="ml-1 text-xs">(no colours)</span>
-                  )}
+                  {val.value}
                 </button>
               )
             })}
           </div>
         </div>
-      )}
+      ))}
 
-      {/* Colour options for the active style */}
-      {activeColours.length > 0 && (
-        <div>
-          <span className="block text-sm font-semibold text-[var(--text-secondary)] mb-2">
-            🌈 Colour
-          </span>
-          <div className="grid grid-cols-2 gap-3">
-            {activeColours.map((colour) => (
-              <VariationButton
-                key={colour.id}
-                variation={colour}
-                isSelected={selectedVariation?.id === colour.id}
-                formatPrice={formatPrice}
-                onSelect={onSelect}
-                cartQuantity={cartQuantities[colour.id] ?? 0}
-              />
-            ))}
+      {selectedVariant && (
+        <div className="p-4 border-2 rounded-xl border-[var(--accent-warm)] bg-[var(--accent-cream)] shadow-warm">
+          <div className="text-sm font-bold text-[var(--foreground)]">
+            {getVariantLabel(selectedVariant)}
           </div>
-        </div>
-      )}
-
-      {activeColours.length === 0 && !hasNamedStyles && (
-        /* No styles and no colours — just show base option */
-        <div className="grid grid-cols-2 gap-3">
-          <button
-            onClick={onSelectBase}
-            aria-label="Select standard base design"
-            aria-pressed={selectedVariation === null}
-            className={baseButtonClass(selectedVariation === null)}
-          >
-            <div className="text-sm font-bold text-[var(--foreground)]">
-              Standard
+          <div className="text-xs font-semibold text-[var(--accent-warm)] mt-1">
+            {formatPrice(selectedVariant.price)}
+          </div>
+          {selectedVariant.stock > 0 && selectedVariant.stock < 6 && (
+            <div className="text-xs text-[var(--accent-rose)] font-medium mt-1">
+              Only {selectedVariant.stock} left
             </div>
-            <div className="text-xs text-[var(--text-secondary)] mt-1">
-              Base design
+          )}
+          {(cartQuantities[selectedVariant.id] ?? 0) > 0 && (
+            <div className="text-xs font-semibold text-blue-600 mt-1">
+              {cartQuantities[selectedVariant.id]} in cart
             </div>
-            <div className="text-xs font-semibold text-[var(--accent-warm)] mt-1">
-              {formatPrice(basePrice)}
-            </div>
-          </button>
+          )}
         </div>
       )}
     </div>
@@ -445,8 +384,8 @@ interface ProductInfoCardProps {
   readonly product: Product
   readonly formatPrice: (amount: number) => string
   readonly effectivePrice: number
-  readonly selectedVariation: ProductVariation | null
-  readonly setSelectedVariation: (v: ProductVariation | null) => void
+  readonly selectedVariant: ProductVariant | null
+  readonly setSelectedVariant: (v: ProductVariant | null) => void
   readonly effectiveStock: number
   readonly cartQuantities: Record<string, number>
 }
@@ -455,8 +394,8 @@ const ProductInfoCard = ({
   product,
   formatPrice,
   effectivePrice,
-  selectedVariation,
-  setSelectedVariation,
+  selectedVariant,
+  setSelectedVariant,
   effectiveStock,
   cartQuantities,
 }: ProductInfoCardProps) => {
@@ -468,7 +407,7 @@ const ProductInfoCard = ({
         </h1>
         <ShareButton
           productId={product.id}
-          variationId={selectedVariation?.id ?? null}
+          variantId={selectedVariant?.id ?? null}
         />
       </div>
 
@@ -486,20 +425,18 @@ const ProductInfoCard = ({
         <span className="text-4xl font-bold text-warm-heading sm:text-5xl">
           {formatPrice(effectivePrice)}
         </span>
-        <PriceModifierDisplay selectedVariation={selectedVariation} />
+        <PriceModifierDisplay selectedVariant={selectedVariant} />
       </div>
 
       <div className="mb-6">
         <StockBadge stock={effectiveStock} showIcon size="md" />
       </div>
 
-      <VariationSelector
-        variations={product.variations}
-        selectedVariation={selectedVariation}
+      <VariantSelector
+        product={product}
+        selectedVariant={selectedVariant}
         formatPrice={formatPrice}
-        onSelect={setSelectedVariation}
-        onSelectBase={() => setSelectedVariation(null)}
-        basePrice={product.price}
+        onSelect={setSelectedVariant}
         cartQuantities={cartQuantities}
       />
     </div>
@@ -706,7 +643,7 @@ const AddToCartSection = ({
 
 export default function ProductClient({
   product,
-  initialVariationId,
+  initialVariantId,
   aiEnabled,
 }: ProductClientProps) {
   const { status } = useSession()
@@ -719,9 +656,9 @@ export default function ProductClient({
   trackProductRef.current = trackProduct
   const [quantity, setQuantity] = useState(1)
   const [quantityMessage, setQuantityMessage] = useState('')
-  const [selectedVariation, setSelectedVariation] =
-    useState<ProductVariation | null>(() =>
-      resolveInitialVariation(product, initialVariationId)
+  const [selectedVariant, setSelectedVariant] =
+    useState<ProductVariant | null>(() =>
+      resolveInitialVariant(product, initialVariantId)
     )
   const [addingToCart, setAddingToCart] = useState(false)
   const [cartSuccess, setCartSuccess] = useState(false)
@@ -738,7 +675,7 @@ export default function ProductClient({
     if (!cart?.items) return map
     for (const item of cart.items) {
       if (item.productId === product.id) {
-        const key = item.variationId ?? '__base__'
+        const key = item.variantId ?? '__base__'
         map[key] = (map[key] ?? 0) + item.quantity
       }
     }
@@ -746,26 +683,22 @@ export default function ProductClient({
   }, [cart?.items, product.id])
 
   const currentCartQuantity =
-    cartQuantities[selectedVariation?.id ?? '__base__'] ?? 0
+    cartQuantities[selectedVariant?.id ?? '__base__'] ?? 0
 
   useEffect(() => {
     trackProductRef.current({
       id: product.id,
       name: product.name,
       image: product.image,
-      price: product.price,
+      price: Math.min(...(product.variants?.map(v => v.price) ?? [0])),
       category: product.category,
       viewedAt: Date.now(),
     })
-  }, [product.id, product.name, product.image, product.price, product.category])
+  }, [product.id, product.name, product.image, product.variants, product.category])
 
-  const effectivePrice = selectedVariation
-    ? selectedVariation.price
-    : product.price
+  const effectivePrice = selectedVariant?.price ?? Math.min(...(product.variants?.map(v => v.price) ?? [0]))
 
-  const effectiveStock = selectedVariation
-    ? selectedVariation.stock
-    : product.stock
+  const effectiveStock = selectedVariant?.stock ?? 0
 
   const remainingStock = Math.max(0, effectiveStock - currentCartQuantity)
 
@@ -776,8 +709,8 @@ export default function ProductClient({
   }, [remainingStock, quantity])
 
   const carouselImages = useMemo(
-    () => getCarouselImages(product, selectedVariation),
-    [product, selectedVariation]
+    () => getCarouselImages(product, selectedVariant),
+    [product, selectedVariant]
   )
 
   const handleAddToCart = async () => {
@@ -790,7 +723,7 @@ export default function ProductClient({
       if (status !== 'authenticated') {
         addPendingCartItem({
           productId: product.id,
-          variationId: selectedVariation?.id ?? null,
+          variantId: selectedVariant?.id ?? '',
           quantity,
         })
         setCartSuccess(true)
@@ -802,7 +735,7 @@ export default function ProductClient({
         addToCart({
           productId: product.id,
 
-          variationId: selectedVariation?.id ?? null,
+          variantId: selectedVariant?.id ?? '',
           quantity,
         })
       ).unwrap()
@@ -849,8 +782,8 @@ export default function ProductClient({
               product={product}
               formatPrice={formatPrice}
               effectivePrice={effectivePrice}
-              selectedVariation={selectedVariation}
-              setSelectedVariation={setSelectedVariation}
+              selectedVariant={selectedVariant}
+              setSelectedVariant={setSelectedVariant}
               effectiveStock={remainingStock}
               cartQuantities={cartQuantities}
             />

@@ -1,17 +1,19 @@
 'use client'
 
-import { ProductVariation } from '@/lib/types'
+import { ProductVariant } from '@/lib/types'
 
 interface VariationButtonProps {
-  readonly variation: ProductVariation
+  readonly variant: ProductVariant
+  readonly label: string
   readonly isSelected: boolean
   readonly formatPrice: (amount: number) => string
-  readonly onSelect: (variation: ProductVariation) => void
+  readonly onSelect: (variant: ProductVariant) => void
   readonly cartQuantity?: number
 }
 
 export function VariationButton({
-  variation,
+  variant,
+  label,
   isSelected,
   formatPrice,
   onSelect,
@@ -23,22 +25,24 @@ export function VariationButton({
 
   return (
     <button
-      key={variation.id}
-      onClick={() => onSelect(variation)}
+      key={variant.id}
+      onClick={() => onSelect(variant)}
       className={`${className} focus-warm`}
     >
       <div className="text-sm font-bold text-[var(--foreground)]">
-        {variation.designName}
+        {label}
       </div>
-      <div className="text-xs text-[var(--text-secondary)] mt-1">
-        {variation.name}
-      </div>
+      {variant.sku && (
+        <div className="text-xs text-[var(--text-secondary)] mt-1">
+          SKU: {variant.sku}
+        </div>
+      )}
       <div className="text-xs font-semibold text-[var(--accent-warm)] mt-1">
-        {formatPrice(variation.price)}
+        {formatPrice(variant.price)}
       </div>
-      {variation.stock > 0 && variation.stock < 6 && (
+      {variant.stock > 0 && variant.stock < 6 && (
         <div className="text-xs text-[var(--accent-rose)] font-medium mt-1">
-          Only {variation.stock} left
+          Only {variant.stock} left
         </div>
       )}
       {cartQuantity > 0 && (
