@@ -1,6 +1,10 @@
 import { NextRequest } from 'next/server'
 import { drizzleDb } from '@/lib/db'
-import { products, productVariants, productVariantOptionValues } from '@/lib/schema'
+import {
+  products,
+  productVariants,
+  productVariantOptionValues,
+} from '@/lib/schema'
 import { eq, and, isNull } from 'drizzle-orm'
 import { CreateVariantSchema } from '@/features/product/validations'
 import { z } from 'zod'

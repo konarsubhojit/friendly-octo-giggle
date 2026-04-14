@@ -85,10 +85,7 @@ export function CartItemRow({
               >
                 {Array.from(
                   {
-                    length: Math.min(
-                      item.variant?.stock ?? 0,
-                      10
-                    ),
+                    length: Math.min(item.variant?.stock ?? 0, 10),
                   },
                   (_, i) => i + 1
                 ).map((n) => (

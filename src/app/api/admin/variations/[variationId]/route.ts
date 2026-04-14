@@ -1,6 +1,10 @@
 import { NextRequest } from 'next/server'
 import { drizzleDb } from '@/lib/db'
-import { products, productVariants, productVariantOptionValues } from '@/lib/schema'
+import {
+  products,
+  productVariants,
+  productVariantOptionValues,
+} from '@/lib/schema'
 import { eq, and, isNull } from 'drizzle-orm'
 import { UpdateVariantSchema } from '@/features/product/validations'
 import {
@@ -61,7 +65,10 @@ export async function PUT(
       return apiError('No fields to update', 400)
     }
 
-    const updateData: Record<string, unknown> = { ...validated, updatedAt: new Date() }
+    const updateData: Record<string, unknown> = {
+      ...validated,
+      updatedAt: new Date(),
+    }
 
     const [updated] = await drizzleDb
       .update(productVariants)

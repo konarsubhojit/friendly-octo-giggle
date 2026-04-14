@@ -366,9 +366,7 @@ const buildProductNamesString = async (
   )
 
   return [
-    ...new Set(
-      items.map((item) => productNameMap.get(item.productId) ?? '')
-    ),
+    ...new Set(items.map((item) => productNameMap.get(item.productId) ?? '')),
   ].join(', ')
 }
 

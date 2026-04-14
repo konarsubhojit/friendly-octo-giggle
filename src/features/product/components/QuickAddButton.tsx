@@ -10,7 +10,9 @@ import { addPendingCartItem } from '@/features/cart/services/pending-cart'
 import toast from 'react-hot-toast'
 import type { Product } from '@/lib/types'
 
-type QuickAddProduct = Pick<Product, 'id' | 'name'> & { variants?: Array<{ id: string; stock: number }> }
+type QuickAddProduct = Pick<Product, 'id' | 'name'> & {
+  variants?: Array<{ id: string; stock: number }>
+}
 
 export function QuickAddButton({
   product,
@@ -40,7 +42,11 @@ export function QuickAddButton({
 
         const firstVariant = product.variants?.[0]
         const result = await dispatch(
-          addToCart({ productId: product.id, variantId: firstVariant?.id ?? '', quantity: 1 })
+          addToCart({
+            productId: product.id,
+            variantId: firstVariant?.id ?? '',
+            quantity: 1,
+          })
         ).unwrap()
         if (result.warning) {
           toast(result.warning, { icon: '⚠️' })
@@ -60,7 +66,8 @@ export function QuickAddButton({
     [dispatch, product, status]
   )
 
-  if ((product.variants?.reduce((sum, v) => sum + v.stock, 0) ?? 0) === 0) return null
+  if ((product.variants?.reduce((sum, v) => sum + v.stock, 0) ?? 0) === 0)
+    return null
 
   return (
     <button

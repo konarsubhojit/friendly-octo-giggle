@@ -24,9 +24,7 @@ export interface ProductFormData {
   images: string[]
 }
 
-const buildInitialFormData = (
-  product: Product | null
-): ProductFormData =>
+const buildInitialFormData = (product: Product | null): ProductFormData =>
   product
     ? {
         name: product.name,

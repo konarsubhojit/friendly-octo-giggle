@@ -274,7 +274,9 @@ export default function ProductsManagement() {
     />
   )
 
-  const inStockProducts = products.filter((product) => getTotalStock(product) > 0).length
+  const inStockProducts = products.filter(
+    (product) => getTotalStock(product) > 0
+  ).length
   const lowStockProducts = products.filter(
     (product) => getTotalStock(product) > 0 && getTotalStock(product) <= 5
   ).length

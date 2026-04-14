@@ -298,7 +298,9 @@ const buildOrderItemValues = (
 
     const price = product.variantPriceMap.get(item.variantId)
     if (price === undefined) {
-      throw new Error(`Variant ${item.variantId} not found for product ${item.productId}`)
+      throw new Error(
+        `Variant ${item.variantId} not found for product ${item.productId}`
+      )
     }
 
     return {
@@ -595,7 +597,7 @@ export const createOrderForUser = async ({
             updatedAt: new Date(),
           })
           .where(eq(productVariants.id, item.variantId))
-      ),
+      )
     )
 
     return newOrder
@@ -640,9 +642,7 @@ export const createOrderForUser = async ({
       })),
       createdAt: hydratedOrder.createdAt.toISOString(),
       productNames: [
-        ...new Set(
-          hydratedOrder.items.map((item) => item.product.name)
-        ),
+        ...new Set(hydratedOrder.items.map((item) => item.product.name)),
       ].join(', '),
     })
   )

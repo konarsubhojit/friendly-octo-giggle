@@ -112,7 +112,8 @@ const makeProduct = (overrides: Partial<Product> = {}): Product => {
 
 const toGridItem = (product: Product): ProductGridItem => {
   const variants = product.variants ?? []
-  const price = variants.length > 0 ? Math.min(...variants.map((v) => v.price)) : 0
+  const price =
+    variants.length > 0 ? Math.min(...variants.map((v) => v.price)) : 0
   const stock = variants.reduce((sum, v) => sum + v.stock, 0)
   return {
     id: product.id,
@@ -126,7 +127,10 @@ const toGridItem = (product: Product): ProductGridItem => {
 }
 
 /** Helper: create a Product with a single variant at the given stock level */
-const withVariantStock = (stock: number, overrides: Partial<Product> = {}): Product =>
+const withVariantStock = (
+  stock: number,
+  overrides: Partial<Product> = {}
+): Product =>
   makeProduct({
     ...overrides,
     variants: [

@@ -59,7 +59,10 @@ describe('buildProductContext', () => {
   })
 
   it('shows out of stock message when stock is 0', () => {
-    const product = { ...baseProduct, variants: [{ ...baseProduct.variants![0], stock: 0 }] }
+    const product = {
+      ...baseProduct,
+      variants: [{ ...baseProduct.variants![0], stock: 0 }],
+    }
     const context = buildProductContext(product)
     expect(context).toContain('Out of stock')
   })

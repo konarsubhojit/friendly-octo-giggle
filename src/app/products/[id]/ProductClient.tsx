@@ -31,10 +31,9 @@ interface ProductClientProps {
 }
 
 const getVariantImages = (variant: ProductVariant): string[] =>
-  [
-    ...(variant.image ? [variant.image] : []),
-    ...(variant.images ?? []),
-  ].filter(Boolean)
+  [...(variant.image ? [variant.image] : []), ...(variant.images ?? [])].filter(
+    Boolean
+  )
 
 const getProductImages = (product: Product): string[] =>
   [product.image, ...(product.images ?? [])].filter(Boolean)
@@ -56,7 +55,9 @@ const resolveInitialVariant = (
 ): ProductVariant | null => {
   if (!variantId) return product.variants?.[0] ?? null
   const variants = product.variants ?? []
-  return variants.find((v) => v.id === variantId) ?? product.variants?.[0] ?? null
+  return (
+    variants.find((v) => v.id === variantId) ?? product.variants?.[0] ?? null
+  )
 }
 
 const getClampedQtyState = (
@@ -656,10 +657,9 @@ export default function ProductClient({
   trackProductRef.current = trackProduct
   const [quantity, setQuantity] = useState(1)
   const [quantityMessage, setQuantityMessage] = useState('')
-  const [selectedVariant, setSelectedVariant] =
-    useState<ProductVariant | null>(() =>
-      resolveInitialVariant(product, initialVariantId)
-    )
+  const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(
+    () => resolveInitialVariant(product, initialVariantId)
+  )
   const [addingToCart, setAddingToCart] = useState(false)
   const [cartSuccess, setCartSuccess] = useState(false)
   const [error, setError] = useState('')
@@ -690,13 +690,21 @@ export default function ProductClient({
       id: product.id,
       name: product.name,
       image: product.image,
-      price: Math.min(...(product.variants?.map(v => v.price) ?? [0])),
+      price: Math.min(...(product.variants?.map((v) => v.price) ?? [0])),
       category: product.category,
       viewedAt: Date.now(),
     })
-  }, [product.id, product.name, product.image, product.variants, product.category])
+  }, [
+    product.id,
+    product.name,
+    product.image,
+    product.variants,
+    product.category,
+  ])
 
-  const effectivePrice = selectedVariant?.price ?? Math.min(...(product.variants?.map(v => v.price) ?? [0]))
+  const effectivePrice =
+    selectedVariant?.price ??
+    Math.min(...(product.variants?.map((v) => v.price) ?? [0]))
 
   const effectiveStock = selectedVariant?.stock ?? 0
 

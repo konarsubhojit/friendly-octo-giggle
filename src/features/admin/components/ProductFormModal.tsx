@@ -10,12 +10,7 @@ import {
 import useProductForm, {
   MAX_IMAGES,
 } from '@/features/admin/hooks/useProductForm'
-import {
-  TextInput,
-  TextArea,
-  SelectInput,
-  FileInput,
-} from 'zenput'
+import { TextInput, TextArea, SelectInput, FileInput } from 'zenput'
 
 interface ProductFormModalProps {
   readonly editingProduct: Product | null

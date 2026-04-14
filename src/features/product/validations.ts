@@ -59,10 +59,7 @@ export type CreateOptionValueInput = z.infer<typeof CreateOptionValueSchema>
 // ─── Product Variant Validation Schemas ───────────────────
 
 export const CreateVariantSchema = z.object({
-  sku: z
-    .string()
-    .max(100, 'SKU must be under 100 characters')
-    .nullish(),
+  sku: z.string().max(100, 'SKU must be under 100 characters').nullish(),
   price: z
     .number({ message: 'Price is required' })
     .positive('Price must be greater than zero'),
@@ -80,25 +77,25 @@ export const CreateVariantSchema = z.object({
     .default([]),
 })
 
-export const UpdateVariantSchema = z.object({
-  sku: z
-    .string()
-    .max(100, 'SKU must be under 100 characters')
-    .nullish(),
-  price: z
-    .number({ message: 'Price is required' })
-    .positive('Price must be greater than zero'),
-  stock: z
-    .number({ message: 'Stock is required' })
-    .int('Stock must be an integer')
-    .nonnegative('Stock must be non-negative'),
-  image: z.string().regex(URL_REGEX, 'Must be a valid URL').nullish(),
-  images: z
-    .array(z.string().regex(URL_REGEX, 'Each image must be a valid URL'))
-    .max(10, 'Maximum 10 images allowed'),
-  optionValueIds: z
-    .array(z.string().regex(SHORT_ID_REGEX, 'Invalid option value ID')),
-}).partial()
+export const UpdateVariantSchema = z
+  .object({
+    sku: z.string().max(100, 'SKU must be under 100 characters').nullish(),
+    price: z
+      .number({ message: 'Price is required' })
+      .positive('Price must be greater than zero'),
+    stock: z
+      .number({ message: 'Stock is required' })
+      .int('Stock must be an integer')
+      .nonnegative('Stock must be non-negative'),
+    image: z.string().regex(URL_REGEX, 'Must be a valid URL').nullish(),
+    images: z
+      .array(z.string().regex(URL_REGEX, 'Each image must be a valid URL'))
+      .max(10, 'Maximum 10 images allowed'),
+    optionValueIds: z.array(
+      z.string().regex(SHORT_ID_REGEX, 'Invalid option value ID')
+    ),
+  })
+  .partial()
 
 export type CreateVariantInput = z.infer<typeof CreateVariantSchema>
 export type UpdateVariantInput = z.infer<typeof UpdateVariantSchema>
@@ -126,10 +123,7 @@ export type CreateReviewInput = z.infer<typeof CreateReviewSchema>
 
 export const CreateShareSchema = z.object({
   productId: z.string().regex(SHORT_ID_REGEX, 'Invalid product ID'),
-  variantId: z
-    .string()
-    .regex(SHORT_ID_REGEX, 'Invalid variant ID')
-    .nullish(),
+  variantId: z.string().regex(SHORT_ID_REGEX, 'Invalid variant ID').nullish(),
 })
 
 export type CreateShareInput = z.infer<typeof CreateShareSchema>

@@ -38,9 +38,10 @@ export default async function AdminProductEditPage({ params }: PageProps) {
 
   const serializedVariants = product.variants.map(serializeVariant)
 
-  const minPrice = serializedVariants.length > 0
-    ? Math.min(...serializedVariants.map((v) => v.price))
-    : 0
+  const minPrice =
+    serializedVariants.length > 0
+      ? Math.min(...serializedVariants.map((v) => v.price))
+      : 0
   const totalStock = serializedVariants.reduce((sum, v) => sum + v.stock, 0)
 
   const serializedProduct = {

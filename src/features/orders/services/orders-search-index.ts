@@ -61,9 +61,7 @@ const getUserOrdersKey = (userId: string) =>
   `${USER_ORDERS_KEY_PREFIX}${userId}`
 
 const buildProductNames = (items: BackfillableOrder['items']): string =>
-  [
-    ...new Set(items.map((item) => item.product.name)),
-  ].join(', ')
+  [...new Set(items.map((item) => item.product.name))].join(', ')
 
 const getOrdersIndex = (redis: Redis) =>
   redis.search.index({

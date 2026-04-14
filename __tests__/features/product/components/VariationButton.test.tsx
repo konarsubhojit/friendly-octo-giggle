@@ -23,7 +23,8 @@ describe('VariationButton', () => {
   it('renders design name and variation name', () => {
     render(
       <VariationButton
-        variant={baseVariation} label="Red"
+        variant={baseVariation}
+        label="Red"
         isSelected={false}
         formatPrice={mockFormatPrice}
         onSelect={vi.fn()}
@@ -37,7 +38,8 @@ describe('VariationButton', () => {
   it('renders formatted price', () => {
     render(
       <VariationButton
-        variant={baseVariation} label="Red"
+        variant={baseVariation}
+        label="Red"
         isSelected={false}
         formatPrice={mockFormatPrice}
         onSelect={vi.fn()}
@@ -51,7 +53,8 @@ describe('VariationButton', () => {
     const onSelect = vi.fn()
     render(
       <VariationButton
-        variant={baseVariation} label="Red"
+        variant={baseVariation}
+        label="Red"
         isSelected={false}
         formatPrice={mockFormatPrice}
         onSelect={onSelect}
@@ -66,7 +69,8 @@ describe('VariationButton', () => {
     const lowStockVariation = { ...baseVariation, stock: 3 }
     render(
       <VariationButton
-        variant={lowStockVariation} label="Low Stock"
+        variant={lowStockVariation}
+        label="Low Stock"
         isSelected={false}
         formatPrice={mockFormatPrice}
         onSelect={vi.fn()}
@@ -79,7 +83,8 @@ describe('VariationButton', () => {
   it('does not show low stock when stock >= 6', () => {
     render(
       <VariationButton
-        variant={baseVariation} label="Red"
+        variant={baseVariation}
+        label="Red"
         isSelected={false}
         formatPrice={mockFormatPrice}
         onSelect={vi.fn()}
@@ -93,7 +98,8 @@ describe('VariationButton', () => {
     const outOfStock = { ...baseVariation, stock: 0 }
     render(
       <VariationButton
-        variant={outOfStock} label="Out of Stock"
+        variant={outOfStock}
+        label="Out of Stock"
         isSelected={false}
         formatPrice={mockFormatPrice}
         onSelect={vi.fn()}
@@ -106,7 +112,8 @@ describe('VariationButton', () => {
   it('shows cart quantity badge when cartQuantity > 0', () => {
     render(
       <VariationButton
-        variant={baseVariation} label="Red"
+        variant={baseVariation}
+        label="Red"
         isSelected={false}
         formatPrice={mockFormatPrice}
         onSelect={vi.fn()}
@@ -119,7 +126,8 @@ describe('VariationButton', () => {
   it('does not show cart quantity when cartQuantity is 0', () => {
     render(
       <VariationButton
-        variant={baseVariation} label="Red"
+        variant={baseVariation}
+        label="Red"
         isSelected={false}
         formatPrice={mockFormatPrice}
         onSelect={vi.fn()}
@@ -132,7 +140,8 @@ describe('VariationButton', () => {
   it('applies selected styles when isSelected is true', () => {
     render(
       <VariationButton
-        variant={baseVariation} label="Red"
+        variant={baseVariation}
+        label="Red"
         isSelected={true}
         formatPrice={mockFormatPrice}
         onSelect={vi.fn()}

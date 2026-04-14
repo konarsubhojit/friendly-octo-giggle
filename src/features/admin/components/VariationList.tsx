@@ -151,11 +151,15 @@ const VariantCard = ({
   const defaultDraft = getDefaultDraft(variant)
 
   const ui: QuickEditUiState = {
-    hasDraftChanges: draft.price !== defaultDraft.price || draft.stock !== defaultDraft.stock,
-    hasValidPrice: !Number.isNaN(Number.parseFloat(draft.price)) && Number.parseFloat(draft.price) > 0,
+    hasDraftChanges:
+      draft.price !== defaultDraft.price || draft.stock !== defaultDraft.stock,
+    hasValidPrice:
+      !Number.isNaN(Number.parseFloat(draft.price)) &&
+      Number.parseFloat(draft.price) > 0,
     isQuickSaveDisabled:
       savingVariantId === variant.id ||
-      (draft.price === defaultDraft.price && draft.stock === defaultDraft.stock),
+      (draft.price === defaultDraft.price &&
+        draft.stock === defaultDraft.stock),
   }
 
   const displayLabel = variant.sku ?? variant.id
@@ -204,9 +208,7 @@ const VariantCard = ({
                   convertCurrency(variant.price, rates.INR, rates[currency])
                 )}
               </p>
-              <p className="text-xs text-slate-500">
-                {variant.stock} in stock
-              </p>
+              <p className="text-xs text-slate-500">{variant.stock} in stock</p>
             </div>
           </div>
 
@@ -215,8 +217,12 @@ const VariantCard = ({
               draft={draft}
               saving={savingVariantId === variant.id}
               variantSku={displayLabel}
-              onPriceChange={(value) => updateQuickDraft(variant.id, 'price', value)}
-              onStockChange={(value) => updateQuickDraft(variant.id, 'stock', value)}
+              onPriceChange={(value) =>
+                updateQuickDraft(variant.id, 'price', value)
+              }
+              onStockChange={(value) =>
+                updateQuickDraft(variant.id, 'stock', value)
+              }
               onSave={() => handleQuickSave(variant)}
               onReset={() => resetQuickDraft(variant)}
               ui={ui}
@@ -281,8 +287,7 @@ export default function VariationList({
   productId,
   initialVariants,
 }: VariationListProps) {
-  const [variants, setVariants] =
-    useState<ProductVariant[]>(initialVariants)
+  const [variants, setVariants] = useState<ProductVariant[]>(initialVariants)
   const { currency, formatPrice, rates } = useCurrency()
   const [showFormModal, setShowFormModal] = useState(false)
   const [editingVariant, setEditingVariant] = useState<
@@ -302,9 +307,7 @@ export default function VariationList({
     (sum, variant) => sum + variant.stock,
     0
   )
-  const stockedVariants = variants.filter(
-    (variant) => variant.stock > 0
-  ).length
+  const stockedVariants = variants.filter((variant) => variant.stock > 0).length
 
   const handleAddClick = () => {
     setEditingVariant(undefined)

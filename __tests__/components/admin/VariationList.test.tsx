@@ -52,22 +52,14 @@ describe('VariationList', () => {
   })
 
   it('renders empty state when no variations', () => {
-    render(
-      <VariationList
-        productId="abc1234"
-        initialVariants={[]}
-      />
-    )
+    render(<VariationList productId="abc1234" initialVariants={[]} />)
     expect(screen.getByText('No variations yet')).toBeInTheDocument()
     expect(screen.getByText('Add Variation')).toBeInTheDocument()
   })
 
   it('renders variation cards with correct data', () => {
     render(
-      <VariationList
-        productId="abc1234"
-        initialVariants={[mockVariation]}
-      />
+      <VariationList productId="abc1234" initialVariants={[mockVariation]} />
     )
     expect(screen.getByText('Red - Large')).toBeInTheDocument()
     expect(screen.getByText('Classic Logo')).toBeInTheDocument()
@@ -78,10 +70,7 @@ describe('VariationList', () => {
 
   it('displays variation price', () => {
     render(
-      <VariationList
-        productId="abc1234"
-        initialVariants={[mockVariation]}
-      />
+      <VariationList productId="abc1234" initialVariants={[mockVariation]} />
     )
     // mockVariation.price = 150
     expect(screen.getByText('$150.00')).toBeInTheDocument()
@@ -99,10 +88,7 @@ describe('VariationList', () => {
 
   it('renders Edit and Delete buttons', () => {
     render(
-      <VariationList
-        productId="abc1234"
-        initialVariants={[mockVariation]}
-      />
+      <VariationList productId="abc1234" initialVariants={[mockVariation]} />
     )
     expect(
       screen.getByRole('button', {
@@ -116,20 +102,14 @@ describe('VariationList', () => {
 
   it('renders Add Variation button when variations exist', () => {
     render(
-      <VariationList
-        productId="abc1234"
-        initialVariants={[mockVariation]}
-      />
+      <VariationList productId="abc1234" initialVariants={[mockVariation]} />
     )
     expect(screen.getByText('Add Variation')).toBeInTheDocument()
   })
 
   it('keeps quick edit fields collapsed until edit is opened', () => {
     render(
-      <VariationList
-        productId="abc1234"
-        initialVariants={[mockVariation]}
-      />
+      <VariationList productId="abc1234" initialVariants={[mockVariation]} />
     )
 
     expect(
@@ -142,10 +122,7 @@ describe('VariationList', () => {
 
   it('expands quick edit fields when the edit action is clicked', () => {
     render(
-      <VariationList
-        productId="abc1234"
-        initialVariants={[mockVariation]}
-      />
+      <VariationList productId="abc1234" initialVariants={[mockVariation]} />
     )
 
     fireEvent.click(
@@ -176,10 +153,7 @@ describe('VariationList', () => {
     vi.stubGlobal('fetch', mockFetch)
 
     render(
-      <VariationList
-        productId="abc1234"
-        initialVariants={[mockVariation]}
-      />
+      <VariationList productId="abc1234" initialVariants={[mockVariation]} />
     )
 
     fireEvent.click(

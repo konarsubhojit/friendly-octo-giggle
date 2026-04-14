@@ -29,9 +29,7 @@ export function VariationButton({
       onClick={() => onSelect(variant)}
       className={`${className} focus-warm`}
     >
-      <div className="text-sm font-bold text-[var(--foreground)]">
-        {label}
-      </div>
+      <div className="text-sm font-bold text-[var(--foreground)]">{label}</div>
       {variant.sku && (
         <div className="text-xs text-[var(--text-secondary)] mt-1">
           SKU: {variant.sku}

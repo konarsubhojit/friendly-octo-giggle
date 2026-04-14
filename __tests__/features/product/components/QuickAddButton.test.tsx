@@ -60,7 +60,12 @@ describe('QuickAddButton', () => {
 
   it('does not render when product is out of stock', () => {
     const { container } = render(
-      <QuickAddButton product={{ ...mockProduct, variants: [{ id: 'var-default', stock: 0 }] }} />
+      <QuickAddButton
+        product={{
+          ...mockProduct,
+          variants: [{ id: 'var-default', stock: 0 }],
+        }}
+      />
     )
     expect(container.firstChild).toBeNull()
   })

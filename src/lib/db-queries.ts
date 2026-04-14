@@ -163,16 +163,7 @@ export const db = {
     findAllMinimal: async (
       options: ProductListOptions = {}
     ): Promise<
-      Array<
-        Pick<
-          Product,
-          | 'id'
-          | 'name'
-          | 'description'
-          | 'category'
-          | 'image'
-        >
-      >
+      Array<Pick<Product, 'id' | 'name' | 'description' | 'category' | 'image'>>
     > => {
       const { limit, offset, search, category } = options
 
@@ -220,16 +211,7 @@ export const db = {
       ids: string[],
       category?: string
     ): Promise<
-      Array<
-        Pick<
-          Product,
-          | 'id'
-          | 'name'
-          | 'description'
-          | 'category'
-          | 'image'
-        >
-      >
+      Array<Pick<Product, 'id' | 'name' | 'description' | 'category' | 'image'>>
     > => {
       if (ids.length === 0) {
         return []

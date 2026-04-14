@@ -142,9 +142,7 @@ const validateImageFile = (file: File): string | null => {
   return null
 }
 
-const validateFormData = (
-  formData: FormData
-): Record<string, string> => {
+const validateFormData = (formData: FormData): Record<string, string> => {
   const errs: Record<string, string> = {}
   if (formData.price === '') errs.price = 'Price is required'
   else if (Number.isNaN(Number.parseFloat(formData.price)))
@@ -471,9 +469,7 @@ const VariationFormModal = ({
                         })
                       }}
                       validationState={
-                        errors.price
-                          ? ('error' as const)
-                          : ('default' as const)
+                        errors.price ? ('error' as const) : ('default' as const)
                       }
                       errorMessage={errors.price}
                       placeholder="e.g. 150.00"
@@ -625,8 +621,7 @@ const VariationFormModal = ({
                       Variant price
                     </p>
                     <p className="mt-2 text-2xl font-black tracking-tight text-slate-950 dark:text-slate-50">
-                      {priceNum > 0 ? priceNum.toFixed(2) : '—'}{' '}
-                      {priceCurrency}
+                      {priceNum > 0 ? priceNum.toFixed(2) : '—'} {priceCurrency}
                     </p>
                   </div>
                 </div>
@@ -637,9 +632,7 @@ const VariationFormModal = ({
                   Editing notes
                 </h4>
                 <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                  <li>
-                    Each variant has its own price and stock.
-                  </li>
+                  <li>Each variant has its own price and stock.</li>
                   <li>
                     Use the lead image for the option customers should recognize
                     first.
