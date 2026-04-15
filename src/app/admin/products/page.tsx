@@ -274,9 +274,7 @@ export default function ProductsManagement() {
     getVariantTotalStock(product.variants)
   )
   const inStockProducts = stockByProduct.filter((s) => s > 0).length
-  const lowStockProducts = stockByProduct.filter(
-    (s) => s > 0 && s <= 5
-  ).length
+  const lowStockProducts = stockByProduct.filter((s) => s > 0 && s <= 5).length
 
   return (
     <AdminPageShell
