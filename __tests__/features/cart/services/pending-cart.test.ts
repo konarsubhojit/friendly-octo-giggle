@@ -6,7 +6,7 @@ import {
   hasPendingCartItems,
 } from '@/features/cart/services/pending-cart'
 
-// Valid 7-char base62 IDs matching SHORT_ID_RE
+// Valid 7-char base62 IDs matching SHORT_ID_REGEX
 const PRODUCT_ID_1 = 'aB1cD2e'
 const PRODUCT_ID_2 = 'fG3hI4j'
 const VARIANT_ID_1 = 'kL5mN6o'

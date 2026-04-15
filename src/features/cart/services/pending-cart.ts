@@ -4,7 +4,7 @@
  * authentication.
  */
 
-const SHORT_ID_RE = /^[0-9A-Za-z]{7}$/
+import { SHORT_ID_REGEX } from '@/lib/validations/primitives'
 
 export interface PendingCartItem {
   readonly productId: string
@@ -19,9 +19,9 @@ function isValidPendingCartItem(item: unknown): item is PendingCartItem {
   const { productId, variantId, quantity } = item as Record<string, unknown>
   return (
     typeof productId === 'string' &&
-    SHORT_ID_RE.test(productId) &&
+    SHORT_ID_REGEX.test(productId) &&
     typeof variantId === 'string' &&
-    SHORT_ID_RE.test(variantId) &&
+    SHORT_ID_REGEX.test(variantId) &&
     typeof quantity === 'number' &&
     Number.isInteger(quantity) &&
     quantity > 0

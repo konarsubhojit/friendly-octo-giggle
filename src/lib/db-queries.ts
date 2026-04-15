@@ -283,14 +283,49 @@ export const db = {
         const row = await drizzleDb.query.products.findFirst({
           where: and(eq(products.id, id), isNull(products.deletedAt)),
           with: {
+            options: {
+              orderBy: (o, { asc }) => [asc(o.sortOrder)],
+              with: {
+                values: {
+                  orderBy: (v, { asc }) => [asc(v.sortOrder)],
+                },
+              },
+            },
             variants: {
               where: (v, { isNull }) => isNull(v.deletedAt),
+              with: {
+                optionValues: {
+                  with: {
+                    optionValue: true,
+                  },
+                },
+              },
             },
           },
         })
         if (!row) return null
         return {
           ...serializeProduct(row),
+          options: row.options.map((opt) => ({
+            id: opt.id,
+            productId: opt.productId,
+            name: opt.name,
+            sortOrder: opt.sortOrder,
+            createdAt:
+              typeof opt.createdAt === 'string'
+                ? opt.createdAt
+                : opt.createdAt.toISOString(),
+            values: opt.values.map((val) => ({
+              id: val.id,
+              optionId: val.optionId,
+              value: val.value,
+              sortOrder: val.sortOrder,
+              createdAt:
+                typeof val.createdAt === 'string'
+                  ? val.createdAt
+                  : val.createdAt.toISOString(),
+            })),
+          })),
           variants: row.variants.map(serializeVariant),
         }
       }

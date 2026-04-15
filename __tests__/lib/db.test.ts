@@ -178,6 +178,7 @@ function makeDbRow(overrides: Record<string, unknown> = {}) {
     deletedAt: null,
     createdAt: now,
     updatedAt: now,
+    options: [],
     variants: [
       {
         id: 'var0001',
@@ -190,6 +191,7 @@ function makeDbRow(overrides: Record<string, unknown> = {}) {
         deletedAt: null,
         createdAt: now,
         updatedAt: now,
+        optionValues: [],
       },
     ],
     ...overrides,
@@ -206,6 +208,7 @@ function expectedSerialized(overrides: Record<string, unknown> = {}) {
     deletedAt: null,
     createdAt: now.toISOString(),
     updatedAt: now.toISOString(),
+    options: [],
     variants: [
       {
         id: 'var0001',
@@ -218,6 +221,7 @@ function expectedSerialized(overrides: Record<string, unknown> = {}) {
         deletedAt: null,
         createdAt: now.toISOString(),
         updatedAt: now.toISOString(),
+        optionValues: [],
       },
     ],
     ...overrides,

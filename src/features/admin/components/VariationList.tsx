@@ -59,59 +59,72 @@ const QuickEditPanel = ({
   onSave,
   onReset,
   ui,
-}: QuickEditPanelProps) => (
-  <div className="mt-3 flex flex-col gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/60">
-    <div className="flex flex-wrap gap-3">
-      <div className="flex-1 min-w-[100px]">
-        <label className="mb-1 block text-xs font-semibold text-slate-500">
-          Price
-        </label>
-        <input
-          type="number"
-          step="0.01"
-          min="0"
-          value={draft.price}
-          onChange={(e) => onPriceChange(e.target.value)}
-          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-50"
-          aria-label={`Price for ${variantSku ?? 'variant'}`}
-        />
+}: QuickEditPanelProps) => {
+  const priceId = `quick-edit-price-${variantSku ?? 'variant'}`
+  const stockId = `quick-edit-stock-${variantSku ?? 'variant'}`
+
+  return (
+    <div className="mt-3 flex flex-col gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/60">
+      <div className="flex flex-wrap gap-3">
+        <div className="flex-1 min-w-[100px]">
+          <label
+            htmlFor={priceId}
+            className="mb-1 block text-xs font-semibold text-slate-500"
+          >
+            Price
+          </label>
+          <input
+            id={priceId}
+            type="number"
+            step="0.01"
+            min="0"
+            value={draft.price}
+            onChange={(e) => onPriceChange(e.target.value)}
+            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-50"
+            aria-label={`Price for ${variantSku ?? 'variant'}`}
+          />
+        </div>
+        <div className="flex-1 min-w-[100px]">
+          <label
+            htmlFor={stockId}
+            className="mb-1 block text-xs font-semibold text-slate-500"
+          >
+            Stock
+          </label>
+          <input
+            id={stockId}
+            type="number"
+            step="1"
+            min="0"
+            value={draft.stock}
+            onChange={(e) => onStockChange(e.target.value)}
+            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-50"
+            aria-label={`Stock for ${variantSku ?? 'variant'}`}
+          />
+        </div>
       </div>
-      <div className="flex-1 min-w-[100px]">
-        <label className="mb-1 block text-xs font-semibold text-slate-500">
-          Stock
-        </label>
-        <input
-          type="number"
-          step="1"
-          min="0"
-          value={draft.stock}
-          onChange={(e) => onStockChange(e.target.value)}
-          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-50"
-          aria-label={`Stock for ${variantSku ?? 'variant'}`}
-        />
-      </div>
-    </div>
-    <div className="flex gap-2">
-      <button
-        type="button"
-        disabled={ui.isQuickSaveDisabled}
-        onClick={onSave}
-        className="rounded-full bg-slate-950 px-4 py-2 text-xs font-semibold text-white transition hover:bg-slate-800 disabled:opacity-50"
-      >
-        {saving ? 'Saving…' : 'Save'}
-      </button>
-      {ui.hasDraftChanges && (
+      <div className="flex gap-2">
         <button
           type="button"
-          onClick={onReset}
-          className="rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-100"
+          disabled={ui.isQuickSaveDisabled}
+          onClick={onSave}
+          className="rounded-full bg-slate-950 px-4 py-2 text-xs font-semibold text-white transition hover:bg-slate-800 disabled:opacity-50"
         >
-          Reset
+          {saving ? 'Saving…' : 'Save'}
         </button>
-      )}
+        {ui.hasDraftChanges && (
+          <button
+            type="button"
+            onClick={onReset}
+            className="rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-100"
+          >
+            Reset
+          </button>
+        )}
+      </div>
     </div>
-  </div>
-)
+  )
+}
 
 interface VariantCardProps {
   readonly variant: ProductVariant

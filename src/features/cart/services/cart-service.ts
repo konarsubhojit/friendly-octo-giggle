@@ -40,6 +40,7 @@ interface CartProductRecord {
 
 interface CartItemRecord {
   id: string
+  variantId: string
   quantity: number
   createdAt: Date | string
   updatedAt: Date | string
@@ -346,7 +347,7 @@ function dbCartToRedisItems(
     productDescription: item.product.description ?? '',
     productImage: item.product.image ?? '',
     productCategory: item.product.category ?? '',
-    variantId: item.variant?.id ?? '',
+    variantId: item.variantId,
     variantSku: item.variant?.sku ?? null,
     variantPrice: item.variant?.price ?? 0,
     variantStock: item.variant?.stock ?? 0,
