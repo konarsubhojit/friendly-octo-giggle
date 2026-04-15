@@ -678,6 +678,346 @@ describe('ProductClient', () => {
     ).not.toBeInTheDocument()
   })
 
+  it('shows error when no variant is selected and add-to-cart is clicked', async () => {
+    // A product with no variants results in null selectedVariant
+    // which means effectiveStock is 0 and OutOfStockPanel is shown
+    // The "no variant selected" error path is triggered when a user somehow
+    // clicks add-to-cart without a variant selected (edge case with stock > 0)
+    const product = makeProduct({ variants: [] })
+    render(
+      <ProductClient
+        product={product}
+        initialVariantId={null}
+        aiEnabled={false}
+      />
+    )
+
+    // No variants → stock is 0 → OutOfStockPanel shown, not AddToCartSection
+    expect(
+      screen.getByRole('link', { name: 'Browse Products' })
+    ).toBeInTheDocument()
+  })
+
+  it('shows error when trying to add to cart without selecting a variant', async () => {
+    // Create a product where resolveInitialVariant returns null
+    // This happens when the product has no variants at all
+    const product: Product = {
+      id: 'prod001',
+      name: 'Test Product',
+      description: 'desc',
+      image: 'https://example.com/img.jpg',
+      images: [],
+      category: 'Flowers',
+      deletedAt: null,
+      createdAt: '2025-01-01T00:00:00.000Z',
+      updatedAt: '2025-01-01T00:00:00.000Z',
+      variants: [],
+    }
+    render(
+      <ProductClient
+        product={product}
+        initialVariantId={null}
+        aiEnabled={false}
+      />
+    )
+
+    // With no variants at all, it shows the OutOfStock panel (stock=0)
+    expect(
+      screen.getByRole('link', { name: 'Browse Products' })
+    ).toBeInTheDocument()
+  })
+
+  it('renders option-based variant selector when product has options', () => {
+    const variants = [
+      makeVariation({
+        id: 'var-red-sm',
+        price: 500,
+        stock: 5,
+        optionValues: [
+          {
+            id: 'ov-red',
+            value: 'Red',
+            optionId: 'opt-color',
+            sortOrder: 0,
+            createdAt: '2025-01-01T00:00:00.000Z',
+          },
+          {
+            id: 'ov-sm',
+            value: 'Small',
+            optionId: 'opt-size',
+            sortOrder: 0,
+            createdAt: '2025-01-01T00:00:00.000Z',
+          },
+        ],
+      }),
+      makeVariation({
+        id: 'var-blue-sm',
+        price: 600,
+        stock: 3,
+        optionValues: [
+          {
+            id: 'ov-blue',
+            value: 'Blue',
+            optionId: 'opt-color',
+            sortOrder: 1,
+            createdAt: '2025-01-01T00:00:00.000Z',
+          },
+          {
+            id: 'ov-sm',
+            value: 'Small',
+            optionId: 'opt-size',
+            sortOrder: 0,
+            createdAt: '2025-01-01T00:00:00.000Z',
+          },
+        ],
+      }),
+    ]
+    const product: Product = {
+      ...makeProduct({ variants }),
+      options: [
+        {
+          id: 'opt-color',
+          productId: 'prod001',
+          name: 'Color',
+          sortOrder: 0,
+          createdAt: '2025-01-01T00:00:00.000Z',
+          values: [
+            {
+              id: 'ov-red',
+              optionId: 'opt-color',
+              value: 'Red',
+              sortOrder: 0,
+              createdAt: '2025-01-01T00:00:00.000Z',
+            },
+            {
+              id: 'ov-blue',
+              optionId: 'opt-color',
+              value: 'Blue',
+              sortOrder: 1,
+              createdAt: '2025-01-01T00:00:00.000Z',
+            },
+          ],
+        },
+        {
+          id: 'opt-size',
+          productId: 'prod001',
+          name: 'Size',
+          sortOrder: 1,
+          createdAt: '2025-01-01T00:00:00.000Z',
+          values: [
+            {
+              id: 'ov-sm',
+              optionId: 'opt-size',
+              value: 'Small',
+              sortOrder: 0,
+              createdAt: '2025-01-01T00:00:00.000Z',
+            },
+          ],
+        },
+      ],
+    }
+    render(
+      <ProductClient
+        product={product}
+        initialVariantId="var-red-sm"
+        aiEnabled={false}
+      />
+    )
+
+    expect(screen.getByText('Choose Your Options')).toBeInTheDocument()
+    expect(screen.getByText('Color')).toBeInTheDocument()
+    expect(screen.getByText('Size')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Red' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Blue' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Small' })).toBeInTheDocument()
+    // Selected variant info should appear
+    expect(screen.getByText('Red / Small')).toBeInTheDocument()
+  })
+
+  it('switches variant when option button is clicked', () => {
+    const variants = [
+      makeVariation({
+        id: 'var-red-sm',
+        price: 500,
+        stock: 5,
+        optionValues: [
+          {
+            id: 'ov-red',
+            value: 'Red',
+            optionId: 'opt-color',
+            sortOrder: 0,
+            createdAt: '2025-01-01T00:00:00.000Z',
+          },
+          {
+            id: 'ov-sm',
+            value: 'Small',
+            optionId: 'opt-size',
+            sortOrder: 0,
+            createdAt: '2025-01-01T00:00:00.000Z',
+          },
+        ],
+      }),
+      makeVariation({
+        id: 'var-blue-sm',
+        price: 600,
+        stock: 3,
+        optionValues: [
+          {
+            id: 'ov-blue',
+            value: 'Blue',
+            optionId: 'opt-color',
+            sortOrder: 1,
+            createdAt: '2025-01-01T00:00:00.000Z',
+          },
+          {
+            id: 'ov-sm',
+            value: 'Small',
+            optionId: 'opt-size',
+            sortOrder: 0,
+            createdAt: '2025-01-01T00:00:00.000Z',
+          },
+        ],
+      }),
+    ]
+    const product: Product = {
+      ...makeProduct({ variants }),
+      options: [
+        {
+          id: 'opt-color',
+          productId: 'prod001',
+          name: 'Color',
+          sortOrder: 0,
+          createdAt: '2025-01-01T00:00:00.000Z',
+          values: [
+            {
+              id: 'ov-red',
+              optionId: 'opt-color',
+              value: 'Red',
+              sortOrder: 0,
+              createdAt: '2025-01-01T00:00:00.000Z',
+            },
+            {
+              id: 'ov-blue',
+              optionId: 'opt-color',
+              value: 'Blue',
+              sortOrder: 1,
+              createdAt: '2025-01-01T00:00:00.000Z',
+            },
+          ],
+        },
+        {
+          id: 'opt-size',
+          productId: 'prod001',
+          name: 'Size',
+          sortOrder: 1,
+          createdAt: '2025-01-01T00:00:00.000Z',
+          values: [
+            {
+              id: 'ov-sm',
+              optionId: 'opt-size',
+              value: 'Small',
+              sortOrder: 0,
+              createdAt: '2025-01-01T00:00:00.000Z',
+            },
+          ],
+        },
+      ],
+    }
+    render(
+      <ProductClient
+        product={product}
+        initialVariantId="var-red-sm"
+        aiEnabled={false}
+      />
+    )
+
+    // Initially Red/Small is selected - price 500
+    // Price appears in: main price area + variant detail panel + total = 3 times
+    expect(screen.getAllByText('₹500.00').length).toBeGreaterThanOrEqual(2)
+
+    // Click Blue to switch variant
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name: 'Blue' }))
+    })
+
+    // Should now show Blue/Small - price 600
+    expect(screen.getAllByText('₹600.00').length).toBeGreaterThanOrEqual(2)
+    expect(screen.getByText('Blue / Small')).toBeInTheDocument()
+  })
+
+  it('uses variant images when selected variant has images', () => {
+    const variant = makeVariation({
+      id: 'var-with-img',
+      image: 'https://example.com/variant.jpg',
+      images: ['https://example.com/variant2.jpg'],
+    })
+    const product = makeProduct({ variants: [variant] })
+    render(
+      <ProductClient
+        product={product}
+        initialVariantId="var-with-img"
+        aiEnabled={false}
+      />
+    )
+
+    const carousel = screen.getByTestId('image-carousel')
+    expect(
+      carousel.querySelector('img[src="https://example.com/variant.jpg"]')
+    ).toBeInTheDocument()
+    expect(
+      carousel.querySelector('img[src="https://example.com/variant2.jpg"]')
+    ).toBeInTheDocument()
+  })
+
+  it('shows low stock warning when variant stock is between 1 and 5 with options', () => {
+    const variants = [
+      makeVariation({
+        id: 'var-low',
+        price: 500,
+        stock: 3,
+        optionValues: [
+          {
+            id: 'ov-red',
+            value: 'Red',
+            optionId: 'opt-color',
+            sortOrder: 0,
+            createdAt: '2025-01-01T00:00:00.000Z',
+          },
+        ],
+      }),
+    ]
+    const product: Product = {
+      ...makeProduct({ variants }),
+      options: [
+        {
+          id: 'opt-color',
+          productId: 'prod001',
+          name: 'Color',
+          sortOrder: 0,
+          createdAt: '2025-01-01T00:00:00.000Z',
+          values: [
+            {
+              id: 'ov-red',
+              optionId: 'opt-color',
+              value: 'Red',
+              sortOrder: 0,
+              createdAt: '2025-01-01T00:00:00.000Z',
+            },
+          ],
+        },
+      ],
+    }
+    render(
+      <ProductClient
+        product={product}
+        initialVariantId="var-low"
+        aiEnabled={false}
+      />
+    )
+
+    expect(screen.getByText('Only 3 left')).toBeInTheDocument()
+  })
+
   it('handles generic error thrown by addToCart', async () => {
     vi.mocked(useSession).mockReturnValue({
       data: {

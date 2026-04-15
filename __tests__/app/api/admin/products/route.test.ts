@@ -151,6 +151,68 @@ describe('Admin Products API', () => {
       expect(data.data.totalCount).toBe(1)
     })
 
+    it('serializes variant fields (sku, image, images, dates) in response', async () => {
+      const mockProducts = [
+        {
+          id: 'prod1',
+          name: 'Product With Variants',
+          deletedAt: null,
+          createdAt: new Date('2024-01-01'),
+          updatedAt: new Date('2024-01-01'),
+          variants: [
+            {
+              id: 'v1',
+              productId: 'prod1',
+              sku: 'SKU-001',
+              image: 'https://example.com/v1.jpg',
+              images: ['https://example.com/v1-b.jpg'],
+              price: 100,
+              stock: 10,
+              deletedAt: null,
+              createdAt: new Date('2024-06-01'),
+              updatedAt: new Date('2024-06-02'),
+            },
+            {
+              id: 'v2',
+              productId: 'prod1',
+              sku: null,
+              image: null,
+              images: null,
+              price: 200,
+              stock: 5,
+              deletedAt: null,
+              createdAt: new Date('2024-07-01'),
+              updatedAt: new Date('2024-07-02'),
+            },
+          ],
+        },
+      ]
+      vi.mocked(checkAdminAuth).mockResolvedValue({
+        authorized: true,
+        userId: 'a1',
+      })
+      mockFindMany.mockResolvedValue(mockProducts)
+      mockSelectWhere.mockResolvedValue([{ value: 1 }])
+
+      const response = await GET(makeRequest())
+      const data = await response.json()
+
+      expect(response.status).toBe(200)
+      const product = data.data.products[0]
+      expect(product.variants).toHaveLength(2)
+
+      const [v1, v2] = product.variants
+      expect(v1.sku).toBe('SKU-001')
+      expect(v1.image).toBe('https://example.com/v1.jpg')
+      expect(v1.images).toEqual(['https://example.com/v1-b.jpg'])
+      expect(v1.createdAt).toBe('2024-06-01T00:00:00.000Z')
+      expect(v1.updatedAt).toBe('2024-06-02T00:00:00.000Z')
+
+      expect(v2.sku).toBeNull()
+      expect(v2.image).toBeNull()
+      expect(v2.images).toEqual([])
+    })
+
     it('handles pagination with cursor', async () => {
       const mockProducts = [
         {

@@ -102,6 +102,31 @@ describe('PATCH /api/cart/items/[id]', () => {
     expect(data.error).toBe('Unauthorized')
   })
 
+  it('returns 404 when cart item variant is not found', async () => {
+    mockAuth.mockResolvedValue({ user: { id: 'user1' } } as never)
+    mockFindFirst.mockResolvedValue({
+      id: 'item1',
+      cart: { userId: 'user1' },
+      product: { variants: [] },
+      variant: null,
+      variantId: 'missing-v',
+    } as never)
+
+    const request = new NextRequest('http://localhost/api/cart/items/item1', {
+      method: 'PATCH',
+      body: JSON.stringify({ quantity: 2 }),
+      headers: { 'content-type': 'application/json' },
+    })
+
+    const response = await PATCH(request, {
+      params: Promise.resolve({ id: 'item1' }),
+    })
+    const data = await response.json()
+
+    expect(response.status).toBe(404)
+    expect(data.error).toBe('Cart item variant not found')
+  })
+
   it('returns 400 for insufficient stock', async () => {
     mockAuth.mockResolvedValue({ user: { id: 'user1' } } as never)
     mockFindFirst.mockResolvedValue({

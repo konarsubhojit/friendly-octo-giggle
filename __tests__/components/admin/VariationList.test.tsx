@@ -16,6 +16,26 @@ vi.mock('next/image', () => ({
   ),
 }))
 
+vi.mock('@/features/admin/components/DeleteConfirmModal', () => ({
+  default: ({
+    onConfirm,
+    onCancel,
+    loading,
+  }: {
+    onConfirm: () => void
+    onCancel: () => void
+    loading: boolean
+  }) => (
+    <div data-testid="delete-modal">
+      <p>Are you sure?</p>
+      <button onClick={onConfirm} disabled={loading}>
+        Confirm Delete
+      </button>
+      <button onClick={onCancel}>Cancel</button>
+    </div>
+  ),
+}))
+
 vi.mock('@/contexts/CurrencyContext', () => ({
   useCurrency: () => ({
     formatPrice: (n: number) => `$${n.toFixed(2)}`,
@@ -167,5 +187,179 @@ describe('VariationList', () => {
       expect(screen.getByText('30 in stock')).toBeInTheDocument()
       expect(screen.getByText('$200.00')).toBeInTheDocument()
     })
+  })
+
+  it('shows error toast for invalid price in quick edit (zero)', async () => {
+    const mockToast = await import('react-hot-toast')
+
+    render(
+      <VariationList productId="abc1234" initialVariants={[mockVariant]} />
+    )
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Open quick edit for RED-LG',
+      })
+    )
+
+    fireEvent.change(screen.getByLabelText('Price for RED-LG'), {
+      target: { value: '0' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    await waitFor(() => {
+      expect(mockToast.default.error).toHaveBeenCalledWith(
+        'Price must be a positive number'
+      )
+    })
+  })
+
+  it('shows error toast for invalid stock in quick edit (negative)', async () => {
+    const mockToast = await import('react-hot-toast')
+
+    render(
+      <VariationList productId="abc1234" initialVariants={[mockVariant]} />
+    )
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Open quick edit for RED-LG',
+      })
+    )
+
+    // Set a valid price first, then set invalid stock
+    fireEvent.change(screen.getByLabelText('Price for RED-LG'), {
+      target: { value: '100' },
+    })
+    fireEvent.change(screen.getByLabelText('Stock for RED-LG'), {
+      target: { value: '-1' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    await waitFor(() => {
+      expect(mockToast.default.error).toHaveBeenCalledWith(
+        'Stock must be a non-negative integer'
+      )
+    })
+  })
+
+  it('shows error toast when quick save API call fails', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: false,
+      json: async () => ({ error: 'Server error' }),
+    })
+    vi.stubGlobal('fetch', mockFetch)
+    const mockToast = await import('react-hot-toast')
+
+    render(
+      <VariationList productId="abc1234" initialVariants={[mockVariant]} />
+    )
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Open quick edit for RED-LG',
+      })
+    )
+
+    // Set both fields to valid values so validation passes and API call is made
+    fireEvent.change(screen.getByLabelText('Price for RED-LG'), {
+      target: { value: '300' },
+    })
+    fireEvent.change(screen.getByLabelText('Stock for RED-LG'), {
+      target: { value: '10' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    await waitFor(() => {
+      expect(mockToast.default.error).toHaveBeenCalledWith('Server error')
+    })
+  })
+
+  it('shows Reset button when draft values differ and resets on click', () => {
+    render(
+      <VariationList productId="abc1234" initialVariants={[mockVariant]} />
+    )
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Open quick edit for RED-LG',
+      })
+    )
+
+    fireEvent.change(screen.getByLabelText('Price for RED-LG'), {
+      target: { value: '999' },
+    })
+
+    expect(screen.getByRole('button', { name: 'Reset' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reset' }))
+
+    expect(
+      (screen.getByLabelText('Price for RED-LG') as HTMLInputElement).value
+    ).toBe('150')
+  })
+
+  it('shows error toast when deletion API call fails', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: false,
+      json: async () => ({ error: 'Cannot delete last variant' }),
+    })
+    vi.stubGlobal('fetch', mockFetch)
+    const mockToast = await import('react-hot-toast')
+
+    render(
+      <VariationList productId="abc1234" initialVariants={[mockVariant]} />
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete RED-LG' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('Confirm Delete')).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm Delete' }))
+
+    await waitFor(() => {
+      expect(mockToast.default.error).toHaveBeenCalledWith(
+        'Cannot delete last variant'
+      )
+    })
+  })
+
+  it('renders option values text when variant has optionValues', () => {
+    const variantWithOptions = {
+      ...mockVariant,
+      optionValues: [
+        {
+          id: 'ov1',
+          value: 'Red',
+          optionId: 'opt1',
+          sortOrder: 0,
+          createdAt: '2025-01-01T00:00:00.000Z',
+        },
+        {
+          id: 'ov2',
+          value: 'Large',
+          optionId: 'opt2',
+          sortOrder: 0,
+          createdAt: '2025-01-01T00:00:00.000Z',
+        },
+      ],
+    }
+    render(
+      <VariationList
+        productId="abc1234"
+        initialVariants={[variantWithOptions]}
+      />
+    )
+    expect(screen.getByText('Red / Large')).toBeInTheDocument()
+  })
+
+  it('renders variant without image using placeholder', () => {
+    const noImageVariant = { ...mockVariant, image: null }
+    render(
+      <VariationList productId="abc1234" initialVariants={[noImageVariant]} />
+    )
+    expect(screen.getByText('📦')).toBeInTheDocument()
   })
 })

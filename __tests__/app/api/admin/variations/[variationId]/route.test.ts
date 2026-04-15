@@ -272,6 +272,63 @@ describe('PUT /api/admin/variations/[variationId]', () => {
     expect(data.success).toBe(true)
     expect(data.data.variant.stock).toBe(20)
   })
+
+  it('updates variant with optionValueIds (replaces existing)', async () => {
+    const updatedVariant = {
+      ...mockVariant,
+      price: 150,
+      updatedAt: new Date(),
+    }
+    mockFindFirst
+      .mockResolvedValueOnce(mockVariant)
+      .mockResolvedValueOnce(mockProduct)
+    mockReturning.mockResolvedValueOnce([updatedVariant])
+
+    const request = new NextRequest(
+      'http://localhost/api/admin/variations/var123',
+      {
+        method: 'PUT',
+        body: JSON.stringify({
+          price: 150,
+          optionValueIds: ['ov12345', 'ov67890'],
+        }),
+      }
+    )
+
+    const response = await PUT(request, {
+      params: Promise.resolve({ variationId: 'var123' }),
+    })
+    const data = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(data.success).toBe(true)
+    expect(data.data.variant.price).toBe(150)
+  })
+
+  it('updates variant with empty optionValueIds (clears existing)', async () => {
+    const updatedVariant = {
+      ...mockVariant,
+      updatedAt: new Date(),
+    }
+    mockFindFirst
+      .mockResolvedValueOnce(mockVariant)
+      .mockResolvedValueOnce(mockProduct)
+    mockReturning.mockResolvedValueOnce([updatedVariant])
+
+    const request = new NextRequest(
+      'http://localhost/api/admin/variations/var123',
+      {
+        method: 'PUT',
+        body: JSON.stringify({ stock: 5, optionValueIds: [] }),
+      }
+    )
+
+    const response = await PUT(request, {
+      params: Promise.resolve({ variationId: 'var123' }),
+    })
+
+    expect(response.status).toBe(200)
+  })
 })
 
 describe('DELETE /api/admin/variations/[variationId]', () => {
@@ -340,6 +397,28 @@ describe('DELETE /api/admin/variations/[variationId]', () => {
 
     expect(response.status).toBe(404)
     expect(data.error).toBe('Product not found')
+  })
+
+  it('returns 400 when trying to delete the last variant', async () => {
+    mockFindFirst
+      .mockResolvedValueOnce(mockVariant)
+      .mockResolvedValueOnce(mockProduct)
+    mockFindMany.mockResolvedValueOnce([{ id: 'var123' }])
+
+    const request = new NextRequest(
+      'http://localhost/api/admin/variations/var123',
+      {
+        method: 'DELETE',
+      }
+    )
+
+    const response = await DELETE(request, {
+      params: Promise.resolve({ variationId: 'var123' }),
+    })
+    const data = await response.json()
+
+    expect(response.status).toBe(400)
+    expect(data.error).toBe('Cannot delete the last variant of a product')
   })
 
   it('successfully soft-deletes variant', async () => {
