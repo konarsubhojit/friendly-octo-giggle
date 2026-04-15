@@ -1,9 +1,8 @@
 import { describe, it, vi, expect, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
+import { render, screen, act, waitFor } from '@testing-library/react'
 import React from 'react'
 import ProductGrid from '@/features/product/components/ProductGrid'
 import type { Product } from '@/lib/types'
-import toast from 'react-hot-toast'
 import type { ProductGridItem } from '@/features/product/components/ProductGrid'
 
 vi.mock('next/link', () => ({
@@ -51,10 +50,6 @@ vi.mock('next-auth/react', () => ({
     },
     status: 'authenticated',
   })),
-}))
-
-vi.mock('react-hot-toast', () => ({
-  default: { success: vi.fn(), error: vi.fn() },
 }))
 
 vi.mock('@/contexts/CurrencyContext', () => ({
@@ -123,7 +118,6 @@ const toGridItem = (product: Product): ProductGridItem => {
     image: product.image,
     stock,
     category: product.category,
-    variants: variants.map((v) => ({ id: v.id, stock: v.stock })),
   }
 }
 
@@ -370,76 +364,5 @@ describe('ProductGrid', () => {
       { method: 'GET', headers: { Accept: 'application/json' } }
     )
     expect(screen.getByText("You've seen all products.")).toBeTruthy()
-  })
-  it('renders quick add button for in-stock product', () => {
-    renderGrid([withVariantStock(5)])
-    const btn = screen.getByRole('button', {
-      name: /Add Test Product to cart/i,
-    })
-    expect(btn).toBeTruthy()
-  })
-
-  it('does NOT render quick add button for out-of-stock product', () => {
-    renderGrid([withVariantStock(0)])
-    expect(screen.queryByRole('button', { name: /Add.*to cart/i })).toBeNull()
-  })
-
-  it('quick add button dispatches addToCart and shows success toast', async () => {
-    mockDispatch.mockReturnValue({ unwrap: () => Promise.resolve({}) })
-    renderGrid([withVariantStock(5, { id: 'p1', name: 'Flower Bouquet' })])
-
-    const addBtn = screen.getByRole('button', {
-      name: /Add Flower Bouquet to cart/i,
-    })
-    await act(async () => {
-      fireEvent.click(addBtn)
-    })
-
-    expect(mockDispatch).toHaveBeenCalledTimes(1)
-    await waitFor(() => {
-      expect(vi.mocked(toast).success).toHaveBeenCalledWith(
-        'Flower Bouquet added to cart!'
-      )
-    })
-  })
-
-  it('quick add button shows error toast when dispatch fails', async () => {
-    mockDispatch.mockReturnValue({
-      unwrap: () => Promise.reject(new Error('Out of stock')),
-    })
-    renderGrid([withVariantStock(3, { id: 'p2', name: 'Test Bag' })])
-
-    const addBtn = screen.getByRole('button', {
-      name: /Add Test Bag to cart/i,
-    })
-    await act(async () => {
-      fireEvent.click(addBtn)
-    })
-
-    await waitFor(() => {
-      expect(vi.mocked(toast).error).toHaveBeenCalledWith(
-        'Failed to add to cart. Please try again.'
-      )
-    })
-  })
-
-  it('quick add button is disabled while adding', async () => {
-    let resolveAdd!: () => void
-    const pendingPromise = new Promise<void>((res) => {
-      resolveAdd = res
-    })
-    mockDispatch.mockReturnValue({ unwrap: () => pendingPromise })
-
-    renderGrid([withVariantStock(5)])
-    const btn = screen.getByRole('button', {
-      name: /Add Test Product to cart/i,
-    })
-
-    fireEvent.click(btn)
-    expect(btn).toBeDisabled()
-
-    await act(async () => {
-      resolveAdd()
-    })
   })
 })

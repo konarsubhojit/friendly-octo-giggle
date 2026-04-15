@@ -267,14 +267,25 @@ describe('db.products', () => {
       description: 'A test product',
       category: 'Electronics',
       image: 'https://example.com/img.jpg',
+      variants: [{ price: 100, stock: 5 }],
     }
 
-    it('returns minimal products without cache', async () => {
+    const expectedResult = {
+      id: 'abc1234',
+      name: 'Test Product',
+      description: 'A test product',
+      category: 'Electronics',
+      image: 'https://example.com/img.jpg',
+      price: 100,
+      stock: 5,
+    }
+
+    it('returns minimal products with derived price and stock', async () => {
       mockFindMany.mockResolvedValue([minimalRow])
 
       const result = await db.products.findAllMinimal()
 
-      expect(result).toEqual([minimalRow])
+      expect(result).toEqual([expectedResult])
       expect(mockCacheProductsList).not.toHaveBeenCalled()
     })
 
@@ -283,7 +294,7 @@ describe('db.products', () => {
 
       const result = await db.products.findAllMinimal()
 
-      expect(result).toEqual([minimalRow])
+      expect(result).toEqual([expectedResult])
       expect(mockGetCachedData).not.toHaveBeenCalled()
     })
 
@@ -292,7 +303,7 @@ describe('db.products', () => {
 
       const result = await db.products.findAllMinimal({ limit: 5 })
 
-      expect(result).toEqual([minimalRow])
+      expect(result).toEqual([expectedResult])
       expect(mockGetCachedData).not.toHaveBeenCalled()
     })
 
@@ -304,7 +315,7 @@ describe('db.products', () => {
         category: 'Electronics',
       })
 
-      expect(result).toEqual([minimalRow])
+      expect(result).toEqual([expectedResult])
       expect(mockGetCachedData).not.toHaveBeenCalled()
     })
   })

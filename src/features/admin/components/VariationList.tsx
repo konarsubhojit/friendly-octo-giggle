@@ -441,8 +441,10 @@ export default function VariationList({
       }
       setVariants((prev) => prev.filter((v) => v.id !== deleteTarget.id))
       setDeleteTarget(null)
-    } catch {
-      // Error handled via toast or alert
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Failed to delete variant'
+      toast.error(message)
     } finally {
       setDeleting(false)
     }

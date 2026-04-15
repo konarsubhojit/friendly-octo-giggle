@@ -36,20 +36,25 @@ const toGridItem = (p: {
   category: p.category,
   price: getVariantMinPrice(p.variants),
   stock: getVariantTotalStock(p.variants),
-  variants: p.variants?.map((v) => ({ id: v.id, stock: v.stock })),
 })
 
-/** Convert a minimal product (no variants) to a ProductGridItem */
+/** Convert a MinimalProduct (already has derived price/stock) to a ProductGridItem */
 const toMinimalGridItem = (p: {
   id: string
   name: string
   description: string
   image: string
   category: string
+  price: number
+  stock: number
 }): ProductGridItem => ({
-  ...p,
-  price: 0,
-  stock: 0,
+  id: p.id,
+  name: p.name,
+  description: p.description,
+  image: p.image,
+  category: p.category,
+  price: p.price,
+  stock: p.stock,
 })
 
 interface ShopPageProps {

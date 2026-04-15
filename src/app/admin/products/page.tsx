@@ -270,13 +270,12 @@ export default function ProductsManagement() {
     />
   )
 
-  const inStockProducts = products.filter(
-    (product) => getVariantTotalStock(product.variants) > 0
-  ).length
-  const lowStockProducts = products.filter(
-    (product) =>
-      getVariantTotalStock(product.variants) > 0 &&
-      getVariantTotalStock(product.variants) <= 5
+  const stockByProduct = products.map((product) =>
+    getVariantTotalStock(product.variants)
+  )
+  const inStockProducts = stockByProduct.filter((s) => s > 0).length
+  const lowStockProducts = stockByProduct.filter(
+    (s) => s > 0 && s <= 5
   ).length
 
   return (

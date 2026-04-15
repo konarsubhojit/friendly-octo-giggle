@@ -35,6 +35,35 @@ export interface ProductListOptions {
   category?: string
 }
 
+/** Minimal product representation returned by list queries (includes derived price/stock). */
+export interface MinimalProduct {
+  id: string
+  name: string
+  description: string
+  category: string
+  image: string
+  /** Lowest variant price; 0 when no active variants exist */
+  price: number
+  /** Sum of variant stock; 0 when no active variants exist */
+  stock: number
+}
+
+/** Derive price/stock from embedded variant rows. */
+function deriveMinimalProduct(row: {
+  id: string
+  name: string
+  description: string
+  category: string
+  image: string
+  variants: Array<{ price: number; stock: number }>
+}): MinimalProduct {
+  const { variants, ...base } = row
+  const price =
+    variants.length > 0 ? Math.min(...variants.map((v) => v.price)) : 0
+  const stock = variants.reduce((sum, v) => sum + v.stock, 0)
+  return { ...base, price, stock }
+}
+
 export const db = {
   products: {
     /**
@@ -156,15 +185,13 @@ export const db = {
     },
 
     /**
-     * Find products for list views (minimal fields for performance)
+     * Find products for list views (minimal fields + variant-derived price/stock)
      * @param options - Pagination and filter options
-     * @returns Array of products with only essential fields for list views
+     * @returns Array of products with essential fields and derived price/stock
      */
     findAllMinimal: async (
       options: ProductListOptions = {}
-    ): Promise<
-      Array<Pick<Product, 'id' | 'name' | 'description' | 'category' | 'image'>>
-    > => {
+    ): Promise<MinimalProduct[]> => {
       const { limit, offset, search, category } = options
 
       const filters: SQL[] = [isNull(products.deletedAt)]
@@ -196,11 +223,17 @@ export const db = {
           category: true,
           image: true,
         },
+        with: {
+          variants: {
+            where: (v, { isNull }) => isNull(v.deletedAt),
+            columns: { price: true, stock: true },
+          },
+        },
         limit,
         offset,
       })
 
-      return rows
+      return rows.map(deriveMinimalProduct)
     },
 
     /**
@@ -210,14 +243,12 @@ export const db = {
     findMinimalByIds: async (
       ids: string[],
       category?: string
-    ): Promise<
-      Array<Pick<Product, 'id' | 'name' | 'description' | 'category' | 'image'>>
-    > => {
+    ): Promise<MinimalProduct[]> => {
       if (ids.length === 0) {
         return []
       }
 
-      return drizzleDb.query.products.findMany({
+      const rows = await drizzleDb.query.products.findMany({
         where: and(
           inArray(products.id, ids),
           isNull(products.deletedAt),
@@ -230,7 +261,15 @@ export const db = {
           category: true,
           image: true,
         },
+        with: {
+          variants: {
+            where: (v, { isNull }) => isNull(v.deletedAt),
+            columns: { price: true, stock: true },
+          },
+        },
       })
+
+      return rows.map(deriveMinimalProduct)
     },
 
     /**

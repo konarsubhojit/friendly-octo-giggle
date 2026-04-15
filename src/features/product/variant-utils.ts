@@ -34,15 +34,3 @@ export function getVariantTotalStock(
   if (!variants || variants.length === 0) return 0
   return variants.reduce((sum, v) => sum + v.stock, 0)
 }
-
-/**
- * Returns the first variant that is in stock, falling back to the first
- * variant overall (useful for QuickAdd where we need *some* variant to select).
- * Returns `null` when no variants exist.
- */
-export function getFirstInStockVariant<T extends HasStock>(
-  variants: readonly T[] | undefined | null
-): T | null {
-  if (!variants || variants.length === 0) return null
-  return variants.find((v) => v.stock > 0) ?? variants[0]
-}

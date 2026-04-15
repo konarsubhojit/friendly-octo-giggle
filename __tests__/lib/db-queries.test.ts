@@ -393,6 +393,7 @@ describe('db.products.findMinimalByIds', () => {
         description: 'Roses',
         category: 'Flowers',
         image: 'rose.jpg',
+        variants: [{ price: 100, stock: 5 }],
       },
       {
         id: 'prod002',
@@ -400,6 +401,10 @@ describe('db.products.findMinimalByIds', () => {
         description: 'Lilies',
         category: 'Flowers',
         image: 'lily.jpg',
+        variants: [
+          { price: 200, stock: 3 },
+          { price: 150, stock: 7 },
+        ],
       },
     ]
     mockProductsFindMany.mockResolvedValue(minimalProducts)
@@ -407,6 +412,8 @@ describe('db.products.findMinimalByIds', () => {
     const results = await db.products.findMinimalByIds(['prod001', 'prod002'])
 
     expect(results).toHaveLength(2)
+    expect(results[0]).toMatchObject({ id: 'prod001', price: 100, stock: 5 })
+    expect(results[1]).toMatchObject({ id: 'prod002', price: 150, stock: 10 })
     expect(mockProductsFindMany).toHaveBeenCalledOnce()
   })
 

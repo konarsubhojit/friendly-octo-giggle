@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest'
 import {
   getVariantMinPrice,
   getVariantTotalStock,
-  getFirstInStockVariant,
 } from '@/features/product/variant-utils'
 
 describe('variant-utils', () => {
@@ -51,45 +50,6 @@ describe('variant-utils', () => {
       expect(
         getVariantTotalStock([{ stock: 3 }, { stock: 7 }, { stock: 0 }])
       ).toBe(10)
-    })
-  })
-
-  describe('getFirstInStockVariant', () => {
-    it('returns null for undefined', () => {
-      expect(getFirstInStockVariant(undefined)).toBeNull()
-    })
-
-    it('returns null for null', () => {
-      expect(getFirstInStockVariant(null)).toBeNull()
-    })
-
-    it('returns null for empty array', () => {
-      expect(getFirstInStockVariant([])).toBeNull()
-    })
-
-    it('returns the first in-stock variant', () => {
-      const variants = [
-        { id: 'a', stock: 0 },
-        { id: 'b', stock: 5 },
-        { id: 'c', stock: 3 },
-      ]
-      expect(getFirstInStockVariant(variants)).toEqual({ id: 'b', stock: 5 })
-    })
-
-    it('falls back to first variant when all out of stock', () => {
-      const variants = [
-        { id: 'x', stock: 0 },
-        { id: 'y', stock: 0 },
-      ]
-      expect(getFirstInStockVariant(variants)).toEqual({ id: 'x', stock: 0 })
-    })
-
-    it('returns the first variant when it is in stock', () => {
-      const variants = [
-        { id: 'a', stock: 10 },
-        { id: 'b', stock: 5 },
-      ]
-      expect(getFirstInStockVariant(variants)).toEqual({ id: 'a', stock: 10 })
     })
   })
 })

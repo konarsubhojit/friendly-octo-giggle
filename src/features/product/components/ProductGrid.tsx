@@ -15,7 +15,6 @@ import { useCurrency } from '@/contexts/CurrencyContext'
 import { GradientHeading } from '@/components/ui/GradientHeading'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { StockBadge } from '@/features/product/components/StockBadge'
-import { QuickAddButton } from '@/features/product/components/QuickAddButton'
 import { FlowerAccent } from '@/components/ui/DecorativeElements'
 import { WishlistButton } from '@/features/wishlist/components/WishlistButton'
 
@@ -27,8 +26,6 @@ export type ProductGridItem = Pick<
   price: number
   /** Derived total stock from variants; 0 if no variants */
   stock: number
-  /** Minimal variant data for QuickAdd (id + stock needed for cart ops) */
-  variants?: Array<{ id: string; stock: number }>
 }
 
 interface ProductGridProps {
@@ -149,7 +146,6 @@ const ProductCard = memo(
             </div>
           </div>
         </Link>
-        <QuickAddButton product={product} />
       </div>
     )
   }
