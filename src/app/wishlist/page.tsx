@@ -6,9 +6,7 @@ import Image from 'next/image'
 import { useSession } from 'next-auth/react'
 import { useSelector, useDispatch } from 'react-redux'
 import { useCurrency } from '@/contexts/CurrencyContext'
-import {
-  getVariantMinPrice,
-} from '@/features/product/variant-utils'
+import { getVariantMinPrice } from '@/features/product/variant-utils'
 import {
   fetchWishlist,
   removeFromWishlist,

@@ -704,8 +704,7 @@ export default function ProductClient({
   ])
 
   const effectivePrice =
-    selectedVariant?.price ??
-    getVariantMinPrice(product.variants)
+    selectedVariant?.price ?? getVariantMinPrice(product.variants)
 
   const effectiveStock = selectedVariant?.stock ?? 0
 
