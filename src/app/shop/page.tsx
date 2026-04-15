@@ -10,6 +10,10 @@ import { searchProductIdsCached } from '@/lib/search'
 import { categories as categoriesTable } from '@/lib/schema'
 import { isNull, asc } from 'drizzle-orm'
 import { logError } from '@/lib/logger'
+import {
+  getVariantMinPrice,
+  getVariantTotalStock,
+} from '@/features/product/variant-utils'
 
 export const revalidate = 300
 
@@ -23,18 +27,16 @@ const toGridItem = (p: {
   description: string
   image: string
   category: string
-  variants?: Array<{ price: number; stock: number }>
+  variants?: Array<{ id: string; price: number; stock: number }>
 }): ProductGridItem => ({
   id: p.id,
   name: p.name,
   description: p.description,
   image: p.image,
   category: p.category,
-  price:
-    p.variants && p.variants.length > 0
-      ? Math.min(...p.variants.map((v) => v.price))
-      : 0,
-  stock: p.variants?.reduce((sum, v) => sum + v.stock, 0) ?? 0,
+  price: getVariantMinPrice(p.variants),
+  stock: getVariantTotalStock(p.variants),
+  variants: p.variants?.map((v) => ({ id: v.id, stock: v.stock })),
 })
 
 /** Convert a minimal product (no variants) to a ProductGridItem */

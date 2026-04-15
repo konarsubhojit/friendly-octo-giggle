@@ -7,6 +7,9 @@ import { useSession } from 'next-auth/react'
 import { useSelector, useDispatch } from 'react-redux'
 import { useCurrency } from '@/contexts/CurrencyContext'
 import {
+  getVariantMinPrice,
+} from '@/features/product/variant-utils'
+import {
   fetchWishlist,
   removeFromWishlist,
   optimisticToggle,
@@ -54,11 +57,7 @@ const WishlistCard = ({
           {product.description}
         </p>
         <span className="text-xl font-bold text-[var(--btn-primary)]">
-          {formatPrice(
-            product.variants && product.variants.length > 0
-              ? Math.min(...product.variants.map((v) => v.price))
-              : 0
-          )}
+          {formatPrice(getVariantMinPrice(product.variants))}
         </span>
       </div>
     </Link>

@@ -8,6 +8,10 @@ import { AdminPageShell } from '@/features/admin/components/AdminPageShell'
 import VariationList from '@/features/admin/components/VariationList'
 import ProductEditForm from '@/features/admin/components/ProductEditForm'
 import { serializeVariant } from '@/lib/serializers'
+import {
+  getVariantMinPrice,
+  getVariantTotalStock,
+} from '@/features/product/variant-utils'
 
 export const dynamic = 'force-dynamic'
 
@@ -38,11 +42,8 @@ export default async function AdminProductEditPage({ params }: PageProps) {
 
   const serializedVariants = product.variants.map(serializeVariant)
 
-  const minPrice =
-    serializedVariants.length > 0
-      ? Math.min(...serializedVariants.map((v) => v.price))
-      : 0
-  const totalStock = serializedVariants.reduce((sum, v) => sum + v.stock, 0)
+  const minPrice = getVariantMinPrice(serializedVariants)
+  const totalStock = getVariantTotalStock(serializedVariants)
 
   const serializedProduct = {
     id: product.id,

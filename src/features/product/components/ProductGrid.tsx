@@ -27,6 +27,8 @@ export type ProductGridItem = Pick<
   price: number
   /** Derived total stock from variants; 0 if no variants */
   stock: number
+  /** Minimal variant data for QuickAdd (id + stock needed for cart ops) */
+  variants?: Array<{ id: string; stock: number }>
 }
 
 interface ProductGridProps {

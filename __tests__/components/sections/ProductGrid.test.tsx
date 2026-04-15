@@ -123,6 +123,7 @@ const toGridItem = (product: Product): ProductGridItem => {
     image: product.image,
     stock,
     category: product.category,
+    variants: variants.map((v) => ({ id: v.id, stock: v.stock })),
   }
 }
 

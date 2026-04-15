@@ -5,6 +5,7 @@ import Image from 'next/image'
 import type { ProductVariant } from '@/lib/types'
 import toast from 'react-hot-toast'
 import { useCurrency } from '@/contexts/CurrencyContext'
+import { getVariantTotalStock } from '@/features/product/variant-utils'
 
 const VariationFormModal = lazy(
   () => import('@/features/admin/components/VariationFormModal')
@@ -303,10 +304,7 @@ export default function VariationList({
     null
   )
 
-  const totalVariantStock = variants.reduce(
-    (sum, variant) => sum + variant.stock,
-    0
-  )
+  const totalVariantStock = getVariantTotalStock(variants)
   const stockedVariants = variants.filter((variant) => variant.stock > 0).length
 
   const handleAddClick = () => {

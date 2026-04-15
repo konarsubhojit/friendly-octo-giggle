@@ -1,5 +1,9 @@
 import type { Product } from '@/lib/types'
 import type { CurrencyCode } from '@/lib/currency'
+import {
+  getVariantMinPrice,
+  getVariantTotalStock,
+} from '@/features/product/variant-utils'
 
 const MAX_DESC_CHARS = 400
 
@@ -31,12 +35,14 @@ export const buildProductContext = (
   const formatPrice = (price: number) =>
     sanitizeFormattedPrice((options.formatPrice ?? defaultFormatPrice)(price))
 
+  const totalStock = getVariantTotalStock(product.variants)
+
   const lines: string[] = [
     `Name: ${product.name}`,
     `Category: ${product.category}`,
     `Description: ${truncate(product.description)}`,
-    `Price (${currencyCode}): ${formatPrice(Math.min(...(product.variants?.map((v) => v.price) ?? [0])))}`,
-    `Stock: ${(product.variants?.reduce((sum, v) => sum + v.stock, 0) ?? 0) > 0 ? (product.variants?.reduce((sum, v) => sum + v.stock, 0) ?? 0) + ' units' : 'Out of stock'}`,
+    `Price (${currencyCode}): ${formatPrice(getVariantMinPrice(product.variants))}`,
+    `Stock: ${totalStock > 0 ? totalStock + ' units' : 'Out of stock'}`,
   ]
 
   if (product.variants?.length) {

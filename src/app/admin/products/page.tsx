@@ -8,6 +8,10 @@ import toast from 'react-hot-toast'
 import { useDispatch } from 'react-redux'
 import { upsertProduct } from '@/features/admin/store/adminSlice'
 import type { AppDispatch } from '@/lib/store'
+import {
+  getVariantMinPrice,
+  getVariantTotalStock,
+} from '@/features/product/variant-utils'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { AlertBanner } from '@/components/ui/AlertBanner'
 import {
@@ -239,20 +243,12 @@ export default function ProductsManagement() {
     },
   ]
 
-  const getMinPrice = (p: Product): number =>
-    p.variants && p.variants.length > 0
-      ? Math.min(...p.variants.map((v) => v.price))
-      : 0
-
-  const getTotalStock = (p: Product): number =>
-    p.variants?.reduce((sum, v) => sum + v.stock, 0) ?? 0
-
   const productRows: ProductRow[] = products.map((p) => ({
     id: p.id,
     name: p.name,
     category: p.category,
-    price: formatPrice(getMinPrice(p)),
-    stock: getTotalStock(p),
+    price: formatPrice(getVariantMinPrice(p.variants)),
+    stock: getVariantTotalStock(p.variants),
   }))
 
   const productsListContent = (
@@ -275,10 +271,12 @@ export default function ProductsManagement() {
   )
 
   const inStockProducts = products.filter(
-    (product) => getTotalStock(product) > 0
+    (product) => getVariantTotalStock(product.variants) > 0
   ).length
   const lowStockProducts = products.filter(
-    (product) => getTotalStock(product) > 0 && getTotalStock(product) <= 5
+    (product) =>
+      getVariantTotalStock(product.variants) > 0 &&
+      getVariantTotalStock(product.variants) <= 5
   ).length
 
   return (

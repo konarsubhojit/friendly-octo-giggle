@@ -3,6 +3,10 @@
 import Image from 'next/image'
 import type { Product } from '@/lib/types'
 import { useCurrency } from '@/contexts/CurrencyContext'
+import {
+  getVariantMinPrice,
+  getVariantTotalStock,
+} from '@/features/product/variant-utils'
 
 interface ProductEditFormProps {
   readonly product: Product
@@ -11,8 +15,8 @@ interface ProductEditFormProps {
 export default function ProductEditForm({ product }: ProductEditFormProps) {
   const { formatPrice } = useCurrency()
 
-  const minPrice = Math.min(...(product.variants?.map((v) => v.price) ?? [0]))
-  const totalStock = product.variants?.reduce((sum, v) => sum + v.stock, 0) ?? 0
+  const minPrice = getVariantMinPrice(product.variants)
+  const totalStock = getVariantTotalStock(product.variants)
 
   return (
     <section className="rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-[0_24px_60px_-42px_rgba(15,23,42,0.5)]">

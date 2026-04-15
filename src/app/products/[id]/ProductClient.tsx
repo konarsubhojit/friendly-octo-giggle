@@ -18,6 +18,7 @@ import ImageCarousel from '@/features/product/components/ImageCarousel'
 import { useRecentlyViewed } from '@/features/product/hooks/useRecentlyViewed'
 import RecentlyViewed from '@/features/product/components/RecentlyViewed'
 import { ReviewsSection } from '@/features/product/components/ReviewsSection'
+import { getVariantMinPrice } from '@/features/product/variant-utils'
 
 const ProductAssistant = dynamic(
   () => import('@/features/product/components/ProductAssistant'),
@@ -690,7 +691,7 @@ export default function ProductClient({
       id: product.id,
       name: product.name,
       image: product.image,
-      price: Math.min(...(product.variants?.map((v) => v.price) ?? [0])),
+      price: getVariantMinPrice(product.variants),
       category: product.category,
       viewedAt: Date.now(),
     })
@@ -704,7 +705,7 @@ export default function ProductClient({
 
   const effectivePrice =
     selectedVariant?.price ??
-    Math.min(...(product.variants?.map((v) => v.price) ?? [0]))
+    getVariantMinPrice(product.variants)
 
   const effectiveStock = selectedVariant?.stock ?? 0
 
@@ -727,11 +728,17 @@ export default function ProductClient({
     setCartSuccess(false)
     setStockWarning('')
 
+    if (!selectedVariant) {
+      setError('Please select a variant before adding to cart.')
+      setAddingToCart(false)
+      return
+    }
+
     try {
       if (status !== 'authenticated') {
         addPendingCartItem({
           productId: product.id,
-          variantId: selectedVariant?.id ?? '',
+          variantId: selectedVariant.id,
           quantity,
         })
         setCartSuccess(true)
@@ -742,8 +749,7 @@ export default function ProductClient({
       const result = await dispatch(
         addToCart({
           productId: product.id,
-
-          variantId: selectedVariant?.id ?? '',
+          variantId: selectedVariant.id,
           quantity,
         })
       ).unwrap()

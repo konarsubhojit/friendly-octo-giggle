@@ -9,6 +9,10 @@ import { addToCart } from '@/features/cart/store/cartSlice'
 import { addPendingCartItem } from '@/features/cart/services/pending-cart'
 import toast from 'react-hot-toast'
 import type { Product } from '@/lib/types'
+import {
+  getVariantTotalStock,
+  getFirstInStockVariant,
+} from '@/features/product/variant-utils'
 
 type QuickAddProduct = Pick<Product, 'id' | 'name'> & {
   variants?: Array<{ id: string; stock: number }>
@@ -31,22 +35,26 @@ export function QuickAddButton({
       e.stopPropagation()
       setAdding(true)
       try {
+        const firstVariant = getFirstInStockVariant(product.variants)
+        if (!firstVariant) {
+          toast.error('No variant available for this product.')
+          return
+        }
+
         if (status !== 'authenticated') {
-          const firstVariant = product.variants?.[0]
           addPendingCartItem({
             productId: product.id,
-            variantId: firstVariant?.id ?? '',
+            variantId: firstVariant.id,
             quantity: 1,
           })
           toast.success(`${product.name} saved! Sign in to checkout.`)
           return
         }
 
-        const firstVariant = product.variants?.[0]
         const result = await dispatch(
           addToCart({
             productId: product.id,
-            variantId: firstVariant?.id ?? '',
+            variantId: firstVariant.id,
             quantity: 1,
           })
         ).unwrap()
@@ -69,7 +77,7 @@ export function QuickAddButton({
   )
 
   const totalStock =
-    product.variants?.reduce((sum, v) => sum + v.stock, 0) ?? product.stock ?? 0
+    getVariantTotalStock(product.variants) || product.stock || 0
   if (totalStock === 0) return null
 
   return (
