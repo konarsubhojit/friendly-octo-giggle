@@ -5,7 +5,7 @@ import type { CSSProperties } from 'react'
 
 interface ShareButtonProps {
   readonly productId: string
-  readonly variationId: string | null
+  readonly variantId: string | null
 }
 
 type ShareState = 'idle' | 'loading' | 'ready' | 'error'
@@ -210,7 +210,7 @@ const computePanelStyle = (rect: DOMRect): CSSProperties => {
 
 // ─── Main component ───────────────────────────────────────
 
-export const ShareButton = ({ productId, variationId }: ShareButtonProps) => {
+export const ShareButton = ({ productId, variantId }: ShareButtonProps) => {
   const [shareState, setShareState] = useState<ShareState>('idle')
   const [shareUrl, setShareUrl] = useState<string | null>(null)
   const [autoCopied, setAutoCopied] = useState(false)
@@ -274,7 +274,7 @@ export const ShareButton = ({ productId, variationId }: ShareButtonProps) => {
       const response = await fetch('/api/share', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ productId, variationId }),
+        body: JSON.stringify({ productId, variantId }),
       })
 
       const data = await response.json()

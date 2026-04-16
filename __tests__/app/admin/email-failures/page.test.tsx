@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { render, screen } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import EmailFailuresPage from '@/app/admin/email-failures/page'

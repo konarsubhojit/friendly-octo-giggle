@@ -46,9 +46,9 @@ describe('POST /api/share', () => {
     expect(data.error).toBe('Validation failed')
   })
 
-  it('returns 400 for invalid variationId', async () => {
+  it('returns 400 for invalid variantId', async () => {
     const response = await POST(
-      makePostRequest({ productId: 'abc1234', variationId: 'too-long-id!' })
+      makePostRequest({ productId: 'abc1234', variantId: 'too-long-id!' })
     )
     const data = await response.json()
     expect(response.status).toBe(400)
@@ -68,11 +68,11 @@ describe('POST /api/share', () => {
     expect(mockSharesCreate).toHaveBeenCalledWith('abc1234', null)
   })
 
-  it('creates a share for a product with a variation', async () => {
+  it('creates a share for a product with a variant', async () => {
     mockSharesCreate.mockResolvedValue('shr5678')
 
     const response = await POST(
-      makePostRequest({ productId: 'abc1234', variationId: 'var5678' })
+      makePostRequest({ productId: 'abc1234', variantId: 'var5678' })
     )
     const data = await response.json()
 
@@ -93,11 +93,11 @@ describe('POST /api/share', () => {
     expect(data.success).toBe(false)
   })
 
-  it('handles null variationId explicitly', async () => {
+  it('handles null variantId explicitly', async () => {
     mockSharesCreate.mockResolvedValue('shr9999')
 
     const response = await POST(
-      makePostRequest({ productId: 'abc1234', variationId: null })
+      makePostRequest({ productId: 'abc1234', variantId: null })
     )
     const data = await response.json()
 

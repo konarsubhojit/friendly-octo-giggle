@@ -79,7 +79,10 @@ vi.mock('@/lib/schema', () => ({
   orders: {},
   passwordHistory: {},
   productShares: {},
-  productVariations: {},
+  productVariants: {},
+  productOptions: {},
+  productOptionValues: {},
+  productVariantOptionValues: {},
   products: { id: 'id', deletedAt: 'deletedAt' },
   reviews: {},
   sessions: {},
@@ -95,7 +98,10 @@ vi.mock('@/lib/schema', () => ({
   ordersRelations: {},
   passwordHistoryRelations: {},
   productSharesRelations: {},
-  productVariationsRelations: {},
+  productVariantsRelations: {},
+  productOptionsRelations: {},
+  productOptionValuesRelations: {},
+  productVariantOptionValuesRelations: {},
   productsRelations: {},
   reviewsRelations: {},
   sessionsRelations: {},
@@ -136,8 +142,9 @@ vi.mock('@/lib/serializers', () => ({
     updatedAt: p.updatedAt?.toISOString?.() || p.updatedAt,
     deletedAt: p.deletedAt?.toISOString?.() || p.deletedAt || null,
   })),
-  serializeVariation: vi.fn((v) => ({
+  serializeVariant: vi.fn((v) => ({
     ...v,
+    sku: v.sku ?? null,
     image: v.image ?? null,
     images: v.images ?? [],
     createdAt: v.createdAt?.toISOString?.() || v.createdAt,
@@ -166,26 +173,25 @@ function makeDbRow(overrides: Record<string, unknown> = {}) {
     id: 'abc1234',
     name: 'Test Product',
     description: 'A test product',
-    price: 29.99,
     image: 'https://example.com/img.jpg',
-    stock: 10,
     category: 'Electronics',
     deletedAt: null,
     createdAt: now,
     updatedAt: now,
-    variations: [
+    options: [],
+    variants: [
       {
         id: 'var0001',
         productId: 'abc1234',
-        name: 'Red',
-        designName: 'red-design',
+        sku: null,
         image: null,
+        images: [],
         price: 150,
-        variationType: 'styling',
         stock: 3,
         deletedAt: null,
         createdAt: now,
         updatedAt: now,
+        optionValues: [],
       },
     ],
     ...overrides,
@@ -197,27 +203,25 @@ function expectedSerialized(overrides: Record<string, unknown> = {}) {
     id: 'abc1234',
     name: 'Test Product',
     description: 'A test product',
-    price: 29.99,
     image: 'https://example.com/img.jpg',
-    stock: 10,
     category: 'Electronics',
     deletedAt: null,
     createdAt: now.toISOString(),
     updatedAt: now.toISOString(),
-    variations: [
+    options: [],
+    variants: [
       {
         id: 'var0001',
         productId: 'abc1234',
-        name: 'Red',
-        designName: 'red-design',
+        sku: null,
         image: null,
         images: [],
         price: 150,
-        variationType: 'styling',
         stock: 3,
         deletedAt: null,
         createdAt: now.toISOString(),
         updatedAt: now.toISOString(),
+        optionValues: [],
       },
     ],
     ...overrides,
@@ -265,18 +269,27 @@ describe('db.products', () => {
       id: 'abc1234',
       name: 'Test Product',
       description: 'A test product',
-      price: 29.99,
-      stock: 10,
       category: 'Electronics',
       image: 'https://example.com/img.jpg',
+      variants: [{ price: 100, stock: 5 }],
     }
 
-    it('returns minimal products without cache', async () => {
+    const expectedResult = {
+      id: 'abc1234',
+      name: 'Test Product',
+      description: 'A test product',
+      category: 'Electronics',
+      image: 'https://example.com/img.jpg',
+      price: 100,
+      stock: 5,
+    }
+
+    it('returns minimal products with derived price and stock', async () => {
       mockFindMany.mockResolvedValue([minimalRow])
 
       const result = await db.products.findAllMinimal()
 
-      expect(result).toEqual([minimalRow])
+      expect(result).toEqual([expectedResult])
       expect(mockCacheProductsList).not.toHaveBeenCalled()
     })
 
@@ -285,7 +298,7 @@ describe('db.products', () => {
 
       const result = await db.products.findAllMinimal()
 
-      expect(result).toEqual([minimalRow])
+      expect(result).toEqual([expectedResult])
       expect(mockGetCachedData).not.toHaveBeenCalled()
     })
 
@@ -294,7 +307,7 @@ describe('db.products', () => {
 
       const result = await db.products.findAllMinimal({ limit: 5 })
 
-      expect(result).toEqual([minimalRow])
+      expect(result).toEqual([expectedResult])
       expect(mockGetCachedData).not.toHaveBeenCalled()
     })
 
@@ -306,7 +319,7 @@ describe('db.products', () => {
         category: 'Electronics',
       })
 
-      expect(result).toEqual([minimalRow])
+      expect(result).toEqual([expectedResult])
       expect(mockGetCachedData).not.toHaveBeenCalled()
     })
   })
@@ -349,15 +362,14 @@ describe('db.products', () => {
       const input = {
         name: 'New Product',
         description: 'Brand new',
-        price: 49.99,
         image: 'https://example.com/new.jpg',
-        stock: 20,
         category: 'Apparel',
       }
 
       const dbRow = {
         id: 'new1234',
         ...input,
+        images: [],
         deletedAt: null,
         createdAt: now,
         updatedAt: now,
@@ -377,6 +389,7 @@ describe('db.products', () => {
       expect(result).toEqual({
         ...input,
         id: 'new1234',
+        images: [],
         deletedAt: null,
         createdAt: now.toISOString(),
         updatedAt: now.toISOString(),
@@ -386,14 +399,13 @@ describe('db.products', () => {
   })
   describe('update', () => {
     it('updates a product and invalidates caches', async () => {
-      const input = { name: 'Updated Name', price: 39.99 }
+      const input = { name: 'Updated Name' }
       const dbRow = {
         id: 'abc1234',
         name: 'Updated Name',
         description: 'A test product',
-        price: 39.99,
         image: 'https://example.com/img.jpg',
-        stock: 10,
+        images: [],
         category: 'Electronics',
         deletedAt: null,
         createdAt: now,
@@ -415,9 +427,8 @@ describe('db.products', () => {
         id: 'abc1234',
         name: 'Updated Name',
         description: 'A test product',
-        price: 39.99,
         image: 'https://example.com/img.jpg',
-        stock: 10,
+        images: [],
         category: 'Electronics',
         deletedAt: null,
         createdAt: now.toISOString(),
@@ -476,7 +487,7 @@ describe('db.shares', () => {
       expect(mockInsert).toHaveBeenCalledOnce()
       expect(mockValues).toHaveBeenCalledWith({
         productId: 'prd1234',
-        variationId: null,
+        variantId: null,
       })
       expect(result).toBe('shr1234')
     })
@@ -488,7 +499,7 @@ describe('db.shares', () => {
 
       expect(mockValues).toHaveBeenCalledWith({
         productId: 'prd1234',
-        variationId: 'var5678',
+        variantId: 'var5678',
       })
       expect(result).toBe('shr5678')
     })
@@ -496,7 +507,7 @@ describe('db.shares', () => {
 
   describe('resolve', () => {
     it('calls cacheShareResolve with the correct key and returns the result', async () => {
-      const shareData = { productId: 'prd1234', variationId: null }
+      const shareData = { productId: 'prd1234', variantId: null }
       mockCacheShareResolve.mockResolvedValue(shareData)
 
       const result = await db.shares.resolve('shr1234')
@@ -517,7 +528,7 @@ describe('db.shares', () => {
     })
 
     it('fetcher resolves correct row data from DB when called directly', async () => {
-      const dbRow = { productId: 'prd1234', variationId: 'var5678' }
+      const dbRow = { productId: 'prd1234', variantId: 'var5678' }
       mockSharesFindFirst.mockResolvedValue(dbRow)
 
       mockCacheShareResolve.mockImplementation(
@@ -527,7 +538,7 @@ describe('db.shares', () => {
       const result = await db.shares.resolve('shr1234')
 
       expect(mockSharesFindFirst).toHaveBeenCalledOnce()
-      expect(result).toEqual({ productId: 'prd1234', variationId: 'var5678' })
+      expect(result).toEqual({ productId: 'prd1234', variantId: 'var5678' })
     })
 
     it('fetcher returns null when DB row not found', async () => {

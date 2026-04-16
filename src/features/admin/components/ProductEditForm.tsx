@@ -3,6 +3,10 @@
 import Image from 'next/image'
 import type { Product } from '@/lib/types'
 import { useCurrency } from '@/contexts/CurrencyContext'
+import {
+  getVariantMinPrice,
+  getVariantTotalStock,
+} from '@/features/product/variant-utils'
 
 interface ProductEditFormProps {
   readonly product: Product
@@ -10,6 +14,9 @@ interface ProductEditFormProps {
 
 export default function ProductEditForm({ product }: ProductEditFormProps) {
   const { formatPrice } = useCurrency()
+
+  const minPrice = getVariantMinPrice(product.variants)
+  const totalStock = getVariantTotalStock(product.variants)
 
   return (
     <section className="rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-[0_24px_60px_-42px_rgba(15,23,42,0.5)]">
@@ -40,18 +47,18 @@ export default function ProductEditForm({ product }: ProductEditFormProps) {
           <div className="flex flex-wrap gap-3 text-sm">
             <div className="rounded-2xl bg-emerald-50 px-4 py-3">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">
-                Base price
+                From price
               </p>
               <p className="mt-2 text-lg font-bold text-slate-950">
-                {formatPrice(product.price)}
+                {formatPrice(minPrice)}
               </p>
             </div>
             <div className="rounded-2xl bg-slate-100 px-4 py-3">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-                Stock
+                Total stock
               </p>
               <p className="mt-2 text-lg font-bold text-slate-950">
-                {product.stock}
+                {totalStock}
               </p>
             </div>
             <div className="rounded-2xl bg-sky-50 px-4 py-3">

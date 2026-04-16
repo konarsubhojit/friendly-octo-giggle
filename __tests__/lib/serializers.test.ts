@@ -20,13 +20,14 @@ const makeProduct = (overrides = {}) => ({
 const makeVariation = (overrides = {}) => ({
   id: '660e8400-e29b-41d4-a716-446655440000',
   productId: '550e8400-e29b-41d4-a716-446655440000',
-  name: 'Large',
-  designName: 'Classic',
-  variationType: 'styling' as const,
+  sku: null,
   price: 150.0,
   stock: 3,
+  image: null,
+  images: [],
   createdAt: mockDate,
   updatedAt: mockDate,
+  deletedAt: null,
   ...overrides,
 })
 
@@ -34,12 +35,12 @@ const makeOrderItem = (overrides = {}) => ({
   id: '770e8400-e29b-41d4-a716-446655440000',
   orderId: '880e8400-e29b-41d4-a716-446655440000',
   productId: '550e8400-e29b-41d4-a716-446655440000',
-  variationId: null,
+  variantId: null,
   quantity: 2,
   price: 29.99,
   customizationNote: null,
   product: makeProduct(),
-  variation: null,
+  variant: null,
   ...overrides,
 })
 
@@ -72,18 +73,18 @@ describe('serializeOrder', () => {
     expect(result.items[0].product.updatedAt).toBe(mockISOString)
   })
 
-  it('handles variation = null', () => {
+  it('handles variant = null', () => {
     const result = serializeOrder(makeOrder() as never)
-    expect(result.items[0].variation).toBeNull()
+    expect(result.items[0].variant).toBeNull()
   })
 
-  it('converts Date fields on nested variation', () => {
+  it('converts Date fields on nested variant', () => {
     const order = makeOrder({
-      items: [makeOrderItem({ variation: makeVariation() })],
+      items: [makeOrderItem({ variant: makeVariation() })],
     })
     const result = serializeOrder(order as never)
-    expect(result.items[0].variation?.createdAt).toBe(mockISOString)
-    expect(result.items[0].variation?.updatedAt).toBe(mockISOString)
+    expect(result.items[0].variant?.createdAt).toBe(mockISOString)
+    expect(result.items[0].variant?.updatedAt).toBe(mockISOString)
   })
 
   it('handles string dates (from cache) as passthrough', () => {

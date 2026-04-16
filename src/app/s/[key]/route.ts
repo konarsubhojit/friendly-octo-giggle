@@ -13,8 +13,8 @@ export const GET = async (
     return NextResponse.redirect(new URL('/', request.url))
   }
 
-  const destination = share.variationId
-    ? `/products/${share.productId}?v=${share.variationId}`
+  const destination = share.variantId
+    ? `/products/${share.productId}?v=${share.variantId}`
     : `/products/${share.productId}`
 
   return NextResponse.redirect(new URL(destination, request.url))

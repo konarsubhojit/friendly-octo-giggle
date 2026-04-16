@@ -7,6 +7,7 @@ import VariationList from '@/features/admin/components/VariationList'
 import { auth } from '@/lib/auth'
 import { drizzleDb } from '@/lib/db'
 import { products } from '@/lib/schema'
+import { serializeVariant } from '@/lib/serializers'
 
 export const dynamic = 'force-dynamic'
 
@@ -25,7 +26,7 @@ export default async function AdminProductEditFormPage({ params }: PageProps) {
   const product = await drizzleDb.query.products.findFirst({
     where: and(eq(products.id, id), isNull(products.deletedAt)),
     with: {
-      variations: {
+      variants: {
         where: (v, { isNull }) => isNull(v.deletedAt),
       },
     },
@@ -39,34 +40,18 @@ export default async function AdminProductEditFormPage({ params }: PageProps) {
     id: product.id,
     name: product.name,
     description: product.description,
-    price: product.price,
     image: product.image,
     images: product.images ?? [],
-    stock: product.stock,
     category: product.category,
     deletedAt: null,
     createdAt: product.createdAt.toISOString(),
     updatedAt: product.updatedAt.toISOString(),
   }
 
-  const serializedVariations = product.variations.map((variation) => ({
-    id: variation.id,
-    productId: variation.productId,
-    name: variation.name,
-    designName: variation.designName,
-    variationType: variation.variationType ?? 'styling',
-    styleId: variation.styleId ?? null,
-    image: variation.image ?? null,
-    images: variation.images ?? [],
-    price: variation.price,
-    stock: variation.stock,
-    deletedAt: null,
-    createdAt: variation.createdAt.toISOString(),
-    updatedAt: variation.updatedAt.toISOString(),
-  }))
+  const serializedVariants = product.variants.map(serializeVariant)
 
-  const variationsInStock = serializedVariations.filter(
-    (variation) => variation.stock > 0
+  const variantsInStock = serializedVariants.filter(
+    (variant) => variant.stock > 0
   ).length
 
   return (
@@ -82,7 +67,7 @@ export default async function AdminProductEditFormPage({ params }: PageProps) {
       ]}
       eyebrow="Catalog editing"
       title="Edit Product"
-      description="Update product information, pricing, stock, and variations."
+      description="Update product information and manage variants."
       actions={
         <Link
           href={`/admin/products/${serializedProduct.id}`}
@@ -93,30 +78,23 @@ export default async function AdminProductEditFormPage({ params }: PageProps) {
       }
       metrics={[
         {
-          label: 'Base stock',
-          value: String(serializedProduct.stock),
-          hint: 'Base stock level.',
-          tone: serializedProduct.stock > 0 ? 'sky' : 'rose',
-        },
-        {
-          label: 'Variations',
-          value: String(serializedVariations.length),
-          hint: 'Active product variations.',
+          label: 'Variants',
+          value: String(serializedVariants.length),
+          hint: 'Active product variants.',
           tone: 'amber',
         },
         {
           label: 'In stock',
-          value: String(variationsInStock),
-          hint: 'Variations with available stock.',
-          tone: variationsInStock > 0 ? 'emerald' : 'rose',
+          value: String(variantsInStock),
+          hint: 'Variants with available stock.',
+          tone: variantsInStock > 0 ? 'emerald' : 'rose',
         },
       ]}
     >
       <ProductEditPageForm product={serializedProduct} />
       <VariationList
         productId={serializedProduct.id}
-        productPrice={serializedProduct.price}
-        initialVariations={serializedVariations}
+        initialVariants={serializedVariants}
       />
     </AdminPageShell>
   )
