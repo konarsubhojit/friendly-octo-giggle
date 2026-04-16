@@ -74,16 +74,19 @@ stages:
               artifact: coverage-report
               publishLocation: pipeline
 
-  - stage: Build
-    displayName: Build
+  - stage: BuildAndAnalyze
+    displayName: Build and Code Analysis
     dependsOn: LintAndTest
     condition: succeeded()
     jobs:
-      - job: Build
-        displayName: Build
+      - job: BuildAndSonarQube
+        displayName: Build and SonarQube Analysis
         pool:
           vmImage: ubuntu-latest
         steps:
+          - checkout: self
+            fetchDepth: 0
+
           - task: NodeTool@0
             displayName: Set up Node.js
             inputs:
@@ -116,19 +119,6 @@ stages:
               NEXTAUTH_URL: http://localhost:3000
               NEXT_TELEMETRY_DISABLED: 1
 
-  - stage: Analysis
-    displayName: Code Analysis
-    dependsOn: LintAndTest
-    condition: succeeded()
-    jobs:
-      - job: SonarQube
-        displayName: SonarQube Analysis
-        pool:
-          vmImage: ubuntu-latest
-        steps:
-          - checkout: self
-            fetchDepth: 0
-
           - task: DownloadPipelineArtifact@2
             displayName: Download coverage report
             inputs:
@@ -139,6 +129,7 @@ stages:
             displayName: Prepare SonarQube analysis
             inputs:
               SonarQube: SonarQube
+              organization: konarsubhojit
               scannerMode: CLI
               configMode: file
               extraProperties: |
