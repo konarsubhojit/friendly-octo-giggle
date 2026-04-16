@@ -23,6 +23,8 @@ jobs:
       src_changed: ${{ steps.filter.outputs.any_changed }}
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Detect source file changes
         id: filter
@@ -31,7 +33,7 @@ jobs:
           files_ignore: |
             docs/**
             specs/**
-            **.md
+            **/*.md
             .cursorrules
 
   lint:
