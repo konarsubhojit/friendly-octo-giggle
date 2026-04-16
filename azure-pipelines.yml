@@ -129,6 +129,7 @@ stages:
             displayName: Prepare SonarQube analysis
             inputs:
               SonarQube: SonarQube
+              organization: konarsubhojit
               scannerMode: CLI
               configMode: file
               extraProperties: |
