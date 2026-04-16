@@ -2,19 +2,54 @@ trigger:
   branches:
     include:
       - master
+      - develop
 
 pr:
   branches:
     include:
       - master
+      - develop
 
 variables:
   NODE_VERSION: '22'
   npm_config_cache: $(Pipeline.Workspace)/.npm
 
 stages:
+  - stage: DetectChanges
+    displayName: Detect Changed Files
+    jobs:
+      - job: CheckFiles
+        displayName: Check Changed Files
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - checkout: self
+            fetchDepth: 0
+
+          - bash: |
+              if [ "$(Build.Reason)" = "PullRequest" ]; then
+                git fetch origin "$(System.PullRequest.TargetBranch)"
+                TARGET_REF="origin/$(System.PullRequest.TargetBranch)"
+              else
+                TARGET_REF="HEAD~1"
+              fi
+              CHANGED_FILES=$(git diff --name-only "$TARGET_REF"...HEAD 2>/dev/null || git diff --name-only HEAD~1 HEAD)
+              NON_DOC_COUNT=$(echo "$CHANGED_FILES" | grep -vE '^docs/|\.md$|\.txt$|^\.github/' | grep -c . || echo 0)
+              echo "Changed files:"
+              echo "$CHANGED_FILES"
+              echo "Non-doc changed file count: $NON_DOC_COUNT"
+              if [ "$NON_DOC_COUNT" -gt 0 ]; then
+                echo "##vso[task.setvariable variable=srcChanged;isOutput=true]true"
+              else
+                echo "##vso[task.setvariable variable=srcChanged;isOutput=true]false"
+              fi
+            displayName: Detect source file changes
+            name: detectChanges
+
   - stage: LintAndTest
     displayName: Lint, Type Check & Test
+    dependsOn: DetectChanges
+    condition: eq(stageDependencies.DetectChanges.CheckFiles.outputs['detectChanges.srcChanged'], 'true')
     jobs:
       - job: Lint
         displayName: Lint and Type Check
@@ -76,8 +111,10 @@ stages:
 
   - stage: BuildAndAnalyze
     displayName: Build and Code Analysis
-    dependsOn: LintAndTest
-    condition: succeeded()
+    dependsOn:
+      - DetectChanges
+      - LintAndTest
+    condition: and(succeeded('LintAndTest'), eq(stageDependencies.DetectChanges.CheckFiles.outputs['detectChanges.srcChanged'], 'true'))
     jobs:
       - job: BuildAndSonarQube
         displayName: Build and SonarQube Analysis
@@ -143,3 +180,49 @@ stages:
             displayName: Publish SonarQube results
             inputs:
               pollingTimeoutSec: 600
+
+  - stage: VercelPreview
+    displayName: Vercel Preview Deployment
+    dependsOn: BuildAndAnalyze
+    condition: eq(variables['Build.SourceBranch'], 'refs/heads/develop')
+    jobs:
+      - job: Deploy
+        displayName: Deploy Vercel Preview
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - checkout: self
+            fetchDepth: 0
+
+          - task: NodeTool@0
+            displayName: Set up Node.js
+            inputs:
+              versionSpec: $(NODE_VERSION)
+
+          - task: Cache@2
+            displayName: Cache npm packages
+            inputs:
+              key: 'npm | "$(Agent.OS)" | package-lock.json'
+              restoreKeys: |
+                npm | "$(Agent.OS)"
+              path: $(npm_config_cache)
+
+          - script: npm ci
+            displayName: Install dependencies
+
+          - script: npm install --global vercel
+            displayName: Install Vercel CLI
+
+          - script: vercel pull --yes --environment=preview --token=$(VERCEL_TOKEN)
+            displayName: Pull Vercel environment
+
+          - script: vercel build --token=$(VERCEL_TOKEN)
+            displayName: Build for Vercel preview
+            env:
+              DATABASE_URL: postgresql://localhost/ci_placeholder
+              NEXTAUTH_SECRET: ci-secret-placeholder
+              NEXTAUTH_URL: http://localhost:3000
+              NEXT_TELEMETRY_DISABLED: 1
+
+          - script: vercel deploy --prebuilt --token=$(VERCEL_TOKEN)
+            displayName: Deploy preview
