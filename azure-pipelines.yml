@@ -13,8 +13,40 @@ variables:
   npm_config_cache: $(Pipeline.Workspace)/.npm
 
 stages:
+  - stage: DetectChanges
+    displayName: Detect Changed Files
+    jobs:
+      - job: DetectChanges
+        displayName: Detect Source Changes
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - checkout: self
+            fetchDepth: 0
+
+          - bash: |
+              if [ "$(Build.Reason)" = "PullRequest" ]; then
+                git fetch origin $(System.PullRequest.TargetBranch)
+                CHANGED=$(git diff --name-only "origin/$(System.PullRequest.TargetBranch)"...HEAD)
+              else
+                CHANGED=$(git diff --name-only HEAD~1 HEAD)
+              fi
+              echo "Changed files:"
+              echo "$CHANGED"
+              NON_DOC_COUNT=$(echo "$CHANGED" | grep -v '^docs/' | grep -v '^specs/' | grep -v '\.md$' | grep -v '^\.cursorrules$' | grep -c . || true)
+              echo "Non-doc changed file count: $NON_DOC_COUNT"
+              if [ "$NON_DOC_COUNT" -gt 0 ]; then
+                echo "##vso[task.setvariable variable=srcChanged;isOutput=true]true"
+              else
+                echo "##vso[task.setvariable variable=srcChanged;isOutput=true]false"
+              fi
+            name: DetectChanges
+            displayName: Check for source file changes
+
   - stage: LintAndTest
     displayName: Lint, Type Check & Test
+    dependsOn: DetectChanges
+    condition: and(succeeded('DetectChanges'), eq(stageDependencies.DetectChanges.DetectChanges.outputs['DetectChanges.srcChanged'], 'true'))
     jobs:
       - job: Lint
         displayName: Lint and Type Check
@@ -76,8 +108,8 @@ stages:
 
   - stage: BuildAndAnalyze
     displayName: Build and Code Analysis
-    dependsOn: LintAndTest
-    condition: succeeded()
+    dependsOn: [DetectChanges, LintAndTest]
+    condition: and(succeeded('LintAndTest'), eq(stageDependencies.DetectChanges.DetectChanges.outputs['DetectChanges.srcChanged'], 'true'))
     jobs:
       - job: BuildAndSonarQube
         displayName: Build and SonarQube Analysis
