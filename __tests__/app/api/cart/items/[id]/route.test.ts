@@ -82,9 +82,9 @@ describe('PATCH /api/cart/items/[id]', () => {
     mockFindFirst.mockResolvedValue({
       id: 'item1',
       cart: { userId: 'other-user' },
-      product: { stock: 10 },
-      variation: null,
-      variationId: null,
+      product: { variants: [] },
+      variant: null,
+      variantId: null,
     } as never)
 
     const request = new NextRequest('http://localhost/api/cart/items/item1', {
@@ -102,14 +102,39 @@ describe('PATCH /api/cart/items/[id]', () => {
     expect(data.error).toBe('Unauthorized')
   })
 
+  it('returns 404 when cart item variant is not found', async () => {
+    mockAuth.mockResolvedValue({ user: { id: 'user1' } } as never)
+    mockFindFirst.mockResolvedValue({
+      id: 'item1',
+      cart: { userId: 'user1' },
+      product: { variants: [] },
+      variant: null,
+      variantId: 'missing-v',
+    } as never)
+
+    const request = new NextRequest('http://localhost/api/cart/items/item1', {
+      method: 'PATCH',
+      body: JSON.stringify({ quantity: 2 }),
+      headers: { 'content-type': 'application/json' },
+    })
+
+    const response = await PATCH(request, {
+      params: Promise.resolve({ id: 'item1' }),
+    })
+    const data = await response.json()
+
+    expect(response.status).toBe(404)
+    expect(data.error).toBe('Cart item variant not found')
+  })
+
   it('returns 400 for insufficient stock', async () => {
     mockAuth.mockResolvedValue({ user: { id: 'user1' } } as never)
     mockFindFirst.mockResolvedValue({
       id: 'item1',
       cart: { userId: 'user1' },
-      product: { stock: 5 },
-      variation: null,
-      variationId: null,
+      product: { variants: [{ id: 'v1', stock: 5 }] },
+      variant: { stock: 5 },
+      variantId: 'v1',
     } as never)
 
     const request = new NextRequest('http://localhost/api/cart/items/item1', {
@@ -132,9 +157,9 @@ describe('PATCH /api/cart/items/[id]', () => {
     mockFindFirst.mockResolvedValue({
       id: 'item1',
       cart: { userId: 'user1' },
-      product: { stock: 100 },
-      variation: { stock: 3 },
-      variationId: 'var1',
+      product: { variants: [{ id: 'var1', stock: 3 }] },
+      variant: { stock: 3 },
+      variantId: 'var1',
     } as never)
 
     const request = new NextRequest('http://localhost/api/cart/items/item1', {
@@ -157,9 +182,9 @@ describe('PATCH /api/cart/items/[id]', () => {
     mockFindFirst.mockResolvedValue({
       id: 'item1',
       cart: { userId: 'user1' },
-      product: { stock: 10 },
-      variation: null,
-      variationId: null,
+      product: { variants: [{ id: 'v1', stock: 10 }] },
+      variant: { stock: 10 },
+      variantId: 'v1',
     } as never)
     const mockWhere = vi.fn()
     const mockSet = vi.fn(() => ({ where: mockWhere }))
@@ -188,9 +213,9 @@ describe('PATCH /api/cart/items/[id]', () => {
     mockFindFirst.mockResolvedValue({
       id: 'item1',
       cart: { userId: null, sessionId: 'session123' },
-      product: { stock: 10 },
-      variation: null,
-      variationId: null,
+      product: { variants: [{ id: 'v1', stock: 10 }] },
+      variant: { stock: 10 },
+      variantId: 'v1',
     } as never)
     const mockWhere = vi.fn()
     const mockSet = vi.fn(() => ({ where: mockWhere }))

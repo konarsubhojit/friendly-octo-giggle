@@ -118,7 +118,7 @@ describe('checkout-service', () => {
           pinCode: '110001',
           city: 'New Delhi',
           state: 'Delhi',
-          items: [{ productId: 'abc1234', quantity: 1 }],
+          items: [{ productId: 'abc1234', variantId: 'var0001', quantity: 1 }],
         },
         user: testUser,
       })
@@ -155,7 +155,7 @@ describe('checkout-service', () => {
           pinCode: '110001',
           city: 'New Delhi',
           state: 'Delhi',
-          items: [{ productId: 'abc1234', quantity: 1 }],
+          items: [{ productId: 'abc1234', variantId: 'var0001', quantity: 1 }],
         },
         user: testUser,
       })
@@ -196,7 +196,7 @@ describe('checkout-service', () => {
           pinCode: '110001',
           city: 'New Delhi',
           state: 'Delhi',
-          items: [{ productId: 'abc1234', quantity: 1 }],
+          items: [{ productId: 'abc1234', variantId: 'var0001', quantity: 1 }],
         },
         user: testUser,
       })

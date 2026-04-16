@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const {
   mockProductsFindMany,
-  mockProductVariationsFindMany,
+  mockProductVariantsFindMany,
   mockWishlistsFindMany,
   mockWishlistsFindFirst,
   mockWishlistsInsertReturning,
@@ -47,7 +47,7 @@ const {
 
   return {
     mockProductsFindMany: vi.fn(),
-    mockProductVariationsFindMany: vi.fn(),
+    mockProductVariantsFindMany: vi.fn(),
     mockWishlistsFindMany: vi.fn(),
     mockWishlistsFindFirst: vi.fn(),
     mockWishlistsInsertReturning,
@@ -75,8 +75,8 @@ vi.mock('drizzle-orm/neon-serverless', () => ({
       products: {
         findMany: mockProductsFindMany,
       },
-      productVariations: {
-        findMany: mockProductVariationsFindMany,
+      productVariants: {
+        findMany: mockProductVariantsFindMany,
       },
       wishlists: {
         findMany: mockWishlistsFindMany,
@@ -115,17 +115,18 @@ vi.mock('@/lib/schema', () => ({
   productShares: {
     key: 'key',
     productId: 'productId',
-    variationId: 'variationId',
+    variantId: 'variantId',
   },
-  productVariations: {},
+  productVariants: {},
+  productOptions: {},
+  productOptionValues: {},
+  productVariantOptionValues: {},
   products: {
     id: 'id',
     name: 'name',
     description: 'description',
-    price: 'price',
     image: 'image',
     images: 'images',
-    stock: 'stock',
     category: 'category',
     deletedAt: 'deletedAt',
     createdAt: 'createdAt',
@@ -149,7 +150,10 @@ vi.mock('@/lib/schema', () => ({
   ordersRelations: {},
   passwordHistoryRelations: {},
   productSharesRelations: {},
-  productVariationsRelations: {},
+  productVariantsRelations: {},
+  productOptionsRelations: {},
+  productOptionValuesRelations: {},
+  productVariantOptionValuesRelations: {},
   productsRelations: {},
   reviewsRelations: {},
   sessionsRelations: {},
@@ -192,8 +196,9 @@ vi.mock('@/lib/serializers', () => ({
     updatedAt: p.updatedAt?.toISOString?.() ?? p.updatedAt,
     deletedAt: p.deletedAt?.toISOString?.() ?? null,
   })),
-  serializeVariation: vi.fn((v) => ({
+  serializeVariant: vi.fn((v) => ({
     ...v,
+    sku: v.sku ?? null,
     image: v.image ?? null,
     images: v.images ?? [],
     createdAt: v.createdAt?.toISOString?.() ?? v.createdAt,
@@ -242,10 +247,8 @@ function makeProductRow(overrides: Record<string, unknown> = {}) {
     id: 'prod001',
     name: 'Rose Bouquet',
     description: 'Beautiful roses',
-    price: 500,
     image: 'https://example.com/rose.jpg',
     images: [],
-    stock: 10,
     category: 'Flowers',
     deletedAt: null,
     createdAt: now,
@@ -258,14 +261,11 @@ function makeVariationRow(overrides: Record<string, unknown> = {}) {
   return {
     id: 'var0001',
     productId: 'prod001',
-    name: 'Red',
-    designName: 'Classic',
+    sku: null,
     image: null,
     images: [],
     price: 600,
-    variationType: 'colour' as const,
     stock: 5,
-    styleId: null,
     deletedAt: null,
     createdAt: now,
     updatedAt: now,
@@ -306,14 +306,14 @@ describe('db.products.findBestsellers', () => {
       .mockReturnValueOnce(subqueryChain)
       .mockReturnValueOnce(mainQueryChain)
 
-    mockProductVariationsFindMany.mockResolvedValue(variationRows)
+    mockProductVariantsFindMany.mockResolvedValue(variationRows)
 
     const results = await db.products.findBestsellers({ limit: 5 })
 
     expect(results).toHaveLength(2)
     expect(results[0].id).toBe('prod001')
-    expect(results[0].variations).toHaveLength(1)
-    expect(results[1].variations).toHaveLength(0)
+    expect(results[0].variants).toHaveLength(1)
+    expect(results[1].variants).toHaveLength(0)
   })
 
   it('returns empty array when no bestsellers found', async () => {
@@ -339,7 +339,7 @@ describe('db.products.findBestsellers', () => {
     const results = await db.products.findBestsellers({ limit: 5 })
 
     expect(results).toEqual([])
-    expect(mockProductVariationsFindMany).not.toHaveBeenCalled()
+    expect(mockProductVariantsFindMany).not.toHaveBeenCalled()
   })
 
   it('groups variations by productId correctly', async () => {
@@ -371,12 +371,12 @@ describe('db.products.findBestsellers', () => {
     mockSelect
       .mockReturnValueOnce(subqueryChain)
       .mockReturnValueOnce(mainQueryChain)
-    mockProductVariationsFindMany.mockResolvedValue(variationRows)
+    mockProductVariantsFindMany.mockResolvedValue(variationRows)
 
     const results = await db.products.findBestsellers({ limit: 2 })
 
-    expect(results[0].variations).toHaveLength(2)
-    expect(results[1].variations).toHaveLength(1)
+    expect(results[0].variants).toHaveLength(2)
+    expect(results[1].variants).toHaveLength(1)
   })
 })
 
@@ -391,19 +391,20 @@ describe('db.products.findMinimalByIds', () => {
         id: 'prod001',
         name: 'Rose',
         description: 'Roses',
-        price: 500,
-        stock: 10,
         category: 'Flowers',
         image: 'rose.jpg',
+        variants: [{ price: 100, stock: 5 }],
       },
       {
         id: 'prod002',
         name: 'Lily',
         description: 'Lilies',
-        price: 300,
-        stock: 5,
         category: 'Flowers',
         image: 'lily.jpg',
+        variants: [
+          { price: 200, stock: 3 },
+          { price: 150, stock: 7 },
+        ],
       },
     ]
     mockProductsFindMany.mockResolvedValue(minimalProducts)
@@ -411,6 +412,8 @@ describe('db.products.findMinimalByIds', () => {
     const results = await db.products.findMinimalByIds(['prod001', 'prod002'])
 
     expect(results).toHaveLength(2)
+    expect(results[0]).toMatchObject({ id: 'prod001', price: 100, stock: 5 })
+    expect(results[1]).toMatchObject({ id: 'prod002', price: 150, stock: 10 })
     expect(mockProductsFindMany).toHaveBeenCalledOnce()
   })
 
@@ -469,7 +472,7 @@ describe('db.wishlists', () => {
           productId: 'prod001',
           product: {
             ...makeProductRow({ id: 'prod001' }),
-            variations: [makeVariationRow()],
+            variants: [makeVariationRow()],
           },
         },
       ]
@@ -479,7 +482,7 @@ describe('db.wishlists', () => {
 
       expect(products).toHaveLength(1)
       expect(products[0].id).toBe('prod001')
-      expect(products[0].variations).toHaveLength(1)
+      expect(products[0].variants).toHaveLength(1)
     })
 
     it('filters out deleted products from wishlist', async () => {
@@ -489,7 +492,7 @@ describe('db.wishlists', () => {
           productId: 'prod001',
           product: {
             ...makeProductRow({ id: 'prod001', deletedAt: now }),
-            variations: [],
+            variants: [],
           },
         },
         {
@@ -497,7 +500,7 @@ describe('db.wishlists', () => {
           productId: 'prod002',
           product: {
             ...makeProductRow({ id: 'prod002' }),
-            variations: [],
+            variants: [],
           },
         },
       ]

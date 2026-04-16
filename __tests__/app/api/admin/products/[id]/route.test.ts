@@ -12,19 +12,22 @@ vi.mock('@/lib/db', () => ({
 }))
 vi.mock('@/lib/auth', () => ({ auth: vi.fn() }))
 vi.mock(
-  '@/lib/validations',
-  async () => await vi.importActual('@/lib/validations')
+  '@/features/product/validations',
+  async () => await vi.importActual('@/features/product/validations')
 )
+vi.mock('@/features/admin/services/admin-auth', () => ({
+  checkAdminAuth: vi.fn(),
+}))
 vi.mock('@/lib/logger', () => ({ logError: vi.fn() }))
 vi.mock('next/cache', () => ({ revalidateTag: vi.fn() }))
 vi.mock('@/lib/cache', () => ({ invalidateProductCaches: vi.fn() }))
 
 import { db } from '@/lib/db'
-import { auth } from '@/lib/auth'
 import { revalidateTag } from 'next/cache'
 import { invalidateProductCaches } from '@/lib/cache'
+import { checkAdminAuth } from '@/features/admin/services/admin-auth'
 
-const mockAuth = vi.mocked(auth)
+const mockCheckAdminAuth = vi.mocked(checkAdminAuth)
 const mockProductsUpdate = vi.mocked(db.products.update)
 const mockProductsDelete = vi.mocked(db.products.delete)
 const mockRevalidateTag = vi.mocked(revalidateTag)
@@ -36,7 +39,11 @@ describe('PUT /api/admin/products/[id]', () => {
   })
 
   it('returns 401 when not authenticated', async () => {
-    mockAuth.mockResolvedValue(null as never)
+    mockCheckAdminAuth.mockResolvedValue({
+      authorized: false,
+      error: 'Not authenticated',
+      status: 401,
+    } as never)
 
     const request = new NextRequest('http://localhost/api/admin/products/p1', {
       method: 'PUT',
@@ -54,9 +61,10 @@ describe('PUT /api/admin/products/[id]', () => {
   })
 
   it('returns 403 when not admin', async () => {
-    mockAuth.mockResolvedValue({
-      user: { id: 'u1', email: 'user@test.com', role: 'USER' },
-      expires: '2099-01-01',
+    mockCheckAdminAuth.mockResolvedValue({
+      authorized: false,
+      error: 'Not authorized - Admin access required',
+      status: 403,
     } as never)
 
     const request = new NextRequest('http://localhost/api/admin/products/p1', {
@@ -75,9 +83,9 @@ describe('PUT /api/admin/products/[id]', () => {
   })
 
   it('returns 404 when product not found', async () => {
-    mockAuth.mockResolvedValue({
-      user: { id: 'a1', email: 'admin@test.com', role: 'ADMIN' },
-      expires: '2099-01-01',
+    mockCheckAdminAuth.mockResolvedValue({
+      authorized: true,
+      userId: 'a1',
     } as never)
     mockProductsUpdate.mockResolvedValue(null)
 
@@ -97,17 +105,15 @@ describe('PUT /api/admin/products/[id]', () => {
   })
 
   it('updates product successfully', async () => {
-    mockAuth.mockResolvedValue({
-      user: { id: 'a1', email: 'admin@test.com', role: 'ADMIN' },
-      expires: '2099-01-01',
+    mockCheckAdminAuth.mockResolvedValue({
+      authorized: true,
+      userId: 'a1',
     } as never)
     const updatedProduct = {
       id: 'p1',
       name: 'Updated Product',
       description: 'Desc',
-      price: 99.99,
       image: '/img.jpg',
-      stock: 10,
       category: 'Electronics',
       deletedAt: null,
       createdAt: new Date().toISOString(),
@@ -138,14 +144,14 @@ describe('PUT /api/admin/products/[id]', () => {
   })
 
   it('returns 400 for invalid input', async () => {
-    mockAuth.mockResolvedValue({
-      user: { id: 'a1', email: 'admin@test.com', role: 'ADMIN' },
-      expires: '2099-01-01',
+    mockCheckAdminAuth.mockResolvedValue({
+      authorized: true,
+      userId: 'a1',
     } as never)
 
     const request = new NextRequest('http://localhost/api/admin/products/p1', {
       method: 'PUT',
-      body: JSON.stringify({ price: 'not-a-number' }),
+      body: JSON.stringify({ name: '' }),
       headers: { 'content-type': 'application/json' },
     })
 
@@ -165,7 +171,11 @@ describe('DELETE /api/admin/products/[id]', () => {
   })
 
   it('returns 401 when not authenticated', async () => {
-    mockAuth.mockResolvedValue(null as never)
+    mockCheckAdminAuth.mockResolvedValue({
+      authorized: false,
+      error: 'Not authenticated',
+      status: 401,
+    } as never)
 
     const request = new NextRequest('http://localhost/api/admin/products/p1', {
       method: 'DELETE',
@@ -181,9 +191,10 @@ describe('DELETE /api/admin/products/[id]', () => {
   })
 
   it('returns 403 when not admin', async () => {
-    mockAuth.mockResolvedValue({
-      user: { id: 'u1', email: 'user@test.com', role: 'USER' },
-      expires: '2099-01-01',
+    mockCheckAdminAuth.mockResolvedValue({
+      authorized: false,
+      error: 'Not authorized - Admin access required',
+      status: 403,
     } as never)
 
     const request = new NextRequest('http://localhost/api/admin/products/p1', {
@@ -200,9 +211,9 @@ describe('DELETE /api/admin/products/[id]', () => {
   })
 
   it('returns 404 when product not found', async () => {
-    mockAuth.mockResolvedValue({
-      user: { id: 'a1', email: 'admin@test.com', role: 'ADMIN' },
-      expires: '2099-01-01',
+    mockCheckAdminAuth.mockResolvedValue({
+      authorized: true,
+      userId: 'a1',
     } as never)
     mockProductsDelete.mockResolvedValue(false)
 
@@ -220,9 +231,9 @@ describe('DELETE /api/admin/products/[id]', () => {
   })
 
   it('deletes product successfully', async () => {
-    mockAuth.mockResolvedValue({
-      user: { id: 'a1', email: 'admin@test.com', role: 'ADMIN' },
-      expires: '2099-01-01',
+    mockCheckAdminAuth.mockResolvedValue({
+      authorized: true,
+      userId: 'a1',
     } as never)
     mockProductsDelete.mockResolvedValue(true)
 

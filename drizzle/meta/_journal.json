@@ -57,6 +57,13 @@
       "when": 1776050759375,
       "tag": "0007_structured_order_address",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1776277143179,
+      "tag": "0008_product_variant_schema",
+      "breakpoints": true
     }
   ]
 }

@@ -8,6 +8,10 @@ import toast from 'react-hot-toast'
 import { useDispatch } from 'react-redux'
 import { upsertProduct } from '@/features/admin/store/adminSlice'
 import type { AppDispatch } from '@/lib/store'
+import {
+  getVariantMinPrice,
+  getVariantTotalStock,
+} from '@/features/product/variant-utils'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { AlertBanner } from '@/components/ui/AlertBanner'
 import {
@@ -243,8 +247,8 @@ export default function ProductsManagement() {
     id: p.id,
     name: p.name,
     category: p.category,
-    price: formatPrice(p.price),
-    stock: p.stock,
+    price: formatPrice(getVariantMinPrice(p.variants)),
+    stock: getVariantTotalStock(p.variants),
   }))
 
   const productsListContent = (
@@ -266,10 +270,9 @@ export default function ProductsManagement() {
     />
   )
 
-  const inStockProducts = products.filter((product) => product.stock > 0).length
-  const lowStockProducts = products.filter(
-    (product) => product.stock > 0 && product.stock <= 5
-  ).length
+  const stockValues = productRows.map((r) => r.stock)
+  const inStockProducts = stockValues.filter((s) => s > 0).length
+  const lowStockProducts = stockValues.filter((s) => s > 0 && s <= 5).length
 
   return (
     <AdminPageShell

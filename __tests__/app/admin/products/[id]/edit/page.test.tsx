@@ -28,24 +28,20 @@ vi.mock('@/lib/db', () => ({
           id: 'prd-1',
           name: 'Rose Box',
           description: 'Gift-ready floral arrangement',
-          price: 1299,
           image: 'https://example.com/rose-box.jpg',
           images: [],
-          stock: 12,
           category: 'Gifts',
           deletedAt: null,
           createdAt: new Date('2026-03-01T00:00:00.000Z'),
           updatedAt: new Date('2026-03-10T00:00:00.000Z'),
-          variations: [
+          variants: [
             {
               id: 'var-1',
               productId: 'prd-1',
-              name: 'Large',
-              designName: 'Festive Red',
+              sku: null,
               image: null,
               images: [],
               price: 100,
-              variationType: 'styling',
               stock: 5,
               deletedAt: null,
               createdAt: new Date('2026-03-03T00:00:00.000Z'),
@@ -66,10 +62,10 @@ vi.mock('@/features/admin/components/ProductEditPageForm', () => ({
 
 vi.mock('@/features/admin/components/VariationList', () => ({
   default: ({
-    initialVariations,
+    initialVariants,
   }: {
-    initialVariations: Array<{ id: string }>
-  }) => <div>Variation workspace: {initialVariations.length}</div>,
+    initialVariants: Array<{ id: string }>
+  }) => <div>Variation workspace: {initialVariants.length}</div>,
 }))
 
 describe('AdminProductEditFormPage', () => {
@@ -87,7 +83,7 @@ describe('AdminProductEditFormPage', () => {
     ).toBeInTheDocument()
     expect(screen.getByText('Product form: Rose Box')).toBeInTheDocument()
     expect(screen.getByText('Variation workspace: 1')).toBeInTheDocument()
-    expect(screen.getByText('Variations')).toBeInTheDocument()
+    expect(screen.getByText('Variants')).toBeInTheDocument()
     expect(screen.getByText('In stock')).toBeInTheDocument()
   })
 })

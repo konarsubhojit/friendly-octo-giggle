@@ -407,7 +407,7 @@ export const processCheckoutRequestById = async (
         state: checkoutRequest.state ?? '',
         items: checkoutRequest.items.map((item) => ({
           productId: item.productId,
-          variationId: item.variationId ?? undefined,
+          variantId: item.variantId,
           quantity: item.quantity,
           customizationNote: item.customizationNote ?? undefined,
         })),

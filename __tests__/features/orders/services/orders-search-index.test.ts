@@ -197,12 +197,12 @@ describe('orders-search-index', () => {
           items: [
             {
               productId: 'p1',
-              variationId: null,
+              variantId: null,
               quantity: 1,
               price: 50,
               customizationNote: null,
               product: { name: 'Gadget' },
-              variation: null,
+              variant: null,
             },
           ],
         },
@@ -215,7 +215,7 @@ describe('orders-search-index', () => {
       expect(mockPipeline.hset).toHaveBeenCalled()
     })
 
-    it('builds productNames with variation names', async () => {
+    it('builds productNames from product names', async () => {
       const orders = [
         {
           id: 'ord1',
@@ -229,21 +229,21 @@ describe('orders-search-index', () => {
           items: [
             {
               productId: 'p1',
-              variationId: 'v1',
+              variantId: 'v1',
               quantity: 1,
               price: 120,
               customizationNote: null,
               product: { name: 'Widget' },
-              variation: { name: 'Blue' },
+              variant: { sku: 'Blue' },
             },
             {
               productId: 'p2',
-              variationId: null,
+              variantId: null,
               quantity: 1,
               price: 80,
               customizationNote: null,
               product: { name: 'Gadget' },
-              variation: null,
+              variant: null,
             },
           ],
         },
@@ -256,7 +256,7 @@ describe('orders-search-index', () => {
       expect(mockPipeline.hset).toHaveBeenCalledWith(
         'order:ord1',
         expect.objectContaining({
-          productNames: 'Widget - Blue, Gadget',
+          productNames: 'Widget, Gadget',
         })
       )
     })

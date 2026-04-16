@@ -43,9 +43,9 @@ const buildOrderDatabaseSearchCondition = (searchTerm: string) => {
     sql`EXISTS (
       SELECT 1 FROM "OrderItem" oi
       JOIN "Product" p ON p.id = oi."productId"
-      LEFT JOIN "ProductVariation" pv ON pv.id = oi."variationId"
+      LEFT JOIN "ProductVariant" pv ON pv.id = oi."variantId"
       WHERE oi."orderId" = ${orders.id}
-      AND (p.name ILIKE ${pattern} OR pv.name ILIKE ${pattern})
+      AND (p.name ILIKE ${pattern} OR pv.sku ILIKE ${pattern})
     )`
   )
 }

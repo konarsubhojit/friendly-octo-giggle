@@ -33,10 +33,10 @@ describe('order-summary', () => {
       buildCheckoutSummaryLineItems([
         {
           quantity: 2,
-          product: { name: 'Rose Box', price: 1000 },
-          variation: {
+          product: { name: 'Rose Box' },
+          variant: {
             name: 'Large',
-            designName: 'Ruby',
+            sku: 'Ruby',
             price: 1250,
           },
           customizationNote: 'Add ribbon',
@@ -58,14 +58,14 @@ describe('order-summary', () => {
     const rawItems = [
       {
         quantity: 2,
-        product: { name: 'Rose Box', price: 1000 },
-        variation: { name: 'Large', designName: null, price: 1250 },
+        product: { name: 'Rose Box' },
+        variant: { name: 'Large', sku: null, price: 1250 },
         customizationNote: null,
       },
       {
         quantity: 1,
-        product: { name: 'Lily Vase', price: 800 },
-        variation: null,
+        product: { name: 'Lily Vase' },
+        variant: { name: undefined, sku: null, price: 800 },
         customizationNote: null,
       },
     ] as const
