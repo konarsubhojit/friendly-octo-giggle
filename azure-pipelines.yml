@@ -135,7 +135,7 @@ stages:
               artifact: coverage-report
               path: coverage
 
-          - task: SonarQubePrepare@7
+          - task: SonarCloudPrepare@4
             displayName: Prepare SonarQube analysis
             inputs:
               SonarQube: SonarQube
@@ -144,10 +144,10 @@ stages:
               extraProperties: |
                 sonar.coverage.exclusions=src/app/**/page.tsx,src/app/**/layout.tsx,src/app/**/loading.tsx,src/app/**/error.tsx,src/lib/schema.ts,src/lib/db.ts,src/lib/env.ts,src/lib/redis.ts,src/lib/logger.ts,src/lib/qstash.ts,src/lib/qstash-events.ts,src/lib/queue.ts,src/lib/email/providers.ts,src/lib/constants/categories.ts,src/lib/constants/checkout-policies.ts,src/lib/search/**,src/lib/ai/**,src/proxy.ts,src/types/**
 
-          - task: SonarQubeAnalyze@7
+          - task: SonarCloudAnalyze@4
             displayName: Run SonarQube analysis
 
-          - task: SonarQubePublish@7
+          - task: SonarCloudPublish@4
             displayName: Publish SonarQube results
             inputs:
-              pollingTimeoutSec: 300
+              pollingTimeoutSec: 600
