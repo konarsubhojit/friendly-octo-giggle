@@ -11,7 +11,6 @@ pr:
 variables:
   NODE_VERSION: '22'
   npm_config_cache: $(Pipeline.Workspace)/.npm
-  system.debug: true
 
 stages:
   - stage: LintAndTest
