@@ -1,0 +1,153 @@
+trigger:
+  branches:
+    include:
+      - master
+
+pr:
+  branches:
+    include:
+      - master
+
+variables:
+  NODE_VERSION: '22'
+  npm_config_cache: $(Pipeline.Workspace)/.npm
+
+stages:
+  - stage: LintAndTest
+    displayName: Lint, Type Check & Test
+    jobs:
+      - job: Lint
+        displayName: Lint and Type Check
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - task: NodeTool@0
+            displayName: Set up Node.js
+            inputs:
+              versionSpec: $(NODE_VERSION)
+
+          - task: Cache@2
+            displayName: Cache npm packages
+            inputs:
+              key: 'npm | "$(Agent.OS)" | package-lock.json'
+              restoreKeys: |
+                npm | "$(Agent.OS)"
+              path: $(npm_config_cache)
+
+          - script: npm ci
+            displayName: Install dependencies
+
+          - script: npm run lint
+            displayName: Lint
+
+          - script: npx tsc --noEmit -p tsconfig.check.json
+            displayName: Type check
+
+      - job: Test
+        displayName: Test
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - task: NodeTool@0
+            displayName: Set up Node.js
+            inputs:
+              versionSpec: $(NODE_VERSION)
+
+          - task: Cache@2
+            displayName: Cache npm packages
+            inputs:
+              key: 'npm | "$(Agent.OS)" | package-lock.json'
+              restoreKeys: |
+                npm | "$(Agent.OS)"
+              path: $(npm_config_cache)
+
+          - script: npm ci
+            displayName: Install dependencies
+
+          - script: npm run test:coverage
+            displayName: Run tests with coverage
+
+          - task: PublishPipelineArtifact@1
+            displayName: Upload coverage report
+            inputs:
+              targetPath: coverage
+              artifact: coverage-report
+              publishLocation: pipeline
+
+  - stage: Build
+    displayName: Build
+    dependsOn: LintAndTest
+    condition: succeeded()
+    jobs:
+      - job: Build
+        displayName: Build
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - task: NodeTool@0
+            displayName: Set up Node.js
+            inputs:
+              versionSpec: $(NODE_VERSION)
+
+          - task: Cache@2
+            displayName: Cache npm packages
+            inputs:
+              key: 'npm | "$(Agent.OS)" | package-lock.json'
+              restoreKeys: |
+                npm | "$(Agent.OS)"
+              path: $(npm_config_cache)
+
+          - task: Cache@2
+            displayName: Restore Next.js build cache
+            inputs:
+              key: 'nextjs | "$(Agent.OS)" | package-lock.json'
+              restoreKeys: |
+                nextjs | "$(Agent.OS)"
+              path: .next/cache
+
+          - script: npm ci
+            displayName: Install dependencies
+
+          - script: npm run build
+            displayName: Build
+            env:
+              DATABASE_URL: postgresql://localhost/ci_placeholder
+              NEXTAUTH_SECRET: ci-secret-placeholder
+              NEXTAUTH_URL: http://localhost:3000
+              NEXT_TELEMETRY_DISABLED: 1
+
+  - stage: Analysis
+    displayName: Code Analysis
+    dependsOn: LintAndTest
+    condition: succeeded()
+    jobs:
+      - job: SonarQube
+        displayName: SonarQube Analysis
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - checkout: self
+            fetchDepth: 0
+
+          - task: DownloadPipelineArtifact@2
+            displayName: Download coverage report
+            inputs:
+              artifact: coverage-report
+              path: coverage
+
+          - task: SonarQubePrepare@7
+            displayName: Prepare SonarQube analysis
+            inputs:
+              SonarQube: SonarQube
+              scannerMode: CLI
+              configMode: file
+              extraProperties: |
+                sonar.coverage.exclusions=src/app/**/page.tsx,src/app/**/layout.tsx,src/app/**/loading.tsx,src/app/**/error.tsx,src/lib/schema.ts,src/lib/db.ts,src/lib/env.ts,src/lib/redis.ts,src/lib/logger.ts,src/lib/qstash.ts,src/lib/qstash-events.ts,src/lib/queue.ts,src/lib/email/providers.ts,src/lib/constants/categories.ts,src/lib/constants/checkout-policies.ts,src/lib/search/**,src/lib/ai/**,src/proxy.ts,src/types/**
+
+          - task: SonarQubeAnalyze@7
+            displayName: Run SonarQube analysis
+
+          - task: SonarQubePublish@7
+            displayName: Publish SonarQube results
+            inputs:
+              pollingTimeoutSec: 300
