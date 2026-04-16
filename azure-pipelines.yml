@@ -1,13 +1,11 @@
 trigger:
   branches:
     include:
-      - master
       - develop
 
 pr:
   branches:
     include:
-      - master
       - develop
 
 variables:
