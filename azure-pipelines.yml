@@ -112,14 +112,6 @@ stages:
           - script: npm ci
             displayName: Install dependencies
 
-          - script: npm run build
-            displayName: Build
-            env:
-              DATABASE_URL: postgresql://localhost/ci_placeholder
-              NEXTAUTH_SECRET: ci-secret-placeholder
-              NEXTAUTH_URL: http://localhost:3000
-              NEXT_TELEMETRY_DISABLED: 1
-
           - task: DownloadPipelineArtifact@2
             displayName: Download coverage report
             inputs:
@@ -135,6 +127,14 @@ stages:
               configMode: file
               extraProperties: |
                 sonar.coverage.exclusions=src/app/**/page.tsx,src/app/**/layout.tsx,src/app/**/loading.tsx,src/app/**/error.tsx,src/lib/schema.ts,src/lib/db.ts,src/lib/env.ts,src/lib/redis.ts,src/lib/logger.ts,src/lib/qstash.ts,src/lib/qstash-events.ts,src/lib/queue.ts,src/lib/email/providers.ts,src/lib/constants/categories.ts,src/lib/constants/checkout-policies.ts,src/lib/search/**,src/lib/ai/**,src/proxy.ts,src/types/**
+
+          - script: npm run build
+            displayName: Build
+            env:
+              DATABASE_URL: postgresql://localhost/ci_placeholder
+              NEXTAUTH_SECRET: ci-secret-placeholder
+              NEXTAUTH_URL: http://localhost:3000
+              NEXT_TELEMETRY_DISABLED: 1
 
           - task: SonarCloudAnalyze@4
             displayName: Run SonarQube analysis
