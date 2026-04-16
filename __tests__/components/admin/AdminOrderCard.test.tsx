@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { AdminOrderCard } from '@/features/admin/components/AdminOrderCard'
 import { OrderStatus } from '@/lib/types'

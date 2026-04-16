@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { render, screen } from '@testing-library/react'
 import { AdminSalesDashboardClient } from '@/features/admin/components/AdminSalesDashboardClient'
 import type { AdminSalesDashboardData } from '@/features/admin/services/admin-sales'
