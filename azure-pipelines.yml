@@ -3,52 +3,32 @@ trigger:
     include:
       - master
       - develop
+  paths:
+    exclude:
+      - docs/**
+      - specs/**
+      - '**/*.md'
+      - .cursorrules
 
 pr:
   branches:
     include:
       - master
       - develop
+  paths:
+    exclude:
+      - docs/**
+      - specs/**
+      - '**/*.md'
+      - .cursorrules
 
 variables:
   NODE_VERSION: '22'
   npm_config_cache: $(Pipeline.Workspace)/.npm
 
 stages:
-  - stage: DetectChanges
-    displayName: Detect Changed Files
-    jobs:
-      - job: CheckFiles
-        displayName: Detect Source Changes
-        pool:
-          vmImage: ubuntu-latest
-        steps:
-          - checkout: self
-            fetchDepth: 0
-
-          - bash: |
-              if [ "$(Build.Reason)" = "PullRequest" ]; then
-                git fetch origin $(System.PullRequest.TargetBranchName)
-                CHANGED=$(git diff --name-only "origin/$(System.PullRequest.TargetBranchName)"...HEAD)
-              else
-                CHANGED=$(git diff --name-only HEAD~1 HEAD)
-              fi
-              echo "Changed files:"
-              echo "$CHANGED"
-              NON_DOC_COUNT=$(echo "$CHANGED" | grep -v '^$' | grep -v '^docs/' | grep -v '^specs/' | grep -v '\.md$' | grep -v '^\.cursorrules$' | grep -c . || true)
-              echo "Non-doc changed file count: $NON_DOC_COUNT"
-              if [ "$NON_DOC_COUNT" -gt 0 ]; then
-                echo "##vso[task.setvariable variable=srcChanged;isOutput=true]true"
-              else
-                echo "##vso[task.setvariable variable=srcChanged;isOutput=true]false"
-              fi
-            name: detectChanges
-            displayName: Check for source file changes
-
   - stage: LintAndTest
     displayName: Lint, Type Check & Test
-    dependsOn: DetectChanges
-    condition: eq(stageDependencies.DetectChanges.CheckFiles.outputs['detectChanges.srcChanged'], 'true')
     jobs:
       - job: Lint
         displayName: Lint and Type Check
@@ -110,8 +90,8 @@ stages:
 
   - stage: BuildAndAnalyze
     displayName: Build and Code Analysis
-    dependsOn: [DetectChanges, LintAndTest]
-    condition: and(succeeded('LintAndTest'), eq(stageDependencies.DetectChanges.CheckFiles.outputs['detectChanges.srcChanged'], 'true'))
+    dependsOn: LintAndTest
+    condition: succeeded('LintAndTest')
     jobs:
       - job: BuildAndSonarQube
         displayName: Build and SonarQube Analysis
