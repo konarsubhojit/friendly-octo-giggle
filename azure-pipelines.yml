@@ -28,8 +28,8 @@ stages:
 
           - bash: |
               if [ "$(Build.Reason)" = "PullRequest" ]; then
-                git fetch origin $(System.PullRequest.TargetBranch)
-                CHANGED=$(git diff --name-only "origin/$(System.PullRequest.TargetBranch)"...HEAD)
+                git fetch origin $(System.PullRequest.TargetBranchName)
+                CHANGED=$(git diff --name-only "origin/$(System.PullRequest.TargetBranchName)"...HEAD)
               else
                 CHANGED=$(git diff --name-only HEAD~1 HEAD)
               fi
