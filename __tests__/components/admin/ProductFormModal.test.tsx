@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import React from 'react'
@@ -29,10 +30,8 @@ const mockProduct: Product = {
   id: 'prod-1',
   name: 'Test Product',
   description: 'A nice product',
-  price: 500, // ₹500 INR (base currency)
   image: 'https://example.com/image.jpg',
   images: [],
-  stock: 10,
   category: 'Flowers',
   deletedAt: null,
   createdAt: '2024-01-01',
@@ -146,29 +145,6 @@ describe('ProductFormModal', () => {
     expect((descInput as HTMLTextAreaElement).value).toBe('New Description')
   })
 
-  it('updates stock when changed', () => {
-    renderModal()
-    const stockInput = screen.getByLabelText('Stock')
-    fireEvent.change(stockInput, { target: { value: '25' } })
-    expect((stockInput as HTMLInputElement).value).toBe('25')
-  })
-
-  it('allows setting stock to 0 directly', () => {
-    renderModal({ editingProduct: mockProduct }) // starts with stock=10
-    const stockInput = screen.getByLabelText('Stock')
-    fireEvent.change(stockInput, { target: { value: '0' } })
-    expect((stockInput as HTMLInputElement).value).toBe('0')
-  })
-
-  it('allows clearing stock field and then typing 0', () => {
-    renderModal({ editingProduct: mockProduct }) // starts with stock=10
-    const stockInput = screen.getByLabelText('Stock')
-    fireEvent.change(stockInput, { target: { value: '' } })
-    expect((stockInput as HTMLInputElement).value).toBe('0')
-    fireEvent.change(stockInput, { target: { value: '0' } })
-    expect((stockInput as HTMLInputElement).value).toBe('0')
-  })
-
   it('updates category when selected', async () => {
     renderModal()
     const catSelect = screen.getByLabelText('Category') as HTMLSelectElement
@@ -230,13 +206,6 @@ describe('ProductFormModal', () => {
     })
   })
 
-  it('handles currency change and converts price', () => {
-    renderModal({ editingProduct: mockProduct })
-    const currencySelect = screen.getByRole('combobox', { name: 'Price' })
-    fireEvent.change(currencySelect, { target: { value: 'USD' } })
-    expect((currencySelect as HTMLSelectElement).value).toBe('USD')
-  })
-
   it('shows inline error when submitting without image', async () => {
     const { container } = renderModal()
     fireEvent.change(screen.getByLabelText('Name'), {
@@ -248,10 +217,6 @@ describe('ProductFormModal', () => {
     fireEvent.change(screen.getByLabelText('Category'), {
       target: { value: 'Flowers' },
     })
-    const priceInput = screen.getByRole('spinbutton', { name: 'Price' })
-    fireEvent.change(priceInput, { target: { value: '100' } })
-    const stockInput = screen.getByLabelText('Stock')
-    fireEvent.change(stockInput, { target: { value: '5' } })
 
     const form = container.querySelector('form')
     expect(form).not.toBeNull()
@@ -351,12 +316,6 @@ describe('ProductFormModal', () => {
     })
     fireEvent.change(screen.getByLabelText('Category'), {
       target: { value: 'Flowers' },
-    })
-    fireEvent.change(screen.getByRole('spinbutton', { name: 'Price' }), {
-      target: { value: '50' },
-    })
-    fireEvent.change(screen.getByLabelText('Stock'), {
-      target: { value: '10' },
     })
 
     const fileInput = screen.getByLabelText(/primary image/i)
@@ -470,12 +429,6 @@ describe('ProductFormModal', () => {
     fireEvent.change(screen.getByLabelText('Category'), {
       target: { value: 'Flowers' },
     })
-    fireEvent.change(screen.getByRole('spinbutton', { name: 'Price' }), {
-      target: { value: '50' },
-    })
-    fireEvent.change(screen.getByLabelText('Stock'), {
-      target: { value: '10' },
-    })
 
     const fileInput = screen.getByLabelText(/primary image/i)
     const validFile = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
@@ -531,12 +484,6 @@ describe('ProductFormModal', () => {
     })
     fireEvent.change(screen.getByLabelText('Category'), {
       target: { value: 'Flowers' },
-    })
-    fireEvent.change(screen.getByRole('spinbutton', { name: 'Price' }), {
-      target: { value: '10' },
-    })
-    fireEvent.change(screen.getByLabelText('Stock'), {
-      target: { value: '5' },
     })
 
     const fileInput = screen.getByLabelText(/primary image/i)
@@ -620,30 +567,6 @@ describe('ProductFormModal', () => {
     await waitFor(() => {
       expect(
         screen.queryByText(PRODUCT_ERRORS.NAME_REQUIRED)
-      ).not.toBeInTheDocument()
-    })
-  })
-
-  it('clears inline error when price is corrected', async () => {
-    const { container } = renderModal()
-    const form = container.querySelector('form')
-    fireEvent.change(screen.getByRole('spinbutton', { name: 'Price' }), {
-      target: { value: '0' },
-    })
-    act(() => {
-      fireEvent.submit(form as HTMLFormElement)
-    })
-    await waitFor(() => {
-      expect(
-        screen.getByText(PRODUCT_ERRORS.PRICE_POSITIVE)
-      ).toBeInTheDocument()
-    })
-    fireEvent.change(screen.getByRole('spinbutton', { name: 'Price' }), {
-      target: { value: '50' },
-    })
-    await waitFor(() => {
-      expect(
-        screen.queryByText(PRODUCT_ERRORS.PRICE_POSITIVE)
       ).not.toBeInTheDocument()
     })
   })

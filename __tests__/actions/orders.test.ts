@@ -71,8 +71,8 @@ const validOrderData = {
   city: 'New Delhi',
   state: 'Delhi',
   items: [
-    { productId: 'prod001', quantity: 2, price: 25 },
-    { productId: 'prod002', variationId: 'var001', quantity: 1, price: 50 },
+    { productId: 'prod001', variantId: 'var-default', quantity: 2, price: 25 },
+    { productId: 'prod002', variantId: 'var001', quantity: 1, price: 50 },
   ],
 }
 
@@ -105,11 +105,11 @@ describe('createOrder', () => {
       }
     )
     vi.mocked(drizzleDb.query.products.findMany).mockResolvedValue([
-      { id: 'prod001', name: 'Test Product A', variations: [] },
+      { id: 'prod001', name: 'Test Product A', variants: [] },
       {
         id: 'prod002',
         name: 'Test Product B',
-        variations: [{ id: 'var001', name: 'Blue' }],
+        variants: [{ id: 'var001' }],
       },
     ] as never)
   })
@@ -349,7 +349,7 @@ describe('getUserOrders', () => {
           id: 'item001',
           orderId: 'ORD1234567',
           productId: 'prod001',
-          variationId: null,
+          variantId: null,
           quantity: 2,
           price: 25,
           customizationNote: null,

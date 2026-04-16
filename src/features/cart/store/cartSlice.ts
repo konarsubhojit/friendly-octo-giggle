@@ -120,7 +120,7 @@ export const syncPendingCartItems = createAsyncThunk(
         dispatch(
           addToCart({
             productId: item.productId,
-            variationId: item.variationId ?? undefined,
+            variantId: item.variantId,
             quantity: item.quantity,
           })
         )

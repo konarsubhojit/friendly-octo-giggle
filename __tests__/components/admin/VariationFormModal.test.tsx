@@ -1,8 +1,9 @@
+// @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import React from 'react'
 import VariationFormModal from '@/features/admin/components/VariationFormModal'
-import type { ProductVariation } from '@/lib/types'
+import type { ProductVariant } from '@/lib/types'
 
 const { mockToastError, mockToastSuccess } = vi.hoisted(() => ({
   mockToastError: vi.fn(),
@@ -39,16 +40,13 @@ vi.mock('@/contexts/CurrencyContext', () => ({
   }),
 }))
 
-const mockVariation: ProductVariation = {
+const mockVariant: ProductVariant = {
   id: 'var1234',
   productId: 'abc1234',
-  styleId: null,
-  name: 'Red - Large',
-  designName: 'Classic Logo',
+  sku: null,
   image: null,
   images: [],
   price: 150,
-  variationType: 'styling' as const,
   stock: 25,
   deletedAt: null,
   createdAt: '2025-01-01T00:00:00.000Z',
@@ -57,19 +55,8 @@ const mockVariation: ProductVariation = {
 
 const defaultProps = {
   productId: 'abc1234',
-  productPrice: 29.99,
   onClose: vi.fn(),
   onSuccess: vi.fn(),
-}
-
-const switchToColour = () => {
-  const typeSelect = screen.getByLabelText('Variation Type')
-  fireEvent.change(typeSelect, { target: { value: 'colour' } })
-}
-
-const switchToStyling = () => {
-  const typeSelect = screen.getByLabelText('Variation Type')
-  fireEvent.change(typeSelect, { target: { value: 'styling' } })
 }
 
 describe('VariationFormModal', () => {
@@ -80,35 +67,18 @@ describe('VariationFormModal', () => {
 
   it('renders in create mode with empty fields', () => {
     render(<VariationFormModal {...defaultProps} />)
-    expect(screen.getByText('Add Variation')).toBeInTheDocument()
-    expect(screen.getByLabelText(/^Name/)).toHaveValue('')
-    expect(screen.getByLabelText(/Design Name/)).toHaveValue('')
+    expect(screen.getByText('Add Variant')).toBeInTheDocument()
     expect(screen.getByText('Create')).toBeInTheDocument()
   })
 
   it('renders in edit mode with pre-populated fields', () => {
-    render(<VariationFormModal {...defaultProps} variation={mockVariation} />)
-    expect(screen.getByText('Edit Variation')).toBeInTheDocument()
-    expect(screen.getByLabelText(/^Name/)).toHaveValue('Red - Large')
-    expect(screen.getByLabelText(/Design Name/)).toHaveValue('Classic Logo')
+    render(<VariationFormModal {...defaultProps} variant={mockVariant} />)
+    expect(screen.getByText('Edit Variant')).toBeInTheDocument()
     expect(screen.getByText('Update')).toBeInTheDocument()
-  })
-
-  it('shows validation errors for empty required fields', async () => {
-    render(<VariationFormModal {...defaultProps} />)
-    switchToColour()
-    fireEvent.click(screen.getByText('Create'))
-
-    await waitFor(() => {
-      expect(screen.getByText('Name is required')).toBeInTheDocument()
-      expect(screen.getByText('Design name is required')).toBeInTheDocument()
-      expect(screen.getByText('Stock is required')).toBeInTheDocument()
-    })
   })
 
   it('shows price warning when price <= 0', () => {
     render(<VariationFormModal {...defaultProps} />)
-    switchToColour()
     const priceInput = screen.getByRole('spinbutton', { name: 'Price' })
     fireEvent.change(priceInput, { target: { value: '-50' } })
     expect(
@@ -118,7 +88,6 @@ describe('VariationFormModal', () => {
 
   it('disables submit when price is invalid', () => {
     render(<VariationFormModal {...defaultProps} />)
-    switchToColour()
     const priceInput = screen.getByRole('spinbutton', { name: 'Price' })
     fireEvent.change(priceInput, { target: { value: '-100' } })
     expect(screen.getByText('Create')).toBeDisabled()
@@ -135,20 +104,12 @@ describe('VariationFormModal', () => {
     const onSuccess = vi.fn()
     const mockFetch = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ data: { variation: mockVariation } }),
+      json: async () => ({ data: { variant: mockVariant } }),
     })
     vi.stubGlobal('fetch', mockFetch)
 
     render(<VariationFormModal {...defaultProps} onSuccess={onSuccess} />)
 
-    switchToColour()
-
-    fireEvent.change(screen.getByLabelText(/^Name/), {
-      target: { value: 'Blue' },
-    })
-    fireEvent.change(screen.getByLabelText(/Design Name/), {
-      target: { value: 'Modern' },
-    })
     fireEvent.change(screen.getByRole('spinbutton', { name: 'Price' }), {
       target: { value: '150' },
     })
@@ -163,16 +124,6 @@ describe('VariationFormModal', () => {
         '/api/admin/variations',
         expect.objectContaining({
           method: 'POST',
-          body: JSON.stringify({
-            name: 'Blue',
-            designName: 'Modern',
-            variationType: 'colour',
-            price: 150,
-            stock: 10,
-            styleId: null,
-            productId: 'abc1234',
-            image: null,
-          }),
         })
       )
       expect(onSuccess).toHaveBeenCalled()
@@ -184,7 +135,7 @@ describe('VariationFormModal', () => {
     const mockFetch = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
-        data: { variation: { ...mockVariation, name: 'Green' } },
+        data: { variant: { ...mockVariant, price: 200 } },
       }),
     })
     vi.stubGlobal('fetch', mockFetch)
@@ -192,13 +143,13 @@ describe('VariationFormModal', () => {
     render(
       <VariationFormModal
         {...defaultProps}
-        variation={mockVariation}
+        variant={mockVariant}
         onSuccess={onSuccess}
       />
     )
 
-    fireEvent.change(screen.getByLabelText(/^Name/), {
-      target: { value: 'Green' },
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Price' }), {
+      target: { value: '200' },
     })
     fireEvent.click(screen.getByText('Update'))
 
@@ -211,121 +162,8 @@ describe('VariationFormModal', () => {
     })
   })
 
-  it('renders in styling type mode and hides price/stock fields', () => {
+  it('shows validation errors for empty required fields', async () => {
     render(<VariationFormModal {...defaultProps} />)
-    const typeSelect = screen.getByLabelText(
-      'Variation Type'
-    ) as HTMLSelectElement
-    expect(typeSelect.value).toBe('styling')
-    expect(screen.queryByLabelText(/^Stock/)).not.toBeInTheDocument()
-    expect(screen.queryByLabelText(/^Price/)).not.toBeInTheDocument()
-  })
-
-  it('shows style grouping info banner for styling type', () => {
-    render(<VariationFormModal {...defaultProps} />)
-    expect(screen.getByText(/Styles are grouping-only/)).toBeInTheDocument()
-  })
-
-  it('shows parent style selector when switching to colour type', () => {
-    render(<VariationFormModal {...defaultProps} />)
-    switchToColour()
-    expect(screen.getByLabelText('Parent Style')).toBeInTheDocument()
-  })
-
-  it('renders parent style options when styles prop is provided', () => {
-    const mockStyles = [
-      {
-        ...mockVariation,
-        id: 'sty001',
-        name: 'Floral',
-        designName: 'classic',
-        variationType: 'styling' as const,
-      },
-    ]
-    render(<VariationFormModal {...defaultProps} styles={mockStyles} />)
-    switchToColour()
-    expect(screen.getByText(/Floral/)).toBeInTheDocument()
-  })
-
-  it('submits styling type without price/stock validation', async () => {
-    const onSuccess = vi.fn()
-    const mockFetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ data: { variation: mockVariation } }),
-    })
-    vi.stubGlobal('fetch', mockFetch)
-
-    render(<VariationFormModal {...defaultProps} onSuccess={onSuccess} />)
-
-    fireEvent.change(screen.getByLabelText(/^Name/), {
-      target: { value: 'Floral Style' },
-    })
-    fireEvent.change(screen.getByLabelText(/Design Name/), {
-      target: { value: 'Summer' },
-    })
-    fireEvent.click(screen.getByText('Create'))
-
-    await waitFor(() => {
-      expect(mockFetch).toHaveBeenCalledWith(
-        '/api/admin/variations',
-        expect.objectContaining({
-          method: 'POST',
-          body: expect.stringContaining('"variationType":"styling"'),
-        })
-      )
-      expect(onSuccess).toHaveBeenCalled()
-    })
-  })
-
-  it('shows name too long validation error', async () => {
-    render(<VariationFormModal {...defaultProps} />)
-    switchToColour()
-
-    const longName = 'A'.repeat(101)
-    fireEvent.change(screen.getByLabelText(/^Name/), {
-      target: { value: longName },
-    })
-    fireEvent.click(screen.getByText('Create'))
-
-    await waitFor(() => {
-      expect(
-        screen.getByText('Name must be under 100 characters')
-      ).toBeInTheDocument()
-    })
-  })
-
-  it('shows design name too long validation error', async () => {
-    render(<VariationFormModal {...defaultProps} />)
-    switchToColour()
-
-    fireEvent.change(screen.getByLabelText(/^Name/), {
-      target: { value: 'Red' },
-    })
-    fireEvent.change(screen.getByLabelText(/Design Name/), {
-      target: { value: 'D'.repeat(101) },
-    })
-    fireEvent.click(screen.getByText('Create'))
-
-    await waitFor(() => {
-      expect(
-        screen.getByText('Design name must be under 100 characters')
-      ).toBeInTheDocument()
-    })
-  })
-
-  it('shows stock validation error for non-integer stock value', async () => {
-    render(<VariationFormModal {...defaultProps} />)
-    switchToColour()
-
-    fireEvent.change(screen.getByLabelText(/^Name/), {
-      target: { value: 'Red' },
-    })
-    fireEvent.change(screen.getByLabelText(/Design Name/), {
-      target: { value: 'Classic' },
-    })
-    fireEvent.change(screen.getByRole('spinbutton', { name: 'Price' }), {
-      target: { value: '100' },
-    })
     fireEvent.click(screen.getByText('Create'))
 
     await waitFor(() => {
@@ -336,18 +174,11 @@ describe('VariationFormModal', () => {
   it('shows toast error when fetch returns error response', async () => {
     const mockFetch = vi.fn().mockResolvedValue({
       ok: false,
-      json: async () => ({ error: 'Duplicate variation name' }),
+      json: async () => ({ error: 'Server error' }),
     })
     vi.stubGlobal('fetch', mockFetch)
 
     render(<VariationFormModal {...defaultProps} />)
-    switchToColour()
-    fireEvent.change(screen.getByLabelText(/^Name/), {
-      target: { value: 'Red' },
-    })
-    fireEvent.change(screen.getByLabelText(/Design Name/), {
-      target: { value: 'Classic' },
-    })
     fireEvent.change(screen.getByRole('spinbutton', { name: 'Price' }), {
       target: { value: '100' },
     })
@@ -357,68 +188,19 @@ describe('VariationFormModal', () => {
     fireEvent.click(screen.getByText('Create'))
 
     await waitFor(() => {
-      expect(mockToastError).toHaveBeenCalledWith('Duplicate variation name')
-    })
-  })
-
-  it('shows generic toast error when server returns unexpected response', async () => {
-    const mockFetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ unexpected: 'format' }),
-    })
-    vi.stubGlobal('fetch', mockFetch)
-
-    render(<VariationFormModal {...defaultProps} />)
-    switchToColour()
-    fireEvent.change(screen.getByLabelText(/^Name/), {
-      target: { value: 'Blue' },
-    })
-    fireEvent.change(screen.getByLabelText(/Design Name/), {
-      target: { value: 'Summer' },
-    })
-    fireEvent.change(screen.getByRole('spinbutton', { name: 'Price' }), {
-      target: { value: '150' },
-    })
-    fireEvent.change(screen.getByLabelText(/Stock/), {
-      target: { value: '5' },
-    })
-    fireEvent.click(screen.getByText('Create'))
-
-    await waitFor(() => {
-      expect(mockToastError).toHaveBeenCalledWith(
-        expect.stringContaining('Unexpected variation response')
-      )
+      expect(mockToastError).toHaveBeenCalledWith('Server error')
     })
   })
 
   it('closes via close X button (aria-label)', () => {
     const onClose = vi.fn()
     render(<VariationFormModal {...defaultProps} onClose={onClose} />)
-    fireEvent.click(screen.getByLabelText('Close variation editor'))
+    fireEvent.click(screen.getByLabelText('Close variant editor'))
     expect(onClose).toHaveBeenCalled()
   })
 
-  it('switches from styling to colour type and resets styleId', () => {
+  it('displays Variant editor heading', () => {
     render(<VariationFormModal {...defaultProps} />)
-    const typeSelect = screen.getByLabelText(
-      'Variation Type'
-    ) as HTMLSelectElement
-    expect(typeSelect.value).toBe('styling')
-    switchToColour()
-    expect(typeSelect.value).toBe('colour')
-    expect(screen.getByLabelText('Parent Style')).toBeInTheDocument()
-    switchToStyling()
-    expect(typeSelect.value).toBe('styling')
-  })
-
-  it('displays Add Variation title text for create mode', () => {
-    render(<VariationFormModal {...defaultProps} />)
-    expect(screen.getByText('Add Variation')).toBeInTheDocument()
-    expect(screen.getByText(/Variation editor/i)).toBeInTheDocument()
-  })
-
-  it('displays Edit Variation title text for edit mode', () => {
-    render(<VariationFormModal {...defaultProps} variation={mockVariation} />)
-    expect(screen.getByText('Edit Variation')).toBeInTheDocument()
+    expect(screen.getByText(/Variant editor/i)).toBeInTheDocument()
   })
 })

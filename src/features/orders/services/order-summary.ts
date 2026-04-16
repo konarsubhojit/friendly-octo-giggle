@@ -8,12 +8,11 @@ interface ProductSummaryItem {
 interface CheckoutPriceItem {
   readonly quantity?: number
   readonly product?: {
-    readonly price: number
     readonly name: string
   } | null
-  readonly variation?: {
-    readonly name: string
-    readonly designName?: string | null
+  readonly variant?: {
+    readonly name?: string
+    readonly sku?: string | null
     readonly price: number
   } | null
   readonly customizationNote?: string | null
@@ -81,8 +80,8 @@ export function countOrderUnits(items: readonly ProductSummaryItem[]) {
   return items.reduce((sum, item) => sum + (item.quantity ?? 0), 0)
 }
 
-function getVariationLabel(item: CheckoutPriceItem) {
-  const parts = [item.variation?.name, item.variation?.designName].filter(
+function getVariantLabel(item: CheckoutPriceItem) {
+  const parts = [item.variant?.name, item.variant?.sku].filter(
     (value): value is string => Boolean(value)
   )
 
@@ -98,12 +97,11 @@ export function buildCheckoutSummaryLineItems(
 ): CheckoutSummaryLineItem[] {
   return items.map((item) => {
     const quantity = item.quantity ?? 0
-    const basePrice = item.product?.price ?? 0
-    const unitPrice = item.variation?.price ?? basePrice
+    const unitPrice = item.variant?.price ?? 0
 
     return {
       name: item.product?.name ?? 'Product unavailable',
-      variationLabel: getVariationLabel(item),
+      variationLabel: getVariantLabel(item),
       quantity,
       unitPrice,
       lineTotal: unitPrice * quantity,

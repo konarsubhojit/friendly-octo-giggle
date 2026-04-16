@@ -14,14 +14,12 @@ export interface CartItemRedis {
   productId: string
   productName: string
   productDescription: string
-  productPrice: number
   productImage: string
   productCategory: string
-  productStock: number
-  variationId: string | null
-  variationName: string | null
-  variationPrice: number | null
-  variationStock: number | null
+  variantId: string
+  variantSku: string | null
+  variantPrice: number
+  variantStock: number
   quantity: number
   createdAt: string
   updatedAt: string
@@ -43,14 +41,12 @@ const toHashFields = (item: CartItemRedis): Record<string, string> => ({
   productId: item.productId,
   productName: item.productName,
   productDescription: item.productDescription,
-  productPrice: String(item.productPrice),
   productImage: item.productImage,
   productCategory: item.productCategory,
-  productStock: String(item.productStock),
-  variationId: item.variationId ?? '',
-  variationName: item.variationName ?? '',
-  variationPrice: String(item.variationPrice ?? 0),
-  variationStock: String(item.variationStock ?? 0),
+  variantId: item.variantId,
+  variantSku: item.variantSku ?? '',
+  variantPrice: String(item.variantPrice),
+  variantStock: String(item.variantStock),
   quantity: String(item.quantity),
   createdAt: item.createdAt,
   updatedAt: item.updatedAt,
@@ -66,19 +62,12 @@ const fromHashFields = (hash: Record<string, string>): CartItemRedis | null => {
     productId: hash.productId ?? '',
     productName: hash.productName ?? '',
     productDescription: hash.productDescription ?? '',
-    productPrice: Number(hash.productPrice ?? 0),
     productImage: hash.productImage ?? '',
     productCategory: hash.productCategory ?? '',
-    productStock: Number(hash.productStock ?? 0),
-    variationId: hash.variationId || null,
-    variationName: hash.variationName || null,
-    variationPrice: (() => {
-      if (hash.variationPrice !== undefined) return Number(hash.variationPrice)
-      if (hash.variationPriceModifier)
-        return Number(hash.variationPriceModifier)
-      return null
-    })(),
-    variationStock: hash.variationStock ? Number(hash.variationStock) : null,
+    variantId: hash.variantId ?? '',
+    variantSku: hash.variantSku || null,
+    variantPrice: Number(hash.variantPrice ?? 0),
+    variantStock: Number(hash.variantStock ?? 0),
     quantity: Number(hash.quantity ?? 0),
     createdAt: hash.createdAt ?? '',
     updatedAt: hash.updatedAt ?? '',
