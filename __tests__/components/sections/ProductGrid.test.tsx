@@ -1,9 +1,9 @@
+// @vitest-environment jsdom
 import { describe, it, vi, expect, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
+import { render, screen, act, waitFor } from '@testing-library/react'
 import React from 'react'
 import ProductGrid from '@/features/product/components/ProductGrid'
 import type { Product } from '@/lib/types'
-import toast from 'react-hot-toast'
 import type { ProductGridItem } from '@/features/product/components/ProductGrid'
 
 vi.mock('next/link', () => ({
@@ -53,10 +53,6 @@ vi.mock('next-auth/react', () => ({
   })),
 }))
 
-vi.mock('react-hot-toast', () => ({
-  default: { success: vi.fn(), error: vi.fn() },
-}))
-
 vi.mock('@/contexts/CurrencyContext', () => ({
   useCurrency: () => ({
     currency: 'INR' as const,
@@ -81,14 +77,26 @@ const makeProduct = (overrides: Partial<Product> = {}): Product => {
     id: '1',
     name: 'Test Product',
     description: 'A nice product',
-    price: 10,
     image: '/img.jpg',
     images: [],
-    stock: 10,
     category: 'Flowers',
     deletedAt: null,
     createdAt: '2024-01-01',
     updatedAt: '2024-01-01',
+    variants: [
+      {
+        id: 'var-default',
+        productId: '1',
+        sku: null,
+        price: 10,
+        stock: 10,
+        image: null,
+        images: [],
+        deletedAt: null,
+        createdAt: '2024-01-01',
+        updatedAt: '2024-01-01',
+      },
+    ],
     ...overrides,
   }
 
@@ -98,15 +106,44 @@ const makeProduct = (overrides: Partial<Product> = {}): Product => {
   }
 }
 
-const toGridItem = (product: Product): ProductGridItem => ({
-  id: product.id,
-  name: product.name,
-  description: product.description,
-  price: product.price,
-  image: product.image,
-  stock: product.stock,
-  category: product.category,
-})
+const toGridItem = (product: Product): ProductGridItem => {
+  const variants = product.variants ?? []
+  const price =
+    variants.length > 0 ? Math.min(...variants.map((v) => v.price)) : 0
+  const stock = variants.reduce((sum, v) => sum + v.stock, 0)
+  return {
+    id: product.id,
+    name: product.name,
+    description: product.description,
+    price,
+    image: product.image,
+    stock,
+    category: product.category,
+  }
+}
+
+/** Helper: create a Product with a single variant at the given stock level */
+const withVariantStock = (
+  stock: number,
+  overrides: Partial<Product> = {}
+): Product =>
+  makeProduct({
+    ...overrides,
+    variants: [
+      {
+        id: `var-${overrides.id ?? '1'}`,
+        productId: overrides.id ?? '1',
+        sku: null,
+        price: 10,
+        stock,
+        image: null,
+        images: [],
+        deletedAt: null,
+        createdAt: '2024-01-01',
+        updatedAt: '2024-01-01',
+      },
+    ],
+  })
 
 const ALL_CATEGORIES = [
   'Handbag',
@@ -178,17 +215,17 @@ describe('ProductGrid', () => {
   })
 
   it('shows In Stock badge for stock > 5', () => {
-    renderGrid([makeProduct({ stock: 10 })])
+    renderGrid([withVariantStock(10)])
     expect(screen.getByText('In Stock')).toBeTruthy()
   })
 
   it('shows low stock warning for stock 1-5', () => {
-    renderGrid([makeProduct({ stock: 3 })])
+    renderGrid([withVariantStock(3)])
     expect(screen.getByText('Only 3 left')).toBeTruthy()
   })
 
   it('shows Out of Stock for stock 0', () => {
-    renderGrid([makeProduct({ stock: 0 })])
+    renderGrid([withVariantStock(0)])
     expect(screen.getByText('Out of Stock')).toBeTruthy()
   })
 
@@ -328,76 +365,5 @@ describe('ProductGrid', () => {
       { method: 'GET', headers: { Accept: 'application/json' } }
     )
     expect(screen.getByText("You've seen all products.")).toBeTruthy()
-  })
-  it('renders quick add button for in-stock product', () => {
-    renderGrid([makeProduct({ stock: 5 })])
-    const btn = screen.getByRole('button', {
-      name: /Add Test Product to cart/i,
-    })
-    expect(btn).toBeTruthy()
-  })
-
-  it('does NOT render quick add button for out-of-stock product', () => {
-    renderGrid([makeProduct({ stock: 0 })])
-    expect(screen.queryByRole('button', { name: /Add.*to cart/i })).toBeNull()
-  })
-
-  it('quick add button dispatches addToCart and shows success toast', async () => {
-    mockDispatch.mockReturnValue({ unwrap: () => Promise.resolve({}) })
-    renderGrid([makeProduct({ id: 'p1', name: 'Flower Bouquet', stock: 5 })])
-
-    const addBtn = screen.getByRole('button', {
-      name: /Add Flower Bouquet to cart/i,
-    })
-    await act(async () => {
-      fireEvent.click(addBtn)
-    })
-
-    expect(mockDispatch).toHaveBeenCalledTimes(1)
-    await waitFor(() => {
-      expect(vi.mocked(toast).success).toHaveBeenCalledWith(
-        'Flower Bouquet added to cart!'
-      )
-    })
-  })
-
-  it('quick add button shows error toast when dispatch fails', async () => {
-    mockDispatch.mockReturnValue({
-      unwrap: () => Promise.reject(new Error('Out of stock')),
-    })
-    renderGrid([makeProduct({ id: 'p2', name: 'Test Bag', stock: 3 })])
-
-    const addBtn = screen.getByRole('button', {
-      name: /Add Test Bag to cart/i,
-    })
-    await act(async () => {
-      fireEvent.click(addBtn)
-    })
-
-    await waitFor(() => {
-      expect(vi.mocked(toast).error).toHaveBeenCalledWith(
-        'Failed to add to cart. Please try again.'
-      )
-    })
-  })
-
-  it('quick add button is disabled while adding', async () => {
-    let resolveAdd!: () => void
-    const pendingPromise = new Promise<void>((res) => {
-      resolveAdd = res
-    })
-    mockDispatch.mockReturnValue({ unwrap: () => pendingPromise })
-
-    renderGrid([makeProduct({ stock: 5 })])
-    const btn = screen.getByRole('button', {
-      name: /Add Test Product to cart/i,
-    })
-
-    fireEvent.click(btn)
-    expect(btn).toBeDisabled()
-
-    await act(async () => {
-      resolveAdd()
-    })
   })
 })

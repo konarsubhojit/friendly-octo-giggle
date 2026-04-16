@@ -70,8 +70,6 @@ export async function POST(request: Request) {
         name: p.name,
         description: p.description,
         category: p.category,
-        price: p.price,
-        stock: p.stock,
         image: p.image,
       })),
       { throwOnError: true }

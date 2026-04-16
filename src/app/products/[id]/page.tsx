@@ -44,7 +44,7 @@ const ProductPage = async ({
   readonly params: Promise<{ id: string }>
   readonly searchParams: Promise<{ v?: string }>
 }) => {
-  const [{ id }, { v: initialVariationId }] = await Promise.all([
+  const [{ id }, { v: initialVariantId }] = await Promise.all([
     params,
     searchParams,
   ])
@@ -60,7 +60,7 @@ const ProductPage = async ({
   return (
     <ProductClient
       product={product}
-      initialVariationId={initialVariationId ?? null}
+      initialVariantId={initialVariantId ?? null}
       aiEnabled={aiEnabled}
     />
   )

@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { render, screen } from '@testing-library/react'
 import { SalesTrendChart } from '@/features/admin/components/SalesTrendChart'
 import type { SalesTrendPoint } from '@/features/admin/services/admin-sales'

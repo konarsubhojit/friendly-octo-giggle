@@ -14,8 +14,8 @@ import {
   ProductSchema,
   ProductInputSchema,
   ProductUpdateSchema,
-  CreateVariationSchema,
-  UpdateVariationSchema,
+  CreateVariantSchema,
+  UpdateVariantSchema,
   CreateReviewSchema,
   CreateShareSchema,
   registerSchema,
@@ -61,8 +61,8 @@ describe('lib/validations/index re-exports', () => {
     expect(ProductSchema).toBeDefined()
     expect(ProductInputSchema).toBeDefined()
     expect(ProductUpdateSchema).toBeDefined()
-    expect(CreateVariationSchema).toBeDefined()
-    expect(UpdateVariationSchema).toBeDefined()
+    expect(CreateVariantSchema).toBeDefined()
+    expect(UpdateVariantSchema).toBeDefined()
     expect(CreateReviewSchema).toBeDefined()
     expect(CreateShareSchema).toBeDefined()
   })

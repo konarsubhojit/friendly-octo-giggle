@@ -80,7 +80,7 @@ vi.mock('@/lib/schema', () => ({
     id: 'id',
     cartId: 'cartId',
     productId: 'productId',
-    variationId: 'variationId',
+    variantId: 'variantId',
   },
   users: { id: 'id' },
 }))
@@ -199,14 +199,12 @@ describe('cart-service', () => {
           productId: 'prod1',
           productName: 'Widget',
           productDescription: 'Desc',
-          productPrice: 100,
           productImage: 'img.jpg',
           productCategory: 'Cat',
-          productStock: 10,
-          variationId: null,
-          variationName: null,
-          variationPrice: null,
-          variationStock: null,
+          variantId: 'v1',
+          variantSku: null,
+          variantPrice: 100,
+          variantStock: 10,
           quantity: 2,
           createdAt: '2024-01-01T00:00:00Z',
           updatedAt: '2024-01-01T00:00:00Z',
@@ -238,15 +236,26 @@ describe('cart-service', () => {
               id: 'prod1',
               name: 'Widget',
               description: 'A widget',
-              price: 100,
               image: 'img.jpg',
               category: 'Cat',
-              stock: 10,
               createdAt: new Date('2024-01-01'),
               updatedAt: new Date('2024-01-01'),
-              variations: [],
+              variants: [
+                {
+                  id: 'var1',
+                  productId: 'prod1',
+                  sku: null,
+                  price: 100,
+                  stock: 10,
+                  image: null,
+                  images: [],
+                  deletedAt: null,
+                  createdAt: new Date('2024-01-01'),
+                  updatedAt: new Date('2024-01-01'),
+                },
+              ],
             },
-            variation: null,
+            variant: null,
           },
         ],
       }
@@ -295,14 +304,12 @@ describe('cart-service', () => {
           productId: 'prod1',
           productName: 'Widget',
           productDescription: 'Desc',
-          productPrice: 100,
           productImage: 'img.jpg',
           productCategory: 'Cat',
-          productStock: 10,
-          variationId: 'var1',
-          variationName: 'Large',
-          variationPrice: 120,
-          variationStock: 5,
+          variantId: 'var1',
+          variantSku: 'Large',
+          variantPrice: 120,
+          variantStock: 5,
           quantity: 1,
           createdAt: '2024-01-01T00:00:00Z',
           updatedAt: '2024-01-01T00:00:00Z',
@@ -313,7 +320,7 @@ describe('cart-service', () => {
       const result = await getCart({ sessionId: 'sess1' })
 
       expect(result.cart).not.toBeNull()
-      expect(result.cart!.items[0].variation).not.toBeNull()
+      expect(result.cart!.items[0].variant).not.toBeNull()
     })
   })
 

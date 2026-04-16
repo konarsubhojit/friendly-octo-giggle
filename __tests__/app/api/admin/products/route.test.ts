@@ -60,9 +60,13 @@ vi.mock('@/lib/search', () => ({
 }))
 
 vi.mock(
-  '@/lib/validations',
-  async () => await vi.importActual('@/lib/validations')
+  '@/features/product/validations',
+  async () => await vi.importActual('@/features/product/validations')
 )
+
+vi.mock('@/features/admin/services/admin-auth', () => ({
+  checkAdminAuth: vi.fn(),
+}))
 
 vi.mock('@/lib/logger', () => ({
   logError: vi.fn(),
@@ -73,9 +77,9 @@ vi.mock('next/cache', () => ({
 }))
 
 import { db } from '@/lib/db'
-import { auth } from '@/lib/auth'
 import { invalidateProductCaches } from '@/lib/cache'
 import { revalidateTag } from 'next/cache'
+import { checkAdminAuth } from '@/features/admin/services/admin-auth'
 
 const makeRequest = (params?: Record<string, string>) => {
   const url = new URL('http://localhost/api/admin/products')
@@ -93,7 +97,11 @@ describe('Admin Products API', () => {
 
   describe('GET /api/admin/products', () => {
     it('returns 401 when not authenticated', async () => {
-      vi.mocked(auth).mockResolvedValue(null as never)
+      vi.mocked(checkAdminAuth).mockResolvedValue({
+        authorized: false,
+        error: 'Not authenticated',
+        status: 401,
+      })
       const response = await GET(makeRequest())
       const data = await response.json()
       expect(response.status).toBe(401)
@@ -102,10 +110,11 @@ describe('Admin Products API', () => {
     })
 
     it('returns 403 when not admin', async () => {
-      vi.mocked(auth).mockResolvedValue({
-        user: { role: 'CUSTOMER' },
-        expires: new Date().toISOString(),
-      } as never)
+      vi.mocked(checkAdminAuth).mockResolvedValue({
+        authorized: false,
+        error: 'Not authorized - Admin access required',
+        status: 403,
+      })
       const response = await GET(makeRequest())
       const data = await response.json()
       expect(response.status).toBe(403)
@@ -118,17 +127,16 @@ describe('Admin Products API', () => {
         {
           id: 'prod1',
           name: 'Product 1',
-          price: 19.99,
           deletedAt: null,
           createdAt: new Date('2024-01-01'),
           updatedAt: new Date('2024-01-01'),
-          variations: [],
+          variants: [],
         },
       ]
-      vi.mocked(auth).mockResolvedValue({
-        user: { role: 'ADMIN' },
-        expires: new Date().toISOString(),
-      } as never)
+      vi.mocked(checkAdminAuth).mockResolvedValue({
+        authorized: true,
+        userId: 'a1',
+      })
       mockFindMany.mockResolvedValue(mockProducts)
       mockSelectWhere.mockResolvedValue([{ value: 1 }])
 
@@ -143,22 +151,83 @@ describe('Admin Products API', () => {
       expect(data.data.totalCount).toBe(1)
     })
 
+    it('serializes variant fields (sku, image, images, dates) in response', async () => {
+      const mockProducts = [
+        {
+          id: 'prod1',
+          name: 'Product With Variants',
+          deletedAt: null,
+          createdAt: new Date('2024-01-01'),
+          updatedAt: new Date('2024-01-01'),
+          variants: [
+            {
+              id: 'v1',
+              productId: 'prod1',
+              sku: 'SKU-001',
+              image: 'https://example.com/v1.jpg',
+              images: ['https://example.com/v1-b.jpg'],
+              price: 100,
+              stock: 10,
+              deletedAt: null,
+              createdAt: new Date('2024-06-01'),
+              updatedAt: new Date('2024-06-02'),
+            },
+            {
+              id: 'v2',
+              productId: 'prod1',
+              sku: null,
+              image: null,
+              images: null,
+              price: 200,
+              stock: 5,
+              deletedAt: null,
+              createdAt: new Date('2024-07-01'),
+              updatedAt: new Date('2024-07-02'),
+            },
+          ],
+        },
+      ]
+      vi.mocked(checkAdminAuth).mockResolvedValue({
+        authorized: true,
+        userId: 'a1',
+      })
+      mockFindMany.mockResolvedValue(mockProducts)
+      mockSelectWhere.mockResolvedValue([{ value: 1 }])
+
+      const response = await GET(makeRequest())
+      const data = await response.json()
+
+      expect(response.status).toBe(200)
+      const product = data.data.products[0]
+      expect(product.variants).toHaveLength(2)
+
+      const [v1, v2] = product.variants
+      expect(v1.sku).toBe('SKU-001')
+      expect(v1.image).toBe('https://example.com/v1.jpg')
+      expect(v1.images).toEqual(['https://example.com/v1-b.jpg'])
+      expect(v1.createdAt).toBe('2024-06-01T00:00:00.000Z')
+      expect(v1.updatedAt).toBe('2024-06-02T00:00:00.000Z')
+
+      expect(v2.sku).toBeNull()
+      expect(v2.image).toBeNull()
+      expect(v2.images).toEqual([])
+    })
+
     it('handles pagination with cursor', async () => {
       const mockProducts = [
         {
           id: 'prod2',
           name: 'Product 2',
-          price: 29.99,
           deletedAt: null,
           createdAt: new Date('2024-01-02'),
           updatedAt: new Date('2024-01-02'),
-          variations: [],
+          variants: [],
         },
       ]
-      vi.mocked(auth).mockResolvedValue({
-        user: { role: 'ADMIN' },
-        expires: new Date().toISOString(),
-      } as never)
+      vi.mocked(checkAdminAuth).mockResolvedValue({
+        authorized: true,
+        userId: 'a1',
+      })
       mockFindMany.mockResolvedValue(mockProducts)
       mockSelectWhere.mockResolvedValue([{ value: 1 }])
 
@@ -176,17 +245,16 @@ describe('Admin Products API', () => {
         {
           id: 'prod3',
           name: 'Product 3',
-          price: 39.99,
           deletedAt: null,
           createdAt: new Date('2024-01-03'),
           updatedAt: new Date('2024-01-03'),
-          variations: [],
+          variants: [],
         },
       ]
-      vi.mocked(auth).mockResolvedValue({
-        user: { role: 'ADMIN' },
-        expires: new Date().toISOString(),
-      } as never)
+      vi.mocked(checkAdminAuth).mockResolvedValue({
+        authorized: true,
+        userId: 'a1',
+      })
       mockFindMany.mockResolvedValue(mockProducts)
       mockSelectWhere.mockResolvedValue([{ value: 1 }])
 
@@ -198,10 +266,10 @@ describe('Admin Products API', () => {
     })
 
     it('handles search with empty results', async () => {
-      vi.mocked(auth).mockResolvedValue({
-        user: { role: 'ADMIN' },
-        expires: new Date().toISOString(),
-      } as never)
+      vi.mocked(checkAdminAuth).mockResolvedValue({
+        authorized: true,
+        userId: 'a1',
+      })
       mockFindMany.mockResolvedValue([])
       mockSelectWhere.mockResolvedValue([{ value: 0 }])
 
@@ -214,10 +282,10 @@ describe('Admin Products API', () => {
     })
 
     it('enforces limit constraints', async () => {
-      vi.mocked(auth).mockResolvedValue({
-        user: { role: 'ADMIN' },
-        expires: new Date().toISOString(),
-      } as never)
+      vi.mocked(checkAdminAuth).mockResolvedValue({
+        authorized: true,
+        userId: 'a1',
+      })
       mockFindMany.mockResolvedValue([])
       mockSelectWhere.mockResolvedValue([{ value: 0 }])
 
@@ -234,8 +302,6 @@ describe('Admin Products API', () => {
   describe('POST /api/admin/products', () => {
     const validProductInput = {
       name: 'Test Product',
-      price: 29.99,
-      stock: 100,
       category: 'Electronics',
       description: 'Test desc',
       image: 'https://example.com/img.png',
@@ -248,7 +314,11 @@ describe('Admin Products API', () => {
       })
 
     it('returns 401 when not authenticated', async () => {
-      vi.mocked(auth).mockResolvedValue(null as never)
+      vi.mocked(checkAdminAuth).mockResolvedValue({
+        authorized: false,
+        error: 'Not authenticated',
+        status: 401,
+      })
       const request = createPostRequest(validProductInput)
       const response = await POST(request)
       const data = await response.json()
@@ -258,10 +328,11 @@ describe('Admin Products API', () => {
     })
 
     it('returns 403 when not admin', async () => {
-      vi.mocked(auth).mockResolvedValue({
-        user: { role: 'CUSTOMER' },
-        expires: new Date().toISOString(),
-      } as never)
+      vi.mocked(checkAdminAuth).mockResolvedValue({
+        authorized: false,
+        error: 'Not authorized - Admin access required',
+        status: 403,
+      })
       const request = createPostRequest(validProductInput)
       const response = await POST(request)
       const data = await response.json()
@@ -271,11 +342,11 @@ describe('Admin Products API', () => {
     })
 
     it('returns 400 for invalid input (Zod validation)', async () => {
-      vi.mocked(auth).mockResolvedValue({
-        user: { role: 'ADMIN' },
-        expires: new Date().toISOString(),
-      } as never)
-      const invalidInput = { name: '', price: -10, stock: -5 }
+      vi.mocked(checkAdminAuth).mockResolvedValue({
+        authorized: true,
+        userId: 'a1',
+      })
+      const invalidInput = { name: '' }
       const request = createPostRequest(invalidInput)
       const response = await POST(request)
       const data = await response.json()
@@ -288,14 +359,15 @@ describe('Admin Products API', () => {
       const mockCreatedProduct = {
         id: 'newprod1',
         ...validProductInput,
+        images: [],
         deletedAt: null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       }
-      vi.mocked(auth).mockResolvedValue({
-        user: { role: 'ADMIN' },
-        expires: new Date().toISOString(),
-      } as never)
+      vi.mocked(checkAdminAuth).mockResolvedValue({
+        authorized: true,
+        userId: 'a1',
+      })
       mockCreate.mockResolvedValue(mockCreatedProduct)
       vi.mocked(invalidateProductCaches).mockResolvedValue()
 

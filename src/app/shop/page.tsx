@@ -10,11 +10,52 @@ import { searchProductIdsCached } from '@/lib/search'
 import { categories as categoriesTable } from '@/lib/schema'
 import { isNull, asc } from 'drizzle-orm'
 import { logError } from '@/lib/logger'
+import {
+  getVariantMinPrice,
+  getVariantTotalStock,
+} from '@/features/product/variant-utils'
 
 export const revalidate = 300
 
 const SHOP_INITIAL_SIZE = 24
 const SHOP_BATCH_SIZE = 20
+
+/** Convert a Product (with variants) to a ProductGridItem with derived price/stock */
+const toGridItem = (p: {
+  id: string
+  name: string
+  description: string
+  image: string
+  category: string
+  variants?: Array<{ id: string; price: number; stock: number }>
+}): ProductGridItem => ({
+  id: p.id,
+  name: p.name,
+  description: p.description,
+  image: p.image,
+  category: p.category,
+  price: getVariantMinPrice(p.variants),
+  stock: getVariantTotalStock(p.variants),
+})
+
+/** Convert a MinimalProduct (already has derived price/stock) to a ProductGridItem */
+const toMinimalGridItem = (p: {
+  id: string
+  name: string
+  description: string
+  image: string
+  category: string
+  price: number
+  stock: number
+}): ProductGridItem => ({
+  id: p.id,
+  name: p.name,
+  description: p.description,
+  image: p.image,
+  category: p.category,
+  price: p.price,
+  stock: p.stock,
+})
 
 interface ShopPageProps {
   readonly searchParams?: Promise<{
@@ -81,8 +122,10 @@ const ShopPage = async ({ searchParams }: ShopPageProps) => {
         })
 
         shopData = {
-          products: allProducts.slice(0, SHOP_INITIAL_SIZE),
-          bestsellers: topProducts,
+          products: allProducts
+            .slice(0, SHOP_INITIAL_SIZE)
+            .map(toMinimalGridItem),
+          bestsellers: topProducts.map(toGridItem),
           categoryNames: cats.map((c) => c.name),
           hasNextPage: allProducts.length > SHOP_INITIAL_SIZE,
         }
@@ -101,8 +144,8 @@ const ShopPage = async ({ searchParams }: ShopPageProps) => {
         })
 
         shopData = {
-          products: orderedProducts,
-          bestsellers: topProducts,
+          products: orderedProducts.map(toMinimalGridItem),
+          bestsellers: topProducts.map(toGridItem),
           categoryNames: cats.map((c) => c.name),
           hasNextPage: matchedIds.length > SHOP_INITIAL_SIZE,
         }
@@ -116,8 +159,10 @@ const ShopPage = async ({ searchParams }: ShopPageProps) => {
       })
 
       shopData = {
-        products: allProducts.slice(0, SHOP_INITIAL_SIZE),
-        bestsellers: topProducts,
+        products: allProducts
+          .slice(0, SHOP_INITIAL_SIZE)
+          .map(toMinimalGridItem),
+        bestsellers: topProducts.map(toGridItem),
         categoryNames: cats.map((c) => c.name),
         hasNextPage: allProducts.length > SHOP_INITIAL_SIZE,
       }

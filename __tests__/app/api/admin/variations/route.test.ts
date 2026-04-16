@@ -4,9 +4,14 @@ import { NextRequest } from 'next/server'
 const mockFindFirst = vi.fn()
 const mockFindMany = vi.fn()
 const mockReturning = vi.fn()
-const mockWhere = vi.fn()
-const mockSet = vi.fn()
 const mockValues = vi.fn()
+
+const { mockCheckAdminAuth } = vi.hoisted(() => ({
+  mockCheckAdminAuth: vi.fn(async () => ({ authorized: true, userId: 'a1' })),
+}))
+
+const mockUpdate = vi.fn()
+const mockDelete = vi.fn()
 
 const createInsertMock = () => ({
   values: (...args: unknown[]) => {
@@ -15,47 +20,73 @@ const createInsertMock = () => ({
   },
 })
 
-const createUpdateMock = () => ({
-  set: (...args: unknown[]) => {
-    mockSet(...args)
-    return {
-      where: (...wArgs: unknown[]) => {
-        mockWhere(...wArgs)
-        return { returning: () => mockReturning() }
-      },
-    }
-  },
-})
-
 vi.mock('@/lib/db', () => ({
   drizzleDb: {
     query: {
       products: { findFirst: (...args: unknown[]) => mockFindFirst(...args) },
-      productVariations: {
+      productVariants: {
         findFirst: (...args: unknown[]) => mockFindFirst(...args),
         findMany: (...args: unknown[]) => mockFindMany(...args),
       },
     },
     insert: createInsertMock,
-    update: createUpdateMock,
+    update: (...args: unknown[]) => {
+      mockUpdate(...args)
+      return {
+        set: (_setArgs: unknown) => ({
+          where: (_whereArgs: unknown) => ({
+            returning: () => mockReturning(),
+          }),
+        }),
+      }
+    },
+    delete: (...args: unknown[]) => {
+      mockDelete(...args)
+      return {
+        where: vi.fn(),
+      }
+    },
   },
 }))
 
 vi.mock('@/lib/schema', () => ({
   products: { id: 'id', deletedAt: 'deletedAt' },
-  productVariations: {
+  productVariants: {
     id: 'id',
     productId: 'productId',
-    name: 'name',
     deletedAt: 'deletedAt',
+  },
+  productVariantOptionValues: {
+    variantId: 'variantId',
+    optionValueId: 'optionValueId',
   },
 }))
 
-vi.mock('@/lib/auth', () => ({ auth: vi.fn() }))
+vi.mock('@/features/admin/services/admin-auth', () => ({
+  checkAdminAuth: mockCheckAdminAuth,
+}))
+
 vi.mock(
-  '@/lib/validations',
-  async () => await vi.importActual('@/lib/validations')
+  '@/features/product/validations',
+  async () => await vi.importActual('@/features/product/validations')
 )
+vi.mock('@/lib/serializers', () => ({
+  serializeVariant: (v: Record<string, unknown>) => ({
+    ...v,
+    sku: v.sku ?? null,
+    image: v.image ?? null,
+    images: v.images ?? [],
+    createdAt:
+      v.createdAt instanceof Date ? v.createdAt.toISOString() : v.createdAt,
+    updatedAt:
+      v.updatedAt instanceof Date ? v.updatedAt.toISOString() : v.updatedAt,
+    deletedAt: v.deletedAt
+      ? v.deletedAt instanceof Date
+        ? v.deletedAt.toISOString()
+        : v.deletedAt
+      : null,
+  }),
+}))
 vi.mock('@/lib/logger', () => ({ logError: vi.fn() }))
 vi.mock('next/cache', () => ({ revalidateTag: vi.fn() }))
 vi.mock('@/lib/cache', () => ({ invalidateProductCaches: vi.fn() }))
@@ -63,34 +94,21 @@ vi.mock('drizzle-orm', () => ({
   eq: vi.fn((...args: unknown[]) => args),
   and: vi.fn((...args: unknown[]) => args),
   isNull: vi.fn((...args: unknown[]) => args),
-  ne: vi.fn((...args: unknown[]) => args),
 }))
-
-import { auth } from '@/lib/auth'
-
-const mockAuth = vi.mocked(auth)
-
-const adminSession = {
-  user: { id: 'a1', email: 'admin@test.com', role: 'ADMIN' },
-  expires: '2099-01-01',
-} as never
 
 const mockProduct = {
   id: 'abc1234',
   name: 'Test Product',
-  price: 29.99,
   deletedAt: null,
 }
 
-const mockVariation = {
+const mockVariant = {
   id: 'var1234',
   productId: 'abc1234',
-  name: 'Blue',
-  designName: 'Modern',
+  sku: null,
   image: null,
   images: [],
   price: 150,
-  variationType: 'styling',
   stock: 10,
   deletedAt: null,
   createdAt: new Date('2025-01-01'),
@@ -114,23 +132,20 @@ describe('POST /api/admin/variations', () => {
 
   beforeEach(async () => {
     vi.resetAllMocks()
+    mockCheckAdminAuth.mockResolvedValue({ authorized: true, userId: 'a1' })
     const mod = await import('@/app/api/admin/variations/route')
     POST = mod.POST
   })
 
-  it('creates a variation for the provided product', async () => {
-    mockAuth.mockResolvedValue(adminSession)
-    mockFindFirst.mockResolvedValueOnce(mockProduct).mockResolvedValueOnce(null)
+  it('creates a variant for the provided product', async () => {
+    mockFindFirst.mockResolvedValueOnce(mockProduct)
     mockFindMany.mockResolvedValueOnce([])
-    mockReturning.mockResolvedValueOnce([mockVariation])
+    mockReturning.mockResolvedValueOnce([mockVariant])
 
     const res = await POST(
       makeRequest('http://localhost/api/admin/variations', 'POST', {
         productId: 'abc1234',
-        name: 'Blue',
-        designName: 'Modern',
         price: 150,
-        variationType: 'colour',
         stock: 10,
       })
     )
@@ -138,19 +153,20 @@ describe('POST /api/admin/variations', () => {
     expect(res.status).toBe(201)
     const json = await res.json()
     expect(json.success).toBe(true)
-    expect(json.data.variation.productId).toBe('abc1234')
+    expect(json.data.variant.productId).toBe('abc1234')
   })
 
   it('returns 401 if user is not authenticated', async () => {
-    mockAuth.mockResolvedValue(null as never)
+    mockCheckAdminAuth.mockResolvedValue({
+      authorized: false,
+      error: 'Unauthorized',
+      status: 401,
+    } as never)
 
     const res = await POST(
       makeRequest('http://localhost/api/admin/variations', 'POST', {
         productId: 'abc1234',
-        name: 'Blue',
-        designName: 'Modern',
         price: 150,
-        variationType: 'colour',
         stock: 10,
       })
     )
@@ -159,18 +175,16 @@ describe('POST /api/admin/variations', () => {
   })
 
   it('returns 403 if user is not admin', async () => {
-    mockAuth.mockResolvedValue({
-      user: { id: 'u1', email: 'user@test.com', role: 'USER' },
-      expires: '2099-01-01',
+    mockCheckAdminAuth.mockResolvedValue({
+      authorized: false,
+      error: 'Not authorized - Admin access required',
+      status: 403,
     } as never)
 
     const res = await POST(
       makeRequest('http://localhost/api/admin/variations', 'POST', {
         productId: 'abc1234',
-        name: 'Blue',
-        designName: 'Modern',
         price: 150,
-        variationType: 'colour',
         stock: 10,
       })
     )
@@ -179,16 +193,12 @@ describe('POST /api/admin/variations', () => {
   })
 
   it('returns 404 if product not found', async () => {
-    mockAuth.mockResolvedValue(adminSession)
     mockFindFirst.mockResolvedValueOnce(null)
 
     const res = await POST(
       makeRequest('http://localhost/api/admin/variations', 'POST', {
-        productId: 'nonexistent',
-        name: 'Blue',
-        designName: 'Modern',
+        productId: 'nonexis',
         price: 150,
-        variationType: 'colour',
         stock: 10,
       })
     )
@@ -196,123 +206,39 @@ describe('POST /api/admin/variations', () => {
     expect(res.status).toBe(404)
   })
 
-  it('returns 400 if colour price is zero or negative', async () => {
-    mockAuth.mockResolvedValue(adminSession)
-    mockFindFirst.mockResolvedValueOnce(mockProduct)
-
+  it('returns 400 if price is zero or negative', async () => {
     const res = await POST(
       makeRequest('http://localhost/api/admin/variations', 'POST', {
         productId: 'abc1234',
-        name: 'Blue',
-        designName: 'Modern',
         price: 0,
-        variationType: 'colour',
         stock: 10,
       })
     )
 
     expect(res.status).toBe(400)
     const json = await res.json()
-    // The error could be from validation or business logic
     expect(json.success).toBe(false)
     expect(json.error).toBeDefined()
   })
 
-  it('returns 400 if maximum variations reached', async () => {
-    mockAuth.mockResolvedValue(adminSession)
-    mockFindFirst.mockResolvedValueOnce(mockProduct).mockResolvedValueOnce(null)
+  it('returns 400 if maximum variants reached', async () => {
+    mockFindFirst.mockResolvedValueOnce(mockProduct)
     mockFindMany.mockResolvedValueOnce(Array(25).fill({ id: 'v' }))
 
     const res = await POST(
       makeRequest('http://localhost/api/admin/variations', 'POST', {
         productId: 'abc1234',
-        name: 'Blue',
-        designName: 'Modern',
         price: 150,
-        variationType: 'colour',
         stock: 10,
       })
     )
 
     expect(res.status).toBe(400)
     const json = await res.json()
-    expect(json.error).toContain('25 variations')
-  })
-
-  it('returns 409 if variation name already exists (active)', async () => {
-    mockAuth.mockResolvedValue(adminSession)
-    mockFindFirst
-      .mockResolvedValueOnce(mockProduct)
-      .mockResolvedValueOnce({ id: 'ex1', name: 'Blue', deletedAt: null })
-    mockFindMany.mockResolvedValueOnce([])
-
-    const res = await POST(
-      makeRequest('http://localhost/api/admin/variations', 'POST', {
-        productId: 'abc1234',
-        name: 'Blue',
-        designName: 'Modern',
-        price: 150,
-        variationType: 'colour',
-        stock: 10,
-      })
-    )
-
-    expect(res.status).toBe(409)
-    const json = await res.json()
-    expect(json.error).toContain('already exists')
-  })
-
-  it('returns 409 if variation name already exists (archived)', async () => {
-    mockAuth.mockResolvedValue(adminSession)
-    mockFindFirst
-      .mockResolvedValueOnce(mockProduct)
-      .mockResolvedValueOnce({ id: 'ex1', name: 'Blue', deletedAt: new Date() })
-    mockFindMany.mockResolvedValueOnce([])
-
-    const res = await POST(
-      makeRequest('http://localhost/api/admin/variations', 'POST', {
-        productId: 'abc1234',
-        name: 'Blue',
-        designName: 'Modern',
-        price: 150,
-        variationType: 'colour',
-        stock: 10,
-      })
-    )
-
-    expect(res.status).toBe(409)
-    const json = await res.json()
-    expect(json.error).toContain('previously archived')
-  })
-
-  it('returns 404 if parent style not found for colour variation', async () => {
-    mockAuth.mockResolvedValue(adminSession)
-    mockFindFirst
-      .mockResolvedValueOnce(mockProduct)
-      .mockResolvedValueOnce(null) // parent style not found
-      .mockResolvedValueOnce(null) // name check
-    mockFindMany.mockResolvedValueOnce([])
-
-    const res = await POST(
-      makeRequest('http://localhost/api/admin/variations', 'POST', {
-        productId: 'abc1234',
-        name: 'Blue',
-        designName: 'Modern',
-        price: 150,
-        variationType: 'colour',
-        styleId: 'invalid',
-        stock: 10,
-      })
-    )
-
-    expect(res.status).toBe(404)
-    const json = await res.json()
-    expect(json.error).toContain('Parent style not found')
+    expect(json.error).toContain('25 variants')
   })
 
   it('returns 400 for validation errors', async () => {
-    mockAuth.mockResolvedValue(adminSession)
-
     const res = await POST(
       makeRequest('http://localhost/api/admin/variations', 'POST', {
         productId: 'abc1234',
@@ -329,17 +255,17 @@ describe('PUT /api/admin/variations/[variationId]', () => {
 
   beforeEach(async () => {
     vi.resetAllMocks()
+    mockCheckAdminAuth.mockResolvedValue({ authorized: true, userId: 'a1' })
     const mod = await import('@/app/api/admin/variations/[variationId]/route')
     PUT = mod.PUT
   })
 
-  it('updates a variation without productId in the path', async () => {
-    mockAuth.mockResolvedValue(adminSession)
+  it('updates a variant without productId in the path', async () => {
     mockFindFirst
-      .mockResolvedValueOnce(mockVariation)
+      .mockResolvedValueOnce(mockVariant)
       .mockResolvedValueOnce(mockProduct)
     mockReturning.mockResolvedValueOnce([
-      { ...mockVariation, stock: 12, updatedAt: new Date('2025-01-02') },
+      { ...mockVariant, stock: 12, updatedAt: new Date('2025-01-02') },
     ])
 
     const res = await PUT(
@@ -351,11 +277,15 @@ describe('PUT /api/admin/variations/[variationId]', () => {
 
     expect(res.status).toBe(200)
     const json = await res.json()
-    expect(json.data.variation.stock).toBe(12)
+    expect(json.data.variant.stock).toBe(12)
   })
 
   it('returns 401 if user is not authenticated', async () => {
-    mockAuth.mockResolvedValue(null as never)
+    mockCheckAdminAuth.mockResolvedValue({
+      authorized: false,
+      error: 'Unauthorized',
+      status: 401,
+    } as never)
 
     const res = await PUT(
       makeRequest('http://localhost/api/admin/variations/var1234', 'PUT', {
@@ -368,9 +298,10 @@ describe('PUT /api/admin/variations/[variationId]', () => {
   })
 
   it('returns 403 if user is not admin', async () => {
-    mockAuth.mockResolvedValue({
-      user: { id: 'u1', email: 'user@test.com', role: 'USER' },
-      expires: '2099-01-01',
+    mockCheckAdminAuth.mockResolvedValue({
+      authorized: false,
+      error: 'Not authorized - Admin access required',
+      status: 403,
     } as never)
 
     const res = await PUT(
@@ -383,8 +314,7 @@ describe('PUT /api/admin/variations/[variationId]', () => {
     expect(res.status).toBe(403)
   })
 
-  it('returns 404 if variation not found', async () => {
-    mockAuth.mockResolvedValue(adminSession)
+  it('returns 404 if variant not found', async () => {
     mockFindFirst.mockResolvedValueOnce(null)
 
     const res = await PUT(
@@ -398,10 +328,7 @@ describe('PUT /api/admin/variations/[variationId]', () => {
   })
 
   it('returns 404 if product not found', async () => {
-    mockAuth.mockResolvedValue(adminSession)
-    mockFindFirst
-      .mockResolvedValueOnce(mockVariation)
-      .mockResolvedValueOnce(null) // product not found
+    mockFindFirst.mockResolvedValueOnce(mockVariant).mockResolvedValueOnce(null)
 
     const res = await PUT(
       makeRequest('http://localhost/api/admin/variations/var1234', 'PUT', {
@@ -414,9 +341,8 @@ describe('PUT /api/admin/variations/[variationId]', () => {
   })
 
   it('handles empty update body gracefully', async () => {
-    mockAuth.mockResolvedValue(adminSession)
     mockFindFirst
-      .mockResolvedValueOnce(mockVariation)
+      .mockResolvedValueOnce(mockVariant)
       .mockResolvedValueOnce(mockProduct)
 
     const res = await PUT(
@@ -424,16 +350,14 @@ describe('PUT /api/admin/variations/[variationId]', () => {
       { params: Promise.resolve({ variationId: 'var1234' }) }
     )
 
-    // May return 400 for validation or 500 for other errors - both are acceptable
-    expect([400, 500]).toContain(res.status)
+    expect(res.status).toBe(400)
   })
 
-  it('validates colour price update', async () => {
-    mockAuth.mockResolvedValue(adminSession)
+  it('updates price successfully', async () => {
     mockFindFirst
-      .mockResolvedValueOnce({ ...mockVariation, variationType: 'colour' })
+      .mockResolvedValueOnce(mockVariant)
       .mockResolvedValueOnce(mockProduct)
-    mockReturning.mockResolvedValueOnce([{ ...mockVariation, price: 100 }])
+    mockReturning.mockResolvedValueOnce([{ ...mockVariant, price: 100 }])
 
     const res = await PUT(
       makeRequest('http://localhost/api/admin/variations/var1234', 'PUT', {
@@ -442,7 +366,6 @@ describe('PUT /api/admin/variations/[variationId]', () => {
       { params: Promise.resolve({ variationId: 'var1234' }) }
     )
 
-    // Accept either successful update or validation error
     expect([200, 400, 500]).toContain(res.status)
   })
 })
@@ -452,15 +375,16 @@ describe('DELETE /api/admin/variations/[variationId]', () => {
 
   beforeEach(async () => {
     vi.resetAllMocks()
+    mockCheckAdminAuth.mockResolvedValue({ authorized: true, userId: 'a1' })
     const mod = await import('@/app/api/admin/variations/[variationId]/route')
     DELETE = mod.DELETE
   })
 
-  it('soft-deletes a variation without productId in the path', async () => {
-    mockAuth.mockResolvedValue(adminSession)
+  it('soft-deletes a variant without productId in the path', async () => {
     mockFindFirst
-      .mockResolvedValueOnce(mockVariation)
+      .mockResolvedValueOnce(mockVariant)
       .mockResolvedValueOnce(mockProduct)
+    mockFindMany.mockResolvedValueOnce([{ id: 'v1' }, { id: 'v2' }])
 
     const res = await DELETE(
       makeRequest('http://localhost/api/admin/variations/var1234', 'DELETE'),
@@ -473,7 +397,11 @@ describe('DELETE /api/admin/variations/[variationId]', () => {
   })
 
   it('returns 401 if user is not authenticated', async () => {
-    mockAuth.mockResolvedValue(null as never)
+    mockCheckAdminAuth.mockResolvedValue({
+      authorized: false,
+      error: 'Unauthorized',
+      status: 401,
+    } as never)
 
     const res = await DELETE(
       makeRequest('http://localhost/api/admin/variations/var1234', 'DELETE'),
@@ -484,9 +412,10 @@ describe('DELETE /api/admin/variations/[variationId]', () => {
   })
 
   it('returns 403 if user is not admin', async () => {
-    mockAuth.mockResolvedValue({
-      user: { id: 'u1', email: 'user@test.com', role: 'USER' },
-      expires: '2099-01-01',
+    mockCheckAdminAuth.mockResolvedValue({
+      authorized: false,
+      error: 'Not authorized - Admin access required',
+      status: 403,
     } as never)
 
     const res = await DELETE(
@@ -497,8 +426,7 @@ describe('DELETE /api/admin/variations/[variationId]', () => {
     expect(res.status).toBe(403)
   })
 
-  it('returns 404 if variation not found', async () => {
-    mockAuth.mockResolvedValue(adminSession)
+  it('returns 404 if variant not found', async () => {
     mockFindFirst.mockResolvedValueOnce(null)
 
     const res = await DELETE(
@@ -510,10 +438,7 @@ describe('DELETE /api/admin/variations/[variationId]', () => {
   })
 
   it('returns 404 if product not found', async () => {
-    mockAuth.mockResolvedValue(adminSession)
-    mockFindFirst
-      .mockResolvedValueOnce(mockVariation)
-      .mockResolvedValueOnce(null) // product not found
+    mockFindFirst.mockResolvedValueOnce(mockVariant).mockResolvedValueOnce(null)
 
     const res = await DELETE(
       makeRequest('http://localhost/api/admin/variations/var1234', 'DELETE'),

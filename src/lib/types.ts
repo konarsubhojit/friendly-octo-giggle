@@ -1,42 +1,53 @@
+export interface ProductOptionValue {
+  id: string
+  optionId: string
+  value: string
+  sortOrder: number
+  createdAt: string
+}
+
+export interface ProductOption {
+  id: string
+  productId: string
+  name: string
+  sortOrder: number
+  createdAt: string
+  values: ProductOptionValue[]
+}
+
+export interface ProductVariant {
+  id: string
+  productId: string
+  sku: string | null
+  price: number
+  stock: number
+  image: string | null
+  images: string[]
+  deletedAt: string | null
+  createdAt: string
+  updatedAt: string
+  optionValues?: ProductOptionValue[]
+}
+
 export interface Product {
   id: string
   name: string
   description: string
-  price: number
   image: string
   images: string[]
-  stock: number
   category: string
   deletedAt: string | null
   createdAt: string
   updatedAt: string
-  variations?: ProductVariation[]
-}
-
-export interface ProductVariation {
-  id: string
-  productId: string
-  styleId: string | null
-  name: string
-  designName: string
-  variationType: 'styling' | 'colour'
-  image: string | null
-  images: string[]
-  price: number
-  stock: number
-  deletedAt: string | null
-  createdAt: string
-  updatedAt: string
-  colours?: ProductVariation[]
+  options?: ProductOption[]
+  variants?: ProductVariant[]
 }
 
 export interface ProductInput {
   name: string
   description: string
-  price: number
   image: string
   images?: string[]
-  stock: number
   category: string
 }
 
@@ -50,7 +61,7 @@ export enum OrderStatus {
 
 export interface OrderItem {
   productId: string
-  variationId?: string
+  variantId: string
   quantity: number
   price: number
   customizationNote?: string | null
@@ -58,7 +69,7 @@ export interface OrderItem {
 
 export interface OrderItemInput {
   productId: string
-  variationId?: string
+  variantId: string
   quantity: number
   customizationNote?: string | null
 }
@@ -95,12 +106,12 @@ export interface Order {
 export interface OrderItemWithProduct {
   id: string
   productId: string
-  variationId?: string | null
+  variantId: string
   quantity: number
   price: number
   customizationNote?: string | null
   product: Product
-  variation?: ProductVariation | null
+  variant?: ProductVariant | null
 }
 
 export interface CreateOrderInput {
@@ -145,7 +156,7 @@ export interface CartItem {
   id: string
   cartId: string
   productId: string
-  variationId?: string | null
+  variantId: string
   quantity: number
   createdAt: string
   updatedAt: string
@@ -153,12 +164,12 @@ export interface CartItem {
 
 export interface CartItemWithProduct extends CartItem {
   product: Product
-  variation?: ProductVariation | null
+  variant?: ProductVariant | null
 }
 
 export interface AddToCartInput {
   productId: string
-  variationId?: string | null
+  variantId: string
   quantity: number
 }
 
