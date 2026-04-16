@@ -2,11 +2,13 @@ trigger:
   branches:
     include:
       - master
+      - develop
 
 pr:
   branches:
     include:
       - master
+      - develop
 
 variables:
   NODE_VERSION: '22'
@@ -175,3 +177,31 @@ stages:
             displayName: Publish SonarQube results
             inputs:
               pollingTimeoutSec: 600
+
+  - stage: VercelPreview
+    displayName: Deploy to Vercel Preview
+    dependsOn: BuildAndAnalyze
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/develop'))
+    jobs:
+      - job: DeployPreview
+        displayName: Deploy Preview to Vercel
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - task: NodeTool@0
+            displayName: Set up Node.js
+            inputs:
+              versionSpec: $(NODE_VERSION)
+
+          - script: npm install -g vercel
+            displayName: Install Vercel CLI
+
+          - script: |
+              vercel pull --yes --environment=preview --token=$VERCEL_TOKEN
+              vercel build --token=$VERCEL_TOKEN
+              vercel deploy --prebuilt --token=$VERCEL_TOKEN
+            displayName: Deploy to Vercel Preview
+            env:
+              VERCEL_TOKEN: $(VERCEL_TOKEN)
+              VERCEL_ORG_ID: $(VERCEL_ORG_ID)
+              VERCEL_PROJECT_ID: $(VERCEL_PROJECT_ID)
