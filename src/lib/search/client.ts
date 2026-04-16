@@ -30,8 +30,6 @@ export type ProductContent = {
   name: string
   description: string
   category: string
-  price: number
-  stock: number
 }
 
 export type ProductMetadata = {
@@ -43,8 +41,6 @@ type ProductIndexDocument = {
   name: string
   description: string
   category: string
-  price: number
-  stock: number
   image: string
 }
 
@@ -83,8 +79,6 @@ function toIndexedProduct(product: ProductIndexDocument) {
       name: product.name,
       description: product.description,
       category: product.category,
-      price: product.price,
-      stock: product.stock,
     },
     metadata: {
       image: product.image,

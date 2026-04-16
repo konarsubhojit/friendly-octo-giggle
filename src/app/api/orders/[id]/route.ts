@@ -44,7 +44,7 @@ export async function GET(
             items: {
               with: {
                 product: true,
-                variation: true,
+                variant: true,
               },
             },
           },
@@ -122,7 +122,7 @@ export async function PATCH(
         items: {
           with: {
             product: true,
-            variation: true,
+            variant: true,
           },
         },
       },

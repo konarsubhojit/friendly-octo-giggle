@@ -174,7 +174,7 @@ export const GET = async (request: NextRequest) => {
         orderBy: [desc(orders.createdAt)],
         limit: limit + 1,
         offset: useOffset ? offset : undefined,
-        with: { items: { with: { product: true, variation: true } } },
+        with: { items: { with: { product: true, variant: true } } },
       })
 
       const hasMore = rows.length > limit

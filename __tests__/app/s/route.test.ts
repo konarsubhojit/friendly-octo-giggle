@@ -34,10 +34,10 @@ describe('GET /s/[key]', () => {
     expect(response.headers.get('location')).toBe('http://localhost/')
   })
 
-  it('redirects to product page without variation when variationId is null', async () => {
+  it('redirects to product page without variation when variantId is null', async () => {
     mockSharesResolve.mockResolvedValue({
       productId: 'prd1234',
-      variationId: null,
+      variantId: null,
     })
 
     const response = await GET(makeGetRequest('abc1234'), {
@@ -49,10 +49,10 @@ describe('GET /s/[key]', () => {
     expect(location).toBe('http://localhost/products/prd1234')
   })
 
-  it('redirects to product page with variation query param', async () => {
+  it('redirects to product page with variant query param', async () => {
     mockSharesResolve.mockResolvedValue({
       productId: 'prd1234',
-      variationId: 'var5678',
+      variantId: 'var5678',
     })
 
     const response = await GET(makeGetRequest('abc1234'), {
@@ -67,7 +67,7 @@ describe('GET /s/[key]', () => {
   it('resolves the key from the route params', async () => {
     mockSharesResolve.mockResolvedValue({
       productId: 'prd1234',
-      variationId: null,
+      variantId: null,
     })
 
     await GET(makeGetRequest('mykey12'), {

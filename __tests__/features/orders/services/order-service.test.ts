@@ -121,10 +121,9 @@ vi.mock('@/lib/schema', () => ({
   orderItems: { orderId: 'orderId' },
   products: {
     id: 'id',
-    stock: 'stock',
     deletedAt: 'deletedAt',
   },
-  productVariations: {
+  productVariants: {
     id: 'id',
     stock: 'stock',
     deletedAt: 'deletedAt',
@@ -337,7 +336,7 @@ describe('order-service', () => {
             pinCode: '110001',
             city: 'New Delhi',
             state: 'Delhi',
-            items: [{ productId: 'p1', quantity: 1 }],
+            items: [{ productId: 'p1', variantId: 'v1', quantity: 1 }],
           },
           user: { id: 'user1', name: 'Test', email: null },
         })
@@ -357,7 +356,7 @@ describe('order-service', () => {
             pinCode: '',
             city: '',
             state: '',
-            items: [{ productId: 'p1', quantity: 1 }],
+            items: [{ productId: 'p1', variantId: 'v1', quantity: 1 }],
           },
           user: testUser,
         })
@@ -379,7 +378,7 @@ describe('order-service', () => {
             pinCode: '110001',
             city: 'New Delhi',
             state: 'Delhi',
-            items: [{ productId: 'p1', quantity: 1 }],
+            items: [{ productId: 'p1', variantId: 'v1', quantity: 1 }],
           },
           user: testUser,
         })
@@ -388,36 +387,10 @@ describe('order-service', () => {
 
     it('throws when insufficient stock', async () => {
       mockPrimaryDrizzleDbQuery.products.findMany.mockResolvedValue([
-        { id: 'p1', name: 'Widget', price: 100, stock: 0, variations: [] },
-      ])
-
-      await expect(
-        createOrderForUser({
-          body: {
-            customerName: 'Test',
-            customerEmail: 'test@test.com',
-            customerAddress: '123 St',
-            addressLine1: '123 Test St',
-            addressLine2: '',
-            addressLine3: '',
-            pinCode: '110001',
-            city: 'New Delhi',
-            state: 'Delhi',
-            items: [{ productId: 'p1', quantity: 5 }],
-          },
-          user: testUser,
-        })
-      ).rejects.toThrow(OrderRequestError)
-    })
-
-    it('throws when variation not found', async () => {
-      mockPrimaryDrizzleDbQuery.products.findMany.mockResolvedValue([
         {
           id: 'p1',
           name: 'Widget',
-          price: 100,
-          stock: 10,
-          variations: [{ id: 'v1', price: 120, stock: 5 }],
+          variants: [{ id: 'v1', price: 100, stock: 0 }],
         },
       ])
 
@@ -433,7 +406,35 @@ describe('order-service', () => {
             pinCode: '110001',
             city: 'New Delhi',
             state: 'Delhi',
-            items: [{ productId: 'p1', variationId: 'v999', quantity: 1 }],
+            items: [{ productId: 'p1', variantId: 'v1', quantity: 5 }],
+          },
+          user: testUser,
+        })
+      ).rejects.toThrow(OrderRequestError)
+    })
+
+    it('throws when variant not found', async () => {
+      mockPrimaryDrizzleDbQuery.products.findMany.mockResolvedValue([
+        {
+          id: 'p1',
+          name: 'Widget',
+          variants: [{ id: 'v1', price: 120, stock: 5 }],
+        },
+      ])
+
+      await expect(
+        createOrderForUser({
+          body: {
+            customerName: 'Test',
+            customerEmail: 'test@test.com',
+            customerAddress: '123 St',
+            addressLine1: '123 Test St',
+            addressLine2: '',
+            addressLine3: '',
+            pinCode: '110001',
+            city: 'New Delhi',
+            state: 'Delhi',
+            items: [{ productId: 'p1', variantId: 'v999', quantity: 1 }],
           },
           user: testUser,
         })
@@ -460,7 +461,11 @@ describe('order-service', () => {
       }
 
       mockPrimaryDrizzleDbQuery.products.findMany.mockResolvedValue([
-        { id: 'p1', name: 'Widget', price: 100, stock: 10, variations: [] },
+        {
+          id: 'p1',
+          name: 'Widget',
+          variants: [{ id: 'v1', price: 100, stock: 10 }],
+        },
       ])
 
       mockPrimaryDrizzleDbTransaction.mockImplementation(
@@ -486,7 +491,7 @@ describe('order-service', () => {
         items: [
           {
             productId: 'p1',
-            variationId: null,
+            variantId: null,
             quantity: 2,
             price: 100,
             customizationNote: null,
@@ -495,7 +500,7 @@ describe('order-service', () => {
               createdAt: new Date('2024-01-01'),
               updatedAt: new Date('2024-01-01'),
             },
-            variation: null,
+            variant: null,
           },
         ],
       }
@@ -519,7 +524,7 @@ describe('order-service', () => {
           pinCode: '110001',
           city: 'New Delhi',
           state: 'Delhi',
-          items: [{ productId: 'p1', quantity: 2 }],
+          items: [{ productId: 'p1', variantId: 'v1', quantity: 2 }],
         },
         user: testUser,
       })
@@ -556,7 +561,11 @@ describe('order-service', () => {
       }
 
       mockPrimaryDrizzleDbQuery.products.findMany.mockResolvedValue([
-        { id: 'p1', name: 'Widget', price: 100, stock: 10, variations: [] },
+        {
+          id: 'p1',
+          name: 'Widget',
+          variants: [{ id: 'v1', price: 100, stock: 10 }],
+        },
       ])
 
       mockPrimaryDrizzleDbTransaction.mockImplementation(
@@ -582,7 +591,7 @@ describe('order-service', () => {
         items: [
           {
             productId: 'p1',
-            variationId: null,
+            variantId: null,
             quantity: 1,
             price: 100,
             customizationNote: null,
@@ -591,7 +600,7 @@ describe('order-service', () => {
               createdAt: new Date('2024-01-01'),
               updatedAt: new Date('2024-01-01'),
             },
-            variation: null,
+            variant: null,
           },
         ],
       }
@@ -613,7 +622,7 @@ describe('order-service', () => {
           pinCode: '110001',
           city: 'New Delhi',
           state: 'Delhi',
-          items: [{ productId: 'p1', quantity: 1 }],
+          items: [{ productId: 'p1', variantId: 'v1', quantity: 1 }],
         },
         user: testUser,
       })
@@ -629,7 +638,11 @@ describe('order-service', () => {
 
     it('throws when order retrieval fails after creation', async () => {
       mockPrimaryDrizzleDbQuery.products.findMany.mockResolvedValue([
-        { id: 'p1', name: 'Widget', price: 100, stock: 10, variations: [] },
+        {
+          id: 'p1',
+          name: 'Widget',
+          variants: [{ id: 'v1', price: 100, stock: 10 }],
+        },
       ])
 
       mockPrimaryDrizzleDbTransaction.mockImplementation(
@@ -664,7 +677,7 @@ describe('order-service', () => {
             pinCode: '110001',
             city: 'New Delhi',
             state: 'Delhi',
-            items: [{ productId: 'p1', quantity: 1 }],
+            items: [{ productId: 'p1', variantId: 'v1', quantity: 1 }],
           },
           user: testUser,
         })
@@ -673,7 +686,11 @@ describe('order-service', () => {
 
     it('uses user defaults for name and email when body is empty', async () => {
       mockPrimaryDrizzleDbQuery.products.findMany.mockResolvedValue([
-        { id: 'p1', name: 'Widget', price: 50, stock: 10, variations: [] },
+        {
+          id: 'p1',
+          name: 'Widget',
+          variants: [{ id: 'v1', price: 50, stock: 10 }],
+        },
       ])
 
       const newOrder = {
@@ -717,7 +734,7 @@ describe('order-service', () => {
         items: [
           {
             productId: 'p1',
-            variationId: null,
+            variantId: null,
             quantity: 1,
             price: 50,
             customizationNote: null,
@@ -726,7 +743,7 @@ describe('order-service', () => {
               createdAt: new Date('2024-01-01'),
               updatedAt: new Date('2024-01-01'),
             },
-            variation: null,
+            variant: null,
           },
         ],
       }
@@ -748,7 +765,7 @@ describe('order-service', () => {
           pinCode: '110001',
           city: 'New Delhi',
           state: 'Delhi',
-          items: [{ productId: 'p1', quantity: 1 }],
+          items: [{ productId: 'p1', variantId: 'v1', quantity: 1 }],
         },
         user: testUser,
       })
