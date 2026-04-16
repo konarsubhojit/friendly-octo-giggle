@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 import React from 'react'
@@ -40,7 +41,7 @@ const mockCart = {
       id: 'citem0001',
       cartId: 'cart0001',
       productId: 'prd0001',
-      variationId: 'var0001',
+      variantId: 'var0001',
       quantity: 2,
       createdAt: '2026-03-01T00:00:00.000Z',
       updatedAt: '2026-03-01T00:00:00.000Z',

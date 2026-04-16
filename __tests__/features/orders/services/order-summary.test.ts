@@ -110,8 +110,8 @@ describe('order-summary', () => {
       const items = [
         {
           quantity: 2,
-          product: { price: 100, name: 'Widget' },
-          variation: null,
+          product: { name: 'Widget' },
+          variant: { price: 100, sku: null },
           customizationNote: null,
         },
       ]
@@ -134,8 +134,8 @@ describe('order-summary', () => {
       const items = [
         {
           quantity: 1,
-          product: { price: 100, name: 'Widget' },
-          variation: { name: 'Large', designName: null, price: 150 },
+          product: { name: 'Widget' },
+          variant: { name: 'Large', sku: null, price: 150 },
           customizationNote: 'Custom text',
         },
       ]
@@ -148,12 +148,12 @@ describe('order-summary', () => {
       expect(result[0].customizationNote).toBe('Custom text')
     })
 
-    it('includes designName in variation label', () => {
+    it('includes sku in variation label', () => {
       const items = [
         {
           quantity: 1,
-          product: { price: 100, name: 'Widget' },
-          variation: { name: 'Blue', designName: 'Ocean', price: 120 },
+          product: { name: 'Widget' },
+          variant: { name: 'Blue', sku: 'Ocean', price: 120 },
         },
       ]
 
@@ -162,12 +162,12 @@ describe('order-summary', () => {
       expect(result[0].variationLabel).toBe('Blue - Ocean')
     })
 
-    it('deduplicates variation name and designName when same', () => {
+    it('deduplicates variation name and sku when same', () => {
       const items = [
         {
           quantity: 1,
-          product: { price: 100, name: 'Widget' },
-          variation: { name: 'Blue', designName: 'Blue', price: 120 },
+          product: { name: 'Widget' },
+          variant: { name: 'Blue', sku: 'Blue', price: 120 },
         },
       ]
 
@@ -223,13 +223,13 @@ describe('order-summary', () => {
       const items = [
         {
           quantity: 2,
-          product: { price: 100, name: 'A' },
-          variation: null,
+          product: { name: 'A' },
+          variant: { price: 100, sku: null },
         },
         {
           quantity: 3,
-          product: { price: 50, name: 'B' },
-          variation: null,
+          product: { name: 'B' },
+          variant: { price: 50, sku: null },
         },
       ]
 
@@ -245,8 +245,8 @@ describe('order-summary', () => {
       const items = [
         {
           quantity: 1,
-          product: { price: 100, name: 'A' },
-          variation: { name: 'XL', designName: null, price: 120 },
+          product: { name: 'A' },
+          variant: { name: 'XL', sku: null, price: 120 },
         },
       ]
 

@@ -1,5 +1,9 @@
 import type { Product } from '@/lib/types'
 import type { CurrencyCode } from '@/lib/currency'
+import {
+  getVariantMinPrice,
+  getVariantTotalStock,
+} from '@/features/product/variant-utils'
 
 const MAX_DESC_CHARS = 400
 
@@ -31,22 +35,21 @@ export const buildProductContext = (
   const formatPrice = (price: number) =>
     sanitizeFormattedPrice((options.formatPrice ?? defaultFormatPrice)(price))
 
+  const totalStock = getVariantTotalStock(product.variants)
+
   const lines: string[] = [
     `Name: ${product.name}`,
     `Category: ${product.category}`,
     `Description: ${truncate(product.description)}`,
-    `Price (${currencyCode}): ${formatPrice(product.price)}`,
-    `Stock: ${product.stock > 0 ? product.stock + ' units' : 'Out of stock'}`,
+    `Price (${currencyCode}): ${formatPrice(getVariantMinPrice(product.variants))}`,
+    `Stock: ${totalStock > 0 ? totalStock + ' units' : 'Out of stock'}`,
   ]
 
-  if (product.variations?.length) {
-    lines.push(`Variations (${product.variations.length}):`)
-    for (const v of product.variations) {
+  if (product.variants?.length) {
+    lines.push(`Variants (${product.variants.length}):`)
+    for (const v of product.variants) {
       const stock = v.stock > 0 ? `${v.stock} in stock` : 'out of stock'
-      const type = v.variationType === 'colour' ? 'Colour' : 'Styling'
-      lines.push(
-        `- [${type}] ${v.name} / ${v.designName}: ${formatPrice(v.price)}, ${stock}`
-      )
+      lines.push(`- ${v.sku ?? 'Variant'}: ${formatPrice(v.price)}, ${stock}`)
     }
   }
 

@@ -193,7 +193,7 @@ export default function CheckoutReviewPage() {
             state: pendingCheckout.state.trim(),
             items: cartItems.map((item) => ({
               productId: item.productId,
-              variationId: item.variationId ?? undefined,
+              variantId: item.variantId,
               quantity: item.quantity,
               customizationNote:
                 pendingCheckout.customizationNotes[item.id] ?? undefined,

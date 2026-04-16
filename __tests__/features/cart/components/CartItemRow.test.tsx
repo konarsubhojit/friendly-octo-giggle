@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import React from 'react'
@@ -29,7 +30,7 @@ const baseItem: CartItemWithProduct = {
   id: 'item1',
   cartId: 'cart1',
   productId: 'prod1',
-  variationId: null,
+  variantId: 'v1',
   quantity: 2,
   createdAt: '2024-01-01T00:00:00Z',
   updatedAt: '2024-01-01T00:00:00Z',
@@ -37,11 +38,21 @@ const baseItem: CartItemWithProduct = {
     id: 'prod1',
     name: 'Handmade Basket',
     description: 'Beautiful basket',
-    price: 999,
     image: '/img/basket.jpg',
     images: ['/img/basket.jpg'],
-    stock: 10,
     category: 'Home Decor',
+    deletedAt: null,
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: '2024-01-01T00:00:00Z',
+  },
+  variant: {
+    id: 'v1',
+    productId: 'prod1',
+    sku: null,
+    price: 999,
+    stock: 10,
+    image: null,
+    images: [],
     deletedAt: null,
     createdAt: '2024-01-01T00:00:00Z',
     updatedAt: '2024-01-01T00:00:00Z',
@@ -184,18 +195,15 @@ describe('CartItemRow', () => {
   it('renders variation details when present', () => {
     const itemWithVariation: CartItemWithProduct = {
       ...baseItem,
-      variationId: 'var1',
-      variation: {
+      variantId: 'var1',
+      variant: {
         id: 'var1',
         productId: 'prod1',
-        styleId: null,
-        name: 'Red',
-        designName: 'Crimson',
-        variationType: 'colour',
-        image: '/img/red.jpg',
-        images: [],
+        sku: 'Crimson - Red',
         price: 1299,
         stock: 5,
+        image: '/img/red.jpg',
+        images: [],
         deletedAt: null,
         createdAt: '2024-01-01T00:00:00Z',
         updatedAt: '2024-01-01T00:00:00Z',

@@ -155,10 +155,8 @@ export const products = pgTable(
       .$defaultFn(() => generateShortId()),
     name: text('name').notNull(),
     description: text('description').notNull(),
-    price: doublePrecision('price').notNull(),
     image: text('image').notNull(),
     images: json('images').$type<string[]>().default([]).notNull(),
-    stock: integer('stock').notNull(),
     category: text('category').notNull(),
     deletedAt: timestamp('deletedAt', { mode: 'date' }),
     createdAt: timestamp('createdAt', { mode: 'date' }).defaultNow().notNull(),
@@ -171,8 +169,10 @@ export const products = pgTable(
   ]
 )
 
-export const productVariations = pgTable(
-  'ProductVariation',
+// ─── Product Options (dynamic variation dimensions) ──────
+
+export const productOptions = pgTable(
+  'ProductOption',
   {
     id: varchar('id', { length: 7 })
       .primaryKey()
@@ -180,24 +180,75 @@ export const productVariations = pgTable(
     productId: varchar('productId', { length: 7 })
       .notNull()
       .references(() => products.id, { onDelete: 'cascade' }),
-    styleId: varchar('styleId', { length: 7 }), // Self-ref: null for styles & base-product colours; set for colours under a style
     name: text('name').notNull(),
-    designName: text('designName').notNull(),
-    variationType: text('variationType', { enum: ['styling', 'colour'] })
-      .default('styling')
-      .notNull(),
-    image: text('image'),
-    images: json('images').$type<string[]>().default([]).notNull(),
+    sortOrder: integer('sortOrder').notNull().default(0),
+    createdAt: timestamp('createdAt', { mode: 'date' }).defaultNow().notNull(),
+  },
+  (t) => [
+    index('ProductOption_productId_idx').on(t.productId),
+    unique('ProductOption_productId_name_key').on(t.productId, t.name),
+  ]
+)
+
+export const productOptionValues = pgTable(
+  'ProductOptionValue',
+  {
+    id: varchar('id', { length: 7 })
+      .primaryKey()
+      .$defaultFn(() => generateShortId()),
+    optionId: varchar('optionId', { length: 7 })
+      .notNull()
+      .references(() => productOptions.id, { onDelete: 'cascade' }),
+    value: text('value').notNull(),
+    sortOrder: integer('sortOrder').notNull().default(0),
+    createdAt: timestamp('createdAt', { mode: 'date' }).defaultNow().notNull(),
+  },
+  (t) => [
+    index('ProductOptionValue_optionId_idx').on(t.optionId),
+    unique('ProductOptionValue_optionId_value_key').on(t.optionId, t.value),
+  ]
+)
+
+// ─── Product Variants (purchasable combinations) ─────────
+
+export const productVariants = pgTable(
+  'ProductVariant',
+  {
+    id: varchar('id', { length: 7 })
+      .primaryKey()
+      .$defaultFn(() => generateShortId()),
+    productId: varchar('productId', { length: 7 })
+      .notNull()
+      .references(() => products.id, { onDelete: 'cascade' }),
+    sku: text('sku'),
     price: doublePrecision('price').notNull(),
     stock: integer('stock').notNull(),
+    image: text('image'),
+    images: json('images').$type<string[]>().default([]).notNull(),
     deletedAt: timestamp('deletedAt', { mode: 'date' }),
     createdAt: timestamp('createdAt', { mode: 'date' }).defaultNow().notNull(),
     updatedAt: timestamp('updatedAt', { mode: 'date' }).defaultNow().notNull(),
   },
   (t) => [
-    index('ProductVariation_productId_idx').on(t.productId),
-    index('ProductVariation_styleId_idx').on(t.styleId),
-    unique('ProductVariation_productId_name_key').on(t.productId, t.name),
+    index('ProductVariant_productId_idx').on(t.productId),
+    index('ProductVariant_deletedAt_idx').on(t.deletedAt),
+  ]
+)
+
+export const productVariantOptionValues = pgTable(
+  'ProductVariantOptionValue',
+  {
+    variantId: varchar('variantId', { length: 7 })
+      .notNull()
+      .references(() => productVariants.id, { onDelete: 'cascade' }),
+    optionValueId: varchar('optionValueId', { length: 7 })
+      .notNull()
+      .references(() => productOptionValues.id, { onDelete: 'cascade' }),
+  },
+  (t) => [
+    unique('ProductVariantOptionValue_pk').on(t.variantId, t.optionValueId),
+    index('ProductVariantOptionValue_variantId_idx').on(t.variantId),
+    index('ProductVariantOptionValue_optionValueId_idx').on(t.optionValueId),
   ]
 )
 
@@ -205,7 +256,7 @@ export const productVariations = pgTable(
 
 export interface CheckoutRequestItemRecord {
   productId: string
-  variationId?: string | null
+  variantId: string
   quantity: number
   customizationNote?: string | null
 }
@@ -288,9 +339,9 @@ export const orderItems = pgTable(
     productId: varchar('productId', { length: 7 })
       .notNull()
       .references(() => products.id),
-    variationId: varchar('variationId', { length: 7 }).references(
-      () => productVariations.id
-    ),
+    variantId: varchar('variantId', { length: 7 })
+      .notNull()
+      .references(() => productVariants.id),
     quantity: integer('quantity').notNull(),
     price: doublePrecision('price').notNull(),
     customizationNote: text('customizationNote'),
@@ -298,7 +349,7 @@ export const orderItems = pgTable(
   (t) => [
     index('OrderItem_orderId_idx').on(t.orderId),
     index('OrderItem_productId_idx').on(t.productId),
-    index('OrderItem_variationId_idx').on(t.variationId),
+    index('OrderItem_variantId_idx').on(t.variantId),
   ]
 )
 
@@ -332,22 +383,22 @@ export const cartItems = pgTable(
     productId: varchar('productId', { length: 7 })
       .notNull()
       .references(() => products.id),
-    variationId: varchar('variationId', { length: 7 }).references(
-      () => productVariations.id
-    ),
+    variantId: varchar('variantId', { length: 7 })
+      .notNull()
+      .references(() => productVariants.id),
     quantity: integer('quantity').notNull(),
     createdAt: timestamp('createdAt', { mode: 'date' }).defaultNow().notNull(),
     updatedAt: timestamp('updatedAt', { mode: 'date' }).defaultNow().notNull(),
   },
   (t) => [
-    unique('CartItem_cartId_productId_variationId_key').on(
+    unique('CartItem_cartId_productId_variantId_key').on(
       t.cartId,
       t.productId,
-      t.variationId
+      t.variantId
     ),
     index('CartItem_cartId_idx').on(t.cartId),
     index('CartItem_productId_idx').on(t.productId),
-    index('CartItem_variationId_idx').on(t.variationId),
+    index('CartItem_variantId_idx').on(t.variantId),
   ]
 )
 
@@ -413,15 +464,15 @@ export const productShares = pgTable(
     productId: varchar('productId', { length: 7 })
       .notNull()
       .references(() => products.id, { onDelete: 'cascade' }),
-    variationId: varchar('variationId', { length: 7 }).references(
-      () => productVariations.id,
+    variantId: varchar('variantId', { length: 7 }).references(
+      () => productVariants.id,
       { onDelete: 'set null' }
     ),
     createdAt: timestamp('createdAt', { mode: 'date' }).defaultNow().notNull(),
   },
   (t) => [
     index('ProductShare_productId_idx').on(t.productId),
-    index('ProductShare_variationId_idx').on(t.variationId),
+    index('ProductShare_variantId_idx').on(t.variantId),
   ]
 )
 
@@ -456,28 +507,60 @@ export const sessionsRelations = relations(sessions, ({ one }) => ({
 }))
 
 export const productsRelations = relations(products, ({ many }) => ({
-  variations: many(productVariations),
+  options: many(productOptions),
+  variants: many(productVariants),
   orderItems: many(orderItems),
   cartItems: many(cartItems),
   wishlists: many(wishlists),
   reviews: many(reviews),
 }))
 
-export const productVariationsRelations = relations(
-  productVariations,
+export const productOptionsRelations = relations(
+  productOptions,
   ({ one, many }) => ({
     product: one(products, {
-      fields: [productVariations.productId],
+      fields: [productOptions.productId],
       references: [products.id],
     }),
-    style: one(productVariations, {
-      fields: [productVariations.styleId],
-      references: [productVariations.id],
-      relationName: 'styleColours',
+    values: many(productOptionValues),
+  })
+)
+
+export const productOptionValuesRelations = relations(
+  productOptionValues,
+  ({ one, many }) => ({
+    option: one(productOptions, {
+      fields: [productOptionValues.optionId],
+      references: [productOptions.id],
     }),
-    colours: many(productVariations, { relationName: 'styleColours' }),
+    variantLinks: many(productVariantOptionValues),
+  })
+)
+
+export const productVariantsRelations = relations(
+  productVariants,
+  ({ one, many }) => ({
+    product: one(products, {
+      fields: [productVariants.productId],
+      references: [products.id],
+    }),
+    optionValues: many(productVariantOptionValues),
     orderItems: many(orderItems),
     cartItems: many(cartItems),
+  })
+)
+
+export const productVariantOptionValuesRelations = relations(
+  productVariantOptionValues,
+  ({ one }) => ({
+    variant: one(productVariants, {
+      fields: [productVariantOptionValues.variantId],
+      references: [productVariants.id],
+    }),
+    optionValue: one(productOptionValues, {
+      fields: [productVariantOptionValues.optionValueId],
+      references: [productOptionValues.id],
+    }),
   })
 )
 
@@ -510,9 +593,9 @@ export const orderItemsRelations = relations(orderItems, ({ one }) => ({
     fields: [orderItems.productId],
     references: [products.id],
   }),
-  variation: one(productVariations, {
-    fields: [orderItems.variationId],
-    references: [productVariations.id],
+  variant: one(productVariants, {
+    fields: [orderItems.variantId],
+    references: [productVariants.id],
   }),
 }))
 
@@ -527,9 +610,9 @@ export const cartItemsRelations = relations(cartItems, ({ one }) => ({
     fields: [cartItems.productId],
     references: [products.id],
   }),
-  variation: one(productVariations, {
-    fields: [cartItems.variationId],
-    references: [productVariations.id],
+  variant: one(productVariants, {
+    fields: [cartItems.variantId],
+    references: [productVariants.id],
   }),
 }))
 
@@ -555,9 +638,9 @@ export const productSharesRelations = relations(productShares, ({ one }) => ({
     fields: [productShares.productId],
     references: [products.id],
   }),
-  variation: one(productVariations, {
-    fields: [productShares.variationId],
-    references: [productVariations.id],
+  variant: one(productVariants, {
+    fields: [productShares.variantId],
+    references: [productVariants.id],
   }),
 }))
 

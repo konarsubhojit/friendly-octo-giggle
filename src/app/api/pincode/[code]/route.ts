@@ -1,6 +1,6 @@
 import { type NextRequest } from 'next/server'
-import { getIndiaPincode, isValidPincode } from 'india-pincode'
 import type { IndiaPincode } from 'india-pincode'
+import { getIndiaPincode, isValidPincode } from '@/server/pincode-loader'
 import { apiSuccess, apiError } from '@/lib/api-utils'
 import { getCachedData } from '@/lib/redis'
 import { CACHE_KEYS, CACHE_TTL } from '@/lib/cache'

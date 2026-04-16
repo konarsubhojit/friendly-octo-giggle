@@ -129,8 +129,6 @@ describe('POST /api/admin/search/reindex', () => {
         name: 'Rose Bouquet',
         description: 'Fresh roses',
         category: 'Flowers',
-        price: 29,
-        stock: 10,
         image: '/rose.png',
       },
     ])
@@ -151,8 +149,6 @@ describe('POST /api/admin/search/reindex', () => {
           name: 'Rose Bouquet',
           description: 'Fresh roses',
           category: 'Flowers',
-          price: 29,
-          stock: 10,
           image: '/rose.png',
         },
       ],

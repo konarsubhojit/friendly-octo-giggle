@@ -117,7 +117,7 @@ export const GET = async (request: NextRequest) => {
           orderBy: [desc(products.createdAt)],
           limit: limit + 1,
           offset: useOffset ? offset : undefined,
-          with: { variations: true },
+          with: { variants: true },
         }),
         drizzleDb
           .select({ value: count() })
@@ -137,9 +137,9 @@ export const GET = async (request: NextRequest) => {
         deletedAt: null,
         createdAt: p.createdAt.toISOString(),
         updatedAt: p.updatedAt.toISOString(),
-        variations: p.variations.map((v) => ({
+        variants: p.variants.map((v) => ({
           ...v,
-          styleId: v.styleId ?? null,
+          sku: v.sku ?? null,
           image: v.image ?? null,
           images: v.images ?? [],
           createdAt: v.createdAt.toISOString(),
