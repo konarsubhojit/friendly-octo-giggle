@@ -303,7 +303,9 @@ export default function ProductSearch({ onNavigate }: ProductSearchProps) {
       {open &&
         createPortal(
           <div className="fixed inset-0 z-[200]">
-            <div
+            <button
+              type="button"
+              aria-label="Close search"
               className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"
               onClick={closeDialog}
             />
@@ -315,7 +317,11 @@ export default function ProductSearch({ onNavigate }: ProductSearchProps) {
               aria-label="Search products"
               className="absolute left-1/2 top-[10%] w-[min(92vw,680px)] -translate-x-1/2 rounded-2xl border border-[var(--border-warm)] bg-[var(--surface)] shadow-[0_20px_60px_-20px_rgba(0,0,0,0.35)]"
             >
-              <div className="flex items-center gap-3 border-b border-[var(--border-warm)] px-4 py-3">
+              <div
+                role="search"
+                aria-label="Product search"
+                className="flex items-center gap-3 border-b border-[var(--border-warm)] px-4 py-3"
+              >
                 <svg
                   className="h-5 w-5 text-[var(--text-muted)]"
                   fill="none"
@@ -331,6 +337,8 @@ export default function ProductSearch({ onNavigate }: ProductSearchProps) {
                   />
                 </svg>
                 <input
+                  type="search"
+                  aria-label="Search products"
                   ref={inputRef}
                   value={query}
                   onChange={(e) => {
@@ -338,12 +346,13 @@ export default function ProductSearch({ onNavigate }: ProductSearchProps) {
                     setActiveIndex(-1)
                   }}
                   onKeyDown={handleKeyDown}
-                  placeholder="Search by name, description, category..."
+                  placeholder="Search products by name, category..."
                   className="w-full bg-transparent text-[15px] text-[var(--foreground)] placeholder:text-[var(--text-muted)] outline-none"
                 />
                 <button
                   type="button"
                   onClick={closeDialog}
+                  aria-label="Close search"
                   className="rounded-lg px-2 py-1 text-xs text-[var(--text-muted)] hover:bg-[var(--surface-elevated)]"
                 >
                   ESC
@@ -364,7 +373,7 @@ export default function ProductSearch({ onNavigate }: ProductSearchProps) {
                   <li className="px-3 py-6 text-center text-sm text-[var(--text-muted)]">
                     {query.trim()
                       ? 'No products found'
-                      : 'Start typing to search products'}
+                      : 'Start typing to search products...'}
                   </li>
                 ) : (
                   results.map((item, index) => {
@@ -373,7 +382,6 @@ export default function ProductSearch({ onNavigate }: ProductSearchProps) {
                       <li key={item.id}>
                         <button
                           type="button"
-                          role="option"
                           aria-selected={isActive}
                           onMouseEnter={() => setActiveIndex(index)}
                           onClick={() => navigate(item.id)}
@@ -395,15 +403,15 @@ export default function ProductSearch({ onNavigate }: ProductSearchProps) {
                             ) : null}
                           </div>
                           <div className="min-w-0 flex-1">
-                            <div className="truncate text-sm font-semibold text-[var(--foreground)]">
+                            <p className="truncate text-sm font-semibold text-[var(--foreground)]">
                               <HighlightText text={item.name} query={query} />
-                            </div>
-                            <div className="mt-0.5 line-clamp-1 text-xs text-[var(--text-muted)]">
+                            </p>
+                            <p className="mt-0.5 line-clamp-1 text-xs text-[var(--text-muted)]">
                               <HighlightText
                                 text={item.description}
                                 query={query}
                               />
-                            </div>
+                            </p>
                           </div>
                           <div className="text-right">
                             <div className="text-sm font-semibold text-[var(--foreground)]">
