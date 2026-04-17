@@ -291,18 +291,27 @@ const VariantSelector = ({
     }
   }
 
+  type ValueStatus = 'available' | 'out_of_stock'
+
   /**
-   * For a given option, compute which of its values are available given the
+   * For a given option, compute the availability status of each value given the
    * current selections in *preceding* options (by sortOrder).
    *
    * Options are displayed in sortOrder.  The first option always shows every
    * value.  Each subsequent option is filtered by the selections made in all
    * options that come before it – a cascading pattern that prevents "dead-end"
    * states while still hiding impossible combinations.
+   *
+   * Returns a Map where:
+   * - `'available'` — at least one matching variant has stock > 0
+   * - `'out_of_stock'` — matching variants exist but all have stock === 0
+   * - absent key — no matching variant exists at all (value is hidden)
    */
-  const getAvailableValues = (optionId: string): Set<string> => {
+  const getValueAvailability = (
+    optionId: string
+  ): Map<string, ValueStatus> => {
     const optionIndex = options.findIndex((o) => o.id === optionId)
-    if (optionIndex === -1) return new Set<string>()
+    if (optionIndex === -1) return new Map()
 
     // Collect selected values from preceding options only
     const precedingSelections: string[] = []
@@ -312,7 +321,10 @@ const VariantSelector = ({
     }
 
     const option = options[optionIndex]
-    const available = new Set<string>()
+    const optionValueIds = new Set((option.values ?? []).map((v) => v.id))
+    // Track whether each value has at least one in-stock variant
+    const statusMap = new Map<string, ValueStatus>()
+
     for (const v of variants) {
       const variantValueIds = getVariantOptionValues(v)
       // Check that the variant matches every preceding option's selection
@@ -320,14 +332,15 @@ const VariantSelector = ({
         variantValueIds.includes(selId)
       )
       if (!matchesPreceding) continue
-      // Collect which value of *this* option the variant carries
-      for (const val of option.values ?? []) {
-        if (variantValueIds.includes(val.id)) {
-          available.add(val.id)
-        }
+
+      for (const valId of variantValueIds) {
+        if (!optionValueIds.has(valId)) continue
+        // Once a value is marked available, it stays available
+        if (statusMap.get(valId) === 'available') continue
+        statusMap.set(valId, v.stock > 0 ? 'available' : 'out_of_stock')
       }
     }
-    return available
+    return statusMap
   }
 
   const handleOptionChange = (optionId: string, valueId: string) => {
@@ -367,7 +380,7 @@ const VariantSelector = ({
       </span>
 
       {options.map((option) => {
-        const availableValueIds = getAvailableValues(option.id)
+        const valueAvailability = getValueAvailability(option.id)
         return (
           <div key={option.id}>
             <span className="block text-sm font-semibold text-[var(--text-secondary)] mb-2">
@@ -375,20 +388,27 @@ const VariantSelector = ({
             </span>
             <div className="flex flex-wrap gap-2">
               {(option.values ?? [])
-                .filter((val) => availableValueIds.has(val.id))
+                .filter((val) => valueAvailability.has(val.id))
                 .map((val) => {
                   const isActive =
                     selectedOptionValues.get(option.id) === val.id
+                  const isOutOfStock =
+                    valueAvailability.get(val.id) === 'out_of_stock'
                   return (
                     <button
                       key={val.id}
                       onClick={() => handleOptionChange(option.id, val.id)}
+                      disabled={isOutOfStock}
                       aria-pressed={isActive}
+                      aria-disabled={isOutOfStock}
                       className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
-                        isActive
-                          ? 'bg-[var(--accent-warm)] text-white shadow-warm'
-                          : 'bg-[var(--accent-cream)] text-[var(--text-secondary)] border border-[var(--border-warm)] hover:border-[var(--accent-warm)]'
+                        isOutOfStock
+                          ? 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed line-through'
+                          : isActive
+                            ? 'bg-[var(--accent-warm)] text-white shadow-warm'
+                            : 'bg-[var(--accent-cream)] text-[var(--text-secondary)] border border-[var(--border-warm)] hover:border-[var(--accent-warm)]'
                       }`}
+                      title={isOutOfStock ? `${val.value} — Out of stock` : undefined}
                     >
                       {val.value}
                     </button>

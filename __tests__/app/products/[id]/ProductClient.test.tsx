@@ -1241,4 +1241,121 @@ describe('ProductClient', () => {
     expect(screen.getByRole('button', { name: 'M' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'L' })).toBeInTheDocument()
   })
+
+  it('shows out-of-stock option values as disabled buttons', () => {
+    // Red-S is in stock, Red-L is out of stock
+    const variants = [
+      makeVariation({
+        id: 'var-red-s',
+        price: 500,
+        stock: 5,
+        optionValues: [
+          { id: 'ov-red', value: 'Red', optionId: 'opt-color', sortOrder: 0, createdAt: '2025-01-01T00:00:00.000Z' },
+          { id: 'ov-s', value: 'S', optionId: 'opt-size', sortOrder: 0, createdAt: '2025-01-01T00:00:00.000Z' },
+        ],
+      }),
+      makeVariation({
+        id: 'var-red-l',
+        price: 550,
+        stock: 0,
+        optionValues: [
+          { id: 'ov-red', value: 'Red', optionId: 'opt-color', sortOrder: 0, createdAt: '2025-01-01T00:00:00.000Z' },
+          { id: 'ov-l', value: 'L', optionId: 'opt-size', sortOrder: 1, createdAt: '2025-01-01T00:00:00.000Z' },
+        ],
+      }),
+    ]
+    const product: Product = {
+      ...makeProduct({ variants }),
+      options: [
+        {
+          id: 'opt-color', productId: 'prod001', name: 'Color', sortOrder: 0,
+          createdAt: '2025-01-01T00:00:00.000Z',
+          values: [
+            { id: 'ov-red', optionId: 'opt-color', value: 'Red', sortOrder: 0, createdAt: '2025-01-01T00:00:00.000Z' },
+          ],
+        },
+        {
+          id: 'opt-size', productId: 'prod001', name: 'Size', sortOrder: 1,
+          createdAt: '2025-01-01T00:00:00.000Z',
+          values: [
+            { id: 'ov-s', optionId: 'opt-size', value: 'S', sortOrder: 0, createdAt: '2025-01-01T00:00:00.000Z' },
+            { id: 'ov-l', optionId: 'opt-size', value: 'L', sortOrder: 1, createdAt: '2025-01-01T00:00:00.000Z' },
+          ],
+        },
+      ],
+    }
+
+    render(
+      <ProductClient product={product} initialVariantId="var-red-s" aiEnabled={false} />
+    )
+
+    // S should be enabled (in stock)
+    const sButton = screen.getByRole('button', { name: 'S' })
+    expect(sButton).toBeInTheDocument()
+    expect(sButton).not.toBeDisabled()
+
+    // L should be visible but disabled (out of stock)
+    const lButton = screen.getByRole('button', { name: 'L' })
+    expect(lButton).toBeInTheDocument()
+    expect(lButton).toBeDisabled()
+    expect(lButton).toHaveAttribute('title', 'L — Out of stock')
+  })
+
+  it('shows out-of-stock color as disabled when all its variants have zero stock', () => {
+    // Red-S in stock, Blue-S out of stock
+    const variants = [
+      makeVariation({
+        id: 'var-red-s',
+        price: 500,
+        stock: 5,
+        optionValues: [
+          { id: 'ov-red', value: 'Red', optionId: 'opt-color', sortOrder: 0, createdAt: '2025-01-01T00:00:00.000Z' },
+          { id: 'ov-s', value: 'S', optionId: 'opt-size', sortOrder: 0, createdAt: '2025-01-01T00:00:00.000Z' },
+        ],
+      }),
+      makeVariation({
+        id: 'var-blue-s',
+        price: 600,
+        stock: 0,
+        optionValues: [
+          { id: 'ov-blue', value: 'Blue', optionId: 'opt-color', sortOrder: 1, createdAt: '2025-01-01T00:00:00.000Z' },
+          { id: 'ov-s', value: 'S', optionId: 'opt-size', sortOrder: 0, createdAt: '2025-01-01T00:00:00.000Z' },
+        ],
+      }),
+    ]
+    const product: Product = {
+      ...makeProduct({ variants }),
+      options: [
+        {
+          id: 'opt-color', productId: 'prod001', name: 'Color', sortOrder: 0,
+          createdAt: '2025-01-01T00:00:00.000Z',
+          values: [
+            { id: 'ov-red', optionId: 'opt-color', value: 'Red', sortOrder: 0, createdAt: '2025-01-01T00:00:00.000Z' },
+            { id: 'ov-blue', optionId: 'opt-color', value: 'Blue', sortOrder: 1, createdAt: '2025-01-01T00:00:00.000Z' },
+          ],
+        },
+        {
+          id: 'opt-size', productId: 'prod001', name: 'Size', sortOrder: 1,
+          createdAt: '2025-01-01T00:00:00.000Z',
+          values: [
+            { id: 'ov-s', optionId: 'opt-size', value: 'S', sortOrder: 0, createdAt: '2025-01-01T00:00:00.000Z' },
+          ],
+        },
+      ],
+    }
+
+    render(
+      <ProductClient product={product} initialVariantId="var-red-s" aiEnabled={false} />
+    )
+
+    // Red should be enabled
+    const redButton = screen.getByRole('button', { name: 'Red' })
+    expect(redButton).not.toBeDisabled()
+
+    // Blue should be visible but disabled (all Blue variants are out of stock)
+    const blueButton = screen.getByRole('button', { name: 'Blue' })
+    expect(blueButton).toBeInTheDocument()
+    expect(blueButton).toBeDisabled()
+    expect(blueButton).toHaveAttribute('title', 'Blue — Out of stock')
+  })
 })
