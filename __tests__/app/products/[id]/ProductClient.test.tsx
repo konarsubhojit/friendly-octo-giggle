@@ -1529,7 +1529,9 @@ describe('ProductClient', () => {
     expect(sButton).not.toBeDisabled()
 
     // L should be visible, NOT disabled, with out-of-stock title
-    const lButton = screen.getByRole('button', { name: 'L' })
+    const lButton = screen.getByRole('button', {
+      name: 'L — Out of stock',
+    })
     expect(lButton).toBeInTheDocument()
     expect(lButton).not.toBeDisabled()
     expect(lButton).toHaveAttribute('title', 'L — Out of stock')
@@ -1653,7 +1655,9 @@ describe('ProductClient', () => {
     expect(redButton).not.toBeDisabled()
 
     // Blue should be visible, clickable, with out-of-stock styling
-    const blueButton = screen.getByRole('button', { name: 'Blue' })
+    const blueButton = screen.getByRole('button', {
+      name: 'Blue — Out of stock',
+    })
     expect(blueButton).toBeInTheDocument()
     expect(blueButton).not.toBeDisabled()
     expect(blueButton).toHaveAttribute('title', 'Blue — Out of stock')
