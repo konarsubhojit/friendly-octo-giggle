@@ -182,13 +182,19 @@ const ProductGrid = ({
       : undefined
 
   useEffect(() => {
-    setVisibleProducts(products)
-    setCanLoadMore(hasNextPage)
-    canLoadMoreRef.current = hasNextPage
-    visibleCountRef.current = products.length
-    setIsLoadingMore(false)
-    isLoadingRef.current = false
-    setLoadError(null)
+    const timer = globalThis.setTimeout(() => {
+      setVisibleProducts(products)
+      setCanLoadMore(hasNextPage)
+      canLoadMoreRef.current = hasNextPage
+      visibleCountRef.current = products.length
+      setIsLoadingMore(false)
+      isLoadingRef.current = false
+      setLoadError(null)
+    }, 0)
+
+    return () => {
+      globalThis.clearTimeout(timer)
+    }
   }, [products, hasNextPage, search, selectedCategory])
 
   useEffect(() => {

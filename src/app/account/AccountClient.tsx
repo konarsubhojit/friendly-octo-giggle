@@ -38,13 +38,17 @@ export default function AccountClient() {
 
   useEffect(() => {
     if (authStatus === 'authenticated') {
-      fetchProfile()
-    } else if (authStatus === 'unauthenticated') {
-      setLoading(false)
+      const timer = globalThis.setTimeout(() => {
+        void fetchProfile()
+      }, 0)
+
+      return () => {
+        globalThis.clearTimeout(timer)
+      }
     }
   }, [authStatus, fetchProfile])
 
-  if (authStatus === 'loading' || loading) {
+  if (authStatus === 'loading' || (authStatus === 'authenticated' && loading)) {
     return (
       <div className="min-h-screen bg-warm-gradient">
         <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">

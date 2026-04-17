@@ -888,7 +888,10 @@ const ProductClient = ({
   const { trackProduct } = useRecentlyViewed()
 
   const trackProductRef = useRef(trackProduct)
-  trackProductRef.current = trackProduct
+
+  useEffect(() => {
+    trackProductRef.current = trackProduct
+  }, [trackProduct])
   const [quantity, setQuantity] = useState(1)
   const [quantityMessage, setQuantityMessage] = useState('')
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(
@@ -938,8 +941,17 @@ const ProductClient = ({
 
   useEffect(() => {
     const { qty, message } = getClampedQtyState(quantity, remainingStock)
-    if (qty !== quantity) setQuantity(qty)
-    setQuantityMessage(message)
+
+    const timer = globalThis.setTimeout(() => {
+      if (qty !== quantity) {
+        setQuantity(qty)
+      }
+      setQuantityMessage(message)
+    }, 0)
+
+    return () => {
+      globalThis.clearTimeout(timer)
+    }
   }, [remainingStock, quantity])
 
   const carouselImages = useMemo(

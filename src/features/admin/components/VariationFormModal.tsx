@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import Image from 'next/image'
 import type { ProductVariant } from '@/lib/types'
 import toast from 'react-hot-toast'
@@ -203,19 +203,21 @@ const VariationFormModal = ({
   const priceInInr = convertCurrency(priceNum, priceCurrency, 'INR', rates)
   const priceWarning = formData.price !== '' && priceInInr <= 0
 
-  const [primaryImagePreviewUrl, setPrimaryImagePreviewUrl] = useState<
-    string | null
-  >(null)
+  const primaryImagePreviewUrl = useMemo(
+    () =>
+      primaryImageFile
+        ? globalThis.URL.createObjectURL(primaryImageFile)
+        : null,
+    [primaryImageFile]
+  )
 
   useEffect(() => {
-    if (!primaryImageFile) {
-      setPrimaryImagePreviewUrl(null)
-      return
+    if (!primaryImagePreviewUrl) return
+
+    return () => {
+      globalThis.URL.revokeObjectURL(primaryImagePreviewUrl)
     }
-    const url = URL.createObjectURL(primaryImageFile)
-    setPrimaryImagePreviewUrl(url)
-    return () => URL.revokeObjectURL(url)
-  }, [primaryImageFile])
+  }, [primaryImagePreviewUrl])
 
   const currentPrimaryImagePreview = primaryImagePreviewUrl ?? primaryImageUrl
 

@@ -118,9 +118,16 @@ export default function ProductSearch({ onNavigate }: ProductSearchProps) {
   useEffect(() => {
     if (open) {
       requestAnimationFrame(() => inputRef.current?.focus())
-    } else {
+      return
+    }
+
+    const resetTimer = globalThis.setTimeout(() => {
       setResults([])
       setIsSearching(false)
+    }, 0)
+
+    return () => {
+      globalThis.clearTimeout(resetTimer)
     }
   }, [open])
 
@@ -134,13 +141,23 @@ export default function ProductSearch({ onNavigate }: ProductSearchProps) {
     clearDebounce()
 
     const trimmed = query.trim()
+
     if (!trimmed) {
-      setResults([])
-      setIsSearching(false)
-      return
+      const resetTimer = globalThis.setTimeout(() => {
+        setResults([])
+        setIsSearching(false)
+      }, 0)
+
+      return () => {
+        globalThis.clearTimeout(resetTimer)
+        abortController.abort()
+      }
     }
 
-    setIsSearching(true)
+    const searchingTimer = globalThis.setTimeout(() => {
+      setIsSearching(true)
+    }, 0)
+
     debounceRef.current = setTimeout(async () => {
       try {
         const params = new URLSearchParams({
@@ -175,6 +192,7 @@ export default function ProductSearch({ onNavigate }: ProductSearchProps) {
 
     return () => {
       clearDebounce()
+      globalThis.clearTimeout(searchingTimer)
       abortController.abort()
     }
   }, [query])
@@ -273,34 +291,33 @@ export default function ProductSearch({ onNavigate }: ProductSearchProps) {
             strokeLinecap="round"
             strokeLinejoin="round"
             strokeWidth={2}
-            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+            d="M21 21l-4.35-4.35m1.85-5.15a7 7 0 11-14 0 7 7 0 0114 0z"
           />
         </svg>
         <span className="truncate">Search products...</span>
-        <kbd className="hidden lg:inline-flex items-center gap-0.5 ml-auto rounded border border-[var(--border-warm)] bg-[var(--background)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--text-muted)]">
+        <kbd className="ml-auto hidden rounded-md border border-[var(--border-warm)] bg-[var(--surface-elevated)] px-1.5 py-0.5 text-[11px] font-medium text-[var(--text-muted)] sm:inline-block">
           ⌘K
         </kbd>
       </button>
 
       {open &&
         createPortal(
-          <div className="fixed inset-0 z-[200] flex items-start justify-center pt-[15vh] px-4">
-            <button
-              type="button"
-              className="absolute inset-0 bg-black/40 backdrop-blur-sm cursor-default"
-              onClick={() => closeDialog()}
-              aria-label="Close search"
-              tabIndex={-1}
+          <div className="fixed inset-0 z-[200]">
+            <div
+              className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"
+              onClick={closeDialog}
             />
+
             <div
               ref={dialogRef}
-              role="search"
-              aria-label="Product search"
-              className="relative w-full max-w-lg bg-[var(--surface)] border border-[var(--border-warm)] rounded-2xl shadow-warm-lg overflow-hidden animate-scale-in"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Search products"
+              className="absolute left-1/2 top-[10%] w-[min(92vw,680px)] -translate-x-1/2 rounded-2xl border border-[var(--border-warm)] bg-[var(--surface)] shadow-[0_20px_60px_-20px_rgba(0,0,0,0.35)]"
             >
-              <div className="flex items-center gap-3 px-4 py-3 border-b border-[var(--border-warm)]">
+              <div className="flex items-center gap-3 border-b border-[var(--border-warm)] px-4 py-3">
                 <svg
-                  className="w-5 h-5 text-[var(--accent-rose)] shrink-0"
+                  className="h-5 w-5 text-[var(--text-muted)]"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -310,137 +327,98 @@ export default function ProductSearch({ onNavigate }: ProductSearchProps) {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                    d="M21 21l-4.35-4.35m1.85-5.15a7 7 0 11-14 0 7 7 0 0114 0z"
                   />
                 </svg>
                 <input
                   ref={inputRef}
-                  type="search"
-                  placeholder="Search products by name, category..."
                   value={query}
-                  onChange={(e) => setQuery(e.target.value)}
+                  onChange={(e) => {
+                    setQuery(e.target.value)
+                    setActiveIndex(-1)
+                  }}
                   onKeyDown={handleKeyDown}
-                  className="flex-1 bg-transparent text-[var(--foreground)] placeholder:text-[var(--text-muted)] text-sm outline-none"
-                  aria-label="Search products"
+                  placeholder="Search by name, description, category..."
+                  className="w-full bg-transparent text-[15px] text-[var(--foreground)] placeholder:text-[var(--text-muted)] outline-none"
                 />
                 <button
+                  type="button"
                   onClick={closeDialog}
-                  className="text-[var(--text-muted)] hover:text-[var(--foreground)] transition-colors"
-                  aria-label="Close search"
+                  className="rounded-lg px-2 py-1 text-xs text-[var(--text-muted)] hover:bg-[var(--surface-elevated)]"
                 >
-                  <kbd className="inline-flex items-center rounded border border-[var(--border-warm)] bg-[var(--background)] px-1.5 py-0.5 text-[10px] font-medium">
-                    ESC
-                  </kbd>
+                  ESC
                 </button>
               </div>
 
-              <div className="max-h-[50vh] overflow-y-auto overscroll-contain">
-                {isSearching && (
-                  <div className="px-4 py-8 text-center text-sm text-[var(--text-muted)]">
+              <ul
+                ref={listRef}
+                role="listbox"
+                aria-label="Search results"
+                className="max-h-[60vh] overflow-auto p-2"
+              >
+                {isSearching ? (
+                  <li className="px-3 py-4 text-sm text-[var(--text-muted)]">
                     Searching...
-                  </div>
-                )}
-
-                {!isSearching && query.trim() && results.length === 0 && (
-                  <div className="px-4 py-8 text-center text-sm text-[var(--text-muted)]">
-                    No products found for &ldquo;{query}&rdquo;
-                  </div>
-                )}
-
-                {!isSearching && results.length > 0 && (
-                  <ul
-                    ref={listRef}
-                    id="search-results-list"
-                    aria-label="Search results"
-                    className="py-2"
-                  >
-                    {results.map((product, i) => (
-                      <li key={product.id}>
+                  </li>
+                ) : results.length === 0 ? (
+                  <li className="px-3 py-6 text-center text-sm text-[var(--text-muted)]">
+                    {query.trim()
+                      ? 'No products found'
+                      : 'Start typing to search products'}
+                  </li>
+                ) : (
+                  results.map((item, index) => {
+                    const isActive = index === clampedIndex
+                    return (
+                      <li key={item.id}>
                         <button
                           type="button"
-                          tabIndex={-1}
-                          className={`flex w-full items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors ${
-                            clampedIndex === i
+                          role="option"
+                          aria-selected={isActive}
+                          onMouseEnter={() => setActiveIndex(index)}
+                          onClick={() => navigate(item.id)}
+                          className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left transition-colors ${
+                            isActive
                               ? 'bg-[var(--accent-blush)]'
-                              : 'hover:bg-[var(--accent-blush)]/50'
+                              : 'hover:bg-[var(--surface-elevated)]'
                           }`}
-                          onClick={() => navigate(product.id)}
-                          onMouseEnter={() => setActiveIndex(i)}
                         >
-                          <div className="relative flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--accent-cream)] to-[var(--accent-blush)] overflow-hidden shrink-0">
-                            {product.image ? (
+                          <div className="relative h-12 w-12 overflow-hidden rounded-lg bg-[var(--surface-elevated)]">
+                            {item.image ? (
                               <Image
-                                src={product.image}
-                                alt=""
+                                src={item.image}
+                                alt={item.name}
                                 fill
-                                className="object-contain p-1"
-                                sizes="40px"
+                                sizes="48px"
+                                className="object-cover"
                               />
-                            ) : (
-                              <span
-                                aria-hidden="true"
-                                className="text-xs font-semibold uppercase text-[var(--accent-rose)]"
-                              >
-                                {(
-                                  product.name ||
-                                  product.category ||
-                                  '?'
-                                ).slice(0, 1)}
-                              </span>
-                            )}
+                            ) : null}
                           </div>
-                          <div className="flex-1 min-w-0 text-left">
-                            <p className="text-sm font-medium text-[var(--foreground)] truncate">
+                          <div className="min-w-0 flex-1">
+                            <div className="truncate text-sm font-semibold text-[var(--foreground)]">
+                              <HighlightText text={item.name} query={query} />
+                            </div>
+                            <div className="mt-0.5 line-clamp-1 text-xs text-[var(--text-muted)]">
                               <HighlightText
-                                text={product.name}
+                                text={item.description}
                                 query={query}
                               />
-                            </p>
-                            <p className="text-xs text-[var(--text-muted)] truncate">
-                              <HighlightText
-                                text={product.category}
-                                query={query}
-                              />
-                            </p>
+                            </div>
                           </div>
-                          <span className="text-sm font-semibold text-[var(--btn-primary)] shrink-0">
-                            {formatPrice(product.price)}
-                          </span>
+                          <div className="text-right">
+                            <div className="text-sm font-semibold text-[var(--foreground)]">
+                              {formatPrice(item.price)}
+                            </div>
+                            <div className="mt-0.5 text-[11px] text-[var(--text-muted)]">
+                              {item.category}
+                            </div>
+                          </div>
                         </button>
                       </li>
-                    ))}
-                  </ul>
+                    )
+                  })
                 )}
-
-                {!query.trim() && (
-                  <div className="px-4 py-8 text-center text-sm text-[var(--text-muted)]">
-                    Start typing to search products...
-                  </div>
-                )}
-              </div>
-
-              {results.length > 0 && (
-                <div className="px-4 py-2 border-t border-[var(--border-warm)] flex items-center gap-4 text-[10px] text-[var(--text-muted)]">
-                  <span className="flex items-center gap-1">
-                    <kbd className="inline-flex items-center rounded border border-[var(--border-warm)] bg-[var(--background)] px-1 py-0.5 font-medium">
-                      ↑↓
-                    </kbd>{' '}
-                    navigate
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <kbd className="inline-flex items-center rounded border border-[var(--border-warm)] bg-[var(--background)] px-1 py-0.5 font-medium">
-                      ↵
-                    </kbd>{' '}
-                    select
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <kbd className="inline-flex items-center rounded border border-[var(--border-warm)] bg-[var(--background)] px-1 py-0.5 font-medium">
-                      esc
-                    </kbd>{' '}
-                    close
-                  </span>
-                </div>
-              )}
+              </ul>
             </div>
           </div>,
           document.body

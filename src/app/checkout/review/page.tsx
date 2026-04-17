@@ -92,21 +92,17 @@ export default function CheckoutReviewPage() {
   const [isPending, startTransition] = useTransition()
   const [isAcknowledged, setIsAcknowledged] = useState(false)
   const [checkoutMessage, setCheckoutMessage] = useState<string | null>(null)
-  const [pendingCheckout, setPendingCheckout] =
-    useState<PendingCheckout | null>(null)
-  const [isHydrated, setIsHydrated] = useState(false)
+  const [pendingCheckout] = useState<PendingCheckout | null>(() =>
+    readPendingCheckout()
+  )
 
   const acknowledgmentId = useId()
 
   useEffect(() => {
-    const data = readPendingCheckout()
-    if (!data) {
+    if (!pendingCheckout) {
       router.replace('/cart')
-      return
     }
-    setPendingCheckout(data)
-    setIsHydrated(true)
-  }, [router])
+  }, [pendingCheckout, router])
 
   useEffect(() => {
     if (status === 'authenticated') {
@@ -223,7 +219,7 @@ export default function CheckoutReviewPage() {
     })
   }
 
-  if (!isHydrated || status === 'loading') {
+  if (pendingCheckout === null || status === 'loading') {
     return (
       <div className="min-h-screen bg-warm-gradient flex items-center justify-center">
         <LoadingSpinner />

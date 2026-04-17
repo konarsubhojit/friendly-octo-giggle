@@ -144,7 +144,13 @@ const AdminReviewsPage = () => {
   }, [ratingFilter])
 
   useEffect(() => {
-    fetchReviews()
+    const timer = globalThis.setTimeout(() => {
+      void fetchReviews()
+    }, 0)
+
+    return () => {
+      globalThis.clearTimeout(timer)
+    }
   }, [fetchReviews])
 
   const filtered = search.trim()

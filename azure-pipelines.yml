@@ -9,10 +9,23 @@ trigger:
       - '**/*.md'
       - .cursorrules
 
+pr:
+  branches:
+    include:
+      - develop
+      - master
+  paths:
+    exclude:
+      - docs/**
+      - specs/**
+      - '**/*.md'
+      - .cursorrules
+
 variables:
   NODE_VERSION: '22'
+  NPM_CI_FLAGS: '--prefer-offline --no-audit --fund=false --progress=false'
+  NODE_MODULES_CACHE_PATH: $(System.DefaultWorkingDirectory)/node_modules
   npm_config_cache: $(Pipeline.Workspace)/.npm
-  system.debug: true
 
 stages:
   - stage: LintAndTest
@@ -23,7 +36,7 @@ stages:
         pool:
           vmImage: ubuntu-latest
         steps:
-          - task: NodeTool@0
+          - task: UseNode@1
             displayName: Set up Node.js
             inputs:
               versionSpec: $(NODE_VERSION)
@@ -36,8 +49,18 @@ stages:
                 npm | "$(Agent.OS)"
               path: $(npm_config_cache)
 
-          - script: npm ci
-            displayName: Install dependencies
+          - task: Cache@2
+            displayName: Cache node_modules
+            inputs:
+              key: 'node_modules | "$(Agent.OS)" | "$(NODE_VERSION)" | package-lock.json'
+              restoreKeys: |
+                node_modules | "$(Agent.OS)" | "$(NODE_VERSION)"
+              path: $(NODE_MODULES_CACHE_PATH)
+              cacheHitVar: NODE_MODULES_CACHE_RESTORED
+
+          - script: npm ci $(NPM_CI_FLAGS)
+            displayName: Install dependencies (cache miss)
+            condition: ne(variables.NODE_MODULES_CACHE_RESTORED, 'true')
 
           - script: npm run lint
             displayName: Lint
@@ -50,7 +73,7 @@ stages:
         pool:
           vmImage: ubuntu-latest
         steps:
-          - task: NodeTool@0
+          - task: UseNode@1
             displayName: Set up Node.js
             inputs:
               versionSpec: $(NODE_VERSION)
@@ -63,14 +86,30 @@ stages:
                 npm | "$(Agent.OS)"
               path: $(npm_config_cache)
 
-          - script: npm ci
-            displayName: Install dependencies
+          - task: Cache@2
+            displayName: Cache node_modules
+            inputs:
+              key: 'node_modules | "$(Agent.OS)" | "$(NODE_VERSION)" | package-lock.json'
+              restoreKeys: |
+                node_modules | "$(Agent.OS)" | "$(NODE_VERSION)"
+              path: $(NODE_MODULES_CACHE_PATH)
+              cacheHitVar: NODE_MODULES_CACHE_RESTORED
 
-          - script: npm run test:coverage
-            displayName: Run tests with coverage
+          - script: npm ci $(NPM_CI_FLAGS)
+            displayName: Install dependencies (cache miss)
+            condition: ne(variables.NODE_MODULES_CACHE_RESTORED, 'true')
+
+          - script: |
+              if [ "$(Build.SourceBranch)" = "refs/heads/develop" ]; then
+                npm run test:coverage
+              else
+                npm run test
+              fi
+            displayName: Run tests (coverage on develop)
 
           - task: PublishPipelineArtifact@1
             displayName: Upload coverage report
+            condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/develop'))
             inputs:
               targetPath: coverage
               artifact: coverage-report
@@ -89,7 +128,7 @@ stages:
           - checkout: self
             fetchDepth: 0
 
-          - task: NodeTool@0
+          - task: UseNode@1
             displayName: Set up Node.js
             inputs:
               versionSpec: $(NODE_VERSION)
@@ -103,6 +142,15 @@ stages:
               path: $(npm_config_cache)
 
           - task: Cache@2
+            displayName: Cache node_modules
+            inputs:
+              key: 'node_modules | "$(Agent.OS)" | "$(NODE_VERSION)" | package-lock.json'
+              restoreKeys: |
+                node_modules | "$(Agent.OS)" | "$(NODE_VERSION)"
+              path: $(NODE_MODULES_CACHE_PATH)
+              cacheHitVar: NODE_MODULES_CACHE_RESTORED
+
+          - task: Cache@2
             displayName: Restore Next.js build cache
             inputs:
               key: 'nextjs | "$(Agent.OS)" | package-lock.json'
@@ -110,8 +158,9 @@ stages:
                 nextjs | "$(Agent.OS)"
               path: .next/cache
 
-          - script: npm ci
-            displayName: Install dependencies
+          - script: npm ci $(NPM_CI_FLAGS)
+            displayName: Install dependencies (cache miss)
+            condition: ne(variables.NODE_MODULES_CACHE_RESTORED, 'true')
 
           - script: npm run build
             displayName: Build
@@ -131,13 +180,27 @@ stages:
         pool:
           vmImage: ubuntu-latest
         steps:
-          - task: NodeTool@0
+          - checkout: self
+            fetchDepth: 2
+
+          - task: UseNode@1
             displayName: Set up Node.js
             inputs:
               versionSpec: $(NODE_VERSION)
 
-          - script: npm install vercel
+          - script: |
+              CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)
+              if echo "$CHANGED_FILES" | grep -Eq '^(src/|app/|components/|contexts/|features/|hooks/|lib/|public/|server/|next\.config\.ts|package\.json|package-lock\.json|vercel\.json|postcss\.config\.js|eslint\.config\.js|tsconfig\.json|tsconfig\.check\.json)'; then
+                echo "##vso[task.setvariable variable=SHOULD_DEPLOY]true"
+              else
+                echo "##vso[task.setvariable variable=SHOULD_DEPLOY]false"
+                echo "No deploy-relevant changes detected."
+              fi
+            displayName: Detect deploy-relevant changes
+
+          - script: npm install --no-save --prefer-offline --no-audit --fund=false --progress=false vercel
             displayName: Install Vercel CLI
+            condition: and(succeeded(), eq(variables['SHOULD_DEPLOY'], 'true'))
 
           - script: |
               npx vercel pull --yes --environment=preview --token=$VERCEL_TOKEN
@@ -145,6 +208,7 @@ stages:
               npx vercel build --token=$VERCEL_TOKEN
               npx vercel deploy --prebuilt --token=$VERCEL_TOKEN
             displayName: Deploy to Vercel Preview
+            condition: and(succeeded(), eq(variables['SHOULD_DEPLOY'], 'true'))
             env:
               VERCEL_TOKEN: $(VERCEL_TOKEN)
               VERCEL_ORG_ID: $(VERCEL_ORG_ID)

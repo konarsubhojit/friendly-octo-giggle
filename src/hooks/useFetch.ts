@@ -16,7 +16,6 @@ export const useFetch = <T>(
   const [error, setError] = useState<string | null>(null)
   const optionsRef = useRef(options)
   optionsRef.current = options
-
   const fetchData = useCallback(async () => {
     setLoading(true)
     setError(null)
@@ -39,10 +38,16 @@ export const useFetch = <T>(
   }, [url])
 
   useEffect(() => {
-    // fetchData handles all errors internally via try/catch and sets error state
-    fetchData().catch(() => {
-      /* no-op: errors handled inside fetchData */
-    })
+    const timer = globalThis.setTimeout(() => {
+      // fetchData handles all errors internally via try/catch and sets error state
+      fetchData().catch(() => {
+        /* no-op: errors handled inside fetchData */
+      })
+    }, 0)
+
+    return () => {
+      globalThis.clearTimeout(timer)
+    }
   }, [fetchData])
 
   const refetch = useCallback(() => {
