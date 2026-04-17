@@ -382,7 +382,6 @@ export default function ProductSearch({ onNavigate }: ProductSearchProps) {
                       <li key={item.id}>
                         <button
                           type="button"
-                          aria-selected={isActive}
                           onMouseEnter={() => setActiveIndex(index)}
                           onClick={() => navigate(item.id)}
                           className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left transition-colors ${

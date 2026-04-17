@@ -42,14 +42,6 @@ stages:
               versionSpec: $(NODE_VERSION)
 
           - task: Cache@2
-            displayName: Cache npm packages
-            inputs:
-              key: 'npm | "$(Agent.OS)" | "$(NODE_VERSION)" | package-lock.json'
-              restoreKeys: |
-                npm | "$(Agent.OS)" | "$(NODE_VERSION)"
-              path: $(npm_config_cache)
-
-          - task: Cache@2
             displayName: Cache node_modules
             inputs:
               key: 'node_modules | "$(Agent.OS)" | "$(NODE_VERSION)" | package-lock.json'
@@ -78,12 +70,6 @@ stages:
             inputs:
               versionSpec: $(NODE_VERSION)
 
-          - task: Cache@2
-            displayName: Cache npm packages
-            inputs:
-              key: 'npm | "$(Agent.OS)" | "$(NODE_VERSION)" | package-lock.json'
-              restoreKeys: |
-                npm | "$(Agent.OS)" | "$(NODE_VERSION)"
               path: $(npm_config_cache)
 
           - task: Cache@2
@@ -132,14 +118,6 @@ stages:
             displayName: Set up Node.js
             inputs:
               versionSpec: $(NODE_VERSION)
-
-          - task: Cache@2
-            displayName: Cache npm packages
-            inputs:
-              key: 'npm | "$(Agent.OS)" | "$(NODE_VERSION)" | package-lock.json'
-              restoreKeys: |
-                npm | "$(Agent.OS)" | "$(NODE_VERSION)"
-              path: $(npm_config_cache)
 
           - task: Cache@2
             displayName: Cache node_modules
