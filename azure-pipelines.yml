@@ -23,6 +23,7 @@ pr:
 
 variables:
   NODE_VERSION: '22'
+  NPM_VERSION: '11.11.1'
   NPM_CI_FLAGS: '--cache $(npm_config_cache)'
   NODE_MODULES_CACHE_PATH: $(System.DefaultWorkingDirectory)/node_modules
   npm_config_cache: $(Pipeline.Workspace)/.npm
@@ -40,6 +41,9 @@ stages:
             displayName: Set up Node.js
             inputs:
               versionSpec: $(NODE_VERSION)
+
+          - script: npm install -g npm@$(NPM_VERSION)
+            displayName: Pin npm version
 
           - task: Cache@2
             displayName: Cache npm packages
@@ -77,6 +81,9 @@ stages:
             displayName: Set up Node.js
             inputs:
               versionSpec: $(NODE_VERSION)
+
+          - script: npm install -g npm@$(NPM_VERSION)
+            displayName: Pin npm version
 
           - task: Cache@2
             displayName: Cache npm packages
@@ -133,6 +140,9 @@ stages:
             inputs:
               versionSpec: $(NODE_VERSION)
 
+          - script: npm install -g npm@$(NPM_VERSION)
+            displayName: Pin npm version
+
           - task: Cache@2
             displayName: Cache npm packages
             inputs:
@@ -187,6 +197,9 @@ stages:
             displayName: Set up Node.js
             inputs:
               versionSpec: $(NODE_VERSION)
+
+          - script: npm install -g npm@$(NPM_VERSION)
+            displayName: Pin npm version
 
           - script: |
               CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)
