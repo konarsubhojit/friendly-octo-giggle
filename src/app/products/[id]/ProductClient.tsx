@@ -260,20 +260,27 @@ const VariantSelector = ({
     )
   }
 
-  const getVariantLabel = (variant: ProductVariant): string => {
-    if (!variant.optionValues || variant.optionValues.length === 0) {
-      return variant.sku ?? `Variant`
-    }
+  /** Build a lookup from option-value ID → display value. */
+  const buildValueMap = (): Map<string, string> => {
     const valueMap = new Map<string, string>()
     for (const opt of options) {
       for (const val of opt.values ?? []) {
         valueMap.set(val.id, val.value)
       }
     }
+    return valueMap
+  }
+
+  const getVariantLabel = (variant: ProductVariant): string => {
+    const fallback = variant.sku ?? 'Variant'
+    if (!variant.optionValues || variant.optionValues.length === 0) {
+      return fallback
+    }
+    const valueMap = buildValueMap()
     const parts = variant.optionValues
       .map((ov) => valueMap.get(ov.id))
       .filter(Boolean)
-    return parts.length > 0 ? parts.join(' / ') : (variant.sku ?? 'Variant')
+    return parts.length > 0 ? parts.join(' / ') : fallback
   }
 
   const selectedOptionValues = new Map<string, string>()
@@ -301,6 +308,25 @@ const VariantSelector = ({
   const getVariantOptionValueSet = (variant: ProductVariant): Set<string> =>
     variantValueIndex.get(variant.id) ?? new Set()
 
+  /** Collect selected values from options preceding the given index. */
+  const getPrecedingSelections = (optionIndex: number): string[] => {
+    const selections: string[] = []
+    for (let i = 0; i < optionIndex; i++) {
+      const selVal = selectedOptionValues.get(options[i].id)
+      if (selVal) selections.push(selVal)
+    }
+    return selections
+  }
+
+  /** Check if a variant matches all of the given selections. */
+  const matchesPrecedingSelections = (
+    variant: ProductVariant,
+    selections: string[]
+  ): boolean => {
+    const valIds = getVariantOptionValueSet(variant)
+    return selections.every((selId) => valIds.has(selId))
+  }
+
   /**
    * For a given option, compute the availability status of each value given the
    * current selections in *preceding* options (by sortOrder).
@@ -321,21 +347,15 @@ const VariantSelector = ({
     const optionIndex = options.findIndex((o) => o.id === optionId)
     if (optionIndex === -1) return new Map()
 
-    // Collect selected values from preceding options only
-    const precedingSelections: string[] = []
-    for (let i = 0; i < optionIndex; i++) {
-      const selVal = selectedOptionValues.get(options[i].id)
-      if (selVal) precedingSelections.push(selVal)
-    }
-
+    const precedingSelections = getPrecedingSelections(optionIndex)
     const option = options[optionIndex]
     const optionValueIds = new Set((option.values ?? []).map((v) => v.id))
     const statusMap = new Map<string, OptionValueStatus>()
 
     for (const v of variants) {
-      const valIds = getVariantOptionValueSet(v)
-      if (!precedingSelections.every((selId) => valIds.has(selId))) continue
+      if (!matchesPrecedingSelections(v, precedingSelections)) continue
 
+      const valIds = getVariantOptionValueSet(v)
       for (const valId of valIds) {
         if (!optionValueIds.has(valId)) continue
         if (statusMap.get(valId) === 'available') continue
@@ -380,20 +400,21 @@ const VariantSelector = ({
     }
   }
 
+  const BUTTON_BASE =
+    'px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200'
+  const BUTTON_OOS_ACTIVE = `${BUTTON_BASE} bg-[var(--surface)] text-[var(--text-muted)] border-2 border-[var(--text-muted)] line-through shadow-sm`
+  const BUTTON_OOS_INACTIVE = `${BUTTON_BASE} bg-[var(--surface)] text-[var(--text-muted)] border border-[var(--border-warm)] line-through hover:border-[var(--text-muted)]`
+  const BUTTON_ACTIVE = `${BUTTON_BASE} bg-[var(--accent-warm)] text-white shadow-warm`
+  const BUTTON_INACTIVE = `${BUTTON_BASE} bg-[var(--accent-cream)] text-[var(--text-secondary)] border border-[var(--border-warm)] hover:border-[var(--accent-warm)]`
+
   const getOptionButtonClassName = (
     isActive: boolean,
     isOutOfStock: boolean
   ): string => {
-    const base =
-      'px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200'
     if (isOutOfStock) {
-      return isActive
-        ? `${base} bg-[var(--surface)] text-[var(--text-muted)] border-2 border-[var(--text-muted)] line-through shadow-sm`
-        : `${base} bg-[var(--surface)] text-[var(--text-muted)] border border-[var(--border-warm)] line-through hover:border-[var(--text-muted)]`
+      return isActive ? BUTTON_OOS_ACTIVE : BUTTON_OOS_INACTIVE
     }
-    return isActive
-      ? `${base} bg-[var(--accent-warm)] text-white shadow-warm`
-      : `${base} bg-[var(--accent-cream)] text-[var(--text-secondary)] border border-[var(--border-warm)] hover:border-[var(--accent-warm)]`
+    return isActive ? BUTTON_ACTIVE : BUTTON_INACTIVE
   }
 
   return (
@@ -425,6 +446,7 @@ const VariantSelector = ({
                       key={val.id}
                       onClick={() => handleOptionChange(option.id, val.id)}
                       aria-pressed={isActive}
+                      aria-disabled={isOutOfStock || undefined}
                       className={getOptionButtonClassName(
                         isActive,
                         isOutOfStock
