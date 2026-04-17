@@ -15,7 +15,11 @@ export const useFetch = <T>(
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const optionsRef = useRef(options)
-  optionsRef.current = options
+
+  useEffect(() => {
+    optionsRef.current = options
+  }, [options])
+
   const fetchData = useCallback(async () => {
     setLoading(true)
     setError(null)
