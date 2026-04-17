@@ -443,9 +443,7 @@ const VariantSelector = ({
                       onClick={() => handleOptionChange(option.id, val.id)}
                       aria-pressed={isActive}
                       aria-label={
-                        isOutOfStock
-                          ? `${val.value} — Out of stock`
-                          : val.value
+                        isOutOfStock ? `${val.value} — Out of stock` : val.value
                       }
                       className={getOptionButtonClassName(
                         isActive,
