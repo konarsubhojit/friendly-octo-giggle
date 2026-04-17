@@ -216,11 +216,7 @@ describe('ProductClient', () => {
   it('renders product name, price, description, and category', () => {
     const product = makeProduct()
     render(
-      <ProductClient
-        product={product}
-        initialVariantId={null}
-        aiEnabled
-      />
+      <ProductClient product={product} initialVariantId={null} aiEnabled />
     )
 
     expect(
@@ -236,11 +232,7 @@ describe('ProductClient', () => {
   it('renders breadcrumb navigation with product name', () => {
     const product = makeProduct()
     render(
-      <ProductClient
-        product={product}
-        initialVariantId={null}
-        aiEnabled
-      />
+      <ProductClient product={product} initialVariantId={null} aiEnabled />
     )
 
     expect(
@@ -258,11 +250,7 @@ describe('ProductClient', () => {
       images: [],
     })
     render(
-      <ProductClient
-        product={product}
-        initialVariantId={null}
-        aiEnabled
-      />
+      <ProductClient product={product} initialVariantId={null} aiEnabled />
     )
 
     expect(screen.getByTestId('image-carousel')).toBeInTheDocument()
@@ -271,11 +259,7 @@ describe('ProductClient', () => {
   it('renders add-to-cart section when product is in stock', () => {
     const product = makeProduct({ variants: [makeVariation({ stock: 10 })] })
     render(
-      <ProductClient
-        product={product}
-        initialVariantId={null}
-        aiEnabled
-      />
+      <ProductClient product={product} initialVariantId={null} aiEnabled />
     )
 
     expect(
@@ -287,11 +271,7 @@ describe('ProductClient', () => {
   it('renders out-of-stock panel when product stock is 0', () => {
     const product = makeProduct({ variants: [makeVariation({ stock: 0 })] })
     render(
-      <ProductClient
-        product={product}
-        initialVariantId={null}
-        aiEnabled
-      />
+      <ProductClient product={product} initialVariantId={null} aiEnabled />
     )
 
     // Out-of-stock panel has a "Browse Products" link
@@ -315,11 +295,7 @@ describe('ProductClient', () => {
       })
     )
     render(
-      <ProductClient
-        product={product}
-        initialVariantId={null}
-        aiEnabled
-      />
+      <ProductClient product={product} initialVariantId={null} aiEnabled />
     )
 
     expect(screen.getByText('All Available Stock in Cart')).toBeInTheDocument()
@@ -332,11 +308,7 @@ describe('ProductClient', () => {
   it('renders share button', () => {
     const product = makeProduct()
     render(
-      <ProductClient
-        product={product}
-        initialVariantId={null}
-        aiEnabled
-      />
+      <ProductClient product={product} initialVariantId={null} aiEnabled />
     )
     expect(screen.getByTestId('share-button')).toBeInTheDocument()
   })
@@ -344,11 +316,7 @@ describe('ProductClient', () => {
   it('renders reviews section and recently viewed', () => {
     const product = makeProduct()
     render(
-      <ProductClient
-        product={product}
-        initialVariantId={null}
-        aiEnabled
-      />
+      <ProductClient product={product} initialVariantId={null} aiEnabled />
     )
     expect(screen.getByTestId('reviews-section')).toBeInTheDocument()
     expect(screen.getByTestId('recently-viewed')).toBeInTheDocument()
@@ -357,11 +325,7 @@ describe('ProductClient', () => {
   it('tracks product view on mount', () => {
     const product = makeProduct()
     render(
-      <ProductClient
-        product={product}
-        initialVariantId={null}
-        aiEnabled
-      />
+      <ProductClient product={product} initialVariantId={null} aiEnabled />
     )
     expect(mockTrackProduct).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'prod001', name: 'Rose Bouquet' })
@@ -379,11 +343,7 @@ describe('ProductClient', () => {
     })
     const product = makeProduct()
     render(
-      <ProductClient
-        product={product}
-        initialVariantId={null}
-        aiEnabled
-      />
+      <ProductClient product={product} initialVariantId={null} aiEnabled />
     )
     expect(mockDispatch).toHaveBeenCalledWith(
       expect.objectContaining({ type: 'cart/fetchCart' })
@@ -393,11 +353,7 @@ describe('ProductClient', () => {
   it('does NOT dispatch fetchCart when unauthenticated', () => {
     const product = makeProduct()
     render(
-      <ProductClient
-        product={product}
-        initialVariantId={null}
-        aiEnabled
-      />
+      <ProductClient product={product} initialVariantId={null} aiEnabled />
     )
     expect(mockFetchCart).not.toHaveBeenCalled()
   })
@@ -405,11 +361,7 @@ describe('ProductClient', () => {
   it('adds to cart via pending cart when unauthenticated', async () => {
     const product = makeProduct()
     render(
-      <ProductClient
-        product={product}
-        initialVariantId={null}
-        aiEnabled
-      />
+      <ProductClient product={product} initialVariantId={null} aiEnabled />
     )
 
     await act(() => {
@@ -426,11 +378,7 @@ describe('ProductClient', () => {
   it('shows cart success message after adding to cart', async () => {
     const product = makeProduct()
     render(
-      <ProductClient
-        product={product}
-        initialVariantId={null}
-        aiEnabled
-      />
+      <ProductClient product={product} initialVariantId={null} aiEnabled />
     )
 
     await act(() => {
@@ -453,11 +401,7 @@ describe('ProductClient', () => {
     })
     const product = makeProduct()
     render(
-      <ProductClient
-        product={product}
-        initialVariantId={null}
-        aiEnabled
-      />
+      <ProductClient product={product} initialVariantId={null} aiEnabled />
     )
 
     await act(() => {
@@ -483,11 +427,7 @@ describe('ProductClient', () => {
     mockUnwrap.mockRejectedValue('Out of stock')
     const product = makeProduct()
     render(
-      <ProductClient
-        product={product}
-        initialVariantId={null}
-        aiEnabled
-      />
+      <ProductClient product={product} initialVariantId={null} aiEnabled />
     )
 
     await act(() => {
@@ -514,11 +454,7 @@ describe('ProductClient', () => {
     })
     const product = makeProduct()
     render(
-      <ProductClient
-        product={product}
-        initialVariantId={null}
-        aiEnabled
-      />
+      <ProductClient product={product} initialVariantId={null} aiEnabled />
     )
 
     await act(() => {
@@ -537,11 +473,7 @@ describe('ProductClient', () => {
     ]
     const product = makeProduct({ variants })
     render(
-      <ProductClient
-        product={product}
-        initialVariantId={null}
-        aiEnabled
-      />
+      <ProductClient product={product} initialVariantId={null} aiEnabled />
     )
 
     expect(screen.getByTestId('variation-btn-var001')).toBeInTheDocument()
@@ -552,11 +484,7 @@ describe('ProductClient', () => {
     const variation = makeVariation({ id: 'var001', price: 750 })
     const product = makeProduct({ variants: [variation] })
     render(
-      <ProductClient
-        product={product}
-        initialVariantId="var001"
-        aiEnabled
-      />
+      <ProductClient product={product} initialVariantId="var001" aiEnabled />
     )
 
     expect(screen.getAllByText('₹750.00')).toHaveLength(2)
@@ -569,11 +497,7 @@ describe('ProductClient', () => {
     ]
     const product = makeProduct({ variants })
     render(
-      <ProductClient
-        product={product}
-        initialVariantId={null}
-        aiEnabled
-      />
+      <ProductClient product={product} initialVariantId={null} aiEnabled />
     )
 
     expect(screen.getAllByText('₹500.00')).toHaveLength(2)
@@ -588,11 +512,7 @@ describe('ProductClient', () => {
   it('quantity selector renders with options up to stock (max 10)', () => {
     const product = makeProduct({ variants: [makeVariation({ stock: 5 })] })
     render(
-      <ProductClient
-        product={product}
-        initialVariantId={null}
-        aiEnabled
-      />
+      <ProductClient product={product} initialVariantId={null} aiEnabled />
     )
 
     const select = screen.getByLabelText('Select quantity')
@@ -614,11 +534,7 @@ describe('ProductClient', () => {
       })
     )
     render(
-      <ProductClient
-        product={product}
-        initialVariantId={null}
-        aiEnabled
-      />
+      <ProductClient product={product} initialVariantId={null} aiEnabled />
     )
 
     expect(screen.getByText(/You already have/)).toBeInTheDocument()
@@ -636,11 +552,7 @@ describe('ProductClient', () => {
   it('shows View Cart link in add-to-cart section', () => {
     const product = makeProduct()
     render(
-      <ProductClient
-        product={product}
-        initialVariantId={null}
-        aiEnabled
-      />
+      <ProductClient product={product} initialVariantId={null} aiEnabled />
     )
     expect(screen.getByRole('link', { name: /View Cart/i })).toHaveAttribute(
       'href',
@@ -651,11 +563,7 @@ describe('ProductClient', () => {
   it('shows total price (quantity × price) in add-to-cart section', () => {
     const product = makeProduct({ variants: [makeVariation({ price: 500 })] })
     render(
-      <ProductClient
-        product={product}
-        initialVariantId={null}
-        aiEnabled
-      />
+      <ProductClient product={product} initialVariantId={null} aiEnabled />
     )
     expect(screen.getAllByText('₹500.00')).toHaveLength(2)
   })
@@ -1031,11 +939,7 @@ describe('ProductClient', () => {
     mockUnwrap.mockRejectedValue(new Error('Network error'))
     const product = makeProduct()
     render(
-      <ProductClient
-        product={product}
-        initialVariantId={null}
-        aiEnabled
-      />
+      <ProductClient product={product} initialVariantId={null} aiEnabled />
     )
 
     await act(() => {

@@ -437,7 +437,8 @@ const VariantSelector = ({
       const valIds = getVariantOptionValueSet(v, variantValueIndex)
       if (!precedingSelections.every((sel) => valIds.has(sel))) continue
       for (const valId of valIds) {
-        if (optionValueIds.has(valId)) updateValueStatus(statusMap, valId, v.stock)
+        if (optionValueIds.has(valId))
+          updateValueStatus(statusMap, valId, v.stock)
       }
     }
     return statusMap
@@ -836,7 +837,9 @@ const AddToCartSection = ({
 
 /** Aggregate per-variant cart quantities for a given product. */
 const computeCartQuantities = (
-  items: { productId: string; variantId?: string | null; quantity: number }[] | undefined,
+  items:
+    | { productId: string; variantId?: string | null; quantity: number }[]
+    | undefined,
   productId: string
 ): Record<string, number> => {
   const map: Record<string, number> = {}
