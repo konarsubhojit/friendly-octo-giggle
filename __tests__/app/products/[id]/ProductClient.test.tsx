@@ -1048,4 +1048,197 @@ describe('ProductClient', () => {
       ).toBeInTheDocument()
     })
   })
+
+  it('hides unavailable option values based on selected options', () => {
+    // Red comes in S and L; Blue only comes in S — no Blue-L variant exists
+    const variants = [
+      makeVariation({
+        id: 'var-red-s',
+        price: 500,
+        stock: 5,
+        optionValues: [
+          { id: 'ov-red', value: 'Red', optionId: 'opt-color', sortOrder: 0, createdAt: '2025-01-01T00:00:00.000Z' },
+          { id: 'ov-s', value: 'S', optionId: 'opt-size', sortOrder: 0, createdAt: '2025-01-01T00:00:00.000Z' },
+        ],
+      }),
+      makeVariation({
+        id: 'var-red-l',
+        price: 550,
+        stock: 3,
+        optionValues: [
+          { id: 'ov-red', value: 'Red', optionId: 'opt-color', sortOrder: 0, createdAt: '2025-01-01T00:00:00.000Z' },
+          { id: 'ov-l', value: 'L', optionId: 'opt-size', sortOrder: 1, createdAt: '2025-01-01T00:00:00.000Z' },
+        ],
+      }),
+      makeVariation({
+        id: 'var-blue-s',
+        price: 600,
+        stock: 4,
+        optionValues: [
+          { id: 'ov-blue', value: 'Blue', optionId: 'opt-color', sortOrder: 1, createdAt: '2025-01-01T00:00:00.000Z' },
+          { id: 'ov-s', value: 'S', optionId: 'opt-size', sortOrder: 0, createdAt: '2025-01-01T00:00:00.000Z' },
+        ],
+      }),
+    ]
+    const product: Product = {
+      ...makeProduct({ variants }),
+      options: [
+        {
+          id: 'opt-color', productId: 'prod001', name: 'Color', sortOrder: 0,
+          createdAt: '2025-01-01T00:00:00.000Z',
+          values: [
+            { id: 'ov-red', optionId: 'opt-color', value: 'Red', sortOrder: 0, createdAt: '2025-01-01T00:00:00.000Z' },
+            { id: 'ov-blue', optionId: 'opt-color', value: 'Blue', sortOrder: 1, createdAt: '2025-01-01T00:00:00.000Z' },
+          ],
+        },
+        {
+          id: 'opt-size', productId: 'prod001', name: 'Size', sortOrder: 1,
+          createdAt: '2025-01-01T00:00:00.000Z',
+          values: [
+            { id: 'ov-s', optionId: 'opt-size', value: 'S', sortOrder: 0, createdAt: '2025-01-01T00:00:00.000Z' },
+            { id: 'ov-l', optionId: 'opt-size', value: 'L', sortOrder: 1, createdAt: '2025-01-01T00:00:00.000Z' },
+          ],
+        },
+      ],
+    }
+
+    render(
+      <ProductClient product={product} initialVariantId="var-red-s" aiEnabled={false} />
+    )
+
+    // Red is selected → both S and L should be visible (Red has S and L)
+    expect(screen.getByRole('button', { name: 'S' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'L' })).toBeInTheDocument()
+
+    // Now click Blue
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name: 'Blue' }))
+    })
+
+    // Blue only has S → L should be hidden
+    expect(screen.getByRole('button', { name: 'S' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'L' })).not.toBeInTheDocument()
+  })
+
+  it('auto-selects valid combination when current selection becomes unavailable', () => {
+    // Red has S and L; Blue only has S
+    const variants = [
+      makeVariation({
+        id: 'var-red-s',
+        price: 500,
+        stock: 5,
+        optionValues: [
+          { id: 'ov-red', value: 'Red', optionId: 'opt-color', sortOrder: 0, createdAt: '2025-01-01T00:00:00.000Z' },
+          { id: 'ov-s', value: 'S', optionId: 'opt-size', sortOrder: 0, createdAt: '2025-01-01T00:00:00.000Z' },
+        ],
+      }),
+      makeVariation({
+        id: 'var-red-l',
+        price: 550,
+        stock: 3,
+        optionValues: [
+          { id: 'ov-red', value: 'Red', optionId: 'opt-color', sortOrder: 0, createdAt: '2025-01-01T00:00:00.000Z' },
+          { id: 'ov-l', value: 'L', optionId: 'opt-size', sortOrder: 1, createdAt: '2025-01-01T00:00:00.000Z' },
+        ],
+      }),
+      makeVariation({
+        id: 'var-blue-s',
+        price: 600,
+        stock: 4,
+        optionValues: [
+          { id: 'ov-blue', value: 'Blue', optionId: 'opt-color', sortOrder: 1, createdAt: '2025-01-01T00:00:00.000Z' },
+          { id: 'ov-s', value: 'S', optionId: 'opt-size', sortOrder: 0, createdAt: '2025-01-01T00:00:00.000Z' },
+        ],
+      }),
+    ]
+    const product: Product = {
+      ...makeProduct({ variants }),
+      options: [
+        {
+          id: 'opt-color', productId: 'prod001', name: 'Color', sortOrder: 0,
+          createdAt: '2025-01-01T00:00:00.000Z',
+          values: [
+            { id: 'ov-red', optionId: 'opt-color', value: 'Red', sortOrder: 0, createdAt: '2025-01-01T00:00:00.000Z' },
+            { id: 'ov-blue', optionId: 'opt-color', value: 'Blue', sortOrder: 1, createdAt: '2025-01-01T00:00:00.000Z' },
+          ],
+        },
+        {
+          id: 'opt-size', productId: 'prod001', name: 'Size', sortOrder: 1,
+          createdAt: '2025-01-01T00:00:00.000Z',
+          values: [
+            { id: 'ov-s', optionId: 'opt-size', value: 'S', sortOrder: 0, createdAt: '2025-01-01T00:00:00.000Z' },
+            { id: 'ov-l', optionId: 'opt-size', value: 'L', sortOrder: 1, createdAt: '2025-01-01T00:00:00.000Z' },
+          ],
+        },
+      ],
+    }
+
+    // Start with Red-L selected
+    render(
+      <ProductClient product={product} initialVariantId="var-red-l" aiEnabled={false} />
+    )
+
+    // Verify Red/L selected (price 550)
+    expect(screen.getAllByText('₹550.00').length).toBeGreaterThanOrEqual(2)
+
+    // Click Blue — Blue-L doesn't exist, should fall back to Blue-S (price 600)
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name: 'Blue' }))
+    })
+
+    expect(screen.getAllByText('₹600.00').length).toBeGreaterThanOrEqual(2)
+    expect(screen.getByText('Blue / S')).toBeInTheDocument()
+  })
+
+  it('shows all sizes when no color is initially selected for a single-option product', () => {
+    // A product with only one option (Size) should always show all values
+    const variants = [
+      makeVariation({
+        id: 'var-s',
+        price: 500,
+        stock: 5,
+        optionValues: [
+          { id: 'ov-s', value: 'S', optionId: 'opt-size', sortOrder: 0, createdAt: '2025-01-01T00:00:00.000Z' },
+        ],
+      }),
+      makeVariation({
+        id: 'var-m',
+        price: 550,
+        stock: 3,
+        optionValues: [
+          { id: 'ov-m', value: 'M', optionId: 'opt-size', sortOrder: 1, createdAt: '2025-01-01T00:00:00.000Z' },
+        ],
+      }),
+      makeVariation({
+        id: 'var-l',
+        price: 600,
+        stock: 4,
+        optionValues: [
+          { id: 'ov-l', value: 'L', optionId: 'opt-size', sortOrder: 2, createdAt: '2025-01-01T00:00:00.000Z' },
+        ],
+      }),
+    ]
+    const product: Product = {
+      ...makeProduct({ variants }),
+      options: [
+        {
+          id: 'opt-size', productId: 'prod001', name: 'Size', sortOrder: 0,
+          createdAt: '2025-01-01T00:00:00.000Z',
+          values: [
+            { id: 'ov-s', optionId: 'opt-size', value: 'S', sortOrder: 0, createdAt: '2025-01-01T00:00:00.000Z' },
+            { id: 'ov-m', optionId: 'opt-size', value: 'M', sortOrder: 1, createdAt: '2025-01-01T00:00:00.000Z' },
+            { id: 'ov-l', optionId: 'opt-size', value: 'L', sortOrder: 2, createdAt: '2025-01-01T00:00:00.000Z' },
+          ],
+        },
+      ],
+    }
+
+    render(
+      <ProductClient product={product} initialVariantId="var-s" aiEnabled={false} />
+    )
+
+    expect(screen.getByRole('button', { name: 'S' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'M' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'L' })).toBeInTheDocument()
+  })
 })

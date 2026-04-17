@@ -291,16 +291,65 @@ const VariantSelector = ({
     }
   }
 
+  /**
+   * For a given option, compute which of its values are available given the
+   * current selections in *preceding* options (by sortOrder).
+   *
+   * Options are displayed in sortOrder.  The first option always shows every
+   * value.  Each subsequent option is filtered by the selections made in all
+   * options that come before it – a cascading pattern that prevents "dead-end"
+   * states while still hiding impossible combinations.
+   */
+  const getAvailableValues = (optionId: string): Set<string> => {
+    const optionIndex = options.findIndex((o) => o.id === optionId)
+
+    // Collect selected values from preceding options only
+    const precedingSelections: string[] = []
+    for (let i = 0; i < optionIndex; i++) {
+      const selVal = selectedOptionValues.get(options[i].id)
+      if (selVal) precedingSelections.push(selVal)
+    }
+
+    const available = new Set<string>()
+    for (const v of variants) {
+      const variantValueIds = getVariantOptionValues(v)
+      // Check that the variant matches every preceding option's selection
+      const matchesPreceding = precedingSelections.every((selId) =>
+        variantValueIds.includes(selId)
+      )
+      if (!matchesPreceding) continue
+      // Collect which value of *this* option the variant carries
+      const option = options.find((o) => o.id === optionId)
+      for (const val of option?.values ?? []) {
+        if (variantValueIds.includes(val.id)) {
+          available.add(val.id)
+        }
+      }
+    }
+    return available
+  }
+
   const handleOptionChange = (optionId: string, valueId: string) => {
     const newSelections = new Map(selectedOptionValues)
     newSelections.set(optionId, valueId)
 
-    const matchingVariant = variants.find((v) => {
+    // Find a variant matching all current selections
+    let matchingVariant = variants.find((v) => {
       const variantValueIds = getVariantOptionValues(v)
       return [...newSelections.values()].every((selectedValueId) =>
         variantValueIds.includes(selectedValueId)
       )
     })
+
+    // If no exact match exists (e.g. user picked Red but current size has no
+    // Red variant), clear downstream selections and pick the first variant
+    // that includes the newly selected value.
+    if (!matchingVariant) {
+      matchingVariant = variants.find((v) => {
+        const variantValueIds = getVariantOptionValues(v)
+        return variantValueIds.includes(valueId)
+      })
+    }
 
     if (matchingVariant) {
       onSelect(matchingVariant)
@@ -316,32 +365,38 @@ const VariantSelector = ({
         Choose Your Options
       </span>
 
-      {options.map((option) => (
-        <div key={option.id}>
-          <span className="block text-sm font-semibold text-[var(--text-secondary)] mb-2">
-            {option.name}
-          </span>
-          <div className="flex flex-wrap gap-2">
-            {(option.values ?? []).map((val) => {
-              const isActive = selectedOptionValues.get(option.id) === val.id
-              return (
-                <button
-                  key={val.id}
-                  onClick={() => handleOptionChange(option.id, val.id)}
-                  aria-pressed={isActive}
-                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
-                    isActive
-                      ? 'bg-[var(--accent-warm)] text-white shadow-warm'
-                      : 'bg-[var(--accent-cream)] text-[var(--text-secondary)] border border-[var(--border-warm)] hover:border-[var(--accent-warm)]'
-                  }`}
-                >
-                  {val.value}
-                </button>
-              )
-            })}
+      {options.map((option) => {
+        const availableValueIds = getAvailableValues(option.id)
+        return (
+          <div key={option.id}>
+            <span className="block text-sm font-semibold text-[var(--text-secondary)] mb-2">
+              {option.name}
+            </span>
+            <div className="flex flex-wrap gap-2">
+              {(option.values ?? [])
+                .filter((val) => availableValueIds.has(val.id))
+                .map((val) => {
+                  const isActive =
+                    selectedOptionValues.get(option.id) === val.id
+                  return (
+                    <button
+                      key={val.id}
+                      onClick={() => handleOptionChange(option.id, val.id)}
+                      aria-pressed={isActive}
+                      className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
+                        isActive
+                          ? 'bg-[var(--accent-warm)] text-white shadow-warm'
+                          : 'bg-[var(--accent-cream)] text-[var(--text-secondary)] border border-[var(--border-warm)] hover:border-[var(--accent-warm)]'
+                      }`}
+                    >
+                      {val.value}
+                    </button>
+                  )
+                })}
+            </div>
           </div>
-        </div>
-      ))}
+        )
+      })}
 
       {selectedVariant && (
         <div className="p-4 border-2 rounded-xl border-[var(--accent-warm)] bg-[var(--accent-cream)] shadow-warm">
