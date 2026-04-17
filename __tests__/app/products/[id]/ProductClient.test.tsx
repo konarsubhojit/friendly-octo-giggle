@@ -1242,7 +1242,7 @@ describe('ProductClient', () => {
     expect(screen.getByRole('button', { name: 'L' })).toBeInTheDocument()
   })
 
-  it('shows out-of-stock option values as disabled buttons', () => {
+  it('shows out-of-stock option values as clickable buttons with visual indicator', () => {
     // Red-S is in stock, Red-L is out of stock
     const variants = [
       makeVariation({
@@ -1291,17 +1291,26 @@ describe('ProductClient', () => {
 
     // S should be enabled (in stock)
     const sButton = screen.getByRole('button', { name: 'S' })
-    expect(sButton).toBeInTheDocument()
     expect(sButton).not.toBeDisabled()
 
-    // L should be visible but disabled (out of stock)
+    // L should be visible, NOT disabled, with out-of-stock title
     const lButton = screen.getByRole('button', { name: 'L' })
     expect(lButton).toBeInTheDocument()
-    expect(lButton).toBeDisabled()
+    expect(lButton).not.toBeDisabled()
     expect(lButton).toHaveAttribute('title', 'L — Out of stock')
+    expect(lButton.className).toContain('line-through')
+
+    // Clicking L should select the out-of-stock variant and show out-of-stock panel
+    act(() => {
+      fireEvent.click(lButton)
+    })
+
+    // Out-of-stock panel shows "Browse Products" link
+    expect(screen.getByRole('link', { name: 'Browse Products' })).toHaveAttribute('href', '/shop')
+    expect(screen.queryByRole('button', { name: /Add to Cart/i })).not.toBeInTheDocument()
   })
 
-  it('shows out-of-stock color as disabled when all its variants have zero stock', () => {
+  it('shows out-of-stock color as clickable and selecting it shows out-of-stock view', () => {
     // Red-S in stock, Blue-S out of stock
     const variants = [
       makeVariation({
@@ -1352,10 +1361,23 @@ describe('ProductClient', () => {
     const redButton = screen.getByRole('button', { name: 'Red' })
     expect(redButton).not.toBeDisabled()
 
-    // Blue should be visible but disabled (all Blue variants are out of stock)
+    // Blue should be visible, clickable, with out-of-stock styling
     const blueButton = screen.getByRole('button', { name: 'Blue' })
     expect(blueButton).toBeInTheDocument()
-    expect(blueButton).toBeDisabled()
+    expect(blueButton).not.toBeDisabled()
     expect(blueButton).toHaveAttribute('title', 'Blue — Out of stock')
+    expect(blueButton.className).toContain('line-through')
+
+    // Initially add-to-cart is shown (in stock)
+    expect(screen.getByRole('button', { name: /Add to Cart/i })).toBeInTheDocument()
+
+    // Click Blue — out-of-stock variant selected, should show out-of-stock panel
+    act(() => {
+      fireEvent.click(blueButton)
+    })
+
+    // Out-of-stock panel replaces add-to-cart
+    expect(screen.getByRole('link', { name: 'Browse Products' })).toHaveAttribute('href', '/shop')
+    expect(screen.queryByRole('button', { name: /Add to Cart/i })).not.toBeInTheDocument()
   })
 })
