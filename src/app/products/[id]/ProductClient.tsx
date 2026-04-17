@@ -291,7 +291,7 @@ const VariantSelector = ({
     }
   }
 
-  type OptionValueStatus = 'available' | 'out_of_stock'
+  type OptionValueStatus = 'available' | 'outOfStock'
 
   /**
    * For a given option, compute the availability status of each value given the
@@ -304,7 +304,7 @@ const VariantSelector = ({
    *
    * Returns a Map where:
    * - `'available'` — at least one matching variant has stock > 0
-   * - `'out_of_stock'` — matching variants exist but all have stock === 0
+   * - `'outOfStock'` — matching variants exist but all have stock === 0
    * - absent key — no matching variant exists at all (value is hidden)
    */
   const getValueAvailability = (
@@ -337,41 +337,48 @@ const VariantSelector = ({
         if (!optionValueIds.has(valId)) continue
         if (statusMap.get(valId) === 'available') continue
         const status: OptionValueStatus =
-          v.stock > 0 ? 'available' : 'out_of_stock'
+          v.stock > 0 ? 'available' : 'outOfStock'
         statusMap.set(valId, status)
       }
     }
     return statusMap
   }
 
-  const handleOptionChange = (optionId: string, valueId: string) => {
-    const newSelections = new Map(selectedOptionValues)
-    newSelections.set(optionId, valueId)
-
-    // Find a variant matching all current selections
-    let matchingVariant = variants.find((v) => {
+  const findMatchingVariant = (
+    selections: Map<string, string>
+  ): ProductVariant | undefined =>
+    variants.find((v) => {
       const variantValueIds = getVariantOptionValues(v)
-      return [...newSelections.values()].every((selectedValueId) =>
+      return [...selections.values()].every((selectedValueId) =>
         variantValueIds.includes(selectedValueId)
       )
     })
 
-    // If no exact match exists (e.g. user picked Blue but current size has no
-    // Blue variant), clear downstream selections and pick the first variant
-    // that includes the newly selected value.
-    if (!matchingVariant) {
-      const changedIndex = options.findIndex((o) => o.id === optionId)
-      for (const opt of options.slice(changedIndex + 1)) {
-        newSelections.delete(opt.id)
-      }
-      matchingVariant = variants.find((v) => {
-        const variantValueIds = getVariantOptionValues(v)
-        return variantValueIds.includes(valueId)
-      })
+  const handleOptionChange = (optionId: string, valueId: string) => {
+    const newSelections = new Map(selectedOptionValues)
+    newSelections.set(optionId, valueId)
+
+    // Try exact match first
+    const exactMatch = findMatchingVariant(newSelections)
+
+    if (exactMatch) {
+      onSelect(exactMatch)
+      return
     }
 
-    if (matchingVariant) {
-      onSelect(matchingVariant)
+    // No exact match — clear downstream selections and pick the first
+    // variant that includes the newly selected value.
+    const changedIndex = options.findIndex((o) => o.id === optionId)
+    for (const opt of options.slice(changedIndex + 1)) {
+      newSelections.delete(opt.id)
+    }
+    const fallbackMatch = variants.find((v) => {
+      const variantValueIds = getVariantOptionValues(v)
+      return variantValueIds.includes(valueId)
+    })
+
+    if (fallbackMatch) {
+      onSelect(fallbackMatch)
     }
   }
 
@@ -398,7 +405,7 @@ const VariantSelector = ({
                   const isActive =
                     selectedOptionValues.get(option.id) === val.id
                   const isOutOfStock =
-                    valueAvailability.get(val.id) === 'out_of_stock'
+                    valueAvailability.get(val.id) === 'outOfStock'
                   return (
                     <button
                       key={val.id}
