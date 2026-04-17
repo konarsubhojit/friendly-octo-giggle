@@ -440,6 +440,7 @@ const VariantSelector = ({
                   return (
                     <button
                       key={val.id}
+                      type="button"
                       onClick={() => handleOptionChange(option.id, val.id)}
                       aria-pressed={isActive}
                       aria-label={
