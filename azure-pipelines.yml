@@ -23,7 +23,7 @@ pr:
 
 variables:
   NODE_VERSION: '22'
-  NPM_CI_FLAGS: '--cache $(npm_config_cache) --no-audit --no-fund'
+  NPM_CI_FLAGS: '--cache $(npm_config_cache)'
   NODE_MODULES_CACHE_PATH: $(System.DefaultWorkingDirectory)/node_modules
   npm_config_cache: $(Pipeline.Workspace)/.npm
 
