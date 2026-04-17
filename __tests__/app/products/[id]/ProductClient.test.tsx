@@ -1178,16 +1178,16 @@ describe('ProductClient', () => {
       <ProductClient product={product} initialVariantId="var-red-l" aiEnabled={false} />
     )
 
-    // Verify Red/L selected (price 550)
-    expect(screen.getAllByText('₹550.00').length).toBeGreaterThanOrEqual(2)
+    // Verify Red/L selected
+    expect(screen.getByText('Red / L')).toBeInTheDocument()
 
     // Click Blue — Blue-L doesn't exist, should fall back to Blue-S (price 600)
     act(() => {
       fireEvent.click(screen.getByRole('button', { name: 'Blue' }))
     })
 
-    expect(screen.getAllByText('₹600.00').length).toBeGreaterThanOrEqual(2)
     expect(screen.getByText('Blue / S')).toBeInTheDocument()
+    expect(screen.getAllByText('₹600.00').length).toBeGreaterThanOrEqual(2)
   })
 
   it('shows all sizes when no color is initially selected for a single-option product', () => {

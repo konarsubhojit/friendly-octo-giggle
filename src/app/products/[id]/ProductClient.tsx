@@ -356,10 +356,14 @@ const VariantSelector = ({
       )
     })
 
-    // If no exact match exists (e.g. user picked Red but current size has no
-    // Red variant), clear downstream selections and pick the first variant
+    // If no exact match exists (e.g. user picked Blue but current size has no
+    // Blue variant), clear downstream selections and pick the first variant
     // that includes the newly selected value.
     if (!matchingVariant) {
+      const changedIndex = options.findIndex((o) => o.id === optionId)
+      for (const opt of options.slice(changedIndex + 1)) {
+        newSelections.delete(opt.id)
+      }
       matchingVariant = variants.find((v) => {
         const variantValueIds = getVariantOptionValues(v)
         return variantValueIds.includes(valueId)
@@ -403,8 +407,8 @@ const VariantSelector = ({
                       className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
                         isOutOfStock
                           ? isActive
-                            ? 'bg-gray-200 text-gray-500 border-2 border-gray-400 line-through shadow-sm'
-                            : 'bg-gray-100 text-gray-400 border border-gray-200 line-through hover:border-gray-400'
+                            ? 'bg-[var(--surface)] text-[var(--text-muted)] border-2 border-[var(--text-muted)] line-through shadow-sm'
+                            : 'bg-[var(--surface)] text-[var(--text-muted)] border border-[var(--border-warm)] line-through hover:border-[var(--text-muted)]'
                           : isActive
                             ? 'bg-[var(--accent-warm)] text-white shadow-warm'
                             : 'bg-[var(--accent-cream)] text-[var(--text-secondary)] border border-[var(--border-warm)] hover:border-[var(--accent-warm)]'
