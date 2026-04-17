@@ -23,7 +23,7 @@ pr:
 
 variables:
   NODE_VERSION: '22'
-  NPM_CI_FLAGS: '--prefer-offline --no-audit --fund=false --progress=false'
+  NPM_CI_FLAGS: '--no-audit --fund=false --progress=false'
   NODE_MODULES_CACHE_PATH: $(System.DefaultWorkingDirectory)/node_modules
   npm_config_cache: $(Pipeline.Workspace)/.npm
 
@@ -44,9 +44,9 @@ stages:
           - task: Cache@2
             displayName: Cache npm packages
             inputs:
-              key: 'npm | "$(Agent.OS)" | package-lock.json'
+              key: 'npm | "$(Agent.OS)" | "$(NODE_VERSION)" | package-lock.json'
               restoreKeys: |
-                npm | "$(Agent.OS)"
+                npm | "$(Agent.OS)" | "$(NODE_VERSION)"
               path: $(npm_config_cache)
 
           - task: Cache@2
@@ -81,9 +81,9 @@ stages:
           - task: Cache@2
             displayName: Cache npm packages
             inputs:
-              key: 'npm | "$(Agent.OS)" | package-lock.json'
+              key: 'npm | "$(Agent.OS)" | "$(NODE_VERSION)" | package-lock.json'
               restoreKeys: |
-                npm | "$(Agent.OS)"
+                npm | "$(Agent.OS)" | "$(NODE_VERSION)"
               path: $(npm_config_cache)
 
           - task: Cache@2
@@ -136,9 +136,9 @@ stages:
           - task: Cache@2
             displayName: Cache npm packages
             inputs:
-              key: 'npm | "$(Agent.OS)" | package-lock.json'
+              key: 'npm | "$(Agent.OS)" | "$(NODE_VERSION)" | package-lock.json'
               restoreKeys: |
-                npm | "$(Agent.OS)"
+                npm | "$(Agent.OS)" | "$(NODE_VERSION)"
               path: $(npm_config_cache)
 
           - task: Cache@2
