@@ -302,6 +302,7 @@ const VariantSelector = ({
    */
   const getAvailableValues = (optionId: string): Set<string> => {
     const optionIndex = options.findIndex((o) => o.id === optionId)
+    if (optionIndex === -1) return new Set<string>()
 
     // Collect selected values from preceding options only
     const precedingSelections: string[] = []
@@ -310,6 +311,7 @@ const VariantSelector = ({
       if (selVal) precedingSelections.push(selVal)
     }
 
+    const option = options[optionIndex]
     const available = new Set<string>()
     for (const v of variants) {
       const variantValueIds = getVariantOptionValues(v)
@@ -319,8 +321,7 @@ const VariantSelector = ({
       )
       if (!matchesPreceding) continue
       // Collect which value of *this* option the variant carries
-      const option = options.find((o) => o.id === optionId)
-      for (const val of option?.values ?? []) {
+      for (const val of option.values ?? []) {
         if (variantValueIds.includes(val.id)) {
           available.add(val.id)
         }
