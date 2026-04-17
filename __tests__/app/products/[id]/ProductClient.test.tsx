@@ -84,8 +84,8 @@ vi.mock('@/features/product/components/StockBadge', () => ({
   ),
 }))
 
-vi.mock('@/features/product/components/VariationButton', () => ({
-  VariationButton: ({
+vi.mock('@/features/product/components/VariantButton', () => ({
+  VariantButton: ({
     variant,
     isSelected,
     onSelect,

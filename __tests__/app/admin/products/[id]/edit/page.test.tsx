@@ -61,7 +61,7 @@ vi.mock('@/features/admin/components/ProductEditPageForm', () => ({
   ),
 }))
 
-vi.mock('@/features/admin/components/VariationList', () => ({
+vi.mock('@/features/admin/components/VariantList', () => ({
   default: ({
     initialVariants,
   }: {

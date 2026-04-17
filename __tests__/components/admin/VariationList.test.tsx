@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import React from 'react'
-import VariationList from '@/features/admin/components/VariationList'
+import VariationList from '@/features/admin/components/VariantList'
 import type { ProductVariant } from '@/lib/types'
 
 vi.mock('react-hot-toast', () => ({
@@ -176,7 +176,7 @@ describe('VariationList', () => {
 
     await waitFor(() => {
       expect(mockFetch).toHaveBeenCalledWith(
-        '/api/admin/variations/var1234',
+        '/api/admin/variants/var1234',
         expect.objectContaining({
           method: 'PUT',
           body: JSON.stringify({ price: 200, stock: 30 }),

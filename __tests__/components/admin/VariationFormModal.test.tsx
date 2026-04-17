@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import React from 'react'
-import VariationFormModal from '@/features/admin/components/VariationFormModal'
+import VariationFormModal from '@/features/admin/components/VariantFormModal'
 import type { ProductVariant } from '@/lib/types'
 
 const { mockToastError, mockToastSuccess } = vi.hoisted(() => ({
@@ -121,7 +121,7 @@ describe('VariationFormModal', () => {
 
     await waitFor(() => {
       expect(mockFetch).toHaveBeenCalledWith(
-        '/api/admin/variations',
+        '/api/admin/variants',
         expect.objectContaining({
           method: 'POST',
         })
@@ -155,7 +155,7 @@ describe('VariationFormModal', () => {
 
     await waitFor(() => {
       expect(mockFetch).toHaveBeenCalledWith(
-        '/api/admin/variations/var1234',
+        '/api/admin/variants/var1234',
         expect.objectContaining({ method: 'PUT' })
       )
       expect(onSuccess).toHaveBeenCalled()

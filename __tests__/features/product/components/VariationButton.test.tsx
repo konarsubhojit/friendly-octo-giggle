@@ -2,7 +2,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import React from 'react'
-import { VariationButton } from '@/features/product/components/VariationButton'
+import { VariantButton as VariationButton } from '@/features/product/components/VariantButton'
 import type { ProductVariant } from '@/lib/types'
 
 const baseVariation: ProductVariant = {
