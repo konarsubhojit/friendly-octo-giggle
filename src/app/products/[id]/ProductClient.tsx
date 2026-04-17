@@ -388,15 +388,19 @@ const VariantSelector = ({
       return
     }
 
-    // No exact match — clear downstream selections and find a variant
-    // that matches all remaining (upstream + changed) selections.
+    // No exact match — clear downstream selections and pick the first
+    // variant that includes the newly selected value and all remaining selections.
     const changedIndex = options.findIndex((o) => o.id === optionId)
     for (const opt of options.slice(changedIndex + 1)) {
       newSelections.delete(opt.id)
     }
-    const fallbackMatch =
-      findMatchingVariant(newSelections) ??
-      variants.find((v) => getVariantOptionValueSet(v).has(valueId))
+    const fallbackMatch = variants.find((v) => {
+      const valueSet = getVariantOptionValueSet(v)
+      return (
+        valueSet.has(valueId) &&
+        [...newSelections.values()].every((sel) => valueSet.has(sel))
+      )
+    })
 
     if (fallbackMatch) {
       onSelect(fallbackMatch)
@@ -442,15 +446,12 @@ const VariantSelector = ({
                       key={val.id}
                       onClick={() => handleOptionChange(option.id, val.id)}
                       aria-pressed={isActive}
-                      aria-label={
-                        isOutOfStock ? `${val.value} — Out of stock` : val.value
-                      }
                       className={getOptionButtonClassName(
                         isActive,
                         isOutOfStock
                       )}
-                      title={
-                        isOutOfStock ? `${val.value} — Out of stock` : undefined
+                      aria-label={
+                        isOutOfStock ? `${val.value} — Out of stock` : val.value
                       }
                     >
                       {val.value}
