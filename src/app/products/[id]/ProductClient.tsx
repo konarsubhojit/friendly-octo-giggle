@@ -260,9 +260,6 @@ const VariantSelector = ({
     )
   }
 
-  const getVariantOptionValues = (variant: ProductVariant) =>
-    variant.optionValues?.map((ov) => ov.id) ?? []
-
   const getVariantLabel = (variant: ProductVariant): string => {
     if (!variant.optionValues || variant.optionValues.length === 0) {
       return variant.sku ?? `Variant`
@@ -293,6 +290,17 @@ const VariantSelector = ({
 
   type OptionValueStatus = 'available' | 'outOfStock'
 
+  /** Pre-index variant option value IDs as Sets for O(1) lookup. */
+  const variantValueIndex = new Map(
+    variants.map((v) => [
+      v.id,
+      new Set(v.optionValues?.map((ov) => ov.id) ?? []),
+    ])
+  )
+
+  const getVariantOptionValueSet = (variant: ProductVariant): Set<string> =>
+    variantValueIndex.get(variant.id) ?? new Set()
+
   /**
    * For a given option, compute the availability status of each value given the
    * current selections in *preceding* options (by sortOrder).
@@ -322,23 +330,16 @@ const VariantSelector = ({
 
     const option = options[optionIndex]
     const optionValueIds = new Set((option.values ?? []).map((v) => v.id))
-    // Track whether each value has at least one in-stock variant
     const statusMap = new Map<string, OptionValueStatus>()
 
     for (const v of variants) {
-      const variantValueIds = getVariantOptionValues(v)
-      // Check that the variant matches every preceding option's selection
-      const matchesPreceding = precedingSelections.every((selId) =>
-        variantValueIds.includes(selId)
-      )
-      if (!matchesPreceding) continue
+      const valIds = getVariantOptionValueSet(v)
+      if (!precedingSelections.every((selId) => valIds.has(selId))) continue
 
-      for (const valId of variantValueIds) {
+      for (const valId of valIds) {
         if (!optionValueIds.has(valId)) continue
         if (statusMap.get(valId) === 'available') continue
-        const status: OptionValueStatus =
-          v.stock > 0 ? 'available' : 'outOfStock'
-        statusMap.set(valId, status)
+        statusMap.set(valId, v.stock > 0 ? 'available' : 'outOfStock')
       }
     }
     return statusMap
@@ -348,10 +349,8 @@ const VariantSelector = ({
     selections: Map<string, string>
   ): ProductVariant | undefined =>
     variants.find((v) => {
-      const variantValueIds = getVariantOptionValues(v)
-      return [...selections.values()].every((selectedValueId) =>
-        variantValueIds.includes(selectedValueId)
-      )
+      const valIds = getVariantOptionValueSet(v)
+      return [...selections.values()].every((sel) => valIds.has(sel))
     })
 
   const handleOptionChange = (optionId: string, valueId: string) => {
@@ -372,14 +371,28 @@ const VariantSelector = ({
     for (const opt of options.slice(changedIndex + 1)) {
       newSelections.delete(opt.id)
     }
-    const fallbackMatch = variants.find((v) => {
-      const variantValueIds = getVariantOptionValues(v)
-      return variantValueIds.includes(valueId)
-    })
+    const fallbackMatch = variants.find((v) =>
+      getVariantOptionValueSet(v).has(valueId)
+    )
 
     if (fallbackMatch) {
       onSelect(fallbackMatch)
     }
+  }
+
+  const getOptionButtonClassName = (
+    isActive: boolean,
+    isOutOfStock: boolean
+  ): string => {
+    const base = 'px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200'
+    if (isOutOfStock) {
+      return isActive
+        ? `${base} bg-[var(--surface)] text-[var(--text-muted)] border-2 border-[var(--text-muted)] line-through shadow-sm`
+        : `${base} bg-[var(--surface)] text-[var(--text-muted)] border border-[var(--border-warm)] line-through hover:border-[var(--text-muted)]`
+    }
+    return isActive
+      ? `${base} bg-[var(--accent-warm)] text-white shadow-warm`
+      : `${base} bg-[var(--accent-cream)] text-[var(--text-secondary)] border border-[var(--border-warm)] hover:border-[var(--accent-warm)]`
   }
 
   return (
@@ -411,15 +424,7 @@ const VariantSelector = ({
                       key={val.id}
                       onClick={() => handleOptionChange(option.id, val.id)}
                       aria-pressed={isActive}
-                      className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
-                        isOutOfStock
-                          ? isActive
-                            ? 'bg-[var(--surface)] text-[var(--text-muted)] border-2 border-[var(--text-muted)] line-through shadow-sm'
-                            : 'bg-[var(--surface)] text-[var(--text-muted)] border border-[var(--border-warm)] line-through hover:border-[var(--text-muted)]'
-                          : isActive
-                            ? 'bg-[var(--accent-warm)] text-white shadow-warm'
-                            : 'bg-[var(--accent-cream)] text-[var(--text-secondary)] border border-[var(--border-warm)] hover:border-[var(--accent-warm)]'
-                      }`}
+                      className={getOptionButtonClassName(isActive, isOutOfStock)}
                       title={isOutOfStock ? `${val.value} — Out of stock` : undefined}
                     >
                       {val.value}
