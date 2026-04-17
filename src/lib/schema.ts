@@ -169,7 +169,7 @@ export const products = pgTable(
   ]
 )
 
-// ─── Product Options (dynamic variation dimensions) ──────
+// ─── Product Options (dynamic variant dimensions) ──────
 
 export const productOptions = pgTable(
   'ProductOption',

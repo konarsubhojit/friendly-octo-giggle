@@ -24,7 +24,7 @@ import {
 
 const MAX_ADDITIONAL_IMAGES = 10
 
-interface VariationFormModalProps {
+interface VariantFormModalProps {
   readonly productId: string
   readonly variant?: ProductVariant
   readonly onClose: () => void
@@ -96,8 +96,8 @@ const getVariantMutationConfig = (
   method: isEditing ? 'PUT' : 'POST',
   url:
     isEditing && variantId
-      ? `/api/admin/variations/${variantId}`
-      : '/api/admin/variations',
+      ? `/api/admin/variants/${variantId}`
+      : '/api/admin/variants',
   fallbackError: isEditing
     ? 'Failed to update variant'
     : 'Failed to create variant',
@@ -167,12 +167,12 @@ const getSubmitButtonLabel = (
   return isEditing ? 'Update' : 'Create'
 }
 
-const VariationFormModal = ({
+const VariantFormModal = ({
   productId,
   variant,
   onClose,
   onSuccess,
-}: VariationFormModalProps) => {
+}: VariantFormModalProps) => {
   const isEditing = !!variant
   const { availableCurrencies, currency, rates } = useCurrency()
   const [priceCurrency, setPriceCurrency] = useState<CurrencyCode>(currency)
@@ -694,4 +694,4 @@ const VariationFormModal = ({
   )
 }
 
-export default VariationFormModal
+export default VariantFormModal

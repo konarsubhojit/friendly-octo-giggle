@@ -11,7 +11,7 @@ import { addPendingCartItem } from '@/features/cart/services/pending-cart'
 import { useCurrency } from '@/contexts/CurrencyContext'
 import type { AppDispatch, RootState } from '@/lib/store'
 import { StockBadge } from '@/features/product/components/StockBadge'
-import { VariationButton } from '@/features/product/components/VariationButton'
+import { VariantButton } from '@/features/product/components/VariantButton'
 import { ShareButton } from '@/features/product/components/ShareButton'
 import { ButterflyAccent } from '@/components/ui/DecorativeElements'
 import ImageCarousel from '@/features/product/components/ImageCarousel'
@@ -323,13 +323,13 @@ const NoOptionsVariantGrid = ({
   <div className="mb-6 space-y-5">
     <span
       className="block text-lg font-semibold text-[var(--foreground)]"
-      id="variation-selector-label"
+      id="variant-selector-label"
     >
       Choose Your Option
     </span>
     <div className="grid grid-cols-2 gap-3">
       {variants.map((v, idx) => (
-        <VariationButton
+        <VariantButton
           key={v.id}
           variant={v}
           label={v.sku ?? `Option ${idx + 1}`}
@@ -479,7 +479,7 @@ const VariantSelector = ({
     <div className="mb-6 space-y-5">
       <span
         className="block text-lg font-semibold text-[var(--foreground)]"
-        id="variation-selector-label"
+        id="variant-selector-label"
       >
         Choose Your Options
       </span>

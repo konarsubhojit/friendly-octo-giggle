@@ -2,7 +2,7 @@
 
 import { ProductVariant } from '@/lib/types'
 
-interface VariationButtonProps {
+interface VariantButtonProps {
   readonly variant: ProductVariant
   readonly label: string
   readonly isSelected: boolean
@@ -11,14 +11,14 @@ interface VariationButtonProps {
   readonly cartQuantity?: number
 }
 
-export function VariationButton({
+export function VariantButton({
   variant,
   label,
   isSelected,
   formatPrice,
   onSelect,
   cartQuantity = 0,
-}: VariationButtonProps) {
+}: VariantButtonProps) {
   const className = isSelected
     ? 'p-4 border-2 rounded-xl transition-all duration-300 border-[var(--accent-warm)] bg-[var(--accent-cream)] shadow-warm scale-105'
     : 'p-4 border-2 rounded-xl transition-all duration-300 border-[var(--border-warm)] hover:border-[var(--accent-warm)] hover:shadow-warm hover:scale-105 bg-[var(--accent-cream)]/50'

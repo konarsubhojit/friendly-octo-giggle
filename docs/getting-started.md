@@ -124,7 +124,7 @@ psql $DATABASE_URL -c "UPDATE \"User\" SET role = 'ADMIN' WHERE email = 'your-em
 1. Browse products on homepage
 2. Click a product to view details
 3. Sign in with Google
-4. Select product variation (if available)
+4. Select product variant (if available)
 5. Add to cart or place order directly
 6. Fill in shipping information
 7. Submit order
@@ -181,7 +181,7 @@ friendly-octo-giggle/
 │   │   │                      #   categories, checkout-requests, email-failures, search)
 │   │   ├── api/               # API routes
 │   │   │   ├── admin/         # Admin APIs (products, orders, users, reviews, sales,
-│   │   │   │                  #   categories, email-failures, search, variations)
+│   │   │   │                  #   categories, email-failures, search, variants)
 │   │   │   ├── auth/          # Auth endpoints (nextauth, register, change-password)
 │   │   │   ├── cart/          # Cart APIs
 │   │   │   ├── categories/    # Public categories API
@@ -348,16 +348,16 @@ npx drizzle-kit drop
 
 ### Add Product Variations
 
-Products can have multiple variations (e.g., colors, sizes):
+Products can have multiple variants (e.g., colors, sizes):
 
 1. Edit a product
 2. Click "Add Variation"
-3. Set variation details:
+3. Set variant details:
    - **Name**: e.g., "Blue" or "Large"
    - **Design Name**: e.g., "Classic Design"
    - **Price Modifier**: Additional cost (can be negative)
    - **Stock**: Variation-specific stock
-   - **Image**: Optional variation image
+   - **Image**: Optional variant image
 4. Save product
 
 ### Manage Orders
