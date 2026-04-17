@@ -291,7 +291,7 @@ const VariantSelector = ({
     }
   }
 
-  type ValueStatus = 'available' | 'out_of_stock'
+  type OptionValueStatus = 'available' | 'out_of_stock'
 
   /**
    * For a given option, compute the availability status of each value given the
@@ -309,7 +309,7 @@ const VariantSelector = ({
    */
   const getValueAvailability = (
     optionId: string
-  ): Map<string, ValueStatus> => {
+  ): Map<string, OptionValueStatus> => {
     const optionIndex = options.findIndex((o) => o.id === optionId)
     if (optionIndex === -1) return new Map()
 
@@ -323,7 +323,7 @@ const VariantSelector = ({
     const option = options[optionIndex]
     const optionValueIds = new Set((option.values ?? []).map((v) => v.id))
     // Track whether each value has at least one in-stock variant
-    const statusMap = new Map<string, ValueStatus>()
+    const statusMap = new Map<string, OptionValueStatus>()
 
     for (const v of variants) {
       const variantValueIds = getVariantOptionValues(v)
@@ -335,9 +335,10 @@ const VariantSelector = ({
 
       for (const valId of variantValueIds) {
         if (!optionValueIds.has(valId)) continue
-        // Once a value is marked available, it stays available
         if (statusMap.get(valId) === 'available') continue
-        statusMap.set(valId, v.stock > 0 ? 'available' : 'out_of_stock')
+        const status: OptionValueStatus =
+          v.stock > 0 ? 'available' : 'out_of_stock'
+        statusMap.set(valId, status)
       }
     }
     return statusMap
