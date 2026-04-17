@@ -214,6 +214,13 @@ const PriceModifierDisplay = ({
   )
 }
 
+const BUTTON_BASE =
+  'px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200'
+const BUTTON_OOS_ACTIVE = `${BUTTON_BASE} bg-[var(--surface)] text-[var(--text-muted)] border-2 border-[var(--text-muted)] line-through shadow-sm`
+const BUTTON_OOS_INACTIVE = `${BUTTON_BASE} bg-[var(--surface)] text-[var(--text-muted)] border border-[var(--border-warm)] line-through hover:border-[var(--text-muted)]`
+const BUTTON_ACTIVE = `${BUTTON_BASE} bg-[var(--accent-warm)] text-white shadow-warm`
+const BUTTON_INACTIVE = `${BUTTON_BASE} bg-[var(--accent-cream)] text-[var(--text-secondary)] border border-[var(--border-warm)] hover:border-[var(--accent-warm)]`
+
 interface VariantSelectorProps {
   readonly product: Product
   readonly selectedVariant: ProductVariant | null
@@ -260,15 +267,12 @@ const VariantSelector = ({
     )
   }
 
-  /** Build a lookup from option-value ID → display value. */
-  const buildValueMap = (): Map<string, string> => {
-    const valueMap = new Map<string, string>()
-    for (const opt of options) {
-      for (const val of opt.values ?? []) {
-        valueMap.set(val.id, val.value)
-      }
+  /** Lookup from option-value ID → display value, built once per render. */
+  const valueMap = new Map<string, string>()
+  for (const opt of options) {
+    for (const val of opt.values ?? []) {
+      valueMap.set(val.id, val.value)
     }
-    return valueMap
   }
 
   const getVariantLabel = (variant: ProductVariant): string => {
@@ -276,7 +280,6 @@ const VariantSelector = ({
     if (!variant.optionValues || variant.optionValues.length === 0) {
       return fallback
     }
-    const valueMap = buildValueMap()
     const parts = variant.optionValues
       .map((ov) => valueMap.get(ov.id))
       .filter(Boolean)
@@ -399,13 +402,6 @@ const VariantSelector = ({
       onSelect(fallbackMatch)
     }
   }
-
-  const BUTTON_BASE =
-    'px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200'
-  const BUTTON_OOS_ACTIVE = `${BUTTON_BASE} bg-[var(--surface)] text-[var(--text-muted)] border-2 border-[var(--text-muted)] line-through shadow-sm`
-  const BUTTON_OOS_INACTIVE = `${BUTTON_BASE} bg-[var(--surface)] text-[var(--text-muted)] border border-[var(--border-warm)] line-through hover:border-[var(--text-muted)]`
-  const BUTTON_ACTIVE = `${BUTTON_BASE} bg-[var(--accent-warm)] text-white shadow-warm`
-  const BUTTON_INACTIVE = `${BUTTON_BASE} bg-[var(--accent-cream)] text-[var(--text-secondary)] border border-[var(--border-warm)] hover:border-[var(--accent-warm)]`
 
   const getOptionButtonClassName = (
     isActive: boolean,
