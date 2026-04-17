@@ -384,7 +384,8 @@ const VariantSelector = ({
     isActive: boolean,
     isOutOfStock: boolean
   ): string => {
-    const base = 'px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200'
+    const base =
+      'px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200'
     if (isOutOfStock) {
       return isActive
         ? `${base} bg-[var(--surface)] text-[var(--text-muted)] border-2 border-[var(--text-muted)] line-through shadow-sm`
@@ -424,8 +425,13 @@ const VariantSelector = ({
                       key={val.id}
                       onClick={() => handleOptionChange(option.id, val.id)}
                       aria-pressed={isActive}
-                      className={getOptionButtonClassName(isActive, isOutOfStock)}
-                      title={isOutOfStock ? `${val.value} — Out of stock` : undefined}
+                      className={getOptionButtonClassName(
+                        isActive,
+                        isOutOfStock
+                      )}
+                      title={
+                        isOutOfStock ? `${val.value} — Out of stock` : undefined
+                      }
                     >
                       {val.value}
                     </button>

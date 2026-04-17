@@ -1057,8 +1057,20 @@ describe('ProductClient', () => {
         price: 500,
         stock: 5,
         optionValues: [
-          { id: 'ov-red', value: 'Red', optionId: 'opt-color', sortOrder: 0, createdAt: '2025-01-01T00:00:00.000Z' },
-          { id: 'ov-s', value: 'S', optionId: 'opt-size', sortOrder: 0, createdAt: '2025-01-01T00:00:00.000Z' },
+          {
+            id: 'ov-red',
+            value: 'Red',
+            optionId: 'opt-color',
+            sortOrder: 0,
+            createdAt: '2025-01-01T00:00:00.000Z',
+          },
+          {
+            id: 'ov-s',
+            value: 'S',
+            optionId: 'opt-size',
+            sortOrder: 0,
+            createdAt: '2025-01-01T00:00:00.000Z',
+          },
         ],
       }),
       makeVariation({
@@ -1066,8 +1078,20 @@ describe('ProductClient', () => {
         price: 550,
         stock: 3,
         optionValues: [
-          { id: 'ov-red', value: 'Red', optionId: 'opt-color', sortOrder: 0, createdAt: '2025-01-01T00:00:00.000Z' },
-          { id: 'ov-l', value: 'L', optionId: 'opt-size', sortOrder: 1, createdAt: '2025-01-01T00:00:00.000Z' },
+          {
+            id: 'ov-red',
+            value: 'Red',
+            optionId: 'opt-color',
+            sortOrder: 0,
+            createdAt: '2025-01-01T00:00:00.000Z',
+          },
+          {
+            id: 'ov-l',
+            value: 'L',
+            optionId: 'opt-size',
+            sortOrder: 1,
+            createdAt: '2025-01-01T00:00:00.000Z',
+          },
         ],
       }),
       makeVariation({
@@ -1075,8 +1099,20 @@ describe('ProductClient', () => {
         price: 600,
         stock: 4,
         optionValues: [
-          { id: 'ov-blue', value: 'Blue', optionId: 'opt-color', sortOrder: 1, createdAt: '2025-01-01T00:00:00.000Z' },
-          { id: 'ov-s', value: 'S', optionId: 'opt-size', sortOrder: 0, createdAt: '2025-01-01T00:00:00.000Z' },
+          {
+            id: 'ov-blue',
+            value: 'Blue',
+            optionId: 'opt-color',
+            sortOrder: 1,
+            createdAt: '2025-01-01T00:00:00.000Z',
+          },
+          {
+            id: 'ov-s',
+            value: 'S',
+            optionId: 'opt-size',
+            sortOrder: 0,
+            createdAt: '2025-01-01T00:00:00.000Z',
+          },
         ],
       }),
     ]
@@ -1084,26 +1120,60 @@ describe('ProductClient', () => {
       ...makeProduct({ variants }),
       options: [
         {
-          id: 'opt-color', productId: 'prod001', name: 'Color', sortOrder: 0,
+          id: 'opt-color',
+          productId: 'prod001',
+          name: 'Color',
+          sortOrder: 0,
           createdAt: '2025-01-01T00:00:00.000Z',
           values: [
-            { id: 'ov-red', optionId: 'opt-color', value: 'Red', sortOrder: 0, createdAt: '2025-01-01T00:00:00.000Z' },
-            { id: 'ov-blue', optionId: 'opt-color', value: 'Blue', sortOrder: 1, createdAt: '2025-01-01T00:00:00.000Z' },
+            {
+              id: 'ov-red',
+              optionId: 'opt-color',
+              value: 'Red',
+              sortOrder: 0,
+              createdAt: '2025-01-01T00:00:00.000Z',
+            },
+            {
+              id: 'ov-blue',
+              optionId: 'opt-color',
+              value: 'Blue',
+              sortOrder: 1,
+              createdAt: '2025-01-01T00:00:00.000Z',
+            },
           ],
         },
         {
-          id: 'opt-size', productId: 'prod001', name: 'Size', sortOrder: 1,
+          id: 'opt-size',
+          productId: 'prod001',
+          name: 'Size',
+          sortOrder: 1,
           createdAt: '2025-01-01T00:00:00.000Z',
           values: [
-            { id: 'ov-s', optionId: 'opt-size', value: 'S', sortOrder: 0, createdAt: '2025-01-01T00:00:00.000Z' },
-            { id: 'ov-l', optionId: 'opt-size', value: 'L', sortOrder: 1, createdAt: '2025-01-01T00:00:00.000Z' },
+            {
+              id: 'ov-s',
+              optionId: 'opt-size',
+              value: 'S',
+              sortOrder: 0,
+              createdAt: '2025-01-01T00:00:00.000Z',
+            },
+            {
+              id: 'ov-l',
+              optionId: 'opt-size',
+              value: 'L',
+              sortOrder: 1,
+              createdAt: '2025-01-01T00:00:00.000Z',
+            },
           ],
         },
       ],
     }
 
     render(
-      <ProductClient product={product} initialVariantId="var-red-s" aiEnabled={false} />
+      <ProductClient
+        product={product}
+        initialVariantId="var-red-s"
+        aiEnabled={false}
+      />
     )
 
     // Red is selected → both S and L should be visible (Red has S and L)
@@ -1128,8 +1198,20 @@ describe('ProductClient', () => {
         price: 500,
         stock: 5,
         optionValues: [
-          { id: 'ov-red', value: 'Red', optionId: 'opt-color', sortOrder: 0, createdAt: '2025-01-01T00:00:00.000Z' },
-          { id: 'ov-s', value: 'S', optionId: 'opt-size', sortOrder: 0, createdAt: '2025-01-01T00:00:00.000Z' },
+          {
+            id: 'ov-red',
+            value: 'Red',
+            optionId: 'opt-color',
+            sortOrder: 0,
+            createdAt: '2025-01-01T00:00:00.000Z',
+          },
+          {
+            id: 'ov-s',
+            value: 'S',
+            optionId: 'opt-size',
+            sortOrder: 0,
+            createdAt: '2025-01-01T00:00:00.000Z',
+          },
         ],
       }),
       makeVariation({
@@ -1137,8 +1219,20 @@ describe('ProductClient', () => {
         price: 550,
         stock: 3,
         optionValues: [
-          { id: 'ov-red', value: 'Red', optionId: 'opt-color', sortOrder: 0, createdAt: '2025-01-01T00:00:00.000Z' },
-          { id: 'ov-l', value: 'L', optionId: 'opt-size', sortOrder: 1, createdAt: '2025-01-01T00:00:00.000Z' },
+          {
+            id: 'ov-red',
+            value: 'Red',
+            optionId: 'opt-color',
+            sortOrder: 0,
+            createdAt: '2025-01-01T00:00:00.000Z',
+          },
+          {
+            id: 'ov-l',
+            value: 'L',
+            optionId: 'opt-size',
+            sortOrder: 1,
+            createdAt: '2025-01-01T00:00:00.000Z',
+          },
         ],
       }),
       makeVariation({
@@ -1146,8 +1240,20 @@ describe('ProductClient', () => {
         price: 600,
         stock: 4,
         optionValues: [
-          { id: 'ov-blue', value: 'Blue', optionId: 'opt-color', sortOrder: 1, createdAt: '2025-01-01T00:00:00.000Z' },
-          { id: 'ov-s', value: 'S', optionId: 'opt-size', sortOrder: 0, createdAt: '2025-01-01T00:00:00.000Z' },
+          {
+            id: 'ov-blue',
+            value: 'Blue',
+            optionId: 'opt-color',
+            sortOrder: 1,
+            createdAt: '2025-01-01T00:00:00.000Z',
+          },
+          {
+            id: 'ov-s',
+            value: 'S',
+            optionId: 'opt-size',
+            sortOrder: 0,
+            createdAt: '2025-01-01T00:00:00.000Z',
+          },
         ],
       }),
     ]
@@ -1155,19 +1261,49 @@ describe('ProductClient', () => {
       ...makeProduct({ variants }),
       options: [
         {
-          id: 'opt-color', productId: 'prod001', name: 'Color', sortOrder: 0,
+          id: 'opt-color',
+          productId: 'prod001',
+          name: 'Color',
+          sortOrder: 0,
           createdAt: '2025-01-01T00:00:00.000Z',
           values: [
-            { id: 'ov-red', optionId: 'opt-color', value: 'Red', sortOrder: 0, createdAt: '2025-01-01T00:00:00.000Z' },
-            { id: 'ov-blue', optionId: 'opt-color', value: 'Blue', sortOrder: 1, createdAt: '2025-01-01T00:00:00.000Z' },
+            {
+              id: 'ov-red',
+              optionId: 'opt-color',
+              value: 'Red',
+              sortOrder: 0,
+              createdAt: '2025-01-01T00:00:00.000Z',
+            },
+            {
+              id: 'ov-blue',
+              optionId: 'opt-color',
+              value: 'Blue',
+              sortOrder: 1,
+              createdAt: '2025-01-01T00:00:00.000Z',
+            },
           ],
         },
         {
-          id: 'opt-size', productId: 'prod001', name: 'Size', sortOrder: 1,
+          id: 'opt-size',
+          productId: 'prod001',
+          name: 'Size',
+          sortOrder: 1,
           createdAt: '2025-01-01T00:00:00.000Z',
           values: [
-            { id: 'ov-s', optionId: 'opt-size', value: 'S', sortOrder: 0, createdAt: '2025-01-01T00:00:00.000Z' },
-            { id: 'ov-l', optionId: 'opt-size', value: 'L', sortOrder: 1, createdAt: '2025-01-01T00:00:00.000Z' },
+            {
+              id: 'ov-s',
+              optionId: 'opt-size',
+              value: 'S',
+              sortOrder: 0,
+              createdAt: '2025-01-01T00:00:00.000Z',
+            },
+            {
+              id: 'ov-l',
+              optionId: 'opt-size',
+              value: 'L',
+              sortOrder: 1,
+              createdAt: '2025-01-01T00:00:00.000Z',
+            },
           ],
         },
       ],
@@ -1175,7 +1311,11 @@ describe('ProductClient', () => {
 
     // Start with Red-L selected
     render(
-      <ProductClient product={product} initialVariantId="var-red-l" aiEnabled={false} />
+      <ProductClient
+        product={product}
+        initialVariantId="var-red-l"
+        aiEnabled={false}
+      />
     )
 
     // Verify Red/L selected
@@ -1198,7 +1338,13 @@ describe('ProductClient', () => {
         price: 500,
         stock: 5,
         optionValues: [
-          { id: 'ov-s', value: 'S', optionId: 'opt-size', sortOrder: 0, createdAt: '2025-01-01T00:00:00.000Z' },
+          {
+            id: 'ov-s',
+            value: 'S',
+            optionId: 'opt-size',
+            sortOrder: 0,
+            createdAt: '2025-01-01T00:00:00.000Z',
+          },
         ],
       }),
       makeVariation({
@@ -1206,7 +1352,13 @@ describe('ProductClient', () => {
         price: 550,
         stock: 3,
         optionValues: [
-          { id: 'ov-m', value: 'M', optionId: 'opt-size', sortOrder: 1, createdAt: '2025-01-01T00:00:00.000Z' },
+          {
+            id: 'ov-m',
+            value: 'M',
+            optionId: 'opt-size',
+            sortOrder: 1,
+            createdAt: '2025-01-01T00:00:00.000Z',
+          },
         ],
       }),
       makeVariation({
@@ -1214,7 +1366,13 @@ describe('ProductClient', () => {
         price: 600,
         stock: 4,
         optionValues: [
-          { id: 'ov-l', value: 'L', optionId: 'opt-size', sortOrder: 2, createdAt: '2025-01-01T00:00:00.000Z' },
+          {
+            id: 'ov-l',
+            value: 'L',
+            optionId: 'opt-size',
+            sortOrder: 2,
+            createdAt: '2025-01-01T00:00:00.000Z',
+          },
         ],
       }),
     ]
@@ -1222,19 +1380,44 @@ describe('ProductClient', () => {
       ...makeProduct({ variants }),
       options: [
         {
-          id: 'opt-size', productId: 'prod001', name: 'Size', sortOrder: 0,
+          id: 'opt-size',
+          productId: 'prod001',
+          name: 'Size',
+          sortOrder: 0,
           createdAt: '2025-01-01T00:00:00.000Z',
           values: [
-            { id: 'ov-s', optionId: 'opt-size', value: 'S', sortOrder: 0, createdAt: '2025-01-01T00:00:00.000Z' },
-            { id: 'ov-m', optionId: 'opt-size', value: 'M', sortOrder: 1, createdAt: '2025-01-01T00:00:00.000Z' },
-            { id: 'ov-l', optionId: 'opt-size', value: 'L', sortOrder: 2, createdAt: '2025-01-01T00:00:00.000Z' },
+            {
+              id: 'ov-s',
+              optionId: 'opt-size',
+              value: 'S',
+              sortOrder: 0,
+              createdAt: '2025-01-01T00:00:00.000Z',
+            },
+            {
+              id: 'ov-m',
+              optionId: 'opt-size',
+              value: 'M',
+              sortOrder: 1,
+              createdAt: '2025-01-01T00:00:00.000Z',
+            },
+            {
+              id: 'ov-l',
+              optionId: 'opt-size',
+              value: 'L',
+              sortOrder: 2,
+              createdAt: '2025-01-01T00:00:00.000Z',
+            },
           ],
         },
       ],
     }
 
     render(
-      <ProductClient product={product} initialVariantId="var-s" aiEnabled={false} />
+      <ProductClient
+        product={product}
+        initialVariantId="var-s"
+        aiEnabled={false}
+      />
     )
 
     expect(screen.getByRole('button', { name: 'S' })).toBeInTheDocument()
@@ -1250,8 +1433,20 @@ describe('ProductClient', () => {
         price: 500,
         stock: 5,
         optionValues: [
-          { id: 'ov-red', value: 'Red', optionId: 'opt-color', sortOrder: 0, createdAt: '2025-01-01T00:00:00.000Z' },
-          { id: 'ov-s', value: 'S', optionId: 'opt-size', sortOrder: 0, createdAt: '2025-01-01T00:00:00.000Z' },
+          {
+            id: 'ov-red',
+            value: 'Red',
+            optionId: 'opt-color',
+            sortOrder: 0,
+            createdAt: '2025-01-01T00:00:00.000Z',
+          },
+          {
+            id: 'ov-s',
+            value: 'S',
+            optionId: 'opt-size',
+            sortOrder: 0,
+            createdAt: '2025-01-01T00:00:00.000Z',
+          },
         ],
       }),
       makeVariation({
@@ -1259,8 +1454,20 @@ describe('ProductClient', () => {
         price: 550,
         stock: 0,
         optionValues: [
-          { id: 'ov-red', value: 'Red', optionId: 'opt-color', sortOrder: 0, createdAt: '2025-01-01T00:00:00.000Z' },
-          { id: 'ov-l', value: 'L', optionId: 'opt-size', sortOrder: 1, createdAt: '2025-01-01T00:00:00.000Z' },
+          {
+            id: 'ov-red',
+            value: 'Red',
+            optionId: 'opt-color',
+            sortOrder: 0,
+            createdAt: '2025-01-01T00:00:00.000Z',
+          },
+          {
+            id: 'ov-l',
+            value: 'L',
+            optionId: 'opt-size',
+            sortOrder: 1,
+            createdAt: '2025-01-01T00:00:00.000Z',
+          },
         ],
       }),
     ]
@@ -1268,25 +1475,53 @@ describe('ProductClient', () => {
       ...makeProduct({ variants }),
       options: [
         {
-          id: 'opt-color', productId: 'prod001', name: 'Color', sortOrder: 0,
+          id: 'opt-color',
+          productId: 'prod001',
+          name: 'Color',
+          sortOrder: 0,
           createdAt: '2025-01-01T00:00:00.000Z',
           values: [
-            { id: 'ov-red', optionId: 'opt-color', value: 'Red', sortOrder: 0, createdAt: '2025-01-01T00:00:00.000Z' },
+            {
+              id: 'ov-red',
+              optionId: 'opt-color',
+              value: 'Red',
+              sortOrder: 0,
+              createdAt: '2025-01-01T00:00:00.000Z',
+            },
           ],
         },
         {
-          id: 'opt-size', productId: 'prod001', name: 'Size', sortOrder: 1,
+          id: 'opt-size',
+          productId: 'prod001',
+          name: 'Size',
+          sortOrder: 1,
           createdAt: '2025-01-01T00:00:00.000Z',
           values: [
-            { id: 'ov-s', optionId: 'opt-size', value: 'S', sortOrder: 0, createdAt: '2025-01-01T00:00:00.000Z' },
-            { id: 'ov-l', optionId: 'opt-size', value: 'L', sortOrder: 1, createdAt: '2025-01-01T00:00:00.000Z' },
+            {
+              id: 'ov-s',
+              optionId: 'opt-size',
+              value: 'S',
+              sortOrder: 0,
+              createdAt: '2025-01-01T00:00:00.000Z',
+            },
+            {
+              id: 'ov-l',
+              optionId: 'opt-size',
+              value: 'L',
+              sortOrder: 1,
+              createdAt: '2025-01-01T00:00:00.000Z',
+            },
           ],
         },
       ],
     }
 
     render(
-      <ProductClient product={product} initialVariantId="var-red-s" aiEnabled={false} />
+      <ProductClient
+        product={product}
+        initialVariantId="var-red-s"
+        aiEnabled={false}
+      />
     )
 
     // S should be enabled (in stock)
@@ -1306,8 +1541,12 @@ describe('ProductClient', () => {
     })
 
     // Out-of-stock panel shows "Browse Products" link
-    expect(screen.getByRole('link', { name: 'Browse Products' })).toHaveAttribute('href', '/shop')
-    expect(screen.queryByRole('button', { name: /Add to Cart/i })).not.toBeInTheDocument()
+    expect(
+      screen.getByRole('link', { name: 'Browse Products' })
+    ).toHaveAttribute('href', '/shop')
+    expect(
+      screen.queryByRole('button', { name: /Add to Cart/i })
+    ).not.toBeInTheDocument()
   })
 
   it('shows out-of-stock color as clickable and selecting it shows out-of-stock view', () => {
@@ -1318,8 +1557,20 @@ describe('ProductClient', () => {
         price: 500,
         stock: 5,
         optionValues: [
-          { id: 'ov-red', value: 'Red', optionId: 'opt-color', sortOrder: 0, createdAt: '2025-01-01T00:00:00.000Z' },
-          { id: 'ov-s', value: 'S', optionId: 'opt-size', sortOrder: 0, createdAt: '2025-01-01T00:00:00.000Z' },
+          {
+            id: 'ov-red',
+            value: 'Red',
+            optionId: 'opt-color',
+            sortOrder: 0,
+            createdAt: '2025-01-01T00:00:00.000Z',
+          },
+          {
+            id: 'ov-s',
+            value: 'S',
+            optionId: 'opt-size',
+            sortOrder: 0,
+            createdAt: '2025-01-01T00:00:00.000Z',
+          },
         ],
       }),
       makeVariation({
@@ -1327,8 +1578,20 @@ describe('ProductClient', () => {
         price: 600,
         stock: 0,
         optionValues: [
-          { id: 'ov-blue', value: 'Blue', optionId: 'opt-color', sortOrder: 1, createdAt: '2025-01-01T00:00:00.000Z' },
-          { id: 'ov-s', value: 'S', optionId: 'opt-size', sortOrder: 0, createdAt: '2025-01-01T00:00:00.000Z' },
+          {
+            id: 'ov-blue',
+            value: 'Blue',
+            optionId: 'opt-color',
+            sortOrder: 1,
+            createdAt: '2025-01-01T00:00:00.000Z',
+          },
+          {
+            id: 'ov-s',
+            value: 'S',
+            optionId: 'opt-size',
+            sortOrder: 0,
+            createdAt: '2025-01-01T00:00:00.000Z',
+          },
         ],
       }),
     ]
@@ -1336,25 +1599,53 @@ describe('ProductClient', () => {
       ...makeProduct({ variants }),
       options: [
         {
-          id: 'opt-color', productId: 'prod001', name: 'Color', sortOrder: 0,
+          id: 'opt-color',
+          productId: 'prod001',
+          name: 'Color',
+          sortOrder: 0,
           createdAt: '2025-01-01T00:00:00.000Z',
           values: [
-            { id: 'ov-red', optionId: 'opt-color', value: 'Red', sortOrder: 0, createdAt: '2025-01-01T00:00:00.000Z' },
-            { id: 'ov-blue', optionId: 'opt-color', value: 'Blue', sortOrder: 1, createdAt: '2025-01-01T00:00:00.000Z' },
+            {
+              id: 'ov-red',
+              optionId: 'opt-color',
+              value: 'Red',
+              sortOrder: 0,
+              createdAt: '2025-01-01T00:00:00.000Z',
+            },
+            {
+              id: 'ov-blue',
+              optionId: 'opt-color',
+              value: 'Blue',
+              sortOrder: 1,
+              createdAt: '2025-01-01T00:00:00.000Z',
+            },
           ],
         },
         {
-          id: 'opt-size', productId: 'prod001', name: 'Size', sortOrder: 1,
+          id: 'opt-size',
+          productId: 'prod001',
+          name: 'Size',
+          sortOrder: 1,
           createdAt: '2025-01-01T00:00:00.000Z',
           values: [
-            { id: 'ov-s', optionId: 'opt-size', value: 'S', sortOrder: 0, createdAt: '2025-01-01T00:00:00.000Z' },
+            {
+              id: 'ov-s',
+              optionId: 'opt-size',
+              value: 'S',
+              sortOrder: 0,
+              createdAt: '2025-01-01T00:00:00.000Z',
+            },
           ],
         },
       ],
     }
 
     render(
-      <ProductClient product={product} initialVariantId="var-red-s" aiEnabled={false} />
+      <ProductClient
+        product={product}
+        initialVariantId="var-red-s"
+        aiEnabled={false}
+      />
     )
 
     // Red should be enabled
@@ -1369,7 +1660,9 @@ describe('ProductClient', () => {
     expect(blueButton.className).toContain('line-through')
 
     // Initially add-to-cart is shown (in stock)
-    expect(screen.getByRole('button', { name: /Add to Cart/i })).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: /Add to Cart/i })
+    ).toBeInTheDocument()
 
     // Click Blue — out-of-stock variant selected, should show out-of-stock panel
     act(() => {
@@ -1377,7 +1670,11 @@ describe('ProductClient', () => {
     })
 
     // Out-of-stock panel replaces add-to-cart
-    expect(screen.getByRole('link', { name: 'Browse Products' })).toHaveAttribute('href', '/shop')
-    expect(screen.queryByRole('button', { name: /Add to Cart/i })).not.toBeInTheDocument()
+    expect(
+      screen.getByRole('link', { name: 'Browse Products' })
+    ).toHaveAttribute('href', '/shop')
+    expect(
+      screen.queryByRole('button', { name: /Add to Cart/i })
+    ).not.toBeInTheDocument()
   })
 })
