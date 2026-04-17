@@ -122,8 +122,8 @@ vi.mock('@/features/product/components/ImageCarousel', () => ({
     productName: string
   }) => (
     <div data-testid="image-carousel" aria-label={productName}>
-      {images.map((img, i) => (
-        <img key={i} src={img} alt={`${productName} ${i}`} />
+      {images.map((img) => (
+        <img key={img} src={img} alt={`${productName}`} />
       ))}
     </div>
   ),
@@ -149,7 +149,7 @@ vi.mock('@/features/product/components/ProductAssistant', () => ({
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 
-function makeProduct(overrides: Partial<Product> = {}): Product {
+const makeProduct = (overrides: Partial<Product> = {}): Product => {
   return {
     id: 'prod001',
     name: 'Rose Bouquet',
@@ -178,9 +178,9 @@ function makeProduct(overrides: Partial<Product> = {}): Product {
   }
 }
 
-function makeVariation(
+const makeVariation = (
   overrides: Partial<ProductVariant> = {}
-): ProductVariant {
+): ProductVariant => {
   return {
     id: 'var001',
     productId: 'prod001',
@@ -219,7 +219,7 @@ describe('ProductClient', () => {
       <ProductClient
         product={product}
         initialVariantId={null}
-        aiEnabled={true}
+        aiEnabled
       />
     )
 
@@ -239,7 +239,7 @@ describe('ProductClient', () => {
       <ProductClient
         product={product}
         initialVariantId={null}
-        aiEnabled={true}
+        aiEnabled
       />
     )
 
@@ -261,7 +261,7 @@ describe('ProductClient', () => {
       <ProductClient
         product={product}
         initialVariantId={null}
-        aiEnabled={true}
+        aiEnabled
       />
     )
 
@@ -274,7 +274,7 @@ describe('ProductClient', () => {
       <ProductClient
         product={product}
         initialVariantId={null}
-        aiEnabled={true}
+        aiEnabled
       />
     )
 
@@ -290,7 +290,7 @@ describe('ProductClient', () => {
       <ProductClient
         product={product}
         initialVariantId={null}
-        aiEnabled={true}
+        aiEnabled
       />
     )
 
@@ -318,7 +318,7 @@ describe('ProductClient', () => {
       <ProductClient
         product={product}
         initialVariantId={null}
-        aiEnabled={true}
+        aiEnabled
       />
     )
 
@@ -335,7 +335,7 @@ describe('ProductClient', () => {
       <ProductClient
         product={product}
         initialVariantId={null}
-        aiEnabled={true}
+        aiEnabled
       />
     )
     expect(screen.getByTestId('share-button')).toBeInTheDocument()
@@ -347,7 +347,7 @@ describe('ProductClient', () => {
       <ProductClient
         product={product}
         initialVariantId={null}
-        aiEnabled={true}
+        aiEnabled
       />
     )
     expect(screen.getByTestId('reviews-section')).toBeInTheDocument()
@@ -360,7 +360,7 @@ describe('ProductClient', () => {
       <ProductClient
         product={product}
         initialVariantId={null}
-        aiEnabled={true}
+        aiEnabled
       />
     )
     expect(mockTrackProduct).toHaveBeenCalledWith(
@@ -382,7 +382,7 @@ describe('ProductClient', () => {
       <ProductClient
         product={product}
         initialVariantId={null}
-        aiEnabled={true}
+        aiEnabled
       />
     )
     expect(mockDispatch).toHaveBeenCalledWith(
@@ -396,7 +396,7 @@ describe('ProductClient', () => {
       <ProductClient
         product={product}
         initialVariantId={null}
-        aiEnabled={true}
+        aiEnabled
       />
     )
     expect(mockFetchCart).not.toHaveBeenCalled()
@@ -408,11 +408,11 @@ describe('ProductClient', () => {
       <ProductClient
         product={product}
         initialVariantId={null}
-        aiEnabled={true}
+        aiEnabled
       />
     )
 
-    await act(async () => {
+    await act(() => {
       fireEvent.click(screen.getByRole('button', { name: /Add to Cart/i }))
     })
 
@@ -429,11 +429,11 @@ describe('ProductClient', () => {
       <ProductClient
         product={product}
         initialVariantId={null}
-        aiEnabled={true}
+        aiEnabled
       />
     )
 
-    await act(async () => {
+    await act(() => {
       fireEvent.click(screen.getByRole('button', { name: /Add to Cart/i }))
     })
 
@@ -456,11 +456,11 @@ describe('ProductClient', () => {
       <ProductClient
         product={product}
         initialVariantId={null}
-        aiEnabled={true}
+        aiEnabled
       />
     )
 
-    await act(async () => {
+    await act(() => {
       fireEvent.click(screen.getByRole('button', { name: /Add to Cart/i }))
     })
 
@@ -486,11 +486,11 @@ describe('ProductClient', () => {
       <ProductClient
         product={product}
         initialVariantId={null}
-        aiEnabled={true}
+        aiEnabled
       />
     )
 
-    await act(async () => {
+    await act(() => {
       fireEvent.click(screen.getByRole('button', { name: /Add to Cart/i }))
     })
 
@@ -517,11 +517,11 @@ describe('ProductClient', () => {
       <ProductClient
         product={product}
         initialVariantId={null}
-        aiEnabled={true}
+        aiEnabled
       />
     )
 
-    await act(async () => {
+    await act(() => {
       fireEvent.click(screen.getByRole('button', { name: /Add to Cart/i }))
     })
 
@@ -540,7 +540,7 @@ describe('ProductClient', () => {
       <ProductClient
         product={product}
         initialVariantId={null}
-        aiEnabled={true}
+        aiEnabled
       />
     )
 
@@ -555,7 +555,7 @@ describe('ProductClient', () => {
       <ProductClient
         product={product}
         initialVariantId="var001"
-        aiEnabled={true}
+        aiEnabled
       />
     )
 
@@ -572,7 +572,7 @@ describe('ProductClient', () => {
       <ProductClient
         product={product}
         initialVariantId={null}
-        aiEnabled={true}
+        aiEnabled
       />
     )
 
@@ -591,7 +591,7 @@ describe('ProductClient', () => {
       <ProductClient
         product={product}
         initialVariantId={null}
-        aiEnabled={true}
+        aiEnabled
       />
     )
 
@@ -617,7 +617,7 @@ describe('ProductClient', () => {
       <ProductClient
         product={product}
         initialVariantId={null}
-        aiEnabled={true}
+        aiEnabled
       />
     )
 
@@ -639,7 +639,7 @@ describe('ProductClient', () => {
       <ProductClient
         product={product}
         initialVariantId={null}
-        aiEnabled={true}
+        aiEnabled
       />
     )
     expect(screen.getByRole('link', { name: /View Cart/i })).toHaveAttribute(
@@ -654,7 +654,7 @@ describe('ProductClient', () => {
       <ProductClient
         product={product}
         initialVariantId={null}
-        aiEnabled={true}
+        aiEnabled
       />
     )
     expect(screen.getAllByText('₹500.00')).toHaveLength(2)
@@ -1034,11 +1034,11 @@ describe('ProductClient', () => {
       <ProductClient
         product={product}
         initialVariantId={null}
-        aiEnabled={true}
+        aiEnabled
       />
     )
 
-    await act(async () => {
+    await act(() => {
       fireEvent.click(screen.getByRole('button', { name: /Add to Cart/i }))
     })
 
