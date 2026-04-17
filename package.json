@@ -83,8 +83,7 @@
   "overrides": {
     "@esbuild-kit/core-utils": {
       "esbuild": ">=0.25.0"
-    },
-    "nodemailer": "^7.0.7"
+    }
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.11.1",
