@@ -27,7 +27,7 @@ variables:
   NODE_MODULES_CACHE_PATH: $(System.DefaultWorkingDirectory)/node_modules
 
 pool:
-  vmImage: 'ubuntu-latest'
+  name: default
 
 stages:
   - stage: LintAndTest

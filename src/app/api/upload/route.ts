@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server'
-import { put } from '@vercel/blob'
 import {
   isValidImageType,
   MAX_FILE_SIZE,
@@ -7,10 +6,13 @@ import {
 } from '@/lib/upload-constants'
 import { logError } from '@/lib/logger'
 import { checkAdminAuth } from '@/features/admin/services/admin-auth'
+import { type ImageStorageProvider, uploadImage } from '@/lib/image-storage'
 
 export async function POST(request: Request) {
   let fileName = 'unknown'
   let userId = 'unknown'
+  let provider: ImageStorageProvider | 'unknown' = 'unknown'
+  let azureAccountAlias = 'unknown'
 
   try {
     const authCheck = await checkAdminAuth()
@@ -24,6 +26,8 @@ export async function POST(request: Request) {
 
     const formData = await request.formData()
     const file = formData.get('file') as File | null
+    const providerInput = formData.get('provider')
+    const azureAccountAliasInput = formData.get('azureAccountAlias')
 
     if (!file) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 })
@@ -49,24 +53,47 @@ export async function POST(request: Request) {
       )
     }
 
-    const blob = await put(file.name, file, {
-      access: 'public',
-      addRandomSuffix: true,
+    const requestedProvider =
+      providerInput === 'vercel' || providerInput === 'azure'
+        ? providerInput
+        : undefined
+
+    if (providerInput !== null && requestedProvider === undefined) {
+      return NextResponse.json(
+        { error: 'Invalid provider. Expected "vercel" or "azure".' },
+        { status: 400 }
+      )
+    }
+    provider = requestedProvider ?? 'unknown'
+
+    const requestedAzureAccountAlias =
+      typeof azureAccountAliasInput === 'string' &&
+      azureAccountAliasInput.trim().length > 0
+        ? azureAccountAliasInput
+        : undefined
+
+    const uploaded = await uploadImage(file, {
+      provider: requestedProvider,
+      azureAccountAlias: requestedAzureAccountAlias,
     })
+    provider = uploaded.provider
+    azureAccountAlias = uploaded.azureAccountAlias ?? 'n/a'
 
     return NextResponse.json({
       success: true,
       data: {
-        url: blob.url,
-        pathname: blob.pathname,
-        contentType: blob.contentType,
+        url: uploaded.url,
+        pathname: uploaded.pathname,
+        contentType: uploaded.contentType,
+        provider: uploaded.provider,
+        azureAccountAlias: uploaded.azureAccountAlias ?? null,
       },
     })
   } catch (error) {
     logError({
       error,
       context: 'file_upload',
-      additionalInfo: { fileName, userId },
+      additionalInfo: { fileName, userId, provider, azureAccountAlias },
     })
     return NextResponse.json(
       { error: 'Failed to upload file' },
