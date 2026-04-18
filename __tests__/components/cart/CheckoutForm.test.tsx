@@ -63,7 +63,6 @@ const mockCart = {
         id: 'var0001',
         productId: 'prd0001',
         sku: null,
-        name: 'Small (15 cm)',
         price: 100,
         stock: 10,
         image: null,

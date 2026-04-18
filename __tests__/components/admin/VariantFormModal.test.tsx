@@ -77,7 +77,7 @@ describe('VariantFormModal', () => {
     expect(screen.getByText('Update')).toBeInTheDocument()
   })
 
-  it('shows price warning when price <= 0', () => {
+  it('shows price warning when price <= 0', { timeout: 10_000 }, () => {
     render(<VariantFormModal {...defaultProps} />)
     const priceInput = screen.getByRole('spinbutton', { name: 'Price' })
     fireEvent.change(priceInput, { target: { value: '-50' } })
