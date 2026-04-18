@@ -57,13 +57,6 @@ export async function POST(request: Request) {
       providerInput === 'vercel' || providerInput === 'azure'
         ? providerInput
         : undefined
-    provider = requestedProvider ?? 'unknown'
-
-    const requestedAzureAccountAlias =
-      typeof azureAccountAliasInput === 'string' &&
-      azureAccountAliasInput.trim().length > 0
-        ? azureAccountAliasInput
-        : undefined
 
     if (providerInput !== null && requestedProvider === undefined) {
       return NextResponse.json(
@@ -71,6 +64,13 @@ export async function POST(request: Request) {
         { status: 400 }
       )
     }
+    provider = requestedProvider ?? 'unknown'
+
+    const requestedAzureAccountAlias =
+      typeof azureAccountAliasInput === 'string' &&
+      azureAccountAliasInput.trim().length > 0
+        ? azureAccountAliasInput
+        : undefined
 
     const uploaded = await uploadImage(file, {
       provider: requestedProvider,

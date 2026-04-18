@@ -37,7 +37,34 @@ export const EnvSchema = z
     GOOGLE_GENERATIVE_AI_API_KEY: z.string().optional(),
     SENTRY_DSN: z.url().optional(),
     IMAGE_UPLOAD_PROVIDER: z.enum(['vercel', 'azure']).optional(),
-    AZURE_BLOB_ACCOUNTS_JSON: z.string().optional(),
+    AZURE_BLOB_ACCOUNTS_JSON: z
+      .string()
+      .optional()
+      .refine(
+        (value) => {
+          if (value === undefined || value === '') return true
+          let parsed: unknown
+          try {
+            parsed = JSON.parse(value)
+          } catch {
+            return false
+          }
+          if (!Array.isArray(parsed)) return false
+          return parsed.every(
+            (item) =>
+              typeof item === 'object' &&
+              item !== null &&
+              typeof (item as Record<string, unknown>).alias === 'string' &&
+              typeof (item as Record<string, unknown>).connectionString ===
+                'string' &&
+              typeof (item as Record<string, unknown>).container === 'string'
+          )
+        },
+        {
+          message:
+            'AZURE_BLOB_ACCOUNTS_JSON must be a JSON array of objects with string alias, connectionString, and container properties.',
+        }
+      ),
     AZURE_BLOB_DEFAULT_ACCOUNT_ALIAS: z.string().optional(),
     AZURE_BLOB_AUTO_CREATE_CONTAINER: z.enum(['true', 'false']).optional(),
   })
