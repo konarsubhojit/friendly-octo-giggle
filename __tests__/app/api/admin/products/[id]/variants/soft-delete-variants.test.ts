@@ -2,7 +2,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { drizzleDb } from '@/lib/db'
 import { serializeOrder } from '@/lib/serializers'
 import type { InferSelectModel } from 'drizzle-orm'
-import type { orders, orderItems, products, productVariants } from '@/lib/schema'
+import type {
+  orders,
+  orderItems,
+  products,
+  productVariants,
+} from '@/lib/schema'
 
 type OrderWithItems = InferSelectModel<typeof orders> & {
   items: (InferSelectModel<typeof orderItems> & {
@@ -123,7 +128,9 @@ describe('FR-011: Order History Preservation after Soft-Delete', () => {
     vi.mocked(drizzleDb.query.orders.findFirst).mockResolvedValue(mockDbOrder)
 
     const orderData = await drizzleDb.query.orders.findFirst()
-    const serializedOrder = serializeOrder(orderData as unknown as OrderWithItems)
+    const serializedOrder = serializeOrder(
+      orderData as unknown as OrderWithItems
+    )
 
     expect(serializedOrder.items[0].variant).toBeDefined()
     expect(serializedOrder.items[0].variant!.id).toBe('var1234')
@@ -146,7 +153,9 @@ describe('FR-011: Order History Preservation after Soft-Delete', () => {
     vi.mocked(drizzleDb.query.orders.findFirst).mockResolvedValue(mockDbOrder)
 
     const orderData = await drizzleDb.query.orders.findFirst()
-    const serializedOrder = serializeOrder(orderData as unknown as OrderWithItems)
+    const serializedOrder = serializeOrder(
+      orderData as unknown as OrderWithItems
+    )
     const variant = serializedOrder.items[0].variant!
 
     expect(variant.price).toBe(150)
@@ -185,7 +194,9 @@ describe('FR-011: Order History Preservation after Soft-Delete', () => {
     vi.mocked(drizzleDb.query.orders.findFirst).mockResolvedValue(mockDbOrder)
 
     const orderData = await drizzleDb.query.orders.findFirst()
-    const serializedOrder = serializeOrder(orderData as unknown as OrderWithItems)
+    const serializedOrder = serializeOrder(
+      orderData as unknown as OrderWithItems
+    )
 
     const variantIds = serializedOrder.items
       .filter((item) => item.variant)
