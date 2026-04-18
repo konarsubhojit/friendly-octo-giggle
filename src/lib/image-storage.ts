@@ -101,7 +101,9 @@ const pickAzureAccount = (
   return account
 }
 
-const getContainerClient = (account: AzureBlobAccountConfig): ContainerClient => {
+const getContainerClient = (
+  account: AzureBlobAccountConfig
+): ContainerClient => {
   const blobServiceClient = BlobServiceClient.fromConnectionString(
     account.connectionString
   )
