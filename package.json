@@ -107,6 +107,7 @@
     "prettier": "^3.8.1",
     "tsx": "^4.21.0",
     "typescript": "6.0.2",
+    "vercel": "^51.7.0",
     "vite-tsconfig-paths": "^6.1.1",
     "vitest": "^4.1.4",
     "ws": "^8.20.0"
