@@ -36,8 +36,6 @@ stages:
     jobs:
       - job: Lint
         displayName: Lint and Type Check
-        pool:
-          vmImage: ubuntu-latest
         steps:
           - task: NodeTool@0
             displayName: Set up Node.js
@@ -65,8 +63,6 @@ stages:
 
       - job: Test
         displayName: Test
-        pool:
-          vmImage: ubuntu-latest
         steps:
           - task: NodeTool@0
             displayName: Set up Node.js
@@ -111,8 +107,6 @@ stages:
     jobs:
       - job: BuildAndSonarQube
         displayName: Build and SonarQube Analysis
-        pool:
-          vmImage: ubuntu-latest
         steps:
           - checkout: self
             fetchDepth: 0
@@ -158,8 +152,6 @@ stages:
     jobs:
       - job: DeployPreview
         displayName: Deploy Preview to Vercel
-        pool:
-          vmImage: ubuntu-latest
         steps:
           - checkout: self
             fetchDepth: 2
