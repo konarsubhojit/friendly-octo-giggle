@@ -175,8 +175,10 @@ stages:
                 echo "No deploy-relevant changes detected."
               fi
             displayName: Detect deploy-relevant changes
+          - script: npm ci --no-audit --no-fund
+            condition: and(succeeded(), eq(variables['SHOULD_DEPLOY'], 'true'))
 
-          - script: npm install --no-save --prefer-offline --no-audit --fund=false --progress=false vercel
+          - script: npm install --no-save --no-audit --fund=false --progress=false vercel
             displayName: Install Vercel CLI
             condition: and(succeeded(), eq(variables['SHOULD_DEPLOY'], 'true'))
 
