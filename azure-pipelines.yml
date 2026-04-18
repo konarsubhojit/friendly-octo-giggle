@@ -70,6 +70,9 @@ stages:
           ${{ else }}:
             vmImage: 'ubuntu-latest'
         steps:
+          - checkout: self
+            clean: false
+            fetchDepth: 0
           - task: NodeTool@0
             displayName: Set up Node.js
             inputs:
