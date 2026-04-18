@@ -52,7 +52,7 @@ export const CACHE_KEYS = {
   ADMIN_SALES_PATTERN: 'admin:sales:*',
   // Exchange rates (date-scoped, refreshed once per UTC day)
   EXCHANGE_RATES_BY_DATE: (date: string) => `exchange-rates:${date}`,
-  // Product shares (immutable token → productId + variationId mapping)
+  // Product shares (immutable token → productId + variantId mapping)
   SHARE_RESOLVE_BY_KEY: (key: string) => `share:${key}`,
   // Pincode → city/state lookup (practically immutable)
   PINCODE_LOOKUP: (code: string) => `pincode:${code}`,
@@ -447,9 +447,9 @@ export const cacheAdminSales = <T>(fetcher: () => Promise<T>): Promise<T> => {
 }
 
 /**
- * Cache a resolved share key to its product/variation mapping.
+ * Cache a resolved share key to its product/variant mapping.
  *
- * Share tokens are immutable — the key → productId+variationId mapping never
+ * Share tokens are immutable — the key → productId+variantId mapping never
  * changes after creation. Non-null results are cached with a 1-year TTL (an
  * effective permanent cache for an immutable record). Null results (token does
  * not yet exist) are intentionally NOT cached to prevent cache-poisoning via

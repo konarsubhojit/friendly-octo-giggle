@@ -7,14 +7,14 @@ import toast from 'react-hot-toast'
 import { useCurrency } from '@/contexts/CurrencyContext'
 import { getVariantTotalStock } from '@/features/product/variant-utils'
 
-const VariationFormModal = lazy(
-  () => import('@/features/admin/components/VariationFormModal')
+const VariantFormModal = lazy(
+  () => import('@/features/admin/components/VariantFormModal')
 )
 const DeleteConfirmModal = lazy(
   () => import('@/features/admin/components/DeleteConfirmModal')
 )
 
-interface VariationListProps {
+interface VariantListProps {
   readonly productId: string
   readonly initialVariants: ProductVariant[]
 }
@@ -297,10 +297,10 @@ const VariantCard = ({
   )
 }
 
-export default function VariationList({
+export default function VariantList({
   productId,
   initialVariants,
-}: VariationListProps) {
+}: VariantListProps) {
   const [variants, setVariants] = useState<ProductVariant[]>(initialVariants)
   const { currency, formatPrice, rates } = useCurrency()
   const [showFormModal, setShowFormModal] = useState(false)
@@ -413,7 +413,7 @@ export default function VariationList({
     setSavingVariantId(variant.id)
 
     try {
-      const res = await fetch(`/api/admin/variations/${variant.id}`, {
+      const res = await fetch(`/api/admin/variants/${variant.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -445,7 +445,7 @@ export default function VariationList({
     if (!deleteTarget || deleting) return
     setDeleting(true)
     try {
-      const res = await fetch(`/api/admin/variations/${deleteTarget.id}`, {
+      const res = await fetch(`/api/admin/variants/${deleteTarget.id}`, {
         method: 'DELETE',
       })
       if (!res.ok) {
@@ -523,7 +523,7 @@ export default function VariationList({
         </div>
         {showFormModal && (
           <Suspense fallback={modalFallback}>
-            <VariationFormModal
+            <VariantFormModal
               productId={productId}
               variant={editingVariant}
               onClose={handleFormClose}
@@ -595,7 +595,7 @@ export default function VariationList({
 
       {showFormModal && (
         <Suspense fallback={modalFallback}>
-          <VariationFormModal
+          <VariantFormModal
             productId={productId}
             variant={editingVariant}
             onClose={handleFormClose}

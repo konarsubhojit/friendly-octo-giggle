@@ -182,13 +182,23 @@ const ProductGrid = ({
       : undefined
 
   useEffect(() => {
-    setVisibleProducts(products)
-    setCanLoadMore(hasNextPage)
+    // Update refs synchronously so loadMore() (called by the
+    // IntersectionObserver) always sees the latest pagination state even
+    // before the deferred state updates flush.
     canLoadMoreRef.current = hasNextPage
     visibleCountRef.current = products.length
-    setIsLoadingMore(false)
     isLoadingRef.current = false
-    setLoadError(null)
+
+    const timer = globalThis.setTimeout(() => {
+      setVisibleProducts(products)
+      setCanLoadMore(hasNextPage)
+      setIsLoadingMore(false)
+      setLoadError(null)
+    }, 0)
+
+    return () => {
+      globalThis.clearTimeout(timer)
+    }
   }, [products, hasNextPage, search, selectedCategory])
 
   useEffect(() => {

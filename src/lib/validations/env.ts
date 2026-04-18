@@ -36,6 +36,37 @@ export const EnvSchema = z
     NEXT_PUBLIC_UPSTASH_SEARCH_REST_READONLY_TOKEN: z.string().optional(),
     GOOGLE_GENERATIVE_AI_API_KEY: z.string().optional(),
     SENTRY_DSN: z.url().optional(),
+    IMAGE_UPLOAD_PROVIDER: z.enum(['vercel', 'azure']).optional(),
+    AZURE_BLOB_ACCOUNTS_JSON: z
+      .string()
+      .optional()
+      .refine(
+        (value) => {
+          if (value === undefined || value === '') return true
+          let parsed: unknown
+          try {
+            parsed = JSON.parse(value)
+          } catch {
+            return false
+          }
+          if (!Array.isArray(parsed)) return false
+          return parsed.every(
+            (item) =>
+              typeof item === 'object' &&
+              item !== null &&
+              typeof (item as Record<string, unknown>).alias === 'string' &&
+              typeof (item as Record<string, unknown>).connectionString ===
+                'string' &&
+              typeof (item as Record<string, unknown>).container === 'string'
+          )
+        },
+        {
+          message:
+            'AZURE_BLOB_ACCOUNTS_JSON must be a JSON array of objects with string alias, connectionString, and container properties.',
+        }
+      ),
+    AZURE_BLOB_DEFAULT_ACCOUNT_ALIAS: z.string().optional(),
+    AZURE_BLOB_AUTO_CREATE_CONTAINER: z.enum(['true', 'false']).optional(),
   })
   .superRefine((data, ctx) => {
     // Skip production-only checks during build phase (next build sets NODE_ENV=production)
@@ -50,6 +81,58 @@ export const EnvSchema = z
           })
         }
       })
+    }
+
+    // Cross-field checks for the Azure Blob upload provider.
+    if (data.IMAGE_UPLOAD_PROVIDER === 'azure') {
+      if (!data.AZURE_BLOB_ACCOUNTS_JSON) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['AZURE_BLOB_ACCOUNTS_JSON'],
+          message:
+            "AZURE_BLOB_ACCOUNTS_JSON must be set when IMAGE_UPLOAD_PROVIDER='azure'",
+        })
+        return
+      }
+
+      let parsed: unknown
+      try {
+        parsed = JSON.parse(data.AZURE_BLOB_ACCOUNTS_JSON)
+      } catch {
+        // The field-level .refine will already surface a parse error;
+        // nothing more to add here.
+        return
+      }
+      if (!Array.isArray(parsed) || parsed.length === 0) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['AZURE_BLOB_ACCOUNTS_JSON'],
+          message:
+            "AZURE_BLOB_ACCOUNTS_JSON must contain at least one account when IMAGE_UPLOAD_PROVIDER='azure'",
+        })
+        return
+      }
+
+      if (data.AZURE_BLOB_DEFAULT_ACCOUNT_ALIAS) {
+        const aliases = parsed
+          .map((item) =>
+            typeof item === 'object' &&
+            item !== null &&
+            typeof (item as Record<string, unknown>).alias === 'string'
+              ? ((item as Record<string, unknown>).alias as string)
+              : null
+          )
+          .filter((alias): alias is string => alias !== null)
+
+        if (!aliases.includes(data.AZURE_BLOB_DEFAULT_ACCOUNT_ALIAS)) {
+          ctx.addIssue({
+            code: 'custom',
+            path: ['AZURE_BLOB_DEFAULT_ACCOUNT_ALIAS'],
+            message:
+              'AZURE_BLOB_DEFAULT_ACCOUNT_ALIAS must match an alias in AZURE_BLOB_ACCOUNTS_JSON',
+          })
+        }
+      }
     }
   })
 

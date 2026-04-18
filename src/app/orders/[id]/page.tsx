@@ -191,7 +191,7 @@ interface OrderItemRowItem {
   readonly price: number
   readonly customizationNote?: string | null
   readonly product?: { id: string; name: string; image: string; price: number }
-  readonly variation?: {
+  readonly variant?: {
     id: string
     name: string
     image?: string
@@ -205,7 +205,7 @@ interface OrderItemRowProps {
 }
 
 function OrderItemRow({ item, formatPrice }: OrderItemRowProps) {
-  const image = item.variation?.image || item.product?.image
+  const image = item.variant?.image || item.product?.image
   const sections: Record<string, ReactElement | null> = {
     image: image ? (
       <div className="relative w-16 h-16 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700">
@@ -218,9 +218,9 @@ function OrderItemRow({ item, formatPrice }: OrderItemRowProps) {
         />
       </div>
     ) : null,
-    variation: item.variation ? (
+    variant: item.variant ? (
       <p className="text-xs text-gray-500 dark:text-gray-400">
-        {item.variation.name}
+        {item.variant.name}
       </p>
     ) : null,
     customization: item.customizationNote ? (
@@ -243,7 +243,7 @@ function OrderItemRow({ item, formatPrice }: OrderItemRowProps) {
           >
             {item.product?.name}
           </Link>
-          {sections.variation}
+          {sections.variant}
           <p className="text-xs text-[var(--text-muted)]">
             Qty: {item.quantity}
           </p>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import Image from 'next/image'
 import type { ProductVariant } from '@/lib/types'
 import toast from 'react-hot-toast'
@@ -24,7 +24,7 @@ import {
 
 const MAX_ADDITIONAL_IMAGES = 10
 
-interface VariationFormModalProps {
+interface VariantFormModalProps {
   readonly productId: string
   readonly variant?: ProductVariant
   readonly onClose: () => void
@@ -96,8 +96,8 @@ const getVariantMutationConfig = (
   method: isEditing ? 'PUT' : 'POST',
   url:
     isEditing && variantId
-      ? `/api/admin/variations/${variantId}`
-      : '/api/admin/variations',
+      ? `/api/admin/variants/${variantId}`
+      : '/api/admin/variants',
   fallbackError: isEditing
     ? 'Failed to update variant'
     : 'Failed to create variant',
@@ -167,12 +167,12 @@ const getSubmitButtonLabel = (
   return isEditing ? 'Update' : 'Create'
 }
 
-const VariationFormModal = ({
+const VariantFormModal = ({
   productId,
   variant,
   onClose,
   onSuccess,
-}: VariationFormModalProps) => {
+}: VariantFormModalProps) => {
   const isEditing = !!variant
   const { availableCurrencies, currency, rates } = useCurrency()
   const [priceCurrency, setPriceCurrency] = useState<CurrencyCode>(currency)
@@ -203,21 +203,41 @@ const VariationFormModal = ({
   const priceInInr = convertCurrency(priceNum, priceCurrency, 'INR', rates)
   const priceWarning = formData.price !== '' && priceInInr <= 0
 
-  const [primaryImagePreviewUrl, setPrimaryImagePreviewUrl] = useState<
-    string | null
-  >(null)
+  const primaryImagePreviewUrl = useMemo(
+    () =>
+      primaryImageFile
+        ? globalThis.URL.createObjectURL(primaryImageFile)
+        : null,
+    [primaryImageFile]
+  )
 
   useEffect(() => {
-    if (!primaryImageFile) {
-      setPrimaryImagePreviewUrl(null)
-      return
+    if (!primaryImagePreviewUrl) return
+
+    return () => {
+      globalThis.URL.revokeObjectURL(primaryImagePreviewUrl)
     }
-    const url = URL.createObjectURL(primaryImageFile)
-    setPrimaryImagePreviewUrl(url)
-    return () => URL.revokeObjectURL(url)
-  }, [primaryImageFile])
+  }, [primaryImagePreviewUrl])
 
   const currentPrimaryImagePreview = primaryImagePreviewUrl ?? primaryImageUrl
+
+  // Memoize gallery preview URLs per pending file so they are created once
+  // (not on every render inside .map) and revoked on cleanup to avoid leaks.
+  const additionalImagePreviewUrls = useMemo(
+    () =>
+      additionalImageFiles.map((file) =>
+        file ? globalThis.URL.createObjectURL(file) : null
+      ),
+    [additionalImageFiles]
+  )
+
+  useEffect(() => {
+    return () => {
+      additionalImagePreviewUrls.forEach((url) => {
+        if (url) globalThis.URL.revokeObjectURL(url)
+      })
+    }
+  }, [additionalImagePreviewUrls])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -553,9 +573,9 @@ const VariationFormModal = ({
                     </div>
                     {additionalImageUrls.map((url, idx) => {
                       const pendingFile = additionalImageFiles[idx] ?? null
-                      const previewSrc = pendingFile
-                        ? URL.createObjectURL(pendingFile)
-                        : url
+                      const pendingPreviewUrl =
+                        additionalImagePreviewUrls[idx] ?? null
+                      const previewSrc = pendingPreviewUrl ?? url
 
                       return (
                         <div
@@ -692,4 +712,4 @@ const VariationFormModal = ({
   )
 }
 
-export default VariationFormModal
+export default VariantFormModal

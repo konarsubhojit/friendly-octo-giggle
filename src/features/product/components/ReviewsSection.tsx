@@ -148,7 +148,13 @@ export const ReviewsSection = ({ productId }: ReviewsSectionProps) => {
   }, [productId])
 
   useEffect(() => {
-    fetchReviews()
+    const timer = globalThis.setTimeout(() => {
+      void fetchReviews()
+    }, 0)
+
+    return () => {
+      globalThis.clearTimeout(timer)
+    }
   }, [fetchReviews])
 
   const handleReviewSuccess = () => {

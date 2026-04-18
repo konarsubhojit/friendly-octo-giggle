@@ -17,7 +17,7 @@ type Status = 'idle' | 'streaming' | 'error'
 
 const STARTER_PROMPTS = [
   'Is this product in stock?',
-  'What variations are available?',
+  'What variants are available?',
   'Tell me more about this product',
 ]
 

@@ -537,7 +537,7 @@ describe('Cart API Route', () => {
       expect(data).toEqual({ error: 'Variant not found' })
     })
 
-    it('auto-caps quantity when variation stock is insufficient', async () => {
+    it('auto-caps quantity when variant stock is insufficient', async () => {
       const mockCart = {
         id: VALID_CART_ID,
         createdAt: new Date('2024-01-01'),
@@ -716,7 +716,7 @@ describe('Cart API Route', () => {
       expect(data).toEqual({ error: 'Cart not found' })
     })
 
-    it('serializes cart with variation data', async () => {
+    it('serializes cart with variant data', async () => {
       const mockCart = {
         id: VALID_CART_ID,
         createdAt: new Date('2024-01-01'),

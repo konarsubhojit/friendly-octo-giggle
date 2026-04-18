@@ -5,7 +5,7 @@ import { products } from '@/lib/schema'
 import { eq, and, isNull } from 'drizzle-orm'
 import Link from 'next/link'
 import { AdminPageShell } from '@/features/admin/components/AdminPageShell'
-import VariationList from '@/features/admin/components/VariationList'
+import VariantList from '@/features/admin/components/VariantList'
 import ProductEditForm from '@/features/admin/components/ProductEditForm'
 import { serializeVariant } from '@/lib/serializers'
 import {
@@ -98,7 +98,7 @@ export default async function AdminProductEditPage({ params }: PageProps) {
       ]}
     >
       <ProductEditForm product={serializedProduct} />
-      <VariationList
+      <VariantList
         productId={product.id}
         initialVariants={serializedVariants}
       />

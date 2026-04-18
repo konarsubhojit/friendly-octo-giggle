@@ -84,7 +84,7 @@ const mockOrder = {
   shippingProvider: null,
   createdAt: new Date('2025-01-01T00:00:00.000Z'),
   updatedAt: new Date('2025-01-01T00:00:00.000Z'),
-  items: [{ id: 'i1', product: { id: 'p1' }, variation: null }],
+  items: [{ id: 'i1', product: { id: 'p1' }, variant: null }],
 }
 
 describe('PATCH /api/admin/orders/[id]', () => {

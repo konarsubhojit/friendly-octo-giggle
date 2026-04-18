@@ -3,7 +3,7 @@ import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { AdminPageShell } from '@/features/admin/components/AdminPageShell'
 import ProductEditPageForm from '@/features/admin/components/ProductEditPageForm'
-import VariationList from '@/features/admin/components/VariationList'
+import VariantList from '@/features/admin/components/VariantList'
 import { auth } from '@/lib/auth'
 import { drizzleDb } from '@/lib/db'
 import { products } from '@/lib/schema'
@@ -92,7 +92,7 @@ export default async function AdminProductEditFormPage({ params }: PageProps) {
       ]}
     >
       <ProductEditPageForm product={serializedProduct} />
-      <VariationList
+      <VariantList
         productId={serializedProduct.id}
         initialVariants={serializedVariants}
       />

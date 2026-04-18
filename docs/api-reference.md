@@ -63,8 +63,8 @@ Admin endpoints require authentication via NextAuth session with ADMIN role.
 - `/api/admin/users/[id]` (GET, PATCH)
 - `/api/admin/categories` (GET, POST)
 - `/api/admin/categories/[id]` (PUT, DELETE)
-- `/api/admin/variations` (GET)
-- `/api/admin/variations/[variationId]` (PUT, DELETE)
+- `/api/admin/variants` (GET)
+- `/api/admin/variants/[variantId]` (PUT, DELETE)
 - `/api/admin/reviews` (GET, DELETE)
 - `/api/admin/sales` (GET)
 - `/api/admin/email-failures` (GET)
@@ -105,7 +105,7 @@ Retrieve all products with caching.
         "category": "Electronics",
         "createdAt": "2024-01-15T10:30:00.000Z",
         "updatedAt": "2024-01-15T10:30:00.000Z",
-        "variations": [
+        "variants": [
           {
             "id": "Kd93mNp",
             "name": "Red",
@@ -171,7 +171,7 @@ Get cart for current user/session. Returns null if no cart exists.
       {
         "id": "Gh78jKl",
         "productId": "Mn56oPq",
-        "variationId": "Kd93mNp",
+        "variantId": "Kd93mNp",
         "quantity": 2,
         "product": {
           "id": "Mn56oPq",
@@ -180,7 +180,7 @@ Get cart for current user/session. Returns null if no cart exists.
           "image": "https://...",
           "stock": 100
         },
-        "variation": {
+        "variant": {
           "id": "Kd93mNp",
           "name": "Red",
           "priceModifier": 5.0,
@@ -203,7 +203,7 @@ Add item to cart or update quantity if exists.
 ```json
 {
   "productId": "Mn56oPq",
-  "variationId": "Kd93mNp",
+  "variantId": "Kd93mNp",
   "quantity": 2
 }
 ```
@@ -217,7 +217,7 @@ Add item to cart or update quantity if exists.
 **Errors**:
 
 - `400`: Invalid input, insufficient stock
-- `404`: Product or variation not found
+- `404`: Product or variant not found
 
 #### DELETE /api/cart
 
@@ -288,7 +288,7 @@ Create new order with stock validation and atomic updates.
   "items": [
     {
       "productId": "Mn56oPq",
-      "variationId": "Kd93mNp",
+      "variantId": "Kd93mNp",
       "quantity": 2
     }
   ]
@@ -310,7 +310,7 @@ Create new order with stock validation and atomic updates.
       {
         "id": "Bc34dEf",
         "productId": "Mn56oPq",
-        "variationId": "Kd93mNp",
+        "variantId": "Kd93mNp",
         "quantity": 2,
         "price": 34.99,
         "product": {
@@ -328,9 +328,9 @@ Create new order with stock validation and atomic updates.
 
 **Business Logic**:
 
-- Validates all products/variations exist
+- Validates all products/variants exist
 - Checks stock availability
-- Calculates total with variation price modifiers
+- Calculates total with variant price modifiers
 - Atomically creates order and decrements stock in transaction
 - Invalidates product and order caches
 
@@ -829,7 +829,7 @@ const response = await fetch('/api/cart', {
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
     productId: 'Mn56oPq',
-    variationId: 'Kd93mNp',
+    variantId: 'Kd93mNp',
     quantity: 2,
   }),
 })
@@ -850,7 +850,7 @@ curl -X POST https://your-domain.com/api/orders \
     "items": [
       {
         "productId": "Mn56oPq",
-        "variationId": "Kd93mNp",
+        "variantId": "Kd93mNp",
         "quantity": 1
       }
     ]
@@ -921,7 +921,7 @@ console.log('Image uploaded:', data.url)
 
 All types are defined across multiple files following feature-based organization:
 
-- Core types: `src/lib/types.ts` — `Product`, `ProductVariation`, `Order`, `OrderItem`, `OrderStatus`, `Cart`, `CartItem`
+- Core types: `src/lib/types.ts` — `Product`, `ProductVariant`, `Order`, `OrderItem`, `OrderStatus`, `Cart`, `CartItem`
 - Validation schemas: `src/lib/validations/` (shared), `src/features/*/validations.ts` (feature-specific)
 - API utilities: `src/lib/api-utils.ts` — `apiSuccess`, `apiError`, `handleApiError`
 - The `src/lib/validations.ts` file is a backward-compat re-export shim

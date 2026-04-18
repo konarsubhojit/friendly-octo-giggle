@@ -84,8 +84,8 @@ vi.mock('@/features/product/components/StockBadge', () => ({
   ),
 }))
 
-vi.mock('@/features/product/components/VariationButton', () => ({
-  VariationButton: ({
+vi.mock('@/features/product/components/VariantButton', () => ({
+  VariantButton: ({
     variant,
     isSelected,
     onSelect,
@@ -95,7 +95,7 @@ vi.mock('@/features/product/components/VariationButton', () => ({
     onSelect: (v: ProductVariant) => void
   }) => (
     <button
-      data-testid={`variation-btn-${variant.id}`}
+      data-testid={`variant-btn-${variant.id}`}
       aria-pressed={isSelected}
       onClick={() => onSelect(variant)}
     >
@@ -122,8 +122,8 @@ vi.mock('@/features/product/components/ImageCarousel', () => ({
     productName: string
   }) => (
     <div data-testid="image-carousel" aria-label={productName}>
-      {images.map((img, i) => (
-        <img key={i} src={img} alt={`${productName} ${i}`} />
+      {images.map((img) => (
+        <img key={img} src={img} alt={`${productName}`} />
       ))}
     </div>
   ),
@@ -149,7 +149,7 @@ vi.mock('@/features/product/components/ProductAssistant', () => ({
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 
-function makeProduct(overrides: Partial<Product> = {}): Product {
+const makeProduct = (overrides: Partial<Product> = {}): Product => {
   return {
     id: 'prod001',
     name: 'Rose Bouquet',
@@ -178,9 +178,9 @@ function makeProduct(overrides: Partial<Product> = {}): Product {
   }
 }
 
-function makeVariation(
+const makeVariant = (
   overrides: Partial<ProductVariant> = {}
-): ProductVariant {
+): ProductVariant => {
   return {
     id: 'var001',
     productId: 'prod001',
@@ -216,11 +216,7 @@ describe('ProductClient', () => {
   it('renders product name, price, description, and category', () => {
     const product = makeProduct()
     render(
-      <ProductClient
-        product={product}
-        initialVariantId={null}
-        aiEnabled={true}
-      />
+      <ProductClient product={product} initialVariantId={null} aiEnabled />
     )
 
     expect(
@@ -236,11 +232,7 @@ describe('ProductClient', () => {
   it('renders breadcrumb navigation with product name', () => {
     const product = makeProduct()
     render(
-      <ProductClient
-        product={product}
-        initialVariantId={null}
-        aiEnabled={true}
-      />
+      <ProductClient product={product} initialVariantId={null} aiEnabled />
     )
 
     expect(
@@ -258,24 +250,16 @@ describe('ProductClient', () => {
       images: [],
     })
     render(
-      <ProductClient
-        product={product}
-        initialVariantId={null}
-        aiEnabled={true}
-      />
+      <ProductClient product={product} initialVariantId={null} aiEnabled />
     )
 
     expect(screen.getByTestId('image-carousel')).toBeInTheDocument()
   })
 
   it('renders add-to-cart section when product is in stock', () => {
-    const product = makeProduct({ variants: [makeVariation({ stock: 10 })] })
+    const product = makeProduct({ variants: [makeVariant({ stock: 10 })] })
     render(
-      <ProductClient
-        product={product}
-        initialVariantId={null}
-        aiEnabled={true}
-      />
+      <ProductClient product={product} initialVariantId={null} aiEnabled />
     )
 
     expect(
@@ -285,13 +269,9 @@ describe('ProductClient', () => {
   })
 
   it('renders out-of-stock panel when product stock is 0', () => {
-    const product = makeProduct({ variants: [makeVariation({ stock: 0 })] })
+    const product = makeProduct({ variants: [makeVariant({ stock: 0 })] })
     render(
-      <ProductClient
-        product={product}
-        initialVariantId={null}
-        aiEnabled={true}
-      />
+      <ProductClient product={product} initialVariantId={null} aiEnabled />
     )
 
     // Out-of-stock panel has a "Browse Products" link
@@ -303,7 +283,7 @@ describe('ProductClient', () => {
 
   it('shows "all stock in cart" panel when cart quantity equals stock', () => {
     const product = makeProduct({
-      variants: [makeVariation({ id: 'var001', stock: 3 })],
+      variants: [makeVariant({ id: 'var001', stock: 3 })],
     })
     vi.mocked(useSelector).mockImplementation((selector) =>
       selector({
@@ -315,11 +295,7 @@ describe('ProductClient', () => {
       })
     )
     render(
-      <ProductClient
-        product={product}
-        initialVariantId={null}
-        aiEnabled={true}
-      />
+      <ProductClient product={product} initialVariantId={null} aiEnabled />
     )
 
     expect(screen.getByText('All Available Stock in Cart')).toBeInTheDocument()
@@ -332,11 +308,7 @@ describe('ProductClient', () => {
   it('renders share button', () => {
     const product = makeProduct()
     render(
-      <ProductClient
-        product={product}
-        initialVariantId={null}
-        aiEnabled={true}
-      />
+      <ProductClient product={product} initialVariantId={null} aiEnabled />
     )
     expect(screen.getByTestId('share-button')).toBeInTheDocument()
   })
@@ -344,11 +316,7 @@ describe('ProductClient', () => {
   it('renders reviews section and recently viewed', () => {
     const product = makeProduct()
     render(
-      <ProductClient
-        product={product}
-        initialVariantId={null}
-        aiEnabled={true}
-      />
+      <ProductClient product={product} initialVariantId={null} aiEnabled />
     )
     expect(screen.getByTestId('reviews-section')).toBeInTheDocument()
     expect(screen.getByTestId('recently-viewed')).toBeInTheDocument()
@@ -357,11 +325,7 @@ describe('ProductClient', () => {
   it('tracks product view on mount', () => {
     const product = makeProduct()
     render(
-      <ProductClient
-        product={product}
-        initialVariantId={null}
-        aiEnabled={true}
-      />
+      <ProductClient product={product} initialVariantId={null} aiEnabled />
     )
     expect(mockTrackProduct).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'prod001', name: 'Rose Bouquet' })
@@ -379,11 +343,7 @@ describe('ProductClient', () => {
     })
     const product = makeProduct()
     render(
-      <ProductClient
-        product={product}
-        initialVariantId={null}
-        aiEnabled={true}
-      />
+      <ProductClient product={product} initialVariantId={null} aiEnabled />
     )
     expect(mockDispatch).toHaveBeenCalledWith(
       expect.objectContaining({ type: 'cart/fetchCart' })
@@ -393,11 +353,7 @@ describe('ProductClient', () => {
   it('does NOT dispatch fetchCart when unauthenticated', () => {
     const product = makeProduct()
     render(
-      <ProductClient
-        product={product}
-        initialVariantId={null}
-        aiEnabled={true}
-      />
+      <ProductClient product={product} initialVariantId={null} aiEnabled />
     )
     expect(mockFetchCart).not.toHaveBeenCalled()
   })
@@ -405,14 +361,10 @@ describe('ProductClient', () => {
   it('adds to cart via pending cart when unauthenticated', async () => {
     const product = makeProduct()
     render(
-      <ProductClient
-        product={product}
-        initialVariantId={null}
-        aiEnabled={true}
-      />
+      <ProductClient product={product} initialVariantId={null} aiEnabled />
     )
 
-    await act(async () => {
+    await act(() => {
       fireEvent.click(screen.getByRole('button', { name: /Add to Cart/i }))
     })
 
@@ -426,14 +378,10 @@ describe('ProductClient', () => {
   it('shows cart success message after adding to cart', async () => {
     const product = makeProduct()
     render(
-      <ProductClient
-        product={product}
-        initialVariantId={null}
-        aiEnabled={true}
-      />
+      <ProductClient product={product} initialVariantId={null} aiEnabled />
     )
 
-    await act(async () => {
+    await act(() => {
       fireEvent.click(screen.getByRole('button', { name: /Add to Cart/i }))
     })
 
@@ -453,14 +401,10 @@ describe('ProductClient', () => {
     })
     const product = makeProduct()
     render(
-      <ProductClient
-        product={product}
-        initialVariantId={null}
-        aiEnabled={true}
-      />
+      <ProductClient product={product} initialVariantId={null} aiEnabled />
     )
 
-    await act(async () => {
+    await act(() => {
       fireEvent.click(screen.getByRole('button', { name: /Add to Cart/i }))
     })
 
@@ -483,14 +427,10 @@ describe('ProductClient', () => {
     mockUnwrap.mockRejectedValue('Out of stock')
     const product = makeProduct()
     render(
-      <ProductClient
-        product={product}
-        initialVariantId={null}
-        aiEnabled={true}
-      />
+      <ProductClient product={product} initialVariantId={null} aiEnabled />
     )
 
-    await act(async () => {
+    await act(() => {
       fireEvent.click(screen.getByRole('button', { name: /Add to Cart/i }))
     })
 
@@ -514,14 +454,10 @@ describe('ProductClient', () => {
     })
     const product = makeProduct()
     render(
-      <ProductClient
-        product={product}
-        initialVariantId={null}
-        aiEnabled={true}
-      />
+      <ProductClient product={product} initialVariantId={null} aiEnabled />
     )
 
-    await act(async () => {
+    await act(() => {
       fireEvent.click(screen.getByRole('button', { name: /Add to Cart/i }))
     })
 
@@ -530,69 +466,53 @@ describe('ProductClient', () => {
     })
   })
 
-  it('renders variation buttons for colour variations', () => {
+  it('renders variant buttons for colour variants', () => {
     const variants = [
-      makeVariation({ id: 'var001' }),
-      makeVariation({ id: 'var002' }),
+      makeVariant({ id: 'var001' }),
+      makeVariant({ id: 'var002' }),
     ]
     const product = makeProduct({ variants })
     render(
-      <ProductClient
-        product={product}
-        initialVariantId={null}
-        aiEnabled={true}
-      />
+      <ProductClient product={product} initialVariantId={null} aiEnabled />
     )
 
-    expect(screen.getByTestId('variation-btn-var001')).toBeInTheDocument()
-    expect(screen.getByTestId('variation-btn-var002')).toBeInTheDocument()
+    expect(screen.getByTestId('variant-btn-var001')).toBeInTheDocument()
+    expect(screen.getByTestId('variant-btn-var002')).toBeInTheDocument()
   })
 
-  it('selects initial variation from initialVariantId prop', () => {
-    const variation = makeVariation({ id: 'var001', price: 750 })
-    const product = makeProduct({ variants: [variation] })
+  it('selects initial variant from initialVariantId prop', () => {
+    const variant = makeVariant({ id: 'var001', price: 750 })
+    const product = makeProduct({ variants: [variant] })
     render(
-      <ProductClient
-        product={product}
-        initialVariantId="var001"
-        aiEnabled={true}
-      />
+      <ProductClient product={product} initialVariantId="var001" aiEnabled />
     )
 
     expect(screen.getAllByText('₹750.00')).toHaveLength(2)
   })
 
-  it('selecting a variation updates the displayed price', () => {
+  it('selecting a variant updates the displayed price', () => {
     const variants = [
-      makeVariation({ id: 'default-var', price: 500 }),
-      makeVariation({ id: 'var001', price: 750 }),
+      makeVariant({ id: 'default-var', price: 500 }),
+      makeVariant({ id: 'var001', price: 750 }),
     ]
     const product = makeProduct({ variants })
     render(
-      <ProductClient
-        product={product}
-        initialVariantId={null}
-        aiEnabled={true}
-      />
+      <ProductClient product={product} initialVariantId={null} aiEnabled />
     )
 
     expect(screen.getAllByText('₹500.00')).toHaveLength(2)
 
     act(() => {
-      fireEvent.click(screen.getByTestId('variation-btn-var001'))
+      fireEvent.click(screen.getByTestId('variant-btn-var001'))
     })
 
     expect(screen.getAllByText('₹750.00')).toHaveLength(2)
   })
 
   it('quantity selector renders with options up to stock (max 10)', () => {
-    const product = makeProduct({ variants: [makeVariation({ stock: 5 })] })
+    const product = makeProduct({ variants: [makeVariant({ stock: 5 })] })
     render(
-      <ProductClient
-        product={product}
-        initialVariantId={null}
-        aiEnabled={true}
-      />
+      <ProductClient product={product} initialVariantId={null} aiEnabled />
     )
 
     const select = screen.getByLabelText('Select quantity')
@@ -602,7 +522,7 @@ describe('ProductClient', () => {
 
   it('shows already-in-cart notice when items are in cart', () => {
     const product = makeProduct({
-      variants: [makeVariation({ id: 'var001', stock: 10 })],
+      variants: [makeVariant({ id: 'var001', stock: 10 })],
     })
     vi.mocked(useSelector).mockImplementation((selector) =>
       selector({
@@ -614,11 +534,7 @@ describe('ProductClient', () => {
       })
     )
     render(
-      <ProductClient
-        product={product}
-        initialVariantId={null}
-        aiEnabled={true}
-      />
+      <ProductClient product={product} initialVariantId={null} aiEnabled />
     )
 
     expect(screen.getByText(/You already have/)).toBeInTheDocument()
@@ -636,11 +552,7 @@ describe('ProductClient', () => {
   it('shows View Cart link in add-to-cart section', () => {
     const product = makeProduct()
     render(
-      <ProductClient
-        product={product}
-        initialVariantId={null}
-        aiEnabled={true}
-      />
+      <ProductClient product={product} initialVariantId={null} aiEnabled />
     )
     expect(screen.getByRole('link', { name: /View Cart/i })).toHaveAttribute(
       'href',
@@ -649,13 +561,9 @@ describe('ProductClient', () => {
   })
 
   it('shows total price (quantity × price) in add-to-cart section', () => {
-    const product = makeProduct({ variants: [makeVariation({ price: 500 })] })
+    const product = makeProduct({ variants: [makeVariant({ price: 500 })] })
     render(
-      <ProductClient
-        product={product}
-        initialVariantId={null}
-        aiEnabled={true}
-      />
+      <ProductClient product={product} initialVariantId={null} aiEnabled />
     )
     expect(screen.getAllByText('₹500.00')).toHaveLength(2)
   })
@@ -730,7 +638,7 @@ describe('ProductClient', () => {
 
   it('renders option-based variant selector when product has options', () => {
     const variants = [
-      makeVariation({
+      makeVariant({
         id: 'var-red-sm',
         price: 500,
         stock: 5,
@@ -751,7 +659,7 @@ describe('ProductClient', () => {
           },
         ],
       }),
-      makeVariation({
+      makeVariant({
         id: 'var-blue-sm',
         price: 600,
         stock: 3,
@@ -837,7 +745,7 @@ describe('ProductClient', () => {
 
   it('switches variant when option button is clicked', () => {
     const variants = [
-      makeVariation({
+      makeVariant({
         id: 'var-red-sm',
         price: 500,
         stock: 5,
@@ -858,7 +766,7 @@ describe('ProductClient', () => {
           },
         ],
       }),
-      makeVariation({
+      makeVariant({
         id: 'var-blue-sm',
         price: 600,
         stock: 3,
@@ -947,7 +855,7 @@ describe('ProductClient', () => {
   })
 
   it('uses variant images when selected variant has images', () => {
-    const variant = makeVariation({
+    const variant = makeVariant({
       id: 'var-with-img',
       image: 'https://example.com/variant.jpg',
       images: ['https://example.com/variant2.jpg'],
@@ -972,7 +880,7 @@ describe('ProductClient', () => {
 
   it('shows low stock warning when variant stock is between 1 and 5 with options', () => {
     const variants = [
-      makeVariation({
+      makeVariant({
         id: 'var-low',
         price: 500,
         stock: 3,
@@ -1031,14 +939,10 @@ describe('ProductClient', () => {
     mockUnwrap.mockRejectedValue(new Error('Network error'))
     const product = makeProduct()
     render(
-      <ProductClient
-        product={product}
-        initialVariantId={null}
-        aiEnabled={true}
-      />
+      <ProductClient product={product} initialVariantId={null} aiEnabled />
     )
 
-    await act(async () => {
+    await act(() => {
       fireEvent.click(screen.getByRole('button', { name: /Add to Cart/i }))
     })
 
@@ -1047,5 +951,638 @@ describe('ProductClient', () => {
         screen.getByText('Something went wrong. Please try again.')
       ).toBeInTheDocument()
     })
+  })
+
+  it('hides unavailable option values based on selected options', () => {
+    // Red comes in S and L; Blue only comes in S — no Blue-L variant exists
+    const variants = [
+      makeVariant({
+        id: 'var-red-s',
+        price: 500,
+        stock: 5,
+        optionValues: [
+          {
+            id: 'ov-red',
+            value: 'Red',
+            optionId: 'opt-color',
+            sortOrder: 0,
+            createdAt: '2025-01-01T00:00:00.000Z',
+          },
+          {
+            id: 'ov-s',
+            value: 'S',
+            optionId: 'opt-size',
+            sortOrder: 0,
+            createdAt: '2025-01-01T00:00:00.000Z',
+          },
+        ],
+      }),
+      makeVariant({
+        id: 'var-red-l',
+        price: 550,
+        stock: 3,
+        optionValues: [
+          {
+            id: 'ov-red',
+            value: 'Red',
+            optionId: 'opt-color',
+            sortOrder: 0,
+            createdAt: '2025-01-01T00:00:00.000Z',
+          },
+          {
+            id: 'ov-l',
+            value: 'L',
+            optionId: 'opt-size',
+            sortOrder: 1,
+            createdAt: '2025-01-01T00:00:00.000Z',
+          },
+        ],
+      }),
+      makeVariant({
+        id: 'var-blue-s',
+        price: 600,
+        stock: 4,
+        optionValues: [
+          {
+            id: 'ov-blue',
+            value: 'Blue',
+            optionId: 'opt-color',
+            sortOrder: 1,
+            createdAt: '2025-01-01T00:00:00.000Z',
+          },
+          {
+            id: 'ov-s',
+            value: 'S',
+            optionId: 'opt-size',
+            sortOrder: 0,
+            createdAt: '2025-01-01T00:00:00.000Z',
+          },
+        ],
+      }),
+    ]
+    const product: Product = {
+      ...makeProduct({ variants }),
+      options: [
+        {
+          id: 'opt-color',
+          productId: 'prod001',
+          name: 'Color',
+          sortOrder: 0,
+          createdAt: '2025-01-01T00:00:00.000Z',
+          values: [
+            {
+              id: 'ov-red',
+              optionId: 'opt-color',
+              value: 'Red',
+              sortOrder: 0,
+              createdAt: '2025-01-01T00:00:00.000Z',
+            },
+            {
+              id: 'ov-blue',
+              optionId: 'opt-color',
+              value: 'Blue',
+              sortOrder: 1,
+              createdAt: '2025-01-01T00:00:00.000Z',
+            },
+          ],
+        },
+        {
+          id: 'opt-size',
+          productId: 'prod001',
+          name: 'Size',
+          sortOrder: 1,
+          createdAt: '2025-01-01T00:00:00.000Z',
+          values: [
+            {
+              id: 'ov-s',
+              optionId: 'opt-size',
+              value: 'S',
+              sortOrder: 0,
+              createdAt: '2025-01-01T00:00:00.000Z',
+            },
+            {
+              id: 'ov-l',
+              optionId: 'opt-size',
+              value: 'L',
+              sortOrder: 1,
+              createdAt: '2025-01-01T00:00:00.000Z',
+            },
+          ],
+        },
+      ],
+    }
+
+    render(
+      <ProductClient
+        product={product}
+        initialVariantId="var-red-s"
+        aiEnabled={false}
+      />
+    )
+
+    // Red is selected → both S and L should be visible (Red has S and L)
+    expect(screen.getByRole('button', { name: 'S' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'L' })).toBeInTheDocument()
+
+    // Now click Blue
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name: 'Blue' }))
+    })
+
+    // Blue only has S → L should be hidden
+    expect(screen.getByRole('button', { name: 'S' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'L' })).not.toBeInTheDocument()
+  })
+
+  it('auto-selects valid combination when current selection becomes unavailable', () => {
+    // Red has S and L; Blue only has S
+    const variants = [
+      makeVariant({
+        id: 'var-red-s',
+        price: 500,
+        stock: 5,
+        optionValues: [
+          {
+            id: 'ov-red',
+            value: 'Red',
+            optionId: 'opt-color',
+            sortOrder: 0,
+            createdAt: '2025-01-01T00:00:00.000Z',
+          },
+          {
+            id: 'ov-s',
+            value: 'S',
+            optionId: 'opt-size',
+            sortOrder: 0,
+            createdAt: '2025-01-01T00:00:00.000Z',
+          },
+        ],
+      }),
+      makeVariant({
+        id: 'var-red-l',
+        price: 550,
+        stock: 3,
+        optionValues: [
+          {
+            id: 'ov-red',
+            value: 'Red',
+            optionId: 'opt-color',
+            sortOrder: 0,
+            createdAt: '2025-01-01T00:00:00.000Z',
+          },
+          {
+            id: 'ov-l',
+            value: 'L',
+            optionId: 'opt-size',
+            sortOrder: 1,
+            createdAt: '2025-01-01T00:00:00.000Z',
+          },
+        ],
+      }),
+      makeVariant({
+        id: 'var-blue-s',
+        price: 600,
+        stock: 4,
+        optionValues: [
+          {
+            id: 'ov-blue',
+            value: 'Blue',
+            optionId: 'opt-color',
+            sortOrder: 1,
+            createdAt: '2025-01-01T00:00:00.000Z',
+          },
+          {
+            id: 'ov-s',
+            value: 'S',
+            optionId: 'opt-size',
+            sortOrder: 0,
+            createdAt: '2025-01-01T00:00:00.000Z',
+          },
+        ],
+      }),
+    ]
+    const product: Product = {
+      ...makeProduct({ variants }),
+      options: [
+        {
+          id: 'opt-color',
+          productId: 'prod001',
+          name: 'Color',
+          sortOrder: 0,
+          createdAt: '2025-01-01T00:00:00.000Z',
+          values: [
+            {
+              id: 'ov-red',
+              optionId: 'opt-color',
+              value: 'Red',
+              sortOrder: 0,
+              createdAt: '2025-01-01T00:00:00.000Z',
+            },
+            {
+              id: 'ov-blue',
+              optionId: 'opt-color',
+              value: 'Blue',
+              sortOrder: 1,
+              createdAt: '2025-01-01T00:00:00.000Z',
+            },
+          ],
+        },
+        {
+          id: 'opt-size',
+          productId: 'prod001',
+          name: 'Size',
+          sortOrder: 1,
+          createdAt: '2025-01-01T00:00:00.000Z',
+          values: [
+            {
+              id: 'ov-s',
+              optionId: 'opt-size',
+              value: 'S',
+              sortOrder: 0,
+              createdAt: '2025-01-01T00:00:00.000Z',
+            },
+            {
+              id: 'ov-l',
+              optionId: 'opt-size',
+              value: 'L',
+              sortOrder: 1,
+              createdAt: '2025-01-01T00:00:00.000Z',
+            },
+          ],
+        },
+      ],
+    }
+
+    // Start with Red-L selected
+    render(
+      <ProductClient
+        product={product}
+        initialVariantId="var-red-l"
+        aiEnabled={false}
+      />
+    )
+
+    // Verify Red/L selected
+    expect(screen.getByText('Red / L')).toBeInTheDocument()
+
+    // Click Blue — Blue-L doesn't exist, should fall back to Blue-S (price 600)
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name: 'Blue' }))
+    })
+
+    expect(screen.getByText('Blue / S')).toBeInTheDocument()
+    expect(screen.getAllByText('₹600.00').length).toBeGreaterThanOrEqual(2)
+  })
+
+  it('shows all sizes when no color is initially selected for a single-option product', () => {
+    // A product with only one option (Size) should always show all values
+    const variants = [
+      makeVariant({
+        id: 'var-s',
+        price: 500,
+        stock: 5,
+        optionValues: [
+          {
+            id: 'ov-s',
+            value: 'S',
+            optionId: 'opt-size',
+            sortOrder: 0,
+            createdAt: '2025-01-01T00:00:00.000Z',
+          },
+        ],
+      }),
+      makeVariant({
+        id: 'var-m',
+        price: 550,
+        stock: 3,
+        optionValues: [
+          {
+            id: 'ov-m',
+            value: 'M',
+            optionId: 'opt-size',
+            sortOrder: 1,
+            createdAt: '2025-01-01T00:00:00.000Z',
+          },
+        ],
+      }),
+      makeVariant({
+        id: 'var-l',
+        price: 600,
+        stock: 4,
+        optionValues: [
+          {
+            id: 'ov-l',
+            value: 'L',
+            optionId: 'opt-size',
+            sortOrder: 2,
+            createdAt: '2025-01-01T00:00:00.000Z',
+          },
+        ],
+      }),
+    ]
+    const product: Product = {
+      ...makeProduct({ variants }),
+      options: [
+        {
+          id: 'opt-size',
+          productId: 'prod001',
+          name: 'Size',
+          sortOrder: 0,
+          createdAt: '2025-01-01T00:00:00.000Z',
+          values: [
+            {
+              id: 'ov-s',
+              optionId: 'opt-size',
+              value: 'S',
+              sortOrder: 0,
+              createdAt: '2025-01-01T00:00:00.000Z',
+            },
+            {
+              id: 'ov-m',
+              optionId: 'opt-size',
+              value: 'M',
+              sortOrder: 1,
+              createdAt: '2025-01-01T00:00:00.000Z',
+            },
+            {
+              id: 'ov-l',
+              optionId: 'opt-size',
+              value: 'L',
+              sortOrder: 2,
+              createdAt: '2025-01-01T00:00:00.000Z',
+            },
+          ],
+        },
+      ],
+    }
+
+    render(
+      <ProductClient
+        product={product}
+        initialVariantId="var-s"
+        aiEnabled={false}
+      />
+    )
+
+    expect(screen.getByRole('button', { name: 'S' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'M' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'L' })).toBeInTheDocument()
+  })
+
+  it('shows out-of-stock option values as clickable buttons with visual indicator', () => {
+    // Red-S is in stock, Red-L is out of stock
+    const variants = [
+      makeVariant({
+        id: 'var-red-s',
+        price: 500,
+        stock: 5,
+        optionValues: [
+          {
+            id: 'ov-red',
+            value: 'Red',
+            optionId: 'opt-color',
+            sortOrder: 0,
+            createdAt: '2025-01-01T00:00:00.000Z',
+          },
+          {
+            id: 'ov-s',
+            value: 'S',
+            optionId: 'opt-size',
+            sortOrder: 0,
+            createdAt: '2025-01-01T00:00:00.000Z',
+          },
+        ],
+      }),
+      makeVariant({
+        id: 'var-red-l',
+        price: 550,
+        stock: 0,
+        optionValues: [
+          {
+            id: 'ov-red',
+            value: 'Red',
+            optionId: 'opt-color',
+            sortOrder: 0,
+            createdAt: '2025-01-01T00:00:00.000Z',
+          },
+          {
+            id: 'ov-l',
+            value: 'L',
+            optionId: 'opt-size',
+            sortOrder: 1,
+            createdAt: '2025-01-01T00:00:00.000Z',
+          },
+        ],
+      }),
+    ]
+    const product: Product = {
+      ...makeProduct({ variants }),
+      options: [
+        {
+          id: 'opt-color',
+          productId: 'prod001',
+          name: 'Color',
+          sortOrder: 0,
+          createdAt: '2025-01-01T00:00:00.000Z',
+          values: [
+            {
+              id: 'ov-red',
+              optionId: 'opt-color',
+              value: 'Red',
+              sortOrder: 0,
+              createdAt: '2025-01-01T00:00:00.000Z',
+            },
+          ],
+        },
+        {
+          id: 'opt-size',
+          productId: 'prod001',
+          name: 'Size',
+          sortOrder: 1,
+          createdAt: '2025-01-01T00:00:00.000Z',
+          values: [
+            {
+              id: 'ov-s',
+              optionId: 'opt-size',
+              value: 'S',
+              sortOrder: 0,
+              createdAt: '2025-01-01T00:00:00.000Z',
+            },
+            {
+              id: 'ov-l',
+              optionId: 'opt-size',
+              value: 'L',
+              sortOrder: 1,
+              createdAt: '2025-01-01T00:00:00.000Z',
+            },
+          ],
+        },
+      ],
+    }
+
+    render(
+      <ProductClient
+        product={product}
+        initialVariantId="var-red-s"
+        aiEnabled={false}
+      />
+    )
+
+    // S should be enabled (in stock)
+    const sButton = screen.getByRole('button', { name: 'S' })
+    expect(sButton).not.toBeDisabled()
+
+    // L should be visible, NOT disabled, with out-of-stock title
+    const lButton = screen.getByRole('button', {
+      name: 'L — Out of stock',
+    })
+    expect(lButton).toBeInTheDocument()
+    expect(lButton).not.toBeDisabled()
+    expect(lButton).toHaveAttribute('title', 'L — Out of stock')
+    expect(lButton.className).toContain('line-through')
+
+    // Clicking L should select the out-of-stock variant and show out-of-stock panel
+    act(() => {
+      fireEvent.click(lButton)
+    })
+
+    // Out-of-stock panel shows "Browse Products" link
+    expect(
+      screen.getByRole('link', { name: 'Browse Products' })
+    ).toHaveAttribute('href', '/shop')
+    expect(
+      screen.queryByRole('button', { name: /Add to Cart/i })
+    ).not.toBeInTheDocument()
+  })
+
+  it('shows out-of-stock color as clickable and selecting it shows out-of-stock view', () => {
+    // Red-S in stock, Blue-S out of stock
+    const variants = [
+      makeVariant({
+        id: 'var-red-s',
+        price: 500,
+        stock: 5,
+        optionValues: [
+          {
+            id: 'ov-red',
+            value: 'Red',
+            optionId: 'opt-color',
+            sortOrder: 0,
+            createdAt: '2025-01-01T00:00:00.000Z',
+          },
+          {
+            id: 'ov-s',
+            value: 'S',
+            optionId: 'opt-size',
+            sortOrder: 0,
+            createdAt: '2025-01-01T00:00:00.000Z',
+          },
+        ],
+      }),
+      makeVariant({
+        id: 'var-blue-s',
+        price: 600,
+        stock: 0,
+        optionValues: [
+          {
+            id: 'ov-blue',
+            value: 'Blue',
+            optionId: 'opt-color',
+            sortOrder: 1,
+            createdAt: '2025-01-01T00:00:00.000Z',
+          },
+          {
+            id: 'ov-s',
+            value: 'S',
+            optionId: 'opt-size',
+            sortOrder: 0,
+            createdAt: '2025-01-01T00:00:00.000Z',
+          },
+        ],
+      }),
+    ]
+    const product: Product = {
+      ...makeProduct({ variants }),
+      options: [
+        {
+          id: 'opt-color',
+          productId: 'prod001',
+          name: 'Color',
+          sortOrder: 0,
+          createdAt: '2025-01-01T00:00:00.000Z',
+          values: [
+            {
+              id: 'ov-red',
+              optionId: 'opt-color',
+              value: 'Red',
+              sortOrder: 0,
+              createdAt: '2025-01-01T00:00:00.000Z',
+            },
+            {
+              id: 'ov-blue',
+              optionId: 'opt-color',
+              value: 'Blue',
+              sortOrder: 1,
+              createdAt: '2025-01-01T00:00:00.000Z',
+            },
+          ],
+        },
+        {
+          id: 'opt-size',
+          productId: 'prod001',
+          name: 'Size',
+          sortOrder: 1,
+          createdAt: '2025-01-01T00:00:00.000Z',
+          values: [
+            {
+              id: 'ov-s',
+              optionId: 'opt-size',
+              value: 'S',
+              sortOrder: 0,
+              createdAt: '2025-01-01T00:00:00.000Z',
+            },
+          ],
+        },
+      ],
+    }
+
+    render(
+      <ProductClient
+        product={product}
+        initialVariantId="var-red-s"
+        aiEnabled={false}
+      />
+    )
+
+    // Red should be enabled
+    const redButton = screen.getByRole('button', { name: 'Red' })
+    expect(redButton).not.toBeDisabled()
+
+    // Blue should be visible, clickable, with out-of-stock styling
+    const blueButton = screen.getByRole('button', {
+      name: 'Blue — Out of stock',
+    })
+    expect(blueButton).toBeInTheDocument()
+    expect(blueButton).not.toBeDisabled()
+    expect(blueButton).toHaveAttribute('title', 'Blue — Out of stock')
+    expect(blueButton.className).toContain('line-through')
+
+    // Initially add-to-cart is shown (in stock)
+    expect(
+      screen.getByRole('button', { name: /Add to Cart/i })
+    ).toBeInTheDocument()
+
+    // Click Blue — out-of-stock variant selected, should show out-of-stock panel
+    act(() => {
+      fireEvent.click(blueButton)
+    })
+
+    // Out-of-stock panel replaces add-to-cart
+    expect(
+      screen.getByRole('link', { name: 'Browse Products' })
+    ).toHaveAttribute('href', '/shop')
+    expect(
+      screen.queryByRole('button', { name: /Add to Cart/i })
+    ).not.toBeInTheDocument()
   })
 })

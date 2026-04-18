@@ -1,16 +1,33 @@
 trigger:
   branches:
     include:
-      - master
+      - develop
+  paths:
+    exclude:
+      - docs/**
+      - specs/**
+      - '**/*.md'
+      - .cursorrules
 
 pr:
   branches:
     include:
+      - develop
       - master
+  paths:
+    exclude:
+      - docs/**
+      - specs/**
+      - '**/*.md'
+      - .cursorrules
 
 variables:
-  NODE_VERSION: '22'
-  npm_config_cache: $(Pipeline.Workspace)/.npm
+  NODE_VERSION: '24'
+  NPM_CI_FLAGS: '--no-audit --no-fund'
+  NODE_MODULES_CACHE_PATH: $(System.DefaultWorkingDirectory)/node_modules
+
+pool:
+  name: default
 
 stages:
   - stage: LintAndTest
@@ -18,8 +35,6 @@ stages:
     jobs:
       - job: Lint
         displayName: Lint and Type Check
-        pool:
-          vmImage: ubuntu-latest
         steps:
           - task: NodeTool@0
             displayName: Set up Node.js
@@ -27,15 +42,17 @@ stages:
               versionSpec: $(NODE_VERSION)
 
           - task: Cache@2
-            displayName: Cache npm packages
+            displayName: Cache node_modules
             inputs:
-              key: 'npm | "$(Agent.OS)" | package-lock.json'
+              key: 'node_modules | "$(Agent.OS)" | "$(NODE_VERSION)" | package-lock.json'
               restoreKeys: |
-                npm | "$(Agent.OS)"
-              path: $(npm_config_cache)
+                node_modules | "$(Agent.OS)" | "$(NODE_VERSION)"
+              path: $(NODE_MODULES_CACHE_PATH)
+              cacheHitVar: NODE_MODULES_CACHE_RESTORED
 
-          - script: npm ci
-            displayName: Install dependencies
+          - script: npm ci $(NPM_CI_FLAGS)
+            displayName: Install dependencies (cache miss)
+            condition: ne(variables.NODE_MODULES_CACHE_RESTORED, 'true')
 
           - script: npm run lint
             displayName: Lint
@@ -45,30 +62,38 @@ stages:
 
       - job: Test
         displayName: Test
+        variables:
+          npm_config_cache: /home/ubuntu/.npm
         pool:
-          vmImage: ubuntu-latest
+          ${{ if and(ne(variables['Build.Reason'], 'PullRequest'), or(eq(variables['Build.SourceBranch'], 'refs/heads/develop'), eq(variables['Build.SourceBranch'], 'refs/heads/master'))) }}:
+            name: default
+          ${{ else }}:
+            vmImage: 'ubuntu-latest'
         steps:
+          - checkout: self
+            clean: false
+            fetchDepth: 0
           - task: NodeTool@0
             displayName: Set up Node.js
             inputs:
               versionSpec: $(NODE_VERSION)
 
-          - task: Cache@2
-            displayName: Cache npm packages
-            inputs:
-              key: 'npm | "$(Agent.OS)" | package-lock.json'
-              restoreKeys: |
-                npm | "$(Agent.OS)"
-              path: $(npm_config_cache)
-
-          - script: npm ci
-            displayName: Install dependencies
+          - script: |
+              if [ -d "node_modules" ]; then
+                echo "node_modules exists, performing incremental update..."
+                npm install --prefer-offline --no-audit
+              else
+                echo "First run or node_modules missing, performing clean install..."
+                npm ci --prefer-offline --no-audit
+              fi
+            displayName: 'Smart npm Install'
 
           - script: npm run test:coverage
-            displayName: Run tests with coverage
+            displayName: Run tests
 
           - task: PublishPipelineArtifact@1
             displayName: Upload coverage report
+            condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/develop'))
             inputs:
               targetPath: coverage
               artifact: coverage-report
@@ -77,12 +102,10 @@ stages:
   - stage: BuildAndAnalyze
     displayName: Build and Code Analysis
     dependsOn: LintAndTest
-    condition: succeeded()
+    condition: succeeded('LintAndTest')
     jobs:
       - job: BuildAndSonarQube
         displayName: Build and SonarQube Analysis
-        pool:
-          vmImage: ubuntu-latest
         steps:
           - checkout: self
             fetchDepth: 0
@@ -93,12 +116,13 @@ stages:
               versionSpec: $(NODE_VERSION)
 
           - task: Cache@2
-            displayName: Cache npm packages
+            displayName: Cache node_modules
             inputs:
-              key: 'npm | "$(Agent.OS)" | package-lock.json'
+              key: 'node_modules | "$(Agent.OS)" | "$(NODE_VERSION)" | package-lock.json'
               restoreKeys: |
-                npm | "$(Agent.OS)"
-              path: $(npm_config_cache)
+                node_modules | "$(Agent.OS)" | "$(NODE_VERSION)"
+              path: $(NODE_MODULES_CACHE_PATH)
+              cacheHitVar: NODE_MODULES_CACHE_RESTORED
 
           - task: Cache@2
             displayName: Restore Next.js build cache
@@ -108,25 +132,9 @@ stages:
                 nextjs | "$(Agent.OS)"
               path: .next/cache
 
-          - script: npm ci
-            displayName: Install dependencies
-
-          - task: SonarCloudPrepare@4
-            displayName: Prepare SonarQube analysis
-            inputs:
-              SonarQube: SonarQube
-              organization: konarsubhojit
-              scannerMode: CLI
-              configMode: file
-              extraProperties: |
-                sonar.coverage.exclusions=src/app/**/page.tsx,src/app/**/layout.tsx,src/app/**/loading.tsx,src/app/**/error.tsx,src/lib/schema.ts,src/lib/db.ts,src/lib/env.ts,src/lib/redis.ts,src/lib/logger.ts,src/lib/qstash.ts,src/lib/qstash-events.ts,src/lib/queue.ts,src/lib/email/providers.ts,src/lib/constants/categories.ts,src/lib/constants/checkout-policies.ts,src/lib/search/**,src/lib/ai/**,src/proxy.ts,src/types/**
-
-          - task: DownloadPipelineArtifact@2
-            displayName: Download coverage report
-            continueOnError: true
-            inputs:
-              artifact: coverage-report
-              path: coverage
+          - script: npm ci $(NPM_CI_FLAGS)
+            displayName: Install dependencies (cache miss)
+            condition: ne(variables.NODE_MODULES_CACHE_RESTORED, 'true')
 
           - script: npm run build
             displayName: Build
@@ -136,10 +144,84 @@ stages:
               NEXTAUTH_URL: http://localhost:3000
               NEXT_TELEMETRY_DISABLED: 1
 
-          - task: SonarCloudAnalyze@4
-            displayName: Run SonarQube analysis
+  - stage: VercelPreview
+    displayName: Deploy to Vercel Preview
+    dependsOn: BuildAndAnalyze
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/develop'))
+    jobs:
+      - job: DeployPreview
+        displayName: Deploy Preview to Vercel
+        steps:
+          - checkout: self
+            fetchDepth: 2
 
-          - task: SonarCloudPublish@4
-            displayName: Publish SonarQube results
+          - task: NodeTool@0
+            displayName: Set up Node.js
             inputs:
-              pollingTimeoutSec: 600
+              versionSpec: $(NODE_VERSION)
+
+          - script: npm ci $(NPM_CI_FLAGS)
+            displayName: Install dependencies
+
+          - script: npm install --no-save --no-audit --fund=false --progress=false vercel
+            displayName: Install Vercel CLI
+
+          - script: |
+              npx vercel pull --yes --environment=preview --token=$VERCEL_TOKEN
+              cp .vercel/.env.preview.local .env.preview
+            displayName: Pull Vercel preview environment
+            env:
+              VERCEL_TOKEN: $(VERCEL_TOKEN)
+              VERCEL_ORG_ID: $(VERCEL_ORG_ID)
+              VERCEL_PROJECT_ID: $(VERCEL_PROJECT_ID)
+
+          - script: npm run db:migrate
+            displayName: Run preview database migrations
+
+          - script: npx vercel deploy --token=$VERCEL_TOKEN
+            displayName: Deploy to Vercel Preview (Vercel builds)
+            env:
+              VERCEL_TOKEN: $(VERCEL_TOKEN)
+              VERCEL_ORG_ID: $(VERCEL_ORG_ID)
+              VERCEL_PROJECT_ID: $(VERCEL_PROJECT_ID)
+
+  - stage: VercelProduction
+    displayName: Deploy to Vercel Production
+    dependsOn: BuildAndAnalyze
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
+    jobs:
+      - job: DeployProduction
+        displayName: Deploy Production to Vercel
+        steps:
+          - checkout: self
+            fetchDepth: 2
+
+          - task: NodeTool@0
+            displayName: Set up Node.js
+            inputs:
+              versionSpec: $(NODE_VERSION)
+
+          - script: npm ci $(NPM_CI_FLAGS)
+            displayName: Install dependencies
+
+          - script: npm install --no-save --no-audit --fund=false --progress=false vercel
+            displayName: Install Vercel CLI
+
+          - script: |
+              npx vercel pull --yes --environment=production --token=$VERCEL_TOKEN
+              cp .vercel/.env.production.local .env.production
+            displayName: Pull Vercel production environment
+            env:
+              VERCEL_TOKEN: $(VERCEL_TOKEN)
+              VERCEL_ORG_ID: $(VERCEL_ORG_ID)
+              VERCEL_PROJECT_ID: $(VERCEL_PROJECT_ID)
+
+          - script: npm run db:migrate
+            displayName: Run production database migrations
+
+          - script: npx vercel deploy --prod --token=$VERCEL_TOKEN
+            displayName: Deploy to Vercel Production (Vercel builds)
+            env:
+              VERCEL_TOKEN: $(VERCEL_TOKEN)
+              VERCEL_ORG_ID: $(VERCEL_ORG_ID)
+              VERCEL_PROJECT_ID: $(VERCEL_PROJECT_ID)

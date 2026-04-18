@@ -15,7 +15,7 @@ interface OrderItem {
     image: string
     price: number
   }
-  variation?: {
+  variant?: {
     id: string
     name: string
     price: number

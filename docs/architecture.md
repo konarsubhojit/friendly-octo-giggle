@@ -128,7 +128,7 @@ The codebase uses three Drizzle exports from `lib/db.ts`:
 The project no longer assumes generic CUID-style IDs for domain tables. Current patterns are:
 
 - Auth tables such as `User`, `Account`, and `PasswordHistory` use text UUID-style values.
-- Store domain entities such as products, categories, variations, carts, wishlists, reviews, and failed emails use short base62-style IDs.
+- Store domain entities such as products, categories, variants, carts, wishlists, reviews, and failed emails use short base62-style IDs.
 - Orders use a dedicated short order ID format.
 
 ### Core Domain Tables
@@ -137,10 +137,10 @@ Current schema highlights:
 
 - `User`: email, optional password hash, optional phone number, role, currency preference, image metadata.
 - `Product`: base product record with `image`, `images`, category label, stock, and soft-delete timestamp.
-- `ProductVariation`: per-variation stock, image set, name, design name, price modifier, soft-delete timestamp.
+- `ProductVariant`: per-variant stock, image set, name, design name, price modifier, soft-delete timestamp.
 - `Category`: standalone category table with sort order and soft-delete support.
 - `Order`: user association, customer snapshot fields, status, tracking number, shipping provider, timestamps.
-- `OrderItem`: product snapshot with optional variation and `customizationNote`.
+- `OrderItem`: product snapshot with optional variant and `customizationNote`.
 - `Cart` and `CartItem`: authenticated and guest cart support.
 - `Wishlist` and `Review`: user engagement features.
 - `ProductShare`: immutable short-link mapping for shareable product URLs.
@@ -149,14 +149,14 @@ Current schema highlights:
 ### Relationship Model
 
 - Users have many orders, accounts, password history rows, and wishlist entries.
-- Products have many variations, order items, cart items, wishlist entries, and reviews.
+- Products have many variants, order items, cart items, wishlist entries, and reviews.
 - Orders own their line items via cascade delete.
 - Carts own cart items via cascade delete.
-- Product shares optionally bind a product and a chosen variation.
+- Product shares optionally bind a product and a chosen variant.
 
 ### Soft Deletes
 
-Products, variations, and categories use `deletedAt` instead of hard deletes for normal removal paths. Most public queries explicitly filter out soft-deleted rows.
+Products, variants, and categories use `deletedAt` instead of hard deletes for normal removal paths. Most public queries explicitly filter out soft-deleted rows.
 
 ---
 
@@ -240,13 +240,13 @@ The current cart architecture still supports two ownership modes:
 
 The database remains the source of truth, while Redis can cache cart results when configured.
 
-### Product Variation and Pricing Model
+### Product Variant and Pricing Model
 
-Variation behavior in the live codebase is more capable than the earlier document described:
+Variant behavior in the live codebase is more capable than the earlier document described:
 
-- variations can override image and image gallery content
-- each variation has independent stock
-- price is base product price plus variation price modifier
+- variants can override image and image gallery content
+- each variant has independent stock
+- price is base product price plus variant price modifier
 - order items snapshot unit price at order time
 - order items can carry a `customizationNote`
 
@@ -287,7 +287,7 @@ Product search is split into two layers:
 Order search follows a similar hybrid strategy:
 
 - try Redis-backed order search helpers first
-- fall back to direct SQL search against orders, product names, and variation names
+- fall back to direct SQL search against orders, product names, and variant names
 - cache successful DB search results for short periods
 
 ### Client State and Providers

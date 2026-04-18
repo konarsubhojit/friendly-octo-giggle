@@ -105,7 +105,10 @@ export const useCursorPagination = <T>({
   const pendingPaginationRequestsRef = useRef<
     Map<string, Promise<PaginatedResponse<T>>>
   >(new Map())
-  transformRef.current = transform
+
+  useEffect(() => {
+    transformRef.current = transform
+  }, [transform])
 
   const syncPageCursors = useCallback((nextValue: Array<string | null>) => {
     pageCursorsRef.current = nextValue
