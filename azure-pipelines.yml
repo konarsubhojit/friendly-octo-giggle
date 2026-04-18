@@ -23,9 +23,8 @@ pr:
 
 variables:
   NODE_VERSION: '22'
-  NPM_CI_FLAGS: '--cache $(npm_config_cache) --no-audit --no-fund'
+  NPM_CI_FLAGS: '--no-audit --no-fund'
   NODE_MODULES_CACHE_PATH: $(System.DefaultWorkingDirectory)/node_modules
-  npm_config_cache: $(Pipeline.Workspace)/.npm
 
 pool:
   vmImage: 'ubuntu-latest'
@@ -73,14 +72,6 @@ stages:
             displayName: Set up Node.js
             inputs:
               versionSpec: $(NODE_VERSION)
-
-          - task: Cache@2
-            displayName: Cache npm cache
-            inputs:
-              key: 'npm | "$(Agent.OS)" | "$(NODE_VERSION)" | package-lock.json'
-              restoreKeys: |
-                npm | "$(Agent.OS)" | "$(NODE_VERSION)"
-              path: $(npm_config_cache)
 
           - script: npm ci $(NPM_CI_FLAGS)
             displayName: Install dependencies
