@@ -36,6 +36,10 @@ export const EnvSchema = z
     NEXT_PUBLIC_UPSTASH_SEARCH_REST_READONLY_TOKEN: z.string().optional(),
     GOOGLE_GENERATIVE_AI_API_KEY: z.string().optional(),
     SENTRY_DSN: z.url().optional(),
+    IMAGE_UPLOAD_PROVIDER: z.enum(['vercel', 'azure']).optional(),
+    AZURE_BLOB_ACCOUNTS_JSON: z.string().optional(),
+    AZURE_BLOB_DEFAULT_ACCOUNT_ALIAS: z.string().optional(),
+    AZURE_BLOB_AUTO_CREATE_CONTAINER: z.enum(['true', 'false']).optional(),
   })
   .superRefine((data, ctx) => {
     // Skip production-only checks during build phase (next build sets NODE_ENV=production)
