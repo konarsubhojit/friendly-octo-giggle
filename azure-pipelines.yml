@@ -74,28 +74,19 @@ stages:
             inputs:
               versionSpec: $(NODE_VERSION)
 
+          - task: Cache@2
+            displayName: Cache npm cache
+            inputs:
+              key: 'npm | "$(Agent.OS)" | "$(NODE_VERSION)" | package-lock.json'
+              restoreKeys: |
+                npm | "$(Agent.OS)" | "$(NODE_VERSION)"
               path: $(npm_config_cache)
 
-          - task: Cache@2
-            displayName: Cache node_modules
-            inputs:
-              key: 'node_modules | "$(Agent.OS)" | "$(NODE_VERSION)" | package-lock.json'
-              restoreKeys: |
-                node_modules | "$(Agent.OS)" | "$(NODE_VERSION)"
-              path: $(NODE_MODULES_CACHE_PATH)
-              cacheHitVar: NODE_MODULES_CACHE_RESTORED
-
           - script: npm ci $(NPM_CI_FLAGS)
-            displayName: Install dependencies (cache miss)
-            condition: ne(variables.NODE_MODULES_CACHE_RESTORED, 'true')
+            displayName: Install dependencies
 
-          - script: |
-              if [ "$(Build.SourceBranch)" = "refs/heads/develop" ]; then
-                npm run test:coverage
-              else
-                npm run test
-              fi
-            displayName: Run tests (coverage on develop)
+          - script: npm run test:coverage
+            displayName: Run tests
 
           - task: PublishPipelineArtifact@1
             displayName: Upload coverage report
