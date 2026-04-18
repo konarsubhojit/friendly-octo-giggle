@@ -192,8 +192,8 @@ describe('CartItemRow', () => {
     expect(screen.queryByLabelText('Quantity for Handmade Basket')).toBeNull()
   })
 
-  it('renders variation details when present', () => {
-    const itemWithVariation: CartItemWithProduct = {
+  it('renders variant details when present', () => {
+    const itemWithVariant: CartItemWithProduct = {
       ...baseItem,
       variantId: 'var1',
       variant: {
@@ -212,7 +212,7 @@ describe('CartItemRow', () => {
 
     render(
       <CartItemRow
-        item={itemWithVariation}
+        item={itemWithVariant}
         isLast={false}
         updating={null}
         customizationNote=""

@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import React from 'react'
-import VariationList from '@/features/admin/components/VariantList'
+import VariantList from '@/features/admin/components/VariantList'
 import type { ProductVariant } from '@/lib/types'
 
 vi.mock('react-hot-toast', () => ({
@@ -60,43 +60,43 @@ const mockVariant: ProductVariant = {
   updatedAt: '2025-01-01T00:00:00.000Z',
 }
 
-describe('VariationList', () => {
+describe('VariantList', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.stubGlobal('fetch', vi.fn())
   })
 
-  it('renders empty state when no variations', () => {
-    render(<VariationList productId="abc1234" initialVariants={[]} />)
+  it('renders empty state when no variants', () => {
+    render(<VariantList productId="abc1234" initialVariants={[]} />)
     expect(screen.getByText('No variants yet')).toBeInTheDocument()
     expect(screen.getByText('Add Variant')).toBeInTheDocument()
   })
 
-  it('renders variation cards with correct data', () => {
+  it('renders variant cards with correct data', () => {
     render(
-      <VariationList productId="abc1234" initialVariants={[mockVariant]} />
+      <VariantList productId="abc1234" initialVariants={[mockVariant]} />
     )
     expect(screen.getByText('RED-LG')).toBeInTheDocument()
     expect(screen.getByText('25 in stock')).toBeInTheDocument()
     expect(screen.getByText('Variants (1)')).toBeInTheDocument()
   })
 
-  it('displays variation price', () => {
+  it('displays variant price', () => {
     render(
-      <VariationList productId="abc1234" initialVariants={[mockVariant]} />
+      <VariantList productId="abc1234" initialVariants={[mockVariant]} />
     )
     expect(screen.getByText('$150.00')).toBeInTheDocument()
   })
 
-  it('shows variant id for variations without sku', () => {
+  it('shows variant id for variants without sku', () => {
     const noSku = { ...mockVariant, sku: null }
-    render(<VariationList productId="abc1234" initialVariants={[noSku]} />)
+    render(<VariantList productId="abc1234" initialVariants={[noSku]} />)
     expect(screen.getByText('var1234')).toBeInTheDocument()
   })
 
   it('renders Edit and Delete buttons', () => {
     render(
-      <VariationList productId="abc1234" initialVariants={[mockVariant]} />
+      <VariantList productId="abc1234" initialVariants={[mockVariant]} />
     )
     expect(
       screen.getByRole('button', {
@@ -108,16 +108,16 @@ describe('VariationList', () => {
     ).toBeInTheDocument()
   })
 
-  it('renders Add Variation button when variations exist', () => {
+  it('renders Add Variant button when variants exist', () => {
     render(
-      <VariationList productId="abc1234" initialVariants={[mockVariant]} />
+      <VariantList productId="abc1234" initialVariants={[mockVariant]} />
     )
     expect(screen.getByText('Add Variant')).toBeInTheDocument()
   })
 
   it('keeps quick edit fields collapsed until edit is opened', () => {
     render(
-      <VariationList productId="abc1234" initialVariants={[mockVariant]} />
+      <VariantList productId="abc1234" initialVariants={[mockVariant]} />
     )
 
     expect(screen.queryByLabelText('Price for RED-LG')).not.toBeInTheDocument()
@@ -126,7 +126,7 @@ describe('VariationList', () => {
 
   it('expands quick edit fields when the edit action is clicked', () => {
     render(
-      <VariationList productId="abc1234" initialVariants={[mockVariant]} />
+      <VariantList productId="abc1234" initialVariants={[mockVariant]} />
     )
 
     fireEvent.click(
@@ -157,7 +157,7 @@ describe('VariationList', () => {
     vi.stubGlobal('fetch', mockFetch)
 
     render(
-      <VariationList productId="abc1234" initialVariants={[mockVariant]} />
+      <VariantList productId="abc1234" initialVariants={[mockVariant]} />
     )
 
     fireEvent.click(
@@ -194,7 +194,7 @@ describe('VariationList', () => {
     const mockToast = await import('react-hot-toast')
 
     render(
-      <VariationList productId="abc1234" initialVariants={[mockVariant]} />
+      <VariantList productId="abc1234" initialVariants={[mockVariant]} />
     )
 
     fireEvent.click(
@@ -219,7 +219,7 @@ describe('VariationList', () => {
     const mockToast = await import('react-hot-toast')
 
     render(
-      <VariationList productId="abc1234" initialVariants={[mockVariant]} />
+      <VariantList productId="abc1234" initialVariants={[mockVariant]} />
     )
 
     fireEvent.click(
@@ -253,7 +253,7 @@ describe('VariationList', () => {
     const mockToast = await import('react-hot-toast')
 
     render(
-      <VariationList productId="abc1234" initialVariants={[mockVariant]} />
+      <VariantList productId="abc1234" initialVariants={[mockVariant]} />
     )
 
     fireEvent.click(
@@ -278,7 +278,7 @@ describe('VariationList', () => {
 
   it('shows Reset button when draft values differ and resets on click', () => {
     render(
-      <VariationList productId="abc1234" initialVariants={[mockVariant]} />
+      <VariantList productId="abc1234" initialVariants={[mockVariant]} />
     )
 
     fireEvent.click(
@@ -309,7 +309,7 @@ describe('VariationList', () => {
     const mockToast = await import('react-hot-toast')
 
     render(
-      <VariationList productId="abc1234" initialVariants={[mockVariant]} />
+      <VariantList productId="abc1234" initialVariants={[mockVariant]} />
     )
 
     fireEvent.click(screen.getByRole('button', { name: 'Delete RED-LG' }))
@@ -348,7 +348,7 @@ describe('VariationList', () => {
       ],
     }
     render(
-      <VariationList
+      <VariantList
         productId="abc1234"
         initialVariants={[variantWithOptions]}
       />
@@ -359,7 +359,7 @@ describe('VariationList', () => {
   it('renders variant without image using placeholder', () => {
     const noImageVariant = { ...mockVariant, image: null }
     render(
-      <VariationList productId="abc1234" initialVariants={[noImageVariant]} />
+      <VariantList productId="abc1234" initialVariants={[noImageVariant]} />
     )
     expect(screen.getByText('📦')).toBeInTheDocument()
   })

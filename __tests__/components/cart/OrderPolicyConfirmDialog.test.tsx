@@ -7,7 +7,7 @@ import { OrderPolicyConfirmDialog } from '@/features/cart/components/OrderPolicy
 const mockLineItems = [
   {
     name: 'Hand-knitted Flower Bouquet',
-    variationLabel: 'Small (15 cm) - Rose Red',
+    variantLabel: 'Small (15 cm) - Rose Red',
     quantity: 2,
     unitPrice: 1499,
     lineTotal: 2998,
@@ -15,7 +15,7 @@ const mockLineItems = [
   },
   {
     name: 'Macramé Wall Hanging',
-    variationLabel: null,
+    variantLabel: null,
     quantity: 1,
     unitPrice: 2299,
     lineTotal: 2299,

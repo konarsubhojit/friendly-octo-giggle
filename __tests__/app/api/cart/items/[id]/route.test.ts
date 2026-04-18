@@ -152,7 +152,7 @@ describe('PATCH /api/cart/items/[id]', () => {
     expect(data.error).toBe('Insufficient stock')
   })
 
-  it('returns 400 for insufficient stock with variation', async () => {
+  it('returns 400 for insufficient stock with variant', async () => {
     mockAuth.mockResolvedValue({ user: { id: 'user1' } } as never)
     mockFindFirst.mockResolvedValue({
       id: 'item1',

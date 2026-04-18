@@ -66,7 +66,7 @@ const dispatchEmail = (event: QStashEvent): void => {
         name: item.name,
         quantity: item.quantity,
         price: formatPriceForCurrency(item.price, currency),
-        variation: null,
+        variant: null,
       })),
     })
   } else {

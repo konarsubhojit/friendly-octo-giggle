@@ -27,17 +27,17 @@ describe('RecentOrdersSection', () => {
                 {
                   quantity: 1,
                   product: { name: 'Rose Gift Box' },
-                  variation: null,
+                  variant: null,
                 },
                 {
                   quantity: 2,
                   product: { name: 'Lily Vase' },
-                  variation: null,
+                  variant: null,
                 },
                 {
                   quantity: 1,
                   product: { name: 'Tulip Candle' },
-                  variation: null,
+                  variant: null,
                 },
               ],
             },

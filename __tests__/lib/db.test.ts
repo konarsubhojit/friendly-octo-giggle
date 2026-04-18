@@ -492,7 +492,7 @@ describe('db.shares', () => {
       expect(result).toBe('shr1234')
     })
 
-    it('inserts a share record with a variationId', async () => {
+    it('inserts a share record with a variantId', async () => {
       mockReturningInsert.mockResolvedValue([{ key: 'shr5678' }])
 
       const result = await db.shares.create('prd1234', 'var5678')

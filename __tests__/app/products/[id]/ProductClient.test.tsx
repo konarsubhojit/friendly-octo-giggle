@@ -95,7 +95,7 @@ vi.mock('@/features/product/components/VariantButton', () => ({
     onSelect: (v: ProductVariant) => void
   }) => (
     <button
-      data-testid={`variation-btn-${variant.id}`}
+      data-testid={`variant-btn-${variant.id}`}
       aria-pressed={isSelected}
       onClick={() => onSelect(variant)}
     >
@@ -178,7 +178,7 @@ const makeProduct = (overrides: Partial<Product> = {}): Product => {
   }
 }
 
-const makeVariation = (
+const makeVariant = (
   overrides: Partial<ProductVariant> = {}
 ): ProductVariant => {
   return {
@@ -257,7 +257,7 @@ describe('ProductClient', () => {
   })
 
   it('renders add-to-cart section when product is in stock', () => {
-    const product = makeProduct({ variants: [makeVariation({ stock: 10 })] })
+    const product = makeProduct({ variants: [makeVariant({ stock: 10 })] })
     render(
       <ProductClient product={product} initialVariantId={null} aiEnabled />
     )
@@ -269,7 +269,7 @@ describe('ProductClient', () => {
   })
 
   it('renders out-of-stock panel when product stock is 0', () => {
-    const product = makeProduct({ variants: [makeVariation({ stock: 0 })] })
+    const product = makeProduct({ variants: [makeVariant({ stock: 0 })] })
     render(
       <ProductClient product={product} initialVariantId={null} aiEnabled />
     )
@@ -283,7 +283,7 @@ describe('ProductClient', () => {
 
   it('shows "all stock in cart" panel when cart quantity equals stock', () => {
     const product = makeProduct({
-      variants: [makeVariation({ id: 'var001', stock: 3 })],
+      variants: [makeVariant({ id: 'var001', stock: 3 })],
     })
     vi.mocked(useSelector).mockImplementation((selector) =>
       selector({
@@ -466,23 +466,23 @@ describe('ProductClient', () => {
     })
   })
 
-  it('renders variation buttons for colour variations', () => {
+  it('renders variant buttons for colour variants', () => {
     const variants = [
-      makeVariation({ id: 'var001' }),
-      makeVariation({ id: 'var002' }),
+      makeVariant({ id: 'var001' }),
+      makeVariant({ id: 'var002' }),
     ]
     const product = makeProduct({ variants })
     render(
       <ProductClient product={product} initialVariantId={null} aiEnabled />
     )
 
-    expect(screen.getByTestId('variation-btn-var001')).toBeInTheDocument()
-    expect(screen.getByTestId('variation-btn-var002')).toBeInTheDocument()
+    expect(screen.getByTestId('variant-btn-var001')).toBeInTheDocument()
+    expect(screen.getByTestId('variant-btn-var002')).toBeInTheDocument()
   })
 
-  it('selects initial variation from initialVariantId prop', () => {
-    const variation = makeVariation({ id: 'var001', price: 750 })
-    const product = makeProduct({ variants: [variation] })
+  it('selects initial variant from initialVariantId prop', () => {
+    const variant = makeVariant({ id: 'var001', price: 750 })
+    const product = makeProduct({ variants: [variant] })
     render(
       <ProductClient product={product} initialVariantId="var001" aiEnabled />
     )
@@ -490,10 +490,10 @@ describe('ProductClient', () => {
     expect(screen.getAllByText('₹750.00')).toHaveLength(2)
   })
 
-  it('selecting a variation updates the displayed price', () => {
+  it('selecting a variant updates the displayed price', () => {
     const variants = [
-      makeVariation({ id: 'default-var', price: 500 }),
-      makeVariation({ id: 'var001', price: 750 }),
+      makeVariant({ id: 'default-var', price: 500 }),
+      makeVariant({ id: 'var001', price: 750 }),
     ]
     const product = makeProduct({ variants })
     render(
@@ -503,14 +503,14 @@ describe('ProductClient', () => {
     expect(screen.getAllByText('₹500.00')).toHaveLength(2)
 
     act(() => {
-      fireEvent.click(screen.getByTestId('variation-btn-var001'))
+      fireEvent.click(screen.getByTestId('variant-btn-var001'))
     })
 
     expect(screen.getAllByText('₹750.00')).toHaveLength(2)
   })
 
   it('quantity selector renders with options up to stock (max 10)', () => {
-    const product = makeProduct({ variants: [makeVariation({ stock: 5 })] })
+    const product = makeProduct({ variants: [makeVariant({ stock: 5 })] })
     render(
       <ProductClient product={product} initialVariantId={null} aiEnabled />
     )
@@ -522,7 +522,7 @@ describe('ProductClient', () => {
 
   it('shows already-in-cart notice when items are in cart', () => {
     const product = makeProduct({
-      variants: [makeVariation({ id: 'var001', stock: 10 })],
+      variants: [makeVariant({ id: 'var001', stock: 10 })],
     })
     vi.mocked(useSelector).mockImplementation((selector) =>
       selector({
@@ -561,7 +561,7 @@ describe('ProductClient', () => {
   })
 
   it('shows total price (quantity × price) in add-to-cart section', () => {
-    const product = makeProduct({ variants: [makeVariation({ price: 500 })] })
+    const product = makeProduct({ variants: [makeVariant({ price: 500 })] })
     render(
       <ProductClient product={product} initialVariantId={null} aiEnabled />
     )
@@ -638,7 +638,7 @@ describe('ProductClient', () => {
 
   it('renders option-based variant selector when product has options', () => {
     const variants = [
-      makeVariation({
+      makeVariant({
         id: 'var-red-sm',
         price: 500,
         stock: 5,
@@ -659,7 +659,7 @@ describe('ProductClient', () => {
           },
         ],
       }),
-      makeVariation({
+      makeVariant({
         id: 'var-blue-sm',
         price: 600,
         stock: 3,
@@ -745,7 +745,7 @@ describe('ProductClient', () => {
 
   it('switches variant when option button is clicked', () => {
     const variants = [
-      makeVariation({
+      makeVariant({
         id: 'var-red-sm',
         price: 500,
         stock: 5,
@@ -766,7 +766,7 @@ describe('ProductClient', () => {
           },
         ],
       }),
-      makeVariation({
+      makeVariant({
         id: 'var-blue-sm',
         price: 600,
         stock: 3,
@@ -855,7 +855,7 @@ describe('ProductClient', () => {
   })
 
   it('uses variant images when selected variant has images', () => {
-    const variant = makeVariation({
+    const variant = makeVariant({
       id: 'var-with-img',
       image: 'https://example.com/variant.jpg',
       images: ['https://example.com/variant2.jpg'],
@@ -880,7 +880,7 @@ describe('ProductClient', () => {
 
   it('shows low stock warning when variant stock is between 1 and 5 with options', () => {
     const variants = [
-      makeVariation({
+      makeVariant({
         id: 'var-low',
         price: 500,
         stock: 3,
@@ -956,7 +956,7 @@ describe('ProductClient', () => {
   it('hides unavailable option values based on selected options', () => {
     // Red comes in S and L; Blue only comes in S — no Blue-L variant exists
     const variants = [
-      makeVariation({
+      makeVariant({
         id: 'var-red-s',
         price: 500,
         stock: 5,
@@ -977,7 +977,7 @@ describe('ProductClient', () => {
           },
         ],
       }),
-      makeVariation({
+      makeVariant({
         id: 'var-red-l',
         price: 550,
         stock: 3,
@@ -998,7 +998,7 @@ describe('ProductClient', () => {
           },
         ],
       }),
-      makeVariation({
+      makeVariant({
         id: 'var-blue-s',
         price: 600,
         stock: 4,
@@ -1097,7 +1097,7 @@ describe('ProductClient', () => {
   it('auto-selects valid combination when current selection becomes unavailable', () => {
     // Red has S and L; Blue only has S
     const variants = [
-      makeVariation({
+      makeVariant({
         id: 'var-red-s',
         price: 500,
         stock: 5,
@@ -1118,7 +1118,7 @@ describe('ProductClient', () => {
           },
         ],
       }),
-      makeVariation({
+      makeVariant({
         id: 'var-red-l',
         price: 550,
         stock: 3,
@@ -1139,7 +1139,7 @@ describe('ProductClient', () => {
           },
         ],
       }),
-      makeVariation({
+      makeVariant({
         id: 'var-blue-s',
         price: 600,
         stock: 4,
@@ -1237,7 +1237,7 @@ describe('ProductClient', () => {
   it('shows all sizes when no color is initially selected for a single-option product', () => {
     // A product with only one option (Size) should always show all values
     const variants = [
-      makeVariation({
+      makeVariant({
         id: 'var-s',
         price: 500,
         stock: 5,
@@ -1251,7 +1251,7 @@ describe('ProductClient', () => {
           },
         ],
       }),
-      makeVariation({
+      makeVariant({
         id: 'var-m',
         price: 550,
         stock: 3,
@@ -1265,7 +1265,7 @@ describe('ProductClient', () => {
           },
         ],
       }),
-      makeVariation({
+      makeVariant({
         id: 'var-l',
         price: 600,
         stock: 4,
@@ -1332,7 +1332,7 @@ describe('ProductClient', () => {
   it('shows out-of-stock option values as clickable buttons with visual indicator', () => {
     // Red-S is in stock, Red-L is out of stock
     const variants = [
-      makeVariation({
+      makeVariant({
         id: 'var-red-s',
         price: 500,
         stock: 5,
@@ -1353,7 +1353,7 @@ describe('ProductClient', () => {
           },
         ],
       }),
-      makeVariation({
+      makeVariant({
         id: 'var-red-l',
         price: 550,
         stock: 0,
@@ -1458,7 +1458,7 @@ describe('ProductClient', () => {
   it('shows out-of-stock color as clickable and selecting it shows out-of-stock view', () => {
     // Red-S in stock, Blue-S out of stock
     const variants = [
-      makeVariation({
+      makeVariant({
         id: 'var-red-s',
         price: 500,
         stock: 5,
@@ -1479,7 +1479,7 @@ describe('ProductClient', () => {
           },
         ],
       }),
-      makeVariation({
+      makeVariant({
         id: 'var-blue-s',
         price: 600,
         stock: 0,

@@ -53,7 +53,7 @@ describe('orderConfirmationTemplate', () => {
         name: 'Candle Set',
         quantity: 1,
         price: '₹501.00',
-        variation: 'Rose Gold',
+        variant: 'Rose Gold',
       },
     ],
     shippingAddress: '123 Main St\nBangalore, KA 560001',
@@ -81,7 +81,7 @@ describe('orderConfirmationTemplate', () => {
     expect(result.html).toContain('Candle Set')
   })
 
-  it('HTML contains variation info', () => {
+  it('HTML contains variant info', () => {
     const result = orderConfirmationTemplate(data)
     expect(result.html).toContain('Rose Gold')
   })

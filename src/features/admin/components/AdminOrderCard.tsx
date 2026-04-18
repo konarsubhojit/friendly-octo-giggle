@@ -18,7 +18,7 @@ interface AdminOrderItem {
   price: number
   customizationNote?: string | null
   product?: { id: string; name: string; image: string }
-  variation?: { id: string; name: string; price: number } | null
+  variant?: { id: string; name: string; price: number } | null
 }
 
 interface AdminOrder {
@@ -75,9 +75,9 @@ function OrderItemRow({ item }: OrderItemRowProps) {
         </Badge>
       </div>
       <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
-        {item.variation && (
+        {item.variant && (
           <p className="text-blue-600 dark:text-blue-400">
-            {item.variation.name}
+            {item.variant.name}
           </p>
         )}
         <p>{item.quantity === 1 ? 'Single unit' : `${item.quantity} units`}</p>
