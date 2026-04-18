@@ -63,6 +63,11 @@ stages:
 
       - job: Test
         displayName: Test
+        pool:
+          ${{ if and(ne(variables['Build.Reason'], 'PullRequest'), or(eq(variables['Build.SourceBranch'], 'refs/heads/develop'), eq(variables['Build.SourceBranch'], 'refs/heads/master'))) }}:
+            name: default
+          ${{ else }}:
+            vmImage: 'ubuntu-latest'
         steps:
           - task: NodeTool@0
             displayName: Set up Node.js
