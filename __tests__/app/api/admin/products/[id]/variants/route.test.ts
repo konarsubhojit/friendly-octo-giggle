@@ -106,13 +106,13 @@ function makeRequest(url: string, method: string, body?: unknown) {
   })
 }
 
-describe('GET /api/admin/products/[id]/variations', () => {
-  let GET: typeof import('@/app/api/admin/products/[id]/variations/route').GET
+describe('GET /api/admin/products/[id]/variants', () => {
+  let GET: typeof import('@/app/api/admin/products/[id]/variants/route').GET
 
   beforeEach(async () => {
     vi.resetAllMocks()
     mockCheckAdminAuth.mockResolvedValue({ authorized: true, userId: 'a1' })
-    const mod = await import('@/app/api/admin/products/[id]/variations/route')
+    const mod = await import('@/app/api/admin/products/[id]/variants/route')
     GET = mod.GET
   })
 
@@ -124,7 +124,7 @@ describe('GET /api/admin/products/[id]/variations', () => {
     } as never)
     const res = await GET(
       makeRequest(
-        'http://localhost/api/admin/products/abc1234/variations',
+        'http://localhost/api/admin/products/abc1234/variants',
         'GET'
       ),
       { params: Promise.resolve({ id: 'abc1234' }) }
@@ -140,7 +140,7 @@ describe('GET /api/admin/products/[id]/variations', () => {
     } as never)
     const res = await GET(
       makeRequest(
-        'http://localhost/api/admin/products/abc1234/variations',
+        'http://localhost/api/admin/products/abc1234/variants',
         'GET'
       ),
       { params: Promise.resolve({ id: 'abc1234' }) }
@@ -152,7 +152,7 @@ describe('GET /api/admin/products/[id]/variations', () => {
     mockFindFirst.mockResolvedValueOnce(null)
     const res = await GET(
       makeRequest(
-        'http://localhost/api/admin/products/abc1234/variations',
+        'http://localhost/api/admin/products/abc1234/variants',
         'GET'
       ),
       { params: Promise.resolve({ id: 'abc1234' }) }
@@ -165,7 +165,7 @@ describe('GET /api/admin/products/[id]/variations', () => {
     mockFindMany.mockResolvedValueOnce([mockVariant])
     const res = await GET(
       makeRequest(
-        'http://localhost/api/admin/products/abc1234/variations',
+        'http://localhost/api/admin/products/abc1234/variants',
         'GET'
       ),
       { params: Promise.resolve({ id: 'abc1234' }) }
@@ -177,13 +177,13 @@ describe('GET /api/admin/products/[id]/variations', () => {
   })
 })
 
-describe('POST /api/admin/products/[id]/variations', () => {
-  let POST: typeof import('@/app/api/admin/products/[id]/variations/route').POST
+describe('POST /api/admin/products/[id]/variants', () => {
+  let POST: typeof import('@/app/api/admin/products/[id]/variants/route').POST
 
   beforeEach(async () => {
     vi.resetAllMocks()
     mockCheckAdminAuth.mockResolvedValue({ authorized: true, userId: 'a1' })
-    const mod = await import('@/app/api/admin/products/[id]/variations/route')
+    const mod = await import('@/app/api/admin/products/[id]/variants/route')
     POST = mod.POST
   })
 
@@ -200,7 +200,7 @@ describe('POST /api/admin/products/[id]/variations', () => {
     } as never)
     const res = await POST(
       makeRequest(
-        'http://localhost/api/admin/products/abc1234/variations',
+        'http://localhost/api/admin/products/abc1234/variants',
         'POST',
         validBody
       ),
@@ -217,7 +217,7 @@ describe('POST /api/admin/products/[id]/variations', () => {
     } as never)
     const res = await POST(
       makeRequest(
-        'http://localhost/api/admin/products/abc1234/variations',
+        'http://localhost/api/admin/products/abc1234/variants',
         'POST',
         validBody
       ),
@@ -230,7 +230,7 @@ describe('POST /api/admin/products/[id]/variations', () => {
     mockFindFirst.mockResolvedValueOnce(mockProduct)
     const res = await POST(
       makeRequest(
-        'http://localhost/api/admin/products/abc1234/variations',
+        'http://localhost/api/admin/products/abc1234/variants',
         'POST',
         { stock: -1 }
       ),
@@ -243,7 +243,7 @@ describe('POST /api/admin/products/[id]/variations', () => {
     mockFindFirst.mockResolvedValueOnce(mockProduct)
     const res = await POST(
       makeRequest(
-        'http://localhost/api/admin/products/abc1234/variations',
+        'http://localhost/api/admin/products/abc1234/variants',
         'POST',
         {
           ...validBody,
@@ -260,7 +260,7 @@ describe('POST /api/admin/products/[id]/variations', () => {
     mockFindMany.mockResolvedValueOnce(Array(25).fill({ id: 'x' }))
     const res = await POST(
       makeRequest(
-        'http://localhost/api/admin/products/abc1234/variations',
+        'http://localhost/api/admin/products/abc1234/variants',
         'POST',
         validBody
       ),
@@ -277,7 +277,7 @@ describe('POST /api/admin/products/[id]/variations', () => {
     mockReturning.mockResolvedValueOnce([mockVariant])
     const res = await POST(
       makeRequest(
-        'http://localhost/api/admin/products/abc1234/variations',
+        'http://localhost/api/admin/products/abc1234/variants',
         'POST',
         validBody
       ),

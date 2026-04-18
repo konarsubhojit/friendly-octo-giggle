@@ -10,7 +10,7 @@ export interface OrderEmailItem {
   name: string
   quantity: number
   price: string
-  variation?: string | null
+  variant?: string | null
 }
 
 export interface OrderConfirmationData {
@@ -88,7 +88,7 @@ const itemsTableHtml = (items: OrderEmailItem[]) => `
         (item) => `
     <tr>
       <td style="padding:10px 12px;border-bottom:1px solid #F2E8E4;color:#5C4A44;font-size:13px;">
-        ${escapeHtml(item.name)}${item.variation ? `<br><span style="color:#7a5543;font-size:12px;">${escapeHtml(item.variation)}</span>` : ''}
+        ${escapeHtml(item.name)}${item.variant ? `<br><span style="color:#7a5543;font-size:12px;">${escapeHtml(item.variant)}</span>` : ''}
       </td>
       <td style="padding:10px 12px;border-bottom:1px solid #F2E8E4;text-align:center;color:#5C4A44;font-size:13px;">${item.quantity}</td>
       <td style="padding:10px 12px;border-bottom:1px solid #F2E8E4;text-align:right;color:#b83060;font-size:13px;font-weight:600;">${escapeHtml(item.price)}</td>
@@ -136,8 +136,15 @@ export const orderConfirmationTemplate = (data: OrderConfirmationData) => {
 
   const itemLines = data.items
     .map((item) => {
-      const variationStr = item.variation ? ` (${item.variation})` : ''
-      return `- ${item.name} x${item.quantity}: ${item.price}${variationStr}`
+      const sanitizedVariant = item.variant
+        ? item.variant
+            .trim()
+            .replace(/[\r\n\t\x00-\x1F\x7F]/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim()
+        : ''
+      const variantStr = sanitizedVariant ? ` (${sanitizedVariant})` : ''
+      return `- ${item.name} x${item.quantity}: ${item.price}${variantStr}`
     })
     .join('\n')
 

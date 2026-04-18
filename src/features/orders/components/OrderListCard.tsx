@@ -18,7 +18,7 @@ const STATUS_CONFIG: Record<string, { label: string }> = {
 interface OrderItem {
   readonly quantity: number
   readonly product?: { name: string; image: string } | null
-  readonly variation?: {
+  readonly variant?: {
     id: string
     name: string
     price: number

@@ -121,7 +121,7 @@ describe('order-summary', () => {
       expect(result).toEqual([
         {
           name: 'Widget',
-          variationLabel: null,
+          variantLabel: null,
           quantity: 2,
           unitPrice: 100,
           lineTotal: 200,
@@ -130,7 +130,7 @@ describe('order-summary', () => {
       ])
     })
 
-    it('uses variation price when variation exists', () => {
+    it('uses variant price when variant exists', () => {
       const items = [
         {
           quantity: 1,
@@ -144,11 +144,11 @@ describe('order-summary', () => {
 
       expect(result[0].unitPrice).toBe(150)
       expect(result[0].lineTotal).toBe(150)
-      expect(result[0].variationLabel).toBe('Large')
+      expect(result[0].variantLabel).toBe('Large')
       expect(result[0].customizationNote).toBe('Custom text')
     })
 
-    it('includes sku in variation label', () => {
+    it('includes sku in variant label', () => {
       const items = [
         {
           quantity: 1,
@@ -159,10 +159,10 @@ describe('order-summary', () => {
 
       const result = buildCheckoutSummaryLineItems(items)
 
-      expect(result[0].variationLabel).toBe('Blue - Ocean')
+      expect(result[0].variantLabel).toBe('Blue - Ocean')
     })
 
-    it('deduplicates variation name and sku when same', () => {
+    it('deduplicates variant name and sku when same', () => {
       const items = [
         {
           quantity: 1,
@@ -173,7 +173,7 @@ describe('order-summary', () => {
 
       const result = buildCheckoutSummaryLineItems(items)
 
-      expect(result[0].variationLabel).toBe('Blue')
+      expect(result[0].variantLabel).toBe('Blue')
     })
 
     it('handles missing product', () => {
@@ -181,7 +181,7 @@ describe('order-summary', () => {
         {
           quantity: 3,
           product: null,
-          variation: null,
+          variant: null,
         },
       ]
 
@@ -196,7 +196,7 @@ describe('order-summary', () => {
       const items = [
         {
           product: { price: 50, name: 'Item' },
-          variation: null,
+          variant: null,
         },
       ]
 
@@ -241,7 +241,7 @@ describe('order-summary', () => {
       expect(result.total).toBe(350)
     })
 
-    it('uses variation prices in total', () => {
+    it('uses variant prices in total', () => {
       const items = [
         {
           quantity: 1,
@@ -273,7 +273,7 @@ describe('order-summary', () => {
       const lineItems = [
         {
           name: 'Widget',
-          variationLabel: null,
+          variantLabel: null,
           quantity: 2,
           unitPrice: 100,
           lineTotal: 200,
@@ -281,7 +281,7 @@ describe('order-summary', () => {
         },
         {
           name: 'Gadget',
-          variationLabel: 'Blue',
+          variantLabel: 'Blue',
           quantity: 1,
           unitPrice: 50,
           lineTotal: 50,

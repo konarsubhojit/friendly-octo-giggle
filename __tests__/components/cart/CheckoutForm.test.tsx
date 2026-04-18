@@ -59,13 +59,13 @@ const mockCart = {
         createdAt: '2026-03-01T00:00:00.000Z',
         updatedAt: '2026-03-01T00:00:00.000Z',
       },
-      variation: {
+      variant: {
         id: 'var0001',
         productId: 'prd0001',
         styleId: null,
         name: 'Small (15 cm)',
         designName: 'Rose Red',
-        variationType: 'styling' as const,
+        variantType: 'styling' as const,
         image: null,
         images: [],
         price: 100,

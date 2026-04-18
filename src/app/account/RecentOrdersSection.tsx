@@ -15,7 +15,7 @@ import {
 interface RecentOrderItem {
   readonly quantity: number
   readonly product?: { readonly name: string } | null
-  readonly variation?: { readonly name: string } | null
+  readonly variant?: { readonly name: string } | null
 }
 
 interface RecentOrder {

@@ -723,7 +723,7 @@ export const createOrderForUser = async ({
         name: item.product.name,
         quantity: item.quantity,
         price: formatPriceForCurrency(item.price, currencyCode),
-        variation: null,
+        variant: null,
       })),
     })
   }

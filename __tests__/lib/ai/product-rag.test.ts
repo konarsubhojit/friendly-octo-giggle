@@ -67,7 +67,7 @@ describe('buildProductContext', () => {
     expect(context).toContain('Out of stock')
   })
 
-  it('includes variations when present', () => {
+  it('includes variants when present', () => {
     const product: Product = {
       ...baseProduct,
       variants: [
@@ -104,7 +104,7 @@ describe('buildProductContext', () => {
     expect(context).toContain('BLU-LG: ₹39.99, out of stock')
   })
 
-  it('does not include variations section when single default variant', () => {
+  it('does not include variants section when single default variant', () => {
     const context = buildProductContext(baseProduct)
     expect(context).toContain('Variants (1):')
   })

@@ -20,6 +20,29 @@ const createInsertMock = () => ({
   },
 })
 
+const makeTx = () => ({
+  query: {
+    productVariants: {
+      findMany: (...args: unknown[]) => mockFindMany(...args),
+    },
+  },
+  insert: createInsertMock,
+  update: (...args: unknown[]) => {
+    mockUpdate(...args)
+    return {
+      set: (_setArgs: unknown) => ({
+        where: (_whereArgs: unknown) => ({
+          returning: () => mockReturning(),
+        }),
+      }),
+    }
+  },
+  delete: (...args: unknown[]) => {
+    mockDelete(...args)
+    return { where: vi.fn() }
+  },
+})
+
 vi.mock('@/lib/db', () => ({
   drizzleDb: {
     query: {
@@ -46,6 +69,11 @@ vi.mock('@/lib/db', () => ({
         where: vi.fn(),
       }
     },
+  },
+  primaryDrizzleDb: {
+    transaction: (
+      callback: (tx: ReturnType<typeof makeTx>) => Promise<unknown>
+    ) => callback(makeTx()),
   },
 }))
 
@@ -127,13 +155,13 @@ function makeRequest(url: string, method: string, body?: unknown) {
   })
 }
 
-describe('POST /api/admin/variations', () => {
-  let POST: typeof import('@/app/api/admin/variations/route').POST
+describe('POST /api/admin/variants', () => {
+  let POST: typeof import('@/app/api/admin/variants/route').POST
 
   beforeEach(async () => {
     vi.resetAllMocks()
     mockCheckAdminAuth.mockResolvedValue({ authorized: true, userId: 'a1' })
-    const mod = await import('@/app/api/admin/variations/route')
+    const mod = await import('@/app/api/admin/variants/route')
     POST = mod.POST
   })
 
@@ -143,7 +171,7 @@ describe('POST /api/admin/variations', () => {
     mockReturning.mockResolvedValueOnce([mockVariant])
 
     const res = await POST(
-      makeRequest('http://localhost/api/admin/variations', 'POST', {
+      makeRequest('http://localhost/api/admin/variants', 'POST', {
         productId: 'abc1234',
         price: 150,
         stock: 10,
@@ -164,7 +192,7 @@ describe('POST /api/admin/variations', () => {
     } as never)
 
     const res = await POST(
-      makeRequest('http://localhost/api/admin/variations', 'POST', {
+      makeRequest('http://localhost/api/admin/variants', 'POST', {
         productId: 'abc1234',
         price: 150,
         stock: 10,
@@ -182,7 +210,7 @@ describe('POST /api/admin/variations', () => {
     } as never)
 
     const res = await POST(
-      makeRequest('http://localhost/api/admin/variations', 'POST', {
+      makeRequest('http://localhost/api/admin/variants', 'POST', {
         productId: 'abc1234',
         price: 150,
         stock: 10,
@@ -196,7 +224,7 @@ describe('POST /api/admin/variations', () => {
     mockFindFirst.mockResolvedValueOnce(null)
 
     const res = await POST(
-      makeRequest('http://localhost/api/admin/variations', 'POST', {
+      makeRequest('http://localhost/api/admin/variants', 'POST', {
         productId: 'nonexis',
         price: 150,
         stock: 10,
@@ -208,7 +236,7 @@ describe('POST /api/admin/variations', () => {
 
   it('returns 400 if price is zero or negative', async () => {
     const res = await POST(
-      makeRequest('http://localhost/api/admin/variations', 'POST', {
+      makeRequest('http://localhost/api/admin/variants', 'POST', {
         productId: 'abc1234',
         price: 0,
         stock: 10,
@@ -226,7 +254,7 @@ describe('POST /api/admin/variations', () => {
     mockFindMany.mockResolvedValueOnce(Array(25).fill({ id: 'v' }))
 
     const res = await POST(
-      makeRequest('http://localhost/api/admin/variations', 'POST', {
+      makeRequest('http://localhost/api/admin/variants', 'POST', {
         productId: 'abc1234',
         price: 150,
         stock: 10,
@@ -240,7 +268,7 @@ describe('POST /api/admin/variations', () => {
 
   it('returns 400 for validation errors', async () => {
     const res = await POST(
-      makeRequest('http://localhost/api/admin/variations', 'POST', {
+      makeRequest('http://localhost/api/admin/variants', 'POST', {
         productId: 'abc1234',
         // missing required fields
       })
@@ -250,13 +278,13 @@ describe('POST /api/admin/variations', () => {
   })
 })
 
-describe('PUT /api/admin/variations/[variationId]', () => {
-  let PUT: typeof import('@/app/api/admin/variations/[variationId]/route').PUT
+describe('PUT /api/admin/variants/[variantId]', () => {
+  let PUT: typeof import('@/app/api/admin/variants/[variantId]/route').PUT
 
   beforeEach(async () => {
     vi.resetAllMocks()
     mockCheckAdminAuth.mockResolvedValue({ authorized: true, userId: 'a1' })
-    const mod = await import('@/app/api/admin/variations/[variationId]/route')
+    const mod = await import('@/app/api/admin/variants/[variantId]/route')
     PUT = mod.PUT
   })
 
@@ -269,10 +297,10 @@ describe('PUT /api/admin/variations/[variationId]', () => {
     ])
 
     const res = await PUT(
-      makeRequest('http://localhost/api/admin/variations/var1234', 'PUT', {
+      makeRequest('http://localhost/api/admin/variants/var1234', 'PUT', {
         stock: 12,
       }),
-      { params: Promise.resolve({ variationId: 'var1234' }) }
+      { params: Promise.resolve({ variantId: 'var1234' }) }
     )
 
     expect(res.status).toBe(200)
@@ -288,10 +316,10 @@ describe('PUT /api/admin/variations/[variationId]', () => {
     } as never)
 
     const res = await PUT(
-      makeRequest('http://localhost/api/admin/variations/var1234', 'PUT', {
+      makeRequest('http://localhost/api/admin/variants/var1234', 'PUT', {
         stock: 12,
       }),
-      { params: Promise.resolve({ variationId: 'var1234' }) }
+      { params: Promise.resolve({ variantId: 'var1234' }) }
     )
 
     expect(res.status).toBe(401)
@@ -305,10 +333,10 @@ describe('PUT /api/admin/variations/[variationId]', () => {
     } as never)
 
     const res = await PUT(
-      makeRequest('http://localhost/api/admin/variations/var1234', 'PUT', {
+      makeRequest('http://localhost/api/admin/variants/var1234', 'PUT', {
         stock: 12,
       }),
-      { params: Promise.resolve({ variationId: 'var1234' }) }
+      { params: Promise.resolve({ variantId: 'var1234' }) }
     )
 
     expect(res.status).toBe(403)
@@ -318,10 +346,10 @@ describe('PUT /api/admin/variations/[variationId]', () => {
     mockFindFirst.mockResolvedValueOnce(null)
 
     const res = await PUT(
-      makeRequest('http://localhost/api/admin/variations/var1234', 'PUT', {
+      makeRequest('http://localhost/api/admin/variants/var1234', 'PUT', {
         stock: 12,
       }),
-      { params: Promise.resolve({ variationId: 'var1234' }) }
+      { params: Promise.resolve({ variantId: 'var1234' }) }
     )
 
     expect(res.status).toBe(404)
@@ -331,10 +359,10 @@ describe('PUT /api/admin/variations/[variationId]', () => {
     mockFindFirst.mockResolvedValueOnce(mockVariant).mockResolvedValueOnce(null)
 
     const res = await PUT(
-      makeRequest('http://localhost/api/admin/variations/var1234', 'PUT', {
+      makeRequest('http://localhost/api/admin/variants/var1234', 'PUT', {
         stock: 12,
       }),
-      { params: Promise.resolve({ variationId: 'var1234' }) }
+      { params: Promise.resolve({ variantId: 'var1234' }) }
     )
 
     expect(res.status).toBe(404)
@@ -346,8 +374,8 @@ describe('PUT /api/admin/variations/[variationId]', () => {
       .mockResolvedValueOnce(mockProduct)
 
     const res = await PUT(
-      makeRequest('http://localhost/api/admin/variations/var1234', 'PUT', {}),
-      { params: Promise.resolve({ variationId: 'var1234' }) }
+      makeRequest('http://localhost/api/admin/variants/var1234', 'PUT', {}),
+      { params: Promise.resolve({ variantId: 'var1234' }) }
     )
 
     expect(res.status).toBe(400)
@@ -360,23 +388,23 @@ describe('PUT /api/admin/variations/[variationId]', () => {
     mockReturning.mockResolvedValueOnce([{ ...mockVariant, price: 100 }])
 
     const res = await PUT(
-      makeRequest('http://localhost/api/admin/variations/var1234', 'PUT', {
+      makeRequest('http://localhost/api/admin/variants/var1234', 'PUT', {
         price: 100,
       }),
-      { params: Promise.resolve({ variationId: 'var1234' }) }
+      { params: Promise.resolve({ variantId: 'var1234' }) }
     )
 
     expect([200, 400, 500]).toContain(res.status)
   })
 })
 
-describe('DELETE /api/admin/variations/[variationId]', () => {
-  let DELETE: typeof import('@/app/api/admin/variations/[variationId]/route').DELETE
+describe('DELETE /api/admin/variants/[variantId]', () => {
+  let DELETE: typeof import('@/app/api/admin/variants/[variantId]/route').DELETE
 
   beforeEach(async () => {
     vi.resetAllMocks()
     mockCheckAdminAuth.mockResolvedValue({ authorized: true, userId: 'a1' })
-    const mod = await import('@/app/api/admin/variations/[variationId]/route')
+    const mod = await import('@/app/api/admin/variants/[variantId]/route')
     DELETE = mod.DELETE
   })
 
@@ -387,8 +415,8 @@ describe('DELETE /api/admin/variations/[variationId]', () => {
     mockFindMany.mockResolvedValueOnce([{ id: 'v1' }, { id: 'v2' }])
 
     const res = await DELETE(
-      makeRequest('http://localhost/api/admin/variations/var1234', 'DELETE'),
-      { params: Promise.resolve({ variationId: 'var1234' }) }
+      makeRequest('http://localhost/api/admin/variants/var1234', 'DELETE'),
+      { params: Promise.resolve({ variantId: 'var1234' }) }
     )
 
     expect(res.status).toBe(200)
@@ -404,8 +432,8 @@ describe('DELETE /api/admin/variations/[variationId]', () => {
     } as never)
 
     const res = await DELETE(
-      makeRequest('http://localhost/api/admin/variations/var1234', 'DELETE'),
-      { params: Promise.resolve({ variationId: 'var1234' }) }
+      makeRequest('http://localhost/api/admin/variants/var1234', 'DELETE'),
+      { params: Promise.resolve({ variantId: 'var1234' }) }
     )
 
     expect(res.status).toBe(401)
@@ -419,8 +447,8 @@ describe('DELETE /api/admin/variations/[variationId]', () => {
     } as never)
 
     const res = await DELETE(
-      makeRequest('http://localhost/api/admin/variations/var1234', 'DELETE'),
-      { params: Promise.resolve({ variationId: 'var1234' }) }
+      makeRequest('http://localhost/api/admin/variants/var1234', 'DELETE'),
+      { params: Promise.resolve({ variantId: 'var1234' }) }
     )
 
     expect(res.status).toBe(403)
@@ -430,8 +458,8 @@ describe('DELETE /api/admin/variations/[variationId]', () => {
     mockFindFirst.mockResolvedValueOnce(null)
 
     const res = await DELETE(
-      makeRequest('http://localhost/api/admin/variations/var1234', 'DELETE'),
-      { params: Promise.resolve({ variationId: 'var1234' }) }
+      makeRequest('http://localhost/api/admin/variants/var1234', 'DELETE'),
+      { params: Promise.resolve({ variantId: 'var1234' }) }
     )
 
     expect(res.status).toBe(404)
@@ -441,8 +469,8 @@ describe('DELETE /api/admin/variations/[variationId]', () => {
     mockFindFirst.mockResolvedValueOnce(mockVariant).mockResolvedValueOnce(null)
 
     const res = await DELETE(
-      makeRequest('http://localhost/api/admin/variations/var1234', 'DELETE'),
-      { params: Promise.resolve({ variationId: 'var1234' }) }
+      makeRequest('http://localhost/api/admin/variants/var1234', 'DELETE'),
+      { params: Promise.resolve({ variantId: 'var1234' }) }
     )
 
     expect(res.status).toBe(404)
