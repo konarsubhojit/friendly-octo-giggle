@@ -73,18 +73,14 @@ describe('VariantList', () => {
   })
 
   it('renders variant cards with correct data', () => {
-    render(
-      <VariantList productId="abc1234" initialVariants={[mockVariant]} />
-    )
+    render(<VariantList productId="abc1234" initialVariants={[mockVariant]} />)
     expect(screen.getByText('RED-LG')).toBeInTheDocument()
     expect(screen.getByText('25 in stock')).toBeInTheDocument()
     expect(screen.getByText('Variants (1)')).toBeInTheDocument()
   })
 
   it('displays variant price', () => {
-    render(
-      <VariantList productId="abc1234" initialVariants={[mockVariant]} />
-    )
+    render(<VariantList productId="abc1234" initialVariants={[mockVariant]} />)
     expect(screen.getByText('$150.00')).toBeInTheDocument()
   })
 
@@ -95,9 +91,7 @@ describe('VariantList', () => {
   })
 
   it('renders Edit and Delete buttons', () => {
-    render(
-      <VariantList productId="abc1234" initialVariants={[mockVariant]} />
-    )
+    render(<VariantList productId="abc1234" initialVariants={[mockVariant]} />)
     expect(
       screen.getByRole('button', {
         name: 'Open quick edit for RED-LG',
@@ -109,25 +103,19 @@ describe('VariantList', () => {
   })
 
   it('renders Add Variant button when variants exist', () => {
-    render(
-      <VariantList productId="abc1234" initialVariants={[mockVariant]} />
-    )
+    render(<VariantList productId="abc1234" initialVariants={[mockVariant]} />)
     expect(screen.getByText('Add Variant')).toBeInTheDocument()
   })
 
   it('keeps quick edit fields collapsed until edit is opened', () => {
-    render(
-      <VariantList productId="abc1234" initialVariants={[mockVariant]} />
-    )
+    render(<VariantList productId="abc1234" initialVariants={[mockVariant]} />)
 
     expect(screen.queryByLabelText('Price for RED-LG')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Stock for RED-LG')).not.toBeInTheDocument()
   })
 
   it('expands quick edit fields when the edit action is clicked', () => {
-    render(
-      <VariantList productId="abc1234" initialVariants={[mockVariant]} />
-    )
+    render(<VariantList productId="abc1234" initialVariants={[mockVariant]} />)
 
     fireEvent.click(
       screen.getByRole('button', {
@@ -156,9 +144,7 @@ describe('VariantList', () => {
     })
     vi.stubGlobal('fetch', mockFetch)
 
-    render(
-      <VariantList productId="abc1234" initialVariants={[mockVariant]} />
-    )
+    render(<VariantList productId="abc1234" initialVariants={[mockVariant]} />)
 
     fireEvent.click(
       screen.getByRole('button', {
@@ -193,9 +179,7 @@ describe('VariantList', () => {
   it('shows error toast for invalid price in quick edit (zero)', async () => {
     const mockToast = await import('react-hot-toast')
 
-    render(
-      <VariantList productId="abc1234" initialVariants={[mockVariant]} />
-    )
+    render(<VariantList productId="abc1234" initialVariants={[mockVariant]} />)
 
     fireEvent.click(
       screen.getByRole('button', {
@@ -218,9 +202,7 @@ describe('VariantList', () => {
   it('shows error toast for invalid stock in quick edit (negative)', async () => {
     const mockToast = await import('react-hot-toast')
 
-    render(
-      <VariantList productId="abc1234" initialVariants={[mockVariant]} />
-    )
+    render(<VariantList productId="abc1234" initialVariants={[mockVariant]} />)
 
     fireEvent.click(
       screen.getByRole('button', {
@@ -252,9 +234,7 @@ describe('VariantList', () => {
     vi.stubGlobal('fetch', mockFetch)
     const mockToast = await import('react-hot-toast')
 
-    render(
-      <VariantList productId="abc1234" initialVariants={[mockVariant]} />
-    )
+    render(<VariantList productId="abc1234" initialVariants={[mockVariant]} />)
 
     fireEvent.click(
       screen.getByRole('button', {
@@ -277,9 +257,7 @@ describe('VariantList', () => {
   })
 
   it('shows Reset button when draft values differ and resets on click', () => {
-    render(
-      <VariantList productId="abc1234" initialVariants={[mockVariant]} />
-    )
+    render(<VariantList productId="abc1234" initialVariants={[mockVariant]} />)
 
     fireEvent.click(
       screen.getByRole('button', {
@@ -308,9 +286,7 @@ describe('VariantList', () => {
     vi.stubGlobal('fetch', mockFetch)
     const mockToast = await import('react-hot-toast')
 
-    render(
-      <VariantList productId="abc1234" initialVariants={[mockVariant]} />
-    )
+    render(<VariantList productId="abc1234" initialVariants={[mockVariant]} />)
 
     fireEvent.click(screen.getByRole('button', { name: 'Delete RED-LG' }))
 
@@ -348,10 +324,7 @@ describe('VariantList', () => {
       ],
     }
     render(
-      <VariantList
-        productId="abc1234"
-        initialVariants={[variantWithOptions]}
-      />
+      <VariantList productId="abc1234" initialVariants={[variantWithOptions]} />
     )
     expect(screen.getByText('Red / Large')).toBeInTheDocument()
   })
