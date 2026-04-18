@@ -55,3 +55,7 @@ playwright-tests/.auth/
 .playwright-mcp/**.log
 .contextstream/
 vitest-report.json
+.cursor/mcp.json
+.vscode/mcp.json
+.vscode/mcp.json
+.mcp.json

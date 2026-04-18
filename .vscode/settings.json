@@ -20,7 +20,5 @@
   },
   "files.autoSave": "onFocusChange",
   "chat.agent.maxRequests": 10000,
-  "githubPullRequests.ignoredPullRequestBranches": [
-    "develop"
-  ]
+  "githubPullRequests.ignoredPullRequestBranches": ["develop"]
 }

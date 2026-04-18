@@ -112,7 +112,7 @@ export default function ProductSearch({ onNavigate }: ProductSearchProps) {
   const [activeIndex, setActiveIndex] = useState(-1)
   const inputRef = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLUListElement>(null)
-  const dialogRef = useRef<HTMLDivElement>(null)
+  const dialogRef = useRef<HTMLDialogElement>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
@@ -314,13 +314,12 @@ export default function ProductSearch({ onNavigate }: ProductSearchProps) {
               onClick={closeDialog}
             />
 
-            <div
+            <dialog
               ref={dialogRef}
+              open
               id="product-search-dialog"
-              role="dialog"
-              aria-modal="true"
               aria-label="Search products"
-              className="absolute left-1/2 top-[10%] w-[min(92vw,680px)] -translate-x-1/2 rounded-2xl border border-[var(--border-warm)] bg-[var(--surface)] shadow-[0_20px_60px_-20px_rgba(0,0,0,0.35)]"
+              className="absolute left-1/2 top-[10%] w-[min(92vw,680px)] -translate-x-1/2 rounded-2xl border border-[var(--border-warm)] bg-[var(--surface)] shadow-[0_20px_60px_-20px_rgba(0,0,0,0.35)] p-0"
             >
               <div
                 role="search"
@@ -366,29 +365,27 @@ export default function ProductSearch({ onNavigate }: ProductSearchProps) {
 
               <ul
                 ref={listRef}
-                role="listbox"
                 aria-label="Search results"
                 className="max-h-[60vh] overflow-auto p-2"
               >
-                {isSearching ? (
+                {isSearching && (
                   <li className="px-3 py-4 text-sm text-[var(--text-muted)]">
                     Searching...
                   </li>
-                ) : results.length === 0 ? (
+                )}
+                {!isSearching && results.length === 0 && (
                   <li className="px-3 py-6 text-center text-sm text-[var(--text-muted)]">
                     {query.trim()
                       ? 'No products found'
                       : 'Start typing to search products...'}
                   </li>
-                ) : (
+                )}
+                {!isSearching &&
+                  results.length > 0 &&
                   results.map((item, index) => {
                     const isActive = index === clampedIndex
                     return (
-                      <li
-                        key={item.id}
-                        role="option"
-                        aria-selected={isActive}
-                      >
+                      <li key={item.id} aria-current={isActive || undefined}>
                         <button
                           type="button"
                           onMouseEnter={() => setActiveIndex(index)}
@@ -432,10 +429,9 @@ export default function ProductSearch({ onNavigate }: ProductSearchProps) {
                         </button>
                       </li>
                     )
-                  })
-                )}
+                  })}
               </ul>
-            </div>
+            </dialog>
           </div>,
           document.body
         )}
