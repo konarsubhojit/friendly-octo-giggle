@@ -71,8 +71,9 @@ vi.mock('@/lib/db', () => ({
     },
   },
   primaryDrizzleDb: {
-    transaction: (callback: (tx: ReturnType<typeof makeTx>) => Promise<unknown>) =>
-      callback(makeTx()),
+    transaction: (
+      callback: (tx: ReturnType<typeof makeTx>) => Promise<unknown>
+    ) => callback(makeTx()),
   },
 }))
 
