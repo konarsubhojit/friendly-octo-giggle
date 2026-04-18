@@ -164,22 +164,6 @@ jobs:
     if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
     steps:
       - uses: actions/checkout@v6
-        with:
-          fetch-depth: 2
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: 24
-          cache: npm
-
-      - name: Pull Vercel preview environment
-        run: |
-          npx --yes vercel@latest pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
-          cp .vercel/.env.preview.local .env.preview
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
       - name: Deploy to Vercel Preview
         run: npx --yes vercel@latest deploy --token=${{ secrets.VERCEL_TOKEN }}
@@ -194,22 +178,6 @@ jobs:
     if: github.ref == 'refs/heads/master' && github.event_name == 'push'
     steps:
       - uses: actions/checkout@v6
-        with:
-          fetch-depth: 2
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: 24
-          cache: npm
-
-      - name: Pull Vercel production environment
-        run: |
-          npx --yes vercel@latest pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
-          cp .vercel/.env.production.local .env.production
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
       - name: Deploy to Vercel Production
         run: npx --yes vercel@latest deploy --prod --token=${{ secrets.VERCEL_TOKEN }}
@@ -283,7 +251,7 @@ jobs:
       - name: Pull Vercel production environment and run migrations
         run: |
           npx vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
-          cp .vercel/.env.production.local .env.production
+          cp .vercel/.env.production.local .env.local
           npm run db:migrate
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
