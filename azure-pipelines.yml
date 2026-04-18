@@ -62,6 +62,8 @@ stages:
 
       - job: Test
         displayName: Test
+        variables:
+          npm_config_cache: /home/ubuntu/.npm
         pool:
           ${{ if and(ne(variables['Build.Reason'], 'PullRequest'), or(eq(variables['Build.SourceBranch'], 'refs/heads/develop'), eq(variables['Build.SourceBranch'], 'refs/heads/master'))) }}:
             name: default
@@ -73,8 +75,15 @@ stages:
             inputs:
               versionSpec: $(NODE_VERSION)
 
-          - script: npm ci $(NPM_CI_FLAGS)
-            displayName: Install dependencies
+          - script: |
+              if [ -d "node_modules" ]; then
+                echo "node_modules exists, performing incremental update..."
+                npm install --prefer-offline --no-audit
+              else
+                echo "First run or node_modules missing, performing clean install..."
+                npm ci --prefer-offline --no-audit
+              fi
+            displayName: 'Smart npm Install'
 
           - script: npm run test:coverage
             displayName: Run tests
