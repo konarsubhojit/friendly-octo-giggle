@@ -20,6 +20,29 @@ const createInsertMock = () => ({
   },
 })
 
+const makeTx = () => ({
+  query: {
+    productVariants: {
+      findMany: (...args: unknown[]) => mockFindMany(...args),
+    },
+  },
+  insert: createInsertMock,
+  update: (...args: unknown[]) => {
+    mockUpdate(...args)
+    return {
+      set: (_setArgs: unknown) => ({
+        where: (_whereArgs: unknown) => ({
+          returning: () => mockReturning(),
+        }),
+      }),
+    }
+  },
+  delete: (...args: unknown[]) => {
+    mockDelete(...args)
+    return { where: vi.fn() }
+  },
+})
+
 vi.mock('@/lib/db', () => ({
   drizzleDb: {
     query: {
@@ -46,6 +69,10 @@ vi.mock('@/lib/db', () => ({
         where: vi.fn(),
       }
     },
+  },
+  primaryDrizzleDb: {
+    transaction: (callback: (tx: ReturnType<typeof makeTx>) => Promise<unknown>) =>
+      callback(makeTx()),
   },
 }))
 
