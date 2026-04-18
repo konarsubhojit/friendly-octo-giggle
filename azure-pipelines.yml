@@ -27,6 +27,9 @@ variables:
   NODE_MODULES_CACHE_PATH: $(System.DefaultWorkingDirectory)/node_modules
   npm_config_cache: $(Pipeline.Workspace)/.npm
 
+pool:
+  name: Default
+
 stages:
   - stage: LintAndTest
     displayName: Lint, Type Check & Test
