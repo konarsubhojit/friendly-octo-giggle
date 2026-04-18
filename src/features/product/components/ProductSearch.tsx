@@ -306,6 +306,7 @@ export default function ProductSearch({ onNavigate }: ProductSearchProps) {
             <button
               type="button"
               aria-label="Close search"
+              tabIndex={-1}
               className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"
               onClick={closeDialog}
             />

@@ -8,6 +8,12 @@ import { logError } from '@/lib/logger'
 import { checkAdminAuth } from '@/features/admin/services/admin-auth'
 import { type ImageStorageProvider, uploadImage } from '@/lib/image-storage'
 
+// The Azure Blob upload path in `image-storage.ts` depends on Node.js APIs
+// (`Buffer`, `@azure/storage-blob` stream handling) that are not available on
+// the Edge runtime. Pin this route to the Node.js runtime so deployments on
+// Vercel (or any platform that might default to Edge) don't fail at runtime.
+export const runtime = 'nodejs'
+
 export async function POST(request: Request) {
   let fileName = 'unknown'
   let userId = 'unknown'

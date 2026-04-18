@@ -173,4 +173,59 @@ describe('POST /api/upload', () => {
     expect(body.error).toBe('Failed to upload file')
     expect(logError).toHaveBeenCalled()
   })
+
+  it('returns 500 and logs context when uploadImage rejects with default provider', async () => {
+    mockAuth.mockResolvedValue({ user: { id: 'user-123', role: 'ADMIN' } })
+    mockUploadImage.mockRejectedValue(new Error('upload failed'))
+    const file = { name: 'fail.png', type: 'image/png', size: 1024 }
+
+    const res = await POST(makeRequest(file))
+
+    expect(res.status).toBe(500)
+    const body = await res.json()
+    expect(body.error).toBe('Failed to upload file')
+    expect(logError).toHaveBeenCalledTimes(1)
+    expect(logError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        error: expect.any(Error),
+        context: 'file_upload',
+        additionalInfo: expect.objectContaining({
+          fileName: 'fail.png',
+          userId: 'user-123',
+          // No provider input → route leaves provider as 'unknown' before upload
+          provider: 'unknown',
+          azureAccountAlias: 'unknown',
+        }),
+      })
+    )
+  })
+
+  it('returns 500 and logs context when uploadImage rejects with explicit azure provider + alias', async () => {
+    mockAuth.mockResolvedValue({ user: { id: 'user-456', role: 'ADMIN' } })
+    mockUploadImage.mockRejectedValue(new Error('upload failed'))
+    const file = { name: 'fail-azure.png', type: 'image/png', size: 2048 }
+
+    const res = await POST(
+      makeRequest(file, { provider: 'azure', azureAccountAlias: 'images-west' })
+    )
+
+    expect(res.status).toBe(500)
+    const body = await res.json()
+    expect(body.error).toBe('Failed to upload file')
+    expect(logError).toHaveBeenCalledTimes(1)
+    expect(logError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        error: expect.any(Error),
+        context: 'file_upload',
+        additionalInfo: expect.objectContaining({
+          fileName: 'fail-azure.png',
+          userId: 'user-456',
+          provider: 'azure',
+          // alias is only captured into the log context after a successful upload;
+          // when uploadImage throws, it remains at its pre-upload default.
+          azureAccountAlias: 'unknown',
+        }),
+      })
+    )
+  })
 })
