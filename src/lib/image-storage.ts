@@ -98,7 +98,10 @@ const pickAzureAccount = (
 
   const aliasCandidate =
     requestedAlias ?? env.AZURE_BLOB_DEFAULT_ACCOUNT_ALIAS ?? accounts[0].alias
-  if (typeof aliasCandidate !== 'string' || aliasCandidate.trim().length === 0) {
+  if (
+    typeof aliasCandidate !== 'string' ||
+    aliasCandidate.trim().length === 0
+  ) {
     throw new Error(
       'Azure Blob account alias is missing. Provide azureAccountAlias, set AZURE_BLOB_DEFAULT_ACCOUNT_ALIAS, or configure an account with a valid alias.'
     )
