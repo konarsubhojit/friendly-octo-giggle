@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import React from 'react'
-import VariationFormModal from '@/features/admin/components/VariationFormModal'
+import VariantFormModal from '@/features/admin/components/VariantFormModal'
 import type { ProductVariant } from '@/lib/types'
 
 const { mockToastError, mockToastSuccess } = vi.hoisted(() => ({
@@ -59,26 +59,26 @@ const defaultProps = {
   onSuccess: vi.fn(),
 }
 
-describe('VariationFormModal', () => {
+describe('VariantFormModal', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.stubGlobal('fetch', vi.fn())
   })
 
   it('renders in create mode with empty fields', () => {
-    render(<VariationFormModal {...defaultProps} />)
+    render(<VariantFormModal {...defaultProps} />)
     expect(screen.getByText('Add Variant')).toBeInTheDocument()
     expect(screen.getByText('Create')).toBeInTheDocument()
   })
 
   it('renders in edit mode with pre-populated fields', () => {
-    render(<VariationFormModal {...defaultProps} variant={mockVariant} />)
+    render(<VariantFormModal {...defaultProps} variant={mockVariant} />)
     expect(screen.getByText('Edit Variant')).toBeInTheDocument()
     expect(screen.getByText('Update')).toBeInTheDocument()
   })
 
   it('shows price warning when price <= 0', () => {
-    render(<VariationFormModal {...defaultProps} />)
+    render(<VariantFormModal {...defaultProps} />)
     const priceInput = screen.getByRole('spinbutton', { name: 'Price' })
     fireEvent.change(priceInput, { target: { value: '-50' } })
     expect(
@@ -87,7 +87,7 @@ describe('VariationFormModal', () => {
   })
 
   it('disables submit when price is invalid', () => {
-    render(<VariationFormModal {...defaultProps} />)
+    render(<VariantFormModal {...defaultProps} />)
     const priceInput = screen.getByRole('spinbutton', { name: 'Price' })
     fireEvent.change(priceInput, { target: { value: '-100' } })
     expect(screen.getByText('Create')).toBeDisabled()
@@ -95,7 +95,7 @@ describe('VariationFormModal', () => {
 
   it('calls onClose when Cancel is clicked', () => {
     const onClose = vi.fn()
-    render(<VariationFormModal {...defaultProps} onClose={onClose} />)
+    render(<VariantFormModal {...defaultProps} onClose={onClose} />)
     fireEvent.click(screen.getByText('Cancel'))
     expect(onClose).toHaveBeenCalled()
   })
@@ -108,7 +108,7 @@ describe('VariationFormModal', () => {
     })
     vi.stubGlobal('fetch', mockFetch)
 
-    render(<VariationFormModal {...defaultProps} onSuccess={onSuccess} />)
+    render(<VariantFormModal {...defaultProps} onSuccess={onSuccess} />)
 
     fireEvent.change(screen.getByRole('spinbutton', { name: 'Price' }), {
       target: { value: '150' },
@@ -121,7 +121,7 @@ describe('VariationFormModal', () => {
 
     await waitFor(() => {
       expect(mockFetch).toHaveBeenCalledWith(
-        '/api/admin/variations',
+        '/api/admin/variants',
         expect.objectContaining({
           method: 'POST',
         })
@@ -141,7 +141,7 @@ describe('VariationFormModal', () => {
     vi.stubGlobal('fetch', mockFetch)
 
     render(
-      <VariationFormModal
+      <VariantFormModal
         {...defaultProps}
         variant={mockVariant}
         onSuccess={onSuccess}
@@ -155,7 +155,7 @@ describe('VariationFormModal', () => {
 
     await waitFor(() => {
       expect(mockFetch).toHaveBeenCalledWith(
-        '/api/admin/variations/var1234',
+        '/api/admin/variants/var1234',
         expect.objectContaining({ method: 'PUT' })
       )
       expect(onSuccess).toHaveBeenCalled()
@@ -163,7 +163,7 @@ describe('VariationFormModal', () => {
   })
 
   it('shows validation errors for empty required fields', async () => {
-    render(<VariationFormModal {...defaultProps} />)
+    render(<VariantFormModal {...defaultProps} />)
     fireEvent.click(screen.getByText('Create'))
 
     await waitFor(() => {
@@ -178,7 +178,7 @@ describe('VariationFormModal', () => {
     })
     vi.stubGlobal('fetch', mockFetch)
 
-    render(<VariationFormModal {...defaultProps} />)
+    render(<VariantFormModal {...defaultProps} />)
     fireEvent.change(screen.getByRole('spinbutton', { name: 'Price' }), {
       target: { value: '100' },
     })
@@ -194,13 +194,13 @@ describe('VariationFormModal', () => {
 
   it('closes via close X button (aria-label)', () => {
     const onClose = vi.fn()
-    render(<VariationFormModal {...defaultProps} onClose={onClose} />)
+    render(<VariantFormModal {...defaultProps} onClose={onClose} />)
     fireEvent.click(screen.getByLabelText('Close variant editor'))
     expect(onClose).toHaveBeenCalled()
   })
 
   it('displays Variant editor heading', () => {
-    render(<VariationFormModal {...defaultProps} />)
+    render(<VariantFormModal {...defaultProps} />)
     expect(screen.getByText(/Variant editor/i)).toBeInTheDocument()
   })
 })

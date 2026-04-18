@@ -88,12 +88,12 @@ describe('app/products/[id]/loading.tsx – Product Detail Loading', () => {
     expect(imageArea).toBeInTheDocument()
   })
 
-  it('renders 4 variation skeletons', async () => {
+  it('renders 4 variant skeletons', async () => {
     const { default: ProductDetailLoading } =
       await import('@/app/products/[id]/loading')
     const { container } = render(<ProductDetailLoading />)
-    const variationSkeletons = container.querySelectorAll('.h-10.w-20')
-    expect(variationSkeletons).toHaveLength(4)
+    const variantSkeletons = container.querySelectorAll('.h-10.w-20')
+    expect(variantSkeletons).toHaveLength(4)
   })
 
   it('renders additional info card skeleton', async () => {

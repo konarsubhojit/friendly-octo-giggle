@@ -27,7 +27,7 @@ interface AdminOrderItem {
   price: number
   customizationNote?: string | null
   product?: { id: string; name: string; image: string }
-  variation?: { id: string; name: string; price: number } | null
+  variant?: { id: string; name: string; price: number } | null
 }
 
 interface AdminOrder {

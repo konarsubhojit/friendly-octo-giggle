@@ -359,11 +359,11 @@ describe('ProductGrid', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Loaded Product')).toBeTruthy()
+      expect(screen.getByText("You've seen all products.")).toBeTruthy()
     })
     expect(fetch).toHaveBeenCalledWith(
       '/api/products?q=rose&category=Flowers&limit=20&offset=1',
       { method: 'GET', headers: { Accept: 'application/json' } }
     )
-    expect(screen.getByText("You've seen all products.")).toBeTruthy()
   })
 })

@@ -647,7 +647,7 @@ describe('cacheShareResolve', () => {
   })
 
   it('returns cached value and skips fetcher on cache hit', async () => {
-    const shareData = { productId: 'prd1234', variationId: 'var5678' }
+    const shareData = { productId: 'prd1234', variantId: 'var5678' }
     mockRedisClient.get.mockResolvedValue(shareData)
     const fetcher = vi.fn()
 
@@ -660,7 +660,7 @@ describe('cacheShareResolve', () => {
   })
 
   it('fetches, caches with 1-year TTL, and returns non-null result on cache miss', async () => {
-    const shareData = { productId: 'prd1234', variationId: null }
+    const shareData = { productId: 'prd1234', variantId: null }
     mockRedisClient.get.mockResolvedValue(null)
     mockRedisClient.setex.mockResolvedValue('OK')
     const fetcher = vi.fn().mockResolvedValue(shareData)
@@ -688,7 +688,7 @@ describe('cacheShareResolve', () => {
   })
 
   it('falls back to fetcher when Redis throws', async () => {
-    const shareData = { productId: 'prd1234', variationId: null }
+    const shareData = { productId: 'prd1234', variantId: null }
     mockRedisClient.get.mockRejectedValue(new Error('Redis down'))
     const fetcher = vi.fn().mockResolvedValue(shareData)
 
