@@ -157,17 +157,11 @@ stages:
             inputs:
               versionSpec: $(NODE_VERSION)
 
-          - script: npm ci --no-audit --no-fund
-
           - script: npm install --no-save --no-audit --fund=false --progress=false vercel
             displayName: Install Vercel CLI
 
-          - script: |
-              npx vercel pull --yes --environment=preview --token=$VERCEL_TOKEN
-              cp .vercel/.env.preview.local .env.local
-              npx vercel build --token=$VERCEL_TOKEN
-              npx vercel deploy --prebuilt --token=$VERCEL_TOKEN
-            displayName: Deploy to Vercel Preview
+          - script: npx vercel deploy --token=$VERCEL_TOKEN
+            displayName: Deploy to Vercel Preview (Vercel builds)
             env:
               VERCEL_TOKEN: $(VERCEL_TOKEN)
               VERCEL_ORG_ID: $(VERCEL_ORG_ID)
