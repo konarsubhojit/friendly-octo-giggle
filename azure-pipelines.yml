@@ -22,7 +22,7 @@ pr:
       - .cursorrules
 
 variables:
-  NODE_VERSION: '22'
+  NODE_VERSION: '24'
   NPM_CI_FLAGS: '--no-audit --no-fund'
   NODE_MODULES_CACHE_PATH: $(System.DefaultWorkingDirectory)/node_modules
 

@@ -182,13 +182,17 @@ const ProductGrid = ({
       : undefined
 
   useEffect(() => {
+    // Update refs synchronously so loadMore() (called by the
+    // IntersectionObserver) always sees the latest pagination state even
+    // before the deferred state updates flush.
+    canLoadMoreRef.current = hasNextPage
+    visibleCountRef.current = products.length
+    isLoadingRef.current = false
+
     const timer = globalThis.setTimeout(() => {
       setVisibleProducts(products)
       setCanLoadMore(hasNextPage)
-      canLoadMoreRef.current = hasNextPage
-      visibleCountRef.current = products.length
       setIsLoadingMore(false)
-      isLoadingRef.current = false
       setLoadError(null)
     }, 0)
 

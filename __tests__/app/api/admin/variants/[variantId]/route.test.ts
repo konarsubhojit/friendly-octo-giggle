@@ -10,6 +10,7 @@ const {
   mockUpdate,
   mockReturning,
   mockDelete,
+  mockExecute,
 } = vi.hoisted(() => ({
   mockCheckAdminAuth: vi.fn(async () => ({ authorized: true })),
   mockInvalidateProductCaches: vi.fn(),
@@ -19,6 +20,7 @@ const {
   mockUpdate: vi.fn(),
   mockReturning: vi.fn(),
   mockDelete: vi.fn(),
+  mockExecute: vi.fn(async () => ({ rows: [{ id: 'var123' }] })),
 }))
 
 const makeTx = () => ({
@@ -27,6 +29,7 @@ const makeTx = () => ({
       findMany: (...args: unknown[]) => mockFindMany(...args),
     },
   },
+  execute: (...args: unknown[]) => mockExecute(...args),
   update: (...args: unknown[]) => {
     mockUpdate(...args)
     return {
@@ -113,6 +116,13 @@ vi.mock('drizzle-orm', () => ({
   eq: vi.fn((...args: unknown[]) => ({ op: 'eq', args })),
   and: vi.fn((...args: unknown[]) => ({ op: 'and', args })),
   isNull: vi.fn((field: unknown) => ({ op: 'isNull', field })),
+  sql: Object.assign(
+    (strings: TemplateStringsArray, ...values: unknown[]) => ({
+      strings,
+      values,
+    }),
+    { raw: (s: string) => s }
+  ),
 }))
 
 vi.mock(
@@ -433,6 +443,7 @@ describe('DELETE /api/admin/variants/[variantId]', () => {
     mockFindFirst
       .mockResolvedValueOnce(mockVariant)
       .mockResolvedValueOnce(mockProduct)
+    mockExecute.mockResolvedValueOnce({ rows: [] })
     mockFindMany.mockResolvedValueOnce([{ id: 'var123' }])
 
     const request = new NextRequest(
@@ -455,7 +466,7 @@ describe('DELETE /api/admin/variants/[variantId]', () => {
     mockFindFirst
       .mockResolvedValueOnce(mockVariant)
       .mockResolvedValueOnce(mockProduct)
-    mockFindMany.mockResolvedValueOnce([{ id: 'v1' }, { id: 'v2' }])
+    mockExecute.mockResolvedValueOnce({ rows: [{ id: 'var123' }] })
 
     const request = new NextRequest(
       'http://localhost/api/admin/variants/var123',
@@ -479,7 +490,7 @@ describe('DELETE /api/admin/variants/[variantId]', () => {
     mockFindFirst
       .mockResolvedValueOnce(mockVariant)
       .mockResolvedValueOnce(mockProduct)
-    mockFindMany.mockResolvedValueOnce([{ id: 'v1' }, { id: 'v2' }])
+    mockExecute.mockResolvedValueOnce({ rows: [{ id: 'var123' }] })
 
     const request = new NextRequest(
       'http://localhost/api/admin/variants/var123',

@@ -70,6 +70,7 @@ const getAzureAccounts = (): AzureBlobAccountConfig[] => {
     throw new Error('AZURE_BLOB_ACCOUNTS_JSON must be a JSON array.')
   }
 
+  const seenAliases = new Set<string>()
   return parsed.map((item, index) => {
     const raw = item as Partial<AzureBlobAccountConfig>
     if (!raw.alias || !raw.connectionString || !raw.container) {
@@ -78,8 +79,21 @@ const getAzureAccounts = (): AzureBlobAccountConfig[] => {
       )
     }
 
+    const normalizedAlias = normalizePathSegment(raw.alias)
+    if (normalizedAlias.length === 0) {
+      throw new Error(
+        `AZURE_BLOB_ACCOUNTS_JSON[${index}] alias "${raw.alias}" normalizes to an empty string.`
+      )
+    }
+    if (seenAliases.has(normalizedAlias)) {
+      throw new Error(
+        `AZURE_BLOB_ACCOUNTS_JSON contains duplicate normalized alias "${normalizedAlias}" (from "${raw.alias}" at index ${index}).`
+      )
+    }
+    seenAliases.add(normalizedAlias)
+
     return {
-      alias: normalizePathSegment(raw.alias),
+      alias: normalizedAlias,
       connectionString: raw.connectionString,
       container: raw.container,
     }
@@ -128,7 +142,10 @@ const ensureContainerIfRequested = async (
   containerClient: ContainerClient
 ): Promise<void> => {
   if (env.AZURE_BLOB_AUTO_CREATE_CONTAINER !== 'true') return
-  await containerClient.createIfNotExists()
+  // Create with anonymous blob-level read access so the returned
+  // blockBlobClient.url is publicly reachable (this path is used for
+  // product/gallery images).
+  await containerClient.createIfNotExists({ access: 'blob' })
 }
 
 const AZURE_UPLOAD_TIMEOUT_MS = 60_000

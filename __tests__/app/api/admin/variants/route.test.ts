@@ -5,6 +5,7 @@ const mockFindFirst = vi.fn()
 const mockFindMany = vi.fn()
 const mockReturning = vi.fn()
 const mockValues = vi.fn()
+const mockExecute = vi.fn(async () => ({ rows: [{ id: 'locked' }] }))
 
 const { mockCheckAdminAuth } = vi.hoisted(() => ({
   mockCheckAdminAuth: vi.fn(async () => ({ authorized: true, userId: 'a1' })),
@@ -26,6 +27,7 @@ const makeTx = () => ({
       findMany: (...args: unknown[]) => mockFindMany(...args),
     },
   },
+  execute: (...args: unknown[]) => mockExecute(...args),
   insert: createInsertMock,
   update: (...args: unknown[]) => {
     mockUpdate(...args)
@@ -122,6 +124,13 @@ vi.mock('drizzle-orm', () => ({
   eq: vi.fn((...args: unknown[]) => args),
   and: vi.fn((...args: unknown[]) => args),
   isNull: vi.fn((...args: unknown[]) => args),
+  sql: Object.assign(
+    (strings: TemplateStringsArray, ...values: unknown[]) => ({
+      strings,
+      values,
+    }),
+    { raw: (s: string) => s }
+  ),
 }))
 
 const mockProduct = {

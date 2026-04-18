@@ -221,6 +221,24 @@ const VariantFormModal = ({
 
   const currentPrimaryImagePreview = primaryImagePreviewUrl ?? primaryImageUrl
 
+  // Memoize gallery preview URLs per pending file so they are created once
+  // (not on every render inside .map) and revoked on cleanup to avoid leaks.
+  const additionalImagePreviewUrls = useMemo(
+    () =>
+      additionalImageFiles.map((file) =>
+        file ? globalThis.URL.createObjectURL(file) : null
+      ),
+    [additionalImageFiles]
+  )
+
+  useEffect(() => {
+    return () => {
+      additionalImagePreviewUrls.forEach((url) => {
+        if (url) globalThis.URL.revokeObjectURL(url)
+      })
+    }
+  }, [additionalImagePreviewUrls])
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
@@ -555,9 +573,9 @@ const VariantFormModal = ({
                     </div>
                     {additionalImageUrls.map((url, idx) => {
                       const pendingFile = additionalImageFiles[idx] ?? null
-                      const previewSrc = pendingFile
-                        ? URL.createObjectURL(pendingFile)
-                        : url
+                      const pendingPreviewUrl =
+                        additionalImagePreviewUrls[idx] ?? null
+                      const previewSrc = pendingPreviewUrl ?? url
 
                       return (
                         <div

@@ -346,17 +346,17 @@ npx drizzle-kit drop
    - **Image**: Upload or use URL
 5. Click "Save"
 
-### Add Product Variations
+### Add Product Variants
 
 Products can have multiple variants (e.g., colors, sizes):
 
 1. Edit a product
-2. Click "Add Variation"
+2. Click "Add Variant"
 3. Set variant details:
    - **Name**: e.g., "Blue" or "Large"
    - **Design Name**: e.g., "Classic Design"
    - **Price Modifier**: Additional cost (can be negative)
-   - **Stock**: Variation-specific stock
+   - **Stock**: Variant-specific stock
    - **Image**: Optional variant image
 4. Save product
 

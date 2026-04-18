@@ -5,7 +5,7 @@ import {
   productVariants,
   productVariantOptionValues,
 } from '@/lib/schema'
-import { eq, and, isNull } from 'drizzle-orm'
+import { eq, and, isNull, sql } from 'drizzle-orm'
 import { CreateVariantSchema } from '@/features/product/validations'
 import { z } from 'zod'
 import {
@@ -54,6 +54,13 @@ export async function POST(request: NextRequest) {
     let variant
     try {
       variant = await primaryDrizzleDb.transaction(async (tx) => {
+        // Lock the owning product row so concurrent variant creates for the
+        // same product serialize on this row; without this two requests can
+        // both see activeCount < MAX_VARIANTS_PER_PRODUCT and exceed the cap.
+        await tx.execute(
+          sql`SELECT id FROM ${products} WHERE id = ${productId} FOR UPDATE`
+        )
+
         const activeCount = await tx.query.productVariants.findMany({
           where: and(
             eq(productVariants.productId, productId),

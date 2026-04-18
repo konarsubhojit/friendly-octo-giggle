@@ -25,7 +25,6 @@ export function VariantButton({
 
   return (
     <button
-      key={variant.id}
       onClick={() => onSelect(variant)}
       className={`${className} focus-warm`}
     >

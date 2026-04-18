@@ -240,9 +240,9 @@ The current cart architecture still supports two ownership modes:
 
 The database remains the source of truth, while Redis can cache cart results when configured.
 
-### Product Variation and Pricing Model
+### Product Variant and Pricing Model
 
-Variation behavior in the live codebase is more capable than the earlier document described:
+Variant behavior in the live codebase is more capable than the earlier document described:
 
 - variants can override image and image gallery content
 - each variant has independent stock

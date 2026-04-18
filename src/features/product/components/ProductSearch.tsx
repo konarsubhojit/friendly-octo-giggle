@@ -277,8 +277,11 @@ export default function ProductSearch({ onNavigate }: ProductSearchProps) {
       <button
         type="button"
         onClick={openDialog}
-        className="w-full max-w-[220px] sm:max-w-xs flex items-center gap-2 border border-[var(--border-warm)] bg-[var(--surface)] text-[var(--text-muted)] rounded-full px-4 py-1.5 text-sm hover:border-[var(--accent-rose)] transition-colors cursor-pointer"
         aria-label="Search products"
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        aria-controls="product-search-dialog"
+        className="w-full max-w-[220px] sm:max-w-xs flex items-center gap-2 border border-[var(--border-warm)] bg-[var(--surface)] text-[var(--text-muted)] rounded-full px-4 py-1.5 text-sm hover:border-[var(--accent-rose)] transition-colors cursor-pointer"
       >
         <svg
           className="w-4 h-4 shrink-0"
@@ -313,6 +316,7 @@ export default function ProductSearch({ onNavigate }: ProductSearchProps) {
 
             <div
               ref={dialogRef}
+              id="product-search-dialog"
               role="dialog"
               aria-modal="true"
               aria-label="Search products"
@@ -380,7 +384,11 @@ export default function ProductSearch({ onNavigate }: ProductSearchProps) {
                   results.map((item, index) => {
                     const isActive = index === clampedIndex
                     return (
-                      <li key={item.id}>
+                      <li
+                        key={item.id}
+                        role="option"
+                        aria-selected={isActive}
+                      >
                         <button
                           type="button"
                           onMouseEnter={() => setActiveIndex(index)}

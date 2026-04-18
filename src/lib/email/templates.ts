@@ -139,8 +139,8 @@ export const orderConfirmationTemplate = (data: OrderConfirmationData) => {
       const sanitizedVariant = item.variant
         ? item.variant
             .trim()
-            .replace(/[\r\n\t\x00-\x1F\x7F]/g, ' ')
-            .replace(/\s+/g, ' ')
+            .replaceAll(/[\x00-\x1F\x7F]/g, ' ')
+            .replaceAll(/\s+/g, ' ')
             .trim()
         : ''
       const variantStr = sanitizedVariant ? ` (${sanitizedVariant})` : ''

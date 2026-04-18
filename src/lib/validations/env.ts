@@ -82,6 +82,58 @@ export const EnvSchema = z
         }
       })
     }
+
+    // Cross-field checks for the Azure Blob upload provider.
+    if (data.IMAGE_UPLOAD_PROVIDER === 'azure') {
+      if (!data.AZURE_BLOB_ACCOUNTS_JSON) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['AZURE_BLOB_ACCOUNTS_JSON'],
+          message:
+            "AZURE_BLOB_ACCOUNTS_JSON must be set when IMAGE_UPLOAD_PROVIDER='azure'",
+        })
+        return
+      }
+
+      let parsed: unknown
+      try {
+        parsed = JSON.parse(data.AZURE_BLOB_ACCOUNTS_JSON)
+      } catch {
+        // The field-level .refine will already surface a parse error;
+        // nothing more to add here.
+        return
+      }
+      if (!Array.isArray(parsed) || parsed.length === 0) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['AZURE_BLOB_ACCOUNTS_JSON'],
+          message:
+            "AZURE_BLOB_ACCOUNTS_JSON must contain at least one account when IMAGE_UPLOAD_PROVIDER='azure'",
+        })
+        return
+      }
+
+      if (data.AZURE_BLOB_DEFAULT_ACCOUNT_ALIAS) {
+        const aliases = parsed
+          .map((item) =>
+            typeof item === 'object' &&
+            item !== null &&
+            typeof (item as Record<string, unknown>).alias === 'string'
+              ? ((item as Record<string, unknown>).alias as string)
+              : null
+          )
+          .filter((alias): alias is string => alias !== null)
+
+        if (!aliases.includes(data.AZURE_BLOB_DEFAULT_ACCOUNT_ALIAS)) {
+          ctx.addIssue({
+            code: 'custom',
+            path: ['AZURE_BLOB_DEFAULT_ACCOUNT_ALIAS'],
+            message:
+              'AZURE_BLOB_DEFAULT_ACCOUNT_ALIAS must match an alias in AZURE_BLOB_ACCOUNTS_JSON',
+          })
+        }
+      }
+    }
   })
 
 export type Env = z.infer<typeof EnvSchema>
