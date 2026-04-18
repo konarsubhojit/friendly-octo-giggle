@@ -17,38 +17,16 @@ permissions:
   id-token: write
 
 jobs:
-  changes:
-    name: Detect Changes
-    runs-on: ubuntu-latest
-    outputs:
-      src_changed: ${{ steps.filter.outputs.any_changed }}
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-
-      - name: Detect source file changes
-        id: filter
-        uses: tj-actions/changed-files@v46
-        with:
-          files_ignore: |
-            docs/**
-            specs/**
-            **/*.md
-            .cursorrules
-
   lint:
     name: Lint and Type Check
     runs-on: ubuntu-latest
-    needs: [changes]
-    if: needs.changes.outputs.src_changed == 'true'
     steps:
       - uses: actions/checkout@v6
 
       - name: Set up Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
 
       - name: Restore npm cache
@@ -71,15 +49,13 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
-    needs: [changes]
-    if: needs.changes.outputs.src_changed == 'true'
     steps:
       - uses: actions/checkout@v6
 
       - name: Set up Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
 
       - name: Restore npm cache
@@ -106,8 +82,7 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
-    needs: [changes, lint, test]
-    if: needs.changes.outputs.src_changed == 'true'
+    needs: [lint, test]
     steps:
       - uses: actions/checkout@v6
         with:
@@ -116,7 +91,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
 
       - name: Restore npm cache
@@ -164,8 +139,8 @@ jobs:
   deepsource:
     name: DeepSource Analysis
     runs-on: ubuntu-latest
-    needs: [changes, test]
-    if: needs.changes.outputs.src_changed == 'true' && (github.event_name == 'push' || github.event_name == 'pull_request')
+    needs: [test]
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
     steps:
       - uses: actions/checkout@v6
         with:
@@ -185,8 +160,8 @@ jobs:
   deploy-preview:
     name: Deploy to Vercel Preview
     runs-on: ubuntu-latest
-    needs: [changes, build]
-    if: needs.changes.outputs.src_changed == 'true' && github.ref == 'refs/heads/develop' && github.event_name == 'push'
+    needs: [build]
+    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
     steps:
       - uses: actions/checkout@v6
         with:
@@ -195,7 +170,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
 
       - name: Pull Vercel preview environment
@@ -215,8 +190,8 @@ jobs:
   deploy-production:
     name: Deploy to Vercel Production
     runs-on: ubuntu-latest
-    needs: [changes, build]
-    if: needs.changes.outputs.src_changed == 'true' && github.ref == 'refs/heads/master' && github.event_name == 'push'
+    needs: [build]
+    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
     steps:
       - uses: actions/checkout@v6
         with:
@@ -225,7 +200,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
 
       - name: Pull Vercel production environment
@@ -245,8 +220,8 @@ jobs:
   database-migrations-preview:
     name: Run Database Migrations (Preview)
     runs-on: ubuntu-latest
-    needs: [changes, deploy-preview]
-    if: needs.changes.outputs.src_changed == 'true' && github.ref == 'refs/heads/develop' && github.event_name == 'push'
+    needs: [deploy-preview]
+    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
     steps:
       - uses: actions/checkout@v6
         with:
@@ -255,7 +230,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
 
       - name: Restore npm cache
@@ -281,8 +256,8 @@ jobs:
   database-migrations-production:
     name: Run Database Migrations (Production)
     runs-on: ubuntu-latest
-    needs: [changes, deploy-production]
-    if: needs.changes.outputs.src_changed == 'true' && github.ref == 'refs/heads/master' && github.event_name == 'push'
+    needs: [deploy-production]
+    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
     steps:
       - uses: actions/checkout@v6
         with:
@@ -291,7 +266,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
 
       - name: Restore npm cache
