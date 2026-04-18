@@ -19,5 +19,6 @@
     "editor.defaultFormatter": "esbenp.prettier-vscode"
   },
   "files.autoSave": "onFocusChange",
-  "chat.agent.maxRequests": 10000
+  "chat.agent.maxRequests": 10000,
+  "githubPullRequests.ignoredPullRequestBranches": ["develop"]
 }

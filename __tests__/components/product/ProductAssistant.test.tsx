@@ -79,7 +79,7 @@ describe('ProductAssistant', () => {
       screen.getByRole('button', { name: 'Ask a question about Test Product' })
     )
     expect(screen.getByText('Is this product in stock?')).toBeTruthy()
-    expect(screen.getByText('What variations are available?')).toBeTruthy()
+    expect(screen.getByText('What variants are available?')).toBeTruthy()
     expect(screen.getByText('Tell me more about this product')).toBeTruthy()
   })
 

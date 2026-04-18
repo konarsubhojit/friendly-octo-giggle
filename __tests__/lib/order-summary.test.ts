@@ -28,7 +28,7 @@ describe('order-summary', () => {
     ).toBe(5)
   })
 
-  it('builds checkout line items with variation labels and customization notes', () => {
+  it('builds checkout line items with variant labels and customization notes', () => {
     expect(
       buildCheckoutSummaryLineItems([
         {
@@ -45,7 +45,7 @@ describe('order-summary', () => {
     ).toEqual([
       {
         name: 'Rose Box',
-        variationLabel: 'Large - Ruby',
+        variantLabel: 'Large - Ruby',
         quantity: 2,
         unitPrice: 1250,
         lineTotal: 2500,

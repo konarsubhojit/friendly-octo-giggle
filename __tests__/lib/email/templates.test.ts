@@ -53,7 +53,7 @@ describe('orderConfirmationTemplate', () => {
         name: 'Candle Set',
         quantity: 1,
         price: '₹501.00',
-        variation: 'Rose Gold',
+        variant: 'Rose Gold',
       },
     ],
     shippingAddress: '123 Main St\nBangalore, KA 560001',
@@ -81,7 +81,7 @@ describe('orderConfirmationTemplate', () => {
     expect(result.html).toContain('Candle Set')
   })
 
-  it('HTML contains variation info', () => {
+  it('HTML contains variant info', () => {
     const result = orderConfirmationTemplate(data)
     expect(result.html).toContain('Rose Gold')
   })
@@ -109,6 +109,31 @@ describe('orderConfirmationTemplate', () => {
     const result = orderConfirmationTemplate(xssData)
     expect(result.html).not.toContain('<script>')
     expect(result.html).toContain('&lt;script&gt;')
+  })
+
+  it('sanitizes variant whitespace/control chars in plain-text body while preserving original in HTML (escaped)', () => {
+    const messyVariant = '  Blue\n\tRed  '
+    const messyData: OrderConfirmationData = {
+      ...data,
+      items: [
+        {
+          name: 'Messy Item',
+          quantity: 1,
+          price: '₹100.00',
+          variant: messyVariant,
+        },
+      ],
+    }
+    const result = orderConfirmationTemplate(messyData)
+
+    // Plain text: normalized (trimmed, control chars & runs of whitespace collapsed to single space)
+    expect(result.text).toContain('(Blue Red)')
+    expect(result.text).not.toContain('(  Blue')
+    expect(result.text).not.toContain('\t')
+
+    // HTML: original value preserved (HTML-escaped, no raw <script> injection vectors).
+    // Newlines/tabs are literal whitespace in HTML and remain in the source.
+    expect(result.html).toContain(messyVariant)
   })
 })
 

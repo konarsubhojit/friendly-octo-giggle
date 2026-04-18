@@ -32,6 +32,10 @@ context(
 
 For later messages in the same session, call `context` first before doing more work.
 
+Before inventing a workflow from memory, check whether ContextStream already surfaced relevant skills, docs, lessons, or decisions for the task.
+Use `skill(action="list")`, `memory(action="list_docs")`, `session(action="get_lessons")`, and `memory(action="decisions")` when the task is unfamiliar or likely already documented.
+Reuse the current `project_id` returned by `init` or `context` for project-scoped docs, events, and skills instead of guessing.
+
 ### 2. Plan multi-step work
 
 Capture a persistent plan:

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { POST } from '@/app/api/upload/route'
 import { auth } from '@/lib/auth'
-import { put } from '@vercel/blob'
+import { uploadImage } from '@/lib/image-storage'
 import {
   MAX_FILE_SIZE,
   VALID_IMAGE_TYPES_DISPLAY,
@@ -9,7 +9,7 @@ import {
 import { logError } from '@/lib/logger'
 
 vi.mock('@/lib/auth', () => ({ auth: vi.fn() }))
-vi.mock('@vercel/blob', () => ({ put: vi.fn() }))
+vi.mock('@/lib/image-storage', () => ({ uploadImage: vi.fn() }))
 vi.mock(
   '@/lib/upload-constants',
   async () => await vi.importActual('@/lib/upload-constants')
@@ -17,10 +17,11 @@ vi.mock(
 vi.mock('@/lib/logger', () => ({ logError: vi.fn() }))
 
 const mockAuth = auth as ReturnType<typeof vi.fn>
-const mockPut = put as ReturnType<typeof vi.fn>
+const mockUploadImage = uploadImage as ReturnType<typeof vi.fn>
 
 function makeRequest(
-  file?: { name: string; type: string; size: number } | null
+  file?: { name: string; type: string; size: number } | null,
+  extras: Record<string, string> = {}
 ): Request {
   const mockFormData = new Map<string, unknown>()
   if (file) {
@@ -29,6 +30,9 @@ function makeRequest(
       type: file.type,
       size: file.size,
     })
+  }
+  for (const [key, value] of Object.entries(extras)) {
+    mockFormData.set(key, value)
   }
   return {
     formData: async () => ({
@@ -94,27 +98,70 @@ describe('POST /api/upload', () => {
     )
   })
 
-  it('uploads successfully', async () => {
+  it('returns 400 for invalid provider', async () => {
     mockAuth.mockResolvedValue({ user: { id: 'u1', role: 'ADMIN' } })
-    const blobResult = {
+    const file = { name: 'test.png', type: 'image/png', size: 1024 }
+    const res = await POST(makeRequest(file, { provider: 'gcs' }))
+    expect(res.status).toBe(400)
+    const body = await res.json()
+    expect(body.error).toBe('Invalid provider. Expected "vercel" or "azure".')
+    expect(mockUploadImage).not.toHaveBeenCalled()
+  })
+
+  it('uploads successfully via Vercel (default)', async () => {
+    mockAuth.mockResolvedValue({ user: { id: 'u1', role: 'ADMIN' } })
+    const uploadResult = {
       url: 'https://blob.vercel-storage.com/test.png',
       pathname: 'test.png',
       contentType: 'image/png',
+      provider: 'vercel' as const,
     }
-    mockPut.mockResolvedValue(blobResult)
+    mockUploadImage.mockResolvedValue(uploadResult)
     const file = { name: 'test.png', type: 'image/png', size: 1024 }
     const res = await POST(makeRequest(file))
     expect(res.status).toBe(200)
     const body = await res.json()
     expect(body.success).toBe(true)
     expect(body.data).toEqual({
-      url: blobResult.url,
-      pathname: blobResult.pathname,
-      contentType: blobResult.contentType,
+      url: uploadResult.url,
+      pathname: uploadResult.pathname,
+      contentType: uploadResult.contentType,
+      provider: 'vercel',
+      azureAccountAlias: null,
     })
-    expect(mockPut).toHaveBeenCalledWith('test.png', file, {
-      access: 'public',
-      addRandomSuffix: true,
+    expect(mockUploadImage).toHaveBeenCalledWith(file, {
+      provider: undefined,
+      azureAccountAlias: undefined,
+    })
+  })
+
+  it('uploads successfully via Azure with alias', async () => {
+    mockAuth.mockResolvedValue({ user: { id: 'u1', role: 'ADMIN' } })
+    const uploadResult = {
+      url: 'https://acct.blob.core.windows.net/container/images/abc.png',
+      pathname: 'images/abc.png',
+      contentType: 'image/png',
+      provider: 'azure' as const,
+      azureAccountAlias: 'primary',
+    }
+    mockUploadImage.mockResolvedValue(uploadResult)
+    const file = { name: 'test.png', type: 'image/png', size: 1024 }
+    const res = await POST(
+      makeRequest(file, { provider: 'azure', azureAccountAlias: 'primary' })
+    )
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.success).toBe(true)
+    expect(body.data).toEqual({
+      url: uploadResult.url,
+      pathname: uploadResult.pathname,
+      contentType: uploadResult.contentType,
+      provider: 'azure',
+      azureAccountAlias: 'primary',
+    })
+    expect(mockUploadImage).toHaveBeenCalledWith(file, {
+      provider: 'azure',
+      azureAccountAlias: 'primary',
     })
   })
 
@@ -125,5 +172,60 @@ describe('POST /api/upload', () => {
     const body = await res.json()
     expect(body.error).toBe('Failed to upload file')
     expect(logError).toHaveBeenCalled()
+  })
+
+  it('returns 500 and logs context when uploadImage rejects with default provider', async () => {
+    mockAuth.mockResolvedValue({ user: { id: 'user-123', role: 'ADMIN' } })
+    mockUploadImage.mockRejectedValue(new Error('upload failed'))
+    const file = { name: 'fail.png', type: 'image/png', size: 1024 }
+
+    const res = await POST(makeRequest(file))
+
+    expect(res.status).toBe(500)
+    const body = await res.json()
+    expect(body.error).toBe('Failed to upload file')
+    expect(logError).toHaveBeenCalledTimes(1)
+    expect(logError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        error: expect.any(Error),
+        context: 'file_upload',
+        additionalInfo: expect.objectContaining({
+          fileName: 'fail.png',
+          userId: 'user-123',
+          // No provider input → route leaves provider as 'unknown' before upload
+          provider: 'unknown',
+          azureAccountAlias: 'unknown',
+        }),
+      })
+    )
+  })
+
+  it('returns 500 and logs context when uploadImage rejects with explicit azure provider + alias', async () => {
+    mockAuth.mockResolvedValue({ user: { id: 'user-456', role: 'ADMIN' } })
+    mockUploadImage.mockRejectedValue(new Error('upload failed'))
+    const file = { name: 'fail-azure.png', type: 'image/png', size: 2048 }
+
+    const res = await POST(
+      makeRequest(file, { provider: 'azure', azureAccountAlias: 'images-west' })
+    )
+
+    expect(res.status).toBe(500)
+    const body = await res.json()
+    expect(body.error).toBe('Failed to upload file')
+    expect(logError).toHaveBeenCalledTimes(1)
+    expect(logError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        error: expect.any(Error),
+        context: 'file_upload',
+        additionalInfo: expect.objectContaining({
+          fileName: 'fail-azure.png',
+          userId: 'user-456',
+          provider: 'azure',
+          // alias is only captured into the log context after a successful upload;
+          // when uploadImage throws, it remains at its pre-upload default.
+          azureAccountAlias: 'unknown',
+        }),
+      })
+    )
   })
 })

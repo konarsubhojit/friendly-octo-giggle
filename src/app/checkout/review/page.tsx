@@ -92,21 +92,17 @@ export default function CheckoutReviewPage() {
   const [isPending, startTransition] = useTransition()
   const [isAcknowledged, setIsAcknowledged] = useState(false)
   const [checkoutMessage, setCheckoutMessage] = useState<string | null>(null)
-  const [pendingCheckout, setPendingCheckout] =
-    useState<PendingCheckout | null>(null)
-  const [isHydrated, setIsHydrated] = useState(false)
+  const [pendingCheckout] = useState<PendingCheckout | null>(() =>
+    readPendingCheckout()
+  )
 
   const acknowledgmentId = useId()
 
   useEffect(() => {
-    const data = readPendingCheckout()
-    if (!data) {
+    if (!pendingCheckout) {
       router.replace('/cart')
-      return
     }
-    setPendingCheckout(data)
-    setIsHydrated(true)
-  }, [router])
+  }, [pendingCheckout, router])
 
   useEffect(() => {
     if (status === 'authenticated') {
@@ -223,7 +219,7 @@ export default function CheckoutReviewPage() {
     })
   }
 
-  if (!isHydrated || status === 'loading') {
+  if (pendingCheckout === null || status === 'loading') {
     return (
       <div className="min-h-screen bg-warm-gradient flex items-center justify-center">
         <LoadingSpinner />
@@ -328,7 +324,7 @@ export default function CheckoutReviewPage() {
                   <div className="space-y-3">
                     {lineItems.map((item) => (
                       <article
-                        key={`${item.name}-${item.variationLabel ?? 'default'}`}
+                        key={`${item.name}-${item.variantLabel ?? 'default'}`}
                         className="rounded-2xl border border-[var(--border-warm)] bg-[var(--surface-raised)] px-4 py-3"
                       >
                         <div className="flex items-start justify-between gap-4">
@@ -336,9 +332,9 @@ export default function CheckoutReviewPage() {
                             <h4 className="font-semibold text-[var(--foreground)]">
                               {item.name}
                             </h4>
-                            {item.variationLabel ? (
+                            {item.variantLabel ? (
                               <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                                {item.variationLabel}
+                                {item.variantLabel}
                               </p>
                             ) : null}
                             {item.customizationNote ? (

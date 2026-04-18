@@ -257,7 +257,7 @@ function makeProductRow(overrides: Record<string, unknown> = {}) {
   }
 }
 
-function makeVariationRow(overrides: Record<string, unknown> = {}) {
+function makeVariantRow(overrides: Record<string, unknown> = {}) {
   return {
     id: 'var0001',
     productId: 'prod001',
@@ -278,15 +278,15 @@ describe('db.products.findBestsellers', () => {
     vi.clearAllMocks()
   })
 
-  it('returns products sorted by sales with their variations', async () => {
+  it('returns products sorted by sales with their variants', async () => {
     const productRows = [
       makeProductRow({ id: 'prod001' }),
       makeProductRow({ id: 'prod002' }),
     ]
-    const variationRows = [makeVariationRow({ productId: 'prod001' })]
+    const variantRows = [makeVariantRow({ productId: 'prod001' })]
 
     // findBestsellers calls drizzleDb.select() twice (subquery + main)
-    // and drizzleDb.query.productVariations.findMany() once
+    // and drizzleDb.query.productVariants.findMany() once
     const subqueryChain = {
       from: vi.fn().mockReturnThis(),
       innerJoin: vi.fn().mockReturnThis(),
@@ -306,7 +306,7 @@ describe('db.products.findBestsellers', () => {
       .mockReturnValueOnce(subqueryChain)
       .mockReturnValueOnce(mainQueryChain)
 
-    mockProductVariantsFindMany.mockResolvedValue(variationRows)
+    mockProductVariantsFindMany.mockResolvedValue(variantRows)
 
     const results = await db.products.findBestsellers({ limit: 5 })
 
@@ -342,15 +342,15 @@ describe('db.products.findBestsellers', () => {
     expect(mockProductVariantsFindMany).not.toHaveBeenCalled()
   })
 
-  it('groups variations by productId correctly', async () => {
+  it('groups variants by productId correctly', async () => {
     const productRows = [
       makeProductRow({ id: 'prodA' }),
       makeProductRow({ id: 'prodB' }),
     ]
-    const variationRows = [
-      makeVariationRow({ id: 'v1', productId: 'prodA' }),
-      makeVariationRow({ id: 'v2', productId: 'prodA' }),
-      makeVariationRow({ id: 'v3', productId: 'prodB' }),
+    const variantRows = [
+      makeVariantRow({ id: 'v1', productId: 'prodA' }),
+      makeVariantRow({ id: 'v2', productId: 'prodA' }),
+      makeVariantRow({ id: 'v3', productId: 'prodB' }),
     ]
 
     const subqueryChain = {
@@ -371,7 +371,7 @@ describe('db.products.findBestsellers', () => {
     mockSelect
       .mockReturnValueOnce(subqueryChain)
       .mockReturnValueOnce(mainQueryChain)
-    mockProductVariantsFindMany.mockResolvedValue(variationRows)
+    mockProductVariantsFindMany.mockResolvedValue(variantRows)
 
     const results = await db.products.findBestsellers({ limit: 2 })
 
@@ -472,7 +472,7 @@ describe('db.wishlists', () => {
           productId: 'prod001',
           product: {
             ...makeProductRow({ id: 'prod001' }),
-            variants: [makeVariationRow()],
+            variants: [makeVariantRow()],
           },
         },
       ]

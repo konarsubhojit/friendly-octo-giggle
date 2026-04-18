@@ -69,7 +69,7 @@ export const db = {
     /**
      * Find all products with optional pagination
      * @param options - Pagination options
-     * @returns Array of products with full details including variations
+     * @returns Array of products with full details including variants
      */
     findAll: async (options: ProductListOptions = {}): Promise<Product[]> => {
       const { limit, offset } = options
@@ -100,7 +100,7 @@ export const db = {
      * Only counts items from non-cancelled orders.
      *
      * The sort and limit are pushed entirely to SQL using a LEFT JOIN subquery
-     * so that only the final result-set rows are loaded into memory. Variations
+     * so that only the final result-set rows are loaded into memory. Variants
      * are fetched in a second, narrowly-scoped query so we never load the full
      * catalog into Node.
      *
@@ -492,7 +492,7 @@ export const db = {
     },
 
     /**
-     * Resolve a share key to its product and variation IDs.
+     * Resolve a share key to its product and variant IDs.
      * Result is cached in Redis with a 1-year TTL since share tokens
      * are immutable — the mapping never changes after creation.
      * Null results (missing token) are not cached to prevent poisoning.

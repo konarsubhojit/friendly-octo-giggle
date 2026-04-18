@@ -68,7 +68,7 @@ This is a highly scalable e-commerce platform designed for serverless deployment
 
 ### Core Features
 
-- **Product Management**: Full CRUD with images, variations, categories, and stock tracking
+- **Product Management**: Full CRUD with images, variants, categories, and stock tracking
 - **Product Search**: Upstash Search with automatic DB fallback
 - **Order Processing**: Queue-based checkout with complete order lifecycle management
 - **User Authentication**: Google OAuth, Microsoft Entra ID, and email/password with NextAuth.js v5

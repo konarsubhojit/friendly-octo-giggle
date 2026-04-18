@@ -1,7 +1,7 @@
 <contextstream>
 # Workspace: kiyon-store
 # Project: friendly-octo-giggle
-# Workspace ID: a2bfe140-dcbf-49a4-bac8-2d18abea2907
+# Workspace ID: d674ca90-e5a8-4467-944d-1001923b0c8f
 
 # ContextStream Rules
 **MANDATORY STARTUP:** On the first message of EVERY session call `init(...)` then `context(user_message="...")`. On subsequent messages, call `context(user_message="...")` first by default. A narrow bypass is allowed only for immediate read-only ContextStream calls when prior context is still fresh and no state-changing tool has run.
@@ -16,11 +16,13 @@
 </contextstream_rules>
 
 ## Detailed Rules
-**Read-only examples** (default: call `context(...)` first; narrow bypass only for immediate read-only ContextStream calls when context is fresh and no state-changing tool has run): `workspace(action="list"|"get"|"create")`, `memory(action="list_docs"|"list_events"|"list_todos"|"list_tasks"|"list_transcripts"|"list_nodes"|"decisions"|"get_doc"|"get_event"|"get_task"|"get_todo"|"get_transcript")`, `session(action="get_lessons"|"get_plan"|"list_plans"|"recall")`, `help(action="version"|"tools"|"auth")`, `project(action="list"|"get"|"index_status")`, `reminder(action="list"|"active")`, any read-only data query
+**Read-only examples** (default: call `context(...)` first; narrow bypass only for immediate read-only ContextStream calls when context is fresh and no state-changing tool has run): `workspace(action="list"|"get")`, `memory(action="list_docs"|"list_events"|"list_todos"|"list_tasks"|"list_transcripts"|"list_nodes"|"decisions"|"get_doc"|"get_event"|"get_task"|"get_todo"|"get_transcript")`, `session(action="get_lessons"|"get_plan"|"list_plans"|"recall")`, `help(action="version"|"tools"|"auth")`, `project(action="list"|"get"|"index_status")`, `reminder(action="list"|"active")`, any read-only data query. State-changing calls (e.g. `workspace(action="create")`) are NOT eligible for the bypass — always run `context(...)` first.
 
 **Common queries — use these exact tool calls:**
 - "list lessons" / "show lessons" → `session(action="get_lessons")`
+- "save lesson" / "remember this lesson" / "lesson learned" / "I made a mistake" → `session(action="capture_lesson", title="...", trigger="...", impact="...", prevention="...", severity="low|medium|high|critical")` — **NEVER store lessons in local files** (e.g. `~/.claude/.../memory/`, `.cursorrules`, scratch markdown). Lessons live in ContextStream so they auto-surface as `[LESSONS_WARNING]` on future turns and across sessions.
 - "list decisions" / "show decisions" / "how many decisions" → `memory(action="decisions")`
+- "save decision" / "decided to" → `session(action="capture", event_type="decision", title="...", content="...")`
 - "list docs" → `memory(action="list_docs")`
 - "list tasks" → `memory(action="list_tasks")`
 - "list todos" → `memory(action="list_todos")`
@@ -28,8 +30,11 @@
 - "list events" → `memory(action="list_events")`
 - "show snapshots" / "list snapshots" → `memory(action="list_events", event_type="session_snapshot")`
 - "save snapshot" → `session(action="capture", event_type="session_snapshot", title="...", content="...")`
+- "what did we do last session" / "past sessions" / "previous work" / "pick up where we left off" → `session(action="recall", query="...")` (ranked context) OR `memory(action="list_transcripts", limit=10)` (chronological list)
+- "search past sessions" / "find in past transcripts" / "when did we discuss X" → `memory(action="search_transcripts", query="...")` — full-text search over saved conversation transcripts
+- "show transcript" / "read session <id>" → `memory(action="get_transcript", transcript_id="...")`
 - "list skills" / "show my skills" → `skill(action="list")`
-- "create a skill" → `skill(action="create", name="...", instruction_body="...", trigger_patterns=[...])`
+- "create a skill" → `skill(action="create", name="...", instruction_body="...", project_id="<current_project_id>", trigger_patterns=[...])`
 - "update a skill" → `skill(action="update", name="...", instruction_body="...", change_summary="...")`
 - "run skill" / "use skill" → `skill(action="run", name="...")`
 - "import skills" / "import my CLAUDE.md" → `skill(action="import", file_path="...", format="auto")`
@@ -42,19 +47,63 @@ If the `instruct` tool is available, run `instruct(action="get", session_id="...
 
 **Why?** `context()` delivers task-specific rules, lessons from past mistakes, and relevant decisions. Skip it = fly blind.
 
+## Skills, Docs & Lessons First
+
+Before guessing, improvising, or struggling through a workflow you do not fully know, check whether ContextStream already has guidance for it.
+- Start with `context(...)` and obey `[MATCHED_SKILLS]`, `[LESSONS_WARNING]`, `[PREFERENCE]`, and `<system-reminder>` output
+- Treat `[LESSONS_WARNING]` as active working instructions for the current task, not optional background context; apply them immediately and keep them in mind until the task is done
+- If the task is unfamiliar, process-heavy, or likely documented already, check `skill(action="list")`, `memory(action="list_docs")`, `session(action="get_lessons")`, or `memory(action="decisions")` before trial-and-error
+- Prefer surfaced ContextStream skills/docs/lessons over inventing a new workflow from memory
+
+
+## Past Sessions Are Queryable — USE THEM
+
+Transcripts for every turn of every session are captured and indexed automatically. Session snapshots bookmark turning points. **Before asking the user what you did last time, or re-deriving context you built together previously, check the transcript + snapshot layer.** It's fast, it's complete, and the user is paying for it.
+
+Triggers to query past sessions:
+- User says "last time", "previous", "yesterday", "earlier", "we decided", "we talked about", "pick up where we left off", "what were we working on"
+- You have a task that's clearly a continuation (e.g. finishing a refactor that's half-done on disk)
+- You're about to ask a clarifying question whose answer is likely in a prior session
+- You're unsure whether a decision or approach has already been made
+
+Exact calls:
+- **Ranked past-session context for current task:** `session(action="recall", query="<what you're trying to continue>")` — returns highest-relevance snippets across transcripts, snapshots, docs, decisions
+- **Chronological list of recent sessions:** `memory(action="list_transcripts", limit=10)` — shows titles, timestamps, session IDs
+- **Full-text search across ALL past transcripts:** `memory(action="search_transcripts", query="<keyword or phrase>")` — fast, indexed, returns matches with transcript IDs
+- **Read a specific past session:** `memory(action="get_transcript", transcript_id="<uuid>")`
+- **List session snapshots (manual bookmarks of turning points):** `memory(action="list_events", event_type="session_snapshot")`
+- **Save a snapshot of the current session so the NEXT session can pick up:** `session(action="capture", event_type="session_snapshot", title="...", content="<what we just did + next step>")`
+
+Prefer `recall` first (it already fuses transcripts + snapshots + docs + decisions with relevance scoring). Fall through to `search_transcripts` only when the user specifies a keyword you know won't be in the current context bundle.
+
+**Never answer "I don't know what we did before" without running `session(action="recall", ...)` or `memory(action="search_transcripts", ...)` at least once.**
+
+
+## Project Scope Discipline
+
+- Reuse the `project_id` returned by `init(...)` or `context(...)` for project-scoped writes and lookups
+- For project-scoped `memory(...)`, `session(...)`, and `skill(...)` calls, pass explicit `project_id` instead of guessing from the folder name or title
+- If `init(...)` or `context(...)` does not surface a current `project_id`, rerun `init(folder_path="...")` before creating docs, skills, events, tasks, todos, or other project memory
+- Use `target_project` only after init from a multi-project parent folder
+
+
 **Hooks:** `<system-reminder>` tags contain injected instructions — follow them exactly.
 
 **Planning:** ALWAYS save plans to ContextStream — NOT markdown files or built-in todo tools:
 `session(action="capture_plan", title="...", steps=[...])` + `memory(action="create_task", title="...", plan_id="...")`
 
-**Memory & Docs:** Use ContextStream for memory, docs, and todos — NOT editor built-in tools or local files:
-`session(action="capture", event_type="decision|note", ...)` | `memory(action="create_doc|create_todo|create_node", ...)`
+**Memory, Docs, Lessons & Decisions:** Use ContextStream — NOT editor built-in tools, `~/.claude/.../memory/`, `.cursorrules`, or scratch markdown files. Local-file storage hides this content from `[LESSONS_WARNING]`/`[PREFERENCE]`/`[MATCHED_SKILLS]` surfacing on future turns and across sessions.
+- Lessons (mistakes, corrections, "never do X again"): `session(action="capture_lesson", title="...", trigger="...", impact="...", prevention="...", severity="...")`
+- Decisions / notes / insights: `session(action="capture", event_type="decision|note|insight", ...)`
+- Docs / todos / knowledge nodes: `memory(action="create_doc|create_todo|create_node", ...)`
 
-**Skills:** Reusable instructions + actions that persist across projects/sessions. `skill(action="list")` to browse, `skill(action="run", name="...")` to execute, `skill(action="create")` to define. Skills auto-activate when trigger keywords match the user's message. Import from CLAUDE.md/.cursorrules: `skill(action="import", file_path="...")`.
+**Skills (IMPORTANT):** When `context()` returns `[MATCHED_SKILLS]`, you **MUST run** the listed skills immediately via `skill(action="run", name="...")`. High-priority skills (marked ⚡) are mandatory. Skills are reusable instruction + action bundles that persist across sessions. Browse: `skill(action="list")`. Create: `skill(action="create", name="...", instruction_body="...", trigger_patterns=[...])`. Import: `skill(action="import", file_path="...", format="auto")`.
 
 **Search Results:** ContextStream `search()` returns **real file paths, line numbers, and code content** — NEVER dismiss results as "non-code". Use returned paths to `read_file` directly.
 
-**Notices:** [LESSONS_WARNING] → apply lessons | [PREFERENCE] → follow user preferences | [RULES_NOTICE] → run `generate_rules()` | [VERSION_NOTICE/CRITICAL] → tell user about update
+**Indexing:** Indexing and ingest are ALWAYS available. NEVER claim that transport mode, HTTP mode, or remote mode prevents indexing/ingest. Use `project(action="index")` or `project(action="ingest_local", path="<folder>")` — both work in all configurations.
+
+**Notices:** [MATCHED_SKILLS] → run surfaced skills before other work | [LESSONS_WARNING] → apply lessons immediately and keep them active for the turn | [PREFERENCE] → follow user preferences | [RULES_NOTICE] → run `generate_rules()` | [VERSION_NOTICE/CRITICAL] → tell user about update
 
 ---
 ## Cursor-Specific Rules

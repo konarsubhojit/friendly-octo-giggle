@@ -2,10 +2,10 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import React from 'react'
-import { VariationButton } from '@/features/product/components/VariationButton'
+import { VariantButton } from '@/features/product/components/VariantButton'
 import type { ProductVariant } from '@/lib/types'
 
-const baseVariation: ProductVariant = {
+const baseVariant: ProductVariant = {
   id: 'var1',
   productId: 'prod1',
   sku: null,
@@ -20,11 +20,11 @@ const baseVariation: ProductVariant = {
 
 const mockFormatPrice = (amount: number) => `₹${amount.toFixed(2)}`
 
-describe('VariationButton', () => {
+describe('VariantButton', () => {
   it('renders label and formatted price', () => {
     render(
-      <VariationButton
-        variant={baseVariation}
+      <VariantButton
+        variant={baseVariant}
         label="Red"
         isSelected={false}
         formatPrice={mockFormatPrice}
@@ -39,8 +39,8 @@ describe('VariationButton', () => {
   it('calls onSelect when clicked', () => {
     const onSelect = vi.fn()
     render(
-      <VariationButton
-        variant={baseVariation}
+      <VariantButton
+        variant={baseVariant}
         label="Red"
         isSelected={false}
         formatPrice={mockFormatPrice}
@@ -49,14 +49,14 @@ describe('VariationButton', () => {
     )
 
     fireEvent.click(screen.getByRole('button'))
-    expect(onSelect).toHaveBeenCalledWith(baseVariation)
+    expect(onSelect).toHaveBeenCalledWith(baseVariant)
   })
 
   it('shows low stock warning when stock < 6', () => {
-    const lowStockVariation = { ...baseVariation, stock: 3 }
+    const lowStockVariant = { ...baseVariant, stock: 3 }
     render(
-      <VariationButton
-        variant={lowStockVariation}
+      <VariantButton
+        variant={lowStockVariant}
         label="Low Stock"
         isSelected={false}
         formatPrice={mockFormatPrice}
@@ -69,8 +69,8 @@ describe('VariationButton', () => {
 
   it('does not show low stock when stock >= 6', () => {
     render(
-      <VariationButton
-        variant={baseVariation}
+      <VariantButton
+        variant={baseVariant}
         label="Red"
         isSelected={false}
         formatPrice={mockFormatPrice}
@@ -82,9 +82,9 @@ describe('VariationButton', () => {
   })
 
   it('does not show low stock when stock is 0', () => {
-    const outOfStock = { ...baseVariation, stock: 0 }
+    const outOfStock = { ...baseVariant, stock: 0 }
     render(
-      <VariationButton
+      <VariantButton
         variant={outOfStock}
         label="Out of Stock"
         isSelected={false}
@@ -98,8 +98,8 @@ describe('VariationButton', () => {
 
   it('shows cart quantity badge when cartQuantity > 0', () => {
     render(
-      <VariationButton
-        variant={baseVariation}
+      <VariantButton
+        variant={baseVariant}
         label="Red"
         isSelected={false}
         formatPrice={mockFormatPrice}
@@ -113,8 +113,8 @@ describe('VariationButton', () => {
 
   it('does not show cart quantity when cartQuantity is 0', () => {
     render(
-      <VariationButton
-        variant={baseVariation}
+      <VariantButton
+        variant={baseVariant}
         label="Red"
         isSelected={false}
         formatPrice={mockFormatPrice}
@@ -128,8 +128,8 @@ describe('VariationButton', () => {
 
   it('applies selected styles when isSelected is true', () => {
     render(
-      <VariationButton
-        variant={baseVariation}
+      <VariantButton
+        variant={baseVariant}
         label="Red"
         isSelected={true}
         formatPrice={mockFormatPrice}

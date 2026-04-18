@@ -55,7 +55,7 @@ describe('POST /api/share', () => {
     expect(data.error).toBe('Validation failed')
   })
 
-  it('creates a share for a product without variation', async () => {
+  it('creates a share for a product without variant', async () => {
     mockSharesCreate.mockResolvedValue('shr1234')
 
     const response = await POST(makePostRequest({ productId: 'abc1234' }))

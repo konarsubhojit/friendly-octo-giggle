@@ -61,16 +61,16 @@ vi.mock('@/features/admin/components/ProductEditPageForm', () => ({
   ),
 }))
 
-vi.mock('@/features/admin/components/VariationList', () => ({
+vi.mock('@/features/admin/components/VariantList', () => ({
   default: ({
     initialVariants,
   }: {
     initialVariants: Array<{ id: string }>
-  }) => <div>Variation workspace: {initialVariants.length}</div>,
+  }) => <div>Variant workspace: {initialVariants.length}</div>,
 }))
 
 describe('AdminProductEditFormPage', () => {
-  it('renders a unified editing workspace with product and variation tools', async () => {
+  it('renders a unified editing workspace with product and variant tools', async () => {
     render(
       await AdminProductEditFormPage({
         params: Promise.resolve({ id: 'prd-1' }),
@@ -83,7 +83,7 @@ describe('AdminProductEditFormPage', () => {
       })
     ).toBeInTheDocument()
     expect(screen.getByText('Product form: Rose Box')).toBeInTheDocument()
-    expect(screen.getByText('Variation workspace: 1')).toBeInTheDocument()
+    expect(screen.getByText('Variant workspace: 1')).toBeInTheDocument()
     expect(screen.getByText('Variants')).toBeInTheDocument()
     expect(screen.getByText('In stock')).toBeInTheDocument()
   })

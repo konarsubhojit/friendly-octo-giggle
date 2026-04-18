@@ -115,7 +115,7 @@ describe('lib/email', () => {
             name: 'SuperWidget',
             quantity: 2,
             price: '$21.00',
-            variation: 'Red',
+            variant: 'Red',
           },
         ],
         shippingAddress: '123 Main St',

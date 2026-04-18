@@ -147,12 +147,12 @@ describe('orders-search-index', () => {
           items: [
             {
               productId: 'p1',
-              variationId: null,
+              variantId: null,
               quantity: 1,
               price: 100,
               customizationNote: null,
               product: { name: 'Widget' },
-              variation: null,
+              variant: null,
             },
           ],
         },

@@ -14,17 +14,17 @@ describe('OrderListCard', () => {
             {
               quantity: 1,
               product: { name: 'Rose Gift Box', image: '/rose.jpg' },
-              variation: null,
+              variant: null,
             },
             {
               quantity: 2,
               product: { name: 'Lily Vase', image: '/lily.jpg' },
-              variation: null,
+              variant: null,
             },
             {
               quantity: 1,
               product: { name: 'Tulip Candle', image: '/tulip.jpg' },
-              variation: null,
+              variant: null,
             },
           ],
         }}

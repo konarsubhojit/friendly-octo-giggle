@@ -34,7 +34,7 @@ describe('GET /s/[key]', () => {
     expect(response.headers.get('location')).toBe('http://localhost/')
   })
 
-  it('redirects to product page without variation when variantId is null', async () => {
+  it('redirects to product page without variant when variantId is null', async () => {
     mockSharesResolve.mockResolvedValue({
       productId: 'prd1234',
       variantId: null,

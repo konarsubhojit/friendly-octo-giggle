@@ -20,7 +20,7 @@ interface CheckoutPriceItem {
 
 export interface CheckoutSummaryLineItem {
   readonly name: string
-  readonly variationLabel: string | null
+  readonly variantLabel: string | null
   readonly quantity: number
   readonly unitPrice: number
   readonly lineTotal: number
@@ -101,7 +101,7 @@ export function buildCheckoutSummaryLineItems(
 
     return {
       name: item.product?.name ?? 'Product unavailable',
-      variationLabel: getVariantLabel(item),
+      variantLabel: getVariantLabel(item),
       quantity,
       unitPrice,
       lineTotal: unitPrice * quantity,

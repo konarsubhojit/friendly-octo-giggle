@@ -11,7 +11,7 @@ import { addPendingCartItem } from '@/features/cart/services/pending-cart'
 import { useCurrency } from '@/contexts/CurrencyContext'
 import type { AppDispatch, RootState } from '@/lib/store'
 import { StockBadge } from '@/features/product/components/StockBadge'
-import { VariationButton } from '@/features/product/components/VariationButton'
+import { VariantButton } from '@/features/product/components/VariantButton'
 import { ShareButton } from '@/features/product/components/ShareButton'
 import { ButterflyAccent } from '@/components/ui/DecorativeElements'
 import ImageCarousel from '@/features/product/components/ImageCarousel'
@@ -50,15 +50,16 @@ const getCarouselImages = (
   return getProductImages(product)
 }
 
+const getFirstVariant = (product: Product): ProductVariant | null =>
+  product.variants?.[0] ?? null
+
 const resolveInitialVariant = (
   product: Product,
   variantId: string | null
 ): ProductVariant | null => {
-  if (!variantId) return product.variants?.[0] ?? null
-  const variants = product.variants ?? []
-  return (
-    variants.find((v) => v.id === variantId) ?? product.variants?.[0] ?? null
-  )
+  const first = getFirstVariant(product)
+  if (!variantId) return first
+  return product.variants?.find((v) => v.id === variantId) ?? first
 }
 
 const getClampedQtyState = (
@@ -214,6 +215,164 @@ const PriceModifierDisplay = ({
   )
 }
 
+const BUTTON_BASE =
+  'px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200'
+const BUTTON_OOS_ACTIVE = `${BUTTON_BASE} bg-[var(--surface)] text-[var(--text-muted)] border-2 border-[var(--text-muted)] line-through shadow-sm`
+const BUTTON_OOS_INACTIVE = `${BUTTON_BASE} bg-[var(--surface)] text-[var(--text-muted)] border border-[var(--border-warm)] line-through hover:border-[var(--text-muted)]`
+const BUTTON_ACTIVE = `${BUTTON_BASE} bg-[var(--accent-warm)] text-white shadow-warm`
+const BUTTON_INACTIVE = `${BUTTON_BASE} bg-[var(--accent-cream)] text-[var(--text-secondary)] border border-[var(--border-warm)] hover:border-[var(--accent-warm)]`
+
+type OptionValueStatus = 'available' | 'outOfStock'
+
+/** Resolve the CSS class for an option button based on active & stock state. */
+const getOptionButtonClassName = (
+  isActive: boolean,
+  isOutOfStock: boolean
+): string => {
+  if (isOutOfStock) {
+    return isActive ? BUTTON_OOS_ACTIVE : BUTTON_OOS_INACTIVE
+  }
+  return isActive ? BUTTON_ACTIVE : BUTTON_INACTIVE
+}
+
+/** Build a lookup from option-value ID → display string. */
+const buildValueMap = (
+  options: NonNullable<Product['options']>
+): Map<string, string> => {
+  const m = new Map<string, string>()
+  for (const opt of options) {
+    for (const val of opt.values ?? []) {
+      m.set(val.id, val.value)
+    }
+  }
+  return m
+}
+
+/** Build a human-readable label for a variant from its option values. */
+const getVariantLabel = (
+  variant: ProductVariant,
+  valueMap: Map<string, string>
+): string => {
+  const fallback = variant.sku ?? 'Variant'
+  if (!variant.optionValues || variant.optionValues.length === 0) {
+    return fallback
+  }
+  const parts = variant.optionValues
+    .map((ov) => valueMap.get(ov.id))
+    .filter(Boolean)
+  return parts.length > 0 ? parts.join(' / ') : fallback
+}
+
+/** Map each option ID to the currently-selected option-value ID. */
+const buildSelectedOptionValues = (
+  selectedVariant: ProductVariant | null,
+  options: NonNullable<Product['options']>
+): Map<string, string> => {
+  const m = new Map<string, string>()
+  if (!selectedVariant?.optionValues) return m
+  for (const ov of selectedVariant.optionValues) {
+    for (const opt of options) {
+      if (opt.values?.some((v) => v.id === ov.id)) {
+        m.set(opt.id, ov.id)
+      }
+    }
+  }
+  return m
+}
+
+/** Pre-index variant option value IDs as Sets for O(1) lookup. */
+const buildVariantValueIndex = (
+  variants: ProductVariant[]
+): Map<string, Set<string>> =>
+  new Map(
+    variants.map((v) => [
+      v.id,
+      new Set(v.optionValues?.map((ov) => ov.id) ?? []),
+    ])
+  )
+
+const getVariantOptionValueSet = (
+  variant: ProductVariant,
+  index: Map<string, Set<string>>
+): Set<string> => index.get(variant.id) ?? new Set()
+
+/** Update a status map with a single value's stock status (available wins). */
+const updateValueStatus = (
+  statusMap: Map<string, OptionValueStatus>,
+  valId: string,
+  stock: number
+): void => {
+  if (statusMap.get(valId) === 'available') return
+  statusMap.set(valId, stock > 0 ? 'available' : 'outOfStock')
+}
+
+/** Variant grid shown when the product has no named options. */
+const NoOptionsVariantGrid = ({
+  variants,
+  selectedVariant,
+  formatPrice,
+  onSelect,
+  cartQuantities,
+}: {
+  readonly variants: ProductVariant[]
+  readonly selectedVariant: ProductVariant | null
+  readonly formatPrice: (amount: number) => string
+  readonly onSelect: (v: ProductVariant) => void
+  readonly cartQuantities: Record<string, number>
+}) => (
+  <div className="mb-6 space-y-5">
+    <span
+      className="block text-lg font-semibold text-[var(--foreground)]"
+      id="variant-selector-label"
+    >
+      Choose Your Option
+    </span>
+    <div className="grid grid-cols-2 gap-3">
+      {variants.map((v, idx) => (
+        <VariantButton
+          key={v.id}
+          variant={v}
+          label={v.sku ?? `Option ${idx + 1}`}
+          isSelected={selectedVariant?.id === v.id}
+          formatPrice={formatPrice}
+          onSelect={onSelect}
+          cartQuantity={cartQuantities[v.id] ?? 0}
+        />
+      ))}
+    </div>
+  </div>
+)
+
+/** Summary card shown below the option selectors for the selected variant. */
+const SelectedVariantSummary = ({
+  variant,
+  label,
+  formattedPrice,
+  cartQuantity,
+}: {
+  readonly variant: ProductVariant
+  readonly label: string
+  readonly formattedPrice: string
+  readonly cartQuantity: number
+}) => (
+  <div className="p-4 border-2 rounded-xl border-[var(--accent-warm)] bg-[var(--accent-cream)] shadow-warm">
+    <div className="text-sm font-bold text-[var(--foreground)]">{label}</div>
+    <div className="text-xs font-semibold text-[var(--accent-warm)] mt-1">
+      {formattedPrice}
+    </div>
+    {variant.stock > 0 && variant.stock < 6 && (
+      <div className="text-xs text-[var(--accent-rose)] font-medium mt-1">
+        Only {variant.stock} left
+      </div>
+    )}
+    {cartQuantity > 0 && (
+      <div className="text-xs font-semibold text-blue-600 mt-1">
+        {cartQuantity} in cart
+      </div>
+    )}
+  </div>
+)
+
 interface VariantSelectorProps {
   readonly product: Product
   readonly selectedVariant: ProductVariant | null
@@ -236,132 +395,143 @@ const VariantSelector = ({
 
   if (options.length === 0) {
     return (
-      <div className="mb-6 space-y-5">
-        <span
-          className="block text-lg font-semibold text-[var(--foreground)]"
-          id="variation-selector-label"
-        >
-          Choose Your Option
-        </span>
-        <div className="grid grid-cols-2 gap-3">
-          {variants.map((v) => (
-            <VariationButton
-              key={v.id}
-              variant={v}
-              label={v.sku ?? `Option ${variants.indexOf(v) + 1}`}
-              isSelected={selectedVariant?.id === v.id}
-              formatPrice={formatPrice}
-              onSelect={onSelect}
-              cartQuantity={cartQuantities[v.id] ?? 0}
-            />
-          ))}
-        </div>
-      </div>
+      <NoOptionsVariantGrid
+        variants={variants}
+        selectedVariant={selectedVariant}
+        formatPrice={formatPrice}
+        onSelect={onSelect}
+        cartQuantities={cartQuantities}
+      />
     )
   }
 
-  const getVariantOptionValues = (variant: ProductVariant) =>
-    variant.optionValues?.map((ov) => ov.id) ?? []
+  const valueMap = buildValueMap(options)
+  const selectedOptionValues = buildSelectedOptionValues(
+    selectedVariant,
+    options
+  )
+  const variantValueIndex = buildVariantValueIndex(variants)
 
-  const getVariantLabel = (variant: ProductVariant): string => {
-    if (!variant.optionValues || variant.optionValues.length === 0) {
-      return variant.sku ?? `Variant`
+  /** Collect selected values from options preceding the given index. */
+  const getPrecedingSelections = (optionIndex: number): string[] => {
+    const selections: string[] = []
+    for (let i = 0; i < optionIndex; i++) {
+      const selVal = selectedOptionValues.get(options[i].id)
+      if (selVal) selections.push(selVal)
     }
-    const valueMap = new Map<string, string>()
-    for (const opt of options) {
-      for (const val of opt.values ?? []) {
-        valueMap.set(val.id, val.value)
-      }
-    }
-    const parts = variant.optionValues
-      .map((ov) => valueMap.get(ov.id))
-      .filter(Boolean)
-    return parts.length > 0 ? parts.join(' / ') : (variant.sku ?? 'Variant')
+    return selections
   }
 
-  const selectedOptionValues = new Map<string, string>()
-  if (selectedVariant?.optionValues) {
-    for (const ov of selectedVariant.optionValues) {
-      const ovId = ov.id
-      for (const opt of options) {
-        if (opt.values?.some((v) => v.id === ovId)) {
-          selectedOptionValues.set(opt.id, ovId)
-        }
+  const getValueAvailability = (
+    optionId: string
+  ): Map<string, OptionValueStatus> => {
+    const optionIndex = options.findIndex((o) => o.id === optionId)
+    if (optionIndex === -1) return new Map()
+
+    const precedingSelections = getPrecedingSelections(optionIndex)
+    const option = options[optionIndex]
+    const optionValueIds = new Set((option.values ?? []).map((v) => v.id))
+    const statusMap = new Map<string, OptionValueStatus>()
+
+    for (const v of variants) {
+      const valIds = getVariantOptionValueSet(v, variantValueIndex)
+      if (!precedingSelections.every((sel) => valIds.has(sel))) continue
+      for (const valId of valIds) {
+        if (optionValueIds.has(valId))
+          updateValueStatus(statusMap, valId, v.stock)
       }
     }
+    return statusMap
   }
+
+  const findMatchingVariant = (
+    selections: Map<string, string>
+  ): ProductVariant | undefined =>
+    variants.find((v) => {
+      const valIds = getVariantOptionValueSet(v, variantValueIndex)
+      return [...selections.values()].every((sel) => valIds.has(sel))
+    })
 
   const handleOptionChange = (optionId: string, valueId: string) => {
     const newSelections = new Map(selectedOptionValues)
     newSelections.set(optionId, valueId)
 
-    const matchingVariant = variants.find((v) => {
-      const variantValueIds = getVariantOptionValues(v)
-      return [...newSelections.values()].every((selectedValueId) =>
-        variantValueIds.includes(selectedValueId)
-      )
-    })
-
-    if (matchingVariant) {
-      onSelect(matchingVariant)
+    const exactMatch = findMatchingVariant(newSelections)
+    if (exactMatch) {
+      onSelect(exactMatch)
+      return
     }
+
+    const changedIndex = options.findIndex((o) => o.id === optionId)
+    for (const opt of options.slice(changedIndex + 1)) {
+      newSelections.delete(opt.id)
+    }
+    const fallbackMatch =
+      findMatchingVariant(newSelections) ??
+      variants.find((v) =>
+        getVariantOptionValueSet(v, variantValueIndex).has(valueId)
+      )
+
+    if (fallbackMatch) onSelect(fallbackMatch)
   }
 
   return (
     <div className="mb-6 space-y-5">
       <span
         className="block text-lg font-semibold text-[var(--foreground)]"
-        id="variation-selector-label"
+        id="variant-selector-label"
       >
         Choose Your Options
       </span>
 
-      {options.map((option) => (
-        <div key={option.id}>
-          <span className="block text-sm font-semibold text-[var(--text-secondary)] mb-2">
-            {option.name}
-          </span>
-          <div className="flex flex-wrap gap-2">
-            {(option.values ?? []).map((val) => {
-              const isActive = selectedOptionValues.get(option.id) === val.id
-              return (
-                <button
-                  key={val.id}
-                  onClick={() => handleOptionChange(option.id, val.id)}
-                  aria-pressed={isActive}
-                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
-                    isActive
-                      ? 'bg-[var(--accent-warm)] text-white shadow-warm'
-                      : 'bg-[var(--accent-cream)] text-[var(--text-secondary)] border border-[var(--border-warm)] hover:border-[var(--accent-warm)]'
-                  }`}
-                >
-                  {val.value}
-                </button>
-              )
-            })}
+      {options.map((option) => {
+        const valueAvailability = getValueAvailability(option.id)
+        return (
+          <div key={option.id}>
+            <span className="block text-sm font-semibold text-[var(--text-secondary)] mb-2">
+              {option.name}
+            </span>
+            <div className="flex flex-wrap gap-2">
+              {(option.values ?? [])
+                .filter((val) => valueAvailability.has(val.id))
+                .map((val) => {
+                  const isActive =
+                    selectedOptionValues.get(option.id) === val.id
+                  const isOutOfStock =
+                    valueAvailability.get(val.id) === 'outOfStock'
+                  return (
+                    <button
+                      key={val.id}
+                      type="button"
+                      onClick={() => handleOptionChange(option.id, val.id)}
+                      aria-pressed={isActive}
+                      aria-label={
+                        isOutOfStock ? `${val.value} — Out of stock` : val.value
+                      }
+                      className={getOptionButtonClassName(
+                        isActive,
+                        isOutOfStock
+                      )}
+                      title={
+                        isOutOfStock ? `${val.value} — Out of stock` : undefined
+                      }
+                    >
+                      {val.value}
+                    </button>
+                  )
+                })}
+            </div>
           </div>
-        </div>
-      ))}
+        )
+      })}
 
       {selectedVariant && (
-        <div className="p-4 border-2 rounded-xl border-[var(--accent-warm)] bg-[var(--accent-cream)] shadow-warm">
-          <div className="text-sm font-bold text-[var(--foreground)]">
-            {getVariantLabel(selectedVariant)}
-          </div>
-          <div className="text-xs font-semibold text-[var(--accent-warm)] mt-1">
-            {formatPrice(selectedVariant.price)}
-          </div>
-          {selectedVariant.stock > 0 && selectedVariant.stock < 6 && (
-            <div className="text-xs text-[var(--accent-rose)] font-medium mt-1">
-              Only {selectedVariant.stock} left
-            </div>
-          )}
-          {(cartQuantities[selectedVariant.id] ?? 0) > 0 && (
-            <div className="text-xs font-semibold text-blue-600 mt-1">
-              {cartQuantities[selectedVariant.id]} in cart
-            </div>
-          )}
-        </div>
+        <SelectedVariantSummary
+          variant={selectedVariant}
+          label={getVariantLabel(selectedVariant, valueMap)}
+          formattedPrice={formatPrice(selectedVariant.price)}
+          cartQuantity={cartQuantities[selectedVariant.id] ?? 0}
+        />
       )}
     </div>
   )
@@ -445,6 +615,98 @@ const ProductInfoCard = ({
   )
 }
 
+/** Feedback banners rendered at the top of the add-to-cart section. */
+const CartStatusAlerts = ({
+  currentCartQuantity,
+  error,
+  cartSuccess,
+  stockWarning,
+}: {
+  readonly currentCartQuantity: number
+  readonly error: string
+  readonly cartSuccess: boolean
+  readonly stockWarning: string
+}) => (
+  <>
+    {currentCartQuantity > 0 && (
+      <div className="mb-4 p-3 bg-blue-50 text-blue-700 rounded-xl border border-blue-200 flex items-center gap-3">
+        <svg
+          className="w-5 h-5 flex-shrink-0"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"
+          />
+        </svg>
+        <span className="font-medium text-sm">
+          You already have <strong>{currentCartQuantity}</strong> of this item
+          in your{' '}
+          <Link href="/cart" className="underline font-semibold">
+            cart
+          </Link>
+        </span>
+      </div>
+    )}
+
+    {error && (
+      <div className="mb-4 p-4 bg-red-500/10 text-red-500 rounded-xl border border-red-500/20 flex items-center gap-3">
+        <svg
+          className="w-5 h-5 flex-shrink-0"
+          fill="currentColor"
+          viewBox="0 0 20 20"
+        >
+          <path
+            fillRule="evenodd"
+            d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+            clipRule="evenodd"
+          />
+        </svg>
+        <span className="font-medium">{error}</span>
+      </div>
+    )}
+
+    {cartSuccess && (
+      <div className="mb-4 p-4 bg-gradient-to-r from-green-50 to-emerald-50 text-green-700 rounded-xl border border-green-200 flex items-center gap-3">
+        <svg
+          className="w-5 h-5 flex-shrink-0"
+          fill="currentColor"
+          viewBox="0 0 20 20"
+        >
+          <path
+            fillRule="evenodd"
+            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+            clipRule="evenodd"
+          />
+        </svg>
+        <span className="font-semibold">Added to cart!</span>
+      </div>
+    )}
+
+    {stockWarning && (
+      <div className="mb-4 p-4 bg-amber-500/10 text-amber-700 rounded-xl border border-amber-500/20 flex items-start gap-3">
+        <svg
+          className="w-5 h-5 flex-shrink-0 mt-0.5"
+          fill="currentColor"
+          viewBox="0 0 20 20"
+        >
+          <path
+            fillRule="evenodd"
+            d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+            clipRule="evenodd"
+          />
+        </svg>
+        <span className="font-medium">{stockWarning}</span>
+      </div>
+    )}
+  </>
+)
+
 interface AddToCartSectionProps {
   readonly error: string
   readonly cartSuccess: boolean
@@ -476,82 +738,12 @@ const AddToCartSection = ({
 }: AddToCartSectionProps) => {
   return (
     <div className="rounded-2xl border border-[var(--border-warm)] bg-[var(--surface)]/80 p-6 shadow-warm backdrop-blur-lg sm:p-8">
-      {currentCartQuantity > 0 && (
-        <div className="mb-4 p-3 bg-blue-50 text-blue-700 rounded-xl border border-blue-200 flex items-center gap-3">
-          <svg
-            className="w-5 h-5 flex-shrink-0"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            aria-hidden="true"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"
-            />
-          </svg>
-          <span className="font-medium text-sm">
-            You already have <strong>{currentCartQuantity}</strong> of this item
-            in your{' '}
-            <Link href="/cart" className="underline font-semibold">
-              cart
-            </Link>
-          </span>
-        </div>
-      )}
-
-      {error && (
-        <div className="mb-4 p-4 bg-red-500/10 text-red-500 rounded-xl border border-red-500/20 flex items-center gap-3">
-          <svg
-            className="w-5 h-5 flex-shrink-0"
-            fill="currentColor"
-            viewBox="0 0 20 20"
-          >
-            <path
-              fillRule="evenodd"
-              d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-              clipRule="evenodd"
-            />
-          </svg>
-          <span className="font-medium">{error}</span>
-        </div>
-      )}
-
-      {cartSuccess && (
-        <div className="mb-4 p-4 bg-gradient-to-r from-green-50 to-emerald-50 text-green-700 rounded-xl border border-green-200 flex items-center gap-3">
-          <svg
-            className="w-5 h-5 flex-shrink-0"
-            fill="currentColor"
-            viewBox="0 0 20 20"
-          >
-            <path
-              fillRule="evenodd"
-              d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-              clipRule="evenodd"
-            />
-          </svg>
-          <span className="font-semibold">Added to cart!</span>
-        </div>
-      )}
-
-      {stockWarning && (
-        <div className="mb-4 p-4 bg-amber-500/10 text-amber-700 rounded-xl border border-amber-500/20 flex items-start gap-3">
-          <svg
-            className="w-5 h-5 flex-shrink-0 mt-0.5"
-            fill="currentColor"
-            viewBox="0 0 20 20"
-          >
-            <path
-              fillRule="evenodd"
-              d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-              clipRule="evenodd"
-            />
-          </svg>
-          <span className="font-medium">{stockWarning}</span>
-        </div>
-      )}
+      <CartStatusAlerts
+        currentCartQuantity={currentCartQuantity}
+        error={error}
+        cartSuccess={cartSuccess}
+        stockWarning={stockWarning}
+      />
 
       <div className="mb-5">
         <label
@@ -643,11 +835,52 @@ const AddToCartSection = ({
   )
 }
 
-export default function ProductClient({
+/** Aggregate per-variant cart quantities for a given product. */
+const computeCartQuantities = (
+  items:
+    | { productId: string; variantId?: string | null; quantity: number }[]
+    | undefined,
+  productId: string
+): Record<string, number> => {
+  const map: Record<string, number> = {}
+  if (!items) return map
+  for (const item of items) {
+    if (item.productId !== productId) continue
+    const key = item.variantId ?? '__base__'
+    map[key] = (map[key] ?? 0) + item.quantity
+  }
+  return map
+}
+
+/** Apply cart dispatch result — set success/warning state. */
+const applyCartResult = (
+  result: { warning?: string | null; adjustedQuantity?: number | null },
+  remainingStock: number,
+  setQuantity: (q: number) => void,
+  setStockWarning: (s: string) => void,
+  setCartSuccess: (b: boolean) => void
+): void => {
+  if (result.warning) {
+    if (result.adjustedQuantity) {
+      setQuantity(Math.min(result.adjustedQuantity, remainingStock))
+    }
+    setStockWarning(result.warning)
+    setCartSuccess(true)
+    setTimeout(() => {
+      setCartSuccess(false)
+      setStockWarning('')
+    }, 5000)
+  } else {
+    setCartSuccess(true)
+    setTimeout(() => setCartSuccess(false), 3000)
+  }
+}
+
+const ProductClient = ({
   product,
   initialVariantId,
   aiEnabled,
-}: ProductClientProps) {
+}: ProductClientProps) => {
   const { status } = useSession()
   const dispatch = useDispatch<AppDispatch>()
   const { formatPrice } = useCurrency()
@@ -655,7 +888,10 @@ export default function ProductClient({
   const { trackProduct } = useRecentlyViewed()
 
   const trackProductRef = useRef(trackProduct)
-  trackProductRef.current = trackProduct
+
+  useEffect(() => {
+    trackProductRef.current = trackProduct
+  }, [trackProduct])
   const [quantity, setQuantity] = useState(1)
   const [quantityMessage, setQuantityMessage] = useState('')
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(
@@ -671,17 +907,10 @@ export default function ProductClient({
     dispatch(fetchCart())
   }, [dispatch, status])
 
-  const cartQuantities = useMemo(() => {
-    const map: Record<string, number> = {}
-    if (!cart?.items) return map
-    for (const item of cart.items) {
-      if (item.productId === product.id) {
-        const key = item.variantId ?? '__base__'
-        map[key] = (map[key] ?? 0) + item.quantity
-      }
-    }
-    return map
-  }, [cart?.items, product.id])
+  const cartQuantities = useMemo(
+    () => computeCartQuantities(cart?.items, product.id),
+    [cart?.items, product.id]
+  )
 
   const currentCartQuantity =
     cartQuantities[selectedVariant?.id ?? '__base__'] ?? 0
@@ -712,8 +941,17 @@ export default function ProductClient({
 
   useEffect(() => {
     const { qty, message } = getClampedQtyState(quantity, remainingStock)
-    if (qty !== quantity) setQuantity(qty)
-    setQuantityMessage(message)
+
+    const timer = globalThis.setTimeout(() => {
+      if (qty !== quantity) {
+        setQuantity(qty)
+      }
+      setQuantityMessage(message)
+    }, 0)
+
+    return () => {
+      globalThis.clearTimeout(timer)
+    }
   }, [remainingStock, quantity])
 
   const carouselImages = useMemo(
@@ -753,26 +991,19 @@ export default function ProductClient({
         })
       ).unwrap()
 
-      if (result.warning) {
-        if (result.adjustedQuantity) {
-          setQuantity(Math.min(result.adjustedQuantity, remainingStock))
-        }
-        setStockWarning(result.warning)
-        setCartSuccess(true)
-        setTimeout(() => {
-          setCartSuccess(false)
-          setStockWarning('')
-        }, 5000)
-      } else {
-        setCartSuccess(true)
-        setTimeout(() => setCartSuccess(false), 3000)
-      }
+      applyCartResult(
+        result,
+        remainingStock,
+        setQuantity,
+        setStockWarning,
+        setCartSuccess
+      )
     } catch (err) {
-      setError(
+      const message =
         typeof err === 'string'
           ? err
           : 'Something went wrong. Please try again.'
-      )
+      setError(message)
     } finally {
       setAddingToCart(false)
     }
@@ -839,3 +1070,5 @@ export default function ProductClient({
     </div>
   )
 }
+
+export default ProductClient
