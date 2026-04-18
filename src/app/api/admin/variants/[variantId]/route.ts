@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { drizzleDb } from '@/lib/db'
+import { drizzleDb, primaryDrizzleDb } from '@/lib/db'
 import {
   products,
   productVariants,
@@ -70,26 +70,30 @@ export async function PUT(
       updatedAt: new Date(),
     }
 
-    const [updated] = await drizzleDb
-      .update(productVariants)
-      .set(updateData)
-      .where(eq(productVariants.id, variantId))
-      .returning()
+    const [updated] = await primaryDrizzleDb.transaction(async (tx) => {
+      const [updatedVariant] = await tx
+        .update(productVariants)
+        .set(updateData)
+        .where(eq(productVariants.id, variantId))
+        .returning()
 
-    if (optionValueIds !== undefined) {
-      await drizzleDb
-        .delete(productVariantOptionValues)
-        .where(eq(productVariantOptionValues.variantId, variantId))
+      if (optionValueIds !== undefined) {
+        await tx
+          .delete(productVariantOptionValues)
+          .where(eq(productVariantOptionValues.variantId, variantId))
 
-      if (optionValueIds.length > 0) {
-        await drizzleDb.insert(productVariantOptionValues).values(
-          optionValueIds.map((optionValueId) => ({
-            variantId,
-            optionValueId,
-          }))
-        )
+        if (optionValueIds.length > 0) {
+          await tx.insert(productVariantOptionValues).values(
+            optionValueIds.map((optionValueId) => ({
+              variantId,
+              optionValueId,
+            }))
+          )
+        }
       }
-    }
+
+      return [updatedVariant]
+    })
 
     revalidateTag('products', {})
     await invalidateProductCaches(existing.productId)
@@ -121,21 +125,33 @@ export async function DELETE(
       return apiError('Product not found', 404)
     }
 
-    const activeVariants = await drizzleDb.query.productVariants.findMany({
-      where: and(
-        eq(productVariants.productId, existing.productId),
-        isNull(productVariants.deletedAt)
-      ),
-      columns: { id: true },
-    })
-    if (activeVariants.length <= 1) {
-      return apiError('Cannot delete the last variant of a product', 400)
-    }
+    try {
+      await primaryDrizzleDb.transaction(async (tx) => {
+        const activeVariants = await tx.query.productVariants.findMany({
+          where: and(
+            eq(productVariants.productId, existing.productId),
+            isNull(productVariants.deletedAt)
+          ),
+          columns: { id: true },
+        })
+        if (activeVariants.length <= 1) {
+          throw new Error('Cannot delete the last variant of a product')
+        }
 
-    await drizzleDb
-      .update(productVariants)
-      .set({ deletedAt: new Date(), updatedAt: new Date() })
-      .where(eq(productVariants.id, variantId))
+        await tx
+          .update(productVariants)
+          .set({ deletedAt: new Date(), updatedAt: new Date() })
+          .where(eq(productVariants.id, variantId))
+      })
+    } catch (txError) {
+      if (
+        txError instanceof Error &&
+        txError.message === 'Cannot delete the last variant of a product'
+      ) {
+        return apiError('Cannot delete the last variant of a product', 400)
+      }
+      throw txError
+    }
 
     revalidateTag('products', {})
     await invalidateProductCaches(existing.productId)

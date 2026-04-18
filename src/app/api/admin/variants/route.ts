@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { drizzleDb } from '@/lib/db'
+import { drizzleDb, primaryDrizzleDb } from '@/lib/db'
 import {
   products,
   productVariants,
@@ -51,36 +51,51 @@ export async function POST(request: NextRequest) {
       return apiError('Product not found', 404)
     }
 
-    const activeCount = await drizzleDb.query.productVariants.findMany({
-      where: and(
-        eq(productVariants.productId, productId),
-        isNull(productVariants.deletedAt)
-      ),
-      columns: { id: true },
-    })
-    if (activeCount.length >= MAX_VARIANTS_PER_PRODUCT) {
-      return apiError('Maximum of 25 variants per product reached', 400)
-    }
+    let variant
+    try {
+      variant = await primaryDrizzleDb.transaction(async (tx) => {
+        const activeCount = await tx.query.productVariants.findMany({
+          where: and(
+            eq(productVariants.productId, productId),
+            isNull(productVariants.deletedAt)
+          ),
+          columns: { id: true },
+        })
+        if (activeCount.length >= MAX_VARIANTS_PER_PRODUCT) {
+          throw new Error('Maximum of 25 variants per product reached')
+        }
 
-    const [variant] = await drizzleDb
-      .insert(productVariants)
-      .values({
-        productId,
-        sku: validated.sku ?? null,
-        price: validated.price,
-        stock: validated.stock,
-        image: validated.image ?? null,
-        images: validated.images ?? [],
+        const [newVariant] = await tx
+          .insert(productVariants)
+          .values({
+            productId,
+            sku: validated.sku ?? null,
+            price: validated.price,
+            stock: validated.stock,
+            image: validated.image ?? null,
+            images: validated.images ?? [],
+          })
+          .returning()
+
+        if (optionValueIds && optionValueIds.length > 0) {
+          await tx.insert(productVariantOptionValues).values(
+            optionValueIds.map((optionValueId) => ({
+              variantId: newVariant.id,
+              optionValueId,
+            }))
+          )
+        }
+
+        return newVariant
       })
-      .returning()
-
-    if (optionValueIds && optionValueIds.length > 0) {
-      await drizzleDb.insert(productVariantOptionValues).values(
-        optionValueIds.map((optionValueId) => ({
-          variantId: variant.id,
-          optionValueId,
-        }))
-      )
+    } catch (txError) {
+      if (
+        txError instanceof Error &&
+        txError.message === 'Maximum of 25 variants per product reached'
+      ) {
+        return apiError('Maximum of 25 variants per product reached', 400)
+      }
+      throw txError
     }
 
     revalidateTag('products', {})

@@ -136,7 +136,14 @@ export const orderConfirmationTemplate = (data: OrderConfirmationData) => {
 
   const itemLines = data.items
     .map((item) => {
-      const variantStr = item.variant ? ` (${item.variant})` : ''
+      const sanitizedVariant = item.variant
+        ? item.variant
+            .trim()
+            .replace(/[\r\n\t\x00-\x1F\x7F]/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim()
+        : ''
+      const variantStr = sanitizedVariant ? ` (${sanitizedVariant})` : ''
       return `- ${item.name} x${item.quantity}: ${item.price}${variantStr}`
     })
     .join('\n')
