@@ -157,21 +157,10 @@ stages:
             inputs:
               versionSpec: $(NODE_VERSION)
 
-          - script: |
-              CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)
-              if echo "$CHANGED_FILES" | grep -Eq '^(src/|app/|components/|contexts/|features/|hooks/|lib/|public/|server/|next\.config\.ts|package\.json|package-lock\.json|vercel\.json|postcss\.config\.js|eslint\.config\.js|tsconfig\.json|tsconfig\.check\.json)'; then
-                echo "##vso[task.setvariable variable=SHOULD_DEPLOY]true"
-              else
-                echo "##vso[task.setvariable variable=SHOULD_DEPLOY]false"
-                echo "No deploy-relevant changes detected."
-              fi
-            displayName: Detect deploy-relevant changes
           - script: npm ci --no-audit --no-fund
-            condition: and(succeeded(), eq(variables['SHOULD_DEPLOY'], 'true'))
 
           - script: npm install --no-save --no-audit --fund=false --progress=false vercel
             displayName: Install Vercel CLI
-            condition: and(succeeded(), eq(variables['SHOULD_DEPLOY'], 'true'))
 
           - script: |
               npx vercel pull --yes --environment=preview --token=$VERCEL_TOKEN
@@ -179,7 +168,6 @@ stages:
               npx vercel build --token=$VERCEL_TOKEN
               npx vercel deploy --prebuilt --token=$VERCEL_TOKEN
             displayName: Deploy to Vercel Preview
-            condition: and(succeeded(), eq(variables['SHOULD_DEPLOY'], 'true'))
             env:
               VERCEL_TOKEN: $(VERCEL_TOKEN)
               VERCEL_ORG_ID: $(VERCEL_ORG_ID)
