@@ -28,7 +28,7 @@ variables:
   npm_config_cache: $(Pipeline.Workspace)/.npm
 
 pool:
-  vmImage: 'ubuntu-latest'
+  name: default
 
 stages:
   - stage: LintAndTest
