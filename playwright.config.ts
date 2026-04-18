@@ -33,6 +33,7 @@ export default defineConfig({
         '**/fixed-background.spec.ts',
         '**/ux-audit.spec.ts',
         '**/orders-list.spec.ts',
+        '**/ai-stock-privacy.spec.ts',
       ],
     },
     {
@@ -43,6 +44,7 @@ export default defineConfig({
         '**/fixed-background.spec.ts',
         '**/ux-audit.spec.ts',
         '**/orders-list.spec.ts',
+        '**/ai-stock-privacy.spec.ts',
       ],
     },
     // Password validation — desktop
@@ -124,6 +126,16 @@ export default defineConfig({
         storageState: './playwright-tests/.auth/admin.json',
       },
       testMatch: '**/orders-live.spec.ts',
+    },
+    // Variant options E2E — tests storefront + admin option manager
+    {
+      name: 'variant-options',
+      timeout: 60000,
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1280, height: 800 },
+      },
+      testMatch: '**/variant-options.spec.ts',
     },
   ],
   reporter: [

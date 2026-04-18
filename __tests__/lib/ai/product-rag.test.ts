@@ -35,7 +35,7 @@ describe('buildProductContext', () => {
     expect(context).toContain('Name: Handmade Basket')
     expect(context).toContain('Category: Home Decor')
     expect(context).toContain('Price (INR): ₹29.99')
-    expect(context).toContain('Stock: 10 units')
+    expect(context).toContain('Stock: In Stock')
   })
 
   it('includes description', () => {
@@ -64,7 +64,7 @@ describe('buildProductContext', () => {
       variants: [{ ...baseProduct.variants![0], stock: 0 }],
     }
     const context = buildProductContext(product)
-    expect(context).toContain('Out of stock')
+    expect(context).toContain('Out of Stock')
   })
 
   it('includes variants when present', () => {
@@ -100,8 +100,84 @@ describe('buildProductContext', () => {
 
     const context = buildProductContext(product)
     expect(context).toContain('Variants (2):')
-    expect(context).toContain('RED-SM: ₹34.99, 5 in stock')
+    expect(context).toMatch(
+      /RED-SM: ₹34\.99, low stock\s*[-–—]\s*limited availability/
+    )
     expect(context).toContain('BLU-LG: ₹39.99, out of stock')
+  })
+
+  it('uses option value labels instead of SKU when available', () => {
+    const product: Product = {
+      ...baseProduct,
+      options: [
+        {
+          id: 'opt-color',
+          productId: 'abc1234',
+          name: 'Color',
+          sortOrder: 0,
+          createdAt: '2024-01-01T00:00:00Z',
+          values: [
+            {
+              id: 'ov-red',
+              optionId: 'opt-color',
+              value: 'Red',
+              sortOrder: 0,
+              createdAt: '2024-01-01T00:00:00Z',
+            },
+          ],
+        },
+        {
+          id: 'opt-size',
+          productId: 'abc1234',
+          name: 'Size',
+          sortOrder: 1,
+          createdAt: '2024-01-01T00:00:00Z',
+          values: [
+            {
+              id: 'ov-xl',
+              optionId: 'opt-size',
+              value: 'XL',
+              sortOrder: 0,
+              createdAt: '2024-01-01T00:00:00Z',
+            },
+          ],
+        },
+      ],
+      variants: [
+        {
+          id: 'var1',
+          productId: 'abc1234',
+          sku: 'ABC-Red-XL',
+          image: null,
+          images: [],
+          price: 1000,
+          stock: 1000,
+          deletedAt: null,
+          createdAt: '2024-01-01T00:00:00Z',
+          updatedAt: '2024-01-01T00:00:00Z',
+          optionValues: [
+            {
+              id: 'ov-red',
+              optionId: 'opt-color',
+              value: 'Red',
+              sortOrder: 0,
+              createdAt: '2024-01-01T00:00:00Z',
+            },
+            {
+              id: 'ov-xl',
+              optionId: 'opt-size',
+              value: 'XL',
+              sortOrder: 0,
+              createdAt: '2024-01-01T00:00:00Z',
+            },
+          ],
+        },
+      ],
+    }
+
+    const context = buildProductContext(product)
+    expect(context).toContain('Color: Red, Size: XL')
+    expect(context).not.toContain('ABC-Red-XL')
   })
 
   it("includes 'Variants (1):' for single default variant", () => {

@@ -306,6 +306,101 @@ const updateValueStatus = (
   statusMap.set(valId, stock > 0 ? 'available' : 'outOfStock')
 }
 
+/**
+ * Auto-derive ProductOption[] and patch variant optionValues from SKU segments.
+ *
+ * Given variants with SKUs like "Red-L", "Red-XL", "Blue-L", tries to detect
+ * a consistent split pattern and creates synthetic option dimensions. Returns
+ * null if SKUs don't form a consistent pattern (varying segment counts, missing
+ * SKUs, or only 1 segment).
+ */
+const deriveOptionsFromSkus = (
+  variants: ProductVariant[],
+  delimiter = '-'
+): {
+  options: NonNullable<Product['options']>
+  variants: ProductVariant[]
+} | null => {
+  if (variants.length === 0) return null
+
+  // Split each variant's SKU
+  const parsed: { variant: ProductVariant; segments: string[] }[] = []
+  for (const v of variants) {
+    if (!v.sku) return null
+    const segments = v.sku.split(delimiter).map((s) => s.trim())
+    if (segments.length < 2) return null
+    parsed.push({ variant: v, segments })
+  }
+
+  // Ensure all SKUs split into the same number of segments
+  const segmentCount = parsed[0].segments.length
+  if (parsed.some((p) => p.segments.length !== segmentCount)) return null
+
+  // Collect unique values per dimension
+  const valuesPerDimension: Set<string>[] = Array.from(
+    { length: segmentCount },
+    () => new Set<string>()
+  )
+  for (const { segments } of parsed) {
+    for (let i = 0; i < segments.length; i++) {
+      valuesPerDimension[i].add(segments[i])
+    }
+  }
+
+  // Only derive if at least one dimension has >1 unique value
+  if (valuesPerDimension.every((s) => s.size <= 1)) return null
+
+  // Build synthetic options with stable IDs
+  const options: NonNullable<Product['options']> = valuesPerDimension.map(
+    (values, dimIdx) => {
+      const sortedValues = [...values]
+      return {
+        id: `_derived_opt_${dimIdx}`,
+        productId: '',
+        name: `Option ${dimIdx + 1}`,
+        sortOrder: dimIdx,
+        createdAt: '',
+        values: sortedValues.map((value, valIdx) => ({
+          id: `_derived_val_${dimIdx}_${valIdx}`,
+          optionId: `_derived_opt_${dimIdx}`,
+          value,
+          sortOrder: valIdx,
+          createdAt: '',
+        })),
+      }
+    }
+  )
+
+  // Build a value lookup: "dimIdx:segmentValue" → synthetic optionValue id
+  const valueLookup = new Map<string, string>()
+  for (const opt of options) {
+    const dimIdx = options.indexOf(opt)
+    for (const val of opt.values) {
+      valueLookup.set(`${dimIdx}:${val.value}`, val.id)
+    }
+  }
+
+  // Patch each variant with synthetic optionValues
+  const patchedVariants = parsed.map(({ variant, segments }) => {
+    const optionValues = segments
+      .map((seg, i) => {
+        const valId = valueLookup.get(`${i}:${seg}`)
+        if (!valId) return null
+        return {
+          id: valId,
+          optionId: `_derived_opt_${i}`,
+          value: seg,
+          sortOrder: 0,
+          createdAt: '',
+        }
+      })
+      .filter((v): v is NonNullable<typeof v> => v !== null)
+    return { ...variant, optionValues }
+  })
+
+  return { options, variants: patchedVariants }
+}
+
 /** Variant grid shown when the product has no named options. */
 const NoOptionsVariantGrid = ({
   variants,
@@ -388,16 +483,29 @@ const VariantSelector = ({
   onSelect,
   cartQuantities,
 }: VariantSelectorProps) => {
-  const variants = product.variants ?? []
-  const options = product.options ?? []
+  const rawVariants = product.variants ?? []
+  const rawOptions = product.options ?? []
 
-  if (variants.length === 0) return null
+  if (rawVariants.length === 0) return null
 
+  // Derive options from SKU patterns if none are defined
+  const derived =
+    rawOptions.length === 0 ? deriveOptionsFromSkus(rawVariants) : null
+
+  const variants = derived?.variants ?? rawVariants
+  const options = derived?.options ?? rawOptions
+  const resolvedSelectedVariant =
+    derived && selectedVariant
+      ? (derived.variants.find((v) => v.id === selectedVariant.id) ??
+        selectedVariant)
+      : selectedVariant
+
+  // No options available (derivation also failed) — fall back to grid
   if (options.length === 0) {
     return (
       <NoOptionsVariantGrid
         variants={variants}
-        selectedVariant={selectedVariant}
+        selectedVariant={resolvedSelectedVariant}
         formatPrice={formatPrice}
         onSelect={onSelect}
         cartQuantities={cartQuantities}
@@ -407,7 +515,7 @@ const VariantSelector = ({
 
   const valueMap = buildValueMap(options)
   const selectedOptionValues = buildSelectedOptionValues(
-    selectedVariant,
+    resolvedSelectedVariant,
     options
   )
   const variantValueIndex = buildVariantValueIndex(variants)
@@ -525,12 +633,12 @@ const VariantSelector = ({
         )
       })}
 
-      {selectedVariant && (
+      {resolvedSelectedVariant && (
         <SelectedVariantSummary
-          variant={selectedVariant}
-          label={getVariantLabel(selectedVariant, valueMap)}
-          formattedPrice={formatPrice(selectedVariant.price)}
-          cartQuantity={cartQuantities[selectedVariant.id] ?? 0}
+          variant={resolvedSelectedVariant}
+          label={getVariantLabel(resolvedSelectedVariant, valueMap)}
+          formattedPrice={formatPrice(resolvedSelectedVariant.price)}
+          cartQuantity={cartQuantities[resolvedSelectedVariant.id] ?? 0}
         />
       )}
     </div>

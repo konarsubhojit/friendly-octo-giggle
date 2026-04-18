@@ -1,4 +1,4 @@
-import type { Product } from '@/lib/types'
+import type { Product, ProductVariant, ProductOption } from '@/lib/types'
 import type { CurrencyCode } from '@/lib/currency'
 import {
   getVariantMinPrice,
@@ -27,6 +27,32 @@ const defaultFormatPrice = (priceInINR: number): string =>
 const sanitizeFormattedPrice = (value: string): string =>
   value.replace(/\u00a0/g, ' ')
 
+const stockLabel = (stock: number): string => {
+  if (stock > 5) return 'In Stock'
+  if (stock > 0) return 'Low Stock – limited availability'
+  return 'Out of Stock'
+}
+
+/**
+ * Build a human-readable label for a variant using its option values
+ * (e.g. "Color: Red, Size: XL") instead of the raw SKU code.
+ */
+const variantLabel = (
+  variant: ProductVariant,
+  options?: ProductOption[]
+): string => {
+  if (variant.optionValues?.length && options?.length) {
+    const optionMap = new Map(options.map((o) => [o.id, o.name]))
+    return variant.optionValues
+      .map((ov) => {
+        const optionName = optionMap.get(ov.optionId)
+        return optionName ? `${optionName}: ${ov.value}` : ov.value
+      })
+      .join(', ')
+  }
+  return variant.sku ?? 'Variant'
+}
+
 export const buildProductContext = (
   product: Product,
   options: BuildProductContextOptions = {}
@@ -42,14 +68,16 @@ export const buildProductContext = (
     `Category: ${product.category}`,
     `Description: ${truncate(product.description)}`,
     `Price (${currencyCode}): ${formatPrice(getVariantMinPrice(product.variants))}`,
-    `Stock: ${totalStock > 0 ? totalStock + ' units' : 'Out of stock'}`,
+    `Stock: ${stockLabel(totalStock)}`,
   ]
 
   if (product.variants?.length) {
     lines.push(`Variants (${product.variants.length}):`)
     for (const v of product.variants) {
-      const stock = v.stock > 0 ? `${v.stock} in stock` : 'out of stock'
-      lines.push(`- ${v.sku ?? 'Variant'}: ${formatPrice(v.price)}, ${stock}`)
+      const label = variantLabel(v, product.options)
+      lines.push(
+        `- ${label}: ${formatPrice(v.price)}, ${stockLabel(v.stock).toLowerCase()}`
+      )
     }
   }
 
