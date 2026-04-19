@@ -7,7 +7,7 @@ import {
   productVariants,
   productVariantOptionValues,
 } from '@/lib/schema'
-import { eq, and, isNull } from 'drizzle-orm'
+import { eq, and, isNull, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import {
   apiSuccess,
@@ -31,7 +31,12 @@ const GenerateOptionsSchema = z.object({
     )
     .min(1, 'At least one option name is required')
     .max(5, 'Maximum 5 option names'),
-  delimiter: z.string().max(5).default('-'),
+  delimiter: z
+    .string()
+    .trim()
+    .min(1, 'Delimiter is required')
+    .max(5, 'Delimiter must be 5 characters or fewer')
+    .default('-'),
 })
 
 /**
@@ -101,7 +106,7 @@ export async function POST(
       skuSegments.push({ variantId: variant.id, segments })
     }
 
-    // Collect unique values per option dimension
+    // Collect unique values per option dimension (sorted for deterministic order)
     const uniqueValuesPerOption: Set<string>[] = Array.from(
       { length: optionNames.length },
       () => new Set<string>()
@@ -112,8 +117,11 @@ export async function POST(
       }
     }
 
-    // Run everything in a transaction
+    // Run everything in a transaction with product row lock
     const result = await primaryDrizzleDb.transaction(async (tx) => {
+      // Lock the product row to prevent concurrent generate requests
+      await tx.execute(sql`SELECT id FROM products WHERE id = ${id} FOR UPDATE`)
+
       // Delete existing options for this product.
       // Cascade: productOptions → productOptionValues → productVariantOptionValues
       await tx.delete(productOptions).where(eq(productOptions.productId, id))
@@ -131,7 +139,7 @@ export async function POST(
           })
           .returning()
 
-        const values = [...uniqueValuesPerOption[i]]
+        const values = [...uniqueValuesPerOption[i]].sort()
         if (values.length > 0) {
           const insertedValues = await tx
             .insert(productOptionValues)
@@ -176,7 +184,7 @@ export async function POST(
       })
     })
 
-    revalidateTag('products', {})
+    revalidateTag('products')
     await invalidateProductCaches(id)
 
     const serialized = result.map((opt) => ({

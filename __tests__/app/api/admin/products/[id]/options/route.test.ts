@@ -40,6 +40,7 @@ vi.mock('drizzle-orm', () => ({
   eq: vi.fn((_col, val) => ({ _op: 'eq', val })),
   and: vi.fn((...args) => ({ _op: 'and', args })),
   isNull: vi.fn((col) => ({ _op: 'isNull', col })),
+  sql: vi.fn((...args) => ({ _tag: 'sql', args })),
 }))
 
 vi.mock('@/features/admin/services/admin-auth', () => ({
@@ -281,13 +282,28 @@ describe('POST /api/admin/products/[id]/options', () => {
       userId: 'a1',
     })
     mockProductFindFirst.mockResolvedValue({ id: 'p1' })
-    mockOptionsFindMany.mockResolvedValue([
-      { id: '1' },
-      { id: '2' },
-      { id: '3' },
-      { id: '4' },
-      { id: '5' },
-    ])
+
+    mockTransaction.mockImplementation(
+      async (fn: (tx: unknown) => Promise<unknown>) => {
+        const tx = {
+          execute: vi.fn().mockResolvedValue(null),
+          query: {
+            productOptions: {
+              findMany: vi
+                .fn()
+                .mockResolvedValue([
+                  { id: '1' },
+                  { id: '2' },
+                  { id: '3' },
+                  { id: '4' },
+                  { id: '5' },
+                ]),
+            },
+          },
+        }
+        return fn(tx)
+      }
+    )
 
     const req = new NextRequest(
       'http://localhost/api/admin/products/p1/options',
@@ -331,6 +347,7 @@ describe('POST /api/admin/products/[id]/options', () => {
     mockTransaction.mockImplementation(
       async (fn: (tx: unknown) => Promise<unknown>) => {
         const tx = {
+          execute: vi.fn().mockResolvedValue(null),
           insert: vi.fn(() => ({
             values: vi.fn(() => ({
               returning: vi.fn().mockResolvedValue([{ id: 'o1' }]),
@@ -338,6 +355,7 @@ describe('POST /api/admin/products/[id]/options', () => {
           })),
           query: {
             productOptions: {
+              findMany: vi.fn().mockResolvedValue([]),
               findFirst: vi.fn().mockResolvedValue(createdOption),
             },
           },
@@ -372,13 +390,17 @@ describe('POST /api/admin/products/[id]/options', () => {
     mockTransaction.mockImplementation(
       async (fn: (tx: unknown) => Promise<unknown>) => {
         const tx = {
+          execute: vi.fn().mockResolvedValue(null),
           insert: vi.fn(() => ({
             values: vi.fn(() => ({
               returning: vi.fn().mockResolvedValue([{ id: 'o1' }]),
             })),
           })),
           query: {
-            productOptions: { findFirst: vi.fn().mockResolvedValue(null) },
+            productOptions: {
+              findMany: vi.fn().mockResolvedValue([]),
+              findFirst: vi.fn().mockResolvedValue(null),
+            },
           },
         }
         return fn(tx)

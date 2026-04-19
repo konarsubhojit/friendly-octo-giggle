@@ -104,8 +104,13 @@ test.describe('AI Product Assistant — stock privacy', () => {
 
     // Verify the AI response text does not contain exact stock numbers
     const responseText = await assistant.textContent()
-    expect(responseText).not.toMatch(/\d{2,}\s*(units|in stock)/i)
-    expect(responseText).not.toMatch(/\(\d+.*in stock\)/i)
+    expect(responseText).not.toMatch(/\d{2,}\s*(units|in stock)/iu)
+    expect(responseText).not.toMatch(/\(\d+.*in stock\)/iu)
+
+    // Assert the captured request body does not leak exact stock counts
+    expect(capturedChatBodies.length).toBeGreaterThan(0)
+    const requestPayload = JSON.stringify(capturedChatBodies[0])
+    expect(requestPayload).not.toMatch(/"stock"\s*:\s*\d+/iu)
   })
 
   test('should use option value labels instead of raw SKU codes', async ({
@@ -147,6 +152,9 @@ test.describe('AI Product Assistant — stock privacy', () => {
     // Verify the response doesn't contain raw SKU codes like "ABC-Red-XL"
     const responseText = await assistant.textContent()
     // The response should not contain the compound SKU format
-    expect(responseText).not.toMatch(/ABC-Red-(XL|L)/i)
+    expect(responseText).not.toMatch(/ABC-Red-(XL|L)/iu)
+
+    // Assert the captured request included context (not empty)
+    expect(capturedChatBodies.length).toBeGreaterThan(0)
   })
 })

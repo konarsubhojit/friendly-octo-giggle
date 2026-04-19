@@ -34,6 +34,7 @@ vi.mock('drizzle-orm', () => ({
   and: vi.fn((...args) => ({ _op: 'and', args })),
   isNull: vi.fn((col) => ({ _op: 'isNull', col })),
   inArray: vi.fn((_col, vals) => ({ _op: 'inArray', vals })),
+  sql: vi.fn((...args) => ({ _tag: 'sql', args })),
 }))
 
 vi.mock('@/features/admin/services/admin-auth', () => ({
@@ -263,8 +264,9 @@ describe('POST /api/admin/products/[id]/options/generate', () => {
     mockTransaction.mockImplementation(
       async (fn: (tx: unknown) => Promise<unknown>) => {
         const tx = {
+          execute: vi.fn().mockResolvedValue(null),
           delete: vi.fn(() => ({
-            where: vi.fn().mockResolvedValue(undefined),
+            where: vi.fn().mockResolvedValue(null),
           })),
           insert: vi.fn(() => ({
             values: vi.fn(() => ({
@@ -307,7 +309,7 @@ describe('POST /api/admin/products/[id]/options/generate', () => {
     expect(json.data.options[0].name).toBe('Color')
     expect(json.data.options[1].name).toBe('Size')
     expect(json.data.variantsLinked).toBe(3)
-    expect(vi.mocked(revalidateTag)).toHaveBeenCalledWith('products', {})
+    expect(vi.mocked(revalidateTag)).toHaveBeenCalledWith('products')
     expect(vi.mocked(invalidateProductCaches)).toHaveBeenCalledWith('p1')
   })
 
@@ -324,8 +326,9 @@ describe('POST /api/admin/products/[id]/options/generate', () => {
     mockTransaction.mockImplementation(
       async (fn: (tx: unknown) => Promise<unknown>) => {
         const tx = {
+          execute: vi.fn().mockResolvedValue(null),
           delete: vi.fn(() => ({
-            where: vi.fn().mockResolvedValue(undefined),
+            where: vi.fn().mockResolvedValue(null),
           })),
           insert: vi.fn(() => ({
             values: vi.fn(() => ({
@@ -418,8 +421,9 @@ describe('POST /api/admin/products/[id]/options/generate', () => {
     mockTransaction.mockImplementation(
       async (fn: (tx: unknown) => Promise<unknown>) => {
         const tx = {
+          execute: vi.fn().mockResolvedValue(null),
           delete: vi.fn(() => ({
-            where: vi.fn().mockResolvedValue(undefined),
+            where: vi.fn().mockResolvedValue(null),
           })),
           insert: vi.fn(() => ({
             values: vi.fn(() => ({
@@ -487,8 +491,9 @@ describe('POST /api/admin/products/[id]/options/generate', () => {
     mockTransaction.mockImplementation(
       async (fn: (tx: unknown) => Promise<unknown>) => {
         const tx = {
+          execute: vi.fn().mockResolvedValue(null),
           delete: vi.fn(() => ({
-            where: vi.fn().mockResolvedValue(undefined),
+            where: vi.fn().mockResolvedValue(null),
           })),
           insert: vi.fn(() => ({
             values: vi.fn(() => ({

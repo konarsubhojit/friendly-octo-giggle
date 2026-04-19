@@ -24,10 +24,15 @@ test.beforeAll(() => {
     mkdirSync(SCREENSHOT_DIR, { recursive: true })
 })
 
-const TEST_EMAIL = 'nid.ph.new@gmail.com'
-const TEST_PASSWORD = 'Copilot@123'
+const TEST_EMAIL = process.env.PLAYWRIGHT_TEST_EMAIL
+const TEST_PASSWORD = process.env.PLAYWRIGHT_TEST_PASSWORD
 
 async function adminLogin(page: Page) {
+  if (!TEST_EMAIL || !TEST_PASSWORD) {
+    throw new Error(
+      'Missing admin test credentials. Set PLAYWRIGHT_TEST_EMAIL and PLAYWRIGHT_TEST_PASSWORD environment variables.'
+    )
+  }
   await page.goto('/auth/signin')
   await page.waitForSelector('input[name="identifier"]', { timeout: 15000 })
   await page.fill('input[name="identifier"]', TEST_EMAIL)
@@ -193,7 +198,14 @@ test.describe('Cart — Add variant to cart', () => {
     const addToCart = page.locator('button:has-text("Add to Cart")')
     await expect(addToCart).toBeVisible()
     await addToCart.click()
-    await page.waitForTimeout(2000)
+
+    // Verify add-to-cart worked by checking for a cart badge update or toast
+    await expect(
+      page
+        .locator('[data-testid="cart-count"]')
+        .or(page.locator('.Toastify, [role="status"]').getByText(/added/i))
+        .or(page.locator('button:has-text("Add to Cart")'))
+    ).toBeVisible({ timeout: 5000 })
 
     await page.screenshot({
       path: screenshotPath('variant-add-to-cart'),

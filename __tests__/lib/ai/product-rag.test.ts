@@ -54,7 +54,7 @@ describe('buildProductContext', () => {
       .split('\n')
       .find((l) => l.startsWith('Description:'))
     expect(descLine).toBeDefined()
-    expect(descLine!.length).toBeLessThan(420)
+    expect(descLine?.length).toBeLessThan(420)
     expect(descLine).toContain('…')
   })
 
@@ -101,7 +101,7 @@ describe('buildProductContext', () => {
     const context = buildProductContext(product)
     expect(context).toContain('Variants (2):')
     expect(context).toMatch(
-      /RED-SM: ₹34\.99, low stock\s*[-–—]\s*limited availability/
+      /RED-SM: ₹34\.99, low stock\s*[-–—]\s*limited availability/u
     )
     expect(context).toContain('BLU-LG: ₹39.99, out of stock')
   })

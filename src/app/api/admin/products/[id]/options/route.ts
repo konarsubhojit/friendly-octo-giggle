@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { primaryDrizzleDb, drizzleDb } from '@/lib/db'
 import { products, productOptions, productOptionValues } from '@/lib/schema'
-import { eq, and, isNull } from 'drizzle-orm'
+import { eq, and, isNull, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import {
   apiSuccess,
@@ -114,18 +114,20 @@ export async function POST(
 
     const { name, sortOrder, values } = parseResult.data
 
-    const existingOptions = await drizzleDb.query.productOptions.findMany({
-      where: eq(productOptions.productId, id),
-      columns: { id: true },
-    })
-    if (existingOptions.length >= MAX_OPTIONS_PER_PRODUCT) {
-      return apiError(
-        `Maximum of ${MAX_OPTIONS_PER_PRODUCT} options per product reached`,
-        400
-      )
-    }
-
     const option = await primaryDrizzleDb.transaction(async (tx) => {
+      // Lock the product row to prevent concurrent option creation past the limit
+      await tx.execute(sql`SELECT id FROM products WHERE id = ${id} FOR UPDATE`)
+
+      const existingOptions = await tx.query.productOptions.findMany({
+        where: eq(productOptions.productId, id),
+        columns: { id: true },
+      })
+      if (existingOptions.length >= MAX_OPTIONS_PER_PRODUCT) {
+        throw new Error(
+          `Maximum of ${MAX_OPTIONS_PER_PRODUCT} options per product reached`
+        )
+      }
+
       const [newOption] = await tx
         .insert(productOptions)
         .values({ productId: id, name, sortOrder })
@@ -155,7 +157,7 @@ export async function POST(
       return apiError('Failed to create option', 500)
     }
 
-    revalidateTag('products', {})
+    revalidateTag('products')
     await invalidateProductCaches(id)
 
     const serialized = {
@@ -175,6 +177,9 @@ export async function POST(
 
     return apiSuccess({ option: serialized }, 201)
   } catch (error) {
+    if (error instanceof Error && error.message.includes('Maximum')) {
+      return apiError(error.message, 400)
+    }
     return handleApiError(error)
   }
 }

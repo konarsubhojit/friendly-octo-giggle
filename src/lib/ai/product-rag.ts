@@ -25,7 +25,7 @@ const defaultFormatPrice = (priceInINR: number): string =>
   }).format(priceInINR)
 
 const sanitizeFormattedPrice = (value: string): string =>
-  value.replace(/\u00a0/g, ' ')
+  value.replace(/\u00a0/gu, ' ')
 
 const stockLabel = (stock: number): string => {
   if (stock > 5) return 'In Stock'

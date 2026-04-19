@@ -3,7 +3,7 @@ import { NextRequest } from 'next/server'
 import { DELETE } from '@/app/api/admin/products/[id]/options/[optionId]/route'
 
 const mockOptionFindFirst = vi.hoisted(() => vi.fn())
-const mockDeleteWhere = vi.hoisted(() => vi.fn().mockResolvedValue(undefined))
+const mockDeleteWhere = vi.hoisted(() => vi.fn().mockResolvedValue(null))
 const mockDelete = vi.hoisted(() => vi.fn(() => ({ where: mockDeleteWhere })))
 
 vi.mock('@/lib/db', () => ({
@@ -145,7 +145,7 @@ describe('DELETE /api/admin/products/[id]/options/[optionId]', () => {
     const json = await res.json()
     expect(json.data.deleted).toBe(true)
     expect(mockDelete).toHaveBeenCalled()
-    expect(vi.mocked(revalidateTag)).toHaveBeenCalledWith('products', {})
+    expect(vi.mocked(revalidateTag)).toHaveBeenCalledWith('products')
     expect(vi.mocked(invalidateProductCaches)).toHaveBeenCalledWith('p1')
   })
 

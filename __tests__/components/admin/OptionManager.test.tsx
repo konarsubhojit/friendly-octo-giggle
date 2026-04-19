@@ -425,6 +425,11 @@ describe('OptionManager', () => {
     await waitFor(() => {
       expect(vi.mocked(toast.success)).toHaveBeenCalledWith('Option deleted')
     })
+
+    // Assert the deleted option is removed from the DOM
+    await waitFor(() => {
+      expect(screen.queryByText('Color')).not.toBeInTheDocument()
+    })
   })
 
   it('shows error toast when delete fails', async () => {

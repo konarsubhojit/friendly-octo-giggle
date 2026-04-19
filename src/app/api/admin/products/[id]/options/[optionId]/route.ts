@@ -2,12 +2,18 @@ import { NextRequest } from 'next/server'
 import { primaryDrizzleDb, drizzleDb } from '@/lib/db'
 import { productOptions } from '@/lib/schema'
 import { eq } from 'drizzle-orm'
+import { z } from 'zod'
 import { apiSuccess, apiError, handleApiError } from '@/lib/api-utils'
 import { checkAdminAuth } from '@/features/admin/services/admin-auth'
 import { invalidateProductCaches } from '@/lib/cache'
 import { revalidateTag } from 'next/cache'
 
 export const dynamic = 'force-dynamic'
+
+const RouteParamsSchema = z.object({
+  id: z.string().min(1, 'Product ID is required'),
+  optionId: z.string().min(1, 'Option ID is required'),
+})
 
 export async function DELETE(
   _request: NextRequest,
@@ -19,7 +25,12 @@ export async function DELETE(
   }
 
   try {
-    const { id, optionId } = await params
+    const rawParams = await params
+    const parseResult = RouteParamsSchema.safeParse(rawParams)
+    if (!parseResult.success) {
+      return apiError('Invalid route parameters', 400)
+    }
+    const { id, optionId } = parseResult.data
 
     const existing = await drizzleDb.query.productOptions.findFirst({
       where: eq(productOptions.id, optionId),
@@ -33,7 +44,7 @@ export async function DELETE(
       .delete(productOptions)
       .where(eq(productOptions.id, optionId))
 
-    revalidateTag('products', {})
+    revalidateTag('products')
     await invalidateProductCaches(id)
 
     return apiSuccess({ deleted: true })

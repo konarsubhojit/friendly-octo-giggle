@@ -244,14 +244,28 @@ export default function OptionManager({
               type="text"
               value={delimiter}
               onChange={(e) => setDelimiter(e.target.value)}
+              minLength={1}
               maxLength={5}
+              aria-invalid={!delimiter.trim()}
+              aria-describedby={
+                !delimiter.trim() ? 'option-delimiter-error' : undefined
+              }
               className={`${INPUT_BASE} text-center`}
             />
+            {!delimiter.trim() && (
+              <p
+                id="option-delimiter-error"
+                className="mt-1 text-xs text-red-600"
+                role="alert"
+              >
+                Delimiter is required
+              </p>
+            )}
           </div>
           <button
             type="button"
             onClick={handleGenerate}
-            disabled={generating || !optionNames.trim()}
+            disabled={generating || !optionNames.trim() || !delimiter.trim()}
             className={PRIMARY_BUTTON}
           >
             {generating ? (
@@ -295,7 +309,7 @@ export default function OptionManager({
                   </th>
                   {skuPreview.names.map((name, i) => (
                     <th
-                      key={`header-${name}-${i}`}
+                      key={`header-${name}`}
                       className="px-3 py-2 text-left font-semibold text-[var(--text-secondary)]"
                     >
                       {name}
@@ -319,7 +333,7 @@ export default function OptionManager({
                     {row.valid ? (
                       row.segments.map((seg, i) => (
                         <td
-                          key={`${row.sku}-seg-${i}`}
+                          key={`${row.sku}-${seg}`}
                           className="px-3 py-1.5 text-[var(--foreground)]"
                         >
                           <span className="inline-flex rounded-full bg-[var(--accent-cream)] px-2 py-0.5 text-[var(--foreground)]">

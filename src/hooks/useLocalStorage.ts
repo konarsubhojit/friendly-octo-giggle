@@ -48,9 +48,11 @@ export const useLocalStorage = <T>(
         const current = (() => {
           try {
             const item = globalThis.localStorage.getItem(key)
-            return item ? (JSON.parse(item) as T) : initialValue
+            return item
+              ? (JSON.parse(item) as T)
+              : (JSON.parse(serializedInitial) as T)
           } catch {
-            return initialValue
+            return JSON.parse(serializedInitial) as T
           }
         })()
 
@@ -66,7 +68,7 @@ export const useLocalStorage = <T>(
         logError({ error, context: 'useLocalStorage:write' })
       }
     },
-    [key, initialValue]
+    [key, serializedInitial]
   )
 
   return [storedValue, setValue]
