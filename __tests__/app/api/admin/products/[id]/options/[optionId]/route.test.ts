@@ -165,7 +165,7 @@ describe('DELETE /api/admin/products/[id]/options/[optionId]', () => {
     const json = await res.json()
     expect(json.data.deleted).toBe(true)
     expect(mockDelete).toHaveBeenCalled()
-    expect(vi.mocked(revalidateTag)).toHaveBeenCalledWith('products')
+    expect(vi.mocked(revalidateTag)).toHaveBeenCalledWith('products', {})
     expect(vi.mocked(invalidateProductCaches)).toHaveBeenCalledWith('p1')
   })
 

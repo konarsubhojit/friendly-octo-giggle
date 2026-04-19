@@ -44,7 +44,7 @@ export async function DELETE(
       .delete(productOptions)
       .where(eq(productOptions.id, optionId))
 
-    revalidateTag('products')
+    revalidateTag('products', {})
     await invalidateProductCaches(id)
 
     return apiSuccess({ deleted: true })

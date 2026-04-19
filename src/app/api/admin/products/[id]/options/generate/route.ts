@@ -192,7 +192,7 @@ export async function POST(
       })
     })
 
-    revalidateTag('products')
+    revalidateTag('products', {})
     await invalidateProductCaches(id)
 
     const serialized = result.map((opt) => ({

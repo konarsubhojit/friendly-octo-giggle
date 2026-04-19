@@ -166,7 +166,7 @@ export async function POST(
       return apiError('Failed to create option', 500)
     }
 
-    revalidateTag('products')
+    revalidateTag('products', {})
     await invalidateProductCaches(id)
 
     const serialized = {

@@ -309,7 +309,7 @@ describe('POST /api/admin/products/[id]/options/generate', () => {
     expect(json.data.options[0].name).toBe('Color')
     expect(json.data.options[1].name).toBe('Size')
     expect(json.data.variantsLinked).toBe(3)
-    expect(vi.mocked(revalidateTag)).toHaveBeenCalledWith('products')
+    expect(vi.mocked(revalidateTag)).toHaveBeenCalledWith('products', {})
     expect(vi.mocked(invalidateProductCaches)).toHaveBeenCalledWith('p1')
   })
 
