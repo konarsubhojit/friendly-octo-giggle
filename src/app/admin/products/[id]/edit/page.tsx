@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { AdminPageShell } from '@/features/admin/components/AdminPageShell'
 import ProductEditPageForm from '@/features/admin/components/ProductEditPageForm'
 import VariantList from '@/features/admin/components/VariantList'
+import OptionManager from '@/features/admin/components/OptionManager'
 import { auth } from '@/lib/auth'
 import { drizzleDb } from '@/lib/db'
 import { products } from '@/lib/schema'
@@ -26,6 +27,14 @@ export default async function AdminProductEditFormPage({ params }: PageProps) {
   const product = await drizzleDb.query.products.findFirst({
     where: and(eq(products.id, id), isNull(products.deletedAt)),
     with: {
+      options: {
+        orderBy: (o, { asc }) => [asc(o.sortOrder)],
+        with: {
+          values: {
+            orderBy: (v, { asc }) => [asc(v.sortOrder)],
+          },
+        },
+      },
       variants: {
         where: (v, { isNull }) => isNull(v.deletedAt),
       },
@@ -49,6 +58,21 @@ export default async function AdminProductEditFormPage({ params }: PageProps) {
   }
 
   const serializedVariants = product.variants.map(serializeVariant)
+
+  const serializedOptions = (product.options ?? []).map((opt) => ({
+    id: opt.id,
+    productId: opt.productId,
+    name: opt.name,
+    sortOrder: opt.sortOrder,
+    createdAt: opt.createdAt.toISOString(),
+    values: opt.values.map((val) => ({
+      id: val.id,
+      optionId: val.optionId,
+      value: val.value,
+      sortOrder: val.sortOrder,
+      createdAt: val.createdAt.toISOString(),
+    })),
+  }))
 
   const variantsInStock = serializedVariants.filter(
     (variant) => variant.stock > 0
@@ -92,6 +116,11 @@ export default async function AdminProductEditFormPage({ params }: PageProps) {
       ]}
     >
       <ProductEditPageForm product={serializedProduct} />
+      <OptionManager
+        productId={serializedProduct.id}
+        initialOptions={serializedOptions}
+        variants={serializedVariants}
+      />
       <VariantList
         productId={serializedProduct.id}
         initialVariants={serializedVariants}

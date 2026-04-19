@@ -1,9 +1,16 @@
+// This file configures the initialization of Sentry for edge features (middleware, edge routes, and so on).
+// The config you add here will be used whenever one of the edge features is loaded.
+// Note that this config is unrelated to the Vercel Edge Runtime and is also required when running locally.
+// https://docs.sentry.io/platforms/javascript/guides/nextjs/
+
 import * as Sentry from '@sentry/nextjs'
 
-if (process.env.SENTRY_DSN) {
-  Sentry.init({
-    dsn: process.env.SENTRY_DSN,
-    tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.01 : 0.1,
-    sampleRate: process.env.NODE_ENV === 'production' ? 0.5 : 1.0,
-  })
-}
+const isProd = process.env.NODE_ENV === 'production'
+
+Sentry.init({
+  dsn: process.env.SENTRY_DSN,
+  environment: isProd ? 'production' : 'development',
+  tracesSampleRate: isProd ? 0.1 : 1.0,
+  enableLogs: true,
+  sendDefaultPii: true,
+})

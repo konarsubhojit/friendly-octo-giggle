@@ -59,3 +59,6 @@ vitest-report.json
 .vscode/mcp.json
 .vscode/mcp.json
 .mcp.json
+
+# Sentry Config File
+.env.sentry-build-plugin
