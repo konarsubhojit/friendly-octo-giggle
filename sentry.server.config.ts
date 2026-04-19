@@ -1,25 +1,15 @@
+// This file configures the initialization of Sentry on the server.
+// The config you add here will be used whenever the server handles a request.
+// https://docs.sentry.io/platforms/javascript/guides/nextjs/
+
 import * as Sentry from '@sentry/nextjs'
 
-if (process.env.SENTRY_DSN) {
-  Sentry.init({
-    dsn: process.env.SENTRY_DSN,
-    tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.01 : 0.1,
-    sampleRate: process.env.NODE_ENV === 'production' ? 0.5 : 1.0,
-    beforeSend(event, hint) {
-      const original = hint?.originalException
-      // Defense-in-depth: instrumentation.ts already converts _ErrorEvent to a
-      // normal Error at the uncaughtException level, but Sentry may capture
-      // errors through other paths. Drop any that slip through.
-      if (
-        original &&
-        typeof original === 'object' &&
-        'type' in original &&
-        (original as { type: string }).type === 'error' &&
-        original.constructor?.name === '_ErrorEvent'
-      ) {
-        return null
-      }
-      return event
-    },
-  })
-}
+const isProd = process.env.NODE_ENV === 'production'
+
+Sentry.init({
+  dsn: process.env.SENTRY_DSN,
+  environment: isProd ? 'production' : 'development',
+  tracesSampleRate: isProd ? 0.1 : 1.0,
+  enableLogs: true,
+  sendDefaultPii: true,
+})
