@@ -97,14 +97,20 @@ test.describe('Variant Option Selector — Storefront', () => {
       '#variant-selector-label ~ div button[aria-pressed="false"]'
     )
     const count = await unpressed.count()
-    if (count > 0) {
-      await unpressed.first().click()
-      await page.waitForTimeout(500)
-      await page.screenshot({
-        path: screenshotPath('variant-options-switched'),
-        fullPage: false,
-      })
-    }
+    expect(count).toBeGreaterThan(0)
+
+    const target = unpressed.first()
+    await target.click()
+
+    // After clicking, the button should now be pressed
+    await expect(target).toHaveAttribute('aria-pressed', 'true', {
+      timeout: 5000,
+    })
+
+    await page.screenshot({
+      path: screenshotPath('variant-options-switched'),
+      fullPage: false,
+    })
   })
 
   test('stock status, quantity, and add-to-cart are visible', async ({
@@ -204,7 +210,6 @@ test.describe('Cart — Add variant to cart', () => {
       page
         .locator('[data-testid="cart-count"]')
         .or(page.locator('.Toastify, [role="status"]').getByText(/added/i))
-        .or(page.locator('button:has-text("Add to Cart")'))
     ).toBeVisible({ timeout: 5000 })
 
     await page.screenshot({

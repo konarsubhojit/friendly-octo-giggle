@@ -262,7 +262,7 @@ describe('POST /api/admin/products/[id]/options/generate', () => {
 
     let insertCallCount = 0
     mockTransaction.mockImplementation(
-      async (fn: (tx: unknown) => Promise<unknown>) => {
+      (fn: (tx: unknown) => Promise<unknown>) => {
         const tx = {
           execute: vi.fn().mockResolvedValue(null),
           delete: vi.fn(() => ({
@@ -324,7 +324,7 @@ describe('POST /api/admin/products/[id]/options/generate', () => {
     ])
 
     mockTransaction.mockImplementation(
-      async (fn: (tx: unknown) => Promise<unknown>) => {
+      (fn: (tx: unknown) => Promise<unknown>) => {
         const tx = {
           execute: vi.fn().mockResolvedValue(null),
           delete: vi.fn(() => ({
@@ -419,7 +419,7 @@ describe('POST /api/admin/products/[id]/options/generate', () => {
     ])
 
     mockTransaction.mockImplementation(
-      async (fn: (tx: unknown) => Promise<unknown>) => {
+      (fn: (tx: unknown) => Promise<unknown>) => {
         const tx = {
           execute: vi.fn().mockResolvedValue(null),
           delete: vi.fn(() => ({
@@ -489,7 +489,7 @@ describe('POST /api/admin/products/[id]/options/generate', () => {
     ])
 
     mockTransaction.mockImplementation(
-      async (fn: (tx: unknown) => Promise<unknown>) => {
+      (fn: (tx: unknown) => Promise<unknown>) => {
         const tx = {
           execute: vi.fn().mockResolvedValue(null),
           delete: vi.fn(() => ({

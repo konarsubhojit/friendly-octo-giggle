@@ -86,6 +86,26 @@ describe('DELETE /api/admin/products/[id]/options/[optionId]', () => {
     expect(json.error).toBe('Not authenticated')
   })
 
+  it('returns 400 for invalid params', async () => {
+    vi.mocked(checkAdminAuth).mockResolvedValue({
+      authorized: true,
+      userId: 'a1',
+    })
+
+    const req = new NextRequest(
+      'http://localhost/api/admin/products//options/',
+      { method: 'DELETE' }
+    )
+    const res = await DELETE(req, makeParams('', ''))
+    expect(res.status).toBe(400)
+    const json = await res.json()
+    expect(json.error).toBe('Invalid route parameters')
+    expect(mockOptionFindFirst).not.toHaveBeenCalled()
+    expect(mockDelete).not.toHaveBeenCalled()
+    expect(vi.mocked(revalidateTag)).not.toHaveBeenCalled()
+    expect(vi.mocked(invalidateProductCaches)).not.toHaveBeenCalled()
+  })
+
   it('returns 404 when option not found', async () => {
     vi.mocked(checkAdminAuth).mockResolvedValue({
       authorized: true,

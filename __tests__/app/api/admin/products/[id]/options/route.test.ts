@@ -284,7 +284,7 @@ describe('POST /api/admin/products/[id]/options', () => {
     mockProductFindFirst.mockResolvedValue({ id: 'p1' })
 
     mockTransaction.mockImplementation(
-      async (fn: (tx: unknown) => Promise<unknown>) => {
+      (fn: (tx: unknown) => Promise<unknown>) => {
         const tx = {
           execute: vi.fn().mockResolvedValue(null),
           query: {
@@ -345,7 +345,7 @@ describe('POST /api/admin/products/[id]/options', () => {
     }
 
     mockTransaction.mockImplementation(
-      async (fn: (tx: unknown) => Promise<unknown>) => {
+      (fn: (tx: unknown) => Promise<unknown>) => {
         const tx = {
           execute: vi.fn().mockResolvedValue(null),
           insert: vi.fn(() => ({
@@ -388,7 +388,7 @@ describe('POST /api/admin/products/[id]/options', () => {
     mockOptionsFindMany.mockResolvedValue([])
 
     mockTransaction.mockImplementation(
-      async (fn: (tx: unknown) => Promise<unknown>) => {
+      (fn: (tx: unknown) => Promise<unknown>) => {
         const tx = {
           execute: vi.fn().mockResolvedValue(null),
           insert: vi.fn(() => ({

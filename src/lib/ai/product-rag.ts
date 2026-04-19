@@ -1,4 +1,4 @@
-import type { Product, ProductVariant, ProductOption } from '@/lib/types'
+import type { Product, ProductVariant } from '@/lib/types'
 import type { CurrencyCode } from '@/lib/currency'
 import {
   getVariantMinPrice,
@@ -33,24 +33,36 @@ const stockLabel = (stock: number): string => {
   return 'Out of Stock'
 }
 
+const MAX_LABEL_CHARS = 100
+
+/** Strip control characters, collapse whitespace, and limit length. */
+const sanitizeLabel = (value: string, max = MAX_LABEL_CHARS): string =>
+  value
+    .replace(/[\p{Cc}\p{Cf}]/gu, ' ')
+    .replace(/\s+/gu, ' ')
+    .trim()
+    .slice(0, max)
+
 /**
  * Build a human-readable label for a variant using its option values
  * (e.g. "Color: Red, Size: XL") instead of the raw SKU code.
  */
 const variantLabel = (
   variant: ProductVariant,
-  options?: ProductOption[]
+  optionMap?: Map<string, string>
 ): string => {
-  if (variant.optionValues?.length && options?.length) {
-    const optionMap = new Map(options.map((o) => [o.id, o.name]))
+  if (variant.optionValues?.length && optionMap?.size) {
     return variant.optionValues
       .map((ov) => {
         const optionName = optionMap.get(ov.optionId)
-        return optionName ? `${optionName}: ${ov.value}` : ov.value
+        const safeValue = sanitizeLabel(ov.value)
+        return optionName
+          ? `${sanitizeLabel(optionName)}: ${safeValue}`
+          : safeValue
       })
       .join(', ')
   }
-  return variant.sku ?? 'Variant'
+  return sanitizeLabel(variant.sku ?? 'Variant')
 }
 
 export const buildProductContext = (
@@ -72,9 +84,12 @@ export const buildProductContext = (
   ]
 
   if (product.variants?.length) {
+    const optionMap = product.options?.length
+      ? new Map(product.options.map((o) => [o.id, o.name]))
+      : undefined
     lines.push(`Variants (${product.variants.length}):`)
     for (const v of product.variants) {
-      const label = variantLabel(v, product.options)
+      const label = variantLabel(v, optionMap)
       lines.push(
         `- ${label}: ${formatPrice(v.price)}, ${stockLabel(v.stock).toLowerCase()}`
       )

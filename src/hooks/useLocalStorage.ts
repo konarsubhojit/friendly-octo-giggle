@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useSyncExternalStore } from 'react'
+import { useState, useCallback, useMemo, useSyncExternalStore } from 'react'
 import { logError } from '@/lib/logger'
 
 export const useLocalStorage = <T>(
@@ -35,12 +35,13 @@ export const useLocalStorage = <T>(
     () => serializedInitial
   )
 
-  let storedValue: T
-  try {
-    storedValue = JSON.parse(raw) as T
-  } catch {
-    storedValue = initialValue
-  }
+  const storedValue = useMemo<T>(() => {
+    try {
+      return JSON.parse(raw) as T
+    } catch {
+      return initialValue
+    }
+  }, [raw, initialValue])
 
   const setValue = useCallback(
     (value: T | ((val: T) => T)) => {

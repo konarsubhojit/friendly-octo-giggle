@@ -20,6 +20,7 @@ const MAX_OPTIONS_PER_PRODUCT = 5
 const CreateOptionWithValuesSchema = z.object({
   name: z
     .string()
+    .trim()
     .min(1, 'Option name is required')
     .max(100, 'Option name must be under 100 characters'),
   sortOrder: z.number().int().nonnegative().default(0),
@@ -28,13 +29,21 @@ const CreateOptionWithValuesSchema = z.object({
       z.object({
         value: z
           .string()
+          .trim()
           .min(1, 'Value is required')
           .max(100, 'Value must be under 100 characters'),
         sortOrder: z.number().int().nonnegative().default(0),
       })
     )
     .min(1, 'At least one value is required')
-    .max(50, 'Maximum 50 values per option'),
+    .max(50, 'Maximum 50 values per option')
+    .refine(
+      (vals) => {
+        const normalized = vals.map((v) => v.value.toLowerCase())
+        return new Set(normalized).size === normalized.length
+      },
+      { message: 'Option values must be unique' }
+    ),
 })
 
 export async function GET(

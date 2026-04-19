@@ -26,11 +26,19 @@ const GenerateOptionsSchema = z.object({
     .array(
       z
         .string()
+        .trim()
         .min(1, 'Option name is required')
         .max(100, 'Option name must be under 100 characters')
     )
     .min(1, 'At least one option name is required')
-    .max(5, 'Maximum 5 option names'),
+    .max(5, 'Maximum 5 option names')
+    .refine(
+      (names) => {
+        const normalized = names.map((n) => n.toLowerCase())
+        return new Set(normalized).size === normalized.length
+      },
+      { message: 'Option names must be unique' }
+    ),
   delimiter: z
     .string()
     .trim()

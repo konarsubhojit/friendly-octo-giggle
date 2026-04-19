@@ -309,7 +309,7 @@ export default function OptionManager({
                   </th>
                   {skuPreview.names.map((name, i) => (
                     <th
-                      key={`header-${name}`}
+                      key={`header-${name}-${i}`}
                       className="px-3 py-2 text-left font-semibold text-[var(--text-secondary)]"
                     >
                       {name}
@@ -333,7 +333,7 @@ export default function OptionManager({
                     {row.valid ? (
                       row.segments.map((seg, i) => (
                         <td
-                          key={`${row.sku}-${seg}`}
+                          key={`${row.sku}-${i}-${seg}`}
                           className="px-3 py-1.5 text-[var(--foreground)]"
                         >
                           <span className="inline-flex rounded-full bg-[var(--accent-cream)] px-2 py-0.5 text-[var(--foreground)]">
