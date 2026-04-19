@@ -1,4 +1,4 @@
-import type { Product } from '@/lib/types'
+import type { Product, ProductVariant } from '@/lib/types'
 import type { CurrencyCode } from '@/lib/currency'
 import {
   getVariantMinPrice,
@@ -25,7 +25,45 @@ const defaultFormatPrice = (priceInINR: number): string =>
   }).format(priceInINR)
 
 const sanitizeFormattedPrice = (value: string): string =>
-  value.replace(/\u00a0/g, ' ')
+  value.replace(/\u00a0/gu, ' ')
+
+const stockLabel = (stock: number): string => {
+  if (stock > 5) return 'In Stock'
+  if (stock > 0) return 'Low Stock – limited availability'
+  return 'Out of Stock'
+}
+
+const MAX_LABEL_CHARS = 100
+
+/** Strip control characters, collapse whitespace, and limit length. */
+const sanitizeLabel = (value: string, max = MAX_LABEL_CHARS): string =>
+  value
+    .replace(/[\p{Cc}\p{Cf}]/gu, ' ')
+    .replace(/\s+/gu, ' ')
+    .trim()
+    .slice(0, max)
+
+/**
+ * Build a human-readable label for a variant using its option values
+ * (e.g. "Color: Red, Size: XL") instead of the raw SKU code.
+ */
+const variantLabel = (
+  variant: ProductVariant,
+  optionMap?: Map<string, string>
+): string => {
+  if (variant.optionValues?.length && optionMap?.size) {
+    return variant.optionValues
+      .map((ov) => {
+        const optionName = optionMap.get(ov.optionId)
+        const safeValue = sanitizeLabel(ov.value)
+        return optionName
+          ? `${sanitizeLabel(optionName)}: ${safeValue}`
+          : safeValue
+      })
+      .join(', ')
+  }
+  return sanitizeLabel(variant.sku ?? 'Variant')
+}
 
 export const buildProductContext = (
   product: Product,
@@ -42,14 +80,19 @@ export const buildProductContext = (
     `Category: ${product.category}`,
     `Description: ${truncate(product.description)}`,
     `Price (${currencyCode}): ${formatPrice(getVariantMinPrice(product.variants))}`,
-    `Stock: ${totalStock > 0 ? totalStock + ' units' : 'Out of stock'}`,
+    `Stock: ${stockLabel(totalStock)}`,
   ]
 
   if (product.variants?.length) {
+    const optionMap = product.options?.length
+      ? new Map(product.options.map((o) => [o.id, o.name]))
+      : undefined
     lines.push(`Variants (${product.variants.length}):`)
     for (const v of product.variants) {
-      const stock = v.stock > 0 ? `${v.stock} in stock` : 'out of stock'
-      lines.push(`- ${v.sku ?? 'Variant'}: ${formatPrice(v.price)}, ${stock}`)
+      const label = variantLabel(v, optionMap)
+      lines.push(
+        `- ${label}: ${formatPrice(v.price)}, ${stockLabel(v.stock).toLowerCase()}`
+      )
     }
   }
 

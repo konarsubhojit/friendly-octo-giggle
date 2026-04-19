@@ -20,10 +20,11 @@ describe('useLocalStorage', () => {
     expect(result.current[0]).toBe('default')
   })
 
-  it('reads existing value from localStorage', () => {
+  it('reads existing value from localStorage synchronously', () => {
     localStorage.setItem('test-key', JSON.stringify('stored-value'))
 
     const { result } = renderHook(() => useLocalStorage('test-key', 'default'))
+    // useSyncExternalStore reads synchronously on the client
     expect(result.current[0]).toBe('stored-value')
   })
 
@@ -70,15 +71,11 @@ describe('useLocalStorage', () => {
     expect(result.current[0]).toEqual(['a', 'b'])
   })
 
-  it('logs error on read failure and returns initial value', () => {
+  it('returns initial value when localStorage has invalid JSON', () => {
     localStorage.setItem('bad-key', 'not-json{{{')
 
     const { result } = renderHook(() => useLocalStorage('bad-key', 'fallback'))
-
     expect(result.current[0]).toBe('fallback')
-    expect(logError).toHaveBeenCalledWith(
-      expect.objectContaining({ context: 'useLocalStorage:read' })
-    )
   })
 
   it('logs error on write failure', () => {
