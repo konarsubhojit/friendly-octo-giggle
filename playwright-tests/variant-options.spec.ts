@@ -10,9 +10,9 @@
  * 6. Add to cart
  */
 import { test, expect, type Page } from '@playwright/test'
-import { dirname, join } from 'path'
-import { existsSync, mkdirSync } from 'fs'
-import { fileURLToPath } from 'url'
+import { dirname, join } from 'node:path'
+import { existsSync, mkdirSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)

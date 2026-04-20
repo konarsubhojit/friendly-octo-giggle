@@ -132,10 +132,11 @@ describe('FR-011: Order History Preservation after Soft-Delete', () => {
       orderData as unknown as OrderWithItems
     )
 
-    expect(serializedOrder.items[0].variant).toBeDefined()
-    expect(serializedOrder.items[0].variant!.id).toBe('var1234')
-    expect(serializedOrder.items[0].variant!.productId).toBe('abc1234')
-    expect(serializedOrder.items[0].variant!.deletedAt).not.toBeNull()
+    const variant = serializedOrder.items[0].variant
+    expect(variant).toBeDefined()
+    expect(variant?.id).toBe('var1234')
+    expect(variant?.productId).toBe('abc1234')
+    expect(variant?.deletedAt).not.toBeNull()
   })
 
   it('soft-deleted variant retains all original fields', async () => {
@@ -156,12 +157,13 @@ describe('FR-011: Order History Preservation after Soft-Delete', () => {
     const serializedOrder = serializeOrder(
       orderData as unknown as OrderWithItems
     )
-    const variant = serializedOrder.items[0].variant!
+    const variant = serializedOrder.items[0].variant
+    expect(variant).toBeDefined()
 
-    expect(variant.price).toBe(150)
-    expect(variant.productId).toBe('abc1234')
-    expect(variant.id).toBe('var1234')
-    expect(variant.deletedAt).not.toBeNull()
+    expect(variant?.price).toBe(150)
+    expect(variant?.productId).toBe('abc1234')
+    expect(variant?.id).toBe('var1234')
+    expect(variant?.deletedAt).not.toBeNull()
   })
 
   it('active variant queries filter out soft-deleted variants', async () => {
@@ -200,7 +202,7 @@ describe('FR-011: Order History Preservation after Soft-Delete', () => {
 
     const variantIds = serializedOrder.items
       .filter((item) => item.variant)
-      .map((item) => item.variant!.id)
+      .map((item) => item.variant?.id)
 
     expect(variantIds).toContain('var1234')
   })
