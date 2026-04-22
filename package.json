@@ -34,7 +34,7 @@
   },
   "homepage": "https://github.com/konarsubhojit/friendly-octo-giggle#readme",
   "dependencies": {
-    "@auth/core": "0.41.1",
+    "@auth/core": "0.41.2",
     "@auth/drizzle-adapter": "1.11.1",
     "@azure/storage-blob": "^12.31.0",
     "@google/genai": "^1.49.0",
