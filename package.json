@@ -38,7 +38,7 @@
     "@auth/drizzle-adapter": "1.11.1",
     "@azure/storage-blob": "^12.31.0",
     "@google/genai": "^1.49.0",
-    "@neondatabase/serverless": "^0.10.0",
+    "@neondatabase/serverless": "^1.1.0",
     "@reduxjs/toolkit": "^2.11.2",
     "@sentry/nextjs": "^10.49.0",
     "@tailwindcss/postcss": "^4.1.18",
