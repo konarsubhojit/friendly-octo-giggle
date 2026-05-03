@@ -193,10 +193,24 @@ interface OrderItemRowItem {
   readonly product?: { id: string; name: string; image: string; price: number }
   readonly variant?: {
     id: string
-    name: string
+    sku: string | null
     image?: string
     price: number
+    optionValues?: Array<{
+      id: string
+      optionId: string
+      value: string
+    }>
   } | null
+}
+
+const resolveOrderVariantLabel = (
+  variant: NonNullable<OrderItemRowItem['variant']>
+): string | null => {
+  if (variant.optionValues && variant.optionValues.length > 0) {
+    return variant.optionValues.map((ov) => ov.value).join(' / ')
+  }
+  return variant.sku ?? null
 }
 
 interface OrderItemRowProps {
@@ -206,6 +220,7 @@ interface OrderItemRowProps {
 
 function OrderItemRow({ item, formatPrice }: OrderItemRowProps) {
   const image = item.variant?.image || item.product?.image
+  const variantLabel = item.variant ? resolveOrderVariantLabel(item.variant) : null
   const sections: Record<string, ReactElement | null> = {
     image: image ? (
       <div className="relative w-16 h-16 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700">
@@ -218,10 +233,8 @@ function OrderItemRow({ item, formatPrice }: OrderItemRowProps) {
         />
       </div>
     ) : null,
-    variant: item.variant ? (
-      <p className="text-xs text-gray-500 dark:text-gray-400">
-        {item.variant.name}
-      </p>
+    variant: variantLabel ? (
+      <p className="text-xs text-gray-500 dark:text-gray-400">{variantLabel}</p>
     ) : null,
     customization: item.customizationNote ? (
       <div className="mt-2 ml-20 p-2 bg-amber-50 border border-amber-200 rounded-lg">

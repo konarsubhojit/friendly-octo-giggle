@@ -36,6 +36,7 @@ const mockVariant = {
   stock: 0,
   image: null,
   images: [] as string[],
+  sortOrder: 0,
   deletedAt: new Date('2025-06-01'),
   createdAt: new Date('2025-01-01'),
   updatedAt: new Date('2025-06-01'),

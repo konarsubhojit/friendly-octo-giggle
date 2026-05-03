@@ -23,7 +23,7 @@ export interface ProductVariant {
   stock: number
   image: string | null
   images: string[]
-  sortOrder: number
+  sortOrder?: number
   deletedAt: string | null
   createdAt: string
   updatedAt: string

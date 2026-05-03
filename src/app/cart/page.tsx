@@ -104,7 +104,11 @@ export default function CartPage() {
       existing.push(item)
       groups.set(item.productId, existing)
     }
-    return [...groups.values()]
+    return [...groups.values()].map((group) =>
+      [...group].sort(
+        (a, b) => (a.variant?.sortOrder ?? 0) - (b.variant?.sortOrder ?? 0)
+      )
+    )
   }, [cart?.items])
 
   if ((loading && cart === null) || status === 'loading') {

@@ -17,8 +17,14 @@ interface OrderItem {
   }
   variant?: {
     id: string
-    name: string
+    sku: string | null
+    image?: string
     price: number
+    optionValues?: Array<{
+      id: string
+      optionId: string
+      value: string
+    }>
   } | null
 }
 
