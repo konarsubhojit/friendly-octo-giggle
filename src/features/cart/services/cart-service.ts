@@ -114,9 +114,8 @@ export class CartRequestError extends Error {
   }
 }
 
-export const isCartRequestError = (
-  error: unknown
-): error is CartRequestError => error instanceof CartRequestError
+export const isCartRequestError = (error: unknown): error is CartRequestError =>
+  error instanceof CartRequestError
 
 const verifyProductStock = async (
   body: AddToCartInput
@@ -530,7 +529,9 @@ const redisItemsToCartResponse = (items: CartItemRedis[]) => {
   }
 }
 
-export const getCart = async (identity: CartIdentity): Promise<{
+export const getCart = async (
+  identity: CartIdentity
+): Promise<{
   cart:
     | ReturnType<typeof serializeCart>
     | ReturnType<typeof redisItemsToCartResponse>

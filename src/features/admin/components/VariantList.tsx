@@ -415,10 +415,13 @@ const VariantList = ({ productId, initialVariants }: VariantListProps) => {
     setDragSourceIndex(index)
   }, [])
 
-  const handleDragOver = useCallback((e: React.DragEvent, index: number) => {
-    e.preventDefault()
-    if (dragSourceIndex !== index) setDragOverIndex(index)
-  }, [dragSourceIndex])
+  const handleDragOver = useCallback(
+    (e: React.DragEvent, index: number) => {
+      e.preventDefault()
+      if (dragSourceIndex !== index) setDragOverIndex(index)
+    },
+    [dragSourceIndex]
+  )
 
   const handleDrop = useCallback(
     async (targetIndex: number) => {
