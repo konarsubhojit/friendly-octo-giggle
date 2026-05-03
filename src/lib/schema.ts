@@ -225,6 +225,7 @@ export const productVariants = pgTable(
     stock: integer('stock').notNull(),
     image: text('image'),
     images: json('images').$type<string[]>().default([]).notNull(),
+    sortOrder: integer('sortOrder').notNull().default(0),
     deletedAt: timestamp('deletedAt', { mode: 'date' }),
     createdAt: timestamp('createdAt', { mode: 'date' }).defaultNow().notNull(),
     updatedAt: timestamp('updatedAt', { mode: 'date' }).defaultNow().notNull(),
