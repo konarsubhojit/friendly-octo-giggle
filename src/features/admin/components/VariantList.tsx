@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, lazy, Suspense } from 'react'
+import { useState, useRef, useCallback, lazy, Suspense } from 'react'
 import Image from 'next/image'
 import type { ProductVariant } from '@/lib/types'
 import toast from 'react-hot-toast'
@@ -18,6 +18,25 @@ interface VariantListProps {
   readonly productId: string
   readonly initialVariants: ProductVariant[]
 }
+
+function reorder<T>(list: T[], from: number, to: number): T[] {
+  if (from === to) return list
+  const result = [...list]
+  const [moved] = result.splice(from, 1)
+  result.splice(to, 0, moved)
+  return result
+}
+
+const GripIcon = () => (
+  <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+    <circle cx="5" cy="4" r="1.2" />
+    <circle cx="5" cy="8" r="1.2" />
+    <circle cx="5" cy="12" r="1.2" />
+    <circle cx="11" cy="4" r="1.2" />
+    <circle cx="11" cy="8" r="1.2" />
+    <circle cx="11" cy="12" r="1.2" />
+  </svg>
+)
 
 interface QuickEditDraft {
   price: string
@@ -128,6 +147,10 @@ const QuickEditPanel = ({
 
 interface VariantCardProps {
   readonly variant: ProductVariant
+  readonly index: number
+  readonly isDragOver: boolean
+  readonly isDragging: boolean
+  readonly reorderSaving: boolean
   readonly currency: string
   readonly draft: QuickEditDraft
   readonly expandedVariantId: string | null
@@ -145,10 +168,18 @@ interface VariantCardProps {
     field: keyof QuickEditDraft,
     value: string
   ) => void
+  readonly onDragStart: (index: number) => void
+  readonly onDragOver: (e: React.DragEvent, index: number) => void
+  readonly onDrop: (index: number) => void
+  readonly onDragEnd: () => void
 }
 
 const VariantCard = ({
   variant,
+  index,
+  isDragOver,
+  isDragging,
+  reorderSaving,
   currency,
   draft,
   expandedVariantId,
@@ -162,6 +193,10 @@ const VariantCard = ({
   resetQuickDraft,
   savingVariantId,
   updateQuickDraft,
+  onDragStart,
+  onDragOver,
+  onDrop,
+  onDragEnd,
 }: VariantCardProps) => {
   const isExpanded = expandedVariantId === variant.id
   const defaultDraft = getDefaultDraft(variant)
@@ -181,8 +216,31 @@ const VariantCard = ({
   const displayLabel = variant.sku ?? variant.id
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md dark:border-slate-700 dark:bg-slate-900/80">
-      <div className="flex items-start gap-4">
+    <div
+      draggable
+      onDragStart={() => onDragStart(index)}
+      onDragOver={(e) => onDragOver(e, index)}
+      onDrop={() => onDrop(index)}
+      onDragEnd={onDragEnd}
+      className={[
+        'rounded-2xl border bg-white p-4 shadow-sm transition-all duration-150 select-none dark:bg-slate-900/80',
+        isDragging
+          ? 'opacity-50 shadow-inner border-dashed border-slate-300 dark:border-slate-600'
+          : isDragOver
+            ? 'border-sky-400 shadow-md scale-[1.01] dark:border-sky-500'
+            : 'border-slate-200 hover:shadow-md dark:border-slate-700',
+      ].join(' ')}
+      role="listitem"
+      aria-label={`Variant ${variant.sku ?? variant.id}. Drag to reorder.`}
+    >
+      <div className="flex items-start gap-2">
+        <span
+          className="flex-shrink-0 mt-1 cursor-grab active:cursor-grabbing text-slate-300 dark:text-slate-600 hover:text-slate-400 transition-colors"
+          aria-hidden="true"
+        >
+          <GripIcon />
+        </span>
+        <div className="flex items-start gap-4 flex-1 min-w-0">
         <div className="relative h-14 w-14 flex-shrink-0 overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-800">
           {variant.image ? (
             <Image
@@ -320,6 +378,7 @@ const VariantCard = ({
               />
             </svg>
           </button>
+          </div>
         </div>
       </div>
     </div>
@@ -345,6 +404,60 @@ export default function VariantList({
   const [expandedVariantId, setExpandedVariantId] = useState<string | null>(
     null
   )
+
+  const dragSourceIndex = useRef<number | null>(null)
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
+  const [reorderSaving, setReorderSaving] = useState(false)
+
+  const handleDragStart = useCallback((index: number) => {
+    dragSourceIndex.current = index
+  }, [])
+
+  const handleDragOver = useCallback((e: React.DragEvent, index: number) => {
+    e.preventDefault()
+    if (dragSourceIndex.current !== index) setDragOverIndex(index)
+  }, [])
+
+  const handleDrop = useCallback(async (targetIndex: number) => {
+    const sourceIndex = dragSourceIndex.current
+    dragSourceIndex.current = null
+    setDragOverIndex(null)
+    if (sourceIndex === null || sourceIndex === targetIndex) return
+
+    const reordered = reorder(variants, sourceIndex, targetIndex).map(
+      (v, idx) => ({ ...v, sortOrder: idx })
+    )
+    const previous = variants
+    setVariants(reordered)
+    setReorderSaving(true)
+    try {
+      const res = await fetch(
+        `/api/admin/products/${productId}/variants/reorder`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            items: reordered.map(({ id, sortOrder }) => ({ id, sortOrder })),
+          }),
+        }
+      )
+      if (!res.ok) {
+        const data = await res.json().catch(() => null)
+        throw new Error(data?.error ?? 'Failed to save order')
+      }
+      toast.success('Order saved')
+    } catch (err) {
+      setVariants(previous)
+      toast.error(err instanceof Error ? err.message : 'Failed to save order')
+    } finally {
+      setReorderSaving(false)
+    }
+  }, [variants, productId])
+
+  const handleDragEnd = useCallback(() => {
+    dragSourceIndex.current = null
+    setDragOverIndex(null)
+  }, [])
 
   const totalVariantStock = getVariantTotalStock(variants)
   const stockedVariants = variants.filter((variant) => variant.stock > 0).length
@@ -606,11 +719,27 @@ export default function VariantList({
         </div>
       </div>
 
-      <div className="space-y-3">
-        {variants.map((variant) => (
+      {reorderSaving && (
+        <p className="mb-2 text-xs text-slate-400 flex items-center gap-1.5" role="status">
+          <svg className="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+          </svg>
+          Saving…
+        </p>
+      )}
+      <p className="mb-3 text-xs text-slate-400 dark:text-slate-500">
+        Drag <span aria-hidden="true" className="font-mono">⠿</span> to reorder variants
+      </p>
+      <div className="space-y-3" role="list" aria-label="Variants — drag to reorder">
+        {variants.map((variant, index) => (
           <VariantCard
             key={variant.id}
             variant={variant}
+            index={index}
+            isDragOver={dragOverIndex === index}
+            isDragging={dragSourceIndex.current === index}
+            reorderSaving={reorderSaving}
             currency={currency}
             draft={getDraft(variant)}
             expandedVariantId={expandedVariantId}
@@ -624,6 +753,10 @@ export default function VariantList({
             resetQuickDraft={resetQuickDraft}
             savingVariantId={savingVariantId}
             updateQuickDraft={updateQuickDraft}
+            onDragStart={handleDragStart}
+            onDragOver={handleDragOver}
+            onDrop={handleDrop}
+            onDragEnd={handleDragEnd}
           />
         ))}
       </div>
