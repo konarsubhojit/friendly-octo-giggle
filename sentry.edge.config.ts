@@ -10,7 +10,7 @@ const isProd = process.env.NODE_ENV === 'production'
 Sentry.init({
   dsn: process.env.SENTRY_DSN,
   environment: isProd ? 'production' : 'development',
-  tracesSampleRate: isProd ? 0.1 : 1.0,
+  tracesSampleRate: isProd ? 0.1 : 1,
   enableLogs: true,
   sendDefaultPii: true,
 })

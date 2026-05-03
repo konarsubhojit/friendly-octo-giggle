@@ -10,10 +10,10 @@ Sentry.init({
   dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
   environment: isProd ? 'production' : 'development',
   integrations: [Sentry.replayIntegration()],
-  tracesSampleRate: isProd ? 0.1 : 1.0,
+  tracesSampleRate: isProd ? 0.1 : 1,
   enableLogs: true,
-  replaysSessionSampleRate: isProd ? 0.1 : 1.0,
-  replaysOnErrorSampleRate: 1.0,
+  replaysSessionSampleRate: isProd ? 0.1 : 1,
+  replaysOnErrorSampleRate: 1,
   sendDefaultPii: true,
 })
 

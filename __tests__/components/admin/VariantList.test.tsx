@@ -37,6 +37,21 @@ vi.mock('@/features/admin/components/DeleteConfirmModal', () => ({
   ),
 }))
 
+vi.mock('@/features/admin/components/VariantFormModal', () => ({
+  default: ({
+    variant,
+    onClose,
+  }: {
+    variant?: { id: string }
+    onClose: () => void
+  }) => (
+    <div data-testid="variant-form-modal">
+      <p>{variant ? `Editing ${variant.id}` : 'Creating variant'}</p>
+      <button onClick={onClose}>Close</button>
+    </div>
+  ),
+}))
+
 vi.mock('@/contexts/CurrencyContext', () => ({
   useCurrency: () => ({
     formatPrice: (n: number) => `$${n.toFixed(2)}`,
@@ -92,6 +107,11 @@ describe('VariantList', () => {
 
   it('renders Edit and Delete buttons', () => {
     render(<VariantList productId="abc1234" initialVariants={[mockVariant]} />)
+    expect(
+      screen.getByRole('button', {
+        name: 'Edit RED-LG',
+      })
+    ).toBeInTheDocument()
     expect(
       screen.getByRole('button', {
         name: 'Open quick edit for RED-LG',
@@ -335,5 +355,34 @@ describe('VariantList', () => {
       <VariantList productId="abc1234" initialVariants={[noImageVariant]} />
     )
     expect(screen.getByText('📦')).toBeInTheDocument()
+  })
+
+  it('opens full edit modal when Edit button is clicked', async () => {
+    render(<VariantList productId="abc1234" initialVariants={[mockVariant]} />)
+
+    expect(screen.queryByTestId('variant-form-modal')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit RED-LG' }))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('variant-form-modal')).toBeInTheDocument()
+      expect(screen.getByText('Editing var1234')).toBeInTheDocument()
+    })
+  })
+
+  it('closes full edit modal when close is triggered', async () => {
+    render(<VariantList productId="abc1234" initialVariants={[mockVariant]} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit RED-LG' }))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('variant-form-modal')).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }))
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('variant-form-modal')).not.toBeInTheDocument()
+    })
   })
 })

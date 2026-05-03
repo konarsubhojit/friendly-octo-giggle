@@ -36,7 +36,7 @@ export async function DELETE(
       where: eq(productOptions.id, optionId),
       columns: { id: true, productId: true },
     })
-    if (!existing || existing.productId !== id) {
+    if (existing?.productId !== id) {
       return apiError('Option not found', 404)
     }
 

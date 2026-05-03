@@ -29,7 +29,8 @@ const makeTx = () => ({
       findMany: (...args: unknown[]) => mockFindMany(...args),
     },
   },
-  execute: ((...args: unknown[]) => mockExecute(...(args as [unknown]))) as typeof mockExecute,
+  execute: ((...args: unknown[]) =>
+    mockExecute(...(args as [unknown]))) as typeof mockExecute,
   update: (...args: unknown[]) => {
     mockUpdate(...args)
     return {
@@ -443,7 +444,9 @@ describe('DELETE /api/admin/variants/[variantId]', () => {
     mockFindFirst
       .mockResolvedValueOnce(mockVariant)
       .mockResolvedValueOnce(mockProduct)
-    mockExecute.mockResolvedValueOnce({ rows: [] })
+    // UPDATE returns nothing (subquery blocked it), then findMany shows the
+    // variant is still present → it's the last one
+    mockReturning.mockResolvedValueOnce([])
     mockFindMany.mockResolvedValueOnce([{ id: 'var123' }])
 
     const request = new NextRequest(
@@ -466,7 +469,8 @@ describe('DELETE /api/admin/variants/[variantId]', () => {
     mockFindFirst
       .mockResolvedValueOnce(mockVariant)
       .mockResolvedValueOnce(mockProduct)
-    mockExecute.mockResolvedValueOnce({ rows: [{ id: 'var123' }] })
+    // Atomic UPDATE succeeds — no secondary findMany needed
+    mockReturning.mockResolvedValueOnce([{ id: 'var123' }])
 
     const request = new NextRequest(
       'http://localhost/api/admin/variants/var123',
@@ -490,7 +494,7 @@ describe('DELETE /api/admin/variants/[variantId]', () => {
     mockFindFirst
       .mockResolvedValueOnce(mockVariant)
       .mockResolvedValueOnce(mockProduct)
-    mockExecute.mockResolvedValueOnce({ rows: [{ id: 'var123' }] })
+    mockReturning.mockResolvedValueOnce([{ id: 'var123' }])
 
     const request = new NextRequest(
       'http://localhost/api/admin/variants/var123',
