@@ -17,7 +17,7 @@ interface CartItemRowProps {
   readonly onCustomizationChange: (itemId: string, note: string) => void
 }
 
-export function CartItemRow({
+export const CartItemRow = ({
   item,
   isLast,
   updating,
@@ -26,7 +26,7 @@ export function CartItemRow({
   onUpdateQuantity,
   onRemoveItem,
   onCustomizationChange,
-}: CartItemRowProps) {
+}: CartItemRowProps) => {
   const price = item.variant ? item.variant.price : 0
   const image = item.variant?.image || item.product.image
   const variantLabel = resolveVariantLabel(item)

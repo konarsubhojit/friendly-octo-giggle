@@ -17,7 +17,7 @@ interface CategoriesClientProps {
   readonly initialCategories: Category[]
 }
 
-function reorder<T>(list: T[], from: number, to: number): T[] {
+const reorder = <T,>(list: T[], from: number, to: number): T[] => {
   if (from === to) return list
   const result = [...list]
   const [moved] = result.splice(from, 1)
@@ -55,7 +55,7 @@ interface CategoryRowProps {
   readonly onDeleteClick: (cat: Category) => void
 }
 
-function CategoryRow({
+const CategoryRow = ({
   cat,
   index,
   isDragOver,
@@ -67,7 +67,7 @@ function CategoryRow({
   onDragEnd,
   onRename,
   onDeleteClick,
-}: CategoryRowProps) {
+}: CategoryRowProps) => {
   const [editing, setEditing] = useState(false)
   const [draftName, setDraftName] = useState(cat.name)
   const [renameSaving, setRenameSaving] = useState(false)
@@ -204,9 +204,7 @@ function CategoryRow({
   )
 }
 
-export default function CategoriesClient({
-  initialCategories,
-}: CategoriesClientProps) {
+const CategoriesClient = ({ initialCategories }: CategoriesClientProps) => {
   const [cats, setCats] = useState<Category[]>(initialCategories)
   const [saving, setSaving] = useState(false)
   const [newName, setNewName] = useState('')
@@ -214,7 +212,7 @@ export default function CategoriesClient({
   const [deleteTarget, setDeleteTarget] = useState<Category | null>(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
 
-  const dragSourceIndex = useRef<number | null>(null)
+  const [dragSourceIndex, setDragSourceIndex] = useState<number | null>(null)
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
 
   const handleAdd = async (e: React.BaseSyntheticEvent) => {
@@ -288,18 +286,18 @@ export default function CategoriesClient({
   }
 
   const handleDragStart = useCallback((index: number) => {
-    dragSourceIndex.current = index
+    setDragSourceIndex(index)
   }, [])
 
   const handleDragOver = useCallback((e: React.DragEvent, index: number) => {
     e.preventDefault()
-    if (dragSourceIndex.current !== index) setDragOverIndex(index)
-  }, [])
+    if (dragSourceIndex !== index) setDragOverIndex(index)
+  }, [dragSourceIndex])
 
   const handleDrop = useCallback(
     async (targetIndex: number) => {
-      const sourceIndex = dragSourceIndex.current
-      dragSourceIndex.current = null
+      const sourceIndex = dragSourceIndex
+      setDragSourceIndex(null)
       setDragOverIndex(null)
       if (sourceIndex === null || sourceIndex === targetIndex) return
 
@@ -332,11 +330,11 @@ export default function CategoriesClient({
         setSaving(false)
       }
     },
-    [cats]
+    [cats, dragSourceIndex]
   )
 
   const handleDragEnd = useCallback(() => {
-    dragSourceIndex.current = null
+    setDragSourceIndex(null)
     setDragOverIndex(null)
   }, [])
 
@@ -433,7 +431,7 @@ export default function CategoriesClient({
                 cat={cat}
                 index={index}
                 isDragOver={dragOverIndex === index}
-                isDragging={dragSourceIndex.current === index}
+                isDragging={dragSourceIndex === index}
                 saving={saving}
                 onDragStart={handleDragStart}
                 onDragOver={handleDragOver}
@@ -461,3 +459,5 @@ export default function CategoriesClient({
     </>
   )
 }
+
+export default CategoriesClient

@@ -16,7 +16,7 @@ const ReorderCategoriesSchema = z.object({
     .min(1, 'At least one item required'),
 })
 
-export async function PATCH(request: Request) {
+export const PATCH = async (request: Request) => {
   const session = await auth()
   if (!session?.user) return apiError('Not authenticated', 401)
   if (session.user.role !== 'ADMIN') return apiError('Not authorized', 403)

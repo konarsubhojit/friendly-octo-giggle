@@ -41,17 +41,30 @@ interface OrderListCardProps {
 
 const ProductThumbnails = ({ items }: { readonly items: OrderItem[] }) => {
   const images = items
-    .map((item) => item.product?.image)
-    .filter((img): img is string => Boolean(img))
+    .map((item) =>
+      item.product?.image
+        ? {
+            key: JSON.stringify([
+              item.product.name,
+              item.product.image,
+              item.variant?.id ?? 'base',
+              item.quantity,
+              item.variant?.price ?? 0,
+            ]),
+            src: item.product.image,
+          }
+        : null
+    )
+    .filter((item): item is { key: string; src: string } => Boolean(item))
     .slice(0, 3)
 
   if (images.length === 0) return null
 
   return (
     <div className="flex -space-x-2 flex-shrink-0">
-      {images.map((src, index) => (
+      {images.map(({ key, src }, index) => (
         <div
-          key={index}
+          key={key}
           className="relative w-10 h-10 rounded-lg overflow-hidden border-2 border-[var(--surface)] bg-[var(--accent-cream)]"
           style={{ zIndex: images.length - index }}
         >

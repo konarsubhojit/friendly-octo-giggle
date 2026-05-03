@@ -143,6 +143,19 @@ export default function CartPage() {
   }
 
   const isEmpty = !cart?.items || cart.items.length === 0
+  const cartItemGroups = groupedItems.map((group, index) => (
+    <CartProductGroup
+      key={group[0].productId}
+      items={group}
+      isLastGroup={index === groupedItems.length - 1}
+      updating={updating}
+      customizationNotes={customizationNotes}
+      formatPrice={formatPrice}
+      onUpdateQuantity={handleUpdateQuantity}
+      onRemoveItem={handleRemoveItem}
+      onCustomizationChange={handleCustomizationChange}
+    />
+  ))
 
   return (
     <div className="min-h-screen bg-warm-gradient">
@@ -177,21 +190,7 @@ export default function CartPage() {
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2">
-              <Card className="overflow-hidden">
-                {groupedItems.map((group, index) => (
-                  <CartProductGroup
-                    key={group[0].productId}
-                    items={group}
-                    isLastGroup={index === groupedItems.length - 1}
-                    updating={updating}
-                    customizationNotes={customizationNotes}
-                    formatPrice={formatPrice}
-                    onUpdateQuantity={handleUpdateQuantity}
-                    onRemoveItem={handleRemoveItem}
-                    onCustomizationChange={handleCustomizationChange}
-                  />
-                ))}
-              </Card>
+              <Card className="overflow-hidden">{cartItemGroups}</Card>
 
               <Link
                 href="/shop"

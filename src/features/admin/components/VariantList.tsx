@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useCallback, lazy, Suspense } from 'react'
+import { useState, useCallback, lazy, Suspense } from 'react'
 import Image from 'next/image'
 import type { ProductVariant } from '@/lib/types'
 import toast from 'react-hot-toast'
@@ -19,7 +19,7 @@ interface VariantListProps {
   readonly initialVariants: ProductVariant[]
 }
 
-function reorder<T>(list: T[], from: number, to: number): T[] {
+const reorder = <T,>(list: T[], from: number, to: number): T[] => {
   if (from === to) return list
   const result = [...list]
   const [moved] = result.splice(from, 1)
@@ -155,7 +155,6 @@ interface VariantCardProps {
   readonly index: number
   readonly isDragOver: boolean
   readonly isDragging: boolean
-  readonly reorderSaving: boolean
   readonly currency: string
   readonly draft: QuickEditDraft
   readonly expandedVariantId: string | null
@@ -184,7 +183,6 @@ const VariantCard = ({
   index,
   isDragOver,
   isDragging,
-  reorderSaving,
   currency,
   draft,
   expandedVariantId,
@@ -392,10 +390,7 @@ const VariantCard = ({
   )
 }
 
-export default function VariantList({
-  productId,
-  initialVariants,
-}: VariantListProps) {
+const VariantList = ({ productId, initialVariants }: VariantListProps) => {
   const [variants, setVariants] = useState<ProductVariant[]>(initialVariants)
   const { currency, formatPrice, rates } = useCurrency()
   const [showFormModal, setShowFormModal] = useState(false)
@@ -412,23 +407,23 @@ export default function VariantList({
     null
   )
 
-  const dragSourceIndex = useRef<number | null>(null)
+  const [dragSourceIndex, setDragSourceIndex] = useState<number | null>(null)
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
   const [reorderSaving, setReorderSaving] = useState(false)
 
   const handleDragStart = useCallback((index: number) => {
-    dragSourceIndex.current = index
+    setDragSourceIndex(index)
   }, [])
 
   const handleDragOver = useCallback((e: React.DragEvent, index: number) => {
     e.preventDefault()
-    if (dragSourceIndex.current !== index) setDragOverIndex(index)
-  }, [])
+    if (dragSourceIndex !== index) setDragOverIndex(index)
+  }, [dragSourceIndex])
 
   const handleDrop = useCallback(
     async (targetIndex: number) => {
-      const sourceIndex = dragSourceIndex.current
-      dragSourceIndex.current = null
+      const sourceIndex = dragSourceIndex
+      setDragSourceIndex(null)
       setDragOverIndex(null)
       if (sourceIndex === null || sourceIndex === targetIndex) return
 
@@ -461,11 +456,11 @@ export default function VariantList({
         setReorderSaving(false)
       }
     },
-    [variants, productId]
+    [variants, productId, dragSourceIndex]
   )
 
   const handleDragEnd = useCallback(() => {
-    dragSourceIndex.current = null
+    setDragSourceIndex(null)
     setDragOverIndex(null)
   }, [])
 
@@ -775,8 +770,7 @@ export default function VariantList({
             variant={variant}
             index={index}
             isDragOver={dragOverIndex === index}
-            isDragging={dragSourceIndex.current === index}
-            reorderSaving={reorderSaving}
+            isDragging={dragSourceIndex === index}
             currency={currency}
             draft={getDraft(variant)}
             expandedVariantId={expandedVariantId}
@@ -821,3 +815,5 @@ export default function VariantList({
     </section>
   )
 }
+
+export default VariantList

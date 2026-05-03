@@ -15,10 +15,10 @@ import { revalidateTag } from 'next/cache'
 
 export const dynamic = 'force-dynamic'
 
-export async function PATCH(
+export const PATCH = async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   const authCheck = await checkAdminAuth()
   if (!authCheck.authorized) {
     return apiError(authCheck.error ?? 'Unauthorized', authCheck.status)

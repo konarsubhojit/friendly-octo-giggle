@@ -114,13 +114,13 @@ export class CartRequestError extends Error {
   }
 }
 
-export function isCartRequestError(error: unknown): error is CartRequestError {
-  return error instanceof CartRequestError
-}
+export const isCartRequestError = (
+  error: unknown
+): error is CartRequestError => error instanceof CartRequestError
 
-async function verifyProductStock(
+const verifyProductStock = async (
   body: AddToCartInput
-): Promise<{ product: ProductWithVariants; availableStock: number }> {
+): Promise<{ product: ProductWithVariants; availableStock: number }> => {
   const product = await drizzleDb.query.products.findFirst({
     where: and(eq(products.id, body.productId), isNull(products.deletedAt)),
     with: {
@@ -148,10 +148,10 @@ async function verifyProductStock(
   return { product, availableStock }
 }
 
-async function getOrCreateCart(
+const getOrCreateCart = async (
   session: Session | null,
   sessionId: string | undefined
-): Promise<{ cart: { id: string }; sessionId: string | undefined }> {
+): Promise<{ cart: { id: string }; sessionId: string | undefined }> => {
   const createGuestCart = async (providedSessionId?: string) => {
     const guestSessionId =
       providedSessionId ?? `guest_${Date.now()}_${crypto.randomUUID()}`
@@ -198,11 +198,11 @@ async function getOrCreateCart(
   return createGuestCart(sessionId)
 }
 
-async function addOrUpdateCartItem(
+const addOrUpdateCartItem = async (
   cartId: string,
   body: AddToCartInput,
   availableStock: number
-): Promise<CartMutationWarning> {
+): Promise<CartMutationWarning> => {
   const existingItem = await primaryDrizzleDb.query.cartItems.findFirst({
     where: and(
       eq(cartItems.cartId, cartId),
@@ -253,14 +253,13 @@ async function addOrUpdateCartItem(
     : null
 }
 
-function toISOString(value: Date | string): string {
-  return typeof value === 'string' ? value : value.toISOString()
-}
+const toISOString = (value: Date | string): string =>
+  typeof value === 'string' ? value : value.toISOString()
 
-function buildVariantLabel(
+const buildVariantLabel = (
   variantOptionValues: CartVariantOptionValueLink[] | undefined,
   productOptions: CartProductOptionRecord[] | undefined
-): string | null {
+): string | null => {
   if (!variantOptionValues?.length || !productOptions?.length) return null
   const optionMap = new Map(productOptions.map((opt) => [opt.id, opt]))
   const sorted = [...variantOptionValues].sort((a, b) => {
@@ -277,7 +276,7 @@ function buildVariantLabel(
   return parts.length > 0 ? parts.join(' / ') : null
 }
 
-function serializeCart(cart: CartRecord) {
+const serializeCart = (cart: CartRecord) => {
   return {
     ...cart,
     createdAt: toISOString(cart.createdAt),
@@ -337,7 +336,7 @@ function serializeCart(cart: CartRecord) {
   }
 }
 
-function fetchCartFromDB(userId?: string, sessionId?: string) {
+const fetchCartFromDB = (userId?: string, sessionId?: string) => {
   if (userId) {
     return drizzleDb.query.carts.findFirst({
       where: eq(carts.userId, userId),
@@ -415,20 +414,23 @@ function fetchCartFromDB(userId?: string, sessionId?: string) {
   return Promise.resolve(undefined)
 }
 
-export function getCartIdentity(
+export const getCartIdentity = (
   session: { user?: { id?: string } } | null,
   sessionId: string | undefined
-): CartIdentity {
+): CartIdentity => {
   return { userId: session?.user?.id, sessionId }
 }
 
-function getCartCacheKey(userId?: string, sessionId?: string): string | null {
+const getCartCacheKey = (
+  userId?: string,
+  sessionId?: string
+): string | null => {
   if (userId) return CACHE_KEYS.CART_BY_USER(userId)
   if (sessionId) return CACHE_KEYS.CART_BY_SESSION(sessionId)
   return null
 }
 
-function findCartForDeletion(userId?: string, sessionId?: string) {
+const findCartForDeletion = (userId?: string, sessionId?: string) => {
   if (userId) {
     return drizzleDb.query.carts.findFirst({ where: eq(carts.userId, userId) })
   }
@@ -440,7 +442,7 @@ function findCartForDeletion(userId?: string, sessionId?: string) {
   return Promise.resolve(undefined)
 }
 
-export function buildGuestSessionCookieOptions() {
+export const buildGuestSessionCookieOptions = () => {
   return {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
@@ -449,11 +451,11 @@ export function buildGuestSessionCookieOptions() {
   }
 }
 
-function dbCartToRedisItems(
+const dbCartToRedisItems = (
   cart: CartRecord,
   userId?: string,
   sessionId?: string
-): CartItemRedis[] {
+): CartItemRedis[] => {
   return cart.items.map((item) => ({
     itemId: item.id,
     cartId: cart.id,
@@ -477,7 +479,7 @@ function dbCartToRedisItems(
   }))
 }
 
-function redisItemsToCartResponse(items: CartItemRedis[]) {
+const redisItemsToCartResponse = (items: CartItemRedis[]) => {
   if (items.length === 0) return null
 
   const first = items[0]
@@ -528,12 +530,12 @@ function redisItemsToCartResponse(items: CartItemRedis[]) {
   }
 }
 
-export async function getCart(identity: CartIdentity): Promise<{
+export const getCart = async (identity: CartIdentity): Promise<{
   cart:
     | ReturnType<typeof serializeCart>
     | ReturnType<typeof redisItemsToCartResponse>
     | null
-}> {
+}> => {
   const { userId, sessionId } = identity
 
   if (!userId && !sessionId) {
@@ -567,11 +569,11 @@ export async function getCart(identity: CartIdentity): Promise<{
   return { cart: serialized }
 }
 
-export async function addItemToCart(
+export const addItemToCart = async (
   session: Session | null,
   body: AddToCartInput,
   sessionId: string | undefined
-): Promise<AddToCartResult> {
+): Promise<AddToCartResult> => {
   const [{ availableStock }, { cart, sessionId: resolvedSessionId }] =
     await Promise.all([
       verifyProductStock(body),
@@ -635,7 +637,7 @@ export async function addItemToCart(
   }
 }
 
-export async function clearCart(identity: CartIdentity): Promise<void> {
+export const clearCart = async (identity: CartIdentity): Promise<void> => {
   const { userId, sessionId } = identity
 
   if (!userId && !sessionId) {

@@ -59,6 +59,19 @@ const baseItem: CartItemWithProduct = {
   },
 }
 
+const fallbackVariant: NonNullable<CartItemWithProduct['variant']> = {
+  id: 'var1',
+  productId: 'prod1',
+  sku: null,
+  price: 1299,
+  stock: 5,
+  image: null,
+  images: [],
+  deletedAt: null,
+  createdAt: '2024-01-01T00:00:00Z',
+  updatedAt: '2024-01-01T00:00:00Z',
+}
+
 const mockFormatPrice = (amount: number) => `₹${amount.toFixed(2)}`
 
 describe('CartItemRow', () => {
@@ -345,6 +358,37 @@ describe('CartItemRow', () => {
     )
 
     expect(screen.getByText('Color: Blue / Size: XL')).toBeTruthy()
+  })
+
+  it('falls back to SKU when no variantLabel or option data is available', () => {
+    const itemWithSkuOnly: CartItemWithProduct = {
+      ...baseItem,
+      variantLabel: undefined,
+      product: {
+        ...baseItem.product,
+        options: undefined,
+      },
+      variant: {
+        ...fallbackVariant,
+        sku: 'SKU-123',
+        optionValues: undefined,
+      },
+    }
+
+    render(
+      <CartItemRow
+        item={itemWithSkuOnly}
+        isLast={false}
+        updating={null}
+        customizationNote=""
+        formatPrice={mockFormatPrice}
+        onUpdateQuantity={vi.fn()}
+        onRemoveItem={vi.fn()}
+        onCustomizationChange={vi.fn()}
+      />
+    )
+
+    expect(screen.getByText('SKU-123')).toBeTruthy()
   })
 
   it('renders customization note input', () => {

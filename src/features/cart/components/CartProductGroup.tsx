@@ -18,81 +18,6 @@ interface CartProductGroupProps {
   readonly isLastGroup: boolean
 }
 
-export function CartProductGroup({
-  items,
-  updating,
-  customizationNotes,
-  formatPrice,
-  onUpdateQuantity,
-  onRemoveItem,
-  onCustomizationChange,
-  isLastGroup,
-}: CartProductGroupProps) {
-  if (items.length === 1) {
-    return (
-      <CartItemRow
-        item={items[0]}
-        isLast={isLastGroup}
-        updating={updating}
-        customizationNote={customizationNotes[items[0].id] || ''}
-        formatPrice={formatPrice}
-        onUpdateQuantity={onUpdateQuantity}
-        onRemoveItem={onRemoveItem}
-        onCustomizationChange={onCustomizationChange}
-      />
-    )
-  }
-
-  const product = items[0].product
-  const productImage = items[0].variant?.image || product.image
-
-  return (
-    <div className={isLastGroup ? '' : 'border-b border-[var(--border-warm)]'}>
-      <div className="flex gap-4 px-6 pt-5 pb-2 items-center">
-        <div className="relative w-10 h-10 flex-shrink-0 bg-[var(--accent-cream)] rounded-lg overflow-hidden border border-[var(--border-warm)]">
-          <Image
-            src={productImage}
-            alt={product.name}
-            fill
-            sizes="40px"
-            className="object-cover"
-          />
-        </div>
-        <Link
-          href={`/products/${product.id}`}
-          className="text-sm font-bold text-[var(--foreground)] hover:text-[var(--accent-rose)] transition-colors truncate"
-        >
-          {product.name}
-        </Link>
-        <span className="ml-auto text-xs text-[var(--text-muted)] flex-shrink-0">
-          {items.length} variants
-        </span>
-      </div>
-
-      {items.map((item, index) => (
-        <div
-          key={item.id}
-          className={
-            index < items.length - 1
-              ? 'border-t border-[var(--border-warm)]/50'
-              : ''
-          }
-        >
-          <CartVariantRow
-            item={item}
-            updating={updating}
-            customizationNote={customizationNotes[item.id] || ''}
-            formatPrice={formatPrice}
-            onUpdateQuantity={onUpdateQuantity}
-            onRemoveItem={onRemoveItem}
-            onCustomizationChange={onCustomizationChange}
-          />
-        </div>
-      ))}
-    </div>
-  )
-}
-
 interface CartVariantRowProps {
   readonly item: CartItemWithProduct
   readonly updating: string | null
@@ -190,6 +115,90 @@ const CartVariantRow = ({
           {formatPrice(price * item.quantity)}
         </p>
       </div>
+    </div>
+  )
+}
+
+export const CartProductGroup = ({
+  items,
+  updating,
+  customizationNotes,
+  formatPrice,
+  onUpdateQuantity,
+  onRemoveItem,
+  onCustomizationChange,
+  isLastGroup,
+}: CartProductGroupProps) => {
+  if (items.length === 1) {
+    return (
+      <CartItemRow
+        item={items[0]}
+        isLast={isLastGroup}
+        updating={updating}
+        customizationNote={customizationNotes[items[0].id] || ''}
+        formatPrice={formatPrice}
+        onUpdateQuantity={onUpdateQuantity}
+        onRemoveItem={onRemoveItem}
+        onCustomizationChange={onCustomizationChange}
+      />
+    )
+  }
+
+  const product = items[0].product
+  const productImage = items[0].variant?.image || product.image
+
+  return (
+    <div className={isLastGroup ? '' : 'border-b border-[var(--border-warm)]'}>
+      <div className="flex gap-4 px-6 pt-5 pb-2 items-center">
+        {productImage ? (
+          <div className="relative w-10 h-10 flex-shrink-0 bg-[var(--accent-cream)] rounded-lg overflow-hidden border border-[var(--border-warm)]">
+            <Image
+              src={productImage}
+              alt={product.name}
+              fill
+              sizes="40px"
+              className="object-cover"
+            />
+          </div>
+        ) : (
+          <div
+            aria-label={`No product image available for ${product.name}`}
+            className="w-10 h-10 flex-shrink-0 bg-[var(--accent-cream)] rounded-lg overflow-hidden border border-[var(--border-warm)] flex items-center justify-center text-sm"
+          >
+            No image
+          </div>
+        )}
+        <Link
+          href={`/products/${product.id}`}
+          className="text-sm font-bold text-[var(--foreground)] hover:text-[var(--accent-rose)] transition-colors truncate"
+        >
+          {product.name}
+        </Link>
+        <span className="ml-auto text-xs text-[var(--text-muted)] flex-shrink-0">
+          {items.length} variants
+        </span>
+      </div>
+
+      {items.map((item, index) => (
+        <div
+          key={item.id}
+          className={
+            index < items.length - 1
+              ? 'border-t border-[var(--border-warm)]/50'
+              : ''
+          }
+        >
+          <CartVariantRow
+            item={item}
+            updating={updating}
+            customizationNote={customizationNotes[item.id] || ''}
+            formatPrice={formatPrice}
+            onUpdateQuantity={onUpdateQuantity}
+            onRemoveItem={onRemoveItem}
+            onCustomizationChange={onCustomizationChange}
+          />
+        </div>
+      ))}
     </div>
   )
 }
