@@ -227,6 +227,126 @@ describe('CartItemRow', () => {
     expect(screen.getByText('₹1299.00')).toBeTruthy()
   })
 
+  it('renders pre-computed variantLabel when provided', () => {
+    const itemWithLabel: CartItemWithProduct = {
+      ...baseItem,
+      variantLabel: 'Color: Red / Size: L',
+      variant: {
+        id: 'var1',
+        productId: 'prod1',
+        sku: null,
+        price: 1299,
+        stock: 5,
+        image: null,
+        images: [],
+        deletedAt: null,
+        createdAt: '2024-01-01T00:00:00Z',
+        updatedAt: '2024-01-01T00:00:00Z',
+      },
+    }
+
+    render(
+      <CartItemRow
+        item={itemWithLabel}
+        isLast={false}
+        updating={null}
+        customizationNote=""
+        formatPrice={mockFormatPrice}
+        onUpdateQuantity={vi.fn()}
+        onRemoveItem={vi.fn()}
+        onCustomizationChange={vi.fn()}
+      />
+    )
+
+    expect(screen.getByText('Color: Red / Size: L')).toBeTruthy()
+  })
+
+  it('builds variant label from optionValues and product options', () => {
+    const itemWithOptions: CartItemWithProduct = {
+      ...baseItem,
+      product: {
+        ...baseItem.product,
+        options: [
+          {
+            id: 'opt1',
+            productId: 'prod1',
+            name: 'Color',
+            sortOrder: 0,
+            createdAt: '2024-01-01T00:00:00Z',
+            values: [
+              {
+                id: 'oval1',
+                optionId: 'opt1',
+                value: 'Blue',
+                sortOrder: 0,
+                createdAt: '2024-01-01T00:00:00Z',
+              },
+            ],
+          },
+          {
+            id: 'opt2',
+            productId: 'prod1',
+            name: 'Size',
+            sortOrder: 1,
+            createdAt: '2024-01-01T00:00:00Z',
+            values: [
+              {
+                id: 'oval2',
+                optionId: 'opt2',
+                value: 'XL',
+                sortOrder: 0,
+                createdAt: '2024-01-01T00:00:00Z',
+              },
+            ],
+          },
+        ],
+      },
+      variant: {
+        id: 'var1',
+        productId: 'prod1',
+        sku: null,
+        price: 1499,
+        stock: 3,
+        image: null,
+        images: [],
+        deletedAt: null,
+        createdAt: '2024-01-01T00:00:00Z',
+        updatedAt: '2024-01-01T00:00:00Z',
+        optionValues: [
+          {
+            id: 'oval1',
+            optionId: 'opt1',
+            value: 'Blue',
+            sortOrder: 0,
+            createdAt: '2024-01-01T00:00:00Z',
+          },
+          {
+            id: 'oval2',
+            optionId: 'opt2',
+            value: 'XL',
+            sortOrder: 0,
+            createdAt: '2024-01-01T00:00:00Z',
+          },
+        ],
+      },
+    }
+
+    render(
+      <CartItemRow
+        item={itemWithOptions}
+        isLast={false}
+        updating={null}
+        customizationNote=""
+        formatPrice={mockFormatPrice}
+        onUpdateQuantity={vi.fn()}
+        onRemoveItem={vi.fn()}
+        onCustomizationChange={vi.fn()}
+      />
+    )
+
+    expect(screen.getByText('Color: Blue / Size: XL')).toBeTruthy()
+  })
+
   it('renders customization note input', () => {
     render(
       <CartItemRow

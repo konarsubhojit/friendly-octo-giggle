@@ -21,7 +21,7 @@ import {
   syncPendingCartItems,
 } from '@/features/cart/store/cartSlice'
 import type { AppDispatch } from '@/lib/store'
-import { CartItemRow } from '@/features/cart/components/CartItemRow'
+import { CartProductGroup } from '@/features/cart/components/CartProductGroup'
 import { CheckoutForm } from '@/features/cart/components/CheckoutForm'
 import CartGlyph from '@/components/icons/CartGlyph'
 import { LeafAccent } from '@/components/ui/DecorativeElements'
@@ -97,6 +97,16 @@ export default function CartPage() {
     []
   )
 
+  const groupedItems = useMemo(() => {
+    const groups = new Map<string, CartItemWithProduct[]>()
+    for (const item of cart?.items ?? []) {
+      const existing = groups.get(item.productId) ?? []
+      existing.push(item)
+      groups.set(item.productId, existing)
+    }
+    return [...groups.values()]
+  }, [cart?.items])
+
   if ((loading && cart === null) || status === 'loading') {
     return (
       <div className="min-h-screen bg-warm-gradient">
@@ -164,13 +174,13 @@ export default function CartPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2">
               <Card className="overflow-hidden">
-                {cart.items.map((item: CartItemWithProduct, index: number) => (
-                  <CartItemRow
-                    key={item.id}
-                    item={item}
-                    isLast={index === cart.items.length - 1}
+                {groupedItems.map((group, index) => (
+                  <CartProductGroup
+                    key={group[0].productId}
+                    items={group}
+                    isLastGroup={index === groupedItems.length - 1}
                     updating={updating}
-                    customizationNote={customizationNotes[item.id] || ''}
+                    customizationNotes={customizationNotes}
                     formatPrice={formatPrice}
                     onUpdateQuantity={handleUpdateQuantity}
                     onRemoveItem={handleRemoveItem}

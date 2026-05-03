@@ -18,13 +18,44 @@ interface ProductWithVariants {
   variants: Array<{ id: string; stock: number }>
 }
 
+interface CartVariantOptionValueRecord {
+  id: string
+  optionId: string
+  value: string
+  sortOrder: number
+  createdAt: Date | string
+}
+
+interface CartVariantOptionValueLink {
+  optionValue: CartVariantOptionValueRecord
+}
+
 interface CartVariantRecord {
   id?: string
   sku?: string | null
   price?: number | null
   stock?: number | null
+  image?: string | null
+  images?: string[]
+  optionValues?: CartVariantOptionValueLink[]
   createdAt: Date | string
   updatedAt: Date | string
+}
+
+interface CartProductOptionValueRecord {
+  id: string
+  optionId: string
+  value: string
+  sortOrder: number
+  createdAt: Date | string
+}
+
+interface CartProductOptionRecord {
+  id: string
+  name: string
+  sortOrder: number
+  createdAt: Date | string
+  values: CartProductOptionValueRecord[]
 }
 
 interface CartProductRecord {
@@ -33,6 +64,7 @@ interface CartProductRecord {
   description?: string
   image?: string
   category?: string
+  options?: CartProductOptionRecord[]
   createdAt: Date | string
   updatedAt: Date | string
   variants: CartVariantRecord[]
@@ -222,33 +254,78 @@ function toISOString(value: Date | string): string {
   return typeof value === 'string' ? value : value.toISOString()
 }
 
+function buildVariantLabel(
+  variantOptionValues: CartVariantOptionValueLink[] | undefined,
+  productOptions: CartProductOptionRecord[] | undefined
+): string | null {
+  if (!variantOptionValues?.length || !productOptions?.length) return null
+  const optionNameMap = new Map(productOptions.map((opt) => [opt.id, opt.name]))
+  const parts = variantOptionValues
+    .map(({ optionValue }) => {
+      const name = optionNameMap.get(optionValue.optionId)
+      return name ? `${name}: ${optionValue.value}` : optionValue.value
+    })
+    .filter(Boolean)
+  return parts.length > 0 ? parts.join(' / ') : null
+}
+
 function serializeCart(cart: CartRecord) {
   return {
     ...cart,
     createdAt: toISOString(cart.createdAt),
     updatedAt: toISOString(cart.updatedAt),
-    items: cart.items.map((item) => ({
-      ...item,
-      createdAt: toISOString(item.createdAt),
-      updatedAt: toISOString(item.updatedAt),
-      product: {
-        ...item.product,
-        createdAt: toISOString(item.product.createdAt),
-        updatedAt: toISOString(item.product.updatedAt),
-        variants: item.product.variants.map((variant) => ({
-          ...variant,
-          createdAt: toISOString(variant.createdAt),
-          updatedAt: toISOString(variant.updatedAt),
+    items: cart.items.map((item) => {
+      const flatOptionValues = item.variant?.optionValues?.map(
+        ({ optionValue }) => ({
+          id: optionValue.id,
+          optionId: optionValue.optionId,
+          value: optionValue.value,
+          sortOrder: optionValue.sortOrder,
+          createdAt: toISOString(optionValue.createdAt),
+        })
+      )
+      const options = item.product.options?.map((opt) => ({
+        id: opt.id,
+        productId: item.product.id,
+        name: opt.name,
+        sortOrder: opt.sortOrder,
+        createdAt: toISOString(opt.createdAt),
+        values: opt.values.map((val) => ({
+          id: val.id,
+          optionId: val.optionId,
+          value: val.value,
+          sortOrder: val.sortOrder,
+          createdAt: toISOString(val.createdAt),
         })),
-      },
-      variant: item.variant
-        ? {
-            ...item.variant,
-            createdAt: toISOString(item.variant.createdAt),
-            updatedAt: toISOString(item.variant.updatedAt),
-          }
-        : null,
-    })),
+      }))
+      return {
+        ...item,
+        createdAt: toISOString(item.createdAt),
+        updatedAt: toISOString(item.updatedAt),
+        variantLabel:
+          buildVariantLabel(item.variant?.optionValues, item.product.options) ??
+          null,
+        product: {
+          ...item.product,
+          createdAt: toISOString(item.product.createdAt),
+          updatedAt: toISOString(item.product.updatedAt),
+          options,
+          variants: item.product.variants.map((variant) => ({
+            ...variant,
+            createdAt: toISOString(variant.createdAt),
+            updatedAt: toISOString(variant.updatedAt),
+          })),
+        },
+        variant: item.variant
+          ? {
+              ...item.variant,
+              createdAt: toISOString(item.variant.createdAt),
+              updatedAt: toISOString(item.variant.updatedAt),
+              optionValues: flatOptionValues ?? [],
+            }
+          : null,
+      }
+    }),
   }
 }
 
@@ -261,13 +338,29 @@ function fetchCartFromDB(userId?: string, sessionId?: string) {
           with: {
             product: {
               with: {
+                options: {
+                  orderBy: (o, { asc }) => [asc(o.sortOrder)],
+                  with: {
+                    values: {
+                      orderBy: (v, { asc }) => [asc(v.sortOrder)],
+                    },
+                  },
+                },
                 variants: {
                   where: (variant, { isNull: isVariantNull }) =>
                     isVariantNull(variant.deletedAt),
                 },
               },
             },
-            variant: true,
+            variant: {
+              with: {
+                optionValues: {
+                  with: {
+                    optionValue: true,
+                  },
+                },
+              },
+            },
           },
         },
       },
@@ -282,13 +375,29 @@ function fetchCartFromDB(userId?: string, sessionId?: string) {
           with: {
             product: {
               with: {
+                options: {
+                  orderBy: (o, { asc }) => [asc(o.sortOrder)],
+                  with: {
+                    values: {
+                      orderBy: (v, { asc }) => [asc(v.sortOrder)],
+                    },
+                  },
+                },
                 variants: {
                   where: (variant, { isNull: isVariantNull }) =>
                     isVariantNull(variant.deletedAt),
                 },
               },
             },
-            variant: true,
+            variant: {
+              with: {
+                optionValues: {
+                  with: {
+                    optionValue: true,
+                  },
+                },
+              },
+            },
           },
         },
       },
@@ -351,6 +460,9 @@ function dbCartToRedisItems(
     variantSku: item.variant?.sku ?? null,
     variantPrice: item.variant?.price ?? 0,
     variantStock: item.variant?.stock ?? 0,
+    variantOptionLabel:
+      buildVariantLabel(item.variant?.optionValues, item.product.options) ??
+      null,
     quantity: item.quantity,
     createdAt: toISOString(item.createdAt),
     updatedAt: toISOString(item.updatedAt),
@@ -373,6 +485,7 @@ function redisItemsToCartResponse(items: CartItemRedis[]) {
       quantity: item.quantity,
       createdAt: item.createdAt,
       updatedAt: item.updatedAt,
+      variantLabel: item.variantOptionLabel ?? null,
       product: {
         id: item.productId,
         name: item.productName,
@@ -398,6 +511,7 @@ function redisItemsToCartResponse(items: CartItemRedis[]) {
             id: item.variantId,
             price: item.variantPrice,
             stock: item.variantStock,
+            sku: item.variantSku,
             createdAt: item.createdAt,
             updatedAt: item.updatedAt,
           }
@@ -466,13 +580,29 @@ export async function addItemToCart(
           with: {
             product: {
               with: {
+                options: {
+                  orderBy: (o, { asc }) => [asc(o.sortOrder)],
+                  with: {
+                    values: {
+                      orderBy: (v, { asc }) => [asc(v.sortOrder)],
+                    },
+                  },
+                },
                 variants: {
                   where: (variant, { isNull: isVariantNull }) =>
                     isVariantNull(variant.deletedAt),
                 },
               },
             },
-            variant: true,
+            variant: {
+              with: {
+                optionValues: {
+                  with: {
+                    optionValue: true,
+                  },
+                },
+              },
+            },
           },
         },
       },
