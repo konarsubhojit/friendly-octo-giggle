@@ -37,9 +37,12 @@ interface CartVariantRecord {
   stock?: number | null
   image?: string | null
   images?: string[]
-  optionValues?: CartVariantOptionValueLink[]
   createdAt: Date | string
   updatedAt: Date | string
+}
+
+interface CartItemVariantDbRecord extends CartVariantRecord {
+  optionValues?: CartVariantOptionValueLink[]
 }
 
 interface CartProductOptionValueRecord {
@@ -77,7 +80,7 @@ interface CartItemRecord {
   createdAt: Date | string
   updatedAt: Date | string
   product: CartProductRecord
-  variant: CartVariantRecord | null
+  variant: CartItemVariantDbRecord | null
 }
 
 interface CartRecord {
@@ -259,11 +262,16 @@ function buildVariantLabel(
   productOptions: CartProductOptionRecord[] | undefined
 ): string | null {
   if (!variantOptionValues?.length || !productOptions?.length) return null
-  const optionNameMap = new Map(productOptions.map((opt) => [opt.id, opt.name]))
-  const parts = variantOptionValues
+  const optionMap = new Map(productOptions.map((opt) => [opt.id, opt]))
+  const sorted = [...variantOptionValues].sort((a, b) => {
+    const aOrder = optionMap.get(a.optionValue.optionId)?.sortOrder ?? 0
+    const bOrder = optionMap.get(b.optionValue.optionId)?.sortOrder ?? 0
+    return aOrder - bOrder
+  })
+  const parts = sorted
     .map(({ optionValue }) => {
-      const name = optionNameMap.get(optionValue.optionId)
-      return name ? `${name}: ${optionValue.value}` : optionValue.value
+      const option = optionMap.get(optionValue.optionId)
+      return option ? `${option.name}: ${optionValue.value}` : optionValue.value
     })
     .filter(Boolean)
   return parts.length > 0 ? parts.join(' / ') : null

@@ -17,5 +17,5 @@ export const resolveVariantLabel = (
       .filter(Boolean)
     if (parts.length > 0) return parts.join(' / ')
   }
-  return item.variant.sku ?? null
+  return item.variant.sku ?? 'Variant'
 }
