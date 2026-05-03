@@ -1012,9 +1012,9 @@ const ProductClient = ({
 
   /**
    * Update selected variant AND reflect it in the URL as `?v=<id>` so users
-   * can share the exact variant by copying the address bar or using the share
-   * button.  We use `router.replace` (no new history entry) with `scroll:
-   * false` so the page doesn't jump on each click.
+   * can share the exact variant by copying the address bar. We use
+   * `router.replace` (no new history entry) with `scroll: false` so the page
+   * doesn't jump on each click.
    */
   const handleVariantSelect = useCallback(
     (variant: ProductVariant | null) => {
