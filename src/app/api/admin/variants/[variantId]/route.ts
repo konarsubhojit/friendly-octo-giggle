@@ -5,7 +5,7 @@ import {
   productVariants,
   productVariantOptionValues,
 } from '@/lib/schema'
-import { eq, and, isNull } from 'drizzle-orm'
+import { eq, and, isNull, sql } from 'drizzle-orm'
 import { UpdateVariantSchema } from '@/features/product/validations'
 import {
   apiSuccess,
@@ -156,34 +156,39 @@ export async function DELETE(
 
     try {
       await primaryDrizzleDb.transaction(async (tx) => {
-        // Count active variants for this product before deleting. If only one
-        // remains it must be this one, so we reject the delete.
-        const activeVariants = await tx.query.productVariants.findMany({
-          where: and(
-            eq(productVariants.productId, existing.productId),
-            isNull(productVariants.deletedAt)
-          ),
-          columns: { id: true },
-        })
-
-        if (activeVariants.length <= 1) {
-          throw new LastVariantError()
-        }
-
-        // Soft-delete the variant using a standard Drizzle update so the
-        // query is compatible with the Neon serverless HTTP driver.
+        // Single conditional UPDATE: only succeeds when the product still has
+        // more than one active variant AND this variant is still active.
+        // The correlated subquery makes the check+delete atomic — no race
+        // condition even under concurrent deletes — while staying within
+        // Drizzle's query builder (not tx.execute) so it works on Neon's
+        // serverless HTTP driver. Timestamps use NOW() to keep the source of
+        // truth on the database side.
         const [deleted] = await tx
           .update(productVariants)
-          .set({ deletedAt: new Date(), updatedAt: new Date() })
+          .set({ deletedAt: sql`NOW()`, updatedAt: sql`NOW()` })
           .where(
             and(
               eq(productVariants.id, variantId),
-              isNull(productVariants.deletedAt)
+              isNull(productVariants.deletedAt),
+              sql`(SELECT COUNT(*) FROM ${productVariants} WHERE ${productVariants.productId} = ${existing.productId} AND ${productVariants.deletedAt} IS NULL) > 1`
             )
           )
           .returning({ id: productVariants.id })
 
         if (!deleted) {
+          // The UPDATE matched nothing. Determine why: either this was the
+          // last active variant (still present but blocked) or it was already
+          // soft-deleted by a concurrent request.
+          const remaining = await tx.query.productVariants.findMany({
+            where: and(
+              eq(productVariants.productId, existing.productId),
+              isNull(productVariants.deletedAt)
+            ),
+            columns: { id: true },
+          })
+          if (remaining.some((v) => v.id === variantId)) {
+            throw new LastVariantError()
+          }
           throw new VariantGoneError()
         }
       })

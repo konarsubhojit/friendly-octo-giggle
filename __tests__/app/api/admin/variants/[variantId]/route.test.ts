@@ -444,7 +444,9 @@ describe('DELETE /api/admin/variants/[variantId]', () => {
     mockFindFirst
       .mockResolvedValueOnce(mockVariant)
       .mockResolvedValueOnce(mockProduct)
-    // Only 1 active variant remaining — it is the last one
+    // UPDATE returns nothing (subquery blocked it), then findMany shows the
+    // variant is still present → it's the last one
+    mockReturning.mockResolvedValueOnce([])
     mockFindMany.mockResolvedValueOnce([{ id: 'var123' }])
 
     const request = new NextRequest(
@@ -467,8 +469,7 @@ describe('DELETE /api/admin/variants/[variantId]', () => {
     mockFindFirst
       .mockResolvedValueOnce(mockVariant)
       .mockResolvedValueOnce(mockProduct)
-    // 2 active variants — deletion is allowed
-    mockFindMany.mockResolvedValueOnce([{ id: 'var123' }, { id: 'var456' }])
+    // Atomic UPDATE succeeds — no secondary findMany needed
     mockReturning.mockResolvedValueOnce([{ id: 'var123' }])
 
     const request = new NextRequest(
@@ -493,7 +494,6 @@ describe('DELETE /api/admin/variants/[variantId]', () => {
     mockFindFirst
       .mockResolvedValueOnce(mockVariant)
       .mockResolvedValueOnce(mockProduct)
-    mockFindMany.mockResolvedValueOnce([{ id: 'var123' }, { id: 'var456' }])
     mockReturning.mockResolvedValueOnce([{ id: 'var123' }])
 
     const request = new NextRequest(
