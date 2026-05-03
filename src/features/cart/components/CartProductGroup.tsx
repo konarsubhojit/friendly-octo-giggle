@@ -162,6 +162,7 @@ export const CartProductGroup = ({
           </div>
         ) : (
           <div
+            role="img"
             aria-label={`No product image available for ${product.name}`}
             className="w-10 h-10 flex-shrink-0 bg-[var(--accent-cream)] rounded-lg overflow-hidden border border-[var(--border-warm)] flex items-center justify-center text-sm"
           >

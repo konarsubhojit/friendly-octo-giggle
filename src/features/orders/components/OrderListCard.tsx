@@ -44,13 +44,7 @@ const ProductThumbnails = ({ items }: { readonly items: OrderItem[] }) => {
     .map((item) =>
       item.product?.image
         ? {
-            key: JSON.stringify([
-              item.product.name,
-              item.product.image,
-              item.variant?.id ?? 'base',
-              item.quantity,
-              item.variant?.price ?? 0,
-            ]),
+            key: `${item.product.name}|${item.product.image}|${item.variant?.id ?? 'base'}|${item.quantity}|${item.variant?.price ?? 0}`,
             src: item.product.image,
           }
         : null
