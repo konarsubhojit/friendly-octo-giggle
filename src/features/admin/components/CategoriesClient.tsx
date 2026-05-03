@@ -26,7 +26,12 @@ function reorder<T>(list: T[], from: number, to: number): T[] {
 }
 
 const GripIcon = () => (
-  <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+  <svg
+    className="w-4 h-4"
+    viewBox="0 0 16 16"
+    fill="currentColor"
+    aria-hidden="true"
+  >
     <circle cx="5" cy="4" r="1.2" />
     <circle cx="5" cy="8" r="1.2" />
     <circle cx="5" cy="12" r="1.2" />
@@ -81,7 +86,10 @@ function CategoryRow({
 
   const commitEdit = async () => {
     const trimmed = draftName.trim()
-    if (!trimmed || trimmed === cat.name) { cancelEdit(); return }
+    if (!trimmed || trimmed === cat.name) {
+      cancelEdit()
+      return
+    }
     setRenameSaving(true)
     await onRename(cat.id, trimmed)
     setEditing(false)
@@ -151,11 +159,17 @@ function CategoryRow({
 
       {editing && (
         <div className="flex items-center gap-1.5 flex-shrink-0 text-xs text-slate-400">
-          {renameSaving ? <span>Saving…</span> : (
+          {renameSaving ? (
+            <span>Saving…</span>
+          ) : (
             <>
-              <kbd className="px-1 rounded bg-slate-100 dark:bg-slate-800 font-mono">↵</kbd>
+              <kbd className="px-1 rounded bg-slate-100 dark:bg-slate-800 font-mono">
+                ↵
+              </kbd>
               <span>save</span>
-              <kbd className="ml-1 px-1 rounded bg-slate-100 dark:bg-slate-800 font-mono">Esc</kbd>
+              <kbd className="ml-1 px-1 rounded bg-slate-100 dark:bg-slate-800 font-mono">
+                Esc
+              </kbd>
               <span>cancel</span>
             </>
           )}
@@ -170,9 +184,19 @@ function CategoryRow({
           className="flex-shrink-0 opacity-0 group-hover:opacity-100 focus:opacity-100 p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition disabled:opacity-30"
           aria-label={`Delete ${cat.name}`}
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
-              d="M6 7h12m-9 0V5.5A1.5 1.5 0 0110.5 4h3A1.5 1.5 0 0115 5.5V7m-7.5 0l.75 11.25A1.5 1.5 0 009.75 19.5h4.5a1.5 1.5 0 001.5-1.25L16.5 7m-6 3v5m3-5v5" />
+          <svg
+            className="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={1.8}
+              d="M6 7h12m-9 0V5.5A1.5 1.5 0 0110.5 4h3A1.5 1.5 0 0115 5.5V7m-7.5 0l.75 11.25A1.5 1.5 0 009.75 19.5h4.5a1.5 1.5 0 001.5-1.25L16.5 7m-6 3v5m3-5v5"
+            />
           </svg>
         </button>
       )}
@@ -180,7 +204,9 @@ function CategoryRow({
   )
 }
 
-export default function CategoriesClient({ initialCategories }: CategoriesClientProps) {
+export default function CategoriesClient({
+  initialCategories,
+}: CategoriesClientProps) {
   const [cats, setCats] = useState<Category[]>(initialCategories)
   const [saving, setSaving] = useState(false)
   const [newName, setNewName] = useState('')
@@ -205,11 +231,15 @@ export default function CategoriesClient({ initialCategories }: CategoriesClient
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Failed to create category')
       const created = data.data?.category ?? data.category
-      setCats((prev) => [...prev, created].sort((a, b) => a.sortOrder - b.sortOrder))
+      setCats((prev) =>
+        [...prev, created].sort((a, b) => a.sortOrder - b.sortOrder)
+      )
       setNewName('')
       toast.success(`"${created.name}" added`)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to create category')
+      toast.error(
+        err instanceof Error ? err.message : 'Failed to create category'
+      )
     } finally {
       setAddLoading(false)
     }
@@ -228,7 +258,9 @@ export default function CategoriesClient({ initialCategories }: CategoriesClient
       setCats((prev) => prev.map((c) => (c.id === id ? updated : c)))
       toast.success(`Renamed to "${updated.name}"`)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to rename category')
+      toast.error(
+        err instanceof Error ? err.message : 'Failed to rename category'
+      )
     }
   }, [])
 
@@ -236,7 +268,9 @@ export default function CategoriesClient({ initialCategories }: CategoriesClient
     if (!deleteTarget) return
     setDeleteLoading(true)
     try {
-      const res = await fetch(`/api/admin/categories/${deleteTarget.id}`, { method: 'DELETE' })
+      const res = await fetch(`/api/admin/categories/${deleteTarget.id}`, {
+        method: 'DELETE',
+      })
       if (!res.ok) {
         const data = await res.json().catch(() => null)
         throw new Error(data?.error ?? 'Failed to delete category')
@@ -244,7 +278,9 @@ export default function CategoriesClient({ initialCategories }: CategoriesClient
       setCats((prev) => prev.filter((c) => c.id !== deleteTarget.id))
       toast.success(`"${deleteTarget.name}" deleted`)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to delete category')
+      toast.error(
+        err instanceof Error ? err.message : 'Failed to delete category'
+      )
     } finally {
       setDeleteTarget(null)
       setDeleteLoading(false)
@@ -260,37 +296,44 @@ export default function CategoriesClient({ initialCategories }: CategoriesClient
     if (dragSourceIndex.current !== index) setDragOverIndex(index)
   }, [])
 
-  const handleDrop = useCallback(async (targetIndex: number) => {
-    const sourceIndex = dragSourceIndex.current
-    dragSourceIndex.current = null
-    setDragOverIndex(null)
-    if (sourceIndex === null || sourceIndex === targetIndex) return
+  const handleDrop = useCallback(
+    async (targetIndex: number) => {
+      const sourceIndex = dragSourceIndex.current
+      dragSourceIndex.current = null
+      setDragOverIndex(null)
+      if (sourceIndex === null || sourceIndex === targetIndex) return
 
-    const reordered = reorder(cats, sourceIndex, targetIndex).map((cat, idx) => ({
-      ...cat,
-      sortOrder: idx,
-    }))
-    const previous = cats
-    setCats(reordered)
-    setSaving(true)
-    try {
-      const res = await fetch('/api/admin/categories/reorder', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items: reordered.map(({ id, sortOrder }) => ({ id, sortOrder })) }),
-      })
-      if (!res.ok) {
-        const data = await res.json().catch(() => null)
-        throw new Error(data?.error ?? 'Failed to save order')
+      const reordered = reorder(cats, sourceIndex, targetIndex).map(
+        (cat, idx) => ({
+          ...cat,
+          sortOrder: idx,
+        })
+      )
+      const previous = cats
+      setCats(reordered)
+      setSaving(true)
+      try {
+        const res = await fetch('/api/admin/categories/reorder', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            items: reordered.map(({ id, sortOrder }) => ({ id, sortOrder })),
+          }),
+        })
+        if (!res.ok) {
+          const data = await res.json().catch(() => null)
+          throw new Error(data?.error ?? 'Failed to save order')
+        }
+        toast.success('Order saved')
+      } catch (err) {
+        setCats(previous)
+        toast.error(err instanceof Error ? err.message : 'Failed to save order')
+      } finally {
+        setSaving(false)
       }
-      toast.success('Order saved')
-    } catch (err) {
-      setCats(previous)
-      toast.error(err instanceof Error ? err.message : 'Failed to save order')
-    } finally {
-      setSaving(false)
-    }
-  }, [cats])
+    },
+    [cats]
+  )
 
   const handleDragEnd = useCallback(() => {
     dragSourceIndex.current = null
@@ -303,7 +346,9 @@ export default function CategoriesClient({ initialCategories }: CategoriesClient
         onSubmit={handleAdd}
         className="mb-6 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-5"
       >
-        <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">Add Category</h3>
+        <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">
+          Add Category
+        </h3>
         <div className="flex gap-3">
           <input
             id="new-cat-name"
@@ -326,30 +371,62 @@ export default function CategoriesClient({ initialCategories }: CategoriesClient
           </button>
         </div>
         <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">
-          New categories are automatically placed at the end. Drag rows to reorder.
+          New categories are automatically placed at the end. Drag rows to
+          reorder.
         </p>
       </form>
 
       {cats.length === 0 ? (
         <div className="rounded-xl border border-dashed border-slate-300 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-950/50 p-10 text-center">
-          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">No categories yet</p>
-          <p className="text-xs text-slate-400 mt-1">Add your first category above.</p>
+          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+            No categories yet
+          </p>
+          <p className="text-xs text-slate-400 mt-1">
+            Add your first category above.
+          </p>
         </div>
       ) : (
         <>
           {saving && (
-            <p className="mb-2 text-xs text-slate-400 flex items-center gap-1.5" role="status">
-              <svg className="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24" aria-hidden="true">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            <p
+              className="mb-2 text-xs text-slate-400 flex items-center gap-1.5"
+              role="status"
+            >
+              <svg
+                className="animate-spin w-3 h-3"
+                fill="none"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                />
               </svg>
               Saving order…
             </p>
           )}
           <p className="mb-3 text-xs text-slate-400 dark:text-slate-500">
-            Drag <span aria-hidden="true" className="font-mono">⠿</span> to reorder · click a name to rename
+            Drag{' '}
+            <span aria-hidden="true" className="font-mono">
+              ⠿
+            </span>{' '}
+            to reorder · click a name to rename
           </p>
-          <div className="space-y-2" role="list" aria-label="Categories — drag to reorder">
+          <div
+            className="space-y-2"
+            role="list"
+            aria-label="Categories — drag to reorder"
+          >
             {cats.map((cat, index) => (
               <CategoryRow
                 key={cat.id}

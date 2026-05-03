@@ -178,7 +178,9 @@ describe('admin/categories API', () => {
           where: vi.fn().mockReturnThis(),
           limit: vi
             .fn()
-            .mockResolvedValue([{ id: '1', name: 'Existing', deletedAt: null }]),
+            .mockResolvedValue([
+              { id: '1', name: 'Existing', deletedAt: null },
+            ]),
         })
         .mockReturnValueOnce({
           from: vi.fn().mockReturnThis(),

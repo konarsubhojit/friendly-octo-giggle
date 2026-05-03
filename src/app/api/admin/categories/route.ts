@@ -68,7 +68,11 @@ export async function POST(request: Request) {
       if (cat.deletedAt) {
         const [reactivated] = await drizzleDb
           .update(categories)
-          .set({ deletedAt: null, updatedAt: new Date(), sortOrder: nextSortOrder })
+          .set({
+            deletedAt: null,
+            updatedAt: new Date(),
+            sortOrder: nextSortOrder,
+          })
           .where(eq(categories.id, cat.id))
           .returning()
 

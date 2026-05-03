@@ -28,7 +28,12 @@ function reorder<T>(list: T[], from: number, to: number): T[] {
 }
 
 const GripIcon = () => (
-  <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+  <svg
+    className="w-4 h-4"
+    viewBox="0 0 16 16"
+    fill="currentColor"
+    aria-hidden="true"
+  >
     <circle cx="5" cy="4" r="1.2" />
     <circle cx="5" cy="8" r="1.2" />
     <circle cx="5" cy="12" r="1.2" />
@@ -241,143 +246,145 @@ const VariantCard = ({
           <GripIcon />
         </span>
         <div className="flex items-start gap-4 flex-1 min-w-0">
-        <div className="relative h-14 w-14 flex-shrink-0 overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-800">
-          {variant.image ? (
-            <Image
-              src={variant.image}
-              alt={displayLabel}
-              fill
-              className="object-cover"
-              sizes="56px"
-            />
-          ) : (
-            <div className="flex h-full items-center justify-center text-lg">
-              📦
-            </div>
-          )}
-        </div>
-
-        <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-2">
-            <div>
-              <p className="text-sm font-semibold text-slate-950 dark:text-slate-50">
-                {displayLabel}
-              </p>
-              {variant.optionValues && variant.optionValues.length > 0 && (
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  {variant.optionValues.map((ov) => ov.value).join(' / ')}
-                </p>
-              )}
-              <p className="mt-0.5 text-[10px] text-slate-400 dark:text-slate-500">
-                Updated{' '}
-                {new Date(variant.updatedAt).toLocaleDateString('en-US', {
-                  month: 'short',
-                  day: 'numeric',
-                })}
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="text-sm font-bold text-slate-950 dark:text-slate-50">
-                {formatPrice(
-                  convertCurrency(variant.price, rates.INR, rates[currency])
-                )}
-              </p>
-              <p className="text-xs text-slate-500">{variant.stock} in stock</p>
-            </div>
+          <div className="relative h-14 w-14 flex-shrink-0 overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-800">
+            {variant.image ? (
+              <Image
+                src={variant.image}
+                alt={displayLabel}
+                fill
+                className="object-cover"
+                sizes="56px"
+              />
+            ) : (
+              <div className="flex h-full items-center justify-center text-lg">
+                📦
+              </div>
+            )}
           </div>
 
-          {isExpanded && (
-            <QuickEditPanel
-              draft={draft}
-              saving={savingVariantId === variant.id}
-              variantSku={displayLabel}
-              onPriceChange={(value) =>
-                updateQuickDraft(variant.id, 'price', value)
-              }
-              onStockChange={(value) =>
-                updateQuickDraft(variant.id, 'stock', value)
-              }
-              onSave={() => handleQuickSave(variant)}
-              onReset={() => resetQuickDraft(variant)}
-              ui={ui}
-            />
-          )}
-        </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <p className="text-sm font-semibold text-slate-950 dark:text-slate-50">
+                  {displayLabel}
+                </p>
+                {variant.optionValues && variant.optionValues.length > 0 && (
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    {variant.optionValues.map((ov) => ov.value).join(' / ')}
+                  </p>
+                )}
+                <p className="mt-0.5 text-[10px] text-slate-400 dark:text-slate-500">
+                  Updated{' '}
+                  {new Date(variant.updatedAt).toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                  })}
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-sm font-bold text-slate-950 dark:text-slate-50">
+                  {formatPrice(
+                    convertCurrency(variant.price, rates.INR, rates[currency])
+                  )}
+                </p>
+                <p className="text-xs text-slate-500">
+                  {variant.stock} in stock
+                </p>
+              </div>
+            </div>
 
-        <div className="flex flex-col gap-1.5">
-          <button
-            type="button"
-            onClick={() => handleEditClick(variant)}
-            aria-label={`Edit ${displayLabel}`}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-600 transition hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700"
-          >
-            <svg
-              className="h-3.5 w-3.5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              aria-hidden="true"
+            {isExpanded && (
+              <QuickEditPanel
+                draft={draft}
+                saving={savingVariantId === variant.id}
+                variantSku={displayLabel}
+                onPriceChange={(value) =>
+                  updateQuickDraft(variant.id, 'price', value)
+                }
+                onStockChange={(value) =>
+                  updateQuickDraft(variant.id, 'stock', value)
+                }
+                onSave={() => handleQuickSave(variant)}
+                onReset={() => resetQuickDraft(variant)}
+                ui={ui}
+              />
+            )}
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <button
+              type="button"
+              onClick={() => handleEditClick(variant)}
+              aria-label={`Edit ${displayLabel}`}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-600 transition hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1.8}
-                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-              />
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1.8}
-                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-              />
-            </svg>
-          </button>
-          <button
-            type="button"
-            onClick={() => handleQuickEditToggle(variant.id)}
-            aria-label={`${isExpanded ? 'Close quick edit for' : 'Open quick edit for'} ${displayLabel}`}
-            className={`inline-flex h-9 w-9 items-center justify-center rounded-full transition ${
-              isExpanded
-                ? 'bg-sky-50 text-sky-700 hover:bg-sky-100 dark:bg-sky-950/40 dark:text-sky-400'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400'
-            }`}
-          >
-            <svg
-              className="h-3.5 w-3.5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              aria-hidden="true"
+              <svg
+                className="h-3.5 w-3.5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.8}
+                  d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.8}
+                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                />
+              </svg>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleQuickEditToggle(variant.id)}
+              aria-label={`${isExpanded ? 'Close quick edit for' : 'Open quick edit for'} ${displayLabel}`}
+              className={`inline-flex h-9 w-9 items-center justify-center rounded-full transition ${
+                isExpanded
+                  ? 'bg-sky-50 text-sky-700 hover:bg-sky-100 dark:bg-sky-950/40 dark:text-sky-400'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400'
+              }`}
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1.8}
-                d="M16.862 4.487a2.1 2.1 0 113.03 2.902L9.91 17.37 6 18l.63-3.91 10.232-9.603z"
-              />
-            </svg>
-          </button>
-          <button
-            type="button"
-            onClick={() => handleDeleteClick(variant)}
-            aria-label={`Delete ${displayLabel}`}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-rose-200 bg-rose-50 text-rose-700 transition hover:border-rose-300 hover:bg-rose-100"
-          >
-            <svg
-              className="h-3.5 w-3.5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              aria-hidden="true"
+              <svg
+                className="h-3.5 w-3.5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.8}
+                  d="M16.862 4.487a2.1 2.1 0 113.03 2.902L9.91 17.37 6 18l.63-3.91 10.232-9.603z"
+                />
+              </svg>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleDeleteClick(variant)}
+              aria-label={`Delete ${displayLabel}`}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-rose-200 bg-rose-50 text-rose-700 transition hover:border-rose-300 hover:bg-rose-100"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1.8}
-                d="M6 7h12m-9 0V5.5A1.5 1.5 0 0110.5 4h3A1.5 1.5 0 0115 5.5V7m-7.5 0l.75 11.25A1.5 1.5 0 009.75 19.5h4.5a1.5 1.5 0 001.5-1.25L16.5 7m-6 3v5m3-5v5"
-              />
-            </svg>
-          </button>
+              <svg
+                className="h-3.5 w-3.5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.8}
+                  d="M6 7h12m-9 0V5.5A1.5 1.5 0 0110.5 4h3A1.5 1.5 0 0115 5.5V7m-7.5 0l.75 11.25A1.5 1.5 0 009.75 19.5h4.5a1.5 1.5 0 001.5-1.25L16.5 7m-6 3v5m3-5v5"
+                />
+              </svg>
+            </button>
           </div>
         </div>
       </div>
@@ -418,41 +425,44 @@ export default function VariantList({
     if (dragSourceIndex.current !== index) setDragOverIndex(index)
   }, [])
 
-  const handleDrop = useCallback(async (targetIndex: number) => {
-    const sourceIndex = dragSourceIndex.current
-    dragSourceIndex.current = null
-    setDragOverIndex(null)
-    if (sourceIndex === null || sourceIndex === targetIndex) return
+  const handleDrop = useCallback(
+    async (targetIndex: number) => {
+      const sourceIndex = dragSourceIndex.current
+      dragSourceIndex.current = null
+      setDragOverIndex(null)
+      if (sourceIndex === null || sourceIndex === targetIndex) return
 
-    const reordered = reorder(variants, sourceIndex, targetIndex).map(
-      (v, idx) => ({ ...v, sortOrder: idx })
-    )
-    const previous = variants
-    setVariants(reordered)
-    setReorderSaving(true)
-    try {
-      const res = await fetch(
-        `/api/admin/products/${productId}/variants/reorder`,
-        {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            items: reordered.map(({ id, sortOrder }) => ({ id, sortOrder })),
-          }),
-        }
+      const reordered = reorder(variants, sourceIndex, targetIndex).map(
+        (v, idx) => ({ ...v, sortOrder: idx })
       )
-      if (!res.ok) {
-        const data = await res.json().catch(() => null)
-        throw new Error(data?.error ?? 'Failed to save order')
+      const previous = variants
+      setVariants(reordered)
+      setReorderSaving(true)
+      try {
+        const res = await fetch(
+          `/api/admin/products/${productId}/variants/reorder`,
+          {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              items: reordered.map(({ id, sortOrder }) => ({ id, sortOrder })),
+            }),
+          }
+        )
+        if (!res.ok) {
+          const data = await res.json().catch(() => null)
+          throw new Error(data?.error ?? 'Failed to save order')
+        }
+        toast.success('Order saved')
+      } catch (err) {
+        setVariants(previous)
+        toast.error(err instanceof Error ? err.message : 'Failed to save order')
+      } finally {
+        setReorderSaving(false)
       }
-      toast.success('Order saved')
-    } catch (err) {
-      setVariants(previous)
-      toast.error(err instanceof Error ? err.message : 'Failed to save order')
-    } finally {
-      setReorderSaving(false)
-    }
-  }, [variants, productId])
+    },
+    [variants, productId]
+  )
 
   const handleDragEnd = useCallback(() => {
     dragSourceIndex.current = null
@@ -720,18 +730,45 @@ export default function VariantList({
       </div>
 
       {reorderSaving && (
-        <p className="mb-2 text-xs text-slate-400 flex items-center gap-1.5" role="status">
-          <svg className="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24" aria-hidden="true">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+        <p
+          className="mb-2 text-xs text-slate-400 flex items-center gap-1.5"
+          role="status"
+        >
+          <svg
+            className="animate-spin w-3 h-3"
+            fill="none"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <circle
+              className="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
+            />
+            <path
+              className="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+            />
           </svg>
           Saving…
         </p>
       )}
       <p className="mb-3 text-xs text-slate-400 dark:text-slate-500">
-        Drag <span aria-hidden="true" className="font-mono">⠿</span> to reorder variants
+        Drag{' '}
+        <span aria-hidden="true" className="font-mono">
+          ⠿
+        </span>{' '}
+        to reorder variants
       </p>
-      <div className="space-y-3" role="list" aria-label="Variants — drag to reorder">
+      <div
+        className="space-y-3"
+        role="list"
+        aria-label="Variants — drag to reorder"
+      >
         {variants.map((variant, index) => (
           <VariantCard
             key={variant.id}

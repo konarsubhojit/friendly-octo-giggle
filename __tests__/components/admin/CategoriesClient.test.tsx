@@ -73,8 +73,12 @@ describe('CategoriesClient', () => {
     render(<CategoriesClient initialCategories={mockCategories} />)
     expect(screen.getByRole('button', { name: 'Bags' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Shoes' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Delete Bags' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Delete Shoes' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Delete Bags' })
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Delete Shoes' })
+    ).toBeInTheDocument()
   })
 
   it('allows adding a new category', async () => {
@@ -100,7 +104,9 @@ describe('CategoriesClient', () => {
     fireEvent.change(screen.getByPlaceholderText('e.g. Handbag'), {
       target: { value: 'Hats' },
     })
-    fireEvent.submit(screen.getByPlaceholderText('e.g. Handbag').closest('form')!)
+    fireEvent.submit(
+      screen.getByPlaceholderText('e.g. Handbag').closest('form')!
+    )
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: 'Hats' })).toBeInTheDocument()
@@ -123,7 +129,9 @@ describe('CategoriesClient', () => {
     fireEvent.change(screen.getByPlaceholderText('e.g. Handbag'), {
       target: { value: 'Bags' },
     })
-    fireEvent.submit(screen.getByPlaceholderText('e.g. Handbag').closest('form')!)
+    fireEvent.submit(
+      screen.getByPlaceholderText('e.g. Handbag').closest('form')!
+    )
 
     await waitFor(() => {
       expect(toast.default.error).toHaveBeenCalledWith('Duplicate name')
@@ -163,7 +171,9 @@ describe('CategoriesClient', () => {
     fireEvent.keyDown(input, { key: 'Enter' })
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Backpacks' })).toBeInTheDocument()
+      expect(
+        screen.getByRole('button', { name: 'Backpacks' })
+      ).toBeInTheDocument()
     })
   })
 
@@ -207,7 +217,9 @@ describe('CategoriesClient', () => {
     fireEvent.click(screen.getByText('Confirm'))
 
     await waitFor(() => {
-      expect(screen.queryByRole('button', { name: 'Bags' })).not.toBeInTheDocument()
+      expect(
+        screen.queryByRole('button', { name: 'Bags' })
+      ).not.toBeInTheDocument()
     })
     expect(screen.getByRole('button', { name: 'Shoes' })).toBeInTheDocument()
   })

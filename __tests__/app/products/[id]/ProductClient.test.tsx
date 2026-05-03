@@ -1597,7 +1597,11 @@ describe('ProductClient', () => {
     ]
     const product = makeProduct({ variants })
     render(
-      <ProductClient product={product} initialVariantId={null} aiEnabled={false} />
+      <ProductClient
+        product={product}
+        initialVariantId={null}
+        aiEnabled={false}
+      />
     )
 
     act(() => {
