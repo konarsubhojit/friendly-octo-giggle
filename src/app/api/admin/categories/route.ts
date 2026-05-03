@@ -2,12 +2,11 @@ import { apiSuccess, apiError, handleApiError } from '@/lib/api-utils'
 import { auth } from '@/lib/auth'
 import { drizzleDb } from '@/lib/db'
 import { categories } from '@/lib/schema'
-import { isNull, asc, eq } from 'drizzle-orm'
+import { isNull, asc, eq, max } from 'drizzle-orm'
 import { z } from 'zod/v4'
 
 const CreateCategorySchema = z.object({
   name: z.string().min(1, 'Name is required').max(100),
-  sortOrder: z.number().int().min(0).optional(),
 })
 
 export async function GET() {
@@ -31,9 +30,7 @@ export async function GET() {
         })),
       },
       200,
-      {
-        'Cache-Control': 'private, s-maxage=30, stale-while-revalidate=10',
-      }
+      { 'Cache-Control': 'private, s-maxage=30, stale-while-revalidate=10' }
     )
   } catch (error) {
     return handleApiError(error)
@@ -48,11 +45,9 @@ export async function POST(request: Request) {
   try {
     const body = await request.json()
     const parsed = CreateCategorySchema.safeParse(body)
-    if (!parsed.success) {
-      return apiError(parsed.error.issues[0].message, 400)
-    }
+    if (!parsed.success) return apiError(parsed.error.issues[0].message, 400)
 
-    const { name, sortOrder } = parsed.data
+    const { name } = parsed.data
 
     const existing = await drizzleDb
       .select()
@@ -60,16 +55,20 @@ export async function POST(request: Request) {
       .where(eq(categories.name, name.trim()))
       .limit(1)
 
+    // Auto-assign sortOrder = max + 1 so new items always appear at the end
+    const [{ maxOrder }] = await drizzleDb
+      .select({ maxOrder: max(categories.sortOrder) })
+      .from(categories)
+      .where(isNull(categories.deletedAt))
+
+    const nextSortOrder = (maxOrder ?? -1) + 1
+
     if (existing.length > 0) {
       const cat = existing[0]
       if (cat.deletedAt) {
         const [reactivated] = await drizzleDb
           .update(categories)
-          .set({
-            deletedAt: null,
-            updatedAt: new Date(),
-            sortOrder: sortOrder ?? cat.sortOrder,
-          })
+          .set({ deletedAt: null, updatedAt: new Date(), sortOrder: nextSortOrder })
           .where(eq(categories.id, cat.id))
           .returning()
 
@@ -90,7 +89,7 @@ export async function POST(request: Request) {
 
     const [created] = await drizzleDb
       .insert(categories)
-      .values({ name: name.trim(), sortOrder: sortOrder ?? 0 })
+      .values({ name: name.trim(), sortOrder: nextSortOrder })
       .returning()
 
     return apiSuccess(
