@@ -1,6 +1,8 @@
 import type { CartItemWithProduct } from '@/lib/types'
 
-export const resolveVariantLabel = (item: CartItemWithProduct): string | null => {
+export const resolveVariantLabel = (
+  item: CartItemWithProduct
+): string | null => {
   if (item.variantLabel) return item.variantLabel
   if (!item.variant) return null
   const { optionValues } = item.variant
