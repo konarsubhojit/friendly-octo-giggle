@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Product, ProductVariant } from '@/lib/types'
@@ -994,6 +994,8 @@ const ProductClient = ({
   const dispatch = useDispatch<AppDispatch>()
   const { formatPrice } = useCurrency()
   const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
   const cart = useSelector((state: RootState) => state.cart.cart)
   const { trackProduct } = useRecentlyViewed()
 
@@ -1017,18 +1019,16 @@ const ProductClient = ({
   const handleVariantSelect = useCallback(
     (variant: ProductVariant | null) => {
       setSelectedVariant(variant)
-      const params = new URLSearchParams(window.location.search)
+      const params = new URLSearchParams(searchParams.toString())
       if (variant) {
         params.set('v', variant.id)
       } else {
         params.delete('v')
       }
       const qs = params.toString()
-      router.replace(`${window.location.pathname}${qs ? `?${qs}` : ''}`, {
-        scroll: false,
-      })
+      router.replace(`${pathname}${qs ? `?${qs}` : ''}`, { scroll: false })
     },
-    [router]
+    [router, pathname, searchParams]
   )
   const [addingToCart, setAddingToCart] = useState(false)
   const [cartSuccess, setCartSuccess] = useState(false)

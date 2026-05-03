@@ -1,4 +1,4 @@
-import { cache } from 'react'
+import { cache, Suspense } from 'react'
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import { Product } from '@/lib/types'
@@ -58,11 +58,13 @@ const ProductPage = async ({
   }
 
   return (
-    <ProductClient
-      product={product}
-      initialVariantId={initialVariantId ?? null}
-      aiEnabled={aiEnabled}
-    />
+    <Suspense fallback={null}>
+      <ProductClient
+        product={product}
+        initialVariantId={initialVariantId ?? null}
+        aiEnabled={aiEnabled}
+      />
+    </Suspense>
   )
 }
 

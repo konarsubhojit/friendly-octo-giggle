@@ -149,6 +149,8 @@ vi.mock('@/features/product/components/ProductAssistant', () => ({
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ replace: vi.fn() }),
+  usePathname: () => '/products/test-id',
+  useSearchParams: () => new URLSearchParams(),
 }))
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
