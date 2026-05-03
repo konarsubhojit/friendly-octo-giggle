@@ -220,7 +220,9 @@ interface OrderItemRowProps {
 
 function OrderItemRow({ item, formatPrice }: OrderItemRowProps) {
   const image = item.variant?.image || item.product?.image
-  const variantLabel = item.variant ? resolveOrderVariantLabel(item.variant) : null
+  const variantLabel = item.variant
+    ? resolveOrderVariantLabel(item.variant)
+    : null
   const sections: Record<string, ReactElement | null> = {
     image: image ? (
       <div className="relative w-16 h-16 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700">

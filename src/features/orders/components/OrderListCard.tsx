@@ -39,11 +39,7 @@ interface OrderListCardProps {
   readonly order: OrderSummary
 }
 
-const ProductThumbnails = ({
-  items,
-}: {
-  readonly items: OrderItem[]
-}) => {
+const ProductThumbnails = ({ items }: { readonly items: OrderItem[] }) => {
   const images = items
     .map((item) => item.product?.image)
     .filter((img): img is string => Boolean(img))
@@ -59,13 +55,7 @@ const ProductThumbnails = ({
           className="relative w-10 h-10 rounded-lg overflow-hidden border-2 border-[var(--surface)] bg-[var(--accent-cream)]"
           style={{ zIndex: images.length - index }}
         >
-          <Image
-            src={src}
-            alt=""
-            fill
-            sizes="40px"
-            className="object-cover"
-          />
+          <Image src={src} alt="" fill sizes="40px" className="object-cover" />
         </div>
       ))}
       {items.length > 3 && (
