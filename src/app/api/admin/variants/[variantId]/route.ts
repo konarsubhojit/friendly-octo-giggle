@@ -5,7 +5,7 @@ import {
   productVariants,
   productVariantOptionValues,
 } from '@/lib/schema'
-import { eq, and, isNull, sql } from 'drizzle-orm'
+import { eq, and, isNull } from 'drizzle-orm'
 import { UpdateVariantSchema } from '@/features/product/validations'
 import {
   apiSuccess,
@@ -156,37 +156,34 @@ export async function DELETE(
 
     try {
       await primaryDrizzleDb.transaction(async (tx) => {
-        // Atomic check+delete: single conditional UPDATE that only succeeds
-        // when the product still has more than one active variant AND this
-        // variant is still active. Prevents the read-then-update race where
-        // two concurrent DELETEs both see count === 2 and both succeed.
-        const result = await tx.execute(sql`
-          UPDATE ${productVariants}
-          SET deleted_at = NOW(), updated_at = NOW()
-          WHERE id = ${variantId}
-            AND deleted_at IS NULL
-            AND (
-              SELECT COUNT(*)
-              FROM ${productVariants}
-              WHERE product_id = ${existing.productId}
-                AND deleted_at IS NULL
-            ) > 1
-          RETURNING id
-        `)
-        const rows = (result as unknown as { rows?: unknown[] }).rows ?? []
-        if (rows.length === 0) {
-          // Either the variant was already gone, or it was the last one.
-          // Distinguish by looking at the remaining active count.
-          const remaining = await tx.query.productVariants.findMany({
-            where: and(
-              eq(productVariants.productId, existing.productId),
+        // Count active variants for this product before deleting. If only one
+        // remains it must be this one, so we reject the delete.
+        const activeVariants = await tx.query.productVariants.findMany({
+          where: and(
+            eq(productVariants.productId, existing.productId),
+            isNull(productVariants.deletedAt)
+          ),
+          columns: { id: true },
+        })
+
+        if (activeVariants.length <= 1) {
+          throw new LastVariantError()
+        }
+
+        // Soft-delete the variant using a standard Drizzle update so the
+        // query is compatible with the Neon serverless HTTP driver.
+        const [deleted] = await tx
+          .update(productVariants)
+          .set({ deletedAt: new Date(), updatedAt: new Date() })
+          .where(
+            and(
+              eq(productVariants.id, variantId),
               isNull(productVariants.deletedAt)
-            ),
-            columns: { id: true },
-          })
-          if (remaining.some((v) => v.id === variantId)) {
-            throw new LastVariantError()
-          }
+            )
+          )
+          .returning({ id: productVariants.id })
+
+        if (!deleted) {
           throw new VariantGoneError()
         }
       })

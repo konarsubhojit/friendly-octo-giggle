@@ -443,7 +443,7 @@ describe('DELETE /api/admin/variants/[variantId]', () => {
     mockFindFirst
       .mockResolvedValueOnce(mockVariant)
       .mockResolvedValueOnce(mockProduct)
-    mockExecute.mockResolvedValueOnce({ rows: [] })
+    // Only 1 active variant remaining — it is the last one
     mockFindMany.mockResolvedValueOnce([{ id: 'var123' }])
 
     const request = new NextRequest(
@@ -466,7 +466,9 @@ describe('DELETE /api/admin/variants/[variantId]', () => {
     mockFindFirst
       .mockResolvedValueOnce(mockVariant)
       .mockResolvedValueOnce(mockProduct)
-    mockExecute.mockResolvedValueOnce({ rows: [{ id: 'var123' }] })
+    // 2 active variants — deletion is allowed
+    mockFindMany.mockResolvedValueOnce([{ id: 'var123' }, { id: 'var456' }])
+    mockReturning.mockResolvedValueOnce([{ id: 'var123' }])
 
     const request = new NextRequest(
       'http://localhost/api/admin/variants/var123',
@@ -490,7 +492,8 @@ describe('DELETE /api/admin/variants/[variantId]', () => {
     mockFindFirst
       .mockResolvedValueOnce(mockVariant)
       .mockResolvedValueOnce(mockProduct)
-    mockExecute.mockResolvedValueOnce({ rows: [{ id: 'var123' }] })
+    mockFindMany.mockResolvedValueOnce([{ id: 'var123' }, { id: 'var456' }])
+    mockReturning.mockResolvedValueOnce([{ id: 'var123' }])
 
     const request = new NextRequest(
       'http://localhost/api/admin/variants/var123',
