@@ -107,7 +107,11 @@ describe('CartProductGroup', () => {
     it('delegates to CartItemRow for a single item', () => {
       const item = makeItem('item1', 'v1')
       render(
-        <CartProductGroup {...defaultProps} items={[item]} isLastGroup={false} />
+        <CartProductGroup
+          {...defaultProps}
+          items={[item]}
+          isLastGroup={false}
+        />
       )
       expect(screen.getByTestId('cart-item-row-item1')).toBeTruthy()
     })
