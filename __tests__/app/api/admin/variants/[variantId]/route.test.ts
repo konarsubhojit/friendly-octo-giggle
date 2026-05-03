@@ -29,7 +29,8 @@ const makeTx = () => ({
       findMany: (...args: unknown[]) => mockFindMany(...args),
     },
   },
-  execute: ((...args: unknown[]) => mockExecute(...(args as [unknown]))) as typeof mockExecute,
+  execute: ((...args: unknown[]) =>
+    mockExecute(...(args as [unknown]))) as typeof mockExecute,
   update: (...args: unknown[]) => {
     mockUpdate(...args)
     return {
