@@ -45,9 +45,7 @@ export function CartProductGroup({
   const productImage = items[0].variant?.image || product.image
 
   return (
-    <div
-      className={isLastGroup ? '' : 'border-b border-[var(--border-warm)]'}
-    >
+    <div className={isLastGroup ? '' : 'border-b border-[var(--border-warm)]'}>
       <div className="flex gap-4 px-6 pt-5 pb-2 items-center">
         <div className="relative w-10 h-10 flex-shrink-0 bg-[var(--accent-cream)] rounded-lg overflow-hidden border border-[var(--border-warm)]">
           <Image
