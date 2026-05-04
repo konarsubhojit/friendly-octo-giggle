@@ -128,7 +128,7 @@ export async function POST(
     // Run everything in a transaction with product row lock
     const result = await primaryDrizzleDb.transaction(async (tx) => {
       // Lock the product row to prevent concurrent generate requests
-      await tx.execute(sql`SELECT id FROM products WHERE id = ${id} FOR UPDATE`)
+      await tx.execute(sql`SELECT id FROM ${products} WHERE id = ${id} FOR UPDATE`)
 
       // Delete existing options for this product.
       // Cascade: productOptions → productOptionValues → productVariantOptionValues
