@@ -64,6 +64,13 @@
       "when": 1776277143179,
       "tag": "0008_product_variant_schema",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1777838400000,
+      "tag": "0009_variant_sort_order",
+      "breakpoints": true
     }
   ]
 }

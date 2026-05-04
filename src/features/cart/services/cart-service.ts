@@ -18,13 +18,47 @@ interface ProductWithVariants {
   variants: Array<{ id: string; stock: number }>
 }
 
+interface CartVariantOptionValueRecord {
+  id: string
+  optionId: string
+  value: string
+  sortOrder: number
+  createdAt: Date | string
+}
+
+interface CartVariantOptionValueLink {
+  optionValue: CartVariantOptionValueRecord
+}
+
 interface CartVariantRecord {
   id?: string
   sku?: string | null
   price?: number | null
   stock?: number | null
+  image?: string | null
+  images?: string[]
   createdAt: Date | string
   updatedAt: Date | string
+}
+
+interface CartItemVariantDbRecord extends CartVariantRecord {
+  optionValues?: CartVariantOptionValueLink[]
+}
+
+interface CartProductOptionValueRecord {
+  id: string
+  optionId: string
+  value: string
+  sortOrder: number
+  createdAt: Date | string
+}
+
+interface CartProductOptionRecord {
+  id: string
+  name: string
+  sortOrder: number
+  createdAt: Date | string
+  values: CartProductOptionValueRecord[]
 }
 
 interface CartProductRecord {
@@ -33,6 +67,7 @@ interface CartProductRecord {
   description?: string
   image?: string
   category?: string
+  options?: CartProductOptionRecord[]
   createdAt: Date | string
   updatedAt: Date | string
   variants: CartVariantRecord[]
@@ -45,7 +80,7 @@ interface CartItemRecord {
   createdAt: Date | string
   updatedAt: Date | string
   product: CartProductRecord
-  variant: CartVariantRecord | null
+  variant: CartItemVariantDbRecord | null
 }
 
 interface CartRecord {
@@ -79,13 +114,12 @@ export class CartRequestError extends Error {
   }
 }
 
-export function isCartRequestError(error: unknown): error is CartRequestError {
-  return error instanceof CartRequestError
-}
+export const isCartRequestError = (error: unknown): error is CartRequestError =>
+  error instanceof CartRequestError
 
-async function verifyProductStock(
+const verifyProductStock = async (
   body: AddToCartInput
-): Promise<{ product: ProductWithVariants; availableStock: number }> {
+): Promise<{ product: ProductWithVariants; availableStock: number }> => {
   const product = await drizzleDb.query.products.findFirst({
     where: and(eq(products.id, body.productId), isNull(products.deletedAt)),
     with: {
@@ -113,10 +147,10 @@ async function verifyProductStock(
   return { product, availableStock }
 }
 
-async function getOrCreateCart(
+const getOrCreateCart = async (
   session: Session | null,
   sessionId: string | undefined
-): Promise<{ cart: { id: string }; sessionId: string | undefined }> {
+): Promise<{ cart: { id: string }; sessionId: string | undefined }> => {
   const createGuestCart = async (providedSessionId?: string) => {
     const guestSessionId =
       providedSessionId ?? `guest_${Date.now()}_${crypto.randomUUID()}`
@@ -163,11 +197,11 @@ async function getOrCreateCart(
   return createGuestCart(sessionId)
 }
 
-async function addOrUpdateCartItem(
+const addOrUpdateCartItem = async (
   cartId: string,
   body: AddToCartInput,
   availableStock: number
-): Promise<CartMutationWarning> {
+): Promise<CartMutationWarning> => {
   const existingItem = await primaryDrizzleDb.query.cartItems.findFirst({
     where: and(
       eq(cartItems.cartId, cartId),
@@ -218,41 +252,90 @@ async function addOrUpdateCartItem(
     : null
 }
 
-function toISOString(value: Date | string): string {
-  return typeof value === 'string' ? value : value.toISOString()
+const toISOString = (value: Date | string): string =>
+  typeof value === 'string' ? value : value.toISOString()
+
+const buildVariantLabel = (
+  variantOptionValues: CartVariantOptionValueLink[] | undefined,
+  productOptions: CartProductOptionRecord[] | undefined
+): string | null => {
+  if (!variantOptionValues?.length || !productOptions?.length) return null
+  const optionMap = new Map(productOptions.map((opt) => [opt.id, opt]))
+  const sorted = [...variantOptionValues].sort((a, b) => {
+    const aOrder = optionMap.get(a.optionValue.optionId)?.sortOrder ?? 0
+    const bOrder = optionMap.get(b.optionValue.optionId)?.sortOrder ?? 0
+    return aOrder - bOrder
+  })
+  const parts = sorted
+    .map(({ optionValue }) => {
+      const option = optionMap.get(optionValue.optionId)
+      return option ? `${option.name}: ${optionValue.value}` : optionValue.value
+    })
+    .filter(Boolean)
+  return parts.length > 0 ? parts.join(' / ') : null
 }
 
-function serializeCart(cart: CartRecord) {
+const serializeCart = (cart: CartRecord) => {
   return {
     ...cart,
     createdAt: toISOString(cart.createdAt),
     updatedAt: toISOString(cart.updatedAt),
-    items: cart.items.map((item) => ({
-      ...item,
-      createdAt: toISOString(item.createdAt),
-      updatedAt: toISOString(item.updatedAt),
-      product: {
-        ...item.product,
-        createdAt: toISOString(item.product.createdAt),
-        updatedAt: toISOString(item.product.updatedAt),
-        variants: item.product.variants.map((variant) => ({
-          ...variant,
-          createdAt: toISOString(variant.createdAt),
-          updatedAt: toISOString(variant.updatedAt),
+    items: cart.items.map((item) => {
+      const flatOptionValues = item.variant?.optionValues?.map(
+        ({ optionValue }) => ({
+          id: optionValue.id,
+          optionId: optionValue.optionId,
+          value: optionValue.value,
+          sortOrder: optionValue.sortOrder,
+          createdAt: toISOString(optionValue.createdAt),
+        })
+      )
+      const options = item.product.options?.map((opt) => ({
+        id: opt.id,
+        productId: item.product.id,
+        name: opt.name,
+        sortOrder: opt.sortOrder,
+        createdAt: toISOString(opt.createdAt),
+        values: opt.values.map((val) => ({
+          id: val.id,
+          optionId: val.optionId,
+          value: val.value,
+          sortOrder: val.sortOrder,
+          createdAt: toISOString(val.createdAt),
         })),
-      },
-      variant: item.variant
-        ? {
-            ...item.variant,
-            createdAt: toISOString(item.variant.createdAt),
-            updatedAt: toISOString(item.variant.updatedAt),
-          }
-        : null,
-    })),
+      }))
+      return {
+        ...item,
+        createdAt: toISOString(item.createdAt),
+        updatedAt: toISOString(item.updatedAt),
+        variantLabel:
+          buildVariantLabel(item.variant?.optionValues, item.product.options) ??
+          null,
+        product: {
+          ...item.product,
+          createdAt: toISOString(item.product.createdAt),
+          updatedAt: toISOString(item.product.updatedAt),
+          options,
+          variants: item.product.variants.map((variant) => ({
+            ...variant,
+            createdAt: toISOString(variant.createdAt),
+            updatedAt: toISOString(variant.updatedAt),
+          })),
+        },
+        variant: item.variant
+          ? {
+              ...item.variant,
+              createdAt: toISOString(item.variant.createdAt),
+              updatedAt: toISOString(item.variant.updatedAt),
+              optionValues: flatOptionValues ?? [],
+            }
+          : null,
+      }
+    }),
   }
 }
 
-function fetchCartFromDB(userId?: string, sessionId?: string) {
+const fetchCartFromDB = (userId?: string, sessionId?: string) => {
   if (userId) {
     return drizzleDb.query.carts.findFirst({
       where: eq(carts.userId, userId),
@@ -261,13 +344,29 @@ function fetchCartFromDB(userId?: string, sessionId?: string) {
           with: {
             product: {
               with: {
+                options: {
+                  orderBy: (o, { asc }) => [asc(o.sortOrder)],
+                  with: {
+                    values: {
+                      orderBy: (v, { asc }) => [asc(v.sortOrder)],
+                    },
+                  },
+                },
                 variants: {
                   where: (variant, { isNull: isVariantNull }) =>
                     isVariantNull(variant.deletedAt),
                 },
               },
             },
-            variant: true,
+            variant: {
+              with: {
+                optionValues: {
+                  with: {
+                    optionValue: true,
+                  },
+                },
+              },
+            },
           },
         },
       },
@@ -282,13 +381,29 @@ function fetchCartFromDB(userId?: string, sessionId?: string) {
           with: {
             product: {
               with: {
+                options: {
+                  orderBy: (o, { asc }) => [asc(o.sortOrder)],
+                  with: {
+                    values: {
+                      orderBy: (v, { asc }) => [asc(v.sortOrder)],
+                    },
+                  },
+                },
                 variants: {
                   where: (variant, { isNull: isVariantNull }) =>
                     isVariantNull(variant.deletedAt),
                 },
               },
             },
-            variant: true,
+            variant: {
+              with: {
+                optionValues: {
+                  with: {
+                    optionValue: true,
+                  },
+                },
+              },
+            },
           },
         },
       },
@@ -298,20 +413,23 @@ function fetchCartFromDB(userId?: string, sessionId?: string) {
   return Promise.resolve(undefined)
 }
 
-export function getCartIdentity(
+export const getCartIdentity = (
   session: { user?: { id?: string } } | null,
   sessionId: string | undefined
-): CartIdentity {
+): CartIdentity => {
   return { userId: session?.user?.id, sessionId }
 }
 
-function getCartCacheKey(userId?: string, sessionId?: string): string | null {
+const getCartCacheKey = (
+  userId?: string,
+  sessionId?: string
+): string | null => {
   if (userId) return CACHE_KEYS.CART_BY_USER(userId)
   if (sessionId) return CACHE_KEYS.CART_BY_SESSION(sessionId)
   return null
 }
 
-function findCartForDeletion(userId?: string, sessionId?: string) {
+const findCartForDeletion = (userId?: string, sessionId?: string) => {
   if (userId) {
     return drizzleDb.query.carts.findFirst({ where: eq(carts.userId, userId) })
   }
@@ -323,7 +441,7 @@ function findCartForDeletion(userId?: string, sessionId?: string) {
   return Promise.resolve(undefined)
 }
 
-export function buildGuestSessionCookieOptions() {
+export const buildGuestSessionCookieOptions = () => {
   return {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
@@ -332,11 +450,11 @@ export function buildGuestSessionCookieOptions() {
   }
 }
 
-function dbCartToRedisItems(
+const dbCartToRedisItems = (
   cart: CartRecord,
   userId?: string,
   sessionId?: string
-): CartItemRedis[] {
+): CartItemRedis[] => {
   return cart.items.map((item) => ({
     itemId: item.id,
     cartId: cart.id,
@@ -351,13 +469,16 @@ function dbCartToRedisItems(
     variantSku: item.variant?.sku ?? null,
     variantPrice: item.variant?.price ?? 0,
     variantStock: item.variant?.stock ?? 0,
+    variantOptionLabel:
+      buildVariantLabel(item.variant?.optionValues, item.product.options) ??
+      null,
     quantity: item.quantity,
     createdAt: toISOString(item.createdAt),
     updatedAt: toISOString(item.updatedAt),
   }))
 }
 
-function redisItemsToCartResponse(items: CartItemRedis[]) {
+const redisItemsToCartResponse = (items: CartItemRedis[]) => {
   if (items.length === 0) return null
 
   const first = items[0]
@@ -373,6 +494,7 @@ function redisItemsToCartResponse(items: CartItemRedis[]) {
       quantity: item.quantity,
       createdAt: item.createdAt,
       updatedAt: item.updatedAt,
+      variantLabel: item.variantOptionLabel ?? null,
       product: {
         id: item.productId,
         name: item.productName,
@@ -398,6 +520,7 @@ function redisItemsToCartResponse(items: CartItemRedis[]) {
             id: item.variantId,
             price: item.variantPrice,
             stock: item.variantStock,
+            sku: item.variantSku,
             createdAt: item.createdAt,
             updatedAt: item.updatedAt,
           }
@@ -406,12 +529,14 @@ function redisItemsToCartResponse(items: CartItemRedis[]) {
   }
 }
 
-export async function getCart(identity: CartIdentity): Promise<{
+export const getCart = async (
+  identity: CartIdentity
+): Promise<{
   cart:
     | ReturnType<typeof serializeCart>
     | ReturnType<typeof redisItemsToCartResponse>
     | null
-}> {
+}> => {
   const { userId, sessionId } = identity
 
   if (!userId && !sessionId) {
@@ -445,11 +570,11 @@ export async function getCart(identity: CartIdentity): Promise<{
   return { cart: serialized }
 }
 
-export async function addItemToCart(
+export const addItemToCart = async (
   session: Session | null,
   body: AddToCartInput,
   sessionId: string | undefined
-): Promise<AddToCartResult> {
+): Promise<AddToCartResult> => {
   const [{ availableStock }, { cart, sessionId: resolvedSessionId }] =
     await Promise.all([
       verifyProductStock(body),
@@ -466,13 +591,29 @@ export async function addItemToCart(
           with: {
             product: {
               with: {
+                options: {
+                  orderBy: (o, { asc }) => [asc(o.sortOrder)],
+                  with: {
+                    values: {
+                      orderBy: (v, { asc }) => [asc(v.sortOrder)],
+                    },
+                  },
+                },
                 variants: {
                   where: (variant, { isNull: isVariantNull }) =>
                     isVariantNull(variant.deletedAt),
                 },
               },
             },
-            variant: true,
+            variant: {
+              with: {
+                optionValues: {
+                  with: {
+                    optionValue: true,
+                  },
+                },
+              },
+            },
           },
         },
       },
@@ -497,7 +638,7 @@ export async function addItemToCart(
   }
 }
 
-export async function clearCart(identity: CartIdentity): Promise<void> {
+export const clearCart = async (identity: CartIdentity): Promise<void> => {
   const { userId, sessionId } = identity
 
   if (!userId && !sessionId) {

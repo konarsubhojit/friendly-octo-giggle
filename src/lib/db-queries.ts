@@ -293,6 +293,7 @@ export const db = {
             },
             variants: {
               where: (v, { isNull }) => isNull(v.deletedAt),
+              orderBy: (v, { asc }) => [asc(v.sortOrder)],
               with: {
                 optionValues: {
                   with: {

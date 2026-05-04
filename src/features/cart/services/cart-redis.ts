@@ -20,6 +20,7 @@ export interface CartItemRedis {
   variantSku: string | null
   variantPrice: number
   variantStock: number
+  variantOptionLabel: string | null
   quantity: number
   createdAt: string
   updatedAt: string
@@ -47,6 +48,7 @@ const toHashFields = (item: CartItemRedis): Record<string, string> => ({
   variantSku: item.variantSku ?? '',
   variantPrice: String(item.variantPrice),
   variantStock: String(item.variantStock),
+  variantOptionLabel: item.variantOptionLabel ?? '',
   quantity: String(item.quantity),
   createdAt: item.createdAt,
   updatedAt: item.updatedAt,
@@ -68,6 +70,7 @@ const fromHashFields = (hash: Record<string, string>): CartItemRedis | null => {
     variantSku: hash.variantSku || null,
     variantPrice: Number(hash.variantPrice ?? 0),
     variantStock: Number(hash.variantStock ?? 0),
+    variantOptionLabel: hash.variantOptionLabel || null,
     quantity: Number(hash.quantity ?? 0),
     createdAt: hash.createdAt ?? '',
     updatedAt: hash.updatedAt ?? '',
