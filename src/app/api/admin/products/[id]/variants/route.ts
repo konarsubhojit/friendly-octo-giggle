@@ -108,6 +108,7 @@ export async function POST(
         stock: validated.stock,
         image: validated.image ?? null,
         images: validated.images ?? [],
+        sortOrder: activeCount.length,
       })
       .returning()
 

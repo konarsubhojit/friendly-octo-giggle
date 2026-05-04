@@ -125,7 +125,9 @@ export async function POST(
 
     const option = await primaryDrizzleDb.transaction(async (tx) => {
       // Lock the product row to prevent concurrent option creation past the limit
-      await tx.execute(sql`SELECT id FROM products WHERE id = ${id} FOR UPDATE`)
+      await tx.execute(
+        sql`SELECT id FROM ${products} WHERE id = ${id} FOR UPDATE`
+      )
 
       const existingOptions = await tx.query.productOptions.findMany({
         where: eq(productOptions.productId, id),

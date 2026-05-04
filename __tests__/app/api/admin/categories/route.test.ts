@@ -28,6 +28,7 @@ vi.mock('drizzle-orm', () => ({
   isNull: vi.fn(),
   asc: vi.fn(),
   ne: vi.fn(),
+  max: vi.fn(),
 }))
 
 import { GET, POST } from '@/app/api/admin/categories/route'
@@ -130,12 +131,16 @@ describe('admin/categories API', () => {
     it('creates a new category', async () => {
       mockAuth.mockResolvedValue({ user: { role: 'ADMIN' } })
 
-      const selectChain = {
-        from: vi.fn().mockReturnThis(),
-        where: vi.fn().mockReturnThis(),
-        limit: vi.fn().mockResolvedValue([]),
-      }
-      mockDrizzleDb.select.mockReturnValue(selectChain)
+      mockDrizzleDb.select
+        .mockReturnValueOnce({
+          from: vi.fn().mockReturnThis(),
+          where: vi.fn().mockReturnThis(),
+          limit: vi.fn().mockResolvedValue([]),
+        })
+        .mockReturnValueOnce({
+          from: vi.fn().mockReturnThis(),
+          where: vi.fn().mockResolvedValue([{ maxOrder: 0 }]),
+        })
 
       const insertChain = {
         values: vi.fn().mockReturnThis(),
@@ -167,14 +172,20 @@ describe('admin/categories API', () => {
     it('returns 409 for duplicate active category', async () => {
       mockAuth.mockResolvedValue({ user: { role: 'ADMIN' } })
 
-      const selectChain = {
-        from: vi.fn().mockReturnThis(),
-        where: vi.fn().mockReturnThis(),
-        limit: vi
-          .fn()
-          .mockResolvedValue([{ id: '1', name: 'Existing', deletedAt: null }]),
-      }
-      mockDrizzleDb.select.mockReturnValue(selectChain)
+      mockDrizzleDb.select
+        .mockReturnValueOnce({
+          from: vi.fn().mockReturnThis(),
+          where: vi.fn().mockReturnThis(),
+          limit: vi
+            .fn()
+            .mockResolvedValue([
+              { id: '1', name: 'Existing', deletedAt: null },
+            ]),
+        })
+        .mockReturnValueOnce({
+          from: vi.fn().mockReturnThis(),
+          where: vi.fn().mockResolvedValue([{ maxOrder: 1 }]),
+        })
 
       const request = new Request('http://localhost/api/admin/categories', {
         method: 'POST',
@@ -191,19 +202,23 @@ describe('admin/categories API', () => {
     it('reactivates a soft-deleted category', async () => {
       mockAuth.mockResolvedValue({ user: { role: 'ADMIN' } })
 
-      const selectChain = {
-        from: vi.fn().mockReturnThis(),
-        where: vi.fn().mockReturnThis(),
-        limit: vi.fn().mockResolvedValue([
-          {
-            id: '1',
-            name: 'Deleted Cat',
-            deletedAt: new Date(),
-            sortOrder: 0,
-          },
-        ]),
-      }
-      mockDrizzleDb.select.mockReturnValue(selectChain)
+      mockDrizzleDb.select
+        .mockReturnValueOnce({
+          from: vi.fn().mockReturnThis(),
+          where: vi.fn().mockReturnThis(),
+          limit: vi.fn().mockResolvedValue([
+            {
+              id: '1',
+              name: 'Deleted Cat',
+              deletedAt: new Date(),
+              sortOrder: 0,
+            },
+          ]),
+        })
+        .mockReturnValueOnce({
+          from: vi.fn().mockReturnThis(),
+          where: vi.fn().mockResolvedValue([{ maxOrder: 2 }]),
+        })
 
       const updateChain = {
         set: vi.fn().mockReturnThis(),
