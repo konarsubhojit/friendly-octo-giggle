@@ -71,10 +71,14 @@ describe('CategoriesClient', () => {
 
   it('renders categories table with data', () => {
     render(<CategoriesClient initialCategories={mockCategories} />)
-    expect(screen.getByText('Bags')).toBeInTheDocument()
-    expect(screen.getByText('Shoes')).toBeInTheDocument()
-    expect(screen.getAllByText('Edit')).toHaveLength(2)
-    expect(screen.getAllByText('Delete')).toHaveLength(2)
+    expect(screen.getByRole('button', { name: 'Bags' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Shoes' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Delete Bags' })
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Delete Shoes' })
+    ).toBeInTheDocument()
   })
 
   it('allows adding a new category', async () => {
@@ -101,11 +105,11 @@ describe('CategoriesClient', () => {
       target: { value: 'Hats' },
     })
     fireEvent.submit(
-      screen.getByRole('button', { name: /add category/i }).closest('form')!
+      screen.getByPlaceholderText('e.g. Handbag').closest('form')!
     )
 
     await waitFor(() => {
-      expect(screen.getByText('Hats')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Hats' })).toBeInTheDocument()
     })
   })
 
@@ -126,7 +130,7 @@ describe('CategoriesClient', () => {
       target: { value: 'Bags' },
     })
     fireEvent.submit(
-      screen.getByRole('button', { name: /add category/i }).closest('form')!
+      screen.getByPlaceholderText('e.g. Handbag').closest('form')!
     )
 
     await waitFor(() => {
@@ -136,17 +140,16 @@ describe('CategoriesClient', () => {
 
   it('enters edit mode when Edit is clicked', () => {
     render(<CategoriesClient initialCategories={mockCategories} />)
-    fireEvent.click(screen.getAllByText('Edit')[0])
+    fireEvent.click(screen.getByRole('button', { name: 'Bags' }))
     expect(screen.getByDisplayValue('Bags')).toBeInTheDocument()
-    expect(screen.getByText('Save')).toBeInTheDocument()
-    expect(screen.getByText('Cancel')).toBeInTheDocument()
   })
 
   it('cancels edit mode', () => {
     render(<CategoriesClient initialCategories={mockCategories} />)
-    fireEvent.click(screen.getAllByText('Edit')[0])
-    fireEvent.click(screen.getByText('Cancel'))
-    expect(screen.queryByText('Save')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Bags' }))
+    const input = screen.getByDisplayValue('Bags')
+    fireEvent.keyDown(input, { key: 'Escape' })
+    expect(screen.queryByDisplayValue('Bags')).not.toBeInTheDocument()
   })
 
   it('saves an updated category', async () => {
@@ -161,15 +164,16 @@ describe('CategoriesClient', () => {
     )
 
     render(<CategoriesClient initialCategories={mockCategories} />)
-    fireEvent.click(screen.getAllByText('Edit')[0])
+    fireEvent.click(screen.getByRole('button', { name: 'Bags' }))
 
-    fireEvent.change(screen.getByDisplayValue('Bags'), {
-      target: { value: 'Backpacks' },
-    })
-    fireEvent.click(screen.getByText('Save'))
+    const input = screen.getByDisplayValue('Bags')
+    fireEvent.change(input, { target: { value: 'Backpacks' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
 
     await waitFor(() => {
-      expect(screen.getByText('Backpacks')).toBeInTheDocument()
+      expect(
+        screen.getByRole('button', { name: 'Backpacks' })
+      ).toBeInTheDocument()
     })
   })
 
@@ -185,8 +189,10 @@ describe('CategoriesClient', () => {
     )
 
     render(<CategoriesClient initialCategories={mockCategories} />)
-    fireEvent.click(screen.getAllByText('Edit')[0])
-    fireEvent.click(screen.getByText('Save'))
+    fireEvent.click(screen.getByRole('button', { name: 'Bags' }))
+    const input = screen.getByDisplayValue('Bags')
+    fireEvent.change(input, { target: { value: 'Changed' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
 
     await waitFor(() => {
       expect(toast.default.error).toHaveBeenCalledWith('Update failed')
@@ -195,7 +201,7 @@ describe('CategoriesClient', () => {
 
   it('opens delete confirmation dialog', () => {
     render(<CategoriesClient initialCategories={mockCategories} />)
-    fireEvent.click(screen.getAllByText('Delete')[0])
+    fireEvent.click(screen.getByRole('button', { name: 'Delete Bags' }))
     expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument()
     expect(screen.getByText('Delete Category')).toBeInTheDocument()
   })
@@ -207,13 +213,15 @@ describe('CategoriesClient', () => {
     )
 
     render(<CategoriesClient initialCategories={mockCategories} />)
-    fireEvent.click(screen.getAllByText('Delete')[0])
+    fireEvent.click(screen.getByRole('button', { name: 'Delete Bags' }))
     fireEvent.click(screen.getByText('Confirm'))
 
     await waitFor(() => {
-      expect(screen.queryByText('Bags')).not.toBeInTheDocument()
+      expect(
+        screen.queryByRole('button', { name: 'Bags' })
+      ).not.toBeInTheDocument()
     })
-    expect(screen.getByText('Shoes')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Shoes' })).toBeInTheDocument()
   })
 
   it('shows error toast when delete fails', async () => {
@@ -228,7 +236,7 @@ describe('CategoriesClient', () => {
     )
 
     render(<CategoriesClient initialCategories={mockCategories} />)
-    fireEvent.click(screen.getAllByText('Delete')[0])
+    fireEvent.click(screen.getByRole('button', { name: 'Delete Bags' }))
     fireEvent.click(screen.getByText('Confirm'))
 
     await waitFor(() => {
@@ -238,7 +246,7 @@ describe('CategoriesClient', () => {
 
   it('closes delete dialog on cancel', () => {
     render(<CategoriesClient initialCategories={mockCategories} />)
-    fireEvent.click(screen.getAllByText('Delete')[0])
+    fireEvent.click(screen.getByRole('button', { name: 'Delete Bags' }))
     fireEvent.click(screen.getByText('Cancel Dialog'))
     expect(screen.queryByTestId('confirm-dialog')).not.toBeInTheDocument()
   })

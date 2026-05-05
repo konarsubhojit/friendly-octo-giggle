@@ -27,7 +27,7 @@ const makeTx = () => ({
       findMany: (...args: unknown[]) => mockFindMany(...args),
     },
   },
-  execute: ((...args: unknown[]) => mockExecute(...(args as [unknown]))) as typeof mockExecute,
+  execute: () => mockExecute(),
   insert: createInsertMock,
   update: (...args: unknown[]) => {
     mockUpdate(...args)
@@ -422,6 +422,7 @@ describe('DELETE /api/admin/variants/[variantId]', () => {
       .mockResolvedValueOnce(mockVariant)
       .mockResolvedValueOnce(mockProduct)
     mockFindMany.mockResolvedValueOnce([{ id: 'v1' }, { id: 'v2' }])
+    mockReturning.mockResolvedValueOnce([{ id: 'var1234' }])
 
     const res = await DELETE(
       makeRequest('http://localhost/api/admin/variants/var1234', 'DELETE'),

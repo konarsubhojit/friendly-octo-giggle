@@ -100,6 +100,19 @@ export const UpdateVariantSchema = z
 export type CreateVariantInput = z.infer<typeof CreateVariantSchema>
 export type UpdateVariantInput = z.infer<typeof UpdateVariantSchema>
 
+export const ReorderVariantsSchema = z.object({
+  items: z
+    .array(
+      z.object({
+        id: z.string().regex(SHORT_ID_REGEX, 'Invalid variant ID'),
+        sortOrder: z.number().int().nonnegative(),
+      })
+    )
+    .min(1, 'At least one item required'),
+})
+
+export type ReorderVariantsInput = z.infer<typeof ReorderVariantsSchema>
+
 // ─── Review Validation Schemas ────────────────────────────
 
 export const CreateReviewSchema = z.object({
