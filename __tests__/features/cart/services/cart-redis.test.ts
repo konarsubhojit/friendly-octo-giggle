@@ -60,6 +60,7 @@ const createCartItem = (
   variantSku: null,
   variantPrice: 100,
   variantStock: 10,
+  variantOptionLabel: null,
   quantity: 2,
   createdAt: '2024-01-01T00:00:00Z',
   updatedAt: '2024-01-01T00:00:00Z',

@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
+import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Product, ProductVariant } from '@/lib/types'
@@ -992,6 +993,9 @@ const ProductClient = ({
   const { status } = useSession()
   const dispatch = useDispatch<AppDispatch>()
   const { formatPrice } = useCurrency()
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
   const cart = useSelector((state: RootState) => state.cart.cart)
   const { trackProduct } = useRecentlyViewed()
 
@@ -1004,6 +1008,27 @@ const ProductClient = ({
   const [quantityMessage, setQuantityMessage] = useState('')
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(
     () => resolveInitialVariant(product, initialVariantId)
+  )
+
+  /**
+   * Update selected variant AND reflect it in the URL as `?v=<id>` so users
+   * can share the exact variant by copying the address bar. We use
+   * `router.replace` (no new history entry) with `scroll: false` so the page
+   * doesn't jump on each click.
+   */
+  const handleVariantSelect = useCallback(
+    (variant: ProductVariant | null) => {
+      setSelectedVariant(variant)
+      const params = new URLSearchParams(searchParams.toString())
+      if (variant) {
+        params.set('v', variant.id)
+      } else {
+        params.delete('v')
+      }
+      const qs = params.toString()
+      router.replace(`${pathname}${qs ? `?${qs}` : ''}`, { scroll: false })
+    },
+    [router, pathname, searchParams]
   )
   const [addingToCart, setAddingToCart] = useState(false)
   const [cartSuccess, setCartSuccess] = useState(false)
@@ -1135,7 +1160,7 @@ const ProductClient = ({
               formatPrice={formatPrice}
               effectivePrice={effectivePrice}
               selectedVariant={selectedVariant}
-              setSelectedVariant={setSelectedVariant}
+              setSelectedVariant={handleVariantSelect}
               effectiveStock={remainingStock}
               cartQuantities={cartQuantities}
             />

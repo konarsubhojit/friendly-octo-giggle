@@ -23,6 +23,7 @@ export interface ProductVariant {
   stock: number
   image: string | null
   images: string[]
+  sortOrder?: number
   deletedAt: string | null
   createdAt: string
   updatedAt: string
@@ -165,6 +166,7 @@ export interface CartItem {
 export interface CartItemWithProduct extends CartItem {
   product: Product
   variant?: ProductVariant | null
+  variantLabel?: string | null
 }
 
 export interface AddToCartInput {

@@ -4,6 +4,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { CartItemWithProduct } from '@/lib/types'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
+import { resolveVariantLabel } from '@/features/cart/utils/variant-label'
 
 interface CartItemRowProps {
   readonly item: CartItemWithProduct
@@ -16,7 +17,7 @@ interface CartItemRowProps {
   readonly onCustomizationChange: (itemId: string, note: string) => void
 }
 
-export function CartItemRow({
+export const CartItemRow = ({
   item,
   isLast,
   updating,
@@ -25,9 +26,10 @@ export function CartItemRow({
   onUpdateQuantity,
   onRemoveItem,
   onCustomizationChange,
-}: CartItemRowProps) {
+}: CartItemRowProps) => {
   const price = item.variant ? item.variant.price : 0
   const image = item.variant?.image || item.product.image
+  const variantLabel = resolveVariantLabel(item)
 
   return (
     <div
@@ -50,9 +52,9 @@ export function CartItemRow({
         >
           {item.product.name}
         </Link>
-        {item.variant && (
+        {variantLabel && (
           <p className="text-xs text-[var(--text-muted)] mt-0.5">
-            {item.variant.sku ?? 'Variant'}
+            {variantLabel}
           </p>
         )}
         <p className="text-lg font-bold text-[var(--accent-rose)] mt-1">

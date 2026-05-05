@@ -2,14 +2,19 @@
 import { render, screen } from '@testing-library/react'
 import { OrderListCard } from '@/features/orders/components/OrderListCard'
 
+vi.mock('@/contexts/CurrencyContext', () => ({
+  useCurrency: () => ({ formatPrice: (n: number) => `$${n.toFixed(2)}` }),
+}))
+
 describe('OrderListCard', () => {
-  it('shows up to two product names and hides total pricing in the list view', () => {
+  it('shows product names, thumbnails, total price, and item count', () => {
     render(
       <OrderListCard
         order={{
           id: 'ord5678',
           status: 'SHIPPED',
           createdAt: '2026-03-18T08:00:00.000Z',
+          totalAmount: 220,
           items: [
             {
               quantity: 1,
@@ -35,11 +40,6 @@ describe('OrderListCard', () => {
       screen.getByText('Rose Gift Box, Lily Vase and 1 more')
     ).toBeInTheDocument()
     expect(screen.getByText('4 items')).toBeInTheDocument()
-    expect(
-      screen.getByText(
-        'Open the order to review pricing, shipping address, and full item details.'
-      )
-    ).toBeInTheDocument()
-    expect(screen.queryByText('$220.00')).not.toBeInTheDocument()
+    expect(screen.getByText('$220.00')).toBeInTheDocument()
   })
 })
