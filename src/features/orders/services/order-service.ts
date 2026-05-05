@@ -97,6 +97,7 @@ interface HydratedOrderItem {
   customizationNote: string | null
   product: {
     name: string
+    image: string
     createdAt: Date
     updatedAt: Date
   }
