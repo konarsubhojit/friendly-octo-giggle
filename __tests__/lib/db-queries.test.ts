@@ -18,6 +18,7 @@ const {
   mockCacheShareResolve,
   mockWithReplicas,
   mockNe,
+  mockInArray,
 } = vi.hoisted(() => {
   // Wishlists insert chain: .values().onConflictDoNothing().returning()
   const mockWishlistsInsertReturning = vi.fn()
@@ -46,6 +47,7 @@ const {
   const mockSelectFrom = vi.fn(() => ({ where: mockSelectWhere }))
   const mockSelect = vi.fn(() => ({ from: mockSelectFrom }))
   const mockNe = vi.fn((...args: unknown[]) => ({ op: 'ne', args }))
+  const mockInArray = vi.fn((...args: unknown[]) => ({ op: 'inArray', args }))
 
   return {
     mockProductsFindMany: vi.fn(),
@@ -65,6 +67,7 @@ const {
     mockCacheShareResolve: vi.fn(),
     mockWithReplicas: vi.fn((primary) => primary),
     mockNe,
+    mockInArray,
   }
 })
 
@@ -232,7 +235,7 @@ vi.mock('drizzle-orm', () => {
     ilike: vi.fn((...args: unknown[]) => ({ op: 'ilike', args })),
     or: vi.fn((...args: unknown[]) => ({ op: 'or', args })),
     ne: mockNe,
-    inArray: vi.fn((...args: unknown[]) => ({ op: 'inArray', args })),
+    inArray: mockInArray,
     sql: sqlMock,
   }
 })
@@ -484,7 +487,7 @@ describe('db.products.findMinimalByIds', () => {
     expect(mockProductsFindMany).toHaveBeenCalledOnce()
   })
 
-  it('excludes cancelled orders from sold count aggregation', async () => {
+  it('includes only confirmed order statuses in sold count aggregation', async () => {
     mockProductsFindMany.mockResolvedValue([
       {
         id: 'prod001',
@@ -505,7 +508,11 @@ describe('db.products.findMinimalByIds', () => {
 
     await db.products.findMinimalByIds(['prod001'])
 
-    expect(mockNe).toHaveBeenCalledWith('status', 'CANCELLED')
+    expect(mockInArray).toHaveBeenCalledWith('status', [
+      'PROCESSING',
+      'SHIPPED',
+      'DELIVERED',
+    ])
   })
 })
 

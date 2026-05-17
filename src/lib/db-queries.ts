@@ -66,6 +66,12 @@ function deriveMinimalProduct(row: {
   return { ...base, price, stock }
 }
 
+const CONFIRMED_ORDER_STATUSES = [
+  'PROCESSING',
+  'SHIPPED',
+  'DELIVERED',
+] as const
+
 const fetchProductSoldCounts = async (
   productIds: string[]
 ): Promise<Map<string, number>> => {
@@ -84,7 +90,10 @@ const fetchProductSoldCounts = async (
     .from(orderItems)
     .innerJoin(
       orders,
-      and(eq(orders.id, orderItems.orderId), ne(orders.status, 'CANCELLED'))
+      and(
+        eq(orders.id, orderItems.orderId),
+        inArray(orders.status, [...CONFIRMED_ORDER_STATUSES])
+      )
     )
     .where(inArray(orderItems.productId, productIds))
     .groupBy(orderItems.productId)
