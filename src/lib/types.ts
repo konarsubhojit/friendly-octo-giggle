@@ -37,6 +37,7 @@ export interface Product {
   image: string
   images: string[]
   category: string
+  soldCount?: number
   deletedAt: string | null
   createdAt: string
   updatedAt: string

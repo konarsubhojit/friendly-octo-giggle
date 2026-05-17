@@ -11,10 +11,12 @@ const {
   mockUpdate,
   mockCacheProductsList,
   mockCacheProductById,
+  mockCacheProductSoldCounts,
   mockInvalidateProductCaches,
   mockCacheShareResolve,
   mockGetCachedData,
   mockWithReplicas,
+  mockSelect,
 } = vi.hoisted(() => {
   const mockReturningInsert = vi.fn()
   const mockValues = vi.fn(() => ({ returning: mockReturningInsert }))
@@ -24,6 +26,15 @@ const {
   const mockWhere = vi.fn(() => ({ returning: mockReturningUpdate }))
   const mockSet = vi.fn(() => ({ where: mockWhere }))
   const mockUpdate = vi.fn(() => ({ set: mockSet }))
+  const mockSelect = vi.fn(() => ({
+    from: vi.fn().mockReturnValue({
+      innerJoin: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          groupBy: vi.fn().mockResolvedValue([]),
+        }),
+      }),
+    }),
+  }))
 
   return {
     mockFindMany: vi.fn(),
@@ -37,10 +48,15 @@ const {
     mockUpdate,
     mockCacheProductsList: vi.fn(),
     mockCacheProductById: vi.fn(),
+    mockCacheProductSoldCounts: vi.fn(
+      async (_productIds: string[], fetcher: () => Promise<unknown>) =>
+        fetcher()
+    ),
     mockInvalidateProductCaches: vi.fn(),
     mockCacheShareResolve: vi.fn(),
     mockGetCachedData: vi.fn((key, ttl, fetcher) => fetcher()),
     mockWithReplicas: vi.fn((primary) => primary),
+    mockSelect,
   }
 })
 vi.mock('@neondatabase/serverless', () => ({
@@ -58,6 +74,7 @@ vi.mock('drizzle-orm/neon-serverless', () => ({
         findFirst: mockSharesFindFirst,
       },
     },
+    select: mockSelect,
     insert: mockInsert,
     update: mockUpdate,
   })),
@@ -75,8 +92,12 @@ vi.mock('@/lib/schema', () => ({
   categories: {},
   checkoutRequests: {},
   failedEmails: {},
-  orderItems: {},
-  orders: {},
+  orderItems: {
+    productId: 'productId',
+    quantity: 'quantity',
+    orderId: 'orderId',
+  },
+  orders: { id: 'id', status: 'status' },
   passwordHistory: {},
   productShares: {},
   productVariants: {},
@@ -120,6 +141,7 @@ vi.mock('@/lib/env', () => ({
 vi.mock('@/lib/cache', () => ({
   cacheProductsList: mockCacheProductsList,
   cacheProductById: mockCacheProductById,
+  cacheProductSoldCounts: mockCacheProductSoldCounts,
   invalidateProductCaches: mockInvalidateProductCaches,
   cacheShareResolve: mockCacheShareResolve,
   CACHE_KEYS: {
@@ -155,11 +177,21 @@ vi.mock('@/lib/serializers', () => ({
 
 vi.mock('drizzle-orm', () => ({
   eq: vi.fn((...args: unknown[]) => ({ op: 'eq', args })),
+  ne: vi.fn((...args: unknown[]) => ({ op: 'ne', args })),
+  inArray: vi.fn((...args: unknown[]) => ({ op: 'inArray', args })),
   desc: vi.fn((col: unknown) => ({ op: 'desc', col })),
   and: vi.fn((...args: unknown[]) => ({ op: 'and', args })),
   isNull: vi.fn((col: unknown) => ({ op: 'isNull', col })),
   ilike: vi.fn((...args: unknown[]) => ({ op: 'ilike', args })),
   or: vi.fn((...args: unknown[]) => ({ op: 'or', args })),
+  sql: Object.assign(
+    vi.fn((parts: TemplateStringsArray, ...values: unknown[]) => ({
+      parts,
+      values,
+      as: vi.fn((alias: string) => ({ alias })),
+    })),
+    { raw: vi.fn((value: string) => value) }
+  ),
 }))
 
 vi.mock('drizzle-orm/pg-core', () => ({
@@ -282,6 +314,7 @@ describe('db.products', () => {
       image: 'https://example.com/img.jpg',
       price: 100,
       stock: 5,
+      soldCount: 0,
     }
 
     it('returns minimal products with derived price and stock', async () => {
@@ -329,7 +362,7 @@ describe('db.products', () => {
 
       const result = await db.products.findById('abc1234', false)
 
-      expect(result).toEqual(expectedSerialized())
+      expect(result).toEqual(expectedSerialized({ soldCount: 0 }))
       expect(mockFindFirst).toHaveBeenCalledOnce()
       expect(mockCacheProductById).not.toHaveBeenCalled()
     })
@@ -342,7 +375,7 @@ describe('db.products', () => {
 
       const result = await db.products.findById('abc1234')
 
-      expect(result).toEqual(expectedSerialized())
+      expect(result).toEqual(expectedSerialized({ soldCount: 0 }))
       expect(mockCacheProductById).toHaveBeenCalledWith(
         'abc1234',
         expect.any(Function)
