@@ -118,6 +118,7 @@ const toGridItem = (product: Product): ProductGridItem => {
     price,
     image: product.image,
     stock,
+    soldCount: product.soldCount ?? 0,
     category: product.category,
   }
 }
@@ -202,6 +203,11 @@ describe('ProductGrid', () => {
   it('renders product description', () => {
     renderGrid([makeProduct({ description: 'Beautiful flowers' })])
     expect(screen.getByText('Beautiful flowers')).toBeTruthy()
+  })
+
+  it('renders sold count text beside price', () => {
+    renderGrid([makeProduct({ soldCount: 102 })])
+    expect(screen.getByText('102 Sold')).toBeTruthy()
   })
 
   it('renders category in filter dropdown', () => {
