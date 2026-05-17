@@ -66,7 +66,7 @@ function deriveMinimalProduct(row: {
   return { ...base, price, stock }
 }
 
-const getProductSoldCounts = async (
+const fetchProductSoldCounts = async (
   productIds: string[]
 ): Promise<Map<string, number>> => {
   if (productIds.length === 0) {
@@ -78,7 +78,7 @@ const getProductSoldCounts = async (
       productId: orderItems.productId,
       soldCount:
         sql<number>`cast(coalesce(sum(${orderItems.quantity}), 0) as int)`.as(
-          'sold_count'
+          'soldCount'
         ),
     })
     .from(orderItems)
@@ -206,7 +206,7 @@ export const db = {
         varsByProduct.set(v.productId, list)
       }
 
-      const soldCountByProductId = await getProductSoldCounts(productIds)
+      const soldCountByProductId = await fetchProductSoldCounts(productIds)
 
       return rows.map((p) => ({
         ...serializeProduct(p),
@@ -264,7 +264,7 @@ export const db = {
         offset,
       })
 
-      const soldCountByProductId = await getProductSoldCounts(
+      const soldCountByProductId = await fetchProductSoldCounts(
         rows.map((row) => row.id)
       )
 
@@ -307,7 +307,7 @@ export const db = {
         },
       })
 
-      const soldCountByProductId = await getProductSoldCounts(
+      const soldCountByProductId = await fetchProductSoldCounts(
         rows.map((row) => row.id)
       )
 
@@ -350,7 +350,7 @@ export const db = {
           },
         })
         if (!row) return null
-        const soldCountByProductId = await getProductSoldCounts([id])
+        const soldCountByProductId = await fetchProductSoldCounts([id])
         return {
           ...serializeProduct(row),
           soldCount: soldCountByProductId.get(id) ?? 0,

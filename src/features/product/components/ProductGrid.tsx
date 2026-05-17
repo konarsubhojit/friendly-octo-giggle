@@ -145,7 +145,11 @@ const ProductCard = memo(
               <span className="text-xl font-bold text-[var(--btn-primary)]">
                 {formatPrice(product.price)}
               </span>
-              <span className="text-sm font-semibold text-[var(--text-muted)]">
+              <span
+                className="text-sm font-semibold text-[var(--text-muted)]"
+                role="status"
+                aria-label={`Total units sold: ${product.soldCount}`}
+              >
                 {product.soldCount} Sold
               </span>
             </div>

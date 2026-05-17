@@ -17,6 +17,7 @@ const {
   mockInvalidateProductCaches,
   mockCacheShareResolve,
   mockWithReplicas,
+  mockNe,
 } = vi.hoisted(() => {
   // Wishlists insert chain: .values().onConflictDoNothing().returning()
   const mockWishlistsInsertReturning = vi.fn()
@@ -44,6 +45,7 @@ const {
   const mockSelectWhere = vi.fn()
   const mockSelectFrom = vi.fn(() => ({ where: mockSelectWhere }))
   const mockSelect = vi.fn(() => ({ from: mockSelectFrom }))
+  const mockNe = vi.fn((...args: unknown[]) => ({ op: 'ne', args }))
 
   return {
     mockProductsFindMany: vi.fn(),
@@ -62,6 +64,7 @@ const {
     mockInvalidateProductCaches: vi.fn(),
     mockCacheShareResolve: vi.fn(),
     mockWithReplicas: vi.fn((primary) => primary),
+    mockNe,
   }
 })
 
@@ -228,7 +231,7 @@ vi.mock('drizzle-orm', () => {
     isNull: vi.fn((col: unknown) => ({ op: 'isNull', col })),
     ilike: vi.fn((...args: unknown[]) => ({ op: 'ilike', args })),
     or: vi.fn((...args: unknown[]) => ({ op: 'or', args })),
-    ne: vi.fn((...args: unknown[]) => ({ op: 'ne', args })),
+    ne: mockNe,
     inArray: vi.fn((...args: unknown[]) => ({ op: 'inArray', args })),
     sql: sqlMock,
   }
@@ -479,6 +482,30 @@ describe('db.products.findMinimalByIds', () => {
     await db.products.findMinimalByIds(['prod001'], 'Flowers')
 
     expect(mockProductsFindMany).toHaveBeenCalledOnce()
+  })
+
+  it('excludes cancelled orders from sold count aggregation', async () => {
+    mockProductsFindMany.mockResolvedValue([
+      {
+        id: 'prod001',
+        name: 'Rose',
+        description: 'Roses',
+        category: 'Flowers',
+        image: 'rose.jpg',
+        variants: [{ price: 100, stock: 5 }],
+      },
+    ])
+    const soldCountQueryChain = {
+      from: vi.fn().mockReturnThis(),
+      innerJoin: vi.fn().mockReturnThis(),
+      where: vi.fn().mockReturnThis(),
+      groupBy: vi.fn().mockResolvedValue([]),
+    }
+    mockSelect.mockReturnValue(soldCountQueryChain)
+
+    await db.products.findMinimalByIds(['prod001'])
+
+    expect(mockNe).toHaveBeenCalledWith('status', 'CANCELLED')
   })
 })
 
