@@ -67,7 +67,8 @@ const {
     mockInvalidateProductCaches: vi.fn(),
     mockCacheShareResolve: vi.fn(),
     mockCacheProductSoldCounts: vi.fn(
-      async (_productIds: string[], fetcher: () => Promise<unknown>) => fetcher()
+      async (_productIds: string[], fetcher: () => Promise<unknown>) =>
+        fetcher()
     ),
     mockWithReplicas: vi.fn((primary) => primary),
     mockNe,

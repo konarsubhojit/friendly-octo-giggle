@@ -49,7 +49,8 @@ const {
     mockCacheProductsList: vi.fn(),
     mockCacheProductById: vi.fn(),
     mockCacheProductSoldCounts: vi.fn(
-      async (_productIds: string[], fetcher: () => Promise<unknown>) => fetcher()
+      async (_productIds: string[], fetcher: () => Promise<unknown>) =>
+        fetcher()
     ),
     mockInvalidateProductCaches: vi.fn(),
     mockCacheShareResolve: vi.fn(),
