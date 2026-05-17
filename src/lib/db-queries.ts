@@ -21,6 +21,7 @@ import { drizzleDb, primaryDrizzleDb } from './db'
 import { Product, ProductInput } from './types'
 import {
   cacheProductById,
+  cacheProductSoldCounts,
   invalidateProductCaches,
   cacheShareResolve,
 } from './cache'
@@ -75,24 +76,26 @@ const fetchProductSoldCounts = async (
     return new Map()
   }
 
-  const rows = await drizzleDb
-    .select({
-      productId: orderItems.productId,
-      soldCount:
-        sql<number>`cast(coalesce(sum(${orderItems.quantity}), 0) as int)`.as(
-          'soldCount'
-        ),
-    })
-    .from(orderItems)
-    .innerJoin(
-      orders,
-      and(
-        eq(orders.id, orderItems.orderId),
-        inArray(orders.status, [...CONFIRMED_ORDER_STATUSES])
+  const rows = await cacheProductSoldCounts(productIds, async () =>
+    drizzleDb
+      .select({
+        productId: orderItems.productId,
+        soldCount:
+          sql<number>`cast(coalesce(sum(${orderItems.quantity}), 0) as int)`.as(
+            'soldCount'
+          ),
+      })
+      .from(orderItems)
+      .innerJoin(
+        orders,
+        and(
+          eq(orders.id, orderItems.orderId),
+          inArray(orders.status, [...CONFIRMED_ORDER_STATUSES])
+        )
       )
-    )
-    .where(inArray(orderItems.productId, productIds))
-    .groupBy(orderItems.productId)
+      .where(inArray(orderItems.productId, productIds))
+      .groupBy(orderItems.productId)
+  )
 
   return new Map(rows.map((row) => [row.productId, row.soldCount]))
 }

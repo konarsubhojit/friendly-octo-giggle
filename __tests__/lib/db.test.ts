@@ -11,6 +11,7 @@ const {
   mockUpdate,
   mockCacheProductsList,
   mockCacheProductById,
+  mockCacheProductSoldCounts,
   mockInvalidateProductCaches,
   mockCacheShareResolve,
   mockGetCachedData,
@@ -47,6 +48,9 @@ const {
     mockUpdate,
     mockCacheProductsList: vi.fn(),
     mockCacheProductById: vi.fn(),
+    mockCacheProductSoldCounts: vi.fn(
+      async (_productIds: string[], fetcher: () => Promise<unknown>) => fetcher()
+    ),
     mockInvalidateProductCaches: vi.fn(),
     mockCacheShareResolve: vi.fn(),
     mockGetCachedData: vi.fn((key, ttl, fetcher) => fetcher()),
@@ -136,6 +140,7 @@ vi.mock('@/lib/env', () => ({
 vi.mock('@/lib/cache', () => ({
   cacheProductsList: mockCacheProductsList,
   cacheProductById: mockCacheProductById,
+  cacheProductSoldCounts: mockCacheProductSoldCounts,
   invalidateProductCaches: mockInvalidateProductCaches,
   cacheShareResolve: mockCacheShareResolve,
   CACHE_KEYS: {

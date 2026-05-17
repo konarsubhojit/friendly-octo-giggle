@@ -16,6 +16,7 @@ const {
   mockDelete,
   mockInvalidateProductCaches,
   mockCacheShareResolve,
+  mockCacheProductSoldCounts,
   mockWithReplicas,
   mockNe,
   mockInArray,
@@ -65,6 +66,9 @@ const {
     mockDelete,
     mockInvalidateProductCaches: vi.fn(),
     mockCacheShareResolve: vi.fn(),
+    mockCacheProductSoldCounts: vi.fn(
+      async (_productIds: string[], fetcher: () => Promise<unknown>) => fetcher()
+    ),
     mockWithReplicas: vi.fn((primary) => primary),
     mockNe,
     mockInArray,
@@ -182,6 +186,7 @@ vi.mock('@/lib/cache', () => ({
   cacheProductById: vi.fn(
     async (_key: string, fetcher: () => Promise<unknown>) => fetcher()
   ),
+  cacheProductSoldCounts: mockCacheProductSoldCounts,
   invalidateProductCaches: mockInvalidateProductCaches,
   cacheShareResolve: mockCacheShareResolve,
   CACHE_KEYS: { PRODUCTS_ALL: 'products:all' },
@@ -463,6 +468,10 @@ describe('db.products.findMinimalByIds', () => {
       soldCount: 9,
     })
     expect(mockProductsFindMany).toHaveBeenCalledOnce()
+    expect(mockCacheProductSoldCounts).toHaveBeenCalledWith(
+      ['prod001', 'prod002'],
+      expect.any(Function)
+    )
   })
 
   it('returns empty array for empty IDs list without querying DB', async () => {
