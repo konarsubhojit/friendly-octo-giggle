@@ -66,11 +66,7 @@ function deriveMinimalProduct(row: {
   return { ...base, price, stock }
 }
 
-const CONFIRMED_ORDER_STATUSES = [
-  'PROCESSING',
-  'SHIPPED',
-  'DELIVERED',
-] as const
+const CONFIRMED_ORDER_STATUSES = ['PROCESSING', 'SHIPPED', 'DELIVERED'] as const
 
 const fetchProductSoldCounts = async (
   productIds: string[]
