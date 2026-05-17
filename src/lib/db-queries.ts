@@ -90,7 +90,7 @@ const fetchProductSoldCounts = async (
         orders,
         and(
           eq(orders.id, orderItems.orderId),
-          inArray(orders.status, [...CONFIRMED_ORDER_STATUSES])
+          inArray(orders.status, CONFIRMED_ORDER_STATUSES)
         )
       )
       .where(inArray(orderItems.productId, productIds))

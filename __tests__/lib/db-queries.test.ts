@@ -523,6 +523,11 @@ describe('db.products.findMinimalByIds', () => {
       'SHIPPED',
       'DELIVERED',
     ])
+    const inArrayStatusesArg = mockInArray.mock.calls.find(
+      (call) => call[0] === 'status'
+    )?.[1] as string[] | undefined
+    expect(inArrayStatusesArg).not.toContain('PENDING')
+    expect(inArrayStatusesArg).not.toContain('CANCELLED')
   })
 })
 
