@@ -26,6 +26,7 @@ import {
   cacheShareResolve,
 } from './cache'
 import { serializeProduct, serializeVariant } from './serializers'
+import { CONFIRMED_ORDER_STATUSES } from './constants/order-statuses'
 
 // ─── Product Helpers (with date serialization) ──────────
 
@@ -59,7 +60,7 @@ function deriveMinimalProduct(row: {
   category: string
   image: string
   variants: Array<{ price: number; stock: number }>
-}): Omit<MinimalProduct, 'soldCount'> {
+}): MinimalProductDerivedFields {
   const { variants, ...base } = row
   const price =
     variants.length > 0 ? Math.min(...variants.map((v) => v.price)) : 0
@@ -67,7 +68,15 @@ function deriveMinimalProduct(row: {
   return { ...base, price, stock }
 }
 
-const CONFIRMED_ORDER_STATUSES = ['PROCESSING', 'SHIPPED', 'DELIVERED'] as const
+type MinimalProductDerivedFields = {
+  id: string
+  name: string
+  description: string
+  category: string
+  image: string
+  price: number
+  stock: number
+}
 
 const fetchProductSoldCounts = async (
   productIds: string[]

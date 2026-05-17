@@ -5,6 +5,7 @@
  * the generic Redis cache utilities with resource-specific logic.
  */
 
+import { createHash } from 'node:crypto'
 import {
   getCachedData,
   invalidateCache as invalidateCachePattern,
@@ -22,8 +23,7 @@ export const CACHE_KEYS = {
   PRODUCTS_BESTSELLERS_PATTERN: 'products:bestsellers*',
   CATEGORIES_ALL: 'categories:all',
   PRODUCT_BY_ID: (id: string) => `product:${id}`,
-  PRODUCT_SOLD_COUNTS: (normalizedIds: string) =>
-    `products:sold-count:${normalizedIds}`,
+  PRODUCT_SOLD_COUNTS: (idsHash: string) => `products:sold-count:${idsHash}`,
   PRODUCTS_PATTERN: 'products:*',
   PRODUCT_PATTERN: 'product:*',
   // Cart (per-user or per-session)
@@ -176,9 +176,10 @@ export const cacheProductSoldCounts = <T>(
 ): Promise<T> => {
   const normalizedIds = [...new Set(productIds)].sort().join(',')
   if (!normalizedIds) return fetcher()
+  const idsHash = createHash('sha256').update(normalizedIds).digest('hex')
 
   return getCachedData(
-    CACHE_KEYS.PRODUCT_SOLD_COUNTS(normalizedIds),
+    CACHE_KEYS.PRODUCT_SOLD_COUNTS(idsHash),
     CACHE_TTL.PRODUCT_SOLD_COUNTS,
     fetcher,
     CACHE_TTL.PRODUCT_SOLD_COUNTS_STALE

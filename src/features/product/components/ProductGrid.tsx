@@ -26,7 +26,7 @@ export type ProductGridItem = Pick<
   price: number
   /** Derived total stock from variants; 0 if no variants */
   stock: number
-  /** Aggregated sold quantity from non-cancelled orders */
+  /** Aggregated sold quantity from confirmed orders */
   soldCount: number
 }
 

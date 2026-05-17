@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { CONFIRMED_ORDER_STATUSES } from '@/lib/constants/order-statuses'
 
 const {
   mockProductsFindMany,
@@ -518,11 +519,10 @@ describe('db.products.findMinimalByIds', () => {
 
     await db.products.findMinimalByIds(['prod001'])
 
-    expect(mockInArray).toHaveBeenCalledWith('status', [
-      'PROCESSING',
-      'SHIPPED',
-      'DELIVERED',
-    ])
+    expect(mockInArray).toHaveBeenCalledWith(
+      'status',
+      CONFIRMED_ORDER_STATUSES
+    )
     const inArrayStatusesArg = mockInArray.mock.calls.find(
       (call) => call[0] === 'status'
     )?.[1] as string[] | undefined
