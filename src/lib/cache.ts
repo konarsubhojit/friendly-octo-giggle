@@ -5,6 +5,7 @@
  * the generic Redis cache utilities with resource-specific logic.
  */
 
+import { createHash } from 'node:crypto'
 import {
   getCachedData,
   invalidateCache as invalidateCachePattern,
@@ -22,6 +23,7 @@ export const CACHE_KEYS = {
   PRODUCTS_BESTSELLERS_PATTERN: 'products:bestsellers*',
   CATEGORIES_ALL: 'categories:all',
   PRODUCT_BY_ID: (id: string) => `product:${id}`,
+  PRODUCT_SOLD_COUNTS: (idsHash: string) => `products:sold-count:${idsHash}`,
   PRODUCTS_PATTERN: 'products:*',
   PRODUCT_PATTERN: 'product:*',
   // Cart (per-user or per-session)
@@ -66,6 +68,8 @@ export const CACHE_TTL = {
   CATEGORIES_LIST: 3600,
   CATEGORIES_LIST_STALE: 120,
   PRODUCT_DETAIL: 900,
+  PRODUCT_SOLD_COUNTS: 300,
+  PRODUCT_SOLD_COUNTS_STALE: 30,
   STALE_TIME: 30,
   CART: 30, // 30 seconds for cart (frequently mutated)
   CART_STALE: 5,
@@ -165,6 +169,22 @@ export const cacheProductById = <T>(
     fetcher,
     CACHE_TTL.STALE_TIME
   )
+
+export const cacheProductSoldCounts = <T>(
+  productIds: string[],
+  fetcher: () => Promise<T>
+): Promise<T> => {
+  const normalizedIds = [...new Set(productIds)].sort().join(',')
+  if (!normalizedIds) return fetcher()
+  const idsHash = createHash('sha256').update(normalizedIds).digest('hex')
+
+  return getCachedData(
+    CACHE_KEYS.PRODUCT_SOLD_COUNTS(idsHash),
+    CACHE_TTL.PRODUCT_SOLD_COUNTS,
+    fetcher,
+    CACHE_TTL.PRODUCT_SOLD_COUNTS_STALE
+  )
+}
 
 /**
  * Cache bestsellers product list with stampede prevention
