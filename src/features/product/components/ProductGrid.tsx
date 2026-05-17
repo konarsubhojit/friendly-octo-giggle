@@ -26,6 +26,8 @@ export type ProductGridItem = Pick<
   price: number
   /** Derived total stock from variants; 0 if no variants */
   stock: number
+  /** Aggregated sold quantity from confirmed orders */
+  soldCount: number
 }
 
 interface ProductGridProps {
@@ -139,9 +141,16 @@ const ProductCard = memo(
             <p className="mb-4 line-clamp-2 text-sm leading-relaxed text-[var(--text-muted)]">
               {product.description}
             </p>
-            <div className="flex items-center">
+            <div className="flex items-center gap-3">
               <span className="text-xl font-bold text-[var(--btn-primary)]">
                 {formatPrice(product.price)}
+              </span>
+              <span
+                className="text-sm font-semibold text-[var(--text-muted)]"
+                role="status"
+                aria-label={`Total units sold: ${product.soldCount}`}
+              >
+                {product.soldCount} Sold
               </span>
             </div>
           </div>
