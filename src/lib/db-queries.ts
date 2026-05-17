@@ -21,10 +21,12 @@ import { drizzleDb, primaryDrizzleDb } from './db'
 import { Product, ProductInput } from './types'
 import {
   cacheProductById,
+  cacheProductSoldCounts,
   invalidateProductCaches,
   cacheShareResolve,
 } from './cache'
 import { serializeProduct, serializeVariant } from './serializers'
+import { CONFIRMED_ORDER_STATUSES } from './constants/order-statuses'
 
 // ─── Product Helpers (with date serialization) ──────────
 
@@ -46,6 +48,8 @@ export interface MinimalProduct {
   price: number
   /** Sum of variant stock; 0 when no active variants exist */
   stock: number
+  /** Sum of sold quantities from non-cancelled orders */
+  soldCount: number
 }
 
 /** Derive price/stock from embedded variant rows. */
@@ -56,12 +60,53 @@ function deriveMinimalProduct(row: {
   category: string
   image: string
   variants: Array<{ price: number; stock: number }>
-}): MinimalProduct {
+}): MinimalProductDerivedFields {
   const { variants, ...base } = row
   const price =
     variants.length > 0 ? Math.min(...variants.map((v) => v.price)) : 0
   const stock = variants.reduce((sum, v) => sum + v.stock, 0)
   return { ...base, price, stock }
+}
+
+type MinimalProductDerivedFields = {
+  id: string
+  name: string
+  description: string
+  category: string
+  image: string
+  price: number
+  stock: number
+}
+
+const fetchProductSoldCounts = async (
+  productIds: string[]
+): Promise<Map<string, number>> => {
+  if (productIds.length === 0) {
+    return new Map()
+  }
+
+  const rows = await cacheProductSoldCounts(productIds, async () =>
+    drizzleDb
+      .select({
+        productId: orderItems.productId,
+        soldCount:
+          sql<number>`cast(coalesce(sum(${orderItems.quantity}), 0) as int)`.as(
+            'soldCount'
+          ),
+      })
+      .from(orderItems)
+      .innerJoin(
+        orders,
+        and(
+          eq(orders.id, orderItems.orderId),
+          inArray(orders.status, CONFIRMED_ORDER_STATUSES)
+        )
+      )
+      .where(inArray(orderItems.productId, productIds))
+      .groupBy(orderItems.productId)
+  )
+
+  return new Map(rows.map((row) => [row.productId, row.soldCount]))
 }
 
 export const db = {
@@ -178,8 +223,11 @@ export const db = {
         varsByProduct.set(v.productId, list)
       }
 
+      const soldCountByProductId = await fetchProductSoldCounts(productIds)
+
       return rows.map((p) => ({
         ...serializeProduct(p),
+        soldCount: soldCountByProductId.get(p.id) ?? 0,
         variants: (varsByProduct.get(p.id) ?? []).map(serializeVariant),
       }))
     },
@@ -233,7 +281,14 @@ export const db = {
         offset,
       })
 
-      return rows.map(deriveMinimalProduct)
+      const soldCountByProductId = await fetchProductSoldCounts(
+        rows.map((row) => row.id)
+      )
+
+      return rows.map((row) => ({
+        ...deriveMinimalProduct(row),
+        soldCount: soldCountByProductId.get(row.id) ?? 0,
+      }))
     },
 
     /**
@@ -269,7 +324,14 @@ export const db = {
         },
       })
 
-      return rows.map(deriveMinimalProduct)
+      const soldCountByProductId = await fetchProductSoldCounts(
+        rows.map((row) => row.id)
+      )
+
+      return rows.map((row) => ({
+        ...deriveMinimalProduct(row),
+        soldCount: soldCountByProductId.get(row.id) ?? 0,
+      }))
     },
 
     /**
@@ -305,8 +367,10 @@ export const db = {
           },
         })
         if (!row) return null
+        const soldCountByProductId = await fetchProductSoldCounts([id])
         return {
           ...serializeProduct(row),
+          soldCount: soldCountByProductId.get(id) ?? 0,
           options: row.options.map((opt) => ({
             id: opt.id,
             productId: opt.productId,
