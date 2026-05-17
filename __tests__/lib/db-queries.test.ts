@@ -301,10 +301,20 @@ describe('db.products.findBestsellers', () => {
       $dynamic: vi.fn().mockReturnThis(),
       limit: vi.fn().mockResolvedValue(productRows),
     }
+    const soldCountQueryChain = {
+      from: vi.fn().mockReturnThis(),
+      innerJoin: vi.fn().mockReturnThis(),
+      where: vi.fn().mockReturnThis(),
+      groupBy: vi.fn().mockResolvedValue([
+        { productId: 'prod001', soldCount: 12 },
+        { productId: 'prod002', soldCount: 3 },
+      ]),
+    }
 
     mockSelect
       .mockReturnValueOnce(subqueryChain)
       .mockReturnValueOnce(mainQueryChain)
+      .mockReturnValueOnce(soldCountQueryChain)
 
     mockProductVariantsFindMany.mockResolvedValue(variantRows)
 
@@ -313,7 +323,9 @@ describe('db.products.findBestsellers', () => {
     expect(results).toHaveLength(2)
     expect(results[0].id).toBe('prod001')
     expect(results[0].variants).toHaveLength(1)
+    expect(results[0].soldCount).toBe(12)
     expect(results[1].variants).toHaveLength(0)
+    expect(results[1].soldCount).toBe(3)
   })
 
   it('returns empty array when no bestsellers found', async () => {
@@ -367,10 +379,20 @@ describe('db.products.findBestsellers', () => {
       $dynamic: vi.fn().mockReturnThis(),
       limit: vi.fn().mockResolvedValue(productRows),
     }
+    const soldCountQueryChain = {
+      from: vi.fn().mockReturnThis(),
+      innerJoin: vi.fn().mockReturnThis(),
+      where: vi.fn().mockReturnThis(),
+      groupBy: vi.fn().mockResolvedValue([
+        { productId: 'prodA', soldCount: 4 },
+        { productId: 'prodB', soldCount: 1 },
+      ]),
+    }
 
     mockSelect
       .mockReturnValueOnce(subqueryChain)
       .mockReturnValueOnce(mainQueryChain)
+      .mockReturnValueOnce(soldCountQueryChain)
     mockProductVariantsFindMany.mockResolvedValue(variantRows)
 
     const results = await db.products.findBestsellers({ limit: 2 })
@@ -408,12 +430,32 @@ describe('db.products.findMinimalByIds', () => {
       },
     ]
     mockProductsFindMany.mockResolvedValue(minimalProducts)
+    const soldCountQueryChain = {
+      from: vi.fn().mockReturnThis(),
+      innerJoin: vi.fn().mockReturnThis(),
+      where: vi.fn().mockReturnThis(),
+      groupBy: vi.fn().mockResolvedValue([
+        { productId: 'prod001', soldCount: 2 },
+        { productId: 'prod002', soldCount: 9 },
+      ]),
+    }
+    mockSelect.mockReturnValue(soldCountQueryChain)
 
     const results = await db.products.findMinimalByIds(['prod001', 'prod002'])
 
     expect(results).toHaveLength(2)
-    expect(results[0]).toMatchObject({ id: 'prod001', price: 100, stock: 5 })
-    expect(results[1]).toMatchObject({ id: 'prod002', price: 150, stock: 10 })
+    expect(results[0]).toMatchObject({
+      id: 'prod001',
+      price: 100,
+      stock: 5,
+      soldCount: 2,
+    })
+    expect(results[1]).toMatchObject({
+      id: 'prod002',
+      price: 150,
+      stock: 10,
+      soldCount: 9,
+    })
     expect(mockProductsFindMany).toHaveBeenCalledOnce()
   })
 
@@ -426,6 +468,13 @@ describe('db.products.findMinimalByIds', () => {
 
   it('filters by category when provided', async () => {
     mockProductsFindMany.mockResolvedValue([])
+    const soldCountQueryChain = {
+      from: vi.fn().mockReturnThis(),
+      innerJoin: vi.fn().mockReturnThis(),
+      where: vi.fn().mockReturnThis(),
+      groupBy: vi.fn().mockResolvedValue([]),
+    }
+    mockSelect.mockReturnValue(soldCountQueryChain)
 
     await db.products.findMinimalByIds(['prod001'], 'Flowers')
 

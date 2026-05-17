@@ -709,8 +709,11 @@ const ProductInfoCard = ({
         <PriceModifierDisplay selectedVariant={selectedVariant} />
       </div>
 
-      <div className="mb-6">
+      <div className="mb-6 flex flex-wrap items-center gap-3">
         <StockBadge stock={effectiveStock} showIcon size="md" />
+        <span className="inline-flex items-center rounded-full bg-[var(--accent-cream)] px-4 py-2 text-sm font-semibold text-[var(--text-secondary)] shadow-warm">
+          {product.soldCount ?? 0} Sold
+        </span>
       </div>
 
       <VariantSelector

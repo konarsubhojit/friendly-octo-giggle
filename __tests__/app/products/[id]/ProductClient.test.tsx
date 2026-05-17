@@ -235,6 +235,15 @@ describe('ProductClient', () => {
     expect(screen.getByText('Flowers')).toBeInTheDocument()
   })
 
+  it('renders sold count pill near stock badge', () => {
+    const product = makeProduct({ soldCount: 102 })
+    render(
+      <ProductClient product={product} initialVariantId={null} aiEnabled />
+    )
+
+    expect(screen.getByText('102 Sold')).toBeInTheDocument()
+  })
+
   it('renders breadcrumb navigation with product name', () => {
     const product = makeProduct()
     render(
