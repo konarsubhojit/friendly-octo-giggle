@@ -87,7 +87,11 @@ vi.mock('@/lib/schema', () => ({
   categories: {},
   checkoutRequests: {},
   failedEmails: {},
-  orderItems: { productId: 'productId', quantity: 'quantity', orderId: 'orderId' },
+  orderItems: {
+    productId: 'productId',
+    quantity: 'quantity',
+    orderId: 'orderId',
+  },
   orders: { id: 'id', status: 'status' },
   passwordHistory: {},
   productShares: {},
