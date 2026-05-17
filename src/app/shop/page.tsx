@@ -27,6 +27,7 @@ const toGridItem = (p: {
   description: string
   image: string
   category: string
+  soldCount?: number
   variants?: Array<{ id: string; price: number; stock: number }>
 }): ProductGridItem => ({
   id: p.id,
@@ -36,6 +37,7 @@ const toGridItem = (p: {
   category: p.category,
   price: getVariantMinPrice(p.variants),
   stock: getVariantTotalStock(p.variants),
+  soldCount: p.soldCount ?? 0,
 })
 
 /** Convert a MinimalProduct (already has derived price/stock) to a ProductGridItem */
@@ -47,6 +49,7 @@ const toMinimalGridItem = (p: {
   category: string
   price: number
   stock: number
+  soldCount: number
 }): ProductGridItem => ({
   id: p.id,
   name: p.name,
@@ -55,6 +58,7 @@ const toMinimalGridItem = (p: {
   category: p.category,
   price: p.price,
   stock: p.stock,
+  soldCount: p.soldCount,
 })
 
 interface ShopPageProps {
