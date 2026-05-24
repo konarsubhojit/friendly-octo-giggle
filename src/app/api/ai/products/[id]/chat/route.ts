@@ -74,11 +74,37 @@ const toGoogleContents = (messages: ChatMessage[]): Content[] =>
 const estimateTokens = (text: string): number =>
   text.trim().length === 0 ? 0 : Math.ceil(text.length / 4)
 
+const normalizePolicyText = (text: string): { normalized: string; compact: string } => {
+  const normalized = text
+    .normalize('NFKC')
+    .replace(/[\u200B-\u200F\uFE00-\uFE0F]/g, '')
+    .toLowerCase()
+    .replace(/[013457]/g, (char) => {
+      const map: Record<string, string> = {
+        '0': 'o',
+        '1': 'i',
+        '3': 'e',
+        '4': 'a',
+        '5': 's',
+        '7': 't',
+      }
+      return map[char] ?? char
+    })
+    .replace(/\s+/gu, ' ')
+    .trim()
+  return {
+    normalized,
+    compact: normalized.replace(/[^a-z]/g, ''),
+  }
+}
+
 const sanitizePromptText = (
   text: string,
   maxChars = MAX_INPUT_MESSAGE_CHARS
 ): string =>
   text
+    .normalize('NFKC')
+    .replace(/[\u200B-\u200F\uFE00-\uFE0F]/g, '')
     .replace(/[\p{Cc}\p{Cf}]/gu, ' ')
     .replace(/[<>{}`$]/g, ' ')
     .replace(/\s+/gu, ' ')
@@ -93,6 +119,16 @@ const sanitizeAssistantOutput = (text: string): string =>
 
 const utcDateKey = (): string => new Date().toISOString().slice(0, 10)
 
+const secondsUntilNextUtcMidnight = (): number => {
+  const now = new Date()
+  const nextMidnightUtc = Date.UTC(
+    now.getUTCFullYear(),
+    now.getUTCMonth(),
+    now.getUTCDate() + 1
+  )
+  return Math.max(1, Math.ceil((nextMidnightUtc - now.getTime()) / 1000))
+}
+
 const getDailyUsage = async (
   userId: string
 ): Promise<{ requests: number; tokens: number }> => {
@@ -100,8 +136,7 @@ const getDailyUsage = async (
   if (!redis) return { requests: 0, tokens: 0 }
 
   const key = `ai:chat:usage:${userId}:${utcDateKey()}`
-  const raw =
-    ((await redis.hgetall(key)) as Record<string, string | number> | null) ?? {}
+  const raw = ((await redis.hgetall(key)) as Record<string, string> | null) ?? {}
   const requests = Number(raw.requests ?? 0)
   const tokens = Number(raw.tokens ?? 0)
   return {
@@ -118,17 +153,39 @@ const recordDailyUsage = async (
   if (!redis) return
 
   const key = `ai:chat:usage:${userId}:${utcDateKey()}`
-  const ttlSeconds = 60 * 60 * 48
+  const ttlSeconds = secondsUntilNextUtcMidnight()
   await redis.hincrby(key, 'requests', 1)
   await redis.hincrby(key, 'tokens', tokenCount)
   await redis.expire(key, ttlSeconds)
 }
 
+const adjustDailyTokenUsage = async (
+  userId: string,
+  tokenDelta: number
+): Promise<void> => {
+  if (tokenDelta === 0) return
+  const redis = getRedisClient()
+  if (!redis) return
+
+  const key = `ai:chat:usage:${userId}:${utcDateKey()}`
+  await redis.hincrby(key, 'tokens', tokenDelta)
+  await redis.expire(key, secondsUntilNextUtcMidnight())
+}
+
 const detectBlockedPrompt = (text: string): string | null => {
-  if (JAILBREAK_PATTERNS.some((pattern) => pattern.test(text))) {
+  const { normalized, compact } = normalizePolicyText(text)
+  if (
+    JAILBREAK_PATTERNS.some(
+      (pattern) => pattern.test(normalized) || pattern.test(compact)
+    )
+  ) {
     return 'Prompt contains disallowed instructions.'
   }
-  if (OFF_DOMAIN_PATTERNS.some((pattern) => pattern.test(text))) {
+  if (
+    OFF_DOMAIN_PATTERNS.some(
+      (pattern) => pattern.test(normalized) || pattern.test(compact)
+    )
+  ) {
     return 'Only product-related questions are allowed.'
   }
   return null
@@ -243,7 +300,8 @@ export const POST = async (
     if (dailyUsage.requests + 1 > DAILY_REQUEST_QUOTA) {
       return apiError('Daily AI chat request quota exceeded', 429)
     }
-    if (dailyUsage.tokens + estimatedInputTokens > DAILY_TOKEN_QUOTA) {
+    const reservedTotalTokens = estimatedInputTokens + MAX_OUTPUT_TOKENS
+    if (dailyUsage.tokens + reservedTotalTokens > DAILY_TOKEN_QUOTA) {
       return apiError('Daily AI chat token quota exceeded', 429)
     }
 
@@ -287,6 +345,8 @@ export const POST = async (
       maxOutputTokens: Math.min(aiConfig.maxResponseTokens, MAX_OUTPUT_TOKENS),
     }
     const messageCount = trimmed.length
+
+    await recordDailyUsage(session.user.id, reservedTotalTokens)
 
     const stream = await genAI.models.generateContentStream({
       model: chatModel,
@@ -336,7 +396,10 @@ export const POST = async (
         .then(async (text) => {
           const outputTokens = estimateTokens(text)
           const totalTokens = estimatedInputTokens + outputTokens
-          await recordDailyUsage(session.user.id, totalTokens)
+          await adjustDailyTokenUsage(
+            session.user.id,
+            totalTokens - reservedTotalTokens
+          )
           logBusinessEvent({
             event: 'ai_chat_usage',
             userId: session.user.id,

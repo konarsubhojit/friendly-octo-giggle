@@ -525,4 +525,22 @@ describe('POST /api/ai/products/[id]/chat', () => {
     expect(response.status).toBe(429)
     expect(mockStreamChunks).not.toHaveBeenCalled()
   })
+
+  it('returns 429 when daily token quota is exhausted', async () => {
+    vi.mocked(db.products.findById).mockResolvedValue(mockProduct)
+    vi.mocked(auth).mockResolvedValue({ user: { id: 'user-123' } } as never)
+    redisHgetallMock.mockResolvedValueOnce({ requests: 10, tokens: 11650 })
+
+    const request = new NextRequest(
+      'http://localhost/api/ai/products/abc1234/chat',
+      { method: 'POST', body: JSON.stringify(validBody) }
+    )
+
+    const response = await POST(request, {
+      params: Promise.resolve({ id: 'abc1234' }),
+    })
+
+    expect(response.status).toBe(429)
+    expect(mockStreamChunks).not.toHaveBeenCalled()
+  })
 })
