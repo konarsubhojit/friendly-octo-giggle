@@ -22,7 +22,9 @@ const UploadFormFieldsSchema = z.object({
   provider: z
     .preprocess(
       (value) =>
-        value === null || value === undefined || value === '' ? undefined : value,
+        value === null || value === undefined || value === ''
+          ? undefined
+          : value,
       z.enum(['vercel', 'azure']).optional()
     )
     .optional(),
@@ -112,10 +114,7 @@ export async function POST(request: Request) {
     }
 
     const requestBodySize = getRequestBodySize(request)
-    if (
-      requestBodySize !== null &&
-      requestBodySize > MAX_FORM_DATA_BODY_SIZE
-    ) {
+    if (requestBodySize !== null && requestBodySize > MAX_FORM_DATA_BODY_SIZE) {
       return NextResponse.json(
         {
           error: `Request body too large. Maximum size is ${MAX_FORM_DATA_BODY_SIZE / 1024 / 1024}MB.`,
