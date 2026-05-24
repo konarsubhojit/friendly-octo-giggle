@@ -144,6 +144,29 @@ describe('POST /api/upload', () => {
     )
   })
 
+  it('returns 400 when PNG payload has only a spoofed 4-byte signature prefix', async () => {
+    mockAuth.mockResolvedValue({ user: { id: 'u1', role: 'ADMIN' } })
+    const spoofedPngPrefix = Uint8Array.from([
+      0x89, 0x50, 0x4e, 0x47, 0x00, 0x00, 0x00, 0x00, 0x41, 0x42, 0x43, 0x44,
+    ])
+
+    const res = await POST(
+      makeRequest(
+        createFile({
+          name: 'spoofed.png',
+          type: 'image/png',
+          bytes: spoofedPngPrefix,
+        })
+      )
+    )
+
+    expect(res.status).toBe(400)
+    const body = await res.json()
+    expect(body.error).toBe(
+      `Invalid file type. Only ${VALID_IMAGE_TYPES_DISPLAY} are allowed.`
+    )
+  })
+
   it('returns 400 for file too large', async () => {
     mockAuth.mockResolvedValue({ user: { id: 'u1', role: 'ADMIN' } })
     const res = await POST(
