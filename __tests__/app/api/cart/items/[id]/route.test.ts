@@ -77,7 +77,7 @@ describe('PATCH /api/cart/items/[id]', () => {
     expect(data.error).toBe('Cart item not found')
   })
 
-  it("returns 404 when item belongs to another signed-in user", async () => {
+  it('returns 404 when item belongs to another signed-in user', async () => {
     mockAuth.mockResolvedValue({ user: { id: 'user1' } } as never)
     mockFindFirst.mockResolvedValue({
       id: 'item1',
@@ -289,7 +289,7 @@ describe('DELETE /api/cart/items/[id]', () => {
     expect(data.error).toBe('Cart item not found')
   })
 
-  it("returns 404 when item belongs to another signed-in user", async () => {
+  it('returns 404 when item belongs to another signed-in user', async () => {
     mockAuth.mockResolvedValue({ user: { id: 'user1' } } as never)
     mockFindFirst.mockResolvedValue({
       id: 'item1',

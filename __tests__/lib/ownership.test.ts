@@ -16,21 +16,17 @@ describe('assertOwnership', () => {
 
   it('returns true for matching guest cart session', () => {
     expect(
-      assertOwnership(
-        { userId: null, sessionId: 'guest-1' },
-        null,
-        { sessionId: 'guest-1' }
-      )
+      assertOwnership({ userId: null, sessionId: 'guest-1' }, null, {
+        sessionId: 'guest-1',
+      })
     ).toBe(true)
   })
 
   it('returns false for guest cart session mismatch', () => {
     expect(
-      assertOwnership(
-        { userId: null, sessionId: 'guest-1' },
-        null,
-        { sessionId: 'guest-2' }
-      )
+      assertOwnership({ userId: null, sessionId: 'guest-1' }, null, {
+        sessionId: 'guest-2',
+      })
     ).toBe(false)
   })
 })

@@ -52,7 +52,10 @@ export async function PATCH(
         { sessionId }
       )
     ) {
-      return NextResponse.json({ error: 'Cart item not found' }, { status: 404 })
+      return NextResponse.json(
+        { error: 'Cart item not found' },
+        { status: 404 }
+      )
     }
 
     if (!cartItem.variant) {
@@ -122,7 +125,10 @@ export async function DELETE(
         { sessionId }
       )
     ) {
-      return NextResponse.json({ error: 'Cart item not found' }, { status: 404 })
+      return NextResponse.json(
+        { error: 'Cart item not found' },
+        { status: 404 }
+      )
     }
 
     await drizzleDb.delete(cartItems).where(eq(cartItems.id, id))

@@ -33,7 +33,7 @@ export const assertOwnership = (
 
   return Boolean(
     resource.sessionId &&
-      options.sessionId &&
-      resource.sessionId === options.sessionId
+    options.sessionId &&
+    resource.sessionId === options.sessionId
   )
 }
