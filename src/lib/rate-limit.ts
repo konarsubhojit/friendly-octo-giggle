@@ -12,7 +12,7 @@ type RateLimitResult = {
 let generalLimiter: Ratelimit | null = null
 let strictLimiter: Ratelimit | null = null
 
-const getGeneralLimiter = (): Ratelimit | null => {
+export const getGeneralLimiter = (): Ratelimit | null => {
   const redis = getRedisClient()
   if (!redis) return null
   if (!generalLimiter) {
@@ -25,7 +25,7 @@ const getGeneralLimiter = (): Ratelimit | null => {
   return generalLimiter
 }
 
-const getStrictLimiter = (): Ratelimit | null => {
+export const getStrictLimiter = (): Ratelimit | null => {
   const redis = getRedisClient()
   if (!redis) return null
   if (!strictLimiter) {
