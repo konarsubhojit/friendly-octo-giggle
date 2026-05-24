@@ -68,7 +68,9 @@ const getValidatedImageByMagicBytes = (
     bytes[0] === 0x47 &&
     bytes[1] === 0x49 &&
     bytes[2] === 0x46 &&
-    bytes[3] === 0x38
+    bytes[3] === 0x38 &&
+    ((bytes[4] === 0x37 && bytes[5] === 0x61) ||
+      (bytes[4] === 0x39 && bytes[5] === 0x61))
   ) {
     return { mimeType: 'image/gif', extension: 'gif' }
   }
@@ -140,9 +142,18 @@ export async function POST(request: Request) {
       const hasProviderError = parseResult.error.issues.some(
         (issue) => issue.path[0] === 'provider'
       )
+      const hasAzureAccountAliasError = parseResult.error.issues.some(
+        (issue) => issue.path[0] === 'azureAccountAlias'
+      )
       if (hasProviderError) {
         return NextResponse.json(
           { error: 'Invalid provider. Expected "vercel" or "azure".' },
+          { status: 400 }
+        )
+      }
+      if (!hasAzureAccountAliasError) {
+        return NextResponse.json(
+          { error: 'Invalid upload form fields.' },
           { status: 400 }
         )
       }
