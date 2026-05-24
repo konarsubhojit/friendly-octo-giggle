@@ -3,6 +3,7 @@ import { ZodError, type ZodType } from 'zod'
 import { logError } from '@/lib/logger'
 
 export const DEFAULT_JSON_BODY_MAX_BYTES = 64 * 1024
+const textEncoder = new TextEncoder()
 
 const getValidationDetails = (error: ZodError<unknown>) =>
   error.issues.reduce(
@@ -14,6 +15,10 @@ const getValidationDetails = (error: ZodError<unknown>) =>
     {} as Record<string, string>
   )
 
+/**
+ * Returns parsed Content-Length for a request.
+ * Returns null when header is missing, invalid, or negative.
+ */
 const parseContentLength = (request: Request): number | null => {
   const headerValue = request.headers.get('content-length')
   if (!headerValue) {
@@ -44,6 +49,11 @@ export const isJsonBodyParseError = (
   error: unknown
 ): error is JsonBodyParseError => error instanceof JsonBodyParseError
 
+/**
+ * Parses and validates a JSON request body with optional size and empty-body
+ * guards. Throws JsonBodyParseError on invalid JSON, validation failures,
+ * empty-body violations, or size limit violations.
+ */
 export const parseJsonBody = async <TSchema extends ZodType>(
   request: Request,
   schema: TSchema,
@@ -59,7 +69,7 @@ export const parseJsonBody = async <TSchema extends ZodType>(
   }
 
   const rawText = await request.text()
-  const actualBodySize = new TextEncoder().encode(rawText).byteLength
+  const actualBodySize = textEncoder.encode(rawText).byteLength
   if (actualBodySize > maxBytes) {
     throw new JsonBodyParseError('Request body too large', 400, {
       maxBytes,
