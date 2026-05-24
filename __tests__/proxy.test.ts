@@ -17,11 +17,15 @@ vi.mock('@/lib/edge-config', () => ({
 }))
 
 vi.mock('@/lib/rate-limit', () => ({
+  GENERAL_RATE_LIMIT_MAX_REQUESTS: 60,
+  STRICT_RATE_LIMIT_MAX_REQUESTS: 10,
   getStrictLimiter: mockGetStrictLimiter,
   getGeneralLimiter: mockGetGeneralLimiter,
 }))
 
 import { config, proxy } from '@/proxy'
+
+const MOCK_RESET_TIMESTAMP = Date.now() + 60_000
 
 const createRequest = (
   pathname: string,
@@ -47,13 +51,13 @@ describe('proxy rate limiting', () => {
       success: true,
       limit: 10,
       remaining: 9,
-      reset: 1_700_000_000_000,
+      reset: MOCK_RESET_TIMESTAMP,
     })
     mockGeneralLimit.mockResolvedValue({
       success: true,
       limit: 60,
       remaining: 59,
-      reset: 1_700_000_000_000,
+      reset: MOCK_RESET_TIMESTAMP,
     })
 
     mockGetStrictLimiter.mockReturnValue({ limit: mockStrictLimit })
@@ -71,7 +75,9 @@ describe('proxy rate limiting', () => {
     expect(mockGeneralLimit).not.toHaveBeenCalled()
     expect(response.headers.get('X-RateLimit-Limit')).toBe('10')
     expect(response.headers.get('X-RateLimit-Remaining')).toBe('9')
-    expect(response.headers.get('X-RateLimit-Reset')).toBe('1700000000000')
+    expect(response.headers.get('X-RateLimit-Reset')).toBe(
+      String(MOCK_RESET_TIMESTAMP)
+    )
   })
 
   it('prefers authenticated user id for limiter identifier', async () => {
@@ -98,6 +104,18 @@ describe('proxy rate limiting', () => {
     )
 
     expect(mockGeneralLimit).toHaveBeenCalledWith('ip:198.51.100.25')
+  })
+
+  it('uses immediate proxy ip when x-forwarded-for chain is not trusted', async () => {
+    process.env.TRUSTED_PROXY_IPS = '10.0.0.1'
+
+    await proxy(
+      createRequest('/api/orders', {
+        'x-forwarded-for': '198.51.100.25, 10.0.0.2',
+      })
+    )
+
+    expect(mockGeneralLimit).toHaveBeenCalledWith('ip:10.0.0.2')
   })
 
   it('returns 429 with consistent rate-limit headers when blocked', async () => {

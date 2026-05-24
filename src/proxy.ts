@@ -3,7 +3,12 @@ import { Ratelimit } from '@upstash/ratelimit'
 import { Redis } from '@upstash/redis'
 import { auth } from '@/lib/auth'
 import { getFeatureFlags } from '@/lib/edge-config'
-import { getGeneralLimiter, getStrictLimiter } from '@/lib/rate-limit'
+import {
+  GENERAL_RATE_LIMIT_MAX_REQUESTS,
+  getGeneralLimiter,
+  getStrictLimiter,
+  STRICT_RATE_LIMIT_MAX_REQUESTS,
+} from '@/lib/rate-limit'
 
 const ADMIN_PATH_PREFIX = '/admin'
 const ADMIN_API_PREFIX = '/api/admin'
@@ -83,13 +88,15 @@ const buildRateLimitedResponse = (result: RateLimitResult): NextResponse =>
     }
   )
 
-const getTrustedProxyIps = (): Set<string> =>
-  new Set(
-    (process.env.TRUSTED_PROXY_IPS ?? '')
+const getTrustedProxyIps = (): Set<string> => {
+  const rawTrustedProxies = process.env.TRUSTED_PROXY_IPS ?? ''
+  return new Set(
+    rawTrustedProxies
       .split(',')
       .map((ip) => ip.trim())
       .filter(Boolean)
   )
+}
 
 const getClientIpFromHeaders = (headers: Headers): string => {
   const directIpHeaders = ['cf-connecting-ip', 'x-real-ip']
@@ -115,7 +122,7 @@ const getClientIpFromHeaders = (headers: Headers): string => {
     return forwardedSegments[0]
   }
 
-  return 'unknown'
+  return immediateProxyIp ?? 'unknown'
 }
 
 const buildIdentifier = (userId: string | null, ipAddress: string): string =>
@@ -123,6 +130,29 @@ const buildIdentifier = (userId: string | null, ipAddress: string): string =>
 
 const isStrictRateLimitPath = (pathname: string): boolean =>
   STRICT_RATE_LIMIT_PATHS.some((pathPrefix) => pathname.startsWith(pathPrefix))
+
+const buildRateLimitUnavailableResponse = (limit: number): NextResponse => {
+  const reset = Date.now() + 60_000
+  const headers = createRateLimitHeaders({
+    success: false,
+    limit,
+    remaining: 0,
+    reset,
+  })
+  return NextResponse.json(
+    {
+      success: false,
+      error: 'Rate limiting service temporarily unavailable. Please try again.',
+    },
+    {
+      status: 503,
+      headers: {
+        ...headers,
+        'Retry-After': getRetryAfterSeconds(reset),
+      },
+    }
+  )
+}
 
 function getInMemoryAiRateLimitResult(
   identifier: string,
@@ -223,10 +253,11 @@ export async function proxy(request: NextRequest) {
       rateLimitHeaders = createRateLimitHeaders(rateLimitResult)
     }
   } else if (isSensitivePath) {
-    const limiter = isStrictRateLimitPath(pathname)
-      ? getStrictLimiter()
-      : getGeneralLimiter()
-    const fallbackLimit = isStrictRateLimitPath(pathname) ? 10 : 60
+    const isStrictPath = isStrictRateLimitPath(pathname)
+    const limiter = isStrictPath ? getStrictLimiter() : getGeneralLimiter()
+    const fallbackLimit = isStrictPath
+      ? STRICT_RATE_LIMIT_MAX_REQUESTS
+      : GENERAL_RATE_LIMIT_MAX_REQUESTS
     let rateLimitResult: RateLimitResult = {
       success: true,
       limit: fallbackLimit,
@@ -234,7 +265,11 @@ export async function proxy(request: NextRequest) {
       reset: Date.now() + 60_000,
     }
 
-    if (limiter) {
+    if (!limiter) {
+      if (isStrictPath) {
+        return buildRateLimitUnavailableResponse(fallbackLimit)
+      }
+    } else {
       try {
         const result = await limiter.limit(identifier)
         rateLimitResult = {
@@ -244,7 +279,9 @@ export async function proxy(request: NextRequest) {
           reset: result.reset,
         }
       } catch {
-        // Redis unavailable — fail open but still emit baseline rate-limit headers.
+        if (isStrictPath) {
+          return buildRateLimitUnavailableResponse(fallbackLimit)
+        }
       }
     }
 
