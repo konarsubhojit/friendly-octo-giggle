@@ -27,6 +27,7 @@ export const assertOwnership = (
     return resource.userId === sessionUserId
   }
 
+  // Do not allow guest-session fallback for resources that are tied to a user.
   if (resource.userId) {
     return false
   }

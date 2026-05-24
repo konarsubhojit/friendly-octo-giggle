@@ -29,4 +29,28 @@ describe('assertOwnership', () => {
       })
     ).toBe(false)
   })
+
+  it('returns false when resource is null', () => {
+    expect(assertOwnership(null, { user: { id: 'user-1' } })).toBe(false)
+  })
+
+  it('prefers authenticated user ownership when both userId and sessionId exist', () => {
+    expect(
+      assertOwnership(
+        { userId: 'user-1', sessionId: 'guest-1' },
+        { user: { id: 'user-1' } },
+        { sessionId: 'guest-2' }
+      )
+    ).toBe(true)
+  })
+
+  it('returns false for authenticated user accessing guest resource', () => {
+    expect(
+      assertOwnership(
+        { userId: null, sessionId: 'guest-1' },
+        { user: { id: 'user-2' } },
+        { sessionId: 'guest-1' }
+      )
+    ).toBe(false)
+  })
 })
