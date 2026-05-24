@@ -74,7 +74,9 @@ const toGoogleContents = (messages: ChatMessage[]): Content[] =>
 const estimateTokens = (text: string): number =>
   text.trim().length === 0 ? 0 : Math.ceil(text.length / 4)
 
-const normalizePolicyText = (text: string): { normalized: string; compact: string } => {
+const normalizePolicyText = (
+  text: string
+): { normalized: string; compact: string } => {
   const normalized = text
     .normalize('NFKC')
     .replace(/[\u200B-\u200F\uFE00-\uFE0F]/g, '')
@@ -136,7 +138,8 @@ const getDailyUsage = async (
   if (!redis) return { requests: 0, tokens: 0 }
 
   const key = `ai:chat:usage:${userId}:${utcDateKey()}`
-  const raw = ((await redis.hgetall(key)) as Record<string, string> | null) ?? {}
+  const raw =
+    ((await redis.hgetall(key)) as Record<string, string> | null) ?? {}
   const requests = Number(raw.requests ?? 0)
   const tokens = Number(raw.tokens ?? 0)
   return {
