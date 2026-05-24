@@ -1,7 +1,12 @@
 import { NextRequest } from 'next/server'
 import { db } from '@/lib/db'
 import { ProductUpdateSchema } from '@/features/product/validations'
-import { apiSuccess, apiError, handleApiError } from '@/lib/api-utils'
+import {
+  apiSuccess,
+  apiError,
+  handleApiError,
+  parseJsonBody,
+} from '@/lib/api-utils'
 import { checkAdminAuth } from '@/features/admin/services/admin-auth'
 import { revalidateTag } from 'next/cache'
 import { invalidateProductCaches } from '@/lib/cache'
@@ -20,9 +25,7 @@ export async function PUT(
 
   try {
     const { id } = await params
-    const body = await request.json()
-
-    const validated = ProductUpdateSchema.parse(body)
+    const validated = await parseJsonBody(request, ProductUpdateSchema)
 
     const product = await db.products.update(id, validated)
 

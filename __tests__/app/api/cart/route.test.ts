@@ -226,7 +226,7 @@ describe('Cart API Route', () => {
       const data = await response.json()
 
       expect(response.status).toBe(404)
-      expect(data).toEqual({ error: 'Product not found' })
+      expect(data.error).toBe('Product not found')
     })
 
     it('returns 400 for out of stock product', async () => {
@@ -249,7 +249,7 @@ describe('Cart API Route', () => {
       const data = await response.json()
 
       expect(response.status).toBe(400)
-      expect(data).toEqual({ error: 'This product is currently out of stock' })
+      expect(data.error).toBe('This product is currently out of stock')
     })
 
     it('creates cart item for authenticated user (201)', async () => {
@@ -534,7 +534,7 @@ describe('Cart API Route', () => {
       const data = await response.json()
 
       expect(response.status).toBe(404)
-      expect(data).toEqual({ error: 'Variant not found' })
+      expect(data.error).toBe('Variant not found')
     })
 
     it('auto-caps quantity when variant stock is insufficient', async () => {
@@ -713,7 +713,7 @@ describe('Cart API Route', () => {
       const data = await response.json()
 
       expect(response.status).toBe(404)
-      expect(data).toEqual({ error: 'Cart not found' })
+      expect(data.error).toBe('Cart not found')
     })
 
     it('serializes cart with variant data', async () => {

@@ -1,4 +1,9 @@
-import { apiSuccess, apiError, handleApiError } from '@/lib/api-utils'
+import {
+  apiSuccess,
+  apiError,
+  handleApiError,
+  parseJsonBody,
+} from '@/lib/api-utils'
 import { auth } from '@/lib/auth'
 import { drizzleDb } from '@/lib/db'
 import { categories } from '@/lib/schema'
@@ -22,11 +27,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
   const { id } = await params
 
   try {
-    const body = await request.json()
-    const parsed = UpdateCategorySchema.safeParse(body)
-    if (!parsed.success) {
-      return apiError(parsed.error.issues[0].message, 400)
-    }
+    const validated = await parseJsonBody(request, UpdateCategorySchema)
 
     const existing = await drizzleDb
       .select()
@@ -38,7 +39,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
       return apiError('Category not found', 404)
     }
 
-    const { name, sortOrder } = parsed.data
+    const { name, sortOrder } = validated
 
     if (name && name.trim() !== existing[0].name) {
       const duplicate = await drizzleDb

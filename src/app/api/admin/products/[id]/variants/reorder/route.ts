@@ -7,7 +7,7 @@ import {
   apiSuccess,
   apiError,
   handleApiError,
-  handleValidationError,
+  parseJsonBody,
 } from '@/lib/api-utils'
 import { checkAdminAuth } from '@/features/admin/services/admin-auth'
 import { invalidateProductCaches } from '@/lib/cache'
@@ -26,13 +26,7 @@ export const PATCH = async (
 
   try {
     const { id: productId } = await params
-    const body = await request.json()
-    const parseResult = ReorderVariantsSchema.safeParse(body)
-    if (!parseResult.success) {
-      return handleValidationError(parseResult.error)
-    }
-
-    const { items } = parseResult.data
+    const { items } = await parseJsonBody(request, ReorderVariantsSchema)
     const now = new Date()
 
     await drizzleDb.transaction(async (tx) => {
