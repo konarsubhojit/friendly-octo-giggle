@@ -41,7 +41,9 @@ export async function POST(request: Request) {
   }
 
   try {
-    const body = await parseJsonBody(request, reindexRequestSchema)
+    const body = await parseJsonBody(request, reindexRequestSchema, {
+      allowEmpty: true,
+    })
     const target = body?.target ?? 'products'
 
     if (target === 'orders') {

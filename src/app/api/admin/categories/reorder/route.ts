@@ -27,11 +27,11 @@ export const PATCH = async (request: Request) => {
   if (session.user.role !== 'ADMIN') return apiError('Not authorized', 403)
 
   try {
-    const parsed = await parseJsonBody(request, ReorderCategoriesSchema)
+    const validated = await parseJsonBody(request, ReorderCategoriesSchema)
 
     await primaryDrizzleDb.transaction(async (tx) => {
       await Promise.all(
-        parsed.items.map(({ id, sortOrder }) =>
+        validated.items.map(({ id, sortOrder }) =>
           tx
             .update(categories)
             .set({ sortOrder, updatedAt: new Date() })

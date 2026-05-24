@@ -27,7 +27,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
   const { id } = await params
 
   try {
-    const parsed = await parseJsonBody(request, UpdateCategorySchema)
+    const validated = await parseJsonBody(request, UpdateCategorySchema)
 
     const existing = await drizzleDb
       .select()
@@ -39,7 +39,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
       return apiError('Category not found', 404)
     }
 
-    const { name, sortOrder } = parsed
+    const { name, sortOrder } = validated
 
     if (name && name.trim() !== existing[0].name) {
       const duplicate = await drizzleDb

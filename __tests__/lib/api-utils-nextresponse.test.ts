@@ -203,6 +203,34 @@ describe('parseJsonBody', () => {
     })
   })
 
+  it('rejects empty bodies by default', async () => {
+    const { parseJsonBody } = await import('@/lib/api-utils')
+    const schema = z.object({ productId: z.string().min(1) })
+    const request = new Request('http://localhost/api/test', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: '',
+    })
+
+    await expect(parseJsonBody(request, schema)).rejects.toMatchObject({
+      message: 'Request body is required',
+      status: 400,
+    })
+  })
+
+  it('allows empty bodies when configured', async () => {
+    const { parseJsonBody } = await import('@/lib/api-utils')
+    const schema = z.object({}).optional()
+    const request = new Request('http://localhost/api/test', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: '',
+    })
+
+    const result = await parseJsonBody(request, schema, { allowEmpty: true })
+    expect(result).toEqual({})
+  })
+
   it('rejects validation errors with details', async () => {
     const { parseJsonBody } = await import('@/lib/api-utils')
     const schema = z.object({

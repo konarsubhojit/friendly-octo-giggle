@@ -47,7 +47,7 @@ export const isJsonBodyParseError = (
 export const parseJsonBody = async <TSchema extends ZodType>(
   request: Request,
   schema: TSchema,
-  options?: { maxBytes?: number }
+  options?: { maxBytes?: number; allowEmpty?: boolean }
 ): Promise<TSchema['_output']> => {
   const maxBytes = options?.maxBytes ?? DEFAULT_JSON_BODY_MAX_BYTES
   const contentLength = parseContentLength(request)
@@ -69,9 +69,11 @@ export const parseJsonBody = async <TSchema extends ZodType>(
 
   let rawBody: unknown
   if (rawText.trim().length === 0) {
-    // Empty request bodies are treated as empty objects so callers can support
-    // optional JSON payloads with schema-level defaults.
-    rawBody = {}
+    if (options?.allowEmpty) {
+      rawBody = {}
+    } else {
+      throw new JsonBodyParseError('Request body is required', 400)
+    }
   } else {
     try {
       rawBody = JSON.parse(rawText)
