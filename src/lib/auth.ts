@@ -224,10 +224,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       const lastCheck = token.lastDbCheckAt as number | undefined
       const now = Math.floor(Date.now() / 1000)
 
-      if (
-        lastCheck === undefined ||
-        now - lastCheck >= JWT_DB_CHECK_INTERVAL
-      ) {
+      if (lastCheck === undefined || now - lastCheck >= JWT_DB_CHECK_INTERVAL) {
         const dbUser = await primaryDrizzleDb.query.users.findFirst({
           where: eq(users.id, userId),
           columns: { role: true, lockedUntil: true, sessionVersion: true },
