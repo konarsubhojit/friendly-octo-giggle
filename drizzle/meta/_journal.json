@@ -71,6 +71,13 @@
       "when": 1777838400000,
       "tag": "0009_variant_sort_order",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1778985600000,
+      "tag": "0010_account_lockout",
+      "breakpoints": true
     }
   ]
 }

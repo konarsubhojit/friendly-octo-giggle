@@ -60,6 +60,7 @@ export const users = pgTable('User', {
     .default('INR')
     .notNull(),
   role: userRoleEnum('role').default('CUSTOMER').notNull(),
+  lockedUntil: timestamp('lockedUntil', { mode: 'date' }),
   createdAt: timestamp('createdAt', { mode: 'date' }).defaultNow().notNull(),
   updatedAt: timestamp('updatedAt', { mode: 'date' }).defaultNow().notNull(),
 })

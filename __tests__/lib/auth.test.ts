@@ -81,6 +81,12 @@ vi.mock('next-auth/providers/credentials', () => ({
 
 const mockFindFirst = vi.hoisted(() => vi.fn())
 const mockVerifyPassword = vi.hoisted(() => vi.fn())
+const mockUpdateUsers = vi.hoisted(() => vi.fn())
+const mockUpdateSet = vi.hoisted(() => vi.fn())
+const mockUpdateWhere = vi.hoisted(() => vi.fn())
+const mockRecordFailedLoginAttempt = vi.hoisted(() => vi.fn())
+const mockGetClientIpFromRequest = vi.hoisted(() => vi.fn())
+const mockGetAccountLockUntil = vi.hoisted(() => vi.fn())
 
 vi.mock('@auth/drizzle-adapter', () => ({
   DrizzleAdapter: vi.fn(() => ({})),
@@ -92,6 +98,7 @@ const mockPrimaryDrizzleDb = {
       findFirst: mockFindFirst,
     },
   },
+  update: mockUpdateUsers,
 }
 
 vi.mock('@/lib/db', () => ({
@@ -100,7 +107,12 @@ vi.mock('@/lib/db', () => ({
 }))
 
 vi.mock('@/lib/schema', () => ({
-  users: { email: 'email', phoneNumber: 'phoneNumber' },
+  users: {
+    id: 'id',
+    email: 'email',
+    phoneNumber: 'phoneNumber',
+    lockedUntil: 'lockedUntil',
+  },
   accounts: {},
   sessions: {},
   verificationTokens: {},
@@ -112,6 +124,12 @@ vi.mock('@/lib/logger', () => ({
 
 vi.mock('@/features/auth/services/password', () => ({
   verifyPassword: mockVerifyPassword,
+}))
+
+vi.mock('@/features/auth/services/login-protection', () => ({
+  recordFailedLoginAttempt: mockRecordFailedLoginAttempt,
+  getClientIpFromRequest: mockGetClientIpFromRequest,
+  getAccountLockUntil: mockGetAccountLockUntil,
 }))
 
 vi.mock('drizzle-orm', () => ({
@@ -126,6 +144,14 @@ describe('auth module', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    mockUpdateSet.mockReturnValue({ where: mockUpdateWhere })
+    mockUpdateUsers.mockReturnValue({ set: mockUpdateSet })
+    mockRecordFailedLoginAttempt.mockResolvedValue({
+      shouldLockAccount: false,
+      shouldThrottleIp: false,
+    })
+    mockGetClientIpFromRequest.mockReturnValue('203.0.113.10')
+    mockGetAccountLockUntil.mockReturnValue(new Date('2026-01-01T00:15:00.000Z'))
   })
 
   it('exports handlers, signIn, signOut, auth', async () => {
@@ -313,7 +339,7 @@ describe('auth module', () => {
       expect(mockLogAuthEvent).toHaveBeenCalledWith(
         expect.objectContaining({
           event: 'failed_login',
-          error: 'User not found',
+          error: 'Invalid credentials',
         })
       )
     })
@@ -332,7 +358,30 @@ describe('auth module', () => {
       expect(mockLogAuthEvent).toHaveBeenCalledWith(
         expect.objectContaining({
           event: 'failed_login',
-          error: 'No password set (OAuth-only user)',
+          error: 'Invalid credentials',
+        })
+      )
+    })
+
+    it('returns null when account is currently locked', async () => {
+      mockFindFirst.mockResolvedValue({
+        id: 'user-1',
+        email: 'test@example.com',
+        lockedUntil: new Date('2099-01-01T00:00:00.000Z'),
+        passwordHash: TEST_HASH,
+      })
+
+      const result = await authorize({
+        identifier: 'test@example.com',
+        password: TEST_WRONG_PASSWORD,
+      })
+
+      expect(result).toBeNull()
+      expect(mockVerifyPassword).not.toHaveBeenCalled()
+      expect(mockLogAuthEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          event: 'account_locked',
+          error: 'Account is temporarily locked',
         })
       )
     })
@@ -341,6 +390,7 @@ describe('auth module', () => {
       mockFindFirst.mockResolvedValue({
         id: 'user-1',
         email: 'test@example.com',
+        lockedUntil: null,
         passwordHash: TEST_HASH,
       })
       mockVerifyPassword.mockResolvedValue(false)
@@ -352,7 +402,41 @@ describe('auth module', () => {
       expect(mockLogAuthEvent).toHaveBeenCalledWith(
         expect.objectContaining({
           event: 'failed_login',
-          error: 'Invalid password',
+          error: 'Invalid credentials',
+        })
+      )
+    })
+
+    it('locks account and emits account_locked after threshold is reached', async () => {
+      mockFindFirst.mockResolvedValue({
+        id: 'user-1',
+        email: 'test@example.com',
+        lockedUntil: null,
+        passwordHash: TEST_HASH,
+      })
+      mockVerifyPassword.mockResolvedValue(false)
+      mockRecordFailedLoginAttempt.mockResolvedValue({
+        shouldLockAccount: true,
+        shouldThrottleIp: false,
+      })
+
+      const result = await authorize({
+        identifier: 'test@example.com',
+        password: TEST_WRONG_PASSWORD,
+      })
+
+      expect(result).toBeNull()
+      expect(mockUpdateUsers).toHaveBeenCalledWith(expect.any(Object))
+      expect(mockUpdateSet).toHaveBeenCalledWith(
+        expect.objectContaining({
+          lockedUntil: new Date('2026-01-01T00:15:00.000Z'),
+        })
+      )
+      expect(mockUpdateWhere).toHaveBeenCalled()
+      expect(mockLogAuthEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          event: 'account_locked',
+          error: 'Too many failed login attempts',
         })
       )
     })
@@ -365,6 +449,7 @@ describe('auth module', () => {
         image: null,
         role: 'CUSTOMER',
         phoneNumber: '+1234567890',
+        lockedUntil: null,
         passwordHash: TEST_HASH,
       })
       mockVerifyPassword.mockResolvedValue(true)
