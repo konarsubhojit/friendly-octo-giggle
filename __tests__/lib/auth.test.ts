@@ -151,7 +151,9 @@ describe('auth module', () => {
       shouldThrottleIp: false,
     })
     mockGetClientIpFromRequest.mockReturnValue('203.0.113.10')
-    mockGetAccountLockUntil.mockReturnValue(new Date('2026-01-01T00:15:00.000Z'))
+    mockGetAccountLockUntil.mockReturnValue(
+      new Date('2026-01-01T00:15:00.000Z')
+    )
   })
 
   it('exports handlers, signIn, signOut, auth', async () => {

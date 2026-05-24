@@ -15,7 +15,10 @@ const getFailedByUserLimiter = (): Ratelimit | null => {
   if (!failedByUserLimiter) {
     failedByUserLimiter = new Ratelimit({
       redis,
-      limiter: Ratelimit.slidingWindow(MAX_FAILED_LOGIN_ATTEMPTS, FAILED_LOGIN_WINDOW),
+      limiter: Ratelimit.slidingWindow(
+        MAX_FAILED_LOGIN_ATTEMPTS,
+        FAILED_LOGIN_WINDOW
+      ),
       prefix: 'rl:auth:failed:user',
     })
   }
@@ -30,7 +33,10 @@ const getFailedByIpLimiter = (): Ratelimit | null => {
   if (!failedByIpLimiter) {
     failedByIpLimiter = new Ratelimit({
       redis,
-      limiter: Ratelimit.slidingWindow(MAX_FAILED_LOGIN_ATTEMPTS, FAILED_LOGIN_WINDOW),
+      limiter: Ratelimit.slidingWindow(
+        MAX_FAILED_LOGIN_ATTEMPTS,
+        FAILED_LOGIN_WINDOW
+      ),
       prefix: 'rl:auth:failed:ip',
     })
   }
@@ -71,7 +77,9 @@ export const recordFailedLoginAttempt = async ({
   ])
 
   return {
-    shouldLockAccount: Boolean(userResult && reachedAttemptThreshold(userResult)),
+    shouldLockAccount: Boolean(
+      userResult && reachedAttemptThreshold(userResult)
+    ),
     shouldThrottleIp: Boolean(ipResult && reachedAttemptThreshold(ipResult)),
   }
 }
