@@ -9,6 +9,13 @@ import type { Adapter } from 'next-auth/adapters'
 import { logAuthEvent } from './logger'
 import { verifyPassword } from '@/features/auth/services/password'
 import { eq, or } from 'drizzle-orm'
+import {
+  getAccountLockUntil,
+  getClientIpFromRequest,
+  recordFailedLoginAttempt,
+} from '@/features/auth/services/login-protection'
+
+const INVALID_CREDENTIALS_ERROR = 'Invalid credentials'
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: DrizzleAdapter(primaryDrizzleDb, {
@@ -45,9 +52,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         identifier: { label: 'Email or Phone', type: 'text' },
         password: { label: 'Password', type: 'password' },
       },
-      async authorize(credentials) {
+      async authorize(credentials, request) {
         const identifier = credentials?.identifier as string | undefined
         const password = credentials?.password as string | undefined
+        const ipAddress = getClientIpFromRequest(request)
 
         if (!identifier || !password) return null
 
@@ -60,35 +68,87 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         })
 
         if (!user) {
+          await recordFailedLoginAttempt({ ipAddress })
           logAuthEvent({
             event: 'failed_login',
             email: identifier,
             success: false,
-            error: 'User not found',
+            error: INVALID_CREDENTIALS_ERROR,
+          })
+          return null
+        }
+
+        if (user.lockedUntil && user.lockedUntil > new Date()) {
+          logAuthEvent({
+            event: 'account_locked',
+            userId: user.id,
+            email: user.email,
+            success: false,
+            error: 'Account is temporarily locked',
           })
           return null
         }
 
         // OAuth-only users don't have a password hash
         if (!user.passwordHash) {
+          const failedAttempt = await recordFailedLoginAttempt({
+            userId: user.id,
+            ipAddress,
+          })
+
+          if (failedAttempt.shouldLockAccount) {
+            const lockedUntil = getAccountLockUntil()
+            await primaryDrizzleDb
+              .update(users)
+              .set({ lockedUntil, updatedAt: new Date() })
+              .where(eq(users.id, user.id))
+            logAuthEvent({
+              event: 'account_locked',
+              userId: user.id,
+              email: user.email,
+              success: false,
+              error: 'Too many failed login attempts',
+            })
+          }
+
           logAuthEvent({
             event: 'failed_login',
             userId: user.id,
             email: user.email,
             success: false,
-            error: 'No password set (OAuth-only user)',
+            error: INVALID_CREDENTIALS_ERROR,
           })
           return null
         }
 
         const isValid = await verifyPassword(password, user.passwordHash)
         if (!isValid) {
+          const failedAttempt = await recordFailedLoginAttempt({
+            userId: user.id,
+            ipAddress,
+          })
+
+          if (failedAttempt.shouldLockAccount) {
+            const lockedUntil = getAccountLockUntil()
+            await primaryDrizzleDb
+              .update(users)
+              .set({ lockedUntil, updatedAt: new Date() })
+              .where(eq(users.id, user.id))
+            logAuthEvent({
+              event: 'account_locked',
+              userId: user.id,
+              email: user.email,
+              success: false,
+              error: 'Too many failed login attempts',
+            })
+          }
+
           logAuthEvent({
             event: 'failed_login',
             userId: user.id,
             email: user.email,
             success: false,
-            error: 'Invalid password',
+            error: INVALID_CREDENTIALS_ERROR,
           })
           return null
         }

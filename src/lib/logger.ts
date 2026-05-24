@@ -80,6 +80,7 @@ export const logAuthEvent = (data: {
     | 'logout'
     | 'register'
     | 'failed_login'
+    | 'account_locked'
     | 'session_created'
     | 'session_expired'
     | 'password_change'
