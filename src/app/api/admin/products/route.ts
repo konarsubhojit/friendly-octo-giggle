@@ -8,6 +8,7 @@ import {
   apiError,
   handleApiError,
   parseOffsetParam,
+  parseJsonBody,
 } from '@/lib/api-utils'
 import { revalidateTag } from 'next/cache'
 import { invalidateProductCaches, cacheAdminProductsList } from '@/lib/cache'
@@ -177,9 +178,7 @@ export const POST = async (request: NextRequest) => {
   }
 
   try {
-    const body = await request.json()
-
-    const validated = ProductInputSchema.parse(body)
+    const validated = await parseJsonBody(request, ProductInputSchema)
 
     const product = await db.products.create(validated)
 

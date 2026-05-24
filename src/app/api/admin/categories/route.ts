@@ -1,4 +1,9 @@
-import { apiSuccess, apiError, handleApiError } from '@/lib/api-utils'
+import {
+  apiSuccess,
+  apiError,
+  handleApiError,
+  parseJsonBody,
+} from '@/lib/api-utils'
 import { auth } from '@/lib/auth'
 import { drizzleDb } from '@/lib/db'
 import { categories } from '@/lib/schema'
@@ -43,11 +48,7 @@ export async function POST(request: Request) {
   if (session.user.role !== 'ADMIN') return apiError('Not authorized', 403)
 
   try {
-    const body = await request.json()
-    const parsed = CreateCategorySchema.safeParse(body)
-    if (!parsed.success) return apiError(parsed.error.issues[0].message, 400)
-
-    const { name } = parsed.data
+    const { name } = await parseJsonBody(request, CreateCategorySchema)
 
     const existing = await drizzleDb
       .select()

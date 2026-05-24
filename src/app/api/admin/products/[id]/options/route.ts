@@ -7,7 +7,7 @@ import {
   apiSuccess,
   apiError,
   handleApiError,
-  handleValidationError,
+  parseJsonBody,
 } from '@/lib/api-utils'
 import { checkAdminAuth } from '@/features/admin/services/admin-auth'
 import { invalidateProductCaches } from '@/lib/cache'
@@ -115,13 +115,10 @@ export async function POST(
       return apiError('Product not found', 404)
     }
 
-    const body = await request.json()
-    const parseResult = CreateOptionWithValuesSchema.safeParse(body)
-    if (!parseResult.success) {
-      return handleValidationError(parseResult.error)
-    }
-
-    const { name, sortOrder, values } = parseResult.data
+    const { name, sortOrder, values } = await parseJsonBody(
+      request,
+      CreateOptionWithValuesSchema
+    )
 
     const option = await primaryDrizzleDb.transaction(async (tx) => {
       // Lock the product row to prevent concurrent option creation past the limit

@@ -6,7 +6,7 @@ import {
   apiSuccess,
   apiError,
   handleApiError,
-  handleValidationError,
+  parseJsonBody,
 } from '@/lib/api-utils'
 import { auth } from '@/lib/auth'
 import { CreateReviewSchema } from '@/features/product/validations'
@@ -51,14 +51,8 @@ const handlePost = async (request: NextRequest) => {
   }
 
   try {
-    const body = await request.json()
-    const parseResult = CreateReviewSchema.safeParse(body)
-    if (!parseResult.success) {
-      return handleValidationError(parseResult.error)
-    }
-
     const { productId, orderId, rating, comment, isAnonymous } =
-      parseResult.data
+      await parseJsonBody(request, CreateReviewSchema)
 
     const existing = await drizzleDb.query.reviews.findFirst({
       where: and(

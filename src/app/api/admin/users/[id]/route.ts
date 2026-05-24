@@ -2,7 +2,12 @@ import { NextRequest } from 'next/server'
 import { drizzleDb, primaryDrizzleDb } from '@/lib/db'
 import { users } from '@/lib/schema'
 import { eq } from 'drizzle-orm'
-import { apiSuccess, apiError, handleApiError } from '@/lib/api-utils'
+import {
+  apiSuccess,
+  apiError,
+  handleApiError,
+  parseJsonBody,
+} from '@/lib/api-utils'
 import { checkAdminAuth } from '@/features/admin/services/admin-auth'
 import { cacheAdminUserById, invalidateAdminUserCaches } from '@/lib/cache'
 import { z } from 'zod'
@@ -24,9 +29,7 @@ export async function PATCH(
     }
 
     const { id } = await params
-    const body = await request.json()
-
-    const validated = UpdateUserRoleSchema.parse(body)
+    const validated = await parseJsonBody(request, UpdateUserRoleSchema)
 
     if (id === authCheck.userId) {
       return apiError('Cannot modify your own role', 403)

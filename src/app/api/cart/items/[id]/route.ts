@@ -4,7 +4,7 @@ import { cartItems } from '@/lib/schema'
 import { eq } from 'drizzle-orm'
 import { auth } from '@/lib/auth'
 import { UpdateCartItemSchema } from '@/features/cart/validations'
-import { handleValidationError } from '@/lib/api-utils'
+import { apiError, isJsonBodyParseError, parseJsonBody } from '@/lib/api-utils'
 import { logError } from '@/lib/logger'
 import { invalidateCartCache } from '@/lib/cache'
 import {
@@ -22,13 +22,7 @@ export async function PATCH(
     const { id } = await params
     const session = await auth()
     const sessionId = request.cookies.get('cart_session')?.value
-    const rawBody = await request.json()
-
-    const parseResult = UpdateCartItemSchema.safeParse(rawBody)
-    if (!parseResult.success) {
-      return handleValidationError(parseResult.error)
-    }
-    const body = parseResult.data
+    const body = await parseJsonBody(request, UpdateCartItemSchema)
 
     const cartItem = await drizzleDb.query.cartItems.findFirst({
       where: eq(cartItems.id, id),
@@ -83,6 +77,10 @@ export async function PATCH(
 
     return NextResponse.json({ success: true })
   } catch (error) {
+    if (isJsonBodyParseError(error)) {
+      return apiError(error.message, error.status, error.details)
+    }
+
     logError({ error, context: 'cart_item_update' })
     return NextResponse.json(
       { error: 'Failed to update cart item' },

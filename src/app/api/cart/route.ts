@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { AddToCartSchema } from '@/features/cart/validations'
-import { handleValidationError } from '@/lib/api-utils'
+import { apiError, isJsonBodyParseError, parseJsonBody } from '@/lib/api-utils'
 import { logError } from '@/lib/logger'
 import {
   addItemToCart,
@@ -32,15 +32,10 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const [session, rawBody] = await Promise.all([auth(), request.json()])
-
-    const parseResult = AddToCartSchema.safeParse(rawBody)
-
-    if (!parseResult.success) {
-      return handleValidationError(parseResult.error)
-    }
-
-    const body = parseResult.data
+    const [session, body] = await Promise.all([
+      auth(),
+      parseJsonBody(request, AddToCartSchema),
+    ])
     const result = await addItemToCart(
       session,
       body,
@@ -68,11 +63,12 @@ export async function POST(request: NextRequest) {
 
     return response
   } catch (error) {
+    if (isJsonBodyParseError(error)) {
+      return apiError(error.message, error.status, error.details)
+    }
+
     if (isCartRequestError(error)) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: error.status }
-      )
+      return apiError(error.message, error.status)
     }
 
     logError({ error, context: 'cart_add' })
