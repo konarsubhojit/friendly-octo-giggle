@@ -1,10 +1,6 @@
 import { NextRequest } from 'next/server'
 import { db } from '@/lib/db'
-import {
-  apiSuccess,
-  handleApiError,
-  parseJsonBody,
-} from '@/lib/api-utils'
+import { apiSuccess, handleApiError, parseJsonBody } from '@/lib/api-utils'
 import { CreateShareSchema } from '@/features/product/validations'
 import { withLogging } from '@/lib/api-middleware'
 

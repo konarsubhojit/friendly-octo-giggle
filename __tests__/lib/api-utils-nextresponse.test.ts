@@ -115,7 +115,8 @@ describe('handleApiError', () => {
   })
 
   it('handles JsonBodyParseError with details', async () => {
-    const { handleApiError, JsonBodyParseError } = await import('@/lib/api-utils')
+    const { handleApiError, JsonBodyParseError } =
+      await import('@/lib/api-utils')
     const response = handleApiError(
       new JsonBodyParseError('Request body too large', 400, {
         maxBytes: 1024,

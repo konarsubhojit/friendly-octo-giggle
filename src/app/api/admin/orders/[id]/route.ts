@@ -121,8 +121,7 @@ export const PATCH = async (
           customerName: order.customerName,
           orderId: order.id,
           status: validatedBody.status,
-          trackingNumber:
-            validatedBody.trackingNumber ?? order.trackingNumber,
+          trackingNumber: validatedBody.trackingNumber ?? order.trackingNumber,
           shippingProvider:
             validatedBody.shippingProvider ?? order.shippingProvider,
         })

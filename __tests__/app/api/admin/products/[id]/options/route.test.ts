@@ -56,9 +56,8 @@ vi.mock('next/cache', () => ({
 }))
 
 vi.mock('@/lib/api-utils', async () => {
-  const actual = await vi.importActual<typeof import('@/lib/api-utils')>(
-    '@/lib/api-utils'
-  )
+  const actual =
+    await vi.importActual<typeof import('@/lib/api-utils')>('@/lib/api-utils')
   const { NextResponse } = await import('next/server')
   return {
     ...actual,
