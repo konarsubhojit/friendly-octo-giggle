@@ -7,7 +7,7 @@ import {
   apiSuccess,
   apiError,
   handleApiError,
-  handleValidationError,
+  parseJsonBody,
 } from '@/lib/api-utils'
 import { auth } from '@/lib/auth'
 import { serializeOrder } from '@/lib/serializers'
@@ -73,11 +73,7 @@ export async function PATCH(
       return apiError('Authentication required', 401)
     }
 
-    const body = await request.json()
-    const parseResult = OrderActionSchema.safeParse(body)
-    if (!parseResult.success) {
-      return handleValidationError(parseResult.error)
-    }
+    await parseJsonBody(request, OrderActionSchema)
 
     const { id } = await params
 

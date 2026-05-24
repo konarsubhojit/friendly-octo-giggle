@@ -1,4 +1,9 @@
-import { apiSuccess, apiError, handleApiError } from '@/lib/api-utils'
+import {
+  apiSuccess,
+  apiError,
+  handleApiError,
+  parseJsonBody,
+} from '@/lib/api-utils'
 import { auth } from '@/lib/auth'
 import { drizzleDb } from '@/lib/db'
 import { products } from '@/lib/schema'
@@ -36,9 +41,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const body = reindexRequestSchema.parse(
-      await request.json().catch(() => ({}))
-    )
+    const body = await parseJsonBody(request, reindexRequestSchema)
     const target = body?.target ?? 'products'
 
     if (target === 'orders') {

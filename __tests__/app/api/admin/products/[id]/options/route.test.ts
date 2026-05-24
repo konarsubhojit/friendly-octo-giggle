@@ -56,25 +56,16 @@ vi.mock('next/cache', () => ({
 }))
 
 vi.mock('@/lib/api-utils', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/api-utils')>(
+    '@/lib/api-utils'
+  )
   const { NextResponse } = await import('next/server')
   return {
+    ...actual,
     apiSuccess: (data: unknown, status = 200) =>
       NextResponse.json({ success: true, data }, { status }),
     apiError: (error: string, status = 400) =>
       NextResponse.json({ success: false, error }, { status }),
-    handleApiError: (error: unknown) =>
-      NextResponse.json(
-        {
-          success: false,
-          error: error instanceof Error ? error.message : 'Internal error',
-        },
-        { status: 500 }
-      ),
-    handleValidationError: (error: unknown) =>
-      NextResponse.json(
-        { success: false, error: 'Validation error', details: error },
-        { status: 400 }
-      ),
   }
 })
 

@@ -5,6 +5,7 @@ import {
   apiError,
   handleApiError,
   handleValidationError,
+  parseJsonBody,
 } from '@/lib/api-utils'
 import {
   getFailedEmails,
@@ -112,13 +113,7 @@ export const POST = async (request: NextRequest) => {
   }
 
   try {
-    const rawBody = await request.json()
-    const parseResult = ManualRetryBodySchema.safeParse(rawBody)
-    if (!parseResult.success) {
-      return handleValidationError(parseResult.error)
-    }
-
-    const { ids } = parseResult.data
+    const { ids } = await parseJsonBody(request, ManualRetryBodySchema)
     const results = await batchRetryFailedEmails(ids)
 
     return apiSuccess({ results })

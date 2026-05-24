@@ -12,7 +12,7 @@ import {
   apiSuccess,
   apiError,
   handleApiError,
-  handleValidationError,
+  parseJsonBody,
 } from '@/lib/api-utils'
 import { checkAdminAuth } from '@/features/admin/services/admin-auth'
 import { invalidateProductCaches } from '@/lib/cache'
@@ -39,13 +39,10 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const body = await request.json()
-    const parseResult = CreateAdminVariantSchema.safeParse(body)
-    if (!parseResult.success) {
-      return handleValidationError(parseResult.error)
-    }
-
-    const { productId, optionValueIds, ...validated } = parseResult.data
+    const { productId, optionValueIds, ...validated } = await parseJsonBody(
+      request,
+      CreateAdminVariantSchema
+    )
     const product = await findProduct(productId)
     if (!product) {
       return apiError('Product not found', 404)

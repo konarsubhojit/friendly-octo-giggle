@@ -2,7 +2,7 @@
  * Supplementary tests for api-utils.ts NextResponse-dependent functions.
  */
 import { describe, it, expect, vi } from 'vitest'
-import { ZodError } from 'zod'
+import { ZodError, z } from 'zod'
 
 vi.mock('next/server', () => ({
   NextResponse: {
@@ -113,6 +113,21 @@ describe('handleApiError', () => {
     handleApiError(new Error('test'))
     expect(logError).toHaveBeenCalled()
   })
+
+  it('handles JsonBodyParseError with details', async () => {
+    const { handleApiError, JsonBodyParseError } = await import('@/lib/api-utils')
+    const response = handleApiError(
+      new JsonBodyParseError('Request body too large', 400, {
+        maxBytes: 1024,
+      })
+    )
+    expect(response.status).toBe(400)
+    expect(response.body).toMatchObject({
+      success: false,
+      error: 'Request body too large',
+      details: { maxBytes: 1024 },
+    })
+  })
 })
 
 describe('asyncHandler', () => {
@@ -133,5 +148,75 @@ describe('asyncHandler', () => {
     expect((result as { body: { error: string } }).body.error).toBe(
       'Handler failed'
     )
+  })
+})
+
+describe('parseJsonBody', () => {
+  it('parses valid JSON and returns typed data', async () => {
+    const { parseJsonBody } = await import('@/lib/api-utils')
+    const schema = z.object({ productId: z.string().min(1) })
+    const request = new Request('http://localhost/api/test', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ productId: 'abc1234' }),
+    })
+
+    const result = await parseJsonBody(request, schema)
+
+    expect(result).toEqual({ productId: 'abc1234' })
+  })
+
+  it('rejects oversized bodies using content-length', async () => {
+    const { parseJsonBody } = await import('@/lib/api-utils')
+    const schema = z.object({ productId: z.string().min(1) })
+    const request = new Request('http://localhost/api/test', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'content-length': '70000',
+      },
+      body: JSON.stringify({ productId: 'abc1234' }),
+    })
+
+    await expect(
+      parseJsonBody(request, schema, { maxBytes: 64 * 1024 })
+    ).rejects.toMatchObject({
+      message: 'Request body too large',
+      status: 400,
+      details: { maxBytes: 64 * 1024, contentLength: 70000 },
+    })
+  })
+
+  it('rejects malformed JSON', async () => {
+    const { parseJsonBody } = await import('@/lib/api-utils')
+    const schema = z.object({ productId: z.string().min(1) })
+    const request = new Request('http://localhost/api/test', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: '{"productId":',
+    })
+
+    await expect(parseJsonBody(request, schema)).rejects.toMatchObject({
+      message: 'Invalid JSON body',
+      status: 400,
+    })
+  })
+
+  it('rejects validation errors with details', async () => {
+    const { parseJsonBody } = await import('@/lib/api-utils')
+    const schema = z.object({
+      quantity: z.number().int().positive('Quantity must be positive'),
+    })
+    const request = new Request('http://localhost/api/test', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ quantity: 0 }),
+    })
+
+    await expect(parseJsonBody(request, schema)).rejects.toMatchObject({
+      message: 'Validation failed',
+      status: 400,
+      details: { quantity: 'Quantity must be positive' },
+    })
   })
 })
