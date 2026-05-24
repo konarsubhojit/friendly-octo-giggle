@@ -54,7 +54,7 @@ export async function GET(
       CACHE_TTL.ORDER_DETAIL_STALE
     )
 
-    if (!order || !assertOwnership(order, session)) {
+    if (!assertOwnership(order, session)) {
       return apiError('Order not found', 404)
     }
 
@@ -82,7 +82,7 @@ export async function PATCH(
       where: eq(orders.id, id),
     })
 
-    if (!order || !assertOwnership(order, session)) {
+    if (!assertOwnership(order, session)) {
       return apiError('Order not found', 404)
     }
 

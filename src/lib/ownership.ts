@@ -13,11 +13,11 @@ interface AssertOwnershipOptions {
   readonly sessionId?: string | null
 }
 
-export const assertOwnership = (
-  resource: OwnershipResource | null | undefined,
+export const assertOwnership = <T extends OwnershipResource>(
+  resource: T | null | undefined,
   session: SessionLike | null | undefined,
   options: AssertOwnershipOptions = {}
-): boolean => {
+): resource is T => {
   if (!resource) {
     return false
   }
@@ -27,8 +27,8 @@ export const assertOwnership = (
     return resource.userId === sessionUserId
   }
 
-  // If a resource has a userId, ownership must be proven by that same userId.
-  // This prevents access by supplying/guessing a guest sessionId fallback.
+  // If a resource has a userId, ownership must be proven by that same userId,
+  // even if a matching guest sessionId is provided.
   if (resource.userId) {
     return false
   }
