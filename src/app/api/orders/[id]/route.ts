@@ -15,6 +15,7 @@ import { getCachedData, invalidateCache, getRedisClient } from '@/lib/redis'
 import { CACHE_KEYS, CACHE_TTL, invalidateUserOrderCaches } from '@/lib/cache'
 import { logError } from '@/lib/logger'
 import { waitUntil } from '@vercel/functions'
+import { assertOwnership } from '@/lib/ownership'
 
 export const dynamic = 'force-dynamic'
 
@@ -53,7 +54,7 @@ export async function GET(
       CACHE_TTL.ORDER_DETAIL_STALE
     )
 
-    if (order?.userId !== session.user.id) {
+    if (!order || !assertOwnership(order, session)) {
       return apiError('Order not found', 404)
     }
 
@@ -81,7 +82,7 @@ export async function PATCH(
       where: eq(orders.id, id),
     })
 
-    if (order?.userId !== session.user.id) {
+    if (!order || !assertOwnership(order, session)) {
       return apiError('Order not found', 404)
     }
 
