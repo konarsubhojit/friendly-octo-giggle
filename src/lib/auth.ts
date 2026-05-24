@@ -17,6 +17,9 @@ import {
 
 const INVALID_CREDENTIALS_ERROR = 'Invalid credentials'
 
+/** How often (in seconds) to re-validate a token against the DB. */
+const JWT_DB_CHECK_INTERVAL = 5 * 60
+
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: DrizzleAdapter(primaryDrizzleDb, {
     usersTable: users,
@@ -192,14 +195,67 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
       return session
     },
-    jwt({ token, user }) {
+    async jwt({ token, user }) {
       if (user) {
+        // Sign-in: populate token from user object
         token.id = user.id ?? ''
         token.role = user.role || 'CUSTOMER'
         if ('phoneNumber' in user && user.phoneNumber) {
           token.phoneNumber = user.phoneNumber
         }
+
+        // Fetch sessionVersion from DB so forced-logout can be detected later
+        if (user.id) {
+          const dbUser = await primaryDrizzleDb.query.users.findFirst({
+            where: eq(users.id, user.id),
+            columns: { sessionVersion: true },
+          })
+          token.sessionVersion = dbUser?.sessionVersion ?? 0
+        }
+
+        token.lastDbCheckAt = Math.floor(Date.now() / 1000)
+        return token
       }
+
+      // Subsequent requests: periodically re-validate role & lock status from DB
+      const userId = token.id as string | undefined
+      if (!userId) return token
+
+      const lastCheck = token.lastDbCheckAt as number | undefined
+      const now = Math.floor(Date.now() / 1000)
+
+      if (
+        lastCheck === undefined ||
+        now - lastCheck >= JWT_DB_CHECK_INTERVAL
+      ) {
+        const dbUser = await primaryDrizzleDb.query.users.findFirst({
+          where: eq(users.id, userId),
+          columns: { role: true, lockedUntil: true, sessionVersion: true },
+        })
+
+        // User deleted → invalidate
+        if (!dbUser) return null
+
+        // Account locked → invalidate
+        if (dbUser.lockedUntil && dbUser.lockedUntil > new Date()) {
+          return null
+        }
+
+        // Session version bumped (admin forced logout-all) → invalidate
+        const storedVersion = token.sessionVersion as number | undefined
+        if (
+          storedVersion !== undefined &&
+          dbUser.sessionVersion !== storedVersion
+        ) {
+          return null
+        }
+
+        // Refresh token with latest DB state
+        token.role = dbUser.role
+        token.sessionVersion = dbUser.sessionVersion
+        token.lastDbCheckAt = now
+      }
+
       return token
     },
     signIn({ user, account }) {
@@ -228,6 +284,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   },
   session: {
     strategy: 'jwt',
-    maxAge: 24 * 60 * 60,
+    maxAge: 2 * 60 * 60, // 2 hours
+    updateAge: 15 * 60, // Roll the cookie every 15 minutes of activity
   },
 })

@@ -17,7 +17,7 @@ const mockNextAuthReturn = vi.hoisted(() => ({
 }))
 
 interface NextAuthConfig {
-  session: { strategy: string; maxAge: number }
+  session: { strategy: string; maxAge: number; updateAge?: number }
   pages: { signIn: string; error: string }
   providers: Array<{
     id: string
@@ -33,7 +33,7 @@ interface NextAuthConfig {
     jwt: (params: {
       token: Record<string, unknown>
       user?: Record<string, unknown>
-    }) => Record<string, unknown>
+    }) => Promise<Record<string, unknown> | null>
     signIn: (params: {
       user: Record<string, unknown>
       account: Record<string, unknown> | null
@@ -166,7 +166,9 @@ describe('auth module', () => {
 
   it('calls NextAuth with jwt strategy and custom pages', () => {
     expect(capturedConfig).toBeDefined()
-    expect(capturedConfig.session).toEqual({ strategy: 'jwt', maxAge: 86400 })
+    expect(capturedConfig.session.strategy).toBe('jwt')
+    expect(capturedConfig.session.maxAge).toBe(2 * 60 * 60)
+    expect(capturedConfig.session.updateAge).toBe(15 * 60)
     expect(capturedConfig.pages).toEqual({
       signIn: '/auth/signin',
       error: '/auth/error',
@@ -206,22 +208,136 @@ describe('auth module', () => {
   })
 
   describe('callbacks.jwt', () => {
-    it('sets token.id and token.role from user', () => {
+    it('sets token.id, token.role, sessionVersion, and lastDbCheckAt from user on sign-in', async () => {
+      mockFindFirst.mockResolvedValueOnce({ sessionVersion: 3 })
       const token = { sub: 'sub-1' }
       const user = { id: 'user-789', role: 'ADMIN' }
 
-      const result = capturedConfig.callbacks.jwt({ token, user })
+      const result = await capturedConfig.callbacks.jwt({ token, user })
 
-      expect(result.id).toBe('user-789')
-      expect(result.role).toBe('ADMIN')
+      expect(result).not.toBeNull()
+      expect(result!.id).toBe('user-789')
+      expect(result!.role).toBe('ADMIN')
+      expect(result!.sessionVersion).toBe(3)
+      expect(typeof result!.lastDbCheckAt).toBe('number')
     })
 
-    it('returns token unchanged when no user is present', () => {
-      const token = { sub: 'sub-1', id: 'existing-id', role: 'CUSTOMER' }
+    it('returns token unchanged when no user and lastDbCheckAt is recent', async () => {
+      const now = Math.floor(Date.now() / 1000)
+      const token = {
+        sub: 'sub-1',
+        id: 'existing-id',
+        role: 'CUSTOMER',
+        lastDbCheckAt: now,
+        sessionVersion: 0,
+      }
 
-      const result = capturedConfig.callbacks.jwt({ token, user: undefined })
+      const result = await capturedConfig.callbacks.jwt({
+        token,
+        user: undefined,
+      })
 
       expect(result).toEqual(token)
+      expect(mockFindFirst).not.toHaveBeenCalled()
+    })
+
+    it('re-validates from DB when lastDbCheckAt is stale', async () => {
+      const stale = Math.floor(Date.now() / 1000) - 10 * 60 // 10 min ago
+      const token = {
+        sub: 'sub-1',
+        id: 'existing-id',
+        role: 'CUSTOMER',
+        lastDbCheckAt: stale,
+        sessionVersion: 1,
+      }
+      mockFindFirst.mockResolvedValueOnce({
+        role: 'CUSTOMER',
+        lockedUntil: null,
+        sessionVersion: 1,
+      })
+
+      const result = await capturedConfig.callbacks.jwt({
+        token,
+        user: undefined,
+      })
+
+      expect(result).not.toBeNull()
+      expect(result!.role).toBe('CUSTOMER')
+      expect((result!.lastDbCheckAt as number) > stale).toBe(true)
+    })
+
+    it('returns null (invalidates session) when user is not found in DB', async () => {
+      const stale = Math.floor(Date.now() / 1000) - 10 * 60
+      const token = { sub: 'sub-1', id: 'deleted-user', lastDbCheckAt: stale }
+      mockFindFirst.mockResolvedValueOnce(null)
+
+      const result = await capturedConfig.callbacks.jwt({
+        token,
+        user: undefined,
+      })
+
+      expect(result).toBeNull()
+    })
+
+    it('returns null when account is locked in DB', async () => {
+      const stale = Math.floor(Date.now() / 1000) - 10 * 60
+      const token = {
+        sub: 'sub-1',
+        id: 'locked-user',
+        lastDbCheckAt: stale,
+        sessionVersion: 0,
+      }
+      mockFindFirst.mockResolvedValueOnce({
+        role: 'CUSTOMER',
+        lockedUntil: new Date(Date.now() + 60_000),
+        sessionVersion: 0,
+      })
+
+      const result = await capturedConfig.callbacks.jwt({
+        token,
+        user: undefined,
+      })
+
+      expect(result).toBeNull()
+    })
+
+    it('returns null when sessionVersion has changed (forced logout)', async () => {
+      const stale = Math.floor(Date.now() / 1000) - 10 * 60
+      const token = {
+        sub: 'sub-1',
+        id: 'user-123',
+        lastDbCheckAt: stale,
+        sessionVersion: 1,
+      }
+      mockFindFirst.mockResolvedValueOnce({
+        role: 'ADMIN',
+        lockedUntil: null,
+        sessionVersion: 2, // bumped by admin
+      })
+
+      const result = await capturedConfig.callbacks.jwt({
+        token,
+        user: undefined,
+      })
+
+      expect(result).toBeNull()
+    })
+
+    it('triggers DB re-validation when lastDbCheckAt is missing', async () => {
+      const token = { sub: 'sub-1', id: 'existing-id', role: 'CUSTOMER' }
+      mockFindFirst.mockResolvedValueOnce({
+        role: 'CUSTOMER',
+        lockedUntil: null,
+        sessionVersion: 0,
+      })
+
+      const result = await capturedConfig.callbacks.jwt({
+        token,
+        user: undefined,
+      })
+
+      expect(result).not.toBeNull()
+      expect(mockFindFirst).toHaveBeenCalled()
     })
   })
 
@@ -498,7 +614,8 @@ describe('auth module', () => {
   })
 
   describe('callbacks.jwt phoneNumber', () => {
-    it('sets phoneNumber on token when user has it', () => {
+    it('sets phoneNumber on token when user has it', async () => {
+      mockFindFirst.mockResolvedValueOnce({ sessionVersion: 0 })
       const token = { sub: 'sub-1' }
       const user = {
         id: 'user-123',
@@ -506,18 +623,19 @@ describe('auth module', () => {
         phoneNumber: '+1234567890',
       }
 
-      const result = capturedConfig.callbacks.jwt({ token, user })
+      const result = await capturedConfig.callbacks.jwt({ token, user })
 
-      expect(result.phoneNumber).toBe('+1234567890')
+      expect(result!.phoneNumber).toBe('+1234567890')
     })
 
-    it('does not set phoneNumber when user does not have it', () => {
+    it('does not set phoneNumber when user does not have it', async () => {
+      mockFindFirst.mockResolvedValueOnce({ sessionVersion: 0 })
       const token = { sub: 'sub-1' }
       const user = { id: 'user-123', role: 'CUSTOMER' }
 
-      const result = capturedConfig.callbacks.jwt({ token, user })
+      const result = await capturedConfig.callbacks.jwt({ token, user })
 
-      expect(result.phoneNumber).toBeUndefined()
+      expect(result!.phoneNumber).toBeUndefined()
     })
   })
 
@@ -532,14 +650,15 @@ describe('auth module', () => {
   })
 
   describe('callbacks.jwt edge cases', () => {
-    it('defaults role to CUSTOMER when user.role is missing', () => {
+    it('defaults role to CUSTOMER when user.role is missing', async () => {
+      mockFindFirst.mockResolvedValueOnce({ sessionVersion: 0 })
       const token = { sub: 'sub-1' }
       const user = { id: 'user-nrole' }
 
-      const result = capturedConfig.callbacks.jwt({ token, user })
+      const result = await capturedConfig.callbacks.jwt({ token, user })
 
-      expect(result.id).toBe('user-nrole')
-      expect(result.role).toBe('CUSTOMER')
+      expect(result!.id).toBe('user-nrole')
+      expect(result!.role).toBe('CUSTOMER')
     })
   })
 
