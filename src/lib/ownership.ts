@@ -27,8 +27,8 @@ export const assertOwnership = <T extends OwnershipResource>(
     return resource.userId === sessionUserId
   }
 
-  // If a resource has a userId, ownership must be proven by that same userId,
-  // even if a matching guest sessionId is provided.
+  // If a resource has a userId, only that userId can establish ownership.
+  // Guest sessionId fallback is never allowed for user-owned resources.
   if (resource.userId) {
     return false
   }

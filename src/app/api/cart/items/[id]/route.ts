@@ -45,12 +45,13 @@ export async function PATCH(
       )
     }
 
+    const cartOwner = {
+      userId: cartItem.cart.userId,
+      sessionId: cartItem.cart.sessionId,
+    }
+
     if (
-      !assertOwnership(
-        { userId: cartItem.cart.userId, sessionId: cartItem.cart.sessionId },
-        session,
-        { sessionId }
-      )
+      !assertOwnership(cartOwner, session, { sessionId })
     ) {
       return NextResponse.json(
         { error: 'Cart item not found' },
@@ -118,12 +119,13 @@ export async function DELETE(
       )
     }
 
+    const cartOwner = {
+      userId: cartItem.cart.userId,
+      sessionId: cartItem.cart.sessionId,
+    }
+
     if (
-      !assertOwnership(
-        { userId: cartItem.cart.userId, sessionId: cartItem.cart.sessionId },
-        session,
-        { sessionId }
-      )
+      !assertOwnership(cartOwner, session, { sessionId })
     ) {
       return NextResponse.json(
         { error: 'Cart item not found' },
