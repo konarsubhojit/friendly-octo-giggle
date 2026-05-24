@@ -53,4 +53,14 @@ describe('assertOwnership', () => {
       )
     ).toBe(false)
   })
+
+  it('returns false when authenticated user mismatches a user-owned resource even if sessionId matches', () => {
+    expect(
+      assertOwnership(
+        { userId: 'user-1', sessionId: 'guest-1' },
+        { user: { id: 'user-2' } },
+        { sessionId: 'guest-1' }
+      )
+    ).toBe(false)
+  })
 })

@@ -27,15 +27,11 @@ export const assertOwnership = (
     return resource.userId === sessionUserId
   }
 
-  // Do not allow guest-session fallback for user-owned resources. This blocks
-  // attempts to bypass user ownership checks by supplying/guessing a sessionId.
+  // If a resource has a userId, ownership must be proven by that same userId.
+  // This prevents access by supplying/guessing a guest sessionId fallback.
   if (resource.userId) {
     return false
   }
 
-  return Boolean(
-    resource.sessionId &&
-    options.sessionId &&
-    resource.sessionId === options.sessionId
-  )
+  return !!options.sessionId && resource.sessionId === options.sessionId
 }
