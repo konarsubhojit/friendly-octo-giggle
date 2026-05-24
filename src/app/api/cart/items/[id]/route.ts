@@ -15,6 +15,9 @@ import { assertOwnership } from '@/lib/ownership'
 
 export const dynamic = 'force-dynamic'
 
+const toCartOwner = (cart: { userId: string | null; sessionId: string | null }) =>
+  ({ userId: cart.userId, sessionId: cart.sessionId }) as const
+
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -45,10 +48,7 @@ export async function PATCH(
       )
     }
 
-    const cartOwner = {
-      userId: cartItem.cart.userId,
-      sessionId: cartItem.cart.sessionId,
-    }
+    const cartOwner = toCartOwner(cartItem.cart)
 
     if (
       !assertOwnership(cartOwner, session, { sessionId })
@@ -119,10 +119,7 @@ export async function DELETE(
       )
     }
 
-    const cartOwner = {
-      userId: cartItem.cart.userId,
-      sessionId: cartItem.cart.sessionId,
-    }
+    const cartOwner = toCartOwner(cartItem.cart)
 
     if (
       !assertOwnership(cartOwner, session, { sessionId })
