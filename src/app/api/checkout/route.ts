@@ -10,6 +10,9 @@ import { apiError, isJsonBodyParseError, parseJsonBody } from '@/lib/api-utils'
 import { logBusinessEvent, logError } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
+// Route-level validation intentionally stays loose because checkout-service
+// injects authenticated user defaults and performs strict SubmitCheckoutSchema
+// validation before enqueueing.
 const CheckoutRequestBodySchema = z.record(z.string(), z.unknown())
 
 const handlePost = async (request: NextRequest) => {

@@ -69,6 +69,8 @@ export const parseJsonBody = async <TSchema extends ZodType>(
 
   let rawBody: unknown
   if (rawText.trim().length === 0) {
+    // Empty request bodies are treated as empty objects so callers can support
+    // optional JSON payloads with schema-level defaults.
     rawBody = {}
   } else {
     try {

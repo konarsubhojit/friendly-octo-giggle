@@ -14,6 +14,9 @@ import {
 } from '@/features/orders/services/order-service'
 
 export const dynamic = 'force-dynamic'
+// Route-level validation intentionally stays loose because checkout-service
+// injects authenticated user defaults and performs strict SubmitCheckoutSchema
+// validation before enqueueing.
 const CheckoutRequestBodySchema = z.record(z.string(), z.unknown())
 
 const handleGet = async (request: NextRequest) => {
