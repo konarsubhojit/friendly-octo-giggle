@@ -492,7 +492,10 @@ describe('POST /api/ai/products/[id]/chat', () => {
         method: 'POST',
         body: JSON.stringify({
           messages: [
-            { role: 'user', text: 'Write a Python script to scrape a website.' },
+            {
+              role: 'user',
+              text: 'Write a Python script to scrape a website.',
+            },
           ],
         }),
       }

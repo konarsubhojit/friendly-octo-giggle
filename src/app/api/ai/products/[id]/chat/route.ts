@@ -194,7 +194,8 @@ export const POST = async (
     }
 
     const lastUserText =
-      sanitizedMessages.findLast((message) => message.role === 'user')?.text ?? ''
+      sanitizedMessages.findLast((message) => message.role === 'user')?.text ??
+      ''
     const blockedReason = detectBlockedPrompt(lastUserText)
     if (blockedReason) {
       return apiError(blockedReason, 400)
