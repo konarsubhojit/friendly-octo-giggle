@@ -8,6 +8,7 @@ import { db, drizzleDb } from '@/lib/db'
 import { apiError, handleApiError } from '@/lib/api-utils'
 import { logError, logBusinessEvent } from '@/lib/logger'
 import { formatPriceForCurrency, isValidCurrencyCode } from '@/lib/currency'
+import { getRedisClient } from '@/lib/redis'
 import type { CurrencyCode } from '@/lib/currency'
 import type { Content } from '@google/genai'
 import { users } from '@/lib/schema'
@@ -25,6 +26,35 @@ const ChatRequestSchema = z.object({
 
 type ChatMessage = z.infer<typeof ChatMessageSchema>
 
+const MAX_INPUT_MESSAGE_CHARS = 500
+const MAX_CONVERSATION_TURNS = 6
+const MAX_OUTPUT_TOKENS = 400
+const DAILY_REQUEST_QUOTA = 40
+const DAILY_TOKEN_QUOTA = 12000
+const PRODUCT_CONTEXT_MAX_CHARS = 4000
+
+const JAILBREAK_PATTERNS = [
+  /\bignore\s+(all\s+)?(previous|prior)\s+(instructions|rules)\b/i,
+  /\b(system\s*prompt|developer\s*message|jailbreak|bypass\s+safety)\b/i,
+  /\b(reveal|show|print|dump)\b.{0,40}\b(prompt|instructions|hidden\s+rules)\b/i,
+  /\b(act\s+as|pretend\s+to\s+be)\b.{0,30}\b(system|developer|dan)\b/i,
+]
+
+const OFF_DOMAIN_PATTERNS = [
+  /\b(write|generate|create)\b.{0,30}\b(code|script|sql|program|regex|essay|poem)\b/i,
+  /\b(solve|calculate)\b.{0,20}\b(math|equation|homework)\b/i,
+  /\b(weather\s+(today|tomorrow|in)\b|forecast|temperature\s+in)\b/i,
+  /\b(latest\s+news|headlines|politics|election)\b/i,
+  /\bmedical\s+advice|diagnose|prescription|legal\s+advice\b/i,
+]
+
+const SYSTEM_PROMPT_LEAK_PATTERNS = [
+  /\[Product Information\]/gi,
+  /You are a helpful shopping assistant for this specific product\./gi,
+  /Answer questions using only the product information provided below\./gi,
+  /\bsystem\s*prompt\b/gi,
+]
+
 const SYSTEM_PROMPT_PREFIX = `You are a helpful shopping assistant for this specific product.
 Answer questions using only the product information provided below.
 Be concise. Focus on helping the customer make a purchase decision.
@@ -40,6 +70,129 @@ const toGoogleContents = (messages: ChatMessage[]): Content[] =>
     role: role === 'assistant' ? 'model' : 'user',
     parts: [{ text }],
   }))
+
+const estimateTokens = (text: string): number =>
+  text.trim().length === 0 ? 0 : Math.ceil(text.length / 4)
+
+const normalizePolicyText = (
+  text: string
+): { normalized: string; compact: string } => {
+  const normalized = text
+    .normalize('NFKC')
+    .replace(/[\u200B-\u200F\uFE00-\uFE0F]/g, '')
+    .toLowerCase()
+    .replace(/[013457]/g, (char) => {
+      const map: Record<string, string> = {
+        '0': 'o',
+        '1': 'i',
+        '3': 'e',
+        '4': 'a',
+        '5': 's',
+        '7': 't',
+      }
+      return map[char] ?? char
+    })
+    .replace(/\s+/gu, ' ')
+    .trim()
+  return {
+    normalized,
+    compact: normalized.replace(/[^a-z]/g, ''),
+  }
+}
+
+const sanitizePromptText = (
+  text: string,
+  maxChars = MAX_INPUT_MESSAGE_CHARS
+): string =>
+  text
+    .normalize('NFKC')
+    .replace(/[\u200B-\u200F\uFE00-\uFE0F]/g, '')
+    .replace(/[\p{Cc}\p{Cf}]/gu, ' ')
+    .replace(/[<>{}`$]/g, ' ')
+    .replace(/\s+/gu, ' ')
+    .trim()
+    .slice(0, maxChars)
+
+const sanitizeAssistantOutput = (text: string): string =>
+  SYSTEM_PROMPT_LEAK_PATTERNS.reduce(
+    (safe, pattern) => safe.replace(pattern, ''),
+    text
+  )
+
+const utcDateKey = (): string => new Date().toISOString().slice(0, 10)
+
+const secondsUntilNextUtcMidnight = (): number => {
+  const now = new Date()
+  const nextMidnightUtc = Date.UTC(
+    now.getUTCFullYear(),
+    now.getUTCMonth(),
+    now.getUTCDate() + 1
+  )
+  return Math.max(1, Math.ceil((nextMidnightUtc - now.getTime()) / 1000))
+}
+
+const getDailyUsage = async (
+  userId: string
+): Promise<{ requests: number; tokens: number }> => {
+  const redis = getRedisClient()
+  if (!redis) return { requests: 0, tokens: 0 }
+
+  const key = `ai:chat:usage:${userId}:${utcDateKey()}`
+  const raw =
+    ((await redis.hgetall(key)) as Record<string, string> | null) ?? {}
+  const requests = Number(raw.requests ?? 0)
+  const tokens = Number(raw.tokens ?? 0)
+  return {
+    requests: Number.isFinite(requests) ? requests : 0,
+    tokens: Number.isFinite(tokens) ? tokens : 0,
+  }
+}
+
+const recordDailyUsage = async (
+  userId: string,
+  tokenCount: number
+): Promise<void> => {
+  const redis = getRedisClient()
+  if (!redis) return
+
+  const key = `ai:chat:usage:${userId}:${utcDateKey()}`
+  const ttlSeconds = secondsUntilNextUtcMidnight()
+  await redis.hincrby(key, 'requests', 1)
+  await redis.hincrby(key, 'tokens', tokenCount)
+  await redis.expire(key, ttlSeconds)
+}
+
+const adjustDailyTokenUsage = async (
+  userId: string,
+  tokenDelta: number
+): Promise<void> => {
+  if (tokenDelta === 0) return
+  const redis = getRedisClient()
+  if (!redis) return
+
+  const key = `ai:chat:usage:${userId}:${utcDateKey()}`
+  await redis.hincrby(key, 'tokens', tokenDelta)
+  await redis.expire(key, secondsUntilNextUtcMidnight())
+}
+
+const detectBlockedPrompt = (text: string): string | null => {
+  const { normalized, compact } = normalizePolicyText(text)
+  if (
+    JAILBREAK_PATTERNS.some(
+      (pattern) => pattern.test(normalized) || pattern.test(compact)
+    )
+  ) {
+    return 'Prompt contains disallowed instructions.'
+  }
+  if (
+    OFF_DOMAIN_PATTERNS.some(
+      (pattern) => pattern.test(normalized) || pattern.test(compact)
+    )
+  ) {
+    return 'Only product-related questions are allowed.'
+  }
+  return null
+}
 
 export const POST = async (
   request: NextRequest,
@@ -69,6 +222,45 @@ export const POST = async (
       return apiError('Authentication required', 401)
     }
 
+    if (
+      parsed.data.messages.some(
+        (message) =>
+          message.text.trim().length === 0 ||
+          message.text.length > MAX_INPUT_MESSAGE_CHARS
+      )
+    ) {
+      return apiError(
+        `Each message must be between 1 and ${MAX_INPUT_MESSAGE_CHARS} characters`,
+        400
+      )
+    }
+
+    const sanitizedMessages = parsed.data.messages.map((message) => ({
+      ...message,
+      text: sanitizePromptText(message.text),
+    }))
+    if (sanitizedMessages.some((message) => message.text.length === 0)) {
+      return apiError('Messages must include meaningful text', 400)
+    }
+
+    const conversationTurns = sanitizedMessages.filter(
+      (message) => message.role === 'user'
+    ).length
+    if (conversationTurns > MAX_CONVERSATION_TURNS) {
+      return apiError(
+        `Conversation is limited to ${MAX_CONVERSATION_TURNS} user turns`,
+        400
+      )
+    }
+
+    const lastUserText =
+      sanitizedMessages.findLast((message) => message.role === 'user')?.text ??
+      ''
+    const blockedReason = detectBlockedPrompt(lastUserText)
+    if (blockedReason) {
+      return apiError(blockedReason, 400)
+    }
+
     let currencyCode: CurrencyCode = 'INR'
     const userRecord = await drizzleDb.query.users.findFirst({
       where: eq(users.id, session.user.id),
@@ -89,19 +281,40 @@ export const POST = async (
 
     const systemPrompt =
       SYSTEM_PROMPT_PREFIX +
-      buildProductContext(product, {
-        currencyCode,
-        formatPrice: (priceInINR: number) =>
-          formatPriceForCurrency(priceInINR, currencyCode),
-      })
+      sanitizePromptText(
+        buildProductContext(product, {
+          currencyCode,
+          formatPrice: (priceInINR: number) =>
+            formatPriceForCurrency(priceInINR, currencyCode),
+        }),
+        PRODUCT_CONTEXT_MAX_CHARS
+      )
 
-    const trimmed = parsed.data.messages.slice(-aiConfig.maxHistoryMessages)
+    const trimmed = sanitizedMessages.slice(
+      -Math.min(aiConfig.maxHistoryMessages, MAX_CONVERSATION_TURNS * 2)
+    )
     const isSingleTurn = trimmed.length === 1
-    const lastUserText = trimmed.findLast((m) => m.role === 'user')?.text ?? ''
+    const estimatedInputTokens = trimmed.reduce(
+      (sum, message) => sum + estimateTokens(message.text),
+      0
+    )
+
+    const dailyUsage = await getDailyUsage(session.user.id)
+    if (dailyUsage.requests + 1 > DAILY_REQUEST_QUOTA) {
+      return apiError('Daily AI chat request quota exceeded', 429)
+    }
+    const reservedTotalTokens = estimatedInputTokens + MAX_OUTPUT_TOKENS
+    if (dailyUsage.tokens + reservedTotalTokens > DAILY_TOKEN_QUOTA) {
+      return apiError('Daily AI chat token quota exceeded', 429)
+    }
 
     if (isSingleTurn && lastUserText) {
       const cached = await getCachedAiResponse(id, lastUserText, currencyCode)
       if (cached !== null) {
+        const outputTokens = estimateTokens(cached)
+        const totalTokens = estimatedInputTokens + outputTokens
+        await recordDailyUsage(session.user.id, totalTokens)
+
         logBusinessEvent({
           event: 'ai_chat_request',
           details: {
@@ -112,13 +325,31 @@ export const POST = async (
           },
           success: true,
         })
+        logBusinessEvent({
+          event: 'ai_chat_usage',
+          userId: session.user.id,
+          details: {
+            productId: id,
+            cached: true,
+            inputTokens: estimatedInputTokens,
+            outputTokens,
+            totalTokens,
+            requestsUsed: dailyUsage.requests + 1,
+          },
+          success: true,
+        })
         return NextResponse.json({ text: cached })
       }
     }
 
     const contents = toGoogleContents(trimmed)
-    const generateConfig = buildGenerateConfig(aiConfig, systemPrompt)
+    const generateConfig = {
+      ...buildGenerateConfig(aiConfig, systemPrompt),
+      maxOutputTokens: Math.min(aiConfig.maxResponseTokens, MAX_OUTPUT_TOKENS),
+    }
     const messageCount = trimmed.length
+
+    await recordDailyUsage(session.user.id, reservedTotalTokens)
 
     const stream = await genAI.models.generateContentStream({
       model: chatModel,
@@ -143,7 +374,7 @@ export const POST = async (
         let fullText = ''
         try {
           for await (const chunk of stream) {
-            const text = chunk.text
+            const text = sanitizeAssistantOutput(chunk.text ?? '')
             if (text) {
               fullText += text
               controller.enqueue(encoder.encode(text))
@@ -162,6 +393,38 @@ export const POST = async (
         }
       },
     })
+
+    waitUntil(
+      fullTextPromise
+        .then(async (text) => {
+          const outputTokens = estimateTokens(text)
+          const totalTokens = estimatedInputTokens + outputTokens
+          await adjustDailyTokenUsage(
+            session.user.id,
+            totalTokens - reservedTotalTokens
+          )
+          logBusinessEvent({
+            event: 'ai_chat_usage',
+            userId: session.user.id,
+            details: {
+              productId: id,
+              cached: false,
+              inputTokens: estimatedInputTokens,
+              outputTokens,
+              totalTokens,
+              requestsUsed: dailyUsage.requests + 1,
+            },
+            success: true,
+          })
+        })
+        .catch((error) =>
+          logError({
+            error,
+            context: 'ai_chat_usage_log',
+            additionalInfo: { productId: id, userId: session.user.id },
+          })
+        )
+    )
 
     if (isSingleTurn && lastUserText) {
       waitUntil(
