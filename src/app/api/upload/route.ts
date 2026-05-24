@@ -151,14 +151,14 @@ export async function POST(request: Request) {
           { status: 400 }
         )
       }
-      if (!hasAzureAccountAliasError) {
+      if (hasAzureAccountAliasError) {
         return NextResponse.json(
-          { error: 'Invalid upload form fields.' },
+          { error: 'Invalid azureAccountAlias. Expected a non-empty string.' },
           { status: 400 }
         )
       }
       return NextResponse.json(
-        { error: 'Invalid azureAccountAlias. Expected a non-empty string.' },
+        { error: 'Invalid upload form fields.' },
         { status: 400 }
       )
     }
