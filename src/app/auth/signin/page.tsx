@@ -120,6 +120,14 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
 
         {/* Links */}
         <div className="mt-6 text-center space-y-3">
+          <p>
+            <Link
+              href="/auth/forgot-password"
+              className="text-sm font-semibold text-[var(--btn-primary)] hover:text-[var(--btn-primary-hover)]"
+            >
+              Forgot your password?
+            </Link>
+          </p>
           <p className="text-sm text-[var(--text-secondary)]">
             Don&apos;t have an account?{' '}
             <Link
