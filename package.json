@@ -49,7 +49,7 @@
     "@types/react-dom": "^19.2.3",
     "@upstash/qstash": "^2.10.1",
     "@upstash/ratelimit": "^2.0.8",
-    "@upstash/redis": "^1.37.0",
+    "@upstash/redis": "^1.38.0",
     "@upstash/search": "^0.1.7",
     "@upstash/search-ui": "^0.1.5",
     "@vercel/analytics": "^2.0.1",
