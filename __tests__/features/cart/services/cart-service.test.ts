@@ -396,7 +396,7 @@ describe('cart-service', () => {
         'sess1'
       )
 
-      expect(rotatedSessionId).toMatch(/^guest_\d+_[0-9a-f-]+$/)
+      expect(rotatedSessionId).toMatch(/^guest_[0-9a-f-]+$/)
       expect(mockPrimaryDrizzleDbUpdate).toHaveBeenCalled()
       expect(mockInvalidateCartCache).toHaveBeenCalledWith('user1', undefined)
       expect(mockInvalidateCartCache).toHaveBeenCalledWith(undefined, 'sess1')
@@ -424,7 +424,7 @@ describe('cart-service', () => {
         'sess1'
       )
 
-      expect(rotatedSessionId).toMatch(/^guest_\d+_[0-9a-f-]+$/)
+      expect(rotatedSessionId).toMatch(/^guest_[0-9a-f-]+$/)
       expect(mockLogError).toHaveBeenCalledWith(
         expect.objectContaining({ context: 'cart_merge_cache_cleanup' })
       )

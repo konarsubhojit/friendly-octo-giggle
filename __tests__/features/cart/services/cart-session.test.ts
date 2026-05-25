@@ -33,7 +33,7 @@ describe('cart-session helpers', () => {
   it('creates opaque guest cart session identifiers', () => {
     const sessionId = createGuestCartSessionId()
 
-    expect(sessionId).toMatch(/^guest_\d+_[0-9a-f-]+$/)
+    expect(sessionId).toMatch(/^guest_[0-9a-f-]+$/)
   })
 
   it('creates unique guest cart session identifiers', () => {

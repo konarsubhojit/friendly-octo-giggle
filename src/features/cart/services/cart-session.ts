@@ -20,7 +20,7 @@ const createCartSessionSignature = (sessionId: string): string =>
     .digest('base64url')
 
 export const createGuestCartSessionId = (): string =>
-  `guest_${Date.now()}_${crypto.randomUUID()}`
+  `guest_${crypto.randomUUID()}`
 
 export const signCartSessionCookieValue = (sessionId: string): string => {
   const signature = createCartSessionSignature(sessionId)

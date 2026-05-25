@@ -528,29 +528,35 @@ export const mergeGuestCartIntoUserCart = async (
     await primaryDrizzleDb.delete(carts).where(eq(carts.id, guestCart.id))
   }
 
-  const cleanupResults = await Promise.allSettled([
-    invalidateCartCache(userId, undefined),
-    invalidateCartCache(undefined, sessionId),
-    removeCartItemsByCartId(guestCart.id, undefined, sessionId),
-  ])
+  const cleanupOperations = [
+    {
+      operation: 'invalidate_user_cart_cache',
+      promise: invalidateCartCache(userId, undefined),
+    },
+    {
+      operation: 'invalidate_guest_cart_cache',
+      promise: invalidateCartCache(undefined, sessionId),
+    },
+    {
+      operation: 'remove_guest_cart_items_from_redis',
+      promise: removeCartItemsByCartId(guestCart.id, undefined, sessionId),
+    },
+  ] as const
+
+  const cleanupResults = await Promise.allSettled(
+    cleanupOperations.map(({ promise }) => promise)
+  )
 
   cleanupResults.forEach((result, index) => {
     if (result.status === 'fulfilled') {
       return
     }
 
-    const operation =
-      index === 0
-        ? 'invalidate_user_cart_cache'
-        : index === 1
-          ? 'invalidate_guest_cart_cache'
-          : 'remove_guest_cart_items_from_redis'
-
     logError({
       error: result.reason,
       context: 'cart_merge_cache_cleanup',
       additionalInfo: {
-        operation,
+        operation: cleanupOperations[index]?.operation,
         userId,
         sessionId,
         guestCartId: guestCart.id,
