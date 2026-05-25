@@ -6,9 +6,15 @@ import {
   savePasswordToHistory,
 } from '@/features/auth/services/password'
 import { primaryDrizzleDb } from '@/lib/db'
-import { users } from '@/lib/schema'
+import { users, verificationTokens } from '@/lib/schema'
 import { eq, or } from 'drizzle-orm'
-import { logAuthEvent } from '@/lib/logger'
+import { logAuthEvent, logError } from '@/lib/logger'
+import {
+  createEmailVerificationIdentifier,
+  generateEmailVerificationToken,
+} from '@/features/auth/services/email-verification'
+import { getQStashClient } from '@/lib/qstash'
+import { env } from '@/lib/env'
 
 export async function POST(request: NextRequest) {
   try {
@@ -56,6 +62,42 @@ export async function POST(request: NextRequest) {
       .returning({ id: users.id })
 
     await savePasswordToHistory(newUser.id, passwordHash)
+
+    const identifier = createEmailVerificationIdentifier(newUser.id)
+    const { plainToken, tokenHash, expiresAt } =
+      generateEmailVerificationToken()
+
+    await primaryDrizzleDb
+      .delete(verificationTokens)
+      .where(eq(verificationTokens.identifier, identifier))
+
+    await primaryDrizzleDb.insert(verificationTokens).values({
+      identifier,
+      token: tokenHash,
+      expires: expiresAt,
+    })
+
+    const appBaseUrl = env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+    const verifyUrl = `${appBaseUrl}/auth/verify-email?token=${encodeURIComponent(plainToken)}&identifier=${encodeURIComponent(identifier)}`
+    try {
+      await getQStashClient().publishJSON({
+        url: `${appBaseUrl}/api/services/email-verification-email`,
+        body: {
+          type: 'auth.email_verification_requested',
+          data: {
+            to: email,
+            customerName: name,
+            verifyUrl,
+          },
+        },
+      })
+    } catch (publishError) {
+      logError({
+        error: publishError,
+        context: 'email_verification_qstash_publish_failed',
+        additionalInfo: { email, userId: newUser.id },
+      })
+    }
 
     logAuthEvent({
       event: 'register',

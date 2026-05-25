@@ -151,7 +151,7 @@ export default function RegisterPage() {
         })
         const data = await res.json()
         if (!res.ok) return parseRegisterError(data)
-        router.push('/auth/signin?registered=true')
+        router.push('/auth/verify-email?registered=true')
         return undefined
       } catch {
         return "We couldn't create your account right now. Please try again in a moment."

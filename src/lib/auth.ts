@@ -124,6 +124,18 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           return null
         }
 
+        // Credentials users must verify email before sign in.
+        if (!user.emailVerified) {
+          logAuthEvent({
+            event: 'failed_login',
+            userId: user.id,
+            email: user.email,
+            success: false,
+            error: 'Email not verified',
+          })
+          return null
+        }
+
         const isValid = await verifyPassword(password, user.passwordHash)
         if (!isValid) {
           const failedAttempt = await recordFailedLoginAttempt({
