@@ -455,6 +455,14 @@ export const buildGuestSessionCookieOptions = () => {
   }
 }
 
+/**
+ * Merge a guest cart into an authenticated user's cart and invalidate the
+ * previous guest session identifier.
+ *
+ * Returns a freshly generated guest session ID when a guest cart was found and
+ * merged so callers can rotate the `cart_session` cookie. Returns `undefined`
+ * when there is no guest cart for the provided session ID.
+ */
 export const mergeGuestCartIntoUserCart = async (
   userId: string,
   sessionId: string
@@ -514,13 +522,12 @@ export const mergeGuestCartIntoUserCart = async (
       })
     }
 
-    await Promise.all([
-      primaryDrizzleDb
-        .update(carts)
-        .set({ updatedAt: now })
-        .where(eq(carts.id, userCart.id)),
-      primaryDrizzleDb.delete(carts).where(eq(carts.id, guestCart.id)),
-    ])
+    await primaryDrizzleDb
+      .update(carts)
+      .set({ updatedAt: now })
+      .where(eq(carts.id, userCart.id))
+
+    await primaryDrizzleDb.delete(carts).where(eq(carts.id, guestCart.id))
   }
 
   await Promise.all([

@@ -2,6 +2,7 @@ import { createHmac, timingSafeEqual } from 'node:crypto'
 
 export const CART_SESSION_COOKIE_NAME = 'cart_session'
 const CART_SESSION_COOKIE_VERSION = 'v1'
+const CART_SESSION_HMAC_PURPOSE = 'cart-session'
 
 const getCartSessionSecret = (): string => {
   const secret = process.env.NEXTAUTH_SECRET
@@ -13,7 +14,9 @@ const getCartSessionSecret = (): string => {
 
 const createCartSessionSignature = (sessionId: string): string =>
   createHmac('sha256', getCartSessionSecret())
-    .update(`${CART_SESSION_COOKIE_VERSION}.${sessionId}`)
+    .update(
+      `${CART_SESSION_HMAC_PURPOSE}:${CART_SESSION_COOKIE_VERSION}.${sessionId}`
+    )
     .digest('base64url')
 
 export const createGuestCartSessionId = (): string =>

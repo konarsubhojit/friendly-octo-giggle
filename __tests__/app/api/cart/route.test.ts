@@ -250,6 +250,25 @@ describe('Cart API Route', () => {
       expect(data).toEqual({ error: 'Failed to fetch cart' })
       expect(logError).toHaveBeenCalled()
     })
+
+    it('returns 500 and does not rotate the cookie when guest cart merge fails', async () => {
+      const signedSessionId = signCartSessionCookieValue('guest123')
+
+      ;(auth as Mock).mockResolvedValue({ user: { id: 'user123' } })
+      ;(drizzleDb.query.carts.findFirst as Mock).mockRejectedValue(
+        new Error('Merge failed')
+      )
+
+      const request = new NextRequest('http://localhost/api/cart', {
+        headers: { cookie: `cart_session=${signedSessionId}` },
+      })
+      const response = await GET(request)
+      const data = await response.json()
+
+      expect(response.status).toBe(500)
+      expect(data).toEqual({ error: 'Failed to fetch cart' })
+      expect(response.headers.get('set-cookie')).toBeNull()
+    })
   })
 
   describe('POST /api/cart', () => {

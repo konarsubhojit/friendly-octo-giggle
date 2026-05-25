@@ -35,4 +35,12 @@ describe('cart-session helpers', () => {
 
     expect(sessionId).toMatch(/^guest_\d+_[0-9a-f-]+$/)
   })
+
+  it('creates unique guest cart session identifiers', () => {
+    const sessionIds = new Set(
+      Array.from({ length: 5 }, () => createGuestCartSessionId())
+    )
+
+    expect(sessionIds.size).toBe(5)
+  })
 })
