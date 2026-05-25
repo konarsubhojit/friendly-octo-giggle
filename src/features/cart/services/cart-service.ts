@@ -530,11 +530,23 @@ export const mergeGuestCartIntoUserCart = async (
     await primaryDrizzleDb.delete(carts).where(eq(carts.id, guestCart.id))
   }
 
-  await Promise.all([
-    invalidateCartCache(userId, undefined),
-    invalidateCartCache(undefined, sessionId),
-    removeCartItemsByCartId(guestCart.id, undefined, sessionId),
-  ])
+  try {
+    await Promise.all([
+      invalidateCartCache(userId, undefined),
+      invalidateCartCache(undefined, sessionId),
+      removeCartItemsByCartId(guestCart.id, undefined, sessionId),
+    ])
+  } catch (error) {
+    logError({
+      error,
+      context: 'cart_merge_cache_cleanup',
+      additionalInfo: {
+        userId,
+        sessionId,
+        guestCartId: guestCart.id,
+      },
+    })
+  }
 
   return createGuestCartSessionId()
 }
