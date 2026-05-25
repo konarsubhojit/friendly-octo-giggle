@@ -485,6 +485,7 @@ describe('auth module', () => {
       mockFindFirst.mockResolvedValue({
         id: 'user-1',
         email: 'test@example.com',
+        emailVerified: new Date('2025-01-01T00:00:00.000Z'),
         lockedUntil: new Date('2099-01-01T00:00:00.000Z'),
         passwordHash: TEST_HASH,
       })
@@ -508,6 +509,7 @@ describe('auth module', () => {
       mockFindFirst.mockResolvedValue({
         id: 'user-1',
         email: 'test@example.com',
+        emailVerified: new Date('2025-01-01T00:00:00.000Z'),
         lockedUntil: null,
         passwordHash: TEST_HASH,
       })
@@ -529,6 +531,7 @@ describe('auth module', () => {
       mockFindFirst.mockResolvedValue({
         id: 'user-1',
         email: 'test@example.com',
+        emailVerified: new Date('2025-01-01T00:00:00.000Z'),
         lockedUntil: null,
         passwordHash: TEST_HASH,
       })
@@ -567,6 +570,7 @@ describe('auth module', () => {
         image: null,
         role: 'CUSTOMER',
         phoneNumber: '+1234567890',
+        emailVerified: new Date('2025-01-01T00:00:00.000Z'),
         lockedUntil: null,
         passwordHash: TEST_HASH,
       })
@@ -585,6 +589,30 @@ describe('auth module', () => {
       })
       expect(mockLogAuthEvent).not.toHaveBeenCalledWith(
         expect.objectContaining({ event: 'login' })
+      )
+    })
+
+    it('returns null when credentials user has not verified email', async () => {
+      mockFindFirst.mockResolvedValue({
+        id: 'user-1',
+        email: 'test@example.com',
+        emailVerified: null,
+        lockedUntil: null,
+        passwordHash: TEST_HASH,
+      })
+
+      const result = await authorize({
+        identifier: 'test@example.com',
+        password: TEST_CORRECT_PASSWORD,
+      })
+
+      expect(result).toBeNull()
+      expect(mockVerifyPassword).not.toHaveBeenCalled()
+      expect(mockLogAuthEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          event: 'failed_login',
+          error: 'Email not verified',
+        })
       )
     })
   })
