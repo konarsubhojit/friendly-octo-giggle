@@ -205,8 +205,9 @@ describe('Cart API Route', () => {
           items: [],
         })
         .mockResolvedValueOnce(null)
-      ;(drizzleDb.update as Mock)
-        .mockReturnValueOnce({ set: vi.fn(() => ({ where: vi.fn() })) })
+      ;(drizzleDb.update as Mock).mockReturnValueOnce({
+        set: vi.fn(() => ({ where: vi.fn() })),
+      })
       ;(getCachedData as Mock).mockResolvedValue(mergedCart)
 
       const request = new NextRequest('http://localhost/api/cart', {
@@ -215,8 +216,7 @@ describe('Cart API Route', () => {
       const response = await GET(request)
       const data = await response.json()
       const setCookie = response.headers.get('set-cookie')
-      const rotatedCookieValue = setCookie
-        ?.match(/cart_session=([^;]+)/)?.[1]
+      const rotatedCookieValue = setCookie?.match(/cart_session=([^;]+)/)?.[1]
 
       expect(response.status).toBe(200)
       expect(data.cart?.id).toBe(VALID_CART_ID)
@@ -491,10 +491,10 @@ describe('Cart API Route', () => {
       ;(drizzleDb.insert as Mock).mockReturnValue({
         values: vi.fn(() => ({ returning: vi.fn() })),
       })
-      ;(drizzleDb.update as Mock)
-        .mockReturnValueOnce({ set: vi.fn(() => ({ where: vi.fn() })) })
-      ;(drizzleDb.delete as Mock)
-        .mockReturnValueOnce({ where: vi.fn() })
+      ;(drizzleDb.update as Mock).mockReturnValueOnce({
+        set: vi.fn(() => ({ where: vi.fn() })),
+      })
+      ;(drizzleDb.delete as Mock).mockReturnValueOnce({ where: vi.fn() })
 
       const request = new NextRequest('http://localhost/api/cart', {
         method: 'POST',
@@ -510,8 +510,7 @@ describe('Cart API Route', () => {
       })
       const response = await POST(request)
       const setCookie = response.headers.get('set-cookie')
-      const rotatedCookieValue = setCookie
-        ?.match(/cart_session=([^;]+)/)?.[1]
+      const rotatedCookieValue = setCookie?.match(/cart_session=([^;]+)/)?.[1]
 
       expect(response.status).toBe(201)
       expect(invalidateCartCache).toHaveBeenCalledWith('user123', undefined)

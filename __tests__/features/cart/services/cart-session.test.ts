@@ -18,7 +18,10 @@ describe('cart-session helpers', () => {
 
   it('rejects tampered cookie values', () => {
     const signedValue = signCartSessionCookieValue('guest-session-123')
-    const tamperedValue = signedValue.replace('guest-session-123', 'other-session')
+    const tamperedValue = signedValue.replace(
+      'guest-session-123',
+      'other-session'
+    )
 
     expect(verifyCartSessionCookieValue(tamperedValue)).toBeUndefined()
   })
