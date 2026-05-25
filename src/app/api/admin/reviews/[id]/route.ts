@@ -2,7 +2,12 @@ import { NextRequest } from 'next/server'
 import { eq } from 'drizzle-orm'
 import { drizzleDb } from '@/lib/db'
 import { reviews } from '@/lib/schema'
-import { apiError, apiSuccess, handleApiError, parseJsonBody } from '@/lib/api-utils'
+import {
+  apiError,
+  apiSuccess,
+  handleApiError,
+  parseJsonBody,
+} from '@/lib/api-utils'
 import { checkAdminAuth } from '@/features/admin/services/admin-auth'
 import { ModerateReviewSchema } from '@/features/product/validations'
 import { withLogging } from '@/lib/api-middleware'

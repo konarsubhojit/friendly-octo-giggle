@@ -61,7 +61,9 @@ const ReviewMeta = ({
     <span>
       By: <strong className="text-slate-700">{displayName}</strong>
     </span>
-    {!review.isAnonymous && review.user?.email && <span>{review.user.email}</span>}
+    {!review.isAnonymous && review.user?.email && (
+      <span>{review.user.email}</span>
+    )}
     <span>
       {new Date(review.createdAt).toLocaleDateString('en-US', {
         year: 'numeric',
@@ -134,9 +136,12 @@ const ReviewRow = ({
               </Badge>
             )}
           </div>
-          <p className="mb-3 text-sm leading-relaxed text-slate-700">{review.comment}</p>
+          <p className="mb-3 text-sm leading-relaxed text-slate-700">
+            {review.comment}
+          </p>
           <div className="mb-3 text-xs text-slate-500">
-            Helpful: {review.helpfulCount} · Not helpful: {review.notHelpfulCount}
+            Helpful: {review.helpfulCount} · Not helpful:{' '}
+            {review.notHelpfulCount}
           </div>
           <ReviewMeta review={review} displayName={displayName} />
 
@@ -154,7 +159,9 @@ const ReviewRow = ({
             <button
               type="button"
               disabled={pendingActionId === review.id}
-              onClick={() => onModerate(review.id, { isHidden: !review.isHidden })}
+              onClick={() =>
+                onModerate(review.id, { isHidden: !review.isHidden })
+              }
               className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 hover:border-slate-400"
             >
               {review.isHidden ? 'Unhide' : 'Hide'}
@@ -180,9 +187,9 @@ const AdminReviewsPage = () => {
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [ratingFilter, setRatingFilter] = useState('')
-  const [hiddenFilter, setHiddenFilter] = useState<'all' | 'hidden' | 'visible'>(
-    'all'
-  )
+  const [hiddenFilter, setHiddenFilter] = useState<
+    'all' | 'hidden' | 'visible'
+  >('all')
   const [verifiedOnly, setVerifiedOnly] = useState(false)
   const [total, setTotal] = useState(0)
   const [pendingActionId, setPendingActionId] = useState<string | null>(null)
@@ -264,7 +271,9 @@ const AdminReviewsPage = () => {
       if (!res.ok) {
         throw new Error(data.error || 'Failed to remove review')
       }
-      setReviews((current) => current.filter((review) => review.id !== reviewId))
+      setReviews((current) =>
+        current.filter((review) => review.id !== reviewId)
+      )
       setTotal((current) => Math.max(0, current - 1))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong')
@@ -287,7 +296,8 @@ const AdminReviewsPage = () => {
 
   const avgRating =
     filtered.length > 0
-      ? filtered.reduce((sum, review) => sum + review.rating, 0) / filtered.length
+      ? filtered.reduce((sum, review) => sum + review.rating, 0) /
+        filtered.length
       : 0
 
   const filteredContent =
@@ -346,7 +356,9 @@ const AdminReviewsPage = () => {
         },
       ]}
     >
-      {error ? <AlertBanner message={error} variant="error" className="mb-0" /> : null}
+      {error ? (
+        <AlertBanner message={error} variant="error" className="mb-0" />
+      ) : null}
 
       <AdminPanel title="Filter" description="">
         <ReviewsFilters
@@ -438,7 +450,9 @@ const ReviewsFilters = ({
       <select
         value={hiddenFilter}
         onChange={(event) =>
-          onHiddenFilterChange(event.target.value as 'all' | 'hidden' | 'visible')
+          onHiddenFilterChange(
+            event.target.value as 'all' | 'hidden' | 'visible'
+          )
         }
         className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600"
         aria-label="Visibility filter"

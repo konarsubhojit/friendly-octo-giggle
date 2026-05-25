@@ -161,11 +161,7 @@ const ReviewCard = ({
   )
 }
 
-const RatingSummary = ({
-  summary,
-}: {
-  readonly summary: ReviewSummary
-}) => {
+const RatingSummary = ({ summary }: { readonly summary: ReviewSummary }) => {
   if (summary.totalReviews === 0) return null
 
   return (
@@ -267,7 +263,8 @@ export const ReviewsSection = ({ productId }: ReviewsSectionProps) => {
               : 0,
           ratingBreakdown: [5, 4, 3, 2, 1].map((rating) => ({
             rating,
-            count: nextReviews.filter((review) => review.rating === rating).length,
+            count: nextReviews.filter((review) => review.rating === rating)
+              .length,
           })),
         }
       )
@@ -374,7 +371,9 @@ export const ReviewsSection = ({ productId }: ReviewsSectionProps) => {
 
       setReviews((current) =>
         current.map((review) =>
-          review.id === editingReview.id ? { ...review, ...data.data.review } : review
+          review.id === editingReview.id
+            ? { ...review, ...data.data.review }
+            : review
         )
       )
       setEditingReview(null)
@@ -398,9 +397,13 @@ export const ReviewsSection = ({ productId }: ReviewsSectionProps) => {
       if (!response.ok) {
         throw new Error(data.error ?? 'Could not delete review')
       }
-      setReviews((current) => current.filter((review) => review.id !== reviewId))
+      setReviews((current) =>
+        current.filter((review) => review.id !== reviewId)
+      )
     } catch (deleteError) {
-      setError(deleteError instanceof Error ? deleteError.message : 'Delete failed')
+      setError(
+        deleteError instanceof Error ? deleteError.message : 'Delete failed'
+      )
     } finally {
       setBusyReviewId(null)
     }
@@ -486,7 +489,10 @@ export const ReviewsSection = ({ productId }: ReviewsSectionProps) => {
         </div>
 
         {error && (
-          <p role="alert" className="mb-4 text-sm text-red-600 dark:text-red-400">
+          <p
+            role="alert"
+            className="mb-4 text-sm text-red-600 dark:text-red-400"
+          >
             {error}
           </p>
         )}

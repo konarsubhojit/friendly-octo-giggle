@@ -2,7 +2,12 @@ import { NextRequest } from 'next/server'
 import { and, eq, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { auth } from '@/lib/auth'
-import { parseJsonBody, apiError, apiSuccess, handleApiError } from '@/lib/api-utils'
+import {
+  parseJsonBody,
+  apiError,
+  apiSuccess,
+  handleApiError,
+} from '@/lib/api-utils'
 import { drizzleDb } from '@/lib/db'
 import { reviews, reviewVotes } from '@/lib/schema'
 import { VoteReviewSchema } from '@/features/product/validations'

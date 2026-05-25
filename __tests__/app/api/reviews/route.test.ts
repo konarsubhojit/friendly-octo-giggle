@@ -63,7 +63,10 @@ const {
 vi.mock('@/lib/db', () => ({
   drizzleDb: {
     query: {
-      reviews: { findMany: mockReviewsFindMany, findFirst: mockReviewsFindFirst },
+      reviews: {
+        findMany: mockReviewsFindMany,
+        findFirst: mockReviewsFindFirst,
+      },
       reviewVotes: { findMany: mockReviewVotesFindMany },
     },
     insert: mockInsert,
@@ -275,7 +278,9 @@ describe('Reviews API', () => {
       mockReviewsFindFirst.mockResolvedValue({ id: 'rev1', userId: 'user1' })
       mockDeleteWhere.mockResolvedValue(undefined)
 
-      const response = await DELETE(makeRequest('DELETE', undefined, { id: 'rev1' }))
+      const response = await DELETE(
+        makeRequest('DELETE', undefined, { id: 'rev1' })
+      )
       const data = await response.json()
 
       expect(response.status).toBe(200)

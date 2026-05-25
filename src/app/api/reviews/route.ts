@@ -30,7 +30,10 @@ const handleGet = async (request: NextRequest) => {
 
   try {
     const session = await auth()
-    const conditions = [eq(reviews.productId, productId), eq(reviews.isHidden, false)]
+    const conditions = [
+      eq(reviews.productId, productId),
+      eq(reviews.isHidden, false),
+    ]
 
     if (ratingFilter) {
       const parsed = Number.parseInt(ratingFilter, 10)
@@ -101,8 +104,10 @@ const handleGet = async (request: NextRequest) => {
             productReviews.length > 0
               ? Number(
                   (
-                    productReviews.reduce((sum, review) => sum + review.rating, 0) /
-                    productReviews.length
+                    productReviews.reduce(
+                      (sum, review) => sum + review.rating,
+                      0
+                    ) / productReviews.length
                   ).toFixed(1)
                 )
               : 0,
@@ -111,7 +116,7 @@ const handleGet = async (request: NextRequest) => {
       },
       200,
       {
-      'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=30',
+        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=30',
       }
     )
   } catch (error) {

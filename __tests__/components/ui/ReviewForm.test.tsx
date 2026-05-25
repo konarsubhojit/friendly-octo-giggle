@@ -8,7 +8,9 @@ vi.mock('next-auth/react', () => ({
   useSession: mockSession,
 }))
 vi.mock('next/image', () => ({
-  default: (props: React.ComponentProps<'img'>) => <img {...props} alt={props.alt} />,
+  default: (props: React.ComponentProps<'img'>) => (
+    <img {...props} alt={props.alt} />
+  ),
 }))
 
 vi.mock('@/components/ui/GradientButton', () => ({

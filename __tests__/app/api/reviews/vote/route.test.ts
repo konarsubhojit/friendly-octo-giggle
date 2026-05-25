@@ -84,7 +84,9 @@ describe('POST /api/reviews/vote', () => {
   it('returns 401 when unauthenticated', async () => {
     mockAuth.mockResolvedValue(null as never)
 
-    const response = await POST(makePostRequest({ reviewId: 'abc1234', vote: 'up' }))
+    const response = await POST(
+      makePostRequest({ reviewId: 'abc1234', vote: 'up' })
+    )
     expect(response.status).toBe(401)
   })
 
@@ -107,7 +109,9 @@ describe('POST /api/reviews/vote', () => {
       })
     mockReviewVotesFindFirst.mockResolvedValue(null)
 
-    const response = await POST(makePostRequest({ reviewId: 'abc1234', vote: 'up' }))
+    const response = await POST(
+      makePostRequest({ reviewId: 'abc1234', vote: 'up' })
+    )
     const data = await response.json()
 
     expect(response.status).toBe(200)

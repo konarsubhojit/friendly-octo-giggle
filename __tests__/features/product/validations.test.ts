@@ -165,7 +165,9 @@ describe('product/validations', () => {
     it('accepts up/down votes only', () => {
       expect(VoteReviewSchema.safeParse({ vote: 'up' }).success).toBe(true)
       expect(VoteReviewSchema.safeParse({ vote: 'down' }).success).toBe(true)
-      expect(VoteReviewSchema.safeParse({ vote: 'sideways' }).success).toBe(false)
+      expect(VoteReviewSchema.safeParse({ vote: 'sideways' }).success).toBe(
+        false
+      )
     })
   })
 
