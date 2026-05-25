@@ -230,9 +230,12 @@ export async function proxy(request: NextRequest) {
   if (process.env.NODE_ENV !== 'development' && proto === 'http') {
     const host = request.headers.get('host') || ''
     return withResponseHeaders(
-      NextResponse.redirect(`https://${host}${pathname}${request.nextUrl.search}`, {
-        status: 301,
-      })
+      NextResponse.redirect(
+        `https://${host}${pathname}${request.nextUrl.search}`,
+        {
+          status: 301,
+        }
+      )
     )
   }
 
