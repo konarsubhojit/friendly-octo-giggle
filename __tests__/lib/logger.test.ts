@@ -24,6 +24,8 @@ import {
   logCacheOperation,
   generateRequestId,
   Timer,
+  maskEmail,
+  scrubSensitiveData,
 } from '@/lib/logger'
 
 describe('logger module', () => {
@@ -435,6 +437,139 @@ describe('logger module', () => {
         expect.objectContaining({ operation: 'slow-op', duration: 1500 }),
         'Slow operation detected: slow-op'
       )
+    })
+  })
+
+  describe('maskEmail', () => {
+    it('should replace the local part with first char + *** and keep the domain', () => {
+      expect(maskEmail('john@example.com')).toBe('j***@example.com')
+    })
+
+    it('should work for short local parts', () => {
+      expect(maskEmail('a@b.co')).toBe('a***@b.co')
+    })
+
+    it('should return [REDACTED] when the value has no @ sign', () => {
+      expect(maskEmail('notanemail')).toBe('[REDACTED]')
+    })
+
+    it('should return [REDACTED] when @ is the first character', () => {
+      expect(maskEmail('@nodomain.com')).toBe('[REDACTED]')
+    })
+  })
+
+  describe('scrubSensitiveData', () => {
+    it('should redact password fields', () => {
+      const result = scrubSensitiveData({ password: 'x' })
+      expect(result.password).toBe('[REDACTED]')
+    })
+
+    it('should redact passwordHash fields', () => {
+      const result = scrubSensitiveData({ passwordHash: 'hashed-value' })
+      expect(result.passwordHash).toBe('[REDACTED]')
+    })
+
+    it('should redact token fields', () => {
+      const result = scrubSensitiveData({ token: 'secret-token' })
+      expect(result.token).toBe('[REDACTED]')
+    })
+
+    it('should redact authorization fields (case-insensitive)', () => {
+      const result = scrubSensitiveData({ Authorization: 'Bearer xyz' })
+      expect(result.Authorization).toBe('[REDACTED]')
+    })
+
+    it('should redact cookie fields', () => {
+      const result = scrubSensitiveData({ cookie: 'session=abc' })
+      expect(result.cookie).toBe('[REDACTED]')
+    })
+
+    it('should redact set-cookie fields', () => {
+      const result = scrubSensitiveData({ 'set-cookie': 'session=abc; Path=/' })
+      expect(result['set-cookie']).toBe('[REDACTED]')
+    })
+
+    it('should redact creditCard fields', () => {
+      const result = scrubSensitiveData({ creditCard: '4111111111111111' })
+      expect(result.creditCard).toBe('[REDACTED]')
+    })
+
+    it('should redact cvv fields', () => {
+      const result = scrubSensitiveData({ cvv: '123' })
+      expect(result.cvv).toBe('[REDACTED]')
+    })
+
+    it('should mask email fields', () => {
+      const result = scrubSensitiveData({ email: 'john@example.com' })
+      expect(result.email).toBe('j***@example.com')
+    })
+
+    it('should preserve non-sensitive fields unchanged', () => {
+      const result = scrubSensitiveData({ orderId: 'ord_1', total: 99.99 })
+      expect(result.orderId).toBe('ord_1')
+      expect(result.total).toBe(99.99)
+    })
+
+    it('should recursively scrub nested objects', () => {
+      const result = scrubSensitiveData({
+        user: { email: 'jane@example.com', password: 'secret', name: 'Jane' },
+      })
+      const user = result.user as Record<string, unknown>
+      expect(user.email).toBe('j***@example.com')
+      expect(user.password).toBe('[REDACTED]')
+      expect(user.name).toBe('Jane')
+    })
+
+    it('should leave arrays untouched (not recursed into)', () => {
+      const arr = [1, 2, 3]
+      const result = scrubSensitiveData({ items: arr })
+      expect(result.items).toBe(arr)
+    })
+
+    it('should leave Date instances untouched', () => {
+      const date = new Date('2024-01-01')
+      const result = scrubSensitiveData({ createdAt: date })
+      expect(result.createdAt).toBe(date)
+    })
+
+    it('should leave Error instances untouched', () => {
+      const err = new Error('oops')
+      const result = scrubSensitiveData({ cause: err })
+      expect(result.cause).toBe(err)
+    })
+  })
+
+  describe('logError redaction', () => {
+    it('should redact password in additionalInfo before logging', () => {
+      logError({
+        error: new Error('fail'),
+        context: 'test',
+        additionalInfo: { password: 'x', orderId: 'ord_1' },
+      })
+      const [callObj] = mockLogger.error.mock.calls[0]
+      expect(callObj.password).toBe('[REDACTED]')
+      expect(callObj.orderId).toBe('ord_1')
+    })
+
+    it('should mask email in additionalInfo before logging', () => {
+      logError({
+        error: new Error('fail'),
+        context: 'test',
+        additionalInfo: { email: 'alice@example.com' },
+      })
+      const [callObj] = mockLogger.error.mock.calls[0]
+      expect(callObj.email).toBe('a***@example.com')
+    })
+
+    it('should not expose raw sensitive values anywhere in the logged object', () => {
+      logError({
+        error: new Error('fail'),
+        context: 'test',
+        additionalInfo: { password: 'supersecret', token: 'tok_abc' },
+      })
+      const [callObj] = mockLogger.error.mock.calls[0]
+      expect(JSON.stringify(callObj)).not.toContain('supersecret')
+      expect(JSON.stringify(callObj)).not.toContain('tok_abc')
     })
   })
 })
