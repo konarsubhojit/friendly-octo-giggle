@@ -11,8 +11,14 @@ import {
   updateCartItemQuantityInRedis,
   removeCartItemFromRedis,
 } from '@/features/cart/services/cart-redis'
+import { assertOwnership } from '@/lib/ownership'
 
 export const dynamic = 'force-dynamic'
+
+const toCartOwner = (cart: {
+  userId: string | null
+  sessionId: string | null
+}) => ({ userId: cart.userId, sessionId: cart.sessionId }) as const
 
 export async function PATCH(
   request: NextRequest,
@@ -44,12 +50,13 @@ export async function PATCH(
       )
     }
 
-    const isOwner = session?.user?.id
-      ? cartItem.cart.userId === session.user.id
-      : cartItem.cart.sessionId === sessionId
+    const cartOwner = toCartOwner(cartItem.cart)
 
-    if (!isOwner) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+    if (!assertOwnership(cartOwner, session, { sessionId })) {
+      return NextResponse.json(
+        { error: 'Cart item not found' },
+        { status: 404 }
+      )
     }
 
     if (!cartItem.variant) {
@@ -112,12 +119,13 @@ export async function DELETE(
       )
     }
 
-    const isOwner = session?.user?.id
-      ? cartItem.cart.userId === session.user.id
-      : cartItem.cart.sessionId === sessionId
+    const cartOwner = toCartOwner(cartItem.cart)
 
-    if (!isOwner) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+    if (!assertOwnership(cartOwner, session, { sessionId })) {
+      return NextResponse.json(
+        { error: 'Cart item not found' },
+        { status: 404 }
+      )
     }
 
     await drizzleDb.delete(cartItems).where(eq(cartItems.id, id))

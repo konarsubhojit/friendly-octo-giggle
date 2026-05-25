@@ -32,6 +32,7 @@ const mockBestsellers = [
     price: 25,
     description: 'A rose gift box',
     stock: 10,
+    soldCount: 12,
     category: 'Gifts',
   },
   {
@@ -41,6 +42,7 @@ const mockBestsellers = [
     price: 35,
     description: 'A lily vase',
     stock: 5,
+    soldCount: 9,
     category: 'Decor',
   },
   {
@@ -50,6 +52,7 @@ const mockBestsellers = [
     price: 15,
     description: 'A tulip candle',
     stock: 20,
+    soldCount: 6,
     category: 'Candles',
   },
 ]

@@ -211,4 +211,28 @@ describe('GET /api/checkout/[id]', () => {
     expect(response.status).toBe(404)
     expect(data.error).toBe('Checkout request not found')
   })
+
+  it("returns 404 when another user's checkout request is queried", async () => {
+    mockAuth.mockResolvedValue({
+      user: { id: 'user2', name: 'Test', email: 'test@example.com' },
+    })
+    mockGetCheckoutRequestStatusForUser.mockRejectedValue({
+      message: 'Checkout request not found',
+      status: 404,
+    })
+    mockIsCheckoutRequestError.mockReturnValue(true)
+
+    const response = await GET(
+      new NextRequest('http://localhost/api/checkout/CHK1234'),
+      { params: Promise.resolve({ id: 'CHK1234' }) }
+    )
+    const data = await response.json()
+
+    expect(response.status).toBe(404)
+    expect(data.error).toBe('Checkout request not found')
+    expect(mockGetCheckoutRequestStatusForUser).toHaveBeenCalledWith({
+      checkoutRequestId: 'CHK1234',
+      userId: 'user2',
+    })
+  })
 })

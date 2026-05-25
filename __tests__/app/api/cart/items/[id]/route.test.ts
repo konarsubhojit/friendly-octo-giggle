@@ -77,7 +77,7 @@ describe('PATCH /api/cart/items/[id]', () => {
     expect(data.error).toBe('Cart item not found')
   })
 
-  it('returns 403 when not owner', async () => {
+  it('returns 404 when item belongs to another signed-in user', async () => {
     mockAuth.mockResolvedValue({ user: { id: 'user1' } } as never)
     mockFindFirst.mockResolvedValue({
       id: 'item1',
@@ -98,8 +98,8 @@ describe('PATCH /api/cart/items/[id]', () => {
     })
     const data = await response.json()
 
-    expect(response.status).toBe(403)
-    expect(data.error).toBe('Unauthorized')
+    expect(response.status).toBe(404)
+    expect(data.error).toBe('Cart item not found')
   })
 
   it('returns 404 when cart item variant is not found', async () => {
@@ -289,7 +289,7 @@ describe('DELETE /api/cart/items/[id]', () => {
     expect(data.error).toBe('Cart item not found')
   })
 
-  it('returns 403 when not owner', async () => {
+  it('returns 404 when item belongs to another signed-in user', async () => {
     mockAuth.mockResolvedValue({ user: { id: 'user1' } } as never)
     mockFindFirst.mockResolvedValue({
       id: 'item1',
@@ -305,8 +305,8 @@ describe('DELETE /api/cart/items/[id]', () => {
     })
     const data = await response.json()
 
-    expect(response.status).toBe(403)
-    expect(data.error).toBe('Unauthorized')
+    expect(response.status).toBe(404)
+    expect(data.error).toBe('Cart item not found')
   })
 
   it('deletes item successfully', async () => {
