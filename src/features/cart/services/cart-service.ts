@@ -118,10 +118,8 @@ export class CartRequestError extends Error {
 export const isCartRequestError = (error: unknown): error is CartRequestError =>
   error instanceof CartRequestError
 
-const cartItemKey = (item: {
-  productId: string
-  variantId: string
-}): string => `${item.productId}:${item.variantId}`
+const cartItemKey = (item: { productId: string; variantId: string }): string =>
+  `${item.productId}:${item.variantId}`
 
 const verifyProductStock = async (
   body: AddToCartInput
