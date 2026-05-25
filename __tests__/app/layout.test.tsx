@@ -3,6 +3,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { render } from '@testing-library/react'
 import React from 'react'
 
+// Hoisted so mockHeaders exists before dynamic import('@/app/layout').
 const mockHeaders = vi.hoisted(() => vi.fn())
 
 vi.mock('next/font/google', () => ({

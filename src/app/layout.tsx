@@ -11,12 +11,12 @@ import { Analytics } from '@vercel/analytics/next'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import HeaderWrapper from '@/components/layout/HeaderWrapper'
 
-const AnalyticsWithNonce = Analytics as unknown as React.ComponentType<{
+type NoncedTelemetryComponent = React.ComponentType<{
   readonly nonce?: string
 }>
-const SpeedInsightsWithNonce = SpeedInsights as unknown as React.ComponentType<{
-  readonly nonce?: string
-}>
+// Vercel telemetry libraries support forwarding `nonce` at runtime for injected scripts.
+const AnalyticsWithNonce = Analytics as NoncedTelemetryComponent
+const SpeedInsightsWithNonce = SpeedInsights as NoncedTelemetryComponent
 
 function AppProviders({ children }: { readonly children: React.ReactNode }) {
   return (
@@ -55,7 +55,7 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
-  const nonce = (await headers()).get('x-nonce') ?? undefined
+  const nonce = (await headers()).get('x-nonce') || undefined
 
   return (
     <html

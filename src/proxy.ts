@@ -29,10 +29,23 @@ const STRICT_RATE_LIMIT_PATHS = [
 
 const AI_RATE_LIMIT_PATHS = ['/api/ai']
 const AI_RATE_LIMIT_MAX_REQUESTS = 10 // stricter: 10 per minute for AI
-
 // In-memory sliding-window counters keyed by IP + path prefix.
 // Used as a fallback when Redis is unavailable for AI paths.
 const aiRateLimitStore = new Map<string, { count: number; resetAt: number }>()
+const generateNonce = (): string =>
+  Array.from(crypto.getRandomValues(new Uint8Array(16)))
+    .map((value) => value.toString(16).padStart(2, '0'))
+    .join('')
+const buildCspHeader = (nonce: string): string =>
+  [
+    "default-src 'self'",
+    `script-src 'self' 'nonce-${nonce}'${isDev ? " 'unsafe-eval'" : ''} https://va.vercel-scripts.com`,
+    `style-src 'self' 'nonce-${nonce}'`,
+    "img-src 'self' data: blob: https://images.unsplash.com https://*.public.blob.vercel-storage.com https://lh3.googleusercontent.com",
+    "font-src 'self'",
+    "connect-src 'self' https://va.vercel-scripts.com https://accounts.google.com https://login.microsoftonline.com https://graph.microsoft.com https://*.ingest.de.sentry.io",
+    "frame-src 'self' https://accounts.google.com https://login.microsoftonline.com",
+  ].join('; ')
 
 type RateLimitResult = {
   success: boolean
@@ -188,18 +201,8 @@ function getInMemoryAiRateLimitResult(
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
-  const nonce = btoa(
-    String.fromCharCode(...crypto.getRandomValues(new Uint8Array(16)))
-  )
-  const csp = [
-    "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}'${isDev ? " 'unsafe-eval'" : ''} https://va.vercel-scripts.com`,
-    `style-src 'self' 'nonce-${nonce}'`,
-    "img-src 'self' data: blob: https://images.unsplash.com https://*.public.blob.vercel-storage.com https://lh3.googleusercontent.com",
-    "font-src 'self'",
-    "connect-src 'self' https://va.vercel-scripts.com https://accounts.google.com https://login.microsoftonline.com https://graph.microsoft.com https://*.ingest.de.sentry.io",
-    "frame-src 'self' https://accounts.google.com https://login.microsoftonline.com",
-  ].join('; ')
+  const nonce = generateNonce()
+  const csp = buildCspHeader(nonce)
   const requestHeaders = new Headers(request.headers)
   requestHeaders.set('x-nonce', nonce)
   let rateLimitHeaders: HeadersInit | null = null
@@ -346,7 +349,7 @@ export async function proxy(request: NextRequest) {
         // For non-API routes, return an HTML maintenance page.
         return withResponseHeaders(
           new NextResponse(
-            `<!DOCTYPE html><html><head><title>Maintenance</title></head><body><h1>Under Maintenance</h1><p>We're performing scheduled maintenance. Please check back shortly.</p></body></html>`,
+            `<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"><title>Maintenance</title></head><body><main><h1>Under Maintenance</h1><p>We're performing scheduled maintenance. Please check back shortly.</p></main></body></html>`,
             {
               status: 503,
               headers: {
@@ -410,6 +413,7 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
+  // Match all app/API routes while excluding static assets.
   matcher: [
     '/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|map)$).*)',
   ],
