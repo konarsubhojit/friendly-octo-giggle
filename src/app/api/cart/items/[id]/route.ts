@@ -11,6 +11,7 @@ import {
   updateCartItemQuantityInRedis,
   removeCartItemFromRedis,
 } from '@/features/cart/services/cart-redis'
+import { verifyCartSessionCookieValue } from '@/features/cart/services/cart-session'
 import { assertOwnership } from '@/lib/ownership'
 
 export const dynamic = 'force-dynamic'
@@ -27,7 +28,9 @@ export async function PATCH(
   try {
     const { id } = await params
     const session = await auth()
-    const sessionId = request.cookies.get('cart_session')?.value
+    const sessionId = verifyCartSessionCookieValue(
+      request.cookies.get('cart_session')?.value
+    )
     const body = await parseJsonBody(request, UpdateCartItemSchema)
 
     const cartItem = await drizzleDb.query.cartItems.findFirst({
@@ -103,7 +106,9 @@ export async function DELETE(
   try {
     const { id } = await params
     const session = await auth()
-    const sessionId = request.cookies.get('cart_session')?.value
+    const sessionId = verifyCartSessionCookieValue(
+      request.cookies.get('cart_session')?.value
+    )
 
     const cartItem = await drizzleDb.query.cartItems.findFirst({
       where: eq(cartItems.id, id),

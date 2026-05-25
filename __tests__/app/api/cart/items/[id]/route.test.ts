@@ -5,6 +5,7 @@ import { primaryDrizzleDb as drizzleDb } from '@/lib/db'
 import { auth } from '@/lib/auth'
 import { logError } from '@/lib/logger'
 import { invalidateCartCache } from '@/lib/cache'
+import { signCartSessionCookieValue } from '@/features/cart/services/cart-session'
 
 vi.mock('@/lib/db', () => ({
   primaryDrizzleDb: {
@@ -40,6 +41,7 @@ const mockInvalidateCartCache = vi.mocked(invalidateCartCache)
 describe('PATCH /api/cart/items/[id]', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    process.env.NEXTAUTH_SECRET = 'test-nextauth-secret'
   })
 
   it('returns 400 for invalid body (missing quantity)', async () => {
@@ -227,7 +229,7 @@ describe('PATCH /api/cart/items/[id]', () => {
       body: JSON.stringify({ quantity: 2 }),
       headers: {
         'content-type': 'application/json',
-        cookie: 'cart_session=session123',
+        cookie: `cart_session=${signCartSessionCookieValue('session123')}`,
       },
     })
 
@@ -264,6 +266,34 @@ describe('PATCH /api/cart/items/[id]', () => {
       error: expect.any(Error),
       context: 'cart_item_update',
     })
+  })
+
+  it('returns 404 for guest requests with an unsigned cart session cookie', async () => {
+    mockAuth.mockResolvedValue(null as never)
+    mockFindFirst.mockResolvedValue({
+      id: 'item1',
+      cart: { userId: null, sessionId: 'session123' },
+      product: { variants: [{ id: 'v1', stock: 10 }] },
+      variant: { stock: 10 },
+      variantId: 'v1',
+    } as never)
+
+    const request = new NextRequest('http://localhost/api/cart/items/item1', {
+      method: 'PATCH',
+      body: JSON.stringify({ quantity: 2 }),
+      headers: {
+        'content-type': 'application/json',
+        cookie: 'cart_session=session123',
+      },
+    })
+
+    const response = await PATCH(request, {
+      params: Promise.resolve({ id: 'item1' }),
+    })
+    const data = await response.json()
+
+    expect(response.status).toBe(404)
+    expect(data.error).toBe('Cart item not found')
   })
 })
 
@@ -347,7 +377,7 @@ describe('DELETE /api/cart/items/[id]', () => {
     const request = new NextRequest('http://localhost/api/cart/items/item1', {
       method: 'DELETE',
       headers: {
-        cookie: 'cart_session=session123',
+        cookie: `cart_session=${signCartSessionCookieValue('session123')}`,
       },
     })
 
@@ -382,5 +412,28 @@ describe('DELETE /api/cart/items/[id]', () => {
       error: expect.any(Error),
       context: 'cart_item_delete',
     })
+  })
+
+  it('returns 404 for guest deletes with an unsigned cart session cookie', async () => {
+    mockAuth.mockResolvedValue(null as never)
+    mockFindFirst.mockResolvedValue({
+      id: 'item1',
+      cart: { userId: null, sessionId: 'session123' },
+    } as never)
+
+    const request = new NextRequest('http://localhost/api/cart/items/item1', {
+      method: 'DELETE',
+      headers: {
+        cookie: 'cart_session=session123',
+      },
+    })
+
+    const response = await DELETE(request, {
+      params: Promise.resolve({ id: 'item1' }),
+    })
+    const data = await response.json()
+
+    expect(response.status).toBe(404)
+    expect(data.error).toBe('Cart item not found')
   })
 })

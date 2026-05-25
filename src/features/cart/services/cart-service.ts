@@ -10,6 +10,7 @@ import {
   removeCartItemsByCartId,
   type CartItemRedis,
 } from '@/features/cart/services/cart-redis'
+import { createGuestCartSessionId } from '@/features/cart/services/cart-session'
 import type { Session } from 'next-auth'
 import type { AddToCartInput } from '@/features/cart/validations'
 
@@ -117,6 +118,9 @@ export class CartRequestError extends Error {
 export const isCartRequestError = (error: unknown): error is CartRequestError =>
   error instanceof CartRequestError
 
+const cartItemKey = (item: { productId: string; variantId: string }): string =>
+  `${item.productId}:${item.variantId}`
+
 const verifyProductStock = async (
   body: AddToCartInput
 ): Promise<{ product: ProductWithVariants; availableStock: number }> => {
@@ -152,8 +156,7 @@ const getOrCreateCart = async (
   sessionId: string | undefined
 ): Promise<{ cart: { id: string }; sessionId: string | undefined }> => {
   const createGuestCart = async (providedSessionId?: string) => {
-    const guestSessionId =
-      providedSessionId ?? `guest_${Date.now()}_${crypto.randomUUID()}`
+    const guestSessionId = providedSessionId ?? createGuestCartSessionId()
     let cart = await primaryDrizzleDb.query.carts.findFirst({
       where: eq(carts.sessionId, guestSessionId),
     })
@@ -448,6 +451,120 @@ export const buildGuestSessionCookieOptions = () => {
     sameSite: 'lax' as const,
     maxAge: 60 * 60 * 24 * 30,
   }
+}
+
+/**
+ * Merge a guest cart into an authenticated user's cart and invalidate the
+ * previous guest session identifier.
+ *
+ * Returns a freshly generated guest session ID when a guest cart was found and
+ * merged so callers can rotate the `cart_session` cookie. Returns `undefined`
+ * when there is no guest cart for the provided session ID.
+ */
+export const mergeGuestCartIntoUserCart = async (
+  userId: string,
+  sessionId: string
+): Promise<string | undefined> => {
+  const guestCart = await primaryDrizzleDb.query.carts.findFirst({
+    where: eq(carts.sessionId, sessionId),
+    with: {
+      items: true,
+    },
+  })
+
+  if (!guestCart) {
+    return undefined
+  }
+
+  const now = new Date()
+  const userCart = await primaryDrizzleDb.query.carts.findFirst({
+    where: eq(carts.userId, userId),
+    with: {
+      items: true,
+    },
+  })
+
+  if (!userCart) {
+    await primaryDrizzleDb
+      .update(carts)
+      .set({
+        userId,
+        sessionId: null,
+        updatedAt: now,
+      })
+      .where(eq(carts.id, guestCart.id))
+  } else {
+    const existingItems = new Map(
+      userCart.items.map((item) => [cartItemKey(item), item])
+    )
+
+    for (const guestItem of guestCart.items) {
+      const existingItem = existingItems.get(cartItemKey(guestItem))
+      if (existingItem) {
+        await primaryDrizzleDb
+          .update(cartItems)
+          .set({
+            quantity: existingItem.quantity + guestItem.quantity,
+            updatedAt: now,
+          })
+          .where(eq(cartItems.id, existingItem.id))
+        continue
+      }
+
+      await primaryDrizzleDb.insert(cartItems).values({
+        cartId: userCart.id,
+        productId: guestItem.productId,
+        variantId: guestItem.variantId,
+        quantity: guestItem.quantity,
+        updatedAt: now,
+      })
+    }
+
+    await primaryDrizzleDb
+      .update(carts)
+      .set({ updatedAt: now })
+      .where(eq(carts.id, userCart.id))
+
+    await primaryDrizzleDb.delete(carts).where(eq(carts.id, guestCart.id))
+  }
+
+  const cleanupOperations = [
+    {
+      operation: 'invalidate_user_cart_cache',
+      promise: invalidateCartCache(userId, undefined),
+    },
+    {
+      operation: 'invalidate_guest_cart_cache',
+      promise: invalidateCartCache(undefined, sessionId),
+    },
+    {
+      operation: 'remove_guest_cart_items_from_redis',
+      promise: removeCartItemsByCartId(guestCart.id, undefined, sessionId),
+    },
+  ] as const
+
+  const cleanupResults = await Promise.allSettled(
+    cleanupOperations.map(({ promise }) => promise)
+  )
+
+  cleanupResults.forEach((result, index) => {
+    if (result.status === 'fulfilled') {
+      return
+    }
+
+    logError({
+      error: result.reason,
+      context: 'cart_merge_cache_cleanup',
+      additionalInfo: {
+        operation: cleanupOperations[index]?.operation,
+        userId,
+        sessionId,
+        guestCartId: guestCart.id,
+      },
+    })
+  })
+
+  return createGuestCartSessionId()
 }
 
 const dbCartToRedisItems = (
