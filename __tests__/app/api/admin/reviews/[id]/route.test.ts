@@ -1,31 +1,27 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { NextRequest } from 'next/server'
 
-const {
-  mockUpdate,
-  mockUpdateReturning,
-  mockDelete,
-  mockDeleteReturning,
-} = vi.hoisted(() => {
-  const mockUpdateReturning = vi.fn()
-  const mockUpdateWhere = vi.fn(() => ({ returning: mockUpdateReturning }))
-  const mockUpdateSet = vi.fn(() => ({ where: mockUpdateWhere }))
-  const mockUpdate = vi.fn(() => ({ set: mockUpdateSet }))
+const { mockUpdate, mockUpdateReturning, mockDelete, mockDeleteReturning } =
+  vi.hoisted(() => {
+    const mockUpdateReturning = vi.fn()
+    const mockUpdateWhere = vi.fn(() => ({ returning: mockUpdateReturning }))
+    const mockUpdateSet = vi.fn(() => ({ where: mockUpdateWhere }))
+    const mockUpdate = vi.fn(() => ({ set: mockUpdateSet }))
 
-  const mockDeleteReturning = vi.fn()
-  const mockDeleteWhere = vi.fn(() => ({ returning: mockDeleteReturning }))
-  const mockDelete = vi.fn(() => ({ where: mockDeleteWhere }))
+    const mockDeleteReturning = vi.fn()
+    const mockDeleteWhere = vi.fn(() => ({ returning: mockDeleteReturning }))
+    const mockDelete = vi.fn(() => ({ where: mockDeleteWhere }))
 
-  return {
-    mockUpdate,
-    mockUpdateSet,
-    mockUpdateWhere,
-    mockUpdateReturning,
-    mockDelete,
-    mockDeleteWhere,
-    mockDeleteReturning,
-  }
-})
+    return {
+      mockUpdate,
+      mockUpdateSet,
+      mockUpdateWhere,
+      mockUpdateReturning,
+      mockDelete,
+      mockDeleteWhere,
+      mockDeleteReturning,
+    }
+  })
 
 vi.mock('@/lib/db', () => ({
   drizzleDb: {
