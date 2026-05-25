@@ -139,7 +139,20 @@ describe('proxy rate limiting', () => {
     expect(response.headers.get('Retry-After')).toBeTruthy()
   })
 
-  it('includes credentials callback matcher in proxy config', () => {
-    expect(config.matcher).toContain('/api/auth/callback/credentials')
+  it('adds nonce-based CSP headers without unsafe-inline', async () => {
+    const response = await proxy(createRequest('/shop'))
+    const nonce = response.headers.get('x-nonce')
+    const csp = response.headers.get('Content-Security-Policy')
+
+    expect(nonce).toBeTruthy()
+    expect(csp).toContain(`script-src 'self' 'nonce-${nonce}'`)
+    expect(csp).toContain(`style-src 'self' 'nonce-${nonce}'`)
+    expect(csp).not.toContain("'unsafe-inline'")
+  })
+
+  it('matches broad app routes while excluding Next.js static assets', () => {
+    expect(config.matcher).toContain(
+      '/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|map)$).*)'
+    )
   })
 })
