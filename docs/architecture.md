@@ -240,6 +240,13 @@ The current cart architecture still supports two ownership modes:
 
 The database remains the source of truth, while Redis can cache cart results when configured.
 
+Guest cart cookies use a signed `cart_session` value with the schema `v1.<sessionId>.<hmac>`:
+
+- `sessionId` is the opaque guest cart identifier stored in the `Cart.sessionId` column.
+- `hmac` is an HMAC-SHA256 signature over `v1.<sessionId>` using `NEXTAUTH_SECRET`.
+- The cookie is issued as `HttpOnly`, `SameSite=Lax`, and `Secure` in production with a 30-day lifetime.
+- Authenticated cart reads and writes may merge a guest cart into the user cart, then rotate the cookie to a fresh guest session identifier so the previous guest session cannot be replayed.
+
 ### Product Variant and Pricing Model
 
 Variant behavior in the live codebase is more capable than the earlier document described:

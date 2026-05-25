@@ -10,6 +10,7 @@ import {
   removeCartItemsByCartId,
   type CartItemRedis,
 } from '@/features/cart/services/cart-redis'
+import { createGuestCartSessionId } from '@/features/cart/services/cart-session'
 import type { Session } from 'next-auth'
 import type { AddToCartInput } from '@/features/cart/validations'
 
@@ -117,6 +118,11 @@ export class CartRequestError extends Error {
 export const isCartRequestError = (error: unknown): error is CartRequestError =>
   error instanceof CartRequestError
 
+const guestCartItemKey = (item: {
+  productId: string
+  variantId: string
+}): string => `${item.productId}:${item.variantId}`
+
 const verifyProductStock = async (
   body: AddToCartInput
 ): Promise<{ product: ProductWithVariants; availableStock: number }> => {
@@ -152,8 +158,7 @@ const getOrCreateCart = async (
   sessionId: string | undefined
 ): Promise<{ cart: { id: string }; sessionId: string | undefined }> => {
   const createGuestCart = async (providedSessionId?: string) => {
-    const guestSessionId =
-      providedSessionId ?? `guest_${Date.now()}_${crypto.randomUUID()}`
+    const guestSessionId = providedSessionId ?? createGuestCartSessionId()
     let cart = await primaryDrizzleDb.query.carts.findFirst({
       where: eq(carts.sessionId, guestSessionId),
     })
@@ -448,6 +453,83 @@ export const buildGuestSessionCookieOptions = () => {
     sameSite: 'lax' as const,
     maxAge: 60 * 60 * 24 * 30,
   }
+}
+
+export const mergeGuestCartIntoUserCart = async (
+  userId: string,
+  sessionId: string
+): Promise<string | undefined> => {
+  const guestCart = await primaryDrizzleDb.query.carts.findFirst({
+    where: eq(carts.sessionId, sessionId),
+    with: {
+      items: true,
+    },
+  })
+
+  if (!guestCart) {
+    return undefined
+  }
+
+  const now = new Date()
+  const userCart = await primaryDrizzleDb.query.carts.findFirst({
+    where: eq(carts.userId, userId),
+    with: {
+      items: true,
+    },
+  })
+
+  if (!userCart) {
+    await primaryDrizzleDb
+      .update(carts)
+      .set({
+        userId,
+        sessionId: null,
+        updatedAt: now,
+      })
+      .where(eq(carts.id, guestCart.id))
+  } else {
+    const existingItems = new Map(
+      userCart.items.map((item) => [guestCartItemKey(item), item])
+    )
+
+    for (const guestItem of guestCart.items) {
+      const existingItem = existingItems.get(guestCartItemKey(guestItem))
+      if (existingItem) {
+        await primaryDrizzleDb
+          .update(cartItems)
+          .set({
+            quantity: existingItem.quantity + guestItem.quantity,
+            updatedAt: now,
+          })
+          .where(eq(cartItems.id, existingItem.id))
+        continue
+      }
+
+      await primaryDrizzleDb.insert(cartItems).values({
+        cartId: userCart.id,
+        productId: guestItem.productId,
+        variantId: guestItem.variantId,
+        quantity: guestItem.quantity,
+        updatedAt: now,
+      })
+    }
+
+    await Promise.all([
+      primaryDrizzleDb
+        .update(carts)
+        .set({ updatedAt: now })
+        .where(eq(carts.id, userCart.id)),
+      primaryDrizzleDb.delete(carts).where(eq(carts.id, guestCart.id)),
+    ])
+  }
+
+  await Promise.all([
+    invalidateCartCache(userId, undefined),
+    invalidateCartCache(undefined, sessionId),
+    removeCartItemsByCartId(guestCart.id, undefined, sessionId),
+  ])
+
+  return createGuestCartSessionId()
 }
 
 const dbCartToRedisItems = (

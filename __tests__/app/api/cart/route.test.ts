@@ -78,12 +78,17 @@ import { auth } from '@/lib/auth'
 import { getCachedData } from '@/lib/redis'
 import { invalidateCartCache } from '@/lib/cache'
 import { logError } from '@/lib/logger'
+import {
+  signCartSessionCookieValue,
+  verifyCartSessionCookieValue,
+} from '@/features/cart/services/cart-session'
 
 import { GET, POST, DELETE } from '@/app/api/cart/route'
 
 describe('Cart API Route', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    process.env.NEXTAUTH_SECRET = 'test-nextauth-secret'
   })
 
   describe('GET /api/cart', () => {
@@ -150,9 +155,10 @@ describe('Cart API Route', () => {
 
       ;(auth as Mock).mockResolvedValue(null)
       ;(getCachedData as Mock).mockResolvedValue(mockCart)
+      const signedSessionId = signCartSessionCookieValue('guest123')
 
       const request = new NextRequest('http://localhost/api/cart', {
-        headers: { cookie: 'cart_session=guest123' },
+        headers: { cookie: `cart_session=${signedSessionId}` },
       })
       const response = await GET(request)
       const data = await response.json()
@@ -166,6 +172,59 @@ describe('Cart API Route', () => {
         expect.any(Function),
         5
       )
+    })
+
+    it('ignores unsigned guest cart cookie values', async () => {
+      ;(auth as Mock).mockResolvedValue(null)
+
+      const request = new NextRequest('http://localhost/api/cart', {
+        headers: { cookie: 'cart_session=guest123' },
+      })
+      const response = await GET(request)
+      const data = await response.json()
+
+      expect(response.status).toBe(200)
+      expect(data).toEqual({ cart: null })
+      expect(getCachedData).not.toHaveBeenCalled()
+      expect(response.headers.get('set-cookie')).toContain('cart_session=;')
+    })
+
+    it('merges a signed guest cart into the authenticated cart and rotates the cookie', async () => {
+      const signedSessionId = signCartSessionCookieValue('guest123')
+      const mergedCart = {
+        id: VALID_CART_ID,
+        createdAt: new Date('2024-01-01'),
+        updatedAt: new Date('2024-01-02'),
+        items: [],
+      }
+
+      ;(auth as Mock).mockResolvedValue({ user: { id: 'user123' } })
+      ;(drizzleDb.query.carts.findFirst as Mock)
+        .mockResolvedValueOnce({
+          id: 'guest-cart',
+          items: [],
+        })
+        .mockResolvedValueOnce(null)
+      ;(drizzleDb.update as Mock)
+        .mockReturnValueOnce({ set: vi.fn(() => ({ where: vi.fn() })) })
+      ;(getCachedData as Mock).mockResolvedValue(mergedCart)
+
+      const request = new NextRequest('http://localhost/api/cart', {
+        headers: { cookie: `cart_session=${signedSessionId}` },
+      })
+      const response = await GET(request)
+      const data = await response.json()
+      const setCookie = response.headers.get('set-cookie')
+      const rotatedCookieValue = setCookie
+        ?.match(/cart_session=([^;]+)/)?.[1]
+
+      expect(response.status).toBe(200)
+      expect(data.cart?.id).toBe(VALID_CART_ID)
+      expect(invalidateCartCache).toHaveBeenCalledWith('user123', undefined)
+      expect(invalidateCartCache).toHaveBeenCalledWith(undefined, 'guest123')
+      expect(rotatedCookieValue).toBeDefined()
+      expect(rotatedCookieValue).not.toBe(signedSessionId)
+      expect(verifyCartSessionCookieValue(rotatedCookieValue)).toBeDefined()
     })
 
     it('returns null cart when getCachedData returns undefined', async () => {
@@ -344,11 +403,15 @@ describe('Cart API Route', () => {
       })
       const response = await POST(request)
       const data = await response.json()
+      const setCookie = response.headers.get('set-cookie')
+      const signedCookie = setCookie?.match(/cart_session=([^;]+)/)?.[1]
 
       expect(response.status).toBe(201)
       expect(data.cart).toBeDefined()
-      const setCookie = response.headers.get('set-cookie')
       expect(setCookie).toContain('cart_session=')
+      expect(setCookie).toContain('HttpOnly')
+      expect(setCookie).toContain('SameSite=lax')
+      expect(verifyCartSessionCookieValue(signedCookie)).toBeDefined()
     })
 
     it('falls back to guest cart when authenticated user no longer exists', async () => {
@@ -398,6 +461,64 @@ describe('Cart API Route', () => {
       )
       const setCookie = response.headers.get('set-cookie')
       expect(setCookie).toContain('cart_session=')
+      const signedCookie = setCookie?.match(/cart_session=([^;]+)/)?.[1]
+      expect(verifyCartSessionCookieValue(signedCookie)).toBeDefined()
+    })
+
+    it('merges a signed guest cart into the authenticated cart before adding items and rotates the cookie', async () => {
+      const signedSessionId = signCartSessionCookieValue('guest123')
+      const mockCart = {
+        id: VALID_CART_ID,
+        createdAt: new Date('2024-01-01'),
+        updatedAt: new Date('2024-01-02'),
+        items: [],
+      }
+
+      ;(auth as Mock).mockResolvedValue({ user: { id: 'user123' } })
+      ;(drizzleDb.query.products.findFirst as Mock).mockResolvedValue({
+        id: VALID_PRODUCT_ID,
+        variants: [{ id: VALID_VARIANT_ID_TOP, stock: 10 }],
+      })
+      ;(drizzleDb.query.carts.findFirst as Mock)
+        .mockResolvedValueOnce({
+          id: 'guest-cart',
+          items: [],
+        })
+        .mockResolvedValueOnce({ id: VALID_CART_ID, items: [] })
+        .mockResolvedValueOnce({ id: VALID_CART_ID })
+        .mockResolvedValueOnce(mockCart)
+      ;(drizzleDb.query.cartItems.findFirst as Mock).mockResolvedValue(null)
+      ;(drizzleDb.insert as Mock).mockReturnValue({
+        values: vi.fn(() => ({ returning: vi.fn() })),
+      })
+      ;(drizzleDb.update as Mock)
+        .mockReturnValueOnce({ set: vi.fn(() => ({ where: vi.fn() })) })
+      ;(drizzleDb.delete as Mock)
+        .mockReturnValueOnce({ where: vi.fn() })
+
+      const request = new NextRequest('http://localhost/api/cart', {
+        method: 'POST',
+        body: JSON.stringify({
+          productId: VALID_PRODUCT_ID,
+          variantId: VALID_VARIANT_ID_TOP,
+          quantity: 1,
+        }),
+        headers: {
+          'content-type': 'application/json',
+          cookie: `cart_session=${signedSessionId}`,
+        },
+      })
+      const response = await POST(request)
+      const setCookie = response.headers.get('set-cookie')
+      const rotatedCookieValue = setCookie
+        ?.match(/cart_session=([^;]+)/)?.[1]
+
+      expect(response.status).toBe(201)
+      expect(invalidateCartCache).toHaveBeenCalledWith('user123', undefined)
+      expect(invalidateCartCache).toHaveBeenCalledWith(undefined, 'guest123')
+      expect(rotatedCookieValue).toBeDefined()
+      expect(rotatedCookieValue).not.toBe(signedSessionId)
+      expect(verifyCartSessionCookieValue(rotatedCookieValue)).toBeDefined()
     })
 
     it('returns 500 on error', async () => {
@@ -450,9 +571,10 @@ describe('Cart API Route', () => {
       const deleteWhereMock = vi.fn()
       ;(drizzleDb.delete as Mock).mockReturnValue({ where: deleteWhereMock })
 
+      const signedSessionId = signCartSessionCookieValue('guest123')
       const request = new NextRequest('http://localhost/api/cart', {
         method: 'DELETE',
-        headers: { cookie: 'cart_session=guest123' },
+        headers: { cookie: `cart_session=${signedSessionId}` },
       })
       const response = await DELETE(request)
       const data = await response.json()
