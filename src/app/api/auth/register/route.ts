@@ -64,7 +64,8 @@ export async function POST(request: NextRequest) {
     await savePasswordToHistory(newUser.id, passwordHash)
 
     const identifier = createEmailVerificationIdentifier(newUser.id)
-    const { plainToken, tokenHash, expiresAt } = generateEmailVerificationToken()
+    const { plainToken, tokenHash, expiresAt } =
+      generateEmailVerificationToken()
 
     await primaryDrizzleDb
       .delete(verificationTokens)

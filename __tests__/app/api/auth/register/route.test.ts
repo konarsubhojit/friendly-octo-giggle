@@ -90,7 +90,9 @@ describe('POST /api/auth/register', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks()
-    mockCreateEmailVerificationIdentifier.mockReturnValue('email-verify:new-user-id')
+    mockCreateEmailVerificationIdentifier.mockReturnValue(
+      'email-verify:new-user-id'
+    )
     mockGenerateEmailVerificationToken.mockReturnValue({
       plainToken: 'verify-plain-token',
       tokenHash: 'verify-token-hash',

@@ -73,7 +73,9 @@ export default function VerifyEmailPage() {
             Verify Email
           </h1>
           {state === 'loading' ? (
-            <p className="text-[var(--text-secondary)]">Verifying your email…</p>
+            <p className="text-[var(--text-secondary)]">
+              Verifying your email…
+            </p>
           ) : message ? (
             <p
               className={

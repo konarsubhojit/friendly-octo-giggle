@@ -58,7 +58,8 @@ describe('POST /api/services/email-verification-email', () => {
   })
 
   it('sends verification email for valid payload', async () => {
-    const { POST } = await import('@/app/api/services/email-verification-email/route')
+    const { POST } =
+      await import('@/app/api/services/email-verification-email/route')
 
     const req = makeRequest({
       type: 'auth.email_verification_requested',
@@ -82,7 +83,8 @@ describe('POST /api/services/email-verification-email', () => {
     mockEnv.QSTASH_NEXT_SIGNING_KEY = 'next'
     mockVerify.mockRejectedValue(new Error('invalid signature'))
 
-    const { POST } = await import('@/app/api/services/email-verification-email/route')
+    const { POST } =
+      await import('@/app/api/services/email-verification-email/route')
     const req = makeRequest(
       {
         type: 'auth.email_verification_requested',
