@@ -10,6 +10,7 @@ import {
   STRICT_RATE_LIMIT_MAX_REQUESTS,
 } from '@/lib/rate-limit'
 
+const isDev = process.env.NODE_ENV === 'development'
 const ADMIN_PATH_PREFIX = '/admin'
 const ADMIN_API_PREFIX = '/api/admin'
 
@@ -187,6 +188,20 @@ function getInMemoryAiRateLimitResult(
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
+  const nonce = btoa(
+    String.fromCharCode(...crypto.getRandomValues(new Uint8Array(16)))
+  )
+  const csp = [
+    "default-src 'self'",
+    `script-src 'self' 'nonce-${nonce}'${isDev ? " 'unsafe-eval'" : ''} https://va.vercel-scripts.com`,
+    `style-src 'self' 'nonce-${nonce}'`,
+    "img-src 'self' data: blob: https://images.unsplash.com https://*.public.blob.vercel-storage.com https://lh3.googleusercontent.com",
+    "font-src 'self'",
+    "connect-src 'self' https://va.vercel-scripts.com https://accounts.google.com https://login.microsoftonline.com https://graph.microsoft.com https://*.ingest.de.sentry.io",
+    "frame-src 'self' https://accounts.google.com https://login.microsoftonline.com",
+  ].join('; ')
+  const requestHeaders = new Headers(request.headers)
+  requestHeaders.set('x-nonce', nonce)
   let rateLimitHeaders: HeadersInit | null = null
   let cachedSession: SessionLike | undefined
 
@@ -199,7 +214,9 @@ export async function proxy(request: NextRequest) {
     return cachedSession
   }
 
-  const withRateLimitHeaders = (response: NextResponse): NextResponse => {
+  const withResponseHeaders = (response: NextResponse): NextResponse => {
+    response.headers.set('Content-Security-Policy', csp)
+    response.headers.set('x-nonce', nonce)
     if (rateLimitHeaders) {
       for (const [key, value] of Object.entries(rateLimitHeaders)) {
         response.headers.set(key, value)
@@ -212,9 +229,10 @@ export async function proxy(request: NextRequest) {
   const proto = request.headers.get('x-forwarded-proto') || 'http'
   if (process.env.NODE_ENV !== 'development' && proto === 'http') {
     const host = request.headers.get('host') || ''
-    return NextResponse.redirect(
-      `https://${host}${pathname}${request.nextUrl.search}`,
-      { status: 301 }
+    return withResponseHeaders(
+      NextResponse.redirect(`https://${host}${pathname}${request.nextUrl.search}`, {
+        status: 301,
+      })
     )
   }
 
@@ -247,7 +265,7 @@ export async function proxy(request: NextRequest) {
       rateLimitResult = getInMemoryAiRateLimitResult(identifier, pathname)
     }
     if (rateLimitResult && !rateLimitResult.success) {
-      return buildRateLimitedResponse(rateLimitResult)
+      return withResponseHeaders(buildRateLimitedResponse(rateLimitResult))
     }
     if (rateLimitResult) {
       rateLimitHeaders = createRateLimitHeaders(rateLimitResult)
@@ -267,7 +285,9 @@ export async function proxy(request: NextRequest) {
 
     if (!limiter) {
       if (isStrictPath) {
-        return buildRateLimitUnavailableResponse(fallbackLimit)
+        return withResponseHeaders(
+          buildRateLimitUnavailableResponse(fallbackLimit)
+        )
       }
     } else {
       try {
@@ -280,13 +300,15 @@ export async function proxy(request: NextRequest) {
         }
       } catch {
         if (isStrictPath) {
-          return buildRateLimitUnavailableResponse(fallbackLimit)
+          return withResponseHeaders(
+            buildRateLimitUnavailableResponse(fallbackLimit)
+          )
         }
       }
     }
 
     if (!rateLimitResult.success) {
-      return buildRateLimitedResponse(rateLimitResult)
+      return withResponseHeaders(buildRateLimitedResponse(rateLimitResult))
     }
     rateLimitHeaders = createRateLimitHeaders(rateLimitResult)
   }
@@ -308,7 +330,7 @@ export async function proxy(request: NextRequest) {
       if (flags.maintenanceMode) {
         // For API routes return a JSON response; for pages return 503.
         if (pathname.startsWith('/api/')) {
-          return withRateLimitHeaders(
+          return withResponseHeaders(
             NextResponse.json(
               {
                 success: false,
@@ -319,14 +341,9 @@ export async function proxy(request: NextRequest) {
           )
         }
         // For non-API routes, return an HTML maintenance page.
-        return withRateLimitHeaders(
+        return withResponseHeaders(
           new NextResponse(
-            `<!DOCTYPE html><html><head><title>Maintenance</title></head>
-             <body style="display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:system-ui;background:#fdf6f0">
-             <div style="text-align:center;max-width:480px;padding:2rem">
-             <h1 style="font-size:2rem;margin-bottom:1rem">🛠️ Under Maintenance</h1>
-             <p style="color:#666">We're performing scheduled maintenance. Please check back shortly.</p>
-             </div></body></html>`,
+            `<!DOCTYPE html><html><head><title>Maintenance</title></head><body><h1>Under Maintenance</h1><p>We're performing scheduled maintenance. Please check back shortly.</p></body></html>`,
             {
               status: 503,
               headers: {
@@ -352,7 +369,7 @@ export async function proxy(request: NextRequest) {
 
     if (!currentSession?.user) {
       if (pathname.startsWith('/api/')) {
-        return withRateLimitHeaders(
+        return withResponseHeaders(
           NextResponse.json(
             { success: false, error: 'Not authenticated' },
             { status: 401 }
@@ -362,12 +379,12 @@ export async function proxy(request: NextRequest) {
       const signInUrl = request.nextUrl.clone()
       signInUrl.pathname = '/auth/signin'
       signInUrl.searchParams.set('callbackUrl', pathname)
-      return withRateLimitHeaders(NextResponse.redirect(signInUrl))
+      return withResponseHeaders(NextResponse.redirect(signInUrl))
     }
 
     if (currentSession.user.role !== 'ADMIN') {
       if (pathname.startsWith('/api/')) {
-        return withRateLimitHeaders(
+        return withResponseHeaders(
           NextResponse.json(
             { success: false, error: 'Not authorized - Admin access required' },
             { status: 403 }
@@ -376,22 +393,21 @@ export async function proxy(request: NextRequest) {
       }
       const homeUrl = request.nextUrl.clone()
       homeUrl.pathname = '/'
-      return withRateLimitHeaders(NextResponse.redirect(homeUrl))
+      return withResponseHeaders(NextResponse.redirect(homeUrl))
     }
   }
 
-  return withRateLimitHeaders(NextResponse.next())
+  return withResponseHeaders(
+    NextResponse.next({
+      request: {
+        headers: requestHeaders,
+      },
+    })
+  )
 }
 
 export const config = {
   matcher: [
-    '/admin/:path*',
-    '/api/admin/:path*',
-    '/api/auth/register',
-    '/api/auth/change-password',
-    '/api/auth/callback/credentials',
-    '/api/checkout/:path*',
-    '/api/orders/:path*',
-    '/api/ai/:path*',
+    '/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|map)$).*)',
   ],
 }
