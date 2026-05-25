@@ -445,6 +445,11 @@ export const reviews = pgTable(
     rating: integer('rating').notNull(),
     comment: text('comment').notNull(),
     isAnonymous: boolean('isAnonymous').default(false).notNull(),
+    isVerifiedBuyer: boolean('isVerifiedBuyer').default(false).notNull(),
+    helpfulCount: integer('helpfulCount').default(0).notNull(),
+    notHelpfulCount: integer('notHelpfulCount').default(0).notNull(),
+    isFeatured: boolean('isFeatured').default(false).notNull(),
+    isHidden: boolean('isHidden').default(false).notNull(),
     createdAt: timestamp('createdAt', { mode: 'date' }).defaultNow().notNull(),
     updatedAt: timestamp('updatedAt', { mode: 'date' }).defaultNow().notNull(),
   },
@@ -453,6 +458,29 @@ export const reviews = pgTable(
     index('Review_userId_idx').on(t.userId),
     index('Review_productId_rating_idx').on(t.productId, t.rating),
     unique('Review_userId_productId_key').on(t.userId, t.productId),
+  ]
+)
+
+export const reviewVotes = pgTable(
+  'ReviewVote',
+  {
+    id: varchar('id', { length: 7 })
+      .primaryKey()
+      .$defaultFn(() => generateShortId()),
+    reviewId: varchar('reviewId', { length: 7 })
+      .notNull()
+      .references(() => reviews.id, { onDelete: 'cascade' }),
+    userId: text('userId')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    vote: integer('vote').notNull(),
+    createdAt: timestamp('createdAt', { mode: 'date' }).defaultNow().notNull(),
+    updatedAt: timestamp('updatedAt', { mode: 'date' }).defaultNow().notNull(),
+  },
+  (t) => [
+    unique('ReviewVote_reviewId_userId_key').on(t.reviewId, t.userId),
+    index('ReviewVote_reviewId_idx').on(t.reviewId),
+    index('ReviewVote_userId_idx').on(t.userId),
   ]
 )
 
@@ -489,6 +517,7 @@ export const usersRelations = relations(users, ({ many, one }) => ({
   cart: one(carts),
   passwordHistory: many(passwordHistory),
   wishlists: many(wishlists),
+  reviewVotes: many(reviewVotes),
 }))
 
 export const accountsRelations = relations(accounts, ({ one }) => ({
@@ -627,13 +656,19 @@ export const wishlistsRelations = relations(wishlists, ({ one }) => ({
   }),
 }))
 
-export const reviewsRelations = relations(reviews, ({ one }) => ({
+export const reviewsRelations = relations(reviews, ({ one, many }) => ({
   product: one(products, {
     fields: [reviews.productId],
     references: [products.id],
   }),
   order: one(orders, { fields: [reviews.orderId], references: [orders.id] }),
   user: one(users, { fields: [reviews.userId], references: [users.id] }),
+  votes: many(reviewVotes),
+}))
+
+export const reviewVotesRelations = relations(reviewVotes, ({ one }) => ({
+  review: one(reviews, { fields: [reviewVotes.reviewId], references: [reviews.id] }),
+  user: one(users, { fields: [reviewVotes.userId], references: [users.id] }),
 }))
 
 export const productSharesRelations = relations(productShares, ({ one }) => ({

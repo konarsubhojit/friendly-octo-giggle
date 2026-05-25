@@ -7,6 +7,9 @@ const mockSession = vi.hoisted(() => vi.fn())
 vi.mock('next-auth/react', () => ({
   useSession: mockSession,
 }))
+vi.mock('next/image', () => ({
+  default: (props: React.ComponentProps<'img'>) => <img {...props} alt={props.alt} />,
+}))
 
 vi.mock('@/components/ui/GradientButton', () => ({
   GradientButton: ({ children, ...props }: React.ComponentProps<'button'>) => (
@@ -35,6 +38,7 @@ describe('ReviewForm', () => {
       screen.getByRole('group', { name: 'Select star rating' })
     ).toBeInTheDocument()
     expect(screen.getByLabelText(/your review/i)).toBeInTheDocument()
+    expect(screen.getByText(/1 = Poor/i)).toBeInTheDocument()
     expect(screen.getByText('Submit Review')).toBeInTheDocument()
   })
 

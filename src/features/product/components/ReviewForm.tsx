@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useSession } from 'next-auth/react'
+import Image from 'next/image'
 import { StarRating } from '@/components/ui/StarRating'
 import { GradientButton } from '@/components/ui/GradientButton'
 
@@ -97,6 +98,33 @@ export const ReviewForm = ({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+      <div className="flex items-center gap-3 rounded-xl border border-[var(--border-warm)] bg-[var(--surface)]/60 px-3 py-2">
+        {session.user.image ? (
+          <Image
+            src={session.user.image}
+            alt={session.user.name ?? 'Your avatar'}
+            width={32}
+            height={32}
+            className="h-8 w-8 rounded-full object-cover"
+          />
+        ) : (
+          <div
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--accent-blush)] text-xs font-semibold text-[var(--accent-rose)]"
+            aria-hidden="true"
+          >
+            {(session.user.name ?? session.user.email ?? 'U')[0]?.toUpperCase()}
+          </div>
+        )}
+        <div className="min-w-0">
+          <p className="truncate text-sm font-medium text-[var(--foreground)]">
+            {session.user.name ?? 'Signed in user'}
+          </p>
+          <p className="text-xs text-[var(--text-muted)]">
+            Your profile avatar will be shown with this review unless anonymous.
+          </p>
+        </div>
+      </div>
+
       {/* Star rating selector */}
       <div>
         <p className="block text-sm font-semibold text-[var(--foreground)] mb-2">
@@ -112,6 +140,9 @@ export const ReviewForm = ({
           onChange={setRating}
           label="Select star rating"
         />
+        <p className="mt-2 text-xs text-[var(--text-muted)]">
+          1 = Poor · 2 = Fair · 3 = Good · 4 = Very good · 5 = Excellent
+        </p>
       </div>
 
       {/* Comment */}
