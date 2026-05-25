@@ -3,11 +3,8 @@ import { NextRequest } from 'next/server'
 
 const {
   mockUpdate,
-  mockUpdateSet,
-  mockUpdateWhere,
   mockUpdateReturning,
   mockDelete,
-  mockDeleteWhere,
   mockDeleteReturning,
 } = vi.hoisted(() => {
   const mockUpdateReturning = vi.fn()

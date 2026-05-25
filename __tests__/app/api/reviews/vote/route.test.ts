@@ -7,8 +7,6 @@ const {
   mockTransaction,
   mockTxInsert,
   mockTxUpdate,
-  mockTxUpdateSet,
-  mockTxUpdateWhere,
 } = vi.hoisted(() => {
   const mockTxInsertValues = vi.fn()
   const mockTxInsert = vi.fn(() => ({ values: mockTxInsertValues }))
