@@ -28,6 +28,16 @@ const getGuestCartSessionCookie = (request: NextRequest) => {
   }
 }
 
+const deleteInvalidGuestCartSessionCookie = (
+  response: NextResponse,
+  cookieValue: string | undefined,
+  sessionId: string | undefined
+) => {
+  if (cookieValue && !sessionId) {
+    response.cookies.delete(CART_SESSION_COOKIE_NAME)
+  }
+}
+
 export async function GET(request: NextRequest) {
   try {
     const session = await auth()
@@ -43,9 +53,7 @@ export async function GET(request: NextRequest) {
     const result = await getCart(identity)
     const response = NextResponse.json(result)
 
-    if (cookieValue && !sessionId) {
-      response.cookies.delete(CART_SESSION_COOKIE_NAME)
-    }
+    deleteInvalidGuestCartSessionCookie(response, cookieValue, sessionId)
 
     if (rotatedSessionId) {
       response.cookies.set(
@@ -97,8 +105,8 @@ export async function POST(request: NextRequest) {
         signCartSessionCookieValue(nextGuestSessionId),
         buildGuestSessionCookieOptions()
       )
-    } else if (cookieValue && !sessionId) {
-      response.cookies.delete(CART_SESSION_COOKIE_NAME)
+    } else {
+      deleteInvalidGuestCartSessionCookie(response, cookieValue, sessionId)
     }
 
     return response
@@ -130,8 +138,8 @@ export async function DELETE(request: NextRequest) {
 
     if (!identity.userId && identity.sessionId) {
       response.cookies.delete(CART_SESSION_COOKIE_NAME)
-    } else if (cookieValue && !sessionId) {
-      response.cookies.delete(CART_SESSION_COOKIE_NAME)
+    } else {
+      deleteInvalidGuestCartSessionCookie(response, cookieValue, sessionId)
     }
 
     return response

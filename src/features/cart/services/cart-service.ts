@@ -118,7 +118,7 @@ export class CartRequestError extends Error {
 export const isCartRequestError = (error: unknown): error is CartRequestError =>
   error instanceof CartRequestError
 
-const guestCartItemKey = (item: {
+const cartItemKey = (item: {
   productId: string
   variantId: string
 }): string => `${item.productId}:${item.variantId}`
@@ -497,11 +497,11 @@ export const mergeGuestCartIntoUserCart = async (
       .where(eq(carts.id, guestCart.id))
   } else {
     const existingItems = new Map(
-      userCart.items.map((item) => [guestCartItemKey(item), item])
+      userCart.items.map((item) => [cartItemKey(item), item])
     )
 
     for (const guestItem of guestCart.items) {
-      const existingItem = existingItems.get(guestCartItemKey(guestItem))
+      const existingItem = existingItems.get(cartItemKey(guestItem))
       if (existingItem) {
         await primaryDrizzleDb
           .update(cartItems)
@@ -530,23 +530,35 @@ export const mergeGuestCartIntoUserCart = async (
     await primaryDrizzleDb.delete(carts).where(eq(carts.id, guestCart.id))
   }
 
-  try {
-    await Promise.all([
-      invalidateCartCache(userId, undefined),
-      invalidateCartCache(undefined, sessionId),
-      removeCartItemsByCartId(guestCart.id, undefined, sessionId),
-    ])
-  } catch (error) {
+  const cleanupResults = await Promise.allSettled([
+    invalidateCartCache(userId, undefined),
+    invalidateCartCache(undefined, sessionId),
+    removeCartItemsByCartId(guestCart.id, undefined, sessionId),
+  ])
+
+  cleanupResults.forEach((result, index) => {
+    if (result.status === 'fulfilled') {
+      return
+    }
+
+    const operation =
+      index === 0
+        ? 'invalidate_user_cart_cache'
+        : index === 1
+          ? 'invalidate_guest_cart_cache'
+          : 'remove_guest_cart_items_from_redis'
+
     logError({
-      error,
+      error: result.reason,
       context: 'cart_merge_cache_cleanup',
       additionalInfo: {
+        operation,
         userId,
         sessionId,
         guestCartId: guestCart.id,
       },
     })
-  }
+  })
 
   return createGuestCartSessionId()
 }
