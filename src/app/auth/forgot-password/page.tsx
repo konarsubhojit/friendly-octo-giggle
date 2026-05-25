@@ -2,7 +2,11 @@
 
 import { useCallback, useState } from 'react'
 import Link from 'next/link'
-import { DynamicForm, type FieldDef, type SubmitResult } from '@/components/ui/DynamicForm'
+import {
+  DynamicForm,
+  type FieldDef,
+  type SubmitResult,
+} from '@/components/ui/DynamicForm'
 
 const FORGOT_PASSWORD_FIELDS: ReadonlyArray<FieldDef> = [
   {
@@ -80,4 +84,3 @@ export default function ForgotPasswordPage() {
     </div>
   )
 }
-

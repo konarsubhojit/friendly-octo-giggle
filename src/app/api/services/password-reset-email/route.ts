@@ -87,7 +87,11 @@ export async function POST(request: NextRequest) {
   const messageId = request.headers.get('Upstash-Message-Id') ?? undefined
   const bodyText = await request.text()
 
-  const signatureError = await verifyQStashSignature(request, bodyText, messageId)
+  const signatureError = await verifyQStashSignature(
+    request,
+    bodyText,
+    messageId
+  )
   if (signatureError) {
     return signatureError
   }
@@ -119,4 +123,3 @@ export async function POST(request: NextRequest) {
 
   return apiSuccess({ sent: true })
 }
-

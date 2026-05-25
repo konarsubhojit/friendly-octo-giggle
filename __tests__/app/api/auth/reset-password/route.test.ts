@@ -179,4 +179,3 @@ describe('POST /api/auth/reset-password', () => {
     expect(mockSavePasswordToHistory).toHaveBeenCalledWith('user-1', 'new-hash')
   })
 })
-

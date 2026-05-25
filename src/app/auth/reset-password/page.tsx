@@ -3,7 +3,11 @@
 import { useCallback, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import { DynamicForm, type FieldDef, type SubmitResult } from '@/components/ui/DynamicForm'
+import {
+  DynamicForm,
+  type FieldDef,
+  type SubmitResult,
+} from '@/components/ui/DynamicForm'
 import { PASSWORD_REQUIREMENTS } from '@/lib/validations/primitives'
 
 const RESET_PASSWORD_FIELDS: ReadonlyArray<FieldDef> = [
@@ -70,7 +74,9 @@ export default function ResetPasswordPage() {
 
         const data = await response.json()
         if (!response.ok) {
-          return data.error || 'Could not reset your password. Please try again.'
+          return (
+            data.error || 'Could not reset your password. Please try again.'
+          )
         }
 
         setSuccessMessage('Password reset successfully. You can now sign in.')
@@ -130,4 +136,3 @@ export default function ResetPasswordPage() {
     </div>
   )
 }
-

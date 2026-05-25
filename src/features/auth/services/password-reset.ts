@@ -24,7 +24,10 @@ const getForgotByEmailLimiter = (): Ratelimit | null => {
   if (!forgotByEmailLimiter) {
     forgotByEmailLimiter = new Ratelimit({
       redis,
-      limiter: Ratelimit.slidingWindow(FORGOT_LIMIT_PER_EMAIL, FORGOT_LIMIT_WINDOW),
+      limiter: Ratelimit.slidingWindow(
+        FORGOT_LIMIT_PER_EMAIL,
+        FORGOT_LIMIT_WINDOW
+      ),
       prefix: 'rl:auth:forgot:email',
     })
   }
@@ -37,7 +40,10 @@ const getForgotByIpLimiter = (): Ratelimit | null => {
   if (!forgotByIpLimiter) {
     forgotByIpLimiter = new Ratelimit({
       redis,
-      limiter: Ratelimit.slidingWindow(FORGOT_LIMIT_PER_IP, FORGOT_LIMIT_WINDOW),
+      limiter: Ratelimit.slidingWindow(
+        FORGOT_LIMIT_PER_IP,
+        FORGOT_LIMIT_WINDOW
+      ),
       prefix: 'rl:auth:forgot:ip',
     })
   }
@@ -138,7 +144,9 @@ export const consumeResetPasswordRateLimits = async ({
   const ipLimiter = getResetByIpLimiter()
 
   const [identifierResult, ipResult] = await Promise.all([
-    identifierLimiter ? identifierLimiter.limit(identifier) : Promise.resolve(null),
+    identifierLimiter
+      ? identifierLimiter.limit(identifier)
+      : Promise.resolve(null),
     ipLimiter ? ipLimiter.limit(ipAddress) : Promise.resolve(null),
   ])
 
@@ -147,4 +155,3 @@ export const consumeResetPasswordRateLimits = async ({
     ipLimited: normalizeRateLimitResult(ipResult),
   }
 }
-

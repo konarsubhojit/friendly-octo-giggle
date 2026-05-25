@@ -55,7 +55,8 @@ describe('POST /api/services/password-reset-email', () => {
   })
 
   it('sends password reset email for valid payload', async () => {
-    const { POST } = await import('@/app/api/services/password-reset-email/route')
+    const { POST } =
+      await import('@/app/api/services/password-reset-email/route')
 
     const req = makeRequest({
       type: 'password.reset_requested',
@@ -79,7 +80,8 @@ describe('POST /api/services/password-reset-email', () => {
     mockEnv.QSTASH_NEXT_SIGNING_KEY = 'next'
     mockVerify.mockRejectedValue(new Error('invalid signature'))
 
-    const { POST } = await import('@/app/api/services/password-reset-email/route')
+    const { POST } =
+      await import('@/app/api/services/password-reset-email/route')
     const req = makeRequest(
       {
         type: 'password.reset_requested',
@@ -96,4 +98,3 @@ describe('POST /api/services/password-reset-email', () => {
     expect(res.status).toBe(401)
   })
 })
-
