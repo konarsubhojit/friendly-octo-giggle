@@ -33,6 +33,7 @@ const ChatMessageSchema = z.object({
 const ChatRequestSchema = z.object({
   messages: z.array(ChatMessageSchema).min(1),
   persistHistory: z.boolean().optional(),
+  // Allow lightweight client-generated IDs (default shape: product-{productId}).
   threadId: z
     .string()
     .trim()
@@ -224,6 +225,9 @@ const parseBudgetInINR = (
   return convertPriceToINR(raw, detectedCurrency)
 }
 
+const escapeLikeValue = (value: string): string =>
+  value.replace(/[\\%_]/g, '\\$&')
+
 const resolveThreadId = (
   providedThreadId: string | undefined,
   productId: string
@@ -266,7 +270,12 @@ const loadPersistedMessages = async (
     const parsed = JSON.parse(raw)
     const result = z.array(ChatMessageSchema).safeParse(parsed)
     return result.success ? result.data : []
-  } catch {
+  } catch (error) {
+    logError({
+      error,
+      context: 'ai_chat_history_load',
+      additionalInfo: { userId, productId, threadId },
+    })
     return []
   }
 }
@@ -329,7 +338,9 @@ const fetchComparisonContext = async (
   formatPrice: (priceInINR: number) => string
 ): Promise<string | null> => {
   const terms = extractComparisonTerms(text, currentProduct.name)
-  const conditions = terms.map((term) => ilike(products.name, `%${term}%`))
+  const conditions = terms.map((term) =>
+    ilike(products.name, `%${escapeLikeValue(term)}%`)
+  )
   if (conditions.length === 0) return null
 
   const rows = await drizzleDb.query.products.findMany({
