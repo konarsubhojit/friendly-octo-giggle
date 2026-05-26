@@ -445,7 +445,9 @@ const fetchReviewSummaryContext = async (
     .map((row) => row.comment.trim())
     .filter((comment) => comment.length > 0)
     .slice(0, 3)
-    .map((comment) => `- ${truncateForSummary(comment, MAX_REVIEW_COMMENT_CHARS)}`)
+    .map(
+      (comment) => `- ${truncateForSummary(comment, MAX_REVIEW_COMMENT_CHARS)}`
+    )
 
   return [
     `Review summary: ${rows.length} recent reviews, average rating ${average}/5, ${positive} positive ratings (4★+).`,
