@@ -13,7 +13,7 @@ import {
   isOrderRequestError,
 } from '@/features/orders/services/order-service'
 import { send } from '@/lib/queue'
-import { logBusinessEvent, logError } from '@/lib/logger'
+import { logBusinessEvent, logError, logPerformance } from '@/lib/logger'
 import { checkoutRequests, orders } from '@/lib/schema'
 import { formatStructuredAddress } from '@/lib/address-utils'
 import type {
@@ -391,6 +391,12 @@ export const processCheckoutRequestById = async (
   ) {
     return
   }
+
+  logPerformance({
+    operation: 'queue.checkout.lag',
+    duration: Date.now() - checkoutRequest.createdAt.getTime(),
+    metadata: { checkoutRequestId },
+  })
 
   await updateCheckoutRequestStatus(checkoutRequestId, 'PROCESSING', null)
 

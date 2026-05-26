@@ -6,6 +6,7 @@ const {
   mockDrizzleDbSelect,
   mockLogBusinessEvent,
   mockLogError,
+  mockLogPerformance,
   mockSend,
   mockCreateOrderForUser,
 } = vi.hoisted(() => ({
@@ -21,6 +22,7 @@ const {
   })),
   mockLogBusinessEvent: vi.fn(),
   mockLogError: vi.fn(),
+  mockLogPerformance: vi.fn(),
   mockSend: vi.fn(),
   mockCreateOrderForUser: vi.fn(),
 }))
@@ -38,6 +40,7 @@ vi.mock('@/lib/db', () => ({
 vi.mock('@/lib/logger', () => ({
   logBusinessEvent: mockLogBusinessEvent,
   logError: mockLogError,
+  logPerformance: mockLogPerformance,
 }))
 
 vi.mock('@/lib/queue', () => ({
@@ -276,6 +279,54 @@ describe('checkout-service', () => {
       await processCheckoutRequestById('cr1ab23')
 
       expect(mockCreateOrderForUser).not.toHaveBeenCalled()
+    })
+
+    it('records checkout queue lag before processing', async () => {
+      const checkoutSelectChain = {
+        from: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockResolvedValue([
+          {
+            id: 'cr2xy89',
+            userId: 'user1',
+            customerName: 'Test User',
+            customerEmail: 'test@example.com',
+            customerAddress: '123 Street',
+            addressLine1: '123 Street',
+            addressLine2: '',
+            addressLine3: '',
+            pinCode: '110001',
+            city: 'New Delhi',
+            state: 'Delhi',
+            items: [],
+            status: 'PENDING',
+            createdAt: new Date(Date.now() - 2_000),
+          },
+        ]),
+      }
+      const orderSelectChain = {
+        from: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockReturnThis(),
+        then: vi.fn().mockResolvedValue(null),
+      }
+      mockDrizzleDbSelect
+        .mockReturnValueOnce(checkoutSelectChain as never)
+        .mockReturnValueOnce(orderSelectChain as never)
+      const updateChain = {
+        set: vi.fn().mockReturnThis(),
+        where: vi.fn().mockResolvedValue([]),
+      }
+      mockUpdate.mockReturnValue(updateChain)
+      mockCreateOrderForUser.mockResolvedValue({ order: { id: 'ord1' } })
+
+      await processCheckoutRequestById('cr2xy89')
+
+      expect(mockLogPerformance).toHaveBeenCalledWith(
+        expect.objectContaining({
+          operation: 'queue.checkout.lag',
+        })
+      )
     })
 
     it('throws on invalid checkout request id', async () => {
