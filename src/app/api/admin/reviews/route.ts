@@ -17,6 +17,9 @@ export const GET = async (request: NextRequest) => {
     const { searchParams } = new URL(request.url)
     const productId = searchParams.get('productId')
     const ratingStr = searchParams.get('rating')
+    const hidden = searchParams.get('hidden')
+    const featured = searchParams.get('featured')
+    const verified = searchParams.get('verified')
 
     const conditions: SQL[] = []
     if (productId) {
@@ -28,6 +31,15 @@ export const GET = async (request: NextRequest) => {
         conditions.push(eq(reviews.rating, rating))
       }
     }
+    if (hidden === 'true' || hidden === 'false') {
+      conditions.push(eq(reviews.isHidden, hidden === 'true'))
+    }
+    if (featured === 'true' || featured === 'false') {
+      conditions.push(eq(reviews.isFeatured, featured === 'true'))
+    }
+    if (verified === 'true' || verified === 'false') {
+      conditions.push(eq(reviews.isVerifiedBuyer, verified === 'true'))
+    }
 
     const singleOrCombined =
       conditions.length === 1 ? conditions[0] : and(...conditions)
@@ -35,7 +47,7 @@ export const GET = async (request: NextRequest) => {
 
     const allReviews = await drizzleDb.query.reviews.findMany({
       where: whereClause,
-      orderBy: [desc(reviews.createdAt)],
+      orderBy: [desc(reviews.isFeatured), desc(reviews.createdAt)],
       limit: 200,
       with: {
         user: { columns: { id: true, name: true, email: true, image: true } },
