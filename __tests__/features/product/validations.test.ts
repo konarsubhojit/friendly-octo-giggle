@@ -3,6 +3,9 @@ import {
   CreateVariantSchema,
   UpdateVariantSchema,
   CreateReviewSchema,
+  UpdateReviewSchema,
+  VoteReviewSchema,
+  ModerateReviewSchema,
   CreateShareSchema,
   ProductSchema,
   ProductInputSchema,
@@ -144,6 +147,37 @@ describe('product/validations', () => {
       if (result.success) {
         expect(result.data.isAnonymous).toBe(false)
       }
+    })
+  })
+
+  describe('UpdateReviewSchema', () => {
+    it('validates valid update payload', () => {
+      const result = UpdateReviewSchema.safeParse({
+        rating: 4,
+        comment: 'Updated review text long enough',
+        isAnonymous: true,
+      })
+      expect(result.success).toBe(true)
+    })
+  })
+
+  describe('VoteReviewSchema', () => {
+    it('accepts up/down votes only', () => {
+      expect(VoteReviewSchema.safeParse({ vote: 'up' }).success).toBe(true)
+      expect(VoteReviewSchema.safeParse({ vote: 'down' }).success).toBe(true)
+      expect(VoteReviewSchema.safeParse({ vote: 'sideways' }).success).toBe(
+        false
+      )
+    })
+  })
+
+  describe('ModerateReviewSchema', () => {
+    it('accepts feature/hide updates', () => {
+      const result = ModerateReviewSchema.safeParse({
+        isFeatured: true,
+        isHidden: false,
+      })
+      expect(result.success).toBe(true)
     })
   })
 

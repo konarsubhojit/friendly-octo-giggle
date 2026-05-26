@@ -132,6 +132,34 @@ export const CreateReviewSchema = z.object({
 
 export type CreateReviewInput = z.infer<typeof CreateReviewSchema>
 
+export const UpdateReviewSchema = z.object({
+  rating: z
+    .number()
+    .int('Rating must be a whole number')
+    .min(1, 'Rating must be at least 1')
+    .max(5, 'Rating must be at most 5'),
+  comment: z
+    .string()
+    .min(10, 'Review must be at least 10 characters')
+    .max(1000, 'Review must be under 1000 characters'),
+  isAnonymous: z.boolean().default(false),
+})
+
+export type UpdateReviewInput = z.infer<typeof UpdateReviewSchema>
+
+export const VoteReviewSchema = z.object({
+  vote: z.enum(['up', 'down']),
+})
+
+export type VoteReviewInput = z.infer<typeof VoteReviewSchema>
+
+export const ModerateReviewSchema = z.object({
+  isFeatured: z.boolean().optional(),
+  isHidden: z.boolean().optional(),
+})
+
+export type ModerateReviewInput = z.infer<typeof ModerateReviewSchema>
+
 // ─── Share Validation Schemas ─────────────────────────────
 
 export const CreateShareSchema = z.object({
