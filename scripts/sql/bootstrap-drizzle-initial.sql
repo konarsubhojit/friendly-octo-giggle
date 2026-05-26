@@ -58,10 +58,15 @@ CREATE TABLE IF NOT EXISTS public."User" (
   "passwordHash" text,
   "phoneNumber" varchar(20),
   role public."UserRole" DEFAULT 'CUSTOMER' NOT NULL,
+  "lockedUntil" timestamp,
+  "sessionVersion" integer DEFAULT 0 NOT NULL,
   "createdAt" timestamp DEFAULT now() NOT NULL,
   "updatedAt" timestamp DEFAULT now() NOT NULL,
   "currencyPreference" varchar(3) DEFAULT 'INR' NOT NULL
 );
+
+ALTER TABLE public."User" ADD COLUMN IF NOT EXISTS "lockedUntil" timestamp;
+ALTER TABLE public."User" ADD COLUMN IF NOT EXISTS "sessionVersion" integer DEFAULT 0 NOT NULL;
 
 CREATE TABLE IF NOT EXISTS public."Account" (
   id text PRIMARY KEY NOT NULL,
