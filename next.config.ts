@@ -59,9 +59,14 @@ export default withSentryConfig(nextConfig, {
   // For all available options, see:
   // https://www.npmjs.com/package/@sentry/webpack-plugin#options
 
-  org: 'kiyon',
+  // Sourced from the Vercel ↔ Sentry integration env vars
+  // (SENTRY_ORG / SENTRY_PROJECT / SENTRY_AUTH_TOKEN). Falls back to the
+  // historical values so local builds without the integration keep working.
+  org: process.env.SENTRY_ORG ?? 'kiyon',
 
-  project: 'javascript-nextjs',
+  project: process.env.SENTRY_PROJECT ?? 'javascript-nextjs',
+
+  authToken: process.env.SENTRY_AUTH_TOKEN,
 
   // Only print logs for uploading source maps in CI
   silent: !process.env.CI,
