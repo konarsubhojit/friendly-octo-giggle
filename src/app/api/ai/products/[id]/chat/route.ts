@@ -993,6 +993,9 @@ export const POST = async (
     return new Response(readable, {
       headers: {
         'Content-Type': 'text/plain; charset=utf-8',
+        'Cache-Control': 'no-cache, no-transform',
+        'X-Accel-Buffering': 'no',
+        Connection: 'keep-alive',
         ...(persistHistory ? { 'X-AI-Thread-ID': threadId } : {}),
       },
     })

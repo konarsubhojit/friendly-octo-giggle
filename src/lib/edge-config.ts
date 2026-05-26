@@ -58,7 +58,7 @@ const DEFAULT_SHIPPING_CONFIG: ShippingConfig = {
 
 const DEFAULT_AI_CONFIG: AiConfig = {
   enabled: true,
-  chatModel: 'gemini-2.0-flash',
+  chatModel: 'gemini-3.5-flash',
   embeddingModel: 'text-embedding-004',
   maxResponseTokens: 512,
   maxContextChunks: 3,
