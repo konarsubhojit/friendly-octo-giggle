@@ -32,7 +32,8 @@ const state = {
   },
 }
 
-const getRouteKey = (method: string, path: string): string => `${method} ${path}`
+const getRouteKey = (method: string, path: string): string =>
+  `${method} ${path}`
 
 const escapeLabelValue = (value: string): string =>
   value.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n')

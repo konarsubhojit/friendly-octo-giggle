@@ -48,12 +48,16 @@ describe('metrics', () => {
     recordBusinessEventMetric(false)
 
     const output = renderPrometheusMetrics()
-    expect(output).toContain('application_cache_operations_total{operation="hit"} 2')
+    expect(output).toContain(
+      'application_cache_operations_total{operation="hit"} 2'
+    )
     expect(output).toContain(
       'application_cache_operations_total{operation="miss"} 1'
     )
     expect(output).toContain('application_cache_hit_rate 0.666667')
-    expect(output).toContain('application_checkout_queue_lag_ms_average 500.000')
+    expect(output).toContain(
+      'application_checkout_queue_lag_ms_average 500.000'
+    )
     expect(output).toContain('application_checkout_queue_lag_ms_max 750')
     expect(output).toContain(
       'application_business_events_total{success="true"} 1'
