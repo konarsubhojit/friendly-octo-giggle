@@ -23,6 +23,10 @@ export interface AiConfig {
   readonly maxResponseTokens: number
   readonly maxContextChunks: number
   readonly maxHistoryMessages: number
+  readonly advancedFeaturesEnabled?: boolean
+  readonly dailyRequestQuota?: number
+  readonly dailyTokenQuota?: number
+  readonly advancedFeatureDailyRequestQuota?: number
   readonly thinkingLevel?: 'none' | 'low' | 'medium' | 'high'
   readonly includeThoughts?: boolean
 }
@@ -55,6 +59,10 @@ const DEFAULT_AI_CONFIG: AiConfig = {
   maxResponseTokens: 512,
   maxContextChunks: 3,
   maxHistoryMessages: 10,
+  advancedFeaturesEnabled: true,
+  dailyRequestQuota: 40,
+  dailyTokenQuota: 12000,
+  advancedFeatureDailyRequestQuota: 15,
   thinkingLevel: 'none',
   includeThoughts: false,
 }

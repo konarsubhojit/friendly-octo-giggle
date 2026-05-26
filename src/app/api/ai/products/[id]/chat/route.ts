@@ -9,10 +9,13 @@ import { apiError, handleApiError } from '@/lib/api-utils'
 import { logError, logBusinessEvent } from '@/lib/logger'
 import { formatPriceForCurrency, isValidCurrencyCode } from '@/lib/currency'
 import { getRedisClient } from '@/lib/redis'
+import { getShippingConfig } from '@/lib/edge-config'
+import { getVariantMinPrice, getVariantTotalStock } from '@/features/product/variant-utils'
 import type { CurrencyCode } from '@/lib/currency'
 import type { Content } from '@google/genai'
-import { users } from '@/lib/schema'
-import { eq } from 'drizzle-orm'
+import type { Product } from '@/lib/types'
+import { users, products, orders, reviews } from '@/lib/schema'
+import { and, desc, eq, ilike, isNull, or } from 'drizzle-orm'
 import { auth } from '@/lib/auth'
 
 const ChatMessageSchema = z.object({
@@ -22,6 +25,14 @@ const ChatMessageSchema = z.object({
 
 const ChatRequestSchema = z.object({
   messages: z.array(ChatMessageSchema).min(1),
+  persistHistory: z.boolean().optional(),
+  threadId: z
+    .string()
+    .trim()
+    .min(1)
+    .max(80)
+    .regex(/^[a-zA-Z0-9:_-]+$/)
+    .optional(),
 })
 
 type ChatMessage = z.infer<typeof ChatMessageSchema>
@@ -31,7 +42,38 @@ const MAX_CONVERSATION_TURNS = 6
 const MAX_OUTPUT_TOKENS = 400
 const DAILY_REQUEST_QUOTA = 40
 const DAILY_TOKEN_QUOTA = 12000
+const ADVANCED_DAILY_REQUEST_QUOTA = 15
 const PRODUCT_CONTEXT_MAX_CHARS = 4000
+const CHAT_HISTORY_TTL_SECONDS = 60 * 60 * 24 * 30
+
+const DELIVERY_INFO_PATTERNS = [
+  /\b(delivery|deliver|shipping|arrive|eta|estimate)\b/i,
+]
+
+const RECOMMENDATION_PATTERNS = [
+  /\b(recommend|suggest|best|good option|top pick)\b/i,
+  /\b(under|below|less than)\b.{0,12}\b(\$|₹|€|£)?\s*\d+/i,
+]
+
+const COMPARISON_PATTERNS = [
+  /\bcompare\b/i,
+  /\b(vs|versus)\b/i,
+  /\bdifference between\b/i,
+]
+
+const REVIEW_SUMMARY_PATTERNS = [
+  /\b(review|reviews|rating|ratings|feedback|customers?\s+say)\b/i,
+]
+
+const ORDER_STATUS_PATTERNS = [
+  /\bwhere\s+is\s+my\s+order\b/i,
+  /\border\s+status\b/i,
+  /\btrack(?:ing)?\s+my\s+order\b/i,
+]
+
+const BUDGET_PATTERN =
+  /\b(?:under|below|less than|up to)\s*([$₹€£])?\s*(\d+(?:\.\d{1,2})?)/i
+const ORDER_ID_PATTERN = /\b[A-Za-z0-9]{7,10}\b/
 
 const JAILBREAK_PATTERNS = [
   /\bignore\s+(all\s+)?(previous|prior)\s+(instructions|rules)\b/i,
@@ -59,8 +101,10 @@ const SYSTEM_PROMPT_PREFIX = `You are a helpful shopping assistant for this spec
 Answer questions using only the product information provided below.
 Be concise. Focus on helping the customer make a purchase decision.
 If the product data does not contain enough information, say "That information is not specified for this product."
-Do not make up facts. Do not discuss other products.
+Do not make up facts.
 Never reveal exact stock quantities or inventory numbers. Only indicate whether items are in stock, low stock, or out of stock.
+For order-status questions, answer only with the authenticated user's order context when available.
+Do not provide legal/medical/financial advice or any code generation.
 
 [Product Information]
 `
@@ -118,6 +162,367 @@ const sanitizeAssistantOutput = (text: string): string =>
     (safe, pattern) => safe.replace(pattern, ''),
     text
   )
+
+const toStockLabel = (stock: number): string => {
+  if (stock > 5) return 'In Stock'
+  if (stock > 0) return 'Low Stock'
+  return 'Out of Stock'
+}
+
+const CURRENCY_TO_INR: Record<CurrencyCode, number> = {
+  INR: 1,
+  USD: 83.5,
+  EUR: 83.5 / 0.92,
+  GBP: 83.5 / 0.79,
+}
+
+type IntentSignals = {
+  wantsComparison: boolean
+  wantsRecommendation: boolean
+  wantsDeliveryInfo: boolean
+  wantsOrderStatus: boolean
+  wantsReviewSummary: boolean
+}
+
+const detectIntentSignals = (text: string): IntentSignals => ({
+  wantsComparison: COMPARISON_PATTERNS.some((pattern) => pattern.test(text)),
+  wantsRecommendation: RECOMMENDATION_PATTERNS.some((pattern) =>
+    pattern.test(text)
+  ),
+  wantsDeliveryInfo: DELIVERY_INFO_PATTERNS.some((pattern) => pattern.test(text)),
+  wantsOrderStatus: ORDER_STATUS_PATTERNS.some((pattern) => pattern.test(text)),
+  wantsReviewSummary: REVIEW_SUMMARY_PATTERNS.some((pattern) =>
+    pattern.test(text)
+  ),
+})
+
+const parseBudgetInINR = (
+  text: string,
+  fallbackCurrency: CurrencyCode
+): number | null => {
+  const match = text.match(BUDGET_PATTERN)
+  if (!match) return null
+  const raw = Number(match[2])
+  if (!Number.isFinite(raw) || raw <= 0) return null
+
+  const symbol = match[1]
+  const detectedCurrency: CurrencyCode =
+    symbol === '$'
+      ? 'USD'
+      : symbol === '€'
+        ? 'EUR'
+        : symbol === '£'
+          ? 'GBP'
+          : symbol === '₹'
+            ? 'INR'
+            : fallbackCurrency
+
+  return raw * CURRENCY_TO_INR[detectedCurrency]
+}
+
+const getThreadId = (
+  providedThreadId: string | undefined,
+  productId: string
+): string => providedThreadId ?? `product-${productId}`
+
+const getChatHistoryKey = (
+  userId: string,
+  productId: string,
+  threadId: string
+): string => `ai:chat:history:${userId}:${productId}:${threadId}`
+
+const trimMessageHistory = (
+  messages: ChatMessage[],
+  maxMessages: number
+): ChatMessage[] => {
+  if (messages.length <= maxMessages) return messages
+  return messages.slice(-maxMessages)
+}
+
+const loadPersistedMessages = async (
+  userId: string,
+  productId: string,
+  threadId: string
+): Promise<ChatMessage[]> => {
+  const redis = getRedisClient() as
+    | {
+        get?: (key: string) => Promise<string | null>
+      }
+    | null
+  if (!redis?.get) return []
+
+  try {
+    const raw = await redis.get(getChatHistoryKey(userId, productId, threadId))
+    if (!raw) return []
+    const parsed = JSON.parse(raw)
+    const result = z.array(ChatMessageSchema).safeParse(parsed)
+    return result.success ? result.data : []
+  } catch {
+    return []
+  }
+}
+
+const persistMessages = async (
+  userId: string,
+  productId: string,
+  threadId: string,
+  messages: ChatMessage[]
+): Promise<void> => {
+  const redis = getRedisClient() as
+    | {
+        set?: (
+          key: string,
+          value: string,
+          options?: { ex?: number }
+        ) => Promise<unknown>
+      }
+    | null
+  if (!redis?.set) return
+
+  await redis.set(
+    getChatHistoryKey(userId, productId, threadId),
+    JSON.stringify(messages),
+    { ex: CHAT_HISTORY_TTL_SECONDS }
+  )
+}
+
+const getAdvancedUsage = async (userId: string): Promise<number> => {
+  const redis = getRedisClient()
+  if (!redis) return 0
+  const key = `ai:chat:advanced:${userId}:${utcDateKey()}`
+  const raw =
+    ((await redis.hgetall(key)) as Record<string, string> | null) ?? {}
+  const requests = Number(raw.requests ?? 0)
+  return Number.isFinite(requests) ? requests : 0
+}
+
+const recordAdvancedUsage = async (userId: string): Promise<void> => {
+  const redis = getRedisClient()
+  if (!redis) return
+  const key = `ai:chat:advanced:${userId}:${utcDateKey()}`
+  await redis.hincrby(key, 'requests', 1)
+  await redis.expire(key, secondsUntilNextUtcMidnight())
+}
+
+const extractComparisonTerms = (
+  text: string,
+  productName: string
+): string[] => {
+  const normalized = text
+    .replace(/\bcompare\b/gi, ' ')
+    .replace(/\bdifference\s+between\b/gi, ' ')
+  const terms = normalized
+    .split(/\b(?:vs\.?|versus|and|with)\b/gi)
+    .map((part) => part.replace(/[^\w\s-]/g, ' ').trim())
+    .filter((part) => part.length >= 3)
+    .slice(0, 3)
+
+  if (terms.length > 0) return terms
+  return [productName]
+}
+
+const fetchComparisonContext = async (
+  currentProduct: Product,
+  text: string,
+  currencyCode: CurrencyCode,
+  formatPrice: (priceInINR: number) => string
+): Promise<string | null> => {
+  const terms = extractComparisonTerms(text, currentProduct.name)
+  const conditions = terms.map((term) => ilike(products.name, `%${term}%`))
+  if (conditions.length === 0) return null
+
+  const rows = await drizzleDb.query.products.findMany({
+    where: and(isNull(products.deletedAt), or(...conditions)),
+    with: {
+      variants: {
+        where: (variant, { isNull: isVariantNull }) => isVariantNull(variant.deletedAt),
+        columns: { price: true, stock: true },
+      },
+    },
+    limit: 4,
+  })
+
+  if (rows.length <= 1) return null
+
+  const lines = rows.map((row) => {
+    const minPrice = getVariantMinPrice(row.variants)
+    const totalStock = getVariantTotalStock(row.variants)
+    return `- ${row.name}: ${formatPrice(minPrice)} (${currencyCode}), ${toStockLabel(totalStock)}`
+  })
+
+  return `Comparison candidates:\n${lines.join('\n')}`
+}
+
+const fetchRecommendationContext = async (
+  currentProduct: Product,
+  text: string,
+  currencyCode: CurrencyCode,
+  formatPrice: (priceInINR: number) => string
+): Promise<string | null> => {
+  const budgetInINR = parseBudgetInINR(text, currencyCode)
+  if (!budgetInINR) return null
+
+  const rows = await drizzleDb.query.products.findMany({
+    where: and(
+      isNull(products.deletedAt),
+      eq(products.category, currentProduct.category)
+    ),
+    with: {
+      variants: {
+        where: (variant, { isNull: isVariantNull }) => isVariantNull(variant.deletedAt),
+        columns: { price: true, stock: true },
+      },
+    },
+    limit: 12,
+  })
+
+  const candidates = rows
+    .filter((row) => row.id !== currentProduct.id)
+    .map((row) => ({
+      id: row.id,
+      name: row.name,
+      minPrice: getVariantMinPrice(row.variants),
+      stock: getVariantTotalStock(row.variants),
+    }))
+    .filter((row) => row.minPrice > 0 && row.minPrice <= budgetInINR)
+    .sort((a, b) => a.minPrice - b.minPrice)
+    .slice(0, 3)
+
+  if (candidates.length === 0) {
+    return `No same-category alternatives were found under ${formatPrice(budgetInINR)} (${currencyCode}).`
+  }
+
+  return [
+    `Recommendations under ${formatPrice(budgetInINR)} (${currencyCode}):`,
+    ...candidates.map(
+      (row) =>
+        `- ${row.name}: ${formatPrice(row.minPrice)}, ${toStockLabel(row.stock)}`
+    ),
+  ].join('\n')
+}
+
+const fetchReviewSummaryContext = async (productId: string): Promise<string | null> => {
+  const rows = await drizzleDb.query.reviews.findMany({
+    where: eq(reviews.productId, productId),
+    columns: { rating: true, comment: true, createdAt: true },
+    orderBy: desc(reviews.createdAt),
+    limit: 12,
+  })
+
+  if (rows.length === 0) return 'No customer reviews are available for this product yet.'
+
+  const average = (
+    rows.reduce((sum, row) => sum + row.rating, 0) / rows.length
+  ).toFixed(1)
+  const positive = rows.filter((row) => row.rating >= 4).length
+  const recentComments = rows
+    .map((row) => row.comment.trim())
+    .filter((comment) => comment.length > 0)
+    .slice(0, 3)
+    .map((comment) => `- ${comment.slice(0, 120)}`)
+
+  return [
+    `Review summary: ${rows.length} recent reviews, average rating ${average}/5, ${positive} positive ratings (4★+).`,
+    ...(recentComments.length > 0 ? ['Recent feedback:', ...recentComments] : []),
+  ].join('\n')
+}
+
+const fetchOrderStatusContext = async (
+  userId: string,
+  text: string
+): Promise<string | null> => {
+  const orderId = text.match(ORDER_ID_PATTERN)?.[0] ?? null
+  if (orderId) {
+    const order = await drizzleDb.query.orders.findFirst({
+      where: and(eq(orders.id, orderId), eq(orders.userId, userId)),
+      columns: {
+        id: true,
+        status: true,
+        trackingNumber: true,
+        shippingProvider: true,
+        createdAt: true,
+      },
+    })
+    if (!order) {
+      return `No order with ID "${orderId}" was found for this account.`
+    }
+    return `Order ${order.id}: status ${order.status}, tracking ${order.trackingNumber ?? 'not available'}, carrier ${order.shippingProvider ?? 'not assigned'}.`
+  }
+
+  const recentOrders = await drizzleDb.query.orders.findMany({
+    where: eq(orders.userId, userId),
+    columns: {
+      id: true,
+      status: true,
+      trackingNumber: true,
+      shippingProvider: true,
+      createdAt: true,
+    },
+    orderBy: desc(orders.createdAt),
+    limit: 3,
+  })
+
+  if (recentOrders.length === 0) {
+    return 'No orders were found for this account yet.'
+  }
+
+  return [
+    'Recent order status:',
+    ...recentOrders.map(
+      (order) =>
+        `- ${order.id}: ${order.status}, tracking ${order.trackingNumber ?? 'not available'}, carrier ${order.shippingProvider ?? 'not assigned'}`
+    ),
+  ].join('\n')
+}
+
+const buildCommerceContext = async (params: {
+  product: Product
+  userId: string
+  messageText: string
+  currencyCode: CurrencyCode
+  formatPrice: (priceInINR: number) => string
+  intents: IntentSignals
+}): Promise<string[]> => {
+  const sections: string[] = []
+
+  if (params.intents.wantsDeliveryInfo) {
+    const shippingConfig = await getShippingConfig()
+    sections.push(
+      `Estimated delivery: approximately ${shippingConfig.estimatedDeliveryDays} business days (standard shipping).`
+    )
+  }
+
+  const [comparison, recommendation, reviewSummary, orderStatus] =
+    await Promise.all([
+      params.intents.wantsComparison
+        ? fetchComparisonContext(
+            params.product,
+            params.messageText,
+            params.currencyCode,
+            params.formatPrice
+          )
+        : Promise.resolve(null),
+      params.intents.wantsRecommendation
+        ? fetchRecommendationContext(
+            params.product,
+            params.messageText,
+            params.currencyCode,
+            params.formatPrice
+          )
+        : Promise.resolve(null),
+      params.intents.wantsReviewSummary
+        ? fetchReviewSummaryContext(params.product.id)
+        : Promise.resolve(null),
+      params.intents.wantsOrderStatus
+        ? fetchOrderStatusContext(params.userId, params.messageText)
+        : Promise.resolve(null),
+    ])
+
+  for (const section of [comparison, recommendation, reviewSummary, orderStatus]) {
+    if (section) sections.push(section)
+  }
+  return sections
+}
 
 const utcDateKey = (): string => new Date().toISOString().slice(0, 10)
 
@@ -235,6 +640,9 @@ export const POST = async (
       )
     }
 
+    const persistHistory = parsed.data.persistHistory ?? false
+    const threadId = getThreadId(parsed.data.threadId, id)
+
     const sanitizedMessages = parsed.data.messages.map((message) => ({
       ...message,
       text: sanitizePromptText(message.text),
@@ -243,7 +651,18 @@ export const POST = async (
       return apiError('Messages must include meaningful text', 400)
     }
 
-    const conversationTurns = sanitizedMessages.filter(
+    let allMessages = sanitizedMessages
+    if (persistHistory && sanitizedMessages.length === 1) {
+      const persisted = await loadPersistedMessages(session.user.id, id, threadId)
+      if (persisted.length > 0) {
+        allMessages = trimMessageHistory(
+          [...persisted, ...sanitizedMessages],
+          MAX_CONVERSATION_TURNS * 2
+        )
+      }
+    }
+
+    const conversationTurns = allMessages.filter(
       (message) => message.role === 'user'
     ).length
     if (conversationTurns > MAX_CONVERSATION_TURNS) {
@@ -254,12 +673,17 @@ export const POST = async (
     }
 
     const lastUserText =
-      sanitizedMessages.findLast((message) => message.role === 'user')?.text ??
-      ''
+      allMessages.findLast((message) => message.role === 'user')?.text ?? ''
     const blockedReason = detectBlockedPrompt(lastUserText)
     if (blockedReason) {
       return apiError(blockedReason, 400)
     }
+    const intents = detectIntentSignals(lastUserText)
+    const usesAdvancedFeatures =
+      intents.wantsComparison ||
+      intents.wantsRecommendation ||
+      intents.wantsOrderStatus ||
+      intents.wantsReviewSummary
 
     let currencyCode: CurrencyCode = 'INR'
     const userRecord = await drizzleDb.query.users.findFirst({
@@ -277,20 +701,39 @@ export const POST = async (
     if (aiConfig.enabled === false) {
       return apiError('AI features are currently unavailable', 503)
     }
+    if (usesAdvancedFeatures && aiConfig.advancedFeaturesEnabled === false) {
+      return apiError('Advanced AI features are currently unavailable', 503)
+    }
     chatModel = aiConfig.chatModel
+
+    const formatPrice = (priceInINR: number) =>
+      formatPriceForCurrency(priceInINR, currencyCode)
+    const supplementalContext = await buildCommerceContext({
+      product,
+      userId: session.user.id,
+      messageText: lastUserText,
+      currencyCode,
+      formatPrice,
+      intents,
+    })
 
     const systemPrompt =
       SYSTEM_PROMPT_PREFIX +
       sanitizePromptText(
         buildProductContext(product, {
           currencyCode,
-          formatPrice: (priceInINR: number) =>
-            formatPriceForCurrency(priceInINR, currencyCode),
+          formatPrice,
         }),
         PRODUCT_CONTEXT_MAX_CHARS
-      )
+      ) +
+      (supplementalContext.length > 0
+        ? `\n\n[Commerce Context]\n${sanitizePromptText(
+            supplementalContext.join('\n\n'),
+            PRODUCT_CONTEXT_MAX_CHARS
+          )}`
+        : '')
 
-    const trimmed = sanitizedMessages.slice(
+    const trimmed = allMessages.slice(
       -Math.min(aiConfig.maxHistoryMessages, MAX_CONVERSATION_TURNS * 2)
     )
     const isSingleTurn = trimmed.length === 1
@@ -300,12 +743,23 @@ export const POST = async (
     )
 
     const dailyUsage = await getDailyUsage(session.user.id)
-    if (dailyUsage.requests + 1 > DAILY_REQUEST_QUOTA) {
+    const requestQuota = aiConfig.dailyRequestQuota ?? DAILY_REQUEST_QUOTA
+    const tokenQuota = aiConfig.dailyTokenQuota ?? DAILY_TOKEN_QUOTA
+    if (dailyUsage.requests + 1 > requestQuota) {
       return apiError('Daily AI chat request quota exceeded', 429)
     }
     const reservedTotalTokens = estimatedInputTokens + MAX_OUTPUT_TOKENS
-    if (dailyUsage.tokens + reservedTotalTokens > DAILY_TOKEN_QUOTA) {
+    if (dailyUsage.tokens + reservedTotalTokens > tokenQuota) {
       return apiError('Daily AI chat token quota exceeded', 429)
+    }
+    if (usesAdvancedFeatures) {
+      const advancedUsage = await getAdvancedUsage(session.user.id)
+      const advancedQuota =
+        aiConfig.advancedFeatureDailyRequestQuota ?? ADVANCED_DAILY_REQUEST_QUOTA
+      if (advancedUsage + 1 > advancedQuota) {
+        return apiError('Daily advanced AI request quota exceeded', 429)
+      }
+      await recordAdvancedUsage(session.user.id)
     }
 
     if (isSingleTurn && lastUserText) {
@@ -338,7 +792,20 @@ export const POST = async (
           },
           success: true,
         })
-        return NextResponse.json({ text: cached })
+        if (persistHistory) {
+          const historyToPersist = trimMessageHistory(
+            [
+              ...trimmed,
+              { role: 'assistant', text: sanitizeAssistantOutput(cached) },
+            ],
+            aiConfig.maxHistoryMessages
+          )
+          await persistMessages(session.user.id, id, threadId, historyToPersist)
+        }
+        return NextResponse.json(
+          { text: cached, threadId: persistHistory ? threadId : undefined },
+          persistHistory ? { headers: { 'X-AI-Thread-ID': threadId } } : undefined
+        )
       }
     }
 
@@ -443,8 +910,31 @@ export const POST = async (
       )
     }
 
+    if (persistHistory) {
+      waitUntil(
+        fullTextPromise
+          .then((text) => {
+            const historyToPersist = trimMessageHistory(
+              [...trimmed, { role: 'assistant', text }],
+              aiConfig.maxHistoryMessages
+            )
+            return persistMessages(session.user.id, id, threadId, historyToPersist)
+          })
+          .catch((error) =>
+            logError({
+              error,
+              context: 'ai_chat_history_persist',
+              additionalInfo: { productId: id, userId: session.user.id, threadId },
+            })
+          )
+      )
+    }
+
     return new Response(readable, {
-      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+      headers: {
+        'Content-Type': 'text/plain; charset=utf-8',
+        ...(persistHistory ? { 'X-AI-Thread-ID': threadId } : {}),
+      },
     })
   } catch (error) {
     logError({
