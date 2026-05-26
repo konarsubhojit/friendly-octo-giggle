@@ -3,9 +3,23 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { ReviewsSection } from '@/features/product/components/ReviewsSection'
 
+const mockSession = vi.hoisted(() => vi.fn())
+vi.mock('next-auth/react', () => ({
+  useSession: mockSession,
+}))
+vi.mock('next/image', () => ({
+  default: (props: React.ComponentProps<'img'>) => (
+    <img {...props} alt={props.alt} />
+  ),
+}))
 vi.mock('@/features/product/components/ReviewForm', () => ({
   ReviewForm: ({ productId }: { productId: string }) => (
     <div data-testid="review-form">ReviewForm for {productId}</div>
+  ),
+}))
+vi.mock('@/components/ui/GradientButton', () => ({
+  GradientButton: ({ children, ...props }: React.ComponentProps<'button'>) => (
+    <button {...props}>{children}</button>
   ),
 }))
 
@@ -27,6 +41,7 @@ describe('ReviewsSection', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.stubGlobal('fetch', vi.fn())
+    mockSession.mockReturnValue({ data: null })
   })
 
   it('shows loading spinner initially', () => {
@@ -60,10 +75,18 @@ describe('ReviewsSection', () => {
                 rating: 5,
                 comment: 'Excellent product!',
                 isAnonymous: false,
+                isVerifiedBuyer: true,
+                helpfulCount: 2,
+                notHelpfulCount: 0,
                 createdAt: '2024-01-15T10:00:00Z',
                 user: { name: 'Jane', image: null },
               },
             ],
+            summary: {
+              totalReviews: 1,
+              averageRating: 5,
+              ratingBreakdown: [{ rating: 5, count: 1 }],
+            },
           },
         }),
     } as Response)
@@ -73,6 +96,7 @@ describe('ReviewsSection', () => {
     await waitFor(() => {
       expect(screen.getByText('Excellent product!')).toBeInTheDocument()
       expect(screen.getByText('Jane')).toBeInTheDocument()
+      expect(screen.getByText('Verified buyer')).toBeInTheDocument()
     })
   })
 
@@ -88,6 +112,9 @@ describe('ReviewsSection', () => {
                 rating: 3,
                 comment: 'It was okay.',
                 isAnonymous: true,
+                isVerifiedBuyer: false,
+                helpfulCount: 0,
+                notHelpfulCount: 0,
                 createdAt: '2024-01-15T10:00:00Z',
                 user: null,
               },
@@ -115,6 +142,7 @@ describe('ReviewsSection', () => {
       expect(fetch).toHaveBeenCalledWith(
         expect.stringContaining('productId=prod001')
       )
+      expect(fetch).toHaveBeenCalledWith(expect.stringContaining('sort=recent'))
     })
   })
 
@@ -147,6 +175,9 @@ describe('ReviewsSection', () => {
                 rating: 5,
                 comment: 'Great product!',
                 isAnonymous: false,
+                isVerifiedBuyer: false,
+                helpfulCount: 0,
+                notHelpfulCount: 0,
                 createdAt: '2024-01-15T10:00:00Z',
                 user: { name: 'Jane', image: null },
               },
@@ -155,6 +186,9 @@ describe('ReviewsSection', () => {
                 rating: 3,
                 comment: 'Average quality.',
                 isAnonymous: false,
+                isVerifiedBuyer: false,
+                helpfulCount: 0,
+                notHelpfulCount: 0,
                 createdAt: '2024-01-14T10:00:00Z',
                 user: { name: 'John', image: null },
               },
