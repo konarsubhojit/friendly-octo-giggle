@@ -23,6 +23,14 @@ export interface AiConfig {
   readonly maxResponseTokens: number
   readonly maxContextChunks: number
   readonly maxHistoryMessages: number
+  /** Enables/disables advanced commerce intents (comparison, recommendations, order tracking, review summaries, delivery context). */
+  readonly advancedFeaturesEnabled?: boolean
+  /** Per-user daily request ceiling for all AI chat calls. */
+  readonly dailyRequestQuota?: number
+  /** Per-user daily token ceiling for all AI chat calls. */
+  readonly dailyTokenQuota?: number
+  /** Per-user daily request ceiling specifically for advanced commerce intents. */
+  readonly advancedFeatureDailyRequestQuota?: number
   readonly thinkingLevel?: 'none' | 'low' | 'medium' | 'high'
   readonly includeThoughts?: boolean
 }
@@ -55,6 +63,10 @@ const DEFAULT_AI_CONFIG: AiConfig = {
   maxResponseTokens: 512,
   maxContextChunks: 3,
   maxHistoryMessages: 10,
+  advancedFeaturesEnabled: true,
+  dailyRequestQuota: 40,
+  dailyTokenQuota: 12000,
+  advancedFeatureDailyRequestQuota: 15,
   thinkingLevel: 'none',
   includeThoughts: false,
 }
