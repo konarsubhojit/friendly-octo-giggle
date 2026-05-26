@@ -6,7 +6,7 @@ import {
   apiSuccess,
   apiError,
   handleApiError,
-  handleValidationError,
+  parseJsonBody,
 } from '@/lib/api-utils'
 import { checkAdminAuth } from '@/features/admin/services/admin-auth'
 import { cacheAdminOrderById, invalidateAdminOrderCaches } from '@/lib/cache'
@@ -47,16 +47,11 @@ export const PATCH = async (
 
   try {
     const { id } = await params
-    const rawBody = await request.json()
-
-    const parseResult = UpdateOrderStatusSchema.safeParse(rawBody)
-    if (!parseResult.success) {
-      return handleValidationError(parseResult.error)
-    }
+    const validatedBody = await parseJsonBody(request, UpdateOrderStatusSchema)
 
     await primaryDrizzleDb
       .update(orders)
-      .set(buildUpdateData(parseResult.data))
+      .set(buildUpdateData(validatedBody))
       .where(eq(orders.id, id))
 
     const order = await primaryDrizzleDb.query.orders.findFirst({
@@ -74,7 +69,7 @@ export const PATCH = async (
     if (redis) {
       waitUntil(
         redis
-          .hset(`order:${id}`, { status: parseResult.data.status })
+          .hset(`order:${id}`, { status: validatedBody.status })
           .catch((err) =>
             logError({ error: err, context: 'admin_order_redis_update' })
           )
@@ -82,7 +77,7 @@ export const PATCH = async (
     }
 
     const notifyStatuses = ['PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED']
-    if (notifyStatuses.includes(parseResult.data.status)) {
+    if (notifyStatuses.includes(validatedBody.status)) {
       const workerUrl = `${env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'}/api/services/email`
       const statusEvent: OrderStatusChangedEvent = {
         type: 'order.status_changed',
@@ -90,11 +85,11 @@ export const PATCH = async (
           orderId: order.id,
           customerEmail: order.customerEmail,
           customerName: order.customerName,
-          newStatus: parseResult.data.status,
+          newStatus: validatedBody.status,
           trackingNumber:
-            parseResult.data.trackingNumber ?? order.trackingNumber ?? null,
+            validatedBody.trackingNumber ?? order.trackingNumber ?? null,
           shippingProvider:
-            parseResult.data.shippingProvider ?? order.shippingProvider ?? null,
+            validatedBody.shippingProvider ?? order.shippingProvider ?? null,
         },
       }
 
@@ -125,11 +120,10 @@ export const PATCH = async (
           to: order.customerEmail,
           customerName: order.customerName,
           orderId: order.id,
-          status: parseResult.data.status,
-          trackingNumber:
-            parseResult.data.trackingNumber ?? order.trackingNumber,
+          status: validatedBody.status,
+          trackingNumber: validatedBody.trackingNumber ?? order.trackingNumber,
           shippingProvider:
-            parseResult.data.shippingProvider ?? order.shippingProvider,
+            validatedBody.shippingProvider ?? order.shippingProvider,
         })
       }
     }

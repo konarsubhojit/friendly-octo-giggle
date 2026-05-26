@@ -16,6 +16,14 @@ const mockInsert = vi.hoisted(() => vi.fn(() => ({ values: mockInsertValues })))
 const mockHashPassword = vi.hoisted(() => vi.fn())
 const mockSavePasswordToHistory = vi.hoisted(() => vi.fn())
 const mockLogAuthEvent = vi.hoisted(() => vi.fn())
+const mockLogError = vi.hoisted(() => vi.fn())
+const mockDeleteWhere = vi.hoisted(() => vi.fn())
+const mockDelete = vi.hoisted(() =>
+  vi.fn(() => ({ where: mockDeleteWhere.mockResolvedValue(undefined) }))
+)
+const mockPublishJSON = vi.hoisted(() => vi.fn())
+const mockGenerateEmailVerificationToken = vi.hoisted(() => vi.fn())
+const mockCreateEmailVerificationIdentifier = vi.hoisted(() => vi.fn())
 
 const mockPrimaryDrizzleDb = {
   query: {
@@ -23,6 +31,7 @@ const mockPrimaryDrizzleDb = {
       findFirst: mockFindFirst,
     },
   },
+  delete: mockDelete,
   insert: mockInsert,
 }
 
@@ -37,6 +46,11 @@ vi.mock('@/lib/schema', () => ({
     phoneNumber: 'phoneNumber',
     id: 'id',
   },
+  verificationTokens: {
+    identifier: 'identifier',
+    token: 'token',
+    expires: 'expires',
+  },
 }))
 
 vi.mock('@/features/auth/services/password', () => ({
@@ -46,7 +60,24 @@ vi.mock('@/features/auth/services/password', () => ({
 
 vi.mock('@/lib/logger', () => ({
   logAuthEvent: mockLogAuthEvent,
-  logError: vi.fn(),
+  logError: mockLogError,
+}))
+
+vi.mock('@/lib/qstash', () => ({
+  getQStashClient: () => ({
+    publishJSON: mockPublishJSON,
+  }),
+}))
+
+vi.mock('@/features/auth/services/email-verification', () => ({
+  createEmailVerificationIdentifier: mockCreateEmailVerificationIdentifier,
+  generateEmailVerificationToken: mockGenerateEmailVerificationToken,
+}))
+
+vi.mock('@/lib/env', () => ({
+  env: {
+    NEXT_PUBLIC_APP_URL: 'http://localhost:3000',
+  },
 }))
 
 vi.mock('drizzle-orm', () => ({
@@ -59,6 +90,16 @@ describe('POST /api/auth/register', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks()
+    mockCreateEmailVerificationIdentifier.mockReturnValue(
+      'email-verify:new-user-id'
+    )
+    mockGenerateEmailVerificationToken.mockReturnValue({
+      plainToken: 'verify-plain-token',
+      tokenHash: 'verify-token-hash',
+      expiresAt: new Date('2026-01-01T00:30:00.000Z'),
+    })
+    mockDeleteWhere.mockResolvedValue(undefined)
+    mockPublishJSON.mockResolvedValue(undefined)
     const mod = await import('@/app/api/auth/register/route')
     POST = mod.POST
   })
@@ -85,6 +126,20 @@ describe('POST /api/auth/register', () => {
     expect(res.status).toBe(201)
     expect(data.success).toBe(true)
     expect(data.data.userId).toBe('new-user-id')
+    expect(mockDeleteWhere).toHaveBeenCalledOnce()
+    expect(mockInsertValues).toHaveBeenNthCalledWith(2, {
+      identifier: 'email-verify:new-user-id',
+      token: 'verify-token-hash',
+      expires: new Date('2026-01-01T00:30:00.000Z'),
+    })
+    expect(mockPublishJSON).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: 'http://localhost:3000/api/services/email-verification-email',
+        body: expect.objectContaining({
+          type: 'auth.email_verification_requested',
+        }),
+      })
+    )
     expect(mockLogAuthEvent).toHaveBeenCalledWith(
       expect.objectContaining({ event: 'register', success: true })
     )

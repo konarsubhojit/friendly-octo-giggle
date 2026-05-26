@@ -16,7 +16,8 @@ vi.mock('@/lib/auth', () => ({
   auth: mockAuth,
 }))
 
-vi.mock('@/lib/api-utils', () => ({
+vi.mock('@/lib/api-utils', async () => ({
+  ...(await vi.importActual('@/lib/api-utils')),
   apiError: mockApiError,
   apiSuccess: mockApiSuccess,
   handleApiError: mockHandleApiError,

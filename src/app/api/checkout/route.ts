@@ -1,13 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
+import { z } from 'zod'
 import {
   enqueueCheckoutForUser,
   isCheckoutRequestError,
 } from '@/features/cart/services/checkout-service'
 import { withLogging } from '@/lib/api-middleware'
+import { apiError, isJsonBodyParseError, parseJsonBody } from '@/lib/api-utils'
 import { logBusinessEvent, logError } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
+const CheckoutRequestBodySchema = z
+  .object({
+    customerName: z.string().optional(),
+    customerEmail: z.string().optional(),
+    customerAddress: z.string().optional(),
+    items: z.array(z.unknown()).optional(),
+  })
+  .passthrough()
 
 const handlePost = async (request: NextRequest) => {
   try {
@@ -25,7 +35,7 @@ const handlePost = async (request: NextRequest) => {
       )
     }
 
-    const body = await request.json()
+    const body = await parseJsonBody(request, CheckoutRequestBodySchema)
     const result = await enqueueCheckoutForUser({
       body,
       user: {
@@ -37,11 +47,12 @@ const handlePost = async (request: NextRequest) => {
 
     return NextResponse.json(result, { status: 202 })
   } catch (error) {
+    if (isJsonBodyParseError(error)) {
+      return apiError(error.message, error.status, error.details)
+    }
+
     if (isCheckoutRequestError(error)) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: error.status }
-      )
+      return apiError(error.message, error.status)
     }
 
     logError({

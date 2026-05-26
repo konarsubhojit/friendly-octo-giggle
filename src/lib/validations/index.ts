@@ -26,6 +26,9 @@ export {
   CreateProductOptionSchema,
   CreateOptionValueSchema,
   CreateReviewSchema,
+  UpdateReviewSchema,
+  VoteReviewSchema,
+  ModerateReviewSchema,
   CreateShareSchema,
 } from '@/features/product/validations'
 export type {
@@ -36,6 +39,9 @@ export type {
   CreateProductOptionInput,
   CreateOptionValueInput,
   CreateReviewInput,
+  UpdateReviewInput,
+  VoteReviewInput,
+  ModerateReviewInput,
   CreateShareInput,
 } from '@/features/product/validations'
 

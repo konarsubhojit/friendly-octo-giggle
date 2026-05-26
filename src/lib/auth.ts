@@ -9,6 +9,16 @@ import type { Adapter } from 'next-auth/adapters'
 import { logAuthEvent } from './logger'
 import { verifyPassword } from '@/features/auth/services/password'
 import { eq, or } from 'drizzle-orm'
+import {
+  getAccountLockUntil,
+  getClientIpFromRequest,
+  recordFailedLoginAttempt,
+} from '@/features/auth/services/login-protection'
+
+const INVALID_CREDENTIALS_ERROR = 'Invalid credentials'
+
+/** How often (in seconds) to re-validate a token against the DB. */
+const JWT_DB_CHECK_INTERVAL = 5 * 60
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: DrizzleAdapter(primaryDrizzleDb, {
@@ -45,9 +55,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         identifier: { label: 'Email or Phone', type: 'text' },
         password: { label: 'Password', type: 'password' },
       },
-      async authorize(credentials) {
+      async authorize(credentials, request) {
         const identifier = credentials?.identifier as string | undefined
         const password = credentials?.password as string | undefined
+        const ipAddress = getClientIpFromRequest(request)
 
         if (!identifier || !password) return null
 
@@ -60,35 +71,99 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         })
 
         if (!user) {
+          await recordFailedLoginAttempt({ ipAddress })
           logAuthEvent({
             event: 'failed_login',
             email: identifier,
             success: false,
-            error: 'User not found',
+            error: INVALID_CREDENTIALS_ERROR,
+          })
+          return null
+        }
+
+        if (user.lockedUntil && user.lockedUntil > new Date()) {
+          logAuthEvent({
+            event: 'account_locked',
+            userId: user.id,
+            email: user.email,
+            success: false,
+            error: 'Account is temporarily locked',
           })
           return null
         }
 
         // OAuth-only users don't have a password hash
         if (!user.passwordHash) {
+          const failedAttempt = await recordFailedLoginAttempt({
+            userId: user.id,
+            ipAddress,
+          })
+
+          if (failedAttempt.shouldLockAccount) {
+            const lockedUntil = getAccountLockUntil()
+            await primaryDrizzleDb
+              .update(users)
+              .set({ lockedUntil, updatedAt: new Date() })
+              .where(eq(users.id, user.id))
+            logAuthEvent({
+              event: 'account_locked',
+              userId: user.id,
+              email: user.email,
+              success: false,
+              error: 'Too many failed login attempts',
+            })
+          }
+
           logAuthEvent({
             event: 'failed_login',
             userId: user.id,
             email: user.email,
             success: false,
-            error: 'No password set (OAuth-only user)',
+            error: INVALID_CREDENTIALS_ERROR,
+          })
+          return null
+        }
+
+        // Credentials users must verify email before sign in.
+        if (!user.emailVerified) {
+          logAuthEvent({
+            event: 'failed_login',
+            userId: user.id,
+            email: user.email,
+            success: false,
+            error: 'Email not verified',
           })
           return null
         }
 
         const isValid = await verifyPassword(password, user.passwordHash)
         if (!isValid) {
+          const failedAttempt = await recordFailedLoginAttempt({
+            userId: user.id,
+            ipAddress,
+          })
+
+          if (failedAttempt.shouldLockAccount) {
+            const lockedUntil = getAccountLockUntil()
+            await primaryDrizzleDb
+              .update(users)
+              .set({ lockedUntil, updatedAt: new Date() })
+              .where(eq(users.id, user.id))
+            logAuthEvent({
+              event: 'account_locked',
+              userId: user.id,
+              email: user.email,
+              success: false,
+              error: 'Too many failed login attempts',
+            })
+          }
+
           logAuthEvent({
             event: 'failed_login',
             userId: user.id,
             email: user.email,
             success: false,
-            error: 'Invalid password',
+            error: INVALID_CREDENTIALS_ERROR,
           })
           return null
         }
@@ -132,14 +207,64 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
       return session
     },
-    jwt({ token, user }) {
+    async jwt({ token, user }) {
       if (user) {
+        // Sign-in: populate token from user object
         token.id = user.id ?? ''
         token.role = user.role || 'CUSTOMER'
         if ('phoneNumber' in user && user.phoneNumber) {
           token.phoneNumber = user.phoneNumber
         }
+
+        // Fetch sessionVersion from DB so forced-logout can be detected later
+        if (user.id) {
+          const dbUser = await primaryDrizzleDb.query.users.findFirst({
+            where: eq(users.id, user.id),
+            columns: { sessionVersion: true },
+          })
+          token.sessionVersion = dbUser?.sessionVersion ?? 0
+        }
+
+        token.lastDbCheckAt = Math.floor(Date.now() / 1000)
+        return token
       }
+
+      // Subsequent requests: periodically re-validate role & lock status from DB
+      const userId = token.id as string | undefined
+      if (!userId) return token
+
+      const lastCheck = token.lastDbCheckAt as number | undefined
+      const now = Math.floor(Date.now() / 1000)
+
+      if (lastCheck === undefined || now - lastCheck >= JWT_DB_CHECK_INTERVAL) {
+        const dbUser = await primaryDrizzleDb.query.users.findFirst({
+          where: eq(users.id, userId),
+          columns: { role: true, lockedUntil: true, sessionVersion: true },
+        })
+
+        // User deleted → invalidate
+        if (!dbUser) return null
+
+        // Account locked → invalidate
+        if (dbUser.lockedUntil && dbUser.lockedUntil > new Date()) {
+          return null
+        }
+
+        // Session version bumped (admin forced logout-all) → invalidate
+        const storedVersion = token.sessionVersion as number | undefined
+        if (
+          storedVersion !== undefined &&
+          dbUser.sessionVersion !== storedVersion
+        ) {
+          return null
+        }
+
+        // Refresh token with latest DB state
+        token.role = dbUser.role
+        token.sessionVersion = dbUser.sessionVersion
+        token.lastDbCheckAt = now
+      }
+
       return token
     },
     signIn({ user, account }) {
@@ -168,6 +293,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   },
   session: {
     strategy: 'jwt',
-    maxAge: 24 * 60 * 60,
+    maxAge: 2 * 60 * 60, // 2 hours
+    updateAge: 15 * 60, // Roll the cookie every 15 minutes of activity
   },
 })

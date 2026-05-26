@@ -4,15 +4,22 @@ import { cartItems } from '@/lib/schema'
 import { eq } from 'drizzle-orm'
 import { auth } from '@/lib/auth'
 import { UpdateCartItemSchema } from '@/features/cart/validations'
-import { handleValidationError } from '@/lib/api-utils'
+import { apiError, isJsonBodyParseError, parseJsonBody } from '@/lib/api-utils'
 import { logError } from '@/lib/logger'
 import { invalidateCartCache } from '@/lib/cache'
 import {
   updateCartItemQuantityInRedis,
   removeCartItemFromRedis,
 } from '@/features/cart/services/cart-redis'
+import { verifyCartSessionCookieValue } from '@/features/cart/services/cart-session'
+import { assertOwnership } from '@/lib/ownership'
 
 export const dynamic = 'force-dynamic'
+
+const toCartOwner = (cart: {
+  userId: string | null
+  sessionId: string | null
+}) => ({ userId: cart.userId, sessionId: cart.sessionId }) as const
 
 export async function PATCH(
   request: NextRequest,
@@ -21,14 +28,10 @@ export async function PATCH(
   try {
     const { id } = await params
     const session = await auth()
-    const sessionId = request.cookies.get('cart_session')?.value
-    const rawBody = await request.json()
-
-    const parseResult = UpdateCartItemSchema.safeParse(rawBody)
-    if (!parseResult.success) {
-      return handleValidationError(parseResult.error)
-    }
-    const body = parseResult.data
+    const sessionId = verifyCartSessionCookieValue(
+      request.cookies.get('cart_session')?.value
+    )
+    const body = await parseJsonBody(request, UpdateCartItemSchema)
 
     const cartItem = await drizzleDb.query.cartItems.findFirst({
       where: eq(cartItems.id, id),
@@ -50,12 +53,13 @@ export async function PATCH(
       )
     }
 
-    const isOwner = session?.user?.id
-      ? cartItem.cart.userId === session.user.id
-      : cartItem.cart.sessionId === sessionId
+    const cartOwner = toCartOwner(cartItem.cart)
 
-    if (!isOwner) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+    if (!assertOwnership(cartOwner, session, { sessionId })) {
+      return NextResponse.json(
+        { error: 'Cart item not found' },
+        { status: 404 }
+      )
     }
 
     if (!cartItem.variant) {
@@ -83,6 +87,10 @@ export async function PATCH(
 
     return NextResponse.json({ success: true })
   } catch (error) {
+    if (isJsonBodyParseError(error)) {
+      return apiError(error.message, error.status, error.details)
+    }
+
     logError({ error, context: 'cart_item_update' })
     return NextResponse.json(
       { error: 'Failed to update cart item' },
@@ -98,7 +106,9 @@ export async function DELETE(
   try {
     const { id } = await params
     const session = await auth()
-    const sessionId = request.cookies.get('cart_session')?.value
+    const sessionId = verifyCartSessionCookieValue(
+      request.cookies.get('cart_session')?.value
+    )
 
     const cartItem = await drizzleDb.query.cartItems.findFirst({
       where: eq(cartItems.id, id),
@@ -114,12 +124,13 @@ export async function DELETE(
       )
     }
 
-    const isOwner = session?.user?.id
-      ? cartItem.cart.userId === session.user.id
-      : cartItem.cart.sessionId === sessionId
+    const cartOwner = toCartOwner(cartItem.cart)
 
-    if (!isOwner) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+    if (!assertOwnership(cartOwner, session, { sessionId })) {
+      return NextResponse.json(
+        { error: 'Cart item not found' },
+        { status: 404 }
+      )
     }
 
     await drizzleDb.delete(cartItems).where(eq(cartItems.id, id))

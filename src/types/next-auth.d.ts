@@ -20,5 +20,9 @@ declare module 'next-auth/jwt' {
     id: string
     role: 'ADMIN' | 'CUSTOMER'
     phoneNumber?: string | null
+    /** Server-side monotonic counter; bump to force logout-all for a user. */
+    sessionVersion?: number
+    /** Unix epoch seconds when the DB was last consulted for this token. */
+    lastDbCheckAt?: number
   }
 }

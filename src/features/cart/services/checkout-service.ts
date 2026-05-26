@@ -26,6 +26,7 @@ import {
   SubmitCheckoutSchema,
   type SubmitCheckoutInput,
 } from '@/features/cart/validations'
+import { assertOwnership } from '@/lib/ownership'
 
 export const CHECKOUT_QUEUE_TOPIC = 'checkout-orders'
 
@@ -337,7 +338,7 @@ export const getCheckoutRequestStatusForUser = async ({
 }): Promise<CheckoutRequestStatusResponse> => {
   const checkoutRequest = await findCheckoutRequestById(checkoutRequestId)
 
-  if (checkoutRequest?.userId !== userId) {
+  if (!assertOwnership(checkoutRequest, { user: { id: userId } })) {
     throw new CheckoutRequestError('Checkout request not found', 404)
   }
 

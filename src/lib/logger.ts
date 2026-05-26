@@ -3,11 +3,108 @@ import pino from 'pino'
 // Create base logger configuration
 const isDevelopment = process.env.NODE_ENV === 'development'
 
+// Keys whose values must never appear in logs (case-insensitive comparison).
+const SENSITIVE_KEYS = new Set([
+  'password',
+  'passwordhash',
+  'token',
+  'authorization',
+  'cookie',
+  'set-cookie',
+  'creditcard',
+  'cvv',
+])
+
+/**
+ * Masks an email address to protect PII while keeping it identifiable.
+ * e.g. "john@example.com" -> "j***@example.com"
+ */
+export const maskEmail = (email: string): string => {
+  const atIndex = email.indexOf('@')
+  if (atIndex <= 0) return '[REDACTED]'
+  return `${email[0]}***@${email.slice(atIndex + 1)}`
+}
+
+/**
+ * Returns true only for plain objects created via `{}` or `Object.create(null)`.
+ * Special object types (Date, RegExp, Error, Set, Map, arrays, …) return false
+ * so that scrubSensitiveData leaves them untouched.
+ */
+const isPlainObject = (value: unknown): value is Record<string, unknown> => {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+    return false
+  }
+  const proto = Object.getPrototypeOf(value) as unknown
+  return proto === Object.prototype || proto === null
+}
+
+/**
+ * Recursively scrubs sensitive fields from a plain object before it is
+ * serialised into a log entry.  Passwords, tokens, cookies, etc. are
+ * replaced with "[REDACTED]"; email addresses are masked to the
+ * first-character + *** form ("j***@example.com").
+ *
+ * Only plain objects are recursed into; special types (Date, RegExp, Error,
+ * Set, Map, …) are left untouched to avoid breaking their serialization.
+ */
+export const scrubSensitiveData = (
+  data: Record<string, unknown>
+): Record<string, unknown> => {
+  const result: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(data)) {
+    const lowerKey = key.toLowerCase()
+    if (SENSITIVE_KEYS.has(lowerKey)) {
+      result[key] = '[REDACTED]'
+    } else if (lowerKey === 'email' && typeof value === 'string') {
+      result[key] = maskEmail(value)
+    } else if (isPlainObject(value)) {
+      result[key] = scrubSensitiveData(value as Record<string, unknown>)
+    } else {
+      result[key] = value
+    }
+  }
+  return result
+}
+
 export const logger = pino({
   level: process.env.LOG_LEVEL || (isDevelopment ? 'debug' : 'info'),
   formatters: {
     level: (label) => {
       return { level: label }
+    },
+  },
+  // Redact sensitive fields at the Pino serialisation layer as a defence-in-depth
+  // safeguard.  logError also calls scrubSensitiveData() explicitly so that
+  // additionalInfo is clean before it is spread into the log object.
+  redact: {
+    paths: [
+      'password',
+      'passwordHash',
+      'token',
+      'authorization',
+      'cookie',
+      'set-cookie',
+      'creditCard',
+      'cvv',
+      'email',
+      '*.password',
+      '*.passwordHash',
+      '*.token',
+      '*.authorization',
+      '*.cookie',
+      '*.creditCard',
+      '*.cvv',
+      '*.email',
+    ],
+    censor: (value: unknown, path: PropertyKey[]): unknown => {
+      // `path[path.length - 1]` is the matched key name for both top-level
+      // paths (e.g. 'email') and wildcard paths (e.g. '*.email') because Pino
+      // resolves the wildcard before invoking the censor function.
+      const key = String(path[path.length - 1])
+      if (key === 'email' && typeof value === 'string') {
+        return maskEmail(value)
+      }
+      return '[REDACTED]'
     },
   },
   // Pretty print in development, JSON in production
@@ -80,6 +177,7 @@ export const logAuthEvent = (data: {
     | 'logout'
     | 'register'
     | 'failed_login'
+    | 'account_locked'
     | 'session_created'
     | 'session_expired'
     | 'password_change'
@@ -133,6 +231,12 @@ export const logError = (data: {
   const error =
     data.error instanceof Error ? data.error : new Error(String(data.error))
 
+  // Scrub sensitive fields from additionalInfo before spreading into the log
+  // payload so that passwords, tokens, etc. are never written to the log sink.
+  const scrubbedInfo = data.additionalInfo
+    ? scrubSensitiveData(data.additionalInfo)
+    : undefined
+
   logger.error(
     {
       type: 'error',
@@ -142,7 +246,7 @@ export const logError = (data: {
       errorName: error.name,
       errorMessage: error.message,
       stack: error.stack,
-      ...data.additionalInfo,
+      ...scrubbedInfo,
     },
     `Error occurred: ${data.context || 'Unknown context'}`
   )

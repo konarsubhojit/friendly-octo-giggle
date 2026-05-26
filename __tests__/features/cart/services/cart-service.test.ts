@@ -98,6 +98,7 @@ import {
   buildGuestSessionCookieOptions,
   getCart,
   clearCart,
+  mergeGuestCartIntoUserCart,
 } from '@/features/cart/services/cart-service'
 
 describe('cart-service', () => {
@@ -374,6 +375,58 @@ describe('cart-service', () => {
         'cart2',
         undefined,
         'sess1'
+      )
+    })
+  })
+
+  describe('mergeGuestCartIntoUserCart', () => {
+    it('reassigns a guest cart to the authenticated user and returns a rotated session id', async () => {
+      mockPrimaryDrizzleDbQuery.carts.findFirst
+        .mockResolvedValueOnce({
+          id: 'guest-cart',
+          items: [],
+        })
+        .mockResolvedValueOnce(null)
+      mockPrimaryDrizzleDbUpdate.mockReturnValue({
+        set: vi.fn(() => ({ where: vi.fn().mockResolvedValue([]) })),
+      })
+
+      const rotatedSessionId = await mergeGuestCartIntoUserCart(
+        'user1',
+        'sess1'
+      )
+
+      expect(rotatedSessionId).toMatch(/^guest_[0-9a-f-]+$/)
+      expect(mockPrimaryDrizzleDbUpdate).toHaveBeenCalled()
+      expect(mockInvalidateCartCache).toHaveBeenCalledWith('user1', undefined)
+      expect(mockInvalidateCartCache).toHaveBeenCalledWith(undefined, 'sess1')
+      expect(mockRemoveCartItemsByCartId).toHaveBeenCalledWith(
+        'guest-cart',
+        undefined,
+        'sess1'
+      )
+    })
+
+    it('logs and continues when cache cleanup fails after the merge', async () => {
+      mockPrimaryDrizzleDbQuery.carts.findFirst
+        .mockResolvedValueOnce({
+          id: 'guest-cart',
+          items: [],
+        })
+        .mockResolvedValueOnce(null)
+      mockPrimaryDrizzleDbUpdate.mockReturnValue({
+        set: vi.fn(() => ({ where: vi.fn().mockResolvedValue([]) })),
+      })
+      mockInvalidateCartCache.mockRejectedValueOnce(new Error('cache failed'))
+
+      const rotatedSessionId = await mergeGuestCartIntoUserCart(
+        'user1',
+        'sess1'
+      )
+
+      expect(rotatedSessionId).toMatch(/^guest_[0-9a-f-]+$/)
+      expect(mockLogError).toHaveBeenCalledWith(
+        expect.objectContaining({ context: 'cart_merge_cache_cleanup' })
       )
     })
   })

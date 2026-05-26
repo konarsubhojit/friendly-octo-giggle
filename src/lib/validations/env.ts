@@ -8,10 +8,14 @@ const QSTASH_REQUIRED_KEYS = [
   'NEXT_PUBLIC_APP_URL',
 ] as const
 
+const AUTH_REQUIRED_KEYS = ['NEXTAUTH_SECRET'] as const
+
 export const EnvSchema = z
   .object({
     DATABASE_URL: z.string(),
     READ_DATABASE_URL: z.string().optional(),
+    NEXTAUTH_SECRET: z.string().optional(),
+    AUTH_TRUST_HOST: z.enum(['true', 'false']).optional(),
     REDIS_URL: z.string().optional(),
     UPSTASH_REDIS_REST_URL: z.url().optional(),
     UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
@@ -74,6 +78,17 @@ export const EnvSchema = z
     if (data.NODE_ENV === 'production' && !isBuildPhase) {
       QSTASH_REQUIRED_KEYS.forEach((key) => {
         if (!data[key]) {
+          ctx.addIssue({
+            code: 'custom',
+            path: [key],
+            message: `${key} is required in production`,
+          })
+        }
+      })
+
+      AUTH_REQUIRED_KEYS.forEach((key) => {
+        const val = data[key]
+        if (!val || !val.trim()) {
           ctx.addIssue({
             code: 'custom',
             path: [key],

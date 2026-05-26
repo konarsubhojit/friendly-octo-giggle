@@ -19,6 +19,7 @@ import {
   cartItems,
   wishlists,
   reviews,
+  reviewVotes,
   failedEmails,
   userRoleEnum,
   orderStatusEnum,
@@ -42,6 +43,7 @@ import {
   cartItemsRelations,
   wishlistsRelations,
   reviewsRelations,
+  reviewVotesRelations,
   productSharesRelations,
   categoriesRelations,
 } from './schema'
@@ -92,6 +94,8 @@ const schema = {
   wishlistsRelations,
   reviews,
   reviewsRelations,
+  reviewVotes,
+  reviewVotesRelations,
   productSharesRelations,
 }
 

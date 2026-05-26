@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Nunito, Playfair_Display } from 'next/font/google'
+import { headers } from 'next/headers'
 import './globals.css'
 import { SessionProvider } from '@/components/providers/SessionProvider'
 import StoreProvider from '@/components/providers/StoreProvider'
@@ -9,6 +10,13 @@ import { Toaster } from 'react-hot-toast'
 import { Analytics } from '@vercel/analytics/next'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import HeaderWrapper from '@/components/layout/HeaderWrapper'
+
+type NoncedTelemetryComponent = React.ComponentType<{
+  readonly nonce?: string
+}>
+// Vercel telemetry libraries support forwarding `nonce` at runtime for injected scripts.
+const AnalyticsWithNonce = Analytics as NoncedTelemetryComponent
+const SpeedInsightsWithNonce = SpeedInsights as NoncedTelemetryComponent
 
 function AppProviders({ children }: { readonly children: React.ReactNode }) {
   return (
@@ -42,11 +50,13 @@ export const metadata: Metadata = {
     'Handmade crochet flowers, bags, keychains, and accessories — crafted with love, delivered to your door.',
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const nonce = (await headers()).get('x-nonce') || undefined
+
   return (
     <html
       lang="en"
@@ -68,8 +78,8 @@ export default function RootLayout({
             }}
           />
         </AppProviders>
-        <Analytics />
-        <SpeedInsights />
+        <AnalyticsWithNonce nonce={nonce} />
+        <SpeedInsightsWithNonce nonce={nonce} />
       </body>
     </html>
   )

@@ -1,10 +1,20 @@
 import { NextRequest } from 'next/server'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
-import { apiSuccess, apiError, handleApiError } from '@/lib/api-utils'
+import {
+  apiSuccess,
+  apiError,
+  handleApiError,
+  parseJsonBody,
+} from '@/lib/api-utils'
 import { logError } from '@/lib/logger'
+import { z } from 'zod'
 
 export const dynamic = 'force-dynamic'
+
+const AddToWishlistSchema = z.object({
+  productId: z.string().min(1, 'productId is required'),
+})
 
 /**
  * GET /api/wishlist
@@ -39,12 +49,7 @@ export const POST = async (req: NextRequest) => {
       return apiError('Unauthorized', 401)
     }
 
-    const body = await req.json()
-    const { productId } = body as { productId?: string }
-
-    if (!productId || typeof productId !== 'string') {
-      return apiError('productId is required', 400)
-    }
+    const { productId } = await parseJsonBody(req, AddToWishlistSchema)
 
     await db.wishlists.add(session.user.id, productId)
 

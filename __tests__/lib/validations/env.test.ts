@@ -61,6 +61,7 @@ describe('EnvSchema', () => {
       expect(paths).toContain('QSTASH_CURRENT_SIGNING_KEY')
       expect(paths).toContain('QSTASH_NEXT_SIGNING_KEY')
       expect(paths).toContain('NEXT_PUBLIC_APP_URL')
+      expect(paths).toContain('NEXTAUTH_SECRET')
     }
   })
 
@@ -85,9 +86,76 @@ describe('EnvSchema', () => {
       QSTASH_CURRENT_SIGNING_KEY: 'sig_current',
       QSTASH_NEXT_SIGNING_KEY: 'sig_next',
       NEXT_PUBLIC_APP_URL: 'https://example.com',
+      NEXTAUTH_SECRET: 'super-secret-value',
     })
 
     expect(result.success).toBe(true)
+  })
+
+  it('rejects whitespace-only NEXTAUTH_SECRET in production', () => {
+    vi.stubEnv('NEXT_PHASE', '')
+
+    const result = EnvSchema.safeParse({
+      ...baseEnv,
+      NODE_ENV: 'production',
+      QSTASH_TOKEN: 'tok_test',
+      QSTASH_CURRENT_SIGNING_KEY: 'sig_current',
+      QSTASH_NEXT_SIGNING_KEY: 'sig_next',
+      NEXT_PUBLIC_APP_URL: 'https://example.com',
+      NEXTAUTH_SECRET: '   ', // whitespace only
+    })
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      const paths = result.error.issues.map((i) => i.path[0])
+      expect(paths).toContain('NEXTAUTH_SECRET')
+    }
+  })
+
+  it('rejects missing NEXTAUTH_SECRET in production', () => {
+    vi.stubEnv('NEXT_PHASE', '')
+
+    const result = EnvSchema.safeParse({
+      ...baseEnv,
+      NODE_ENV: 'production',
+      QSTASH_TOKEN: 'tok_test',
+      QSTASH_CURRENT_SIGNING_KEY: 'sig_current',
+      QSTASH_NEXT_SIGNING_KEY: 'sig_next',
+      NEXT_PUBLIC_APP_URL: 'https://example.com',
+      // NEXTAUTH_SECRET intentionally omitted
+    })
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      const paths = result.error.issues.map((i) => i.path[0])
+      expect(paths).toContain('NEXTAUTH_SECRET')
+    }
+  })
+
+  it('NEXTAUTH_SECRET is optional in development', () => {
+    const result = EnvSchema.safeParse({
+      ...baseEnv,
+      NODE_ENV: 'development',
+    })
+    expect(result.success).toBe(true)
+  })
+
+  it('accepts valid AUTH_TRUST_HOST values', () => {
+    for (const value of ['true', 'false']) {
+      const result = EnvSchema.safeParse({
+        ...baseEnv,
+        AUTH_TRUST_HOST: value,
+      })
+      expect(result.success).toBe(true)
+    }
+  })
+
+  it('rejects invalid AUTH_TRUST_HOST value', () => {
+    const result = EnvSchema.safeParse({
+      ...baseEnv,
+      AUTH_TRUST_HOST: 'yes',
+    })
+    expect(result.success).toBe(false)
   })
 
   it('rejects invalid UPSTASH_REDIS_REST_URL (not a URL)', () => {

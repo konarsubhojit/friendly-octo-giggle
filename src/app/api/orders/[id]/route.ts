@@ -7,7 +7,7 @@ import {
   apiSuccess,
   apiError,
   handleApiError,
-  handleValidationError,
+  parseJsonBody,
 } from '@/lib/api-utils'
 import { auth } from '@/lib/auth'
 import { serializeOrder } from '@/lib/serializers'
@@ -15,6 +15,7 @@ import { getCachedData, invalidateCache, getRedisClient } from '@/lib/redis'
 import { CACHE_KEYS, CACHE_TTL, invalidateUserOrderCaches } from '@/lib/cache'
 import { logError } from '@/lib/logger'
 import { waitUntil } from '@vercel/functions'
+import { assertOwnership } from '@/lib/ownership'
 
 export const dynamic = 'force-dynamic'
 
@@ -53,7 +54,7 @@ export async function GET(
       CACHE_TTL.ORDER_DETAIL_STALE
     )
 
-    if (order?.userId !== session.user.id) {
+    if (!assertOwnership(order, session)) {
       return apiError('Order not found', 404)
     }
 
@@ -73,11 +74,7 @@ export async function PATCH(
       return apiError('Authentication required', 401)
     }
 
-    const body = await request.json()
-    const parseResult = OrderActionSchema.safeParse(body)
-    if (!parseResult.success) {
-      return handleValidationError(parseResult.error)
-    }
+    await parseJsonBody(request, OrderActionSchema)
 
     const { id } = await params
 
@@ -85,7 +82,7 @@ export async function PATCH(
       where: eq(orders.id, id),
     })
 
-    if (order?.userId !== session.user.id) {
+    if (!assertOwnership(order, session)) {
       return apiError('Order not found', 404)
     }
 

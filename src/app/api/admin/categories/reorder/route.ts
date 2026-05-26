@@ -1,4 +1,9 @@
-import { apiSuccess, apiError, handleApiError } from '@/lib/api-utils'
+import {
+  apiSuccess,
+  apiError,
+  handleApiError,
+  parseJsonBody,
+} from '@/lib/api-utils'
 import { auth } from '@/lib/auth'
 import { primaryDrizzleDb } from '@/lib/db'
 import { categories } from '@/lib/schema'
@@ -22,15 +27,11 @@ export const PATCH = async (request: Request) => {
   if (session.user.role !== 'ADMIN') return apiError('Not authorized', 403)
 
   try {
-    const body = await request.json()
-    const parsed = ReorderCategoriesSchema.safeParse(body)
-    if (!parsed.success) {
-      return apiError(parsed.error.issues[0].message, 400)
-    }
+    const validated = await parseJsonBody(request, ReorderCategoriesSchema)
 
     await primaryDrizzleDb.transaction(async (tx) => {
       await Promise.all(
-        parsed.data.items.map(({ id, sortOrder }) =>
+        validated.items.map(({ id, sortOrder }) =>
           tx
             .update(categories)
             .set({ sortOrder, updatedAt: new Date() })

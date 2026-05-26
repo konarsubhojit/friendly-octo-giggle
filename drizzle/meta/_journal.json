@@ -5,71 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1774381250472,
-      "tag": "0000_colossal_stepford_cuckoos",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1774378815410,
-      "tag": "0001_polite_reaper",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1774618645201,
-      "tag": "0002_ensure_checkout_request_id",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1774891975344,
-      "tag": "0003_overjoyed_nomad",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1774930099907,
-      "tag": "0004_daily_the_renegades",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1775861000000,
-      "tag": "0005_cost_opt_indexes",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "7",
-      "when": 1775955700000,
-      "tag": "0006_perf_composite_indexes",
-      "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "7",
-      "when": 1776050759375,
-      "tag": "0007_structured_order_address",
-      "breakpoints": true
-    },
-    {
-      "idx": 8,
-      "version": "7",
-      "when": 1776277143179,
-      "tag": "0008_product_variant_schema",
-      "breakpoints": true
-    },
-    {
-      "idx": 9,
-      "version": "7",
-      "when": 1777838400000,
-      "tag": "0009_variant_sort_order",
+      "when": 1779808524594,
+      "tag": "0000_init",
       "breakpoints": true
     }
   ]

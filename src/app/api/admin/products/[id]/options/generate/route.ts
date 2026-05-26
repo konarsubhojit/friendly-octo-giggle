@@ -13,7 +13,7 @@ import {
   apiSuccess,
   apiError,
   handleApiError,
-  handleValidationError,
+  parseJsonBody,
 } from '@/lib/api-utils'
 import { checkAdminAuth } from '@/features/admin/services/admin-auth'
 import { invalidateProductCaches } from '@/lib/cache'
@@ -74,13 +74,10 @@ export async function POST(
       return apiError('Product not found', 404)
     }
 
-    const body = await request.json()
-    const parseResult = GenerateOptionsSchema.safeParse(body)
-    if (!parseResult.success) {
-      return handleValidationError(parseResult.error)
-    }
-
-    const { optionNames, delimiter } = parseResult.data
+    const { optionNames, delimiter } = await parseJsonBody(
+      request,
+      GenerateOptionsSchema
+    )
 
     // Fetch active variants with their SKUs
     const variants = await drizzleDb.query.productVariants.findMany({
