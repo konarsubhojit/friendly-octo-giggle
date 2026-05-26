@@ -136,6 +136,7 @@ vi.mock('@/lib/currency', () => ({
   formatPriceForCurrency: vi.fn(
     (price: number, currencyCode: string) => `${currencyCode}-${price}`
   ),
+  convertPriceToINR: vi.fn((amount: number) => amount * 80),
   isValidCurrencyCode: (code: string) =>
     ['INR', 'USD', 'EUR', 'GBP'].includes(code),
 }))

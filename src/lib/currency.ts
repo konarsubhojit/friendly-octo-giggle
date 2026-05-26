@@ -42,3 +42,13 @@ export function formatPriceForCurrency(
     maximumFractionDigits: 2,
   }).format(converted)
 }
+
+/** Convert a price from a display currency back to INR. */
+export function convertPriceToINR(
+  amount: number,
+  currencyCode: CurrencyCode
+): number {
+  const rate = CURRENCIES[currencyCode].rate
+  if (!Number.isFinite(amount) || amount < 0 || rate <= 0) return 0
+  return amount / rate
+}

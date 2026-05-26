@@ -7,7 +7,11 @@ import { getCachedAiResponse, setCachedAiResponse } from '@/lib/ai/ai-cache'
 import { db, drizzleDb } from '@/lib/db'
 import { apiError, handleApiError } from '@/lib/api-utils'
 import { logError, logBusinessEvent } from '@/lib/logger'
-import { formatPriceForCurrency, isValidCurrencyCode } from '@/lib/currency'
+import {
+  convertPriceToINR,
+  formatPriceForCurrency,
+  isValidCurrencyCode,
+} from '@/lib/currency'
 import { getRedisClient } from '@/lib/redis'
 import { getShippingConfig } from '@/lib/edge-config'
 import {
@@ -174,14 +178,6 @@ const toStockLabel = (stock: number): string => {
   return 'Out of Stock'
 }
 
-const CURRENCY_TO_INR: Record<CurrencyCode, number> = {
-  INR: 1,
-  // Keep aligned with server fallback rates in src/lib/currency.ts.
-  USD: 83.5,
-  EUR: 83.5 / 0.92,
-  GBP: 83.5 / 0.79,
-}
-
 type IntentSignals = {
   wantsComparison: boolean
   wantsRecommendation: boolean
@@ -225,7 +221,7 @@ const parseBudgetInINR = (
             ? 'INR'
             : fallbackCurrency
 
-  return raw * CURRENCY_TO_INR[detectedCurrency]
+  return convertPriceToINR(raw, detectedCurrency)
 }
 
 const resolveThreadId = (
@@ -350,11 +346,9 @@ const fetchComparisonContext = async (
 
   if (rows.length <= 1) return null
 
-  const lines = rows.map((row) => {
-    const minPrice = getVariantMinPrice(row.variants)
-    const totalStock = getVariantTotalStock(row.variants)
-    return `- ${row.name}: ${formatPrice(minPrice)} (${currencyCode}), ${toStockLabel(totalStock)}`
-  })
+  const lines = rows.map((row) =>
+    formatComparableProduct(row.name, row.variants, currencyCode, formatPrice)
+  )
 
   return `Comparison candidates:\n${lines.join('\n')}`
 }
@@ -408,6 +402,28 @@ const fetchRecommendationContext = async (
   ].join('\n')
 }
 
+const formatComparableProduct = (
+  name: string,
+  variants: Array<{ price: number; stock: number }>,
+  currencyCode: CurrencyCode,
+  formatPrice: (priceInINR: number) => string
+): string => {
+  const minPrice = getVariantMinPrice(variants)
+  const totalStock = getVariantTotalStock(variants)
+  return `- ${name}: ${formatPrice(minPrice)} (${currencyCode}), ${toStockLabel(totalStock)}`
+}
+
+const truncateForSummary = (text: string, maxChars: number): string =>
+  text.length > maxChars ? `${text.slice(0, maxChars)}...` : text
+
+const formatOrderStatusLine = (order: {
+  id: string
+  status: string
+  trackingNumber: string | null
+  shippingProvider: string | null
+}): string =>
+  `${order.id}: ${order.status}, tracking ${order.trackingNumber ?? 'not available'}, carrier ${order.shippingProvider ?? 'not assigned'}`
+
 const fetchReviewSummaryContext = async (
   productId: string
 ): Promise<string | null> => {
@@ -429,7 +445,7 @@ const fetchReviewSummaryContext = async (
     .map((row) => row.comment.trim())
     .filter((comment) => comment.length > 0)
     .slice(0, 3)
-    .map((comment) => `- ${comment.slice(0, MAX_REVIEW_COMMENT_CHARS)}`)
+    .map((comment) => `- ${truncateForSummary(comment, MAX_REVIEW_COMMENT_CHARS)}`)
 
   return [
     `Review summary: ${rows.length} recent reviews, average rating ${average}/5, ${positive} positive ratings (4★+).`,
@@ -458,7 +474,7 @@ const fetchOrderStatusContext = async (
     if (!order) {
       return `No order with ID "${orderId}" was found for this account.`
     }
-    return `Order ${order.id}: status ${order.status}, tracking ${order.trackingNumber ?? 'not available'}, carrier ${order.shippingProvider ?? 'not assigned'}.`
+    return `Order ${formatOrderStatusLine(order)}.`
   }
 
   const recentOrders = await drizzleDb.query.orders.findMany({
@@ -480,10 +496,7 @@ const fetchOrderStatusContext = async (
 
   return [
     'Recent order status:',
-    ...recentOrders.map(
-      (order) =>
-        `- ${order.id}: ${order.status}, tracking ${order.trackingNumber ?? 'not available'}, carrier ${order.shippingProvider ?? 'not assigned'}`
-    ),
+    ...recentOrders.map((order) => `- ${formatOrderStatusLine(order)}`),
   ].join('\n')
 }
 
