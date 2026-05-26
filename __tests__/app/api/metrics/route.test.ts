@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { GET } from '@/app/api/metrics/route'
-import { recordApiRequestMetric, resetMetricsForTests } from '@/lib/metrics'
+import { recordApiRequestMetric, resetMetrics } from '@/lib/metrics'
 
 describe('GET /api/metrics', () => {
   it('returns prometheus formatted metrics', async () => {
-    resetMetricsForTests()
+    resetMetrics()
     recordApiRequestMetric({
       method: 'GET',
       path: '/api/health',

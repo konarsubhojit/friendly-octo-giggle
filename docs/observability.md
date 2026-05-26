@@ -37,7 +37,7 @@ Configure alerts in your monitoring system (Sentry, Datadog, Prometheus Alertman
 
 1. `application_api_request_errors_total` spike over baseline
 2. `application_api_request_slow_total` sustained growth
-3. `application_cache_hit_rate` dropping below target (for example `< 0.5`)
+3. `application_cache_hit_rate` dropping below your baseline target (for example `< 0.5`, adjusted to your normal traffic profile)
 4. `application_checkout_queue_lag_ms_max` breaching queue SLO
 
 ## Synthetic Uptests

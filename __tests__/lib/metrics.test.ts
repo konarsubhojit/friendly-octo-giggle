@@ -5,12 +5,12 @@ import {
   recordCacheMetric,
   recordCheckoutQueueLagMetric,
   renderPrometheusMetrics,
-  resetMetricsForTests,
+  resetMetrics,
 } from '@/lib/metrics'
 
 describe('metrics', () => {
   beforeEach(() => {
-    resetMetricsForTests()
+    resetMetrics()
   })
 
   it('records API latency and slow/error counters', () => {

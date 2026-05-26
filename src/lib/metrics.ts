@@ -32,7 +32,7 @@ const state = {
   },
 }
 
-const getRouteKey = (method: string, path: string): string =>
+const buildRouteKey = (method: string, path: string): string =>
   `${method} ${path}`
 
 const escapeLabelValue = (value: string): string =>
@@ -56,7 +56,7 @@ export const recordApiRequestMetric = (data: {
     state.api.slow += 1
   }
 
-  const key = getRouteKey(data.method, data.path)
+  const key = buildRouteKey(data.method, data.path)
   const existing = state.api.byRoute.get(key) ?? {
     count: 0,
     errorCount: 0,
@@ -90,6 +90,8 @@ export const recordBusinessEventMetric = (success: boolean) => {
 }
 
 export const recordCheckoutQueueLagMetric = (lagMs: number) => {
+  // Clock skew or malformed timestamps can produce negative lag values.
+  // Clamp to zero so the exported metric remains valid.
   const normalizedLag = Math.max(lagMs, 0)
   state.queue.checkoutLagSamples += 1
   state.queue.checkoutLagTotalMs += normalizedLag
@@ -163,7 +165,7 @@ export const renderPrometheusMetrics = (): string => {
   return `${lines.join('\n')}\n`
 }
 
-export const resetMetricsForTests = () => {
+export const resetMetrics = () => {
   state.api.total = 0
   state.api.errors = 0
   state.api.slow = 0
@@ -179,3 +181,6 @@ export const resetMetricsForTests = () => {
   state.queue.checkoutLagTotalMs = 0
   state.queue.checkoutLagMaxMs = 0
 }
+
+// Backward-compatible alias for tests importing the older helper name.
+export const resetMetricsForTests = resetMetrics
