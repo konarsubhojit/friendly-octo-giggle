@@ -47,7 +47,9 @@ const DAILY_REQUEST_QUOTA = 40
 const DAILY_TOKEN_QUOTA = 12000
 const ADVANCED_DAILY_REQUEST_QUOTA = 15
 const PRODUCT_CONTEXT_MAX_CHARS = 4000
+const SUPPLEMENTAL_CONTEXT_MAX_CHARS = 1600
 const CHAT_HISTORY_TTL_SECONDS = 60 * 60 * 24 * 30
+const MAX_REVIEW_COMMENT_CHARS = 120
 
 const DELIVERY_INFO_PATTERNS = [
   /\b(delivery|deliver|shipping|arrive|eta|estimate)\b/i,
@@ -75,7 +77,7 @@ const ORDER_STATUS_PATTERNS = [
 ]
 
 const BUDGET_PATTERN =
-  /\b(?:under|below|less than|up to)\s*([$₹€£])?\s*(\d+(?:\.\d{1,2})?)/i
+  /\b(?:under|below|less than|up to)\s*(?:([$₹€£])\s*)?(\d+(?:\.\d{1,2})?)\s*([$₹€£])?/i
 const ORDER_ID_PATTERN = /\b[A-Za-z0-9]{7,10}\b/
 
 const JAILBREAK_PATTERNS = [
@@ -174,6 +176,7 @@ const toStockLabel = (stock: number): string => {
 
 const CURRENCY_TO_INR: Record<CurrencyCode, number> = {
   INR: 1,
+  // Keep aligned with server fallback rates in src/lib/currency.ts.
   USD: 83.5,
   EUR: 83.5 / 0.92,
   GBP: 83.5 / 0.79,
@@ -210,7 +213,7 @@ const parseBudgetInINR = (
   const raw = Number(match[2])
   if (!Number.isFinite(raw) || raw <= 0) return null
 
-  const symbol = match[1]
+  const symbol = match[1] ?? match[3]
   const detectedCurrency: CurrencyCode =
     symbol === '$'
       ? 'USD'
@@ -225,7 +228,7 @@ const parseBudgetInINR = (
   return raw * CURRENCY_TO_INR[detectedCurrency]
 }
 
-const getThreadId = (
+const resolveThreadId = (
   providedThreadId: string | undefined,
   productId: string
 ): string => providedThreadId ?? `product-${productId}`
@@ -235,6 +238,15 @@ const getChatHistoryKey = (
   productId: string,
   threadId: string
 ): string => `ai:chat:history:${userId}:${productId}:${threadId}`
+
+type RedisHistoryClient = {
+  get?: (key: string) => Promise<string | null>
+  set?: (
+    key: string,
+    value: string,
+    options?: { ex?: number }
+  ) => Promise<unknown>
+}
 
 const trimMessageHistory = (
   messages: ChatMessage[],
@@ -249,9 +261,7 @@ const loadPersistedMessages = async (
   productId: string,
   threadId: string
 ): Promise<ChatMessage[]> => {
-  const redis = getRedisClient() as {
-    get?: (key: string) => Promise<string | null>
-  } | null
+  const redis = getRedisClient() as RedisHistoryClient | null
   if (!redis?.get) return []
 
   try {
@@ -271,13 +281,7 @@ const persistMessages = async (
   threadId: string,
   messages: ChatMessage[]
 ): Promise<void> => {
-  const redis = getRedisClient() as {
-    set?: (
-      key: string,
-      value: string,
-      options?: { ex?: number }
-    ) => Promise<unknown>
-  } | null
+  const redis = getRedisClient() as RedisHistoryClient | null
   if (!redis?.set) return
 
   await redis.set(
@@ -425,7 +429,7 @@ const fetchReviewSummaryContext = async (
     .map((row) => row.comment.trim())
     .filter((comment) => comment.length > 0)
     .slice(0, 3)
-    .map((comment) => `- ${comment.slice(0, 120)}`)
+    .map((comment) => `- ${comment.slice(0, MAX_REVIEW_COMMENT_CHARS)}`)
 
   return [
     `Review summary: ${rows.length} recent reviews, average rating ${average}/5, ${positive} positive ratings (4★+).`,
@@ -654,7 +658,7 @@ export const POST = async (
     }
 
     const persistHistory = parsed.data.persistHistory ?? false
-    const threadId = getThreadId(parsed.data.threadId, id)
+    const threadId = resolveThreadId(parsed.data.threadId, id)
 
     const sanitizedMessages = parsed.data.messages.map((message) => ({
       ...message,
@@ -699,6 +703,7 @@ export const POST = async (
     const usesAdvancedFeatures =
       intents.wantsComparison ||
       intents.wantsRecommendation ||
+      intents.wantsDeliveryInfo ||
       intents.wantsOrderStatus ||
       intents.wantsReviewSummary
 
@@ -746,7 +751,7 @@ export const POST = async (
       (supplementalContext.length > 0
         ? `\n\n[Commerce Context]\n${sanitizePromptText(
             supplementalContext.join('\n\n'),
-            PRODUCT_CONTEXT_MAX_CHARS
+            SUPPLEMENTAL_CONTEXT_MAX_CHARS
           )}`
         : '')
 

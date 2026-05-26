@@ -668,6 +668,35 @@ describe('POST /api/ai/products/[id]/chat', () => {
     )
   })
 
+  it('supports recommendation budget with postfix currency symbol', async () => {
+    vi.mocked(db.products.findById).mockResolvedValue(mockProduct)
+    vi.mocked(auth).mockResolvedValue({ user: { id: 'user-123' } } as never)
+    vi.mocked(drizzleDb.query.products.findMany).mockResolvedValue([] as never)
+
+    const request = new NextRequest(
+      'http://localhost/api/ai/products/abc1234/chat',
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          messages: [{ role: 'user', text: "What's best under 500€?" }],
+        }),
+      }
+    )
+
+    const response = await POST(request, {
+      params: Promise.resolve({ id: 'abc1234' }),
+    })
+
+    expect(response.status).toBe(200)
+    expect(mockStreamChunks).toHaveBeenCalledWith(
+      expect.objectContaining({
+        config: expect.objectContaining({
+          systemInstruction: expect.stringContaining('under'),
+        }),
+      })
+    )
+  })
+
   it('adds review summary and delivery estimate context when requested', async () => {
     vi.mocked(db.products.findById).mockResolvedValue(mockProduct)
     vi.mocked(auth).mockResolvedValue({ user: { id: 'user-123' } } as never)
