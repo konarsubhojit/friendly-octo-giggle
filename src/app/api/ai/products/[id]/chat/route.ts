@@ -10,7 +10,10 @@ import { logError, logBusinessEvent } from '@/lib/logger'
 import { formatPriceForCurrency, isValidCurrencyCode } from '@/lib/currency'
 import { getRedisClient } from '@/lib/redis'
 import { getShippingConfig } from '@/lib/edge-config'
-import { getVariantMinPrice, getVariantTotalStock } from '@/features/product/variant-utils'
+import {
+  getVariantMinPrice,
+  getVariantTotalStock,
+} from '@/features/product/variant-utils'
 import type { CurrencyCode } from '@/lib/currency'
 import type { Content } from '@google/genai'
 import type { Product } from '@/lib/types'
@@ -189,7 +192,9 @@ const detectIntentSignals = (text: string): IntentSignals => ({
   wantsRecommendation: RECOMMENDATION_PATTERNS.some((pattern) =>
     pattern.test(text)
   ),
-  wantsDeliveryInfo: DELIVERY_INFO_PATTERNS.some((pattern) => pattern.test(text)),
+  wantsDeliveryInfo: DELIVERY_INFO_PATTERNS.some((pattern) =>
+    pattern.test(text)
+  ),
   wantsOrderStatus: ORDER_STATUS_PATTERNS.some((pattern) => pattern.test(text)),
   wantsReviewSummary: REVIEW_SUMMARY_PATTERNS.some((pattern) =>
     pattern.test(text)
@@ -244,11 +249,9 @@ const loadPersistedMessages = async (
   productId: string,
   threadId: string
 ): Promise<ChatMessage[]> => {
-  const redis = getRedisClient() as
-    | {
-        get?: (key: string) => Promise<string | null>
-      }
-    | null
+  const redis = getRedisClient() as {
+    get?: (key: string) => Promise<string | null>
+  } | null
   if (!redis?.get) return []
 
   try {
@@ -268,15 +271,13 @@ const persistMessages = async (
   threadId: string,
   messages: ChatMessage[]
 ): Promise<void> => {
-  const redis = getRedisClient() as
-    | {
-        set?: (
-          key: string,
-          value: string,
-          options?: { ex?: number }
-        ) => Promise<unknown>
-      }
-    | null
+  const redis = getRedisClient() as {
+    set?: (
+      key: string,
+      value: string,
+      options?: { ex?: number }
+    ) => Promise<unknown>
+  } | null
   if (!redis?.set) return
 
   await redis.set(
@@ -335,7 +336,8 @@ const fetchComparisonContext = async (
     where: and(isNull(products.deletedAt), or(...conditions)),
     with: {
       variants: {
-        where: (variant, { isNull: isVariantNull }) => isVariantNull(variant.deletedAt),
+        where: (variant, { isNull: isVariantNull }) =>
+          isVariantNull(variant.deletedAt),
         columns: { price: true, stock: true },
       },
     },
@@ -369,7 +371,8 @@ const fetchRecommendationContext = async (
     ),
     with: {
       variants: {
-        where: (variant, { isNull: isVariantNull }) => isVariantNull(variant.deletedAt),
+        where: (variant, { isNull: isVariantNull }) =>
+          isVariantNull(variant.deletedAt),
         columns: { price: true, stock: true },
       },
     },
@@ -401,7 +404,9 @@ const fetchRecommendationContext = async (
   ].join('\n')
 }
 
-const fetchReviewSummaryContext = async (productId: string): Promise<string | null> => {
+const fetchReviewSummaryContext = async (
+  productId: string
+): Promise<string | null> => {
   const rows = await drizzleDb.query.reviews.findMany({
     where: eq(reviews.productId, productId),
     columns: { rating: true, comment: true, createdAt: true },
@@ -409,7 +414,8 @@ const fetchReviewSummaryContext = async (productId: string): Promise<string | nu
     limit: 12,
   })
 
-  if (rows.length === 0) return 'No customer reviews are available for this product yet.'
+  if (rows.length === 0)
+    return 'No customer reviews are available for this product yet.'
 
   const average = (
     rows.reduce((sum, row) => sum + row.rating, 0) / rows.length
@@ -423,7 +429,9 @@ const fetchReviewSummaryContext = async (productId: string): Promise<string | nu
 
   return [
     `Review summary: ${rows.length} recent reviews, average rating ${average}/5, ${positive} positive ratings (4★+).`,
-    ...(recentComments.length > 0 ? ['Recent feedback:', ...recentComments] : []),
+    ...(recentComments.length > 0
+      ? ['Recent feedback:', ...recentComments]
+      : []),
   ].join('\n')
 }
 
@@ -518,7 +526,12 @@ const buildCommerceContext = async (params: {
         : Promise.resolve(null),
     ])
 
-  for (const section of [comparison, recommendation, reviewSummary, orderStatus]) {
+  for (const section of [
+    comparison,
+    recommendation,
+    reviewSummary,
+    orderStatus,
+  ]) {
     if (section) sections.push(section)
   }
   return sections
@@ -653,7 +666,11 @@ export const POST = async (
 
     let allMessages = sanitizedMessages
     if (persistHistory && sanitizedMessages.length === 1) {
-      const persisted = await loadPersistedMessages(session.user.id, id, threadId)
+      const persisted = await loadPersistedMessages(
+        session.user.id,
+        id,
+        threadId
+      )
       if (persisted.length > 0) {
         allMessages = trimMessageHistory(
           [...persisted, ...sanitizedMessages],
@@ -755,7 +772,8 @@ export const POST = async (
     if (usesAdvancedFeatures) {
       const advancedUsage = await getAdvancedUsage(session.user.id)
       const advancedQuota =
-        aiConfig.advancedFeatureDailyRequestQuota ?? ADVANCED_DAILY_REQUEST_QUOTA
+        aiConfig.advancedFeatureDailyRequestQuota ??
+        ADVANCED_DAILY_REQUEST_QUOTA
       if (advancedUsage + 1 > advancedQuota) {
         return apiError('Daily advanced AI request quota exceeded', 429)
       }
@@ -804,7 +822,9 @@ export const POST = async (
         }
         return NextResponse.json(
           { text: cached, threadId: persistHistory ? threadId : undefined },
-          persistHistory ? { headers: { 'X-AI-Thread-ID': threadId } } : undefined
+          persistHistory
+            ? { headers: { 'X-AI-Thread-ID': threadId } }
+            : undefined
         )
       }
     }
@@ -918,13 +938,22 @@ export const POST = async (
               [...trimmed, { role: 'assistant', text }],
               aiConfig.maxHistoryMessages
             )
-            return persistMessages(session.user.id, id, threadId, historyToPersist)
+            return persistMessages(
+              session.user.id,
+              id,
+              threadId,
+              historyToPersist
+            )
           })
           .catch((error) =>
             logError({
               error,
               context: 'ai_chat_history_persist',
-              additionalInfo: { productId: id, userId: session.user.id, threadId },
+              additionalInfo: {
+                productId: id,
+                userId: session.user.id,
+                threadId,
+              },
             })
           )
       )
