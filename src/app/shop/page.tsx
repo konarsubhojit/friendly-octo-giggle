@@ -14,6 +14,8 @@ import {
   getVariantTotalStock,
 } from '@/features/product/variant-utils'
 import {
+  SEARCH_SORT_VALUES,
+  SEARCH_VARIANT_VALUES,
   searchCatalog,
   type SearchSort,
   type SearchVariantFilter,
@@ -72,8 +74,11 @@ const ShopPage = async ({ searchParams }: ShopPageProps) => {
   const search = getSingleValue(resolvedSearchParams.q)?.trim() ?? ''
   const selectedCategory =
     getSingleValue(resolvedSearchParams.category)?.trim() ?? 'All'
-  const selectedSort = (getSingleValue(resolvedSearchParams.sort)?.trim() ??
-    'relevance') as SearchSort
+  const rawSort = getSingleValue(resolvedSearchParams.sort)?.trim()
+  const selectedSort: SearchSort =
+    rawSort && SEARCH_SORT_VALUES.includes(rawSort as SearchSort)
+      ? (rawSort as SearchSort)
+      : 'relevance'
   const rawMinPrice = Number.parseFloat(
     getSingleValue(resolvedSearchParams.minPrice) ?? ''
   )
@@ -87,9 +92,11 @@ const ShopPage = async ({ searchParams }: ShopPageProps) => {
     getSingleValue(resolvedSearchParams.minRating) ?? ''
   )
   const minRating = Number.isFinite(rawMinRating) ? rawMinRating : undefined
-  const selectedVariant = (getSingleValue(
-    resolvedSearchParams.variant
-  )?.trim() ?? 'all') as SearchVariantFilter
+  const rawVariant = getSingleValue(resolvedSearchParams.variant)?.trim()
+  const selectedVariant: SearchVariantFilter =
+    rawVariant && SEARCH_VARIANT_VALUES.includes(rawVariant as SearchVariantFilter)
+      ? (rawVariant as SearchVariantFilter)
+      : 'all'
 
   let shopData: {
     products: ProductGridItem[]

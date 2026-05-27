@@ -43,6 +43,9 @@ function queueSelectResults(results: unknown[]) {
   let index = 0
 
   mockSelect.mockImplementation(() => {
+    if (index >= results.length) {
+      throw new Error('Unexpected select call')
+    }
     const value = results[index++]
     const whereResult = {
       groupBy: vi.fn(async () => value),

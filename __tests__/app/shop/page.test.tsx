@@ -92,6 +92,15 @@ vi.mock('@/lib/cache', () => ({
 }))
 
 vi.mock('@/lib/search-discovery', () => ({
+  SEARCH_SORT_VALUES: [
+    'relevance',
+    'price_asc',
+    'price_desc',
+    'newest',
+    'best_selling',
+    'top_rated',
+  ],
+  SEARCH_VARIANT_VALUES: ['all', 'single', 'multiple'],
   searchCatalog: mockSearchCatalog,
 }))
 

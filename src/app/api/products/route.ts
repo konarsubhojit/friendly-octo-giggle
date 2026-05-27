@@ -2,7 +2,13 @@ import { NextRequest } from 'next/server'
 import { apiSuccess, handleApiError } from '@/lib/api-utils'
 import { withLogging } from '@/lib/api-middleware'
 import { cacheProductsList } from '@/lib/cache'
-import { searchCatalog } from '@/lib/search-discovery'
+import {
+  SEARCH_SORT_VALUES,
+  SEARCH_VARIANT_VALUES,
+  type SearchSort,
+  type SearchVariantFilter,
+  searchCatalog,
+} from '@/lib/search-discovery'
 
 const DEFAULT_LIMIT = 24
 const MAX_LIMIT = 100
@@ -26,7 +32,15 @@ async function handleGet(request: NextRequest) {
     const maxPrice = Number.parseFloat(searchParams.get('maxPrice') ?? '')
     const inStock = searchParams.get('inStock') === 'true'
     const minRating = Number.parseFloat(searchParams.get('minRating') ?? '')
-    const variant = searchParams.get('variant')?.trim() ?? 'all'
+    const rawVariant = searchParams.get('variant')?.trim()
+    const variant: SearchVariantFilter =
+      rawVariant && SEARCH_VARIANT_VALUES.includes(rawVariant as SearchVariantFilter)
+        ? (rawVariant as SearchVariantFilter)
+        : 'all'
+    const validSort: SearchSort =
+      sort && SEARCH_SORT_VALUES.includes(sort as SearchSort)
+        ? (sort as SearchSort)
+        : 'relevance'
     const limit = parseProductLimit(searchParams.get('limit'))
     const offset = Math.max(
       0,
@@ -38,20 +52,13 @@ async function handleGet(request: NextRequest) {
         searchCatalog({
           q: search ?? '',
           category: category || undefined,
-          sort:
-            sort === 'price_asc' ||
-            sort === 'price_desc' ||
-            sort === 'newest' ||
-            sort === 'best_selling' ||
-            sort === 'top_rated'
-              ? sort
-              : 'relevance',
+          sort: validSort,
           minPrice: Number.isFinite(minPrice) ? minPrice : undefined,
           maxPrice: Number.isFinite(maxPrice) ? maxPrice : undefined,
           inStock,
           minRating: Number.isFinite(minRating) ? minRating : undefined,
           variant:
-            variant === 'single' || variant === 'multiple' ? variant : 'all',
+            variant,
           limit: limit + 1,
           offset,
         }),

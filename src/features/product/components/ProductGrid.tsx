@@ -149,14 +149,11 @@ const highlightMatches = (text: string, query: string) => {
 
   return segments.map((segment, index) =>
     index % 2 === 1 ? (
-      <mark
-        key={`${segment}-${index}`}
-        className="rounded bg-[var(--accent-blush)] px-0.5"
-      >
+      <mark key={index} className="rounded bg-[var(--accent-blush)] px-0.5">
         {segment}
       </mark>
     ) : (
-      <Fragment key={`${segment}-${index}`}>{segment}</Fragment>
+      <Fragment key={index}>{segment}</Fragment>
     )
   )
 }
@@ -186,13 +183,11 @@ ProductImageArea.displayName = 'ProductImageArea'
 
 const ProductCard = memo(
   ({ product, formatPrice, index, query }: ProductCardProps) => {
-    const trackClick = () => {
-      const body = JSON.stringify({
-        productId: product.id,
-        query: query || undefined,
-      })
+    const trackClick = useCallback(() => {
+      const body = JSON.stringify({ productId: product.id, query: query || undefined })
       if (typeof navigator !== 'undefined' && 'sendBeacon' in navigator) {
-        navigator.sendBeacon('/api/search/click', body)
+        const payload = new Blob([body], { type: 'application/json' })
+        navigator.sendBeacon('/api/search/click', payload)
         return
       }
 
@@ -202,7 +197,7 @@ const ProductCard = memo(
         body,
         keepalive: true,
       })
-    }
+    }, [product.id, query])
 
     return (
       <div
@@ -488,12 +483,32 @@ const ProductGrid = ({
       params.set('sort', sortDraft)
     }
 
-    if (Number.isFinite(normalizedMinPrice) && normalizedMinPrice >= 0) {
-      params.set('minPrice', String(normalizedMinPrice))
+    const validatedMinPrice = Number.isFinite(normalizedMinPrice)
+      ? normalizedMinPrice
+      : undefined
+    const validatedMaxPrice = Number.isFinite(normalizedMaxPrice)
+      ? normalizedMaxPrice
+      : undefined
+
+    const safeMinPrice =
+      validatedMinPrice !== undefined &&
+      validatedMaxPrice !== undefined &&
+      validatedMinPrice > validatedMaxPrice
+        ? validatedMaxPrice
+        : validatedMinPrice
+    const safeMaxPrice =
+      validatedMinPrice !== undefined &&
+      validatedMaxPrice !== undefined &&
+      validatedMinPrice > validatedMaxPrice
+        ? validatedMinPrice
+        : validatedMaxPrice
+
+    if (typeof safeMinPrice === 'number' && safeMinPrice >= 0) {
+      params.set('minPrice', String(safeMinPrice))
     }
 
-    if (Number.isFinite(normalizedMaxPrice) && normalizedMaxPrice >= 0) {
-      params.set('maxPrice', String(normalizedMaxPrice))
+    if (typeof safeMaxPrice === 'number' && safeMaxPrice >= 0) {
+      params.set('maxPrice', String(safeMaxPrice))
     }
 
     if (inStockDraft) {

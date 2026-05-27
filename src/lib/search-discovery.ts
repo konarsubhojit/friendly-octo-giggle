@@ -81,6 +81,7 @@ const DEFAULT_POPULAR_SEARCHES = [
   'keychain',
   'hair accessories',
 ]
+const SPELLCHECK_PREFIX_MIN = 2
 
 const normalizeWhitespace = (value: string) => value.trim().replace(/\s+/g, ' ')
 
@@ -93,13 +94,13 @@ const buildSpellSuggestions = (
     return []
   }
 
-  const source = [
-    ...new Set([...categoriesFromResults, ...DEFAULT_POPULAR_SEARCHES]),
-  ]
+  const source = [...new Set([...categoriesFromResults, ...DEFAULT_POPULAR_SEARCHES])]
+  const fuzzyPrefix = normalized.slice(
+    0,
+    Math.max(SPELLCHECK_PREFIX_MIN, normalized.length - 1)
+  )
   const byContainment = source.filter((term) =>
-    term
-      .toLowerCase()
-      .includes(normalized.slice(0, Math.max(2, normalized.length - 1)))
+    term.toLowerCase().includes(fuzzyPrefix)
   )
 
   if (byContainment.length > 0) {
@@ -226,7 +227,11 @@ const applySort = (
     sorted.sort((a, b) => {
       const rankA = relevanceOrder.get(a.id) ?? Number.MAX_SAFE_INTEGER
       const rankB = relevanceOrder.get(b.id) ?? Number.MAX_SAFE_INTEGER
-      return rankA - rankB || b.soldCount - a.soldCount
+      return (
+        rankA - rankB ||
+        b.soldCount - a.soldCount ||
+        b.createdAt.localeCompare(a.createdAt)
+      )
     })
     return sorted
   }

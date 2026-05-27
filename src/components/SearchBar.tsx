@@ -34,16 +34,12 @@ const markMatches = (text: string, query: string) => {
   return (
     <>
       {parts.map((part, index) => {
-        const key = `${part}-${index}`
         return index % 2 === 1 ? (
-          <mark
-            key={key}
-            className="rounded bg-[var(--accent-blush)] px-0.5 text-[inherit]"
-          >
+          <mark key={index} className="rounded bg-[var(--accent-blush)] px-0.5 text-[inherit]">
             {part}
           </mark>
         ) : (
-          <Fragment key={key}>{part}</Fragment>
+          <Fragment key={index}>{part}</Fragment>
         )
       })}
     </>
@@ -190,6 +186,11 @@ export function SearchBar({
         onChange={(event) => onChange(event.target.value)}
         onFocus={() => setOpen(true)}
         onKeyDown={(event) => {
+          if (event.key === 'Escape') {
+            setOpen(false)
+            return
+          }
+
           if (event.key === 'Enter') {
             persistRecent(value)
             onSubmit()

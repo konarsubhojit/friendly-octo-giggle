@@ -8,6 +8,8 @@ const SearchSuggestSchema = z.object({
   q: z.string().trim().min(1).max(200),
   limit: z.coerce.number().int().min(1).max(10).default(8),
 })
+const SUGGEST_CACHE_TTL_SECONDS = 30
+const SUGGEST_CACHE_STALE_SECONDS = 5
 
 const buildSuggestCacheKey = (query: string, limit: number) =>
   `search:suggest:${encodeURIComponent(query.toLowerCase())}:${limit}`
@@ -28,15 +30,15 @@ export async function GET(request: NextRequest) {
 
     const data = await getCachedData(
       buildSuggestCacheKey(q, limit),
-      30,
+      SUGGEST_CACHE_TTL_SECONDS,
       () => suggestSearchTerms(q, limit),
-      5
+      SUGGEST_CACHE_STALE_SECONDS
     )
 
     const response = apiSuccess(data)
     response.headers.set(
       'Cache-Control',
-      'public, s-maxage=30, stale-while-revalidate=60'
+      `public, s-maxage=${SUGGEST_CACHE_TTL_SECONDS}, stale-while-revalidate=${SUGGEST_CACHE_TTL_SECONDS * 2}`
     )
 
     return response
