@@ -100,7 +100,7 @@ export default function CartPage() {
             JSON.stringify(next)
           )
         } catch {
-          // Checkout should still work when sessionStorage is unavailable.
+          // Checkout should still work when storage is unavailable (quota/private mode).
         }
         return next
       })

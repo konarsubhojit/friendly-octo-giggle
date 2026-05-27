@@ -13,20 +13,24 @@ export const CreateAddressSchema = z.object({
   isDefault: z.boolean().optional().default(false),
 })
 
+const UpdateOptionalAddressLine2Schema = z
+  .string()
+  .trim()
+  .max(200, 'Address Line 2 must be under 200 characters')
+  .optional()
+
+const UpdateOptionalAddressLine3Schema = z
+  .string()
+  .trim()
+  .max(200, 'Address Line 3 must be under 200 characters')
+  .optional()
+
 export const UpdateAddressSchema = z
   .object({
     label: AddressLabelSchema.optional(),
     addressLine1: StructuredAddressSchema.shape.addressLine1.optional(),
-    addressLine2: z
-      .string()
-      .trim()
-      .max(200, 'Address Line 2 must be under 200 characters')
-      .optional(),
-    addressLine3: z
-      .string()
-      .trim()
-      .max(200, 'Address Line 3 must be under 200 characters')
-      .optional(),
+    addressLine2: UpdateOptionalAddressLine2Schema,
+    addressLine3: UpdateOptionalAddressLine3Schema,
     pinCode: StructuredAddressSchema.shape.pinCode.optional(),
     city: StructuredAddressSchema.shape.city.optional(),
     state: StructuredAddressSchema.shape.state.optional(),

@@ -71,7 +71,7 @@ test.describe('Checkout error recovery', () => {
     await page.getByLabel(/state/i).fill('Karnataka')
     await page.getByRole('button', { name: /continue to review/i }).click()
     await expect(page).toHaveURL(/\/checkout\/review/)
-    await page.getByRole('checkbox', { name: /acknowledg/i }).check()
+    await page.getByRole('checkbox', { name: /acknowledge/i }).check()
     await page.getByRole('button', { name: /confirm and place order/i }).click()
 
     await expect(page.getByText(/queue submission failed/i)).toBeVisible()

@@ -191,7 +191,6 @@ export const CheckoutForm = ({
 
   useEffect(() => {
     if (customizationNotes && Object.keys(customizationNotes).length > 0) {
-      if (typeof window === 'undefined') return
       try {
         sessionStorage.setItem(
           PENDING_CUSTOMIZATION_KEY,
@@ -325,7 +324,7 @@ export const CheckoutForm = ({
           })
           if (!response.ok) {
             toast.error(
-              'Unable to save address right now. Please retry before continuing.'
+              'Address save failed. Please fix the issue and try again.'
             )
             return
           }
