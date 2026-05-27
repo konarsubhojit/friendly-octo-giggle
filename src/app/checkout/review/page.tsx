@@ -177,7 +177,7 @@ export default function CheckoutReviewPage() {
     startTransition(async () => {
       try {
         setCheckoutError(null)
-        setCheckoutMessage('Submitting your order...')
+        setCheckoutMessage('Submitting your order…')
 
         const enqueueResult = await apiClient.post<CheckoutEnqueueResponse>(
           '/api/checkout',
@@ -426,7 +426,8 @@ export default function CheckoutReviewPage() {
                 <button
                   type="button"
                   onClick={handleConfirm}
-                  className="mt-2 text-xs font-semibold underline underline-offset-2"
+                  aria-label="Retry checkout after error"
+                  className="mt-2 text-xs font-semibold underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-rose)]"
                 >
                   Retry checkout
                 </button>

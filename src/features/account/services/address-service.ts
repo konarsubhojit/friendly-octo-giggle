@@ -1,4 +1,4 @@
-import { and, asc, eq } from 'drizzle-orm'
+import { and, asc, desc, eq } from 'drizzle-orm'
 import { drizzleDb, primaryDrizzleDb } from '@/lib/db'
 import { addresses } from '@/lib/schema'
 import type {
@@ -37,19 +37,18 @@ const clearDefaultAddress = async (userId: string) => {
     .where(and(eq(addresses.userId, userId), eq(addresses.isDefault, true)))
 }
 
-export const listUserAddresses = async (
-  userId: string
-): Promise<SavedAddress[]> =>
+const normalizeOptionalText = (value: string | undefined): string | null => {
+  const trimmed = value?.trim() ?? ''
+  return trimmed.length === 0 ? null : trimmed
+}
+
+export const listUserAddresses = async (userId: string): Promise<SavedAddress[]> =>
   drizzleDb.query.addresses
     .findMany({
       where: eq(addresses.userId, userId),
-      orderBy: [asc(addresses.isDefault), asc(addresses.createdAt)],
+      orderBy: [desc(addresses.isDefault), asc(addresses.createdAt)],
     })
-    .then((rows) =>
-      rows
-        .map(toSavedAddress)
-        .sort((a, b) => Number(b.isDefault) - Number(a.isDefault))
-    )
+    .then((rows) => rows.map(toSavedAddress))
 
 export const createUserAddress = async (
   userId: string,
@@ -65,8 +64,8 @@ export const createUserAddress = async (
       userId,
       label: input.label.trim(),
       addressLine1: input.addressLine1.trim(),
-      addressLine2: input.addressLine2.trim() || null,
-      addressLine3: input.addressLine3.trim() || null,
+      addressLine2: normalizeOptionalText(input.addressLine2),
+      addressLine3: normalizeOptionalText(input.addressLine3),
       pinCode: input.pinCode.trim(),
       city: input.city.trim(),
       state: input.state.trim(),
@@ -107,10 +106,10 @@ export const updateUserAddress = async ({
         ? { addressLine1: input.addressLine1.trim() }
         : {}),
       ...(input.addressLine2 !== undefined
-        ? { addressLine2: input.addressLine2.trim() || null }
+        ? { addressLine2: normalizeOptionalText(input.addressLine2) }
         : {}),
       ...(input.addressLine3 !== undefined
-        ? { addressLine3: input.addressLine3.trim() || null }
+        ? { addressLine3: normalizeOptionalText(input.addressLine3) }
         : {}),
       ...(input.pinCode !== undefined ? { pinCode: input.pinCode.trim() } : {}),
       ...(input.city !== undefined ? { city: input.city.trim() } : {}),

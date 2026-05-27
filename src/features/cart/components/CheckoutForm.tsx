@@ -16,6 +16,7 @@ import toast from 'react-hot-toast'
 const PENDING_CHECKOUT_KEY = 'pending_checkout'
 const PINCODE_REGEX = /^\d{6}$/
 const PENDING_CUSTOMIZATION_KEY = 'pending_customization_notes'
+const MAX_ADDRESS_LABEL_LENGTH = 40
 
 interface PincodeLookupResponse {
   success: boolean
@@ -199,10 +200,14 @@ export const CheckoutForm = ({
 
   const updateField = useCallback(
     (field: keyof AddressFields, value: string) => {
+      if (selectedAddressId) {
+        setSelectedAddressId('')
+        setSaveAddress(true)
+      }
       setAddress((prev) => ({ ...prev, [field]: value }))
       setErrors((prev) => ({ ...prev, [field]: undefined }))
     },
-    []
+    [selectedAddressId]
   )
 
   const applyPincodeResult = useCallback((city: string, state: string) => {
@@ -298,15 +303,24 @@ export const CheckoutForm = ({
     const persistPendingCheckout = async () => {
       try {
         if (!selectedAddressId && saveAddress) {
-          await fetch('/api/account/addresses', {
+          const trimmedLabelLine = trimmed.addressLine1.trim()
+          const truncationSuffix = '...'
+          const labelAddressLine =
+            trimmedLabelLine.length > MAX_ADDRESS_LABEL_LENGTH
+              ? `${trimmedLabelLine.slice(0, MAX_ADDRESS_LABEL_LENGTH - truncationSuffix.length)}${truncationSuffix}`
+              : trimmedLabelLine
+          const response = await fetch('/api/account/addresses', {
             method: 'POST',
             headers: { 'content-type': 'application/json' },
             body: JSON.stringify({
-              label: `${trimmed.addressLine1.slice(0, 40)}${trimmed.city ? ` · ${trimmed.city}` : ''}`,
+              label: `${labelAddressLine}${trimmed.city ? ` · ${trimmed.city}` : ''}`,
               ...trimmed,
               isDefault: savedAddresses.length === 0,
             }),
           })
+          if (!response.ok) {
+            toast.error('Unable to save address right now. You can still continue.')
+          }
         }
 
         sessionStorage.setItem(

@@ -45,6 +45,7 @@ export const CheckoutProgress = ({ currentStep }: CheckoutProgressProps) => {
               ) : (
                 <span
                   className={`rounded-full px-3 py-1 font-medium ${className}`}
+                  aria-current={isActive ? 'step' : undefined}
                 >
                   {step.label}
                 </span>

@@ -12,7 +12,9 @@ export default function CheckoutConfirmationPage() {
   const searchParams = useSearchParams()
   const orderId = searchParams.get('orderId')
   const [order, setOrder] = useState<Order | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(
+    orderId ? null : 'No order ID provided.'
+  )
 
   useEffect(() => {
     if (!orderId) return
@@ -46,7 +48,7 @@ export default function CheckoutConfirmationPage() {
         <CheckoutProgress currentStep="confirmation" />
         <GradientHeading className="mb-2">Order Confirmed</GradientHeading>
         <p className="mb-8 text-sm text-[var(--text-secondary)]">
-          Thank you! We&apos;re processing your order now.
+          {"Thank you! We're processing your order now."}
         </p>
 
         {!order && !error ? (

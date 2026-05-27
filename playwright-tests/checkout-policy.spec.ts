@@ -58,7 +58,17 @@ test.describe('Checkout policy confirmation', () => {
         json: {
           success: true,
           data: {
-            order: { id: 'ord-test-001', items: [], trackingNumber: null },
+            order: {
+              id: 'ord-test-001',
+              items: [
+                {
+                  id: 'item-1',
+                  quantity: 1,
+                  product: { id: 'prd1', name: 'Test Bouquet' },
+                },
+              ],
+              trackingNumber: null,
+            },
           },
         },
       })
