@@ -87,7 +87,9 @@ test.describe('Checkout policy confirmation', () => {
     ).toBeEnabled()
 
     await page.getByRole('button', { name: /confirm and place order/i }).click()
-    await expect(page).toHaveURL(/\/checkout\/confirmation\?orderId=ord-test-001/)
+    await expect(page).toHaveURL(
+      /\/checkout\/confirmation\?orderId=ord-test-001/
+    )
     expect(checkoutRequests).toBe(1)
   })
 })

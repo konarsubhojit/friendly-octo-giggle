@@ -211,7 +211,9 @@ export default function CheckoutReviewPage() {
         await dispatch(clearCart()).unwrap()
         clearPendingCheckout()
         toast.success(`Order ${completedCheckout.orderId} placed successfully!`)
-        router.push(`/checkout/confirmation?orderId=${completedCheckout.orderId}`)
+        router.push(
+          `/checkout/confirmation?orderId=${completedCheckout.orderId}`
+        )
       } catch (error) {
         const message =
           error instanceof Error ? error.message : 'Failed to place order'
@@ -432,12 +434,12 @@ export default function CheckoutReviewPage() {
             ) : null}
 
             <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-                <Link
-                  href="/checkout/shipping"
-                  className="inline-flex items-center justify-center rounded-xl border border-[var(--border-warm)] px-5 py-2.5 text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--accent-blush)] transition-colors"
-                >
-                  Back
-                </Link>
+              <Link
+                href="/checkout/shipping"
+                className="inline-flex items-center justify-center rounded-xl border border-[var(--border-warm)] px-5 py-2.5 text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--accent-blush)] transition-colors"
+              >
+                Back
+              </Link>
               <GradientButton
                 type="button"
                 onClick={handleConfirm}

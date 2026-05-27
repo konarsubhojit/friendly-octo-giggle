@@ -18,9 +18,7 @@ export interface SavedAddress {
   isDefault: boolean
 }
 
-const toSavedAddress = (
-  row: typeof addresses.$inferSelect
-): SavedAddress => ({
+const toSavedAddress = (row: typeof addresses.$inferSelect): SavedAddress => ({
   id: row.id,
   label: row.label,
   addressLine1: row.addressLine1,
@@ -39,7 +37,9 @@ const clearDefaultAddress = async (userId: string) => {
     .where(and(eq(addresses.userId, userId), eq(addresses.isDefault, true)))
 }
 
-export const listUserAddresses = async (userId: string): Promise<SavedAddress[]> =>
+export const listUserAddresses = async (
+  userId: string
+): Promise<SavedAddress[]> =>
   drizzleDb.query.addresses
     .findMany({
       where: eq(addresses.userId, userId),

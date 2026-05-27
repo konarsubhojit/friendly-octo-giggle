@@ -1,7 +1,9 @@
 import { expect, test } from '@playwright/test'
 import { MOCK_CART } from './mock-data.js'
 
-test('shows recoverable error when checkout processing fails', async ({ page }) => {
+test('shows recoverable error when checkout processing fails', async ({
+  page,
+}) => {
   let attempt = 0
 
   await page.route('**/api/cart', async (route) => {
@@ -49,7 +51,9 @@ test('shows recoverable error when checkout processing fails', async ({ page }) 
     route.fulfill({
       json: {
         success: true,
-        data: { order: { id: 'ord-test-retry', items: [], trackingNumber: null } },
+        data: {
+          order: { id: 'ord-test-retry', items: [], trackingNumber: null },
+        },
       },
     })
   )
@@ -66,5 +70,7 @@ test('shows recoverable error when checkout processing fails', async ({ page }) 
 
   await expect(page.getByText(/queue submission failed/i)).toBeVisible()
   await page.getByRole('button', { name: /retry checkout/i }).click()
-  await expect(page).toHaveURL(/\/checkout\/confirmation\?orderId=ord-test-retry/)
+  await expect(page).toHaveURL(
+    /\/checkout\/confirmation\?orderId=ord-test-retry/
+  )
 })

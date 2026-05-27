@@ -94,7 +94,10 @@ export default function CartPage() {
     (itemId: string, note: string) => {
       setCustomizationNotes((prev) => {
         const next = { ...prev, [itemId]: note }
-        sessionStorage.setItem('pending_customization_notes', JSON.stringify(next))
+        sessionStorage.setItem(
+          'pending_customization_notes',
+          JSON.stringify(next)
+        )
         return next
       })
     },

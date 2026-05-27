@@ -79,16 +79,13 @@ const getValidationErrors = (address: AddressFields): AddressErrors => {
   const result = StructuredAddressSchema.safeParse(address)
   if (result.success) return {}
 
-  return result.error.issues.reduce(
-    (acc, issue) => {
-      const key = issue.path[0]
-      if (typeof key === 'string' && key in address) {
-        acc[key as keyof AddressErrors] = issue.message
-      }
-      return acc
-    },
-    {} as AddressErrors
-  )
+  return result.error.issues.reduce((acc, issue) => {
+    const key = issue.path[0]
+    if (typeof key === 'string' && key in address) {
+      acc[key as keyof AddressErrors] = issue.message
+    }
+    return acc
+  }, {} as AddressErrors)
 }
 
 const trimAddress = (address: AddressFields): AddressFields => ({
@@ -112,7 +109,9 @@ const readCachedCustomizationNotes = (): Record<string, string> => {
   }
 }
 
-export const CheckoutForm = ({ customizationNotes = {} }: CheckoutFormProps) => {
+export const CheckoutForm = ({
+  customizationNotes = {},
+}: CheckoutFormProps) => {
   const router = useRouter()
   const { data: session } = useSession()
   const cart = useSelector(selectCart)
@@ -312,7 +311,10 @@ export const CheckoutForm = ({ customizationNotes = {} }: CheckoutFormProps) => 
 
         sessionStorage.setItem(
           PENDING_CHECKOUT_KEY,
-          JSON.stringify({ ...trimmed, customizationNotes: mergedCustomizationNotes })
+          JSON.stringify({
+            ...trimmed,
+            customizationNotes: mergedCustomizationNotes,
+          })
         )
       } catch {
         toast.error('Unable to proceed. Please try again.')
@@ -463,13 +465,19 @@ export const CheckoutForm = ({ customizationNotes = {} }: CheckoutFormProps) => 
         </div>
 
         {pincodeNotice && (
-          <p className="text-xs text-amber-600 dark:text-amber-400" role="status">
+          <p
+            className="text-xs text-amber-600 dark:text-amber-400"
+            role="status"
+          >
             {pincodeNotice}
           </p>
         )}
 
         {pincodeAutoFilled && (
-          <p className="text-xs text-emerald-600 dark:text-emerald-400" role="status">
+          <p
+            className="text-xs text-emerald-600 dark:text-emerald-400"
+            role="status"
+          >
             ✓ City and state auto-filled from pin code
           </p>
         )}

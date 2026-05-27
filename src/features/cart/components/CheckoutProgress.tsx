@@ -43,7 +43,9 @@ export const CheckoutProgress = ({ currentStep }: CheckoutProgressProps) => {
                   {step.label}
                 </Link>
               ) : (
-                <span className={`rounded-full px-3 py-1 font-medium ${className}`}>
+                <span
+                  className={`rounded-full px-3 py-1 font-medium ${className}`}
+                >
                   {step.label}
                 </span>
               )}

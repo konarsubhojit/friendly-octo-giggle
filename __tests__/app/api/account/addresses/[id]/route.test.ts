@@ -22,12 +22,17 @@ describe('PATCH /api/account/addresses/[id]', () => {
     mockUpdateUserAddress.mockResolvedValue(null)
     const { PATCH } = await import('@/app/api/account/addresses/[id]/route')
 
-    const req = new NextRequest('http://localhost/api/account/addresses/addr001', {
-      method: 'PATCH',
-      body: JSON.stringify({ label: 'Updated home' }),
-    })
+    const req = new NextRequest(
+      'http://localhost/api/account/addresses/addr001',
+      {
+        method: 'PATCH',
+        body: JSON.stringify({ label: 'Updated home' }),
+      }
+    )
 
-    const response = await PATCH(req, { params: Promise.resolve({ id: 'addr001' }) })
+    const response = await PATCH(req, {
+      params: Promise.resolve({ id: 'addr001' }),
+    })
     expect(response.status).toBe(404)
   })
 })
@@ -42,9 +47,12 @@ describe('DELETE /api/account/addresses/[id]', () => {
     mockDeleteUserAddress.mockResolvedValue(true)
     const { DELETE } = await import('@/app/api/account/addresses/[id]/route')
 
-    const req = new NextRequest('http://localhost/api/account/addresses/addr001', {
-      method: 'DELETE',
-    })
+    const req = new NextRequest(
+      'http://localhost/api/account/addresses/addr001',
+      {
+        method: 'DELETE',
+      }
+    )
 
     const response = await DELETE(req, {
       params: Promise.resolve({ id: 'addr001' }),
