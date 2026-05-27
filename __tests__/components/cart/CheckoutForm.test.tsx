@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import React from 'react'
 import { Provider } from 'react-redux'
 import { configureStore } from '@reduxjs/toolkit'
@@ -134,6 +134,42 @@ describe('CheckoutForm', () => {
       getItem: vi.fn(),
       removeItem: vi.fn(),
     })
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: string | URL | Request) => {
+        const url =
+          typeof input === 'string'
+            ? input
+            : input instanceof URL
+              ? input.toString()
+              : input.url
+
+        if (url.includes('/api/pincode/')) {
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({
+              success: true,
+              data: { city: 'Bengaluru', state: 'Karnataka' },
+            }),
+          }
+        }
+
+        if (url.includes('/api/account/addresses')) {
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({ success: true, data: { addresses: [] } }),
+          }
+        }
+
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ success: true }),
+        }
+      })
+    )
   })
 
   it('renders all structured address fields', () => {
@@ -147,19 +183,19 @@ describe('CheckoutForm', () => {
     expect(screen.getByLabelText(/state/i)).toBeInTheDocument()
   })
 
-  it('navigates to review page with valid structured address', () => {
+  it('navigates to review page with valid structured address', async () => {
     renderCheckoutForm()
     fillStructuredAddress()
 
-    fireEvent.click(
-      screen.getByRole('button', { name: /review.*place order/i })
-    )
+    fireEvent.click(screen.getByRole('button', { name: /continue to review/i }))
 
-    expect(sessionStorage.setItem).toHaveBeenCalledWith(
-      'pending_checkout',
-      expect.stringContaining('42 MG Road')
-    )
-    expect(mockPush).toHaveBeenCalledWith('/checkout/review')
+    await waitFor(() => {
+      expect(sessionStorage.setItem).toHaveBeenCalledWith(
+        'pending_checkout',
+        expect.stringContaining('42 MG Road')
+      )
+      expect(mockPush).toHaveBeenCalledWith('/checkout/review')
+    })
   })
 
   it('shows error when address line 1 is empty', () => {
@@ -175,9 +211,7 @@ describe('CheckoutForm', () => {
       target: { value: 'Karnataka' },
     })
 
-    fireEvent.click(
-      screen.getByRole('button', { name: /review.*place order/i })
-    )
+    fireEvent.click(screen.getByRole('button', { name: /continue to review/i }))
 
     expect(screen.getByText(/address line 1 is required/i)).toBeInTheDocument()
     expect(mockPush).not.toHaveBeenCalledWith('/checkout/review')
@@ -199,9 +233,7 @@ describe('CheckoutForm', () => {
       target: { value: 'Karnataka' },
     })
 
-    fireEvent.click(
-      screen.getByRole('button', { name: /review.*place order/i })
-    )
+    fireEvent.click(screen.getByRole('button', { name: /continue to review/i }))
 
     expect(
       screen.getByText(/pin code must be exactly 6 digits/i)
@@ -209,7 +241,7 @@ describe('CheckoutForm', () => {
     expect(mockPush).not.toHaveBeenCalledWith('/checkout/review')
   })
 
-  it('redirects unauthenticated users to sign in', () => {
+  it('redirects unauthenticated users to sign in', async () => {
     mockUseSession.mockReturnValue({
       data: null,
       status: 'unauthenticated',
@@ -219,10 +251,12 @@ describe('CheckoutForm', () => {
     renderCheckoutForm()
     fillStructuredAddress()
 
-    fireEvent.click(
-      screen.getByRole('button', { name: /review.*place order/i })
-    )
+    fireEvent.click(screen.getByRole('button', { name: /continue to review/i }))
 
-    expect(mockPush).toHaveBeenCalledWith('/auth/signin?callbackUrl=/cart')
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith(
+        '/auth/signin?callbackUrl=/checkout/shipping'
+      )
+    })
   })
 })

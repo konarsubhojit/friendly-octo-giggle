@@ -102,6 +102,21 @@ CREATE TABLE IF NOT EXISTS public."PasswordHistory" (
   "createdAt" timestamp DEFAULT now() NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS public."Address" (
+  id varchar(7) PRIMARY KEY NOT NULL,
+  "userId" text NOT NULL,
+  label text NOT NULL,
+  "addressLine1" text NOT NULL,
+  "addressLine2" text,
+  "addressLine3" text,
+  "pinCode" text NOT NULL,
+  city text NOT NULL,
+  state text NOT NULL,
+  "isDefault" boolean DEFAULT false NOT NULL,
+  "createdAt" timestamp DEFAULT now() NOT NULL,
+  "updatedAt" timestamp DEFAULT now() NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS public."Category" (
   id varchar(7) PRIMARY KEY NOT NULL,
   "name" text NOT NULL,
@@ -533,6 +548,14 @@ $$;
 
 DO $$
 BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'Address_userId_User_id_fk') THEN
+    ALTER TABLE public."Address" ADD CONSTRAINT "Address_userId_User_id_fk" FOREIGN KEY ("userId") REFERENCES public."User"(id) ON DELETE cascade ON UPDATE no action;
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'Order_checkoutRequestId_CheckoutRequest_id_fk') THEN
     ALTER TABLE public."Order" ADD CONSTRAINT "Order_checkoutRequestId_CheckoutRequest_id_fk" FOREIGN KEY ("checkoutRequestId") REFERENCES public."CheckoutRequest"(id) ON DELETE set null ON UPDATE no action;
   END IF;
@@ -540,6 +563,8 @@ END
 $$;
 
 CREATE INDEX IF NOT EXISTS "Account_userId_idx" ON public."Account" USING btree ("userId");
+CREATE INDEX IF NOT EXISTS "Address_userId_idx" ON public."Address" USING btree ("userId");
+CREATE UNIQUE INDEX IF NOT EXISTS "Address_one_default_per_user_idx" ON public."Address" USING btree ("userId") WHERE "isDefault" = true;
 CREATE INDEX IF NOT EXISTS "CartItem_cartId_idx" ON public."CartItem" USING btree ("cartId");
 CREATE INDEX IF NOT EXISTS "CartItem_productId_idx" ON public."CartItem" USING btree ("productId");
 CREATE INDEX IF NOT EXISTS "CartItem_variationId_idx" ON public."CartItem" USING btree ("variationId");

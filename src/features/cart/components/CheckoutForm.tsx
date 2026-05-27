@@ -1,10 +1,11 @@
 'use client'
 
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { useSelector } from 'react-redux'
 import { selectCart } from '@/features/cart/store/cartSlice'
+import { StructuredAddressSchema } from '@/features/orders/validations'
 import { GradientButton } from '@/components/ui/GradientButton'
 import { buildCheckoutSummaryLineItems } from '@/features/orders/services/order-summary'
 import { formatStructuredAddress } from '@/lib/address-utils'
@@ -14,6 +15,8 @@ import toast from 'react-hot-toast'
 
 const PENDING_CHECKOUT_KEY = 'pending_checkout'
 const PINCODE_REGEX = /^\d{6}$/
+const PENDING_CUSTOMIZATION_KEY = 'pending_customization_notes'
+const MAX_ADDRESS_LABEL_LENGTH = 40
 
 interface PincodeLookupResponse {
   success: boolean
@@ -50,13 +53,21 @@ interface AddressFields {
 
 interface AddressErrors {
   addressLine1?: string
+  addressLine2?: string
+  addressLine3?: string
   pinCode?: string
   city?: string
   state?: string
 }
 
+interface SavedAddress extends AddressFields {
+  id: string
+  label: string
+  isDefault: boolean
+}
+
 interface CheckoutFormProps {
-  readonly customizationNotes: Record<string, string>
+  readonly customizationNotes?: Record<string, string>
 }
 
 const INPUT_CLASS =
@@ -65,23 +76,17 @@ const INPUT_CLASS =
 const READONLY_CLASS =
   'w-full px-3 py-2 border border-[var(--border-warm)] rounded-xl text-sm text-[var(--foreground)] bg-[var(--surface-muted)]/60 cursor-not-allowed transition-colors'
 
-const validateAddress = (address: AddressFields): AddressErrors => {
-  const newErrors: AddressErrors = {}
+const getValidationErrors = (address: AddressFields): AddressErrors => {
+  const result = StructuredAddressSchema.safeParse(address)
+  if (result.success) return {}
 
-  if (!address.addressLine1.trim()) {
-    newErrors.addressLine1 = 'Address Line 1 is required'
-  }
-  if (!PINCODE_REGEX.test(address.pinCode)) {
-    newErrors.pinCode = 'Pin code must be exactly 6 digits'
-  }
-  if (!address.city.trim()) {
-    newErrors.city = 'City is required'
-  }
-  if (!address.state.trim()) {
-    newErrors.state = 'State is required'
-  }
-
-  return newErrors
+  return result.error.issues.reduce((acc, issue) => {
+    const key = issue.path[0]
+    if (typeof key === 'string' && key in address) {
+      acc[key as keyof AddressErrors] = issue.message
+    }
+    return acc
+  }, {} as AddressErrors)
 }
 
 const trimAddress = (address: AddressFields): AddressFields => ({
@@ -93,7 +98,21 @@ const trimAddress = (address: AddressFields): AddressFields => ({
   state: address.state.trim(),
 })
 
-export const CheckoutForm = ({ customizationNotes }: CheckoutFormProps) => {
+const readCachedCustomizationNotes = (): Record<string, string> => {
+  if (typeof window === 'undefined') return {}
+  try {
+    const raw = sessionStorage.getItem(PENDING_CUSTOMIZATION_KEY)
+    if (!raw) return {}
+    const parsed = JSON.parse(raw) as Record<string, string>
+    return typeof parsed === 'object' && parsed !== null ? parsed : {}
+  } catch {
+    return {}
+  }
+}
+
+export const CheckoutForm = ({
+  customizationNotes = {},
+}: CheckoutFormProps) => {
   const router = useRouter()
   const { data: session } = useSession()
   const cart = useSelector(selectCart)
@@ -107,31 +126,92 @@ export const CheckoutForm = ({ customizationNotes }: CheckoutFormProps) => {
     city: '',
     state: '',
   })
+  const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([])
+  const [selectedAddressId, setSelectedAddressId] = useState<string>('')
+  const [saveAddress, setSaveAddress] = useState(true)
   const [errors, setErrors] = useState<AddressErrors>({})
   const [pincodeAutoFilled, setPincodeAutoFilled] = useState(false)
   const [pincodeLoading, setPincodeLoading] = useState(false)
   const [pincodeNotice, setPincodeNotice] = useState<string | null>(null)
 
   const cartItems = useMemo(() => cart?.items ?? [], [cart?.items])
+  const mergedCustomizationNotes = useMemo(
+    () => ({
+      ...readCachedCustomizationNotes(),
+      ...customizationNotes,
+    }),
+    [customizationNotes]
+  )
   const checkoutItems = useMemo(
     () =>
       cartItems.map((item) => ({
         ...item,
-        customizationNote: customizationNotes[item.id] ?? null,
+        customizationNote: mergedCustomizationNotes[item.id] ?? null,
       })),
-    [cartItems, customizationNotes]
+    [cartItems, mergedCustomizationNotes]
   )
   const lineItems = useMemo(
     () => buildCheckoutSummaryLineItems(checkoutItems),
     [checkoutItems]
   )
 
+  useEffect(() => {
+    if (!session?.user?.id) return
+
+    const run = async () => {
+      try {
+        const res = await fetch('/api/account/addresses')
+        if (!res.ok) return
+        const payload = (await res.json()) as {
+          success?: boolean
+          data?: { addresses?: SavedAddress[] }
+        }
+        const records = payload.data?.addresses ?? []
+        setSavedAddresses(records)
+        const defaultAddress = records.find((record) => record.isDefault)
+        if (defaultAddress) {
+          setSelectedAddressId(defaultAddress.id)
+          setAddress({
+            addressLine1: defaultAddress.addressLine1,
+            addressLine2: defaultAddress.addressLine2 ?? '',
+            addressLine3: defaultAddress.addressLine3 ?? '',
+            pinCode: defaultAddress.pinCode,
+            city: defaultAddress.city,
+            state: defaultAddress.state,
+          })
+          setSaveAddress(false)
+        }
+      } catch {
+        // No-op: checkout should still work without saved addresses.
+      }
+    }
+
+    void run()
+  }, [session?.user?.id])
+
+  useEffect(() => {
+    if (customizationNotes && Object.keys(customizationNotes).length > 0) {
+      try {
+        sessionStorage.setItem(
+          PENDING_CUSTOMIZATION_KEY,
+          JSON.stringify(customizationNotes)
+        )
+      } catch {
+        // Ignore storage failures (e.g., private mode/quota exceeded)
+      }
+    }
+  }, [customizationNotes])
+
   const updateField = useCallback(
     (field: keyof AddressFields, value: string) => {
+      if (selectedAddressId) {
+        setSelectedAddressId('')
+        setSaveAddress(true)
+      }
       setAddress((prev) => ({ ...prev, [field]: value }))
       setErrors((prev) => ({ ...prev, [field]: undefined }))
     },
-    []
+    [selectedAddressId]
   )
 
   const applyPincodeResult = useCallback((city: string, state: string) => {
@@ -186,17 +266,34 @@ export const CheckoutForm = ({ customizationNotes }: CheckoutFormProps) => {
     [pincodeAutoFilled, updateField, applyPincodeResult]
   )
 
+  const applySavedAddress = (addressId: string) => {
+    setSelectedAddressId(addressId)
+    setSaveAddress(false)
+    const selected = savedAddresses.find((item) => item.id === addressId)
+    if (!selected) return
+    setAddress({
+      addressLine1: selected.addressLine1,
+      addressLine2: selected.addressLine2 ?? '',
+      addressLine3: selected.addressLine3 ?? '',
+      pinCode: selected.pinCode,
+      city: selected.city,
+      state: selected.state,
+    })
+    setErrors({})
+  }
+
   const handleSubmit: NonNullable<React.ComponentProps<'form'>['onSubmit']> = (
     e
   ) => {
     e.preventDefault()
 
     if (!session?.user?.id || !session.user.email) {
-      router.push('/auth/signin?callbackUrl=/cart')
+      router.push('/auth/signin?callbackUrl=/checkout/shipping')
       return
     }
 
-    const validationErrors = validateAddress(address)
+    const trimmed = trimAddress(address)
+    const validationErrors = getValidationErrors(trimmed)
     setErrors(validationErrors)
     if (Object.keys(validationErrors).length > 0) {
       return
@@ -207,17 +304,48 @@ export const CheckoutForm = ({ customizationNotes }: CheckoutFormProps) => {
       return
     }
 
-    try {
-      sessionStorage.setItem(
-        PENDING_CHECKOUT_KEY,
-        JSON.stringify({ ...trimAddress(address), customizationNotes })
-      )
-    } catch {
-      toast.error('Unable to proceed. Please try again.')
-      return
+    const persistPendingCheckout = async () => {
+      try {
+        if (!selectedAddressId && saveAddress) {
+          const trimmedLabelLine = trimmed.addressLine1.trim()
+          const truncationSuffix = '...'
+          const labelAddressLine =
+            trimmedLabelLine.length > MAX_ADDRESS_LABEL_LENGTH
+              ? `${trimmedLabelLine.slice(0, MAX_ADDRESS_LABEL_LENGTH - truncationSuffix.length)}${truncationSuffix}`
+              : trimmedLabelLine
+          const response = await fetch('/api/account/addresses', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({
+              label: `${labelAddressLine}${trimmed.city ? ` · ${trimmed.city}` : ''}`,
+              ...trimmed,
+              isDefault: savedAddresses.length === 0,
+            }),
+          })
+          if (!response.ok) {
+            toast.error(
+              'Address save failed. Please fix the issue and try again.'
+            )
+            return
+          }
+        }
+
+        sessionStorage.setItem(
+          PENDING_CHECKOUT_KEY,
+          JSON.stringify({
+            ...trimmed,
+            customizationNotes: mergedCustomizationNotes,
+          })
+        )
+      } catch {
+        toast.error('Unable to proceed. Please try again.')
+        return
+      }
+
+      router.push('/checkout/review')
     }
 
-    router.push('/checkout/review')
+    void persistPendingCheckout()
   }
 
   const addressPreview = address.addressLine1.trim()
@@ -231,6 +359,52 @@ export const CheckoutForm = ({ customizationNotes }: CheckoutFormProps) => {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+      {savedAddresses.length > 0 ? (
+        <fieldset className="space-y-2">
+          <legend className="text-sm font-semibold text-[var(--foreground)]">
+            Saved Addresses
+          </legend>
+          <div className="space-y-2">
+            {savedAddresses.map((record) => (
+              <label
+                key={record.id}
+                className="block cursor-pointer rounded-xl border border-[var(--border-warm)] bg-[var(--surface)]/40 px-3 py-2 text-sm"
+              >
+                <input
+                  type="radio"
+                  name="saved-address"
+                  value={record.id}
+                  checked={selectedAddressId === record.id}
+                  onChange={() => applySavedAddress(record.id)}
+                  className="mr-2"
+                />
+                <span className="font-medium text-[var(--foreground)]">
+                  {record.label}
+                </span>
+              </label>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedAddressId('')
+              setSaveAddress(true)
+              setAddress({
+                addressLine1: '',
+                addressLine2: '',
+                addressLine3: '',
+                pinCode: '',
+                city: '',
+                state: '',
+              })
+            }}
+            className="text-xs font-medium text-[var(--accent-rose)] hover:underline"
+          >
+            + Add a new address
+          </button>
+        </fieldset>
+      ) : null}
+
       <fieldset className="space-y-3">
         <legend className="text-sm font-semibold text-[var(--foreground)] mb-1.5">
           Shipping Address
@@ -256,6 +430,8 @@ export const CheckoutForm = ({ customizationNotes }: CheckoutFormProps) => {
           onChange={(v) => updateField('addressLine2', v)}
           placeholder="Apartment, suite, floor (optional)"
           maxLength={200}
+          error={errors.addressLine2}
+          errorId="address-line2-error"
           inputClassName={INPUT_CLASS}
         />
 
@@ -266,6 +442,8 @@ export const CheckoutForm = ({ customizationNotes }: CheckoutFormProps) => {
           onChange={(v) => updateField('addressLine3', v)}
           placeholder="Landmark, area (optional)"
           maxLength={200}
+          error={errors.addressLine3}
+          errorId="address-line3-error"
           inputClassName={INPUT_CLASS}
         />
 
@@ -326,6 +504,18 @@ export const CheckoutForm = ({ customizationNotes }: CheckoutFormProps) => {
         )}
       </fieldset>
 
+      {!selectedAddressId ? (
+        <label className="flex items-start gap-2 text-sm text-[var(--text-secondary)]">
+          <input
+            type="checkbox"
+            checked={saveAddress}
+            onChange={(event) => setSaveAddress(event.target.checked)}
+            className="mt-1 h-4 w-4 rounded border-[var(--border-warm)] accent-[var(--accent-rose)]"
+          />
+          Save this address for future checkouts
+        </label>
+      ) : null}
+
       {addressPreview && (
         <div className="rounded-xl border border-[var(--border-warm)] bg-[var(--surface)]/30 p-3">
           <p className="text-xs font-medium text-[var(--text-muted)] mb-1">
@@ -350,7 +540,7 @@ export const CheckoutForm = ({ customizationNotes }: CheckoutFormProps) => {
         fullWidth
         disabled={!cartItems.length}
       >
-        Review & Place Order
+        Continue to Review
       </GradientButton>
     </form>
   )
