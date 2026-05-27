@@ -34,7 +34,8 @@ async function handleGet(request: NextRequest) {
     const minRating = Number.parseFloat(searchParams.get('minRating') ?? '')
     const rawVariant = searchParams.get('variant')?.trim()
     const variant: SearchVariantFilter =
-      rawVariant && SEARCH_VARIANT_VALUES.includes(rawVariant as SearchVariantFilter)
+      rawVariant &&
+      SEARCH_VARIANT_VALUES.includes(rawVariant as SearchVariantFilter)
         ? (rawVariant as SearchVariantFilter)
         : 'all'
     const validSort: SearchSort =
@@ -57,8 +58,7 @@ async function handleGet(request: NextRequest) {
           maxPrice: Number.isFinite(maxPrice) ? maxPrice : undefined,
           inStock,
           minRating: Number.isFinite(minRating) ? minRating : undefined,
-          variant:
-            variant,
+          variant: variant,
           limit: limit + 1,
           offset,
         }),

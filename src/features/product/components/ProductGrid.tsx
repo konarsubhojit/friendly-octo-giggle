@@ -184,7 +184,10 @@ ProductImageArea.displayName = 'ProductImageArea'
 const ProductCard = memo(
   ({ product, formatPrice, index, query }: ProductCardProps) => {
     const trackClick = useCallback(() => {
-      const body = JSON.stringify({ productId: product.id, query: query || undefined })
+      const body = JSON.stringify({
+        productId: product.id,
+        query: query || undefined,
+      })
       if (typeof navigator !== 'undefined' && 'sendBeacon' in navigator) {
         const payload = new Blob([body], { type: 'application/json' })
         navigator.sendBeacon('/api/search/click', payload)

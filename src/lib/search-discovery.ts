@@ -94,7 +94,9 @@ const buildSpellSuggestions = (
     return []
   }
 
-  const source = [...new Set([...categoriesFromResults, ...DEFAULT_POPULAR_SEARCHES])]
+  const source = [
+    ...new Set([...categoriesFromResults, ...DEFAULT_POPULAR_SEARCHES]),
+  ]
   const fuzzyPrefix = normalized.slice(
     0,
     Math.max(SPELLCHECK_PREFIX_MIN, normalized.length - 1)

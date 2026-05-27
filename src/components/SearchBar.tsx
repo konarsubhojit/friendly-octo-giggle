@@ -35,7 +35,10 @@ const markMatches = (text: string, query: string) => {
     <>
       {parts.map((part, index) => {
         return index % 2 === 1 ? (
-          <mark key={index} className="rounded bg-[var(--accent-blush)] px-0.5 text-[inherit]">
+          <mark
+            key={index}
+            className="rounded bg-[var(--accent-blush)] px-0.5 text-[inherit]"
+          >
             {part}
           </mark>
         ) : (

@@ -94,7 +94,8 @@ const ShopPage = async ({ searchParams }: ShopPageProps) => {
   const minRating = Number.isFinite(rawMinRating) ? rawMinRating : undefined
   const rawVariant = getSingleValue(resolvedSearchParams.variant)?.trim()
   const selectedVariant: SearchVariantFilter =
-    rawVariant && SEARCH_VARIANT_VALUES.includes(rawVariant as SearchVariantFilter)
+    rawVariant &&
+    SEARCH_VARIANT_VALUES.includes(rawVariant as SearchVariantFilter)
       ? (rawVariant as SearchVariantFilter)
       : 'all'
 
