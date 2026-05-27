@@ -13,7 +13,11 @@ import {
   getVariantMinPrice,
   getVariantTotalStock,
 } from '@/features/product/variant-utils'
-import { searchCatalog, type SearchSort, type SearchVariantFilter } from '@/lib/search-discovery'
+import {
+  searchCatalog,
+  type SearchSort,
+  type SearchVariantFilter,
+} from '@/lib/search-discovery'
 
 export const revalidate = 300
 
@@ -83,8 +87,9 @@ const ShopPage = async ({ searchParams }: ShopPageProps) => {
     getSingleValue(resolvedSearchParams.minRating) ?? ''
   )
   const minRating = Number.isFinite(rawMinRating) ? rawMinRating : undefined
-  const selectedVariant = (getSingleValue(resolvedSearchParams.variant)?.trim() ??
-    'all') as SearchVariantFilter
+  const selectedVariant = (getSingleValue(
+    resolvedSearchParams.variant
+  )?.trim() ?? 'all') as SearchVariantFilter
 
   let shopData: {
     products: ProductGridItem[]
@@ -131,16 +136,18 @@ const ShopPage = async ({ searchParams }: ShopPageProps) => {
     })
 
     shopData = {
-      products: searchResult.results.slice(0, SHOP_INITIAL_SIZE).map((product) => ({
-        id: product.id,
-        name: product.name,
-        description: product.description,
-        image: product.image,
-        category: product.category,
-        price: product.price,
-        stock: product.stock,
-        soldCount: product.soldCount,
-      })),
+      products: searchResult.results
+        .slice(0, SHOP_INITIAL_SIZE)
+        .map((product) => ({
+          id: product.id,
+          name: product.name,
+          description: product.description,
+          image: product.image,
+          category: product.category,
+          price: product.price,
+          stock: product.stock,
+          soldCount: product.soldCount,
+        })),
       bestsellers: topProducts.map(toGridItem),
       categoryNames: cats.map((c) => c.name),
       hasNextPage: searchResult.total > SHOP_INITIAL_SIZE,
@@ -151,8 +158,14 @@ const ShopPage = async ({ searchParams }: ShopPageProps) => {
     logError({ error, context: 'shop_products_fetch' })
   }
 
-  const { products, bestsellers, categoryNames, hasNextPage, suggestions, trending } =
-    shopData
+  const {
+    products,
+    bestsellers,
+    categoryNames,
+    hasNextPage,
+    suggestions,
+    trending,
+  } = shopData
 
   return (
     <div className="min-h-screen bg-warm-gradient">

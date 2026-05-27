@@ -149,7 +149,10 @@ const highlightMatches = (text: string, query: string) => {
 
   return segments.map((segment, index) =>
     index % 2 === 1 ? (
-      <mark key={`${segment}-${index}`} className="rounded bg-[var(--accent-blush)] px-0.5">
+      <mark
+        key={`${segment}-${index}`}
+        className="rounded bg-[var(--accent-blush)] px-0.5"
+      >
         {segment}
       </mark>
     ) : (
@@ -184,7 +187,10 @@ ProductImageArea.displayName = 'ProductImageArea'
 const ProductCard = memo(
   ({ product, formatPrice, index, query }: ProductCardProps) => {
     const trackClick = () => {
-      const body = JSON.stringify({ productId: product.id, query: query || undefined })
+      const body = JSON.stringify({
+        productId: product.id,
+        query: query || undefined,
+      })
       if (typeof navigator !== 'undefined' && 'sendBeacon' in navigator) {
         navigator.sendBeacon('/api/search/click', body)
         return
@@ -278,9 +284,9 @@ const ProductGrid = ({
   const [minRatingDraft, setMinRatingDraft] = useState<string>(
     typeof minRating === 'number' ? String(minRating) : ''
   )
-  const [variantDraft, setVariantDraft] = useState<'all' | 'single' | 'multiple'>(
-    variant
-  )
+  const [variantDraft, setVariantDraft] = useState<
+    'all' | 'single' | 'multiple'
+  >(variant)
   const sentinelRef = useRef<HTMLDivElement | null>(null)
   const isLoadingRef = useRef(false)
   const canLoadMoreRef = useRef(hasNextPage)
@@ -306,10 +312,9 @@ const ProductGrid = ({
     typeof minRating === 'number' ||
     variant !== 'all'
 
-  const emptyMessage =
-    hasActiveFilters
-      ? 'Try adjusting your search or category filter.'
-      : undefined
+  const emptyMessage = hasActiveFilters
+    ? 'Try adjusting your search or category filter.'
+    : undefined
 
   useEffect(() => {
     // Update refs synchronously so loadMore() (called by the
@@ -368,7 +373,16 @@ const ProductGrid = ({
     return () => {
       globalThis.clearTimeout(timer)
     }
-  }, [search, selectedCategory, selectedSort, minPrice, maxPrice, inStock, minRating, variant])
+  }, [
+    search,
+    selectedCategory,
+    selectedSort,
+    minPrice,
+    maxPrice,
+    inStock,
+    minRating,
+    variant,
+  ])
 
   const loadMore = useCallback(async () => {
     if (isLoadingRef.current || !canLoadMoreRef.current) return
@@ -495,7 +509,9 @@ const ProductGrid = ({
     }
 
     const query = params.toString()
-    router.push(query ? `/shop?${query}#products` : resetHref, { scroll: false })
+    router.push(query ? `/shop?${query}#products` : resetHref, {
+      scroll: false,
+    })
   }, [
     searchDraft,
     categoryDraft,
@@ -682,7 +698,9 @@ const ProductGrid = ({
               id="variant-filter"
               value={variantDraft}
               onChange={(event) =>
-                setVariantDraft(event.target.value as 'all' | 'single' | 'multiple')
+                setVariantDraft(
+                  event.target.value as 'all' | 'single' | 'multiple'
+                )
               }
               className="min-w-0 flex-1 bg-transparent pr-6 text-sm font-medium text-[var(--foreground)] focus:outline-none"
               aria-label="Filter by variants"

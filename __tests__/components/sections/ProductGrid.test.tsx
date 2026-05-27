@@ -303,9 +303,9 @@ describe('ProductGrid', () => {
       name: /filter by category/i,
     })
     expect(select).toBeTruthy()
-    expect(screen.getAllByRole('option', { name: 'All' }).length).toBeGreaterThan(
-      0
-    )
+    expect(
+      screen.getAllByRole('option', { name: 'All' }).length
+    ).toBeGreaterThan(0)
     expect(screen.getByRole('option', { name: 'Handbag' })).toBeTruthy()
     expect(screen.getByRole('option', { name: 'Flowers' })).toBeTruthy()
     expect(screen.getByRole('option', { name: 'Flower Pots' })).toBeTruthy()

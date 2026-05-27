@@ -19,7 +19,9 @@ import { GET } from '@/app/api/search/suggest/route'
 describe('search suggest API', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockGetCachedData.mockImplementation(async (_key, _ttl, fetcher) => fetcher())
+    mockGetCachedData.mockImplementation(async (_key, _ttl, fetcher) =>
+      fetcher()
+    )
     mockSuggestSearchTerms.mockResolvedValue({
       query: 'rose',
       products: [{ id: 'p1', label: 'Rose Bouquet', category: 'Flowers' }],

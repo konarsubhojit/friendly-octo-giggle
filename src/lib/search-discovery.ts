@@ -1,12 +1,7 @@
 import { and, avg, eq, ilike, inArray, isNull, sql } from 'drizzle-orm'
 import { db, drizzleDb } from '@/lib/db'
 import { logBusinessEvent } from '@/lib/logger'
-import {
-  categories,
-  products,
-  productVariants,
-  reviews,
-} from '@/lib/schema'
+import { categories, products, productVariants, reviews } from '@/lib/schema'
 import { searchProductIdsCached } from '@/lib/search'
 
 export const SEARCH_SORT_VALUES = [
@@ -98,9 +93,13 @@ const buildSpellSuggestions = (
     return []
   }
 
-  const source = [...new Set([...categoriesFromResults, ...DEFAULT_POPULAR_SEARCHES])]
+  const source = [
+    ...new Set([...categoriesFromResults, ...DEFAULT_POPULAR_SEARCHES]),
+  ]
   const byContainment = source.filter((term) =>
-    term.toLowerCase().includes(normalized.slice(0, Math.max(2, normalized.length - 1)))
+    term
+      .toLowerCase()
+      .includes(normalized.slice(0, Math.max(2, normalized.length - 1)))
   )
 
   if (byContainment.length > 0) {
@@ -110,7 +109,9 @@ const buildSpellSuggestions = (
   return source.slice(0, 3)
 }
 
-const aggregateFacets = (productsList: SearchResultProduct[]): SearchFacetCounts => {
+const aggregateFacets = (
+  productsList: SearchResultProduct[]
+): SearchFacetCounts => {
   const categoryCounts = new Map<string, number>()
 
   let min = Number.POSITIVE_INFINITY
@@ -230,7 +231,10 @@ const applySort = (
     return sorted
   }
 
-  const comparators: Record<SearchSort, (a: SearchResultProduct, b: SearchResultProduct) => number> = {
+  const comparators: Record<
+    SearchSort,
+    (a: SearchResultProduct, b: SearchResultProduct) => number
+  > = {
     relevance: () => 0,
     price_asc: (a, b) => a.price - b.price || b.soldCount - a.soldCount,
     price_desc: (a, b) => b.price - a.price || b.soldCount - a.soldCount,
@@ -276,7 +280,9 @@ const attachRatingsAndVariantCounts = async (
       .groupBy(productVariants.productId),
   ])
 
-  const ratingById = new Map(ratingsRows.map((row) => [row.productId, row.rating]))
+  const ratingById = new Map(
+    ratingsRows.map((row) => [row.productId, row.rating])
+  )
   const variantCountById = new Map(
     variantsRows.map((row) => [row.productId, row.variantCount])
   )
@@ -297,10 +303,15 @@ const fetchTrendingProducts = async () => {
   }))
 }
 
-async function searchCandidates(
-  options: SearchQueryOptions
-): Promise<{ products: SearchResultProduct[]; fallbackUsed: boolean; relevanceOrder: Map<string, number> }> {
-  const candidateLimit = Math.min(Math.max(options.offset + options.limit + 20, 60), 200)
+async function searchCandidates(options: SearchQueryOptions): Promise<{
+  products: SearchResultProduct[]
+  fallbackUsed: boolean
+  relevanceOrder: Map<string, number>
+}> {
+  const candidateLimit = Math.min(
+    Math.max(options.offset + options.limit + 20, 60),
+    200
+  )
   const normalizedCategory = options.category?.trim()
   const normalizedQuery = normalizeWhitespace(options.q)
 
@@ -320,7 +331,12 @@ async function searchCandidates(
       const productRows = await drizzleDb
         .select({ id: products.id, createdAt: products.createdAt })
         .from(products)
-        .where(inArray(products.id, matchedProducts.map((product) => product.id)))
+        .where(
+          inArray(
+            products.id,
+            matchedProducts.map((product) => product.id)
+          )
+        )
 
       const createdAtById = new Map(
         productRows.map((row) => [row.id, row.createdAt.toISOString()])
@@ -357,7 +373,12 @@ async function searchCandidates(
   const productRows = await drizzleDb
     .select({ id: products.id, createdAt: products.createdAt })
     .from(products)
-    .where(inArray(products.id, dbRows.map((product) => product.id)))
+    .where(
+      inArray(
+        products.id,
+        dbRows.map((product) => product.id)
+      )
+    )
 
   const createdAtById = new Map(
     productRows.map((row) => [row.id, row.createdAt.toISOString()])
@@ -381,8 +402,11 @@ export async function searchCatalog(
   options: SearchQueryOptions
 ): Promise<SearchCatalogResult> {
   const normalizedQuery = normalizeWhitespace(options.q)
-  const { products: candidates, fallbackUsed, relevanceOrder } =
-    await searchCandidates({ ...options, q: normalizedQuery })
+  const {
+    products: candidates,
+    fallbackUsed,
+    relevanceOrder,
+  } = await searchCandidates({ ...options, q: normalizedQuery })
 
   const facets = aggregateFacets(candidates)
   const filtered = applyFilters(candidates, options)
@@ -459,7 +483,9 @@ export async function suggestSearchTerms(query: string, limit = 8) {
       label: product.name,
       category: product.category,
     })),
-    categories: [...new Set(matchedCategories.map((category) => category.name))],
+    categories: [
+      ...new Set(matchedCategories.map((category) => category.name)),
+    ],
     popular: DEFAULT_POPULAR_SEARCHES,
   }
 }

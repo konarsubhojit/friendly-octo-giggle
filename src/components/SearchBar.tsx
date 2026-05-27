@@ -36,7 +36,10 @@ const markMatches = (text: string, query: string) => {
       {parts.map((part, index) => {
         const key = `${part}-${index}`
         return index % 2 === 1 ? (
-          <mark key={key} className="rounded bg-[var(--accent-blush)] px-0.5 text-[inherit]">
+          <mark
+            key={key}
+            className="rounded bg-[var(--accent-blush)] px-0.5 text-[inherit]"
+          >
             {part}
           </mark>
         ) : (
@@ -110,9 +113,12 @@ export function SearchBar({
     const loadSuggestions = async () => {
       try {
         const params = new URLSearchParams({ q: debouncedValue, limit: '6' })
-        const response = await fetch(`/api/search/suggest?${params.toString()}`, {
-          signal: controller.signal,
-        })
+        const response = await fetch(
+          `/api/search/suggest?${params.toString()}`,
+          {
+            signal: controller.signal,
+          }
+        )
 
         if (!response.ok) {
           throw new Error('suggest request failed')
@@ -159,10 +165,10 @@ export function SearchBar({
       return
     }
 
-    const nextRecent = [normalized, ...recent.filter((item) => item !== normalized)].slice(
-      0,
-      MAX_RECENT
-    )
+    const nextRecent = [
+      normalized,
+      ...recent.filter((item) => item !== normalized),
+    ].slice(0, MAX_RECENT)
     setRecent(nextRecent)
     globalThis.localStorage.setItem(storageKey, JSON.stringify(nextRecent))
   }
@@ -213,7 +219,9 @@ export function SearchBar({
       {open && (
         <div className="absolute z-20 mt-2 w-full overflow-hidden rounded-2xl border border-[var(--border-warm)] bg-[var(--surface)] shadow-warm-lg">
           {isLoading ? (
-            <p className="px-4 py-3 text-sm text-[var(--text-muted)]">Searching…</p>
+            <p className="px-4 py-3 text-sm text-[var(--text-muted)]">
+              Searching…
+            </p>
           ) : (
             <>
               {!!recent.length && (
