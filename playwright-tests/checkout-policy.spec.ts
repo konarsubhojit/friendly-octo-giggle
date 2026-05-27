@@ -49,11 +49,28 @@ test.describe('Checkout policy confirmation', () => {
       })
     )
 
+    await page.route('**/api/account/addresses', (route) =>
+      route.fulfill({ json: { success: true, data: { addresses: [] } } })
+    )
+
+    await page.route('**/api/orders/**', (route) =>
+      route.fulfill({
+        json: {
+          success: true,
+          data: {
+            order: { id: 'ord-test-001', items: [], trackingNumber: null },
+          },
+        },
+      })
+    )
+
     await page.goto('/cart')
-    await page
-      .getByLabel(/shipping address/i)
-      .fill('42 MG Road, Bengaluru, Karnataka 560001')
-    await page.getByRole('button', { name: /place order/i }).click()
+    await page.getByRole('link', { name: /continue to shipping/i }).click()
+    await page.getByLabel(/address line 1/i).fill('42 MG Road')
+    await page.getByLabel(/pin code/i).fill('560001')
+    await page.getByLabel(/city/i).fill('Bengaluru')
+    await page.getByLabel(/state/i).fill('Karnataka')
+    await page.getByRole('button', { name: /continue to review/i }).click()
 
     await expect(
       page.getByRole('heading', { name: /review order policy/i })
@@ -70,7 +87,7 @@ test.describe('Checkout policy confirmation', () => {
     ).toBeEnabled()
 
     await page.getByRole('button', { name: /confirm and place order/i }).click()
-    await expect(page).toHaveURL(/\/orders$/)
+    await expect(page).toHaveURL(/\/checkout\/confirmation\?orderId=ord-test-001/)
     expect(checkoutRequests).toBe(1)
   })
 })

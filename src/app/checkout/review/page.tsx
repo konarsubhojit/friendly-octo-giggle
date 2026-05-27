@@ -35,6 +35,7 @@ import { GradientButton } from '@/components/ui/GradientButton'
 import { GradientHeading } from '@/components/ui/GradientHeading'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { useCurrency } from '@/contexts/CurrencyContext'
+import { CheckoutProgress } from '@/features/cart/components/CheckoutProgress'
 
 const CHECKOUT_POLL_INTERVAL_MS = 1500
 const CHECKOUT_POLL_MAX_ATTEMPTS = 40
@@ -92,6 +93,7 @@ export default function CheckoutReviewPage() {
   const [isPending, startTransition] = useTransition()
   const [isAcknowledged, setIsAcknowledged] = useState(false)
   const [checkoutMessage, setCheckoutMessage] = useState<string | null>(null)
+  const [checkoutError, setCheckoutError] = useState<string | null>(null)
   const [pendingCheckout] = useState<PendingCheckout | null>(() =>
     readPendingCheckout()
   )
@@ -153,7 +155,7 @@ export default function CheckoutReviewPage() {
         throw new Error(checkoutStatus.error ?? 'Checkout failed')
       }
 
-      setCheckoutMessage('Processing your order...')
+      setCheckoutMessage("We're processing your order…")
 
       await delay(CHECKOUT_POLL_INTERVAL_MS)
     }
@@ -174,6 +176,7 @@ export default function CheckoutReviewPage() {
 
     startTransition(async () => {
       try {
+        setCheckoutError(null)
         setCheckoutMessage('Submitting your order...')
 
         const enqueueResult = await apiClient.post<CheckoutEnqueueResponse>(
@@ -208,11 +211,12 @@ export default function CheckoutReviewPage() {
         await dispatch(clearCart()).unwrap()
         clearPendingCheckout()
         toast.success(`Order ${completedCheckout.orderId} placed successfully!`)
-        router.push('/orders')
+        router.push(`/checkout/confirmation?orderId=${completedCheckout.orderId}`)
       } catch (error) {
-        toast.error(
+        const message =
           error instanceof Error ? error.message : 'Failed to place order'
-        )
+        setCheckoutError(message)
+        toast.error(message)
       } finally {
         setCheckoutMessage(null)
       }
@@ -235,6 +239,7 @@ export default function CheckoutReviewPage() {
   return (
     <div className="min-h-screen bg-warm-gradient">
       <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
+        <CheckoutProgress currentStep="review" />
         <GradientHeading className="mb-2">Review Your Order</GradientHeading>
         <p className="mb-8 text-sm text-[var(--text-secondary)]">
           Review your order details and policy terms before confirming your
@@ -261,10 +266,10 @@ export default function CheckoutReviewPage() {
                 : ''}
             </p>
             <Link
-              href="/cart"
+              href="/checkout/shipping"
               className="mt-3 inline-block text-xs font-medium text-[var(--accent-rose)] hover:underline"
             >
-              ← Edit address
+              ← Edit shipping details
             </Link>
           </section>
 
@@ -369,6 +374,20 @@ export default function CheckoutReviewPage() {
                     total={formatPrice(pricingSummary.total)}
                   />
                 </div>
+
+                <div className="rounded-2xl border border-dashed border-[var(--border-warm)] px-4 py-3">
+                  <p className="text-xs font-medium text-[var(--text-secondary)]">
+                    Promo / coupon code
+                  </p>
+                  <p className="mt-1 text-xs text-[var(--text-muted)]">
+                    Promo support is coming soon.
+                  </p>
+                </div>
+
+                <p className="text-xs text-[var(--text-muted)]">
+                  Delivery estimate: 3-7 business days (based on shipping
+                  settings).
+                </p>
               </div>
             )}
           </section>
@@ -399,13 +418,26 @@ export default function CheckoutReviewPage() {
               </output>
             ) : null}
 
+            {checkoutError ? (
+              <div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-200">
+                <p>{checkoutError}</p>
+                <button
+                  type="button"
+                  onClick={handleConfirm}
+                  className="mt-2 text-xs font-semibold underline underline-offset-2"
+                >
+                  Retry checkout
+                </button>
+              </div>
+            ) : null}
+
             <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-              <Link
-                href="/cart"
-                className="inline-flex items-center justify-center rounded-xl border border-[var(--border-warm)] px-5 py-2.5 text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--accent-blush)] transition-colors"
-              >
-                Cancel
-              </Link>
+                <Link
+                  href="/checkout/shipping"
+                  className="inline-flex items-center justify-center rounded-xl border border-[var(--border-warm)] px-5 py-2.5 text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--accent-blush)] transition-colors"
+                >
+                  Back
+                </Link>
               <GradientButton
                 type="button"
                 onClick={handleConfirm}

@@ -124,6 +124,7 @@ vi.mock('@/lib/schema', () => ({
   orderItems: { productId: 'productId', quantity: 'quantity' },
   orders: { id: 'id', status: 'status' },
   passwordHistory: {},
+  addresses: {},
   productShares: {
     key: 'key',
     productId: 'productId',
@@ -162,6 +163,7 @@ vi.mock('@/lib/schema', () => ({
   orderItemsRelations: {},
   ordersRelations: {},
   passwordHistoryRelations: {},
+  addressesRelations: {},
   productSharesRelations: {},
   productVariantsRelations: {},
   productOptionsRelations: {},

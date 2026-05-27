@@ -66,6 +66,29 @@ export const users = pgTable('User', {
   updatedAt: timestamp('updatedAt', { mode: 'date' }).defaultNow().notNull(),
 })
 
+export const addresses = pgTable(
+  'Address',
+  {
+    id: varchar('id', { length: 7 })
+      .primaryKey()
+      .$defaultFn(() => generateShortId()),
+    userId: text('userId')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    label: text('label').notNull(),
+    addressLine1: text('addressLine1').notNull(),
+    addressLine2: text('addressLine2'),
+    addressLine3: text('addressLine3'),
+    pinCode: text('pinCode').notNull(),
+    city: text('city').notNull(),
+    state: text('state').notNull(),
+    isDefault: boolean('isDefault').notNull().default(false),
+    createdAt: timestamp('createdAt', { mode: 'date' }).defaultNow().notNull(),
+    updatedAt: timestamp('updatedAt', { mode: 'date' }).defaultNow().notNull(),
+  },
+  (t) => [index('Address_userId_idx').on(t.userId)]
+)
+
 export const accounts = pgTable(
   'Account',
   {
@@ -512,12 +535,17 @@ export const productShares = pgTable(
 export const usersRelations = relations(users, ({ many, one }) => ({
   accounts: many(accounts),
   sessions: many(sessions),
+  addresses: many(addresses),
   checkoutRequests: many(checkoutRequests),
   orders: many(orders),
   cart: one(carts),
   passwordHistory: many(passwordHistory),
   wishlists: many(wishlists),
   reviewVotes: many(reviewVotes),
+}))
+
+export const addressesRelations = relations(addresses, ({ one }) => ({
+  user: one(users, { fields: [addresses.userId], references: [users.id] }),
 }))
 
 export const accountsRelations = relations(accounts, ({ one }) => ({
