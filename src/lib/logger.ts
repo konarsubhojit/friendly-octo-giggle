@@ -1,4 +1,10 @@
 import pino from 'pino'
+import {
+  recordApiRequestMetric,
+  recordBusinessEventMetric,
+  recordCacheMetric,
+  recordCheckoutQueueLagMetric,
+} from './metrics'
 
 // Create base logger configuration
 const isDevelopment = process.env.NODE_ENV === 'development'
@@ -134,6 +140,8 @@ export const logApiRequest = (data: {
   duration?: number
   statusCode?: number
 }) => {
+  recordApiRequestMetric(data)
+
   const logData = {
     type: 'api_request',
     ...data,
@@ -209,6 +217,8 @@ export const logBusinessEvent = (data: {
   details: Record<string, unknown>
   success: boolean
 }) => {
+  recordBusinessEventMetric(data.success)
+
   const logData = {
     type: 'business_event',
     ...data,
@@ -257,6 +267,10 @@ export const logPerformance = (data: {
   duration: number
   metadata?: Record<string, unknown>
 }) => {
+  if (data.operation === 'queue.checkout.lag') {
+    recordCheckoutQueueLagMetric(data.duration)
+  }
+
   const logData = {
     type: 'performance',
     ...data,
@@ -275,6 +289,8 @@ export const logCacheOperation = (data: {
   ttl?: number
   success: boolean
 }) => {
+  recordCacheMetric(data.operation)
+
   const logData = {
     type: 'cache_operation',
     ...data,

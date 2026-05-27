@@ -1,0 +1,40 @@
+name: Synthetic Uptests
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  synthetic-uptests:
+    runs-on: ubuntu-latest
+    env:
+      BASE_URL: ${{ secrets.SYNTHETIC_BASE_URL }}
+    steps:
+      - name: Check required secret
+        run: |
+          if [ -z "${BASE_URL}" ]; then
+            echo "SYNTHETIC_BASE_URL secret is required"
+            exit 1
+          fi
+
+      - name: Health endpoint uptime check
+        run: |
+          curl --fail --show-error --silent \
+            -H "Accept: application/json" \
+            "${BASE_URL}/api/health" \
+            | grep '"status":"ok"'
+
+      - name: Product API route check
+        run: |
+          curl --fail --show-error --silent \
+            -H "Accept: application/json" \
+            "${BASE_URL}/api/products?limit=1" >/dev/null
+
+      - name: Request ID propagation check
+        run: |
+          curl --fail --show-error --silent --head "${BASE_URL}/api/products?limit=1" \
+            | grep -i "x-request-id:"
