@@ -136,11 +136,39 @@ describe('CheckoutForm', () => {
     })
     vi.stubGlobal(
       'fetch',
-      vi.fn(async () => ({
-        ok: true,
-        status: 200,
-        json: async () => ({ success: true, data: { addresses: [] } }),
-      }))
+      vi.fn(async (input: string | URL | Request) => {
+        const url =
+          typeof input === 'string'
+            ? input
+            : input instanceof URL
+              ? input.toString()
+              : input.url
+
+        if (url.includes('/api/pincode/')) {
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({
+              success: true,
+              data: { city: 'Bengaluru', state: 'Karnataka' },
+            }),
+          }
+        }
+
+        if (url.includes('/api/account/addresses')) {
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({ success: true, data: { addresses: [] } }),
+          }
+        }
+
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ success: true }),
+        }
+      })
     )
   })
 

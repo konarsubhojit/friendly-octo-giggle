@@ -16,7 +16,20 @@ export const CreateAddressSchema = z.object({
 export const UpdateAddressSchema = z
   .object({
     label: AddressLabelSchema.optional(),
-    ...StructuredAddressSchema.partial().shape,
+    addressLine1: StructuredAddressSchema.shape.addressLine1.optional(),
+    addressLine2: z
+      .string()
+      .trim()
+      .max(200, 'Address Line 2 must be under 200 characters')
+      .optional(),
+    addressLine3: z
+      .string()
+      .trim()
+      .max(200, 'Address Line 3 must be under 200 characters')
+      .optional(),
+    pinCode: StructuredAddressSchema.shape.pinCode.optional(),
+    city: StructuredAddressSchema.shape.city.optional(),
+    state: StructuredAddressSchema.shape.state.optional(),
     isDefault: z.boolean().optional(),
   })
   .refine((value) => Object.keys(value).length > 0, {

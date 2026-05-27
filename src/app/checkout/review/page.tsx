@@ -212,7 +212,7 @@ export default function CheckoutReviewPage() {
         clearPendingCheckout()
         toast.success(`Order ${completedCheckout.orderId} placed successfully!`)
         router.push(
-          `/checkout/confirmation?orderId=${completedCheckout.orderId}`
+          `/checkout/confirmation?orderId=${encodeURIComponent(completedCheckout.orderId)}`
         )
       } catch (error) {
         const message =

@@ -191,10 +191,15 @@ export const CheckoutForm = ({
 
   useEffect(() => {
     if (customizationNotes && Object.keys(customizationNotes).length > 0) {
-      sessionStorage.setItem(
-        PENDING_CUSTOMIZATION_KEY,
-        JSON.stringify(customizationNotes)
-      )
+      if (typeof window === 'undefined') return
+      try {
+        sessionStorage.setItem(
+          PENDING_CUSTOMIZATION_KEY,
+          JSON.stringify(customizationNotes)
+        )
+      } catch {
+        // Ignore storage failures (e.g., private mode/quota exceeded)
+      }
     }
   }, [customizationNotes])
 
@@ -320,8 +325,9 @@ export const CheckoutForm = ({
           })
           if (!response.ok) {
             toast.error(
-              'Unable to save address right now. You can still continue.'
+              'Unable to save address right now. Please retry before continuing.'
             )
+            return
           }
         }
 

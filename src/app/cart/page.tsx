@@ -94,10 +94,14 @@ export default function CartPage() {
     (itemId: string, note: string) => {
       setCustomizationNotes((prev) => {
         const next = { ...prev, [itemId]: note }
-        sessionStorage.setItem(
-          'pending_customization_notes',
-          JSON.stringify(next)
-        )
+        try {
+          sessionStorage.setItem(
+            'pending_customization_notes',
+            JSON.stringify(next)
+          )
+        } catch {
+          // Checkout should still work when sessionStorage is unavailable.
+        }
         return next
       })
     },

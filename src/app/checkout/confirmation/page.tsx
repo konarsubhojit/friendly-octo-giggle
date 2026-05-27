@@ -21,7 +21,7 @@ export default function CheckoutConfirmationPage() {
 
     const run = async () => {
       try {
-        const res = await fetch(`/api/orders/${orderId}`)
+        const res = await fetch(`/api/orders/${encodeURIComponent(orderId)}`)
         const payload = (await res.json()) as {
           success?: boolean
           data?: { order?: Order }

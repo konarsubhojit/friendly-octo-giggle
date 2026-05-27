@@ -564,6 +564,7 @@ $$;
 
 CREATE INDEX IF NOT EXISTS "Account_userId_idx" ON public."Account" USING btree ("userId");
 CREATE INDEX IF NOT EXISTS "Address_userId_idx" ON public."Address" USING btree ("userId");
+CREATE UNIQUE INDEX IF NOT EXISTS "Address_one_default_per_user_idx" ON public."Address" USING btree ("userId") WHERE "isDefault" = true;
 CREATE INDEX IF NOT EXISTS "CartItem_cartId_idx" ON public."CartItem" USING btree ("cartId");
 CREATE INDEX IF NOT EXISTS "CartItem_productId_idx" ON public."CartItem" USING btree ("productId");
 CREATE INDEX IF NOT EXISTS "CartItem_variationId_idx" ON public."CartItem" USING btree ("variationId");

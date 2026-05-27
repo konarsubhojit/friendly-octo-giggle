@@ -10,8 +10,9 @@ import {
   unique,
   json,
   boolean,
+  uniqueIndex,
 } from 'drizzle-orm/pg-core'
-import { relations } from 'drizzle-orm'
+import { relations, sql } from 'drizzle-orm'
 import type { AdapterAccountType } from '@auth/core/adapters'
 import { generateShortId, generateOrderId } from './short-id'
 
@@ -86,7 +87,12 @@ export const addresses = pgTable(
     createdAt: timestamp('createdAt', { mode: 'date' }).defaultNow().notNull(),
     updatedAt: timestamp('updatedAt', { mode: 'date' }).defaultNow().notNull(),
   },
-  (t) => [index('Address_userId_idx').on(t.userId)]
+  (t) => [
+    index('Address_userId_idx').on(t.userId),
+    uniqueIndex('Address_one_default_per_user_idx')
+      .on(t.userId)
+      .where(sql`${t.isDefault} = true`),
+  ]
 )
 
 export const accounts = pgTable(
