@@ -1,15 +1,18 @@
 'use client'
 
 import {
+  Fragment,
   memo,
   startTransition,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
+import { useRouter } from 'next/navigation'
 import { Product } from '@/lib/types'
 import { useCurrency } from '@/contexts/CurrencyContext'
 import { GradientHeading } from '@/components/ui/GradientHeading'
@@ -17,6 +20,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { StockBadge } from '@/features/product/components/StockBadge'
 import { FlowerAccent } from '@/components/ui/DecorativeElements'
 import { WishlistButton } from '@/features/wishlist/components/WishlistButton'
+import { SearchBar } from '@/components/SearchBar'
 
 export type ProductGridItem = Pick<
   Product,
@@ -35,6 +39,14 @@ interface ProductGridProps {
   readonly categories?: string[]
   readonly search?: string
   readonly selectedCategory?: string
+  readonly selectedSort?: string
+  readonly minPrice?: number
+  readonly maxPrice?: number
+  readonly inStock?: boolean
+  readonly minRating?: number
+  readonly variant?: 'all' | 'single' | 'multiple'
+  readonly suggestions?: string[]
+  readonly trending?: Array<{ id: string; name: string; category: string }>
   readonly hasNextPage?: boolean
   readonly batchSize?: number
 }
@@ -43,6 +55,7 @@ interface ProductCardProps {
   readonly product: ProductGridItem
   readonly formatPrice: (amount: number) => string
   readonly index: number
+  readonly query: string
 }
 
 interface ProductImageAreaProps {
@@ -52,12 +65,19 @@ interface ProductImageAreaProps {
 
 const DEFAULT_CATEGORY = 'All'
 const DEFAULT_BATCH_SIZE = 20
+const DEFAULT_SORT = 'relevance'
 
 const createProductsApiHref = (
   offset: number,
   limit: number,
   search: string,
-  selectedCategory: string
+  selectedCategory: string,
+  selectedSort: string,
+  minPrice?: number,
+  maxPrice?: number,
+  inStock?: boolean,
+  minRating?: number,
+  variant: 'all' | 'single' | 'multiple' = 'all'
 ) => {
   const params = new URLSearchParams()
 
@@ -67,6 +87,30 @@ const createProductsApiHref = (
 
   if (selectedCategory !== DEFAULT_CATEGORY) {
     params.set('category', selectedCategory)
+  }
+
+  if (selectedSort !== DEFAULT_SORT) {
+    params.set('sort', selectedSort)
+  }
+
+  if (typeof minPrice === 'number') {
+    params.set('minPrice', String(minPrice))
+  }
+
+  if (typeof maxPrice === 'number') {
+    params.set('maxPrice', String(maxPrice))
+  }
+
+  if (inStock) {
+    params.set('inStock', 'true')
+  }
+
+  if (typeof minRating === 'number') {
+    params.set('minRating', String(minRating))
+  }
+
+  if (variant !== 'all') {
+    params.set('variant', variant)
   }
 
   params.set('limit', String(limit))
@@ -93,6 +137,27 @@ const mergeProducts = (
   return Array.from(productsById.values())
 }
 
+const highlightMatches = (text: string, query: string) => {
+  const normalized = query.trim()
+  if (!normalized) {
+    return text
+  }
+
+  const escaped = normalized.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const regex = new RegExp(`(${escaped})`, 'ig')
+  const segments = text.split(regex)
+
+  return segments.map((segment, index) =>
+    index % 2 === 1 ? (
+      <mark key={`${segment}-${index}`} className="rounded bg-[var(--accent-blush)] px-0.5">
+        {segment}
+      </mark>
+    ) : (
+      <Fragment key={`${segment}-${index}`}>{segment}</Fragment>
+    )
+  )
+}
+
 const ProductImageArea = memo(
   ({ product, eagerLoad }: ProductImageAreaProps) => {
     return (
@@ -117,7 +182,22 @@ const ProductImageArea = memo(
 ProductImageArea.displayName = 'ProductImageArea'
 
 const ProductCard = memo(
-  ({ product, formatPrice, index }: ProductCardProps) => {
+  ({ product, formatPrice, index, query }: ProductCardProps) => {
+    const trackClick = () => {
+      const body = JSON.stringify({ productId: product.id, query: query || undefined })
+      if (typeof navigator !== 'undefined' && 'sendBeacon' in navigator) {
+        navigator.sendBeacon('/api/search/click', body)
+        return
+      }
+
+      void fetch('/api/search/click', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body,
+        keepalive: true,
+      })
+    }
+
     return (
       <div
         className="bg-theme-card group relative overflow-hidden rounded-3xl border border-[var(--border-warm)] shadow-warm transition-all duration-300 hover:-translate-y-1 hover:scale-[1.02] hover:border-[var(--accent-rose)] hover:shadow-warm-lg"
@@ -129,6 +209,7 @@ const ProductCard = memo(
         />
         <Link
           href={`/products/${product.id}`}
+          onClick={trackClick}
           className="block"
           aria-label={product.name}
         >
@@ -136,10 +217,10 @@ const ProductCard = memo(
 
           <div className="p-5">
             <h3 className="mb-1.5 line-clamp-1 text-base font-bold text-[var(--foreground)] transition-colors duration-200 group-hover:text-[var(--accent-rose)]">
-              {product.name}
+              {highlightMatches(product.name, query)}
             </h3>
             <p className="mb-4 line-clamp-2 text-sm leading-relaxed text-[var(--text-muted)]">
-              {product.description}
+              {highlightMatches(product.description, query)}
             </p>
             <div className="flex items-center gap-3">
               <span className="text-xl font-bold text-[var(--btn-primary)]">
@@ -167,26 +248,66 @@ const ProductGrid = ({
   categories = [],
   search = '',
   selectedCategory = DEFAULT_CATEGORY,
+  selectedSort = DEFAULT_SORT,
+  minPrice,
+  maxPrice,
+  inStock = false,
+  minRating,
+  variant = 'all',
+  suggestions = [],
+  trending = [],
   hasNextPage = false,
   batchSize = DEFAULT_BATCH_SIZE,
 }: ProductGridProps) => {
+  const router = useRouter()
   const { formatPrice } = useCurrency()
   const [visibleProducts, setVisibleProducts] = useState(products)
   const [canLoadMore, setCanLoadMore] = useState(hasNextPage)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
+  const [searchDraft, setSearchDraft] = useState(search)
+  const [categoryDraft, setCategoryDraft] = useState(selectedCategory)
+  const [sortDraft, setSortDraft] = useState(selectedSort)
+  const [minPriceDraft, setMinPriceDraft] = useState<string>(
+    typeof minPrice === 'number' ? String(minPrice) : ''
+  )
+  const [maxPriceDraft, setMaxPriceDraft] = useState<string>(
+    typeof maxPrice === 'number' ? String(maxPrice) : ''
+  )
+  const [inStockDraft, setInStockDraft] = useState(inStock)
+  const [minRatingDraft, setMinRatingDraft] = useState<string>(
+    typeof minRating === 'number' ? String(minRating) : ''
+  )
+  const [variantDraft, setVariantDraft] = useState<'all' | 'single' | 'multiple'>(
+    variant
+  )
   const sentinelRef = useRef<HTMLDivElement | null>(null)
   const isLoadingRef = useRef(false)
   const canLoadMoreRef = useRef(hasNextPage)
   const visibleCountRef = useRef(products.length)
   const searchRef = useRef(search)
   const categoryRef = useRef(selectedCategory)
+  const sortRef = useRef(selectedSort)
+  const minPriceRef = useRef(minPrice)
+  const maxPriceRef = useRef(maxPrice)
+  const inStockRef = useRef(inStock)
+  const minRatingRef = useRef(minRating)
+  const variantRef = useRef(variant)
   const batchSizeRef = useRef(batchSize)
 
   const categoryFilters = [DEFAULT_CATEGORY, ...categories]
+  const hasActiveFilters =
+    Boolean(search) ||
+    selectedCategory !== DEFAULT_CATEGORY ||
+    selectedSort !== DEFAULT_SORT ||
+    typeof minPrice === 'number' ||
+    typeof maxPrice === 'number' ||
+    inStock ||
+    typeof minRating === 'number' ||
+    variant !== 'all'
 
   const emptyMessage =
-    search || selectedCategory !== DEFAULT_CATEGORY
+    hasActiveFilters
       ? 'Try adjusting your search or category filter.'
       : undefined
 
@@ -213,8 +334,41 @@ const ProductGrid = ({
   useEffect(() => {
     searchRef.current = search
     categoryRef.current = selectedCategory
+    sortRef.current = selectedSort
+    minPriceRef.current = minPrice
+    maxPriceRef.current = maxPrice
+    inStockRef.current = inStock
+    minRatingRef.current = minRating
+    variantRef.current = variant
     batchSizeRef.current = batchSize
-  }, [search, selectedCategory, batchSize])
+  }, [
+    search,
+    selectedCategory,
+    selectedSort,
+    minPrice,
+    maxPrice,
+    inStock,
+    minRating,
+    variant,
+    batchSize,
+  ])
+
+  useEffect(() => {
+    const timer = globalThis.setTimeout(() => {
+      setSearchDraft(search)
+      setCategoryDraft(selectedCategory)
+      setSortDraft(selectedSort)
+      setMinPriceDraft(typeof minPrice === 'number' ? String(minPrice) : '')
+      setMaxPriceDraft(typeof maxPrice === 'number' ? String(maxPrice) : '')
+      setInStockDraft(inStock)
+      setMinRatingDraft(typeof minRating === 'number' ? String(minRating) : '')
+      setVariantDraft(variant)
+    }, 0)
+
+    return () => {
+      globalThis.clearTimeout(timer)
+    }
+  }, [search, selectedCategory, selectedSort, minPrice, maxPrice, inStock, minRating, variant])
 
   const loadMore = useCallback(async () => {
     if (isLoadingRef.current || !canLoadMoreRef.current) return
@@ -231,7 +385,13 @@ const ProductGrid = ({
           currentOffset,
           batchSizeRef.current,
           searchRef.current,
-          categoryRef.current
+          categoryRef.current,
+          sortRef.current,
+          minPriceRef.current,
+          maxPriceRef.current,
+          inStockRef.current,
+          minRatingRef.current,
+          variantRef.current
         ),
         { method: 'GET', headers: { Accept: 'application/json' } }
       )
@@ -291,6 +451,64 @@ const ProductGrid = ({
     return () => observer.disconnect()
   }, [loadMore])
 
+  const resetHref = useMemo(() => '/shop#products', [])
+
+  const applySearchState = useCallback(() => {
+    const params = new URLSearchParams()
+
+    const normalizedSearch = searchDraft.trim()
+    const normalizedCategory = categoryDraft.trim()
+    const normalizedMinPrice = Number.parseFloat(minPriceDraft)
+    const normalizedMaxPrice = Number.parseFloat(maxPriceDraft)
+    const normalizedMinRating = Number.parseFloat(minRatingDraft)
+
+    if (normalizedSearch) {
+      params.set('q', normalizedSearch)
+    }
+
+    if (normalizedCategory && normalizedCategory !== DEFAULT_CATEGORY) {
+      params.set('category', normalizedCategory)
+    }
+
+    if (sortDraft !== DEFAULT_SORT) {
+      params.set('sort', sortDraft)
+    }
+
+    if (Number.isFinite(normalizedMinPrice) && normalizedMinPrice >= 0) {
+      params.set('minPrice', String(normalizedMinPrice))
+    }
+
+    if (Number.isFinite(normalizedMaxPrice) && normalizedMaxPrice >= 0) {
+      params.set('maxPrice', String(normalizedMaxPrice))
+    }
+
+    if (inStockDraft) {
+      params.set('inStock', 'true')
+    }
+
+    if (Number.isFinite(normalizedMinRating) && normalizedMinRating >= 0) {
+      params.set('minRating', String(normalizedMinRating))
+    }
+
+    if (variantDraft !== 'all') {
+      params.set('variant', variantDraft)
+    }
+
+    const query = params.toString()
+    router.push(query ? `/shop?${query}#products` : resetHref, { scroll: false })
+  }, [
+    searchDraft,
+    categoryDraft,
+    sortDraft,
+    minPriceDraft,
+    maxPriceDraft,
+    inStockDraft,
+    minRatingDraft,
+    variantDraft,
+    router,
+    resetHref,
+  ])
+
   return (
     <main
       id="products"
@@ -308,32 +526,18 @@ const ProductGrid = ({
       </p>
 
       <form
-        action="/shop#products"
-        method="get"
+        onSubmit={(event) => {
+          event.preventDefault()
+          applySearchState()
+        }}
         className="mb-8 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between"
       >
         <div className="relative w-full lg:max-w-xl lg:flex-1">
-          <svg
-            className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--accent-rose)]"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            aria-hidden="true"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-            />
-          </svg>
-          <input
-            type="search"
-            name="q"
-            placeholder="Search products..."
-            defaultValue={search}
-            className="glass-card w-full rounded-full border border-[var(--border-warm)] py-3 pl-11 pr-4 text-[var(--foreground)] shadow-warm transition-all duration-200 placeholder-[var(--text-muted)] focus:border-[var(--accent-rose)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-rose)]/30"
-            aria-label="Search products"
+          <SearchBar
+            value={searchDraft}
+            onChange={setSearchDraft}
+            onSubmit={applySearchState}
+            categoryQuickLinks={categories}
           />
         </div>
 
@@ -362,7 +566,8 @@ const ProductGrid = ({
             <select
               id="category-filter"
               name="category"
-              defaultValue={selectedCategory}
+              value={categoryDraft}
+              onChange={(event) => setCategoryDraft(event.target.value)}
               className="min-w-0 flex-1 bg-transparent pr-6 text-sm font-medium text-[var(--foreground)] focus:outline-none"
               aria-label="Filter by category"
             >
@@ -374,6 +579,120 @@ const ProductGrid = ({
             </select>
           </div>
 
+          <div className="glass-card flex w-full min-w-0 items-center gap-2 rounded-[1.75rem] border border-[var(--border-warm)] px-4 py-2.5 shadow-warm sm:w-auto">
+            <label
+              htmlFor="sort-filter"
+              className="shrink-0 text-sm font-semibold text-[var(--text-secondary)]"
+            >
+              Sort
+            </label>
+            <select
+              id="sort-filter"
+              name="sort"
+              value={sortDraft}
+              onChange={(event) => setSortDraft(event.target.value)}
+              className="min-w-0 flex-1 bg-transparent pr-6 text-sm font-medium text-[var(--foreground)] focus:outline-none"
+              aria-label="Sort products"
+            >
+              <option value="relevance">Relevance</option>
+              <option value="price_asc">Price: Low to High</option>
+              <option value="price_desc">Price: High to Low</option>
+              <option value="newest">Newest</option>
+              <option value="best_selling">Best-selling</option>
+              <option value="top_rated">Top-rated</option>
+            </select>
+          </div>
+
+          <div className="glass-card flex w-full min-w-0 items-center gap-2 rounded-[1.75rem] border border-[var(--border-warm)] px-4 py-2.5 shadow-warm sm:w-auto">
+            <label
+              htmlFor="min-price-filter"
+              className="shrink-0 text-sm font-semibold text-[var(--text-secondary)]"
+            >
+              ₹
+            </label>
+            <input
+              id="min-price-filter"
+              type="number"
+              min={0}
+              inputMode="decimal"
+              value={minPriceDraft}
+              onChange={(event) => setMinPriceDraft(event.target.value)}
+              placeholder="Min"
+              className="w-20 bg-transparent text-sm text-[var(--foreground)] focus:outline-none"
+              aria-label="Minimum price"
+            />
+            <span className="text-xs text-[var(--text-muted)]">to</span>
+            <input
+              type="number"
+              min={0}
+              inputMode="decimal"
+              value={maxPriceDraft}
+              onChange={(event) => setMaxPriceDraft(event.target.value)}
+              placeholder="Max"
+              className="w-20 bg-transparent text-sm text-[var(--foreground)] focus:outline-none"
+              aria-label="Maximum price"
+            />
+          </div>
+
+          <div className="glass-card flex items-center gap-2 rounded-[1.75rem] border border-[var(--border-warm)] px-4 py-2.5 shadow-warm">
+            <input
+              id="stock-filter"
+              type="checkbox"
+              checked={inStockDraft}
+              onChange={(event) => setInStockDraft(event.target.checked)}
+              className="h-4 w-4 rounded border-[var(--border-warm)] text-[var(--btn-primary)] focus:ring-[var(--accent-rose)]"
+            />
+            <label
+              htmlFor="stock-filter"
+              className="text-sm font-semibold text-[var(--text-secondary)]"
+            >
+              In stock
+            </label>
+          </div>
+
+          <div className="glass-card flex w-full min-w-0 items-center gap-2 rounded-[1.75rem] border border-[var(--border-warm)] px-4 py-2.5 shadow-warm sm:w-auto">
+            <label
+              htmlFor="rating-filter"
+              className="shrink-0 text-sm font-semibold text-[var(--text-secondary)]"
+            >
+              Rating
+            </label>
+            <select
+              id="rating-filter"
+              value={minRatingDraft}
+              onChange={(event) => setMinRatingDraft(event.target.value)}
+              className="min-w-0 flex-1 bg-transparent pr-6 text-sm font-medium text-[var(--foreground)] focus:outline-none"
+              aria-label="Minimum rating"
+            >
+              <option value="">Any</option>
+              <option value="4">4★ & up</option>
+              <option value="3">3★ & up</option>
+              <option value="2">2★ & up</option>
+            </select>
+          </div>
+
+          <div className="glass-card flex w-full min-w-0 items-center gap-2 rounded-[1.75rem] border border-[var(--border-warm)] px-4 py-2.5 shadow-warm sm:w-auto">
+            <label
+              htmlFor="variant-filter"
+              className="shrink-0 text-sm font-semibold text-[var(--text-secondary)]"
+            >
+              Variants
+            </label>
+            <select
+              id="variant-filter"
+              value={variantDraft}
+              onChange={(event) =>
+                setVariantDraft(event.target.value as 'all' | 'single' | 'multiple')
+              }
+              className="min-w-0 flex-1 bg-transparent pr-6 text-sm font-medium text-[var(--foreground)] focus:outline-none"
+              aria-label="Filter by variants"
+            >
+              <option value="all">All</option>
+              <option value="single">Single</option>
+              <option value="multiple">Multiple</option>
+            </select>
+          </div>
+
           <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:flex-nowrap">
             <button
               type="submit"
@@ -381,9 +700,9 @@ const ProductGrid = ({
             >
               Apply
             </button>
-            {(search || selectedCategory !== DEFAULT_CATEGORY) && (
+            {hasActiveFilters && (
               <Link
-                href="/shop#products"
+                href={resetHref}
                 className="flex-1 rounded-full border border-[var(--border-warm)] bg-[var(--surface)] px-4 py-2.5 text-center text-sm font-semibold text-[var(--foreground)] shadow-warm transition-colors duration-200 hover:border-[var(--accent-rose)] sm:flex-none"
               >
                 Reset
@@ -394,7 +713,66 @@ const ProductGrid = ({
       </form>
 
       {visibleProducts.length === 0 ? (
-        <EmptyState title="No products found" message={emptyMessage} />
+        <div className="space-y-4">
+          <EmptyState title="No products found" message={emptyMessage} />
+
+          {(suggestions.length > 0 || trending.length > 0) && (
+            <div className="rounded-2xl border border-[var(--border-warm)] bg-[var(--surface)] p-4 shadow-warm">
+              {suggestions.length > 0 && (
+                <div className="mb-4">
+                  <p className="mb-2 text-sm font-semibold text-[var(--text-secondary)]">
+                    Did you mean
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {suggestions.map((entry) => (
+                      <button
+                        key={entry}
+                        type="button"
+                        onClick={() => {
+                          setSearchDraft(entry)
+                          const params = new URLSearchParams()
+                          params.set('q', entry)
+                          if (selectedCategory !== DEFAULT_CATEGORY) {
+                            params.set('category', selectedCategory)
+                          }
+                          router.push(`/shop?${params.toString()}#products`, {
+                            scroll: false,
+                          })
+                        }}
+                        className="rounded-full bg-[var(--surface-elevated)] px-3 py-1.5 text-xs font-medium text-[var(--foreground)] hover:bg-[var(--accent-blush)]"
+                      >
+                        {entry}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {trending.length > 0 && (
+                <div>
+                  <p className="mb-2 text-sm font-semibold text-[var(--text-secondary)]">
+                    Trending products
+                  </p>
+                  <ul className="space-y-1 text-sm">
+                    {trending.map((product) => (
+                      <li key={product.id}>
+                        <Link
+                          href={`/products/${product.id}`}
+                          className="text-[var(--btn-primary)] hover:underline"
+                        >
+                          {product.name}
+                        </Link>
+                        <span className="ml-2 text-xs text-[var(--text-muted)]">
+                          {product.category}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       ) : (
         <>
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
@@ -404,6 +782,7 @@ const ProductGrid = ({
                 product={product}
                 formatPrice={formatPrice}
                 index={index}
+                query={search}
               />
             ))}
           </div>
