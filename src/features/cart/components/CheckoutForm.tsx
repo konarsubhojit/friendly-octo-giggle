@@ -319,7 +319,9 @@ export const CheckoutForm = ({
             }),
           })
           if (!response.ok) {
-            toast.error('Unable to save address right now. You can still continue.')
+            toast.error(
+              'Unable to save address right now. You can still continue.'
+            )
           }
         }
 

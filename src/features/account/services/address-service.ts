@@ -42,7 +42,9 @@ const normalizeOptionalText = (value: string | undefined): string | null => {
   return trimmed.length === 0 ? null : trimmed
 }
 
-export const listUserAddresses = async (userId: string): Promise<SavedAddress[]> =>
+export const listUserAddresses = async (
+  userId: string
+): Promise<SavedAddress[]> =>
   drizzleDb.query.addresses
     .findMany({
       where: eq(addresses.userId, userId),
