@@ -6,6 +6,8 @@ import ProductGrid from '@/features/product/components/ProductGrid'
 import type { Product } from '@/lib/types'
 import type { ProductGridItem } from '@/features/product/components/ProductGrid'
 
+const mockRouterPush = vi.fn()
+
 vi.mock('next/link', () => ({
   default: ({
     children,
@@ -33,6 +35,28 @@ vi.mock('next/image', () => ({
     priority?: boolean
   }) => (
     <img alt={alt} src={src} data-priority={priority ? 'true' : undefined} />
+  ),
+}))
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: mockRouterPush,
+  }),
+}))
+
+vi.mock('@/components/SearchBar', () => ({
+  SearchBar: ({
+    value,
+    onChange,
+  }: {
+    value: string
+    onChange: (next: string) => void
+  }) => (
+    <input
+      aria-label="Search products"
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+    />
   ),
 }))
 
@@ -279,7 +303,9 @@ describe('ProductGrid', () => {
       name: /filter by category/i,
     })
     expect(select).toBeTruthy()
-    expect(screen.getByRole('option', { name: 'All' })).toBeTruthy()
+    expect(
+      screen.getAllByRole('option', { name: 'All' }).length
+    ).toBeGreaterThan(0)
     expect(screen.getByRole('option', { name: 'Handbag' })).toBeTruthy()
     expect(screen.getByRole('option', { name: 'Flowers' })).toBeTruthy()
     expect(screen.getByRole('option', { name: 'Flower Pots' })).toBeTruthy()
