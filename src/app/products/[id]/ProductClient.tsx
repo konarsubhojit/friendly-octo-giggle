@@ -20,6 +20,7 @@ import { useRecentlyViewed } from '@/features/product/hooks/useRecentlyViewed'
 import RecentlyViewed from '@/features/product/components/RecentlyViewed'
 import { ReviewsSection } from '@/features/product/components/ReviewsSection'
 import { getVariantMinPrice } from '@/features/product/variant-utils'
+import { WishlistButton } from '@/features/wishlist/components/WishlistButton'
 
 const ProductAssistant = dynamic(
   () => import('@/features/product/components/ProductAssistant'),
@@ -836,6 +837,7 @@ interface AddToCartSectionProps {
   readonly handleAddToCart: () => void
   readonly formatPrice: (amount: number) => string
   readonly currentCartQuantity: number
+  readonly showAlerts?: boolean
 }
 
 const AddToCartSection = ({
@@ -851,15 +853,18 @@ const AddToCartSection = ({
   handleAddToCart,
   formatPrice,
   currentCartQuantity,
+  showAlerts = true,
 }: AddToCartSectionProps) => {
   return (
     <div className="rounded-2xl border border-[var(--border-warm)] bg-[var(--surface)]/80 p-6 shadow-warm backdrop-blur-lg sm:p-8">
-      <CartStatusAlerts
-        currentCartQuantity={currentCartQuantity}
-        error={error}
-        cartSuccess={cartSuccess}
-        stockWarning={stockWarning}
-      />
+      {showAlerts && (
+        <CartStatusAlerts
+          currentCartQuantity={currentCartQuantity}
+          error={error}
+          cartSuccess={cartSuccess}
+          stockWarning={stockWarning}
+        />
+      )}
 
       <div className="mb-5">
         <label
@@ -991,6 +996,62 @@ const applyCartResult = (
     setTimeout(() => setCartSuccess(false), 3000)
   }
 }
+
+interface StickyMobileActionBarProps {
+  readonly remainingStock: number
+  readonly addingToCart: boolean
+  readonly handleAddToCart: () => void
+  readonly productId: string
+  readonly productName: string
+  readonly effectivePrice: number
+  readonly formatPrice: (amount: number) => string
+}
+
+/**
+ * Sticky bottom action bar shown only on mobile (hidden on md+).
+ * Provides quick Add-to-Cart + Wishlist access without scrolling.
+ */
+const StickyMobileActionBar = ({
+  remainingStock,
+  addingToCart,
+  handleAddToCart,
+  productId,
+  productName,
+  effectivePrice,
+  formatPrice,
+}: StickyMobileActionBarProps) => (
+  <div className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-[var(--surface)]/95 backdrop-blur-lg border-t border-[var(--border-warm)] shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
+    <div className="flex items-center gap-3 px-4 py-3 safe-bottom">
+      {/* Wishlist toggle */}
+      <div className="relative flex-shrink-0 w-11 h-11">
+        <WishlistButton
+          productId={productId}
+          productName={productName}
+          className="!static !w-11 !h-11 !top-auto !right-auto"
+        />
+      </div>
+
+      {/* Price */}
+      <span className="font-bold text-lg text-[var(--foreground)] flex-shrink-0">
+        {formatPrice(effectivePrice)}
+      </span>
+
+      {/* Add to Cart */}
+      <button
+        onClick={handleAddToCart}
+        disabled={addingToCart || remainingStock === 0}
+        aria-disabled={addingToCart || remainingStock === 0}
+        className="flex-1 min-tap rounded-xl bg-gradient-to-r from-[var(--accent-warm)] to-[var(--accent-rose)] text-white font-bold text-base shadow-warm hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity focus-warm"
+      >
+        {remainingStock === 0
+          ? 'Out of Stock'
+          : addingToCart
+            ? 'Adding…'
+            : 'Add to Cart'}
+      </button>
+    </div>
+  </div>
+)
 
 const ProductClient = ({
   product,
@@ -1151,7 +1212,7 @@ const ProductClient = ({
 
   return (
     <div className="min-h-screen bg-warm-gradient">
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-28 md:pb-16">
         <BreadcrumbNav productName={product.name} />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
@@ -1172,25 +1233,35 @@ const ProductClient = ({
               cartQuantities={cartQuantities}
             />
 
-            {/* Add to Cart — or Out of Stock panel */}
-            {remainingStock > 0 ? (
-              <AddToCartSection
-                error={error}
-                cartSuccess={cartSuccess}
-                stockWarning={stockWarning}
-                quantity={quantity}
-                quantityMessage={quantityMessage}
-                setQuantity={setQuantity}
-                effectiveStock={remainingStock}
-                effectivePrice={effectivePrice}
-                addingToCart={addingToCart}
-                handleAddToCart={handleAddToCart}
-                formatPrice={formatPrice}
-                currentCartQuantity={currentCartQuantity}
-              />
-            ) : (
-              <OutOfStockPanel currentCartQuantity={currentCartQuantity} />
-            )}
+            {/* Add to Cart — or Out of Stock panel (hidden on mobile; sticky bar handles it) */}
+            {/* Single CartStatusAlerts for both mobile & desktop */}
+            <CartStatusAlerts
+              currentCartQuantity={currentCartQuantity}
+              error={error}
+              cartSuccess={cartSuccess}
+              stockWarning={stockWarning}
+            />
+            <div className="hidden md:block">
+              {remainingStock > 0 ? (
+                <AddToCartSection
+                  error={error}
+                  cartSuccess={cartSuccess}
+                  stockWarning={stockWarning}
+                  quantity={quantity}
+                  quantityMessage={quantityMessage}
+                  setQuantity={setQuantity}
+                  effectiveStock={remainingStock}
+                  effectivePrice={effectivePrice}
+                  addingToCart={addingToCart}
+                  handleAddToCart={handleAddToCart}
+                  formatPrice={formatPrice}
+                  currentCartQuantity={currentCartQuantity}
+                  showAlerts={false}
+                />
+              ) : (
+                <OutOfStockPanel currentCartQuantity={currentCartQuantity} />
+              )}
+            </div>
           </div>
         </div>
       </main>
@@ -1207,6 +1278,17 @@ const ProductClient = ({
       </div>
 
       <RecentlyViewed />
+
+      {/* Sticky mobile action bar */}
+      <StickyMobileActionBar
+        remainingStock={remainingStock}
+        addingToCart={addingToCart}
+        handleAddToCart={handleAddToCart}
+        productId={product.id}
+        productName={product.name}
+        effectivePrice={effectivePrice}
+        formatPrice={formatPrice}
+      />
     </div>
   )
 }

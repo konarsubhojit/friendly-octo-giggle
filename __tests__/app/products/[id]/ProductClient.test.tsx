@@ -42,7 +42,7 @@ const mockUnwrap = vi.fn()
 vi.mock('react-redux', () => ({
   useDispatch: () => mockDispatch,
   useSelector: vi.fn((selector: (s: unknown) => unknown) =>
-    selector({ cart: { cart: null } })
+    selector({ cart: { cart: null }, wishlist: { productIds: [], loading: false } })
   ),
 }))
 
@@ -213,7 +213,7 @@ describe('ProductClient', () => {
       update: vi.fn(),
     })
     vi.mocked(useSelector).mockImplementation((selector) =>
-      selector({ cart: { cart: null } })
+      selector({ cart: { cart: null }, wishlist: { productIds: [], loading: false } })
     )
     mockDispatch.mockReturnValue({ unwrap: mockUnwrap })
     mockUnwrap.mockResolvedValue({ warning: null, adjustedQuantity: null })
@@ -231,7 +231,7 @@ describe('ProductClient', () => {
     expect(
       screen.getByText('A beautiful bouquet of red roses.')
     ).toBeInTheDocument()
-    expect(screen.getAllByText('₹500.00')).toHaveLength(2)
+    expect(screen.getAllByText('₹500.00')).toHaveLength(3)
     expect(screen.getByText('Flowers')).toBeInTheDocument()
   })
 
@@ -278,7 +278,7 @@ describe('ProductClient', () => {
     )
 
     expect(
-      screen.getByRole('button', { name: /Add to Cart/i })
+      screen.getAllByRole('button', { name: /Add to Cart/i })[0]
     ).toBeInTheDocument()
     expect(screen.getByLabelText('Select quantity')).toBeInTheDocument()
   })
@@ -307,6 +307,7 @@ describe('ProductClient', () => {
             items: [{ productId: 'prod001', variantId: 'var001', quantity: 3 }],
           },
         },
+        wishlist: { productIds: [], loading: false },
       })
     )
     render(
@@ -380,7 +381,7 @@ describe('ProductClient', () => {
     )
 
     await act(() => {
-      fireEvent.click(screen.getByRole('button', { name: /Add to Cart/i }))
+      fireEvent.click(screen.getAllByRole('button', { name: /Add to Cart/i })[0])
     })
 
     await waitFor(() => {
@@ -397,7 +398,7 @@ describe('ProductClient', () => {
     )
 
     await act(() => {
-      fireEvent.click(screen.getByRole('button', { name: /Add to Cart/i }))
+      fireEvent.click(screen.getAllByRole('button', { name: /Add to Cart/i })[0])
     })
 
     await waitFor(() => {
@@ -420,7 +421,7 @@ describe('ProductClient', () => {
     )
 
     await act(() => {
-      fireEvent.click(screen.getByRole('button', { name: /Add to Cart/i }))
+      fireEvent.click(screen.getAllByRole('button', { name: /Add to Cart/i })[0])
     })
 
     await waitFor(() => {
@@ -446,7 +447,7 @@ describe('ProductClient', () => {
     )
 
     await act(() => {
-      fireEvent.click(screen.getByRole('button', { name: /Add to Cart/i }))
+      fireEvent.click(screen.getAllByRole('button', { name: /Add to Cart/i })[0])
     })
 
     await waitFor(() => {
@@ -473,7 +474,7 @@ describe('ProductClient', () => {
     )
 
     await act(() => {
-      fireEvent.click(screen.getByRole('button', { name: /Add to Cart/i }))
+      fireEvent.click(screen.getAllByRole('button', { name: /Add to Cart/i })[0])
     })
 
     await waitFor(() => {
@@ -502,7 +503,7 @@ describe('ProductClient', () => {
       <ProductClient product={product} initialVariantId="var001" aiEnabled />
     )
 
-    expect(screen.getAllByText('₹750.00')).toHaveLength(2)
+    expect(screen.getAllByText('₹750.00')).toHaveLength(3)
   })
 
   it('selecting a variant updates the displayed price', () => {
@@ -515,13 +516,13 @@ describe('ProductClient', () => {
       <ProductClient product={product} initialVariantId={null} aiEnabled />
     )
 
-    expect(screen.getAllByText('₹500.00')).toHaveLength(2)
+    expect(screen.getAllByText('₹500.00')).toHaveLength(3)
 
     act(() => {
       fireEvent.click(screen.getByTestId('variant-btn-var001'))
     })
 
-    expect(screen.getAllByText('₹750.00')).toHaveLength(2)
+    expect(screen.getAllByText('₹750.00')).toHaveLength(3)
   })
 
   it('quantity selector renders with options up to stock (max 10)', () => {
@@ -546,6 +547,7 @@ describe('ProductClient', () => {
             items: [{ productId: 'prod001', variantId: 'var001', quantity: 2 }],
           },
         },
+        wishlist: { productIds: [], loading: false },
       })
     )
     render(
@@ -580,7 +582,7 @@ describe('ProductClient', () => {
     render(
       <ProductClient product={product} initialVariantId={null} aiEnabled />
     )
-    expect(screen.getAllByText('₹500.00')).toHaveLength(2)
+    expect(screen.getAllByText('₹500.00')).toHaveLength(3)
   })
 
   it('does not render ProductAssistant when aiEnabled is false', () => {
@@ -958,7 +960,7 @@ describe('ProductClient', () => {
     )
 
     await act(() => {
-      fireEvent.click(screen.getByRole('button', { name: /Add to Cart/i }))
+      fireEvent.click(screen.getAllByRole('button', { name: /Add to Cart/i })[0])
     })
 
     await waitFor(() => {
@@ -1584,7 +1586,7 @@ describe('ProductClient', () => {
 
     // Initially add-to-cart is shown (in stock)
     expect(
-      screen.getByRole('button', { name: /Add to Cart/i })
+      screen.getAllByRole('button', { name: /Add to Cart/i })[0]
     ).toBeInTheDocument()
 
     // Click Blue — out-of-stock variant selected, should show out-of-stock panel
