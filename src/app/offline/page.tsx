@@ -3,7 +3,8 @@ import Link from 'next/link'
 
 export const metadata: Metadata = {
   title: "You're Offline | The Kiyon Store",
-  description: 'No internet connection. Please check your network and try again.',
+  description:
+    'No internet connection. Please check your network and try again.',
 }
 
 export default function OfflinePage() {

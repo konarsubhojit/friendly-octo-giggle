@@ -42,7 +42,10 @@ const mockUnwrap = vi.fn()
 vi.mock('react-redux', () => ({
   useDispatch: () => mockDispatch,
   useSelector: vi.fn((selector: (s: unknown) => unknown) =>
-    selector({ cart: { cart: null }, wishlist: { productIds: [], loading: false } })
+    selector({
+      cart: { cart: null },
+      wishlist: { productIds: [], loading: false },
+    })
   ),
 }))
 
@@ -213,7 +216,10 @@ describe('ProductClient', () => {
       update: vi.fn(),
     })
     vi.mocked(useSelector).mockImplementation((selector) =>
-      selector({ cart: { cart: null }, wishlist: { productIds: [], loading: false } })
+      selector({
+        cart: { cart: null },
+        wishlist: { productIds: [], loading: false },
+      })
     )
     mockDispatch.mockReturnValue({ unwrap: mockUnwrap })
     mockUnwrap.mockResolvedValue({ warning: null, adjustedQuantity: null })
@@ -381,7 +387,9 @@ describe('ProductClient', () => {
     )
 
     await act(() => {
-      fireEvent.click(screen.getAllByRole('button', { name: /Add to Cart/i })[0])
+      fireEvent.click(
+        screen.getAllByRole('button', { name: /Add to Cart/i })[0]
+      )
     })
 
     await waitFor(() => {
@@ -398,7 +406,9 @@ describe('ProductClient', () => {
     )
 
     await act(() => {
-      fireEvent.click(screen.getAllByRole('button', { name: /Add to Cart/i })[0])
+      fireEvent.click(
+        screen.getAllByRole('button', { name: /Add to Cart/i })[0]
+      )
     })
 
     await waitFor(() => {
@@ -421,7 +431,9 @@ describe('ProductClient', () => {
     )
 
     await act(() => {
-      fireEvent.click(screen.getAllByRole('button', { name: /Add to Cart/i })[0])
+      fireEvent.click(
+        screen.getAllByRole('button', { name: /Add to Cart/i })[0]
+      )
     })
 
     await waitFor(() => {
@@ -447,7 +459,9 @@ describe('ProductClient', () => {
     )
 
     await act(() => {
-      fireEvent.click(screen.getAllByRole('button', { name: /Add to Cart/i })[0])
+      fireEvent.click(
+        screen.getAllByRole('button', { name: /Add to Cart/i })[0]
+      )
     })
 
     await waitFor(() => {
@@ -474,7 +488,9 @@ describe('ProductClient', () => {
     )
 
     await act(() => {
-      fireEvent.click(screen.getAllByRole('button', { name: /Add to Cart/i })[0])
+      fireEvent.click(
+        screen.getAllByRole('button', { name: /Add to Cart/i })[0]
+      )
     })
 
     await waitFor(() => {
@@ -960,7 +976,9 @@ describe('ProductClient', () => {
     )
 
     await act(() => {
-      fireEvent.click(screen.getAllByRole('button', { name: /Add to Cart/i })[0])
+      fireEvent.click(
+        screen.getAllByRole('button', { name: /Add to Cart/i })[0]
+      )
     })
 
     await waitFor(() => {

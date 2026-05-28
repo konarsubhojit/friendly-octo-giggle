@@ -40,7 +40,7 @@ function isStandaloneMode(): boolean {
     window.matchMedia('(display-mode: standalone)').matches ||
     Boolean(
       'standalone' in navigator &&
-        (navigator as Navigator & { standalone?: boolean }).standalone
+      (navigator as Navigator & { standalone?: boolean }).standalone
     )
   )
 }

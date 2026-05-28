@@ -148,7 +148,8 @@ const ImageCarousel = ({
       } else if (e.changedTouches.length === 2) {
         // Pinch gesture ended — check if scale crossed threshold
         const endDist = getTouchDistance(e.changedTouches)
-        const ratio = touchStartDist.current > 0 ? endDist / touchStartDist.current : 1
+        const ratio =
+          touchStartDist.current > 0 ? endDist / touchStartDist.current : 1
         if (ratio >= PINCH_ZOOM_SCALE) {
           setIsZoomed(true)
         } else if (ratio <= 1 / PINCH_ZOOM_SCALE) {
@@ -348,4 +349,3 @@ const ImageCarousel = ({
 }
 
 export default ImageCarousel
-
