@@ -29,6 +29,14 @@ const SWIPE_THRESHOLD = 50
 // Minimum pinch scale change to toggle zoom
 const PINCH_ZOOM_SCALE = 1.5
 
+// Pure utility — lives outside component so it is never recreated on render
+const getTouchDistance = (touches: React.TouchList): number => {
+  if (touches.length < 2) return 0
+  const dx = touches[0].clientX - touches[1].clientX
+  const dy = touches[0].clientY - touches[1].clientY
+  return Math.sqrt(dx * dx + dy * dy)
+}
+
 const ImageCarousel = ({
   images,
   productName,
@@ -100,13 +108,6 @@ const ImageCarousel = ({
 
   // ─── Touch handlers ────────────────────────────────────────────────────────
 
-  const getTouchDistance = (touches: React.TouchList): number => {
-    if (touches.length < 2) return 0
-    const dx = touches[0].clientX - touches[1].clientX
-    const dy = touches[0].clientY - touches[1].clientY
-    return Math.sqrt(dx * dx + dy * dy)
-  }
-
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     if (e.touches.length === 1) {
       touchStartX.current = e.touches[0].clientX
@@ -117,17 +118,30 @@ const ImageCarousel = ({
     }
   }, [])
 
-  const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    if (e.touches.length === 1 && !isSwiping.current) {
-      const dx = Math.abs(e.touches[0].clientX - touchStartX.current)
-      const dy = Math.abs(e.touches[0].clientY - touchStartY.current)
-      // Predominantly horizontal — prevent page scroll while swiping
-      if (dx > dy && dx > 10) {
-        e.preventDefault()
-        isSwiping.current = true
+  const handleTouchMove = useCallback(
+    (e: React.TouchEvent) => {
+      if (e.touches.length === 1 && !isSwiping.current) {
+        const dx = Math.abs(e.touches[0].clientX - touchStartX.current)
+        const dy = Math.abs(e.touches[0].clientY - touchStartY.current)
+        // Predominantly horizontal — prevent page scroll while swiping
+        if (dx > dy && dx > 10) {
+          e.preventDefault()
+          isSwiping.current = true
+        }
+      } else if (e.touches.length === 2 && touchStartDist.current > 0) {
+        // Track pinch in touchmove (changedTouches in touchend only has
+        // the *lifted* finger, so scale detection must happen here)
+        const currentDist = getTouchDistance(e.touches)
+        const ratio = currentDist / touchStartDist.current
+        if (ratio >= PINCH_ZOOM_SCALE) {
+          setIsZoomed(true)
+        } else if (ratio <= 1 / PINCH_ZOOM_SCALE) {
+          setIsZoomed(false)
+        }
       }
-    }
-  }, [])
+    },
+    [setIsZoomed]
+  )
 
   const handleTouchEnd = useCallback(
     (e: React.TouchEvent) => {
@@ -144,16 +158,6 @@ const ImageCarousel = ({
           } else {
             goPrev()
           }
-        }
-      } else if (e.changedTouches.length === 2) {
-        // Pinch gesture ended — check if scale crossed threshold
-        const endDist = getTouchDistance(e.changedTouches)
-        const ratio =
-          touchStartDist.current > 0 ? endDist / touchStartDist.current : 1
-        if (ratio >= PINCH_ZOOM_SCALE) {
-          setIsZoomed(true)
-        } else if (ratio <= 1 / PINCH_ZOOM_SCALE) {
-          setIsZoomed(false)
         }
       }
       isSwiping.current = false

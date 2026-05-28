@@ -26,11 +26,7 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches
       .open(SHELL_CACHE)
-      .then((cache) =>
-        cache.addAll(
-          SHELL_URLS.filter((url) => url !== '/offline').concat(['/offline'])
-        )
-      )
+      .then((cache) => cache.addAll(SHELL_URLS))
       .then(() => self.skipWaiting())
   )
 })

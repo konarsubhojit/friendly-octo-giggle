@@ -56,6 +56,9 @@ export const metadata: Metadata = {
     statusBarStyle: 'default',
     title: 'Kiyon',
   },
+  icons: {
+    apple: '/icons/apple-touch-icon.png',
+  },
   other: {
     'mobile-web-app-capable': 'yes',
   },
@@ -80,9 +83,6 @@ export default async function RootLayout({
       lang="en"
       className={`${nunito.className} ${playfairDisplay.variable}`}
     >
-      <head>
-        <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
-      </head>
       <body className="antialiased">
         <AppProviders>
           <HeaderWrapper />

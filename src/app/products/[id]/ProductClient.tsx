@@ -1020,7 +1020,11 @@ const StickyMobileActionBar = ({
   effectivePrice,
   formatPrice,
 }: StickyMobileActionBarProps) => (
-  <div className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-[var(--surface)]/95 backdrop-blur-lg border-t border-[var(--border-warm)] shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
+  <div
+    role="region"
+    aria-label="Quick actions"
+    className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-[var(--surface)]/95 backdrop-blur-lg border-t border-[var(--border-warm)] shadow-[0_-4px_20px_rgba(0,0,0,0.08)]"
+  >
     <div className="flex items-center gap-3 px-4 py-3 safe-bottom">
       {/* Wishlist toggle */}
       <div className="relative flex-shrink-0 w-11 h-11">
@@ -1234,7 +1238,13 @@ const ProductClient = ({
             />
 
             {/* Add to Cart — or Out of Stock panel (hidden on mobile; sticky bar handles it) */}
-            {/* Single CartStatusAlerts for both mobile & desktop */}
+            {/*
+             * CartStatusAlerts is rendered once here (unconditionally) so that:
+             *  - On mobile: alerts are visible above the sticky bottom bar
+             *  - On desktop: alerts appear above the AddToCartSection card
+             * The desktop AddToCartSection passes showAlerts={false} to avoid
+             * a second render and duplicate announcements in jsdom tests.
+             */}
             <CartStatusAlerts
               currentCartQuantity={currentCartQuantity}
               error={error}

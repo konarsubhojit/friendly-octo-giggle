@@ -66,7 +66,7 @@ export function InstallBanner() {
   const [promptEvent, setPromptEvent] =
     useState<BeforeInstallPromptEvent | null>(null)
 
-  // Detect iOS Safari once at client mount (lazy initialiser, never re-runs)
+  // Detect iOS Safari once at client mount (lazy initialiser runs once per mount)
   const [isIosSafari] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false
     return checkIosSafari()
