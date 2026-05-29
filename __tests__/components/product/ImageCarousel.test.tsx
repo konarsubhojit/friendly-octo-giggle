@@ -266,6 +266,7 @@ describe('ImageCarousel', () => {
       name: /image carousel for keyboard product/i,
     })
     region.focus()
+    expect(region).toHaveFocus()
 
     fireEvent.keyDown(region, { key: 'ArrowRight' })
     expect(screen.getByText('2 / 2')).toBeInTheDocument()

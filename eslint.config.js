@@ -20,6 +20,8 @@ const config = [
       'no-implicit-globals': 'error',
       'no-var': 'error',
       'jsx-a11y/aria-props': 'error',
+      'jsx-a11y/aria-proptypes': 'error',
+      'jsx-a11y/aria-role': 'error',
     },
   },
 

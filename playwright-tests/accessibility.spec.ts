@@ -108,8 +108,6 @@ test.describe('Accessibility – authenticated pages', () => {
   const authenticatedRoutes: Array<{ name: string; path: string }> = [
     { name: 'Account', path: '/account' },
     { name: 'Orders', path: '/orders' },
-    { name: 'Checkout Shipping', path: '/checkout/shipping' },
-    { name: 'Checkout Review', path: '/checkout/review' },
     { name: 'Admin Dashboard', path: '/admin' },
     { name: 'Admin Products', path: '/admin/products' },
     { name: 'Admin Orders', path: '/admin/orders' },

@@ -369,13 +369,14 @@ export default function Header() {
   useEffect(() => {
     function handleEscape(event: KeyboardEvent) {
       if (event.key !== 'Escape') return
+      if (!menuOpen && !mobileNavOpen) return
       setMenuOpen(false)
       setMobileNavOpen(false)
     }
 
     document.addEventListener('keydown', handleEscape)
     return () => document.removeEventListener('keydown', handleEscape)
-  }, [])
+  }, [menuOpen, mobileNavOpen])
 
   return (
     <>
