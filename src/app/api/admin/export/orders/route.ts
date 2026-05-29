@@ -2,7 +2,10 @@ import { asc } from 'drizzle-orm'
 import { drizzleDb } from '@/lib/db'
 import { orders } from '@/lib/schema'
 import { checkAdminAuth } from '@/features/admin/services/admin-auth'
-import { streamCsvResponse } from '@/features/admin/services/admin-csv'
+import {
+  batchedCsvRows,
+  streamCsvResponse,
+} from '@/features/admin/services/admin-csv'
 import { apiError, handleApiError } from '@/lib/api-utils'
 
 export const dynamic = 'force-dynamic'
@@ -14,10 +17,6 @@ export const GET = async () => {
   }
 
   try {
-    const rows = await drizzleDb.query.orders.findMany({
-      orderBy: [asc(orders.createdAt)],
-    })
-
     return streamCsvResponse(
       'orders.csv',
       [
@@ -30,16 +29,24 @@ export const GET = async () => {
         'shippingProvider',
         'createdAt',
       ],
-      rows.map((order) => [
-        order.id,
-        order.customerName,
-        order.customerEmail,
-        order.totalAmount,
-        order.status,
-        order.trackingNumber,
-        order.shippingProvider,
-        order.createdAt.toISOString(),
-      ])
+      batchedCsvRows({
+        fetchBatch: (offset, limit) =>
+          drizzleDb.query.orders.findMany({
+            orderBy: [asc(orders.createdAt), asc(orders.id)],
+            limit,
+            offset,
+          }),
+        mapRow: (order) => [
+          order.id,
+          order.customerName,
+          order.customerEmail,
+          order.totalAmount,
+          order.status,
+          order.trackingNumber,
+          order.shippingProvider,
+          order.createdAt.toISOString(),
+        ],
+      })
     )
   } catch (error) {
     return handleApiError(error)

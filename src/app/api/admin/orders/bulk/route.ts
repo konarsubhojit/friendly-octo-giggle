@@ -4,6 +4,7 @@ import { drizzleDb } from '@/lib/db'
 import { orders } from '@/lib/schema'
 import { checkAdminAuth } from '@/features/admin/services/admin-auth'
 import { recordAdminAuditLog } from '@/features/admin/services/admin-audit-log'
+import { invalidateAdminOrderCaches } from '@/lib/cache'
 import {
   apiError,
   apiSuccess,
@@ -27,6 +28,13 @@ export const POST = async (request: Request) => {
 
   try {
     const payload = await parseJsonBody(request, BulkOrderSchema)
+    const updatedOrders = await drizzleDb.query.orders.findMany({
+      where: inArray(orders.id, payload.orderIds),
+      columns: {
+        id: true,
+        userId: true,
+      },
+    })
 
     const result = await drizzleDb
       .update(orders)
@@ -40,6 +48,11 @@ export const POST = async (request: Request) => {
       action: 'bulk_status_update',
       diff: payload,
     })
+
+    await invalidateAdminOrderCaches(
+      updatedOrders.map((order) => order.id),
+      updatedOrders.map((order) => order.userId)
+    )
 
     return apiSuccess({
       updatedCount: result.rowCount ?? 0,

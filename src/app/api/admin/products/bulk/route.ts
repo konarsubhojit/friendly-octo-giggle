@@ -56,6 +56,14 @@ export const POST = async (request: Request) => {
     let affectedProducts = 0
     let affectedVariants = 0
 
+    if (
+      payload.operation === 'bulk_price_update' &&
+      payload.mode === 'set' &&
+      payload.amount <= 0
+    ) {
+      return apiError('Price must be greater than zero', 400)
+    }
+
     if (payload.operation === 'bulk_price_update') {
       const result = await drizzleDb
         .update(productVariants)
@@ -143,7 +151,7 @@ export const POST = async (request: Request) => {
       diff: payload,
     })
 
-    await invalidateProductCaches()
+    await invalidateProductCaches(payload.productIds)
     revalidateTag('products', 'max')
 
     return apiSuccess({

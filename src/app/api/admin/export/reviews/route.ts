@@ -2,7 +2,10 @@ import { asc } from 'drizzle-orm'
 import { drizzleDb } from '@/lib/db'
 import { reviews } from '@/lib/schema'
 import { checkAdminAuth } from '@/features/admin/services/admin-auth'
-import { streamCsvResponse } from '@/features/admin/services/admin-csv'
+import {
+  batchedCsvRows,
+  streamCsvResponse,
+} from '@/features/admin/services/admin-csv'
 import { apiError, handleApiError } from '@/lib/api-utils'
 
 export const dynamic = 'force-dynamic'
@@ -14,10 +17,6 @@ export const GET = async () => {
   }
 
   try {
-    const rows = await drizzleDb.query.reviews.findMany({
-      orderBy: [asc(reviews.createdAt)],
-    })
-
     return streamCsvResponse(
       'reviews.csv',
       [
@@ -30,16 +29,24 @@ export const GET = async () => {
         'isHidden',
         'createdAt',
       ],
-      rows.map((review) => [
-        review.id,
-        review.productId,
-        review.userId,
-        review.rating,
-        review.comment,
-        review.isFeatured,
-        review.isHidden,
-        review.createdAt.toISOString(),
-      ])
+      batchedCsvRows({
+        fetchBatch: (offset, limit) =>
+          drizzleDb.query.reviews.findMany({
+            orderBy: [asc(reviews.createdAt), asc(reviews.id)],
+            limit,
+            offset,
+          }),
+        mapRow: (review) => [
+          review.id,
+          review.productId,
+          review.userId,
+          review.rating,
+          review.comment,
+          review.isFeatured,
+          review.isHidden,
+          review.createdAt.toISOString(),
+        ],
+      })
     )
   } catch (error) {
     return handleApiError(error)

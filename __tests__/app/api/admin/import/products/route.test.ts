@@ -87,7 +87,7 @@ describe('POST /api/admin/import/products', () => {
 
     const mockValues = vi.fn()
     const mockInsert = vi.fn(() => ({ values: mockValues }))
-    mockTransaction.mockImplementation(async (callback) =>
+    mockTransaction.mockImplementation((callback) =>
       callback({ insert: mockInsert })
     )
 

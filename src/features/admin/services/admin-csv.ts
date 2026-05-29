@@ -1,8 +1,26 @@
 const NEWLINE = '\n'
+const FORMULA_PREFIX_RE = /^[=+\-@]/
+
+type CsvRow = readonly unknown[]
+type CsvRows = Iterable<CsvRow> | AsyncIterable<CsvRow>
+
+const sanitizeCsvCell = (value: string): string =>
+  FORMULA_PREFIX_RE.test(value) ? `'${value}` : value
+
+const toAsyncIterator = (rows: CsvRows): AsyncIterator<CsvRow> => {
+  if (Symbol.asyncIterator in rows) {
+    return rows[Symbol.asyncIterator]()
+  }
+
+  return (async function* () {
+    yield* rows
+  })()
+}
 
 export const csvEscape = (value: unknown): string => {
   if (value === null || value === undefined) return ''
-  const raw = typeof value === 'string' ? value : JSON.stringify(value)
+  const raw =
+    typeof value === 'string' ? sanitizeCsvCell(value) : JSON.stringify(value)
   const escaped = raw.replaceAll('"', '""')
   return /[",\n\r]/.test(raw) ? `"${escaped}"` : escaped
 }
@@ -13,17 +31,30 @@ export const toCsvLine = (values: readonly unknown[]): string =>
 export const streamCsvResponse = (
   filename: string,
   headers: readonly string[],
-  rows: readonly (readonly unknown[])[]
+  rows: CsvRows
 ): Response => {
   const encoder = new TextEncoder()
+  const iterator = toAsyncIterator(rows)
+  let headerSent = false
 
   const stream = new ReadableStream<Uint8Array>({
-    start(controller) {
-      controller.enqueue(encoder.encode(toCsvLine(headers)))
-      for (const row of rows) {
-        controller.enqueue(encoder.encode(toCsvLine(row)))
+    async pull(controller) {
+      if (!headerSent) {
+        headerSent = true
+        controller.enqueue(encoder.encode(toCsvLine(headers)))
+        return
       }
-      controller.close()
+
+      const next = await iterator.next()
+      if (next.done) {
+        controller.close()
+        return
+      }
+
+      controller.enqueue(encoder.encode(toCsvLine(next.value)))
+    },
+    async cancel() {
+      await iterator.return?.()
     },
   })
 
@@ -37,51 +68,92 @@ export const streamCsvResponse = (
   })
 }
 
+export const batchedCsvRows = async function* <T>({
+  fetchBatch,
+  mapRow,
+  batchSize = 250,
+}: {
+  fetchBatch: (offset: number, limit: number) => Promise<T[]>
+  mapRow: (item: T) => CsvRow
+  batchSize?: number
+}): AsyncIterable<CsvRow> {
+  let offset = 0
+
+  while (true) {
+    const batch = await fetchBatch(offset, batchSize)
+    if (batch.length === 0) {
+      return
+    }
+
+    for (const item of batch) {
+      yield mapRow(item)
+    }
+
+    if (batch.length < batchSize) {
+      return
+    }
+
+    offset += batch.length
+  }
+}
+
 export const parseCsv = (
   csvText: string
 ): { headers: string[]; rows: string[][] } => {
-  const lines = csvText
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0)
+  const allRows: string[][] = []
+  let currentRow: string[] = []
+  let currentValue = ''
+  let inQuotes = false
 
-  if (lines.length === 0) return { headers: [], rows: [] }
+  const pushValue = () => {
+    currentRow.push(currentValue.trim())
+    currentValue = ''
+  }
 
-  const parseLine = (line: string): string[] => {
-    const values: string[] = []
-    let current = ''
-    let inQuotes = false
-
-    for (let index = 0; index < line.length; index += 1) {
-      const char = line[index]
-
-      if (char === '"') {
-        const next = line[index + 1]
-        if (inQuotes && next === '"') {
-          current += '"'
-          index += 1
-          continue
-        }
-        inQuotes = !inQuotes
-        continue
-      }
-
-      if (char === ',' && !inQuotes) {
-        values.push(current)
-        current = ''
-        continue
-      }
-
-      current += char
+  const pushRow = () => {
+    if (currentRow.length === 0 && currentValue.trim().length === 0) {
+      return
     }
 
-    values.push(current)
-    return values.map((value) => value.trim())
+    pushValue()
+    allRows.push(currentRow)
+    currentRow = []
   }
 
-  const [headerLine, ...rowLines] = lines
-  return {
-    headers: parseLine(headerLine),
-    rows: rowLines.map((line) => parseLine(line)),
+  for (let index = 0; index < csvText.length; index += 1) {
+    const char = csvText[index]
+    const next = csvText[index + 1]
+
+    if (char === '"') {
+      if (inQuotes && next === '"') {
+        currentValue += '"'
+        index += 1
+        continue
+      }
+
+      inQuotes = !inQuotes
+      continue
+    }
+
+    if (char === ',' && !inQuotes) {
+      pushValue()
+      continue
+    }
+
+    if ((char === '\n' || char === '\r') && !inQuotes) {
+      if (char === '\r' && next === '\n') {
+        index += 1
+      }
+
+      pushRow()
+      continue
+    }
+
+    currentValue += char
   }
+
+  pushRow()
+
+  const [headers = [], ...rows] = allRows
+  return { headers, rows }
 }
