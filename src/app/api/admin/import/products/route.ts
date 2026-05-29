@@ -121,7 +121,7 @@ export const POST = async (request: Request) => {
     })
 
     await invalidateProductCaches()
-    revalidateTag('products', {})
+    revalidateTag('products', 'max')
 
     return apiSuccess({
       ...report,
