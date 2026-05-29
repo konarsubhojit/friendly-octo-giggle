@@ -62,6 +62,7 @@ const dispatchEmail = (event: QStashEvent): void => {
       orderId: event.data.orderId,
       totalAmount: formatPriceForCurrency(event.data.totalAmount, currency),
       shippingAddress: event.data.customerAddress,
+      locale: event.data.locale,
       items: event.data.items.map((item) => ({
         name: item.name,
         quantity: item.quantity,
@@ -75,6 +76,7 @@ const dispatchEmail = (event: QStashEvent): void => {
       customerName: event.data.customerName,
       orderId: event.data.orderId,
       status: event.data.newStatus,
+      locale: event.data.locale,
       trackingNumber: event.data.trackingNumber,
       shippingProvider: event.data.shippingProvider,
     })

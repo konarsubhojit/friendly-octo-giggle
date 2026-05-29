@@ -1,6 +1,6 @@
 {
-  "id": "d9f50a0d-2b4e-47e8-9f6d-3979896c8422",
-  "prevId": "9eddca43-d1ec-49b6-a067-958a897cfcf1",
+  "id": "be983f81-00a7-4da6-8468-b6ba801c85e9",
+  "prevId": "d9f50a0d-2b4e-47e8-9f6d-3979896c8422",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -245,6 +245,123 @@
         "Address_userId_User_id_fk": {
           "name": "Address_userId_User_id_fk",
           "tableFrom": "Address",
+          "tableTo": "User",
+          "columnsFrom": [
+            "userId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.AdminAuditLog": {
+      "name": "AdminAuditLog",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "varchar(7)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "userId": {
+          "name": "userId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "entity": {
+          "name": "entity",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "entityId": {
+          "name": "entityId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "action": {
+          "name": "action",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "diff": {
+          "name": "diff",
+          "type": "json",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::json"
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "AdminAuditLog_userId_idx": {
+          "name": "AdminAuditLog_userId_idx",
+          "columns": [
+            {
+              "expression": "userId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "AdminAuditLog_entity_idx": {
+          "name": "AdminAuditLog_entity_idx",
+          "columns": [
+            {
+              "expression": "entity",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "AdminAuditLog_createdAt_idx": {
+          "name": "AdminAuditLog_createdAt_idx",
+          "columns": [
+            {
+              "expression": "createdAt",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "AdminAuditLog_userId_User_id_fk": {
+          "name": "AdminAuditLog_userId_User_id_fk",
+          "tableFrom": "AdminAuditLog",
           "tableTo": "User",
           "columnsFrom": [
             "userId"

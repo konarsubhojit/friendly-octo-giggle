@@ -184,6 +184,7 @@ export const db = {
           id: products.id,
           name: products.name,
           description: products.description,
+          localizedContent: products.localizedContent,
           image: products.image,
           images: products.images,
           category: products.category,

@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 import { drizzleDb, primaryDrizzleDb } from '@/lib/db'
-import { orders } from '@/lib/schema'
+import { orders, users } from '@/lib/schema'
 import { eq } from 'drizzle-orm'
 import {
   apiSuccess,
@@ -19,6 +19,7 @@ import { env } from '@/lib/env'
 import { logBusinessEvent, logError } from '@/lib/logger'
 import { getRedisClient } from '@/lib/redis'
 import { waitUntil } from '@vercel/functions'
+import { isSupportedLocale } from '@/lib/i18n/config'
 
 export const dynamic = 'force-dynamic'
 
@@ -78,6 +79,23 @@ export const PATCH = async (
 
     const notifyStatuses = ['PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED']
     if (notifyStatuses.includes(validatedBody.status)) {
+      let userLocaleRecord: { localePreference: string } | null = null
+      if (order.userId) {
+        try {
+          const foundUserLocale = await drizzleDb.query.users.findFirst({
+            where: eq(users.id, order.userId),
+            columns: { localePreference: true },
+          })
+          userLocaleRecord = foundUserLocale ?? null
+        } catch {
+          userLocaleRecord = null
+        }
+      }
+      const locale =
+        userLocaleRecord?.localePreference &&
+        isSupportedLocale(userLocaleRecord.localePreference)
+          ? userLocaleRecord.localePreference
+          : 'en'
       const workerUrl = `${env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'}/api/services/email`
       const statusEvent: OrderStatusChangedEvent = {
         type: 'order.status_changed',
@@ -86,6 +104,7 @@ export const PATCH = async (
           customerEmail: order.customerEmail,
           customerName: order.customerName,
           newStatus: validatedBody.status,
+          locale,
           trackingNumber:
             validatedBody.trackingNumber ?? order.trackingNumber ?? null,
           shippingProvider:
@@ -121,6 +140,7 @@ export const PATCH = async (
           customerName: order.customerName,
           orderId: order.id,
           status: validatedBody.status,
+          locale,
           trackingNumber: validatedBody.trackingNumber ?? order.trackingNumber,
           shippingProvider:
             validatedBody.shippingProvider ?? order.shippingProvider,

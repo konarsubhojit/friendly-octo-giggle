@@ -60,6 +60,9 @@ export const users = pgTable('User', {
   currencyPreference: varchar('currencyPreference', { length: 3 })
     .default('INR')
     .notNull(),
+  localePreference: varchar('localePreference', { length: 10 })
+    .default('en')
+    .notNull(),
   role: userRoleEnum('role').default('CUSTOMER').notNull(),
   lockedUntil: timestamp('lockedUntil', { mode: 'date' }),
   sessionVersion: integer('sessionVersion').default(0).notNull(),
@@ -186,6 +189,10 @@ export const products = pgTable(
       .$defaultFn(() => generateShortId()),
     name: text('name').notNull(),
     description: text('description').notNull(),
+    localizedContent: json('localizedContent')
+      .$type<Record<string, { name?: string; description?: string }>>()
+      .default({})
+      .notNull(),
     image: text('image').notNull(),
     images: json('images').$type<string[]>().default([]).notNull(),
     category: text('category').notNull(),
