@@ -4,8 +4,13 @@ const FORMULA_PREFIX_RE = /^[=+\-@|\t\r]/
 type CsvRow = readonly unknown[]
 type CsvRows = Iterable<CsvRow> | AsyncIterable<CsvRow>
 
-const sanitizeCsvCell = (value: string): string =>
-  FORMULA_PREFIX_RE.test(value) ? `'${value}` : value
+const sanitizeCsvCell = (value: string): string => {
+  if (!FORMULA_PREFIX_RE.test(value)) {
+    return value
+  }
+
+  return `'${value.replaceAll("'", "''")}`
+}
 
 const toAsyncIterator = (rows: CsvRows): AsyncIterator<CsvRow> => {
   if (Symbol.asyncIterator in rows) {
