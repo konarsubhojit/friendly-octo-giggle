@@ -12,6 +12,7 @@ export interface UserProfile {
   role: string
   hasPassword: boolean
   currencyPreference: string
+  localePreference?: string
   createdAt: string
 }
 

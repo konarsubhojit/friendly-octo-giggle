@@ -9,6 +9,7 @@ import {
   useEffect,
   type ReactNode,
 } from 'react'
+import { useLocale } from '@/contexts/LocaleContext'
 
 export type CurrencyCode = 'INR' | 'USD' | 'EUR' | 'GBP'
 
@@ -55,6 +56,7 @@ const EXCHANGE_RATES_MAX_AGE_MS = 3600_000 // 1 hour
 export function CurrencyProvider({
   children,
 }: Readonly<{ children: ReactNode }>) {
+  const { locale } = useLocale()
   const [currency, setCurrency] = useState<CurrencyCode>('INR')
   const [rates, setRates] =
     useState<Record<CurrencyCode, number>>(FALLBACK_RATES)
@@ -142,14 +144,15 @@ export function CurrencyProvider({
   const formatPrice = useCallback(
     (priceInINR: number): string => {
       const converted = priceInINR * rates[currency]
-      return new Intl.NumberFormat(config.locale, {
+      const numberLocale = locale === 'es' ? 'es-ES' : config.locale
+      return new Intl.NumberFormat(numberLocale, {
         style: 'currency',
         currency: config.code,
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
       }).format(converted)
     },
-    [config, rates, currency]
+    [config, rates, currency, locale]
   )
 
   const value: CurrencyContextValue = useMemo(

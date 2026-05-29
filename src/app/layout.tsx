@@ -12,6 +12,13 @@ import { SpeedInsights } from '@vercel/speed-insights/next'
 import HeaderWrapper from '@/components/layout/HeaderWrapper'
 import { ServiceWorkerRegistration } from '@/components/pwa/ServiceWorkerRegistration'
 import { InstallBanner } from '@/components/pwa/InstallBanner'
+import { LocaleProvider } from '@/contexts/LocaleContext'
+import {
+  DEFAULT_LOCALE,
+  getLocaleDirection,
+  isSupportedLocale,
+} from '@/lib/i18n/config'
+import { getMessage } from '@/lib/i18n/messages'
 
 type NoncedTelemetryComponent = React.ComponentType<{
   readonly nonce?: string
@@ -20,13 +27,21 @@ type NoncedTelemetryComponent = React.ComponentType<{
 const AnalyticsWithNonce = Analytics as NoncedTelemetryComponent
 const SpeedInsightsWithNonce = SpeedInsights as NoncedTelemetryComponent
 
-function AppProviders({ children }: { readonly children: React.ReactNode }) {
+function AppProviders({
+  children,
+  locale,
+}: {
+  readonly children: React.ReactNode
+  readonly locale: 'en' | 'es'
+}) {
   return (
     <StoreProvider>
       <ThemeProvider>
-        <CurrencyProvider>
-          <SessionProvider>{children}</SessionProvider>
-        </CurrencyProvider>
+        <LocaleProvider locale={locale}>
+          <CurrencyProvider>
+            <SessionProvider>{children}</SessionProvider>
+          </CurrencyProvider>
+        </LocaleProvider>
       </ThemeProvider>
     </StoreProvider>
   )
@@ -50,6 +65,13 @@ export const metadata: Metadata = {
   title: 'The Kiyon Store',
   description:
     'Handmade crochet flowers, bags, keychains, and accessories — crafted with love, delivered to your door.',
+  alternates: {
+    languages: {
+      en: '/en',
+      es: '/es',
+      'x-default': '/en',
+    },
+  },
   manifest: '/manifest.webmanifest',
   appleWebApp: {
     capable: true,
@@ -76,11 +98,16 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
-  const nonce = (await headers()).get('x-nonce') || undefined
+  const requestHeaders = await headers()
+  const nonce = requestHeaders.get('x-nonce') || undefined
+  const localeHeader = requestHeaders.get('x-locale') || DEFAULT_LOCALE
+  const locale = isSupportedLocale(localeHeader) ? localeHeader : DEFAULT_LOCALE
+  const dir = getLocaleDirection(locale)
 
   return (
     <html
-      lang="en"
+      lang={locale}
+      dir={dir}
       className={`${nunito.className} ${playfairDisplay.variable}`}
     >
       <body className="antialiased">
@@ -88,9 +115,9 @@ export default async function RootLayout({
           href="#main-content"
           className="skip-link sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[200] focus:rounded-md focus:bg-[var(--surface)] focus:px-4 focus:py-2 focus:font-semibold focus:text-[var(--foreground)]"
         >
-          Skip to main content
+          {getMessage(locale, 'common.skipToContent')}
         </a>
-        <AppProviders>
+        <AppProviders locale={locale}>
           <HeaderWrapper />
           <main id="main-content" className="relative">
             {children}

@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { db } from '@/lib/db'
 import { apiSuccess, apiError, handleApiError } from '@/lib/api-utils'
 import { cacheProductById } from '@/lib/cache'
+import { getRequestLocale, localizeProductContent } from '@/lib/i18n/request'
 
 export async function GET(
   request: NextRequest,
@@ -16,7 +17,9 @@ export async function GET(
       return apiError('Product not found', 404)
     }
 
-    return apiSuccess({ product }, 200, {
+    const locale = await getRequestLocale()
+
+    return apiSuccess({ product: localizeProductContent(product, locale) }, 200, {
       'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=30',
     })
   } catch (error) {

@@ -135,6 +135,13 @@ describe('orderConfirmationTemplate', () => {
     // Newlines/tabs are literal whitespace in HTML and remain in the source.
     expect(result.html).toContain(messyVariant)
   })
+
+  it('renders localized confirmation copy in Spanish when locale is es', () => {
+    const result = orderConfirmationTemplate({ ...data, locale: 'es' })
+    expect(result.subject).toContain('Pedido confirmado')
+    expect(result.html).toContain('Resumen del pedido')
+    expect(result.html).toContain('lang="es"')
+  })
 })
 
 describe('orderStatusUpdateTemplate', () => {
@@ -208,5 +215,12 @@ describe('orderStatusUpdateTemplate', () => {
       expect(result.html).toBeTruthy()
       expect(result.text).toBeTruthy()
     }
+  })
+
+  it('renders localized status labels in Spanish when locale is es', () => {
+    const result = orderStatusUpdateTemplate({ ...data, locale: 'es' })
+    expect(result.subject).toContain('Enviado')
+    expect(result.html).toContain('Nuevo estado')
+    expect(result.html).toContain('lang="es"')
   })
 })
