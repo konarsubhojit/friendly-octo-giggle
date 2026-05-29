@@ -15,6 +15,13 @@
       "when": 1779903939392,
       "tag": "0001_needy_hellcat",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1780057144734,
+      "tag": "0002_lean_raza",
+      "breakpoints": true
     }
   ]
 }

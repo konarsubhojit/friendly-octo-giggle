@@ -42,6 +42,11 @@ describe('AdminDashboard', () => {
       topProducts: [],
       recentSales: [],
       totalCustomers: 14,
+      revenue7d: 500,
+      revenue30d: 900,
+      revenue90d: 1200,
+      lowStockAlerts: 3,
+      emailFailureCount: 1,
     })
 
     render(await AdminPageModule.default())
