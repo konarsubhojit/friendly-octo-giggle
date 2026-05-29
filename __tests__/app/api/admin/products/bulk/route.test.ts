@@ -2,7 +2,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mockCheckAdminAuth = vi.hoisted(() => vi.fn())
 const mockUpdateWhere = vi.hoisted(() => vi.fn())
-const mockUpdateSet = vi.hoisted(() => vi.fn(() => ({ where: mockUpdateWhere })))
+const mockUpdateSet = vi.hoisted(() =>
+  vi.fn(() => ({ where: mockUpdateWhere }))
+)
 const mockUpdate = vi.hoisted(() => vi.fn(() => ({ set: mockUpdateSet })))
 const mockInvalidateProductCaches = vi.hoisted(() => vi.fn())
 const mockRecordAdminAuditLog = vi.hoisted(() => vi.fn())
@@ -44,7 +46,8 @@ vi.mock('next/cache', () => ({
 }))
 
 vi.mock('drizzle-orm', async () => {
-  const actual = await vi.importActual<typeof import('drizzle-orm')>('drizzle-orm')
+  const actual =
+    await vi.importActual<typeof import('drizzle-orm')>('drizzle-orm')
   return {
     ...actual,
     and: vi.fn(),
