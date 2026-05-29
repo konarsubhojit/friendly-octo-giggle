@@ -288,6 +288,17 @@ export function Product({ product }) {
 />
 ```
 
+### Accessibility (WCAG 2.1 AA)
+
+- Ensure every route renders a primary landmark via `#main-content` and keep header/nav/footer semantic.
+- Include visible keyboard focus states on all interactive controls (`a`, `button`, form fields, custom focusable elements).
+- For icon-only controls (cart, wishlist, share, menu toggles), always provide descriptive `aria-label`.
+- Keep modals/menus/carousels keyboard-operable (Enter/Space defaults + Escape/Arrow key handlers where applicable).
+- Respect `prefers-reduced-motion: reduce` for animations and transitions.
+- Prefer form controls with explicit labels and wire validation feedback with `aria-describedby`.
+- Any async UI status (toast, cart updates, background actions) should announce through polite live regions (`aria-live="polite"`).
+- Update `playwright-tests/accessibility.spec.ts` when adding or changing user/admin routes so axe audits stay comprehensive.
+
 ---
 
 ## 4. Database Migrations
