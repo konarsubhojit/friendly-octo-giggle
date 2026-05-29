@@ -51,10 +51,6 @@ export const POST = async (request: Request) => {
 
   try {
     const payload = await parseJsonBody(request, ProductBulkSchema)
-    const now = new Date()
-
-    let affectedProducts = 0
-    let affectedVariants = 0
 
     if (
       payload.operation === 'bulk_price_update' &&
@@ -63,6 +59,11 @@ export const POST = async (request: Request) => {
     ) {
       return apiError('Price must be greater than zero', 400)
     }
+
+    const now = new Date()
+
+    let affectedProducts = 0
+    let affectedVariants = 0
 
     if (payload.operation === 'bulk_price_update') {
       const result = await drizzleDb

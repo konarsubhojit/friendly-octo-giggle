@@ -1,5 +1,5 @@
 const NEWLINE = '\n'
-const FORMULA_PREFIX_RE = /^[=+\-@]/
+const FORMULA_PREFIX_RE = /^[=+\-@|\t\r]/
 
 type CsvRow = readonly unknown[]
 type CsvRows = Iterable<CsvRow> | AsyncIterable<CsvRow>

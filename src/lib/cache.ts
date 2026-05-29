@@ -215,6 +215,34 @@ export const cacheCategoriesList = <T>(
   )
 }
 
+const normalizeCacheKeys = (
+  value?: string | readonly string[] | null
+): readonly string[] => {
+  if (value === undefined || value === null) {
+    return []
+  }
+
+  if (Array.isArray(value)) {
+    return value
+  }
+
+  return [value as string]
+}
+
+const normalizeNullableCacheKeys = (
+  value?: string | null | readonly (string | null | undefined)[]
+): readonly (string | null | undefined)[] => {
+  if (value === undefined || value === null) {
+    return []
+  }
+
+  if (Array.isArray(value)) {
+    return value
+  }
+
+  return [value as string | null | undefined]
+}
+
 export const invalidateProductCaches = async (
   productIds?: string | readonly string[]
 ): Promise<void> => {
@@ -222,11 +250,7 @@ export const invalidateProductCaches = async (
     await invalidateCachePattern(CACHE_KEYS.PRODUCTS_PATTERN)
     await invalidateCachePattern(CACHE_KEYS.ADMIN_PRODUCTS_PATTERN)
 
-    const ids = productIds
-      ? Array.isArray(productIds)
-        ? productIds
-        : [productIds]
-      : []
+    const ids = normalizeCacheKeys(productIds)
 
     for (const productId of ids) {
       await invalidateCachePattern(CACHE_KEYS.PRODUCT_BY_ID(productId))
@@ -330,7 +354,7 @@ export const invalidateAdminOrderCaches = async (
   userIds?: string | null | readonly (string | null | undefined)[]
 ): Promise<void> => {
   try {
-    const ids = Array.isArray(orderIds) ? orderIds : [orderIds]
+    const ids = normalizeCacheKeys(orderIds)
     await invalidateCachePattern(CACHE_KEYS.ADMIN_ORDERS_PATTERN)
     for (const orderId of ids) {
       await invalidateCachePattern(CACHE_KEYS.ADMIN_ORDER_BY_ID(orderId))
@@ -340,13 +364,9 @@ export const invalidateAdminOrderCaches = async (
 
     const uniqueUserIds = [
       ...new Set(
-        (
-          userIds
-            ? Array.isArray(userIds)
-              ? userIds
-              : [userIds]
-            : []
-        ).filter((userId): userId is string => Boolean(userId))
+        normalizeNullableCacheKeys(userIds).filter(
+          (userId): userId is string => Boolean(userId)
+        )
       ),
     ]
 

@@ -16,6 +16,8 @@ describe('admin-csv helpers', () => {
   it('prefixes spreadsheet formulas in string fields', () => {
     expect(csvEscape('=SUM(A1:A2)')).toBe("'=SUM(A1:A2)")
     expect(csvEscape('@cmd')).toBe("'@cmd")
+    expect(csvEscape('\t=SUM(A1:A2)')).toBe("'\t=SUM(A1:A2)")
+    expect(csvEscape('|cmd')).toBe("'|cmd")
   })
 
   it('serializes csv lines', () => {
