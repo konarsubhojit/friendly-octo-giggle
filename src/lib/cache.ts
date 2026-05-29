@@ -340,13 +340,9 @@ export const invalidateAdminOrderCaches = async (
 
     const uniqueUserIds = [
       ...new Set(
-        (
-          userIds
-            ? Array.isArray(userIds)
-              ? userIds
-              : [userIds]
-            : []
-        ).filter((userId): userId is string => Boolean(userId))
+        (userIds ? (Array.isArray(userIds) ? userIds : [userIds]) : []).filter(
+          (userId): userId is string => Boolean(userId)
+        )
       ),
     ]
 
