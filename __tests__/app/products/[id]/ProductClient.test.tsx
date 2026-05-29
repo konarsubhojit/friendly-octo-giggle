@@ -293,17 +293,25 @@ describe('ProductClient', () => {
     expect(
       screen.getAllByRole('button', { name: /Add to Cart/i })[0]
     ).toBeInTheDocument()
-    expect(screen.getAllByLabelText('Select quantity').length).toBeGreaterThan(0)
+    expect(screen.getAllByLabelText('Select quantity').length).toBeGreaterThan(
+      0
+    )
   })
 
   it('keeps quantity and cart controls in the mobile quick actions bar', () => {
     render(
-      <ProductClient product={makeProduct()} initialVariantId={null} aiEnabled />
+      <ProductClient
+        product={makeProduct()}
+        initialVariantId={null}
+        aiEnabled
+      />
     )
 
     const quickActions = screen.getByRole('region', { name: /quick actions/i })
 
-    expect(within(quickActions).getByLabelText('Select quantity')).toBeInTheDocument()
+    expect(
+      within(quickActions).getByLabelText('Select quantity')
+    ).toBeInTheDocument()
     expect(
       within(quickActions).getByRole('link', { name: /View Cart/i })
     ).toHaveAttribute('href', '/cart')
@@ -607,10 +615,9 @@ describe('ProductClient', () => {
     render(
       <ProductClient product={product} initialVariantId={null} aiEnabled />
     )
-    expect(screen.getAllByRole('link', { name: /View Cart/i })[0]).toHaveAttribute(
-      'href',
-      '/cart'
-    )
+    expect(
+      screen.getAllByRole('link', { name: /View Cart/i })[0]
+    ).toHaveAttribute('href', '/cart')
   })
 
   it('shows total price (quantity × price) in add-to-cart section', () => {
