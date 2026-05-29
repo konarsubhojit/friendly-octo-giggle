@@ -364,8 +364,8 @@ export const invalidateAdminOrderCaches = async (
 
     const uniqueUserIds = [
       ...new Set(
-        normalizeNullableCacheKeys(userIds).filter(
-          (userId): userId is string => Boolean(userId)
+        normalizeNullableCacheKeys(userIds).filter((userId): userId is string =>
+          Boolean(userId)
         )
       ),
     ]
