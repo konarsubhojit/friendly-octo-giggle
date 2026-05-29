@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { csvEscape, parseCsv, toCsvLine } from '@/features/admin/services/admin-csv'
+import {
+  csvEscape,
+  parseCsv,
+  toCsvLine,
+} from '@/features/admin/services/admin-csv'
 
 describe('admin-csv helpers', () => {
   it('escapes csv fields with quotes and commas', () => {

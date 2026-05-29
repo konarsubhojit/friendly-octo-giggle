@@ -6,7 +6,12 @@ import { products, productVariants } from '@/lib/schema'
 import { checkAdminAuth } from '@/features/admin/services/admin-auth'
 import { recordAdminAuditLog } from '@/features/admin/services/admin-audit-log'
 import { invalidateProductCaches } from '@/lib/cache'
-import { apiError, apiSuccess, handleApiError, parseJsonBody } from '@/lib/api-utils'
+import {
+  apiError,
+  apiSuccess,
+  handleApiError,
+  parseJsonBody,
+} from '@/lib/api-utils'
 
 export const dynamic = 'force-dynamic'
 
@@ -86,7 +91,10 @@ export const POST = async (request: Request) => {
         .update(products)
         .set({ category: payload.category, updatedAt: now })
         .where(
-          and(inArray(products.id, payload.productIds), isNull(products.deletedAt))
+          and(
+            inArray(products.id, payload.productIds),
+            isNull(products.deletedAt)
+          )
         )
       affectedProducts = result.rowCount ?? 0
     }
@@ -96,7 +104,10 @@ export const POST = async (request: Request) => {
         .update(products)
         .set({ deletedAt: now, updatedAt: now })
         .where(
-          and(inArray(products.id, payload.productIds), isNull(products.deletedAt))
+          and(
+            inArray(products.id, payload.productIds),
+            isNull(products.deletedAt)
+          )
         )
       const variantResult = await drizzleDb
         .update(productVariants)

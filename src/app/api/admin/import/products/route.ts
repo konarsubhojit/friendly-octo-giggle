@@ -5,7 +5,12 @@ import { parseCsv } from '@/features/admin/services/admin-csv'
 import { checkAdminAuth } from '@/features/admin/services/admin-auth'
 import { recordAdminAuditLog } from '@/features/admin/services/admin-audit-log'
 import { invalidateProductCaches } from '@/lib/cache'
-import { apiError, apiSuccess, handleApiError, parseJsonBody } from '@/lib/api-utils'
+import {
+  apiError,
+  apiSuccess,
+  handleApiError,
+  parseJsonBody,
+} from '@/lib/api-utils'
 import { primaryDrizzleDb } from '@/lib/db'
 import { products } from '@/lib/schema'
 
@@ -33,7 +38,9 @@ export const POST = async (request: Request) => {
     const payload = await parseJsonBody(request, ImportRequestSchema)
     const parsed = parseCsv(payload.csv)
 
-    const headerIndex = new Map(parsed.headers.map((header, idx) => [header, idx]))
+    const headerIndex = new Map(
+      parsed.headers.map((header, idx) => [header, idx])
+    )
     const missingHeaders = REQUIRED_HEADERS.filter(
       (header) => !headerIndex.has(header)
     )
@@ -116,7 +123,11 @@ export const POST = async (request: Request) => {
     await invalidateProductCaches()
     revalidateTag('products', {})
 
-    return apiSuccess({ ...report, dryRun: false, committedRows: validRows.length })
+    return apiSuccess({
+      ...report,
+      dryRun: false,
+      committedRows: validRows.length,
+    })
   } catch (error) {
     return handleApiError(error)
   }

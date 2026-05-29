@@ -58,7 +58,10 @@ describe('POST /api/admin/import/products', () => {
   })
 
   it('returns validation report during dry-run', async () => {
-    mockCheckAdminAuth.mockResolvedValue({ authorized: true, userId: 'admin-1' })
+    mockCheckAdminAuth.mockResolvedValue({
+      authorized: true,
+      userId: 'admin-1',
+    })
 
     const response = await POST(
       new Request('http://localhost/api/admin/import/products', {
@@ -77,11 +80,16 @@ describe('POST /api/admin/import/products', () => {
   })
 
   it('commits all rows after successful validation', async () => {
-    mockCheckAdminAuth.mockResolvedValue({ authorized: true, userId: 'admin-1' })
+    mockCheckAdminAuth.mockResolvedValue({
+      authorized: true,
+      userId: 'admin-1',
+    })
 
     const mockValues = vi.fn()
     const mockInsert = vi.fn(() => ({ values: mockValues }))
-    mockTransaction.mockImplementation(async (callback) => callback({ insert: mockInsert }))
+    mockTransaction.mockImplementation(async (callback) =>
+      callback({ insert: mockInsert })
+    )
 
     const response = await POST(
       new Request('http://localhost/api/admin/import/products', {
