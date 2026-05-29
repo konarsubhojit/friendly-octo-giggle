@@ -6,7 +6,6 @@ import ProductGrid, {
 import { BestsellersScroller } from '@/features/product/components/BestsellersScroller'
 import { db, drizzleDb } from '@/lib/db'
 import { cacheCategoriesList, cacheProductsBestsellers } from '@/lib/cache'
-import { searchProductIdsCached } from '@/lib/search'
 import { categories as categoriesTable } from '@/lib/schema'
 import { isNull, asc } from 'drizzle-orm'
 import { logError } from '@/lib/logger'
@@ -14,6 +13,13 @@ import {
   getVariantMinPrice,
   getVariantTotalStock,
 } from '@/features/product/variant-utils'
+import {
+  SEARCH_SORT_VALUES,
+  SEARCH_VARIANT_VALUES,
+  searchCatalog,
+  type SearchSort,
+  type SearchVariantFilter,
+} from '@/lib/search-discovery'
 
 export const revalidate = 300
 
@@ -40,31 +46,16 @@ const toGridItem = (p: {
   soldCount: p.soldCount ?? 0,
 })
 
-/** Convert a MinimalProduct (already has derived price/stock) to a ProductGridItem */
-const toMinimalGridItem = (p: {
-  id: string
-  name: string
-  description: string
-  image: string
-  category: string
-  price: number
-  stock: number
-  soldCount: number
-}): ProductGridItem => ({
-  id: p.id,
-  name: p.name,
-  description: p.description,
-  image: p.image,
-  category: p.category,
-  price: p.price,
-  stock: p.stock,
-  soldCount: p.soldCount,
-})
-
 interface ShopPageProps {
   readonly searchParams?: Promise<{
     q?: string | string[]
     category?: string | string[]
+    sort?: string | string[]
+    minPrice?: string | string[]
+    maxPrice?: string | string[]
+    inStock?: string | string[]
+    minRating?: string | string[]
+    variant?: string | string[]
   }>
 }
 
@@ -83,17 +74,45 @@ const ShopPage = async ({ searchParams }: ShopPageProps) => {
   const search = getSingleValue(resolvedSearchParams.q)?.trim() ?? ''
   const selectedCategory =
     getSingleValue(resolvedSearchParams.category)?.trim() ?? 'All'
+  const rawSort = getSingleValue(resolvedSearchParams.sort)?.trim()
+  const selectedSort: SearchSort =
+    rawSort && SEARCH_SORT_VALUES.includes(rawSort as SearchSort)
+      ? (rawSort as SearchSort)
+      : 'relevance'
+  const rawMinPrice = Number.parseFloat(
+    getSingleValue(resolvedSearchParams.minPrice) ?? ''
+  )
+  const rawMaxPrice = Number.parseFloat(
+    getSingleValue(resolvedSearchParams.maxPrice) ?? ''
+  )
+  const minPrice = Number.isFinite(rawMinPrice) ? rawMinPrice : undefined
+  const maxPrice = Number.isFinite(rawMaxPrice) ? rawMaxPrice : undefined
+  const inStock = getSingleValue(resolvedSearchParams.inStock) === 'true'
+  const rawMinRating = Number.parseFloat(
+    getSingleValue(resolvedSearchParams.minRating) ?? ''
+  )
+  const minRating = Number.isFinite(rawMinRating) ? rawMinRating : undefined
+  const rawVariant = getSingleValue(resolvedSearchParams.variant)?.trim()
+  const selectedVariant: SearchVariantFilter =
+    rawVariant &&
+    SEARCH_VARIANT_VALUES.includes(rawVariant as SearchVariantFilter)
+      ? (rawVariant as SearchVariantFilter)
+      : 'all'
 
   let shopData: {
     products: ProductGridItem[]
     bestsellers: ProductGridItem[]
     categoryNames: string[]
     hasNextPage: boolean
+    suggestions: string[]
+    trending: Array<{ id: string; name: string; category: string }>
   } = {
     products: [],
     bestsellers: [],
     categoryNames: [],
     hasNextPage: false,
+    suggestions: [],
+    trending: [],
   }
 
   try {
@@ -111,71 +130,50 @@ const ShopPage = async ({ searchParams }: ShopPageProps) => {
       ),
     ])
 
-    if (search) {
-      const matchedIds = await searchProductIdsCached(search, {
-        category: selectedCategoryFilter,
-        limit: SHOP_INITIAL_SIZE + 1,
-      })
+    const searchResult = await searchCatalog({
+      q: search,
+      category: selectedCategoryFilter,
+      sort: selectedSort,
+      minPrice,
+      maxPrice,
+      inStock,
+      minRating,
+      variant: selectedVariant,
+      limit: SHOP_INITIAL_SIZE + 1,
+      offset: 0,
+    })
 
-      if (matchedIds === null) {
-        const allProducts = await db.products.findAllMinimal({
-          limit: SHOP_INITIAL_SIZE + 1,
-          offset: 0,
-          search,
-          category: selectedCategoryFilter,
-        })
-
-        shopData = {
-          products: allProducts
-            .slice(0, SHOP_INITIAL_SIZE)
-            .map(toMinimalGridItem),
-          bestsellers: topProducts.map(toGridItem),
-          categoryNames: cats.map((c) => c.name),
-          hasNextPage: allProducts.length > SHOP_INITIAL_SIZE,
-        }
-      } else {
-        const pageIds = matchedIds.slice(0, SHOP_INITIAL_SIZE)
-        const matchedProducts = await db.products.findMinimalByIds(
-          pageIds,
-          selectedCategoryFilter
-        )
-        const productsById = new Map(
-          matchedProducts.map((product) => [product.id, product])
-        )
-        const orderedProducts = pageIds.flatMap((id) => {
-          const product = productsById.get(id)
-          return product ? [product] : []
-        })
-
-        shopData = {
-          products: orderedProducts.map(toMinimalGridItem),
-          bestsellers: topProducts.map(toGridItem),
-          categoryNames: cats.map((c) => c.name),
-          hasNextPage: matchedIds.length > SHOP_INITIAL_SIZE,
-        }
-      }
-    } else {
-      const allProducts = await db.products.findAllMinimal({
-        limit: SHOP_INITIAL_SIZE + 1,
-        offset: 0,
-        search,
-        category: selectedCategoryFilter,
-      })
-
-      shopData = {
-        products: allProducts
-          .slice(0, SHOP_INITIAL_SIZE)
-          .map(toMinimalGridItem),
-        bestsellers: topProducts.map(toGridItem),
-        categoryNames: cats.map((c) => c.name),
-        hasNextPage: allProducts.length > SHOP_INITIAL_SIZE,
-      }
+    shopData = {
+      products: searchResult.results
+        .slice(0, SHOP_INITIAL_SIZE)
+        .map((product) => ({
+          id: product.id,
+          name: product.name,
+          description: product.description,
+          image: product.image,
+          category: product.category,
+          price: product.price,
+          stock: product.stock,
+          soldCount: product.soldCount,
+        })),
+      bestsellers: topProducts.map(toGridItem),
+      categoryNames: cats.map((c) => c.name),
+      hasNextPage: searchResult.total > SHOP_INITIAL_SIZE,
+      suggestions: searchResult.suggestions,
+      trending: searchResult.trending,
     }
   } catch (error) {
     logError({ error, context: 'shop_products_fetch' })
   }
 
-  const { products, bestsellers, categoryNames, hasNextPage } = shopData
+  const {
+    products,
+    bestsellers,
+    categoryNames,
+    hasNextPage,
+    suggestions,
+    trending,
+  } = shopData
 
   return (
     <div className="min-h-screen bg-warm-gradient">
@@ -221,6 +219,14 @@ const ShopPage = async ({ searchParams }: ShopPageProps) => {
         categories={categoryNames}
         search={search}
         selectedCategory={selectedCategory}
+        selectedSort={selectedSort}
+        minPrice={minPrice}
+        maxPrice={maxPrice}
+        inStock={inStock}
+        minRating={minRating}
+        variant={selectedVariant}
+        suggestions={suggestions}
+        trending={trending}
         hasNextPage={hasNextPage}
         batchSize={SHOP_BATCH_SIZE}
       />

@@ -153,6 +153,37 @@ Retrieve single product by ID.
 
 ### Cart
 
+### Search
+
+#### GET /api/search
+
+Search products with relevance, faceted filtering, and sort controls.
+
+**Query Parameters**:
+
+- `q` (required): search query
+- `category` (optional)
+- `minPrice`, `maxPrice` (optional)
+- `inStock=true|false` (optional)
+- `minRating` (optional, `0-5`)
+- `variant` (optional: `all`, `single`, `multiple`)
+- `sort` (optional: `relevance`, `price_asc`, `price_desc`, `newest`, `best_selling`, `top_rated`)
+- `limit` (optional, default `20`, max `50`)
+- `offset` (optional, default `0`)
+
+**Response fields** include `results`, `total`, `facets`, `suggestions`, and `trending` (for zero-result fallbacks).
+
+#### GET /api/search/suggest
+
+Autocomplete suggestions for search-as-you-type.
+
+**Query Parameters**:
+
+- `q` (required): partial query
+- `limit` (optional, default `8`, max `10`)
+
+**Caching**: 30s TTL with stale-while-revalidate.
+
 #### GET /api/cart
 
 Get cart for current user/session. Returns null if no cart exists.

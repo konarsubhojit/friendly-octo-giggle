@@ -82,7 +82,7 @@ describe('app/layout.tsx', () => {
     )
   })
 
-  it('wraps children in a div, not a main element', async () => {
+  it('wraps children in the main landmark', async () => {
     mockHeaders.mockResolvedValue({
       get: vi.fn(() => null),
     })
@@ -92,9 +92,10 @@ describe('app/layout.tsx', () => {
     })
     const { container } = render(ui)
     const mainElements = container.querySelectorAll('main')
-    expect(mainElements.length).toBe(0)
+    expect(mainElements.length).toBe(1)
+    expect(mainElements[0]).toHaveAttribute('id', 'main-content')
     const child = container.querySelector("[data-testid='child']")
-    expect(child?.closest('div')).toBeTruthy()
+    expect(child?.closest('main')).toBeTruthy()
   })
 
   it('renders HeaderWrapper', async () => {

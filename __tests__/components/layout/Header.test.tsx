@@ -557,4 +557,37 @@ describe('Header', () => {
     expect(wishlistLink).not.toBeNull()
     expect(wishlistLink?.textContent).toContain('My Wishlist')
   })
+
+  it('closes open menus when Escape is pressed', () => {
+    vi.mocked(useSession).mockReturnValue({
+      data: {
+        user: {
+          id: 'user1',
+          name: 'Alice',
+          email: 'alice@example.com',
+          image: null,
+          role: 'CUSTOMER',
+        },
+        expires: '',
+      },
+      status: 'authenticated',
+      update: vi.fn(),
+    })
+    render(<Header />)
+
+    act(() => {
+      fireEvent.click(screen.getByLabelText('User menu'))
+      fireEvent.click(screen.getByLabelText('Open menu'))
+    })
+
+    expect(screen.getByRole('menu')).toBeTruthy()
+    expect(screen.getByLabelText('Close menu')).toBeTruthy()
+
+    act(() => {
+      fireEvent.keyDown(document, { key: 'Escape' })
+    })
+
+    expect(screen.queryByRole('menu')).toBeNull()
+    expect(screen.queryByLabelText('Close menu')).toBeNull()
+  })
 })

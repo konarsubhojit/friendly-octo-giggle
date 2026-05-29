@@ -1144,6 +1144,14 @@ grep "cache_operation" logs/*.log | grep -c "hit"
 grep "cache_operation" logs/*.log | grep -c "miss"
 ```
 
+**Prometheus metrics endpoint:**
+
+```bash
+curl https://yourdomain.com/api/metrics
+```
+
+See `docs/observability.md` for metric names, alert thresholds, and synthetic uptime checks.
+
 ### Health Checks
 
 ```bash

@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Nunito, Playfair_Display } from 'next/font/google'
 import { headers } from 'next/headers'
 import './globals.css'
@@ -10,6 +10,8 @@ import { Toaster } from 'react-hot-toast'
 import { Analytics } from '@vercel/analytics/next'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import HeaderWrapper from '@/components/layout/HeaderWrapper'
+import { ServiceWorkerRegistration } from '@/components/pwa/ServiceWorkerRegistration'
+import { InstallBanner } from '@/components/pwa/InstallBanner'
 
 type NoncedTelemetryComponent = React.ComponentType<{
   readonly nonce?: string
@@ -48,6 +50,25 @@ export const metadata: Metadata = {
   title: 'The Kiyon Store',
   description:
     'Handmade crochet flowers, bags, keychains, and accessories — crafted with love, delivered to your door.',
+  manifest: '/manifest.webmanifest',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Kiyon',
+  },
+  icons: {
+    apple: '/icons/apple-touch-icon.png',
+  },
+  other: {
+    'mobile-web-app-capable': 'yes',
+  },
+}
+
+export const viewport: Viewport = {
+  themeColor: '#e89588',
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
 }
 
 export default async function RootLayout({
@@ -63,12 +84,24 @@ export default async function RootLayout({
       className={`${nunito.className} ${playfairDisplay.variable}`}
     >
       <body className="antialiased">
+        <a
+          href="#main-content"
+          className="skip-link sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[200] focus:rounded-md focus:bg-[var(--surface)] focus:px-4 focus:py-2 focus:font-semibold focus:text-[var(--foreground)]"
+        >
+          Skip to main content
+        </a>
         <AppProviders>
           <HeaderWrapper />
-          <div className="relative">{children}</div>
+          <main id="main-content" className="relative">
+            {children}
+          </main>
           <Toaster
             position="top-right"
             toastOptions={{
+              ariaProps: {
+                role: 'status',
+                'aria-live': 'polite',
+              },
               style: {
                 background: 'var(--surface)',
                 color: 'var(--foreground)',
@@ -77,7 +110,9 @@ export default async function RootLayout({
               },
             }}
           />
+          <InstallBanner />
         </AppProviders>
+        <ServiceWorkerRegistration />
         <AnalyticsWithNonce nonce={nonce} />
         <SpeedInsightsWithNonce nonce={nonce} />
       </body>

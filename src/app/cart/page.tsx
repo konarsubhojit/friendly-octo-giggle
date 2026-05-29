@@ -22,7 +22,7 @@ import {
 } from '@/features/cart/store/cartSlice'
 import type { AppDispatch } from '@/lib/store'
 import { CartProductGroup } from '@/features/cart/components/CartProductGroup'
-import { CheckoutForm } from '@/features/cart/components/CheckoutForm'
+import { CheckoutProgress } from '@/features/cart/components/CheckoutProgress'
 import CartGlyph from '@/components/icons/CartGlyph'
 import { LeafAccent } from '@/components/ui/DecorativeElements'
 import { buildCheckoutPricingSummary } from '@/features/orders/services/order-summary'
@@ -92,7 +92,18 @@ export default function CartPage() {
 
   const handleCustomizationChange = useCallback(
     (itemId: string, note: string) => {
-      setCustomizationNotes((prev) => ({ ...prev, [itemId]: note }))
+      setCustomizationNotes((prev) => {
+        const next = { ...prev, [itemId]: note }
+        try {
+          sessionStorage.setItem(
+            'pending_customization_notes',
+            JSON.stringify(next)
+          )
+        } catch {
+          // Checkout should still work when storage is unavailable (quota/private mode).
+        }
+        return next
+      })
     },
     []
   )
@@ -160,6 +171,7 @@ export default function CartPage() {
   return (
     <div className="min-h-screen bg-warm-gradient">
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 relative">
+        <CheckoutProgress currentStep="cart" />
         <LeafAccent className="absolute top-32 right-4 w-8 h-8 opacity-20 hidden sm:block animate-float-gentle" />
         <LeafAccent className="absolute bottom-20 left-2 w-10 h-10 opacity-15 hidden sm:block animate-float-slow" />
 
@@ -233,11 +245,16 @@ export default function CartPage() {
 
                 <div className="mb-4 p-3 bg-[var(--accent-blush)]/50 rounded-lg border border-[var(--border-warm)] text-center">
                   <p className="text-xs text-[var(--text-muted)]">
-                    Payment integration coming soon
+                    Shipping and address selection in next step
                   </p>
                 </div>
 
-                <CheckoutForm customizationNotes={customizationNotes} />
+                <Link
+                  href="/checkout/shipping"
+                  className="inline-flex w-full items-center justify-center rounded-xl bg-[var(--accent-rose)] px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90"
+                >
+                  Continue to Shipping
+                </Link>
               </Card>
             </div>
           </div>

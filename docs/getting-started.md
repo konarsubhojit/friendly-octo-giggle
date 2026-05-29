@@ -201,7 +201,7 @@ friendly-octo-giggle/
 │   │   │   └── health/        # Health check
 │   │   ├── auth/              # Sign-in, register pages
 │   │   ├── cart/              # Shopping cart page
-│   │   ├── checkout/          # Checkout review page
+│   │   ├── checkout/          # Multi-step checkout (shipping, review, confirmation)
 │   │   ├── products/          # Product listing and detail pages
 │   │   ├── orders/            # Order listing and detail pages
 │   │   ├── shop/              # Shop page

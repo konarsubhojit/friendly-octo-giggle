@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { AssistantMarkdown } from './AssistantMarkdown'
 
 interface ProductAssistantProps {
   readonly productId: string
@@ -270,7 +271,11 @@ export default function ProductAssistant({
                   : 'bg-[var(--accent-cream)] text-[var(--foreground)] border border-[var(--border-warm)]'
               }`}
             >
-              <span>{msg.text}</span>
+              {msg.role === 'assistant' ? (
+                <AssistantMarkdown text={msg.text} />
+              ) : (
+                <span>{msg.text}</span>
+              )}
             </div>
           </div>
         ))}
