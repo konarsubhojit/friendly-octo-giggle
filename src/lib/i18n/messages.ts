@@ -114,8 +114,6 @@ export const getMessage = (locale: AppLocale, key: MessageKey): string => {
   if (typeof localized === 'string') return localized
 
   const fallback =
-    messages.en[namespace][
-      leaf as keyof (typeof messages.en)[typeof namespace]
-    ]
+    messages.en[namespace][leaf as keyof (typeof messages.en)[typeof namespace]]
   return typeof fallback === 'string' ? fallback : key
 }
