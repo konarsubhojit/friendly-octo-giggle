@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Nunito, Playfair_Display } from 'next/font/google'
 import { headers } from 'next/headers'
 import './globals.css'
@@ -10,6 +10,8 @@ import { Toaster } from 'react-hot-toast'
 import { Analytics } from '@vercel/analytics/next'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import HeaderWrapper from '@/components/layout/HeaderWrapper'
+import { ServiceWorkerRegistration } from '@/components/pwa/ServiceWorkerRegistration'
+import { InstallBanner } from '@/components/pwa/InstallBanner'
 
 type NoncedTelemetryComponent = React.ComponentType<{
   readonly nonce?: string
@@ -48,6 +50,25 @@ export const metadata: Metadata = {
   title: 'The Kiyon Store',
   description:
     'Handmade crochet flowers, bags, keychains, and accessories — crafted with love, delivered to your door.',
+  manifest: '/manifest.webmanifest',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Kiyon',
+  },
+  icons: {
+    apple: '/icons/apple-touch-icon.png',
+  },
+  other: {
+    'mobile-web-app-capable': 'yes',
+  },
+}
+
+export const viewport: Viewport = {
+  themeColor: '#e89588',
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
 }
 
 export default async function RootLayout({
@@ -77,7 +98,9 @@ export default async function RootLayout({
               },
             }}
           />
+          <InstallBanner />
         </AppProviders>
+        <ServiceWorkerRegistration />
         <AnalyticsWithNonce nonce={nonce} />
         <SpeedInsightsWithNonce nonce={nonce} />
       </body>

@@ -165,4 +165,92 @@ describe('ImageCarousel', () => {
     })
     expect(section).toHaveAttribute('aria-roledescription', 'carousel')
   })
+
+  it('tracks swipe gestures across multiple touchmove events', () => {
+    render(
+      <ImageCarousel
+        images={['/img1.jpg', '/img2.jpg']}
+        productName="Product Swipe"
+      />
+    )
+
+    const section = screen.getByRole('region', {
+      name: /image carousel for product swipe/i,
+    })
+
+    fireEvent.touchStart(section, {
+      touches: [{ clientX: 220, clientY: 100 }],
+    })
+
+    fireEvent.touchMove(section, {
+      touches: [{ clientX: 150, clientY: 105 }],
+    })
+    fireEvent.touchMove(section, {
+      touches: [{ clientX: 110, clientY: 108 }],
+    })
+    fireEvent.touchEnd(section, {
+      changedTouches: [{ clientX: 110, clientY: 108 }],
+    })
+
+    expect(
+      screen.getByRole('img', { name: /product swipe image 2 of 2/i })
+    ).toBeInTheDocument()
+  })
+
+  it('does not navigate on swipe end while zoomed', () => {
+    render(
+      <ImageCarousel
+        images={['/img1.jpg', '/img2.jpg']}
+        productName="Product Zoom"
+      />
+    )
+
+    const section = screen.getByRole('region', {
+      name: /image carousel for product zoom/i,
+    })
+
+    fireEvent.touchStart(section, {
+      touches: [
+        { clientX: 100, clientY: 100 },
+        { clientX: 140, clientY: 100 },
+      ],
+    })
+    fireEvent.touchMove(section, {
+      touches: [
+        { clientX: 80, clientY: 100 },
+        { clientX: 180, clientY: 100 },
+      ],
+    })
+    fireEvent.touchStart(section, {
+      touches: [{ clientX: 220, clientY: 100 }],
+    })
+    fireEvent.touchEnd(section, {
+      changedTouches: [{ clientX: 100, clientY: 100 }],
+    })
+
+    expect(
+      screen.getByRole('img', { name: /product zoom image 1 of 2/i })
+    ).toBeInTheDocument()
+  })
+
+  it('supports pinch-to-zoom in the single-image layout', () => {
+    render(<ImageCarousel images={['/img1.jpg']} productName="Solo Product" />)
+
+    const image = screen.getByLabelText(/tap to zoom in/i)
+
+    fireEvent.touchStart(image, {
+      touches: [
+        { clientX: 100, clientY: 100 },
+        { clientX: 140, clientY: 100 },
+      ],
+    })
+
+    fireEvent.touchMove(image, {
+      touches: [
+        { clientX: 80, clientY: 100 },
+        { clientX: 180, clientY: 100 },
+      ],
+    })
+    expect(screen.getByLabelText(/tap to zoom out/i)).toBeInTheDocument()
+  })
 })

@@ -23,6 +23,20 @@ const getAnimationClass = (
     : 'animate-slide-in-left'
 }
 
+// Minimum horizontal swipe distance to trigger navigation (px)
+const SWIPE_THRESHOLD = 50
+
+// Minimum pinch scale change to toggle zoom
+const PINCH_ZOOM_SCALE = 1.5
+
+// Pure utility — lives outside component so it is never recreated on render
+const getTouchDistance = (touches: React.TouchList): number => {
+  if (touches.length < 2) return 0
+  const dx = touches[0].clientX - touches[1].clientX
+  const dy = touches[0].clientY - touches[1].clientY
+  return Math.sqrt(dx * dx + dy * dy)
+}
+
 const ImageCarousel = ({
   images,
   productName,
@@ -31,8 +45,15 @@ const ImageCarousel = ({
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isAnimating, setIsAnimating] = useState(false)
   const [direction, setDirection] = useState<'next' | 'prev'>('next')
+  const [isZoomed, setIsZoomed] = useState(false)
   const autoScrollRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+
+  // Touch tracking refs
+  const touchStartX = useRef(0)
+  const touchStartY = useRef(0)
+  const touchStartDist = useRef(0)
+  const isSwiping = useRef(false)
 
   const total = images.length
 
@@ -58,18 +79,20 @@ const ImageCarousel = ({
   // Auto-scroll — always returns a cleanup so the return type is consistent
   useEffect(() => {
     let id: ReturnType<typeof setTimeout> | undefined
-    if (total > 1) {
+    // Pause auto-scroll while the user has zoomed in
+    if (total > 1 && !isZoomed) {
       id = setTimeout(goNext, autoScrollInterval)
       autoScrollRef.current = id ?? null
     }
     return () => {
       if (id !== undefined) clearTimeout(id)
     }
-  }, [currentIndex, goNext, autoScrollInterval, total])
+  }, [currentIndex, goNext, autoScrollInterval, total, isZoomed])
 
   // Mouse wheel navigation
   useEffect(() => {
     const handleWheel = (e: WheelEvent) => {
+      if (isZoomed) return
       e.preventDefault()
       if (e.deltaY > 0) {
         goNext()
@@ -81,7 +104,89 @@ const ImageCarousel = ({
     const container = containerRef.current
     container?.addEventListener('wheel', handleWheel, { passive: false })
     return () => container?.removeEventListener('wheel', handleWheel)
-  }, [goNext, goPrev])
+  }, [goNext, goPrev, isZoomed])
+
+  // ─── Touch handlers ────────────────────────────────────────────────────────
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length === 1) {
+      touchStartX.current = e.touches[0].clientX
+      touchStartY.current = e.touches[0].clientY
+      isSwiping.current = false
+    } else if (e.touches.length === 2) {
+      touchStartDist.current = getTouchDistance(e.touches)
+      isSwiping.current = false
+    }
+  }, [])
+
+  const resetTouchState = useCallback(() => {
+    touchStartX.current = 0
+    touchStartY.current = 0
+    touchStartDist.current = 0
+    isSwiping.current = false
+  }, [])
+
+  const handleTouchMove = useCallback(
+    (e: React.TouchEvent) => {
+      if (e.touches.length === 2 && touchStartDist.current > 0) {
+        e.preventDefault()
+        isSwiping.current = false
+        // Track pinch in touchmove (changedTouches in touchend only has
+        // the *lifted* finger, so scale detection must happen here)
+        const currentDist = getTouchDistance(e.touches)
+        const ratio = currentDist / touchStartDist.current
+        if (ratio >= PINCH_ZOOM_SCALE) {
+          setIsZoomed(true)
+        } else if (ratio <= 1 / PINCH_ZOOM_SCALE) {
+          setIsZoomed(false)
+        }
+        return
+      }
+
+      if (e.touches.length === 1) {
+        const dx = Math.abs(e.touches[0].clientX - touchStartX.current)
+        const dy = Math.abs(e.touches[0].clientY - touchStartY.current)
+        const shouldSwipe = isSwiping.current || (dx > dy && dx > 10)
+        // Predominantly horizontal — prevent page scroll while swiping
+        if (shouldSwipe) {
+          e.preventDefault()
+          isSwiping.current = true
+        }
+      }
+    },
+    [setIsZoomed]
+  )
+
+  const handleTouchEnd = useCallback(
+    (e: React.TouchEvent) => {
+      if (isZoomed || e.changedTouches.length !== 1 || total <= 1) {
+        resetTouchState()
+        return
+      }
+
+      if (e.changedTouches.length === 1) {
+        const deltaX = e.changedTouches[0].clientX - touchStartX.current
+        const deltaY = e.changedTouches[0].clientY - touchStartY.current
+
+        if (
+          Math.abs(deltaX) > SWIPE_THRESHOLD &&
+          Math.abs(deltaX) > Math.abs(deltaY)
+        ) {
+          if (deltaX < 0) {
+            goNext()
+          } else {
+            goPrev()
+          }
+        }
+      }
+      resetTouchState()
+    },
+    [goNext, goPrev, isZoomed, resetTouchState, total]
+  )
+
+  const handleImageClick = useCallback(() => {
+    if (isZoomed) setIsZoomed(false)
+  }, [isZoomed])
 
   if (total === 0) return null
 
@@ -89,13 +194,20 @@ const ImageCarousel = ({
   if (total === 1) {
     return (
       <div className="relative overflow-hidden">
-        <div className="relative aspect-square w-full rounded-2xl overflow-hidden shadow-2xl border-4 border-[var(--border-warm)] bg-[var(--accent-blush)]/30">
+        <div
+          className={`relative aspect-square w-full rounded-2xl overflow-hidden shadow-2xl border-4 border-[var(--border-warm)] bg-[var(--accent-blush)]/30 transition-transform duration-300 ${isZoomed ? 'cursor-zoom-out' : 'cursor-zoom-in'}`}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          onClick={() => setIsZoomed((z) => !z)}
+          aria-label={isZoomed ? 'Tap to zoom out' : 'Tap to zoom in'}
+        >
           <Image
             src={images[0]}
             alt={productName}
             fill
-            sizes="(max-width: 768px) 100vw, 50vw"
-            className="object-contain"
+            sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 600px"
+            className={`object-contain transition-transform duration-300 ${isZoomed ? 'scale-150 cursor-zoom-out' : 'cursor-zoom-in'}`}
             priority
           />
         </div>
@@ -115,70 +227,87 @@ const ImageCarousel = ({
         aria-roledescription="carousel"
         aria-label={`Image carousel for ${productName}. Use the previous and next buttons to navigate.`}
         className="relative aspect-square w-full rounded-2xl overflow-hidden shadow-2xl border-4 border-[var(--border-warm)] bg-[var(--accent-blush)]/30 group focus:outline-none focus:ring-2 focus:ring-[var(--accent-warm)]"
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onClick={handleImageClick}
       >
-        <div className={`relative w-full h-full ${animationClass}`}>
+        <div
+          className={`relative w-full h-full transition-transform duration-300 ${animationClass} ${isZoomed ? 'scale-150 cursor-zoom-out' : 'cursor-zoom-in'}`}
+        >
           <Image
             src={images[currentIndex]}
             alt={`${productName} image ${currentIndex + 1} of ${total}`}
             fill
-            sizes="(max-width: 768px) 100vw, 50vw"
+            sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 600px"
             className="object-contain transition-opacity duration-300"
             priority={currentIndex === 0}
           />
         </div>
 
+        {/* Zoom indicator */}
+        {isZoomed && (
+          <div className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-black/40 text-white text-xs font-semibold backdrop-blur-sm pointer-events-none">
+            Tap to zoom out
+          </div>
+        )}
+
         {/* Hover overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
 
-        {/* Prev button */}
-        <button
-          onClick={(e) => {
-            e.stopPropagation()
-            goPrev()
-          }}
-          aria-label="Previous image"
-          className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-[var(--surface)]/90 backdrop-blur-sm border border-[var(--border-warm)] shadow-warm flex items-center justify-center text-[var(--foreground)] hover:bg-[var(--accent-peach)] transition-all duration-200 opacity-0 group-hover:opacity-100 z-10"
-        >
-          <svg
-            className="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            aria-hidden="true"
+        {/* Prev button — hidden while zoomed */}
+        {!isZoomed && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              goPrev()
+            }}
+            aria-label="Previous image"
+            className="absolute left-3 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-[var(--surface)]/90 backdrop-blur-sm border border-[var(--border-warm)] shadow-warm flex items-center justify-center text-[var(--foreground)] hover:bg-[var(--accent-peach)] transition-all duration-200 opacity-0 group-hover:opacity-100 sm:w-10 sm:h-10 z-10"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M15 19l-7-7 7-7"
-            />
-          </svg>
-        </button>
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 19l-7-7 7-7"
+              />
+            </svg>
+          </button>
+        )}
 
-        {/* Next button */}
-        <button
-          onClick={(e) => {
-            e.stopPropagation()
-            goNext()
-          }}
-          aria-label="Next image"
-          className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-[var(--surface)]/90 backdrop-blur-sm border border-[var(--border-warm)] shadow-warm flex items-center justify-center text-[var(--foreground)] hover:bg-[var(--accent-peach)] transition-all duration-200 opacity-0 group-hover:opacity-100 z-10"
-        >
-          <svg
-            className="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            aria-hidden="true"
+        {/* Next button — hidden while zoomed */}
+        {!isZoomed && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              goNext()
+            }}
+            aria-label="Next image"
+            className="absolute right-3 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-[var(--surface)]/90 backdrop-blur-sm border border-[var(--border-warm)] shadow-warm flex items-center justify-center text-[var(--foreground)] hover:bg-[var(--accent-peach)] transition-all duration-200 opacity-0 group-hover:opacity-100 sm:w-10 sm:h-10 z-10"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M9 5l7 7-7 7"
-            />
-          </svg>
-        </button>
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 5l7 7-7 7"
+              />
+            </svg>
+          </button>
+        )}
 
         {/* Image counter badge */}
         <div className="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-black/40 text-white text-xs font-semibold backdrop-blur-sm">
@@ -199,7 +328,7 @@ const ImageCarousel = ({
             aria-selected={idx === currentIndex}
             aria-label={`Go to image ${idx + 1}`}
             onClick={() => goToIndex(idx, idx > currentIndex ? 'next' : 'prev')}
-            className={`rounded-full transition-all duration-300 ${
+            className={`rounded-full transition-all duration-300 min-tap flex items-center justify-center ${
               idx === currentIndex
                 ? 'w-6 h-2.5 bg-[var(--accent-warm)]'
                 : 'w-2.5 h-2.5 bg-[var(--accent-blush)] hover:bg-[var(--accent-peach)]'
