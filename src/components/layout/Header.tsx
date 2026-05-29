@@ -46,6 +46,7 @@ function UserMenu({ user, menuOpen, setMenuOpen, menuRef }: UserMenuProps) {
         aria-label="User menu"
         aria-expanded={menuOpen}
         aria-haspopup="menu"
+        aria-controls="user-menu"
       >
         {user.image ? (
           <Image
@@ -78,6 +79,7 @@ function UserMenu({ user, menuOpen, setMenuOpen, menuRef }: UserMenuProps) {
 
       {menuOpen && (
         <div
+          id="user-menu"
           className="absolute right-0 mt-2 w-56 bg-[var(--surface)] rounded-2xl shadow-warm-lg border border-[var(--border-warm)] py-2 z-50 animate-scale-in"
           role="menu"
         >
@@ -363,6 +365,17 @@ export default function Header() {
 
   // Close mobile nav when route changes (click on link)
   const closeMobileNav = useCallback(() => setMobileNavOpen(false), [])
+
+  useEffect(() => {
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key !== 'Escape') return
+      setMenuOpen(false)
+      setMobileNavOpen(false)
+    }
+
+    document.addEventListener('keydown', handleEscape)
+    return () => document.removeEventListener('keydown', handleEscape)
+  }, [])
 
   return (
     <>

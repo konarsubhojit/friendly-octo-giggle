@@ -188,6 +188,26 @@ const ImageCarousel = ({
     if (isZoomed) setIsZoomed(false)
   }, [isZoomed])
 
+  const handleCarouselKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLElement>) => {
+      if (event.key === 'ArrowRight') {
+        event.preventDefault()
+        goNext()
+        return
+      }
+      if (event.key === 'ArrowLeft') {
+        event.preventDefault()
+        goPrev()
+        return
+      }
+      if (event.key === 'Escape' && isZoomed) {
+        event.preventDefault()
+        setIsZoomed(false)
+      }
+    },
+    [goNext, goPrev, isZoomed]
+  )
+
   if (total === 0) return null
 
   // Single image — no carousel needed, just render image with contain
@@ -231,6 +251,8 @@ const ImageCarousel = ({
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         onClick={handleImageClick}
+        onKeyDown={handleCarouselKeyDown}
+        tabIndex={0}
       >
         <div
           className={`relative w-full h-full transition-transform duration-300 ${animationClass} ${isZoomed ? 'scale-150 cursor-zoom-out' : 'cursor-zoom-in'}`}

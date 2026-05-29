@@ -19,6 +19,7 @@ const config = [
       'no-console': 'error',
       'no-implicit-globals': 'error',
       'no-var': 'error',
+      'jsx-a11y/aria-props': 'error',
     },
   },
 

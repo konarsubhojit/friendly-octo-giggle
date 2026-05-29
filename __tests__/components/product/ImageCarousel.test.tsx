@@ -253,4 +253,28 @@ describe('ImageCarousel', () => {
     })
     expect(screen.getByLabelText(/tap to zoom out/i)).toBeInTheDocument()
   })
+
+  it('supports Arrow key navigation on carousel region', () => {
+    render(
+      <ImageCarousel
+        images={['/img1.jpg', '/img2.jpg']}
+        productName="Keyboard Product"
+      />
+    )
+
+    const region = screen.getByRole('region', {
+      name: /image carousel for keyboard product/i,
+    })
+    region.focus()
+
+    fireEvent.keyDown(region, { key: 'ArrowRight' })
+    expect(screen.getByText('2 / 2')).toBeInTheDocument()
+
+    act(() => {
+      vi.advanceTimersByTime(450)
+    })
+
+    fireEvent.keyDown(region, { key: 'ArrowLeft' })
+    expect(screen.getByText('1 / 2')).toBeInTheDocument()
+  })
 })

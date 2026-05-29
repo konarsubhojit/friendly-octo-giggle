@@ -84,12 +84,24 @@ export default async function RootLayout({
       className={`${nunito.className} ${playfairDisplay.variable}`}
     >
       <body className="antialiased">
+        <a
+          href="#main-content"
+          className="skip-link sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[200] focus:rounded-md focus:bg-[var(--surface)] focus:px-4 focus:py-2 focus:font-semibold focus:text-[var(--foreground)]"
+        >
+          Skip to main content
+        </a>
         <AppProviders>
           <HeaderWrapper />
-          <div className="relative">{children}</div>
+          <main id="main-content" className="relative">
+            {children}
+          </main>
           <Toaster
             position="top-right"
             toastOptions={{
+              ariaProps: {
+                role: 'status',
+                'aria-live': 'polite',
+              },
               style: {
                 background: 'var(--surface)',
                 color: 'var(--foreground)',
