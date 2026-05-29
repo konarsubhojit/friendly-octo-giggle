@@ -345,15 +345,15 @@ textarea {
 }
 
 :is(
-    a[href],
-    button,
-    input,
-    select,
-    textarea,
-    summary,
-    [role='button'],
-    [tabindex]:not([tabindex='-1'])
-  ):focus-visible {
+  a[href],
+  button,
+  input,
+  select,
+  textarea,
+  summary,
+  [role='button'],
+  [tabindex]:not([tabindex='-1'])
+):focus-visible {
   outline: none;
   box-shadow:
     0 0 0 2px var(--background),
