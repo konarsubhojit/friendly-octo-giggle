@@ -81,6 +81,7 @@ export const updateProfileSchema = z.object({
     .regex(PHONE_REGEX, 'Invalid phone number format')
     .nullish(),
   currencyPreference: z.enum(['INR', 'USD', 'EUR', 'GBP']).optional(),
+  localePreference: z.enum(['en', 'es']).optional(),
 })
 
 export type RegisterInput = z.infer<typeof registerSchema>

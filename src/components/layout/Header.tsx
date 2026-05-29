@@ -10,6 +10,8 @@ import { GradientButton } from '@/components/ui/GradientButton'
 import { FlowerAccent } from '@/components/ui/DecorativeElements'
 import ProductSearch from '@/features/product/components/ProductSearch'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
+import { useLocale } from '@/contexts/LocaleContext'
+import LanguageSwitcher from '@/components/ui/LanguageSwitcher'
 
 interface UserMenuUser {
   readonly name?: string | null
@@ -27,12 +29,13 @@ interface UserMenuProps {
 
 function UserMenu({ user, menuOpen, setMenuOpen, menuRef }: UserMenuProps) {
   const [signingOut, setSigningOut] = useState(false)
+  const { t, localizePath } = useLocale()
 
   async function handleSignOut() {
     setMenuOpen(false)
     setSigningOut(true)
     try {
-      await signOut({ callbackUrl: '/' })
+      await signOut({ callbackUrl: localizePath('/') })
     } finally {
       setSigningOut(false)
     }
@@ -43,7 +46,7 @@ function UserMenu({ user, menuOpen, setMenuOpen, menuRef }: UserMenuProps) {
       <button
         onClick={() => setMenuOpen(!menuOpen)}
         className="flex items-center gap-2 hover:opacity-80 transition-opacity"
-        aria-label="User menu"
+        aria-label={t('header.userMenu')}
         aria-expanded={menuOpen}
         aria-haspopup="menu"
         aria-controls="user-menu"
@@ -92,7 +95,7 @@ function UserMenu({ user, menuOpen, setMenuOpen, menuRef }: UserMenuProps) {
             </p>
           </div>
           <Link
-            href="/account"
+            href={localizePath('/account')}
             onClick={() => setMenuOpen(false)}
             className="flex items-center gap-3 px-4 py-2.5 text-sm text-[var(--text-secondary)] hover:bg-[var(--accent-blush)] transition-colors rounded-lg mx-1"
             role="menuitem"
@@ -111,10 +114,10 @@ function UserMenu({ user, menuOpen, setMenuOpen, menuRef }: UserMenuProps) {
                 d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
               />
             </svg>
-            My Account
+            {t('header.account')}
           </Link>
           <Link
-            href="/orders"
+            href={localizePath('/orders')}
             onClick={() => setMenuOpen(false)}
             className="flex items-center gap-3 px-4 py-2.5 text-sm text-[var(--text-secondary)] hover:bg-[var(--accent-blush)] transition-colors rounded-lg mx-1"
             role="menuitem"
@@ -133,10 +136,10 @@ function UserMenu({ user, menuOpen, setMenuOpen, menuRef }: UserMenuProps) {
                 d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
               />
             </svg>
-            My Orders
+            {t('header.orders')}
           </Link>
           <Link
-            href="/wishlist"
+            href={localizePath('/wishlist')}
             onClick={() => setMenuOpen(false)}
             className="flex items-center gap-3 px-4 py-2.5 text-sm text-[var(--text-secondary)] hover:bg-[var(--accent-blush)] transition-colors rounded-lg mx-1"
             role="menuitem"
@@ -155,11 +158,11 @@ function UserMenu({ user, menuOpen, setMenuOpen, menuRef }: UserMenuProps) {
                 d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
               />
             </svg>
-            My Wishlist
+            {t('header.wishlist')}
           </Link>
           {user.role === 'ADMIN' && (
             <Link
-              href="/admin"
+              href={localizePath('/admin')}
               onClick={() => setMenuOpen(false)}
               className="flex items-center gap-3 px-4 py-2.5 text-sm text-[var(--text-secondary)] hover:bg-[var(--accent-blush)] transition-colors rounded-lg mx-1"
               role="menuitem"
@@ -184,7 +187,7 @@ function UserMenu({ user, menuOpen, setMenuOpen, menuRef }: UserMenuProps) {
                   d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
                 />
               </svg>
-              Admin Dashboard
+              {t('header.admin')}
             </Link>
           )}
           <div className="border-t border-[var(--border-warm)] mt-1 pt-1">
@@ -213,7 +216,7 @@ function UserMenu({ user, menuOpen, setMenuOpen, menuRef }: UserMenuProps) {
                   />
                 </svg>
               )}
-              {signingOut ? 'Signing out…' : 'Sign Out'}
+              {signingOut ? t('header.signingOut') : t('header.signOut')}
             </button>
           </div>
         </div>
@@ -233,6 +236,7 @@ function MobileNav({
   closeMobileNav,
   onLoginClick,
 }: MobileNavProps) {
+  const { t, localizePath } = useLocale()
   return (
     <div
       id="mobile-nav-drawer"
@@ -243,7 +247,7 @@ function MobileNav({
           <ProductSearch onNavigate={closeMobileNav} />
         </div>
         <Link
-          href="/"
+          href={localizePath('/')}
           onClick={closeMobileNav}
           className="flex items-center gap-3 px-4 py-3 text-[var(--text-secondary)] hover:bg-[var(--accent-blush)] rounded-xl font-medium transition-colors"
         >
@@ -261,10 +265,10 @@ function MobileNav({
               d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
             />
           </svg>
-          Home
+          {t('header.home')}
         </Link>
         <Link
-          href="/shop"
+          href={localizePath('/shop')}
           onClick={closeMobileNav}
           className="flex items-center gap-3 px-4 py-3 text-[var(--text-secondary)] hover:bg-[var(--accent-blush)] rounded-xl font-medium transition-colors"
         >
@@ -282,10 +286,10 @@ function MobileNav({
               d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
             />
           </svg>
-          Shop
+          {t('header.shop')}
         </Link>
         <Link
-          href="/about"
+          href={localizePath('/about')}
           onClick={closeMobileNav}
           className="flex items-center gap-3 px-4 py-3 text-[var(--text-secondary)] hover:bg-[var(--accent-blush)] rounded-xl font-medium transition-colors"
         >
@@ -303,10 +307,10 @@ function MobileNav({
               d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
             />
           </svg>
-          About
+          {t('header.about')}
         </Link>
         <Link
-          href="/contact"
+          href={localizePath('/contact')}
           onClick={closeMobileNav}
           className="flex items-center gap-3 px-4 py-3 text-[var(--text-secondary)] hover:bg-[var(--accent-blush)] rounded-xl font-medium transition-colors"
         >
@@ -324,7 +328,7 @@ function MobileNav({
               d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
             />
           </svg>
-          Contact
+          {t('header.contact')}
         </Link>
         {!isLoggedIn && (
           <div className="pt-2 border-t border-[var(--border-warm)] mt-2">
@@ -337,7 +341,7 @@ function MobileNav({
               fullWidth
               className="text-sm"
             >
-              Login
+              {t('header.login')}
             </GradientButton>
           </div>
         )}
@@ -347,6 +351,7 @@ function MobileNav({
 }
 
 export default function Header() {
+  const { t, localizePath } = useLocale()
   const { data: session } = useSession()
   const [menuOpen, setMenuOpen] = useState(false)
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
@@ -384,43 +389,44 @@ export default function Header() {
         <div className="mx-auto w-full max-w-[96rem] px-4 py-4 sm:px-6 lg:px-8 xl:px-10 2xl:px-12">
           <div className="flex items-center justify-between gap-3">
             <Link
-              href="/"
+              href={localizePath('/')}
               className="group flex min-w-0 items-center gap-1.5 text-xl font-bold transition-all duration-300 sm:text-2xl"
             >
               <FlowerAccent className="w-7 h-7 group-hover:animate-wiggle" />
               <span className="font-display truncate bg-gradient-to-r from-[var(--accent-rose)] to-[var(--accent-warm)] bg-clip-text text-transparent">
-                The Kiyon Store
+                {t('common.storeName')}
               </span>
             </Link>
 
             <nav className="hidden items-center gap-4 md:flex xl:gap-8">
               <Link
-                href="/"
+                href={localizePath('/')}
                 className="text-[var(--text-secondary)] hover:text-[var(--accent-rose)] transition-all duration-300 font-semibold px-3 py-1.5 rounded-full hover:bg-[var(--accent-blush)]/50"
               >
-                Home
+                {t('header.home')}
               </Link>
               <Link
-                href="/shop"
+                href={localizePath('/shop')}
                 className="text-[var(--text-secondary)] hover:text-[var(--accent-rose)] transition-all duration-300 font-semibold px-3 py-1.5 rounded-full hover:bg-[var(--accent-blush)]/50"
               >
-                Shop
+                {t('header.shop')}
               </Link>
               <Link
-                href="/about"
+                href={localizePath('/about')}
                 className="text-[var(--text-secondary)] hover:text-[var(--accent-rose)] transition-all duration-300 font-semibold px-3 py-1.5 rounded-full hover:bg-[var(--accent-blush)]/50"
               >
-                About
+                {t('header.about')}
               </Link>
               <Link
-                href="/contact"
+                href={localizePath('/contact')}
                 className="text-[var(--text-secondary)] hover:text-[var(--accent-rose)] transition-all duration-300 font-semibold px-3 py-1.5 rounded-full hover:bg-[var(--accent-blush)]/50"
               >
-                Contact
+                {t('header.contact')}
               </Link>
             </nav>
 
             <div className="flex min-w-0 shrink-0 items-center gap-2 sm:gap-4">
+              <LanguageSwitcher />
               <div className="hidden sm:block">
                 <ProductSearch />
               </div>
@@ -439,7 +445,7 @@ export default function Header() {
                   size="sm"
                   className="hidden sm:block"
                 >
-                  Login
+                  {t('header.login')}
                 </GradientButton>
               )}
 
@@ -448,7 +454,9 @@ export default function Header() {
                 id="mobile-nav-toggle"
                 onClick={() => setMobileNavOpen(!mobileNavOpen)}
                 className="md:hidden flex items-center justify-center w-9 h-9 rounded-lg text-[var(--text-secondary)] hover:bg-[var(--accent-blush)] transition-colors"
-                aria-label={mobileNavOpen ? 'Close menu' : 'Open menu'}
+                aria-label={
+                  mobileNavOpen ? t('header.closeMenu') : t('header.openMenu')
+                }
                 aria-expanded={mobileNavOpen}
                 aria-haspopup="menu"
                 aria-controls="mobile-nav-drawer"
