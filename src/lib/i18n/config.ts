@@ -5,6 +5,7 @@ export type AppLocale = (typeof SUPPORTED_LOCALES)[number]
 export const DEFAULT_LOCALE: AppLocale = 'en'
 export const LOCALE_COOKIE_NAME = 'kiyon-locale'
 
+// Future-friendly groundwork for upcoming RTL locales.
 const RTL_LOCALES = new Set(['ar', 'he'])
 
 export const isSupportedLocale = (value: string): value is AppLocale =>

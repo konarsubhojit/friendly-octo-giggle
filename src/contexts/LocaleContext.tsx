@@ -20,7 +20,13 @@ interface LocaleContextValue {
   localizePath: (pathname: string) => string
 }
 
-const LocaleContext = createContext<LocaleContextValue | null>(null)
+const fallbackLocaleContext: LocaleContextValue = {
+  locale: DEFAULT_LOCALE,
+  t: (key) => getMessage(DEFAULT_LOCALE, key),
+  localizePath: (pathname) => pathname,
+}
+
+const LocaleContext = createContext<LocaleContextValue>(fallbackLocaleContext)
 
 interface LocaleProviderProps {
   readonly locale: AppLocale
@@ -48,7 +54,5 @@ export function LocaleProvider({
 }
 
 export function useLocale() {
-  const ctx = useContext(LocaleContext)
-  if (!ctx) throw new Error('useLocale must be used within a LocaleProvider')
-  return ctx
+  return useContext(LocaleContext)
 }

@@ -1,7 +1,6 @@
 'use client'
 
 import { useTransition } from 'react'
-import { usePathname, useRouter } from 'next/navigation'
 import {
   LOCALE_COOKIE_NAME,
   SUPPORTED_LOCALES,
@@ -11,8 +10,6 @@ import {
 import { useLocale } from '@/contexts/LocaleContext'
 
 export default function LanguageSwitcher() {
-  const router = useRouter()
-  const pathname = usePathname()
   const [isPending, startTransition] = useTransition()
   const { locale, t } = useLocale()
 
@@ -26,7 +23,12 @@ export default function LanguageSwitcher() {
     }).catch(() => {})
 
     startTransition(() => {
-      router.replace(toLocalizedPathname(pathname, nextLocale))
+      const currentPath =
+        typeof window === 'undefined' ? '/' : window.location.pathname
+      const nextPath = toLocalizedPathname(currentPath, nextLocale)
+      if (typeof window !== 'undefined') {
+        window.location.assign(nextPath)
+      }
     })
   }
 

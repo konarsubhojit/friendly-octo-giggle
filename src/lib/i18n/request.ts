@@ -7,12 +7,16 @@ import {
 } from '@/lib/i18n/config'
 
 export const getRequestLocale = async (): Promise<AppLocale> => {
-  const requestHeaders = await headers()
-  const localeHeader = requestHeaders.get('x-locale')
-  if (localeHeader && isSupportedLocale(localeHeader)) return localeHeader
+  try {
+    const requestHeaders = await headers()
+    const localeHeader = requestHeaders.get('x-locale')
+    if (localeHeader && isSupportedLocale(localeHeader)) return localeHeader
+  } catch {}
 
-  const localeCookie = (await cookies()).get(LOCALE_COOKIE_NAME)?.value
-  if (localeCookie && isSupportedLocale(localeCookie)) return localeCookie
+  try {
+    const localeCookie = (await cookies()).get(LOCALE_COOKIE_NAME)?.value
+    if (localeCookie && isSupportedLocale(localeCookie)) return localeCookie
+  } catch {}
 
   return DEFAULT_LOCALE
 }
@@ -33,7 +37,7 @@ export const localizeProductContent = <
   if (!localized) return product
   return {
     ...product,
-    name: localized.name || product.name,
-    description: localized.description || product.description,
+    name: localized.name ?? product.name,
+    description: localized.description ?? product.description,
   }
 }

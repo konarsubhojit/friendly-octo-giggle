@@ -79,12 +79,18 @@ export const PATCH = async (
 
     const notifyStatuses = ['PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED']
     if (notifyStatuses.includes(validatedBody.status)) {
-      const userLocaleRecord = order.userId
-        ? await drizzleDb.query.users.findFirst({
+      let userLocaleRecord: { localePreference: string } | null = null
+      if (order.userId) {
+        try {
+          const foundUserLocale = await drizzleDb.query.users.findFirst({
             where: eq(users.id, order.userId),
             columns: { localePreference: true },
           })
-        : null
+          userLocaleRecord = foundUserLocale ?? null
+        } catch {
+          userLocaleRecord = null
+        }
+      }
       const locale =
         userLocaleRecord?.localePreference &&
         isSupportedLocale(userLocaleRecord.localePreference)

@@ -52,6 +52,10 @@ const CurrencyContext = createContext<CurrencyContextValue | null>(null)
 
 const EXCHANGE_RATES_STORAGE_KEY = 'exchange-rates'
 const EXCHANGE_RATES_MAX_AGE_MS = 3600_000 // 1 hour
+const LOCALE_TO_NUMBER_FORMAT: Record<string, string> = {
+  en: 'en-US',
+  es: 'es-ES',
+}
 
 export function CurrencyProvider({
   children,
@@ -144,7 +148,7 @@ export function CurrencyProvider({
   const formatPrice = useCallback(
     (priceInINR: number): string => {
       const converted = priceInINR * rates[currency]
-      const numberLocale = locale === 'es' ? 'es-ES' : config.locale
+      const numberLocale = LOCALE_TO_NUMBER_FORMAT[locale] ?? config.locale
       return new Intl.NumberFormat(numberLocale, {
         style: 'currency',
         currency: config.code,

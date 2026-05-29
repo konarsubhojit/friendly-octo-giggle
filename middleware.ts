@@ -26,6 +26,7 @@ export function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl
 
   if (
+    // Skip non-page requests; locale prefixes are only for user-facing routes.
     pathname.startsWith('/_next') ||
     pathname.startsWith('/api') ||
     PUBLIC_FILE.test(pathname)
@@ -61,5 +62,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
 }
