@@ -672,7 +672,8 @@ export const createOrderForUser = async ({
       ? userRecord.currencyPreference
       : 'INR'
   const locale =
-    userRecord?.localePreference && isSupportedLocale(userRecord.localePreference)
+    userRecord?.localePreference &&
+    isSupportedLocale(userRecord.localePreference)
       ? userRecord.localePreference
       : 'en'
 

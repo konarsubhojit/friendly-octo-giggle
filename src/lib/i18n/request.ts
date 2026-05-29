@@ -20,7 +20,11 @@ export const getRequestLocale = async (): Promise<AppLocale> => {
 type LocalizedContent = Record<string, { name?: string; description?: string }>
 
 export const localizeProductContent = <
-  T extends { name: string; description: string; localizedContent?: LocalizedContent },
+  T extends {
+    name: string
+    description: string
+    localizedContent?: LocalizedContent
+  },
 >(
   product: T,
   locale: AppLocale

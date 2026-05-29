@@ -102,7 +102,8 @@ export async function PATCH(request: NextRequest) {
     if (phoneNumber !== undefined) updateData.phoneNumber = phoneNumber || null
     if (currencyPreference !== undefined)
       updateData.currencyPreference = currencyPreference
-    if (localePreference !== undefined) updateData.localePreference = localePreference
+    if (localePreference !== undefined)
+      updateData.localePreference = localePreference
 
     await primaryDrizzleDb
       .update(users)

@@ -38,7 +38,8 @@ export const messages = {
       badgeHair: 'Hair accessories',
       badgeKnitwear: 'Handmade knitwear',
       badgeShipping: 'Free shipping',
-      illustrationLabel: 'Illustration placeholder: girl crocheting by a window',
+      illustrationLabel:
+        'Illustration placeholder: girl crocheting by a window',
       atelierMood: 'atelier mood',
       illustrationText: 'Illustration: Girl crocheting by a window',
     },
@@ -109,5 +110,7 @@ export const getMessage = (locale: AppLocale, key: MessageKey): string => {
   const [namespace, leaf] = key.split('.') as [Namespace, string]
   const entry = messages[locale]?.[namespace]
   if (!entry) return key
-  return entry[leaf as keyof typeof entry] ?? messages.en[namespace][leaf as never]
+  return (
+    entry[leaf as keyof typeof entry] ?? messages.en[namespace][leaf as never]
+  )
 }

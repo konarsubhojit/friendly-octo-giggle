@@ -42,7 +42,9 @@ export function LocaleProvider({
     [locale, t, localizePath]
   )
 
-  return <LocaleContext.Provider value={value}>{children}</LocaleContext.Provider>
+  return (
+    <LocaleContext.Provider value={value}>{children}</LocaleContext.Provider>
+  )
 }
 
 export function useLocale() {

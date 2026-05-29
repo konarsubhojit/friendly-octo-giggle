@@ -19,9 +19,13 @@ export async function GET(
 
     const locale = await getRequestLocale()
 
-    return apiSuccess({ product: localizeProductContent(product, locale) }, 200, {
-      'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=30',
-    })
+    return apiSuccess(
+      { product: localizeProductContent(product, locale) },
+      200,
+      {
+        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=30',
+      }
+    )
   } catch (error) {
     return handleApiError(error)
   }
