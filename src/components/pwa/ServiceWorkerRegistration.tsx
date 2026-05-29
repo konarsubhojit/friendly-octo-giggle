@@ -36,12 +36,16 @@ export function ServiceWorkerRegistration() {
       }
     }
 
+    const handleLoad = () => void register()
+
     // Defer registration until after page load for better LCP
     if (document.readyState === 'complete') {
       void register()
     } else {
-      window.addEventListener('load', () => void register(), { once: true })
+      window.addEventListener('load', handleLoad, { once: true })
     }
+
+    return () => window.removeEventListener('load', handleLoad)
   }, [])
 
   return null

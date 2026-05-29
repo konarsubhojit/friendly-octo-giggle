@@ -115,20 +115,22 @@ const ImageCarousel = ({
       isSwiping.current = false
     } else if (e.touches.length === 2) {
       touchStartDist.current = getTouchDistance(e.touches)
+      isSwiping.current = false
     }
+  }, [])
+
+  const resetTouchState = useCallback(() => {
+    touchStartX.current = 0
+    touchStartY.current = 0
+    touchStartDist.current = 0
+    isSwiping.current = false
   }, [])
 
   const handleTouchMove = useCallback(
     (e: React.TouchEvent) => {
-      if (e.touches.length === 1 && !isSwiping.current) {
-        const dx = Math.abs(e.touches[0].clientX - touchStartX.current)
-        const dy = Math.abs(e.touches[0].clientY - touchStartY.current)
-        // Predominantly horizontal — prevent page scroll while swiping
-        if (dx > dy && dx > 10) {
-          e.preventDefault()
-          isSwiping.current = true
-        }
-      } else if (e.touches.length === 2 && touchStartDist.current > 0) {
+      if (e.touches.length === 2 && touchStartDist.current > 0) {
+        e.preventDefault()
+        isSwiping.current = false
         // Track pinch in touchmove (changedTouches in touchend only has
         // the *lifted* finger, so scale detection must happen here)
         const currentDist = getTouchDistance(e.touches)
@@ -138,6 +140,18 @@ const ImageCarousel = ({
         } else if (ratio <= 1 / PINCH_ZOOM_SCALE) {
           setIsZoomed(false)
         }
+        return
+      }
+
+      if (e.touches.length === 1) {
+        const dx = Math.abs(e.touches[0].clientX - touchStartX.current)
+        const dy = Math.abs(e.touches[0].clientY - touchStartY.current)
+        const shouldSwipe = isSwiping.current || (dx > dy && dx > 10)
+        // Predominantly horizontal — prevent page scroll while swiping
+        if (shouldSwipe) {
+          e.preventDefault()
+          isSwiping.current = true
+        }
       }
     },
     [setIsZoomed]
@@ -145,7 +159,12 @@ const ImageCarousel = ({
 
   const handleTouchEnd = useCallback(
     (e: React.TouchEvent) => {
-      if (e.changedTouches.length === 1 && total > 1) {
+      if (isZoomed || e.changedTouches.length !== 1 || total <= 1) {
+        resetTouchState()
+        return
+      }
+
+      if (e.changedTouches.length === 1) {
         const deltaX = e.changedTouches[0].clientX - touchStartX.current
         const deltaY = e.changedTouches[0].clientY - touchStartY.current
 
@@ -160,9 +179,9 @@ const ImageCarousel = ({
           }
         }
       }
-      isSwiping.current = false
+      resetTouchState()
     },
-    [goNext, goPrev, total]
+    [goNext, goPrev, isZoomed, resetTouchState, total]
   )
 
   const handleImageClick = useCallback(() => {
@@ -178,6 +197,7 @@ const ImageCarousel = ({
         <div
           className={`relative aspect-square w-full rounded-2xl overflow-hidden shadow-2xl border-4 border-[var(--border-warm)] bg-[var(--accent-blush)]/30 transition-transform duration-300 ${isZoomed ? 'cursor-zoom-out' : 'cursor-zoom-in'}`}
           onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
           onClick={() => setIsZoomed((z) => !z)}
           aria-label={isZoomed ? 'Tap to zoom out' : 'Tap to zoom in'}

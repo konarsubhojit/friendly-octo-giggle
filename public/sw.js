@@ -15,7 +15,13 @@ const ALL_CACHES = [SHELL_CACHE, IMAGE_CACHE]
 const SHELL_URLS = ['/', '/shop', '/cart', '/wishlist', '/offline']
 
 /** Routes that should bypass the service worker entirely */
-const BYPASS_PREFIXES = ['/api/', '/admin', '/auth', '/monitoring', '/_next/']
+const BYPASS_PREFIXES = [
+  '/api/',
+  '/admin',
+  '/auth',
+  '/monitoring',
+  '/_next/image',
+]
 
 /** Maximum number of images to keep in the image cache */
 const IMAGE_CACHE_LIMIT = 60
@@ -24,10 +30,10 @@ const IMAGE_CACHE_LIMIT = 60
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches
-      .open(SHELL_CACHE)
-      .then((cache) => cache.addAll(SHELL_URLS))
-      .then(() => self.skipWaiting())
+    caches.open(SHELL_CACHE).then(async (cache) => {
+      await Promise.allSettled(SHELL_URLS.map((url) => cache.add(url)))
+      await self.skipWaiting()
+    })
   )
 })
 

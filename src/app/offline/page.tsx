@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 
+import { RetryButton } from './RetryButton'
+
 export const metadata: Metadata = {
   title: "You're Offline | The Kiyon Store",
   description:
@@ -37,14 +39,7 @@ export default function OfflinePage() {
       </p>
 
       <div className="flex flex-col sm:flex-row gap-3">
-        <button
-          onClick={() => {
-            if (typeof window !== 'undefined') window.location.reload()
-          }}
-          className="min-tap px-6 py-3 rounded-xl bg-gradient-to-r from-[var(--accent-warm)] to-[var(--accent-rose)] text-white font-bold shadow-warm hover:opacity-90 transition-opacity focus-warm"
-        >
-          Try Again
-        </button>
+        <RetryButton />
         <Link
           href="/"
           className="min-tap px-6 py-3 rounded-xl border border-[var(--border-warm)] bg-[var(--surface)] text-[var(--text-secondary)] font-semibold hover:bg-[var(--accent-blush)] transition-colors focus-warm flex items-center justify-center"

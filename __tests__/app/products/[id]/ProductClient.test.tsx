@@ -1,6 +1,13 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  act,
+  within,
+} from '@testing-library/react'
 import React from 'react'
 import ProductClient from '@/app/products/[id]/ProductClient'
 import type { Product, ProductVariant } from '@/lib/types'
@@ -286,7 +293,20 @@ describe('ProductClient', () => {
     expect(
       screen.getAllByRole('button', { name: /Add to Cart/i })[0]
     ).toBeInTheDocument()
-    expect(screen.getByLabelText('Select quantity')).toBeInTheDocument()
+    expect(screen.getAllByLabelText('Select quantity').length).toBeGreaterThan(0)
+  })
+
+  it('keeps quantity and cart controls in the mobile quick actions bar', () => {
+    render(
+      <ProductClient product={makeProduct()} initialVariantId={null} aiEnabled />
+    )
+
+    const quickActions = screen.getByRole('region', { name: /quick actions/i })
+
+    expect(within(quickActions).getByLabelText('Select quantity')).toBeInTheDocument()
+    expect(
+      within(quickActions).getByRole('link', { name: /View Cart/i })
+    ).toHaveAttribute('href', '/cart')
   })
 
   it('renders out-of-stock panel when product stock is 0', () => {
@@ -547,7 +567,7 @@ describe('ProductClient', () => {
       <ProductClient product={product} initialVariantId={null} aiEnabled />
     )
 
-    const select = screen.getByLabelText('Select quantity')
+    const select = screen.getAllByLabelText('Select quantity')[0]
     // Stock is 5, so options 1-5 should exist
     expect(select.querySelectorAll('option')).toHaveLength(5)
   })
@@ -587,7 +607,7 @@ describe('ProductClient', () => {
     render(
       <ProductClient product={product} initialVariantId={null} aiEnabled />
     )
-    expect(screen.getByRole('link', { name: /View Cart/i })).toHaveAttribute(
+    expect(screen.getAllByRole('link', { name: /View Cart/i })[0]).toHaveAttribute(
       'href',
       '/cart'
     )
