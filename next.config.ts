@@ -76,6 +76,10 @@ export default withSentryConfig(nextConfig, {
 
   // Upload a larger set of source maps for prettier stack traces (increases build time)
   widenClientFileUpload: true,
+  sourcemaps: {
+    // Work around Vercel build ENOENT for middleware.js.nft.json after uploads.
+    disable: process.env.VERCEL === '1',
+  },
 
   // Route browser requests to Sentry through a Next.js rewrite to circumvent ad-blockers.
   // This can increase your server load as well as your hosting bill.
