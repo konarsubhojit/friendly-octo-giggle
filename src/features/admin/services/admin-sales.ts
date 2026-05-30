@@ -19,6 +19,11 @@ interface AggregatedDashboardRow {
   readonly topProducts: unknown
   readonly recentSales: unknown
   readonly totalCustomers: SqlNumericValue
+  readonly revenue7d: SqlNumericValue
+  readonly revenue30d: SqlNumericValue
+  readonly revenue90d: SqlNumericValue
+  readonly lowStockAlerts: SqlNumericValue
+  readonly emailFailureCount: SqlNumericValue
 }
 
 export interface SalesTrendPoint {
@@ -53,6 +58,11 @@ export interface AdminSalesDashboardData {
   readonly topProducts: readonly SalesTopProduct[]
   readonly recentSales: readonly SalesTrendPoint[]
   readonly totalCustomers: number
+  readonly revenue7d: number
+  readonly revenue30d: number
+  readonly revenue90d: number
+  readonly lowStockAlerts: number
+  readonly emailFailureCount: number
 }
 
 function startOfDay(date: Date): Date {
@@ -130,6 +140,9 @@ export const getAdminSalesDashboardData =
         new Date(now.getFullYear(), now.getMonth() - 1, 1)
       )
       const recentSalesStart = addDays(today, -(RECENT_SALES_DAY_COUNT - 1))
+      const sevenDayWindow = addDays(today, -6)
+      const thirtyDayWindow = addDays(today, -29)
+      const ninetyDayWindow = addDays(today, -89)
 
       const dashboardResult = await drizzleDb.execute(sql`
         with active_orders as (
@@ -149,7 +162,10 @@ export const getAdminSalesDashboardData =
             coalesce(sum(ao."totalAmount") filter (where ao."createdAt" >= ${thisMonth}), 0)::float8 as "monthRevenue",
             count(*) filter (where ao."createdAt" >= ${thisMonth})::int as "monthOrders",
             coalesce(sum(ao."totalAmount") filter (where ao."createdAt" >= ${lastMonth} and ao."createdAt" < ${thisMonth}), 0)::float8 as "lastMonthRevenue",
-            count(*) filter (where ao."createdAt" >= ${lastMonth} and ao."createdAt" < ${thisMonth})::int as "lastMonthOrders"
+            count(*) filter (where ao."createdAt" >= ${lastMonth} and ao."createdAt" < ${thisMonth})::int as "lastMonthOrders",
+            coalesce(sum(ao."totalAmount") filter (where ao."createdAt" >= ${sevenDayWindow}), 0)::float8 as "revenue7d",
+            coalesce(sum(ao."totalAmount") filter (where ao."createdAt" >= ${thirtyDayWindow}), 0)::float8 as "revenue30d",
+            coalesce(sum(ao."totalAmount") filter (where ao."createdAt" >= ${ninetyDayWindow}), 0)::float8 as "revenue90d"
           from active_orders ao
         ),
         status_counts as (
@@ -214,6 +230,9 @@ export const getAdminSalesDashboardData =
           summary."monthOrders",
           summary."lastMonthRevenue",
           summary."lastMonthOrders",
+          summary."revenue7d",
+          summary."revenue30d",
+          summary."revenue90d",
           status_counts."ordersByStatus",
           recent_sales."recentSales",
           top_products."topProducts",
@@ -221,7 +240,21 @@ export const getAdminSalesDashboardData =
             select count(*)::int
             from "User" u
             where u.role = 'CUSTOMER'
-          ) as "totalCustomers"
+          ) as "totalCustomers",
+          (
+            select count(*)::int
+            from "ProductVariant" pv
+            inner join "Product" p on p.id = pv."productId"
+            where pv.stock > 0
+              and pv.stock <= 5
+              and pv."deletedAt" is null
+              and p."deletedAt" is null
+          ) as "lowStockAlerts",
+          (
+            select count(*)::int
+            from "FailedEmail" fe
+            where fe.status = 'failed'
+          ) as "emailFailureCount"
         from summary
         cross join status_counts
         cross join recent_sales
@@ -240,6 +273,9 @@ export const getAdminSalesDashboardData =
       const monthOrders = parseNumberValue(dashboardRow?.monthOrders)
       const lastMonthRevenue = parseNumberValue(dashboardRow?.lastMonthRevenue)
       const lastMonthOrders = parseNumberValue(dashboardRow?.lastMonthOrders)
+      const revenue7d = parseNumberValue(dashboardRow?.revenue7d)
+      const revenue30d = parseNumberValue(dashboardRow?.revenue30d)
+      const revenue90d = parseNumberValue(dashboardRow?.revenue90d)
 
       const ordersByStatus = parseJsonValue<Record<string, number>>(
         dashboardRow?.ordersByStatus,
@@ -310,6 +346,11 @@ export const getAdminSalesDashboardData =
         topProducts,
         recentSales,
         totalCustomers: parseNumberValue(dashboardRow?.totalCustomers),
+        revenue7d,
+        revenue30d,
+        revenue90d,
+        lowStockAlerts: parseNumberValue(dashboardRow?.lowStockAlerts),
+        emailFailureCount: parseNumberValue(dashboardRow?.emailFailureCount),
       }
     })
   }

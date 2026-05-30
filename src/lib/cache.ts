@@ -215,20 +215,52 @@ export const cacheCategoriesList = <T>(
   )
 }
 
+const normalizeCacheKeys = (
+  value?: string | readonly string[] | null
+): readonly string[] => {
+  if (value === undefined || value === null) {
+    return []
+  }
+
+  if (Array.isArray(value)) {
+    return value
+  }
+
+  return [value as string]
+}
+
+const normalizeNullableCacheKeys = (
+  value?: string | null | readonly (string | null | undefined)[]
+): readonly (string | null | undefined)[] => {
+  if (value === undefined || value === null) {
+    return []
+  }
+
+  if (Array.isArray(value)) {
+    return value
+  }
+
+  return [value as string | null | undefined]
+}
+
 export const invalidateProductCaches = async (
-  productId?: string
+  productIds?: string | readonly string[]
 ): Promise<void> => {
   try {
     await invalidateCachePattern(CACHE_KEYS.PRODUCTS_PATTERN)
     await invalidateCachePattern(CACHE_KEYS.ADMIN_PRODUCTS_PATTERN)
 
-    if (productId) {
+    const ids = normalizeCacheKeys(productIds)
+
+    for (const productId of ids) {
       await invalidateCachePattern(CACHE_KEYS.PRODUCT_BY_ID(productId))
     }
 
     logCacheOperation({
       operation: 'invalidate',
-      key: productId ? `products:* and product:${productId}` : 'products:*',
+      key: ids.length
+        ? `products:* and ${ids.map((productId) => `product:${productId}`).join(', ')}`
+        : 'products:*',
       success: true,
     })
   } catch (error) {
@@ -318,15 +350,27 @@ export const cacheAdminOrderById = <T>(
  * Called after order status updates
  */
 export const invalidateAdminOrderCaches = async (
-  orderId: string,
-  userId?: string | null
+  orderIds: string | readonly string[],
+  userIds?: string | null | readonly (string | null | undefined)[]
 ): Promise<void> => {
   try {
+    const ids = normalizeCacheKeys(orderIds)
     await invalidateCachePattern(CACHE_KEYS.ADMIN_ORDERS_PATTERN)
-    await invalidateCachePattern(CACHE_KEYS.ADMIN_ORDER_BY_ID(orderId))
+    for (const orderId of ids) {
+      await invalidateCachePattern(CACHE_KEYS.ADMIN_ORDER_BY_ID(orderId))
+    }
     await invalidateCachePattern(CACHE_KEYS.PRODUCTS_BESTSELLERS_PATTERN)
     await invalidateCachePattern(CACHE_KEYS.ADMIN_SALES_PATTERN)
-    if (userId) {
+
+    const uniqueUserIds = [
+      ...new Set(
+        normalizeNullableCacheKeys(userIds).filter((userId): userId is string =>
+          Boolean(userId)
+        )
+      ),
+    ]
+
+    for (const userId of uniqueUserIds) {
       await invalidateUserOrderCaches(userId)
     }
   } catch (error) {

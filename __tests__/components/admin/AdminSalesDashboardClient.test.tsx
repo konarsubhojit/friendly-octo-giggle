@@ -54,6 +54,11 @@ const sales: AdminSalesDashboardData = {
     { date: '2026-03-22', label: 'Sun', revenue: 650, orders: 7 },
   ],
   totalCustomers: 92,
+  revenue7d: 2000,
+  revenue30d: 4800,
+  revenue90d: 12000,
+  lowStockAlerts: 4,
+  emailFailureCount: 2,
 }
 
 describe('AdminSalesDashboardClient', () => {

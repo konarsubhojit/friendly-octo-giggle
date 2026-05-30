@@ -112,6 +112,20 @@ export function AdminSalesDashboardClient({
       tone: 'text-amber-700',
       glow: 'bg-amber-500/10',
     },
+    {
+      label: 'Revenue (7/30/90)',
+      value: `${formatPrice(sales.revenue7d)} / ${formatPrice(sales.revenue30d)} / ${formatPrice(sales.revenue90d)}`,
+      detail: 'Rolling revenue windows',
+      tone: 'text-indigo-700',
+      glow: 'bg-indigo-500/10',
+    },
+    {
+      label: 'Operational alerts',
+      value: `${sales.lowStockAlerts} low stock`,
+      detail: `${sales.emailFailureCount} failed email sends`,
+      tone: 'text-rose-700',
+      glow: 'bg-rose-500/10',
+    },
   ]
 
   return (
@@ -159,7 +173,7 @@ export function AdminSalesDashboardClient({
         </div>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {summaryCards.map((card) => (
           <article
             key={card.label}
