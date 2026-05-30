@@ -8,7 +8,7 @@ import {
   validateProfileFields,
   validatePasswordFields,
   isPasswordStrong,
-} from '@/app/account/page'
+} from '@/app/account/account-shared'
 import { PROFILE_ERRORS, PASSWORD_ERRORS } from '@/lib/constants/error-messages'
 describe('isPasswordStrong', () => {
   it('returns false for an empty password', () => {
