@@ -144,6 +144,12 @@ export function AdminSalesDashboardClient({
               client work focused on currency-aware formatting and a compact D3
               trend chart.
             </p>
+            <a
+              href="/api/admin/sales/export"
+              className="mt-5 inline-flex items-center rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm transition-colors hover:bg-slate-50"
+            >
+              Export CSV
+            </a>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2 lg:w-[25rem]">
