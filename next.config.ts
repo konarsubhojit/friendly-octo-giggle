@@ -78,8 +78,7 @@ export default withSentryConfig(nextConfig, {
   widenClientFileUpload: true,
   sourcemaps: {
     // Work around preview build ENOENT for middleware.js.nft.json after uploads.
-    disable:
-      process.env.VERCEL === '1' && process.env.VERCEL_ENV === 'preview',
+    disable: process.env.VERCEL === '1' && process.env.VERCEL_ENV === 'preview',
   },
 
   // Route browser requests to Sentry through a Next.js rewrite to circumvent ad-blockers.
