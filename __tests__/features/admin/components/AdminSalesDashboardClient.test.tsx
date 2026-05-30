@@ -245,6 +245,14 @@ describe('AdminSalesDashboardClient', () => {
     ).toBeInTheDocument()
   })
 
+  it('shows export csv action', () => {
+    render(<AdminSalesDashboardClient sales={mockSalesData} />)
+    expect(screen.getByRole('link', { name: 'Export CSV' })).toHaveAttribute(
+      'href',
+      '/api/admin/sales/export'
+    )
+  })
+
   it('displays negative delta correctly', () => {
     const dataWithNegativeDelta = {
       ...mockSalesData,

@@ -10,7 +10,7 @@ import {
 import {
   type AppLocale,
   DEFAULT_LOCALE,
-  toLocalizedPathname,
+  stripLocaleFromPathname,
 } from '@/lib/i18n/config'
 import { getMessage, type MessageKey } from '@/lib/i18n/messages'
 
@@ -38,10 +38,12 @@ export function LocaleProvider({
   children,
 }: LocaleProviderProps) {
   const t = useCallback((key: MessageKey) => getMessage(locale, key), [locale])
-  const localizePath = useCallback(
-    (pathname: string) => toLocalizedPathname(pathname, locale),
-    [locale]
-  )
+  const localizePath = useCallback((pathname: string) => {
+    const normalizedPathname = pathname.startsWith('/')
+      ? pathname
+      : `/${pathname}`
+    return stripLocaleFromPathname(normalizedPathname)
+  }, [])
 
   const value = useMemo(
     () => ({ locale, t, localizePath }),
