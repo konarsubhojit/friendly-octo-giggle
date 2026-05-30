@@ -24,6 +24,7 @@ export async function GET() {
         role: true,
         passwordHash: true,
         currencyPreference: true,
+        localePreference: true,
         createdAt: true,
       },
     })
@@ -41,6 +42,7 @@ export async function GET() {
       role: user.role,
       hasPassword: !!user.passwordHash,
       currencyPreference: user.currencyPreference,
+      localePreference: user.localePreference,
       createdAt: user.createdAt.toISOString(),
     })
   } catch (error) {
@@ -70,7 +72,8 @@ export async function PATCH(request: NextRequest) {
       return apiError('Validation failed', 400, details)
     }
 
-    const { name, email, phoneNumber, currencyPreference } = parseResult.data
+    const { name, email, phoneNumber, currencyPreference, localePreference } =
+      parseResult.data
 
     if (email) {
       const existingByEmail = await primaryDrizzleDb.query.users.findFirst({
@@ -99,6 +102,8 @@ export async function PATCH(request: NextRequest) {
     if (phoneNumber !== undefined) updateData.phoneNumber = phoneNumber || null
     if (currencyPreference !== undefined)
       updateData.currencyPreference = currencyPreference
+    if (localePreference !== undefined)
+      updateData.localePreference = localePreference
 
     await primaryDrizzleDb
       .update(users)

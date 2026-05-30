@@ -1,12 +1,23 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { z } from 'zod'
 
 const mockProcessCheckoutRequestById = vi.hoisted(() => vi.fn())
 const mockRecoverCheckoutRequestAfterRetryExhaustion = vi.hoisted(() => vi.fn())
+const QueueCallbackPayloadSchema = z.object({
+  message: z.object({ checkoutRequestId: z.string() }),
+  metadata: z.object({ deliveryCount: z.number() }),
+})
+const mockHandleCallback = vi.hoisted(() =>
+  vi.fn((handler) => async (request: Request) => {
+    const payload = QueueCallbackPayloadSchema.parse(await request.json())
 
-vi.mock('@vercel/queue', () => ({
-  QueueClient: class {
-    handleCallback = vi.fn((handler) => handler)
-  },
+    await handler(payload.message, payload.metadata)
+    return new Response(null, { status: 200 })
+  })
+)
+
+vi.mock('@/lib/queue', () => ({
+  handleCallback: mockHandleCallback,
 }))
 
 vi.mock('@/features/cart/services/checkout-service', () => ({
@@ -18,12 +29,16 @@ vi.mock('@/features/cart/services/checkout-service', () => ({
 const invokePost = async (checkoutRequestId: string, deliveryCount: number) => {
   const { POST } = await import('@/app/api/queue/checkout-orders/route')
 
-  await (
-    POST as unknown as (
-      message: { checkoutRequestId: string },
-      metadata: { deliveryCount: number }
-    ) => Promise<void>
-  )({ checkoutRequestId }, { deliveryCount })
+  await POST(
+    new Request('http://localhost/api/queue/checkout-orders', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        message: { checkoutRequestId },
+        metadata: { deliveryCount },
+      }),
+    })
+  )
 }
 
 describe('POST /api/queue/checkout-orders', () => {

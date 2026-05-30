@@ -35,6 +35,7 @@ import {
   isValidCurrencyCode,
   type CurrencyCode,
 } from '@/lib/currency'
+import { isSupportedLocale } from '@/lib/i18n/config'
 
 const PAGE_SIZE = 20
 
@@ -663,13 +664,18 @@ export const createOrderForUser = async ({
   const workerUrl = `${env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'}/api/services/email`
   const userRecord = await drizzleDb.query.users.findFirst({
     where: eq(users.id, user.id),
-    columns: { currencyPreference: true },
+    columns: { currencyPreference: true, localePreference: true },
   })
   const currencyCode: CurrencyCode =
     userRecord?.currencyPreference &&
     isValidCurrencyCode(userRecord.currencyPreference)
       ? userRecord.currencyPreference
       : 'INR'
+  const locale =
+    userRecord?.localePreference &&
+    isSupportedLocale(userRecord.localePreference)
+      ? userRecord.localePreference
+      : 'en'
 
   const emailEvent: OrderCreatedEvent = {
     type: 'order.created',
@@ -680,6 +686,7 @@ export const createOrderForUser = async ({
       customerAddress: hydratedOrder.customerAddress,
       totalAmount: hydratedOrder.totalAmount,
       currencyCode,
+      locale,
       items: hydratedOrder.items.map((item) => ({
         name: item.product.name,
         quantity: item.quantity,
@@ -720,6 +727,7 @@ export const createOrderForUser = async ({
         currencyCode
       ),
       shippingAddress: hydratedOrder.customerAddress,
+      locale,
       items: hydratedOrder.items.map((item) => ({
         name: item.product.name,
         quantity: item.quantity,

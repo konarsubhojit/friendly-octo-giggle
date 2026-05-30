@@ -1,48 +1,42 @@
+'use client'
+
 import Link from 'next/link'
 import {
   ScatteredFlowers,
   VineDivider,
 } from '@/components/ui/DecorativeElements'
-
-const STATS = [
-  { num: '100%', label: 'Handmade', decorative: false },
-  { num: '50+', label: 'Products', decorative: false },
-  { num: '❤️', label: 'Made with love', decorative: true },
-] as const
-
-const FEATURE_BADGES = [
-  { icon: '🌸', text: 'Crochet flowers' },
-  { icon: '🎀', text: 'Hair accessories' },
-  { icon: '🧶', text: 'Handmade knitwear' },
-  { icon: '🚚', text: 'Free shipping' },
-] as const
+import { useLocale } from '@/contexts/LocaleContext'
 
 const HeroTextColumn = () => {
+  const { t, localizePath } = useLocale()
+  const stats = [
+    { num: '100%', label: t('hero.statHandmade'), decorative: false },
+    { num: '50+', label: t('hero.statProducts'), decorative: false },
+    { num: '❤️', label: t('hero.statLove'), decorative: true },
+  ] as const
+
   return (
     <div className="flex-1 max-w-xl animate-fade-in-up">
       <h1
         id="hero-heading"
         className="font-cursive text-5xl sm:text-6xl lg:text-7xl font-bold leading-tight text-[var(--foreground)] mb-6"
       >
-        Handmade With Love
+        {t('hero.title')}
       </h1>
       <p className="text-xs sm:text-sm font-semibold tracking-[0.25em] uppercase text-[var(--text-muted)] mb-8">
-        Crochet&nbsp; •&nbsp; Flowers&nbsp; •&nbsp; Bags&nbsp; •&nbsp;
-        Accessories
+        {t('hero.categories')}
       </p>
       <p className="text-base sm:text-lg text-[var(--text-secondary)] mb-8 leading-relaxed animate-fade-in-up animation-delay-100">
-        Discover our collection of crocheted flowers, hair accessories,
-        keyrings, scarves, and cozy wearables — each piece lovingly crafted, one
-        stitch at a time.
+        {t('hero.description')}
       </p>
       <Link
-        href="/shop"
+        href={localizePath('/shop')}
         className="inline-flex items-center gap-2 px-8 py-3.5 bg-[var(--btn-primary)] text-white rounded-full font-bold hover:bg-[var(--btn-primary-hover)] transition-all duration-300 shadow-warm hover:shadow-warm-lg hover:scale-105 focus-warm animate-fade-in-up animation-delay-200"
       >
-        Explore Shop <span aria-hidden="true">→</span>
+        {t('hero.cta')} <span aria-hidden="true">→</span>
       </Link>
       <div className="flex flex-wrap gap-6 mt-10 pt-8 border-t border-[var(--border-warm)] animate-fade-in-up animation-delay-300">
-        {STATS.map(({ num, label, decorative }) => (
+        {stats.map(({ num, label, decorative }) => (
           <div key={label} className="flex flex-col">
             <span
               className="text-2xl font-bold font-display text-[var(--hero-stat)]"
@@ -61,18 +55,19 @@ const HeroTextColumn = () => {
 }
 
 const HeroIllustration = () => {
+  const { t } = useLocale()
   return (
     <div className="flex-1 w-full max-w-lg lg:max-w-none animate-fade-in-up animation-delay-200">
       <div
         className="relative flex min-h-[400px] w-full items-center justify-center overflow-hidden rounded-[2rem] border border-[var(--border-warm)] bg-theme-panel shadow-warm-lg"
         role="img"
-        aria-label="Illustration placeholder: girl crocheting by a window"
+        aria-label={t('hero.illustrationLabel')}
       >
         <div
           className="absolute left-6 top-6 rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] glass-card text-[var(--text-secondary)]"
           aria-hidden="true"
         >
-          atelier mood
+          {t('hero.atelierMood')}
         </div>
         <div
           className="absolute -right-10 top-10 h-28 w-28 rounded-full blur-3xl"
@@ -89,7 +84,7 @@ const HeroIllustration = () => {
             🧶
           </span>
           <p className="text-sm text-[var(--foreground)] font-medium">
-            Illustration: Girl crocheting by a window
+            {t('hero.illustrationText')}
           </p>
         </div>
       </div>
@@ -98,9 +93,17 @@ const HeroIllustration = () => {
 }
 
 const FeatureBadges = () => {
+  const { t } = useLocale()
+  const featureBadges = [
+    { icon: '🌸', text: t('hero.badgeFlowers') },
+    { icon: '🎀', text: t('hero.badgeHair') },
+    { icon: '🧶', text: t('hero.badgeKnitwear') },
+    { icon: '🚚', text: t('hero.badgeShipping') },
+  ] as const
+
   return (
     <div className="flex flex-wrap gap-4 justify-center mt-6 animate-fade-in-up animation-delay-400">
-      {FEATURE_BADGES.map(({ icon, text }) => (
+      {featureBadges.map(({ icon, text }) => (
         <div
           key={text}
           className="glass-card flex items-center gap-2.5 rounded-full border border-[var(--border-warm)] px-5 py-2.5 shadow-warm animate-float-gentle"

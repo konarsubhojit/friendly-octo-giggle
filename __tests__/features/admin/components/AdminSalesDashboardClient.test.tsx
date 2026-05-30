@@ -79,6 +79,11 @@ describe('AdminSalesDashboardClient', () => {
     todayOrders: 3,
     averageOrderValue: 333.33,
     totalCustomers: 75,
+    revenue7d: 3200,
+    revenue30d: 8000,
+    revenue90d: 22000,
+    lowStockAlerts: 6,
+    emailFailureCount: 2,
     pendingOrders: 5,
     fulfillmentRate: 92.5,
     ordersByStatus: {

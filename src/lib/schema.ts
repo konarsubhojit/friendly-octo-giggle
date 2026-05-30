@@ -60,6 +60,9 @@ export const users = pgTable('User', {
   currencyPreference: varchar('currencyPreference', { length: 3 })
     .default('INR')
     .notNull(),
+  localePreference: varchar('localePreference', { length: 10 })
+    .default('en')
+    .notNull(),
   role: userRoleEnum('role').default('CUSTOMER').notNull(),
   lockedUntil: timestamp('lockedUntil', { mode: 'date' }),
   sessionVersion: integer('sessionVersion').default(0).notNull(),
@@ -186,6 +189,10 @@ export const products = pgTable(
       .$defaultFn(() => generateShortId()),
     name: text('name').notNull(),
     description: text('description').notNull(),
+    localizedContent: json('localizedContent')
+      .$type<Record<string, { name?: string; description?: string }>>()
+      .default({})
+      .notNull(),
     image: text('image').notNull(),
     images: json('images').$type<string[]>().default([]).notNull(),
     category: text('category').notNull(),
@@ -385,6 +392,28 @@ export const orderItems = pgTable(
   ]
 )
 
+export const adminAuditLogs = pgTable(
+  'AdminAuditLog',
+  {
+    id: varchar('id', { length: 7 })
+      .primaryKey()
+      .$defaultFn(() => generateShortId()),
+    userId: text('userId')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    entity: text('entity').notNull(),
+    entityId: text('entityId').notNull(),
+    action: text('action').notNull(),
+    diff: json('diff').$type<Record<string, unknown>>().notNull().default({}),
+    createdAt: timestamp('createdAt', { mode: 'date' }).defaultNow().notNull(),
+  },
+  (t) => [
+    index('AdminAuditLog_userId_idx').on(t.userId),
+    index('AdminAuditLog_entity_idx').on(t.entity),
+    index('AdminAuditLog_createdAt_idx').on(t.createdAt),
+  ]
+)
+
 // ─── Cart Tables ─────────────────────────────────────────
 
 export const carts = pgTable(
@@ -548,6 +577,7 @@ export const usersRelations = relations(users, ({ many, one }) => ({
   passwordHistory: many(passwordHistory),
   wishlists: many(wishlists),
   reviewVotes: many(reviewVotes),
+  adminAuditLogs: many(adminAuditLogs),
 }))
 
 export const addressesRelations = relations(addresses, ({ one }) => ({
@@ -716,6 +746,13 @@ export const productSharesRelations = relations(productShares, ({ one }) => ({
   variant: one(productVariants, {
     fields: [productShares.variantId],
     references: [productVariants.id],
+  }),
+}))
+
+export const adminAuditLogsRelations = relations(adminAuditLogs, ({ one }) => ({
+  user: one(users, {
+    fields: [adminAuditLogs.userId],
+    references: [users.id],
   }),
 }))
 

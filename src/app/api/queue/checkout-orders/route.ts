@@ -7,7 +7,7 @@ import { CheckoutQueueMessageSchema } from '@/features/cart/validations'
 
 const MAX_CHECKOUT_CONSUMER_ATTEMPTS = 5
 
-export const POST = handleCallback(
+const checkoutOrdersCallbackHandler = handleCallback(
   async (message, metadata) => {
     const { checkoutRequestId } = CheckoutQueueMessageSchema.parse(message)
 
@@ -30,3 +30,6 @@ export const POST = handleCallback(
     visibilityTimeoutSeconds: 600,
   }
 )
+
+export const POST = async (request: Request) =>
+  checkoutOrdersCallbackHandler(request)
