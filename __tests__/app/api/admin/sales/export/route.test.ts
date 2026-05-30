@@ -36,7 +36,10 @@ describe('GET /api/admin/sales/export', () => {
   })
 
   it('returns csv export with sales rows', async () => {
-    mockCheckAdminAuth.mockResolvedValue({ authorized: true, userId: 'admin-1' })
+    mockCheckAdminAuth.mockResolvedValue({
+      authorized: true,
+      userId: 'admin-1',
+    })
     mockGetAdminSalesDashboardData.mockResolvedValue({
       recentSales: [
         { date: '2026-05-01', orders: 2, revenue: 100, label: 'Thu' },

@@ -38,15 +38,12 @@ export function LocaleProvider({
   children,
 }: LocaleProviderProps) {
   const t = useCallback((key: MessageKey) => getMessage(locale, key), [locale])
-  const localizePath = useCallback(
-    (pathname: string) => {
-      const normalizedPathname = pathname.startsWith('/')
-        ? pathname
-        : `/${pathname}`
-      return stripLocaleFromPathname(normalizedPathname)
-    },
-    []
-  )
+  const localizePath = useCallback((pathname: string) => {
+    const normalizedPathname = pathname.startsWith('/')
+      ? pathname
+      : `/${pathname}`
+    return stripLocaleFromPathname(normalizedPathname)
+  }, [])
 
   const value = useMemo(
     () => ({ locale, t, localizePath }),
