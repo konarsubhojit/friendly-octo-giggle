@@ -46,26 +46,30 @@ describe('app/loading.tsx – Root Loading', () => {
 
 describe('app/products/loading.tsx – Products Loading', () => {
   it('renders without crashing', async () => {
-    const { default: ProductsLoading } = await import('@/app/[locale]/products/loading')
+    const { default: ProductsLoading } =
+      await import('@/app/[locale]/products/loading')
     const { container } = render(<ProductsLoading />)
     expect(container).toBeTruthy()
   })
 
   it('renders 9 ProductCardSkeletons', async () => {
-    const { default: ProductsLoading } = await import('@/app/[locale]/products/loading')
+    const { default: ProductsLoading } =
+      await import('@/app/[locale]/products/loading')
     render(<ProductsLoading />)
     expect(screen.getAllByTestId('product-card-skeleton')).toHaveLength(9)
   })
 
   it('renders a pagination skeleton', async () => {
-    const { default: ProductsLoading } = await import('@/app/[locale]/products/loading')
+    const { default: ProductsLoading } =
+      await import('@/app/[locale]/products/loading')
     const { container } = render(<ProductsLoading />)
     const paginationButtons = container.querySelectorAll('.h-10.w-10')
     expect(paginationButtons.length).toBeGreaterThanOrEqual(5)
   })
 
   it('contains animate-pulse elements', async () => {
-    const { default: ProductsLoading } = await import('@/app/[locale]/products/loading')
+    const { default: ProductsLoading } =
+      await import('@/app/[locale]/products/loading')
     const { container } = render(<ProductsLoading />)
     const pulseElements = container.querySelectorAll('.animate-pulse')
     expect(pulseElements.length).toBeGreaterThan(0)
@@ -115,13 +119,15 @@ describe('app/products/[id]/loading.tsx – Product Detail Loading', () => {
 
 describe('app/wishlist/loading.tsx – Wishlist Loading', () => {
   it('renders without crashing', async () => {
-    const { default: WishlistLoading } = await import('@/app/[locale]/wishlist/loading')
+    const { default: WishlistLoading } =
+      await import('@/app/[locale]/wishlist/loading')
     const { container } = render(<WishlistLoading />)
     expect(container).toBeTruthy()
   })
 
   it('uses pt-8 spacing (not pt-28)', async () => {
-    const { default: WishlistLoading } = await import('@/app/[locale]/wishlist/loading')
+    const { default: WishlistLoading } =
+      await import('@/app/[locale]/wishlist/loading')
     const { container } = render(<WishlistLoading />)
     const main = container.querySelector('main')
     expect(main?.className).toContain('pt-8')
@@ -129,7 +135,8 @@ describe('app/wishlist/loading.tsx – Wishlist Loading', () => {
   })
 
   it('contains animate-pulse elements', async () => {
-    const { default: WishlistLoading } = await import('@/app/[locale]/wishlist/loading')
+    const { default: WishlistLoading } =
+      await import('@/app/[locale]/wishlist/loading')
     const { container } = render(<WishlistLoading />)
     expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(
       0
@@ -163,7 +170,8 @@ describe('app/shop/loading.tsx – Shop Loading', () => {
 
 describe('Spacing consistency – pt-8 on all loading skeletons', () => {
   it('products loading uses pt-8', async () => {
-    const { default: ProductsLoading } = await import('@/app/[locale]/products/loading')
+    const { default: ProductsLoading } =
+      await import('@/app/[locale]/products/loading')
     const { container } = render(<ProductsLoading />)
     const main = container.querySelector('main')
     expect(main?.className).toContain('pt-8')

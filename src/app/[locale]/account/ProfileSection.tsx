@@ -4,7 +4,10 @@ import { useCallback, useState } from 'react'
 import { DynamicForm, type SubmitResult } from '@/components/ui/DynamicForm'
 import { Card } from '@/components/ui/Card'
 import { API_ERRORS } from '@/lib/constants/error-messages'
-import { PROFILE_FIELDS, type UserProfile } from '@/app/[locale]/account/account-shared'
+import {
+  PROFILE_FIELDS,
+  type UserProfile,
+} from '@/app/[locale]/account/account-shared'
 
 interface ProfileSectionProps {
   readonly profile: UserProfile
