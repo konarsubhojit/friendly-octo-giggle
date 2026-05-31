@@ -8,11 +8,11 @@ import { AuthRequiredState } from '@/components/ui/AuthRequiredState'
 import { Card } from '@/components/ui/Card'
 import { GradientHeading } from '@/components/ui/GradientHeading'
 import { API_ERRORS } from '@/lib/constants/error-messages'
-import { ProfileSection } from '@/app/account/ProfileSection'
-import { PreferencesSection } from '@/app/account/PreferencesSection'
-import { PasswordSection } from '@/app/account/PasswordSection'
-import { RecentOrdersSection } from '@/app/account/RecentOrdersSection'
-import type { UserProfile } from '@/app/account/account-shared'
+import { ProfileSection } from '@/app/[locale]/account/ProfileSection'
+import { PreferencesSection } from '@/app/[locale]/account/PreferencesSection'
+import { PasswordSection } from '@/app/[locale]/account/PasswordSection'
+import { RecentOrdersSection } from '@/app/[locale]/account/RecentOrdersSection'
+import type { UserProfile } from '@/app/[locale]/account/account-shared'
 
 export default function AccountClient() {
   const { data: session, status: authStatus } = useSession()

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Card } from '@/components/ui/Card'
 import { ThemeSelector } from '@/components/ui/ThemeSelector'
 import { useCurrency, type CurrencyCode } from '@/contexts/CurrencyContext'
-import type { UserProfile } from '@/app/account/account-shared'
+import type { UserProfile } from '@/app/[locale]/account/account-shared'
 
 interface PreferencesSectionProps {
   readonly profile: UserProfile | null

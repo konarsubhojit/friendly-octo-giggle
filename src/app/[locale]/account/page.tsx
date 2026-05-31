@@ -1,4 +1,4 @@
-import AccountClient from '@/app/account/AccountClient'
+import AccountClient from '@/app/[locale]/account/AccountClient'
 
 export default function AccountPage() {
   return <AccountClient />

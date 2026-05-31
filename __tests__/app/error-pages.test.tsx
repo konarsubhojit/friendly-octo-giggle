@@ -16,11 +16,11 @@ vi.mock('next/link', () => ({
   }) => <a href={href}>{children}</a>,
 }))
 
-import GlobalError from '@/app/error'
-import OrdersError from '@/app/orders/error'
-import AdminError from '@/app/admin/error'
-import CartError from '@/app/cart/error'
-import ProductsError from '@/app/products/error'
+import GlobalError from '@/app/[locale]/error'
+import OrdersError from '@/app/[locale]/orders/error'
+import AdminError from '@/app/[locale]/admin/error'
+import CartError from '@/app/[locale]/cart/error'
+import ProductsError from '@/app/[locale]/products/error'
 
 function createError(
   message: string,

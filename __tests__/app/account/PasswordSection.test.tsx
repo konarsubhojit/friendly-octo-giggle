@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import React from 'react'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { PasswordSection } from '@/app/account/PasswordSection'
+import { PasswordSection } from '@/app/[locale]/account/PasswordSection'
 
 vi.mock('@/components/ui/Card', () => ({
   Card: ({

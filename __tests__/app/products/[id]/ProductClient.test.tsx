@@ -9,7 +9,7 @@ import {
   within,
 } from '@testing-library/react'
 import React from 'react'
-import ProductClient from '@/app/products/[id]/ProductClient'
+import ProductClient from '@/app/[locale]/products/[id]/ProductClient'
 import type { Product, ProductVariant } from '@/lib/types'
 import { useSession } from 'next-auth/react'
 import { useSelector } from 'react-redux'

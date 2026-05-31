@@ -2,7 +2,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import React from 'react'
-import HelpPage from '@/app/help/page'
+import HelpPage from '@/app/[locale]/help/page'
 
 vi.mock('next/link', () => ({
   default: ({

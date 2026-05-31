@@ -13,7 +13,7 @@ vi.mock('@/lib/db', () => ({
   },
 }))
 
-import { GET } from '@/app/s/[key]/route'
+import { GET } from '@/app/[locale]/s/[key]/route'
 
 const makeGetRequest = (key: string) =>
   new NextRequest(`http://localhost/s/${key}`)

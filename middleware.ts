@@ -5,7 +5,6 @@ import {
   type AppLocale,
   getLocaleFromPathname,
   isSupportedLocale,
-  stripLocaleFromPathname,
   toLocalizedPathname,
 } from '@/lib/i18n/config'
 
@@ -34,25 +33,30 @@ export function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
+  // Routes now live under `src/app/[locale]/...`, so locale is a real URL
+  // segment instead of a rewritten-away prefix. We only need to redirect
+  // unprefixed requests to a locale-prefixed URL; the request then resolves
+  // directly to the `[locale]` route segment and can be cached / ISR'd
+  // without the root layout having to read request headers.
   const localeFromPath = getLocaleFromPathname(pathname)
   if (!localeFromPath) {
     const locale = getPreferredLocale(request)
     const redirectUrl = request.nextUrl.clone()
     redirectUrl.pathname = toLocalizedPathname(pathname, locale)
     redirectUrl.search = search
-    return NextResponse.redirect(redirectUrl)
+    const response = NextResponse.redirect(redirectUrl)
+    response.cookies.set(LOCALE_COOKIE_NAME, locale, {
+      path: '/',
+      maxAge: 60 * 60 * 24 * 365,
+      sameSite: 'lax',
+    })
+    return response
   }
 
-  const rewriteUrl = request.nextUrl.clone()
-  rewriteUrl.pathname = stripLocaleFromPathname(pathname)
-  rewriteUrl.search = search
-
-  const requestHeaders = new Headers(request.headers)
-  requestHeaders.set('x-locale', localeFromPath)
-
-  const response = NextResponse.rewrite(rewriteUrl, {
-    request: { headers: requestHeaders },
-  })
+  // Locale already present in the path — refresh the preference cookie so the
+  // next bare-path visit lands on the same locale, then let the request fall
+  // through to the route segment.
+  const response = NextResponse.next()
   response.cookies.set(LOCALE_COOKIE_NAME, localeFromPath, {
     path: '/',
     maxAge: 60 * 60 * 24 * 365,

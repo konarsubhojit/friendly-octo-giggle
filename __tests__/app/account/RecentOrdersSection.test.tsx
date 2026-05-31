@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import { RecentOrdersSection } from '@/app/account/RecentOrdersSection'
+import { RecentOrdersSection } from '@/app/[locale]/account/RecentOrdersSection'
 
 describe('RecentOrdersSection', () => {
   beforeEach(() => {

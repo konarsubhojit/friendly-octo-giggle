@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { render, screen } from '@testing-library/react'
 import type { ReactNode } from 'react'
-import AdminCheckoutRequestsPage from '@/app/admin/checkout-requests/page'
+import AdminCheckoutRequestsPage from '@/app/[locale]/admin/checkout-requests/page'
 
 const mockGetRecentCheckoutRequests = vi.hoisted(() => vi.fn())
 
