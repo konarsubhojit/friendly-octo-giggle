@@ -80,10 +80,7 @@ export function CurrencyProvider({
           rates: Record<string, number>
           timestamp: number
         }
-        if (
-          cached &&
-          Date.now() - timestamp < EXCHANGE_RATES_MAX_AGE_MS
-        ) {
+        if (cached && Date.now() - timestamp < EXCHANGE_RATES_MAX_AGE_MS) {
           return {
             rates: {
               INR: cached['INR'] ?? FALLBACK_RATES.INR,
@@ -152,11 +149,9 @@ export function CurrencyProvider({
       opts?: { timeout: number }
     ) => number | NodeJS.Timeout
     const ric =
-      (
-        typeof window !== 'undefined' &&
+      (typeof window !== 'undefined' &&
         (window as unknown as { requestIdleCallback?: IdleScheduler })
-          .requestIdleCallback
-      ) ||
+          .requestIdleCallback) ||
       ((cb: () => void) => setTimeout(cb, 1))
     const handle = ric(runFetch, { timeout: 2000 })
 
