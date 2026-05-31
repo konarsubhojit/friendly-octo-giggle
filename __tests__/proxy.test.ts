@@ -1,15 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
 
-const mockAuth = vi.hoisted(() => vi.fn())
+const mockGetToken = vi.hoisted(() => vi.fn())
 const mockGetFeatureFlags = vi.hoisted(() => vi.fn())
 const mockStrictLimit = vi.hoisted(() => vi.fn())
 const mockGeneralLimit = vi.hoisted(() => vi.fn())
 const mockGetStrictLimiter = vi.hoisted(() => vi.fn())
 const mockGetGeneralLimiter = vi.hoisted(() => vi.fn())
 
-vi.mock('@/lib/auth', () => ({
-  auth: mockAuth,
+vi.mock('next-auth/jwt', () => ({
+  getToken: mockGetToken,
 }))
 
 vi.mock('@/lib/edge-config', () => ({
@@ -23,7 +23,7 @@ vi.mock('@/lib/rate-limit', () => ({
   getGeneralLimiter: mockGetGeneralLimiter,
 }))
 
-import { config, proxy } from '@/proxy'
+import { config, proxy } from '../proxy'
 
 const MOCK_RESET_TIMESTAMP = Date.now() + 60_000
 
@@ -43,8 +43,9 @@ describe('proxy rate limiting', () => {
     vi.clearAllMocks()
     delete process.env.TRUSTED_PROXY_IPS
     vi.stubEnv('NODE_ENV', 'development')
+    vi.stubEnv('NEXTAUTH_SECRET', 'test-secret')
 
-    mockAuth.mockResolvedValue(null)
+    mockGetToken.mockResolvedValue(null)
     mockGetFeatureFlags.mockResolvedValue({ maintenanceMode: false })
 
     mockStrictLimit.mockResolvedValue({
@@ -81,9 +82,7 @@ describe('proxy rate limiting', () => {
   })
 
   it('prefers authenticated user id for limiter identifier', async () => {
-    mockAuth.mockResolvedValue({
-      user: { id: 'user-42', role: 'CUSTOMER' },
-    })
+    mockGetToken.mockResolvedValue({ id: 'user-42', role: 'CUSTOMER' })
 
     await proxy(
       createRequest('/api/orders', {

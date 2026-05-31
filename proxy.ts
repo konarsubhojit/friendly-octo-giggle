@@ -1,8 +1,16 @@
 import { NextResponse, type NextRequest } from 'next/server'
+import { getToken } from 'next-auth/jwt'
 import { Ratelimit } from '@upstash/ratelimit'
 import { Redis } from '@upstash/redis'
-import { auth } from '@/lib/auth'
 import { getFeatureFlags } from '@/lib/edge-config'
+import {
+  DEFAULT_LOCALE,
+  LOCALE_COOKIE_NAME,
+  type AppLocale,
+  getLocaleFromPathname,
+  isSupportedLocale,
+  toLocalizedPathname,
+} from '@/lib/i18n/config'
 import {
   GENERAL_RATE_LIMIT_MAX_REQUESTS,
   getGeneralLimiter,
@@ -11,40 +19,32 @@ import {
 } from '@/lib/rate-limit'
 
 /**
- * ⚠️ Orphaned but intentionally retained.
+ * Edge-only proxy (Next.js 16 `proxy.ts` convention).
  *
- * This module implements production security primitives — nonce-based CSP,
- * Upstash-backed rate limiting for `/api/auth/*`, `/api/checkout`,
- * `/api/orders`, `/api/ai`; Edge-Config-driven maintenance mode; HTTPS
- * enforcement; and a server-side admin auth + role gate on `/admin/*` and
- * `/api/admin/*` — that are NOT currently invoked from `middleware.ts`. The
- * active middleware only performs the locale redirect/cookie refresh.
+ * Composes the two previously-separate edge layers into one:
+ *   1. Locale redirect / cookie refresh (was `middleware.ts`).
+ *   2. Production security primitives: nonce-based CSP, Upstash-backed
+ *      rate limiting for `/api/auth/*`, `/api/checkout`, `/api/orders`,
+ *      `/api/ai`; Edge-Config-driven maintenance mode; HTTPS enforcement;
+ *      and an admin auth + role gate on `/admin/*` and `/api/admin/*`
+ *      (was `src/proxy.ts`).
  *
- * Why not wired yet:
- *   The `auth()` import below resolves to the Node-side NextAuth instance in
- *   `@/lib/auth`, which pulls the Drizzle adapter, `pino` logger, and
- *   `prom-client` metrics into the bundle — none of which are edge-safe.
- *   To activate this file from `middleware.ts` (or rename both into a single
- *   Next.js 16 `proxy.ts`), the admin auth check here must switch to the
- *   edge-safe `@/lib/auth.config` (or `getToken` from `next-auth/jwt`) so
- *   the edge runtime can read the JWT without bundling the adapter, the
- *   logger, or the metrics client. The DB driver itself is fine —
- *   `@neondatabase/serverless` is edge-compatible by design.
- *
- * Why not deleted:
- *   Deleting it would silently regress production security posture (no CSP,
- *   no distributed rate limiting, no maintenance kill switch, no edge admin
- *   gate). The behaviour is documented as the "security middleware" in
- *   `docs/architecture.md` and `.github/copilot-instructions.md`.
- *
- * Test coverage: `__tests__/proxy.test.ts` exercises this module's pure logic
- * so it does not bit-rot while it sits offline. Tracked as a follow-up to the
- * Tier A2 / route-group migration (PR #311).
+ * Edge-safety notes:
+ *   - The admin gate reads the JWT via `getToken({ req, secret })` from
+ *     `next-auth/jwt` instead of `auth()` from `@/lib/auth`. This avoids
+ *     pulling the Drizzle adapter, `pino` logger, and `prom-client` metrics
+ *     into the edge bundle. The full Node-side session machinery still lives
+ *     in `@/lib/auth` and is used by server components / route handlers.
+ *   - No logger / metrics calls are made here; the security primitives don't
+ *     require them. Auth events that need persistence happen on the Node
+ *     side (sign-in callbacks, route handlers).
  */
 
 const isDev = process.env.NODE_ENV === 'development'
 const ADMIN_PATH_PREFIX = '/admin'
 const ADMIN_API_PREFIX = '/api/admin'
+
+const PUBLIC_FILE = /\.(.*)$/
 
 const RATE_LIMIT_PATHS = [
   '/api/auth/register',
@@ -86,13 +86,9 @@ type RateLimitResult = {
   reset: number
 }
 
-type SessionUser = {
+type AuthTokenLike = {
   id?: string | null
   role?: string | null
-}
-
-type SessionLike = {
-  user?: SessionUser | null
 } | null
 
 // Distributed rate limiter for AI routes — enforced across all serverless
@@ -231,22 +227,63 @@ function getInMemoryAiRateLimitResult(
   }
 }
 
+const getPreferredLocale = (request: NextRequest): AppLocale => {
+  const fromCookie = request.cookies.get(LOCALE_COOKIE_NAME)?.value
+  if (fromCookie && isSupportedLocale(fromCookie)) return fromCookie
+
+  const languageHeader = request.headers.get('accept-language')
+  const firstLanguage = languageHeader?.split(',')[0]?.split('-')[0]
+  if (firstLanguage && isSupportedLocale(firstLanguage)) return firstLanguage
+
+  return DEFAULT_LOCALE
+}
+
+const isLocaleEligiblePath = (pathname: string): boolean =>
+  !pathname.startsWith('/_next') &&
+  !pathname.startsWith('/api') &&
+  !PUBLIC_FILE.test(pathname)
+
 export async function proxy(request: NextRequest) {
-  const { pathname } = request.nextUrl
+  const { pathname, search } = request.nextUrl
   const nonce = generateNonce()
   const csp = buildCspHeader(nonce)
   const requestHeaders = new Headers(request.headers)
   requestHeaders.set('x-nonce', nonce)
   let rateLimitHeaders: HeadersInit | null = null
-  let cachedSession: SessionLike | undefined
+  let cachedToken: AuthTokenLike | undefined
 
-  const getSession = async (): Promise<SessionLike> => {
-    if (cachedSession !== undefined) {
-      return cachedSession
+  // Read the NextAuth JWT directly at the edge. Unlike `auth()` from
+  // `@/lib/auth`, `getToken` pulls in only `next-auth/jwt` — no DB adapter,
+  // no logger, no metrics — and so is safe in the edge runtime.
+  const getAuthToken = async (): Promise<AuthTokenLike> => {
+    if (cachedToken !== undefined) {
+      return cachedToken
     }
-    const session = await auth()
-    cachedSession = (session as SessionLike) ?? null
-    return cachedSession
+    const secret = process.env.NEXTAUTH_SECRET
+    if (!secret) {
+      cachedToken = null
+      return cachedToken
+    }
+    try {
+      const token = await getToken({
+        req: request,
+        secret,
+        secureCookie: process.env.NODE_ENV === 'production',
+        cookieName:
+          process.env.NODE_ENV === 'production'
+            ? '__Secure-next-auth.session-token'
+            : 'next-auth.session-token',
+      })
+      cachedToken = token
+        ? {
+            id: (token.id as string | undefined) ?? null,
+            role: (token.role as string | undefined) ?? null,
+          }
+        : null
+    } catch {
+      cachedToken = null
+    }
+    return cachedToken
   }
 
   const withResponseHeaders = (response: NextResponse): NextResponse => {
@@ -277,8 +314,8 @@ export async function proxy(request: NextRequest) {
   // ── Rate limiting for sensitive endpoints ──────────────
   const isAiPath = AI_RATE_LIMIT_PATHS.some((p) => pathname.startsWith(p))
   const isSensitivePath = RATE_LIMIT_PATHS.some((p) => pathname.startsWith(p))
-  const session = isAiPath || isSensitivePath ? await getSession() : null
-  const userId = session?.user?.id?.trim() || null
+  const token = isAiPath || isSensitivePath ? await getAuthToken() : null
+  const userId = token?.id?.trim() || null
   const ipAddress = getClientIpFromHeaders(request.headers)
   const identifier = buildIdentifier(userId, ipAddress)
 
@@ -403,9 +440,9 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith(ADMIN_API_PREFIX)
 
   if (isAdminRoute) {
-    const currentSession = await getSession()
+    const currentToken = await getAuthToken()
 
-    if (!currentSession?.user) {
+    if (!currentToken?.id) {
       if (pathname.startsWith('/api/')) {
         return withResponseHeaders(
           NextResponse.json(
@@ -420,7 +457,7 @@ export async function proxy(request: NextRequest) {
       return withResponseHeaders(NextResponse.redirect(signInUrl))
     }
 
-    if (currentSession.user.role !== 'ADMIN') {
+    if (currentToken.role !== 'ADMIN') {
       if (pathname.startsWith('/api/')) {
         return withResponseHeaders(
           NextResponse.json(
@@ -435,6 +472,46 @@ export async function proxy(request: NextRequest) {
     }
   }
 
+  // ── Locale redirect / cookie refresh ──────────────────
+  // Routes now live under `src/app/[locale]/...`, so locale is a real URL
+  // segment instead of a rewritten-away prefix. We only need to redirect
+  // unprefixed user-facing requests to a locale-prefixed URL; the request
+  // then resolves directly to the `[locale]` route segment and can be
+  // cached / ISR'd without the root layout having to read request headers.
+  if (isLocaleEligiblePath(pathname)) {
+    const localeFromPath = getLocaleFromPathname(pathname)
+    if (!localeFromPath) {
+      const locale = getPreferredLocale(request)
+      const redirectUrl = request.nextUrl.clone()
+      redirectUrl.pathname = toLocalizedPathname(pathname, locale)
+      redirectUrl.search = search
+      const response = withResponseHeaders(NextResponse.redirect(redirectUrl))
+      response.cookies.set(LOCALE_COOKIE_NAME, locale, {
+        path: '/',
+        maxAge: 60 * 60 * 24 * 365,
+        sameSite: 'lax',
+      })
+      return response
+    }
+
+    // Locale already present in the path — refresh the preference cookie so
+    // the next bare-path visit lands on the same locale, then let the
+    // request fall through to the route segment with security headers.
+    const response = withResponseHeaders(
+      NextResponse.next({
+        request: {
+          headers: requestHeaders,
+        },
+      })
+    )
+    response.cookies.set(LOCALE_COOKIE_NAME, localeFromPath, {
+      path: '/',
+      maxAge: 60 * 60 * 24 * 365,
+      sameSite: 'lax',
+    })
+    return response
+  }
+
   return withResponseHeaders(
     NextResponse.next({
       request: {
@@ -445,7 +522,9 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Match all app/API routes while excluding static assets.
+  // Union of the previous `middleware.ts` and `src/proxy.ts` matchers.
+  // The security primitives need to see `/api/*`, while locale handling is
+  // limited inline (see `isLocaleEligiblePath`).
   matcher: [
     '/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|map)$).*)',
   ],
