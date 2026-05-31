@@ -3,7 +3,8 @@
 import dynamic from 'next/dynamic'
 
 const Toaster = dynamic(
-  () => import('react-hot-toast').then((module) => ({ default: module.Toaster })),
+  () =>
+    import('react-hot-toast').then((module) => ({ default: module.Toaster })),
   { ssr: false }
 )
 const InstallBanner = dynamic(

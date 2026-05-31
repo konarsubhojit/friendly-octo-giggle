@@ -12,7 +12,9 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { useLocale } from '@/contexts/LocaleContext'
 import LanguageSwitcher from '@/components/ui/LanguageSwitcher'
 
-const LoginModal = dynamic(() => import('@/features/auth/components/LoginModal'))
+const LoginModal = dynamic(
+  () => import('@/features/auth/components/LoginModal')
+)
 const ProductSearch = dynamic(
   () => import('@/features/product/components/ProductSearch'),
   {

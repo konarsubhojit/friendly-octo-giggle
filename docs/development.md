@@ -1076,7 +1076,10 @@ import Image from 'next/image';
 
 ```typescript
 const response = apiSuccess({ products })
-response.headers.set('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=120')
+response.headers.set(
+  'Cache-Control',
+  'public, s-maxage=60, stale-while-revalidate=120'
+)
 return response
 ```
 
