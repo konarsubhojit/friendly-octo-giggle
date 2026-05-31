@@ -112,13 +112,13 @@ export default async function RootLayout({
         <link
           rel="preconnect"
           href="https://va.vercel-scripts.com"
-          crossOrigin=""
+          crossOrigin="anonymous"
         />
         <link rel="dns-prefetch" href="https://va.vercel-scripts.com" />
         <link
           rel="preconnect"
           href="https://blob.vercel-storage.com"
-          crossOrigin=""
+          crossOrigin="anonymous"
         />
         <link rel="dns-prefetch" href="https://blob.vercel-storage.com" />
       </head>

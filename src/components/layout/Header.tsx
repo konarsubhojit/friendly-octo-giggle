@@ -13,7 +13,8 @@ import { useLocale } from '@/contexts/LocaleContext'
 import LanguageSwitcher from '@/components/ui/LanguageSwitcher'
 
 const LoginModal = dynamic(
-  () => import('@/features/auth/components/LoginModal')
+  () => import('@/features/auth/components/LoginModal'),
+  { ssr: false }
 )
 const ProductSearch = dynamic(
   () => import('@/features/product/components/ProductSearch'),
