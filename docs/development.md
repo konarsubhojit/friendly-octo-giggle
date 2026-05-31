@@ -343,7 +343,7 @@ zenput is currently approved only for the admin surface (`/admin/*` pages and `s
 
 zenput's `NumberInput.onChange` is declared as `(value: number | undefined) => void` — it fires `undefined` when the user clears the field. This forces every caller to write `setFoo(v ?? 0)` (or similar) defensively and is easy to miss in code review.
 
-The `NumberField` adapter normalises this:
+The `NumberField` adapter normalizes this:
 
 ```tsx
 import { NumberField } from '@/components/ui/zenput'

@@ -30,7 +30,7 @@ export interface NumberFieldProps extends Omit<
 
 /**
  * App-wide adapter around zenput's `NumberInput` that:
- *  - normalises `onChange(value: number | undefined)` to `(value: number) => void`
+ *  - normalizes `onChange(value: number | undefined)` to `(value: number) => void`
  *    with a configurable fallback (`defaultValueOnClear`).
  *  - applies the default `fullWidth` styling used across the admin surface.
  */

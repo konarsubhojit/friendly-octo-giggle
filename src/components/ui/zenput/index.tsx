@@ -7,7 +7,7 @@
  * **Always import zenput components from this module** (e.g.
  * `import { TextInput } from '@/components/ui/zenput'`) instead of directly from
  * `'zenput'`. The adapter applies app-default props (`fullWidth`, `size`,
- * `variant`) and shimms behavioural rough-edges such as
+ * `variant`) and shims behavioural rough-edges such as
  * `NumberInput.onChange(value: number | undefined)`.
  *
  * See `docs/development.md` → "zenput Adapter Layer" for guidance on when to
