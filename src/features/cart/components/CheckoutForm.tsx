@@ -290,7 +290,9 @@ export const CheckoutForm = ({
     e.preventDefault()
 
     if (!session?.user?.id || !session.user.email) {
-      router.push(`${localizePath('/auth/signin')}?callbackUrl=${encodeURIComponent(localizePath('/checkout/shipping'))}`)
+      router.push(
+        `${localizePath('/auth/signin')}?callbackUrl=${encodeURIComponent(localizePath('/checkout/shipping'))}`
+      )
       return
     }
 

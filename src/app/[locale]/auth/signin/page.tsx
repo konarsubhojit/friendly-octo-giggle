@@ -1,6 +1,10 @@
 import Link from '@/components/ui/LocaleLink'
 import { signIn } from '@/lib/auth'
-import { toLocalizedPathname, isSupportedLocale, DEFAULT_LOCALE } from '@/lib/i18n/config'
+import {
+  toLocalizedPathname,
+  isSupportedLocale,
+  DEFAULT_LOCALE,
+} from '@/lib/i18n/config'
 import SignInClient from './SignInClient'
 
 export const dynamic = 'force-dynamic'

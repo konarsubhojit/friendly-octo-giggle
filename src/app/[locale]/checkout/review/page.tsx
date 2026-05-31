@@ -172,7 +172,9 @@ export default function CheckoutReviewPage() {
     const sessionUser = session?.user
 
     if (!sessionUser?.email) {
-      router.push(`${localizePath('/auth/signin')}?callbackUrl=${encodeURIComponent(localizePath('/checkout/review'))}`)
+      router.push(
+        `${localizePath('/auth/signin')}?callbackUrl=${encodeURIComponent(localizePath('/checkout/review'))}`
+      )
       return
     }
 
@@ -236,7 +238,9 @@ export default function CheckoutReviewPage() {
   }
 
   if (!session?.user) {
-    router.replace(`${localizePath('/auth/signin')}?callbackUrl=${encodeURIComponent(localizePath('/checkout/review'))}`)
+    router.replace(
+      `${localizePath('/auth/signin')}?callbackUrl=${encodeURIComponent(localizePath('/checkout/review'))}`
+    )
     return null
   }
 
