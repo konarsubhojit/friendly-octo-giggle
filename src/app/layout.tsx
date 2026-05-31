@@ -18,13 +18,6 @@ import {
 } from '@/lib/i18n/config'
 import { getMessage } from '@/lib/i18n/messages'
 
-type NoncedTelemetryComponent = React.ComponentType<{
-  readonly nonce?: string
-}>
-// Vercel telemetry libraries support forwarding `nonce` at runtime for injected scripts.
-const AnalyticsWithNonce = Analytics as NoncedTelemetryComponent
-const SpeedInsightsWithNonce = SpeedInsights as NoncedTelemetryComponent
-
 function AppProviders({
   children,
   locale,
@@ -96,8 +89,10 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  // Only `x-locale` (set by middleware.ts) is needed here. The previous
+  // `x-nonce` lookup was dead code: middleware.ts does not set it, so
+  // forwarding `nonce` to <Analytics>/<SpeedInsights> never had an effect.
   const requestHeaders = await headers()
-  const nonce = requestHeaders.get('x-nonce') || undefined
   const localeHeader = requestHeaders.get('x-locale') || DEFAULT_LOCALE
   const locale = isSupportedLocale(localeHeader) ? localeHeader : DEFAULT_LOCALE
   const dir = getLocaleDirection(locale)
@@ -136,8 +131,8 @@ export default async function RootLayout({
           </main>
           <AppEnhancements />
         </AppProviders>
-        <AnalyticsWithNonce nonce={nonce} />
-        <SpeedInsightsWithNonce nonce={nonce} />
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   )

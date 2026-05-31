@@ -13,6 +13,8 @@ vi.mock('@/lib/cache', () => ({
   cacheProductsBestsellers: vi.fn(async (fetcher: () => Promise<unknown>) => {
     return await fetcher()
   }),
+  buildPublicCacheHeader: (s: number, w: number = Math.floor(s / 2)) =>
+    `public, s-maxage=${s}, stale-while-revalidate=${w}`,
 }))
 
 vi.mock('@/lib/api-middleware', () => ({

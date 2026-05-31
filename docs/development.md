@@ -1074,14 +1074,24 @@ import Image from 'next/image';
 
 **Set cache headers**
 
+For public, CDN-cacheable GET routes, use the shared helper to keep the
+`Cache-Control` shape consistent across the codebase. The helper defaults
+`stale-while-revalidate` to half of `s-maxage`.
+
 ```typescript
+import { buildPublicCacheHeader } from '@/lib/cache'
+
 const response = apiSuccess({ products })
-response.headers.set(
-  'Cache-Control',
-  'public, s-maxage=60, stale-while-revalidate=120'
-)
+response.headers.set('Cache-Control', buildPublicCacheHeader(60))
 return response
 ```
+
+Conventions:
+
+- Align `maxAgeSeconds` with the matching Redis `CACHE_TTL` where feasible.
+- For data that can be mutated by admin actions (e.g. products list,
+  categories), keep `maxAgeSeconds` modest — admin mutations invalidate
+  Redis but not the Vercel CDN cache.
 
 ---
 

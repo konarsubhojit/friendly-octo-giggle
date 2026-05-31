@@ -62,79 +62,115 @@ export function CurrencyProvider({
 }: Readonly<{ children: ReactNode }>) {
   const { locale } = useLocale()
   const [currency, setCurrency] = useState<CurrencyCode>('INR')
-  const [rates, setRates] =
-    useState<Record<CurrencyCode, number>>(FALLBACK_RATES)
-  const [ratesLoading, setRatesLoading] = useState(true)
 
-  // Fetch live rates once on mount; use sessionStorage to cache across navigations
-  useEffect(() => {
-    let cancelled = false
-
-    const STORAGE_KEY = EXCHANGE_RATES_STORAGE_KEY
-    const STORAGE_MAX_AGE_MS = EXCHANGE_RATES_MAX_AGE_MS
-
-    // Try sessionStorage first
+  // Synchronously seed rates from sessionStorage on mount so the first paint
+  // already has the correct values when the cache is fresh; only fall back to
+  // hardcoded FALLBACK_RATES when no fresh cache exists.
+  const [{ rates, ratesLoading }, setRatesState] = useState<{
+    rates: Record<CurrencyCode, number>
+    ratesLoading: boolean
+  }>(() => {
+    if (typeof window === 'undefined') {
+      return { rates: FALLBACK_RATES, ratesLoading: true }
+    }
     try {
-      const stored = sessionStorage.getItem(STORAGE_KEY)
+      const stored = sessionStorage.getItem(EXCHANGE_RATES_STORAGE_KEY)
       if (stored) {
         const { rates: cached, timestamp } = JSON.parse(stored) as {
           rates: Record<string, number>
           timestamp: number
         }
-        if (Date.now() - timestamp < STORAGE_MAX_AGE_MS && cached) {
-          // eslint-disable-next-line react-hooks/set-state-in-effect -- reading cached sessionStorage on mount is the intended pattern
-          setRates({
-            INR: cached['INR'] ?? FALLBACK_RATES.INR,
-            USD: cached['USD'] ?? FALLBACK_RATES.USD,
-            EUR: cached['EUR'] ?? FALLBACK_RATES.EUR,
-            GBP: cached['GBP'] ?? FALLBACK_RATES.GBP,
-          })
-          setRatesLoading(false)
-          return
+        if (
+          cached &&
+          Date.now() - timestamp < EXCHANGE_RATES_MAX_AGE_MS
+        ) {
+          return {
+            rates: {
+              INR: cached['INR'] ?? FALLBACK_RATES.INR,
+              USD: cached['USD'] ?? FALLBACK_RATES.USD,
+              EUR: cached['EUR'] ?? FALLBACK_RATES.EUR,
+              GBP: cached['GBP'] ?? FALLBACK_RATES.GBP,
+            },
+            ratesLoading: false,
+          }
         }
       }
     } catch {
-      // sessionStorage unavailable (e.g. SSR, incognito)
+      // sessionStorage unavailable (e.g. incognito) — fall through.
+    }
+    return { rates: FALLBACK_RATES, ratesLoading: true }
+  })
+
+  // Fetch live rates lazily when no fresh cache was found. Defer the network
+  // request to browser idle time so it does not compete with first paint.
+  useEffect(() => {
+    if (!ratesLoading) return
+    let cancelled = false
+
+    const runFetch = () => {
+      if (cancelled) return
+      fetch('/api/exchange-rates')
+        .then((res) => {
+          if (!res.ok) return null
+          return res.json() as Promise<{
+            data?: { rates?: Record<string, number> }
+          }>
+        })
+        .then((body) => {
+          if (cancelled) return
+          if (body?.data?.rates) {
+            const fetched = body.data.rates
+            const newRates = {
+              INR: fetched['INR'] ?? FALLBACK_RATES.INR,
+              USD: fetched['USD'] ?? FALLBACK_RATES.USD,
+              EUR: fetched['EUR'] ?? FALLBACK_RATES.EUR,
+              GBP: fetched['GBP'] ?? FALLBACK_RATES.GBP,
+            }
+            setRatesState({ rates: newRates, ratesLoading: false })
+            try {
+              sessionStorage.setItem(
+                EXCHANGE_RATES_STORAGE_KEY,
+                JSON.stringify({ rates: newRates, timestamp: Date.now() })
+              )
+            } catch {
+              // silently ignore storage errors
+            }
+          } else {
+            setRatesState((prev) => ({ ...prev, ratesLoading: false }))
+          }
+        })
+        .catch(() => {
+          // Silently keep the hardcoded fallback rates when the API is unreachable.
+          if (!cancelled) {
+            setRatesState((prev) => ({ ...prev, ratesLoading: false }))
+          }
+        })
     }
 
-    fetch('/api/exchange-rates')
-      .then((res) => {
-        if (!res.ok) return null
-        return res.json() as Promise<{
-          data?: { rates?: Record<string, number> }
-        }>
-      })
-      .then((body) => {
-        if (!cancelled && body?.data?.rates) {
-          const fetched = body.data.rates
-          const newRates = {
-            INR: fetched['INR'] ?? FALLBACK_RATES.INR,
-            USD: fetched['USD'] ?? FALLBACK_RATES.USD,
-            EUR: fetched['EUR'] ?? FALLBACK_RATES.EUR,
-            GBP: fetched['GBP'] ?? FALLBACK_RATES.GBP,
-          }
-          setRates(newRates)
-          try {
-            sessionStorage.setItem(
-              STORAGE_KEY,
-              JSON.stringify({ rates: newRates, timestamp: Date.now() })
-            )
-          } catch {
-            // silently ignore storage errors
-          }
-        }
-      })
-      .catch(() => {
-        // Silently keep the hardcoded fallback rates when the API is unreachable
-      })
-      .finally(() => {
-        if (!cancelled) setRatesLoading(false)
-      })
+    type IdleScheduler = (
+      cb: () => void,
+      opts?: { timeout: number }
+    ) => number | NodeJS.Timeout
+    const ric =
+      (
+        typeof window !== 'undefined' &&
+        (window as unknown as { requestIdleCallback?: IdleScheduler })
+          .requestIdleCallback
+      ) ||
+      ((cb: () => void) => setTimeout(cb, 1))
+    const handle = ric(runFetch, { timeout: 2000 })
 
     return () => {
       cancelled = true
+      type IdleCanceller = (handle: number | NodeJS.Timeout) => void
+      const cic =
+        (typeof window !== 'undefined' &&
+          (window as unknown as { cancelIdleCallback?: IdleCanceller })
+            .cancelIdleCallback) ||
+        ((h: number | NodeJS.Timeout) => clearTimeout(h as NodeJS.Timeout))
+      cic(handle)
     }
-  }, [])
+  }, [ratesLoading])
 
   const config = CURRENCIES[currency]
 

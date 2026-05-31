@@ -49,23 +49,19 @@ vi.mock('react-hot-toast', () => ({
 }))
 
 vi.mock('@vercel/analytics/next', () => ({
-  Analytics: ({ nonce }: { nonce?: string }) => (
-    <div data-testid="analytics" data-nonce={nonce} />
-  ),
+  Analytics: () => <div data-testid="analytics" />,
 }))
 
 vi.mock('@vercel/speed-insights/next', () => ({
-  SpeedInsights: ({ nonce }: { nonce?: string }) => (
-    <div data-testid="speed-insights" data-nonce={nonce} />
-  ),
+  SpeedInsights: () => <div data-testid="speed-insights" />,
 }))
 
 describe('app/layout.tsx', () => {
-  it('passes request nonce to Analytics and SpeedInsights', async () => {
+  it('renders Analytics and SpeedInsights without nonce wiring', async () => {
+    // The previous `x-nonce` lookup was dead code (middleware.ts does not
+    // set the header). Layout now omits nonce forwarding entirely.
     mockHeaders.mockResolvedValue({
-      get: vi.fn((header: string) =>
-        header === 'x-nonce' ? 'test-layout-nonce' : null
-      ),
+      get: vi.fn(() => null),
     })
 
     const { default: RootLayout } = await import('@/app/layout')
@@ -74,12 +70,8 @@ describe('app/layout.tsx', () => {
     })
     const { getByTestId } = render(ui)
 
-    expect(getByTestId('analytics').getAttribute('data-nonce')).toBe(
-      'test-layout-nonce'
-    )
-    expect(getByTestId('speed-insights').getAttribute('data-nonce')).toBe(
-      'test-layout-nonce'
-    )
+    expect(getByTestId('analytics')).toBeTruthy()
+    expect(getByTestId('speed-insights')).toBeTruthy()
   })
 
   it('wraps children in the main landmark', async () => {
