@@ -1,17 +1,29 @@
 'use client'
 
+import dynamic from 'next/dynamic'
 import { useState, useRef, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useSession, signOut } from 'next-auth/react'
 import CartIcon from '@/components/layout/CartIcon'
-import LoginModal from '@/features/auth/components/LoginModal'
 import { GradientButton } from '@/components/ui/GradientButton'
 import { FlowerAccent } from '@/components/ui/DecorativeElements'
-import ProductSearch from '@/features/product/components/ProductSearch'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { useLocale } from '@/contexts/LocaleContext'
 import LanguageSwitcher from '@/components/ui/LanguageSwitcher'
+
+const LoginModal = dynamic(() => import('@/features/auth/components/LoginModal'))
+const ProductSearch = dynamic(
+  () => import('@/features/product/components/ProductSearch'),
+  {
+    loading: () => (
+      <div
+        className="h-10 w-10 rounded-full bg-[var(--accent-blush)]/50 sm:w-64 sm:rounded-2xl"
+        aria-hidden="true"
+      />
+    ),
+  }
+)
 
 interface UserMenuUser {
   readonly name?: string | null

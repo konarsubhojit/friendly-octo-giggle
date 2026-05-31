@@ -90,7 +90,7 @@ describe('GET /api/products', () => {
   it('sets Cache-Control header', async () => {
     const response = await GET(new NextRequest('http://localhost/api/products'))
     expect(response.headers.get('Cache-Control')).toBe(
-      's-maxage=60, stale-while-revalidate=120'
+      'public, s-maxage=60, stale-while-revalidate=120'
     )
   })
 

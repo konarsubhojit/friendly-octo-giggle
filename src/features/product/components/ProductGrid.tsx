@@ -21,6 +21,7 @@ import { StockBadge } from '@/features/product/components/StockBadge'
 import { FlowerAccent } from '@/components/ui/DecorativeElements'
 import { WishlistButton } from '@/features/wishlist/components/WishlistButton'
 import { SearchBar } from '@/components/SearchBar'
+import { PRODUCT_CARD_BLUR_DATA_URL } from '@/lib/image-placeholder'
 
 export type ProductGridItem = Pick<
   Product,
@@ -169,6 +170,10 @@ const ProductImageArea = memo(
           className="object-contain p-4 transition-transform duration-500 group-hover:scale-108"
           sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 25vw"
           priority={eagerLoad}
+          loading={eagerLoad ? undefined : 'lazy'}
+          decoding="async"
+          placeholder="blur"
+          blurDataURL={PRODUCT_CARD_BLUR_DATA_URL}
         />
         <WishlistButton productId={product.id} productName={product.name} />
         <div className="absolute bottom-3 left-3">

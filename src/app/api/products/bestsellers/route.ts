@@ -34,7 +34,7 @@ const handleGet = async (request: NextRequest) => {
     const response = apiSuccess({ products })
     response.headers.set(
       'Cache-Control',
-      's-maxage=120, stale-while-revalidate=60'
+      'public, s-maxage=120, stale-while-revalidate=60'
     )
     return response
   } catch (error) {

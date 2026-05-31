@@ -4,6 +4,7 @@ import { useCallback, useRef } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import type { ProductGridItem } from '@/features/product/components/ProductGrid'
+import { PRODUCT_CARD_BLUR_DATA_URL } from '@/lib/image-placeholder'
 
 interface BestsellersScrollerProps {
   readonly bestsellers: ProductGridItem[]
@@ -77,6 +78,10 @@ export function BestsellersScroller({ bestsellers }: BestsellersScrollerProps) {
                   className="object-contain p-3 group-hover:scale-105 transition-transform duration-300"
                   sizes="(max-width: 640px) 192px, 208px"
                   priority={index < 3}
+                  loading={index < 3 ? undefined : 'lazy'}
+                  decoding="async"
+                  placeholder="blur"
+                  blurDataURL={PRODUCT_CARD_BLUR_DATA_URL}
                 />
                 <span className="absolute top-2 left-2 inline-flex items-center justify-center w-7 h-7 rounded-full bg-[var(--btn-primary)] text-white text-xs font-bold">
                   {index + 1}

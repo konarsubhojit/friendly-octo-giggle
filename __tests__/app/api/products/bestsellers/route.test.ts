@@ -112,7 +112,7 @@ describe('GET /api/products/bestsellers', () => {
       new NextRequest('http://localhost/api/products/bestsellers')
     )
     expect(response.headers.get('Cache-Control')).toBe(
-      's-maxage=120, stale-while-revalidate=60'
+      'public, s-maxage=120, stale-while-revalidate=60'
     )
   })
 

@@ -21,7 +21,7 @@ import {
   type SearchVariantFilter,
 } from '@/lib/search-discovery'
 
-export const revalidate = 300
+export const revalidate = 60
 
 const SHOP_INITIAL_SIZE = 24
 const SHOP_BATCH_SIZE = 20

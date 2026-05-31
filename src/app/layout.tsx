@@ -6,12 +6,10 @@ import { SessionProvider } from '@/components/providers/SessionProvider'
 import StoreProvider from '@/components/providers/StoreProvider'
 import { CurrencyProvider } from '@/contexts/CurrencyContext'
 import { ThemeProvider } from '@/contexts/ThemeContext'
-import { Toaster } from 'react-hot-toast'
 import { Analytics } from '@vercel/analytics/next'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import HeaderWrapper from '@/components/layout/HeaderWrapper'
-import { ServiceWorkerRegistration } from '@/components/pwa/ServiceWorkerRegistration'
-import { InstallBanner } from '@/components/pwa/InstallBanner'
+import { AppEnhancements } from '@/components/pwa/AppEnhancements'
 import { LocaleProvider } from '@/contexts/LocaleContext'
 import {
   DEFAULT_LOCALE,
@@ -110,6 +108,20 @@ export default async function RootLayout({
       dir={dir}
       className={`${nunito.className} ${playfairDisplay.variable}`}
     >
+      <head>
+        <link
+          rel="preconnect"
+          href="https://va.vercel-scripts.com"
+          crossOrigin=""
+        />
+        <link rel="dns-prefetch" href="https://va.vercel-scripts.com" />
+        <link
+          rel="preconnect"
+          href="https://blob.vercel-storage.com"
+          crossOrigin=""
+        />
+        <link rel="dns-prefetch" href="https://blob.vercel-storage.com" />
+      </head>
       <body className="antialiased">
         <a
           href="#main-content"
@@ -122,24 +134,8 @@ export default async function RootLayout({
           <main id="main-content" className="relative">
             {children}
           </main>
-          <Toaster
-            position="top-right"
-            toastOptions={{
-              ariaProps: {
-                role: 'status',
-                'aria-live': 'polite',
-              },
-              style: {
-                background: 'var(--surface)',
-                color: 'var(--foreground)',
-                border: '1px solid var(--border-warm)',
-                borderRadius: '16px',
-              },
-            }}
-          />
-          <InstallBanner />
+          <AppEnhancements />
         </AppProviders>
-        <ServiceWorkerRegistration />
         <AnalyticsWithNonce nonce={nonce} />
         <SpeedInsightsWithNonce nonce={nonce} />
       </body>

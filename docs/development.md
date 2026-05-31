@@ -1032,6 +1032,13 @@ await invalidateCache('products:*')
 
 ### Next.js Optimization
 
+**Storefront performance budgets**
+
+- Home, shop, and product pages should target: **LCP ≤ 2.5s**, **INP ≤ 200ms**, **CLS ≤ 0.1**, and **TBT ≤ 200ms**
+- Keep first-load JavaScript lean on key storefront routes; treat a **10% bundle growth** as a regression that needs review
+- Prefer `revalidate = 60` for public storefront pages unless telemetry shows stale content is unacceptable
+- Use `npm run analyze` locally (or in CI with `ANALYZE=true`) to inspect route bundles before merging
+
 **Use Server Components for data fetching**
 
 ```typescript
@@ -1069,7 +1076,7 @@ import Image from 'next/image';
 
 ```typescript
 const response = apiSuccess({ products })
-response.headers.set('Cache-Control', 's-maxage=60, stale-while-revalidate=120')
+response.headers.set('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=120')
 return response
 ```
 
