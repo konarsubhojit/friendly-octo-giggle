@@ -301,7 +301,7 @@ export function Product({ product }) {
 
 ### zenput Adapter Layer
 
-The admin surface uses the [`zenput`](https://www.npmjs.com/package/zenput) component library for standardised form inputs and tables. **`zenput` is pinned to an exact version** in `package.json` — bumps must go through a manual upgrade PR (Dependabot PRs against `zenput` should be closed in favour of a documented manual upgrade).
+The admin surface uses the [`zenput`](https://www.npmjs.com/package/zenput) component library for standardized form inputs and tables. **`zenput` is pinned to an exact version** in `package.json` — bumps must go through a manual upgrade PR (Dependabot PRs against `zenput` should be closed in favor of a documented manual upgrade).
 
 **Always import zenput components from the adapter, never from `'zenput'` directly:**
 
@@ -364,7 +364,7 @@ For any non-zero baseline (e.g. a price field that should snap to `min` when cle
 
 Before extending the zenput footprint:
 
-1. Verify light/dark parity on `/admin/products`, `/admin/orders`, `ProductFormModal`, and `VariantFormModal`. Any colour drift must be patched by mapping zenput tokens to the Tailwind v4 tokens declared in `src/app/globals.css`.
+1. Verify light/dark parity on `/admin/products`, `/admin/orders`, `ProductFormModal`, and `VariantFormModal`. Any color drift must be patched by mapping zenput tokens to the Tailwind v4 tokens declared in `src/app/globals.css`.
 2. Capture an `@next/bundle-analyzer` baseline (`npm run analyze`) for the admin routes and attach the numbers to the PR description.
 3. Re-run the axe-core audit in `playwright-tests/accessibility.spec.ts` for the four files above; resolve any new critical/serious violations before merging.
 

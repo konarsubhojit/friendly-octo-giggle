@@ -68,7 +68,7 @@ code instead of writing more adapters.
 optional `asChild` slot (so it composes with `LocaleLink`).
 
 **Why:** Our admin pages re-declare the same `inline-flex items-center
-rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white …`
+rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white ...`
 class string in ~20 places. A `Button` that consumes the zenput tokens would
 let us delete the repetition without bouncing through Tailwind tokens.
 
