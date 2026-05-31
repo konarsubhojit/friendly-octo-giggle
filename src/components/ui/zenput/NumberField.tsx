@@ -19,7 +19,14 @@ export interface NumberFieldProps extends Omit<
   ZenputNumberInputProps,
   'onChange'
 > {
-  /** Called whenever the value changes. Receives a guaranteed `number`. */
+  /**
+   * Called whenever the value changes. Receives a guaranteed `number`.
+   *
+   * When the user clears the field — zenput's underlying `NumberInput` fires
+   * `undefined` in that case — the adapter substitutes `defaultValueOnClear`
+   * (default `0`) before invoking this callback, so consumers never have to
+   * handle an `undefined` branch.
+   */
   readonly onChange?: (value: number) => void
   /**
    * Value substituted when the user clears the field (zenput emits

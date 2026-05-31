@@ -175,6 +175,7 @@ export function MoneyInput({
  * `DataTable` does not currently accept `fullWidth` / `size` / `variant` props,
  * so this is a transparent re-export today. Routing through the adapter still
  * matters because future app-wide table defaults (loading states, empty
- * messages, pagination styling) will be applied here.
+ * messages, pagination styling) will be applied here — see
+ * `docs/zenput-admin-opportunities.md` (FR-4, FR-5) for the planned scope.
  */
 export const DataTable = ZenputDataTable

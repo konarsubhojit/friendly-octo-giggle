@@ -3,8 +3,8 @@
 > Companion document to the [zenput Phase A](../docs/development.md#zenput-adapter-layer) work.
 > This is **analysis only** — no admin component should be migrated to a zenput
 > equivalent without an accompanying PR that updates the adapter layer in
-> `src/components/ui/zenput/`, the developer docs, and the axe/visual
-> regression suites.
+> `src/components/ui/zenput/`, the developer guide at `docs/development.md`,
+> and the axe/visual regression suites.
 
 ## 1. Method
 
@@ -152,5 +152,5 @@ zenput's.
 ---
 
 If/when any of FR-1..FR-8 ship, revisit this document and the corresponding
-row in §2 to promote the entry from "Conditional fit" / "Keep custom" to a
+row in Section 2 (the Component opportunity map table) to promote the entry from "Conditional fit" / "Keep custom" to a
 concrete Phase B/C/D migration task.
