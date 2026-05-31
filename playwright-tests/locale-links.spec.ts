@@ -83,15 +83,25 @@ test.describe('locale link smoke', () => {
     ).toEqual([])
   })
 
-  test('unsupported locale segment returns 404 (dynamicParams=false)', async ({
+  test('unsupported locale (e.g. /de/about) ultimately 404s', async ({
     page,
   }) => {
-    const response = await page.goto('/en/fr-not-a-route', {
+    // Middleware prepends the default locale to any path whose first segment
+    // isn't a supported locale, so `/de/about` redirects to `/en/de/about`.
+    // `[locale]/layout.tsx` sets `dynamicParams = false`, so any URL whose
+    // resolved [locale] segment isn't pre-rendered (here: `de`) 404s — and
+    // any unknown sub-route under a supported locale 404s as well.
+    const viaRedirect = await page.goto('/de/about', {
       waitUntil: 'domcontentloaded',
     })
-    expect(response).not.toBeNull()
-    // Either a true 404 from notFound() or a redirect to a 404-rendering route.
-    expect(response!.status()).toBe(404)
+    expect(viaRedirect).not.toBeNull()
+    expect(viaRedirect!.status()).toBe(404)
+
+    const direct = await page.goto('/en/this-route-does-not-exist', {
+      waitUntil: 'domcontentloaded',
+    })
+    expect(direct).not.toBeNull()
+    expect(direct!.status()).toBe(404)
   })
 
   test('clicking the Shop nav link navigates to a locale-prefixed URL', async ({

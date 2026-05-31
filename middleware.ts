@@ -37,7 +37,10 @@ export function middleware(request: NextRequest) {
   // segment instead of a rewritten-away prefix. We only need to redirect
   // unprefixed requests to a locale-prefixed URL; the request then resolves
   // directly to the `[locale]` route segment and can be cached / ISR'd
-  // without the root layout having to read request headers.
+  // without the root layout having to read request headers. (The previous
+  // rewrite-based setup forced the root layout to call `headers()` to
+  // recover the locale, which poisoned every route as dynamic and blocked
+  // ISR — see "Tier A1" in the perf plan.)
   const localeFromPath = getLocaleFromPathname(pathname)
   if (!localeFromPath) {
     const locale = getPreferredLocale(request)
