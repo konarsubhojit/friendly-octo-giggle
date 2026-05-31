@@ -146,13 +146,15 @@ describe('app/wishlist/loading.tsx – Wishlist Loading', () => {
 
 describe('app/shop/loading.tsx – Shop Loading', () => {
   it('renders without crashing', async () => {
-    const { default: ShopLoading } = await import('@/app/[locale]/(public)/shop/loading')
+    const { default: ShopLoading } =
+      await import('@/app/[locale]/(public)/shop/loading')
     const { container } = render(<ShopLoading />)
     expect(container).toBeTruthy()
   })
 
   it('uses pt-8 spacing (not pt-28)', async () => {
-    const { default: ShopLoading } = await import('@/app/[locale]/(public)/shop/loading')
+    const { default: ShopLoading } =
+      await import('@/app/[locale]/(public)/shop/loading')
     const { container } = render(<ShopLoading />)
     const section = container.querySelector('section')
     expect(section?.className).toContain('pt-8')
@@ -160,7 +162,8 @@ describe('app/shop/loading.tsx – Shop Loading', () => {
   })
 
   it('contains animate-pulse elements', async () => {
-    const { default: ShopLoading } = await import('@/app/[locale]/(public)/shop/loading')
+    const { default: ShopLoading } =
+      await import('@/app/[locale]/(public)/shop/loading')
     const { container } = render(<ShopLoading />)
     expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(
       0
