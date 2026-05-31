@@ -177,7 +177,8 @@ const ordersSlice = createSlice({
 export const { clearOrderError, clearCurrentOrder } = ordersSlice.actions
 
 export const selectOrders = (state: OrdersRootState) => state.orders.orders
-export const selectOrdersLoading = (state: OrdersRootState) => state.orders.loading
+export const selectOrdersLoading = (state: OrdersRootState) =>
+  state.orders.loading
 export const selectOrdersError = (state: OrdersRootState) => state.orders.error
 export const selectCurrentOrder = (state: OrdersRootState) =>
   state.orders.currentOrder
