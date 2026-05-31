@@ -21,15 +21,9 @@ import { ProductInfoCard } from './components/ProductInfoCard'
 import { CartStatusAlerts } from './components/CartStatusAlerts'
 import { AddToCartSection } from './components/AddToCartSection'
 import { StickyMobileActionBar } from './components/StickyMobileActionBar'
-import {
-  getClampedQtyState,
-  resolveInitialVariant,
-} from './lib/variant-utils'
+import { getClampedQtyState, resolveInitialVariant } from './lib/variant-utils'
 import { getCarouselImages } from './lib/images'
-import {
-  applyCartResult,
-  computeCartQuantities,
-} from './lib/cart-quantities'
+import { applyCartResult, computeCartQuantities } from './lib/cart-quantities'
 
 const ProductAssistant = dynamic(
   () => import('@/features/product/components/ProductAssistant'),
