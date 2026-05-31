@@ -47,6 +47,7 @@ export default defineConfig({
         'src/lib/search/**',
         'src/lib/ai/**',
         'src/proxy.ts',
+        'proxy.ts',
         'src/types/**',
       ],
     },
