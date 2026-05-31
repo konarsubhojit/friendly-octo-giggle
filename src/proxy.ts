@@ -21,14 +21,15 @@ import {
  * active middleware only performs the locale redirect/cookie refresh.
  *
  * Why not wired yet:
- *   `auth()` from `@/lib/auth` transitively imports `@/lib/db`
- *   (`primaryDrizzleDb`) and the Drizzle adapter, which pull `pg`/`postgres`
- *   into the bundle. That breaks Next.js middleware's edge runtime constraint.
- *   Activating this file from `middleware.ts` therefore requires first
- *   splitting `src/lib/auth.ts` into an edge-safe `auth.config.ts` (JWT-only
- *   callbacks, no adapter/DB) + a Node-only `auth.ts` per the NextAuth v5
- *   documented pattern, so the edge runtime can call `auth()` without
- *   bundling the Postgres driver.
+ *   The `auth()` import below resolves to the Node-side NextAuth instance in
+ *   `@/lib/auth`, which pulls the Drizzle adapter, `pino` logger, and
+ *   `prom-client` metrics into the bundle — none of which are edge-safe.
+ *   To activate this file from `middleware.ts` (or rename both into a single
+ *   Next.js 16 `proxy.ts`), the admin auth check here must switch to the
+ *   edge-safe `@/lib/auth.config` (or `getToken` from `next-auth/jwt`) so
+ *   the edge runtime can read the JWT without bundling the adapter, the
+ *   logger, or the metrics client. The DB driver itself is fine —
+ *   `@neondatabase/serverless` is edge-compatible by design.
  *
  * Why not deleted:
  *   Deleting it would silently regress production security posture (no CSP,
