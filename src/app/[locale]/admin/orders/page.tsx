@@ -13,10 +13,7 @@ import {
 } from '@/features/admin/components/AdminPageShell'
 import { AdminOrderCard } from '@/features/admin/components/AdminOrderCard'
 import { AdminSearchForm } from '@/features/admin/components/AdminSearchForm'
-import {
-  DataTable,
-  type DataTableColumn,
-} from '@/components/ui/zenput'
+import { DataTable, type DataTableColumn } from '@/components/ui/zenput'
 
 type ShippingEdits = Record<
   string,

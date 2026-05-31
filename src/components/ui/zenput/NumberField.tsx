@@ -15,8 +15,10 @@ import {
  * adapter substitutes `defaultValueOnClear` (default `0`) so consumers can
  * rely on a `(value: number) => void` signature.
  */
-export interface NumberFieldProps
-  extends Omit<ZenputNumberInputProps, 'onChange'> {
+export interface NumberFieldProps extends Omit<
+  ZenputNumberInputProps,
+  'onChange'
+> {
   /** Called whenever the value changes. Receives a guaranteed `number`. */
   readonly onChange?: (value: number) => void
   /**
