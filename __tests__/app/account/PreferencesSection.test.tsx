@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { PreferencesSection } from '@/app/[locale]/account/PreferencesSection'
+import { PreferencesSection } from '@/app/[locale]/(public)/account/PreferencesSection'
 
 const mockSetCurrency = vi.hoisted(() => vi.fn())
 

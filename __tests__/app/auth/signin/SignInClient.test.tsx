@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react'
-import SignInClient from '@/app/[locale]/auth/signin/SignInClient'
+import SignInClient from '@/app/[locale]/(public)/auth/signin/SignInClient'
 
 const VALID_TEST_SECRET = ['password', '123'].join('')
 const INVALID_TEST_SECRET = ['wrong'].join('')

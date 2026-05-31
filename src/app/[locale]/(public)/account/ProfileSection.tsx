@@ -7,7 +7,7 @@ import { API_ERRORS } from '@/lib/constants/error-messages'
 import {
   PROFILE_FIELDS,
   type UserProfile,
-} from '@/app/[locale]/account/account-shared'
+} from '@/app/[locale]/(public)/account/account-shared'
 
 interface ProfileSectionProps {
   readonly profile: UserProfile

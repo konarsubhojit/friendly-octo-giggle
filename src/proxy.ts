@@ -10,6 +10,37 @@ import {
   STRICT_RATE_LIMIT_MAX_REQUESTS,
 } from '@/lib/rate-limit'
 
+/**
+ * ⚠️ Orphaned but intentionally retained.
+ *
+ * This module implements production security primitives — nonce-based CSP,
+ * Upstash-backed rate limiting for `/api/auth/*`, `/api/checkout`,
+ * `/api/orders`, `/api/ai`; Edge-Config-driven maintenance mode; HTTPS
+ * enforcement; and a server-side admin auth + role gate on `/admin/*` and
+ * `/api/admin/*` — that are NOT currently invoked from `middleware.ts`. The
+ * active middleware only performs the locale redirect/cookie refresh.
+ *
+ * Why not wired yet:
+ *   `auth()` from `@/lib/auth` transitively imports `@/lib/db`
+ *   (`primaryDrizzleDb`) and the Drizzle adapter, which pull `pg`/`postgres`
+ *   into the bundle. That breaks Next.js middleware's edge runtime constraint.
+ *   Activating this file from `middleware.ts` therefore requires first
+ *   splitting `src/lib/auth.ts` into an edge-safe `auth.config.ts` (JWT-only
+ *   callbacks, no adapter/DB) + a Node-only `auth.ts` per the NextAuth v5
+ *   documented pattern, so the edge runtime can call `auth()` without
+ *   bundling the Postgres driver.
+ *
+ * Why not deleted:
+ *   Deleting it would silently regress production security posture (no CSP,
+ *   no distributed rate limiting, no maintenance kill switch, no edge admin
+ *   gate). The behaviour is documented as the "security middleware" in
+ *   `docs/architecture.md` and `.github/copilot-instructions.md`.
+ *
+ * Test coverage: `__tests__/proxy.test.ts` exercises this module's pure logic
+ * so it does not bit-rot while it sits offline. Tracked as a follow-up to the
+ * Tier A2 / route-group migration (PR #311).
+ */
+
 const isDev = process.env.NODE_ENV === 'development'
 const ADMIN_PATH_PREFIX = '/admin'
 const ADMIN_API_PREFIX = '/api/admin'

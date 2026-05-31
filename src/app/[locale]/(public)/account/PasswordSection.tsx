@@ -4,7 +4,7 @@ import { useCallback, useState } from 'react'
 import { DynamicForm, type SubmitResult } from '@/components/ui/DynamicForm'
 import { Card } from '@/components/ui/Card'
 import { API_ERRORS } from '@/lib/constants/error-messages'
-import { PASSWORD_FIELDS } from '@/app/[locale]/account/account-shared'
+import { PASSWORD_FIELDS } from '@/app/[locale]/(public)/account/account-shared'
 
 export function PasswordSection() {
   const [isChanging, setIsChanging] = useState(false)

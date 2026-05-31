@@ -69,7 +69,9 @@ export default async function AdminLayout({ children }: AdminLayoutProps) {
         </div>
       </header>
       <AdminNavLinks />
-      <AdminStoreProvider>{children}</AdminStoreProvider>
+      <main id="main-content" className="relative">
+        <AdminStoreProvider>{children}</AdminStoreProvider>
+      </main>
     </div>
   )
 }

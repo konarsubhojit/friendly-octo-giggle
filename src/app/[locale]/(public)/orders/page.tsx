@@ -1,6 +1,6 @@
 import { auth } from '@/lib/auth'
 import { AuthRequiredState } from '@/components/ui/AuthRequiredState'
-import OrdersClient from '@/app/[locale]/orders/OrdersClient'
+import OrdersClient from '@/app/[locale]/(public)/orders/OrdersClient'
 
 export const dynamic = 'force-dynamic'
 export default async function OrdersPage() {

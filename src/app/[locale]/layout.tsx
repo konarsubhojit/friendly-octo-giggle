@@ -8,7 +8,6 @@ import { CurrencyProvider } from '@/contexts/CurrencyContext'
 import { ThemeProvider } from '@/contexts/ThemeContext'
 import { Analytics } from '@vercel/analytics/next'
 import { SpeedInsights } from '@vercel/speed-insights/next'
-import HeaderWrapper from '@/components/layout/HeaderWrapper'
 import { AppEnhancements } from '@/components/pwa/AppEnhancements'
 import { LocaleProvider } from '@/contexts/LocaleContext'
 import {
@@ -136,10 +135,7 @@ export default async function LocaleLayout({
           {getMessage(locale, 'common.skipToContent')}
         </a>
         <AppProviders locale={locale}>
-          <HeaderWrapper />
-          <main id="main-content" className="relative">
-            {children}
-          </main>
+          {children}
           <AppEnhancements />
         </AppProviders>
         <Analytics />

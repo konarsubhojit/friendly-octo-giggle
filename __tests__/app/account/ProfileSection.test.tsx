@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import React from 'react'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { ProfileSection } from '@/app/[locale]/account/ProfileSection'
+import { ProfileSection } from '@/app/[locale]/(public)/account/ProfileSection'
 
 vi.mock('@/components/ui/Card', () => ({
   Card: ({

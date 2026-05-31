@@ -67,17 +67,18 @@ describe('app/[locale]/layout.tsx', () => {
     expect(getByTestId('speed-insights')).toBeTruthy()
   })
 
-  it('wraps children in the main landmark and renders HeaderWrapper', async () => {
+  it('renders the locale-level providers around its children without mounting HeaderWrapper directly', async () => {
+    // After the (public) route group introduction, HeaderWrapper and the
+    // <main> landmark live in src/app/[locale]/(public)/layout.tsx so the
+    // /admin section can render its own chrome without the public header.
     const { default: LocaleLayout } = await import('@/app/[locale]/layout')
     const ui = await LocaleLayout({
       children: <span data-testid="child">content</span>,
       params: Promise.resolve({ locale: 'en' }),
     })
-    const { container, getByTestId } = render(ui)
-    const mainElements = container.querySelectorAll('main')
-    expect(mainElements.length).toBe(1)
-    expect(mainElements[0]).toHaveAttribute('id', 'main-content')
-    expect(getByTestId('header-wrapper')).toBeTruthy()
+    const { container, getByTestId, queryByTestId } = render(ui)
+    expect(container.querySelectorAll('main').length).toBe(0)
+    expect(queryByTestId('header-wrapper')).toBeNull()
     expect(getByTestId('child')).toBeTruthy()
   })
 

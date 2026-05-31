@@ -8,6 +8,11 @@ import {
   toLocalizedPathname,
 } from '@/lib/i18n/config'
 
+// NOTE: `src/proxy.ts` contains additional security middleware (CSP/nonce,
+// Upstash rate limits, maintenance mode, HTTPS redirect, admin auth gate) that
+// is NOT currently wired in. See the header comment of `src/proxy.ts` for the
+// prerequisite (edge-safe auth split) before composing it with this file.
+
 const PUBLIC_FILE = /\.(.*)$/
 
 const getPreferredLocale = (request: NextRequest): AppLocale => {

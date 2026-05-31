@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
-import ContactForm from '@/app/[locale]/contact/ContactForm'
+import ContactForm from '@/app/[locale]/(public)/contact/ContactForm'
 
 describe('ContactForm', () => {
   it('renders form with all fields', () => {
