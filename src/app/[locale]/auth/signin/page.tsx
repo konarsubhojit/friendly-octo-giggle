@@ -1,5 +1,6 @@
-import Link from 'next/link'
+import Link from '@/components/ui/LocaleLink'
 import { signIn } from '@/lib/auth'
+import { toLocalizedPathname, isSupportedLocale, DEFAULT_LOCALE } from '@/lib/i18n/config'
 import SignInClient from './SignInClient'
 
 export const dynamic = 'force-dynamic'
@@ -34,12 +35,17 @@ function SignInHeader() {
 }
 
 interface SignInPageProps {
+  readonly params: Promise<{ locale: string }>
   readonly searchParams: Promise<{ callbackUrl?: string }>
 }
 
-export default async function SignInPage({ searchParams }: SignInPageProps) {
-  const params = await searchParams
-  const callbackUrl = params.callbackUrl || '/'
+export default async function SignInPage({
+  params,
+  searchParams,
+}: SignInPageProps) {
+  const [{ locale: rawLocale }, sp] = await Promise.all([params, searchParams])
+  const locale = isSupportedLocale(rawLocale) ? rawLocale : DEFAULT_LOCALE
+  const callbackUrl = sp.callbackUrl || toLocalizedPathname('/', locale)
 
   async function handleGoogleSignIn() {
     'use server'

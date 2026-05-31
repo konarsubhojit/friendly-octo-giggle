@@ -1,6 +1,6 @@
 'use client'
 
-import Link from 'next/link'
+import Link from '@/components/ui/LocaleLink'
 import { useEffect, useState } from 'react'
 import { Badge, orderStatusVariant } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'

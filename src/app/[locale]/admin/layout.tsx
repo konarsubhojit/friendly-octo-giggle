@@ -1,6 +1,6 @@
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
+import Link from '@/components/ui/LocaleLink'
 import { AdminHeaderNav } from '@/features/admin/components/AdminHeaderNav'
 import { AdminNavLinks } from '@/features/admin/components/AdminNavLinks'
 import AdminStoreProvider from '@/components/providers/AdminStoreProvider'

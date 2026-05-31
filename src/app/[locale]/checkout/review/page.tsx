@@ -4,9 +4,10 @@ import { useId, useMemo, useState, useTransition, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { useSelector, useDispatch } from 'react-redux'
-import Link from 'next/link'
+import Link from '@/components/ui/LocaleLink'
 import toast from 'react-hot-toast'
 import { z } from 'zod'
+import { useLocale } from '@/contexts/LocaleContext'
 import { formatStructuredAddress } from '@/lib/address-utils'
 import {
   clearCart,
@@ -85,6 +86,7 @@ const SECTION_CLASS =
 
 export default function CheckoutReviewPage() {
   const router = useRouter()
+  const { localizePath } = useLocale()
   const { data: session, status } = useSession()
   const dispatch = useDispatch<AppDispatch>()
   const cart = useSelector(selectCart)
@@ -102,9 +104,9 @@ export default function CheckoutReviewPage() {
 
   useEffect(() => {
     if (!pendingCheckout) {
-      router.replace('/cart')
+      router.replace(localizePath('/cart'))
     }
-  }, [pendingCheckout, router])
+  }, [pendingCheckout, router, localizePath])
 
   useEffect(() => {
     if (status === 'authenticated') {
@@ -170,7 +172,7 @@ export default function CheckoutReviewPage() {
     const sessionUser = session?.user
 
     if (!sessionUser?.email) {
-      router.push('/auth/signin?callbackUrl=/checkout/review')
+      router.push(`${localizePath('/auth/signin')}?callbackUrl=${encodeURIComponent(localizePath('/checkout/review'))}`)
       return
     }
 
@@ -212,7 +214,7 @@ export default function CheckoutReviewPage() {
         clearPendingCheckout()
         toast.success(`Order ${completedCheckout.orderId} placed successfully!`)
         router.push(
-          `/checkout/confirmation?orderId=${encodeURIComponent(completedCheckout.orderId)}`
+          `${localizePath('/checkout/confirmation')}?orderId=${encodeURIComponent(completedCheckout.orderId)}`
         )
       } catch (error) {
         const message =
@@ -234,7 +236,7 @@ export default function CheckoutReviewPage() {
   }
 
   if (!session?.user) {
-    router.replace('/auth/signin?callbackUrl=/checkout/review')
+    router.replace(`${localizePath('/auth/signin')}?callbackUrl=${encodeURIComponent(localizePath('/checkout/review'))}`)
     return null
   }
 

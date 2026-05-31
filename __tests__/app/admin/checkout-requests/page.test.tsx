@@ -67,7 +67,7 @@ describe('AdminCheckoutRequestsPage', () => {
     ).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'ORD123ABC' })).toHaveAttribute(
       'href',
-      '/admin/orders?search=ORD123ABC'
+      '/en/admin/orders?search=ORD123ABC'
     )
     expect(mockGetRecentCheckoutRequests).toHaveBeenCalledWith({
       limit: 50,

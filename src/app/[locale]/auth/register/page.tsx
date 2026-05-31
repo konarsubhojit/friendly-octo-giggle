@@ -1,8 +1,9 @@
 'use client'
 
 import { useCallback } from 'react'
-import Link from 'next/link'
+import Link from '@/components/ui/LocaleLink'
 import { useRouter } from 'next/navigation'
+import { useLocale } from '@/contexts/LocaleContext'
 import {
   DynamicForm,
   type FieldDef,
@@ -134,6 +135,7 @@ const parseRegisterError = (data: {
 
 export default function RegisterPage() {
   const router = useRouter()
+  const { localizePath } = useLocale()
 
   const handleSubmit = useCallback(
     async (values: Readonly<Record<string, string>>): Promise<SubmitResult> => {
@@ -151,13 +153,13 @@ export default function RegisterPage() {
         })
         const data = await res.json()
         if (!res.ok) return parseRegisterError(data)
-        router.push('/auth/verify-email?registered=true')
+        router.push(`${localizePath('/auth/verify-email')}?registered=true`)
         return undefined
       } catch {
         return "We couldn't create your account right now. Please try again in a moment."
       }
     },
-    [router]
+    [router, localizePath]
   )
 
   return (

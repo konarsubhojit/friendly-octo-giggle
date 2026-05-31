@@ -60,11 +60,11 @@ describe('AdminPageShell', () => {
     expect(screen.getByRole('button', { name: 'Add Product' })).toBeVisible()
     expect(screen.getByRole('link', { name: 'Admin' })).toHaveAttribute(
       'href',
-      '/admin'
+      '/en/admin'
     )
     expect(screen.getByRole('link', { name: 'Products' })).toHaveAttribute(
       'href',
-      '/admin/products'
+      '/en/admin/products'
     )
     expect(
       screen.getByRole('heading', { name: 'Catalog results' })

@@ -166,7 +166,7 @@ describe('CartProductGroup', () => {
       )
 
       const link = screen.getByRole('link', { name: 'Handmade Basket' })
-      expect(link.getAttribute('href')).toBe('/products/prod1')
+      expect(link.getAttribute('href')).toBe('/en/products/prod1')
       expect(screen.getByText('2 variants')).toBeTruthy()
     })
 

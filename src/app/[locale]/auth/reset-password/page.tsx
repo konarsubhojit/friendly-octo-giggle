@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useMemo, useState } from 'react'
-import Link from 'next/link'
+import Link from '@/components/ui/LocaleLink'
 import { useSearchParams } from 'next/navigation'
 import {
   DynamicForm,

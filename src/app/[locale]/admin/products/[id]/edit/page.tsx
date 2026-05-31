@@ -1,6 +1,6 @@
 import { and, eq, isNull } from 'drizzle-orm'
 import { notFound, redirect } from 'next/navigation'
-import Link from 'next/link'
+import Link from '@/components/ui/LocaleLink'
 import { AdminPageShell } from '@/features/admin/components/AdminPageShell'
 import ProductEditPageForm from '@/features/admin/components/ProductEditPageForm'
 import VariantList from '@/features/admin/components/VariantList'

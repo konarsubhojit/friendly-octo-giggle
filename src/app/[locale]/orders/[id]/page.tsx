@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback, use } from 'react'
 import type { ReactElement } from 'react'
-import Link from 'next/link'
+import Link from '@/components/ui/LocaleLink'
 import Image from 'next/image'
 import { useSession } from 'next-auth/react'
 import { useSelector, useDispatch } from 'react-redux'

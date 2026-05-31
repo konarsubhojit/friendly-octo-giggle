@@ -268,7 +268,7 @@ describe('ProductClient', () => {
     ).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Shop' })).toHaveAttribute(
       'href',
-      '/shop'
+      '/en/shop'
     )
   })
 
@@ -314,7 +314,7 @@ describe('ProductClient', () => {
     ).toBeInTheDocument()
     expect(
       within(quickActions).getByRole('link', { name: /View Cart/i })
-    ).toHaveAttribute('href', '/cart')
+    ).toHaveAttribute('href', '/en/cart')
   })
 
   it('renders out-of-stock panel when product stock is 0', () => {
@@ -326,7 +326,7 @@ describe('ProductClient', () => {
     // Out-of-stock panel has a "Browse Products" link
     expect(
       screen.getByRole('link', { name: 'Browse Products' })
-    ).toHaveAttribute('href', '/shop')
+    ).toHaveAttribute('href', '/en/shop')
     expect(screen.queryByRole('button', { name: /Add to Cart/i })).toBeNull()
   })
 
@@ -351,7 +351,7 @@ describe('ProductClient', () => {
     expect(screen.getByText('All Available Stock in Cart')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Go to Cart' })).toHaveAttribute(
       'href',
-      '/cart'
+      '/en/cart'
     )
   })
 
@@ -617,7 +617,7 @@ describe('ProductClient', () => {
     )
     expect(
       screen.getAllByRole('link', { name: /View Cart/i })[0]
-    ).toHaveAttribute('href', '/cart')
+    ).toHaveAttribute('href', '/en/cart')
   })
 
   it('shows total price (quantity × price) in add-to-cart section', () => {
@@ -1511,7 +1511,7 @@ describe('ProductClient', () => {
     // Out-of-stock panel shows "Browse Products" link
     expect(
       screen.getByRole('link', { name: 'Browse Products' })
-    ).toHaveAttribute('href', '/shop')
+    ).toHaveAttribute('href', '/en/shop')
     expect(
       screen.queryByRole('button', { name: /Add to Cart/i })
     ).not.toBeInTheDocument()
@@ -1642,7 +1642,7 @@ describe('ProductClient', () => {
     // Out-of-stock panel replaces add-to-cart
     expect(
       screen.getByRole('link', { name: 'Browse Products' })
-    ).toHaveAttribute('href', '/shop')
+    ).toHaveAttribute('href', '/en/shop')
     expect(
       screen.queryByRole('button', { name: /Add to Cart/i })
     ).not.toBeInTheDocument()

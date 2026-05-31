@@ -293,7 +293,7 @@ describe('ProductGrid', () => {
   it('renders product link with correct href', () => {
     renderGrid([makeProduct({ id: 'prod-42', name: 'My Product' })])
     const link = screen.getByRole('link', { name: /My Product/i })
-    expect(link.getAttribute('href')).toBe('/products/prod-42')
+    expect(link.getAttribute('href')).toBe('/en/products/prod-42')
   })
 
   it('renders multiple products', () => {

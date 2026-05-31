@@ -1,6 +1,6 @@
 'use client'
 
-import Link from 'next/link'
+import Link from '@/components/ui/LocaleLink'
 import { useCurrency } from '@/contexts/CurrencyContext'
 import type { AdminSalesDashboardData } from '@/features/admin/services/admin-sales'
 import { OrdersByStatusCard } from '@/features/admin/components/OrdersByStatusCard'

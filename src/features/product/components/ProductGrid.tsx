@@ -10,7 +10,7 @@ import {
   useRef,
   useState,
 } from 'react'
-import Link from 'next/link'
+import Link from '@/components/ui/LocaleLink'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { Product } from '@/lib/types'

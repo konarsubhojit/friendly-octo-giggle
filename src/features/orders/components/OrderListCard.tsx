@@ -1,6 +1,6 @@
 'use client'
 
-import Link from 'next/link'
+import Link from '@/components/ui/LocaleLink'
 import Image from 'next/image'
 import { Badge, orderStatusVariant } from '@/components/ui/Badge'
 import { useCurrency } from '@/contexts/CurrencyContext'

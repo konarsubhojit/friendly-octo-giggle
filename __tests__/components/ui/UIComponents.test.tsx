@@ -236,7 +236,7 @@ describe('EmptyState', () => {
   it('renders CTA as a link when ctaHref is provided', () => {
     render(<EmptyState title="Empty" ctaText="Browse" ctaHref="/" />)
     const link = screen.getByRole('link', { name: 'Browse' })
-    expect(link.getAttribute('href')).toBe('/')
+    expect(link.getAttribute('href')).toBe('/en')
   })
 
   it('renders CTA as a button when onCtaClick is provided', () => {

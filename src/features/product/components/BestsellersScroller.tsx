@@ -2,7 +2,7 @@
 
 import { useCallback, useRef } from 'react'
 import Image from 'next/image'
-import Link from 'next/link'
+import Link from '@/components/ui/LocaleLink'
 import type { ProductGridItem } from '@/features/product/components/ProductGrid'
 import { PRODUCT_CARD_BLUR_DATA_URL } from '@/lib/image-placeholder'
 

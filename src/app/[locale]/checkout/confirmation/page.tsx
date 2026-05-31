@@ -1,6 +1,6 @@
 'use client'
 
-import Link from 'next/link'
+import Link from '@/components/ui/LocaleLink'
 import { useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { CheckoutProgress } from '@/features/cart/components/CheckoutProgress'

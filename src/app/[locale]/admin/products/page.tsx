@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, lazy, Suspense, useRef } from 'react'
-import Link from 'next/link'
+import Link from '@/components/ui/LocaleLink'
 import { Product } from '@/lib/types'
 import { useCurrency } from '@/contexts/CurrencyContext'
 import toast from 'react-hot-toast'

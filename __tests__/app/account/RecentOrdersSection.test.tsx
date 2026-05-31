@@ -64,7 +64,7 @@ describe('RecentOrdersSection', () => {
     expect(screen.getByText('4 items')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /view all/i })).toHaveAttribute(
       'href',
-      '/orders'
+      '/en/orders'
     )
   }, 15000)
 })

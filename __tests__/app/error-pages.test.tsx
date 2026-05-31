@@ -96,7 +96,7 @@ describe('OrdersError (app/orders/error.tsx)', () => {
 
   it('"Go home" link points to "/"', () => {
     render(<OrdersError error={createError('fail')} reset={vi.fn()} />)
-    expect(screen.getByText('Go home')).toHaveAttribute('href', '/')
+    expect(screen.getByText('Go home')).toHaveAttribute('href', '/en')
   })
 
   it('displays fallback message when error.message is empty', () => {
@@ -141,7 +141,7 @@ describe('AdminError (app/admin/error.tsx)', () => {
 
   it('"Admin home" link points to "/admin"', () => {
     render(<AdminError error={createError('fail')} reset={vi.fn()} />)
-    expect(screen.getByText('Admin home')).toHaveAttribute('href', '/admin')
+    expect(screen.getByText('Admin home')).toHaveAttribute('href', '/en/admin')
   })
 
   it('displays fallback message when error.message is empty', () => {
@@ -188,7 +188,7 @@ describe('CartError (app/cart/error.tsx)', () => {
     render(<CartError error={createError('fail')} reset={vi.fn()} />)
     expect(screen.getByText('Continue shopping')).toHaveAttribute(
       'href',
-      '/products'
+      '/en/products'
     )
   })
 
@@ -234,6 +234,6 @@ describe('ProductsError (app/products/error.tsx)', () => {
 
   it('"Go home" link points to "/"', () => {
     render(<ProductsError error={createError('fail')} reset={vi.fn()} />)
-    expect(screen.getByText('Go home')).toHaveAttribute('href', '/')
+    expect(screen.getByText('Go home')).toHaveAttribute('href', '/en')
   })
 })

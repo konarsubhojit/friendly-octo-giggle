@@ -2,7 +2,7 @@
 
 import dynamic from 'next/dynamic'
 import { useState, useRef, useEffect, useCallback } from 'react'
-import Link from 'next/link'
+import Link from '@/components/ui/LocaleLink'
 import Image from 'next/image'
 import { useSession, signOut } from 'next-auth/react'
 import CartIcon from '@/components/layout/CartIcon'

@@ -1,5 +1,5 @@
 import Footer from '@/components/layout/Footer'
-import Link from 'next/link'
+import Link from '@/components/ui/LocaleLink'
 
 export const revalidate = 3600
 
