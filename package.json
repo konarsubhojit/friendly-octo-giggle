@@ -78,7 +78,7 @@
     "react-hot-toast": "^2.6.0",
     "react-redux": "^9.2.0",
     "tailwindcss": "^4.1.18",
-    "zenput": "^1.0.1",
+    "zenput": "1.1.1",
     "zod": "4.3.6"
   },
   "overrides": {
