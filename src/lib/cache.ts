@@ -111,7 +111,7 @@ export const CACHE_TTL = {
  */
 export const buildPublicCacheHeader = (
   maxAgeSeconds: number,
-  staleSeconds: number = Math.floor(maxAgeSeconds / 2)
+  staleSeconds: number = Math.max(1, Math.floor(maxAgeSeconds / 2))
 ): string =>
   `public, s-maxage=${maxAgeSeconds}, stale-while-revalidate=${staleSeconds}`
 
