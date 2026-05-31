@@ -5,7 +5,7 @@ import { OrderStatus } from '@/lib/types'
 import { useCurrency } from '@/contexts/CurrencyContext'
 import { useDispatch } from 'react-redux'
 import { updateAdminOrderStatus } from '@/features/admin/store/adminSlice'
-import type { AppDispatch } from '@/lib/store'
+import type { AdminDispatch } from '@/lib/store'
 import { AlertBanner } from '@/components/ui/AlertBanner'
 import {
   AdminPageShell,
@@ -65,7 +65,7 @@ type OrderRow = {
 
 export default function OrdersManagement() {
   const { formatPrice } = useCurrency()
-  const dispatch = useDispatch<AppDispatch>()
+  const dispatch = useDispatch<AdminDispatch>()
 
   const [orders, setOrders] = useState<AdminOrder[]>([])
   const [loading, setLoading] = useState(true)

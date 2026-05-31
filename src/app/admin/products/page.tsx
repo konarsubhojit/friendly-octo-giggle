@@ -7,7 +7,7 @@ import { useCurrency } from '@/contexts/CurrencyContext'
 import toast from 'react-hot-toast'
 import { useDispatch } from 'react-redux'
 import { upsertProduct } from '@/features/admin/store/adminSlice'
-import type { AppDispatch } from '@/lib/store'
+import type { AdminDispatch } from '@/lib/store'
 import {
   getVariantMinPrice,
   getVariantTotalStock,
@@ -40,7 +40,7 @@ type ProductRow = {
 
 export default function ProductsManagement() {
   const { formatPrice } = useCurrency()
-  const dispatch = useDispatch<AppDispatch>()
+  const dispatch = useDispatch<AdminDispatch>()
 
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)

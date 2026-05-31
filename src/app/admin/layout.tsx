@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { AdminHeaderNav } from '@/features/admin/components/AdminHeaderNav'
 import { AdminNavLinks } from '@/features/admin/components/AdminNavLinks'
+import AdminStoreProvider from '@/components/providers/AdminStoreProvider'
 
 interface AdminLayoutProps {
   readonly children: React.ReactNode
@@ -68,7 +69,7 @@ export default async function AdminLayout({ children }: AdminLayoutProps) {
         </div>
       </header>
       <AdminNavLinks />
-      {children}
+      <AdminStoreProvider>{children}</AdminStoreProvider>
     </div>
   )
 }

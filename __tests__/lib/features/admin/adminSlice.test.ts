@@ -168,9 +168,6 @@ describe('adminSlice extraReducers', () => {
 
 describe('admin selectors', () => {
   const rootState = {
-    cart: {} as never,
-    orders: {} as never,
-    wishlist: {} as never,
     admin: {
       ...initialState,
       products: [{ id: 'p1' }] as never[],

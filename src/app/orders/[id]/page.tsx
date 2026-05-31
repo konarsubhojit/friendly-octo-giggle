@@ -17,7 +17,7 @@ import {
   selectOrderCancelling,
   clearCurrentOrder,
 } from '@/features/orders/store/ordersSlice'
-import type { AppDispatch } from '@/lib/store'
+import type { OrdersDispatch } from '@/lib/store'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { AuthRequiredState } from '@/components/ui/AuthRequiredState'
 import { Card } from '@/components/ui/Card'
@@ -330,7 +330,7 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
   const { id } = use(params)
   const { data: session, status: authStatus } = useSession()
   const { formatPrice } = useCurrency()
-  const dispatch = useDispatch<AppDispatch>()
+  const dispatch = useDispatch<OrdersDispatch>()
   const order = useSelector(selectCurrentOrder)
   const loading = useSelector(selectOrderDetailLoading)
   const error = useSelector(selectOrdersError)

@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useDispatch } from 'react-redux'
 import { updateAdminUserRole } from '@/features/admin/store/adminSlice'
-import type { AppDispatch } from '@/lib/store'
+import type { AdminDispatch } from '@/lib/store'
 import { logError } from '@/lib/logger'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { AlertBanner } from '@/components/ui/AlertBanner'
@@ -34,7 +34,7 @@ const normalizeUser = (user: AdminUser): AdminUser => ({
 })
 
 export default function UsersManagement() {
-  const dispatch = useDispatch<AppDispatch>()
+  const dispatch = useDispatch<AdminDispatch>()
   const [updatingUserId, setUpdatingUserId] = useState<string | null>(null)
 
   const {
