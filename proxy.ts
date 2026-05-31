@@ -274,12 +274,16 @@ export async function proxy(request: NextRequest) {
             ? '__Secure-next-auth.session-token'
             : 'next-auth.session-token',
       })
-      cachedToken = token
-        ? {
-            id: (token.id as string | undefined) ?? null,
-            role: (token.role as string | undefined) ?? null,
-          }
-        : null
+      if (!token) {
+        cachedToken = null
+      } else {
+        const rawId = token.id
+        const rawRole = token.role
+        cachedToken = {
+          id: typeof rawId === 'string' ? rawId : null,
+          role: typeof rawRole === 'string' ? rawRole : null,
+        }
+      }
     } catch {
       cachedToken = null
     }
@@ -442,7 +446,7 @@ export async function proxy(request: NextRequest) {
   if (isAdminRoute) {
     const currentToken = await getAuthToken()
 
-    if (!currentToken?.id) {
+    if (!currentToken?.id?.trim()) {
       if (pathname.startsWith('/api/')) {
         return withResponseHeaders(
           NextResponse.json(
