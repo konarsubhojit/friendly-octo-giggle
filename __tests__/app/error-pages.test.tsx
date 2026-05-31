@@ -16,11 +16,11 @@ vi.mock('next/link', () => ({
   }) => <a href={href}>{children}</a>,
 }))
 
-import GlobalError from '@/app/error'
-import OrdersError from '@/app/orders/error'
-import AdminError from '@/app/admin/error'
-import CartError from '@/app/cart/error'
-import ProductsError from '@/app/products/error'
+import GlobalError from '@/app/[locale]/(public)/error'
+import OrdersError from '@/app/[locale]/(public)/orders/error'
+import AdminError from '@/app/[locale]/admin/error'
+import CartError from '@/app/[locale]/(public)/cart/error'
+import ProductsError from '@/app/[locale]/(public)/products/error'
 
 function createError(
   message: string,
@@ -96,7 +96,7 @@ describe('OrdersError (app/orders/error.tsx)', () => {
 
   it('"Go home" link points to "/"', () => {
     render(<OrdersError error={createError('fail')} reset={vi.fn()} />)
-    expect(screen.getByText('Go home')).toHaveAttribute('href', '/')
+    expect(screen.getByText('Go home')).toHaveAttribute('href', '/en')
   })
 
   it('displays fallback message when error.message is empty', () => {
@@ -141,7 +141,7 @@ describe('AdminError (app/admin/error.tsx)', () => {
 
   it('"Admin home" link points to "/admin"', () => {
     render(<AdminError error={createError('fail')} reset={vi.fn()} />)
-    expect(screen.getByText('Admin home')).toHaveAttribute('href', '/admin')
+    expect(screen.getByText('Admin home')).toHaveAttribute('href', '/en/admin')
   })
 
   it('displays fallback message when error.message is empty', () => {
@@ -188,7 +188,7 @@ describe('CartError (app/cart/error.tsx)', () => {
     render(<CartError error={createError('fail')} reset={vi.fn()} />)
     expect(screen.getByText('Continue shopping')).toHaveAttribute(
       'href',
-      '/products'
+      '/en/products'
     )
   })
 
@@ -234,6 +234,6 @@ describe('ProductsError (app/products/error.tsx)', () => {
 
   it('"Go home" link points to "/"', () => {
     render(<ProductsError error={createError('fail')} reset={vi.fn()} />)
-    expect(screen.getByText('Go home')).toHaveAttribute('href', '/')
+    expect(screen.getByText('Go home')).toHaveAttribute('href', '/en')
   })
 })

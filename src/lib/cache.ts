@@ -96,6 +96,26 @@ export const CACHE_TTL = {
 } as const
 
 /**
+ * Build a `Cache-Control` header value for public, CDN-cacheable GET routes.
+ *
+ * Convention: `s-maxage` defines the fresh window served straight from the
+ * CDN; `stale-while-revalidate` defines an additional grace window during
+ * which the CDN serves a stale response while triggering a background
+ * revalidation. Defaults to `staleSeconds = floor(maxAgeSeconds / 2)` so the
+ * shape is consistent across routes.
+ *
+ * Public routes should align `maxAgeSeconds` with the corresponding Redis
+ * `CACHE_TTL` entry where feasible. Routes whose underlying data can be
+ * mutated by admin actions (e.g. products list) should keep `maxAgeSeconds`
+ * modest because admin mutations do not invalidate the Vercel CDN cache.
+ */
+export const buildPublicCacheHeader = (
+  maxAgeSeconds: number,
+  staleSeconds: number = Math.max(1, Math.floor(maxAgeSeconds / 2))
+): string =>
+  `public, s-maxage=${maxAgeSeconds}, stale-while-revalidate=${staleSeconds}`
+
+/**
  * Build a normalized cache key for product list queries.
  * Creates unique keys based on pagination and filter parameters to avoid cache collisions.
  *

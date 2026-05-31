@@ -30,7 +30,7 @@ describe('TopProductsTable', () => {
     expect(screen.getByText('$1800.00')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Rose Gift Box' })).toHaveAttribute(
       'href',
-      '/admin/products/prod001'
+      '/en/admin/products/prod001'
     )
   })
 

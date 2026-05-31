@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { render, screen } from '@testing-library/react'
 import type { ReactNode } from 'react'
-import AdminProductEditFormPage from '@/app/admin/products/[id]/edit/page'
+import AdminProductEditFormPage from '@/app/[locale]/admin/products/[id]/edit/page'
 
 const mockRedirect = vi.fn()
 const mockNotFound = vi.fn()

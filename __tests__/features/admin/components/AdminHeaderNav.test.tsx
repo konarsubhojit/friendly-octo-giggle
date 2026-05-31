@@ -43,12 +43,12 @@ describe('AdminHeaderNav', () => {
     expect(screen.getByTitle('Admin User')).toBeInTheDocument()
   })
 
-  it('shows a View Store link pointing to /', () => {
+  it('shows a View Store link prefixed with the active locale', () => {
     render(<AdminHeaderNav userName="Admin User" />)
 
     const viewStoreLink = screen.getByRole('link', { name: 'View Store' })
     expect(viewStoreLink).toBeInTheDocument()
-    expect(viewStoreLink).toHaveAttribute('href', '/')
+    expect(viewStoreLink).toHaveAttribute('href', '/en')
   })
 
   it('shows a Sign Out button', () => {
@@ -59,14 +59,14 @@ describe('AdminHeaderNav', () => {
     expect(signOutButton).not.toBeDisabled()
   })
 
-  it('calls signOut with callbackUrl when button is clicked', async () => {
+  it('calls signOut with locale-prefixed callbackUrl when button is clicked', async () => {
     mockSignOut.mockResolvedValue(undefined)
     render(<AdminHeaderNav userName="Admin User" />)
 
     fireEvent.click(screen.getByRole('button', { name: 'Sign Out' }))
 
     await waitFor(() => {
-      expect(mockSignOut).toHaveBeenCalledWith({ callbackUrl: '/' })
+      expect(mockSignOut).toHaveBeenCalledWith({ callbackUrl: '/en' })
     })
   })
 

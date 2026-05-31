@@ -215,7 +215,7 @@ describe('AdminSalesDashboardClient', () => {
   it('renders navigation cards for Products', () => {
     render(<AdminSalesDashboardClient sales={mockSalesData} />)
     const productsLink = screen.getByRole('link', { name: /Products/i })
-    expect(productsLink).toHaveAttribute('href', '/admin/products')
+    expect(productsLink).toHaveAttribute('href', '/en/admin/products')
     expect(
       screen.getByText(
         'Adjust pricing, inventory, and catalog details before demand spikes hit.'
@@ -226,7 +226,7 @@ describe('AdminSalesDashboardClient', () => {
   it('renders navigation cards for Orders', () => {
     render(<AdminSalesDashboardClient sales={mockSalesData} />)
     const ordersLink = screen.getByRole('link', { name: /Orders/i })
-    expect(ordersLink).toHaveAttribute('href', '/admin/orders')
+    expect(ordersLink).toHaveAttribute('href', '/en/admin/orders')
     expect(
       screen.getByText(
         'Review pipeline health, unblock fulfilment, and handle exceptions quickly.'
@@ -237,7 +237,7 @@ describe('AdminSalesDashboardClient', () => {
   it('renders navigation cards for Users', () => {
     render(<AdminSalesDashboardClient sales={mockSalesData} />)
     const usersLink = screen.getByRole('link', { name: /Users/i })
-    expect(usersLink).toHaveAttribute('href', '/admin/users')
+    expect(usersLink).toHaveAttribute('href', '/en/admin/users')
     expect(
       screen.getByText(
         'Check customer growth and keep admin access and permissions under control.'

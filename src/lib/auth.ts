@@ -1,6 +1,4 @@
 import NextAuth from 'next-auth'
-import Google from 'next-auth/providers/google'
-import MicrosoftEntraId from 'next-auth/providers/microsoft-entra-id'
 import Credentials from 'next-auth/providers/credentials'
 import { DrizzleAdapter } from '@auth/drizzle-adapter'
 import { primaryDrizzleDb } from '@/lib/db'
@@ -14,6 +12,7 @@ import {
   getClientIpFromRequest,
   recordFailedLoginAttempt,
 } from '@/features/auth/services/login-protection'
+import { authConfig } from './auth.config'
 
 const INVALID_CREDENTIALS_ERROR = 'Invalid credentials'
 
@@ -21,6 +20,7 @@ const INVALID_CREDENTIALS_ERROR = 'Invalid credentials'
 const JWT_DB_CHECK_INTERVAL = 5 * 60
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
+  ...authConfig,
   adapter: DrizzleAdapter(primaryDrizzleDb, {
     usersTable: users,
     accountsTable: accounts,
@@ -28,27 +28,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     verificationTokensTable: verificationTokens,
   }) as Adapter,
   providers: [
-    Google({
-      clientId: process.env.GOOGLE_CLIENT_ID
-        ? process.env.GOOGLE_CLIENT_ID
-        : '',
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET
-        ? process.env.GOOGLE_CLIENT_SECRET
-        : '',
-      authorization: {
-        params: {
-          prompt: 'consent',
-          access_type: 'offline',
-          response_type: 'code',
-        },
-      },
-    }),
-    MicrosoftEntraId({
-      clientId: process.env.MICROSOFT_CLIENT_ID ?? '',
-      clientSecret: process.env.MICROSOFT_CLIENT_SECRET ?? '',
-      issuer: 'https://login.microsoftonline.com/common/v2.0',
-      authorization: { params: { scope: 'openid profile email User.Read' } },
-    }),
+    // OAuth providers come from the edge-safe config; Credentials is added
+    // here because its `authorize` callback performs a DB lookup and cannot
+    // run in the edge runtime.
+    ...authConfig.providers,
     Credentials({
       name: 'credentials',
       credentials: {
@@ -179,34 +162,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       },
     }),
   ],
-  cookies: {
-    sessionToken: {
-      name:
-        process.env.NODE_ENV === 'production'
-          ? '__Secure-next-auth.session-token'
-          : 'next-auth.session-token',
-      options: {
-        httpOnly: true,
-        sameSite: 'lax',
-        path: '/',
-        secure: process.env.NODE_ENV === 'production',
-      },
-    },
-  },
   callbacks: {
-    async session({ session, token }) {
-      const userId = token.id as string
-      if (!session.user || !userId) {
-        return session
-      }
-
-      session.user.id = userId
-      session.user.role = (token.role as 'ADMIN' | 'CUSTOMER') || 'CUSTOMER'
-      session.user.phoneNumber =
-        (token.phoneNumber as string | null | undefined) || undefined
-
-      return session
-    },
+    ...authConfig.callbacks,
     async jwt({ token, user }) {
       if (user) {
         // Sign-in: populate token from user object
@@ -286,14 +243,5 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         success: true,
       })
     },
-  },
-  pages: {
-    signIn: '/auth/signin',
-    error: '/auth/error',
-  },
-  session: {
-    strategy: 'jwt',
-    maxAge: 2 * 60 * 60, // 2 hours
-    updateAge: 15 * 60, // Roll the cookie every 15 minutes of activity
   },
 })

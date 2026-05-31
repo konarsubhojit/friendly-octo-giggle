@@ -1,6 +1,6 @@
 'use client'
 
-import Link from 'next/link'
+import Link from '@/components/ui/LocaleLink'
 import Image from 'next/image'
 import { CartItemWithProduct } from '@/lib/types'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'

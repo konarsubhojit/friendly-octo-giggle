@@ -10,21 +10,21 @@ const LocalizedPathProbe = ({ path }: { readonly path: string }) => {
 }
 
 describe('LocaleContext', () => {
-  it('keeps internal navigation paths locale-agnostic', () => {
+  it('prepends the active locale to internal hrefs', () => {
     render(
       <LocaleProvider locale="es">
         <LocalizedPathProbe path="/shop" />
       </LocaleProvider>
     )
-    expect(screen.getByText('/shop')).toBeInTheDocument()
+    expect(screen.getByText('/es/shop')).toBeInTheDocument()
   })
 
-  it('strips locale prefix from links when present', () => {
+  it('is idempotent when the path is already locale-prefixed', () => {
     render(
       <LocaleProvider locale="en">
         <LocalizedPathProbe path="/en/admin" />
       </LocaleProvider>
     )
-    expect(screen.getByText('/admin')).toBeInTheDocument()
+    expect(screen.getByText('/en/admin')).toBeInTheDocument()
   })
 })

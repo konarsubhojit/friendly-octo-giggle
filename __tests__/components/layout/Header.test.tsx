@@ -305,7 +305,7 @@ describe('Header', () => {
     const menu = screen.getByRole('menu')
     expect(menu).toBeTruthy()
 
-    const myOrdersLink = menu.querySelector("a[href='/orders']")
+    const myOrdersLink = menu.querySelector("a[href='/en/orders']")
     expect(myOrdersLink).not.toBeNull()
     act(() => {
       fireEvent.click(myOrdersLink as HTMLElement)
@@ -334,7 +334,7 @@ describe('Header', () => {
       fireEvent.click(screen.getByLabelText('User menu'))
     })
     const menu = screen.getByRole('menu')
-    const adminLink = menu.querySelector("a[href='/admin']")
+    const adminLink = menu.querySelector("a[href='/en/admin']")
     expect(adminLink).not.toBeNull()
     act(() => {
       fireEvent.click(adminLink as HTMLElement)
@@ -363,7 +363,7 @@ describe('Header', () => {
       fireEvent.click(screen.getByLabelText('User menu'))
     })
     const menu = screen.getByRole('menu')
-    const accountLink = menu.querySelector("a[href='/account']")
+    const accountLink = menu.querySelector("a[href='/en/account']")
     expect(accountLink).not.toBeNull()
     expect(accountLink?.textContent).toContain('My Account')
   })
@@ -451,7 +451,7 @@ describe('Header', () => {
     const homeLinks = screen.getAllByText('Home')
     // At least the mobile nav Home link should point to /
     const homeLink = homeLinks.find(
-      (el) => el.closest('a')?.getAttribute('href') === '/'
+      (el) => el.closest('a')?.getAttribute('href') === '/en'
     )
     expect(homeLink).toBeTruthy()
   })
@@ -468,7 +468,7 @@ describe('Header', () => {
     })
     const shopLinks = screen.getAllByText('Shop')
     const shopLink = shopLinks.find(
-      (el) => el.closest('a')?.getAttribute('href') === '/shop'
+      (el) => el.closest('a')?.getAttribute('href') === '/en/shop'
     )
     expect(shopLink).toBeTruthy()
   })
@@ -553,7 +553,7 @@ describe('Header', () => {
       fireEvent.click(screen.getByLabelText('User menu'))
     })
     const menu = screen.getByRole('menu')
-    const wishlistLink = menu.querySelector("a[href='/wishlist']")
+    const wishlistLink = menu.querySelector("a[href='/en/wishlist']")
     expect(wishlistLink).not.toBeNull()
     expect(wishlistLink?.textContent).toContain('My Wishlist')
   })

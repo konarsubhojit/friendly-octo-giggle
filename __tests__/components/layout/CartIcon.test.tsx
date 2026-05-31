@@ -50,7 +50,7 @@ describe('CartIcon', () => {
   it('renders a link to /cart', () => {
     renderCartIcon()
     const link = screen.getByRole('link', { name: /shopping cart/i })
-    expect(link.getAttribute('href')).toBe('/cart')
+    expect(link.getAttribute('href')).toBe('/en/cart')
   })
 
   it('does not show badge when cart is empty', () => {

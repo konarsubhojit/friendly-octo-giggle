@@ -12,6 +12,8 @@ const { mockSearchCatalog, mockCacheProductsList } = vi.hoisted(() => ({
 
 vi.mock('@/lib/cache', () => ({
   cacheProductsList: mockCacheProductsList,
+  buildPublicCacheHeader: (s: number, w: number = Math.floor(s / 2)) =>
+    `public, s-maxage=${s}, stale-while-revalidate=${w}`,
 }))
 
 vi.mock('@/lib/search-discovery', () => ({
@@ -90,7 +92,7 @@ describe('GET /api/products', () => {
   it('sets Cache-Control header', async () => {
     const response = await GET(new NextRequest('http://localhost/api/products'))
     expect(response.headers.get('Cache-Control')).toBe(
-      's-maxage=60, stale-while-revalidate=120'
+      'public, s-maxage=60, stale-while-revalidate=30'
     )
   })
 

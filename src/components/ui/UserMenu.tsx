@@ -2,9 +2,10 @@
 
 import { useState } from 'react'
 import { signOut } from 'next-auth/react'
-import Link from 'next/link'
+import Link from '@/components/ui/LocaleLink'
 import Image from 'next/image'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
+import { useLocale } from '@/contexts/LocaleContext'
 
 interface Session {
   user?: {
@@ -22,11 +23,12 @@ interface UserMenuProps {
 
 export function UserMenu({ session, onLoginClick }: UserMenuProps) {
   const [signingOut, setSigningOut] = useState(false)
+  const { localizePath } = useLocale()
 
   async function handleSignOut() {
     setSigningOut(true)
     try {
-      await signOut({ callbackUrl: '/' })
+      await signOut({ callbackUrl: localizePath('/') })
     } finally {
       setSigningOut(false)
     }

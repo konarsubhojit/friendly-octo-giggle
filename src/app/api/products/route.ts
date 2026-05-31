@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { apiSuccess, handleApiError } from '@/lib/api-utils'
 import { withLogging } from '@/lib/api-middleware'
-import { cacheProductsList } from '@/lib/cache'
+import { buildPublicCacheHeader, cacheProductsList } from '@/lib/cache'
 import {
   SEARCH_SORT_VALUES,
   SEARCH_VARIANT_VALUES,
@@ -70,10 +70,7 @@ async function handleGet(request: NextRequest) {
       products: products.results.slice(0, limit),
       hasMore,
     })
-    response.headers.set(
-      'Cache-Control',
-      's-maxage=60, stale-while-revalidate=120'
-    )
+    response.headers.set('Cache-Control', buildPublicCacheHeader(60))
     return response
   } catch (error) {
     return handleApiError(error)

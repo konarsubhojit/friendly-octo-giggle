@@ -30,7 +30,7 @@ describe('Hero', () => {
   it('renders Explore Shop link pointing to /shop', () => {
     render(<Hero />)
     const link = screen.getByText(/Explore Shop/).closest('a')
-    expect(link?.getAttribute('href')).toBe('/shop')
+    expect(link?.getAttribute('href')).toBe('/en/shop')
   })
 
   it('renders feature badges', () => {

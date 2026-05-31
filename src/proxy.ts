@@ -10,6 +10,38 @@ import {
   STRICT_RATE_LIMIT_MAX_REQUESTS,
 } from '@/lib/rate-limit'
 
+/**
+ * ⚠️ Orphaned but intentionally retained.
+ *
+ * This module implements production security primitives — nonce-based CSP,
+ * Upstash-backed rate limiting for `/api/auth/*`, `/api/checkout`,
+ * `/api/orders`, `/api/ai`; Edge-Config-driven maintenance mode; HTTPS
+ * enforcement; and a server-side admin auth + role gate on `/admin/*` and
+ * `/api/admin/*` — that are NOT currently invoked from `middleware.ts`. The
+ * active middleware only performs the locale redirect/cookie refresh.
+ *
+ * Why not wired yet:
+ *   The `auth()` import below resolves to the Node-side NextAuth instance in
+ *   `@/lib/auth`, which pulls the Drizzle adapter, `pino` logger, and
+ *   `prom-client` metrics into the bundle — none of which are edge-safe.
+ *   To activate this file from `middleware.ts` (or rename both into a single
+ *   Next.js 16 `proxy.ts`), the admin auth check here must switch to the
+ *   edge-safe `@/lib/auth.config` (or `getToken` from `next-auth/jwt`) so
+ *   the edge runtime can read the JWT without bundling the adapter, the
+ *   logger, or the metrics client. The DB driver itself is fine —
+ *   `@neondatabase/serverless` is edge-compatible by design.
+ *
+ * Why not deleted:
+ *   Deleting it would silently regress production security posture (no CSP,
+ *   no distributed rate limiting, no maintenance kill switch, no edge admin
+ *   gate). The behaviour is documented as the "security middleware" in
+ *   `docs/architecture.md` and `.github/copilot-instructions.md`.
+ *
+ * Test coverage: `__tests__/proxy.test.ts` exercises this module's pure logic
+ * so it does not bit-rot while it sits offline. Tracked as a follow-up to the
+ * Tier A2 / route-group migration (PR #311).
+ */
+
 const isDev = process.env.NODE_ENV === 'development'
 const ADMIN_PATH_PREFIX = '/admin'
 const ADMIN_API_PREFIX = '/api/admin'

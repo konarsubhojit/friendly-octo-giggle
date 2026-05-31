@@ -13,6 +13,8 @@ vi.mock('@/lib/cache', () => ({
   cacheProductsBestsellers: vi.fn(async (fetcher: () => Promise<unknown>) => {
     return await fetcher()
   }),
+  buildPublicCacheHeader: (s: number, w: number = Math.floor(s / 2)) =>
+    `public, s-maxage=${s}, stale-while-revalidate=${w}`,
 }))
 
 vi.mock('@/lib/api-middleware', () => ({
@@ -112,7 +114,7 @@ describe('GET /api/products/bestsellers', () => {
       new NextRequest('http://localhost/api/products/bestsellers')
     )
     expect(response.headers.get('Cache-Control')).toBe(
-      's-maxage=120, stale-while-revalidate=60'
+      'public, s-maxage=120, stale-while-revalidate=60'
     )
   })
 

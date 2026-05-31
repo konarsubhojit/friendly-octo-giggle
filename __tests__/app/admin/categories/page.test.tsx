@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { render, screen } from '@testing-library/react'
 import type { ReactNode } from 'react'
-import AdminCategoriesPage from '@/app/admin/categories/page'
+import AdminCategoriesPage from '@/app/[locale]/admin/categories/page'
 
 let mockCategories = [
   {

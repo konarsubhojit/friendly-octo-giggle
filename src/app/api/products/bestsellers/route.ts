@@ -3,7 +3,7 @@ import { apiSuccess, handleApiError } from '@/lib/api-utils'
 import { withLogging } from '@/lib/api-middleware'
 import { NextRequest } from 'next/server'
 import { z } from 'zod'
-import { cacheProductsBestsellers } from '@/lib/cache'
+import { cacheProductsBestsellers, buildPublicCacheHeader } from '@/lib/cache'
 
 /**
  * GET /api/products/bestsellers
@@ -14,7 +14,9 @@ import { cacheProductsBestsellers } from '@/lib/cache'
  * Query params:
  * - `limit` (optional): number of products to return (1-100). Defaults to 5.
  *
- * Results are Redis-cached for 2 minutes with a 20-second stale window.
+ * Results are Redis-cached (see `CACHE_TTL.PRODUCTS_BESTSELLERS`) and the
+ * HTTP response is CDN-cacheable for a shorter window because admin product
+ * mutations do not invalidate the Vercel CDN cache.
  */
 const BestsellersQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(5),
@@ -32,10 +34,7 @@ const handleGet = async (request: NextRequest) => {
     )
 
     const response = apiSuccess({ products })
-    response.headers.set(
-      'Cache-Control',
-      's-maxage=120, stale-while-revalidate=60'
-    )
+    response.headers.set('Cache-Control', buildPublicCacheHeader(120))
     return response
   } catch (error) {
     return handleApiError(error)

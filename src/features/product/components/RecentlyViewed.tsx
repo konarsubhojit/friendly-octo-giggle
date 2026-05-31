@@ -1,6 +1,6 @@
 'use client'
 
-import Link from 'next/link'
+import Link from '@/components/ui/LocaleLink'
 import Image from 'next/image'
 import { useRecentlyViewed } from '@/features/product/hooks/useRecentlyViewed'
 import { useCurrency } from '@/contexts/CurrencyContext'
