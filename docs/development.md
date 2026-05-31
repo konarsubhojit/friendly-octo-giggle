@@ -299,6 +299,75 @@ export function Product({ product }) {
 - Any async UI status (toast, cart updates, background actions) should announce through polite live regions (`aria-live="polite"`).
 - Update `playwright-tests/accessibility.spec.ts` when adding or changing user/admin routes so axe audits stay comprehensive.
 
+### zenput Adapter Layer
+
+The admin surface uses the [`zenput`](https://www.npmjs.com/package/zenput) component library for standardised form inputs and tables. **`zenput` is pinned to an exact version** in `package.json` — bumps must go through a manual upgrade PR (Dependabot PRs against `zenput` should be closed in favour of a documented manual upgrade).
+
+**Always import zenput components from the adapter, never from `'zenput'` directly:**
+
+```ts
+// ✅ Good — routes through the app's defaults & the NumberField shim
+import {
+  TextInput,
+  TextArea,
+  SelectInput,
+  FileInput,
+  MoneyInput,
+  NumberField,
+  DataTable,
+} from '@/components/ui/zenput'
+
+// ❌ Bad — bypasses app defaults; lint will flag this
+import { TextInput } from 'zenput'
+```
+
+An ESLint `no-restricted-imports` rule enforces this for all files under `src/` except the adapter itself.
+
+#### Approved zenput components & when to use them
+
+| Use case                                          | Component                                            | Notes                                                                                                          |
+| ------------------------------------------------- | ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| Single-line text input in admin forms             | `TextInput` from `@/components/ui/zenput`            | Defaults: `fullWidth`, `size='md'`, `variant='outlined'`.                                                      |
+| Multi-line text input (descriptions, notes)       | `TextArea` from `@/components/ui/zenput`             | Supports `autoResize`, `showCharCount`.                                                                        |
+| Single-select dropdown (categories, currencies)   | `SelectInput` from `@/components/ui/zenput`          | Pass `options: SelectOption[]`.                                                                                |
+| Numeric input (stock, quantities)                 | `NumberField` from `@/components/ui/zenput`          | **Use `NumberField`, not zenput's `NumberInput` directly** — see caveat below.                                 |
+| Money / currency-aware price input                | `MoneyInput` from `@/components/ui/zenput`           | Pass `currencies: CurrencyOption[]` and `currency`.                                                            |
+| File / image upload with preview                  | `FileInput` from `@/components/ui/zenput`            | Supports `dropzone`, `previewSrc`, `showFileNames`.                                                            |
+| Tabular admin lists (products, orders)            | `DataTable` from `@/components/ui/zenput`            | Supports loading skeletons, pagination, `expandedRowRender`.                                                   |
+| Newsletter signup, marketing forms, hero CTAs     | Existing primitives in `src/components/ui/`          | Keep using `TextInput.tsx`, `SelectInput.tsx`, `DynamicForm.tsx` etc.; do **not** swap for zenput on the public surface yet. |
+| Generic buttons, badges, alerts, locale links     | Existing primitives in `src/components/ui/`          | `CtaButton`, `Badge`, `AlertBanner`, `LocaleLink` remain canonical.                                            |
+
+zenput is currently approved only for the admin surface (`/admin/*` pages and `src/features/admin/components/*`). Wider rollout requires a follow-up RFC.
+
+#### `NumberInput` onChange caveat
+
+zenput's `NumberInput.onChange` is declared as `(value: number | undefined) => void` — it fires `undefined` when the user clears the field. This forces every caller to write `setFoo(v ?? 0)` (or similar) defensively and is easy to miss in code review.
+
+The `NumberField` adapter normalises this:
+
+```tsx
+import { NumberField } from '@/components/ui/zenput'
+
+// onChange receives a guaranteed `number`. When the user clears the input,
+// the adapter substitutes `defaultValueOnClear` (defaults to 0).
+<NumberField
+  label="Stock"
+  value={stock}
+  defaultValueOnClear={0}
+  onChange={(value) => setStock(value)}
+/>
+```
+
+For any non-zero baseline (e.g. a price field that should snap to `min` when cleared), set `defaultValueOnClear` explicitly.
+
+#### Theming, bundle size, and accessibility checks
+
+Before extending the zenput footprint:
+
+1. Verify light/dark parity on `/admin/products`, `/admin/orders`, `ProductFormModal`, and `VariantFormModal`. Any colour drift must be patched by mapping zenput tokens to the Tailwind v4 tokens declared in `src/app/globals.css`.
+2. Capture an `@next/bundle-analyzer` baseline (`npm run analyze`) for the admin routes and attach the numbers to the PR description.
+3. Re-run the axe-core audit in `playwright-tests/accessibility.spec.ts` for the four files above; resolve any new critical/serious violations before merging.
+
 ---
 
 ## 4. Database Migrations

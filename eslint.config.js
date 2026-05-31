@@ -57,6 +57,27 @@ const config = [
       '@next/next/no-img-element': 'off',
     },
   },
+  // Forbid direct imports from 'zenput' outside the adapter layer. Use
+  // '@/components/ui/zenput' instead so we route through the app's defaults
+  // and the NumberField wrapper. See docs/development.md.
+  {
+    files: ['src/**/*.{ts,tsx}'],
+    ignores: ['src/components/ui/zenput/**'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: 'zenput',
+              message:
+                "Import zenput components from '@/components/ui/zenput' instead, so the app's defaults and the NumberField wrapper are applied.",
+            },
+          ],
+        },
+      ],
+    },
+  },
 ]
 
 export default config

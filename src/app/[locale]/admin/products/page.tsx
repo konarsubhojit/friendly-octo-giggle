@@ -19,7 +19,10 @@ import {
   AdminPanel,
 } from '@/features/admin/components/AdminPageShell'
 import { AdminSearchForm } from '@/features/admin/components/AdminSearchForm'
-import { DataTable, type DataTableColumn } from 'zenput'
+import {
+  DataTable,
+  type DataTableColumn,
+} from '@/components/ui/zenput'
 
 const ProductFormModal = lazy(
   () => import('@/features/admin/components/ProductFormModal')

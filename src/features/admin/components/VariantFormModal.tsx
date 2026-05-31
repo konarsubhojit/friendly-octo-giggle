@@ -16,11 +16,11 @@ import {
 } from '@/lib/upload-constants'
 import {
   TextInput,
-  NumberInput,
+  NumberField,
   FileInput,
   MoneyInput,
   type CurrencyOption,
-} from 'zenput'
+} from '@/components/ui/zenput'
 
 const MAX_ADDITIONAL_IMAGES = 10
 
@@ -503,7 +503,7 @@ const VariantFormModal = ({
                     </p>
                   </div>
 
-                  <NumberInput
+                  <NumberField
                     label="Stock"
                     min={0}
                     step={1}
@@ -513,7 +513,7 @@ const VariantFormModal = ({
                     onChange={(v) => {
                       setFormData((prev) => ({
                         ...prev,
-                        stock: String(v ?? 0),
+                        stock: String(v),
                       }))
                       setErrors((prev) => {
                         const next = { ...prev }
