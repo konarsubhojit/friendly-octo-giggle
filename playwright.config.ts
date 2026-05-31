@@ -127,6 +127,17 @@ export default defineConfig({
       },
       testMatch: '**/orders-live.spec.ts',
     },
+    // Locale link smoke — public, unauthenticated. Guards against the
+    // post-[locale]-migration regression where internal hrefs lost their
+    // /{locale}/ prefix and 404'd.
+    {
+      name: 'locale-links',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1280, height: 800 },
+      },
+      testMatch: '**/locale-links.spec.ts',
+    },
     // Variant options E2E — tests storefront + admin option manager
     {
       name: 'variant-options',
