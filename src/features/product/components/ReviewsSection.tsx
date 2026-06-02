@@ -203,16 +203,85 @@ const RatingSummary = ({ summary }: { readonly summary: ReviewSummary }) => {
   )
 }
 
+const REVIEW_SKELETON_KEYS = ['skel-a', 'skel-b', 'skel-c'] as const
+
 const ReviewsSkeleton = () => (
   <div className="space-y-4" aria-label="Loading reviews">
-    {Array.from({ length: 3 }).map((_, index) => (
+    {REVIEW_SKELETON_KEYS.map((key) => (
       <div
-        key={index}
+        key={key}
         className="h-24 animate-pulse rounded-xl bg-[var(--border-warm)]/40"
       />
     ))}
   </div>
 )
+
+interface ReviewsContentProps {
+  readonly loading: boolean
+  readonly reviews: Review[]
+  readonly visibleReviews: Review[]
+  readonly summary: ReviewSummary
+  readonly visibleCount: number
+  readonly busyReviewId: string | null
+  readonly onLoadMore: () => void
+  readonly onVote: (reviewId: string, vote: 'up' | 'down') => void
+  readonly onEdit: (review: Review) => void
+  readonly onDelete: (reviewId: string) => void
+}
+
+const ReviewsContent = ({
+  loading,
+  reviews,
+  visibleReviews,
+  summary,
+  visibleCount,
+  busyReviewId,
+  onLoadMore,
+  onVote,
+  onEdit,
+  onDelete,
+}: ReviewsContentProps) => {
+  if (loading) return <ReviewsSkeleton />
+
+  if (reviews.length === 0) {
+    return (
+      <div className="py-8 text-center">
+        <p className="text-sm text-[var(--text-muted)]">
+          No reviews yet. Be the first to share your thoughts!
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <>
+      <RatingSummary summary={summary} />
+      <div>
+        {visibleReviews.map((review) => (
+          <ReviewCard
+            key={review.id}
+            review={review}
+            onVote={onVote}
+            onEdit={onEdit}
+            onDelete={onDelete}
+            isUpdating={busyReviewId === review.id}
+          />
+        ))}
+      </div>
+      {visibleCount < reviews.length && (
+        <div className="pt-4 text-center">
+          <button
+            type="button"
+            onClick={onLoadMore}
+            className="rounded-full border border-[var(--border-warm)] px-4 py-2 text-sm font-medium text-[var(--text-secondary)] hover:border-[var(--accent-rose)] hover:text-[var(--foreground)]"
+          >
+            Load more reviews
+          </button>
+        </div>
+      )}
+    </>
+  )
+}
 
 export const ReviewsSection = ({ productId }: ReviewsSectionProps) => {
   const { data: session } = useSession()
@@ -450,7 +519,7 @@ export const ReviewsSection = ({ productId }: ReviewsSectionProps) => {
 
         <div className="mb-4 flex flex-wrap items-center gap-3">
           <label className="text-sm text-[var(--text-secondary)]">
-            Sort
+            <span>Sort</span>
             <select
               className="ml-2 rounded-lg border border-[var(--border-warm)] bg-[var(--surface)] px-2 py-1 text-sm"
               value={sortBy}
@@ -464,7 +533,7 @@ export const ReviewsSection = ({ productId }: ReviewsSectionProps) => {
             </select>
           </label>
           <label className="text-sm text-[var(--text-secondary)]">
-            Rating
+            <span>Rating</span>
             <select
               className="ml-2 rounded-lg border border-[var(--border-warm)] bg-[var(--surface)] px-2 py-1 text-sm"
               value={ratingFilter}
@@ -484,7 +553,7 @@ export const ReviewsSection = ({ productId }: ReviewsSectionProps) => {
               checked={verifiedOnly}
               onChange={(event) => setVerifiedOnly(event.target.checked)}
             />
-            Verified buyers only
+            <span>Verified buyers only</span>
           </label>
         </div>
 
@@ -521,7 +590,7 @@ export const ReviewsSection = ({ productId }: ReviewsSectionProps) => {
                 checked={editAnonymous}
                 onChange={(event) => setEditAnonymous(event.target.checked)}
               />
-              Submit anonymously
+              <span>Submit anonymously</span>
             </label>
             <div className="mt-3 flex gap-2">
               <GradientButton
@@ -542,42 +611,18 @@ export const ReviewsSection = ({ productId }: ReviewsSectionProps) => {
           </div>
         )}
 
-        {loading ? (
-          <ReviewsSkeleton />
-        ) : reviews.length === 0 ? (
-          <div className="py-8 text-center">
-            <p className="text-sm text-[var(--text-muted)]">
-              No reviews yet. Be the first to share your thoughts!
-            </p>
-          </div>
-        ) : (
-          <>
-            <RatingSummary summary={summary} />
-            <div>
-              {visibleReviews.map((review) => (
-                <ReviewCard
-                  key={review.id}
-                  review={review}
-                  onVote={handleVote}
-                  onEdit={startEdit}
-                  onDelete={handleDelete}
-                  isUpdating={busyReviewId === review.id}
-                />
-              ))}
-            </div>
-            {visibleCount < reviews.length && (
-              <div className="pt-4 text-center">
-                <button
-                  type="button"
-                  onClick={() => setVisibleCount((count) => count + 5)}
-                  className="rounded-full border border-[var(--border-warm)] px-4 py-2 text-sm font-medium text-[var(--text-secondary)] hover:border-[var(--accent-rose)] hover:text-[var(--foreground)]"
-                >
-                  Load more reviews
-                </button>
-              </div>
-            )}
-          </>
-        )}
+        <ReviewsContent
+          loading={loading}
+          reviews={reviews}
+          visibleReviews={visibleReviews}
+          summary={summary}
+          visibleCount={visibleCount}
+          busyReviewId={busyReviewId}
+          onLoadMore={() => setVisibleCount((count) => count + 5)}
+          onVote={handleVote}
+          onEdit={startEdit}
+          onDelete={handleDelete}
+        />
       </Card>
     </section>
   )

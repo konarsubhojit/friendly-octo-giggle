@@ -13,11 +13,57 @@ import {
   recordFailedLoginAttempt,
 } from '@/features/auth/services/login-protection'
 import { authConfig } from './auth.config'
+import type { JWT } from 'next-auth/jwt'
 
 const INVALID_CREDENTIALS_ERROR = 'Invalid credentials'
 
 /** How often (in seconds) to re-validate a token against the DB. */
 const JWT_DB_CHECK_INTERVAL = 5 * 60
+
+type JwtToken = JWT
+
+const populateTokenFromUser = async (
+  token: JwtToken,
+  user: { id?: string; role?: JwtToken['role']; phoneNumber?: string | null }
+): Promise<JwtToken> => {
+  token.id = user.id ?? ''
+  token.role = user.role || 'CUSTOMER'
+  if ('phoneNumber' in user && user.phoneNumber) {
+    token.phoneNumber = user.phoneNumber
+  }
+  if (user.id) {
+    const dbUser = await primaryDrizzleDb.query.users.findFirst({
+      where: eq(users.id, user.id),
+      columns: { sessionVersion: true },
+    })
+    token.sessionVersion = dbUser?.sessionVersion ?? 0
+  }
+  token.lastDbCheckAt = Math.floor(Date.now() / 1000)
+  return token
+}
+
+const refreshTokenFromDb = async (
+  token: JwtToken,
+  userId: string,
+  now: number
+): Promise<JwtToken | null> => {
+  const dbUser = await primaryDrizzleDb.query.users.findFirst({
+    where: eq(users.id, userId),
+    columns: { role: true, lockedUntil: true, sessionVersion: true },
+  })
+  if (!dbUser) return null
+  if (dbUser.lockedUntil && dbUser.lockedUntil > new Date()) return null
+
+  const storedVersion = token.sessionVersion
+  if (storedVersion !== undefined && dbUser.sessionVersion !== storedVersion) {
+    return null
+  }
+
+  token.role = dbUser.role
+  token.sessionVersion = dbUser.sessionVersion
+  token.lastDbCheckAt = now
+  return token
+}
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   ...authConfig,
@@ -166,63 +212,19 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     ...authConfig.callbacks,
     async jwt({ token, user }) {
       if (user) {
-        // Sign-in: populate token from user object
-        token.id = user.id ?? ''
-        token.role = user.role || 'CUSTOMER'
-        if ('phoneNumber' in user && user.phoneNumber) {
-          token.phoneNumber = user.phoneNumber
-        }
-
-        // Fetch sessionVersion from DB so forced-logout can be detected later
-        if (user.id) {
-          const dbUser = await primaryDrizzleDb.query.users.findFirst({
-            where: eq(users.id, user.id),
-            columns: { sessionVersion: true },
-          })
-          token.sessionVersion = dbUser?.sessionVersion ?? 0
-        }
-
-        token.lastDbCheckAt = Math.floor(Date.now() / 1000)
-        return token
+        return populateTokenFromUser(token, user)
       }
 
-      // Subsequent requests: periodically re-validate role & lock status from DB
       const userId = token.id as string | undefined
       if (!userId) return token
 
-      const lastCheck = token.lastDbCheckAt as number | undefined
+      const lastCheck = token.lastDbCheckAt
       const now = Math.floor(Date.now() / 1000)
-
-      if (lastCheck === undefined || now - lastCheck >= JWT_DB_CHECK_INTERVAL) {
-        const dbUser = await primaryDrizzleDb.query.users.findFirst({
-          where: eq(users.id, userId),
-          columns: { role: true, lockedUntil: true, sessionVersion: true },
-        })
-
-        // User deleted → invalidate
-        if (!dbUser) return null
-
-        // Account locked → invalidate
-        if (dbUser.lockedUntil && dbUser.lockedUntil > new Date()) {
-          return null
-        }
-
-        // Session version bumped (admin forced logout-all) → invalidate
-        const storedVersion = token.sessionVersion as number | undefined
-        if (
-          storedVersion !== undefined &&
-          dbUser.sessionVersion !== storedVersion
-        ) {
-          return null
-        }
-
-        // Refresh token with latest DB state
-        token.role = dbUser.role
-        token.sessionVersion = dbUser.sessionVersion
-        token.lastDbCheckAt = now
+      if (lastCheck !== undefined && now - lastCheck < JWT_DB_CHECK_INTERVAL) {
+        return token
       }
 
-      return token
+      return refreshTokenFromDb(token, userId, now)
     },
     signIn({ user, account }) {
       // Log successful sign-in

@@ -21,6 +21,7 @@ import {
 import type { CurrencyCode } from '@/lib/currency'
 import type { Content } from '@google/genai'
 import type { Product } from '@/lib/types'
+import type { Session } from 'next-auth'
 import { users, products, orders, reviews } from '@/lib/schema'
 import { and, desc, eq, ilike, isNull, or } from 'drizzle-orm'
 import { auth } from '@/lib/auth'
@@ -62,7 +63,7 @@ const DELIVERY_INFO_PATTERNS = [
 
 const RECOMMENDATION_PATTERNS = [
   /\b(recommend|suggest|best|good option|top pick)\b/i,
-  /\b(under|below|less than)\b.{0,12}\b(\$|₹|€|£)?\s*\d+/i,
+  /\b(under|below|less than)\b.{0,12}\b[$₹€£]?\s*\d+/i,
 ]
 
 const COMPARISON_PATTERNS = [
@@ -133,7 +134,7 @@ const normalizePolicyText = (
 ): { normalized: string; compact: string } => {
   const normalized = text
     .normalize('NFKC')
-    .replace(/[\u200B-\u200F\uFE00-\uFE0F]/g, '')
+    .replace(/[\u200B-\u200F]|[\uFE00-\uFE0F]/g, '')
     .toLowerCase()
     .replace(/[013457]/g, (char) => {
       const map: Record<string, string> = {
@@ -160,7 +161,7 @@ const sanitizePromptText = (
 ): string =>
   text
     .normalize('NFKC')
-    .replace(/[\u200B-\u200F\uFE00-\uFE0F]/g, '')
+    .replace(/[\u200B-\u200F]|[\uFE00-\uFE0F]/g, '')
     .replace(/[\p{Cc}\p{Cf}]/gu, ' ')
     .replace(/[<>{}`$]/g, ' ')
     .replace(/\s+/gu, ' ')
@@ -201,32 +202,41 @@ const detectIntentSignals = (text: string): IntentSignals => ({
   ),
 })
 
+const detectCurrencyFromSymbol = (
+  symbol: string | undefined,
+  fallbackCurrency: CurrencyCode
+): CurrencyCode => {
+  switch (symbol) {
+    case '$':
+      return 'USD'
+    case '€':
+      return 'EUR'
+    case '£':
+      return 'GBP'
+    case '₹':
+      return 'INR'
+    default:
+      return fallbackCurrency
+  }
+}
+
 const parseBudgetInINR = (
   text: string,
   fallbackCurrency: CurrencyCode
 ): number | null => {
-  const match = text.match(BUDGET_PATTERN)
+  const match = new RegExp(BUDGET_PATTERN).exec(text)
   if (!match) return null
   const raw = Number(match[2])
   if (!Number.isFinite(raw) || raw <= 0) return null
 
   const symbol = match[1] ?? match[3]
-  const detectedCurrency: CurrencyCode =
-    symbol === '$'
-      ? 'USD'
-      : symbol === '€'
-        ? 'EUR'
-        : symbol === '£'
-          ? 'GBP'
-          : symbol === '₹'
-            ? 'INR'
-            : fallbackCurrency
+  const detectedCurrency = detectCurrencyFromSymbol(symbol, fallbackCurrency)
 
   return convertPriceToINR(raw, detectedCurrency)
 }
 
 const escapeLikeValue = (value: string): string =>
-  value.replace(/[\\%_]/g, '\\$&')
+  value.replace(/[\\%_]/g, String.raw`\$&`)
 
 const resolveThreadId = (
   providedThreadId: string | undefined,
@@ -472,7 +482,7 @@ const fetchOrderStatusContext = async (
   userId: string,
   text: string
 ): Promise<string | null> => {
-  const orderId = text.match(ORDER_ID_PATTERN)?.[0] ?? null
+  const orderId = ORDER_ID_PATTERN.exec(text)?.[0] ?? null
   if (orderId) {
     const order = await drizzleDb.query.orders.findFirst({
       where: and(eq(orders.id, orderId), eq(orders.userId, userId)),
@@ -642,6 +652,366 @@ const detectBlockedPrompt = (text: string): string | null => {
   return null
 }
 
+type AuthorizedSession = Session & { user: { id: string } }
+
+type ChatRequestData = z.infer<typeof ChatRequestSchema>
+
+type PreparedRequest = {
+  parsedData: ChatRequestData
+  session: AuthorizedSession
+  persistHistory: boolean
+  threadId: string
+  sanitizedMessages: ChatMessage[]
+}
+
+const parseAndValidateRequest = async (
+  request: NextRequest,
+  productId: string
+): Promise<NextResponse | PreparedRequest> => {
+  const body = await request.json()
+  const parsed = ChatRequestSchema.safeParse(body)
+  if (!parsed.success) return apiError('Invalid request body', 400)
+
+  const session = await auth()
+  if (!session?.user?.id) return apiError('Authentication required', 401)
+
+  if (
+    parsed.data.messages.some(
+      (message) =>
+        message.text.trim().length === 0 ||
+        message.text.length > MAX_INPUT_MESSAGE_CHARS
+    )
+  ) {
+    return apiError(
+      `Each message must be between 1 and ${MAX_INPUT_MESSAGE_CHARS} characters`,
+      400
+    )
+  }
+
+  const persistHistory = parsed.data.persistHistory ?? false
+  const threadId = resolveThreadId(parsed.data.threadId, productId)
+
+  const sanitizedMessages = parsed.data.messages.map((message) => ({
+    ...message,
+    text: sanitizePromptText(message.text),
+  }))
+  if (sanitizedMessages.some((message) => message.text.length === 0)) {
+    return apiError('Messages must include meaningful text', 400)
+  }
+
+  return {
+    parsedData: parsed.data,
+    session: session as AuthorizedSession,
+    persistHistory,
+    threadId,
+    sanitizedMessages,
+  }
+}
+
+const composeConversationMessages = async (
+  sanitizedMessages: ChatMessage[],
+  persistHistory: boolean,
+  userId: string,
+  productId: string,
+  threadId: string
+): Promise<ChatMessage[]> => {
+  if (!persistHistory || sanitizedMessages.length !== 1) {
+    return sanitizedMessages
+  }
+  const persisted = await loadPersistedMessages(userId, productId, threadId)
+  if (persisted.length === 0) return sanitizedMessages
+  return trimMessageHistory(
+    [...persisted, ...sanitizedMessages],
+    MAX_CONVERSATION_TURNS * 2
+  )
+}
+
+const resolveCurrencyForUser = async (
+  userId: string
+): Promise<CurrencyCode> => {
+  const userRecord = await drizzleDb.query.users.findFirst({
+    where: eq(users.id, userId),
+    columns: { currencyPreference: true },
+  })
+  if (
+    userRecord?.currencyPreference &&
+    isValidCurrencyCode(userRecord.currencyPreference)
+  ) {
+    return userRecord.currencyPreference
+  }
+  return 'INR'
+}
+
+const usesAnyAdvancedIntent = (intents: IntentSignals): boolean =>
+  intents.wantsComparison ||
+  intents.wantsRecommendation ||
+  intents.wantsDeliveryInfo ||
+  intents.wantsOrderStatus ||
+  intents.wantsReviewSummary
+
+const buildSystemPrompt = (
+  product: Product,
+  currencyCode: CurrencyCode,
+  formatPrice: (priceInINR: number) => string,
+  supplementalContext: string[]
+): string => {
+  const productPart = sanitizePromptText(
+    buildProductContext(product, { currencyCode, formatPrice }),
+    PRODUCT_CONTEXT_MAX_CHARS
+  )
+  const commercePart =
+    supplementalContext.length > 0
+      ? `\n\n[Commerce Context]\n${sanitizePromptText(
+          supplementalContext.join('\n\n'),
+          SUPPLEMENTAL_CONTEXT_MAX_CHARS
+        )}`
+      : ''
+  return SYSTEM_PROMPT_PREFIX + productPart + commercePart
+}
+
+type QuotaCheckParams = {
+  userId: string
+  dailyUsage: { requests: number; tokens: number }
+  reservedTotalTokens: number
+  requestQuota: number
+  tokenQuota: number
+  usesAdvancedFeatures: boolean
+  advancedQuota: number
+}
+
+const enforceQuotas = async (
+  params: QuotaCheckParams
+): Promise<NextResponse | null> => {
+  if (params.dailyUsage.requests + 1 > params.requestQuota) {
+    return apiError('Daily AI chat request quota exceeded', 429)
+  }
+  if (
+    params.dailyUsage.tokens + params.reservedTotalTokens >
+    params.tokenQuota
+  ) {
+    return apiError('Daily AI chat token quota exceeded', 429)
+  }
+  if (params.usesAdvancedFeatures) {
+    const advancedUsage = await getAdvancedUsage(params.userId)
+    if (advancedUsage + 1 > params.advancedQuota) {
+      return apiError('Daily advanced AI request quota exceeded', 429)
+    }
+    await recordAdvancedUsage(params.userId)
+  }
+  return null
+}
+
+type CachedResponseContext = {
+  productId: string
+  userId: string
+  lastUserText: string
+  currencyCode: CurrencyCode
+  trimmed: ChatMessage[]
+  estimatedInputTokens: number
+  dailyUsage: { requests: number; tokens: number }
+  threadId: string
+  persistHistory: boolean
+  maxHistoryMessages: number
+  chatModel: string
+}
+
+const respondWithCachedAnswer = async (
+  cached: string,
+  ctx: CachedResponseContext
+): Promise<NextResponse> => {
+  const outputTokens = estimateTokens(cached)
+  const totalTokens = ctx.estimatedInputTokens + outputTokens
+  await recordDailyUsage(ctx.userId, totalTokens)
+
+  logBusinessEvent({
+    event: 'ai_chat_request',
+    details: {
+      productId: ctx.productId,
+      chatModel: ctx.chatModel,
+      messageCount: ctx.trimmed.length,
+      cached: true,
+    },
+    success: true,
+  })
+  logBusinessEvent({
+    event: 'ai_chat_usage',
+    userId: ctx.userId,
+    details: {
+      productId: ctx.productId,
+      cached: true,
+      inputTokens: ctx.estimatedInputTokens,
+      outputTokens,
+      totalTokens,
+      requestsUsed: ctx.dailyUsage.requests + 1,
+    },
+    success: true,
+  })
+
+  if (ctx.persistHistory) {
+    const historyToPersist = trimMessageHistory(
+      [
+        ...ctx.trimmed,
+        { role: 'assistant', text: sanitizeAssistantOutput(cached) },
+      ],
+      ctx.maxHistoryMessages
+    )
+    await persistMessages(
+      ctx.userId,
+      ctx.productId,
+      ctx.threadId,
+      historyToPersist
+    )
+  }
+
+  return NextResponse.json(
+    { text: cached, threadId: ctx.persistHistory ? ctx.threadId : undefined },
+    ctx.persistHistory
+      ? { headers: { 'X-AI-Thread-ID': ctx.threadId } }
+      : undefined
+  )
+}
+
+const buildStreamReader = (
+  stream: AsyncIterable<{ text?: string }>
+): {
+  readable: ReadableStream<Uint8Array>
+  fullTextPromise: Promise<string>
+} => {
+  const encoder = new TextEncoder()
+  let resolveFull!: (text: string) => void
+  const fullTextPromise = new Promise<string>((resolve) => {
+    resolveFull = resolve
+  })
+
+  const readable = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      let fullText = ''
+      try {
+        for await (const chunk of stream) {
+          const text = sanitizeAssistantOutput(chunk.text ?? '')
+          if (text) {
+            fullText += text
+            controller.enqueue(encoder.encode(text))
+          }
+        }
+        controller.close()
+        resolveFull(fullText)
+      } catch (error) {
+        if (error instanceof Error && error.name === 'AbortError') {
+          controller.close()
+          resolveFull('')
+        } else {
+          controller.error(error)
+          resolveFull('')
+        }
+      }
+    },
+  })
+
+  return { readable, fullTextPromise }
+}
+
+type StreamSideEffectContext = {
+  fullTextPromise: Promise<string>
+  productId: string
+  userId: string
+  lastUserText: string
+  currencyCode: CurrencyCode
+  isSingleTurn: boolean
+  persistHistory: boolean
+  threadId: string
+  trimmed: ChatMessage[]
+  estimatedInputTokens: number
+  reservedTotalTokens: number
+  dailyUsage: { requests: number; tokens: number }
+  maxHistoryMessages: number
+}
+
+const scheduleStreamSideEffects = (ctx: StreamSideEffectContext): void => {
+  waitUntil(
+    ctx.fullTextPromise
+      .then(async (text) => {
+        const outputTokens = estimateTokens(text)
+        const totalTokens = ctx.estimatedInputTokens + outputTokens
+        await adjustDailyTokenUsage(
+          ctx.userId,
+          totalTokens - ctx.reservedTotalTokens
+        )
+        logBusinessEvent({
+          event: 'ai_chat_usage',
+          userId: ctx.userId,
+          details: {
+            productId: ctx.productId,
+            cached: false,
+            inputTokens: ctx.estimatedInputTokens,
+            outputTokens,
+            totalTokens,
+            requestsUsed: ctx.dailyUsage.requests + 1,
+          },
+          success: true,
+        })
+      })
+      .catch((error) =>
+        logError({
+          error,
+          context: 'ai_chat_usage_log',
+          additionalInfo: { productId: ctx.productId, userId: ctx.userId },
+        })
+      )
+  )
+
+  if (ctx.isSingleTurn && ctx.lastUserText) {
+    waitUntil(
+      ctx.fullTextPromise
+        .then((text) => {
+          if (text)
+            return setCachedAiResponse(
+              ctx.productId,
+              ctx.lastUserText,
+              ctx.currencyCode,
+              text
+            )
+        })
+        .catch((error) =>
+          logError({
+            error,
+            context: 'ai_cache_background_write',
+            additionalInfo: { productId: ctx.productId },
+          })
+        )
+    )
+  }
+
+  if (ctx.persistHistory) {
+    waitUntil(
+      ctx.fullTextPromise
+        .then((text) => {
+          const historyToPersist = trimMessageHistory(
+            [...ctx.trimmed, { role: 'assistant', text }],
+            ctx.maxHistoryMessages
+          )
+          return persistMessages(
+            ctx.userId,
+            ctx.productId,
+            ctx.threadId,
+            historyToPersist
+          )
+        })
+        .catch((error) =>
+          logError({
+            error,
+            context: 'ai_chat_history_persist',
+            additionalInfo: {
+              productId: ctx.productId,
+              userId: ctx.userId,
+              threadId: ctx.threadId,
+            },
+          })
+        )
+    )
+  }
+}
+
 export const POST = async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -653,61 +1023,20 @@ export const POST = async (
     const { id } = await params
     productId = id
     const product = await db.products.findById(id)
+    if (!product) return apiError('Product not found', 404)
 
-    if (!product) {
-      return apiError('Product not found', 404)
-    }
+    const prepared = await parseAndValidateRequest(request, id)
+    if (prepared instanceof NextResponse) return prepared
 
-    const body = await request.json()
-    const parsed = ChatRequestSchema.safeParse(body)
+    const { session, persistHistory, threadId, sanitizedMessages } = prepared
 
-    if (!parsed.success) {
-      return apiError('Invalid request body', 400)
-    }
-
-    const session = await auth()
-    if (!session?.user?.id) {
-      return apiError('Authentication required', 401)
-    }
-
-    if (
-      parsed.data.messages.some(
-        (message) =>
-          message.text.trim().length === 0 ||
-          message.text.length > MAX_INPUT_MESSAGE_CHARS
-      )
-    ) {
-      return apiError(
-        `Each message must be between 1 and ${MAX_INPUT_MESSAGE_CHARS} characters`,
-        400
-      )
-    }
-
-    const persistHistory = parsed.data.persistHistory ?? false
-    const threadId = resolveThreadId(parsed.data.threadId, id)
-
-    const sanitizedMessages = parsed.data.messages.map((message) => ({
-      ...message,
-      text: sanitizePromptText(message.text),
-    }))
-    if (sanitizedMessages.some((message) => message.text.length === 0)) {
-      return apiError('Messages must include meaningful text', 400)
-    }
-
-    let allMessages = sanitizedMessages
-    if (persistHistory && sanitizedMessages.length === 1) {
-      const persisted = await loadPersistedMessages(
-        session.user.id,
-        id,
-        threadId
-      )
-      if (persisted.length > 0) {
-        allMessages = trimMessageHistory(
-          [...persisted, ...sanitizedMessages],
-          MAX_CONVERSATION_TURNS * 2
-        )
-      }
-    }
+    const allMessages = await composeConversationMessages(
+      sanitizedMessages,
+      persistHistory,
+      session.user.id,
+      id,
+      threadId
+    )
 
     const conversationTurns = allMessages.filter(
       (message) => message.role === 'user'
@@ -722,28 +1051,11 @@ export const POST = async (
     const lastUserText =
       allMessages.findLast((message) => message.role === 'user')?.text ?? ''
     const blockedReason = detectBlockedPrompt(lastUserText)
-    if (blockedReason) {
-      return apiError(blockedReason, 400)
-    }
-    const intents = detectIntentSignals(lastUserText)
-    const usesAdvancedFeatures =
-      intents.wantsComparison ||
-      intents.wantsRecommendation ||
-      intents.wantsDeliveryInfo ||
-      intents.wantsOrderStatus ||
-      intents.wantsReviewSummary
+    if (blockedReason) return apiError(blockedReason, 400)
 
-    let currencyCode: CurrencyCode = 'INR'
-    const userRecord = await drizzleDb.query.users.findFirst({
-      where: eq(users.id, session.user.id),
-      columns: { currencyPreference: true },
-    })
-    if (
-      userRecord?.currencyPreference &&
-      isValidCurrencyCode(userRecord.currencyPreference)
-    ) {
-      currencyCode = userRecord.currencyPreference
-    }
+    const intents = detectIntentSignals(lastUserText)
+    const usesAdvancedFeatures = usesAnyAdvancedIntent(intents)
+    const currencyCode = await resolveCurrencyForUser(session.user.id)
 
     const aiConfig = await getAiConfigCached()
     if (aiConfig.enabled === false) {
@@ -765,21 +1077,12 @@ export const POST = async (
       intents,
     })
 
-    const systemPrompt =
-      SYSTEM_PROMPT_PREFIX +
-      sanitizePromptText(
-        buildProductContext(product, {
-          currencyCode,
-          formatPrice,
-        }),
-        PRODUCT_CONTEXT_MAX_CHARS
-      ) +
-      (supplementalContext.length > 0
-        ? `\n\n[Commerce Context]\n${sanitizePromptText(
-            supplementalContext.join('\n\n'),
-            SUPPLEMENTAL_CONTEXT_MAX_CHARS
-          )}`
-        : '')
+    const systemPrompt = buildSystemPrompt(
+      product,
+      currencyCode,
+      formatPrice,
+      supplementalContext
+    )
 
     const trimmed = allMessages.slice(
       -Math.min(aiConfig.maxHistoryMessages, MAX_CONVERSATION_TURNS * 2)
@@ -789,74 +1092,38 @@ export const POST = async (
       (sum, message) => sum + estimateTokens(message.text),
       0
     )
+    const reservedTotalTokens = estimatedInputTokens + MAX_OUTPUT_TOKENS
 
     const dailyUsage = await getDailyUsage(session.user.id)
-    const requestQuota = aiConfig.dailyRequestQuota ?? DAILY_REQUEST_QUOTA
-    const tokenQuota = aiConfig.dailyTokenQuota ?? DAILY_TOKEN_QUOTA
-    if (dailyUsage.requests + 1 > requestQuota) {
-      return apiError('Daily AI chat request quota exceeded', 429)
-    }
-    const reservedTotalTokens = estimatedInputTokens + MAX_OUTPUT_TOKENS
-    if (dailyUsage.tokens + reservedTotalTokens > tokenQuota) {
-      return apiError('Daily AI chat token quota exceeded', 429)
-    }
-    if (usesAdvancedFeatures) {
-      const advancedUsage = await getAdvancedUsage(session.user.id)
-      const advancedQuota =
+    const quotaError = await enforceQuotas({
+      userId: session.user.id,
+      dailyUsage,
+      reservedTotalTokens,
+      requestQuota: aiConfig.dailyRequestQuota ?? DAILY_REQUEST_QUOTA,
+      tokenQuota: aiConfig.dailyTokenQuota ?? DAILY_TOKEN_QUOTA,
+      usesAdvancedFeatures,
+      advancedQuota:
         aiConfig.advancedFeatureDailyRequestQuota ??
-        ADVANCED_DAILY_REQUEST_QUOTA
-      if (advancedUsage + 1 > advancedQuota) {
-        return apiError('Daily advanced AI request quota exceeded', 429)
-      }
-      await recordAdvancedUsage(session.user.id)
-    }
+        ADVANCED_DAILY_REQUEST_QUOTA,
+    })
+    if (quotaError) return quotaError
 
     if (isSingleTurn && lastUserText) {
       const cached = await getCachedAiResponse(id, lastUserText, currencyCode)
       if (cached !== null) {
-        const outputTokens = estimateTokens(cached)
-        const totalTokens = estimatedInputTokens + outputTokens
-        await recordDailyUsage(session.user.id, totalTokens)
-
-        logBusinessEvent({
-          event: 'ai_chat_request',
-          details: {
-            productId: id,
-            chatModel: aiConfig.chatModel,
-            messageCount: trimmed.length,
-            cached: true,
-          },
-          success: true,
-        })
-        logBusinessEvent({
-          event: 'ai_chat_usage',
+        return respondWithCachedAnswer(cached, {
+          productId: id,
           userId: session.user.id,
-          details: {
-            productId: id,
-            cached: true,
-            inputTokens: estimatedInputTokens,
-            outputTokens,
-            totalTokens,
-            requestsUsed: dailyUsage.requests + 1,
-          },
-          success: true,
+          lastUserText,
+          currencyCode,
+          trimmed,
+          estimatedInputTokens,
+          dailyUsage,
+          threadId,
+          persistHistory,
+          maxHistoryMessages: aiConfig.maxHistoryMessages,
+          chatModel: aiConfig.chatModel,
         })
-        if (persistHistory) {
-          const historyToPersist = trimMessageHistory(
-            [
-              ...trimmed,
-              { role: 'assistant', text: sanitizeAssistantOutput(cached) },
-            ],
-            aiConfig.maxHistoryMessages
-          )
-          await persistMessages(session.user.id, id, threadId, historyToPersist)
-        }
-        return NextResponse.json(
-          { text: cached, threadId: persistHistory ? threadId : undefined },
-          persistHistory
-            ? { headers: { 'X-AI-Thread-ID': threadId } }
-            : undefined
-        )
       }
     }
 
@@ -881,114 +1148,23 @@ export const POST = async (
       success: true,
     })
 
-    const encoder = new TextEncoder()
-    let resolveFull!: (text: string) => void
-    const fullTextPromise = new Promise<string>((resolve) => {
-      resolveFull = resolve
+    const { readable, fullTextPromise } = buildStreamReader(stream)
+
+    scheduleStreamSideEffects({
+      fullTextPromise,
+      productId: id,
+      userId: session.user.id,
+      lastUserText,
+      currencyCode,
+      isSingleTurn,
+      persistHistory,
+      threadId,
+      trimmed,
+      estimatedInputTokens,
+      reservedTotalTokens,
+      dailyUsage,
+      maxHistoryMessages: aiConfig.maxHistoryMessages,
     })
-
-    const readable = new ReadableStream<Uint8Array>({
-      async start(controller) {
-        let fullText = ''
-        try {
-          for await (const chunk of stream) {
-            const text = sanitizeAssistantOutput(chunk.text ?? '')
-            if (text) {
-              fullText += text
-              controller.enqueue(encoder.encode(text))
-            }
-          }
-          controller.close()
-          resolveFull(fullText)
-        } catch (error) {
-          if (error instanceof Error && error.name === 'AbortError') {
-            controller.close()
-            resolveFull('')
-          } else {
-            controller.error(error)
-            resolveFull('')
-          }
-        }
-      },
-    })
-
-    waitUntil(
-      fullTextPromise
-        .then(async (text) => {
-          const outputTokens = estimateTokens(text)
-          const totalTokens = estimatedInputTokens + outputTokens
-          await adjustDailyTokenUsage(
-            session.user.id,
-            totalTokens - reservedTotalTokens
-          )
-          logBusinessEvent({
-            event: 'ai_chat_usage',
-            userId: session.user.id,
-            details: {
-              productId: id,
-              cached: false,
-              inputTokens: estimatedInputTokens,
-              outputTokens,
-              totalTokens,
-              requestsUsed: dailyUsage.requests + 1,
-            },
-            success: true,
-          })
-        })
-        .catch((error) =>
-          logError({
-            error,
-            context: 'ai_chat_usage_log',
-            additionalInfo: { productId: id, userId: session.user.id },
-          })
-        )
-    )
-
-    if (isSingleTurn && lastUserText) {
-      waitUntil(
-        fullTextPromise
-          .then((text) => {
-            if (text)
-              return setCachedAiResponse(id, lastUserText, currencyCode, text)
-          })
-          .catch((error) =>
-            logError({
-              error,
-              context: 'ai_cache_background_write',
-              additionalInfo: { productId: id },
-            })
-          )
-      )
-    }
-
-    if (persistHistory) {
-      waitUntil(
-        fullTextPromise
-          .then((text) => {
-            const historyToPersist = trimMessageHistory(
-              [...trimmed, { role: 'assistant', text }],
-              aiConfig.maxHistoryMessages
-            )
-            return persistMessages(
-              session.user.id,
-              id,
-              threadId,
-              historyToPersist
-            )
-          })
-          .catch((error) =>
-            logError({
-              error,
-              context: 'ai_chat_history_persist',
-              additionalInfo: {
-                productId: id,
-                userId: session.user.id,
-                threadId,
-              },
-            })
-          )
-      )
-    }
 
     return new Response(readable, {
       headers: {

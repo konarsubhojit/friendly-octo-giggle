@@ -194,7 +194,15 @@ export const cacheProductSoldCounts = <T>(
   productIds: string[],
   fetcher: () => Promise<T>
 ): Promise<T> => {
-  const normalizedIds = [...new Set(productIds)].sort().join(',')
+  // Use a locale-independent byte-order sort so the hash is stable across
+  // Node versions, edge runtimes, and ICU configurations. Product IDs are
+  // base62 ASCII (see `lib/short-id.ts`), so byte order is well-defined.
+  const byteOrder = (a: string, b: string): number => {
+    if (a < b) return -1
+    if (a > b) return 1
+    return 0
+  }
+  const normalizedIds = [...new Set(productIds)].sort(byteOrder).join(',')
   if (!normalizedIds) return fetcher()
   const idsHash = createHash('sha256').update(normalizedIds).digest('hex')
 
@@ -276,11 +284,12 @@ export const invalidateProductCaches = async (
       await invalidateCachePattern(CACHE_KEYS.PRODUCT_BY_ID(productId))
     }
 
+    const productKeys = ids
+      .map((productId) => `product:${productId}`)
+      .join(', ')
     logCacheOperation({
       operation: 'invalidate',
-      key: ids.length
-        ? `products:* and ${ids.map((productId) => `product:${productId}`).join(', ')}`
-        : 'products:*',
+      key: ids.length ? `products:* and ${productKeys}` : 'products:*',
       success: true,
     })
   } catch (error) {

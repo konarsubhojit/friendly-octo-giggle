@@ -51,7 +51,7 @@ export default function VerifyEmailPage() {
         setMessage(
           data?.error ?? 'This verification link is invalid or has expired.'
         )
-      } catch (_error) {
+      } catch {
         if (cancelled) return
         setState('error')
         setMessage('Could not verify your email right now. Please try again.')
@@ -72,25 +72,27 @@ export default function VerifyEmailPage() {
           <h1 className="text-2xl sm:text-3xl font-bold text-[var(--foreground)] mb-2">
             Verify Email
           </h1>
-          {state === 'loading' ? (
-            <p className="text-[var(--text-secondary)]">
-              Verifying your email…
-            </p>
-          ) : message ? (
-            <p
-              className={
+          {(() => {
+            if (state === 'loading') {
+              return (
+                <p className="text-[var(--text-secondary)]">
+                  Verifying your email…
+                </p>
+              )
+            }
+            if (message) {
+              const messageClass =
                 state === 'error'
                   ? 'text-red-700'
                   : 'text-[var(--text-secondary)]'
-              }
-            >
-              {message}
-            </p>
-          ) : (
-            <p className="text-[var(--text-secondary)]">
-              Use the link in your inbox to verify your email address.
-            </p>
-          )}
+              return <p className={messageClass}>{message}</p>
+            }
+            return (
+              <p className="text-[var(--text-secondary)]">
+                Use the link in your inbox to verify your email address.
+              </p>
+            )
+          })()}
         </div>
 
         <div className="mt-6 text-center space-y-2">

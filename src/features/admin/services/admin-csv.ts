@@ -102,63 +102,80 @@ export const batchedCsvRows = async function* <T>({
   }
 }
 
+type CsvState = {
+  rows: string[][]
+  currentRow: string[]
+  currentValue: string
+  inQuotes: boolean
+  index: number
+}
+
+const pushValueState = (state: CsvState) => {
+  state.currentRow.push(state.currentValue)
+  state.currentValue = ''
+}
+
+const pushRowState = (state: CsvState) => {
+  pushValueState(state)
+  state.rows.push(state.currentRow)
+  state.currentRow = []
+}
+
+const handleQuote = (state: CsvState, next: string | undefined) => {
+  if (state.inQuotes && next === '"') {
+    state.currentValue += '"'
+    state.index += 1
+    return
+  }
+  state.inQuotes = !state.inQuotes
+}
+
+const handleLineBreak = (
+  state: CsvState,
+  char: string,
+  next: string | undefined
+) => {
+  if (char === '\r' && next === '\n') {
+    state.index += 1
+  }
+  pushRowState(state)
+}
+
 export const parseCsv = (
   csvText: string
 ): { headers: string[]; rows: string[][] } => {
-  const allRows: string[][] = []
-  let currentRow: string[] = []
-  let currentValue = ''
-  let inQuotes = false
-
-  const pushValue = () => {
-    currentRow.push(currentValue.trim())
-    currentValue = ''
+  const state: CsvState = {
+    rows: [],
+    currentRow: [],
+    currentValue: '',
+    inQuotes: false,
+    index: 0,
   }
 
-  const pushRow = () => {
-    if (currentRow.length === 0 && currentValue.trim().length === 0) {
-      return
-    }
-
-    pushValue()
-    allRows.push(currentRow)
-    currentRow = []
-  }
-
-  for (let index = 0; index < csvText.length; index += 1) {
-    const char = csvText[index]
-    const next = csvText[index + 1]
+  while (state.index < csvText.length) {
+    const char = csvText[state.index]
+    const next = csvText[state.index + 1]
 
     if (char === '"') {
-      if (inQuotes && next === '"') {
-        currentValue += '"'
-        index += 1
-        continue
-      }
-
-      inQuotes = !inQuotes
-      continue
+      handleQuote(state, next)
+    } else if (char === ',' && !state.inQuotes) {
+      pushValueState(state)
+    } else if ((char === '\n' || char === '\r') && !state.inQuotes) {
+      handleLineBreak(state, char, next)
+    } else {
+      state.currentValue += char
     }
 
-    if (char === ',' && !inQuotes) {
-      pushValue()
-      continue
-    }
-
-    if ((char === '\n' || char === '\r') && !inQuotes) {
-      if (char === '\r' && next === '\n') {
-        index += 1
-      }
-
-      pushRow()
-      continue
-    }
-
-    currentValue += char
+    state.index += 1
   }
 
-  pushRow()
+  // Flush a final partial row only when the input did not end with a newline,
+  // so files terminated by '\n' (Excel/Google Sheets exports) do not produce a
+  // phantom trailing empty row.
+  if (state.currentValue.length > 0 || state.currentRow.length > 0) {
+    pushRowState(state)
+  }
 
-  const [headers = [], ...rows] = allRows
+  const [headers = [], ...rows] = state.rows
   return { headers, rows }
 }

@@ -46,12 +46,16 @@ const handleGet = async (request: NextRequest) => {
       conditions.push(eq(reviews.isVerifiedBuyer, true))
     }
 
-    const orderBy =
-      sort === 'top'
-        ? [desc(reviews.rating), desc(reviews.createdAt)]
-        : sort === 'helpful'
-          ? [desc(reviews.helpfulCount), desc(reviews.createdAt)]
-          : [desc(reviews.isFeatured), desc(reviews.createdAt)]
+    const getOrderBy = () => {
+      if (sort === 'top') {
+        return [desc(reviews.rating), desc(reviews.createdAt)]
+      }
+      if (sort === 'helpful') {
+        return [desc(reviews.helpfulCount), desc(reviews.createdAt)]
+      }
+      return [desc(reviews.isFeatured), desc(reviews.createdAt)]
+    }
+    const orderBy = getOrderBy()
 
     const productReviews = await drizzleDb.query.reviews.findMany({
       where: and(...conditions),
@@ -81,18 +85,20 @@ const handleGet = async (request: NextRequest) => {
       count: productReviews.filter((review) => review.rating === rating).length,
     }))
 
+    const resolveUserVote = (reviewId: string): 'up' | 'down' | null => {
+      const value = voteMap.get(reviewId)
+      if (value === 1) return 'up'
+      if (value === -1) return 'down'
+      return null
+    }
+
     const serialized = productReviews.map((r) => ({
       ...r,
       createdAt: r.createdAt.toISOString(),
       updatedAt: r.updatedAt.toISOString(),
       user: r.isAnonymous ? null : r.user,
       isOwnReview: Boolean(sessionUserId && r.userId === sessionUserId),
-      userVote:
-        voteMap.get(r.id) === 1
-          ? 'up'
-          : voteMap.get(r.id) === -1
-            ? 'down'
-            : null,
+      userVote: resolveUserVote(r.id),
     }))
 
     return apiSuccess(

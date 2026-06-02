@@ -18,8 +18,8 @@ export interface CartItemRedis {
   productCategory: string
   variantId: string
   variantSku: string | null
-  variantPrice: number
-  variantStock: number
+  variantPrice: number | null
+  variantStock: number | null
   variantOptionLabel: string | null
   quantity: number
   createdAt: string
@@ -34,6 +34,17 @@ const cartOwnerKey = (userId?: string, sessionId?: string): string | null => {
   return null
 }
 
+const NULL_SENTINEL = ''
+
+const nullableNumberToHash = (value: number | null): string =>
+  value === null ? NULL_SENTINEL : String(value)
+
+const hashToNullableNumber = (value: string | undefined): number | null => {
+  if (value === undefined || value === NULL_SENTINEL) return null
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : null
+}
+
 const toHashFields = (item: CartItemRedis): Record<string, string> => ({
   itemId: item.itemId,
   cartId: item.cartId,
@@ -46,8 +57,8 @@ const toHashFields = (item: CartItemRedis): Record<string, string> => ({
   productCategory: item.productCategory,
   variantId: item.variantId,
   variantSku: item.variantSku ?? '',
-  variantPrice: String(item.variantPrice),
-  variantStock: String(item.variantStock),
+  variantPrice: nullableNumberToHash(item.variantPrice),
+  variantStock: nullableNumberToHash(item.variantStock),
   variantOptionLabel: item.variantOptionLabel ?? '',
   quantity: String(item.quantity),
   createdAt: item.createdAt,
@@ -68,8 +79,8 @@ const fromHashFields = (hash: Record<string, string>): CartItemRedis | null => {
     productCategory: hash.productCategory ?? '',
     variantId: hash.variantId ?? '',
     variantSku: hash.variantSku || null,
-    variantPrice: Number(hash.variantPrice ?? 0),
-    variantStock: Number(hash.variantStock ?? 0),
+    variantPrice: hashToNullableNumber(hash.variantPrice),
+    variantStock: hashToNullableNumber(hash.variantStock),
     variantOptionLabel: hash.variantOptionLabel || null,
     quantity: Number(hash.quantity ?? 0),
     createdAt: hash.createdAt ?? '',
@@ -283,5 +294,17 @@ export const fetchCartFromRedis = async (
 }
 
 export const backfillCartToRedis = (items: CartItemRedis[]): void => {
-  waitUntil(writeCartItemsToRedis(items))
+  // Intentionally fire-and-forget: cart reads degrade gracefully when the
+  // Redis cache misses, so we don't block the response on the backfill.
+  // `writeCartItemsToRedis` swallows its own errors, but we also attach a
+  // catch here as a safety net in case the promise rejects before reaching
+  // the inner try/catch (e.g. synchronous client init errors).
+  const promise = writeCartItemsToRedis(items).catch((error: unknown) => {
+    logError({
+      error,
+      context: 'cart_redis_backfill',
+      additionalInfo: { itemCount: items.length },
+    })
+  })
+  waitUntil(promise)
 }

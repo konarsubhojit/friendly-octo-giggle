@@ -16,17 +16,20 @@ interface CheckoutProgressProps {
 export const CheckoutProgress = ({ currentStep }: CheckoutProgressProps) => {
   const activeIndex = steps.findIndex((step) => step.id === currentStep)
 
+  const stepClassName = (isActive: boolean, isComplete: boolean) => {
+    if (isActive) return 'bg-[var(--accent-rose)] text-white'
+    if (isComplete)
+      return 'bg-[var(--accent-blush)] text-[var(--foreground)]'
+    return 'bg-[var(--surface-raised)] text-[var(--text-muted)]'
+  }
+
   return (
     <nav aria-label="Checkout progress" className="mb-6">
       <ol className="flex flex-wrap items-center gap-2 text-xs sm:text-sm">
         {steps.map((step, index) => {
           const isActive = step.id === currentStep
           const isComplete = index < activeIndex
-          const className = isActive
-            ? 'bg-[var(--accent-rose)] text-white'
-            : isComplete
-              ? 'bg-[var(--accent-blush)] text-[var(--foreground)]'
-              : 'bg-[var(--surface-raised)] text-[var(--text-muted)]'
+          const className = stepClassName(isActive, isComplete)
 
           return (
             <li key={step.id} className="flex items-center gap-2">

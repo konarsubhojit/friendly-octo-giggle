@@ -35,6 +35,8 @@ export type ProductGridItem = Pick<
   soldCount: number
 }
 
+type VariantOption = 'all' | 'single' | 'multiple'
+
 interface ProductGridProps {
   readonly products: ProductGridItem[]
   readonly categories?: string[]
@@ -45,7 +47,7 @@ interface ProductGridProps {
   readonly maxPrice?: number
   readonly inStock?: boolean
   readonly minRating?: number
-  readonly variant?: 'all' | 'single' | 'multiple'
+  readonly variant?: VariantOption
   readonly suggestions?: string[]
   readonly trending?: Array<{ id: string; name: string; category: string }>
   readonly hasNextPage?: boolean
@@ -68,6 +70,64 @@ const DEFAULT_CATEGORY = 'All'
 const DEFAULT_BATCH_SIZE = 20
 const DEFAULT_SORT = 'relevance'
 
+const toFiniteNumber = (raw: string): number | undefined => {
+  const parsed = Number.parseFloat(raw)
+  return Number.isFinite(parsed) ? parsed : undefined
+}
+
+const orderedPriceRange = (
+  minPrice: number | undefined,
+  maxPrice: number | undefined
+): {
+  safeMinPrice: number | undefined
+  safeMaxPrice: number | undefined
+} => {
+  if (minPrice !== undefined && maxPrice !== undefined && minPrice > maxPrice) {
+    return { safeMinPrice: maxPrice, safeMaxPrice: minPrice }
+  }
+  return { safeMinPrice: minPrice, safeMaxPrice: maxPrice }
+}
+
+type SearchDraftInput = {
+  searchDraft: string
+  categoryDraft: string
+  sortDraft: string
+  minPriceDraft: string
+  maxPriceDraft: string
+  inStockDraft: boolean
+  minRatingDraft: string
+  variantDraft: VariantOption
+}
+
+const buildSearchParams = (input: SearchDraftInput): URLSearchParams => {
+  const params = new URLSearchParams()
+  const normalizedSearch = input.searchDraft.trim()
+  const normalizedCategory = input.categoryDraft.trim()
+  const minRating = toFiniteNumber(input.minRatingDraft)
+  const { safeMinPrice, safeMaxPrice } = orderedPriceRange(
+    toFiniteNumber(input.minPriceDraft),
+    toFiniteNumber(input.maxPriceDraft)
+  )
+
+  if (normalizedSearch) params.set('q', normalizedSearch)
+  if (normalizedCategory && normalizedCategory !== DEFAULT_CATEGORY) {
+    params.set('category', normalizedCategory)
+  }
+  if (input.sortDraft !== DEFAULT_SORT) params.set('sort', input.sortDraft)
+  if (typeof safeMinPrice === 'number' && safeMinPrice >= 0) {
+    params.set('minPrice', String(safeMinPrice))
+  }
+  if (typeof safeMaxPrice === 'number' && safeMaxPrice >= 0) {
+    params.set('maxPrice', String(safeMaxPrice))
+  }
+  if (input.inStockDraft) params.set('inStock', 'true')
+  if (minRating !== undefined && minRating >= 0) {
+    params.set('minRating', String(minRating))
+  }
+  if (input.variantDraft !== 'all') params.set('variant', input.variantDraft)
+  return params
+}
+
 const createProductsApiHref = (
   offset: number,
   limit: number,
@@ -78,7 +138,7 @@ const createProductsApiHref = (
   maxPrice?: number,
   inStock?: boolean,
   minRating?: number,
-  variant: 'all' | 'single' | 'multiple' = 'all'
+  variant: VariantOption = 'all'
 ) => {
   const params = new URLSearchParams()
 
@@ -150,11 +210,14 @@ const highlightMatches = (text: string, query: string) => {
 
   return segments.map((segment, index) =>
     index % 2 === 1 ? (
-      <mark key={index} className="rounded bg-[var(--accent-blush)] px-0.5">
+      <mark
+        key={`m-${index}-${segment}`}
+        className="rounded bg-[var(--accent-blush)] px-0.5"
+      >
         {segment}
       </mark>
     ) : (
-      <Fragment key={index}>{segment}</Fragment>
+      <Fragment key={`s-${index}-${segment}`}>{segment}</Fragment>
     )
   )
 }
@@ -235,13 +298,12 @@ const ProductCard = memo(
               <span className="text-xl font-bold text-[var(--btn-primary)]">
                 {formatPrice(product.price)}
               </span>
-              <span
+              <output
                 className="text-sm font-semibold text-[var(--text-muted)]"
-                role="status"
                 aria-label={`Total units sold: ${product.soldCount}`}
               >
                 {product.soldCount} Sold
-              </span>
+              </output>
             </div>
           </div>
         </Link>
@@ -287,9 +349,7 @@ const ProductGrid = ({
   const [minRatingDraft, setMinRatingDraft] = useState<string>(
     typeof minRating === 'number' ? String(minRating) : ''
   )
-  const [variantDraft, setVariantDraft] = useState<
-    'all' | 'single' | 'multiple'
-  >(variant)
+  const [variantDraft, setVariantDraft] = useState<VariantOption>(variant)
   const sentinelRef = useRef<HTMLDivElement | null>(null)
   const isLoadingRef = useRef(false)
   const canLoadMoreRef = useRef(hasNextPage)
@@ -471,65 +531,16 @@ const ProductGrid = ({
   const resetHref = useMemo(() => '/shop#products', [])
 
   const applySearchState = useCallback(() => {
-    const params = new URLSearchParams()
-
-    const normalizedSearch = searchDraft.trim()
-    const normalizedCategory = categoryDraft.trim()
-    const normalizedMinPrice = Number.parseFloat(minPriceDraft)
-    const normalizedMaxPrice = Number.parseFloat(maxPriceDraft)
-    const normalizedMinRating = Number.parseFloat(minRatingDraft)
-
-    if (normalizedSearch) {
-      params.set('q', normalizedSearch)
-    }
-
-    if (normalizedCategory && normalizedCategory !== DEFAULT_CATEGORY) {
-      params.set('category', normalizedCategory)
-    }
-
-    if (sortDraft !== DEFAULT_SORT) {
-      params.set('sort', sortDraft)
-    }
-
-    const validatedMinPrice = Number.isFinite(normalizedMinPrice)
-      ? normalizedMinPrice
-      : undefined
-    const validatedMaxPrice = Number.isFinite(normalizedMaxPrice)
-      ? normalizedMaxPrice
-      : undefined
-
-    const safeMinPrice =
-      validatedMinPrice !== undefined &&
-      validatedMaxPrice !== undefined &&
-      validatedMinPrice > validatedMaxPrice
-        ? validatedMaxPrice
-        : validatedMinPrice
-    const safeMaxPrice =
-      validatedMinPrice !== undefined &&
-      validatedMaxPrice !== undefined &&
-      validatedMinPrice > validatedMaxPrice
-        ? validatedMinPrice
-        : validatedMaxPrice
-
-    if (typeof safeMinPrice === 'number' && safeMinPrice >= 0) {
-      params.set('minPrice', String(safeMinPrice))
-    }
-
-    if (typeof safeMaxPrice === 'number' && safeMaxPrice >= 0) {
-      params.set('maxPrice', String(safeMaxPrice))
-    }
-
-    if (inStockDraft) {
-      params.set('inStock', 'true')
-    }
-
-    if (Number.isFinite(normalizedMinRating) && normalizedMinRating >= 0) {
-      params.set('minRating', String(normalizedMinRating))
-    }
-
-    if (variantDraft !== 'all') {
-      params.set('variant', variantDraft)
-    }
+    const params = buildSearchParams({
+      searchDraft,
+      categoryDraft,
+      sortDraft,
+      minPriceDraft,
+      maxPriceDraft,
+      inStockDraft,
+      minRatingDraft,
+      variantDraft,
+    })
 
     const query = params.toString()
     router.push(query ? `/shop?${query}#products` : resetHref, {
@@ -721,9 +732,7 @@ const ProductGrid = ({
               id="variant-filter"
               value={variantDraft}
               onChange={(event) =>
-                setVariantDraft(
-                  event.target.value as 'all' | 'single' | 'multiple'
-                )
+                setVariantDraft(event.target.value as VariantOption)
               }
               className="min-w-0 flex-1 bg-transparent pr-6 text-sm font-medium text-[var(--foreground)] focus:outline-none"
               aria-label="Filter by variants"
