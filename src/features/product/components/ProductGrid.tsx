@@ -128,18 +128,31 @@ const buildSearchParams = (input: SearchDraftInput): URLSearchParams => {
   return params
 }
 
-const createProductsApiHref = (
-  offset: number,
-  limit: number,
-  search: string,
-  selectedCategory: string,
-  selectedSort: string,
-  minPrice?: number,
-  maxPrice?: number,
-  inStock?: boolean,
-  minRating?: number,
-  variant: VariantOption = 'all'
-) => {
+type ProductsApiHrefOptions = {
+  offset: number
+  limit: number
+  search: string
+  selectedCategory: string
+  selectedSort: string
+  minPrice?: number
+  maxPrice?: number
+  inStock?: boolean
+  minRating?: number
+  variant?: VariantOption
+}
+
+const createProductsApiHref = ({
+  offset,
+  limit,
+  search,
+  selectedCategory,
+  selectedSort,
+  minPrice,
+  maxPrice,
+  inStock,
+  minRating,
+  variant = 'all',
+}: ProductsApiHrefOptions) => {
   const params = new URLSearchParams()
 
   if (search) {
@@ -204,7 +217,7 @@ const highlightMatches = (text: string, query: string) => {
     return text
   }
 
-  const escaped = normalized.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const escaped = normalized.replace(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`)
   const regex = new RegExp(`(${escaped})`, 'ig')
   const segments = text.split(regex)
 
@@ -458,18 +471,18 @@ const ProductGrid = ({
 
     try {
       const response = await fetch(
-        createProductsApiHref(
-          currentOffset,
-          batchSizeRef.current,
-          searchRef.current,
-          categoryRef.current,
-          sortRef.current,
-          minPriceRef.current,
-          maxPriceRef.current,
-          inStockRef.current,
-          minRatingRef.current,
-          variantRef.current
-        ),
+        createProductsApiHref({
+          offset: currentOffset,
+          limit: batchSizeRef.current,
+          search: searchRef.current,
+          selectedCategory: categoryRef.current,
+          selectedSort: sortRef.current,
+          minPrice: minPriceRef.current,
+          maxPrice: maxPriceRef.current,
+          inStock: inStockRef.current,
+          minRating: minRatingRef.current,
+          variant: variantRef.current,
+        }),
         { method: 'GET', headers: { Accept: 'application/json' } }
       )
 

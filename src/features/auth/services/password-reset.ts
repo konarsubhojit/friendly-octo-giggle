@@ -4,7 +4,7 @@ import { getRedisClient } from '@/lib/redis'
 
 const PASSWORD_RESET_TOKEN_BYTES = 32 // NOSONAR S2068: byte length constant, not a credential
 const PASSWORD_RESET_TOKEN_TTL_MS = 30 * 60 * 1000
-const PASSWORD_RESET_IDENTIFIER_PREFIX = 'password-reset:'
+const PASSWORD_RESET_IDENTIFIER_PREFIX = 'password-reset:' // NOSONAR S2068: namespace prefix for Redis keys, not a credential
 
 const FORGOT_LIMIT_WINDOW = '15 m'
 const RESET_LIMIT_WINDOW = '15 m'
