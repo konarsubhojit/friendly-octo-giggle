@@ -220,7 +220,7 @@ describe('Cart API Route', () => {
 
       expect(response.status).toBe(200)
       expect(data.cart?.id).toBe(VALID_CART_ID)
-      expect(invalidateCartCache).toHaveBeenCalledWith('user123', undefined)
+      expect(invalidateCartCache).toHaveBeenCalledWith('user123')
       expect(invalidateCartCache).toHaveBeenCalledWith(undefined, 'guest123')
       expect(rotatedCookieValue).toBeDefined()
       expect(rotatedCookieValue).not.toBe(signedSessionId)
@@ -405,8 +405,11 @@ describe('Cart API Route', () => {
       const insertReturningMock = vi
         .fn()
         .mockResolvedValue([{ id: VALID_CART_ID }])
-      const insertValuesMock = vi.fn(() => ({
+      const onConflictDoNothingMock = vi.fn(() => ({
         returning: insertReturningMock,
+      }))
+      const insertValuesMock = vi.fn(() => ({
+        onConflictDoNothing: onConflictDoNothingMock,
       }))
       ;(drizzleDb.insert as Mock).mockReturnValue({ values: insertValuesMock })
       ;(drizzleDb.query.cartItems.findFirst as Mock).mockResolvedValue(null)
@@ -456,8 +459,11 @@ describe('Cart API Route', () => {
       const insertReturningMock = vi
         .fn()
         .mockResolvedValue([{ id: VALID_CART_ID }])
-      const insertValuesMock = vi.fn(() => ({
+      const onConflictDoNothingMock = vi.fn(() => ({
         returning: insertReturningMock,
+      }))
+      const insertValuesMock = vi.fn(() => ({
+        onConflictDoNothing: onConflictDoNothingMock,
       }))
       ;(drizzleDb.insert as Mock).mockReturnValue({ values: insertValuesMock })
 
@@ -532,7 +538,7 @@ describe('Cart API Route', () => {
       const rotatedCookieValue = setCookie?.match(/cart_session=([^;]+)/)?.[1]
 
       expect(response.status).toBe(201)
-      expect(invalidateCartCache).toHaveBeenCalledWith('user123', undefined)
+      expect(invalidateCartCache).toHaveBeenCalledWith('user123')
       expect(invalidateCartCache).toHaveBeenCalledWith(undefined, 'guest123')
       expect(rotatedCookieValue).toBeDefined()
       expect(rotatedCookieValue).not.toBe(signedSessionId)
