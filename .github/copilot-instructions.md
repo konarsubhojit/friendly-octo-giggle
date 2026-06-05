@@ -854,14 +854,14 @@ export async function generateStaticParams() {
 ```bash
 npm run dev          # Start dev server
 npm run dev:https    # Start dev server with experimental HTTPS
-npm run build        # Build for production
-npm run lint         # ESLint check
+npm run build        # Build for production — REQUIRED pre-PR check (see "Pre-PR Validation")
+npm run lint         # ESLint check — REQUIRED pre-PR check
 npm run db:generate  # Generate Drizzle migrations
 npm run db:migrate   # Apply migrations
 npm run db:push      # Push schema directly (no migration file)
 npm run db:studio    # Open Drizzle Studio GUI
 npm run db:seed      # Seed database
-npm run test         # Run unit tests (single run)
+npm run test         # Run unit tests (single run) — REQUIRED pre-PR check
 npm run test:watch   # Run unit tests (watch mode)
 npm run test:coverage # Run unit tests with coverage
 ```
@@ -1035,6 +1035,32 @@ npm run test:coverage # Run unit tests with coverage
 - Add meaningful comments for complex logic
 - Suggest performance optimizations
 - Consider serverless constraints
+
+## Pre-PR Validation (MANDATORY)
+
+Before opening or updating a pull request, the agent **MUST** run all four commands locally and confirm each one passes. Skipping `npm run build` is the single most common cause of CI/Vercel deploy failures on this repo (Next.js route-type errors and missing `.nft.json` manifests only surface in `next build`, not in `tsc --noEmit`).
+
+```bash
+npm run lint        # ESLint — style & a11y rules
+npx tsc --noEmit    # TypeScript type-check
+npm test            # Vitest unit tests
+npm run build       # Next.js production build — REQUIRED, catches route & ISR errors
+```
+
+If any command fails, fix the failures (or revert the change) before opening / updating the PR. Do not rely on `parallel_validation` to catch Next.js build-only errors — it does not run `next build`.
+
+## Agent Tool Preferences
+
+Prefer the built-in structured tools over shelling out through `bash`. Shell wrappers are slower, consume a bash session, and return unstructured output that's harder to reason over.
+
+| Use this built-in tool | Instead of shelling out via `bash` to |
+| ---------------------- | -------------------------------------- |
+| `grep`                 | `grep`, `rg`, `ag`                     |
+| `glob`                 | `find`, `ls`, `fd`                     |
+| `view`                 | `cat`, `head`, `tail`, `less`, `bat`   |
+| `edit` / `create`      | `sed -i`, `awk`, here-docs into files  |
+
+Reserve `bash` for things that genuinely require a shell: running tests/builds (`npm run …`), git commands, package installs, scripts, or composing pipelines whose intermediate output is not needed.
 
 ## UI/UX Testing Requirements
 

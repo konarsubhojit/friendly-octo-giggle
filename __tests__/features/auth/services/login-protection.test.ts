@@ -89,10 +89,16 @@ describe('login-protection service', () => {
   })
 
   it('computes account lock duration at 15 minutes', () => {
-    const now = Date.now()
-    const lockUntil = getAccountLockUntil().getTime()
+    vi.useFakeTimers()
+    try {
+      const now = new Date('2026-01-01T00:00:00.000Z')
+      vi.setSystemTime(now)
 
-    expect(lockUntil - now).toBeLessThanOrEqual(ACCOUNT_LOCK_DURATION_MS)
-    expect(lockUntil - now).toBeGreaterThan(ACCOUNT_LOCK_DURATION_MS - 2000)
+      const lockUntil = getAccountLockUntil().getTime()
+
+      expect(lockUntil - now.getTime()).toBe(ACCOUNT_LOCK_DURATION_MS)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })
