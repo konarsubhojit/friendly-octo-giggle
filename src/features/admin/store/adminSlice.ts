@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk, createSelector } from '@reduxjs/toolkit'
-import type { RootState } from '@/lib/store'
+import type { AdminRootState } from '@/lib/store'
 import { apiClient, ApiError } from '@/lib/api-client'
 
 // Admin-scoped types
@@ -271,16 +271,17 @@ const adminSlice = createSlice({
 export const { clearAdminError, removeProduct, upsertProduct } =
   adminSlice.actions
 
-export const selectAdminProducts = (state: RootState) => state.admin.products
-export const selectAdminOrders = (state: RootState) => state.admin.orders
-export const selectAdminUsers = (state: RootState) => state.admin.users
-export const selectAdminProductsLoading = (state: RootState) =>
+export const selectAdminProducts = (state: AdminRootState) =>
+  state.admin.products
+export const selectAdminOrders = (state: AdminRootState) => state.admin.orders
+export const selectAdminUsers = (state: AdminRootState) => state.admin.users
+export const selectAdminProductsLoading = (state: AdminRootState) =>
   state.admin.productsLoading
-export const selectAdminOrdersLoading = (state: RootState) =>
+export const selectAdminOrdersLoading = (state: AdminRootState) =>
   state.admin.ordersLoading
-export const selectAdminUsersLoading = (state: RootState) =>
+export const selectAdminUsersLoading = (state: AdminRootState) =>
   state.admin.usersLoading
-export const selectAdminError = (state: RootState) => state.admin.error
+export const selectAdminError = (state: AdminRootState) => state.admin.error
 
 // Memoized derived selectors — prevent unnecessary re-renders
 export const selectAdminProductCount = createSelector(

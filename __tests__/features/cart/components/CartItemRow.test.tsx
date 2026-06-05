@@ -90,7 +90,7 @@ describe('CartItemRow', () => {
     )
 
     const link = screen.getByText('Handmade Basket')
-    expect(link.closest('a')?.getAttribute('href')).toBe('/products/prod1')
+    expect(link.closest('a')?.getAttribute('href')).toBe('/en/products/prod1')
   })
 
   it('renders product image', () => {

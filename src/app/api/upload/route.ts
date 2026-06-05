@@ -18,6 +18,11 @@ export const runtime = 'nodejs'
 const MAGIC_BYTE_READ_LENGTH = 16
 const MAX_FORM_DATA_BODY_SIZE = MAX_FILE_SIZE + 1024 * 1024
 
+const normalizeAliasInput = (value: unknown) => {
+  if (value === null || value === undefined) return undefined
+  return typeof value === 'string' ? value.trim() : value
+}
+
 const UploadFormFieldsSchema = z.object({
   provider: z
     .preprocess(
@@ -29,15 +34,7 @@ const UploadFormFieldsSchema = z.object({
     )
     .optional(),
   azureAccountAlias: z
-    .preprocess(
-      (value) =>
-        value === null || value === undefined
-          ? undefined
-          : typeof value === 'string'
-            ? value.trim()
-            : value,
-      z.string().min(1).optional()
-    )
+    .preprocess(normalizeAliasInput, z.string().min(1).optional())
     .optional(),
 })
 

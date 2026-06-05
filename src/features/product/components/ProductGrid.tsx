@@ -10,7 +10,7 @@ import {
   useRef,
   useState,
 } from 'react'
-import Link from 'next/link'
+import Link from '@/components/ui/LocaleLink'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { Product } from '@/lib/types'
@@ -21,6 +21,7 @@ import { StockBadge } from '@/features/product/components/StockBadge'
 import { FlowerAccent } from '@/components/ui/DecorativeElements'
 import { WishlistButton } from '@/features/wishlist/components/WishlistButton'
 import { SearchBar } from '@/components/SearchBar'
+import { PRODUCT_CARD_BLUR_DATA_URL } from '@/lib/image-placeholder'
 
 export type ProductGridItem = Pick<
   Product,
@@ -34,6 +35,8 @@ export type ProductGridItem = Pick<
   soldCount: number
 }
 
+type VariantOption = 'all' | 'single' | 'multiple'
+
 interface ProductGridProps {
   readonly products: ProductGridItem[]
   readonly categories?: string[]
@@ -44,7 +47,7 @@ interface ProductGridProps {
   readonly maxPrice?: number
   readonly inStock?: boolean
   readonly minRating?: number
-  readonly variant?: 'all' | 'single' | 'multiple'
+  readonly variant?: VariantOption
   readonly suggestions?: string[]
   readonly trending?: Array<{ id: string; name: string; category: string }>
   readonly hasNextPage?: boolean
@@ -67,18 +70,89 @@ const DEFAULT_CATEGORY = 'All'
 const DEFAULT_BATCH_SIZE = 20
 const DEFAULT_SORT = 'relevance'
 
-const createProductsApiHref = (
-  offset: number,
-  limit: number,
-  search: string,
-  selectedCategory: string,
-  selectedSort: string,
-  minPrice?: number,
-  maxPrice?: number,
-  inStock?: boolean,
-  minRating?: number,
-  variant: 'all' | 'single' | 'multiple' = 'all'
-) => {
+const toFiniteNumber = (raw: string): number | undefined => {
+  const parsed = Number.parseFloat(raw)
+  return Number.isFinite(parsed) ? parsed : undefined
+}
+
+const orderedPriceRange = (
+  minPrice: number | undefined,
+  maxPrice: number | undefined
+): {
+  safeMinPrice: number | undefined
+  safeMaxPrice: number | undefined
+} => {
+  if (minPrice !== undefined && maxPrice !== undefined && minPrice > maxPrice) {
+    return { safeMinPrice: maxPrice, safeMaxPrice: minPrice }
+  }
+  return { safeMinPrice: minPrice, safeMaxPrice: maxPrice }
+}
+
+type SearchDraftInput = {
+  searchDraft: string
+  categoryDraft: string
+  sortDraft: string
+  minPriceDraft: string
+  maxPriceDraft: string
+  inStockDraft: boolean
+  minRatingDraft: string
+  variantDraft: VariantOption
+}
+
+const buildSearchParams = (input: SearchDraftInput): URLSearchParams => {
+  const params = new URLSearchParams()
+  const normalizedSearch = input.searchDraft.trim()
+  const normalizedCategory = input.categoryDraft.trim()
+  const minRating = toFiniteNumber(input.minRatingDraft)
+  const { safeMinPrice, safeMaxPrice } = orderedPriceRange(
+    toFiniteNumber(input.minPriceDraft),
+    toFiniteNumber(input.maxPriceDraft)
+  )
+
+  if (normalizedSearch) params.set('q', normalizedSearch)
+  if (normalizedCategory && normalizedCategory !== DEFAULT_CATEGORY) {
+    params.set('category', normalizedCategory)
+  }
+  if (input.sortDraft !== DEFAULT_SORT) params.set('sort', input.sortDraft)
+  if (typeof safeMinPrice === 'number' && safeMinPrice >= 0) {
+    params.set('minPrice', String(safeMinPrice))
+  }
+  if (typeof safeMaxPrice === 'number' && safeMaxPrice >= 0) {
+    params.set('maxPrice', String(safeMaxPrice))
+  }
+  if (input.inStockDraft) params.set('inStock', 'true')
+  if (minRating !== undefined && minRating >= 0) {
+    params.set('minRating', String(minRating))
+  }
+  if (input.variantDraft !== 'all') params.set('variant', input.variantDraft)
+  return params
+}
+
+type ProductsApiHrefOptions = {
+  offset: number
+  limit: number
+  search: string
+  selectedCategory: string
+  selectedSort: string
+  minPrice?: number
+  maxPrice?: number
+  inStock?: boolean
+  minRating?: number
+  variant?: VariantOption
+}
+
+const createProductsApiHref = ({
+  offset,
+  limit,
+  search,
+  selectedCategory,
+  selectedSort,
+  minPrice,
+  maxPrice,
+  inStock,
+  minRating,
+  variant = 'all',
+}: ProductsApiHrefOptions) => {
   const params = new URLSearchParams()
 
   if (search) {
@@ -143,17 +217,20 @@ const highlightMatches = (text: string, query: string) => {
     return text
   }
 
-  const escaped = normalized.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const escaped = normalized.replace(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`)
   const regex = new RegExp(`(${escaped})`, 'ig')
   const segments = text.split(regex)
 
   return segments.map((segment, index) =>
     index % 2 === 1 ? (
-      <mark key={index} className="rounded bg-[var(--accent-blush)] px-0.5">
+      <mark
+        key={`m-${index}-${segment}`}
+        className="rounded bg-[var(--accent-blush)] px-0.5"
+      >
         {segment}
       </mark>
     ) : (
-      <Fragment key={index}>{segment}</Fragment>
+      <Fragment key={`s-${index}-${segment}`}>{segment}</Fragment>
     )
   )
 }
@@ -169,6 +246,10 @@ const ProductImageArea = memo(
           className="object-contain p-4 transition-transform duration-500 group-hover:scale-108"
           sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 25vw"
           priority={eagerLoad}
+          loading={eagerLoad ? undefined : 'lazy'}
+          decoding="async"
+          placeholder="blur"
+          blurDataURL={PRODUCT_CARD_BLUR_DATA_URL}
         />
         <WishlistButton productId={product.id} productName={product.name} />
         <div className="absolute bottom-3 left-3">
@@ -230,13 +311,12 @@ const ProductCard = memo(
               <span className="text-xl font-bold text-[var(--btn-primary)]">
                 {formatPrice(product.price)}
               </span>
-              <span
+              <output
                 className="text-sm font-semibold text-[var(--text-muted)]"
-                role="status"
                 aria-label={`Total units sold: ${product.soldCount}`}
               >
                 {product.soldCount} Sold
-              </span>
+              </output>
             </div>
           </div>
         </Link>
@@ -282,9 +362,7 @@ const ProductGrid = ({
   const [minRatingDraft, setMinRatingDraft] = useState<string>(
     typeof minRating === 'number' ? String(minRating) : ''
   )
-  const [variantDraft, setVariantDraft] = useState<
-    'all' | 'single' | 'multiple'
-  >(variant)
+  const [variantDraft, setVariantDraft] = useState<VariantOption>(variant)
   const sentinelRef = useRef<HTMLDivElement | null>(null)
   const isLoadingRef = useRef(false)
   const canLoadMoreRef = useRef(hasNextPage)
@@ -393,18 +471,18 @@ const ProductGrid = ({
 
     try {
       const response = await fetch(
-        createProductsApiHref(
-          currentOffset,
-          batchSizeRef.current,
-          searchRef.current,
-          categoryRef.current,
-          sortRef.current,
-          minPriceRef.current,
-          maxPriceRef.current,
-          inStockRef.current,
-          minRatingRef.current,
-          variantRef.current
-        ),
+        createProductsApiHref({
+          offset: currentOffset,
+          limit: batchSizeRef.current,
+          search: searchRef.current,
+          selectedCategory: categoryRef.current,
+          selectedSort: sortRef.current,
+          minPrice: minPriceRef.current,
+          maxPrice: maxPriceRef.current,
+          inStock: inStockRef.current,
+          minRating: minRatingRef.current,
+          variant: variantRef.current,
+        }),
         { method: 'GET', headers: { Accept: 'application/json' } }
       )
 
@@ -466,65 +544,16 @@ const ProductGrid = ({
   const resetHref = useMemo(() => '/shop#products', [])
 
   const applySearchState = useCallback(() => {
-    const params = new URLSearchParams()
-
-    const normalizedSearch = searchDraft.trim()
-    const normalizedCategory = categoryDraft.trim()
-    const normalizedMinPrice = Number.parseFloat(minPriceDraft)
-    const normalizedMaxPrice = Number.parseFloat(maxPriceDraft)
-    const normalizedMinRating = Number.parseFloat(minRatingDraft)
-
-    if (normalizedSearch) {
-      params.set('q', normalizedSearch)
-    }
-
-    if (normalizedCategory && normalizedCategory !== DEFAULT_CATEGORY) {
-      params.set('category', normalizedCategory)
-    }
-
-    if (sortDraft !== DEFAULT_SORT) {
-      params.set('sort', sortDraft)
-    }
-
-    const validatedMinPrice = Number.isFinite(normalizedMinPrice)
-      ? normalizedMinPrice
-      : undefined
-    const validatedMaxPrice = Number.isFinite(normalizedMaxPrice)
-      ? normalizedMaxPrice
-      : undefined
-
-    const safeMinPrice =
-      validatedMinPrice !== undefined &&
-      validatedMaxPrice !== undefined &&
-      validatedMinPrice > validatedMaxPrice
-        ? validatedMaxPrice
-        : validatedMinPrice
-    const safeMaxPrice =
-      validatedMinPrice !== undefined &&
-      validatedMaxPrice !== undefined &&
-      validatedMinPrice > validatedMaxPrice
-        ? validatedMinPrice
-        : validatedMaxPrice
-
-    if (typeof safeMinPrice === 'number' && safeMinPrice >= 0) {
-      params.set('minPrice', String(safeMinPrice))
-    }
-
-    if (typeof safeMaxPrice === 'number' && safeMaxPrice >= 0) {
-      params.set('maxPrice', String(safeMaxPrice))
-    }
-
-    if (inStockDraft) {
-      params.set('inStock', 'true')
-    }
-
-    if (Number.isFinite(normalizedMinRating) && normalizedMinRating >= 0) {
-      params.set('minRating', String(normalizedMinRating))
-    }
-
-    if (variantDraft !== 'all') {
-      params.set('variant', variantDraft)
-    }
+    const params = buildSearchParams({
+      searchDraft,
+      categoryDraft,
+      sortDraft,
+      minPriceDraft,
+      maxPriceDraft,
+      inStockDraft,
+      minRatingDraft,
+      variantDraft,
+    })
 
     const query = params.toString()
     router.push(query ? `/shop?${query}#products` : resetHref, {
@@ -716,9 +745,7 @@ const ProductGrid = ({
               id="variant-filter"
               value={variantDraft}
               onChange={(event) =>
-                setVariantDraft(
-                  event.target.value as 'all' | 'single' | 'multiple'
-                )
+                setVariantDraft(event.target.value as VariantOption)
               }
               className="min-w-0 flex-1 bg-transparent pr-6 text-sm font-medium text-[var(--foreground)] focus:outline-none"
               aria-label="Filter by variants"

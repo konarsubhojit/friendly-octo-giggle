@@ -10,7 +10,7 @@ import {
 import {
   type AppLocale,
   DEFAULT_LOCALE,
-  stripLocaleFromPathname,
+  toLocalizedPathname,
 } from '@/lib/i18n/config'
 import { getMessage, type MessageKey } from '@/lib/i18n/messages'
 
@@ -23,7 +23,7 @@ interface LocaleContextValue {
 const fallbackLocaleContext: LocaleContextValue = {
   locale: DEFAULT_LOCALE,
   t: (key) => getMessage(DEFAULT_LOCALE, key),
-  localizePath: (pathname) => pathname,
+  localizePath: (pathname) => toLocalizedPathname(pathname, DEFAULT_LOCALE),
 }
 
 const LocaleContext = createContext<LocaleContextValue>(fallbackLocaleContext)
@@ -38,12 +38,15 @@ export function LocaleProvider({
   children,
 }: LocaleProviderProps) {
   const t = useCallback((key: MessageKey) => getMessage(locale, key), [locale])
-  const localizePath = useCallback((pathname: string) => {
-    const normalizedPathname = pathname.startsWith('/')
-      ? pathname
-      : `/${pathname}`
-    return stripLocaleFromPathname(normalizedPathname)
-  }, [])
+  // Now that locale is a real route segment (src/app/[locale]/...),
+  // internal hrefs need to be prefixed with the current locale so client
+  // navigations land directly on the locale-aware route segment without
+  // bouncing through a middleware redirect. Idempotent: paths that already
+  // start with /{locale}/ are returned unchanged.
+  const localizePath = useCallback(
+    (pathname: string) => toLocalizedPathname(pathname, locale),
+    [locale]
+  )
 
   const value = useMemo(
     () => ({ locale, t, localizePath }),

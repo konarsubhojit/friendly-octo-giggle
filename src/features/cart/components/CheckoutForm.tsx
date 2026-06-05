@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { useSelector } from 'react-redux'
+import { useLocale } from '@/contexts/LocaleContext'
 import { selectCart } from '@/features/cart/store/cartSlice'
 import { StructuredAddressSchema } from '@/features/orders/validations'
 import { GradientButton } from '@/components/ui/GradientButton'
@@ -99,7 +100,7 @@ const trimAddress = (address: AddressFields): AddressFields => ({
 })
 
 const readCachedCustomizationNotes = (): Record<string, string> => {
-  if (typeof window === 'undefined') return {}
+  if (globalThis.window === undefined) return {}
   try {
     const raw = sessionStorage.getItem(PENDING_CUSTOMIZATION_KEY)
     if (!raw) return {}
@@ -114,6 +115,7 @@ export const CheckoutForm = ({
   customizationNotes = {},
 }: CheckoutFormProps) => {
   const router = useRouter()
+  const { localizePath } = useLocale()
   const { data: session } = useSession()
   const cart = useSelector(selectCart)
   const latestPincodeRef = useRef('')
@@ -288,7 +290,9 @@ export const CheckoutForm = ({
     e.preventDefault()
 
     if (!session?.user?.id || !session.user.email) {
-      router.push('/auth/signin?callbackUrl=/checkout/shipping')
+      router.push(
+        `${localizePath('/auth/signin')}?callbackUrl=${encodeURIComponent(localizePath('/checkout/shipping'))}`
+      )
       return
     }
 
@@ -309,15 +313,20 @@ export const CheckoutForm = ({
         if (!selectedAddressId && saveAddress) {
           const trimmedLabelLine = trimmed.addressLine1.trim()
           const truncationSuffix = '...'
+          const truncatedLine = trimmedLabelLine.slice(
+            0,
+            MAX_ADDRESS_LABEL_LENGTH - truncationSuffix.length
+          )
           const labelAddressLine =
             trimmedLabelLine.length > MAX_ADDRESS_LABEL_LENGTH
-              ? `${trimmedLabelLine.slice(0, MAX_ADDRESS_LABEL_LENGTH - truncationSuffix.length)}${truncationSuffix}`
+              ? `${truncatedLine}${truncationSuffix}`
               : trimmedLabelLine
+          const citySuffix = trimmed.city ? ` · ${trimmed.city}` : ''
           const response = await fetch('/api/account/addresses', {
             method: 'POST',
             headers: { 'content-type': 'application/json' },
             body: JSON.stringify({
-              label: `${labelAddressLine}${trimmed.city ? ` · ${trimmed.city}` : ''}`,
+              label: `${labelAddressLine}${citySuffix}`,
               ...trimmed,
               isDefault: savedAddresses.length === 0,
             }),
@@ -342,7 +351,7 @@ export const CheckoutForm = ({
         return
       }
 
-      router.push('/checkout/review')
+      router.push(localizePath('/checkout/review'))
     }
 
     void persistPendingCheckout()
@@ -486,25 +495,19 @@ export const CheckoutForm = ({
         </div>
 
         {pincodeNotice && (
-          <p
-            className="text-xs text-amber-600 dark:text-amber-400"
-            role="status"
-          >
+          <output className="text-xs text-amber-600 dark:text-amber-400">
             {pincodeNotice}
-          </p>
+          </output>
         )}
 
         {pincodeAutoFilled && (
-          <p
-            className="text-xs text-emerald-600 dark:text-emerald-400"
-            role="status"
-          >
+          <output className="text-xs text-emerald-600 dark:text-emerald-400">
             ✓ City and state auto-filled from pin code
-          </p>
+          </output>
         )}
       </fieldset>
 
-      {!selectedAddressId ? (
+      {selectedAddressId ? null : (
         <label className="flex items-start gap-2 text-sm text-[var(--text-secondary)]">
           <input
             type="checkbox"
@@ -512,9 +515,9 @@ export const CheckoutForm = ({
             onChange={(event) => setSaveAddress(event.target.checked)}
             className="mt-1 h-4 w-4 rounded border-[var(--border-warm)] accent-[var(--accent-rose)]"
           />
-          Save this address for future checkouts
+          <span>Save this address for future checkouts</span>
         </label>
-      ) : null}
+      )}
 
       {addressPreview && (
         <div className="rounded-xl border border-[var(--border-warm)] bg-[var(--surface)]/30 p-3">

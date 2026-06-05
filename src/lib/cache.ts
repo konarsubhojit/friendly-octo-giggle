@@ -96,6 +96,26 @@ export const CACHE_TTL = {
 } as const
 
 /**
+ * Build a `Cache-Control` header value for public, CDN-cacheable GET routes.
+ *
+ * Convention: `s-maxage` defines the fresh window served straight from the
+ * CDN; `stale-while-revalidate` defines an additional grace window during
+ * which the CDN serves a stale response while triggering a background
+ * revalidation. Defaults to `staleSeconds = floor(maxAgeSeconds / 2)` so the
+ * shape is consistent across routes.
+ *
+ * Public routes should align `maxAgeSeconds` with the corresponding Redis
+ * `CACHE_TTL` entry where feasible. Routes whose underlying data can be
+ * mutated by admin actions (e.g. products list) should keep `maxAgeSeconds`
+ * modest because admin mutations do not invalidate the Vercel CDN cache.
+ */
+export const buildPublicCacheHeader = (
+  maxAgeSeconds: number,
+  staleSeconds: number = Math.max(1, Math.floor(maxAgeSeconds / 2))
+): string =>
+  `public, s-maxage=${maxAgeSeconds}, stale-while-revalidate=${staleSeconds}`
+
+/**
  * Build a normalized cache key for product list queries.
  * Creates unique keys based on pagination and filter parameters to avoid cache collisions.
  *
@@ -174,7 +194,15 @@ export const cacheProductSoldCounts = <T>(
   productIds: string[],
   fetcher: () => Promise<T>
 ): Promise<T> => {
-  const normalizedIds = [...new Set(productIds)].sort().join(',')
+  // Use a locale-independent byte-order sort so the hash is stable across
+  // Node versions, edge runtimes, and ICU configurations. Product IDs are
+  // base62 ASCII (see `lib/short-id.ts`), so byte order is well-defined.
+  const byteOrder = (a: string, b: string): number => {
+    if (a < b) return -1
+    if (a > b) return 1
+    return 0
+  }
+  const normalizedIds = [...new Set(productIds)].sort(byteOrder).join(',')
   if (!normalizedIds) return fetcher()
   const idsHash = createHash('sha256').update(normalizedIds).digest('hex')
 
@@ -256,11 +284,12 @@ export const invalidateProductCaches = async (
       await invalidateCachePattern(CACHE_KEYS.PRODUCT_BY_ID(productId))
     }
 
+    const productKeys = ids
+      .map((productId) => `product:${productId}`)
+      .join(', ')
     logCacheOperation({
       operation: 'invalidate',
-      key: ids.length
-        ? `products:* and ${ids.map((productId) => `product:${productId}`).join(', ')}`
-        : 'products:*',
+      key: ids.length ? `products:* and ${productKeys}` : 'products:*',
       success: true,
     })
   } catch (error) {

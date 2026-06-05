@@ -154,7 +154,8 @@ describe('app/shop/page', () => {
   })
 
   it('uses catalog search response for initial shop products and sort', async () => {
-    const { default: ShopPage } = await import('@/app/shop/page')
+    const { default: ShopPage } =
+      await import('@/app/[locale]/(public)/shop/page')
     const view = await ShopPage({
       searchParams: Promise.resolve({ q: 'flowers', sort: 'price_desc' }),
     })

@@ -79,7 +79,7 @@ describe('AdminSalesDashboardClient', () => {
     expect(screen.getByText('DELIVERED')).toBeInTheDocument()
     expect(screen.getByText('Products').closest('a')).toHaveAttribute(
       'href',
-      '/admin/products'
+      '/en/admin/products'
     )
   })
 })

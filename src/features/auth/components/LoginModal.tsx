@@ -3,7 +3,7 @@
 import { useEffect, useRef, useCallback } from 'react'
 import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
+import Link from '@/components/ui/LocaleLink'
 import {
   DynamicForm,
   type FieldDef,

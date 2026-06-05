@@ -31,13 +31,13 @@ function persistDismissal() {
 
 function isStandaloneMode(): boolean {
   if (
-    typeof window === 'undefined' ||
-    !window.matchMedia ||
-    typeof window.matchMedia !== 'function'
+    globalThis.window === undefined ||
+    !globalThis.matchMedia ||
+    typeof globalThis.matchMedia !== 'function'
   )
     return false
   return (
-    window.matchMedia('(display-mode: standalone)').matches ||
+    globalThis.matchMedia('(display-mode: standalone)').matches ||
     Boolean(
       'standalone' in navigator &&
       (navigator as Navigator & { standalone?: boolean }).standalone
@@ -47,7 +47,7 @@ function isStandaloneMode(): boolean {
 
 function checkIosSafari(): boolean {
   const isIos =
-    /iphone|ipad|ipod/i.test(navigator.userAgent) && !('MSStream' in window)
+    /iphone|ipad|ipod/i.test(navigator.userAgent) && !('MSStream' in globalThis)
   const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent)
   return isIos && isSafari
 }
@@ -68,13 +68,13 @@ export function InstallBanner() {
 
   // Detect iOS Safari once at client mount (lazy initialiser runs once per mount)
   const [isIosSafari] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return false
+    if (globalThis.window === undefined) return false
     return checkIosSafari()
   })
 
   // iOS: show immediately if the user hasn't dismissed and isn't in standalone
   const [visible, setVisible] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return false
+    if (globalThis.window === undefined) return false
     return !isDismissed() && !isStandaloneMode() && checkIosSafari()
   })
 
@@ -88,9 +88,9 @@ export function InstallBanner() {
       setVisible(true)
     }
 
-    window.addEventListener('beforeinstallprompt', handleBeforeInstall)
+    globalThis.addEventListener('beforeinstallprompt', handleBeforeInstall)
     return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstall)
+      globalThis.removeEventListener('beforeinstallprompt', handleBeforeInstall)
     }
   }, [])
 
@@ -113,8 +113,7 @@ export function InstallBanner() {
   const showIosTip = isIosSafari && !promptEvent
 
   return (
-    <div
-      role="banner"
+    <header
       aria-label="Install Kiyon Store app"
       className="fixed bottom-0 left-0 right-0 z-[60] md:bottom-4 md:left-4 md:right-auto md:max-w-sm animate-fade-in"
     >
@@ -180,6 +179,6 @@ export function InstallBanner() {
           </svg>
         </button>
       </div>
-    </div>
+    </header>
   )
 }

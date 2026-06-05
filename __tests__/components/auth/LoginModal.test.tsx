@@ -151,7 +151,7 @@ describe('LoginModal', () => {
   it('has register link', () => {
     render(<LoginModal isOpen={true} onClose={vi.fn()} />)
     const registerLink = screen.getByText('Register').closest('a')
-    expect(registerLink?.getAttribute('href')).toBe('/auth/register')
+    expect(registerLink?.getAttribute('href')).toBe('/en/auth/register')
   })
 
   it('calls signIn with credentials on form submit', async () => {

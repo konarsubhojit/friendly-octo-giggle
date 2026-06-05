@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import { RecentOrdersSection } from '@/app/account/RecentOrdersSection'
+import { RecentOrdersSection } from '@/app/[locale]/(public)/account/RecentOrdersSection'
 
 describe('RecentOrdersSection', () => {
   beforeEach(() => {
@@ -64,7 +64,7 @@ describe('RecentOrdersSection', () => {
     expect(screen.getByText('4 items')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /view all/i })).toHaveAttribute(
       'href',
-      '/orders'
+      '/en/orders'
     )
   }, 15000)
 })

@@ -80,8 +80,8 @@ describe('BestsellersScroller', () => {
   it('links to product pages', () => {
     render(<BestsellersScroller bestsellers={mockBestsellers} />)
     const links = screen.getAllByRole('link')
-    expect(links[0]).toHaveAttribute('href', '/products/prod1')
-    expect(links[1]).toHaveAttribute('href', '/products/prod2')
+    expect(links[0]).toHaveAttribute('href', '/en/products/prod1')
+    expect(links[1]).toHaveAttribute('href', '/en/products/prod2')
   })
 
   it('renders scroll buttons', () => {

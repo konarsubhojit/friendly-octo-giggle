@@ -1,6 +1,6 @@
 'use client'
 
-import Link from 'next/link'
+import Link from '@/components/ui/LocaleLink'
 import { useCurrency } from '@/contexts/CurrencyContext'
 import type { AdminSalesDashboardData } from '@/features/admin/services/admin-sales'
 import { OrdersByStatusCard } from '@/features/admin/components/OrdersByStatusCard'
@@ -144,6 +144,11 @@ export function AdminSalesDashboardClient({
               client work focused on currency-aware formatting and a compact D3
               trend chart.
             </p>
+            {/* Plain <a> triggers a browser download for the CSV stream;
+                next/link would intercept it as a client-side navigation.
+                The locale-aware lint rule otherwise mis-matches this API
+                path against the new `[locale]` segment. */}
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
             <a
               href="/api/admin/sales/export"
               className="mt-5 inline-flex items-center rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm transition-colors hover:bg-slate-50"

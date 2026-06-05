@@ -1,7 +1,7 @@
 'use client'
 
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
-import Link from 'next/link'
+import Link from '@/components/ui/LocaleLink'
 import { useSession } from 'next-auth/react'
 import { useDebounce } from '@/hooks/useDebounce'
 
@@ -27,7 +27,7 @@ const markMatches = (text: string, query: string) => {
     return <>{text}</>
   }
 
-  const escaped = normalized.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const escaped = normalized.replace(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`)
   const regex = new RegExp(`(${escaped})`, 'ig')
   const parts = text.split(regex)
 
@@ -36,13 +36,13 @@ const markMatches = (text: string, query: string) => {
       {parts.map((part, index) => {
         return index % 2 === 1 ? (
           <mark
-            key={index}
+            key={`m-${index}-${part}`}
             className="rounded bg-[var(--accent-blush)] px-0.5 text-[inherit]"
           >
             {part}
           </mark>
         ) : (
-          <Fragment key={index}>{part}</Fragment>
+          <Fragment key={`s-${index}-${part}`}>{part}</Fragment>
         )
       })}
     </>

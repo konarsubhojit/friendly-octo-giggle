@@ -88,7 +88,7 @@ export const EnvSchema = z
 
       AUTH_REQUIRED_KEYS.forEach((key) => {
         const val = data[key]
-        if (!val || !val.trim()) {
+        if (!val?.trim()) {
           ctx.addIssue({
             code: 'custom',
             path: [key],

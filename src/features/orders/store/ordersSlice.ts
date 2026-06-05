@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk, createSelector } from '@reduxjs/toolkit'
-import type { RootState } from '@/lib/store'
+import type { OrdersRootState } from '@/lib/store'
 import { apiClient, ApiError } from '@/lib/api-client'
 
 // Types matching API responses
@@ -176,14 +176,15 @@ const ordersSlice = createSlice({
 
 export const { clearOrderError, clearCurrentOrder } = ordersSlice.actions
 
-export const selectOrders = (state: RootState) => state.orders.orders
-export const selectOrdersLoading = (state: RootState) => state.orders.loading
-export const selectOrdersError = (state: RootState) => state.orders.error
-export const selectCurrentOrder = (state: RootState) =>
+export const selectOrders = (state: OrdersRootState) => state.orders.orders
+export const selectOrdersLoading = (state: OrdersRootState) =>
+  state.orders.loading
+export const selectOrdersError = (state: OrdersRootState) => state.orders.error
+export const selectCurrentOrder = (state: OrdersRootState) =>
   state.orders.currentOrder
-export const selectOrderDetailLoading = (state: RootState) =>
+export const selectOrderDetailLoading = (state: OrdersRootState) =>
   state.orders.detailLoading
-export const selectOrderCancelling = (state: RootState) =>
+export const selectOrderCancelling = (state: OrdersRootState) =>
   state.orders.cancelling
 
 // Memoized derived selectors — prevent unnecessary re-renders

@@ -29,12 +29,28 @@ vi.mock('next/image', () => ({
     alt,
     src,
     priority,
+    loading,
+    decoding,
+    placeholder,
+    blurDataURL,
   }: {
     alt: string
     src: string
     priority?: boolean
+    loading?: 'lazy' | 'eager'
+    decoding?: 'async' | 'sync' | 'auto'
+    placeholder?: string
+    blurDataURL?: string
   }) => (
-    <img alt={alt} src={src} data-priority={priority ? 'true' : undefined} />
+    <img
+      alt={alt}
+      src={src}
+      data-priority={priority ? 'true' : undefined}
+      data-loading={loading}
+      data-decoding={decoding}
+      data-placeholder={placeholder}
+      data-blur={blurDataURL ? 'true' : undefined}
+    />
   ),
 }))
 
@@ -234,6 +250,21 @@ describe('ProductGrid', () => {
     expect(screen.getByText('102 Sold')).toBeTruthy()
   })
 
+  it('lazy loads non-priority product card images with async decoding and blur placeholders', () => {
+    renderGrid([
+      makeProduct({ id: '1', name: 'One' }),
+      makeProduct({ id: '2', name: 'Two' }),
+      makeProduct({ id: '3', name: 'Three' }),
+      makeProduct({ id: '4', name: 'Four' }),
+    ])
+
+    const image = screen.getByAltText('Four')
+    expect(image).toHaveAttribute('data-loading', 'lazy')
+    expect(image).toHaveAttribute('data-decoding', 'async')
+    expect(image).toHaveAttribute('data-placeholder', 'blur')
+    expect(image).toHaveAttribute('data-blur', 'true')
+  })
+
   it('renders category in filter dropdown', () => {
     renderGrid([makeProduct({ category: 'Flowers' })], ['Flowers'])
     const select = screen.getByRole('combobox', {
@@ -262,7 +293,7 @@ describe('ProductGrid', () => {
   it('renders product link with correct href', () => {
     renderGrid([makeProduct({ id: 'prod-42', name: 'My Product' })])
     const link = screen.getByRole('link', { name: /My Product/i })
-    expect(link.getAttribute('href')).toBe('/products/prod-42')
+    expect(link.getAttribute('href')).toBe('/en/products/prod-42')
   })
 
   it('renders multiple products', () => {

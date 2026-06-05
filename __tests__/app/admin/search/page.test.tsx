@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { render, screen } from '@testing-library/react'
 import type { ReactNode } from 'react'
-import AdminSearchPage from '@/app/admin/search/page'
+import AdminSearchPage from '@/app/[locale]/admin/search/page'
 
 const isSearchAvailable = vi.fn()
 const areOrdersSearchControlsAvailable = vi.fn()

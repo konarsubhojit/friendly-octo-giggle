@@ -398,7 +398,7 @@ describe('cart-service', () => {
 
       expect(rotatedSessionId).toMatch(/^guest_[0-9a-f-]+$/)
       expect(mockPrimaryDrizzleDbUpdate).toHaveBeenCalled()
-      expect(mockInvalidateCartCache).toHaveBeenCalledWith('user1', undefined)
+      expect(mockInvalidateCartCache).toHaveBeenCalledWith('user1')
       expect(mockInvalidateCartCache).toHaveBeenCalledWith(undefined, 'sess1')
       expect(mockRemoveCartItemsByCartId).toHaveBeenCalledWith(
         'guest-cart',
