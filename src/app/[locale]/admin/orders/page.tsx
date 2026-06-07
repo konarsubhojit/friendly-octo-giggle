@@ -63,6 +63,49 @@ type OrderRow = {
   _raw: AdminOrder
 }
 
+interface ExpandedOrderRowProps {
+  readonly row: OrderRow
+  readonly updatingOrderId: string | null
+  readonly savingShippingId: string | null
+  readonly edit: { trackingNumber: string; shippingProvider: string }
+  readonly onStatusChange: (orderId: string, newStatus: OrderStatus) => void
+  readonly onShippingFieldChange: (
+    orderId: string,
+    field: 'trackingNumber' | 'shippingProvider',
+    value: string,
+    order: { trackingNumber?: string | null; shippingProvider?: string | null }
+  ) => void
+  readonly onSaveShipping: (
+    orderId: string,
+    currentStatus: OrderStatus | string,
+    order: { trackingNumber?: string | null; shippingProvider?: string | null }
+  ) => void
+}
+
+function ExpandedOrderRow({
+  row,
+  updatingOrderId,
+  savingShippingId,
+  edit,
+  onStatusChange,
+  onShippingFieldChange,
+  onSaveShipping,
+}: ExpandedOrderRowProps) {
+  return (
+    <div className="px-4 pb-4">
+      <AdminOrderCard
+        order={row._raw}
+        updatingOrderId={updatingOrderId}
+        savingShippingId={savingShippingId}
+        edit={edit}
+        onStatusChange={onStatusChange}
+        onShippingFieldChange={onShippingFieldChange}
+        onSaveShipping={onSaveShipping}
+      />
+    </div>
+  )
+}
+
 export default function OrdersManagement() {
   const { formatPrice } = useCurrency()
   const dispatch = useDispatch<AdminDispatch>()
@@ -282,6 +325,18 @@ export default function OrdersManagement() {
     _raw: order,
   }))
 
+  const renderExpandedOrder = (row: OrderRow) => (
+    <ExpandedOrderRow
+      row={row}
+      updatingOrderId={updatingOrderId}
+      savingShippingId={savingShippingId}
+      edit={getShippingEdit(row._raw.id, row._raw)}
+      onStatusChange={handleStatusChange}
+      onShippingFieldChange={setShippingField}
+      onSaveShipping={handleSaveShipping}
+    />
+  )
+
   const ordersListContent = (
     <DataTable
       columns={orderColumns}
@@ -296,19 +351,7 @@ export default function OrdersManagement() {
         totalCount,
         onPageChange: handlePageSelect,
       }}
-      expandedRowRender={(row) => (
-        <div className="px-4 pb-4">
-          <AdminOrderCard
-            order={row._raw}
-            updatingOrderId={updatingOrderId}
-            savingShippingId={savingShippingId}
-            edit={getShippingEdit(row._raw.id, row._raw)}
-            onStatusChange={handleStatusChange}
-            onShippingFieldChange={setShippingField}
-            onSaveShipping={handleSaveShipping}
-          />
-        </div>
-      )}
+      expandedRowRender={renderExpandedOrder}
     />
   )
 

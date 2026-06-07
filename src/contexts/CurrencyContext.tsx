@@ -51,7 +51,7 @@ interface CurrencyContextValue {
 const CurrencyContext = createContext<CurrencyContextValue | null>(null)
 
 const EXCHANGE_RATES_STORAGE_KEY = 'exchange-rates'
-const EXCHANGE_RATES_MAX_AGE_MS = 3600_000 // 1 hour
+const EXCHANGE_RATES_MAX_AGE_MS = 3_600_000 // 1 hour
 const LOCALE_TO_NUMBER_FORMAT: Record<string, string> = {
   en: 'en-US',
   es: 'es-ES',
@@ -70,7 +70,7 @@ export function CurrencyProvider({
     rates: Record<CurrencyCode, number>
     ratesLoading: boolean
   }>(() => {
-    if (typeof window === 'undefined') {
+    if (typeof globalThis.window === 'undefined') {
       return { rates: FALLBACK_RATES, ratesLoading: true }
     }
     try {
@@ -104,6 +104,41 @@ export function CurrencyProvider({
     if (!ratesLoading) return
     let cancelled = false
 
+    const markLoaded = () => {
+      if (cancelled) return
+      setRatesState((prev) => ({ ...prev, ratesLoading: false }))
+    }
+
+    const persistRates = (newRates: Record<CurrencyCode, number>) => {
+      try {
+        sessionStorage.setItem(
+          EXCHANGE_RATES_STORAGE_KEY,
+          JSON.stringify({ rates: newRates, timestamp: Date.now() })
+        )
+      } catch {
+        // silently ignore storage errors
+      }
+    }
+
+    const applyFetchedBody = (
+      body: { data?: { rates?: Record<string, number> } } | null
+    ) => {
+      if (cancelled) return
+      if (body?.data?.rates) {
+        const fetched = body.data.rates
+        const newRates = {
+          INR: fetched['INR'] ?? FALLBACK_RATES.INR,
+          USD: fetched['USD'] ?? FALLBACK_RATES.USD,
+          EUR: fetched['EUR'] ?? FALLBACK_RATES.EUR,
+          GBP: fetched['GBP'] ?? FALLBACK_RATES.GBP,
+        }
+        setRatesState({ rates: newRates, ratesLoading: false })
+        persistRates(newRates)
+      } else {
+        markLoaded()
+      }
+    }
+
     const runFetch = () => {
       if (cancelled) return
       fetch('/api/exchange-rates')
@@ -113,35 +148,8 @@ export function CurrencyProvider({
             data?: { rates?: Record<string, number> }
           }>
         })
-        .then((body) => {
-          if (cancelled) return
-          if (body?.data?.rates) {
-            const fetched = body.data.rates
-            const newRates = {
-              INR: fetched['INR'] ?? FALLBACK_RATES.INR,
-              USD: fetched['USD'] ?? FALLBACK_RATES.USD,
-              EUR: fetched['EUR'] ?? FALLBACK_RATES.EUR,
-              GBP: fetched['GBP'] ?? FALLBACK_RATES.GBP,
-            }
-            setRatesState({ rates: newRates, ratesLoading: false })
-            try {
-              sessionStorage.setItem(
-                EXCHANGE_RATES_STORAGE_KEY,
-                JSON.stringify({ rates: newRates, timestamp: Date.now() })
-              )
-            } catch {
-              // silently ignore storage errors
-            }
-          } else {
-            setRatesState((prev) => ({ ...prev, ratesLoading: false }))
-          }
-        })
-        .catch(() => {
-          // Silently keep the hardcoded fallback rates when the API is unreachable.
-          if (!cancelled) {
-            setRatesState((prev) => ({ ...prev, ratesLoading: false }))
-          }
-        })
+        .then(applyFetchedBody)
+        .catch(markLoaded)
     }
 
     type IdleScheduler = (
@@ -149,8 +157,8 @@ export function CurrencyProvider({
       opts?: { timeout: number }
     ) => number | NodeJS.Timeout
     const ric =
-      (typeof window !== 'undefined' &&
-        (window as unknown as { requestIdleCallback?: IdleScheduler })
+      (typeof globalThis.window !== 'undefined' &&
+        (globalThis.window as unknown as { requestIdleCallback?: IdleScheduler })
           .requestIdleCallback) ||
       ((cb: () => void) => setTimeout(cb, 1))
     const handle = ric(runFetch, { timeout: 2000 })
@@ -159,8 +167,8 @@ export function CurrencyProvider({
       cancelled = true
       type IdleCanceller = (handle: number | NodeJS.Timeout) => void
       const cic =
-        (typeof window !== 'undefined' &&
-          (window as unknown as { cancelIdleCallback?: IdleCanceller })
+        (typeof globalThis.window !== 'undefined' &&
+          (globalThis.window as unknown as { cancelIdleCallback?: IdleCanceller })
             .cancelIdleCallback) ||
         ((h: number | NodeJS.Timeout) => clearTimeout(h as NodeJS.Timeout))
       cic(handle)

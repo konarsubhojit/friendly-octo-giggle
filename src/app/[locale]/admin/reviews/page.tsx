@@ -12,6 +12,8 @@ import {
 import { StarRating } from '@/components/ui/StarRating'
 import { Badge } from '@/components/ui/Badge'
 
+type HiddenFilter = 'all' | 'hidden' | 'visible'
+
 interface ReviewProduct {
   id: string
   name: string
@@ -187,9 +189,7 @@ const AdminReviewsPage = () => {
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [ratingFilter, setRatingFilter] = useState('')
-  const [hiddenFilter, setHiddenFilter] = useState<
-    'all' | 'hidden' | 'visible'
-  >('all')
+  const [hiddenFilter, setHiddenFilter] = useState<HiddenFilter>('all')
   const [verifiedOnly, setVerifiedOnly] = useState(false)
   const [total, setTotal] = useState(0)
   const [pendingActionId, setPendingActionId] = useState<string | null>(null)
@@ -402,8 +402,8 @@ const ReviewsFilters = ({
   readonly onSearchChange: (val: string) => void
   readonly ratingFilter: string
   readonly onRatingChange: (val: string) => void
-  readonly hiddenFilter: 'all' | 'hidden' | 'visible'
-  readonly onHiddenFilterChange: (val: 'all' | 'hidden' | 'visible') => void
+  readonly hiddenFilter: HiddenFilter
+  readonly onHiddenFilterChange: (val: HiddenFilter) => void
   readonly verifiedOnly: boolean
   readonly onVerifiedChange: (value: boolean) => void
 }) => (
@@ -450,9 +450,7 @@ const ReviewsFilters = ({
       <select
         value={hiddenFilter}
         onChange={(event) =>
-          onHiddenFilterChange(
-            event.target.value as 'all' | 'hidden' | 'visible'
-          )
+          onHiddenFilterChange(event.target.value as HiddenFilter)
         }
         className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600"
         aria-label="Visibility filter"
@@ -467,7 +465,7 @@ const ReviewsFilters = ({
           checked={verifiedOnly}
           onChange={(event) => onVerifiedChange(event.target.checked)}
         />
-        Verified only
+        <span>Verified only</span>
       </label>
     </div>
   </div>

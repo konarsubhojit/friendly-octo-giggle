@@ -17,9 +17,7 @@ let genAIInstance: GoogleGenAI | undefined
 
 export const genAI = new Proxy({} as GoogleGenAI, {
   get(_, prop) {
-    if (!genAIInstance) {
-      genAIInstance = new GoogleGenAI({ apiKey: getApiKey() })
-    }
+    genAIInstance ??= new GoogleGenAI({ apiKey: getApiKey() })
 
     const value = Reflect.get(genAIInstance, prop, genAIInstance)
 

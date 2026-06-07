@@ -101,6 +101,18 @@ const CategoryRow = ({
     if (e.key === 'Escape') cancelEdit()
   }
 
+  let dragStateClass: string
+  if (isDragging) {
+    dragStateClass =
+      'opacity-40 shadow-inner bg-slate-50 dark:bg-slate-800/40 border-dashed border-slate-300 dark:border-slate-600'
+  } else if (isDragOver) {
+    dragStateClass =
+      'border-sky-400 bg-sky-50/60 dark:bg-sky-900/20 shadow-md scale-[1.01]'
+  } else {
+    dragStateClass =
+      'border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-600'
+  }
+
   return (
     <div
       draggable
@@ -110,11 +122,7 @@ const CategoryRow = ({
       onDragEnd={onDragEnd}
       className={[
         'group flex items-center gap-3 rounded-xl border px-4 py-3 transition-all duration-150 select-none',
-        isDragging
-          ? 'opacity-40 shadow-inner bg-slate-50 dark:bg-slate-800/40 border-dashed border-slate-300 dark:border-slate-600'
-          : isDragOver
-            ? 'border-sky-400 bg-sky-50/60 dark:bg-sky-900/20 shadow-md scale-[1.01]'
-            : 'border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-600',
+        dragStateClass,
       ].join(' ')}
       role="listitem"
       aria-label={`Category: ${cat.name}. Drag to reorder.`}

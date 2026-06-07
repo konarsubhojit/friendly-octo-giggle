@@ -45,7 +45,7 @@ export async function getCachedAiResponse(
 export async function setCachedAiResponse(
   productId: string,
   question: string,
-  currencyCode: string = 'INR',
+  currencyCode: string,
   response: string
 ): Promise<void> {
   const redis = getRedisClient()

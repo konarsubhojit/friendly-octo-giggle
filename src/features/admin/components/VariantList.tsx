@@ -227,11 +227,15 @@ const VariantCard = ({
       onDragEnd={onDragEnd}
       className={[
         'rounded-2xl border bg-white p-4 shadow-sm transition-all duration-150 select-none dark:bg-slate-900/80',
-        isDragging
-          ? 'opacity-50 shadow-inner border-dashed border-slate-300 dark:border-slate-600'
-          : isDragOver
-            ? 'border-sky-400 shadow-md scale-[1.01] dark:border-sky-500'
-            : 'border-slate-200 hover:shadow-md dark:border-slate-700',
+        (() => {
+          if (isDragging) {
+            return 'opacity-50 shadow-inner border-dashed border-slate-300 dark:border-slate-600'
+          }
+          if (isDragOver) {
+            return 'border-sky-400 shadow-md scale-[1.01] dark:border-sky-500'
+          }
+          return 'border-slate-200 hover:shadow-md dark:border-slate-700'
+        })(),
       ].join(' ')}
       role="listitem"
       aria-label={`Variant ${variant.sku ?? variant.id}. Drag to reorder.`}

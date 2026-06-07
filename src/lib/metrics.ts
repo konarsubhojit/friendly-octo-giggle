@@ -36,7 +36,7 @@ const buildRouteKey = (method: string, path: string): string =>
   `${method} ${path}`
 
 const escapeLabelValue = (value: string): string =>
-  value.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n')
+  value.replaceAll('\\', String.raw`\\`).replaceAll('"', String.raw`\"`).replaceAll('\n', String.raw`\n`)
 
 export const recordApiRequestMetric = (data: {
   method: string
@@ -152,12 +152,8 @@ export const renderPrometheusMetrics = (): string => {
     const safeMethod = escapeLabelValue(method)
     const safePath = escapeLabelValue(path)
     lines.push(
-      `application_api_requests_by_route_total{method="${safeMethod}",path="${safePath}"} ${metrics.count}`
-    )
-    lines.push(
-      `application_api_request_errors_by_route_total{method="${safeMethod}",path="${safePath}"} ${metrics.errorCount}`
-    )
-    lines.push(
+      `application_api_requests_by_route_total{method="${safeMethod}",path="${safePath}"} ${metrics.count}`,
+      `application_api_request_errors_by_route_total{method="${safeMethod}",path="${safePath}"} ${metrics.errorCount}`,
       `application_api_request_slow_by_route_total{method="${safeMethod}",path="${safePath}"} ${metrics.slowCount}`
     )
   }

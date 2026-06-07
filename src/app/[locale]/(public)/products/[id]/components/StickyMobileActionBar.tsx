@@ -60,11 +60,11 @@ export const StickyMobileActionBar = ({
           aria-disabled={addingToCart || remainingStock === 0}
           className="flex-1 min-tap rounded-xl bg-gradient-to-r from-[var(--accent-warm)] to-[var(--accent-rose)] text-white font-bold text-base shadow-warm hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity focus-warm"
         >
-          {remainingStock === 0
-            ? 'Out of Stock'
-            : addingToCart
-              ? 'Adding…'
-              : 'Add to Cart'}
+          {(() => {
+            if (remainingStock === 0) return 'Out of Stock'
+            if (addingToCart) return 'Adding…'
+            return 'Add to Cart'
+          })()}
         </button>
       </div>
 

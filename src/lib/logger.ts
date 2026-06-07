@@ -64,7 +64,7 @@ export const scrubSensitiveData = (
     } else if (lowerKey === 'email' && typeof value === 'string') {
       result[key] = maskEmail(value)
     } else if (isPlainObject(value)) {
-      result[key] = scrubSensitiveData(value as Record<string, unknown>)
+      result[key] = scrubSensitiveData(value)
     } else {
       result[key] = value
     }
@@ -106,7 +106,7 @@ export const logger = pino({
       // `path[path.length - 1]` is the matched key name for both top-level
       // paths (e.g. 'email') and wildcard paths (e.g. '*.email') because Pino
       // resolves the wildcard before invoking the censor function.
-      const key = String(path[path.length - 1])
+      const key = String(path.at(-1))
       if (key === 'email' && typeof value === 'string') {
         return maskEmail(value)
       }

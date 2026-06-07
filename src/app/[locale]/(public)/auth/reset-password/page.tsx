@@ -101,11 +101,7 @@ export default function ResetPasswordPage() {
           </p>
         </div>
 
-        {!canSubmit ? (
-          <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            This reset link is invalid. Please request a new one.
-          </p>
-        ) : (
+        {canSubmit ? (
           <DynamicForm
             fields={RESET_PASSWORD_FIELDS}
             onSubmit={handleSubmit}
@@ -116,6 +112,10 @@ export default function ResetPasswordPage() {
             formClassName="space-y-4"
             submitButtonClassName="w-full py-3 bg-[var(--btn-primary)] bg-gradient-to-r from-[var(--accent-rose)] to-[var(--accent-pink)] text-white rounded-full font-semibold hover:from-[var(--accent-pink)] hover:to-[var(--accent-rose)] transition-all duration-300 shadow-warm hover:shadow-warm-lg disabled:opacity-50 disabled:cursor-not-allowed focus-warm"
           />
+        ) : (
+          <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            This reset link is invalid. Please request a new one.
+          </p>
         )}
 
         <div className="mt-6 text-center space-y-2">

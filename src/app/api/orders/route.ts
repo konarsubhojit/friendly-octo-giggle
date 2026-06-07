@@ -15,13 +15,12 @@ import {
 
 export const dynamic = 'force-dynamic'
 const CheckoutRequestBodySchema = z
-  .object({
+  .looseObject({
     customerName: z.string().optional(),
     customerEmail: z.string().optional(),
     customerAddress: z.string().optional(),
     items: z.array(z.unknown()).optional(),
   })
-  .passthrough()
 
 const handleGet = async (request: NextRequest) => {
   try {

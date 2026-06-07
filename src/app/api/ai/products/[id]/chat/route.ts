@@ -311,11 +311,10 @@ const getAdvancedUsage = async (userId: string): Promise<number> => {
   if (!redis) return 0
   const key = `ai:chat:advanced:${userId}:${utcDateKey()}`
   const raw =
-    ((await redis.hgetall(key)) as Record<string, string> | null) ?? {}
+    (await redis.hgetall(key)) ?? {}
   const requests = Number(raw.requests ?? 0)
   return Number.isFinite(requests) ? requests : 0
 }
-
 const recordAdvancedUsage = async (userId: string): Promise<void> => {
   const redis = getRedisClient()
   if (!redis) return
@@ -597,7 +596,7 @@ const getDailyUsage = async (
 
   const key = `ai:chat:usage:${userId}:${utcDateKey()}`
   const raw =
-    ((await redis.hgetall(key)) as Record<string, string> | null) ?? {}
+    (await redis.hgetall(key)) ?? {}
   const requests = Number(raw.requests ?? 0)
   const tokens = Number(raw.tokens ?? 0)
   return {
@@ -701,7 +700,7 @@ const parseAndValidateRequest = async (
 
   return {
     parsedData: parsed.data,
-    session: session as AuthorizedSession,
+    session,
     persistHistory,
     threadId,
     sanitizedMessages,

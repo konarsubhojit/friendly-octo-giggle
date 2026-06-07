@@ -21,13 +21,17 @@ export function VariantButton({
 }: VariantButtonProps) {
   const isOutOfStock = variant.stock === 0
 
-  const baseClass = isOutOfStock
-    ? isSelected
-      ? 'p-4 border-2 rounded-xl transition-all duration-300 border-[var(--border-warm)] bg-gray-100 opacity-60 cursor-not-allowed'
-      : 'p-4 border-2 rounded-xl transition-all duration-300 border-[var(--border-warm)] bg-gray-50 opacity-50 cursor-not-allowed'
-    : isSelected
+  const getBaseClass = () => {
+    if (isOutOfStock) {
+      return isSelected
+        ? 'p-4 border-2 rounded-xl transition-all duration-300 border-[var(--border-warm)] bg-gray-100 opacity-60 cursor-not-allowed'
+        : 'p-4 border-2 rounded-xl transition-all duration-300 border-[var(--border-warm)] bg-gray-50 opacity-50 cursor-not-allowed'
+    }
+    return isSelected
       ? 'p-4 border-2 rounded-xl transition-all duration-300 border-[var(--accent-warm)] bg-[var(--accent-cream)] shadow-warm scale-105'
       : 'p-4 border-2 rounded-xl transition-all duration-300 border-[var(--border-warm)] hover:border-[var(--accent-warm)] hover:shadow-warm hover:scale-105 bg-[var(--accent-cream)]/50'
+  }
+  const baseClass = getBaseClass()
 
   return (
     <button

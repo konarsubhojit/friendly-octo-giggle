@@ -77,7 +77,8 @@ const ProductClient = ({
         params.delete('v')
       }
       const qs = params.toString()
-      router.replace(`${pathname}${qs ? `?${qs}` : ''}`, { scroll: false })
+      const search = qs ? `?${qs}` : ''
+      router.replace(`${pathname}${search}`, { scroll: false })
     },
     [router, pathname, searchParams]
   )

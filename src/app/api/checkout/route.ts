@@ -11,13 +11,12 @@ import { logBusinessEvent, logError } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 const CheckoutRequestBodySchema = z
-  .object({
+  .looseObject({
     customerName: z.string().optional(),
     customerEmail: z.string().optional(),
     customerAddress: z.string().optional(),
     items: z.array(z.unknown()).optional(),
   })
-  .passthrough()
 
 const handlePost = async (request: NextRequest) => {
   try {
