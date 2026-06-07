@@ -265,9 +265,10 @@ describe('ImageCarousel', () => {
     const region = screen.getByRole('region', {
       name: /image carousel for keyboard product/i,
     })
-    region.focus()
-    expect(region).toHaveFocus()
 
+    // Keyboard handlers are attached natively to the carousel container so the
+    // <section> can stay semantically non-interactive. fireEvent.keyDown bubbles
+    // up through React, but the native listener responds to the same event.
     fireEvent.keyDown(region, { key: 'ArrowRight' })
     expect(screen.getByText('2 / 2')).toBeInTheDocument()
 

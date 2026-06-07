@@ -219,7 +219,7 @@ const VariantCard = ({
   const displayLabel = variant.sku ?? variant.id
 
   return (
-    <div
+    <li
       draggable
       onDragStart={() => onDragStart(index)}
       onDragOver={(e) => onDragOver(e, index)}
@@ -237,7 +237,6 @@ const VariantCard = ({
           return 'border-slate-200 hover:shadow-md dark:border-slate-700'
         })(),
       ].join(' ')}
-      role="listitem"
       aria-label={`Variant ${variant.sku ?? variant.id}. Drag to reorder.`}
     >
       <div className="flex items-start gap-2">
@@ -390,7 +389,7 @@ const VariantCard = ({
           </div>
         </div>
       </div>
-    </div>
+    </li>
   )
 }
 
@@ -732,10 +731,7 @@ const VariantList = ({ productId, initialVariants }: VariantListProps) => {
       </div>
 
       {reorderSaving && (
-        <p
-          className="mb-2 text-xs text-slate-400 flex items-center gap-1.5"
-          role="status"
-        >
+        <output className="mb-2 text-xs text-slate-400 flex items-center gap-1.5">
           <svg
             className="animate-spin w-3 h-3"
             fill="none"
@@ -757,7 +753,7 @@ const VariantList = ({ productId, initialVariants }: VariantListProps) => {
             />
           </svg>
           Saving…
-        </p>
+        </output>
       )}
       <p className="mb-3 text-xs text-slate-400 dark:text-slate-500">
         Drag{' '}
@@ -766,9 +762,8 @@ const VariantList = ({ productId, initialVariants }: VariantListProps) => {
         </span>{' '}
         to reorder variants
       </p>
-      <div
-        className="space-y-3"
-        role="list"
+      <ul
+        className="space-y-3 list-none p-0"
         aria-label="Variants — drag to reorder"
       >
         {variants.map((variant, index) => (
@@ -797,7 +792,7 @@ const VariantList = ({ productId, initialVariants }: VariantListProps) => {
             onDragEnd={handleDragEnd}
           />
         ))}
-      </div>
+      </ul>
 
       {showFormModal && (
         <Suspense fallback={modalFallback}>
