@@ -14,13 +14,12 @@ import {
 } from '@/features/orders/services/order-service'
 
 export const dynamic = 'force-dynamic'
-const CheckoutRequestBodySchema = z
-  .looseObject({
-    customerName: z.string().optional(),
-    customerEmail: z.string().optional(),
-    customerAddress: z.string().optional(),
-    items: z.array(z.unknown()).optional(),
-  })
+const CheckoutRequestBodySchema = z.looseObject({
+  customerName: z.string().optional(),
+  customerEmail: z.string().optional(),
+  customerAddress: z.string().optional(),
+  items: z.array(z.unknown()).optional(),
+})
 
 const handleGet = async (request: NextRequest) => {
   try {

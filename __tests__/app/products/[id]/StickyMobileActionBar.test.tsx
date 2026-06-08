@@ -82,30 +82,41 @@ describe('StickyMobileActionBar', () => {
 
   it('shows quantity selector + View Cart link when in stock', () => {
     renderBar({ remainingStock: 4 })
-    const select = screen.getByLabelText(/select quantity/i) as HTMLSelectElement
+    const select = screen.getByLabelText(
+      /select quantity/i
+    ) as HTMLSelectElement
     expect(select).toBeInTheDocument()
     // remainingStock=4 → options 1..4
     expect(select.querySelectorAll('option')).toHaveLength(4)
 
     const setQuantity = vi.fn()
     renderBar({ remainingStock: 4, setQuantity })
-    const select2 = screen.getAllByLabelText(/select quantity/i)[1] as HTMLSelectElement
+    const select2 = screen.getAllByLabelText(
+      /select quantity/i
+    )[1] as HTMLSelectElement
     fireEvent.change(select2, { target: { value: '3' } })
     expect(setQuantity).toHaveBeenCalledWith(3)
 
-    expect(screen.getAllByRole('link', { name: /view cart/i }).length).toBeGreaterThan(0)
+    expect(
+      screen.getAllByRole('link', { name: /view cart/i }).length
+    ).toBeGreaterThan(0)
   })
 
   it('caps quantity options at 10 even when remainingStock is higher', () => {
     renderBar({ remainingStock: 25 })
-    const select = screen.getByLabelText(/select quantity/i) as HTMLSelectElement
+    const select = screen.getByLabelText(
+      /select quantity/i
+    ) as HTMLSelectElement
     expect(select.querySelectorAll('option')).toHaveLength(10)
   })
 
   it('renders the quantity message and links it via aria-describedby', () => {
     renderBar({ quantityMessage: 'Only 3 left' })
     const select = screen.getByLabelText(/select quantity/i)
-    expect(select).toHaveAttribute('aria-describedby', 'mobile-quantity-message')
+    expect(select).toHaveAttribute(
+      'aria-describedby',
+      'mobile-quantity-message'
+    )
     expect(screen.getByText('Only 3 left')).toBeInTheDocument()
   })
 })

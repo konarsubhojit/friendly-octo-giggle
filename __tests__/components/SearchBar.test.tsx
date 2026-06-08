@@ -7,7 +7,9 @@ vi.mock('next-auth/react', () => ({ useSession: mockSession }))
 
 import { SearchBar } from '@/components/SearchBar'
 
-function setup(overrides: Partial<React.ComponentProps<typeof SearchBar>> = {}) {
+function setup(
+  overrides: Partial<React.ComponentProps<typeof SearchBar>> = {}
+) {
   const onChange = vi.fn()
   const onSubmit = vi.fn()
   const utils = render(
@@ -65,9 +67,7 @@ describe('SearchBar', () => {
     fireEvent.focus(screen.getByRole('searchbox'))
 
     // When open, the dropdown panel container is rendered alongside the input
-    expect(
-      container.querySelector('.absolute.z-20')
-    ).not.toBeNull()
+    expect(container.querySelector('.absolute.z-20')).not.toBeNull()
   })
 
   it('submits and persists the query when Enter is pressed', () => {

@@ -126,10 +126,7 @@ describe('InstallBanner', () => {
 
   it('does not render again while the previous dismissal is still fresh', () => {
     setUserAgent(IOS_SAFARI_UA)
-    localStorage.setItem(
-      'kiyon-install-banner-dismissed',
-      String(Date.now())
-    )
+    localStorage.setItem('kiyon-install-banner-dismissed', String(Date.now()))
 
     const { container } = render(<InstallBanner />)
 

@@ -310,8 +310,7 @@ const getAdvancedUsage = async (userId: string): Promise<number> => {
   const redis = getRedisClient()
   if (!redis) return 0
   const key = `ai:chat:advanced:${userId}:${utcDateKey()}`
-  const raw =
-    (await redis.hgetall(key)) ?? {}
+  const raw = (await redis.hgetall(key)) ?? {}
   const requests = Number(raw.requests ?? 0)
   return Number.isFinite(requests) ? requests : 0
 }
@@ -595,8 +594,7 @@ const getDailyUsage = async (
   if (!redis) return { requests: 0, tokens: 0 }
 
   const key = `ai:chat:usage:${userId}:${utcDateKey()}`
-  const raw =
-    (await redis.hgetall(key)) ?? {}
+  const raw = (await redis.hgetall(key)) ?? {}
   const requests = Number(raw.requests ?? 0)
   const tokens = Number(raw.tokens ?? 0)
   return {

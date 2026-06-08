@@ -36,7 +36,10 @@ const buildRouteKey = (method: string, path: string): string =>
   `${method} ${path}`
 
 const escapeLabelValue = (value: string): string =>
-  value.replaceAll('\\', String.raw`\\`).replaceAll('"', String.raw`\"`).replaceAll('\n', String.raw`\n`)
+  value
+    .replaceAll('\\', String.raw`\\`)
+    .replaceAll('"', String.raw`\"`)
+    .replaceAll('\n', String.raw`\n`)
 
 export const recordApiRequestMetric = (data: {
   method: string

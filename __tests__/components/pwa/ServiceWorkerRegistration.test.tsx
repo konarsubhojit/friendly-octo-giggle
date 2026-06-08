@@ -6,9 +6,8 @@ import { ServiceWorkerRegistration } from '@/components/pwa/ServiceWorkerRegistr
 
 type SwRegisterOptions = { scope?: string; updateViaCache?: string }
 
-const registerMock = vi.fn<
-  (script: string, options?: SwRegisterOptions) => Promise<unknown>
->()
+const registerMock =
+  vi.fn<(script: string, options?: SwRegisterOptions) => Promise<unknown>>()
 
 const installingListeners = new Map<string, () => void>()
 const registrationListeners = new Map<string, () => void>()

@@ -6,14 +6,14 @@ on `konarsubhojit_friendly-octo-giggle` and raise total project coverage to
 
 The work is split across **6 PRs**. PR-1 has already landed.
 
-| PR    | Theme                                       | Status      |
-| ----- | ------------------------------------------- | ----------- |
-| PR-1  | Low-risk Sonar findings (Groups A + B + C)  | ✅ Merged    |
-| PR-2  | Accessibility (Group D)                     | ✅ Merged    |
-| PR-3  | Security Hotspot audit (ReDoS ×2)           | ✅ Merged    |
-| PR-4  | Unit tests — Priority-1 service/lib modules | ✅ Merged    |
-| PR-5  | API route tests — Priority-2 endpoints      | ✅ Merged    |
-| PR-6  | Component tests + coverage-exclude tidy-up  | ✅ Merged    |
+| PR   | Theme                                       | Status    |
+| ---- | ------------------------------------------- | --------- |
+| PR-1 | Low-risk Sonar findings (Groups A + B + C)  | ✅ Merged |
+| PR-2 | Accessibility (Group D)                     | ✅ Merged |
+| PR-3 | Security Hotspot audit (ReDoS ×2)           | ✅ Merged |
+| PR-4 | Unit tests — Priority-1 service/lib modules | ✅ Merged |
+| PR-5 | API route tests — Priority-2 endpoints      | ✅ Merged |
+| PR-6 | Component tests + coverage-exclude tidy-up  | ✅ Merged |
 
 ---
 
@@ -39,13 +39,13 @@ S1082).
 
 ### Scope
 
-| Rule    | Fix                                                                                                         |
-| ------- | ----------------------------------------------------------------------------------------------------------- |
-| S6819   | Replace ARIA `role` props with the equivalent semantic element (`role="status"` → `<output>`, `role="list"` → `<ul>`, `role="listitem"` → `<li>`, `role="button"` on a `<div>` → `<button>`). |
-| S6845   | Remove `tabIndex` from non-interactive elements that are not focus targets.                                 |
-| S6847   | Elements with a click handler must also have keyboard handling — convert to `<button>` where appropriate.   |
-| S6848   | Non-interactive elements should not have interactive ARIA roles.                                            |
-| S1082   | `<img>` and icon-only buttons need an `alt` / `aria-label`.                                                 |
+| Rule  | Fix                                                                                                                                                                                           |
+| ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| S6819 | Replace ARIA `role` props with the equivalent semantic element (`role="status"` → `<output>`, `role="list"` → `<ul>`, `role="listitem"` → `<li>`, `role="button"` on a `<div>` → `<button>`). |
+| S6845 | Remove `tabIndex` from non-interactive elements that are not focus targets.                                                                                                                   |
+| S6847 | Elements with a click handler must also have keyboard handling — convert to `<button>` where appropriate.                                                                                     |
+| S6848 | Non-interactive elements should not have interactive ARIA roles.                                                                                                                              |
+| S1082 | `<img>` and icon-only buttons need an `alt` / `aria-label`.                                                                                                                                   |
 
 ### Files expected to change
 
@@ -72,10 +72,10 @@ S1082).
 Two ReDoS hotspots will be reviewed and, per the agreed disposition, marked
 **SAFE** with an explanatory comment.
 
-| Hotspot key            | File                                                              | Pattern   |
-| ---------------------- | ----------------------------------------------------------------- | --------- |
-| `AZ5lNj5qsEsy9yoWZESg` | `src/app/[locale]/(public)/auth/forgot-password/page.tsx:22`      | email RFC |
-| `AZ5zooeL4zARl5cMfQwJ` | `src/features/product/components/AssistantMarkdown.tsx:88`        | markdown  |
+| Hotspot key            | File                                                         | Pattern   |
+| ---------------------- | ------------------------------------------------------------ | --------- |
+| `AZ5lNj5qsEsy9yoWZESg` | `src/app/[locale]/(public)/auth/forgot-password/page.tsx:22` | email RFC |
+| `AZ5zooeL4zARl5cMfQwJ` | `src/features/product/components/AssistantMarkdown.tsx:88`   | markdown  |
 
 ### Audit checklist (per hotspot)
 

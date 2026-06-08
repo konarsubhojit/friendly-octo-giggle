@@ -7,8 +7,9 @@ describe('CheckoutProgress', () => {
   it('renders all four steps as a navigation list', () => {
     render(<CheckoutProgress currentStep="cart" />)
 
-    expect(screen.getByRole('navigation', { name: /checkout progress/i }))
-      .toBeInTheDocument()
+    expect(
+      screen.getByRole('navigation', { name: /checkout progress/i })
+    ).toBeInTheDocument()
     expect(screen.getByText('Cart')).toBeInTheDocument()
     expect(screen.getByText('Shipping')).toBeInTheDocument()
     expect(screen.getByText('Review')).toBeInTheDocument()

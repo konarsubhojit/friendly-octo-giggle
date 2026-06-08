@@ -38,7 +38,9 @@ const baseProduct: Product = {
 
 const formatPrice = (n: number) => `$${n.toFixed(2)}`
 
-const renderCard = (overrides: Partial<React.ComponentProps<typeof ProductInfoCard>> = {}) =>
+const renderCard = (
+  overrides: Partial<React.ComponentProps<typeof ProductInfoCard>> = {}
+) =>
   render(
     <ProductInfoCard
       product={baseProduct}
@@ -55,7 +57,9 @@ const renderCard = (overrides: Partial<React.ComponentProps<typeof ProductInfoCa
 describe('ProductInfoCard', () => {
   it('renders name, description, category and formatted price', () => {
     renderCard()
-    expect(screen.getByRole('heading', { name: 'Test Product' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { name: 'Test Product' })
+    ).toBeInTheDocument()
     expect(screen.getByText('A lovely test product')).toBeInTheDocument()
     expect(screen.getByText('Accessories')).toBeInTheDocument()
     expect(screen.getByText('$199.00')).toBeInTheDocument()

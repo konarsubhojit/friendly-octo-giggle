@@ -100,7 +100,10 @@ export async function POST(request: NextRequest) {
   try {
     rawBody = JSON.parse(bodyText)
   } catch (error) {
-    logger.warn({ messageId, err: error }, 'email_verification_payload_invalid_json')
+    logger.warn(
+      { messageId, err: error },
+      'email_verification_payload_invalid_json'
+    )
     return apiError('Invalid payload', 400)
   }
 

@@ -158,8 +158,11 @@ export function CurrencyProvider({
     ) => number | NodeJS.Timeout
     const ric =
       (typeof globalThis.window !== 'undefined' &&
-        (globalThis.window as unknown as { requestIdleCallback?: IdleScheduler })
-          .requestIdleCallback) ||
+        (
+          globalThis.window as unknown as {
+            requestIdleCallback?: IdleScheduler
+          }
+        ).requestIdleCallback) ||
       ((cb: () => void) => setTimeout(cb, 1))
     const handle = ric(runFetch, { timeout: 2000 })
 
@@ -168,8 +171,11 @@ export function CurrencyProvider({
       type IdleCanceller = (handle: number | NodeJS.Timeout) => void
       const cic =
         (typeof globalThis.window !== 'undefined' &&
-          (globalThis.window as unknown as { cancelIdleCallback?: IdleCanceller })
-            .cancelIdleCallback) ||
+          (
+            globalThis.window as unknown as {
+              cancelIdleCallback?: IdleCanceller
+            }
+          ).cancelIdleCallback) ||
         ((h: number | NodeJS.Timeout) => clearTimeout(h as NodeJS.Timeout))
       cic(handle)
     }

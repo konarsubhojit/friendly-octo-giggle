@@ -27,31 +27,27 @@ describe('password-reset token helpers', () => {
   })
 
   it('normalizeEmailForLookup trims and lowercases', async () => {
-    const { normalizeEmailForLookup } = await import(
-      '@/features/auth/services/password-reset'
-    )
+    const { normalizeEmailForLookup } =
+      await import('@/features/auth/services/password-reset')
     expect(normalizeEmailForLookup('  Foo@Bar.COM  ')).toBe('foo@bar.com')
   })
 
   it('createPasswordResetIdentifier prefixes user ids', async () => {
-    const { createPasswordResetIdentifier } = await import(
-      '@/features/auth/services/password-reset'
-    )
+    const { createPasswordResetIdentifier } =
+      await import('@/features/auth/services/password-reset')
     expect(createPasswordResetIdentifier('u1')).toBe('password-reset:u1')
   })
 
   it('parsePasswordResetIdentifier strips/null-checks the prefix', async () => {
-    const { parsePasswordResetIdentifier } = await import(
-      '@/features/auth/services/password-reset'
-    )
+    const { parsePasswordResetIdentifier } =
+      await import('@/features/auth/services/password-reset')
     expect(parsePasswordResetIdentifier('password-reset:abc')).toBe('abc')
     expect(parsePasswordResetIdentifier('email-verify:abc')).toBeNull()
   })
 
   it('hashPasswordResetToken returns deterministic sha256 hex', async () => {
-    const { hashPasswordResetToken } = await import(
-      '@/features/auth/services/password-reset'
-    )
+    const { hashPasswordResetToken } =
+      await import('@/features/auth/services/password-reset')
     const hash = hashPasswordResetToken('tok')
     expect(hash).toMatch(/^[0-9a-f]{64}$/)
     expect(hashPasswordResetToken('tok')).toBe(hash)
@@ -60,7 +56,8 @@ describe('password-reset token helpers', () => {
   it('generatePasswordResetToken yields plainToken/hash/expiry consistently', async () => {
     const mod = await import('@/features/auth/services/password-reset')
     const before = Date.now()
-    const { plainToken, tokenHash, expiresAt } = mod.generatePasswordResetToken()
+    const { plainToken, tokenHash, expiresAt } =
+      mod.generatePasswordResetToken()
     const after = Date.now()
 
     expect(plainToken).toMatch(/^[0-9a-f]{64}$/)
@@ -80,9 +77,8 @@ describe('consumeForgotPasswordRateLimits', () => {
 
   it('returns false flags when redis is unavailable', async () => {
     mockGetRedisClient.mockReturnValue(null)
-    const { consumeForgotPasswordRateLimits } = await import(
-      '@/features/auth/services/password-reset'
-    )
+    const { consumeForgotPasswordRateLimits } =
+      await import('@/features/auth/services/password-reset')
     await expect(
       consumeForgotPasswordRateLimits({
         email: 'user@example.com',
@@ -97,9 +93,8 @@ describe('consumeForgotPasswordRateLimits', () => {
     mockLimit
       .mockResolvedValueOnce({ success: false }) // email
       .mockResolvedValueOnce({ success: true }) // ip
-    const { consumeForgotPasswordRateLimits } = await import(
-      '@/features/auth/services/password-reset'
-    )
+    const { consumeForgotPasswordRateLimits } =
+      await import('@/features/auth/services/password-reset')
 
     const result = await consumeForgotPasswordRateLimits({
       email: 'user@example.com',
@@ -113,9 +108,8 @@ describe('consumeForgotPasswordRateLimits', () => {
     mockLimit
       .mockResolvedValueOnce({ success: true }) // email
       .mockResolvedValueOnce({ success: false }) // ip
-    const { consumeForgotPasswordRateLimits } = await import(
-      '@/features/auth/services/password-reset'
-    )
+    const { consumeForgotPasswordRateLimits } =
+      await import('@/features/auth/services/password-reset')
 
     const result = await consumeForgotPasswordRateLimits({
       email: 'user@example.com',
@@ -134,9 +128,8 @@ describe('consumeResetPasswordRateLimits', () => {
 
   it('returns false flags when redis is unavailable', async () => {
     mockGetRedisClient.mockReturnValue(null)
-    const { consumeResetPasswordRateLimits } = await import(
-      '@/features/auth/services/password-reset'
-    )
+    const { consumeResetPasswordRateLimits } =
+      await import('@/features/auth/services/password-reset')
     await expect(
       consumeResetPasswordRateLimits({
         identifier: 'password-reset:u1',
@@ -150,9 +143,8 @@ describe('consumeResetPasswordRateLimits', () => {
     mockLimit
       .mockResolvedValueOnce({ success: false }) // identifier
       .mockResolvedValueOnce({ success: false }) // ip
-    const { consumeResetPasswordRateLimits } = await import(
-      '@/features/auth/services/password-reset'
-    )
+    const { consumeResetPasswordRateLimits } =
+      await import('@/features/auth/services/password-reset')
 
     const result = await consumeResetPasswordRateLimits({
       identifier: 'password-reset:u1',

@@ -1,7 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { NextRequest } from 'next/server'
 
-const { mockCheckAdminAuth, mockTransaction, mockSet, mockRevalidateTag, mockInvalidateProductCaches } = vi.hoisted(() => {
+const {
+  mockCheckAdminAuth,
+  mockTransaction,
+  mockSet,
+  mockRevalidateTag,
+  mockInvalidateProductCaches,
+} = vi.hoisted(() => {
   const mockSet = vi.fn()
   const mockWhere = vi.fn()
   const mockUpdate = vi.fn(() => ({

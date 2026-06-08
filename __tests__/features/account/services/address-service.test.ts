@@ -81,7 +81,9 @@ describe('listUserAddresses', () => {
 
 describe('createUserAddress', () => {
   it('clears existing defaults when isDefault is true and trims inputs', async () => {
-    const setMock = vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue(undefined) })
+    const setMock = vi
+      .fn()
+      .mockReturnValue({ where: vi.fn().mockResolvedValue(undefined) })
     mockPrimaryUpdate.mockReturnValue({ set: setMock })
     const returningMock = vi
       .fn()

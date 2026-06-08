@@ -53,9 +53,8 @@ describe('rate-limit', () => {
       reset: 1700000000,
     })
 
-    const { checkRateLimit, STRICT_RATE_LIMIT_MAX_REQUESTS } = await import(
-      '@/lib/rate-limit'
-    )
+    const { checkRateLimit, STRICT_RATE_LIMIT_MAX_REQUESTS } =
+      await import('@/lib/rate-limit')
 
     const result = await checkRateLimit(
       buildRequest('/api/auth/login', { 'x-forwarded-for': '1.2.3.4, 5.6.7.8' })
@@ -83,9 +82,8 @@ describe('rate-limit', () => {
       reset: 1700000000,
     })
 
-    const { checkRateLimit, GENERAL_RATE_LIMIT_MAX_REQUESTS } = await import(
-      '@/lib/rate-limit'
-    )
+    const { checkRateLimit, GENERAL_RATE_LIMIT_MAX_REQUESTS } =
+      await import('@/lib/rate-limit')
 
     const result = await checkRateLimit(buildRequest('/api/products'))
 

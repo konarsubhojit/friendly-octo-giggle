@@ -29,10 +29,7 @@ describe('patchErrorEvent', () => {
     const eventObj = new _ErrorEvent()
 
     const result = (
-      process.emit as unknown as (
-        event: string,
-        ...args: unknown[]
-      ) => boolean
+      process.emit as unknown as (event: string, ...args: unknown[]) => boolean
     )('uncaughtException', eventObj)
 
     expect(result).toBe(true)

@@ -203,7 +203,9 @@ describe('EnvSchema — Azure Blob upload provider', () => {
   it('rejects array entries missing required string fields', () => {
     const result = EnvSchema.safeParse({
       ...baseEnv,
-      AZURE_BLOB_ACCOUNTS_JSON: JSON.stringify([{ alias: 'x', container: 'c' }]),
+      AZURE_BLOB_ACCOUNTS_JSON: JSON.stringify([
+        { alias: 'x', container: 'c' },
+      ]),
     })
     expect(result.success).toBe(false)
   })
