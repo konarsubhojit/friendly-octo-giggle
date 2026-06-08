@@ -11,7 +11,7 @@ The work is split across **6 PRs**. PR-1 has already landed.
 | PR-1  | Low-risk Sonar findings (Groups A + B + C)  | ✅ Merged    |
 | PR-2  | Accessibility (Group D)                     | ✅ Merged    |
 | PR-3  | Security Hotspot audit (ReDoS ×2)           | ✅ Merged    |
-| PR-4  | Unit tests — Priority-1 service/lib modules | 🟡 Planned   |
+| PR-4  | Unit tests — Priority-1 service/lib modules | ✅ Merged    |
 | PR-5  | API route tests — Priority-2 endpoints      | 🟡 Planned   |
 | PR-6  | Component tests + coverage-exclude tidy-up  | 🟡 Planned   |
 

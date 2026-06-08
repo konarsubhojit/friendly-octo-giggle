@@ -176,3 +176,97 @@ describe('EnvSchema', () => {
     expect(result.success).toBe(true)
   })
 })
+
+describe('EnvSchema — Azure Blob upload provider', () => {
+  const baseEnv = { DATABASE_URL: 'postgresql://localhost:5432/test' }
+  const validAccounts = JSON.stringify([
+    { alias: 'primary', connectionString: 'c1', container: 'images' },
+    { alias: 'secondary', connectionString: 'c2', container: 'images-2' },
+  ])
+
+  it('rejects malformed AZURE_BLOB_ACCOUNTS_JSON', () => {
+    const result = EnvSchema.safeParse({
+      ...baseEnv,
+      AZURE_BLOB_ACCOUNTS_JSON: '{not json',
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects AZURE_BLOB_ACCOUNTS_JSON that is not an array', () => {
+    const result = EnvSchema.safeParse({
+      ...baseEnv,
+      AZURE_BLOB_ACCOUNTS_JSON: JSON.stringify({ alias: 'x' }),
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects array entries missing required string fields', () => {
+    const result = EnvSchema.safeParse({
+      ...baseEnv,
+      AZURE_BLOB_ACCOUNTS_JSON: JSON.stringify([{ alias: 'x', container: 'c' }]),
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('accepts an empty string AZURE_BLOB_ACCOUNTS_JSON', () => {
+    const result = EnvSchema.safeParse({
+      ...baseEnv,
+      AZURE_BLOB_ACCOUNTS_JSON: '',
+    })
+    expect(result.success).toBe(true)
+  })
+
+  it('rejects azure provider without AZURE_BLOB_ACCOUNTS_JSON', () => {
+    const result = EnvSchema.safeParse({
+      ...baseEnv,
+      IMAGE_UPLOAD_PROVIDER: 'azure',
+    })
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      const paths = result.error.issues.map((i) => i.path[0])
+      expect(paths).toContain('AZURE_BLOB_ACCOUNTS_JSON')
+    }
+  })
+
+  it('rejects azure provider with an empty accounts array', () => {
+    const result = EnvSchema.safeParse({
+      ...baseEnv,
+      IMAGE_UPLOAD_PROVIDER: 'azure',
+      AZURE_BLOB_ACCOUNTS_JSON: JSON.stringify([]),
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects a default account alias that is not in the accounts list', () => {
+    const result = EnvSchema.safeParse({
+      ...baseEnv,
+      IMAGE_UPLOAD_PROVIDER: 'azure',
+      AZURE_BLOB_ACCOUNTS_JSON: validAccounts,
+      AZURE_BLOB_DEFAULT_ACCOUNT_ALIAS: 'tertiary',
+    })
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      const paths = result.error.issues.map((i) => i.path[0])
+      expect(paths).toContain('AZURE_BLOB_DEFAULT_ACCOUNT_ALIAS')
+    }
+  })
+
+  it('accepts a valid azure configuration', () => {
+    const result = EnvSchema.safeParse({
+      ...baseEnv,
+      IMAGE_UPLOAD_PROVIDER: 'azure',
+      AZURE_BLOB_ACCOUNTS_JSON: validAccounts,
+      AZURE_BLOB_DEFAULT_ACCOUNT_ALIAS: 'secondary',
+      AZURE_BLOB_AUTO_CREATE_CONTAINER: 'true',
+    })
+    expect(result.success).toBe(true)
+  })
+
+  it('rejects unknown IMAGE_UPLOAD_PROVIDER values', () => {
+    const result = EnvSchema.safeParse({
+      ...baseEnv,
+      IMAGE_UPLOAD_PROVIDER: 's3',
+    })
+    expect(result.success).toBe(false)
+  })
+})
