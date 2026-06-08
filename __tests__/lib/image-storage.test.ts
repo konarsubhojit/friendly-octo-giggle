@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 const mockPut = vi.hoisted(() => vi.fn())
 const mockUploadData = vi.hoisted(() => vi.fn().mockResolvedValue(undefined))
 const mockGetBlockBlobClient = vi.hoisted(() =>
-  vi.fn(() => ({
+  vi.fn((_blobName: string) => ({
     uploadData: mockUploadData,
     url: 'https://blob.example.com/container/images/uuid.png',
   }))

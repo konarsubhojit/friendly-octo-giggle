@@ -127,8 +127,8 @@ describe('createUserAddress', () => {
     await createUserAddress('user-1', {
       label: 'Home',
       addressLine1: '42 MG Road',
-      addressLine2: undefined,
-      addressLine3: undefined,
+      addressLine2: '',
+      addressLine3: '',
       pinCode: '560001',
       city: 'Bengaluru',
       state: 'Karnataka',
