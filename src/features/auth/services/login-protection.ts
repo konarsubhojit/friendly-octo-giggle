@@ -12,16 +12,14 @@ const getFailedByUserLimiter = (): Ratelimit | null => {
   const redis = getRedisClient()
   if (!redis) return null
 
-  if (!failedByUserLimiter) {
-    failedByUserLimiter = new Ratelimit({
-      redis,
-      limiter: Ratelimit.slidingWindow(
-        MAX_FAILED_LOGIN_ATTEMPTS,
-        FAILED_LOGIN_WINDOW
-      ),
-      prefix: 'rl:auth:failed:user',
-    })
-  }
+  failedByUserLimiter ??= new Ratelimit({
+    redis,
+    limiter: Ratelimit.slidingWindow(
+      MAX_FAILED_LOGIN_ATTEMPTS,
+      FAILED_LOGIN_WINDOW
+    ),
+    prefix: 'rl:auth:failed:user',
+  })
 
   return failedByUserLimiter
 }
@@ -30,16 +28,14 @@ const getFailedByIpLimiter = (): Ratelimit | null => {
   const redis = getRedisClient()
   if (!redis) return null
 
-  if (!failedByIpLimiter) {
-    failedByIpLimiter = new Ratelimit({
-      redis,
-      limiter: Ratelimit.slidingWindow(
-        MAX_FAILED_LOGIN_ATTEMPTS,
-        FAILED_LOGIN_WINDOW
-      ),
-      prefix: 'rl:auth:failed:ip',
-    })
-  }
+  failedByIpLimiter ??= new Ratelimit({
+    redis,
+    limiter: Ratelimit.slidingWindow(
+      MAX_FAILED_LOGIN_ATTEMPTS,
+      FAILED_LOGIN_WINDOW
+    ),
+    prefix: 'rl:auth:failed:ip',
+  })
 
   return failedByIpLimiter
 }

@@ -101,8 +101,20 @@ const CategoryRow = ({
     if (e.key === 'Escape') cancelEdit()
   }
 
+  let dragStateClass: string
+  if (isDragging) {
+    dragStateClass =
+      'opacity-40 shadow-inner bg-slate-50 dark:bg-slate-800/40 border-dashed border-slate-300 dark:border-slate-600'
+  } else if (isDragOver) {
+    dragStateClass =
+      'border-sky-400 bg-sky-50/60 dark:bg-sky-900/20 shadow-md scale-[1.01]'
+  } else {
+    dragStateClass =
+      'border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-600'
+  }
+
   return (
-    <div
+    <li
       draggable
       onDragStart={() => onDragStart(index)}
       onDragOver={(e) => onDragOver(e, index)}
@@ -110,13 +122,8 @@ const CategoryRow = ({
       onDragEnd={onDragEnd}
       className={[
         'group flex items-center gap-3 rounded-xl border px-4 py-3 transition-all duration-150 select-none',
-        isDragging
-          ? 'opacity-40 shadow-inner bg-slate-50 dark:bg-slate-800/40 border-dashed border-slate-300 dark:border-slate-600'
-          : isDragOver
-            ? 'border-sky-400 bg-sky-50/60 dark:bg-sky-900/20 shadow-md scale-[1.01]'
-            : 'border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-600',
+        dragStateClass,
       ].join(' ')}
-      role="listitem"
       aria-label={`Category: ${cat.name}. Drag to reorder.`}
     >
       <span
@@ -200,7 +207,7 @@ const CategoryRow = ({
           </svg>
         </button>
       )}
-    </div>
+    </li>
   )
 }
 
@@ -389,10 +396,7 @@ const CategoriesClient = ({ initialCategories }: CategoriesClientProps) => {
       ) : (
         <>
           {saving && (
-            <p
-              className="mb-2 text-xs text-slate-400 flex items-center gap-1.5"
-              role="status"
-            >
+            <output className="mb-2 text-xs text-slate-400 flex items-center gap-1.5">
               <svg
                 className="animate-spin w-3 h-3"
                 fill="none"
@@ -414,7 +418,7 @@ const CategoriesClient = ({ initialCategories }: CategoriesClientProps) => {
                 />
               </svg>
               Saving order…
-            </p>
+            </output>
           )}
           <p className="mb-3 text-xs text-slate-400 dark:text-slate-500">
             Drag{' '}
@@ -423,9 +427,8 @@ const CategoriesClient = ({ initialCategories }: CategoriesClientProps) => {
             </span>{' '}
             to reorder · click a name to rename
           </p>
-          <div
-            className="space-y-2"
-            role="list"
+          <ul
+            className="space-y-2 list-none p-0"
             aria-label="Categories — drag to reorder"
           >
             {cats.map((cat, index) => (
@@ -444,7 +447,7 @@ const CategoriesClient = ({ initialCategories }: CategoriesClientProps) => {
                 onDeleteClick={setDeleteTarget}
               />
             ))}
-          </div>
+          </ul>
         </>
       )}
 

@@ -10,9 +10,9 @@ import { env } from '@/lib/env'
 const EmailVerificationEventSchema = z.object({
   type: z.literal('auth.email_verification_requested'),
   data: z.object({
-    to: z.string().email(),
+    to: z.email(),
     customerName: z.string().min(1),
-    verifyUrl: z.string().url(),
+    verifyUrl: z.url(),
   }),
 })
 
@@ -34,8 +34,8 @@ const verifyQStashSignature = async (
   try {
     await getQStashReceiver().verify({ signature, body: bodyText })
     return null
-  } catch (_error) {
-    logger.warn({ messageId }, 'qstash_signature_invalid')
+  } catch (error) {
+    logger.warn({ messageId, err: error }, 'qstash_signature_invalid')
     return apiError('Invalid signature', 401)
   }
 }
@@ -99,7 +99,11 @@ export async function POST(request: NextRequest) {
   let rawBody: unknown
   try {
     rawBody = JSON.parse(bodyText)
-  } catch (_error) {
+  } catch (error) {
+    logger.warn(
+      { messageId, err: error },
+      'email_verification_payload_invalid_json'
+    )
     return apiError('Invalid payload', 400)
   }
 

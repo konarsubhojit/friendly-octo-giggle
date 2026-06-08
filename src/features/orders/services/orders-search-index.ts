@@ -114,7 +114,7 @@ const fetchOrdersForBackfill = async (): Promise<BackfillableOrder[]> => {
     },
   })
 
-  return rows as BackfillableOrder[]
+  return rows
 }
 
 export async function backfillOrdersSearchIndex(): Promise<number> {

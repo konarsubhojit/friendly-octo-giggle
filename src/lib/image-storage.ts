@@ -67,7 +67,7 @@ const getAzureAccounts = (): AzureBlobAccountConfig[] => {
   }
 
   if (!Array.isArray(parsed)) {
-    throw new Error('AZURE_BLOB_ACCOUNTS_JSON must be a JSON array.')
+    throw new TypeError('AZURE_BLOB_ACCOUNTS_JSON must be a JSON array.')
   }
 
   const seenAliases = new Set<string>()

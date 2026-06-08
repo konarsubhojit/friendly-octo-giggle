@@ -146,7 +146,9 @@ export async function POST(
           })
           .returning()
 
-        const values = [...uniqueValuesPerOption[i]].sort()
+        const values = [...uniqueValuesPerOption[i]].sort((a, b) =>
+          a.localeCompare(b)
+        )
         if (values.length > 0) {
           const insertedValues = await tx
             .insert(productOptionValues)

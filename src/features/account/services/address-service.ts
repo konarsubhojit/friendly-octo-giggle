@@ -103,20 +103,20 @@ export const updateUserAddress = async ({
   const [updated] = await primaryDrizzleDb
     .update(addresses)
     .set({
-      ...(input.label !== undefined ? { label: input.label.trim() } : {}),
-      ...(input.addressLine1 !== undefined
-        ? { addressLine1: input.addressLine1.trim() }
-        : {}),
-      ...(input.addressLine2 !== undefined
-        ? { addressLine2: normalizeOptionalText(input.addressLine2) }
-        : {}),
-      ...(input.addressLine3 !== undefined
-        ? { addressLine3: normalizeOptionalText(input.addressLine3) }
-        : {}),
-      ...(input.pinCode !== undefined ? { pinCode: input.pinCode.trim() } : {}),
-      ...(input.city !== undefined ? { city: input.city.trim() } : {}),
-      ...(input.state !== undefined ? { state: input.state.trim() } : {}),
-      ...(input.isDefault !== undefined ? { isDefault: input.isDefault } : {}),
+      ...(input.label === undefined ? {} : { label: input.label.trim() }),
+      ...(input.addressLine1 === undefined
+        ? {}
+        : { addressLine1: input.addressLine1.trim() }),
+      ...(input.addressLine2 === undefined
+        ? {}
+        : { addressLine2: normalizeOptionalText(input.addressLine2) }),
+      ...(input.addressLine3 === undefined
+        ? {}
+        : { addressLine3: normalizeOptionalText(input.addressLine3) }),
+      ...(input.pinCode === undefined ? {} : { pinCode: input.pinCode.trim() }),
+      ...(input.city === undefined ? {} : { city: input.city.trim() }),
+      ...(input.state === undefined ? {} : { state: input.state.trim() }),
+      ...(input.isDefault === undefined ? {} : { isDefault: input.isDefault }),
       updatedAt: new Date(),
     })
     .where(and(eq(addresses.id, addressId), eq(addresses.userId, userId)))
