@@ -18,7 +18,10 @@ loadEnv({ path: path.resolve(process.cwd(), '.env') })
 loadEnv({ path: path.resolve(process.cwd(), '.env.local'), override: true })
 
 export const AUTH_STATE_PATH = path.join(__dirname, '.auth', 'admin.json')
-const BASE_URL = 'https://localhost:3000'
+const BASE_URL = process.env.PLAYWRIGHT_BASE_URL ?? 'https://localhost:3000'
+// Routes are served under a /{locale}/ prefix (there is no middleware redirect
+// for unprefixed paths), so sign-in must target the localized URL.
+const LOCALE = process.env.PLAYWRIGHT_LOCALE ?? 'en'
 
 export default async function globalSetup() {
   const authDir = path.dirname(AUTH_STATE_PATH)
@@ -46,7 +49,7 @@ export default async function globalSetup() {
   try {
     const page = await context.newPage()
 
-    await page.goto('/auth/signin')
+    await page.goto(`/${LOCALE}/auth/signin`)
     await page.waitForSelector('input[name="identifier"]', {
       timeout: 15000,
     })
