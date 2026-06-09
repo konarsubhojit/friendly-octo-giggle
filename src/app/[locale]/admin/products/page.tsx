@@ -219,7 +219,13 @@ export default function ProductsManagement() {
     { key: 'name', header: 'Name', sortable: true },
     { key: 'category', header: 'Category', sortable: true },
     { key: 'price', header: 'Price', sortable: true, align: 'right' },
-    { key: 'stock', header: 'Stock', filterable: true, sortable: true, align: 'right' },
+    {
+      key: 'stock',
+      header: 'Stock',
+      filterable: true,
+      sortable: true,
+      align: 'right',
+    },
     {
       key: 'actions',
       header: 'Actions',
