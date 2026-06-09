@@ -310,10 +310,10 @@ export default function OrdersManagement() {
 
   const orderColumns: DataTableColumn<OrderRow>[] = [
     { key: 'id', header: 'Order ID' },
-    { key: 'customer', header: 'Customer' },
+    { key: 'customer', header: 'Customer', sortable: true },
     { key: 'status', header: 'Status', filterable: true },
-    { key: 'total', header: 'Total' },
-    { key: 'date', header: 'Date' },
+    { key: 'total', header: 'Total', sortable: true, align: 'right' },
+    { key: 'date', header: 'Date', sortable: true, align: 'right' },
   ]
 
   const orderRows: OrderRow[] = orders.map((order) => ({
@@ -344,6 +344,7 @@ export default function OrdersManagement() {
       rowKey={(row) => row.id}
       loading={loading}
       skeletonRowCount={PAGE_SIZE}
+      serverSide
       emptyMessage={search ? 'No orders match your search.' : 'No orders yet.'}
       pagination={{
         currentPage,

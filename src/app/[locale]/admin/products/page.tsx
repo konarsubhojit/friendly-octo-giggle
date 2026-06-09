@@ -216,13 +216,14 @@ export default function ProductsManagement() {
   }
 
   const productColumns: DataTableColumn<ProductRow>[] = [
-    { key: 'name', header: 'Name' },
-    { key: 'category', header: 'Category' },
-    { key: 'price', header: 'Price' },
-    { key: 'stock', header: 'Stock', filterable: true },
+    { key: 'name', header: 'Name', sortable: true },
+    { key: 'category', header: 'Category', sortable: true },
+    { key: 'price', header: 'Price', sortable: true, align: 'right' },
+    { key: 'stock', header: 'Stock', filterable: true, sortable: true, align: 'right' },
     {
       key: 'actions',
       header: 'Actions',
+      sticky: 'right',
       render: (_value, row) => (
         <div className="flex gap-2">
           <Link
@@ -258,6 +259,7 @@ export default function ProductsManagement() {
       rowKey={(row) => row.id}
       loading={loading}
       skeletonRowCount={PAGE_SIZE}
+      serverSide
       emptyMessage={
         search ? 'No products match your search.' : 'No products yet.'
       }
