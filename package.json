@@ -56,7 +56,7 @@
     "@vercel/analytics": "^2.0.1",
     "@vercel/blob": "^2.2.0",
     "@vercel/edge-config": "^1.4.3",
-    "@vercel/functions": "^3.4.3",
+    "@vercel/functions": "^3.6.2",
     "@vercel/queue": "0.1.6",
     "@vercel/speed-insights": "^2.0.0",
     "autoprefixer": "^10.4.24",
