@@ -74,7 +74,7 @@ test.describe('product navigation (no 404 regression)', () => {
     expect(hrefs.length).toBeGreaterThan(0)
     const card = page.locator(`a[href="${hrefs[0]}"]`).first()
     await card.click()
-    await expect(page).toHaveURL(new RegExp(hrefs[0].replace(/[/]/g, '\\/')))
+    await expect(page).toHaveURL((url) => url.pathname === hrefs[0])
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
     await expect(page.getByText(/this page could not be found/i)).toHaveCount(0)
   })
