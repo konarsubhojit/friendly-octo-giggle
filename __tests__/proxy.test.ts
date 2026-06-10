@@ -23,7 +23,7 @@ vi.mock('@/lib/rate-limit', () => ({
   getGeneralLimiter: mockGetGeneralLimiter,
 }))
 
-import { config, proxy } from '../proxy'
+import { config, proxy } from '../src/proxy'
 
 const MOCK_RESET_TIMESTAMP = Date.now() + 60_000
 
