@@ -42,9 +42,10 @@ test.describe('product navigation (no 404 regression)', () => {
   }) => {
     await page.goto('/en/shop', { waitUntil: 'domcontentloaded' })
     const hrefs = await getGridProductHrefs(page)
-    expect(hrefs.length, 'shop should render at least one product').toBeGreaterThan(
-      0
-    )
+    expect(
+      hrefs.length,
+      'shop should render at least one product'
+    ).toBeGreaterThan(0)
     for (const href of hrefs) {
       expect(href, `product href ${href} must be locale-prefixed`).toMatch(
         /^\/en\/products\//
@@ -84,16 +85,18 @@ test.describe('product navigation (no 404 regression)', () => {
   }) => {
     await page.goto('/en/shop', { waitUntil: 'domcontentloaded' })
 
-    await page.getByRole('button', { name: /search products/i }).first().click()
+    await page
+      .getByRole('button', { name: /search products/i })
+      .first()
+      .click()
     const dialog = page.getByRole('dialog', { name: /search products/i })
-    const searchbox = dialog.getByRole('searchbox', { name: /search products/i })
+    const searchbox = dialog.getByRole('searchbox', {
+      name: /search products/i,
+    })
     await expect(searchbox).toBeVisible()
     await searchbox.fill('crochet')
 
-    const firstResult = dialog
-      .getByRole('listitem')
-      .getByRole('button')
-      .first()
+    const firstResult = dialog.getByRole('listitem').getByRole('button').first()
     await expect(firstResult).toBeVisible()
     await firstResult.click()
 
@@ -106,9 +109,9 @@ test.describe('product navigation (no 404 regression)', () => {
     page,
   }) => {
     await page.goto('/en/shop', { waitUntil: 'domcontentloaded' })
-    await page.getByRole('combobox', { name: /sort products/i }).selectOption(
-      'newest'
-    )
+    await page
+      .getByRole('combobox', { name: /sort products/i })
+      .selectOption('newest')
     await page.getByRole('button', { name: /^apply$/i }).click()
     // The shop filter navigates via router.push(); the regression being guarded
     // is that the destination stays under the /en/ locale prefix (it previously
