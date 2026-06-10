@@ -69,13 +69,13 @@ describe('ProductEditPageForm', () => {
   it('navigates to product detail page on cancel', () => {
     render(<ProductEditPageForm product={mockProduct} />)
     screen.getByTestId('cancel-btn').click()
-    expect(mockPush).toHaveBeenCalledWith('/admin/products/prod123')
+    expect(mockPush).toHaveBeenCalledWith('/en/admin/products/prod123')
   })
 
   it('navigates to saved product page on success and refreshes', () => {
     render(<ProductEditPageForm product={mockProduct} />)
     screen.getByTestId('save-btn').click()
-    expect(mockPush).toHaveBeenCalledWith('/admin/products/saved-1')
+    expect(mockPush).toHaveBeenCalledWith('/en/admin/products/saved-1')
     expect(mockRefresh).toHaveBeenCalled()
   })
 })
