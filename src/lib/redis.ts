@@ -5,6 +5,26 @@ import { env } from './env'
 
 let redis: Redis | null = null
 
+const REDIS_GET_TIMEOUT_MS = 3_000
+const REDIS_FETCH_TIMEOUT_MS = 8_000
+
+export const withTimeout = <T>(
+  promise: Promise<T>,
+  ms: number,
+  label: string
+): Promise<T> => {
+  let timerId: ReturnType<typeof setTimeout> | undefined
+  const timeoutPromise = new Promise<T>((_, reject) => {
+    timerId = setTimeout(
+      () => reject(new Error(`${label} timed out after ${ms}ms`)),
+      ms
+    )
+  })
+  return Promise.race([promise, timeoutPromise]).finally(() =>
+    clearTimeout(timerId)
+  )
+}
+
 export const isRedisAvailable = (): boolean =>
   Boolean(env.UPSTASH_REDIS_REST_URL && env.UPSTASH_REDIS_REST_TOKEN)
 
@@ -91,7 +111,11 @@ export const getCachedData = async <T>(
   const timer = new Timer(`cache.get.${key}`)
 
   try {
-    const cached = await redisClient.get<{ value: T; timestamp: number }>(key)
+    const cached = await withTimeout(
+      redisClient.get<{ value: T; timestamp: number }>(key),
+      REDIS_GET_TIMEOUT_MS,
+      `redis.get:${key}`
+    )
 
     if (cached) {
       const age = Date.now() - cached.timestamp
@@ -133,12 +157,10 @@ export const getCachedData = async <T>(
     }
 
     logCacheOperation({ operation: 'miss', key, success: true })
-    const result = await fetchWithStampedePrevention(
-      redisClient,
-      key,
-      ttl,
-      staleTime,
-      fetcher
+    const result = await withTimeout(
+      fetchWithStampedePrevention(redisClient, key, ttl, staleTime, fetcher),
+      REDIS_FETCH_TIMEOUT_MS,
+      `redis.fetch:${key}`
     )
     timer.end({ cacheHit: false, fetched: true })
     return result
