@@ -218,7 +218,7 @@ export default function OptionManager({
           <code className="rounded bg-[var(--accent-cream)] px-1.5 py-0.5 text-[var(--foreground)]">
             Cotton-Blue-L
           </code>
-          , enter the option names in the same order, separated by commas.
+          {', enter the option names in the same order, separated by commas.'}
         </p>
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
@@ -248,7 +248,7 @@ export default function OptionManager({
               maxLength={5}
               aria-invalid={!delimiter.trim()}
               aria-describedby={
-                !delimiter.trim() ? 'option-delimiter-error' : undefined
+                delimiter.trim() ? undefined : 'option-delimiter-error'
               }
               className={`${INPUT_BASE} text-center`}
             />

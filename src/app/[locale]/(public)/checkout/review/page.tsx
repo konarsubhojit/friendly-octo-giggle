@@ -77,7 +77,7 @@ function readPendingCheckout(): PendingCheckout | null {
 }
 
 function clearPendingCheckout(): void {
-  if (typeof globalThis.window === 'undefined') return
+  if (globalThis.window === undefined) return
   sessionStorage.removeItem(PENDING_CHECKOUT_KEY)
 }
 

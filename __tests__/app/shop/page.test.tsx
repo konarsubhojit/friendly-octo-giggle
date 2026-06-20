@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mockFindBestsellers = vi.fn()
 const mockSearchCatalog = vi.fn()
+const mockWithTimeout = vi.fn()
 const mockCategoryOrderBy = vi.fn()
 const mockCategoryWhere = vi.fn(() => ({ orderBy: mockCategoryOrderBy }))
 const mockCategoryFrom = vi.fn(() => ({ where: mockCategoryWhere }))
@@ -71,6 +72,10 @@ vi.mock('@/features/product/components/ProductGrid', () => ({
   ),
 }))
 
+vi.mock('@/lib/redis', () => ({
+  withTimeout: mockWithTimeout,
+}))
+
 vi.mock('@/lib/db', () => ({
   db: {
     products: {
@@ -112,6 +117,7 @@ describe('app/shop/page', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.useRealTimers()
+    mockWithTimeout.mockImplementation((promise: Promise<unknown>) => promise)
     mockFindBestsellers.mockResolvedValue([])
     mockCategoryOrderBy.mockResolvedValue([{ name: 'Flowers' }])
     mockSearchCatalog.mockResolvedValue({
@@ -173,5 +179,20 @@ describe('app/shop/page', () => {
     expect(screen.getByText('Grid count: 2')).toBeInTheDocument()
     expect(screen.getByText('Grid batch: 20')).toBeInTheDocument()
     expect(screen.getByText('Grid sort: price_desc')).toBeInTheDocument()
+  }, 15000)
+
+  it('renders empty shop state when data fetches time out', async () => {
+    mockWithTimeout.mockRejectedValueOnce(
+      new Error('shop_initial_data timed out after 5000ms')
+    )
+
+    const { default: ShopPage } =
+      await import('@/app/[locale]/(public)/shop/page')
+    const view = await ShopPage({ searchParams: Promise.resolve({}) })
+
+    render(view)
+
+    expect(screen.getByText('Grid count: 0')).toBeInTheDocument()
+    expect(screen.getByText('Grid next: false')).toBeInTheDocument()
   }, 15000)
 })

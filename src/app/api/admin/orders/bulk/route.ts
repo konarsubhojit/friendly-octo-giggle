@@ -17,7 +17,7 @@ export const dynamic = 'force-dynamic'
 
 const BulkOrderSchema = z.object({
   orderIds: z.array(z.string().min(1)).min(1).max(1000),
-  status: z.nativeEnum(OrderStatus),
+  status: z.enum(OrderStatus),
 })
 
 export const POST = async (request: Request) => {

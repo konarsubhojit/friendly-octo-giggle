@@ -131,7 +131,7 @@ export const getFailedEmails = async (
   const total = totalRows[0]?.value ?? 0
 
   return {
-    records: rows as FailedEmail[],
+    records: rows,
     total,
   }
 }
@@ -273,9 +273,7 @@ export const getRetriableFailedEmails = async (): Promise<FailedEmail[]> => {
     .orderBy(asc(failedEmails.createdAt))
     .limit(MAX_CRON_RETRY_BATCH)
 
-  return rows.filter(
-    (row) => row.attemptCount < MAX_CRON_RETRY_ATTEMPTS
-  ) as FailedEmail[]
+  return rows.filter((row) => row.attemptCount < MAX_CRON_RETRY_ATTEMPTS)
 }
 
 export type { EmailAttemptRecord } from '@/lib/schema'

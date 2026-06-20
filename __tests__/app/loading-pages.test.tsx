@@ -21,26 +21,17 @@ describe('app/loading.tsx – Root Loading', () => {
     expect(container).toBeTruthy()
   })
 
-  it('renders HeroSkeleton and 6 ProductCardSkeletons', async () => {
+  it('renders HeroSkeleton only (no product card skeletons)', async () => {
     const { default: Loading } = await import('@/app/[locale]/(public)/loading')
     render(<Loading />)
     expect(screen.getByTestId('hero-skeleton')).toBeInTheDocument()
-    expect(screen.getAllByTestId('product-card-skeleton')).toHaveLength(6)
+    expect(screen.queryAllByTestId('product-card-skeleton')).toHaveLength(0)
   })
 
-  it('renders 4 link skeletons in the footer', async () => {
+  it('does not render a footer skeleton', async () => {
     const { default: Loading } = await import('@/app/[locale]/(public)/loading')
     const { container } = render(<Loading />)
-    const footer = container.querySelector('footer')!
-    const linkSkeletons = footer.querySelectorAll('.h-4.w-20')
-    expect(linkSkeletons).toHaveLength(4)
-  })
-
-  it('contains animate-pulse elements', async () => {
-    const { default: Loading } = await import('@/app/[locale]/(public)/loading')
-    const { container } = render(<Loading />)
-    const pulseElements = container.querySelectorAll('.animate-pulse')
-    expect(pulseElements.length).toBeGreaterThan(0)
+    expect(container.querySelector('footer')).toBeNull()
   })
 })
 

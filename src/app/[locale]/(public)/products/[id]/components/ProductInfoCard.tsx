@@ -68,13 +68,12 @@ export const ProductInfoCard = ({
 
       <div className="mb-6 flex flex-wrap items-center gap-3">
         <StockBadge stock={effectiveStock} showIcon size="md" />
-        <span
+        <output
           className="inline-flex items-center rounded-full bg-[var(--accent-cream)] px-4 py-2 text-sm font-semibold text-[var(--text-secondary)] shadow-warm"
-          role="status"
           aria-label={`Total units sold: ${product.soldCount ?? 0}`}
         >
           {product.soldCount ?? 0} Sold
-        </span>
+        </output>
       </div>
 
       <VariantSelector

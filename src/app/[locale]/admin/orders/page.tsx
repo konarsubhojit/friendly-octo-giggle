@@ -63,6 +63,49 @@ type OrderRow = {
   _raw: AdminOrder
 }
 
+interface ExpandedOrderRowProps {
+  readonly row: OrderRow
+  readonly updatingOrderId: string | null
+  readonly savingShippingId: string | null
+  readonly edit: { trackingNumber: string; shippingProvider: string }
+  readonly onStatusChange: (orderId: string, newStatus: OrderStatus) => void
+  readonly onShippingFieldChange: (
+    orderId: string,
+    field: 'trackingNumber' | 'shippingProvider',
+    value: string,
+    order: { trackingNumber?: string | null; shippingProvider?: string | null }
+  ) => void
+  readonly onSaveShipping: (
+    orderId: string,
+    currentStatus: OrderStatus | string,
+    order: { trackingNumber?: string | null; shippingProvider?: string | null }
+  ) => void
+}
+
+function ExpandedOrderRow({
+  row,
+  updatingOrderId,
+  savingShippingId,
+  edit,
+  onStatusChange,
+  onShippingFieldChange,
+  onSaveShipping,
+}: ExpandedOrderRowProps) {
+  return (
+    <div className="px-4 pb-4">
+      <AdminOrderCard
+        order={row._raw}
+        updatingOrderId={updatingOrderId}
+        savingShippingId={savingShippingId}
+        edit={edit}
+        onStatusChange={onStatusChange}
+        onShippingFieldChange={onShippingFieldChange}
+        onSaveShipping={onSaveShipping}
+      />
+    </div>
+  )
+}
+
 export default function OrdersManagement() {
   const { formatPrice } = useCurrency()
   const dispatch = useDispatch<AdminDispatch>()
@@ -267,10 +310,10 @@ export default function OrdersManagement() {
 
   const orderColumns: DataTableColumn<OrderRow>[] = [
     { key: 'id', header: 'Order ID' },
-    { key: 'customer', header: 'Customer' },
+    { key: 'customer', header: 'Customer', sortable: true },
     { key: 'status', header: 'Status', filterable: true },
-    { key: 'total', header: 'Total' },
-    { key: 'date', header: 'Date' },
+    { key: 'total', header: 'Total', sortable: true, align: 'right' },
+    { key: 'date', header: 'Date', sortable: true, align: 'right' },
   ]
 
   const orderRows: OrderRow[] = orders.map((order) => ({
@@ -282,6 +325,18 @@ export default function OrdersManagement() {
     _raw: order,
   }))
 
+  const renderExpandedOrder = (row: OrderRow) => (
+    <ExpandedOrderRow
+      row={row}
+      updatingOrderId={updatingOrderId}
+      savingShippingId={savingShippingId}
+      edit={getShippingEdit(row._raw.id, row._raw)}
+      onStatusChange={handleStatusChange}
+      onShippingFieldChange={setShippingField}
+      onSaveShipping={handleSaveShipping}
+    />
+  )
+
   const ordersListContent = (
     <DataTable
       columns={orderColumns}
@@ -289,6 +344,7 @@ export default function OrdersManagement() {
       rowKey={(row) => row.id}
       loading={loading}
       skeletonRowCount={PAGE_SIZE}
+      serverSide
       emptyMessage={search ? 'No orders match your search.' : 'No orders yet.'}
       pagination={{
         currentPage,
@@ -296,19 +352,7 @@ export default function OrdersManagement() {
         totalCount,
         onPageChange: handlePageSelect,
       }}
-      expandedRowRender={(row) => (
-        <div className="px-4 pb-4">
-          <AdminOrderCard
-            order={row._raw}
-            updatingOrderId={updatingOrderId}
-            savingShippingId={savingShippingId}
-            edit={getShippingEdit(row._raw.id, row._raw)}
-            onStatusChange={handleStatusChange}
-            onShippingFieldChange={setShippingField}
-            onSaveShipping={handleSaveShipping}
-          />
-        </div>
-      )}
+      expandedRowRender={renderExpandedOrder}
     />
   )
 

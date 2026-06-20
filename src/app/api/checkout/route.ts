@@ -10,14 +10,12 @@ import { apiError, isJsonBodyParseError, parseJsonBody } from '@/lib/api-utils'
 import { logBusinessEvent, logError } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
-const CheckoutRequestBodySchema = z
-  .object({
-    customerName: z.string().optional(),
-    customerEmail: z.string().optional(),
-    customerAddress: z.string().optional(),
-    items: z.array(z.unknown()).optional(),
-  })
-  .passthrough()
+const CheckoutRequestBodySchema = z.looseObject({
+  customerName: z.string().optional(),
+  customerEmail: z.string().optional(),
+  customerAddress: z.string().optional(),
+  items: z.array(z.unknown()).optional(),
+})
 
 const handlePost = async (request: NextRequest) => {
   try {

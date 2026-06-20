@@ -34,7 +34,7 @@ const getTouchDistance = (touches: React.TouchList): number => {
   if (touches.length < 2) return 0
   const dx = touches[0].clientX - touches[1].clientX
   const dy = touches[0].clientY - touches[1].clientY
-  return Math.sqrt(dx * dx + dy * dy)
+  return Math.hypot(dx, dy)
 }
 
 const ImageCarousel = ({
@@ -189,7 +189,7 @@ const ImageCarousel = ({
   }, [isZoomed])
 
   const handleCarouselKeyDown = useCallback(
-    (event: React.KeyboardEvent<HTMLElement>) => {
+    (event: KeyboardEvent) => {
       if (event.key === 'ArrowRight') {
         event.preventDefault()
         goNext()
@@ -208,19 +208,36 @@ const ImageCarousel = ({
     [goNext, goPrev, isZoomed]
   )
 
+  // Attach native keydown/click listeners to the carousel container so the
+  // <section> wrapper can remain non-interactive (no tabIndex / onClick /
+  // onKeyDown JSX attributes). The listener fires when any child receives
+  // focus (e.g. the prev/next/dot buttons).
+  useEffect(() => {
+    const node = containerRef.current
+    if (!node || total <= 1) return
+    node.addEventListener('keydown', handleCarouselKeyDown)
+    node.addEventListener('click', handleImageClick)
+    return () => {
+      node.removeEventListener('keydown', handleCarouselKeyDown)
+      node.removeEventListener('click', handleImageClick)
+    }
+  }, [handleCarouselKeyDown, handleImageClick, total])
+
   if (total === 0) return null
 
   // Single image — no carousel needed, just render image with contain
   if (total === 1) {
     return (
       <div className="relative overflow-hidden">
-        <div
-          className={`relative aspect-square w-full rounded-2xl overflow-hidden shadow-2xl border-4 border-[var(--border-warm)] bg-[var(--accent-blush)]/30 transition-transform duration-300 ${isZoomed ? 'cursor-zoom-out' : 'cursor-zoom-in'}`}
+        <button
+          type="button"
+          className={`relative aspect-square w-full rounded-2xl overflow-hidden shadow-2xl border-4 border-[var(--border-warm)] bg-[var(--accent-blush)]/30 transition-transform duration-300 block ${isZoomed ? 'cursor-zoom-out' : 'cursor-zoom-in'}`}
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
           onClick={() => setIsZoomed((z) => !z)}
           aria-label={isZoomed ? 'Tap to zoom out' : 'Tap to zoom in'}
+          aria-pressed={isZoomed}
         >
           <Image
             src={images[0]}
@@ -230,7 +247,7 @@ const ImageCarousel = ({
             className={`object-contain transition-transform duration-300 ${isZoomed ? 'scale-150 cursor-zoom-out' : 'cursor-zoom-in'}`}
             priority
           />
-        </div>
+        </button>
         <div className="absolute -top-6 -right-6 w-32 h-32 bg-gradient-to-r from-[var(--accent-peach)] to-[var(--accent-blush)] rounded-full blur-3xl opacity-30 -z-10" />
         <div className="absolute -bottom-6 -left-6 w-40 h-40 bg-gradient-to-r from-[var(--accent-sage)] to-[var(--accent-cream)] rounded-full blur-3xl opacity-30 -z-10" />
       </div>
@@ -246,13 +263,10 @@ const ImageCarousel = ({
         ref={containerRef}
         aria-roledescription="carousel"
         aria-label={`Image carousel for ${productName}. Use the previous and next buttons to navigate.`}
-        className="relative aspect-square w-full rounded-2xl overflow-hidden shadow-2xl border-4 border-[var(--border-warm)] bg-[var(--accent-blush)]/30 group focus:outline-none focus:ring-2 focus:ring-[var(--accent-warm)]"
+        className="relative aspect-square w-full rounded-2xl overflow-hidden shadow-2xl border-4 border-[var(--border-warm)] bg-[var(--accent-blush)]/30 group focus-within:outline focus-within:outline-2 focus-within:outline-[var(--accent-warm)]"
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        onClick={handleImageClick}
-        onKeyDown={handleCarouselKeyDown}
-        tabIndex={0}
       >
         <div
           className={`relative w-full h-full transition-transform duration-300 ${animationClass} ${isZoomed ? 'scale-150 cursor-zoom-out' : 'cursor-zoom-in'}`}

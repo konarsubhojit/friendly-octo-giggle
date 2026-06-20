@@ -15,7 +15,7 @@ export const getLocaleDirection = (locale: string): 'ltr' | 'rtl' =>
   RTL_LOCALES.has(locale) ? 'rtl' : 'ltr'
 
 export const getLocaleFromPathname = (pathname: string): AppLocale | null => {
-  const firstSegment = pathname.split('/').filter(Boolean)[0]
+  const firstSegment = pathname.split('/').find(Boolean)
   return firstSegment && isSupportedLocale(firstSegment) ? firstSegment : null
 }
 

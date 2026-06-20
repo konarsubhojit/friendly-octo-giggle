@@ -354,7 +354,7 @@ describe('ProductSearch', () => {
     act(() => {
       fireEvent.click(screen.getByRole('button', { name: /Crochet Bag/i }))
     })
-    expect(mockPush).toHaveBeenCalledWith('/products/prod001')
+    expect(mockPush).toHaveBeenCalledWith('/en/products/prod001')
     await waitFor(() => {
       expect(
         screen.queryByRole('search', { name: 'Product search' })

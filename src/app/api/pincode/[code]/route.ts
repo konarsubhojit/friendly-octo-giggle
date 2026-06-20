@@ -15,9 +15,7 @@ interface PincodeLookupResult {
 let pincodeInstance: IndiaPincode | null = null
 
 function getPincode(): IndiaPincode {
-  if (!pincodeInstance) {
-    pincodeInstance = getIndiaPincode()
-  }
+  pincodeInstance ??= getIndiaPincode()
   return pincodeInstance
 }
 

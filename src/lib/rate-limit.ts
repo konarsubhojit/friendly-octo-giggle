@@ -18,26 +18,22 @@ export const STRICT_RATE_LIMIT_MAX_REQUESTS = 10
 export const getGeneralLimiter = (): Ratelimit | null => {
   const redis = getRedisClient()
   if (!redis) return null
-  if (!generalLimiter) {
-    generalLimiter = new Ratelimit({
-      redis,
-      limiter: Ratelimit.slidingWindow(GENERAL_RATE_LIMIT_MAX_REQUESTS, '60 s'),
-      prefix: 'rl:general',
-    })
-  }
+  generalLimiter ??= new Ratelimit({
+    redis,
+    limiter: Ratelimit.slidingWindow(GENERAL_RATE_LIMIT_MAX_REQUESTS, '60 s'),
+    prefix: 'rl:general',
+  })
   return generalLimiter
 }
 
 export const getStrictLimiter = (): Ratelimit | null => {
   const redis = getRedisClient()
   if (!redis) return null
-  if (!strictLimiter) {
-    strictLimiter = new Ratelimit({
-      redis,
-      limiter: Ratelimit.slidingWindow(STRICT_RATE_LIMIT_MAX_REQUESTS, '60 s'),
-      prefix: 'rl:strict',
-    })
-  }
+  strictLimiter ??= new Ratelimit({
+    redis,
+    limiter: Ratelimit.slidingWindow(STRICT_RATE_LIMIT_MAX_REQUESTS, '60 s'),
+    prefix: 'rl:strict',
+  })
   return strictLimiter
 }
 

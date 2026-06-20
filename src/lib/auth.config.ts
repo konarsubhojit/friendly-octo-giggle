@@ -59,9 +59,8 @@ export const authConfig = {
         return session
       }
       session.user.id = userId
-      session.user.role = (token.role as 'ADMIN' | 'CUSTOMER') || 'CUSTOMER'
-      session.user.phoneNumber =
-        (token.phoneNumber as string | null | undefined) || undefined
+      session.user.role = token.role || 'CUSTOMER'
+      session.user.phoneNumber = token.phoneNumber || undefined
       return session
     },
   },

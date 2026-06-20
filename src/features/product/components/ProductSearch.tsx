@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { useCurrency } from '@/contexts/CurrencyContext'
+import { useLocale } from '@/contexts/LocaleContext'
 
 interface ProductSearchProps {
   readonly onNavigate?: () => void
@@ -105,6 +106,7 @@ function HighlightText({
 export default function ProductSearch({ onNavigate }: ProductSearchProps) {
   const router = useRouter()
   const { formatPrice } = useCurrency()
+  const { localizePath } = useLocale()
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<SearchResult[]>([])
@@ -237,9 +239,9 @@ export default function ProductSearch({ onNavigate }: ProductSearchProps) {
     (productId: string) => {
       closeDialog()
       onNavigate?.()
-      router.push(`/products/${productId}`)
+      router.push(localizePath(`/products/${productId}`))
     },
-    [router, closeDialog, onNavigate]
+    [router, closeDialog, onNavigate, localizePath]
   )
 
   // Keyboard navigation
