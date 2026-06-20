@@ -9,6 +9,7 @@ import { cacheCategoriesList, cacheProductsBestsellers } from '@/lib/cache'
 import { categories as categoriesTable } from '@/lib/schema'
 import { isNull, asc } from 'drizzle-orm'
 import { logError } from '@/lib/logger'
+import { withTimeout } from '@/lib/redis'
 import {
   getVariantMinPrice,
   getVariantTotalStock,
@@ -119,29 +120,37 @@ const ShopPage = async ({ searchParams }: ShopPageProps) => {
     const selectedCategoryFilter =
       selectedCategory === 'All' ? undefined : selectedCategory
 
-    const [topProducts, cats] = await Promise.all([
-      cacheProductsBestsellers(() => db.products.findBestsellers(), 5),
-      cacheCategoriesList(() =>
-        drizzleDb
-          .select({ name: categoriesTable.name })
-          .from(categoriesTable)
-          .where(isNull(categoriesTable.deletedAt))
-          .orderBy(asc(categoriesTable.sortOrder), asc(categoriesTable.name))
-      ),
-    ])
+    const [topProducts, cats] = await withTimeout(
+      Promise.all([
+        cacheProductsBestsellers(() => db.products.findBestsellers(), 5),
+        cacheCategoriesList(() =>
+          drizzleDb
+            .select({ name: categoriesTable.name })
+            .from(categoriesTable)
+            .where(isNull(categoriesTable.deletedAt))
+            .orderBy(asc(categoriesTable.sortOrder), asc(categoriesTable.name))
+        ),
+      ]),
+      5_000,
+      'shop_initial_data'
+    )
 
-    const searchResult = await searchCatalog({
-      q: search,
-      category: selectedCategoryFilter,
-      sort: selectedSort,
-      minPrice,
-      maxPrice,
-      inStock,
-      minRating,
-      variant: selectedVariant,
-      limit: SHOP_INITIAL_SIZE + 1,
-      offset: 0,
-    })
+    const searchResult = await withTimeout(
+      searchCatalog({
+        q: search,
+        category: selectedCategoryFilter,
+        sort: selectedSort,
+        minPrice,
+        maxPrice,
+        inStock,
+        minRating,
+        variant: selectedVariant,
+        limit: SHOP_INITIAL_SIZE + 1,
+        offset: 0,
+      }),
+      5_000,
+      'shop_catalog_search'
+    )
 
     shopData = {
       products: searchResult.results

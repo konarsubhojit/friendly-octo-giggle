@@ -51,6 +51,34 @@ const cachedObject = <T>(value: T, ageMs = 0) => ({
   timestamp: Date.now() - ageMs,
 })
 
+describe('withTimeout', () => {
+  it('resolves when the promise settles before the deadline', async () => {
+    const { withTimeout } = await import('@/lib/redis')
+    const result = await withTimeout(Promise.resolve('ok'), 100, 'test')
+    expect(result).toBe('ok')
+  })
+
+  it('rejects with a timeout error when the promise never settles', async () => {
+    vi.useFakeTimers()
+    const { withTimeout } = await import('@/lib/redis')
+    const pending = new Promise<string>(() => {})
+    const resultPromise = withTimeout(pending, 50, 'my-op')
+    const assertion = expect(resultPromise).rejects.toThrow(
+      'my-op timed out after 50ms'
+    )
+    await vi.runAllTimersAsync()
+    await assertion
+    vi.useRealTimers()
+  })
+
+  it('rejects immediately when the wrapped promise rejects', async () => {
+    const { withTimeout } = await import('@/lib/redis')
+    await expect(
+      withTimeout(Promise.reject(new Error('boom')), 1000, 'test')
+    ).rejects.toThrow('boom')
+  })
+})
+
 describe('getRedisClient', () => {
   beforeEach(() => {
     vi.resetModules()
@@ -234,6 +262,39 @@ describe('getCachedData', () => {
 
     expect(result).toBe('error-fallback')
     expect(fetcher).toHaveBeenCalledOnce()
+  })
+
+  it('falls back to fetcher when redis.get times out', async () => {
+    vi.useFakeTimers()
+    mockRedisInstance.get.mockImplementationOnce(
+      () => new Promise(() => {})
+    )
+    const fetcher = vi.fn().mockResolvedValue('timeout-fallback')
+
+    const resultPromise = getCachedData('key:timeout', 60, fetcher)
+    await vi.runAllTimersAsync()
+    const result = await resultPromise
+
+    expect(result).toBe('timeout-fallback')
+    expect(fetcher).toHaveBeenCalledOnce()
+    vi.useRealTimers()
+  })
+
+  it('falls back to fetcher when stampede prevention times out', async () => {
+    vi.useFakeTimers()
+    mockRedisInstance.get.mockResolvedValueOnce(null)
+    mockRedisInstance.set.mockImplementationOnce(
+      () => new Promise(() => {})
+    )
+    const fetcher = vi.fn().mockResolvedValue('stampede-fallback')
+
+    const resultPromise = getCachedData('key:stampede', 60, fetcher)
+    await vi.runAllTimersAsync()
+    const result = await resultPromise
+
+    expect(result).toBe('stampede-fallback')
+    expect(fetcher).toHaveBeenCalledOnce()
+    vi.useRealTimers()
   })
 })
 
