@@ -120,9 +120,13 @@ const ShopPage = async ({ searchParams }: ShopPageProps) => {
     const selectedCategoryFilter =
       selectedCategory === 'All' ? undefined : selectedCategory
 
-    const [topProducts, cats] = await withTimeout(
-      Promise.all([
+    const [topProducts, cats] = await Promise.all([
+      withTimeout(
         cacheProductsBestsellers(() => db.products.findBestsellers(), 5),
+        5_000,
+        'shop_bestsellers'
+      ),
+      withTimeout(
         cacheCategoriesList(() =>
           drizzleDb
             .select({ name: categoriesTable.name })
@@ -130,10 +134,10 @@ const ShopPage = async ({ searchParams }: ShopPageProps) => {
             .where(isNull(categoriesTable.deletedAt))
             .orderBy(asc(categoriesTable.sortOrder), asc(categoriesTable.name))
         ),
-      ]),
-      5_000,
-      'shop_initial_data'
-    )
+        5_000,
+        'shop_categories'
+      ),
+    ])
 
     const searchResult = await withTimeout(
       searchCatalog({

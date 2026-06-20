@@ -12,16 +12,18 @@ export const withTimeout = <T>(
   promise: Promise<T>,
   ms: number,
   label: string
-): Promise<T> =>
-  Promise.race([
-    promise,
-    new Promise<T>((_, reject) =>
-      setTimeout(
-        () => reject(new Error(`${label} timed out after ${ms}ms`)),
-        ms
-      )
-    ),
-  ])
+): Promise<T> => {
+  let timerId: ReturnType<typeof setTimeout> | undefined
+  const timeoutPromise = new Promise<T>((_, reject) => {
+    timerId = setTimeout(
+      () => reject(new Error(`${label} timed out after ${ms}ms`)),
+      ms
+    )
+  })
+  return Promise.race([promise, timeoutPromise]).finally(() =>
+    clearTimeout(timerId)
+  )
+}
 
 export const isRedisAvailable = (): boolean =>
   Boolean(env.UPSTASH_REDIS_REST_URL && env.UPSTASH_REDIS_REST_TOKEN)
