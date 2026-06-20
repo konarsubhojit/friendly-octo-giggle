@@ -109,7 +109,7 @@
     "prettier": "^3.8.1",
     "tsx": "^4.21.0",
     "typescript": "6.0.3",
-    "vercel": "^54.4.1",
+    "vercel": "^54.14.2",
     "vite-tsconfig-paths": "^6.1.1",
     "vitest": "^4.1.7",
     "ws": "^8.21.0"
