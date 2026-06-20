@@ -266,9 +266,7 @@ describe('getCachedData', () => {
 
   it('falls back to fetcher when redis.get times out', async () => {
     vi.useFakeTimers()
-    mockRedisInstance.get.mockImplementationOnce(
-      () => new Promise(() => {})
-    )
+    mockRedisInstance.get.mockImplementationOnce(() => new Promise(() => {}))
     const fetcher = vi.fn().mockResolvedValue('timeout-fallback')
 
     const resultPromise = getCachedData('key:timeout', 60, fetcher)
@@ -283,9 +281,7 @@ describe('getCachedData', () => {
   it('falls back to fetcher when stampede prevention times out', async () => {
     vi.useFakeTimers()
     mockRedisInstance.get.mockResolvedValueOnce(null)
-    mockRedisInstance.set.mockImplementationOnce(
-      () => new Promise(() => {})
-    )
+    mockRedisInstance.set.mockImplementationOnce(() => new Promise(() => {}))
     const fetcher = vi.fn().mockResolvedValue('stampede-fallback')
 
     const resultPromise = getCachedData('key:stampede', 60, fetcher)
