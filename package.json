@@ -54,7 +54,7 @@
     "@upstash/search": "^0.1.7",
     "@upstash/search-ui": "^0.1.5",
     "@vercel/analytics": "^2.0.1",
-    "@vercel/blob": "^2.2.0",
+    "@vercel/blob": "^2.4.1",
     "@vercel/edge-config": "^1.4.3",
     "@vercel/functions": "^3.6.2",
     "@vercel/queue": "0.3.1",
