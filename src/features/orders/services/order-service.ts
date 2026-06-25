@@ -653,7 +653,6 @@ export const createOrderForUser = async ({
     ...new Set(body.items.map((item) => item.productId)),
   ]
   await Promise.all([
-    invalidateCache('products:*'),
     invalidateCache('admin:orders:*'),
     invalidateUserOrderCaches(user.id),
     ...productCacheKeys.map((productId) =>
