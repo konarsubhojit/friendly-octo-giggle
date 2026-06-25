@@ -4,13 +4,14 @@ import {
   ScatteredFlowers,
   MushroomAccent,
 } from '@/components/ui/DecorativeElements'
+import { STORE_NAME, withStoreName } from '@/lib/constants/store'
 
 export const revalidate = 3600
 
 export const metadata = {
-  title: 'About Us | The Kiyon Store',
+  title: withStoreName('About Us'),
   description:
-    'Learn more about The Kiyon Store, our mission, values, and the team behind our handmade decorations and wearables.',
+    `Learn more about ${STORE_NAME}, our mission, values, and the team behind our handmade decorations and wearables.`,
 }
 
 const FEATURES = [
@@ -26,7 +27,7 @@ const MissionSection = () => (
       Our Story
     </h2>
     <p className="text-[var(--text-secondary)] leading-relaxed mb-4">
-      Founded in 2024, The Kiyon Store started as a small team passionate about
+      Founded in 2024, {STORE_NAME} started as a small team passionate about
       handmade decorations and cozy wearables. Today, we serve thousands of
       customers who love our flower bouquets, keyrings, hand warmers, mufflers,
       and scarves — all crafted with heart.

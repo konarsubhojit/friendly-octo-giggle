@@ -1,9 +1,10 @@
 import type { AppLocale } from '@/lib/i18n/config'
+import { STORE_NAME } from '@/lib/constants/store'
 
 export const messages = {
   en: {
     common: {
-      storeName: 'The Kiyon Store',
+      storeName: STORE_NAME,
       skipToContent: 'Skip to main content',
     },
     header: {
@@ -46,7 +47,7 @@ export const messages = {
   },
   es: {
     common: {
-      storeName: 'La Tienda Kiyon',
+      storeName: STORE_NAME,
       skipToContent: 'Saltar al contenido principal',
     },
     header: {

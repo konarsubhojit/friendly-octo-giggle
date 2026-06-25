@@ -16,6 +16,7 @@ import {
   isSupportedLocale,
 } from '@/lib/i18n/config'
 import { getMessage } from '@/lib/i18n/messages'
+import { STORE_NAME, STORE_SHORT_NAME } from '@/lib/constants/store'
 
 function AppProviders({
   children,
@@ -52,7 +53,7 @@ const playfairDisplay = Playfair_Display({
 })
 
 export const metadata: Metadata = {
-  title: 'The Kiyon Store',
+  title: STORE_NAME,
   description:
     'Handmade crochet flowers, bags, keychains, and accessories — crafted with love, delivered to your door.',
   alternates: {
@@ -66,7 +67,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'Kiyon',
+    title: STORE_SHORT_NAME,
   },
   icons: {
     apple: '/icons/apple-touch-icon.png',

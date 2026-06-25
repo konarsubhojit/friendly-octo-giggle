@@ -21,6 +21,7 @@ import {
   type SearchSort,
   type SearchVariantFilter,
 } from '@/lib/search-discovery'
+import { withStoreName } from '@/lib/constants/store'
 
 export const revalidate = 60
 
@@ -65,7 +66,7 @@ function getSingleValue(value?: string | string[]) {
 }
 
 export const metadata: Metadata = {
-  title: 'Shop | The Kiyon Store',
+  title: withStoreName('Shop'),
   description:
     'Browse our full collection of handmade crochet flowers, bags, keychains, hair accessories, and more.',
 }
