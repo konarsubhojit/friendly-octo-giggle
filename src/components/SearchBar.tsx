@@ -172,6 +172,7 @@ export function SearchBar({
     const onOutsideClick = (event: MouseEvent) => {
       if (!containerRef.current?.contains(event.target as Node)) {
         setOpen(false)
+        setActiveIndex(-1)
       }
     }
 
@@ -248,24 +249,20 @@ export function SearchBar({
     () => suggestionSections.flatMap((section) => section.options),
     [suggestionSections]
   )
+  const resolvedActiveIndex =
+    open && activeIndex >= 0 && activeIndex < flatOptions.length
+      ? activeIndex
+      : -1
 
   useEffect(() => {
-    setActiveIndex((current) => {
-      if (!open || !flatOptions.length) {
-        return -1
-      }
-
-      return current >= flatOptions.length ? flatOptions.length - 1 : current
-    })
-  }, [flatOptions.length, open])
-
-  useEffect(() => {
-    if (activeIndex < 0) {
+    if (resolvedActiveIndex < 0) {
       return
     }
 
-    optionRefs.current[activeIndex]?.scrollIntoView({ block: 'nearest' })
-  }, [activeIndex])
+    optionRefs.current[resolvedActiveIndex]?.scrollIntoView({
+      block: 'nearest',
+    })
+  }, [resolvedActiveIndex])
 
   const persistRecent = (query: string) => {
     const normalized = query.trim()
@@ -289,7 +286,8 @@ export function SearchBar({
     setActiveIndex(-1)
   }
 
-  const activeOption = activeIndex >= 0 ? flatOptions[activeIndex] : undefined
+  const activeOption =
+    resolvedActiveIndex >= 0 ? flatOptions[resolvedActiveIndex] : undefined
   const resultsDescription = isLoading
     ? 'Searching suggestions.'
     : flatOptions.length
@@ -328,7 +326,9 @@ export function SearchBar({
 
             event.preventDefault()
             setActiveIndex((current) =>
-              current < flatOptions.length - 1 ? current + 1 : 0
+              current < 0 || current >= flatOptions.length - 1
+                ? 0
+                : current + 1
             )
             return
           }
@@ -344,7 +344,9 @@ export function SearchBar({
 
             event.preventDefault()
             setActiveIndex((current) =>
-              current > 0 ? current - 1 : flatOptions.length - 1
+              current <= 0 || current >= flatOptions.length
+                ? flatOptions.length - 1
+                : current - 1
             )
             return
           }
@@ -455,7 +457,8 @@ export function SearchBar({
                           }
                         >
                           {section.options.map((option) => {
-                            const isActive = option.index === activeIndex
+                            const isActive =
+                              option.index === resolvedActiveIndex
 
                             return (
                               <li
