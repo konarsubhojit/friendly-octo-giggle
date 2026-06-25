@@ -541,7 +541,10 @@ describe('order-service', () => {
         })
       )
       expect(mockWaitUntil).toHaveBeenCalled()
-      expect(mockInvalidateCache).toHaveBeenCalled()
+      expect(mockInvalidateCache).toHaveBeenCalledWith('admin:orders:*')
+      expect(mockInvalidateCache).toHaveBeenCalledWith('product:p1')
+      expect(mockInvalidateCache).not.toHaveBeenCalledWith('products:*')
+      expect(mockInvalidateUserOrderCaches).toHaveBeenCalledWith('user1')
     })
 
     it('falls back to direct email on qstash failure', async () => {
