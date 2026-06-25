@@ -400,13 +400,15 @@ const buildOrderSummary = ({
 const invalidateOrderCaches = (
   userId: string,
   items: CreateOrderActionInput['items']
-) =>
-  Promise.all([
-    invalidateCache('products:*'),
+) => {
+  const productIds = [...new Set(items.map((item) => item.productId))]
+
+  return Promise.all([
     invalidateCache('admin:orders:*'),
     invalidateUserOrderCaches(userId),
-    ...items.map((item) => invalidateCache(`product:${item.productId}`)),
+    ...productIds.map((productId) => invalidateCache(`product:${productId}`)),
   ])
+}
 
 export const createOrder = async (
   userId: string,

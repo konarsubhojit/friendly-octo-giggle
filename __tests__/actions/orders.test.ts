@@ -59,6 +59,8 @@ import {
   getUserOrders,
 } from '@/features/orders/actions/orders'
 import { drizzleDb } from '@/lib/db'
+import { invalidateCache } from '@/lib/redis'
+import { invalidateUserOrderCaches } from '@/lib/cache'
 
 const validOrderData = {
   customerName: 'Alice Smith',
@@ -125,6 +127,11 @@ describe('createOrder', () => {
     expect(mockLogBusinessEvent).toHaveBeenCalledWith(
       expect.objectContaining({ event: 'order_created', success: true })
     )
+    expect(invalidateCache).toHaveBeenCalledWith('admin:orders:*')
+    expect(invalidateCache).toHaveBeenCalledWith('product:prod001')
+    expect(invalidateCache).toHaveBeenCalledWith('product:prod002')
+    expect(invalidateCache).not.toHaveBeenCalledWith('products:*')
+    expect(invalidateUserOrderCaches).toHaveBeenCalledWith('user-123')
   })
 
   it('returns error when customerName is missing', async () => {
