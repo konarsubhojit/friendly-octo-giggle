@@ -121,6 +121,12 @@ describe('SearchBar', () => {
     )
     expect(options[0]).toHaveAttribute('aria-selected', 'true')
 
+    fireEvent.keyDown(input, { key: 'ArrowUp' })
+    await waitFor(() =>
+      expect(input).toHaveAttribute('aria-activedescendant', options[2].id)
+    )
+    expect(options[2]).toHaveAttribute('aria-selected', 'true')
+
     fireEvent.keyDown(input, { key: 'End' })
     await waitFor(() =>
       expect(input).toHaveAttribute('aria-activedescendant', options[2].id)

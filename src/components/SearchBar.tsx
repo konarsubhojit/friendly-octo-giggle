@@ -301,7 +301,7 @@ export function SearchBar({
   return (
     <div ref={containerRef} className="relative w-full">
       <input
-        type="search"
+        type="text"
         role="combobox"
         name="q"
         autoComplete="off"
@@ -316,6 +316,8 @@ export function SearchBar({
         }}
         onKeyDown={(event) => {
           if (event.key === 'ArrowDown') {
+            event.preventDefault()
+
             if (!open) {
               setOpen(true)
             }
@@ -323,8 +325,6 @@ export function SearchBar({
             if (!flatOptions.length) {
               return
             }
-
-            event.preventDefault()
             setActiveIndex((current) =>
               current < 0 || current >= flatOptions.length - 1
                 ? 0
@@ -334,6 +334,8 @@ export function SearchBar({
           }
 
           if (event.key === 'ArrowUp') {
+            event.preventDefault()
+
             if (!open) {
               setOpen(true)
             }
@@ -341,8 +343,6 @@ export function SearchBar({
             if (!flatOptions.length) {
               return
             }
-
-            event.preventDefault()
             setActiveIndex((current) =>
               current <= 0 || current >= flatOptions.length
                 ? flatOptions.length - 1
