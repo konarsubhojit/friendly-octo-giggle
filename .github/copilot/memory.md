@@ -2,85 +2,106 @@
 
 This file contains important facts about the project that Copilot should remember.
 
+> **Single source of truth:** [`docs/architecture.md`](../../docs/architecture.md)
+> describes the live architecture in detail. If anything here ever conflicts
+> with that document or the actual code, the code and `docs/architecture.md`
+> win — update this file to match.
+
 ## Architecture Decisions
 
-### Why Prisma 7 with Adapter?
+### Why Drizzle ORM with Neon Serverless?
 
-- Prisma 7 requires either `adapter` or `accelerateUrl` in the client constructor
-- Using `@prisma/adapter-pg` with `pg` for PostgreSQL connection
-- This enables connection pooling for serverless environments
-- Singleton pattern prevents connection exhaustion
+- The data layer uses **Drizzle ORM** (`drizzle-orm`), not Prisma.
+- The database client lives in [`src/lib/db.ts`](../../src/lib/db.ts) and is built
+  with `drizzle-orm/neon-serverless` on top of a `@neondatabase/serverless` `Pool`.
+- Pools are created as singletons on `globalThis` to prevent connection
+  exhaustion in serverless environments.
+- Read/write splitting is provided via `withReplicas`:
+  - `primaryDrizzleDb` — primary/writer (auth, mutations, read-after-write).
+  - `readDrizzleDb` — replica reader.
+  - `drizzleDb` — composite that routes reads to the replica automatically.
+- `READ_DATABASE_URL` is optional and falls back to `DATABASE_URL`.
+- Schema migrations are managed with **Drizzle Kit** (`drizzle-kit`), with SQL
+  output in the `drizzle/` directory.
 
 ### Why NextAuth v5 (Auth.js)?
 
-- Modern authentication library with App Router support
-- Better TypeScript support than v4
-- Database session strategy for better security
-- Integrated with Prisma adapter
-- Supports multiple providers (we use Google)
+- Modern authentication library with App Router support.
+- Better TypeScript support than v4.
+- **JWT session strategy** (`session.strategy: 'jwt'`), not database sessions.
+  See [`src/lib/auth.config.ts`](../../src/lib/auth.config.ts).
+- Uses the **Drizzle adapter** (`@auth/drizzle-adapter`) to persist users,
+  accounts, and verification tokens via `primaryDrizzleDb`.
+- Supports multiple providers: **Google OAuth**, **Microsoft Entra ID**, and
+  **Credentials** (email/password with bcryptjs and password-history tracking).
+- Split config pattern: `auth.config.ts` is edge-safe (used by `proxy.ts`); the
+  Node-only pieces (Drizzle adapter, Credentials provider, DB re-validation) are
+  composed in [`src/lib/auth.ts`](../../src/lib/auth.ts).
 
 ### Why Zod for Validation?
 
-- Runtime type checking complements TypeScript
-- Type inference from schemas
-- Better error messages than manual validation
-- Single source of truth for types
-- Works seamlessly with API routes and Server Actions
+- Runtime type checking complements TypeScript.
+- Type inference from schemas.
+- Better error messages than manual validation.
+- Single source of truth for types.
+- Works seamlessly with API routes and Server Actions.
 
 ### Redis Caching Strategy
 
-- **Stale-While-Revalidate (SWR)**: Serves cached data immediately while fetching fresh data in background
-- **Stampede Prevention**: Distributed locks prevent multiple simultaneous cache misses
-- **TTL**: Products cached for 60s with 10s stale window
-- **Invalidation**: Automatic cache clearing on product/order updates
-- **Singleton Client**: Prevents connection issues in serverless
+- **Stale-While-Revalidate (SWR)**: Serves cached data immediately while fetching fresh data in background.
+- **Stampede Prevention**: Distributed locks prevent multiple simultaneous cache misses.
+- **TTL**: Products cached for 60s with 10s stale window.
+- **Invalidation**: Automatic cache clearing on product/order updates.
+- **HTTP-based Upstash Redis**: `@upstash/redis` is stateless and serverless-friendly.
 
 ## Code Conventions
 
 ### File Naming
 
-- **Components**: PascalCase (e.g., `ErrorBoundary.tsx`)
-- **Utilities**: kebab-case (e.g., `api-utils.ts`)
-- **Pages**: lowercase (e.g., `page.tsx`, `[id]/page.tsx`)
-- **Server Actions**: camelCase with `Action` suffix (e.g., `createOrderAction`)
+- **Components**: PascalCase (e.g., `ErrorBoundary.tsx`).
+- **Utilities**: kebab-case (e.g., `api-utils.ts`).
+- **Pages**: lowercase (e.g., `page.tsx`, `[id]/page.tsx`).
+- **Server Actions**: camelCase with `Action` suffix (e.g., `createOrderAction`).
 
 ### Import Aliases
 
-- `@/` maps to root directory
-- Use absolute imports: `import { prisma } from '@/lib/db'`
-- Never use relative imports crossing directories
+- `@/` maps to the `src/` directory (see `tsconfig.json` → `paths`).
+- Use absolute imports, e.g. `import { drizzleDb } from '@/lib/db'`.
+- Never use relative imports crossing directories.
 
 ### TypeScript Patterns
 
-- **Types**: Define in `lib/types.ts` or infer from Zod schemas
-- **Enums**: Use string unions or Zod enums
-- **Async Results**: Return `AsyncResult<T>` type for better error handling
-- **Generics**: Use for reusable utilities (hooks, API wrappers)
+- **Types**: Define in `lib/types.ts` or infer from Zod schemas.
+- **Enums**: Use string unions, Zod enums, or Drizzle `pgEnum` for DB columns.
+- **Generics**: Use for reusable utilities (hooks, API wrappers).
 
 ## Database Schema Patterns
 
 ### ID Strategy
 
-- All IDs use `cuid()` for better distributed system compatibility
-- More collision-resistant than UUIDs
-- Shorter and more readable
+- Domain entities (products, orders, carts, reviews, etc.) use **base62 short
+  IDs** — 7-character alphanumeric strings generated by `generateShortId()` in
+  [`src/lib/short-id.ts`](../../src/lib/short-id.ts) and stored as `varchar(7)`.
+- Order IDs use the `ORD`-prefixed form via `generateOrderId()`.
+- Auth tables (users, accounts, sessions, verification tokens) use **UUIDs**
+  via `crypto.randomUUID()`.
+- No `cuid()` is used anywhere.
 
 ### Timestamps
 
-- Every model has `createdAt` and `updatedAt`
-- Use `@default(now())` and `@updatedAt`
-- Convert to ISO strings for API responses
+- Models include `createdAt` / `updatedAt` columns where relevant.
+- Convert timestamps to ISO strings for API responses.
 
 ### Relations
 
-- Always add `@@index` for foreign keys
-- Use `onDelete: Cascade` for dependent records
-- Name relations clearly (user, product, order)
+- Add indexes for frequently queried foreign keys.
+- Use cascading deletes for dependent records where appropriate.
+- Name relations clearly (user, product, order).
 
 ### Enums
 
-- Use Prisma enums for fixed sets of values
-- Keep enum names descriptive (OrderStatus, UserRole)
+- Use Drizzle `pgEnum` for fixed sets of values
+  (e.g., `userRoleEnum`, `orderStatusEnum`, `emailTypeEnum`).
 
 ## API Response Format
 
@@ -105,20 +126,20 @@ This file contains important facts about the project that Copilot should remembe
 
 ### Why This Format?
 
-- Consistent across all endpoints
-- Easy to check success client-side
-- TypeScript type guards work well
-- Detailed validation errors
+- Consistent across all endpoints.
+- Easy to check success client-side.
+- TypeScript type guards work well.
+- Detailed validation errors.
 
 ## Authentication Flow
 
-1. User clicks "Sign in with Google"
-2. NextAuth redirects to Google OAuth
-3. User authorizes, Google redirects back
-4. NextAuth creates/updates user in database
-5. Session stored in database (not JWT)
-6. Session cookie sent to client
-7. Server checks session on protected routes
+1. User signs in with Google, Microsoft Entra ID, or email/password (Credentials).
+2. NextAuth handles the OAuth handshake or verifies credentials against the DB.
+3. The Drizzle adapter creates/updates the user, account, and related records.
+4. A **JWT session** is issued; the `jwt` callback (in `auth.ts`) populates and
+   re-validates fields such as `id`, `role`, and `phoneNumber` against the DB.
+5. The session cookie is sent to the client.
+6. Server-side `auth()` checks the session on protected routes.
 
 ### Session Structure
 
@@ -129,7 +150,8 @@ This file contains important facts about the project that Copilot should remembe
     name: string,
     email: string,
     image: string,
-    role: 'ADMIN' | 'CUSTOMER'
+    role: 'ADMIN' | 'CUSTOMER',
+    phoneNumber?: string
   }
 }
 ```
@@ -138,194 +160,189 @@ This file contains important facts about the project that Copilot should remembe
 
 ### What to Cache
 
-- Product listings (high read, low write)
-- Individual product details
-- Public data only (never user-specific)
+- Product listings (high read, low write).
+- Individual product details.
+- Public data only (never user-specific).
 
 ### What NOT to Cache
 
-- Order data (privacy concern)
-- User sessions (already in database)
-- Admin data (always fresh)
-- Authentication responses
+- Order data (privacy concern).
+- Authentication responses.
+- Admin data (always fresh).
 
 ### Cache Keys Pattern
 
-- `products:all` - All products list
-- `product:{id}` - Single product
-- Use wildcards for bulk invalidation: `products:*`
+- `products:all` - All products list.
+- `product:{id}` - Single product.
+- Use wildcards for bulk invalidation: `products:*`.
 
 ## Common Gotchas
 
-### Prisma Client Generation
+### Database Migrations
 
-- Must run `npm run db:generate` after schema changes
-- In production, runs automatically during build
-- Don't commit generated client to git
+- Run `npm run db:generate` after editing `src/lib/schema.ts`, review the SQL in
+  `drizzle/`, then apply with `npm run db:migrate`.
+- Commit the generated migration SQL together with the `drizzle/meta` journal and
+  snapshot files.
+- Never edit a migration file after it has been applied.
 
 ### Server Components vs Client
 
-- Default to Server Components
-- Only use 'use client' for:
-  - React hooks (useState, useEffect, etc.)
-  - Browser APIs (localStorage, etc.)
-  - Event handlers
-  - Context consumers
+- Default to Server Components.
+- Only use `'use client'` for:
+  - React hooks (useState, useEffect, etc.).
+  - Browser APIs (localStorage, etc.).
+  - Event handlers.
+  - Context consumers.
 
 ### NextAuth Session
 
-- Use `auth()` in Server Components
-- Use `useSession()` in Client Components
-- Session is database-backed, not JWT
-- Always check for null session
+- Use `auth()` in Server Components.
+- Use `useSession()` in Client Components.
+- The session is **JWT-backed**, not database-backed.
+- Always check for a null session.
 
 ### Environment Variables
 
-- Client-side vars must start with `NEXT_PUBLIC_`
-- Server-only vars don't need prefix
-- Validate with Zod on startup
-- Never commit .env to git
+- Client-side vars must start with `NEXT_PUBLIC_`.
+- Server-only vars don't need a prefix.
+- Validate with Zod on startup (`src/lib/env.ts`).
+- Never commit `.env` to git.
 
 ## Performance Considerations
 
 ### Serverless Constraints
 
-- Connection pooling is critical
-- Cold starts affect first request
-- Stateless by design
-- Use singletons for DB/Redis clients
+- Connection pooling is critical.
+- Cold starts affect the first request.
+- Stateless by design.
+- Use singletons for DB/Redis clients.
 
 ### Database Best Practices
 
-- Use indexes on frequently queried fields
-- Limit SELECT fields when possible
-- Use transactions for multi-step operations
-- Avoid N+1 queries with `include`
+- Use indexes on frequently queried fields.
+- Limit SELECT fields when possible.
+- Use transactions for multi-step operations.
+- Avoid N+1 queries with Drizzle relational `with`.
 
 ### Caching Best Practices
 
-- Cache at API level, not component level
-- Use appropriate TTL (60s is good default)
-- Always implement stampede prevention
-- Invalidate aggressively on writes
+- Cache at API level, not component level.
+- Use appropriate TTL (60s is a good default).
+- Always implement stampede prevention.
+- Invalidate aggressively on writes.
 
 ## Security Principles
 
 ### Input Validation
 
-1. Validate on server (Zod schemas)
-2. Never trust client input
-3. Validate before database operations
-4. Return helpful but not revealing errors
+1. Validate on server (Zod schemas).
+2. Never trust client input.
+3. Validate before database operations.
+4. Return helpful but not revealing errors.
 
 ### Authentication
 
-- Check session on every protected route
-- Check role for admin operations
-- Use secure session storage (database)
-- Implement CSRF protection (NextAuth does this)
+- Check session on every protected route.
+- Check role for admin operations.
+- Implement CSRF protection (NextAuth does this).
 
 ### Data Access
 
-- Users can only see their own orders
-- Admins can see all data
-- Never expose sensitive data in client
-- Filter data based on user role
+- Users can only see their own orders.
+- Admins can see all data.
+- Never expose sensitive data in client.
+- Filter data based on user role.
 
 ## Troubleshooting Guide
 
 ### Build Fails
 
-1. Check TypeScript errors first
-2. Verify Prisma client is generated
-3. Check environment variables exist
-4. Run `npm run db:generate`
+1. Check TypeScript errors first (`npx tsc --noEmit`).
+2. Confirm `src/lib/schema.ts` and migrations are in sync.
+3. Check that required environment variables exist.
 
 ### Database Connection Issues
 
-1. Verify DATABASE_URL format
-2. Check database is running
-3. Verify network access
-4. Check connection pooling config
+1. Verify `DATABASE_URL` (and optional `READ_DATABASE_URL`) format.
+2. Check the database is reachable.
+3. Verify network access.
+4. Check connection pooling config in `src/lib/db.ts`.
 
 ### Authentication Not Working
 
-1. Verify Google OAuth credentials
-2. Check NEXTAUTH_SECRET is set
-3. Verify callback URLs match
-4. Check database has auth tables
+1. Verify provider credentials (Google, Microsoft Entra ID).
+2. Check `AUTH_SECRET` / `NEXTAUTH_SECRET` is set.
+3. Verify callback URLs match.
+4. Confirm the Drizzle auth tables exist.
 
 ### Cache Not Working
 
-1. Verify Redis connection
-2. Check REDIS_URL format
-3. Test Redis independently
-4. Check cache key patterns
+1. Verify the Upstash Redis connection.
+2. Check the Redis env vars.
+3. Test Redis independently.
+4. Check cache key patterns.
 
 ## Future Enhancements Ideas
 
-- [ ] Add email notifications for orders
-- [ ] Implement payment processing (Stripe)
-- [ ] Add product reviews and ratings
-- [ ] Implement inventory alerts
-- [ ] Add analytics dashboard
-- [ ] Support multiple currencies
-- [ ] Add wish list functionality
-- [ ] Implement product search
-- [ ] Add order tracking
-- [ ] Support bulk product imports
+- [ ] Implement payment processing (Stripe).
+- [ ] Implement inventory alerts.
+- [ ] Add analytics dashboard.
+- [ ] Support bulk product imports.
+
+> Already shipped (do **not** treat as open work): product search, wishlist,
+> order tracking, product reviews/ratings, order email notifications, and
+> multi-currency support.
 
 ## Key Metrics to Monitor
 
-- Cache hit rate (aim for >80%)
-- API response times (<200ms)
-- Database query times (<50ms)
-- Cold start duration (<1s)
-- Error rates (<1%)
-- Authentication success rate (>95%)
+- Cache hit rate (aim for >80%).
+- API response times (<200ms).
+- Database query times (<50ms).
+- Cold start duration (<1s).
+- Error rates (<1%).
+- Authentication success rate (>95%).
 
 ## Useful Commands
 
 ```bash
 # Development
-npm run dev                    # Start dev server
-npm run build                  # Test production build
-npm run db:generate            # Generate Prisma client
-
-# Database
-npm run db:migrate             # Create and run migration
-npm run db:seed                # Seed database
-npx prisma studio              # Open Prisma GUI
-
-# Testing
-npm run lint                   # Run linter
-npm run type-check             # Check TypeScript (if added)
-
-# Production
+npm run dev                    # Start dev server (experimental HTTPS)
 npm run build                  # Build for production
 npm run start                  # Start production server
+
+# Database (Drizzle Kit)
+npm run db:generate            # Generate migration from schema.ts
+npm run db:migrate             # Apply migrations
+npm run db:push                # Push schema directly (no migration file)
+npm run db:studio              # Open Drizzle Studio GUI
+
+# Quality
+npm run lint                   # Run ESLint
+npm test                       # Run Vitest unit tests
 ```
 
 ## Dependencies to Keep Updated
 
-- next (framework updates)
-- @prisma/client (bug fixes)
-- next-auth (security patches)
-- tailwindcss (new features)
-- zod (validation improvements)
+- `next` (framework updates).
+- `drizzle-orm` / `drizzle-kit` (ORM fixes).
+- `next-auth` / `@auth/drizzle-adapter` (security patches).
+- `tailwindcss` (new features).
+- `zod` (validation improvements).
 
 ## Version Compatibility
 
-- Node.js: 18+
-- Next.js: 16.x
-- Prisma: 7.x
-- NextAuth: 5.x (beta)
-- React: 19.x
+- Node.js: 22+.
+- Next.js: 16.x.
+- Drizzle ORM: 0.45.x.
+- NextAuth: 5.x (beta).
+- React: 19.x.
 
 ## References
 
+- [Project architecture](../../docs/architecture.md) (single source of truth)
 - [Next.js Docs](https://nextjs.org/docs)
-- [Prisma Docs](https://www.prisma.io/docs)
+- [Drizzle ORM Docs](https://orm.drizzle.team/docs/overview)
 - [NextAuth Docs](https://authjs.dev/)
 - [Zod Docs](https://zod.dev/)
 - [Tailwind Docs](https://tailwindcss.com/docs)
