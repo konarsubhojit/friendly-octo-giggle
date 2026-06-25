@@ -45,6 +45,15 @@ export const checkoutRequestStatusEnum = pgEnum('CheckoutRequestStatus', [
   'FAILED',
 ])
 
+export const paymentStatusEnum = pgEnum('PaymentStatus', [
+  'PENDING',
+  'PAID',
+  'FAILED',
+  'REFUNDED',
+])
+
+export const paymentProviderEnum = pgEnum('PaymentProvider', ['RAZORPAY'])
+
 // ─── Auth Tables (NextAuth compatible) ───────────────────
 
 export const users = pgTable('User', {
@@ -319,6 +328,10 @@ export const checkoutRequests = pgTable(
     city: text('city'),
     state: text('state'),
     items: json('items').$type<CheckoutRequestItemRecord[]>().notNull(),
+    paymentProvider: paymentProviderEnum('paymentProvider').notNull(),
+    paymentOrderId: text('paymentOrderId').notNull(),
+    paymentTransactionId: text('paymentTransactionId').notNull(),
+    paymentSignature: text('paymentSignature').notNull(),
     status: checkoutRequestStatusEnum('status').default('PENDING').notNull(),
     errorMessage: text('errorMessage'),
     createdAt: timestamp('createdAt', { mode: 'date' }).defaultNow().notNull(),
@@ -328,6 +341,7 @@ export const checkoutRequests = pgTable(
     index('CheckoutRequest_userId_idx').on(t.userId),
     index('CheckoutRequest_status_idx').on(t.status),
     index('CheckoutRequest_createdAt_idx').on(t.createdAt),
+    index('CheckoutRequest_paymentTransactionId_idx').on(t.paymentTransactionId),
   ]
 )
 
@@ -352,6 +366,14 @@ export const orders = pgTable(
       { onDelete: 'set null' }
     ),
     totalAmount: doublePrecision('totalAmount').notNull(),
+    paymentStatus: paymentStatusEnum('paymentStatus')
+      .default('PENDING')
+      .notNull(),
+    paymentProvider: paymentProviderEnum('paymentProvider'),
+    paymentOrderId: text('paymentOrderId'),
+    paymentTransactionId: text('paymentTransactionId'),
+    amountPaid: doublePrecision('amountPaid').default(0).notNull(),
+    paidAt: timestamp('paidAt', { mode: 'date' }),
     status: orderStatusEnum('status').default('PENDING').notNull(),
     trackingNumber: text('trackingNumber'),
     shippingProvider: text('shippingProvider'),
@@ -362,6 +384,8 @@ export const orders = pgTable(
     index('Order_userId_idx').on(t.userId),
     index('Order_status_idx').on(t.status),
     index('Order_createdAt_idx').on(t.createdAt),
+    index('Order_paymentStatus_idx').on(t.paymentStatus),
+    index('Order_paymentTransactionId_idx').on(t.paymentTransactionId),
     unique('Order_checkoutRequestId_key').on(t.checkoutRequestId),
   ]
 )

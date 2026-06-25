@@ -184,6 +184,12 @@ describe('CreateOrderSchema', () => {
     city: 'New Delhi',
     state: 'Delhi',
     items: [{ productId: validShortId, quantity: 1, price: 29.99 }],
+    payment: {
+      provider: 'RAZORPAY',
+      orderId: 'order_123',
+      paymentId: 'pay_123',
+      signature: 'sig_123',
+    },
   }
 
   it('accepts valid order', () => {

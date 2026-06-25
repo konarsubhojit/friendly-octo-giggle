@@ -61,6 +61,17 @@ export enum OrderStatus {
   CANCELLED = 'CANCELLED',
 }
 
+export type PaymentStatus = 'PENDING' | 'PAID' | 'FAILED' | 'REFUNDED'
+
+export type PaymentProvider = 'RAZORPAY'
+
+export interface CheckoutPaymentInput {
+  provider: PaymentProvider
+  orderId: string
+  paymentId: string
+  signature: string
+}
+
 export interface OrderItem {
   productId: string
   variantId: string
@@ -98,6 +109,12 @@ export interface Order {
   state?: string | null
   totalAmount: number
   status: OrderStatus
+  paymentStatus: PaymentStatus
+  paymentProvider?: PaymentProvider | null
+  paymentOrderId?: string | null
+  paymentTransactionId?: string | null
+  amountPaid: number
+  paidAt?: string | null
   trackingNumber?: string | null
   shippingProvider?: string | null
   createdAt: string
@@ -127,6 +144,7 @@ export interface CreateOrderInput {
   city: string
   state: string
   items: OrderItemInput[]
+  payment: CheckoutPaymentInput
 }
 
 export type CheckoutRequestStatus =

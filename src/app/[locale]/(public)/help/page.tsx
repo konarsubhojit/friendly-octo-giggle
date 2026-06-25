@@ -28,7 +28,7 @@ const faqs = [
   {
     question: 'What payment methods do you accept?',
     answer:
-      'We accept all major credit cards (Visa, Mastercard, Amex), debit cards, and digital wallets. All transactions are secured with industry-standard encryption.',
+      'Checkout is processed through Razorpay. We currently support prepaid card, UPI, netbanking, and wallet payments handled by Razorpay. Orders are confirmed only after a successful payment authorization/capture.',
   },
   {
     question: 'How long does delivery take?',

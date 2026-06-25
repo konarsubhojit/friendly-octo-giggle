@@ -30,9 +30,17 @@ interface OrderItem {
 interface OrderSummary {
   readonly id: string
   readonly status: string
+  readonly paymentStatus?: string
   readonly createdAt: string
   readonly totalAmount: number
   readonly items: OrderItem[]
+}
+
+const PAYMENT_STATUS_LABEL: Record<string, string> = {
+  PENDING: 'Payment Pending',
+  PAID: 'Paid',
+  FAILED: 'Payment Failed',
+  REFUNDED: 'Refunded',
 }
 
 interface OrderListCardProps {
@@ -95,6 +103,12 @@ export const OrderListCard = ({ order }: OrderListCardProps) => {
             <Badge variant={orderStatusVariant(order.status)} size="sm">
               {statusInfo.label}
             </Badge>
+            {order.paymentStatus ? (
+              <Badge variant="neutral" size="sm">
+                {PAYMENT_STATUS_LABEL[order.paymentStatus] ??
+                  'Unknown Payment Status'}
+              </Badge>
+            ) : null}
             <span className="text-xs text-[var(--text-muted)]">
               {new Date(order.createdAt).toLocaleDateString('en-US', {
                 year: 'numeric',

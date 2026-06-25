@@ -34,6 +34,8 @@ interface AdminOrder {
   state?: string | null
   totalAmount: number
   status: string
+  paymentStatus?: string
+  paymentProvider?: string | null
   trackingNumber?: string | null
   shippingProvider?: string | null
   createdAt: string
@@ -225,6 +227,11 @@ export function AdminOrderCard({
             <Badge variant={orderStatusVariant(order.status)}>
               {order.status}
             </Badge>
+            {order.paymentStatus ? (
+              <Badge variant={order.paymentStatus === 'PAID' ? 'success' : 'neutral'}>
+                Payment: {order.paymentStatus}
+              </Badge>
+            ) : null}
             {hasTracking ? (
               <Badge variant="sage" size="sm">
                 Tracking attached
@@ -329,6 +336,15 @@ export function AdminOrderCard({
               </h4>
               <p className="whitespace-pre-line text-sm text-gray-600 dark:text-gray-400">
                 {formatStructuredAddress(order)}
+              </p>
+            </div>
+            <div>
+              <h4 className="mb-1 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                Payment
+              </h4>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                {order.paymentStatus ?? 'PENDING'}
+                {order.paymentProvider ? ` via ${order.paymentProvider}` : ''}
               </p>
             </div>
           </div>

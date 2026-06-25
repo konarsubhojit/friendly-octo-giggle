@@ -36,6 +36,11 @@ import {
   type CurrencyCode,
 } from '@/lib/currency'
 import { isSupportedLocale } from '@/lib/i18n/config'
+import {
+  PaymentConfigurationError,
+  PaymentVerificationError,
+  verifyCheckoutPayment,
+} from '@/lib/payments'
 
 const PAGE_SIZE = 20
 
@@ -111,6 +116,7 @@ interface HydratedOrder {
   customerAddress: string
   totalAmount: number
   status: string
+  paymentStatus: string
   createdAt: Date
   updatedAt: Date
   items: HydratedOrderItem[]
@@ -550,6 +556,32 @@ export const createOrderForUser = async ({
   }
   const stockDetails = stockResult as Extract<StockCheckResult, { valid: true }>
 
+  let verifiedPayment: {
+    provider: 'RAZORPAY'
+    paymentOrderId: string
+    paymentTransactionId: string
+    amountPaid: number
+    paidAt: Date
+  }
+  try {
+    verifiedPayment = await verifyCheckoutPayment({
+      payment: body.payment,
+      expectedAmount: stockDetails.totalAmount,
+    })
+  } catch (error) {
+    if (
+      error instanceof PaymentVerificationError ||
+      error instanceof PaymentConfigurationError
+    ) {
+      return logFailedOrderCreation(
+        'payment_verification_failed',
+        error.status,
+        error.message
+      )
+    }
+    throw error
+  }
+
   const itemsWithVariant = body.items.filter(
     (item): item is OrderItemInput & { variantId: string } =>
       item.variantId != null
@@ -582,6 +614,12 @@ export const createOrderForUser = async ({
         checkoutRequestId: checkoutRequestId ?? null,
         totalAmount: stockDetails.totalAmount,
         status: 'PENDING',
+        paymentStatus: 'PAID',
+        paymentProvider: verifiedPayment.provider,
+        paymentOrderId: verifiedPayment.paymentOrderId,
+        paymentTransactionId: verifiedPayment.paymentTransactionId,
+        amountPaid: verifiedPayment.amountPaid,
+        paidAt: verifiedPayment.paidAt,
         updatedAt: new Date(),
       })
       .returning()

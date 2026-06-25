@@ -9,6 +9,7 @@ const {
   mockLogPerformance,
   mockSend,
   mockCreateOrderForUser,
+  mockEnsurePaymentProviderConfigured,
 } = vi.hoisted(() => ({
   mockInsert: vi.fn(),
   mockUpdate: vi.fn(),
@@ -25,6 +26,7 @@ const {
   mockLogPerformance: vi.fn(),
   mockSend: vi.fn(),
   mockCreateOrderForUser: vi.fn(),
+  mockEnsurePaymentProviderConfigured: vi.fn(),
 }))
 
 vi.mock('@/lib/db', () => ({
@@ -51,6 +53,17 @@ vi.mock('@/features/orders/services/order-service', () => ({
   createOrderForUser: mockCreateOrderForUser,
   isOrderRequestError: (error: unknown) =>
     error instanceof Error && 'status' in error,
+}))
+
+vi.mock('@/lib/payments', () => ({
+  ensurePaymentProviderConfigured: mockEnsurePaymentProviderConfigured,
+  PaymentConfigurationError: class PaymentConfigurationError extends Error {
+    status: number
+    constructor(message: string, status = 503) {
+      super(message)
+      this.status = status
+    }
+  },
 }))
 
 vi.mock('@vercel/functions', () => ({
@@ -122,6 +135,12 @@ describe('checkout-service', () => {
           city: 'New Delhi',
           state: 'Delhi',
           items: [{ productId: 'abc1234', variantId: 'var0001', quantity: 1 }],
+          payment: {
+            provider: 'RAZORPAY',
+            orderId: 'order_123',
+            paymentId: 'pay_123',
+            signature: 'sig_123',
+          },
         },
         user: testUser,
       })
@@ -159,6 +178,12 @@ describe('checkout-service', () => {
           city: 'New Delhi',
           state: 'Delhi',
           items: [{ productId: 'abc1234', variantId: 'var0001', quantity: 1 }],
+          payment: {
+            provider: 'RAZORPAY',
+            orderId: 'order_123',
+            paymentId: 'pay_123',
+            signature: 'sig_123',
+          },
         },
         user: testUser,
       })
@@ -200,6 +225,12 @@ describe('checkout-service', () => {
           city: 'New Delhi',
           state: 'Delhi',
           items: [{ productId: 'abc1234', variantId: 'var0001', quantity: 1 }],
+          payment: {
+            provider: 'RAZORPAY',
+            orderId: 'order_123',
+            paymentId: 'pay_123',
+            signature: 'sig_123',
+          },
         },
         user: testUser,
       })
