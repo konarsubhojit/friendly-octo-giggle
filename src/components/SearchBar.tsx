@@ -467,7 +467,9 @@ export function SearchBar({
                                   optionRefs.current[option.index] = element
                                 }}
                                 onMouseDown={(event) => event.preventDefault()}
-                                onMouseEnter={() => setActiveIndex(option.index)}
+                                onMouseEnter={() =>
+                                  setActiveIndex(option.index)
+                                }
                                 onClick={() => applySuggestion(option.value)}
                                 className={
                                   section.key === 'products'
