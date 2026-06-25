@@ -228,7 +228,9 @@ export function AdminOrderCard({
               {order.status}
             </Badge>
             {order.paymentStatus ? (
-              <Badge variant={order.paymentStatus === 'PAID' ? 'success' : 'neutral'}>
+              <Badge
+                variant={order.paymentStatus === 'PAID' ? 'success' : 'neutral'}
+              >
                 Payment: {order.paymentStatus}
               </Badge>
             ) : null}

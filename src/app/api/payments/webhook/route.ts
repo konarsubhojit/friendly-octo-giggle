@@ -81,11 +81,7 @@ const handleCapturedPayment = async ({
   }
 }
 
-const handleFailedPayment = async ({
-  paymentId,
-}: {
-  paymentId: string
-}) => {
+const handleFailedPayment = async ({ paymentId }: { paymentId: string }) => {
   await Promise.all([
     primaryDrizzleDb
       .update(checkoutRequests)
@@ -154,7 +150,10 @@ export async function POST(request: NextRequest) {
       error instanceof PaymentVerificationError ||
       error instanceof PaymentConfigurationError
     ) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.status }
+      )
     }
 
     logError({ error, context: 'payment_webhook_processing_failed' })

@@ -175,7 +175,9 @@ export const verifyRazorpayWebhookSignature = ({
     )
   }
 
-  const expected = createHmac('sha256', webhookSecret).update(payload).digest('hex')
+  const expected = createHmac('sha256', webhookSecret)
+    .update(payload)
+    .digest('hex')
   const expectedBuffer = Buffer.from(expected)
   const actualBuffer = Buffer.from(signature)
   const valid =

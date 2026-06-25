@@ -341,7 +341,9 @@ export const checkoutRequests = pgTable(
     index('CheckoutRequest_userId_idx').on(t.userId),
     index('CheckoutRequest_status_idx').on(t.status),
     index('CheckoutRequest_createdAt_idx').on(t.createdAt),
-    index('CheckoutRequest_paymentTransactionId_idx').on(t.paymentTransactionId),
+    index('CheckoutRequest_paymentTransactionId_idx').on(
+      t.paymentTransactionId
+    ),
   ]
 )
 
