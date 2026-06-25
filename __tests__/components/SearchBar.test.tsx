@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 
 const { mockSession } = vi.hoisted(() => ({ mockSession: vi.fn() }))
 vi.mock('next-auth/react', () => ({ useSession: mockSession }))
@@ -27,6 +27,7 @@ describe('SearchBar', () => {
   beforeEach(() => {
     localStorage.clear()
     mockSession.mockReturnValue({ data: null })
+    HTMLElement.prototype.scrollIntoView = vi.fn()
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
@@ -44,17 +45,17 @@ describe('SearchBar', () => {
     vi.restoreAllMocks()
   })
 
-  it('renders a search input with the right accessible label', () => {
+  it('renders a search combobox with the right accessible label', () => {
     setup()
-    expect(
-      screen.getByRole('searchbox', { name: /search products/i })
-    ).toBeInTheDocument()
+    const input = screen.getByRole('combobox', { name: /search products/i })
+    expect(input).toBeInTheDocument()
+    expect(input).toHaveAttribute('aria-autocomplete', 'list')
   })
 
   it('calls onChange when the user types', () => {
     const { onChange } = setup()
 
-    fireEvent.change(screen.getByRole('searchbox'), {
+    fireEvent.change(screen.getByRole('combobox'), {
       target: { value: 'shoes' },
     })
 
@@ -64,7 +65,7 @@ describe('SearchBar', () => {
   it('opens the suggestion panel on focus', () => {
     const { container } = setup()
 
-    fireEvent.focus(screen.getByRole('searchbox'))
+    fireEvent.focus(screen.getByRole('combobox'))
 
     // When open, the dropdown panel container is rendered alongside the input
     expect(container.querySelector('.absolute.z-20')).not.toBeNull()
@@ -73,8 +74,8 @@ describe('SearchBar', () => {
   it('submits and persists the query when Enter is pressed', () => {
     const { onSubmit } = setup({ value: 'cotton' })
 
-    fireEvent.focus(screen.getByRole('searchbox'))
-    fireEvent.keyDown(screen.getByRole('searchbox'), { key: 'Enter' })
+    fireEvent.focus(screen.getByRole('combobox'))
+    fireEvent.keyDown(screen.getByRole('combobox'), { key: 'Enter' })
 
     expect(onSubmit).toHaveBeenCalledTimes(1)
     const stored = JSON.parse(
@@ -86,16 +87,56 @@ describe('SearchBar', () => {
   it('closes the panel when Escape is pressed without submitting', () => {
     const { onSubmit } = setup({ value: 'cotton' })
 
-    fireEvent.focus(screen.getByRole('searchbox'))
-    fireEvent.keyDown(screen.getByRole('searchbox'), { key: 'Escape' })
+    fireEvent.focus(screen.getByRole('combobox'))
+    fireEvent.keyDown(screen.getByRole('combobox'), { key: 'Escape' })
 
     expect(onSubmit).not.toHaveBeenCalled()
+  })
+
+  it('supports combobox keyboard navigation and Enter selection for suggestions', async () => {
+    localStorage.setItem(
+      'search:recent:guest',
+      JSON.stringify(['summer', 'sale', 'sandals'])
+    )
+
+    const { onChange, onSubmit } = setup()
+    const input = screen.getByRole('combobox', { name: /search products/i })
+
+    fireEvent.focus(input)
+
+    const listbox = await screen.findByRole('listbox', {
+      name: /search suggestions/i,
+    })
+    const options = within(listbox).getAllByRole('option')
+
+    fireEvent.keyDown(input, { key: 'ArrowDown' })
+    await waitFor(() =>
+      expect(input).toHaveAttribute('aria-activedescendant', options[0].id)
+    )
+    expect(options[0]).toHaveAttribute('aria-selected', 'true')
+
+    fireEvent.keyDown(input, { key: 'End' })
+    await waitFor(() =>
+      expect(input).toHaveAttribute('aria-activedescendant', options[2].id)
+    )
+    expect(options[2]).toHaveAttribute('aria-selected', 'true')
+
+    fireEvent.keyDown(input, { key: 'Home' })
+    await waitFor(() =>
+      expect(input).toHaveAttribute('aria-activedescendant', options[0].id)
+    )
+
+    fireEvent.keyDown(input, { key: 'Enter' })
+
+    expect(onChange).toHaveBeenLastCalledWith('summer')
+    expect(onSubmit).toHaveBeenCalledTimes(1)
+    expect(screen.queryByRole('listbox')).toBeNull()
   })
 
   it('issues a /api/search/suggest request when value is set and panel opens', async () => {
     setup({ value: 'cot' })
 
-    fireEvent.focus(screen.getByRole('searchbox'))
+    fireEvent.focus(screen.getByRole('combobox'))
 
     await waitFor(() =>
       expect(globalThis.fetch).toHaveBeenCalledWith(
@@ -113,10 +154,10 @@ describe('SearchBar', () => {
 
     const { onChange, onSubmit } = setup()
 
-    fireEvent.focus(screen.getByRole('searchbox'))
+    fireEvent.focus(screen.getByRole('combobox'))
 
-    const recentButton = await screen.findByRole('button', { name: 'summer' })
-    fireEvent.click(recentButton)
+    const recentOption = await screen.findByRole('option', { name: 'summer' })
+    fireEvent.click(recentOption)
 
     expect(onChange).toHaveBeenLastCalledWith('summer')
     expect(onSubmit).toHaveBeenCalled()
@@ -125,7 +166,7 @@ describe('SearchBar', () => {
   it('renders category quick links and closes panel on click', async () => {
     const { container } = setup({ categoryQuickLinks: ['Bags', 'Shoes'] })
 
-    fireEvent.focus(screen.getByRole('searchbox'))
+    fireEvent.focus(screen.getByRole('combobox'))
 
     const bagsLink = await screen.findByRole('link', { name: 'Bags' })
     expect(bagsLink).toHaveAttribute(
@@ -146,7 +187,7 @@ describe('SearchBar', () => {
 
     setup({ value: 'fail' })
 
-    fireEvent.focus(screen.getByRole('searchbox'))
+    fireEvent.focus(screen.getByRole('combobox'))
 
     await waitFor(() => expect(globalThis.fetch).toHaveBeenCalled())
     // Should not render any product suggestions
@@ -158,8 +199,8 @@ describe('SearchBar', () => {
 
     setup({ value: 'logged-in-query' })
 
-    fireEvent.focus(screen.getByRole('searchbox'))
-    fireEvent.keyDown(screen.getByRole('searchbox'), { key: 'Enter' })
+    fireEvent.focus(screen.getByRole('combobox'))
+    fireEvent.keyDown(screen.getByRole('combobox'), { key: 'Enter' })
 
     const stored = JSON.parse(
       localStorage.getItem('search:recent:user-42') ?? '[]'
