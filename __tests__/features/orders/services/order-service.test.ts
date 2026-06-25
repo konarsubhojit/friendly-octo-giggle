@@ -861,7 +861,9 @@ describe('order-service', () => {
                   returning: vi.fn().mockImplementation(() => {
                     // First variant succeeds; second was consumed by a concurrent order.
                     callCount += 1
-                    return Promise.resolve(callCount === 1 ? [{ id: 'v1' }] : [])
+                    return Promise.resolve(
+                      callCount === 1 ? [{ id: 'v1' }] : []
+                    )
                   }),
                 }),
               }),
