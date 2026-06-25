@@ -124,6 +124,12 @@ describe('LoadingSpinner', () => {
     expect(svg?.getAttribute('class')).toContain('h-5 w-5')
   })
 
+  it('uses the warm theme color by default', () => {
+    const { container } = render(<LoadingSpinner />)
+    const svg = container.querySelector('svg')
+    expect(svg?.getAttribute('class')).toContain('text-[var(--accent-rose)]')
+  })
+
   it('applies custom color class', () => {
     const { container } = render(<LoadingSpinner color="text-white" />)
     const svg = container.querySelector('svg')
