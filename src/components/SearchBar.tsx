@@ -326,9 +326,7 @@ export function SearchBar({
               return
             }
             setActiveIndex((current) =>
-              current < 0 || current >= flatOptions.length - 1
-                ? 0
-                : current + 1
+              current < 0 || current >= flatOptions.length - 1 ? 0 : current + 1
             )
             return
           }
