@@ -10,8 +10,7 @@ export const revalidate = 3600
 
 export const metadata = {
   title: withStoreName('About Us'),
-  description:
-    `Learn more about ${STORE_NAME}, our mission, values, and the team behind our handmade decorations and wearables.`,
+  description: `Learn more about ${STORE_NAME}, our mission, values, and the team behind our handmade decorations and wearables.`,
 }
 
 const FEATURES = [
