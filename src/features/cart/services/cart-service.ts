@@ -420,13 +420,9 @@ const findCartWithRelations = (where: SQL<unknown>) =>
   })
 
 const fetchCartFromDB = (userId?: string, sessionId?: string) => {
-  if (!userId && !sessionId) return Promise.resolve(undefined)
-
-  const where = userId
-    ? eq(carts.userId, userId)
-    : eq(carts.sessionId, sessionId!)
-
-  return findCartWithRelations(where)
+  if (userId) return findCartWithRelations(eq(carts.userId, userId))
+  if (sessionId) return findCartWithRelations(eq(carts.sessionId, sessionId))
+  return Promise.resolve(undefined)
 }
 
 export const getCartIdentity = (
