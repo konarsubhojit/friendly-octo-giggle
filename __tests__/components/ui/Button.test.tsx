@@ -103,6 +103,16 @@ describe('Button', () => {
       expect(btn.disabled).toBe(true)
     })
 
+    it('keeps the button disabled when loading=true even if disabled={false} is explicitly passed', () => {
+      render(
+        <Button loading disabled={false}>
+          Saving
+        </Button>
+      )
+      const btn = screen.getByRole('button') as HTMLButtonElement
+      expect(btn.disabled).toBe(true)
+    })
+
     it('shows loadingText when loading', () => {
       render(
         <Button loading loadingText="Saving…">
