@@ -610,7 +610,7 @@ const ProductGrid = ({
                       ? '/shop#products'
                       : `/shop?category=${encodeURIComponent(cat)}#products`
                   }
-                  aria-current={isActive ? 'true' : undefined}
+                  aria-current={isActive || undefined}
                   className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
                     isActive
                       ? 'border-[var(--accent-rose)] bg-[var(--accent-blush)] text-[var(--foreground)]'
