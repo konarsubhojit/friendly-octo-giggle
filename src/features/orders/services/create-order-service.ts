@@ -29,7 +29,10 @@ import {
   PaymentVerificationError,
   verifyCheckoutPayment,
 } from '@/lib/payments'
-import { OrderRequestError, type OrderSessionUser } from './order-service.shared'
+import {
+  OrderRequestError,
+  type OrderSessionUser,
+} from './order-service.shared'
 
 type ProductWithVariants = Awaited<
   ReturnType<typeof drizzleDb.query.products.findMany>
@@ -332,7 +335,9 @@ const getDefaultOrderCacheInvalidator = (): OrderCacheInvalidator => ({
     await Promise.all([
       invalidateCache('admin:orders:*'),
       invalidateUserOrderCaches(userId),
-      ...uniqueProductIds.map((productId) => invalidateCache(`product:${productId}`)),
+      ...uniqueProductIds.map((productId) =>
+        invalidateCache(`product:${productId}`)
+      ),
     ])
   },
 })
@@ -362,7 +367,10 @@ export const validateOrderInput = ({
   }
 
   return {
-    customerDetails: customerValidation as Extract<ValidationResult, { valid: true }>,
+    customerDetails: customerValidation as Extract<
+      ValidationResult,
+      { valid: true }
+    >,
     requestedProductIds: [...new Set(body.items.map((item) => item.productId))],
   }
 }
@@ -396,7 +404,8 @@ export const persistOrder = async ({
   checkoutRequestId?: string
 }) => {
   const itemsWithVariant = body.items.filter(
-    (item): item is OrderItemInput & { variantId: string } => item.variantId != null
+    (item): item is OrderItemInput & { variantId: string } =>
+      item.variantId != null
   )
 
   return primaryDrizzleDb.transaction(async (tx) => {
@@ -554,7 +563,10 @@ export const dispatchOrderNotifications = async ({
       to: hydratedOrder.customerEmail,
       customerName: hydratedOrder.customerName,
       orderId: hydratedOrder.id,
-      totalAmount: formatPriceForCurrency(hydratedOrder.totalAmount, currencyCode),
+      totalAmount: formatPriceForCurrency(
+        hydratedOrder.totalAmount,
+        currencyCode
+      ),
       shippingAddress: hydratedOrder.customerAddress,
       locale,
       items: hydratedOrder.items.map((item) => ({
@@ -717,8 +729,9 @@ export const createOrderForUser = async ({
       stockResult.details
     )
   }
-  const totalAmount = (stockResult as Extract<StockCheckResult, { valid: true }>)
-    .totalAmount
+  const totalAmount = (
+    stockResult as Extract<StockCheckResult, { valid: true }>
+  ).totalAmount
   const verifiedPayment = await verifyPaymentForOrder({
     payment: body.payment,
     expectedAmount: totalAmount,

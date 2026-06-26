@@ -378,7 +378,11 @@ describe('order-service', () => {
         priceAndValidateStock(
           [{ productId: 'p1', variantId: 'v1', quantity: 2 }],
           [
-            { id: 'p1', name: 'Widget', variants: [{ id: 'v1', price: 75, stock: 5 }] },
+            {
+              id: 'p1',
+              name: 'Widget',
+              variants: [{ id: 'v1', price: 75, stock: 5 }],
+            },
           ] as never
         )
       ).toEqual({ valid: true, totalAmount: 150 })
@@ -387,7 +391,11 @@ describe('order-service', () => {
         priceAndValidateStock(
           [{ productId: 'p1', variantId: 'v1', quantity: 10 }],
           [
-            { id: 'p1', name: 'Widget', variants: [{ id: 'v1', price: 75, stock: 1 }] },
+            {
+              id: 'p1',
+              name: 'Widget',
+              variants: [{ id: 'v1', price: 75, stock: 1 }],
+            },
           ] as never
         )
       ).toEqual(
