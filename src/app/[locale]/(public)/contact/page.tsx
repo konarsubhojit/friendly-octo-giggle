@@ -1,12 +1,12 @@
 import Footer from '@/components/layout/Footer'
 import ContactForm from './ContactForm'
+import { STORE_NAME, withStoreName } from '@/lib/constants/store'
 
 export const revalidate = 3600
 
 export const metadata = {
-  title: 'Contact Us | The Kiyon Store',
-  description:
-    "Get in touch with The Kiyon Store support team. We'd love to hear from you.",
+  title: withStoreName('Contact Us'),
+  description: `Get in touch with the ${STORE_NAME} support team. We'd love to hear from you.`,
 }
 
 function ContactInfoSection() {

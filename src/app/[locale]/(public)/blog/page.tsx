@@ -1,33 +1,34 @@
 import Footer from '@/components/layout/Footer'
+import { STORE_NAME, withStoreName } from '@/lib/constants/store'
 
 export const revalidate = 3600
 
 export const metadata = {
-  title: 'Blog | The Kiyon Store',
-  description: 'Latest news, tips, and stories from The Kiyon Store team.',
+  title: withStoreName('Blog'),
+  description: `Latest news, tips, and stories from the ${STORE_NAME} team.`,
 }
 
 const posts = [
   {
-    title: 'Top 10 Shopping Tips to Save More This Season',
+    title: 'How to Care for Crochet Flowers at Home',
     date: 'February 20, 2026',
-    category: 'Tips & Tricks',
+    category: 'Care Tips',
     excerpt:
-      'Discover smart strategies for getting the best deals and maximizing your savings on every order.',
+      'A few simple storage and display tips can help your handmade blooms stay gift-ready for longer.',
   },
   {
-    title: 'Introducing Same-Day Delivery in Select Cities',
+    title: 'What to Expect After You Place an Order',
     date: 'February 10, 2026',
-    category: 'News',
+    category: 'Shopping Guide',
     excerpt:
-      'We are excited to announce same-day delivery is now available for orders placed before 2pm in select metro areas.',
+      'From confirmation emails to shipping updates, here is how the storefront keeps you informed after checkout.',
   },
   {
-    title: 'How We Keep Your Data Safe',
+    title: 'Thoughtful Gift Pairings for Cozy Celebrations',
     date: 'January 28, 2026',
-    category: 'Security',
+    category: 'Gift Guide',
     excerpt:
-      'A deep dive into the security practices we use to protect your personal information and payment details.',
+      'Pair bouquets, scarves, and keychains into easy gift bundles for birthdays, thank-yous, and seasonal surprises.',
   },
   {
     title: 'Behind the Scenes: How We Pick Our Products',
@@ -46,7 +47,7 @@ export default function BlogPage() {
           Blog
         </h1>
         <p className="text-[var(--text-muted)] text-lg mb-12">
-          News, tips, and stories from the Craft &amp; Cozy team.
+          News, tips, and stories from the {STORE_NAME} team.
         </p>
 
         <div className="space-y-6">

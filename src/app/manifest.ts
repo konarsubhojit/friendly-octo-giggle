@@ -1,9 +1,10 @@
 import type { MetadataRoute } from 'next'
+import { STORE_NAME, STORE_SHORT_NAME } from '@/lib/constants/store'
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'The Kiyon Store',
-    short_name: 'Kiyon',
+    name: STORE_NAME,
+    short_name: STORE_SHORT_NAME,
     description:
       'Handmade crochet flowers, bags, keychains, and accessories — crafted with love.',
     start_url: '/',

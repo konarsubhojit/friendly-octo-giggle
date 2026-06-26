@@ -5,11 +5,12 @@ import {
   SUPPORT_EMAIL,
   type CheckoutPolicySection,
 } from '@/lib/constants/checkout-policies'
+import { STORE_NAME, withStoreName } from '@/lib/constants/store'
 
 export const revalidate = 3600
 
 export const metadata = {
-  title: 'Help Center | The Kiyon Store',
+  title: withStoreName('Help Center'),
   description:
     'Find answers to common questions about orders, shipping, returns, and your account.',
 }
@@ -33,7 +34,7 @@ const faqs = [
   {
     question: 'How long does delivery take?',
     answer:
-      'Standard delivery takes 3–7 business days. Express delivery (1–2 days) is available at checkout for most locations.',
+      'Most orders arrive within several business days after they ship. The storefront currently offers standard shipping only, and any faster delivery option will be clearly labeled before you place an order.',
   },
   {
     question: 'What is your return policy?',
@@ -93,7 +94,7 @@ function HelpContactSection() {
           Contact Support
         </Link>
         <a
-          href="mailto:support@estore.example.com"
+          href={`mailto:${SUPPORT_EMAIL}`}
           className="border border-[var(--border-warm)] text-[var(--text-secondary)] px-6 py-3 rounded-xl font-semibold hover:bg-[var(--accent-blush)] transition-all duration-300"
         >
           Email Us
@@ -145,7 +146,8 @@ export default function HelpPage() {
           Help Center
         </h1>
         <p className="text-[var(--text-muted)] text-lg mb-12">
-          Find answers to common questions or reach out to our support team.
+          Find answers to common questions or reach out to the {STORE_NAME}{' '}
+          support team.
         </p>
 
         <FAQSection items={faqs} />

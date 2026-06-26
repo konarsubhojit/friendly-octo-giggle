@@ -15,6 +15,7 @@ import {
   and,
   isNull,
   lt,
+  gte,
   SQL,
 } from 'drizzle-orm'
 import { invalidateCache } from '@/lib/redis'
@@ -628,7 +629,7 @@ export const createOrderForUser = async ({
       .insert(orderItems)
       .values(buildOrderItemValues(body.items, productList, newOrder.id))
 
-    await Promise.all(
+    const stockUpdateResults = await Promise.all(
       itemsWithVariant.map((item) =>
         tx
           .update(productVariants)
@@ -636,9 +637,23 @@ export const createOrderForUser = async ({
             stock: sql`${productVariants.stock} - ${item.quantity}`,
             updatedAt: new Date(),
           })
-          .where(eq(productVariants.id, item.variantId))
+          .where(
+            and(
+              eq(productVariants.id, item.variantId),
+              gte(productVariants.stock, item.quantity)
+            )
+          )
+          .returning({ id: productVariants.id })
       )
     )
+
+    const oversold = stockUpdateResults.some((rows) => rows.length === 0)
+    if (oversold) {
+      throw new OrderRequestError(
+        'Unable to reserve stock — item was sold out by a concurrent order',
+        409
+      )
+    }
 
     return newOrder
   })
@@ -691,7 +706,6 @@ export const createOrderForUser = async ({
     ...new Set(body.items.map((item) => item.productId)),
   ]
   await Promise.all([
-    invalidateCache('products:*'),
     invalidateCache('admin:orders:*'),
     invalidateUserOrderCaches(user.id),
     ...productCacheKeys.map((productId) =>

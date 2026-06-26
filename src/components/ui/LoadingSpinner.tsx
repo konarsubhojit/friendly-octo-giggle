@@ -1,7 +1,7 @@
 interface LoadingSpinnerProps {
   /** Tailwind size class pair (e.g. 'h-8 w-8') or shorthand ('sm' | 'md' | 'lg'). Defaults to 'h-8 w-8'. */
   readonly size?: string
-  /** Tailwind text-color class. Defaults to 'text-blue-600'. */
+  /** Tailwind text-color class. Defaults to 'text-[var(--accent-rose)]'. */
   readonly color?: string
   readonly label?: string
 }
@@ -24,7 +24,7 @@ const SIZE_MAP: Record<string, string> = {
  */
 export function LoadingSpinner({
   size = 'h-8 w-8',
-  color = 'text-blue-600',
+  color = 'text-[var(--accent-rose)]',
   label = 'Loading',
 }: LoadingSpinnerProps) {
   const sizeClass = SIZE_MAP[size] ?? size

@@ -1,33 +1,32 @@
 import Footer from '@/components/layout/Footer'
 import Link from '@/components/ui/LocaleLink'
+import { STORE_NAME, withStoreName } from '@/lib/constants/store'
 
 export const revalidate = 3600
 
 export const metadata = {
-  title: 'Press | The Kiyon Store',
-  description:
-    'Latest press releases, media mentions, and press resources for The Kiyon Store.',
+  title: withStoreName('Press'),
+  description: `Latest press releases, media mentions, and press resources for ${STORE_NAME}.`,
 }
 
 const pressReleases = [
   {
     date: 'February 15, 2026',
-    title: 'Craft & Cozy Reaches 100,000 Customers Milestone',
+    title: 'Editorial Photos and Product Notes Updated for Spring',
     summary:
-      'Craft & Cozy today announced it has served over 100,000 customers since its launch, reflecting strong demand for its handmade flower bouquets, keyrings, hand warmers, mufflers, and scarves.',
+      'We refreshed our press-ready product photos and collection notes so editors can reference the latest handmade bouquets, scarves, and accessories accurately.',
   },
   {
     date: 'January 10, 2026',
-    title:
-      'Craft & Cozy Launches Same-Day Delivery in San Francisco and New York',
+    title: 'Customer Support Resources Consolidated in One Place',
     summary:
-      'Customers in select metro areas can now receive orders placed before 2pm on the same day, powered by our new logistics partnership.',
+      'Our public Help, Returns, and Contact pages now share the same order-policy language to make post-purchase guidance easier to verify.',
   },
   {
     date: 'December 5, 2025',
-    title: 'Craft & Cozy Announces Series A Funding Round',
+    title: 'Gift Guide Talking Points Prepared for Holiday Coverage',
     summary:
-      'Craft & Cozy has closed a $12M Series A round led by Apex Ventures, with participation from leading angel investors in the handmade crafts space.',
+      'We prepared an updated overview of gift-friendly categories, handmade materials, and care tips for seasonal media mentions.',
   },
 ]
 
@@ -39,7 +38,7 @@ export default function PressPage() {
           Press
         </h1>
         <p className="text-[var(--text-muted)] text-lg mb-12">
-          News, press releases, and media resources from Craft &amp; Cozy.
+          News, press releases, and media resources from {STORE_NAME}.
         </p>
 
         <section className="bg-[var(--surface)]/80 backdrop-blur-sm rounded-2xl shadow-warm border border-[var(--border-warm)] p-8 mb-8">
