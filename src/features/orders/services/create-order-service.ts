@@ -151,7 +151,8 @@ const validateCustomerInfo = (
   body: CreateOrderInput,
   user: OrderSessionUser
 ): ValidationResult => {
-  const customerName = body.customerName?.trim() || user.name?.trim() || 'Unknown'
+  const customerName =
+    body.customerName?.trim() || user.name?.trim() || 'Unknown'
   const customerEmail = body.customerEmail?.trim() || user.email
   const customerAddress = body.customerAddress?.trim() || ''
 
