@@ -151,9 +151,9 @@ const validateCustomerInfo = (
   body: CreateOrderInput,
   user: OrderSessionUser
 ): ValidationResult => {
-  const customerName = body.customerName || user.name || 'Unknown'
-  const customerEmail = body.customerEmail || user.email
-  const customerAddress = body.customerAddress || ''
+  const customerName = body.customerName?.trim() || user.name?.trim() || 'Unknown'
+  const customerEmail = body.customerEmail?.trim() || user.email
+  const customerAddress = body.customerAddress?.trim() || ''
 
   const errorMap: Record<
     'missing_email' | 'missing_address',
@@ -300,13 +300,17 @@ const buildOrderItemValues = (
   return items.map((item) => {
     const product = productMap.get(item.productId)
     if (!product) {
-      throw new Error(`Product with id ${item.productId} not found`)
+      throw new OrderRequestError(
+        `Product with id ${item.productId} not found`,
+        404
+      )
     }
 
     const price = product.variantPriceMap.get(item.variantId)
     if (price === undefined) {
-      throw new Error(
-        `Variant ${item.variantId} not found for product ${item.productId}`
+      throw new OrderRequestError(
+        `Variant ${item.variantId} not found for product ${item.productId}`,
+        404
       )
     }
 

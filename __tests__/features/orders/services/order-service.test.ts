@@ -472,7 +472,9 @@ describe('order-service', () => {
             paidAt: new Date('2024-01-01'),
           },
         })
-      ).rejects.toThrow(OrderRequestError)
+      ).rejects.toMatchObject(
+        expect.objectContaining({ status: 409 })
+      )
     })
 
     it('invalidateOrderRelatedCaches uses abstraction port', async () => {
