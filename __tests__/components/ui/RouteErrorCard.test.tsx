@@ -1,13 +1,14 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
+import type { ReactNode } from 'react'
 
 vi.mock('next/link', () => ({
   default: ({
     children,
     href,
   }: {
-    children: React.ReactNode
+    children: ReactNode
     href: string
   }) => <a href={href}>{children}</a>,
 }))
