@@ -1,6 +1,7 @@
 import Link from '@/components/ui/LocaleLink'
+import { Button } from '@/components/ui/Button'
 
-const CTA_BTN =
+const CTA_LINK_CLASSES =
   'inline-block bg-gradient-to-r from-[var(--accent-warm)] to-[var(--accent-rose)] text-white px-6 py-2.5 rounded-full font-bold text-sm hover:from-[var(--accent-rose)] hover:to-[var(--accent-warm)] transition-all shadow-warm hover:shadow-warm-lg hover:scale-105 focus-warm'
 
 interface CtaButtonProps {
@@ -12,16 +13,16 @@ interface CtaButtonProps {
 export function CtaButton({ text, href, onClick }: CtaButtonProps) {
   if (href) {
     return (
-      <Link href={href} className={CTA_BTN}>
+      <Link href={href} className={CTA_LINK_CLASSES}>
         {text}
       </Link>
     )
   }
   if (onClick) {
     return (
-      <button type="button" onClick={onClick} className={CTA_BTN}>
+      <Button type="button" variant="gradient" onClick={onClick}>
         {text}
-      </button>
+      </Button>
     )
   }
   return null
