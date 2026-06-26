@@ -587,7 +587,9 @@ export const createOrderForUser = async ({
   const [existingOrder] = await primaryDrizzleDb
     .select({ id: orders.id })
     .from(orders)
-    .where(eq(orders.paymentTransactionId, verifiedPayment.paymentTransactionId))
+    .where(
+      eq(orders.paymentTransactionId, verifiedPayment.paymentTransactionId)
+    )
     .limit(1)
   if (existingOrder) {
     return logFailedOrderCreation(
