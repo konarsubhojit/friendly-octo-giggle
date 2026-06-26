@@ -323,6 +323,97 @@ describe('cart-service', () => {
       expect(result.cart).not.toBeNull()
       expect(result.cart!.items[0].variant).not.toBeNull()
     })
+
+    it('user and guest DB-fetched carts produce identical serialized shapes', async () => {
+      const dbCart = {
+        id: 'cart1',
+        createdAt: new Date('2024-01-01'),
+        updatedAt: new Date('2024-01-01'),
+        items: [
+          {
+            id: 'item1',
+            variantId: 'var1',
+            quantity: 2,
+            createdAt: new Date('2024-01-01'),
+            updatedAt: new Date('2024-01-01'),
+            product: {
+              id: 'prod1',
+              name: 'Widget',
+              description: 'A widget',
+              image: 'img.jpg',
+              category: 'Cat',
+              createdAt: new Date('2024-01-01'),
+              updatedAt: new Date('2024-01-01'),
+              options: [
+                {
+                  id: 'opt1',
+                  name: 'Size',
+                  sortOrder: 0,
+                  createdAt: new Date('2024-01-01'),
+                  values: [
+                    {
+                      id: 'val1',
+                      optionId: 'opt1',
+                      value: 'Large',
+                      sortOrder: 0,
+                      createdAt: new Date('2024-01-01'),
+                    },
+                  ],
+                },
+              ],
+              variants: [
+                {
+                  id: 'var1',
+                  sku: 'SKU-1',
+                  price: 100,
+                  stock: 10,
+                  image: null,
+                  images: [],
+                  createdAt: new Date('2024-01-01'),
+                  updatedAt: new Date('2024-01-01'),
+                },
+              ],
+            },
+            variant: {
+              id: 'var1',
+              sku: 'SKU-1',
+              price: 100,
+              stock: 10,
+              image: null,
+              images: [],
+              createdAt: new Date('2024-01-01'),
+              updatedAt: new Date('2024-01-01'),
+              optionValues: [
+                {
+                  optionValue: {
+                    id: 'val1',
+                    optionId: 'opt1',
+                    value: 'Large',
+                    sortOrder: 0,
+                    createdAt: new Date('2024-01-01'),
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      }
+
+      // User cart: getCachedData returns the cart for userId
+      mockFetchCartFromRedis.mockResolvedValue(null)
+      mockGetCachedData.mockResolvedValueOnce(dbCart)
+      const userResult = await getCart({ userId: 'user1' })
+
+      // Guest cart: getCachedData returns the same cart for sessionId
+      mockFetchCartFromRedis.mockResolvedValue(null)
+      mockGetCachedData.mockResolvedValueOnce(dbCart)
+      const guestResult = await getCart({ sessionId: 'sess1' })
+
+      // Both carts should be non-null and have identical serialized shapes
+      expect(userResult.cart).not.toBeNull()
+      expect(guestResult.cart).not.toBeNull()
+      expect(userResult.cart).toEqual(guestResult.cart)
+    })
   })
 
   describe('clearCart', () => {
