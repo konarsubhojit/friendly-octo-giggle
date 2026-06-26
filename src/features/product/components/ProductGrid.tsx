@@ -586,10 +586,44 @@ const ProductGrid = ({
         </GradientHeading>
         <FlowerAccent className="h-6 w-6 opacity-70" />
       </div>
-      <p className="mb-8 text-sm text-[var(--text-muted)]">
+      <p className="mb-6 text-sm text-[var(--text-muted)]">
         Browse our complete handmade collection — {visibleProducts.length}
         {canLoadMore ? '+' : ''} items loaded for you.
       </p>
+
+      {/* Mobile category chips — shown only on small screens where the
+          category select dropdown is not visible. Allows quick category
+          browsing without opening the search dropdown. */}
+      {categories.length > 0 && (
+        <nav aria-label="Browse by category" className="mb-6 sm:hidden">
+          <div
+            className="flex gap-2 overflow-x-auto pb-2"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          >
+            {categoryFilters.map((cat) => {
+              const isActive = cat === selectedCategory
+              return (
+                <Link
+                  key={cat}
+                  href={
+                    cat === DEFAULT_CATEGORY
+                      ? '/shop#products'
+                      : `/shop?category=${encodeURIComponent(cat)}#products`
+                  }
+                  aria-current={isActive || undefined}
+                  className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                    isActive
+                      ? 'border-[var(--accent-rose)] bg-[var(--accent-blush)] text-[var(--foreground)]'
+                      : 'border-[var(--border-warm)] text-[var(--foreground)] hover:border-[var(--accent-rose)]'
+                  }`}
+                >
+                  {cat}
+                </Link>
+              )
+            })}
+          </div>
+        </nav>
+      )}
 
       <form
         onSubmit={(event) => {
