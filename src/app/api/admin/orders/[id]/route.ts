@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { drizzleDb, primaryDrizzleDb } from '@/lib/db'
-import { orders, users } from '@/lib/schema'
-import { eq } from 'drizzle-orm'
+import { orders, users, productVariants } from '@/lib/schema'
+import { eq, sql } from 'drizzle-orm'
 import {
   apiSuccess,
   apiError,
@@ -37,6 +37,14 @@ const buildUpdateData = (data: {
   return { status: data.status, updatedAt: new Date(), ...optional }
 }
 
+const VALID_TRANSITIONS: Record<string, string[]> = {
+  PENDING: ['PROCESSING', 'CANCELLED'],
+  PROCESSING: ['SHIPPED', 'CANCELLED'],
+  SHIPPED: ['DELIVERED'],
+  DELIVERED: ['DELIVERED'],
+  CANCELLED: ['CANCELLED'],
+}
+
 export const PATCH = async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -50,10 +58,51 @@ export const PATCH = async (
     const { id } = await params
     const validatedBody = await parseJsonBody(request, UpdateOrderStatusSchema)
 
-    await primaryDrizzleDb
-      .update(orders)
-      .set(buildUpdateData(validatedBody))
-      .where(eq(orders.id, id))
+    const currentOrder = await primaryDrizzleDb.query.orders.findFirst({
+      where: eq(orders.id, id),
+      with: { items: true },
+    })
+
+    if (!currentOrder) {
+      return apiError('Order not found', 404)
+    }
+
+    const allowedNext = VALID_TRANSITIONS[currentOrder.status] ?? []
+    if (!allowedNext.includes(validatedBody.status)) {
+      return apiError(
+        `Cannot transition order from ${currentOrder.status} to ${validatedBody.status}`,
+        400
+      )
+    }
+
+    if (
+      validatedBody.status === 'CANCELLED' &&
+      currentOrder.status !== 'CANCELLED'
+    ) {
+      await primaryDrizzleDb.transaction(async (tx) => {
+        await tx
+          .update(orders)
+          .set(buildUpdateData(validatedBody))
+          .where(eq(orders.id, id))
+
+        await Promise.all(
+          currentOrder.items.map((item) =>
+            tx
+              .update(productVariants)
+              .set({
+                stock: sql`${productVariants.stock} + ${item.quantity}`,
+                updatedAt: new Date(),
+              })
+              .where(eq(productVariants.id, item.variantId))
+          )
+        )
+      })
+    } else {
+      await primaryDrizzleDb
+        .update(orders)
+        .set(buildUpdateData(validatedBody))
+        .where(eq(orders.id, id))
+    }
 
     const order = await primaryDrizzleDb.query.orders.findFirst({
       where: eq(orders.id, id),
