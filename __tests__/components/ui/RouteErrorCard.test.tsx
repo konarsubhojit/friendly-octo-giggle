@@ -14,7 +14,10 @@ vi.mock('next/link', () => ({
 
 import { RouteErrorCard } from '@/components/ui/RouteErrorCard'
 
-function makeError(message: string, digest?: string): Error & { digest?: string } {
+function makeError(
+  message: string,
+  digest?: string
+): Error & { digest?: string } {
   const err = new Error(message) as Error & { digest?: string }
   if (digest) err.digest = digest
   return err
@@ -174,7 +177,9 @@ describe('RouteErrorCard (admin variant)', () => {
         variant="admin"
       />
     )
-    expect(screen.getByText('An error occurred in the admin panel')).toBeInTheDocument()
+    expect(
+      screen.getByText('An error occurred in the admin panel')
+    ).toBeInTheDocument()
   })
 
   it('renders the eyebrow label when provided', () => {
