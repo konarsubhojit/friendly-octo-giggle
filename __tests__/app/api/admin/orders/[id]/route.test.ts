@@ -49,7 +49,10 @@ vi.mock(
   '@/lib/validations',
   async () => await vi.importActual('@/lib/validations')
 )
-vi.mock('@/lib/logger', () => ({ logError: vi.fn(), logBusinessEvent: vi.fn() }))
+vi.mock('@/lib/logger', () => ({
+  logError: vi.fn(),
+  logBusinessEvent: vi.fn(),
+}))
 vi.mock('@/lib/email', () => ({
   sendOrderStatusUpdateEmail: vi.fn(),
 }))
@@ -181,7 +184,9 @@ describe('PATCH /api/admin/orders/[id]', () => {
     const data = await res.json()
 
     expect(res.status).toBe(400)
-    expect(data.error).toContain('Cannot transition order from SHIPPED to CANCELLED')
+    expect(data.error).toContain(
+      'Cannot transition order from SHIPPED to CANCELLED'
+    )
   })
 
   it('returns 400 for invalid status transition (DELIVERED to CANCELLED)', async () => {
@@ -195,7 +200,9 @@ describe('PATCH /api/admin/orders/[id]', () => {
     const data = await res.json()
 
     expect(res.status).toBe(400)
-    expect(data.error).toContain('Cannot transition order from DELIVERED to CANCELLED')
+    expect(data.error).toContain(
+      'Cannot transition order from DELIVERED to CANCELLED'
+    )
   })
 
   it('cancels a PENDING order and uses a transaction for stock restoration', async () => {
@@ -211,7 +218,7 @@ describe('PATCH /api/admin/orders/[id]', () => {
     const cancelledOrder = { ...pendingOrder, status: 'CANCELLED' }
 
     mockFindFirst
-      .mockResolvedValueOnce(pendingOrder as never)  // pre-fetch with items
+      .mockResolvedValueOnce(pendingOrder as never) // pre-fetch with items
       .mockResolvedValueOnce(cancelledOrder as never) // post-update fetch
 
     const res = await PATCH(mkReq({ status: 'CANCELLED' }), mkParams())
