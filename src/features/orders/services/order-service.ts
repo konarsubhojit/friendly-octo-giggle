@@ -1,6 +1,4 @@
-import { drizzleDb } from '@/lib/db'
-import { orders } from '@/lib/schema'
-import { eq, inArray, desc, count, and, lt, SQL } from 'drizzle-orm'
+import { db } from '@/lib/db'
 import { parseOffsetParam } from '@/lib/api-utils'
 import { cacheUserOrdersList } from '@/lib/cache'
 import { searchOrderIds } from '@/features/orders/services/order-search'
@@ -39,23 +37,6 @@ const parseOrderLimit = (param: string | null): number =>
     Math.max(1, Number.parseInt(param ?? String(PAGE_SIZE), 10) || PAGE_SIZE),
     100
   )
-
-const buildOrderConditions = (
-  userId: string,
-  cursor: string | null,
-  useOffset: boolean
-): SQL[] => {
-  const conditions: SQL[] = [eq(orders.userId, userId)]
-
-  if (!useOffset && cursor) {
-    const cursorDate = new Date(cursor)
-    if (!Number.isNaN(cursorDate.getTime())) {
-      conditions.push(lt(orders.createdAt, cursorDate))
-    }
-  }
-
-  return conditions
-}
 
 const serializeDate = (value: Date | string): string =>
   value instanceof Date ? value.toISOString() : value
@@ -113,8 +94,7 @@ export const getUserOrders = async ({
   const offset = useOffset ? parseOffsetParam(offsetParam) : 0
 
   const fetcher = async () => {
-    const conditions = buildOrderConditions(userId, cursor, useOffset)
-    const countConditions = buildOrderConditions(userId, null, false)
+    let searchIds: string[] | undefined
     let totalCountFromSearch: number | null = null
 
     if (search) {
@@ -133,17 +113,16 @@ export const getUserOrders = async ({
       }
 
       if (matchedIds && matchedIds.length > 0) {
-        const searchIds: string[] = matchedIds
-        const searchCondition = inArray(orders.id, searchIds)
-        conditions.push(searchCondition)
+        searchIds = matchedIds
         totalCountFromSearch = searchIds.length
       }
     }
 
-    const rows = await drizzleDb.query.orders.findMany({
-      where: and(...conditions),
-      with: { items: { with: { product: true, variant: true } } },
-      orderBy: [desc(orders.createdAt)],
+    const rows = await db.orders.findMany({
+      userId,
+      cursor,
+      useOffset,
+      searchIds,
       limit: limit + 1,
       offset: useOffset ? offset : undefined,
     })
@@ -152,16 +131,7 @@ export const getUserOrders = async ({
 
     return {
       ...serialized,
-      totalCount:
-        totalCountFromSearch ??
-        Number(
-          (
-            await drizzleDb
-              .select({ value: count() })
-              .from(orders)
-              .where(and(...countConditions))
-          )[0]?.value ?? 0
-        ),
+      totalCount: totalCountFromSearch ?? (await db.orders.count(userId)),
     }
   }
 

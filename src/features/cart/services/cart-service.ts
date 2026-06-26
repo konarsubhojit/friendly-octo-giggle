@@ -1,12 +1,4 @@
-import { drizzleDb, primaryDrizzleDb } from '@/lib/db'
-import {
-  products,
-  productVariants,
-  carts,
-  cartItems,
-  users,
-} from '@/lib/schema'
-import { eq, and, isNull, inArray, type SQL } from 'drizzle-orm'
+import { db } from '@/lib/db'
 import { logError } from '@/lib/logger'
 import { getCachedData } from '@/lib/redis'
 import { CACHE_KEYS, CACHE_TTL, invalidateCartCache } from '@/lib/cache'
@@ -130,15 +122,7 @@ const cartItemKey = (item: { productId: string; variantId: string }): string =>
 const verifyProductStock = async (
   body: AddToCartInput
 ): Promise<{ product: ProductWithVariants; availableStock: number }> => {
-  const product = await drizzleDb.query.products.findFirst({
-    where: and(eq(products.id, body.productId), isNull(products.deletedAt)),
-    with: {
-      variants: {
-        where: (variant, { isNull: isVariantNull }) =>
-          isVariantNull(variant.deletedAt),
-      },
-    },
-  })
+  const product = await db.products.findFirstForCart(body.productId)
 
   if (!product) {
     throw new CartRequestError('Product not found', 404)
@@ -163,9 +147,7 @@ const getOrCreateCart = async (
 ): Promise<{ cart: { id: string }; sessionId: string | undefined }> => {
   const createGuestCart = async (providedSessionId?: string) => {
     const guestSessionId = providedSessionId ?? createGuestCartSessionId()
-    const existing = await primaryDrizzleDb.query.carts.findFirst({
-      where: eq(carts.sessionId, guestSessionId),
-    })
+    const existing = await db.carts.findBySessionId(guestSessionId)
     if (existing) {
       return { cart: existing, sessionId: guestSessionId }
     }
@@ -173,20 +155,14 @@ const getOrCreateCart = async (
     // Atomic insert-or-ignore: relies on the unique constraint on
     // carts.sessionId to prevent duplicate rows under concurrent requests
     // sharing the same guest session id.
-    const [inserted] = await primaryDrizzleDb
-      .insert(carts)
-      .values({ sessionId: guestSessionId, updatedAt: new Date() })
-      .onConflictDoNothing({ target: carts.sessionId })
-      .returning()
+    const inserted = await db.carts.createForSessionOrIgnore(guestSessionId)
 
     if (inserted) {
       return { cart: inserted, sessionId: guestSessionId }
     }
 
     // A concurrent request inserted the row first; re-read it.
-    const racedCart = await primaryDrizzleDb.query.carts.findFirst({
-      where: eq(carts.sessionId, guestSessionId),
-    })
+    const racedCart = await db.carts.findBySessionId(guestSessionId)
     if (!racedCart) {
       throw new CartRequestError('Failed to create guest cart', 500)
     }
@@ -195,19 +171,14 @@ const getOrCreateCart = async (
 
   if (session?.user?.id) {
     const userId = session.user.id
-    const existing = await primaryDrizzleDb.query.carts.findFirst({
-      where: eq(carts.userId, userId),
-    })
+    const existing = await db.carts.findByUserId(userId)
     if (existing) {
       return { cart: existing, sessionId: undefined }
     }
 
-    const userRecord = await primaryDrizzleDb.query.users.findFirst({
-      where: eq(users.id, userId),
-      columns: { id: true },
-    })
+    const userExists = await db.users.existsById(userId)
 
-    if (!userRecord) {
+    if (!userExists) {
       logError({
         error: new Error('Authenticated session user not found in database'),
         context: 'cart_invalid_session_user',
@@ -219,19 +190,13 @@ const getOrCreateCart = async (
 
     // Atomic insert-or-ignore on the unique userId constraint to avoid
     // duplicate carts when concurrent requests race for the same user.
-    const [inserted] = await primaryDrizzleDb
-      .insert(carts)
-      .values({ userId, updatedAt: new Date() })
-      .onConflictDoNothing({ target: carts.userId })
-      .returning()
+    const inserted = await db.carts.createForUserOrIgnore(userId)
 
     if (inserted) {
       return { cart: inserted, sessionId: undefined }
     }
 
-    const racedCart = await primaryDrizzleDb.query.carts.findFirst({
-      where: eq(carts.userId, userId),
-    })
+    const racedCart = await db.carts.findByUserId(userId)
     if (!racedCart) {
       throw new CartRequestError('Failed to create user cart', 500)
     }
@@ -246,13 +211,11 @@ const addOrUpdateCartItem = async (
   body: AddToCartInput,
   availableStock: number
 ): Promise<CartMutationWarning> => {
-  const existingItem = await primaryDrizzleDb.query.cartItems.findFirst({
-    where: and(
-      eq(cartItems.cartId, cartId),
-      eq(cartItems.productId, body.productId),
-      eq(cartItems.variantId, body.variantId)
-    ),
-  })
+  const existingItem = await db.carts.findItem(
+    cartId,
+    body.productId,
+    body.variantId
+  )
 
   let warning: string | null = null
   let adjustedQuantity: number | null = null
@@ -271,10 +234,7 @@ const addOrUpdateCartItem = async (
       adjustedQuantity = newQuantity
       warning = `Only ${availableStock} items available. Added ${canAdd} instead of ${body.quantity} (you already had ${existingItem.quantity} in your cart).`
     }
-    await primaryDrizzleDb
-      .update(cartItems)
-      .set({ quantity: newQuantity, updatedAt: new Date() })
-      .where(eq(cartItems.id, existingItem.id))
+    await db.carts.updateItem(existingItem.id, newQuantity)
   } else {
     let { quantity } = body
     if (quantity > availableStock) {
@@ -282,12 +242,11 @@ const addOrUpdateCartItem = async (
       adjustedQuantity = quantity
       warning = `Only ${availableStock} items available. Added ${availableStock} to your cart.`
     }
-    await primaryDrizzleDb.insert(cartItems).values({
+    await db.carts.insertItem({
       cartId,
       productId: body.productId,
       variantId: body.variantId,
       quantity,
-      updatedAt: new Date(),
     })
   }
 
@@ -379,49 +338,9 @@ const serializeCart = (cart: CartRecord) => {
   }
 }
 
-/**
- * Single authoritative query for a cart with its full relation tree.
- * Used in fetchCartFromDB (both user and guest paths) and addItemToCart.
- */
-const findCartWithRelations = (where: SQL<unknown>) =>
-  drizzleDb.query.carts.findFirst({
-    where,
-    with: {
-      items: {
-        with: {
-          product: {
-            with: {
-              options: {
-                orderBy: (o, { asc }) => [asc(o.sortOrder)],
-                with: {
-                  values: {
-                    orderBy: (v, { asc }) => [asc(v.sortOrder)],
-                  },
-                },
-              },
-              variants: {
-                where: (variant, { isNull: isVariantNull }) =>
-                  isVariantNull(variant.deletedAt),
-              },
-            },
-          },
-          variant: {
-            with: {
-              optionValues: {
-                with: {
-                  optionValue: true,
-                },
-              },
-            },
-          },
-        },
-      },
-    },
-  })
-
 const fetchCartFromDB = (userId?: string, sessionId?: string) => {
-  if (userId) return findCartWithRelations(eq(carts.userId, userId))
-  if (sessionId) return findCartWithRelations(eq(carts.sessionId, sessionId))
+  if (userId) return db.carts.findWithRelationsByUserId(userId)
+  if (sessionId) return db.carts.findWithRelationsBySessionId(sessionId)
   return Promise.resolve(undefined)
 }
 
@@ -442,14 +361,8 @@ const getCartCacheKey = (
 }
 
 const findCartForDeletion = (userId?: string, sessionId?: string) => {
-  if (userId) {
-    return drizzleDb.query.carts.findFirst({ where: eq(carts.userId, userId) })
-  }
-  if (sessionId) {
-    return drizzleDb.query.carts.findFirst({
-      where: eq(carts.sessionId, sessionId),
-    })
-  }
+  if (userId) return db.carts.findByUserId(userId)
+  if (sessionId) return db.carts.findBySessionId(sessionId)
   return Promise.resolve(undefined)
 }
 
@@ -476,14 +389,7 @@ const buildStockByVariantId = async (
   const stockByVariantId = new Map<string, number>()
   if (variantIds.length === 0) return stockByVariantId
 
-  const variantRows = await primaryDrizzleDb
-    .select({
-      id: productVariants.id,
-      stock: productVariants.stock,
-      deletedAt: productVariants.deletedAt,
-    })
-    .from(productVariants)
-    .where(inArray(productVariants.id, variantIds))
+  const variantRows = await db.carts.findVariantStock(variantIds)
 
   for (const variant of variantRows) {
     // Treat soft-deleted variants as out of stock.
@@ -509,31 +415,24 @@ const upsertMergedItem = async (
   cartId: string,
   guestItem: CartItemRow,
   existingItem: CartItemRow | undefined,
-  cappedQuantity: number,
-  now: Date
+  cappedQuantity: number
 ): Promise<void> => {
   if (existingItem) {
     if (cappedQuantity <= 0) {
-      await primaryDrizzleDb
-        .delete(cartItems)
-        .where(eq(cartItems.id, existingItem.id))
+      await db.carts.deleteItem(existingItem.id)
       return
     }
     if (cappedQuantity === existingItem.quantity) return
-    await primaryDrizzleDb
-      .update(cartItems)
-      .set({ quantity: cappedQuantity, updatedAt: now })
-      .where(eq(cartItems.id, existingItem.id))
+    await db.carts.updateItem(existingItem.id, cappedQuantity)
     return
   }
 
   if (cappedQuantity <= 0) return
-  await primaryDrizzleDb.insert(cartItems).values({
+  await db.carts.insertItem({
     cartId,
     productId: guestItem.productId,
     variantId: guestItem.variantId,
     quantity: cappedQuantity,
-    updatedAt: now,
   })
 }
 
@@ -559,17 +458,12 @@ const mergeGuestItemsIntoUserCart = async (
       userCart.id,
       guestItem,
       existingItem,
-      cappedQuantity,
-      now
+      cappedQuantity
     )
   }
 
-  await primaryDrizzleDb
-    .update(carts)
-    .set({ updatedAt: now })
-    .where(eq(carts.id, userCart.id))
-
-  await primaryDrizzleDb.delete(carts).where(eq(carts.id, guestCart.id))
+  await db.carts.update(userCart.id, { updatedAt: now })
+  await db.carts.delete(guestCart.id)
 }
 
 const PG_UNIQUE_VIOLATION = '23505'
@@ -596,10 +490,7 @@ const promoteGuestCartToUser = async (
   now: Date
 ): Promise<{ promoted: boolean }> => {
   try {
-    await primaryDrizzleDb
-      .update(carts)
-      .set({ userId, sessionId: null, updatedAt: now })
-      .where(eq(carts.id, guestCart.id))
+    await db.carts.promoteToUser(guestCart.id, userId, now)
   } catch (error) {
     // A concurrent request created the user's cart between the read and this
     // update. The unique constraint on carts.userId blocks the promotion;
@@ -618,18 +509,13 @@ const promoteGuestCartToUser = async (
     )
 
     if (cappedQuantity <= 0) {
-      await primaryDrizzleDb
-        .delete(cartItems)
-        .where(eq(cartItems.id, guestItem.id))
+      await db.carts.deleteItem(guestItem.id)
       continue
     }
 
     if (cappedQuantity === guestItem.quantity) continue
 
-    await primaryDrizzleDb
-      .update(cartItems)
-      .set({ quantity: cappedQuantity, updatedAt: now })
-      .where(eq(cartItems.id, guestItem.id))
+    await db.carts.updateItem(guestItem.id, cappedQuantity)
   }
 
   return { promoted: true }
@@ -690,18 +576,12 @@ export const mergeGuestCartIntoUserCart = async (
   userId: string,
   sessionId: string
 ): Promise<string | undefined> => {
-  const guestCart = await primaryDrizzleDb.query.carts.findFirst({
-    where: eq(carts.sessionId, sessionId),
-    with: { items: true },
-  })
+  const guestCart = await db.carts.findWithItemsBySessionId(sessionId)
 
   if (!guestCart) return undefined
 
   const now = new Date()
-  const userCart = await primaryDrizzleDb.query.carts.findFirst({
-    where: eq(carts.userId, userId),
-    with: { items: true },
-  })
+  const userCart = await db.carts.findWithItemsByUserId(userId)
 
   const variantIds = Array.from(
     new Set([
@@ -729,10 +609,7 @@ export const mergeGuestCartIntoUserCart = async (
     if (!result.promoted) {
       // Race: another request created the user cart while we were promoting.
       // Re-fetch it and fall back to a merge so the guest items are not lost.
-      const racedUserCart = await primaryDrizzleDb.query.carts.findFirst({
-        where: eq(carts.userId, userId),
-        with: { items: true },
-      })
+      const racedUserCart = await db.carts.findWithItemsByUserId(userId)
 
       if (!racedUserCart) {
         // The cart that blocked us has disappeared (rare); surface a 500 so
@@ -903,7 +780,7 @@ export const addItemToCart = async (
   const stockWarning = await addOrUpdateCartItem(cart.id, body, availableStock)
 
   const [updatedCart] = await Promise.all([
-    findCartWithRelations(eq(carts.id, cart.id)),
+    db.carts.findWithRelationsById(cart.id),
     invalidateCartCache(session?.user?.id, resolvedSessionId),
   ])
 
@@ -935,7 +812,7 @@ export const clearCart = async (identity: CartIdentity): Promise<void> => {
   const cart = await findCartForDeletion(userId, sessionId)
   if (cart) {
     await Promise.all([
-      primaryDrizzleDb.delete(carts).where(eq(carts.id, cart.id)),
+      db.carts.delete(cart.id),
       invalidateCartCache(userId, sessionId),
       removeCartItemsByCartId(cart.id, userId, sessionId),
     ])

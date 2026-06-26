@@ -1,13 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const {
-  mockDrizzleDbQuery,
-  mockPrimaryDrizzleDbQuery,
-  mockPrimaryDrizzleDbInsert,
-  mockPrimaryDrizzleDbUpdate,
-  mockPrimaryDrizzleDbTransaction,
-  mockPrimaryDrizzleDbSelect,
-  mockDrizzleDbSelect,
+  mockDbOrdersFindMany,
+  mockDbOrdersCount,
+  mockDbOrdersFindFirstByPaymentTxId,
+  mockDbOrdersCreateWithItems,
+  mockDbOrdersFindFirstById,
+  mockDbProductsFindManyWithVariants,
+  mockDbUsersFindPreferences,
+  MockStockConflictError,
   mockInvalidateCache,
   mockInvalidateUserOrderCaches,
   mockCacheUserOrdersList,
@@ -20,50 +21,54 @@ const {
   mockWaitUntil,
   mockParseOffsetParam,
   mockVerifyCheckoutPayment,
-} = vi.hoisted(() => ({
-  mockDrizzleDbQuery: {
-    orders: {
-      findMany: vi.fn(),
-      findFirst: vi.fn(),
-    },
-    products: { findMany: vi.fn() },
-    users: { findFirst: vi.fn() },
-  },
-  mockPrimaryDrizzleDbQuery: {
-    orders: { findFirst: vi.fn() },
-    products: { findMany: vi.fn() },
-  },
-  mockPrimaryDrizzleDbInsert: vi.fn(),
-  mockPrimaryDrizzleDbUpdate: vi.fn(),
-  mockPrimaryDrizzleDbTransaction: vi.fn(),
-  mockPrimaryDrizzleDbSelect: vi.fn(),
-  mockDrizzleDbSelect: vi.fn(),
-  mockInvalidateCache: vi.fn().mockResolvedValue(undefined),
-  mockInvalidateUserOrderCaches: vi.fn().mockResolvedValue(undefined),
-  mockCacheUserOrdersList: vi.fn(),
-  mockLogBusinessEvent: vi.fn(),
-  mockLogError: vi.fn(),
-  mockSendOrderConfirmationEmail: vi.fn(),
-  mockGetQStashClient: vi.fn(),
-  mockWriteOrderToRedis: vi.fn().mockResolvedValue(undefined),
-  mockSearchOrderIds: vi.fn(),
-  mockWaitUntil: vi.fn(),
-  mockParseOffsetParam: vi.fn().mockReturnValue(0),
-  mockVerifyCheckoutPayment: vi.fn(),
-}))
+} = vi.hoisted(() => {
+  class MockStockConflictError extends Error {
+    constructor(message: string) {
+      super(message)
+      this.name = 'StockConflictError'
+    }
+  }
+  return {
+    mockDbOrdersFindMany: vi.fn(),
+    mockDbOrdersCount: vi.fn(),
+    mockDbOrdersFindFirstByPaymentTxId: vi.fn(),
+    mockDbOrdersCreateWithItems: vi.fn(),
+    mockDbOrdersFindFirstById: vi.fn(),
+    mockDbProductsFindManyWithVariants: vi.fn(),
+    mockDbUsersFindPreferences: vi.fn(),
+    MockStockConflictError,
+    mockInvalidateCache: vi.fn().mockResolvedValue(undefined),
+    mockInvalidateUserOrderCaches: vi.fn().mockResolvedValue(undefined),
+    mockCacheUserOrdersList: vi.fn(),
+    mockLogBusinessEvent: vi.fn(),
+    mockLogError: vi.fn(),
+    mockSendOrderConfirmationEmail: vi.fn(),
+    mockGetQStashClient: vi.fn(),
+    mockWriteOrderToRedis: vi.fn().mockResolvedValue(undefined),
+    mockSearchOrderIds: vi.fn(),
+    mockWaitUntil: vi.fn(),
+    mockParseOffsetParam: vi.fn().mockReturnValue(0),
+    mockVerifyCheckoutPayment: vi.fn(),
+  }
+})
 
 vi.mock('@/lib/db', () => ({
-  drizzleDb: {
-    query: mockDrizzleDbQuery,
-    select: mockDrizzleDbSelect,
+  db: {
+    orders: {
+      findMany: mockDbOrdersFindMany,
+      count: mockDbOrdersCount,
+      findFirstByPaymentTransactionId: mockDbOrdersFindFirstByPaymentTxId,
+      createWithItems: mockDbOrdersCreateWithItems,
+      findFirstById: mockDbOrdersFindFirstById,
+    },
+    products: {
+      findManyWithVariantsForOrderValidation: mockDbProductsFindManyWithVariants,
+    },
+    users: {
+      findPreferences: mockDbUsersFindPreferences,
+    },
   },
-  primaryDrizzleDb: {
-    query: mockPrimaryDrizzleDbQuery,
-    insert: mockPrimaryDrizzleDbInsert,
-    update: mockPrimaryDrizzleDbUpdate,
-    transaction: mockPrimaryDrizzleDbTransaction,
-    select: mockPrimaryDrizzleDbSelect,
-  },
+  StockConflictError: MockStockConflictError,
 }))
 
 vi.mock('@/lib/redis', () => ({
@@ -207,13 +212,7 @@ describe('order-service', () => {
       paidAt: new Date('2024-01-01'),
     })
     // Default: no existing order for the idempotency check
-    mockPrimaryDrizzleDbSelect.mockReturnValue({
-      from: vi.fn().mockReturnValue({
-        where: vi.fn().mockReturnValue({
-          limit: vi.fn().mockResolvedValue([]),
-        }),
-      }),
-    })
+    mockDbOrdersFindFirstByPaymentTxId.mockResolvedValue(null)
   })
 
   describe('OrderRequestError', () => {
@@ -329,12 +328,8 @@ describe('order-service', () => {
       mockCacheUserOrdersList.mockImplementation(
         async (fetcher: () => Promise<unknown>) => fetcher()
       )
-      mockDrizzleDbQuery.orders.findMany.mockResolvedValue([])
-      mockDrizzleDbSelect.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue([{ value: 5 }]),
-        }),
-      })
+      mockDbOrdersFindMany.mockResolvedValue([])
+      mockDbOrdersCount.mockResolvedValue(5)
 
       const result = await getUserOrders({
         requestUrl: 'http://localhost:3000/api/orders?search=widget',
@@ -408,24 +403,8 @@ describe('order-service', () => {
     })
 
     it('persistOrder throws 409 when stock reservation is blocked in transaction', async () => {
-      mockPrimaryDrizzleDbTransaction.mockImplementation(
-        async (callback: (tx: unknown) => Promise<unknown>) => {
-          const tx = {
-            insert: vi.fn().mockReturnValue({
-              values: vi.fn().mockReturnValue({
-                returning: vi.fn().mockResolvedValue([{ id: 'ord_helper' }]),
-              }),
-            }),
-            update: vi.fn().mockReturnValue({
-              set: vi.fn().mockReturnValue({
-                where: vi.fn().mockReturnValue({
-                  returning: vi.fn().mockResolvedValue([]),
-                }),
-              }),
-            }),
-          }
-          return callback(tx)
-        }
+      mockDbOrdersCreateWithItems.mockRejectedValue(
+        new MockStockConflictError('Widget (v1): race condition blocked stock')
       )
 
       await expect(
@@ -497,7 +476,7 @@ describe('order-service', () => {
       const publishOrderCreated = vi
         .fn()
         .mockResolvedValue({ messageId: 'msg-helper' })
-      mockDrizzleDbQuery.users.findFirst.mockResolvedValue({
+      mockDbUsersFindPreferences.mockResolvedValue({
         currencyPreference: 'INR',
         localePreference: 'en',
       })
@@ -616,7 +595,7 @@ describe('order-service', () => {
     })
 
     it('throws when product not found', async () => {
-      mockPrimaryDrizzleDbQuery.products.findMany.mockResolvedValue([])
+      mockDbProductsFindManyWithVariants.mockResolvedValue([])
 
       await expect(
         createOrderForUser({
@@ -639,7 +618,7 @@ describe('order-service', () => {
     })
 
     it('throws when insufficient stock', async () => {
-      mockPrimaryDrizzleDbQuery.products.findMany.mockResolvedValue([
+      mockDbProductsFindManyWithVariants.mockResolvedValue([
         {
           id: 'p1',
           name: 'Widget',
@@ -668,7 +647,7 @@ describe('order-service', () => {
     })
 
     it('throws when variant not found', async () => {
-      mockPrimaryDrizzleDbQuery.products.findMany.mockResolvedValue([
+      mockDbProductsFindManyWithVariants.mockResolvedValue([
         {
           id: 'p1',
           name: 'Widget',
@@ -715,7 +694,7 @@ describe('order-service', () => {
         updatedAt: new Date('2024-01-01'),
       }
 
-      mockPrimaryDrizzleDbQuery.products.findMany.mockResolvedValue([
+      mockDbProductsFindManyWithVariants.mockResolvedValue([
         {
           id: 'p1',
           name: 'Widget',
@@ -723,25 +702,7 @@ describe('order-service', () => {
         },
       ])
 
-      mockPrimaryDrizzleDbTransaction.mockImplementation(
-        async (callback: (tx: unknown) => Promise<unknown>) => {
-          const tx = {
-            insert: vi.fn().mockReturnValue({
-              values: vi.fn().mockReturnValue({
-                returning: vi.fn().mockResolvedValue([newOrder]),
-              }),
-            }),
-            update: vi.fn().mockReturnValue({
-              set: vi.fn().mockReturnValue({
-                where: vi.fn().mockReturnValue({
-                  returning: vi.fn().mockResolvedValue([{ id: 'v1' }]),
-                }),
-              }),
-            }),
-          }
-          return callback(tx)
-        }
-      )
+      mockDbOrdersCreateWithItems.mockResolvedValue({ id: 'ord1' })
 
       const fullOrder = {
         ...newOrder,
@@ -762,8 +723,8 @@ describe('order-service', () => {
         ],
       }
 
-      mockPrimaryDrizzleDbQuery.orders.findFirst.mockResolvedValue(fullOrder)
-      mockDrizzleDbQuery.users.findFirst.mockResolvedValue({
+      mockDbOrdersFindFirstById.mockResolvedValue(fullOrder)
+      mockDbUsersFindPreferences.mockResolvedValue({
         currencyPreference: 'INR',
       })
       mockGetQStashClient.mockReturnValue({
@@ -826,7 +787,7 @@ describe('order-service', () => {
         updatedAt: new Date('2024-01-01'),
       }
 
-      mockPrimaryDrizzleDbQuery.products.findMany.mockResolvedValue([
+      mockDbProductsFindManyWithVariants.mockResolvedValue([
         {
           id: 'p1',
           name: 'Widget',
@@ -834,25 +795,7 @@ describe('order-service', () => {
         },
       ])
 
-      mockPrimaryDrizzleDbTransaction.mockImplementation(
-        async (callback: (tx: unknown) => Promise<unknown>) => {
-          const tx = {
-            insert: vi.fn().mockReturnValue({
-              values: vi.fn().mockReturnValue({
-                returning: vi.fn().mockResolvedValue([newOrder]),
-              }),
-            }),
-            update: vi.fn().mockReturnValue({
-              set: vi.fn().mockReturnValue({
-                where: vi.fn().mockReturnValue({
-                  returning: vi.fn().mockResolvedValue([{ id: 'v1' }]),
-                }),
-              }),
-            }),
-          }
-          return callback(tx)
-        }
-      )
+      mockDbOrdersCreateWithItems.mockResolvedValue({ id: 'ord2' })
 
       const fullOrder = {
         ...newOrder,
@@ -873,8 +816,8 @@ describe('order-service', () => {
         ],
       }
 
-      mockPrimaryDrizzleDbQuery.orders.findFirst.mockResolvedValue(fullOrder)
-      mockDrizzleDbQuery.users.findFirst.mockResolvedValue(null)
+      mockDbOrdersFindFirstById.mockResolvedValue(fullOrder)
+      mockDbUsersFindPreferences.mockResolvedValue(null)
       mockGetQStashClient.mockReturnValue({
         publishJSON: vi.fn().mockRejectedValue(new Error('Queue down')),
       })
@@ -911,7 +854,7 @@ describe('order-service', () => {
     })
 
     it('throws when order retrieval fails after creation', async () => {
-      mockPrimaryDrizzleDbQuery.products.findMany.mockResolvedValue([
+      mockDbProductsFindManyWithVariants.mockResolvedValue([
         {
           id: 'p1',
           name: 'Widget',
@@ -919,27 +862,9 @@ describe('order-service', () => {
         },
       ])
 
-      mockPrimaryDrizzleDbTransaction.mockImplementation(
-        async (callback: (tx: unknown) => Promise<unknown>) => {
-          const tx = {
-            insert: vi.fn().mockReturnValue({
-              values: vi.fn().mockReturnValue({
-                returning: vi.fn().mockResolvedValue([{ id: 'ord3' }]),
-              }),
-            }),
-            update: vi.fn().mockReturnValue({
-              set: vi.fn().mockReturnValue({
-                where: vi.fn().mockReturnValue({
-                  returning: vi.fn().mockResolvedValue([{ id: 'v1' }]),
-                }),
-              }),
-            }),
-          }
-          return callback(tx)
-        }
-      )
+      mockDbOrdersCreateWithItems.mockResolvedValue({ id: 'ord3' })
 
-      mockPrimaryDrizzleDbQuery.orders.findFirst.mockResolvedValue(null)
+      mockDbOrdersFindFirstById.mockResolvedValue(null)
 
       await expect(
         createOrderForUser({
@@ -967,7 +892,7 @@ describe('order-service', () => {
     })
 
     it('uses user defaults for name and email when body is empty', async () => {
-      mockPrimaryDrizzleDbQuery.products.findMany.mockResolvedValue([
+      mockDbProductsFindManyWithVariants.mockResolvedValue([
         {
           id: 'p1',
           name: 'Widget',
@@ -993,25 +918,7 @@ describe('order-service', () => {
         updatedAt: new Date('2024-01-01'),
       }
 
-      mockPrimaryDrizzleDbTransaction.mockImplementation(
-        async (callback: (tx: unknown) => Promise<unknown>) => {
-          const tx = {
-            insert: vi.fn().mockReturnValue({
-              values: vi.fn().mockReturnValue({
-                returning: vi.fn().mockResolvedValue([newOrder]),
-              }),
-            }),
-            update: vi.fn().mockReturnValue({
-              set: vi.fn().mockReturnValue({
-                where: vi.fn().mockReturnValue({
-                  returning: vi.fn().mockResolvedValue([{ id: 'v1' }]),
-                }),
-              }),
-            }),
-          }
-          return callback(tx)
-        }
-      )
+      mockDbOrdersCreateWithItems.mockResolvedValue({ id: 'ord4' })
 
       const fullOrder = {
         ...newOrder,
@@ -1032,8 +939,8 @@ describe('order-service', () => {
         ],
       }
 
-      mockPrimaryDrizzleDbQuery.orders.findFirst.mockResolvedValue(fullOrder)
-      mockDrizzleDbQuery.users.findFirst.mockResolvedValue(null)
+      mockDbOrdersFindFirstById.mockResolvedValue(fullOrder)
+      mockDbUsersFindPreferences.mockResolvedValue(null)
       mockGetQStashClient.mockReturnValue({
         publishJSON: vi.fn().mockResolvedValue({ messageId: 'msg2' }),
       })
@@ -1064,7 +971,7 @@ describe('order-service', () => {
     })
 
     it('throws 409 when stock decrement is blocked by race condition', async () => {
-      mockPrimaryDrizzleDbQuery.products.findMany.mockResolvedValue([
+      mockDbProductsFindManyWithVariants.mockResolvedValue([
         {
           id: 'p1',
           name: 'Widget',
@@ -1072,26 +979,8 @@ describe('order-service', () => {
         },
       ])
 
-      mockPrimaryDrizzleDbTransaction.mockImplementation(
-        async (callback: (tx: unknown) => Promise<unknown>) => {
-          const tx = {
-            insert: vi.fn().mockReturnValue({
-              values: vi.fn().mockReturnValue({
-                returning: vi.fn().mockResolvedValue([{ id: 'ord5' }]),
-              }),
-            }),
-            update: vi.fn().mockReturnValue({
-              set: vi.fn().mockReturnValue({
-                where: vi.fn().mockReturnValue({
-                  // Simulates a concurrent order having already consumed the stock:
-                  // gte guard matched 0 rows, so no id is returned.
-                  returning: vi.fn().mockResolvedValue([]),
-                }),
-              }),
-            }),
-          }
-          return callback(tx)
-        }
+      mockDbOrdersCreateWithItems.mockRejectedValue(
+        new MockStockConflictError('Widget (v1): race condition blocked stock')
       )
 
       await expect(
@@ -1115,7 +1004,7 @@ describe('order-service', () => {
     })
 
     it('throws 409 when one item succeeds but another is blocked by race condition', async () => {
-      mockPrimaryDrizzleDbQuery.products.findMany.mockResolvedValue([
+      mockDbProductsFindManyWithVariants.mockResolvedValue([
         {
           id: 'p1',
           name: 'Widget A',
@@ -1128,31 +1017,9 @@ describe('order-service', () => {
         },
       ])
 
-      mockPrimaryDrizzleDbTransaction.mockImplementation(
-        async (callback: (tx: unknown) => Promise<unknown>) => {
-          let callCount = 0
-          const tx = {
-            insert: vi.fn().mockReturnValue({
-              values: vi.fn().mockReturnValue({
-                returning: vi.fn().mockResolvedValue([{ id: 'ord6' }]),
-              }),
-            }),
-            update: vi.fn().mockReturnValue({
-              set: vi.fn().mockReturnValue({
-                where: vi.fn().mockReturnValue({
-                  returning: vi.fn().mockImplementation(() => {
-                    // First variant succeeds; second was consumed by a concurrent order.
-                    callCount += 1
-                    return Promise.resolve(
-                      callCount === 1 ? [{ id: 'v1' }] : []
-                    )
-                  }),
-                }),
-              }),
-            }),
-          }
-          return callback(tx)
-        }
+      // Simulates a concurrent order having consumed the second item's stock.
+      mockDbOrdersCreateWithItems.mockRejectedValue(
+        new MockStockConflictError('Widget B (v2): race condition blocked stock')
       )
 
       await expect(
