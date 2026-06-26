@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from 'react'
 import { FieldRenderer } from '@/components/ui/FieldRenderer'
+import { Button } from '@/components/ui/Button'
 
 // Re-export public types from DynamicFormTypes for backwards compatibility
 export type {
@@ -14,9 +15,6 @@ export type {
 } from '@/components/ui/DynamicFormTypes'
 
 import type { DynamicFormProps } from '@/components/ui/DynamicFormTypes'
-
-const DEFAULT_SUBMIT_BTN =
-  'w-full sm:w-auto px-6 py-2 text-sm font-semibold bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed'
 
 /**
  * A self-managing form component driven by field definitions.
@@ -32,7 +30,7 @@ export function DynamicForm({
   serverError: externalServerError,
   serverSuccess,
   formClassName,
-  submitButtonClassName = DEFAULT_SUBMIT_BTN,
+  submitButtonClassName,
 }: DynamicFormProps) {
   const [values, setValues] = useState<Record<string, string>>(() => {
     const init: Record<string, string> = {}
@@ -157,22 +155,35 @@ export function DynamicForm({
       </div>
       <div className="flex flex-col gap-3 pt-4 sm:flex-row">
         {onCancel && (
-          <button
+          <Button
             type="button"
+            variant="ghost"
             onClick={onCancel}
             disabled={submitting}
-            className="w-full px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] bg-[var(--accent-blush)] rounded-full hover:bg-[var(--accent-cream)] disabled:opacity-50 transition border border-[var(--border-warm)] sm:w-auto"
+            className="w-full sm:w-auto"
           >
             {cancelLabel}
-          </button>
+          </Button>
         )}
-        <button
-          type="submit"
-          disabled={submitting}
-          className={submitButtonClassName}
-        >
-          {submitting ? submittingLabel : submitLabel}
-        </button>
+        {submitButtonClassName ? (
+          <button
+            type="submit"
+            disabled={submitting}
+            className={submitButtonClassName}
+          >
+            {submitting ? submittingLabel : submitLabel}
+          </button>
+        ) : (
+          <Button
+            type="submit"
+            variant="primary"
+            fullWidth
+            loading={submitting}
+            loadingText={submittingLabel}
+          >
+            {submitLabel}
+          </Button>
+        )}
       </div>
     </form>
   )
