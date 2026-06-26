@@ -107,7 +107,7 @@ export function RouteErrorCard({
 
   // Default: public warm storefront theme
   return (
-    <div className="min-h-[50vh] flex items-center justify-center px-4">
+    <div className="flex min-h-[50vh] items-center justify-center px-4">
       <div className="max-w-md w-full bg-[var(--accent-cream)] rounded-2xl shadow-warm-lg border border-[var(--border-warm)] p-8 text-center">
         {icon && (
           <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[var(--accent-peach)]/30 flex items-center justify-center">
