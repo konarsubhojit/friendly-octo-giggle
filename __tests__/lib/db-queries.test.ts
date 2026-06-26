@@ -716,7 +716,10 @@ describe('db.users', () => {
 
       const result = await db.users.findPreferences('user123')
 
-      expect(result).toEqual({ currencyPreference: 'USD', localePreference: 'en' })
+      expect(result).toEqual({
+        currencyPreference: 'USD',
+        localePreference: 'en',
+      })
       expect(mockUsersFindFirst).toHaveBeenCalledOnce()
     })
 
@@ -869,7 +872,9 @@ describe('db.checkoutRequests', () => {
 
   describe('create', () => {
     it('inserts and returns id and status', async () => {
-      const returningMock = vi.fn().mockResolvedValue([{ id: 'cr001', status: 'PENDING' }])
+      const returningMock = vi
+        .fn()
+        .mockResolvedValue([{ id: 'cr001', status: 'PENDING' }])
       const valuesMock = vi.fn(() => ({ returning: returningMock }))
       mockInsert.mockReturnValue({ values: valuesMock })
 
@@ -915,10 +920,17 @@ describe('db.checkoutRequests', () => {
       const setMock = vi.fn(() => ({ where: whereMock }))
       mockUpdate.mockReturnValue({ set: setMock })
 
-      await db.checkoutRequests.updateStatus('cr001', 'FAILED', 'Payment timed out')
+      await db.checkoutRequests.updateStatus(
+        'cr001',
+        'FAILED',
+        'Payment timed out'
+      )
 
       expect(setMock).toHaveBeenCalledWith(
-        expect.objectContaining({ status: 'FAILED', errorMessage: 'Payment timed out' })
+        expect.objectContaining({
+          status: 'FAILED',
+          errorMessage: 'Payment timed out',
+        })
       )
     })
   })
@@ -937,7 +949,9 @@ describe('db.checkoutRequests', () => {
       }
       mockSelect.mockReturnValue(chain)
 
-      const result = await db.checkoutRequests.findRecentWithOrders({ limit: 2 })
+      const result = await db.checkoutRequests.findRecentWithOrders({
+        limit: 2,
+      })
 
       expect(result).toHaveLength(2)
       expect(result[0].id).toBe('cr1')

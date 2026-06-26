@@ -535,9 +535,10 @@ export const dispatchOrderNotifications = async ({
 const fetchProductsForOrder = async (
   requestedProductIds: string[]
 ): Promise<ProductWithVariants[]> => {
-  const productList = await db.products.findManyWithVariantsForOrderValidation(
-    requestedProductIds
-  )
+  const productList =
+    await db.products.findManyWithVariantsForOrderValidation(
+      requestedProductIds
+    )
 
   if (productList.length !== requestedProductIds.length) {
     logFailedOrderCreation(

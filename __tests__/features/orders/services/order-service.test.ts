@@ -62,7 +62,8 @@ vi.mock('@/lib/db', () => ({
       findFirstById: mockDbOrdersFindFirstById,
     },
     products: {
-      findManyWithVariantsForOrderValidation: mockDbProductsFindManyWithVariants,
+      findManyWithVariantsForOrderValidation:
+        mockDbProductsFindManyWithVariants,
     },
     users: {
       findPreferences: mockDbUsersFindPreferences,
@@ -1019,7 +1020,9 @@ describe('order-service', () => {
 
       // Simulates a concurrent order having consumed the second item's stock.
       mockDbOrdersCreateWithItems.mockRejectedValue(
-        new MockStockConflictError('Widget B (v2): race condition blocked stock')
+        new MockStockConflictError(
+          'Widget B (v2): race condition blocked stock'
+        )
       )
 
       await expect(

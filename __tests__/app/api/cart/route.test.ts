@@ -359,7 +359,9 @@ describe('Cart API Route', () => {
         id: VALID_PRODUCT_ID,
         variants: [{ id: VALID_VARIANT_ID_TOP, stock: 10 }],
       })
-      ;(mockDbCarts.findByUserId as Mock).mockResolvedValue({ id: VALID_CART_ID })
+      ;(mockDbCarts.findByUserId as Mock).mockResolvedValue({
+        id: VALID_CART_ID,
+      })
       ;(mockDbCarts.findItem as Mock).mockResolvedValue(null)
       ;(mockDbCarts.insertItem as Mock).mockResolvedValue(undefined)
       ;(mockDbCarts.findWithRelationsById as Mock).mockResolvedValue(mockCart)
@@ -495,7 +497,9 @@ describe('Cart API Route', () => {
         id: VALID_PRODUCT_ID,
         variants: [{ id: VALID_VARIANT_ID_TOP, stock: 10 }],
       })
-      ;(mockDbCarts.findByUserId as Mock).mockResolvedValue({ id: VALID_CART_ID })
+      ;(mockDbCarts.findByUserId as Mock).mockResolvedValue({
+        id: VALID_CART_ID,
+      })
       ;(mockDbCarts.findItem as Mock).mockResolvedValue(null)
       ;(mockDbCarts.insertItem as Mock).mockResolvedValue(undefined)
       ;(mockDbCarts.findWithRelationsById as Mock).mockResolvedValue(mockCart)
@@ -695,7 +699,9 @@ describe('Cart API Route', () => {
         id: VALID_PRODUCT_ID,
         variants: [{ id: VALID_VARIANT_ID, stock: 2 }],
       })
-      ;(mockDbCarts.findByUserId as Mock).mockResolvedValue({ id: VALID_CART_ID })
+      ;(mockDbCarts.findByUserId as Mock).mockResolvedValue({
+        id: VALID_CART_ID,
+      })
       ;(mockDbCarts.findItem as Mock).mockResolvedValue(null)
       ;(mockDbCarts.insertItem as Mock).mockResolvedValue(undefined)
       ;(mockDbCarts.findWithRelationsById as Mock).mockResolvedValue(mockCart)
@@ -745,7 +751,9 @@ describe('Cart API Route', () => {
         id: VALID_PRODUCT_ID,
         variants: [{ id: VALID_VARIANT_ID_TOP, stock: 10 }],
       })
-      ;(mockDbCarts.findByUserId as Mock).mockResolvedValue({ id: VALID_CART_ID })
+      ;(mockDbCarts.findByUserId as Mock).mockResolvedValue({
+        id: VALID_CART_ID,
+      })
       ;(mockDbCarts.findItem as Mock).mockResolvedValue({
         id: VALID_ITEM_ID,
         quantity: 2,
@@ -777,7 +785,9 @@ describe('Cart API Route', () => {
         id: VALID_PRODUCT_ID,
         variants: [{ id: VALID_VARIANT_ID_TOP, stock: 5 }],
       })
-      ;(mockDbCarts.findByUserId as Mock).mockResolvedValue({ id: VALID_CART_ID })
+      ;(mockDbCarts.findByUserId as Mock).mockResolvedValue({
+        id: VALID_CART_ID,
+      })
       ;(mockDbCarts.findItem as Mock).mockResolvedValue({
         id: VALID_ITEM_ID,
         quantity: 5,
@@ -806,7 +816,9 @@ describe('Cart API Route', () => {
         id: VALID_PRODUCT_ID,
         variants: [{ id: VALID_VARIANT_ID_TOP, stock: 10 }],
       })
-      ;(mockDbCarts.findByUserId as Mock).mockResolvedValue({ id: VALID_CART_ID })
+      ;(mockDbCarts.findByUserId as Mock).mockResolvedValue({
+        id: VALID_CART_ID,
+      })
       ;(mockDbCarts.findItem as Mock).mockResolvedValue(null)
       ;(mockDbCarts.insertItem as Mock).mockResolvedValue(undefined)
       ;(mockDbCarts.findWithRelationsById as Mock).mockResolvedValue(null)

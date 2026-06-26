@@ -454,12 +454,7 @@ const mergeGuestItemsIntoUserCart = async (
       guestItem.variantId,
       desiredQuantity
     )
-    await upsertMergedItem(
-      userCart.id,
-      guestItem,
-      existingItem,
-      cappedQuantity
-    )
+    await upsertMergedItem(userCart.id, guestItem, existingItem, cappedQuantity)
   }
 
   await db.carts.update(userCart.id, { updatedAt: now })

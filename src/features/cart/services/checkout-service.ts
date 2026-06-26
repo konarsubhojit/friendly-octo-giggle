@@ -139,7 +139,11 @@ const updateCheckoutRequestStatus = async (
   status: CheckoutRequestStatus,
   errorMessage: string | null
 ) => {
-  await db.checkoutRequests.updateStatus(checkoutRequestId, status, errorMessage)
+  await db.checkoutRequests.updateStatus(
+    checkoutRequestId,
+    status,
+    errorMessage
+  )
 }
 
 const findCheckoutRequestById = (checkoutRequestId: string) =>

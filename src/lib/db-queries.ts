@@ -979,7 +979,15 @@ export const db = {
     ): Promise<{ id: string } | null> => {
       const result = await drizzleDb
         .update(orders)
-        .set({ status: status as 'PENDING' | 'PROCESSING' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED', updatedAt: new Date() })
+        .set({
+          status: status as
+            | 'PENDING'
+            | 'PROCESSING'
+            | 'SHIPPED'
+            | 'DELIVERED'
+            | 'CANCELLED',
+          updatedAt: new Date(),
+        })
         .where(eq(orders.id, id))
         .returning({ id: orders.id })
       return result[0] ?? null
@@ -1072,7 +1080,11 @@ export const db = {
     ): Promise<void> => {
       await primaryDrizzleDb
         .update(checkoutRequests)
-        .set({ status: status as CheckoutRequestStatus, errorMessage, updatedAt: new Date() })
+        .set({
+          status: status as CheckoutRequestStatus,
+          errorMessage,
+          updatedAt: new Date(),
+        })
         .where(eq(checkoutRequests.id, id))
     },
 
@@ -1178,10 +1190,7 @@ export const db = {
      * Touch a cart's `updatedAt` timestamp.
      */
     update: async (id: string, values: { updatedAt: Date }): Promise<void> => {
-      await primaryDrizzleDb
-        .update(carts)
-        .set(values)
-        .where(eq(carts.id, id))
+      await primaryDrizzleDb.update(carts).set(values).where(eq(carts.id, id))
     },
 
     /**
@@ -1204,11 +1213,7 @@ export const db = {
     },
 
     /** Find a single cart item by cart + product + variant. */
-    findItem: async (
-      cartId: string,
-      productId: string,
-      variantId: string
-    ) => {
+    findItem: async (cartId: string, productId: string, variantId: string) => {
       return primaryDrizzleDb.query.cartItems.findFirst({
         where: and(
           eq(cartItems.cartId, cartId),
