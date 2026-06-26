@@ -37,7 +37,9 @@ describe('Button', () => {
     })
 
     it('applies secondary variant classes', () => {
-      const { container } = render(<Button variant="secondary">Secondary</Button>)
+      const { container } = render(
+        <Button variant="secondary">Secondary</Button>
+      )
       const btn = container.firstChild as HTMLElement
       expect(btn.className).toContain('from-[var(--text-secondary)]')
     })
@@ -153,24 +155,34 @@ describe('Button', () => {
   describe('base styles', () => {
     it('always applies rounded-full', () => {
       const { container } = render(<Button>Click</Button>)
-      expect((container.firstChild as HTMLElement).className).toContain('rounded-full')
+      expect((container.firstChild as HTMLElement).className).toContain(
+        'rounded-full'
+      )
     })
 
     it('always applies font-semibold', () => {
       const { container } = render(<Button>Click</Button>)
-      expect((container.firstChild as HTMLElement).className).toContain('font-semibold')
+      expect((container.firstChild as HTMLElement).className).toContain(
+        'font-semibold'
+      )
     })
 
     it('always applies focus-warm', () => {
       const { container } = render(<Button>Click</Button>)
-      expect((container.firstChild as HTMLElement).className).toContain('focus-warm')
+      expect((container.firstChild as HTMLElement).className).toContain(
+        'focus-warm'
+      )
     })
   })
 
   describe('className passthrough', () => {
     it('merges extra className', () => {
-      const { container } = render(<Button className="my-extra-class">Click</Button>)
-      expect((container.firstChild as HTMLElement).className).toContain('my-extra-class')
+      const { container } = render(
+        <Button className="my-extra-class">Click</Button>
+      )
+      expect((container.firstChild as HTMLElement).className).toContain(
+        'my-extra-class'
+      )
     })
   })
 

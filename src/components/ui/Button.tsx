@@ -36,7 +36,8 @@ const VARIANT_CLASSES: Record<ButtonVariant, string> = {
   gradient:
     'bg-gradient-to-r from-[var(--accent-warm)] to-[var(--accent-rose)] hover:from-[var(--accent-rose)] hover:to-[var(--accent-warm)] text-white shadow-warm hover:shadow-warm-lg hover:scale-105',
   /** Soft ghost button — blush background, warm border. */
-  ghost: 'bg-[var(--accent-blush)] text-[var(--text-secondary)] border border-[var(--border-warm)] hover:bg-[var(--accent-cream)]',
+  ghost:
+    'bg-[var(--accent-blush)] text-[var(--text-secondary)] border border-[var(--border-warm)] hover:bg-[var(--accent-cream)]',
   /** Destructive / danger action. */
   danger:
     'bg-gradient-to-r from-red-400 to-red-500 hover:from-red-500 hover:to-red-600 text-white shadow-md hover:shadow-lg',
