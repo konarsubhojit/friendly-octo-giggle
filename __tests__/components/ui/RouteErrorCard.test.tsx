@@ -4,13 +4,9 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import type { ReactNode } from 'react'
 
 vi.mock('next/link', () => ({
-  default: ({
-    children,
-    href,
-  }: {
-    children: ReactNode
-    href: string
-  }) => <a href={href}>{children}</a>,
+  default: ({ children, href }: { children: ReactNode; href: string }) => (
+    <a href={href}>{children}</a>
+  ),
 }))
 
 import { RouteErrorCard } from '@/components/ui/RouteErrorCard'
