@@ -425,9 +425,7 @@ describe('ProductGrid', () => {
     const flowersLink = Array.from(nav.querySelectorAll('a')).find(
       (a) => a.textContent === 'Flowers'
     )
-    expect(flowersLink?.getAttribute('href')).toContain(
-      'category=Flowers'
-    )
+    expect(flowersLink?.getAttribute('href')).toContain('category=Flowers')
   })
 
   it('generates a reset href for the All chip', () => {

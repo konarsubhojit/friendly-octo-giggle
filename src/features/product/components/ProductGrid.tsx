@@ -595,10 +595,7 @@ const ProductGrid = ({
           category select dropdown is not visible. Allows quick category
           browsing without opening the search dropdown. */}
       {categories.length > 0 && (
-        <nav
-          aria-label="Browse by category"
-          className="mb-6 sm:hidden"
-        >
+        <nav aria-label="Browse by category" className="mb-6 sm:hidden">
           <div
             className="flex gap-2 overflow-x-auto pb-2"
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
