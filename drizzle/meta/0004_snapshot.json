@@ -763,25 +763,25 @@
           "type": "PaymentProvider",
           "typeSchema": "public",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "paymentOrderId": {
           "name": "paymentOrderId",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "paymentTransactionId": {
           "name": "paymentTransactionId",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "paymentSignature": {
           "name": "paymentSignature",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "status": {
           "name": "status",
@@ -857,21 +857,6 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
-        },
-        "CheckoutRequest_paymentTransactionId_idx": {
-          "name": "CheckoutRequest_paymentTransactionId_idx",
-          "columns": [
-            {
-              "expression": "paymentTransactionId",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
         }
       },
       "foreignKeys": {
@@ -890,7 +875,15 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "CheckoutRequest_paymentTransactionId_key": {
+          "name": "CheckoutRequest_paymentTransactionId_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "paymentTransactionId"
+          ]
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -1457,21 +1450,6 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
-        },
-        "Order_paymentTransactionId_idx": {
-          "name": "Order_paymentTransactionId_idx",
-          "columns": [
-            {
-              "expression": "paymentTransactionId",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
         }
       },
       "foreignKeys": {
@@ -1509,6 +1487,13 @@
           "nullsNotDistinct": false,
           "columns": [
             "checkoutRequestId"
+          ]
+        },
+        "Order_paymentTransactionId_key": {
+          "name": "Order_paymentTransactionId_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "paymentTransactionId"
           ]
         }
       },

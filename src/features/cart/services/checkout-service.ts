@@ -418,6 +418,20 @@ export const processCheckoutRequestById = async (
   await updateCheckoutRequestStatus(checkoutRequestId, 'PROCESSING', null)
 
   try {
+    if (
+      !checkoutRequest.paymentProvider ||
+      !checkoutRequest.paymentOrderId ||
+      !checkoutRequest.paymentTransactionId ||
+      !checkoutRequest.paymentSignature
+    ) {
+      await updateCheckoutRequestStatus(
+        checkoutRequestId,
+        'FAILED',
+        'Missing payment details on checkout request'
+      )
+      return
+    }
+
     const result = await createOrderForUser({
       body: {
         customerName: checkoutRequest.customerName,
@@ -436,10 +450,10 @@ export const processCheckoutRequestById = async (
           customizationNote: item.customizationNote ?? undefined,
         })),
         payment: {
-          provider: checkoutRequest.paymentProvider,
-          orderId: checkoutRequest.paymentOrderId,
-          paymentId: checkoutRequest.paymentTransactionId,
-          signature: checkoutRequest.paymentSignature,
+          provider: checkoutRequest.paymentProvider!,
+          orderId: checkoutRequest.paymentOrderId!,
+          paymentId: checkoutRequest.paymentTransactionId!,
+          signature: checkoutRequest.paymentSignature!,
         },
       },
       user: {

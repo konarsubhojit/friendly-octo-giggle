@@ -583,6 +583,20 @@ export const createOrderForUser = async ({
     throw error
   }
 
+  // Idempotency check: fail fast if this paymentTransactionId already has an order
+  const [existingOrder] = await primaryDrizzleDb
+    .select({ id: orders.id })
+    .from(orders)
+    .where(eq(orders.paymentTransactionId, verifiedPayment.paymentTransactionId))
+    .limit(1)
+  if (existingOrder) {
+    return logFailedOrderCreation(
+      'duplicate_payment_transaction',
+      409,
+      `Order already exists for payment transaction ${verifiedPayment.paymentTransactionId}`
+    )
+  }
+
   const itemsWithVariant = body.items.filter(
     (item): item is OrderItemInput & { variantId: string } =>
       item.variantId != null

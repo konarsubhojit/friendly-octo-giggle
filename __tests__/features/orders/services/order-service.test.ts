@@ -6,6 +6,7 @@ const {
   mockPrimaryDrizzleDbInsert,
   mockPrimaryDrizzleDbUpdate,
   mockPrimaryDrizzleDbTransaction,
+  mockPrimaryDrizzleDbSelect,
   mockDrizzleDbSelect,
   mockInvalidateCache,
   mockInvalidateUserOrderCaches,
@@ -35,6 +36,7 @@ const {
   mockPrimaryDrizzleDbInsert: vi.fn(),
   mockPrimaryDrizzleDbUpdate: vi.fn(),
   mockPrimaryDrizzleDbTransaction: vi.fn(),
+  mockPrimaryDrizzleDbSelect: vi.fn(),
   mockDrizzleDbSelect: vi.fn(),
   mockInvalidateCache: vi.fn().mockResolvedValue(undefined),
   mockInvalidateUserOrderCaches: vi.fn().mockResolvedValue(undefined),
@@ -60,6 +62,7 @@ vi.mock('@/lib/db', () => ({
     insert: mockPrimaryDrizzleDbInsert,
     update: mockPrimaryDrizzleDbUpdate,
     transaction: mockPrimaryDrizzleDbTransaction,
+    select: mockPrimaryDrizzleDbSelect,
   },
 }))
 
@@ -197,6 +200,14 @@ describe('order-service', () => {
       paymentTransactionId: 'pay_123',
       amountPaid: 100,
       paidAt: new Date('2024-01-01'),
+    })
+    // Default: no existing order for the idempotency check
+    mockPrimaryDrizzleDbSelect.mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          limit: vi.fn().mockResolvedValue([]),
+        }),
+      }),
     })
   })
 
@@ -893,6 +904,7 @@ describe('order-service', () => {
             city: 'New Delhi',
             state: 'Delhi',
             items: [{ productId: 'p1', variantId: 'v1', quantity: 1 }],
+            payment: testPayment,
           },
           user: testUser,
         })
@@ -956,6 +968,7 @@ describe('order-service', () => {
               { productId: 'p1', variantId: 'v1', quantity: 1 },
               { productId: 'p2', variantId: 'v2', quantity: 1 },
             ],
+            payment: testPayment,
           },
           user: testUser,
         })

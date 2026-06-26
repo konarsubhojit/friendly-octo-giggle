@@ -75,7 +75,8 @@ const handleCapturedPayment = async ({
   if (
     checkoutRequest &&
     checkoutRequest.status !== 'COMPLETED' &&
-    checkoutRequest.status !== 'FAILED'
+    checkoutRequest.status !== 'FAILED' &&
+    checkoutRequest.status !== 'PROCESSING'
   ) {
     await processCheckoutRequestById(checkoutRequest.id)
   }
