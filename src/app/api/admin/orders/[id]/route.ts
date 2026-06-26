@@ -40,7 +40,7 @@ const buildUpdateData = (data: {
 const VALID_TRANSITIONS: Record<string, string[]> = {
   PENDING: ['PROCESSING', 'CANCELLED'],
   PROCESSING: ['SHIPPED', 'CANCELLED'],
-  SHIPPED: ['SHIPPED', 'DELIVERED'],
+  SHIPPED: ['DELIVERED'],
   DELIVERED: ['DELIVERED'],
   CANCELLED: ['CANCELLED'],
 }

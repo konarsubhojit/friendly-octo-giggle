@@ -153,7 +153,7 @@ describe('PATCH /api/admin/orders/[id]', () => {
     mockFindFirst.mockResolvedValue(mockOrder as never)
 
     const res = await PATCH(
-      mkReq({ status: 'SHIPPED', trackingNumber: 'TRK123' }),
+      mkReq({ status: 'DELIVERED', trackingNumber: 'TRK123' }),
       mkParams()
     )
     const data = await res.json()
