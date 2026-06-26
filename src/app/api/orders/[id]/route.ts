@@ -1,8 +1,8 @@
 import { NextRequest } from 'next/server'
 import { z } from 'zod'
 import { drizzleDb, primaryDrizzleDb } from '@/lib/db'
-import { orders } from '@/lib/schema'
-import { eq } from 'drizzle-orm'
+import { orders, productVariants } from '@/lib/schema'
+import { eq, sql } from 'drizzle-orm'
 import {
   apiSuccess,
   apiError,
@@ -80,6 +80,7 @@ export async function PATCH(
 
     const order = await primaryDrizzleDb.query.orders.findFirst({
       where: eq(orders.id, id),
+      with: { items: true },
     })
 
     if (!assertOwnership(order, session)) {
@@ -90,10 +91,24 @@ export async function PATCH(
       return apiError('Only pending orders can be cancelled', 400)
     }
 
-    await primaryDrizzleDb
-      .update(orders)
-      .set({ status: 'CANCELLED', updatedAt: new Date() })
-      .where(eq(orders.id, id))
+    await primaryDrizzleDb.transaction(async (tx) => {
+      await tx
+        .update(orders)
+        .set({ status: 'CANCELLED', updatedAt: new Date() })
+        .where(eq(orders.id, id))
+
+      await Promise.all(
+        order.items.map((item) =>
+          tx
+            .update(productVariants)
+            .set({
+              stock: sql`${productVariants.stock} + ${item.quantity}`,
+              updatedAt: new Date(),
+            })
+            .where(eq(productVariants.id, item.variantId))
+        )
+      )
+    })
 
     const redis = getRedisClient()
     if (redis) {
