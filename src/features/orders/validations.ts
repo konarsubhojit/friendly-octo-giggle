@@ -43,6 +43,13 @@ export const OrderStatusEnum = z.enum([
   'CANCELLED',
 ])
 
+export const PaymentStatusEnum = z.enum([
+  'PENDING',
+  'PAID',
+  'FAILED',
+  'REFUNDED',
+])
+
 export const CheckoutRequestStatusEnum = z.enum([
   'PENDING',
   'PROCESSING',
@@ -65,6 +72,12 @@ export const CreateOrderSchema = z.object({
   customerEmail: z.string().regex(EMAIL_REGEX, 'Invalid email address'),
   ...StructuredAddressSchema.shape,
   items: z.array(OrderItemSchema).min(1, 'At least one item is required'),
+  payment: z.object({
+    provider: z.literal('RAZORPAY'),
+    orderId: z.string().min(1),
+    paymentId: z.string().min(1),
+    signature: z.string().min(1),
+  }),
 })
 
 export const UpdateOrderStatusSchema = z.object({

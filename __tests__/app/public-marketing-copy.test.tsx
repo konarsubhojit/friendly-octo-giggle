@@ -53,14 +53,10 @@ describe('public marketing copy', () => {
   it('renders help copy without unsupported payment or expedited shipping promises', () => {
     render(<HelpPage />)
 
-    expect(
-      screen.getByText(/supported payment steps inside the storefront/i)
-    ).toBeInTheDocument()
+    expect(screen.getByText(/processed through Razorpay/i)).toBeInTheDocument()
     expect(screen.getByText(/standard shipping only/i)).toBeInTheDocument()
     expect(screen.getByText(new RegExp(STORE_NAME))).toBeInTheDocument()
-    expect(
-      screen.queryByText(/Visa|Mastercard|Amex|wallet/i)
-    ).not.toBeInTheDocument()
+    expect(screen.queryByText(/Visa|Mastercard|Amex/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/express delivery/i)).not.toBeInTheDocument()
   })
 

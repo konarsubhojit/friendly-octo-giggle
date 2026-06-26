@@ -29,7 +29,7 @@ const faqs = [
   {
     question: 'What payment methods do you accept?',
     answer:
-      'We only show supported payment steps inside the storefront during checkout. If an option is not shown in the app, it is not currently available.',
+      'Checkout is processed through Razorpay. We currently support prepaid card, UPI, netbanking, and wallet payments handled by Razorpay. Orders are confirmed only after a successful payment authorization/capture.',
   },
   {
     question: 'How long does delivery take?',

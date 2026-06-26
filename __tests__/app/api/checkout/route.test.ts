@@ -70,6 +70,12 @@ describe('POST /api/checkout', () => {
     const body = {
       customerAddress: '123 Test Street, Kolkata, 700001',
       items: [{ productId: 'ABC1234', quantity: 1 }],
+      payment: {
+        provider: 'RAZORPAY',
+        orderId: 'order_123',
+        paymentId: 'pay_123',
+        signature: 'sig_123',
+      },
     }
 
     const response = await POST(
@@ -131,6 +137,12 @@ describe('POST /api/checkout', () => {
         body: JSON.stringify({
           customerAddress: '123 Test Street, Kolkata, 700001',
           items: [{ productId: 'ABC1234', quantity: 1 }],
+          payment: {
+            provider: 'RAZORPAY',
+            orderId: 'order_123',
+            paymentId: 'pay_123',
+            signature: 'sig_123',
+          },
         }),
         headers: { 'content-type': 'application/json' },
       })

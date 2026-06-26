@@ -27,6 +27,10 @@ import {
   type SubmitCheckoutInput,
 } from '@/features/cart/validations'
 import { assertOwnership } from '@/lib/ownership'
+import {
+  ensurePaymentProviderConfigured,
+  PaymentConfigurationError,
+} from '@/lib/payments'
 
 export const CHECKOUT_QUEUE_TOPIC = 'checkout-orders'
 
@@ -98,6 +102,7 @@ const getNormalizedCheckoutInput = (
     city: typeof rawBody.city === 'string' ? rawBody.city : '',
     state: typeof rawBody.state === 'string' ? rawBody.state : '',
     items: rawBody.items,
+    payment: rawBody.payment,
   })
 
   if (!parseResult.success) {
@@ -267,6 +272,14 @@ export const enqueueCheckoutForUser = async ({
   user: CheckoutSessionUser
 }): Promise<CheckoutEnqueueResponse> => {
   const normalized = getNormalizedCheckoutInput(body, user)
+  try {
+    ensurePaymentProviderConfigured(normalized.payment.provider)
+  } catch (error) {
+    if (error instanceof PaymentConfigurationError) {
+      throw new CheckoutRequestError(error.message, error.status)
+    }
+    throw error
+  }
 
   const [checkoutRequest] = await primaryDrizzleDb
     .insert(checkoutRequests)
@@ -290,6 +303,10 @@ export const enqueueCheckoutForUser = async ({
       city: normalized.city,
       state: normalized.state,
       items: normalized.items,
+      paymentProvider: normalized.payment.provider,
+      paymentOrderId: normalized.payment.orderId,
+      paymentTransactionId: normalized.payment.paymentId,
+      paymentSignature: normalized.payment.signature,
       status: 'PENDING',
       updatedAt: new Date(),
     })
@@ -401,6 +418,20 @@ export const processCheckoutRequestById = async (
   await updateCheckoutRequestStatus(checkoutRequestId, 'PROCESSING', null)
 
   try {
+    if (
+      !checkoutRequest.paymentProvider ||
+      !checkoutRequest.paymentOrderId ||
+      !checkoutRequest.paymentTransactionId ||
+      !checkoutRequest.paymentSignature
+    ) {
+      await updateCheckoutRequestStatus(
+        checkoutRequestId,
+        'FAILED',
+        'Missing payment details on checkout request'
+      )
+      return
+    }
+
     const result = await createOrderForUser({
       body: {
         customerName: checkoutRequest.customerName,
@@ -418,6 +449,12 @@ export const processCheckoutRequestById = async (
           quantity: item.quantity,
           customizationNote: item.customizationNote ?? undefined,
         })),
+        payment: {
+          provider: checkoutRequest.paymentProvider!,
+          orderId: checkoutRequest.paymentOrderId!,
+          paymentId: checkoutRequest.paymentTransactionId!,
+          signature: checkoutRequest.paymentSignature!,
+        },
       },
       user: {
         id: checkoutRequest.userId,

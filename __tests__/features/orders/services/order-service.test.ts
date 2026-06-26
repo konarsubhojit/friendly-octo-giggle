@@ -6,6 +6,7 @@ const {
   mockPrimaryDrizzleDbInsert,
   mockPrimaryDrizzleDbUpdate,
   mockPrimaryDrizzleDbTransaction,
+  mockPrimaryDrizzleDbSelect,
   mockDrizzleDbSelect,
   mockInvalidateCache,
   mockInvalidateUserOrderCaches,
@@ -18,6 +19,7 @@ const {
   mockSearchOrderIds,
   mockWaitUntil,
   mockParseOffsetParam,
+  mockVerifyCheckoutPayment,
 } = vi.hoisted(() => ({
   mockDrizzleDbQuery: {
     orders: {
@@ -34,6 +36,7 @@ const {
   mockPrimaryDrizzleDbInsert: vi.fn(),
   mockPrimaryDrizzleDbUpdate: vi.fn(),
   mockPrimaryDrizzleDbTransaction: vi.fn(),
+  mockPrimaryDrizzleDbSelect: vi.fn(),
   mockDrizzleDbSelect: vi.fn(),
   mockInvalidateCache: vi.fn().mockResolvedValue(undefined),
   mockInvalidateUserOrderCaches: vi.fn().mockResolvedValue(undefined),
@@ -46,6 +49,7 @@ const {
   mockSearchOrderIds: vi.fn(),
   mockWaitUntil: vi.fn(),
   mockParseOffsetParam: vi.fn().mockReturnValue(0),
+  mockVerifyCheckoutPayment: vi.fn(),
 }))
 
 vi.mock('@/lib/db', () => ({
@@ -58,6 +62,7 @@ vi.mock('@/lib/db', () => ({
     insert: mockPrimaryDrizzleDbInsert,
     update: mockPrimaryDrizzleDbUpdate,
     transaction: mockPrimaryDrizzleDbTransaction,
+    select: mockPrimaryDrizzleDbSelect,
   },
 }))
 
@@ -108,6 +113,24 @@ vi.mock('@/lib/currency', () => ({
     (amount: number, code: string) => `${code} ${amount}`
   ),
   isValidCurrencyCode: vi.fn(() => true),
+}))
+
+vi.mock('@/lib/payments', () => ({
+  verifyCheckoutPayment: mockVerifyCheckoutPayment,
+  PaymentVerificationError: class PaymentVerificationError extends Error {
+    status: number
+    constructor(message: string, status = 400) {
+      super(message)
+      this.status = status
+    }
+  },
+  PaymentConfigurationError: class PaymentConfigurationError extends Error {
+    status: number
+    constructor(message: string, status = 503) {
+      super(message)
+      this.status = status
+    }
+  },
 }))
 
 vi.mock('@/lib/schema', () => ({
@@ -161,9 +184,31 @@ const testUser: OrderSessionUser = {
   email: 'test@example.com',
 }
 
+const testPayment = {
+  provider: 'RAZORPAY' as const,
+  orderId: 'order_123',
+  paymentId: 'pay_123',
+  signature: 'sig_123',
+}
+
 describe('order-service', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockVerifyCheckoutPayment.mockResolvedValue({
+      provider: 'RAZORPAY',
+      paymentOrderId: 'order_123',
+      paymentTransactionId: 'pay_123',
+      amountPaid: 100,
+      paidAt: new Date('2024-01-01'),
+    })
+    // Default: no existing order for the idempotency check
+    mockPrimaryDrizzleDbSelect.mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          limit: vi.fn().mockResolvedValue([]),
+        }),
+      }),
+    })
   })
 
   describe('OrderRequestError', () => {
@@ -311,6 +356,7 @@ describe('order-service', () => {
             city: 'New Delhi',
             state: 'Delhi',
             items: [],
+            payment: testPayment,
           },
           user: testUser,
         })
@@ -338,6 +384,7 @@ describe('order-service', () => {
             city: 'New Delhi',
             state: 'Delhi',
             items: [{ productId: 'p1', variantId: 'v1', quantity: 1 }],
+            payment: testPayment,
           },
           user: { id: 'user1', name: 'Test', email: null },
         })
@@ -358,6 +405,7 @@ describe('order-service', () => {
             city: '',
             state: '',
             items: [{ productId: 'p1', variantId: 'v1', quantity: 1 }],
+            payment: testPayment,
           },
           user: testUser,
         })
@@ -380,6 +428,7 @@ describe('order-service', () => {
             city: 'New Delhi',
             state: 'Delhi',
             items: [{ productId: 'p1', variantId: 'v1', quantity: 1 }],
+            payment: testPayment,
           },
           user: testUser,
         })
@@ -408,6 +457,7 @@ describe('order-service', () => {
             city: 'New Delhi',
             state: 'Delhi',
             items: [{ productId: 'p1', variantId: 'v1', quantity: 5 }],
+            payment: testPayment,
           },
           user: testUser,
         })
@@ -436,6 +486,7 @@ describe('order-service', () => {
             city: 'New Delhi',
             state: 'Delhi',
             items: [{ productId: 'p1', variantId: 'v999', quantity: 1 }],
+            payment: testPayment,
           },
           user: testUser,
         })
@@ -528,6 +579,12 @@ describe('order-service', () => {
           city: 'New Delhi',
           state: 'Delhi',
           items: [{ productId: 'p1', variantId: 'v1', quantity: 2 }],
+          payment: {
+            provider: 'RAZORPAY',
+            orderId: 'order_123',
+            paymentId: 'pay_123',
+            signature: 'sig_123',
+          },
         },
         user: testUser,
       })
@@ -631,6 +688,12 @@ describe('order-service', () => {
           city: 'New Delhi',
           state: 'Delhi',
           items: [{ productId: 'p1', variantId: 'v1', quantity: 1 }],
+          payment: {
+            provider: 'RAZORPAY',
+            orderId: 'order_123',
+            paymentId: 'pay_123',
+            signature: 'sig_123',
+          },
         },
         user: testUser,
       })
@@ -688,6 +751,12 @@ describe('order-service', () => {
             city: 'New Delhi',
             state: 'Delhi',
             items: [{ productId: 'p1', variantId: 'v1', quantity: 1 }],
+            payment: {
+              provider: 'RAZORPAY',
+              orderId: 'order_123',
+              paymentId: 'pay_123',
+              signature: 'sig_123',
+            },
           },
           user: testUser,
         })
@@ -778,6 +847,12 @@ describe('order-service', () => {
           city: 'New Delhi',
           state: 'Delhi',
           items: [{ productId: 'p1', variantId: 'v1', quantity: 1 }],
+          payment: {
+            provider: 'RAZORPAY',
+            orderId: 'order_123',
+            paymentId: 'pay_123',
+            signature: 'sig_123',
+          },
         },
         user: testUser,
       })
@@ -829,6 +904,7 @@ describe('order-service', () => {
             city: 'New Delhi',
             state: 'Delhi',
             items: [{ productId: 'p1', variantId: 'v1', quantity: 1 }],
+            payment: testPayment,
           },
           user: testUser,
         })
@@ -892,6 +968,7 @@ describe('order-service', () => {
               { productId: 'p1', variantId: 'v1', quantity: 1 },
               { productId: 'p2', variantId: 'v2', quantity: 1 },
             ],
+            payment: testPayment,
           },
           user: testUser,
         })
