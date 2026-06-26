@@ -6,6 +6,7 @@
 
 // ─── Data Types ─────────────────────────────────────────
 import type { AppLocale } from '@/lib/i18n/config'
+import { STORE_NAME } from '@/lib/constants/store'
 
 export interface OrderEmailItem {
   name: string
@@ -102,7 +103,7 @@ const emailWrapper = (content: string, locale: AppLocale) => `
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>The Kiyon Store</title>
+  <title>${STORE_NAME}</title>
 </head>
 <body style="margin:0;padding:0;background-color:#FAF5EE;font-family:Georgia,serif;">
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
@@ -110,7 +111,7 @@ const emailWrapper = (content: string, locale: AppLocale) => `
       <table role="presentation" width="600" style="max-width:600px;background:#FFFDFB;border-radius:16px;box-shadow:0 4px 20px rgba(92,74,68,0.08);overflow:hidden;">
         <!-- Header -->
         <tr><td style="background:linear-gradient(135deg,#b83060,#cc4880);padding:32px 40px;text-align:center;">
-          <h1 style="color:#fff;margin:0;font-size:28px;font-style:italic;letter-spacing:1px;">🌸 The Kiyon Store</h1>
+          <h1 style="color:#fff;margin:0;font-size:28px;font-style:italic;letter-spacing:1px;">🌸 ${STORE_NAME}</h1>
           <p style="color:rgba(255,255,255,0.85);margin:8px 0 0;font-size:14px;">${localeLabels[locale].handmadeWithLove}</p>
         </td></tr>
         <!-- Body -->
@@ -119,7 +120,7 @@ const emailWrapper = (content: string, locale: AppLocale) => `
         </td></tr>
         <!-- Footer -->
         <tr><td style="padding:24px 40px;text-align:center;border-top:1px solid #F2E8E4;">
-          <p style="margin:0;color:#7a5543;font-size:13px;">© ${new Date().getFullYear()} The Kiyon Store. ${localeLabels[locale].allRightsReserved}</p>
+          <p style="margin:0;color:#7a5543;font-size:13px;">© ${new Date().getFullYear()} ${STORE_NAME}. ${localeLabels[locale].allRightsReserved}</p>
           <p style="margin:8px 0 0;color:#7a5543;font-size:12px;">${localeLabels[locale].handcrafted}</p>
         </td></tr>
       </table>
@@ -211,7 +212,7 @@ export const orderConfirmationTemplate = (data: OrderConfirmationData) => {
         ? `Pedido confirmado — #${data.orderId.toUpperCase()} 🌸`
         : `Order Confirmed — #${data.orderId.toUpperCase()} 🌸`,
     html: emailWrapper(bodyHtml, locale),
-    text: `Hi ${data.customerName},\n\nYour order #${data.orderId.toUpperCase()} has been confirmed!\nTotal: ${data.totalAmount}\n\nItems:\n${itemLines}\n\nShipping to:\n${data.shippingAddress}\n\nThank you for shopping with The Kiyon Store!`,
+    text: `Hi ${data.customerName},\n\nYour order #${data.orderId.toUpperCase()} has been confirmed!\nTotal: ${data.totalAmount}\n\nItems:\n${itemLines}\n\nShipping to:\n${data.shippingAddress}\n\nThank you for shopping with ${STORE_NAME}!`,
   }
 }
 
@@ -278,6 +279,6 @@ export const orderStatusUpdateTemplate = (data: OrderStatusUpdateData) => {
         ? `Tu pedido #${data.orderId.toUpperCase()} ahora está ${localizedStatus} ${info.emoji}`
         : `Your Order #${data.orderId.toUpperCase()} is now ${localizedStatus} ${info.emoji}`,
     html: emailWrapper(bodyHtml, locale),
-    text: `Hi ${data.customerName},\n\nYour order #${data.orderId.toUpperCase()} status has been updated to: ${info.label}\n${trackingLine}${carrierLine}\n\nThank you for shopping with The Kiyon Store!`,
+    text: `Hi ${data.customerName},\n\nYour order #${data.orderId.toUpperCase()} status has been updated to: ${info.label}\n${trackingLine}${carrierLine}\n\nThank you for shopping with ${STORE_NAME}!`,
   }
 }

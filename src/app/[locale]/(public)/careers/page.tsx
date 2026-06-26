@@ -1,12 +1,12 @@
 import Footer from '@/components/layout/Footer'
 import Link from '@/components/ui/LocaleLink'
+import { STORE_NAME, withStoreName } from '@/lib/constants/store'
 
 export const revalidate = 3600
 
 export const metadata = {
-  title: 'Careers | The Kiyon Store',
-  description:
-    'Join The Kiyon Store team. Explore open positions and opportunities.',
+  title: withStoreName('Careers'),
+  description: `Join the ${STORE_NAME} team. Explore open positions and opportunities.`,
 }
 
 const openings = [

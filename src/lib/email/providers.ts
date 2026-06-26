@@ -6,13 +6,14 @@
 import { MailerSend, EmailParams, Sender, Recipient } from 'mailersend'
 import nodemailer, { type Transporter } from 'nodemailer'
 import { logError, logBusinessEvent } from '@/lib/logger'
+import { STORE_NAME } from '@/lib/constants/store'
 
 const FROM_EMAIL =
   process.env.MAILERSEND_FROM_EMAIL ??
   process.env.GOOGLE_SMTP_FROM_EMAIL ??
   process.env.GOOGLE_SMTP_USER ??
   'noreply@thekiyonstore.com'
-const FROM_NAME = 'The Kiyon Store'
+const FROM_NAME = STORE_NAME
 const SMTP_HOST = process.env.GOOGLE_SMTP_HOST ?? 'smtp.gmail.com'
 const SMTP_PORT = Number(process.env.GOOGLE_SMTP_PORT ?? '465')
 const SMTP_SECURE =

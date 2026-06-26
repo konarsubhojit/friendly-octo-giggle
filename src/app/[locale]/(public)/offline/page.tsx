@@ -1,10 +1,11 @@
 import type { Metadata } from 'next'
 import Link from '@/components/ui/LocaleLink'
+import { withStoreName } from '@/lib/constants/store'
 
 import { RetryButton } from './RetryButton'
 
 export const metadata: Metadata = {
-  title: "You're Offline | The Kiyon Store",
+  title: withStoreName("You're Offline"),
   description:
     'No internet connection. Please check your network and try again.',
 }
