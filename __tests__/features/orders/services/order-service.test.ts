@@ -143,6 +143,7 @@ vi.mock('drizzle-orm', () => ({
   and: vi.fn((...args: unknown[]) => args),
   isNull: vi.fn(),
   lt: vi.fn(),
+  gte: vi.fn((...args: unknown[]) => args),
   type: { SQL: class {} },
 }))
 
@@ -478,7 +479,9 @@ describe('order-service', () => {
             }),
             update: vi.fn().mockReturnValue({
               set: vi.fn().mockReturnValue({
-                where: vi.fn().mockResolvedValue([]),
+                where: vi.fn().mockReturnValue({
+                  returning: vi.fn().mockResolvedValue([{ id: 'v1' }]),
+                }),
               }),
             }),
           }
@@ -581,7 +584,9 @@ describe('order-service', () => {
             }),
             update: vi.fn().mockReturnValue({
               set: vi.fn().mockReturnValue({
-                where: vi.fn().mockResolvedValue([]),
+                where: vi.fn().mockReturnValue({
+                  returning: vi.fn().mockResolvedValue([{ id: 'v1' }]),
+                }),
               }),
             }),
           }
@@ -658,7 +663,9 @@ describe('order-service', () => {
             }),
             update: vi.fn().mockReturnValue({
               set: vi.fn().mockReturnValue({
-                where: vi.fn().mockResolvedValue([]),
+                where: vi.fn().mockReturnValue({
+                  returning: vi.fn().mockResolvedValue([{ id: 'v1' }]),
+                }),
               }),
             }),
           }
@@ -724,7 +731,9 @@ describe('order-service', () => {
             }),
             update: vi.fn().mockReturnValue({
               set: vi.fn().mockReturnValue({
-                where: vi.fn().mockResolvedValue([]),
+                where: vi.fn().mockReturnValue({
+                  returning: vi.fn().mockResolvedValue([{ id: 'v1' }]),
+                }),
               }),
             }),
           }
@@ -774,6 +783,119 @@ describe('order-service', () => {
       })
 
       expect(result.order).toBeDefined()
+    })
+
+    it('throws 409 when stock decrement is blocked by race condition', async () => {
+      mockPrimaryDrizzleDbQuery.products.findMany.mockResolvedValue([
+        {
+          id: 'p1',
+          name: 'Widget',
+          variants: [{ id: 'v1', price: 100, stock: 1 }],
+        },
+      ])
+
+      mockPrimaryDrizzleDbTransaction.mockImplementation(
+        async (callback: (tx: unknown) => Promise<unknown>) => {
+          const tx = {
+            insert: vi.fn().mockReturnValue({
+              values: vi.fn().mockReturnValue({
+                returning: vi.fn().mockResolvedValue([{ id: 'ord5' }]),
+              }),
+            }),
+            update: vi.fn().mockReturnValue({
+              set: vi.fn().mockReturnValue({
+                where: vi.fn().mockReturnValue({
+                  // Simulates a concurrent order having already consumed the stock:
+                  // gte guard matched 0 rows, so no id is returned.
+                  returning: vi.fn().mockResolvedValue([]),
+                }),
+              }),
+            }),
+          }
+          return callback(tx)
+        }
+      )
+
+      await expect(
+        createOrderForUser({
+          body: {
+            customerName: 'Test',
+            customerEmail: 'test@example.com',
+            customerAddress: '123 St',
+            addressLine1: '123 Test St',
+            addressLine2: '',
+            addressLine3: '',
+            pinCode: '110001',
+            city: 'New Delhi',
+            state: 'Delhi',
+            items: [{ productId: 'p1', variantId: 'v1', quantity: 1 }],
+          },
+          user: testUser,
+        })
+      ).rejects.toThrow(OrderRequestError)
+    })
+
+    it('throws 409 when one item succeeds but another is blocked by race condition', async () => {
+      mockPrimaryDrizzleDbQuery.products.findMany.mockResolvedValue([
+        {
+          id: 'p1',
+          name: 'Widget A',
+          variants: [{ id: 'v1', price: 100, stock: 5 }],
+        },
+        {
+          id: 'p2',
+          name: 'Widget B',
+          variants: [{ id: 'v2', price: 50, stock: 1 }],
+        },
+      ])
+
+      mockPrimaryDrizzleDbTransaction.mockImplementation(
+        async (callback: (tx: unknown) => Promise<unknown>) => {
+          let callCount = 0
+          const tx = {
+            insert: vi.fn().mockReturnValue({
+              values: vi.fn().mockReturnValue({
+                returning: vi.fn().mockResolvedValue([{ id: 'ord6' }]),
+              }),
+            }),
+            update: vi.fn().mockReturnValue({
+              set: vi.fn().mockReturnValue({
+                where: vi.fn().mockReturnValue({
+                  returning: vi.fn().mockImplementation(() => {
+                    // First variant succeeds; second was consumed by a concurrent order.
+                    callCount += 1
+                    return Promise.resolve(
+                      callCount === 1 ? [{ id: 'v1' }] : []
+                    )
+                  }),
+                }),
+              }),
+            }),
+          }
+          return callback(tx)
+        }
+      )
+
+      await expect(
+        createOrderForUser({
+          body: {
+            customerName: 'Test',
+            customerEmail: 'test@example.com',
+            customerAddress: '123 St',
+            addressLine1: '123 Test St',
+            addressLine2: '',
+            addressLine3: '',
+            pinCode: '110001',
+            city: 'New Delhi',
+            state: 'Delhi',
+            items: [
+              { productId: 'p1', variantId: 'v1', quantity: 1 },
+              { productId: 'p2', variantId: 'v2', quantity: 1 },
+            ],
+          },
+          user: testUser,
+        })
+      ).rejects.toThrow(OrderRequestError)
     })
   })
 })
