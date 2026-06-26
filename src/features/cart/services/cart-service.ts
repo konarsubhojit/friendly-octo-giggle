@@ -6,7 +6,7 @@ import {
   cartItems,
   users,
 } from '@/lib/schema'
-import { eq, and, isNull, inArray } from 'drizzle-orm'
+import { eq, and, isNull, inArray, type SQL } from 'drizzle-orm'
 import { logError } from '@/lib/logger'
 import { getCachedData } from '@/lib/redis'
 import { CACHE_KEYS, CACHE_TTL, invalidateCartCache } from '@/lib/cache'
@@ -379,82 +379,54 @@ const serializeCart = (cart: CartRecord) => {
   }
 }
 
+/**
+ * Single authoritative query for a cart with its full relation tree.
+ * Used in fetchCartFromDB (both user and guest paths) and addItemToCart.
+ */
+const findCartWithRelations = (where: SQL<unknown>) =>
+  drizzleDb.query.carts.findFirst({
+    where,
+    with: {
+      items: {
+        with: {
+          product: {
+            with: {
+              options: {
+                orderBy: (o, { asc }) => [asc(o.sortOrder)],
+                with: {
+                  values: {
+                    orderBy: (v, { asc }) => [asc(v.sortOrder)],
+                  },
+                },
+              },
+              variants: {
+                where: (variant, { isNull: isVariantNull }) =>
+                  isVariantNull(variant.deletedAt),
+              },
+            },
+          },
+          variant: {
+            with: {
+              optionValues: {
+                with: {
+                  optionValue: true,
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  })
+
 const fetchCartFromDB = (userId?: string, sessionId?: string) => {
-  if (userId) {
-    return drizzleDb.query.carts.findFirst({
-      where: eq(carts.userId, userId),
-      with: {
-        items: {
-          with: {
-            product: {
-              with: {
-                options: {
-                  orderBy: (o, { asc }) => [asc(o.sortOrder)],
-                  with: {
-                    values: {
-                      orderBy: (v, { asc }) => [asc(v.sortOrder)],
-                    },
-                  },
-                },
-                variants: {
-                  where: (variant, { isNull: isVariantNull }) =>
-                    isVariantNull(variant.deletedAt),
-                },
-              },
-            },
-            variant: {
-              with: {
-                optionValues: {
-                  with: {
-                    optionValue: true,
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-    })
-  }
+  if (!userId && !sessionId) return Promise.resolve(undefined)
 
-  if (sessionId) {
-    return drizzleDb.query.carts.findFirst({
-      where: eq(carts.sessionId, sessionId),
-      with: {
-        items: {
-          with: {
-            product: {
-              with: {
-                options: {
-                  orderBy: (o, { asc }) => [asc(o.sortOrder)],
-                  with: {
-                    values: {
-                      orderBy: (v, { asc }) => [asc(v.sortOrder)],
-                    },
-                  },
-                },
-                variants: {
-                  where: (variant, { isNull: isVariantNull }) =>
-                    isVariantNull(variant.deletedAt),
-                },
-              },
-            },
-            variant: {
-              with: {
-                optionValues: {
-                  with: {
-                    optionValue: true,
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-    })
-  }
+  const where = userId
+    ? eq(carts.userId, userId)
+    : eq(carts.sessionId, sessionId!)
 
-  return Promise.resolve(undefined)
+  return findCartWithRelations(where)
 }
 
 export const getCartIdentity = (
@@ -935,40 +907,7 @@ export const addItemToCart = async (
   const stockWarning = await addOrUpdateCartItem(cart.id, body, availableStock)
 
   const [updatedCart] = await Promise.all([
-    drizzleDb.query.carts.findFirst({
-      where: eq(carts.id, cart.id),
-      with: {
-        items: {
-          with: {
-            product: {
-              with: {
-                options: {
-                  orderBy: (o, { asc }) => [asc(o.sortOrder)],
-                  with: {
-                    values: {
-                      orderBy: (v, { asc }) => [asc(v.sortOrder)],
-                    },
-                  },
-                },
-                variants: {
-                  where: (variant, { isNull: isVariantNull }) =>
-                    isVariantNull(variant.deletedAt),
-                },
-              },
-            },
-            variant: {
-              with: {
-                optionValues: {
-                  with: {
-                    optionValue: true,
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-    }),
+    findCartWithRelations(eq(carts.id, cart.id)),
     invalidateCartCache(session?.user?.id, resolvedSessionId),
   ])
 
