@@ -1,6 +1,7 @@
 'use client'
 
 import { useTheme } from '@/contexts/ThemeContext'
+import { HeaderSelect } from '@/components/ui/HeaderSelect'
 
 export const ThemeSelector = () => {
   const { theme, setTheme, themes } = useTheme()
@@ -19,12 +20,12 @@ export const ThemeSelector = () => {
         }}
         aria-hidden="true"
       />
-      <select
+      <HeaderSelect
         value={theme}
         onChange={(e) =>
           setTheme(e.target.value as (typeof themes)[number]['id'])
         }
-        className="w-full flex-1 cursor-pointer appearance-none rounded-md border border-[var(--border-warm)] bg-[var(--surface)] px-3 py-1.5 text-sm text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-rose)] sm:w-52 sm:flex-none"
+        className="w-full flex-1 appearance-none sm:w-52 sm:flex-none"
         aria-label="Select colour theme"
       >
         {themes.map((themeOption) => (
@@ -32,7 +33,7 @@ export const ThemeSelector = () => {
             {themeOption.label}
           </option>
         ))}
-      </select>
+      </HeaderSelect>
       <span className="hidden text-xs text-[var(--text-muted)] md:inline">
         {activeTheme.description}
       </span>

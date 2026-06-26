@@ -8,6 +8,7 @@ import {
   toLocalizedPathname,
 } from '@/lib/i18n/config'
 import { useLocale } from '@/contexts/LocaleContext'
+import { HeaderSelect } from '@/components/ui/HeaderSelect'
 
 export default function LanguageSwitcher() {
   const [isPending, startTransition] = useTransition()
@@ -37,8 +38,8 @@ export default function LanguageSwitcher() {
   return (
     <label className="sr-only sm:not-sr-only sm:text-xs sm:text-[var(--text-muted)] sm:flex sm:items-center sm:gap-2">
       <span className="hidden lg:inline">{t('header.language')}</span>
-      <select
-        className="rounded-md border border-[var(--border-warm)] bg-[var(--surface)] px-2 py-1 text-xs text-[var(--foreground)]"
+      <HeaderSelect
+        className="px-2 py-1 text-xs"
         aria-label={t('header.language')}
         value={locale}
         disabled={isPending}
@@ -51,7 +52,7 @@ export default function LanguageSwitcher() {
               : t('header.languageSpanish')}
           </option>
         ))}
-      </select>
+      </HeaderSelect>
     </label>
   )
 }
