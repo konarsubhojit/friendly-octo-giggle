@@ -176,6 +176,11 @@ import {
   isOrderRequestError,
   getUserOrders,
   createOrderForUser,
+  validateOrderInput,
+  priceAndValidateStock,
+  persistOrder,
+  invalidateOrderRelatedCaches,
+  dispatchOrderNotifications,
 } from '@/features/orders/services/order-service'
 
 const testUser: OrderSessionUser = {
@@ -338,6 +343,192 @@ describe('order-service', () => {
 
       expect(result).toHaveProperty('orders')
       expect(result).toHaveProperty('totalCount')
+    })
+  })
+
+  describe('extracted helpers', () => {
+    it('validateOrderInput returns normalized customer details and deduped product ids', () => {
+      const result = validateOrderInput({
+        body: {
+          customerName: '',
+          customerEmail: '',
+          customerAddress: '',
+          addressLine1: '123 Test St ',
+          addressLine2: '',
+          addressLine3: '',
+          pinCode: '110001',
+          city: 'New Delhi',
+          state: 'Delhi',
+          items: [
+            { productId: 'p1', variantId: 'v1', quantity: 1 },
+            { productId: 'p1', variantId: 'v2', quantity: 1 },
+          ],
+          payment: testPayment,
+        },
+        user: testUser,
+      })
+
+      expect(result.customerDetails.customerName).toBe('Test User')
+      expect(result.customerDetails.customerEmail).toBe('test@example.com')
+      expect(result.requestedProductIds).toEqual(['p1'])
+    })
+
+    it('priceAndValidateStock computes total and returns stock errors without DB', () => {
+      expect(
+        priceAndValidateStock(
+          [{ productId: 'p1', variantId: 'v1', quantity: 2 }],
+          [{ id: 'p1', name: 'Widget', variants: [{ id: 'v1', price: 75, stock: 5 }] }]
+        )
+      ).toEqual({ valid: true, totalAmount: 150 })
+
+      expect(
+        priceAndValidateStock(
+          [{ productId: 'p1', variantId: 'v1', quantity: 10 }],
+          [{ id: 'p1', name: 'Widget', variants: [{ id: 'v1', price: 75, stock: 1 }] }]
+        )
+      ).toEqual(
+        expect.objectContaining({
+          valid: false,
+          reason: 'insufficient_stock',
+          status: 400,
+        })
+      )
+    })
+
+    it('persistOrder throws 409 when stock reservation is blocked in transaction', async () => {
+      mockPrimaryDrizzleDbTransaction.mockImplementation(
+        async (callback: (tx: unknown) => Promise<unknown>) => {
+          const tx = {
+            insert: vi.fn().mockReturnValue({
+              values: vi.fn().mockReturnValue({
+                returning: vi.fn().mockResolvedValue([{ id: 'ord_helper' }]),
+              }),
+            }),
+            update: vi.fn().mockReturnValue({
+              set: vi.fn().mockReturnValue({
+                where: vi.fn().mockReturnValue({
+                  returning: vi.fn().mockResolvedValue([]),
+                }),
+              }),
+            }),
+          }
+          return callback(tx)
+        }
+      )
+
+      await expect(
+        persistOrder({
+          body: {
+            customerName: 'Test',
+            customerEmail: 'test@example.com',
+            customerAddress: '123 St',
+            addressLine1: '123 Test St',
+            addressLine2: '',
+            addressLine3: '',
+            pinCode: '110001',
+            city: 'New Delhi',
+            state: 'Delhi',
+            items: [{ productId: 'p1', variantId: 'v1', quantity: 1 }],
+            payment: testPayment,
+          },
+          userId: 'user1',
+          customerDetails: {
+            valid: true,
+            customerName: 'Test',
+            customerEmail: 'test@example.com',
+            customerAddress: '123 St',
+            addressLine1: '123 Test St',
+            addressLine2: '',
+            addressLine3: '',
+            pinCode: '110001',
+            city: 'New Delhi',
+            state: 'Delhi',
+          },
+          productList: [
+            {
+              id: 'p1',
+              name: 'Widget',
+              variants: [{ id: 'v1', price: 100, stock: 1 }],
+            },
+          ],
+          totalAmount: 100,
+          verifiedPayment: {
+            provider: 'RAZORPAY',
+            paymentOrderId: 'order_123',
+            paymentTransactionId: 'pay_123',
+            amountPaid: 100,
+            paidAt: new Date('2024-01-01'),
+          },
+        })
+      ).rejects.toThrow(OrderRequestError)
+    })
+
+    it('invalidateOrderRelatedCaches uses abstraction port', async () => {
+      const invalidateOrderCaches = vi.fn().mockResolvedValue(undefined)
+
+      await invalidateOrderRelatedCaches({
+        userId: 'user1',
+        items: [
+          { productId: 'p1', variantId: 'v1', quantity: 1 },
+          { productId: 'p2', variantId: 'v2', quantity: 1 },
+        ],
+        cacheInvalidator: { invalidateOrderCaches },
+      })
+
+      expect(invalidateOrderCaches).toHaveBeenCalledWith({
+        userId: 'user1',
+        productIds: ['p1', 'p2'],
+      })
+    })
+
+    it('dispatchOrderNotifications uses publisher abstraction and queues email event', async () => {
+      const publishOrderCreated = vi
+        .fn()
+        .mockResolvedValue({ messageId: 'msg-helper' })
+      mockDrizzleDbQuery.users.findFirst.mockResolvedValue({
+        currencyPreference: 'INR',
+        localePreference: 'en',
+      })
+
+      await dispatchOrderNotifications({
+        hydratedOrder: {
+          id: 'ord1',
+          customerName: 'Test User',
+          customerEmail: 'test@example.com',
+          customerAddress: '123 St',
+          totalAmount: 200,
+          status: 'PENDING',
+          paymentStatus: 'PAID',
+          createdAt: new Date('2024-01-01'),
+          updatedAt: new Date('2024-01-01'),
+          items: [
+            {
+              productId: 'p1',
+              variantId: 'v1',
+              quantity: 2,
+              price: 100,
+              customizationNote: null,
+              product: {
+                name: 'Widget',
+                image: '/widget.jpg',
+                createdAt: new Date('2024-01-01'),
+                updatedAt: new Date('2024-01-01'),
+              },
+            },
+          ],
+        },
+        userId: 'user1',
+        publisher: { publishOrderCreated },
+      })
+
+      expect(publishOrderCreated).toHaveBeenCalled()
+      expect(mockSendOrderConfirmationEmail).not.toHaveBeenCalled()
+      expect(mockLogBusinessEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          event: 'order_email_queued',
+          success: true,
+        })
+      )
     })
   })
 

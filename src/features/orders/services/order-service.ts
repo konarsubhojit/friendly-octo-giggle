@@ -123,6 +123,20 @@ interface HydratedOrder {
   items: HydratedOrderItem[]
 }
 
+export interface OrderNotificationPublisher {
+  publishOrderCreated: (input: {
+    url: string
+    event: OrderCreatedEvent
+  }) => Promise<{ messageId?: string }>
+}
+
+export interface OrderCacheInvalidator {
+  invalidateOrderCaches: (input: {
+    userId: string
+    productIds: string[]
+  }) => Promise<void>
+}
+
 const parseOrderLimit = (param: string | null): number =>
   Math.min(
     Math.max(1, Number.parseInt(param ?? String(PAGE_SIZE), 10) || PAGE_SIZE),
@@ -267,6 +281,11 @@ const validateStockAndCalculateTotal = (
   return { valid: true, totalAmount }
 }
 
+export const priceAndValidateStock = (
+  items: OrderItemInput[],
+  productList: ProductWithVariants[]
+): StockCheckResult => validateStockAndCalculateTotal(items, productList)
+
 const sanitizeCustomizationNote = (
   raw: string | null | undefined
 ): string | null => {
@@ -401,6 +420,377 @@ const logFailedOrderCreation = (
   throw new OrderRequestError(message, status)
 }
 
+const getDefaultNotificationPublisher = (): OrderNotificationPublisher => ({
+  publishOrderCreated: async ({ url, event }) =>
+    getQStashClient().publishJSON({
+      url,
+      body: event,
+    }),
+})
+
+const getDefaultOrderCacheInvalidator = (): OrderCacheInvalidator => ({
+  invalidateOrderCaches: async ({ userId, productIds }) => {
+    const uniqueProductIds = [...new Set(productIds)]
+    await Promise.all([
+      invalidateCache('admin:orders:*'),
+      invalidateUserOrderCaches(userId),
+      ...uniqueProductIds.map((productId) => invalidateCache(`product:${productId}`)),
+    ])
+  },
+})
+
+export const validateOrderInput = ({
+  body,
+  user,
+}: {
+  body: CreateOrderInput
+  user: OrderSessionUser
+}) => {
+  if (!body.items || body.items.length === 0) {
+    logFailedOrderCreation(
+      'missing_items',
+      400,
+      'Order must contain at least one item'
+    )
+  }
+
+  const customerValidation = validateCustomerInfo(body, user)
+  if (!customerValidation.valid) {
+    logFailedOrderCreation(
+      customerValidation.reason,
+      customerValidation.status,
+      customerValidation.error
+    )
+  }
+
+  return {
+    customerDetails: customerValidation as Extract<ValidationResult, { valid: true }>,
+    requestedProductIds: [...new Set(body.items.map((item) => item.productId))],
+  }
+}
+
+export const persistOrder = async ({
+  body,
+  userId,
+  customerDetails,
+  productList,
+  totalAmount,
+  verifiedPayment,
+  checkoutRequestId,
+}: {
+  body: CreateOrderInput
+  userId: string
+  customerDetails: Extract<ValidationResult, { valid: true }>
+  productList: ProductWithVariants[]
+  totalAmount: number
+  verifiedPayment: {
+    provider: 'RAZORPAY'
+    paymentOrderId: string
+    paymentTransactionId: string
+    amountPaid: number
+    paidAt: Date
+  }
+  checkoutRequestId?: string
+}) => {
+  const itemsWithVariant = body.items.filter(
+    (item): item is OrderItemInput & { variantId: string } => item.variantId != null
+  )
+
+  return primaryDrizzleDb.transaction(async (tx) => {
+    const [newOrder] = await tx
+      .insert(orders)
+      .values({
+        userId,
+        customerName: customerDetails.customerName,
+        customerEmail: customerDetails.customerEmail,
+        customerAddress:
+          customerDetails.customerAddress ||
+          formatStructuredAddress({
+            customerAddress: '',
+            addressLine1: customerDetails.addressLine1,
+            addressLine2: customerDetails.addressLine2,
+            addressLine3: customerDetails.addressLine3,
+            pinCode: customerDetails.pinCode,
+            city: customerDetails.city,
+            state: customerDetails.state,
+          }),
+        addressLine1: customerDetails.addressLine1 || null,
+        addressLine2: customerDetails.addressLine2 || null,
+        addressLine3: customerDetails.addressLine3 || null,
+        pinCode: customerDetails.pinCode || null,
+        city: customerDetails.city || null,
+        state: customerDetails.state || null,
+        checkoutRequestId: checkoutRequestId ?? null,
+        totalAmount,
+        status: 'PENDING',
+        paymentStatus: 'PAID',
+        paymentProvider: verifiedPayment.provider,
+        paymentOrderId: verifiedPayment.paymentOrderId,
+        paymentTransactionId: verifiedPayment.paymentTransactionId,
+        amountPaid: verifiedPayment.amountPaid,
+        paidAt: verifiedPayment.paidAt,
+        updatedAt: new Date(),
+      })
+      .returning()
+
+    await tx
+      .insert(orderItems)
+      .values(buildOrderItemValues(body.items, productList, newOrder.id))
+
+    const stockUpdateResults = await Promise.all(
+      itemsWithVariant.map((item) =>
+        tx
+          .update(productVariants)
+          .set({
+            stock: sql`${productVariants.stock} - ${item.quantity}`,
+            updatedAt: new Date(),
+          })
+          .where(
+            and(
+              eq(productVariants.id, item.variantId),
+              gte(productVariants.stock, item.quantity)
+            )
+          )
+          .returning({ id: productVariants.id })
+      )
+    )
+
+    if (stockUpdateResults.some((rows) => rows.length === 0)) {
+      throw new OrderRequestError(
+        'Unable to reserve stock — item was sold out by a concurrent order',
+        409
+      )
+    }
+
+    return newOrder
+  })
+}
+
+export const invalidateOrderRelatedCaches = async ({
+  userId,
+  items,
+  cacheInvalidator = getDefaultOrderCacheInvalidator(),
+}: {
+  userId: string
+  items: OrderItemInput[]
+  cacheInvalidator?: OrderCacheInvalidator
+}) => {
+  await cacheInvalidator.invalidateOrderCaches({
+    userId,
+    productIds: items.map((item) => item.productId),
+  })
+}
+
+export const dispatchOrderNotifications = async ({
+  hydratedOrder,
+  userId,
+  publisher = getDefaultNotificationPublisher(),
+}: {
+  hydratedOrder: HydratedOrder
+  userId: string
+  publisher?: OrderNotificationPublisher
+}) => {
+  const workerUrl = `${env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'}/api/services/email`
+  const userRecord = await drizzleDb.query.users.findFirst({
+    where: eq(users.id, userId),
+    columns: { currencyPreference: true, localePreference: true },
+  })
+  const currencyCode: CurrencyCode =
+    userRecord?.currencyPreference &&
+    isValidCurrencyCode(userRecord.currencyPreference)
+      ? userRecord.currencyPreference
+      : 'INR'
+  const locale =
+    userRecord?.localePreference &&
+    isSupportedLocale(userRecord.localePreference)
+      ? userRecord.localePreference
+      : 'en'
+
+  const emailEvent: OrderCreatedEvent = {
+    type: 'order.created',
+    data: {
+      orderId: hydratedOrder.id,
+      customerEmail: hydratedOrder.customerEmail,
+      customerName: hydratedOrder.customerName,
+      customerAddress: hydratedOrder.customerAddress,
+      totalAmount: hydratedOrder.totalAmount,
+      currencyCode,
+      locale,
+      items: hydratedOrder.items.map((item) => ({
+        name: item.product.name,
+        quantity: item.quantity,
+        price: item.price,
+      })),
+    },
+  }
+
+  try {
+    const publishResult = await publisher.publishOrderCreated({
+      url: workerUrl,
+      event: emailEvent,
+    })
+    logBusinessEvent({
+      event: 'order_email_queued',
+      details: {
+        orderId: hydratedOrder.id,
+        eventType: emailEvent.type,
+        messageId: publishResult.messageId,
+      },
+      success: true,
+    })
+  } catch (publishError) {
+    logError({
+      error: publishError,
+      context: 'qstash_publish_failed_using_fallback',
+      additionalInfo: {
+        orderId: hydratedOrder.id,
+        eventType: emailEvent.type,
+      },
+    })
+    sendOrderConfirmationEmail({
+      to: hydratedOrder.customerEmail,
+      customerName: hydratedOrder.customerName,
+      orderId: hydratedOrder.id,
+      totalAmount: formatPriceForCurrency(hydratedOrder.totalAmount, currencyCode),
+      shippingAddress: hydratedOrder.customerAddress,
+      locale,
+      items: hydratedOrder.items.map((item) => ({
+        name: item.product.name,
+        quantity: item.quantity,
+        price: formatPriceForCurrency(item.price, currencyCode),
+        variant: null,
+      })),
+    })
+  }
+}
+
+const fetchProductsForOrder = async (
+  requestedProductIds: string[]
+): Promise<ProductWithVariants[]> => {
+  const productList = (await primaryDrizzleDb.query.products.findMany({
+    where: and(
+      inArray(products.id, requestedProductIds),
+      isNull(products.deletedAt)
+    ),
+    with: {
+      variants: {
+        where: (variant, operators) => operators.isNull(variant.deletedAt),
+      },
+    },
+  })) as ProductWithVariants[]
+
+  if (productList.length !== requestedProductIds.length) {
+    logFailedOrderCreation(
+      'products_not_found',
+      404,
+      'Some products not found',
+      {
+        requestedCount: requestedProductIds.length,
+        foundCount: productList.length,
+      }
+    )
+  }
+
+  return productList
+}
+
+const verifyPaymentForOrder = async ({
+  payment,
+  expectedAmount,
+}: {
+  payment: CreateOrderInput['payment']
+  expectedAmount: number
+}) => {
+  try {
+    return await verifyCheckoutPayment({ payment, expectedAmount })
+  } catch (error) {
+    if (
+      error instanceof PaymentVerificationError ||
+      error instanceof PaymentConfigurationError
+    ) {
+      return logFailedOrderCreation(
+        'payment_verification_failed',
+        error.status,
+        error.message
+      )
+    }
+    throw error
+  }
+}
+
+const ensurePaymentTransactionUnique = async (paymentTransactionId: string) => {
+  const [existingOrder] = await primaryDrizzleDb
+    .select({ id: orders.id })
+    .from(orders)
+    .where(eq(orders.paymentTransactionId, paymentTransactionId))
+    .limit(1)
+
+  if (existingOrder) {
+    return logFailedOrderCreation(
+      'duplicate_payment_transaction',
+      409,
+      `Order already exists for payment transaction ${paymentTransactionId}`
+    )
+  }
+}
+
+const getHydratedOrderOrThrow = async (
+  orderId: string
+): Promise<HydratedOrder> => {
+  const fullOrder = await primaryDrizzleDb.query.orders.findFirst({
+    where: eq(orders.id, orderId),
+    with: { items: { with: { product: true, variant: true } } },
+  })
+
+  if (!fullOrder) {
+    throw new OrderRequestError('Failed to retrieve created order', 500)
+  }
+
+  return fullOrder as HydratedOrder
+}
+
+const logAndQueueOrderRecord = ({
+  hydratedOrder,
+  userId,
+}: {
+  hydratedOrder: HydratedOrder
+  userId: string
+}) => {
+  logBusinessEvent({
+    event: 'order_created',
+    details: {
+      orderId: hydratedOrder.id,
+      totalAmount: hydratedOrder.totalAmount,
+      itemCount: hydratedOrder.items.length,
+      customerEmail: hydratedOrder.customerEmail,
+    },
+    success: true,
+  })
+
+  waitUntil(
+    writeOrderToRedis({
+      id: hydratedOrder.id,
+      userId,
+      customerName: hydratedOrder.customerName,
+      customerEmail: hydratedOrder.customerEmail,
+      customerAddress: hydratedOrder.customerAddress,
+      total: hydratedOrder.totalAmount,
+      status: hydratedOrder.status,
+      items: hydratedOrder.items.map((item) => ({
+        productId: item.productId,
+        variantId: item.variantId,
+        quantity: item.quantity,
+        price: item.price,
+        customizationNote: item.customizationNote ?? null,
+      })),
+      createdAt: hydratedOrder.createdAt.toISOString(),
+      productNames: [
+        ...new Set(hydratedOrder.items.map((item) => item.product.name)),
+      ].join(', '),
+    })
+  )
+}
+
 export const getUserOrders = async ({
   requestUrl,
   userId,
@@ -487,66 +877,12 @@ export const createOrderForUser = async ({
   user: OrderSessionUser
   checkoutRequestId?: string
 }) => {
-  if (!body.items || body.items.length === 0) {
-    logFailedOrderCreation(
-      'missing_items',
-      400,
-      'Order must contain at least one item'
-    )
-  }
-
-  const customerValidation = validateCustomerInfo(body, user)
-  if (!customerValidation.valid) {
-    logFailedOrderCreation(
-      customerValidation.reason,
-      customerValidation.status,
-      customerValidation.error
-    )
-  }
-  const customerDetails = customerValidation as Extract<
-    ValidationResult,
-    { valid: true }
-  >
-
-  const {
-    customerName,
-    customerEmail,
-    customerAddress,
-    addressLine1,
-    addressLine2,
-    addressLine3,
-    pinCode,
-    city,
-    state: addressState,
-  } = customerDetails
-  const requestedProductIds = [
-    ...new Set(body.items.map((item) => item.productId)),
-  ]
-  const productList = (await primaryDrizzleDb.query.products.findMany({
-    where: and(
-      inArray(products.id, requestedProductIds),
-      isNull(products.deletedAt)
-    ),
-    with: {
-      variants: {
-        where: (variant, operators) => operators.isNull(variant.deletedAt),
-      },
-    },
-  })) as ProductWithVariants[]
-
-  if (productList.length !== requestedProductIds.length) {
-    logFailedOrderCreation(
-      'products_not_found',
-      404,
-      'Some products not found',
-      {
-        requestedCount: requestedProductIds.length,
-        foundCount: productList.length,
-      }
-    )
-  }
-
-  const stockResult = validateStockAndCalculateTotal(body.items, productList)
+  const { customerDetails, requestedProductIds } = validateOrderInput({
+    body,
+    user,
+  })
+  const productList = await fetchProductsForOrder(requestedProductIds)
+  const stockResult = priceAndValidateStock(body.items, productList)
   if (!stockResult.valid) {
     logFailedOrderCreation(
       stockResult.reason,
@@ -555,255 +891,25 @@ export const createOrderForUser = async ({
       stockResult.details
     )
   }
-  const stockDetails = stockResult as Extract<StockCheckResult, { valid: true }>
-
-  let verifiedPayment: {
-    provider: 'RAZORPAY'
-    paymentOrderId: string
-    paymentTransactionId: string
-    amountPaid: number
-    paidAt: Date
-  }
-  try {
-    verifiedPayment = await verifyCheckoutPayment({
-      payment: body.payment,
-      expectedAmount: stockDetails.totalAmount,
-    })
-  } catch (error) {
-    if (
-      error instanceof PaymentVerificationError ||
-      error instanceof PaymentConfigurationError
-    ) {
-      return logFailedOrderCreation(
-        'payment_verification_failed',
-        error.status,
-        error.message
-      )
-    }
-    throw error
-  }
-
-  // Idempotency check: fail fast if this paymentTransactionId already has an order
-  const [existingOrder] = await primaryDrizzleDb
-    .select({ id: orders.id })
-    .from(orders)
-    .where(
-      eq(orders.paymentTransactionId, verifiedPayment.paymentTransactionId)
-    )
-    .limit(1)
-  if (existingOrder) {
-    return logFailedOrderCreation(
-      'duplicate_payment_transaction',
-      409,
-      `Order already exists for payment transaction ${verifiedPayment.paymentTransactionId}`
-    )
-  }
-
-  const itemsWithVariant = body.items.filter(
-    (item): item is OrderItemInput & { variantId: string } =>
-      item.variantId != null
-  )
-
-  const order = await primaryDrizzleDb.transaction(async (tx) => {
-    const [newOrder] = await tx
-      .insert(orders)
-      .values({
-        userId: user.id,
-        customerName,
-        customerEmail,
-        customerAddress:
-          customerAddress ||
-          formatStructuredAddress({
-            customerAddress: '',
-            addressLine1,
-            addressLine2,
-            addressLine3,
-            pinCode,
-            city,
-            state: addressState,
-          }),
-        addressLine1: addressLine1 || null,
-        addressLine2: addressLine2 || null,
-        addressLine3: addressLine3 || null,
-        pinCode: pinCode || null,
-        city: city || null,
-        state: addressState || null,
-        checkoutRequestId: checkoutRequestId ?? null,
-        totalAmount: stockDetails.totalAmount,
-        status: 'PENDING',
-        paymentStatus: 'PAID',
-        paymentProvider: verifiedPayment.provider,
-        paymentOrderId: verifiedPayment.paymentOrderId,
-        paymentTransactionId: verifiedPayment.paymentTransactionId,
-        amountPaid: verifiedPayment.amountPaid,
-        paidAt: verifiedPayment.paidAt,
-        updatedAt: new Date(),
-      })
-      .returning()
-
-    await tx
-      .insert(orderItems)
-      .values(buildOrderItemValues(body.items, productList, newOrder.id))
-
-    const stockUpdateResults = await Promise.all(
-      itemsWithVariant.map((item) =>
-        tx
-          .update(productVariants)
-          .set({
-            stock: sql`${productVariants.stock} - ${item.quantity}`,
-            updatedAt: new Date(),
-          })
-          .where(
-            and(
-              eq(productVariants.id, item.variantId),
-              gte(productVariants.stock, item.quantity)
-            )
-          )
-          .returning({ id: productVariants.id })
-      )
-    )
-
-    const oversold = stockUpdateResults.some((rows) => rows.length === 0)
-    if (oversold) {
-      throw new OrderRequestError(
-        'Unable to reserve stock — item was sold out by a concurrent order',
-        409
-      )
-    }
-
-    return newOrder
+  const totalAmount = (stockResult as Extract<StockCheckResult, { valid: true }>)
+    .totalAmount
+  const verifiedPayment = await verifyPaymentForOrder({
+    payment: body.payment,
+    expectedAmount: totalAmount,
   })
-
-  const fullOrder = await primaryDrizzleDb.query.orders.findFirst({
-    where: eq(orders.id, order.id),
-    with: { items: { with: { product: true, variant: true } } },
+  await ensurePaymentTransactionUnique(verifiedPayment.paymentTransactionId)
+  const order = await persistOrder({
+    body,
+    userId: user.id,
+    customerDetails,
+    productList,
+    totalAmount,
+    verifiedPayment,
+    checkoutRequestId,
   })
-
-  if (!fullOrder) {
-    throw new OrderRequestError('Failed to retrieve created order', 500)
-  }
-  const hydratedOrder = fullOrder as HydratedOrder
-
-  logBusinessEvent({
-    event: 'order_created',
-    details: {
-      orderId: hydratedOrder.id,
-      totalAmount: hydratedOrder.totalAmount,
-      itemCount: hydratedOrder.items.length,
-      customerEmail: hydratedOrder.customerEmail,
-    },
-    success: true,
-  })
-
-  waitUntil(
-    writeOrderToRedis({
-      id: hydratedOrder.id,
-      userId: user.id,
-      customerName: hydratedOrder.customerName,
-      customerEmail: hydratedOrder.customerEmail,
-      customerAddress: hydratedOrder.customerAddress,
-      total: hydratedOrder.totalAmount,
-      status: hydratedOrder.status,
-      items: hydratedOrder.items.map((item) => ({
-        productId: item.productId,
-        variantId: item.variantId,
-        quantity: item.quantity,
-        price: item.price,
-        customizationNote: item.customizationNote ?? null,
-      })),
-      createdAt: hydratedOrder.createdAt.toISOString(),
-      productNames: [
-        ...new Set(hydratedOrder.items.map((item) => item.product.name)),
-      ].join(', '),
-    })
-  )
-
-  const productCacheKeys = [
-    ...new Set(body.items.map((item) => item.productId)),
-  ]
-  await Promise.all([
-    invalidateCache('admin:orders:*'),
-    invalidateUserOrderCaches(user.id),
-    ...productCacheKeys.map((productId) =>
-      invalidateCache(`product:${productId}`)
-    ),
-  ])
-
-  const workerUrl = `${env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'}/api/services/email`
-  const userRecord = await drizzleDb.query.users.findFirst({
-    where: eq(users.id, user.id),
-    columns: { currencyPreference: true, localePreference: true },
-  })
-  const currencyCode: CurrencyCode =
-    userRecord?.currencyPreference &&
-    isValidCurrencyCode(userRecord.currencyPreference)
-      ? userRecord.currencyPreference
-      : 'INR'
-  const locale =
-    userRecord?.localePreference &&
-    isSupportedLocale(userRecord.localePreference)
-      ? userRecord.localePreference
-      : 'en'
-
-  const emailEvent: OrderCreatedEvent = {
-    type: 'order.created',
-    data: {
-      orderId: hydratedOrder.id,
-      customerEmail: hydratedOrder.customerEmail,
-      customerName: hydratedOrder.customerName,
-      customerAddress: hydratedOrder.customerAddress,
-      totalAmount: hydratedOrder.totalAmount,
-      currencyCode,
-      locale,
-      items: hydratedOrder.items.map((item) => ({
-        name: item.product.name,
-        quantity: item.quantity,
-        price: item.price,
-      })),
-    },
-  }
-
-  try {
-    const publishResult = await getQStashClient().publishJSON({
-      url: workerUrl,
-      body: emailEvent,
-    })
-    logBusinessEvent({
-      event: 'order_email_queued',
-      details: {
-        orderId: hydratedOrder.id,
-        eventType: emailEvent.type,
-        messageId: publishResult.messageId,
-      },
-      success: true,
-    })
-  } catch (publishError) {
-    logError({
-      error: publishError,
-      context: 'qstash_publish_failed_using_fallback',
-      additionalInfo: {
-        orderId: hydratedOrder.id,
-        eventType: emailEvent.type,
-      },
-    })
-    sendOrderConfirmationEmail({
-      to: hydratedOrder.customerEmail,
-      customerName: hydratedOrder.customerName,
-      orderId: hydratedOrder.id,
-      totalAmount: formatPriceForCurrency(
-        hydratedOrder.totalAmount,
-        currencyCode
-      ),
-      shippingAddress: hydratedOrder.customerAddress,
-      locale,
-      items: hydratedOrder.items.map((item) => ({
-        name: item.product.name,
-        quantity: item.quantity,
-        price: formatPriceForCurrency(item.price, currencyCode),
-        variant: null,
-      })),
-    })
-  }
-
+  const hydratedOrder = await getHydratedOrderOrThrow(order.id)
+  logAndQueueOrderRecord({ hydratedOrder, userId: user.id })
+  await invalidateOrderRelatedCaches({ userId: user.id, items: body.items })
+  await dispatchOrderNotifications({ hydratedOrder, userId: user.id })
   return serializeCreatedOrder(hydratedOrder)
 }
