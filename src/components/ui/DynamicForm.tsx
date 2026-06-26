@@ -158,9 +158,10 @@ export function DynamicForm({
           <Button
             type="button"
             variant="ghost"
+            fullWidth
             onClick={onCancel}
             disabled={submitting}
-            className="w-full sm:w-auto"
+            className="sm:w-auto"
           >
             {cancelLabel}
           </Button>

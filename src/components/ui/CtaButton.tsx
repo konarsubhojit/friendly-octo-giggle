@@ -20,7 +20,7 @@ export function CtaButton({ text, href, onClick }: CtaButtonProps) {
   }
   if (onClick) {
     return (
-      <Button variant="gradient" onClick={onClick}>
+      <Button type="button" variant="gradient" onClick={onClick}>
         {text}
       </Button>
     )
