@@ -1,9 +1,10 @@
 import Footer from '@/components/layout/Footer'
+import { withStoreName } from '@/lib/constants/store'
 
 export const revalidate = 3600
 
 export const metadata = {
-  title: 'Shipping Information | The Kiyon Store',
+  title: withStoreName('Shipping Information'),
   description:
     'Learn about our shipping options, delivery times, and policies.',
 }
@@ -32,44 +33,13 @@ function ShippingOptionsSection() {
           <tbody className="divide-y divide-gray-50">
             <tr>
               <td className="py-3 pr-6 text-[var(--foreground)] font-medium">
-                Standard Shipping
+                Standard shipping
               </td>
               <td className="py-3 pr-6 text-[var(--text-secondary)]">
-                3–7 business days
+                Several business days after shipment
               </td>
               <td className="py-3 text-[var(--text-secondary)]">
-                Free on orders over $50, otherwise $4.99
-              </td>
-            </tr>
-            <tr>
-              <td className="py-3 pr-6 text-[var(--foreground)] font-medium">
-                Express Shipping
-              </td>
-              <td className="py-3 pr-6 text-[var(--text-secondary)]">
-                1–2 business days
-              </td>
-              <td className="py-3 text-[var(--text-secondary)]">$12.99</td>
-            </tr>
-            <tr>
-              <td className="py-3 pr-6 text-[var(--foreground)] font-medium">
-                Same-Day Delivery
-              </td>
-              <td className="py-3 pr-6 text-[var(--text-secondary)]">
-                Same day (order by 2pm)
-              </td>
-              <td className="py-3 text-[var(--text-secondary)]">
-                $19.99 (select cities only)
-              </td>
-            </tr>
-            <tr>
-              <td className="py-3 pr-6 text-[var(--foreground)] font-medium">
-                International
-              </td>
-              <td className="py-3 pr-6 text-[var(--text-secondary)]">
-                7–21 business days
-              </td>
-              <td className="py-3 text-[var(--text-secondary)]">
-                Calculated at checkout
+                Final shipping charges are shown during checkout
               </td>
             </tr>
           </tbody>
@@ -86,9 +56,9 @@ function OrderProcessingSection() {
         Order Processing
       </h2>
       <p className="text-[var(--text-secondary)] leading-relaxed mb-4">
-        Orders placed before 12pm EST on business days are typically processed
-        the same day. Orders placed after 12pm or on weekends are processed the
-        next business day.
+        Orders are typically reviewed and prepared for shipment within one
+        business day. Processing can take longer during holidays or periods of
+        unusually high order volume.
       </p>
       <p className="text-[var(--text-secondary)] leading-relaxed">
         You will receive an order confirmation email immediately after placing
@@ -124,7 +94,8 @@ export default function ShippingPage() {
           Shipping Information
         </h1>
         <p className="text-[var(--text-muted)] text-lg mb-12">
-          Everything you need to know about how we deliver to you.
+          Everything you need to know about our current delivery timeline and
+          order updates.
         </p>
 
         <ShippingOptionsSection />
