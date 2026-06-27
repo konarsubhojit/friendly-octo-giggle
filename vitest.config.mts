@@ -20,6 +20,18 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov'],
+      thresholds: {
+        lines: 80,
+        branches: 74,
+        functions: 80,
+        statements: 80,
+        'src/features/**/services/**/*.ts': {
+          lines: 85,
+          branches: 76,
+          functions: 85,
+          statements: 85,
+        },
+      },
       include: [
         'src/lib/**',
         'src/contexts/**',
