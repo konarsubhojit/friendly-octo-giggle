@@ -1,35 +1,41 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const {
-  mockInsert,
-  mockUpdate,
-  mockTransaction,
+  mockOrdersFindManyByUserId,
+  mockOrdersFindManyByIds,
+  mockOrdersInsertWithItems,
+  mockOrdersUpdateStatus,
+  mockProductsFindNamesByIds,
   mockGetRedisClient,
   mockLogError,
   mockLogBusinessEvent,
   mockGenerateOrderId,
 } = vi.hoisted(() => ({
-  mockInsert: vi.fn(),
-  mockUpdate: vi.fn(),
-  mockTransaction: vi.fn(),
+  mockOrdersFindManyByUserId: vi.fn(),
+  mockOrdersFindManyByIds: vi.fn(),
+  mockOrdersInsertWithItems: vi.fn(),
+  mockOrdersUpdateStatus: vi.fn(),
+  mockProductsFindNamesByIds: vi.fn(),
   mockGetRedisClient: vi.fn(),
   mockLogError: vi.fn(),
   mockLogBusinessEvent: vi.fn(),
   mockGenerateOrderId: vi.fn(() => 'ORD1234567'),
 }))
 
+vi.mock('@vercel/functions', () => ({
+  waitUntil: vi.fn(),
+}))
+
 vi.mock('@/lib/db', () => ({
-  drizzleDb: {
-    insert: mockInsert,
-    update: mockUpdate,
-    transaction: mockTransaction,
-    query: {
-      products: {
-        findMany: vi.fn(),
-      },
-      orders: {
-        findMany: vi.fn(),
-      },
+  db: {
+    orders: {
+      findManyByUserId: mockOrdersFindManyByUserId,
+      findManyByIds: mockOrdersFindManyByIds,
+      insertWithItems: mockOrdersInsertWithItems,
+      updateStatus: mockOrdersUpdateStatus,
+    },
+    products: {
+      findNamesByIds: mockProductsFindNamesByIds,
     },
   },
 }))
@@ -58,7 +64,6 @@ import {
   updateOrderStatus,
   getUserOrders,
 } from '@/features/orders/actions/orders'
-import { drizzleDb } from '@/lib/db'
 import { invalidateCache } from '@/lib/redis'
 import { invalidateUserOrderCaches } from '@/lib/cache'
 
@@ -91,29 +96,15 @@ const makeMockRedis = () => ({
   })),
 })
 
-const makeMockTx = () => ({
-  insert: vi.fn().mockReturnValue({
-    values: vi.fn().mockResolvedValue(undefined),
-  }),
-})
-
 describe('createOrder', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockGetRedisClient.mockReturnValue(makeMockRedis())
-    mockTransaction.mockImplementation(
-      async (cb: (tx: ReturnType<typeof makeMockTx>) => Promise<void>) => {
-        await cb(makeMockTx())
-      }
-    )
-    vi.mocked(drizzleDb.query.products.findMany).mockResolvedValue([
-      { id: 'prod001', name: 'Test Product A', variants: [] },
-      {
-        id: 'prod002',
-        name: 'Test Product B',
-        variants: [{ id: 'var001' }],
-      },
-    ] as never)
+    mockOrdersInsertWithItems.mockResolvedValue(undefined)
+    mockProductsFindNamesByIds.mockResolvedValue([
+      { id: 'prod001', name: 'Test Product A' },
+      { id: 'prod002', name: 'Test Product B' },
+    ])
   })
 
   it('inserts into PostgreSQL and returns orderId on success', async () => {
@@ -123,7 +114,7 @@ describe('createOrder', () => {
     if (result.success) {
       expect(result.data.orderId).toBe('ORD1234567')
     }
-    expect(mockTransaction).toHaveBeenCalledOnce()
+    expect(mockOrdersInsertWithItems).toHaveBeenCalledOnce()
     expect(mockLogBusinessEvent).toHaveBeenCalledWith(
       expect.objectContaining({ event: 'order_created', success: true })
     )
@@ -141,7 +132,7 @@ describe('createOrder', () => {
     })
 
     expect(result.success).toBe(false)
-    expect(mockTransaction).not.toHaveBeenCalled()
+    expect(mockOrdersInsertWithItems).not.toHaveBeenCalled()
   })
 
   it('returns error when items array is empty', async () => {
@@ -151,11 +142,13 @@ describe('createOrder', () => {
     })
 
     expect(result.success).toBe(false)
-    expect(mockTransaction).not.toHaveBeenCalled()
+    expect(mockOrdersInsertWithItems).not.toHaveBeenCalled()
   })
 
   it('returns error when PostgreSQL transaction fails but does not crash', async () => {
-    mockTransaction.mockRejectedValueOnce(new Error('DB connection refused'))
+    mockOrdersInsertWithItems.mockRejectedValueOnce(
+      new Error('DB connection refused')
+    )
 
     const result = await createOrder('user-123', validOrderData)
 
@@ -187,12 +180,7 @@ describe('updateOrderStatus', () => {
   })
 
   it('updates status in PostgreSQL and Redis on success', async () => {
-    const updateChain = {
-      set: vi.fn().mockReturnThis(),
-      where: vi.fn().mockReturnThis(),
-      returning: vi.fn().mockResolvedValue([{ id: 'ORD1234567' }]),
-    }
-    mockUpdate.mockReturnValue(updateChain)
+    mockOrdersUpdateStatus.mockResolvedValue({ id: 'ORD1234567' })
 
     const result = await updateOrderStatus('ORD1234567', 'PROCESSING')
 
@@ -206,12 +194,7 @@ describe('updateOrderStatus', () => {
   })
 
   it('returns error when order is not found in PostgreSQL', async () => {
-    const updateChain = {
-      set: vi.fn().mockReturnThis(),
-      where: vi.fn().mockReturnThis(),
-      returning: vi.fn().mockResolvedValue([]),
-    }
-    mockUpdate.mockReturnValue(updateChain)
+    mockOrdersUpdateStatus.mockResolvedValue(null)
 
     const result = await updateOrderStatus('ORD_MISSING', 'SHIPPED')
 
@@ -228,16 +211,11 @@ describe('updateOrderStatus', () => {
     if (!result.success) {
       expect(result.error).toBe('Invalid order status')
     }
-    expect(mockUpdate).not.toHaveBeenCalled()
+    expect(mockOrdersUpdateStatus).not.toHaveBeenCalled()
   })
 
   it('still succeeds when Redis hset fails after PG update succeeds', async () => {
-    const updateChain = {
-      set: vi.fn().mockReturnThis(),
-      where: vi.fn().mockReturnThis(),
-      returning: vi.fn().mockResolvedValue([{ id: 'ORD1234567' }]),
-    }
-    mockUpdate.mockReturnValue(updateChain)
+    mockOrdersUpdateStatus.mockResolvedValue({ id: 'ORD1234567' })
 
     const mockRedis = makeMockRedis()
     mockRedis.hset.mockRejectedValueOnce(new Error('Redis timeout'))
@@ -252,12 +230,7 @@ describe('updateOrderStatus', () => {
   })
 
   it('returns error when PostgreSQL update fails', async () => {
-    const updateChain = {
-      set: vi.fn().mockReturnThis(),
-      where: vi.fn().mockReturnThis(),
-      returning: vi.fn().mockRejectedValue(new Error('DB error')),
-    }
-    mockUpdate.mockReturnValue(updateChain)
+    mockOrdersUpdateStatus.mockRejectedValue(new Error('DB error'))
 
     const result = await updateOrderStatus('ORD1234567', 'CANCELLED')
 
@@ -317,9 +290,7 @@ describe('getUserOrders', () => {
     const mockRedis = makeMockRedis()
     mockGetRedisClient.mockReturnValue(mockRedis)
 
-    const dbQuery = vi.fn().mockResolvedValue([])
-    const { drizzleDb } = await import('@/lib/db')
-    vi.mocked(drizzleDb.query.orders.findMany).mockImplementation(dbQuery)
+    mockOrdersFindManyByUserId.mockResolvedValue([])
 
     const result = await getUserOrders('user-no-orders')
 
@@ -362,7 +333,7 @@ describe('getUserOrders', () => {
           id: 'item001',
           orderId: 'ORD1234567',
           productId: 'prod001',
-          variantId: null,
+          variantId: 'var-default',
           quantity: 2,
           price: 25,
           customizationNote: null,
@@ -370,8 +341,8 @@ describe('getUserOrders', () => {
       ],
     }
 
-    const { drizzleDb } = await import('@/lib/db')
-    vi.mocked(drizzleDb.query.orders.findMany).mockResolvedValue([dbRow])
+    const { db } = await import('@/lib/db')
+    vi.mocked(db.orders.findManyByUserId).mockResolvedValue([dbRow])
 
     const result = await getUserOrders('user-123')
 
@@ -385,8 +356,8 @@ describe('getUserOrders', () => {
   it('returns error when both Redis and PostgreSQL fail', async () => {
     mockGetRedisClient.mockReturnValue(null)
 
-    const { drizzleDb } = await import('@/lib/db')
-    vi.mocked(drizzleDb.query.orders.findMany).mockRejectedValue(
+    const { db } = await import('@/lib/db')
+    vi.mocked(db.orders.findManyByUserId).mockRejectedValue(
       new Error('DB down')
     )
 
@@ -438,8 +409,8 @@ describe('getUserOrders', () => {
       items: [],
     }
 
-    const { drizzleDb } = await import('@/lib/db')
-    vi.mocked(drizzleDb.query.orders.findMany).mockResolvedValue([orphanRow])
+    const { db } = await import('@/lib/db')
+    vi.mocked(db.orders.findManyByIds).mockResolvedValue([orphanRow])
 
     const result = await getUserOrders('user-123')
 
