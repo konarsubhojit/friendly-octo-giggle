@@ -19,8 +19,7 @@ export const CheckoutProgress = ({ currentStep }: CheckoutProgressProps) => {
 
   const stepClassName = (isActive: boolean, isComplete: boolean) => {
     if (isActive) return 'bg-[var(--accent-rose)] text-white'
-    if (isComplete)
-      return 'bg-[var(--accent-blush)] text-[var(--foreground)]'
+    if (isComplete) return 'bg-[var(--accent-blush)] text-[var(--foreground)]'
     return 'bg-[var(--surface-raised)] text-[var(--text-muted)]'
   }
 
