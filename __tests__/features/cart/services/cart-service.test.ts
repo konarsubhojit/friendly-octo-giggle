@@ -517,6 +517,30 @@ describe('cart-service', () => {
       expect(mockDbCartsPromoteToUser).toHaveBeenCalled()
     })
 
+    it('drops soft-deleted variant rows while promoting guest cart to user cart', async () => {
+      mockDbCartsFindWithItemsBySessionId.mockResolvedValue({
+        id: 'guest-cart',
+        items: [
+          {
+            id: 'guest-item-2',
+            cartId: 'guest-cart',
+            productId: 'prod2',
+            variantId: 'var2',
+            quantity: 1,
+          },
+        ],
+      })
+      mockDbCartsFindWithItemsByUserId.mockResolvedValue(null)
+      mockDbCartsFindVariantStock.mockResolvedValue([
+        { id: 'var2', stock: 10, deletedAt: new Date('2024-01-01') },
+      ])
+      mockDbCartsPromoteToUser.mockResolvedValue(undefined)
+
+      await mergeGuestCartIntoUserCart('user1', 'sess1')
+
+      expect(mockDbCartsDeleteItem).toHaveBeenCalledWith('guest-item-2')
+    })
+
     it('reassigns a guest cart to the authenticated user and returns a rotated session id', async () => {
       mockDbCartsFindWithItemsBySessionId.mockResolvedValue({
         id: 'guest-cart',

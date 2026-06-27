@@ -474,14 +474,14 @@ describe('checkout-service', () => {
       )
     })
 
-    it('includes fallback reason when retry exhaustion receives non-error payload', async () => {
+    it('includes fallback reason when retry exhaustion receives malformed error payload', async () => {
       mockDbOrdersFindFirstByCheckoutRequestId.mockResolvedValue(null)
       mockDbCheckoutRequestsUpdateStatus.mockResolvedValue(undefined)
 
       await recoverCheckoutRequestAfterRetryExhaustion({
         checkoutRequestId: 'cr1',
         deliveryCount: 2,
-        error: { message: 42 },
+        error: { message: null },
       })
 
       expect(mockDbCheckoutRequestsUpdateStatus).toHaveBeenCalledWith(
