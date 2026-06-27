@@ -127,6 +127,7 @@ export function parseShopFilters(
 }
 
 const SKELETON_IDS = ['s1', 's2', 's3', 's4', 's5', 's6'] as const
+const BESTSELLER_SKELETON_IDS = ['b1', 'b2', 'b3', 'b4', 'b5'] as const
 
 /** Fallback for the streamed catalog region (bestsellers + product grid). */
 function ShopCatalogFallback() {
@@ -139,7 +140,7 @@ function ShopCatalogFallback() {
         <div className="h-9 w-48 bg-gradient-to-r from-[var(--accent-warm)] to-[var(--accent-rose)] rounded-lg animate-pulse mb-2" />
         <div className="h-4 w-64 bg-[var(--accent-blush)] rounded animate-pulse mb-5" />
         <div className="flex gap-4 overflow-hidden">
-          {['b1', 'b2', 'b3', 'b4', 'b5'].map((id) => (
+          {BESTSELLER_SKELETON_IDS.map((id) => (
             <div key={id} className="w-44 shrink-0">
               <ProductCardSkeleton />
             </div>
@@ -163,7 +164,8 @@ function ShopCatalogFallback() {
 /**
  * Streamed data region. Doing all DB/cache work here (instead of in the page
  * body) lets the static shell — the page heading — flush immediately while the
- * catalog data is fetched, improving perceived LCP/TTFB (R2/R4).
+ * catalog data is fetched, improving perceived LCP/TTFB by streaming the shell
+ * and filling the data-dependent regions in via a Suspense boundary.
  */
 export async function ShopCatalog({
   filters,
