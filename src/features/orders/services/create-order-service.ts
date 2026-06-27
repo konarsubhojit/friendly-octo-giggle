@@ -1,12 +1,4 @@
-import { drizzleDb, primaryDrizzleDb } from '@/lib/db'
-import {
-  orders,
-  orderItems,
-  products,
-  productVariants,
-  users,
-} from '@/lib/schema'
-import { eq, inArray, sql, and, isNull, gte } from 'drizzle-orm'
+import { db, StockConflictError } from '@/lib/db'
 import { formatStructuredAddress } from '@/lib/address-utils'
 import { invalidateCache } from '@/lib/redis'
 import { invalidateUserOrderCaches } from '@/lib/cache'
@@ -34,9 +26,9 @@ import {
   type OrderSessionUser,
 } from './order-service.shared'
 
-type ProductWithVariants = Awaited<
-  ReturnType<typeof drizzleDb.query.products.findMany>
->[number] & {
+type ProductWithVariants = {
+  id: string
+  name: string
   variants: Array<{ id: string; price: number; stock: number }>
 }
 
@@ -277,10 +269,8 @@ const sanitizeCustomizationNote = (
 
 const buildOrderItemValues = (
   items: OrderItemInput[],
-  productList: ProductWithVariants[],
-  orderId: string
+  productList: ProductWithVariants[]
 ): Array<{
-  orderId: string
   productId: string
   variantId: string
   quantity: number
@@ -307,7 +297,7 @@ const buildOrderItemValues = (
       )
     }
 
-    const price = product.variantPriceMap.get(item.variantId)
+    const price = product.variantPriceMap.get(item.variantId ?? '')
     if (price === undefined) {
       throw new OrderRequestError(
         `Variant ${item.variantId} not found for product ${item.productId}`,
@@ -316,9 +306,8 @@ const buildOrderItemValues = (
     }
 
     return {
-      orderId,
       productId: item.productId,
-      variantId: item.variantId,
+      variantId: item.variantId ?? '',
       quantity: item.quantity,
       price,
       customizationNote: sanitizeCustomizationNote(item.customizationNote),
@@ -408,16 +397,10 @@ export const persistOrder = async ({
   }
   checkoutRequestId?: string
 }) => {
-  const itemsWithVariant = body.items.filter(
-    (item): item is OrderItemInput & { variantId: string } =>
-      item.variantId != null
-  )
-
-  return primaryDrizzleDb.transaction(async (tx) => {
-    const [newOrder] = await tx
-      .insert(orders)
-      .values({
-        userId,
+  try {
+    return await db.orders.createWithItems({
+      userId,
+      customerDetails: {
         customerName: customerDetails.customerName,
         customerEmail: customerDetails.customerEmail,
         customerAddress:
@@ -437,50 +420,18 @@ export const persistOrder = async ({
         pinCode: customerDetails.pinCode || null,
         city: customerDetails.city || null,
         state: customerDetails.state || null,
-        checkoutRequestId: checkoutRequestId ?? null,
-        totalAmount,
-        status: 'PENDING',
-        paymentStatus: 'PAID',
-        paymentProvider: verifiedPayment.provider,
-        paymentOrderId: verifiedPayment.paymentOrderId,
-        paymentTransactionId: verifiedPayment.paymentTransactionId,
-        amountPaid: verifiedPayment.amountPaid,
-        paidAt: verifiedPayment.paidAt,
-        updatedAt: new Date(),
-      })
-      .returning()
-
-    await tx
-      .insert(orderItems)
-      .values(buildOrderItemValues(body.items, productList, newOrder.id))
-
-    const stockUpdateResults = await Promise.all(
-      itemsWithVariant.map((item) =>
-        tx
-          .update(productVariants)
-          .set({
-            stock: sql`${productVariants.stock} - ${item.quantity}`,
-            updatedAt: new Date(),
-          })
-          .where(
-            and(
-              eq(productVariants.id, item.variantId),
-              gte(productVariants.stock, item.quantity)
-            )
-          )
-          .returning({ id: productVariants.id })
-      )
-    )
-
-    if (stockUpdateResults.some((rows) => rows.length === 0)) {
-      throw new OrderRequestError(
-        'Unable to reserve stock — item was sold out by a concurrent order',
-        409
-      )
+      },
+      checkoutRequestId: checkoutRequestId ?? null,
+      totalAmount,
+      verifiedPayment,
+      items: buildOrderItemValues(body.items, productList),
+    })
+  } catch (err) {
+    if (err instanceof StockConflictError) {
+      throw new OrderRequestError(err.message, 409)
     }
-
-    return newOrder
-  })
+    throw err
+  }
 }
 
 export const invalidateOrderRelatedCaches = async ({
@@ -508,10 +459,7 @@ export const dispatchOrderNotifications = async ({
   publisher?: OrderNotificationPublisher
 }) => {
   const workerUrl = `${env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'}/api/services/email`
-  const userRecord = await drizzleDb.query.users.findFirst({
-    where: eq(users.id, userId),
-    columns: { currencyPreference: true, localePreference: true },
-  })
+  const userRecord = await db.users.findPreferences(userId)
   const currencyCode: CurrencyCode =
     userRecord?.currencyPreference &&
     isValidCurrencyCode(userRecord.currencyPreference)
@@ -587,17 +535,10 @@ export const dispatchOrderNotifications = async ({
 const fetchProductsForOrder = async (
   requestedProductIds: string[]
 ): Promise<ProductWithVariants[]> => {
-  const productList = (await primaryDrizzleDb.query.products.findMany({
-    where: and(
-      inArray(products.id, requestedProductIds),
-      isNull(products.deletedAt)
-    ),
-    with: {
-      variants: {
-        where: (variant, operators) => operators.isNull(variant.deletedAt),
-      },
-    },
-  })) as ProductWithVariants[]
+  const productList =
+    await db.products.findManyWithVariantsForOrderValidation(
+      requestedProductIds
+    )
 
   if (productList.length !== requestedProductIds.length) {
     logFailedOrderCreation(
@@ -639,11 +580,8 @@ const verifyPaymentForOrder = async ({
 }
 
 const ensurePaymentTransactionUnique = async (paymentTransactionId: string) => {
-  const [existingOrder] = await primaryDrizzleDb
-    .select({ id: orders.id })
-    .from(orders)
-    .where(eq(orders.paymentTransactionId, paymentTransactionId))
-    .limit(1)
+  const existingOrder =
+    await db.orders.findFirstByPaymentTransactionId(paymentTransactionId)
 
   if (existingOrder) {
     return logFailedOrderCreation(
@@ -657,10 +595,7 @@ const ensurePaymentTransactionUnique = async (paymentTransactionId: string) => {
 const getHydratedOrderOrThrow = async (
   orderId: string
 ): Promise<HydratedOrder> => {
-  const fullOrder = await primaryDrizzleDb.query.orders.findFirst({
-    where: eq(orders.id, orderId),
-    with: { items: { with: { product: true, variant: true } } },
-  })
+  const fullOrder = await db.orders.findFirstById(orderId)
 
   if (!fullOrder) {
     throw new OrderRequestError('Failed to retrieve created order', 500)
