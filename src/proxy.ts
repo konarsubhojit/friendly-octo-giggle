@@ -50,13 +50,25 @@ const RATE_LIMIT_PATHS = [
   '/api/auth/register',
   '/api/auth/change-password',
   '/api/auth/callback/credentials',
+  '/api/auth/forgot-password',
+  '/api/auth/reset-password',
   '/api/checkout',
   '/api/orders',
+  '/api/cart',
+  '/api/wishlist',
+  '/api/reviews',
+  '/api/upload',
+  '/api/account',
+  '/api/search',
 ]
 const STRICT_RATE_LIMIT_PATHS = [
   '/api/auth/register',
   '/api/auth/change-password',
   '/api/auth/callback/credentials',
+  // Password-reset flows are prime targets for email-abuse / user
+  // enumeration and token brute-forcing, so they get the stricter limiter.
+  '/api/auth/forgot-password',
+  '/api/auth/reset-password',
 ]
 
 const AI_RATE_LIMIT_PATHS = ['/api/ai']
@@ -64,6 +76,14 @@ const AI_RATE_LIMIT_MAX_REQUESTS = 10 // stricter: 10 per minute for AI
 // In-memory sliding-window counters keyed by IP + path prefix.
 // Used as a fallback when Redis is unavailable for AI paths.
 const aiRateLimitStore = new Map<string, { count: number; resetAt: number }>()
+// Separate in-memory store for general sensitive paths (cart, wishlist,
+// reviews, upload, account, search, …). Used as a fallback when the Upstash
+// limiter is unavailable so these abuse-prone routes are never left fully
+// unbounded. Mirrors the `/api/ai` in-memory fallback pattern.
+const generalRateLimitStore = new Map<
+  string,
+  { count: number; resetAt: number }
+>()
 const generateNonce = (): string =>
   Array.from(crypto.getRandomValues(new Uint8Array(16)))
     .map((value) => value.toString(16).padStart(2, '0'))
@@ -196,6 +216,36 @@ const buildRateLimitUnavailableResponse = (limit: number): NextResponse => {
   )
 }
 
+function getInMemoryRateLimitResult(
+  store: Map<string, { count: number; resetAt: number }>,
+  identifier: string,
+  prefix: string,
+  maxRequests: number
+): RateLimitResult {
+  const key = `${identifier}:${prefix}`
+  const now = Date.now()
+  const entry = store.get(key)
+  const reset = now + 60_000
+
+  if (!entry || now > entry.resetAt) {
+    store.set(key, { count: 1, resetAt: reset })
+    return {
+      success: true,
+      limit: maxRequests,
+      remaining: maxRequests - 1,
+      reset,
+    }
+  }
+
+  entry.count += 1
+  return {
+    success: entry.count <= maxRequests,
+    limit: maxRequests,
+    remaining: Math.max(0, maxRequests - entry.count),
+    reset: entry.resetAt,
+  }
+}
+
 function getInMemoryAiRateLimitResult(
   identifier: string,
   pathname: string
@@ -203,28 +253,26 @@ function getInMemoryAiRateLimitResult(
   const aiPrefix = AI_RATE_LIMIT_PATHS.find((p) => pathname.startsWith(p))
   if (!aiPrefix) return null
 
-  const key = `${identifier}:${aiPrefix}`
-  const now = Date.now()
-  const entry = aiRateLimitStore.get(key)
-  const reset = now + 60_000
+  return getInMemoryRateLimitResult(
+    aiRateLimitStore,
+    identifier,
+    aiPrefix,
+    AI_RATE_LIMIT_MAX_REQUESTS
+  )
+}
 
-  if (!entry || now > entry.resetAt) {
-    aiRateLimitStore.set(key, { count: 1, resetAt: reset })
-    return {
-      success: true,
-      limit: AI_RATE_LIMIT_MAX_REQUESTS,
-      remaining: AI_RATE_LIMIT_MAX_REQUESTS - 1,
-      reset,
-    }
-  }
-
-  entry.count += 1
-  return {
-    success: entry.count <= AI_RATE_LIMIT_MAX_REQUESTS,
-    limit: AI_RATE_LIMIT_MAX_REQUESTS,
-    remaining: Math.max(0, AI_RATE_LIMIT_MAX_REQUESTS - entry.count),
-    reset: entry.resetAt,
-  }
+function getInMemoryGeneralRateLimitResult(
+  identifier: string,
+  pathname: string
+): RateLimitResult {
+  const prefix =
+    RATE_LIMIT_PATHS.find((p) => pathname.startsWith(p)) ?? pathname
+  return getInMemoryRateLimitResult(
+    generalRateLimitStore,
+    identifier,
+    prefix,
+    GENERAL_RATE_LIMIT_MAX_REQUESTS
+  )
 }
 
 const getPreferredLocale = (request: NextRequest): AppLocale => {
@@ -368,6 +416,9 @@ export async function proxy(request: NextRequest) {
           buildRateLimitUnavailableResponse(fallbackLimit)
         )
       }
+      // General sensitive paths: fall back to the in-memory limiter so the
+      // route is never left fully unbounded when Upstash is unavailable.
+      rateLimitResult = getInMemoryGeneralRateLimitResult(identifier, pathname)
     } else {
       try {
         const result = await limiter.limit(identifier)
@@ -383,6 +434,11 @@ export async function proxy(request: NextRequest) {
             buildRateLimitUnavailableResponse(fallbackLimit)
           )
         }
+        // General sensitive paths: degrade to in-memory limiting on error.
+        rateLimitResult = getInMemoryGeneralRateLimitResult(
+          identifier,
+          pathname
+        )
       }
     }
 
