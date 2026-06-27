@@ -270,6 +270,24 @@ describe('checkout-service', () => {
       expect(mockCreateOrderForUser).not.toHaveBeenCalled()
     })
 
+    it('marks pending requests as completed when an order already exists', async () => {
+      mockDbCheckoutRequestsFindById.mockResolvedValue({
+        id: 'cr1ab23',
+        userId: 'user1',
+        status: 'PENDING',
+      })
+      mockDbOrdersFindFirstByCheckoutRequestId.mockResolvedValue({ id: 'ord1' })
+
+      await processCheckoutRequestById('cr1ab23')
+
+      expect(mockDbCheckoutRequestsUpdateStatus).toHaveBeenCalledWith(
+        'cr1ab23',
+        'COMPLETED',
+        null
+      )
+      expect(mockCreateOrderForUser).not.toHaveBeenCalled()
+    })
+
     it('records checkout queue lag before processing', async () => {
       mockDbCheckoutRequestsFindById.mockResolvedValue({
         id: 'cr2xy89',
@@ -453,6 +471,23 @@ describe('checkout-service', () => {
           event: 'checkout_request_retry_exhausted',
           success: false,
         })
+      )
+    })
+
+    it('includes fallback reason when retry exhaustion receives malformed error payload', async () => {
+      mockDbOrdersFindFirstByCheckoutRequestId.mockResolvedValue(null)
+      mockDbCheckoutRequestsUpdateStatus.mockResolvedValue(undefined)
+
+      await recoverCheckoutRequestAfterRetryExhaustion({
+        checkoutRequestId: 'cr1',
+        deliveryCount: 2,
+        error: { message: null },
+      })
+
+      expect(mockDbCheckoutRequestsUpdateStatus).toHaveBeenCalledWith(
+        'cr1',
+        'FAILED',
+        'Automatic recovery stopped after 2 attempts: Unknown consumer error'
       )
     })
   })

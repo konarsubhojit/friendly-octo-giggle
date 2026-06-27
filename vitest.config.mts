@@ -20,6 +20,20 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov'],
+      thresholds: {
+        lines: 80,
+        branches: 74,
+        functions: 80,
+        statements: 80,
+        // Keep this pattern aligned with feature service paths under src/features/**/services/**/*.ts.
+        'src/features/**/services/**/*.ts': {
+          lines: 85,
+          // Branches remain lower because current service branch coverage baseline is below line/function coverage.
+          branches: 76,
+          functions: 85,
+          statements: 85,
+        },
+      },
       include: [
         'src/lib/**',
         'src/contexts/**',

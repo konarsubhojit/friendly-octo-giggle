@@ -5,7 +5,12 @@ const {
   mockDbCartsFindBySessionId,
   mockDbCartsFindWithItemsByUserId,
   mockDbCartsFindWithItemsBySessionId,
+  mockDbCartsFindVariantStock,
   mockDbCartsPromoteToUser,
+  mockDbCartsUpdateItem,
+  mockDbCartsDeleteItem,
+  mockDbCartsInsertItem,
+  mockDbCartsUpdate,
   mockDbCartsDelete,
   mockGetCachedData,
   mockFetchCartFromRedis,
@@ -18,7 +23,12 @@ const {
   mockDbCartsFindBySessionId: vi.fn(),
   mockDbCartsFindWithItemsByUserId: vi.fn(),
   mockDbCartsFindWithItemsBySessionId: vi.fn(),
+  mockDbCartsFindVariantStock: vi.fn().mockResolvedValue([]),
   mockDbCartsPromoteToUser: vi.fn().mockResolvedValue(undefined),
+  mockDbCartsUpdateItem: vi.fn().mockResolvedValue(undefined),
+  mockDbCartsDeleteItem: vi.fn().mockResolvedValue(undefined),
+  mockDbCartsInsertItem: vi.fn().mockResolvedValue(undefined),
+  mockDbCartsUpdate: vi.fn().mockResolvedValue(undefined),
   mockDbCartsDelete: vi.fn().mockResolvedValue(undefined),
   mockGetCachedData: vi.fn(),
   mockFetchCartFromRedis: vi.fn(),
@@ -35,7 +45,12 @@ vi.mock('@/lib/db', () => ({
       findBySessionId: mockDbCartsFindBySessionId,
       findWithItemsByUserId: mockDbCartsFindWithItemsByUserId,
       findWithItemsBySessionId: mockDbCartsFindWithItemsBySessionId,
+      findVariantStock: mockDbCartsFindVariantStock,
       promoteToUser: mockDbCartsPromoteToUser,
+      updateItem: mockDbCartsUpdateItem,
+      deleteItem: mockDbCartsDeleteItem,
+      insertItem: mockDbCartsInsertItem,
+      update: mockDbCartsUpdate,
       delete: mockDbCartsDelete,
     },
   },
@@ -434,6 +449,98 @@ describe('cart-service', () => {
   })
 
   describe('mergeGuestCartIntoUserCart', () => {
+    it('caps merged quantities to variant stock when both carts contain the same line item', async () => {
+      mockDbCartsFindWithItemsBySessionId.mockResolvedValue({
+        id: 'guest-cart',
+        items: [
+          {
+            id: 'guest-item-1',
+            cartId: 'guest-cart',
+            productId: 'prod1',
+            variantId: 'var1',
+            quantity: 5,
+          },
+        ],
+      })
+      mockDbCartsFindWithItemsByUserId.mockResolvedValue({
+        id: 'user-cart',
+        items: [
+          {
+            id: 'user-item-1',
+            cartId: 'user-cart',
+            productId: 'prod1',
+            variantId: 'var1',
+            quantity: 2,
+          },
+        ],
+      })
+      mockDbCartsFindVariantStock.mockResolvedValue([
+        { id: 'var1', stock: 4, deletedAt: null },
+      ])
+
+      const rotatedSessionId = await mergeGuestCartIntoUserCart(
+        'user1',
+        'sess1'
+      )
+
+      expect(rotatedSessionId).toMatch(/^guest_[0-9a-f-]+$/)
+      expect(mockDbCartsUpdateItem).toHaveBeenCalledWith('user-item-1', 4)
+      expect(mockDbCartsDelete).toHaveBeenCalledWith('guest-cart')
+    })
+
+    it('drops out-of-stock guest items while promoting guest cart to user cart', async () => {
+      mockDbCartsFindWithItemsBySessionId.mockResolvedValue({
+        id: 'guest-cart',
+        items: [
+          {
+            id: 'guest-item-1',
+            cartId: 'guest-cart',
+            productId: 'prod1',
+            variantId: 'var1',
+            quantity: 2,
+          },
+        ],
+      })
+      mockDbCartsFindWithItemsByUserId.mockResolvedValue(null)
+      mockDbCartsFindVariantStock.mockResolvedValue([
+        { id: 'var1', stock: 0, deletedAt: null },
+      ])
+      mockDbCartsPromoteToUser.mockResolvedValue(undefined)
+
+      const rotatedSessionId = await mergeGuestCartIntoUserCart(
+        'user1',
+        'sess1'
+      )
+
+      expect(rotatedSessionId).toMatch(/^guest_[0-9a-f-]+$/)
+      expect(mockDbCartsDeleteItem).toHaveBeenCalledWith('guest-item-1')
+      expect(mockDbCartsPromoteToUser).toHaveBeenCalled()
+    })
+
+    it('drops soft-deleted variant rows while promoting guest cart to user cart', async () => {
+      mockDbCartsFindWithItemsBySessionId.mockResolvedValue({
+        id: 'guest-cart',
+        items: [
+          {
+            id: 'guest-item-2',
+            cartId: 'guest-cart',
+            productId: 'prod2',
+            variantId: 'var2',
+            quantity: 1,
+          },
+        ],
+      })
+      mockDbCartsFindWithItemsByUserId.mockResolvedValue(null)
+      mockDbCartsFindVariantStock.mockResolvedValue([
+        { id: 'var2', stock: 10, deletedAt: new Date('2024-01-01') },
+      ])
+      mockDbCartsPromoteToUser.mockResolvedValue(undefined)
+
+      await mergeGuestCartIntoUserCart('user1', 'sess1')
+
+      expect(mockDbCartsDeleteItem).toHaveBeenCalledWith('guest-item-2')
+    })
+
     it('reassigns a guest cart to the authenticated user and returns a rotated session id', async () => {
       mockDbCartsFindWithItemsBySessionId.mockResolvedValue({
         id: 'guest-cart',
