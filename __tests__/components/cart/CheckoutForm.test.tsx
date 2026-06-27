@@ -88,6 +88,7 @@ const renderCheckoutForm = () => {
         error: null,
         stockWarning: null,
         adjustedQuantity: null,
+        hydrated: false,
       },
     },
   })

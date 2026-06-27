@@ -160,11 +160,10 @@ describe('app/shop/page', () => {
   })
 
   it('uses catalog search response for initial shop products and sort', async () => {
-    const { default: ShopPage } =
+    const { ShopCatalog, parseShopFilters } =
       await import('@/app/[locale]/(public)/shop/page')
-    const view = await ShopPage({
-      searchParams: Promise.resolve({ q: 'flowers', sort: 'price_desc' }),
-    })
+    const filters = parseShopFilters({ q: 'flowers', sort: 'price_desc' })
+    const view = await ShopCatalog({ filters })
 
     render(view)
 
@@ -181,14 +180,26 @@ describe('app/shop/page', () => {
     expect(screen.getByText('Grid sort: price_desc')).toBeInTheDocument()
   }, 15000)
 
+  it('renders the static shop heading shell immediately', async () => {
+    const { default: ShopPage } =
+      await import('@/app/[locale]/(public)/shop/page')
+    const view = await ShopPage({ searchParams: Promise.resolve({}) })
+
+    render(view)
+
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Shop' })
+    ).toBeInTheDocument()
+  }, 15000)
+
   it('renders empty shop state when data fetches time out', async () => {
     mockWithTimeout.mockRejectedValueOnce(
       new Error('shop_initial_data timed out after 5000ms')
     )
 
-    const { default: ShopPage } =
+    const { ShopCatalog, parseShopFilters } =
       await import('@/app/[locale]/(public)/shop/page')
-    const view = await ShopPage({ searchParams: Promise.resolve({}) })
+    const view = await ShopCatalog({ filters: parseShopFilters({}) })
 
     render(view)
 

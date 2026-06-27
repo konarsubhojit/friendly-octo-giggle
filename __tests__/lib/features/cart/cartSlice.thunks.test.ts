@@ -210,6 +210,7 @@ describe('cartSlice async thunks (fetch bodies)', () => {
         error: null,
         stockWarning: null,
         adjustedQuantity: null,
+        hydrated: false,
       },
     })
     await store.dispatch(clearCart())

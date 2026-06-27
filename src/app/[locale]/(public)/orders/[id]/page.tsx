@@ -230,6 +230,7 @@ function OrderItemRow({ item, formatPrice }: OrderItemRowProps) {
           src={image}
           alt={item.product?.name || 'Order item'}
           fill
+          loading="lazy"
           sizes="80px"
           className="object-cover"
         />

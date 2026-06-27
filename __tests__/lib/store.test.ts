@@ -22,6 +22,7 @@ describe('Redux storefront store', () => {
       error: null,
       stockWarning: null,
       adjustedQuantity: null,
+      hydrated: false,
     })
   })
 

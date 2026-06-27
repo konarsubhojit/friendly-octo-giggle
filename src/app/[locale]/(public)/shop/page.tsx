@@ -1,9 +1,11 @@
+import { Suspense } from 'react'
 import type { Metadata } from 'next'
 import Footer from '@/components/layout/Footer'
 import ProductGrid, {
   type ProductGridItem,
 } from '@/features/product/components/ProductGrid'
 import { BestsellersScroller } from '@/features/product/components/BestsellersScroller'
+import ProductCardSkeleton from '@/components/skeletons/ProductCardSkeleton'
 import { db, drizzleDb } from '@/lib/db'
 import { cacheCategoriesList, cacheProductsBestsellers } from '@/lib/cache'
 import { categories as categoriesTable } from '@/lib/schema'
@@ -48,6 +50,17 @@ const toGridItem = (p: {
   soldCount: p.soldCount ?? 0,
 })
 
+export interface ShopFilters {
+  readonly search: string
+  readonly selectedCategory: string
+  readonly selectedSort: SearchSort
+  readonly minPrice?: number
+  readonly maxPrice?: number
+  readonly inStock: boolean
+  readonly minRating?: number
+  readonly selectedVariant: SearchVariantFilter
+}
+
 interface ShopPageProps {
   readonly searchParams?: Promise<{
     q?: string | string[]
@@ -71,35 +84,102 @@ export const metadata: Metadata = {
     'Browse our full collection of handmade crochet flowers, bags, keychains, hair accessories, and more.',
 }
 
-const ShopPage = async ({ searchParams }: ShopPageProps) => {
-  const resolvedSearchParams = (await searchParams) ?? {}
-  const search = getSingleValue(resolvedSearchParams.q)?.trim() ?? ''
-  const selectedCategory =
-    getSingleValue(resolvedSearchParams.category)?.trim() ?? 'All'
-  const rawSort = getSingleValue(resolvedSearchParams.sort)?.trim()
+export function parseShopFilters(
+  searchParams: NonNullable<Awaited<ShopPageProps['searchParams']>>
+): ShopFilters {
+  const search = getSingleValue(searchParams.q)?.trim() ?? ''
+  const selectedCategory = getSingleValue(searchParams.category)?.trim() ?? 'All'
+  const rawSort = getSingleValue(searchParams.sort)?.trim()
   const selectedSort: SearchSort =
     rawSort && SEARCH_SORT_VALUES.includes(rawSort as SearchSort)
       ? (rawSort as SearchSort)
       : 'relevance'
   const rawMinPrice = Number.parseFloat(
-    getSingleValue(resolvedSearchParams.minPrice) ?? ''
+    getSingleValue(searchParams.minPrice) ?? ''
   )
   const rawMaxPrice = Number.parseFloat(
-    getSingleValue(resolvedSearchParams.maxPrice) ?? ''
+    getSingleValue(searchParams.maxPrice) ?? ''
   )
   const minPrice = Number.isFinite(rawMinPrice) ? rawMinPrice : undefined
   const maxPrice = Number.isFinite(rawMaxPrice) ? rawMaxPrice : undefined
-  const inStock = getSingleValue(resolvedSearchParams.inStock) === 'true'
+  const inStock = getSingleValue(searchParams.inStock) === 'true'
   const rawMinRating = Number.parseFloat(
-    getSingleValue(resolvedSearchParams.minRating) ?? ''
+    getSingleValue(searchParams.minRating) ?? ''
   )
   const minRating = Number.isFinite(rawMinRating) ? rawMinRating : undefined
-  const rawVariant = getSingleValue(resolvedSearchParams.variant)?.trim()
+  const rawVariant = getSingleValue(searchParams.variant)?.trim()
   const selectedVariant: SearchVariantFilter =
     rawVariant &&
     SEARCH_VARIANT_VALUES.includes(rawVariant as SearchVariantFilter)
       ? (rawVariant as SearchVariantFilter)
       : 'all'
+
+  return {
+    search,
+    selectedCategory,
+    selectedSort,
+    minPrice,
+    maxPrice,
+    inStock,
+    minRating,
+    selectedVariant,
+  }
+}
+
+const SKELETON_IDS = ['s1', 's2', 's3', 's4', 's5', 's6'] as const
+
+/** Fallback for the streamed catalog region (bestsellers + product grid). */
+function ShopCatalogFallback() {
+  return (
+    <>
+      <section
+        className="mx-auto w-full max-w-[96rem] px-4 pb-6 sm:px-6 lg:px-8 xl:px-10 2xl:px-12"
+        aria-hidden="true"
+      >
+        <div className="h-9 w-48 bg-gradient-to-r from-[var(--accent-warm)] to-[var(--accent-rose)] rounded-lg animate-pulse mb-2" />
+        <div className="h-4 w-64 bg-[var(--accent-blush)] rounded animate-pulse mb-5" />
+        <div className="flex gap-4 overflow-hidden">
+          {['b1', 'b2', 'b3', 'b4', 'b5'].map((id) => (
+            <div key={id} className="w-44 shrink-0">
+              <ProductCardSkeleton />
+            </div>
+          ))}
+        </div>
+      </section>
+      <section
+        className="mx-auto w-full max-w-[96rem] px-4 pb-6 sm:px-6 lg:px-8 xl:px-10 2xl:px-12"
+        aria-hidden="true"
+      >
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {SKELETON_IDS.map((id) => (
+            <ProductCardSkeleton key={id} />
+          ))}
+        </div>
+      </section>
+    </>
+  )
+}
+
+/**
+ * Streamed data region. Doing all DB/cache work here (instead of in the page
+ * body) lets the static shell — the page heading — flush immediately while the
+ * catalog data is fetched, improving perceived LCP/TTFB (R2/R4).
+ */
+export async function ShopCatalog({
+  filters,
+}: {
+  readonly filters: ShopFilters
+}) {
+  const {
+    search,
+    selectedCategory,
+    selectedSort,
+    minPrice,
+    maxPrice,
+    inStock,
+    minRating,
+    selectedVariant,
+  } = filters
 
   let shopData: {
     products: ProductGridItem[]
@@ -190,22 +270,7 @@ const ShopPage = async ({ searchParams }: ShopPageProps) => {
   } = shopData
 
   return (
-    <div className="min-h-screen bg-warm-gradient">
-      <section
-        className="mx-auto w-full max-w-[96rem] px-4 pb-4 pt-8 sm:px-6 lg:px-8 xl:px-10 2xl:px-12"
-        aria-labelledby="shop-heading"
-      >
-        <h1
-          id="shop-heading"
-          className="font-cursive text-4xl sm:text-5xl font-bold text-[var(--foreground)] mb-2 animate-fade-in-up"
-        >
-          Shop
-        </h1>
-        <p className="text-[var(--text-secondary)] mb-6 animate-fade-in-up animation-delay-100">
-          Browse our handmade collection — each piece crafted with care.
-        </p>
-      </section>
-
+    <>
       <section
         className="mx-auto w-full max-w-[96rem] px-4 pb-6 sm:px-6 lg:px-8 xl:px-10 2xl:px-12"
         aria-labelledby="shop-bestsellers-heading"
@@ -244,6 +309,34 @@ const ShopPage = async ({ searchParams }: ShopPageProps) => {
         hasNextPage={hasNextPage}
         batchSize={SHOP_BATCH_SIZE}
       />
+    </>
+  )
+}
+
+const ShopPage = async ({ searchParams }: ShopPageProps) => {
+  const resolvedSearchParams = (await searchParams) ?? {}
+  const filters = parseShopFilters(resolvedSearchParams)
+
+  return (
+    <div className="min-h-screen bg-warm-gradient">
+      <section
+        className="mx-auto w-full max-w-[96rem] px-4 pb-4 pt-8 sm:px-6 lg:px-8 xl:px-10 2xl:px-12"
+        aria-labelledby="shop-heading"
+      >
+        <h1
+          id="shop-heading"
+          className="font-cursive text-4xl sm:text-5xl font-bold text-[var(--foreground)] mb-2 animate-fade-in-up"
+        >
+          Shop
+        </h1>
+        <p className="text-[var(--text-secondary)] mb-6 animate-fade-in-up animation-delay-100">
+          Browse our handmade collection — each piece crafted with care.
+        </p>
+      </section>
+
+      <Suspense fallback={<ShopCatalogFallback />}>
+        <ShopCatalog filters={filters} />
+      </Suspense>
 
       <Footer />
     </div>

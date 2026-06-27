@@ -1,0 +1,248 @@
+'use client'
+
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import Link from '@/components/ui/LocaleLink'
+import { useSession } from 'next-auth/react'
+import { useSelector, useDispatch } from 'react-redux'
+import { CartItemWithProduct, Cart } from '@/lib/types'
+import { useCurrency } from '@/contexts/CurrencyContext'
+import { AlertBanner } from '@/components/ui/AlertBanner'
+import { EmptyState } from '@/components/ui/EmptyState'
+import { Card } from '@/components/ui/Card'
+import { GradientHeading } from '@/components/ui/GradientHeading'
+import {
+  fetchCart,
+  updateCartItem,
+  removeCartItem,
+  selectCart,
+  hydrateCart,
+  syncPendingCartItems,
+} from '@/features/cart/store/cartSlice'
+import type { RootState, AppDispatch } from '@/lib/store'
+import { CartProductGroup } from '@/features/cart/components/CartProductGroup'
+import { CheckoutProgress } from '@/features/cart/components/CheckoutProgress'
+import CartGlyph from '@/components/icons/CartGlyph'
+import { LeafAccent } from '@/components/ui/DecorativeElements'
+import { buildCheckoutPricingSummary } from '@/features/orders/services/order-summary'
+import { CartPricingSummary } from '@/features/cart/components/CartPricingSummary'
+
+interface CartClientProps {
+  readonly initialCart: Cart | null
+}
+
+export default function CartClient({ initialCart }: CartClientProps) {
+  const { status } = useSession()
+  const dispatch = useDispatch<AppDispatch>()
+  const hydrated = useSelector((state: RootState) => state.cart.hydrated)
+  const reduxCart = useSelector(selectCart)
+  const { formatPrice } = useCurrency()
+  const [updating, setUpdating] = useState<string | null>(null)
+  const [customizationNotes, setCustomizationNotes] = useState<
+    Record<string, string>
+  >({})
+  const [error, setError] = useState('')
+
+  // Render from the server-provided cart until the store is seeded, so both
+  // SSR and the first client render show the same content (no empty flash,
+  // no hydration mismatch).
+  const cart = hydrated ? reduxCart : initialCart
+
+  // Seed the store once with the server cart, then reconcile on the client:
+  // sync any guest items added before sign-in and refresh from the API (which
+  // also merges a guest cart cookie into the user cart).
+  useEffect(() => {
+    dispatch(hydrateCart(initialCart))
+  }, [dispatch, initialCart])
+
+  useEffect(() => {
+    if (status !== 'authenticated') return
+    dispatch(syncPendingCartItems()).finally(() => {
+      dispatch(fetchCart({ force: true }))
+    })
+  }, [dispatch, status])
+
+  const handleUpdateQuantity = useCallback(
+    async (itemId: string, quantity: number) => {
+      if (quantity < 1) return
+
+      setUpdating(itemId)
+      try {
+        await dispatch(updateCartItem({ itemId, quantity })).unwrap()
+      } catch (err) {
+        setError(
+          typeof err === 'string'
+            ? err
+            : 'Something went wrong. Please try again.'
+        )
+      } finally {
+        setUpdating(null)
+      }
+    },
+    [dispatch]
+  )
+
+  const handleRemoveItem = useCallback(
+    async (itemId: string) => {
+      setUpdating(itemId)
+      try {
+        await dispatch(removeCartItem(itemId)).unwrap()
+      } catch (err) {
+        setError(
+          typeof err === 'string'
+            ? err
+            : 'Something went wrong. Please try again.'
+        )
+      } finally {
+        setUpdating(null)
+      }
+    },
+    [dispatch]
+  )
+
+  const pricingSummary = useMemo(
+    () => buildCheckoutPricingSummary(cart?.items ?? []),
+    [cart?.items]
+  )
+
+  const handleCustomizationChange = useCallback(
+    (itemId: string, note: string) => {
+      setCustomizationNotes((prev) => {
+        const next = { ...prev, [itemId]: note }
+        try {
+          sessionStorage.setItem(
+            'pending_customization_notes',
+            JSON.stringify(next)
+          )
+        } catch {
+          // Checkout should still work when storage is unavailable (quota/private mode).
+        }
+        return next
+      })
+    },
+    []
+  )
+
+  const groupedItems = useMemo(() => {
+    const groups = new Map<string, CartItemWithProduct[]>()
+    for (const item of cart?.items ?? []) {
+      const existing = groups.get(item.productId) ?? []
+      existing.push(item)
+      groups.set(item.productId, existing)
+    }
+    return [...groups.values()].map((group) =>
+      [...group].sort(
+        (a, b) => (a.variant?.sortOrder ?? 0) - (b.variant?.sortOrder ?? 0)
+      )
+    )
+  }, [cart?.items])
+
+  const isEmpty = !cart?.items || cart.items.length === 0
+  const cartItemGroups = groupedItems.map((group, index) => (
+    <CartProductGroup
+      key={group[0].productId}
+      items={group}
+      isLastGroup={index === groupedItems.length - 1}
+      updating={updating}
+      customizationNotes={customizationNotes}
+      formatPrice={formatPrice}
+      onUpdateQuantity={handleUpdateQuantity}
+      onRemoveItem={handleRemoveItem}
+      onCustomizationChange={handleCustomizationChange}
+    />
+  ))
+
+  return (
+    <div className="min-h-screen bg-warm-gradient">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 relative">
+        <CheckoutProgress currentStep="cart" />
+        <LeafAccent className="absolute top-32 right-4 w-8 h-8 opacity-20 hidden sm:block animate-float-gentle" />
+        <LeafAccent className="absolute bottom-20 left-2 w-10 h-10 opacity-15 hidden sm:block animate-float-slow" />
+
+        <GradientHeading className="mb-8">Shopping Cart</GradientHeading>
+
+        {error && (
+          <AlertBanner
+            message={error}
+            variant="error"
+            onDismiss={() => setError('')}
+            className="mb-6"
+          />
+        )}
+
+        {isEmpty ? (
+          <Card className="p-12 text-center">
+            <EmptyState
+              icon={
+                <CartGlyph className="inline-block h-28 w-28 shrink-0 text-[var(--accent-peach)]" />
+              }
+              title="Your cart is empty"
+              message="Add some products to get started!"
+              ctaText="Browse Products"
+              ctaHref="/shop"
+              className="py-0"
+            />
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2">
+              <Card className="overflow-hidden">{cartItemGroups}</Card>
+
+              <Link
+                href="/shop"
+                className="inline-flex items-center gap-2 mt-4 text-sm text-[var(--text-secondary)] hover:text-[var(--accent-rose)] transition-colors font-medium"
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                  />
+                </svg>
+                Continue Shopping
+              </Link>
+            </div>
+
+            <div className="lg:col-span-1">
+              <Card className="p-6 sticky top-28">
+                <h2 className="text-lg font-bold text-[var(--foreground)] mb-4">
+                  Order Summary
+                </h2>
+
+                <CartPricingSummary
+                  className="mb-4"
+                  itemCount={pricingSummary.itemCount}
+                  subtotal={formatPrice(pricingSummary.subtotal)}
+                  shipping={
+                    pricingSummary.shippingAmount === 0
+                      ? 'Free'
+                      : formatPrice(pricingSummary.shippingAmount)
+                  }
+                  total={formatPrice(pricingSummary.total)}
+                />
+
+                <div className="mb-4 p-3 bg-[var(--accent-blush)]/50 rounded-lg border border-[var(--border-warm)] text-center">
+                  <p className="text-xs text-[var(--text-muted)]">
+                    Shipping and address selection in next step
+                  </p>
+                </div>
+
+                <Link
+                  href="/checkout/shipping"
+                  className="inline-flex w-full items-center justify-center rounded-xl bg-[var(--accent-rose)] px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90"
+                >
+                  Continue to Shipping
+                </Link>
+              </Card>
+            </div>
+          </div>
+        )}
+      </main>
+    </div>
+  )
+}
