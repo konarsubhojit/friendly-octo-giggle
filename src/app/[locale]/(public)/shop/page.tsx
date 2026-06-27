@@ -88,7 +88,8 @@ export function parseShopFilters(
   searchParams: NonNullable<Awaited<ShopPageProps['searchParams']>>
 ): ShopFilters {
   const search = getSingleValue(searchParams.q)?.trim() ?? ''
-  const selectedCategory = getSingleValue(searchParams.category)?.trim() ?? 'All'
+  const selectedCategory =
+    getSingleValue(searchParams.category)?.trim() ?? 'All'
   const rawSort = getSingleValue(searchParams.sort)?.trim()
   const selectedSort: SearchSort =
     rawSort && SEARCH_SORT_VALUES.includes(rawSort as SearchSort)

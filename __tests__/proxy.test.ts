@@ -138,15 +138,17 @@ describe('proxy rate limiting', () => {
     expect(response.headers.get('Retry-After')).toBeTruthy()
   })
 
-  it.each([
-    '/api/auth/forgot-password',
-    '/api/auth/reset-password',
-  ])('applies the strict limiter to %s', async (pathname) => {
-    await proxy(createRequest(pathname, { 'cf-connecting-ip': '203.0.113.40' }))
+  it.each(['/api/auth/forgot-password', '/api/auth/reset-password'])(
+    'applies the strict limiter to %s',
+    async (pathname) => {
+      await proxy(
+        createRequest(pathname, { 'cf-connecting-ip': '203.0.113.40' })
+      )
 
-    expect(mockStrictLimit).toHaveBeenCalledWith('ip:203.0.113.40')
-    expect(mockGeneralLimit).not.toHaveBeenCalled()
-  })
+      expect(mockStrictLimit).toHaveBeenCalledWith('ip:203.0.113.40')
+      expect(mockGeneralLimit).not.toHaveBeenCalled()
+    }
+  )
 
   it.each([
     '/api/cart',

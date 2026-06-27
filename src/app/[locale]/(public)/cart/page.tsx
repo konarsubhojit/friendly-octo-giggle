@@ -2,10 +2,7 @@ import { auth } from '@/lib/auth'
 import { logError } from '@/lib/logger'
 import Link from '@/components/ui/LocaleLink'
 import { AuthRequiredState } from '@/components/ui/AuthRequiredState'
-import {
-  getCart,
-  getCartIdentity,
-} from '@/features/cart/services/cart-service'
+import { getCart, getCartIdentity } from '@/features/cart/services/cart-service'
 import type { Cart } from '@/lib/types'
 import CartClient from '@/app/[locale]/(public)/cart/CartClient'
 
