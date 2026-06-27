@@ -351,7 +351,7 @@ export const CheckoutForm = ({
         return
       }
 
-      router.push(localizePath('/checkout/review'))
+      router.push(localizePath('/checkout/payment'))
     }
 
     void persistPendingCheckout()
@@ -532,8 +532,8 @@ export const CheckoutForm = ({
 
       {lineItems.length > 0 && (
         <p className="text-xs text-[var(--text-muted)]">
-          {lineItems.length} item{lineItems.length === 1 ? '' : 's'} · Review
-          policies before placing order
+          {lineItems.length} item{lineItems.length === 1 ? '' : 's'} · Payment
+          collected on the next step
         </p>
       )}
 
@@ -543,7 +543,7 @@ export const CheckoutForm = ({
         fullWidth
         disabled={!cartItems.length}
       >
-        Continue to Review
+        Continue to Payment
       </GradientButton>
     </form>
   )
