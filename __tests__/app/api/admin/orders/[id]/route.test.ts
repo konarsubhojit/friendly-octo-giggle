@@ -5,17 +5,33 @@ const mockFindFirst = vi.hoisted(() => vi.fn())
 const mockUpdate = vi.hoisted(() =>
   vi.fn(() => ({ set: vi.fn(() => ({ where: vi.fn() })) }))
 )
+const mockTransaction = vi.hoisted(() =>
+  vi.fn(async (callback: (tx: unknown) => Promise<unknown>) => {
+    const tx = {
+      update: vi.fn(() => ({
+        set: vi.fn(() => ({
+          where: vi.fn(),
+        })),
+      })),
+    }
+    return callback(tx)
+  })
+)
 const mockDb = vi.hoisted(() => ({
   query: { orders: { findFirst: mockFindFirst } },
   update: mockUpdate,
+  transaction: mockTransaction,
 }))
 
 vi.mock('@/lib/db', () => ({
   primaryDrizzleDb: mockDb,
   drizzleDb: mockDb,
 }))
-vi.mock('@/lib/schema', () => ({ orders: { id: 'id' } }))
-vi.mock('drizzle-orm', () => ({ eq: vi.fn() }))
+vi.mock('@/lib/schema', () => ({
+  orders: { id: 'id' },
+  productVariants: { id: 'id', stock: 'stock' },
+}))
+vi.mock('drizzle-orm', () => ({ eq: vi.fn(), sql: vi.fn() }))
 vi.mock('@/lib/auth', () => ({ auth: vi.fn() }))
 vi.mock('@/lib/redis', () => ({
   getCachedData: vi.fn(),
@@ -33,7 +49,10 @@ vi.mock(
   '@/lib/validations',
   async () => await vi.importActual('@/lib/validations')
 )
-vi.mock('@/lib/logger', () => ({ logError: vi.fn() }))
+vi.mock('@/lib/logger', () => ({
+  logError: vi.fn(),
+  logBusinessEvent: vi.fn(),
+}))
 vi.mock('@/lib/email', () => ({
   sendOrderStatusUpdateEmail: vi.fn(),
 }))
@@ -130,10 +149,11 @@ describe('PATCH /api/admin/orders/[id]', () => {
     mockUpdate.mockReturnValue({
       set: vi.fn(() => ({ where: vi.fn() })),
     } as never)
+    // findFirst called twice: pre-fetch (with items) + post-update fetch (with product/variant)
     mockFindFirst.mockResolvedValue(mockOrder as never)
 
     const res = await PATCH(
-      mkReq({ status: 'SHIPPED', trackingNumber: 'TRK123' }),
+      mkReq({ status: 'DELIVERED', trackingNumber: 'TRK123' }),
       mkParams()
     )
     const data = await res.json()
@@ -144,11 +164,8 @@ describe('PATCH /api/admin/orders/[id]', () => {
     expect(mockInvalidateAdminOrderCaches).toHaveBeenCalledWith('o1', 'u1')
   })
 
-  it('returns 404 when order not found after update', async () => {
+  it('returns 404 when order not found', async () => {
     mockAuth.mockResolvedValue(adminSession as never)
-    mockUpdate.mockReturnValue({
-      set: vi.fn(() => ({ where: vi.fn() })),
-    } as never)
     mockFindFirst.mockResolvedValue(undefined as never)
 
     const res = await PATCH(mkReq({ status: 'SHIPPED' }), mkParams())
@@ -156,6 +173,76 @@ describe('PATCH /api/admin/orders/[id]', () => {
 
     expect(res.status).toBe(404)
     expect(data.error).toBe('Order not found')
+  })
+
+  it('returns 400 for invalid status transition (SHIPPED to CANCELLED)', async () => {
+    mockAuth.mockResolvedValue(adminSession as never)
+    // mockOrder has status 'SHIPPED'
+    mockFindFirst.mockResolvedValue(mockOrder as never)
+
+    const res = await PATCH(mkReq({ status: 'CANCELLED' }), mkParams())
+    const data = await res.json()
+
+    expect(res.status).toBe(400)
+    expect(data.error).toContain(
+      'Cannot transition order from SHIPPED to CANCELLED'
+    )
+  })
+
+  it('returns 400 for invalid status transition (DELIVERED to CANCELLED)', async () => {
+    mockAuth.mockResolvedValue(adminSession as never)
+    mockFindFirst.mockResolvedValue({
+      ...mockOrder,
+      status: 'DELIVERED',
+    } as never)
+
+    const res = await PATCH(mkReq({ status: 'CANCELLED' }), mkParams())
+    const data = await res.json()
+
+    expect(res.status).toBe(400)
+    expect(data.error).toContain(
+      'Cannot transition order from DELIVERED to CANCELLED'
+    )
+  })
+
+  it('cancels a PENDING order and uses a transaction for stock restoration', async () => {
+    mockAuth.mockResolvedValue(adminSession as never)
+    const pendingOrder = {
+      ...mockOrder,
+      status: 'PENDING',
+      items: [
+        { id: 'oi1', variantId: 'v1', quantity: 3 },
+        { id: 'oi2', variantId: 'v2', quantity: 1 },
+      ],
+    }
+    const cancelledOrder = { ...pendingOrder, status: 'CANCELLED' }
+
+    mockFindFirst
+      .mockResolvedValueOnce(pendingOrder as never) // pre-fetch with items
+      .mockResolvedValueOnce(cancelledOrder as never) // post-update fetch
+
+    const res = await PATCH(mkReq({ status: 'CANCELLED' }), mkParams())
+    const data = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(data.data.order.serialized).toBe(true)
+    expect(mockTransaction).toHaveBeenCalled()
+    // simple update should NOT have been called (transaction handles it)
+    expect(mockUpdate).not.toHaveBeenCalled()
+  })
+
+  it('does not restore stock when order is already CANCELLED', async () => {
+    mockAuth.mockResolvedValue(adminSession as never)
+    const alreadyCancelled = { ...mockOrder, status: 'CANCELLED', items: [] }
+
+    mockFindFirst.mockResolvedValue(alreadyCancelled as never)
+
+    const res = await PATCH(mkReq({ status: 'CANCELLED' }), mkParams())
+
+    expect(res.status).toBe(200)
+    // Simple update path — no transaction
+    expect(mockTransaction).not.toHaveBeenCalled()
+    expect(mockUpdate).toHaveBeenCalled()
   })
 })
 

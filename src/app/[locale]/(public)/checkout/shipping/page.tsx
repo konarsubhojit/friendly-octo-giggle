@@ -102,6 +102,10 @@ export default function CheckoutShippingPage() {
                 }
                 total={formatPrice(pricingSummary.total)}
               />
+
+              <p className="mt-3 text-xs text-[var(--text-muted)]">
+                Payment will be collected on the next step.
+              </p>
             </Card>
           </div>
         </div>

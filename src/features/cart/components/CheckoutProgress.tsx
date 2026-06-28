@@ -1,10 +1,11 @@
 import Link from '@/components/ui/LocaleLink'
 
-type CheckoutStep = 'cart' | 'shipping' | 'review' | 'confirmation'
+type CheckoutStep = 'cart' | 'shipping' | 'payment' | 'review' | 'confirmation'
 
 const steps: Array<{ id: CheckoutStep; label: string; href: string }> = [
   { id: 'cart', label: 'Cart', href: '/cart' },
   { id: 'shipping', label: 'Shipping', href: '/checkout/shipping' },
+  { id: 'payment', label: 'Payment', href: '/checkout/payment' },
   { id: 'review', label: 'Review', href: '/checkout/review' },
   { id: 'confirmation', label: 'Confirmation', href: '/checkout/confirmation' },
 ]
@@ -18,8 +19,7 @@ export const CheckoutProgress = ({ currentStep }: CheckoutProgressProps) => {
 
   const stepClassName = (isActive: boolean, isComplete: boolean) => {
     if (isActive) return 'bg-[var(--accent-rose)] text-white'
-    if (isComplete)
-      return 'bg-[var(--accent-blush)] text-[var(--foreground)]'
+    if (isComplete) return 'bg-[var(--accent-blush)] text-[var(--foreground)]'
     return 'bg-[var(--surface-raised)] text-[var(--text-muted)]'
   }
 

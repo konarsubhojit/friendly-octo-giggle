@@ -31,6 +31,13 @@ export const CheckoutOrderItemSchema = z.object({
     .nullish(),
 })
 
+export const CheckoutPaymentSchema = z.object({
+  provider: z.literal('RAZORPAY'),
+  orderId: z.string().min(1, 'Payment order ID is required').max(200),
+  paymentId: z.string().min(1, 'Payment transaction ID is required').max(200),
+  signature: z.string().min(1, 'Payment signature is required').max(500),
+})
+
 export const SubmitCheckoutSchema = z.object({
   customerName: z.string().min(1, 'Name is required').max(200),
   customerEmail: z.string().regex(EMAIL_REGEX, 'Invalid email address'),
@@ -38,6 +45,7 @@ export const SubmitCheckoutSchema = z.object({
   items: z
     .array(CheckoutOrderItemSchema)
     .min(1, 'At least one item is required'),
+  payment: CheckoutPaymentSchema,
 })
 
 export const CheckoutQueueMessageSchema = z.object({

@@ -6,39 +6,44 @@ const VALID_CART_ID = 'cart001'
 const VALID_ITEM_ID = 'item001'
 const VALID_VARIANT_ID_TOP = 'var0001'
 
-const mockPrimaryDrizzleDb = vi.hoisted(() => ({
-  query: {
-    products: { findFirst: vi.fn() },
-    carts: { findFirst: vi.fn() },
-    cartItems: { findFirst: vi.fn() },
-    users: { findFirst: vi.fn() },
-  },
-  insert: vi.fn(() => ({ values: vi.fn(() => ({ returning: vi.fn() })) })),
-  update: vi.fn(() => ({ set: vi.fn(() => ({ where: vi.fn() })) })),
-  delete: vi.fn(() => ({ where: vi.fn() })),
-}))
+const { mockDbCarts, mockDbProducts, mockDbUsers } = vi.hoisted(() => {
+  const mockDbCarts = {
+    findByUserId: vi.fn(),
+    findBySessionId: vi.fn(),
+    findWithRelationsByUserId: vi.fn(),
+    findWithRelationsBySessionId: vi.fn(),
+    findWithRelationsById: vi.fn(),
+    findWithItemsByUserId: vi.fn(),
+    findWithItemsBySessionId: vi.fn(),
+    createForUserOrIgnore: vi.fn(),
+    createForSessionOrIgnore: vi.fn(),
+    findItem: vi.fn(),
+    insertItem: vi.fn(),
+    updateItem: vi.fn(),
+    deleteItem: vi.fn(),
+    delete: vi.fn(),
+    promoteToUser: vi.fn(),
+    findVariantStock: vi.fn(),
+    update: vi.fn(),
+  }
+  const mockDbProducts = {
+    findFirstForCart: vi.fn(),
+    findBestsellers: vi.fn(),
+    findMinimalByIds: vi.fn(),
+  }
+  const mockDbUsers = {
+    existsById: vi.fn(),
+    findPreferences: vi.fn(),
+  }
+  return { mockDbCarts, mockDbProducts, mockDbUsers }
+})
 
 vi.mock('@/lib/db', () => ({
-  primaryDrizzleDb: mockPrimaryDrizzleDb,
-  drizzleDb: mockPrimaryDrizzleDb,
-}))
-
-vi.mock('@/lib/schema', () => ({
-  products: { id: 'id', deletedAt: 'deletedAt' },
-  users: { id: 'id' },
-  carts: { userId: 'userId', sessionId: 'sessionId', id: 'id' },
-  cartItems: {
-    cartId: 'cartId',
-    productId: 'productId',
-    variantId: 'variantId',
-    id: 'id',
+  db: {
+    carts: mockDbCarts,
+    products: mockDbProducts,
+    users: mockDbUsers,
   },
-}))
-
-vi.mock('drizzle-orm', () => ({
-  eq: vi.fn(),
-  and: vi.fn(),
-  isNull: vi.fn(),
 }))
 
 vi.mock('@/lib/auth', () => ({ auth: vi.fn() }))
@@ -73,7 +78,6 @@ vi.mock('@/lib/validations', async () => {
   return actual
 })
 
-import { drizzleDb } from '@/lib/db'
 import { auth } from '@/lib/auth'
 import { getCachedData } from '@/lib/redis'
 import { invalidateCartCache } from '@/lib/cache'
@@ -199,15 +203,12 @@ describe('Cart API Route', () => {
       }
 
       ;(auth as Mock).mockResolvedValue({ user: { id: 'user123' } })
-      ;(drizzleDb.query.carts.findFirst as Mock)
-        .mockResolvedValueOnce({
-          id: 'guest-cart',
-          items: [],
-        })
-        .mockResolvedValueOnce(null)
-      ;(drizzleDb.update as Mock).mockReturnValueOnce({
-        set: vi.fn(() => ({ where: vi.fn() })),
+      ;(mockDbCarts.findWithItemsBySessionId as Mock).mockResolvedValue({
+        id: 'guest-cart',
+        items: [],
       })
+      ;(mockDbCarts.findWithItemsByUserId as Mock).mockResolvedValue(null)
+      ;(mockDbCarts.promoteToUser as Mock).mockResolvedValue(undefined)
       ;(getCachedData as Mock).mockResolvedValue(mergedCart)
 
       const request = new NextRequest('http://localhost/api/cart', {
@@ -255,7 +256,7 @@ describe('Cart API Route', () => {
       const signedSessionId = signCartSessionCookieValue('guest123')
 
       ;(auth as Mock).mockResolvedValue({ user: { id: 'user123' } })
-      ;(drizzleDb.query.carts.findFirst as Mock).mockRejectedValue(
+      ;(mockDbCarts.findWithItemsBySessionId as Mock).mockRejectedValue(
         new Error('Merge failed')
       )
 
@@ -289,7 +290,7 @@ describe('Cart API Route', () => {
 
     it('returns 404 when product not found', async () => {
       ;(auth as Mock).mockResolvedValue({ user: { id: 'user123' } })
-      ;(drizzleDb.query.products.findFirst as Mock).mockResolvedValue(null)
+      ;(mockDbProducts.findFirstForCart as Mock).mockResolvedValue(null)
 
       const request = new NextRequest('http://localhost/api/cart', {
         method: 'POST',
@@ -309,7 +310,7 @@ describe('Cart API Route', () => {
 
     it('returns 400 for out of stock product', async () => {
       ;(auth as Mock).mockResolvedValue({ user: { id: 'user123' } })
-      ;(drizzleDb.query.products.findFirst as Mock).mockResolvedValue({
+      ;(mockDbProducts.findFirstForCart as Mock).mockResolvedValue({
         id: VALID_PRODUCT_ID,
         variants: [{ id: VALID_VARIANT_ID_TOP, stock: 0 }],
       })
@@ -354,19 +355,16 @@ describe('Cart API Route', () => {
       }
 
       ;(auth as Mock).mockResolvedValue({ user: { id: 'user123' } })
-      ;(drizzleDb.query.products.findFirst as Mock).mockResolvedValue({
+      ;(mockDbProducts.findFirstForCart as Mock).mockResolvedValue({
         id: VALID_PRODUCT_ID,
         variants: [{ id: VALID_VARIANT_ID_TOP, stock: 10 }],
       })
-      ;(drizzleDb.query.carts.findFirst as Mock)
-        .mockResolvedValueOnce({ id: VALID_CART_ID })
-        .mockResolvedValueOnce(mockCart)
-      ;(drizzleDb.query.users.findFirst as Mock).mockResolvedValue({
-        id: 'user123',
+      ;(mockDbCarts.findByUserId as Mock).mockResolvedValue({
+        id: VALID_CART_ID,
       })
-      ;(drizzleDb.query.cartItems.findFirst as Mock).mockResolvedValue(null)
-      const insertValuesMock = vi.fn(() => ({ returning: vi.fn() }))
-      ;(drizzleDb.insert as Mock).mockReturnValue({ values: insertValuesMock })
+      ;(mockDbCarts.findItem as Mock).mockResolvedValue(null)
+      ;(mockDbCarts.insertItem as Mock).mockResolvedValue(undefined)
+      ;(mockDbCarts.findWithRelationsById as Mock).mockResolvedValue(mockCart)
 
       const request = new NextRequest('http://localhost/api/cart', {
         method: 'POST',
@@ -395,24 +393,17 @@ describe('Cart API Route', () => {
       }
 
       ;(auth as Mock).mockResolvedValue(null)
-      ;(drizzleDb.query.products.findFirst as Mock).mockResolvedValue({
+      ;(mockDbProducts.findFirstForCart as Mock).mockResolvedValue({
         id: VALID_PRODUCT_ID,
         variants: [{ id: VALID_VARIANT_ID_TOP, stock: 10 }],
       })
-      ;(drizzleDb.query.carts.findFirst as Mock)
-        .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce(mockCart)
-      const insertReturningMock = vi
-        .fn()
-        .mockResolvedValue([{ id: VALID_CART_ID }])
-      const onConflictDoNothingMock = vi.fn(() => ({
-        returning: insertReturningMock,
-      }))
-      const insertValuesMock = vi.fn(() => ({
-        onConflictDoNothing: onConflictDoNothingMock,
-      }))
-      ;(drizzleDb.insert as Mock).mockReturnValue({ values: insertValuesMock })
-      ;(drizzleDb.query.cartItems.findFirst as Mock).mockResolvedValue(null)
+      ;(mockDbCarts.findBySessionId as Mock).mockResolvedValue(null)
+      ;(mockDbCarts.createForSessionOrIgnore as Mock).mockResolvedValue({
+        id: VALID_CART_ID,
+      })
+      ;(mockDbCarts.findItem as Mock).mockResolvedValue(null)
+      ;(mockDbCarts.insertItem as Mock).mockResolvedValue(undefined)
+      ;(mockDbCarts.findWithRelationsById as Mock).mockResolvedValue(mockCart)
 
       const request = new NextRequest('http://localhost/api/cart', {
         method: 'POST',
@@ -445,27 +436,19 @@ describe('Cart API Route', () => {
       }
 
       ;(auth as Mock).mockResolvedValue({ user: { id: 'missing-user' } })
-      ;(drizzleDb.query.products.findFirst as Mock).mockResolvedValue({
+      ;(mockDbProducts.findFirstForCart as Mock).mockResolvedValue({
         id: VALID_PRODUCT_ID,
         variants: [{ id: VALID_VARIANT_ID_TOP, stock: 10 }],
       })
-      ;(drizzleDb.query.carts.findFirst as Mock)
-        .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce(mockCart)
-      ;(drizzleDb.query.users.findFirst as Mock).mockResolvedValue(null)
-      ;(drizzleDb.query.cartItems.findFirst as Mock).mockResolvedValue(null)
-
-      const insertReturningMock = vi
-        .fn()
-        .mockResolvedValue([{ id: VALID_CART_ID }])
-      const onConflictDoNothingMock = vi.fn(() => ({
-        returning: insertReturningMock,
-      }))
-      const insertValuesMock = vi.fn(() => ({
-        onConflictDoNothing: onConflictDoNothingMock,
-      }))
-      ;(drizzleDb.insert as Mock).mockReturnValue({ values: insertValuesMock })
+      ;(mockDbCarts.findByUserId as Mock).mockResolvedValue(null)
+      ;(mockDbUsers.existsById as Mock).mockResolvedValue(false)
+      ;(mockDbCarts.findBySessionId as Mock).mockResolvedValue(null)
+      ;(mockDbCarts.createForSessionOrIgnore as Mock).mockResolvedValue({
+        id: VALID_CART_ID,
+      })
+      ;(mockDbCarts.findItem as Mock).mockResolvedValue(null)
+      ;(mockDbCarts.insertItem as Mock).mockResolvedValue(undefined)
+      ;(mockDbCarts.findWithRelationsById as Mock).mockResolvedValue(mockCart)
 
       const request = new NextRequest('http://localhost/api/cart', {
         method: 'POST',
@@ -500,26 +483,26 @@ describe('Cart API Route', () => {
       }
 
       ;(auth as Mock).mockResolvedValue({ user: { id: 'user123' } })
-      ;(drizzleDb.query.products.findFirst as Mock).mockResolvedValue({
+      ;(mockDbCarts.findWithItemsBySessionId as Mock).mockResolvedValue({
+        id: 'guest-cart',
+        items: [],
+      })
+      ;(mockDbCarts.findWithItemsByUserId as Mock).mockResolvedValue({
+        id: VALID_CART_ID,
+        items: [],
+      })
+      ;(mockDbCarts.update as Mock).mockResolvedValue(undefined)
+      ;(mockDbCarts.delete as Mock).mockResolvedValue(undefined)
+      ;(mockDbProducts.findFirstForCart as Mock).mockResolvedValue({
         id: VALID_PRODUCT_ID,
         variants: [{ id: VALID_VARIANT_ID_TOP, stock: 10 }],
       })
-      ;(drizzleDb.query.carts.findFirst as Mock)
-        .mockResolvedValueOnce({
-          id: 'guest-cart',
-          items: [],
-        })
-        .mockResolvedValueOnce({ id: VALID_CART_ID, items: [] })
-        .mockResolvedValueOnce({ id: VALID_CART_ID })
-        .mockResolvedValueOnce(mockCart)
-      ;(drizzleDb.query.cartItems.findFirst as Mock).mockResolvedValue(null)
-      ;(drizzleDb.insert as Mock).mockReturnValue({
-        values: vi.fn(() => ({ returning: vi.fn() })),
+      ;(mockDbCarts.findByUserId as Mock).mockResolvedValue({
+        id: VALID_CART_ID,
       })
-      ;(drizzleDb.update as Mock).mockReturnValueOnce({
-        set: vi.fn(() => ({ where: vi.fn() })),
-      })
-      ;(drizzleDb.delete as Mock).mockReturnValueOnce({ where: vi.fn() })
+      ;(mockDbCarts.findItem as Mock).mockResolvedValue(null)
+      ;(mockDbCarts.insertItem as Mock).mockResolvedValue(undefined)
+      ;(mockDbCarts.findWithRelationsById as Mock).mockResolvedValue(mockCart)
 
       const request = new NextRequest('http://localhost/api/cart', {
         method: 'POST',
@@ -569,11 +552,8 @@ describe('Cart API Route', () => {
   describe('DELETE /api/cart', () => {
     it('clears cart for authenticated user', async () => {
       ;(auth as Mock).mockResolvedValue({ user: { id: 'user123' } })
-      ;(drizzleDb.query.carts.findFirst as Mock).mockResolvedValue({
-        id: 'cart1',
-      })
-      const deleteWhereMock = vi.fn()
-      ;(drizzleDb.delete as Mock).mockReturnValue({ where: deleteWhereMock })
+      ;(mockDbCarts.findByUserId as Mock).mockResolvedValue({ id: 'cart1' })
+      ;(mockDbCarts.delete as Mock).mockResolvedValue(undefined)
 
       const request = new NextRequest('http://localhost/api/cart', {
         method: 'DELETE',
@@ -583,17 +563,14 @@ describe('Cart API Route', () => {
 
       expect(response.status).toBe(200)
       expect(data).toEqual({ success: true })
-      expect(drizzleDb.delete).toHaveBeenCalled()
+      expect(mockDbCarts.delete).toHaveBeenCalled()
       expect(invalidateCartCache).toHaveBeenCalledWith('user123', undefined)
     })
 
     it('clears cart for guest user with session', async () => {
       ;(auth as Mock).mockResolvedValue(null)
-      ;(drizzleDb.query.carts.findFirst as Mock).mockResolvedValue({
-        id: 'cart2',
-      })
-      const deleteWhereMock = vi.fn()
-      ;(drizzleDb.delete as Mock).mockReturnValue({ where: deleteWhereMock })
+      ;(mockDbCarts.findBySessionId as Mock).mockResolvedValue({ id: 'cart2' })
+      ;(mockDbCarts.delete as Mock).mockResolvedValue(undefined)
 
       const signedSessionId = signCartSessionCookieValue('guest123')
       const request = new NextRequest('http://localhost/api/cart', {
@@ -621,13 +598,14 @@ describe('Cart API Route', () => {
 
       expect(response.status).toBe(200)
       expect(data).toEqual({ success: true })
-      expect(drizzleDb.query.carts.findFirst).not.toHaveBeenCalled()
-      expect(drizzleDb.delete).not.toHaveBeenCalled()
+      expect(mockDbCarts.findByUserId).not.toHaveBeenCalled()
+      expect(mockDbCarts.findBySessionId).not.toHaveBeenCalled()
+      expect(mockDbCarts.delete).not.toHaveBeenCalled()
     })
 
     it('returns success when cart not found', async () => {
       ;(auth as Mock).mockResolvedValue({ user: { id: 'user123' } })
-      ;(drizzleDb.query.carts.findFirst as Mock).mockResolvedValue(null)
+      ;(mockDbCarts.findByUserId as Mock).mockResolvedValue(null)
 
       const request = new NextRequest('http://localhost/api/cart', {
         method: 'DELETE',
@@ -637,7 +615,7 @@ describe('Cart API Route', () => {
 
       expect(response.status).toBe(200)
       expect(data).toEqual({ success: true })
-      expect(drizzleDb.delete).not.toHaveBeenCalled()
+      expect(mockDbCarts.delete).not.toHaveBeenCalled()
       expect(invalidateCartCache).toHaveBeenCalled()
     })
 
@@ -661,7 +639,7 @@ describe('Cart API Route', () => {
 
     it('returns 404 when variant not found', async () => {
       ;(auth as Mock).mockResolvedValue({ user: { id: 'user123' } })
-      ;(drizzleDb.query.products.findFirst as Mock).mockResolvedValue({
+      ;(mockDbProducts.findFirstForCart as Mock).mockResolvedValue({
         id: VALID_PRODUCT_ID,
         variants: [{ id: VALID_VARIANT_ID, stock: 5 }],
       })
@@ -717,16 +695,16 @@ describe('Cart API Route', () => {
       }
 
       ;(auth as Mock).mockResolvedValue({ user: { id: 'user123' } })
-      ;(drizzleDb.query.products.findFirst as Mock).mockResolvedValue({
+      ;(mockDbProducts.findFirstForCart as Mock).mockResolvedValue({
         id: VALID_PRODUCT_ID,
         variants: [{ id: VALID_VARIANT_ID, stock: 2 }],
       })
-      ;(drizzleDb.query.carts.findFirst as Mock)
-        .mockResolvedValueOnce({ id: VALID_CART_ID })
-        .mockResolvedValueOnce(mockCart)
-      ;(drizzleDb.query.cartItems.findFirst as Mock).mockResolvedValue(null)
-      const insertValuesMock = vi.fn(() => ({ returning: vi.fn() }))
-      ;(drizzleDb.insert as Mock).mockReturnValue({ values: insertValuesMock })
+      ;(mockDbCarts.findByUserId as Mock).mockResolvedValue({
+        id: VALID_CART_ID,
+      })
+      ;(mockDbCarts.findItem as Mock).mockResolvedValue(null)
+      ;(mockDbCarts.insertItem as Mock).mockResolvedValue(undefined)
+      ;(mockDbCarts.findWithRelationsById as Mock).mockResolvedValue(mockCart)
 
       const request = new NextRequest('http://localhost/api/cart', {
         method: 'POST',
@@ -769,21 +747,20 @@ describe('Cart API Route', () => {
       }
 
       ;(auth as Mock).mockResolvedValue({ user: { id: 'user123' } })
-      ;(drizzleDb.query.products.findFirst as Mock).mockResolvedValue({
+      ;(mockDbProducts.findFirstForCart as Mock).mockResolvedValue({
         id: VALID_PRODUCT_ID,
         variants: [{ id: VALID_VARIANT_ID_TOP, stock: 10 }],
       })
-      ;(drizzleDb.query.carts.findFirst as Mock)
-        .mockResolvedValueOnce({ id: VALID_CART_ID })
-        .mockResolvedValueOnce(mockCart)
-      ;(drizzleDb.query.cartItems.findFirst as Mock).mockResolvedValue({
+      ;(mockDbCarts.findByUserId as Mock).mockResolvedValue({
+        id: VALID_CART_ID,
+      })
+      ;(mockDbCarts.findItem as Mock).mockResolvedValue({
         id: VALID_ITEM_ID,
         quantity: 2,
         variantId: VALID_VARIANT_ID_TOP,
       })
-      const updateWhereMock = vi.fn()
-      const updateSetMock = vi.fn(() => ({ where: updateWhereMock }))
-      ;(drizzleDb.update as Mock).mockReturnValue({ set: updateSetMock })
+      ;(mockDbCarts.updateItem as Mock).mockResolvedValue(undefined)
+      ;(mockDbCarts.findWithRelationsById as Mock).mockResolvedValue(mockCart)
 
       const request = new NextRequest('http://localhost/api/cart', {
         method: 'POST',
@@ -799,19 +776,19 @@ describe('Cart API Route', () => {
 
       expect(response.status).toBe(201)
       expect(data.cart).toBeDefined()
-      expect(drizzleDb.update).toHaveBeenCalled()
+      expect(mockDbCarts.updateItem).toHaveBeenCalled()
     })
 
     it('returns 400 when cart already has maximum available stock', async () => {
       ;(auth as Mock).mockResolvedValue({ user: { id: 'user123' } })
-      ;(drizzleDb.query.products.findFirst as Mock).mockResolvedValue({
+      ;(mockDbProducts.findFirstForCart as Mock).mockResolvedValue({
         id: VALID_PRODUCT_ID,
         variants: [{ id: VALID_VARIANT_ID_TOP, stock: 5 }],
       })
-      ;(drizzleDb.query.carts.findFirst as Mock).mockResolvedValueOnce({
+      ;(mockDbCarts.findByUserId as Mock).mockResolvedValue({
         id: VALID_CART_ID,
       })
-      ;(drizzleDb.query.cartItems.findFirst as Mock).mockResolvedValue({
+      ;(mockDbCarts.findItem as Mock).mockResolvedValue({
         id: VALID_ITEM_ID,
         quantity: 5,
         variantId: VALID_VARIANT_ID_TOP,
@@ -835,16 +812,16 @@ describe('Cart API Route', () => {
 
     it('returns 404 when updated cart not found after insert', async () => {
       ;(auth as Mock).mockResolvedValue({ user: { id: 'user123' } })
-      ;(drizzleDb.query.products.findFirst as Mock).mockResolvedValue({
+      ;(mockDbProducts.findFirstForCart as Mock).mockResolvedValue({
         id: VALID_PRODUCT_ID,
         variants: [{ id: VALID_VARIANT_ID_TOP, stock: 10 }],
       })
-      ;(drizzleDb.query.carts.findFirst as Mock)
-        .mockResolvedValueOnce({ id: VALID_CART_ID })
-        .mockResolvedValueOnce(null)
-      ;(drizzleDb.query.cartItems.findFirst as Mock).mockResolvedValue(null)
-      const insertValuesMock = vi.fn(() => ({ returning: vi.fn() }))
-      ;(drizzleDb.insert as Mock).mockReturnValue({ values: insertValuesMock })
+      ;(mockDbCarts.findByUserId as Mock).mockResolvedValue({
+        id: VALID_CART_ID,
+      })
+      ;(mockDbCarts.findItem as Mock).mockResolvedValue(null)
+      ;(mockDbCarts.insertItem as Mock).mockResolvedValue(undefined)
+      ;(mockDbCarts.findWithRelationsById as Mock).mockResolvedValue(null)
 
       const request = new NextRequest('http://localhost/api/cart', {
         method: 'POST',

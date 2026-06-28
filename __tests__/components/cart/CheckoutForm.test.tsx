@@ -88,6 +88,7 @@ const renderCheckoutForm = () => {
         error: null,
         stockWarning: null,
         adjustedQuantity: null,
+        hydrated: false,
       },
     },
   })
@@ -183,18 +184,20 @@ describe('CheckoutForm', () => {
     expect(screen.getByLabelText(/state/i)).toBeInTheDocument()
   })
 
-  it('navigates to review page with valid structured address', async () => {
+  it('navigates to payment page with valid structured address', async () => {
     renderCheckoutForm()
     fillStructuredAddress()
 
-    fireEvent.click(screen.getByRole('button', { name: /continue to review/i }))
+    fireEvent.click(
+      screen.getByRole('button', { name: /continue to payment/i })
+    )
 
     await waitFor(() => {
       expect(sessionStorage.setItem).toHaveBeenCalledWith(
         'pending_checkout',
         expect.stringContaining('42 MG Road')
       )
-      expect(mockPush).toHaveBeenCalledWith('/en/checkout/review')
+      expect(mockPush).toHaveBeenCalledWith('/en/checkout/payment')
     })
   })
 
@@ -211,10 +214,12 @@ describe('CheckoutForm', () => {
       target: { value: 'Karnataka' },
     })
 
-    fireEvent.click(screen.getByRole('button', { name: /continue to review/i }))
+    fireEvent.click(
+      screen.getByRole('button', { name: /continue to payment/i })
+    )
 
     expect(screen.getByText(/address line 1 is required/i)).toBeInTheDocument()
-    expect(mockPush).not.toHaveBeenCalledWith('/en/checkout/review')
+    expect(mockPush).not.toHaveBeenCalledWith('/en/checkout/payment')
   })
 
   it('shows error when pin code is invalid', () => {
@@ -233,12 +238,14 @@ describe('CheckoutForm', () => {
       target: { value: 'Karnataka' },
     })
 
-    fireEvent.click(screen.getByRole('button', { name: /continue to review/i }))
+    fireEvent.click(
+      screen.getByRole('button', { name: /continue to payment/i })
+    )
 
     expect(
       screen.getByText(/pin code must be exactly 6 digits/i)
     ).toBeInTheDocument()
-    expect(mockPush).not.toHaveBeenCalledWith('/en/checkout/review')
+    expect(mockPush).not.toHaveBeenCalledWith('/en/checkout/payment')
   })
 
   it('redirects unauthenticated users to sign in', async () => {
@@ -251,7 +258,9 @@ describe('CheckoutForm', () => {
     renderCheckoutForm()
     fillStructuredAddress()
 
-    fireEvent.click(screen.getByRole('button', { name: /continue to review/i }))
+    fireEvent.click(
+      screen.getByRole('button', { name: /continue to payment/i })
+    )
 
     await waitFor(() => {
       expect(mockPush).toHaveBeenCalledWith(

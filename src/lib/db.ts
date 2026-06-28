@@ -138,5 +138,5 @@ export const drizzleDb = withReplicas(primaryDrizzleDb, [readDrizzleDb])
 export type DrizzleDb = typeof drizzleDb
 
 // Re-export query helpers for backward compatibility
-export { db } from './db-queries'
+export { db, StockConflictError } from './db-queries'
 export type { ProductListOptions } from './db-queries'

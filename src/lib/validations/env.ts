@@ -39,6 +39,10 @@ export const EnvSchema = z
     NEXT_PUBLIC_UPSTASH_SEARCH_REST_URL: z.url().optional(),
     NEXT_PUBLIC_UPSTASH_SEARCH_REST_READONLY_TOKEN: z.string().optional(),
     GOOGLE_GENERATIVE_AI_API_KEY: z.string().optional(),
+    PAYMENT_PROVIDER: z.enum(['RAZORPAY']).optional(),
+    RAZORPAY_KEY_ID: z.string().optional(),
+    RAZORPAY_KEY_SECRET: z.string().optional(),
+    RAZORPAY_WEBHOOK_SECRET: z.string().optional(),
     SENTRY_DSN: z.url().optional(),
     IMAGE_UPLOAD_PROVIDER: z.enum(['vercel', 'azure']).optional(),
     AZURE_BLOB_ACCOUNTS_JSON: z
@@ -147,6 +151,35 @@ export const EnvSchema = z
               'AZURE_BLOB_DEFAULT_ACCOUNT_ALIAS must match an alias in AZURE_BLOB_ACCOUNTS_JSON',
           })
         }
+      }
+    }
+
+    if (data.PAYMENT_PROVIDER === 'RAZORPAY') {
+      if (!data.RAZORPAY_KEY_ID?.trim()) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['RAZORPAY_KEY_ID'],
+          message:
+            "RAZORPAY_KEY_ID must be set when PAYMENT_PROVIDER='RAZORPAY'",
+        })
+      }
+
+      if (!data.RAZORPAY_KEY_SECRET?.trim()) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['RAZORPAY_KEY_SECRET'],
+          message:
+            "RAZORPAY_KEY_SECRET must be set when PAYMENT_PROVIDER='RAZORPAY'",
+        })
+      }
+
+      if (!data.RAZORPAY_WEBHOOK_SECRET?.trim()) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['RAZORPAY_WEBHOOK_SECRET'],
+          message:
+            "RAZORPAY_WEBHOOK_SECRET must be set when PAYMENT_PROVIDER='RAZORPAY'",
+        })
       }
     }
   })

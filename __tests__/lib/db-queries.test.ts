@@ -15,12 +15,16 @@ const {
   mockSelect,
   mockInsert,
   mockDelete,
+  mockUpdate,
   mockInvalidateProductCaches,
   mockCacheShareResolve,
   mockCacheProductSoldCounts,
   mockWithReplicas,
   mockNe,
   mockInArray,
+  mockUsersFindFirst,
+  mockOrdersFindMany,
+  mockCartsFindFirst,
 } = vi.hoisted(() => {
   // Wishlists insert chain: .values().onConflictDoNothing().returning()
   const mockWishlistsInsertReturning = vi.fn()
@@ -44,6 +48,9 @@ const {
   // Delete mock
   const mockDelete = vi.fn(() => ({ where: mockWishlistsDeleteWhere }))
 
+  // Shared update mock (used in orders, carts, checkoutRequests tests)
+  const mockUpdate = vi.fn()
+
   // Select chain for simple queries
   const mockSelectWhere = vi.fn()
   const mockSelectFrom = vi.fn(() => ({ where: mockSelectWhere }))
@@ -65,6 +72,7 @@ const {
     mockSelect,
     mockInsert,
     mockDelete,
+    mockUpdate,
     mockInvalidateProductCaches: vi.fn(),
     mockCacheShareResolve: vi.fn(),
     mockCacheProductSoldCounts: vi.fn(
@@ -74,6 +82,9 @@ const {
     mockWithReplicas: vi.fn((primary) => primary),
     mockNe,
     mockInArray,
+    mockUsersFindFirst: vi.fn(),
+    mockOrdersFindMany: vi.fn(),
+    mockCartsFindFirst: vi.fn(),
   }
 })
 
@@ -97,15 +108,21 @@ vi.mock('drizzle-orm/neon-serverless', () => ({
       productShares: {
         findFirst: vi.fn(),
       },
+      users: {
+        findFirst: mockUsersFindFirst,
+      },
+      orders: {
+        findMany: mockOrdersFindMany,
+      },
+      carts: {
+        findFirst: mockCartsFindFirst,
+      },
     },
     select: mockSelect,
     insert: mockInsert,
     delete: mockDelete,
-    update: vi.fn(() => ({
-      set: vi.fn(() => ({
-        where: vi.fn(() => ({ returning: vi.fn().mockResolvedValue([]) })),
-      })),
-    })),
+    update: mockUpdate,
+    transaction: vi.fn(),
   })),
 }))
 
@@ -681,6 +698,333 @@ describe('db.wishlists', () => {
       const result = await db.wishlists.has('user123', 'prod999')
 
       expect(result).toBe(false)
+    })
+  })
+})
+
+describe('db.users', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  describe('findPreferences', () => {
+    it('returns currency and locale preferences when user exists', async () => {
+      mockUsersFindFirst.mockResolvedValue({
+        currencyPreference: 'USD',
+        localePreference: 'en',
+      })
+
+      const result = await db.users.findPreferences('user123')
+
+      expect(result).toEqual({
+        currencyPreference: 'USD',
+        localePreference: 'en',
+      })
+      expect(mockUsersFindFirst).toHaveBeenCalledOnce()
+    })
+
+    it('returns null when user does not exist', async () => {
+      mockUsersFindFirst.mockResolvedValue(undefined)
+
+      const result = await db.users.findPreferences('nonexistent')
+
+      expect(result).toBeNull()
+    })
+  })
+
+  describe('existsById', () => {
+    it('returns true when user exists', async () => {
+      mockUsersFindFirst.mockResolvedValue({ id: 'user123' })
+
+      const result = await db.users.existsById('user123')
+
+      expect(result).toBe(true)
+    })
+
+    it('returns false when user does not exist', async () => {
+      mockUsersFindFirst.mockResolvedValue(undefined)
+
+      const result = await db.users.existsById('nonexistent')
+
+      expect(result).toBe(false)
+    })
+  })
+})
+
+describe('db.orders', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  describe('findManyByUserId', () => {
+    it('returns orders with items for the user', async () => {
+      const orderRows = [
+        { id: 'ord001', userId: 'user1', items: [{ id: 'item1' }] },
+        { id: 'ord002', userId: 'user1', items: [] },
+      ]
+      mockOrdersFindMany.mockResolvedValue(orderRows)
+
+      const result = await db.orders.findManyByUserId('user1')
+
+      expect(result).toHaveLength(2)
+      expect(result[0].id).toBe('ord001')
+      expect(result[0].items).toHaveLength(1)
+      expect(mockOrdersFindMany).toHaveBeenCalledOnce()
+    })
+
+    it('returns empty array when user has no orders', async () => {
+      mockOrdersFindMany.mockResolvedValue([])
+
+      const result = await db.orders.findManyByUserId('user_no_orders')
+
+      expect(result).toEqual([])
+    })
+  })
+
+  describe('findFirstByCheckoutRequestId', () => {
+    it('returns order id when found', async () => {
+      const chain = {
+        from: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockResolvedValue([{ id: 'ord001' }]),
+      }
+      mockSelect.mockReturnValue(chain)
+
+      const result = await db.orders.findFirstByCheckoutRequestId('cr001')
+
+      expect(result).toEqual({ id: 'ord001' })
+    })
+
+    it('returns null when no order linked to checkout request', async () => {
+      const chain = {
+        from: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockResolvedValue([]),
+      }
+      mockSelect.mockReturnValue(chain)
+
+      const result = await db.orders.findFirstByCheckoutRequestId('cr_none')
+
+      expect(result).toBeNull()
+    })
+  })
+
+  describe('updateStatus', () => {
+    it('returns updated order id on success', async () => {
+      const returningMock = vi.fn().mockResolvedValue([{ id: 'ord001' }])
+      const whereMock = vi.fn(() => ({ returning: returningMock }))
+      const setMock = vi.fn(() => ({ where: whereMock }))
+      mockUpdate.mockReturnValue({ set: setMock })
+
+      const result = await db.orders.updateStatus('ord001', 'SHIPPED')
+
+      expect(result).toEqual({ id: 'ord001' })
+      expect(setMock).toHaveBeenCalledWith(
+        expect.objectContaining({ status: 'SHIPPED' })
+      )
+    })
+
+    it('returns null when order not found', async () => {
+      const returningMock = vi.fn().mockResolvedValue([])
+      const whereMock = vi.fn(() => ({ returning: returningMock }))
+      const setMock = vi.fn(() => ({ where: whereMock }))
+      mockUpdate.mockReturnValue({ set: setMock })
+
+      const result = await db.orders.updateStatus('ord_none', 'CANCELLED')
+
+      expect(result).toBeNull()
+    })
+  })
+})
+
+describe('db.checkoutRequests', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  describe('findById', () => {
+    it('returns the checkout request when found', async () => {
+      const chain = {
+        from: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockResolvedValue([{ id: 'cr001', status: 'PENDING' }]),
+      }
+      mockSelect.mockReturnValue(chain)
+
+      const result = await db.checkoutRequests.findById('cr001')
+
+      expect(result).toEqual({ id: 'cr001', status: 'PENDING' })
+    })
+
+    it('returns null when not found', async () => {
+      const chain = {
+        from: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockResolvedValue([]),
+      }
+      mockSelect.mockReturnValue(chain)
+
+      const result = await db.checkoutRequests.findById('cr_none')
+
+      expect(result).toBeNull()
+    })
+  })
+
+  describe('create', () => {
+    it('inserts and returns id and status', async () => {
+      const returningMock = vi
+        .fn()
+        .mockResolvedValue([{ id: 'cr001', status: 'PENDING' }])
+      const valuesMock = vi.fn(() => ({ returning: returningMock }))
+      mockInsert.mockReturnValue({ values: valuesMock })
+
+      const result = await db.checkoutRequests.create({
+        userId: 'user1',
+        customerName: 'Alice',
+        customerEmail: 'alice@example.com',
+        customerAddress: '123 Street',
+        addressLine1: '123 Street',
+        addressLine2: null,
+        addressLine3: null,
+        pinCode: '110001',
+        city: 'Delhi',
+        state: 'Delhi',
+        items: [],
+        paymentProvider: 'RAZORPAY',
+        paymentOrderId: 'order_123',
+        paymentTransactionId: 'pay_123',
+        paymentSignature: 'sig_123',
+        status: 'PENDING',
+      })
+
+      expect(result).toEqual({ id: 'cr001', status: 'PENDING' })
+      expect(mockInsert).toHaveBeenCalledOnce()
+    })
+  })
+
+  describe('updateStatus', () => {
+    it('updates status and clears error message', async () => {
+      const whereMock = vi.fn().mockResolvedValue([])
+      const setMock = vi.fn(() => ({ where: whereMock }))
+      mockUpdate.mockReturnValue({ set: setMock })
+
+      await db.checkoutRequests.updateStatus('cr001', 'COMPLETED', null)
+
+      expect(setMock).toHaveBeenCalledWith(
+        expect.objectContaining({ status: 'COMPLETED', errorMessage: null })
+      )
+    })
+
+    it('updates status and sets error message on failure', async () => {
+      const whereMock = vi.fn().mockResolvedValue([])
+      const setMock = vi.fn(() => ({ where: whereMock }))
+      mockUpdate.mockReturnValue({ set: setMock })
+
+      await db.checkoutRequests.updateStatus(
+        'cr001',
+        'FAILED',
+        'Payment timed out'
+      )
+
+      expect(setMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: 'FAILED',
+          errorMessage: 'Payment timed out',
+        })
+      )
+    })
+  })
+
+  describe('findRecentWithOrders', () => {
+    it('fetches recent requests joined to orders', async () => {
+      const rows = [
+        { id: 'cr1', status: 'PENDING', orderId: null },
+        { id: 'cr2', status: 'COMPLETED', orderId: 'ord1' },
+      ]
+      const chain = {
+        from: vi.fn().mockReturnThis(),
+        leftJoin: vi.fn().mockReturnThis(),
+        orderBy: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockResolvedValue(rows),
+      }
+      mockSelect.mockReturnValue(chain)
+
+      const result = await db.checkoutRequests.findRecentWithOrders({
+        limit: 2,
+      })
+
+      expect(result).toHaveLength(2)
+      expect(result[0].id).toBe('cr1')
+      expect(chain.leftJoin).toHaveBeenCalled()
+    })
+  })
+})
+
+describe('db.carts', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  describe('findByUserId', () => {
+    it('returns cart when found', async () => {
+      mockCartsFindFirst.mockResolvedValue({ id: 'cart1', userId: 'user1' })
+
+      const result = await db.carts.findByUserId('user1')
+
+      expect(result).toEqual({ id: 'cart1', userId: 'user1' })
+      expect(mockCartsFindFirst).toHaveBeenCalledOnce()
+    })
+
+    it('returns undefined when cart not found', async () => {
+      mockCartsFindFirst.mockResolvedValue(undefined)
+
+      const result = await db.carts.findByUserId('user_none')
+
+      expect(result).toBeUndefined()
+    })
+  })
+
+  describe('findBySessionId', () => {
+    it('returns cart for a guest session', async () => {
+      mockCartsFindFirst.mockResolvedValue({ id: 'cart2', sessionId: 'sess1' })
+
+      const result = await db.carts.findBySessionId('sess1')
+
+      expect(result).toEqual({ id: 'cart2', sessionId: 'sess1' })
+    })
+
+    it('returns undefined when no guest cart found', async () => {
+      mockCartsFindFirst.mockResolvedValue(undefined)
+
+      const result = await db.carts.findBySessionId('sess_none')
+
+      expect(result).toBeUndefined()
+    })
+  })
+
+  describe('promoteToUser', () => {
+    it('sets userId and clears sessionId on the cart', async () => {
+      const whereMock = vi.fn().mockResolvedValue([])
+      const setMock = vi.fn(() => ({ where: whereMock }))
+      mockUpdate.mockReturnValue({ set: setMock })
+
+      await db.carts.promoteToUser('cart1', 'user1', new Date('2025-01-01'))
+
+      expect(setMock).toHaveBeenCalledWith(
+        expect.objectContaining({ userId: 'user1', sessionId: null })
+      )
+    })
+  })
+
+  describe('delete', () => {
+    it('deletes a cart by ID', async () => {
+      const whereMock = vi.fn().mockResolvedValue([])
+      mockDelete.mockReturnValue({ where: whereMock })
+
+      await db.carts.delete('cart1')
+
+      expect(mockDelete).toHaveBeenCalled()
+      expect(whereMock).toHaveBeenCalled()
     })
   })
 })

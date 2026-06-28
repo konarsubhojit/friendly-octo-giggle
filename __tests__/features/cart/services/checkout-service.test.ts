@@ -1,39 +1,42 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const {
-  mockInsert,
-  mockUpdate,
-  mockDrizzleDbSelect,
+  mockDbCheckoutRequestsCreate,
+  mockDbCheckoutRequestsUpdateStatus,
+  mockDbCheckoutRequestsFindById,
+  mockDbCheckoutRequestsFindRecentWithOrders,
+  mockDbOrdersFindFirstByCheckoutRequestId,
   mockLogBusinessEvent,
   mockLogError,
   mockLogPerformance,
   mockSend,
   mockCreateOrderForUser,
+  mockEnsurePaymentProviderConfigured,
 } = vi.hoisted(() => ({
-  mockInsert: vi.fn(),
-  mockUpdate: vi.fn(),
-  mockDrizzleDbSelect: vi.fn(() => ({
-    from: vi.fn().mockReturnThis(),
-    where: vi.fn().mockReturnThis(),
-    limit: vi.fn().mockResolvedValue([]),
-    leftJoin: vi.fn().mockReturnThis(),
-    orderBy: vi.fn().mockReturnThis(),
-    then: vi.fn().mockResolvedValue(null),
-  })),
+  mockDbCheckoutRequestsCreate: vi.fn(),
+  mockDbCheckoutRequestsUpdateStatus: vi.fn().mockResolvedValue(undefined),
+  mockDbCheckoutRequestsFindById: vi.fn().mockResolvedValue(null),
+  mockDbCheckoutRequestsFindRecentWithOrders: vi.fn().mockResolvedValue([]),
+  mockDbOrdersFindFirstByCheckoutRequestId: vi.fn().mockResolvedValue(null),
   mockLogBusinessEvent: vi.fn(),
   mockLogError: vi.fn(),
   mockLogPerformance: vi.fn(),
   mockSend: vi.fn(),
   mockCreateOrderForUser: vi.fn(),
+  mockEnsurePaymentProviderConfigured: vi.fn(),
 }))
 
 vi.mock('@/lib/db', () => ({
-  drizzleDb: {
-    select: mockDrizzleDbSelect,
-  },
-  primaryDrizzleDb: {
-    insert: mockInsert,
-    update: mockUpdate,
+  db: {
+    checkoutRequests: {
+      create: mockDbCheckoutRequestsCreate,
+      updateStatus: mockDbCheckoutRequestsUpdateStatus,
+      findById: mockDbCheckoutRequestsFindById,
+      findRecentWithOrders: mockDbCheckoutRequestsFindRecentWithOrders,
+    },
+    orders: {
+      findFirstByCheckoutRequestId: mockDbOrdersFindFirstByCheckoutRequestId,
+    },
   },
 }))
 
@@ -53,18 +56,19 @@ vi.mock('@/features/orders/services/order-service', () => ({
     error instanceof Error && 'status' in error,
 }))
 
+vi.mock('@/lib/payments', () => ({
+  ensurePaymentProviderConfigured: mockEnsurePaymentProviderConfigured,
+  PaymentConfigurationError: class PaymentConfigurationError extends Error {
+    status: number
+    constructor(message: string, status = 503) {
+      super(message)
+      this.status = status
+    }
+  },
+}))
+
 vi.mock('@vercel/functions', () => ({
   waitUntil: vi.fn(),
-}))
-
-vi.mock('@/lib/schema', () => ({
-  checkoutRequests: { id: 'id', status: 'status', userId: 'userId' },
-  orders: { id: 'id', checkoutRequestId: 'checkoutRequestId' },
-}))
-
-vi.mock('drizzle-orm', () => ({
-  eq: vi.fn((...args: unknown[]) => args),
-  desc: vi.fn(),
 }))
 
 import {
@@ -101,13 +105,10 @@ describe('checkout-service', () => {
 
   describe('enqueueCheckoutForUser', () => {
     it('creates checkout request and publishes to queue', async () => {
-      const chainMock = {
-        values: vi.fn().mockReturnThis(),
-        returning: vi
-          .fn()
-          .mockResolvedValue([{ id: 'cr1abc', status: 'PENDING' }]),
-      }
-      mockInsert.mockReturnValue(chainMock)
+      mockDbCheckoutRequestsCreate.mockResolvedValue({
+        id: 'cr1abc',
+        status: 'PENDING',
+      })
       mockSend.mockResolvedValue(undefined)
 
       const result = await enqueueCheckoutForUser({
@@ -122,6 +123,12 @@ describe('checkout-service', () => {
           city: 'New Delhi',
           state: 'Delhi',
           items: [{ productId: 'abc1234', variantId: 'var0001', quantity: 1 }],
+          payment: {
+            provider: 'RAZORPAY',
+            orderId: 'order_123',
+            paymentId: 'pay_123',
+            signature: 'sig_123',
+          },
         },
         user: testUser,
       })
@@ -138,13 +145,10 @@ describe('checkout-service', () => {
     })
 
     it('falls back to inline processing when queue publish fails', async () => {
-      const chainMock = {
-        values: vi.fn().mockReturnThis(),
-        returning: vi
-          .fn()
-          .mockResolvedValue([{ id: 'cr2abcd', status: 'PENDING' }]),
-      }
-      mockInsert.mockReturnValue(chainMock)
+      mockDbCheckoutRequestsCreate.mockResolvedValue({
+        id: 'cr2abcd',
+        status: 'PENDING',
+      })
       mockSend.mockRejectedValue(new Error('Queue down'))
 
       const result = await enqueueCheckoutForUser({
@@ -159,6 +163,12 @@ describe('checkout-service', () => {
           city: 'New Delhi',
           state: 'Delhi',
           items: [{ productId: 'abc1234', variantId: 'var0001', quantity: 1 }],
+          payment: {
+            provider: 'RAZORPAY',
+            orderId: 'order_123',
+            paymentId: 'pay_123',
+            signature: 'sig_123',
+          },
         },
         user: testUser,
       })
@@ -181,13 +191,10 @@ describe('checkout-service', () => {
     })
 
     it('uses user name/email as defaults when body fields empty', async () => {
-      const chainMock = {
-        values: vi.fn().mockReturnThis(),
-        returning: vi
-          .fn()
-          .mockResolvedValue([{ id: 'cr3abcd', status: 'PENDING' }]),
-      }
-      mockInsert.mockReturnValue(chainMock)
+      mockDbCheckoutRequestsCreate.mockResolvedValue({
+        id: 'cr3abcd',
+        status: 'PENDING',
+      })
       mockSend.mockResolvedValue(undefined)
 
       await enqueueCheckoutForUser({
@@ -200,11 +207,17 @@ describe('checkout-service', () => {
           city: 'New Delhi',
           state: 'Delhi',
           items: [{ productId: 'abc1234', variantId: 'var0001', quantity: 1 }],
+          payment: {
+            provider: 'RAZORPAY',
+            orderId: 'order_123',
+            paymentId: 'pay_123',
+            signature: 'sig_123',
+          },
         },
         user: testUser,
       })
 
-      expect(chainMock.values).toHaveBeenCalledWith(
+      expect(mockDbCheckoutRequestsCreate).toHaveBeenCalledWith(
         expect.objectContaining({
           customerName: 'Test User',
           customerEmail: 'test@example.com',
@@ -215,18 +228,11 @@ describe('checkout-service', () => {
 
   describe('getCheckoutRequestStatusForUser', () => {
     it('throws when checkout request not found for user', async () => {
-      const selectChain = {
-        from: vi.fn().mockReturnThis(),
-        where: vi.fn().mockReturnThis(),
-        limit: vi.fn().mockResolvedValue([
-          {
-            id: 'cr1ab23',
-            userId: 'other_user',
-            status: 'PENDING',
-          },
-        ]),
-      }
-      mockDrizzleDbSelect.mockReturnValue(selectChain as never)
+      mockDbCheckoutRequestsFindById.mockResolvedValue({
+        id: 'cr1ab23',
+        userId: 'other_user',
+        status: 'PENDING',
+      })
 
       await expect(
         getCheckoutRequestStatusForUser({
@@ -239,12 +245,7 @@ describe('checkout-service', () => {
 
   describe('processCheckoutRequestById', () => {
     it('returns early when checkout request is missing', async () => {
-      const selectChain = {
-        from: vi.fn().mockReturnThis(),
-        where: vi.fn().mockReturnThis(),
-        limit: vi.fn().mockResolvedValue([]),
-      }
-      mockDrizzleDbSelect.mockReturnValue(selectChain as never)
+      mockDbCheckoutRequestsFindById.mockResolvedValue(null)
 
       await processCheckoutRequestById('cr1ab23')
 
@@ -257,67 +258,55 @@ describe('checkout-service', () => {
     })
 
     it('returns early when already completed or failed', async () => {
-      const checkoutSelectChain = {
-        from: vi.fn().mockReturnThis(),
-        where: vi.fn().mockReturnThis(),
-        limit: vi
-          .fn()
-          .mockResolvedValue([
-            { id: 'cr1ab23', userId: 'user1', status: 'COMPLETED' },
-          ]),
-      }
-      const orderSelectChain = {
-        from: vi.fn().mockReturnThis(),
-        where: vi.fn().mockReturnThis(),
-        limit: vi.fn().mockReturnThis(),
-        then: vi.fn().mockResolvedValue(null),
-      }
-      mockDrizzleDbSelect
-        .mockReturnValueOnce(checkoutSelectChain as never)
-        .mockReturnValueOnce(orderSelectChain as never)
+      mockDbCheckoutRequestsFindById.mockResolvedValue({
+        id: 'cr1ab23',
+        userId: 'user1',
+        status: 'COMPLETED',
+      })
+      mockDbOrdersFindFirstByCheckoutRequestId.mockResolvedValue(null)
 
       await processCheckoutRequestById('cr1ab23')
 
       expect(mockCreateOrderForUser).not.toHaveBeenCalled()
     })
 
+    it('marks pending requests as completed when an order already exists', async () => {
+      mockDbCheckoutRequestsFindById.mockResolvedValue({
+        id: 'cr1ab23',
+        userId: 'user1',
+        status: 'PENDING',
+      })
+      mockDbOrdersFindFirstByCheckoutRequestId.mockResolvedValue({ id: 'ord1' })
+
+      await processCheckoutRequestById('cr1ab23')
+
+      expect(mockDbCheckoutRequestsUpdateStatus).toHaveBeenCalledWith(
+        'cr1ab23',
+        'COMPLETED',
+        null
+      )
+      expect(mockCreateOrderForUser).not.toHaveBeenCalled()
+    })
+
     it('records checkout queue lag before processing', async () => {
-      const checkoutSelectChain = {
-        from: vi.fn().mockReturnThis(),
-        where: vi.fn().mockReturnThis(),
-        limit: vi.fn().mockResolvedValue([
-          {
-            id: 'cr2xy89',
-            userId: 'user1',
-            customerName: 'Test User',
-            customerEmail: 'test@example.com',
-            customerAddress: '123 Street',
-            addressLine1: '123 Street',
-            addressLine2: '',
-            addressLine3: '',
-            pinCode: '110001',
-            city: 'New Delhi',
-            state: 'Delhi',
-            items: [],
-            status: 'PENDING',
-            createdAt: new Date(Date.now() - 2_000),
-          },
-        ]),
-      }
-      const orderSelectChain = {
-        from: vi.fn().mockReturnThis(),
-        where: vi.fn().mockReturnThis(),
-        limit: vi.fn().mockReturnThis(),
-        then: vi.fn().mockResolvedValue(null),
-      }
-      mockDrizzleDbSelect
-        .mockReturnValueOnce(checkoutSelectChain as never)
-        .mockReturnValueOnce(orderSelectChain as never)
-      const updateChain = {
-        set: vi.fn().mockReturnThis(),
-        where: vi.fn().mockResolvedValue([]),
-      }
-      mockUpdate.mockReturnValue(updateChain)
+      mockDbCheckoutRequestsFindById.mockResolvedValue({
+        id: 'cr2xy89',
+        userId: 'user1',
+        customerName: 'Test User',
+        customerEmail: 'test@example.com',
+        customerAddress: '123 Street',
+        addressLine1: '123 Street',
+        addressLine2: '',
+        addressLine3: '',
+        pinCode: '110001',
+        city: 'New Delhi',
+        state: 'Delhi',
+        items: [],
+        status: 'PENDING',
+        createdAt: new Date(Date.now() - 2_000),
+      })
+      mockDbOrdersFindFirstByCheckoutRequestId.mockResolvedValue(null)
+      mockDbCheckoutRequestsUpdateStatus.mockResolvedValue(undefined)
       mockCreateOrderForUser.mockResolvedValue({ order: { id: 'ord1' } })
 
       await processCheckoutRequestById('cr2xy89')
@@ -336,35 +325,27 @@ describe('checkout-service', () => {
 
   describe('getRecentCheckoutRequests', () => {
     it('returns filtered checkout requests', async () => {
-      const selectChain = {
-        from: vi.fn().mockReturnThis(),
-        leftJoin: vi.fn().mockReturnThis(),
-        orderBy: vi.fn().mockReturnThis(),
-        limit: vi.fn().mockResolvedValue([
-          {
-            id: 'cr1',
-            userId: 'user1',
-            customerName: 'Test',
-            customerEmail: 'test@example.com',
-            customerAddress: '123 St',
-            addressLine1: '123 Main Street',
-            addressLine2: '',
-            addressLine3: '',
-            pinCode: '110001',
-            city: 'New Delhi',
-            state: 'Delhi',
-            items: [{ productId: 'p1' }],
-            status: 'PENDING',
-            errorMessage: null,
-            orderId: null,
-            createdAt: new Date('2024-01-01'),
-            updatedAt: new Date('2024-01-01'),
-          },
-        ]),
-      }
-      const fromMock = vi.fn().mockReturnValue(selectChain)
-      selectChain.from = fromMock
-      mockDrizzleDbSelect.mockReturnValue({ from: fromMock } as never)
+      mockDbCheckoutRequestsFindRecentWithOrders.mockResolvedValue([
+        {
+          id: 'cr1',
+          userId: 'user1',
+          customerName: 'Test',
+          customerEmail: 'test@example.com',
+          customerAddress: '123 St',
+          addressLine1: '123 Main Street',
+          addressLine2: '',
+          addressLine3: '',
+          pinCode: '110001',
+          city: 'New Delhi',
+          state: 'Delhi',
+          items: [{ productId: 'p1' }],
+          status: 'PENDING',
+          errorMessage: null,
+          orderId: null,
+          createdAt: new Date('2024-01-01'),
+          updatedAt: new Date('2024-01-01'),
+        },
+      ])
 
       const result = await getRecentCheckoutRequests()
 
@@ -374,53 +355,46 @@ describe('checkout-service', () => {
     })
 
     it('filters by status', async () => {
-      const selectChain = {
-        leftJoin: vi.fn().mockReturnThis(),
-        orderBy: vi.fn().mockReturnThis(),
-        limit: vi.fn().mockResolvedValue([
-          {
-            id: 'cr1',
-            userId: 'user1',
-            customerName: 'Test',
-            customerEmail: 'test@example.com',
-            customerAddress: '123 St',
-            addressLine1: '123 Main Street',
-            addressLine2: '',
-            addressLine3: '',
-            pinCode: '110001',
-            city: 'New Delhi',
-            state: 'Delhi',
-            items: [],
-            status: 'PENDING',
-            errorMessage: null,
-            orderId: null,
-            createdAt: new Date('2024-01-01'),
-            updatedAt: new Date('2024-01-01'),
-          },
-          {
-            id: 'cr2',
-            userId: 'user1',
-            customerName: 'Test2',
-            customerEmail: 'test2@example.com',
-            customerAddress: '456 St',
-            addressLine1: '123 Main Street',
-            addressLine2: '',
-            addressLine3: '',
-            pinCode: '110001',
-            city: 'New Delhi',
-            state: 'Delhi',
-            items: [],
-            status: 'COMPLETED',
-            errorMessage: null,
-            orderId: 'ord1',
-            createdAt: new Date('2024-01-02'),
-            updatedAt: new Date('2024-01-02'),
-          },
-        ]),
-      }
-      mockDrizzleDbSelect.mockReturnValue({
-        from: vi.fn().mockReturnValue(selectChain),
-      } as never)
+      mockDbCheckoutRequestsFindRecentWithOrders.mockResolvedValue([
+        {
+          id: 'cr1',
+          userId: 'user1',
+          customerName: 'Test',
+          customerEmail: 'test@example.com',
+          customerAddress: '123 St',
+          addressLine1: '123 Main Street',
+          addressLine2: '',
+          addressLine3: '',
+          pinCode: '110001',
+          city: 'New Delhi',
+          state: 'Delhi',
+          items: [],
+          status: 'PENDING',
+          errorMessage: null,
+          orderId: null,
+          createdAt: new Date('2024-01-01'),
+          updatedAt: new Date('2024-01-01'),
+        },
+        {
+          id: 'cr2',
+          userId: 'user1',
+          customerName: 'Test2',
+          customerEmail: 'test2@example.com',
+          customerAddress: '456 St',
+          addressLine1: '123 Main Street',
+          addressLine2: '',
+          addressLine3: '',
+          pinCode: '110001',
+          city: 'New Delhi',
+          state: 'Delhi',
+          items: [],
+          status: 'COMPLETED',
+          errorMessage: null,
+          orderId: 'ord1',
+          createdAt: new Date('2024-01-02'),
+          updatedAt: new Date('2024-01-02'),
+        },
+      ])
 
       const result = await getRecentCheckoutRequests({
         status: 'PENDING',
@@ -431,34 +405,27 @@ describe('checkout-service', () => {
     })
 
     it('filters by search term', async () => {
-      const selectChain = {
-        leftJoin: vi.fn().mockReturnThis(),
-        orderBy: vi.fn().mockReturnThis(),
-        limit: vi.fn().mockResolvedValue([
-          {
-            id: 'cr1',
-            userId: 'user1',
-            customerName: 'Alice',
-            customerEmail: 'alice@example.com',
-            customerAddress: '123 St',
-            addressLine1: '123 Main Street',
-            addressLine2: '',
-            addressLine3: '',
-            pinCode: '110001',
-            city: 'New Delhi',
-            state: 'Delhi',
-            items: [],
-            status: 'PENDING',
-            errorMessage: null,
-            orderId: null,
-            createdAt: new Date('2024-01-01'),
-            updatedAt: new Date('2024-01-01'),
-          },
-        ]),
-      }
-      mockDrizzleDbSelect.mockReturnValue({
-        from: vi.fn().mockReturnValue(selectChain),
-      } as never)
+      mockDbCheckoutRequestsFindRecentWithOrders.mockResolvedValue([
+        {
+          id: 'cr1',
+          userId: 'user1',
+          customerName: 'Alice',
+          customerEmail: 'alice@example.com',
+          customerAddress: '123 St',
+          addressLine1: '123 Main Street',
+          addressLine2: '',
+          addressLine3: '',
+          pinCode: '110001',
+          city: 'New Delhi',
+          state: 'Delhi',
+          items: [],
+          status: 'PENDING',
+          errorMessage: null,
+          orderId: null,
+          createdAt: new Date('2024-01-01'),
+          updatedAt: new Date('2024-01-01'),
+        },
+      ])
 
       const result = await getRecentCheckoutRequests({ search: 'alice' })
 
@@ -468,19 +435,8 @@ describe('checkout-service', () => {
 
   describe('recoverCheckoutRequestAfterRetryExhaustion', () => {
     it('marks as COMPLETED when order already exists', async () => {
-      const orderSelectChain = {
-        from: vi.fn().mockReturnThis(),
-        where: vi.fn().mockReturnThis(),
-        limit: vi.fn().mockReturnThis(),
-        then: vi.fn().mockResolvedValue({ id: 'ord1' }),
-      }
-      mockDrizzleDbSelect.mockReturnValue(orderSelectChain as never)
-
-      const updateChain = {
-        set: vi.fn().mockReturnThis(),
-        where: vi.fn().mockResolvedValue([]),
-      }
-      mockUpdate.mockReturnValue(updateChain)
+      mockDbOrdersFindFirstByCheckoutRequestId.mockResolvedValue({ id: 'ord1' })
+      mockDbCheckoutRequestsUpdateStatus.mockResolvedValue(undefined)
 
       await recoverCheckoutRequestAfterRetryExhaustion({
         checkoutRequestId: 'cr1',
@@ -488,25 +444,16 @@ describe('checkout-service', () => {
         error: new Error('test'),
       })
 
-      expect(updateChain.set).toHaveBeenCalledWith(
-        expect.objectContaining({ status: 'COMPLETED' })
+      expect(mockDbCheckoutRequestsUpdateStatus).toHaveBeenCalledWith(
+        'cr1',
+        'COMPLETED',
+        null
       )
     })
 
     it('marks as FAILED when no order exists', async () => {
-      const orderSelectChain = {
-        from: vi.fn().mockReturnThis(),
-        where: vi.fn().mockReturnThis(),
-        limit: vi.fn().mockReturnThis(),
-        then: vi.fn().mockResolvedValue(null),
-      }
-      mockDrizzleDbSelect.mockReturnValue(orderSelectChain as never)
-
-      const updateChain = {
-        set: vi.fn().mockReturnThis(),
-        where: vi.fn().mockResolvedValue([]),
-      }
-      mockUpdate.mockReturnValue(updateChain)
+      mockDbOrdersFindFirstByCheckoutRequestId.mockResolvedValue(null)
+      mockDbCheckoutRequestsUpdateStatus.mockResolvedValue(undefined)
 
       await recoverCheckoutRequestAfterRetryExhaustion({
         checkoutRequestId: 'cr1',
@@ -514,14 +461,33 @@ describe('checkout-service', () => {
         error: new Error('Failed'),
       })
 
-      expect(updateChain.set).toHaveBeenCalledWith(
-        expect.objectContaining({ status: 'FAILED' })
+      expect(mockDbCheckoutRequestsUpdateStatus).toHaveBeenCalledWith(
+        'cr1',
+        'FAILED',
+        expect.any(String)
       )
       expect(mockLogBusinessEvent).toHaveBeenCalledWith(
         expect.objectContaining({
           event: 'checkout_request_retry_exhausted',
           success: false,
         })
+      )
+    })
+
+    it('includes fallback reason when retry exhaustion receives malformed error payload', async () => {
+      mockDbOrdersFindFirstByCheckoutRequestId.mockResolvedValue(null)
+      mockDbCheckoutRequestsUpdateStatus.mockResolvedValue(undefined)
+
+      await recoverCheckoutRequestAfterRetryExhaustion({
+        checkoutRequestId: 'cr1',
+        deliveryCount: 2,
+        error: { message: null },
+      })
+
+      expect(mockDbCheckoutRequestsUpdateStatus).toHaveBeenCalledWith(
+        'cr1',
+        'FAILED',
+        'Automatic recovery stopped after 2 attempts: Unknown consumer error'
       )
     })
   })

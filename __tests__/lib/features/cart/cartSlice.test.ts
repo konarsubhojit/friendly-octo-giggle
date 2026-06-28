@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import cartReducer, {
   clearError,
+  hydrateCart,
   selectCart,
   selectCartLoading,
   selectCartError,
@@ -14,6 +15,7 @@ const initialState = {
   error: null,
   stockWarning: null,
   adjustedQuantity: null,
+  hydrated: false,
 }
 
 describe('cartSlice reducer', () => {
@@ -24,6 +26,24 @@ describe('cartSlice reducer', () => {
   it('clearError sets error to null', () => {
     const state = { ...initialState, error: 'Some error' }
     expect(cartReducer(state, clearError()).error).toBeNull()
+  })
+
+  it('hydrateCart seeds the cart and marks state hydrated', () => {
+    const cart = { id: 'cart-1', items: [] } as never
+    const result = cartReducer(initialState, hydrateCart(cart))
+    expect(result.cart).toBe(cart)
+    expect(result.hydrated).toBe(true)
+    expect(result.loading).toBe(false)
+    expect(result.error).toBeNull()
+  })
+
+  it('hydrateCart accepts a null cart', () => {
+    const result = cartReducer(
+      { ...initialState, hydrated: false },
+      hydrateCart(null)
+    )
+    expect(result.cart).toBeNull()
+    expect(result.hydrated).toBe(true)
   })
 })
 

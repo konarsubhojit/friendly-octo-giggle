@@ -3,6 +3,7 @@ import { configureStore } from '@reduxjs/toolkit'
 import type { Product } from '@/lib/types'
 import wishlistReducer, {
   optimisticToggle,
+  hydrateWishlist,
   fetchWishlist,
   addToWishlist,
   removeFromWishlist,
@@ -13,6 +14,7 @@ const initialState = {
   products: [],
   loading: false,
   error: null,
+  hydrated: false,
 }
 
 function makeStore(preloaded?: object) {
@@ -68,6 +70,23 @@ describe('wishlistSlice reducer', () => {
       expect(result.productIds).toContain('prod001')
       expect(result.productIds).toContain('prod002')
       expect(result.productIds).toHaveLength(2)
+    })
+  })
+
+  describe('hydrateWishlist', () => {
+    it('seeds products and productIds and marks state hydrated', () => {
+      const result = wishlistReducer(
+        initialState,
+        hydrateWishlist({
+          products: [mockProduct],
+          productIds: ['prod001'],
+        })
+      )
+      expect(result.products).toEqual([mockProduct])
+      expect(result.productIds).toEqual(['prod001'])
+      expect(result.hydrated).toBe(true)
+      expect(result.loading).toBe(false)
+      expect(result.error).toBeNull()
     })
   })
 

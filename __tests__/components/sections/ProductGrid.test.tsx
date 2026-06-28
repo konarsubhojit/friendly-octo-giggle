@@ -13,12 +13,14 @@ vi.mock('next/link', () => ({
     children,
     href,
     'aria-label': ariaLabel,
+    ...rest
   }: {
     children: React.ReactNode
     href: string
     'aria-label'?: string
+    [key: string]: unknown
   }) => (
-    <a href={href} aria-label={ariaLabel}>
+    <a href={href} aria-label={ariaLabel} {...rest}>
       {children}
     </a>
   ),
@@ -378,6 +380,62 @@ describe('ProductGrid', () => {
 
     expect(screen.getByText('Showing 1 product so far')).toBeTruthy()
     expect(mockIntersectionObserver).toHaveBeenCalled()
+  })
+
+  it('renders mobile category chips nav when categories are provided', () => {
+    renderGrid([], ALL_CATEGORIES)
+    const nav = screen.getByRole('navigation', { name: /browse by category/i })
+    expect(nav).toBeTruthy()
+    // "All" chip plus one per category
+    const links = screen.getAllByRole('link')
+    const chipLabels = links.map((l) => l.textContent)
+    expect(chipLabels).toContain('All')
+    expect(chipLabels).toContain('Flowers')
+    expect(chipLabels).toContain('Handbag')
+  })
+
+  it('does not render mobile category chips nav when no categories are provided', () => {
+    renderGrid([])
+    expect(
+      screen.queryByRole('navigation', { name: /browse by category/i })
+    ).toBeNull()
+  })
+
+  it('marks the active category chip with aria-current', () => {
+    renderGrid([], ALL_CATEGORIES, { selectedCategory: 'Flowers' })
+    const nav = screen.getByRole('navigation', { name: /browse by category/i })
+    const activeLink = Array.from(nav.querySelectorAll('a')).find(
+      (a) => a.textContent === 'Flowers'
+    )
+    expect(activeLink?.getAttribute('aria-current')).toBe('true')
+  })
+
+  it('does not mark inactive category chips with aria-current', () => {
+    renderGrid([], ALL_CATEGORIES, { selectedCategory: 'Flowers' })
+    const nav = screen.getByRole('navigation', { name: /browse by category/i })
+    const allLink = Array.from(nav.querySelectorAll('a')).find(
+      (a) => a.textContent === 'All'
+    )
+    expect(allLink?.hasAttribute('aria-current')).toBe(false)
+  })
+
+  it('generates correct href for a category chip', () => {
+    renderGrid([], ['Flowers'], { selectedCategory: 'All' })
+    const nav = screen.getByRole('navigation', { name: /browse by category/i })
+    const flowersLink = Array.from(nav.querySelectorAll('a')).find(
+      (a) => a.textContent === 'Flowers'
+    )
+    expect(flowersLink?.getAttribute('href')).toContain('category=Flowers')
+  })
+
+  it('generates a reset href for the All chip', () => {
+    renderGrid([], ['Flowers'], { selectedCategory: 'Flowers' })
+    const nav = screen.getByRole('navigation', { name: /browse by category/i })
+    const allLink = Array.from(nav.querySelectorAll('a')).find(
+      (a) => a.textContent === 'All'
+    )
+    expect(allLink?.getAttribute('href')).not.toContain('category=')
+    expect(allLink?.getAttribute('href')).toContain('#products')
   })
 
   it('loads another batch of products from the API via infinite scroll', async () => {

@@ -7,9 +7,7 @@
 // guarantees that a queue provides but server actions do not.
 
 import { waitUntil } from '@vercel/functions'
-import { drizzleDb } from '@/lib/db'
-import { orders, orderItems, products } from '@/lib/schema'
-import { eq, desc, inArray } from 'drizzle-orm'
+import { db } from '@/lib/db'
 import { getRedisClient, invalidateCache } from '@/lib/redis'
 import { formatStructuredAddress } from '@/lib/address-utils'
 import { generateOrderId } from '@/lib/short-id'
@@ -183,12 +181,7 @@ const mapOrderRowToSummary = (row: OrderWithItemsRow): OrderSummary => ({
 })
 
 const fetchOrdersFromDb = async (userId: string): Promise<OrderSummary[]> => {
-  const rows = await drizzleDb.query.orders.findMany({
-    where: eq(orders.userId, userId),
-    orderBy: [desc(orders.createdAt)],
-    with: { items: true },
-  })
-
+  const rows = await db.orders.findManyByUserId(userId)
   return rows.map(mapOrderRowToSummary)
 }
 
@@ -199,12 +192,7 @@ const fetchOrdersByIdsFromDb = async (
     return []
   }
 
-  const rows = await drizzleDb.query.orders.findMany({
-    where: (orderTable, { inArray: inArrayOperator }) =>
-      inArrayOperator(orderTable.id, orderIds),
-    with: { items: true },
-  })
-
+  const rows = await db.orders.findManyByIds(orderIds)
   return rows.map(mapOrderRowToSummary)
 }
 
@@ -327,28 +315,20 @@ const insertOrderRecords = async (
 ) => {
   const address = resolveOrderAddress(input)
 
-  await drizzleDb.transaction(async (tx) => {
-    await tx.insert(orders).values({
-      id: orderId,
-      userId,
-      customerName: input.customerName,
-      customerEmail: input.customerEmail,
-      ...address,
-      totalAmount: total,
-      status: 'PENDING',
-      updatedAt: new Date(),
-    })
-
-    await tx.insert(orderItems).values(
-      input.items.map((item) => ({
-        orderId,
-        productId: item.productId,
-        variantId: item.variantId,
-        quantity: item.quantity,
-        price: item.price,
-        customizationNote: item.customizationNote ?? null,
-      }))
-    )
+  await db.orders.insertWithItems({
+    orderId,
+    userId,
+    customerName: input.customerName,
+    customerEmail: input.customerEmail,
+    ...address,
+    totalAmount: total,
+    items: input.items.map((item) => ({
+      productId: item.productId,
+      variantId: item.variantId,
+      quantity: item.quantity,
+      price: item.price,
+      customizationNote: item.customizationNote ?? null,
+    })),
   })
 }
 
@@ -356,10 +336,7 @@ const buildProductNamesString = async (
   items: CreateOrderActionInput['items']
 ): Promise<string> => {
   const productIds = [...new Set(items.map((item) => item.productId))]
-  const productRows = await drizzleDb.query.products.findMany({
-    where: inArray(products.id, productIds),
-    columns: { id: true, name: true },
-  })
+  const productRows = await db.products.findNamesByIds(productIds)
 
   const productNameMap = new Map(
     productRows.map((product) => [product.id, product.name])
@@ -400,13 +377,15 @@ const buildOrderSummary = ({
 const invalidateOrderCaches = (
   userId: string,
   items: CreateOrderActionInput['items']
-) =>
-  Promise.all([
-    invalidateCache('products:*'),
+) => {
+  const productIds = [...new Set(items.map((item) => item.productId))]
+
+  return Promise.all([
     invalidateCache('admin:orders:*'),
     invalidateUserOrderCaches(userId),
-    ...items.map((item) => invalidateCache(`product:${item.productId}`)),
+    ...productIds.map((productId) => invalidateCache(`product:${productId}`)),
   ])
+}
 
 export const createOrder = async (
   userId: string,
@@ -471,13 +450,9 @@ export const updateOrderStatus = async (
   const status = parseResult.data
 
   try {
-    const updated = await drizzleDb
-      .update(orders)
-      .set({ status, updatedAt: new Date() })
-      .where(eq(orders.id, orderId))
-      .returning({ id: orders.id })
+    const updated = await db.orders.updateStatus(orderId, status)
 
-    if (updated.length === 0) {
+    if (!updated) {
       return { success: false, error: 'Order not found' }
     }
   } catch (error) {

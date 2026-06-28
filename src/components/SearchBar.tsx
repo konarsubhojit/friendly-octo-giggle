@@ -1,6 +1,6 @@
 'use client'
 
-import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useEffect, useId, useMemo, useRef, useState } from 'react'
 import Link from '@/components/ui/LocaleLink'
 import { useSession } from 'next-auth/react'
 import { useDebounce } from '@/hooks/useDebounce'
@@ -10,6 +10,23 @@ type SuggestResponse = {
   products: Array<{ id: string; label: string; category: string }>
   categories: string[]
   popular: string[]
+}
+
+type SuggestionSectionKey = 'recent' | 'products' | 'categories' | 'popular'
+
+interface SuggestionOption {
+  readonly id: string
+  readonly label: string
+  readonly value: string
+  readonly section: SuggestionSectionKey
+  readonly index: number
+  readonly secondaryLabel?: string
+}
+
+interface SuggestionSection {
+  readonly key: SuggestionSectionKey
+  readonly title: string
+  readonly options: SuggestionOption[]
 }
 
 interface SearchBarProps {
@@ -56,11 +73,15 @@ export function SearchBar({
   categoryQuickLinks = [],
 }: SearchBarProps) {
   const { data: session } = useSession()
+  const listboxId = useId()
+  const statusId = useId()
   const [suggestions, setSuggestions] = useState<SuggestResponse | null>(null)
   const [open, setOpen] = useState(false)
   const [recent, setRecent] = useState<string[]>([])
   const [isLoading, setIsLoading] = useState(false)
+  const [activeIndex, setActiveIndex] = useState(-1)
   const containerRef = useRef<HTMLDivElement | null>(null)
+  const optionRefs = useRef<Array<HTMLElement | null>>([])
   const debouncedValue = useDebounce(value.trim(), 160)
 
   const storageKey = useMemo(
@@ -151,12 +172,97 @@ export function SearchBar({
     const onOutsideClick = (event: MouseEvent) => {
       if (!containerRef.current?.contains(event.target as Node)) {
         setOpen(false)
+        setActiveIndex(-1)
       }
     }
 
     document.addEventListener('mousedown', onOutsideClick)
     return () => document.removeEventListener('mousedown', onOutsideClick)
   }, [])
+
+  const suggestionSections = useMemo(() => {
+    const sections: SuggestionSection[] = []
+    let nextIndex = 0
+
+    const appendSection = (
+      key: SuggestionSectionKey,
+      title: string,
+      items: Array<{
+        readonly label: string
+        readonly value: string
+        readonly secondaryLabel?: string
+      }>
+    ) => {
+      if (!items.length) {
+        return
+      }
+
+      sections.push({
+        key,
+        title,
+        options: items.map((item, index) => ({
+          id: `${listboxId}-${key}-${index}`,
+          label: item.label,
+          value: item.value,
+          section: key,
+          secondaryLabel: item.secondaryLabel,
+          index: nextIndex++,
+        })),
+      })
+    }
+
+    appendSection(
+      'recent',
+      'Recent searches',
+      recent.map((entry) => ({ label: entry, value: entry }))
+    )
+    appendSection(
+      'products',
+      'Products',
+      (suggestions?.products ?? []).map((product) => ({
+        label: product.label,
+        value: product.label,
+        secondaryLabel: product.category,
+      }))
+    )
+    appendSection(
+      'categories',
+      'Categories',
+      (suggestions?.categories ?? []).map((category) => ({
+        label: category,
+        value: category,
+      }))
+    )
+    appendSection(
+      'popular',
+      'Popular searches',
+      (suggestions?.popular ?? []).map((term) => ({
+        label: term,
+        value: term,
+      }))
+    )
+
+    return sections
+  }, [listboxId, recent, suggestions])
+
+  const flatOptions = useMemo(
+    () => suggestionSections.flatMap((section) => section.options),
+    [suggestionSections]
+  )
+  const resolvedActiveIndex =
+    open && activeIndex >= 0 && activeIndex < flatOptions.length
+      ? activeIndex
+      : -1
+
+  useEffect(() => {
+    if (resolvedActiveIndex < 0) {
+      return
+    }
+
+    optionRefs.current[resolvedActiveIndex]?.scrollIntoView({
+      block: 'nearest',
+    })
+  }, [resolvedActiveIndex])
 
   const persistRecent = (query: string) => {
     const normalized = query.trim()
@@ -177,32 +283,113 @@ export function SearchBar({
     persistRecent(query)
     onSubmit()
     setOpen(false)
+    setActiveIndex(-1)
   }
+
+  const activeOption =
+    resolvedActiveIndex >= 0 ? flatOptions[resolvedActiveIndex] : undefined
+  const resultsDescription = isLoading
+    ? 'Searching suggestions.'
+    : flatOptions.length
+      ? `${flatOptions.length} suggestion${flatOptions.length === 1 ? '' : 's'} available.`
+      : value.trim()
+        ? 'No suggestions available.'
+        : recent.length
+          ? `${recent.length} recent ${recent.length === 1 ? 'search is' : 'searches are'} available.`
+          : 'No suggestions available.'
 
   return (
     <div ref={containerRef} className="relative w-full">
       <input
-        type="search"
+        type="text"
+        role="combobox"
         name="q"
         autoComplete="off"
         value={value}
-        onChange={(event) => onChange(event.target.value)}
-        onFocus={() => setOpen(true)}
+        onChange={(event) => {
+          setActiveIndex(-1)
+          onChange(event.target.value)
+        }}
+        onFocus={() => {
+          setOpen(true)
+          setActiveIndex(-1)
+        }}
         onKeyDown={(event) => {
+          if (event.key === 'ArrowDown') {
+            event.preventDefault()
+
+            if (!open) {
+              setOpen(true)
+            }
+
+            if (!flatOptions.length) {
+              return
+            }
+            setActiveIndex((current) =>
+              current < 0 || current >= flatOptions.length - 1 ? 0 : current + 1
+            )
+            return
+          }
+
+          if (event.key === 'ArrowUp') {
+            event.preventDefault()
+
+            if (!open) {
+              setOpen(true)
+            }
+
+            if (!flatOptions.length) {
+              return
+            }
+            setActiveIndex((current) =>
+              current <= 0 || current >= flatOptions.length
+                ? flatOptions.length - 1
+                : current - 1
+            )
+            return
+          }
+
+          if (event.key === 'Home' && flatOptions.length) {
+            event.preventDefault()
+            setActiveIndex(0)
+            return
+          }
+
+          if (event.key === 'End' && flatOptions.length) {
+            event.preventDefault()
+            setActiveIndex(flatOptions.length - 1)
+            return
+          }
+
           if (event.key === 'Escape') {
             setOpen(false)
+            setActiveIndex(-1)
             return
           }
 
           if (event.key === 'Enter') {
+            if (activeOption) {
+              event.preventDefault()
+              applySuggestion(activeOption.value)
+              return
+            }
+
             persistRecent(value)
             onSubmit()
             setOpen(false)
+            setActiveIndex(-1)
           }
         }}
         placeholder="Search products..."
         className="glass-card w-full rounded-full border border-[var(--border-warm)] py-3 pl-11 pr-4 text-[var(--foreground)] shadow-warm transition-all duration-200 placeholder-[var(--text-muted)] focus:border-[var(--accent-rose)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-rose)]/30"
         aria-label="Search products"
+        aria-autocomplete="list"
+        aria-expanded={open}
+        aria-controls={!isLoading && flatOptions.length ? listboxId : undefined}
+        aria-activedescendant={
+          !isLoading && activeOption ? activeOption.id : undefined
+        }
+        aria-describedby={open ? statusId : undefined}
       />
 
       <svg
@@ -222,93 +409,110 @@ export function SearchBar({
 
       {open && (
         <div className="absolute z-20 mt-2 w-full overflow-hidden rounded-2xl border border-[var(--border-warm)] bg-[var(--surface)] shadow-warm-lg">
+          <p id={statusId} role="status" aria-live="polite" className="sr-only">
+            {resultsDescription}
+          </p>
           {isLoading ? (
             <p className="px-4 py-3 text-sm text-[var(--text-muted)]">
               Searching…
             </p>
           ) : (
             <>
-              {!!recent.length && (
-                <div className="border-b border-[var(--border-warm)] px-4 py-3">
-                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-                    Recent searches
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {recent.map((entry) => (
-                      <button
-                        key={entry}
-                        type="button"
-                        onClick={() => applySuggestion(entry)}
-                        className="rounded-full border border-[var(--border-warm)] px-2.5 py-1 text-xs font-medium text-[var(--foreground)] hover:border-[var(--accent-rose)]"
-                      >
-                        {entry}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
+              {!!flatOptions.length && (
+                <div
+                  id={listboxId}
+                  role="listbox"
+                  aria-label="Search suggestions"
+                  className="max-h-96 overflow-y-auto"
+                >
+                  {suggestionSections.map((section, sectionIndex) => {
+                    const labelId = `${listboxId}-${section.key}-label`
+                    const isLastSection =
+                      sectionIndex === suggestionSections.length - 1
 
-              {!!suggestions?.products.length && (
-                <div className="border-b border-[var(--border-warm)] px-4 py-3">
-                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-                    Products
-                  </p>
-                  <ul className="space-y-1">
-                    {suggestions.products.map((product) => (
-                      <li key={product.id}>
-                        <button
-                          type="button"
-                          onClick={() => applySuggestion(product.label)}
-                          className="w-full rounded-lg px-2 py-1.5 text-left text-sm text-[var(--foreground)] hover:bg-[var(--surface-elevated)]"
+                    return (
+                      <div
+                        key={section.key}
+                        role="group"
+                        aria-labelledby={labelId}
+                        className={
+                          !isLastSection
+                            ? 'border-b border-[var(--border-warm)] px-4 py-3'
+                            : 'px-4 py-3'
+                        }
+                      >
+                        <p
+                          id={labelId}
+                          className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]"
                         >
-                          {markMatches(product.label, value)}
-                          <span className="ml-2 text-xs text-[var(--text-muted)]">
-                            {product.category}
-                          </span>
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+                          {section.title}
+                        </p>
+                        <ul
+                          className={
+                            section.key === 'products'
+                              ? 'space-y-1'
+                              : 'flex flex-wrap gap-2'
+                          }
+                        >
+                          {section.options.map((option) => {
+                            const isActive =
+                              option.index === resolvedActiveIndex
 
-              {!!suggestions?.categories.length && (
-                <div className="border-b border-[var(--border-warm)] px-4 py-3">
-                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-                    Categories
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {suggestions.categories.map((category) => (
-                      <button
-                        key={category}
-                        type="button"
-                        onClick={() => applySuggestion(category)}
-                        className="rounded-full border border-[var(--border-warm)] px-2.5 py-1 text-xs font-medium text-[var(--foreground)] hover:border-[var(--accent-rose)]"
-                      >
-                        {markMatches(category, value)}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {!!suggestions?.popular.length && (
-                <div className="px-4 py-3">
-                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-                    Popular searches
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {suggestions.popular.map((term) => (
-                      <button
-                        key={term}
-                        type="button"
-                        onClick={() => applySuggestion(term)}
-                        className="rounded-full bg-[var(--surface-elevated)] px-2.5 py-1 text-xs font-medium text-[var(--foreground)] hover:bg-[var(--accent-blush)]"
-                      >
-                        {term}
-                      </button>
-                    ))}
-                  </div>
+                            return (
+                              <li
+                                key={option.id}
+                                id={option.id}
+                                role="option"
+                                aria-selected={isActive}
+                                ref={(element) => {
+                                  optionRefs.current[option.index] = element
+                                }}
+                                onMouseDown={(event) => event.preventDefault()}
+                                onMouseEnter={() =>
+                                  setActiveIndex(option.index)
+                                }
+                                onClick={() => applySuggestion(option.value)}
+                                className={
+                                  section.key === 'products'
+                                    ? `w-full cursor-pointer rounded-lg px-2 py-1.5 text-left text-sm text-[var(--foreground)] transition-colors ${
+                                        isActive
+                                          ? 'bg-[var(--surface-elevated)] ring-1 ring-[var(--accent-rose)]/25'
+                                          : 'hover:bg-[var(--surface-elevated)]'
+                                      }`
+                                    : section.key === 'popular'
+                                      ? `cursor-pointer rounded-full px-2.5 py-1 text-xs font-medium text-[var(--foreground)] transition-colors ${
+                                          isActive
+                                            ? 'bg-[var(--accent-blush)] ring-1 ring-[var(--accent-rose)]/25'
+                                            : 'bg-[var(--surface-elevated)] hover:bg-[var(--accent-blush)]'
+                                        }`
+                                      : `cursor-pointer rounded-full border px-2.5 py-1 text-xs font-medium text-[var(--foreground)] transition-colors ${
+                                          isActive
+                                            ? 'border-[var(--accent-rose)] bg-[var(--surface-elevated)] ring-1 ring-[var(--accent-rose)]/25'
+                                            : 'border-[var(--border-warm)] hover:border-[var(--accent-rose)]'
+                                        }`
+                                }
+                              >
+                                {section.key === 'products' ? (
+                                  <>
+                                    {markMatches(option.label, value)}
+                                    {option.secondaryLabel && (
+                                      <span className="ml-2 text-xs text-[var(--text-muted)]">
+                                        {option.secondaryLabel}
+                                      </span>
+                                    )}
+                                  </>
+                                ) : section.key === 'popular' ? (
+                                  option.label
+                                ) : (
+                                  markMatches(option.label, value)
+                                )}
+                              </li>
+                            )
+                          })}
+                        </ul>
+                      </div>
+                    )
+                  })}
                 </div>
               )}
 

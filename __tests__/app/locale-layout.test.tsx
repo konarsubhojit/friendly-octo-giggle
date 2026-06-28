@@ -82,6 +82,29 @@ describe('app/[locale]/layout.tsx', () => {
     expect(getByTestId('child')).toBeTruthy()
   })
 
+  it('renders the skip-to-content link targeting #main-content', async () => {
+    const { default: LocaleLayout } = await import('@/app/[locale]/layout')
+    const ui = await LocaleLayout({
+      children: <span data-testid="child">content</span>,
+      params: Promise.resolve({ locale: 'en' }),
+    })
+    const { container } = render(ui)
+    const skipLink = container.querySelector('a[href="#main-content"]')
+    expect(skipLink).toBeTruthy()
+    expect(skipLink?.textContent).toBe('Skip to main content')
+  })
+
+  it('renders the skip-to-content link in Spanish for the es locale', async () => {
+    const { default: LocaleLayout } = await import('@/app/[locale]/layout')
+    const ui = await LocaleLayout({
+      children: <span>content</span>,
+      params: Promise.resolve({ locale: 'es' }),
+    })
+    const { container } = render(ui)
+    const skipLink = container.querySelector('a[href="#main-content"]')
+    expect(skipLink?.textContent).toBe('Saltar al contenido principal')
+  })
+
   it('renders for the alternate supported locale without throwing', async () => {
     const { default: LocaleLayout } = await import('@/app/[locale]/layout')
     const ui = await LocaleLayout({

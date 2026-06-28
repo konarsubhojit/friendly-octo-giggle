@@ -1,11 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const {
-  mockDrizzleDbQuery,
-  mockPrimaryDrizzleDbQuery,
-  mockPrimaryDrizzleDbInsert,
-  mockPrimaryDrizzleDbUpdate,
-  mockPrimaryDrizzleDbDelete,
+  mockDbCartsFindByUserId,
+  mockDbCartsFindBySessionId,
+  mockDbCartsFindWithItemsByUserId,
+  mockDbCartsFindWithItemsBySessionId,
+  mockDbCartsFindVariantStock,
+  mockDbCartsPromoteToUser,
+  mockDbCartsUpdateItem,
+  mockDbCartsDeleteItem,
+  mockDbCartsInsertItem,
+  mockDbCartsUpdate,
+  mockDbCartsDelete,
   mockGetCachedData,
   mockFetchCartFromRedis,
   mockBackfillCartToRedis,
@@ -13,18 +19,17 @@ const {
   mockInvalidateCartCache,
   mockLogError,
 } = vi.hoisted(() => ({
-  mockDrizzleDbQuery: {
-    products: { findFirst: vi.fn() },
-    carts: { findFirst: vi.fn() },
-  },
-  mockPrimaryDrizzleDbQuery: {
-    carts: { findFirst: vi.fn() },
-    cartItems: { findFirst: vi.fn() },
-    users: { findFirst: vi.fn() },
-  },
-  mockPrimaryDrizzleDbInsert: vi.fn(),
-  mockPrimaryDrizzleDbUpdate: vi.fn(),
-  mockPrimaryDrizzleDbDelete: vi.fn(),
+  mockDbCartsFindByUserId: vi.fn(),
+  mockDbCartsFindBySessionId: vi.fn(),
+  mockDbCartsFindWithItemsByUserId: vi.fn(),
+  mockDbCartsFindWithItemsBySessionId: vi.fn(),
+  mockDbCartsFindVariantStock: vi.fn().mockResolvedValue([]),
+  mockDbCartsPromoteToUser: vi.fn().mockResolvedValue(undefined),
+  mockDbCartsUpdateItem: vi.fn().mockResolvedValue(undefined),
+  mockDbCartsDeleteItem: vi.fn().mockResolvedValue(undefined),
+  mockDbCartsInsertItem: vi.fn().mockResolvedValue(undefined),
+  mockDbCartsUpdate: vi.fn().mockResolvedValue(undefined),
+  mockDbCartsDelete: vi.fn().mockResolvedValue(undefined),
   mockGetCachedData: vi.fn(),
   mockFetchCartFromRedis: vi.fn(),
   mockBackfillCartToRedis: vi.fn(),
@@ -34,12 +39,20 @@ const {
 }))
 
 vi.mock('@/lib/db', () => ({
-  drizzleDb: { query: mockDrizzleDbQuery },
-  primaryDrizzleDb: {
-    query: mockPrimaryDrizzleDbQuery,
-    insert: mockPrimaryDrizzleDbInsert,
-    update: mockPrimaryDrizzleDbUpdate,
-    delete: mockPrimaryDrizzleDbDelete,
+  db: {
+    carts: {
+      findByUserId: mockDbCartsFindByUserId,
+      findBySessionId: mockDbCartsFindBySessionId,
+      findWithItemsByUserId: mockDbCartsFindWithItemsByUserId,
+      findWithItemsBySessionId: mockDbCartsFindWithItemsBySessionId,
+      findVariantStock: mockDbCartsFindVariantStock,
+      promoteToUser: mockDbCartsPromoteToUser,
+      updateItem: mockDbCartsUpdateItem,
+      deleteItem: mockDbCartsDeleteItem,
+      insertItem: mockDbCartsInsertItem,
+      update: mockDbCartsUpdate,
+      delete: mockDbCartsDelete,
+    },
   },
 }))
 
@@ -64,31 +77,6 @@ vi.mock('@/features/cart/services/cart-redis', () => ({
 
 vi.mock('@/lib/logger', () => ({
   logError: mockLogError,
-}))
-
-vi.mock('@/lib/schema', () => ({
-  products: {
-    id: 'id',
-    deletedAt: 'deletedAt',
-  },
-  carts: {
-    id: 'id',
-    userId: 'userId',
-    sessionId: 'sessionId',
-  },
-  cartItems: {
-    id: 'id',
-    cartId: 'cartId',
-    productId: 'productId',
-    variantId: 'variantId',
-  },
-  users: { id: 'id' },
-}))
-
-vi.mock('drizzle-orm', () => ({
-  eq: vi.fn((...args: unknown[]) => args),
-  and: vi.fn((...args: unknown[]) => args),
-  isNull: vi.fn(),
 }))
 
 import {
@@ -323,26 +311,112 @@ describe('cart-service', () => {
       expect(result.cart).not.toBeNull()
       expect(result.cart!.items[0].variant).not.toBeNull()
     })
+
+    it('user and guest DB-fetched carts produce identical serialized shapes', async () => {
+      const dbCart = {
+        id: 'cart1',
+        createdAt: new Date('2024-01-01'),
+        updatedAt: new Date('2024-01-01'),
+        items: [
+          {
+            id: 'item1',
+            variantId: 'var1',
+            quantity: 2,
+            createdAt: new Date('2024-01-01'),
+            updatedAt: new Date('2024-01-01'),
+            product: {
+              id: 'prod1',
+              name: 'Widget',
+              description: 'A widget',
+              image: 'img.jpg',
+              category: 'Cat',
+              createdAt: new Date('2024-01-01'),
+              updatedAt: new Date('2024-01-01'),
+              options: [
+                {
+                  id: 'opt1',
+                  name: 'Size',
+                  sortOrder: 0,
+                  createdAt: new Date('2024-01-01'),
+                  values: [
+                    {
+                      id: 'val1',
+                      optionId: 'opt1',
+                      value: 'Large',
+                      sortOrder: 0,
+                      createdAt: new Date('2024-01-01'),
+                    },
+                  ],
+                },
+              ],
+              variants: [
+                {
+                  id: 'var1',
+                  sku: 'SKU-1',
+                  price: 100,
+                  stock: 10,
+                  image: null,
+                  images: [],
+                  createdAt: new Date('2024-01-01'),
+                  updatedAt: new Date('2024-01-01'),
+                },
+              ],
+            },
+            variant: {
+              id: 'var1',
+              sku: 'SKU-1',
+              price: 100,
+              stock: 10,
+              image: null,
+              images: [],
+              createdAt: new Date('2024-01-01'),
+              updatedAt: new Date('2024-01-01'),
+              optionValues: [
+                {
+                  optionValue: {
+                    id: 'val1',
+                    optionId: 'opt1',
+                    value: 'Large',
+                    sortOrder: 0,
+                    createdAt: new Date('2024-01-01'),
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      }
+
+      // User cart: getCachedData returns the cart for userId
+      mockFetchCartFromRedis.mockResolvedValue(null)
+      mockGetCachedData.mockResolvedValueOnce(dbCart)
+      const userResult = await getCart({ userId: 'user1' })
+
+      // Guest cart: getCachedData returns the same cart for sessionId
+      mockFetchCartFromRedis.mockResolvedValue(null)
+      mockGetCachedData.mockResolvedValueOnce(dbCart)
+      const guestResult = await getCart({ sessionId: 'sess1' })
+
+      // Both carts should be non-null and have identical serialized shapes
+      expect(userResult.cart).not.toBeNull()
+      expect(guestResult.cart).not.toBeNull()
+      expect(userResult.cart).toEqual(guestResult.cart)
+    })
   })
 
   describe('clearCart', () => {
     it('does nothing when no identity provided', async () => {
       await clearCart({})
 
-      expect(mockDrizzleDbQuery.carts.findFirst).not.toHaveBeenCalled()
+      expect(mockDbCartsFindByUserId).not.toHaveBeenCalled()
     })
 
     it('deletes cart and clears cache for userId', async () => {
-      mockDrizzleDbQuery.carts.findFirst.mockResolvedValue({
-        id: 'cart1',
-      })
-      mockPrimaryDrizzleDbDelete.mockReturnValue({
-        where: vi.fn().mockResolvedValue([]),
-      })
+      mockDbCartsFindByUserId.mockResolvedValue({ id: 'cart1' })
 
       await clearCart({ userId: 'user1' })
 
-      expect(mockPrimaryDrizzleDbDelete).toHaveBeenCalled()
+      expect(mockDbCartsDelete).toHaveBeenCalledWith('cart1')
       expect(mockInvalidateCartCache).toHaveBeenCalledWith('user1', undefined)
       expect(mockRemoveCartItemsByCartId).toHaveBeenCalledWith(
         'cart1',
@@ -352,25 +426,20 @@ describe('cart-service', () => {
     })
 
     it('only invalidates cache when no cart found', async () => {
-      mockDrizzleDbQuery.carts.findFirst.mockResolvedValue(undefined)
+      mockDbCartsFindByUserId.mockResolvedValue(undefined)
 
       await clearCart({ userId: 'user1' })
 
-      expect(mockPrimaryDrizzleDbDelete).not.toHaveBeenCalled()
+      expect(mockDbCartsDelete).not.toHaveBeenCalled()
       expect(mockInvalidateCartCache).toHaveBeenCalledWith('user1', undefined)
     })
 
     it('clears cart for sessionId', async () => {
-      mockDrizzleDbQuery.carts.findFirst.mockResolvedValue({
-        id: 'cart2',
-      })
-      mockPrimaryDrizzleDbDelete.mockReturnValue({
-        where: vi.fn().mockResolvedValue([]),
-      })
+      mockDbCartsFindBySessionId.mockResolvedValue({ id: 'cart2' })
 
       await clearCart({ sessionId: 'sess1' })
 
-      expect(mockPrimaryDrizzleDbDelete).toHaveBeenCalled()
+      expect(mockDbCartsDelete).toHaveBeenCalledWith('cart2')
       expect(mockRemoveCartItemsByCartId).toHaveBeenCalledWith(
         'cart2',
         undefined,
@@ -380,16 +449,34 @@ describe('cart-service', () => {
   })
 
   describe('mergeGuestCartIntoUserCart', () => {
-    it('reassigns a guest cart to the authenticated user and returns a rotated session id', async () => {
-      mockPrimaryDrizzleDbQuery.carts.findFirst
-        .mockResolvedValueOnce({
-          id: 'guest-cart',
-          items: [],
-        })
-        .mockResolvedValueOnce(null)
-      mockPrimaryDrizzleDbUpdate.mockReturnValue({
-        set: vi.fn(() => ({ where: vi.fn().mockResolvedValue([]) })),
+    it('caps merged quantities to variant stock when both carts contain the same line item', async () => {
+      mockDbCartsFindWithItemsBySessionId.mockResolvedValue({
+        id: 'guest-cart',
+        items: [
+          {
+            id: 'guest-item-1',
+            cartId: 'guest-cart',
+            productId: 'prod1',
+            variantId: 'var1',
+            quantity: 5,
+          },
+        ],
       })
+      mockDbCartsFindWithItemsByUserId.mockResolvedValue({
+        id: 'user-cart',
+        items: [
+          {
+            id: 'user-item-1',
+            cartId: 'user-cart',
+            productId: 'prod1',
+            variantId: 'var1',
+            quantity: 2,
+          },
+        ],
+      })
+      mockDbCartsFindVariantStock.mockResolvedValue([
+        { id: 'var1', stock: 4, deletedAt: null },
+      ])
 
       const rotatedSessionId = await mergeGuestCartIntoUserCart(
         'user1',
@@ -397,7 +484,78 @@ describe('cart-service', () => {
       )
 
       expect(rotatedSessionId).toMatch(/^guest_[0-9a-f-]+$/)
-      expect(mockPrimaryDrizzleDbUpdate).toHaveBeenCalled()
+      expect(mockDbCartsUpdateItem).toHaveBeenCalledWith('user-item-1', 4)
+      expect(mockDbCartsDelete).toHaveBeenCalledWith('guest-cart')
+    })
+
+    it('drops out-of-stock guest items while promoting guest cart to user cart', async () => {
+      mockDbCartsFindWithItemsBySessionId.mockResolvedValue({
+        id: 'guest-cart',
+        items: [
+          {
+            id: 'guest-item-1',
+            cartId: 'guest-cart',
+            productId: 'prod1',
+            variantId: 'var1',
+            quantity: 2,
+          },
+        ],
+      })
+      mockDbCartsFindWithItemsByUserId.mockResolvedValue(null)
+      mockDbCartsFindVariantStock.mockResolvedValue([
+        { id: 'var1', stock: 0, deletedAt: null },
+      ])
+      mockDbCartsPromoteToUser.mockResolvedValue(undefined)
+
+      const rotatedSessionId = await mergeGuestCartIntoUserCart(
+        'user1',
+        'sess1'
+      )
+
+      expect(rotatedSessionId).toMatch(/^guest_[0-9a-f-]+$/)
+      expect(mockDbCartsDeleteItem).toHaveBeenCalledWith('guest-item-1')
+      expect(mockDbCartsPromoteToUser).toHaveBeenCalled()
+    })
+
+    it('drops soft-deleted variant rows while promoting guest cart to user cart', async () => {
+      mockDbCartsFindWithItemsBySessionId.mockResolvedValue({
+        id: 'guest-cart',
+        items: [
+          {
+            id: 'guest-item-2',
+            cartId: 'guest-cart',
+            productId: 'prod2',
+            variantId: 'var2',
+            quantity: 1,
+          },
+        ],
+      })
+      mockDbCartsFindWithItemsByUserId.mockResolvedValue(null)
+      mockDbCartsFindVariantStock.mockResolvedValue([
+        { id: 'var2', stock: 10, deletedAt: new Date('2024-01-01') },
+      ])
+      mockDbCartsPromoteToUser.mockResolvedValue(undefined)
+
+      await mergeGuestCartIntoUserCart('user1', 'sess1')
+
+      expect(mockDbCartsDeleteItem).toHaveBeenCalledWith('guest-item-2')
+    })
+
+    it('reassigns a guest cart to the authenticated user and returns a rotated session id', async () => {
+      mockDbCartsFindWithItemsBySessionId.mockResolvedValue({
+        id: 'guest-cart',
+        items: [],
+      })
+      mockDbCartsFindWithItemsByUserId.mockResolvedValue(null)
+      mockDbCartsPromoteToUser.mockResolvedValue(undefined)
+
+      const rotatedSessionId = await mergeGuestCartIntoUserCart(
+        'user1',
+        'sess1'
+      )
+
+      expect(rotatedSessionId).toMatch(/^guest_[0-9a-f-]+$/)
+      expect(mockDbCartsPromoteToUser).toHaveBeenCalled()
       expect(mockInvalidateCartCache).toHaveBeenCalledWith('user1')
       expect(mockInvalidateCartCache).toHaveBeenCalledWith(undefined, 'sess1')
       expect(mockRemoveCartItemsByCartId).toHaveBeenCalledWith(
@@ -408,15 +566,12 @@ describe('cart-service', () => {
     })
 
     it('logs and continues when cache cleanup fails after the merge', async () => {
-      mockPrimaryDrizzleDbQuery.carts.findFirst
-        .mockResolvedValueOnce({
-          id: 'guest-cart',
-          items: [],
-        })
-        .mockResolvedValueOnce(null)
-      mockPrimaryDrizzleDbUpdate.mockReturnValue({
-        set: vi.fn(() => ({ where: vi.fn().mockResolvedValue([]) })),
+      mockDbCartsFindWithItemsBySessionId.mockResolvedValue({
+        id: 'guest-cart',
+        items: [],
       })
+      mockDbCartsFindWithItemsByUserId.mockResolvedValue(null)
+      mockDbCartsPromoteToUser.mockResolvedValue(undefined)
       mockInvalidateCartCache.mockRejectedValueOnce(new Error('cache failed'))
 
       const rotatedSessionId = await mergeGuestCartIntoUserCart(

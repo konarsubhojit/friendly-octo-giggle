@@ -6,6 +6,7 @@ import ProductClient from './ProductClient'
 import { db } from '@/lib/db'
 import { isAiEnabled } from '@/lib/edge-config'
 import { logError } from '@/lib/logger'
+import { withStoreName } from '@/lib/constants/store'
 
 export const revalidate = 60
 
@@ -32,7 +33,7 @@ export const generateMetadata = async ({
   const product = await getProduct(id)
   if (!product) return { title: 'Product Not Found' }
   return {
-    title: `${product.name} | The Kiyon Store`,
+    title: withStoreName(product.name),
     description: product.description?.slice(0, 160),
   }
 }

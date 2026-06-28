@@ -6,15 +6,13 @@
 // for simpler order reads and search operations.
 
 import { waitUntil } from '@vercel/functions'
-import { desc, eq } from 'drizzle-orm'
-import { drizzleDb, primaryDrizzleDb } from '@/lib/db'
+import { db } from '@/lib/db'
 import {
   createOrderForUser,
   isOrderRequestError,
 } from '@/features/orders/services/order-service'
 import { send } from '@/lib/queue'
 import { logBusinessEvent, logError, logPerformance } from '@/lib/logger'
-import { checkoutRequests, orders } from '@/lib/schema'
 import { formatStructuredAddress } from '@/lib/address-utils'
 import type {
   CheckoutEnqueueResponse,
@@ -27,6 +25,10 @@ import {
   type SubmitCheckoutInput,
 } from '@/features/cart/validations'
 import { assertOwnership } from '@/lib/ownership'
+import {
+  ensurePaymentProviderConfigured,
+  PaymentConfigurationError,
+} from '@/lib/payments'
 
 export const CHECKOUT_QUEUE_TOPIC = 'checkout-orders'
 
@@ -98,6 +100,7 @@ const getNormalizedCheckoutInput = (
     city: typeof rawBody.city === 'string' ? rawBody.city : '',
     state: typeof rawBody.state === 'string' ? rawBody.state : '',
     items: rawBody.items,
+    payment: rawBody.payment,
   })
 
   if (!parseResult.success) {
@@ -136,56 +139,24 @@ const updateCheckoutRequestStatus = async (
   status: CheckoutRequestStatus,
   errorMessage: string | null
 ) => {
-  await primaryDrizzleDb
-    .update(checkoutRequests)
-    .set({
-      status,
-      errorMessage,
-      updatedAt: new Date(),
-    })
-    .where(eq(checkoutRequests.id, checkoutRequestId))
+  await db.checkoutRequests.updateStatus(
+    checkoutRequestId,
+    status,
+    errorMessage
+  )
 }
 
-const findCheckoutRequestById = async (checkoutRequestId: string) => {
-  const [checkoutRequest] = await drizzleDb
-    .select()
-    .from(checkoutRequests)
-    .where(eq(checkoutRequests.id, checkoutRequestId))
-    .limit(1)
+const findCheckoutRequestById = (checkoutRequestId: string) =>
+  db.checkoutRequests.findById(checkoutRequestId)
 
-  return checkoutRequest ?? null
-}
-
-const findCreatedOrderForCheckout = async (checkoutRequestId: string) =>
-  drizzleDb
-    .select({ id: orders.id })
-    .from(orders)
-    .where(eq(orders.checkoutRequestId, checkoutRequestId))
-    .limit(1)
-    .then(([order]) => order ?? null)
+const findCreatedOrderForCheckout = (checkoutRequestId: string) =>
+  db.orders.findFirstByCheckoutRequestId(checkoutRequestId)
 
 export const getRecentCheckoutRequests = async (
   filters: RecentCheckoutRequestFilters = {}
 ): Promise<AdminCheckoutRequestRecord[]> => {
   const { limit = 50, search, status } = filters
-  const rows = await drizzleDb
-    .select({
-      id: checkoutRequests.id,
-      userId: checkoutRequests.userId,
-      customerName: checkoutRequests.customerName,
-      customerEmail: checkoutRequests.customerEmail,
-      customerAddress: checkoutRequests.customerAddress,
-      items: checkoutRequests.items,
-      status: checkoutRequests.status,
-      errorMessage: checkoutRequests.errorMessage,
-      orderId: orders.id,
-      createdAt: checkoutRequests.createdAt,
-      updatedAt: checkoutRequests.updatedAt,
-    })
-    .from(checkoutRequests)
-    .leftJoin(orders, eq(orders.checkoutRequestId, checkoutRequests.id))
-    .orderBy(desc(checkoutRequests.createdAt))
-    .limit(Math.max(limit * 4, 50))
+  const rows = await db.checkoutRequests.findRecentWithOrders({ limit })
 
   const normalizedSearch = search?.trim().toLowerCase() ?? ''
 
@@ -267,33 +238,41 @@ export const enqueueCheckoutForUser = async ({
   user: CheckoutSessionUser
 }): Promise<CheckoutEnqueueResponse> => {
   const normalized = getNormalizedCheckoutInput(body, user)
+  try {
+    ensurePaymentProviderConfigured(normalized.payment.provider)
+  } catch (error) {
+    if (error instanceof PaymentConfigurationError) {
+      throw new CheckoutRequestError(error.message, error.status)
+    }
+    throw error
+  }
 
-  const [checkoutRequest] = await primaryDrizzleDb
-    .insert(checkoutRequests)
-    .values({
-      userId: user.id,
-      customerName: normalized.customerName,
-      customerEmail: normalized.customerEmail,
-      customerAddress: formatStructuredAddress({
-        customerAddress: '',
-        addressLine1: normalized.addressLine1,
-        addressLine2: normalized.addressLine2,
-        addressLine3: normalized.addressLine3,
-        pinCode: normalized.pinCode,
-        city: normalized.city,
-        state: normalized.state,
-      }),
+  const checkoutRequest = await db.checkoutRequests.create({
+    userId: user.id,
+    customerName: normalized.customerName,
+    customerEmail: normalized.customerEmail,
+    customerAddress: formatStructuredAddress({
+      customerAddress: '',
       addressLine1: normalized.addressLine1,
-      addressLine2: normalized.addressLine2 || null,
-      addressLine3: normalized.addressLine3 || null,
+      addressLine2: normalized.addressLine2,
+      addressLine3: normalized.addressLine3,
       pinCode: normalized.pinCode,
       city: normalized.city,
       state: normalized.state,
-      items: normalized.items,
-      status: 'PENDING',
-      updatedAt: new Date(),
-    })
-    .returning({ id: checkoutRequests.id, status: checkoutRequests.status })
+    }),
+    addressLine1: normalized.addressLine1,
+    addressLine2: normalized.addressLine2 || null,
+    addressLine3: normalized.addressLine3 || null,
+    pinCode: normalized.pinCode,
+    city: normalized.city,
+    state: normalized.state,
+    items: normalized.items,
+    paymentProvider: normalized.payment.provider,
+    paymentOrderId: normalized.payment.orderId,
+    paymentTransactionId: normalized.payment.paymentId,
+    paymentSignature: normalized.payment.signature,
+    status: 'PENDING',
+  })
 
   try {
     await send(
@@ -401,6 +380,20 @@ export const processCheckoutRequestById = async (
   await updateCheckoutRequestStatus(checkoutRequestId, 'PROCESSING', null)
 
   try {
+    if (
+      !checkoutRequest.paymentProvider ||
+      !checkoutRequest.paymentOrderId ||
+      !checkoutRequest.paymentTransactionId ||
+      !checkoutRequest.paymentSignature
+    ) {
+      await updateCheckoutRequestStatus(
+        checkoutRequestId,
+        'FAILED',
+        'Missing payment details on checkout request'
+      )
+      return
+    }
+
     const result = await createOrderForUser({
       body: {
         customerName: checkoutRequest.customerName,
@@ -418,6 +411,12 @@ export const processCheckoutRequestById = async (
           quantity: item.quantity,
           customizationNote: item.customizationNote ?? undefined,
         })),
+        payment: {
+          provider: checkoutRequest.paymentProvider!,
+          orderId: checkoutRequest.paymentOrderId!,
+          paymentId: checkoutRequest.paymentTransactionId!,
+          signature: checkoutRequest.paymentSignature!,
+        },
       },
       user: {
         id: checkoutRequest.userId,

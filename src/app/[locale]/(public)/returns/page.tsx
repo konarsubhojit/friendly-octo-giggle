@@ -5,11 +5,12 @@ import {
   SUPPORT_EMAIL,
   type CheckoutPolicySection,
 } from '@/lib/constants/checkout-policies'
+import { withStoreName } from '@/lib/constants/store'
 
 export const revalidate = 3600
 
 export const metadata = {
-  title: 'Returns & Refunds | The Kiyon Store',
+  title: withStoreName('Returns & Refunds'),
   description:
     'Learn about our damaged-item replacement process and order policy.',
 }

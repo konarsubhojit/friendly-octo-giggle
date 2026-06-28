@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import Image from 'next/image'
 
 const DISMISSED_KEY = 'kiyon-install-banner-dismissed'
 const DISMISSED_DURATION_MS = 30 * 24 * 60 * 60 * 1000 // 30 days
@@ -119,8 +120,7 @@ export function InstallBanner() {
     >
       <div className="m-2 md:m-0 rounded-2xl border border-[var(--border-warm)] bg-[var(--surface)]/95 backdrop-blur-lg shadow-warm p-4 flex items-start gap-3">
         {/* Store icon */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
+        <Image
           src="/icons/icon-192.png"
           alt="Kiyon Store"
           className="w-12 h-12 rounded-xl flex-shrink-0 object-cover"
