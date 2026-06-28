@@ -238,13 +238,15 @@ export const enqueueCheckoutForUser = async ({
   user: CheckoutSessionUser
 }): Promise<CheckoutEnqueueResponse> => {
   const normalized = getNormalizedCheckoutInput(body, user)
-  try {
-    ensurePaymentProviderConfigured(normalized.payment.provider)
-  } catch (error) {
-    if (error instanceof PaymentConfigurationError) {
-      throw new CheckoutRequestError(error.message, error.status)
+  if (normalized.payment) {
+    try {
+      ensurePaymentProviderConfigured(normalized.payment.provider)
+    } catch (error) {
+      if (error instanceof PaymentConfigurationError) {
+        throw new CheckoutRequestError(error.message, error.status)
+      }
+      throw error
     }
-    throw error
   }
 
   const checkoutRequest = await db.checkoutRequests.create({
@@ -267,10 +269,10 @@ export const enqueueCheckoutForUser = async ({
     city: normalized.city,
     state: normalized.state,
     items: normalized.items,
-    paymentProvider: normalized.payment.provider,
-    paymentOrderId: normalized.payment.orderId,
-    paymentTransactionId: normalized.payment.paymentId,
-    paymentSignature: normalized.payment.signature,
+    paymentProvider: normalized.payment?.provider ?? null,
+    paymentOrderId: normalized.payment?.orderId ?? null,
+    paymentTransactionId: normalized.payment?.paymentId ?? null,
+    paymentSignature: normalized.payment?.signature ?? null,
     status: 'PENDING',
   })
 
@@ -380,20 +382,6 @@ export const processCheckoutRequestById = async (
   await updateCheckoutRequestStatus(checkoutRequestId, 'PROCESSING', null)
 
   try {
-    if (
-      !checkoutRequest.paymentProvider ||
-      !checkoutRequest.paymentOrderId ||
-      !checkoutRequest.paymentTransactionId ||
-      !checkoutRequest.paymentSignature
-    ) {
-      await updateCheckoutRequestStatus(
-        checkoutRequestId,
-        'FAILED',
-        'Missing payment details on checkout request'
-      )
-      return
-    }
-
     const result = await createOrderForUser({
       body: {
         customerName: checkoutRequest.customerName,
@@ -411,12 +399,18 @@ export const processCheckoutRequestById = async (
           quantity: item.quantity,
           customizationNote: item.customizationNote ?? undefined,
         })),
-        payment: {
-          provider: checkoutRequest.paymentProvider!,
-          orderId: checkoutRequest.paymentOrderId!,
-          paymentId: checkoutRequest.paymentTransactionId!,
-          signature: checkoutRequest.paymentSignature!,
-        },
+        payment:
+          checkoutRequest.paymentProvider &&
+          checkoutRequest.paymentOrderId &&
+          checkoutRequest.paymentTransactionId &&
+          checkoutRequest.paymentSignature
+            ? {
+                provider: checkoutRequest.paymentProvider,
+                orderId: checkoutRequest.paymentOrderId,
+                paymentId: checkoutRequest.paymentTransactionId,
+                signature: checkoutRequest.paymentSignature,
+              }
+            : undefined,
       },
       user: {
         id: checkoutRequest.userId,

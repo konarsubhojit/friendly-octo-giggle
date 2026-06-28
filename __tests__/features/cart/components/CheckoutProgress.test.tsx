@@ -26,22 +26,22 @@ describe('CheckoutProgress', () => {
   })
 
   it('renders completed steps as locale-prefixed links', () => {
-    render(<CheckoutProgress currentStep="review" />)
+    render(<CheckoutProgress currentStep="payment" />)
 
     const cartLink = screen.getByRole('link', { name: 'Cart' })
     const shippingLink = screen.getByRole('link', { name: 'Shipping' })
-    const paymentLink = screen.getByRole('link', { name: 'Payment' })
+    const reviewLink = screen.getByRole('link', { name: 'Review' })
     expect(cartLink).toHaveAttribute('href', expect.stringContaining('/cart'))
     expect(shippingLink).toHaveAttribute(
       'href',
       expect.stringContaining('/checkout/shipping')
     )
-    expect(paymentLink).toHaveAttribute(
+    expect(reviewLink).toHaveAttribute(
       'href',
-      expect.stringContaining('/checkout/payment')
+      expect.stringContaining('/checkout/review')
     )
-    // Review is the current step — rendered as a span, not a link
-    expect(screen.queryByRole('link', { name: 'Review' })).toBeNull()
+    // Payment is the current step — rendered as a span, not a link
+    expect(screen.queryByRole('link', { name: 'Payment' })).toBeNull()
   })
 
   it('renders no links when the first step is current', () => {
