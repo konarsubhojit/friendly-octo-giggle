@@ -104,6 +104,7 @@ const ReviewRow = ({
               src={review.product.image}
               alt={review.product.name}
               fill
+              loading="lazy"
               sizes="56px"
               className="object-cover"
             />

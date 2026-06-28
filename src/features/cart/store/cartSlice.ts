@@ -1,4 +1,9 @@
-import { createSlice, createAsyncThunk, createSelector } from '@reduxjs/toolkit'
+import {
+  createSlice,
+  createAsyncThunk,
+  createSelector,
+  type PayloadAction,
+} from '@reduxjs/toolkit'
 import { Cart, AddToCartInput } from '@/lib/types'
 import { apiClient, ApiError } from '@/lib/api-client'
 import {
@@ -19,6 +24,7 @@ interface CartState {
   error: string | null
   stockWarning: string | null
   adjustedQuantity: number | null
+  hydrated: boolean
 }
 
 const CART_REFRESH_TTL_MS = 60_000
@@ -30,6 +36,7 @@ const initialState: CartState = {
   error: null,
   stockWarning: null,
   adjustedQuantity: null,
+  hydrated: false,
 }
 
 export const fetchCart = createAsyncThunk(
@@ -142,6 +149,16 @@ const cartSlice = createSlice({
       state.stockWarning = null
       state.adjustedQuantity = null
     },
+    // Seed the slice with the server-fetched cart so the cart page renders its
+    // content on first paint instead of fetching it client-side in a useEffect
+    // (avoids the empty-state flash; perf anti-pattern L5/NX4). A client-side
+    // reconciliation fetch (merging any guest cart) still runs afterwards.
+    hydrateCart(state, action: PayloadAction<Cart | null>) {
+      state.cart = action.payload
+      state.loading = false
+      state.error = null
+      state.hydrated = true
+    },
   },
   extraReducers: (builder) => {
     // fetchCart
@@ -208,7 +225,7 @@ const cartSlice = createSlice({
   },
 })
 
-export const { clearError, clearStockWarning } = cartSlice.actions
+export const { clearError, clearStockWarning, hydrateCart } = cartSlice.actions
 
 // Selectors
 export const selectCart = (state: { cart: CartState }) => state.cart.cart

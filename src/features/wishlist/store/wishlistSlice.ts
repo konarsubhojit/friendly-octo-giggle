@@ -7,6 +7,7 @@ interface WishlistState {
   products: Product[]
   loading: boolean
   error: string | null
+  hydrated: boolean
 }
 
 const initialState: WishlistState = {
@@ -14,6 +15,7 @@ const initialState: WishlistState = {
   products: [],
   loading: false,
   error: null,
+  hydrated: false,
 }
 
 export const fetchWishlist = createAsyncThunk(
@@ -77,6 +79,19 @@ const wishlistSlice = createSlice({
         state.productIds.push(id)
       }
     },
+    // Seed the slice with server-fetched data so the wishlist page renders
+    // its content on first paint instead of fetching it client-side in a
+    // useEffect (avoids the empty-state flash; perf anti-pattern L5/NX4).
+    hydrateWishlist: (
+      state,
+      action: PayloadAction<{ products: Product[]; productIds: string[] }>
+    ) => {
+      state.products = action.payload.products
+      state.productIds = action.payload.productIds
+      state.loading = false
+      state.error = null
+      state.hydrated = true
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -102,5 +117,5 @@ const wishlistSlice = createSlice({
   },
 })
 
-export const { optimisticToggle } = wishlistSlice.actions
+export const { optimisticToggle, hydrateWishlist } = wishlistSlice.actions
 export default wishlistSlice.reducer

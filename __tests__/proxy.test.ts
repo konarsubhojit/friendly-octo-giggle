@@ -138,6 +138,74 @@ describe('proxy rate limiting', () => {
     expect(response.headers.get('Retry-After')).toBeTruthy()
   })
 
+  it.each(['/api/auth/forgot-password', '/api/auth/reset-password'])(
+    'applies the strict limiter to %s',
+    async (pathname) => {
+      await proxy(
+        createRequest(pathname, { 'cf-connecting-ip': '203.0.113.40' })
+      )
+
+      expect(mockStrictLimit).toHaveBeenCalledWith('ip:203.0.113.40')
+      expect(mockGeneralLimit).not.toHaveBeenCalled()
+    }
+  )
+
+  it.each([
+    '/api/cart',
+    '/api/wishlist',
+    '/api/reviews',
+    '/api/upload',
+    '/api/account',
+    '/api/search/suggest',
+  ])('applies the general limiter to %s', async (pathname) => {
+    await proxy(createRequest(pathname, { 'cf-connecting-ip': '203.0.113.50' }))
+
+    expect(mockGeneralLimit).toHaveBeenCalledWith('ip:203.0.113.50')
+    expect(mockStrictLimit).not.toHaveBeenCalled()
+  })
+
+  it('returns 429 for a general sensitive path when blocked', async () => {
+    mockGeneralLimit.mockResolvedValue({
+      success: false,
+      limit: 60,
+      remaining: 0,
+      reset: Date.now() + 60_000,
+    })
+
+    const response = await proxy(
+      createRequest('/api/cart', { 'cf-connecting-ip': '203.0.113.60' })
+    )
+
+    expect(response.status).toBe(429)
+    expect(response.headers.get('Retry-After')).toBeTruthy()
+  })
+
+  it('returns 503 for strict reset-password path when limiter is unavailable', async () => {
+    mockGetStrictLimiter.mockReturnValue(null)
+
+    const response = await proxy(
+      createRequest('/api/auth/reset-password', {
+        'cf-connecting-ip': '203.0.113.70',
+      })
+    )
+
+    expect(response.status).toBe(503)
+  })
+
+  it('falls back to in-memory limiting for general paths when limiter is unavailable', async () => {
+    mockGetGeneralLimiter.mockReturnValue(null)
+
+    const response = await proxy(
+      createRequest('/api/cart', { 'cf-connecting-ip': '203.0.113.80' })
+    )
+
+    // Not blocked on the first request, but still counted (headers present),
+    // so the route is never left fully unbounded when Upstash is down.
+    expect(response.status).not.toBe(503)
+    expect(response.headers.get('X-RateLimit-Limit')).toBe('60')
+    expect(response.headers.get('X-RateLimit-Remaining')).toBeTruthy()
+  })
+
   it('adds nonce-based CSP headers without unsafe-inline', async () => {
     const response = await proxy(createRequest('/shop'))
     const nonce = response.headers.get('x-nonce')
