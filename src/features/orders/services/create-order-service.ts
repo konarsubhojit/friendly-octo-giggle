@@ -388,13 +388,13 @@ export const persistOrder = async ({
   customerDetails: Extract<ValidationResult, { valid: true }>
   productList: ProductWithVariants[]
   totalAmount: number
-  verifiedPayment: {
+  verifiedPayment?: {
     provider: 'RAZORPAY'
     paymentOrderId: string
     paymentTransactionId: string
     amountPaid: number
     paidAt: Date
-  }
+  } | null
   checkoutRequestId?: string
 }) => {
   try {
@@ -561,7 +561,14 @@ const verifyPaymentForOrder = async ({
 }: {
   payment: CreateOrderInput['payment']
   expectedAmount: number
-}) => {
+}): Promise<{
+  provider: 'RAZORPAY'
+  paymentOrderId: string
+  paymentTransactionId: string
+  amountPaid: number
+  paidAt: Date
+} | null> => {
+  if (!payment) return null
   try {
     return await verifyCheckoutPayment({ payment, expectedAmount })
   } catch (error) {
@@ -676,7 +683,9 @@ export const createOrderForUser = async ({
     payment: body.payment,
     expectedAmount: totalAmount,
   })
-  await ensurePaymentTransactionUnique(verifiedPayment.paymentTransactionId)
+  if (verifiedPayment) {
+    await ensurePaymentTransactionUnique(verifiedPayment.paymentTransactionId)
+  }
   const order = await persistOrder({
     body,
     userId: user.id,

@@ -797,13 +797,13 @@ export const db = {
       }
       checkoutRequestId: string | null
       totalAmount: number
-      verifiedPayment: {
+      verifiedPayment?: {
         provider: 'RAZORPAY'
         paymentOrderId: string
         paymentTransactionId: string
         amountPaid: number
         paidAt: Date
-      }
+      } | null
       items: Array<{
         productId: string
         variantId: string
@@ -829,12 +829,13 @@ export const db = {
             checkoutRequestId: input.checkoutRequestId,
             totalAmount: input.totalAmount,
             status: 'PENDING',
-            paymentStatus: 'PAID',
-            paymentProvider: input.verifiedPayment.provider,
-            paymentOrderId: input.verifiedPayment.paymentOrderId,
-            paymentTransactionId: input.verifiedPayment.paymentTransactionId,
-            amountPaid: input.verifiedPayment.amountPaid,
-            paidAt: input.verifiedPayment.paidAt,
+            paymentStatus: input.verifiedPayment ? 'PAID' : 'PENDING',
+            paymentProvider: input.verifiedPayment?.provider ?? null,
+            paymentOrderId: input.verifiedPayment?.paymentOrderId ?? null,
+            paymentTransactionId:
+              input.verifiedPayment?.paymentTransactionId ?? null,
+            amountPaid: input.verifiedPayment?.amountPaid ?? 0,
+            paidAt: input.verifiedPayment?.paidAt ?? null,
             updatedAt: new Date(),
           })
           .returning()
@@ -1036,10 +1037,10 @@ export const db = {
       city: string
       state: string
       items: CheckoutRequestItemRecord[]
-      paymentProvider: string
-      paymentOrderId: string
-      paymentTransactionId: string
-      paymentSignature: string
+      paymentProvider?: string | null
+      paymentOrderId?: string | null
+      paymentTransactionId?: string | null
+      paymentSignature?: string | null
       status: CheckoutRequestStatus
     }): Promise<{ id: string; status: CheckoutRequestStatus }> => {
       const [row] = await primaryDrizzleDb
@@ -1056,10 +1057,10 @@ export const db = {
           city: values.city,
           state: values.state,
           items: values.items,
-          paymentProvider: values.paymentProvider as 'RAZORPAY',
-          paymentOrderId: values.paymentOrderId,
-          paymentTransactionId: values.paymentTransactionId,
-          paymentSignature: values.paymentSignature,
+          paymentProvider: (values.paymentProvider as 'RAZORPAY') ?? null,
+          paymentOrderId: values.paymentOrderId ?? null,
+          paymentTransactionId: values.paymentTransactionId ?? null,
+          paymentSignature: values.paymentSignature ?? null,
           status: values.status,
           updatedAt: new Date(),
         })

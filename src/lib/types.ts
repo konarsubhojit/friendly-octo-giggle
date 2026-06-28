@@ -144,7 +144,7 @@ export interface CreateOrderInput {
   city: string
   state: string
   items: OrderItemInput[]
-  payment: CheckoutPaymentInput
+  payment?: CheckoutPaymentInput
 }
 
 export type CheckoutRequestStatus =
