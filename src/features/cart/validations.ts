@@ -45,7 +45,7 @@ export const SubmitCheckoutSchema = z.object({
   items: z
     .array(CheckoutOrderItemSchema)
     .min(1, 'At least one item is required'),
-  payment: CheckoutPaymentSchema,
+  payment: CheckoutPaymentSchema.optional(),
 })
 
 export const CheckoutQueueMessageSchema = z.object({

@@ -1,25 +1,14 @@
 'use client'
 
-import { useId, useMemo, useState, useTransition, useEffect } from 'react'
+import { useId, useMemo, useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
-import { useSelector, useDispatch } from 'react-redux'
+import { useSelector } from 'react-redux'
 import Link from '@/components/ui/LocaleLink'
-import toast from 'react-hot-toast'
 import { z } from 'zod'
 import { useLocale } from '@/contexts/LocaleContext'
 import { formatStructuredAddress } from '@/lib/address-utils'
-import {
-  clearCart,
-  selectCart,
-  fetchCart,
-} from '@/features/cart/store/cartSlice'
-import { apiClient } from '@/lib/api-client'
-import type { AppDispatch } from '@/lib/store'
-import type {
-  CheckoutEnqueueResponse,
-  CheckoutRequestStatusResponse,
-} from '@/lib/types'
+import { selectCart } from '@/features/cart/store/cartSlice'
 import {
   buildCheckoutPricingSummaryFromLineItems,
   buildCheckoutSummaryLineItems,
@@ -38,8 +27,6 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { useCurrency } from '@/contexts/CurrencyContext'
 import { CheckoutProgress } from '@/features/cart/components/CheckoutProgress'
 
-const CHECKOUT_POLL_INTERVAL_MS = 1500
-const CHECKOUT_POLL_MAX_ATTEMPTS = 40
 const PENDING_CHECKOUT_KEY = 'pending_checkout'
 
 const PendingCheckoutSchema = z.object({
@@ -53,11 +40,6 @@ const PendingCheckoutSchema = z.object({
 })
 
 type PendingCheckout = z.infer<typeof PendingCheckoutSchema>
-
-const delay = (ms: number) =>
-  new Promise<void>((resolve) => {
-    globalThis.setTimeout(resolve, ms)
-  })
 
 function readPendingCheckout(): PendingCheckout | null {
   if (globalThis.window === undefined) return null
@@ -76,11 +58,6 @@ function readPendingCheckout(): PendingCheckout | null {
   }
 }
 
-function clearPendingCheckout(): void {
-  if (globalThis.window === undefined) return
-  sessionStorage.removeItem(PENDING_CHECKOUT_KEY)
-}
-
 const SECTION_CLASS =
   'rounded-2xl border border-[var(--border-warm)] bg-[var(--surface)] p-5 sm:p-6'
 
@@ -88,14 +65,10 @@ export default function CheckoutReviewPage() {
   const router = useRouter()
   const { localizePath } = useLocale()
   const { data: session, status } = useSession()
-  const dispatch = useDispatch<AppDispatch>()
   const cart = useSelector(selectCart)
   const { formatPrice } = useCurrency()
 
-  const [isPending, startTransition] = useTransition()
   const [isAcknowledged, setIsAcknowledged] = useState(false)
-  const [checkoutMessage, setCheckoutMessage] = useState<string | null>(null)
-  const [checkoutError, setCheckoutError] = useState<string | null>(null)
   const [pendingCheckout] = useState<PendingCheckout | null>(() =>
     readPendingCheckout()
   )
@@ -107,12 +80,6 @@ export default function CheckoutReviewPage() {
       router.replace(localizePath('/cart'))
     }
   }, [pendingCheckout, router, localizePath])
-
-  useEffect(() => {
-    if (status === 'authenticated') {
-      dispatch(fetchCart())
-    }
-  }, [dispatch, status])
 
   const cartItems = useMemo(() => cart?.items ?? [], [cart?.items])
 
@@ -141,94 +108,6 @@ export default function CheckoutReviewPage() {
       (section) => section.items.length === 0
     )
 
-  const pollCheckoutRequest = async (
-    checkoutRequestId: string
-  ): Promise<CheckoutRequestStatusResponse> => {
-    for (let attempt = 0; attempt < CHECKOUT_POLL_MAX_ATTEMPTS; attempt++) {
-      const checkoutStatus = await apiClient.get<CheckoutRequestStatusResponse>(
-        `/api/checkout/${checkoutRequestId}`
-      )
-
-      if (checkoutStatus.status === 'COMPLETED') {
-        return checkoutStatus
-      }
-
-      if (checkoutStatus.status === 'FAILED') {
-        throw new Error(checkoutStatus.error ?? 'Checkout failed')
-      }
-
-      setCheckoutMessage("We're processing your order…")
-
-      await delay(CHECKOUT_POLL_INTERVAL_MS)
-    }
-
-    throw new Error(
-      'Checkout is taking longer than expected. Please check your orders shortly.'
-    )
-  }
-
-  const handleConfirm = () => {
-    if (!pendingCheckout) return
-    const sessionUser = session?.user
-
-    if (!sessionUser?.email) {
-      router.push(
-        `${localizePath('/auth/signin')}?callbackUrl=${encodeURIComponent(localizePath('/checkout/review'))}`
-      )
-      return
-    }
-
-    startTransition(async () => {
-      try {
-        setCheckoutError(null)
-        setCheckoutMessage('Submitting your order…')
-
-        const enqueueResult = await apiClient.post<CheckoutEnqueueResponse>(
-          '/api/checkout',
-          {
-            customerName: sessionUser.name ?? 'Customer',
-            customerEmail: sessionUser.email,
-            addressLine1: pendingCheckout.addressLine1.trim(),
-            addressLine2: pendingCheckout.addressLine2.trim(),
-            addressLine3: pendingCheckout.addressLine3.trim(),
-            pinCode: pendingCheckout.pinCode.trim(),
-            city: pendingCheckout.city.trim(),
-            state: pendingCheckout.state.trim(),
-            items: cartItems.map((item) => ({
-              productId: item.productId,
-              variantId: item.variantId,
-              quantity: item.quantity,
-              customizationNote:
-                pendingCheckout.customizationNotes[item.id] ?? undefined,
-            })),
-          }
-        )
-
-        const completedCheckout = await pollCheckoutRequest(
-          enqueueResult.checkoutRequestId
-        )
-
-        if (!completedCheckout.orderId) {
-          throw new Error('Checkout completed without an order reference.')
-        }
-
-        await dispatch(clearCart()).unwrap()
-        clearPendingCheckout()
-        toast.success(`Order ${completedCheckout.orderId} placed successfully!`)
-        router.push(
-          `${localizePath('/checkout/confirmation')}?orderId=${encodeURIComponent(completedCheckout.orderId)}`
-        )
-      } catch (error) {
-        const message =
-          error instanceof Error ? error.message : 'Failed to place order'
-        setCheckoutError(message)
-        toast.error(message)
-      } finally {
-        setCheckoutMessage(null)
-      }
-    })
-  }
-
   if (pendingCheckout === null || status === 'loading') {
     return (
       <div className="min-h-screen bg-warm-gradient flex items-center justify-center">
@@ -250,8 +129,8 @@ export default function CheckoutReviewPage() {
         <CheckoutProgress currentStep="review" />
         <GradientHeading className="mb-2">Review Your Order</GradientHeading>
         <p className="mb-8 text-sm text-[var(--text-secondary)]">
-          Review your order details and policy terms before confirming your
-          purchase.
+          Review your order details and policy terms before proceeding to
+          payment.
         </p>
 
         <div className="space-y-6">
@@ -400,7 +279,7 @@ export default function CheckoutReviewPage() {
             )}
           </section>
 
-          {/* Acknowledgment & Confirm */}
+          {/* Acknowledgment & Continue */}
           <div className={SECTION_CLASS}>
             <label
               htmlFor={acknowledgmentId}
@@ -410,51 +289,26 @@ export default function CheckoutReviewPage() {
                 id={acknowledgmentId}
                 type="checkbox"
                 checked={isAcknowledged}
-                disabled={isPending || policyUnavailable}
+                disabled={policyUnavailable}
                 onChange={(event) => setIsAcknowledged(event.target.checked)}
                 className="mt-1 h-4 w-4 rounded border-[var(--border-warm)] accent-[var(--accent-rose)]"
               />
               <span>{CHECKOUT_POLICY_ACKNOWLEDGMENT}</span>
             </label>
 
-            {checkoutMessage ? (
-              <output
-                className="mt-3 block text-xs text-[var(--text-muted)]"
-                aria-live="polite"
-              >
-                {checkoutMessage}
-              </output>
-            ) : null}
-
-            {checkoutError ? (
-              <div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-200">
-                <p>{checkoutError}</p>
-                <button
-                  type="button"
-                  onClick={handleConfirm}
-                  aria-label="Retry checkout after error"
-                  className="mt-2 text-xs font-semibold underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-rose)]"
-                >
-                  Retry checkout
-                </button>
-              </div>
-            ) : null}
-
             <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
               <Link
-                href="/checkout/payment"
+                href="/checkout/shipping"
                 className="inline-flex items-center justify-center rounded-xl border border-[var(--border-warm)] px-5 py-2.5 text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--accent-blush)] transition-colors"
               >
                 Back
               </Link>
               <GradientButton
                 type="button"
-                onClick={handleConfirm}
-                disabled={!isAcknowledged || isPending || policyUnavailable}
-                loading={isPending}
-                loadingText={checkoutMessage ?? 'Processing...'}
+                onClick={() => router.push(localizePath('/checkout/payment'))}
+                disabled={!isAcknowledged || policyUnavailable}
               >
-                Confirm and Place Order
+                Continue to Payment
               </GradientButton>
             </div>
           </div>
