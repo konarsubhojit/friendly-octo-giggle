@@ -68,7 +68,7 @@ jobs:
 
       - name: Restore Next.js build cache
         id: restore-nextjs-cache
-        uses: actions/cache/restore@v5
+        uses: actions/cache/restore@v6
         with:
           path: .next/cache
           key: ${{ runner.os }}-nextjs-${{ hashFiles('package-lock.json', 'src/**/*.ts', 'src/**/*.tsx', 'src/**/*.js', 'src/**/*.jsx', 'src/**/*.css', 'app/**/*.ts', 'app/**/*.tsx', 'pages/**/*.ts', 'pages/**/*.tsx', 'next.config.*') }}
@@ -92,7 +92,7 @@ jobs:
 
       - name: Save Next.js build cache
         if: always() && hashFiles('.next/cache/**') != ''
-        uses: actions/cache/save@v5
+        uses: actions/cache/save@v6
         with:
           path: .next/cache
           key: ${{ runner.os }}-nextjs-${{ hashFiles('package-lock.json', 'src/**/*.ts', 'src/**/*.tsx', 'src/**/*.js', 'src/**/*.jsx', 'src/**/*.css', 'app/**/*.ts', 'app/**/*.tsx', 'pages/**/*.ts', 'pages/**/*.tsx', 'next.config.*') }}
