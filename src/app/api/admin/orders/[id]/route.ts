@@ -45,7 +45,12 @@ const VALID_TRANSITIONS: Record<string, string[]> = {
   CANCELLED: ['CANCELLED'],
 }
 
-const NOTIFY_STATUSES = ['PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED']
+const NOTIFY_STATUSES = new Set([
+  'PROCESSING',
+  'SHIPPED',
+  'DELIVERED',
+  'CANCELLED',
+])
 
 const resolveUserLocale = async (userId: string | null) => {
   if (!userId) return 'en'
@@ -211,7 +216,7 @@ export const PATCH = async (
       )
     }
 
-    if (NOTIFY_STATUSES.includes(validatedBody.status)) {
+    if (NOTIFY_STATUSES.has(validatedBody.status)) {
       await dispatchStatusNotification(order, validatedBody)
     }
 
