@@ -116,72 +116,71 @@ const validateRazorpay = (data: EnvData, ctx: z.RefinementCtx) => {
   })
 }
 
-const BaseEnvSchema = z
-  .object({
-    DATABASE_URL: z.string(),
-    READ_DATABASE_URL: z.string().optional(),
-    NEXTAUTH_SECRET: z.string().optional(),
-    AUTH_TRUST_HOST: z.enum(['true', 'false']).optional(),
-    REDIS_URL: z.string().optional(),
-    UPSTASH_REDIS_REST_URL: z.url().optional(),
-    UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
-    NODE_ENV: z.enum(['development', 'production', 'test']).optional(),
-    EXCHANGE_RATE_API_KEY: z.string().optional(),
-    MAILERSEND_API_KEY: z.string().optional(),
-    MAILERSEND_FROM_EMAIL: z.string().optional(),
-    GOOGLE_SMTP_HOST: z.string().optional(),
-    GOOGLE_SMTP_PORT: z.string().optional(),
-    GOOGLE_SMTP_SECURE: z.enum(['true', 'false']).optional(),
-    GOOGLE_SMTP_USER: z.string().optional(),
-    GOOGLE_SMTP_APP_PASSWORD: z.string().optional(),
-    GOOGLE_SMTP_FROM_EMAIL: z.string().optional(),
-    QSTASH_TOKEN: z.string().optional(),
-    QSTASH_CURRENT_SIGNING_KEY: z.string().optional(),
-    QSTASH_NEXT_SIGNING_KEY: z.string().optional(),
-    NEXT_PUBLIC_APP_URL: z.url().optional(),
-    UPSTASH_SEARCH_REST_URL: z.url().optional(),
-    UPSTASH_SEARCH_REST_TOKEN: z.string().optional(),
-    UPSTASH_SEARCH_REST_READONLY_TOKEN: z.string().optional(),
-    NEXT_PUBLIC_UPSTASH_SEARCH_REST_URL: z.url().optional(),
-    NEXT_PUBLIC_UPSTASH_SEARCH_REST_READONLY_TOKEN: z.string().optional(),
-    GOOGLE_GENERATIVE_AI_API_KEY: z.string().optional(),
-    PAYMENT_PROVIDER: z.enum(['RAZORPAY']).optional(),
-    RAZORPAY_KEY_ID: z.string().optional(),
-    RAZORPAY_KEY_SECRET: z.string().optional(),
-    RAZORPAY_WEBHOOK_SECRET: z.string().optional(),
-    SENTRY_DSN: z.url().optional(),
-    IMAGE_UPLOAD_PROVIDER: z.enum(['vercel', 'azure']).optional(),
-    AZURE_BLOB_ACCOUNTS_JSON: z
-      .string()
-      .optional()
-      .refine(
-        (value) => {
-          if (value === undefined || value === '') return true
-          let parsed: unknown
-          try {
-            parsed = JSON.parse(value)
-          } catch {
-            return false
-          }
-          if (!Array.isArray(parsed)) return false
-          return parsed.every(
-            (item) =>
-              typeof item === 'object' &&
-              item !== null &&
-              typeof (item as Record<string, unknown>).alias === 'string' &&
-              typeof (item as Record<string, unknown>).connectionString ===
-                'string' &&
-              typeof (item as Record<string, unknown>).container === 'string'
-          )
-        },
-        {
-          message:
-            'AZURE_BLOB_ACCOUNTS_JSON must be a JSON array of objects with string alias, connectionString, and container properties.',
+const BaseEnvSchema = z.object({
+  DATABASE_URL: z.string(),
+  READ_DATABASE_URL: z.string().optional(),
+  NEXTAUTH_SECRET: z.string().optional(),
+  AUTH_TRUST_HOST: z.enum(['true', 'false']).optional(),
+  REDIS_URL: z.string().optional(),
+  UPSTASH_REDIS_REST_URL: z.url().optional(),
+  UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
+  NODE_ENV: z.enum(['development', 'production', 'test']).optional(),
+  EXCHANGE_RATE_API_KEY: z.string().optional(),
+  MAILERSEND_API_KEY: z.string().optional(),
+  MAILERSEND_FROM_EMAIL: z.string().optional(),
+  GOOGLE_SMTP_HOST: z.string().optional(),
+  GOOGLE_SMTP_PORT: z.string().optional(),
+  GOOGLE_SMTP_SECURE: z.enum(['true', 'false']).optional(),
+  GOOGLE_SMTP_USER: z.string().optional(),
+  GOOGLE_SMTP_APP_PASSWORD: z.string().optional(),
+  GOOGLE_SMTP_FROM_EMAIL: z.string().optional(),
+  QSTASH_TOKEN: z.string().optional(),
+  QSTASH_CURRENT_SIGNING_KEY: z.string().optional(),
+  QSTASH_NEXT_SIGNING_KEY: z.string().optional(),
+  NEXT_PUBLIC_APP_URL: z.url().optional(),
+  UPSTASH_SEARCH_REST_URL: z.url().optional(),
+  UPSTASH_SEARCH_REST_TOKEN: z.string().optional(),
+  UPSTASH_SEARCH_REST_READONLY_TOKEN: z.string().optional(),
+  NEXT_PUBLIC_UPSTASH_SEARCH_REST_URL: z.url().optional(),
+  NEXT_PUBLIC_UPSTASH_SEARCH_REST_READONLY_TOKEN: z.string().optional(),
+  GOOGLE_GENERATIVE_AI_API_KEY: z.string().optional(),
+  PAYMENT_PROVIDER: z.enum(['RAZORPAY']).optional(),
+  RAZORPAY_KEY_ID: z.string().optional(),
+  RAZORPAY_KEY_SECRET: z.string().optional(),
+  RAZORPAY_WEBHOOK_SECRET: z.string().optional(),
+  SENTRY_DSN: z.url().optional(),
+  IMAGE_UPLOAD_PROVIDER: z.enum(['vercel', 'azure']).optional(),
+  AZURE_BLOB_ACCOUNTS_JSON: z
+    .string()
+    .optional()
+    .refine(
+      (value) => {
+        if (value === undefined || value === '') return true
+        let parsed: unknown
+        try {
+          parsed = JSON.parse(value)
+        } catch {
+          return false
         }
-      ),
-    AZURE_BLOB_DEFAULT_ACCOUNT_ALIAS: z.string().optional(),
-    AZURE_BLOB_AUTO_CREATE_CONTAINER: z.enum(['true', 'false']).optional(),
-  })
+        if (!Array.isArray(parsed)) return false
+        return parsed.every(
+          (item) =>
+            typeof item === 'object' &&
+            item !== null &&
+            typeof (item as Record<string, unknown>).alias === 'string' &&
+            typeof (item as Record<string, unknown>).connectionString ===
+              'string' &&
+            typeof (item as Record<string, unknown>).container === 'string'
+        )
+      },
+      {
+        message:
+          'AZURE_BLOB_ACCOUNTS_JSON must be a JSON array of objects with string alias, connectionString, and container properties.',
+      }
+    ),
+  AZURE_BLOB_DEFAULT_ACCOUNT_ALIAS: z.string().optional(),
+  AZURE_BLOB_AUTO_CREATE_CONTAINER: z.enum(['true', 'false']).optional(),
+})
 
 export const EnvSchema = BaseEnvSchema.superRefine((data, ctx) => {
   validateProductionKeys(data, ctx)

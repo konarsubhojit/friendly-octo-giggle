@@ -86,7 +86,11 @@ const dispatchStatusNotification = async (
       orderId: order.id,
       customerEmail: order.customerEmail,
       customerName: order.customerName,
-      newStatus: update.status as 'PROCESSING' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED',
+      newStatus: update.status as
+        | 'PROCESSING'
+        | 'SHIPPED'
+        | 'DELIVERED'
+        | 'CANCELLED',
       locale,
       trackingNumber,
       shippingProvider,

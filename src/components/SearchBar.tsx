@@ -528,7 +528,11 @@ export function SearchBar({
                                   isActive
                                 )}
                               >
-                                {renderOptionContent(section.key, option, value)}
+                                {renderOptionContent(
+                                  section.key,
+                                  option,
+                                  value
+                                )}
                               </li>
                             )
                           })}
