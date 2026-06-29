@@ -19,7 +19,7 @@ const FORGOT_PASSWORD_FIELDS: ReadonlyArray<FieldDef> = [
     validate: (value) => {
       const normalized = value.trim()
       if (!normalized) return 'Email is required'
-      const isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)
+      const isValid = /^[^\s@]+@[^\s@.]+\.[^\s@]+$/.test(normalized)
       return isValid ? undefined : 'Enter a valid email address'
     },
   },

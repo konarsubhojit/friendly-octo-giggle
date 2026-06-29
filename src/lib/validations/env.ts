@@ -10,7 +10,113 @@ const QSTASH_REQUIRED_KEYS = [
 
 const AUTH_REQUIRED_KEYS = ['NEXTAUTH_SECRET'] as const
 
-export const EnvSchema = z
+type EnvData = z.infer<typeof BaseEnvSchema>
+
+const validateProductionKeys = (data: EnvData, ctx: z.RefinementCtx) => {
+  // Skip production-only checks during build phase (next build sets NODE_ENV=production)
+  const isBuildPhase = process.env.NEXT_PHASE === 'phase-production-build'
+  if (data.NODE_ENV !== 'production' || isBuildPhase) return
+
+  QSTASH_REQUIRED_KEYS.forEach((key) => {
+    if (!data[key]) {
+      ctx.addIssue({
+        code: 'custom',
+        path: [key],
+        message: `${key} is required in production`,
+      })
+    }
+  })
+
+  AUTH_REQUIRED_KEYS.forEach((key) => {
+    if (!data[key]?.trim()) {
+      ctx.addIssue({
+        code: 'custom',
+        path: [key],
+        message: `${key} is required in production`,
+      })
+    }
+  })
+}
+
+const parseAzureAccounts = (raw: string): unknown[] | null => {
+  try {
+    const parsed = JSON.parse(raw)
+    return Array.isArray(parsed) ? parsed : null
+  } catch {
+    return null
+  }
+}
+
+const validateAzureBlob = (data: EnvData, ctx: z.RefinementCtx) => {
+  if (data.IMAGE_UPLOAD_PROVIDER !== 'azure') return
+
+  if (!data.AZURE_BLOB_ACCOUNTS_JSON) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['AZURE_BLOB_ACCOUNTS_JSON'],
+      message:
+        "AZURE_BLOB_ACCOUNTS_JSON must be set when IMAGE_UPLOAD_PROVIDER='azure'",
+    })
+    return
+  }
+
+  // The field-level .refine already surfaces a parse error; nothing to add here.
+  const parsed = parseAzureAccounts(data.AZURE_BLOB_ACCOUNTS_JSON)
+  if (parsed === null) return
+
+  if (parsed.length === 0) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['AZURE_BLOB_ACCOUNTS_JSON'],
+      message:
+        "AZURE_BLOB_ACCOUNTS_JSON must contain at least one account when IMAGE_UPLOAD_PROVIDER='azure'",
+    })
+    return
+  }
+
+  if (!data.AZURE_BLOB_DEFAULT_ACCOUNT_ALIAS) return
+
+  const aliases = parsed
+    .map((item) =>
+      typeof item === 'object' &&
+      item !== null &&
+      typeof (item as Record<string, unknown>).alias === 'string'
+        ? ((item as Record<string, unknown>).alias as string)
+        : null
+    )
+    .filter((alias): alias is string => alias !== null)
+
+  if (!aliases.includes(data.AZURE_BLOB_DEFAULT_ACCOUNT_ALIAS)) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['AZURE_BLOB_DEFAULT_ACCOUNT_ALIAS'],
+      message:
+        'AZURE_BLOB_DEFAULT_ACCOUNT_ALIAS must match an alias in AZURE_BLOB_ACCOUNTS_JSON',
+    })
+  }
+}
+
+const RAZORPAY_REQUIRED_KEYS = [
+  'RAZORPAY_KEY_ID',
+  'RAZORPAY_KEY_SECRET',
+  'RAZORPAY_WEBHOOK_SECRET',
+] as const
+
+const validateRazorpay = (data: EnvData, ctx: z.RefinementCtx) => {
+  if (data.PAYMENT_PROVIDER !== 'RAZORPAY') return
+
+  RAZORPAY_REQUIRED_KEYS.forEach((key) => {
+    if (!data[key]?.trim()) {
+      ctx.addIssue({
+        code: 'custom',
+        path: [key],
+        message: `${key} must be set when PAYMENT_PROVIDER='RAZORPAY'`,
+      })
+    }
+  })
+}
+
+const BaseEnvSchema = z
   .object({
     DATABASE_URL: z.string(),
     READ_DATABASE_URL: z.string().optional(),
@@ -76,112 +182,11 @@ export const EnvSchema = z
     AZURE_BLOB_DEFAULT_ACCOUNT_ALIAS: z.string().optional(),
     AZURE_BLOB_AUTO_CREATE_CONTAINER: z.enum(['true', 'false']).optional(),
   })
-  .superRefine((data, ctx) => {
-    // Skip production-only checks during build phase (next build sets NODE_ENV=production)
-    const isBuildPhase = process.env.NEXT_PHASE === 'phase-production-build'
-    if (data.NODE_ENV === 'production' && !isBuildPhase) {
-      QSTASH_REQUIRED_KEYS.forEach((key) => {
-        if (!data[key]) {
-          ctx.addIssue({
-            code: 'custom',
-            path: [key],
-            message: `${key} is required in production`,
-          })
-        }
-      })
 
-      AUTH_REQUIRED_KEYS.forEach((key) => {
-        const val = data[key]
-        if (!val?.trim()) {
-          ctx.addIssue({
-            code: 'custom',
-            path: [key],
-            message: `${key} is required in production`,
-          })
-        }
-      })
-    }
-
-    // Cross-field checks for the Azure Blob upload provider.
-    if (data.IMAGE_UPLOAD_PROVIDER === 'azure') {
-      if (!data.AZURE_BLOB_ACCOUNTS_JSON) {
-        ctx.addIssue({
-          code: 'custom',
-          path: ['AZURE_BLOB_ACCOUNTS_JSON'],
-          message:
-            "AZURE_BLOB_ACCOUNTS_JSON must be set when IMAGE_UPLOAD_PROVIDER='azure'",
-        })
-        return
-      }
-
-      let parsed: unknown
-      try {
-        parsed = JSON.parse(data.AZURE_BLOB_ACCOUNTS_JSON)
-      } catch {
-        // The field-level .refine will already surface a parse error;
-        // nothing more to add here.
-        return
-      }
-      if (!Array.isArray(parsed) || parsed.length === 0) {
-        ctx.addIssue({
-          code: 'custom',
-          path: ['AZURE_BLOB_ACCOUNTS_JSON'],
-          message:
-            "AZURE_BLOB_ACCOUNTS_JSON must contain at least one account when IMAGE_UPLOAD_PROVIDER='azure'",
-        })
-        return
-      }
-
-      if (data.AZURE_BLOB_DEFAULT_ACCOUNT_ALIAS) {
-        const aliases = parsed
-          .map((item) =>
-            typeof item === 'object' &&
-            item !== null &&
-            typeof (item as Record<string, unknown>).alias === 'string'
-              ? ((item as Record<string, unknown>).alias as string)
-              : null
-          )
-          .filter((alias): alias is string => alias !== null)
-
-        if (!aliases.includes(data.AZURE_BLOB_DEFAULT_ACCOUNT_ALIAS)) {
-          ctx.addIssue({
-            code: 'custom',
-            path: ['AZURE_BLOB_DEFAULT_ACCOUNT_ALIAS'],
-            message:
-              'AZURE_BLOB_DEFAULT_ACCOUNT_ALIAS must match an alias in AZURE_BLOB_ACCOUNTS_JSON',
-          })
-        }
-      }
-    }
-
-    if (data.PAYMENT_PROVIDER === 'RAZORPAY') {
-      if (!data.RAZORPAY_KEY_ID?.trim()) {
-        ctx.addIssue({
-          code: 'custom',
-          path: ['RAZORPAY_KEY_ID'],
-          message:
-            "RAZORPAY_KEY_ID must be set when PAYMENT_PROVIDER='RAZORPAY'",
-        })
-      }
-
-      if (!data.RAZORPAY_KEY_SECRET?.trim()) {
-        ctx.addIssue({
-          code: 'custom',
-          path: ['RAZORPAY_KEY_SECRET'],
-          message:
-            "RAZORPAY_KEY_SECRET must be set when PAYMENT_PROVIDER='RAZORPAY'",
-        })
-      }
-
-      if (!data.RAZORPAY_WEBHOOK_SECRET?.trim()) {
-        ctx.addIssue({
-          code: 'custom',
-          path: ['RAZORPAY_WEBHOOK_SECRET'],
-          message:
-            "RAZORPAY_WEBHOOK_SECRET must be set when PAYMENT_PROVIDER='RAZORPAY'",
-        })
-      }
-    }
-  })
+export const EnvSchema = BaseEnvSchema.superRefine((data, ctx) => {
+  validateProductionKeys(data, ctx)
+  validateAzureBlob(data, ctx)
+  validateRazorpay(data, ctx)
+})
 
 export type Env = z.infer<typeof EnvSchema>

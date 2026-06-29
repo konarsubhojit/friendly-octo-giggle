@@ -36,7 +36,49 @@ interface SearchBarProps {
   readonly categoryQuickLinks?: string[]
 }
 
+const optionClassName = (
+  sectionKey: SuggestionSectionKey,
+  isActive: boolean
+): string => {
+  if (sectionKey === 'products') {
+    return `w-full cursor-pointer rounded-lg px-2 py-1.5 text-left text-sm text-[var(--foreground)] transition-colors ${
+      isActive
+        ? 'bg-[var(--surface-elevated)] ring-1 ring-[var(--accent-rose)]/25'
+        : 'hover:bg-[var(--surface-elevated)]'
+    }`
+  }
+  if (sectionKey === 'popular') {
+    return `cursor-pointer rounded-full px-2.5 py-1 text-xs font-medium text-[var(--foreground)] transition-colors ${
+      isActive
+        ? 'bg-[var(--accent-blush)] ring-1 ring-[var(--accent-rose)]/25'
+        : 'bg-[var(--surface-elevated)] hover:bg-[var(--accent-blush)]'
+    }`
+  }
+  return `cursor-pointer rounded-full border px-2.5 py-1 text-xs font-medium text-[var(--foreground)] transition-colors ${
+    isActive
+      ? 'border-[var(--accent-rose)] bg-[var(--surface-elevated)] ring-1 ring-[var(--accent-rose)]/25'
+      : 'border-[var(--border-warm)] hover:border-[var(--accent-rose)]'
+  }`
+}
+
 const MAX_RECENT = 6
+
+const describeResults = (
+  isLoading: boolean,
+  optionCount: number,
+  hasQuery: boolean,
+  recentCount: number
+): string => {
+  if (isLoading) return 'Searching suggestions.'
+  if (optionCount) {
+    return `${optionCount} suggestion${optionCount === 1 ? '' : 's'} available.`
+  }
+  if (hasQuery) return 'No suggestions available.'
+  if (recentCount) {
+    return `${recentCount} recent ${recentCount === 1 ? 'search is' : 'searches are'} available.`
+  }
+  return 'No suggestions available.'
+}
 
 const markMatches = (text: string, query: string) => {
   const normalized = query.trim()
@@ -64,6 +106,29 @@ const markMatches = (text: string, query: string) => {
       })}
     </>
   )
+}
+
+const renderOptionContent = (
+  sectionKey: SuggestionSectionKey,
+  option: SuggestionOption,
+  value: string
+) => {
+  if (sectionKey === 'products') {
+    return (
+      <>
+        {markMatches(option.label, value)}
+        {option.secondaryLabel && (
+          <span className="ml-2 text-xs text-[var(--text-muted)]">
+            {option.secondaryLabel}
+          </span>
+        )}
+      </>
+    )
+  }
+  if (sectionKey === 'popular') {
+    return option.label
+  }
+  return markMatches(option.label, value)
 }
 
 export function SearchBar({
@@ -288,15 +353,66 @@ export function SearchBar({
 
   const activeOption =
     resolvedActiveIndex >= 0 ? flatOptions[resolvedActiveIndex] : undefined
-  const resultsDescription = isLoading
-    ? 'Searching suggestions.'
-    : flatOptions.length
-      ? `${flatOptions.length} suggestion${flatOptions.length === 1 ? '' : 's'} available.`
-      : value.trim()
-        ? 'No suggestions available.'
-        : recent.length
-          ? `${recent.length} recent ${recent.length === 1 ? 'search is' : 'searches are'} available.`
-          : 'No suggestions available.'
+  const resultsDescription = describeResults(
+    isLoading,
+    flatOptions.length,
+    !!value.trim(),
+    recent.length
+  )
+
+  const moveActive = (direction: 1 | -1) => {
+    if (!open) setOpen(true)
+    if (!flatOptions.length) return
+    setActiveIndex((current) => {
+      const last = flatOptions.length - 1
+      if (direction === 1) {
+        return current < 0 || current >= last ? 0 : current + 1
+      }
+      return current <= 0 || current > last ? last : current - 1
+    })
+  }
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    switch (event.key) {
+      case 'ArrowDown':
+        event.preventDefault()
+        moveActive(1)
+        return
+      case 'ArrowUp':
+        event.preventDefault()
+        moveActive(-1)
+        return
+      case 'Home':
+        if (flatOptions.length) {
+          event.preventDefault()
+          setActiveIndex(0)
+        }
+        return
+      case 'End':
+        if (flatOptions.length) {
+          event.preventDefault()
+          setActiveIndex(flatOptions.length - 1)
+        }
+        return
+      case 'Escape':
+        setOpen(false)
+        setActiveIndex(-1)
+        return
+      case 'Enter':
+        if (activeOption) {
+          event.preventDefault()
+          applySuggestion(activeOption.value)
+          return
+        }
+        persistRecent(value)
+        onSubmit()
+        setOpen(false)
+        setActiveIndex(-1)
+        return
+      default:
+        return
+    }
+  }
 
   return (
     <div ref={containerRef} className="relative w-full">
@@ -314,72 +430,7 @@ export function SearchBar({
           setOpen(true)
           setActiveIndex(-1)
         }}
-        onKeyDown={(event) => {
-          if (event.key === 'ArrowDown') {
-            event.preventDefault()
-
-            if (!open) {
-              setOpen(true)
-            }
-
-            if (!flatOptions.length) {
-              return
-            }
-            setActiveIndex((current) =>
-              current < 0 || current >= flatOptions.length - 1 ? 0 : current + 1
-            )
-            return
-          }
-
-          if (event.key === 'ArrowUp') {
-            event.preventDefault()
-
-            if (!open) {
-              setOpen(true)
-            }
-
-            if (!flatOptions.length) {
-              return
-            }
-            setActiveIndex((current) =>
-              current <= 0 || current >= flatOptions.length
-                ? flatOptions.length - 1
-                : current - 1
-            )
-            return
-          }
-
-          if (event.key === 'Home' && flatOptions.length) {
-            event.preventDefault()
-            setActiveIndex(0)
-            return
-          }
-
-          if (event.key === 'End' && flatOptions.length) {
-            event.preventDefault()
-            setActiveIndex(flatOptions.length - 1)
-            return
-          }
-
-          if (event.key === 'Escape') {
-            setOpen(false)
-            setActiveIndex(-1)
-            return
-          }
-
-          if (event.key === 'Enter') {
-            if (activeOption) {
-              event.preventDefault()
-              applySuggestion(activeOption.value)
-              return
-            }
-
-            persistRecent(value)
-            onSubmit()
-            setOpen(false)
-            setActiveIndex(-1)
-          }
-        }}
+        onKeyDown={handleKeyDown}
         placeholder="Search products..."
         className="glass-card w-full rounded-full border border-[var(--border-warm)] py-3 pl-11 pr-4 text-[var(--foreground)] shadow-warm transition-all duration-200 placeholder-[var(--text-muted)] focus:border-[var(--accent-rose)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-rose)]/30"
         aria-label="Search products"
@@ -472,40 +523,12 @@ export function SearchBar({
                                   setActiveIndex(option.index)
                                 }
                                 onClick={() => applySuggestion(option.value)}
-                                className={
-                                  section.key === 'products'
-                                    ? `w-full cursor-pointer rounded-lg px-2 py-1.5 text-left text-sm text-[var(--foreground)] transition-colors ${
-                                        isActive
-                                          ? 'bg-[var(--surface-elevated)] ring-1 ring-[var(--accent-rose)]/25'
-                                          : 'hover:bg-[var(--surface-elevated)]'
-                                      }`
-                                    : section.key === 'popular'
-                                      ? `cursor-pointer rounded-full px-2.5 py-1 text-xs font-medium text-[var(--foreground)] transition-colors ${
-                                          isActive
-                                            ? 'bg-[var(--accent-blush)] ring-1 ring-[var(--accent-rose)]/25'
-                                            : 'bg-[var(--surface-elevated)] hover:bg-[var(--accent-blush)]'
-                                        }`
-                                      : `cursor-pointer rounded-full border px-2.5 py-1 text-xs font-medium text-[var(--foreground)] transition-colors ${
-                                          isActive
-                                            ? 'border-[var(--accent-rose)] bg-[var(--surface-elevated)] ring-1 ring-[var(--accent-rose)]/25'
-                                            : 'border-[var(--border-warm)] hover:border-[var(--accent-rose)]'
-                                        }`
-                                }
-                              >
-                                {section.key === 'products' ? (
-                                  <>
-                                    {markMatches(option.label, value)}
-                                    {option.secondaryLabel && (
-                                      <span className="ml-2 text-xs text-[var(--text-muted)]">
-                                        {option.secondaryLabel}
-                                      </span>
-                                    )}
-                                  </>
-                                ) : section.key === 'popular' ? (
-                                  option.label
-                                ) : (
-                                  markMatches(option.label, value)
+                                className={optionClassName(
+                                  section.key,
+                                  isActive
                                 )}
+                              >
+                                {renderOptionContent(section.key, option, value)}
                               </li>
                             )
                           })}

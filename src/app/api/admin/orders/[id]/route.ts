@@ -45,6 +45,87 @@ const VALID_TRANSITIONS: Record<string, string[]> = {
   CANCELLED: ['CANCELLED'],
 }
 
+const NOTIFY_STATUSES = ['PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED']
+
+const resolveUserLocale = async (userId: string | null) => {
+  if (!userId) return 'en'
+  try {
+    const found = await drizzleDb.query.users.findFirst({
+      where: eq(users.id, userId),
+      columns: { localePreference: true },
+    })
+    const pref = found?.localePreference
+    return pref && isSupportedLocale(pref) ? pref : 'en'
+  } catch {
+    return 'en'
+  }
+}
+
+const dispatchStatusNotification = async (
+  order: {
+    id: string
+    userId: string | null
+    customerEmail: string
+    customerName: string
+    trackingNumber: string | null
+    shippingProvider: string | null
+  },
+  update: {
+    status: 'PENDING' | 'PROCESSING' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED'
+    trackingNumber?: string | null
+    shippingProvider?: string | null
+  }
+) => {
+  const locale = await resolveUserLocale(order.userId)
+  const trackingNumber = update.trackingNumber ?? order.trackingNumber ?? null
+  const shippingProvider =
+    update.shippingProvider ?? order.shippingProvider ?? null
+  const statusEvent: OrderStatusChangedEvent = {
+    type: 'order.status_changed',
+    data: {
+      orderId: order.id,
+      customerEmail: order.customerEmail,
+      customerName: order.customerName,
+      newStatus: update.status as 'PROCESSING' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED',
+      locale,
+      trackingNumber,
+      shippingProvider,
+    },
+  }
+
+  try {
+    const workerUrl = `${env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'}/api/services/email`
+    const publishResult = await getQStashClient().publishJSON({
+      url: workerUrl,
+      body: statusEvent,
+    })
+    logBusinessEvent({
+      event: 'order_status_email_queued',
+      details: {
+        orderId: order.id,
+        eventType: statusEvent.type,
+        messageId: publishResult.messageId,
+      },
+      success: true,
+    })
+  } catch (publishError) {
+    logError({
+      error: publishError,
+      context: 'qstash_publish_failed_using_fallback',
+      additionalInfo: { orderId: order.id, eventType: statusEvent.type },
+    })
+    sendOrderStatusUpdateEmail({
+      to: order.customerEmail,
+      customerName: order.customerName,
+      orderId: order.id,
+      status: update.status,
+      locale,
+      trackingNumber,
+      shippingProvider,
+    })
+  }
+}
+
 export const PATCH = async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -126,75 +207,8 @@ export const PATCH = async (
       )
     }
 
-    const notifyStatuses = ['PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED']
-    if (notifyStatuses.includes(validatedBody.status)) {
-      let userLocaleRecord: { localePreference: string } | null = null
-      if (order.userId) {
-        try {
-          const foundUserLocale = await drizzleDb.query.users.findFirst({
-            where: eq(users.id, order.userId),
-            columns: { localePreference: true },
-          })
-          userLocaleRecord = foundUserLocale ?? null
-        } catch {
-          userLocaleRecord = null
-        }
-      }
-      const locale =
-        userLocaleRecord?.localePreference &&
-        isSupportedLocale(userLocaleRecord.localePreference)
-          ? userLocaleRecord.localePreference
-          : 'en'
-      const workerUrl = `${env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'}/api/services/email`
-      const statusEvent: OrderStatusChangedEvent = {
-        type: 'order.status_changed',
-        data: {
-          orderId: order.id,
-          customerEmail: order.customerEmail,
-          customerName: order.customerName,
-          newStatus: validatedBody.status,
-          locale,
-          trackingNumber:
-            validatedBody.trackingNumber ?? order.trackingNumber ?? null,
-          shippingProvider:
-            validatedBody.shippingProvider ?? order.shippingProvider ?? null,
-        },
-      }
-
-      try {
-        const publishResult = await getQStashClient().publishJSON({
-          url: workerUrl,
-          body: statusEvent,
-        })
-        logBusinessEvent({
-          event: 'order_status_email_queued',
-          details: {
-            orderId: order.id,
-            eventType: statusEvent.type,
-            messageId: publishResult.messageId,
-          },
-          success: true,
-        })
-      } catch (publishError) {
-        logError({
-          error: publishError,
-          context: 'qstash_publish_failed_using_fallback',
-          additionalInfo: {
-            orderId: order.id,
-            eventType: statusEvent.type,
-          },
-        })
-        sendOrderStatusUpdateEmail({
-          to: order.customerEmail,
-          customerName: order.customerName,
-          orderId: order.id,
-          status: validatedBody.status,
-          locale,
-          trackingNumber: validatedBody.trackingNumber ?? order.trackingNumber,
-          shippingProvider:
-            validatedBody.shippingProvider ?? order.shippingProvider,
-        })
-      }
+    if (NOTIFY_STATUSES.includes(validatedBody.status)) {
+      await dispatchStatusNotification(order, validatedBody)
     }
 
     return apiSuccess({ order: serializeOrder(order) })
