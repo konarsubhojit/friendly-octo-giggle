@@ -63,9 +63,12 @@ vi.mock('@/lib/env', () => ({
     QSTASH_TOKEN: 'test-token',
   },
 }))
+const mockPublishJSON = vi.hoisted(() =>
+  vi.fn().mockResolvedValue({ messageId: 'test-msg-id' })
+)
 vi.mock('@/lib/qstash', () => ({
   getQStashClient: vi.fn(() => ({
-    publishJSON: vi.fn().mockResolvedValue({ messageId: 'test-msg-id' }),
+    publishJSON: mockPublishJSON,
   })),
 }))
 
@@ -244,6 +247,39 @@ describe('PATCH /api/admin/orders/[id]', () => {
     expect(mockTransaction).not.toHaveBeenCalled()
     expect(mockUpdate).toHaveBeenCalled()
   })
+
+  it.each([
+    { from: 'PENDING', to: 'PROCESSING' },
+    { from: 'PROCESSING', to: 'SHIPPED' },
+    { from: 'SHIPPED', to: 'DELIVERED' },
+    { from: 'PROCESSING', to: 'CANCELLED' },
+  ])(
+    'dispatches a status notification for NOTIFY status $to',
+    async ({ from, to }) => {
+      mockAuth.mockResolvedValue(adminSession as never)
+      mockUpdate.mockReturnValue({
+        set: vi.fn(() => ({ where: vi.fn() })),
+      } as never)
+      mockFindFirst.mockResolvedValue({
+        ...mockOrder,
+        status: from,
+        items: [],
+      } as never)
+
+      const res = await PATCH(mkReq({ status: to }), mkParams())
+
+      expect(res.status).toBe(200)
+      expect(mockPublishJSON).toHaveBeenCalledTimes(1)
+      expect(mockPublishJSON).toHaveBeenCalledWith(
+        expect.objectContaining({
+          body: expect.objectContaining({
+            type: 'order.status_changed',
+            data: expect.objectContaining({ newStatus: to }),
+          }),
+        })
+      )
+    }
+  )
 })
 
 describe('GET /api/admin/orders/[id]', () => {
