@@ -1,9 +1,8 @@
-name: Build
+name: Test Runner
 on:
   push:
     branches:
-      - develop
-      - master
+      - test-runner
   pull_request:
     types: [opened, synchronize, reopened]
 
