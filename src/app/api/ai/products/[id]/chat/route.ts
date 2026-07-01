@@ -55,6 +55,7 @@ const PRODUCT_CONTEXT_MAX_CHARS = 4000
 const SUPPLEMENTAL_CONTEXT_MAX_CHARS = 1600
 const CHAT_HISTORY_TTL_SECONDS = 60 * 60 * 24 * 30
 const MAX_REVIEW_COMMENT_CHARS = 120
+const MAX_GUEST_ID_LENGTH = 64
 
 const DELIVERY_INFO_PATTERNS = [
   /\b(delivery|deliver|shipping|arrive|eta|estimate)\b/i,
@@ -563,7 +564,7 @@ const buildCommerceContext = async (params: {
         ? fetchOrderStatusContext(params.userId, params.messageText)
         : params.intents.wantsOrderStatus
           ? Promise.resolve(
-              'Sign in to check your recent orders and tracking details.'
+              'Sign in to check your recent orders and tracking details for your account.'
             )
           : Promise.resolve(null),
     ])
@@ -679,13 +680,14 @@ const resolveRequestIdentity = async (
   }
 
   const rawClientId =
+    request.headers.get('x-vercel-forwarded-for')?.split(',')[0]?.trim() ||
     request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-    request.headers.get('x-real-ip')?.trim() ||
+    request.headers.get('cf-connecting-ip')?.trim() ||
     'unknown'
-  const sanitizedClientId = rawClientId.replace(/[^a-zA-Z0-9:._-]/g, '')
+  const sanitizedClientId = rawClientId.replace(/[^a-zA-Z0-9._-]/g, '')
 
   return {
-    userId: `guest:${sanitizedClientId.slice(0, 64) || 'unknown'}`,
+    userId: `guest:${sanitizedClientId.slice(0, MAX_GUEST_ID_LENGTH) || 'unknown'}`,
     isAuthenticated: false,
   }
 }
