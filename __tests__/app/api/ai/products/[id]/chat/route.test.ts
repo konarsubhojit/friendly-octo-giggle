@@ -197,7 +197,7 @@ describe('POST /api/ai/products/[id]/chat', () => {
     mockStreamChunks.mockReturnValue(makeAsyncGenerator(['Hello', ' world']))
   })
 
-  it('returns 401 when user is not authenticated', async () => {
+  it('supports guest users when not authenticated', async () => {
     vi.mocked(db.products.findById).mockResolvedValue(mockProduct)
     vi.mocked(auth).mockResolvedValue(null as never)
 
@@ -210,9 +210,10 @@ describe('POST /api/ai/products/[id]/chat', () => {
       params: Promise.resolve({ id: 'abc1234' }),
     })
 
-    expect(response.status).toBe(401)
-    const data = await response.json()
-    expect(data.error).toBe('Authentication required')
+    expect(response.status).toBe(200)
+    expect(response.headers.get('content-type')).toContain('text/plain')
+    const text = await response.text()
+    expect(text).toBe('Hello world')
   })
 
   it('returns 404 when product not found', async () => {

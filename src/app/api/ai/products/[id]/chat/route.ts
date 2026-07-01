@@ -21,7 +21,6 @@ import {
 import type { CurrencyCode } from '@/lib/currency'
 import type { Content } from '@google/genai'
 import type { Product } from '@/lib/types'
-import type { Session } from 'next-auth'
 import { users, products, orders, reviews } from '@/lib/schema'
 import { and, desc, eq, ilike, isNull, or } from 'drizzle-orm'
 import { auth } from '@/lib/auth'
@@ -524,6 +523,7 @@ const fetchOrderStatusContext = async (
 const buildCommerceContext = async (params: {
   product: Product
   userId: string
+  isAuthenticated: boolean
   messageText: string
   currencyCode: CurrencyCode
   formatPrice: (priceInINR: number) => string
@@ -559,8 +559,12 @@ const buildCommerceContext = async (params: {
       params.intents.wantsReviewSummary
         ? fetchReviewSummaryContext(params.product.id)
         : Promise.resolve(null),
-      params.intents.wantsOrderStatus
+      params.intents.wantsOrderStatus && params.isAuthenticated
         ? fetchOrderStatusContext(params.userId, params.messageText)
+        : params.intents.wantsOrderStatus
+          ? Promise.resolve(
+              'Sign in to check your recent orders and tracking details.'
+            )
         : Promise.resolve(null),
     ])
 
@@ -649,16 +653,41 @@ const detectBlockedPrompt = (text: string): string | null => {
   return null
 }
 
-type AuthorizedSession = Session & { user: { id: string } }
+type RequestIdentity = {
+  userId: string
+  isAuthenticated: boolean
+}
 
 type ChatRequestData = z.infer<typeof ChatRequestSchema>
 
 type PreparedRequest = {
   parsedData: ChatRequestData
-  session: AuthorizedSession
+  identity: RequestIdentity
   persistHistory: boolean
   threadId: string
   sanitizedMessages: ChatMessage[]
+}
+
+const resolveRequestIdentity = async (
+  request: NextRequest
+): Promise<RequestIdentity> => {
+  const session = await auth()
+  const sessionUserId =
+    typeof session?.user?.id === 'string' ? session.user.id.trim() : ''
+  if (sessionUserId) {
+    return { userId: sessionUserId, isAuthenticated: true }
+  }
+
+  const rawClientId =
+    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    request.headers.get('x-real-ip')?.trim() ||
+    'unknown'
+  const sanitizedClientId = rawClientId.replace(/[^a-zA-Z0-9:._-]/g, '')
+
+  return {
+    userId: `guest:${sanitizedClientId.slice(0, 64) || 'unknown'}`,
+    isAuthenticated: false,
+  }
 }
 
 const parseAndValidateRequest = async (
@@ -669,8 +698,7 @@ const parseAndValidateRequest = async (
   const parsed = ChatRequestSchema.safeParse(body)
   if (!parsed.success) return apiError('Invalid request body', 400)
 
-  const session = await auth()
-  if (!session?.user?.id) return apiError('Authentication required', 401)
+  const identity = await resolveRequestIdentity(request)
 
   if (
     parsed.data.messages.some(
@@ -685,7 +713,8 @@ const parseAndValidateRequest = async (
     )
   }
 
-  const persistHistory = parsed.data.persistHistory ?? false
+  const persistHistory =
+    identity.isAuthenticated && (parsed.data.persistHistory ?? false)
   const threadId = resolveThreadId(parsed.data.threadId, productId)
 
   const sanitizedMessages = parsed.data.messages.map((message) => ({
@@ -698,7 +727,7 @@ const parseAndValidateRequest = async (
 
   return {
     parsedData: parsed.data,
-    session,
+    identity,
     persistHistory,
     threadId,
     sanitizedMessages,
@@ -1025,12 +1054,13 @@ export const POST = async (
     const prepared = await parseAndValidateRequest(request, id)
     if (prepared instanceof NextResponse) return prepared
 
-    const { session, persistHistory, threadId, sanitizedMessages } = prepared
+    const { identity, persistHistory, threadId, sanitizedMessages } = prepared
+    const { userId, isAuthenticated } = identity
 
     const allMessages = await composeConversationMessages(
       sanitizedMessages,
       persistHistory,
-      session.user.id,
+      userId,
       id,
       threadId
     )
@@ -1052,7 +1082,9 @@ export const POST = async (
 
     const intents = detectIntentSignals(lastUserText)
     const usesAdvancedFeatures = usesAnyAdvancedIntent(intents)
-    const currencyCode = await resolveCurrencyForUser(session.user.id)
+    const currencyCode = isAuthenticated
+      ? await resolveCurrencyForUser(userId)
+      : 'INR'
 
     const aiConfig = await getAiConfigCached()
     if (aiConfig.enabled === false) {
@@ -1067,7 +1099,8 @@ export const POST = async (
       formatPriceForCurrency(priceInINR, currencyCode)
     const supplementalContext = await buildCommerceContext({
       product,
-      userId: session.user.id,
+      userId,
+      isAuthenticated,
       messageText: lastUserText,
       currencyCode,
       formatPrice,
@@ -1091,9 +1124,9 @@ export const POST = async (
     )
     const reservedTotalTokens = estimatedInputTokens + MAX_OUTPUT_TOKENS
 
-    const dailyUsage = await getDailyUsage(session.user.id)
+    const dailyUsage = await getDailyUsage(userId)
     const quotaError = await enforceQuotas({
-      userId: session.user.id,
+      userId,
       dailyUsage,
       reservedTotalTokens,
       requestQuota: aiConfig.dailyRequestQuota ?? DAILY_REQUEST_QUOTA,
@@ -1110,7 +1143,7 @@ export const POST = async (
       if (cached !== null) {
         return respondWithCachedAnswer(cached, {
           productId: id,
-          userId: session.user.id,
+          userId,
           lastUserText,
           currencyCode,
           trimmed,
@@ -1131,7 +1164,7 @@ export const POST = async (
     }
     const messageCount = trimmed.length
 
-    await recordDailyUsage(session.user.id, reservedTotalTokens)
+    await recordDailyUsage(userId, reservedTotalTokens)
 
     const stream = await genAI.models.generateContentStream({
       model: chatModel,
@@ -1150,7 +1183,7 @@ export const POST = async (
     scheduleStreamSideEffects({
       fullTextPromise,
       productId: id,
-      userId: session.user.id,
+      userId,
       lastUserText,
       currencyCode,
       isSingleTurn,
