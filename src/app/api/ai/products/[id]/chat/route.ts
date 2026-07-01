@@ -55,6 +55,7 @@ const PRODUCT_CONTEXT_MAX_CHARS = 4000
 const SUPPLEMENTAL_CONTEXT_MAX_CHARS = 1600
 const CHAT_HISTORY_TTL_SECONDS = 60 * 60 * 24 * 30
 const MAX_REVIEW_COMMENT_CHARS = 120
+// Keep guest identifiers compact for cache-key safety while preserving entropy.
 const MAX_GUEST_ID_LENGTH = 64
 
 const DELIVERY_INFO_PATTERNS = [
@@ -558,15 +559,11 @@ const buildCommerceContext = async (params: {
           )
         : Promise.resolve(null),
       params.intents.wantsReviewSummary
-        ? fetchReviewSummaryContext(params.product.id)
-        : Promise.resolve(null),
-      params.intents.wantsOrderStatus && params.isAuthenticated
-        ? fetchOrderStatusContext(params.userId, params.messageText)
-        : params.intents.wantsOrderStatus
-          ? Promise.resolve(
-              'Sign in to check your recent orders and tracking details for your account.'
-            )
+          ? fetchReviewSummaryContext(params.product.id)
           : Promise.resolve(null),
+      params.intents.wantsOrderStatus && params.isAuthenticated
+          ? fetchOrderStatusContext(params.userId, params.messageText)
+          : getGuestOrderStatusResponse(params.intents.wantsOrderStatus),
     ])
 
   for (const section of [
@@ -684,13 +681,25 @@ const resolveRequestIdentity = async (
     request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
     request.headers.get('cf-connecting-ip')?.trim() ||
     'unknown'
-  const sanitizedClientId = rawClientId.replace(/[^a-zA-Z0-9._-]/g, '')
+  const sanitizedClientId = rawClientId.replace(/[^a-zA-Z0-9]/g, '')
+  const guestId = sanitizedClientId
+    ? sanitizedClientId.slice(0, MAX_GUEST_ID_LENGTH)
+    : 'unknown'
 
   return {
-    userId: `guest:${sanitizedClientId.slice(0, MAX_GUEST_ID_LENGTH) || 'unknown'}`,
+    userId: `guest:${guestId}`,
     isAuthenticated: false,
   }
 }
+
+const getGuestOrderStatusResponse = (
+  wantsOrderStatus: boolean
+): Promise<string | null> =>
+  wantsOrderStatus
+    ? Promise.resolve(
+        'Sign in to check your recent orders and tracking details for your account.'
+      )
+    : Promise.resolve(null)
 
 const parseAndValidateRequest = async (
   request: NextRequest,
