@@ -565,7 +565,7 @@ const buildCommerceContext = async (params: {
           ? Promise.resolve(
               'Sign in to check your recent orders and tracking details.'
             )
-        : Promise.resolve(null),
+          : Promise.resolve(null),
     ])
 
   for (const section of [
