@@ -559,11 +559,11 @@ const buildCommerceContext = async (params: {
           )
         : Promise.resolve(null),
       params.intents.wantsReviewSummary
-          ? fetchReviewSummaryContext(params.product.id)
-          : Promise.resolve(null),
+        ? fetchReviewSummaryContext(params.product.id)
+        : Promise.resolve(null),
       params.intents.wantsOrderStatus && params.isAuthenticated
-          ? fetchOrderStatusContext(params.userId, params.messageText)
-          : getGuestOrderStatusResponse(params.intents.wantsOrderStatus),
+        ? fetchOrderStatusContext(params.userId, params.messageText)
+        : getGuestOrderStatusResponse(params.intents.wantsOrderStatus),
     ])
 
   for (const section of [
