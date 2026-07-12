@@ -93,7 +93,7 @@ test.describe('latest platform capabilities', () => {
         },
       })
     )
-    await page.goto('/en', { waitUntil: 'domcontentloaded' })
+    await page.goto('/en', { waitUntil: 'networkidle' })
 
     await page.getByRole('button', { name: 'Search products' }).click()
     const dialog = page.getByRole('dialog', { name: 'Search products' })

@@ -126,7 +126,9 @@ test.describe('Orders List Summary', () => {
     await expect(
       page.getByRole('heading', { name: /order management/i })
     ).toBeVisible()
-    await expect(page.getByText('Priya Sharma').first()).toBeVisible()
+    const customer = page.getByText('Priya Sharma').first()
+    await expect(customer).toBeVisible()
+    await customer.click()
     await expect(
       page.getByLabel('Change status for order ord0001')
     ).toBeVisible()

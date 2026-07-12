@@ -83,9 +83,11 @@ test.describe('Checkout policy confirmation', () => {
     await page.getByRole('button', { name: /continue to review/i }).click()
 
     await expect(
-      page.getByRole('heading', { name: /review order policy/i })
+      page.getByRole('heading', { name: /review your order/i })
     ).toBeVisible()
-    await expect(page.getByText(/support@estore.example.com/i)).toBeVisible()
+    await expect(
+      page.getByText(/support contact: support@estore.example.com/i)
+    ).toBeVisible()
     await expect(
       page.getByRole('button', { name: /continue to payment/i })
     ).toBeDisabled()

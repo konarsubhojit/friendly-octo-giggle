@@ -65,7 +65,7 @@ export function PasswordSection() {
               setSuccess('')
               setIsChanging(true)
             }}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-[var(--accent-rose)] bg-[var(--accent-blush)] rounded-lg hover:bg-[var(--accent-cream)] transition"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-[var(--foreground)] bg-[var(--accent-blush)] rounded-lg hover:bg-[var(--accent-cream)] transition"
             aria-label="Change password"
           >
             <svg
