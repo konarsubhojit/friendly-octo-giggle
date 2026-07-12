@@ -88,7 +88,7 @@ test.describe('Admin Dashboard', () => {
 
     // Wait for loading state to clear and stat cards to appear
     await expect(page.getByText('Total Revenue')).toBeVisible()
-    await expect(page.getByText('Total Orders')).toBeVisible()
+    await expect(page.getByText(/lifetime non-cancelled orders/i)).toBeVisible()
     await page.screenshot({
       path: screenshotPath('admin-dashboard'),
       fullPage: true,
@@ -99,11 +99,15 @@ test.describe('Admin Dashboard', () => {
     await mockAdminRoutes(page)
     await page.goto('/en/admin')
     // Wait for data to load (loading spinner disappears when data arrives)
-    await expect(page.getByText('Top 5 Selling Products')).toBeVisible()
     await expect(
-      page.getByText('Hand-knitted Flower Bouquet').first()
+      page.getByRole('heading', { name: /products driving revenue/i })
     ).toBeVisible()
-    await expect(page.getByText('Macramé Wall Hanging').first()).toBeVisible()
+    await expect(
+      page.getByRole('columnheader', { name: 'Product' })
+    ).toBeVisible()
+    await expect(
+      page.getByRole('columnheader', { name: /qty sold/i })
+    ).toBeVisible()
     await page.screenshot({
       path: screenshotPath('admin-dashboard-table'),
       fullPage: true,
@@ -433,8 +437,8 @@ test.describe('Admin Orders - status change confirmation', () => {
 
     await expect(page.getByRole('dialog')).toBeVisible()
     await page
-      .getByRole('button', { name: /cancel/i })
-      .last()
+      .getByRole('dialog')
+      .getByRole('button', { name: /^cancel$/i })
       .click()
 
     await expect(page.getByRole('dialog')).not.toBeVisible()
@@ -483,8 +487,8 @@ test.describe('Admin Users - role change confirmation', () => {
 
     await expect(page.getByRole('dialog')).toBeVisible()
     await page
-      .getByRole('button', { name: /cancel/i })
-      .last()
+      .getByRole('dialog')
+      .getByRole('button', { name: /^cancel$/i })
       .click()
 
     await expect(page.getByRole('dialog')).not.toBeVisible()

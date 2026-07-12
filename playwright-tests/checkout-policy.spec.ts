@@ -87,15 +87,17 @@ test.describe('Checkout policy confirmation', () => {
     ).toBeVisible()
     await expect(page.getByText(/support@estore.example.com/i)).toBeVisible()
     await expect(
-      page.getByRole('button', { name: /confirm and place order/i })
+      page.getByRole('button', { name: /continue to payment/i })
     ).toBeDisabled()
     expect(checkoutRequests).toBe(0)
 
     await page.getByRole('checkbox').check()
     await expect(
-      page.getByRole('button', { name: /confirm and place order/i })
+      page.getByRole('button', { name: /continue to payment/i })
     ).toBeEnabled()
 
+    await page.getByRole('button', { name: /continue to payment/i }).click()
+    await expect(page).toHaveURL(/\/checkout\/payment/)
     await page.getByRole('button', { name: /confirm and place order/i }).click()
     await expect(page).toHaveURL(
       /\/checkout\/confirmation\?orderId=ord-test-001/

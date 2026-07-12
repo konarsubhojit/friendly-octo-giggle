@@ -105,7 +105,9 @@ export default function Header() {
             </nav>
 
             <div className="flex min-w-0 shrink-0 items-center gap-2 sm:gap-4">
-              <LanguageSwitcher />
+              <div className="hidden sm:block">
+                <LanguageSwitcher />
+              </div>
               <div className="hidden sm:block">
                 <ProductSearch />
               </div>

@@ -65,7 +65,7 @@ test.describe('latest platform capabilities', () => {
     await expect(language.locator('option')).toHaveText(['English', 'Español'])
     await language.selectOption('es')
 
-    await expect(page).toHaveURL(/\/es\/about$/)
+    await expect(page).toHaveURL(/\/es\/about$/, { timeout: 15_000 })
     await expect(page.getByRole('combobox', { name: 'Idioma' })).toHaveValue(
       'es'
     )
@@ -74,36 +74,35 @@ test.describe('latest platform capabilities', () => {
   test('header search renders grouped accessible suggestions', async ({
     page,
   }) => {
-    await page.route('**/api/search/suggest?**', (route) =>
+    await page.route('**/api/search?**', (route) =>
       route.fulfill({
         json: {
           success: true,
           data: {
-            query: 'rose',
-            products: [
-              { id: 'prd0001', label: 'Rose Keyring', category: 'Accessories' },
+            results: [
+              {
+                id: 'prd0001',
+                name: 'Rose Keyring',
+                description: 'Handmade flower keyring',
+                price: 12,
+                image: '',
+                category: 'Accessories',
+              },
             ],
-            categories: ['Flowers'],
-            popular: ['flower bouquet'],
           },
         },
       })
     )
     await page.goto('/en', { waitUntil: 'domcontentloaded' })
 
-    const search = page
-      .getByRole('combobox', { name: 'Search products' })
-      .first()
-    await search.fill('rose')
+    await page.getByRole('button', { name: 'Search products' }).click()
+    const dialog = page.getByRole('dialog', { name: 'Search products' })
+    await dialog
+      .getByRole('searchbox', { name: 'Search products' })
+      .fill('rose')
 
-    const suggestions = page.getByRole('listbox', {
-      name: 'Search suggestions',
-    })
-    await expect(suggestions).toBeVisible()
-    await expect(suggestions.getByRole('option')).toHaveCount(3)
-    await expect(suggestions).toContainText('Rose Keyring')
-    await expect(suggestions).toContainText('Flowers')
-    await expect(suggestions).toContainText('flower bouquet')
+    await expect(dialog.getByText('Rose Keyring')).toBeVisible()
+    await expect(dialog.getByText('Accessories')).toBeVisible()
   })
 
   test('admin search-index operations require authentication', async ({

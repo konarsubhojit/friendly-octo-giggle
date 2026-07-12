@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic'
 import Link from '@/components/ui/LocaleLink'
 import { GradientButton } from '@/components/ui/GradientButton'
 import { useLocale } from '@/contexts/LocaleContext'
+import LanguageSwitcher from '@/components/ui/LanguageSwitcher'
 
 const ProductSearch = dynamic(
   () => import('@/features/product/components/ProductSearch'),
@@ -35,6 +36,9 @@ export function MobileNav({
       className="md:hidden bg-[var(--background)]/95 backdrop-blur-lg border-t border-[var(--border-warm)]/40 shadow-warm animate-fade-in"
     >
       <nav className="mx-auto flex w-full max-w-[96rem] flex-col gap-1 px-4 py-4 sm:px-6">
+        <div className="flex justify-end px-4 py-1 sm:hidden">
+          <LanguageSwitcher />
+        </div>
         <div className="px-4 py-2">
           <ProductSearch onNavigate={closeMobileNav} />
         </div>

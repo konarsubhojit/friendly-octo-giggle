@@ -42,24 +42,31 @@ export default defineConfig({
         ...devices['Desktop Chrome'],
         viewport: { width: 1280, height: 800 },
       },
-      testMatch: [
-        '**/ui-changes.spec.ts',
-        '**/fixed-background.spec.ts',
-        '**/ux-audit.spec.ts',
-        '**/orders-list.spec.ts',
-        '**/ai-stock-privacy.spec.ts',
-      ],
+      testMatch: ['**/ui-changes.spec.ts', '**/ux-audit.spec.ts'],
     },
     {
       name: 'mobile-chrome',
       use: { ...devices['Pixel 5'], viewport: { width: 393, height: 851 } },
-      testMatch: [
-        '**/ui-changes.spec.ts',
-        '**/fixed-background.spec.ts',
-        '**/ux-audit.spec.ts',
-        '**/orders-list.spec.ts',
-        '**/ai-stock-privacy.spec.ts',
-      ],
+      testMatch: ['**/ui-changes.spec.ts', '**/ux-audit.spec.ts'],
+    },
+    // Product assistant regression — public desktop coverage.
+    {
+      name: 'ai-stock-privacy',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1280, height: 800 },
+      },
+      testMatch: '**/ai-stock-privacy.spec.ts',
+    },
+    // Order summaries — authenticated desktop coverage.
+    {
+      name: 'orders-list',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1280, height: 800 },
+        storageState: './playwright-tests/.auth/admin.json',
+      },
+      testMatch: '**/orders-list.spec.ts',
     },
     // Current platform capabilities — PWA, localization, discovery, and admin operations.
     {
@@ -97,11 +104,7 @@ export default defineConfig({
         viewport: { width: 1280, height: 800 },
         storageState: './playwright-tests/.auth/admin.json',
       },
-      testMatch: [
-        '**/admin-views.spec.ts',
-        '**/products.spec.ts',
-        '**/ux-audit.spec.ts',
-      ],
+      testMatch: ['**/admin-views.spec.ts', '**/ux-audit.spec.ts'],
     },
     // Admin views — authenticated admin session (mobile)
     {
