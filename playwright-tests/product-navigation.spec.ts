@@ -83,7 +83,26 @@ test.describe('product navigation (no 404 regression)', () => {
   test('search dropdown result navigates to a locale-prefixed product URL', async ({
     page,
   }) => {
-    await page.goto('/en/shop', { waitUntil: 'domcontentloaded' })
+    await page.route('**/api/search?**', (route) =>
+      route.fulfill({
+        json: {
+          success: true,
+          data: {
+            results: [
+              {
+                id: 'ruJaxwb',
+                name: 'Crochet Keychain',
+                description: 'Handmade keychain',
+                price: 10,
+                image: '',
+                category: 'Keychains',
+              },
+            ],
+          },
+        },
+      })
+    )
+    await page.goto('/en/shop', { waitUntil: 'networkidle' })
 
     await page
       .getByRole('button', { name: /search products/i })

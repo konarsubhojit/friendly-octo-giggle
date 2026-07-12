@@ -200,6 +200,7 @@ export default defineConfig({
       use: {
         ...devices['Desktop Chrome'],
         viewport: { width: 1280, height: 800 },
+        storageState: './playwright-tests/.auth/admin.json',
       },
       testMatch: '**/variant-options.spec.ts',
     },

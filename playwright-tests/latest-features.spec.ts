@@ -58,7 +58,7 @@ test.describe('latest platform capabilities', () => {
     await page.route('**/api/account', (route) =>
       route.fulfill({ status: 200, json: { success: true } })
     )
-    await page.goto('/en/about', { waitUntil: 'domcontentloaded' })
+    await page.goto('/en/about', { waitUntil: 'networkidle' })
 
     const language = page.getByRole('combobox', { name: 'Language' })
     await expect(language).toHaveValue('en')

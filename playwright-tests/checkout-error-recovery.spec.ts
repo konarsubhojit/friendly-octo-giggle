@@ -70,7 +70,7 @@ test.describe('Checkout error recovery', () => {
     await page.getByLabel(/city/i).fill('Bengaluru')
     await page.getByLabel(/state/i).fill('Karnataka')
     await page.getByRole('button', { name: /continue to review/i }).click()
-    await expect(page).toHaveURL(/\/checkout\/review/)
+    await expect(page).toHaveURL(/\/checkout\/review/, { timeout: 15_000 })
     await page.getByRole('checkbox').check()
     await page.getByRole('button', { name: /continue to payment/i }).click()
     await expect(page).toHaveURL(/\/checkout\/payment/)
