@@ -5,6 +5,10 @@
 **Status**: Draft  
 **Input**: User description: "Document the existing shopping cart and checkout hand-off feature by reverse-engineering shipped code."
 
+## Current Implementation Snapshot (2026-07-12)
+
+The shipped cart uses a signed guest session, authenticated persistence, merge-on-sign-in, stock-aware quantities, variants, customization notes, address/pincode capture, policy acknowledgment, and shipping calculations. Checkout now has shipping, payment, review, and confirmation routes plus idempotent checkout requests processed by Vercel Queues and visible to admins.
+
 ## User Scenarios & Testing _(mandatory)_
 
 ### User Story 1 - Maintain a Stock-Aware Cart (Priority: P1)

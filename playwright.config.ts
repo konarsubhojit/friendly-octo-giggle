@@ -61,6 +61,16 @@ export default defineConfig({
         '**/ai-stock-privacy.spec.ts',
       ],
     },
+    // Current platform capabilities — PWA, localization, discovery, and admin operations.
+    {
+      name: 'latest-features',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1280, height: 800 },
+        storageState: './playwright-tests/.auth/admin.json',
+      },
+      testMatch: '**/latest-features.spec.ts',
+    },
     // Password validation — desktop
     {
       name: 'password-validation-desktop',

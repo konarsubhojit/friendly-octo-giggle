@@ -5,6 +5,10 @@
 **Status**: Draft  
 **Input**: User description: "Feature Suggestions: Enhanced Account, Wishlist, and Personalization"
 
+## Current Implementation Snapshot (2026-07-12)
+
+Shipped scope includes a persistent authenticated wishlist, account overview/recent orders, explicit profile/password edit modes, reusable addresses, guest-cart merge, recently viewed products, and persisted currency/locale preferences. The storefront supports INR/USD/EUR/GBP display and English/Spanish routes. Notification-center and sale/stock subscription concepts remain future scope unless separately implemented.
+
 ## User Scenarios & Testing _(mandatory)_
 
 ### User Story 1 - Persistent Wishlist and Unified Account Dashboard (Priority: P1)

@@ -17,7 +17,7 @@
 
 ## 1. Current Status Snapshot
 
-As of March 2026, the project is a Next.js 16 App Router storefront running primarily as a server-rendered application with ISR for public pages and dynamic route handlers for user- and admin-specific data.
+As of July 2026, the project is a Next.js 16 App Router storefront running primarily as a server-rendered application with ISR for public pages and dynamic route handlers for user- and admin-specific data.
 
 Key current-state points:
 
@@ -31,6 +31,10 @@ Key current-state points:
 
 ---
 
+### July 2026 capability update
+
+The runtime now also includes locale-prefixed English and Spanish routes, locale and currency preferences, installable PWA metadata and offline fallback, a guest-accessible AI product assistant, staged checkout pages backed by durable checkout requests and a Vercel Queue consumer, advanced search suggestions/click analytics, account address management, admin import/export and bulk actions, checkout queue visibility, Prometheus metrics, and Sentry instrumentation. See [Feature Catalog](./features.md) for the user-facing inventory.
+
 ## 2. System Overview
 
 The architecture is a serverless-first e-commerce system built around a small number of stable layers:
@@ -41,7 +45,7 @@ The architecture is a serverless-first e-commerce system built around a small nu
 │  Next.js App Router                                          │
 │  • Server Components by default                              │
 │  • Client Components for interactivity                       │
-│  • Root providers: Redux, Theme, Currency, Session, Toast    │
+│  • Root providers: Redux, Theme, Currency, Locale, Session, Toast    │
 │  • Vercel Analytics + Speed Insights                         │
 └──────────────────────────────────────────────────────────────┘
                                ↓
