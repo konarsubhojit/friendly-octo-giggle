@@ -45,6 +45,8 @@ export function AdminDataView<T extends Record<string, unknown>>({
   const [isMobile, setIsMobile] = useState(false)
 
   useEffect(() => {
+    if (typeof globalThis.matchMedia !== 'function') return
+
     const mediaQuery = globalThis.matchMedia(MOBILE_QUERY)
     const updateViewport = () => setIsMobile(mediaQuery.matches)
 

@@ -181,89 +181,152 @@ export default async function AdminCheckoutRequestsPage({
               : 'No checkout requests have been recorded yet.'}
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-800">
-              <thead>
-                <tr className="text-left text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-                  <th className="px-3 py-3">Request</th>
-                  <th className="px-3 py-3">Customer</th>
-                  <th className="px-3 py-3">State</th>
-                  <th className="px-3 py-3">Order</th>
-                  <th className="px-3 py-3">Last Error</th>
-                  <th className="px-3 py-3">Created</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-                {records.map((record) => (
-                  <tr
-                    key={record.id}
-                    className="align-top text-slate-700 dark:text-slate-200"
-                  >
-                    <td className="px-3 py-4">
-                      <div className="font-semibold text-slate-950 dark:text-slate-50">
+          <>
+            <div
+              className="grid gap-3 md:hidden"
+              role="list"
+              aria-label="Checkout requests"
+            >
+              {records.map((record) => (
+                <article
+                  key={record.id}
+                  className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50/70 p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/70"
+                  role="listitem"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="break-all font-mono text-xs font-semibold text-slate-950 dark:text-slate-50">
                         {record.id}
-                      </div>
-                      <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                        User {record.userId}
-                      </div>
-                      <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                        {record.itemCount} item
-                        {record.itemCount === 1 ? '' : 's'}
-                      </div>
-                    </td>
-                    <td className="px-3 py-4">
-                      <div className="font-medium text-slate-950 dark:text-slate-50">
+                      </p>
+                      <p className="mt-1 break-words text-sm font-medium text-slate-700 dark:text-slate-200">
                         {record.customerName}
-                      </div>
-                      <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                      </p>
+                      <p className="mt-1 break-all text-xs text-slate-500 dark:text-slate-400">
                         {record.customerEmail}
-                      </div>
-                      <div className="mt-1 max-w-xs text-xs text-slate-500 dark:text-slate-400">
-                        {truncate(record.customerAddress, 72)}
-                      </div>
-                    </td>
-                    <td className="px-3 py-4">
-                      <span
-                        className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_STYLES[record.status]}`}
-                      >
-                        {record.status}
-                      </span>
-                    </td>
-                    <td className="px-3 py-4">
-                      {record.orderId ? (
-                        <Link
-                          href={`/admin/orders?search=${record.orderId}`}
-                          className="font-medium text-sky-700 underline decoration-sky-300 underline-offset-4 transition hover:text-sky-600 dark:text-sky-300 dark:decoration-sky-600 dark:hover:text-sky-200"
-                        >
-                          {record.orderId}
-                        </Link>
-                      ) : (
-                        <span className="text-xs text-slate-500 dark:text-slate-400">
-                          Not created yet
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-3 py-4">
-                      {record.errorMessage ? (
-                        <span className="max-w-xs text-xs text-rose-700 dark:text-rose-300">
-                          {truncate(record.errorMessage, 88)}
-                        </span>
-                      ) : (
-                        <span className="text-xs text-slate-500 dark:text-slate-400">
-                          None
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-3 py-4 text-xs text-slate-500 dark:text-slate-400">
-                      <time dateTime={record.createdAt}>
-                        {formatTimestamp(record.createdAt)}
-                      </time>
-                    </td>
+                      </p>
+                    </div>
+                    <span
+                      className={`inline-flex shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_STYLES[record.status]}`}
+                    >
+                      {record.status}
+                    </span>
+                  </div>
+                  <dl className="mt-4 grid grid-cols-2 gap-3 border-t border-slate-200 pt-3 text-sm dark:border-slate-700">
+                    <div>
+                      <dt className="text-xs text-slate-500 dark:text-slate-400">
+                        Order
+                      </dt>
+                      <dd className="mt-1 break-all text-slate-700 dark:text-slate-200">
+                        {record.orderId ?? 'Not created yet'}
+                      </dd>
+                    </div>
+                    <div className="text-right">
+                      <dt className="text-xs text-slate-500 dark:text-slate-400">
+                        Items
+                      </dt>
+                      <dd className="mt-1 font-semibold text-slate-950 dark:text-slate-50">
+                        {record.itemCount}
+                      </dd>
+                    </div>
+                  </dl>
+                  {record.errorMessage ? (
+                    <p className="mt-3 break-words rounded-xl bg-rose-50 p-3 text-xs text-rose-700 dark:bg-rose-950/30 dark:text-rose-300">
+                      {truncate(record.errorMessage, 160)}
+                    </p>
+                  ) : null}
+                  <time
+                    dateTime={record.createdAt}
+                    className="mt-3 block text-xs text-slate-500 dark:text-slate-400"
+                  >
+                    {formatTimestamp(record.createdAt)}
+                  </time>
+                </article>
+              ))}
+            </div>
+            <div className="hidden overflow-x-auto md:block">
+              <table className="min-w-[64rem] divide-y divide-slate-200 text-sm dark:divide-slate-800">
+                <thead>
+                  <tr className="text-left text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                    <th className="px-3 py-3">Request</th>
+                    <th className="px-3 py-3">Customer</th>
+                    <th className="px-3 py-3">State</th>
+                    <th className="px-3 py-3">Order</th>
+                    <th className="px-3 py-3">Last Error</th>
+                    <th className="px-3 py-3">Created</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+                  {records.map((record) => (
+                    <tr
+                      key={record.id}
+                      className="align-top text-slate-700 dark:text-slate-200"
+                    >
+                      <td className="px-3 py-4">
+                        <div className="font-semibold text-slate-950 dark:text-slate-50">
+                          {record.id}
+                        </div>
+                        <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                          User {record.userId}
+                        </div>
+                        <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                          {record.itemCount} item
+                          {record.itemCount === 1 ? '' : 's'}
+                        </div>
+                      </td>
+                      <td className="px-3 py-4">
+                        <div className="font-medium text-slate-950 dark:text-slate-50">
+                          {record.customerName}
+                        </div>
+                        <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                          {record.customerEmail}
+                        </div>
+                        <div className="mt-1 max-w-xs text-xs text-slate-500 dark:text-slate-400">
+                          {truncate(record.customerAddress, 72)}
+                        </div>
+                      </td>
+                      <td className="px-3 py-4">
+                        <span
+                          className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_STYLES[record.status]}`}
+                        >
+                          {record.status}
+                        </span>
+                      </td>
+                      <td className="px-3 py-4">
+                        {record.orderId ? (
+                          <Link
+                            href={`/admin/orders?search=${record.orderId}`}
+                            className="font-medium text-sky-700 underline decoration-sky-300 underline-offset-4 transition hover:text-sky-600 dark:text-sky-300 dark:decoration-sky-600 dark:hover:text-sky-200"
+                          >
+                            {record.orderId}
+                          </Link>
+                        ) : (
+                          <span className="text-xs text-slate-500 dark:text-slate-400">
+                            Not created yet
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-3 py-4">
+                        {record.errorMessage ? (
+                          <span className="max-w-xs text-xs text-rose-700 dark:text-rose-300">
+                            {truncate(record.errorMessage, 88)}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-slate-500 dark:text-slate-400">
+                            None
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-3 py-4 text-xs text-slate-500 dark:text-slate-400">
+                        <time dateTime={record.createdAt}>
+                          {formatTimestamp(record.createdAt)}
+                        </time>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </AdminPanel>
     </AdminPageShell>
