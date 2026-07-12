@@ -21,7 +21,7 @@ test.describe('Fixed background image — warm-bg.jpeg', () => {
   // ── Source CSS assertions ────────────────────────────────────────────────
 
   test('bg-warm-gradient utility includes fixed warm-bg image and color-mix overlay', () => {
-    const css = readFileSync(join(__dirname, '../app/globals.css'), 'utf-8')
+    const css = readFileSync(join(__dirname, '../src/app/globals.css'), 'utf-8')
     // Fixed background image is scoped to bg-warm-gradient, not body
     expect(css).toContain("url('/warm-bg.jpeg')")
     expect(css).toContain('fixed')
@@ -37,7 +37,7 @@ test.describe('Fixed background image — warm-bg.jpeg', () => {
   })
 
   test('body does NOT set background-image (scoped to bg-warm-gradient only)', () => {
-    const css = readFileSync(join(__dirname, '../app/globals.css'), 'utf-8')
+    const css = readFileSync(join(__dirname, '../src/app/globals.css'), 'utf-8')
     // Extract the body rule — it should NOT contain background-image
     const bodyRule = css.match(/body\s*\{[^}]*\}/)?.[0] ?? ''
     expect(bodyRule).not.toContain('background-image')
@@ -49,7 +49,7 @@ test.describe('Fixed background image — warm-bg.jpeg', () => {
   test('bg-warm-gradient wrapper has fixed background-image on blog page', async ({
     page,
   }) => {
-    await page.goto('/blog')
+    await page.goto('/en/blog')
     const bgImage = await page.evaluate(() => {
       const el = document.querySelector('.bg-warm-gradient')
       return el ? window.getComputedStyle(el).backgroundImage : ''
@@ -60,7 +60,7 @@ test.describe('Fixed background image — warm-bg.jpeg', () => {
   test('bg-warm-gradient wrapper has fixed background-attachment on blog page', async ({
     page,
   }) => {
-    await page.goto('/blog')
+    await page.goto('/en/blog')
     const bgAttachment = await page.evaluate(() => {
       const el = document.querySelector('.bg-warm-gradient')
       return el ? window.getComputedStyle(el).backgroundAttachment : ''
@@ -72,7 +72,7 @@ test.describe('Fixed background image — warm-bg.jpeg', () => {
   test('bg-warm-gradient wrapper has background-size: cover on blog page', async ({
     page,
   }) => {
-    await page.goto('/blog')
+    await page.goto('/en/blog')
     const bgSize = await page.evaluate(() => {
       const el = document.querySelector('.bg-warm-gradient')
       return el ? window.getComputedStyle(el).backgroundSize : ''
@@ -110,7 +110,7 @@ test.describe('Fixed background image — warm-bg.jpeg', () => {
       testInfo.project.name !== 'desktop-chrome',
       'Only runs on desktop viewport'
     )
-    await page.goto('/about')
+    await page.goto('/en/about')
     await page.waitForLoadState('load')
 
     await page.screenshot({
@@ -140,7 +140,7 @@ test.describe('Fixed background image — warm-bg.jpeg', () => {
       testInfo.project.name !== 'mobile-chrome',
       'Only runs on mobile viewport'
     )
-    await page.goto('/blog')
+    await page.goto('/en/blog')
     await page.waitForLoadState('load')
 
     await page.screenshot({
@@ -172,7 +172,7 @@ test.describe('Fixed background image — warm-bg.jpeg', () => {
       testInfo.project.name !== 'desktop-chrome',
       'Only runs on desktop viewport'
     )
-    await page.goto('/blog')
+    await page.goto('/en/blog')
     await expect(page.locator('header')).toBeVisible()
     await page.screenshot({
       path: screenshotPath('fixed-bg-desktop-blog-full'),
@@ -187,7 +187,7 @@ test.describe('Fixed background image — warm-bg.jpeg', () => {
       testInfo.project.name !== 'desktop-chrome',
       'Only runs on desktop viewport'
     )
-    await page.goto('/about')
+    await page.goto('/en/about')
     await expect(page.locator('h1')).toBeVisible()
     await page.screenshot({
       path: screenshotPath('fixed-bg-desktop-about-full'),
@@ -202,7 +202,7 @@ test.describe('Fixed background image — warm-bg.jpeg', () => {
       testInfo.project.name !== 'mobile-chrome',
       'Only runs on mobile viewport'
     )
-    await page.goto('/contact')
+    await page.goto('/en/contact')
     await expect(page.locator('h1')).toBeVisible()
     await page.screenshot({
       path: screenshotPath('fixed-bg-mobile-contact-full'),
@@ -217,7 +217,7 @@ test.describe('Fixed background image — warm-bg.jpeg', () => {
       testInfo.project.name !== 'mobile-chrome',
       'Only runs on mobile viewport'
     )
-    await page.goto('/shipping')
+    await page.goto('/en/shipping')
     await expect(page.locator('h1')).toBeVisible()
     await page.screenshot({
       path: screenshotPath('fixed-bg-mobile-shipping-full'),
@@ -241,7 +241,7 @@ test.describe('Fixed background image — warm-bg.jpeg', () => {
       testInfo.project.name !== 'desktop-chrome',
       'Only runs on desktop viewport'
     )
-    await page.goto('/blog')
+    await page.goto('/en/blog')
     const bg = await page.evaluate(() => {
       const el = document.querySelector('.bg-warm-gradient')
       if (!el) return { image: '', attachment: '', size: '' }
@@ -263,7 +263,7 @@ test.describe('Fixed background image — warm-bg.jpeg', () => {
 
   test('admin pages do NOT use bg-warm-gradient (separate styling)', () => {
     const adminLayout = readFileSync(
-      join(__dirname, '../app/admin/layout.tsx'),
+      join(__dirname, '../src/app/admin/layout.tsx'),
       'utf-8'
     )
     expect(adminLayout).toContain('bg-gray-50')
@@ -272,7 +272,7 @@ test.describe('Fixed background image — warm-bg.jpeg', () => {
 
   test('blog page uses bg-warm-gradient overlay class', () => {
     const blogPage = readFileSync(
-      join(__dirname, '../app/blog/page.tsx'),
+      join(__dirname, '../src/app/blog/page.tsx'),
       'utf-8'
     )
     expect(blogPage).toContain('bg-warm-gradient')

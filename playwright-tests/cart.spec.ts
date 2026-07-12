@@ -146,7 +146,7 @@ test.describe('Cart page – loading and display', () => {
     const cartState = { current: { ...MOCK_CART } }
     await mockCartRoutes(page, cartState)
 
-    await page.goto('/cart')
+    await page.goto('/en/cart')
 
     await expect(page.getByText(MOCK_CART_ITEM_1.product.name)).toBeVisible()
     await expect(page.getByText(MOCK_CART_ITEM_2.product.name)).toBeVisible()
@@ -158,7 +158,7 @@ test.describe('Cart page – loading and display', () => {
     const cartState = { current: { ...MOCK_CART } }
     await mockCartRoutes(page, cartState)
 
-    await page.goto('/cart')
+    await page.goto('/en/cart')
 
     await expect(
       page.getByRole('heading', { name: /shopping cart/i })
@@ -169,7 +169,7 @@ test.describe('Cart page – loading and display', () => {
     const cartState = { current: { ...MOCK_CART } }
     await mockCartRoutes(page, cartState)
 
-    await page.goto('/cart')
+    await page.goto('/en/cart')
 
     await expect(
       page.getByRole('heading', { name: /order summary/i })
@@ -183,7 +183,7 @@ test.describe('Cart page – loading and display', () => {
     }
     await mockCartRoutes(page, cartState)
 
-    await page.goto('/cart')
+    await page.goto('/en/cart')
 
     await expect(page.getByText(/your cart is empty/i)).toBeVisible()
     await expect(page.getByText(/browse products/i)).toBeVisible()
@@ -195,7 +195,7 @@ test.describe('Cart page – loading and display', () => {
     const cartState: { current: typeof MOCK_CART | null } = { current: null }
     await mockCartRoutes(page, cartState)
 
-    await page.goto('/cart')
+    await page.goto('/en/cart')
 
     await expect(page.getByText(/your cart is empty/i)).toBeVisible()
   })
@@ -213,7 +213,7 @@ test.describe('Cart page – quantity updates', () => {
     }
     await mockCartRoutes(page, cartState)
 
-    await page.goto('/cart')
+    await page.goto('/en/cart')
     await expect(page.getByText(MOCK_CART_ITEM_1.product.name)).toBeVisible()
 
     // Select quantity 3 from the dropdown
@@ -238,7 +238,7 @@ test.describe('Cart page – quantity updates', () => {
     }
     await mockCartRoutes(page, cartState)
 
-    await page.goto('/cart')
+    await page.goto('/en/cart')
     await expect(page.getByText(MOCK_CART_ITEM_1.product.name)).toBeVisible()
 
     // Select quantity 2 from the dropdown
@@ -265,7 +265,7 @@ test.describe('Cart page – quantity updates', () => {
     }
     await mockCartRoutes(page, cartState)
 
-    await page.goto('/cart')
+    await page.goto('/en/cart')
 
     const qtySelect = page.getByLabel(
       `Quantity for ${MOCK_CART_ITEM_1.product.name}`
@@ -279,7 +279,7 @@ test.describe('Cart page – quantity updates', () => {
     const cartState = { current: { ...MOCK_CART } }
     await mockCartRoutes(page, cartState)
 
-    await page.goto('/cart')
+    await page.goto('/en/cart')
 
     // Both items should be visible before
     await expect(page.getByText(MOCK_CART_ITEM_1.product.name)).toBeVisible()
@@ -305,7 +305,7 @@ test.describe('Cart page – remove item', () => {
     const cartState = { current: { ...MOCK_CART } }
     await mockCartRoutes(page, cartState)
 
-    await page.goto('/cart')
+    await page.goto('/en/cart')
 
     await expect(page.getByText(MOCK_CART_ITEM_1.product.name)).toBeVisible()
     await expect(page.getByText(MOCK_CART_ITEM_2.product.name)).toBeVisible()
@@ -329,7 +329,7 @@ test.describe('Cart page – remove item', () => {
     }
     await mockCartRoutes(page, cartState)
 
-    await page.goto('/cart')
+    await page.goto('/en/cart')
     await expect(page.getByText(MOCK_CART_ITEM_1.product.name)).toBeVisible()
 
     // Remove the only item
@@ -352,7 +352,7 @@ test.describe('Cart page – order summary', () => {
     const cartState = { current: { ...MOCK_CART } }
     await mockCartRoutes(page, cartState)
 
-    await page.goto('/cart')
+    await page.goto('/en/cart')
 
     // Derive total quantity directly from the mock state to stay resilient to data changes
     const totalQty = MOCK_CART.items.reduce(
@@ -376,7 +376,7 @@ test.describe('Cart page – order summary', () => {
     }
     await mockCartRoutes(page, cartState)
 
-    await page.goto('/cart')
+    await page.goto('/en/cart')
 
     // Increase quantity of first item using dropdown
     await page
@@ -393,7 +393,7 @@ test.describe('Cart page – order summary', () => {
     const cartState = { current: { ...MOCK_CART } }
     await mockCartRoutes(page, cartState)
 
-    await page.goto('/cart')
+    await page.goto('/en/cart')
 
     await expect(
       page.getByRole('button', { name: /place order/i })
@@ -405,7 +405,7 @@ test.describe('Cart page – order summary', () => {
     const cartState = { current: { ...MOCK_CART } }
     await mockCartRoutes(page, cartState)
 
-    await page.goto('/cart')
+    await page.goto('/en/cart')
 
     // Submit without filling address
     await page.getByRole('button', { name: /place order/i }).click()
@@ -422,7 +422,7 @@ test.describe('Cart page – order summary', () => {
     const cartState = { current: { ...MOCK_CART } }
     await mockCartRoutes(page, cartState)
 
-    await page.goto('/cart')
+    await page.goto('/en/cart')
 
     await page
       .getByLabel(/shipping address/i)
@@ -445,7 +445,7 @@ test.describe('Cart page – order summary', () => {
     const cartState = { current: { ...MOCK_CART } }
     await mockCartRoutes(page, cartState)
 
-    await page.goto('/cart')
+    await page.goto('/en/cart')
 
     await page
       .getByLabel(/shipping address/i)
@@ -467,11 +467,11 @@ test.describe('Cart page – navigation', () => {
     const cartState = { current: { ...MOCK_CART } }
     await mockCartRoutes(page, cartState)
 
-    await page.goto('/cart')
+    await page.goto('/en/cart')
 
     const continueLink = page.getByRole('link', { name: /continue shopping/i })
     await expect(continueLink).toBeVisible()
-    await expect(continueLink).toHaveAttribute('href', '/shop')
+    await expect(continueLink).toHaveAttribute('href', '/en/shop')
   })
 
   test('"Browse Products" link in empty cart navigates to shop', async ({
@@ -482,18 +482,18 @@ test.describe('Cart page – navigation', () => {
     }
     await mockCartRoutes(page, cartState)
 
-    await page.goto('/cart')
+    await page.goto('/en/cart')
 
     const browseLink = page.getByRole('link', { name: /browse products/i })
     await expect(browseLink).toBeVisible()
-    await expect(browseLink).toHaveAttribute('href', '/shop')
+    await expect(browseLink).toHaveAttribute('href', '/en/shop')
   })
 
   test('product name in cart item links to product page', async ({ page }) => {
     const cartState = { current: { ...MOCK_CART } }
     await mockCartRoutes(page, cartState)
 
-    await page.goto('/cart')
+    await page.goto('/en/cart')
 
     const productLink = page.getByRole('link', {
       name: MOCK_CART_ITEM_1.product.name,

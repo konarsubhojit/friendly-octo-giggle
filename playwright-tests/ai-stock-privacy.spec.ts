@@ -72,7 +72,7 @@ test.describe('AI Product Assistant — stock privacy', () => {
     await mockAiChatApi(page)
 
     // Navigate to the test product page
-    await page.goto('/products/Pbwkjtm', { waitUntil: 'networkidle' })
+    await page.goto('/en/products/Pbwkjtm', { waitUntil: 'networkidle' })
 
     // Open the assistant by clicking the collapsed button
     const openButton = page.getByRole('button', {
@@ -119,7 +119,7 @@ test.describe('AI Product Assistant — stock privacy', () => {
     await mockExchangeRates(page)
     await mockAiChatApi(page)
 
-    await page.goto('/products/Pbwkjtm', { waitUntil: 'networkidle' })
+    await page.goto('/en/products/Pbwkjtm', { waitUntil: 'networkidle' })
 
     // Open the assistant
     const openButton = page.getByRole('button', {

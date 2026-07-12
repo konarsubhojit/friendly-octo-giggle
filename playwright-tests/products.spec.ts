@@ -84,7 +84,7 @@ const mockCartApi = async (page: Page) => {
 test.describe('Homepage – Bestsellers ProductGrid (no DB)', () => {
   test('Bestsellers heading is visible', async ({ page }) => {
     await mockExchangeRates(page)
-    await page.goto('/')
+    await page.goto('/en')
     await expect(
       page.getByRole('heading', { name: /Bestsellers/i })
     ).toBeVisible()
@@ -93,7 +93,7 @@ test.describe('Homepage – Bestsellers ProductGrid (no DB)', () => {
 
   test('search input is visible and accepts text', async ({ page }) => {
     await mockExchangeRates(page)
-    await page.goto('/')
+    await page.goto('/en')
     const input = page.getByRole('searchbox', { name: /search products/i })
     await expect(input).toBeVisible()
     await input.fill('flower')
@@ -103,7 +103,7 @@ test.describe('Homepage – Bestsellers ProductGrid (no DB)', () => {
 
   test('all category filter pills are visible', async ({ page }) => {
     await mockExchangeRates(page)
-    await page.goto('/')
+    await page.goto('/en')
     for (const cat of [
       'All',
       'Handbag',
@@ -123,7 +123,7 @@ test.describe('Homepage – Bestsellers ProductGrid (no DB)', () => {
     page,
   }) => {
     await mockExchangeRates(page)
-    await page.goto('/')
+    await page.goto('/en')
     await expect(
       page.getByRole('button', { name: 'All' }).first()
     ).toHaveAttribute('aria-pressed', 'true')
@@ -131,7 +131,7 @@ test.describe('Homepage – Bestsellers ProductGrid (no DB)', () => {
 
   test('clicking a category pill updates aria-pressed', async ({ page }) => {
     await mockExchangeRates(page)
-    await page.goto('/')
+    await page.goto('/en')
     const flowersBtn = page.getByRole('button', { name: 'Flowers' }).first()
     await flowersBtn.click()
     await expect(flowersBtn).toHaveAttribute('aria-pressed', 'true')
@@ -145,7 +145,7 @@ test.describe('Homepage – Bestsellers ProductGrid (no DB)', () => {
 
   test('search with no match shows "No products found"', async ({ page }) => {
     await mockExchangeRates(page)
-    await page.goto('/')
+    await page.goto('/en')
     await page
       .getByRole('searchbox', { name: /search products/i })
       .fill('zzz-no-match-xyz')
@@ -157,7 +157,7 @@ test.describe('Homepage – Bestsellers ProductGrid (no DB)', () => {
 
   test('Hero CTA "Bestsellers" link points to #products', async ({ page }) => {
     await mockExchangeRates(page)
-    await page.goto('/')
+    await page.goto('/en')
     const link = page.getByRole('link', { name: /Bestsellers/i }).first()
     await expect(link).toBeVisible()
     await expect(link).toHaveAttribute('href', '#products')
@@ -171,7 +171,7 @@ test.describe('Admin Products page – product cards with mock data', () => {
   test('renders all 6 mock products', async ({ page }) => {
     await mockExchangeRates(page)
     await mockAdminProductsApi(page)
-    await page.goto('/admin/products')
+    await page.goto('/en/admin/products')
     for (const p of MOCK_PRODUCTS) {
       await expect(page.getByText(p.name).first()).toBeVisible({
         timeout: 10_000,
@@ -183,7 +183,7 @@ test.describe('Admin Products page – product cards with mock data', () => {
   test('product cards show product names and stock', async ({ page }) => {
     await mockExchangeRates(page)
     await mockAdminProductsApi(page)
-    await page.goto('/admin/products')
+    await page.goto('/en/admin/products')
     await expect(
       page.getByText('Hand-knitted Flower Bouquet').first()
     ).toBeVisible({ timeout: 10_000 })
@@ -198,12 +198,12 @@ test.describe('Admin Products page – product cards with mock data', () => {
 
 test.describe('Rebrand – The Kiyon Store page titles', () => {
   for (const { path: routePath, label } of [
-    { path: '/about', label: 'about' },
-    { path: '/blog', label: 'blog' },
-    { path: '/contact', label: 'contact' },
-    { path: '/help', label: 'help' },
-    { path: '/shipping', label: 'shipping' },
-    { path: '/returns', label: 'returns' },
+    { path: '/en/about', label: 'about' },
+    { path: '/en/blog', label: 'blog' },
+    { path: '/en/contact', label: 'contact' },
+    { path: '/en/help', label: 'help' },
+    { path: '/en/shipping', label: 'shipping' },
+    { path: '/en/returns', label: 'returns' },
   ]) {
     test(`${label} page title includes "The Kiyon Store"`, async ({ page }) => {
       await page.goto(routePath)
@@ -221,7 +221,7 @@ test.describe('QuickAddButton – rendered in admin products with mock data', ()
     await mockExchangeRates(page)
     await mockAdminProductsApi(page)
     await mockCartApi(page)
-    await page.goto('/admin/products')
+    await page.goto('/en/admin/products')
 
     // ProductFormModal renders product cards — find an Add button for an in-stock product
     const firstProduct = MOCK_PRODUCTS.find((p) => p.stock > 0)!

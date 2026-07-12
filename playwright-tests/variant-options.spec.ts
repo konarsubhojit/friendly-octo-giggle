@@ -33,7 +33,7 @@ async function adminLogin(page: Page) {
       'Missing admin test credentials. Set PLAYWRIGHT_TEST_EMAIL and PLAYWRIGHT_TEST_PASSWORD environment variables.'
     )
   }
-  await page.goto('/auth/signin')
+  await page.goto('/en/auth/signin')
   await page.waitForSelector('input[name="identifier"]', { timeout: 15000 })
   await page.fill('input[name="identifier"]', TEST_EMAIL)
   await page.fill(
@@ -64,7 +64,7 @@ test.describe('Variant Option Selector — Storefront', () => {
     page,
   }) => {
     await mockExchangeRates(page)
-    await page.goto('/products/Pbwkjtm', { waitUntil: 'networkidle' })
+    await page.goto('/en/products/Pbwkjtm', { waitUntil: 'networkidle' })
 
     const heading = page.locator('#variant-selector-label')
     await expect(heading).toBeVisible({ timeout: 15000 })
@@ -90,7 +90,7 @@ test.describe('Variant Option Selector — Storefront', () => {
 
   test('clicking an unpressed option changes the variant', async ({ page }) => {
     await mockExchangeRates(page)
-    await page.goto('/products/Pbwkjtm', { waitUntil: 'networkidle' })
+    await page.goto('/en/products/Pbwkjtm', { waitUntil: 'networkidle' })
     await page.locator('#variant-selector-label').waitFor({ timeout: 15000 })
 
     const unpressed = page.locator(
@@ -117,7 +117,7 @@ test.describe('Variant Option Selector — Storefront', () => {
     page,
   }) => {
     await mockExchangeRates(page)
-    await page.goto('/products/Pbwkjtm', { waitUntil: 'networkidle' })
+    await page.goto('/en/products/Pbwkjtm', { waitUntil: 'networkidle' })
     await page.locator('#variant-selector-label').waitFor({ timeout: 15000 })
 
     await expect(
@@ -145,7 +145,7 @@ test.describe('Admin — Option Manager', () => {
     page,
   }) => {
     await adminLogin(page)
-    await page.goto('/admin/products/Pbwkjtm/edit', {
+    await page.goto('/en/admin/products/Pbwkjtm/edit', {
       waitUntil: 'domcontentloaded',
     })
 
@@ -166,7 +166,7 @@ test.describe('Admin — Option Manager', () => {
 
   test('option names input shows live SKU preview table', async ({ page }) => {
     await adminLogin(page)
-    await page.goto('/admin/products/Pbwkjtm/edit', {
+    await page.goto('/en/admin/products/Pbwkjtm/edit', {
       waitUntil: 'domcontentloaded',
     })
 
@@ -198,7 +198,7 @@ test.describe('Cart — Add variant to cart', () => {
   test('can add a selected variant to cart', async ({ page }) => {
     await mockExchangeRates(page)
     await adminLogin(page)
-    await page.goto('/products/Pbwkjtm', { waitUntil: 'networkidle' })
+    await page.goto('/en/products/Pbwkjtm', { waitUntil: 'networkidle' })
     await page.locator('#variant-selector-label').waitFor({ timeout: 15000 })
 
     const addToCart = page.locator('button:has-text("Add to Cart")')

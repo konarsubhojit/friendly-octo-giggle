@@ -97,7 +97,11 @@ export default defineConfig({
         viewport: { width: 1280, height: 800 },
         storageState: './playwright-tests/.auth/admin.json',
       },
-      testMatch: ['**/admin-views.spec.ts', '**/ux-audit.spec.ts'],
+      testMatch: [
+        '**/admin-views.spec.ts',
+        '**/products.spec.ts',
+        '**/ux-audit.spec.ts',
+      ],
     },
     // Admin views — authenticated admin session (mobile)
     {
@@ -117,7 +121,11 @@ export default defineConfig({
         viewport: { width: 1280, height: 800 },
         storageState: './playwright-tests/.auth/admin.json',
       },
-      testMatch: '**/cart.spec.ts',
+      testMatch: [
+        '**/cart.spec.ts',
+        '**/checkout-error-recovery.spec.ts',
+        '**/checkout-policy.spec.ts',
+      ],
     },
     // Accessibility — public pages (unauthenticated, desktop)
     {

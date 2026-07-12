@@ -34,7 +34,7 @@ test.describe('Register page - password validation', () => {
   test('no error shown while typing in confirm password field before blur', async ({
     page,
   }) => {
-    await page.goto('/auth/register')
+    await page.goto('/en/auth/register')
 
     const passwordInput = page.locator('#register-password')
     const confirmInput = page.locator('#register-confirm-password')
@@ -56,7 +56,7 @@ test.describe('Register page - password validation', () => {
   test('error shown after blurring confirm password when passwords do not match', async ({
     page,
   }) => {
-    await page.goto('/auth/register')
+    await page.goto('/en/auth/register')
 
     const passwordInput = page.locator('#register-password')
     const confirmInput = page.locator('#register-confirm-password')
@@ -75,7 +75,7 @@ test.describe('Register page - password validation', () => {
   })
 
   test('error disappears when passwords match after blur', async ({ page }) => {
-    await page.goto('/auth/register')
+    await page.goto('/en/auth/register')
 
     const passwordInput = page.locator('#register-password')
     const confirmInput = page.locator('#register-confirm-password')
@@ -101,7 +101,7 @@ test.describe('Register page - password validation', () => {
   test('only one error message shown for confirm password at a time', async ({
     page,
   }) => {
-    await page.goto('/auth/register')
+    await page.goto('/en/auth/register')
 
     const confirmInput = page.locator('#register-confirm-password')
 
@@ -122,7 +122,7 @@ test.describe('Register page - password validation', () => {
   test('no error shown when confirm password is empty after blur', async ({
     page,
   }) => {
-    await page.goto('/auth/register')
+    await page.goto('/en/auth/register')
 
     const confirmInput = page.locator('#register-confirm-password')
 
@@ -136,7 +136,7 @@ test.describe('Register page - password validation', () => {
   test('stale server-side error clears when user edits confirm password field', async ({
     page,
   }) => {
-    await page.goto('/auth/register')
+    await page.goto('/en/auth/register')
 
     // Fill in form with mismatched passwords to get a field error from server
     await page.locator('#register-name').fill('Test User')

@@ -27,7 +27,7 @@ test.describe('Mobile Navigation - Hamburger Menu', () => {
       testInfo.project.name !== 'mobile-chrome',
       'Only runs on mobile viewport'
     )
-    await page.goto('/')
+    await page.goto('/en')
     const hamburger = page.getByRole('button', { name: /open menu/i })
     await expect(hamburger).toBeVisible()
     await page.screenshot({
@@ -43,7 +43,7 @@ test.describe('Mobile Navigation - Hamburger Menu', () => {
       testInfo.project.name !== 'desktop-chrome',
       'Only runs on desktop viewport'
     )
-    await page.goto('/')
+    await page.goto('/en')
     // Wait for all resources including CSS chunks to finish loading.
     await page.waitForLoadState('load')
     // With Turbopack dev server, responsive CSS (md:hidden) is served as a
@@ -73,7 +73,7 @@ test.describe('Mobile Navigation - Hamburger Menu', () => {
       testInfo.project.name !== 'mobile-chrome',
       'Only runs on mobile viewport'
     )
-    await page.goto('/')
+    await page.goto('/en')
     const hamburger = page.getByRole('button', { name: /open menu/i })
     await hamburger.click()
 
@@ -103,7 +103,7 @@ test.describe('Mobile Navigation - Hamburger Menu', () => {
       testInfo.project.name !== 'mobile-chrome',
       'Only runs on mobile viewport'
     )
-    await page.goto('/')
+    await page.goto('/en')
     const hamburger = page.getByRole('button', { name: /open menu/i })
     await hamburger.click()
     // drawer open - button label changes to "Close menu"
@@ -125,7 +125,7 @@ test.describe('Mobile Navigation - Hamburger Menu', () => {
       testInfo.project.name !== 'mobile-chrome',
       'Only runs on mobile viewport'
     )
-    await page.goto('/')
+    await page.goto('/en')
     const hamburger = page.getByRole('button', { name: /open menu/i })
     await expect(hamburger).toHaveAttribute('aria-haspopup', 'menu')
     await expect(hamburger).toHaveAttribute(
@@ -145,7 +145,7 @@ test.describe('Mobile Navigation - Hamburger Menu', () => {
 
 test.describe('Shipping page - table horizontal scroll', () => {
   test('shipping table has overflow-x-auto wrapper', async ({ page }) => {
-    await page.goto('/shipping')
+    await page.goto('/en/shipping')
     // The table wrapper should have overflow-x-auto
     const tableWrapper = page
       .locator('.overflow-x-auto')
@@ -159,7 +159,7 @@ test.describe('Shipping page - table horizontal scroll', () => {
       testInfo.project.name !== 'mobile-chrome',
       'Only runs on mobile viewport'
     )
-    await page.goto('/shipping')
+    await page.goto('/en/shipping')
     await page.screenshot({
       path: screenshotPath('mobile-shipping-table'),
       fullPage: true,
@@ -174,7 +174,7 @@ test.describe('Shipping page - table horizontal scroll', () => {
       testInfo.project.name !== 'desktop-chrome',
       'Only runs on desktop viewport'
     )
-    await page.goto('/shipping')
+    await page.goto('/en/shipping')
     await page.screenshot({
       path: screenshotPath('desktop-shipping-table'),
       fullPage: false,
@@ -190,7 +190,7 @@ test.describe('Admin users page - table horizontal scroll DOM structure', () => 
   test('users table wrapper has overflow-x-auto class', async () => {
     // After refactoring, UsersTable lives in its own component file.
     const source = fs.readFileSync(
-      path.join(__dirname, '../components/admin/UsersTable.tsx'),
+      path.join(__dirname, '../src/components/admin/UsersTable.tsx'),
       'utf-8'
     )
     expect(source).toContain('overflow-x-auto')
@@ -204,7 +204,7 @@ test.describe('Product detail page - dark mode button variants', () => {
   test('variation button has explicit white background class in source', async ({
     page,
   }) => {
-    await page.goto('/')
+    await page.goto('/en')
     // The page should load without errors
     await expect(page.locator('body')).toBeVisible()
   })
@@ -214,7 +214,7 @@ test.describe('Product detail page - dark mode button variants', () => {
     page.on('console', (msg) => {
       if (msg.type() === 'error') consoleErrors.push(msg.text())
     })
-    await page.goto('/')
+    await page.goto('/en')
     const criticalErrors = consoleErrors.filter(
       (e) =>
         !e.includes('net::ERR') &&
@@ -232,7 +232,7 @@ test.describe('Product detail page - dark mode button variants', () => {
 
 test.describe('CurrencySelector - dark mode visibility', () => {
   test('currency selector is visible on home page', async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/en')
     const select = page.getByRole('combobox', { name: /select currency/i })
     await expect(select).toBeVisible()
   })
@@ -240,7 +240,7 @@ test.describe('CurrencySelector - dark mode visibility', () => {
   test('currency selector has warm border class for dark mode compatibility', async ({
     page,
   }) => {
-    await page.goto('/')
+    await page.goto('/en')
     const select = page.getByRole('combobox', { name: /select currency/i })
     const cls = await select.getAttribute('class')
     expect(cls).toContain('border-[var(--border-warm)]')
@@ -253,7 +253,7 @@ test.describe('Admin layout nav - mobile horizontal scroll', () => {
   test('admin nav has overflow-x-auto and whitespace-nowrap classes', async () => {
     // After refactoring, AdminNavLinks lives in its own component file.
     const source = fs.readFileSync(
-      path.join(__dirname, '../components/admin/AdminNavLinks.tsx'),
+      path.join(__dirname, '../src/components/admin/AdminNavLinks.tsx'),
       'utf-8'
     )
     expect(source).toContain('overflow-x-auto')
@@ -269,7 +269,7 @@ test.describe('Full page screenshots for visual verification', () => {
       testInfo.project.name !== 'mobile-chrome',
       'Only runs on mobile viewport'
     )
-    await page.goto('/')
+    await page.goto('/en')
     await expect(page.locator('header')).toBeVisible()
     await page.screenshot({
       path: screenshotPath('mobile-home-full'),
@@ -282,7 +282,7 @@ test.describe('Full page screenshots for visual verification', () => {
       testInfo.project.name !== 'desktop-chrome',
       'Only runs on desktop viewport'
     )
-    await page.goto('/')
+    await page.goto('/en')
     await expect(page.locator('header')).toBeVisible()
     await page.screenshot({
       path: screenshotPath('desktop-home-full'),
@@ -295,7 +295,7 @@ test.describe('Full page screenshots for visual verification', () => {
       testInfo.project.name !== 'mobile-chrome',
       'Only runs on mobile viewport'
     )
-    await page.goto('/shipping')
+    await page.goto('/en/shipping')
     await expect(page.locator('h1')).toBeVisible()
     await page.screenshot({
       path: screenshotPath('mobile-shipping-full'),
@@ -308,7 +308,7 @@ test.describe('Full page screenshots for visual verification', () => {
       testInfo.project.name !== 'mobile-chrome',
       'Only runs on mobile viewport'
     )
-    await page.goto('/about')
+    await page.goto('/en/about')
     await expect(page.locator('h1')).toBeVisible()
     await page.screenshot({
       path: screenshotPath('mobile-about-full'),
@@ -321,7 +321,7 @@ test.describe('Full page screenshots for visual verification', () => {
       testInfo.project.name !== 'desktop-chrome',
       'Only runs on desktop viewport'
     )
-    await page.goto('/shop')
+    await page.goto('/en/shop')
     await expect(page.locator('h1')).toBeVisible()
     await page.screenshot({
       path: screenshotPath('desktop-shop-full'),
@@ -334,25 +334,25 @@ test.describe('Full page screenshots for visual verification', () => {
 
 test.describe('Shop page', () => {
   test('shop page title contains "The Kiyon Store"', async ({ page }) => {
-    await page.goto('/shop')
+    await page.goto('/en/shop')
     await expect(page).toHaveTitle(/The Kiyon Store/i)
   })
 
   test('shop page has "Shop" heading', async ({ page }) => {
-    await page.goto('/shop')
+    await page.goto('/en/shop')
     await expect(
       page.getByRole('heading', { name: /^Shop$/i }).first()
     ).toBeVisible()
   })
 
   test('shop page has category filter dropdown', async ({ page }) => {
-    await page.goto('/shop')
+    await page.goto('/en/shop')
     const select = page.getByRole('combobox', { name: /filter by category/i })
     await expect(select).toBeVisible()
   })
 
   test('shop page has search input', async ({ page }) => {
-    await page.goto('/shop')
+    await page.goto('/en/shop')
     const searchInput = page.getByRole('searchbox', {
       name: /search products/i,
     })
@@ -364,11 +364,11 @@ test.describe('Shop page', () => {
       testInfo.project.name !== 'desktop-chrome',
       'Shop link is in desktop nav; mobile uses hamburger menu'
     )
-    await page.goto('/')
+    await page.goto('/en')
     const shopLink = page.getByRole('link', { name: /^Shop$/i }).first()
     await expect(shopLink).toBeVisible()
     const href = await shopLink.getAttribute('href')
-    expect(href).toBe('/shop')
+    expect(href).toBe('/en/shop')
   })
 })
 
@@ -376,7 +376,7 @@ test.describe('Shop page', () => {
 
 test.describe('Rebrand – The Kiyon Store', () => {
   test('header shows "The Kiyon Store" brand name', async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/en')
     // The brand link in the header
     const brand = page.getByRole('link', { name: /The Kiyon Store/i }).first()
     await expect(brand).toBeVisible()
@@ -384,23 +384,23 @@ test.describe('Rebrand – The Kiyon Store', () => {
   })
 
   test('page title contains "The Kiyon Store"', async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/en')
     await expect(page).toHaveTitle(/The Kiyon Store/i)
   })
 
   test('about page title contains "The Kiyon Store"', async ({ page }) => {
-    await page.goto('/about')
+    await page.goto('/en/about')
     await expect(page).toHaveTitle(/The Kiyon Store/i)
   })
 
   test('contact page title contains "The Kiyon Store"', async ({ page }) => {
-    await page.goto('/contact')
+    await page.goto('/en/contact')
     await expect(page).toHaveTitle(/The Kiyon Store/i)
   })
 
   test('source code has no remaining "Craft & Cozy" in header', async () => {
     const source = fs.readFileSync(
-      path.join(__dirname, '../components/layout/Header.tsx'),
+      path.join(__dirname, '../src/components/layout/Header.tsx'),
       'utf-8'
     )
     expect(source).not.toContain('Craft &amp; Cozy')
@@ -413,7 +413,7 @@ test.describe('Rebrand – The Kiyon Store', () => {
 
 test.describe('Bestsellers section', () => {
   test('homepage shows "Bestsellers" heading', async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/en')
     await expect(
       page.getByRole('heading', { name: /Bestsellers/i })
     ).toBeVisible()
@@ -421,7 +421,7 @@ test.describe('Bestsellers section', () => {
   })
 
   test('homepage has NO "#trending" section', async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/en')
     // The old Trending section used id="trending"; it must be absent after removal
     await expect(page.locator('#trending')).toHaveCount(0)
   })
@@ -429,18 +429,18 @@ test.describe('Bestsellers section', () => {
   test('TrendingProducts component source is deleted', async () => {
     const trendingPath = path.join(
       __dirname,
-      '../components/sections/TrendingProducts.tsx'
+      '../src/components/sections/TrendingProducts.tsx'
     )
     expect(fs.existsSync(trendingPath)).toBe(false)
   })
 
   test('"Explore Shop" link in Hero points to /shop', async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/en')
     // Hero CTA button
     const btn = page.getByRole('link', { name: /Explore Shop/i })
     await expect(btn).toBeVisible()
     const href = await btn.getAttribute('href')
-    expect(href).toBe('/shop')
+    expect(href).toBe('/en/shop')
   })
 })
 
@@ -448,7 +448,7 @@ test.describe('Bestsellers section', () => {
 
 test.describe('ProductGrid – search and category filter', () => {
   test('search input is present on homepage', async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/en')
     const searchInput = page.getByRole('searchbox', {
       name: /search products/i,
     })
@@ -457,7 +457,7 @@ test.describe('ProductGrid – search and category filter', () => {
   })
 
   test('category filter dropdown is present on homepage', async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/en')
     const select = page.getByRole('combobox', { name: /filter by category/i })
     await expect(select).toBeVisible()
     await page.screenshot({ path: screenshotPath('home-category-filter') })
@@ -466,7 +466,7 @@ test.describe('ProductGrid – search and category filter', () => {
   test('"All" is selected by default in category dropdown', async ({
     page,
   }) => {
-    await page.goto('/')
+    await page.goto('/en')
     const select = page.getByRole('combobox', { name: /filter by category/i })
     await expect(select).toHaveValue('All')
   })
@@ -474,7 +474,7 @@ test.describe('ProductGrid – search and category filter', () => {
   test('selecting a category in dropdown filters products', async ({
     page,
   }) => {
-    await page.goto('/')
+    await page.goto('/en')
     const select = page.getByRole('combobox', { name: /filter by category/i })
     await select.selectOption('Handbag')
     await expect(select).toHaveValue('Handbag')
@@ -487,7 +487,7 @@ test.describe('ProductGrid – search and category filter', () => {
       testInfo.project.name !== 'desktop-chrome',
       'Only runs on desktop viewport'
     )
-    await page.goto('/')
+    await page.goto('/en')
     const searchInput = page.getByRole('searchbox', {
       name: /search products/i,
     })
@@ -505,7 +505,7 @@ test.describe('ProductGrid – search and category filter', () => {
 test.describe('Quick add-to-cart button', () => {
   test('source code has QuickAddButton outside Link (not nested)', async () => {
     const source = fs.readFileSync(
-      path.join(__dirname, '../components/sections/ProductGrid.tsx'),
+      path.join(__dirname, '../src/components/sections/ProductGrid.tsx'),
       'utf-8'
     )
     // QuickAddButton must appear as a sibling of Link, not inside it
@@ -518,7 +518,7 @@ test.describe('Quick add-to-cart button', () => {
   test('quick add button has aria-label for accessibility', async () => {
     // After one-file-one-component refactoring, QuickAddButton lives in its own file.
     const source = fs.readFileSync(
-      path.join(__dirname, '../components/sections/QuickAddButton.tsx'),
+      path.join(__dirname, '../src/components/sections/QuickAddButton.tsx'),
       'utf-8'
     )
     expect(source).toContain('aria-label={`Add ${product.name} to cart`}')
@@ -526,7 +526,7 @@ test.describe('Quick add-to-cart button', () => {
 
   test('product card image uses object-contain (no clipping)', async () => {
     const source = fs.readFileSync(
-      path.join(__dirname, '../components/sections/ProductGrid.tsx'),
+      path.join(__dirname, '../src/components/sections/ProductGrid.tsx'),
       'utf-8'
     )
     expect(source).toContain('object-contain')

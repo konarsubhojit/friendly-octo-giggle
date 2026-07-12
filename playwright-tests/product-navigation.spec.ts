@@ -22,10 +22,10 @@ const getGridProductHrefs = async (page: Page): Promise<string[]> => {
   // The grid renders product anchors after hydration, so wait for at least one
   // before reading hrefs to avoid a race on a freshly-loaded page.
   await page
-    .locator('a[href*="/products/"]')
+    .locator('a[href*="/en/products/"]')
     .first()
     .waitFor({ state: 'attached' })
-  return page.$$eval('a[href*="/products/"]', (anchors) =>
+  return page.$$eval('a[href*="/en/products/"]', (anchors) =>
     Array.from(
       new Set(
         anchors

@@ -64,7 +64,7 @@ test.describe('Orders List Summary', () => {
     page,
   }) => {
     await mockSharedOrderRoutes(page)
-    await page.goto('/orders')
+    await page.goto('/en/orders')
 
     await expect(
       page.getByRole('heading', { name: /my orders/i })
@@ -108,7 +108,7 @@ test.describe('Orders List Summary', () => {
         },
       })
     )
-    await page.goto('/account')
+    await page.goto('/en/account')
 
     await expect(
       page.getByRole('heading', { name: /recent orders/i })
@@ -127,7 +127,7 @@ test.describe('Orders List Summary', () => {
     page,
   }) => {
     await mockSharedOrderRoutes(page)
-    await page.goto('/admin/orders')
+    await page.goto('/en/admin/orders')
 
     await expect(
       page.getByRole('heading', {
