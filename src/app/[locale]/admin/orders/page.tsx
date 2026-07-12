@@ -108,6 +108,48 @@ function ExpandedOrderRow({
   )
 }
 
+interface MobileOrderRowProps {
+  readonly row: OrderRow
+  readonly renderExpandedOrder: (row: OrderRow) => React.ReactNode
+}
+
+function MobileOrderRow({ row, renderExpandedOrder }: MobileOrderRowProps) {
+  return (
+    <div className="min-w-0">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-bold text-slate-950 dark:text-slate-50">
+            {row.customer}
+          </p>
+          <p className="mt-1 break-all font-mono text-xs text-slate-500 dark:text-slate-400">
+            {row.id}
+          </p>
+        </div>
+        <Badge tone="info" size="sm">
+          {row.status}
+        </Badge>
+      </div>
+      <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
+        <div>
+          <dt className="text-xs text-slate-500 dark:text-slate-400">Total</dt>
+          <dd className="mt-1 font-semibold text-slate-950 dark:text-slate-50">
+            {row.total}
+          </dd>
+        </div>
+        <div className="text-right">
+          <dt className="text-xs text-slate-500 dark:text-slate-400">Date</dt>
+          <dd className="mt-1 text-slate-700 dark:text-slate-200">
+            {row.date}
+          </dd>
+        </div>
+      </dl>
+      <div className="-mx-4 mt-4 border-t border-slate-200 pt-4 dark:border-slate-700">
+        {renderExpandedOrder(row)}
+      </div>
+    </div>
+  )
+}
+
 export default function OrdersManagement() {
   const { formatPrice } = useCurrency()
   const dispatch = useDispatch<AdminDispatch>()
@@ -124,6 +166,9 @@ export default function OrdersManagement() {
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null)
   const [savingShippingId, setSavingShippingId] = useState<string | null>(null)
   const [shippingEdits, setShippingEdits] = useState<ShippingEdits>({})
+  const [mobileExpandedOrderId, setMobileExpandedOrderId] = useState<
+    string | null
+  >(null)
 
   const pageCursorsRef = useRef<Array<string | null>>([null])
   const pendingOffsetRef = useRef<number | null>(null)
@@ -356,45 +401,7 @@ export default function OrdersManagement() {
       }}
       expandedRowRender={renderExpandedOrder}
       renderMobileCard={(row) => (
-        <div className="min-w-0">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="truncate text-sm font-bold text-slate-950 dark:text-slate-50">
-                {row.customer}
-              </p>
-              <p className="mt-1 break-all font-mono text-xs text-slate-500 dark:text-slate-400">
-                {row.id}
-              </p>
-            </div>
-            <Badge tone="info" size="sm">
-              {row.status}
-            </Badge>
-          </div>
-          <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
-            <div>
-              <dt className="text-xs text-slate-500 dark:text-slate-400">
-                Total
-              </dt>
-              <dd className="mt-1 font-semibold text-slate-950 dark:text-slate-50">
-                {row.total}
-              </dd>
-            </div>
-            <div className="text-right">
-              <dt className="text-xs text-slate-500 dark:text-slate-400">
-                Date
-              </dt>
-              <dd className="mt-1 text-slate-700 dark:text-slate-200">
-                {row.date}
-              </dd>
-            </div>
-          </dl>
-          <details className="mt-4 border-t border-slate-200 pt-3 dark:border-slate-700">
-            <summary className="min-tap cursor-pointer py-2 text-sm font-semibold text-sky-700 dark:text-sky-300">
-              Manage order
-            </summary>
-            <div className="-mx-4 mt-2">{renderExpandedOrder(row)}</div>
-          </details>
-        </div>
+        <MobileOrderRow row={row} renderExpandedOrder={renderExpandedOrder} />
       )}
     />
   )

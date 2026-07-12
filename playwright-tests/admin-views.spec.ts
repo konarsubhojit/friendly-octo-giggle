@@ -128,7 +128,9 @@ test.describe('Admin Dashboard', () => {
 // ─── Admin Products ───────────────────────────────────────────────────────────
 
 test.describe('Admin Products', () => {
-  test('renders product grid with all mock products', async ({ page }) => {
+  test('renders product grid with all mock products', async ({
+    page,
+  }, testInfo) => {
     await mockAdminRoutes(page)
     await page.goto('/admin/products')
     await expect(
@@ -144,7 +146,7 @@ test.describe('Admin Products', () => {
       await expect(page.getByText(product.name).first()).toBeVisible()
     }
     await page.screenshot({
-      path: screenshotPath('admin-products'),
+      path: screenshotPath(`admin-products-${testInfo.project.name}`),
       fullPage: true,
     })
   })
@@ -183,7 +185,9 @@ test.describe('Admin Products', () => {
 // ─── Admin Orders ─────────────────────────────────────────────────────────────
 
 test.describe('Admin Orders', () => {
-  test('renders order management with all mock orders', async ({ page }) => {
+  test('renders order management with all mock orders', async ({
+    page,
+  }, testInfo) => {
     await mockAdminRoutes(page)
     await page.goto('/admin/orders')
     await expect(
@@ -195,8 +199,12 @@ test.describe('Admin Orders', () => {
     for (const order of MOCK_ORDERS) {
       await expect(page.getByText(order.customerName).first()).toBeVisible()
     }
+    const hasHorizontalOverflow = await page.evaluate(
+      () => document.documentElement.scrollWidth > window.innerWidth
+    )
+    expect(hasHorizontalOverflow).toBe(false)
     await page.screenshot({
-      path: screenshotPath('admin-orders'),
+      path: screenshotPath(`admin-orders-${testInfo.project.name}`),
       fullPage: true,
     })
   })
@@ -232,7 +240,7 @@ test.describe('Admin Orders', () => {
 test.describe('Admin Users', () => {
   test('renders user management table with all mock users', async ({
     page,
-  }) => {
+  }, testInfo) => {
     await mockAdminRoutes(page)
     await page.goto('/admin/users')
     await expect(
@@ -243,20 +251,29 @@ test.describe('Admin Users', () => {
       await expect(page.getByText(user.email)).toBeVisible()
     }
     await page.screenshot({
-      path: screenshotPath('admin-users'),
+      path: screenshotPath(`admin-users-${testInfo.project.name}`),
       fullPage: true,
     })
   })
 
-  test('table has overflow-x-auto wrapper for mobile scroll', async ({
+  test('uses a table on desktop and cards on mobile without viewport overflow', async ({
     page,
-  }) => {
+  }, testInfo) => {
     await mockAdminRoutes(page)
     await page.goto('/admin/users')
-    const tableWrapper = page
-      .locator('.overflow-x-auto')
-      .filter({ has: page.locator('table') })
-    await expect(tableWrapper.first()).toBeAttached()
+    const usersView = page.getByLabel('Users')
+
+    if (testInfo.project.name.includes('mobile')) {
+      await expect(usersView.getByRole('list')).toBeVisible()
+      await expect(usersView.getByRole('table')).toHaveCount(0)
+    } else {
+      await expect(usersView.getByRole('table')).toBeVisible()
+    }
+
+    const hasHorizontalOverflow = await page.evaluate(
+      () => document.documentElement.scrollWidth > window.innerWidth
+    )
+    expect(hasHorizontalOverflow).toBe(false)
   })
 
   test('shows ADMIN and CUSTOMER role badges', async ({ page }) => {
@@ -367,7 +384,7 @@ test.describe('Admin layout', () => {
 test.describe('Admin Orders - status change confirmation', () => {
   test('shows confirm dialog when status is changed via row expansion', async ({
     page,
-  }) => {
+  }, testInfo) => {
     await mockAdminRoutes(page)
     await page.goto('/admin/orders')
     await expect(
@@ -376,9 +393,13 @@ test.describe('Admin Orders - status change confirmation', () => {
       })
     ).toBeVisible()
 
-    await page.getByText(MOCK_ORDERS[0].customerName).click()
+    if (!testInfo.project.name.includes('mobile')) {
+      await page.getByText(MOCK_ORDERS[0].customerName).first().click()
+    }
 
-    const statusSelect = page.getByLabel(/change status for order/i).first()
+    const statusSelect = page
+      .locator('select[aria-label^="Change status for order"]:visible')
+      .first()
     await statusSelect.selectOption({ label: 'PROCESSING' })
 
     await expect(page.getByRole('dialog')).toBeVisible()
@@ -391,7 +412,7 @@ test.describe('Admin Orders - status change confirmation', () => {
 
   test('cancels status change when Cancel is clicked in dialog', async ({
     page,
-  }) => {
+  }, testInfo) => {
     await mockAdminRoutes(page)
     await page.goto('/admin/orders')
     await expect(
@@ -400,9 +421,13 @@ test.describe('Admin Orders - status change confirmation', () => {
       })
     ).toBeVisible()
 
-    await page.getByText(MOCK_ORDERS[0].customerName).click()
+    if (!testInfo.project.name.includes('mobile')) {
+      await page.getByText(MOCK_ORDERS[0].customerName).first().click()
+    }
 
-    const statusSelect = page.getByLabel(/change status for order/i).first()
+    const statusSelect = page
+      .locator('select[aria-label^="Change status for order"]:visible')
+      .first()
     const originalStatus = await statusSelect.inputValue()
     await statusSelect.selectOption({ index: 1 })
 
