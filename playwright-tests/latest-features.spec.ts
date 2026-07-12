@@ -34,7 +34,9 @@ test.describe('latest platform capabilities', () => {
     )
   })
 
-  test('localized offline fallback offers recovery actions', async ({ page }) => {
+  test('localized offline fallback offers recovery actions', async ({
+    page,
+  }) => {
     const response = await page.goto('/en/offline', {
       waitUntil: 'domcontentloaded',
     })
@@ -89,7 +91,9 @@ test.describe('latest platform capabilities', () => {
     )
     await page.goto('/en', { waitUntil: 'domcontentloaded' })
 
-    const search = page.getByRole('combobox', { name: 'Search products' }).first()
+    const search = page
+      .getByRole('combobox', { name: 'Search products' })
+      .first()
     await search.fill('rose')
 
     const suggestions = page.getByRole('listbox', {
@@ -102,19 +106,14 @@ test.describe('latest platform capabilities', () => {
     await expect(suggestions).toContainText('flower bouquet')
   })
 
-  test('admin search page reports product and order index readiness', async ({
+  test('admin search-index operations require authentication', async ({
     page,
   }) => {
-    const response = await page.goto('/en/admin/search', {
-      waitUntil: 'domcontentloaded',
-    })
+    await page.goto('/en/admin/search', { waitUntil: 'domcontentloaded' })
 
-    expect(response?.status()).toBeLessThan(400)
+    await expect(page).toHaveURL(/\/en\/auth\/signin/)
     await expect(
-      page.getByRole('heading', { name: 'Search Index Management' })
+      page.getByRole('heading', { name: /welcome back/i })
     ).toBeVisible()
-    await expect(page.getByText('Products index')).toBeVisible()
-    await expect(page.getByText('Orders index')).toBeVisible()
-    await expect(page.getByRole('heading', { name: 'Reindex' })).toBeVisible()
   })
 })

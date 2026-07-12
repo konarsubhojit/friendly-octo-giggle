@@ -85,16 +85,16 @@ vercel env pull
 
 ### Current feature development map
 
-| Area | Primary implementation |
-| --- | --- |
-| Localization and locale-safe links | `src/lib/i18n`, `src/contexts/LocaleContext.tsx`, `src/components/ui/LocaleLink.tsx` |
-| Product search and suggestions | `src/lib/search`, `src/lib/search-discovery.ts`, `src/components/SearchBar.tsx` |
-| AI product assistant | `src/features/product/components/ProductAssistant.tsx`, `src/lib/ai`, `/api/ai/products/[id]/chat` |
-| Cart and staged checkout | `src/features/cart`, `/api/cart`, `/api/checkout`, `/api/queue/checkout-orders` |
-| Account, addresses, and preferences | `src/features/account`, `/api/account`, `/api/account/addresses` |
-| Admin operations | `src/features/admin`, `/api/admin` |
-| PWA and offline behavior | `src/components/pwa`, `src/app/manifest.ts`, localized `/offline` route |
-| Telemetry | `src/lib/metrics.ts`, `src/instrumentation.ts`, `/api/metrics` |
+| Area                                | Primary implementation                                                                             |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------- |
+| Localization and locale-safe links  | `src/lib/i18n`, `src/contexts/LocaleContext.tsx`, `src/components/ui/LocaleLink.tsx`               |
+| Product search and suggestions      | `src/lib/search`, `src/lib/search-discovery.ts`, `src/components/SearchBar.tsx`                    |
+| AI product assistant                | `src/features/product/components/ProductAssistant.tsx`, `src/lib/ai`, `/api/ai/products/[id]/chat` |
+| Cart and staged checkout            | `src/features/cart`, `/api/cart`, `/api/checkout`, `/api/queue/checkout-orders`                    |
+| Account, addresses, and preferences | `src/features/account`, `/api/account`, `/api/account/addresses`                                   |
+| Admin operations                    | `src/features/admin`, `/api/admin`                                                                 |
+| PWA and offline behavior            | `src/components/pwa`, `src/app/manifest.ts`, localized `/offline` route                            |
+| Telemetry                           | `src/lib/metrics.ts`, `src/instrumentation.ts`, `/api/metrics`                                     |
 
 When changing one of these areas, update its feature specification and add Playwright coverage to the closest existing suite. New cross-cutting capabilities belong in `specs/011-current-platform-capabilities`.
 
