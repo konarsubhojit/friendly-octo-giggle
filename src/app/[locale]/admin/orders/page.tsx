@@ -166,9 +166,6 @@ export default function OrdersManagement() {
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null)
   const [savingShippingId, setSavingShippingId] = useState<string | null>(null)
   const [shippingEdits, setShippingEdits] = useState<ShippingEdits>({})
-  const [mobileExpandedOrderId, setMobileExpandedOrderId] = useState<
-    string | null
-  >(null)
 
   const pageCursorsRef = useRef<Array<string | null>>([null])
   const pendingOffsetRef = useRef<number | null>(null)
