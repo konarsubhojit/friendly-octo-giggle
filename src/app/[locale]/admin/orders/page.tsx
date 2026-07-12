@@ -13,7 +13,8 @@ import {
 } from '@/features/admin/components/AdminPageShell'
 import { AdminOrderCard } from '@/features/admin/components/AdminOrderCard'
 import { AdminSearchForm } from '@/features/admin/components/AdminSearchForm'
-import { DataTable, type DataTableColumn } from 'zenput'
+import { Badge, type DataTableColumn } from 'zenput'
+import { AdminDataView } from '@/features/admin/components/AdminDataView'
 
 type ShippingEdits = Record<
   string,
@@ -55,6 +56,7 @@ const STATUS_FILTERS = ['ALL', ...Object.values(OrderStatus)] as const
 const PAGE_SIZE = 20
 
 type OrderRow = {
+  [key: string]: unknown
   id: string
   customer: string
   status: string
@@ -338,13 +340,13 @@ export default function OrdersManagement() {
   )
 
   const ordersListContent = (
-    <DataTable
+    <AdminDataView
+      ariaLabel="Orders"
       columns={orderColumns}
       data={orderRows}
       rowKey={(row) => row.id}
       loading={loading}
       skeletonRowCount={PAGE_SIZE}
-      serverSide
       emptyMessage={search ? 'No orders match your search.' : 'No orders yet.'}
       pagination={{
         currentPage,
@@ -353,6 +355,47 @@ export default function OrdersManagement() {
         onPageChange: handlePageSelect,
       }}
       expandedRowRender={renderExpandedOrder}
+      renderMobileCard={(row) => (
+        <div className="min-w-0">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="truncate text-sm font-bold text-slate-950 dark:text-slate-50">
+                {row.customer}
+              </p>
+              <p className="mt-1 break-all font-mono text-xs text-slate-500 dark:text-slate-400">
+                {row.id}
+              </p>
+            </div>
+            <Badge tone="info" size="sm">
+              {row.status}
+            </Badge>
+          </div>
+          <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
+            <div>
+              <dt className="text-xs text-slate-500 dark:text-slate-400">
+                Total
+              </dt>
+              <dd className="mt-1 font-semibold text-slate-950 dark:text-slate-50">
+                {row.total}
+              </dd>
+            </div>
+            <div className="text-right">
+              <dt className="text-xs text-slate-500 dark:text-slate-400">
+                Date
+              </dt>
+              <dd className="mt-1 text-slate-700 dark:text-slate-200">
+                {row.date}
+              </dd>
+            </div>
+          </dl>
+          <details className="mt-4 border-t border-slate-200 pt-3 dark:border-slate-700">
+            <summary className="min-tap cursor-pointer py-2 text-sm font-semibold text-sky-700 dark:text-sky-300">
+              Manage order
+            </summary>
+            <div className="-mx-4 mt-2">{renderExpandedOrder(row)}</div>
+          </details>
+        </div>
+      )}
     />
   )
 
