@@ -38,6 +38,7 @@ export function UserMenu({ session, onLoginClick }: UserMenuProps) {
     if (onLoginClick) {
       return (
         <button
+          type="button"
           onClick={onLoginClick}
           className="text-sm text-gray-700 hover:text-gray-900 bg-white px-4 py-2 rounded-md border border-gray-300 hover:border-gray-400 transition"
         >
@@ -58,6 +59,7 @@ export function UserMenu({ session, onLoginClick }: UserMenuProps) {
   return (
     <div className="relative group">
       <button
+        type="button"
         className="flex items-center gap-2 text-sm text-gray-700 hover:text-gray-900"
         aria-expanded="true"
         aria-haspopup="menu"
@@ -112,6 +114,7 @@ export function UserMenu({ session, onLoginClick }: UserMenuProps) {
           )}
         </div>
         <button
+          type="button"
           onClick={handleSignOut}
           disabled={signingOut}
           aria-busy={signingOut}

@@ -241,6 +241,7 @@ export default function ProductsManagement() {
             Open
           </Link>
           <button
+            type="button"
             onClick={() => handleDelete(row.id)}
             disabled={deleting}
             className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-100 transition disabled:opacity-60"

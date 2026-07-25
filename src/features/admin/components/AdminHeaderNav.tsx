@@ -38,6 +38,7 @@ export const AdminHeaderNav = ({ userName }: AdminHeaderNavProps) => {
         View Store
       </Link>
       <button
+        type="button"
         onClick={handleSignOut}
         disabled={signingOut}
         aria-busy={signingOut}

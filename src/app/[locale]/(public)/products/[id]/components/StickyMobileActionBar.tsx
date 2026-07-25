@@ -54,6 +54,7 @@ export const StickyMobileActionBar = ({
 
         {/* Add to Cart */}
         <button
+          type="button"
           onClick={handleAddToCart}
           disabled={addingToCart || remainingStock === 0}
           aria-disabled={addingToCart || remainingStock === 0}
