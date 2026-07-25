@@ -85,9 +85,9 @@ export const AssistantMarkdown = ({ text }: AssistantMarkdownProps) => {
       flushList()
       continue
     }
-    const bulletMatch = /^[*\-•]\s+(.*)$/.exec(line)
+    const bulletMatch = /^[*\-•]\s+(\S.*)?$/.exec(line)
     if (bulletMatch) {
-      listItems.push(bulletMatch[1])
+      listItems.push(bulletMatch[1] ?? '')
       continue
     }
     flushList()

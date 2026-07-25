@@ -46,7 +46,7 @@ export function addPendingCartItem(item: PendingCartItem): void {
   if (globalThis.window === undefined) return
   const items = getPendingCartItems()
 
-  const existing = items.find(
+  const existing = items.some(
     (i) => i.productId === item.productId && i.variantId === item.variantId
   )
 

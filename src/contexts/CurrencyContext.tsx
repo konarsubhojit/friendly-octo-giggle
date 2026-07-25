@@ -70,7 +70,7 @@ export function CurrencyProvider({
     rates: Record<CurrencyCode, number>
     ratesLoading: boolean
   }>(() => {
-    if (typeof globalThis.window === 'undefined') {
+    if (globalThis.window === undefined) {
       return { rates: FALLBACK_RATES, ratesLoading: true }
     }
     try {
@@ -157,7 +157,7 @@ export function CurrencyProvider({
       opts?: { timeout: number }
     ) => number | NodeJS.Timeout
     const ric =
-      (typeof globalThis.window !== 'undefined' &&
+      (globalThis.window !== undefined &&
         (
           globalThis.window as unknown as {
             requestIdleCallback?: IdleScheduler
@@ -170,7 +170,7 @@ export function CurrencyProvider({
       cancelled = true
       type IdleCanceller = (handle: number | NodeJS.Timeout) => void
       const cic =
-        (typeof globalThis.window !== 'undefined' &&
+        (globalThis.window !== undefined &&
           (
             globalThis.window as unknown as {
               cancelIdleCallback?: IdleCanceller

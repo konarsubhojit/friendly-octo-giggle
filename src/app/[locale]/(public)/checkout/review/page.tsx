@@ -21,7 +21,7 @@ import {
   type CheckoutPolicySection,
 } from '@/lib/constants/checkout-policies'
 import { CartPricingSummary } from '@/features/cart/components/CartPricingSummary'
-import { GradientButton } from '@/components/ui/GradientButton'
+import { Button } from '@/components/ui/Button'
 import { GradientHeading } from '@/components/ui/GradientHeading'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { useCurrency } from '@/contexts/CurrencyContext'
@@ -303,13 +303,13 @@ export default function CheckoutReviewPage() {
               >
                 Back
               </Link>
-              <GradientButton
+              <Button
                 type="button"
                 onClick={() => router.push(localizePath('/checkout/payment'))}
                 disabled={!isAcknowledged || policyUnavailable}
               >
                 Continue to Payment
-              </GradientButton>
+              </Button>
             </div>
           </div>
         </div>

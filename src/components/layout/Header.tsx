@@ -5,7 +5,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import Link from '@/components/ui/LocaleLink'
 import { useSession } from 'next-auth/react'
 import CartIcon from '@/components/layout/CartIcon'
-import { GradientButton } from '@/components/ui/GradientButton'
+import { Button } from '@/components/ui/Button'
 import { FlowerAccent } from '@/components/ui/DecorativeElements'
 import { useLocale } from '@/contexts/LocaleContext'
 import LanguageSwitcher from '@/components/ui/LanguageSwitcher'
@@ -121,13 +121,13 @@ export default function Header() {
                   menuRef={menuRef}
                 />
               ) : (
-                <GradientButton
+                <Button
                   onClick={() => setLoginModalOpen(true)}
                   size="sm"
                   className="hidden sm:block"
                 >
                   {t('header.login')}
-                </GradientButton>
+                </Button>
               )}
 
               <MobileNavToggle

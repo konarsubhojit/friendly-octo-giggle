@@ -6,7 +6,7 @@ import { StarRating } from '@/components/ui/StarRating'
 import { ReviewForm } from '@/features/product/components/ReviewForm'
 import { Card } from '@/components/ui/Card'
 import Image from 'next/image'
-import { GradientButton } from '@/components/ui/GradientButton'
+import { Button } from '@/components/ui/Button'
 
 interface ReviewUser {
   name: string | null
@@ -593,13 +593,13 @@ export const ReviewsSection = ({ productId }: ReviewsSectionProps) => {
               <span>Submit anonymously</span>
             </label>
             <div className="mt-3 flex gap-2">
-              <GradientButton
+              <Button
                 type="button"
                 disabled={busyReviewId === editingReview.id}
                 onClick={saveEdit}
               >
                 Save
-              </GradientButton>
+              </Button>
               <button
                 type="button"
                 className="rounded-lg border border-[var(--border-warm)] px-3 py-2 text-sm"
