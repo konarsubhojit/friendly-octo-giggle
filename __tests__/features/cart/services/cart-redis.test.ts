@@ -360,4 +360,118 @@ describe('cart-redis', () => {
       expect(waitUntil).toHaveBeenCalled()
     })
   })
+
+  describe('hash serialization', () => {
+    it('round-trips nullable variant fields', async () => {
+      mockRedisClient.smembers.mockResolvedValueOnce(['item1'])
+      mockPipeline.exec.mockResolvedValueOnce([
+        {
+          itemId: 'item1',
+          variantSku: '',
+          variantPrice: '',
+          variantStock: '',
+          variantOptionLabel: '',
+          quantity: '1',
+        },
+      ])
+
+      const result = await fetchCartFromRedis('user1')
+
+      expect(result![0]).toMatchObject({
+        cartId: '',
+        productName: '',
+        variantSku: null,
+        variantPrice: null,
+        variantStock: null,
+        variantOptionLabel: null,
+      })
+    })
+
+    it('treats unparseable numbers as null', async () => {
+      mockRedisClient.smembers.mockResolvedValueOnce(['item1'])
+      mockPipeline.exec.mockResolvedValueOnce([
+        {
+          itemId: 'item1',
+          variantPrice: 'abc',
+          variantStock: 'NaN',
+          quantity: '1',
+        },
+      ])
+
+      const result = await fetchCartFromRedis('user1')
+
+      expect(result![0].variantPrice).toBeNull()
+      expect(result![0].variantStock).toBeNull()
+    })
+
+    it('drops hashes without an item id', async () => {
+      mockRedisClient.smembers.mockResolvedValueOnce(['item1'])
+      mockPipeline.exec.mockResolvedValueOnce([{ cartId: 'cart1' }])
+
+      const result = await fetchCartFromRedis('user1')
+
+      expect(result).toBeNull()
+    })
+
+    it('writes null variant fields as sentinels', async () => {
+      await writeCartItemToRedis(
+        createCartItem({
+          variantSku: null,
+          variantPrice: null,
+          variantStock: null,
+          variantOptionLabel: null,
+        })
+      )
+
+      expect(mockPipeline.hset).toHaveBeenCalledWith(
+        'cartitem:item1',
+        expect.objectContaining({
+          variantSku: '',
+          variantPrice: '',
+          variantStock: '',
+          variantOptionLabel: '',
+        })
+      )
+    })
+
+    it('skips the owner set for items without an owner', async () => {
+      await writeCartItemsToRedis([
+        createCartItem({ userId: '', sessionId: '' }),
+      ])
+
+      expect(mockPipeline.sadd).not.toHaveBeenCalled()
+    })
+
+    it('groups items by owner set', async () => {
+      await writeCartItemsToRedis([
+        createCartItem({ itemId: 'a', userId: '', sessionId: 'sess1' }),
+        createCartItem({ itemId: 'b', userId: '', sessionId: 'sess1' }),
+      ])
+
+      expect(mockPipeline.sadd).toHaveBeenCalledWith(
+        'cartowner:session:sess1',
+        'a'
+      )
+      expect(mockPipeline.sadd).toHaveBeenCalledWith(
+        'cartowner:session:sess1',
+        'b'
+      )
+    })
+  })
+
+  describe('backfillCartToRedis (failures)', () => {
+    it('logs when the backfill rejects', async () => {
+      vi.mocked(getRedisClient).mockImplementationOnce(() => {
+        throw new Error('client init failed')
+      })
+
+      backfillCartToRedis([createCartItem()])
+      await Promise.resolve()
+      await Promise.resolve()
+
+      expect(logError).toHaveBeenCalledWith(
+        expect.objectContaining({ context: 'cart_redis_backfill' })
+      )
+    })
+  })
 })
