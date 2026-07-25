@@ -33,8 +33,8 @@ const mockInvalidateCache = vi.mocked(invalidateCache)
 
 beforeEach(() => {
   vi.clearAllMocks()
-  mockGetCachedData.mockImplementation(
-    async (_key, _ttl, fetcher) => (fetcher as () => Promise<unknown>)()
+  mockGetCachedData.mockImplementation(async (_key, _ttl, fetcher) =>
+    (fetcher as () => Promise<unknown>)()
   )
   mockInvalidateCache.mockResolvedValue(undefined as never)
 })

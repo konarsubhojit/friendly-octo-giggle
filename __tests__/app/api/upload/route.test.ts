@@ -353,7 +353,12 @@ describe('POST /api/upload', () => {
     Uint8Array.from([...signature, ...Array(16 - signature.length).fill(0)])
 
   it.each([
-    ['JPEG', [0xff, 0xd8, 0xff, 0xe0, 0, 0, 0, 0, 0, 0, 0, 0], 'image/jpeg', 'jpg'],
+    [
+      'JPEG',
+      [0xff, 0xd8, 0xff, 0xe0, 0, 0, 0, 0, 0, 0, 0, 0],
+      'image/jpeg',
+      'jpg',
+    ],
     [
       'GIF87a',
       [0x47, 0x49, 0x46, 0x38, 0x37, 0x61, 0, 0, 0, 0, 0, 0],
@@ -372,30 +377,25 @@ describe('POST /api/upload', () => {
       'image/webp',
       'webp',
     ],
-  ])(
-    'accepts %s payloads',
-    async (_label, signature, mimeType, extension) => {
-      mockAuth.mockResolvedValue({ user: { id: 'u1', role: 'ADMIN' } })
-      mockUploadImage.mockResolvedValue({
-        url: 'https://blob/test',
-        pathname: 'test',
-        contentType: mimeType as string,
-        provider: 'vercel' as const,
-      })
-      vi.spyOn(globalThis.crypto, 'randomUUID').mockReturnValue('uuid-1')
+  ])('accepts %s payloads', async (_label, signature, mimeType, extension) => {
+    mockAuth.mockResolvedValue({ user: { id: 'u1', role: 'ADMIN' } })
+    mockUploadImage.mockResolvedValue({
+      url: 'https://blob/test',
+      pathname: 'test',
+      contentType: mimeType as string,
+      provider: 'vercel' as const,
+    })
+    vi.spyOn(globalThis.crypto, 'randomUUID').mockReturnValue('uuid-1')
 
-      const res = await POST(
-        makeRequest(
-          createFile({ bytes: magicBytesFor(signature as number[]) })
-        )
-      )
+    const res = await POST(
+      makeRequest(createFile({ bytes: magicBytesFor(signature as number[]) }))
+    )
 
-      expect(res.status).toBe(200)
-      const [uploadedFile] = mockUploadImage.mock.calls[0] as [File]
-      expect(uploadedFile.name).toBe(`uuid-1.${extension}`)
-      expect(uploadedFile.type).toBe(mimeType)
-    }
-  )
+    expect(res.status).toBe(200)
+    const [uploadedFile] = mockUploadImage.mock.calls[0] as [File]
+    expect(uploadedFile.name).toBe(`uuid-1.${extension}`)
+    expect(uploadedFile.type).toBe(mimeType)
+  })
 
   it('rejects payloads shorter than the magic byte window', async () => {
     mockAuth.mockResolvedValue({ user: { id: 'u1', role: 'ADMIN' } })

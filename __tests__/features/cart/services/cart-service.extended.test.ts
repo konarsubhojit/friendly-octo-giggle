@@ -101,7 +101,9 @@ const productRecord = {
       ],
     },
   ],
-  variants: [{ id: 'var1', price: 10, stock: 5, createdAt: NOW, updatedAt: NOW }],
+  variants: [
+    { id: 'var1', price: 10, stock: 5, createdAt: NOW, updatedAt: NOW },
+  ],
 }
 
 const cartRecord = {
@@ -215,10 +217,14 @@ describe('addItemToCart', () => {
   })
 
   it('caps a new item to the available stock and warns', async () => {
-    const result = await addItemToCart({ user: { id: 'u1' } } as never, {
-      ...addBody,
-      quantity: 50,
-    }, undefined)
+    const result = await addItemToCart(
+      { user: { id: 'u1' } } as never,
+      {
+        ...addBody,
+        quantity: 50,
+      },
+      undefined
+    )
 
     expect(result.adjustedQuantity).toBe(5)
     expect(result.warning).toContain('Only 5 items available')
@@ -240,10 +246,14 @@ describe('addItemToCart', () => {
   it('caps an existing item to the available stock', async () => {
     mocks.carts.findItem.mockResolvedValue({ id: 'item1', quantity: 3 })
 
-    const result = await addItemToCart({ user: { id: 'u1' } } as never, {
-      ...addBody,
-      quantity: 10,
-    }, undefined)
+    const result = await addItemToCart(
+      { user: { id: 'u1' } } as never,
+      {
+        ...addBody,
+        quantity: 10,
+      },
+      undefined
+    )
 
     expect(mocks.carts.updateItem).toHaveBeenCalledWith('item1', 5)
     expect(result.warning).toContain('Added 2 instead of 10')
@@ -411,7 +421,9 @@ describe('addItemToCart', () => {
 
 describe('getCart', () => {
   it('returns null without an identity', async () => {
-    await expect(getCart({ userId: undefined, sessionId: undefined })).resolves.toEqual({
+    await expect(
+      getCart({ userId: undefined, sessionId: undefined })
+    ).resolves.toEqual({
       cart: null,
     })
   })
@@ -473,7 +485,9 @@ describe('getCart', () => {
 
   it('falls back to the database and backfills redis', async () => {
     mocks.fetchCartFromRedis.mockResolvedValue([])
-    mocks.getCachedData.mockImplementation(async (_key, _ttl, loader) => loader())
+    mocks.getCachedData.mockImplementation(async (_key, _ttl, loader) =>
+      loader()
+    )
     mocks.carts.findWithRelationsByUserId.mockResolvedValue(cartRecord)
 
     const { cart } = await getCart({ userId: 'u1', sessionId: undefined })
@@ -484,7 +498,9 @@ describe('getCart', () => {
 
   it('loads a guest cart by session id', async () => {
     mocks.fetchCartFromRedis.mockResolvedValue(null)
-    mocks.getCachedData.mockImplementation(async (_key, _ttl, loader) => loader())
+    mocks.getCachedData.mockImplementation(async (_key, _ttl, loader) =>
+      loader()
+    )
     mocks.carts.findWithRelationsBySessionId.mockResolvedValue(cartRecord)
 
     const { cart } = await getCart({ userId: undefined, sessionId: 's1' })
@@ -497,7 +513,9 @@ describe('getCart', () => {
     mocks.fetchCartFromRedis.mockResolvedValue([])
     mocks.getCachedData.mockResolvedValue(undefined)
 
-    await expect(getCart({ userId: 'u1', sessionId: undefined })).resolves.toEqual({
+    await expect(
+      getCart({ userId: 'u1', sessionId: undefined })
+    ).resolves.toEqual({
       cart: null,
     })
   })
@@ -697,7 +715,10 @@ describe('mergeGuestCartIntoUserCart (merge paths)', () => {
   })
 
   it.each([
-    ['a pg error code', Object.assign(new Error('conflict'), { code: '23505' })],
+    [
+      'a pg error code',
+      Object.assign(new Error('conflict'), { code: '23505' }),
+    ],
     ['a wrapped error code', new Error('failed with 23505')],
     ['a duplicate key message', new Error('duplicate key value violates')],
   ])('falls back to a merge on %s', async (_label, error) => {

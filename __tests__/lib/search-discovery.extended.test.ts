@@ -315,7 +315,12 @@ describe('suggestSearchTerms', () => {
       query: '',
       products: [],
       categories: [],
-      popular: ['flower bouquet', 'crochet bag', 'keychain', 'hair accessories'],
+      popular: [
+        'flower bouquet',
+        'crochet bag',
+        'keychain',
+        'hair accessories',
+      ],
     })
     expect(mockSearchProductIdsCached).not.toHaveBeenCalled()
   })

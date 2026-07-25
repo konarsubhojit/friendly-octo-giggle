@@ -89,9 +89,7 @@ describe('payments', () => {
 
     it('throws for unsupported providers', () => {
       expect(() =>
-        ensurePaymentProviderConfigured(
-          'PAYPAL' as unknown as 'RAZORPAY'
-        )
+        ensurePaymentProviderConfigured('PAYPAL' as unknown as 'RAZORPAY')
       ).toThrow('Unsupported payment provider')
     })
   })
@@ -241,7 +239,9 @@ describe('payments', () => {
         expect.unreachable('should have thrown')
       } catch (error) {
         expect(error).toBeInstanceOf(PaymentVerificationError)
-        expect((error as InstanceType<typeof PaymentVerificationError>).status).toBe(401)
+        expect(
+          (error as InstanceType<typeof PaymentVerificationError>).status
+        ).toBe(401)
       }
     })
 

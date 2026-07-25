@@ -279,9 +279,7 @@ describe('processCheckoutRequestById (extended)', () => {
           city: '',
           state: '',
           payment: undefined,
-          items: [
-            expect.objectContaining({ customizationNote: 'Gift wrap' }),
-          ],
+          items: [expect.objectContaining({ customizationNote: 'Gift wrap' })],
         }),
       })
     )

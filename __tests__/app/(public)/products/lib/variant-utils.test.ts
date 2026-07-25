@@ -43,7 +43,13 @@ const options = [
     createdAt: '',
     values: [
       { id: 'v1', optionId: 'opt1', value: 'Red', sortOrder: 0, createdAt: '' },
-      { id: 'v2', optionId: 'opt1', value: 'Blue', sortOrder: 1, createdAt: '' },
+      {
+        id: 'v2',
+        optionId: 'opt1',
+        value: 'Blue',
+        sortOrder: 1,
+        createdAt: '',
+      },
     ],
   },
 ] as NonNullable<Product['options']>
