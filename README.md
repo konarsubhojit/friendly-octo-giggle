@@ -25,6 +25,7 @@ Open [http://localhost:3000](http://localhost:3000)
 Complete documentation is available in the [`/docs`](./docs) folder:
 
 - **[Getting Started](./docs/getting-started.md)** - Setup and installation guide
+- **[Feature Catalog](./docs/features.md)** - Implemented customer, admin, platform, and operational capabilities
 - **[Architecture](./docs/architecture.md)** - System design and technical overview
 - **[Development](./docs/development.md)** - Development workflows and best practices
 - **[API Reference](./docs/api-reference.md)** - Complete API documentation
@@ -33,10 +34,13 @@ Complete documentation is available in the [`/docs`](./docs) folder:
 
 ## ✨ Key Features
 
-- 🛒 **Full E-Commerce**: Products, cart, orders, and checkout
+- 🛒 **Full E-Commerce**: Stock-aware guest carts, staged checkout, queued order creation, and order tracking
 - 🔐 **Multi-Provider Auth**: Email/password, phone/password, Google OAuth, Microsoft personal accounts
 - 👥 **Role-Based Access**: Customer and Admin roles
-- ⚡ **Redis Caching**: Smart caching with stampede prevention
+- 🔎 **Discovery**: Faceted search, suggestions, click analytics, bestsellers, reviews, and recently viewed products
+- 🤖 **AI Product Assistant**: Guest-friendly product Q&A with RAG and stock-privacy safeguards
+- 🌍 **Localized PWA**: English/Spanish routes, currency preferences, offline fallback, and install support
+- ⚡ **Redis Caching**: Smart caching with stampede prevention and resilient database fallbacks
 - 📦 **Product Variations**: Support for colors, sizes, designs
 - 🎨 **Modern UI**: Responsive design with Tailwind CSS v4
 - 🚀 **Serverless-Ready**: Optimized for Vercel, AWS Lambda, etc.
@@ -70,15 +74,16 @@ Complete documentation is available in the [`/docs`](./docs) folder:
 - Browse and search products
 - View product details with variations
 - Add items to cart (session-based for guests, persistent for logged-in users)
-- **Google OAuth sign-in required for checkout**
+- Sign in with credentials, Google, or Microsoft before checkout
 - Place orders with automatic order tracking
-- View order history (linked to account)
+- Complete shipping, payment, review, and confirmation steps
+- View and search order history, manage addresses and preferences, and maintain a wishlist
 
 ### For Administrators
 
-- Product management (CRUD operations)
-- Order management and status updates
-- User role management
+- Product, category, option, variant, and inventory management
+- Order lifecycle, bulk actions, checkout-queue monitoring, and CSV export
+- User role, review moderation, sales analytics, and search-index management
 - Image upload to Vercel Blob
 - Real-time inventory tracking
 - Access via `/admin` URL (no navigation link)

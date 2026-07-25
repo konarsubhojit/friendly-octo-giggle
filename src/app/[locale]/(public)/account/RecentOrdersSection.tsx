@@ -166,7 +166,7 @@ export function RecentOrdersSection() {
         </div>
         <Link
           href="/orders"
-          className="text-sm font-semibold text-[var(--accent-rose)] transition hover:text-[var(--accent-warm)]"
+          className="text-sm font-semibold text-[var(--foreground)] underline transition hover:text-[var(--accent-warm)]"
         >
           View all
         </Link>

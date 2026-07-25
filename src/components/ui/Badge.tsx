@@ -22,12 +22,12 @@ const VARIANT_CLASSES: Record<BadgeVariant, string> = {
   success: 'bg-[var(--accent-sage)]/20 text-[var(--accent-sage)]',
   warning: 'bg-[var(--accent-peach)]/30 text-[var(--accent-rose)]',
   error: 'bg-[var(--accent-warm)]/20 text-[var(--accent-rose)]',
-  info: 'bg-[var(--accent-blush)] text-[var(--accent-rose)]',
+  info: 'bg-[var(--accent-blush)] text-[var(--foreground)]',
   neutral: 'bg-[var(--border-warm)]/30 text-[var(--text-secondary)]',
-  primary: 'bg-[var(--accent-blush)] text-[var(--accent-rose)]',
+  primary: 'bg-[var(--accent-blush)] text-[var(--foreground)]',
   sage: 'bg-[var(--accent-sage)]/20 text-[var(--accent-sage)]',
   peach: 'bg-[var(--accent-peach)]/30 text-[var(--accent-rose)]',
-  blush: 'bg-[var(--accent-blush)] text-[var(--accent-rose)]',
+  blush: 'bg-[var(--accent-blush)] text-[var(--foreground)]',
 }
 
 const SIZE_CLASSES = {

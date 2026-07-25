@@ -22,10 +22,10 @@ const getGridProductHrefs = async (page: Page): Promise<string[]> => {
   // The grid renders product anchors after hydration, so wait for at least one
   // before reading hrefs to avoid a race on a freshly-loaded page.
   await page
-    .locator('a[href*="/products/"]')
+    .locator('a[href*="/en/products/"]')
     .first()
     .waitFor({ state: 'attached' })
-  return page.$$eval('a[href*="/products/"]', (anchors) =>
+  return page.$$eval('a[href*="/en/products/"]', (anchors) =>
     Array.from(
       new Set(
         anchors
@@ -83,7 +83,26 @@ test.describe('product navigation (no 404 regression)', () => {
   test('search dropdown result navigates to a locale-prefixed product URL', async ({
     page,
   }) => {
-    await page.goto('/en/shop', { waitUntil: 'domcontentloaded' })
+    await page.route('**/api/search?**', (route) =>
+      route.fulfill({
+        json: {
+          success: true,
+          data: {
+            results: [
+              {
+                id: 'ruJaxwb',
+                name: 'Crochet Keychain',
+                description: 'Handmade keychain',
+                price: 10,
+                image: '',
+                category: 'Keychains',
+              },
+            ],
+          },
+        },
+      })
+    )
+    await page.goto('/en/shop', { waitUntil: 'networkidle' })
 
     await page
       .getByRole('button', { name: /search products/i })

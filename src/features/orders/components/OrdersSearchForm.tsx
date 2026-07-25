@@ -45,7 +45,7 @@ export const OrdersSearchForm = ({
       </div>
       <button
         type="submit"
-        className="px-4 py-2 bg-[var(--accent-rose)] text-white rounded-full text-sm hover:opacity-90 transition"
+        className="px-4 py-2 bg-[var(--foreground)] text-[var(--surface)] rounded-full text-sm hover:opacity-90 transition"
       >
         Search
       </button>

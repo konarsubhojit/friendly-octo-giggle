@@ -5,6 +5,10 @@
 **Status**: Draft  
 **Input**: User description: "Document the shipped wishlist feature by reverse-engineering the implementation"
 
+## Current Implementation Snapshot (2026-07-12)
+
+The authenticated wishlist is shipped through Redux-backed UI and `/api/wishlist` routes, with product-level save/remove controls, a localized wishlist page, ownership enforcement, and persistence across sessions. It participates in account personalization and the offline page communicates that saved state remains safe.
+
 ## User Scenarios & Testing _(mandatory)_
 
 ### User Story 1 - Save and Unsave Products (Priority: P1)

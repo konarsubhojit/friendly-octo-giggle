@@ -36,7 +36,7 @@ export default function LanguageSwitcher() {
   }
 
   return (
-    <label className="sr-only sm:not-sr-only sm:text-xs sm:text-[var(--text-muted)] sm:flex sm:items-center sm:gap-2">
+    <label className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
       <span className="hidden lg:inline">{t('header.language')}</span>
       <HeaderSelect
         className="px-2 py-1 text-xs"

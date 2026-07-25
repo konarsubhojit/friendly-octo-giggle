@@ -159,7 +159,7 @@ export function AdminSalesDashboardClient({
 
           <div className="grid gap-3 sm:grid-cols-2 lg:w-[25rem]">
             <div className="rounded-2xl border border-white/70 bg-white/75 p-4 backdrop-blur">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-600">
                 Revenue trend
               </p>
               <p className="mt-2 text-2xl font-bold text-slate-950">
@@ -170,7 +170,7 @@ export function AdminSalesDashboardClient({
               </div>
             </div>
             <div className="rounded-2xl border border-white/70 bg-white/75 p-4 backdrop-blur">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-600">
                 Fulfilment
               </p>
               <p className="mt-2 text-2xl font-bold text-slate-950">
@@ -198,7 +198,7 @@ export function AdminSalesDashboardClient({
             <p className="text-3xl font-bold tracking-tight text-slate-950">
               {card.value}
             </p>
-            <p className="mt-2 text-sm text-slate-500">{card.detail}</p>
+            <p className="mt-2 text-sm text-slate-600">{card.detail}</p>
           </article>
         ))}
       </section>
@@ -211,7 +211,7 @@ export function AdminSalesDashboardClient({
         <article className="rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-[0_20px_50px_-38px_rgba(15,23,42,0.45)]">
           <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
+              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-600">
                 Conversion snapshot
               </p>
               <h2 className="mt-2 text-2xl font-bold text-slate-950">
@@ -232,13 +232,13 @@ export function AdminSalesDashboardClient({
               </p>
             </div>
             <div className="rounded-2xl bg-slate-100 p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-600">
                 Last month
               </p>
               <p className="mt-3 text-3xl font-bold text-slate-950">
                 {sales.lastMonthOrders}
               </p>
-              <p className="mt-2 text-sm text-slate-500">
+              <p className="mt-2 text-sm text-slate-600">
                 Revenue {formatPrice(sales.lastMonthRevenue)}
               </p>
             </div>
@@ -254,7 +254,7 @@ export function AdminSalesDashboardClient({
         <article className="rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-[0_20px_50px_-38px_rgba(15,23,42,0.45)]">
           <div className="mb-5 flex items-center justify-between gap-4">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
+              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-600">
                 Top sellers
               </p>
               <h2 className="mt-2 text-2xl font-bold text-slate-950">
@@ -280,7 +280,7 @@ export function AdminSalesDashboardClient({
                 aria-hidden="true"
               />
               <div className="relative">
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-600">
                   Quick action
                 </p>
                 <h2 className="mt-2 text-2xl font-bold text-slate-950">

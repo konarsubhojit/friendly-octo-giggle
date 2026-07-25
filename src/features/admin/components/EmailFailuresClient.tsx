@@ -4,6 +4,8 @@ import { useState } from 'react'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { AlertBanner } from '@/components/ui/AlertBanner'
 import type { EmailAttemptRecord } from '@/lib/schema'
+import { Badge, type DataTableColumn } from 'zenput'
+import { AdminDataView } from '@/features/admin/components/AdminDataView'
 
 interface FailedEmailRecord {
   readonly id: string
@@ -36,31 +38,13 @@ const formatDate = (date: Date | null): string => {
   return new Date(date).toLocaleString()
 }
 
-const STATUS_CLASSES: Record<string, string> = {
-  pending:
-    'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
-  failed: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
-  sent: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-}
+const STATUS_TONES = {
+  pending: 'warning',
+  failed: 'danger',
+  sent: 'success',
+} as const
 
-const StatusBadge = ({ status }: { readonly status: string }) => (
-  <span
-    className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${STATUS_CLASSES[status] ?? ''}`}
-  >
-    {status}
-  </span>
-)
-
-const TABLE_HEADERS = [
-  'Recipient',
-  'Type',
-  'Order ID',
-  'Attempts',
-  'Status',
-  'Last Error',
-  'Created',
-  'Action',
-]
+type FailedEmailDataRow = FailedEmailRecord & { [key: string]: unknown }
 
 interface EmailFailuresTableProps {
   readonly records: FailedEmailRecord[]
@@ -72,70 +56,121 @@ const EmailFailuresTable = ({
   records,
   retryingId,
   onRetry,
-}: EmailFailuresTableProps) => (
-  <div className="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
-    <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-        <thead className="bg-gray-50 dark:bg-gray-700">
-          <tr>
-            {TABLE_HEADERS.map((h) => (
-              <th
-                key={h}
-                className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
-              >
-                {h}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-          {records.map((record) => (
-            <tr
-              key={record.id}
-              className="hover:bg-gray-50 dark:hover:bg-gray-700"
-            >
-              <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
+}: EmailFailuresTableProps) => {
+  const rows: FailedEmailDataRow[] = records.map((record) => ({ ...record }))
+  const renderRetryButton = (record: FailedEmailDataRow) =>
+    record.status !== 'sent' ? (
+      <button
+        type="button"
+        onClick={() => onRetry(record.id)}
+        disabled={retryingId === record.id}
+        className="min-tap rounded-full bg-slate-950 px-4 py-2 text-xs font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {retryingId === record.id ? 'Retrying…' : 'Retry'}
+      </button>
+    ) : null
+
+  const columns: DataTableColumn<FailedEmailDataRow>[] = [
+    { key: 'recipientEmail', header: 'Recipient' },
+    { key: 'emailType', header: 'Type' },
+    { key: 'referenceId', header: 'Order ID' },
+    { key: 'attemptCount', header: 'Attempts', align: 'right' },
+    {
+      key: 'status',
+      header: 'Status',
+      render: (_value, record) => (
+        <Badge
+          tone={
+            STATUS_TONES[record.status as keyof typeof STATUS_TONES] ??
+            'neutral'
+          }
+          size="sm"
+        >
+          {record.status}
+        </Badge>
+      ),
+    },
+    {
+      key: 'lastError',
+      header: 'Last Error',
+      render: (_value, record) => record.lastError ?? '—',
+    },
+    {
+      key: 'createdAt',
+      header: 'Created',
+      render: (_value, record) => formatDate(record.createdAt),
+    },
+    {
+      key: 'action',
+      header: 'Action',
+      sticky: 'right',
+      render: (_value, record) => renderRetryButton(record),
+    },
+  ]
+
+  return (
+    <AdminDataView
+      ariaLabel="Failed emails"
+      columns={columns}
+      data={rows}
+      rowKey={(record) => record.id}
+      renderMobileCard={(record) => (
+        <div className="min-w-0">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="break-all text-sm font-bold text-slate-950 dark:text-slate-50">
                 {record.recipientEmail}
-              </td>
-              <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
+              </p>
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                 {record.emailType}
-              </td>
-              <td className="px-4 py-3 text-sm font-mono text-gray-600 dark:text-gray-300">
+              </p>
+            </div>
+            <Badge
+              tone={
+                STATUS_TONES[record.status as keyof typeof STATUS_TONES] ??
+                'neutral'
+              }
+              size="sm"
+            >
+              {record.status}
+            </Badge>
+          </div>
+          <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
+            <div>
+              <dt className="text-xs text-slate-500 dark:text-slate-400">
+                Order ID
+              </dt>
+              <dd className="mt-1 break-all font-mono text-slate-700 dark:text-slate-200">
                 {record.referenceId}
-              </td>
-              <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
+              </dd>
+            </div>
+            <div className="text-right">
+              <dt className="text-xs text-slate-500 dark:text-slate-400">
+                Attempts
+              </dt>
+              <dd className="mt-1 font-semibold text-slate-950 dark:text-slate-50">
                 {record.attemptCount}
-              </td>
-              <td className="px-4 py-3">
-                <StatusBadge status={record.status} />
-              </td>
-              <td
-                className="px-4 py-3 text-xs text-red-600 dark:text-red-400 max-w-xs truncate"
-                title={record.lastError ?? ''}
-              >
-                {record.lastError ?? '—'}
-              </td>
-              <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                {formatDate(record.createdAt)}
-              </td>
-              <td className="px-4 py-3">
-                {record.status !== 'sent' && (
-                  <button
-                    onClick={() => onRetry(record.id)}
-                    disabled={retryingId === record.id}
-                    className="px-3 py-1 text-xs font-medium bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
-                  >
-                    {retryingId === record.id ? 'Retrying…' : 'Retry'}
-                  </button>
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  </div>
-)
+              </dd>
+            </div>
+          </dl>
+          {record.lastError ? (
+            <p className="mt-3 break-words rounded-xl bg-rose-50 p-3 text-xs text-rose-700 dark:bg-rose-950/30 dark:text-rose-300">
+              {record.lastError}
+            </p>
+          ) : (
+            <span className="sr-only">—</span>
+          )}
+          <div className="mt-3 flex items-center justify-between gap-3 border-t border-slate-200 pt-3 dark:border-slate-700">
+            <time className="text-xs text-slate-500 dark:text-slate-400">
+              {formatDate(record.createdAt)}
+            </time>
+            {renderRetryButton(record)}
+          </div>
+        </div>
+      )}
+    />
+  )
+}
 
 const applyRetryOutcome = (
   result: { success?: boolean; error?: string } | undefined,

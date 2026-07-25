@@ -24,6 +24,21 @@ This guide covers deploying the e-commerce application to various serverless pla
 - **Redis Labs** (managed Redis)
 - **AWS ElastiCache** (for AWS deployments)
 
+## Capability-specific configuration
+
+The core storefront requires PostgreSQL and NextAuth configuration. Enable newer capabilities independently:
+
+- Redis and Upstash Search: caching, suggestions, product search, order search, and search-index administration.
+- AI provider credentials: product assistant generation; guest requests use a hashed network identity and authenticated users receive persisted history.
+- Vercel Queues: durable checkout processing through the `checkout-orders` topic.
+- QStash and an email provider: asynchronous transactional email and retries.
+- Vercel Blob: admin image upload.
+- Sentry: server, edge, and browser tracing/error capture.
+- Edge Config: maintenance, sale, and shipping feature settings.
+- Cron authorization: exchange-rate refresh and failed-email retry jobs.
+
+Unset optional integrations must be treated as disabled capabilities, not as reasons for the core application to fail startup.
+
 ## Platform-Specific Instructions
 
 ### 1. Vercel (Recommended)

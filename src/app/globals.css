@@ -698,3 +698,14 @@ textarea {
   min-width: 44px;
   min-height: 44px;
 }
+
+/* Keep Zenput data tables readable without allowing them to widen admin pages. */
+.admin-data-table {
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+}
+
+.admin-data-table table {
+  min-width: 46rem;
+}

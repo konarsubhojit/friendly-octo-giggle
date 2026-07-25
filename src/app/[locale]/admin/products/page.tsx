@@ -19,7 +19,8 @@ import {
   AdminPanel,
 } from '@/features/admin/components/AdminPageShell'
 import { AdminSearchForm } from '@/features/admin/components/AdminSearchForm'
-import { DataTable, type DataTableColumn } from 'zenput'
+import { Badge, type DataTableColumn } from 'zenput'
+import { AdminDataView } from '@/features/admin/components/AdminDataView'
 
 const ProductFormModal = lazy(
   () => import('@/features/admin/components/ProductFormModal')
@@ -31,6 +32,7 @@ const DeleteConfirmModal = lazy(
 const PAGE_SIZE = 20
 
 type ProductRow = {
+  [key: string]: unknown
   id: string
   name: string
   category: string
@@ -259,13 +261,13 @@ export default function ProductsManagement() {
   }))
 
   const productsListContent = (
-    <DataTable
+    <AdminDataView
+      ariaLabel="Products"
       columns={productColumns}
       data={productRows}
       rowKey={(row) => row.id}
       loading={loading}
       skeletonRowCount={PAGE_SIZE}
-      serverSide
       emptyMessage={
         search ? 'No products match your search.' : 'No products yet.'
       }
@@ -275,6 +277,42 @@ export default function ProductsManagement() {
         totalCount,
         onPageChange: handlePageSelect,
       }}
+      renderMobileCard={(row) => (
+        <div className="min-w-0">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="break-words text-sm font-bold text-slate-950 dark:text-slate-50">
+                {row.name}
+              </p>
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                {row.category}
+              </p>
+            </div>
+            <Badge tone={row.stock > 0 ? 'success' : 'danger'} size="sm">
+              {row.stock > 0 ? `${row.stock} in stock` : 'Out of stock'}
+            </Badge>
+          </div>
+          <p className="mt-4 text-lg font-bold text-slate-950 dark:text-slate-50">
+            {row.price}
+          </p>
+          <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-200 pt-3 dark:border-slate-700">
+            <Link
+              href={`/admin/products/${row.id}`}
+              className="min-tap inline-flex items-center rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
+            >
+              Open product
+            </Link>
+            <button
+              type="button"
+              onClick={() => handleDelete(row.id)}
+              disabled={deleting}
+              className="min-tap rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-100 disabled:opacity-60"
+            >
+              Delete
+            </button>
+          </div>
+        </div>
+      )}
     />
   )
 

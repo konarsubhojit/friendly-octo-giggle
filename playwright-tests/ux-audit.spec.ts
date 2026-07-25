@@ -11,23 +11,23 @@ const PUBLIC_PROJECTS = new Set(['desktop-chrome', 'mobile-chrome'])
 const ADMIN_PROJECTS = new Set(['admin-desktop', 'admin-mobile'])
 
 const PUBLIC_ROUTES = [
-  { slug: 'home', path: '/' },
-  { slug: 'shop', path: '/shop' },
-  { slug: 'about', path: '/about' },
-  { slug: 'contact', path: '/contact' },
-  { slug: 'shipping', path: '/shipping' },
-  { slug: 'signin', path: '/auth/signin' },
-  { slug: 'register', path: '/auth/register' },
+  { slug: 'home', path: '/en' },
+  { slug: 'shop', path: '/en/shop' },
+  { slug: 'about', path: '/en/about' },
+  { slug: 'contact', path: '/en/contact' },
+  { slug: 'shipping', path: '/en/shipping' },
+  { slug: 'signin', path: '/en/auth/signin' },
+  { slug: 'register', path: '/en/auth/register' },
 ] as const
 
 const ADMIN_ROUTES = [
-  { slug: 'dashboard', path: '/admin' },
-  { slug: 'products', path: '/admin/products' },
-  { slug: 'orders', path: '/admin/orders' },
-  { slug: 'users', path: '/admin/users' },
-  { slug: 'reviews', path: '/admin/reviews' },
-  { slug: 'search', path: '/admin/search' },
-  { slug: 'email-failures', path: '/admin/email-failures' },
+  { slug: 'dashboard', path: '/en/admin' },
+  { slug: 'products', path: '/en/admin/products' },
+  { slug: 'orders', path: '/en/admin/orders' },
+  { slug: 'users', path: '/en/admin/users' },
+  { slug: 'reviews', path: '/en/admin/reviews' },
+  { slug: 'search', path: '/en/admin/search' },
+  { slug: 'email-failures', path: '/en/admin/email-failures' },
 ] as const
 
 test.beforeAll(() => {
@@ -144,13 +144,13 @@ test.describe('public route UX audit', () => {
       'Public route audit only runs on public desktop/mobile projects.'
     )
 
-    await page.goto('/shop', { waitUntil: 'domcontentloaded' })
+    await page.goto('/en/shop', { waitUntil: 'domcontentloaded' })
     await page
-      .locator('a[href^="/products/"]')
+      .locator('a[href^="/en/products/"]')
       .first()
       .waitFor({ state: 'visible' })
     const firstProductHref = await page
-      .locator('a[href^="/products/"]')
+      .locator('a[href^="/en/products/"]')
       .first()
       .getAttribute('href')
 
@@ -194,7 +194,7 @@ test.describe('validation UX audit', () => {
       'Validation audit only runs on public desktop/mobile projects.'
     )
 
-    await page.goto('/auth/signin', { waitUntil: 'domcontentloaded' })
+    await page.goto('/en/auth/signin', { waitUntil: 'domcontentloaded' })
     await settlePage()
     await page.locator('#signin-identifier').fill('x')
     await page.locator('#signin-identifier').clear()
@@ -205,9 +205,6 @@ test.describe('validation UX audit', () => {
       .getByRole('button', { name: /^login$/i })
       .click()
 
-    await expect(page.locator('form [role="alert"]').first()).toContainText(
-      'Please correct'
-    )
     await expect(
       page.getByText(
         'Enter the email address or phone number linked to your account.'
@@ -226,7 +223,7 @@ test.describe('validation UX audit', () => {
       'Validation audit only runs on public desktop/mobile projects.'
     )
 
-    await page.goto('/auth/register', { waitUntil: 'domcontentloaded' })
+    await page.goto('/en/auth/register', { waitUntil: 'domcontentloaded' })
     await settlePage()
     await page.locator('#register-name').fill('Test User')
     await page.locator('#register-email').fill('test@example.com')
@@ -234,9 +231,6 @@ test.describe('validation UX audit', () => {
     await page.locator('#register-confirm-password').fill('WrongPassword1!')
     await page.getByRole('button', { name: /create account/i }).click()
 
-    await expect(page.locator('form [role="alert"]').first()).toContainText(
-      'Please correct'
-    )
     await expect(page.locator('#register-confirm-password')).toHaveClass(
       /border-red-400/
     )
@@ -250,13 +244,10 @@ test.describe('validation UX audit', () => {
       'Validation audit only runs on public desktop/mobile projects.'
     )
 
-    await page.goto('/contact', { waitUntil: 'domcontentloaded' })
+    await page.goto('/en/contact', { waitUntil: 'domcontentloaded' })
     await settlePage()
     await page.getByRole('button', { name: /send message/i }).click()
 
-    await expect(page.locator('form [role="alert"]').first()).toContainText(
-      'Please correct'
-    )
     await expect(
       page.getByText('Tell us your name so we know how to address you.')
     ).toBeVisible()

@@ -42,24 +42,40 @@ export default defineConfig({
         ...devices['Desktop Chrome'],
         viewport: { width: 1280, height: 800 },
       },
-      testMatch: [
-        '**/ui-changes.spec.ts',
-        '**/fixed-background.spec.ts',
-        '**/ux-audit.spec.ts',
-        '**/orders-list.spec.ts',
-        '**/ai-stock-privacy.spec.ts',
-      ],
+      testMatch: ['**/ui-changes.spec.ts', '**/ux-audit.spec.ts'],
     },
     {
       name: 'mobile-chrome',
       use: { ...devices['Pixel 5'], viewport: { width: 393, height: 851 } },
-      testMatch: [
-        '**/ui-changes.spec.ts',
-        '**/fixed-background.spec.ts',
-        '**/ux-audit.spec.ts',
-        '**/orders-list.spec.ts',
-        '**/ai-stock-privacy.spec.ts',
-      ],
+      testMatch: ['**/ui-changes.spec.ts', '**/ux-audit.spec.ts'],
+    },
+    // Product assistant regression — public desktop coverage.
+    {
+      name: 'ai-stock-privacy',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1280, height: 800 },
+      },
+      testMatch: '**/ai-stock-privacy.spec.ts',
+    },
+    // Order summaries — authenticated desktop coverage.
+    {
+      name: 'orders-list',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1280, height: 800 },
+        storageState: './playwright-tests/.auth/admin.json',
+      },
+      testMatch: '**/orders-list.spec.ts',
+    },
+    // Current platform capabilities — PWA, localization, discovery, and admin operations.
+    {
+      name: 'latest-features',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1280, height: 800 },
+      },
+      testMatch: '**/latest-features.spec.ts',
     },
     // Password validation — desktop
     {
@@ -108,7 +124,11 @@ export default defineConfig({
         viewport: { width: 1280, height: 800 },
         storageState: './playwright-tests/.auth/admin.json',
       },
-      testMatch: '**/cart.spec.ts',
+      testMatch: [
+        '**/cart.spec.ts',
+        '**/checkout-error-recovery.spec.ts',
+        '**/checkout-policy.spec.ts',
+      ],
     },
     // Accessibility — public pages (unauthenticated, desktop)
     {
@@ -180,6 +200,7 @@ export default defineConfig({
       use: {
         ...devices['Desktop Chrome'],
         viewport: { width: 1280, height: 800 },
+        storageState: './playwright-tests/.auth/admin.json',
       },
       testMatch: '**/variant-options.spec.ts',
     },

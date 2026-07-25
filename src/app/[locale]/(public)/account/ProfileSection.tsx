@@ -77,7 +77,7 @@ export function ProfileSection({
               setSuccess('')
               setIsEditing(true)
             }}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-[var(--accent-rose)] bg-[var(--accent-blush)] rounded-lg hover:bg-[var(--accent-cream)] transition"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-[var(--foreground)] bg-[var(--accent-blush)] rounded-lg hover:bg-[var(--accent-cream)] transition"
             aria-label="Edit profile"
           >
             <svg
@@ -135,13 +135,16 @@ export function ProfileSection({
               )}
             </dd>
           </div>
-          <div className="text-xs text-[var(--text-muted)] pt-1">
-            Member since{' '}
-            {new Date(profile.createdAt).toLocaleDateString('en-US', {
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric',
-            })}
+          <div>
+            <dt className="sr-only">Membership</dt>
+            <dd className="text-xs text-[var(--text-muted)] pt-1">
+              Member since{' '}
+              {new Date(profile.createdAt).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+              })}
+            </dd>
           </div>
         </dl>
       )}

@@ -7,6 +7,10 @@
 
 ---
 
+## Current Implementation Snapshot (2026-07-12)
+
+The standardized admin experience now spans responsive products, categories, orders, checkout requests, users, reviews, sales, email failures, and search-index screens. It also supports product import, CSV exports, bulk mutations, option/variant management, confirmation dialogs, mobile card layouts, and desktop tables. Coverage lives primarily in `admin-views.spec.ts` and `ux-audit.spec.ts`.
+
 ## User Scenarios & Testing _(mandatory)_
 
 ### User Story 1 — Admin Creates or Edits a Product Using Standardised Form Fields (Priority: P1)

@@ -60,10 +60,10 @@ describe('AdminCheckoutRequestsPage', () => {
     expect(screen.getByText('Processing')).toBeInTheDocument()
     expect(screen.getByText('Failed')).toBeInTheDocument()
     expect(screen.getByText('Completed')).toBeInTheDocument()
-    expect(screen.getByText('CHK1001')).toBeInTheDocument()
-    expect(screen.getByText('Aisha Khan')).toBeInTheDocument()
+    expect(screen.getAllByText('CHK1001')).toHaveLength(2)
+    expect(screen.getAllByText('Aisha Khan')).toHaveLength(2)
     expect(
-      screen.getByText('Insufficient stock for Rose Bouquet')
+      screen.getAllByText('Insufficient stock for Rose Bouquet')[0]
     ).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'ORD123ABC' })).toHaveAttribute(
       'href',

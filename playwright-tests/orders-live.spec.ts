@@ -71,7 +71,7 @@ test('GET /api/orders?limit=3 returns 200 and valid JSON', async ({
 test('/orders page loads without error', async ({ page }) => {
   await suppressExchangeRates(page)
 
-  await page.goto('/orders')
+  await page.goto('/en/orders')
   await page.screenshot({ path: shot('orders-page-loading') })
 
   await page.waitForLoadState('networkidle')
@@ -98,14 +98,14 @@ test('full order flow: shop → cart → checkout → orders list', async ({
   await suppressExchangeRates(page)
 
   // ── 3a: Visit shop page ────────────────────────────────────────────────────
-  await page.goto('/shop')
+  await page.goto('/en/shop')
   await page.waitForLoadState('networkidle')
   await page.screenshot({ path: shot('shop-page') })
   console.log('✓ Shop page loaded')
 
   // ── 3b: Navigate directly to a known product page ──────────────────────────
   // Use the seeded test product ID 'tprod01' (Hand-knitted Flower Bouquet)
-  await page.goto('/products/tprod01')
+  await page.goto('/en/products/tprod01')
   await page.waitForLoadState('networkidle')
   await page.screenshot({ path: shot('product-detail') })
   console.log('✓ Product detail page loaded:', page.url())
@@ -128,7 +128,7 @@ test('full order flow: shop → cart → checkout → orders list', async ({
   }
 
   // ── 3d: Go to cart ─────────────────────────────────────────────────────────
-  await page.goto('/cart')
+  await page.goto('/en/cart')
   await page.waitForLoadState('networkidle')
   await page.screenshot({ path: shot('cart-page') })
   console.log('Cart page loaded')
@@ -165,7 +165,7 @@ test('full order flow: shop → cart → checkout → orders list', async ({
   }
 
   // ── 3f: Verify orders page still loads ────────────────────────────────────
-  await page.goto('/orders')
+  await page.goto('/en/orders')
   await page.waitForLoadState('networkidle')
   await page.screenshot({ path: shot('orders-after-checkout') })
 
@@ -201,7 +201,7 @@ test('account page recent orders section loads without error', async ({
     })
   )
 
-  await page.goto('/account')
+  await page.goto('/en/account')
   await page.waitForLoadState('networkidle')
   await page.screenshot({ path: shot('account-page') })
 

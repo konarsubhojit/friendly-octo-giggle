@@ -5,6 +5,10 @@
 **Status**: Draft  
 **Input**: User description: "Document the shipped authentication and account security feature"
 
+## Current Implementation Snapshot (2026-07-12)
+
+Shipped scope includes email-or-phone credentials, Google OAuth, Microsoft personal-account OAuth, JWT sessions, email verification, forgot/reset/change password, password history, login protection, secure cookies, and CUSTOMER/ADMIN enforcement. Playwright covers registration validation and authenticated account/password interactions; API/unit suites cover token and abuse-protection behavior.
+
 ## User Scenarios & Testing _(mandatory)_
 
 ### User Story 1 - Sign In with Secure Sessions (Priority: P1)
