@@ -3,9 +3,8 @@
 import { useState } from 'react'
 import Image from 'next/image'
 import { signOut } from 'next-auth/react'
-import Link from '@/components/ui/LocaleLink'
+import Link from 'next/link'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
-import { useLocale } from '@/contexts/LocaleContext'
 
 export interface UserMenuUser {
   readonly name?: string | null
@@ -28,13 +27,12 @@ export function UserMenu({
   menuRef,
 }: UserMenuProps) {
   const [signingOut, setSigningOut] = useState(false)
-  const { t, localizePath } = useLocale()
 
   async function handleSignOut() {
     setMenuOpen(false)
     setSigningOut(true)
     try {
-      await signOut({ callbackUrl: localizePath('/') })
+      await signOut({ callbackUrl: '/' })
     } finally {
       setSigningOut(false)
     }
@@ -46,7 +44,7 @@ export function UserMenu({
         type="button"
         onClick={() => setMenuOpen(!menuOpen)}
         className="flex items-center gap-2 hover:opacity-80 transition-opacity"
-        aria-label={t('header.userMenu')}
+        aria-label="User menu"
         aria-expanded={menuOpen}
         aria-haspopup="menu"
         aria-controls="user-menu"
@@ -95,7 +93,7 @@ export function UserMenu({
             </p>
           </div>
           <Link
-            href={localizePath('/account')}
+            href="/account"
             onClick={() => setMenuOpen(false)}
             className="flex items-center gap-3 px-4 py-2.5 text-sm text-[var(--text-secondary)] hover:bg-[var(--accent-blush)] transition-colors rounded-lg mx-1"
             role="menuitem"
@@ -114,10 +112,10 @@ export function UserMenu({
                 d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
               />
             </svg>
-            {t('header.account')}
+            My Account
           </Link>
           <Link
-            href={localizePath('/orders')}
+            href="/orders"
             onClick={() => setMenuOpen(false)}
             className="flex items-center gap-3 px-4 py-2.5 text-sm text-[var(--text-secondary)] hover:bg-[var(--accent-blush)] transition-colors rounded-lg mx-1"
             role="menuitem"
@@ -136,10 +134,10 @@ export function UserMenu({
                 d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
               />
             </svg>
-            {t('header.orders')}
+            My Orders
           </Link>
           <Link
-            href={localizePath('/wishlist')}
+            href="/wishlist"
             onClick={() => setMenuOpen(false)}
             className="flex items-center gap-3 px-4 py-2.5 text-sm text-[var(--text-secondary)] hover:bg-[var(--accent-blush)] transition-colors rounded-lg mx-1"
             role="menuitem"
@@ -158,11 +156,11 @@ export function UserMenu({
                 d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
               />
             </svg>
-            {t('header.wishlist')}
+            My Wishlist
           </Link>
           {user.role === 'ADMIN' && (
             <Link
-              href={localizePath('/admin')}
+              href="/admin"
               onClick={() => setMenuOpen(false)}
               className="flex items-center gap-3 px-4 py-2.5 text-sm text-[var(--text-secondary)] hover:bg-[var(--accent-blush)] transition-colors rounded-lg mx-1"
               role="menuitem"
@@ -187,7 +185,7 @@ export function UserMenu({
                   d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
                 />
               </svg>
-              {t('header.admin')}
+              Admin Dashboard
             </Link>
           )}
           <div className="border-t border-[var(--border-warm)] mt-1 pt-1">
@@ -217,7 +215,7 @@ export function UserMenu({
                   />
                 </svg>
               )}
-              {signingOut ? t('header.signingOut') : t('header.signOut')}
+              {signingOut ? 'Signing out…' : 'Sign Out'}
             </button>
           </div>
         </div>

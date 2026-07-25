@@ -1,4 +1,4 @@
-import Link from '@/components/ui/LocaleLink'
+import Link from 'next/link'
 import { Button } from '@/components/ui/Button'
 
 const CTA_LINK_CLASSES =

@@ -10,12 +10,11 @@ import {
   useRef,
   useState,
 } from 'react'
-import Link from '@/components/ui/LocaleLink'
+import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { Product } from '@/lib/types'
 import { useCurrency } from '@/contexts/CurrencyContext'
-import { useLocale } from '@/contexts/LocaleContext'
 import { GradientHeading } from '@/components/ui/GradientHeading'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { StockBadge } from '@/features/product/components/StockBadge'
@@ -346,7 +345,6 @@ const ProductGrid = ({
 }: ProductGridProps) => {
   const router = useRouter()
   const { formatPrice } = useCurrency()
-  const { localizePath } = useLocale()
   const [visibleProducts, setVisibleProducts] = useState(products)
   const [canLoadMore, setCanLoadMore] = useState(hasNextPage)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
@@ -558,7 +556,7 @@ const ProductGrid = ({
     })
 
     const query = params.toString()
-    router.push(localizePath(query ? `/shop?${query}#products` : resetHref), {
+    router.push(query ? `/shop?${query}#products` : resetHref, {
       scroll: false,
     })
   }, [
@@ -572,7 +570,6 @@ const ProductGrid = ({
     variantDraft,
     router,
     resetHref,
-    localizePath,
   ])
 
   return (
@@ -835,12 +832,9 @@ const ProductGrid = ({
                           if (selectedCategory !== DEFAULT_CATEGORY) {
                             params.set('category', selectedCategory)
                           }
-                          router.push(
-                            localizePath(`/shop?${params.toString()}#products`),
-                            {
-                              scroll: false,
-                            }
-                          )
+                          router.push(`/shop?${params.toString()}#products`, {
+                            scroll: false,
+                          })
                         }}
                         className="rounded-full bg-[var(--surface-elevated)] px-3 py-1.5 text-xs font-medium text-[var(--foreground)] hover:bg-[var(--accent-blush)]"
                       >

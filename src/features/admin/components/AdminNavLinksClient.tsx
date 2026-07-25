@@ -1,8 +1,7 @@
 'use client'
 
-import Link from '@/components/ui/LocaleLink'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useLocale } from '@/contexts/LocaleContext'
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 
@@ -251,7 +250,6 @@ function CommandPalette({
   readonly failedEmailCount: number
 }) {
   const router = useRouter()
-  const { localizePath } = useLocale()
   const [query, setQuery] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
   const [selectedIndex, setSelectedIndex] = useState(0)
@@ -304,12 +302,12 @@ function CommandPalette({
       } else if (e.key === 'Enter' && filtered[selectedIndex]) {
         e.preventDefault()
         onClose()
-        router.push(localizePath(filtered[selectedIndex].href))
+        router.push(filtered[selectedIndex].href)
       } else if (e.key === 'Escape') {
         onClose()
       }
     },
-    [filtered, selectedIndex, onClose, router, localizePath]
+    [filtered, selectedIndex, onClose, router]
   )
 
   if (!open) return null

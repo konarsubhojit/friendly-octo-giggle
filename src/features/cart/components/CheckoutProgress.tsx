@@ -1,4 +1,4 @@
-import Link from '@/components/ui/LocaleLink'
+import Link from 'next/link'
 
 type CheckoutStep = 'cart' | 'shipping' | 'payment' | 'review' | 'confirmation'
 

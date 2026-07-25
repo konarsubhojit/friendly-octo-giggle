@@ -34,7 +34,7 @@ describe('AdminNavLinksClient', () => {
     render(<AdminNavLinksClient failedEmailCount={0} />)
     expect(screen.getByRole('link', { name: 'Dashboard' })).toHaveAttribute(
       'href',
-      '/en/admin'
+      '/admin'
     )
   })
 
@@ -69,11 +69,11 @@ describe('AdminNavLinksClient', () => {
     })
     expect(screen.getByRole('menuitem', { name: 'Products' })).toHaveAttribute(
       'href',
-      '/en/admin/products'
+      '/admin/products'
     )
     expect(
       screen.getByRole('menuitem', { name: 'Categories' })
-    ).toHaveAttribute('href', '/en/admin/categories')
+    ).toHaveAttribute('href', '/admin/categories')
   })
 
   it('positions the dropdown using viewport coordinates when the page is scrolled', async () => {
@@ -197,15 +197,15 @@ describe('AdminNavLinksClient', () => {
     await waitFor(() => screen.getByRole('menu'))
     expect(screen.getByRole('menuitem', { name: 'Orders' })).toHaveAttribute(
       'href',
-      '/en/admin/orders'
+      '/admin/orders'
     )
     expect(screen.getByRole('menuitem', { name: 'Users' })).toHaveAttribute(
       'href',
-      '/en/admin/users'
+      '/admin/users'
     )
     expect(screen.getByRole('menuitem', { name: 'Reviews' })).toHaveAttribute(
       'href',
-      '/en/admin/reviews'
+      '/admin/reviews'
     )
   })
 
@@ -215,11 +215,11 @@ describe('AdminNavLinksClient', () => {
     await waitFor(() => screen.getByRole('menu'))
     expect(screen.getByRole('menuitem', { name: 'Search' })).toHaveAttribute(
       'href',
-      '/en/admin/search'
+      '/admin/search'
     )
     expect(
       screen.getByRole('menuitem', { name: 'Email Failures' })
-    ).toHaveAttribute('href', '/en/admin/email-failures')
+    ).toHaveAttribute('href', '/admin/email-failures')
   })
 
   it('shows failed email badge when failedEmailCount > 0', async () => {

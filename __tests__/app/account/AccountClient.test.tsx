@@ -44,25 +44,25 @@ vi.mock('@/components/ui/GradientHeading', () => ({
   ),
 }))
 
-vi.mock('@/app/[locale]/(public)/account/ProfileSection', () => ({
+vi.mock('@/app/(public)/account/ProfileSection', () => ({
   ProfileSection: ({ profile }: { profile: { name: string } }) => (
     <div data-testid="profile-section">{profile.name}</div>
   ),
 }))
 
-vi.mock('@/app/[locale]/(public)/account/PreferencesSection', () => ({
+vi.mock('@/app/(public)/account/PreferencesSection', () => ({
   PreferencesSection: () => <div data-testid="preferences-section" />,
 }))
 
-vi.mock('@/app/[locale]/(public)/account/PasswordSection', () => ({
+vi.mock('@/app/(public)/account/PasswordSection', () => ({
   PasswordSection: () => <div data-testid="password-section" />,
 }))
 
-vi.mock('@/app/[locale]/(public)/account/RecentOrdersSection', () => ({
+vi.mock('@/app/(public)/account/RecentOrdersSection', () => ({
   RecentOrdersSection: () => <div data-testid="recent-orders-section" />,
 }))
 
-import AccountClient from '@/app/[locale]/(public)/account/AccountClient'
+import AccountClient from '@/app/(public)/account/AccountClient'
 
 describe('AccountClient', () => {
   beforeEach(() => {

@@ -1,10 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import Link from '@/components/ui/LocaleLink'
+import Link from 'next/link'
 import { signOut } from 'next-auth/react'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
-import { useLocale } from '@/contexts/LocaleContext'
 
 interface AdminHeaderNavProps {
   readonly userName: string
@@ -12,12 +11,11 @@ interface AdminHeaderNavProps {
 
 export const AdminHeaderNav = ({ userName }: AdminHeaderNavProps) => {
   const [signingOut, setSigningOut] = useState(false)
-  const { localizePath } = useLocale()
 
   async function handleSignOut() {
     setSigningOut(true)
     try {
-      await signOut({ callbackUrl: localizePath('/') })
+      await signOut({ callbackUrl: '/' })
     } finally {
       setSigningOut(false)
     }

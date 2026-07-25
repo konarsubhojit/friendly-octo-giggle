@@ -1,7 +1,7 @@
 'use client'
 
 import { Fragment, useEffect, useId, useMemo, useRef, useState } from 'react'
-import Link from '@/components/ui/LocaleLink'
+import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import { useDebounce } from '@/hooks/useDebounce'
 

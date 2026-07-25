@@ -1,6 +1,6 @@
 'use client'
 
-import Link from '@/components/ui/LocaleLink'
+import Link from 'next/link'
 import type { ReactElement, ReactNode } from 'react'
 
 interface Session {

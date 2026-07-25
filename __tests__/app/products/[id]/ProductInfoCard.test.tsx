@@ -2,7 +2,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import React from 'react'
-import { ProductInfoCard } from '@/app/[locale]/(public)/products/[id]/components/ProductInfoCard'
+import { ProductInfoCard } from '@/app/(public)/products/[id]/components/ProductInfoCard'
 import type { Product, ProductVariant } from '@/lib/types'
 
 // Stub child components so we focus on ProductInfoCard's own markup
@@ -16,12 +16,9 @@ vi.mock('@/features/product/components/ShareButton', () => ({
   ShareButton: () => <button type="button">Share</button>,
 }))
 
-vi.mock(
-  '@/app/[locale]/(public)/products/[id]/components/VariantSelector',
-  () => ({
-    VariantSelector: () => <div data-testid="variant-selector" />,
-  })
-)
+vi.mock('@/app/(public)/products/[id]/components/VariantSelector', () => ({
+  VariantSelector: () => <div data-testid="variant-selector" />,
+}))
 
 const baseProduct: Product = {
   id: 'p1',

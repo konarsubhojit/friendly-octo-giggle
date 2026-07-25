@@ -4,7 +4,7 @@ import { render, screen } from '@testing-library/react'
 import React from 'react'
 import { Provider } from 'react-redux'
 import { configureStore } from '@reduxjs/toolkit'
-import CartClient from '@/app/[locale]/(public)/cart/CartClient'
+import CartClient from '@/app/(public)/cart/CartClient'
 import cartReducer from '@/features/cart/store/cartSlice'
 import type { Cart } from '@/lib/types'
 

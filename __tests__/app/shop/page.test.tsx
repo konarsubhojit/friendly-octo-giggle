@@ -161,7 +161,7 @@ describe('app/shop/page', () => {
 
   it('uses catalog search response for initial shop products and sort', async () => {
     const { ShopCatalog, parseShopFilters } =
-      await import('@/app/[locale]/(public)/shop/page')
+      await import('@/app/(public)/shop/page')
     const filters = parseShopFilters({ q: 'flowers', sort: 'price_desc' })
     const view = await ShopCatalog({ filters })
 
@@ -181,8 +181,7 @@ describe('app/shop/page', () => {
   }, 15000)
 
   it('renders the static shop heading shell immediately', async () => {
-    const { default: ShopPage } =
-      await import('@/app/[locale]/(public)/shop/page')
+    const { default: ShopPage } = await import('@/app/(public)/shop/page')
     const view = await ShopPage({ searchParams: Promise.resolve({}) })
 
     render(view)
@@ -198,7 +197,7 @@ describe('app/shop/page', () => {
     )
 
     const { ShopCatalog, parseShopFilters } =
-      await import('@/app/[locale]/(public)/shop/page')
+      await import('@/app/(public)/shop/page')
     const view = await ShopCatalog({ filters: parseShopFilters({}) })
 
     render(view)
