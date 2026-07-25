@@ -9,7 +9,6 @@ import {
   useEffect,
   type ReactNode,
 } from 'react'
-import { useLocale } from '@/contexts/LocaleContext'
 
 export type CurrencyCode = 'INR' | 'USD' | 'EUR' | 'GBP'
 
@@ -52,15 +51,9 @@ const CurrencyContext = createContext<CurrencyContextValue | null>(null)
 
 const EXCHANGE_RATES_STORAGE_KEY = 'exchange-rates'
 const EXCHANGE_RATES_MAX_AGE_MS = 3_600_000 // 1 hour
-const LOCALE_TO_NUMBER_FORMAT: Record<string, string> = {
-  en: 'en-US',
-  es: 'es-ES',
-}
-
 export function CurrencyProvider({
   children,
 }: Readonly<{ children: ReactNode }>) {
-  const { locale } = useLocale()
   const [currency, setCurrency] = useState<CurrencyCode>('INR')
 
   // Synchronously seed rates from sessionStorage on mount so the first paint
@@ -70,7 +63,7 @@ export function CurrencyProvider({
     rates: Record<CurrencyCode, number>
     ratesLoading: boolean
   }>(() => {
-    if (typeof globalThis.window === 'undefined') {
+    if (globalThis.window === undefined) {
       return { rates: FALLBACK_RATES, ratesLoading: true }
     }
     try {
@@ -157,7 +150,7 @@ export function CurrencyProvider({
       opts?: { timeout: number }
     ) => number | NodeJS.Timeout
     const ric =
-      (typeof globalThis.window !== 'undefined' &&
+      (globalThis.window !== undefined &&
         (
           globalThis.window as unknown as {
             requestIdleCallback?: IdleScheduler
@@ -170,7 +163,7 @@ export function CurrencyProvider({
       cancelled = true
       type IdleCanceller = (handle: number | NodeJS.Timeout) => void
       const cic =
-        (typeof globalThis.window !== 'undefined' &&
+        (globalThis.window !== undefined &&
           (
             globalThis.window as unknown as {
               cancelIdleCallback?: IdleCanceller
@@ -193,15 +186,14 @@ export function CurrencyProvider({
   const formatPrice = useCallback(
     (priceInINR: number): string => {
       const converted = priceInINR * rates[currency]
-      const numberLocale = LOCALE_TO_NUMBER_FORMAT[locale] ?? config.locale
-      return new Intl.NumberFormat(numberLocale, {
+      return new Intl.NumberFormat(config.locale, {
         style: 'currency',
         currency: config.code,
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
       }).format(converted)
     },
-    [config, rates, currency, locale]
+    [config, rates, currency]
   )
 
   const value: CurrencyContextValue = useMemo(

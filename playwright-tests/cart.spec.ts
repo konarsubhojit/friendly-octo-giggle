@@ -174,7 +174,9 @@ test.describe('Cart page – loading and display', () => {
     await expect(
       page.getByRole('heading', { name: /order summary/i })
     ).toBeVisible()
-    await expect(page.getByText(/shipping/i)).toBeVisible()
+    await expect(
+      page.getByText('Shipping', { exact: true }).last()
+    ).toBeVisible()
   })
 
   test('shows empty cart state when cart has no items', async ({ page }) => {
@@ -385,78 +387,6 @@ test.describe('Cart page – order summary', () => {
 
     // Item count in summary should now reflect 2 + 1 = 3 items
     await expect(page.getByText(/3 items/)).toBeVisible()
-  })
-
-  test('place order button renders and shipping address field is present', async ({
-    page,
-  }) => {
-    const cartState = { current: { ...MOCK_CART } }
-    await mockCartRoutes(page, cartState)
-
-    await page.goto('/cart')
-
-    await expect(
-      page.getByRole('button', { name: /place order/i })
-    ).toBeVisible()
-    await expect(page.getByLabel(/shipping address/i)).toBeVisible()
-  })
-
-  test('place order validation requires shipping address', async ({ page }) => {
-    const cartState = { current: { ...MOCK_CART } }
-    await mockCartRoutes(page, cartState)
-
-    await page.goto('/cart')
-
-    // Submit without filling address
-    await page.getByRole('button', { name: /place order/i }).click()
-
-    // Validation error should appear
-    await expect(
-      page.getByText(/please enter a shipping address/i)
-    ).toBeVisible()
-  })
-
-  test('opens the policy dialog before checkout submission', async ({
-    page,
-  }) => {
-    const cartState = { current: { ...MOCK_CART } }
-    await mockCartRoutes(page, cartState)
-
-    await page.goto('/cart')
-
-    await page
-      .getByLabel(/shipping address/i)
-      .fill('42 MG Road, Bengaluru, Karnataka 560001')
-    await page.getByRole('button', { name: /place order/i }).click()
-
-    await expect(
-      page.getByRole('heading', { name: /review order policy/i })
-    ).toBeVisible()
-    await expect(
-      page.getByRole('button', { name: /confirm and place order/i })
-    ).toBeDisabled()
-
-    await page.screenshot({ path: screenshotPath('cart-policy-dialog') })
-  })
-
-  test('successfully places order after policy acknowledgment', async ({
-    page,
-  }) => {
-    const cartState = { current: { ...MOCK_CART } }
-    await mockCartRoutes(page, cartState)
-
-    await page.goto('/cart')
-
-    await page
-      .getByLabel(/shipping address/i)
-      .fill('42 MG Road, Bengaluru, Karnataka 560001')
-    await page.getByRole('button', { name: /place order/i }).click()
-    await page.getByRole('checkbox').check()
-    await page.getByRole('button', { name: /confirm and place order/i }).click()
-
-    await expect(page).toHaveURL(/\/orders$/)
-
-    await page.screenshot({ path: screenshotPath('cart-order-placed') })
   })
 })
 

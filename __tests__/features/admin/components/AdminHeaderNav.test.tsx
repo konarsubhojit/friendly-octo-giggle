@@ -48,7 +48,7 @@ describe('AdminHeaderNav', () => {
 
     const viewStoreLink = screen.getByRole('link', { name: 'View Store' })
     expect(viewStoreLink).toBeInTheDocument()
-    expect(viewStoreLink).toHaveAttribute('href', '/en')
+    expect(viewStoreLink).toHaveAttribute('href', '/')
   })
 
   it('shows a Sign Out button', () => {
@@ -66,7 +66,7 @@ describe('AdminHeaderNav', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Sign Out' }))
 
     await waitFor(() => {
-      expect(mockSignOut).toHaveBeenCalledWith({ callbackUrl: '/en' })
+      expect(mockSignOut).toHaveBeenCalledWith({ callbackUrl: '/' })
     })
   })
 

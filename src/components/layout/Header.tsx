@@ -2,13 +2,12 @@
 
 import dynamic from 'next/dynamic'
 import { useState, useRef, useEffect, useCallback } from 'react'
-import Link from '@/components/ui/LocaleLink'
+import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import CartIcon from '@/components/layout/CartIcon'
-import { GradientButton } from '@/components/ui/GradientButton'
+import { Button } from '@/components/ui/Button'
 import { FlowerAccent } from '@/components/ui/DecorativeElements'
-import { useLocale } from '@/contexts/LocaleContext'
-import LanguageSwitcher from '@/components/ui/LanguageSwitcher'
+import { STORE_NAME } from '@/lib/constants/store'
 import { UserMenu } from './header/UserMenu'
 import { MobileNav } from './header/MobileNav'
 import { MobileNavToggle } from './header/MobileNavToggle'
@@ -30,7 +29,6 @@ const ProductSearch = dynamic(
 )
 
 export default function Header() {
-  const { t, localizePath } = useLocale()
   const { data: session } = useSession()
   const [menuOpen, setMenuOpen] = useState(false)
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
@@ -68,44 +66,37 @@ export default function Header() {
         <div className="mx-auto w-full max-w-[96rem] px-4 py-4 sm:px-6 lg:px-8 xl:px-10 2xl:px-12">
           <div className="flex items-center justify-between gap-3">
             <Link
-              href={localizePath('/')}
+              href="/"
               className="group flex min-w-0 items-center gap-1.5 text-xl font-bold transition-all duration-300 sm:text-2xl"
             >
               <FlowerAccent className="w-7 h-7 group-hover:animate-wiggle" />
               <span className="font-display truncate bg-gradient-to-r from-[var(--accent-rose)] to-[var(--accent-warm)] bg-clip-text text-transparent">
-                {t('common.storeName')}
+                {STORE_NAME}
               </span>
             </Link>
 
             <nav className="hidden items-center gap-4 md:flex xl:gap-8">
               <Link
-                href={localizePath('/')}
+                href="/shop"
                 className="text-[var(--text-secondary)] hover:text-[var(--accent-rose)] transition-all duration-300 font-semibold px-3 py-1.5 rounded-full hover:bg-[var(--accent-blush)]/50"
               >
-                {t('header.home')}
+                Shop
               </Link>
               <Link
-                href={localizePath('/shop')}
+                href="/about"
                 className="text-[var(--text-secondary)] hover:text-[var(--accent-rose)] transition-all duration-300 font-semibold px-3 py-1.5 rounded-full hover:bg-[var(--accent-blush)]/50"
               >
-                {t('header.shop')}
+                About
               </Link>
               <Link
-                href={localizePath('/about')}
+                href="/contact"
                 className="text-[var(--text-secondary)] hover:text-[var(--accent-rose)] transition-all duration-300 font-semibold px-3 py-1.5 rounded-full hover:bg-[var(--accent-blush)]/50"
               >
-                {t('header.about')}
-              </Link>
-              <Link
-                href={localizePath('/contact')}
-                className="text-[var(--text-secondary)] hover:text-[var(--accent-rose)] transition-all duration-300 font-semibold px-3 py-1.5 rounded-full hover:bg-[var(--accent-blush)]/50"
-              >
-                {t('header.contact')}
+                Contact
               </Link>
             </nav>
 
             <div className="flex min-w-0 shrink-0 items-center gap-2 sm:gap-4">
-              <LanguageSwitcher />
               <div className="hidden sm:block">
                 <ProductSearch />
               </div>
@@ -119,13 +110,13 @@ export default function Header() {
                   menuRef={menuRef}
                 />
               ) : (
-                <GradientButton
+                <Button
                   onClick={() => setLoginModalOpen(true)}
                   size="sm"
                   className="hidden sm:block"
                 >
-                  {t('header.login')}
-                </GradientButton>
+                  Login
+                </Button>
               )}
 
               <MobileNavToggle

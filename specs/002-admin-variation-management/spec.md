@@ -5,6 +5,10 @@
 **Status**: Draft  
 **Input**: User description: "We have added the feature for product variations/different color or design of the same product. But in admin page we don't even have the capability to add new variations. Add that feature."
 
+## Current Implementation Snapshot (2026-07-12)
+
+Variation management now includes multidimensional product options, live SKU previews, option-based combination generation, variant-specific images/pricing/stock, reorder controls, soft deletion, and storefront option selectors. The implementation uses `/api/admin/products/[id]/options`, nested option routes, variant routes, and `variant-options.spec.ts`.
+
 ## User Scenarios & Testing _(mandatory)_
 
 ### User Story 1 - Create a New Variation for a Product (Priority: P1)

@@ -108,7 +108,7 @@ describe('RouteErrorCard (public variant)', () => {
     )
     const link = screen.getByText('Continue shopping')
     expect(link).toBeInTheDocument()
-    expect(link).toHaveAttribute('href', '/en/shop')
+    expect(link).toHaveAttribute('href', '/shop')
   })
 
   it('does not render secondary link when props are absent', () => {
@@ -233,6 +233,6 @@ describe('RouteErrorCard (admin variant)', () => {
         secondaryLabel="Admin home"
       />
     )
-    expect(screen.getByText('Admin home')).toHaveAttribute('href', '/en/admin')
+    expect(screen.getByText('Admin home')).toHaveAttribute('href', '/admin')
   })
 })

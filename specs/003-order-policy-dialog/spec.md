@@ -20,6 +20,10 @@
 - Q: Which email address should be shown as the explicit policy contact for damaged-product claims? → A: Use `support@estore.example.com` as the explicit policy contact email.
 - Q: What interaction should count as explicit policy confirmation before the order is submitted? → A: Require a checkbox acknowledgment inside the dialog, then enable `Confirm and Place Order`.
 
+## Current Implementation Snapshot (2026-07-12)
+
+The policy dialog is integrated into the stock-aware cart and must be acknowledged before checkout submission. Checkout now continues through durable, idempotent request creation and queue processing, with explicit recovery for failed processing. Coverage lives in `checkout-policy.spec.ts`, `checkout-error-recovery.spec.ts`, and `cart.spec.ts`.
+
 ## User Scenarios & Testing _(mandatory)_
 
 ### User Story 1 - Review policy before purchase (Priority: P1)

@@ -32,7 +32,7 @@ Admin endpoints require authentication via NextAuth session with ADMIN role.
 - Session cookie automatically included in subsequent requests
 - Server validates session and checks role
 
-**Public Endpoints**: No authentication required
+**Unauthenticated or guest-capable endpoints**: No account session required
 
 - `/api/products` (GET)
 - `/api/products/[id]` (GET)
@@ -42,31 +42,52 @@ Admin endpoints require authentication via NextAuth session with ADMIN role.
 - `/api/cart/items/[id]` (PATCH, DELETE)
 - `/api/checkout` (POST)
 - `/api/checkout/[id]` (GET)
-- `/api/orders` (GET, POST)
-- `/api/orders/[id]` (GET)
-- `/api/reviews` (GET, POST)
-- `/api/wishlist` (GET, POST)
-- `/api/wishlist/[productId]` (DELETE)
+- `/api/reviews` (GET; writes require a session)
 - `/api/search` (GET)
+- `/api/search/suggest` (GET)
+- `/api/search/click` (POST)
+- `/api/pincode/[code]` (GET)
 - `/api/share` (POST)
 - `/api/exchange-rates` (GET)
 - `/api/health` (GET)
 - `/api/ai/products/[id]/chat` (POST)
 
-**Protected Endpoints**: Require ADMIN role
+**Account-protected endpoints**: Require an authenticated user session
+
+- `/api/account` (GET, PATCH)
+- `/api/account/addresses` (GET, POST)
+- `/api/account/addresses/[id]` (PATCH, DELETE)
+- `/api/auth/change-password` (POST)
+- `/api/orders` (GET, POST)
+- `/api/orders/[id]` (GET)
+- `/api/wishlist` (GET, POST)
+- `/api/wishlist/[productId]` (DELETE)
+- `/api/reviews` (POST)
+- `/api/reviews/vote` (POST)
+
+**Admin-protected endpoints**: Require an ADMIN role
 
 - `/api/admin/products` (GET, POST)
 - `/api/admin/products/[id]` (PUT, DELETE)
+- `/api/admin/products/bulk` (POST)
+- `/api/admin/products/[id]/options` and nested option/generation routes
+- `/api/admin/products/[id]/variants` and variant reorder routes
 - `/api/admin/orders` (GET)
 - `/api/admin/orders/[id]` (GET, PATCH)
+- `/api/admin/orders/bulk` (POST)
 - `/api/admin/users` (GET)
 - `/api/admin/users/[id]` (GET, PATCH)
 - `/api/admin/categories` (GET, POST)
 - `/api/admin/categories/[id]` (PUT, DELETE)
+- `/api/admin/categories/reorder` (POST)
 - `/api/admin/variants` (GET)
 - `/api/admin/variants/[variantId]` (PUT, DELETE)
-- `/api/admin/reviews` (GET, DELETE)
+- `/api/admin/reviews` (GET)
+- `/api/admin/reviews/[id]` (PATCH, DELETE)
 - `/api/admin/sales` (GET)
+- `/api/admin/sales/export` (GET)
+- `/api/admin/export/{orders,products,reviews,users}` (GET)
+- `/api/admin/import/products` (POST)
 - `/api/admin/email-failures` (GET)
 - `/api/admin/search/reindex` (POST)
 - `/api/upload` (POST)
@@ -77,6 +98,15 @@ Admin endpoints require authentication via NextAuth session with ADMIN role.
 - `/api/cron/retry-emails` (GET) — Retry failed emails
 - `/api/cron/refresh-rates` (GET) — Refresh exchange rates
 - `/api/queue/checkout-orders` (POST) — Vercel Queue consumer
+- `/api/payments/webhook` (POST) — payment provider webhook
+- `/api/metrics` (GET) — Prometheus metrics; restrict at the network layer in production
+
+## Current capability notes
+
+- AI product chat accepts guests using a one-way hashed guest identity. Chat history persistence is authenticated-user-only, and responses intentionally avoid exact stock counts.
+- Checkout creation is idempotent and asynchronous: `POST /api/checkout` records a request and the queue consumer creates the order.
+- Optional Redis and search integrations fail open to database-backed behavior where supported.
+- Admin CSV, bulk mutation, category reorder, option generation, variant reorder, sales export, and search reindex endpoints require ADMIN authorization.
 
 ## Public APIs
 

@@ -121,6 +121,7 @@ const ShareUrlPanel = ({
           Share this product
         </span>
         <button
+          type="button"
           onClick={onClose}
           className="text-[var(--text-muted)] hover:text-[var(--foreground)] transition-colors focus-warm rounded"
           aria-label="Close share panel"
@@ -150,6 +151,7 @@ const ShareUrlPanel = ({
           className="flex-1 min-w-0 px-3 py-2 text-sm bg-[var(--accent-cream)] border border-[var(--border-warm)] rounded-lg text-[var(--foreground)] truncate focus:outline-none focus:ring-2 focus:ring-[var(--accent-warm)]"
         />
         <button
+          type="button"
           onClick={handleCopy}
           className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 bg-[var(--btn-primary)] text-white text-sm font-semibold rounded-lg hover:opacity-90 transition-opacity focus-warm"
           aria-label={copied ? 'Copied!' : 'Copy link'}
@@ -310,6 +312,7 @@ export const ShareButton = ({ productId, variantId }: ShareButtonProps) => {
     <>
       <button
         ref={buttonRef}
+        type="button"
         onClick={handleShare}
         disabled={isLoading}
         aria-label={buttonAriaLabel}

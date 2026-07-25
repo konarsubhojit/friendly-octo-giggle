@@ -3,7 +3,7 @@
 import { useEffect, useRef, useCallback } from 'react'
 import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import Link from '@/components/ui/LocaleLink'
+import Link from 'next/link'
 import {
   DynamicForm,
   type FieldDef,
@@ -113,6 +113,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
 
         {/* Close button */}
         <button
+          type="button"
           onClick={onClose}
           className="absolute top-4 right-4 text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors"
           aria-label="Close login modal"

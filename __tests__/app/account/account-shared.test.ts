@@ -5,7 +5,7 @@ import {
   validatePasswordFields,
   PROFILE_FIELDS,
   PASSWORD_FIELDS,
-} from '@/app/[locale]/(public)/account/account-shared'
+} from '@/app/(public)/account/account-shared'
 import { PROFILE_ERRORS, PASSWORD_ERRORS } from '@/lib/constants/error-messages'
 
 describe('account-shared', () => {

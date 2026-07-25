@@ -72,13 +72,7 @@ test.describe('Orders List Summary', () => {
     await expect(
       page.getByText('Hand-knitted Flower Bouquet, Cozy Wool Muffler')
     ).toBeVisible()
-    await expect(
-      page
-        .getByText(
-          'Open the order to review pricing, shipping address, and full item details.'
-        )
-        .first()
-    ).toBeVisible()
+    await expect(page.getByText('Order #ord0001')).toBeVisible()
 
     await page.screenshot({
       path: screenshotPath('my-orders-summary'),
@@ -130,27 +124,13 @@ test.describe('Orders List Summary', () => {
     await page.goto('/admin/orders')
 
     await expect(
-      page.getByRole('heading', {
-        name: /orders workspace tuned for faster exception handling/i,
-      })
+      page.getByRole('heading', { name: /order management/i })
     ).toBeVisible()
-    await expect(
-      page.getByText('Hand-knitted Flower Bouquet, Cozy Wool Muffler')
-    ).toBeVisible()
-    await expect(
-      page.getByRole('button', { name: /show details/i }).first()
-    ).toBeVisible()
-    await expect(page.getByText('Pricing in order details')).toHaveCount(0)
+    const customer = page.getByText('Priya Sharma').first()
+    await expect(customer).toBeVisible()
+    await customer.click()
     await expect(
       page.getByLabel('Change status for order ord0001')
-    ).toBeVisible()
-
-    await page
-      .getByRole('button', { name: /show details/i })
-      .first()
-      .click()
-    await expect(
-      page.getByText('Pricing in order details').first()
     ).toBeVisible()
 
     await page.screenshot({

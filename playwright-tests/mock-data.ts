@@ -171,6 +171,7 @@ export const MOCK_ORDERS = [
         orderId: 'ord0001',
         productId: 'prd0001',
         variationId: 'var0001',
+        variantId: 'var0001',
         quantity: 1,
         price: 1499,
         customizationNote: 'Please use a red ribbon',
@@ -217,6 +218,7 @@ export const MOCK_ORDERS = [
         orderId: 'ord0002',
         productId: 'prd0002',
         variationId: null,
+        variantId: null,
         quantity: 1,
         price: 2299,
         customizationNote: 'For living room wall, natural tones please',
@@ -226,7 +228,7 @@ export const MOCK_ORDERS = [
           image:
             'https://images.unsplash.com/photo-1545127398-14699f92334b?w=600&q=80',
         },
-        variation: null,
+        variant: null,
       },
     ],
   },
@@ -247,6 +249,7 @@ export const MOCK_ORDERS = [
         orderId: 'ord0003',
         productId: 'prd0006',
         variationId: null,
+        variantId: null,
         quantity: 1,
         price: 1199,
         customizationNote: null,
@@ -256,13 +259,14 @@ export const MOCK_ORDERS = [
           image:
             'https://images.unsplash.com/photo-1534215754734-18e55d13e346?w=600&q=80',
         },
-        variation: null,
+        variant: null,
       },
       {
         id: 'itm0005',
         orderId: 'ord0003',
         productId: 'prd0004',
         variationId: null,
+        variantId: null,
         quantity: 2,
         price: 349,
         customizationNote: 'Wrap individually as gifts',
@@ -272,13 +276,14 @@ export const MOCK_ORDERS = [
           image:
             'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80',
         },
-        variation: null,
+        variant: null,
       },
       {
         id: 'itm0006',
         orderId: 'ord0003',
         productId: 'prd0005',
         variationId: null,
+        variantId: null,
         quantity: 2,
         price: 599,
         customizationNote: null,
@@ -288,7 +293,7 @@ export const MOCK_ORDERS = [
           image:
             'https://images.unsplash.com/photo-1576871337632-b9aef4c17ab9?w=600&q=80',
         },
-        variation: null,
+        variant: null,
       },
     ],
   },
@@ -409,6 +414,7 @@ export const MOCK_CART_ITEM_1 = {
   cartId: 'cart0001',
   productId: 'prd0001',
   variationId: 'var0001',
+  variantId: 'var0001',
   quantity: 2,
   createdAt: '2026-03-01T00:00:00.000Z',
   updatedAt: '2026-03-01T00:00:00.000Z',
@@ -441,7 +447,7 @@ export const MOCK_CART_ITEM_1 = {
       },
     ],
   },
-  variation: {
+  variant: {
     id: 'var0001',
     productId: 'prd0001',
     name: 'Small (15 cm)',
@@ -461,6 +467,7 @@ export const MOCK_CART_ITEM_2 = {
   cartId: 'cart0001',
   productId: 'prd0002',
   variationId: null,
+  variantId: null,
   quantity: 1,
   createdAt: '2026-03-01T00:00:00.000Z',
   updatedAt: '2026-03-01T00:00:00.000Z',
@@ -479,7 +486,7 @@ export const MOCK_CART_ITEM_2 = {
     updatedAt: '2026-02-20T11:00:00.000Z',
     variations: [],
   },
-  variation: null,
+  variant: null,
 }
 
 export const MOCK_CART = {

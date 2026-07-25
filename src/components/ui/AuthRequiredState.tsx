@@ -1,4 +1,4 @@
-import Link from '@/components/ui/LocaleLink'
+import Link from 'next/link'
 
 interface AuthRequiredStateProps {
   /** The URL to redirect back to after sign-in (e.g. '/cart'). */

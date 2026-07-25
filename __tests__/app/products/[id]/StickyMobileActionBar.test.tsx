@@ -2,9 +2,9 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import React from 'react'
-import { StickyMobileActionBar } from '@/app/[locale]/(public)/products/[id]/components/StickyMobileActionBar'
+import { StickyMobileActionBar } from '@/app/(public)/products/[id]/components/StickyMobileActionBar'
 
-vi.mock('@/components/ui/LocaleLink', () => ({
+vi.mock('next/link', () => ({
   __esModule: true,
   default: ({
     children,

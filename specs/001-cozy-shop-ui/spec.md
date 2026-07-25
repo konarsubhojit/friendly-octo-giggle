@@ -6,6 +6,10 @@
 **Input**: Redesign the e-commerce website UI to match a cozy, handmade shop aesthetic. Transform the current site ("The Kiyon Store") into a warm, cottage-core themed shop selling handmade crochet items.
 **Visual Reference**: `public/prototype2.jpeg` is the authoritative design prototype. All pages should match this prototype's layout, spacing, and visual treatment as closely as possible.
 
+## Current Implementation Snapshot (2026-07-12)
+
+The cozy storefront is shipped with responsive warm-theme pages, dark mode, mobile navigation, accessible controls, localized English/Spanish routes, currency selection, fixed decorative backgrounds, optimized images, loading/error states, and PWA/offline support. Current regression coverage is in `ui-changes.spec.ts`, `fixed-background.spec.ts`, `ux-audit.spec.ts`, `locale-links.spec.ts`, and `accessibility.spec.ts`.
+
 ## User Scenarios & Testing _(mandatory)_
 
 ### User Story 1 - First Impression & Brand Identity (Priority: P1)

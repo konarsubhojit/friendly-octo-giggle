@@ -93,6 +93,12 @@ This is a highly scalable e-commerce platform designed for serverless deployment
 - **Scalable**: Connection pooling, read replicas, edge-ready architecture
 - **Observable**: Structured logging with Pino
 
+## ✨ Current Feature Set (July 2026)
+
+The implemented capability catalog is maintained in **[features.md](./features.md)**. It covers localized storefront routes, search and recommendations, AI product assistance, guest cart continuity, staged and queued checkout, account addresses and preferences, PWA/offline behavior, admin bulk/CSV workflows, search index controls, observability, and graceful infrastructure fallbacks.
+
+Use the catalog as the product-level index and the API and architecture guides for implementation detail.
+
 ## 📦 Technology Stack
 
 | Category           | Technology                          |
@@ -128,7 +134,7 @@ This documentation is maintained as the single source of truth for the project. 
 3. Do not create standalone MD files in the root directory
 4. Follow the established structure
 
-**Last Updated**: 2026-04-03
+**Last Updated**: 2026-07-12
 
 ## 🤝 Contributing
 

@@ -1,4 +1,4 @@
-import Link from '@/components/ui/LocaleLink'
+import Link from 'next/link'
 
 type CheckoutStep = 'cart' | 'shipping' | 'payment' | 'review' | 'confirmation'
 
@@ -18,7 +18,7 @@ export const CheckoutProgress = ({ currentStep }: CheckoutProgressProps) => {
   const activeIndex = steps.findIndex((step) => step.id === currentStep)
 
   const stepClassName = (isActive: boolean, isComplete: boolean) => {
-    if (isActive) return 'bg-[var(--accent-rose)] text-white'
+    if (isActive) return 'bg-[var(--foreground)] text-[var(--surface)]'
     if (isComplete) return 'bg-[var(--accent-blush)] text-[var(--foreground)]'
     return 'bg-[var(--surface-raised)] text-[var(--text-muted)]'
   }

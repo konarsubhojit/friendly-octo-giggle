@@ -1,7 +1,5 @@
 'use client'
 
-import { useLocale } from '@/contexts/LocaleContext'
-
 export interface MobileNavToggleProps {
   readonly mobileNavOpen: boolean
   readonly onToggle: () => void
@@ -11,13 +9,13 @@ export function MobileNavToggle({
   mobileNavOpen,
   onToggle,
 }: MobileNavToggleProps) {
-  const { t } = useLocale()
   return (
     <button
+      type="button"
       id="mobile-nav-toggle"
       onClick={onToggle}
       className="md:hidden flex items-center justify-center w-9 h-9 rounded-lg text-[var(--text-secondary)] hover:bg-[var(--accent-blush)] transition-colors"
-      aria-label={mobileNavOpen ? t('header.closeMenu') : t('header.openMenu')}
+      aria-label={mobileNavOpen ? 'Close menu' : 'Open menu'}
       aria-expanded={mobileNavOpen}
       aria-haspopup="menu"
       aria-controls="mobile-nav-drawer"

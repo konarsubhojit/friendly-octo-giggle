@@ -93,6 +93,7 @@ export const CursorPaginationBar = ({
 
       <div className="flex items-center gap-2 self-start lg:self-auto">
         <button
+          type="button"
           onClick={onFirst}
           disabled={!canGoBack || loading}
           className={`px-4 py-2 text-sm font-medium ${prevClass} disabled:opacity-40 disabled:cursor-not-allowed transition`}
@@ -100,6 +101,7 @@ export const CursorPaginationBar = ({
           « First
         </button>
         <button
+          type="button"
           onClick={onPrev}
           disabled={!canGoBack || loading}
           className={`px-4 py-2 text-sm font-medium ${prevClass} disabled:opacity-40 disabled:cursor-not-allowed transition`}
@@ -107,6 +109,7 @@ export const CursorPaginationBar = ({
           ← Previous
         </button>
         <button
+          type="button"
           onClick={onNext}
           disabled={!canGoForward || loading}
           className={`px-4 py-2 text-sm font-medium ${nextClass} disabled:opacity-40 disabled:cursor-not-allowed transition`}
@@ -114,6 +117,7 @@ export const CursorPaginationBar = ({
           Next →
         </button>
         <button
+          type="button"
           onClick={onLast}
           disabled={!canGoForward || loading}
           className={`px-4 py-2 text-sm font-medium ${nextClass} disabled:opacity-40 disabled:cursor-not-allowed transition`}

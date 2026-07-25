@@ -149,6 +149,7 @@ export function InstallBanner() {
 
           {promptEvent && (
             <button
+              type="button"
               onClick={handleInstall}
               className="mt-2 min-tap px-4 py-1.5 rounded-lg bg-gradient-to-r from-[var(--accent-warm)] to-[var(--accent-rose)] text-white text-xs font-bold transition-all hover:opacity-90 focus-warm"
             >
@@ -159,6 +160,7 @@ export function InstallBanner() {
 
         {/* Dismiss */}
         <button
+          type="button"
           onClick={handleDismiss}
           aria-label="Dismiss install banner"
           className="flex-shrink-0 min-tap rounded-full flex items-center justify-center text-[var(--text-muted)] hover:bg-[var(--accent-blush)] transition-colors"

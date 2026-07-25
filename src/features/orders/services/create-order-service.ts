@@ -15,7 +15,6 @@ import {
   isValidCurrencyCode,
   type CurrencyCode,
 } from '@/lib/currency'
-import { isSupportedLocale } from '@/lib/i18n/config'
 import {
   PaymentConfigurationError,
   PaymentVerificationError,
@@ -465,11 +464,6 @@ export const dispatchOrderNotifications = async ({
     isValidCurrencyCode(userRecord.currencyPreference)
       ? userRecord.currencyPreference
       : 'INR'
-  const locale =
-    userRecord?.localePreference &&
-    isSupportedLocale(userRecord.localePreference)
-      ? userRecord.localePreference
-      : 'en'
 
   const emailEvent: OrderCreatedEvent = {
     type: 'order.created',
@@ -480,7 +474,6 @@ export const dispatchOrderNotifications = async ({
       customerAddress: hydratedOrder.customerAddress,
       totalAmount: hydratedOrder.totalAmount,
       currencyCode,
-      locale,
       items: hydratedOrder.items.map((item) => ({
         name: item.product.name,
         quantity: item.quantity,
@@ -521,7 +514,6 @@ export const dispatchOrderNotifications = async ({
         currencyCode
       ),
       shippingAddress: hydratedOrder.customerAddress,
-      locale,
       items: hydratedOrder.items.map((item) => ({
         name: item.product.name,
         quantity: item.quantity,

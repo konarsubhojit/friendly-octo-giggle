@@ -2,18 +2,12 @@
 import { render, screen } from '@testing-library/react'
 import React from 'react'
 import { describe, expect, it, vi } from 'vitest'
-import BlogPage, {
-  metadata as blogMetadata,
-} from '@/app/[locale]/(public)/blog/page'
-import HelpPage, {
-  metadata as helpMetadata,
-} from '@/app/[locale]/(public)/help/page'
-import PressPage, {
-  metadata as pressMetadata,
-} from '@/app/[locale]/(public)/press/page'
+import BlogPage, { metadata as blogMetadata } from '@/app/(public)/blog/page'
+import HelpPage, { metadata as helpMetadata } from '@/app/(public)/help/page'
+import PressPage, { metadata as pressMetadata } from '@/app/(public)/press/page'
 import ShippingPage, {
   metadata as shippingMetadata,
-} from '@/app/[locale]/(public)/shipping/page'
+} from '@/app/(public)/shipping/page'
 import { STORE_NAME, withStoreName } from '@/lib/constants/store'
 
 vi.mock('next/link', () => ({

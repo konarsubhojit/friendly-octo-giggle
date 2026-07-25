@@ -205,9 +205,6 @@ test.describe('validation UX audit', () => {
       .getByRole('button', { name: /^login$/i })
       .click()
 
-    await expect(page.locator('form [role="alert"]').first()).toContainText(
-      'Please correct'
-    )
     await expect(
       page.getByText(
         'Enter the email address or phone number linked to your account.'
@@ -234,9 +231,6 @@ test.describe('validation UX audit', () => {
     await page.locator('#register-confirm-password').fill('WrongPassword1!')
     await page.getByRole('button', { name: /create account/i }).click()
 
-    await expect(page.locator('form [role="alert"]').first()).toContainText(
-      'Please correct'
-    )
     await expect(page.locator('#register-confirm-password')).toHaveClass(
       /border-red-400/
     )
@@ -254,9 +248,6 @@ test.describe('validation UX audit', () => {
     await settlePage()
     await page.getByRole('button', { name: /send message/i }).click()
 
-    await expect(page.locator('form [role="alert"]').first()).toContainText(
-      'Please correct'
-    )
     await expect(
       page.getByText('Tell us your name so we know how to address you.')
     ).toBeVisible()

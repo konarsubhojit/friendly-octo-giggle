@@ -239,7 +239,6 @@ export const db = {
           id: products.id,
           name: products.name,
           description: products.description,
-          localizedContent: products.localizedContent,
           image: products.image,
           images: products.images,
           category: products.category,
@@ -684,18 +683,17 @@ export const db = {
 
   users: {
     /**
-     * Fetch a user's currency and locale preferences.
+     * Fetch a user's currency preference.
      * Returns null if the user does not exist.
      */
     findPreferences: async (
       userId: string
     ): Promise<{
       currencyPreference: string | null
-      localePreference: string | null
     } | null> => {
       const row = await drizzleDb.query.users.findFirst({
         where: eq(users.id, userId),
-        columns: { currencyPreference: true, localePreference: true },
+        columns: { currencyPreference: true },
       })
       return row ?? null
     },

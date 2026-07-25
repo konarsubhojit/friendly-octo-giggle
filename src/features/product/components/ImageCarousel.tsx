@@ -294,6 +294,7 @@ const ImageCarousel = ({
         {/* Prev button — hidden while zoomed */}
         {!isZoomed && (
           <button
+            type="button"
             onClick={(e) => {
               e.stopPropagation()
               goPrev()
@@ -321,6 +322,7 @@ const ImageCarousel = ({
         {/* Next button — hidden while zoomed */}
         {!isZoomed && (
           <button
+            type="button"
             onClick={(e) => {
               e.stopPropagation()
               goNext()
@@ -360,6 +362,7 @@ const ImageCarousel = ({
         {images.map((src, idx) => (
           <button
             key={`dot-${src}`}
+            type="button"
             role="tab"
             aria-selected={idx === currentIndex}
             aria-label={`Go to image ${idx + 1}`}
@@ -379,6 +382,7 @@ const ImageCarousel = ({
           {images.map((src, idx) => (
             <button
               key={`thumb-${src}`}
+              type="button"
               onClick={() =>
                 goToIndex(idx, idx > currentIndex ? 'next' : 'prev')
               }

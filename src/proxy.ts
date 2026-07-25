@@ -4,14 +4,6 @@ import { Ratelimit } from '@upstash/ratelimit'
 import { Redis } from '@upstash/redis'
 import { getFeatureFlags } from '@/lib/edge-config'
 import {
-  DEFAULT_LOCALE,
-  LOCALE_COOKIE_NAME,
-  type AppLocale,
-  getLocaleFromPathname,
-  isSupportedLocale,
-  toLocalizedPathname,
-} from '@/lib/i18n/config'
-import {
   GENERAL_RATE_LIMIT_MAX_REQUESTS,
   getGeneralLimiter,
   getStrictLimiter,
@@ -21,13 +13,10 @@ import {
 /**
  * Edge-only proxy (Next.js 16 `proxy.ts` convention).
  *
- * Composes the two previously-separate edge layers into one:
- *   1. Locale redirect / cookie refresh (was `middleware.ts`).
- *   2. Production security primitives: nonce-based CSP, Upstash-backed
- *      rate limiting for `/api/auth/*`, `/api/checkout`, `/api/orders`,
- *      `/api/ai`; Edge-Config-driven maintenance mode; HTTPS enforcement;
- *      and an admin auth + role gate on `/admin/*` and `/api/admin/*`
- *      (was `src/proxy.ts`).
+ * Production security primitives: nonce-based CSP, Upstash-backed rate
+ * limiting for `/api/auth/*`, `/api/checkout`, `/api/orders`, `/api/ai`;
+ * Edge-Config-driven maintenance mode; HTTPS enforcement; and an admin
+ * auth + role gate on `/admin/*` and `/api/admin/*`.
  *
  * Edge-safety notes:
  *   - The admin gate reads the JWT via `getToken({ req, secret })` from
@@ -43,8 +32,6 @@ import {
 const isDev = process.env.NODE_ENV === 'development'
 const ADMIN_PATH_PREFIX = '/admin'
 const ADMIN_API_PREFIX = '/api/admin'
-
-const PUBLIC_FILE = /\.(.*)$/
 
 const RATE_LIMIT_PATHS = [
   '/api/auth/register',
@@ -275,24 +262,8 @@ function getInMemoryGeneralRateLimitResult(
   )
 }
 
-const getPreferredLocale = (request: NextRequest): AppLocale => {
-  const fromCookie = request.cookies.get(LOCALE_COOKIE_NAME)?.value
-  if (fromCookie && isSupportedLocale(fromCookie)) return fromCookie
-
-  const languageHeader = request.headers.get('accept-language')
-  const firstLanguage = languageHeader?.split(',')[0]?.split('-')[0]
-  if (firstLanguage && isSupportedLocale(firstLanguage)) return firstLanguage
-
-  return DEFAULT_LOCALE
-}
-
-const isLocaleEligiblePath = (pathname: string): boolean =>
-  !pathname.startsWith('/_next') &&
-  !pathname.startsWith('/api') &&
-  !PUBLIC_FILE.test(pathname)
-
 export async function proxy(request: NextRequest) {
-  const { pathname, search } = request.nextUrl
+  const { pathname } = request.nextUrl
   const nonce = generateNonce()
   const csp = buildCspHeader(nonce)
   const requestHeaders = new Headers(request.headers)
@@ -532,46 +503,6 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  // ── Locale redirect / cookie refresh ──────────────────
-  // Routes now live under `src/app/[locale]/...`, so locale is a real URL
-  // segment instead of a rewritten-away prefix. We only need to redirect
-  // unprefixed user-facing requests to a locale-prefixed URL; the request
-  // then resolves directly to the `[locale]` route segment and can be
-  // cached / ISR'd without the root layout having to read request headers.
-  if (isLocaleEligiblePath(pathname)) {
-    const localeFromPath = getLocaleFromPathname(pathname)
-    if (!localeFromPath) {
-      const locale = getPreferredLocale(request)
-      const redirectUrl = request.nextUrl.clone()
-      redirectUrl.pathname = toLocalizedPathname(pathname, locale)
-      redirectUrl.search = search
-      const response = withResponseHeaders(NextResponse.redirect(redirectUrl))
-      response.cookies.set(LOCALE_COOKIE_NAME, locale, {
-        path: '/',
-        maxAge: 60 * 60 * 24 * 365,
-        sameSite: 'lax',
-      })
-      return response
-    }
-
-    // Locale already present in the path — refresh the preference cookie so
-    // the next bare-path visit lands on the same locale, then let the
-    // request fall through to the route segment with security headers.
-    const response = withResponseHeaders(
-      NextResponse.next({
-        request: {
-          headers: requestHeaders,
-        },
-      })
-    )
-    response.cookies.set(LOCALE_COOKIE_NAME, localeFromPath, {
-      path: '/',
-      maxAge: 60 * 60 * 24 * 365,
-      sameSite: 'lax',
-    })
-    return response
-  }
-
   return withResponseHeaders(
     NextResponse.next({
       request: {
@@ -582,9 +513,7 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Union of the previous `middleware.ts` and `src/proxy.ts` matchers.
-  // The security primitives need to see `/api/*`, while locale handling is
-  // limited inline (see `isLocaleEligiblePath`).
+  // The security primitives need to see `/api/*` as well as page routes.
   matcher: [
     '/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|map)$).*)',
   ],

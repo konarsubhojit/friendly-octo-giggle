@@ -606,6 +606,24 @@ curl http://localhost:3000/cart
 
 ---
 
+## Current Feature Diagnostics
+
+### Search suggestions or reindex controls are unavailable
+
+Confirm the Upstash Search variables are configured. Product and order queries fall back to database search, but index-specific admin controls correctly report missing configuration.
+
+### Product assistant is unavailable
+
+Confirm the configured AI provider credentials and rate-limit storage. Guest chat is supported, but only authenticated users receive persisted chat history. Exact stock counts must never appear in assistant responses.
+
+### Checkout remains pending or fails
+
+Inspect `/admin/checkout-requests`, queue lag at `/api/metrics`, and the `checkout-orders` Vercel Queue trigger. Reusing the same checkout idempotency key should resolve to the existing request rather than create a duplicate order.
+
+### Install banner or offline page is missing
+
+Verify `/manifest.webmanifest`, icon/screenshot assets under `public/`, service-worker registration in `src/components/pwa`, and `/offline`. Browser install prompts only fire when platform installability criteria are met.
+
 ## Build Errors
 
 ### TypeScript Errors

@@ -5,6 +5,10 @@
 **Status**: Draft  
 **Input**: User description: "Document the shipped customer-facing product catalog, product detail, and search/discovery behavior from code."
 
+## Current Implementation Snapshot (2026-07-12)
+
+The catalog now provides category/price/stock/rating/variant filters, relevance and commerce sorts, suggestions, trending and zero-result recovery, click analytics, hosted-search indexes with SQL fallback, bestsellers, recently viewed items, reviews/voting, share links, and a guest-capable AI product assistant with stock-privacy safeguards.
+
 ## User Scenarios & Testing _(mandatory)_
 
 ### User Story 1 - Browse the Product Catalog (Priority: P1)

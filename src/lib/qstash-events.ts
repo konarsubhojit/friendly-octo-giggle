@@ -15,7 +15,6 @@ const OrderCreatedEventSchema = z.object({
     customerAddress: z.string().min(1),
     totalAmount: z.number().positive(),
     currencyCode: z.enum(['INR', 'USD', 'EUR', 'GBP']).default('INR'),
-    locale: z.enum(['en', 'es']).default('en'),
     items: z.array(OrderEmailItemSchema),
   }),
 })
@@ -33,7 +32,6 @@ const OrderStatusChangedEventSchema = z.object({
       'DELIVERED',
       'CANCELLED',
     ]),
-    locale: z.enum(['en', 'es']).default('en'),
     trackingNumber: z.string().nullable(),
     shippingProvider: z.string().nullable(),
   }),

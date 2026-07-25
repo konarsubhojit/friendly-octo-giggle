@@ -35,6 +35,16 @@ const mockExchangeRates = async (page: Page) => {
   )
 }
 
+const navigateToProduct = async (page: Page) => {
+  await page.goto('/shop', { waitUntil: 'domcontentloaded' })
+  const href = await page
+    .locator('a[href*="/products/"]')
+    .first()
+    .getAttribute('href')
+  expect(href, 'shop should expose a product').toBeTruthy()
+  await page.goto(href as string, { waitUntil: 'networkidle' })
+}
+
 /** Captured request bodies from the AI chat API. */
 let capturedChatBodies: Array<{
   messages: Array<{ role: string; text: string }>
@@ -72,7 +82,7 @@ test.describe('AI Product Assistant — stock privacy', () => {
     await mockAiChatApi(page)
 
     // Navigate to the test product page
-    await page.goto('/products/Pbwkjtm', { waitUntil: 'networkidle' })
+    await navigateToProduct(page)
 
     // Open the assistant by clicking the collapsed button
     const openButton = page.getByRole('button', {
@@ -119,7 +129,7 @@ test.describe('AI Product Assistant — stock privacy', () => {
     await mockExchangeRates(page)
     await mockAiChatApi(page)
 
-    await page.goto('/products/Pbwkjtm', { waitUntil: 'networkidle' })
+    await navigateToProduct(page)
 
     // Open the assistant
     const openButton = page.getByRole('button', {

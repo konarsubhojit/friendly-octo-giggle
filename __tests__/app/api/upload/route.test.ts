@@ -348,4 +348,113 @@ describe('POST /api/upload', () => {
       })
     )
   })
+
+  const magicBytesFor = (signature: number[]): Uint8Array =>
+    Uint8Array.from([...signature, ...Array(16 - signature.length).fill(0)])
+
+  it.each([
+    [
+      'JPEG',
+      [0xff, 0xd8, 0xff, 0xe0, 0, 0, 0, 0, 0, 0, 0, 0],
+      'image/jpeg',
+      'jpg',
+    ],
+    [
+      'GIF87a',
+      [0x47, 0x49, 0x46, 0x38, 0x37, 0x61, 0, 0, 0, 0, 0, 0],
+      'image/gif',
+      'gif',
+    ],
+    [
+      'GIF89a',
+      [0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0, 0, 0, 0, 0, 0],
+      'image/gif',
+      'gif',
+    ],
+    [
+      'WEBP',
+      [0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x45, 0x42, 0x50],
+      'image/webp',
+      'webp',
+    ],
+  ])('accepts %s payloads', async (_label, signature, mimeType, extension) => {
+    mockAuth.mockResolvedValue({ user: { id: 'u1', role: 'ADMIN' } })
+    mockUploadImage.mockResolvedValue({
+      url: 'https://blob/test',
+      pathname: 'test',
+      contentType: mimeType as string,
+      provider: 'vercel' as const,
+    })
+    vi.spyOn(globalThis.crypto, 'randomUUID').mockReturnValue('uuid-1')
+
+    const res = await POST(
+      makeRequest(createFile({ bytes: magicBytesFor(signature as number[]) }))
+    )
+
+    expect(res.status).toBe(200)
+    const [uploadedFile] = mockUploadImage.mock.calls[0] as [File]
+    expect(uploadedFile.name).toBe(`uuid-1.${extension}`)
+    expect(uploadedFile.type).toBe(mimeType)
+  })
+
+  it('rejects payloads shorter than the magic byte window', async () => {
+    mockAuth.mockResolvedValue({ user: { id: 'u1', role: 'ADMIN' } })
+
+    const res = await POST(
+      makeRequest(createFile({ bytes: Uint8Array.from([0x89, 0x50]) }))
+    )
+
+    expect(res.status).toBe(400)
+    const body = await res.json()
+    expect(body.error).toContain(VALID_IMAGE_TYPES_DISPLAY)
+  })
+
+  it('rejects a blank azure account alias', async () => {
+    mockAuth.mockResolvedValue({ user: { id: 'u1', role: 'ADMIN' } })
+
+    const res = await POST(
+      makeRequest(createFile(), { azureAccountAlias: '   ' })
+    )
+
+    expect(res.status).toBe(400)
+    const body = await res.json()
+    expect(body.error).toContain('azureAccountAlias')
+  })
+
+  it('treats a null azure account alias as absent', async () => {
+    mockAuth.mockResolvedValue({ user: { id: 'u1', role: 'ADMIN' } })
+    mockUploadImage.mockResolvedValue({
+      url: 'https://blob/test',
+      pathname: 'test',
+      contentType: 'image/png',
+      provider: 'vercel' as const,
+    })
+
+    const res = await POST(
+      makeRequest(createFile(), { azureAccountAlias: null })
+    )
+
+    expect(res.status).toBe(200)
+  })
+
+  it('ignores an unparseable content-length header', async () => {
+    mockAuth.mockResolvedValue({ user: { id: 'u1', role: 'ADMIN' } })
+    mockUploadImage.mockResolvedValue({
+      url: 'https://blob/test',
+      pathname: 'test',
+      contentType: 'image/png',
+      provider: 'vercel' as const,
+    })
+
+    const request = {
+      headers: { get: () => 'not-a-number' },
+      formData: async () => ({
+        get: (key: string) => (key === 'file' ? createFile() : null),
+      }),
+    } as unknown as Request
+
+    const res = await POST(request)
+
+    expect(res.status).toBe(200)
+  })
 })

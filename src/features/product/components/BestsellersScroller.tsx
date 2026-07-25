@@ -2,7 +2,7 @@
 
 import { useCallback, useRef } from 'react'
 import Image from 'next/image'
-import Link from '@/components/ui/LocaleLink'
+import Link from 'next/link'
 import type { ProductGridItem } from '@/features/product/components/ProductGrid'
 import { PRODUCT_CARD_BLUR_DATA_URL } from '@/lib/image-placeholder'
 
@@ -88,7 +88,7 @@ export function BestsellersScroller({ bestsellers }: BestsellersScrollerProps) {
                 </span>
               </div>
               <div className="p-3">
-                <h3 className="text-sm font-semibold text-[var(--foreground)] line-clamp-1 group-hover:text-[var(--accent-rose)] transition-colors duration-200">
+                <h3 className="text-sm font-semibold text-[var(--foreground)] line-clamp-1 group-hover:text-[var(--foreground)] transition-colors duration-200">
                   {product.name}
                 </h3>
               </div>

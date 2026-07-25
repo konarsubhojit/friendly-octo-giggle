@@ -5,6 +5,10 @@
 **Status**: Draft  
 **Input**: User description: "Document the existing customer order management feature: placing orders, order history, order detail, and status lifecycle."
 
+## Current Implementation Snapshot (2026-07-12)
+
+Orders are created from durable idempotent checkout requests and processed asynchronously. Customers receive searchable history, compact item summaries, detail/status tracking, and email updates. Admins receive status/tracking controls, bulk actions, CSV export, responsive views, hybrid indexed/SQL search, and checkout-queue monitoring.
+
 ## User Scenarios & Testing _(mandatory)_
 
 ### User Story 1 - Place an authenticated order (Priority: P1)

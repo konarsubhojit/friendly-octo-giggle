@@ -83,7 +83,7 @@ export function AdminPanel({
   return (
     <section
       className={[
-        'rounded-[1.75rem] border border-slate-200/80 bg-white/92 p-6 shadow-[0_24px_60px_-42px_rgba(15,23,42,0.5)] backdrop-blur dark:border-slate-700/70 dark:bg-slate-900/88 dark:shadow-[0_24px_60px_-42px_rgba(2,6,23,0.92)]',
+        'min-w-0 overflow-hidden rounded-[1.75rem] border border-slate-200/80 bg-white/92 p-6 shadow-[0_24px_60px_-42px_rgba(15,23,42,0.5)] backdrop-blur dark:border-slate-700/70 dark:bg-slate-900/88 dark:shadow-[0_24px_60px_-42px_rgba(2,6,23,0.92)]',
         className,
       ]
         .filter(Boolean)
@@ -121,7 +121,7 @@ export function AdminPageShell({
   children,
 }: AdminPageShellProps) {
   return (
-    <main className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
+    <main className="mx-auto flex min-w-0 max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
       <AdminBreadcrumbs items={[...breadcrumbs]} />
 
       <section className="relative overflow-hidden rounded-[2rem] border border-slate-200/70 bg-[radial-gradient(circle_at_top_left,_rgba(56,189,248,0.18),_transparent_30%),radial-gradient(circle_at_top_right,_rgba(16,185,129,0.16),_transparent_26%),linear-gradient(180deg,_rgba(255,255,255,0.98),_rgba(248,250,252,0.96))] p-6 shadow-[0_28px_70px_-48px_rgba(15,23,42,0.55)] sm:p-8 dark:border-slate-700/70 dark:bg-[radial-gradient(circle_at_top_left,_rgba(14,165,233,0.22),_transparent_24%),radial-gradient(circle_at_top_right,_rgba(16,185,129,0.16),_transparent_20%),linear-gradient(180deg,_rgba(15,23,42,0.98),_rgba(15,23,42,0.94),_rgba(17,24,39,0.92))] dark:shadow-[0_28px_70px_-48px_rgba(2,6,23,0.95)]">
@@ -148,7 +148,7 @@ export function AdminPageShell({
 
       {metrics ? <AdminMetricGrid metrics={metrics} /> : null}
 
-      <div className="space-y-6">{children}</div>
+      <div className="min-w-0 space-y-6">{children}</div>
     </main>
   )
 }

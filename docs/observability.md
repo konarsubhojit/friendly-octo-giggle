@@ -9,6 +9,18 @@ This project uses structured logs, request-level telemetry, and synthetic checks
 - **Metrics endpoint**: Prometheus-formatted metrics at `GET /api/metrics`
 - **Synthetic uptests**: GitHub Actions workflow `.github/workflows/synthetic-uptests.yml`
 
+## Current workflow coverage
+
+Operational telemetry covers API latency/errors, cache effectiveness, business events, and checkout queue lag. Trace the latest high-value workflows as complete chains:
+
+- Search: `/api/search` → `/api/search/suggest` → `/api/search/click`.
+- Guest AI: `/api/ai/products/[id]/chat`, checking rate limits and stock-privacy outcomes without logging raw client addresses.
+- Checkout: `/api/checkout` → `/api/queue/checkout-orders` → order and email events.
+- Admin operations: bulk product/order updates, CSV import/export, and search reindexing.
+- Scheduled work: exchange-rate refresh and failed-email retries.
+
+Never attach credentials, raw passwords, reset tokens, payment secrets, or full AI guest identifiers to logs or metrics.
+
 ## Request IDs
 
 - API routes wrapped with `withLogging` / `withApiLogging` include `X-Request-ID` in responses.

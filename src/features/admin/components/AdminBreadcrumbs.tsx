@@ -1,4 +1,4 @@
-import Link from '@/components/ui/LocaleLink'
+import Link from 'next/link'
 
 export interface BreadcrumbItem {
   readonly label: string
