@@ -188,9 +188,7 @@ describe('CheckoutForm', () => {
     renderCheckoutForm()
     fillStructuredAddress()
 
-    fireEvent.click(
-      screen.getByRole('button', { name: /continue to review/i })
-    )
+    fireEvent.click(screen.getByRole('button', { name: /continue to review/i }))
 
     await waitFor(() => {
       expect(sessionStorage.setItem).toHaveBeenCalledWith(
@@ -214,9 +212,7 @@ describe('CheckoutForm', () => {
       target: { value: 'Karnataka' },
     })
 
-    fireEvent.click(
-      screen.getByRole('button', { name: /continue to review/i })
-    )
+    fireEvent.click(screen.getByRole('button', { name: /continue to review/i }))
 
     expect(screen.getByText(/address line 1 is required/i)).toBeInTheDocument()
     expect(mockPush).not.toHaveBeenCalledWith('/en/checkout/review')
@@ -238,9 +234,7 @@ describe('CheckoutForm', () => {
       target: { value: 'Karnataka' },
     })
 
-    fireEvent.click(
-      screen.getByRole('button', { name: /continue to review/i })
-    )
+    fireEvent.click(screen.getByRole('button', { name: /continue to review/i }))
 
     expect(
       screen.getByText(/pin code must be exactly 6 digits/i)
@@ -258,9 +252,7 @@ describe('CheckoutForm', () => {
     renderCheckoutForm()
     fillStructuredAddress()
 
-    fireEvent.click(
-      screen.getByRole('button', { name: /continue to review/i })
-    )
+    fireEvent.click(screen.getByRole('button', { name: /continue to review/i }))
 
     await waitFor(() => {
       expect(mockPush).toHaveBeenCalledWith(
