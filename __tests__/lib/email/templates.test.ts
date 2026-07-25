@@ -136,11 +136,11 @@ describe('orderConfirmationTemplate', () => {
     expect(result.html).toContain(messyVariant)
   })
 
-  it('renders localized confirmation copy in Spanish when locale is es', () => {
-    const result = orderConfirmationTemplate({ ...data, locale: 'es' })
-    expect(result.subject).toContain('Pedido confirmado')
-    expect(result.html).toContain('Resumen del pedido')
-    expect(result.html).toContain('lang="es"')
+  it('always renders English confirmation copy', () => {
+    const result = orderConfirmationTemplate(data)
+    expect(result.subject).toContain('Order Confirmed')
+    expect(result.html).toContain('Order Summary')
+    expect(result.html).toContain('lang="en"')
   })
 })
 
@@ -217,10 +217,10 @@ describe('orderStatusUpdateTemplate', () => {
     }
   })
 
-  it('renders localized status labels in Spanish when locale is es', () => {
-    const result = orderStatusUpdateTemplate({ ...data, locale: 'es' })
-    expect(result.subject).toContain('Enviado')
-    expect(result.html).toContain('Nuevo estado')
-    expect(result.html).toContain('lang="es"')
+  it('always renders English status labels', () => {
+    const result = orderStatusUpdateTemplate({ ...data, status: 'SHIPPED' })
+    expect(result.subject).toContain('Shipped')
+    expect(result.html).toContain('New Status')
+    expect(result.html).toContain('lang="en"')
   })
 })

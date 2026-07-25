@@ -54,7 +54,7 @@ const goToAccountWithPassword = async (
     }
     return route.continue()
   })
-  await page.goto('/en/account')
+  await page.goto('/account')
   // Wait for the Password section heading to appear
   await expect(page.getByRole('heading', { name: /^password$/i })).toBeVisible()
 }

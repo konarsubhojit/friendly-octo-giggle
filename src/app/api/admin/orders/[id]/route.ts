@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 import { drizzleDb, primaryDrizzleDb } from '@/lib/db'
-import { orders, users, productVariants } from '@/lib/schema'
+import { orders, productVariants } from '@/lib/schema'
 import { eq, sql } from 'drizzle-orm'
 import {
   apiSuccess,
@@ -19,7 +19,6 @@ import { env } from '@/lib/env'
 import { logBusinessEvent, logError } from '@/lib/logger'
 import { getRedisClient } from '@/lib/redis'
 import { waitUntil } from '@vercel/functions'
-import { isSupportedLocale } from '@/lib/i18n/config'
 
 export const dynamic = 'force-dynamic'
 
@@ -52,20 +51,6 @@ const NOTIFY_STATUSES = new Set([
   'CANCELLED',
 ])
 
-const resolveUserLocale = async (userId: string | null) => {
-  if (!userId) return 'en'
-  try {
-    const found = await drizzleDb.query.users.findFirst({
-      where: eq(users.id, userId),
-      columns: { localePreference: true },
-    })
-    const pref = found?.localePreference
-    return pref && isSupportedLocale(pref) ? pref : 'en'
-  } catch {
-    return 'en'
-  }
-}
-
 const dispatchStatusNotification = async (
   order: {
     id: string
@@ -81,7 +66,6 @@ const dispatchStatusNotification = async (
     shippingProvider?: string | null
   }
 ) => {
-  const locale = await resolveUserLocale(order.userId)
   const trackingNumber = update.trackingNumber ?? order.trackingNumber ?? null
   const shippingProvider =
     update.shippingProvider ?? order.shippingProvider ?? null
@@ -96,7 +80,6 @@ const dispatchStatusNotification = async (
         | 'SHIPPED'
         | 'DELIVERED'
         | 'CANCELLED',
-      locale,
       trackingNumber,
       shippingProvider,
     },
@@ -128,7 +111,6 @@ const dispatchStatusNotification = async (
       customerName: order.customerName,
       orderId: order.id,
       status: update.status,
-      locale,
       trackingNumber,
       shippingProvider,
     })

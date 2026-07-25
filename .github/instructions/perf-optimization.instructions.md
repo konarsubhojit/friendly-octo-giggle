@@ -23,12 +23,12 @@ Comprehensive performance rules for web application development. Every anti-patt
 
 Measures when the largest visible content element finishes rendering. Four sequential phases:
 
-| Phase | Target | What It Measures |
-|-------|--------|-----------------|
-| TTFB | ~40% of budget | Server response time |
-| Resource Load Delay | < 10% | Time between TTFB and LCP resource fetch start |
-| Resource Load Duration | ~40% | Download time for the LCP resource |
-| Element Render Delay | < 10% | Time between download and paint |
+| Phase                  | Target         | What It Measures                               |
+| ---------------------- | -------------- | ---------------------------------------------- |
+| TTFB                   | ~40% of budget | Server response time                           |
+| Resource Load Delay    | < 10%          | Time between TTFB and LCP resource fetch start |
+| Resource Load Duration | ~40%           | Download time for the LCP resource             |
+| Element Render Delay   | < 10%          | Time between download and paint                |
 
 ### INP (Interaction to Next Paint)
 
@@ -36,10 +36,10 @@ Measures when the largest visible content element finishes rendering. Four seque
 
 Measures latency of all user interactions, reports the worst. Three phases:
 
-| Phase | Optimization |
-|-------|-------------|
-| Input Delay | Break long tasks, yield to browser |
-| Processing Time | Keep handlers < 50ms |
+| Phase              | Optimization                           |
+| ------------------ | -------------------------------------- |
+| Input Delay        | Break long tasks, yield to browser     |
+| Processing Time    | Keep handlers < 50ms                   |
 | Presentation Delay | Minimize DOM size, avoid forced layout |
 
 > **Diagnostic tool:** Use the Long Animation Frames (LoAF) API (Chrome 123+) to debug INP issues. LoAF provides better attribution than the legacy Long Tasks API, including script source and rendering time.
@@ -65,7 +65,9 @@ Layout shift sources: images without dimensions, dynamically injected content, w
 <link rel="stylesheet" href="/styles/main.css" />
 
 <!-- GOOD — inline critical CSS (extracted at build time), preload the rest -->
-<style>/* critical above-fold CSS, inlined by a tool like Critters/Beasties */</style>
+<style>
+  /* critical above-fold CSS, inlined by a tool like Critters/Beasties */
+</style>
 <link rel="preload" href="/styles/main.css" as="style" />
 <link rel="stylesheet" href="/styles/main.css" />
 ```
@@ -115,17 +117,21 @@ Prefer build-time critical CSS extraction (e.g., Critters, Beasties, Next.js `ex
 
 ```tsx
 // BAD — content appears after JS execution + API call
-'use client';
+'use client'
 function Page() {
-  const [data, setData] = useState(null);
-  useEffect(() => { fetch('/api/data').then(r => r.json()).then(setData); }, []);
-  return <div>{data?.title}</div>;
+  const [data, setData] = useState(null)
+  useEffect(() => {
+    fetch('/api/data')
+      .then((r) => r.json())
+      .then(setData)
+  }, [])
+  return <div>{data?.title}</div>
 }
 
 // GOOD — Server Component fetches data before HTML is sent
 async function Page() {
-  const data = await fetch('https://api.example.com/data').then(r => r.json());
-  return <div>{data.title}</div>;
+  const data = await fetch('https://api.example.com/data').then((r) => r.json())
+  return <div>{data.title}</div>
 }
 ```
 
@@ -199,7 +205,7 @@ Push `"use client"` down to leaf components that need interactivity.
 ```tsx
 // GOOD — stream shell immediately, fill in data progressively
 async function Page() {
-  const user = await getUser();
+  const user = await getUser()
   return (
     <div>
       <Header user={user} />
@@ -207,7 +213,7 @@ async function Page() {
         <Posts />
       </Suspense>
     </div>
-  );
+  )
 }
 ```
 
@@ -259,7 +265,9 @@ Use client-side rendering for modals, drawers, dropdowns. Angular: `@defer`. Rea
 
 ```tsx
 // GOOD — stable unique key
-{items.map(item => <Row key={item.id} data={item} />)}
+{
+  items.map((item) => <Row key={item.id} data={item} />)
+}
 ```
 
 Never use array index as key if list can reorder.
@@ -277,10 +285,11 @@ Never use array index as key if list can reorder.
 ```typescript
 // GOOD — yield to browser
 async function handleClick() {
-  setLoading(true);
-  await (globalThis.scheduler?.yield?.() ?? new Promise(r => setTimeout(r, 0)));
-  const result = expensiveComputation(data);
-  setResult(result);
+  setLoading(true)
+  await (globalThis.scheduler?.yield?.() ??
+    new Promise((r) => setTimeout(r, 0)))
+  const result = expensiveComputation(data)
+  setResult(result)
 }
 ```
 
@@ -296,8 +305,10 @@ Move heavy work to Web Worker for best results.
 
 ```typescript
 // GOOD — batch reads then batch writes
-const heights = elements.map(el => el.offsetHeight);
-elements.forEach((el, i) => { el.style.height = `${heights[i] + 10}px`; });
+const heights = elements.map((el) => el.offsetHeight)
+elements.forEach((el, i) => {
+  el.style.height = `${heights[i] + 10}px`
+})
 ```
 
 ### J3: setInterval/setTimeout Without Cleanup
@@ -308,9 +319,9 @@ elements.forEach((el, i) => { el.style.height = `${heights[i] + 10}px`; });
 
 ```tsx
 useEffect(() => {
-  const id = setInterval(() => fetchData(), 5000);
-  return () => clearInterval(id);
-}, []);
+  const id = setInterval(() => fetchData(), 5000)
+  return () => clearInterval(id)
+}, [])
 ```
 
 ### J4: addEventListener Without removeEventListener
@@ -321,10 +332,10 @@ useEffect(() => {
 
 ```tsx
 useEffect(() => {
-  const controller = new AbortController();
-  window.addEventListener('resize', handleResize, { signal: controller.signal });
-  return () => controller.abort();
-}, []);
+  const controller = new AbortController()
+  window.addEventListener('resize', handleResize, { signal: controller.signal })
+  return () => controller.abort()
+}, [])
 ```
 
 ### J5: Detached DOM Node References
@@ -371,11 +382,21 @@ React: return cleanup from `useEffect`. Angular: `takeUntilDestroyed()`. Vue: `o
 
 ```css
 /* BAD — main thread, <60fps */
-.card { transition: width 0.3s, height 0.3s; }
+.card {
+  transition:
+    width 0.3s,
+    height 0.3s;
+}
 
 /* GOOD — GPU compositor, 60fps */
-.card { transition: transform 0.3s, opacity 0.3s; }
-.card:hover { transform: scale(1.05); }
+.card {
+  transition:
+    transform 0.3s,
+    opacity 0.3s;
+}
+.card:hover {
+  transform: scale(1.05);
+}
 ```
 
 ### C2: Missing content-visibility for Off-Screen Sections
@@ -415,7 +436,9 @@ Use PurgeCSS, Tailwind purge, or critters. Code-split CSS per route.
 
 ```css
 /* GOOD — zero-specificity reset */
-:where(*, *::before, *::after) { box-sizing: border-box; }
+:where(*, *::before, *::after) {
+  box-sizing: border-box;
+}
 ```
 
 ### C6: Missing CSS Containment
@@ -425,7 +448,9 @@ Use PurgeCSS, Tailwind purge, or critters. Code-split CSS per route.
 - **CWV**: INP
 
 ```css
-.sidebar { contain: layout style paint; }
+.sidebar {
+  contain: layout style paint;
+}
 ```
 
 ### C7: Route Transitions Without View Transitions API
@@ -439,7 +464,7 @@ Use PurgeCSS, Tailwind purge, or critters. Code-split CSS per route.
 if (document.startViewTransition) {
   document.startViewTransition(() => {
     // update DOM / navigate
-  });
+  })
 } else {
   // fallback: update DOM directly
 }
@@ -491,9 +516,12 @@ Always set `width` and `height` on images, or use `aspect-ratio` in CSS.
 - **CWV**: LCP
 
 ```html
-<img src="/hero-800.jpg" alt="Hero"
-     srcset="/hero-400.jpg 400w, /hero-800.jpg 800w, /hero-1200.jpg 1200w"
-     sizes="(max-width: 600px) 400px, (max-width: 1024px) 800px, 1200px" />
+<img
+  src="/hero-800.jpg"
+  alt="Hero"
+  srcset="/hero-400.jpg 400w, /hero-800.jpg 800w, /hero-1200.jpg 1200w"
+  sizes="(max-width: 600px) 400px, (max-width: 1024px) 800px, 1200px"
+/>
 ```
 
 ### I5: Font Without font-display
@@ -517,7 +545,13 @@ Always set `width` and `height` on images, or use `aspect-ratio` in CSS.
 - **CWV**: LCP + CLS
 
 ```html
-<link rel="preload" href="/fonts/main.woff2" as="font" type="font/woff2" crossorigin />
+<link
+  rel="preload"
+  href="/fonts/main.woff2"
+  as="font"
+  type="font/woff2"
+  crossorigin
+/>
 ```
 
 ### I7: Full Font Loaded When Subset Suffices
@@ -550,10 +584,10 @@ npx svgo input.svg -o output.svg
 
 ```typescript
 // BAD
-import { Button } from './components';
+import { Button } from './components'
 
 // GOOD — direct import
-import { Button } from './components/Button';
+import { Button } from './components/Button'
 ```
 
 ### B2: CommonJS require() Preventing Tree Shaking
@@ -572,11 +606,11 @@ Use ESM `import/export`. Replace `require` with `import`.
 
 ```typescript
 // GOOD — tree-shakeable alternatives
-import { format } from 'date-fns';
-import { pick } from 'lodash-es';
+import { format } from 'date-fns'
+import { pick } from 'lodash-es'
 
 // BEST — native JS
-const formatted = new Intl.DateTimeFormat('en').format(date);
+const formatted = new Intl.DateTimeFormat('en').format(date)
 ```
 
 ### B4: Missing Dynamic Import for Route Splitting
@@ -626,8 +660,8 @@ npm dedupe
 - **CWV**: LCP + CLS
 
 ```tsx
-import Image from 'next/image';
-<Image src="/hero.jpg" alt="Hero" width={1200} height={600} priority />
+import Image from 'next/image'
+;<Image src="/hero.jpg" alt="Hero" width={1200} height={600} priority />
 ```
 
 ### NX2: Not Using Cache Components for Partial Prerendering
@@ -677,8 +711,8 @@ Fetch data in Server Components directly (async function body).
 - **CWV**: CLS + LCP
 
 ```tsx
-import { Inter } from 'next/font/google';
-const inter = Inter({ subsets: ['latin'] });
+import { Inter } from 'next/font/google'
+const inter = Inter({ subsets: ['latin'] })
 ```
 
 ### NX6: Missing "use cache" for Cacheable Server Functions
@@ -690,15 +724,15 @@ const inter = Inter({ subsets: ['latin'] });
 ```typescript
 // BAD — data fetched on every request
 async function getProducts() {
-  return await db.products.findMany();
+  return await db.products.findMany()
 }
 
 // GOOD — cached with revalidation
-"use cache";
-import { cacheLife } from 'next/cache';
+;('use cache')
+import { cacheLife } from 'next/cache'
 async function getProducts() {
-  cacheLife('hours');
-  return await db.products.findMany();
+  cacheLife('hours')
+  return await db.products.findMany()
 }
 ```
 
@@ -750,9 +784,9 @@ Angular 19+: prefer zoneless change detection with signals. OnPush is unnecessar
 
 ```html
 @defer (on viewport) {
-  <app-heavy-chart [data]="chartData" />
+<app-heavy-chart [data]="chartData" />
 } @placeholder {
-  <div class="chart-skeleton"></div>
+<div class="chart-skeleton"></div>
 }
 ```
 
@@ -792,8 +826,8 @@ export const appConfig = {
   providers: [
     provideZonelessChangeDetection(), // removes ~15-30KB from bundle
     // ...
-  ]
-};
+  ],
+}
 ```
 
 Zoneless change detection with signals reduces bundle size and improves runtime performance. Stable since Angular 20.
@@ -817,9 +851,9 @@ Enable React Compiler (v19+) for auto-memoization. Remove manual wrappers.
 - **CWV**: INP
 
 ```tsx
-const [isPending, startTransition] = useTransition();
+const [isPending, startTransition] = useTransition()
 function handleFilter(value) {
-  startTransition(() => setFilter(value));
+  startTransition(() => setFilter(value))
 }
 ```
 
@@ -830,8 +864,8 @@ function handleFilter(value) {
 - **CWV**: INP
 
 ```tsx
-const deferredQuery = useDeferredValue(query);
-const results = expensiveFilter(items, deferredQuery);
+const deferredQuery = useDeferredValue(query)
+const results = expensiveFilter(items, deferredQuery)
 ```
 
 ### RX4: Missing React.lazy for Route Splitting
@@ -841,7 +875,7 @@ const results = expensiveFilter(items, deferredQuery);
 - **CWV**: INP
 
 ```tsx
-const Settings = React.lazy(() => import('./pages/Settings'));
+const Settings = React.lazy(() => import('./pages/Settings'))
 ```
 
 ---
@@ -875,7 +909,7 @@ Use `shallowRef()` or `shallowReactive()` for large data.
 - **CWV**: INP
 
 ```typescript
-const HeavyChart = defineAsyncComponent(() => import('./HeavyChart.vue'));
+const HeavyChart = defineAsyncComponent(() => import('./HeavyChart.vue'))
 ```
 
 ### VU4: Not Using Vapor Mode for Performance-Critical Components
@@ -890,38 +924,38 @@ Vue 3.6+ Vapor Mode compiles templates to direct DOM operations, bypassing the v
 
 ## Resource Hints Quick Reference
 
-| Hint | Purpose | When to Use |
-|------|---------|-------------|
-| `preconnect` | DNS + TCP + TLS early | Critical third-party origins (API, CDN, fonts) |
-| `preload` | Fetch immediately, high priority | LCP image, critical font |
-| `prefetch` | Low priority for future navigation | Next-page assets |
-| `dns-prefetch` | DNS resolution only | Non-critical third-party origins |
-| `modulepreload` | Preload + parse ES module | Critical JS modules |
+| Hint                               | Purpose                            | When to Use                                              |
+| ---------------------------------- | ---------------------------------- | -------------------------------------------------------- |
+| `preconnect`                       | DNS + TCP + TLS early              | Critical third-party origins (API, CDN, fonts)           |
+| `preload`                          | Fetch immediately, high priority   | LCP image, critical font                                 |
+| `prefetch`                         | Low priority for future navigation | Next-page assets                                         |
+| `dns-prefetch`                     | DNS resolution only                | Non-critical third-party origins                         |
+| `modulepreload`                    | Preload + parse ES module          | Critical JS modules                                      |
 | `<script type="speculationrules">` | Prefetch/prerender next navigation | Likely next pages (Chrome 121+, progressive enhancement) |
 
 ---
 
 ## Image Optimization Quick Reference
 
-| Aspect | Recommendation |
-|--------|---------------|
-| Format | WebP (25-34% smaller), AVIF (50% smaller) |
-| LCP image | `fetchpriority="high"` or framework `priority` prop |
-| Below-fold | `loading="lazy"` |
-| Dimensions | Always set `width` + `height` |
-| Responsive | `srcset` + `sizes` or framework Image component |
-| Compression | Quality 75-85 for photos |
+| Aspect      | Recommendation                                      |
+| ----------- | --------------------------------------------------- |
+| Format      | WebP (25-34% smaller), AVIF (50% smaller)           |
+| LCP image   | `fetchpriority="high"` or framework `priority` prop |
+| Below-fold  | `loading="lazy"`                                    |
+| Dimensions  | Always set `width` + `height`                       |
+| Responsive  | `srcset` + `sizes` or framework Image component     |
+| Compression | Quality 75-85 for photos                            |
 
 ---
 
 ## Font Loading Quick Reference
 
-| Strategy | Best For | CLS Impact |
-|----------|---------|-----------|
-| `font-display: swap` | Body text | Slight FOUT, minimal CLS |
-| `font-display: optional` | All fonts (best CLS) | No FOUT, no CLS |
-| `next/font` | Next.js projects | Zero CLS |
-| Variable fonts | Multiple weights | Single file for all weights |
+| Strategy                 | Best For             | CLS Impact                  |
+| ------------------------ | -------------------- | --------------------------- |
+| `font-display: swap`     | Body text            | Slight FOUT, minimal CLS    |
+| `font-display: optional` | All fonts (best CLS) | No FOUT, no CLS             |
+| `next/font`              | Next.js projects     | Zero CLS                    |
+| Variable fonts           | Multiple weights     | Single file for all weights |
 
 Rules: preload 1-2 critical fonts only, use WOFF2, subset to needed characters, self-host when possible.
 
@@ -930,6 +964,7 @@ Rules: preload 1-2 critical fonts only, use WOFF2, subset to needed characters, 
 ## Performance Checklist (CWV)
 
 ### LCP (< 2.5s)
+
 - [ ] LCP image has `fetchpriority="high"` or `priority` prop
 - [ ] LCP image preloaded if not in HTML source
 - [ ] No `loading="lazy"` on above-fold images
@@ -942,6 +977,7 @@ Rules: preload 1-2 critical fonts only, use WOFF2, subset to needed characters, 
 - [ ] Fonts preloaded with `font-display: swap` or `optional`
 
 ### INP (< 200ms)
+
 - [ ] Event handlers complete in < 50ms
 - [ ] Long tasks broken into smaller chunks
 - [ ] Route-based code splitting implemented
@@ -954,6 +990,7 @@ Rules: preload 1-2 critical fonts only, use WOFF2, subset to needed characters, 
 - [ ] Effect cleanup implemented (no leaking listeners/timers)
 
 ### CLS (< 0.1)
+
 - [ ] All images have `width` and `height` attributes
 - [ ] Fonts use `font-display: swap` or `optional`
 - [ ] No content injected above existing content dynamically

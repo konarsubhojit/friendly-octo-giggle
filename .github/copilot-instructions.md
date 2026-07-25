@@ -1054,11 +1054,11 @@ If any command fails, fix the failures (or revert the change) before opening / u
 Prefer the built-in structured tools over shelling out through `bash`. Shell wrappers are slower, consume a bash session, and return unstructured output that's harder to reason over.
 
 | Use this built-in tool | Instead of shelling out via `bash` to |
-| ---------------------- | -------------------------------------- |
-| `grep`                 | `grep`, `rg`, `ag`                     |
-| `glob`                 | `find`, `ls`, `fd`                     |
-| `view`                 | `cat`, `head`, `tail`, `less`, `bat`   |
-| `edit` / `create`      | `sed -i`, `awk`, here-docs into files  |
+| ---------------------- | ------------------------------------- |
+| `grep`                 | `grep`, `rg`, `ag`                    |
+| `glob`                 | `find`, `ls`, `fd`                    |
+| `view`                 | `cat`, `head`, `tail`, `less`, `bat`  |
+| `edit` / `create`      | `sed -i`, `awk`, here-docs into files |
 
 Reserve `bash` for things that genuinely require a shell: running tests/builds (`npm run …`), git commands, package installs, scripts, or composing pipelines whose intermediate output is not needed.
 

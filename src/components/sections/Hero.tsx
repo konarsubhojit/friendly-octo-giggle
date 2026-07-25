@@ -1,18 +1,16 @@
 'use client'
 
-import Link from '@/components/ui/LocaleLink'
+import Link from 'next/link'
 import {
   ScatteredFlowers,
   VineDivider,
 } from '@/components/ui/DecorativeElements'
-import { useLocale } from '@/contexts/LocaleContext'
 
 const HeroTextColumn = () => {
-  const { t, localizePath } = useLocale()
   const stats = [
-    { num: '100%', label: t('hero.statHandmade'), decorative: false },
-    { num: '50+', label: t('hero.statProducts'), decorative: false },
-    { num: '❤️', label: t('hero.statLove'), decorative: true },
+    { num: '100%', label: 'Handmade', decorative: false },
+    { num: '50+', label: 'Products', decorative: false },
+    { num: '❤️', label: 'Made with love', decorative: true },
   ] as const
 
   return (
@@ -21,19 +19,21 @@ const HeroTextColumn = () => {
         id="hero-heading"
         className="font-cursive text-5xl sm:text-6xl lg:text-7xl font-bold leading-tight text-[var(--foreground)] mb-6"
       >
-        {t('hero.title')}
+        Handmade With Love
       </h1>
       <p className="text-xs sm:text-sm font-semibold tracking-[0.25em] uppercase text-[var(--text-muted)] mb-8">
-        {t('hero.categories')}
+        Crochet • Flowers • Bags • Accessories
       </p>
       <p className="text-base sm:text-lg text-[var(--text-secondary)] mb-8 leading-relaxed animate-fade-in-up animation-delay-100">
-        {t('hero.description')}
+        Discover our collection of crocheted flowers, hair accessories,
+        keyrings, scarves, and cozy wearables — each piece lovingly crafted, one
+        stitch at a time.
       </p>
       <Link
-        href={localizePath('/shop')}
+        href="/shop"
         className="inline-flex items-center gap-2 px-8 py-3.5 bg-[var(--btn-primary)] text-white rounded-full font-bold hover:bg-[var(--btn-primary-hover)] transition-all duration-300 shadow-warm hover:shadow-warm-lg hover:scale-105 focus-warm animate-fade-in-up animation-delay-200"
       >
-        {t('hero.cta')} <span aria-hidden="true">→</span>
+        Explore Shop <span aria-hidden="true">→</span>
       </Link>
       <div className="flex flex-wrap gap-6 mt-10 pt-8 border-t border-[var(--border-warm)] animate-fade-in-up animation-delay-300">
         {stats.map(({ num, label, decorative }) => (
@@ -55,19 +55,18 @@ const HeroTextColumn = () => {
 }
 
 const HeroIllustration = () => {
-  const { t } = useLocale()
   return (
     <div className="flex-1 w-full max-w-lg lg:max-w-none animate-fade-in-up animation-delay-200">
       <div
         className="relative flex min-h-[400px] w-full items-center justify-center overflow-hidden rounded-[2rem] border border-[var(--border-warm)] bg-theme-panel shadow-warm-lg"
         role="img"
-        aria-label={t('hero.illustrationLabel')}
+        aria-label="Illustration placeholder: girl crocheting by a window"
       >
         <div
           className="absolute left-6 top-6 rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] glass-card text-[var(--text-secondary)]"
           aria-hidden="true"
         >
-          {t('hero.atelierMood')}
+          atelier mood
         </div>
         <div
           className="absolute -right-10 top-10 h-28 w-28 rounded-full blur-3xl"
@@ -84,7 +83,7 @@ const HeroIllustration = () => {
             🧶
           </span>
           <p className="text-sm text-[var(--foreground)] font-medium">
-            {t('hero.illustrationText')}
+            Illustration: Girl crocheting by a window
           </p>
         </div>
       </div>
@@ -93,12 +92,11 @@ const HeroIllustration = () => {
 }
 
 const FeatureBadges = () => {
-  const { t } = useLocale()
   const featureBadges = [
-    { icon: '🌸', text: t('hero.badgeFlowers') },
-    { icon: '🎀', text: t('hero.badgeHair') },
-    { icon: '🧶', text: t('hero.badgeKnitwear') },
-    { icon: '🚚', text: t('hero.badgeShipping') },
+    { icon: '🌸', text: 'Crochet flowers' },
+    { icon: '🎀', text: 'Hair accessories' },
+    { icon: '🧶', text: 'Handmade knitwear' },
+    { icon: '🚚', text: 'Free shipping' },
   ] as const
 
   return (

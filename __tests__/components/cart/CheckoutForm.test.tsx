@@ -195,7 +195,7 @@ describe('CheckoutForm', () => {
         'pending_checkout',
         expect.stringContaining('42 MG Road')
       )
-      expect(mockPush).toHaveBeenCalledWith('/en/checkout/review')
+      expect(mockPush).toHaveBeenCalledWith('/checkout/review')
     })
   })
 
@@ -215,7 +215,7 @@ describe('CheckoutForm', () => {
     fireEvent.click(screen.getByRole('button', { name: /continue to review/i }))
 
     expect(screen.getByText(/address line 1 is required/i)).toBeInTheDocument()
-    expect(mockPush).not.toHaveBeenCalledWith('/en/checkout/review')
+    expect(mockPush).not.toHaveBeenCalledWith('/checkout/review')
   })
 
   it('shows error when pin code is invalid', () => {
@@ -239,7 +239,7 @@ describe('CheckoutForm', () => {
     expect(
       screen.getByText(/pin code must be exactly 6 digits/i)
     ).toBeInTheDocument()
-    expect(mockPush).not.toHaveBeenCalledWith('/en/checkout/review')
+    expect(mockPush).not.toHaveBeenCalledWith('/checkout/review')
   })
 
   it('redirects unauthenticated users to sign in', async () => {
@@ -256,7 +256,7 @@ describe('CheckoutForm', () => {
 
     await waitFor(() => {
       expect(mockPush).toHaveBeenCalledWith(
-        '/en/auth/signin?callbackUrl=%2Fen%2Fcheckout%2Fshipping'
+        '/auth/signin?callbackUrl=%2Fcheckout%2Fshipping'
       )
     })
   })

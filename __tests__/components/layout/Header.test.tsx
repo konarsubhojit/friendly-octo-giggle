@@ -96,7 +96,7 @@ describe('Header', () => {
       update: vi.fn(),
     })
     render(<Header />)
-    expect(screen.getByText('Home')).toBeTruthy()
+    expect(screen.getByText('Shop')).toBeTruthy()
     expect(screen.getByText('About')).toBeTruthy()
     expect(screen.getByText('Contact')).toBeTruthy()
   })
@@ -305,7 +305,7 @@ describe('Header', () => {
     const menu = screen.getByRole('menu')
     expect(menu).toBeTruthy()
 
-    const myOrdersLink = menu.querySelector("a[href='/en/orders']")
+    const myOrdersLink = menu.querySelector("a[href='/orders']")
     expect(myOrdersLink).not.toBeNull()
     act(() => {
       fireEvent.click(myOrdersLink as HTMLElement)
@@ -334,7 +334,7 @@ describe('Header', () => {
       fireEvent.click(screen.getByLabelText('User menu'))
     })
     const menu = screen.getByRole('menu')
-    const adminLink = menu.querySelector("a[href='/en/admin']")
+    const adminLink = menu.querySelector("a[href='/admin']")
     expect(adminLink).not.toBeNull()
     act(() => {
       fireEvent.click(adminLink as HTMLElement)
@@ -363,7 +363,7 @@ describe('Header', () => {
       fireEvent.click(screen.getByLabelText('User menu'))
     })
     const menu = screen.getByRole('menu')
-    const accountLink = menu.querySelector("a[href='/en/account']")
+    const accountLink = menu.querySelector("a[href='/account']")
     expect(accountLink).not.toBeNull()
     expect(accountLink?.textContent).toContain('My Account')
   })
@@ -438,7 +438,7 @@ describe('Header', () => {
     expect(screen.queryByRole('button', { name: 'Login' })).toBeNull()
   })
 
-  it('mobile nav Home link navigates to /', () => {
+  it('does not duplicate a Home link for the shop landing page', () => {
     vi.mocked(useSession).mockReturnValue({
       data: null,
       status: 'unauthenticated',
@@ -448,12 +448,7 @@ describe('Header', () => {
     act(() => {
       fireEvent.click(screen.getByLabelText('Open menu'))
     })
-    const homeLinks = screen.getAllByText('Home')
-    // At least the mobile nav Home link should point to /
-    const homeLink = homeLinks.find(
-      (el) => el.closest('a')?.getAttribute('href') === '/en'
-    )
-    expect(homeLink).toBeTruthy()
+    expect(screen.queryByText('Home')).toBeNull()
   })
 
   it('mobile nav Shop link navigates to /shop', () => {
@@ -468,7 +463,7 @@ describe('Header', () => {
     })
     const shopLinks = screen.getAllByText('Shop')
     const shopLink = shopLinks.find(
-      (el) => el.closest('a')?.getAttribute('href') === '/en/shop'
+      (el) => el.closest('a')?.getAttribute('href') === '/shop'
     )
     expect(shopLink).toBeTruthy()
   })
@@ -553,7 +548,7 @@ describe('Header', () => {
       fireEvent.click(screen.getByLabelText('User menu'))
     })
     const menu = screen.getByRole('menu')
-    const wishlistLink = menu.querySelector("a[href='/en/wishlist']")
+    const wishlistLink = menu.querySelector("a[href='/wishlist']")
     expect(wishlistLink).not.toBeNull()
     expect(wishlistLink?.textContent).toContain('My Wishlist')
   })

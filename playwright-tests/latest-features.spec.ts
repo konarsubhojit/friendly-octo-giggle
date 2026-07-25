@@ -37,7 +37,7 @@ test.describe('latest platform capabilities', () => {
   test('localized offline fallback offers recovery actions', async ({
     page,
   }) => {
-    const response = await page.goto('/en/offline', {
+    const response = await page.goto('/offline', {
       waitUntil: 'domcontentloaded',
     })
 
@@ -48,7 +48,7 @@ test.describe('latest platform capabilities', () => {
     await expect(page.getByRole('button', { name: /try again/i })).toBeVisible()
     await expect(page.getByRole('link', { name: /go home/i })).toHaveAttribute(
       'href',
-      '/en'
+      '/'
     )
   })
 
@@ -58,7 +58,7 @@ test.describe('latest platform capabilities', () => {
     await page.route('**/api/account', (route) =>
       route.fulfill({ status: 200, json: { success: true } })
     )
-    await page.goto('/en/about', { waitUntil: 'networkidle' })
+    await page.goto('/about', { waitUntil: 'networkidle' })
 
     const language = page.getByRole('combobox', { name: 'Language' })
     await expect(language).toHaveValue('en')
@@ -93,7 +93,7 @@ test.describe('latest platform capabilities', () => {
         },
       })
     )
-    await page.goto('/en', { waitUntil: 'networkidle' })
+    await page.goto('/', { waitUntil: 'networkidle' })
 
     await page.getByRole('button', { name: 'Search products' }).click()
     const dialog = page.getByRole('dialog', { name: 'Search products' })
@@ -108,9 +108,9 @@ test.describe('latest platform capabilities', () => {
   test('admin search-index operations require authentication', async ({
     page,
   }) => {
-    await page.goto('/en/admin/search', { waitUntil: 'domcontentloaded' })
+    await page.goto('/admin/search', { waitUntil: 'domcontentloaded' })
 
-    await expect(page).toHaveURL(/\/en\/auth\/signin/)
+    await expect(page).toHaveURL(/\/auth\/signin/)
     await expect(
       page.getByRole('heading', { name: /welcome back/i })
     ).toBeVisible()

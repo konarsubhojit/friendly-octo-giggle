@@ -1,6 +1,6 @@
 'use client'
 
-import Link from '@/components/ui/LocaleLink'
+import Link from 'next/link'
 import { useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useSelector, useDispatch } from 'react-redux'

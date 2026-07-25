@@ -30,7 +30,7 @@ describe('UserMenu', () => {
     render(<UserMenu session={null} />)
     expect(screen.getByText('Login')).toBeTruthy()
     const link = screen.getByText('Login').closest('a')
-    expect(link?.getAttribute('href')).toBe('/en/auth/signin')
+    expect(link?.getAttribute('href')).toBe('/auth/signin')
   })
 
   it('shows Login button with onLoginClick callback', () => {
@@ -111,7 +111,7 @@ describe('UserMenu', () => {
     await act(async () => {
       fireEvent.click(screen.getByText('Sign Out'))
     })
-    expect(signOut).toHaveBeenCalledWith({ callbackUrl: '/en' })
+    expect(signOut).toHaveBeenCalledWith({ callbackUrl: '/' })
   })
 
   it('shows fallback initial when name and email are both null', () => {
@@ -178,7 +178,7 @@ describe('ProtectedRoute', () => {
       </ProtectedRoute>
     )
     const link = screen.getByText('Sign In').closest('a')
-    expect(link?.getAttribute('href')).toBe('/en/auth/signin')
+    expect(link?.getAttribute('href')).toBe('/auth/signin')
   })
 
   it('shows Go Home link in access denied message', () => {
@@ -191,6 +191,6 @@ describe('ProtectedRoute', () => {
       </ProtectedRoute>
     )
     const link = screen.getByText('Go Home').closest('a')
-    expect(link?.getAttribute('href')).toBe('/en')
+    expect(link?.getAttribute('href')).toBe('/')
   })
 })

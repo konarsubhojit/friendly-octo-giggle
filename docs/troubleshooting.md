@@ -608,10 +608,6 @@ curl http://localhost:3000/cart
 
 ## Current Feature Diagnostics
 
-### Locale-prefixed route returns 404
-
-Use a supported locale (`/en/...` or `/es/...`) for browser routes. Internal navigation should use `LocaleLink` or `toLocalizedPathname`; API routes remain unprefixed.
-
 ### Search suggestions or reindex controls are unavailable
 
 Confirm the Upstash Search variables are configured. Product and order queries fall back to database search, but index-specific admin controls correctly report missing configuration.
@@ -622,11 +618,11 @@ Confirm the configured AI provider credentials and rate-limit storage. Guest cha
 
 ### Checkout remains pending or fails
 
-Inspect `/en/admin/checkout-requests`, queue lag at `/api/metrics`, and the `checkout-orders` Vercel Queue trigger. Reusing the same checkout idempotency key should resolve to the existing request rather than create a duplicate order.
+Inspect `/admin/checkout-requests`, queue lag at `/api/metrics`, and the `checkout-orders` Vercel Queue trigger. Reusing the same checkout idempotency key should resolve to the existing request rather than create a duplicate order.
 
 ### Install banner or offline page is missing
 
-Verify `/manifest.webmanifest`, icon/screenshot assets under `public/`, service-worker registration in `src/components/pwa`, and `/en/offline`. Browser install prompts only fire when platform installability criteria are met.
+Verify `/manifest.webmanifest`, icon/screenshot assets under `public/`, service-worker registration in `src/components/pwa`, and `/offline`. Browser install prompts only fire when platform installability criteria are met.
 
 ## Build Errors
 

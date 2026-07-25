@@ -39,7 +39,7 @@ Complete documentation is available in the [`/docs`](./docs) folder:
 - 👥 **Role-Based Access**: Customer and Admin roles
 - 🔎 **Discovery**: Faceted search, suggestions, click analytics, bestsellers, reviews, and recently viewed products
 - 🤖 **AI Product Assistant**: Guest-friendly product Q&A with RAG and stock-privacy safeguards
-- 🌍 **Localized PWA**: English/Spanish routes, currency preferences, offline fallback, and install support
+- 🌍 **Installable PWA**: currency preferences, offline fallback, and install support
 - ⚡ **Redis Caching**: Smart caching with stampede prevention and resilient database fallbacks
 - 📦 **Product Variations**: Support for colors, sizes, designs
 - 🎨 **Modern UI**: Responsive design with Tailwind CSS v4

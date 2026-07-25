@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { useSelector } from 'react-redux'
-import { useLocale } from '@/contexts/LocaleContext'
 import { selectCart } from '@/features/cart/store/cartSlice'
 import { StructuredAddressSchema } from '@/features/orders/validations'
 import { Button } from '@/components/ui/Button'
@@ -115,7 +114,6 @@ export const CheckoutForm = ({
   customizationNotes = {},
 }: CheckoutFormProps) => {
   const router = useRouter()
-  const { localizePath } = useLocale()
   const { data: session } = useSession()
   const cart = useSelector(selectCart)
   const latestPincodeRef = useRef('')
@@ -291,7 +289,7 @@ export const CheckoutForm = ({
 
     if (!session?.user?.id || !session.user.email) {
       router.push(
-        `${localizePath('/auth/signin')}?callbackUrl=${encodeURIComponent(localizePath('/checkout/shipping'))}`
+        `/auth/signin?callbackUrl=${encodeURIComponent('/checkout/shipping')}`
       )
       return
     }
@@ -351,7 +349,7 @@ export const CheckoutForm = ({
         return
       }
 
-      router.push(localizePath('/checkout/review'))
+      router.push('/checkout/review')
     }
 
     void persistPendingCheckout()

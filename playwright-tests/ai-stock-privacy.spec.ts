@@ -36,9 +36,9 @@ const mockExchangeRates = async (page: Page) => {
 }
 
 const navigateToProduct = async (page: Page) => {
-  await page.goto('/en/shop', { waitUntil: 'domcontentloaded' })
+  await page.goto('/shop', { waitUntil: 'domcontentloaded' })
   const href = await page
-    .locator('a[href*="/en/products/"]')
+    .locator('a[href*="/products/"]')
     .first()
     .getAttribute('href')
   expect(href, 'shop should expose a product').toBeTruthy()

@@ -4,7 +4,7 @@ import { render, screen } from '@testing-library/react'
 import React from 'react'
 import { Provider } from 'react-redux'
 import { configureStore } from '@reduxjs/toolkit'
-import WishlistClient from '@/app/[locale]/(public)/wishlist/WishlistClient'
+import WishlistClient from '@/app/(public)/wishlist/WishlistClient'
 import wishlistReducer from '@/features/wishlist/store/wishlistSlice'
 import type { Product } from '@/lib/types'
 
