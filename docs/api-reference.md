@@ -103,7 +103,6 @@ Admin endpoints require authentication via NextAuth session with ADMIN role.
 
 ## Current capability notes
 
-- Browser pages are locale-prefixed (`/en`, `/es`); API routes are not.
 - AI product chat accepts guests using a one-way hashed guest identity. Chat history persistence is authenticated-user-only, and responses intentionally avoid exact stock counts.
 - Checkout creation is idempotent and asynchronous: `POST /api/checkout` records a request and the queue consumer creates the order.
 - Optional Redis and search integrations fail open to database-backed behavior where supported.

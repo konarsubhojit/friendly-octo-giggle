@@ -74,7 +74,7 @@ test.describe('Checkout policy confirmation', () => {
       })
     )
 
-    await page.goto('/en/cart')
+    await page.goto('/cart')
     await page.getByRole('link', { name: /continue to shipping/i }).click()
     await page.getByLabel(/address line 1/i).fill('42 MG Road')
     await page.getByLabel(/pin code/i).fill('560001')

@@ -4,7 +4,6 @@
 
 ## Storefront and discovery
 
-- Locale-prefixed English and Spanish storefronts with locale-safe navigation and persisted language preference.
 - Responsive home, shop, product, marketing, help, shipping, returns, contact, blog, press, and careers pages.
 - Product catalog with category, price, stock, rating, variant-count, and sort controls.
 - Search suggestions, zero-result recovery, trending discovery, click analytics, and database fallback when hosted search is unavailable.
@@ -23,7 +22,7 @@
 
 - Credentials login by email or phone, Google OAuth, and Microsoft personal-account OAuth through NextAuth v5 JWT sessions.
 - Registration, email verification, forgot/reset/change password, password history, login abuse protection, and CUSTOMER/ADMIN authorization.
-- Read-only account overview with explicit edit modes, reusable addresses, locale/currency preferences, recent orders, and wishlist management.
+- Read-only account overview with explicit edit modes, reusable addresses, currency preferences, recent orders, and wishlist management.
 - INR, USD, EUR, and GBP display with cached daily exchange rates.
 
 ## PWA and resilience
@@ -48,7 +47,7 @@
 
 ## Acceptance coverage
 
-Unit and integration tests live under `__tests__/`. Playwright suites cover public and admin routes, locale navigation, accessibility, product options, cart/checkout policy and recovery, orders, AI stock privacy, responsive layouts, and the current platform smoke scenarios. Run the mandatory gates before release:
+Unit and integration tests live under `__tests__/`. Playwright suites cover public and admin routes, accessibility, product options, cart/checkout policy and recovery, orders, AI stock privacy, responsive layouts, and the current platform smoke scenarios. Run the mandatory gates before release:
 
 ```bash
 npm run lint

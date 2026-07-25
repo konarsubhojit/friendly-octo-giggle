@@ -25,9 +25,9 @@ test.beforeAll(() => {
 })
 
 async function navigateToProductWithOptions(page: Page): Promise<string> {
-  await page.goto('/en/shop', { waitUntil: 'networkidle' })
+  await page.goto('/shop', { waitUntil: 'networkidle' })
   const hrefs = await page
-    .locator('a[href*="/en/products/"]')
+    .locator('a[href*="/products/"]')
     .evaluateAll(
       (links) =>
         Array.from(
@@ -154,7 +154,7 @@ test.describe('Admin — Option Manager', () => {
     page,
   }) => {
     const productId = await navigateToProductWithOptions(page)
-    await page.goto(`/en/admin/products/${productId}/edit`, {
+    await page.goto(`/admin/products/${productId}/edit`, {
       waitUntil: 'domcontentloaded',
     })
 
@@ -175,7 +175,7 @@ test.describe('Admin — Option Manager', () => {
 
   test('option names input shows live SKU preview table', async ({ page }) => {
     const productId = await navigateToProductWithOptions(page)
-    await page.goto(`/en/admin/products/${productId}/edit`, {
+    await page.goto(`/admin/products/${productId}/edit`, {
       waitUntil: 'domcontentloaded',
     })
 

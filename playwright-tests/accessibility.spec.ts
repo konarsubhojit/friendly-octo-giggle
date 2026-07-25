@@ -38,9 +38,9 @@ const formatViolations = (
 const navigateToFirstProduct = async (
   page: import('@playwright/test').Page
 ): Promise<void> => {
-  await page.goto('/en/shop')
+  await page.goto('/shop')
   await page.waitForLoadState('networkidle')
-  const firstProductLink = page.locator('a[href^="/en/products/"]').first()
+  const firstProductLink = page.locator('a[href^="/products/"]').first()
   await expect(firstProductLink).toBeVisible()
   await firstProductLink.click()
   await page.waitForLoadState('networkidle')
@@ -54,22 +54,22 @@ test.describe('Accessibility – public pages', () => {
     path?: string
     navigate?: (page: import('@playwright/test').Page) => Promise<void>
   }> = [
-    { name: 'Home', path: '/en' },
-    { name: 'Shop', path: '/en/shop' },
+    { name: 'Home', path: '/' },
+    { name: 'Shop', path: '/shop' },
     { name: 'Product', navigate: navigateToFirstProduct },
-    { name: 'About', path: '/en/about' },
-    { name: 'Blog', path: '/en/blog' },
-    { name: 'Careers', path: '/en/careers' },
-    { name: 'Contact', path: '/en/contact' },
-    { name: 'Help', path: '/en/help' },
-    { name: 'Press', path: '/en/press' },
-    { name: 'Returns', path: '/en/returns' },
-    { name: 'Shipping', path: '/en/shipping' },
-    { name: 'Sign In', path: '/en/auth/signin' },
-    { name: 'Register', path: '/en/auth/register' },
-    { name: 'Cart', path: '/en/cart' },
-    { name: 'Checkout Shipping', path: '/en/checkout/shipping' },
-    { name: 'Checkout Review', path: '/en/checkout/review' },
+    { name: 'About', path: '/about' },
+    { name: 'Blog', path: '/blog' },
+    { name: 'Careers', path: '/careers' },
+    { name: 'Contact', path: '/contact' },
+    { name: 'Help', path: '/help' },
+    { name: 'Press', path: '/press' },
+    { name: 'Returns', path: '/returns' },
+    { name: 'Shipping', path: '/shipping' },
+    { name: 'Sign In', path: '/auth/signin' },
+    { name: 'Register', path: '/auth/register' },
+    { name: 'Cart', path: '/cart' },
+    { name: 'Checkout Shipping', path: '/checkout/shipping' },
+    { name: 'Checkout Review', path: '/checkout/review' },
   ]
 
   for (const route of publicRoutes) {
@@ -106,12 +106,12 @@ test.describe('Accessibility – public pages', () => {
 
 test.describe('Accessibility – authenticated pages', () => {
   const authenticatedRoutes: Array<{ name: string; path: string }> = [
-    { name: 'Account', path: '/en/account' },
-    { name: 'Orders', path: '/en/orders' },
-    { name: 'Admin Dashboard', path: '/en/admin' },
-    { name: 'Admin Products', path: '/en/admin/products' },
-    { name: 'Admin Orders', path: '/en/admin/orders' },
-    { name: 'Admin Users', path: '/en/admin/users' },
+    { name: 'Account', path: '/account' },
+    { name: 'Orders', path: '/orders' },
+    { name: 'Admin Dashboard', path: '/admin' },
+    { name: 'Admin Products', path: '/admin/products' },
+    { name: 'Admin Orders', path: '/admin/orders' },
+    { name: 'Admin Users', path: '/admin/users' },
   ]
 
   for (const route of authenticatedRoutes) {

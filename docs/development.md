@@ -87,7 +87,6 @@ vercel env pull
 
 | Area                                | Primary implementation                                                                             |
 | ----------------------------------- | -------------------------------------------------------------------------------------------------- |
-| Localization and locale-safe links  | `src/lib/i18n`, `src/contexts/LocaleContext.tsx`, `src/components/ui/LocaleLink.tsx`               |
 | Product search and suggestions      | `src/lib/search`, `src/lib/search-discovery.ts`, `src/components/SearchBar.tsx`                    |
 | AI product assistant                | `src/features/product/components/ProductAssistant.tsx`, `src/lib/ai`, `/api/ai/products/[id]/chat` |
 | Cart and staged checkout            | `src/features/cart`, `/api/cart`, `/api/checkout`, `/api/queue/checkout-orders`                    |

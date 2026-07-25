@@ -12,21 +12,21 @@
 import { expect, test, type Page } from '@playwright/test'
 
 const STATIC_PUBLIC_PAGES = [
-  '/en',
-  '/en/shop',
-  '/en/about',
-  '/en/contact',
-  '/en/help',
-  '/en/press',
-  '/en/careers',
-  '/en/blog',
-  '/en/returns',
-  '/en/shipping',
-  '/en/cart',
-  '/en/wishlist',
-  '/en/auth/signin',
-  '/en/auth/register',
-  '/en/auth/forgot-password',
+  '/',
+  '/shop',
+  '/about',
+  '/contact',
+  '/help',
+  '/press',
+  '/careers',
+  '/blog',
+  '/returns',
+  '/shipping',
+  '/cart',
+  '/wishlist',
+  '/auth/signin',
+  '/auth/register',
+  '/auth/forgot-password',
   '/es',
   '/es/shop',
 ] as const
@@ -52,9 +52,9 @@ test.describe('public page coverage', () => {
   }
 
   test('first product detail page renders without error', async ({ page }) => {
-    await page.goto('/en/shop', { waitUntil: 'domcontentloaded' })
+    await page.goto('/shop', { waitUntil: 'domcontentloaded' })
     const href = await page
-      .locator('a[href*="/en/products/"]')
+      .locator('a[href*="/products/"]')
       .first()
       .getAttribute('href')
     expect(href, 'shop should expose at least one product link').toBeTruthy()
