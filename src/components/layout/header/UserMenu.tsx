@@ -43,6 +43,7 @@ export function UserMenu({
   return (
     <div className="relative" ref={menuRef}>
       <button
+        type="button"
         onClick={() => setMenuOpen(!menuOpen)}
         className="flex items-center gap-2 hover:opacity-80 transition-opacity"
         aria-label={t('header.userMenu')}
@@ -191,6 +192,7 @@ export function UserMenu({
           )}
           <div className="border-t border-[var(--border-warm)] mt-1 pt-1">
             <button
+              type="button"
               onClick={handleSignOut}
               disabled={signingOut}
               aria-busy={signingOut}

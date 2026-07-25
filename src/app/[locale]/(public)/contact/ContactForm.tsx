@@ -100,6 +100,7 @@ export default function ContactForm() {
           hours.
         </p>
         <button
+          type="button"
           onClick={() => setSubmitted(false)}
           className="mt-6 text-[var(--accent-rose)] hover:text-[var(--accent-pink)] font-medium text-sm"
         >

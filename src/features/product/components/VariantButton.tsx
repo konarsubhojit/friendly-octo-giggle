@@ -35,6 +35,7 @@ export function VariantButton({
 
   return (
     <button
+      type="button"
       onClick={() => !isOutOfStock && onSelect(variant)}
       disabled={isOutOfStock}
       aria-disabled={isOutOfStock}

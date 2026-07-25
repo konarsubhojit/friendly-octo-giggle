@@ -2,7 +2,7 @@
 
 import dynamic from 'next/dynamic'
 import Link from '@/components/ui/LocaleLink'
-import { GradientButton } from '@/components/ui/GradientButton'
+import { Button } from '@/components/ui/Button'
 import { useLocale } from '@/contexts/LocaleContext'
 import LanguageSwitcher from '@/components/ui/LanguageSwitcher'
 
@@ -128,7 +128,7 @@ export function MobileNav({
         </Link>
         {!isLoggedIn && (
           <div className="pt-2 border-t border-[var(--border-warm)] mt-2">
-            <GradientButton
+            <Button
               onClick={() => {
                 closeMobileNav()
                 onLoginClick()
@@ -138,7 +138,7 @@ export function MobileNav({
               className="text-sm"
             >
               {t('header.login')}
-            </GradientButton>
+            </Button>
           </div>
         )}
       </nav>

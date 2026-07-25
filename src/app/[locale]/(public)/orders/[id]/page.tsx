@@ -53,6 +53,7 @@ function CancelOrderDialog({
       </p>
       <div className="flex gap-3 justify-end">
         <button
+          type="button"
           onClick={onClose}
           disabled={cancelling}
           className="px-4 py-2 text-sm font-medium text-[var(--text-secondary)] bg-gray-100 dark:bg-gray-700 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50"
@@ -60,6 +61,7 @@ function CancelOrderDialog({
           Keep Order
         </button>
         <button
+          type="button"
           onClick={onConfirm}
           disabled={cancelling}
           className="px-4 py-2 text-sm font-semibold text-white bg-red-600 rounded-xl hover:bg-red-700 transition-colors disabled:opacity-50"
@@ -315,6 +317,7 @@ function OrderSummaryHeader({
         </p>
         {status === 'PENDING' && (
           <button
+            type="button"
             onClick={onCancelClick}
             disabled={cancelling}
             className="px-4 py-2 text-sm font-semibold text-red-600 bg-red-50 border border-red-200 rounded-xl hover:bg-red-100 transition-colors disabled:opacity-50"

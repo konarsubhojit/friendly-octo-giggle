@@ -154,6 +154,7 @@ export default function ProductAssistant({
   if (!isOpen) {
     return (
       <button
+        type="button"
         onClick={() => setIsOpen(true)}
         className="w-full rounded-2xl border border-[var(--border-warm)] bg-[var(--surface)]/80 p-6 shadow-warm backdrop-blur-lg transition-all duration-300 hover:shadow-warm-lg hover:border-[var(--accent-warm)] focus-warm text-left"
         aria-label={`Ask a question about ${productName}`}
@@ -216,6 +217,7 @@ export default function ProductAssistant({
           </span>
         </div>
         <button
+          type="button"
           onClick={() => setIsOpen(false)}
           className="rounded-lg p-1.5 text-[var(--text-secondary)] hover:bg-[var(--accent-blush)] hover:text-[var(--foreground)] transition-colors focus-warm"
           aria-label="Close assistant"
@@ -249,6 +251,7 @@ export default function ProductAssistant({
               {STARTER_PROMPTS.map((prompt) => (
                 <button
                   key={prompt}
+                  type="button"
                   onClick={() => handleStarterClick(prompt)}
                   className="rounded-full border border-[var(--border-warm)] bg-[var(--accent-cream)] px-4 py-2 text-sm text-[var(--foreground)] transition-colors hover:border-[var(--accent-warm)] hover:bg-[var(--accent-blush)] focus-warm"
                 >

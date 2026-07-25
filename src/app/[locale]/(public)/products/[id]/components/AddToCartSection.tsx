@@ -144,6 +144,7 @@ export const AddToCartSection = ({
 
       <div className="flex flex-col gap-3 sm:flex-row">
         <button
+          type="button"
           onClick={handleAddToCart}
           disabled={addingToCart}
           className="flex-1 bg-gradient-to-r from-[var(--accent-warm)] to-[var(--accent-rose)] text-white py-4 rounded-xl font-bold text-lg hover:from-[var(--accent-rose)] hover:to-[var(--accent-warm)] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-warm hover:shadow-warm-lg focus-warm"

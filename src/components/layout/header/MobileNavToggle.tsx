@@ -14,6 +14,7 @@ export function MobileNavToggle({
   const { t } = useLocale()
   return (
     <button
+      type="button"
       id="mobile-nav-toggle"
       onClick={onToggle}
       className="md:hidden flex items-center justify-center w-9 h-9 rounded-lg text-[var(--text-secondary)] hover:bg-[var(--accent-blush)] transition-colors"

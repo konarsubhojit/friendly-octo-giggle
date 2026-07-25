@@ -25,11 +25,11 @@ export default function LanguageSwitcher() {
 
     startTransition(() => {
       const currentPath =
-        typeof globalThis.window === 'undefined'
+        globalThis.window === undefined
           ? '/'
           : globalThis.window.location.pathname
       const nextPath = toLocalizedPathname(currentPath, nextLocale)
-      if (typeof globalThis.window !== 'undefined') {
+      if (globalThis.window !== undefined) {
         globalThis.window.location.assign(nextPath)
       }
     })

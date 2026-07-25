@@ -25,7 +25,7 @@ import {
 } from '@/features/orders/services/order-summary'
 import { CheckoutProgress } from '@/features/cart/components/CheckoutProgress'
 import { CartPricingSummary } from '@/features/cart/components/CartPricingSummary'
-import { GradientButton } from '@/components/ui/GradientButton'
+import { Button } from '@/components/ui/Button'
 import { GradientHeading } from '@/components/ui/GradientHeading'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import Link from '@/components/ui/LocaleLink'
@@ -307,7 +307,7 @@ export default function CheckoutPaymentPage() {
             >
               Back
             </Link>
-            <GradientButton
+            <Button
               type="button"
               onClick={handleConfirm}
               disabled={isPending}
@@ -315,7 +315,7 @@ export default function CheckoutPaymentPage() {
               loadingText={checkoutMessage ?? 'Processing...'}
             >
               Confirm and Place Order
-            </GradientButton>
+            </Button>
           </div>
         </div>
       </main>

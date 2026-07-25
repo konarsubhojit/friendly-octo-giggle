@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useSession } from 'next-auth/react'
 import Image from 'next/image'
 import { StarRating } from '@/components/ui/StarRating'
-import { GradientButton } from '@/components/ui/GradientButton'
+import { Button } from '@/components/ui/Button'
 
 interface ReviewFormProps {
   readonly productId: string
@@ -195,13 +195,9 @@ export const ReviewForm = ({
         </p>
       )}
 
-      <GradientButton
-        type="submit"
-        disabled={submitting}
-        className="w-full sm:w-auto"
-      >
+      <Button type="submit" disabled={submitting} className="w-full sm:w-auto">
         {submitting ? 'Submitting…' : 'Submit Review'}
-      </GradientButton>
+      </Button>
     </form>
   )
 }

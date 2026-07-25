@@ -118,6 +118,7 @@ export default function UsersManagement() {
       description="Search accounts and manage user roles and permissions."
       actions={
         <button
+          type="button"
           onClick={handleRefresh}
           disabled={loading}
           className="inline-flex items-center rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"

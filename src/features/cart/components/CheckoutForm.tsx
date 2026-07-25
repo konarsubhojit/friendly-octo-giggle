@@ -7,7 +7,7 @@ import { useSelector } from 'react-redux'
 import { useLocale } from '@/contexts/LocaleContext'
 import { selectCart } from '@/features/cart/store/cartSlice'
 import { StructuredAddressSchema } from '@/features/orders/validations'
-import { GradientButton } from '@/components/ui/GradientButton'
+import { Button } from '@/components/ui/Button'
 import { buildCheckoutSummaryLineItems } from '@/features/orders/services/order-summary'
 import { formatStructuredAddress } from '@/lib/address-utils'
 import { AddressFormField } from './AddressFormField'
@@ -537,14 +537,9 @@ export const CheckoutForm = ({
         </p>
       )}
 
-      <GradientButton
-        type="submit"
-        size="lg"
-        fullWidth
-        disabled={!cartItems.length}
-      >
+      <Button type="submit" size="lg" fullWidth disabled={!cartItems.length}>
         Continue to Review
-      </GradientButton>
+      </Button>
     </form>
   )
 }

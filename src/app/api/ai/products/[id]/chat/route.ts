@@ -523,6 +523,21 @@ const fetchOrderStatusContext = async (
   ].join('\n')
 }
 
+const fetchOrderStatusSection = (params: {
+  userId: string
+  isAuthenticated: boolean
+  messageText: string
+  intents: IntentSignals
+}): Promise<string | null> => {
+  if (!params.intents.wantsOrderStatus) return Promise.resolve(null)
+  if (!params.isAuthenticated) {
+    return Promise.resolve(
+      'Sign in to check your recent orders and tracking details for your account.'
+    )
+  }
+  return fetchOrderStatusContext(params.userId, params.messageText)
+}
+
 const buildCommerceContext = async (params: {
   product: Product
   userId: string
@@ -562,13 +577,7 @@ const buildCommerceContext = async (params: {
       params.intents.wantsReviewSummary
         ? fetchReviewSummaryContext(params.product.id)
         : Promise.resolve(null),
-      !params.intents.wantsOrderStatus
-        ? Promise.resolve(null)
-        : params.isAuthenticated
-          ? fetchOrderStatusContext(params.userId, params.messageText)
-          : Promise.resolve(
-              'Sign in to check your recent orders and tracking details for your account.'
-            ),
+      fetchOrderStatusSection(params),
     ])
 
   for (const section of [

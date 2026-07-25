@@ -89,6 +89,7 @@ const CartVariantRow = ({
           </div>
 
           <button
+            type="button"
             onClick={() => onRemoveItem(item.id)}
             disabled={updating === item.id}
             className="text-xs text-red-500 hover:text-red-700 font-medium disabled:opacity-40 transition-colors focus-warm rounded"

@@ -165,6 +165,7 @@ function ShippingInfoSection({
           />
         </div>
         <button
+          type="button"
           onClick={() => onSaveShipping(orderId, orderStatus, order)}
           disabled={savingShippingId === orderId}
           className="px-4 py-2 bg-purple-600 text-white rounded-md text-sm font-medium hover:bg-purple-700 disabled:bg-gray-400 transition whitespace-nowrap"
