@@ -40,7 +40,11 @@ export function NotificationsSection() {
     try {
       const res = await fetch('/api/account/notifications')
       const data = await res.json()
-      if (data.success) setSettings(data.data)
+      if (data.success) {
+        setSettings(data.data)
+      } else {
+        setError('Could not load your notification preferences.')
+      }
     } catch {
       setError('Could not load your notification preferences.')
     }

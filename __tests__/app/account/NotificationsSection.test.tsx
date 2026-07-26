@@ -116,6 +116,22 @@ describe('NotificationsSection', () => {
     expect(JSON.parse(init.body as string)).toEqual({ marketingEmail: true })
   })
 
+  it('surfaces an error when the API responds unsuccessfully', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        json: async () => ({ success: false, error: 'boom' }),
+      })
+    )
+
+    render(<NotificationsSection />)
+
+    expect(
+      await screen.findByText('Could not load your notification preferences.')
+    ).toBeInTheDocument()
+  })
+
   it('surfaces an error when loading preferences fails', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('network')))
 

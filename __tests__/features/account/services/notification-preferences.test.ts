@@ -5,6 +5,9 @@ const mockDrizzleDbQuery = vi.hoisted(() => ({
   users: { findFirst: vi.fn() },
 }))
 const mockPrimaryInsert = vi.hoisted(() => vi.fn())
+const mockValues = vi.hoisted(() => vi.fn())
+const mockOnConflictDoUpdate = vi.hoisted(() => vi.fn())
+const mockReturning = vi.hoisted(() => vi.fn())
 
 vi.mock('@/lib/db', () => ({
   drizzleDb: { query: mockDrizzleDbQuery },
@@ -42,11 +45,16 @@ const savedRow = {
 describe('notification preferences service', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockPrimaryInsert.mockReturnValue({
-      values: vi.fn().mockReturnValue({
-        onConflictDoUpdate: vi.fn().mockResolvedValue(undefined),
-      }),
-    })
+    mockReturning.mockResolvedValue([
+      {
+        userId: 'user-1',
+        ...DEFAULT_NOTIFICATION_PREFERENCES,
+        transactionalPush: true,
+      },
+    ])
+    mockOnConflictDoUpdate.mockReturnValue({ returning: mockReturning })
+    mockValues.mockReturnValue({ onConflictDoUpdate: mockOnConflictDoUpdate })
+    mockPrimaryInsert.mockReturnValue({ values: mockValues })
   })
 
   it('falls back to defaults when no row exists', async () => {
@@ -67,18 +75,25 @@ describe('notification preferences service', () => {
     expect(prefs.marketingEmail).toBe(true)
   })
 
-  it('merges partial updates over the current values', async () => {
-    mockDrizzleDbQuery.notificationPreferences.findFirst.mockResolvedValue(
-      undefined
-    )
+  it('merges partial updates atomically without a prior read', async () => {
     const result = await updateNotificationPreferences('user-1', {
       transactionalPush: true,
     })
+
     expect(result).toEqual({
       ...DEFAULT_NOTIFICATION_PREFERENCES,
       transactionalPush: true,
     })
     expect(mockPrimaryInsert).toHaveBeenCalledOnce()
+    expect(
+      mockDrizzleDbQuery.notificationPreferences.findFirst
+    ).not.toHaveBeenCalled()
+    // Only the supplied keys are overwritten on conflict, so a concurrent
+    // update to another channel is not clobbered.
+    expect(mockOnConflictDoUpdate.mock.calls[0][0].set).toEqual({
+      transactionalPush: true,
+      updatedAt: expect.any(Date),
+    })
   })
 
   it('maps category/channel pairs to the right flag', () => {

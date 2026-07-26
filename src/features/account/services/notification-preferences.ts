@@ -75,23 +75,26 @@ export const getNotificationPreferences = async (
   return row ? toPreferences(row) : { ...DEFAULT_NOTIFICATION_PREFERENCES }
 }
 
-/** Upserts the supplied subset of preferences and returns the merged result. */
+/**
+ * Upserts the supplied subset of preferences and returns the merged result.
+ *
+ * The merge happens inside a single statement so two concurrent updates cannot
+ * read stale values and overwrite each other's toggles.
+ */
 export const updateNotificationPreferences = async (
   userId: string,
   input: UpdateNotificationPreferencesInput
 ): Promise<NotificationPreferences> => {
-  const current = await getNotificationPreferences(userId)
-  const merged: NotificationPreferences = { ...current, ...input }
-
-  await primaryDrizzleDb
+  const [row] = await primaryDrizzleDb
     .insert(notificationPreferences)
-    .values({ userId, ...merged })
+    .values({ userId, ...DEFAULT_NOTIFICATION_PREFERENCES, ...input })
     .onConflictDoUpdate({
       target: notificationPreferences.userId,
-      set: { ...merged, updatedAt: new Date() },
+      set: { ...input, updatedAt: new Date() },
     })
+    .returning()
 
-  return merged
+  return toPreferences(row)
 }
 
 /** True when the user (or an unknown recipient) accepts this category/channel. */
