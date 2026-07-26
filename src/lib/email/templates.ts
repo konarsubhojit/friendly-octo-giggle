@@ -55,6 +55,23 @@ export interface OrderRefundUpdateData {
   reason?: string | null
 }
 
+export interface AbandonedCartItem {
+  name: string
+  quantity: number
+  /** Pre-formatted price string (e.g. "₹499.00"). */
+  price: string
+  variant?: string | null
+}
+
+export interface AbandonedCartReminderData {
+  to: string
+  customerName: string
+  cartUrl: string
+  items: AbandonedCartItem[]
+  /** 1 for the 24-hour nudge, 2 for the 72-hour follow-up. */
+  reminderNumber: 1 | 2
+}
+
 // ─── Helpers ────────────────────────────────────────────
 
 export const escapeHtml = (str: string): string =>
@@ -387,5 +404,73 @@ export const orderRefundUpdateTemplate = (data: OrderRefundUpdateData) => {
     subject: `${info.label} for Order #${data.orderId.toUpperCase()} ${info.emoji}`,
     html: emailWrapper(bodyHtml),
     text: `Hi ${data.customerName},\n\n${info.headline}.\n\nOrder: #${data.orderId.toUpperCase()}\n${refundKind}: ${data.refundAmount}\nStatus: ${info.label}${reasonLine}\n\n${REFUND_STATUS_NOTES[data.status]}\n\nThank you for shopping with ${STORE_NAME}!`,
+  }
+}
+
+export const abandonedCartReminderTemplate = (
+  data: AbandonedCartReminderData
+) => {
+  const headline =
+    data.reminderNumber === 1
+      ? 'You left something behind 🌸'
+      : 'Still waiting for you 🌸'
+  const subheadline =
+    data.reminderNumber === 1
+      ? `Hi ${escapeHtml(data.customerName)}, it looks like you left some beautiful items in your cart. They're still here whenever you're ready.`
+      : `Hi ${escapeHtml(data.customerName)}, your cart is still waiting! These handcrafted items are popular and stock is limited.`
+
+  const itemsHtml = data.items
+    .map(
+      (item) => `
+    <tr>
+      <td style="padding:10px 12px;border-bottom:1px solid #F2E8E4;color:#5C4A44;font-size:13px;">
+        ${escapeHtml(item.name)}${item.variant ? `<br><span style="color:#7a5543;font-size:12px;">${escapeHtml(item.variant)}</span>` : ''}
+      </td>
+      <td style="padding:10px 12px;border-bottom:1px solid #F2E8E4;text-align:center;color:#5C4A44;font-size:13px;">${item.quantity}</td>
+      <td style="padding:10px 12px;border-bottom:1px solid #F2E8E4;text-align:right;color:#b83060;font-size:13px;font-weight:600;">${escapeHtml(item.price)}</td>
+    </tr>`
+    )
+    .join('')
+
+  const bodyHtml = `
+    <h2 style="color:#5C4A44;margin:0 0 8px;font-size:22px;">${escapeHtml(headline)}</h2>
+    <p style="color:#7a5543;margin:0 0 24px;font-size:15px;">${subheadline}</p>
+    <table role="presentation" width="100%" style="border-collapse:collapse;margin:16px 0;">
+      <thead>
+        <tr style="background:#F9F0EB;">
+          <th style="text-align:left;padding:10px 12px;color:#5C4A44;font-size:13px;font-weight:600;border-bottom:2px solid #E8D5CC;">Item</th>
+          <th style="text-align:center;padding:10px 12px;color:#5C4A44;font-size:13px;font-weight:600;border-bottom:2px solid #E8D5CC;">Qty</th>
+          <th style="text-align:right;padding:10px 12px;color:#5C4A44;font-size:13px;font-weight:600;border-bottom:2px solid #E8D5CC;">Price</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${itemsHtml}
+      </tbody>
+    </table>
+    <div style="text-align:center;margin:32px 0;">
+      <a href="${escapeHtml(data.cartUrl)}"
+         style="background:linear-gradient(135deg,#b83060,#cc4880);color:#fff;text-decoration:none;padding:14px 32px;border-radius:8px;font-size:16px;font-weight:600;display:inline-block;">
+        Return to Cart 🛒
+      </a>
+    </div>
+    <p style="color:#7a5543;font-size:13px;text-align:center;margin:0;">
+      If you no longer wish to receive these reminders, you can update your
+      <a href="${escapeHtml(data.cartUrl.replace('/cart', '/account'))}" style="color:#b83060;">notification preferences</a>.
+    </p>`
+
+  const itemLines = data.items
+    .map((item) => {
+      const variantStr = item.variant ? ` (${item.variant})` : ''
+      return `- ${item.name}${variantStr} x${item.quantity}: ${item.price}`
+    })
+    .join('\n')
+
+  return {
+    subject:
+      data.reminderNumber === 1
+        ? `You left something in your cart 🌸`
+        : `Your cart is still waiting for you 🌸`,
+    html: emailWrapper(bodyHtml),
+    text: `Hi ${data.customerName},\n\n${data.reminderNumber === 1 ? 'You left some items in your cart.' : "Your cart is still waiting — stock is limited!"}\n\nItems:\n${itemLines}\n\nReturn to your cart: ${data.cartUrl}\n\nThank you for shopping with ${STORE_NAME}!`,
   }
 }
