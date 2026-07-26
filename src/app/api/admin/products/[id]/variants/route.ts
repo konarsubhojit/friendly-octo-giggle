@@ -104,6 +104,7 @@ export async function POST(
         sku: validated.sku ?? null,
         price: validated.price,
         stock: validated.stock,
+        weightGrams: validated.weightGrams ?? null,
         image: validated.image ?? null,
         images: validated.images ?? [],
         sortOrder: activeCount.length,

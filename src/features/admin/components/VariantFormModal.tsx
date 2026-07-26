@@ -35,12 +35,14 @@ interface FormData {
   sku: string
   price: string
   stock: string
+  weightGrams: string
 }
 
 interface VariantPayload {
   sku?: string | null
   price: number
   stock: number
+  weightGrams?: number | null
   productId?: string
   image?: string | null
   images?: string[]
@@ -156,6 +158,12 @@ const validateFormData = (formData: FormData): Record<string, string> => {
   ) {
     errs.stock = 'Stock must be a non-negative integer'
   }
+  if (formData.weightGrams !== '') {
+    const weight = Number(formData.weightGrams)
+    if (!Number.isInteger(weight) || weight <= 0 || weight > 50_000) {
+      errs.weightGrams = 'Weight must be a whole number between 1 and 50000 g'
+    }
+  }
   return errs
 }
 
@@ -186,6 +194,7 @@ const VariantFormModal = ({
       ? convertCurrency(variant.price, 'INR', currency, rates).toString()
       : '',
     stock: variant?.stock?.toString() ?? '',
+    weightGrams: variant?.weightGrams?.toString() ?? '',
   })
   const [submitting, setSubmitting] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -321,6 +330,9 @@ const VariantFormModal = ({
       sku: formData.sku.trim() || null,
       price: priceInInr,
       stock: Number.parseInt(formData.stock, 10),
+      weightGrams: formData.weightGrams.trim()
+        ? Number.parseInt(formData.weightGrams, 10)
+        : null,
     }
 
     if (!isEditing) {
@@ -525,6 +537,33 @@ const VariantFormModal = ({
                       errors.stock ? ('error' as const) : ('default' as const)
                     }
                     errorMessage={errors.stock}
+                    placeholder="0"
+                  />
+
+                  <NumberInput
+                    label="Weight (grams)"
+                    min={0}
+                    step={1}
+                    fullWidth
+                    value={Number(formData.weightGrams) || 0}
+                    onChange={(v) => {
+                      setFormData((prev) => ({
+                        ...prev,
+                        weightGrams: v ? String(v) : '',
+                      }))
+                      setErrors((prev) => {
+                        const next = { ...prev }
+                        delete next.weightGrams
+                        return next
+                      })
+                    }}
+                    validationState={
+                      errors.weightGrams
+                        ? ('error' as const)
+                        : ('default' as const)
+                    }
+                    errorMessage={errors.weightGrams}
+                    helperText="Used to price shipping. Leave blank for the default."
                     placeholder="0"
                   />
                 </div>

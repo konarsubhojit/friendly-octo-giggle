@@ -115,6 +115,10 @@ export interface Order {
   pinCode?: string | null
   city?: string | null
   state?: string | null
+  subtotalAmount?: number
+  shippingAmount?: number
+  taxAmount?: number
+  shippingMethod?: ShippingMethodName | null
   totalAmount: number
   status: OrderStatus
   paymentStatus: PaymentStatus

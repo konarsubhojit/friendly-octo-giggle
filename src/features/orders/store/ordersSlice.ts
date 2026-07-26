@@ -39,6 +39,10 @@ interface Order {
   pinCode?: string | null
   city?: string | null
   state?: string | null
+  subtotalAmount?: number
+  shippingAmount?: number
+  taxAmount?: number
+  shippingMethod?: string | null
   totalAmount: number
   status: string
   trackingNumber?: string | null

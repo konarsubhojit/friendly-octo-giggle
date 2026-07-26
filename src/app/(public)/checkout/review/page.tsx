@@ -5,7 +5,10 @@ import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { useSelector } from 'react-redux'
 import Link from 'next/link'
-import { z } from 'zod'
+import {
+  readPendingCheckout,
+  type PendingCheckout,
+} from '@/features/cart/pending-checkout'
 import { formatStructuredAddress } from '@/lib/address-utils'
 import { selectCart } from '@/features/cart/store/cartSlice'
 import {
@@ -25,37 +28,6 @@ import { GradientHeading } from '@/components/ui/GradientHeading'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { useCurrency } from '@/contexts/CurrencyContext'
 import { CheckoutProgress } from '@/features/cart/components/CheckoutProgress'
-
-const PENDING_CHECKOUT_KEY = 'pending_checkout'
-
-const PendingCheckoutSchema = z.object({
-  addressLine1: z.string().min(1),
-  addressLine2: z.string().default(''),
-  addressLine3: z.string().default(''),
-  pinCode: z.string().min(1),
-  city: z.string().min(1),
-  state: z.string().min(1),
-  customizationNotes: z.record(z.string(), z.string()).default({}),
-})
-
-type PendingCheckout = z.infer<typeof PendingCheckoutSchema>
-
-function readPendingCheckout(): PendingCheckout | null {
-  if (globalThis.window === undefined) return null
-  try {
-    const raw = sessionStorage.getItem(PENDING_CHECKOUT_KEY)
-    if (!raw) return null
-    const parsed: unknown = JSON.parse(raw)
-    const result = PendingCheckoutSchema.safeParse(parsed)
-    if (!result.success) {
-      sessionStorage.removeItem(PENDING_CHECKOUT_KEY)
-      return null
-    }
-    return result.data
-  } catch {
-    return null
-  }
-}
 
 const SECTION_CLASS =
   'rounded-2xl border border-[var(--border-warm)] bg-[var(--surface)] p-5 sm:p-6'
@@ -96,8 +68,14 @@ export default function CheckoutReviewPage() {
   )
 
   const pricingSummary = useMemo(
-    () => buildCheckoutPricingSummaryFromLineItems(lineItems),
-    [lineItems]
+    () =>
+      buildCheckoutPricingSummaryFromLineItems(lineItems, {
+        destination: pendingCheckout
+          ? { state: pendingCheckout.state, pinCode: pendingCheckout.pinCode }
+          : null,
+        shippingMethod: pendingCheckout?.shippingMethod,
+      }),
+    [lineItems, pendingCheckout]
   )
 
   const policyUnavailable =

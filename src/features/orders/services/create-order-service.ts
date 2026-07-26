@@ -9,7 +9,11 @@ import {
   type OrderTotals,
   type PricedOrderItem,
 } from './order-pricing'
-import { toShippingMethod } from '@/lib/shipping'
+import {
+  getShippingMethodLabel,
+  toShippingMethod,
+  type ShippingMethodName,
+} from '@/lib/shipping'
 import { notifyOrderConfirmation } from '@/lib/notifications/order-notifications'
 import type { OrderCreatedEvent } from '@/lib/qstash-events'
 import { getQStashClient } from '@/lib/qstash'
@@ -87,6 +91,10 @@ interface HydratedOrder {
   customerName: string
   customerEmail: string
   customerAddress: string
+  subtotalAmount: number
+  shippingAmount: number
+  taxAmount: number
+  shippingMethod: ShippingMethodName | null
   totalAmount: number
   status: string
   paymentStatus: string
@@ -499,6 +507,10 @@ export const dispatchOrderNotifications = async ({
       customerEmail: hydratedOrder.customerEmail,
       customerName: hydratedOrder.customerName,
       customerAddress: hydratedOrder.customerAddress,
+      subtotalAmount: hydratedOrder.subtotalAmount,
+      shippingAmount: hydratedOrder.shippingAmount,
+      taxAmount: hydratedOrder.taxAmount,
+      shippingMethod: hydratedOrder.shippingMethod ?? undefined,
       totalAmount: hydratedOrder.totalAmount,
       currencyCode,
       items: hydratedOrder.items.map((item) => ({
@@ -536,6 +548,18 @@ export const dispatchOrderNotifications = async ({
       to: hydratedOrder.customerEmail,
       customerName: hydratedOrder.customerName,
       orderId: hydratedOrder.id,
+      subtotalAmount: formatPriceForCurrency(
+        hydratedOrder.subtotalAmount,
+        currencyCode
+      ),
+      shippingAmount: formatPriceForCurrency(
+        hydratedOrder.shippingAmount,
+        currencyCode
+      ),
+      taxAmount: formatPriceForCurrency(hydratedOrder.taxAmount, currencyCode),
+      shippingMethodLabel: hydratedOrder.shippingMethod
+        ? getShippingMethodLabel(hydratedOrder.shippingMethod)
+        : null,
       totalAmount: formatPriceForCurrency(
         hydratedOrder.totalAmount,
         currencyCode
