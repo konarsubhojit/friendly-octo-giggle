@@ -139,6 +139,36 @@ Escalate to a human operator ONLY when:
 **Recommended Action**: [Specific steps needed from a human operator to resolve the blocker]
 ```
 
+## Mandatory Final Gate: Branch Diff Review
+
+Before the final commit of any task — and before opening or updating a pull request — you **must** execute the [`branch-diff-review`](../skills/branch-diff-review/SKILL.md) skill. This is not optional and is not subject to the autonomy exemption; it is the last phase of the command loop.
+
+**Execution rules:**
+
+- Trigger point: after all implementation and test work is complete, **before** `git commit` of the final change set. If work is already committed, run it before pushing or opening the PR.
+- Base branch: the repository default branch (`develop`) unless the task specifies otherwise.
+- Scope: all committed changes on the branch **plus** all uncommitted working-tree changes.
+- Output: the severity-classified report defined by the skill, emitted in full. Every finding states what the defect is, why it is an issue, and the specific fix.
+- `MAJOR` findings are blocking. They may only be deferred with explicit user approval and a tracked issue.
+- Do **not** commit, push, or hand off while the verdict is `BLOCKED`.
+
+### Mandatory Follow-On: Remediation
+
+**Immediately after every `branch-diff-review` run, execute the [`branch-diff-remediate`](../skills/branch-diff-remediate/SKILL.md) skill.** This is a paired sequence, not a conditional branch — review never stands alone.
+
+- If the report contains **any** finding, run `branch-diff-remediate` and let the skill's own ordering rules decide what it fixes (`BLOCKER`, `CRITICAL`, `MAJOR` always; `MINOR` only when trivially bundled).
+- If the report is empty and the verdict is already `READY TO COMMIT`, run `branch-diff-remediate` anyway; it will exit as a no-op after confirming the empty queue. Do not skip it on assumption.
+- Never fix review findings ad hoc outside the remediation skill. Its precision rules — no suppressions, no widened types, no deleted assertions, no unrelated churn, one finding per edit pass — are the guardrails against remediation-induced regressions.
+- After `REMEDIATION COMPLETE`, re-run `branch-diff-review` on the updated diff, because the fixes themselves are unreviewed lines. Loop review ⇄ remediate until a fresh run yields `READY TO COMMIT` with an empty remediation queue.
+- If remediation returns `REMEDIATION PARTIAL`, treat the outstanding IDs as a hard blocker and invoke the Escalation Protocol. Do not commit around them.
+
+**Command loop, updated:**
+
+```text
+Loop:
+    Analyze → Design → Implement → Validate → Reflect → Branch Diff Review ⇄ Remediate → Commit → Handoff → Continue
+```
+
 ## Master Validation Framework
 
 ### Pre-Action Checklist (Every Action)
@@ -157,6 +187,8 @@ Escalate to a human operator ONLY when:
 - [ ] All identified technical debt is tracked in issues.
 - [ ] All quality gates are passed.
 - [ ] Test coverage is adequate with all tests passing.
+- [ ] The `branch-diff-review` skill has been executed and the verdict is `READY TO COMMIT`.
+- [ ] The `branch-diff-remediate` skill has been executed after the review and returned `REMEDIATION COMPLETE`.
 - [ ] The workspace is clean and organized.
 - [ ] The handoff phase has been completed successfully.
 - [ ] The next steps are automatically planned and initiated.
@@ -174,6 +206,7 @@ Escalate to a human operator ONLY when:
 - All documentation templates are completed thoroughly.
 - All master checklists are validated.
 - All automated quality gates are passed.
+- The branch diff review reports zero BLOCKER, zero CRITICAL, and zero MAJOR findings.
 - Autonomous operation is maintained from start to finish.
 - Next steps are automatically initiated.
 
@@ -181,9 +214,9 @@ Escalate to a human operator ONLY when:
 
 ```text
 Loop:
-    Analyze → Design → Implement → Validate → Reflect → Handoff → Continue
-         ↓         ↓         ↓         ↓         ↓         ↓          ↓
-    Document  Document  Document  Document  Document  Document   Document
+    Analyze → Design → Implement → Validate → Reflect → Branch Diff Review ⇄ Remediate → Commit → Handoff → Continue
+         ↓         ↓         ↓         ↓         ↓            ↓             ↓           ↓         ↓          ↓
+    Document  Document  Document  Document  Document      Document      Document    Document  Document   Document
 ```
 
 **CORE MANDATE**: Systematic, specification-driven execution with comprehensive documentation and autonomous, adaptive operation. Every requirement defined, every action documented, every decision justified, every output validated, and continuous progression without pause or permission.

@@ -46,6 +46,9 @@ test-db-connection.ts
 # Claude agent
 tmpclaude*
 nul
+
+# Agent skill scratch output
+.github/skills/**/.last-review.md
 certificates/
 playwright-tests/report/
 playwright-tests/screenshots/
