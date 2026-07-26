@@ -28,7 +28,9 @@ describe('bootstrap-drizzle-initial.sql', () => {
   })
 
   it('creates every table idempotently', () => {
-    const createStatements = sql.match(/CREATE TABLE (IF NOT EXISTS )?public\./g)
+    const createStatements = sql.match(
+      /CREATE TABLE (IF NOT EXISTS )?public\./g
+    )
     expect(createStatements?.length).toBeGreaterThan(0)
     expect(sql).not.toMatch(/CREATE TABLE public\./)
   })
