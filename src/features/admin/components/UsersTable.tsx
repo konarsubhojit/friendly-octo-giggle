@@ -5,6 +5,7 @@ import { AdminDataView } from '@/features/admin/components/AdminDataView'
 import { RoleAction } from '@/features/admin/components/RoleAction'
 import { RoleBadge } from '@/features/admin/components/RoleBadge'
 import { UserAvatar } from '@/features/admin/components/UserAvatar'
+import { isStaffRole, type UserRole } from '@/lib/constants/roles'
 
 interface AdminUser {
   readonly id: string
@@ -19,7 +20,7 @@ interface AdminUser {
 interface UsersTableProps {
   readonly users: readonly AdminUser[]
   readonly updatingUserId: string | null
-  readonly onRoleChange: (userId: string, newRole: 'ADMIN' | 'CUSTOMER') => void
+  readonly onRoleChange: (userId: string, newRole: UserRole) => void
 }
 
 type UserDataRow = AdminUser & { [key: string]: unknown }
@@ -90,7 +91,7 @@ export function UsersTable({
               </p>
             </div>
             <Badge
-              tone={user.role === 'ADMIN' ? 'warning' : 'neutral'}
+              tone={isStaffRole(user.role) ? 'warning' : 'neutral'}
               size="sm"
             >
               {user.role}

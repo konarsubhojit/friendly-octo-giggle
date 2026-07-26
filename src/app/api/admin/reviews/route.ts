@@ -8,7 +8,7 @@ import { checkAdminAuth } from '@/features/admin/services/admin-auth'
 export const dynamic = 'force-dynamic'
 
 export const GET = async (request: NextRequest) => {
-  const authCheck = await checkAdminAuth()
+  const authCheck = await checkAdminAuth('reviews:moderate')
   if (!authCheck.authorized) {
     return apiError(authCheck.error ?? 'Unauthorized', authCheck.status)
   }

@@ -117,7 +117,7 @@ const applySearchFilter = async ({
 }
 
 export const GET = async (request: NextRequest) => {
-  const authCheck = await checkAdminAuth()
+  const authCheck = await checkAdminAuth('orders:read')
   if (!authCheck.authorized) {
     return apiError(authCheck.error ?? 'Unknown error', authCheck.status)
   }

@@ -8,7 +8,11 @@ const mockValues = vi.fn()
 const mockExecute = vi.fn(async () => ({ rows: [{ id: 'locked' }] }))
 
 const { mockCheckAdminAuth } = vi.hoisted(() => ({
-  mockCheckAdminAuth: vi.fn(async () => ({ authorized: true, userId: 'a1' })),
+  mockCheckAdminAuth: vi.fn(async () => ({
+    authorized: true,
+    role: 'ADMIN',
+    userId: 'a1',
+  })),
 }))
 
 const mockUpdate = vi.fn()
@@ -169,7 +173,11 @@ describe('POST /api/admin/variants', () => {
 
   beforeEach(async () => {
     vi.resetAllMocks()
-    mockCheckAdminAuth.mockResolvedValue({ authorized: true, userId: 'a1' })
+    mockCheckAdminAuth.mockResolvedValue({
+      authorized: true,
+      role: 'ADMIN',
+      userId: 'a1',
+    })
     const mod = await import('@/app/api/admin/variants/route')
     POST = mod.POST
   })
@@ -292,7 +300,11 @@ describe('PUT /api/admin/variants/[variantId]', () => {
 
   beforeEach(async () => {
     vi.resetAllMocks()
-    mockCheckAdminAuth.mockResolvedValue({ authorized: true, userId: 'a1' })
+    mockCheckAdminAuth.mockResolvedValue({
+      authorized: true,
+      role: 'ADMIN',
+      userId: 'a1',
+    })
     const mod = await import('@/app/api/admin/variants/[variantId]/route')
     PUT = mod.PUT
   })
@@ -412,7 +424,11 @@ describe('DELETE /api/admin/variants/[variantId]', () => {
 
   beforeEach(async () => {
     vi.resetAllMocks()
-    mockCheckAdminAuth.mockResolvedValue({ authorized: true, userId: 'a1' })
+    mockCheckAdminAuth.mockResolvedValue({
+      authorized: true,
+      role: 'ADMIN',
+      userId: 'a1',
+    })
     const mod = await import('@/app/api/admin/variants/[variantId]/route')
     DELETE = mod.DELETE
   })

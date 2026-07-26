@@ -4,7 +4,7 @@ import {
   handleApiError,
   parseJsonBody,
 } from '@/lib/api-utils'
-import { auth } from '@/lib/auth'
+import { checkAdminAuth } from '@/features/admin/services/admin-auth'
 import { drizzleDb } from '@/lib/db'
 import { products } from '@/lib/schema'
 import { isNull } from 'drizzle-orm'
@@ -32,12 +32,9 @@ const reindexRequestSchema = z
  * Rebuild search indexes for products or orders.
  */
 export async function POST(request: Request) {
-  const session = await auth()
-  if (!session?.user) {
-    return apiError('Not authenticated', 401)
-  }
-  if (session.user.role !== 'ADMIN') {
-    return apiError('Not authorized - Admin access required', 403)
+  const authCheck = await checkAdminAuth('system:manage')
+  if (!authCheck.authorized) {
+    return apiError(authCheck.error, authCheck.status)
   }
 
   try {

@@ -5,7 +5,7 @@ import { getAdminSalesDashboardData } from '@/features/admin/services/admin-sale
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
-  const authCheck = await checkAdminAuth()
+  const authCheck = await checkAdminAuth('analytics:read')
   if (!authCheck.authorized) {
     return apiError(authCheck.error, authCheck.status)
   }

@@ -16,7 +16,7 @@ const handlePatch = async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) => {
-  const authCheck = await checkAdminAuth()
+  const authCheck = await checkAdminAuth('reviews:moderate')
   if (!authCheck.authorized) {
     return apiError(authCheck.error ?? 'Unauthorized', authCheck.status)
   }
@@ -69,7 +69,7 @@ const handleDelete = async (
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) => {
-  const authCheck = await checkAdminAuth()
+  const authCheck = await checkAdminAuth('reviews:moderate')
   if (!authCheck.authorized) {
     return apiError(authCheck.error ?? 'Unauthorized', authCheck.status)
   }

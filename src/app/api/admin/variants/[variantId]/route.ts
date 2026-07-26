@@ -51,7 +51,7 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ variantId: string }> }
 ) {
-  const authCheck = await checkAdminAuth()
+  const authCheck = await checkAdminAuth('products:write')
   if (!authCheck.authorized) {
     return apiError(authCheck.error ?? 'Unauthorized', authCheck.status)
   }
@@ -134,7 +134,7 @@ export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ variantId: string }> }
 ) {
-  const authCheck = await checkAdminAuth()
+  const authCheck = await checkAdminAuth('products:write')
   if (!authCheck.authorized) {
     return apiError(authCheck.error ?? 'Unauthorized', authCheck.status)
   }

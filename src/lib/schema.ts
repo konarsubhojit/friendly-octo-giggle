@@ -17,6 +17,7 @@ import type { AdapterAccountType } from '@auth/core/adapters'
 import { generateShortId, generateOrderId } from './short-id'
 import { MONEY_DECIMAL_PLACES } from './money'
 import { PAYMENT_PROVIDERS } from './payments/providers'
+import { USER_ROLES } from './constants/roles'
 
 // ─── Money columns ───────────────────────────────────────
 // Monetary values are stored as exact decimals (never floating point) so that
@@ -34,7 +35,7 @@ const money = (name: string) =>
 
 // ─── Enums ───────────────────────────────────────────────
 
-export const userRoleEnum = pgEnum('UserRole', ['CUSTOMER', 'ADMIN'])
+export const userRoleEnum = pgEnum('UserRole', USER_ROLES)
 
 export const emailTypeEnum = pgEnum('EmailType', [
   'order_confirmation',
@@ -507,6 +508,8 @@ export const adminAuditLogs = pgTable(
     userId: text('userId')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
+    /** Role the actor held when the action was performed. */
+    role: userRoleEnum('role'),
     entity: text('entity').notNull(),
     entityId: text('entityId').notNull(),
     action: text('action').notNull(),

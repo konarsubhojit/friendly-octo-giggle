@@ -16,6 +16,7 @@ import { UsersTable } from '@/features/admin/components/UsersTable'
 import { CursorPaginationBar } from '@/components/ui/CursorPaginationBar'
 import { AdminSearchForm } from '@/features/admin/components/AdminSearchForm'
 import { useCursorPagination } from '@/hooks/useCursorPagination'
+import { isStaffRole, type UserRole } from '@/lib/constants/roles'
 
 interface AdminUser {
   readonly id: string
@@ -61,10 +62,7 @@ export default function UsersManagement() {
     transform: normalizeUser,
   })
 
-  const handleRoleChange = async (
-    userId: string,
-    newRole: 'ADMIN' | 'CUSTOMER'
-  ) => {
+  const handleRoleChange = async (userId: string, newRole: UserRole) => {
     setUpdatingUserId(userId)
     try {
       await dispatch(
@@ -107,7 +105,7 @@ export default function UsersManagement() {
       </>
     )
 
-  const adminCount = users.filter((user) => user.role === 'ADMIN').length
+  const staffCount = users.filter((user) => isStaffRole(user.role)).length
   const customerCount = users.filter((user) => user.role === 'CUSTOMER').length
 
   return (
@@ -134,9 +132,9 @@ export default function UsersManagement() {
           tone: 'sky',
         },
         {
-          label: 'Admins shown',
-          value: String(adminCount),
-          hint: 'Admins on current page.',
+          label: 'Staff shown',
+          value: String(staffCount),
+          hint: 'Admin, support and fulfilment accounts on current page.',
           tone: 'amber',
         },
         {

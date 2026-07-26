@@ -31,7 +31,7 @@ export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const authCheck = await checkAdminAuth()
+  const authCheck = await checkAdminAuth('products:read')
   if (!authCheck.authorized) {
     return apiError(authCheck.error ?? 'Unauthorized', authCheck.status)
   }
@@ -69,7 +69,7 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const authCheck = await checkAdminAuth()
+  const authCheck = await checkAdminAuth('products:write')
   if (!authCheck.authorized) {
     return apiError(authCheck.error ?? 'Unauthorized', authCheck.status)
   }

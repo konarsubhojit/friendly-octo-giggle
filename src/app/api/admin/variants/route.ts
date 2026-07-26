@@ -33,7 +33,7 @@ const findProduct = (productId: string) =>
   })
 
 export async function POST(request: NextRequest) {
-  const authCheck = await checkAdminAuth()
+  const authCheck = await checkAdminAuth('products:write')
   if (!authCheck.authorized) {
     return apiError(authCheck.error ?? 'Unauthorized', authCheck.status)
   }

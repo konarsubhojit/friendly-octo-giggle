@@ -84,7 +84,11 @@ describe('GET /api/admin/export/products', () => {
   })
 
   it('streams CSV with header + computed min price and total stock', async () => {
-    mockCheckAdminAuth.mockResolvedValue({ authorized: true, userId: 'admin' })
+    mockCheckAdminAuth.mockResolvedValue({
+      authorized: true,
+      role: 'ADMIN',
+      userId: 'admin',
+    })
     mockFindMany.mockResolvedValueOnce([product]).mockResolvedValueOnce([])
 
     const response = await GET()
@@ -106,7 +110,11 @@ describe('GET /api/admin/export/products', () => {
   })
 
   it('emits 0/0 for min price and stock when product has no variants', async () => {
-    mockCheckAdminAuth.mockResolvedValue({ authorized: true, userId: 'admin' })
+    mockCheckAdminAuth.mockResolvedValue({
+      authorized: true,
+      role: 'ADMIN',
+      userId: 'admin',
+    })
     mockFindMany
       .mockResolvedValueOnce([{ ...product, variants: [] }])
       .mockResolvedValueOnce([])
@@ -119,7 +127,11 @@ describe('GET /api/admin/export/products', () => {
   })
 
   it('streams only the header row when there are no products', async () => {
-    mockCheckAdminAuth.mockResolvedValue({ authorized: true, userId: 'admin' })
+    mockCheckAdminAuth.mockResolvedValue({
+      authorized: true,
+      role: 'ADMIN',
+      userId: 'admin',
+    })
     mockFindMany.mockResolvedValue([])
 
     const response = await GET()

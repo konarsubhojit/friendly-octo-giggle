@@ -135,6 +135,7 @@ describe('Admin Products API', () => {
       ]
       vi.mocked(checkAdminAuth).mockResolvedValue({
         authorized: true,
+        role: 'ADMIN',
         userId: 'a1',
       })
       mockFindMany.mockResolvedValue(mockProducts)
@@ -189,6 +190,7 @@ describe('Admin Products API', () => {
       ]
       vi.mocked(checkAdminAuth).mockResolvedValue({
         authorized: true,
+        role: 'ADMIN',
         userId: 'a1',
       })
       mockFindMany.mockResolvedValue(mockProducts)
@@ -226,6 +228,7 @@ describe('Admin Products API', () => {
       ]
       vi.mocked(checkAdminAuth).mockResolvedValue({
         authorized: true,
+        role: 'ADMIN',
         userId: 'a1',
       })
       mockFindMany.mockResolvedValue(mockProducts)
@@ -253,6 +256,7 @@ describe('Admin Products API', () => {
       ]
       vi.mocked(checkAdminAuth).mockResolvedValue({
         authorized: true,
+        role: 'ADMIN',
         userId: 'a1',
       })
       mockFindMany.mockResolvedValue(mockProducts)
@@ -268,6 +272,7 @@ describe('Admin Products API', () => {
     it('handles search with empty results', async () => {
       vi.mocked(checkAdminAuth).mockResolvedValue({
         authorized: true,
+        role: 'ADMIN',
         userId: 'a1',
       })
       mockFindMany.mockResolvedValue([])
@@ -284,6 +289,7 @@ describe('Admin Products API', () => {
     it('enforces limit constraints', async () => {
       vi.mocked(checkAdminAuth).mockResolvedValue({
         authorized: true,
+        role: 'ADMIN',
         userId: 'a1',
       })
       mockFindMany.mockResolvedValue([])
@@ -344,6 +350,7 @@ describe('Admin Products API', () => {
     it('returns 400 for invalid input (Zod validation)', async () => {
       vi.mocked(checkAdminAuth).mockResolvedValue({
         authorized: true,
+        role: 'ADMIN',
         userId: 'a1',
       })
       const invalidInput = { name: '' }
@@ -366,6 +373,7 @@ describe('Admin Products API', () => {
       }
       vi.mocked(checkAdminAuth).mockResolvedValue({
         authorized: true,
+        role: 'ADMIN',
         userId: 'a1',
       })
       mockCreate.mockResolvedValue(mockCreatedProduct)

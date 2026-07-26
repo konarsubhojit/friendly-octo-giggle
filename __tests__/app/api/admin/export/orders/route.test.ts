@@ -82,7 +82,11 @@ describe('GET /api/admin/export/orders', () => {
   })
 
   it('streams CSV with headers and order rows for admins', async () => {
-    mockCheckAdminAuth.mockResolvedValue({ authorized: true, userId: 'admin' })
+    mockCheckAdminAuth.mockResolvedValue({
+      authorized: true,
+      role: 'ADMIN',
+      userId: 'admin',
+    })
     mockFindMany.mockResolvedValueOnce([order]).mockResolvedValueOnce([])
 
     const response = await GET()
@@ -102,7 +106,11 @@ describe('GET /api/admin/export/orders', () => {
   })
 
   it('streams only the header row when there are no orders', async () => {
-    mockCheckAdminAuth.mockResolvedValue({ authorized: true, userId: 'admin' })
+    mockCheckAdminAuth.mockResolvedValue({
+      authorized: true,
+      role: 'ADMIN',
+      userId: 'admin',
+    })
     mockFindMany.mockResolvedValue([])
 
     const response = await GET()
@@ -113,7 +121,11 @@ describe('GET /api/admin/export/orders', () => {
   })
 
   it('escapes commas and quotes in customer fields', async () => {
-    mockCheckAdminAuth.mockResolvedValue({ authorized: true, userId: 'admin' })
+    mockCheckAdminAuth.mockResolvedValue({
+      authorized: true,
+      role: 'ADMIN',
+      userId: 'admin',
+    })
     mockFindMany
       .mockResolvedValueOnce([
         { ...order, customerName: 'Doe, John', customerEmail: 'a"b@x.com' },

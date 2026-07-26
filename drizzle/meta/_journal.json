@@ -64,6 +64,13 @@
       "when": 1785045263003,
       "tag": "0008_payment_provider_cod",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1785046562695,
+      "tag": "0009_granular_admin_roles",
+      "breakpoints": true
     }
   ]
 }

@@ -78,7 +78,11 @@ describe('GET /api/admin/export/users', () => {
   })
 
   it('streams CSV with users.csv attachment and user rows', async () => {
-    mockCheckAdminAuth.mockResolvedValue({ authorized: true, userId: 'admin' })
+    mockCheckAdminAuth.mockResolvedValue({
+      authorized: true,
+      role: 'ADMIN',
+      userId: 'admin',
+    })
     mockFindMany.mockResolvedValueOnce([user]).mockResolvedValueOnce([])
 
     const response = await GET()
@@ -95,7 +99,11 @@ describe('GET /api/admin/export/users', () => {
   })
 
   it('streams only the header row when there are no users', async () => {
-    mockCheckAdminAuth.mockResolvedValue({ authorized: true, userId: 'admin' })
+    mockCheckAdminAuth.mockResolvedValue({
+      authorized: true,
+      role: 'ADMIN',
+      userId: 'admin',
+    })
     mockFindMany.mockResolvedValue([])
 
     const response = await GET()

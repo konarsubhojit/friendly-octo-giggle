@@ -12,7 +12,7 @@ import { formatMoneyValue } from '@/lib/money'
 export const dynamic = 'force-dynamic'
 
 export const GET = async () => {
-  const authCheck = await checkAdminAuth()
+  const authCheck = await checkAdminAuth('orders:read')
   if (!authCheck.authorized) {
     return apiError(authCheck.error ?? 'Unauthorized', authCheck.status)
   }
