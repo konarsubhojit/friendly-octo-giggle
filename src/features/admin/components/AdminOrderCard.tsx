@@ -9,6 +9,7 @@ import {
   paymentStatusVariant,
 } from '@/components/ui/Badge'
 import { formatStructuredAddress } from '@/lib/address-utils'
+import { formatPriceForCurrency } from '@/lib/currency'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import {
@@ -72,6 +73,9 @@ interface AdminOrderCardProps {
   readonly refundingOrderId?: string | null
 }
 
+/** Refund amounts are entered and stored in the catalogue's base currency. */
+const BASE_CURRENCY = 'INR' as const
+
 /** Providers whose money never reached us, so there is nothing to refund. */
 const NON_REFUNDABLE_PROVIDERS = new Set(['COD'])
 
@@ -123,7 +127,7 @@ function RefundSection({ order, refunding, onRefund }: RefundSectionProps) {
         message={
           parsedAmount === undefined
             ? 'Refund the full remaining balance of this order to the customer?'
-            : `Refund ${parsedAmount} to the customer?`
+            : `Refund ${formatPriceForCurrency(parsedAmount, BASE_CURRENCY)} to the customer?`
         }
         confirmLabel="Yes, refund"
         variant="danger"
@@ -140,7 +144,7 @@ function RefundSection({ order, refunding, onRefund }: RefundSectionProps) {
             htmlFor={`refund-amount-${order.id}`}
             className="mb-1 block text-xs text-gray-500 dark:text-gray-400"
           >
-            Amount (blank refunds the full balance)
+            Amount in {BASE_CURRENCY} (blank refunds the full balance)
           </label>
           <input
             id={`refund-amount-${order.id}`}

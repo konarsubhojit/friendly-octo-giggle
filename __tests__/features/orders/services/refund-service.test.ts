@@ -256,6 +256,19 @@ describe('refundOrder', () => {
     expect(result.restocked).toBe(false)
   })
 
+  it('does not restock an order that has already shipped', async () => {
+    queueTransaction({
+      select: [[{ ...paidOrder, status: 'SHIPPED' }], []],
+      insert: [[{ id: 'ref1' }]],
+    })
+    queueTransaction({ update: [[], []] })
+
+    const result = await refundOrder({ orderId: 'order1' })
+
+    expect(result.refundableBalance).toBe(0)
+    expect(result.restocked).toBe(false)
+  })
+
   it('counts pending refunds against the refundable balance', async () => {
     queueTransaction({
       select: [[paidOrder], [{ amount: 70 }]],
@@ -363,6 +376,21 @@ describe('reconcileRefundWebhook', () => {
       'user1'
     )
     expect(mockPublishJSON).toHaveBeenCalled()
+  })
+
+  it('does not restock a shipped order from a refund webhook', async () => {
+    queueTransaction({
+      select: [
+        [{ ...paidOrder, status: 'SHIPPED' }],
+        [{ id: 'ref1', amount: 100, status: 'PENDING', reason: null }],
+        [{ amount: 100 }],
+      ],
+      update: [[], []],
+    })
+
+    const outcome = await reconcileRefundWebhook(webhook)
+
+    expect(outcome).toMatchObject({ isPartial: false, restocked: false })
   })
 
   it('ignores a repeated delivery for an already settled refund', async () => {

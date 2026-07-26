@@ -74,6 +74,13 @@ export interface RefundOrderResult {
   readonly restocked: boolean
 }
 
+/**
+ * Statuses where the goods are still in the warehouse, so a refund can safely
+ * return them to inventory. Once an order ships the stock has physically left,
+ * and it is only credited back when the parcel is received again.
+ */
+const RESTOCKABLE_STATUSES = new Set(['PENDING', 'PROCESSING', 'CANCELLED'])
+
 /** Gateway refund states mapped onto the persisted refund lifecycle. */
 const mapGatewayStatus = (status: string): RefundStatus => {
   const normalized = status.toLowerCase()
@@ -219,8 +226,9 @@ const markRefundFailed = async (
 /**
  * Persist the gateway outcome and, for a fully refunded order, return its stock.
  *
- * Delivered orders are never restocked automatically: the goods are with the
- * customer, so inventory is corrected by hand once they come back.
+ * Shipped and delivered orders are never restocked automatically: the goods
+ * have left the warehouse, so inventory is corrected by hand once they come
+ * back.
  */
 const settleRefund = async ({
   prepared,
@@ -249,7 +257,7 @@ const settleRefund = async ({
 
     if (
       prepared.refundableBalance > 0 ||
-      prepared.order.status === 'DELIVERED'
+      !RESTOCKABLE_STATUSES.has(prepared.order.status)
     ) {
       return false
     }
@@ -595,7 +603,7 @@ export const reconcileRefundWebhook = async (
       if (
         input.status === 'PROCESSED' &&
         !isPartial &&
-        order.status !== 'DELIVERED'
+        RESTOCKABLE_STATUSES.has(order.status)
       ) {
         const items = await tx
           .select({
