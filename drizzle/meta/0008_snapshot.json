@@ -1,6 +1,6 @@
 {
-  "id": "693a6af8-9893-4500-a58e-0e970083193c",
-  "prevId": "1dfc05cd-0a6c-4ec3-96f6-d9f5adb4efc9",
+  "id": "b056e10c-cd02-493a-b227-ab9dc2d52f85",
+  "prevId": "693a6af8-9893-4500-a58e-0e970083193c",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -3120,7 +3120,8 @@
       "name": "PaymentProvider",
       "schema": "public",
       "values": [
-        "RAZORPAY"
+        "RAZORPAY",
+        "COD"
       ]
     },
     "public.PaymentStatus": {

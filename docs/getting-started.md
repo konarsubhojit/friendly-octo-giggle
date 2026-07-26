@@ -46,7 +46,17 @@ GOOGLE_CLIENT_SECRET=your-client-secret
 
 # Vercel Blob (for image uploads)
 BLOB_READ_WRITE_TOKEN=your-vercel-blob-token
+
+# Web Push (optional — enables browser order notifications)
+# Generate once with: npx web-push generate-vapid-keys
+VAPID_PUBLIC_KEY=your-vapid-public-key
+VAPID_PRIVATE_KEY=your-vapid-private-key
+VAPID_SUBJECT=mailto:support@yourdomain.com
 ```
+
+Push notifications are optional. When the VAPID keys are unset the account
+notification centre reports push as unavailable and email delivery continues to
+work unchanged. See [Web push setup](./deployment.md#web-push-setup) for details.
 
 ### 3. Get Google OAuth Credentials
 

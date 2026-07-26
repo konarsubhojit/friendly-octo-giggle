@@ -92,6 +92,49 @@ export const users = pgTable('User', {
   updatedAt: timestamp('updatedAt', { mode: 'date' }).defaultNow().notNull(),
 })
 
+/**
+ * Per-user notification preference centre.
+ *
+ * One row per user; absent rows fall back to `DEFAULT_NOTIFICATION_PREFERENCES`
+ * in `features/account/services/notification-preferences.ts`.
+ */
+export const notificationPreferences = pgTable('NotificationPreference', {
+  userId: text('userId')
+    .primaryKey()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  transactionalEmail: boolean('transactionalEmail').notNull().default(true),
+  transactionalPush: boolean('transactionalPush').notNull().default(false),
+  transactionalSms: boolean('transactionalSms').notNull().default(false),
+  marketingEmail: boolean('marketingEmail').notNull().default(false),
+  marketingPush: boolean('marketingPush').notNull().default(false),
+  marketingSms: boolean('marketingSms').notNull().default(false),
+  createdAt: timestamp('createdAt', { mode: 'date' }).defaultNow().notNull(),
+  updatedAt: timestamp('updatedAt', { mode: 'date' }).defaultNow().notNull(),
+})
+
+/**
+ * Web Push subscriptions (RFC 8291) owned by a user.
+ * Endpoints are unique so re-subscribing the same browser updates in place.
+ */
+export const pushSubscriptions = pgTable(
+  'PushSubscription',
+  {
+    id: varchar('id', { length: 7 })
+      .primaryKey()
+      .$defaultFn(() => generateShortId()),
+    userId: text('userId')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    endpoint: text('endpoint').notNull().unique(),
+    p256dh: text('p256dh').notNull(),
+    auth: text('auth').notNull(),
+    userAgent: text('userAgent'),
+    createdAt: timestamp('createdAt', { mode: 'date' }).defaultNow().notNull(),
+    updatedAt: timestamp('updatedAt', { mode: 'date' }).defaultNow().notNull(),
+  },
+  (t) => [index('PushSubscription_userId_idx').on(t.userId)]
+)
+
 export const addresses = pgTable(
   'Address',
   {
@@ -641,7 +684,29 @@ export const usersRelations = relations(users, ({ many, one }) => ({
   wishlists: many(wishlists),
   reviewVotes: many(reviewVotes),
   adminAuditLogs: many(adminAuditLogs),
+  notificationPreference: one(notificationPreferences),
+  pushSubscriptions: many(pushSubscriptions),
 }))
+
+export const notificationPreferencesRelations = relations(
+  notificationPreferences,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [notificationPreferences.userId],
+      references: [users.id],
+    }),
+  })
+)
+
+export const pushSubscriptionsRelations = relations(
+  pushSubscriptions,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [pushSubscriptions.userId],
+      references: [users.id],
+    }),
+  })
+)
 
 export const addressesRelations = relations(addresses, ({ one }) => ({
   user: one(users, { fields: [addresses.userId], references: [users.id] }),

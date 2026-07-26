@@ -5,7 +5,7 @@ import { invalidateUserOrderCaches } from '@/lib/cache'
 import { CreateOrderInput, OrderItemInput } from '@/lib/types'
 import { logBusinessEvent, logError } from '@/lib/logger'
 import { multiplyMoney, sumMoney } from '@/lib/money'
-import { sendOrderConfirmationEmail } from '@/lib/email'
+import { notifyOrderConfirmation } from '@/lib/notifications/order-notifications'
 import type { OrderCreatedEvent } from '@/lib/qstash-events'
 import { getQStashClient } from '@/lib/qstash'
 import { env } from '@/lib/env'
@@ -501,7 +501,7 @@ export const dispatchOrderNotifications = async ({
         eventType: emailEvent.type,
       },
     })
-    sendOrderConfirmationEmail({
+    await notifyOrderConfirmation({
       to: hydratedOrder.customerEmail,
       customerName: hydratedOrder.customerName,
       orderId: hydratedOrder.id,

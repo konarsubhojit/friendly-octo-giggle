@@ -8,6 +8,8 @@ const {
   mockSendOrderStatusUpdateEmail,
   mockSaveFailedEmail,
   mockFindFirst,
+  mockUserFindFirst,
+  mockPreferencesFindFirst,
   mockIsNonRetriableError,
 } = vi.hoisted(() => ({
   mockVerify: vi.fn(),
@@ -16,6 +18,8 @@ const {
   mockSendOrderStatusUpdateEmail: vi.fn(),
   mockSaveFailedEmail: vi.fn().mockResolvedValue('mock-failed-id'),
   mockFindFirst: vi.fn(),
+  mockUserFindFirst: vi.fn(),
+  mockPreferencesFindFirst: vi.fn(),
   mockIsNonRetriableError: vi.fn().mockReturnValue(false),
 }))
 
@@ -58,6 +62,8 @@ vi.mock('@/lib/db', () => ({
       failedEmails: {
         findFirst: mockFindFirst,
       },
+      users: { findFirst: mockUserFindFirst },
+      notificationPreferences: { findFirst: mockPreferencesFindFirst },
     },
   },
 }))

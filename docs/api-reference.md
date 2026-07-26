@@ -57,6 +57,8 @@ Admin endpoints require authentication via NextAuth session with ADMIN role.
 - `/api/account` (GET, PATCH)
 - `/api/account/addresses` (GET, POST)
 - `/api/account/addresses/[id]` (PATCH, DELETE)
+- `/api/account/notifications` (GET, PATCH)
+- `/api/account/push-subscriptions` (POST, DELETE)
 - `/api/auth/change-password` (POST)
 - `/api/orders` (GET, POST)
 - `/api/orders/[id]` (GET)
@@ -108,6 +110,7 @@ Admin endpoints require authentication via NextAuth session with ADMIN role.
 - Checkout creation is idempotent and asynchronous: `POST /api/checkout` records a request and the queue consumer creates the order.
 - Payment providers sit behind the `PaymentGateway` interface (`src/lib/payments/`). `POST /api/checkout` accepts `payment.provider` values of `RAZORPAY` (with `orderId`, `paymentId` and `signature`) or `COD` (no gateway references — Cash on Delivery orders stay `PENDING` and settle to `PAID` when an admin marks them `DELIVERED`).
 - Optional Redis and search integrations fail open to database-backed behavior where supported.
+- Order notifications honour the per-user notification preferences on every send path. Web push requires VAPID keys; when they are absent push is skipped and email is unaffected.
 - Admin CSV, bulk mutation, category reorder, option generation, variant reorder, sales export, and search reindex endpoints require ADMIN authorization.
 
 ## Public APIs
@@ -414,6 +417,99 @@ curl -X POST https://your-domain.com/api/orders \
     "items": [{"productId": "Mn56oPq", "quantity": 2}]
   }'
 ```
+
+---
+
+### Notification preferences
+
+#### GET /api/account/notifications
+
+Returns the caller's notification preference centre state plus the public VAPID
+key needed to create a browser push subscription.
+
+**Authentication**: required (`401` when signed out)
+
+**Response**:
+
+```json
+{
+  "success": true,
+  "data": {
+    "preferences": {
+      "transactionalEmail": true,
+      "transactionalPush": false,
+      "transactionalSms": false,
+      "marketingEmail": false,
+      "marketingPush": false,
+      "marketingSms": false
+    },
+    "pushEnabled": true,
+    "vapidPublicKey": "BEl62i..."
+  }
+}
+```
+
+`pushEnabled` is `false` and `vapidPublicKey` is `null` when the deployment has
+no VAPID key pair configured. Users without saved preferences receive the
+defaults shown above: transactional email is on, every other channel is opt-in.
+
+#### PATCH /api/account/notifications
+
+Updates one or more channel toggles. At least one field is required.
+
+**Request Body**:
+
+```json
+{ "transactionalPush": true, "marketingEmail": false }
+```
+
+**Response**: the merged preference object, in the same shape as `GET`.
+
+**Errors**:
+
+- `400`: empty or invalid payload
+- `401`: not authenticated
+
+### Push subscriptions
+
+#### POST /api/account/push-subscriptions
+
+Registers (or refreshes) the calling browser's push subscription. Send the
+result of `PushSubscription.toJSON()`. Re-posting the same endpoint updates the
+stored keys, which is how the service worker recovers from
+`pushsubscriptionchange`.
+
+**Request Body**:
+
+```json
+{
+  "endpoint": "https://fcm.googleapis.com/fcm/send/abc123",
+  "keys": { "p256dh": "BNc...", "auth": "k9d..." }
+}
+```
+
+**Status**: `201 Created`
+
+**Errors**:
+
+- `400`: malformed payload or a non-HTTPS endpoint
+- `401`: not authenticated
+
+#### DELETE /api/account/push-subscriptions
+
+Removes a subscription the user revoked. Scoped to the caller, so one user
+cannot delete another user's subscription.
+
+**Request Body**:
+
+```json
+{ "endpoint": "https://fcm.googleapis.com/fcm/send/abc123" }
+```
+
+**Status**: `200 OK`
+
+Expired subscriptions do not need an explicit delete: endpoints that the push
+service reports as `404`/`410` during delivery are pruned automatically.
 
 ---
 
