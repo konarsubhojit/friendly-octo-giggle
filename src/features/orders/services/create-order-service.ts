@@ -4,7 +4,12 @@ import { invalidateCache } from '@/lib/redis'
 import { invalidateUserOrderCaches } from '@/lib/cache'
 import { CreateOrderInput, OrderItemInput } from '@/lib/types'
 import { logBusinessEvent, logError } from '@/lib/logger'
-import { multiplyMoney, sumMoney } from '@/lib/money'
+import {
+  calculateOrderTotals,
+  type OrderTotals,
+  type PricedOrderItem,
+} from './order-pricing'
+import { toShippingMethod } from '@/lib/shipping'
 import { notifyOrderConfirmation } from '@/lib/notifications/order-notifications'
 import type { OrderCreatedEvent } from '@/lib/qstash-events'
 import { getQStashClient } from '@/lib/qstash'
@@ -30,7 +35,12 @@ import {
 type ProductWithVariants = {
   id: string
   name: string
-  variants: Array<{ id: string; price: number; stock: number }>
+  variants: Array<{
+    id: string
+    price: number
+    stock: number
+    weightGrams?: number | null
+  }>
 }
 
 type ValidationResult =
@@ -49,7 +59,7 @@ type ValidationResult =
   | { valid: false; error: string; status: number; reason: string }
 
 type StockCheckResult =
-  | { valid: true; totalAmount: number }
+  | { valid: true; pricedItems: PricedOrderItem[] }
   | {
       valid: false
       error: string
@@ -195,10 +205,20 @@ const validateCustomerInfo = (
   }
 }
 
+type ItemStockCheckResult =
+  | { valid: true; pricedItem: PricedOrderItem }
+  | {
+      valid: false
+      error: string
+      status: number
+      reason: string
+      details?: Record<string, unknown>
+    }
+
 const checkStockForItem = (
   item: OrderItemInput,
   product: ProductWithVariants
-): StockCheckResult => {
+): ItemStockCheckResult => {
   const variant = product.variants.find((v) => v.id === item.variantId)
   if (!variant) {
     return {
@@ -226,14 +246,21 @@ const checkStockForItem = (
     }
   }
 
-  return { valid: true, totalAmount: multiplyMoney(price, item.quantity) }
+  return {
+    valid: true,
+    pricedItem: {
+      price,
+      quantity: item.quantity,
+      weightGrams: variant.weightGrams ?? null,
+    },
+  }
 }
 
 const validateStockAndCalculateTotal = (
   items: OrderItemInput[],
   productList: ProductWithVariants[]
 ): StockCheckResult => {
-  const lineTotals: number[] = []
+  const pricedItems: PricedOrderItem[] = []
   const productMap = new Map(
     productList.map((product) => [product.id, product])
   )
@@ -253,10 +280,10 @@ const validateStockAndCalculateTotal = (
     if (!result.valid) {
       return result
     }
-    lineTotals.push(result.totalAmount)
+    pricedItems.push(result.pricedItem)
   }
 
-  return { valid: true, totalAmount: sumMoney(lineTotals) }
+  return { valid: true, pricedItems }
 }
 
 const sanitizeCustomizationNote = (
@@ -380,7 +407,7 @@ export const persistOrder = async ({
   userId,
   customerDetails,
   productList,
-  totalAmount,
+  totals,
   verifiedPayment,
   checkoutRequestId,
 }: {
@@ -388,7 +415,7 @@ export const persistOrder = async ({
   userId: string
   customerDetails: Extract<ValidationResult, { valid: true }>
   productList: ProductWithVariants[]
-  totalAmount: number
+  totals: OrderTotals
   verifiedPayment?: VerifiedPayment | null
   checkoutRequestId?: string
 }) => {
@@ -417,7 +444,11 @@ export const persistOrder = async ({
         state: customerDetails.state || null,
       },
       checkoutRequestId: checkoutRequestId ?? null,
-      totalAmount,
+      subtotalAmount: totals.subtotal,
+      shippingAmount: totals.shipping.amount,
+      taxAmount: totals.tax.amount,
+      shippingMethod: totals.shipping.method,
+      totalAmount: totals.total,
       verifiedPayment,
       items: buildOrderItemValues(body.items, productList),
     })
@@ -660,12 +691,21 @@ export const createOrderForUser = async ({
       stockResult.details
     )
   }
-  const totalAmount = (
-    stockResult as Extract<StockCheckResult, { valid: true }>
-  ).totalAmount
+  const { pricedItems } = stockResult as Extract<
+    StockCheckResult,
+    { valid: true }
+  >
+  const totals = calculateOrderTotals({
+    items: pricedItems,
+    destination: {
+      state: customerDetails.state,
+      pinCode: customerDetails.pinCode,
+    },
+    shippingMethod: toShippingMethod(body.shippingMethod),
+  })
   const verifiedPayment = await verifyPaymentForOrder({
     payment: body.payment,
-    expectedAmount: totalAmount,
+    expectedAmount: totals.total,
     reference: checkoutRequestId,
   })
   if (verifiedPayment) {
@@ -676,7 +716,7 @@ export const createOrderForUser = async ({
     userId: user.id,
     customerDetails,
     productList,
-    totalAmount,
+    totals,
     verifiedPayment,
     checkoutRequestId,
   })

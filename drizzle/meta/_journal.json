@@ -71,6 +71,13 @@
       "when": 1785046562695,
       "tag": "0009_granular_admin_roles",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1785047423992,
+      "tag": "0010_shipping_tax_engine",
+      "breakpoints": true
     }
   ]
 }

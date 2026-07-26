@@ -38,6 +38,8 @@ import { serializeProduct, serializeVariant } from './serializers'
 import { CONFIRMED_ORDER_STATUSES } from './constants/order-statuses'
 import { isPaymentProvider } from './payments/providers'
 import type { VerifiedPayment } from './payments/gateway'
+import type { ShippingMethodName } from './shipping/methods'
+import { toShippingMethod } from './shipping/methods'
 
 // ─── Shared error types ──────────────────────────────────
 
@@ -802,6 +804,10 @@ export const db = {
         state: string | null
       }
       checkoutRequestId: string | null
+      subtotalAmount: number
+      shippingAmount: number
+      taxAmount: number
+      shippingMethod: ShippingMethodName
       totalAmount: number
       verifiedPayment?: VerifiedPayment | null
       items: Array<{
@@ -827,6 +833,10 @@ export const db = {
             city: input.customerDetails.city,
             state: input.customerDetails.state,
             checkoutRequestId: input.checkoutRequestId,
+            subtotalAmount: input.subtotalAmount,
+            shippingAmount: input.shippingAmount,
+            taxAmount: input.taxAmount,
+            shippingMethod: input.shippingMethod,
             totalAmount: input.totalAmount,
             status: 'PENDING',
             // A verified payment that has not settled yet (e.g. Cash on
@@ -1039,6 +1049,7 @@ export const db = {
       city: string
       state: string
       items: CheckoutRequestItemRecord[]
+      shippingMethod?: string | null
       paymentProvider?: string | null
       paymentOrderId?: string | null
       paymentTransactionId?: string | null
@@ -1059,6 +1070,7 @@ export const db = {
           city: values.city,
           state: values.state,
           items: values.items,
+          shippingMethod: toShippingMethod(values.shippingMethod),
           paymentProvider: isPaymentProvider(values.paymentProvider)
             ? values.paymentProvider
             : null,

@@ -242,14 +242,8 @@ export default function CheckoutPaymentPage() {
             </h2>
             <div className="rounded-2xl bg-[var(--accent-blush)]/40 p-4">
               <CartPricingSummary
-                itemCount={pricingSummary.itemCount}
-                subtotal={formatPrice(pricingSummary.subtotal)}
-                shipping={
-                  pricingSummary.shippingAmount === 0
-                    ? 'Free'
-                    : formatPrice(pricingSummary.shippingAmount)
-                }
-                total={formatPrice(pricingSummary.total)}
+                summary={pricingSummary}
+                formatPrice={formatPrice}
               />
             </div>
           </section>

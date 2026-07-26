@@ -17,6 +17,7 @@ import type { AdapterAccountType } from '@auth/core/adapters'
 import { generateShortId, generateOrderId } from './short-id'
 import { MONEY_DECIMAL_PLACES } from './money'
 import { PAYMENT_PROVIDERS } from './payments/providers'
+import { SHIPPING_METHODS } from './shipping/methods'
 import { USER_ROLES } from './constants/roles'
 
 // ─── Money columns ───────────────────────────────────────
@@ -70,6 +71,8 @@ export const paymentStatusEnum = pgEnum('PaymentStatus', [
 ])
 
 export const paymentProviderEnum = pgEnum('PaymentProvider', PAYMENT_PROVIDERS)
+
+export const shippingMethodEnum = pgEnum('ShippingMethod', SHIPPING_METHODS)
 
 // ─── Auth Tables (NextAuth compatible) ───────────────────
 
@@ -323,6 +326,8 @@ export const productVariants = pgTable(
     sku: text('sku'),
     price: money('price').notNull(),
     stock: integer('stock').notNull(),
+    /** Shipping weight of one unit; null falls back to the engine default. */
+    weightGrams: integer('weightGrams'),
     image: text('image'),
     images: json('images').$type<string[]>().default([]).notNull(),
     sortOrder: integer('sortOrder').notNull().default(0),
@@ -381,6 +386,7 @@ export const checkoutRequests = pgTable(
     city: text('city'),
     state: text('state'),
     items: json('items').$type<CheckoutRequestItemRecord[]>().notNull(),
+    shippingMethod: shippingMethodEnum('shippingMethod'),
     paymentProvider: paymentProviderEnum('paymentProvider'),
     paymentOrderId: text('paymentOrderId'),
     paymentTransactionId: text('paymentTransactionId'),
@@ -420,6 +426,10 @@ export const orders = pgTable(
       () => checkoutRequests.id,
       { onDelete: 'set null' }
     ),
+    subtotalAmount: money('subtotalAmount').default(0).notNull(),
+    shippingAmount: money('shippingAmount').default(0).notNull(),
+    taxAmount: money('taxAmount').default(0).notNull(),
+    shippingMethod: shippingMethodEnum('shippingMethod'),
     totalAmount: money('totalAmount').notNull(),
     paymentStatus: paymentStatusEnum('paymentStatus')
       .default('PENDING')

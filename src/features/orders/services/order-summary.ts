@@ -1,3 +1,11 @@
+import { sumMoney } from '@/lib/money'
+import {
+  quoteShipping,
+  type ShippingDestination,
+  type ShippingMethodName,
+} from '@/lib/shipping'
+import { calculateTax } from '@/lib/tax'
+
 interface ProductSummaryItem {
   readonly quantity?: number
   readonly product?: {
@@ -14,6 +22,7 @@ interface CheckoutPriceItem {
     readonly name?: string
     readonly sku?: string | null
     readonly price: number
+    readonly weightGrams?: number | null
   } | null
   readonly customizationNote?: string | null
 }
@@ -25,26 +34,80 @@ export interface CheckoutSummaryLineItem {
   readonly unitPrice: number
   readonly lineTotal: number
   readonly customizationNote: string | null
+  readonly weightGrams: number | null
+}
+
+/**
+ * Delivery context needed to price shipping and tax. Omitted on the cart page,
+ * where the destination is still unknown.
+ */
+export interface CheckoutPricingContext {
+  readonly destination?:
+    | (ShippingDestination & {
+        readonly country?: string | null
+      })
+    | null
+  readonly shippingMethod?: string | null
 }
 
 export interface CheckoutPricingSummary {
   readonly itemCount: number
   readonly subtotal: number
   readonly shippingAmount: number
+  readonly taxAmount: number
   readonly total: number
+  /** Null until a destination is known (shipping is quoted at checkout). */
+  readonly shippingMethod: ShippingMethodName | null
+  /** False while the destination is unknown, so the UI can say "calculated at checkout". */
+  readonly shippingQuoted: boolean
+  readonly freeShippingApplied: boolean
 }
 
 function buildCheckoutPricingSummaryFromDerivedItems(
-  lineItems: readonly CheckoutSummaryLineItem[]
+  lineItems: readonly CheckoutSummaryLineItem[],
+  context: CheckoutPricingContext = {}
 ): CheckoutPricingSummary {
-  const subtotal = lineItems.reduce((sum, item) => sum + item.lineTotal, 0)
+  const subtotal = sumMoney(lineItems.map((item) => item.lineTotal))
   const itemCount = lineItems.reduce((sum, item) => sum + item.quantity, 0)
+  const destination = context.destination
+
+  if (!destination) {
+    return {
+      itemCount,
+      subtotal,
+      shippingAmount: 0,
+      taxAmount: 0,
+      total: subtotal,
+      shippingMethod: null,
+      shippingQuoted: false,
+      freeShippingApplied: false,
+    }
+  }
+
+  const shipping = quoteShipping({
+    destination,
+    items: lineItems.map((item) => ({
+      quantity: item.quantity,
+      weightGrams: item.weightGrams,
+    })),
+    subtotal,
+    method: context.shippingMethod,
+  })
+  const tax = calculateTax({
+    subtotal,
+    shippingAmount: shipping.amount,
+    destination,
+  })
 
   return {
     itemCount,
     subtotal,
-    shippingAmount: 0,
-    total: subtotal,
+    shippingAmount: shipping.amount,
+    taxAmount: tax.amount,
+    total: sumMoney([subtotal, shipping.amount, tax.amount]),
+    shippingMethod: shipping.method,
+    shippingQuoted: true,
+    freeShippingApplied: shipping.freeShippingApplied,
   }
 }
 
@@ -106,20 +169,23 @@ export function buildCheckoutSummaryLineItems(
       unitPrice,
       lineTotal: unitPrice * quantity,
       customizationNote: item.customizationNote ?? null,
+      weightGrams: item.variant?.weightGrams ?? null,
     }
   })
 }
 
 export function buildCheckoutPricingSummary(
-  items: readonly CheckoutPriceItem[]
+  items: readonly CheckoutPriceItem[],
+  context?: CheckoutPricingContext
 ): CheckoutPricingSummary {
   const lineItems = buildCheckoutSummaryLineItems(items)
 
-  return buildCheckoutPricingSummaryFromDerivedItems(lineItems)
+  return buildCheckoutPricingSummaryFromDerivedItems(lineItems, context)
 }
 
 export function buildCheckoutPricingSummaryFromLineItems(
-  lineItems: readonly CheckoutSummaryLineItem[]
+  lineItems: readonly CheckoutSummaryLineItem[],
+  context?: CheckoutPricingContext
 ): CheckoutPricingSummary {
-  return buildCheckoutPricingSummaryFromDerivedItems(lineItems)
+  return buildCheckoutPricingSummaryFromDerivedItems(lineItems, context)
 }
