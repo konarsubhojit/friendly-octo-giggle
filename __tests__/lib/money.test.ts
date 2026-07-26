@@ -36,7 +36,9 @@ describe('toMinorUnits', () => {
 
   it('rejects non-finite amounts', () => {
     expect(() => toMinorUnits(Number.NaN)).toThrow(MoneyRangeError)
-    expect(() => toMinorUnits(Number.POSITIVE_INFINITY)).toThrow(MoneyRangeError)
+    expect(() => toMinorUnits(Number.POSITIVE_INFINITY)).toThrow(
+      MoneyRangeError
+    )
   })
 
   it('rejects amounts outside the safe integer range', () => {
