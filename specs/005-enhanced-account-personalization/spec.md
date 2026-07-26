@@ -5,9 +5,11 @@
 **Status**: Draft  
 **Input**: User description: "Feature Suggestions: Enhanced Account, Wishlist, and Personalization"
 
-## Current Implementation Snapshot (2026-07-12)
+## Current Implementation Snapshot (2026-07-26)
 
-Shipped scope includes a persistent authenticated wishlist, account overview/recent orders, explicit profile/password edit modes, reusable addresses, guest-cart merge, recently viewed products, and persisted currency/locale preferences. The storefront supports INR/USD/EUR/GBP display and English/Spanish routes. Notification-center and sale/stock subscription concepts remain future scope unless separately implemented.
+Shipped scope includes a persistent authenticated wishlist, account overview/recent orders, explicit profile/password edit modes, reusable addresses, guest-cart merge, recently viewed products, and persisted currency/locale preferences. The storefront supports INR/USD/EUR/GBP display and English/Spanish routes.
+
+A notification preference centre now ships in the account area, covering transactional and marketing messaging across the email, browser-push, and SMS/WhatsApp channels (`NotificationPreference`). Order confirmations and status changes fan out through a single dispatcher that honours those preferences on every send path, including the QStash worker and its direct fallbacks. Web push for order-status changes is delivered through the PWA service worker using VAPID (`PushSubscription`), with grant, revoke, and expiry handled per device; push is skipped when VAPID keys are unconfigured. The SMS/WhatsApp channel is captured as a stored preference only — no SMS provider is wired yet. Sale/stock subscription alerts (back-in-stock, price-drop) and an in-app notification timeline remain future scope.
 
 ## User Scenarios & Testing _(mandatory)_
 
@@ -108,7 +110,7 @@ Guest users who authenticate are guided through cart merge decisions, and out-of
 - **FR-002**: System MUST expose account dashboard sections for order history, wishlist management, and address book.
 - **FR-003**: System MUST render personalized homepage modules for logged-in users (recommendations, trends, quick reorder).
 - **FR-004**: System MUST support per-user preferred currency and apply it consistently to product/cart/checkout pricing.
-- **FR-005**: System MUST support in-app and email notification channels with user-level preference controls.
+- **FR-005**: System MUST support in-app and email notification channels with user-level preference controls. _(Email and web-push channels with a preference centre are implemented; the in-app timeline remains outstanding.)_
 - **FR-006**: System MUST support back-in-stock and price-drop subscriptions at product level.
 - **FR-007**: System MUST execute background jobs for notification delivery, retry, and deduplication.
 - **FR-008**: System MUST provide a clear guest-to-user cart merge prompt and preserve user-selected merge outcome.
@@ -123,6 +125,8 @@ Guest users who authenticate are guided through cart merge decisions, and out-of
 - **AccountProfile**: User account aggregate containing preferences, addresses, and dashboard summary links.
 - **UserCurrencyPreference**: Per-user preferred display currency and last-confirmed exchange snapshot.
 - **PersonalizationSignal**: Derived behavior data (orders, views, wishlist interactions) used by recommendation modules.
+- **NotificationPreference** _(implemented)_: Per-user transactional/marketing toggles for the email, push, and SMS channels; unsaved users fall back to defaults (transactional email on, everything else opt-in).
+- **PushSubscription** _(implemented)_: Web Push endpoint and keys per user device, pruned automatically when the push service reports the endpoint as gone.
 - **NotificationSubscription**: Product/event-level alert preferences (back-in-stock, price-drop, promos, order updates).
 - **NotificationEvent**: Delivery-ready event payload for in-app/email channels with dedupe keys and status.
 - **CartMergeDecision**: Persisted record of guest-to-user merge choice and resulting cart reconciliation.

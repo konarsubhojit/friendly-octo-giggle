@@ -149,10 +149,12 @@ Current schema highlights:
 - `Wishlist` and `Review`: user engagement features.
 - `ProductShare`: immutable short-link mapping for shareable product URLs.
 - `FailedEmail`: retry queue and delivery history for email workflows.
+- `NotificationPreference`: per-user transactional/marketing toggles for the email, push, and SMS channels. Missing rows fall back to code defaults.
+- `PushSubscription`: Web Push endpoints and keys per user/device, unique on `endpoint`.
 
 ### Relationship Model
 
-- Users have many orders, accounts, password history rows, and wishlist entries.
+- Users have many orders, accounts, password history rows, wishlist entries, and push subscriptions, plus at most one notification preference row.
 - Products have many variants, order items, cart items, wishlist entries, and reviews.
 - Orders own their line items via cascade delete.
 - Carts own cart items via cascade delete.
@@ -328,7 +330,29 @@ The current flow is:
 3. The route optionally verifies the QStash signature.
 4. It validates the payload with Zod.
 5. It prevents duplicate sends by checking `FailedEmail` for already-sent records of the same reference.
-6. It dispatches either order confirmation or order status update email logic.
+6. It dispatches either order confirmation or order status update logic through `lib/notifications/order-notifications.ts`.
+
+### Notification Fan-out and Preferences
+
+`lib/notifications/order-notifications.ts` is the single fan-out point for order
+notifications and is used by the QStash worker as well as the direct fallbacks in
+order creation and admin status updates. For every send it:
+
+1. Resolves the recipient from the customer email. Guests (no user row) keep the
+   defaults, so receipts still reach them while marketing stays opt-in.
+2. Sends the email only when the transactional email channel is enabled, logging
+   `notification_suppressed_by_preference` otherwise.
+3. Sends Web Push only for signed-in recipients that enabled the push channel.
+
+### Web Push
+
+Push uses the PWA service worker (`public/sw.js`), which handles `push`,
+`notificationclick`, and `pushsubscriptionchange`. Delivery requires a VAPID key
+pair (`VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, optional `VAPID_SUBJECT`); when
+unset, push is skipped and email delivery is unaffected. Subscriptions are
+per-device, stored in `PushSubscription`, and endpoints the push service reports
+as `404`/`410` are deleted so revoked/expired grants do not accumulate. Push
+failures never block the email path.
 
 ### Email Providers
 
