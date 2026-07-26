@@ -71,14 +71,23 @@ SELECT drizzle.ensure_public_enum(
 ALTER TYPE public."PaymentProvider" ADD VALUE IF NOT EXISTS 'COD';
 
 SELECT drizzle.ensure_public_enum(
+  'ShippingMethod',
+  'CREATE TYPE public."ShippingMethod" AS ENUM (''STANDARD'', ''EXPRESS'')'
+);
+
+SELECT drizzle.ensure_public_enum(
   'PaymentStatus',
   'CREATE TYPE public."PaymentStatus" AS ENUM (''PENDING'', ''PAID'', ''FAILED'', ''REFUNDED'')'
 );
 
 SELECT drizzle.ensure_public_enum(
   'UserRole',
-  'CREATE TYPE public."UserRole" AS ENUM (''CUSTOMER'', ''ADMIN'')'
+  'CREATE TYPE public."UserRole" AS ENUM (''CUSTOMER'', ''ADMIN'', ''SUPPORT'', ''FULFILMENT'')'
 );
+
+-- Widen an existing enum created before the granular staff roles were added.
+ALTER TYPE public."UserRole" ADD VALUE IF NOT EXISTS 'SUPPORT';
+ALTER TYPE public."UserRole" ADD VALUE IF NOT EXISTS 'FULFILMENT';
 
 -- ─── Tables ──────────────────────────────────────────────
 
@@ -433,6 +442,7 @@ ALTER TABLE public."Address" ADD COLUMN IF NOT EXISTS "updatedAt" timestamp with
 
 ALTER TABLE public."AdminAuditLog" ADD COLUMN IF NOT EXISTS "diff" json DEFAULT '{}'::json NOT NULL;
 ALTER TABLE public."AdminAuditLog" ADD COLUMN IF NOT EXISTS "createdAt" timestamp without time zone DEFAULT now() NOT NULL;
+ALTER TABLE public."AdminAuditLog" ADD COLUMN IF NOT EXISTS "role" "UserRole";
 
 ALTER TABLE public."Cart" ADD COLUMN IF NOT EXISTS "userId" text;
 ALTER TABLE public."Cart" ADD COLUMN IF NOT EXISTS "sessionId" text;
@@ -461,6 +471,7 @@ ALTER TABLE public."CheckoutRequest" ADD COLUMN IF NOT EXISTS "paymentProvider" 
 ALTER TABLE public."CheckoutRequest" ADD COLUMN IF NOT EXISTS "paymentOrderId" text;
 ALTER TABLE public."CheckoutRequest" ADD COLUMN IF NOT EXISTS "paymentTransactionId" text;
 ALTER TABLE public."CheckoutRequest" ADD COLUMN IF NOT EXISTS "paymentSignature" text;
+ALTER TABLE public."CheckoutRequest" ADD COLUMN IF NOT EXISTS "shippingMethod" "ShippingMethod";
 
 ALTER TABLE public."FailedEmail" ADD COLUMN IF NOT EXISTS "attemptCount" integer DEFAULT 0 NOT NULL;
 ALTER TABLE public."FailedEmail" ADD COLUMN IF NOT EXISTS "lastError" text;
@@ -490,6 +501,11 @@ ALTER TABLE public."Order" ADD COLUMN IF NOT EXISTS "paymentOrderId" text;
 ALTER TABLE public."Order" ADD COLUMN IF NOT EXISTS "paymentTransactionId" text;
 ALTER TABLE public."Order" ADD COLUMN IF NOT EXISTS "amountPaid" numeric(12,2) DEFAULT 0 NOT NULL;
 ALTER TABLE public."Order" ADD COLUMN IF NOT EXISTS "paidAt" timestamp without time zone;
+ALTER TABLE public."Order" ADD COLUMN IF NOT EXISTS "subtotalAmount" numeric(12,2) DEFAULT 0 NOT NULL;
+ALTER TABLE public."Order" ADD COLUMN IF NOT EXISTS "shippingAmount" numeric(12,2) DEFAULT 0 NOT NULL;
+ALTER TABLE public."Order" ADD COLUMN IF NOT EXISTS "taxAmount" numeric(12,2) DEFAULT 0 NOT NULL;
+ALTER TABLE public."Order" ADD COLUMN IF NOT EXISTS "shippingMethod" "ShippingMethod";
+UPDATE public."Order" SET "subtotalAmount" = "totalAmount" WHERE "subtotalAmount" = 0;
 
 ALTER TABLE public."OrderItem" ADD COLUMN IF NOT EXISTS "customizationNote" text;
 
@@ -516,6 +532,7 @@ ALTER TABLE public."ProductVariant" ADD COLUMN IF NOT EXISTS "sortOrder" integer
 ALTER TABLE public."ProductVariant" ADD COLUMN IF NOT EXISTS "deletedAt" timestamp without time zone;
 ALTER TABLE public."ProductVariant" ADD COLUMN IF NOT EXISTS "createdAt" timestamp without time zone DEFAULT now() NOT NULL;
 ALTER TABLE public."ProductVariant" ADD COLUMN IF NOT EXISTS "updatedAt" timestamp without time zone DEFAULT now() NOT NULL;
+ALTER TABLE public."ProductVariant" ADD COLUMN IF NOT EXISTS "weightGrams" integer;
 
 ALTER TABLE public."Review" ADD COLUMN IF NOT EXISTS "orderId" character varying(10);
 ALTER TABLE public."Review" ADD COLUMN IF NOT EXISTS "userId" text;
@@ -1610,11 +1627,25 @@ WHERE NOT EXISTS (
   SELECT 1 FROM drizzle.__drizzle_migrations WHERE created_at = 1785045263003
 );
 
--- 0009_petite_junta
+-- 0009_granular_admin_roles
 INSERT INTO drizzle.__drizzle_migrations (hash, created_at)
-SELECT '76ff64f78229f467e0006468d24255a17e15996245bd16625a21781e20fc5c3a', 1785046310302
+SELECT '4ac2fb43b8ded0b2862f03678e39d302bbd0a60fbf28ca6e8cf0dd4a20d94f59', 1785046562695
 WHERE NOT EXISTS (
-  SELECT 1 FROM drizzle.__drizzle_migrations WHERE created_at = 1785046310302
+  SELECT 1 FROM drizzle.__drizzle_migrations WHERE created_at = 1785046562695
+);
+
+-- 0010_shipping_tax_engine
+INSERT INTO drizzle.__drizzle_migrations (hash, created_at)
+SELECT '417d443ac3cadb43492f3ac5f3f58dffc7d0a8d7eb86056662ff2a0684dbb685', 1785047423992
+WHERE NOT EXISTS (
+  SELECT 1 FROM drizzle.__drizzle_migrations WHERE created_at = 1785047423992
+);
+
+-- 0011_coupon_engine
+INSERT INTO drizzle.__drizzle_migrations (hash, created_at)
+SELECT '76ff64f78229f467e0006468d24255a17e15996245bd16625a21781e20fc5c3a', 1785050938241
+WHERE NOT EXISTS (
+  SELECT 1 FROM drizzle.__drizzle_migrations WHERE created_at = 1785050938241
 );
 
 DROP FUNCTION drizzle.ensure_public_enum(text, text);

@@ -85,6 +85,7 @@ describe('PUT /api/admin/products/[id]', () => {
   it('returns 404 when product not found', async () => {
     mockCheckAdminAuth.mockResolvedValue({
       authorized: true,
+      role: 'ADMIN',
       userId: 'a1',
     } as never)
     mockProductsUpdate.mockResolvedValue(null)
@@ -107,6 +108,7 @@ describe('PUT /api/admin/products/[id]', () => {
   it('updates product successfully', async () => {
     mockCheckAdminAuth.mockResolvedValue({
       authorized: true,
+      role: 'ADMIN',
       userId: 'a1',
     } as never)
     const updatedProduct = {
@@ -146,6 +148,7 @@ describe('PUT /api/admin/products/[id]', () => {
   it('returns 400 for invalid input', async () => {
     mockCheckAdminAuth.mockResolvedValue({
       authorized: true,
+      role: 'ADMIN',
       userId: 'a1',
     } as never)
 
@@ -213,6 +216,7 @@ describe('DELETE /api/admin/products/[id]', () => {
   it('returns 404 when product not found', async () => {
     mockCheckAdminAuth.mockResolvedValue({
       authorized: true,
+      role: 'ADMIN',
       userId: 'a1',
     } as never)
     mockProductsDelete.mockResolvedValue(false)
@@ -233,6 +237,7 @@ describe('DELETE /api/admin/products/[id]', () => {
   it('deletes product successfully', async () => {
     mockCheckAdminAuth.mockResolvedValue({
       authorized: true,
+      role: 'ADMIN',
       userId: 'a1',
     } as never)
     mockProductsDelete.mockResolvedValue(true)

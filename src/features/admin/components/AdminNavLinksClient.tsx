@@ -4,12 +4,15 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { createPortal } from 'react-dom'
+import type { AdminPermission } from '@/lib/constants/roles'
 
 interface NavItem {
   readonly href: string
   readonly label: string
   readonly badge?: number
   readonly keywords?: readonly string[]
+  /** Permission required to see this entry; omitted entries are always shown. */
+  readonly permission?: AdminPermission
 }
 
 interface NavGroup {
@@ -20,6 +23,7 @@ interface NavGroup {
 
 interface AdminNavLinksClientProps {
   readonly failedEmailCount: number
+  readonly permissions: readonly AdminPermission[]
 }
 
 const NAV_GROUPS: readonly NavGroup[] = [
@@ -34,11 +38,13 @@ const NAV_GROUPS: readonly NavGroup[] = [
         href: '/admin/products',
         label: 'Products',
         keywords: ['inventory', 'stock', 'items'],
+        permission: 'products:read',
       },
       {
         href: '/admin/categories',
         label: 'Categories',
         keywords: ['tags', 'groups'],
+        permission: 'products:write',
       },
     ],
   },
@@ -49,21 +55,25 @@ const NAV_GROUPS: readonly NavGroup[] = [
         href: '/admin/orders',
         label: 'Orders',
         keywords: ['purchases', 'transactions', 'sales'],
+        permission: 'orders:read',
       },
       {
         href: '/admin/users',
         label: 'Users',
         keywords: ['customers', 'accounts', 'people'],
+        permission: 'users:read',
       },
       {
         href: '/admin/reviews',
         label: 'Reviews',
         keywords: ['ratings', 'feedback'],
+        permission: 'reviews:moderate',
       },
       {
         href: '/admin/coupons',
         label: 'Coupons',
         keywords: ['discount', 'promotion', 'promo', 'voucher'],
+        permission: 'coupons:manage',
       },
     ],
   },
@@ -74,24 +84,45 @@ const NAV_GROUPS: readonly NavGroup[] = [
         href: '/admin/search',
         label: 'Search',
         keywords: ['reindex', 'indexing'],
+        permission: 'system:manage',
       },
       {
         href: '/admin/email-failures',
         label: 'Email Failures',
         keywords: ['notifications', 'errors', 'emails'],
+        permission: 'system:manage',
       },
       {
         href: '/admin/checkout-requests',
         label: 'Checkout Queue',
         keywords: ['checkout', 'queue', 'orders', 'worker'],
+        permission: 'orders:read',
       },
     ],
   },
 ]
 
-function getAllNavItems(failedEmailCount: number): NavItem[] {
+/**
+ * Drop nav entries the current role cannot use, and any group left empty, so
+ * staff never see a link that would bounce them back to the dashboard.
+ */
+function getVisibleNavGroups(
+  permissions: readonly AdminPermission[]
+): NavGroup[] {
+  return NAV_GROUPS.map((group) => ({
+    ...group,
+    items: group.items?.filter(
+      (item) => !item.permission || permissions.includes(item.permission)
+    ),
+  })).filter((group) => Boolean(group.href) || (group.items?.length ?? 0) > 0)
+}
+
+function getAllNavItems(
+  groups: readonly NavGroup[],
+  failedEmailCount: number
+): NavItem[] {
   const items: NavItem[] = []
-  for (const group of NAV_GROUPS) {
+  for (const group of groups) {
     if (group.href) {
       items.push({ href: group.href, label: group.label })
     }
@@ -249,10 +280,12 @@ function CommandPalette({
   open,
   onClose,
   failedEmailCount,
+  groups,
 }: {
   readonly open: boolean
   readonly onClose: () => void
   readonly failedEmailCount: number
+  readonly groups: readonly NavGroup[]
 }) {
   const router = useRouter()
   const [query, setQuery] = useState('')
@@ -260,8 +293,8 @@ function CommandPalette({
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [prevOpen, setPrevOpen] = useState(open)
   const allItems = useMemo(
-    () => getAllNavItems(failedEmailCount),
-    [failedEmailCount]
+    () => getAllNavItems(groups, failedEmailCount),
+    [groups, failedEmailCount]
   )
 
   const filtered = useMemo(() => {
@@ -401,8 +434,13 @@ function CommandPalette({
 
 export function AdminNavLinksClient({
   failedEmailCount,
+  permissions,
 }: AdminNavLinksClientProps) {
   const [paletteOpen, setPaletteOpen] = useState(false)
+  const visibleGroups = useMemo(
+    () => getVisibleNavGroups(permissions),
+    [permissions]
+  )
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -422,7 +460,7 @@ export function AdminNavLinksClient({
           <div className="flex items-center gap-3 py-3">
             <div className="min-w-0 flex-1 overflow-x-auto">
               <div className="flex min-w-max items-center gap-3 whitespace-nowrap pr-2 sm:gap-4">
-                {NAV_GROUPS.map((group) =>
+                {visibleGroups.map((group) =>
                   group.href ? (
                     <Link
                       key={group.label}
@@ -477,6 +515,7 @@ export function AdminNavLinksClient({
         open={paletteOpen}
         onClose={() => setPaletteOpen(false)}
         failedEmailCount={failedEmailCount}
+        groups={visibleGroups}
       />
     </>
   )

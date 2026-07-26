@@ -1,11 +1,11 @@
 import { and, eq, isNull } from 'drizzle-orm'
-import { notFound, redirect } from 'next/navigation'
+import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { AdminPageShell } from '@/features/admin/components/AdminPageShell'
 import ProductEditPageForm from '@/features/admin/components/ProductEditPageForm'
 import VariantList from '@/features/admin/components/VariantList'
 import OptionManager from '@/features/admin/components/OptionManager'
-import { auth } from '@/lib/auth'
+import { requireAdminPermission } from '@/features/admin/services/admin-page-auth'
 import { drizzleDb } from '@/lib/db'
 import { products } from '@/lib/schema'
 import { serializeVariant } from '@/lib/serializers'
@@ -17,10 +17,7 @@ interface PageProps {
 }
 
 export default async function AdminProductEditFormPage({ params }: PageProps) {
-  const session = await auth()
-  if (session?.user?.role !== 'ADMIN') {
-    redirect('/auth/signin')
-  }
+  await requireAdminPermission('products:write', '/admin/products')
 
   const { id } = await params
 

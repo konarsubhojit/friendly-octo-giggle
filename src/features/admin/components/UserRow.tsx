@@ -3,6 +3,7 @@
 import { UserAvatar } from '@/features/admin/components/UserAvatar'
 import { RoleBadge } from '@/features/admin/components/RoleBadge'
 import { RoleAction } from '@/features/admin/components/RoleAction'
+import type { UserRole } from '@/lib/constants/roles'
 
 interface AdminUser {
   readonly id: string
@@ -17,7 +18,7 @@ interface AdminUser {
 interface UserRowProps {
   readonly user: AdminUser
   readonly updatingUserId: string | null
-  readonly onRoleChange: (userId: string, newRole: 'ADMIN' | 'CUSTOMER') => void
+  readonly onRoleChange: (userId: string, newRole: UserRole) => void
 }
 
 export function UserRow({ user, updatingUserId, onRoleChange }: UserRowProps) {

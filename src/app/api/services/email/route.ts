@@ -3,6 +3,7 @@ import { apiError, apiSuccess } from '@/lib/api-utils'
 import { getQStashReceiver } from '@/lib/qstash'
 import { QStashEmailEventSchema } from '@/lib/qstash-events'
 import type { z } from 'zod'
+import { getShippingMethodLabel } from '@/lib/shipping/methods'
 import {
   notifyOrderConfirmation,
   notifyOrderStatusUpdate,
@@ -60,6 +61,21 @@ const dispatchEmail = async (event: QStashEvent): Promise<void> => {
       to: event.data.customerEmail,
       customerName: event.data.customerName,
       orderId: event.data.orderId,
+      subtotalAmount:
+        event.data.subtotalAmount === undefined
+          ? null
+          : formatPriceForCurrency(event.data.subtotalAmount, currency),
+      shippingAmount:
+        event.data.shippingAmount === undefined
+          ? null
+          : formatPriceForCurrency(event.data.shippingAmount, currency),
+      taxAmount:
+        event.data.taxAmount === undefined
+          ? null
+          : formatPriceForCurrency(event.data.taxAmount, currency),
+      shippingMethodLabel: event.data.shippingMethod
+        ? getShippingMethodLabel(event.data.shippingMethod)
+        : null,
       totalAmount: formatPriceForCurrency(event.data.totalAmount, currency),
       discountAmount: event.data.discountAmount
         ? formatPriceForCurrency(event.data.discountAmount, currency)

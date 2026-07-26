@@ -4,7 +4,17 @@ import { invalidateCache } from '@/lib/redis'
 import { invalidateUserOrderCaches } from '@/lib/cache'
 import { CreateOrderInput, OrderItemInput } from '@/lib/types'
 import { logBusinessEvent, logError } from '@/lib/logger'
-import { multiplyMoney, sumMoney } from '@/lib/money'
+import { roundMoney } from '@/lib/money'
+import {
+  calculateOrderTotals,
+  type OrderTotals,
+  type PricedOrderItem,
+} from './order-pricing'
+import {
+  getShippingMethodLabel,
+  toShippingMethod,
+  type ShippingMethodName,
+} from '@/lib/shipping'
 import { notifyOrderConfirmation } from '@/lib/notifications/order-notifications'
 import type { OrderCreatedEvent } from '@/lib/qstash-events'
 import { getQStashClient } from '@/lib/qstash'
@@ -37,7 +47,12 @@ type ProductWithVariants = {
   id: string
   name: string
   category: string
-  variants: Array<{ id: string; price: number; stock: number }>
+  variants: Array<{
+    id: string
+    price: number
+    stock: number
+    weightGrams?: number | null
+  }>
 }
 
 type ValidationResult =
@@ -56,7 +71,7 @@ type ValidationResult =
   | { valid: false; error: string; status: number; reason: string }
 
 type StockCheckResult =
-  | { valid: true; totalAmount: number }
+  | { valid: true; pricedItems: PricedOrderItem[] }
   | {
       valid: false
       error: string
@@ -84,6 +99,10 @@ interface HydratedOrder {
   customerName: string
   customerEmail: string
   customerAddress: string
+  subtotalAmount: number
+  shippingAmount: number
+  taxAmount: number
+  shippingMethod: ShippingMethodName | null
   totalAmount: number
   discountAmount: number
   couponCode: string | null
@@ -204,10 +223,20 @@ const validateCustomerInfo = (
   }
 }
 
+type ItemStockCheckResult =
+  | { valid: true; pricedItem: PricedOrderItem }
+  | {
+      valid: false
+      error: string
+      status: number
+      reason: string
+      details?: Record<string, unknown>
+    }
+
 const checkStockForItem = (
   item: OrderItemInput,
   product: ProductWithVariants
-): StockCheckResult => {
+): ItemStockCheckResult => {
   const variant = product.variants.find((v) => v.id === item.variantId)
   if (!variant) {
     return {
@@ -235,14 +264,21 @@ const checkStockForItem = (
     }
   }
 
-  return { valid: true, totalAmount: multiplyMoney(price, item.quantity) }
+  return {
+    valid: true,
+    pricedItem: {
+      price,
+      quantity: item.quantity,
+      weightGrams: variant.weightGrams ?? null,
+    },
+  }
 }
 
 const validateStockAndCalculateTotal = (
   items: OrderItemInput[],
   productList: ProductWithVariants[]
 ): StockCheckResult => {
-  const lineTotals: number[] = []
+  const pricedItems: PricedOrderItem[] = []
   const productMap = new Map(
     productList.map((product) => [product.id, product])
   )
@@ -262,10 +298,10 @@ const validateStockAndCalculateTotal = (
     if (!result.valid) {
       return result
     }
-    lineTotals.push(result.totalAmount)
+    pricedItems.push(result.pricedItem)
   }
 
-  return { valid: true, totalAmount: sumMoney(lineTotals) }
+  return { valid: true, pricedItems }
 }
 
 const sanitizeCustomizationNote = (
@@ -389,6 +425,7 @@ export const persistOrder = async ({
   userId,
   customerDetails,
   productList,
+  totals,
   totalAmount,
   discountAmount = 0,
   appliedCoupons = [],
@@ -399,6 +436,8 @@ export const persistOrder = async ({
   userId: string
   customerDetails: Extract<ValidationResult, { valid: true }>
   productList: ProductWithVariants[]
+  totals: OrderTotals
+  /** Amount actually charged: the order totals minus any coupon discount. */
   totalAmount: number
   discountAmount?: number
   appliedCoupons?: readonly AppliedCoupon[]
@@ -430,6 +469,10 @@ export const persistOrder = async ({
         state: customerDetails.state || null,
       },
       checkoutRequestId: checkoutRequestId ?? null,
+      subtotalAmount: totals.subtotal,
+      shippingAmount: totals.shipping.amount,
+      taxAmount: totals.tax.amount,
+      shippingMethod: totals.shipping.method,
       totalAmount,
       discountAmount,
       appliedCoupons: appliedCoupons.map((applied) => ({
@@ -490,6 +533,10 @@ export const dispatchOrderNotifications = async ({
       customerEmail: hydratedOrder.customerEmail,
       customerName: hydratedOrder.customerName,
       customerAddress: hydratedOrder.customerAddress,
+      subtotalAmount: hydratedOrder.subtotalAmount,
+      shippingAmount: hydratedOrder.shippingAmount,
+      taxAmount: hydratedOrder.taxAmount,
+      shippingMethod: hydratedOrder.shippingMethod ?? undefined,
       totalAmount: hydratedOrder.totalAmount,
       discountAmount: hydratedOrder.discountAmount || undefined,
       couponCode: hydratedOrder.couponCode,
@@ -529,6 +576,18 @@ export const dispatchOrderNotifications = async ({
       to: hydratedOrder.customerEmail,
       customerName: hydratedOrder.customerName,
       orderId: hydratedOrder.id,
+      subtotalAmount: formatPriceForCurrency(
+        hydratedOrder.subtotalAmount,
+        currencyCode
+      ),
+      shippingAmount: formatPriceForCurrency(
+        hydratedOrder.shippingAmount,
+        currencyCode
+      ),
+      taxAmount: formatPriceForCurrency(hydratedOrder.taxAmount, currencyCode),
+      shippingMethodLabel: hydratedOrder.shippingMethod
+        ? getShippingMethodLabel(hydratedOrder.shippingMethod)
+        : null,
       totalAmount: formatPriceForCurrency(
         hydratedOrder.totalAmount,
         currencyCode
@@ -673,10 +732,12 @@ const resolveOrderDiscount = async ({
   body,
   userId,
   productList,
+  shippingAmount,
 }: {
   body: CreateOrderInput
   userId: string
   productList: ProductWithVariants[]
+  shippingAmount: number
 }) => {
   const productMap = new Map(
     productList.map((product) => [product.id, product])
@@ -703,6 +764,7 @@ const resolveOrderDiscount = async ({
       codes,
       items: discountItems,
       userId,
+      shippingAmount,
     })
   } catch (error) {
     if (isCouponError(error)) {
@@ -739,14 +801,31 @@ export const createOrderForUser = async ({
       stockResult.details
     )
   }
+  const { pricedItems } = stockResult as Extract<
+    StockCheckResult,
+    { valid: true }
+  >
+  const totals = calculateOrderTotals({
+    items: pricedItems,
+    destination: {
+      state: customerDetails.state,
+      pinCode: customerDetails.pinCode,
+    },
+    shippingMethod: toShippingMethod(body.shippingMethod),
+  })
   // Discounts are always recomputed here from the coupon code plus
   // database-priced line items — a client-supplied total is never trusted.
   const discount = await resolveOrderDiscount({
     body,
     userId: user.id,
     productList,
+    shippingAmount: totals.shipping.amount,
   })
-  const totalAmount = discount.total
+  // The discount can never push the charged amount below zero.
+  const totalAmount = Math.max(
+    0,
+    roundMoney(totals.total - discount.discountAmount)
+  )
   const verifiedPayment = await verifyPaymentForOrder({
     payment: body.payment,
     expectedAmount: totalAmount,
@@ -760,6 +839,7 @@ export const createOrderForUser = async ({
     userId: user.id,
     customerDetails,
     productList,
+    totals,
     totalAmount,
     discountAmount: discount.discountAmount,
     appliedCoupons: discount.appliedCoupons,

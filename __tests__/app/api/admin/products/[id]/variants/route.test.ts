@@ -7,7 +7,11 @@ const mockReturning = vi.fn()
 const mockValues = vi.fn()
 
 const { mockCheckAdminAuth } = vi.hoisted(() => ({
-  mockCheckAdminAuth: vi.fn(async () => ({ authorized: true, userId: 'a1' })),
+  mockCheckAdminAuth: vi.fn(async () => ({
+    authorized: true,
+    role: 'ADMIN',
+    userId: 'a1',
+  })),
 }))
 
 vi.mock('@/lib/db', () => ({
@@ -111,7 +115,11 @@ describe('GET /api/admin/products/[id]/variants', () => {
 
   beforeEach(async () => {
     vi.resetAllMocks()
-    mockCheckAdminAuth.mockResolvedValue({ authorized: true, userId: 'a1' })
+    mockCheckAdminAuth.mockResolvedValue({
+      authorized: true,
+      role: 'ADMIN',
+      userId: 'a1',
+    })
     const mod = await import('@/app/api/admin/products/[id]/variants/route')
     GET = mod.GET
   })
@@ -182,7 +190,11 @@ describe('POST /api/admin/products/[id]/variants', () => {
 
   beforeEach(async () => {
     vi.resetAllMocks()
-    mockCheckAdminAuth.mockResolvedValue({ authorized: true, userId: 'a1' })
+    mockCheckAdminAuth.mockResolvedValue({
+      authorized: true,
+      role: 'ADMIN',
+      userId: 'a1',
+    })
     const mod = await import('@/app/api/admin/products/[id]/variants/route')
     POST = mod.POST
   })

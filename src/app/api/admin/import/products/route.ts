@@ -29,7 +29,7 @@ interface RowIssue {
 const REQUIRED_HEADERS = ['name', 'description', 'image', 'category'] as const
 
 export const POST = async (request: Request) => {
-  const authCheck = await checkAdminAuth()
+  const authCheck = await checkAdminAuth('products:write')
   if (!authCheck.authorized) {
     return apiError(authCheck.error ?? 'Unauthorized', authCheck.status)
   }
@@ -111,6 +111,7 @@ export const POST = async (request: Request) => {
 
     await recordAdminAuditLog({
       userId: authCheck.userId,
+      role: authCheck.role,
       entity: 'product',
       entityId: `import:${new Date().toISOString()}`,
       action: 'csv_import_commit',

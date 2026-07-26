@@ -2,6 +2,7 @@ import { drizzleDb } from '@/lib/db'
 import { failedEmails } from '@/lib/schema'
 import { inArray, count } from 'drizzle-orm'
 import { AdminNavLinksClient } from './AdminNavLinksClient'
+import { getRolePermissions, type UserRole } from '@/lib/constants/roles'
 
 const fetchFailedEmailCount = async (): Promise<number> => {
   try {
@@ -15,8 +16,17 @@ const fetchFailedEmailCount = async (): Promise<number> => {
   }
 }
 
-export async function AdminNavLinks() {
+interface AdminNavLinksProps {
+  readonly role: UserRole
+}
+
+export async function AdminNavLinks({ role }: AdminNavLinksProps) {
   const failedCount = await fetchFailedEmailCount()
 
-  return <AdminNavLinksClient failedEmailCount={failedCount} />
+  return (
+    <AdminNavLinksClient
+      failedEmailCount={failedCount}
+      permissions={getRolePermissions(role)}
+    />
+  )
 }

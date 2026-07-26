@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { SHORT_ID_REGEX, EMAIL_REGEX } from '@/lib/validations/primitives'
 import { StructuredAddressSchema } from '@/features/orders/validations'
 import { PaymentReferenceSchema } from '@/lib/validations/payment'
+import { SHIPPING_METHODS } from '@/lib/shipping/methods'
 
 export const AddToCartSchema = z.object({
   productId: z.string().regex(SHORT_ID_REGEX, 'Invalid product ID'),
@@ -54,6 +55,7 @@ export const SubmitCheckoutSchema = z.object({
     .array(CheckoutOrderItemSchema)
     .min(1, 'At least one item is required'),
   couponCode: CouponCodeSchema.optional(),
+  shippingMethod: z.enum(SHIPPING_METHODS).optional(),
   payment: CheckoutPaymentSchema.optional(),
 })
 

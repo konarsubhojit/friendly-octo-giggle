@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic'
 
 /** Coupon usage / redemption report shown alongside the sales analytics. */
 export async function GET() {
-  const authCheck = await checkAdminAuth()
+  const authCheck = await checkAdminAuth('coupons:manage')
   if (!authCheck.authorized) {
     return apiError(authCheck.error, authCheck.status)
   }

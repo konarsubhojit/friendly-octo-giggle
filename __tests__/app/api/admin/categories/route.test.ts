@@ -56,7 +56,7 @@ describe('admin/categories API', () => {
       const body = await response.json()
 
       expect(response.status).toBe(403)
-      expect(body.error).toBe('Not authorized')
+      expect(body.error).toBe('Not authorized - Admin access required')
     })
 
     it('returns categories for admin users', async () => {

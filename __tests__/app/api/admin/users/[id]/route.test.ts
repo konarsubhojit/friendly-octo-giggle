@@ -27,14 +27,19 @@ vi.mock('@/lib/cache', () => ({
   invalidateAdminUserCaches: vi.fn(),
 }))
 vi.mock('@/lib/logger', () => ({ logError: vi.fn() }))
+vi.mock('@/features/admin/services/admin-audit-log', () => ({
+  recordAdminAuditLog: vi.fn(),
+}))
 
 import { primaryDrizzleDb } from '@/lib/db'
 import { auth } from '@/lib/auth'
 import { cacheAdminUserById, invalidateAdminUserCaches } from '@/lib/cache'
+import { recordAdminAuditLog } from '@/features/admin/services/admin-audit-log'
 
 const mockAuth = vi.mocked(auth)
 const mockCacheAdminUserById = vi.mocked(cacheAdminUserById)
 const mockInvalidateAdminUserCaches = vi.mocked(invalidateAdminUserCaches)
+const mockRecordAdminAuditLog = vi.mocked(recordAdminAuditLog)
 
 const adminSession = { user: { id: 'admin1', role: 'ADMIN' } }
 
@@ -105,6 +110,15 @@ describe('PATCH /api/admin/users/[id]', () => {
     expect(res.status).toBe(200)
     expect(data.data.user).toEqual(updatedUser)
     expect(primaryDrizzleDb.update).toHaveBeenCalled()
+    expect(mockRecordAdminAuditLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'admin1',
+        role: 'ADMIN',
+        entity: 'user',
+        entityId: 'user1',
+        action: 'role_change',
+      })
+    )
     expect(mockInvalidateAdminUserCaches).toHaveBeenCalledWith('user1')
   })
 })

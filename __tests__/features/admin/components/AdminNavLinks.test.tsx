@@ -35,7 +35,7 @@ describe('AdminNavLinks', () => {
       }),
     } as never)
 
-    const Component = await AdminNavLinks()
+    const Component = await AdminNavLinks({ role: 'ADMIN' })
     render(Component)
 
     expect(screen.getByTestId('admin-nav-links-client')).toBeInTheDocument()
@@ -51,7 +51,7 @@ describe('AdminNavLinks', () => {
       }),
     } as never)
 
-    const Component = await AdminNavLinks()
+    const Component = await AdminNavLinks({ role: 'ADMIN' })
     render(Component)
 
     expect(screen.getByTestId('failed-email-count')).toHaveTextContent('0')
@@ -66,7 +66,7 @@ describe('AdminNavLinks', () => {
       }),
     } as never)
 
-    const Component = await AdminNavLinks()
+    const Component = await AdminNavLinks({ role: 'ADMIN' })
     render(Component)
 
     // Should default to 0 on error
@@ -82,7 +82,7 @@ describe('AdminNavLinks', () => {
       }),
     } as never)
 
-    const Component = await AdminNavLinks()
+    const Component = await AdminNavLinks({ role: 'ADMIN' })
     render(Component)
 
     expect(screen.getByTestId('failed-email-count')).toHaveTextContent('0')

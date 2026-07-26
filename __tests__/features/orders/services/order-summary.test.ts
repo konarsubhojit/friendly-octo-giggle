@@ -126,6 +126,7 @@ describe('order-summary', () => {
           unitPrice: 100,
           lineTotal: 200,
           customizationNote: null,
+          weightGrams: null,
         },
       ])
     })
@@ -215,7 +216,11 @@ describe('order-summary', () => {
         itemCount: 0,
         subtotal: 0,
         shippingAmount: 0,
+        taxAmount: 0,
         total: 0,
+        shippingMethod: null,
+        shippingQuoted: false,
+        freeShippingApplied: false,
       })
     })
 
@@ -265,7 +270,11 @@ describe('order-summary', () => {
         itemCount: 0,
         subtotal: 0,
         shippingAmount: 0,
+        taxAmount: 0,
         total: 0,
+        shippingMethod: null,
+        shippingQuoted: false,
+        freeShippingApplied: false,
       })
     })
 
@@ -278,6 +287,7 @@ describe('order-summary', () => {
           unitPrice: 100,
           lineTotal: 200,
           customizationNote: null,
+          weightGrams: null,
         },
         {
           name: 'Gadget',
@@ -286,6 +296,7 @@ describe('order-summary', () => {
           unitPrice: 50,
           lineTotal: 50,
           customizationNote: null,
+          weightGrams: null,
         },
       ]
 

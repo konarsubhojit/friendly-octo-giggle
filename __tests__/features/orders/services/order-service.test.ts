@@ -406,7 +406,10 @@ describe('order-service', () => {
             },
           ] as never
         )
-      ).toEqual({ valid: true, totalAmount: 150 })
+      ).toEqual({
+        valid: true,
+        pricedItems: [{ price: 75, quantity: 2, weightGrams: null }],
+      })
 
       expect(
         priceAndValidateStock(
@@ -468,7 +471,27 @@ describe('order-service', () => {
               variants: [{ id: 'v1', price: 100, stock: 1 }],
             },
           ] as never,
-          totalAmount: 100,
+          totals: {
+            subtotal: 100,
+            shipping: {
+              method: 'STANDARD',
+              zone: 'NATIONAL',
+              amount: 69,
+              billableWeightGrams: 250,
+              freeShippingApplied: false,
+              freeShippingThreshold: 1499,
+              estimatedDays: 7,
+            },
+            tax: {
+              regime: 'GST',
+              rate: 0.05,
+              taxableAmount: 169,
+              amount: 8.45,
+              components: [{ name: 'IGST', rate: 0.05, amount: 8.45 }],
+            },
+            total: 177.45,
+          },
+          totalAmount: 177.45,
           verifiedPayment: {
             provider: 'RAZORPAY',
             paymentOrderId: 'order_123',
@@ -513,6 +536,10 @@ describe('order-service', () => {
           customerName: 'Test User',
           customerEmail: 'test@example.com',
           customerAddress: '123 St',
+          subtotalAmount: 200,
+          shippingAmount: 0,
+          taxAmount: 0,
+          shippingMethod: 'STANDARD',
           totalAmount: 200,
           discountAmount: 0,
           couponCode: null,
@@ -864,7 +891,8 @@ describe('order-service', () => {
       expect(result.order.id).toBe('ord_cod')
       expect(mockVerifyCheckoutPayment).toHaveBeenCalledWith({
         payment: { provider: 'COD' },
-        expectedAmount: 100,
+        // Merchandise 100 + national standard shipping 69 + 5% GST 8.45
+        expectedAmount: 177.45,
         reference: 'chk123',
       })
       expect(mockDbOrdersCreateWithItems).toHaveBeenCalledWith(
@@ -1233,13 +1261,15 @@ describe('order-service', () => {
         await createOrderForUser({ body: couponBody, user: testUser })
 
         expect(mockDbCouponsFindManyByCodes).toHaveBeenCalledWith(['SAVE10'])
-        // Subtotal 200 less a 10% coupon; the client never supplies a total.
+        // Subtotal 200 plus shipping 69 and 5% tax (13.45), less a 10% coupon
+        // on the merchandise (20); the client never supplies a total.
         expect(mockVerifyCheckoutPayment).toHaveBeenCalledWith(
-          expect.objectContaining({ expectedAmount: 180 })
+          expect.objectContaining({ expectedAmount: 262.45 })
         )
         expect(mockDbOrdersCreateWithItems).toHaveBeenCalledWith(
           expect.objectContaining({
-            totalAmount: 180,
+            subtotalAmount: 200,
+            totalAmount: 262.45,
             discountAmount: 20,
             appliedCoupons: [
               expect.objectContaining({ couponId: 'cpn0001', code: 'SAVE10' }),

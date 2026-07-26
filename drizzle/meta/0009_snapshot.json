@@ -1,5 +1,5 @@
 {
-  "id": "579c9018-a746-480a-a71c-c0862670c870",
+  "id": "8d2371be-7ed5-43e4-8005-5eb3a3369791",
   "prevId": "b056e10c-cd02-493a-b227-ab9dc2d52f85",
   "version": "7",
   "dialect": "postgresql",
@@ -277,6 +277,13 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "role": {
+          "name": "role",
+          "type": "UserRole",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
         },
         "entity": {
           "name": "entity",
@@ -758,12 +765,6 @@
           "primaryKey": false,
           "notNull": true
         },
-        "couponCode": {
-          "name": "couponCode",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
         "paymentProvider": {
           "name": "paymentProvider",
           "type": "PaymentProvider",
@@ -897,321 +898,6 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.CouponRedemption": {
-      "name": "CouponRedemption",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "varchar(7)",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "couponId": {
-          "name": "couponId",
-          "type": "varchar(7)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "userId": {
-          "name": "userId",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "orderId": {
-          "name": "orderId",
-          "type": "varchar(10)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "discountAmount": {
-          "name": "discountAmount",
-          "type": "numeric(12, 2)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "createdAt": {
-          "name": "createdAt",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "CouponRedemption_couponId_idx": {
-          "name": "CouponRedemption_couponId_idx",
-          "columns": [
-            {
-              "expression": "couponId",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "CouponRedemption_userId_idx": {
-          "name": "CouponRedemption_userId_idx",
-          "columns": [
-            {
-              "expression": "userId",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "CouponRedemption_createdAt_idx": {
-          "name": "CouponRedemption_createdAt_idx",
-          "columns": [
-            {
-              "expression": "createdAt",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "CouponRedemption_couponId_Coupon_id_fk": {
-          "name": "CouponRedemption_couponId_Coupon_id_fk",
-          "tableFrom": "CouponRedemption",
-          "tableTo": "Coupon",
-          "columnsFrom": [
-            "couponId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "CouponRedemption_userId_User_id_fk": {
-          "name": "CouponRedemption_userId_User_id_fk",
-          "tableFrom": "CouponRedemption",
-          "tableTo": "User",
-          "columnsFrom": [
-            "userId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        },
-        "CouponRedemption_orderId_Order_id_fk": {
-          "name": "CouponRedemption_orderId_Order_id_fk",
-          "tableFrom": "CouponRedemption",
-          "tableTo": "Order",
-          "columnsFrom": [
-            "orderId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "CouponRedemption_couponId_orderId_key": {
-          "name": "CouponRedemption_couponId_orderId_key",
-          "nullsNotDistinct": false,
-          "columns": [
-            "couponId",
-            "orderId"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.Coupon": {
-      "name": "Coupon",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "varchar(7)",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "code": {
-          "name": "code",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "description": {
-          "name": "description",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "discountType": {
-          "name": "discountType",
-          "type": "DiscountType",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "discountValue": {
-          "name": "discountValue",
-          "type": "numeric(12, 2)",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "maxDiscountAmount": {
-          "name": "maxDiscountAmount",
-          "type": "numeric(12, 2)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "minCartValue": {
-          "name": "minCartValue",
-          "type": "numeric(12, 2)",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "scopedCategories": {
-          "name": "scopedCategories",
-          "type": "json",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'[]'::json"
-        },
-        "scopedProductIds": {
-          "name": "scopedProductIds",
-          "type": "json",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'[]'::json"
-        },
-        "usageLimit": {
-          "name": "usageLimit",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "perUserLimit": {
-          "name": "perUserLimit",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "usageCount": {
-          "name": "usageCount",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "stackable": {
-          "name": "stackable",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "isActive": {
-          "name": "isActive",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": true
-        },
-        "startsAt": {
-          "name": "startsAt",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "endsAt": {
-          "name": "endsAt",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "createdAt": {
-          "name": "createdAt",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updatedAt": {
-          "name": "updatedAt",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "Coupon_isActive_idx": {
-          "name": "Coupon_isActive_idx",
-          "columns": [
-            {
-              "expression": "isActive",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "Coupon_endsAt_idx": {
-          "name": "Coupon_endsAt_idx",
-          "columns": [
-            {
-              "expression": "endsAt",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "Coupon_code_unique": {
-          "name": "Coupon_code_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "code"
-          ]
-        }
-      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -1732,25 +1418,6 @@
           "primaryKey": false,
           "notNull": true
         },
-        "discountAmount": {
-          "name": "discountAmount",
-          "type": "numeric(12, 2)",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "couponId": {
-          "name": "couponId",
-          "type": "varchar(7)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "couponCode": {
-          "name": "couponCode",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
         "paymentStatus": {
           "name": "paymentStatus",
           "type": "PaymentStatus",
@@ -1908,19 +1575,6 @@
           "tableTo": "CheckoutRequest",
           "columnsFrom": [
             "checkoutRequestId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        },
-        "Order_couponId_Coupon_id_fk": {
-          "name": "Order_couponId_Coupon_id_fk",
-          "tableFrom": "Order",
-          "tableTo": "Coupon",
-          "columnsFrom": [
-            "couponId"
           ],
           "columnsTo": [
             "id"
@@ -3441,16 +3095,6 @@
         "FAILED"
       ]
     },
-    "public.DiscountType": {
-      "name": "DiscountType",
-      "schema": "public",
-      "values": [
-        "PERCENTAGE",
-        "FIXED_AMOUNT",
-        "FREE_SHIPPING",
-        "BOGO"
-      ]
-    },
     "public.EmailType": {
       "name": "EmailType",
       "schema": "public",
@@ -3502,7 +3146,9 @@
       "schema": "public",
       "values": [
         "CUSTOMER",
-        "ADMIN"
+        "ADMIN",
+        "SUPPORT",
+        "FULFILMENT"
       ]
     }
   },

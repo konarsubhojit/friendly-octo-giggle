@@ -162,7 +162,7 @@ export const PATCH = async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) => {
-  const authCheck = await checkAdminAuth()
+  const authCheck = await checkAdminAuth('orders:update')
   if (!authCheck.authorized) {
     return apiError(authCheck.error ?? 'Unauthorized', authCheck.status)
   }
@@ -253,7 +253,7 @@ export const GET = async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) => {
-  const authCheck = await checkAdminAuth()
+  const authCheck = await checkAdminAuth('orders:read')
   if (!authCheck.authorized) {
     return apiError(authCheck.error ?? 'Unknown error', authCheck.status)
   }

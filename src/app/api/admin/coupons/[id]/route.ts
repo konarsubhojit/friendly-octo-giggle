@@ -21,7 +21,7 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const authCheck = await checkAdminAuth()
+  const authCheck = await checkAdminAuth('coupons:manage')
   if (!authCheck.authorized) {
     return apiError(authCheck.error, authCheck.status)
   }
@@ -63,7 +63,7 @@ export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const authCheck = await checkAdminAuth()
+  const authCheck = await checkAdminAuth('coupons:manage')
   if (!authCheck.authorized) {
     return apiError(authCheck.error, authCheck.status)
   }

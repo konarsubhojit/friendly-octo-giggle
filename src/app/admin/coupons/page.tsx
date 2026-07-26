@@ -1,4 +1,6 @@
+import { redirect } from 'next/navigation'
 import { db } from '@/lib/db'
+import { checkAdminAuth } from '@/features/admin/services/admin-auth'
 import {
   AdminPageShell,
   AdminPanel,
@@ -13,6 +15,14 @@ import { formatMoneyValue } from '@/lib/money'
 export const dynamic = 'force-dynamic'
 
 export default async function AdminCouponsPage() {
+  const authCheck = await checkAdminAuth('coupons:manage')
+  if (!authCheck.authorized) {
+    if (authCheck.status === 401) {
+      redirect('/auth/signin')
+    }
+    redirect('/admin')
+  }
+
   const [couponRows, redemptionRows] = await Promise.all([
     db.coupons.findAll(),
     db.coupons.redemptionSummary(),

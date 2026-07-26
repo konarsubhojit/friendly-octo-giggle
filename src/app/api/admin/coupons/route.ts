@@ -15,7 +15,7 @@ import { serializeCoupon } from '@/features/admin/services/coupon-admin'
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
-  const authCheck = await checkAdminAuth()
+  const authCheck = await checkAdminAuth('coupons:manage')
   if (!authCheck.authorized) {
     return apiError(authCheck.error, authCheck.status)
   }
@@ -29,7 +29,7 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const authCheck = await checkAdminAuth()
+  const authCheck = await checkAdminAuth('coupons:manage')
   if (!authCheck.authorized) {
     return apiError(authCheck.error, authCheck.status)
   }

@@ -5,7 +5,11 @@ import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { useSelector } from 'react-redux'
 import Link from 'next/link'
-import { z } from 'zod'
+import {
+  persistCouponCode,
+  readPendingCheckout,
+  type PendingCheckout,
+} from '@/features/cart/pending-checkout'
 import { formatStructuredAddress } from '@/lib/address-utils'
 import { selectCart } from '@/features/cart/store/cartSlice'
 import {
@@ -27,38 +31,6 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { useCurrency } from '@/contexts/CurrencyContext'
 import { CheckoutProgress } from '@/features/cart/components/CheckoutProgress'
 
-const PENDING_CHECKOUT_KEY = 'pending_checkout'
-
-const PendingCheckoutSchema = z.object({
-  addressLine1: z.string().min(1),
-  addressLine2: z.string().default(''),
-  addressLine3: z.string().default(''),
-  pinCode: z.string().min(1),
-  city: z.string().min(1),
-  state: z.string().min(1),
-  customizationNotes: z.record(z.string(), z.string()).default({}),
-  couponCode: z.string().nullish(),
-})
-
-type PendingCheckout = z.infer<typeof PendingCheckoutSchema>
-
-function readPendingCheckout(): PendingCheckout | null {
-  if (globalThis.window === undefined) return null
-  try {
-    const raw = sessionStorage.getItem(PENDING_CHECKOUT_KEY)
-    if (!raw) return null
-    const parsed: unknown = JSON.parse(raw)
-    const result = PendingCheckoutSchema.safeParse(parsed)
-    if (!result.success) {
-      sessionStorage.removeItem(PENDING_CHECKOUT_KEY)
-      return null
-    }
-    return result.data
-  } catch {
-    return null
-  }
-}
-
 interface AppliedCouponState {
   code: string
   discountAmount: number
@@ -71,17 +43,6 @@ interface CouponPreviewResponse {
     discountAmount: number
     total: number
   }
-}
-
-/** Persist the applied code so the payment step can submit it with the order. */
-function persistCouponCode(code: string | null): void {
-  if (globalThis.window === undefined) return
-  const current = readPendingCheckout()
-  if (!current) return
-  sessionStorage.setItem(
-    PENDING_CHECKOUT_KEY,
-    JSON.stringify({ ...current, couponCode: code })
-  )
 }
 
 const SECTION_CLASS =
@@ -196,8 +157,14 @@ export default function CheckoutReviewPage() {
   )
 
   const pricingSummary = useMemo(
-    () => buildCheckoutPricingSummaryFromLineItems(lineItems),
-    [lineItems]
+    () =>
+      buildCheckoutPricingSummaryFromLineItems(lineItems, {
+        destination: pendingCheckout
+          ? { state: pendingCheckout.state, pinCode: pendingCheckout.pinCode }
+          : null,
+        shippingMethod: pendingCheckout?.shippingMethod,
+      }),
+    [lineItems, pendingCheckout]
   )
 
   const policyUnavailable =
@@ -349,22 +316,9 @@ export default function CheckoutReviewPage() {
 
                 <div className="rounded-2xl bg-[var(--accent-blush)]/40 p-4">
                   <CartPricingSummary
-                    itemCount={pricingSummary.itemCount}
-                    subtotal={formatPrice(pricingSummary.subtotal)}
-                    shipping={
-                      pricingSummary.shippingAmount === 0
-                        ? 'Free'
-                        : formatPrice(pricingSummary.shippingAmount)
-                    }
-                    discount={
-                      appliedCoupon
-                        ? formatPrice(appliedCoupon.discountAmount)
-                        : null
-                    }
-                    total={formatPrice(
-                      pricingSummary.total -
-                        (appliedCoupon?.discountAmount ?? 0)
-                    )}
+                    summary={pricingSummary}
+                    formatPrice={formatPrice}
+                    discountAmount={appliedCoupon?.discountAmount ?? null}
                   />
                 </div>
 

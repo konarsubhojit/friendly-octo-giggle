@@ -89,6 +89,7 @@ describe('DELETE /api/admin/products/[id]/options/[optionId]', () => {
   it('returns 400 for invalid params', async () => {
     vi.mocked(checkAdminAuth).mockResolvedValue({
       authorized: true,
+      role: 'ADMIN',
       userId: 'a1',
     })
 
@@ -109,6 +110,7 @@ describe('DELETE /api/admin/products/[id]/options/[optionId]', () => {
   it('returns 404 when option not found', async () => {
     vi.mocked(checkAdminAuth).mockResolvedValue({
       authorized: true,
+      role: 'ADMIN',
       userId: 'a1',
     })
     mockOptionFindFirst.mockResolvedValue(null)
@@ -128,6 +130,7 @@ describe('DELETE /api/admin/products/[id]/options/[optionId]', () => {
   it('returns 404 when option belongs to different product', async () => {
     vi.mocked(checkAdminAuth).mockResolvedValue({
       authorized: true,
+      role: 'ADMIN',
       userId: 'a1',
     })
     mockOptionFindFirst.mockResolvedValue({
@@ -150,6 +153,7 @@ describe('DELETE /api/admin/products/[id]/options/[optionId]', () => {
   it('deletes option successfully', async () => {
     vi.mocked(checkAdminAuth).mockResolvedValue({
       authorized: true,
+      role: 'ADMIN',
       userId: 'a1',
     })
     mockOptionFindFirst.mockResolvedValue({ id: 'o1', productId: 'p1' })
@@ -172,6 +176,7 @@ describe('DELETE /api/admin/products/[id]/options/[optionId]', () => {
   it('returns 500 on internal error', async () => {
     vi.mocked(checkAdminAuth).mockResolvedValue({
       authorized: true,
+      role: 'ADMIN',
       userId: 'a1',
     })
     mockOptionFindFirst.mockRejectedValue(new Error('DB error'))

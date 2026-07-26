@@ -12,6 +12,7 @@ const mockLineItems = [
     unitPrice: 1499,
     lineTotal: 2998,
     customizationNote: 'Use a satin ribbon',
+    weightGrams: null,
   },
   {
     name: 'Macramé Wall Hanging',
@@ -20,6 +21,7 @@ const mockLineItems = [
     unitPrice: 2299,
     lineTotal: 2299,
     customizationNote: null,
+    weightGrams: null,
   },
 ] as const
 
@@ -27,6 +29,10 @@ const mockPricingSummary = {
   itemCount: 3,
   subtotal: 5297,
   shippingAmount: 0,
+  shippingQuoted: true,
+  shippingMethod: 'STANDARD',
+  freeShippingApplied: true,
+  taxAmount: 0,
   total: 5297,
 } as const
 

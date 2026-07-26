@@ -44,7 +44,7 @@ const ProductBulkSchema = z.discriminatedUnion('operation', [
 ])
 
 export const POST = async (request: Request) => {
-  const authCheck = await checkAdminAuth()
+  const authCheck = await checkAdminAuth('products:write')
   if (!authCheck.authorized) {
     return apiError(authCheck.error ?? 'Unauthorized', authCheck.status)
   }
@@ -146,6 +146,7 @@ export const POST = async (request: Request) => {
 
     await recordAdminAuditLog({
       userId: authCheck.userId,
+      role: authCheck.role,
       entity: 'product',
       entityId: payload.productIds.join(','),
       action: payload.operation,

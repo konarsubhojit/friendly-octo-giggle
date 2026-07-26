@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import type { ReactElement, ReactNode } from 'react'
+import type { UserRole } from '@/lib/constants/roles'
 
 interface Session {
   user?: {
@@ -15,7 +16,7 @@ interface Session {
 interface ProtectedRouteProps {
   readonly children: ReactNode
   readonly session: Session | null
-  readonly requiredRole?: 'ADMIN' | 'CUSTOMER'
+  readonly requiredRole?: UserRole
 }
 
 export function ProtectedRoute({
