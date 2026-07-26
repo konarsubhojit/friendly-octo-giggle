@@ -16,6 +16,7 @@
 - Address capture and Indian pincode lookup, shipping pricing, order-policy acknowledgment, and recoverable validation/errors.
 - Staged shipping, payment, review, and confirmation pages.
 - Idempotent checkout requests persisted before Vercel Queue processing, with status polling and duplicate-order protection.
+- Pluggable payment gateways behind a single `PaymentGateway` interface: Razorpay (online capture with signed verification and webhook reconciliation) and Cash on Delivery (order stays `PENDING` and settles to `PAID` when delivery is confirmed).
 - Authenticated order history, hybrid order search, compact item summaries, detail/status tracking, and transactional emails.
 
 ## Identity and personalization
