@@ -335,6 +335,8 @@ interface OrderSummaryHeaderProps {
   readonly orderId: string
   readonly createdAt: string
   readonly totalAmount: number
+  readonly discountAmount: number
+  readonly couponCode: string | null
   readonly status: string
   readonly cancelling: boolean
   readonly formatPrice: (amount: number) => string
@@ -345,6 +347,8 @@ function OrderSummaryHeader({
   orderId,
   createdAt,
   totalAmount,
+  discountAmount,
+  couponCode,
   status,
   cancelling,
   formatPrice,
@@ -368,9 +372,22 @@ function OrderSummaryHeader({
         </p>
       </div>
       <div className="flex items-center gap-3">
-        <p className="text-2xl font-bold bg-gradient-to-r from-[var(--accent-rose)] to-[var(--accent-pink)] bg-clip-text text-transparent">
-          {formatPrice(totalAmount)}
-        </p>
+        <div className="text-right">
+          {discountAmount > 0 && (
+            <>
+              <p className="text-sm text-[var(--text-muted)] line-through">
+                {formatPrice(totalAmount + discountAmount)}
+              </p>
+              <p className="text-sm font-medium text-[var(--accent-sage)]">
+                {couponCode ? `Coupon ${couponCode}: ` : 'Discount: '}-
+                {formatPrice(discountAmount)}
+              </p>
+            </>
+          )}
+          <p className="text-2xl font-bold bg-gradient-to-r from-[var(--accent-rose)] to-[var(--accent-pink)] bg-clip-text text-transparent">
+            {formatPrice(totalAmount)}
+          </p>
+        </div>
         {status === 'PENDING' && (
           <button
             type="button"
@@ -506,6 +523,8 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
             orderId={order.id}
             createdAt={order.createdAt}
             totalAmount={order.totalAmount}
+            discountAmount={order.discountAmount ?? 0}
+            couponCode={order.couponCode ?? null}
             status={order.status}
             cancelling={cancelling}
             formatPrice={formatPrice}

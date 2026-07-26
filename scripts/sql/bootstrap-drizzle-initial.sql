@@ -53,6 +53,11 @@ SELECT drizzle.ensure_public_enum(
 );
 
 SELECT drizzle.ensure_public_enum(
+  'DiscountType',
+  'CREATE TYPE public."DiscountType" AS ENUM (''PERCENTAGE'', ''FIXED_AMOUNT'', ''FREE_SHIPPING'', ''BOGO'')'
+);
+
+SELECT drizzle.ensure_public_enum(
   'OrderStatus',
   'CREATE TYPE public."OrderStatus" AS ENUM (''PENDING'', ''PROCESSING'', ''SHIPPED'', ''DELIVERED'', ''CANCELLED'')'
 );
@@ -369,6 +374,36 @@ CREATE TABLE IF NOT EXISTS public."VerificationToken" (
   "expires" timestamp without time zone NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS public."Coupon" (
+  "id" character varying(7) NOT NULL,
+  "code" text NOT NULL,
+  "description" text,
+  "discountType" "DiscountType" NOT NULL,
+  "discountValue" numeric(12,2) DEFAULT 0 NOT NULL,
+  "maxDiscountAmount" numeric(12,2),
+  "minCartValue" numeric(12,2) DEFAULT 0 NOT NULL,
+  "scopedCategories" json DEFAULT '[]'::json NOT NULL,
+  "scopedProductIds" json DEFAULT '[]'::json NOT NULL,
+  "usageLimit" integer,
+  "perUserLimit" integer,
+  "usageCount" integer DEFAULT 0 NOT NULL,
+  "stackable" boolean DEFAULT false NOT NULL,
+  "isActive" boolean DEFAULT true NOT NULL,
+  "startsAt" timestamp without time zone,
+  "endsAt" timestamp without time zone,
+  "createdAt" timestamp without time zone DEFAULT now() NOT NULL,
+  "updatedAt" timestamp without time zone DEFAULT now() NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS public."CouponRedemption" (
+  "id" character varying(7) NOT NULL,
+  "couponId" character varying(7) NOT NULL,
+  "userId" text,
+  "orderId" character varying(10) NOT NULL,
+  "discountAmount" numeric(12,2) NOT NULL,
+  "createdAt" timestamp without time zone DEFAULT now() NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS public."WebhookEvent" (
   "id" character varying(7) NOT NULL,
   "provider" "PaymentProvider" NOT NULL,
@@ -525,6 +560,10 @@ ALTER TABLE public."User" ADD COLUMN IF NOT EXISTS "sessionVersion" integer DEFA
 ALTER TABLE public."User" ADD COLUMN IF NOT EXISTS "createdAt" timestamp without time zone DEFAULT now() NOT NULL;
 ALTER TABLE public."User" ADD COLUMN IF NOT EXISTS "updatedAt" timestamp without time zone DEFAULT now() NOT NULL;
 
+ALTER TABLE public."Order" ADD COLUMN IF NOT EXISTS "discountAmount" numeric(12,2) DEFAULT 0 NOT NULL;
+ALTER TABLE public."Order" ADD COLUMN IF NOT EXISTS "couponId" character varying(7);
+ALTER TABLE public."Order" ADD COLUMN IF NOT EXISTS "couponCode" text;
+ALTER TABLE public."CheckoutRequest" ADD COLUMN IF NOT EXISTS "couponCode" text;
 ALTER TABLE public."WebhookEvent" ADD COLUMN IF NOT EXISTS "receivedAt" timestamp without time zone DEFAULT now() NOT NULL;
 ALTER TABLE public."WebhookEvent" ADD COLUMN IF NOT EXISTS "processedAt" timestamp without time zone;
 
@@ -820,6 +859,28 @@ DO $$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."Coupon"'::regclass
+      AND (conname = 'Coupon_pkey' OR pg_get_constraintdef(oid) = 'PRIMARY KEY (id)')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."Coupon" ADD CONSTRAINT "Coupon_pkey" PRIMARY KEY (id)';
+  END IF;
+END
+$$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."CouponRedemption"'::regclass
+      AND (conname = 'CouponRedemption_pkey' OR pg_get_constraintdef(oid) = 'PRIMARY KEY (id)')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."CouponRedemption" ADD CONSTRAINT "CouponRedemption_pkey" PRIMARY KEY (id)';
+  END IF;
+END
+$$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
     WHERE conrelid = 'public."WebhookEvent"'::regclass
       AND (conname = 'WebhookEvent_pkey' OR pg_get_constraintdef(oid) = 'PRIMARY KEY (id)')
   ) THEN
@@ -1011,6 +1072,28 @@ BEGIN
       AND (conname = 'VerificationToken_token_unique' OR pg_get_constraintdef(oid) = 'UNIQUE (token)')
   ) THEN
     EXECUTE 'ALTER TABLE public."VerificationToken" ADD CONSTRAINT "VerificationToken_token_unique" UNIQUE (token)';
+  END IF;
+END
+$$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."Coupon"'::regclass
+      AND (conname = 'Coupon_code_unique' OR pg_get_constraintdef(oid) = 'UNIQUE (code)')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."Coupon" ADD CONSTRAINT "Coupon_code_unique" UNIQUE (code)';
+  END IF;
+END
+$$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."CouponRedemption"'::regclass
+      AND (conname = 'CouponRedemption_couponId_orderId_key' OR pg_get_constraintdef(oid) = 'UNIQUE ("couponId", "orderId")')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."CouponRedemption" ADD CONSTRAINT "CouponRedemption_couponId_orderId_key" UNIQUE ("couponId", "orderId")';
   END IF;
 END
 $$;
@@ -1377,6 +1460,51 @@ BEGIN
   END IF;
 END
 $$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."CouponRedemption"'::regclass
+      AND (conname = 'CouponRedemption_couponId_Coupon_id_fk' OR pg_get_constraintdef(oid) = 'FOREIGN KEY ("couponId") REFERENCES "Coupon"(id) ON DELETE CASCADE')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."CouponRedemption" ADD CONSTRAINT "CouponRedemption_couponId_Coupon_id_fk" FOREIGN KEY ("couponId") REFERENCES "Coupon"(id) ON DELETE CASCADE';
+  END IF;
+END
+$$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."CouponRedemption"'::regclass
+      AND (conname = 'CouponRedemption_userId_User_id_fk' OR pg_get_constraintdef(oid) = 'FOREIGN KEY ("userId") REFERENCES "User"(id) ON DELETE SET NULL')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."CouponRedemption" ADD CONSTRAINT "CouponRedemption_userId_User_id_fk" FOREIGN KEY ("userId") REFERENCES "User"(id) ON DELETE SET NULL';
+  END IF;
+END
+$$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."CouponRedemption"'::regclass
+      AND (conname = 'CouponRedemption_orderId_Order_id_fk' OR pg_get_constraintdef(oid) = 'FOREIGN KEY ("orderId") REFERENCES "Order"(id) ON DELETE CASCADE')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."CouponRedemption" ADD CONSTRAINT "CouponRedemption_orderId_Order_id_fk" FOREIGN KEY ("orderId") REFERENCES "Order"(id) ON DELETE CASCADE';
+  END IF;
+END
+$$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."Order"'::regclass
+      AND (conname = 'Order_couponId_Coupon_id_fk' OR pg_get_constraintdef(oid) = 'FOREIGN KEY ("couponId") REFERENCES "Coupon"(id) ON DELETE SET NULL')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."Order" ADD CONSTRAINT "Order_couponId_Coupon_id_fk" FOREIGN KEY ("couponId") REFERENCES "Coupon"(id) ON DELETE SET NULL';
+  END IF;
+END
+$$;
+
 -- ─── Indexes ─────────────────────────────────────────────
 
 CREATE INDEX IF NOT EXISTS "Account_userId_idx" ON public."Account" USING btree ("userId");
@@ -1415,6 +1543,11 @@ CREATE INDEX IF NOT EXISTS "ProductVariantOptionValue_optionValueId_idx" ON publ
 CREATE INDEX IF NOT EXISTS "ProductVariantOptionValue_variantId_idx" ON public."ProductVariantOptionValue" USING btree ("variantId");
 CREATE INDEX IF NOT EXISTS "ProductVariant_deletedAt_idx" ON public."ProductVariant" USING btree ("deletedAt");
 CREATE INDEX IF NOT EXISTS "ProductVariant_productId_idx" ON public."ProductVariant" USING btree ("productId");
+CREATE INDEX IF NOT EXISTS "Coupon_isActive_idx" ON public."Coupon" USING btree ("isActive");
+CREATE INDEX IF NOT EXISTS "Coupon_endsAt_idx" ON public."Coupon" USING btree ("endsAt");
+CREATE INDEX IF NOT EXISTS "CouponRedemption_couponId_idx" ON public."CouponRedemption" USING btree ("couponId");
+CREATE INDEX IF NOT EXISTS "CouponRedemption_userId_idx" ON public."CouponRedemption" USING btree ("userId");
+CREATE INDEX IF NOT EXISTS "CouponRedemption_createdAt_idx" ON public."CouponRedemption" USING btree ("createdAt");
 CREATE INDEX IF NOT EXISTS "Product_category_idx" ON public."Product" USING btree (category);
 CREATE INDEX IF NOT EXISTS "Product_createdAt_idx" ON public."Product" USING btree ("createdAt");
 CREATE INDEX IF NOT EXISTS "Product_deletedAt_idx" ON public."Product" USING btree ("deletedAt");
@@ -1506,6 +1639,13 @@ INSERT INTO drizzle.__drizzle_migrations (hash, created_at)
 SELECT '417d443ac3cadb43492f3ac5f3f58dffc7d0a8d7eb86056662ff2a0684dbb685', 1785047423992
 WHERE NOT EXISTS (
   SELECT 1 FROM drizzle.__drizzle_migrations WHERE created_at = 1785047423992
+);
+
+-- 0011_coupon_engine
+INSERT INTO drizzle.__drizzle_migrations (hash, created_at)
+SELECT '76ff64f78229f467e0006468d24255a17e15996245bd16625a21781e20fc5c3a', 1785050938241
+WHERE NOT EXISTS (
+  SELECT 1 FROM drizzle.__drizzle_migrations WHERE created_at = 1785050938241
 );
 
 DROP FUNCTION drizzle.ensure_public_enum(text, text);

@@ -77,6 +77,10 @@ const dispatchEmail = async (event: QStashEvent): Promise<void> => {
         ? getShippingMethodLabel(event.data.shippingMethod)
         : null,
       totalAmount: formatPriceForCurrency(event.data.totalAmount, currency),
+      discountAmount: event.data.discountAmount
+        ? formatPriceForCurrency(event.data.discountAmount, currency)
+        : null,
+      couponCode: event.data.couponCode ?? null,
       shippingAddress: event.data.customerAddress,
       items: event.data.items.map((item) => ({
         name: item.name,

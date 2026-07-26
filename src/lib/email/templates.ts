@@ -24,6 +24,9 @@ export interface OrderConfirmationData {
   taxAmount?: string | null
   shippingMethodLabel?: string | null
   totalAmount: string
+  /** Formatted discount, omitted when no coupon was applied. */
+  discountAmount?: string | null
+  couponCode?: string | null
   items: OrderEmailItem[]
   shippingAddress: string
 }
@@ -61,6 +64,7 @@ const labels = {
   cancelled: 'Cancelled',
   thankYou: 'Thank you',
   orderSummary: 'Order Summary',
+  discount: 'Discount',
   subtotal: 'Subtotal',
   shipping: 'Shipping',
   tax: 'Tax (GST)',
@@ -174,6 +178,15 @@ const orderTotalsText = (data: OrderConfirmationData) =>
     .join('\n')
 
 export const orderConfirmationTemplate = (data: OrderConfirmationData) => {
+  const couponSuffix = data.couponCode
+    ? ` (${escapeHtml(data.couponCode.toUpperCase())})`
+    : ''
+  const discountHtml = data.discountAmount
+    ? `<div style="text-align:right;padding:8px 12px;color:#5C4A44;font-size:14px;">
+      <strong>${labels.discount}${couponSuffix}: </strong>
+      <span style="color:#059669;font-weight:600;">-${escapeHtml(data.discountAmount)}</span>
+    </div>`
+    : ''
   const totalsText = orderTotalsText(data)
   const bodyHtml = `
     <h2 style="color:#5C4A44;margin:0 0 8px;font-size:22px;">${labels.thankYou}, ${escapeHtml(data.customerName)}! 🌸</h2>
@@ -187,6 +200,7 @@ export const orderConfirmationTemplate = (data: OrderConfirmationData) => {
     </div>
     <h3 style="color:#5C4A44;font-size:15px;margin:0 0 8px;">${labels.orderSummary}</h3>
     ${itemsTableHtml(data.items)}
+    ${discountHtml}
     <div style="text-align:right;padding:8px 12px;background:#F9F0EB;border-radius:8px;margin-bottom:24px;">
       ${orderTotalsHtml(data)}
       <strong style="color:#5C4A44;font-size:15px;">${labels.total}: </strong>
@@ -214,10 +228,14 @@ export const orderConfirmationTemplate = (data: OrderConfirmationData) => {
     })
     .join('\n')
 
+  const discountText = data.discountAmount
+    ? `Discount${data.couponCode ? ` (${data.couponCode.toUpperCase()})` : ''}: -${data.discountAmount}\n`
+    : ''
+
   return {
     subject: `Order Confirmed — #${data.orderId.toUpperCase()} 🌸`,
     html: emailWrapper(bodyHtml),
-    text: `Hi ${data.customerName},\n\nYour order #${data.orderId.toUpperCase()} has been confirmed!\n${totalsText ? `${totalsText}\n` : ''}Total: ${data.totalAmount}\n\nItems:\n${itemLines}\n\nShipping to:\n${data.shippingAddress}\n\nThank you for shopping with ${STORE_NAME}!`,
+    text: `Hi ${data.customerName},\n\nYour order #${data.orderId.toUpperCase()} has been confirmed!\n${totalsText ? `${totalsText}\n` : ''}${discountText}Total: ${data.totalAmount}\n\nItems:\n${itemLines}\n\nShipping to:\n${data.shippingAddress}\n\nThank you for shopping with ${STORE_NAME}!`,
   }
 }
 

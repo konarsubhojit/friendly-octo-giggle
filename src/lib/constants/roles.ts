@@ -28,6 +28,7 @@ export const ADMIN_PERMISSIONS = [
   'users:read',
   'users:manage',
   'reviews:moderate',
+  'coupons:manage',
   'analytics:read',
   'system:manage',
 ] as const

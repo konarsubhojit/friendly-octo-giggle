@@ -19,6 +19,8 @@ const OrderCreatedEventSchema = z.object({
     taxAmount: z.number().nonnegative().optional(),
     shippingMethod: z.enum(SHIPPING_METHODS).optional(),
     totalAmount: z.number().positive(),
+    discountAmount: z.number().nonnegative().optional(),
+    couponCode: z.string().nullish(),
     currencyCode: z.enum(['INR', 'USD', 'EUR', 'GBP']).default('INR'),
     items: z.array(OrderEmailItemSchema),
   }),

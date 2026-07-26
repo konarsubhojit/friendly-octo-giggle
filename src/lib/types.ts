@@ -120,6 +120,9 @@ export interface Order {
   taxAmount?: number
   shippingMethod?: ShippingMethodName | null
   totalAmount: number
+  /** Discount applied at checkout; 0 when no coupon was used. */
+  discountAmount?: number
+  couponCode?: string | null
   status: OrderStatus
   paymentStatus: PaymentStatus
   paymentProvider?: PaymentProvider | null
@@ -156,6 +159,8 @@ export interface CreateOrderInput {
   city: string
   state: string
   items: OrderItemInput[]
+  /** Optional promo code; the discount is always recomputed server-side. */
+  couponCode?: string | null
   shippingMethod?: ShippingMethodName | null
   payment?: CheckoutPaymentInput
 }

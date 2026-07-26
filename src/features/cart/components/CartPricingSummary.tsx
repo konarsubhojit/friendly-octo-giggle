@@ -6,7 +6,10 @@ interface CartPricingSummaryProps {
   readonly subtotalLabel?: string
   readonly shippingLabel?: string
   readonly taxLabel?: string
+  readonly discountLabel?: string
   readonly totalLabel?: string
+  /** Coupon discount applied to the order; omit or pass 0 when none. */
+  readonly discountAmount?: number | null
   readonly className?: string
 }
 
@@ -26,10 +29,15 @@ export function CartPricingSummary({
   subtotalLabel = 'Subtotal',
   shippingLabel = 'Shipping',
   taxLabel = 'Tax (GST)',
+  discountLabel = 'Discount',
   totalLabel = 'Total',
+  discountAmount,
   className,
 }: CartPricingSummaryProps) {
   const { itemCount } = summary
+  const discount = discountAmount && discountAmount > 0 ? discountAmount : 0
+  // The discount never takes the payable amount below zero.
+  const total = Math.max(0, summary.total - discount)
 
   return (
     <div className={className ?? 'space-y-3 text-sm'}>
@@ -51,10 +59,18 @@ export function CartPricingSummary({
           <span className="font-medium">{formatPrice(summary.taxAmount)}</span>
         </div>
       )}
+      {discount > 0 && (
+        <div className="flex justify-between text-[var(--text-secondary)]">
+          <span>{discountLabel}</span>
+          <span className="text-[var(--accent-sage)] font-medium">
+            -{formatPrice(discount)}
+          </span>
+        </div>
+      )}
       <div className="border-t border-[var(--border-warm)] pt-3 flex justify-between">
         <span className="font-bold text-[var(--foreground)]">{totalLabel}</span>
         <span className="text-xl font-bold text-warm-heading">
-          {formatPrice(summary.total)}
+          {formatPrice(total)}
         </span>
       </div>
     </div>

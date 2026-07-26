@@ -50,6 +50,8 @@ const STRICT_PATHS = [
   '/api/ai',
   '/api/upload',
   '/api/search',
+  // Coupon redemption previews are brute-forceable, so they get the low cap.
+  '/api/cart/coupon',
 ]
 
 const isStrictPath = (pathname: string): boolean =>

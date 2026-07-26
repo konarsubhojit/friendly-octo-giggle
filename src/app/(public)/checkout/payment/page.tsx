@@ -41,6 +41,15 @@ const delay = (ms: number) =>
     globalThis.setTimeout(resolve, ms)
   })
 
+interface CouponPreviewResponse {
+  data: {
+    couponCode: string
+    subtotal: number
+    discountAmount: number
+    total: number
+  }
+}
+
 const SECTION_CLASS =
   'rounded-2xl border border-[var(--border-warm)] bg-[var(--surface)] p-5 sm:p-6'
 
@@ -57,6 +66,7 @@ export default function CheckoutPaymentPage() {
   const [pendingCheckout] = useState<PendingCheckout | null>(() =>
     readPendingCheckout()
   )
+  const [couponDiscount, setCouponDiscount] = useState(0)
 
   useEffect(() => {
     if (!pendingCheckout) {
@@ -69,6 +79,28 @@ export default function CheckoutPaymentPage() {
       dispatch(fetchCart())
     }
   }, [dispatch, status])
+
+  // Preview only: the authoritative discount is recomputed server-side.
+  useEffect(() => {
+    const code = pendingCheckout?.couponCode
+    if (status !== 'authenticated' || !code) {
+      return
+    }
+
+    let cancelled = false
+    apiClient
+      .post<CouponPreviewResponse>('/api/cart/coupon', { couponCode: code })
+      .then((response) => {
+        if (!cancelled) setCouponDiscount(response.data.discountAmount)
+      })
+      .catch(() => {
+        if (!cancelled) setCouponDiscount(0)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [pendingCheckout?.couponCode, status])
 
   const cartItems = useMemo(() => cart?.items ?? [], [cart?.items])
 
@@ -158,6 +190,9 @@ export default function CheckoutPaymentPage() {
               customizationNote:
                 pendingCheckout.customizationNotes[item.id] ?? undefined,
             })),
+            // Only the code travels to the server; the discount itself is
+            // always recomputed there.
+            couponCode: pendingCheckout.couponCode ?? undefined,
           }
         )
 
@@ -220,6 +255,7 @@ export default function CheckoutPaymentPage() {
               <CartPricingSummary
                 summary={pricingSummary}
                 formatPrice={formatPrice}
+                discountAmount={couponDiscount}
               />
             </div>
           </section>
