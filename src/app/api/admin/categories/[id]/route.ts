@@ -4,7 +4,7 @@ import {
   handleApiError,
   parseJsonBody,
 } from '@/lib/api-utils'
-import { auth } from '@/lib/auth'
+import { checkAdminAuth } from '@/features/admin/services/admin-auth'
 import { drizzleDb } from '@/lib/db'
 import { categories } from '@/lib/schema'
 import { eq, and, isNull, ne } from 'drizzle-orm'
@@ -20,9 +20,10 @@ interface RouteParams {
 }
 
 export async function PUT(request: Request, { params }: RouteParams) {
-  const session = await auth()
-  if (!session?.user) return apiError('Not authenticated', 401)
-  if (session.user.role !== 'ADMIN') return apiError('Not authorized', 403)
+  const authCheck = await checkAdminAuth('products:write')
+  if (!authCheck.authorized) {
+    return apiError(authCheck.error, authCheck.status)
+  }
 
   const { id } = await params
 
@@ -83,9 +84,10 @@ export async function PUT(request: Request, { params }: RouteParams) {
 }
 
 export async function DELETE(_request: Request, { params }: RouteParams) {
-  const session = await auth()
-  if (!session?.user) return apiError('Not authenticated', 401)
-  if (session.user.role !== 'ADMIN') return apiError('Not authorized', 403)
+  const authCheck = await checkAdminAuth('products:write')
+  if (!authCheck.authorized) {
+    return apiError(authCheck.error, authCheck.status)
+  }
 
   const { id } = await params
 

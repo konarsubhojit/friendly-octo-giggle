@@ -59,7 +59,7 @@ export function BestsellersScroller({ bestsellers }: BestsellersScrollerProps) {
       {/* Scroll container */}
       <ul
         ref={scrollRef}
-        className="flex gap-4 overflow-x-auto pb-3 snap-x snap-mandatory scroll-smooth scrollbar-hide list-none"
+        className="flex items-stretch gap-4 overflow-x-auto pb-3 snap-x snap-mandatory scroll-smooth scrollbar-hide list-none"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         aria-label="Bestsellers horizontal list"
       >
@@ -68,9 +68,9 @@ export function BestsellersScroller({ bestsellers }: BestsellersScrollerProps) {
             <Link
               href={`/products/${product.id}`}
               aria-label={`View bestseller ${product.name}`}
-              className="group block rounded-2xl border border-[var(--border-warm)] bg-[var(--surface)] shadow-warm hover:shadow-warm-lg transition-all duration-300 overflow-hidden"
+              className="group flex h-full flex-col rounded-2xl border border-[var(--border-warm)] bg-[var(--surface)] shadow-warm hover:shadow-warm-lg transition-all duration-300 overflow-hidden"
             >
-              <div className="relative aspect-square bg-gradient-to-br from-[var(--accent-cream)] to-[var(--accent-blush)]">
+              <div className="relative aspect-square shrink-0 bg-gradient-to-br from-[var(--accent-cream)] to-[var(--accent-blush)]">
                 <Image
                   src={product.image}
                   alt={product.name}

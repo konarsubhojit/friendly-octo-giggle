@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { SHIPPING_METHODS } from '@/lib/shipping/methods'
 
 const OrderEmailItemSchema = z.object({
   name: z.string().min(1),
@@ -13,6 +14,10 @@ const OrderCreatedEventSchema = z.object({
     customerEmail: z.email(),
     customerName: z.string().min(1),
     customerAddress: z.string().min(1),
+    subtotalAmount: z.number().nonnegative().optional(),
+    shippingAmount: z.number().nonnegative().optional(),
+    taxAmount: z.number().nonnegative().optional(),
+    shippingMethod: z.enum(SHIPPING_METHODS).optional(),
     totalAmount: z.number().positive(),
     currencyCode: z.enum(['INR', 'USD', 'EUR', 'GBP']).default('INR'),
     items: z.array(OrderEmailItemSchema),

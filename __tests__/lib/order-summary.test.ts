@@ -50,6 +50,7 @@ describe('order-summary', () => {
         unitPrice: 1250,
         lineTotal: 2500,
         customizationNote: 'Add ribbon',
+        weightGrams: null,
       },
     ])
   })
@@ -76,7 +77,11 @@ describe('order-summary', () => {
       itemCount: 3,
       subtotal: 3300,
       shippingAmount: 0,
+      taxAmount: 0,
       total: 3300,
+      shippingMethod: null,
+      shippingQuoted: false,
+      freeShippingApplied: false,
     })
     expect(buildCheckoutPricingSummaryFromLineItems(lineItems)).toEqual(
       buildCheckoutPricingSummary(rawItems)

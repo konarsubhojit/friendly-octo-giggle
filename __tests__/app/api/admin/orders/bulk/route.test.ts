@@ -56,6 +56,7 @@ describe('POST /api/admin/orders/bulk', () => {
     vi.clearAllMocks()
     mockCheckAdminAuth.mockResolvedValue({
       authorized: true,
+      role: 'ADMIN',
       userId: 'admin-1',
     })
     mockFindMany.mockResolvedValue([

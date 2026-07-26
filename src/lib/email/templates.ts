@@ -18,6 +18,11 @@ export interface OrderConfirmationData {
   to: string
   customerName: string
   orderId: string
+  /** Pre-formatted amounts; omitted for orders placed before the tax engine. */
+  subtotalAmount?: string | null
+  shippingAmount?: string | null
+  taxAmount?: string | null
+  shippingMethodLabel?: string | null
   totalAmount: string
   items: OrderEmailItem[]
   shippingAddress: string
@@ -56,6 +61,9 @@ const labels = {
   cancelled: 'Cancelled',
   thankYou: 'Thank you',
   orderSummary: 'Order Summary',
+  subtotal: 'Subtotal',
+  shipping: 'Shipping',
+  tax: 'Tax (GST)',
   total: 'Total',
   shippingAddress: 'Shipping Address',
   orderId: 'Order ID',
@@ -134,7 +142,39 @@ const statusLabel: Record<
   CANCELLED: { label: 'cancelled', emoji: '❌', color: '#dc2626' },
 }
 
+const totalsRowHtml = (label: string, value: string) => `
+      <div style="display:block;text-align:right;color:#7a5543;font-size:14px;margin-bottom:4px;">
+        <span>${escapeHtml(label)}: </span><span>${escapeHtml(value)}</span>
+      </div>`
+
+/** Itemised subtotal / shipping / tax lines, rendered only when available. */
+const orderTotalsHtml = (data: OrderConfirmationData) =>
+  [
+    data.subtotalAmount
+      ? totalsRowHtml(labels.subtotal, data.subtotalAmount)
+      : '',
+    data.shippingAmount
+      ? totalsRowHtml(
+          data.shippingMethodLabel
+            ? `${labels.shipping} (${data.shippingMethodLabel})`
+            : labels.shipping,
+          data.shippingAmount
+        )
+      : '',
+    data.taxAmount ? totalsRowHtml(labels.tax, data.taxAmount) : '',
+  ].join('')
+
+const orderTotalsText = (data: OrderConfirmationData) =>
+  [
+    data.subtotalAmount ? `${labels.subtotal}: ${data.subtotalAmount}` : '',
+    data.shippingAmount ? `${labels.shipping}: ${data.shippingAmount}` : '',
+    data.taxAmount ? `${labels.tax}: ${data.taxAmount}` : '',
+  ]
+    .filter(Boolean)
+    .join('\n')
+
 export const orderConfirmationTemplate = (data: OrderConfirmationData) => {
+  const totalsText = orderTotalsText(data)
   const bodyHtml = `
     <h2 style="color:#5C4A44;margin:0 0 8px;font-size:22px;">${labels.thankYou}, ${escapeHtml(data.customerName)}! 🌸</h2>
     <p style="color:#7a5543;margin:0 0 24px;font-size:15px;">
@@ -148,6 +188,7 @@ export const orderConfirmationTemplate = (data: OrderConfirmationData) => {
     <h3 style="color:#5C4A44;font-size:15px;margin:0 0 8px;">${labels.orderSummary}</h3>
     ${itemsTableHtml(data.items)}
     <div style="text-align:right;padding:8px 12px;background:#F9F0EB;border-radius:8px;margin-bottom:24px;">
+      ${orderTotalsHtml(data)}
       <strong style="color:#5C4A44;font-size:15px;">${labels.total}: </strong>
       <span style="color:#b83060;font-size:18px;font-weight:700;">${escapeHtml(data.totalAmount)}</span>
     </div>
@@ -176,7 +217,7 @@ export const orderConfirmationTemplate = (data: OrderConfirmationData) => {
   return {
     subject: `Order Confirmed — #${data.orderId.toUpperCase()} 🌸`,
     html: emailWrapper(bodyHtml),
-    text: `Hi ${data.customerName},\n\nYour order #${data.orderId.toUpperCase()} has been confirmed!\nTotal: ${data.totalAmount}\n\nItems:\n${itemLines}\n\nShipping to:\n${data.shippingAddress}\n\nThank you for shopping with ${STORE_NAME}!`,
+    text: `Hi ${data.customerName},\n\nYour order #${data.orderId.toUpperCase()} has been confirmed!\n${totalsText ? `${totalsText}\n` : ''}Total: ${data.totalAmount}\n\nItems:\n${itemLines}\n\nShipping to:\n${data.shippingAddress}\n\nThank you for shopping with ${STORE_NAME}!`,
   }
 }
 

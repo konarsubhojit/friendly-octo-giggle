@@ -8,6 +8,7 @@ import { useSession } from 'next-auth/react'
 import { useSelector, useDispatch } from 'react-redux'
 import { useCurrency } from '@/contexts/CurrencyContext'
 import { formatStructuredAddress } from '@/lib/address-utils'
+import { getShippingMethodLabel } from '@/lib/shipping/methods'
 import {
   fetchOrderById,
   cancelOrder,
@@ -275,6 +276,61 @@ function OrderItemRow({ item, formatPrice }: OrderItemRowProps) {
   )
 }
 
+interface OrderTotalsBreakdownProps {
+  readonly order: {
+    readonly subtotalAmount?: number
+    readonly shippingAmount?: number
+    readonly taxAmount?: number
+    readonly shippingMethod?: string | null
+    readonly totalAmount: number
+  }
+  readonly formatPrice: (amount: number) => string
+}
+
+/**
+ * Itemised subtotal / shipping / tax lines. Orders placed before the shipping
+ * and tax engine carry no breakdown, so only the total is shown for those.
+ */
+function OrderTotalsBreakdown({
+  order,
+  formatPrice,
+}: OrderTotalsBreakdownProps) {
+  const subtotal = order.subtotalAmount
+  if (subtotal === undefined) return null
+
+  const shippingAmount = order.shippingAmount ?? 0
+  const taxAmount = order.taxAmount ?? 0
+  const shippingLabel = order.shippingMethod
+    ? `Shipping (${getShippingMethodLabel(order.shippingMethod)})`
+    : 'Shipping'
+
+  const rows: Array<{ label: string; value: string }> = [
+    { label: 'Subtotal', value: formatPrice(subtotal) },
+    {
+      label: shippingLabel,
+      value: shippingAmount === 0 ? 'Free' : formatPrice(shippingAmount),
+    },
+    { label: 'Tax (GST)', value: formatPrice(taxAmount) },
+  ]
+
+  return (
+    <dl className="mt-6 border-t border-[var(--border-warm)] pt-4 space-y-2 text-sm">
+      {rows.map((row) => (
+        <div key={row.label} className="flex justify-between">
+          <dt className="text-[var(--text-secondary)]">{row.label}</dt>
+          <dd className="font-medium text-[var(--foreground)]">{row.value}</dd>
+        </div>
+      ))}
+      <div className="flex justify-between border-t border-[var(--border-warm)] pt-2">
+        <dt className="font-bold text-[var(--foreground)]">Total</dt>
+        <dd className="font-bold text-[var(--foreground)]">
+          {formatPrice(order.totalAmount)}
+        </dd>
+      </div>
+    </dl>
+  )
+}
+
 interface OrderSummaryHeaderProps {
   readonly orderId: string
   readonly createdAt: string
@@ -487,6 +543,8 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
               />
             ))}
           </div>
+
+          <OrderTotalsBreakdown order={order} formatPrice={formatPrice} />
         </Card>
 
         {/* Tracking Info */}

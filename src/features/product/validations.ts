@@ -71,6 +71,12 @@ export const CreateVariantSchema = z.object({
     .number({ message: 'Stock is required' })
     .int('Stock must be an integer')
     .nonnegative('Stock must be non-negative'),
+  weightGrams: z
+    .number()
+    .int('Weight must be a whole number of grams')
+    .positive('Weight must be greater than zero')
+    .max(50_000, 'Weight must be under 50kg')
+    .nullish(),
   image: z.string().regex(URL_REGEX, 'Must be a valid URL').nullish(),
   images: z
     .array(z.string().regex(URL_REGEX, 'Each image must be a valid URL'))
@@ -93,6 +99,12 @@ export const UpdateVariantSchema = z
       .number({ message: 'Stock is required' })
       .int('Stock must be an integer')
       .nonnegative('Stock must be non-negative'),
+    weightGrams: z
+      .number()
+      .int('Weight must be a whole number of grams')
+      .positive('Weight must be greater than zero')
+      .max(50_000, 'Weight must be under 50kg')
+      .nullish(),
     image: z.string().regex(URL_REGEX, 'Must be a valid URL').nullish(),
     images: z
       .array(z.string().regex(URL_REGEX, 'Each image must be a valid URL'))

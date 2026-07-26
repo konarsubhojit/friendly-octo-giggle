@@ -104,7 +104,11 @@ describe('PATCH /api/admin/products/[id]/variants/reorder', () => {
   })
 
   it('returns 400 when items is empty', async () => {
-    mockCheckAdminAuth.mockResolvedValue({ authorized: true, userId: 'admin' })
+    mockCheckAdminAuth.mockResolvedValue({
+      authorized: true,
+      role: 'ADMIN',
+      userId: 'admin',
+    })
 
     const response = await PATCH(makeRequest({ items: [] }), { params })
 
@@ -113,7 +117,11 @@ describe('PATCH /api/admin/products/[id]/variants/reorder', () => {
   })
 
   it('reorders variants and invalidates product caches on success', async () => {
-    mockCheckAdminAuth.mockResolvedValue({ authorized: true, userId: 'admin' })
+    mockCheckAdminAuth.mockResolvedValue({
+      authorized: true,
+      role: 'ADMIN',
+      userId: 'admin',
+    })
 
     const response = await PATCH(
       makeRequest({
@@ -143,7 +151,11 @@ describe('PATCH /api/admin/products/[id]/variants/reorder', () => {
   })
 
   it('returns 500 when the transaction throws', async () => {
-    mockCheckAdminAuth.mockResolvedValue({ authorized: true, userId: 'admin' })
+    mockCheckAdminAuth.mockResolvedValue({
+      authorized: true,
+      role: 'ADMIN',
+      userId: 'admin',
+    })
     mockTransaction.mockRejectedValueOnce(new Error('tx failed'))
 
     const response = await PATCH(

@@ -4,7 +4,7 @@ import {
   handleApiError,
   parseJsonBody,
 } from '@/lib/api-utils'
-import { auth } from '@/lib/auth'
+import { checkAdminAuth } from '@/features/admin/services/admin-auth'
 import { primaryDrizzleDb } from '@/lib/db'
 import { categories } from '@/lib/schema'
 import { eq } from 'drizzle-orm'
@@ -22,9 +22,10 @@ const ReorderCategoriesSchema = z.object({
 })
 
 export const PATCH = async (request: Request) => {
-  const session = await auth()
-  if (!session?.user) return apiError('Not authenticated', 401)
-  if (session.user.role !== 'ADMIN') return apiError('Not authorized', 403)
+  const authCheck = await checkAdminAuth('products:write')
+  if (!authCheck.authorized) {
+    return apiError(authCheck.error, authCheck.status)
+  }
 
   try {
     const validated = await parseJsonBody(request, ReorderCategoriesSchema)

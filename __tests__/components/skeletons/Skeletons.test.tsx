@@ -5,6 +5,7 @@ import React from 'react'
 import HeaderSkeleton from '@/components/skeletons/HeaderSkeleton'
 import HeroSkeleton from '@/components/skeletons/HeroSkeleton'
 import ProductCardSkeleton from '@/components/skeletons/ProductCardSkeleton'
+import BestsellerCardSkeleton from '@/components/skeletons/BestsellerCardSkeleton'
 
 describe('HeaderSkeleton', () => {
   it('renders a header element', () => {
@@ -51,5 +52,25 @@ describe('ProductCardSkeleton', () => {
     const { container } = render(<ProductCardSkeleton />)
     const imageArea = container.querySelector('.h-64')
     expect(imageArea).toBeTruthy()
+  })
+})
+
+describe('BestsellerCardSkeleton', () => {
+  it('matches the bestseller tile track width so tiles do not resize on load', () => {
+    const { container } = render(<BestsellerCardSkeleton />)
+    const track = container.firstElementChild
+    expect(track?.className).toContain('w-48')
+    expect(track?.className).toContain('sm:w-52')
+    expect(track?.className).toContain('flex-none')
+  })
+
+  it('reserves a square media box to avoid layout shift', () => {
+    const { container } = render(<BestsellerCardSkeleton />)
+    expect(container.querySelector('.aspect-square')).toBeTruthy()
+  })
+
+  it('stretches to the row height', () => {
+    const { container } = render(<BestsellerCardSkeleton />)
+    expect(container.querySelector('.h-full')).toBeTruthy()
   })
 })

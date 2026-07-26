@@ -5,6 +5,7 @@ import { signOut } from 'next-auth/react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
+import { getRoleLabel, isStaffRole } from '@/lib/constants/roles'
 
 interface Session {
   user?: {
@@ -105,9 +106,9 @@ export function UserMenu({ session, onLoginClick }: UserMenuProps) {
         <div className="px-4 py-2 text-sm text-gray-700 border-b">
           <p className="font-medium">{session.user.name}</p>
           <p className="text-xs text-gray-500">{session.user.email}</p>
-          {session.user.role === 'ADMIN' && (
+          {isStaffRole(session.user.role) && (
             <span className="inline-block mt-1 px-2 py-0.5 text-xs bg-purple-100 text-purple-800 rounded">
-              Admin
+              {getRoleLabel(session.user.role) ?? 'Staff'}
             </span>
           )}
         </div>

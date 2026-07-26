@@ -216,14 +216,8 @@ export default function CartClient({ initialCart }: CartClientProps) {
 
                 <CartPricingSummary
                   className="mb-4"
-                  itemCount={pricingSummary.itemCount}
-                  subtotal={formatPrice(pricingSummary.subtotal)}
-                  shipping={
-                    pricingSummary.shippingAmount === 0
-                      ? 'Free'
-                      : formatPrice(pricingSummary.shippingAmount)
-                  }
-                  total={formatPrice(pricingSummary.total)}
+                  summary={pricingSummary}
+                  formatPrice={formatPrice}
                 />
 
                 <div className="mb-4 p-3 bg-[var(--accent-blush)]/50 rounded-lg border border-[var(--border-warm)] text-center">

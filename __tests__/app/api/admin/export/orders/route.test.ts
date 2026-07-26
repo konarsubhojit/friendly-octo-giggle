@@ -29,6 +29,10 @@ const order = {
   id: 'o1',
   customerName: 'Alice',
   customerEmail: 'a@example.com',
+  subtotalAmount: 4000,
+  shippingAmount: 0,
+  taxAmount: 200,
+  shippingMethod: 'STANDARD',
   totalAmount: 4200,
   status: 'PROCESSING',
   trackingNumber: 'TRK1',
@@ -82,7 +86,11 @@ describe('GET /api/admin/export/orders', () => {
   })
 
   it('streams CSV with headers and order rows for admins', async () => {
-    mockCheckAdminAuth.mockResolvedValue({ authorized: true, userId: 'admin' })
+    mockCheckAdminAuth.mockResolvedValue({
+      authorized: true,
+      role: 'ADMIN',
+      userId: 'admin',
+    })
     mockFindMany.mockResolvedValueOnce([order]).mockResolvedValueOnce([])
 
     const response = await GET()
@@ -94,15 +102,19 @@ describe('GET /api/admin/export/orders', () => {
 
     const lines = csv.trim().split('\n')
     expect(lines[0]).toBe(
-      'id,customerName,customerEmail,totalAmount,status,trackingNumber,shippingProvider,createdAt'
+      'id,customerName,customerEmail,subtotalAmount,shippingAmount,taxAmount,shippingMethod,totalAmount,status,trackingNumber,shippingProvider,createdAt'
     )
     expect(lines[1]).toBe(
-      'o1,Alice,a@example.com,4200.00,PROCESSING,TRK1,UPS,2025-01-02T03:04:05.000Z'
+      'o1,Alice,a@example.com,4000.00,0.00,200.00,STANDARD,4200.00,PROCESSING,TRK1,UPS,2025-01-02T03:04:05.000Z'
     )
   })
 
   it('streams only the header row when there are no orders', async () => {
-    mockCheckAdminAuth.mockResolvedValue({ authorized: true, userId: 'admin' })
+    mockCheckAdminAuth.mockResolvedValue({
+      authorized: true,
+      role: 'ADMIN',
+      userId: 'admin',
+    })
     mockFindMany.mockResolvedValue([])
 
     const response = await GET()
@@ -113,7 +125,11 @@ describe('GET /api/admin/export/orders', () => {
   })
 
   it('escapes commas and quotes in customer fields', async () => {
-    mockCheckAdminAuth.mockResolvedValue({ authorized: true, userId: 'admin' })
+    mockCheckAdminAuth.mockResolvedValue({
+      authorized: true,
+      role: 'ADMIN',
+      userId: 'admin',
+    })
     mockFindMany
       .mockResolvedValueOnce([
         { ...order, customerName: 'Doe, John', customerEmail: 'a"b@x.com' },

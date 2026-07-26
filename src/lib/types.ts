@@ -1,4 +1,5 @@
 import type { PaymentProviderName } from '@/lib/payments/providers'
+import type { ShippingMethodName } from '@/lib/shipping/methods'
 
 export interface ProductOptionValue {
   id: string
@@ -23,6 +24,8 @@ export interface ProductVariant {
   sku: string | null
   price: number
   stock: number
+  /** Shipping weight of one unit in grams; null uses the engine default. */
+  weightGrams?: number | null
   image: string | null
   images: string[]
   sortOrder?: number
@@ -112,6 +115,10 @@ export interface Order {
   pinCode?: string | null
   city?: string | null
   state?: string | null
+  subtotalAmount?: number
+  shippingAmount?: number
+  taxAmount?: number
+  shippingMethod?: ShippingMethodName | null
   totalAmount: number
   status: OrderStatus
   paymentStatus: PaymentStatus
@@ -149,6 +156,7 @@ export interface CreateOrderInput {
   city: string
   state: string
   items: OrderItemInput[]
+  shippingMethod?: ShippingMethodName | null
   payment?: CheckoutPaymentInput
 }
 

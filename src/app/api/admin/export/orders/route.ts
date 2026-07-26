@@ -12,7 +12,7 @@ import { formatMoneyValue } from '@/lib/money'
 export const dynamic = 'force-dynamic'
 
 export const GET = async () => {
-  const authCheck = await checkAdminAuth()
+  const authCheck = await checkAdminAuth('orders:read')
   if (!authCheck.authorized) {
     return apiError(authCheck.error ?? 'Unauthorized', authCheck.status)
   }
@@ -24,6 +24,10 @@ export const GET = async () => {
         'id',
         'customerName',
         'customerEmail',
+        'subtotalAmount',
+        'shippingAmount',
+        'taxAmount',
+        'shippingMethod',
         'totalAmount',
         'status',
         'trackingNumber',
@@ -41,6 +45,10 @@ export const GET = async () => {
           order.id,
           order.customerName,
           order.customerEmail,
+          formatMoneyValue(order.subtotalAmount),
+          formatMoneyValue(order.shippingAmount),
+          formatMoneyValue(order.taxAmount),
+          order.shippingMethod,
           formatMoneyValue(order.totalAmount),
           order.status,
           order.trackingNumber,

@@ -71,7 +71,7 @@ describe('PATCH /api/admin/categories/reorder', () => {
     const body = await response.json()
 
     expect(response.status).toBe(403)
-    expect(body.error).toBe('Not authorized')
+    expect(body.error).toBe('Not authorized - Admin access required')
     expect(mockTransaction).not.toHaveBeenCalled()
   })
 

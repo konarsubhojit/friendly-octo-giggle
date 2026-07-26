@@ -4,7 +4,7 @@ import {
   handleApiError,
   parseJsonBody,
 } from '@/lib/api-utils'
-import { auth } from '@/lib/auth'
+import { checkAdminAuth } from '@/features/admin/services/admin-auth'
 import { drizzleDb } from '@/lib/db'
 import { categories } from '@/lib/schema'
 import { isNull, asc, eq, max } from 'drizzle-orm'
@@ -15,9 +15,10 @@ const CreateCategorySchema = z.object({
 })
 
 export async function GET() {
-  const session = await auth()
-  if (!session?.user) return apiError('Not authenticated', 401)
-  if (session.user.role !== 'ADMIN') return apiError('Not authorized', 403)
+  const authCheck = await checkAdminAuth('products:read')
+  if (!authCheck.authorized) {
+    return apiError(authCheck.error, authCheck.status)
+  }
 
   try {
     const list = await drizzleDb
@@ -43,9 +44,10 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const session = await auth()
-  if (!session?.user) return apiError('Not authenticated', 401)
-  if (session.user.role !== 'ADMIN') return apiError('Not authorized', 403)
+  const authCheck = await checkAdminAuth('products:write')
+  if (!authCheck.authorized) {
+    return apiError(authCheck.error, authCheck.status)
+  }
 
   try {
     const { name } = await parseJsonBody(request, CreateCategorySchema)

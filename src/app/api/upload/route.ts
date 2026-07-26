@@ -107,7 +107,7 @@ export async function POST(request: Request) {
   let azureAccountAlias = 'unknown'
 
   try {
-    const authCheck = await checkAdminAuth()
+    const authCheck = await checkAdminAuth('products:write')
     userId = authCheck.authorized ? authCheck.userId : 'unknown'
     if (!authCheck.authorized) {
       return NextResponse.json(

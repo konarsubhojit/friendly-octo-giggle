@@ -18,9 +18,10 @@ describe('recordAdminAuditLog', () => {
     mockValues.mockClear()
   })
 
-  it('inserts the audit row with provided diff', async () => {
+  it('inserts the audit row with provided diff and acting role', async () => {
     await recordAdminAuditLog({
       userId: 'admin-1',
+      role: 'FULFILMENT',
       entity: 'product',
       entityId: 'p1',
       action: 'update',
@@ -30,11 +31,25 @@ describe('recordAdminAuditLog', () => {
     expect(mockInsert).toHaveBeenCalledTimes(1)
     expect(mockValues).toHaveBeenCalledWith({
       userId: 'admin-1',
+      role: 'FULFILMENT',
       entity: 'product',
       entityId: 'p1',
       action: 'update',
       diff: { price: { old: 100, new: 150 } },
     })
+  })
+
+  it('stores a null role when the acting role is unknown', async () => {
+    await recordAdminAuditLog({
+      userId: 'admin-1',
+      entity: 'product',
+      entityId: 'p1',
+      action: 'update',
+    })
+
+    expect(mockValues).toHaveBeenCalledWith(
+      expect.objectContaining({ role: null })
+    )
   })
 
   it('defaults diff to an empty object when omitted', async () => {

@@ -60,6 +60,7 @@ describe('POST /api/admin/import/products', () => {
   it('returns validation report during dry-run', async () => {
     mockCheckAdminAuth.mockResolvedValue({
       authorized: true,
+      role: 'ADMIN',
       userId: 'admin-1',
     })
 
@@ -82,6 +83,7 @@ describe('POST /api/admin/import/products', () => {
   it('commits all rows after successful validation', async () => {
     mockCheckAdminAuth.mockResolvedValue({
       authorized: true,
+      role: 'ADMIN',
       userId: 'admin-1',
     })
 

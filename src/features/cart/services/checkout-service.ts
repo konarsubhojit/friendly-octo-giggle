@@ -33,6 +33,7 @@ import {
   isPaymentProvider,
   requiresPaymentSignature,
 } from '@/lib/payments/providers'
+import { toShippingMethod } from '@/lib/shipping'
 import type { CheckoutPaymentInput } from '@/lib/types'
 
 export const CHECKOUT_QUEUE_TOPIC = 'checkout-orders'
@@ -105,6 +106,7 @@ const getNormalizedCheckoutInput = (
     city: typeof rawBody.city === 'string' ? rawBody.city : '',
     state: typeof rawBody.state === 'string' ? rawBody.state : '',
     items: rawBody.items,
+    shippingMethod: rawBody.shippingMethod,
     payment: rawBody.payment,
   })
 
@@ -315,6 +317,7 @@ export const enqueueCheckoutForUser = async ({
     city: normalized.city,
     state: normalized.state,
     items: normalized.items,
+    shippingMethod: toShippingMethod(normalized.shippingMethod),
     paymentProvider: normalized.payment?.provider ?? null,
     paymentOrderId: storedPayment?.orderId ?? null,
     paymentTransactionId: storedPayment?.paymentId ?? null,
@@ -456,6 +459,7 @@ export const processCheckoutRequestById = async (
           quantity: item.quantity,
           customizationNote: item.customizationNote ?? undefined,
         })),
+        shippingMethod: toShippingMethod(checkoutRequest.shippingMethod),
         payment: buildStoredPaymentReference(checkoutRequest),
       },
       user: {

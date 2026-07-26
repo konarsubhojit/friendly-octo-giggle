@@ -2,35 +2,13 @@ import { NextRequest } from 'next/server'
 import { drizzleDb } from '@/lib/db'
 import { users } from '@/lib/schema'
 import { desc, lt, ilike, and, or, SQL, count } from 'drizzle-orm'
-import { auth } from '@/lib/auth'
 import { apiSuccess, apiError, handleApiError } from '@/lib/api-utils'
+import { checkAdminAuth } from '@/features/admin/services/admin-auth'
 import { cacheAdminUsersList } from '@/lib/cache'
 
 export const dynamic = 'force-dynamic'
 
 const PAGE_SIZE = 20
-
-const checkAdminAuth = async () => {
-  const session = await auth()
-
-  if (!session?.user) {
-    return {
-      authorized: false,
-      error: 'Not authenticated',
-      status: 401 as const,
-    }
-  }
-
-  if (session.user.role !== 'ADMIN') {
-    return {
-      authorized: false,
-      error: 'Not authorized - Admin access required',
-      status: 403 as const,
-    }
-  }
-
-  return { authorized: true, userId: session.user.id }
-}
 
 const parseLimit = (param: string | null, defaultSize: number): number =>
   Math.min(
@@ -68,7 +46,7 @@ const resolveWhereClause = (conditions: SQL[]) => {
 }
 
 export const GET = async (request: NextRequest) => {
-  const authCheck = await checkAdminAuth()
+  const authCheck = await checkAdminAuth('users:read')
   if (!authCheck.authorized) {
     return apiError(authCheck.error ?? 'Unknown error', authCheck.status)
   }

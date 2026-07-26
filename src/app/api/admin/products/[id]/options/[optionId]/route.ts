@@ -19,7 +19,7 @@ export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string; optionId: string }> }
 ) {
-  const authCheck = await checkAdminAuth()
+  const authCheck = await checkAdminAuth('products:write')
   if (!authCheck.authorized) {
     return apiError(authCheck.error ?? 'Unauthorized', authCheck.status)
   }

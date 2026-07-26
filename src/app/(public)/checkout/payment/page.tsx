@@ -4,7 +4,11 @@ import { useEffect, useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { useSelector, useDispatch } from 'react-redux'
-import { z } from 'zod'
+import {
+  clearPendingCheckout,
+  readPendingCheckout,
+  type PendingCheckout,
+} from '@/features/cart/pending-checkout'
 import toast from 'react-hot-toast'
 import {
   clearCart,
@@ -31,41 +35,6 @@ import Link from 'next/link'
 
 const CHECKOUT_POLL_INTERVAL_MS = 1500
 const CHECKOUT_POLL_MAX_ATTEMPTS = 40
-const PENDING_CHECKOUT_KEY = 'pending_checkout'
-
-const PendingCheckoutSchema = z.object({
-  addressLine1: z.string().min(1),
-  addressLine2: z.string().default(''),
-  addressLine3: z.string().default(''),
-  pinCode: z.string().min(1),
-  city: z.string().min(1),
-  state: z.string().min(1),
-  customizationNotes: z.record(z.string(), z.string()).default({}),
-})
-
-type PendingCheckout = z.infer<typeof PendingCheckoutSchema>
-
-function readPendingCheckout(): PendingCheckout | null {
-  if (globalThis.window === undefined) return null
-  try {
-    const raw = sessionStorage.getItem(PENDING_CHECKOUT_KEY)
-    if (!raw) return null
-    const parsed: unknown = JSON.parse(raw)
-    const result = PendingCheckoutSchema.safeParse(parsed)
-    if (!result.success) {
-      sessionStorage.removeItem(PENDING_CHECKOUT_KEY)
-      return null
-    }
-    return result.data
-  } catch {
-    return null
-  }
-}
-
-function clearPendingCheckout(): void {
-  if (globalThis.window === undefined) return
-  sessionStorage.removeItem(PENDING_CHECKOUT_KEY)
-}
 
 const delay = (ms: number) =>
   new Promise<void>((resolve) => {
@@ -118,8 +87,14 @@ export default function CheckoutPaymentPage() {
   )
 
   const pricingSummary = useMemo(
-    () => buildCheckoutPricingSummaryFromLineItems(lineItems),
-    [lineItems]
+    () =>
+      buildCheckoutPricingSummaryFromLineItems(lineItems, {
+        destination: pendingCheckout
+          ? { state: pendingCheckout.state, pinCode: pendingCheckout.pinCode }
+          : null,
+        shippingMethod: pendingCheckout?.shippingMethod,
+      }),
+    [lineItems, pendingCheckout]
   )
 
   const pollCheckoutRequest = async (
@@ -175,6 +150,7 @@ export default function CheckoutPaymentPage() {
             pinCode: pendingCheckout.pinCode.trim(),
             city: pendingCheckout.city.trim(),
             state: pendingCheckout.state.trim(),
+            shippingMethod: pendingCheckout.shippingMethod,
             items: cartItems.map((item) => ({
               productId: item.productId,
               variantId: item.variantId,
@@ -242,14 +218,8 @@ export default function CheckoutPaymentPage() {
             </h2>
             <div className="rounded-2xl bg-[var(--accent-blush)]/40 p-4">
               <CartPricingSummary
-                itemCount={pricingSummary.itemCount}
-                subtotal={formatPrice(pricingSummary.subtotal)}
-                shipping={
-                  pricingSummary.shippingAmount === 0
-                    ? 'Free'
-                    : formatPrice(pricingSummary.shippingAmount)
-                }
-                total={formatPrice(pricingSummary.total)}
+                summary={pricingSummary}
+                formatPrice={formatPrice}
               />
             </div>
           </section>

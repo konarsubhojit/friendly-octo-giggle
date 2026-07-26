@@ -96,6 +96,7 @@ describe('POST /api/admin/products/[id]/options/generate', () => {
   it('returns 404 when product not found', async () => {
     vi.mocked(checkAdminAuth).mockResolvedValue({
       authorized: true,
+      role: 'ADMIN',
       userId: 'a1',
     })
     mockProductFindFirst.mockResolvedValue(null)
@@ -112,6 +113,7 @@ describe('POST /api/admin/products/[id]/options/generate', () => {
   it('returns 400 for invalid input (empty optionNames)', async () => {
     vi.mocked(checkAdminAuth).mockResolvedValue({
       authorized: true,
+      role: 'ADMIN',
       userId: 'a1',
     })
     mockProductFindFirst.mockResolvedValue({ id: 'p1' })
@@ -123,6 +125,7 @@ describe('POST /api/admin/products/[id]/options/generate', () => {
   it('returns 400 for invalid input (too many option names)', async () => {
     vi.mocked(checkAdminAuth).mockResolvedValue({
       authorized: true,
+      role: 'ADMIN',
       userId: 'a1',
     })
     mockProductFindFirst.mockResolvedValue({ id: 'p1' })
@@ -137,6 +140,7 @@ describe('POST /api/admin/products/[id]/options/generate', () => {
   it('returns 400 when no variants found', async () => {
     vi.mocked(checkAdminAuth).mockResolvedValue({
       authorized: true,
+      role: 'ADMIN',
       userId: 'a1',
     })
     mockProductFindFirst.mockResolvedValue({ id: 'p1' })
@@ -154,6 +158,7 @@ describe('POST /api/admin/products/[id]/options/generate', () => {
   it('returns 400 when a variant has no SKU', async () => {
     vi.mocked(checkAdminAuth).mockResolvedValue({
       authorized: true,
+      role: 'ADMIN',
       userId: 'a1',
     })
     mockProductFindFirst.mockResolvedValue({ id: 'p1' })
@@ -173,6 +178,7 @@ describe('POST /api/admin/products/[id]/options/generate', () => {
   it('returns 400 when SKU segment count mismatches option names', async () => {
     vi.mocked(checkAdminAuth).mockResolvedValue({
       authorized: true,
+      role: 'ADMIN',
       userId: 'a1',
     })
     mockProductFindFirst.mockResolvedValue({ id: 'p1' })
@@ -192,6 +198,7 @@ describe('POST /api/admin/products/[id]/options/generate', () => {
   it('generates options from SKUs successfully', async () => {
     vi.mocked(checkAdminAuth).mockResolvedValue({
       authorized: true,
+      role: 'ADMIN',
       userId: 'a1',
     })
     mockProductFindFirst.mockResolvedValue({ id: 'p1' })
@@ -306,6 +313,7 @@ describe('POST /api/admin/products/[id]/options/generate', () => {
   it('uses custom delimiter', async () => {
     vi.mocked(checkAdminAuth).mockResolvedValue({
       authorized: true,
+      role: 'ADMIN',
       userId: 'a1',
     })
     mockProductFindFirst.mockResolvedValue({ id: 'p1' })
@@ -382,6 +390,7 @@ describe('POST /api/admin/products/[id]/options/generate', () => {
   it('returns 500 on transaction error', async () => {
     vi.mocked(checkAdminAuth).mockResolvedValue({
       authorized: true,
+      role: 'ADMIN',
       userId: 'a1',
     })
     mockProductFindFirst.mockResolvedValue({ id: 'p1' })
@@ -400,6 +409,7 @@ describe('POST /api/admin/products/[id]/options/generate', () => {
   it('handles single option name with single segment SKU', async () => {
     vi.mocked(checkAdminAuth).mockResolvedValue({
       authorized: true,
+      role: 'ADMIN',
       userId: 'a1',
     })
     mockProductFindFirst.mockResolvedValue({ id: 'p1' })
@@ -471,6 +481,7 @@ describe('POST /api/admin/products/[id]/options/generate', () => {
   it('defaults delimiter to hyphen when not provided', async () => {
     vi.mocked(checkAdminAuth).mockResolvedValue({
       authorized: true,
+      role: 'ADMIN',
       userId: 'a1',
     })
     mockProductFindFirst.mockResolvedValue({ id: 'p1' })

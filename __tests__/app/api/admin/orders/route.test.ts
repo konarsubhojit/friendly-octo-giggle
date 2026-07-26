@@ -108,6 +108,7 @@ describe('GET /api/admin/orders', () => {
 
     mockCheckAdminAuth.mockResolvedValue({
       authorized: true,
+      role: 'ADMIN',
       userId: 'admin-user',
     })
     mockFindMany.mockResolvedValue(mockOrders)
@@ -128,6 +129,7 @@ describe('GET /api/admin/orders', () => {
   it('returns 500 on database error', async () => {
     mockCheckAdminAuth.mockResolvedValue({
       authorized: true,
+      role: 'ADMIN',
       userId: 'admin-user',
     })
     mockFindMany.mockRejectedValue(new Error('Database error'))
@@ -142,6 +144,7 @@ describe('GET /api/admin/orders', () => {
   it('uses shared order search ids when search is provided', async () => {
     mockCheckAdminAuth.mockResolvedValue({
       authorized: true,
+      role: 'ADMIN',
       userId: 'admin-user',
     })
     mockSearchOrderIds.mockResolvedValue(['order1', 'order2'])

@@ -93,14 +93,8 @@ export default function CheckoutShippingPage() {
 
               <CartPricingSummary
                 className="mb-2"
-                itemCount={pricingSummary.itemCount}
-                subtotal={formatPrice(pricingSummary.subtotal)}
-                shipping={
-                  pricingSummary.shippingAmount === 0
-                    ? 'Free'
-                    : formatPrice(pricingSummary.shippingAmount)
-                }
-                total={formatPrice(pricingSummary.total)}
+                summary={pricingSummary}
+                formatPrice={formatPrice}
               />
 
               <p className="mt-3 text-xs text-[var(--text-muted)]">
