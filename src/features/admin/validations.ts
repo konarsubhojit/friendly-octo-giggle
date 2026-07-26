@@ -35,7 +35,11 @@ const nonNegativeMoney = z
   .nonnegative('Amount cannot be negative')
   .max(MAX_MONEY_AMOUNT, 'Amount is too large')
 
-export const CouponBaseSchema = z.object({
+/**
+ * Field definitions without defaults. The patch schema is built from these so
+ * a partial update never silently rewrites omitted columns to their defaults.
+ */
+const couponFields = {
   code: z
     .string()
     .trim()
@@ -45,20 +49,29 @@ export const CouponBaseSchema = z.object({
     .transform((code) => code.toUpperCase()),
   description: z.string().trim().max(500).nullish(),
   discountType: z.enum(DISCOUNT_TYPES),
-  discountValue: nonNegativeMoney.default(0),
+  discountValue: nonNegativeMoney,
   maxDiscountAmount: nonNegativeMoney.nullish(),
-  minCartValue: nonNegativeMoney.default(0),
-  scopedCategories: z.array(z.string().trim().min(1)).max(50).default([]),
+  minCartValue: nonNegativeMoney,
+  scopedCategories: z.array(z.string().trim().min(1)).max(50),
   scopedProductIds: z
     .array(z.string().regex(SHORT_ID_REGEX, 'Invalid product ID'))
-    .max(100)
-    .default([]),
+    .max(100),
   usageLimit: z.number().int().positive().nullish(),
   perUserLimit: z.number().int().positive().nullish(),
-  stackable: z.boolean().default(false),
-  isActive: z.boolean().default(true),
+  stackable: z.boolean(),
+  isActive: z.boolean(),
   startsAt: optionalDate,
   endsAt: optionalDate,
+}
+
+export const CouponBaseSchema = z.object({
+  ...couponFields,
+  discountValue: couponFields.discountValue.default(0),
+  minCartValue: couponFields.minCartValue.default(0),
+  scopedCategories: couponFields.scopedCategories.default([]),
+  scopedProductIds: couponFields.scopedProductIds.default([]),
+  stackable: couponFields.stackable.default(false),
+  isActive: couponFields.isActive.default(true),
 })
 
 type CouponRuleInput = Partial<z.infer<typeof CouponBaseSchema>>
@@ -99,8 +112,10 @@ const applyCouponRules = (value: CouponRuleInput, ctx: z.RefinementCtx) => {
 }
 
 export const CreateCouponSchema = CouponBaseSchema.superRefine(applyCouponRules)
-export const UpdateCouponSchema =
-  CouponBaseSchema.partial().superRefine(applyCouponRules)
+export const UpdateCouponSchema = z
+  .object(couponFields)
+  .partial()
+  .superRefine(applyCouponRules)
 
 export type CreateCouponInput = z.infer<typeof CreateCouponSchema>
 export type UpdateCouponInput = z.infer<typeof UpdateCouponSchema>

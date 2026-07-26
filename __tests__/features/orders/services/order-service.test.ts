@@ -21,6 +21,9 @@ const {
   mockWaitUntil,
   mockParseOffsetParam,
   mockVerifyCheckoutPayment,
+  mockDbCouponsFindManyByCodes,
+  mockDbCouponsCountUserRedemptions,
+  MockCouponConflictError,
 } = vi.hoisted(() => {
   class MockStockConflictError extends Error {
     constructor(message: string) {
@@ -28,7 +31,16 @@ const {
       this.name = 'StockConflictError'
     }
   }
+  class MockCouponConflictError extends Error {
+    constructor(message: string) {
+      super(message)
+      this.name = 'CouponConflictError'
+    }
+  }
   return {
+    mockDbCouponsFindManyByCodes: vi.fn(),
+    mockDbCouponsCountUserRedemptions: vi.fn(),
+    MockCouponConflictError,
     mockDbOrdersFindMany: vi.fn(),
     mockDbOrdersCount: vi.fn(),
     mockDbOrdersFindFirstByPaymentTxId: vi.fn(),
@@ -68,8 +80,13 @@ vi.mock('@/lib/db', () => ({
     users: {
       findPreferences: mockDbUsersFindPreferences,
     },
+    coupons: {
+      findManyByCodes: mockDbCouponsFindManyByCodes,
+      countUserRedemptions: mockDbCouponsCountUserRedemptions,
+    },
   },
   StockConflictError: MockStockConflictError,
+  CouponConflictError: MockCouponConflictError,
   drizzleDb: {
     query: {
       users: { findFirst: vi.fn().mockResolvedValue(undefined) },
@@ -497,6 +514,8 @@ describe('order-service', () => {
           customerEmail: 'test@example.com',
           customerAddress: '123 St',
           totalAmount: 200,
+          discountAmount: 0,
+          couponCode: null,
           status: 'PENDING',
           paymentStatus: 'PAID',
           createdAt: new Date('2024-01-01'),
@@ -1136,6 +1155,129 @@ describe('order-service', () => {
           user: testUser,
         })
       ).rejects.toThrow(OrderRequestError)
+    })
+
+    describe('coupon discounts', () => {
+      const activeCoupon = {
+        id: 'cpn0001',
+        code: 'SAVE10',
+        discountType: 'PERCENTAGE' as const,
+        discountValue: 10,
+        maxDiscountAmount: null,
+        minCartValue: 0,
+        scopedCategories: [],
+        scopedProductIds: [],
+        usageLimit: null,
+        perUserLimit: null,
+        usageCount: 0,
+        stackable: true,
+        isActive: true,
+        startsAt: null,
+        endsAt: null,
+      }
+
+      const couponBody = {
+        customerName: 'Test User',
+        customerEmail: 'test@example.com',
+        customerAddress: '123 St',
+        addressLine1: '123 Test St',
+        addressLine2: '',
+        addressLine3: '',
+        pinCode: '110001',
+        city: 'New Delhi',
+        state: 'Delhi',
+        items: [{ productId: 'p1', variantId: 'v1', quantity: 2 }],
+        payment: {
+          provider: 'RAZORPAY' as const,
+          orderId: 'order_123',
+          paymentId: 'pay_123',
+          signature: 'sig_123',
+        },
+        couponCode: 'save10',
+      }
+
+      beforeEach(() => {
+        mockDbProductsFindManyWithVariants.mockResolvedValue([
+          {
+            id: 'p1',
+            name: 'Widget',
+            category: 'cat-a',
+            variants: [{ id: 'v1', price: 100, stock: 10 }],
+          },
+        ])
+        mockDbCouponsCountUserRedemptions.mockResolvedValue({})
+        mockDbOrdersFindFirstById.mockResolvedValue({
+          id: 'ord1',
+          userId: 'user1',
+          customerName: 'Test User',
+          customerEmail: 'test@example.com',
+          customerAddress: '123 St',
+          totalAmount: 180,
+          discountAmount: 20,
+          couponCode: 'SAVE10',
+          status: 'PENDING',
+          createdAt: new Date('2024-01-01'),
+          updatedAt: new Date('2024-01-01'),
+          items: [],
+        })
+        mockDbUsersFindPreferences.mockResolvedValue(null)
+        mockGetQStashClient.mockReturnValue({
+          publishJSON: vi.fn().mockResolvedValue({ messageId: 'msg1' }),
+        })
+      })
+
+      it('recomputes the discount server-side from the coupon code alone', async () => {
+        mockDbCouponsFindManyByCodes.mockResolvedValue([activeCoupon])
+        mockDbOrdersCreateWithItems.mockResolvedValue({ id: 'ord1' })
+
+        await createOrderForUser({ body: couponBody, user: testUser })
+
+        expect(mockDbCouponsFindManyByCodes).toHaveBeenCalledWith(['SAVE10'])
+        // Subtotal 200 less a 10% coupon; the client never supplies a total.
+        expect(mockVerifyCheckoutPayment).toHaveBeenCalledWith(
+          expect.objectContaining({ expectedAmount: 180 })
+        )
+        expect(mockDbOrdersCreateWithItems).toHaveBeenCalledWith(
+          expect.objectContaining({
+            totalAmount: 180,
+            discountAmount: 20,
+            appliedCoupons: [
+              expect.objectContaining({ couponId: 'cpn0001', code: 'SAVE10' }),
+            ],
+          })
+        )
+      })
+
+      it('rejects an invalid coupon before charging', async () => {
+        mockDbCouponsFindManyByCodes.mockResolvedValue([])
+
+        await expect(
+          createOrderForUser({ body: couponBody, user: testUser })
+        ).rejects.toMatchObject({ status: 404 })
+
+        expect(mockDbOrdersCreateWithItems).not.toHaveBeenCalled()
+      })
+
+      it('rejects an expired coupon', async () => {
+        mockDbCouponsFindManyByCodes.mockResolvedValue([
+          { ...activeCoupon, endsAt: new Date('2020-01-01') },
+        ])
+
+        await expect(
+          createOrderForUser({ body: couponBody, user: testUser })
+        ).rejects.toMatchObject({ status: 400 })
+      })
+
+      it('maps a redemption cap conflict to a 409', async () => {
+        mockDbCouponsFindManyByCodes.mockResolvedValue([activeCoupon])
+        mockDbOrdersCreateWithItems.mockRejectedValue(
+          new MockCouponConflictError('Coupon SAVE10 is no longer available')
+        )
+
+        await expect(
+          createOrderForUser({ body: couponBody, user: testUser })
+        ).rejects.toMatchObject({ status: 409 })
+      })
     })
   })
 })

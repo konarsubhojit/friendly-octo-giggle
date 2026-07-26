@@ -88,6 +88,9 @@ const mockOrder = {
   paidAt: new Date('2025-01-05'),
   trackingNumber: null,
   shippingProvider: null,
+  discountAmount: 0,
+  couponId: null,
+  couponCode: null,
   createdAt: new Date('2025-01-05'),
   updatedAt: new Date('2025-01-05'),
 }
