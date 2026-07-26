@@ -13,6 +13,7 @@ const { PaymentConfigError } = vi.hoisted(() => ({
 const m = vi.hoisted(() => ({
   create: vi.fn(),
   updateStatus: vi.fn(),
+  claimForProcessing: vi.fn(),
   findById: vi.fn(),
   findRecentWithOrders: vi.fn(),
   findFirstByCheckoutRequestId: vi.fn(),
@@ -30,6 +31,7 @@ vi.mock('@/lib/db', () => ({
     checkoutRequests: {
       create: m.create,
       updateStatus: m.updateStatus,
+      claimForProcessing: m.claimForProcessing,
       findById: m.findById,
       findRecentWithOrders: m.findRecentWithOrders,
     },
@@ -125,6 +127,7 @@ beforeEach(() => {
   m.create.mockResolvedValue({ id: 'cr1abc', status: 'PENDING' })
   m.send.mockResolvedValue(undefined)
   m.updateStatus.mockResolvedValue(undefined)
+  m.claimForProcessing.mockResolvedValue(true)
   m.findFirstByCheckoutRequestId.mockResolvedValue(null)
   m.createOrderForUser.mockResolvedValue({ order: { id: 'ord1' } })
 })

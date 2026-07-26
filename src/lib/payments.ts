@@ -1,5 +1,6 @@
 import { createHmac, timingSafeEqual } from 'node:crypto'
 import { env } from '@/lib/env'
+import { fromMinorUnits, toMinorUnits } from '@/lib/money'
 import type { CheckoutPaymentInput, PaymentProvider } from '@/lib/types'
 
 export class PaymentConfigurationError extends Error {
@@ -30,16 +31,16 @@ interface RazorpayPaymentResponse {
   captured_at?: number
 }
 
-const toMinorUnits = (amount: number): number => {
-  const [whole, fraction = ''] = amount.toFixed(2).split('.')
-  const normalized = Number.parseInt(
-    `${whole}${fraction.padEnd(2, '0').slice(0, 2)}`,
-    10
-  )
-  if (!Number.isSafeInteger(normalized)) {
+/**
+ * Convert an order total to the gateway's minor units (paise). Wraps the shared
+ * money helper so out-of-range totals surface as a payment verification error.
+ */
+const toGatewayAmount = (amount: number): number => {
+  try {
+    return toMinorUnits(amount)
+  } catch {
     throw new PaymentVerificationError('Order amount is out of supported range')
   }
-  return normalized
 }
 
 const ensureRazorpayConfigured = (): { keyId: string; keySecret: string } => {
@@ -143,7 +144,7 @@ export const verifyCheckoutPayment = async ({
     throw new PaymentVerificationError('Payment order mismatch')
   }
 
-  const expectedAmountInPaise = toMinorUnits(expectedAmount)
+  const expectedAmountInPaise = toGatewayAmount(expectedAmount)
   if (details.amount !== expectedAmountInPaise) {
     throw new PaymentVerificationError('Paid amount does not match order total')
   }
@@ -156,7 +157,7 @@ export const verifyCheckoutPayment = async ({
     provider: payment.provider,
     paymentOrderId: payment.orderId,
     paymentTransactionId: payment.paymentId,
-    amountPaid: details.amount / 100,
+    amountPaid: fromMinorUnits(details.amount),
     paidAt: new Date(details.captured_at * 1000),
   }
 }

@@ -1,4 +1,23 @@
 // Shared primitive regex patterns used across feature validation schemas.
+import { MAX_MONEY_AMOUNT, MONEY_DECIMAL_PLACES } from '../money'
+
+/**
+ * Money precision guard shared by every schema that accepts a monetary amount.
+ * Money is persisted as `numeric(12, 2)`, so anything with more than two
+ * decimal places (or outside the column range) must be rejected at the edge
+ * rather than silently rounded on write.
+ */
+export const hasMoneyPrecision = (value: number): boolean => {
+  if (!Number.isFinite(value)) return false
+  if (Math.abs(value) > MAX_MONEY_AMOUNT) return false
+  const scaled = value * 10 ** MONEY_DECIMAL_PLACES
+  return Math.abs(scaled - Math.round(scaled)) < 1e-6
+}
+
+export const MONEY_PRECISION_MESSAGE = `Amount supports at most ${MONEY_DECIMAL_PLACES} decimal places`
+
+export { MAX_MONEY_AMOUNT }
+
 export const SHORT_ID_REGEX = /^[0-9A-Za-z]{7}$/
 export const ORDER_ID_REGEX = /^ORD[0-9A-Za-z]{7}$/
 export const URL_REGEX = /^https?:\/\/.+/

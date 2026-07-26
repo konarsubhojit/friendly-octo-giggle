@@ -1,7 +1,12 @@
 /**
  * Server-side currency formatting utilities for emails and other server contexts.
  * Mirrors the client-side CurrencyContext logic without React dependencies.
+ *
+ * Conversions go through `lib/money.ts` so that displayed amounts use the same
+ * rounding rules as the values persisted in the database.
  */
+
+import { convertMoney } from './money'
 
 export type CurrencyCode = 'INR' | 'USD' | 'EUR' | 'GBP'
 
@@ -34,7 +39,7 @@ export function formatPriceForCurrency(
   currencyCode: CurrencyCode
 ): string {
   const config = CURRENCIES[currencyCode]
-  const converted = priceInINR * config.rate
+  const converted = convertMoney(priceInINR, config.rate)
   return new Intl.NumberFormat(config.locale, {
     style: 'currency',
     currency: config.code,
@@ -50,5 +55,5 @@ export function convertPriceToINR(
 ): number {
   const rate = CURRENCIES[currencyCode].rate
   if (!Number.isFinite(amount) || amount < 0 || rate <= 0) return 0
-  return amount / rate
+  return convertMoney(amount, 1 / rate)
 }

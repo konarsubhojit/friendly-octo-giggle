@@ -1,7 +1,7 @@
 {
   "name": "friendly-octo-giggle",
   "version": "1.0.0",
-  "description": "",
+  "description": "Scalable serverless e-commerce storefront built with Next.js, TypeScript, Drizzle ORM, PostgreSQL and Redis.",
   "main": "index.js",
   "scripts": {
     "dev": "next dev --experimental-https",
@@ -26,8 +26,15 @@
     "type": "git",
     "url": "git+https://github.com/konarsubhojit/friendly-octo-giggle.git"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "nextjs",
+    "ecommerce",
+    "typescript",
+    "drizzle-orm",
+    "postgresql",
+    "redis"
+  ],
+  "author": "Subhojit Konar",
   "license": "ISC",
   "type": "module",
   "bugs": {

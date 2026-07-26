@@ -9,6 +9,7 @@ import {
   useEffect,
   type ReactNode,
 } from 'react'
+import { convertMoney, parseMoney } from '@/lib/money'
 
 export type CurrencyCode = 'INR' | 'USD' | 'EUR' | 'GBP'
 
@@ -178,14 +179,17 @@ export function CurrencyProvider({
 
   const convertPrice = useCallback(
     (priceInINR: number): number => {
-      return priceInINR * rates[currency]
+      return convertMoney(parseMoney(priceInINR) ?? 0, rates[currency])
     },
     [rates, currency]
   )
 
   const formatPrice = useCallback(
     (priceInINR: number): string => {
-      const converted = priceInINR * rates[currency]
+      const converted = convertMoney(
+        parseMoney(priceInINR) ?? 0,
+        rates[currency]
+      )
       return new Intl.NumberFormat(config.locale, {
         style: 'currency',
         currency: config.code,

@@ -7,6 +7,7 @@ import {
   streamCsvResponse,
 } from '@/features/admin/services/admin-csv'
 import { apiError, handleApiError } from '@/lib/api-utils'
+import { formatMoneyValue } from '@/lib/money'
 
 export const dynamic = 'force-dynamic'
 
@@ -40,7 +41,7 @@ export const GET = async () => {
           order.id,
           order.customerName,
           order.customerEmail,
-          order.totalAmount,
+          formatMoneyValue(order.totalAmount),
           order.status,
           order.trackingNumber,
           order.shippingProvider,
