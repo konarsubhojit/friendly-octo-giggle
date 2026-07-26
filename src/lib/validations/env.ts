@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { PAYMENT_PROVIDERS } from '@/lib/payments/providers'
 
 // Keys that must be present in production (outside of the build phase).
 const QSTASH_REQUIRED_KEYS = [
@@ -144,7 +145,7 @@ const BaseEnvSchema = z.object({
   NEXT_PUBLIC_UPSTASH_SEARCH_REST_URL: z.url().optional(),
   NEXT_PUBLIC_UPSTASH_SEARCH_REST_READONLY_TOKEN: z.string().optional(),
   GOOGLE_GENERATIVE_AI_API_KEY: z.string().optional(),
-  PAYMENT_PROVIDER: z.enum(['RAZORPAY']).optional(),
+  PAYMENT_PROVIDER: z.enum(PAYMENT_PROVIDERS).optional(),
   RAZORPAY_KEY_ID: z.string().optional(),
   RAZORPAY_KEY_SECRET: z.string().optional(),
   RAZORPAY_WEBHOOK_SECRET: z.string().optional(),

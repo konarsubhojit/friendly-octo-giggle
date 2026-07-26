@@ -167,6 +167,47 @@ describe('PATCH /api/admin/orders/[id]', () => {
     expect(mockInvalidateAdminOrderCaches).toHaveBeenCalledWith('o1', 'u1')
   })
 
+  it('settles a Cash on Delivery order to PAID on delivery confirmation', async () => {
+    mockAuth.mockResolvedValue(adminSession as never)
+    const setSpy = vi.fn(() => ({ where: vi.fn() }))
+    mockUpdate.mockReturnValue({ set: setSpy } as never)
+    mockFindFirst.mockResolvedValue({
+      ...mockOrder,
+      paymentProvider: 'COD',
+      paymentStatus: 'PENDING',
+    } as never)
+
+    const res = await PATCH(mkReq({ status: 'DELIVERED' }), mkParams())
+
+    expect(res.status).toBe(200)
+    expect(setSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: 'DELIVERED',
+        paymentStatus: 'PAID',
+        amountPaid: 5000,
+        paidAt: expect.any(Date),
+      })
+    )
+  })
+
+  it('leaves an online payment untouched on delivery confirmation', async () => {
+    mockAuth.mockResolvedValue(adminSession as never)
+    const setSpy = vi.fn(() => ({ where: vi.fn() }))
+    mockUpdate.mockReturnValue({ set: setSpy } as never)
+    mockFindFirst.mockResolvedValue({
+      ...mockOrder,
+      paymentProvider: 'RAZORPAY',
+      paymentStatus: 'PAID',
+    } as never)
+
+    const res = await PATCH(mkReq({ status: 'DELIVERED' }), mkParams())
+
+    expect(res.status).toBe(200)
+    expect(setSpy).toHaveBeenCalledWith(
+      expect.not.objectContaining({ paidAt: expect.anything() })
+    )
+  })
+
   it('returns 404 when order not found', async () => {
     mockAuth.mockResolvedValue(adminSession as never)
     mockFindFirst.mockResolvedValue(undefined as never)

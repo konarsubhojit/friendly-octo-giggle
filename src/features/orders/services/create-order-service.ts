@@ -20,6 +20,7 @@ import {
   PaymentConfigurationError,
   PaymentVerificationError,
   verifyCheckoutPayment,
+  type VerifiedPayment,
 } from '@/lib/payments'
 import {
   OrderRequestError,
@@ -388,13 +389,7 @@ export const persistOrder = async ({
   customerDetails: Extract<ValidationResult, { valid: true }>
   productList: ProductWithVariants[]
   totalAmount: number
-  verifiedPayment?: {
-    provider: 'RAZORPAY'
-    paymentOrderId: string
-    paymentTransactionId: string
-    amountPaid: number
-    paidAt: Date
-  } | null
+  verifiedPayment?: VerifiedPayment | null
   checkoutRequestId?: string
 }) => {
   try {
@@ -551,19 +546,15 @@ const fetchProductsForOrder = async (
 const verifyPaymentForOrder = async ({
   payment,
   expectedAmount,
+  reference,
 }: {
   payment: CreateOrderInput['payment']
   expectedAmount: number
-}): Promise<{
-  provider: 'RAZORPAY'
-  paymentOrderId: string
-  paymentTransactionId: string
-  amountPaid: number
-  paidAt: Date
-} | null> => {
+  reference?: string
+}): Promise<VerifiedPayment | null> => {
   if (!payment) return null
   try {
-    return await verifyCheckoutPayment({ payment, expectedAmount })
+    return await verifyCheckoutPayment({ payment, expectedAmount, reference })
   } catch (error) {
     if (
       error instanceof PaymentVerificationError ||
@@ -675,6 +666,7 @@ export const createOrderForUser = async ({
   const verifiedPayment = await verifyPaymentForOrder({
     payment: body.payment,
     expectedAmount: totalAmount,
+    reference: checkoutRequestId,
   })
   if (verifiedPayment) {
     await ensurePaymentTransactionUnique(verifiedPayment.paymentTransactionId)

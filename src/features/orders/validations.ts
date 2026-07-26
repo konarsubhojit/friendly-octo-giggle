@@ -5,6 +5,7 @@ import {
   MAX_MONEY_AMOUNT,
   hasMoneyPrecision,
 } from '@/lib/validations/primitives'
+import { PaymentReferenceSchema } from '@/lib/validations/payment'
 
 export const StructuredAddressSchema = z.object({
   addressLine1: z
@@ -81,12 +82,7 @@ export const CreateOrderSchema = z.object({
   customerEmail: z.string().regex(EMAIL_REGEX, 'Invalid email address'),
   ...StructuredAddressSchema.shape,
   items: z.array(OrderItemSchema).min(1, 'At least one item is required'),
-  payment: z.object({
-    provider: z.literal('RAZORPAY'),
-    orderId: z.string().min(1),
-    paymentId: z.string().min(1),
-    signature: z.string().min(1),
-  }),
+  payment: PaymentReferenceSchema,
 })
 
 export const UpdateOrderStatusSchema = z.object({

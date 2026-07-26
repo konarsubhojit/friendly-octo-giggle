@@ -1,0 +1,1 @@
+ALTER TYPE "public"."PaymentProvider" ADD VALUE 'COD';

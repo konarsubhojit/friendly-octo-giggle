@@ -29,6 +29,11 @@ import {
   ensurePaymentProviderConfigured,
   PaymentConfigurationError,
 } from '@/lib/payments'
+import {
+  isPaymentProvider,
+  requiresPaymentSignature,
+} from '@/lib/payments/providers'
+import type { CheckoutPaymentInput } from '@/lib/types'
 
 export const CHECKOUT_QUEUE_TOPIC = 'checkout-orders'
 
@@ -111,6 +116,39 @@ const getNormalizedCheckoutInput = (
   }
 
   return parseResult.data
+}
+
+/**
+ * Rebuild the payment reference persisted on a checkout request.
+ *
+ * Providers that sign their references (e.g. Razorpay) must have every field
+ * present; offline providers such as Cash on Delivery only carry the provider,
+ * and their references are generated during verification.
+ */
+const buildStoredPaymentReference = (checkoutRequest: {
+  paymentProvider: string | null
+  paymentOrderId: string | null
+  paymentTransactionId: string | null
+  paymentSignature: string | null
+}): CheckoutPaymentInput | undefined => {
+  const provider = checkoutRequest.paymentProvider
+  if (!isPaymentProvider(provider)) return undefined
+
+  const hasSignedReference =
+    checkoutRequest.paymentOrderId &&
+    checkoutRequest.paymentTransactionId &&
+    checkoutRequest.paymentSignature
+
+  if (requiresPaymentSignature(provider) && !hasSignedReference) {
+    return undefined
+  }
+
+  return {
+    provider,
+    orderId: checkoutRequest.paymentOrderId ?? undefined,
+    paymentId: checkoutRequest.paymentTransactionId ?? undefined,
+    signature: checkoutRequest.paymentSignature ?? undefined,
+  }
 }
 
 const buildCheckoutStatusResponse = (
@@ -410,18 +448,7 @@ export const processCheckoutRequestById = async (
           quantity: item.quantity,
           customizationNote: item.customizationNote ?? undefined,
         })),
-        payment:
-          checkoutRequest.paymentProvider &&
-          checkoutRequest.paymentOrderId &&
-          checkoutRequest.paymentTransactionId &&
-          checkoutRequest.paymentSignature
-            ? {
-                provider: checkoutRequest.paymentProvider,
-                orderId: checkoutRequest.paymentOrderId,
-                paymentId: checkoutRequest.paymentTransactionId,
-                signature: checkoutRequest.paymentSignature,
-              }
-            : undefined,
+        payment: buildStoredPaymentReference(checkoutRequest),
       },
       user: {
         id: checkoutRequest.userId,

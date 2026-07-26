@@ -10,16 +10,40 @@ const {
   mockVerifyRazorpayWebhookSignature,
   mockProcessCheckoutRequestById,
   mockSet,
-} = vi.hoisted(() => ({
-  mockInsert: vi.fn(),
-  mockDelete: vi.fn(),
-  mockUpdate: vi.fn(),
-  mockTransaction: vi.fn(),
-  mockTxSelect: vi.fn(),
-  mockVerifyRazorpayWebhookSignature: vi.fn(),
-  mockProcessCheckoutRequestById: vi.fn(),
-  mockSet: vi.fn(),
-}))
+  mockGetPaymentGateway,
+  PaymentVerificationError,
+  PaymentConfigurationError,
+} = vi.hoisted(() => {
+  class PaymentVerificationError extends Error {
+    status: number
+    constructor(message: string, status = 400) {
+      super(message)
+      this.status = status
+    }
+  }
+
+  class PaymentConfigurationError extends Error {
+    status: number
+    constructor(message: string, status = 503) {
+      super(message)
+      this.status = status
+    }
+  }
+
+  return {
+    mockInsert: vi.fn(),
+    mockDelete: vi.fn(),
+    mockUpdate: vi.fn(),
+    mockTransaction: vi.fn(),
+    mockTxSelect: vi.fn(),
+    mockVerifyRazorpayWebhookSignature: vi.fn(),
+    mockProcessCheckoutRequestById: vi.fn(),
+    mockSet: vi.fn(),
+    mockGetPaymentGateway: vi.fn(),
+    PaymentVerificationError,
+    PaymentConfigurationError,
+  }
+})
 
 vi.mock('@/lib/db', () => ({
   primaryDrizzleDb: {
@@ -60,21 +84,10 @@ vi.mock('drizzle-orm', () => ({
 }))
 
 vi.mock('@/lib/payments', () => ({
+  getPaymentGateway: mockGetPaymentGateway,
   verifyRazorpayWebhookSignature: mockVerifyRazorpayWebhookSignature,
-  PaymentVerificationError: class PaymentVerificationError extends Error {
-    status: number
-    constructor(message: string, status = 401) {
-      super(message)
-      this.status = status
-    }
-  },
-  PaymentConfigurationError: class PaymentConfigurationError extends Error {
-    status: number
-    constructor(message: string, status = 503) {
-      super(message)
-      this.status = status
-    }
-  },
+  PaymentVerificationError,
+  PaymentConfigurationError,
 }))
 
 vi.mock('@/features/cart/services/checkout-service', () => ({
@@ -87,6 +100,72 @@ vi.mock('@/lib/logger', () => ({
 }))
 
 import { POST } from '@/app/api/payments/webhook/route'
+import { POST as POST_BY_PROVIDER } from '@/app/api/payments/webhook/[provider]/route'
+
+/**
+ * Stand-in for the Razorpay gateway: verifies the delivery signature and
+ * normalizes the payload exactly as the real implementation does, so the route
+ * is exercised through the provider-agnostic gateway contract.
+ */
+const razorpayGatewayStub = {
+  provider: 'RAZORPAY' as const,
+  verifyWebhook: ({
+    payload,
+    headers,
+  }: {
+    payload: string
+    headers: Headers
+  }) => {
+    const signature = headers.get('x-razorpay-signature')
+    if (!signature) {
+      throw new PaymentVerificationError('Missing webhook signature')
+    }
+
+    mockVerifyRazorpayWebhookSignature({ payload, signature })
+
+    let body: {
+      event?: string
+      payload?: {
+        payment?: {
+          entity?: { id?: string; order_id?: string; amount?: number }
+        }
+      }
+    }
+    try {
+      body = JSON.parse(payload)
+    } catch {
+      throw new PaymentVerificationError('Invalid webhook payload')
+    }
+
+    const entity = body.payload?.payment?.entity
+    if (!entity?.id || !entity.order_id) {
+      throw new PaymentVerificationError('Invalid payment webhook payload')
+    }
+
+    const eventType = body.event ?? ''
+    if (eventType === 'payment.captured' && typeof entity.amount !== 'number') {
+      throw new PaymentVerificationError(
+        'Invalid payment amount in webhook payload'
+      )
+    }
+
+    return {
+      provider: 'RAZORPAY' as const,
+      eventId:
+        headers.get('x-razorpay-event-id')?.trim() ||
+        `${eventType}:${entity.id}`,
+      eventType,
+      type:
+        eventType === 'payment.captured' || eventType === 'payment.failed'
+          ? eventType
+          : ('unhandled' as const),
+      paymentId: entity.id,
+      paymentOrderId: entity.order_id,
+      amountInMinorUnits:
+        typeof entity.amount === 'number' ? entity.amount : null,
+    }
+  },
+}
 
 /** Queue the rows returned by successive `tx.select(...)` calls. */
 const queueTransactionSelects = (results: unknown[][]) => {
@@ -150,6 +229,12 @@ const useReclaimResult = (rows: unknown[]) => {
 describe('POST /api/payments/webhook', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockGetPaymentGateway.mockImplementation((provider: string) => {
+      if (provider !== 'RAZORPAY') {
+        throw new PaymentConfigurationError('Unsupported payment provider', 400)
+      }
+      return razorpayGatewayStub
+    })
     useReclaimResult([])
     mockDelete.mockReturnValue({
       where: vi.fn().mockResolvedValue(undefined),
@@ -286,6 +371,27 @@ describe('POST /api/payments/webhook', () => {
         },
       })
     )
+
+    expect(response.status).toBe(400)
+    expect(mockInsert).not.toHaveBeenCalled()
+  })
+
+  it('dispatches a provider-scoped delivery to the matching gateway', async () => {
+    queueTransactionSelects([[], [{ id: 'chk_123', status: 'PENDING' }]])
+
+    const response = await POST_BY_PROVIDER(buildRequest(capturedEvent), {
+      params: Promise.resolve({ provider: 'razorpay' }),
+    })
+
+    expect(response.status).toBe(200)
+    expect(mockGetPaymentGateway).toHaveBeenCalledWith('RAZORPAY')
+    expect(mockProcessCheckoutRequestById).toHaveBeenCalledWith('chk_123')
+  })
+
+  it('rejects a delivery for an unregistered provider', async () => {
+    const response = await POST_BY_PROVIDER(buildRequest(capturedEvent), {
+      params: Promise.resolve({ provider: 'stripe' }),
+    })
 
     expect(response.status).toBe(400)
     expect(mockInsert).not.toHaveBeenCalled()

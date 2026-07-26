@@ -59,8 +59,11 @@ SELECT drizzle.ensure_public_enum(
 
 SELECT drizzle.ensure_public_enum(
   'PaymentProvider',
-  'CREATE TYPE public."PaymentProvider" AS ENUM (''RAZORPAY'')'
+  'CREATE TYPE public."PaymentProvider" AS ENUM (''RAZORPAY'', ''COD'')'
 );
+
+-- Widen an existing enum created before Cash on Delivery was registered.
+ALTER TYPE public."PaymentProvider" ADD VALUE IF NOT EXISTS 'COD';
 
 SELECT drizzle.ensure_public_enum(
   'PaymentStatus',
@@ -1379,6 +1382,13 @@ INSERT INTO drizzle.__drizzle_migrations (hash, created_at)
 SELECT '984c731ceb56e1923cb8945780309f92be97e55c61923d6bb41dde32541516f1', 1785040622095
 WHERE NOT EXISTS (
   SELECT 1 FROM drizzle.__drizzle_migrations WHERE created_at = 1785040622095
+);
+
+-- 0007_payment_provider_cod
+INSERT INTO drizzle.__drizzle_migrations (hash, created_at)
+SELECT 'c033ca498558ad708c7d5294a7826fdf170d7ecaf23fafbb86ce3be31a67b52d', 1785044083575
+WHERE NOT EXISTS (
+  SELECT 1 FROM drizzle.__drizzle_migrations WHERE created_at = 1785044083575
 );
 
 DROP FUNCTION drizzle.ensure_public_enum(text, text);

@@ -18,22 +18,63 @@ import type { OrderStatusChangedEvent } from '@/lib/qstash-events'
 import { env } from '@/lib/env'
 import { logBusinessEvent, logError } from '@/lib/logger'
 import { getRedisClient } from '@/lib/redis'
+import { settlesPaymentOnDelivery } from '@/lib/payments'
 import { waitUntil } from '@vercel/functions'
 
 export const dynamic = 'force-dynamic'
 
-const buildUpdateData = (data: {
-  status: 'PENDING' | 'PROCESSING' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED'
-  trackingNumber?: string | null
-  shippingProvider?: string | null
-}) => {
+/**
+ * Settle providers that collect payment at delivery (e.g. Cash on Delivery).
+ * Confirming delivery is the settlement event for those orders.
+ */
+const buildDeliverySettlement = (
+  nextStatus: string,
+  currentOrder?: {
+    paymentProvider: string | null
+    paymentStatus: string
+    totalAmount: number
+  }
+) => {
+  if (
+    nextStatus !== 'DELIVERED' ||
+    !currentOrder ||
+    currentOrder.paymentStatus === 'PAID' ||
+    !settlesPaymentOnDelivery(currentOrder.paymentProvider)
+  ) {
+    return {}
+  }
+
+  return {
+    paymentStatus: 'PAID' as const,
+    amountPaid: currentOrder.totalAmount,
+    paidAt: new Date(),
+  }
+}
+
+const buildUpdateData = (
+  data: {
+    status: 'PENDING' | 'PROCESSING' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED'
+    trackingNumber?: string | null
+    shippingProvider?: string | null
+  },
+  currentOrder?: {
+    paymentProvider: string | null
+    paymentStatus: string
+    totalAmount: number
+  }
+) => {
   const optional = Object.fromEntries(
     Object.entries({
       trackingNumber: data.trackingNumber,
       shippingProvider: data.shippingProvider,
     }).filter(([, v]) => v !== undefined)
   )
-  return { status: data.status, updatedAt: new Date(), ...optional }
+  return {
+    status: data.status,
+    updatedAt: new Date(),
+    ...optional,
+    ...buildDeliverySettlement(data.status, currentOrder),
+  }
 }
 
 const VALID_TRANSITIONS: Record<string, string[]> = {
@@ -154,7 +195,7 @@ export const PATCH = async (
       await primaryDrizzleDb.transaction(async (tx) => {
         await tx
           .update(orders)
-          .set(buildUpdateData(validatedBody))
+          .set(buildUpdateData(validatedBody, currentOrder))
           .where(eq(orders.id, id))
 
         await Promise.all(
@@ -172,7 +213,7 @@ export const PATCH = async (
     } else {
       await primaryDrizzleDb
         .update(orders)
-        .set(buildUpdateData(validatedBody))
+        .set(buildUpdateData(validatedBody, currentOrder))
         .where(eq(orders.id, id))
     }
 

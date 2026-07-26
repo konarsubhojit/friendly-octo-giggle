@@ -50,6 +50,13 @@
       "when": 1785040622095,
       "tag": "0006_money_and_webhook_events",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1785044083575,
+      "tag": "0007_payment_provider_cod",
+      "breakpoints": true
     }
   ]
 }

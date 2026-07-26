@@ -1,3 +1,5 @@
+import type { PaymentProviderName } from '@/lib/payments/providers'
+
 export interface ProductOptionValue {
   id: string
   optionId: string
@@ -63,13 +65,16 @@ export enum OrderStatus {
 
 export type PaymentStatus = 'PENDING' | 'PAID' | 'FAILED' | 'REFUNDED'
 
-export type PaymentProvider = 'RAZORPAY'
+export type PaymentProvider = PaymentProviderName
 
 export interface CheckoutPaymentInput {
   provider: PaymentProvider
-  orderId: string
-  paymentId: string
-  signature: string
+  /** Gateway order reference — absent for providers that settle offline. */
+  orderId?: string
+  /** Gateway transaction reference — absent for providers that settle offline. */
+  paymentId?: string
+  /** Gateway signature — required only by providers that sign references. */
+  signature?: string
 }
 
 export interface OrderItem {

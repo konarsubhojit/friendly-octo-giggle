@@ -185,6 +185,41 @@ describe('checkout-service', () => {
       )
     })
 
+    it('queues a Cash on Delivery checkout without gateway references', async () => {
+      mockDbCheckoutRequestsCreate.mockResolvedValue({
+        id: 'cr4abcd',
+        status: 'PENDING',
+      })
+      mockSend.mockResolvedValue(undefined)
+
+      await enqueueCheckoutForUser({
+        body: {
+          customerName: 'Test',
+          customerEmail: 'test@example.com',
+          customerAddress: '123 Main Street, City, State 12345',
+          addressLine1: '123 Main Street',
+          addressLine2: '',
+          addressLine3: '',
+          pinCode: '110001',
+          city: 'New Delhi',
+          state: 'Delhi',
+          items: [{ productId: 'abc1234', variantId: 'var0001', quantity: 1 }],
+          payment: { provider: 'COD' },
+        },
+        user: testUser,
+      })
+
+      expect(mockEnsurePaymentProviderConfigured).toHaveBeenCalledWith('COD')
+      expect(mockDbCheckoutRequestsCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          paymentProvider: 'COD',
+          paymentOrderId: null,
+          paymentTransactionId: null,
+          paymentSignature: null,
+        })
+      )
+    })
+
     it('throws on invalid checkout input', async () => {
       await expect(
         enqueueCheckoutForUser({
