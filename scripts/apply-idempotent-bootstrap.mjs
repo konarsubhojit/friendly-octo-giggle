@@ -66,8 +66,8 @@ function splitStatements(script) {
       continue
     }
 
-    if (char === "'") {
-      const end = script.indexOf("'", index + 1)
+    if (char === "'" || char === '"') {
+      const end = script.indexOf(char, index + 1)
       const stop = end === -1 ? script.length : end + 1
       current += script.slice(index, stop)
       index = stop

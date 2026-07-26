@@ -45,6 +45,12 @@ export const toMinorUnits = (amount: number): number => {
     throw new MoneyRangeError('Monetary amount must be a finite number')
   }
 
+  // `toFixed` switches to exponential notation above 1e21, which would parse
+  // into a completely different (silently wrong) value below.
+  if (Math.abs(amount) > MAX_MONEY_AMOUNT) {
+    throw new MoneyRangeError()
+  }
+
   const sign = amount < 0 ? -1 : 1
   const [whole, fraction = ''] = Math.abs(amount)
     .toFixed(MONEY_DECIMAL_PLACES)
@@ -110,16 +116,17 @@ export const formatMoneyValue = (amount: number): string =>
  * form field. Returns `null` when the value is not a valid amount.
  */
 export const parseMoney = (value: unknown): number | null => {
-  if (typeof value === 'number') {
-    return Number.isFinite(value) ? roundMoney(value) : null
+  const raw =
+    typeof value === 'number'
+      ? value
+      : typeof value === 'string' && value.trim()
+        ? Number(value.trim())
+        : null
+
+  if (raw === null || !Number.isFinite(raw) || !isSupportedMoneyAmount(raw)) {
+    return null
   }
-  if (typeof value === 'string') {
-    const trimmed = value.trim()
-    if (!trimmed) return null
-    const parsed = Number(trimmed)
-    return Number.isFinite(parsed) ? roundMoney(parsed) : null
-  }
-  return null
+  return roundMoney(raw)
 }
 
 /** True when the amount fits the persisted `numeric(12, 2)` range. */

@@ -44,6 +44,14 @@ describe('toMinorUnits', () => {
   it('rejects amounts outside the safe integer range', () => {
     expect(() => toMinorUnits(Number.MAX_SAFE_INTEGER)).toThrow(MoneyRangeError)
   })
+
+  it('rejects amounts large enough for toFixed to use exponential notation', () => {
+    // `(1e21).toFixed(2)` is "1e+21", which would otherwise parse into 1 paise.
+    expect(() => toMinorUnits(1e21)).toThrow(MoneyRangeError)
+    expect(() => toMinorUnits(-1e21)).toThrow(MoneyRangeError)
+    expect(() => toMinorUnits(MAX_MONEY_AMOUNT + 1)).toThrow(MoneyRangeError)
+    expect(toMinorUnits(MAX_MONEY_AMOUNT)).toBe(999999999999)
+  })
 })
 
 describe('fromMinorUnits', () => {
@@ -137,6 +145,12 @@ describe('parseMoney', () => {
     expect(parseMoney(null)).toBeNull()
     expect(parseMoney(undefined)).toBeNull()
     expect(parseMoney(Number.NaN)).toBeNull()
+  })
+
+  it('returns null instead of throwing for out-of-range amounts', () => {
+    expect(parseMoney(1e21)).toBeNull()
+    expect(parseMoney('1e21')).toBeNull()
+    expect(parseMoney(MAX_MONEY_AMOUNT + 1)).toBeNull()
   })
 })
 

@@ -9,6 +9,7 @@ const {
   mockTxSelect,
   mockVerifyRazorpayWebhookSignature,
   mockProcessCheckoutRequestById,
+  mockSet,
 } = vi.hoisted(() => ({
   mockInsert: vi.fn(),
   mockDelete: vi.fn(),
@@ -17,6 +18,7 @@ const {
   mockTxSelect: vi.fn(),
   mockVerifyRazorpayWebhookSignature: vi.fn(),
   mockProcessCheckoutRequestById: vi.fn(),
+  mockSet: vi.fn(),
 }))
 
 vi.mock('@/lib/db', () => ({
@@ -44,6 +46,8 @@ vi.mock('@/lib/schema', () => ({
     id: 'id',
     provider: 'provider',
     eventId: 'eventId',
+    receivedAt: 'receivedAt',
+    processedAt: 'processedAt',
   },
 }))
 
@@ -51,6 +55,8 @@ vi.mock('drizzle-orm', () => ({
   and: vi.fn((...args) => args),
   eq: vi.fn((...args) => args),
   ne: vi.fn((...args) => args),
+  lt: vi.fn((...args) => args),
+  isNull: vi.fn((...args) => args),
 }))
 
 vi.mock('@/lib/payments', () => ({
@@ -123,14 +129,28 @@ const useEventClaimSequence = (claims: boolean[]) => {
   }
 }
 
+/**
+ * `update().set().where()` is awaited directly by some call sites and chained
+ * with `.returning()` by the reclaim path, so the stub must support both.
+ */
+const updateResult = (rows: unknown[]) =>
+  Object.assign(Promise.resolve(rows), {
+    returning: vi.fn().mockResolvedValue(rows),
+  })
+
+/** Rows returned when the handler tries to reclaim a stale, unprocessed claim. */
+const useReclaimResult = (rows: unknown[]) => {
+  mockUpdate.mockReturnValue({
+    set: mockSet.mockReturnValue({
+      where: vi.fn(() => updateResult(rows)),
+    }),
+  })
+}
+
 describe('POST /api/payments/webhook', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockUpdate.mockReturnValue({
-      set: vi.fn().mockReturnValue({
-        where: vi.fn().mockResolvedValue(undefined),
-      }),
-    })
+    useReclaimResult([])
     mockDelete.mockReturnValue({
       where: vi.fn().mockResolvedValue(undefined),
     })
@@ -220,6 +240,43 @@ describe('POST /api/payments/webhook', () => {
     expect(mockDelete).toHaveBeenCalled()
   })
 
+  it('reclaims a stale claim whose processing never completed', async () => {
+    useEventClaimSequence([false])
+    useReclaimResult([{ id: 'evt_stale' }])
+    queueTransactionSelects([[], [{ id: 'chk_123', status: 'PENDING' }]])
+
+    const response = await POST(
+      buildRequest(capturedEvent, { 'x-razorpay-event-id': 'evt_stale' })
+    )
+
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toEqual({ ok: true })
+    expect(mockProcessCheckoutRequestById).toHaveBeenCalledWith('chk_123')
+  })
+
+  it('records processedAt once the side effects commit', async () => {
+    queueTransactionSelects([[], [{ id: 'chk_123', status: 'PENDING' }]])
+
+    await POST(buildRequest(capturedEvent))
+
+    expect(mockSet).toHaveBeenCalledWith(
+      expect.objectContaining({ processedAt: expect.any(Date) })
+    )
+  })
+
+  it('returns 400 for a body that is not valid JSON', async () => {
+    const response = await POST(
+      new NextRequest('http://localhost/api/payments/webhook', {
+        method: 'POST',
+        body: 'not-json',
+        headers: { 'x-razorpay-signature': 'valid_signature' },
+      })
+    )
+
+    expect(response.status).toBe(400)
+    expect(mockInsert).not.toHaveBeenCalled()
+  })
+
   it('rejects a captured event without an amount', async () => {
     const response = await POST(
       buildRequest({
@@ -245,6 +302,10 @@ describe('POST /api/payments/webhook', () => {
     )
 
     expect(response.status).toBe(200)
-    expect(mockUpdate).toHaveBeenCalledTimes(2)
+    // checkout request + order marked failed, then the event marked processed
+    expect(mockUpdate).toHaveBeenCalledTimes(3)
+    expect(mockSet).toHaveBeenCalledWith(
+      expect.objectContaining({ status: 'FAILED' })
+    )
   })
 })

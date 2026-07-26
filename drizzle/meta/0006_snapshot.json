@@ -2755,6 +2755,12 @@
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
+        },
+        "processedAt": {
+          "name": "processedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {

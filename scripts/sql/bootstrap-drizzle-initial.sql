@@ -339,7 +339,8 @@ CREATE TABLE IF NOT EXISTS public."WebhookEvent" (
   "provider" "PaymentProvider" NOT NULL,
   "eventId" text NOT NULL,
   "eventType" text NOT NULL,
-  "receivedAt" timestamp without time zone DEFAULT now() NOT NULL
+  "receivedAt" timestamp without time zone DEFAULT now() NOT NULL,
+  "processedAt" timestamp without time zone
 );
 
 CREATE TABLE IF NOT EXISTS public."Wishlist" (
@@ -482,6 +483,7 @@ ALTER TABLE public."User" ADD COLUMN IF NOT EXISTS "createdAt" timestamp without
 ALTER TABLE public."User" ADD COLUMN IF NOT EXISTS "updatedAt" timestamp without time zone DEFAULT now() NOT NULL;
 
 ALTER TABLE public."WebhookEvent" ADD COLUMN IF NOT EXISTS "receivedAt" timestamp without time zone DEFAULT now() NOT NULL;
+ALTER TABLE public."WebhookEvent" ADD COLUMN IF NOT EXISTS "processedAt" timestamp without time zone;
 
 ALTER TABLE public."Wishlist" ADD COLUMN IF NOT EXISTS "createdAt" timestamp without time zone DEFAULT now() NOT NULL;
 
@@ -1374,7 +1376,7 @@ WHERE NOT EXISTS (
 
 -- 0006_money_and_webhook_events
 INSERT INTO drizzle.__drizzle_migrations (hash, created_at)
-SELECT '23022c62acc0661f3b8a7caac31bcbcddca307b64943c6c04e8a6d9dcb4e0897', 1785040622095
+SELECT '984c731ceb56e1923cb8945780309f92be97e55c61923d6bb41dde32541516f1', 1785040622095
 WHERE NOT EXISTS (
   SELECT 1 FROM drizzle.__drizzle_migrations WHERE created_at = 1785040622095
 );

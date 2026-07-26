@@ -430,6 +430,9 @@ export const orderItems = pgTable(
 // One row per delivered gateway webhook event. The unique (provider, eventId)
 // constraint makes processing idempotent: a duplicate delivery loses the race
 // on insert and is short-circuited instead of re-running side effects.
+// `processedAt` records when the side effects committed, so a delivery that
+// died mid-flight can be reclaimed by a later retry instead of being silently
+// swallowed as a duplicate.
 
 export const webhookEvents = pgTable(
   'WebhookEvent',
@@ -443,6 +446,7 @@ export const webhookEvents = pgTable(
     receivedAt: timestamp('receivedAt', { mode: 'date' })
       .defaultNow()
       .notNull(),
+    processedAt: timestamp('processedAt', { mode: 'date' }),
   },
   (t) => [
     unique('WebhookEvent_provider_eventId_key').on(t.provider, t.eventId),

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { and, eq, ne } from 'drizzle-orm'
+import { and, eq, isNull, lt, ne } from 'drizzle-orm'
 import { primaryDrizzleDb } from '@/lib/db'
 import { checkoutRequests, orders, webhookEvents } from '@/lib/schema'
 import {
@@ -36,12 +36,22 @@ interface RazorpayWebhookEvent {
 }
 
 /**
+ * A claimed-but-unprocessed webhook older than this is treated as abandoned
+ * (the process died mid-flight) and may be reclaimed by a gateway retry.
+ */
+const STALE_WEBHOOK_CLAIM_MS = 5 * 60 * 1000
+
+/**
  * Claim a webhook delivery by inserting its event id. Razorpay retries events
  * aggressively (and can deliver the same event concurrently), so the unique
  * (provider, eventId) constraint is what makes processing exactly-once: the
  * loser of the insert race gets no row back and skips all side effects.
  *
- * @returns true when this delivery is the first one for the event.
+ * If a previous delivery claimed the event but never recorded completion — for
+ * example the function timed out or the process was killed — the claim is
+ * reclaimed once it goes stale so the retry can finish the work.
+ *
+ * @returns true when this delivery owns the event and must process it.
  */
 const claimWebhookEvent = async ({
   eventId,
@@ -58,7 +68,38 @@ const claimWebhookEvent = async ({
     })
     .returning({ id: webhookEvents.id })
 
-  return claimed.length > 0
+  if (claimed.length > 0) {
+    return true
+  }
+
+  const staleBefore = new Date(Date.now() - STALE_WEBHOOK_CLAIM_MS)
+  const reclaimed = await primaryDrizzleDb
+    .update(webhookEvents)
+    .set({ receivedAt: new Date() })
+    .where(
+      and(
+        eq(webhookEvents.provider, WEBHOOK_PROVIDER),
+        eq(webhookEvents.eventId, eventId),
+        isNull(webhookEvents.processedAt),
+        lt(webhookEvents.receivedAt, staleBefore)
+      )
+    )
+    .returning({ id: webhookEvents.id })
+
+  return reclaimed.length > 0
+}
+
+/** Record that the event's side effects committed, closing the claim. */
+const completeWebhookEvent = async (eventId: string): Promise<void> => {
+  await primaryDrizzleDb
+    .update(webhookEvents)
+    .set({ processedAt: new Date() })
+    .where(
+      and(
+        eq(webhookEvents.provider, WEBHOOK_PROVIDER),
+        eq(webhookEvents.eventId, eventId)
+      )
+    )
 }
 
 const releaseWebhookEvent = async (eventId: string): Promise<void> => {
@@ -206,7 +247,18 @@ export async function POST(request: NextRequest) {
 
     verifyRazorpayWebhookSignature({ payload: rawBody, signature })
 
-    const event = JSON.parse(rawBody) as RazorpayWebhookEvent
+    let event: RazorpayWebhookEvent
+    try {
+      event = JSON.parse(rawBody) as RazorpayWebhookEvent
+    } catch {
+      // A signed-but-unparseable body will never become valid, so answer 400
+      // to stop the gateway retrying it forever.
+      return NextResponse.json(
+        { error: 'Invalid webhook payload' },
+        { status: 400 }
+      )
+    }
+
     const paymentEntity = event.payload?.payment?.entity
     const paymentId = paymentEntity?.id
     const paymentOrderId = paymentEntity?.order_id
@@ -257,6 +309,8 @@ export async function POST(request: NextRequest) {
       if (event.event === 'payment.failed') {
         await handleFailedPayment({ paymentId })
       }
+
+      await completeWebhookEvent(eventId)
     } catch (error) {
       // Release the claim so the gateway's retry can reprocess the event
       // instead of it being permanently swallowed as a duplicate.

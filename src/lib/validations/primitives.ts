@@ -1,5 +1,9 @@
 // Shared primitive regex patterns used across feature validation schemas.
-import { MAX_MONEY_AMOUNT, MONEY_DECIMAL_PLACES } from '../money'
+import {
+  MAX_MONEY_AMOUNT,
+  MONEY_DECIMAL_PLACES,
+  isSupportedMoneyAmount,
+} from '../money'
 
 /**
  * Money precision guard shared by every schema that accepts a monetary amount.
@@ -8,13 +12,10 @@ import { MAX_MONEY_AMOUNT, MONEY_DECIMAL_PLACES } from '../money'
  * rather than silently rounded on write.
  */
 export const hasMoneyPrecision = (value: number): boolean => {
-  if (!Number.isFinite(value)) return false
-  if (Math.abs(value) > MAX_MONEY_AMOUNT) return false
+  if (!isSupportedMoneyAmount(value)) return false
   const scaled = value * 10 ** MONEY_DECIMAL_PLACES
   return Math.abs(scaled - Math.round(scaled)) < 1e-6
 }
-
-export const MONEY_PRECISION_MESSAGE = `Amount supports at most ${MONEY_DECIMAL_PLACES} decimal places`
 
 export { MAX_MONEY_AMOUNT }
 
