@@ -112,10 +112,7 @@ const describeValue = (coupon: AdminCouponRecord): string => {
 }
 
 const describeScope = (coupon: AdminCouponRecord): string => {
-  const parts = [
-    ...coupon.scopedCategories,
-    ...coupon.scopedProductIds,
-  ]
+  const parts = [...coupon.scopedCategories, ...coupon.scopedProductIds]
   return parts.length > 0 ? parts.join(', ') : 'Entire cart'
 }
 
@@ -186,9 +183,7 @@ export default function CouponsClient({
     setPendingDelete(null)
     try {
       await apiClient.delete(`/api/admin/coupons/${target.id}`)
-      setCoupons((current) =>
-        current.filter((entry) => entry.id !== target.id)
-      )
+      setCoupons((current) => current.filter((entry) => entry.id !== target.id))
       toast.success(`Coupon ${target.code} deleted`)
     } catch (error) {
       toast.error(
@@ -468,7 +463,8 @@ export default function CouponsClient({
                     <td className={CELL_CLASS}>{describeScope(coupon)}</td>
                     <td className={CELL_CLASS}>{describeCaps(coupon)}</td>
                     <td className={CELL_CLASS}>
-                      {formatDate(coupon.startsAt)} → {formatDate(coupon.endsAt)}
+                      {formatDate(coupon.startsAt)} →{' '}
+                      {formatDate(coupon.endsAt)}
                     </td>
                     <td className={CELL_CLASS}>
                       {coupon.isActive ? 'Active' : 'Inactive'}

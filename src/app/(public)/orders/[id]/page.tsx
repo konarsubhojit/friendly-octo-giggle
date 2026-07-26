@@ -323,8 +323,8 @@ function OrderSummaryHeader({
                 {formatPrice(totalAmount + discountAmount)}
               </p>
               <p className="text-sm font-medium text-[var(--accent-sage)]">
-                {couponCode ? `Coupon ${couponCode}: ` : 'Discount: '}
-                -{formatPrice(discountAmount)}
+                {couponCode ? `Coupon ${couponCode}: ` : 'Discount: '}-
+                {formatPrice(discountAmount)}
               </p>
             </>
           )}
