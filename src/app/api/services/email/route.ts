@@ -4,9 +4,9 @@ import { getQStashReceiver } from '@/lib/qstash'
 import { QStashEmailEventSchema } from '@/lib/qstash-events'
 import type { z } from 'zod'
 import {
-  sendOrderConfirmationEmail,
-  sendOrderStatusUpdateEmail,
-} from '@/lib/email'
+  notifyOrderConfirmation,
+  notifyOrderStatusUpdate,
+} from '@/lib/notifications/order-notifications'
 import { isNonRetriableError } from '@/lib/email/retry'
 import { saveFailedEmail } from '@/lib/email/failed-emails'
 import type { EmailType } from '@/lib/email/failed-emails'
@@ -50,13 +50,13 @@ const verifyQStashSignature = async (
 
 type QStashEvent = z.infer<typeof QStashEmailEventSchema>
 
-const dispatchEmail = (event: QStashEvent): void => {
+const dispatchEmail = async (event: QStashEvent): Promise<void> => {
   if (event.type === 'order.created') {
     const currency: CurrencyCode =
       event.data.currencyCode && isValidCurrencyCode(event.data.currencyCode)
         ? event.data.currencyCode
         : 'INR'
-    sendOrderConfirmationEmail({
+    await notifyOrderConfirmation({
       to: event.data.customerEmail,
       customerName: event.data.customerName,
       orderId: event.data.orderId,
@@ -70,7 +70,7 @@ const dispatchEmail = (event: QStashEvent): void => {
       })),
     })
   } else {
-    sendOrderStatusUpdateEmail({
+    await notifyOrderStatusUpdate({
       to: event.data.customerEmail,
       customerName: event.data.customerName,
       orderId: event.data.orderId,
@@ -169,7 +169,7 @@ export const POST = async (request: NextRequest): Promise<NextResponse> => {
   }
 
   try {
-    dispatchEmail(event)
+    await dispatchEmail(event)
     logger.info(
       { messageId, orderId, eventType: event.type },
       'qstash_email_sent'

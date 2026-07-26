@@ -70,6 +70,12 @@ vi.mock('@/lib/db', () => ({
     },
   },
   StockConflictError: MockStockConflictError,
+  drizzleDb: {
+    query: {
+      users: { findFirst: vi.fn().mockResolvedValue(undefined) },
+      notificationPreferences: { findFirst: vi.fn().mockResolvedValue(undefined) },
+    },
+  },
 }))
 
 vi.mock('@/lib/redis', () => ({

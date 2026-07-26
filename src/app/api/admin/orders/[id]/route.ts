@@ -12,7 +12,7 @@ import { checkAdminAuth } from '@/features/admin/services/admin-auth'
 import { cacheAdminOrderById, invalidateAdminOrderCaches } from '@/lib/cache'
 import { serializeOrder } from '@/lib/serializers'
 import { UpdateOrderStatusSchema } from '@/features/orders/validations'
-import { sendOrderStatusUpdateEmail } from '@/lib/email'
+import { notifyOrderStatusUpdate } from '@/lib/notifications/order-notifications'
 import { getQStashClient } from '@/lib/qstash'
 import type { OrderStatusChangedEvent } from '@/lib/qstash-events'
 import { env } from '@/lib/env'
@@ -106,7 +106,7 @@ const dispatchStatusNotification = async (
       context: 'qstash_publish_failed_using_fallback',
       additionalInfo: { orderId: order.id, eventType: statusEvent.type },
     })
-    sendOrderStatusUpdateEmail({
+    await notifyOrderStatusUpdate({
       to: order.customerEmail,
       customerName: order.customerName,
       orderId: order.id,
