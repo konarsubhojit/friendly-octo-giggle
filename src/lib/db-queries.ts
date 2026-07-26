@@ -1166,6 +1166,15 @@ export const db = {
       return updated ?? null
     },
 
+    /** Number of redemptions recorded for a coupon. */
+    countRedemptions: async (couponId: string): Promise<number> => {
+      const [row] = await primaryDrizzleDb
+        .select({ value: count() })
+        .from(couponRedemptions)
+        .where(eq(couponRedemptions.couponId, couponId))
+      return Number(row?.value ?? 0)
+    },
+
     delete: async (id: string): Promise<{ id: string } | null> => {
       const [deleted] = await primaryDrizzleDb
         .delete(coupons)

@@ -70,6 +70,17 @@ export async function DELETE(
 
   try {
     const { id } = await params
+
+    // Deleting cascades CouponRedemption rows, which would erase the audit
+    // trail behind the redemption report, so redeemed coupons are kept.
+    const redemptions = await db.coupons.countRedemptions(id)
+    if (redemptions > 0) {
+      return apiError(
+        'This coupon has been redeemed and cannot be deleted. Deactivate it instead.',
+        409
+      )
+    }
+
     const deleted = await db.coupons.delete(id)
     if (!deleted) {
       return apiError('Coupon not found', 404)

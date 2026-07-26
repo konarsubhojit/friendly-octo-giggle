@@ -6,6 +6,7 @@ const { mockDbCoupons } = vi.hoisted(() => ({
     findAll: vi.fn(),
     findManyByCodes: vi.fn(),
     create: vi.fn(),
+    countRedemptions: vi.fn(),
     update: vi.fn(),
     delete: vi.fn(),
     redemptionSummary: vi.fn(),
@@ -163,6 +164,7 @@ describe('admin coupon routes', () => {
   })
 
   it('deletes a coupon', async () => {
+    mockDbCoupons.countRedemptions.mockResolvedValue(0)
     mockDbCoupons.delete.mockResolvedValue({ id: 'cpn0001' })
 
     const response = await DELETE(buildRequest({}, 'DELETE'), params)
@@ -171,7 +173,17 @@ describe('admin coupon routes', () => {
     expect(mockDbCoupons.delete).toHaveBeenCalledWith('cpn0001')
   })
 
+  it('refuses to delete a coupon that has been redeemed', async () => {
+    mockDbCoupons.countRedemptions.mockResolvedValue(3)
+
+    const response = await DELETE(buildRequest({}, 'DELETE'), params)
+
+    expect(response.status).toBe(409)
+    expect(mockDbCoupons.delete).not.toHaveBeenCalled()
+  })
+
   it('returns 404 when deleting a missing coupon', async () => {
+    mockDbCoupons.countRedemptions.mockResolvedValue(0)
     mockDbCoupons.delete.mockResolvedValue(null)
 
     const response = await DELETE(buildRequest({}, 'DELETE'), params)

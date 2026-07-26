@@ -110,6 +110,33 @@ export default function CheckoutReviewPage() {
   const [couponError, setCouponError] = useState<string | null>(null)
   const [applyingCoupon, setApplyingCoupon] = useState(false)
 
+  // Re-validate a code restored from session storage so the summary never shows
+  // a total that differs from what will actually be charged.
+  useEffect(() => {
+    const code = pendingCheckout?.couponCode
+    if (status !== 'authenticated' || !code) return
+
+    let cancelled = false
+    apiClient
+      .post<CouponPreviewResponse>('/api/cart/coupon', { couponCode: code })
+      .then((response) => {
+        if (cancelled) return
+        setAppliedCoupon({
+          code: response.data.couponCode,
+          discountAmount: response.data.discountAmount,
+        })
+      })
+      .catch(() => {
+        if (cancelled) return
+        setAppliedCoupon(null)
+        persistCouponCode(null)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [pendingCheckout?.couponCode, status])
+
   const handleApplyCoupon = async () => {
     const code = couponCode.trim()
     if (!code) return
