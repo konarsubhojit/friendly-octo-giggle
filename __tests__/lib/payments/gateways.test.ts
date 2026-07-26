@@ -127,6 +127,22 @@ describe('cash on delivery gateway', () => {
     expect(verified.paidAt).toBeNull()
   })
 
+  it('ignores client-supplied references and derives them server-side', async () => {
+    const verified = await verifyCheckoutPayment({
+      payment: {
+        provider: 'COD',
+        orderId: 'order_spoofed',
+        paymentId: 'pay_spoofed',
+        signature: 'sig',
+      },
+      expectedAmount: 250,
+      reference: 'chk_123',
+    })
+
+    expect(verified.paymentOrderId).toBe('cod_chk_123')
+    expect(verified.paymentTransactionId).toBe('cod_chk_123')
+  })
+
   it('rejects webhook deliveries and refunds', async () => {
     expect(() =>
       codGateway.verifyWebhook({ payload: '{}', headers: new Headers() })

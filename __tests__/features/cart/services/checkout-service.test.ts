@@ -204,7 +204,12 @@ describe('checkout-service', () => {
           city: 'New Delhi',
           state: 'Delhi',
           items: [{ productId: 'abc1234', variantId: 'var0001', quantity: 1 }],
-          payment: { provider: 'COD' },
+          payment: {
+            provider: 'COD',
+            orderId: 'order_spoofed',
+            paymentId: 'pay_spoofed',
+            signature: 'sig_spoofed',
+          },
         },
         user: testUser,
       })

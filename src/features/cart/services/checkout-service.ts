@@ -287,6 +287,14 @@ export const enqueueCheckoutForUser = async ({
     }
   }
 
+  // Only signature-based providers carry client-supplied references. Persisting
+  // them for offline providers would let a caller point a Cash on Delivery
+  // order at another provider's transaction id.
+  const storedPayment =
+    normalized.payment && requiresPaymentSignature(normalized.payment.provider)
+      ? normalized.payment
+      : undefined
+
   const checkoutRequest = await db.checkoutRequests.create({
     userId: user.id,
     customerName: normalized.customerName,
@@ -308,9 +316,9 @@ export const enqueueCheckoutForUser = async ({
     state: normalized.state,
     items: normalized.items,
     paymentProvider: normalized.payment?.provider ?? null,
-    paymentOrderId: normalized.payment?.orderId ?? null,
-    paymentTransactionId: normalized.payment?.paymentId ?? null,
-    paymentSignature: normalized.payment?.signature ?? null,
+    paymentOrderId: storedPayment?.orderId ?? null,
+    paymentTransactionId: storedPayment?.paymentId ?? null,
+    paymentSignature: storedPayment?.signature ?? null,
     status: 'PENDING',
   })
 

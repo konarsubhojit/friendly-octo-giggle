@@ -45,16 +45,18 @@ export const codGateway: PaymentGateway = {
     currency,
   }),
 
+  // References are always derived server-side: a client-supplied reference
+  // could be pointed at another provider's transaction and have the order
+  // marked PAID by that provider's webhook.
   verifyPayment: async ({
-    payment,
     reference,
   }: VerifyPaymentInput): Promise<VerifiedPayment> => {
-    const codReference = payment.orderId || buildReference(reference)
+    const codReference = buildReference(reference)
 
     return {
       provider: 'COD',
       paymentOrderId: codReference,
-      paymentTransactionId: payment.paymentId || codReference,
+      paymentTransactionId: codReference,
       amountPaid: 0,
       paidAt: null,
     }
