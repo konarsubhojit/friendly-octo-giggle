@@ -1,3 +1,14 @@
+-- Idempotent bootstrap for the full current schema.
+--
+-- Generated from the bundled Drizzle migrations (drizzle/*.sql). Applying this
+-- file to an empty database, or to a database that is already partially
+-- migrated, leaves it matching the latest migration and records every bundled
+-- migration as applied so `npm run db:migrate` becomes a no-op.
+--
+-- Regenerate this file whenever a new migration is added: apply every file in
+-- drizzle/ to a scratch database in order, then mirror the resulting schema
+-- here.
+
 BEGIN;
 
 CREATE SCHEMA IF NOT EXISTS drizzle;
@@ -24,15 +35,7 @@ BEGIN
 END
 $$;
 
-SELECT drizzle.ensure_public_enum(
-  'OrderStatus',
-  'CREATE TYPE public."OrderStatus" AS ENUM (''PENDING'', ''PROCESSING'', ''SHIPPED'', ''DELIVERED'', ''CANCELLED'')'
-);
-
-SELECT drizzle.ensure_public_enum(
-  'UserRole',
-  'CREATE TYPE public."UserRole" AS ENUM (''CUSTOMER'', ''ADMIN'')'
-);
+-- ─── Enum types ──────────────────────────────────────────
 
 SELECT drizzle.ensure_public_enum(
   'CheckoutRequestStatus',
@@ -49,588 +52,1333 @@ SELECT drizzle.ensure_public_enum(
   'CREATE TYPE public."FailedEmailStatus" AS ENUM (''pending'', ''failed'', ''sent'')'
 );
 
-CREATE TABLE IF NOT EXISTS public."User" (
-  id text PRIMARY KEY NOT NULL,
-  "name" text,
-  email text NOT NULL,
-  "emailVerified" timestamp,
-  image text,
-  "passwordHash" text,
-  "phoneNumber" varchar(20),
-  role public."UserRole" DEFAULT 'CUSTOMER' NOT NULL,
-  "lockedUntil" timestamp,
-  "sessionVersion" integer DEFAULT 0 NOT NULL,
-  "createdAt" timestamp DEFAULT now() NOT NULL,
-  "updatedAt" timestamp DEFAULT now() NOT NULL,
-  "currencyPreference" varchar(3) DEFAULT 'INR' NOT NULL
+SELECT drizzle.ensure_public_enum(
+  'OrderStatus',
+  'CREATE TYPE public."OrderStatus" AS ENUM (''PENDING'', ''PROCESSING'', ''SHIPPED'', ''DELIVERED'', ''CANCELLED'')'
 );
 
-ALTER TABLE public."User" ADD COLUMN IF NOT EXISTS "lockedUntil" timestamp;
-ALTER TABLE public."User" ADD COLUMN IF NOT EXISTS "sessionVersion" integer DEFAULT 0 NOT NULL;
+SELECT drizzle.ensure_public_enum(
+  'PaymentProvider',
+  'CREATE TYPE public."PaymentProvider" AS ENUM (''RAZORPAY'')'
+);
+
+SELECT drizzle.ensure_public_enum(
+  'PaymentStatus',
+  'CREATE TYPE public."PaymentStatus" AS ENUM (''PENDING'', ''PAID'', ''FAILED'', ''REFUNDED'')'
+);
+
+SELECT drizzle.ensure_public_enum(
+  'UserRole',
+  'CREATE TYPE public."UserRole" AS ENUM (''CUSTOMER'', ''ADMIN'')'
+);
+
+-- ─── Tables ──────────────────────────────────────────────
 
 CREATE TABLE IF NOT EXISTS public."Account" (
-  id text PRIMARY KEY NOT NULL,
+  "id" text NOT NULL,
   "userId" text NOT NULL,
-  type text NOT NULL,
-  provider text NOT NULL,
+  "type" text NOT NULL,
+  "provider" text NOT NULL,
   "providerAccountId" text NOT NULL,
-  refresh_token text,
-  access_token text,
-  expires_at integer,
-  token_type text,
-  scope text,
-  id_token text,
-  session_state text
-);
-
-CREATE TABLE IF NOT EXISTS public."Session" (
-  "sessionToken" text PRIMARY KEY NOT NULL,
-  "userId" text NOT NULL,
-  expires timestamp NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS public."VerificationToken" (
-  identifier text NOT NULL,
-  token text NOT NULL,
-  expires timestamp NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS public."PasswordHistory" (
-  id text PRIMARY KEY NOT NULL,
-  "userId" text NOT NULL,
-  "passwordHash" text NOT NULL,
-  "createdAt" timestamp DEFAULT now() NOT NULL
+  "refresh_token" text,
+  "access_token" text,
+  "expires_at" integer,
+  "token_type" text,
+  "scope" text,
+  "id_token" text,
+  "session_state" text
 );
 
 CREATE TABLE IF NOT EXISTS public."Address" (
-  id varchar(7) PRIMARY KEY NOT NULL,
+  "id" character varying(7) NOT NULL,
   "userId" text NOT NULL,
-  label text NOT NULL,
+  "label" text NOT NULL,
   "addressLine1" text NOT NULL,
   "addressLine2" text,
   "addressLine3" text,
   "pinCode" text NOT NULL,
-  city text NOT NULL,
-  state text NOT NULL,
+  "city" text NOT NULL,
+  "state" text NOT NULL,
   "isDefault" boolean DEFAULT false NOT NULL,
-  "createdAt" timestamp DEFAULT now() NOT NULL,
-  "updatedAt" timestamp DEFAULT now() NOT NULL
+  "createdAt" timestamp without time zone DEFAULT now() NOT NULL,
+  "updatedAt" timestamp without time zone DEFAULT now() NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS public."Category" (
-  id varchar(7) PRIMARY KEY NOT NULL,
-  "name" text NOT NULL,
-  "sortOrder" integer DEFAULT 0 NOT NULL,
-  "createdAt" timestamp DEFAULT now() NOT NULL,
-  "updatedAt" timestamp DEFAULT now() NOT NULL,
-  "deletedAt" timestamp
-);
-
-CREATE TABLE IF NOT EXISTS public."Product" (
-  id varchar(7) PRIMARY KEY NOT NULL,
-  "name" text NOT NULL,
-  description text NOT NULL,
-  price double precision NOT NULL,
-  image text NOT NULL,
-  images json DEFAULT '[]'::json NOT NULL,
-  stock integer NOT NULL,
-  category text NOT NULL,
-  "deletedAt" timestamp,
-  "createdAt" timestamp DEFAULT now() NOT NULL,
-  "updatedAt" timestamp DEFAULT now() NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS public."ProductVariation" (
-  id varchar(7) PRIMARY KEY NOT NULL,
-  "productId" varchar(7) NOT NULL,
-  "name" text NOT NULL,
-  "designName" text NOT NULL,
-  image text,
-  images json DEFAULT '[]'::json NOT NULL,
-  "priceModifier" double precision DEFAULT 0 NOT NULL,
-  stock integer NOT NULL,
-  "createdAt" timestamp DEFAULT now() NOT NULL,
-  "updatedAt" timestamp DEFAULT now() NOT NULL,
-  "deletedAt" timestamp
-);
-
-CREATE TABLE IF NOT EXISTS public."ProductShare" (
-  key varchar(7) PRIMARY KEY NOT NULL,
-  "productId" varchar(7) NOT NULL,
-  "variationId" varchar(7),
-  "createdAt" timestamp DEFAULT now() NOT NULL
+CREATE TABLE IF NOT EXISTS public."AdminAuditLog" (
+  "id" character varying(7) NOT NULL,
+  "userId" text NOT NULL,
+  "entity" text NOT NULL,
+  "entityId" text NOT NULL,
+  "action" text NOT NULL,
+  "diff" json DEFAULT '{}'::json NOT NULL,
+  "createdAt" timestamp without time zone DEFAULT now() NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS public."Cart" (
-  id varchar(7) PRIMARY KEY NOT NULL,
+  "id" character varying(7) NOT NULL,
   "userId" text,
   "sessionId" text,
-  "createdAt" timestamp DEFAULT now() NOT NULL,
-  "updatedAt" timestamp DEFAULT now() NOT NULL
+  "createdAt" timestamp without time zone DEFAULT now() NOT NULL,
+  "updatedAt" timestamp without time zone DEFAULT now() NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS public."CartItem" (
-  id varchar(7) PRIMARY KEY NOT NULL,
-  "cartId" varchar(7) NOT NULL,
-  "productId" varchar(7) NOT NULL,
-  "variationId" varchar(7),
-  quantity integer NOT NULL,
-  "createdAt" timestamp DEFAULT now() NOT NULL,
-  "updatedAt" timestamp DEFAULT now() NOT NULL
+  "id" character varying(7) NOT NULL,
+  "cartId" character varying(7) NOT NULL,
+  "productId" character varying(7) NOT NULL,
+  "variantId" character varying(7) NOT NULL,
+  "quantity" integer NOT NULL,
+  "createdAt" timestamp without time zone DEFAULT now() NOT NULL,
+  "updatedAt" timestamp without time zone DEFAULT now() NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS public."Category" (
+  "id" character varying(7) NOT NULL,
+  "name" text NOT NULL,
+  "sortOrder" integer DEFAULT 0 NOT NULL,
+  "createdAt" timestamp without time zone DEFAULT now() NOT NULL,
+  "updatedAt" timestamp without time zone DEFAULT now() NOT NULL,
+  "deletedAt" timestamp without time zone
 );
 
 CREATE TABLE IF NOT EXISTS public."CheckoutRequest" (
-  id varchar(7) PRIMARY KEY NOT NULL,
+  "id" character varying(7) NOT NULL,
   "userId" text NOT NULL,
   "customerName" text NOT NULL,
   "customerEmail" text NOT NULL,
   "customerAddress" text NOT NULL,
-  items json NOT NULL,
-  status public."CheckoutRequestStatus" DEFAULT 'PENDING' NOT NULL,
+  "addressLine1" text,
+  "addressLine2" text,
+  "addressLine3" text,
+  "pinCode" text,
+  "city" text,
+  "state" text,
+  "items" json NOT NULL,
+  "status" "CheckoutRequestStatus" DEFAULT 'PENDING'::"CheckoutRequestStatus" NOT NULL,
   "errorMessage" text,
-  "createdAt" timestamp DEFAULT now() NOT NULL,
-  "updatedAt" timestamp DEFAULT now() NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS public."Order" (
-  id varchar(10) PRIMARY KEY NOT NULL,
-  "userId" text,
-  "customerName" text NOT NULL,
-  "customerEmail" text NOT NULL,
-  "customerAddress" text NOT NULL,
-  "totalAmount" double precision NOT NULL,
-  status public."OrderStatus" DEFAULT 'PENDING' NOT NULL,
-  "trackingNumber" text,
-  "shippingProvider" text,
-  "createdAt" timestamp DEFAULT now() NOT NULL,
-  "updatedAt" timestamp DEFAULT now() NOT NULL,
-  "checkoutRequestId" varchar(7)
-);
-
-CREATE TABLE IF NOT EXISTS public."OrderItem" (
-  id varchar(7) PRIMARY KEY NOT NULL,
-  "orderId" varchar(10) NOT NULL,
-  "productId" varchar(7) NOT NULL,
-  "variationId" varchar(7),
-  quantity integer NOT NULL,
-  price double precision NOT NULL,
-  "customizationNote" text
-);
-
-CREATE TABLE IF NOT EXISTS public."Review" (
-  id varchar(7) PRIMARY KEY NOT NULL,
-  "productId" varchar(7) NOT NULL,
-  "orderId" varchar(10),
-  "userId" text,
-  rating integer NOT NULL,
-  comment text NOT NULL,
-  "isAnonymous" boolean DEFAULT false NOT NULL,
-  "createdAt" timestamp DEFAULT now() NOT NULL,
-  "updatedAt" timestamp DEFAULT now() NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS public."Wishlist" (
-  id varchar(7) PRIMARY KEY NOT NULL,
-  "userId" text NOT NULL,
-  "productId" varchar(7) NOT NULL,
-  "createdAt" timestamp DEFAULT now() NOT NULL
+  "createdAt" timestamp without time zone DEFAULT now() NOT NULL,
+  "updatedAt" timestamp without time zone DEFAULT now() NOT NULL,
+  "paymentProvider" "PaymentProvider",
+  "paymentOrderId" text,
+  "paymentTransactionId" text,
+  "paymentSignature" text
 );
 
 CREATE TABLE IF NOT EXISTS public."FailedEmail" (
-  id varchar(7) PRIMARY KEY NOT NULL,
+  "id" character varying(7) NOT NULL,
   "recipientEmail" text NOT NULL,
-  subject text NOT NULL,
+  "subject" text NOT NULL,
   "bodyHtml" text NOT NULL,
   "bodyText" text NOT NULL,
-  "emailType" public."EmailType" NOT NULL,
-  "referenceId" varchar(7) NOT NULL,
+  "emailType" "EmailType" NOT NULL,
+  "referenceId" character varying(7) NOT NULL,
   "attemptCount" integer DEFAULT 0 NOT NULL,
   "lastError" text,
   "isRetriable" boolean DEFAULT true NOT NULL,
-  status public."FailedEmailStatus" DEFAULT 'pending' NOT NULL,
+  "status" "FailedEmailStatus" DEFAULT 'pending'::"FailedEmailStatus" NOT NULL,
   "errorHistory" json DEFAULT '[]'::json NOT NULL,
-  "createdAt" timestamp DEFAULT now() NOT NULL,
-  "lastAttemptedAt" timestamp,
-  "sentAt" timestamp
+  "createdAt" timestamp without time zone DEFAULT now() NOT NULL,
+  "lastAttemptedAt" timestamp without time zone,
+  "sentAt" timestamp without time zone
 );
 
-ALTER TABLE public."OrderItem"
-  ALTER COLUMN "orderId" TYPE varchar(10);
+CREATE TABLE IF NOT EXISTS public."Order" (
+  "id" character varying(10) NOT NULL,
+  "userId" text,
+  "customerName" text NOT NULL,
+  "customerEmail" text NOT NULL,
+  "customerAddress" text NOT NULL,
+  "addressLine1" text,
+  "addressLine2" text,
+  "addressLine3" text,
+  "pinCode" text,
+  "city" text,
+  "state" text,
+  "checkoutRequestId" character varying(7),
+  "totalAmount" numeric(12,2) NOT NULL,
+  "status" "OrderStatus" DEFAULT 'PENDING'::"OrderStatus" NOT NULL,
+  "trackingNumber" text,
+  "shippingProvider" text,
+  "createdAt" timestamp without time zone DEFAULT now() NOT NULL,
+  "updatedAt" timestamp without time zone DEFAULT now() NOT NULL,
+  "paymentStatus" "PaymentStatus" DEFAULT 'PENDING'::"PaymentStatus" NOT NULL,
+  "paymentProvider" "PaymentProvider",
+  "paymentOrderId" text,
+  "paymentTransactionId" text,
+  "amountPaid" numeric(12,2) DEFAULT 0 NOT NULL,
+  "paidAt" timestamp without time zone
+);
 
-ALTER TABLE public."Order"
-  ALTER COLUMN id TYPE varchar(10);
+CREATE TABLE IF NOT EXISTS public."OrderItem" (
+  "id" character varying(7) NOT NULL,
+  "orderId" character varying(10) NOT NULL,
+  "productId" character varying(7) NOT NULL,
+  "variantId" character varying(7) NOT NULL,
+  "quantity" integer NOT NULL,
+  "price" numeric(12,2) NOT NULL,
+  "customizationNote" text
+);
 
-ALTER TABLE public."Review"
-  ALTER COLUMN "orderId" TYPE varchar(10);
+CREATE TABLE IF NOT EXISTS public."PasswordHistory" (
+  "id" text NOT NULL,
+  "userId" text NOT NULL,
+  "passwordHash" text NOT NULL,
+  "createdAt" timestamp without time zone DEFAULT now() NOT NULL
+);
 
-ALTER TABLE public."Order"
-  ADD COLUMN IF NOT EXISTS "checkoutRequestId" varchar(7);
+CREATE TABLE IF NOT EXISTS public."Product" (
+  "id" character varying(7) NOT NULL,
+  "name" text NOT NULL,
+  "description" text NOT NULL,
+  "image" text NOT NULL,
+  "images" json DEFAULT '[]'::json NOT NULL,
+  "category" text NOT NULL,
+  "deletedAt" timestamp without time zone,
+  "createdAt" timestamp without time zone DEFAULT now() NOT NULL,
+  "updatedAt" timestamp without time zone DEFAULT now() NOT NULL
+);
 
-ALTER TABLE public."ProductVariation"
-  ADD COLUMN IF NOT EXISTS "deletedAt" timestamp;
+CREATE TABLE IF NOT EXISTS public."ProductOption" (
+  "id" character varying(7) NOT NULL,
+  "productId" character varying(7) NOT NULL,
+  "name" text NOT NULL,
+  "sortOrder" integer DEFAULT 0 NOT NULL,
+  "createdAt" timestamp without time zone DEFAULT now() NOT NULL
+);
 
-ALTER TABLE public."User"
-  ADD COLUMN IF NOT EXISTS "currencyPreference" varchar(3) DEFAULT 'INR';
+CREATE TABLE IF NOT EXISTS public."ProductOptionValue" (
+  "id" character varying(7) NOT NULL,
+  "optionId" character varying(7) NOT NULL,
+  "value" text NOT NULL,
+  "sortOrder" integer DEFAULT 0 NOT NULL,
+  "createdAt" timestamp without time zone DEFAULT now() NOT NULL
+);
 
-ALTER TABLE public."User"
-  ALTER COLUMN "currencyPreference" SET DEFAULT 'INR';
+CREATE TABLE IF NOT EXISTS public."ProductShare" (
+  "key" character varying(7) NOT NULL,
+  "productId" character varying(7) NOT NULL,
+  "variantId" character varying(7),
+  "createdAt" timestamp without time zone DEFAULT now() NOT NULL
+);
 
-UPDATE public."User"
-SET "currencyPreference" = 'INR'
-WHERE "currencyPreference" IS NULL;
+CREATE TABLE IF NOT EXISTS public."ProductVariant" (
+  "id" character varying(7) NOT NULL,
+  "productId" character varying(7) NOT NULL,
+  "sku" text,
+  "price" numeric(12,2) NOT NULL,
+  "stock" integer NOT NULL,
+  "image" text,
+  "images" json DEFAULT '[]'::json NOT NULL,
+  "sortOrder" integer DEFAULT 0 NOT NULL,
+  "deletedAt" timestamp without time zone,
+  "createdAt" timestamp without time zone DEFAULT now() NOT NULL,
+  "updatedAt" timestamp without time zone DEFAULT now() NOT NULL
+);
 
-ALTER TABLE public."User"
-  ALTER COLUMN "currencyPreference" SET NOT NULL;
+CREATE TABLE IF NOT EXISTS public."ProductVariantOptionValue" (
+  "variantId" character varying(7) NOT NULL,
+  "optionValueId" character varying(7) NOT NULL
+);
 
+CREATE TABLE IF NOT EXISTS public."Review" (
+  "id" character varying(7) NOT NULL,
+  "productId" character varying(7) NOT NULL,
+  "orderId" character varying(10),
+  "userId" text,
+  "rating" integer NOT NULL,
+  "comment" text NOT NULL,
+  "isAnonymous" boolean DEFAULT false NOT NULL,
+  "isVerifiedBuyer" boolean DEFAULT false NOT NULL,
+  "helpfulCount" integer DEFAULT 0 NOT NULL,
+  "notHelpfulCount" integer DEFAULT 0 NOT NULL,
+  "isFeatured" boolean DEFAULT false NOT NULL,
+  "isHidden" boolean DEFAULT false NOT NULL,
+  "createdAt" timestamp without time zone DEFAULT now() NOT NULL,
+  "updatedAt" timestamp without time zone DEFAULT now() NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS public."ReviewVote" (
+  "id" character varying(7) NOT NULL,
+  "reviewId" character varying(7) NOT NULL,
+  "userId" text NOT NULL,
+  "vote" integer NOT NULL,
+  "createdAt" timestamp without time zone DEFAULT now() NOT NULL,
+  "updatedAt" timestamp without time zone DEFAULT now() NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS public."Session" (
+  "sessionToken" text NOT NULL,
+  "userId" text NOT NULL,
+  "expires" timestamp without time zone NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS public."User" (
+  "id" text NOT NULL,
+  "name" text,
+  "email" text NOT NULL,
+  "emailVerified" timestamp without time zone,
+  "image" text,
+  "passwordHash" text,
+  "phoneNumber" character varying(20),
+  "currencyPreference" character varying(3) DEFAULT 'INR'::character varying NOT NULL,
+  "role" "UserRole" DEFAULT 'CUSTOMER'::"UserRole" NOT NULL,
+  "lockedUntil" timestamp without time zone,
+  "sessionVersion" integer DEFAULT 0 NOT NULL,
+  "createdAt" timestamp without time zone DEFAULT now() NOT NULL,
+  "updatedAt" timestamp without time zone DEFAULT now() NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS public."VerificationToken" (
+  "identifier" text NOT NULL,
+  "token" text NOT NULL,
+  "expires" timestamp without time zone NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS public."WebhookEvent" (
+  "id" character varying(7) NOT NULL,
+  "provider" "PaymentProvider" NOT NULL,
+  "eventId" text NOT NULL,
+  "eventType" text NOT NULL,
+  "receivedAt" timestamp without time zone DEFAULT now() NOT NULL,
+  "processedAt" timestamp without time zone
+);
+
+CREATE TABLE IF NOT EXISTS public."Wishlist" (
+  "id" character varying(7) NOT NULL,
+  "userId" text NOT NULL,
+  "productId" character varying(7) NOT NULL,
+  "createdAt" timestamp without time zone DEFAULT now() NOT NULL
+);
+
+-- ─── Column catch-up ─────────────────────────────────────
+-- Adds columns introduced by later migrations to databases created from an
+-- earlier snapshot. Columns that are NOT NULL without a default are omitted
+-- because they cannot be added to a table that already holds rows; those are
+-- handled by the ordinary migrations.
+
+ALTER TABLE public."Account" ADD COLUMN IF NOT EXISTS "refresh_token" text;
+ALTER TABLE public."Account" ADD COLUMN IF NOT EXISTS "access_token" text;
+ALTER TABLE public."Account" ADD COLUMN IF NOT EXISTS "expires_at" integer;
+ALTER TABLE public."Account" ADD COLUMN IF NOT EXISTS "token_type" text;
+ALTER TABLE public."Account" ADD COLUMN IF NOT EXISTS "scope" text;
+ALTER TABLE public."Account" ADD COLUMN IF NOT EXISTS "id_token" text;
+ALTER TABLE public."Account" ADD COLUMN IF NOT EXISTS "session_state" text;
+
+ALTER TABLE public."Address" ADD COLUMN IF NOT EXISTS "addressLine2" text;
+ALTER TABLE public."Address" ADD COLUMN IF NOT EXISTS "addressLine3" text;
+ALTER TABLE public."Address" ADD COLUMN IF NOT EXISTS "isDefault" boolean DEFAULT false NOT NULL;
+ALTER TABLE public."Address" ADD COLUMN IF NOT EXISTS "createdAt" timestamp without time zone DEFAULT now() NOT NULL;
+ALTER TABLE public."Address" ADD COLUMN IF NOT EXISTS "updatedAt" timestamp without time zone DEFAULT now() NOT NULL;
+
+ALTER TABLE public."AdminAuditLog" ADD COLUMN IF NOT EXISTS "diff" json DEFAULT '{}'::json NOT NULL;
+ALTER TABLE public."AdminAuditLog" ADD COLUMN IF NOT EXISTS "createdAt" timestamp without time zone DEFAULT now() NOT NULL;
+
+ALTER TABLE public."Cart" ADD COLUMN IF NOT EXISTS "userId" text;
+ALTER TABLE public."Cart" ADD COLUMN IF NOT EXISTS "sessionId" text;
+ALTER TABLE public."Cart" ADD COLUMN IF NOT EXISTS "createdAt" timestamp without time zone DEFAULT now() NOT NULL;
+ALTER TABLE public."Cart" ADD COLUMN IF NOT EXISTS "updatedAt" timestamp without time zone DEFAULT now() NOT NULL;
+
+ALTER TABLE public."CartItem" ADD COLUMN IF NOT EXISTS "createdAt" timestamp without time zone DEFAULT now() NOT NULL;
+ALTER TABLE public."CartItem" ADD COLUMN IF NOT EXISTS "updatedAt" timestamp without time zone DEFAULT now() NOT NULL;
+
+ALTER TABLE public."Category" ADD COLUMN IF NOT EXISTS "sortOrder" integer DEFAULT 0 NOT NULL;
+ALTER TABLE public."Category" ADD COLUMN IF NOT EXISTS "createdAt" timestamp without time zone DEFAULT now() NOT NULL;
+ALTER TABLE public."Category" ADD COLUMN IF NOT EXISTS "updatedAt" timestamp without time zone DEFAULT now() NOT NULL;
+ALTER TABLE public."Category" ADD COLUMN IF NOT EXISTS "deletedAt" timestamp without time zone;
+
+ALTER TABLE public."CheckoutRequest" ADD COLUMN IF NOT EXISTS "addressLine1" text;
+ALTER TABLE public."CheckoutRequest" ADD COLUMN IF NOT EXISTS "addressLine2" text;
+ALTER TABLE public."CheckoutRequest" ADD COLUMN IF NOT EXISTS "addressLine3" text;
+ALTER TABLE public."CheckoutRequest" ADD COLUMN IF NOT EXISTS "pinCode" text;
+ALTER TABLE public."CheckoutRequest" ADD COLUMN IF NOT EXISTS "city" text;
+ALTER TABLE public."CheckoutRequest" ADD COLUMN IF NOT EXISTS "state" text;
+ALTER TABLE public."CheckoutRequest" ADD COLUMN IF NOT EXISTS "status" "CheckoutRequestStatus" DEFAULT 'PENDING'::"CheckoutRequestStatus" NOT NULL;
+ALTER TABLE public."CheckoutRequest" ADD COLUMN IF NOT EXISTS "errorMessage" text;
+ALTER TABLE public."CheckoutRequest" ADD COLUMN IF NOT EXISTS "createdAt" timestamp without time zone DEFAULT now() NOT NULL;
+ALTER TABLE public."CheckoutRequest" ADD COLUMN IF NOT EXISTS "updatedAt" timestamp without time zone DEFAULT now() NOT NULL;
+ALTER TABLE public."CheckoutRequest" ADD COLUMN IF NOT EXISTS "paymentProvider" "PaymentProvider";
+ALTER TABLE public."CheckoutRequest" ADD COLUMN IF NOT EXISTS "paymentOrderId" text;
+ALTER TABLE public."CheckoutRequest" ADD COLUMN IF NOT EXISTS "paymentTransactionId" text;
+ALTER TABLE public."CheckoutRequest" ADD COLUMN IF NOT EXISTS "paymentSignature" text;
+
+ALTER TABLE public."FailedEmail" ADD COLUMN IF NOT EXISTS "attemptCount" integer DEFAULT 0 NOT NULL;
+ALTER TABLE public."FailedEmail" ADD COLUMN IF NOT EXISTS "lastError" text;
+ALTER TABLE public."FailedEmail" ADD COLUMN IF NOT EXISTS "isRetriable" boolean DEFAULT true NOT NULL;
+ALTER TABLE public."FailedEmail" ADD COLUMN IF NOT EXISTS "status" "FailedEmailStatus" DEFAULT 'pending'::"FailedEmailStatus" NOT NULL;
+ALTER TABLE public."FailedEmail" ADD COLUMN IF NOT EXISTS "errorHistory" json DEFAULT '[]'::json NOT NULL;
+ALTER TABLE public."FailedEmail" ADD COLUMN IF NOT EXISTS "createdAt" timestamp without time zone DEFAULT now() NOT NULL;
+ALTER TABLE public."FailedEmail" ADD COLUMN IF NOT EXISTS "lastAttemptedAt" timestamp without time zone;
+ALTER TABLE public."FailedEmail" ADD COLUMN IF NOT EXISTS "sentAt" timestamp without time zone;
+
+ALTER TABLE public."Order" ADD COLUMN IF NOT EXISTS "userId" text;
+ALTER TABLE public."Order" ADD COLUMN IF NOT EXISTS "addressLine1" text;
+ALTER TABLE public."Order" ADD COLUMN IF NOT EXISTS "addressLine2" text;
+ALTER TABLE public."Order" ADD COLUMN IF NOT EXISTS "addressLine3" text;
+ALTER TABLE public."Order" ADD COLUMN IF NOT EXISTS "pinCode" text;
+ALTER TABLE public."Order" ADD COLUMN IF NOT EXISTS "city" text;
+ALTER TABLE public."Order" ADD COLUMN IF NOT EXISTS "state" text;
+ALTER TABLE public."Order" ADD COLUMN IF NOT EXISTS "checkoutRequestId" character varying(7);
+ALTER TABLE public."Order" ADD COLUMN IF NOT EXISTS "status" "OrderStatus" DEFAULT 'PENDING'::"OrderStatus" NOT NULL;
+ALTER TABLE public."Order" ADD COLUMN IF NOT EXISTS "trackingNumber" text;
+ALTER TABLE public."Order" ADD COLUMN IF NOT EXISTS "shippingProvider" text;
+ALTER TABLE public."Order" ADD COLUMN IF NOT EXISTS "createdAt" timestamp without time zone DEFAULT now() NOT NULL;
+ALTER TABLE public."Order" ADD COLUMN IF NOT EXISTS "updatedAt" timestamp without time zone DEFAULT now() NOT NULL;
+ALTER TABLE public."Order" ADD COLUMN IF NOT EXISTS "paymentStatus" "PaymentStatus" DEFAULT 'PENDING'::"PaymentStatus" NOT NULL;
+ALTER TABLE public."Order" ADD COLUMN IF NOT EXISTS "paymentProvider" "PaymentProvider";
+ALTER TABLE public."Order" ADD COLUMN IF NOT EXISTS "paymentOrderId" text;
+ALTER TABLE public."Order" ADD COLUMN IF NOT EXISTS "paymentTransactionId" text;
+ALTER TABLE public."Order" ADD COLUMN IF NOT EXISTS "amountPaid" numeric(12,2) DEFAULT 0 NOT NULL;
+ALTER TABLE public."Order" ADD COLUMN IF NOT EXISTS "paidAt" timestamp without time zone;
+
+ALTER TABLE public."OrderItem" ADD COLUMN IF NOT EXISTS "customizationNote" text;
+
+ALTER TABLE public."PasswordHistory" ADD COLUMN IF NOT EXISTS "createdAt" timestamp without time zone DEFAULT now() NOT NULL;
+
+ALTER TABLE public."Product" ADD COLUMN IF NOT EXISTS "images" json DEFAULT '[]'::json NOT NULL;
+ALTER TABLE public."Product" ADD COLUMN IF NOT EXISTS "deletedAt" timestamp without time zone;
+ALTER TABLE public."Product" ADD COLUMN IF NOT EXISTS "createdAt" timestamp without time zone DEFAULT now() NOT NULL;
+ALTER TABLE public."Product" ADD COLUMN IF NOT EXISTS "updatedAt" timestamp without time zone DEFAULT now() NOT NULL;
+
+ALTER TABLE public."ProductOption" ADD COLUMN IF NOT EXISTS "sortOrder" integer DEFAULT 0 NOT NULL;
+ALTER TABLE public."ProductOption" ADD COLUMN IF NOT EXISTS "createdAt" timestamp without time zone DEFAULT now() NOT NULL;
+
+ALTER TABLE public."ProductOptionValue" ADD COLUMN IF NOT EXISTS "sortOrder" integer DEFAULT 0 NOT NULL;
+ALTER TABLE public."ProductOptionValue" ADD COLUMN IF NOT EXISTS "createdAt" timestamp without time zone DEFAULT now() NOT NULL;
+
+ALTER TABLE public."ProductShare" ADD COLUMN IF NOT EXISTS "variantId" character varying(7);
+ALTER TABLE public."ProductShare" ADD COLUMN IF NOT EXISTS "createdAt" timestamp without time zone DEFAULT now() NOT NULL;
+
+ALTER TABLE public."ProductVariant" ADD COLUMN IF NOT EXISTS "sku" text;
+ALTER TABLE public."ProductVariant" ADD COLUMN IF NOT EXISTS "image" text;
+ALTER TABLE public."ProductVariant" ADD COLUMN IF NOT EXISTS "images" json DEFAULT '[]'::json NOT NULL;
+ALTER TABLE public."ProductVariant" ADD COLUMN IF NOT EXISTS "sortOrder" integer DEFAULT 0 NOT NULL;
+ALTER TABLE public."ProductVariant" ADD COLUMN IF NOT EXISTS "deletedAt" timestamp without time zone;
+ALTER TABLE public."ProductVariant" ADD COLUMN IF NOT EXISTS "createdAt" timestamp without time zone DEFAULT now() NOT NULL;
+ALTER TABLE public."ProductVariant" ADD COLUMN IF NOT EXISTS "updatedAt" timestamp without time zone DEFAULT now() NOT NULL;
+
+ALTER TABLE public."Review" ADD COLUMN IF NOT EXISTS "orderId" character varying(10);
+ALTER TABLE public."Review" ADD COLUMN IF NOT EXISTS "userId" text;
+ALTER TABLE public."Review" ADD COLUMN IF NOT EXISTS "isAnonymous" boolean DEFAULT false NOT NULL;
+ALTER TABLE public."Review" ADD COLUMN IF NOT EXISTS "isVerifiedBuyer" boolean DEFAULT false NOT NULL;
+ALTER TABLE public."Review" ADD COLUMN IF NOT EXISTS "helpfulCount" integer DEFAULT 0 NOT NULL;
+ALTER TABLE public."Review" ADD COLUMN IF NOT EXISTS "notHelpfulCount" integer DEFAULT 0 NOT NULL;
+ALTER TABLE public."Review" ADD COLUMN IF NOT EXISTS "isFeatured" boolean DEFAULT false NOT NULL;
+ALTER TABLE public."Review" ADD COLUMN IF NOT EXISTS "isHidden" boolean DEFAULT false NOT NULL;
+ALTER TABLE public."Review" ADD COLUMN IF NOT EXISTS "createdAt" timestamp without time zone DEFAULT now() NOT NULL;
+ALTER TABLE public."Review" ADD COLUMN IF NOT EXISTS "updatedAt" timestamp without time zone DEFAULT now() NOT NULL;
+
+ALTER TABLE public."ReviewVote" ADD COLUMN IF NOT EXISTS "createdAt" timestamp without time zone DEFAULT now() NOT NULL;
+ALTER TABLE public."ReviewVote" ADD COLUMN IF NOT EXISTS "updatedAt" timestamp without time zone DEFAULT now() NOT NULL;
+
+ALTER TABLE public."User" ADD COLUMN IF NOT EXISTS "name" text;
+ALTER TABLE public."User" ADD COLUMN IF NOT EXISTS "emailVerified" timestamp without time zone;
+ALTER TABLE public."User" ADD COLUMN IF NOT EXISTS "image" text;
+ALTER TABLE public."User" ADD COLUMN IF NOT EXISTS "passwordHash" text;
+ALTER TABLE public."User" ADD COLUMN IF NOT EXISTS "phoneNumber" character varying(20);
+ALTER TABLE public."User" ADD COLUMN IF NOT EXISTS "currencyPreference" character varying(3) DEFAULT 'INR'::character varying NOT NULL;
+ALTER TABLE public."User" ADD COLUMN IF NOT EXISTS "role" "UserRole" DEFAULT 'CUSTOMER'::"UserRole" NOT NULL;
+ALTER TABLE public."User" ADD COLUMN IF NOT EXISTS "lockedUntil" timestamp without time zone;
+ALTER TABLE public."User" ADD COLUMN IF NOT EXISTS "sessionVersion" integer DEFAULT 0 NOT NULL;
+ALTER TABLE public."User" ADD COLUMN IF NOT EXISTS "createdAt" timestamp without time zone DEFAULT now() NOT NULL;
+ALTER TABLE public."User" ADD COLUMN IF NOT EXISTS "updatedAt" timestamp without time zone DEFAULT now() NOT NULL;
+
+ALTER TABLE public."WebhookEvent" ADD COLUMN IF NOT EXISTS "receivedAt" timestamp without time zone DEFAULT now() NOT NULL;
+ALTER TABLE public."WebhookEvent" ADD COLUMN IF NOT EXISTS "processedAt" timestamp without time zone;
+
+ALTER TABLE public."Wishlist" ADD COLUMN IF NOT EXISTS "createdAt" timestamp without time zone DEFAULT now() NOT NULL;
+
+-- ─── Monetary columns ────────────────────────────────────
+-- Money is stored as exact decimals. Convert any legacy floating point columns
+-- in place; re-running this is a no-op once the column is already numeric.
 DO $$
+DECLARE
+  target record;
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'Account_provider_providerAccountId_key') THEN
-    ALTER TABLE public."Account" ADD CONSTRAINT "Account_provider_providerAccountId_key" UNIQUE (provider, "providerAccountId");
-  END IF;
+  FOR target IN
+    SELECT table_name, column_name
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND data_type = 'double precision'
+      AND (table_name, column_name) IN (
+        ('Order', 'totalAmount'),
+        ('Order', 'amountPaid'),
+        ('OrderItem', 'price'),
+        ('ProductVariant', 'price')
+      )
+  LOOP
+    EXECUTE format(
+      'ALTER TABLE public.%I ALTER COLUMN %I TYPE numeric(12, 2) USING round(%I::numeric, 2)',
+      target.table_name, target.column_name, target.column_name
+    );
+  END LOOP;
 END
 $$;
 
-DO $$
-BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'CartItem_cartId_productId_variationId_key') THEN
-    ALTER TABLE public."CartItem" ADD CONSTRAINT "CartItem_cartId_productId_variationId_key" UNIQUE ("cartId", "productId", "variationId");
-  END IF;
-END
-$$;
+-- ─── Removed columns ─────────────────────────────────────
+ALTER TABLE public."Product" DROP COLUMN IF EXISTS "localizedContent";
+ALTER TABLE public."User" DROP COLUMN IF EXISTS "localePreference";
+
+-- ─── Constraints ─────────────────────────────────────────
 
 DO $$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'Cart_userId_unique') THEN
-    ALTER TABLE public."Cart" ADD CONSTRAINT "Cart_userId_unique" UNIQUE ("userId");
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."Account"'::regclass
+      AND (conname = 'Account_pkey' OR pg_get_constraintdef(oid) = 'PRIMARY KEY (id)')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."Account" ADD CONSTRAINT "Account_pkey" PRIMARY KEY (id)';
   END IF;
 END
 $$;
-
 DO $$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'Cart_sessionId_unique') THEN
-    ALTER TABLE public."Cart" ADD CONSTRAINT "Cart_sessionId_unique" UNIQUE ("sessionId");
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."Address"'::regclass
+      AND (conname = 'Address_pkey' OR pg_get_constraintdef(oid) = 'PRIMARY KEY (id)')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."Address" ADD CONSTRAINT "Address_pkey" PRIMARY KEY (id)';
   END IF;
 END
 $$;
-
 DO $$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'ProductVariation_productId_name_key') THEN
-    ALTER TABLE public."ProductVariation" ADD CONSTRAINT "ProductVariation_productId_name_key" UNIQUE ("productId", "name");
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."AdminAuditLog"'::regclass
+      AND (conname = 'AdminAuditLog_pkey' OR pg_get_constraintdef(oid) = 'PRIMARY KEY (id)')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."AdminAuditLog" ADD CONSTRAINT "AdminAuditLog_pkey" PRIMARY KEY (id)';
   END IF;
 END
 $$;
-
 DO $$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'Review_userId_productId_key') THEN
-    ALTER TABLE public."Review" ADD CONSTRAINT "Review_userId_productId_key" UNIQUE ("userId", "productId");
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."Cart"'::regclass
+      AND (conname = 'Cart_pkey' OR pg_get_constraintdef(oid) = 'PRIMARY KEY (id)')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."Cart" ADD CONSTRAINT "Cart_pkey" PRIMARY KEY (id)';
   END IF;
 END
 $$;
-
 DO $$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'User_email_unique') THEN
-    ALTER TABLE public."User" ADD CONSTRAINT "User_email_unique" UNIQUE (email);
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."CartItem"'::regclass
+      AND (conname = 'CartItem_pkey' OR pg_get_constraintdef(oid) = 'PRIMARY KEY (id)')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."CartItem" ADD CONSTRAINT "CartItem_pkey" PRIMARY KEY (id)';
   END IF;
 END
 $$;
-
 DO $$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'User_phoneNumber_unique') THEN
-    ALTER TABLE public."User" ADD CONSTRAINT "User_phoneNumber_unique" UNIQUE ("phoneNumber");
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."Category"'::regclass
+      AND (conname = 'Category_pkey' OR pg_get_constraintdef(oid) = 'PRIMARY KEY (id)')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."Category" ADD CONSTRAINT "Category_pkey" PRIMARY KEY (id)';
   END IF;
 END
 $$;
-
 DO $$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'VerificationToken_token_unique') THEN
-    ALTER TABLE public."VerificationToken" ADD CONSTRAINT "VerificationToken_token_unique" UNIQUE (token);
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."CheckoutRequest"'::regclass
+      AND (conname = 'CheckoutRequest_pkey' OR pg_get_constraintdef(oid) = 'PRIMARY KEY (id)')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."CheckoutRequest" ADD CONSTRAINT "CheckoutRequest_pkey" PRIMARY KEY (id)';
   END IF;
 END
 $$;
-
 DO $$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'VerificationToken_identifier_token_key') THEN
-    ALTER TABLE public."VerificationToken" ADD CONSTRAINT "VerificationToken_identifier_token_key" UNIQUE (identifier, token);
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."FailedEmail"'::regclass
+      AND (conname = 'FailedEmail_pkey' OR pg_get_constraintdef(oid) = 'PRIMARY KEY (id)')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."FailedEmail" ADD CONSTRAINT "FailedEmail_pkey" PRIMARY KEY (id)';
   END IF;
 END
 $$;
-
 DO $$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'Wishlist_userId_productId_key') THEN
-    ALTER TABLE public."Wishlist" ADD CONSTRAINT "Wishlist_userId_productId_key" UNIQUE ("userId", "productId");
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."Order"'::regclass
+      AND (conname = 'Order_pkey' OR pg_get_constraintdef(oid) = 'PRIMARY KEY (id)')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."Order" ADD CONSTRAINT "Order_pkey" PRIMARY KEY (id)';
   END IF;
 END
 $$;
-
 DO $$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'Category_name_unique') THEN
-    ALTER TABLE public."Category" ADD CONSTRAINT "Category_name_unique" UNIQUE ("name");
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."OrderItem"'::regclass
+      AND (conname = 'OrderItem_pkey' OR pg_get_constraintdef(oid) = 'PRIMARY KEY (id)')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."OrderItem" ADD CONSTRAINT "OrderItem_pkey" PRIMARY KEY (id)';
   END IF;
 END
 $$;
-
 DO $$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'Order_checkoutRequestId_key') THEN
-    ALTER TABLE public."Order" ADD CONSTRAINT "Order_checkoutRequestId_key" UNIQUE ("checkoutRequestId");
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."PasswordHistory"'::regclass
+      AND (conname = 'PasswordHistory_pkey' OR pg_get_constraintdef(oid) = 'PRIMARY KEY (id)')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."PasswordHistory" ADD CONSTRAINT "PasswordHistory_pkey" PRIMARY KEY (id)';
   END IF;
 END
 $$;
-
 DO $$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'Account_userId_User_id_fk') THEN
-    ALTER TABLE public."Account" ADD CONSTRAINT "Account_userId_User_id_fk" FOREIGN KEY ("userId") REFERENCES public."User"(id) ON DELETE cascade ON UPDATE no action;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."Product"'::regclass
+      AND (conname = 'Product_pkey' OR pg_get_constraintdef(oid) = 'PRIMARY KEY (id)')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."Product" ADD CONSTRAINT "Product_pkey" PRIMARY KEY (id)';
   END IF;
 END
 $$;
-
 DO $$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'CartItem_cartId_Cart_id_fk') THEN
-    ALTER TABLE public."CartItem" ADD CONSTRAINT "CartItem_cartId_Cart_id_fk" FOREIGN KEY ("cartId") REFERENCES public."Cart"(id) ON DELETE cascade ON UPDATE no action;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."ProductOption"'::regclass
+      AND (conname = 'ProductOption_pkey' OR pg_get_constraintdef(oid) = 'PRIMARY KEY (id)')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."ProductOption" ADD CONSTRAINT "ProductOption_pkey" PRIMARY KEY (id)';
   END IF;
 END
 $$;
-
 DO $$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'CartItem_productId_Product_id_fk') THEN
-    ALTER TABLE public."CartItem" ADD CONSTRAINT "CartItem_productId_Product_id_fk" FOREIGN KEY ("productId") REFERENCES public."Product"(id) ON DELETE no action ON UPDATE no action;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."ProductOptionValue"'::regclass
+      AND (conname = 'ProductOptionValue_pkey' OR pg_get_constraintdef(oid) = 'PRIMARY KEY (id)')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."ProductOptionValue" ADD CONSTRAINT "ProductOptionValue_pkey" PRIMARY KEY (id)';
   END IF;
 END
 $$;
-
 DO $$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'CartItem_variationId_ProductVariation_id_fk') THEN
-    ALTER TABLE public."CartItem" ADD CONSTRAINT "CartItem_variationId_ProductVariation_id_fk" FOREIGN KEY ("variationId") REFERENCES public."ProductVariation"(id) ON DELETE no action ON UPDATE no action;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."ProductShare"'::regclass
+      AND (conname = 'ProductShare_pkey' OR pg_get_constraintdef(oid) = 'PRIMARY KEY (key)')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."ProductShare" ADD CONSTRAINT "ProductShare_pkey" PRIMARY KEY (key)';
   END IF;
 END
 $$;
-
 DO $$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'Cart_userId_User_id_fk') THEN
-    ALTER TABLE public."Cart" ADD CONSTRAINT "Cart_userId_User_id_fk" FOREIGN KEY ("userId") REFERENCES public."User"(id) ON DELETE cascade ON UPDATE no action;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."ProductVariant"'::regclass
+      AND (conname = 'ProductVariant_pkey' OR pg_get_constraintdef(oid) = 'PRIMARY KEY (id)')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."ProductVariant" ADD CONSTRAINT "ProductVariant_pkey" PRIMARY KEY (id)';
   END IF;
 END
 $$;
-
 DO $$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'OrderItem_orderId_Order_id_fk') THEN
-    ALTER TABLE public."OrderItem" ADD CONSTRAINT "OrderItem_orderId_Order_id_fk" FOREIGN KEY ("orderId") REFERENCES public."Order"(id) ON DELETE cascade ON UPDATE no action;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."Review"'::regclass
+      AND (conname = 'Review_pkey' OR pg_get_constraintdef(oid) = 'PRIMARY KEY (id)')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."Review" ADD CONSTRAINT "Review_pkey" PRIMARY KEY (id)';
   END IF;
 END
 $$;
-
 DO $$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'OrderItem_productId_Product_id_fk') THEN
-    ALTER TABLE public."OrderItem" ADD CONSTRAINT "OrderItem_productId_Product_id_fk" FOREIGN KEY ("productId") REFERENCES public."Product"(id) ON DELETE no action ON UPDATE no action;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."ReviewVote"'::regclass
+      AND (conname = 'ReviewVote_pkey' OR pg_get_constraintdef(oid) = 'PRIMARY KEY (id)')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."ReviewVote" ADD CONSTRAINT "ReviewVote_pkey" PRIMARY KEY (id)';
   END IF;
 END
 $$;
-
 DO $$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'OrderItem_variationId_ProductVariation_id_fk') THEN
-    ALTER TABLE public."OrderItem" ADD CONSTRAINT "OrderItem_variationId_ProductVariation_id_fk" FOREIGN KEY ("variationId") REFERENCES public."ProductVariation"(id) ON DELETE no action ON UPDATE no action;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."Session"'::regclass
+      AND (conname = 'Session_pkey' OR pg_get_constraintdef(oid) = 'PRIMARY KEY ("sessionToken")')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."Session" ADD CONSTRAINT "Session_pkey" PRIMARY KEY ("sessionToken")';
   END IF;
 END
 $$;
-
 DO $$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'Order_userId_User_id_fk') THEN
-    ALTER TABLE public."Order" ADD CONSTRAINT "Order_userId_User_id_fk" FOREIGN KEY ("userId") REFERENCES public."User"(id) ON DELETE no action ON UPDATE no action;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."User"'::regclass
+      AND (conname = 'User_pkey' OR pg_get_constraintdef(oid) = 'PRIMARY KEY (id)')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."User" ADD CONSTRAINT "User_pkey" PRIMARY KEY (id)';
   END IF;
 END
 $$;
-
 DO $$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'PasswordHistory_userId_User_id_fk') THEN
-    ALTER TABLE public."PasswordHistory" ADD CONSTRAINT "PasswordHistory_userId_User_id_fk" FOREIGN KEY ("userId") REFERENCES public."User"(id) ON DELETE cascade ON UPDATE no action;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."WebhookEvent"'::regclass
+      AND (conname = 'WebhookEvent_pkey' OR pg_get_constraintdef(oid) = 'PRIMARY KEY (id)')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."WebhookEvent" ADD CONSTRAINT "WebhookEvent_pkey" PRIMARY KEY (id)';
   END IF;
 END
 $$;
-
 DO $$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'ProductShare_productId_Product_id_fk') THEN
-    ALTER TABLE public."ProductShare" ADD CONSTRAINT "ProductShare_productId_Product_id_fk" FOREIGN KEY ("productId") REFERENCES public."Product"(id) ON DELETE cascade ON UPDATE no action;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."Wishlist"'::regclass
+      AND (conname = 'Wishlist_pkey' OR pg_get_constraintdef(oid) = 'PRIMARY KEY (id)')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."Wishlist" ADD CONSTRAINT "Wishlist_pkey" PRIMARY KEY (id)';
   END IF;
 END
 $$;
-
 DO $$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'ProductShare_variationId_ProductVariation_id_fk') THEN
-    ALTER TABLE public."ProductShare" ADD CONSTRAINT "ProductShare_variationId_ProductVariation_id_fk" FOREIGN KEY ("variationId") REFERENCES public."ProductVariation"(id) ON DELETE set null ON UPDATE no action;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."Account"'::regclass
+      AND (conname = 'Account_provider_providerAccountId_key' OR pg_get_constraintdef(oid) = 'UNIQUE (provider, "providerAccountId")')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."Account" ADD CONSTRAINT "Account_provider_providerAccountId_key" UNIQUE (provider, "providerAccountId")';
   END IF;
 END
 $$;
-
 DO $$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'ProductVariation_productId_Product_id_fk') THEN
-    ALTER TABLE public."ProductVariation" ADD CONSTRAINT "ProductVariation_productId_Product_id_fk" FOREIGN KEY ("productId") REFERENCES public."Product"(id) ON DELETE cascade ON UPDATE no action;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."Cart"'::regclass
+      AND (conname = 'Cart_sessionId_unique' OR pg_get_constraintdef(oid) = 'UNIQUE ("sessionId")')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."Cart" ADD CONSTRAINT "Cart_sessionId_unique" UNIQUE ("sessionId")';
   END IF;
 END
 $$;
-
 DO $$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'Review_productId_Product_id_fk') THEN
-    ALTER TABLE public."Review" ADD CONSTRAINT "Review_productId_Product_id_fk" FOREIGN KEY ("productId") REFERENCES public."Product"(id) ON DELETE cascade ON UPDATE no action;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."Cart"'::regclass
+      AND (conname = 'Cart_userId_unique' OR pg_get_constraintdef(oid) = 'UNIQUE ("userId")')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."Cart" ADD CONSTRAINT "Cart_userId_unique" UNIQUE ("userId")';
   END IF;
 END
 $$;
-
 DO $$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'Review_orderId_Order_id_fk') THEN
-    ALTER TABLE public."Review" ADD CONSTRAINT "Review_orderId_Order_id_fk" FOREIGN KEY ("orderId") REFERENCES public."Order"(id) ON DELETE set null ON UPDATE no action;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."CartItem"'::regclass
+      AND (conname = 'CartItem_cartId_productId_variantId_key' OR pg_get_constraintdef(oid) = 'UNIQUE ("cartId", "productId", "variantId")')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."CartItem" ADD CONSTRAINT "CartItem_cartId_productId_variantId_key" UNIQUE ("cartId", "productId", "variantId")';
   END IF;
 END
 $$;
-
 DO $$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'Review_userId_User_id_fk') THEN
-    ALTER TABLE public."Review" ADD CONSTRAINT "Review_userId_User_id_fk" FOREIGN KEY ("userId") REFERENCES public."User"(id) ON DELETE set null ON UPDATE no action;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."Category"'::regclass
+      AND (conname = 'Category_name_unique' OR pg_get_constraintdef(oid) = 'UNIQUE (name)')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."Category" ADD CONSTRAINT "Category_name_unique" UNIQUE (name)';
   END IF;
 END
 $$;
-
 DO $$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'Session_userId_User_id_fk') THEN
-    ALTER TABLE public."Session" ADD CONSTRAINT "Session_userId_User_id_fk" FOREIGN KEY ("userId") REFERENCES public."User"(id) ON DELETE cascade ON UPDATE no action;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."Order"'::regclass
+      AND (conname = 'Order_checkoutRequestId_key' OR pg_get_constraintdef(oid) = 'UNIQUE ("checkoutRequestId")')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."Order" ADD CONSTRAINT "Order_checkoutRequestId_key" UNIQUE ("checkoutRequestId")';
   END IF;
 END
 $$;
-
 DO $$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'Wishlist_userId_User_id_fk') THEN
-    ALTER TABLE public."Wishlist" ADD CONSTRAINT "Wishlist_userId_User_id_fk" FOREIGN KEY ("userId") REFERENCES public."User"(id) ON DELETE cascade ON UPDATE no action;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."Order"'::regclass
+      AND (conname = 'Order_paymentTransactionId_key' OR pg_get_constraintdef(oid) = 'UNIQUE ("paymentTransactionId")')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."Order" ADD CONSTRAINT "Order_paymentTransactionId_key" UNIQUE ("paymentTransactionId")';
   END IF;
 END
 $$;
-
 DO $$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'Wishlist_productId_Product_id_fk') THEN
-    ALTER TABLE public."Wishlist" ADD CONSTRAINT "Wishlist_productId_Product_id_fk" FOREIGN KEY ("productId") REFERENCES public."Product"(id) ON DELETE cascade ON UPDATE no action;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."ProductOption"'::regclass
+      AND (conname = 'ProductOption_productId_name_key' OR pg_get_constraintdef(oid) = 'UNIQUE ("productId", name)')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."ProductOption" ADD CONSTRAINT "ProductOption_productId_name_key" UNIQUE ("productId", name)';
   END IF;
 END
 $$;
-
 DO $$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'CheckoutRequest_userId_User_id_fk') THEN
-    ALTER TABLE public."CheckoutRequest" ADD CONSTRAINT "CheckoutRequest_userId_User_id_fk" FOREIGN KEY ("userId") REFERENCES public."User"(id) ON DELETE cascade ON UPDATE no action;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."ProductOptionValue"'::regclass
+      AND (conname = 'ProductOptionValue_optionId_value_key' OR pg_get_constraintdef(oid) = 'UNIQUE ("optionId", value)')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."ProductOptionValue" ADD CONSTRAINT "ProductOptionValue_optionId_value_key" UNIQUE ("optionId", value)';
   END IF;
 END
 $$;
-
 DO $$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'Address_userId_User_id_fk') THEN
-    ALTER TABLE public."Address" ADD CONSTRAINT "Address_userId_User_id_fk" FOREIGN KEY ("userId") REFERENCES public."User"(id) ON DELETE cascade ON UPDATE no action;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."ProductVariantOptionValue"'::regclass
+      AND (conname = 'ProductVariantOptionValue_pk' OR pg_get_constraintdef(oid) = 'UNIQUE ("variantId", "optionValueId")')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."ProductVariantOptionValue" ADD CONSTRAINT "ProductVariantOptionValue_pk" UNIQUE ("variantId", "optionValueId")';
   END IF;
 END
 $$;
-
 DO $$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'Order_checkoutRequestId_CheckoutRequest_id_fk') THEN
-    ALTER TABLE public."Order" ADD CONSTRAINT "Order_checkoutRequestId_CheckoutRequest_id_fk" FOREIGN KEY ("checkoutRequestId") REFERENCES public."CheckoutRequest"(id) ON DELETE set null ON UPDATE no action;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."Review"'::regclass
+      AND (conname = 'Review_userId_productId_key' OR pg_get_constraintdef(oid) = 'UNIQUE ("userId", "productId")')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."Review" ADD CONSTRAINT "Review_userId_productId_key" UNIQUE ("userId", "productId")';
   END IF;
 END
 $$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."ReviewVote"'::regclass
+      AND (conname = 'ReviewVote_reviewId_userId_key' OR pg_get_constraintdef(oid) = 'UNIQUE ("reviewId", "userId")')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."ReviewVote" ADD CONSTRAINT "ReviewVote_reviewId_userId_key" UNIQUE ("reviewId", "userId")';
+  END IF;
+END
+$$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."User"'::regclass
+      AND (conname = 'User_email_unique' OR pg_get_constraintdef(oid) = 'UNIQUE (email)')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."User" ADD CONSTRAINT "User_email_unique" UNIQUE (email)';
+  END IF;
+END
+$$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."User"'::regclass
+      AND (conname = 'User_phoneNumber_unique' OR pg_get_constraintdef(oid) = 'UNIQUE ("phoneNumber")')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."User" ADD CONSTRAINT "User_phoneNumber_unique" UNIQUE ("phoneNumber")';
+  END IF;
+END
+$$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."VerificationToken"'::regclass
+      AND (conname = 'VerificationToken_identifier_token_key' OR pg_get_constraintdef(oid) = 'UNIQUE (identifier, token)')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."VerificationToken" ADD CONSTRAINT "VerificationToken_identifier_token_key" UNIQUE (identifier, token)';
+  END IF;
+END
+$$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."VerificationToken"'::regclass
+      AND (conname = 'VerificationToken_token_unique' OR pg_get_constraintdef(oid) = 'UNIQUE (token)')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."VerificationToken" ADD CONSTRAINT "VerificationToken_token_unique" UNIQUE (token)';
+  END IF;
+END
+$$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."WebhookEvent"'::regclass
+      AND (conname = 'WebhookEvent_provider_eventId_key' OR pg_get_constraintdef(oid) = 'UNIQUE (provider, "eventId")')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."WebhookEvent" ADD CONSTRAINT "WebhookEvent_provider_eventId_key" UNIQUE (provider, "eventId")';
+  END IF;
+END
+$$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."Wishlist"'::regclass
+      AND (conname = 'Wishlist_userId_productId_key' OR pg_get_constraintdef(oid) = 'UNIQUE ("userId", "productId")')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."Wishlist" ADD CONSTRAINT "Wishlist_userId_productId_key" UNIQUE ("userId", "productId")';
+  END IF;
+END
+$$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."Account"'::regclass
+      AND (conname = 'Account_userId_User_id_fk' OR pg_get_constraintdef(oid) = 'FOREIGN KEY ("userId") REFERENCES "User"(id) ON DELETE CASCADE')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."Account" ADD CONSTRAINT "Account_userId_User_id_fk" FOREIGN KEY ("userId") REFERENCES "User"(id) ON DELETE CASCADE';
+  END IF;
+END
+$$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."Address"'::regclass
+      AND (conname = 'Address_userId_User_id_fk' OR pg_get_constraintdef(oid) = 'FOREIGN KEY ("userId") REFERENCES "User"(id) ON DELETE CASCADE')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."Address" ADD CONSTRAINT "Address_userId_User_id_fk" FOREIGN KEY ("userId") REFERENCES "User"(id) ON DELETE CASCADE';
+  END IF;
+END
+$$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."AdminAuditLog"'::regclass
+      AND (conname = 'AdminAuditLog_userId_User_id_fk' OR pg_get_constraintdef(oid) = 'FOREIGN KEY ("userId") REFERENCES "User"(id) ON DELETE CASCADE')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."AdminAuditLog" ADD CONSTRAINT "AdminAuditLog_userId_User_id_fk" FOREIGN KEY ("userId") REFERENCES "User"(id) ON DELETE CASCADE';
+  END IF;
+END
+$$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."Cart"'::regclass
+      AND (conname = 'Cart_userId_User_id_fk' OR pg_get_constraintdef(oid) = 'FOREIGN KEY ("userId") REFERENCES "User"(id) ON DELETE CASCADE')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."Cart" ADD CONSTRAINT "Cart_userId_User_id_fk" FOREIGN KEY ("userId") REFERENCES "User"(id) ON DELETE CASCADE';
+  END IF;
+END
+$$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."CartItem"'::regclass
+      AND (conname = 'CartItem_cartId_Cart_id_fk' OR pg_get_constraintdef(oid) = 'FOREIGN KEY ("cartId") REFERENCES "Cart"(id) ON DELETE CASCADE')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."CartItem" ADD CONSTRAINT "CartItem_cartId_Cart_id_fk" FOREIGN KEY ("cartId") REFERENCES "Cart"(id) ON DELETE CASCADE';
+  END IF;
+END
+$$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."CartItem"'::regclass
+      AND (conname = 'CartItem_productId_Product_id_fk' OR pg_get_constraintdef(oid) = 'FOREIGN KEY ("productId") REFERENCES "Product"(id)')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."CartItem" ADD CONSTRAINT "CartItem_productId_Product_id_fk" FOREIGN KEY ("productId") REFERENCES "Product"(id)';
+  END IF;
+END
+$$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."CartItem"'::regclass
+      AND (conname = 'CartItem_variantId_ProductVariant_id_fk' OR pg_get_constraintdef(oid) = 'FOREIGN KEY ("variantId") REFERENCES "ProductVariant"(id)')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."CartItem" ADD CONSTRAINT "CartItem_variantId_ProductVariant_id_fk" FOREIGN KEY ("variantId") REFERENCES "ProductVariant"(id)';
+  END IF;
+END
+$$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."CheckoutRequest"'::regclass
+      AND (conname = 'CheckoutRequest_userId_User_id_fk' OR pg_get_constraintdef(oid) = 'FOREIGN KEY ("userId") REFERENCES "User"(id) ON DELETE CASCADE')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."CheckoutRequest" ADD CONSTRAINT "CheckoutRequest_userId_User_id_fk" FOREIGN KEY ("userId") REFERENCES "User"(id) ON DELETE CASCADE';
+  END IF;
+END
+$$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."Order"'::regclass
+      AND (conname = 'Order_checkoutRequestId_CheckoutRequest_id_fk' OR pg_get_constraintdef(oid) = 'FOREIGN KEY ("checkoutRequestId") REFERENCES "CheckoutRequest"(id) ON DELETE SET NULL')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."Order" ADD CONSTRAINT "Order_checkoutRequestId_CheckoutRequest_id_fk" FOREIGN KEY ("checkoutRequestId") REFERENCES "CheckoutRequest"(id) ON DELETE SET NULL';
+  END IF;
+END
+$$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."Order"'::regclass
+      AND (conname = 'Order_userId_User_id_fk' OR pg_get_constraintdef(oid) = 'FOREIGN KEY ("userId") REFERENCES "User"(id)')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."Order" ADD CONSTRAINT "Order_userId_User_id_fk" FOREIGN KEY ("userId") REFERENCES "User"(id)';
+  END IF;
+END
+$$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."OrderItem"'::regclass
+      AND (conname = 'OrderItem_orderId_Order_id_fk' OR pg_get_constraintdef(oid) = 'FOREIGN KEY ("orderId") REFERENCES "Order"(id) ON DELETE CASCADE')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."OrderItem" ADD CONSTRAINT "OrderItem_orderId_Order_id_fk" FOREIGN KEY ("orderId") REFERENCES "Order"(id) ON DELETE CASCADE';
+  END IF;
+END
+$$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."OrderItem"'::regclass
+      AND (conname = 'OrderItem_productId_Product_id_fk' OR pg_get_constraintdef(oid) = 'FOREIGN KEY ("productId") REFERENCES "Product"(id)')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."OrderItem" ADD CONSTRAINT "OrderItem_productId_Product_id_fk" FOREIGN KEY ("productId") REFERENCES "Product"(id)';
+  END IF;
+END
+$$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."OrderItem"'::regclass
+      AND (conname = 'OrderItem_variantId_ProductVariant_id_fk' OR pg_get_constraintdef(oid) = 'FOREIGN KEY ("variantId") REFERENCES "ProductVariant"(id)')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."OrderItem" ADD CONSTRAINT "OrderItem_variantId_ProductVariant_id_fk" FOREIGN KEY ("variantId") REFERENCES "ProductVariant"(id)';
+  END IF;
+END
+$$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."PasswordHistory"'::regclass
+      AND (conname = 'PasswordHistory_userId_User_id_fk' OR pg_get_constraintdef(oid) = 'FOREIGN KEY ("userId") REFERENCES "User"(id) ON DELETE CASCADE')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."PasswordHistory" ADD CONSTRAINT "PasswordHistory_userId_User_id_fk" FOREIGN KEY ("userId") REFERENCES "User"(id) ON DELETE CASCADE';
+  END IF;
+END
+$$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."ProductOption"'::regclass
+      AND (conname = 'ProductOption_productId_Product_id_fk' OR pg_get_constraintdef(oid) = 'FOREIGN KEY ("productId") REFERENCES "Product"(id) ON DELETE CASCADE')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."ProductOption" ADD CONSTRAINT "ProductOption_productId_Product_id_fk" FOREIGN KEY ("productId") REFERENCES "Product"(id) ON DELETE CASCADE';
+  END IF;
+END
+$$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."ProductOptionValue"'::regclass
+      AND (conname = 'ProductOptionValue_optionId_ProductOption_id_fk' OR pg_get_constraintdef(oid) = 'FOREIGN KEY ("optionId") REFERENCES "ProductOption"(id) ON DELETE CASCADE')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."ProductOptionValue" ADD CONSTRAINT "ProductOptionValue_optionId_ProductOption_id_fk" FOREIGN KEY ("optionId") REFERENCES "ProductOption"(id) ON DELETE CASCADE';
+  END IF;
+END
+$$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."ProductShare"'::regclass
+      AND (conname = 'ProductShare_productId_Product_id_fk' OR pg_get_constraintdef(oid) = 'FOREIGN KEY ("productId") REFERENCES "Product"(id) ON DELETE CASCADE')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."ProductShare" ADD CONSTRAINT "ProductShare_productId_Product_id_fk" FOREIGN KEY ("productId") REFERENCES "Product"(id) ON DELETE CASCADE';
+  END IF;
+END
+$$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."ProductShare"'::regclass
+      AND (conname = 'ProductShare_variantId_ProductVariant_id_fk' OR pg_get_constraintdef(oid) = 'FOREIGN KEY ("variantId") REFERENCES "ProductVariant"(id) ON DELETE SET NULL')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."ProductShare" ADD CONSTRAINT "ProductShare_variantId_ProductVariant_id_fk" FOREIGN KEY ("variantId") REFERENCES "ProductVariant"(id) ON DELETE SET NULL';
+  END IF;
+END
+$$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."ProductVariant"'::regclass
+      AND (conname = 'ProductVariant_productId_Product_id_fk' OR pg_get_constraintdef(oid) = 'FOREIGN KEY ("productId") REFERENCES "Product"(id) ON DELETE CASCADE')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."ProductVariant" ADD CONSTRAINT "ProductVariant_productId_Product_id_fk" FOREIGN KEY ("productId") REFERENCES "Product"(id) ON DELETE CASCADE';
+  END IF;
+END
+$$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."ProductVariantOptionValue"'::regclass
+      AND (conname = 'ProductVariantOptionValue_optionValueId_ProductOptionValue_id_f' OR pg_get_constraintdef(oid) = 'FOREIGN KEY ("optionValueId") REFERENCES "ProductOptionValue"(id) ON DELETE CASCADE')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."ProductVariantOptionValue" ADD CONSTRAINT "ProductVariantOptionValue_optionValueId_ProductOptionValue_id_f" FOREIGN KEY ("optionValueId") REFERENCES "ProductOptionValue"(id) ON DELETE CASCADE';
+  END IF;
+END
+$$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."ProductVariantOptionValue"'::regclass
+      AND (conname = 'ProductVariantOptionValue_variantId_ProductVariant_id_fk' OR pg_get_constraintdef(oid) = 'FOREIGN KEY ("variantId") REFERENCES "ProductVariant"(id) ON DELETE CASCADE')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."ProductVariantOptionValue" ADD CONSTRAINT "ProductVariantOptionValue_variantId_ProductVariant_id_fk" FOREIGN KEY ("variantId") REFERENCES "ProductVariant"(id) ON DELETE CASCADE';
+  END IF;
+END
+$$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."Review"'::regclass
+      AND (conname = 'Review_orderId_Order_id_fk' OR pg_get_constraintdef(oid) = 'FOREIGN KEY ("orderId") REFERENCES "Order"(id) ON DELETE SET NULL')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."Review" ADD CONSTRAINT "Review_orderId_Order_id_fk" FOREIGN KEY ("orderId") REFERENCES "Order"(id) ON DELETE SET NULL';
+  END IF;
+END
+$$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."Review"'::regclass
+      AND (conname = 'Review_productId_Product_id_fk' OR pg_get_constraintdef(oid) = 'FOREIGN KEY ("productId") REFERENCES "Product"(id) ON DELETE CASCADE')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."Review" ADD CONSTRAINT "Review_productId_Product_id_fk" FOREIGN KEY ("productId") REFERENCES "Product"(id) ON DELETE CASCADE';
+  END IF;
+END
+$$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."Review"'::regclass
+      AND (conname = 'Review_userId_User_id_fk' OR pg_get_constraintdef(oid) = 'FOREIGN KEY ("userId") REFERENCES "User"(id) ON DELETE SET NULL')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."Review" ADD CONSTRAINT "Review_userId_User_id_fk" FOREIGN KEY ("userId") REFERENCES "User"(id) ON DELETE SET NULL';
+  END IF;
+END
+$$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."ReviewVote"'::regclass
+      AND (conname = 'ReviewVote_reviewId_Review_id_fk' OR pg_get_constraintdef(oid) = 'FOREIGN KEY ("reviewId") REFERENCES "Review"(id) ON DELETE CASCADE')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."ReviewVote" ADD CONSTRAINT "ReviewVote_reviewId_Review_id_fk" FOREIGN KEY ("reviewId") REFERENCES "Review"(id) ON DELETE CASCADE';
+  END IF;
+END
+$$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."ReviewVote"'::regclass
+      AND (conname = 'ReviewVote_userId_User_id_fk' OR pg_get_constraintdef(oid) = 'FOREIGN KEY ("userId") REFERENCES "User"(id) ON DELETE CASCADE')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."ReviewVote" ADD CONSTRAINT "ReviewVote_userId_User_id_fk" FOREIGN KEY ("userId") REFERENCES "User"(id) ON DELETE CASCADE';
+  END IF;
+END
+$$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."Session"'::regclass
+      AND (conname = 'Session_userId_User_id_fk' OR pg_get_constraintdef(oid) = 'FOREIGN KEY ("userId") REFERENCES "User"(id) ON DELETE CASCADE')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."Session" ADD CONSTRAINT "Session_userId_User_id_fk" FOREIGN KEY ("userId") REFERENCES "User"(id) ON DELETE CASCADE';
+  END IF;
+END
+$$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."Wishlist"'::regclass
+      AND (conname = 'Wishlist_productId_Product_id_fk' OR pg_get_constraintdef(oid) = 'FOREIGN KEY ("productId") REFERENCES "Product"(id) ON DELETE CASCADE')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."Wishlist" ADD CONSTRAINT "Wishlist_productId_Product_id_fk" FOREIGN KEY ("productId") REFERENCES "Product"(id) ON DELETE CASCADE';
+  END IF;
+END
+$$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."Wishlist"'::regclass
+      AND (conname = 'Wishlist_userId_User_id_fk' OR pg_get_constraintdef(oid) = 'FOREIGN KEY ("userId") REFERENCES "User"(id) ON DELETE CASCADE')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."Wishlist" ADD CONSTRAINT "Wishlist_userId_User_id_fk" FOREIGN KEY ("userId") REFERENCES "User"(id) ON DELETE CASCADE';
+  END IF;
+END
+$$;
+-- ─── Indexes ─────────────────────────────────────────────
 
 CREATE INDEX IF NOT EXISTS "Account_userId_idx" ON public."Account" USING btree ("userId");
+CREATE UNIQUE INDEX IF NOT EXISTS "Address_one_default_per_user_idx" ON public."Address" USING btree ("userId") WHERE ("isDefault" = true);
 CREATE INDEX IF NOT EXISTS "Address_userId_idx" ON public."Address" USING btree ("userId");
-CREATE UNIQUE INDEX IF NOT EXISTS "Address_one_default_per_user_idx" ON public."Address" USING btree ("userId") WHERE "isDefault" = true;
+CREATE INDEX IF NOT EXISTS "AdminAuditLog_createdAt_idx" ON public."AdminAuditLog" USING btree ("createdAt");
+CREATE INDEX IF NOT EXISTS "AdminAuditLog_entity_idx" ON public."AdminAuditLog" USING btree (entity);
+CREATE INDEX IF NOT EXISTS "AdminAuditLog_userId_idx" ON public."AdminAuditLog" USING btree ("userId");
 CREATE INDEX IF NOT EXISTS "CartItem_cartId_idx" ON public."CartItem" USING btree ("cartId");
 CREATE INDEX IF NOT EXISTS "CartItem_productId_idx" ON public."CartItem" USING btree ("productId");
-CREATE INDEX IF NOT EXISTS "CartItem_variationId_idx" ON public."CartItem" USING btree ("variationId");
+CREATE INDEX IF NOT EXISTS "CartItem_variantId_idx" ON public."CartItem" USING btree ("variantId");
 CREATE INDEX IF NOT EXISTS "Cart_sessionId_idx" ON public."Cart" USING btree ("sessionId");
+CREATE INDEX IF NOT EXISTS "CheckoutRequest_createdAt_idx" ON public."CheckoutRequest" USING btree ("createdAt");
+CREATE UNIQUE INDEX IF NOT EXISTS "CheckoutRequest_paymentTransactionId_key" ON public."CheckoutRequest" USING btree ("paymentTransactionId");
+CREATE INDEX IF NOT EXISTS "CheckoutRequest_status_idx" ON public."CheckoutRequest" USING btree (status);
+CREATE INDEX IF NOT EXISTS "CheckoutRequest_userId_idx" ON public."CheckoutRequest" USING btree ("userId");
+CREATE INDEX IF NOT EXISTS "FailedEmail_createdAt_idx" ON public."FailedEmail" USING btree ("createdAt");
+CREATE INDEX IF NOT EXISTS "FailedEmail_recipientEmail_status_idx" ON public."FailedEmail" USING btree ("recipientEmail", status);
+CREATE INDEX IF NOT EXISTS "FailedEmail_referenceId_idx" ON public."FailedEmail" USING btree ("referenceId");
+CREATE INDEX IF NOT EXISTS "FailedEmail_status_idx" ON public."FailedEmail" USING btree (status);
+CREATE INDEX IF NOT EXISTS "FailedEmail_status_isRetriable_createdAt_idx" ON public."FailedEmail" USING btree (status, "isRetriable", "createdAt");
 CREATE INDEX IF NOT EXISTS "OrderItem_orderId_idx" ON public."OrderItem" USING btree ("orderId");
 CREATE INDEX IF NOT EXISTS "OrderItem_productId_idx" ON public."OrderItem" USING btree ("productId");
-CREATE INDEX IF NOT EXISTS "OrderItem_variationId_idx" ON public."OrderItem" USING btree ("variationId");
+CREATE INDEX IF NOT EXISTS "OrderItem_variantId_idx" ON public."OrderItem" USING btree ("variantId");
+CREATE INDEX IF NOT EXISTS "Order_createdAt_idx" ON public."Order" USING btree ("createdAt");
+CREATE INDEX IF NOT EXISTS "Order_paymentStatus_idx" ON public."Order" USING btree ("paymentStatus");
+CREATE INDEX IF NOT EXISTS "Order_status_idx" ON public."Order" USING btree (status);
 CREATE INDEX IF NOT EXISTS "Order_userId_idx" ON public."Order" USING btree ("userId");
 CREATE INDEX IF NOT EXISTS "PasswordHistory_userId_idx" ON public."PasswordHistory" USING btree ("userId");
+CREATE INDEX IF NOT EXISTS "ProductOptionValue_optionId_idx" ON public."ProductOptionValue" USING btree ("optionId");
+CREATE INDEX IF NOT EXISTS "ProductOption_productId_idx" ON public."ProductOption" USING btree ("productId");
 CREATE INDEX IF NOT EXISTS "ProductShare_productId_idx" ON public."ProductShare" USING btree ("productId");
-CREATE INDEX IF NOT EXISTS "ProductShare_variationId_idx" ON public."ProductShare" USING btree ("variationId");
-CREATE INDEX IF NOT EXISTS "ProductVariation_productId_idx" ON public."ProductVariation" USING btree ("productId");
+CREATE INDEX IF NOT EXISTS "ProductShare_variantId_idx" ON public."ProductShare" USING btree ("variantId");
+CREATE INDEX IF NOT EXISTS "ProductVariantOptionValue_optionValueId_idx" ON public."ProductVariantOptionValue" USING btree ("optionValueId");
+CREATE INDEX IF NOT EXISTS "ProductVariantOptionValue_variantId_idx" ON public."ProductVariantOptionValue" USING btree ("variantId");
+CREATE INDEX IF NOT EXISTS "ProductVariant_deletedAt_idx" ON public."ProductVariant" USING btree ("deletedAt");
+CREATE INDEX IF NOT EXISTS "ProductVariant_productId_idx" ON public."ProductVariant" USING btree ("productId");
 CREATE INDEX IF NOT EXISTS "Product_category_idx" ON public."Product" USING btree (category);
-CREATE INDEX IF NOT EXISTS "Review_productId_idx" ON public."Review" USING btree ("productId");
-CREATE INDEX IF NOT EXISTS "Review_userId_idx" ON public."Review" USING btree ("userId");
-CREATE INDEX IF NOT EXISTS "Session_userId_idx" ON public."Session" USING btree ("userId");
-CREATE INDEX IF NOT EXISTS "Wishlist_userId_idx" ON public."Wishlist" USING btree ("userId");
-CREATE INDEX IF NOT EXISTS "CheckoutRequest_userId_idx" ON public."CheckoutRequest" USING btree ("userId");
-CREATE INDEX IF NOT EXISTS "CheckoutRequest_status_idx" ON public."CheckoutRequest" USING btree (status);
-CREATE INDEX IF NOT EXISTS "CheckoutRequest_createdAt_idx" ON public."CheckoutRequest" USING btree ("createdAt");
-CREATE INDEX IF NOT EXISTS "FailedEmail_status_idx" ON public."FailedEmail" USING btree (status);
-CREATE INDEX IF NOT EXISTS "FailedEmail_referenceId_idx" ON public."FailedEmail" USING btree ("referenceId");
-CREATE INDEX IF NOT EXISTS "FailedEmail_createdAt_idx" ON public."FailedEmail" USING btree ("createdAt");
-CREATE INDEX IF NOT EXISTS "Order_status_idx" ON public."Order" USING btree (status);
-CREATE INDEX IF NOT EXISTS "Order_createdAt_idx" ON public."Order" USING btree ("createdAt");
 CREATE INDEX IF NOT EXISTS "Product_createdAt_idx" ON public."Product" USING btree ("createdAt");
 CREATE INDEX IF NOT EXISTS "Product_deletedAt_idx" ON public."Product" USING btree ("deletedAt");
+CREATE INDEX IF NOT EXISTS "ReviewVote_reviewId_idx" ON public."ReviewVote" USING btree ("reviewId");
+CREATE INDEX IF NOT EXISTS "ReviewVote_userId_idx" ON public."ReviewVote" USING btree ("userId");
+CREATE INDEX IF NOT EXISTS "Review_productId_idx" ON public."Review" USING btree ("productId");
+CREATE INDEX IF NOT EXISTS "Review_productId_rating_idx" ON public."Review" USING btree ("productId", rating);
+CREATE INDEX IF NOT EXISTS "Review_userId_idx" ON public."Review" USING btree ("userId");
+CREATE INDEX IF NOT EXISTS "Session_userId_idx" ON public."Session" USING btree ("userId");
+CREATE INDEX IF NOT EXISTS "WebhookEvent_receivedAt_idx" ON public."WebhookEvent" USING btree ("receivedAt");
+CREATE INDEX IF NOT EXISTS "Wishlist_userId_idx" ON public."Wishlist" USING btree ("userId");
 
-UPDATE drizzle.__drizzle_migrations
-SET hash = '23de57cb932c16a3b710011ab47a0c4a7321566561dc9c358f8eff1b2257dded'
-WHERE created_at = 1774355279555;
+-- ─── Migration bookkeeping ───────────────────────────────
+-- Record every bundled migration so `drizzle-kit migrate` treats this database
+-- as fully migrated.
 
+-- 0000_init
 INSERT INTO drizzle.__drizzle_migrations (hash, created_at)
-SELECT '23de57cb932c16a3b710011ab47a0c4a7321566561dc9c358f8eff1b2257dded', 1774355279555
+SELECT '0c2480c838fd5da9e0d483731cc4a1ed8b99388cca08c89295698a2c73e62b7e', 1779808524594
 WHERE NOT EXISTS (
-  SELECT 1 FROM drizzle.__drizzle_migrations WHERE created_at = 1774355279555
+  SELECT 1 FROM drizzle.__drizzle_migrations WHERE created_at = 1779808524594
 );
 
-UPDATE drizzle.__drizzle_migrations
-SET hash = '23de57cb932c16a3b710011ab47a0c4a7321566561dc9c358f8eff1b2257dded'
-WHERE created_at = 1774381250472;
-
+-- 0001_needy_hellcat
 INSERT INTO drizzle.__drizzle_migrations (hash, created_at)
-SELECT '23de57cb932c16a3b710011ab47a0c4a7321566561dc9c358f8eff1b2257dded', 1774381250472
+SELECT 'ec362f0b86c778d3290a0013335aaa28b939681d0c5afb70698b46ba069fd7ac', 1779903939392
 WHERE NOT EXISTS (
-  SELECT 1 FROM drizzle.__drizzle_migrations WHERE created_at = 1774381250472
+  SELECT 1 FROM drizzle.__drizzle_migrations WHERE created_at = 1779903939392
 );
 
-UPDATE drizzle.__drizzle_migrations
-SET hash = '2969dd7391cd493d76e0c438ef878b36482fc49038d4bf76a07cab797e517d9b'
-WHERE created_at = 1774378815410;
-
+-- 0002_nosy_natasha_romanoff
 INSERT INTO drizzle.__drizzle_migrations (hash, created_at)
-SELECT '2969dd7391cd493d76e0c438ef878b36482fc49038d4bf76a07cab797e517d9b', 1774378815410
+SELECT 'ea0a83a05fd5c05bb5eee07f4af9d148a7c4c9ba94d7a32df82c2114cdbff695', 1780057012196
 WHERE NOT EXISTS (
-  SELECT 1 FROM drizzle.__drizzle_migrations WHERE created_at = 1774378815410
+  SELECT 1 FROM drizzle.__drizzle_migrations WHERE created_at = 1780057012196
 );
 
-UPDATE drizzle.__drizzle_migrations
-SET hash = 'ce645b00b54c7e4a2b9ddc721d34a279212da02e0232c0d88a358deb66d88c28'
-WHERE created_at = 1774618645201;
-
+-- 0003_robust_ultimo
 INSERT INTO drizzle.__drizzle_migrations (hash, created_at)
-SELECT 'ce645b00b54c7e4a2b9ddc721d34a279212da02e0232c0d88a358deb66d88c28', 1774618645201
+SELECT '350bfebd5e22670085ef62d8d483c6d992fbbceb00b9455491f61dccf84a633b', 1780073500719
 WHERE NOT EXISTS (
-  SELECT 1 FROM drizzle.__drizzle_migrations WHERE created_at = 1774618645201
+  SELECT 1 FROM drizzle.__drizzle_migrations WHERE created_at = 1780073500719
+);
+
+-- 0004_fearless_catseye
+INSERT INTO drizzle.__drizzle_migrations (hash, created_at)
+SELECT '993b6c71426f17827517f0491cdee461b1c36a5943089ad8785325db4f3b90c5', 1782414045928
+WHERE NOT EXISTS (
+  SELECT 1 FROM drizzle.__drizzle_migrations WHERE created_at = 1782414045928
+);
+
+-- 0005_simple_roland_deschain
+INSERT INTO drizzle.__drizzle_migrations (hash, created_at)
+SELECT '8a21d1fa9433e4b765276ad996291e7d51cee7735ac9fd4c1d948a2ab0cfa276', 1784987393847
+WHERE NOT EXISTS (
+  SELECT 1 FROM drizzle.__drizzle_migrations WHERE created_at = 1784987393847
+);
+
+-- 0006_money_and_webhook_events
+INSERT INTO drizzle.__drizzle_migrations (hash, created_at)
+SELECT '984c731ceb56e1923cb8945780309f92be97e55c61923d6bb41dde32541516f1', 1785040622095
+WHERE NOT EXISTS (
+  SELECT 1 FROM drizzle.__drizzle_migrations WHERE created_at = 1785040622095
 );
 
 DROP FUNCTION drizzle.ensure_public_enum(text, text);

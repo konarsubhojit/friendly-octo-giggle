@@ -4,6 +4,7 @@ import { invalidateCache } from '@/lib/redis'
 import { invalidateUserOrderCaches } from '@/lib/cache'
 import { CreateOrderInput, OrderItemInput } from '@/lib/types'
 import { logBusinessEvent, logError } from '@/lib/logger'
+import { multiplyMoney, sumMoney } from '@/lib/money'
 import { sendOrderConfirmationEmail } from '@/lib/email'
 import type { OrderCreatedEvent } from '@/lib/qstash-events'
 import { getQStashClient } from '@/lib/qstash'
@@ -224,14 +225,14 @@ const checkStockForItem = (
     }
   }
 
-  return { valid: true, totalAmount: price * item.quantity }
+  return { valid: true, totalAmount: multiplyMoney(price, item.quantity) }
 }
 
 const validateStockAndCalculateTotal = (
   items: OrderItemInput[],
   productList: ProductWithVariants[]
 ): StockCheckResult => {
-  let totalAmount = 0
+  const lineTotals: number[] = []
   const productMap = new Map(
     productList.map((product) => [product.id, product])
   )
@@ -251,10 +252,10 @@ const validateStockAndCalculateTotal = (
     if (!result.valid) {
       return result
     }
-    totalAmount += result.totalAmount
+    lineTotals.push(result.totalAmount)
   }
 
-  return { valid: true, totalAmount }
+  return { valid: true, totalAmount: sumMoney(lineTotals) }
 }
 
 const sanitizeCustomizationNote = (

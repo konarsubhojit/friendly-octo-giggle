@@ -2,21 +2,31 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
 
 const {
-  mockSelect,
+  mockInsert,
+  mockDelete,
   mockUpdate,
+  mockTransaction,
+  mockTxSelect,
   mockVerifyRazorpayWebhookSignature,
   mockProcessCheckoutRequestById,
+  mockSet,
 } = vi.hoisted(() => ({
-  mockSelect: vi.fn(),
+  mockInsert: vi.fn(),
+  mockDelete: vi.fn(),
   mockUpdate: vi.fn(),
+  mockTransaction: vi.fn(),
+  mockTxSelect: vi.fn(),
   mockVerifyRazorpayWebhookSignature: vi.fn(),
   mockProcessCheckoutRequestById: vi.fn(),
+  mockSet: vi.fn(),
 }))
 
 vi.mock('@/lib/db', () => ({
   primaryDrizzleDb: {
-    select: mockSelect,
+    insert: mockInsert,
+    delete: mockDelete,
     update: mockUpdate,
+    transaction: mockTransaction,
   },
 }))
 
@@ -32,11 +42,21 @@ vi.mock('@/lib/schema', () => ({
     paymentStatus: 'paymentStatus',
     paymentTransactionId: 'paymentTransactionId',
   },
+  webhookEvents: {
+    id: 'id',
+    provider: 'provider',
+    eventId: 'eventId',
+    receivedAt: 'receivedAt',
+    processedAt: 'processedAt',
+  },
 }))
 
 vi.mock('drizzle-orm', () => ({
   and: vi.fn((...args) => args),
   eq: vi.fn((...args) => args),
+  ne: vi.fn((...args) => args),
+  lt: vi.fn((...args) => args),
+  isNull: vi.fn((...args) => args),
 }))
 
 vi.mock('@/lib/payments', () => ({
@@ -63,24 +83,82 @@ vi.mock('@/features/cart/services/checkout-service', () => ({
 
 vi.mock('@/lib/logger', () => ({
   logError: vi.fn(),
+  logBusinessEvent: vi.fn(),
 }))
 
 import { POST } from '@/app/api/payments/webhook/route'
 
-const makeSelectChain = (result: unknown) => ({
-  from: vi.fn().mockReturnThis(),
-  where: vi.fn().mockReturnThis(),
-  limit: vi.fn().mockResolvedValue(result),
-})
+/** Queue the rows returned by successive `tx.select(...)` calls. */
+const queueTransactionSelects = (results: unknown[][]) => {
+  mockTxSelect.mockReset()
+  for (const result of results) {
+    mockTxSelect.mockReturnValueOnce({
+      from: vi.fn().mockReturnThis(),
+      where: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      for: vi.fn().mockResolvedValue(result),
+    } as never)
+  }
+}
+
+const buildRequest = (body: unknown, headers: Record<string, string> = {}) =>
+  new NextRequest('http://localhost/api/payments/webhook', {
+    method: 'POST',
+    body: JSON.stringify(body),
+    headers: { 'x-razorpay-signature': 'valid_signature', ...headers },
+  })
+
+const capturedEvent = {
+  event: 'payment.captured',
+  payload: {
+    payment: {
+      entity: { id: 'pay_123', order_id: 'order_123', amount: 19900 },
+    },
+  },
+}
+
+/** Simulate the unique-constraint dedupe: only the first insert returns a row. */
+const useEventClaimSequence = (claims: boolean[]) => {
+  mockInsert.mockReset()
+  for (const claimed of claims) {
+    mockInsert.mockReturnValueOnce({
+      values: vi.fn().mockReturnThis(),
+      onConflictDoNothing: vi.fn().mockReturnThis(),
+      returning: vi.fn().mockResolvedValue(claimed ? [{ id: 'evt_1' }] : []),
+    } as never)
+  }
+}
+
+/**
+ * `update().set().where()` is awaited directly by some call sites and chained
+ * with `.returning()` by the reclaim path, so the stub must support both.
+ */
+const updateResult = (rows: unknown[]) =>
+  Object.assign(Promise.resolve(rows), {
+    returning: vi.fn().mockResolvedValue(rows),
+  })
+
+/** Rows returned when the handler tries to reclaim a stale, unprocessed claim. */
+const useReclaimResult = (rows: unknown[]) => {
+  mockUpdate.mockReturnValue({
+    set: mockSet.mockReturnValue({
+      where: vi.fn(() => updateResult(rows)),
+    }),
+  })
+}
 
 describe('POST /api/payments/webhook', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockUpdate.mockReturnValue({
-      set: vi.fn().mockReturnValue({
-        where: vi.fn().mockResolvedValue(undefined),
-      }),
+    useReclaimResult([])
+    mockDelete.mockReturnValue({
+      where: vi.fn().mockResolvedValue(undefined),
     })
+    mockTransaction.mockImplementation(
+      async (callback: (tx: unknown) => Promise<unknown>) =>
+        callback({ select: mockTxSelect, update: mockUpdate })
+    )
+    useEventClaimSequence([true])
   })
 
   it('returns 400 when signature header is missing', async () => {
@@ -95,33 +173,139 @@ describe('POST /api/payments/webhook', () => {
   })
 
   it('processes captured payment event', async () => {
-    mockSelect
-      .mockReturnValueOnce(makeSelectChain([]) as never)
-      .mockReturnValueOnce(
-        makeSelectChain([{ id: 'chk_123', status: 'PENDING' }]) as never
-      )
+    queueTransactionSelects([[], [{ id: 'chk_123', status: 'PENDING' }]])
 
-    const response = await POST(
-      new NextRequest('http://localhost/api/payments/webhook', {
-        method: 'POST',
-        body: JSON.stringify({
-          event: 'payment.captured',
-          payload: {
-            payment: {
-              entity: {
-                id: 'pay_123',
-                order_id: 'order_123',
-                amount: 19900,
-              },
-            },
-          },
-        }),
-        headers: { 'x-razorpay-signature': 'valid_signature' },
-      })
-    )
+    const response = await POST(buildRequest(capturedEvent))
 
     expect(response.status).toBe(200)
     expect(mockVerifyRazorpayWebhookSignature).toHaveBeenCalled()
     expect(mockProcessCheckoutRequestById).toHaveBeenCalledWith('chk_123')
+  })
+
+  it('marks an existing order as paid without reprocessing checkout', async () => {
+    queueTransactionSelects([[{ id: 'ord_1', paymentStatus: 'PENDING' }]])
+
+    const response = await POST(buildRequest(capturedEvent))
+
+    expect(response.status).toBe(200)
+    expect(mockUpdate).toHaveBeenCalled()
+    expect(mockProcessCheckoutRequestById).not.toHaveBeenCalled()
+  })
+
+  it('ignores a duplicate delivery of the same event', async () => {
+    useEventClaimSequence([false])
+
+    const response = await POST(
+      buildRequest(capturedEvent, { 'x-razorpay-event-id': 'evt_dup' })
+    )
+
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toEqual({
+      ok: true,
+      duplicate: true,
+    })
+    expect(mockTransaction).not.toHaveBeenCalled()
+    expect(mockProcessCheckoutRequestById).not.toHaveBeenCalled()
+  })
+
+  it('processes concurrent deliveries of the same event exactly once', async () => {
+    useEventClaimSequence([true, false])
+    queueTransactionSelects([[], [{ id: 'chk_123', status: 'PENDING' }]])
+
+    const responses = await Promise.all([
+      POST(buildRequest(capturedEvent, { 'x-razorpay-event-id': 'evt_1' })),
+      POST(buildRequest(capturedEvent, { 'x-razorpay-event-id': 'evt_1' })),
+    ])
+
+    expect(responses.map((r) => r.status)).toEqual([200, 200])
+    expect(mockProcessCheckoutRequestById).toHaveBeenCalledTimes(1)
+  })
+
+  it('skips checkout requests that are already being processed', async () => {
+    queueTransactionSelects([[], [{ id: 'chk_123', status: 'PROCESSING' }]])
+
+    const response = await POST(buildRequest(capturedEvent))
+
+    expect(response.status).toBe(200)
+    expect(mockProcessCheckoutRequestById).not.toHaveBeenCalled()
+  })
+
+  it('releases the event claim when processing fails', async () => {
+    queueTransactionSelects([[], [{ id: 'chk_123', status: 'PENDING' }]])
+    mockProcessCheckoutRequestById.mockRejectedValueOnce(new Error('boom'))
+
+    const response = await POST(buildRequest(capturedEvent))
+
+    expect(response.status).toBe(500)
+    expect(mockDelete).toHaveBeenCalled()
+  })
+
+  it('reclaims a stale claim whose processing never completed', async () => {
+    useEventClaimSequence([false])
+    useReclaimResult([{ id: 'evt_stale' }])
+    queueTransactionSelects([[], [{ id: 'chk_123', status: 'PENDING' }]])
+
+    const response = await POST(
+      buildRequest(capturedEvent, { 'x-razorpay-event-id': 'evt_stale' })
+    )
+
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toEqual({ ok: true })
+    expect(mockProcessCheckoutRequestById).toHaveBeenCalledWith('chk_123')
+  })
+
+  it('records processedAt once the side effects commit', async () => {
+    queueTransactionSelects([[], [{ id: 'chk_123', status: 'PENDING' }]])
+
+    await POST(buildRequest(capturedEvent))
+
+    expect(mockSet).toHaveBeenCalledWith(
+      expect.objectContaining({ processedAt: expect.any(Date) })
+    )
+  })
+
+  it('returns 400 for a body that is not valid JSON', async () => {
+    const response = await POST(
+      new NextRequest('http://localhost/api/payments/webhook', {
+        method: 'POST',
+        body: 'not-json',
+        headers: { 'x-razorpay-signature': 'valid_signature' },
+      })
+    )
+
+    expect(response.status).toBe(400)
+    expect(mockInsert).not.toHaveBeenCalled()
+  })
+
+  it('rejects a captured event without an amount', async () => {
+    const response = await POST(
+      buildRequest({
+        event: 'payment.captured',
+        payload: {
+          payment: { entity: { id: 'pay_123', order_id: 'order_123' } },
+        },
+      })
+    )
+
+    expect(response.status).toBe(400)
+    expect(mockInsert).not.toHaveBeenCalled()
+  })
+
+  it('marks failed payments as failed', async () => {
+    const response = await POST(
+      buildRequest({
+        event: 'payment.failed',
+        payload: {
+          payment: { entity: { id: 'pay_123', order_id: 'order_123' } },
+        },
+      })
+    )
+
+    expect(response.status).toBe(200)
+    // checkout request + order marked failed, then the event marked processed
+    expect(mockUpdate).toHaveBeenCalledTimes(3)
+    expect(mockSet).toHaveBeenCalledWith(
+      expect.objectContaining({ status: 'FAILED' })
+    )
   })
 })

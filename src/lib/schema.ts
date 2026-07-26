@@ -4,7 +4,7 @@ import {
   varchar,
   integer,
   timestamp,
-  doublePrecision,
+  numeric,
   pgEnum,
   index,
   unique,
@@ -15,6 +15,21 @@ import {
 import { relations, sql } from 'drizzle-orm'
 import type { AdapterAccountType } from '@auth/core/adapters'
 import { generateShortId, generateOrderId } from './short-id'
+import { MONEY_DECIMAL_PLACES } from './money'
+
+// ─── Money columns ───────────────────────────────────────
+// Monetary values are stored as exact decimals (never floating point) so that
+// totals, refunds and reconciliation never drift. Drizzle maps them back to
+// JavaScript numbers; use the helpers in `lib/money.ts` for any arithmetic.
+
+const MONEY_PRECISION = 12
+
+const money = (name: string) =>
+  numeric(name, {
+    precision: MONEY_PRECISION,
+    scale: MONEY_DECIMAL_PLACES,
+    mode: 'number',
+  })
 
 // ─── Enums ───────────────────────────────────────────────
 
@@ -261,7 +276,7 @@ export const productVariants = pgTable(
       .notNull()
       .references(() => products.id, { onDelete: 'cascade' }),
     sku: text('sku'),
-    price: doublePrecision('price').notNull(),
+    price: money('price').notNull(),
     stock: integer('stock').notNull(),
     image: text('image'),
     images: json('images').$type<string[]>().default([]).notNull(),
@@ -360,14 +375,14 @@ export const orders = pgTable(
       () => checkoutRequests.id,
       { onDelete: 'set null' }
     ),
-    totalAmount: doublePrecision('totalAmount').notNull(),
+    totalAmount: money('totalAmount').notNull(),
     paymentStatus: paymentStatusEnum('paymentStatus')
       .default('PENDING')
       .notNull(),
     paymentProvider: paymentProviderEnum('paymentProvider'),
     paymentOrderId: text('paymentOrderId'),
     paymentTransactionId: text('paymentTransactionId'),
-    amountPaid: doublePrecision('amountPaid').default(0).notNull(),
+    amountPaid: money('amountPaid').default(0).notNull(),
     paidAt: timestamp('paidAt', { mode: 'date' }),
     status: orderStatusEnum('status').default('PENDING').notNull(),
     trackingNumber: text('trackingNumber'),
@@ -401,13 +416,41 @@ export const orderItems = pgTable(
       .notNull()
       .references(() => productVariants.id),
     quantity: integer('quantity').notNull(),
-    price: doublePrecision('price').notNull(),
+    price: money('price').notNull(),
     customizationNote: text('customizationNote'),
   },
   (t) => [
     index('OrderItem_orderId_idx').on(t.orderId),
     index('OrderItem_productId_idx').on(t.productId),
     index('OrderItem_variantId_idx').on(t.variantId),
+  ]
+)
+
+// ─── Payment Webhook Deduplication ───────────────────────
+// One row per delivered gateway webhook event. The unique (provider, eventId)
+// constraint makes processing idempotent: a duplicate delivery loses the race
+// on insert and is short-circuited instead of re-running side effects.
+// `processedAt` records when the side effects committed, so a delivery that
+// died mid-flight can be reclaimed by a later retry instead of being silently
+// swallowed as a duplicate.
+
+export const webhookEvents = pgTable(
+  'WebhookEvent',
+  {
+    id: varchar('id', { length: 7 })
+      .primaryKey()
+      .$defaultFn(() => generateShortId()),
+    provider: paymentProviderEnum('provider').notNull(),
+    eventId: text('eventId').notNull(),
+    eventType: text('eventType').notNull(),
+    receivedAt: timestamp('receivedAt', { mode: 'date' })
+      .defaultNow()
+      .notNull(),
+    processedAt: timestamp('processedAt', { mode: 'date' }),
+  },
+  (t) => [
+    unique('WebhookEvent_provider_eventId_key').on(t.provider, t.eventId),
+    index('WebhookEvent_receivedAt_idx').on(t.receivedAt),
   ]
 )
 

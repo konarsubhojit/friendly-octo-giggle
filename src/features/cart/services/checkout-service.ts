@@ -379,7 +379,18 @@ export const processCheckoutRequestById = async (
     metadata: { checkoutRequestId },
   })
 
-  await updateCheckoutRequestStatus(checkoutRequestId, 'PROCESSING', null)
+  // Compare-and-swap on the status column. Duplicate webhook deliveries and
+  // queue redeliveries race here; only the winner proceeds to create an order.
+  const claimed =
+    await db.checkoutRequests.claimForProcessing(checkoutRequestId)
+  if (!claimed) {
+    logBusinessEvent({
+      event: 'checkout_request_already_processing',
+      details: { checkoutRequestId },
+      success: true,
+    })
+    return
+  }
 
   try {
     const result = await createOrderForUser({

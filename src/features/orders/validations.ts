@@ -1,5 +1,10 @@
 import { z } from 'zod'
-import { SHORT_ID_REGEX, EMAIL_REGEX } from '@/lib/validations/primitives'
+import {
+  SHORT_ID_REGEX,
+  EMAIL_REGEX,
+  MAX_MONEY_AMOUNT,
+  hasMoneyPrecision,
+} from '@/lib/validations/primitives'
 
 export const StructuredAddressSchema = z.object({
   addressLine1: z
@@ -60,7 +65,11 @@ export const CheckoutRequestStatusEnum = z.enum([
 export const OrderItemSchema = z.object({
   productId: z.string().regex(SHORT_ID_REGEX, 'Invalid product ID'),
   quantity: z.number().int().positive('Quantity must be positive'),
-  price: z.number().positive('Price must be positive'),
+  price: z
+    .number()
+    .positive('Price must be positive')
+    .max(MAX_MONEY_AMOUNT, 'Price is out of the supported range')
+    .refine(hasMoneyPrecision, 'Price supports at most 2 decimal places'),
   customizationNote: z
     .string()
     .max(500, 'Customization note must be under 500 characters')

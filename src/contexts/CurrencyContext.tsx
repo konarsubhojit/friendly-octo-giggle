@@ -9,6 +9,7 @@ import {
   useEffect,
   type ReactNode,
 } from 'react'
+import { convertMoney, parseMoney } from '@/lib/money'
 
 export type CurrencyCode = 'INR' | 'USD' | 'EUR' | 'GBP'
 
@@ -32,6 +33,29 @@ const FALLBACK_RATES: Record<CurrencyCode, number> = {
   USD: CURRENCIES.USD.rate,
   EUR: CURRENCIES.EUR.rate,
   GBP: CURRENCIES.GBP.rate,
+}
+
+/**
+ * Rates arrive from the exchange-rate API or from sessionStorage, so they are
+ * not guaranteed to be usable numbers. Anything that is not a finite positive
+ * number falls back to the bundled rate — conversion helpers reject invalid
+ * rates, and a bad rate must never be able to break rendering.
+ */
+const normalizeRates = (
+  candidate: Record<string, unknown> | null | undefined
+): Record<CurrencyCode, number> => {
+  const pick = (code: CurrencyCode): number => {
+    const value = candidate?.[code]
+    return typeof value === 'number' && Number.isFinite(value) && value > 0
+      ? value
+      : FALLBACK_RATES[code]
+  }
+  return {
+    INR: pick('INR'),
+    USD: pick('USD'),
+    EUR: pick('EUR'),
+    GBP: pick('GBP'),
+  }
 }
 
 interface CurrencyContextValue {
@@ -75,12 +99,7 @@ export function CurrencyProvider({
         }
         if (cached && Date.now() - timestamp < EXCHANGE_RATES_MAX_AGE_MS) {
           return {
-            rates: {
-              INR: cached['INR'] ?? FALLBACK_RATES.INR,
-              USD: cached['USD'] ?? FALLBACK_RATES.USD,
-              EUR: cached['EUR'] ?? FALLBACK_RATES.EUR,
-              GBP: cached['GBP'] ?? FALLBACK_RATES.GBP,
-            },
+            rates: normalizeRates(cached),
             ratesLoading: false,
           }
         }
@@ -118,13 +137,7 @@ export function CurrencyProvider({
     ) => {
       if (cancelled) return
       if (body?.data?.rates) {
-        const fetched = body.data.rates
-        const newRates = {
-          INR: fetched['INR'] ?? FALLBACK_RATES.INR,
-          USD: fetched['USD'] ?? FALLBACK_RATES.USD,
-          EUR: fetched['EUR'] ?? FALLBACK_RATES.EUR,
-          GBP: fetched['GBP'] ?? FALLBACK_RATES.GBP,
-        }
+        const newRates = normalizeRates(body.data.rates)
         setRatesState({ rates: newRates, ratesLoading: false })
         persistRates(newRates)
       } else {
@@ -178,14 +191,17 @@ export function CurrencyProvider({
 
   const convertPrice = useCallback(
     (priceInINR: number): number => {
-      return priceInINR * rates[currency]
+      return convertMoney(parseMoney(priceInINR) ?? 0, rates[currency])
     },
     [rates, currency]
   )
 
   const formatPrice = useCallback(
     (priceInINR: number): string => {
-      const converted = priceInINR * rates[currency]
+      const converted = convertMoney(
+        parseMoney(priceInINR) ?? 0,
+        rates[currency]
+      )
       return new Intl.NumberFormat(config.locale, {
         style: 'currency',
         currency: config.code,

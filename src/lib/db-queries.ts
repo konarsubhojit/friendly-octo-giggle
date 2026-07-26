@@ -40,6 +40,12 @@ import { CONFIRMED_ORDER_STATUSES } from './constants/order-statuses'
 // ─── Shared error types ──────────────────────────────────
 
 /**
+ * A checkout request left in `PROCESSING` for longer than this is treated as
+ * abandoned (e.g. the worker crashed) and may be reclaimed by a retry.
+ */
+export const STALE_PROCESSING_CLAIM_MS = 5 * 60 * 1000
+
+/**
  * Thrown by `db.orders.createWithItems` when a stock reservation fails due to
  * a concurrent order. Callers should map this to their domain-specific error
  * (e.g. OrderRequestError with HTTP 409).
@@ -1067,6 +1073,46 @@ export const db = {
           status: checkoutRequests.status,
         })
       return row as { id: string; status: CheckoutRequestStatus }
+    },
+
+    /**
+     * Atomically claim a checkout request for processing.
+     *
+     * This is a compare-and-swap on the status column rather than a
+     * read-then-write, so concurrent deliveries of the same webhook or queue
+     * message can never both start processing the request. A request that has
+     * been stuck in `PROCESSING` for longer than `staleAfterMs` (e.g. a worker
+     * that crashed mid-flight) can be reclaimed so retries still recover.
+     *
+     * @returns true when the caller now owns the request.
+     */
+    claimForProcessing: async (
+      id: string,
+      staleAfterMs = STALE_PROCESSING_CLAIM_MS
+    ): Promise<boolean> => {
+      const staleBefore = new Date(Date.now() - staleAfterMs)
+      const claimed = await primaryDrizzleDb
+        .update(checkoutRequests)
+        .set({
+          status: 'PROCESSING',
+          errorMessage: null,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(checkoutRequests.id, id),
+            or(
+              eq(checkoutRequests.status, 'PENDING'),
+              and(
+                eq(checkoutRequests.status, 'PROCESSING'),
+                lt(checkoutRequests.updatedAt, staleBefore)
+              )
+            )
+          )
+        )
+        .returning({ id: checkoutRequests.id })
+
+      return claimed.length > 0
     },
 
     /**

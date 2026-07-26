@@ -97,7 +97,7 @@ describe('GET /api/admin/export/orders', () => {
       'id,customerName,customerEmail,totalAmount,status,trackingNumber,shippingProvider,createdAt'
     )
     expect(lines[1]).toBe(
-      'o1,Alice,a@example.com,4200,PROCESSING,TRK1,UPS,2025-01-02T03:04:05.000Z'
+      'o1,Alice,a@example.com,4200.00,PROCESSING,TRK1,UPS,2025-01-02T03:04:05.000Z'
     )
   })
 

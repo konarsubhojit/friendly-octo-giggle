@@ -1,16 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { and, eq } from 'drizzle-orm'
+import { and, eq, isNull, lt, ne } from 'drizzle-orm'
 import { primaryDrizzleDb } from '@/lib/db'
-import { checkoutRequests, orders } from '@/lib/schema'
+import { checkoutRequests, orders, webhookEvents } from '@/lib/schema'
 import {
   PaymentConfigurationError,
   PaymentVerificationError,
   verifyRazorpayWebhookSignature,
 } from '@/lib/payments'
-import { logError } from '@/lib/logger'
+import { fromMinorUnits } from '@/lib/money'
+import { logBusinessEvent, logError } from '@/lib/logger'
 import { processCheckoutRequestById } from '@/features/cart/services/checkout-service'
 
 export const dynamic = 'force-dynamic'
+
+const WEBHOOK_PROVIDER = 'RAZORPAY' as const
+
+/** Checkout request states that must never be re-processed by a webhook. */
+const NON_REPROCESSABLE_STATUSES = new Set([
+  'COMPLETED',
+  'FAILED',
+  'PROCESSING',
+])
 
 interface RazorpayWebhookEvent {
   event: string
@@ -25,7 +35,94 @@ interface RazorpayWebhookEvent {
   }
 }
 
-const handleCapturedPayment = async ({
+/**
+ * A claimed-but-unprocessed webhook older than this is treated as abandoned
+ * (the process died mid-flight) and may be reclaimed by a gateway retry.
+ */
+const STALE_WEBHOOK_CLAIM_MS = 5 * 60 * 1000
+
+/**
+ * Claim a webhook delivery by inserting its event id. Razorpay retries events
+ * aggressively (and can deliver the same event concurrently), so the unique
+ * (provider, eventId) constraint is what makes processing exactly-once: the
+ * loser of the insert race gets no row back and skips all side effects.
+ *
+ * If a previous delivery claimed the event but never recorded completion — for
+ * example the function timed out or the process was killed — the claim is
+ * reclaimed once it goes stale so the retry can finish the work.
+ *
+ * @returns true when this delivery owns the event and must process it.
+ */
+const claimWebhookEvent = async ({
+  eventId,
+  eventType,
+}: {
+  eventId: string
+  eventType: string
+}): Promise<boolean> => {
+  const claimed = await primaryDrizzleDb
+    .insert(webhookEvents)
+    .values({ provider: WEBHOOK_PROVIDER, eventId, eventType })
+    .onConflictDoNothing({
+      target: [webhookEvents.provider, webhookEvents.eventId],
+    })
+    .returning({ id: webhookEvents.id })
+
+  if (claimed.length > 0) {
+    return true
+  }
+
+  const staleBefore = new Date(Date.now() - STALE_WEBHOOK_CLAIM_MS)
+  const reclaimed = await primaryDrizzleDb
+    .update(webhookEvents)
+    .set({ receivedAt: new Date() })
+    .where(
+      and(
+        eq(webhookEvents.provider, WEBHOOK_PROVIDER),
+        eq(webhookEvents.eventId, eventId),
+        isNull(webhookEvents.processedAt),
+        lt(webhookEvents.receivedAt, staleBefore)
+      )
+    )
+    .returning({ id: webhookEvents.id })
+
+  return reclaimed.length > 0
+}
+
+/** Record that the event's side effects committed, closing the claim. */
+const completeWebhookEvent = async (eventId: string): Promise<void> => {
+  await primaryDrizzleDb
+    .update(webhookEvents)
+    .set({ processedAt: new Date() })
+    .where(
+      and(
+        eq(webhookEvents.provider, WEBHOOK_PROVIDER),
+        eq(webhookEvents.eventId, eventId)
+      )
+    )
+}
+
+const releaseWebhookEvent = async (eventId: string): Promise<void> => {
+  await primaryDrizzleDb
+    .delete(webhookEvents)
+    .where(
+      and(
+        eq(webhookEvents.provider, WEBHOOK_PROVIDER),
+        eq(webhookEvents.eventId, eventId)
+      )
+    )
+}
+
+/**
+ * Reconcile a captured payment inside a single transaction.
+ *
+ * The order and checkout-request rows are locked with `SELECT ... FOR UPDATE`
+ * so a concurrent delivery blocks until this transaction commits and then sees
+ * the updated state instead of duplicating the transition.
+ *
+ * @returns the checkout request id that still needs processing, if any.
+ */
+const reconcileCapturedPayment = async ({
   paymentId,
   paymentOrderId,
   amount,
@@ -33,52 +130,74 @@ const handleCapturedPayment = async ({
   paymentId: string
   paymentOrderId: string
   amount: number
-}) => {
-  const [existingOrder] = await primaryDrizzleDb
-    .select({
-      id: orders.id,
-      paymentStatus: orders.paymentStatus,
-    })
-    .from(orders)
-    .where(eq(orders.paymentTransactionId, paymentId))
-    .limit(1)
+}): Promise<string | null> =>
+  primaryDrizzleDb.transaction(async (tx) => {
+    const [existingOrder] = await tx
+      .select({
+        id: orders.id,
+        paymentStatus: orders.paymentStatus,
+      })
+      .from(orders)
+      .where(eq(orders.paymentTransactionId, paymentId))
+      .limit(1)
+      .for('update')
 
-  if (existingOrder) {
-    if (existingOrder.paymentStatus !== 'PAID') {
-      await primaryDrizzleDb
-        .update(orders)
-        .set({
-          paymentStatus: 'PAID',
-          amountPaid: amount / 100,
-          paidAt: new Date(),
-          updatedAt: new Date(),
-        })
-        .where(eq(orders.id, existingOrder.id))
+    if (existingOrder) {
+      if (existingOrder.paymentStatus !== 'PAID') {
+        await tx
+          .update(orders)
+          .set({
+            paymentStatus: 'PAID',
+            amountPaid: fromMinorUnits(amount),
+            paidAt: new Date(),
+            updatedAt: new Date(),
+          })
+          .where(
+            and(
+              eq(orders.id, existingOrder.id),
+              ne(orders.paymentStatus, 'PAID')
+            )
+          )
+      }
+      return null
     }
-    return
-  }
 
-  const [checkoutRequest] = await primaryDrizzleDb
-    .select({
-      id: checkoutRequests.id,
-      status: checkoutRequests.status,
-    })
-    .from(checkoutRequests)
-    .where(
-      and(
-        eq(checkoutRequests.paymentTransactionId, paymentId),
-        eq(checkoutRequests.paymentOrderId, paymentOrderId)
+    const [checkoutRequest] = await tx
+      .select({
+        id: checkoutRequests.id,
+        status: checkoutRequests.status,
+      })
+      .from(checkoutRequests)
+      .where(
+        and(
+          eq(checkoutRequests.paymentTransactionId, paymentId),
+          eq(checkoutRequests.paymentOrderId, paymentOrderId)
+        )
       )
-    )
-    .limit(1)
+      .limit(1)
+      .for('update')
 
-  if (
-    checkoutRequest &&
-    checkoutRequest.status !== 'COMPLETED' &&
-    checkoutRequest.status !== 'FAILED' &&
-    checkoutRequest.status !== 'PROCESSING'
-  ) {
-    await processCheckoutRequestById(checkoutRequest.id)
+    if (
+      !checkoutRequest ||
+      NON_REPROCESSABLE_STATUSES.has(checkoutRequest.status)
+    ) {
+      return null
+    }
+
+    return checkoutRequest.id
+  })
+
+const handleCapturedPayment = async (input: {
+  paymentId: string
+  paymentOrderId: string
+  amount: number
+}) => {
+  const checkoutRequestId = await reconcileCapturedPayment(input)
+
+  if (checkoutRequestId) {
+    // Safe to run outside the transaction: processing is itself guarded by a
+    // compare-and-swap on the checkout request status.
+    await processCheckoutRequestById(checkoutRequestId)
   }
 }
 
@@ -102,6 +221,19 @@ const handleFailedPayment = async ({ paymentId }: { paymentId: string }) => {
   ])
 }
 
+/**
+ * Razorpay sends a stable event id in the `x-razorpay-event-id` header. When it
+ * is absent (older integrations, manual replays) fall back to a deterministic
+ * key so duplicates are still collapsed.
+ */
+const resolveEventId = (
+  request: NextRequest,
+  eventType: string,
+  paymentId: string
+): string =>
+  request.headers.get('x-razorpay-event-id')?.trim() ||
+  `${eventType}:${paymentId}`
+
 export async function POST(request: NextRequest) {
   try {
     const rawBody = await request.text()
@@ -115,7 +247,18 @@ export async function POST(request: NextRequest) {
 
     verifyRazorpayWebhookSignature({ payload: rawBody, signature })
 
-    const event = JSON.parse(rawBody) as RazorpayWebhookEvent
+    let event: RazorpayWebhookEvent
+    try {
+      event = JSON.parse(rawBody) as RazorpayWebhookEvent
+    } catch {
+      // A signed-but-unparseable body will never become valid, so answer 400
+      // to stop the gateway retrying it forever.
+      return NextResponse.json(
+        { error: 'Invalid webhook payload' },
+        { status: 400 }
+      )
+    }
+
     const paymentEntity = event.payload?.payment?.entity
     const paymentId = paymentEntity?.id
     const paymentOrderId = paymentEntity?.order_id
@@ -127,22 +270,58 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (event.event === 'payment.captured') {
-      if (typeof paymentEntity.amount !== 'number') {
-        return NextResponse.json(
-          { error: 'Invalid payment amount in webhook payload' },
-          { status: 400 }
-        )
-      }
-      await handleCapturedPayment({
-        paymentId,
-        paymentOrderId,
-        amount: paymentEntity.amount,
-      })
+    if (
+      event.event === 'payment.captured' &&
+      typeof paymentEntity.amount !== 'number'
+    ) {
+      return NextResponse.json(
+        { error: 'Invalid payment amount in webhook payload' },
+        { status: 400 }
+      )
     }
 
-    if (event.event === 'payment.failed') {
-      await handleFailedPayment({ paymentId })
+    const eventId = resolveEventId(request, event.event, paymentId)
+    const isFirstDelivery = await claimWebhookEvent({
+      eventId,
+      eventType: event.event,
+    })
+
+    if (!isFirstDelivery) {
+      // Replays and duplicate deliveries are a no-op, but must still be
+      // acknowledged so the gateway stops retrying.
+      logBusinessEvent({
+        event: 'payment_webhook_duplicate_ignored',
+        details: { eventId, eventType: event.event, paymentId },
+        success: true,
+      })
+      return NextResponse.json({ ok: true, duplicate: true })
+    }
+
+    try {
+      if (event.event === 'payment.captured') {
+        await handleCapturedPayment({
+          paymentId,
+          paymentOrderId,
+          amount: paymentEntity.amount as number,
+        })
+      }
+
+      if (event.event === 'payment.failed') {
+        await handleFailedPayment({ paymentId })
+      }
+
+      await completeWebhookEvent(eventId)
+    } catch (error) {
+      // Release the claim so the gateway's retry can reprocess the event
+      // instead of it being permanently swallowed as a duplicate.
+      await releaseWebhookEvent(eventId).catch((releaseError) => {
+        logError({
+          error: releaseError,
+          context: 'payment_webhook_release_claim_failed',
+          additionalInfo: { eventId },
+        })
+      })
+      throw error
     }
 
     return NextResponse.json({ ok: true })

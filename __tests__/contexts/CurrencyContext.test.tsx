@@ -199,6 +199,34 @@ describe('CurrencyProvider', () => {
     })
   })
 
+  it('ignores malformed rates from the API instead of breaking rendering', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          data: { rates: { INR: 1, USD: 'not-a-number', EUR: 0, GBP: -1 } },
+        }),
+      })
+    )
+
+    render(
+      <CurrencyProvider>
+        <CurrencyDisplay />
+      </CurrencyProvider>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByTestId('rates-loading').textContent).toBe('false')
+    })
+
+    const usdRate = parseFloat(
+      screen.getByTestId('usd-rate').textContent ?? '0'
+    )
+    expect(usdRate).toBeCloseTo(CURRENCIES.USD.rate, 5)
+    expect(screen.getByTestId('formatted').textContent).not.toContain('NaN')
+  })
+
   it('keeps fallback rates when the API fetch fails', async () => {
     render(
       <CurrencyProvider>

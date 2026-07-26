@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 const {
   mockDbCheckoutRequestsCreate,
   mockDbCheckoutRequestsUpdateStatus,
+  mockDbCheckoutRequestsClaimForProcessing,
   mockDbCheckoutRequestsFindById,
   mockDbCheckoutRequestsFindRecentWithOrders,
   mockDbOrdersFindFirstByCheckoutRequestId,
@@ -15,6 +16,7 @@ const {
 } = vi.hoisted(() => ({
   mockDbCheckoutRequestsCreate: vi.fn(),
   mockDbCheckoutRequestsUpdateStatus: vi.fn().mockResolvedValue(undefined),
+  mockDbCheckoutRequestsClaimForProcessing: vi.fn().mockResolvedValue(true),
   mockDbCheckoutRequestsFindById: vi.fn().mockResolvedValue(null),
   mockDbCheckoutRequestsFindRecentWithOrders: vi.fn().mockResolvedValue([]),
   mockDbOrdersFindFirstByCheckoutRequestId: vi.fn().mockResolvedValue(null),
@@ -31,6 +33,7 @@ vi.mock('@/lib/db', () => ({
     checkoutRequests: {
       create: mockDbCheckoutRequestsCreate,
       updateStatus: mockDbCheckoutRequestsUpdateStatus,
+      claimForProcessing: mockDbCheckoutRequestsClaimForProcessing,
       findById: mockDbCheckoutRequestsFindById,
       findRecentWithOrders: mockDbCheckoutRequestsFindRecentWithOrders,
     },
@@ -90,6 +93,7 @@ const testUser: CheckoutSessionUser = {
 describe('checkout-service', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockDbCheckoutRequestsClaimForProcessing.mockResolvedValue(true)
   })
 
   describe('isCheckoutRequestError', () => {
@@ -320,6 +324,34 @@ describe('checkout-service', () => {
 
     it('throws on invalid checkout request id', async () => {
       await expect(processCheckoutRequestById('')).rejects.toThrow()
+    })
+
+    it('skips processing when the request is already claimed', async () => {
+      mockDbCheckoutRequestsFindById.mockResolvedValue({
+        id: 'cr2xy89',
+        userId: 'user1',
+        customerName: 'Test',
+        customerEmail: 'test@example.com',
+        customerAddress: '123 Street',
+        addressLine1: '123 Street',
+        addressLine2: '',
+        addressLine3: '',
+        pinCode: '110001',
+        city: 'New Delhi',
+        state: 'Delhi',
+        items: [],
+        status: 'PENDING',
+        createdAt: new Date(),
+      })
+      mockDbOrdersFindFirstByCheckoutRequestId.mockResolvedValue(null)
+      mockDbCheckoutRequestsClaimForProcessing.mockResolvedValue(false)
+
+      await processCheckoutRequestById('cr2xy89')
+
+      expect(mockDbCheckoutRequestsClaimForProcessing).toHaveBeenCalledWith(
+        'cr2xy89'
+      )
+      expect(mockCreateOrderForUser).not.toHaveBeenCalled()
     })
   })
 

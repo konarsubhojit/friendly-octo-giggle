@@ -4,6 +4,8 @@ import {
   ORDER_ID_REGEX,
   URL_REGEX,
   ISO_DATETIME_REGEX,
+  MAX_MONEY_AMOUNT,
+  hasMoneyPrecision,
 } from '@/lib/validations/primitives'
 
 // ─── Product Validation Schemas ───────────────────────────
@@ -62,7 +64,9 @@ export const CreateVariantSchema = z.object({
   sku: z.string().max(100, 'SKU must be under 100 characters').nullish(),
   price: z
     .number({ message: 'Price is required' })
-    .positive('Price must be greater than zero'),
+    .positive('Price must be greater than zero')
+    .max(MAX_MONEY_AMOUNT, 'Price is out of the supported range')
+    .refine(hasMoneyPrecision, 'Price supports at most 2 decimal places'),
   stock: z
     .number({ message: 'Stock is required' })
     .int('Stock must be an integer')
@@ -82,7 +86,9 @@ export const UpdateVariantSchema = z
     sku: z.string().max(100, 'SKU must be under 100 characters').nullish(),
     price: z
       .number({ message: 'Price is required' })
-      .positive('Price must be greater than zero'),
+      .positive('Price must be greater than zero')
+      .max(MAX_MONEY_AMOUNT, 'Price is out of the supported range')
+      .refine(hasMoneyPrecision, 'Price supports at most 2 decimal places'),
     stock: z
       .number({ message: 'Stock is required' })
       .int('Stock must be an integer')
