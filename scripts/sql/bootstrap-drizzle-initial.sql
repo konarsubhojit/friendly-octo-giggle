@@ -182,6 +182,18 @@ CREATE TABLE IF NOT EXISTS public."FailedEmail" (
   "sentAt" timestamp without time zone
 );
 
+CREATE TABLE IF NOT EXISTS public."NotificationPreference" (
+  "userId" text NOT NULL,
+  "transactionalEmail" boolean DEFAULT true NOT NULL,
+  "transactionalPush" boolean DEFAULT false NOT NULL,
+  "transactionalSms" boolean DEFAULT false NOT NULL,
+  "marketingEmail" boolean DEFAULT false NOT NULL,
+  "marketingPush" boolean DEFAULT false NOT NULL,
+  "marketingSms" boolean DEFAULT false NOT NULL,
+  "createdAt" timestamp without time zone DEFAULT now() NOT NULL,
+  "updatedAt" timestamp without time zone DEFAULT now() NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS public."Order" (
   "id" character varying(10) NOT NULL,
   "userId" text,
@@ -278,6 +290,17 @@ CREATE TABLE IF NOT EXISTS public."ProductVariant" (
 CREATE TABLE IF NOT EXISTS public."ProductVariantOptionValue" (
   "variantId" character varying(7) NOT NULL,
   "optionValueId" character varying(7) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS public."PushSubscription" (
+  "id" character varying(7) NOT NULL,
+  "userId" text NOT NULL,
+  "endpoint" text NOT NULL,
+  "p256dh" text NOT NULL,
+  "auth" text NOT NULL,
+  "userAgent" text,
+  "createdAt" timestamp without time zone DEFAULT now() NOT NULL,
+  "updatedAt" timestamp without time zone DEFAULT now() NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS public."Review" (
@@ -539,6 +562,39 @@ BEGIN
       AND (conname = 'Address_pkey' OR pg_get_constraintdef(oid) = 'PRIMARY KEY (id)')
   ) THEN
     EXECUTE 'ALTER TABLE public."Address" ADD CONSTRAINT "Address_pkey" PRIMARY KEY (id)';
+  END IF;
+END
+$$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."NotificationPreference"'::regclass
+      AND (conname = 'NotificationPreference_pkey' OR pg_get_constraintdef(oid) = 'PRIMARY KEY ("userId")')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."NotificationPreference" ADD CONSTRAINT "NotificationPreference_pkey" PRIMARY KEY ("userId")';
+  END IF;
+END
+$$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."PushSubscription"'::regclass
+      AND (conname = 'PushSubscription_pkey' OR pg_get_constraintdef(oid) = 'PRIMARY KEY (id)')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."PushSubscription" ADD CONSTRAINT "PushSubscription_pkey" PRIMARY KEY (id)';
+  END IF;
+END
+$$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."PushSubscription"'::regclass
+      AND (conname = 'PushSubscription_endpoint_unique' OR pg_get_constraintdef(oid) = 'UNIQUE (endpoint)')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."PushSubscription" ADD CONSTRAINT "PushSubscription_endpoint_unique" UNIQUE (endpoint)';
   END IF;
 END
 $$;
@@ -986,6 +1042,28 @@ DO $$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."NotificationPreference"'::regclass
+      AND (conname = 'NotificationPreference_userId_User_id_fk' OR pg_get_constraintdef(oid) = 'FOREIGN KEY ("userId") REFERENCES "User"(id) ON DELETE CASCADE')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."NotificationPreference" ADD CONSTRAINT "NotificationPreference_userId_User_id_fk" FOREIGN KEY ("userId") REFERENCES "User"(id) ON DELETE CASCADE';
+  END IF;
+END
+$$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."PushSubscription"'::regclass
+      AND (conname = 'PushSubscription_userId_User_id_fk' OR pg_get_constraintdef(oid) = 'FOREIGN KEY ("userId") REFERENCES "User"(id) ON DELETE CASCADE')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."PushSubscription" ADD CONSTRAINT "PushSubscription_userId_User_id_fk" FOREIGN KEY ("userId") REFERENCES "User"(id) ON DELETE CASCADE';
+  END IF;
+END
+$$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
     WHERE conrelid = 'public."AdminAuditLog"'::regclass
       AND (conname = 'AdminAuditLog_userId_User_id_fk' OR pg_get_constraintdef(oid) = 'FOREIGN KEY ("userId") REFERENCES "User"(id) ON DELETE CASCADE')
   ) THEN
@@ -1284,6 +1362,7 @@ $$;
 CREATE INDEX IF NOT EXISTS "Account_userId_idx" ON public."Account" USING btree ("userId");
 CREATE UNIQUE INDEX IF NOT EXISTS "Address_one_default_per_user_idx" ON public."Address" USING btree ("userId") WHERE ("isDefault" = true);
 CREATE INDEX IF NOT EXISTS "Address_userId_idx" ON public."Address" USING btree ("userId");
+CREATE INDEX IF NOT EXISTS "PushSubscription_userId_idx" ON public."PushSubscription" USING btree ("userId");
 CREATE INDEX IF NOT EXISTS "AdminAuditLog_createdAt_idx" ON public."AdminAuditLog" USING btree ("createdAt");
 CREATE INDEX IF NOT EXISTS "AdminAuditLog_entity_idx" ON public."AdminAuditLog" USING btree (entity);
 CREATE INDEX IF NOT EXISTS "AdminAuditLog_userId_idx" ON public."AdminAuditLog" USING btree ("userId");
@@ -1379,6 +1458,13 @@ INSERT INTO drizzle.__drizzle_migrations (hash, created_at)
 SELECT '984c731ceb56e1923cb8945780309f92be97e55c61923d6bb41dde32541516f1', 1785040622095
 WHERE NOT EXISTS (
   SELECT 1 FROM drizzle.__drizzle_migrations WHERE created_at = 1785040622095
+);
+
+-- 0007_customer_notifications
+INSERT INTO drizzle.__drizzle_migrations (hash, created_at)
+SELECT '57e7c0c4af166df78d3a494e01476a7621c2cb2482880dbb42d44e0408d3f4d6', 1785043681036
+WHERE NOT EXISTS (
+  SELECT 1 FROM drizzle.__drizzle_migrations WHERE created_at = 1785043681036
 );
 
 DROP FUNCTION drizzle.ensure_public_enum(text, text);

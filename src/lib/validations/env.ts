@@ -149,6 +149,9 @@ const BaseEnvSchema = z.object({
   RAZORPAY_KEY_SECRET: z.string().optional(),
   RAZORPAY_WEBHOOK_SECRET: z.string().optional(),
   SENTRY_DSN: z.url().optional(),
+  VAPID_PUBLIC_KEY: z.string().optional(),
+  VAPID_PRIVATE_KEY: z.string().optional(),
+  VAPID_SUBJECT: z.string().optional(),
   IMAGE_UPLOAD_PROVIDER: z.enum(['vercel', 'azure']).optional(),
   AZURE_BLOB_ACCOUNTS_JSON: z
     .string()

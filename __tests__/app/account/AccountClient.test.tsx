@@ -54,6 +54,10 @@ vi.mock('@/app/(public)/account/PreferencesSection', () => ({
   PreferencesSection: () => <div data-testid="preferences-section" />,
 }))
 
+vi.mock('@/app/(public)/account/NotificationsSection', () => ({
+  NotificationsSection: () => <div data-testid="notifications-section" />,
+}))
+
 vi.mock('@/app/(public)/account/PasswordSection', () => ({
   PasswordSection: () => <div data-testid="password-section" />,
 }))

@@ -84,6 +84,88 @@ self.addEventListener('fetch', (event) => {
   }
 })
 
+// ─── Push notifications ───────────────────────────────────────────────────────
+
+const DEFAULT_NOTIFICATION = {
+  title: 'Kiyon Store',
+  body: 'You have a new update.',
+  url: '/orders',
+}
+
+function parsePushPayload(event) {
+  if (!event.data) return { ...DEFAULT_NOTIFICATION }
+  try {
+    const data = event.data.json()
+    return {
+      title: data.title || DEFAULT_NOTIFICATION.title,
+      body: data.body || DEFAULT_NOTIFICATION.body,
+      url: data.url || DEFAULT_NOTIFICATION.url,
+      tag: data.tag,
+    }
+  } catch {
+    return { ...DEFAULT_NOTIFICATION, body: event.data.text() }
+  }
+}
+
+self.addEventListener('push', (event) => {
+  const payload = parsePushPayload(event)
+  event.waitUntil(
+    self.registration.showNotification(payload.title, {
+      body: payload.body,
+      icon: '/icons/icon-192.png',
+      badge: '/icons/icon-192.png',
+      tag: payload.tag,
+      data: { url: payload.url },
+    })
+  )
+})
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close()
+  const target = event.notification.data?.url || '/'
+  event.waitUntil(
+    self.clients
+      .matchAll({ type: 'window', includeUncontrolled: true })
+      .then((clientList) => {
+        const targetUrl = new URL(target, self.location.origin).href
+        const existing = clientList.find((client) => client.url === targetUrl)
+        if (existing) return existing.focus()
+        return self.clients.openWindow(targetUrl)
+      })
+  )
+})
+
+/**
+ * Browsers rotate subscription keys (or expire them) without user action.
+ * Re-subscribe with the same application server key and sync the new
+ * subscription to the API so delivery keeps working.
+ */
+self.addEventListener('pushsubscriptionchange', (event) => {
+  const applicationServerKey =
+    event.oldSubscription?.options?.applicationServerKey
+  event.waitUntil(
+    (async () => {
+      if (event.oldSubscription?.endpoint) {
+        await fetch('/api/account/push-subscriptions', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ endpoint: event.oldSubscription.endpoint }),
+        }).catch(() => undefined)
+      }
+      if (!applicationServerKey) return
+      const subscription = await self.registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey,
+      })
+      await fetch('/api/account/push-subscriptions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(subscription.toJSON()),
+      }).catch(() => undefined)
+    })()
+  )
+})
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function isImageRequest(request) {
