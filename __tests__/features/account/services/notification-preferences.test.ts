@@ -11,7 +11,10 @@ vi.mock('@/lib/db', () => ({
   primaryDrizzleDb: { insert: mockPrimaryInsert },
 }))
 vi.mock('@/lib/schema', () => ({
-  notificationPreferences: { __table: 'notificationPreferences', userId: 'userId' },
+  notificationPreferences: {
+    __table: 'notificationPreferences',
+    userId: 'userId',
+  },
   users: { __table: 'users', email: 'email' },
 }))
 vi.mock('drizzle-orm', () => ({

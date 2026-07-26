@@ -64,9 +64,8 @@ describe('/api/account/push-subscriptions', () => {
 
   it('removes a revoked subscription owned by the caller', async () => {
     mockAuth.mockResolvedValue({ user: { id: 'user-1' } })
-    const { DELETE } = await import(
-      '@/app/api/account/push-subscriptions/route'
-    )
+    const { DELETE } =
+      await import('@/app/api/account/push-subscriptions/route')
     const response = await DELETE(
       makeRequest('DELETE', { endpoint: validSubscription.endpoint })
     )

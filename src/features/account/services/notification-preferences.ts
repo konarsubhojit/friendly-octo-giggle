@@ -122,7 +122,13 @@ export const resolveNotificationRecipient = async (
     columns: { id: true },
   })
   if (!user) {
-    return { userId: null, preferences: { ...DEFAULT_NOTIFICATION_PREFERENCES } }
+    return {
+      userId: null,
+      preferences: { ...DEFAULT_NOTIFICATION_PREFERENCES },
+    }
   }
-  return { userId: user.id, preferences: await getNotificationPreferences(user.id) }
+  return {
+    userId: user.id,
+    preferences: await getNotificationPreferences(user.id),
+  }
 }

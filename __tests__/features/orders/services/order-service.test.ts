@@ -73,7 +73,9 @@ vi.mock('@/lib/db', () => ({
   drizzleDb: {
     query: {
       users: { findFirst: vi.fn().mockResolvedValue(undefined) },
-      notificationPreferences: { findFirst: vi.fn().mockResolvedValue(undefined) },
+      notificationPreferences: {
+        findFirst: vi.fn().mockResolvedValue(undefined),
+      },
     },
   },
 }))
