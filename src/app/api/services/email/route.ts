@@ -61,6 +61,10 @@ const dispatchEmail = async (event: QStashEvent): Promise<void> => {
       customerName: event.data.customerName,
       orderId: event.data.orderId,
       totalAmount: formatPriceForCurrency(event.data.totalAmount, currency),
+      discountAmount: event.data.discountAmount
+        ? formatPriceForCurrency(event.data.discountAmount, currency)
+        : null,
+      couponCode: event.data.couponCode ?? null,
       shippingAddress: event.data.customerAddress,
       items: event.data.items.map((item) => ({
         name: item.name,

@@ -43,6 +43,11 @@ import {
   productVariantOptionValuesRelations,
   checkoutRequests,
   checkoutRequestsRelations,
+  coupons,
+  couponRedemptions,
+  couponsRelations,
+  couponRedemptionsRelations,
+  discountTypeEnum,
   ordersRelations,
   orderItemsRelations,
   cartsRelations,
@@ -63,6 +68,7 @@ const schema = {
   checkoutRequestStatusEnum,
   emailTypeEnum,
   failedEmailStatusEnum,
+  discountTypeEnum,
   users,
   accounts,
   sessions,
@@ -79,6 +85,8 @@ const schema = {
   productShares,
   categories,
   checkoutRequests,
+  coupons,
+  couponRedemptions,
   orders,
   orderItems,
   carts,
@@ -99,6 +107,8 @@ const schema = {
   productOptionValuesRelations,
   productVariantOptionValuesRelations,
   checkoutRequestsRelations,
+  couponsRelations,
+  couponRedemptionsRelations,
   ordersRelations,
   orderItemsRelations,
   cartsRelations,
@@ -146,5 +156,5 @@ export const drizzleDb = withReplicas(primaryDrizzleDb, [readDrizzleDb])
 export type DrizzleDb = typeof drizzleDb
 
 // Re-export query helpers for backward compatibility
-export { db, StockConflictError } from './db-queries'
+export { db, StockConflictError, CouponConflictError } from './db-queries'
 export type { ProductListOptions } from './db-queries'

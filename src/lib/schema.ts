@@ -70,6 +70,13 @@ export const paymentStatusEnum = pgEnum('PaymentStatus', [
 
 export const paymentProviderEnum = pgEnum('PaymentProvider', PAYMENT_PROVIDERS)
 
+export const discountTypeEnum = pgEnum('DiscountType', [
+  'PERCENTAGE',
+  'FIXED_AMOUNT',
+  'FREE_SHIPPING',
+  'BOGO',
+])
+
 // ─── Auth Tables (NextAuth compatible) ───────────────────
 
 export const users = pgTable('User', {
@@ -352,6 +359,61 @@ export const productVariantOptionValues = pgTable(
   ]
 )
 
+// ─── Promotion Tables ────────────────────────────────────
+
+/**
+ * A redeemable discount code.
+ *
+ * `usageCount` is the authoritative global redemption counter: it is bumped
+ * with a conditional `UPDATE ... WHERE usageCount < usageLimit` inside the
+ * order transaction, which both enforces the cap and serialises concurrent
+ * redemptions of the same coupon (the row lock is held until commit).
+ */
+export const coupons = pgTable(
+  'Coupon',
+  {
+    id: varchar('id', { length: 7 })
+      .primaryKey()
+      .$defaultFn(() => generateShortId()),
+    /** Always persisted upper-cased so lookups are case-insensitive. */
+    code: text('code').notNull().unique(),
+    description: text('description'),
+    discountType: discountTypeEnum('discountType').notNull(),
+    /** Percentage (0-100) for PERCENTAGE, otherwise a monetary amount. */
+    discountValue: money('discountValue').notNull().default(0),
+    /** Optional ceiling applied to the computed discount. */
+    maxDiscountAmount: money('maxDiscountAmount'),
+    /** Cart subtotal required before the coupon applies. */
+    minCartValue: money('minCartValue').notNull().default(0),
+    /** When non-empty, only items in these categories are discountable. */
+    scopedCategories: json('scopedCategories')
+      .$type<string[]>()
+      .notNull()
+      .default([]),
+    /** When non-empty, only these products are discountable. */
+    scopedProductIds: json('scopedProductIds')
+      .$type<string[]>()
+      .notNull()
+      .default([]),
+    /** Global redemption cap; null means unlimited. */
+    usageLimit: integer('usageLimit'),
+    /** Per-user redemption cap; null means unlimited. */
+    perUserLimit: integer('perUserLimit'),
+    usageCount: integer('usageCount').notNull().default(0),
+    /** When false the coupon may not be combined with any other coupon. */
+    stackable: boolean('stackable').notNull().default(false),
+    isActive: boolean('isActive').notNull().default(true),
+    startsAt: timestamp('startsAt', { mode: 'date' }),
+    endsAt: timestamp('endsAt', { mode: 'date' }),
+    createdAt: timestamp('createdAt', { mode: 'date' }).defaultNow().notNull(),
+    updatedAt: timestamp('updatedAt', { mode: 'date' }).defaultNow().notNull(),
+  },
+  (t) => [
+    index('Coupon_isActive_idx').on(t.isActive),
+    index('Coupon_endsAt_idx').on(t.endsAt),
+  ]
+)
+
 // ─── Order Tables ────────────────────────────────────────
 
 export interface CheckoutRequestItemRecord {
@@ -380,6 +442,7 @@ export const checkoutRequests = pgTable(
     city: text('city'),
     state: text('state'),
     items: json('items').$type<CheckoutRequestItemRecord[]>().notNull(),
+    couponCode: text('couponCode'),
     paymentProvider: paymentProviderEnum('paymentProvider'),
     paymentOrderId: text('paymentOrderId'),
     paymentTransactionId: text('paymentTransactionId'),
@@ -420,6 +483,13 @@ export const orders = pgTable(
       { onDelete: 'set null' }
     ),
     totalAmount: money('totalAmount').notNull(),
+    /** Total discount applied; the pre-discount subtotal is total + discount. */
+    discountAmount: money('discountAmount').default(0).notNull(),
+    couponId: varchar('couponId', { length: 7 }).references(() => coupons.id, {
+      onDelete: 'set null',
+    }),
+    /** Denormalised so the code survives coupon deletion (exports, emails). */
+    couponCode: text('couponCode'),
     paymentStatus: paymentStatusEnum('paymentStatus')
       .default('PENDING')
       .notNull(),
@@ -470,8 +540,35 @@ export const orderItems = pgTable(
   ]
 )
 
-// ─── Payment Webhook Deduplication ───────────────────────
-// One row per delivered gateway webhook event. The unique (provider, eventId)
+/**
+ * One row per coupon applied to an order. Inserted in the same transaction as
+ * the order, so a redemption can never be recorded for an order that failed.
+ */
+export const couponRedemptions = pgTable(
+  'CouponRedemption',
+  {
+    id: varchar('id', { length: 7 })
+      .primaryKey()
+      .$defaultFn(() => generateShortId()),
+    couponId: varchar('couponId', { length: 7 })
+      .notNull()
+      .references(() => coupons.id, { onDelete: 'cascade' }),
+    userId: text('userId').references(() => users.id, { onDelete: 'set null' }),
+    orderId: varchar('orderId', { length: 10 })
+      .notNull()
+      .references(() => orders.id, { onDelete: 'cascade' }),
+    discountAmount: money('discountAmount').notNull(),
+    createdAt: timestamp('createdAt', { mode: 'date' }).defaultNow().notNull(),
+  },
+  (t) => [
+    unique('CouponRedemption_couponId_orderId_key').on(t.couponId, t.orderId),
+    index('CouponRedemption_couponId_idx').on(t.couponId),
+    index('CouponRedemption_userId_idx').on(t.userId),
+    index('CouponRedemption_createdAt_idx').on(t.createdAt),
+  ]
+)
+
+// ─── Payment Webhook Deduplication ───────────────────────// One row per delivered gateway webhook event. The unique (provider, eventId)
 // constraint makes processing idempotent: a duplicate delivery loses the race
 // on insert and is short-circuited instead of re-running side effects.
 // `processedAt` records when the side effects committed, so a delivery that
@@ -808,8 +905,34 @@ export const ordersRelations = relations(orders, ({ one, many }) => ({
     fields: [orders.checkoutRequestId],
     references: [checkoutRequests.id],
   }),
+  coupon: one(coupons, {
+    fields: [orders.couponId],
+    references: [coupons.id],
+  }),
   items: many(orderItems),
 }))
+
+export const couponsRelations = relations(coupons, ({ many }) => ({
+  redemptions: many(couponRedemptions),
+}))
+
+export const couponRedemptionsRelations = relations(
+  couponRedemptions,
+  ({ one }) => ({
+    coupon: one(coupons, {
+      fields: [couponRedemptions.couponId],
+      references: [coupons.id],
+    }),
+    user: one(users, {
+      fields: [couponRedemptions.userId],
+      references: [users.id],
+    }),
+    order: one(orders, {
+      fields: [couponRedemptions.orderId],
+      references: [orders.id],
+    }),
+  })
+)
 
 export const orderItemsRelations = relations(orderItems, ({ one }) => ({
   order: one(orders, { fields: [orderItems.orderId], references: [orders.id] }),

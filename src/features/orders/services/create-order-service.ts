@@ -1,4 +1,4 @@
-import { db, StockConflictError } from '@/lib/db'
+import { CouponConflictError, db, StockConflictError } from '@/lib/db'
 import { formatStructuredAddress } from '@/lib/address-utils'
 import { invalidateCache } from '@/lib/redis'
 import { invalidateUserOrderCaches } from '@/lib/cache'
@@ -23,6 +23,12 @@ import {
   type VerifiedPayment,
 } from '@/lib/payments'
 import {
+  isCouponError,
+  resolveCartDiscount,
+  type AppliedCoupon,
+  type DiscountCartItem,
+} from '@/features/cart/services/coupon-service'
+import {
   OrderRequestError,
   type OrderSessionUser,
 } from './order-service.shared'
@@ -30,6 +36,7 @@ import {
 type ProductWithVariants = {
   id: string
   name: string
+  category: string
   variants: Array<{ id: string; price: number; stock: number }>
 }
 
@@ -78,6 +85,8 @@ interface HydratedOrder {
   customerEmail: string
   customerAddress: string
   totalAmount: number
+  discountAmount: number
+  couponCode: string | null
   status: string
   paymentStatus: string
   createdAt: Date
@@ -381,6 +390,8 @@ export const persistOrder = async ({
   customerDetails,
   productList,
   totalAmount,
+  discountAmount = 0,
+  appliedCoupons = [],
   verifiedPayment,
   checkoutRequestId,
 }: {
@@ -389,6 +400,8 @@ export const persistOrder = async ({
   customerDetails: Extract<ValidationResult, { valid: true }>
   productList: ProductWithVariants[]
   totalAmount: number
+  discountAmount?: number
+  appliedCoupons?: readonly AppliedCoupon[]
   verifiedPayment?: VerifiedPayment | null
   checkoutRequestId?: string
 }) => {
@@ -418,11 +431,20 @@ export const persistOrder = async ({
       },
       checkoutRequestId: checkoutRequestId ?? null,
       totalAmount,
+      discountAmount,
+      appliedCoupons: appliedCoupons.map((applied) => ({
+        couponId: applied.couponId,
+        code: applied.code,
+        discountAmount: applied.discountAmount,
+      })),
       verifiedPayment,
       items: buildOrderItemValues(body.items, productList),
     })
   } catch (err) {
     if (err instanceof StockConflictError) {
+      throw new OrderRequestError(err.message, 409)
+    }
+    if (err instanceof CouponConflictError) {
       throw new OrderRequestError(err.message, 409)
     }
     throw err
@@ -469,6 +491,8 @@ export const dispatchOrderNotifications = async ({
       customerName: hydratedOrder.customerName,
       customerAddress: hydratedOrder.customerAddress,
       totalAmount: hydratedOrder.totalAmount,
+      discountAmount: hydratedOrder.discountAmount || undefined,
+      couponCode: hydratedOrder.couponCode,
       currencyCode,
       items: hydratedOrder.items.map((item) => ({
         name: item.product.name,
@@ -509,6 +533,10 @@ export const dispatchOrderNotifications = async ({
         hydratedOrder.totalAmount,
         currencyCode
       ),
+      discountAmount: hydratedOrder.discountAmount
+        ? formatPriceForCurrency(hydratedOrder.discountAmount, currencyCode)
+        : null,
+      couponCode: hydratedOrder.couponCode,
       shippingAddress: hydratedOrder.customerAddress,
       items: hydratedOrder.items.map((item) => ({
         name: item.product.name,
@@ -637,6 +665,57 @@ const logAndQueueOrderRecord = ({
   )
 }
 
+/**
+ * Recompute the order discount server-side from the submitted coupon code and
+ * the database-priced cart lines.
+ */
+const resolveOrderDiscount = async ({
+  body,
+  userId,
+  productList,
+}: {
+  body: CreateOrderInput
+  userId: string
+  productList: ProductWithVariants[]
+}) => {
+  const productMap = new Map(
+    productList.map((product) => [product.id, product])
+  )
+
+  const discountItems: DiscountCartItem[] = body.items.map((item) => {
+    const product = productMap.get(item.productId)
+    const variant = product?.variants.find(
+      (candidate) => candidate.id === item.variantId
+    )
+
+    return {
+      productId: item.productId,
+      category: product?.category ?? '',
+      quantity: item.quantity,
+      unitPrice: variant?.price ?? 0,
+    }
+  })
+
+  const codes = body.couponCode?.trim() ? [body.couponCode] : []
+
+  try {
+    return await resolveCartDiscount({
+      codes,
+      items: discountItems,
+      userId,
+    })
+  } catch (error) {
+    if (isCouponError(error)) {
+      return logFailedOrderCreation(
+        'coupon_rejected',
+        error.status,
+        error.message
+      )
+    }
+    throw error
+  }
+}
+
 export const createOrderForUser = async ({
   body,
   user,
@@ -660,9 +739,14 @@ export const createOrderForUser = async ({
       stockResult.details
     )
   }
-  const totalAmount = (
-    stockResult as Extract<StockCheckResult, { valid: true }>
-  ).totalAmount
+  // Discounts are always recomputed here from the coupon code plus
+  // database-priced line items — a client-supplied total is never trusted.
+  const discount = await resolveOrderDiscount({
+    body,
+    userId: user.id,
+    productList,
+  })
+  const totalAmount = discount.total
   const verifiedPayment = await verifyPaymentForOrder({
     payment: body.payment,
     expectedAmount: totalAmount,
@@ -677,6 +761,8 @@ export const createOrderForUser = async ({
     customerDetails,
     productList,
     totalAmount,
+    discountAmount: discount.discountAmount,
+    appliedCoupons: discount.appliedCoupons,
     verifiedPayment,
     checkoutRequestId,
   })

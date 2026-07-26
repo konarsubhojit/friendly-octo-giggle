@@ -1,5 +1,7 @@
 import { z } from 'zod'
 import { SHORT_ID_REGEX } from '@/lib/validations/primitives'
+import { MAX_MONEY_AMOUNT } from '@/lib/money'
+import { DISCOUNT_TYPES } from '@/features/cart/services/coupon-service'
 
 // ─── Admin Email-Failures Validation Schemas ──────────────
 
@@ -19,3 +21,86 @@ export const ManualRetryBodySchema = z.object({
 
 export type FailedEmailQuery = z.infer<typeof FailedEmailQuerySchema>
 export type ManualRetryBody = z.infer<typeof ManualRetryBodySchema>
+
+// ─── Admin Coupon Validation Schemas ──────────────────────
+
+const optionalDate = z
+  .string()
+  .datetime({ offset: true })
+  .or(z.string().datetime())
+  .nullish()
+
+const nonNegativeMoney = z
+  .number()
+  .nonnegative('Amount cannot be negative')
+  .max(MAX_MONEY_AMOUNT, 'Amount is too large')
+
+export const CouponBaseSchema = z.object({
+  code: z
+    .string()
+    .trim()
+    .min(3, 'Code must be at least 3 characters')
+    .max(32, 'Code must be at most 32 characters')
+    .regex(/^[A-Za-z0-9_-]+$/, 'Code may only contain letters, digits, - and _')
+    .transform((code) => code.toUpperCase()),
+  description: z.string().trim().max(500).nullish(),
+  discountType: z.enum(DISCOUNT_TYPES),
+  discountValue: nonNegativeMoney.default(0),
+  maxDiscountAmount: nonNegativeMoney.nullish(),
+  minCartValue: nonNegativeMoney.default(0),
+  scopedCategories: z.array(z.string().trim().min(1)).max(50).default([]),
+  scopedProductIds: z
+    .array(z.string().regex(SHORT_ID_REGEX, 'Invalid product ID'))
+    .max(100)
+    .default([]),
+  usageLimit: z.number().int().positive().nullish(),
+  perUserLimit: z.number().int().positive().nullish(),
+  stackable: z.boolean().default(false),
+  isActive: z.boolean().default(true),
+  startsAt: optionalDate,
+  endsAt: optionalDate,
+})
+
+type CouponRuleInput = Partial<z.infer<typeof CouponBaseSchema>>
+
+/** Cross-field rules shared by the create and update payloads. */
+const applyCouponRules = (value: CouponRuleInput, ctx: z.RefinementCtx) => {
+  if (
+    value.discountType === 'PERCENTAGE' &&
+    (value.discountValue === undefined ||
+      value.discountValue <= 0 ||
+      value.discountValue > 100)
+  ) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['discountValue'],
+      message: 'Percentage discount must be between 0 and 100',
+    })
+  }
+
+  if (
+    value.discountType === 'FIXED_AMOUNT' &&
+    (value.discountValue === undefined || value.discountValue <= 0)
+  ) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['discountValue'],
+      message: 'Fixed discount must be greater than zero',
+    })
+  }
+
+  if (value.startsAt && value.endsAt && value.endsAt <= value.startsAt) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['endsAt'],
+      message: 'End date must be after the start date',
+    })
+  }
+}
+
+export const CreateCouponSchema = CouponBaseSchema.superRefine(applyCouponRules)
+export const UpdateCouponSchema =
+  CouponBaseSchema.partial().superRefine(applyCouponRules)
+
+export type CreateCouponInput = z.infer<typeof CreateCouponSchema>
+export type UpdateCouponInput = z.infer<typeof UpdateCouponSchema>

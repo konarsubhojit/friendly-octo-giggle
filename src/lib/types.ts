@@ -149,6 +149,8 @@ export interface CreateOrderInput {
   city: string
   state: string
   items: OrderItemInput[]
+  /** Optional promo code; the discount is always recomputed server-side. */
+  couponCode?: string | null
   payment?: CheckoutPaymentInput
 }
 

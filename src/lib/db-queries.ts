@@ -17,6 +17,8 @@ import {
   products,
   productShares,
   wishlists,
+  coupons,
+  couponRedemptions,
   orders,
   orderItems,
   carts,
@@ -56,6 +58,17 @@ export class StockConflictError extends Error {
   constructor(message: string) {
     super(message)
     this.name = 'StockConflictError'
+  }
+}
+
+/**
+ * Thrown when a coupon redemption loses the race for the last available use
+ * (global or per-user cap) while the order transaction is in flight.
+ */
+export class CouponConflictError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'CouponConflictError'
   }
 }
 
@@ -803,6 +816,16 @@ export const db = {
       }
       checkoutRequestId: string | null
       totalAmount: number
+      discountAmount?: number
+      /**
+       * Coupons resolved server-side. Every entry is redeemed inside the same
+       * transaction as the order, so caps can never be exceeded.
+       */
+      appliedCoupons?: Array<{
+        couponId: string
+        code: string
+        discountAmount: number
+      }>
       verifiedPayment?: VerifiedPayment | null
       items: Array<{
         productId: string
@@ -812,6 +835,9 @@ export const db = {
         customizationNote: string | null
       }>
     }) => {
+      const appliedCoupons = input.appliedCoupons ?? []
+      const primaryCoupon = appliedCoupons[0] ?? null
+
       return primaryDrizzleDb.transaction(async (tx) => {
         const [newOrder] = await tx
           .insert(orders)
@@ -828,6 +854,11 @@ export const db = {
             state: input.customerDetails.state,
             checkoutRequestId: input.checkoutRequestId,
             totalAmount: input.totalAmount,
+            discountAmount: input.discountAmount ?? 0,
+            // Mirrors the primary coupon for display/export; the full set of
+            // coupons for an order always lives in CouponRedemption.
+            couponId: primaryCoupon?.couponId ?? null,
+            couponCode: primaryCoupon?.code ?? null,
             status: 'PENDING',
             // A verified payment that has not settled yet (e.g. Cash on
             // Delivery) stays PENDING until settlement is confirmed.
@@ -875,6 +906,60 @@ export const db = {
           throw new StockConflictError(
             'Unable to reserve stock — item was sold out by a concurrent order'
           )
+        }
+
+        for (const applied of appliedCoupons) {
+          // The conditional increment both enforces the global cap and takes a
+          // row lock held until commit, which serialises concurrent redemptions
+          // of the same coupon and makes the per-user check below race-free.
+          const [claimed] = await tx
+            .update(coupons)
+            .set({
+              usageCount: sql`${coupons.usageCount} + 1`,
+              updatedAt: new Date(),
+            })
+            .where(
+              and(
+                eq(coupons.id, applied.couponId),
+                eq(coupons.isActive, true),
+                sql`(${coupons.usageLimit} IS NULL OR ${coupons.usageCount} < ${coupons.usageLimit})`
+              )
+            )
+            .returning({
+              id: coupons.id,
+              perUserLimit: coupons.perUserLimit,
+            })
+
+          if (!claimed) {
+            throw new CouponConflictError(
+              `Coupon ${applied.code} is no longer available`
+            )
+          }
+
+          if (claimed.perUserLimit !== null) {
+            const [usedByUser] = await tx
+              .select({ value: count() })
+              .from(couponRedemptions)
+              .where(
+                and(
+                  eq(couponRedemptions.couponId, applied.couponId),
+                  eq(couponRedemptions.userId, input.userId)
+                )
+              )
+
+            if (Number(usedByUser?.value ?? 0) >= claimed.perUserLimit) {
+              throw new CouponConflictError(
+                `Coupon ${applied.code} has already been used`
+              )
+            }
+          }
+
+          await tx.insert(couponRedemptions).values({
+            couponId: applied.couponId,
+            userId: input.userId,
+            orderId: newOrder.id,
+            discountAmount: applied.discountAmount,
+          })
         }
 
         return newOrder
@@ -1011,6 +1096,114 @@ export const db = {
     },
   },
 
+  coupons: {
+    /**
+     * Resolve coupon codes for redemption. Reads from the primary DB so a
+     * coupon created or exhausted moments ago is never served stale.
+     */
+    findManyByCodes: async (codes: string[]) => {
+      if (codes.length === 0) return []
+      return primaryDrizzleDb
+        .select()
+        .from(coupons)
+        .where(inArray(coupons.code, codes))
+    },
+
+    findById: async (id: string) => {
+      const [row] = await primaryDrizzleDb
+        .select()
+        .from(coupons)
+        .where(eq(coupons.id, id))
+        .limit(1)
+      return row ?? null
+    },
+
+    /** Redemptions already made by a user, keyed by coupon ID. */
+    countUserRedemptions: async (
+      userId: string,
+      couponIds: string[]
+    ): Promise<Record<string, number>> => {
+      if (couponIds.length === 0) return {}
+      const rows = await primaryDrizzleDb
+        .select({
+          couponId: couponRedemptions.couponId,
+          value: count(),
+        })
+        .from(couponRedemptions)
+        .where(
+          and(
+            eq(couponRedemptions.userId, userId),
+            inArray(couponRedemptions.couponId, couponIds)
+          )
+        )
+        .groupBy(couponRedemptions.couponId)
+
+      return Object.fromEntries(
+        rows.map((row) => [row.couponId, Number(row.value)])
+      )
+    },
+
+    findAll: async () =>
+      drizzleDb.select().from(coupons).orderBy(desc(coupons.createdAt)),
+
+    create: async (values: typeof coupons.$inferInsert) => {
+      const [created] = await primaryDrizzleDb
+        .insert(coupons)
+        .values(values)
+        .returning()
+      return created
+    },
+
+    update: async (
+      id: string,
+      values: Partial<typeof coupons.$inferInsert>
+    ) => {
+      const [updated] = await primaryDrizzleDb
+        .update(coupons)
+        .set({ ...values, updatedAt: new Date() })
+        .where(eq(coupons.id, id))
+        .returning()
+      return updated ?? null
+    },
+
+    delete: async (id: string): Promise<{ id: string } | null> => {
+      const [deleted] = await primaryDrizzleDb
+        .delete(coupons)
+        .where(eq(coupons.id, id))
+        .returning({ id: coupons.id })
+      return deleted ?? null
+    },
+
+    /** Per-coupon redemption totals for the admin usage report. */
+    redemptionSummary: async () => {
+      const rows = await drizzleDb
+        .select({
+          couponId: coupons.id,
+          code: coupons.code,
+          discountType: coupons.discountType,
+          isActive: coupons.isActive,
+          usageLimit: coupons.usageLimit,
+          usageCount: coupons.usageCount,
+          redemptionCount: count(couponRedemptions.id),
+          totalDiscount: sql<number>`coalesce(sum(${couponRedemptions.discountAmount}), 0)`,
+          lastRedeemedAt: sql<Date | null>`max(${couponRedemptions.createdAt})`,
+        })
+        .from(coupons)
+        .leftJoin(couponRedemptions, eq(couponRedemptions.couponId, coupons.id))
+        .groupBy(
+          coupons.id,
+          coupons.code,
+          coupons.discountType,
+          coupons.isActive,
+          coupons.usageLimit,
+          coupons.usageCount
+        )
+        .orderBy(desc(coupons.createdAt))
+
+      return rows
+    },
+  },
+
   checkoutRequests: {
     /**
      * Find a checkout request by its ID.
@@ -1039,6 +1232,7 @@ export const db = {
       city: string
       state: string
       items: CheckoutRequestItemRecord[]
+      couponCode?: string | null
       paymentProvider?: string | null
       paymentOrderId?: string | null
       paymentTransactionId?: string | null
@@ -1059,6 +1253,7 @@ export const db = {
           city: values.city,
           state: values.state,
           items: values.items,
+          couponCode: values.couponCode ?? null,
           paymentProvider: isPaymentProvider(values.paymentProvider)
             ? values.paymentProvider
             : null,

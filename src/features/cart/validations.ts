@@ -34,6 +34,18 @@ export const CheckoutOrderItemSchema = z.object({
 
 export const CheckoutPaymentSchema = PaymentReferenceSchema
 
+/**
+ * Promo code accepted at checkout. Only the code is accepted — the discount is
+ * always recomputed server-side, so a tampered client total has no effect.
+ */
+export const CouponCodeSchema = z
+  .string()
+  .trim()
+  .min(3, 'Coupon code is too short')
+  .max(32, 'Coupon code is too long')
+  .regex(/^[A-Za-z0-9_-]+$/, 'Coupon code contains invalid characters')
+  .transform((code) => code.toUpperCase())
+
 export const SubmitCheckoutSchema = z.object({
   customerName: z.string().min(1, 'Name is required').max(200),
   customerEmail: z.string().regex(EMAIL_REGEX, 'Invalid email address'),
@@ -41,7 +53,12 @@ export const SubmitCheckoutSchema = z.object({
   items: z
     .array(CheckoutOrderItemSchema)
     .min(1, 'At least one item is required'),
+  couponCode: CouponCodeSchema.optional(),
   payment: CheckoutPaymentSchema.optional(),
+})
+
+export const ApplyCouponSchema = z.object({
+  couponCode: CouponCodeSchema,
 })
 
 export const CheckoutQueueMessageSchema = z.object({

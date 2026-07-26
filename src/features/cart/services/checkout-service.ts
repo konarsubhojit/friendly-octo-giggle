@@ -105,6 +105,10 @@ const getNormalizedCheckoutInput = (
     city: typeof rawBody.city === 'string' ? rawBody.city : '',
     state: typeof rawBody.state === 'string' ? rawBody.state : '',
     items: rawBody.items,
+    couponCode:
+      typeof rawBody.couponCode === 'string' && rawBody.couponCode.trim()
+        ? rawBody.couponCode
+        : undefined,
     payment: rawBody.payment,
   })
 
@@ -315,6 +319,7 @@ export const enqueueCheckoutForUser = async ({
     city: normalized.city,
     state: normalized.state,
     items: normalized.items,
+    couponCode: normalized.couponCode ?? null,
     paymentProvider: normalized.payment?.provider ?? null,
     paymentOrderId: storedPayment?.orderId ?? null,
     paymentTransactionId: storedPayment?.paymentId ?? null,
@@ -456,6 +461,7 @@ export const processCheckoutRequestById = async (
           quantity: item.quantity,
           customizationNote: item.customizationNote ?? undefined,
         })),
+        couponCode: checkoutRequest.couponCode,
         payment: buildStoredPaymentReference(checkoutRequest),
       },
       user: {
