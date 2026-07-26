@@ -21,6 +21,7 @@ import {
 } from '@/lib/constants/checkout-policies'
 import { CartPricingSummary } from '@/features/cart/components/CartPricingSummary'
 import { Button } from '@/components/ui/Button'
+import { apiClient } from '@/lib/api-client'
 import { GradientHeading } from '@/components/ui/GradientHeading'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { useCurrency } from '@/contexts/CurrencyContext'
@@ -36,6 +37,7 @@ const PendingCheckoutSchema = z.object({
   city: z.string().min(1),
   state: z.string().min(1),
   customizationNotes: z.record(z.string(), z.string()).default({}),
+  couponCode: z.string().nullish(),
 })
 
 type PendingCheckout = z.infer<typeof PendingCheckoutSchema>
@@ -57,6 +59,31 @@ function readPendingCheckout(): PendingCheckout | null {
   }
 }
 
+interface AppliedCouponState {
+  code: string
+  discountAmount: number
+}
+
+interface CouponPreviewResponse {
+  data: {
+    couponCode: string
+    subtotal: number
+    discountAmount: number
+    total: number
+  }
+}
+
+/** Persist the applied code so the payment step can submit it with the order. */
+function persistCouponCode(code: string | null): void {
+  if (globalThis.window === undefined) return
+  const current = readPendingCheckout()
+  if (!current) return
+  sessionStorage.setItem(
+    PENDING_CHECKOUT_KEY,
+    JSON.stringify({ ...current, couponCode: code })
+  )
+}
+
 const SECTION_CLASS =
   'rounded-2xl border border-[var(--border-warm)] bg-[var(--surface)] p-5 sm:p-6'
 
@@ -72,6 +99,52 @@ export default function CheckoutReviewPage() {
   )
 
   const acknowledgmentId = useId()
+  const couponInputId = useId()
+
+  const [couponCode, setCouponCode] = useState(
+    pendingCheckout?.couponCode ?? ''
+  )
+  const [appliedCoupon, setAppliedCoupon] = useState<AppliedCouponState | null>(
+    null
+  )
+  const [couponError, setCouponError] = useState<string | null>(null)
+  const [applyingCoupon, setApplyingCoupon] = useState(false)
+
+  const handleApplyCoupon = async () => {
+    const code = couponCode.trim()
+    if (!code) return
+
+    setApplyingCoupon(true)
+    setCouponError(null)
+    try {
+      const response = await apiClient.post<CouponPreviewResponse>(
+        '/api/cart/coupon',
+        { couponCode: code }
+      )
+      const applied: AppliedCouponState = {
+        code: response.data.couponCode,
+        discountAmount: response.data.discountAmount,
+      }
+      setAppliedCoupon(applied)
+      setCouponCode(applied.code)
+      persistCouponCode(applied.code)
+    } catch (error) {
+      setAppliedCoupon(null)
+      persistCouponCode(null)
+      setCouponError(
+        error instanceof Error ? error.message : 'Coupon could not be applied'
+      )
+    } finally {
+      setApplyingCoupon(false)
+    }
+  }
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null)
+    setCouponCode('')
+    setCouponError(null)
+    persistCouponCode(null)
+  }
 
   useEffect(() => {
     if (!pendingCheckout) {
@@ -256,17 +329,65 @@ export default function CheckoutReviewPage() {
                         ? 'Free'
                         : formatPrice(pricingSummary.shippingAmount)
                     }
-                    total={formatPrice(pricingSummary.total)}
+                    discount={
+                      appliedCoupon
+                        ? formatPrice(appliedCoupon.discountAmount)
+                        : null
+                    }
+                    total={formatPrice(
+                      pricingSummary.total -
+                        (appliedCoupon?.discountAmount ?? 0)
+                    )}
                   />
                 </div>
 
                 <div className="rounded-2xl border border-dashed border-[var(--border-warm)] px-4 py-3">
-                  <p className="text-xs font-medium text-[var(--text-secondary)]">
+                  <label
+                    htmlFor={couponInputId}
+                    className="text-xs font-medium text-[var(--text-secondary)]"
+                  >
                     Promo / coupon code
-                  </p>
-                  <p className="mt-1 text-xs text-[var(--text-muted)]">
-                    Promo support is coming soon.
-                  </p>
+                  </label>
+                  <div className="mt-2 flex gap-2">
+                    <input
+                      id={couponInputId}
+                      value={couponCode}
+                      onChange={(event) => setCouponCode(event.target.value)}
+                      disabled={appliedCoupon !== null}
+                      placeholder="Enter code"
+                      className="w-full rounded-xl border border-[var(--border-warm)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--foreground)] placeholder-[var(--text-muted)] focus:border-[var(--accent-warm)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-warm)]/40 disabled:opacity-60"
+                    />
+                    {appliedCoupon ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={handleRemoveCoupon}
+                      >
+                        Remove
+                      </Button>
+                    ) : (
+                      <Button
+                        type="button"
+                        onClick={handleApplyCoupon}
+                        loading={applyingCoupon}
+                        loadingText="Checking…"
+                        disabled={!couponCode.trim()}
+                      >
+                        Apply
+                      </Button>
+                    )}
+                  </div>
+                  {appliedCoupon ? (
+                    <p className="mt-2 text-xs text-[var(--accent-sage)]">
+                      {appliedCoupon.code} applied — you save{' '}
+                      {formatPrice(appliedCoupon.discountAmount)}.
+                    </p>
+                  ) : null}
+                  {couponError ? (
+                    <p className="mt-2 text-xs text-red-600" role="alert">
+                      {couponError}
+                    </p>
+                  ) : null}
                 </div>
 
                 <p className="text-xs text-[var(--text-muted)]">

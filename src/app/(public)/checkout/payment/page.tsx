@@ -41,6 +41,7 @@ const PendingCheckoutSchema = z.object({
   city: z.string().min(1),
   state: z.string().min(1),
   customizationNotes: z.record(z.string(), z.string()).default({}),
+  couponCode: z.string().nullish(),
 })
 
 type PendingCheckout = z.infer<typeof PendingCheckoutSchema>
@@ -72,6 +73,15 @@ const delay = (ms: number) =>
     globalThis.setTimeout(resolve, ms)
   })
 
+interface CouponPreviewResponse {
+  data: {
+    couponCode: string
+    subtotal: number
+    discountAmount: number
+    total: number
+  }
+}
+
 const SECTION_CLASS =
   'rounded-2xl border border-[var(--border-warm)] bg-[var(--surface)] p-5 sm:p-6'
 
@@ -88,6 +98,7 @@ export default function CheckoutPaymentPage() {
   const [pendingCheckout] = useState<PendingCheckout | null>(() =>
     readPendingCheckout()
   )
+  const [couponDiscount, setCouponDiscount] = useState(0)
 
   useEffect(() => {
     if (!pendingCheckout) {
@@ -100,6 +111,28 @@ export default function CheckoutPaymentPage() {
       dispatch(fetchCart())
     }
   }, [dispatch, status])
+
+  // Preview only: the authoritative discount is recomputed server-side.
+  useEffect(() => {
+    const code = pendingCheckout?.couponCode
+    if (status !== 'authenticated' || !code) {
+      return
+    }
+
+    let cancelled = false
+    apiClient
+      .post<CouponPreviewResponse>('/api/cart/coupon', { couponCode: code })
+      .then((response) => {
+        if (!cancelled) setCouponDiscount(response.data.discountAmount)
+      })
+      .catch(() => {
+        if (!cancelled) setCouponDiscount(0)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [pendingCheckout?.couponCode, status])
 
   const cartItems = useMemo(() => cart?.items ?? [], [cart?.items])
 
@@ -182,6 +215,9 @@ export default function CheckoutPaymentPage() {
               customizationNote:
                 pendingCheckout.customizationNotes[item.id] ?? undefined,
             })),
+            // Only the code travels to the server; the discount itself is
+            // always recomputed there.
+            couponCode: pendingCheckout.couponCode ?? undefined,
           }
         )
 
@@ -249,7 +285,10 @@ export default function CheckoutPaymentPage() {
                     ? 'Free'
                     : formatPrice(pricingSummary.shippingAmount)
                 }
-                total={formatPrice(pricingSummary.total)}
+                discount={
+                  couponDiscount > 0 ? formatPrice(couponDiscount) : null
+                }
+                total={formatPrice(pricingSummary.total - couponDiscount)}
               />
             </div>
           </section>

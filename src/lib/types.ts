@@ -113,6 +113,9 @@ export interface Order {
   city?: string | null
   state?: string | null
   totalAmount: number
+  /** Discount applied at checkout; 0 when no coupon was used. */
+  discountAmount?: number
+  couponCode?: string | null
   status: OrderStatus
   paymentStatus: PaymentStatus
   paymentProvider?: PaymentProvider | null

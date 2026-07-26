@@ -60,6 +60,11 @@ const NAV_GROUPS: readonly NavGroup[] = [
         label: 'Reviews',
         keywords: ['ratings', 'feedback'],
       },
+      {
+        href: '/admin/coupons',
+        label: 'Coupons',
+        keywords: ['discount', 'promotion', 'promo', 'voucher'],
+      },
     ],
   },
   {
