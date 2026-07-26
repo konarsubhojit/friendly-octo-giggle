@@ -316,6 +316,49 @@ describe('processCheckoutRequestById (extended)', () => {
     )
   })
 
+  it('forwards a Cash on Delivery payment without gateway references', async () => {
+    m.findById.mockResolvedValue({
+      ...checkoutRow,
+      paymentProvider: 'COD',
+      paymentOrderId: null,
+      paymentTransactionId: null,
+      paymentSignature: null,
+    })
+
+    await processCheckoutRequestById('cr2xy89')
+
+    expect(m.createOrderForUser).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: expect.objectContaining({
+          payment: {
+            provider: 'COD',
+            orderId: undefined,
+            paymentId: undefined,
+            signature: undefined,
+          },
+        }),
+      })
+    )
+  })
+
+  it('drops an incomplete signed payment reference', async () => {
+    m.findById.mockResolvedValue({
+      ...checkoutRow,
+      paymentProvider: 'RAZORPAY',
+      paymentOrderId: 'order_1',
+      paymentTransactionId: 'pay_1',
+      paymentSignature: null,
+    })
+
+    await processCheckoutRequestById('cr2xy89')
+
+    expect(m.createOrderForUser).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: expect.objectContaining({ payment: undefined }),
+      })
+    )
+  })
+
   it('marks the request FAILED for client-side order errors', async () => {
     m.findById.mockResolvedValue(checkoutRow)
     m.createOrderForUser.mockRejectedValue(

@@ -16,6 +16,7 @@ import { relations, sql } from 'drizzle-orm'
 import type { AdapterAccountType } from '@auth/core/adapters'
 import { generateShortId, generateOrderId } from './short-id'
 import { MONEY_DECIMAL_PLACES } from './money'
+import { PAYMENT_PROVIDERS } from './payments/providers'
 
 // ─── Money columns ───────────────────────────────────────
 // Monetary values are stored as exact decimals (never floating point) so that
@@ -67,7 +68,7 @@ export const paymentStatusEnum = pgEnum('PaymentStatus', [
   'REFUNDED',
 ])
 
-export const paymentProviderEnum = pgEnum('PaymentProvider', ['RAZORPAY'])
+export const paymentProviderEnum = pgEnum('PaymentProvider', PAYMENT_PROVIDERS)
 
 // ─── Auth Tables (NextAuth compatible) ───────────────────
 

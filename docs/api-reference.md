@@ -100,13 +100,15 @@ Admin endpoints require authentication via NextAuth session with ADMIN role.
 - `/api/cron/retry-emails` (GET) — Retry failed emails
 - `/api/cron/refresh-rates` (GET) — Refresh exchange rates
 - `/api/queue/checkout-orders` (POST) — Vercel Queue consumer
-- `/api/payments/webhook` (POST) — payment provider webhook
+- `/api/payments/webhook` (POST) — Razorpay webhook (legacy path, kept for the registered URL)
+- `/api/payments/webhook/[provider]` (POST) — provider-scoped payment webhook, dispatched to the registered gateway
 - `/api/metrics` (GET) — Prometheus metrics; restrict at the network layer in production
 
 ## Current capability notes
 
 - AI product chat accepts guests using a one-way hashed guest identity. Chat history persistence is authenticated-user-only, and responses intentionally avoid exact stock counts.
 - Checkout creation is idempotent and asynchronous: `POST /api/checkout` records a request and the queue consumer creates the order.
+- Payment providers sit behind the `PaymentGateway` interface (`src/lib/payments/`). `POST /api/checkout` accepts `payment.provider` values of `RAZORPAY` (with `orderId`, `paymentId` and `signature`) or `COD` (no gateway references — Cash on Delivery orders stay `PENDING` and settle to `PAID` when an admin marks them `DELIVERED`).
 - Optional Redis and search integrations fail open to database-backed behavior where supported.
 - Order notifications honour the per-user notification preferences on every send path. Web push requires VAPID keys; when they are absent push is skipped and email is unaffected.
 - Admin CSV, bulk mutation, category reorder, option generation, variant reorder, sales export, and search reindex endpoints require ADMIN authorization.

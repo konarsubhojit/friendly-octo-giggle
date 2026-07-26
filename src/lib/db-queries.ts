@@ -36,6 +36,8 @@ import {
 } from './cache'
 import { serializeProduct, serializeVariant } from './serializers'
 import { CONFIRMED_ORDER_STATUSES } from './constants/order-statuses'
+import { isPaymentProvider } from './payments/providers'
+import type { VerifiedPayment } from './payments/gateway'
 
 // ─── Shared error types ──────────────────────────────────
 
@@ -801,13 +803,7 @@ export const db = {
       }
       checkoutRequestId: string | null
       totalAmount: number
-      verifiedPayment?: {
-        provider: 'RAZORPAY'
-        paymentOrderId: string
-        paymentTransactionId: string
-        amountPaid: number
-        paidAt: Date
-      } | null
+      verifiedPayment?: VerifiedPayment | null
       items: Array<{
         productId: string
         variantId: string
@@ -833,7 +829,9 @@ export const db = {
             checkoutRequestId: input.checkoutRequestId,
             totalAmount: input.totalAmount,
             status: 'PENDING',
-            paymentStatus: input.verifiedPayment ? 'PAID' : 'PENDING',
+            // A verified payment that has not settled yet (e.g. Cash on
+            // Delivery) stays PENDING until settlement is confirmed.
+            paymentStatus: input.verifiedPayment?.paidAt ? 'PAID' : 'PENDING',
             paymentProvider: input.verifiedPayment?.provider ?? null,
             paymentOrderId: input.verifiedPayment?.paymentOrderId ?? null,
             paymentTransactionId:
@@ -1061,7 +1059,9 @@ export const db = {
           city: values.city,
           state: values.state,
           items: values.items,
-          paymentProvider: (values.paymentProvider as 'RAZORPAY') ?? null,
+          paymentProvider: isPaymentProvider(values.paymentProvider)
+            ? values.paymentProvider
+            : null,
           paymentOrderId: values.paymentOrderId ?? null,
           paymentTransactionId: values.paymentTransactionId ?? null,
           paymentSignature: values.paymentSignature ?? null,

@@ -777,6 +777,88 @@ describe('order-service', () => {
       expect(mockInvalidateUserOrderCaches).toHaveBeenCalledWith('user1')
     })
 
+    it('creates an unsettled Cash on Delivery order', async () => {
+      mockVerifyCheckoutPayment.mockResolvedValue({
+        provider: 'COD',
+        paymentOrderId: 'cod_chk123',
+        paymentTransactionId: 'cod_chk123',
+        amountPaid: 0,
+        paidAt: null,
+      })
+      mockDbProductsFindManyWithVariants.mockResolvedValue([
+        {
+          id: 'p1',
+          name: 'Widget',
+          variants: [{ id: 'v1', price: 100, stock: 10 }],
+        },
+      ])
+      mockDbOrdersCreateWithItems.mockResolvedValue({ id: 'ord_cod' })
+      mockDbOrdersFindFirstById.mockResolvedValue({
+        id: 'ord_cod',
+        userId: 'user1',
+        customerName: 'Test',
+        customerEmail: 'test@example.com',
+        customerAddress: '123 St',
+        totalAmount: 100,
+        status: 'PENDING',
+        paymentStatus: 'PENDING',
+        createdAt: new Date('2024-01-01'),
+        updatedAt: new Date('2024-01-01'),
+        items: [
+          {
+            productId: 'p1',
+            variantId: 'v1',
+            quantity: 1,
+            price: 100,
+            customizationNote: null,
+            product: {
+              name: 'Widget',
+              createdAt: new Date('2024-01-01'),
+              updatedAt: new Date('2024-01-01'),
+            },
+          },
+        ],
+      })
+      mockDbUsersFindPreferences.mockResolvedValue(null)
+      mockGetQStashClient.mockReturnValue({
+        publishJSON: vi.fn().mockResolvedValue({ messageId: 'msg1' }),
+      })
+
+      const result = await createOrderForUser({
+        body: {
+          customerName: 'Test',
+          customerEmail: 'test@example.com',
+          customerAddress: '123 St',
+          addressLine1: '123 Test St',
+          addressLine2: '',
+          addressLine3: '',
+          pinCode: '110001',
+          city: 'New Delhi',
+          state: 'Delhi',
+          items: [{ productId: 'p1', variantId: 'v1', quantity: 1 }],
+          payment: { provider: 'COD' },
+        },
+        user: testUser,
+        checkoutRequestId: 'chk123',
+      })
+
+      expect(result.order.id).toBe('ord_cod')
+      expect(mockVerifyCheckoutPayment).toHaveBeenCalledWith({
+        payment: { provider: 'COD' },
+        expectedAmount: 100,
+        reference: 'chk123',
+      })
+      expect(mockDbOrdersCreateWithItems).toHaveBeenCalledWith(
+        expect.objectContaining({
+          verifiedPayment: expect.objectContaining({
+            provider: 'COD',
+            amountPaid: 0,
+            paidAt: null,
+          }),
+        })
+      )
+    })
+
     it('falls back to direct email on qstash failure', async () => {
       const newOrder = {
         id: 'ord2',
