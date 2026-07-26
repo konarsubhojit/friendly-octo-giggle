@@ -6,6 +6,7 @@ import type { z } from 'zod'
 import { getShippingMethodLabel } from '@/lib/shipping/methods'
 import {
   notifyOrderConfirmation,
+  notifyOrderRefundUpdate,
   notifyOrderStatusUpdate,
 } from '@/lib/notifications/order-notifications'
 import { isNonRetriableError } from '@/lib/email/retry'
@@ -22,10 +23,14 @@ import {
   type CurrencyCode,
 } from '@/lib/currency'
 
-const resolveEmailType = (
-  eventType: 'order.created' | 'order.status_changed'
-): EmailType =>
-  eventType === 'order.created' ? 'order_confirmation' : 'order_status_update'
+const EMAIL_TYPE_BY_EVENT: Record<QStashEvent['type'], EmailType> = {
+  'order.created': 'order_confirmation',
+  'order.status_changed': 'order_status_update',
+  'order.refunded': 'order_refund_update',
+}
+
+const resolveEmailType = (eventType: QStashEvent['type']): EmailType =>
+  EMAIL_TYPE_BY_EVENT[eventType]
 
 const verifyQStashSignature = async (
   request: NextRequest,
@@ -88,6 +93,19 @@ const dispatchEmail = async (event: QStashEvent): Promise<void> => {
         price: formatPriceForCurrency(item.price, currency),
         variant: null,
       })),
+    })
+  } else if (event.type === 'order.refunded') {
+    const currency: CurrencyCode = isValidCurrencyCode(event.data.currencyCode)
+      ? event.data.currencyCode
+      : 'INR'
+    await notifyOrderRefundUpdate({
+      to: event.data.customerEmail,
+      customerName: event.data.customerName,
+      orderId: event.data.orderId,
+      status: event.data.refundStatus,
+      refundAmount: formatPriceForCurrency(event.data.refundAmount, currency),
+      isPartial: event.data.isPartial,
+      reason: event.data.reason ?? null,
     })
   } else {
     await notifyOrderStatusUpdate({

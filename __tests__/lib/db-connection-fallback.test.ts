@@ -60,6 +60,8 @@ const makeOtherMocks = (PoolMock: ReturnType<typeof makePoolMock>) => {
     cartItemsRelations: {},
     categoriesRelations: {},
     checkoutRequestsRelations: {},
+    refunds: {},
+    refundsRelations: {},
     orderItemsRelations: {},
     ordersRelations: {},
     couponsRelations: {},

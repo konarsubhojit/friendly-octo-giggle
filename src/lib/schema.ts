@@ -41,6 +41,7 @@ export const userRoleEnum = pgEnum('UserRole', USER_ROLES)
 export const emailTypeEnum = pgEnum('EmailType', [
   'order_confirmation',
   'order_status_update',
+  'order_refund_update',
 ])
 
 export const failedEmailStatusEnum = pgEnum('FailedEmailStatus', [
@@ -71,6 +72,12 @@ export const paymentStatusEnum = pgEnum('PaymentStatus', [
 ])
 
 export const paymentProviderEnum = pgEnum('PaymentProvider', PAYMENT_PROVIDERS)
+
+export const refundStatusEnum = pgEnum('RefundStatus', [
+  'PENDING',
+  'PROCESSED',
+  'FAILED',
+])
 
 export const discountTypeEnum = pgEnum('DiscountType', [
   'PERCENTAGE',
@@ -510,6 +517,12 @@ export const orders = pgTable(
     amountPaid: money('amountPaid').default(0).notNull(),
     paidAt: timestamp('paidAt', { mode: 'date' }),
     status: orderStatusEnum('status').default('PENDING').notNull(),
+    /**
+     * Set the first time the order's stock is returned to inventory
+     * (cancellation or full refund). Restocking is guarded by this column so a
+     * cancellation followed by a refund can never credit the same item twice.
+     */
+    stockRestoredAt: timestamp('stockRestoredAt', { mode: 'date' }),
     trackingNumber: text('trackingNumber'),
     shippingProvider: text('shippingProvider'),
     createdAt: timestamp('createdAt', { mode: 'date' }).defaultNow().notNull(),
@@ -548,6 +561,49 @@ export const orderItems = pgTable(
     index('OrderItem_orderId_idx').on(t.orderId),
     index('OrderItem_productId_idx').on(t.productId),
     index('OrderItem_variantId_idx').on(t.variantId),
+  ]
+)
+
+/**
+ * One row per refund attempt against an order.
+ *
+ * Rows are inserted before the gateway is called so a refund that fails
+ * mid-flight is still visible to operators, and `gatewayRefundId` is unique so
+ * a `refund.processed` webhook can reconcile the row exactly once.
+ */
+export const refunds = pgTable(
+  'Refund',
+  {
+    id: varchar('id', { length: 7 })
+      .primaryKey()
+      .$defaultFn(() => generateShortId()),
+    orderId: varchar('orderId', { length: 10 })
+      .notNull()
+      .references(() => orders.id, { onDelete: 'cascade' }),
+    provider: paymentProviderEnum('provider').notNull(),
+    /** Gateway payment the refund was issued against. */
+    paymentTransactionId: text('paymentTransactionId').notNull(),
+    /** Gateway refund id; null until the gateway accepts the refund. */
+    gatewayRefundId: text('gatewayRefundId'),
+    amount: money('amount').notNull(),
+    status: refundStatusEnum('status').default('PENDING').notNull(),
+    /** Operator-supplied reason, surfaced in exports and audit logs. */
+    reason: text('reason'),
+    /** Gateway or validation failure detail for `FAILED` refunds. */
+    errorMessage: text('errorMessage'),
+    /** Admin who issued the refund; null for customer-initiated cancellations. */
+    initiatedById: text('initiatedById').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    processedAt: timestamp('processedAt', { mode: 'date' }),
+    createdAt: timestamp('createdAt', { mode: 'date' }).defaultNow().notNull(),
+    updatedAt: timestamp('updatedAt', { mode: 'date' }).defaultNow().notNull(),
+  },
+  (t) => [
+    index('Refund_orderId_idx').on(t.orderId),
+    index('Refund_status_idx').on(t.status),
+    index('Refund_createdAt_idx').on(t.createdAt),
+    uniqueIndex('Refund_gatewayRefundId_key').on(t.gatewayRefundId),
   ]
 )
 
@@ -923,6 +979,15 @@ export const ordersRelations = relations(orders, ({ one, many }) => ({
     references: [coupons.id],
   }),
   items: many(orderItems),
+  refunds: many(refunds),
+}))
+
+export const refundsRelations = relations(refunds, ({ one }) => ({
+  order: one(orders, { fields: [refunds.orderId], references: [orders.id] }),
+  initiatedBy: one(users, {
+    fields: [refunds.initiatedById],
+    references: [users.id],
+  }),
 }))
 
 export const couponsRelations = relations(coupons, ({ many }) => ({

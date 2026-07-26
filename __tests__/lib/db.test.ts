@@ -120,6 +120,8 @@ vi.mock('@/lib/schema', () => ({
   cartItemsRelations: {},
   categoriesRelations: {},
   checkoutRequestsRelations: {},
+  refunds: {},
+  refundsRelations: {},
   orderItemsRelations: {},
   ordersRelations: {},
   couponsRelations: {},

@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { drizzleDb, primaryDrizzleDb } from '@/lib/db'
-import { orders, productVariants } from '@/lib/schema'
-import { eq, sql } from 'drizzle-orm'
+import { orders } from '@/lib/schema'
+import { eq } from 'drizzle-orm'
 import {
   apiSuccess,
   apiError,
@@ -19,6 +19,7 @@ import { env } from '@/lib/env'
 import { logBusinessEvent, logError } from '@/lib/logger'
 import { getRedisClient } from '@/lib/redis'
 import { settlesPaymentOnDelivery } from '@/lib/payments'
+import { restockOrderItems } from '@/features/orders/services/order-restock'
 import { waitUntil } from '@vercel/functions'
 
 export const dynamic = 'force-dynamic'
@@ -198,17 +199,7 @@ export const PATCH = async (
           .set(buildUpdateData(validatedBody, currentOrder))
           .where(eq(orders.id, id))
 
-        await Promise.all(
-          currentOrder.items.map((item) =>
-            tx
-              .update(productVariants)
-              .set({
-                stock: sql`${productVariants.stock} + ${item.quantity}`,
-                updatedAt: new Date(),
-              })
-              .where(eq(productVariants.id, item.variantId))
-          )
-        )
+        await restockOrderItems(tx, currentOrder)
       })
     } else {
       await primaryDrizzleDb

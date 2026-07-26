@@ -44,9 +44,25 @@ const OrderStatusChangedEventSchema = z.object({
   }),
 })
 
+const OrderRefundedEventSchema = z.object({
+  type: z.literal('order.refunded'),
+  data: z.object({
+    orderId: z.string().min(1),
+    customerEmail: z.email(),
+    customerName: z.string().min(1),
+    refundAmount: z.number().positive(),
+    refundStatus: z.enum(['PENDING', 'PROCESSED', 'FAILED']),
+    /** True when only part of the order total was refunded. */
+    isPartial: z.boolean(),
+    reason: z.string().nullish(),
+    currencyCode: z.enum(['INR', 'USD', 'EUR', 'GBP']).default('INR'),
+  }),
+})
+
 export const QStashEmailEventSchema = z.discriminatedUnion('type', [
   OrderCreatedEventSchema,
   OrderStatusChangedEventSchema,
+  OrderRefundedEventSchema,
 ])
 
 export type QStashEmailEvent = z.infer<typeof QStashEmailEventSchema>
@@ -54,4 +70,5 @@ export type OrderCreatedEvent = z.infer<typeof OrderCreatedEventSchema>
 export type OrderStatusChangedEvent = z.infer<
   typeof OrderStatusChangedEventSchema
 >
+export type OrderRefundedEvent = z.infer<typeof OrderRefundedEventSchema>
 export type OrderEmailItem = z.infer<typeof OrderEmailItemSchema>

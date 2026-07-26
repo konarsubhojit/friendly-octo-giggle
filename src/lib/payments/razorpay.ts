@@ -47,6 +47,13 @@ interface RazorpayWebhookPayload {
         amount?: number
       }
     }
+    refund?: {
+      entity?: {
+        id?: string
+        payment_id?: string
+        amount?: number
+      }
+    }
   }
 }
 
@@ -136,14 +143,22 @@ export const verifyRazorpayWebhookSignature = ({
   }
 }
 
+const HANDLED_WEBHOOK_EVENT_TYPES = new Set<PaymentWebhookEventType>([
+  'payment.captured',
+  'payment.failed',
+  'refund.processed',
+  'refund.failed',
+])
+
 const normalizeWebhookEventType = (
   eventType: string
-): PaymentWebhookEventType => {
-  if (eventType === 'payment.captured' || eventType === 'payment.failed') {
-    return eventType
-  }
-  return 'unhandled'
-}
+): PaymentWebhookEventType =>
+  HANDLED_WEBHOOK_EVENT_TYPES.has(eventType as PaymentWebhookEventType)
+    ? (eventType as PaymentWebhookEventType)
+    : 'unhandled'
+
+const isRefundEventType = (type: PaymentWebhookEventType): boolean =>
+  type === 'refund.processed' || type === 'refund.failed'
 
 export const razorpayGateway: PaymentGateway = {
   provider: 'RAZORPAY',
@@ -272,15 +287,39 @@ export const razorpayGateway: PaymentGateway = {
     }
 
     const entity = body.payload?.payment?.entity
+    const refundEntity = body.payload?.refund?.entity
     const eventType = body.event ?? ''
+    const type = normalizeWebhookEventType(eventType)
+
+    if (isRefundEventType(type)) {
+      const refundId = refundEntity?.id
+      const refundedPaymentId = refundEntity?.payment_id ?? entity?.id
+
+      if (!refundId || !refundedPaymentId) {
+        throw new PaymentVerificationError('Invalid refund webhook payload')
+      }
+
+      return {
+        provider: 'RAZORPAY',
+        eventId:
+          headers.get('x-razorpay-event-id')?.trim() ||
+          `${eventType}:${refundId}`,
+        eventType,
+        type,
+        paymentId: refundedPaymentId,
+        paymentOrderId: entity?.order_id ?? '',
+        amountInMinorUnits:
+          typeof refundEntity?.amount === 'number' ? refundEntity.amount : null,
+        refundId,
+      }
+    }
+
     const paymentId = entity?.id
     const paymentOrderId = entity?.order_id
 
     if (!paymentId || !paymentOrderId) {
       throw new PaymentVerificationError('Invalid payment webhook payload')
     }
-
-    const type = normalizeWebhookEventType(eventType)
 
     if (type === 'payment.captured' && typeof entity?.amount !== 'number') {
       throw new PaymentVerificationError(

@@ -43,6 +43,8 @@ export interface VerifyPaymentInput {
 export type PaymentWebhookEventType =
   | 'payment.captured'
   | 'payment.failed'
+  | 'refund.processed'
+  | 'refund.failed'
   | 'unhandled'
 
 /** A gateway webhook delivery normalized into provider-agnostic fields. */
@@ -56,6 +58,8 @@ export interface PaymentWebhookEvent {
   readonly paymentOrderId: string
   /** Captured amount in minor units, when the event carries one. */
   readonly amountInMinorUnits: number | null
+  /** Gateway refund id, present only for refund events. */
+  readonly refundId?: string
 }
 
 export interface VerifyWebhookInput {

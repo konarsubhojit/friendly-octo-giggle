@@ -12,6 +12,7 @@ import type { PaymentProvider } from '@/lib/types'
 import { fromMinorUnits } from '@/lib/money'
 import { logBusinessEvent, logError } from '@/lib/logger'
 import { processCheckoutRequestById } from '@/features/cart/services/checkout-service'
+import { reconcileRefundWebhook } from '@/features/orders/services/refund-service'
 
 /** Checkout request states that must never be re-processed by a webhook. */
 const NON_REPROCESSABLE_STATUSES = new Set([
@@ -214,6 +215,20 @@ const handleFailedPayment = async ({ paymentId }: { paymentId: string }) => {
   ])
 }
 
+const handleRefundEvent = async (event: PaymentWebhookEvent) => {
+  if (!event.refundId) {
+    throw new PaymentVerificationError('Refund id is missing from the webhook')
+  }
+
+  await reconcileRefundWebhook({
+    provider: event.provider,
+    gatewayRefundId: event.refundId,
+    paymentTransactionId: event.paymentId,
+    status: event.type === 'refund.processed' ? 'PROCESSED' : 'FAILED',
+    amountInMinorUnits: event.amountInMinorUnits,
+  })
+}
+
 const applyWebhookEvent = async (event: PaymentWebhookEvent) => {
   if (event.type === 'payment.captured') {
     if (typeof event.amountInMinorUnits !== 'number') {
@@ -231,6 +246,10 @@ const applyWebhookEvent = async (event: PaymentWebhookEvent) => {
 
   if (event.type === 'payment.failed') {
     await handleFailedPayment({ paymentId: event.paymentId })
+  }
+
+  if (event.type === 'refund.processed' || event.type === 'refund.failed') {
+    await handleRefundEvent(event)
   }
 }
 

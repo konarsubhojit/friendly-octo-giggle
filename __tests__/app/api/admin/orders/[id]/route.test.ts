@@ -10,7 +10,9 @@ const mockTransaction = vi.hoisted(() =>
     const tx = {
       update: vi.fn(() => ({
         set: vi.fn(() => ({
-          where: vi.fn(),
+          where: vi.fn(() => ({
+            returning: vi.fn(async () => [{ id: 'order1' }]),
+          })),
         })),
       })),
     }
@@ -28,10 +30,15 @@ vi.mock('@/lib/db', () => ({
   drizzleDb: mockDb,
 }))
 vi.mock('@/lib/schema', () => ({
-  orders: { id: 'id' },
+  orders: { id: 'id', stockRestoredAt: 'stockRestoredAt' },
   productVariants: { id: 'id', stock: 'stock' },
 }))
-vi.mock('drizzle-orm', () => ({ eq: vi.fn(), sql: vi.fn() }))
+vi.mock('drizzle-orm', () => ({
+  and: vi.fn(),
+  eq: vi.fn(),
+  isNull: vi.fn(),
+  sql: vi.fn(),
+}))
 vi.mock('@/lib/auth', () => ({ auth: vi.fn() }))
 vi.mock('@/lib/redis', () => ({
   getCachedData: vi.fn(),

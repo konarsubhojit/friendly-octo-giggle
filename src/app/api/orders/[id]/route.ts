@@ -1,8 +1,8 @@
 import { NextRequest } from 'next/server'
 import { z } from 'zod'
 import { drizzleDb, primaryDrizzleDb } from '@/lib/db'
-import { orders, productVariants } from '@/lib/schema'
-import { eq, sql } from 'drizzle-orm'
+import { orders } from '@/lib/schema'
+import { eq } from 'drizzle-orm'
 import {
   apiSuccess,
   apiError,
@@ -16,12 +16,24 @@ import { CACHE_KEYS, CACHE_TTL, invalidateUserOrderCaches } from '@/lib/cache'
 import { logError } from '@/lib/logger'
 import { waitUntil } from '@vercel/functions'
 import { assertOwnership } from '@/lib/ownership'
+import { restockOrderItems } from '@/features/orders/services/order-restock'
+import {
+  isRefundRequestError,
+  refundOrder,
+} from '@/features/orders/services/refund-service'
 
 export const dynamic = 'force-dynamic'
 
 const OrderActionSchema = z.object({
   action: z.literal('cancel'),
 })
+
+/**
+ * Orders a customer may still cancel themselves. Once an order has shipped the
+ * goods have left the warehouse, so cancellation becomes a support/returns
+ * conversation instead.
+ */
+const CUSTOMER_CANCELLABLE_STATUSES = new Set(['PENDING', 'PROCESSING'])
 
 export async function GET(
   _request: NextRequest,
@@ -87,8 +99,27 @@ export async function PATCH(
       return apiError('Order not found', 404)
     }
 
-    if (order.status !== 'PENDING') {
-      return apiError('Only pending orders can be cancelled', 400)
+    if (!CUSTOMER_CANCELLABLE_STATUSES.has(order.status)) {
+      return apiError(
+        'Orders can only be cancelled before they are shipped',
+        400
+      )
+    }
+
+    // Refund first: if the money cannot be returned the order stays open so the
+    // customer can retry, rather than being cancelled without a refund.
+    if (order.paymentStatus === 'PAID') {
+      try {
+        await refundOrder({
+          orderId: id,
+          reason: 'Cancelled by customer before shipment',
+        })
+      } catch (refundError) {
+        if (isRefundRequestError(refundError)) {
+          return apiError(refundError.message, refundError.status)
+        }
+        throw refundError
+      }
     }
 
     await primaryDrizzleDb.transaction(async (tx) => {
@@ -97,17 +128,7 @@ export async function PATCH(
         .set({ status: 'CANCELLED', updatedAt: new Date() })
         .where(eq(orders.id, id))
 
-      await Promise.all(
-        order.items.map((item) =>
-          tx
-            .update(productVariants)
-            .set({
-              stock: sql`${productVariants.stock} + ${item.quantity}`,
-              updatedAt: new Date(),
-            })
-            .where(eq(productVariants.id, item.variantId))
-        )
-      )
+      await restockOrderItems(tx, order)
     })
 
     const redis = getRedisClient()

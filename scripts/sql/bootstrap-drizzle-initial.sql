@@ -44,8 +44,11 @@ SELECT drizzle.ensure_public_enum(
 
 SELECT drizzle.ensure_public_enum(
   'EmailType',
-  'CREATE TYPE public."EmailType" AS ENUM (''order_confirmation'', ''order_status_update'')'
+  'CREATE TYPE public."EmailType" AS ENUM (''order_confirmation'', ''order_status_update'', ''order_refund_update'')'
 );
+
+-- Widen an existing enum created before refund emails were added.
+ALTER TYPE public."EmailType" ADD VALUE IF NOT EXISTS 'order_refund_update';
 
 SELECT drizzle.ensure_public_enum(
   'FailedEmailStatus',
@@ -78,6 +81,11 @@ SELECT drizzle.ensure_public_enum(
 SELECT drizzle.ensure_public_enum(
   'PaymentStatus',
   'CREATE TYPE public."PaymentStatus" AS ENUM (''PENDING'', ''PAID'', ''FAILED'', ''REFUNDED'')'
+);
+
+SELECT drizzle.ensure_public_enum(
+  'RefundStatus',
+  'CREATE TYPE public."RefundStatus" AS ENUM (''PENDING'', ''PROCESSED'', ''FAILED'')'
 );
 
 SELECT drizzle.ensure_public_enum(
@@ -404,6 +412,22 @@ CREATE TABLE IF NOT EXISTS public."CouponRedemption" (
   "createdAt" timestamp without time zone DEFAULT now() NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS public."Refund" (
+  "id" character varying(7) NOT NULL,
+  "orderId" character varying(10) NOT NULL,
+  "provider" "PaymentProvider" NOT NULL,
+  "paymentTransactionId" text NOT NULL,
+  "gatewayRefundId" text,
+  "amount" numeric(12,2) NOT NULL,
+  "status" "RefundStatus" DEFAULT 'PENDING'::"RefundStatus" NOT NULL,
+  "reason" text,
+  "errorMessage" text,
+  "initiatedById" text,
+  "processedAt" timestamp without time zone,
+  "createdAt" timestamp without time zone DEFAULT now() NOT NULL,
+  "updatedAt" timestamp without time zone DEFAULT now() NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS public."WebhookEvent" (
   "id" character varying(7) NOT NULL,
   "provider" "PaymentProvider" NOT NULL,
@@ -564,6 +588,7 @@ ALTER TABLE public."Order" ADD COLUMN IF NOT EXISTS "discountAmount" numeric(12,
 ALTER TABLE public."Order" ADD COLUMN IF NOT EXISTS "couponId" character varying(7);
 ALTER TABLE public."Order" ADD COLUMN IF NOT EXISTS "couponCode" text;
 ALTER TABLE public."CheckoutRequest" ADD COLUMN IF NOT EXISTS "couponCode" text;
+ALTER TABLE public."Order" ADD COLUMN IF NOT EXISTS "stockRestoredAt" timestamp without time zone;
 ALTER TABLE public."WebhookEvent" ADD COLUMN IF NOT EXISTS "receivedAt" timestamp without time zone DEFAULT now() NOT NULL;
 ALTER TABLE public."WebhookEvent" ADD COLUMN IF NOT EXISTS "processedAt" timestamp without time zone;
 
@@ -1101,6 +1126,17 @@ DO $$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."Refund"'::regclass
+      AND (conname = 'Refund_pkey' OR pg_get_constraintdef(oid) = 'PRIMARY KEY (id)')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."Refund" ADD CONSTRAINT "Refund_pkey" PRIMARY KEY (id)';
+  END IF;
+END
+$$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
     WHERE conrelid = 'public."WebhookEvent"'::regclass
       AND (conname = 'WebhookEvent_provider_eventId_key' OR pg_get_constraintdef(oid) = 'UNIQUE (provider, "eventId")')
   ) THEN
@@ -1497,6 +1533,28 @@ DO $$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."Refund"'::regclass
+      AND (conname = 'Refund_orderId_Order_id_fk' OR pg_get_constraintdef(oid) = 'FOREIGN KEY ("orderId") REFERENCES "Order"(id) ON DELETE CASCADE')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."Refund" ADD CONSTRAINT "Refund_orderId_Order_id_fk" FOREIGN KEY ("orderId") REFERENCES "Order"(id) ON DELETE CASCADE';
+  END IF;
+END
+$$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."Refund"'::regclass
+      AND (conname = 'Refund_initiatedById_User_id_fk' OR pg_get_constraintdef(oid) = 'FOREIGN KEY ("initiatedById") REFERENCES "User"(id) ON DELETE SET NULL')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."Refund" ADD CONSTRAINT "Refund_initiatedById_User_id_fk" FOREIGN KEY ("initiatedById") REFERENCES "User"(id) ON DELETE SET NULL';
+  END IF;
+END
+$$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
     WHERE conrelid = 'public."Order"'::regclass
       AND (conname = 'Order_couponId_Coupon_id_fk' OR pg_get_constraintdef(oid) = 'FOREIGN KEY ("couponId") REFERENCES "Coupon"(id) ON DELETE SET NULL')
   ) THEN
@@ -1557,6 +1615,10 @@ CREATE INDEX IF NOT EXISTS "Review_productId_idx" ON public."Review" USING btree
 CREATE INDEX IF NOT EXISTS "Review_productId_rating_idx" ON public."Review" USING btree ("productId", rating);
 CREATE INDEX IF NOT EXISTS "Review_userId_idx" ON public."Review" USING btree ("userId");
 CREATE INDEX IF NOT EXISTS "Session_userId_idx" ON public."Session" USING btree ("userId");
+CREATE INDEX IF NOT EXISTS "Refund_orderId_idx" ON public."Refund" USING btree ("orderId");
+CREATE INDEX IF NOT EXISTS "Refund_status_idx" ON public."Refund" USING btree (status);
+CREATE INDEX IF NOT EXISTS "Refund_createdAt_idx" ON public."Refund" USING btree ("createdAt");
+CREATE UNIQUE INDEX IF NOT EXISTS "Refund_gatewayRefundId_key" ON public."Refund" USING btree ("gatewayRefundId");
 CREATE INDEX IF NOT EXISTS "WebhookEvent_receivedAt_idx" ON public."WebhookEvent" USING btree ("receivedAt");
 CREATE INDEX IF NOT EXISTS "Wishlist_userId_idx" ON public."Wishlist" USING btree ("userId");
 
@@ -1646,6 +1708,13 @@ INSERT INTO drizzle.__drizzle_migrations (hash, created_at)
 SELECT '76ff64f78229f467e0006468d24255a17e15996245bd16625a21781e20fc5c3a', 1785050938241
 WHERE NOT EXISTS (
   SELECT 1 FROM drizzle.__drizzle_migrations WHERE created_at = 1785050938241
+);
+
+-- 0012_refunds
+INSERT INTO drizzle.__drizzle_migrations (hash, created_at)
+SELECT 'a53a0ad38185ec683734ff1b7307db7e0df6a9b9532f074cd8faeff2cded1802', 1785055842528
+WHERE NOT EXISTS (
+  SELECT 1 FROM drizzle.__drizzle_migrations WHERE created_at = 1785055842528
 );
 
 DROP FUNCTION drizzle.ensure_public_enum(text, text);

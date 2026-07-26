@@ -261,7 +261,7 @@ describe('razorpay gateway', () => {
 
     it('flags unrelated events as unhandled', () => {
       const payload = JSON.stringify({
-        event: 'refund.processed',
+        event: 'payment.authorized',
         payload: {
           payment: { entity: { id: 'pay_123', order_id: 'order_123' } },
         },
@@ -271,6 +271,64 @@ describe('razorpay gateway', () => {
         razorpay.verifyWebhook({ payload, headers: webhookHeaders(payload) })
           .type
       ).toBe('unhandled')
+    })
+
+    it('normalizes a refund event from the refund entity', () => {
+      const payload = JSON.stringify({
+        event: 'refund.processed',
+        payload: {
+          refund: {
+            entity: { id: 'rfnd_1', payment_id: 'pay_123', amount: 9900 },
+          },
+          payment: { entity: { id: 'pay_123', order_id: 'order_123' } },
+        },
+      })
+
+      expect(
+        razorpay.verifyWebhook({ payload, headers: webhookHeaders(payload) })
+      ).toEqual({
+        provider: 'RAZORPAY',
+        eventId: 'refund.processed:rfnd_1',
+        eventType: 'refund.processed',
+        type: 'refund.processed',
+        paymentId: 'pay_123',
+        paymentOrderId: 'order_123',
+        amountInMinorUnits: 9900,
+        refundId: 'rfnd_1',
+      })
+    })
+
+    it('normalizes a failed refund event', () => {
+      const payload = JSON.stringify({
+        event: 'refund.failed',
+        payload: {
+          refund: {
+            entity: { id: 'rfnd_2', payment_id: 'pay_123', amount: 5000 },
+          },
+        },
+      })
+
+      const event = razorpay.verifyWebhook({
+        payload,
+        headers: webhookHeaders(payload),
+      })
+
+      expect(event.type).toBe('refund.failed')
+      expect(event.refundId).toBe('rfnd_2')
+      expect(event.paymentOrderId).toBe('')
+    })
+
+    it('rejects a refund event without a refund id', () => {
+      const payload = JSON.stringify({
+        event: 'refund.processed',
+        payload: {
+          payment: { entity: { id: 'pay_123', order_id: 'order_123' } },
+        },
+      })
+
+      expect(() =>
+        razorpay.verifyWebhook({ payload, headers: webhookHeaders(payload) })
+      ).toThrow('Invalid refund webhook payload')
     })
 
     it('rejects a delivery without a signature header', () => {
