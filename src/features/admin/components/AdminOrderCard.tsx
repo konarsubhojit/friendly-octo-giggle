@@ -3,7 +3,11 @@
 import { useState } from 'react'
 import type { ChangeEvent } from 'react'
 import { OrderStatus } from '@/lib/types'
-import { Badge, orderStatusVariant } from '@/components/ui/Badge'
+import {
+  Badge,
+  orderStatusVariant,
+  paymentStatusVariant,
+} from '@/components/ui/Badge'
 import { formatStructuredAddress } from '@/lib/address-utils'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
@@ -36,6 +40,7 @@ interface AdminOrder {
   status: string
   paymentStatus?: string
   paymentProvider?: string | null
+  amountPaid?: number
   trackingNumber?: string | null
   shippingProvider?: string | null
   createdAt: string
@@ -59,6 +64,136 @@ interface AdminOrderCardProps {
     status: string,
     order: AdminOrder
   ) => void
+  /** Absent for operators without the `orders:refund` permission. */
+  readonly onRefund?: (
+    orderId: string,
+    input: { amount?: number; reason?: string }
+  ) => void
+  readonly refundingOrderId?: string | null
+}
+
+/** Providers whose money never reached us, so there is nothing to refund. */
+const NON_REFUNDABLE_PROVIDERS = new Set(['COD'])
+
+const isRefundable = (order: AdminOrder): boolean =>
+  (order.paymentStatus === 'PAID' || order.paymentStatus === 'REFUNDED') &&
+  !NON_REFUNDABLE_PROVIDERS.has(order.paymentProvider ?? '')
+
+interface RefundSectionProps {
+  readonly order: AdminOrder
+  readonly refunding: boolean
+  readonly onRefund: NonNullable<AdminOrderCardProps['onRefund']>
+}
+
+function RefundSection({ order, refunding, onRefund }: RefundSectionProps) {
+  const [amount, setAmount] = useState('')
+  const [reason, setReason] = useState('')
+  const [confirming, setConfirming] = useState(false)
+  const [amountError, setAmountError] = useState<string | null>(null)
+
+  const parsedAmount = amount.trim() === '' ? undefined : Number(amount)
+
+  const handleRequest = () => {
+    if (
+      parsedAmount !== undefined &&
+      (!Number.isFinite(parsedAmount) || parsedAmount <= 0)
+    ) {
+      setAmountError('Enter an amount greater than zero, or leave it blank.')
+      return
+    }
+    setAmountError(null)
+    setConfirming(true)
+  }
+
+  const handleConfirm = () => {
+    setConfirming(false)
+    onRefund(order.id, {
+      amount: parsedAmount,
+      reason: reason.trim() || undefined,
+    })
+    setAmount('')
+    setReason('')
+  }
+
+  return (
+    <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-600 dark:bg-gray-700">
+      <ConfirmDialog
+        isOpen={confirming}
+        title="Refund order"
+        message={
+          parsedAmount === undefined
+            ? 'Refund the full remaining balance of this order to the customer?'
+            : `Refund ${parsedAmount} to the customer?`
+        }
+        confirmLabel="Yes, refund"
+        variant="danger"
+        loading={refunding}
+        onConfirm={handleConfirm}
+        onCancel={() => setConfirming(false)}
+      />
+      <h4 className="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
+        Refund
+      </h4>
+      <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-end">
+        <div className="w-full flex-1">
+          <label
+            htmlFor={`refund-amount-${order.id}`}
+            className="mb-1 block text-xs text-gray-500 dark:text-gray-400"
+          >
+            Amount (blank refunds the full balance)
+          </label>
+          <input
+            id={`refund-amount-${order.id}`}
+            type="number"
+            min="0"
+            step="0.01"
+            inputMode="decimal"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            placeholder="Full refund"
+            aria-describedby={
+              amountError ? `refund-amount-error-${order.id}` : undefined
+            }
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+          />
+        </div>
+        <div className="w-full flex-1">
+          <label
+            htmlFor={`refund-reason-${order.id}`}
+            className="mb-1 block text-xs text-gray-500 dark:text-gray-400"
+          >
+            Reason
+          </label>
+          <input
+            id={`refund-reason-${order.id}`}
+            type="text"
+            maxLength={500}
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            placeholder="e.g. Damaged on arrival"
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+          />
+        </div>
+        <button
+          type="button"
+          onClick={handleRequest}
+          disabled={refunding}
+          className="whitespace-nowrap rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-700 disabled:bg-gray-400"
+        >
+          {refunding ? 'Refunding…' : 'Issue refund'}
+        </button>
+      </div>
+      {amountError ? (
+        <p
+          id={`refund-amount-error-${order.id}`}
+          role="alert"
+          className="mt-2 text-xs text-red-600 dark:text-red-400"
+        >
+          {amountError}
+        </p>
+      ) : null}
+    </div>
+  )
 }
 
 interface OrderItemRowProps {
@@ -185,6 +320,8 @@ export function AdminOrderCard({
   onStatusChange,
   onShippingFieldChange,
   onSaveShipping,
+  onRefund,
+  refundingOrderId,
 }: AdminOrderCardProps) {
   const hasTracking = Boolean(order.trackingNumber || order.shippingProvider)
   const [pendingStatus, setPendingStatus] = useState<OrderStatus | null>(null)
@@ -229,9 +366,7 @@ export function AdminOrderCard({
               {order.status}
             </Badge>
             {order.paymentStatus ? (
-              <Badge
-                variant={order.paymentStatus === 'PAID' ? 'success' : 'neutral'}
-              >
+              <Badge variant={paymentStatusVariant(order.paymentStatus)}>
                 Payment: {order.paymentStatus}
               </Badge>
             ) : null}
@@ -351,6 +486,14 @@ export function AdminOrderCard({
               </p>
             </div>
           </div>
+
+          {onRefund && isRefundable(order) ? (
+            <RefundSection
+              order={order}
+              refunding={refundingOrderId === order.id}
+              onRefund={onRefund}
+            />
+          ) : null}
 
           <ShippingInfoSection
             orderId={order.id}

@@ -2,6 +2,8 @@ export {
   type OrderEmailItem,
   type OrderConfirmationData,
   type OrderStatusUpdateData,
+  type OrderRefundUpdateData,
+  type RefundStatus,
   escapeHtml,
 } from './templates'
 
@@ -13,8 +15,10 @@ import { sendWithRetry } from './retry'
 import {
   orderConfirmationTemplate,
   orderStatusUpdateTemplate,
+  orderRefundUpdateTemplate,
   type OrderConfirmationData,
   type OrderStatusUpdateData,
+  type OrderRefundUpdateData,
 } from './templates'
 
 export const sendOrderConfirmationEmail = (
@@ -34,5 +38,15 @@ export const sendOrderStatusUpdateEmail = (
   sendWithRetry(
     { to: data.to, ...template },
     { emailType: 'order_status_update', referenceId: data.orderId }
+  )
+}
+
+export const sendOrderRefundUpdateEmail = (
+  data: OrderRefundUpdateData
+): void => {
+  const template = orderRefundUpdateTemplate(data)
+  sendWithRetry(
+    { to: data.to, ...template },
+    { emailType: 'order_refund_update', referenceId: data.orderId }
   )
 }

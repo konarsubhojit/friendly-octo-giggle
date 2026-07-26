@@ -9,6 +9,7 @@ const {
   mockTxSelect,
   mockVerifyRazorpayWebhookSignature,
   mockProcessCheckoutRequestById,
+  mockReconcileRefundWebhook,
   mockSet,
   mockGetPaymentGateway,
   PaymentVerificationError,
@@ -38,6 +39,7 @@ const {
     mockTxSelect: vi.fn(),
     mockVerifyRazorpayWebhookSignature: vi.fn(),
     mockProcessCheckoutRequestById: vi.fn(),
+    mockReconcileRefundWebhook: vi.fn(),
     mockSet: vi.fn(),
     mockGetPaymentGateway: vi.fn(),
     PaymentVerificationError,
@@ -94,6 +96,10 @@ vi.mock('@/features/cart/services/checkout-service', () => ({
   processCheckoutRequestById: mockProcessCheckoutRequestById,
 }))
 
+vi.mock('@/features/orders/services/refund-service', () => ({
+  reconcileRefundWebhook: mockReconcileRefundWebhook,
+}))
+
 vi.mock('@/lib/logger', () => ({
   logError: vi.fn(),
   logBusinessEvent: vi.fn(),
@@ -129,12 +135,39 @@ const razorpayGatewayStub = {
         payment?: {
           entity?: { id?: string; order_id?: string; amount?: number }
         }
+        refund?: {
+          entity?: { id?: string; payment_id?: string; amount?: number }
+        }
       }
     }
     try {
       body = JSON.parse(payload)
     } catch {
       throw new PaymentVerificationError('Invalid webhook payload')
+    }
+
+    const eventName = body.event ?? ''
+    if (eventName.startsWith('refund.')) {
+      const refund = body.payload?.refund?.entity
+      if (!refund?.id || !refund.payment_id) {
+        throw new PaymentVerificationError('Invalid refund webhook payload')
+      }
+      return {
+        provider: 'RAZORPAY' as const,
+        eventId:
+          headers.get('x-razorpay-event-id')?.trim() ||
+          `${eventName}:${refund.id}`,
+        eventType: eventName,
+        type:
+          eventName === 'refund.processed' || eventName === 'refund.failed'
+            ? eventName
+            : ('unhandled' as const),
+        paymentId: refund.payment_id,
+        paymentOrderId: body.payload?.payment?.entity?.order_id ?? '',
+        amountInMinorUnits:
+          typeof refund.amount === 'number' ? refund.amount : null,
+        refundId: refund.id,
+      }
     }
 
     const entity = body.payload?.payment?.entity
@@ -275,6 +308,51 @@ describe('POST /api/payments/webhook', () => {
     expect(response.status).toBe(200)
     expect(mockUpdate).toHaveBeenCalled()
     expect(mockProcessCheckoutRequestById).not.toHaveBeenCalled()
+  })
+
+  it('reconciles a processed refund event', async () => {
+    mockReconcileRefundWebhook.mockResolvedValue({ restocked: true })
+
+    const response = await POST(
+      buildRequest({
+        event: 'refund.processed',
+        payload: {
+          refund: {
+            entity: { id: 'rfnd_1', payment_id: 'pay_123', amount: 19900 },
+          },
+        },
+      })
+    )
+
+    expect(response.status).toBe(200)
+    expect(mockReconcileRefundWebhook).toHaveBeenCalledWith({
+      provider: 'RAZORPAY',
+      gatewayRefundId: 'rfnd_1',
+      paymentTransactionId: 'pay_123',
+      status: 'PROCESSED',
+      amountInMinorUnits: 19900,
+    })
+    expect(mockProcessCheckoutRequestById).not.toHaveBeenCalled()
+  })
+
+  it('reconciles a failed refund event', async () => {
+    mockReconcileRefundWebhook.mockResolvedValue(null)
+
+    const response = await POST(
+      buildRequest({
+        event: 'refund.failed',
+        payload: {
+          refund: {
+            entity: { id: 'rfnd_2', payment_id: 'pay_123', amount: 19900 },
+          },
+        },
+      })
+    )
+
+    expect(response.status).toBe(200)
+    expect(mockReconcileRefundWebhook).toHaveBeenCalledWith(
+      expect.objectContaining({ status: 'FAILED', gatewayRefundId: 'rfnd_2' })
+    )
   })
 
   it('ignores a duplicate delivery of the same event', async () => {

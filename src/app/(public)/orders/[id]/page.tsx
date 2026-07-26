@@ -50,7 +50,9 @@ function CancelOrderDialog({
         Cancel Order?
       </h3>
       <p className="text-sm text-[var(--text-secondary)] mb-6">
-        This action cannot be undone. Your order will be cancelled immediately.
+        This action cannot be undone. Your order will be cancelled immediately
+        and any payment already made will be refunded to your original payment
+        method.
       </p>
       <div className="flex gap-3 justify-end">
         <button
@@ -79,6 +81,9 @@ interface OrderDetailPageProps {
 }
 
 const STATUS_STEPS = ['PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED'] as const
+
+/** Orders can only be cancelled by the customer until they ship. */
+const CANCELLABLE_STATUSES = new Set(['PENDING', 'PROCESSING'])
 
 const STATUS_LABELS: Record<string, string> = {
   PENDING: 'Order Placed',
@@ -388,7 +393,7 @@ function OrderSummaryHeader({
             {formatPrice(totalAmount)}
           </p>
         </div>
-        {status === 'PENDING' && (
+        {CANCELLABLE_STATUSES.has(status) && (
           <button
             type="button"
             onClick={onCancelClick}

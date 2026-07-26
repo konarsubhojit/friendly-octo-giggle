@@ -85,6 +85,27 @@ export const CreateOrderSchema = z.object({
   payment: PaymentReferenceSchema,
 })
 
+/**
+ * Admin refund request. Omitting `amount` refunds the whole refundable balance;
+ * supplying one issues a partial refund.
+ */
+export const RefundOrderSchema = z.object({
+  amount: z
+    .number()
+    .positive('Refund amount must be positive')
+    .max(MAX_MONEY_AMOUNT, 'Refund amount is out of the supported range')
+    .refine(
+      hasMoneyPrecision,
+      'Refund amount supports at most 2 decimal places'
+    )
+    .optional(),
+  reason: z
+    .string()
+    .trim()
+    .max(500, 'Reason must be under 500 characters')
+    .optional(),
+})
+
 export const UpdateOrderStatusSchema = z.object({
   status: OrderStatusEnum,
   trackingNumber: z
@@ -99,3 +120,4 @@ export const UpdateOrderStatusSchema = z.object({
 
 export type OrderStatusType = z.infer<typeof OrderStatusEnum>
 export type CreateOrderInput = z.infer<typeof CreateOrderSchema>
+export type RefundOrderInput = z.infer<typeof RefundOrderSchema>

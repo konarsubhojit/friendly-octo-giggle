@@ -40,6 +40,21 @@ export interface OrderStatusUpdateData {
   shippingProvider?: string | null
 }
 
+/** Lifecycle of a refund as reported by the payment gateway. */
+export type RefundStatus = 'PENDING' | 'PROCESSED' | 'FAILED'
+
+export interface OrderRefundUpdateData {
+  to: string
+  customerName: string
+  orderId: string
+  status: RefundStatus
+  /** Pre-formatted refunded amount. */
+  refundAmount: string
+  /** True when only part of the order total was refunded. */
+  isPartial: boolean
+  reason?: string | null
+}
+
 // ─── Helpers ────────────────────────────────────────────
 
 export const escapeHtml = (str: string): string =>
@@ -297,5 +312,80 @@ export const orderStatusUpdateTemplate = (data: OrderStatusUpdateData) => {
     subject: `Your Order #${data.orderId.toUpperCase()} is now ${statusText} ${info.emoji}`,
     html: emailWrapper(bodyHtml),
     text: `Hi ${data.customerName},\n\nYour order #${data.orderId.toUpperCase()} status has been updated to: ${info.label}\n${trackingLine}${carrierLine}\n\nThank you for shopping with ${STORE_NAME}!`,
+  }
+}
+
+const refundStatusLabel: Record<
+  RefundStatus,
+  { label: string; emoji: string; color: string; headline: string }
+> = {
+  PENDING: {
+    label: 'Refund initiated',
+    emoji: '⏳',
+    color: '#d97706',
+    headline: 'Your refund is on its way',
+  },
+  PROCESSED: {
+    label: 'Refund completed',
+    emoji: '💸',
+    color: '#059669',
+    headline: 'Your refund has been processed',
+  },
+  FAILED: {
+    label: 'Refund failed',
+    emoji: '⚠️',
+    color: '#dc2626',
+    headline: 'We could not process your refund',
+  },
+}
+
+const REFUND_STATUS_NOTES: Record<RefundStatus, string> = {
+  PENDING:
+    'Your bank usually takes 5–7 working days to credit the amount back to you.',
+  PROCESSED:
+    'The amount has been sent back to your original payment method and should appear within 5–7 working days.',
+  FAILED:
+    'No money has left our side. Our team is looking into it and will contact you shortly.',
+}
+
+export const orderRefundUpdateTemplate = (data: OrderRefundUpdateData) => {
+  const info = refundStatusLabel[data.status]
+  const refundKind = data.isPartial ? 'Partial refund' : 'Full refund'
+  const reasonHtml = data.reason
+    ? `<p style="margin:8px 0 0;color:#5C4A44;font-size:14px;"><strong>Reason:</strong> ${escapeHtml(data.reason)}</p>`
+    : ''
+
+  const bodyHtml = `
+    <h2 style="color:#5C4A44;margin:0 0 8px;font-size:22px;">
+      ${info.emoji} ${escapeHtml(info.headline)}
+    </h2>
+    <p style="color:#7a5543;margin:0 0 24px;font-size:15px;">
+      Hi ${escapeHtml(data.customerName)}, here's an update on the refund for your order.
+    </p>
+    <div style="background:#F9F0EB;border-radius:12px;padding:16px 20px;margin-bottom:20px;">
+      <p style="margin:0 0 8px;color:#5C4A44;font-size:14px;">
+        <strong>${labels.order}:</strong> <span style="font-family:monospace;color:#b83060;">#${escapeHtml(data.orderId.toUpperCase())}</span>
+      </p>
+      <p style="margin:0 0 8px;color:#5C4A44;font-size:14px;">
+        <strong>${escapeHtml(refundKind)}:</strong> <span style="color:#b83060;font-weight:600;">${escapeHtml(data.refundAmount)}</span>
+      </p>
+      <p style="margin:0;color:#5C4A44;font-size:14px;">
+        <strong>Status:</strong>
+        <span style="background-color:${info.color}1a;color:${info.color};padding:2px 8px;border-radius:20px;font-size:13px;font-weight:600;margin-left:6px;">
+          ${escapeHtml(info.label)}
+        </span>
+      </p>
+      ${reasonHtml}
+    </div>
+    <p style="color:#7a5543;font-size:14px;margin-top:24px;">
+      ${escapeHtml(REFUND_STATUS_NOTES[data.status])}
+    </p>`
+
+  const reasonLine = data.reason ? `\nReason: ${data.reason}` : ''
+
+  return {
+    subject: `${info.label} for Order #${data.orderId.toUpperCase()} ${info.emoji}`,
+    html: emailWrapper(bodyHtml),
+    text: `Hi ${data.customerName},\n\n${info.headline}.\n\nOrder: #${data.orderId.toUpperCase()}\n${refundKind}: ${data.refundAmount}\nStatus: ${info.label}${reasonLine}\n\n${REFUND_STATUS_NOTES[data.status]}\n\nThank you for shopping with ${STORE_NAME}!`,
   }
 }

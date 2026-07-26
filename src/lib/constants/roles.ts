@@ -23,6 +23,7 @@ export type UserRole = (typeof USER_ROLES)[number]
 export const ADMIN_PERMISSIONS = [
   'orders:read',
   'orders:update',
+  'orders:refund',
   'products:read',
   'products:write',
   'users:read',
@@ -40,7 +41,8 @@ export type AdminPermission = (typeof ADMIN_PERMISSIONS)[number]
  *
  * - `ADMIN` keeps unrestricted access so existing operators are unaffected.
  * - `FULFILMENT` moves orders through the pipeline (status, tracking) and can
- *   read the catalog for picking, but cannot edit products or prices.
+ *   read the catalog for picking, but cannot edit products or prices — moving
+ *   money back to a customer stays with `ADMIN`.
  * - `SUPPORT` answers customer questions: read orders and users, moderate
  *   reviews — but never change roles or catalog data.
  */

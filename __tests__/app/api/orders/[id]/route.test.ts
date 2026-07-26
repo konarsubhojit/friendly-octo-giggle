@@ -5,13 +5,16 @@ import { primaryDrizzleDb } from '@/lib/db'
 import { auth } from '@/lib/auth'
 import { getCachedData, invalidateCache } from '@/lib/redis'
 import { invalidateUserOrderCaches } from '@/lib/cache'
+import { refundOrder } from '@/features/orders/services/refund-service'
 
 const mockTransaction = vi.hoisted(() =>
   vi.fn(async (callback: (tx: unknown) => Promise<unknown>) => {
     const tx = {
       update: vi.fn(() => ({
         set: vi.fn(() => ({
-          where: vi.fn(),
+          where: vi.fn(() => ({
+            returning: vi.fn(async () => [{ id: 'order1' }]),
+          })),
         })),
       })),
     }
@@ -35,13 +38,21 @@ vi.mock('@/lib/db', () => ({
 }))
 
 vi.mock('@/lib/schema', () => ({
-  orders: { id: 'id', status: 'status' },
+  orders: { id: 'id', status: 'status', stockRestoredAt: 'stockRestoredAt' },
   productVariants: { id: 'id', stock: 'stock' },
 }))
 
 vi.mock('drizzle-orm', () => ({
+  and: vi.fn(),
   eq: vi.fn(),
+  isNull: vi.fn(),
   sql: vi.fn(),
+}))
+
+vi.mock('@/features/orders/services/refund-service', () => ({
+  refundOrder: vi.fn(),
+  isRefundRequestError: (error: unknown) =>
+    error instanceof Error && error.name === 'RefundRequestError',
 }))
 
 vi.mock('@/lib/auth', () => ({
@@ -74,6 +85,7 @@ const mockGetCachedData = vi.mocked(getCachedData)
 const mockInvalidateCache = vi.mocked(invalidateCache)
 const mockInvalidateUserOrderCaches = vi.mocked(invalidateUserOrderCaches)
 const mockFindFirst = vi.mocked(primaryDrizzleDb.query.orders.findFirst)
+const mockRefundOrder = vi.mocked(refundOrder)
 
 describe('GET /api/orders/[id]', () => {
   const mockOrder = {
@@ -247,7 +259,7 @@ describe('PATCH /api/orders/[id]', () => {
     expect(data.error).toBe('Order not found')
   })
 
-  it('returns 400 when order is not PENDING', async () => {
+  it('returns 400 when the order has already shipped', async () => {
     mockAuth.mockResolvedValue({
       user: { id: 'user1', name: 'Test', email: 'test@example.com' },
     } as never)
@@ -266,7 +278,82 @@ describe('PATCH /api/orders/[id]', () => {
     const data = await response.json()
 
     expect(response.status).toBe(400)
-    expect(data.error).toBe('Only pending orders can be cancelled')
+    expect(data.error).toBe(
+      'Orders can only be cancelled before they are shipped'
+    )
+  })
+
+  it('cancels a PROCESSING order before shipment', async () => {
+    mockAuth.mockResolvedValue({
+      user: { id: 'user1', name: 'Test', email: 'test@example.com' },
+    } as never)
+
+    mockFindFirst
+      .mockResolvedValueOnce({ ...mockOrder, status: 'PROCESSING' } as never)
+      .mockResolvedValueOnce({ ...mockOrder, status: 'CANCELLED' } as never)
+
+    const request = new NextRequest('http://localhost/api/orders/order1', {
+      method: 'PATCH',
+      body: JSON.stringify({ action: 'cancel' }),
+    })
+    const response = await PATCH(request, {
+      params: Promise.resolve({ id: 'order1' }),
+    })
+
+    expect(response.status).toBe(200)
+    expect(mockRefundOrder).not.toHaveBeenCalled()
+  })
+
+  it('refunds a paid order before cancelling it', async () => {
+    mockAuth.mockResolvedValue({
+      user: { id: 'user1', name: 'Test', email: 'test@example.com' },
+    } as never)
+
+    mockFindFirst
+      .mockResolvedValueOnce({ ...mockOrder, paymentStatus: 'PAID' } as never)
+      .mockResolvedValueOnce({ ...mockOrder, status: 'CANCELLED' } as never)
+
+    const request = new NextRequest('http://localhost/api/orders/order1', {
+      method: 'PATCH',
+      body: JSON.stringify({ action: 'cancel' }),
+    })
+    const response = await PATCH(request, {
+      params: Promise.resolve({ id: 'order1' }),
+    })
+
+    expect(response.status).toBe(200)
+    expect(mockRefundOrder).toHaveBeenCalledWith({
+      orderId: 'order1',
+      reason: 'Cancelled by customer before shipment',
+    })
+  })
+
+  it('keeps the order open when the refund is rejected', async () => {
+    mockAuth.mockResolvedValue({
+      user: { id: 'user1', name: 'Test', email: 'test@example.com' },
+    } as never)
+
+    mockFindFirst.mockResolvedValueOnce({
+      ...mockOrder,
+      paymentStatus: 'PAID',
+    } as never)
+    const refundError = new Error('Order has already been fully refunded')
+    refundError.name = 'RefundRequestError'
+    Object.assign(refundError, { status: 409 })
+    mockRefundOrder.mockRejectedValueOnce(refundError)
+
+    const request = new NextRequest('http://localhost/api/orders/order1', {
+      method: 'PATCH',
+      body: JSON.stringify({ action: 'cancel' }),
+    })
+    const response = await PATCH(request, {
+      params: Promise.resolve({ id: 'order1' }),
+    })
+    const data = await response.json()
+
+    expect(response.status).toBe(409)
+    expect(data.error).toBe('Order has already been fully refunded')
+    expect(mockTransaction).not.toHaveBeenCalled()
   })
 
   it('cancels order successfully', async () => {
@@ -334,13 +421,15 @@ describe('PATCH /api/orders/[id]', () => {
     const mockTx = {
       update: vi.fn(() => ({
         set: vi.fn(() => ({
-          where: vi.fn(),
+          where: vi.fn(() => ({
+            returning: vi.fn(async () => [{ id: 'order1' }]),
+          })),
         })),
       })),
     }
     await txCallback(mockTx)
-    // update called once for order status + once per item (2 items)
-    expect(mockTx.update).toHaveBeenCalledTimes(3)
+    // once for the order status, once to claim the restock, once per item
+    expect(mockTx.update).toHaveBeenCalledTimes(4)
   })
 
   it('returns 500 when updatedOrder is null after cancel', async () => {

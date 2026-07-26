@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   escapeHtml,
   orderConfirmationTemplate,
+  orderRefundUpdateTemplate,
   orderStatusUpdateTemplate,
 } from '@/lib/email/templates'
 import type {
@@ -221,6 +222,57 @@ describe('orderStatusUpdateTemplate', () => {
     const result = orderStatusUpdateTemplate({ ...data, status: 'SHIPPED' })
     expect(result.subject).toContain('Shipped')
     expect(result.html).toContain('New Status')
+    expect(result.html).toContain('lang="en"')
+  })
+})
+
+describe('orderRefundUpdateTemplate', () => {
+  const data = {
+    to: 'customer@example.com',
+    customerName: 'Bob',
+    orderId: 'ORDxyz5678',
+    status: 'PROCESSED' as const,
+    refundAmount: '₹1,299.00',
+    isPartial: false,
+    reason: null,
+  }
+
+  it('returns a subject with the order id', () => {
+    const result = orderRefundUpdateTemplate(data)
+    expect(result.subject).toContain('ORDXYZ5678')
+  })
+
+  it('labels a full refund and its amount', () => {
+    const result = orderRefundUpdateTemplate(data)
+    expect(result.html).toContain('Full refund')
+    expect(result.text).toContain('₹1,299.00')
+  })
+
+  it('labels a partial refund', () => {
+    const result = orderRefundUpdateTemplate({ ...data, isPartial: true })
+    expect(result.html).toContain('Partial refund')
+  })
+
+  it('includes the reason when one is given', () => {
+    const result = orderRefundUpdateTemplate({
+      ...data,
+      reason: 'Cancelled before shipment',
+    })
+    expect(result.html).toContain('Cancelled before shipment')
+    expect(result.text).toContain('Reason: Cancelled before shipment')
+  })
+
+  it('escapes a reason containing HTML', () => {
+    const result = orderRefundUpdateTemplate({
+      ...data,
+      reason: '<script>alert(1)</script>',
+    })
+    expect(result.html).not.toContain('<script>')
+  })
+
+  it('renders a failed refund', () => {
+    const result = orderRefundUpdateTemplate({ ...data, status: 'FAILED' })
+    expect(result.text).toContain('Status:')
     expect(result.html).toContain('lang="en"')
   })
 })
