@@ -53,4 +53,12 @@ describe('env', () => {
       'postgresql://BUILD_TIME_PLACEHOLDER_DO_NOT_USE'
     )
   })
+
+  it('accepts lowercase database_url as fallback', async () => {
+    delete process.env.DATABASE_URL
+    vi.stubEnv('database_url', 'postgresql://localhost/lowercase-test')
+    vi.stubEnv('NODE_ENV', 'test')
+    const { env } = await import('@/lib/env')
+    expect(env.DATABASE_URL).toBe('postgresql://localhost/lowercase-test')
+  })
 })
