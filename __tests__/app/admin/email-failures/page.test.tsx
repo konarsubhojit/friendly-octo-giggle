@@ -3,6 +3,13 @@ import { render, screen } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import EmailFailuresPage from '@/app/admin/email-failures/page'
 
+const mockRequireAdminPermission = vi.hoisted(() => vi.fn())
+
+vi.mock('@/features/admin/services/admin-page-auth', () => ({
+  requireAdminPermission: (permission: string, callbackUrl?: string) =>
+    mockRequireAdminPermission(permission, callbackUrl),
+}))
+
 let mockFailures = [
   {
     id: 'fail-1',
@@ -50,6 +57,15 @@ vi.mock('@/features/admin/components/EmailFailuresClient', () => ({
 }))
 
 describe('EmailFailuresPage', () => {
+  it('enforces the system:manage admin permission', async () => {
+    render(await EmailFailuresPage())
+
+    expect(mockRequireAdminPermission).toHaveBeenCalledWith(
+      'system:manage',
+      '/admin/email-failures'
+    )
+  })
+
   it('renders queue metrics and the upgraded admin shell', async () => {
     render(await EmailFailuresPage())
 
