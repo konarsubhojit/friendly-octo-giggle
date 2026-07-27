@@ -1717,6 +1717,13 @@ WHERE NOT EXISTS (
   SELECT 1 FROM drizzle.__drizzle_migrations WHERE created_at = 1785055842528
 );
 
+-- 0013_abandoned_cart_reminders
+INSERT INTO drizzle.__drizzle_migrations (hash, created_at)
+SELECT '76a7409fd380278c705031a124d6ec2c45074a32aa5bd40727018669e8064d08', 1753574832000
+WHERE NOT EXISTS (
+  SELECT 1 FROM drizzle.__drizzle_migrations WHERE created_at = 1753574832000
+);
+
 DROP FUNCTION drizzle.ensure_public_enum(text, text);
 
 COMMIT;

@@ -42,6 +42,7 @@ export const emailTypeEnum = pgEnum('EmailType', [
   'order_confirmation',
   'order_status_update',
   'order_refund_update',
+  'abandoned_cart_reminder',
 ])
 
 export const failedEmailStatusEnum = pgEnum('FailedEmailStatus', [
@@ -735,6 +736,40 @@ export const cartItems = pgTable(
   ]
 )
 
+// ─── Abandoned Cart Reminder Table ──────────────────────
+
+/**
+ * Tracks abandoned-cart reminder emails sent per cart.
+ * Cap is enforced by allowing at most two rows per cart
+ * (reminderNumber = 1 for the 24-hour nudge, 2 for the 72-hour follow-up).
+ */
+export const abandonedCartReminders = pgTable(
+  'AbandonedCartReminder',
+  {
+    id: varchar('id', { length: 7 })
+      .primaryKey()
+      .$defaultFn(() => generateShortId()),
+    cartId: varchar('cartId', { length: 7 })
+      .notNull()
+      .references(() => carts.id, { onDelete: 'cascade' }),
+    userId: text('userId')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    /** 1 = first reminder (24 h), 2 = second reminder (72 h). */
+    reminderNumber: integer('reminderNumber').notNull(),
+    sentAt: timestamp('sentAt', { mode: 'date' }).defaultNow().notNull(),
+  },
+  (t) => [
+    unique('AbandonedCartReminder_cartId_reminderNumber_key').on(
+      t.cartId,
+      t.reminderNumber
+    ),
+    index('AbandonedCartReminder_cartId_idx').on(t.cartId),
+    index('AbandonedCartReminder_userId_idx').on(t.userId),
+    index('AbandonedCartReminder_sentAt_idx').on(t.sentAt),
+  ]
+)
+
 // ─── Wishlist Table ──────────────────────────────────────
 
 export const wishlists = pgTable(
@@ -852,6 +887,7 @@ export const usersRelations = relations(users, ({ many, one }) => ({
   adminAuditLogs: many(adminAuditLogs),
   notificationPreference: one(notificationPreferences),
   pushSubscriptions: many(pushSubscriptions),
+  abandonedCartReminders: many(abandonedCartReminders),
 }))
 
 export const notificationPreferencesRelations = relations(
@@ -1027,6 +1063,7 @@ export const orderItemsRelations = relations(orderItems, ({ one }) => ({
 export const cartsRelations = relations(carts, ({ one, many }) => ({
   user: one(users, { fields: [carts.userId], references: [users.id] }),
   items: many(cartItems),
+  reminders: many(abandonedCartReminders),
 }))
 
 export const cartItemsRelations = relations(cartItems, ({ one }) => ({
@@ -1040,6 +1077,20 @@ export const cartItemsRelations = relations(cartItems, ({ one }) => ({
     references: [productVariants.id],
   }),
 }))
+
+export const abandonedCartRemindersRelations = relations(
+  abandonedCartReminders,
+  ({ one }) => ({
+    cart: one(carts, {
+      fields: [abandonedCartReminders.cartId],
+      references: [carts.id],
+    }),
+    user: one(users, {
+      fields: [abandonedCartReminders.userId],
+      references: [users.id],
+    }),
+  })
+)
 
 export const wishlistsRelations = relations(wishlists, ({ one }) => ({
   user: one(users, { fields: [wishlists.userId], references: [users.id] }),

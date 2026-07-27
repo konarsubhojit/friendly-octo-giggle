@@ -4,6 +4,8 @@ export {
   type OrderStatusUpdateData,
   type OrderRefundUpdateData,
   type RefundStatus,
+  type AbandonedCartItem,
+  type AbandonedCartReminderData,
   escapeHtml,
 } from './templates'
 
@@ -16,9 +18,11 @@ import {
   orderConfirmationTemplate,
   orderStatusUpdateTemplate,
   orderRefundUpdateTemplate,
+  abandonedCartReminderTemplate,
   type OrderConfirmationData,
   type OrderStatusUpdateData,
   type OrderRefundUpdateData,
+  type AbandonedCartReminderData,
 } from './templates'
 
 export const sendOrderConfirmationEmail = (
@@ -48,5 +52,15 @@ export const sendOrderRefundUpdateEmail = (
   sendWithRetry(
     { to: data.to, ...template },
     { emailType: 'order_refund_update', referenceId: data.orderId }
+  )
+}
+
+export const sendAbandonedCartReminderEmail = (
+  data: AbandonedCartReminderData & { cartId: string }
+): void => {
+  const template = abandonedCartReminderTemplate(data)
+  sendWithRetry(
+    { to: data.to, ...template },
+    { emailType: 'abandoned_cart_reminder', referenceId: data.cartId }
   )
 }
