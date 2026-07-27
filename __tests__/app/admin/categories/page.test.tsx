@@ -3,6 +3,13 @@ import { render, screen } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import AdminCategoriesPage from '@/app/admin/categories/page'
 
+const mockRequireAdminPermission = vi.hoisted(() => vi.fn())
+
+vi.mock('@/features/admin/services/admin-page-auth', () => ({
+  requireAdminPermission: (permission: string, callbackUrl?: string) =>
+    mockRequireAdminPermission(permission, callbackUrl),
+}))
+
 let mockCategories = [
   {
     id: 'cat-1',
@@ -51,6 +58,15 @@ vi.mock('@/features/admin/components/CategoriesClient', () => ({
 }))
 
 describe('AdminCategoriesPage', () => {
+  it('enforces the products:write admin permission', async () => {
+    render(await AdminCategoriesPage())
+
+    expect(mockRequireAdminPermission).toHaveBeenCalledWith(
+      'products:write',
+      '/admin/categories'
+    )
+  })
+
   it('renders the upgraded admin shell with serialized categories', async () => {
     render(await AdminCategoriesPage())
 

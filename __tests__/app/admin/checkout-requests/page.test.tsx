@@ -3,6 +3,13 @@ import { render, screen } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import AdminCheckoutRequestsPage from '@/app/admin/checkout-requests/page'
 
+const mockRequireAdminPermission = vi.hoisted(() => vi.fn())
+
+vi.mock('@/features/admin/services/admin-page-auth', () => ({
+  requireAdminPermission: (permission: string, callbackUrl?: string) =>
+    mockRequireAdminPermission(permission, callbackUrl),
+}))
+
 const mockGetRecentCheckoutRequests = vi.hoisted(() => vi.fn())
 
 const mockRecords = [
@@ -48,6 +55,15 @@ describe('AdminCheckoutRequestsPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockGetRecentCheckoutRequests.mockResolvedValue(mockRecords)
+  })
+
+  it('enforces the orders:read admin permission', async () => {
+    render(await AdminCheckoutRequestsPage({}))
+
+    expect(mockRequireAdminPermission).toHaveBeenCalledWith(
+      'orders:read',
+      '/admin/checkout-requests'
+    )
   })
 
   it('renders queue metrics and request rows', async () => {
