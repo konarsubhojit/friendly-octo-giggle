@@ -1,5 +1,6 @@
 import { createHmac, timingSafeEqual } from 'node:crypto'
 import { env } from '@/lib/env'
+import { logError } from '@/lib/logger'
 import { fromMinorUnits, toMinorUnits } from '@/lib/money'
 import { PaymentConfigurationError, PaymentVerificationError } from './errors'
 import type {
@@ -59,6 +60,15 @@ const razorpayFetch = async (
       signal: AbortSignal.timeout(RAZORPAY_REQUEST_TIMEOUT_MS),
     })
   } catch (error) {
+    // `PaymentVerificationError` carries no cause, so without this the root
+    // cause (DNS, TLS, socket reset, or a plain programming error) is lost and
+    // an operator only ever sees the mapped message.
+    logError({
+      error,
+      context: 'razorpay_request_failed',
+      additionalInfo: { operation },
+    })
+
     if (isAbortError(error)) {
       throw new PaymentVerificationError(
         `Payment provider timed out while trying to ${operation}`,

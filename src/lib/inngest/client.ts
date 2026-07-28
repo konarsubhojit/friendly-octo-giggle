@@ -12,12 +12,18 @@ export const INNGEST_APP_ID = 'friendly-octo-giggle'
 /**
  * Shared Inngest client.
  *
+ * Both keys are read through the validated env module rather than left to the
+ * library's ambient `process.env` lookup: the served functions run the money
+ * path, so request-signature verification must use the same key the
+ * `INNGEST_EVENT_KEY ⇒ INNGEST_SIGNING_KEY` refinement guarantees is present.
+ *
  * The event key is optional so the app still boots (and falls back to the
  * Vercel Queue) in environments where Inngest is not configured yet.
  */
 export const inngest = new Inngest({
   id: INNGEST_APP_ID,
   eventKey: env.INNGEST_EVENT_KEY,
+  signingKey: env.INNGEST_SIGNING_KEY,
 })
 
 /**

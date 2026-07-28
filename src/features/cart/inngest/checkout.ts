@@ -8,6 +8,8 @@ import {
   preflightCheckoutRequest,
   recordCheckoutProcessingFailure,
   recoverCheckoutRequestAfterRetryExhaustion,
+  resolveCheckoutSettlement,
+  type CheckoutSkipReason,
 } from '@/features/cart/services/checkout-service'
 import { logError } from '@/lib/logger'
 
@@ -32,9 +34,13 @@ export type CheckoutRunResult =
   | {
       readonly checkoutRequestId: string
       readonly outcome: 'skipped'
-      readonly reason: string
+      readonly reason: CheckoutSkipReason
     }
-  | { readonly checkoutRequestId: string; readonly outcome: 'already-processing' }
+  | {
+      readonly checkoutRequestId: string
+      readonly outcome: 'already-processing'
+      readonly reason: CheckoutSkipReason
+    }
   | {
       readonly checkoutRequestId: string
       readonly outcome: 'completed'
@@ -71,12 +77,33 @@ export const runCheckoutRequestSteps = async ({
 
   // Step 2 — compare-and-swap claim. Memoized, so a retry of a later step
   // never re-claims and never depends on the stale-claim window.
-  const claimed = await step.run('claim-checkout-request', () =>
-    claimCheckoutRequest(checkoutRequestId)
-  )
+  const claim = await step.run('claim-checkout-request', async () => {
+    if (await claimCheckoutRequest(checkoutRequestId)) {
+      return { claimed: true as const }
+    }
 
-  if (!claimed) {
-    return { checkoutRequestId, outcome: 'already-processing' }
+    // A failed claim is ambiguous: either a peer trigger owns the request, or
+    // this run already claimed it on an attempt that died before its
+    // checkpoint persisted. Only a settled request is safe to walk away from
+    // — otherwise nothing else would ever pick the request up, because the
+    // queue never received it and the webhook refuses to reprocess
+    // `PROCESSING`.
+    const settlement = await resolveCheckoutSettlement(checkoutRequestId)
+    if (settlement.settled) {
+      return { claimed: false as const, reason: settlement.reason }
+    }
+
+    throw new Error(
+      `Checkout request ${checkoutRequestId} is claimed but unsettled; retrying until the claim goes stale`
+    )
+  })
+
+  if (!claim.claimed) {
+    return {
+      checkoutRequestId,
+      outcome: 'already-processing',
+      reason: claim.reason,
+    }
   }
 
   // Step 3 — verify payment and persist the order atomically.

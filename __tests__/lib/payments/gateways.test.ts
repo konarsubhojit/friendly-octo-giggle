@@ -7,7 +7,11 @@ const envMock = vi.hoisted(() => ({
   RAZORPAY_WEBHOOK_SECRET: 'webhook_secret' as string | undefined,
 }))
 
+const { mockLogError } = vi.hoisted(() => ({ mockLogError: vi.fn() }))
+
 vi.mock('@/lib/env', () => ({ env: envMock }))
+
+vi.mock('@/lib/logger', () => ({ logError: mockLogError }))
 
 const {
   PaymentConfigurationError,
@@ -239,10 +243,8 @@ describe('razorpay gateway', () => {
     })
 
     it('maps a transport failure onto the retriable 5xx path', async () => {
-      vi.stubGlobal(
-        'fetch',
-        vi.fn().mockRejectedValue(new TypeError('fetch failed'))
-      )
+      const transportError = new TypeError('fetch failed')
+      vi.stubGlobal('fetch', vi.fn().mockRejectedValue(transportError))
 
       await expect(
         razorpay.verifyPayment({
@@ -253,6 +255,14 @@ describe('razorpay gateway', () => {
         name: 'PaymentVerificationError',
         status: 502,
       })
+      // The mapped error carries no cause, so the diagnostic has to be logged.
+      expect(mockLogError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: transportError,
+          context: 'razorpay_request_failed',
+          additionalInfo: { operation: 'verify a payment' },
+        })
+      )
     })
 
     it('bounds order creation and refunds as well', async () => {

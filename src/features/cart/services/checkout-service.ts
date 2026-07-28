@@ -449,6 +449,12 @@ type CheckoutRequestRecord = NonNullable<
 >
 
 /**
+ * Why a checkout request needs no further processing — a missing row, an order
+ * that already exists, or a terminal status.
+ */
+export type CheckoutSkipReason = 'missing' | 'order_exists' | 'already_settled'
+
+/**
  * Result of the idempotency guard that runs before any work is claimed.
  *
  * `skip` covers every case where the request is already settled — a missing
@@ -457,7 +463,7 @@ type CheckoutRequestRecord = NonNullable<
 export type CheckoutPreflightResult =
   | {
       readonly action: 'skip'
-      readonly reason: 'missing' | 'order_exists' | 'already_settled'
+      readonly reason: CheckoutSkipReason
     }
   | { readonly action: 'process'; readonly checkoutRequest: CheckoutRequestRecord }
 
@@ -471,6 +477,56 @@ const assertValidCheckoutRequestId = (checkoutRequestId: string): void => {
 }
 
 /**
+ * Outcome of the read-only settlement check.
+ */
+export type CheckoutSettlement =
+  | { readonly settled: true; readonly reason: CheckoutSkipReason }
+  | {
+      readonly settled: false
+      readonly checkoutRequest: CheckoutRequestRecord
+    }
+
+/**
+ * Read-only check for whether a checkout request still needs processing.
+ *
+ * Free of metric side effects — unlike `preflightCheckoutRequest`, which also
+ * emits the queue-lag sample and must therefore run once per delivery — so it
+ * is safe to repeat within a single delivery. The only write is the
+ * self-healing status update when an order already exists.
+ */
+export const resolveCheckoutSettlement = async (
+  checkoutRequestId: string
+): Promise<CheckoutSettlement> => {
+  const checkoutRequest = await findCheckoutRequestById(checkoutRequestId)
+
+  if (!checkoutRequest) {
+    logBusinessEvent({
+      event: 'checkout_request_missing',
+      details: { checkoutRequestId },
+      success: false,
+    })
+    return { settled: true, reason: 'missing' }
+  }
+
+  const existingOrder = await findCreatedOrderForCheckout(checkoutRequestId)
+  if (existingOrder) {
+    if (checkoutRequest.status !== 'COMPLETED') {
+      await updateCheckoutRequestStatus(checkoutRequestId, 'COMPLETED', null)
+    }
+    return { settled: true, reason: 'order_exists' }
+  }
+
+  if (
+    checkoutRequest.status === 'COMPLETED' ||
+    checkoutRequest.status === 'FAILED'
+  ) {
+    return { settled: true, reason: 'already_settled' }
+  }
+
+  return { settled: false, checkoutRequest }
+}
+
+/**
  * Step 1 — decide whether a checkout request still needs processing.
  *
  * Safe to repeat: it only reads, plus a self-healing status write when an
@@ -481,39 +537,18 @@ export const preflightCheckoutRequest = async (
 ): Promise<CheckoutPreflightResult> => {
   assertValidCheckoutRequestId(checkoutRequestId)
 
-  const checkoutRequest = await findCheckoutRequestById(checkoutRequestId)
-
-  if (!checkoutRequest) {
-    logBusinessEvent({
-      event: 'checkout_request_missing',
-      details: { checkoutRequestId },
-      success: false,
-    })
-    return { action: 'skip', reason: 'missing' }
-  }
-
-  const existingOrder = await findCreatedOrderForCheckout(checkoutRequestId)
-  if (existingOrder) {
-    if (checkoutRequest.status !== 'COMPLETED') {
-      await updateCheckoutRequestStatus(checkoutRequestId, 'COMPLETED', null)
-    }
-    return { action: 'skip', reason: 'order_exists' }
-  }
-
-  if (
-    checkoutRequest.status === 'COMPLETED' ||
-    checkoutRequest.status === 'FAILED'
-  ) {
-    return { action: 'skip', reason: 'already_settled' }
+  const settlement = await resolveCheckoutSettlement(checkoutRequestId)
+  if (settlement.settled) {
+    return { action: 'skip', reason: settlement.reason }
   }
 
   logPerformance({
     operation: CHECKOUT_QUEUE_LAG_OPERATION,
-    duration: Date.now() - checkoutRequest.createdAt.getTime(),
+    duration: Date.now() - settlement.checkoutRequest.createdAt.getTime(),
     metadata: { checkoutRequestId },
   })
 
-  return { action: 'process', checkoutRequest }
+  return { action: 'process', checkoutRequest: settlement.checkoutRequest }
 }
 
 /**

@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const {
   mockPreflightCheckoutRequest,
+  mockResolveCheckoutSettlement,
   mockClaimCheckoutRequest,
   mockCreateOrderForCheckoutRequest,
   mockRecordCheckoutProcessingFailure,
@@ -9,6 +10,7 @@ const {
   mockLogError,
 } = vi.hoisted(() => ({
   mockPreflightCheckoutRequest: vi.fn(),
+  mockResolveCheckoutSettlement: vi.fn(),
   mockClaimCheckoutRequest: vi.fn(),
   mockCreateOrderForCheckoutRequest: vi.fn(),
   mockRecordCheckoutProcessingFailure: vi.fn(),
@@ -18,6 +20,7 @@ const {
 
 vi.mock('@/features/cart/services/checkout-service', () => ({
   preflightCheckoutRequest: mockPreflightCheckoutRequest,
+  resolveCheckoutSettlement: mockResolveCheckoutSettlement,
   claimCheckoutRequest: mockClaimCheckoutRequest,
   createOrderForCheckoutRequest: mockCreateOrderForCheckoutRequest,
   recordCheckoutProcessingFailure: mockRecordCheckoutProcessingFailure,
@@ -143,8 +146,12 @@ describe('processCheckoutRequestFunction', () => {
     expect(mockClaimCheckoutRequest).not.toHaveBeenCalled()
   })
 
-  it('stops when another worker holds the claim', async () => {
+  it('stops when another worker holds the claim and the request is settled', async () => {
     mockClaimCheckoutRequest.mockResolvedValue(false)
+    mockResolveCheckoutSettlement.mockResolvedValue({
+      settled: true,
+      reason: 'order_exists',
+    })
     const { step } = createStepRunner()
 
     const result = await runCheckoutRequestSteps({
@@ -155,8 +162,45 @@ describe('processCheckoutRequestFunction', () => {
     expect(result).toEqual({
       checkoutRequestId: CHECKOUT_REQUEST_ID,
       outcome: 'already-processing',
+      reason: 'order_exists',
     })
     expect(mockCreateOrderForCheckoutRequest).not.toHaveBeenCalled()
+  })
+
+  it('retries instead of exiting when the claim fails but the request is unsettled', async () => {
+    mockClaimCheckoutRequest.mockResolvedValue(false)
+    mockResolveCheckoutSettlement.mockResolvedValue({
+      settled: false,
+      checkoutRequest: { id: CHECKOUT_REQUEST_ID },
+    })
+    const { step } = createStepRunner()
+
+    // Walking away here would strand the request: nothing else can pick it up
+    // once it is stuck in PROCESSING.
+    await expect(
+      runCheckoutRequestSteps({
+        event: { data: { checkoutRequestId: CHECKOUT_REQUEST_ID } },
+        step,
+      })
+    ).rejects.toThrow(/claimed but unsettled/)
+    expect(mockCreateOrderForCheckoutRequest).not.toHaveBeenCalled()
+  })
+
+  it('does not re-emit the queue lag sample when re-checking a failed claim', async () => {
+    mockClaimCheckoutRequest.mockResolvedValue(false)
+    mockResolveCheckoutSettlement.mockResolvedValue({
+      settled: true,
+      reason: 'already_settled',
+    })
+    const { step } = createStepRunner()
+
+    await runCheckoutRequestSteps({
+      event: { data: { checkoutRequestId: CHECKOUT_REQUEST_ID } },
+      step,
+    })
+
+    // Preflight owns the lag metric, so re-checking must not run it again.
+    expect(mockPreflightCheckoutRequest).toHaveBeenCalledTimes(1)
   })
 
   it('marks client-side failures non-retriable so Inngest stops immediately', async () => {
