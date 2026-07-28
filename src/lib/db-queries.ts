@@ -46,10 +46,26 @@ import { toShippingMethod } from './shipping/methods'
 // ─── Shared error types ──────────────────────────────────
 
 /**
+ * Ceiling for any invocation that can hold a `PROCESSING` claim.
+ *
+ * Declared as `maxDuration` on every claim-holding route so the platform kills
+ * a stuck worker before its claim is considered stale.
+ */
+export const CLAIM_HOLDER_MAX_DURATION_SECONDS = 30
+
+/**
  * A checkout request left in `PROCESSING` for longer than this is treated as
  * abandoned (e.g. the worker crashed) and may be reclaimed by a retry.
+ *
+ * The value sits inside a hard window:
+ * - **Above** `CLAIM_HOLDER_MAX_DURATION_SECONDS`, so a live worker can never
+ *   have its claim stolen mid-flight.
+ * - **Below** the queue's `retryAfterSeconds` (60s in `vercel.json`), so the
+ *   redelivery that follows a killed worker can actually reclaim the request.
+ *   A longer window strands the request: the redelivery finds it `PROCESSING`,
+ *   returns early, acks, and no further delivery ever arrives.
  */
-export const STALE_PROCESSING_CLAIM_MS = 5 * 60 * 1000
+export const STALE_PROCESSING_CLAIM_MS = 45 * 1000
 
 /**
  * Thrown by `db.orders.createWithItems` when a stock reservation fails due to

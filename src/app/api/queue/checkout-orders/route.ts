@@ -5,6 +5,13 @@ import {
 import { handleCallback } from '@/lib/queue'
 import { CheckoutQueueMessageSchema } from '@/features/cart/validations'
 
+/**
+ * Mirrors the `maxDuration` declared for this consumer in `vercel.json`. Must
+ * stay at or below `STALE_PROCESSING_CLAIM_MS` (see `lib/db-queries`) so a
+ * killed invocation's claim is reclaimable by the next delivery.
+ */
+export const maxDuration = 30
+
 const MAX_CHECKOUT_CONSUMER_ATTEMPTS = 5
 
 const checkoutOrdersCallbackHandler = handleCallback(

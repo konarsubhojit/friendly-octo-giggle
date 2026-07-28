@@ -3,6 +3,14 @@ import { handlePaymentWebhook } from '@/features/payments/services/payment-webho
 
 export const dynamic = 'force-dynamic'
 
+/**
+ * Bounds how long this route can hold a `PROCESSING` claim on a checkout
+ * request. Must stay at or below `STALE_PROCESSING_CLAIM_MS` (see
+ * `lib/db-queries`) so a killed invocation's claim becomes reclaimable by the
+ * next delivery instead of stranding the request.
+ */
+export const maxDuration = 30
+
 /** Provider-scoped webhook endpoint — dispatches to the registered gateway. */
 export async function POST(
   request: NextRequest,

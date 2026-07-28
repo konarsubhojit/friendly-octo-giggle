@@ -10,6 +10,14 @@ import { apiError, isJsonBodyParseError, parseJsonBody } from '@/lib/api-utils'
 import { logBusinessEvent, logError } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
+
+/**
+ * Bounds how long this route can hold a `PROCESSING` claim on a checkout
+ * request. Must stay at or below `STALE_PROCESSING_CLAIM_MS` (see
+ * `lib/db-queries`) so a killed invocation's claim becomes reclaimable by the
+ * next delivery instead of stranding the request.
+ */
+export const maxDuration = 30
 const CheckoutRequestBodySchema = z.looseObject({
   customerName: z.string().optional(),
   customerEmail: z.string().optional(),

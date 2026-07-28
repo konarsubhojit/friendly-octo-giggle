@@ -12,7 +12,12 @@ import {
   isOrderRequestError,
 } from '@/features/orders/services/order-service'
 import { send } from '@/lib/queue'
-import { logBusinessEvent, logError, logPerformance } from '@/lib/logger'
+import {
+  CHECKOUT_QUEUE_LAG_OPERATION,
+  logBusinessEvent,
+  logError,
+  logPerformance,
+} from '@/lib/logger'
 import { formatStructuredAddress } from '@/lib/address-utils'
 import type {
   CheckoutEnqueueResponse,
@@ -34,6 +39,8 @@ import {
   requiresPaymentSignature,
 } from '@/lib/payments/providers'
 import { toShippingMethod } from '@/lib/shipping'
+import { inngest, isInngestConfigured } from '@/lib/inngest/client'
+import { checkoutRequestCreated } from '@/features/cart/inngest/events'
 import type { CheckoutPaymentInput } from '@/lib/types'
 
 export const CHECKOUT_QUEUE_TOPIC = 'checkout-orders'
@@ -260,6 +267,14 @@ export const recoverCheckoutRequestAfterRetryExhaustion = async ({
     return
   }
 
+  // A terminal failure already recorded the precise reason (declined payment,
+  // out-of-stock item). Overwriting it with the generic retry-exhausted message
+  // would hide that from the customer and from support.
+  const checkoutRequest = await findCheckoutRequestById(checkoutRequestId)
+  if (checkoutRequest?.status === 'FAILED') {
+    return
+  }
+
   const errorMessage = buildRetryExhaustedMessage(deliveryCount, error)
   await updateCheckoutRequestStatus(checkoutRequestId, 'FAILED', errorMessage)
 
@@ -272,6 +287,45 @@ export const recoverCheckoutRequestAfterRetryExhaustion = async ({
     },
     success: false,
   })
+}
+
+/**
+ * Hand a checkout request to its durable orchestrator.
+ *
+ * Inngest is preferred when configured: each pipeline step checkpoints
+ * independently, so a retry resumes after the last completed step instead of
+ * replaying payment verification. The Vercel Queue remains the fallback so a
+ * deployment without Inngest credentials — or a transient Inngest outage —
+ * still processes checkouts durably.
+ *
+ * Throws when every durable transport fails, letting the caller decide on the
+ * inline last resort.
+ */
+const dispatchCheckoutProcessing = async ({
+  checkoutRequestId,
+  userId,
+}: {
+  checkoutRequestId: string
+  userId: string
+}): Promise<void> => {
+  if (isInngestConfigured()) {
+    try {
+      await inngest.send(checkoutRequestCreated.create({ checkoutRequestId }))
+      return
+    } catch (error) {
+      logError({
+        error,
+        context: 'checkout_inngest_publish_failed_falling_back_to_queue',
+        additionalInfo: { checkoutRequestId, userId },
+      })
+    }
+  }
+
+  await send(
+    CHECKOUT_QUEUE_TOPIC,
+    { checkoutRequestId },
+    { idempotencyKey: `checkout-request:${checkoutRequestId}` }
+  )
 }
 
 export const enqueueCheckoutForUser = async ({
@@ -331,11 +385,10 @@ export const enqueueCheckoutForUser = async ({
   })
 
   try {
-    await send(
-      CHECKOUT_QUEUE_TOPIC,
-      { checkoutRequestId: checkoutRequest.id },
-      { idempotencyKey: `checkout-request:${checkoutRequest.id}` }
-    )
+    await dispatchCheckoutProcessing({
+      checkoutRequestId: checkoutRequest.id,
+      userId: user.id,
+    })
   } catch (error) {
     logError({
       error,
@@ -391,15 +444,42 @@ export const getCheckoutRequestStatusForUser = async ({
   )
 }
 
-export const processCheckoutRequestById = async (
-  checkoutRequestId: string
-): Promise<void> => {
+type CheckoutRequestRecord = NonNullable<
+  Awaited<ReturnType<typeof db.checkoutRequests.findById>>
+>
+
+/**
+ * Result of the idempotency guard that runs before any work is claimed.
+ *
+ * `skip` covers every case where the request is already settled — a missing
+ * row, an order that already exists, or a terminal status.
+ */
+export type CheckoutPreflightResult =
+  | {
+      readonly action: 'skip'
+      readonly reason: 'missing' | 'order_exists' | 'already_settled'
+    }
+  | { readonly action: 'process'; readonly checkoutRequest: CheckoutRequestRecord }
+
+const assertValidCheckoutRequestId = (checkoutRequestId: string): void => {
   const parseResult = CheckoutQueueMessageSchema.safeParse({
     checkoutRequestId,
   })
   if (!parseResult.success) {
     throw new CheckoutRequestError('Invalid checkout queue message', 400)
   }
+}
+
+/**
+ * Step 1 — decide whether a checkout request still needs processing.
+ *
+ * Safe to repeat: it only reads, plus a self-healing status write when an
+ * order already exists for the request.
+ */
+export const preflightCheckoutRequest = async (
+  checkoutRequestId: string
+): Promise<CheckoutPreflightResult> => {
+  assertValidCheckoutRequestId(checkoutRequestId)
 
   const checkoutRequest = await findCheckoutRequestById(checkoutRequestId)
 
@@ -409,7 +489,7 @@ export const processCheckoutRequestById = async (
       details: { checkoutRequestId },
       success: false,
     })
-    return
+    return { action: 'skip', reason: 'missing' }
   }
 
   const existingOrder = await findCreatedOrderForCheckout(checkoutRequestId)
@@ -417,102 +497,180 @@ export const processCheckoutRequestById = async (
     if (checkoutRequest.status !== 'COMPLETED') {
       await updateCheckoutRequestStatus(checkoutRequestId, 'COMPLETED', null)
     }
-    return
+    return { action: 'skip', reason: 'order_exists' }
   }
 
   if (
     checkoutRequest.status === 'COMPLETED' ||
     checkoutRequest.status === 'FAILED'
   ) {
-    return
+    return { action: 'skip', reason: 'already_settled' }
   }
 
   logPerformance({
-    operation: 'queue.checkout.lag',
+    operation: CHECKOUT_QUEUE_LAG_OPERATION,
     duration: Date.now() - checkoutRequest.createdAt.getTime(),
     metadata: { checkoutRequestId },
   })
 
-  // Compare-and-swap on the status column. Duplicate webhook deliveries and
-  // queue redeliveries race here; only the winner proceeds to create an order.
+  return { action: 'process', checkoutRequest }
+}
+
+/**
+ * Step 2 — compare-and-swap the request into `PROCESSING`.
+ *
+ * Duplicate webhook deliveries, queue redeliveries and durable-run retries all
+ * race here; only the winner goes on to create an order.
+ */
+export const claimCheckoutRequest = async (
+  checkoutRequestId: string
+): Promise<boolean> => {
   const claimed =
     await db.checkoutRequests.claimForProcessing(checkoutRequestId)
+
   if (!claimed) {
     logBusinessEvent({
       event: 'checkout_request_already_processing',
       details: { checkoutRequestId },
       success: true,
     })
-    return
   }
 
-  try {
-    const result = await createOrderForUser({
-      body: {
-        customerName: checkoutRequest.customerName,
-        customerEmail: checkoutRequest.customerEmail,
-        customerAddress: checkoutRequest.customerAddress,
-        addressLine1: checkoutRequest.addressLine1 ?? '',
-        addressLine2: checkoutRequest.addressLine2 ?? '',
-        addressLine3: checkoutRequest.addressLine3 ?? '',
-        pinCode: checkoutRequest.pinCode ?? '',
-        city: checkoutRequest.city ?? '',
-        state: checkoutRequest.state ?? '',
-        items: checkoutRequest.items.map((item) => ({
-          productId: item.productId,
-          variantId: item.variantId,
-          quantity: item.quantity,
-          customizationNote: item.customizationNote ?? undefined,
-        })),
-        couponCode: checkoutRequest.couponCode,
-        shippingMethod: toShippingMethod(checkoutRequest.shippingMethod),
-        payment: buildStoredPaymentReference(checkoutRequest),
-      },
-      user: {
-        id: checkoutRequest.userId,
-        name: checkoutRequest.customerName,
-        email: checkoutRequest.customerEmail,
-      },
+  return claimed
+}
+
+const runCheckoutOrderCreation = async (
+  checkoutRequest: CheckoutRequestRecord
+): Promise<string> => {
+  const checkoutRequestId = checkoutRequest.id
+
+  // Payment verification and order persistence deliberately stay inside this
+  // single call: "money confirmed" and "order exists" must either both happen
+  // or neither, and the claim above makes a retry from the top safe.
+  const result = await createOrderForUser({
+    body: {
+      customerName: checkoutRequest.customerName,
+      customerEmail: checkoutRequest.customerEmail,
+      customerAddress: checkoutRequest.customerAddress,
+      addressLine1: checkoutRequest.addressLine1 ?? '',
+      addressLine2: checkoutRequest.addressLine2 ?? '',
+      addressLine3: checkoutRequest.addressLine3 ?? '',
+      pinCode: checkoutRequest.pinCode ?? '',
+      city: checkoutRequest.city ?? '',
+      state: checkoutRequest.state ?? '',
+      items: checkoutRequest.items.map((item) => ({
+        productId: item.productId,
+        variantId: item.variantId,
+        quantity: item.quantity,
+        customizationNote: item.customizationNote ?? undefined,
+      })),
+      couponCode: checkoutRequest.couponCode,
+      shippingMethod: toShippingMethod(checkoutRequest.shippingMethod),
+      payment: buildStoredPaymentReference(checkoutRequest),
+    },
+    user: {
+      id: checkoutRequest.userId,
+      name: checkoutRequest.customerName,
+      email: checkoutRequest.customerEmail,
+    },
+    checkoutRequestId,
+  })
+
+  await updateCheckoutRequestStatus(checkoutRequestId, 'COMPLETED', null)
+
+  logBusinessEvent({
+    event: 'checkout_request_completed',
+    details: {
       checkoutRequestId,
-    })
+      orderId: result.order.id,
+      userId: checkoutRequest.userId,
+    },
+    success: true,
+  })
 
-    await updateCheckoutRequestStatus(checkoutRequestId, 'COMPLETED', null)
+  return result.order.id
+}
 
-    logBusinessEvent({
-      event: 'checkout_request_completed',
-      details: {
-        checkoutRequestId,
-        orderId: result.order.id,
-        userId: checkoutRequest.userId,
-      },
-      success: true,
-    })
-  } catch (error) {
-    if (isOrderRequestError(error) && error.status < 500) {
-      await updateCheckoutRequestStatus(
-        checkoutRequestId,
-        'FAILED',
-        error.message
-      )
-      logBusinessEvent({
-        event: 'checkout_request_failed',
-        details: {
-          checkoutRequestId,
-          reason: error.message,
-          status: error.status,
-        },
-        success: false,
-      })
-      return
-    }
+/**
+ * Step 3 — create the order for a claimed checkout request.
+ *
+ * @returns the created order id.
+ */
+export const createOrderForCheckoutRequest = async (
+  checkoutRequestId: string
+): Promise<string> => {
+  const checkoutRequest = await findCheckoutRequestById(checkoutRequestId)
 
+  if (!checkoutRequest) {
+    throw new CheckoutRequestError('Checkout request not found', 404)
+  }
+
+  return runCheckoutOrderCreation(checkoutRequest)
+}
+
+/**
+ * Step 4 — record a processing failure and classify it.
+ *
+ * Client-side failures (4xx) are terminal: the request is marked `FAILED` and
+ * must not be retried. Everything else is transient, so the request is reset to
+ * `PENDING` and the caller re-throws to trigger another delivery.
+ */
+export const recordCheckoutProcessingFailure = async (
+  checkoutRequestId: string,
+  error: unknown
+): Promise<{ readonly terminal: boolean }> => {
+  if (isOrderRequestError(error) && error.status < 500) {
     await updateCheckoutRequestStatus(
       checkoutRequestId,
-      'PENDING',
-      error instanceof Error
-        ? error.message
-        : 'Temporary checkout processing failure'
+      'FAILED',
+      error.message
     )
+    logBusinessEvent({
+      event: 'checkout_request_failed',
+      details: {
+        checkoutRequestId,
+        reason: error.message,
+        status: error.status,
+      },
+      success: false,
+    })
+    return { terminal: true }
+  }
+
+  await updateCheckoutRequestStatus(
+    checkoutRequestId,
+    'PENDING',
+    error instanceof Error
+      ? error.message
+      : 'Temporary checkout processing failure'
+  )
+  return { terminal: false }
+}
+
+/**
+ * Process a checkout request end to end inside a single invocation.
+ *
+ * Used by the Vercel Queue consumer, the payment webhook and the inline
+ * fallback. The Inngest function runs the same steps, but checkpoints each one
+ * independently so a retry resumes instead of restarting.
+ */
+export const processCheckoutRequestById = async (
+  checkoutRequestId: string
+): Promise<void> => {
+  const preflight = await preflightCheckoutRequest(checkoutRequestId)
+  if (preflight.action === 'skip') return
+
+  const claimed = await claimCheckoutRequest(checkoutRequestId)
+  if (!claimed) return
+
+  try {
+    await runCheckoutOrderCreation(preflight.checkoutRequest)
+  } catch (error) {
+    const { terminal } = await recordCheckoutProcessingFailure(
+      checkoutRequestId,
+      error
+    )
+    if (terminal) return
     throw error
   }
 }

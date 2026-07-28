@@ -47,6 +47,7 @@ vi.mock('@/lib/logger', () => ({
   logBusinessEvent: mockLogBusinessEvent,
   logError: mockLogError,
   logPerformance: mockLogPerformance,
+  CHECKOUT_QUEUE_LAG_OPERATION: 'queue.checkout.lag',
 }))
 
 vi.mock('@/lib/queue', () => ({
