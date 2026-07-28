@@ -4,6 +4,7 @@ import {
   recordBusinessEventMetric,
   recordCacheMetric,
   recordCheckoutQueueLagMetric,
+  recordOrderProcessingMetric,
 } from './metrics'
 
 // Create base logger configuration
@@ -262,13 +263,26 @@ export const logError = (data: {
   )
 }
 
+/**
+ * Performance operations that also feed application metrics.
+ *
+ * Shared with the call sites so the metric binding cannot drift from the
+ * operation name that is logged.
+ */
+export const CHECKOUT_QUEUE_LAG_OPERATION = 'queue.checkout.lag'
+export const ORDER_CREATE_OPERATION = 'checkout.order.create'
+
 export const logPerformance = (data: {
   operation: string
   duration: number
   metadata?: Record<string, unknown>
 }) => {
-  if (data.operation === 'queue.checkout.lag') {
+  if (data.operation === CHECKOUT_QUEUE_LAG_OPERATION) {
     recordCheckoutQueueLagMetric(data.duration)
+  }
+
+  if (data.operation === ORDER_CREATE_OPERATION) {
+    recordOrderProcessingMetric(data.duration)
   }
 
   const logData = {

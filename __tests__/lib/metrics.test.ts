@@ -4,6 +4,7 @@ import {
   recordBusinessEventMetric,
   recordCacheMetric,
   recordCheckoutQueueLagMetric,
+  recordOrderProcessingMetric,
   renderPrometheusMetrics,
   resetMetrics,
 } from '@/lib/metrics'
@@ -64,6 +65,46 @@ describe('metrics', () => {
     )
     expect(output).toContain(
       'application_business_events_total{success="false"} 1'
+    )
+  })
+
+  it('records order processing durations as a histogram', () => {
+    recordOrderProcessingMetric(80)
+    recordOrderProcessingMetric(1_800)
+    recordOrderProcessingMetric(40_000)
+
+    const output = renderPrometheusMetrics()
+    expect(output).toContain(
+      '# TYPE application_order_processing_duration_ms histogram'
+    )
+    expect(output).toContain(
+      'application_order_processing_duration_ms_bucket{le="100"} 1'
+    )
+    expect(output).toContain(
+      'application_order_processing_duration_ms_bucket{le="2500"} 2'
+    )
+    expect(output).toContain(
+      'application_order_processing_duration_ms_bucket{le="30000"} 2'
+    )
+    expect(output).toContain(
+      'application_order_processing_duration_ms_bucket{le="+Inf"} 3'
+    )
+    expect(output).toContain('application_order_processing_duration_ms_sum 41880')
+    expect(output).toContain('application_order_processing_duration_ms_count 3')
+    expect(output).toContain('application_order_processing_duration_ms_max 40000')
+  })
+
+  it('clamps negative order processing durations and resets cleanly', () => {
+    recordOrderProcessingMetric(-500)
+    expect(renderPrometheusMetrics()).toContain(
+      'application_order_processing_duration_ms_sum 0'
+    )
+
+    resetMetrics()
+    const output = renderPrometheusMetrics()
+    expect(output).toContain('application_order_processing_duration_ms_count 0')
+    expect(output).toContain(
+      'application_order_processing_duration_ms_bucket{le="100"} 0'
     )
   })
 })
