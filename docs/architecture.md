@@ -33,7 +33,7 @@ Key current-state points:
 
 ### July 2026 capability update
 
-The runtime now also includes currency preferences, installable PWA metadata and offline fallback, a guest-accessible AI product assistant, staged checkout pages backed by durable checkout requests and a Vercel Queue consumer, advanced search suggestions/click analytics, account address management, admin import/export and bulk actions, checkout queue visibility, Prometheus metrics, and Sentry instrumentation. See [Feature Catalog](./features.md) for the user-facing inventory.
+The runtime now also includes currency preferences, installable PWA metadata and offline fallback, a guest-accessible AI product assistant, staged checkout pages backed by durable checkout requests processed by Inngest (with a Vercel Queue consumer as fallback), advanced search suggestions/click analytics, account address management, admin import/export and bulk actions, checkout queue visibility, Prometheus metrics, and Sentry instrumentation. See [Feature Catalog](./features.md) for the user-facing inventory.
 
 ## 2. System Overview
 
@@ -106,6 +106,7 @@ The dominant design principles in the current code are:
 | Upstash Redis                     | Cache, stale-while-revalidate, lightweight shared state |
 | Upstash Search                    | Product search index with DB fallback                   |
 | Upstash QStash                    | Signed async email event delivery                       |
+| Inngest                           | Durable, step-checkpointed checkout order processing    |
 | Vercel Blob                       | Hosted media storage                                    |
 | Vercel Edge Config                | Feature flags and shipping configuration                |
 | Vercel Analytics / Speed Insights | Runtime telemetry                                       |
@@ -318,6 +319,48 @@ This means user identity, theme selection, currency formatting, and shared UI st
 ---
 
 ## 8. Async Work, Email, and Scheduled Jobs
+
+### Durable Checkout Processing
+
+The HTTP request the customer waits on never verifies payment or creates an
+order. `enqueueCheckoutForUser` validates the submission, persists a
+`CheckoutRequest` row, hands it to an orchestrator, and returns.
+
+Processing then runs as four independently repeatable steps, all exported from
+`features/cart/services/checkout-service.ts`:
+
+1. **Preflight** — skip when the request is missing, already has an order, or is
+   already settled. Read-only apart from a self-healing status write.
+2. **Claim** — compare-and-swap the row into `PROCESSING`. Duplicate publishes,
+   queue redeliveries, webhook triggers and durable retries all race here; only
+   the winner proceeds.
+3. **Create order** — verify payment and persist the order. These stay in one
+   call on purpose: "money confirmed" and "order exists" must either both happen
+   or neither, so there is never a window where a customer is charged with no
+   order.
+4. **Record failure** — classify the error. Client-side failures (4xx) are
+   terminal; anything else resets to `PENDING` for another attempt.
+
+Two orchestrators run the same steps:
+
+| Orchestrator | Trigger | Behaviour on retry |
+| --- | --- | --- |
+| Inngest (`/api/inngest`, used when `INNGEST_EVENT_KEY` is set) | `checkout/request.created` | Each step is checkpointed, so a retry resumes after the last completed step and never re-verifies payment |
+| Vercel Queue (`/api/queue/checkout-orders`) | `checkout-orders` topic | Whole pipeline re-runs; the claim and the unique constraints keep it safe |
+
+`enqueueCheckoutForUser` prefers Inngest, falls back to the queue, and only as a
+last resort processes inline via `waitUntil`. The payment webhook is a third,
+independent trigger for the same steps.
+
+Two invariants keep a killed worker from stranding a request:
+
+- Every route that can hold a claim declares `maxDuration = 30`, which is below
+  `STALE_PROCESSING_CLAIM_MS`, so a live claim can never be stolen mid-flight.
+- `STALE_PROCESSING_CLAIM_MS` is below the queue's `retryAfterSeconds`, so the
+  redelivery that follows a killed worker can actually reclaim the request.
+
+Duplicate orders are impossible regardless: `Order.checkoutRequestId` and
+`Order.paymentTransactionId` are both unique.
 
 ### Async Email Delivery
 

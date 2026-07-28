@@ -563,5 +563,25 @@ describe('checkout-service', () => {
         'Automatic recovery stopped after 2 attempts: Unknown consumer error'
       )
     })
+
+    it('keeps an existing terminal failure reason instead of overwriting it', async () => {
+      mockDbOrdersFindFirstByCheckoutRequestId.mockResolvedValue(null)
+      mockDbCheckoutRequestsFindById.mockResolvedValue({
+        id: 'cr1',
+        status: 'FAILED',
+        errorMessage: 'Payment declined by issuer',
+      })
+
+      await recoverCheckoutRequestAfterRetryExhaustion({
+        checkoutRequestId: 'cr1',
+        deliveryCount: 5,
+        error: new Error('Retries exhausted'),
+      })
+
+      expect(mockDbCheckoutRequestsUpdateStatus).not.toHaveBeenCalled()
+      expect(mockLogBusinessEvent).not.toHaveBeenCalledWith(
+        expect.objectContaining({ event: 'checkout_request_retry_exhausted' })
+      )
+    })
   })
 })
