@@ -79,6 +79,7 @@ import {
   enqueueCheckoutForUser,
   getCheckoutRequestStatusForUser,
   processCheckoutRequestById,
+  createOrderForCheckoutRequest,
   getRecentCheckoutRequests,
   recoverCheckoutRequestAfterRetryExhaustion,
   isCheckoutRequestError,
@@ -393,6 +394,98 @@ describe('checkout-service', () => {
         'cr2xy89'
       )
       expect(mockCreateOrderForUser).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('createOrderForCheckoutRequest', () => {
+    const pendingRequest = {
+      id: 'cr3zz11',
+      userId: 'user1',
+      customerName: 'Test User',
+      customerEmail: 'test@example.com',
+      customerAddress: '123 Street',
+      addressLine1: '123 Street',
+      addressLine2: '',
+      addressLine3: '',
+      pinCode: '110001',
+      city: 'New Delhi',
+      state: 'Delhi',
+      items: [],
+      status: 'PROCESSING',
+      createdAt: new Date(),
+    }
+
+    it('throws when the checkout request no longer exists', async () => {
+      mockDbCheckoutRequestsFindById.mockResolvedValue(null)
+
+      await expect(createOrderForCheckoutRequest('cr3zz11')).rejects.toThrow(
+        'Checkout request not found'
+      )
+    })
+
+    // A durable step is retried whenever an attempt dies after its work
+    // committed but before its checkpoint persisted. Re-creating the order
+    // would raise a duplicate-transaction 409 and flip a paid request to
+    // FAILED.
+    it('returns the existing order instead of creating a second one', async () => {
+      mockDbCheckoutRequestsFindById.mockResolvedValue(pendingRequest)
+      mockDbOrdersFindFirstByCheckoutRequestId.mockResolvedValue({
+        id: 'ord9',
+      })
+
+      await expect(createOrderForCheckoutRequest('cr3zz11')).resolves.toBe(
+        'ord9'
+      )
+
+      expect(mockCreateOrderForUser).not.toHaveBeenCalled()
+      expect(mockDbCheckoutRequestsUpdateStatus).toHaveBeenCalledWith(
+        'cr3zz11',
+        'COMPLETED',
+        null
+      )
+    })
+
+    // The transient-failure path releases the claim back to PENDING, so a
+    // payment webhook can complete the request while a durable run is still
+    // retrying. The loser must not report a failure over a real order.
+    it('settles with a peer order when creation loses the race', async () => {
+      mockDbCheckoutRequestsFindById.mockResolvedValue(pendingRequest)
+      mockDbOrdersFindFirstByCheckoutRequestId
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({ id: 'ord10' })
+      mockCreateOrderForUser.mockRejectedValue(
+        Object.assign(new Error('Order already exists for payment tx'), {
+          status: 409,
+        })
+      )
+
+      await expect(createOrderForCheckoutRequest('cr3zz11')).resolves.toBe(
+        'ord10'
+      )
+
+      expect(mockDbCheckoutRequestsUpdateStatus).toHaveBeenCalledWith(
+        'cr3zz11',
+        'COMPLETED',
+        null
+      )
+    })
+
+    it('rethrows when creation fails and no order exists', async () => {
+      const failure = Object.assign(new Error('Payment declined'), {
+        status: 400,
+      })
+      mockDbCheckoutRequestsFindById.mockResolvedValue(pendingRequest)
+      mockDbOrdersFindFirstByCheckoutRequestId.mockResolvedValue(null)
+      mockCreateOrderForUser.mockRejectedValue(failure)
+
+      await expect(createOrderForCheckoutRequest('cr3zz11')).rejects.toBe(
+        failure
+      )
+      expect(mockDbCheckoutRequestsUpdateStatus).not.toHaveBeenCalledWith(
+        'cr3zz11',
+        'COMPLETED',
+        null
+      )
     })
   })
 

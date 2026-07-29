@@ -337,20 +337,24 @@ Processing then runs as four independently repeatable steps, all exported from
 3. **Create order** — verify payment and persist the order. These stay in one
    call on purpose: "money confirmed" and "order exists" must either both happen
    or neither, so there is never a window where a customer is charged with no
-   order.
+   order. The step is idempotent in both directions: it returns any order that
+   already exists instead of creating a second one, and if a peer trigger wins
+   the race to the insert it adopts that order rather than recording a failure.
 4. **Record failure** — classify the error. Client-side failures (4xx) are
    terminal; anything else resets to `PENDING` for another attempt.
 
 Two orchestrators run the same steps:
 
-| Orchestrator | Trigger | Behaviour on retry |
-| --- | --- | --- |
+| Orchestrator                                                   | Trigger                    | Behaviour on retry                                                                                        |
+| -------------------------------------------------------------- | -------------------------- | --------------------------------------------------------------------------------------------------------- |
 | Inngest (`/api/inngest`, used when `INNGEST_EVENT_KEY` is set) | `checkout/request.created` | Each step is checkpointed, so a retry resumes after the last completed step and never re-verifies payment |
-| Vercel Queue (`/api/queue/checkout-orders`) | `checkout-orders` topic | Whole pipeline re-runs; the claim and the unique constraints keep it safe |
+| Vercel Queue (`/api/queue/checkout-orders`)                    | `checkout-orders` topic    | Whole pipeline re-runs; the claim and the unique constraints keep it safe                                 |
 
 `enqueueCheckoutForUser` prefers Inngest, falls back to the queue, and only as a
-last resort processes inline via `waitUntil`. The payment webhook is a third,
-independent trigger for the same steps.
+last resort processes inline via `waitUntil`. Each transport is given a bounded
+wall-clock budget so a degraded provider hands over to the next one instead of
+holding the customer's request open until the platform kills it. The payment
+webhook is a third, independent trigger for the same steps.
 
 Two invariants keep a killed worker from stranding a request:
 

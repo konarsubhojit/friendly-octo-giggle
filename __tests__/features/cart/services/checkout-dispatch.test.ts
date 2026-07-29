@@ -171,4 +171,63 @@ describe('checkout dispatch', () => {
     )
     expect(mockWaitUntil).toHaveBeenCalledTimes(1)
   })
+
+  // An unbounded publish would hold the customer's request open until the
+  // platform kills it, so neither fallback would ever run.
+  it('stops waiting on a hung Inngest publish and uses the queue', async () => {
+    vi.useFakeTimers()
+    try {
+      mockIsInngestConfigured.mockReturnValue(true)
+      mockInngestSend.mockReturnValue(new Promise(() => {}))
+
+      const enqueued = enqueueCheckoutForUser({
+        body: checkoutBody,
+        user: testUser,
+      })
+
+      await vi.advanceTimersByTimeAsync(5_000)
+      await enqueued
+
+      expect(mockLogError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          context: 'checkout_inngest_publish_failed_falling_back_to_queue',
+        })
+      )
+      expect(mockSend).toHaveBeenCalledTimes(1)
+      expect(mockWaitUntil).not.toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('does not leave a late publish rejection unhandled', async () => {
+    const unhandled = vi.fn()
+    process.on('unhandledRejection', unhandled)
+    vi.useFakeTimers()
+    try {
+      mockIsInngestConfigured.mockReturnValue(true)
+      let rejectPublish: (error: Error) => void = () => {}
+      mockInngestSend.mockReturnValue(
+        new Promise((_resolve, reject) => {
+          rejectPublish = reject
+        })
+      )
+
+      const enqueued = enqueueCheckoutForUser({
+        body: checkoutBody,
+        user: testUser,
+      })
+      await vi.advanceTimersByTimeAsync(5_000)
+      await enqueued
+
+      rejectPublish(new Error('Inngest replied too late'))
+      await vi.advanceTimersByTimeAsync(0)
+    } finally {
+      vi.useRealTimers()
+      await new Promise((resolve) => setImmediate(resolve))
+      process.off('unhandledRejection', unhandled)
+    }
+
+    expect(unhandled).not.toHaveBeenCalled()
+  })
 })

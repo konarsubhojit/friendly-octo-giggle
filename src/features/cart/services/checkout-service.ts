@@ -290,6 +290,58 @@ export const recoverCheckoutRequestAfterRetryExhaustion = async ({
 }
 
 /**
+ * Wall-clock budget for publishing the checkout event.
+ *
+ * This runs inside the request the customer is waiting on, and the Inngest SDK
+ * retries a failed publish up to five times with no timeout of its own. Left
+ * unbounded, a degraded Inngest API would hold the route open until the
+ * platform kills it at `maxDuration`, so neither the queue fallback below nor
+ * the caller's inline fallback would ever run and the request would be stranded
+ * in `PENDING` with no orchestrator.
+ */
+const INNGEST_PUBLISH_TIMEOUT_MS = 5_000
+
+class InngestPublishTimeoutError extends Error {
+  constructor(timeoutMs: number) {
+    super(`Inngest publish did not complete within ${timeoutMs}ms`)
+    this.name = 'InngestPublishTimeoutError'
+  }
+}
+
+/**
+ * Publish the checkout event, giving up on the wait after a fixed budget.
+ *
+ * A publish that lands after the timeout is harmless: the resulting run shares
+ * the same compare-and-swap claim as the queue delivery, so at most one of them
+ * creates an order.
+ */
+const publishCheckoutEvent = async (
+  checkoutRequestId: string
+): Promise<void> => {
+  const publish = inngest
+    .send(checkoutRequestCreated.create({ checkoutRequestId }))
+    .then(() => undefined)
+
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const timeout = new Promise<never>((_resolve, reject) => {
+    timer = setTimeout(
+      () => reject(new InngestPublishTimeoutError(INNGEST_PUBLISH_TIMEOUT_MS)),
+      INNGEST_PUBLISH_TIMEOUT_MS
+    )
+  })
+
+  try {
+    // Swallow a late rejection from the abandoned publish: nothing is waiting
+    // on it once the timeout wins, and an unhandled rejection can take the
+    // whole worker down.
+    publish.catch(() => undefined)
+    await Promise.race([publish, timeout])
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+/**
  * Hand a checkout request to its durable orchestrator.
  *
  * Inngest is preferred when configured: each pipeline step checkpoints
@@ -310,7 +362,7 @@ const dispatchCheckoutProcessing = async ({
 }): Promise<void> => {
   if (isInngestConfigured()) {
     try {
-      await inngest.send(checkoutRequestCreated.create({ checkoutRequestId }))
+      await publishCheckoutEvent(checkoutRequestId)
       return
     } catch (error) {
       logError({
@@ -465,7 +517,10 @@ export type CheckoutPreflightResult =
       readonly action: 'skip'
       readonly reason: CheckoutSkipReason
     }
-  | { readonly action: 'process'; readonly checkoutRequest: CheckoutRequestRecord }
+  | {
+      readonly action: 'process'
+      readonly checkoutRequest: CheckoutRequestRecord
+    }
 
 const assertValidCheckoutRequestId = (checkoutRequestId: string): void => {
   const parseResult = CheckoutQueueMessageSchema.safeParse({
@@ -574,15 +629,32 @@ export const claimCheckoutRequest = async (
   return claimed
 }
 
-const runCheckoutOrderCreation = async (
-  checkoutRequest: CheckoutRequestRecord
-): Promise<string> => {
-  const checkoutRequestId = checkoutRequest.id
+/**
+ * Settle a request whose order already exists, returning that order's id.
+ *
+ * The order is the source of truth: once one exists the request is `COMPLETED`
+ * whatever its column currently says, so this is also the self-heal for a
+ * status write that was lost mid-flight.
+ *
+ * @returns the existing order id, or `null` when no order has been created.
+ */
+const settleWithExistingOrder = async (
+  checkoutRequestId: string
+): Promise<string | null> => {
+  const existingOrder = await findCreatedOrderForCheckout(checkoutRequestId)
+  if (!existingOrder) return null
 
-  // Payment verification and order persistence deliberately stay inside this
-  // single call: "money confirmed" and "order exists" must either both happen
-  // or neither, and the claim above makes a retry from the top safe.
-  const result = await createOrderForUser({
+  await updateCheckoutRequestStatus(checkoutRequestId, 'COMPLETED', null)
+  return existingOrder.id
+}
+
+// Payment verification and order persistence deliberately stay inside this
+// single call: "money confirmed" and "order exists" must either both happen or
+// neither, and the caller's claim makes a retry from the top safe.
+const createOrderFromCheckoutRequest = (
+  checkoutRequest: CheckoutRequestRecord
+) =>
+  createOrderForUser({
     body: {
       customerName: checkoutRequest.customerName,
       customerEmail: checkoutRequest.customerEmail,
@@ -608,8 +680,36 @@ const runCheckoutOrderCreation = async (
       name: checkoutRequest.customerName,
       email: checkoutRequest.customerEmail,
     },
-    checkoutRequestId,
+    checkoutRequestId: checkoutRequest.id,
   })
+
+const runCheckoutOrderCreation = async (
+  checkoutRequest: CheckoutRequestRecord
+): Promise<string> => {
+  const checkoutRequestId = checkoutRequest.id
+
+  // Re-entry is normal here and must never produce a second attempt: a durable
+  // step is retried whenever an attempt dies after its work committed but
+  // before its checkpoint persisted, and the claim is memoized so the retry
+  // does not go back through the pre-claim guard. Without this the retry would
+  // hit `Order_checkoutRequestId_key` / the duplicate-transaction check and the
+  // resulting 409 would mark an already-paid request `FAILED`.
+  const alreadyCreated = await settleWithExistingOrder(checkoutRequestId)
+  if (alreadyCreated) return alreadyCreated
+
+  let result: Awaited<ReturnType<typeof createOrderFromCheckoutRequest>>
+  try {
+    result = await createOrderFromCheckoutRequest(checkoutRequest)
+  } catch (error) {
+    // A peer trigger can win the gap between the guard above and the insert:
+    // the transient-failure path releases the claim back to `PENDING`, so the
+    // payment webhook may claim and complete the request while a durable run
+    // is still retrying. Its order is the real one — reporting a failure here
+    // would overwrite a `COMPLETED` request that has a paid order behind it.
+    const raced = await settleWithExistingOrder(checkoutRequestId)
+    if (raced) return raced
+    throw error
+  }
 
   await updateCheckoutRequestStatus(checkoutRequestId, 'COMPLETED', null)
 
@@ -629,7 +729,12 @@ const runCheckoutOrderCreation = async (
 /**
  * Step 3 — create the order for a claimed checkout request.
  *
- * @returns the created order id.
+ * Idempotent: if an order already exists for the request — because a previous
+ * attempt committed before its checkpoint persisted, or because a peer trigger
+ * got there first — the existing order is returned and the request is settled
+ * rather than a second creation being attempted.
+ *
+ * @returns the order id for the request.
  */
 export const createOrderForCheckoutRequest = async (
   checkoutRequestId: string

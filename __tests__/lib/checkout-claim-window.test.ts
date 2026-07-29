@@ -38,7 +38,8 @@ describe('checkout claim window', () => {
   })
 
   it('expires before the queue redelivers, so a killed worker can be reclaimed', () => {
-    const retryAfterSeconds = consumer.experimentalTriggers?.[0]?.retryAfterSeconds
+    const retryAfterSeconds =
+      consumer.experimentalTriggers?.[0]?.retryAfterSeconds
 
     expect(retryAfterSeconds).toBeGreaterThan(0)
     expect(STALE_PROCESSING_CLAIM_MS).toBeLessThan(

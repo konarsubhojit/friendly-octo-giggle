@@ -204,7 +204,9 @@ describe('processCheckoutRequestFunction', () => {
   })
 
   it('marks client-side failures non-retriable so Inngest stops immediately', async () => {
-    const failure = Object.assign(new Error('Payment declined'), { status: 400 })
+    const failure = Object.assign(new Error('Payment declined'), {
+      status: 400,
+    })
     mockCreateOrderForCheckoutRequest.mockRejectedValue(failure)
     mockRecordCheckoutProcessingFailure.mockResolvedValue({ terminal: true })
     const { step } = createStepRunner()
@@ -238,7 +240,10 @@ describe('processCheckoutRequestFunction', () => {
     const { step } = createStepRunner()
 
     await expect(
-      runCheckoutRequestSteps({ event: { data: { checkoutRequestId: '' } }, step })
+      runCheckoutRequestSteps({
+        event: { data: { checkoutRequestId: '' } },
+        step,
+      })
     ).rejects.toBeTruthy()
     expect(mockPreflightCheckoutRequest).not.toHaveBeenCalled()
   })
@@ -257,11 +262,13 @@ describe('handleCheckoutRequestFailure', () => {
       error,
     })
 
-    expect(mockRecoverCheckoutRequestAfterRetryExhaustion).toHaveBeenCalledWith({
-      checkoutRequestId: CHECKOUT_REQUEST_ID,
-      deliveryCount: CHECKOUT_FUNCTION_RETRIES + 1,
-      error,
-    })
+    expect(mockRecoverCheckoutRequestAfterRetryExhaustion).toHaveBeenCalledWith(
+      {
+        checkoutRequestId: CHECKOUT_REQUEST_ID,
+        deliveryCount: CHECKOUT_FUNCTION_RETRIES + 1,
+        error,
+      }
+    )
   })
 
   it('logs instead of throwing when the payload has no request id', async () => {
@@ -270,7 +277,9 @@ describe('handleCheckoutRequestFailure', () => {
       error: new Error('boom'),
     })
 
-    expect(mockRecoverCheckoutRequestAfterRetryExhaustion).not.toHaveBeenCalled()
+    expect(
+      mockRecoverCheckoutRequestAfterRetryExhaustion
+    ).not.toHaveBeenCalled()
     expect(mockLogError).toHaveBeenCalledWith(
       expect.objectContaining({
         context: 'inngest_checkout_failure_without_request_id',

@@ -89,9 +89,13 @@ describe('metrics', () => {
     expect(output).toContain(
       'application_order_processing_duration_ms_bucket{le="+Inf"} 3'
     )
-    expect(output).toContain('application_order_processing_duration_ms_sum 41880')
+    expect(output).toContain(
+      'application_order_processing_duration_ms_sum 41880'
+    )
     expect(output).toContain('application_order_processing_duration_ms_count 3')
-    expect(output).toContain('application_order_processing_duration_ms_max 40000')
+    expect(output).toContain(
+      'application_order_processing_duration_ms_max 40000'
+    )
   })
 
   it('clamps negative order processing durations and resets cleanly', () => {

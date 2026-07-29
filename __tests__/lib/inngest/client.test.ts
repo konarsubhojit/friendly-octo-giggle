@@ -34,9 +34,8 @@ describe('inngest client', () => {
   it('reports configured once an event key is set', async () => {
     mockEnv.INNGEST_EVENT_KEY = 'signkey-prod-abc123'
     mockEnv.INNGEST_SIGNING_KEY = 'signkey-prod-def456'
-    const { isInngestConfigured, inngest, INNGEST_APP_ID } = await import(
-      '@/lib/inngest/client'
-    )
+    const { isInngestConfigured, inngest, INNGEST_APP_ID } =
+      await import('@/lib/inngest/client')
 
     expect(isInngestConfigured()).toBe(true)
     expect(inngest.id).toBe(INNGEST_APP_ID)
