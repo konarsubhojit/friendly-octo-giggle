@@ -3,7 +3,12 @@ import { formatStructuredAddress } from '@/lib/address-utils'
 import { invalidateCache } from '@/lib/redis'
 import { invalidateUserOrderCaches } from '@/lib/cache'
 import { CreateOrderInput, OrderItemInput } from '@/lib/types'
-import { logBusinessEvent, logError } from '@/lib/logger'
+import {
+  logBusinessEvent,
+  logError,
+  logPerformance,
+  ORDER_CREATE_OPERATION,
+} from '@/lib/logger'
 import { roundMoney } from '@/lib/money'
 import {
   calculateOrderTotals,
@@ -630,6 +635,8 @@ const fetchProductsForOrder = async (
   return productList
 }
 
+const PAYMENT_VERIFY_OPERATION = 'checkout.payment.verify'
+
 const verifyPaymentForOrder = async ({
   payment,
   expectedAmount,
@@ -640,6 +647,9 @@ const verifyPaymentForOrder = async ({
   reference?: string
 }): Promise<VerifiedPayment | null> => {
   if (!payment) return null
+  // The gateway call is the only external hop in this pipeline, so it is timed
+  // separately from the order as a whole.
+  const startedAt = Date.now()
   try {
     return await verifyCheckoutPayment({ payment, expectedAmount, reference })
   } catch (error) {
@@ -654,6 +664,12 @@ const verifyPaymentForOrder = async ({
       )
     }
     throw error
+  } finally {
+    logPerformance({
+      operation: PAYMENT_VERIFY_OPERATION,
+      duration: Date.now() - startedAt,
+      metadata: { provider: payment.provider },
+    })
   }
 }
 
@@ -778,15 +794,17 @@ const resolveOrderDiscount = async ({
   }
 }
 
-export const createOrderForUser = async ({
-  body,
-  user,
-  checkoutRequestId,
-}: {
+interface CreateOrderForUserInput {
   body: CreateOrderInput
   user: OrderSessionUser
   checkoutRequestId?: string
-}) => {
+}
+
+const runOrderCreation = async ({
+  body,
+  user,
+  checkoutRequestId,
+}: CreateOrderForUserInput) => {
   const { customerDetails, requestedProductIds } = validateOrderInput({
     body,
     user,
@@ -851,4 +869,36 @@ export const createOrderForUser = async ({
   await invalidateOrderRelatedCaches({ userId: user.id, items: body.items })
   await dispatchOrderNotifications({ hydratedOrder, userId: user.id })
   return serializeCreatedOrder(hydratedOrder)
+}
+
+/**
+ * Create an order, timing the whole pipeline.
+ *
+ * Payment verification and persistence stay inside one call on purpose: "money
+ * confirmed" and "order exists" must either both happen or neither, and the
+ * caller's compare-and-swap claim makes a retry from the top safe. The timing
+ * around it feeds `application_order_processing_duration_ms` so the pipeline's
+ * real p95/p99 is measurable before any restructuring is considered.
+ */
+export const createOrderForUser = async (input: CreateOrderForUserInput) => {
+  const startedAt = Date.now()
+  let outcome = 'created'
+
+  try {
+    return await runOrderCreation(input)
+  } catch (error) {
+    outcome = 'failed'
+    throw error
+  } finally {
+    logPerformance({
+      operation: ORDER_CREATE_OPERATION,
+      duration: Date.now() - startedAt,
+      metadata: {
+        outcome,
+        itemCount: input.body.items.length,
+        paymentProvider: input.body.payment?.provider ?? 'none',
+        checkoutRequestId: input.checkoutRequestId,
+      },
+    })
+  }
 }

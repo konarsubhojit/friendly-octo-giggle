@@ -116,9 +116,28 @@ vercel --prod
 
 **Step 3.1: Configure the two async delivery paths separately**
 
-- Checkout orchestration now uses Vercel Queues via `@vercel/queue` and the trigger configured in `vercel.json`.
+- Checkout orchestration runs on Inngest when `INNGEST_EVENT_KEY` is set, and falls back to Vercel Queues (`@vercel/queue` plus the trigger in `vercel.json`) otherwise.
 - Transactional email remains on the separate QStash worker path at `/api/services/email`.
 - Keep these concerns isolated in production. Do not replace the QStash email path with the checkout queue unless you explicitly want to redesign email delivery semantics.
+
+**Runtime budget:** Fluid Compute is enabled for this project, so the platform
+ceiling is 300s. The routes that can hold a `PROCESSING` claim on a checkout
+request deliberately declare a much lower `maxDuration = 30`; see
+`STALE_PROCESSING_CLAIM_MS` in `src/lib/db-queries.ts` for the invariant that
+ties the two together. Raising either value without the other can strand a
+checkout request.
+
+Required Inngest setup (optional — skip to stay on Vercel Queues):
+
+```env
+INNGEST_EVENT_KEY=...
+INNGEST_SIGNING_KEY=...
+```
+
+- Register the app at `https://your-domain.com/api/inngest` in the Inngest dashboard.
+- Rollout: set both keys and redeploy. New checkouts publish `checkout/request.created`; in-flight queue messages keep draining through `/api/queue/checkout-orders`, so the two run side by side with no cutover window.
+- Rollback: unset `INNGEST_EVENT_KEY` and redeploy. Publishing reverts to the queue immediately; already-published Inngest runs finish on their own.
+- Both orchestrators call the same steps and share the same compare-and-swap claim, so a request can never be processed twice.
 
 Required Vercel Queue setup:
 

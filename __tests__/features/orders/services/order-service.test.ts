@@ -14,6 +14,7 @@ const {
   mockCacheUserOrdersList,
   mockLogBusinessEvent,
   mockLogError,
+  mockLogPerformance,
   mockSendOrderConfirmationEmail,
   mockGetQStashClient,
   mockWriteOrderToRedis,
@@ -54,6 +55,7 @@ const {
     mockCacheUserOrdersList: vi.fn(),
     mockLogBusinessEvent: vi.fn(),
     mockLogError: vi.fn(),
+    mockLogPerformance: vi.fn(),
     mockSendOrderConfirmationEmail: vi.fn(),
     mockGetQStashClient: vi.fn(),
     mockWriteOrderToRedis: vi.fn().mockResolvedValue(undefined),
@@ -109,6 +111,8 @@ vi.mock('@/lib/cache', () => ({
 vi.mock('@/lib/logger', () => ({
   logBusinessEvent: mockLogBusinessEvent,
   logError: mockLogError,
+  logPerformance: mockLogPerformance,
+  ORDER_CREATE_OPERATION: 'checkout.order.create',
 }))
 
 vi.mock('@/lib/email', () => ({

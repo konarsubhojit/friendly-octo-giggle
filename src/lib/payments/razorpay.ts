@@ -1,5 +1,6 @@
 import { createHmac, timingSafeEqual } from 'node:crypto'
 import { env } from '@/lib/env'
+import { logError } from '@/lib/logger'
 import { fromMinorUnits, toMinorUnits } from '@/lib/money'
 import { PaymentConfigurationError, PaymentVerificationError } from './errors'
 import type {
@@ -16,6 +17,71 @@ import type {
 } from './gateway'
 
 const RAZORPAY_API_BASE = 'https://api.razorpay.com/v1'
+
+/**
+ * Wall-clock budget for a single Razorpay API call.
+ *
+ * Without this the call is unbounded: a hanging gateway would block the
+ * checkout worker until the platform kills the function at `maxDuration`,
+ * which is indistinguishable from a crash and leaves the checkout request
+ * stuck in `PROCESSING` until its claim goes stale.
+ */
+const RAZORPAY_REQUEST_TIMEOUT_MS = 10_000
+
+/**
+ * Timeouts and transport failures are transient, so they are surfaced as 5xx.
+ * `verifyPaymentForOrder` maps the status straight onto the order pipeline's
+ * retry policy: < 500 fails the checkout terminally, >= 500 resets it to
+ * `PENDING` for another delivery.
+ */
+const RAZORPAY_TIMEOUT_STATUS = 504
+const RAZORPAY_TRANSPORT_STATUS = 502
+
+const isAbortError = (error: unknown): boolean =>
+  error instanceof Error &&
+  (error.name === 'TimeoutError' || error.name === 'AbortError')
+
+/**
+ * Perform a Razorpay API call under a bounded timeout.
+ *
+ * Both the abort and the transport failure paths raise retriable
+ * `PaymentVerificationError`s so a slow or unreachable gateway is retried
+ * rather than terminating the checkout as a client error.
+ */
+const razorpayFetch = async (
+  url: string,
+  init: RequestInit,
+  operation: string
+): Promise<Response> => {
+  try {
+    return await fetch(url, {
+      ...init,
+      cache: 'no-store',
+      signal: AbortSignal.timeout(RAZORPAY_REQUEST_TIMEOUT_MS),
+    })
+  } catch (error) {
+    // `PaymentVerificationError` carries no cause, so without this the root
+    // cause (DNS, TLS, socket reset, or a plain programming error) is lost and
+    // an operator only ever sees the mapped message.
+    logError({
+      error,
+      context: 'razorpay_request_failed',
+      additionalInfo: { operation },
+    })
+
+    if (isAbortError(error)) {
+      throw new PaymentVerificationError(
+        `Payment provider timed out while trying to ${operation}`,
+        RAZORPAY_TIMEOUT_STATUS
+      )
+    }
+
+    throw new PaymentVerificationError(
+      `Unable to reach the payment provider to ${operation}`,
+      RAZORPAY_TRANSPORT_STATUS
+    )
+  }
+}
 
 interface RazorpayPaymentResponse {
   id: string
@@ -174,19 +240,22 @@ export const razorpayGateway: PaymentGateway = {
   }: CreateGatewayOrderInput): Promise<GatewayOrder> => {
     const { keyId, keySecret } = ensureRazorpayConfigured()
 
-    const response = await fetch(`${RAZORPAY_API_BASE}/orders`, {
-      method: 'POST',
-      headers: {
-        Authorization: authHeader(keyId, keySecret),
-        'Content-Type': 'application/json',
+    const response = await razorpayFetch(
+      `${RAZORPAY_API_BASE}/orders`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: authHeader(keyId, keySecret),
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          amount: toGatewayAmount(amount),
+          currency,
+          receipt,
+        }),
       },
-      body: JSON.stringify({
-        amount: toGatewayAmount(amount),
-        currency,
-        receipt,
-      }),
-      cache: 'no-store',
-    })
+      'create a payment order'
+    )
 
     if (!response.ok) {
       throw new PaymentVerificationError('Unable to create payment order', 502)
@@ -219,14 +288,14 @@ export const razorpayGateway: PaymentGateway = {
       keySecret,
     })
 
-    const response = await fetch(
+    const response = await razorpayFetch(
       `${RAZORPAY_API_BASE}/payments/${payment.paymentId}`,
       {
         headers: {
           Authorization: authHeader(keyId, keySecret),
         },
-        cache: 'no-store',
-      }
+      },
+      'verify a payment'
     )
 
     if (!response.ok) {
@@ -350,7 +419,7 @@ export const razorpayGateway: PaymentGateway = {
   }: RefundInput): Promise<PaymentRefund> => {
     const { keyId, keySecret } = ensureRazorpayConfigured()
 
-    const response = await fetch(
+    const response = await razorpayFetch(
       `${RAZORPAY_API_BASE}/payments/${paymentTransactionId}/refund`,
       {
         method: 'POST',
@@ -359,8 +428,8 @@ export const razorpayGateway: PaymentGateway = {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ amount: toGatewayAmount(amount) }),
-        cache: 'no-store',
-      }
+      },
+      'refund a payment'
     )
 
     if (!response.ok) {

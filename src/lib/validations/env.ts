@@ -117,6 +117,19 @@ const validateRazorpay = (data: EnvData, ctx: z.RefinementCtx) => {
   })
 }
 
+const validateInngest = (data: EnvData, ctx: z.RefinementCtx) => {
+  // Publishing checkout events without a signing key would produce runs the
+  // serve endpoint cannot authenticate, stranding every checkout request.
+  if (!data.INNGEST_EVENT_KEY?.trim()) return
+  if (data.INNGEST_SIGNING_KEY?.trim()) return
+
+  ctx.addIssue({
+    code: 'custom',
+    path: ['INNGEST_SIGNING_KEY'],
+    message: 'INNGEST_SIGNING_KEY must be set when INNGEST_EVENT_KEY is set',
+  })
+}
+
 const BaseEnvSchema = z.object({
   DATABASE_URL: z.string(),
   READ_DATABASE_URL: z.string().optional(),
@@ -138,6 +151,8 @@ const BaseEnvSchema = z.object({
   QSTASH_TOKEN: z.string().optional(),
   QSTASH_CURRENT_SIGNING_KEY: z.string().optional(),
   QSTASH_NEXT_SIGNING_KEY: z.string().optional(),
+  INNGEST_EVENT_KEY: z.string().optional(),
+  INNGEST_SIGNING_KEY: z.string().optional(),
   NEXT_PUBLIC_APP_URL: z.url().optional(),
   UPSTASH_SEARCH_REST_URL: z.url().optional(),
   UPSTASH_SEARCH_REST_TOKEN: z.string().optional(),
@@ -190,6 +205,7 @@ export const EnvSchema = BaseEnvSchema.superRefine((data, ctx) => {
   validateProductionKeys(data, ctx)
   validateAzureBlob(data, ctx)
   validateRazorpay(data, ctx)
+  validateInngest(data, ctx)
 })
 
 export type Env = z.infer<typeof EnvSchema>

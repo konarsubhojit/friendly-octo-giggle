@@ -7,7 +7,11 @@ const envMock = vi.hoisted(() => ({
   RAZORPAY_WEBHOOK_SECRET: 'webhook_secret' as string | undefined,
 }))
 
+const { mockLogError } = vi.hoisted(() => ({ mockLogError: vi.fn() }))
+
 vi.mock('@/lib/env', () => ({ env: envMock }))
+
+vi.mock('@/lib/logger', () => ({ logError: mockLogError }))
 
 const {
   PaymentConfigurationError,
@@ -186,6 +190,105 @@ describe('razorpay gateway', () => {
     await expect(
       razorpay.createOrder({ amount: 250, currency: 'INR', receipt: 'chk_1' })
     ).rejects.toThrow('Unable to create payment order')
+  })
+
+  describe('bounded gateway calls', () => {
+    const signedPayment = () => {
+      const orderId = 'order_123'
+      const paymentId = 'pay_123'
+      return {
+        provider: 'RAZORPAY' as const,
+        orderId,
+        paymentId,
+        signature: sign('key_secret', `${orderId}|${paymentId}`),
+      }
+    }
+
+    const timeoutError = () => {
+      const error = new Error('The operation was aborted due to timeout')
+      error.name = 'TimeoutError'
+      return error
+    }
+
+    it('sends every gateway call with an abort signal', async () => {
+      const fetchMock = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ id: 'order_1', amount: 25000, currency: 'INR' }),
+      })
+      vi.stubGlobal('fetch', fetchMock)
+
+      await razorpay.createOrder({
+        amount: 250,
+        currency: 'INR',
+        receipt: 'chk_123',
+      })
+
+      const [, init] = fetchMock.mock.calls[0]
+      expect(init.signal).toBeInstanceOf(AbortSignal)
+      expect(init.cache).toBe('no-store')
+    })
+
+    it('maps a verification timeout onto the retriable 5xx path', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockRejectedValue(timeoutError()))
+
+      await expect(
+        razorpay.verifyPayment({
+          payment: signedPayment(),
+          expectedAmount: 250,
+        })
+      ).rejects.toMatchObject({
+        name: 'PaymentVerificationError',
+        status: 504,
+      })
+    })
+
+    it('maps a transport failure onto the retriable 5xx path', async () => {
+      const transportError = new TypeError('fetch failed')
+      vi.stubGlobal('fetch', vi.fn().mockRejectedValue(transportError))
+
+      await expect(
+        razorpay.verifyPayment({
+          payment: signedPayment(),
+          expectedAmount: 250,
+        })
+      ).rejects.toMatchObject({
+        name: 'PaymentVerificationError',
+        status: 502,
+      })
+      // The mapped error carries no cause, so the diagnostic has to be logged.
+      expect(mockLogError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: transportError,
+          context: 'razorpay_request_failed',
+          additionalInfo: { operation: 'verify a payment' },
+        })
+      )
+    })
+
+    it('bounds order creation and refunds as well', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockRejectedValue(timeoutError()))
+
+      await expect(
+        razorpay.createOrder({ amount: 250, currency: 'INR', receipt: 'chk_1' })
+      ).rejects.toMatchObject({ status: 504 })
+      await expect(
+        razorpay.refund({ paymentTransactionId: 'pay_123', amount: 250 })
+      ).rejects.toMatchObject({ status: 504 })
+    })
+
+    it('keeps out-of-range amounts a client error', async () => {
+      const fetchMock = vi.fn()
+      vi.stubGlobal('fetch', fetchMock)
+
+      await expect(
+        razorpay.createOrder({
+          amount: Number.MAX_SAFE_INTEGER,
+          currency: 'INR',
+          receipt: 'chk_1',
+        })
+      ).rejects.toMatchObject({ status: 400 })
+      expect(fetchMock).not.toHaveBeenCalled()
+    })
   })
 
   it('rejects a payment missing its gateway references', async () => {
