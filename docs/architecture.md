@@ -351,10 +351,11 @@ Two orchestrators run the same steps:
 | Vercel Queue (`/api/queue/checkout-orders`)                    | `checkout-orders` topic    | Whole pipeline re-runs; the claim and the unique constraints keep it safe                                 |
 
 `enqueueCheckoutForUser` prefers Inngest, falls back to the queue, and only as a
-last resort processes inline via `waitUntil`. Each transport is given a bounded
-wall-clock budget so a degraded provider hands over to the next one instead of
-holding the customer's request open until the platform kills it. The payment
-webhook is a third, independent trigger for the same steps.
+last resort processes inline via `waitUntil`. The Inngest publish is given a
+bounded wall-clock budget so a degraded Inngest API hands over to the queue
+instead of holding the customer's request open until the platform kills it at
+`maxDuration`. The payment webhook is a third, independent trigger for the same
+steps.
 
 Two invariants keep a killed worker from stranding a request:
 

@@ -487,6 +487,30 @@ describe('checkout-service', () => {
         null
       )
     })
+
+    // Swapping the original error for a lookup error would reclassify a
+    // terminal 4xx as transient and lose the reason shown to the customer.
+    it('keeps the original error when the race re-check itself fails', async () => {
+      const failure = Object.assign(new Error('Payment declined'), {
+        status: 400,
+      })
+      const lookupFailure = new Error('Replica unavailable')
+      mockDbCheckoutRequestsFindById.mockResolvedValue(pendingRequest)
+      mockDbOrdersFindFirstByCheckoutRequestId
+        .mockResolvedValueOnce(null)
+        .mockRejectedValueOnce(lookupFailure)
+      mockCreateOrderForUser.mockRejectedValue(failure)
+
+      await expect(createOrderForCheckoutRequest('cr3zz11')).rejects.toBe(
+        failure
+      )
+      expect(mockLogError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: lookupFailure,
+          context: 'checkout_race_settlement_check_failed',
+        })
+      )
+    })
   })
 
   describe('getRecentCheckoutRequests', () => {

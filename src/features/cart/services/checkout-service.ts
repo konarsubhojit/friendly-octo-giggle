@@ -313,7 +313,8 @@ class InngestPublishTimeoutError extends Error {
  *
  * A publish that lands after the timeout is harmless: the resulting run shares
  * the same compare-and-swap claim as the queue delivery, so at most one of them
- * creates an order.
+ * creates an order. `Promise.race` subscribes to the publish promise, so a late
+ * rejection is already handled and cannot surface as an unhandled rejection.
  */
 const publishCheckoutEvent = async (
   checkoutRequestId: string
@@ -331,10 +332,6 @@ const publishCheckoutEvent = async (
   })
 
   try {
-    // Swallow a late rejection from the abandoned publish: nothing is waiting
-    // on it once the timeout wins, and an unhandled rejection can take the
-    // whole worker down.
-    publish.catch(() => undefined)
     await Promise.race([publish, timeout])
   } finally {
     clearTimeout(timer)
@@ -648,6 +645,30 @@ const settleWithExistingOrder = async (
   return existingOrder.id
 }
 
+/**
+ * Best-effort variant of `settleWithExistingOrder` for the failure path.
+ *
+ * Losing the original ordering error would be worse than losing the self-heal:
+ * `recordCheckoutProcessingFailure` classifies terminal versus transient purely
+ * from the error it is handed, so letting a lookup failure propagate in its
+ * place would turn "payment declined" into four more retries and a generic
+ * retry-exhausted message.
+ */
+const findSettledOrderAfterFailure = async (
+  checkoutRequestId: string
+): Promise<string | null> => {
+  try {
+    return await settleWithExistingOrder(checkoutRequestId)
+  } catch (error) {
+    logError({
+      error,
+      context: 'checkout_race_settlement_check_failed',
+      additionalInfo: { checkoutRequestId },
+    })
+    return null
+  }
+}
+
 // Payment verification and order persistence deliberately stay inside this
 // single call: "money confirmed" and "order exists" must either both happen or
 // neither, and the caller's claim makes a retry from the top safe.
@@ -706,7 +727,7 @@ const runCheckoutOrderCreation = async (
     // payment webhook may claim and complete the request while a durable run
     // is still retrying. Its order is the real one — reporting a failure here
     // would overwrite a `COMPLETED` request that has a paid order behind it.
-    const raced = await settleWithExistingOrder(checkoutRequestId)
+    const raced = await findSettledOrderAfterFailure(checkoutRequestId)
     if (raced) return raced
     throw error
   }
