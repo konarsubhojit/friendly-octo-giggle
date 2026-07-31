@@ -109,9 +109,7 @@ describe('withApiLogging', () => {
     const response = mockResponse(200)
     const handler = vi.fn().mockResolvedValue(response)
     const wrapped = withApiLogging(handler)
-    const result = await wrapped(
-      mockRequest('GET', '/api/checkout/abc1234')
-    )
+    const result = await wrapped(mockRequest('GET', '/api/checkout/abc1234'))
     // Should pass through to handler without returning 429
     expect(result.status).toBe(200)
     expect(handler).toHaveBeenCalledOnce()
