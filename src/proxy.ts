@@ -4,6 +4,7 @@ import { Ratelimit } from '@upstash/ratelimit'
 import { Redis } from '@upstash/redis'
 import { getFeatureFlags } from '@/lib/edge-config'
 import {
+  buildIdentifier,
   GENERAL_RATE_LIMIT_MAX_REQUESTS,
   getGeneralLimiter,
   getStrictLimiter,
@@ -78,6 +79,8 @@ const RATE_LIMIT_PATHS = [
   '/api/upload',
   '/api/account',
   '/api/search',
+  '/api/products',
+  '/api/share',
 ]
 const STRICT_RATE_LIMIT_PATHS = [
   '/api/auth/register',
@@ -88,6 +91,11 @@ const STRICT_RATE_LIMIT_PATHS = [
   '/api/auth/forgot-password',
   '/api/auth/reset-password',
 ]
+
+// Paths matched EXACTLY (not by prefix) for the strict rate limiter at the
+// edge. Exact matching prevents read-only sub-paths (e.g. GET /api/checkout/{id})
+// from sharing the same tight bucket as the write endpoint (POST /api/checkout).
+const STRICT_RATE_LIMIT_EXACT_PATHS = ['/api/checkout']
 
 const AI_RATE_LIMIT_PATHS = ['/api/ai']
 const AI_RATE_LIMIT_MAX_REQUESTS = 10 // stricter: 10 per minute for AI
@@ -205,10 +213,8 @@ const getClientIpFromHeaders = (headers: Headers): string => {
   return immediateProxyIp ?? 'unknown'
 }
 
-const buildIdentifier = (userId: string | null, ipAddress: string): string =>
-  userId ? `user:${userId}` : `ip:${ipAddress}`
-
 const isStrictRateLimitPath = (pathname: string): boolean =>
+  STRICT_RATE_LIMIT_EXACT_PATHS.includes(pathname) ||
   STRICT_RATE_LIMIT_PATHS.some((pathPrefix) => pathname.startsWith(pathPrefix))
 
 const buildRateLimitUnavailableResponse = (limit: number): NextResponse => {
