@@ -15,7 +15,7 @@ import {
   selectCart,
   fetchCart,
 } from '@/features/cart/store/cartSlice'
-import { apiClient } from '@/lib/api-client'
+import { apiClient, ApiError } from '@/lib/api-client'
 import type { AppDispatch } from '@/lib/store'
 import type {
   CheckoutEnqueueResponse,
@@ -33,8 +33,10 @@ import { GradientHeading } from '@/components/ui/GradientHeading'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import Link from 'next/link'
 
-const CHECKOUT_POLL_INTERVAL_MS = 1500
-const CHECKOUT_POLL_MAX_ATTEMPTS = 40
+const CHECKOUT_POLL_INITIAL_INTERVAL_MS = 2_000
+const CHECKOUT_POLL_MAX_INTERVAL_MS = 15_000
+const CHECKOUT_POLL_BACKOFF_FACTOR = 1.5
+const CHECKOUT_POLL_MAX_ATTEMPTS = 20
 
 const delay = (ms: number) =>
   new Promise<void>((resolve) => {
@@ -133,21 +135,41 @@ export default function CheckoutPaymentPage() {
     checkoutRequestId: string
   ): Promise<CheckoutRequestStatusResponse> => {
     for (let attempt = 0; attempt < CHECKOUT_POLL_MAX_ATTEMPTS; attempt++) {
-      const checkoutStatus = await apiClient.get<CheckoutRequestStatusResponse>(
-        `/api/checkout/${checkoutRequestId}`
+      try {
+        const checkoutStatus =
+          await apiClient.get<CheckoutRequestStatusResponse>(
+            `/api/checkout/${checkoutRequestId}`
+          )
+
+        if (checkoutStatus.status === 'COMPLETED') {
+          return checkoutStatus
+        }
+
+        if (checkoutStatus.status === 'FAILED') {
+          throw new Error(checkoutStatus.error ?? 'Checkout failed')
+        }
+
+        setCheckoutMessage("We're processing your order…")
+      } catch (error) {
+        if (error instanceof ApiError && error.status === 429) {
+          // Honour the Retry-After header so we don't burn through the budget.
+          const waitMs = Math.max(error.retryAfter ?? 60, 1) * 1000
+          setCheckoutMessage('Please wait a moment before retrying…')
+          await delay(waitMs)
+          continue
+        }
+        // Any other error (including FAILED status above) bubbles up.
+        throw error
+      }
+
+      // Exponential backoff: start fast to catch quick completions, then slow
+      // down to avoid hitting the rate limiter on longer Inngest runs.
+      const nextInterval = Math.min(
+        CHECKOUT_POLL_INITIAL_INTERVAL_MS *
+          Math.pow(CHECKOUT_POLL_BACKOFF_FACTOR, attempt),
+        CHECKOUT_POLL_MAX_INTERVAL_MS
       )
-
-      if (checkoutStatus.status === 'COMPLETED') {
-        return checkoutStatus
-      }
-
-      if (checkoutStatus.status === 'FAILED') {
-        throw new Error(checkoutStatus.error ?? 'Checkout failed')
-      }
-
-      setCheckoutMessage("We're processing your order…")
-
-      await delay(CHECKOUT_POLL_INTERVAL_MS)
+      await delay(nextInterval)
     }
 
     throw new Error(

@@ -15,10 +15,6 @@ vi.mock('@/lib/auth', () => ({
   auth: vi.fn().mockResolvedValue(null),
 }))
 
-vi.mock('@/lib/rate-limit', () => ({
-  checkRateLimit: vi.fn().mockResolvedValue(null),
-}))
-
 function mockRequest(method = 'GET', pathname = '/api/test'): NextRequest {
   return {
     method,
@@ -105,6 +101,21 @@ describe('withApiLogging', () => {
       requestId: 'req-test-id',
     })
   })
+
+  it('does not perform rate limiting (handled at the edge proxy)', async () => {
+    // The middleware must not call checkRateLimit — rate limiting is now
+    // exclusively the proxy's responsibility to avoid double-counting tokens.
+    const { withApiLogging } = await import('@/lib/api-middleware')
+    const response = mockResponse(200)
+    const handler = vi.fn().mockResolvedValue(response)
+    const wrapped = withApiLogging(handler)
+    const result = await wrapped(
+      mockRequest('GET', '/api/checkout/abc1234')
+    )
+    // Should pass through to handler without returning 429
+    expect(result.status).toBe(200)
+    expect(handler).toHaveBeenCalledOnce()
+  })
 })
 
 describe('withLogging', () => {
@@ -152,5 +163,18 @@ describe('withLogging', () => {
         statusCode: 404,
       })
     )
+  })
+
+  it('does not perform rate limiting (handled at the edge proxy)', async () => {
+    // The middleware must not call checkRateLimit — rate limiting is now
+    // exclusively the proxy's responsibility to avoid double-counting tokens.
+    const { withLogging } = await import('@/lib/api-middleware')
+    const response = mockResponse(200)
+    const handler = vi.fn().mockResolvedValue(response)
+    const wrapped = withLogging(handler)
+    const result = await wrapped(mockRequest('GET', '/api/checkout/abc1234'))
+    // Should pass through without returning 429
+    expect(result.status).toBe(200)
+    expect(handler).toHaveBeenCalledOnce()
   })
 })

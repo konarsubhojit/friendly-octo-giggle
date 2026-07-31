@@ -7,12 +7,20 @@
  */
 
 export class ApiError extends Error {
+  /**
+   * Number of seconds the client should wait before retrying, parsed from
+   * the `Retry-After` response header. Only populated on 429 responses.
+   */
+  readonly retryAfter: number | undefined
+
   constructor(
     message: string,
-    public readonly status: number
+    public readonly status: number,
+    retryAfter?: number
   ) {
     super(message)
     this.name = 'ApiError'
+    this.retryAfter = retryAfter
   }
 }
 
@@ -29,7 +37,10 @@ const request = async <T>(url: string, options?: RequestInit): Promise<T> => {
   const res = await fetch(url, options)
   if (!res.ok) {
     const message = await parseErrorResponse(res)
-    throw new ApiError(message, res.status)
+    const retryAfterHeader = res.headers?.get?.('Retry-After') ?? null
+    const retryAfter =
+      retryAfterHeader !== null ? parseInt(retryAfterHeader, 10) : undefined
+    throw new ApiError(message, res.status, retryAfter)
   }
   return res.json() as Promise<T>
 }
