@@ -1,115 +1,148 @@
-# Feature Specification: [FEATURE NAME]
+# Feature Specification: Personalized Recommendations
 
-**Feature Branch**: `[###-feature-name]`  
-**Created**: [DATE]  
+**Feature Branch**: `017-personalized-recommendations`  
+**Created**: 2026-08-01  
 **Status**: Draft  
-**Input**: User description: "$ARGUMENTS"
+**Epic**: Phase 2 — Correctness and commerce depth  
+**Input**: Compute product affinity from purchase, share, and browsing signals and surface it as recommendation rails on the product page, the cart, the home page, and zero-result search, with a bestseller fallback whenever scores are unavailable.
+
+## Baseline (verified 2026-08-01)
+
+- Discovery today is query-driven and non-personalized: faceted search and suggestions (`src/lib/search-discovery.ts`, `src/lib/search/`), click analytics, a bestsellers scroller, and a recently-viewed strip.
+- Signals already exist in the database and are not yet used for affinity: `OrderItem` (co-purchase), `ProductShare` (intent), `Review` and `ReviewVote` (sentiment), and `Wishlist` (explicit interest).
+- The infrastructure needed to compute and serve scores is already in place: Inngest scheduled functions (`refreshExchangeRatesFunction`, `scanAbandonedCartsFunction`) as the cron pattern, Redis with stampede prevention and stale-while-revalidate via `getCachedData`, and cache key conventions in `src/lib/cache.ts`.
+- The platform's established fallback discipline — every optional service degrades to a database-backed path — applies directly: bestsellers is the natural fallback for an unavailable recommendation score.
+- There is no `recommend*` module anywhere in `src/`; this capability does not exist in any form today.
 
 ## User Scenarios & Testing _(mandatory)_
 
-<!--
-  IMPORTANT: User stories should be PRIORITIZED as user journeys ordered by importance.
-  Each user story/journey must be INDEPENDENTLY TESTABLE - meaning if you implement just ONE of them,
-  you should still have a viable MVP (Minimum Viable Product) that delivers value.
+### User Story 1 - Related products on the product page (Priority: P1)
 
-  Assign priorities (P1, P2, P3, etc.) to each story, where P1 is the most critical.
-  Think of each story as a standalone slice of functionality that can be:
-  - Developed independently
-  - Tested independently
-  - Deployed independently
-  - Demonstrated to users independently
--->
+A shopper viewing a product sees other products frequently bought or viewed alongside it, ranked by strength of association.
 
-### User Story 1 - [Brief Title] (Priority: P1)
+**Why this priority**: The product page is where purchase intent is highest and where a relevant adjacent item most reliably increases basket size. It also validates the scoring pipeline end to end with a single surface.
 
-[Describe this user journey in plain language]
-
-**Why this priority**: [Explain the value and why it has this priority level]
-
-**Independent Test**: [Describe how this can be tested independently - e.g., "Can be fully tested by [specific action] and delivers [specific value]"]
+**Independent Test**: Seed orders containing known product pairs, run the scoring job, open one product's page, and confirm its co-purchased partners appear in association-strength order.
 
 **Acceptance Scenarios**:
 
-1. **Given** [initial state], **When** [action], **Then** [expected outcome]
-2. **Given** [initial state], **When** [action], **Then** [expected outcome]
+1. **Given** products co-purchased in past orders, **When** a shopper opens one of them, **Then** its partners are shown ordered by association strength.
+2. **Given** a product with no association data, **When** a shopper opens it, **Then** the rail falls back to bestsellers from the same category rather than rendering empty.
+3. **Given** a recommendation candidate that is soft-deleted, out of stock, or unpublished, **When** the rail renders, **Then** that candidate is excluded.
+4. **Given** the recommendation rail, **When** it renders, **Then** it never includes the product currently being viewed.
 
 ---
 
-### User Story 2 - [Brief Title] (Priority: P2)
+### User Story 2 - Cart cross-sell before checkout (Priority: P2)
 
-[Describe this user journey in plain language]
+A shopper reviewing their cart sees complementary products derived from everything already in the cart.
 
-**Why this priority**: [Explain the value and why it has this priority level]
+**Why this priority**: A high-conversion placement that reuses the Story 1 scoring pipeline, but it must not distract from checkout completion.
 
-**Independent Test**: [Describe how this can be tested independently]
+**Independent Test**: Add known products to a cart, open the cart, and confirm suggestions derive from the combined cart contents and exclude items already present.
 
 **Acceptance Scenarios**:
 
-1. **Given** [initial state], **When** [action], **Then** [expected outcome]
+1. **Given** a cart with items, **When** the cart page renders, **Then** suggestions are derived from all cart items combined.
+2. **Given** a product already in the cart, **When** suggestions render, **Then** it is not suggested again.
+3. **Given** an empty cart, **When** the page renders, **Then** no cross-sell rail is shown.
+4. **Given** the cross-sell rail, **When** it renders, **Then** it does not displace or visually outrank the checkout call to action.
 
 ---
 
-### User Story 3 - [Brief Title] (Priority: P3)
+### User Story 3 - Personalized home rail for signed-in shoppers (Priority: P2)
 
-[Describe this user journey in plain language]
+A returning signed-in shopper sees a rail informed by their own orders, wishlist, and recently viewed products.
 
-**Why this priority**: [Explain the value and why it has this priority level]
+**Why this priority**: Highest personalization value, but it depends on per-user data and carries the strictest privacy constraints, so it follows the anonymous surfaces.
 
-**Independent Test**: [Describe how this can be tested independently]
+**Independent Test**: Sign in as a user with order and wishlist history, load the home page, and confirm the rail reflects that history and differs from a second user's rail.
 
 **Acceptance Scenarios**:
 
-1. **Given** [initial state], **When** [action], **Then** [expected outcome]
+1. **Given** a signed-in shopper with history, **When** they open the home page, **Then** a personalized rail reflects their own signals.
+2. **Given** a guest, **When** they open the home page, **Then** they see a non-personalized rail and no per-user data is computed or stored for them.
+3. **Given** two different signed-in shoppers, **When** each loads the home page, **Then** neither receives the other's recommendations.
+4. **Given** a signed-in shopper with no history, **When** the rail renders, **Then** it falls back to bestsellers.
 
 ---
 
-[Add more user stories as needed, each with an assigned priority]
+### User Story 4 - Recovery from zero-result search (Priority: P3)
+
+A shopper whose search returns nothing is offered relevant products instead of a dead end.
+
+**Why this priority**: Recovers an otherwise-lost session, but affects a smaller share of traffic than the primary rails.
+
+**Independent Test**: Search for a term with no matches and confirm recommended products are offered alongside the existing zero-result guidance.
+
+**Acceptance Scenarios**:
+
+1. **Given** a search with no results, **When** the page renders, **Then** recommended products are offered.
+2. **Given** the search had a category filter, **When** recovery renders, **Then** suggestions respect that category when possible.
+3. **Given** no recommendation data exists, **When** recovery renders, **Then** bestsellers are shown.
+
+---
 
 ### Edge Cases
 
-<!--
-  ACTION REQUIRED: The content in this section represents placeholders.
-  Fill them out with the right edge cases.
--->
-
-- What happens when [boundary condition]?
-- How does system handle [error scenario]?
+- A cold catalog with no order history must degrade to bestsellers everywhere rather than showing empty rails.
+- Scores must never expose another customer's purchase history, directly or by inference from a single-order association.
+- An association derived from a single order is statistically meaningless and must be suppressed by a minimum-support threshold.
+- Guest recommendation requests must not create or persist per-user profiles.
+- Recommendation data must never reveal exact stock counts, consistent with the AI assistant's existing stock-privacy rule.
+- The scoring job must be bounded in runtime and memory so a growing order table cannot exhaust the function timeout.
+- Deleting a user or product must remove the associated signals from subsequent score computation.
+- A cache stampede on a popular product's rail must be prevented by the existing `getCachedData` mechanism.
+- Recommendations must never override explicit shopper intent such as an active category filter.
 
 ## Requirements _(mandatory)_
 
-<!--
-  ACTION REQUIRED: The content in this section represents placeholders.
-  Fill them out with the right functional requirements.
--->
-
 ### Functional Requirements
 
-- **FR-001**: System MUST [specific capability, e.g., "allow users to create accounts"]
-- **FR-002**: System MUST [specific capability, e.g., "validate email addresses"]
-- **FR-003**: Users MUST be able to [key interaction, e.g., "reset their password"]
-- **FR-004**: System MUST [data requirement, e.g., "persist user preferences"]
-- **FR-005**: System MUST [behavior, e.g., "log all security events"]
+- **FR-001**: A scheduled Inngest function MUST compute product affinity scores from order co-purchase, share, wishlist, and recently-viewed signals.
+- **FR-002**: The scoring job MUST process a bounded window of history per run and MUST be safe to re-run without corrupting scores.
+- **FR-003**: Associations below a documented minimum support threshold MUST be discarded.
+- **FR-004**: Computed scores MUST be cached in Redis through `getCachedData` with stampede prevention and an explicit TTL.
+- **FR-005**: Every recommendation surface MUST fall back to category-scoped bestsellers when scores are unavailable, empty, or Redis is down.
+- **FR-006**: Recommendation results MUST exclude soft-deleted, unpublished, and out-of-stock products, and MUST exclude the anchor product or current cart contents.
+- **FR-007**: Recommendations MUST be surfaced on the product detail page, the cart page, the home page for signed-in shoppers, and the zero-result search state.
+- **FR-008**: Personalized results MUST be computed only for authenticated users, scoped strictly to the requesting user's own signals.
+- **FR-009**: Guest requests MUST NOT create, persist, or cache a per-user profile.
+- **FR-010**: Recommendation responses MUST NOT disclose exact stock counts.
+- **FR-011**: Recommendation surfaces MUST NOT block page rendering; they MUST stream inside `Suspense` boundaries with skeleton fallbacks.
+- **FR-012**: Recommendation impressions and clicks MUST be recorded so effectiveness can be measured, reusing the existing search click-analytics approach.
+- **FR-013**: Schema changes MUST ship as a reviewed Drizzle migration with indexes supporting anchor-product score lookups.
+- **FR-014**: An administrator MUST be able to trigger a score recomputation and see when scores were last refreshed.
+- **FR-015**: `docs/features.md` MUST document the recommendation surfaces, the signals used, and the fallback behavior.
 
-_Example of marking unclear requirements:_
+### Key Entities
 
-- **FR-006**: System MUST authenticate users via [NEEDS CLARIFICATION: auth method not specified - email/password, SSO, OAuth?]
-- **FR-007**: System MUST retain user data for [NEEDS CLARIFICATION: retention period not specified]
-
-### Key Entities _(include if feature involves data)_
-
-- **[Entity 1]**: [What it represents, key attributes without implementation]
-- **[Entity 2]**: [What it represents, relationships to other entities]
+- **ProductAffinityScore**: A directed association between an anchor product and a recommended product, with a strength value, a support count, and a computation timestamp.
+- **RecommendationSignal**: A contributing input — order co-purchase, share, wishlist entry, or recently-viewed event — with its weight in the scoring model.
+- **RecommendationSurface**: A placement (product page, cart, home rail, zero-result recovery) with its own candidate rules and fallback.
+- **RecommendationEvent**: An impression or click record used to measure effectiveness.
 
 ## Success Criteria _(mandatory)_
 
-<!--
-  ACTION REQUIRED: Define measurable success criteria.
-  These must be technology-agnostic and measurable.
--->
-
 ### Measurable Outcomes
 
-- **SC-001**: [Measurable metric, e.g., "Users can complete account creation in under 2 minutes"]
-- **SC-002**: [Measurable metric, e.g., "System handles 1000 concurrent users without degradation"]
-- **SC-003**: [User satisfaction metric, e.g., "90% of users successfully complete primary task on first attempt"]
-- **SC-004**: [Business metric, e.g., "Reduce support tickets related to [X] by 50%"]
+- **SC-001**: Every recommendation surface renders non-empty content for any valid anchor, including on a catalog with no order history.
+- **SC-002**: With Redis unavailable, every surface still renders through the bestseller fallback without error.
+- **SC-003**: No recommendation response contains exact stock counts or another user's data.
+- **SC-004**: Two different signed-in shoppers receive different personalized rails given different histories.
+- **SC-005**: Recommendation rails do not regress Largest Contentful Paint on the product, cart, or home pages.
+- **SC-006**: The scoring job completes within its scheduled window on a representative data volume.
+- **SC-007**: Impressions and clicks are recorded for every surface, enabling a click-through measurement.
+- **SC-008**: Service-layer coverage for scoring and selection meets the 85% threshold for `src/features/**/services/**`.
+
+## Out of Scope
+
+- Machine-learned ranking models, embeddings, or vector similarity; this feature is signal-based scoring only.
+- Real-time per-event score updates; scores refresh on a schedule.
+- Email or push recommendation campaigns.
+- Manual merchandising rules or admin-curated placement.
+
+## Dependencies
+
+- Reuses the Inngest cron pattern and the Redis caching helpers already in production.
+- Complements `020-storefront-ai-assistant`, which may consume these scores but must not depend on them.
