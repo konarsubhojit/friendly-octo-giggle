@@ -1,6 +1,6 @@
 import { serve } from 'inngest/next'
 import { inngest } from '@/lib/inngest/client'
-import { processCheckoutRequestFunction } from '@/features/cart/inngest/checkout'
+import { inngestFunctions } from '@/lib/inngest/registry'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,5 +15,5 @@ export const maxDuration = 30
 
 export const { GET, POST, PUT } = serve({
   client: inngest,
-  functions: [processCheckoutRequestFunction],
+  functions: [...inngestFunctions],
 })

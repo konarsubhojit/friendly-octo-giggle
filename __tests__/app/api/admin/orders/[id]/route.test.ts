@@ -67,16 +67,13 @@ vi.mock('@/lib/search', () => ({}))
 vi.mock('@/lib/env', () => ({
   env: {
     NEXT_PUBLIC_APP_URL: 'http://localhost:3000',
-    QSTASH_TOKEN: 'test-token',
   },
 }))
-const mockPublishJSON = vi.hoisted(() =>
-  vi.fn().mockResolvedValue({ messageId: 'test-msg-id' })
+const mockDispatchWorkflowEvent = vi.hoisted(() =>
+  vi.fn().mockResolvedValue('published')
 )
-vi.mock('@/lib/qstash', () => ({
-  getQStashClient: vi.fn(() => ({
-    publishJSON: mockPublishJSON,
-  })),
+vi.mock('@/lib/inngest/dispatch', () => ({
+  dispatchWorkflowEvent: mockDispatchWorkflowEvent,
 }))
 
 import { PATCH, GET } from '@/app/api/admin/orders/[id]/route'
@@ -317,11 +314,11 @@ describe('PATCH /api/admin/orders/[id]', () => {
       const res = await PATCH(mkReq({ status: to }), mkParams())
 
       expect(res.status).toBe(200)
-      expect(mockPublishJSON).toHaveBeenCalledTimes(1)
-      expect(mockPublishJSON).toHaveBeenCalledWith(
+      expect(mockDispatchWorkflowEvent).toHaveBeenCalledTimes(1)
+      expect(mockDispatchWorkflowEvent).toHaveBeenCalledWith(
         expect.objectContaining({
-          body: expect.objectContaining({
-            type: 'order.status_changed',
+          event: expect.objectContaining({
+            name: 'order/status.changed',
             data: expect.objectContaining({ newStatus: to }),
           }),
         })

@@ -10,7 +10,7 @@ const mockDelete = vi.hoisted(() =>
 )
 const mockInsertValues = vi.hoisted(() => vi.fn())
 const mockInsert = vi.hoisted(() => vi.fn(() => ({ values: mockInsertValues })))
-const mockPublishJSON = vi.hoisted(() => vi.fn())
+const mockDispatchWorkflowEvent = vi.hoisted(() => vi.fn())
 const mockConsumeForgotPasswordRateLimits = vi.hoisted(() => vi.fn())
 const mockGeneratePasswordResetToken = vi.hoisted(() => vi.fn())
 const mockCreatePasswordResetIdentifier = vi.hoisted(() => vi.fn())
@@ -38,10 +38,8 @@ vi.mock('@/lib/schema', () => ({
   },
 }))
 
-vi.mock('@/lib/qstash', () => ({
-  getQStashClient: () => ({
-    publishJSON: mockPublishJSON,
-  }),
+vi.mock('@/lib/inngest/dispatch', () => ({
+  dispatchWorkflowEvent: mockDispatchWorkflowEvent,
 }))
 
 vi.mock('@/features/auth/services/login-protection', () => ({
@@ -76,6 +74,7 @@ describe('POST /api/auth/forgot-password', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks()
+    mockDispatchWorkflowEvent.mockResolvedValue('published')
     mockGetClientIpFromRequest.mockReturnValue('203.0.113.5')
     mockConsumeForgotPasswordRateLimits.mockResolvedValue({
       emailLimited: false,
@@ -149,19 +148,16 @@ describe('POST /api/auth/forgot-password', () => {
       token: 'hashed-token',
       expires: new Date('2026-01-01T00:30:00.000Z'),
     })
-    expect(mockPublishJSON).toHaveBeenCalledWith(
+    expect(mockDispatchWorkflowEvent).toHaveBeenCalledWith(
       expect.objectContaining({
-        url: 'http://localhost:3000/api/services/password-reset-email',
-        body: expect.objectContaining({
-          type: 'password.reset_requested',
-          data: expect.objectContaining({
-            to: 'user@example.com',
-          }),
+        event: expect.objectContaining({
+          name: 'auth/password-reset.requested',
+          data: expect.objectContaining({ to: 'user@example.com' }),
         }),
       })
     )
-    expect(mockPublishJSON.mock.calls[0]?.[0]?.body?.data?.resetUrl).toContain(
-      'token=plain-token'
-    )
+    expect(
+      mockDispatchWorkflowEvent.mock.calls[0]?.[0]?.event?.data?.resetUrl
+    ).toContain('token=plain-token')
   })
 })

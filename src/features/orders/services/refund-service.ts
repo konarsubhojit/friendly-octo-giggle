@@ -13,9 +13,9 @@ import {
   isValidCurrencyCode,
   type CurrencyCode,
 } from '@/lib/currency'
-import { env } from '@/lib/env'
-import { getQStashClient } from '@/lib/qstash'
-import type { OrderRefundedEvent } from '@/lib/qstash-events'
+import { orderRefunded } from '@/features/orders/inngest/events'
+import { dispatchWorkflowEvent } from '@/lib/inngest/dispatch'
+import { orderSession } from '@/lib/inngest/sessions'
 import { notifyOrderRefundUpdate } from '@/lib/notifications/order-notifications'
 import { invalidateAdminOrderCaches } from '@/lib/cache'
 import { logBusinessEvent, logError } from '@/lib/logger'
@@ -290,68 +290,66 @@ const resolveCurrency = async (
 }
 
 /**
- * Queue the refund email through QStash, falling back to sending it inline when
- * the queue is unavailable — the same contract used for order status changes.
+ * Announce that a refund was recorded.
+ *
+ * The email is a subscriber to `order/refunded`, so it retries on its own and
+ * a mail-provider outage can no longer add latency to — or fail — the refund
+ * request itself. The inline notification survives only as the fallback for
+ * environments without Inngest configured.
  */
 export const dispatchRefundNotification = async ({
   order,
+  refundId,
   amount,
   status,
   isPartial,
   reason,
 }: {
   order: Pick<LockedOrder, 'id' | 'userId' | 'customerEmail' | 'customerName'>
+  /** Distinguishes repeat partial refunds, which each earn their own email. */
+  refundId: string
   amount: number
   status: RefundStatus
   isPartial: boolean
   reason?: string | null
 }): Promise<void> => {
   const currencyCode = await resolveCurrency(order.userId)
-  const event: OrderRefundedEvent = {
-    type: 'order.refunded',
-    data: {
-      orderId: order.id,
-      customerEmail: order.customerEmail,
-      customerName: order.customerName,
-      refundAmount: amount,
-      refundStatus: status,
-      isPartial,
-      reason: reason ?? null,
-      currencyCode,
-    },
-  }
 
-  try {
-    const workerUrl = `${env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'}/api/services/email`
-    const publishResult = await getQStashClient().publishJSON({
-      url: workerUrl,
-      body: event,
-    })
-    logBusinessEvent({
-      event: 'order_refund_email_queued',
-      details: {
+  const dispatchResult = await dispatchWorkflowEvent({
+    event: orderRefunded.create(
+      {
         orderId: order.id,
-        eventType: event.type,
-        messageId: publishResult.messageId,
+        refundId,
+        userId: order.userId,
+        customerEmail: order.customerEmail,
+        customerName: order.customerName,
+        refundAmount: amount,
+        refundStatus: status,
+        isPartial,
+        reason: reason ?? null,
+        currencyCode,
       },
-      success: true,
-    })
-  } catch (publishError) {
-    logError({
-      error: publishError,
-      context: 'qstash_publish_failed_using_fallback',
-      additionalInfo: { orderId: order.id, eventType: event.type },
-    })
-    await notifyOrderRefundUpdate({
-      to: order.customerEmail,
-      customerName: order.customerName,
-      orderId: order.id,
-      status,
-      refundAmount: formatPriceForCurrency(amount, currencyCode),
-      isPartial,
-      reason: reason ?? null,
-    })
-  }
+      { meta: { sessions: orderSession(order.id) } }
+    ),
+    context: 'order_refunded_publish_failed',
+    details: { orderId: order.id, refundId, status },
+    fallback: () =>
+      notifyOrderRefundUpdate({
+        to: order.customerEmail,
+        customerName: order.customerName,
+        orderId: order.id,
+        status,
+        refundAmount: formatPriceForCurrency(amount, currencyCode),
+        isPartial,
+        reason: reason ?? null,
+      }),
+  })
+
+  logBusinessEvent({
+    event: 'order_refund_email_queued',
+    details: { orderId: order.id, refundId, status, dispatch: dispatchResult },
+    success: true,
+  })
 }
 
 /**
@@ -402,6 +400,7 @@ export const refundOrder = async (
     await markRefundFailed(refundId, 'The payment gateway rejected the refund')
     await dispatchRefundNotification({
       order,
+      refundId,
       amount,
       status,
       isPartial: prepared.refundableBalance > 0,
@@ -449,6 +448,7 @@ export const refundOrder = async (
 
   await dispatchRefundNotification({
     order,
+    refundId,
     amount,
     status,
     isPartial: prepared.refundableBalance > 0,
@@ -481,6 +481,8 @@ export interface RefundWebhookInput {
 
 interface RefundWebhookOutcome {
   order: Pick<LockedOrder, 'id' | 'userId' | 'customerEmail' | 'customerName'>
+  /** Local refund row id, needed to key the notification per refund. */
+  refundId: string
   amount: number
   isPartial: boolean
   restocked: boolean
@@ -627,7 +629,7 @@ export const reconcileRefundWebhook = async (
         success: true,
       })
 
-      return { order, amount, isPartial, restocked }
+      return { order, refundId, amount, isPartial, restocked }
     }
   )
 
@@ -638,6 +640,7 @@ export const reconcileRefundWebhook = async (
   await invalidateAdminOrderCaches(outcome.order.id, outcome.order.userId)
   await dispatchRefundNotification({
     order: outcome.order,
+    refundId: outcome.refundId,
     amount: outcome.amount,
     status: input.status,
     isPartial: outcome.isPartial,

@@ -16,7 +16,7 @@ const {
   mockLogError,
   mockLogPerformance,
   mockSendOrderConfirmationEmail,
-  mockGetQStashClient,
+  mockDispatchWorkflowEvent,
   mockWriteOrderToRedis,
   mockSearchOrderIds,
   mockWaitUntil,
@@ -57,7 +57,7 @@ const {
     mockLogError: vi.fn(),
     mockLogPerformance: vi.fn(),
     mockSendOrderConfirmationEmail: vi.fn(),
-    mockGetQStashClient: vi.fn(),
+    mockDispatchWorkflowEvent: vi.fn(),
     mockWriteOrderToRedis: vi.fn().mockResolvedValue(undefined),
     mockSearchOrderIds: vi.fn(),
     mockWaitUntil: vi.fn(),
@@ -119,8 +119,8 @@ vi.mock('@/lib/email', () => ({
   sendOrderConfirmationEmail: mockSendOrderConfirmationEmail,
 }))
 
-vi.mock('@/lib/qstash', () => ({
-  getQStashClient: mockGetQStashClient,
+vi.mock('@/lib/inngest/dispatch', () => ({
+  dispatchWorkflowEvent: mockDispatchWorkflowEvent,
 }))
 
 vi.mock('@/lib/env', () => ({
@@ -234,6 +234,7 @@ const testPayment = {
 describe('order-service', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockDispatchWorkflowEvent.mockResolvedValue('published')
     mockVerifyCheckoutPayment.mockResolvedValue({
       provider: 'RAZORPAY',
       paymentOrderId: 'order_123',
@@ -525,10 +526,7 @@ describe('order-service', () => {
       })
     })
 
-    it('dispatchOrderNotifications uses publisher abstraction and queues email event', async () => {
-      const publishOrderCreated = vi
-        .fn()
-        .mockResolvedValue({ messageId: 'msg-helper' })
+    it('dispatchOrderNotifications publishes order/created instead of emailing inline', async () => {
       mockDbUsersFindPreferences.mockResolvedValue({
         currencyPreference: 'INR',
         localePreference: 'en',
@@ -568,14 +566,25 @@ describe('order-service', () => {
           ],
         },
         userId: 'user1',
-        publisher: { publishOrderCreated },
+        checkoutRequestId: 'chk1234',
       })
 
-      expect(publishOrderCreated).toHaveBeenCalled()
+      expect(mockDispatchWorkflowEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          event: expect.objectContaining({
+            name: 'order/created',
+            data: expect.objectContaining({
+              orderId: 'ord1',
+              checkoutRequestId: 'chk1234',
+              currencyCode: 'INR',
+            }),
+          }),
+        })
+      )
       expect(mockSendOrderConfirmationEmail).not.toHaveBeenCalled()
       expect(mockLogBusinessEvent).toHaveBeenCalledWith(
         expect.objectContaining({
-          event: 'order_email_queued',
+          event: 'order_created_dispatched',
           success: true,
         })
       )
@@ -786,9 +795,6 @@ describe('order-service', () => {
       mockDbUsersFindPreferences.mockResolvedValue({
         currencyPreference: 'INR',
       })
-      mockGetQStashClient.mockReturnValue({
-        publishJSON: vi.fn().mockResolvedValue({ messageId: 'msg1' }),
-      })
 
       const result = await createOrderForUser({
         body: {
@@ -820,7 +826,11 @@ describe('order-service', () => {
           success: true,
         })
       )
-      expect(mockWaitUntil).toHaveBeenCalled()
+      expect(mockDispatchWorkflowEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          event: expect.objectContaining({ name: 'order/created' }),
+        })
+      )
       expect(mockInvalidateCache).toHaveBeenCalledWith('admin:orders:*')
       expect(mockInvalidateCache).toHaveBeenCalledWith('product:p1')
       expect(mockInvalidateCache).not.toHaveBeenCalledWith('products:*')
@@ -870,9 +880,6 @@ describe('order-service', () => {
         ],
       })
       mockDbUsersFindPreferences.mockResolvedValue(null)
-      mockGetQStashClient.mockReturnValue({
-        publishJSON: vi.fn().mockResolvedValue({ messageId: 'msg1' }),
-      })
 
       const result = await createOrderForUser({
         body: {
@@ -910,7 +917,7 @@ describe('order-service', () => {
       )
     })
 
-    it('falls back to direct email on qstash failure', async () => {
+    it('falls back to direct email when order/created cannot be published', async () => {
       const newOrder = {
         id: 'ord2',
         userId: 'user1',
@@ -960,9 +967,12 @@ describe('order-service', () => {
 
       mockDbOrdersFindFirstById.mockResolvedValue(fullOrder)
       mockDbUsersFindPreferences.mockResolvedValue(null)
-      mockGetQStashClient.mockReturnValue({
-        publishJSON: vi.fn().mockRejectedValue(new Error('Queue down')),
-      })
+      mockDispatchWorkflowEvent.mockImplementationOnce(
+        async ({ fallback }: { fallback?: () => Promise<void> }) => {
+          await fallback?.()
+          return 'fallback'
+        }
+      )
 
       const result = await createOrderForUser({
         body: {
@@ -987,11 +997,6 @@ describe('order-service', () => {
       })
 
       expect(result.order.id).toBe('ord2')
-      expect(mockLogError).toHaveBeenCalledWith(
-        expect.objectContaining({
-          context: 'qstash_publish_failed_using_fallback',
-        })
-      )
       expect(mockSendOrderConfirmationEmail).toHaveBeenCalled()
     })
 
@@ -1083,9 +1088,6 @@ describe('order-service', () => {
 
       mockDbOrdersFindFirstById.mockResolvedValue(fullOrder)
       mockDbUsersFindPreferences.mockResolvedValue(null)
-      mockGetQStashClient.mockReturnValue({
-        publishJSON: vi.fn().mockResolvedValue({ messageId: 'msg2' }),
-      })
 
       const result = await createOrderForUser({
         body: {
@@ -1253,9 +1255,6 @@ describe('order-service', () => {
           items: [],
         })
         mockDbUsersFindPreferences.mockResolvedValue(null)
-        mockGetQStashClient.mockReturnValue({
-          publishJSON: vi.fn().mockResolvedValue({ messageId: 'msg1' }),
-        })
       })
 
       it('recomputes the discount server-side from the coupon code alone', async () => {

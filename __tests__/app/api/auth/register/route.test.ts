@@ -21,7 +21,7 @@ const mockDeleteWhere = vi.hoisted(() => vi.fn())
 const mockDelete = vi.hoisted(() =>
   vi.fn(() => ({ where: mockDeleteWhere.mockResolvedValue(undefined) }))
 )
-const mockPublishJSON = vi.hoisted(() => vi.fn())
+const mockDispatchWorkflowEvent = vi.hoisted(() => vi.fn())
 const mockGenerateEmailVerificationToken = vi.hoisted(() => vi.fn())
 const mockCreateEmailVerificationIdentifier = vi.hoisted(() => vi.fn())
 
@@ -63,10 +63,8 @@ vi.mock('@/lib/logger', () => ({
   logError: mockLogError,
 }))
 
-vi.mock('@/lib/qstash', () => ({
-  getQStashClient: () => ({
-    publishJSON: mockPublishJSON,
-  }),
+vi.mock('@/lib/inngest/dispatch', () => ({
+  dispatchWorkflowEvent: mockDispatchWorkflowEvent,
 }))
 
 vi.mock('@/features/auth/services/email-verification', () => ({
@@ -99,7 +97,7 @@ describe('POST /api/auth/register', () => {
       expiresAt: new Date('2026-01-01T00:30:00.000Z'),
     })
     mockDeleteWhere.mockResolvedValue(undefined)
-    mockPublishJSON.mockResolvedValue(undefined)
+    mockDispatchWorkflowEvent.mockResolvedValue('published')
     const mod = await import('@/app/api/auth/register/route')
     POST = mod.POST
   })
@@ -132,11 +130,15 @@ describe('POST /api/auth/register', () => {
       token: 'verify-token-hash',
       expires: new Date('2026-01-01T00:30:00.000Z'),
     })
-    expect(mockPublishJSON).toHaveBeenCalledWith(
+    expect(mockDispatchWorkflowEvent).toHaveBeenCalledWith(
       expect.objectContaining({
-        url: 'http://localhost:3000/api/services/email-verification-email',
-        body: expect.objectContaining({
-          type: 'auth.email_verification_requested',
+        event: expect.objectContaining({
+          name: 'auth/email-verification.requested',
+          data: expect.objectContaining({
+            to: 'test@example.com',
+            customerName: 'Test User',
+            verifyUrl: expect.stringContaining('verify-plain-token'),
+          }),
         }),
       })
     )

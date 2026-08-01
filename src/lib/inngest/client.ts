@@ -1,4 +1,5 @@
 import { Inngest } from 'inngest'
+import { scoreMiddleware } from 'inngest/experimental'
 import { env } from '@/lib/env'
 
 /**
@@ -19,11 +20,16 @@ export const INNGEST_APP_ID = 'friendly-octo-giggle'
  *
  * The event key is optional so the app still boots (and falls back to the
  * Vercel Queue) in environments where Inngest is not configured yet.
+ *
+ * `scoreMiddleware()` is what puts `step.score()` on the step tooling. Without
+ * it registered here the tool is absent at runtime, so every function that
+ * records an outcome depends on this middleware staying in place.
  */
 export const inngest = new Inngest({
   id: INNGEST_APP_ID,
   eventKey: env.INNGEST_EVENT_KEY,
   signingKey: env.INNGEST_SIGNING_KEY,
+  middleware: [scoreMiddleware()],
 })
 
 /**

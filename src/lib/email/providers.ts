@@ -75,7 +75,120 @@ export interface EmailMessage {
   text: string
 }
 
-export const sendEmail = async (msg: EmailMessage): Promise<void> => {
+export type EmailProviderName = 'google_smtp' | 'mailersend'
+
+/**
+ * Outcome of a delivery attempt.
+ *
+ * `delivered: false` means no provider was configured at all — a deliberate
+ * no-op in environments without mail credentials, not a failure. A genuine
+ * failure throws `EmailDeliveryError` instead, so a durable caller can tell
+ * "nothing to do" apart from "this needs retrying".
+ */
+export interface EmailDeliveryResult {
+  readonly delivered: boolean
+  readonly provider: EmailProviderName | null
+  /** True when the primary provider failed and a secondary one delivered. */
+  readonly usedFallbackProvider: boolean
+}
+
+/** Raised when every configured provider refused the message. */
+export class EmailDeliveryError extends Error {
+  readonly providersAttempted: readonly EmailProviderName[]
+
+  constructor(
+    message: string,
+    providersAttempted: readonly EmailProviderName[],
+    options?: { cause?: unknown }
+  ) {
+    super(message, options)
+    this.name = 'EmailDeliveryError'
+    this.providersAttempted = providersAttempted
+  }
+}
+
+const deliverViaSmtp = async (msg: EmailMessage): Promise<void> => {
+  if (!smtpTransport) throw new Error('SMTP transport is not initialised')
+
+  await smtpTransport.sendMail({
+    to: msg.to,
+    from: `${FROM_NAME} <${FROM_EMAIL}>`,
+    subject: msg.subject,
+    html: msg.html,
+    text: msg.text,
+  })
+  logBusinessEvent({
+    event: 'email_sent',
+    details: { to: msg.to, subject: msg.subject, provider: 'google_smtp' },
+    success: true,
+  })
+}
+
+const deliverViaMailerSend = async (msg: EmailMessage): Promise<void> => {
+  if (!mailerSendClient) throw new Error('MailerSend client is not initialised')
+
+  const sentFrom = new Sender(FROM_EMAIL, FROM_NAME)
+  const recipients = [new Recipient(msg.to)]
+
+  const emailParams = new EmailParams()
+    .setFrom(sentFrom)
+    .setTo(recipients)
+    .setReplyTo(sentFrom)
+    .setSubject(msg.subject)
+    .setHtml(msg.html)
+    .setText(msg.text)
+
+  await mailerSendClient.email.send(emailParams)
+  logBusinessEvent({
+    event: 'email_sent',
+    details: { to: msg.to, subject: msg.subject, provider: 'mailersend' },
+    success: true,
+  })
+}
+
+const logMailerSendFailure = (msg: EmailMessage, error: unknown): void => {
+  const errorMeta = extractMailerSendErrorMeta(error)
+
+  if (errorMeta.isUnauthorized) {
+    logBusinessEvent({
+      event: 'email_auth_failed',
+      details: {
+        to: msg.to,
+        subject: msg.subject,
+        fromEmail: FROM_EMAIL,
+        statusCode: errorMeta.statusCode,
+        providerErrors: errorMeta.providerErrors,
+      },
+      success: false,
+    })
+  }
+
+  logError({
+    error,
+    context: 'email_send_failed',
+    additionalInfo: {
+      to: msg.to,
+      subject: msg.subject,
+      fromEmail: FROM_EMAIL,
+      provider: 'mailersend',
+      statusCode: errorMeta.statusCode,
+      providerErrors: errorMeta.providerErrors,
+    },
+  })
+}
+
+/**
+ * Send a message, reporting which provider delivered it and throwing when
+ * none could.
+ *
+ * This is the entry point durable callers use: an Inngest step can only retry
+ * a delivery it is told about, so a total failure has to surface as a thrown
+ * error rather than a log line. `sendEmail` keeps the older swallow-and-log
+ * contract for fire-and-forget callers.
+ */
+export const deliverEmail = async (
+  msg: EmailMessage
+): Promise<EmailDeliveryResult> => {
   const hasGoogleSmtp = initGoogleSmtp()
   const hasMailerSend = initMailerSend()
 
@@ -89,25 +202,23 @@ export const sendEmail = async (msg: EmailMessage): Promise<void> => {
       },
       success: true,
     })
-    return
+    return { delivered: false, provider: null, usedFallbackProvider: false }
   }
 
+  const attempted: EmailProviderName[] = []
+  let primaryFailure: unknown
+
   if (hasGoogleSmtp && smtpTransport) {
+    attempted.push('google_smtp')
     try {
-      await smtpTransport.sendMail({
-        to: msg.to,
-        from: `${FROM_NAME} <${FROM_EMAIL}>`,
-        subject: msg.subject,
-        html: msg.html,
-        text: msg.text,
-      })
-      logBusinessEvent({
-        event: 'email_sent',
-        details: { to: msg.to, subject: msg.subject, provider: 'google_smtp' },
-        success: true,
-      })
-      return
+      await deliverViaSmtp(msg)
+      return {
+        delivered: true,
+        provider: 'google_smtp',
+        usedFallbackProvider: false,
+      }
     } catch (error) {
+      primaryFailure = error
       logError({
         error,
         context: 'email_send_failed',
@@ -121,54 +232,44 @@ export const sendEmail = async (msg: EmailMessage): Promise<void> => {
     }
   }
 
-  if (!hasMailerSend || !mailerSendClient) return
-
-  try {
-    const sentFrom = new Sender(FROM_EMAIL, FROM_NAME)
-    const recipients = [new Recipient(msg.to)]
-
-    const emailParams = new EmailParams()
-      .setFrom(sentFrom)
-      .setTo(recipients)
-      .setReplyTo(sentFrom)
-      .setSubject(msg.subject)
-      .setHtml(msg.html)
-      .setText(msg.text)
-
-    await mailerSendClient.email.send(emailParams)
-    logBusinessEvent({
-      event: 'email_sent',
-      details: { to: msg.to, subject: msg.subject, provider: 'mailersend' },
-      success: true,
-    })
-  } catch (error) {
-    const errorMeta = extractMailerSendErrorMeta(error)
-
-    if (errorMeta.isUnauthorized) {
-      logBusinessEvent({
-        event: 'email_auth_failed',
-        details: {
-          to: msg.to,
-          subject: msg.subject,
-          fromEmail: FROM_EMAIL,
-          statusCode: errorMeta.statusCode,
-          providerErrors: errorMeta.providerErrors,
-        },
-        success: false,
-      })
-    }
-
-    logError({
-      error,
-      context: 'email_send_failed',
-      additionalInfo: {
-        to: msg.to,
-        subject: msg.subject,
-        fromEmail: FROM_EMAIL,
+  if (hasMailerSend && mailerSendClient) {
+    attempted.push('mailersend')
+    try {
+      await deliverViaMailerSend(msg)
+      return {
+        delivered: true,
         provider: 'mailersend',
-        statusCode: errorMeta.statusCode,
-        providerErrors: errorMeta.providerErrors,
-      },
-    })
+        // Only a fallback if a primary provider was tried and failed first.
+        usedFallbackProvider: primaryFailure !== undefined,
+      }
+    } catch (error) {
+      logMailerSendFailure(msg, error)
+      throw new EmailDeliveryError(
+        `Email delivery failed for every configured provider (${attempted.join(', ')})`,
+        attempted,
+        { cause: error }
+      )
+    }
+  }
+
+  throw new EmailDeliveryError(
+    `Email delivery failed for every configured provider (${attempted.join(', ')})`,
+    attempted,
+    { cause: primaryFailure }
+  )
+}
+
+/**
+ * Fire-and-forget send.
+ *
+ * Never throws: callers on this path have no way to react to a failure, and
+ * `deliverEmail` has already logged the provider errors by the time it
+ * rejects.
+ */
+export const sendEmail = async (msg: EmailMessage): Promise<void> => {
+  try {
+    await deliverEmail(msg)
+  } catch {
+    // Already logged inside deliverEmail.
   }
 }

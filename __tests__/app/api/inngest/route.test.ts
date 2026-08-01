@@ -14,13 +14,13 @@ vi.mock('inngest/next', () => ({
 
 import * as route from '@/app/api/inngest/route'
 import { inngest } from '@/lib/inngest/client'
-import { processCheckoutRequestFunction } from '@/features/cart/inngest/checkout'
+import { inngestFunctions } from '@/lib/inngest/registry'
 
 describe('GET/POST/PUT /api/inngest', () => {
-  it('serves the checkout function from the shared client', () => {
+  it('serves every registered function from the shared client', () => {
     expect(mockServe).toHaveBeenCalledWith({
       client: inngest,
-      functions: [processCheckoutRequestFunction],
+      functions: [...inngestFunctions],
     })
     expect(route.GET).toBeDefined()
     expect(route.POST).toBeDefined()
