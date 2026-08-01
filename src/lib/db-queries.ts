@@ -101,6 +101,19 @@ export interface ProductListOptions {
   category?: string
 }
 
+/**
+ * Options for {@link db.products.findBestsellers}.
+ *
+ * `withCache` controls the Redis sold-count lookup only. Callers inside a
+ * `"use cache"` scope must pass `false`: nesting a Redis round trip inside a
+ * cached scope stores the same rows twice and splits invalidation across two
+ * systems, so the cached scope could serve data the tag revalidation already
+ * cleared.
+ */
+export interface BestsellerOptions extends ProductListOptions {
+  withCache?: boolean
+}
+
 /** Minimal product representation returned by list queries (includes derived price/stock). */
 export interface MinimalProduct {
   id: string
@@ -143,13 +156,14 @@ type MinimalProductDerivedFields = {
 }
 
 const fetchProductSoldCounts = async (
-  productIds: string[]
+  productIds: string[],
+  withCache = true
 ): Promise<Map<string, number>> => {
   if (productIds.length === 0) {
     return new Map()
   }
 
-  const rows = await cacheProductSoldCounts(productIds, async () =>
+  const fetcher = async () =>
     drizzleDb
       .select({
         productId: orderItems.productId,
@@ -168,7 +182,10 @@ const fetchProductSoldCounts = async (
       )
       .where(inArray(orderItems.productId, productIds))
       .groupBy(orderItems.productId)
-  )
+
+  const rows = withCache
+    ? await cacheProductSoldCounts(productIds, fetcher)
+    : await fetcher()
 
   return new Map(rows.map((row) => [row.productId, row.soldCount]))
 }
@@ -253,9 +270,9 @@ export const db = {
      * @returns Array of products sorted by sales volume descending
      */
     findBestsellers: async (
-      options: ProductListOptions = {}
+      options: BestsellerOptions = {}
     ): Promise<Product[]> => {
-      const { limit = 5 } = options
+      const { limit = 5, withCache = true } = options
 
       // Single SQL query: LEFT JOIN a sales-aggregate subquery so products
       // with no sales still appear (totalSold = 0), then sort + limit in DB.
@@ -319,7 +336,10 @@ export const db = {
         varsByProduct.set(v.productId, list)
       }
 
-      const soldCountByProductId = await fetchProductSoldCounts(productIds)
+      const soldCountByProductId = await fetchProductSoldCounts(
+        productIds,
+        withCache
+      )
 
       return rows.map((p) => ({
         ...serializeProduct(p),
@@ -433,7 +453,8 @@ export const db = {
     /**
      * Find product by ID with optional caching
      * @param id - Product ID
-     * @param withCache - Whether to use Redis cache
+     * @param withCache - Whether to use Redis cache. Pass `false` from inside a
+     *   `"use cache"` scope so the cached scope holds no nested Redis read.
      * @returns Product with full details or null if not found
      */
     findById: async (id: string, withCache = true): Promise<Product | null> => {
@@ -463,7 +484,10 @@ export const db = {
           },
         })
         if (!row) return null
-        const soldCountByProductId = await fetchProductSoldCounts([id])
+        const soldCountByProductId = await fetchProductSoldCounts(
+          [id],
+          withCache
+        )
         return {
           ...serializeProduct(row),
           soldCount: soldCountByProductId.get(id) ?? 0,
