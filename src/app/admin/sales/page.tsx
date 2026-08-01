@@ -6,7 +6,7 @@ import { getAdminSalesDashboardData } from '@/features/admin/services/admin-sale
 export const dynamic = 'force-dynamic'
 
 const AdminSalesPage = async () => {
-  const authCheck = await checkAdminAuth()
+  const authCheck = await checkAdminAuth('analytics:read')
   if (!authCheck.authorized) {
     if (authCheck.status === 401) {
       redirect('/auth/signin')

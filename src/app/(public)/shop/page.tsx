@@ -6,6 +6,7 @@ import ProductGrid, {
 } from '@/features/product/components/ProductGrid'
 import { BestsellersScroller } from '@/features/product/components/BestsellersScroller'
 import ProductCardSkeleton from '@/components/skeletons/ProductCardSkeleton'
+import BestsellerCardSkeleton from '@/components/skeletons/BestsellerCardSkeleton'
 import { db, drizzleDb } from '@/lib/db'
 import { cacheCategoriesList, cacheProductsBestsellers } from '@/lib/cache'
 import { categories as categoriesTable } from '@/lib/schema'
@@ -140,11 +141,9 @@ function ShopCatalogFallback() {
       >
         <div className="h-9 w-48 bg-gradient-to-r from-[var(--accent-warm)] to-[var(--accent-rose)] rounded-lg animate-pulse mb-2" />
         <div className="h-4 w-64 bg-[var(--accent-blush)] rounded animate-pulse mb-5" />
-        <div className="flex gap-4 overflow-hidden">
+        <div className="flex items-stretch gap-4 overflow-hidden pb-3">
           {BESTSELLER_SKELETON_IDS.map((id) => (
-            <div key={id} className="w-44 shrink-0">
-              <ProductCardSkeleton />
-            </div>
+            <BestsellerCardSkeleton key={id} />
           ))}
         </div>
       </section>

@@ -70,7 +70,8 @@ describe('rate-limit', () => {
       STRICT_RATE_LIMIT_MAX_REQUESTS,
       '60 s'
     )
-    expect(mockLimit).toHaveBeenCalledWith('1.2.3.4')
+    // Without a userId, identifier is the first IP from x-forwarded-for
+    expect(mockLimit).toHaveBeenCalledWith('ip:1.2.3.4')
   })
 
   it('uses the general limiter for other paths and falls back to anonymous', async () => {
@@ -92,7 +93,85 @@ describe('rate-limit', () => {
       GENERAL_RATE_LIMIT_MAX_REQUESTS,
       '60 s'
     )
-    expect(mockLimit).toHaveBeenCalledWith('anonymous')
+    expect(mockLimit).toHaveBeenCalledWith('ip:anonymous')
+  })
+
+  it('uses the strict limiter for POST /api/checkout (exact match)', async () => {
+    mockGetRedisClient.mockReturnValue({})
+    mockLimit.mockResolvedValue({
+      success: true,
+      limit: 10,
+      remaining: 9,
+      reset: 1700000000,
+    })
+
+    const { checkRateLimit, STRICT_RATE_LIMIT_MAX_REQUESTS } =
+      await import('@/lib/rate-limit')
+
+    await checkRateLimit(buildRequest('/api/checkout'))
+
+    expect(mockSlidingWindow).toHaveBeenCalledWith(
+      STRICT_RATE_LIMIT_MAX_REQUESTS,
+      '60 s'
+    )
+  })
+
+  it('uses the general limiter for GET /api/checkout/{id} (status poll)', async () => {
+    mockGetRedisClient.mockReturnValue({})
+    mockLimit.mockResolvedValue({
+      success: true,
+      limit: 60,
+      remaining: 59,
+      reset: 1700000000,
+    })
+
+    const { checkRateLimit, GENERAL_RATE_LIMIT_MAX_REQUESTS } =
+      await import('@/lib/rate-limit')
+
+    await checkRateLimit(buildRequest('/api/checkout/abc1234'))
+
+    expect(mockSlidingWindow).toHaveBeenCalledWith(
+      GENERAL_RATE_LIMIT_MAX_REQUESTS,
+      '60 s'
+    )
+  })
+
+  it('scopes identifier to user when userId is provided', async () => {
+    mockGetRedisClient.mockReturnValue({})
+    mockLimit.mockResolvedValue({
+      success: true,
+      limit: 60,
+      remaining: 59,
+      reset: 1700000000,
+    })
+
+    const { checkRateLimit } = await import('@/lib/rate-limit')
+
+    await checkRateLimit(
+      buildRequest('/api/products', { 'x-forwarded-for': '1.2.3.4' }),
+      'user-xyz'
+    )
+
+    expect(mockLimit).toHaveBeenCalledWith('user:user-xyz')
+  })
+
+  it('falls back to ip-scoped identifier when userId is null', async () => {
+    mockGetRedisClient.mockReturnValue({})
+    mockLimit.mockResolvedValue({
+      success: true,
+      limit: 60,
+      remaining: 59,
+      reset: 1700000000,
+    })
+
+    const { checkRateLimit } = await import('@/lib/rate-limit')
+
+    await checkRateLimit(
+      buildRequest('/api/products', { 'x-forwarded-for': '5.6.7.8' }),
+      null
+    )
+
+    expect(mockLimit).toHaveBeenCalledWith('ip:5.6.7.8')
   })
 
   it('memoizes the limiter instances across calls', async () => {
@@ -119,5 +198,17 @@ describe('rate-limit', () => {
 
     const result = await checkRateLimit(buildRequest('/api/products'))
     expect(result).toBeNull()
+  })
+
+  describe('buildIdentifier', () => {
+    it('returns user-scoped identifier when userId is provided', async () => {
+      const { buildIdentifier } = await import('@/lib/rate-limit')
+      expect(buildIdentifier('user-42', '1.2.3.4')).toBe('user:user-42')
+    })
+
+    it('returns ip-scoped identifier when userId is null', async () => {
+      const { buildIdentifier } = await import('@/lib/rate-limit')
+      expect(buildIdentifier(null, '1.2.3.4')).toBe('ip:1.2.3.4')
+    })
   })
 })

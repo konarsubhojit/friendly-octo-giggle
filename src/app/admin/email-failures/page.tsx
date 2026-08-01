@@ -6,6 +6,7 @@ import {
   AdminPanel,
 } from '@/features/admin/components/AdminPageShell'
 import { EmailFailuresClient } from '@/features/admin/components/EmailFailuresClient'
+import { requireAdminPermission } from '@/features/admin/services/admin-page-auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -20,6 +21,8 @@ const fetchEmailFailures = async () => {
 }
 
 const EmailFailuresPage = async () => {
+  await requireAdminPermission('system:manage', '/admin/email-failures')
+
   const records = await fetchEmailFailures()
   const pendingCount = records.filter(
     (record) => record.status === 'pending'

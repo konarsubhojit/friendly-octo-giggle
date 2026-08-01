@@ -137,7 +137,8 @@ See [Deployment Guide](./docs/deployment.md) for detailed instructions.
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please read the [Development Guide](./docs/development.md) for:
+Contributions are welcome! Please read [CONTRIBUTING.md](./CONTRIBUTING.md) and the
+[Development Guide](./docs/development.md) for:
 
 - Code style guidelines
 - Development workflow
@@ -146,7 +147,7 @@ Contributions are welcome! Please read the [Development Guide](./docs/developmen
 
 ## 📄 License
 
-ISC
+Released under the [ISC License](./LICENSE).
 
 ## 🆘 Support
 

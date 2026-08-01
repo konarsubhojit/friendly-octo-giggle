@@ -66,7 +66,7 @@ function toWhereClause(conditions: SQL[]): SQL {
  *   search   — text filter (matches product name)
  */
 export const GET = async (request: NextRequest) => {
-  const authCheck = await checkAdminAuth()
+  const authCheck = await checkAdminAuth('products:read')
   if (!authCheck.authorized) {
     return apiError(authCheck.error ?? 'Unknown error', authCheck.status)
   }
@@ -172,7 +172,7 @@ export const GET = async (request: NextRequest) => {
 }
 
 export const POST = async (request: NextRequest) => {
-  const authCheck = await checkAdminAuth()
+  const authCheck = await checkAdminAuth('products:write')
   if (!authCheck.authorized) {
     return apiError(authCheck.error ?? 'Unauthorized', authCheck.status)
   }

@@ -8,6 +8,7 @@ import { useSession } from 'next-auth/react'
 import { useSelector, useDispatch } from 'react-redux'
 import { useCurrency } from '@/contexts/CurrencyContext'
 import { formatStructuredAddress } from '@/lib/address-utils'
+import { getShippingMethodLabel } from '@/lib/shipping/methods'
 import {
   fetchOrderById,
   cancelOrder,
@@ -49,7 +50,9 @@ function CancelOrderDialog({
         Cancel Order?
       </h3>
       <p className="text-sm text-[var(--text-secondary)] mb-6">
-        This action cannot be undone. Your order will be cancelled immediately.
+        This action cannot be undone. Your order will be cancelled immediately
+        and any payment already made will be refunded to your original payment
+        method.
       </p>
       <div className="flex gap-3 justify-end">
         <button
@@ -78,6 +81,9 @@ interface OrderDetailPageProps {
 }
 
 const STATUS_STEPS = ['PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED'] as const
+
+/** Orders can only be cancelled by the customer until they ship. */
+const CANCELLABLE_STATUSES = new Set(['PENDING', 'PROCESSING'])
 
 const STATUS_LABELS: Record<string, string> = {
   PENDING: 'Order Placed',
@@ -275,10 +281,67 @@ function OrderItemRow({ item, formatPrice }: OrderItemRowProps) {
   )
 }
 
+interface OrderTotalsBreakdownProps {
+  readonly order: {
+    readonly subtotalAmount?: number
+    readonly shippingAmount?: number
+    readonly taxAmount?: number
+    readonly shippingMethod?: string | null
+    readonly totalAmount: number
+  }
+  readonly formatPrice: (amount: number) => string
+}
+
+/**
+ * Itemised subtotal / shipping / tax lines. Orders placed before the shipping
+ * and tax engine carry no breakdown, so only the total is shown for those.
+ */
+function OrderTotalsBreakdown({
+  order,
+  formatPrice,
+}: OrderTotalsBreakdownProps) {
+  const subtotal = order.subtotalAmount
+  if (subtotal === undefined) return null
+
+  const shippingAmount = order.shippingAmount ?? 0
+  const taxAmount = order.taxAmount ?? 0
+  const shippingLabel = order.shippingMethod
+    ? `Shipping (${getShippingMethodLabel(order.shippingMethod)})`
+    : 'Shipping'
+
+  const rows: Array<{ label: string; value: string }> = [
+    { label: 'Subtotal', value: formatPrice(subtotal) },
+    {
+      label: shippingLabel,
+      value: shippingAmount === 0 ? 'Free' : formatPrice(shippingAmount),
+    },
+    { label: 'Tax (GST)', value: formatPrice(taxAmount) },
+  ]
+
+  return (
+    <dl className="mt-6 border-t border-[var(--border-warm)] pt-4 space-y-2 text-sm">
+      {rows.map((row) => (
+        <div key={row.label} className="flex justify-between">
+          <dt className="text-[var(--text-secondary)]">{row.label}</dt>
+          <dd className="font-medium text-[var(--foreground)]">{row.value}</dd>
+        </div>
+      ))}
+      <div className="flex justify-between border-t border-[var(--border-warm)] pt-2">
+        <dt className="font-bold text-[var(--foreground)]">Total</dt>
+        <dd className="font-bold text-[var(--foreground)]">
+          {formatPrice(order.totalAmount)}
+        </dd>
+      </div>
+    </dl>
+  )
+}
+
 interface OrderSummaryHeaderProps {
   readonly orderId: string
   readonly createdAt: string
   readonly totalAmount: number
+  readonly discountAmount: number
+  readonly couponCode: string | null
   readonly status: string
   readonly cancelling: boolean
   readonly formatPrice: (amount: number) => string
@@ -289,6 +352,8 @@ function OrderSummaryHeader({
   orderId,
   createdAt,
   totalAmount,
+  discountAmount,
+  couponCode,
   status,
   cancelling,
   formatPrice,
@@ -312,10 +377,23 @@ function OrderSummaryHeader({
         </p>
       </div>
       <div className="flex items-center gap-3">
-        <p className="text-2xl font-bold bg-gradient-to-r from-[var(--accent-rose)] to-[var(--accent-pink)] bg-clip-text text-transparent">
-          {formatPrice(totalAmount)}
-        </p>
-        {status === 'PENDING' && (
+        <div className="text-right">
+          {discountAmount > 0 && (
+            <>
+              <p className="text-sm text-[var(--text-muted)] line-through">
+                {formatPrice(totalAmount + discountAmount)}
+              </p>
+              <p className="text-sm font-medium text-[var(--accent-sage)]">
+                {couponCode ? `Coupon ${couponCode}: ` : 'Discount: '}-
+                {formatPrice(discountAmount)}
+              </p>
+            </>
+          )}
+          <p className="text-2xl font-bold bg-gradient-to-r from-[var(--accent-rose)] to-[var(--accent-pink)] bg-clip-text text-transparent">
+            {formatPrice(totalAmount)}
+          </p>
+        </div>
+        {CANCELLABLE_STATUSES.has(status) && (
           <button
             type="button"
             onClick={onCancelClick}
@@ -450,6 +528,8 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
             orderId={order.id}
             createdAt={order.createdAt}
             totalAmount={order.totalAmount}
+            discountAmount={order.discountAmount ?? 0}
+            couponCode={order.couponCode ?? null}
             status={order.status}
             cancelling={cancelling}
             formatPrice={formatPrice}
@@ -487,6 +567,8 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
               />
             ))}
           </div>
+
+          <OrderTotalsBreakdown order={order} formatPrice={formatPrice} />
         </Card>
 
         {/* Tracking Info */}

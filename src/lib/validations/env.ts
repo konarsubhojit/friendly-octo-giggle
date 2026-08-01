@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { PAYMENT_PROVIDERS } from '@/lib/payments/providers'
 
 // Keys that must be present in production (outside of the build phase).
 const QSTASH_REQUIRED_KEYS = [
@@ -116,6 +117,19 @@ const validateRazorpay = (data: EnvData, ctx: z.RefinementCtx) => {
   })
 }
 
+const validateInngest = (data: EnvData, ctx: z.RefinementCtx) => {
+  // Publishing checkout events without a signing key would produce runs the
+  // serve endpoint cannot authenticate, stranding every checkout request.
+  if (!data.INNGEST_EVENT_KEY?.trim()) return
+  if (data.INNGEST_SIGNING_KEY?.trim()) return
+
+  ctx.addIssue({
+    code: 'custom',
+    path: ['INNGEST_SIGNING_KEY'],
+    message: 'INNGEST_SIGNING_KEY must be set when INNGEST_EVENT_KEY is set',
+  })
+}
+
 const BaseEnvSchema = z.object({
   DATABASE_URL: z.string(),
   READ_DATABASE_URL: z.string().optional(),
@@ -137,6 +151,8 @@ const BaseEnvSchema = z.object({
   QSTASH_TOKEN: z.string().optional(),
   QSTASH_CURRENT_SIGNING_KEY: z.string().optional(),
   QSTASH_NEXT_SIGNING_KEY: z.string().optional(),
+  INNGEST_EVENT_KEY: z.string().optional(),
+  INNGEST_SIGNING_KEY: z.string().optional(),
   NEXT_PUBLIC_APP_URL: z.url().optional(),
   UPSTASH_SEARCH_REST_URL: z.url().optional(),
   UPSTASH_SEARCH_REST_TOKEN: z.string().optional(),
@@ -144,11 +160,14 @@ const BaseEnvSchema = z.object({
   NEXT_PUBLIC_UPSTASH_SEARCH_REST_URL: z.url().optional(),
   NEXT_PUBLIC_UPSTASH_SEARCH_REST_READONLY_TOKEN: z.string().optional(),
   GOOGLE_GENERATIVE_AI_API_KEY: z.string().optional(),
-  PAYMENT_PROVIDER: z.enum(['RAZORPAY']).optional(),
+  PAYMENT_PROVIDER: z.enum(PAYMENT_PROVIDERS).optional(),
   RAZORPAY_KEY_ID: z.string().optional(),
   RAZORPAY_KEY_SECRET: z.string().optional(),
   RAZORPAY_WEBHOOK_SECRET: z.string().optional(),
   SENTRY_DSN: z.url().optional(),
+  VAPID_PUBLIC_KEY: z.string().optional(),
+  VAPID_PRIVATE_KEY: z.string().optional(),
+  VAPID_SUBJECT: z.string().optional(),
   IMAGE_UPLOAD_PROVIDER: z.enum(['vercel', 'azure']).optional(),
   AZURE_BLOB_ACCOUNTS_JSON: z
     .string()
@@ -186,6 +205,7 @@ export const EnvSchema = BaseEnvSchema.superRefine((data, ctx) => {
   validateProductionKeys(data, ctx)
   validateAzureBlob(data, ctx)
   validateRazorpay(data, ctx)
+  validateInngest(data, ctx)
 })
 
 export type Env = z.infer<typeof EnvSchema>

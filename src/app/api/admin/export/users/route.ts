@@ -11,7 +11,7 @@ import { apiError, handleApiError } from '@/lib/api-utils'
 export const dynamic = 'force-dynamic'
 
 export const GET = async () => {
-  const authCheck = await checkAdminAuth()
+  const authCheck = await checkAdminAuth('users:manage')
   if (!authCheck.authorized) {
     return apiError(authCheck.error ?? 'Unauthorized', authCheck.status)
   }

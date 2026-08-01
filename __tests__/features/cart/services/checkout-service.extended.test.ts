@@ -13,6 +13,7 @@ const { PaymentConfigError } = vi.hoisted(() => ({
 const m = vi.hoisted(() => ({
   create: vi.fn(),
   updateStatus: vi.fn(),
+  claimForProcessing: vi.fn(),
   findById: vi.fn(),
   findRecentWithOrders: vi.fn(),
   findFirstByCheckoutRequestId: vi.fn(),
@@ -30,6 +31,7 @@ vi.mock('@/lib/db', () => ({
     checkoutRequests: {
       create: m.create,
       updateStatus: m.updateStatus,
+      claimForProcessing: m.claimForProcessing,
       findById: m.findById,
       findRecentWithOrders: m.findRecentWithOrders,
     },
@@ -41,6 +43,7 @@ vi.mock('@/lib/logger', () => ({
   logBusinessEvent: m.logBusinessEvent,
   logError: m.logError,
   logPerformance: m.logPerformance,
+  CHECKOUT_QUEUE_LAG_OPERATION: 'queue.checkout.lag',
 }))
 
 vi.mock('@/lib/queue', () => ({ send: m.send }))
@@ -125,6 +128,7 @@ beforeEach(() => {
   m.create.mockResolvedValue({ id: 'cr1abc', status: 'PENDING' })
   m.send.mockResolvedValue(undefined)
   m.updateStatus.mockResolvedValue(undefined)
+  m.claimForProcessing.mockResolvedValue(true)
   m.findFirstByCheckoutRequestId.mockResolvedValue(null)
   m.createOrderForUser.mockResolvedValue({ order: { id: 'ord1' } })
 })
@@ -309,6 +313,49 @@ describe('processCheckoutRequestById (extended)', () => {
             signature: 'sig_1',
           },
         }),
+      })
+    )
+  })
+
+  it('forwards a Cash on Delivery payment without gateway references', async () => {
+    m.findById.mockResolvedValue({
+      ...checkoutRow,
+      paymentProvider: 'COD',
+      paymentOrderId: null,
+      paymentTransactionId: null,
+      paymentSignature: null,
+    })
+
+    await processCheckoutRequestById('cr2xy89')
+
+    expect(m.createOrderForUser).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: expect.objectContaining({
+          payment: {
+            provider: 'COD',
+            orderId: undefined,
+            paymentId: undefined,
+            signature: undefined,
+          },
+        }),
+      })
+    )
+  })
+
+  it('drops an incomplete signed payment reference', async () => {
+    m.findById.mockResolvedValue({
+      ...checkoutRow,
+      paymentProvider: 'RAZORPAY',
+      paymentOrderId: 'order_1',
+      paymentTransactionId: 'pay_1',
+      paymentSignature: null,
+    })
+
+    await processCheckoutRequestById('cr2xy89')
+
+    expect(m.createOrderForUser).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: expect.objectContaining({ payment: undefined }),
       })
     )
   })

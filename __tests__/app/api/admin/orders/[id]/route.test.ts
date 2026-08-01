@@ -10,7 +10,9 @@ const mockTransaction = vi.hoisted(() =>
     const tx = {
       update: vi.fn(() => ({
         set: vi.fn(() => ({
-          where: vi.fn(),
+          where: vi.fn(() => ({
+            returning: vi.fn(async () => [{ id: 'order1' }]),
+          })),
         })),
       })),
     }
@@ -28,10 +30,15 @@ vi.mock('@/lib/db', () => ({
   drizzleDb: mockDb,
 }))
 vi.mock('@/lib/schema', () => ({
-  orders: { id: 'id' },
+  orders: { id: 'id', stockRestoredAt: 'stockRestoredAt' },
   productVariants: { id: 'id', stock: 'stock' },
 }))
-vi.mock('drizzle-orm', () => ({ eq: vi.fn(), sql: vi.fn() }))
+vi.mock('drizzle-orm', () => ({
+  and: vi.fn(),
+  eq: vi.fn(),
+  isNull: vi.fn(),
+  sql: vi.fn(),
+}))
 vi.mock('@/lib/auth', () => ({ auth: vi.fn() }))
 vi.mock('@/lib/redis', () => ({
   getCachedData: vi.fn(),
@@ -165,6 +172,47 @@ describe('PATCH /api/admin/orders/[id]', () => {
     expect(data.data.order.serialized).toBe(true)
     expect(mockUpdate).toHaveBeenCalled()
     expect(mockInvalidateAdminOrderCaches).toHaveBeenCalledWith('o1', 'u1')
+  })
+
+  it('settles a Cash on Delivery order to PAID on delivery confirmation', async () => {
+    mockAuth.mockResolvedValue(adminSession as never)
+    const setSpy = vi.fn(() => ({ where: vi.fn() }))
+    mockUpdate.mockReturnValue({ set: setSpy } as never)
+    mockFindFirst.mockResolvedValue({
+      ...mockOrder,
+      paymentProvider: 'COD',
+      paymentStatus: 'PENDING',
+    } as never)
+
+    const res = await PATCH(mkReq({ status: 'DELIVERED' }), mkParams())
+
+    expect(res.status).toBe(200)
+    expect(setSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: 'DELIVERED',
+        paymentStatus: 'PAID',
+        amountPaid: 5000,
+        paidAt: expect.any(Date),
+      })
+    )
+  })
+
+  it('leaves an online payment untouched on delivery confirmation', async () => {
+    mockAuth.mockResolvedValue(adminSession as never)
+    const setSpy = vi.fn(() => ({ where: vi.fn() }))
+    mockUpdate.mockReturnValue({ set: setSpy } as never)
+    mockFindFirst.mockResolvedValue({
+      ...mockOrder,
+      paymentProvider: 'RAZORPAY',
+      paymentStatus: 'PAID',
+    } as never)
+
+    const res = await PATCH(mkReq({ status: 'DELIVERED' }), mkParams())
+
+    expect(res.status).toBe(200)
+    expect(setSpy).toHaveBeenCalledWith(
+      expect.not.objectContaining({ paidAt: expect.anything() })
+    )
   })
 
   it('returns 404 when order not found', async () => {

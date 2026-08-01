@@ -8,6 +8,7 @@ import {
   type AdminCheckoutRequestRecord,
 } from '@/features/cart/services/checkout-service'
 import { CheckoutRequestStatusEnum } from '@/features/orders/validations'
+import { requireAdminPermission } from '@/features/admin/services/admin-page-auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -53,6 +54,8 @@ const normalizeStatusParam = (
 export default async function AdminCheckoutRequestsPage({
   searchParams,
 }: AdminCheckoutRequestsPageProps) {
+  await requireAdminPermission('orders:read', '/admin/checkout-requests')
+
   const resolvedSearchParams = (await searchParams) ?? {}
   const search = normalizeSearchParam(resolvedSearchParams.search)
   const status = normalizeStatusParam(resolvedSearchParams.status)

@@ -10,6 +10,7 @@ import { GradientHeading } from '@/components/ui/GradientHeading'
 import { API_ERRORS } from '@/lib/constants/error-messages'
 import { ProfileSection } from '@/app/(public)/account/ProfileSection'
 import { PreferencesSection } from '@/app/(public)/account/PreferencesSection'
+import { NotificationsSection } from '@/app/(public)/account/NotificationsSection'
 import { PasswordSection } from '@/app/(public)/account/PasswordSection'
 import { RecentOrdersSection } from '@/app/(public)/account/RecentOrdersSection'
 import type { UserProfile } from '@/app/(public)/account/account-shared'
@@ -89,6 +90,8 @@ export default function AccountClient() {
         <RecentOrdersSection />
 
         <PreferencesSection profile={profile} />
+
+        <NotificationsSection />
 
         {profile?.hasPassword && <PasswordSection />}
 

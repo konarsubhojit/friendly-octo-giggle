@@ -11,11 +11,13 @@ import {
 import { checkAdminAuth } from '@/features/admin/services/admin-auth'
 import { cacheAdminUserById, invalidateAdminUserCaches } from '@/lib/cache'
 import { z } from 'zod'
+import { ASSIGNABLE_USER_ROLES } from '@/lib/constants/roles'
+import { recordAdminAuditLog } from '@/features/admin/services/admin-audit-log'
 
 export const dynamic = 'force-dynamic'
 
 const UpdateUserRoleSchema = z.object({
-  role: z.enum(['ADMIN', 'CUSTOMER']),
+  role: z.enum(ASSIGNABLE_USER_ROLES),
 })
 
 export async function PATCH(
@@ -23,7 +25,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const authCheck = await checkAdminAuth()
+    const authCheck = await checkAdminAuth('users:manage')
     if (!authCheck.authorized) {
       return apiError(authCheck.error, authCheck.status)
     }
@@ -52,6 +54,15 @@ export async function PATCH(
 
     await invalidateAdminUserCaches(id)
 
+    await recordAdminAuditLog({
+      userId: authCheck.userId,
+      role: authCheck.role,
+      entity: 'user',
+      entityId: id,
+      action: 'role_change',
+      diff: { role: validated.role },
+    })
+
     return apiSuccess({ user })
   } catch (error) {
     return handleApiError(error)
@@ -63,7 +74,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const authCheck = await checkAdminAuth()
+    const authCheck = await checkAdminAuth('users:read')
     if (!authCheck.authorized) {
       return apiError(authCheck.error, authCheck.status)
     }

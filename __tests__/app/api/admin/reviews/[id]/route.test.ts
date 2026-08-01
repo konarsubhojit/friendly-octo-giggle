@@ -74,7 +74,11 @@ describe('Admin review moderation route', () => {
   })
 
   it('updates moderation flags', async () => {
-    mockCheckAdminAuth.mockResolvedValue({ authorized: true, userId: 'admin' })
+    mockCheckAdminAuth.mockResolvedValue({
+      authorized: true,
+      role: 'ADMIN',
+      userId: 'admin',
+    })
     mockUpdateReturning.mockResolvedValue([
       {
         id: 'rev1',
@@ -100,7 +104,11 @@ describe('Admin review moderation route', () => {
   })
 
   it('removes review', async () => {
-    mockCheckAdminAuth.mockResolvedValue({ authorized: true, userId: 'admin' })
+    mockCheckAdminAuth.mockResolvedValue({
+      authorized: true,
+      role: 'ADMIN',
+      userId: 'admin',
+    })
     mockDeleteReturning.mockResolvedValue([{ id: 'rev1' }])
 
     const response = await DELETE(

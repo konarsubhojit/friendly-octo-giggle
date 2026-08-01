@@ -18,7 +18,15 @@ export interface OrderConfirmationData {
   to: string
   customerName: string
   orderId: string
+  /** Pre-formatted amounts; omitted for orders placed before the tax engine. */
+  subtotalAmount?: string | null
+  shippingAmount?: string | null
+  taxAmount?: string | null
+  shippingMethodLabel?: string | null
   totalAmount: string
+  /** Formatted discount, omitted when no coupon was applied. */
+  discountAmount?: string | null
+  couponCode?: string | null
   items: OrderEmailItem[]
   shippingAddress: string
 }
@@ -30,6 +38,38 @@ export interface OrderStatusUpdateData {
   status: string
   trackingNumber?: string | null
   shippingProvider?: string | null
+}
+
+/** Lifecycle of a refund as reported by the payment gateway. */
+export type RefundStatus = 'PENDING' | 'PROCESSED' | 'FAILED'
+
+export interface OrderRefundUpdateData {
+  to: string
+  customerName: string
+  orderId: string
+  status: RefundStatus
+  /** Pre-formatted refunded amount. */
+  refundAmount: string
+  /** True when only part of the order total was refunded. */
+  isPartial: boolean
+  reason?: string | null
+}
+
+export interface AbandonedCartItem {
+  name: string
+  quantity: number
+  /** Pre-formatted price string (e.g. "₹499.00"). */
+  price: string
+  variant?: string | null
+}
+
+export interface AbandonedCartReminderData {
+  to: string
+  customerName: string
+  cartUrl: string
+  items: AbandonedCartItem[]
+  /** 1 for the 24-hour nudge, 2 for the 72-hour follow-up. */
+  reminderNumber: 1 | 2
 }
 
 // ─── Helpers ────────────────────────────────────────────
@@ -56,6 +96,10 @@ const labels = {
   cancelled: 'Cancelled',
   thankYou: 'Thank you',
   orderSummary: 'Order Summary',
+  discount: 'Discount',
+  subtotal: 'Subtotal',
+  shipping: 'Shipping',
+  tax: 'Tax (GST)',
   total: 'Total',
   shippingAddress: 'Shipping Address',
   orderId: 'Order ID',
@@ -134,7 +178,48 @@ const statusLabel: Record<
   CANCELLED: { label: 'cancelled', emoji: '❌', color: '#dc2626' },
 }
 
+const totalsRowHtml = (label: string, value: string) => `
+      <div style="display:block;text-align:right;color:#7a5543;font-size:14px;margin-bottom:4px;">
+        <span>${escapeHtml(label)}: </span><span>${escapeHtml(value)}</span>
+      </div>`
+
+/** Itemised subtotal / shipping / tax lines, rendered only when available. */
+const orderTotalsHtml = (data: OrderConfirmationData) =>
+  [
+    data.subtotalAmount
+      ? totalsRowHtml(labels.subtotal, data.subtotalAmount)
+      : '',
+    data.shippingAmount
+      ? totalsRowHtml(
+          data.shippingMethodLabel
+            ? `${labels.shipping} (${data.shippingMethodLabel})`
+            : labels.shipping,
+          data.shippingAmount
+        )
+      : '',
+    data.taxAmount ? totalsRowHtml(labels.tax, data.taxAmount) : '',
+  ].join('')
+
+const orderTotalsText = (data: OrderConfirmationData) =>
+  [
+    data.subtotalAmount ? `${labels.subtotal}: ${data.subtotalAmount}` : '',
+    data.shippingAmount ? `${labels.shipping}: ${data.shippingAmount}` : '',
+    data.taxAmount ? `${labels.tax}: ${data.taxAmount}` : '',
+  ]
+    .filter(Boolean)
+    .join('\n')
+
 export const orderConfirmationTemplate = (data: OrderConfirmationData) => {
+  const couponSuffix = data.couponCode
+    ? ` (${escapeHtml(data.couponCode.toUpperCase())})`
+    : ''
+  const discountHtml = data.discountAmount
+    ? `<div style="text-align:right;padding:8px 12px;color:#5C4A44;font-size:14px;">
+      <strong>${labels.discount}${couponSuffix}: </strong>
+      <span style="color:#059669;font-weight:600;">-${escapeHtml(data.discountAmount)}</span>
+    </div>`
+    : ''
+  const totalsText = orderTotalsText(data)
   const bodyHtml = `
     <h2 style="color:#5C4A44;margin:0 0 8px;font-size:22px;">${labels.thankYou}, ${escapeHtml(data.customerName)}! 🌸</h2>
     <p style="color:#7a5543;margin:0 0 24px;font-size:15px;">
@@ -147,7 +232,9 @@ export const orderConfirmationTemplate = (data: OrderConfirmationData) => {
     </div>
     <h3 style="color:#5C4A44;font-size:15px;margin:0 0 8px;">${labels.orderSummary}</h3>
     ${itemsTableHtml(data.items)}
+    ${discountHtml}
     <div style="text-align:right;padding:8px 12px;background:#F9F0EB;border-radius:8px;margin-bottom:24px;">
+      ${orderTotalsHtml(data)}
       <strong style="color:#5C4A44;font-size:15px;">${labels.total}: </strong>
       <span style="color:#b83060;font-size:18px;font-weight:700;">${escapeHtml(data.totalAmount)}</span>
     </div>
@@ -173,10 +260,14 @@ export const orderConfirmationTemplate = (data: OrderConfirmationData) => {
     })
     .join('\n')
 
+  const discountText = data.discountAmount
+    ? `Discount${data.couponCode ? ` (${data.couponCode.toUpperCase()})` : ''}: -${data.discountAmount}\n`
+    : ''
+
   return {
     subject: `Order Confirmed — #${data.orderId.toUpperCase()} 🌸`,
     html: emailWrapper(bodyHtml),
-    text: `Hi ${data.customerName},\n\nYour order #${data.orderId.toUpperCase()} has been confirmed!\nTotal: ${data.totalAmount}\n\nItems:\n${itemLines}\n\nShipping to:\n${data.shippingAddress}\n\nThank you for shopping with ${STORE_NAME}!`,
+    text: `Hi ${data.customerName},\n\nYour order #${data.orderId.toUpperCase()} has been confirmed!\n${totalsText ? `${totalsText}\n` : ''}${discountText}Total: ${data.totalAmount}\n\nItems:\n${itemLines}\n\nShipping to:\n${data.shippingAddress}\n\nThank you for shopping with ${STORE_NAME}!`,
   }
 }
 
@@ -238,5 +329,148 @@ export const orderStatusUpdateTemplate = (data: OrderStatusUpdateData) => {
     subject: `Your Order #${data.orderId.toUpperCase()} is now ${statusText} ${info.emoji}`,
     html: emailWrapper(bodyHtml),
     text: `Hi ${data.customerName},\n\nYour order #${data.orderId.toUpperCase()} status has been updated to: ${info.label}\n${trackingLine}${carrierLine}\n\nThank you for shopping with ${STORE_NAME}!`,
+  }
+}
+
+const refundStatusLabel: Record<
+  RefundStatus,
+  { label: string; emoji: string; color: string; headline: string }
+> = {
+  PENDING: {
+    label: 'Refund initiated',
+    emoji: '⏳',
+    color: '#d97706',
+    headline: 'Your refund is on its way',
+  },
+  PROCESSED: {
+    label: 'Refund completed',
+    emoji: '💸',
+    color: '#059669',
+    headline: 'Your refund has been processed',
+  },
+  FAILED: {
+    label: 'Refund failed',
+    emoji: '⚠️',
+    color: '#dc2626',
+    headline: 'We could not process your refund',
+  },
+}
+
+const REFUND_STATUS_NOTES: Record<RefundStatus, string> = {
+  PENDING:
+    'Your bank usually takes 5–7 working days to credit the amount back to you.',
+  PROCESSED:
+    'The amount has been sent back to your original payment method and should appear within 5–7 working days.',
+  FAILED:
+    'No money has left our side. Our team is looking into it and will contact you shortly.',
+}
+
+export const orderRefundUpdateTemplate = (data: OrderRefundUpdateData) => {
+  const info = refundStatusLabel[data.status]
+  const refundKind = data.isPartial ? 'Partial refund' : 'Full refund'
+  const reasonHtml = data.reason
+    ? `<p style="margin:8px 0 0;color:#5C4A44;font-size:14px;"><strong>Reason:</strong> ${escapeHtml(data.reason)}</p>`
+    : ''
+
+  const bodyHtml = `
+    <h2 style="color:#5C4A44;margin:0 0 8px;font-size:22px;">
+      ${info.emoji} ${escapeHtml(info.headline)}
+    </h2>
+    <p style="color:#7a5543;margin:0 0 24px;font-size:15px;">
+      Hi ${escapeHtml(data.customerName)}, here's an update on the refund for your order.
+    </p>
+    <div style="background:#F9F0EB;border-radius:12px;padding:16px 20px;margin-bottom:20px;">
+      <p style="margin:0 0 8px;color:#5C4A44;font-size:14px;">
+        <strong>${labels.order}:</strong> <span style="font-family:monospace;color:#b83060;">#${escapeHtml(data.orderId.toUpperCase())}</span>
+      </p>
+      <p style="margin:0 0 8px;color:#5C4A44;font-size:14px;">
+        <strong>${escapeHtml(refundKind)}:</strong> <span style="color:#b83060;font-weight:600;">${escapeHtml(data.refundAmount)}</span>
+      </p>
+      <p style="margin:0;color:#5C4A44;font-size:14px;">
+        <strong>Status:</strong>
+        <span style="background-color:${info.color}1a;color:${info.color};padding:2px 8px;border-radius:20px;font-size:13px;font-weight:600;margin-left:6px;">
+          ${escapeHtml(info.label)}
+        </span>
+      </p>
+      ${reasonHtml}
+    </div>
+    <p style="color:#7a5543;font-size:14px;margin-top:24px;">
+      ${escapeHtml(REFUND_STATUS_NOTES[data.status])}
+    </p>`
+
+  const reasonLine = data.reason ? `\nReason: ${data.reason}` : ''
+
+  return {
+    subject: `${info.label} for Order #${data.orderId.toUpperCase()} ${info.emoji}`,
+    html: emailWrapper(bodyHtml),
+    text: `Hi ${data.customerName},\n\n${info.headline}.\n\nOrder: #${data.orderId.toUpperCase()}\n${refundKind}: ${data.refundAmount}\nStatus: ${info.label}${reasonLine}\n\n${REFUND_STATUS_NOTES[data.status]}\n\nThank you for shopping with ${STORE_NAME}!`,
+  }
+}
+
+export const abandonedCartReminderTemplate = (
+  data: AbandonedCartReminderData
+) => {
+  const headline =
+    data.reminderNumber === 1
+      ? 'You left something behind 🌸'
+      : 'Still waiting for you 🌸'
+  const subheadline =
+    data.reminderNumber === 1
+      ? `Hi ${escapeHtml(data.customerName)}, it looks like you left some beautiful items in your cart. They're still here whenever you're ready.`
+      : `Hi ${escapeHtml(data.customerName)}, your cart is still waiting! These handcrafted items are popular and stock is limited.`
+
+  const itemsHtml = data.items
+    .map(
+      (item) => `
+    <tr>
+      <td style="padding:10px 12px;border-bottom:1px solid #F2E8E4;color:#5C4A44;font-size:13px;">
+        ${escapeHtml(item.name)}${item.variant ? `<br><span style="color:#7a5543;font-size:12px;">${escapeHtml(item.variant)}</span>` : ''}
+      </td>
+      <td style="padding:10px 12px;border-bottom:1px solid #F2E8E4;text-align:center;color:#5C4A44;font-size:13px;">${item.quantity}</td>
+      <td style="padding:10px 12px;border-bottom:1px solid #F2E8E4;text-align:right;color:#b83060;font-size:13px;font-weight:600;">${escapeHtml(item.price)}</td>
+    </tr>`
+    )
+    .join('')
+
+  const bodyHtml = `
+    <h2 style="color:#5C4A44;margin:0 0 8px;font-size:22px;">${escapeHtml(headline)}</h2>
+    <p style="color:#7a5543;margin:0 0 24px;font-size:15px;">${subheadline}</p>
+    <table role="presentation" width="100%" style="border-collapse:collapse;margin:16px 0;">
+      <thead>
+        <tr style="background:#F9F0EB;">
+          <th style="text-align:left;padding:10px 12px;color:#5C4A44;font-size:13px;font-weight:600;border-bottom:2px solid #E8D5CC;">Item</th>
+          <th style="text-align:center;padding:10px 12px;color:#5C4A44;font-size:13px;font-weight:600;border-bottom:2px solid #E8D5CC;">Qty</th>
+          <th style="text-align:right;padding:10px 12px;color:#5C4A44;font-size:13px;font-weight:600;border-bottom:2px solid #E8D5CC;">Price</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${itemsHtml}
+      </tbody>
+    </table>
+    <div style="text-align:center;margin:32px 0;">
+      <a href="${escapeHtml(data.cartUrl)}"
+         style="background:linear-gradient(135deg,#b83060,#cc4880);color:#fff;text-decoration:none;padding:14px 32px;border-radius:8px;font-size:16px;font-weight:600;display:inline-block;">
+        Return to Cart 🛒
+      </a>
+    </div>
+    <p style="color:#7a5543;font-size:13px;text-align:center;margin:0;">
+      If you no longer wish to receive these reminders, you can update your
+      <a href="${escapeHtml(data.cartUrl.replace('/cart', '/account'))}" style="color:#b83060;">notification preferences</a>.
+    </p>`
+
+  const itemLines = data.items
+    .map((item) => {
+      const variantStr = item.variant ? ` (${item.variant})` : ''
+      return `- ${item.name}${variantStr} x${item.quantity}: ${item.price}`
+    })
+    .join('\n')
+
+  return {
+    subject:
+      data.reminderNumber === 1
+        ? `You left something in your cart 🌸`
+        : `Your cart is still waiting for you 🌸`,
+    html: emailWrapper(bodyHtml),
+    text: `Hi ${data.customerName},\n\n${data.reminderNumber === 1 ? 'You left some items in your cart.' : "Your cart is still waiting — stock is limited!"}\n\nItems:\n${itemLines}\n\nReturn to your cart: ${data.cartUrl}\n\nThank you for shopping with ${STORE_NAME}!`,
   }
 }

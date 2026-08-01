@@ -97,6 +97,7 @@ describe('GET /api/admin/products/[id]/options', () => {
   it('returns 404 when product not found', async () => {
     vi.mocked(checkAdminAuth).mockResolvedValue({
       authorized: true,
+      role: 'ADMIN',
       userId: 'a1',
     })
     mockProductFindFirst.mockResolvedValue(null)
@@ -113,6 +114,7 @@ describe('GET /api/admin/products/[id]/options', () => {
   it('returns options for a product', async () => {
     vi.mocked(checkAdminAuth).mockResolvedValue({
       authorized: true,
+      role: 'ADMIN',
       userId: 'a1',
     })
     mockProductFindFirst.mockResolvedValue({ id: 'p1' })
@@ -157,6 +159,7 @@ describe('GET /api/admin/products/[id]/options', () => {
   it('returns empty array when product has no options', async () => {
     vi.mocked(checkAdminAuth).mockResolvedValue({
       authorized: true,
+      role: 'ADMIN',
       userId: 'a1',
     })
     mockProductFindFirst.mockResolvedValue({ id: 'p1' })
@@ -174,6 +177,7 @@ describe('GET /api/admin/products/[id]/options', () => {
   it('returns 500 on internal error', async () => {
     vi.mocked(checkAdminAuth).mockResolvedValue({
       authorized: true,
+      role: 'ADMIN',
       userId: 'a1',
     })
     mockProductFindFirst.mockRejectedValue(new Error('DB down'))
@@ -212,6 +216,7 @@ describe('POST /api/admin/products/[id]/options', () => {
   it('returns 404 when product not found', async () => {
     vi.mocked(checkAdminAuth).mockResolvedValue({
       authorized: true,
+      role: 'ADMIN',
       userId: 'a1',
     })
     mockProductFindFirst.mockResolvedValue(null)
@@ -231,6 +236,7 @@ describe('POST /api/admin/products/[id]/options', () => {
   it('returns 400 for invalid input (missing name)', async () => {
     vi.mocked(checkAdminAuth).mockResolvedValue({
       authorized: true,
+      role: 'ADMIN',
       userId: 'a1',
     })
     mockProductFindFirst.mockResolvedValue({ id: 'p1' })
@@ -250,6 +256,7 @@ describe('POST /api/admin/products/[id]/options', () => {
   it('returns 400 for invalid input (empty values array)', async () => {
     vi.mocked(checkAdminAuth).mockResolvedValue({
       authorized: true,
+      role: 'ADMIN',
       userId: 'a1',
     })
     mockProductFindFirst.mockResolvedValue({ id: 'p1' })
@@ -269,6 +276,7 @@ describe('POST /api/admin/products/[id]/options', () => {
   it('returns 400 when max options reached', async () => {
     vi.mocked(checkAdminAuth).mockResolvedValue({
       authorized: true,
+      role: 'ADMIN',
       userId: 'a1',
     })
     mockProductFindFirst.mockResolvedValue({ id: 'p1' })
@@ -312,6 +320,7 @@ describe('POST /api/admin/products/[id]/options', () => {
   it('creates an option with values successfully', async () => {
     vi.mocked(checkAdminAuth).mockResolvedValue({
       authorized: true,
+      role: 'ADMIN',
       userId: 'a1',
     })
     mockProductFindFirst.mockResolvedValue({ id: 'p1' })
@@ -372,6 +381,7 @@ describe('POST /api/admin/products/[id]/options', () => {
   it('returns 500 when transaction returns null', async () => {
     vi.mocked(checkAdminAuth).mockResolvedValue({
       authorized: true,
+      role: 'ADMIN',
       userId: 'a1',
     })
     mockProductFindFirst.mockResolvedValue({ id: 'p1' })
@@ -414,6 +424,7 @@ describe('POST /api/admin/products/[id]/options', () => {
   it('returns 500 on unexpected error', async () => {
     vi.mocked(checkAdminAuth).mockResolvedValue({
       authorized: true,
+      role: 'ADMIN',
       userId: 'a1',
     })
     mockProductFindFirst.mockResolvedValue({ id: 'p1' })

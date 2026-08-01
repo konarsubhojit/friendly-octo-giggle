@@ -1,3 +1,6 @@
+import type { PaymentProviderName } from '@/lib/payments/providers'
+import type { ShippingMethodName } from '@/lib/shipping/methods'
+
 export interface ProductOptionValue {
   id: string
   optionId: string
@@ -21,6 +24,8 @@ export interface ProductVariant {
   sku: string | null
   price: number
   stock: number
+  /** Shipping weight of one unit in grams; null uses the engine default. */
+  weightGrams?: number | null
   image: string | null
   images: string[]
   sortOrder?: number
@@ -63,13 +68,16 @@ export enum OrderStatus {
 
 export type PaymentStatus = 'PENDING' | 'PAID' | 'FAILED' | 'REFUNDED'
 
-export type PaymentProvider = 'RAZORPAY'
+export type PaymentProvider = PaymentProviderName
 
 export interface CheckoutPaymentInput {
   provider: PaymentProvider
-  orderId: string
-  paymentId: string
-  signature: string
+  /** Gateway order reference — absent for providers that settle offline. */
+  orderId?: string
+  /** Gateway transaction reference — absent for providers that settle offline. */
+  paymentId?: string
+  /** Gateway signature — required only by providers that sign references. */
+  signature?: string
 }
 
 export interface OrderItem {
@@ -107,7 +115,14 @@ export interface Order {
   pinCode?: string | null
   city?: string | null
   state?: string | null
+  subtotalAmount?: number
+  shippingAmount?: number
+  taxAmount?: number
+  shippingMethod?: ShippingMethodName | null
   totalAmount: number
+  /** Discount applied at checkout; 0 when no coupon was used. */
+  discountAmount?: number
+  couponCode?: string | null
   status: OrderStatus
   paymentStatus: PaymentStatus
   paymentProvider?: PaymentProvider | null
@@ -144,6 +159,9 @@ export interface CreateOrderInput {
   city: string
   state: string
   items: OrderItemInput[]
+  /** Optional promo code; the discount is always recomputed server-side. */
+  couponCode?: string | null
+  shippingMethod?: ShippingMethodName | null
   payment?: CheckoutPaymentInput
 }
 

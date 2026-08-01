@@ -1,5 +1,5 @@
-import { notFound, redirect } from 'next/navigation'
-import { auth } from '@/lib/auth'
+import { notFound } from 'next/navigation'
+import { requireAdminPermission } from '@/features/admin/services/admin-page-auth'
 import { drizzleDb } from '@/lib/db'
 import { products } from '@/lib/schema'
 import { eq, and, isNull } from 'drizzle-orm'
@@ -20,10 +20,7 @@ interface PageProps {
 }
 
 export default async function AdminProductEditPage({ params }: PageProps) {
-  const session = await auth()
-  if (session?.user?.role !== 'ADMIN') {
-    redirect('/auth/signin')
-  }
+  await requireAdminPermission('products:read', '/admin/products')
 
   const { id } = await params
 

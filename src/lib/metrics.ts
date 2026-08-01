@@ -1,5 +1,16 @@
 const SLOW_API_THRESHOLD_MS = 1_000
 
+/**
+ * Upper bounds (milliseconds) of the order processing histogram.
+ *
+ * Buckets — rather than an average — are what make a real p95/p99 derivable
+ * (`histogram_quantile`) before deciding whether the checkout pipeline needs
+ * restructuring.
+ */
+const ORDER_PROCESSING_BUCKETS_MS = [
+  100, 250, 500, 1_000, 2_500, 5_000, 10_000, 30_000,
+] as const
+
 interface ApiRouteMetrics {
   count: number
   errorCount: number
@@ -29,6 +40,12 @@ const state = {
     checkoutLagSamples: 0,
     checkoutLagTotalMs: 0,
     checkoutLagMaxMs: 0,
+  },
+  orders: {
+    processingSamples: 0,
+    processingTotalMs: 0,
+    processingMaxMs: 0,
+    processingBuckets: ORDER_PROCESSING_BUCKETS_MS.map(() => 0),
   },
 }
 
@@ -104,6 +121,47 @@ export const recordCheckoutQueueLagMetric = (lagMs: number) => {
   )
 }
 
+export const recordOrderProcessingMetric = (durationMs: number) => {
+  // Clock skew or a mis-ordered timer can produce negative durations.
+  const normalizedDuration = Math.max(durationMs, 0)
+  state.orders.processingSamples += 1
+  state.orders.processingTotalMs += normalizedDuration
+  state.orders.processingMaxMs = Math.max(
+    state.orders.processingMaxMs,
+    normalizedDuration
+  )
+
+  ORDER_PROCESSING_BUCKETS_MS.forEach((upperBound, index) => {
+    if (normalizedDuration <= upperBound) {
+      state.orders.processingBuckets[index] += 1
+    }
+  })
+}
+
+const renderOrderProcessingHistogram = (): string[] => {
+  const lines = [
+    '# HELP application_order_processing_duration_ms Order creation duration in milliseconds.',
+    '# TYPE application_order_processing_duration_ms histogram',
+  ]
+
+  ORDER_PROCESSING_BUCKETS_MS.forEach((upperBound, index) => {
+    lines.push(
+      `application_order_processing_duration_ms_bucket{le="${upperBound}"} ${state.orders.processingBuckets[index]}`
+    )
+  })
+
+  lines.push(
+    `application_order_processing_duration_ms_bucket{le="+Inf"} ${state.orders.processingSamples}`,
+    `application_order_processing_duration_ms_sum ${state.orders.processingTotalMs}`,
+    `application_order_processing_duration_ms_count ${state.orders.processingSamples}`,
+    '# HELP application_order_processing_duration_ms_max Slowest order creation observed in milliseconds.',
+    '# TYPE application_order_processing_duration_ms_max gauge',
+    `application_order_processing_duration_ms_max ${state.orders.processingMaxMs}`
+  )
+
+  return lines
+}
+
 export const renderPrometheusMetrics = (): string => {
   const cacheLookups = state.cache.hit + state.cache.miss
   const cacheHitRate = cacheLookups > 0 ? state.cache.hit / cacheLookups : 0
@@ -146,6 +204,7 @@ export const renderPrometheusMetrics = (): string => {
     '# HELP application_checkout_queue_lag_ms_max Max checkout queue lag in milliseconds.',
     '# TYPE application_checkout_queue_lag_ms_max gauge',
     `application_checkout_queue_lag_ms_max ${state.queue.checkoutLagMaxMs}`,
+    ...renderOrderProcessingHistogram(),
   ]
 
   for (const [key, metrics] of state.api.byRoute.entries()) {
@@ -179,6 +238,10 @@ export const resetMetrics = () => {
   state.queue.checkoutLagSamples = 0
   state.queue.checkoutLagTotalMs = 0
   state.queue.checkoutLagMaxMs = 0
+  state.orders.processingSamples = 0
+  state.orders.processingTotalMs = 0
+  state.orders.processingMaxMs = 0
+  state.orders.processingBuckets.fill(0)
 }
 
 // Backward-compatible alias for tests importing the older helper name.

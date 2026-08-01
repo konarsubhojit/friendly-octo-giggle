@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { drizzleDb, primaryDrizzleDb } from '@/lib/db'
-import { orders, productVariants } from '@/lib/schema'
-import { eq, sql } from 'drizzle-orm'
+import { orders } from '@/lib/schema'
+import { eq } from 'drizzle-orm'
 import {
   apiSuccess,
   apiError,
@@ -12,28 +12,70 @@ import { checkAdminAuth } from '@/features/admin/services/admin-auth'
 import { cacheAdminOrderById, invalidateAdminOrderCaches } from '@/lib/cache'
 import { serializeOrder } from '@/lib/serializers'
 import { UpdateOrderStatusSchema } from '@/features/orders/validations'
-import { sendOrderStatusUpdateEmail } from '@/lib/email'
+import { notifyOrderStatusUpdate } from '@/lib/notifications/order-notifications'
 import { getQStashClient } from '@/lib/qstash'
 import type { OrderStatusChangedEvent } from '@/lib/qstash-events'
 import { env } from '@/lib/env'
 import { logBusinessEvent, logError } from '@/lib/logger'
 import { getRedisClient } from '@/lib/redis'
+import { settlesPaymentOnDelivery } from '@/lib/payments'
+import { restockOrderItems } from '@/features/orders/services/order-restock'
 import { waitUntil } from '@vercel/functions'
 
 export const dynamic = 'force-dynamic'
 
-const buildUpdateData = (data: {
-  status: 'PENDING' | 'PROCESSING' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED'
-  trackingNumber?: string | null
-  shippingProvider?: string | null
-}) => {
+/**
+ * Settle providers that collect payment at delivery (e.g. Cash on Delivery).
+ * Confirming delivery is the settlement event for those orders.
+ */
+const buildDeliverySettlement = (
+  nextStatus: string,
+  currentOrder?: {
+    paymentProvider: string | null
+    paymentStatus: string
+    totalAmount: number
+  }
+) => {
+  if (
+    nextStatus !== 'DELIVERED' ||
+    !currentOrder ||
+    currentOrder.paymentStatus === 'PAID' ||
+    !settlesPaymentOnDelivery(currentOrder.paymentProvider)
+  ) {
+    return {}
+  }
+
+  return {
+    paymentStatus: 'PAID' as const,
+    amountPaid: currentOrder.totalAmount,
+    paidAt: new Date(),
+  }
+}
+
+const buildUpdateData = (
+  data: {
+    status: 'PENDING' | 'PROCESSING' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED'
+    trackingNumber?: string | null
+    shippingProvider?: string | null
+  },
+  currentOrder?: {
+    paymentProvider: string | null
+    paymentStatus: string
+    totalAmount: number
+  }
+) => {
   const optional = Object.fromEntries(
     Object.entries({
       trackingNumber: data.trackingNumber,
       shippingProvider: data.shippingProvider,
     }).filter(([, v]) => v !== undefined)
   )
-  return { status: data.status, updatedAt: new Date(), ...optional }
+  return {
+    status: data.status,
+    updatedAt: new Date(),
+    ...optional,
+    ...buildDeliverySettlement(data.status, currentOrder),
+  }
 }
 
 const VALID_TRANSITIONS: Record<string, string[]> = {
@@ -106,7 +148,7 @@ const dispatchStatusNotification = async (
       context: 'qstash_publish_failed_using_fallback',
       additionalInfo: { orderId: order.id, eventType: statusEvent.type },
     })
-    sendOrderStatusUpdateEmail({
+    await notifyOrderStatusUpdate({
       to: order.customerEmail,
       customerName: order.customerName,
       orderId: order.id,
@@ -121,7 +163,7 @@ export const PATCH = async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) => {
-  const authCheck = await checkAdminAuth()
+  const authCheck = await checkAdminAuth('orders:update')
   if (!authCheck.authorized) {
     return apiError(authCheck.error ?? 'Unauthorized', authCheck.status)
   }
@@ -154,25 +196,15 @@ export const PATCH = async (
       await primaryDrizzleDb.transaction(async (tx) => {
         await tx
           .update(orders)
-          .set(buildUpdateData(validatedBody))
+          .set(buildUpdateData(validatedBody, currentOrder))
           .where(eq(orders.id, id))
 
-        await Promise.all(
-          currentOrder.items.map((item) =>
-            tx
-              .update(productVariants)
-              .set({
-                stock: sql`${productVariants.stock} + ${item.quantity}`,
-                updatedAt: new Date(),
-              })
-              .where(eq(productVariants.id, item.variantId))
-          )
-        )
+        await restockOrderItems(tx, currentOrder)
       })
     } else {
       await primaryDrizzleDb
         .update(orders)
-        .set(buildUpdateData(validatedBody))
+        .set(buildUpdateData(validatedBody, currentOrder))
         .where(eq(orders.id, id))
     }
 
@@ -212,7 +244,7 @@ export const GET = async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) => {
-  const authCheck = await checkAdminAuth()
+  const authCheck = await checkAdminAuth('orders:read')
   if (!authCheck.authorized) {
     return apiError(authCheck.error ?? 'Unknown error', authCheck.status)
   }

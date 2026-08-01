@@ -34,6 +34,13 @@ Never attach credentials, raw passwords, reset tokens, payment secrets, or full 
 - Cache operations (hit/miss/set/invalidate) and cache hit rate
 - Business event success/failure counters
 - Checkout queue lag (avg/max, milliseconds)
+- Order processing duration as a histogram, `application_order_processing_duration_ms_bucket` (plus `_sum`, `_count` and `_max`), covering payment verification through order persistence
+
+Use the histogram to derive real percentiles before making capacity decisions:
+
+```promql
+histogram_quantile(0.99, sum(rate(application_order_processing_duration_ms_bucket[5m])) by (le))
+```
 
 ## Tracing Key Workflows
 
@@ -51,6 +58,7 @@ Configure alerts in your monitoring system (Sentry, Datadog, Prometheus Alertman
 2. `application_api_request_slow_total` sustained growth
 3. `application_cache_hit_rate` dropping below your baseline target (for example `< 0.5`, adjusted to your normal traffic profile)
 4. `application_checkout_queue_lag_ms_max` breaching queue SLO
+5. `application_order_processing_duration_ms` p99 approaching the 30s `maxDuration` declared on claim-holding routes
 
 ## Synthetic Uptests
 

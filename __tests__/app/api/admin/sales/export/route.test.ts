@@ -38,6 +38,7 @@ describe('GET /api/admin/sales/export', () => {
   it('returns csv export with sales rows', async () => {
     mockCheckAdminAuth.mockResolvedValue({
       authorized: true,
+      role: 'ADMIN',
       userId: 'admin-1',
     })
     mockGetAdminSalesDashboardData.mockResolvedValue({

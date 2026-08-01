@@ -3,6 +3,13 @@ import { render, screen } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import AdminSearchPage from '@/app/admin/search/page'
 
+const mockRequireAdminPermission = vi.hoisted(() => vi.fn())
+
+vi.mock('@/features/admin/services/admin-page-auth', () => ({
+  requireAdminPermission: (permission: string, callbackUrl?: string) =>
+    mockRequireAdminPermission(permission, callbackUrl),
+}))
+
 const isSearchAvailable = vi.fn()
 const areOrdersSearchControlsAvailable = vi.fn()
 
@@ -37,11 +44,23 @@ vi.mock('@/features/admin/components/SearchReindexClient', () => ({
 }))
 
 describe('AdminSearchPage', () => {
-  it('renders the upgraded page shell for configured search', () => {
+  it('enforces the system:manage admin permission', async () => {
     isSearchAvailable.mockReturnValue(true)
     areOrdersSearchControlsAvailable.mockReturnValue(true)
 
-    render(<AdminSearchPage />)
+    render(await AdminSearchPage())
+
+    expect(mockRequireAdminPermission).toHaveBeenCalledWith(
+      'system:manage',
+      '/admin/search'
+    )
+  })
+
+  it('renders the upgraded page shell for configured search', async () => {
+    isSearchAvailable.mockReturnValue(true)
+    areOrdersSearchControlsAvailable.mockReturnValue(true)
+
+    render(await AdminSearchPage())
 
     expect(
       screen.getByRole('heading', {
@@ -57,11 +76,11 @@ describe('AdminSearchPage', () => {
     ).toBeInTheDocument()
   })
 
-  it('renders the fallback metric state when search is not configured', () => {
+  it('renders the fallback metric state when search is not configured', async () => {
     isSearchAvailable.mockReturnValue(false)
     areOrdersSearchControlsAvailable.mockReturnValue(false)
 
-    render(<AdminSearchPage />)
+    render(await AdminSearchPage())
 
     expect(screen.getAllByText('Missing config')).toHaveLength(2)
     expect(
@@ -71,11 +90,11 @@ describe('AdminSearchPage', () => {
     ).toBeInTheDocument()
   })
 
-  it('renders mixed search infrastructure states', () => {
+  it('renders mixed search infrastructure states', async () => {
     isSearchAvailable.mockReturnValue(false)
     areOrdersSearchControlsAvailable.mockReturnValue(true)
 
-    render(<AdminSearchPage />)
+    render(await AdminSearchPage())
 
     expect(screen.getByText('Products index')).toBeInTheDocument()
     expect(screen.getByText('Orders index')).toBeInTheDocument()

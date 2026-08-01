@@ -33,11 +33,51 @@ The core storefront requires PostgreSQL and NextAuth configuration. Enable newer
 - Vercel Queues: durable checkout processing through the `checkout-orders` topic.
 - QStash and an email provider: asynchronous transactional email and retries.
 - Vercel Blob: admin image upload.
+- Web Push (VAPID) credentials: browser push notifications for order-status changes. See [Web push setup](#web-push-setup).
 - Sentry: server, edge, and browser tracing/error capture.
 - Edge Config: maintenance, sale, and shipping feature settings.
 - Cron authorization: exchange-rate refresh and failed-email retry jobs.
 
 Unset optional integrations must be treated as disabled capabilities, not as reasons for the core application to fail startup.
+
+### Web push setup
+
+Web push uses the service worker already registered for the PWA, so no extra
+infrastructure is required — only a VAPID key pair.
+
+1. Generate the key pair once per environment:
+
+   ```bash
+   npx web-push generate-vapid-keys
+   ```
+
+2. Set the resulting values as environment variables:
+
+   | Variable            | Required | Purpose                                                                        |
+   | ------------------- | -------- | ------------------------------------------------------------------------------ |
+   | `VAPID_PUBLIC_KEY`  | Yes      | Application server key. Served to clients by `GET /api/account/notifications`. |
+   | `VAPID_PRIVATE_KEY` | Yes      | Signs push requests. Treat as a secret and never expose it to the browser.     |
+   | `VAPID_SUBJECT`     | No       | Contact URI (`mailto:` or `https:`) sent to push services.                     |
+
+3. Apply the migration that adds the `NotificationPreference` and
+   `PushSubscription` tables:
+
+   ```bash
+   npm run db:migrate
+   ```
+
+4. Verify the deployment is served over HTTPS. Browsers refuse to register push
+   subscriptions on insecure origins (`localhost` is exempt).
+
+Operational notes:
+
+- When the key pair is absent, push sending is skipped and the account
+  preference centre reports push as unavailable; email delivery is unaffected.
+- Rotating `VAPID_PRIVATE_KEY` invalidates every stored subscription. Customers
+  must opt in again; stale endpoints are pruned automatically when the push
+  service returns `404`/`410`.
+- Subscriptions are per browser/device, so a customer opting in on a phone does
+  not receive push on their laptop until they opt in there too.
 
 ## Platform-Specific Instructions
 
@@ -76,9 +116,28 @@ vercel --prod
 
 **Step 3.1: Configure the two async delivery paths separately**
 
-- Checkout orchestration now uses Vercel Queues via `@vercel/queue` and the trigger configured in `vercel.json`.
+- Checkout orchestration runs on Inngest when `INNGEST_EVENT_KEY` is set, and falls back to Vercel Queues (`@vercel/queue` plus the trigger in `vercel.json`) otherwise.
 - Transactional email remains on the separate QStash worker path at `/api/services/email`.
 - Keep these concerns isolated in production. Do not replace the QStash email path with the checkout queue unless you explicitly want to redesign email delivery semantics.
+
+**Runtime budget:** Fluid Compute is enabled for this project, so the platform
+ceiling is 300s. The routes that can hold a `PROCESSING` claim on a checkout
+request deliberately declare a much lower `maxDuration = 30`; see
+`STALE_PROCESSING_CLAIM_MS` in `src/lib/db-queries.ts` for the invariant that
+ties the two together. Raising either value without the other can strand a
+checkout request.
+
+Required Inngest setup (optional — skip to stay on Vercel Queues):
+
+```env
+INNGEST_EVENT_KEY=...
+INNGEST_SIGNING_KEY=...
+```
+
+- Register the app at `https://your-domain.com/api/inngest` in the Inngest dashboard.
+- Rollout: set both keys and redeploy. New checkouts publish `checkout/request.created`; in-flight queue messages keep draining through `/api/queue/checkout-orders`, so the two run side by side with no cutover window.
+- Rollback: unset `INNGEST_EVENT_KEY` and redeploy. Publishing reverts to the queue immediately; already-published Inngest runs finish on their own.
+- Both orchestrators call the same steps and share the same compare-and-swap claim, so a request can never be processed twice.
 
 Required Vercel Queue setup:
 

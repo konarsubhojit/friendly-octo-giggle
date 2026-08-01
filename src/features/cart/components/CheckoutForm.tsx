@@ -11,9 +11,16 @@ import { buildCheckoutSummaryLineItems } from '@/features/orders/services/order-
 import { formatStructuredAddress } from '@/lib/address-utils'
 import { AddressFormField } from './AddressFormField'
 import { PincodeField } from './PincodeField'
+import { ShippingMethodSelector } from './ShippingMethodSelector'
+import { useCurrency } from '@/contexts/CurrencyContext'
+import { buildShippingMethodOptions } from '@/lib/shipping'
+import {
+  DEFAULT_SHIPPING_METHOD,
+  type ShippingMethodName,
+} from '@/lib/shipping/methods'
+import { sumMoney } from '@/lib/money'
+import { PENDING_CHECKOUT_KEY } from '@/features/cart/pending-checkout'
 import toast from 'react-hot-toast'
-
-const PENDING_CHECKOUT_KEY = 'pending_checkout'
 const PINCODE_REGEX = /^\d{6}$/
 const PENDING_CUSTOMIZATION_KEY = 'pending_customization_notes'
 const MAX_ADDRESS_LABEL_LENGTH = 40
@@ -116,6 +123,7 @@ export const CheckoutForm = ({
   const router = useRouter()
   const { data: session } = useSession()
   const cart = useSelector(selectCart)
+  const { formatPrice } = useCurrency()
   const latestPincodeRef = useRef('')
 
   const [address, setAddress] = useState<AddressFields>({
@@ -135,6 +143,10 @@ export const CheckoutForm = ({
   const [pincodeNotice, setPincodeNotice] = useState<string | null>(null)
 
   const cartItems = useMemo(() => cart?.items ?? [], [cart?.items])
+  const [shippingMethod, setShippingMethod] = useState<ShippingMethodName>(
+    DEFAULT_SHIPPING_METHOD
+  )
+
   const mergedCustomizationNotes = useMemo(
     () => ({
       ...readCachedCustomizationNotes(),
@@ -153,6 +165,26 @@ export const CheckoutForm = ({
   const lineItems = useMemo(
     () => buildCheckoutSummaryLineItems(checkoutItems),
     [checkoutItems]
+  )
+
+  const hasDeliveryDestination =
+    PINCODE_REGEX.test(address.pinCode.trim()) &&
+    address.state.trim().length > 0
+
+  const shippingMethodOptions = useMemo(
+    () =>
+      buildShippingMethodOptions({
+        destination: {
+          state: address.state.trim(),
+          pinCode: address.pinCode.trim(),
+        },
+        items: lineItems.map((item) => ({
+          quantity: item.quantity,
+          weightGrams: item.weightGrams,
+        })),
+        subtotal: sumMoney(lineItems.map((item) => item.lineTotal)),
+      }),
+    [address.state, address.pinCode, lineItems]
   )
 
   useEffect(() => {
@@ -341,6 +373,7 @@ export const CheckoutForm = ({
           PENDING_CHECKOUT_KEY,
           JSON.stringify({
             ...trimmed,
+            shippingMethod,
             customizationNotes: mergedCustomizationNotes,
           })
         )
@@ -504,6 +537,14 @@ export const CheckoutForm = ({
           </output>
         )}
       </fieldset>
+
+      <ShippingMethodSelector
+        options={shippingMethodOptions}
+        value={shippingMethod}
+        onChange={setShippingMethod}
+        formatPrice={formatPrice}
+        hasDestination={hasDeliveryDestination}
+      />
 
       {selectedAddressId ? null : (
         <label className="flex items-start gap-2 text-sm text-[var(--text-secondary)]">

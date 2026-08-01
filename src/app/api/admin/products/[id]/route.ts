@@ -18,7 +18,7 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const authCheck = await checkAdminAuth()
+  const authCheck = await checkAdminAuth('products:write')
   if (!authCheck.authorized) {
     return apiError(authCheck.error, authCheck.status)
   }
@@ -49,7 +49,7 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const authCheck = await checkAdminAuth()
+  const authCheck = await checkAdminAuth('products:write')
   if (!authCheck.authorized) {
     return apiError(authCheck.error, authCheck.status)
   }

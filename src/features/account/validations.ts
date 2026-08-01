@@ -42,3 +42,48 @@ export const UpdateAddressSchema = z
 
 export type CreateAddressInput = z.infer<typeof CreateAddressSchema>
 export type UpdateAddressInput = z.infer<typeof UpdateAddressSchema>
+
+export const UpdateNotificationPreferencesSchema = z
+  .object({
+    transactionalEmail: z.boolean().optional(),
+    transactionalPush: z.boolean().optional(),
+    transactionalSms: z.boolean().optional(),
+    marketingEmail: z.boolean().optional(),
+    marketingPush: z.boolean().optional(),
+    marketingSms: z.boolean().optional(),
+  })
+  .refine((value) => Object.keys(value).length > 0, {
+    message: 'At least one preference is required',
+  })
+
+export type UpdateNotificationPreferencesInput = z.infer<
+  typeof UpdateNotificationPreferencesSchema
+>
+
+/**
+ * Push endpoints are supplied by the browser and later requested server-side,
+ * so they are restricted to HTTPS to avoid outbound requests to arbitrary
+ * internal schemes.
+ */
+const PushEndpointSchema = z
+  .url()
+  .max(2048, 'Push endpoint is too long')
+  .refine(
+    (value) => value.startsWith('https://'),
+    'Push endpoint must use HTTPS'
+  )
+
+/** Browser `PushSubscription.toJSON()` payload (RFC 8291 keys). */
+export const PushSubscriptionSchema = z.object({
+  endpoint: PushEndpointSchema,
+  keys: z.object({
+    p256dh: z.string().trim().min(1).max(255),
+    auth: z.string().trim().min(1).max(255),
+  }),
+})
+
+export const DeletePushSubscriptionSchema = z.object({
+  endpoint: PushEndpointSchema,
+})
+
+export type PushSubscriptionInput = z.infer<typeof PushSubscriptionSchema>

@@ -21,6 +21,8 @@ vi.mock('@/lib/rate-limit', () => ({
   STRICT_RATE_LIMIT_MAX_REQUESTS: 10,
   getStrictLimiter: mockGetStrictLimiter,
   getGeneralLimiter: mockGetGeneralLimiter,
+  buildIdentifier: (userId: string | null, ip: string) =>
+    userId ? `user:${userId}` : `ip:${ip}`,
 }))
 
 import { config, proxy } from '../src/proxy'
@@ -204,6 +206,44 @@ describe('proxy rate limiting', () => {
     expect(response.status).not.toBe(503)
     expect(response.headers.get('X-RateLimit-Limit')).toBe('60')
     expect(response.headers.get('X-RateLimit-Remaining')).toBeTruthy()
+  })
+
+  it('applies the strict limiter to POST /api/checkout (exact match)', async () => {
+    await proxy(
+      createRequest('/api/checkout', { 'cf-connecting-ip': '203.0.113.90' })
+    )
+
+    expect(mockStrictLimit).toHaveBeenCalledWith('ip:203.0.113.90')
+    expect(mockGeneralLimit).not.toHaveBeenCalled()
+  })
+
+  it('applies the general limiter to GET /api/checkout/{id} (status poll)', async () => {
+    await proxy(
+      createRequest('/api/checkout/abc1234', {
+        'cf-connecting-ip': '203.0.113.91',
+      })
+    )
+
+    expect(mockGeneralLimit).toHaveBeenCalledWith('ip:203.0.113.91')
+    expect(mockStrictLimit).not.toHaveBeenCalled()
+  })
+
+  it('applies the general limiter to /api/products', async () => {
+    await proxy(
+      createRequest('/api/products', { 'cf-connecting-ip': '203.0.113.92' })
+    )
+
+    expect(mockGeneralLimit).toHaveBeenCalledWith('ip:203.0.113.92')
+    expect(mockStrictLimit).not.toHaveBeenCalled()
+  })
+
+  it('applies the general limiter to /api/share', async () => {
+    await proxy(
+      createRequest('/api/share', { 'cf-connecting-ip': '203.0.113.93' })
+    )
+
+    expect(mockGeneralLimit).toHaveBeenCalledWith('ip:203.0.113.93')
+    expect(mockStrictLimit).not.toHaveBeenCalled()
   })
 
   it('adds nonce-based CSP headers without unsafe-inline', async () => {

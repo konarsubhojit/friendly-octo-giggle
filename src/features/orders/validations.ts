@@ -1,5 +1,11 @@
 import { z } from 'zod'
-import { SHORT_ID_REGEX, EMAIL_REGEX } from '@/lib/validations/primitives'
+import {
+  SHORT_ID_REGEX,
+  EMAIL_REGEX,
+  MAX_MONEY_AMOUNT,
+  hasMoneyPrecision,
+} from '@/lib/validations/primitives'
+import { PaymentReferenceSchema } from '@/lib/validations/payment'
 
 export const StructuredAddressSchema = z.object({
   addressLine1: z
@@ -60,7 +66,11 @@ export const CheckoutRequestStatusEnum = z.enum([
 export const OrderItemSchema = z.object({
   productId: z.string().regex(SHORT_ID_REGEX, 'Invalid product ID'),
   quantity: z.number().int().positive('Quantity must be positive'),
-  price: z.number().positive('Price must be positive'),
+  price: z
+    .number()
+    .positive('Price must be positive')
+    .max(MAX_MONEY_AMOUNT, 'Price is out of the supported range')
+    .refine(hasMoneyPrecision, 'Price supports at most 2 decimal places'),
   customizationNote: z
     .string()
     .max(500, 'Customization note must be under 500 characters')
@@ -72,12 +82,28 @@ export const CreateOrderSchema = z.object({
   customerEmail: z.string().regex(EMAIL_REGEX, 'Invalid email address'),
   ...StructuredAddressSchema.shape,
   items: z.array(OrderItemSchema).min(1, 'At least one item is required'),
-  payment: z.object({
-    provider: z.literal('RAZORPAY'),
-    orderId: z.string().min(1),
-    paymentId: z.string().min(1),
-    signature: z.string().min(1),
-  }),
+  payment: PaymentReferenceSchema,
+})
+
+/**
+ * Admin refund request. Omitting `amount` refunds the whole refundable balance;
+ * supplying one issues a partial refund.
+ */
+export const RefundOrderSchema = z.object({
+  amount: z
+    .number()
+    .positive('Refund amount must be positive')
+    .max(MAX_MONEY_AMOUNT, 'Refund amount is out of the supported range')
+    .refine(
+      hasMoneyPrecision,
+      'Refund amount supports at most 2 decimal places'
+    )
+    .optional(),
+  reason: z
+    .string()
+    .trim()
+    .max(500, 'Reason must be under 500 characters')
+    .optional(),
 })
 
 export const UpdateOrderStatusSchema = z.object({
@@ -94,3 +120,4 @@ export const UpdateOrderStatusSchema = z.object({
 
 export type OrderStatusType = z.infer<typeof OrderStatusEnum>
 export type CreateOrderInput = z.infer<typeof CreateOrderSchema>
+export type RefundOrderInput = z.infer<typeof RefundOrderSchema>

@@ -14,6 +14,7 @@ const {
   mockCacheUserOrdersList,
   mockLogBusinessEvent,
   mockLogError,
+  mockLogPerformance,
   mockSendOrderConfirmationEmail,
   mockGetQStashClient,
   mockWriteOrderToRedis,
@@ -21,6 +22,9 @@ const {
   mockWaitUntil,
   mockParseOffsetParam,
   mockVerifyCheckoutPayment,
+  mockDbCouponsFindManyByCodes,
+  mockDbCouponsCountUserRedemptions,
+  MockCouponConflictError,
 } = vi.hoisted(() => {
   class MockStockConflictError extends Error {
     constructor(message: string) {
@@ -28,7 +32,16 @@ const {
       this.name = 'StockConflictError'
     }
   }
+  class MockCouponConflictError extends Error {
+    constructor(message: string) {
+      super(message)
+      this.name = 'CouponConflictError'
+    }
+  }
   return {
+    mockDbCouponsFindManyByCodes: vi.fn(),
+    mockDbCouponsCountUserRedemptions: vi.fn(),
+    MockCouponConflictError,
     mockDbOrdersFindMany: vi.fn(),
     mockDbOrdersCount: vi.fn(),
     mockDbOrdersFindFirstByPaymentTxId: vi.fn(),
@@ -42,6 +55,7 @@ const {
     mockCacheUserOrdersList: vi.fn(),
     mockLogBusinessEvent: vi.fn(),
     mockLogError: vi.fn(),
+    mockLogPerformance: vi.fn(),
     mockSendOrderConfirmationEmail: vi.fn(),
     mockGetQStashClient: vi.fn(),
     mockWriteOrderToRedis: vi.fn().mockResolvedValue(undefined),
@@ -68,8 +82,21 @@ vi.mock('@/lib/db', () => ({
     users: {
       findPreferences: mockDbUsersFindPreferences,
     },
+    coupons: {
+      findManyByCodes: mockDbCouponsFindManyByCodes,
+      countUserRedemptions: mockDbCouponsCountUserRedemptions,
+    },
   },
   StockConflictError: MockStockConflictError,
+  CouponConflictError: MockCouponConflictError,
+  drizzleDb: {
+    query: {
+      users: { findFirst: vi.fn().mockResolvedValue(undefined) },
+      notificationPreferences: {
+        findFirst: vi.fn().mockResolvedValue(undefined),
+      },
+    },
+  },
 }))
 
 vi.mock('@/lib/redis', () => ({
@@ -84,6 +111,8 @@ vi.mock('@/lib/cache', () => ({
 vi.mock('@/lib/logger', () => ({
   logBusinessEvent: mockLogBusinessEvent,
   logError: mockLogError,
+  logPerformance: mockLogPerformance,
+  ORDER_CREATE_OPERATION: 'checkout.order.create',
 }))
 
 vi.mock('@/lib/email', () => ({
@@ -381,7 +410,10 @@ describe('order-service', () => {
             },
           ] as never
         )
-      ).toEqual({ valid: true, totalAmount: 150 })
+      ).toEqual({
+        valid: true,
+        pricedItems: [{ price: 75, quantity: 2, weightGrams: null }],
+      })
 
       expect(
         priceAndValidateStock(
@@ -443,7 +475,27 @@ describe('order-service', () => {
               variants: [{ id: 'v1', price: 100, stock: 1 }],
             },
           ] as never,
-          totalAmount: 100,
+          totals: {
+            subtotal: 100,
+            shipping: {
+              method: 'STANDARD',
+              zone: 'NATIONAL',
+              amount: 69,
+              billableWeightGrams: 250,
+              freeShippingApplied: false,
+              freeShippingThreshold: 1499,
+              estimatedDays: 7,
+            },
+            tax: {
+              regime: 'GST',
+              rate: 0.05,
+              taxableAmount: 169,
+              amount: 8.45,
+              components: [{ name: 'IGST', rate: 0.05, amount: 8.45 }],
+            },
+            total: 177.45,
+          },
+          totalAmount: 177.45,
           verifiedPayment: {
             provider: 'RAZORPAY',
             paymentOrderId: 'order_123',
@@ -488,7 +540,13 @@ describe('order-service', () => {
           customerName: 'Test User',
           customerEmail: 'test@example.com',
           customerAddress: '123 St',
+          subtotalAmount: 200,
+          shippingAmount: 0,
+          taxAmount: 0,
+          shippingMethod: 'STANDARD',
           totalAmount: 200,
+          discountAmount: 0,
+          couponCode: null,
           status: 'PENDING',
           paymentStatus: 'PAID',
           createdAt: new Date('2024-01-01'),
@@ -769,6 +827,89 @@ describe('order-service', () => {
       expect(mockInvalidateUserOrderCaches).toHaveBeenCalledWith('user1')
     })
 
+    it('creates an unsettled Cash on Delivery order', async () => {
+      mockVerifyCheckoutPayment.mockResolvedValue({
+        provider: 'COD',
+        paymentOrderId: 'cod_chk123',
+        paymentTransactionId: 'cod_chk123',
+        amountPaid: 0,
+        paidAt: null,
+      })
+      mockDbProductsFindManyWithVariants.mockResolvedValue([
+        {
+          id: 'p1',
+          name: 'Widget',
+          variants: [{ id: 'v1', price: 100, stock: 10 }],
+        },
+      ])
+      mockDbOrdersCreateWithItems.mockResolvedValue({ id: 'ord_cod' })
+      mockDbOrdersFindFirstById.mockResolvedValue({
+        id: 'ord_cod',
+        userId: 'user1',
+        customerName: 'Test',
+        customerEmail: 'test@example.com',
+        customerAddress: '123 St',
+        totalAmount: 100,
+        status: 'PENDING',
+        paymentStatus: 'PENDING',
+        createdAt: new Date('2024-01-01'),
+        updatedAt: new Date('2024-01-01'),
+        items: [
+          {
+            productId: 'p1',
+            variantId: 'v1',
+            quantity: 1,
+            price: 100,
+            customizationNote: null,
+            product: {
+              name: 'Widget',
+              createdAt: new Date('2024-01-01'),
+              updatedAt: new Date('2024-01-01'),
+            },
+          },
+        ],
+      })
+      mockDbUsersFindPreferences.mockResolvedValue(null)
+      mockGetQStashClient.mockReturnValue({
+        publishJSON: vi.fn().mockResolvedValue({ messageId: 'msg1' }),
+      })
+
+      const result = await createOrderForUser({
+        body: {
+          customerName: 'Test',
+          customerEmail: 'test@example.com',
+          customerAddress: '123 St',
+          addressLine1: '123 Test St',
+          addressLine2: '',
+          addressLine3: '',
+          pinCode: '110001',
+          city: 'New Delhi',
+          state: 'Delhi',
+          items: [{ productId: 'p1', variantId: 'v1', quantity: 1 }],
+          payment: { provider: 'COD' },
+        },
+        user: testUser,
+        checkoutRequestId: 'chk123',
+      })
+
+      expect(result.order.id).toBe('ord_cod')
+      expect(mockVerifyCheckoutPayment).toHaveBeenCalledWith({
+        payment: { provider: 'COD' },
+        // Merchandise 100 + national standard shipping 69 + 5% GST 8.45
+        expectedAmount: 177.45,
+        reference: 'chk123',
+      })
+      expect(mockDbOrdersCreateWithItems).toHaveBeenCalledWith(
+        expect.objectContaining({
+          verifiedPayment: expect.objectContaining({
+            provider: 'COD',
+            amountPaid: 0,
+            paidAt: null,
+          }),
+        })
+      )
+    })
+
     it('falls back to direct email on qstash failure', async () => {
       const newOrder = {
         id: 'ord2',
@@ -1046,6 +1187,131 @@ describe('order-service', () => {
           user: testUser,
         })
       ).rejects.toThrow(OrderRequestError)
+    })
+
+    describe('coupon discounts', () => {
+      const activeCoupon = {
+        id: 'cpn0001',
+        code: 'SAVE10',
+        discountType: 'PERCENTAGE' as const,
+        discountValue: 10,
+        maxDiscountAmount: null,
+        minCartValue: 0,
+        scopedCategories: [],
+        scopedProductIds: [],
+        usageLimit: null,
+        perUserLimit: null,
+        usageCount: 0,
+        stackable: true,
+        isActive: true,
+        startsAt: null,
+        endsAt: null,
+      }
+
+      const couponBody = {
+        customerName: 'Test User',
+        customerEmail: 'test@example.com',
+        customerAddress: '123 St',
+        addressLine1: '123 Test St',
+        addressLine2: '',
+        addressLine3: '',
+        pinCode: '110001',
+        city: 'New Delhi',
+        state: 'Delhi',
+        items: [{ productId: 'p1', variantId: 'v1', quantity: 2 }],
+        payment: {
+          provider: 'RAZORPAY' as const,
+          orderId: 'order_123',
+          paymentId: 'pay_123',
+          signature: 'sig_123',
+        },
+        couponCode: 'save10',
+      }
+
+      beforeEach(() => {
+        mockDbProductsFindManyWithVariants.mockResolvedValue([
+          {
+            id: 'p1',
+            name: 'Widget',
+            category: 'cat-a',
+            variants: [{ id: 'v1', price: 100, stock: 10 }],
+          },
+        ])
+        mockDbCouponsCountUserRedemptions.mockResolvedValue({})
+        mockDbOrdersFindFirstById.mockResolvedValue({
+          id: 'ord1',
+          userId: 'user1',
+          customerName: 'Test User',
+          customerEmail: 'test@example.com',
+          customerAddress: '123 St',
+          totalAmount: 180,
+          discountAmount: 20,
+          couponCode: 'SAVE10',
+          status: 'PENDING',
+          createdAt: new Date('2024-01-01'),
+          updatedAt: new Date('2024-01-01'),
+          items: [],
+        })
+        mockDbUsersFindPreferences.mockResolvedValue(null)
+        mockGetQStashClient.mockReturnValue({
+          publishJSON: vi.fn().mockResolvedValue({ messageId: 'msg1' }),
+        })
+      })
+
+      it('recomputes the discount server-side from the coupon code alone', async () => {
+        mockDbCouponsFindManyByCodes.mockResolvedValue([activeCoupon])
+        mockDbOrdersCreateWithItems.mockResolvedValue({ id: 'ord1' })
+
+        await createOrderForUser({ body: couponBody, user: testUser })
+
+        expect(mockDbCouponsFindManyByCodes).toHaveBeenCalledWith(['SAVE10'])
+        // Subtotal 200 plus shipping 69 and 5% tax (13.45), less a 10% coupon
+        // on the merchandise (20); the client never supplies a total.
+        expect(mockVerifyCheckoutPayment).toHaveBeenCalledWith(
+          expect.objectContaining({ expectedAmount: 262.45 })
+        )
+        expect(mockDbOrdersCreateWithItems).toHaveBeenCalledWith(
+          expect.objectContaining({
+            subtotalAmount: 200,
+            totalAmount: 262.45,
+            discountAmount: 20,
+            appliedCoupons: [
+              expect.objectContaining({ couponId: 'cpn0001', code: 'SAVE10' }),
+            ],
+          })
+        )
+      })
+
+      it('rejects an invalid coupon before charging', async () => {
+        mockDbCouponsFindManyByCodes.mockResolvedValue([])
+
+        await expect(
+          createOrderForUser({ body: couponBody, user: testUser })
+        ).rejects.toMatchObject({ status: 404 })
+
+        expect(mockDbOrdersCreateWithItems).not.toHaveBeenCalled()
+      })
+
+      it('rejects an expired coupon', async () => {
+        mockDbCouponsFindManyByCodes.mockResolvedValue([
+          { ...activeCoupon, endsAt: new Date('2020-01-01') },
+        ])
+
+        await expect(
+          createOrderForUser({ body: couponBody, user: testUser })
+        ).rejects.toMatchObject({ status: 400 })
+      })
+
+      it('maps a redemption cap conflict to a 409', async () => {
+        mockDbCouponsFindManyByCodes.mockResolvedValue([activeCoupon])
+        mockDbOrdersCreateWithItems.mockRejectedValue(
+          new MockCouponConflictError('Coupon SAVE10 is no longer available')
+        )
+
+        await expect(
+          createOrderForUser({ body: couponBody, user: testUser })
+        ).rejects.toMatchObject({ status: 409 })
+      })
     })
   })
 })

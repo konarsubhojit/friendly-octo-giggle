@@ -4,11 +4,17 @@ import { Ratelimit } from '@upstash/ratelimit'
 import { Redis } from '@upstash/redis'
 import { getFeatureFlags } from '@/lib/edge-config'
 import {
+  buildIdentifier,
   GENERAL_RATE_LIMIT_MAX_REQUESTS,
   getGeneralLimiter,
   getStrictLimiter,
   STRICT_RATE_LIMIT_MAX_REQUESTS,
 } from '@/lib/rate-limit'
+import {
+  hasPermission,
+  isStaffRole,
+  type AdminPermission,
+} from '@/lib/constants/roles'
 
 /**
  * Edge-only proxy (Next.js 16 `proxy.ts` convention).
@@ -33,6 +39,32 @@ const isDev = process.env.NODE_ENV === 'development'
 const ADMIN_PATH_PREFIX = '/admin'
 const ADMIN_API_PREFIX = '/api/admin'
 
+/**
+ * Permission required to open each admin screen, longest prefix first.
+ *
+ * Admin pages are largely client components that load their data from
+ * `/api/admin/*`, so the screen-level gate lives here in the edge proxy while
+ * each API route enforces the permission for its own HTTP method.
+ */
+const ADMIN_SECTION_PERMISSIONS: ReadonlyArray<
+  readonly [prefix: string, permission: AdminPermission]
+> = [
+  ['/admin/products', 'products:read'],
+  ['/admin/categories', 'products:write'],
+  ['/admin/orders', 'orders:read'],
+  ['/admin/checkout-requests', 'orders:read'],
+  ['/admin/users', 'users:read'],
+  ['/admin/reviews', 'reviews:moderate'],
+  ['/admin/sales', 'analytics:read'],
+  ['/admin/search', 'system:manage'],
+  ['/admin/email-failures', 'system:manage'],
+]
+
+const getAdminSectionPermission = (pathname: string): AdminPermission | null =>
+  ADMIN_SECTION_PERMISSIONS.find(
+    ([prefix]) => pathname === prefix || pathname.startsWith(`${prefix}/`)
+  )?.[1] ?? null
+
 const RATE_LIMIT_PATHS = [
   '/api/auth/register',
   '/api/auth/change-password',
@@ -47,6 +79,8 @@ const RATE_LIMIT_PATHS = [
   '/api/upload',
   '/api/account',
   '/api/search',
+  '/api/products',
+  '/api/share',
 ]
 const STRICT_RATE_LIMIT_PATHS = [
   '/api/auth/register',
@@ -57,6 +91,11 @@ const STRICT_RATE_LIMIT_PATHS = [
   '/api/auth/forgot-password',
   '/api/auth/reset-password',
 ]
+
+// Paths matched EXACTLY (not by prefix) for the strict rate limiter at the
+// edge. Exact matching prevents read-only sub-paths (e.g. GET /api/checkout/{id})
+// from sharing the same tight bucket as the write endpoint (POST /api/checkout).
+const STRICT_RATE_LIMIT_EXACT_PATHS = ['/api/checkout']
 
 const AI_RATE_LIMIT_PATHS = ['/api/ai']
 const AI_RATE_LIMIT_MAX_REQUESTS = 10 // stricter: 10 per minute for AI
@@ -174,10 +213,8 @@ const getClientIpFromHeaders = (headers: Headers): string => {
   return immediateProxyIp ?? 'unknown'
 }
 
-const buildIdentifier = (userId: string | null, ipAddress: string): string =>
-  userId ? `user:${userId}` : `ip:${ipAddress}`
-
 const isStrictRateLimitPath = (pathname: string): boolean =>
+  STRICT_RATE_LIMIT_EXACT_PATHS.includes(pathname) ||
   STRICT_RATE_LIMIT_PATHS.some((pathPrefix) => pathname.startsWith(pathPrefix))
 
 const buildRateLimitUnavailableResponse = (limit: number): NextResponse => {
@@ -488,7 +525,7 @@ export async function proxy(request: NextRequest) {
       return withResponseHeaders(NextResponse.redirect(signInUrl))
     }
 
-    if (currentToken.role !== 'ADMIN') {
+    if (!isStaffRole(currentToken.role)) {
       if (pathname.startsWith('/api/')) {
         return withResponseHeaders(
           NextResponse.json(
@@ -500,6 +537,19 @@ export async function proxy(request: NextRequest) {
       const homeUrl = request.nextUrl.clone()
       homeUrl.pathname = '/'
       return withResponseHeaders(NextResponse.redirect(homeUrl))
+    }
+
+    // Per-section permission gate for admin screens. API routes enforce their
+    // own permission in the route handler, where the HTTP method is known.
+    const sectionPermission = getAdminSectionPermission(pathname)
+    if (
+      sectionPermission &&
+      !hasPermission(currentToken.role, sectionPermission)
+    ) {
+      const dashboardUrl = request.nextUrl.clone()
+      dashboardUrl.pathname = ADMIN_PATH_PREFIX
+      dashboardUrl.search = ''
+      return withResponseHeaders(NextResponse.redirect(dashboardUrl))
     }
   }
 

@@ -16,6 +16,7 @@
 - Address capture and Indian pincode lookup, shipping pricing, order-policy acknowledgment, and recoverable validation/errors.
 - Staged shipping, payment, review, and confirmation pages.
 - Idempotent checkout requests persisted before Vercel Queue processing, with status polling and duplicate-order protection.
+- Pluggable payment gateways behind a single `PaymentGateway` interface: Razorpay (online capture with signed verification and webhook reconciliation) and Cash on Delivery (order stays `PENDING` and settles to `PAID` when delivery is confirmed).
 - Authenticated order history, hybrid order search, compact item summaries, detail/status tracking, and transactional emails.
 
 ## Identity and personalization
@@ -23,11 +24,13 @@
 - Credentials login by email or phone, Google OAuth, and Microsoft personal-account OAuth through NextAuth v5 JWT sessions.
 - Registration, email verification, forgot/reset/change password, password history, login abuse protection, and CUSTOMER/ADMIN authorization.
 - Read-only account overview with explicit edit modes, reusable addresses, currency preferences, recent orders, and wishlist management.
+- Notification preference centre covering transactional and marketing messaging across email, browser push, and SMS/WhatsApp channels.
 - INR, USD, EUR, and GBP display with cached daily exchange rates.
 
 ## PWA and resilience
 
 - Web app manifest, install prompt, icons, screenshots, shortcuts, service-worker registration, and localized offline fallback.
+- Web push order-status notifications delivered through the PWA service worker, with per-device opt-in and automatic cleanup of expired or revoked subscriptions.
 - Public ISR/server rendering, image placeholders, responsive images, skeletons, error boundaries, and mobile-safe layouts.
 - Optional Redis caching with stampede prevention and stale-while-revalidate; core reads degrade to PostgreSQL when optional infrastructure is absent.
 

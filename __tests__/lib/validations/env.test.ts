@@ -271,4 +271,28 @@ describe('EnvSchema — Azure Blob upload provider', () => {
     })
     expect(result.success).toBe(false)
   })
+  it('rejects an Inngest event key without a signing key', () => {
+    const result = EnvSchema.safeParse({
+      ...baseEnv,
+      INNGEST_EVENT_KEY: 'evt-key',
+    })
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error.issues[0].path).toEqual(['INNGEST_SIGNING_KEY'])
+    }
+  })
+
+  it('accepts a complete Inngest configuration', () => {
+    const result = EnvSchema.safeParse({
+      ...baseEnv,
+      INNGEST_EVENT_KEY: 'evt-key',
+      INNGEST_SIGNING_KEY: 'signkey-prod-abc',
+    })
+    expect(result.success).toBe(true)
+  })
+
+  it('accepts an environment with Inngest fully absent', () => {
+    const result = EnvSchema.safeParse({ ...baseEnv })
+    expect(result.success).toBe(true)
+  })
 })

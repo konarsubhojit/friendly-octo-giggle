@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { auth } from '@/lib/auth'
+import { checkAdminAuth } from '@/features/admin/services/admin-auth'
 import {
   apiSuccess,
   apiError,
@@ -19,25 +19,6 @@ import {
 } from '@/features/admin/validations'
 
 export const dynamic = 'force-dynamic'
-
-const checkAdminAuth = async () => {
-  const session = await auth()
-  if (!session?.user) {
-    return {
-      authorized: false as const,
-      error: 'Not authenticated',
-      status: 401 as const,
-    }
-  }
-  if (session.user.role !== 'ADMIN') {
-    return {
-      authorized: false as const,
-      error: 'Not authorized - Admin access required',
-      status: 403 as const,
-    }
-  }
-  return { authorized: true as const }
-}
 
 const parseStatusList = (statusParam: string): FailedEmailStatus[] => {
   const valid = new Set<FailedEmailStatus>(['pending', 'failed', 'sent'])
@@ -71,7 +52,7 @@ const fetchEmailRecords = async (filters: {
 }
 
 export const GET = async (request: NextRequest) => {
-  const authCheck = await checkAdminAuth()
+  const authCheck = await checkAdminAuth('system:manage')
   if (!authCheck.authorized) {
     return apiError(authCheck.error, authCheck.status)
   }
@@ -107,7 +88,7 @@ export const GET = async (request: NextRequest) => {
 }
 
 export const POST = async (request: NextRequest) => {
-  const authCheck = await checkAdminAuth()
+  const authCheck = await checkAdminAuth('system:manage')
   if (!authCheck.authorized) {
     return apiError(authCheck.error, authCheck.status)
   }

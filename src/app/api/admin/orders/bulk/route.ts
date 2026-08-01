@@ -21,7 +21,7 @@ const BulkOrderSchema = z.object({
 })
 
 export const POST = async (request: Request) => {
-  const authCheck = await checkAdminAuth()
+  const authCheck = await checkAdminAuth('orders:update')
   if (!authCheck.authorized) {
     return apiError(authCheck.error ?? 'Unauthorized', authCheck.status)
   }
@@ -43,6 +43,7 @@ export const POST = async (request: Request) => {
 
     await recordAdminAuditLog({
       userId: authCheck.userId,
+      role: authCheck.role,
       entity: 'order',
       entityId: payload.orderIds.join(','),
       action: 'bulk_status_update',

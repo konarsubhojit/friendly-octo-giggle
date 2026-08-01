@@ -43,6 +43,62 @@
       "when": 1784987393847,
       "tag": "0005_simple_roland_deschain",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1785040622095,
+      "tag": "0006_money_and_webhook_events",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1785043681036,
+      "tag": "0007_customer_notifications",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1785045263003,
+      "tag": "0008_payment_provider_cod",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1785046562695,
+      "tag": "0009_granular_admin_roles",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1785047423992,
+      "tag": "0010_shipping_tax_engine",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1785050938241,
+      "tag": "0011_coupon_engine",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1785055842528,
+      "tag": "0012_refunds",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1753574832000,
+      "tag": "0013_abandoned_cart_reminders",
+      "breakpoints": true
     }
   ]
 }

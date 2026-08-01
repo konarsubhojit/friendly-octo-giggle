@@ -4,14 +4,18 @@ import { useEffect, useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { useSelector, useDispatch } from 'react-redux'
-import { z } from 'zod'
+import {
+  clearPendingCheckout,
+  readPendingCheckout,
+  type PendingCheckout,
+} from '@/features/cart/pending-checkout'
 import toast from 'react-hot-toast'
 import {
   clearCart,
   selectCart,
   fetchCart,
 } from '@/features/cart/store/cartSlice'
-import { apiClient } from '@/lib/api-client'
+import { apiClient, ApiError } from '@/lib/api-client'
 import type { AppDispatch } from '@/lib/store'
 import type {
   CheckoutEnqueueResponse,
@@ -29,48 +33,24 @@ import { GradientHeading } from '@/components/ui/GradientHeading'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import Link from 'next/link'
 
-const CHECKOUT_POLL_INTERVAL_MS = 1500
-const CHECKOUT_POLL_MAX_ATTEMPTS = 40
-const PENDING_CHECKOUT_KEY = 'pending_checkout'
-
-const PendingCheckoutSchema = z.object({
-  addressLine1: z.string().min(1),
-  addressLine2: z.string().default(''),
-  addressLine3: z.string().default(''),
-  pinCode: z.string().min(1),
-  city: z.string().min(1),
-  state: z.string().min(1),
-  customizationNotes: z.record(z.string(), z.string()).default({}),
-})
-
-type PendingCheckout = z.infer<typeof PendingCheckoutSchema>
-
-function readPendingCheckout(): PendingCheckout | null {
-  if (globalThis.window === undefined) return null
-  try {
-    const raw = sessionStorage.getItem(PENDING_CHECKOUT_KEY)
-    if (!raw) return null
-    const parsed: unknown = JSON.parse(raw)
-    const result = PendingCheckoutSchema.safeParse(parsed)
-    if (!result.success) {
-      sessionStorage.removeItem(PENDING_CHECKOUT_KEY)
-      return null
-    }
-    return result.data
-  } catch {
-    return null
-  }
-}
-
-function clearPendingCheckout(): void {
-  if (globalThis.window === undefined) return
-  sessionStorage.removeItem(PENDING_CHECKOUT_KEY)
-}
+const CHECKOUT_POLL_INITIAL_INTERVAL_MS = 2_000
+const CHECKOUT_POLL_MAX_INTERVAL_MS = 15_000
+const CHECKOUT_POLL_BACKOFF_FACTOR = 1.5
+const CHECKOUT_POLL_MAX_ATTEMPTS = 20
 
 const delay = (ms: number) =>
   new Promise<void>((resolve) => {
     globalThis.setTimeout(resolve, ms)
   })
+
+interface CouponPreviewResponse {
+  data: {
+    couponCode: string
+    subtotal: number
+    discountAmount: number
+    total: number
+  }
+}
 
 const SECTION_CLASS =
   'rounded-2xl border border-[var(--border-warm)] bg-[var(--surface)] p-5 sm:p-6'
@@ -88,6 +68,7 @@ export default function CheckoutPaymentPage() {
   const [pendingCheckout] = useState<PendingCheckout | null>(() =>
     readPendingCheckout()
   )
+  const [couponDiscount, setCouponDiscount] = useState(0)
 
   useEffect(() => {
     if (!pendingCheckout) {
@@ -100,6 +81,28 @@ export default function CheckoutPaymentPage() {
       dispatch(fetchCart())
     }
   }, [dispatch, status])
+
+  // Preview only: the authoritative discount is recomputed server-side.
+  useEffect(() => {
+    const code = pendingCheckout?.couponCode
+    if (status !== 'authenticated' || !code) {
+      return
+    }
+
+    let cancelled = false
+    apiClient
+      .post<CouponPreviewResponse>('/api/cart/coupon', { couponCode: code })
+      .then((response) => {
+        if (!cancelled) setCouponDiscount(response.data.discountAmount)
+      })
+      .catch(() => {
+        if (!cancelled) setCouponDiscount(0)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [pendingCheckout?.couponCode, status])
 
   const cartItems = useMemo(() => cart?.items ?? [], [cart?.items])
 
@@ -118,29 +121,55 @@ export default function CheckoutPaymentPage() {
   )
 
   const pricingSummary = useMemo(
-    () => buildCheckoutPricingSummaryFromLineItems(lineItems),
-    [lineItems]
+    () =>
+      buildCheckoutPricingSummaryFromLineItems(lineItems, {
+        destination: pendingCheckout
+          ? { state: pendingCheckout.state, pinCode: pendingCheckout.pinCode }
+          : null,
+        shippingMethod: pendingCheckout?.shippingMethod,
+      }),
+    [lineItems, pendingCheckout]
   )
 
   const pollCheckoutRequest = async (
     checkoutRequestId: string
   ): Promise<CheckoutRequestStatusResponse> => {
     for (let attempt = 0; attempt < CHECKOUT_POLL_MAX_ATTEMPTS; attempt++) {
-      const checkoutStatus = await apiClient.get<CheckoutRequestStatusResponse>(
-        `/api/checkout/${checkoutRequestId}`
+      try {
+        const checkoutStatus =
+          await apiClient.get<CheckoutRequestStatusResponse>(
+            `/api/checkout/${checkoutRequestId}`
+          )
+
+        if (checkoutStatus.status === 'COMPLETED') {
+          return checkoutStatus
+        }
+
+        if (checkoutStatus.status === 'FAILED') {
+          throw new Error(checkoutStatus.error ?? 'Checkout failed')
+        }
+
+        setCheckoutMessage("We're processing your order…")
+      } catch (error) {
+        if (error instanceof ApiError && error.status === 429) {
+          // Honour the Retry-After header so we don't burn through the budget.
+          const waitMs = Math.max(error.retryAfter ?? 60, 1) * 1000
+          setCheckoutMessage('Please wait a moment before retrying…')
+          await delay(waitMs)
+          continue
+        }
+        // Any other error (including FAILED status above) bubbles up.
+        throw error
+      }
+
+      // Exponential backoff: start fast to catch quick completions, then slow
+      // down to avoid hitting the rate limiter on longer Inngest runs.
+      const nextInterval = Math.min(
+        CHECKOUT_POLL_INITIAL_INTERVAL_MS *
+          Math.pow(CHECKOUT_POLL_BACKOFF_FACTOR, attempt),
+        CHECKOUT_POLL_MAX_INTERVAL_MS
       )
-
-      if (checkoutStatus.status === 'COMPLETED') {
-        return checkoutStatus
-      }
-
-      if (checkoutStatus.status === 'FAILED') {
-        throw new Error(checkoutStatus.error ?? 'Checkout failed')
-      }
-
-      setCheckoutMessage("We're processing your order…")
-
-      await delay(CHECKOUT_POLL_INTERVAL_MS)
+      await delay(nextInterval)
     }
 
     throw new Error(
@@ -175,6 +204,7 @@ export default function CheckoutPaymentPage() {
             pinCode: pendingCheckout.pinCode.trim(),
             city: pendingCheckout.city.trim(),
             state: pendingCheckout.state.trim(),
+            shippingMethod: pendingCheckout.shippingMethod,
             items: cartItems.map((item) => ({
               productId: item.productId,
               variantId: item.variantId,
@@ -182,6 +212,9 @@ export default function CheckoutPaymentPage() {
               customizationNote:
                 pendingCheckout.customizationNotes[item.id] ?? undefined,
             })),
+            // Only the code travels to the server; the discount itself is
+            // always recomputed there.
+            couponCode: pendingCheckout.couponCode ?? undefined,
           }
         )
 
@@ -242,14 +275,9 @@ export default function CheckoutPaymentPage() {
             </h2>
             <div className="rounded-2xl bg-[var(--accent-blush)]/40 p-4">
               <CartPricingSummary
-                itemCount={pricingSummary.itemCount}
-                subtotal={formatPrice(pricingSummary.subtotal)}
-                shipping={
-                  pricingSummary.shippingAmount === 0
-                    ? 'Free'
-                    : formatPrice(pricingSummary.shippingAmount)
-                }
-                total={formatPrice(pricingSummary.total)}
+                summary={pricingSummary}
+                formatPrice={formatPrice}
+                discountAmount={couponDiscount}
               />
             </div>
           </section>

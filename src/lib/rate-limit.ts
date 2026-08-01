@@ -37,26 +37,48 @@ export const getStrictLimiter = (): Ratelimit | null => {
   return strictLimiter
 }
 
-const getIdentifier = (request: NextRequest): string => {
+/**
+ * Build a rate-limit bucket identifier that is scoped to the authenticated
+ * user when available, so that individual users on shared mobile IP addresses
+ * (CGNAT) don't exhaust each other's buckets.
+ */
+export const buildIdentifier = (
+  userId: string | null,
+  ipAddress: string
+): string => (userId ? `user:${userId}` : `ip:${ipAddress}`)
+
+const getIdentifier = (
+  request: NextRequest,
+  userId?: string | null
+): string => {
   const forwarded = request.headers.get('x-forwarded-for')
   const ip = forwarded ? forwarded.split(',')[0].trim() : 'anonymous'
-  return ip
+  return buildIdentifier(userId ?? null, ip)
 }
 
-const STRICT_PATHS = [
+// Paths matched by prefix that use the strict (low-cap) rate limiter.
+const STRICT_PREFIX_PATHS = [
   '/api/auth',
-  '/api/checkout',
   '/api/orders',
   '/api/ai',
   '/api/upload',
   '/api/search',
+  // Coupon redemption previews are brute-forceable, so they get the low cap.
+  '/api/cart/coupon',
 ]
 
+// Paths matched EXACTLY (not by prefix) that use the strict rate limiter.
+// Using exact match here prevents read-only sub-paths (e.g. GET /api/checkout/{id})
+// from sharing the same tight bucket as the write endpoint (POST /api/checkout).
+const STRICT_EXACT_PATHS = ['/api/checkout']
+
 const isStrictPath = (pathname: string): boolean =>
-  STRICT_PATHS.some((prefix) => pathname.startsWith(prefix))
+  STRICT_EXACT_PATHS.includes(pathname) ||
+  STRICT_PREFIX_PATHS.some((prefix) => pathname.startsWith(prefix))
 
 export const checkRateLimit = async (
-  request: NextRequest
+  request: NextRequest,
+  userId?: string | null
 ): Promise<RateLimitResult | null> => {
   try {
     const pathname = request.nextUrl.pathname
@@ -66,7 +88,7 @@ export const checkRateLimit = async (
 
     if (!limiter) return null
 
-    const identifier = getIdentifier(request)
+    const identifier = getIdentifier(request, userId)
     const result = await limiter.limit(identifier)
     return {
       success: result.success,

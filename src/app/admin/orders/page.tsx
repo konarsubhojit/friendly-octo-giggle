@@ -4,7 +4,10 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { OrderStatus } from '@/lib/types'
 import { useCurrency } from '@/contexts/CurrencyContext'
 import { useDispatch } from 'react-redux'
-import { updateAdminOrderStatus } from '@/features/admin/store/adminSlice'
+import {
+  refundAdminOrder,
+  updateAdminOrderStatus,
+} from '@/features/admin/store/adminSlice'
 import type { AdminDispatch } from '@/lib/store'
 import { AlertBanner } from '@/components/ui/AlertBanner'
 import {
@@ -44,6 +47,9 @@ interface AdminOrder {
   state?: string | null
   totalAmount: number
   status: string
+  paymentStatus?: string
+  paymentProvider?: string | null
+  amountPaid?: number
   trackingNumber?: string | null
   shippingProvider?: string | null
   createdAt: string
@@ -82,6 +88,11 @@ interface ExpandedOrderRowProps {
     currentStatus: OrderStatus | string,
     order: { trackingNumber?: string | null; shippingProvider?: string | null }
   ) => void
+  readonly onRefund: (
+    orderId: string,
+    input: { amount?: number; reason?: string }
+  ) => void
+  readonly refundingOrderId: string | null
 }
 
 function ExpandedOrderRow({
@@ -92,6 +103,8 @@ function ExpandedOrderRow({
   onStatusChange,
   onShippingFieldChange,
   onSaveShipping,
+  onRefund,
+  refundingOrderId,
 }: ExpandedOrderRowProps) {
   return (
     <div className="px-4 pb-4">
@@ -103,6 +116,8 @@ function ExpandedOrderRow({
         onStatusChange={onStatusChange}
         onShippingFieldChange={onShippingFieldChange}
         onSaveShipping={onSaveShipping}
+        onRefund={onRefund}
+        refundingOrderId={refundingOrderId}
       />
     </div>
   )
@@ -165,6 +180,7 @@ export default function OrdersManagement() {
   const [totalCount, setTotalCount] = useState(0)
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null)
   const [savingShippingId, setSavingShippingId] = useState<string | null>(null)
+  const [refundingOrderId, setRefundingOrderId] = useState<string | null>(null)
   const [shippingEdits, setShippingEdits] = useState<ShippingEdits>({})
 
   const pageCursorsRef = useRef<Array<string | null>>([null])
@@ -319,6 +335,24 @@ export default function OrdersManagement() {
     setUpdatingOrderId(null)
   }
 
+  const handleRefund = async (
+    orderId: string,
+    input: { amount?: number; reason?: string }
+  ) => {
+    setRefundingOrderId(orderId)
+    setError(null)
+    const result = await dispatch(refundAdminOrder({ id: orderId, ...input }))
+    if (refundAdminOrder.rejected.match(result)) {
+      setError((result.payload as string) ?? 'Failed to refund order')
+    } else {
+      const refundedOrder = result.payload as AdminOrder
+      setOrders((prev) =>
+        prev.map((o) => (o.id === orderId ? { ...o, ...refundedOrder } : o))
+      )
+    }
+    setRefundingOrderId(null)
+  }
+
   const handleSaveShipping = async (
     orderId: string,
     currentStatus: OrderStatus | string,
@@ -378,6 +412,8 @@ export default function OrdersManagement() {
       onStatusChange={handleStatusChange}
       onShippingFieldChange={setShippingField}
       onSaveShipping={handleSaveShipping}
+      onRefund={handleRefund}
+      refundingOrderId={refundingOrderId}
     />
   )
 

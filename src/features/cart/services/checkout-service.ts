@@ -12,7 +12,12 @@ import {
   isOrderRequestError,
 } from '@/features/orders/services/order-service'
 import { send } from '@/lib/queue'
-import { logBusinessEvent, logError, logPerformance } from '@/lib/logger'
+import {
+  CHECKOUT_QUEUE_LAG_OPERATION,
+  logBusinessEvent,
+  logError,
+  logPerformance,
+} from '@/lib/logger'
 import { formatStructuredAddress } from '@/lib/address-utils'
 import type {
   CheckoutEnqueueResponse,
@@ -29,6 +34,14 @@ import {
   ensurePaymentProviderConfigured,
   PaymentConfigurationError,
 } from '@/lib/payments'
+import {
+  isPaymentProvider,
+  requiresPaymentSignature,
+} from '@/lib/payments/providers'
+import { toShippingMethod } from '@/lib/shipping'
+import { inngest, isInngestConfigured } from '@/lib/inngest/client'
+import { checkoutRequestCreated } from '@/features/cart/inngest/events'
+import type { CheckoutPaymentInput } from '@/lib/types'
 
 export const CHECKOUT_QUEUE_TOPIC = 'checkout-orders'
 
@@ -100,6 +113,11 @@ const getNormalizedCheckoutInput = (
     city: typeof rawBody.city === 'string' ? rawBody.city : '',
     state: typeof rawBody.state === 'string' ? rawBody.state : '',
     items: rawBody.items,
+    couponCode:
+      typeof rawBody.couponCode === 'string' && rawBody.couponCode.trim()
+        ? rawBody.couponCode
+        : undefined,
+    shippingMethod: rawBody.shippingMethod,
     payment: rawBody.payment,
   })
 
@@ -111,6 +129,39 @@ const getNormalizedCheckoutInput = (
   }
 
   return parseResult.data
+}
+
+/**
+ * Rebuild the payment reference persisted on a checkout request.
+ *
+ * Providers that sign their references (e.g. Razorpay) must have every field
+ * present; offline providers such as Cash on Delivery only carry the provider,
+ * and their references are generated during verification.
+ */
+const buildStoredPaymentReference = (checkoutRequest: {
+  paymentProvider: string | null
+  paymentOrderId: string | null
+  paymentTransactionId: string | null
+  paymentSignature: string | null
+}): CheckoutPaymentInput | undefined => {
+  const provider = checkoutRequest.paymentProvider
+  if (!isPaymentProvider(provider)) return undefined
+
+  const hasSignedReference =
+    checkoutRequest.paymentOrderId &&
+    checkoutRequest.paymentTransactionId &&
+    checkoutRequest.paymentSignature
+
+  if (requiresPaymentSignature(provider) && !hasSignedReference) {
+    return undefined
+  }
+
+  return {
+    provider,
+    orderId: checkoutRequest.paymentOrderId ?? undefined,
+    paymentId: checkoutRequest.paymentTransactionId ?? undefined,
+    signature: checkoutRequest.paymentSignature ?? undefined,
+  }
 }
 
 const buildCheckoutStatusResponse = (
@@ -216,6 +267,14 @@ export const recoverCheckoutRequestAfterRetryExhaustion = async ({
     return
   }
 
+  // A terminal failure already recorded the precise reason (declined payment,
+  // out-of-stock item). Overwriting it with the generic retry-exhausted message
+  // would hide that from the customer and from support.
+  const checkoutRequest = await findCheckoutRequestById(checkoutRequestId)
+  if (checkoutRequest?.status === 'FAILED') {
+    return
+  }
+
   const errorMessage = buildRetryExhaustedMessage(deliveryCount, error)
   await updateCheckoutRequestStatus(checkoutRequestId, 'FAILED', errorMessage)
 
@@ -228,6 +287,94 @@ export const recoverCheckoutRequestAfterRetryExhaustion = async ({
     },
     success: false,
   })
+}
+
+/**
+ * Wall-clock budget for publishing the checkout event.
+ *
+ * This runs inside the request the customer is waiting on, and the Inngest SDK
+ * retries a failed publish up to five times with no timeout of its own. Left
+ * unbounded, a degraded Inngest API would hold the route open until the
+ * platform kills it at `maxDuration`, so neither the queue fallback below nor
+ * the caller's inline fallback would ever run and the request would be stranded
+ * in `PENDING` with no orchestrator.
+ */
+const INNGEST_PUBLISH_TIMEOUT_MS = 5_000
+
+class InngestPublishTimeoutError extends Error {
+  constructor(timeoutMs: number) {
+    super(`Inngest publish did not complete within ${timeoutMs}ms`)
+    this.name = 'InngestPublishTimeoutError'
+  }
+}
+
+/**
+ * Publish the checkout event, giving up on the wait after a fixed budget.
+ *
+ * A publish that lands after the timeout is harmless: the resulting run shares
+ * the same compare-and-swap claim as the queue delivery, so at most one of them
+ * creates an order. `Promise.race` subscribes to the publish promise, so a late
+ * rejection is already handled and cannot surface as an unhandled rejection.
+ */
+const publishCheckoutEvent = async (
+  checkoutRequestId: string
+): Promise<void> => {
+  const publish = inngest
+    .send(checkoutRequestCreated.create({ checkoutRequestId }))
+    .then(() => undefined)
+
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const timeout = new Promise<never>((_resolve, reject) => {
+    timer = setTimeout(
+      () => reject(new InngestPublishTimeoutError(INNGEST_PUBLISH_TIMEOUT_MS)),
+      INNGEST_PUBLISH_TIMEOUT_MS
+    )
+  })
+
+  try {
+    await Promise.race([publish, timeout])
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+/**
+ * Hand a checkout request to its durable orchestrator.
+ *
+ * Inngest is preferred when configured: each pipeline step checkpoints
+ * independently, so a retry resumes after the last completed step instead of
+ * replaying payment verification. The Vercel Queue remains the fallback so a
+ * deployment without Inngest credentials — or a transient Inngest outage —
+ * still processes checkouts durably.
+ *
+ * Throws when every durable transport fails, letting the caller decide on the
+ * inline last resort.
+ */
+const dispatchCheckoutProcessing = async ({
+  checkoutRequestId,
+  userId,
+}: {
+  checkoutRequestId: string
+  userId: string
+}): Promise<void> => {
+  if (isInngestConfigured()) {
+    try {
+      await publishCheckoutEvent(checkoutRequestId)
+      return
+    } catch (error) {
+      logError({
+        error,
+        context: 'checkout_inngest_publish_failed_falling_back_to_queue',
+        additionalInfo: { checkoutRequestId, userId },
+      })
+    }
+  }
+
+  await send(
+    CHECKOUT_QUEUE_TOPIC,
+    { checkoutRequestId },
+    { idempotencyKey: `checkout-request:${checkoutRequestId}` }
+  )
 }
 
 export const enqueueCheckoutForUser = async ({
@@ -249,6 +396,14 @@ export const enqueueCheckoutForUser = async ({
     }
   }
 
+  // Only signature-based providers carry client-supplied references. Persisting
+  // them for offline providers would let a caller point a Cash on Delivery
+  // order at another provider's transaction id.
+  const storedPayment =
+    normalized.payment && requiresPaymentSignature(normalized.payment.provider)
+      ? normalized.payment
+      : undefined
+
   const checkoutRequest = await db.checkoutRequests.create({
     userId: user.id,
     customerName: normalized.customerName,
@@ -269,19 +424,20 @@ export const enqueueCheckoutForUser = async ({
     city: normalized.city,
     state: normalized.state,
     items: normalized.items,
+    couponCode: normalized.couponCode ?? null,
+    shippingMethod: toShippingMethod(normalized.shippingMethod),
     paymentProvider: normalized.payment?.provider ?? null,
-    paymentOrderId: normalized.payment?.orderId ?? null,
-    paymentTransactionId: normalized.payment?.paymentId ?? null,
-    paymentSignature: normalized.payment?.signature ?? null,
+    paymentOrderId: storedPayment?.orderId ?? null,
+    paymentTransactionId: storedPayment?.paymentId ?? null,
+    paymentSignature: storedPayment?.signature ?? null,
     status: 'PENDING',
   })
 
   try {
-    await send(
-      CHECKOUT_QUEUE_TOPIC,
-      { checkoutRequestId: checkoutRequest.id },
-      { idempotencyKey: `checkout-request:${checkoutRequest.id}` }
-    )
+    await dispatchCheckoutProcessing({
+      checkoutRequestId: checkoutRequest.id,
+      userId: user.id,
+    })
   } catch (error) {
     logError({
       error,
@@ -337,16 +493,62 @@ export const getCheckoutRequestStatusForUser = async ({
   )
 }
 
-export const processCheckoutRequestById = async (
-  checkoutRequestId: string
-): Promise<void> => {
+type CheckoutRequestRecord = NonNullable<
+  Awaited<ReturnType<typeof db.checkoutRequests.findById>>
+>
+
+/**
+ * Why a checkout request needs no further processing — a missing row, an order
+ * that already exists, or a terminal status.
+ */
+export type CheckoutSkipReason = 'missing' | 'order_exists' | 'already_settled'
+
+/**
+ * Result of the idempotency guard that runs before any work is claimed.
+ *
+ * `skip` covers every case where the request is already settled — a missing
+ * row, an order that already exists, or a terminal status.
+ */
+export type CheckoutPreflightResult =
+  | {
+      readonly action: 'skip'
+      readonly reason: CheckoutSkipReason
+    }
+  | {
+      readonly action: 'process'
+      readonly checkoutRequest: CheckoutRequestRecord
+    }
+
+const assertValidCheckoutRequestId = (checkoutRequestId: string): void => {
   const parseResult = CheckoutQueueMessageSchema.safeParse({
     checkoutRequestId,
   })
   if (!parseResult.success) {
     throw new CheckoutRequestError('Invalid checkout queue message', 400)
   }
+}
 
+/**
+ * Outcome of the read-only settlement check.
+ */
+export type CheckoutSettlement =
+  | { readonly settled: true; readonly reason: CheckoutSkipReason }
+  | {
+      readonly settled: false
+      readonly checkoutRequest: CheckoutRequestRecord
+    }
+
+/**
+ * Read-only check for whether a checkout request still needs processing.
+ *
+ * Free of metric side effects — unlike `preflightCheckoutRequest`, which also
+ * emits the queue-lag sample and must therefore run once per delivery — so it
+ * is safe to repeat within a single delivery. The only write is the
+ * self-healing status update when an order already exists.
+ */
+export const resolveCheckoutSettlement = async (
+  checkoutRequestId: string
+): Promise<CheckoutSettlement> => {
   const checkoutRequest = await findCheckoutRequestById(checkoutRequestId)
 
   if (!checkoutRequest) {
@@ -355,7 +557,7 @@ export const processCheckoutRequestById = async (
       details: { checkoutRequestId },
       success: false,
     })
-    return
+    return { settled: true, reason: 'missing' }
   }
 
   const existingOrder = await findCreatedOrderForCheckout(checkoutRequestId)
@@ -363,100 +565,273 @@ export const processCheckoutRequestById = async (
     if (checkoutRequest.status !== 'COMPLETED') {
       await updateCheckoutRequestStatus(checkoutRequestId, 'COMPLETED', null)
     }
-    return
+    return { settled: true, reason: 'order_exists' }
   }
 
   if (
     checkoutRequest.status === 'COMPLETED' ||
     checkoutRequest.status === 'FAILED'
   ) {
-    return
+    return { settled: true, reason: 'already_settled' }
+  }
+
+  return { settled: false, checkoutRequest }
+}
+
+/**
+ * Step 1 — decide whether a checkout request still needs processing.
+ *
+ * Safe to repeat: it only reads, plus a self-healing status write when an
+ * order already exists for the request.
+ */
+export const preflightCheckoutRequest = async (
+  checkoutRequestId: string
+): Promise<CheckoutPreflightResult> => {
+  assertValidCheckoutRequestId(checkoutRequestId)
+
+  const settlement = await resolveCheckoutSettlement(checkoutRequestId)
+  if (settlement.settled) {
+    return { action: 'skip', reason: settlement.reason }
   }
 
   logPerformance({
-    operation: 'queue.checkout.lag',
-    duration: Date.now() - checkoutRequest.createdAt.getTime(),
+    operation: CHECKOUT_QUEUE_LAG_OPERATION,
+    duration: Date.now() - settlement.checkoutRequest.createdAt.getTime(),
     metadata: { checkoutRequestId },
   })
 
-  await updateCheckoutRequestStatus(checkoutRequestId, 'PROCESSING', null)
+  return { action: 'process', checkoutRequest: settlement.checkoutRequest }
+}
 
-  try {
-    const result = await createOrderForUser({
-      body: {
-        customerName: checkoutRequest.customerName,
-        customerEmail: checkoutRequest.customerEmail,
-        customerAddress: checkoutRequest.customerAddress,
-        addressLine1: checkoutRequest.addressLine1 ?? '',
-        addressLine2: checkoutRequest.addressLine2 ?? '',
-        addressLine3: checkoutRequest.addressLine3 ?? '',
-        pinCode: checkoutRequest.pinCode ?? '',
-        city: checkoutRequest.city ?? '',
-        state: checkoutRequest.state ?? '',
-        items: checkoutRequest.items.map((item) => ({
-          productId: item.productId,
-          variantId: item.variantId,
-          quantity: item.quantity,
-          customizationNote: item.customizationNote ?? undefined,
-        })),
-        payment:
-          checkoutRequest.paymentProvider &&
-          checkoutRequest.paymentOrderId &&
-          checkoutRequest.paymentTransactionId &&
-          checkoutRequest.paymentSignature
-            ? {
-                provider: checkoutRequest.paymentProvider,
-                orderId: checkoutRequest.paymentOrderId,
-                paymentId: checkoutRequest.paymentTransactionId,
-                signature: checkoutRequest.paymentSignature,
-              }
-            : undefined,
-      },
-      user: {
-        id: checkoutRequest.userId,
-        name: checkoutRequest.customerName,
-        email: checkoutRequest.customerEmail,
-      },
-      checkoutRequestId,
-    })
+/**
+ * Step 2 — compare-and-swap the request into `PROCESSING`.
+ *
+ * Duplicate webhook deliveries, queue redeliveries and durable-run retries all
+ * race here; only the winner goes on to create an order.
+ */
+export const claimCheckoutRequest = async (
+  checkoutRequestId: string
+): Promise<boolean> => {
+  const claimed =
+    await db.checkoutRequests.claimForProcessing(checkoutRequestId)
 
-    await updateCheckoutRequestStatus(checkoutRequestId, 'COMPLETED', null)
-
+  if (!claimed) {
     logBusinessEvent({
-      event: 'checkout_request_completed',
-      details: {
-        checkoutRequestId,
-        orderId: result.order.id,
-        userId: checkoutRequest.userId,
-      },
+      event: 'checkout_request_already_processing',
+      details: { checkoutRequestId },
       success: true,
     })
-  } catch (error) {
-    if (isOrderRequestError(error) && error.status < 500) {
-      await updateCheckoutRequestStatus(
-        checkoutRequestId,
-        'FAILED',
-        error.message
-      )
-      logBusinessEvent({
-        event: 'checkout_request_failed',
-        details: {
-          checkoutRequestId,
-          reason: error.message,
-          status: error.status,
-        },
-        success: false,
-      })
-      return
-    }
+  }
 
+  return claimed
+}
+
+/**
+ * Settle a request whose order already exists, returning that order's id.
+ *
+ * The order is the source of truth: once one exists the request is `COMPLETED`
+ * whatever its column currently says, so this is also the self-heal for a
+ * status write that was lost mid-flight.
+ *
+ * @returns the existing order id, or `null` when no order has been created.
+ */
+const settleWithExistingOrder = async (
+  checkoutRequestId: string
+): Promise<string | null> => {
+  const existingOrder = await findCreatedOrderForCheckout(checkoutRequestId)
+  if (!existingOrder) return null
+
+  await updateCheckoutRequestStatus(checkoutRequestId, 'COMPLETED', null)
+  return existingOrder.id
+}
+
+/**
+ * Best-effort variant of `settleWithExistingOrder` for the failure path.
+ *
+ * Losing the original ordering error would be worse than losing the self-heal:
+ * `recordCheckoutProcessingFailure` classifies terminal versus transient purely
+ * from the error it is handed, so letting a lookup failure propagate in its
+ * place would turn "payment declined" into four more retries and a generic
+ * retry-exhausted message.
+ */
+const findSettledOrderAfterFailure = async (
+  checkoutRequestId: string
+): Promise<string | null> => {
+  try {
+    return await settleWithExistingOrder(checkoutRequestId)
+  } catch (error) {
+    logError({
+      error,
+      context: 'checkout_race_settlement_check_failed',
+      additionalInfo: { checkoutRequestId },
+    })
+    return null
+  }
+}
+
+// Payment verification and order persistence deliberately stay inside this
+// single call: "money confirmed" and "order exists" must either both happen or
+// neither, and the caller's claim makes a retry from the top safe.
+const createOrderFromCheckoutRequest = (
+  checkoutRequest: CheckoutRequestRecord
+) =>
+  createOrderForUser({
+    body: {
+      customerName: checkoutRequest.customerName,
+      customerEmail: checkoutRequest.customerEmail,
+      customerAddress: checkoutRequest.customerAddress,
+      addressLine1: checkoutRequest.addressLine1 ?? '',
+      addressLine2: checkoutRequest.addressLine2 ?? '',
+      addressLine3: checkoutRequest.addressLine3 ?? '',
+      pinCode: checkoutRequest.pinCode ?? '',
+      city: checkoutRequest.city ?? '',
+      state: checkoutRequest.state ?? '',
+      items: checkoutRequest.items.map((item) => ({
+        productId: item.productId,
+        variantId: item.variantId,
+        quantity: item.quantity,
+        customizationNote: item.customizationNote ?? undefined,
+      })),
+      couponCode: checkoutRequest.couponCode,
+      shippingMethod: toShippingMethod(checkoutRequest.shippingMethod),
+      payment: buildStoredPaymentReference(checkoutRequest),
+    },
+    user: {
+      id: checkoutRequest.userId,
+      name: checkoutRequest.customerName,
+      email: checkoutRequest.customerEmail,
+    },
+    checkoutRequestId: checkoutRequest.id,
+  })
+
+const runCheckoutOrderCreation = async (
+  checkoutRequest: CheckoutRequestRecord
+): Promise<string> => {
+  const checkoutRequestId = checkoutRequest.id
+
+  // Re-entry is normal here and must never produce a second attempt: a durable
+  // step is retried whenever an attempt dies after its work committed but
+  // before its checkpoint persisted, and the claim is memoized so the retry
+  // does not go back through the pre-claim guard. Without this the retry would
+  // hit `Order_checkoutRequestId_key` / the duplicate-transaction check and the
+  // resulting 409 would mark an already-paid request `FAILED`.
+  const alreadyCreated = await settleWithExistingOrder(checkoutRequestId)
+  if (alreadyCreated) return alreadyCreated
+
+  let result: Awaited<ReturnType<typeof createOrderFromCheckoutRequest>>
+  try {
+    result = await createOrderFromCheckoutRequest(checkoutRequest)
+  } catch (error) {
+    // A peer trigger can win the gap between the guard above and the insert:
+    // the transient-failure path releases the claim back to `PENDING`, so the
+    // payment webhook may claim and complete the request while a durable run
+    // is still retrying. Its order is the real one — reporting a failure here
+    // would overwrite a `COMPLETED` request that has a paid order behind it.
+    const raced = await findSettledOrderAfterFailure(checkoutRequestId)
+    if (raced) return raced
+    throw error
+  }
+
+  await updateCheckoutRequestStatus(checkoutRequestId, 'COMPLETED', null)
+
+  logBusinessEvent({
+    event: 'checkout_request_completed',
+    details: {
+      checkoutRequestId,
+      orderId: result.order.id,
+      userId: checkoutRequest.userId,
+    },
+    success: true,
+  })
+
+  return result.order.id
+}
+
+/**
+ * Step 3 — create the order for a claimed checkout request.
+ *
+ * Idempotent: if an order already exists for the request — because a previous
+ * attempt committed before its checkpoint persisted, or because a peer trigger
+ * got there first — the existing order is returned and the request is settled
+ * rather than a second creation being attempted.
+ *
+ * @returns the order id for the request.
+ */
+export const createOrderForCheckoutRequest = async (
+  checkoutRequestId: string
+): Promise<string> => {
+  const checkoutRequest = await findCheckoutRequestById(checkoutRequestId)
+
+  if (!checkoutRequest) {
+    throw new CheckoutRequestError('Checkout request not found', 404)
+  }
+
+  return runCheckoutOrderCreation(checkoutRequest)
+}
+
+/**
+ * Step 4 — record a processing failure and classify it.
+ *
+ * Client-side failures (4xx) are terminal: the request is marked `FAILED` and
+ * must not be retried. Everything else is transient, so the request is reset to
+ * `PENDING` and the caller re-throws to trigger another delivery.
+ */
+export const recordCheckoutProcessingFailure = async (
+  checkoutRequestId: string,
+  error: unknown
+): Promise<{ readonly terminal: boolean }> => {
+  if (isOrderRequestError(error) && error.status < 500) {
     await updateCheckoutRequestStatus(
       checkoutRequestId,
-      'PENDING',
-      error instanceof Error
-        ? error.message
-        : 'Temporary checkout processing failure'
+      'FAILED',
+      error.message
     )
+    logBusinessEvent({
+      event: 'checkout_request_failed',
+      details: {
+        checkoutRequestId,
+        reason: error.message,
+        status: error.status,
+      },
+      success: false,
+    })
+    return { terminal: true }
+  }
+
+  await updateCheckoutRequestStatus(
+    checkoutRequestId,
+    'PENDING',
+    error instanceof Error
+      ? error.message
+      : 'Temporary checkout processing failure'
+  )
+  return { terminal: false }
+}
+
+/**
+ * Process a checkout request end to end inside a single invocation.
+ *
+ * Used by the Vercel Queue consumer, the payment webhook and the inline
+ * fallback. The Inngest function runs the same steps, but checkpoints each one
+ * independently so a retry resumes instead of restarting.
+ */
+export const processCheckoutRequestById = async (
+  checkoutRequestId: string
+): Promise<void> => {
+  const preflight = await preflightCheckoutRequest(checkoutRequestId)
+  if (preflight.action === 'skip') return
+
+  const claimed = await claimCheckoutRequest(checkoutRequestId)
+  if (!claimed) return
+
+  try {
+    await runCheckoutOrderCreation(preflight.checkoutRequest)
+  } catch (error) {
+    const { terminal } = await recordCheckoutProcessingFailure(
+      checkoutRequestId,
+      error
+    )
+    if (terminal) return
     throw error
   }
 }

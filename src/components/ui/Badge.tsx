@@ -76,7 +76,24 @@ export function orderStatusVariant(status: string): BadgeVariant {
   return map[status.toUpperCase()] ?? 'neutral'
 }
 
+/** Maps a payment-status string to the appropriate `BadgeVariant`. */
+export function paymentStatusVariant(status: string): BadgeVariant {
+  const map: Record<string, BadgeVariant> = {
+    PENDING: 'warning',
+    PAID: 'success',
+    FAILED: 'error',
+    REFUNDED: 'info',
+  }
+  return map[status.toUpperCase()] ?? 'neutral'
+}
+
 /** Maps a user-role string to the appropriate `BadgeVariant`. */
 export function roleVariant(role: string): BadgeVariant {
-  return role.toUpperCase() === 'ADMIN' ? 'primary' : 'success'
+  const map: Record<string, BadgeVariant> = {
+    ADMIN: 'primary',
+    SUPPORT: 'info',
+    FULFILMENT: 'warning',
+    CUSTOMER: 'success',
+  }
+  return map[role.toUpperCase()] ?? 'success'
 }

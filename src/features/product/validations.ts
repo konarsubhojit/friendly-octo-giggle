@@ -4,6 +4,8 @@ import {
   ORDER_ID_REGEX,
   URL_REGEX,
   ISO_DATETIME_REGEX,
+  MAX_MONEY_AMOUNT,
+  hasMoneyPrecision,
 } from '@/lib/validations/primitives'
 
 // ─── Product Validation Schemas ───────────────────────────
@@ -62,11 +64,19 @@ export const CreateVariantSchema = z.object({
   sku: z.string().max(100, 'SKU must be under 100 characters').nullish(),
   price: z
     .number({ message: 'Price is required' })
-    .positive('Price must be greater than zero'),
+    .positive('Price must be greater than zero')
+    .max(MAX_MONEY_AMOUNT, 'Price is out of the supported range')
+    .refine(hasMoneyPrecision, 'Price supports at most 2 decimal places'),
   stock: z
     .number({ message: 'Stock is required' })
     .int('Stock must be an integer')
     .nonnegative('Stock must be non-negative'),
+  weightGrams: z
+    .number()
+    .int('Weight must be a whole number of grams')
+    .positive('Weight must be greater than zero')
+    .max(50_000, 'Weight must be under 50kg')
+    .nullish(),
   image: z.string().regex(URL_REGEX, 'Must be a valid URL').nullish(),
   images: z
     .array(z.string().regex(URL_REGEX, 'Each image must be a valid URL'))
@@ -82,11 +92,19 @@ export const UpdateVariantSchema = z
     sku: z.string().max(100, 'SKU must be under 100 characters').nullish(),
     price: z
       .number({ message: 'Price is required' })
-      .positive('Price must be greater than zero'),
+      .positive('Price must be greater than zero')
+      .max(MAX_MONEY_AMOUNT, 'Price is out of the supported range')
+      .refine(hasMoneyPrecision, 'Price supports at most 2 decimal places'),
     stock: z
       .number({ message: 'Stock is required' })
       .int('Stock must be an integer')
       .nonnegative('Stock must be non-negative'),
+    weightGrams: z
+      .number()
+      .int('Weight must be a whole number of grams')
+      .positive('Weight must be greater than zero')
+      .max(50_000, 'Weight must be under 50kg')
+      .nullish(),
     image: z.string().regex(URL_REGEX, 'Must be a valid URL').nullish(),
     images: z
       .array(z.string().regex(URL_REGEX, 'Each image must be a valid URL'))

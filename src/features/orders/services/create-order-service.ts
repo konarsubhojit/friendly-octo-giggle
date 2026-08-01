@@ -1,10 +1,26 @@
-import { db, StockConflictError } from '@/lib/db'
+import { CouponConflictError, db, StockConflictError } from '@/lib/db'
 import { formatStructuredAddress } from '@/lib/address-utils'
 import { invalidateCache } from '@/lib/redis'
 import { invalidateUserOrderCaches } from '@/lib/cache'
 import { CreateOrderInput, OrderItemInput } from '@/lib/types'
-import { logBusinessEvent, logError } from '@/lib/logger'
-import { sendOrderConfirmationEmail } from '@/lib/email'
+import {
+  logBusinessEvent,
+  logError,
+  logPerformance,
+  ORDER_CREATE_OPERATION,
+} from '@/lib/logger'
+import { roundMoney } from '@/lib/money'
+import {
+  calculateOrderTotals,
+  type OrderTotals,
+  type PricedOrderItem,
+} from './order-pricing'
+import {
+  getShippingMethodLabel,
+  toShippingMethod,
+  type ShippingMethodName,
+} from '@/lib/shipping'
+import { notifyOrderConfirmation } from '@/lib/notifications/order-notifications'
 import type { OrderCreatedEvent } from '@/lib/qstash-events'
 import { getQStashClient } from '@/lib/qstash'
 import { env } from '@/lib/env'
@@ -19,7 +35,14 @@ import {
   PaymentConfigurationError,
   PaymentVerificationError,
   verifyCheckoutPayment,
+  type VerifiedPayment,
 } from '@/lib/payments'
+import {
+  isCouponError,
+  resolveCartDiscount,
+  type AppliedCoupon,
+  type DiscountCartItem,
+} from '@/features/cart/services/coupon-service'
 import {
   OrderRequestError,
   type OrderSessionUser,
@@ -28,7 +51,13 @@ import {
 type ProductWithVariants = {
   id: string
   name: string
-  variants: Array<{ id: string; price: number; stock: number }>
+  category: string
+  variants: Array<{
+    id: string
+    price: number
+    stock: number
+    weightGrams?: number | null
+  }>
 }
 
 type ValidationResult =
@@ -47,7 +76,7 @@ type ValidationResult =
   | { valid: false; error: string; status: number; reason: string }
 
 type StockCheckResult =
-  | { valid: true; totalAmount: number }
+  | { valid: true; pricedItems: PricedOrderItem[] }
   | {
       valid: false
       error: string
@@ -75,7 +104,13 @@ interface HydratedOrder {
   customerName: string
   customerEmail: string
   customerAddress: string
+  subtotalAmount: number
+  shippingAmount: number
+  taxAmount: number
+  shippingMethod: ShippingMethodName | null
   totalAmount: number
+  discountAmount: number
+  couponCode: string | null
   status: string
   paymentStatus: string
   createdAt: Date
@@ -193,10 +228,20 @@ const validateCustomerInfo = (
   }
 }
 
+type ItemStockCheckResult =
+  | { valid: true; pricedItem: PricedOrderItem }
+  | {
+      valid: false
+      error: string
+      status: number
+      reason: string
+      details?: Record<string, unknown>
+    }
+
 const checkStockForItem = (
   item: OrderItemInput,
   product: ProductWithVariants
-): StockCheckResult => {
+): ItemStockCheckResult => {
   const variant = product.variants.find((v) => v.id === item.variantId)
   if (!variant) {
     return {
@@ -224,14 +269,21 @@ const checkStockForItem = (
     }
   }
 
-  return { valid: true, totalAmount: price * item.quantity }
+  return {
+    valid: true,
+    pricedItem: {
+      price,
+      quantity: item.quantity,
+      weightGrams: variant.weightGrams ?? null,
+    },
+  }
 }
 
 const validateStockAndCalculateTotal = (
   items: OrderItemInput[],
   productList: ProductWithVariants[]
 ): StockCheckResult => {
-  let totalAmount = 0
+  const pricedItems: PricedOrderItem[] = []
   const productMap = new Map(
     productList.map((product) => [product.id, product])
   )
@@ -251,10 +303,10 @@ const validateStockAndCalculateTotal = (
     if (!result.valid) {
       return result
     }
-    totalAmount += result.totalAmount
+    pricedItems.push(result.pricedItem)
   }
 
-  return { valid: true, totalAmount }
+  return { valid: true, pricedItems }
 }
 
 const sanitizeCustomizationNote = (
@@ -378,7 +430,10 @@ export const persistOrder = async ({
   userId,
   customerDetails,
   productList,
+  totals,
   totalAmount,
+  discountAmount = 0,
+  appliedCoupons = [],
   verifiedPayment,
   checkoutRequestId,
 }: {
@@ -386,14 +441,12 @@ export const persistOrder = async ({
   userId: string
   customerDetails: Extract<ValidationResult, { valid: true }>
   productList: ProductWithVariants[]
+  totals: OrderTotals
+  /** Amount actually charged: the order totals minus any coupon discount. */
   totalAmount: number
-  verifiedPayment?: {
-    provider: 'RAZORPAY'
-    paymentOrderId: string
-    paymentTransactionId: string
-    amountPaid: number
-    paidAt: Date
-  } | null
+  discountAmount?: number
+  appliedCoupons?: readonly AppliedCoupon[]
+  verifiedPayment?: VerifiedPayment | null
   checkoutRequestId?: string
 }) => {
   try {
@@ -421,12 +474,25 @@ export const persistOrder = async ({
         state: customerDetails.state || null,
       },
       checkoutRequestId: checkoutRequestId ?? null,
+      subtotalAmount: totals.subtotal,
+      shippingAmount: totals.shipping.amount,
+      taxAmount: totals.tax.amount,
+      shippingMethod: totals.shipping.method,
       totalAmount,
+      discountAmount,
+      appliedCoupons: appliedCoupons.map((applied) => ({
+        couponId: applied.couponId,
+        code: applied.code,
+        discountAmount: applied.discountAmount,
+      })),
       verifiedPayment,
       items: buildOrderItemValues(body.items, productList),
     })
   } catch (err) {
     if (err instanceof StockConflictError) {
+      throw new OrderRequestError(err.message, 409)
+    }
+    if (err instanceof CouponConflictError) {
       throw new OrderRequestError(err.message, 409)
     }
     throw err
@@ -472,7 +538,13 @@ export const dispatchOrderNotifications = async ({
       customerEmail: hydratedOrder.customerEmail,
       customerName: hydratedOrder.customerName,
       customerAddress: hydratedOrder.customerAddress,
+      subtotalAmount: hydratedOrder.subtotalAmount,
+      shippingAmount: hydratedOrder.shippingAmount,
+      taxAmount: hydratedOrder.taxAmount,
+      shippingMethod: hydratedOrder.shippingMethod ?? undefined,
       totalAmount: hydratedOrder.totalAmount,
+      discountAmount: hydratedOrder.discountAmount || undefined,
+      couponCode: hydratedOrder.couponCode,
       currencyCode,
       items: hydratedOrder.items.map((item) => ({
         name: item.product.name,
@@ -505,14 +577,30 @@ export const dispatchOrderNotifications = async ({
         eventType: emailEvent.type,
       },
     })
-    sendOrderConfirmationEmail({
+    await notifyOrderConfirmation({
       to: hydratedOrder.customerEmail,
       customerName: hydratedOrder.customerName,
       orderId: hydratedOrder.id,
+      subtotalAmount: formatPriceForCurrency(
+        hydratedOrder.subtotalAmount,
+        currencyCode
+      ),
+      shippingAmount: formatPriceForCurrency(
+        hydratedOrder.shippingAmount,
+        currencyCode
+      ),
+      taxAmount: formatPriceForCurrency(hydratedOrder.taxAmount, currencyCode),
+      shippingMethodLabel: hydratedOrder.shippingMethod
+        ? getShippingMethodLabel(hydratedOrder.shippingMethod)
+        : null,
       totalAmount: formatPriceForCurrency(
         hydratedOrder.totalAmount,
         currencyCode
       ),
+      discountAmount: hydratedOrder.discountAmount
+        ? formatPriceForCurrency(hydratedOrder.discountAmount, currencyCode)
+        : null,
+      couponCode: hydratedOrder.couponCode,
       shippingAddress: hydratedOrder.customerAddress,
       items: hydratedOrder.items.map((item) => ({
         name: item.product.name,
@@ -547,22 +635,23 @@ const fetchProductsForOrder = async (
   return productList
 }
 
+const PAYMENT_VERIFY_OPERATION = 'checkout.payment.verify'
+
 const verifyPaymentForOrder = async ({
   payment,
   expectedAmount,
+  reference,
 }: {
   payment: CreateOrderInput['payment']
   expectedAmount: number
-}): Promise<{
-  provider: 'RAZORPAY'
-  paymentOrderId: string
-  paymentTransactionId: string
-  amountPaid: number
-  paidAt: Date
-} | null> => {
+  reference?: string
+}): Promise<VerifiedPayment | null> => {
   if (!payment) return null
+  // The gateway call is the only external hop in this pipeline, so it is timed
+  // separately from the order as a whole.
+  const startedAt = Date.now()
   try {
-    return await verifyCheckoutPayment({ payment, expectedAmount })
+    return await verifyCheckoutPayment({ payment, expectedAmount, reference })
   } catch (error) {
     if (
       error instanceof PaymentVerificationError ||
@@ -575,6 +664,12 @@ const verifyPaymentForOrder = async ({
       )
     }
     throw error
+  } finally {
+    logPerformance({
+      operation: PAYMENT_VERIFY_OPERATION,
+      duration: Date.now() - startedAt,
+      metadata: { provider: payment.provider },
+    })
   }
 }
 
@@ -645,15 +740,71 @@ const logAndQueueOrderRecord = ({
   )
 }
 
-export const createOrderForUser = async ({
+/**
+ * Recompute the order discount server-side from the submitted coupon code and
+ * the database-priced cart lines.
+ */
+const resolveOrderDiscount = async ({
   body,
-  user,
-  checkoutRequestId,
+  userId,
+  productList,
+  shippingAmount,
 }: {
+  body: CreateOrderInput
+  userId: string
+  productList: ProductWithVariants[]
+  shippingAmount: number
+}) => {
+  const productMap = new Map(
+    productList.map((product) => [product.id, product])
+  )
+
+  const discountItems: DiscountCartItem[] = body.items.map((item) => {
+    const product = productMap.get(item.productId)
+    const variant = product?.variants.find(
+      (candidate) => candidate.id === item.variantId
+    )
+
+    return {
+      productId: item.productId,
+      category: product?.category ?? '',
+      quantity: item.quantity,
+      unitPrice: variant?.price ?? 0,
+    }
+  })
+
+  const codes = body.couponCode?.trim() ? [body.couponCode] : []
+
+  try {
+    return await resolveCartDiscount({
+      codes,
+      items: discountItems,
+      userId,
+      shippingAmount,
+    })
+  } catch (error) {
+    if (isCouponError(error)) {
+      return logFailedOrderCreation(
+        'coupon_rejected',
+        error.status,
+        error.message
+      )
+    }
+    throw error
+  }
+}
+
+interface CreateOrderForUserInput {
   body: CreateOrderInput
   user: OrderSessionUser
   checkoutRequestId?: string
-}) => {
+}
+
+const runOrderCreation = async ({
+  body,
+  user,
+  checkoutRequestId,
+}: CreateOrderForUserInput) => {
   const { customerDetails, requestedProductIds } = validateOrderInput({
     body,
     user,
@@ -668,12 +819,35 @@ export const createOrderForUser = async ({
       stockResult.details
     )
   }
-  const totalAmount = (
-    stockResult as Extract<StockCheckResult, { valid: true }>
-  ).totalAmount
+  const { pricedItems } = stockResult as Extract<
+    StockCheckResult,
+    { valid: true }
+  >
+  const totals = calculateOrderTotals({
+    items: pricedItems,
+    destination: {
+      state: customerDetails.state,
+      pinCode: customerDetails.pinCode,
+    },
+    shippingMethod: toShippingMethod(body.shippingMethod),
+  })
+  // Discounts are always recomputed here from the coupon code plus
+  // database-priced line items — a client-supplied total is never trusted.
+  const discount = await resolveOrderDiscount({
+    body,
+    userId: user.id,
+    productList,
+    shippingAmount: totals.shipping.amount,
+  })
+  // The discount can never push the charged amount below zero.
+  const totalAmount = Math.max(
+    0,
+    roundMoney(totals.total - discount.discountAmount)
+  )
   const verifiedPayment = await verifyPaymentForOrder({
     payment: body.payment,
     expectedAmount: totalAmount,
+    reference: checkoutRequestId,
   })
   if (verifiedPayment) {
     await ensurePaymentTransactionUnique(verifiedPayment.paymentTransactionId)
@@ -683,7 +857,10 @@ export const createOrderForUser = async ({
     userId: user.id,
     customerDetails,
     productList,
+    totals,
     totalAmount,
+    discountAmount: discount.discountAmount,
+    appliedCoupons: discount.appliedCoupons,
     verifiedPayment,
     checkoutRequestId,
   })
@@ -692,4 +869,36 @@ export const createOrderForUser = async ({
   await invalidateOrderRelatedCaches({ userId: user.id, items: body.items })
   await dispatchOrderNotifications({ hydratedOrder, userId: user.id })
   return serializeCreatedOrder(hydratedOrder)
+}
+
+/**
+ * Create an order, timing the whole pipeline.
+ *
+ * Payment verification and persistence stay inside one call on purpose: "money
+ * confirmed" and "order exists" must either both happen or neither, and the
+ * caller's compare-and-swap claim makes a retry from the top safe. The timing
+ * around it feeds `application_order_processing_duration_ms` so the pipeline's
+ * real p95/p99 is measurable before any restructuring is considered.
+ */
+export const createOrderForUser = async (input: CreateOrderForUserInput) => {
+  const startedAt = Date.now()
+  let outcome = 'created'
+
+  try {
+    return await runOrderCreation(input)
+  } catch (error) {
+    outcome = 'failed'
+    throw error
+  } finally {
+    logPerformance({
+      operation: ORDER_CREATE_OPERATION,
+      duration: Date.now() - startedAt,
+      metadata: {
+        outcome,
+        itemCount: input.body.items.length,
+        paymentProvider: input.body.payment?.provider ?? 'none',
+        checkoutRequestId: input.checkoutRequestId,
+      },
+    })
+  }
 }

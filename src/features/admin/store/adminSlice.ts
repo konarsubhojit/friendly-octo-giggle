@@ -132,6 +132,34 @@ export const fetchAdminUsers = createAsyncThunk(
   }
 )
 
+/**
+ * Issue a refund against an order. Omitting `amount` refunds the whole
+ * refundable balance; supplying one issues a partial refund.
+ */
+export const refundAdminOrder = createAsyncThunk(
+  'admin/refundOrder',
+  async (
+    { id, amount, reason }: { id: string; amount?: number; reason?: string },
+    { rejectWithValue }
+  ) => {
+    try {
+      const body: Record<string, unknown> = {}
+      if (amount !== undefined) body.amount = amount
+      if (reason) body.reason = reason
+
+      const data = await apiClient.post<Record<string, unknown>>(
+        `/api/admin/orders/${id}/refund`,
+        body
+      )
+      const payload = (data.data ?? data) as Record<string, unknown>
+      return payload.order as unknown as AdminOrder
+    } catch (error) {
+      if (error instanceof ApiError) return rejectWithValue(error.message)
+      return rejectWithValue('Failed to refund order')
+    }
+  }
+)
+
 export const updateAdminOrderStatus = createAsyncThunk(
   'admin/updateOrderStatus',
   async (
@@ -257,6 +285,16 @@ const adminSlice = createSlice({
         if (idx >= 0) {
           state.orders[idx] = { ...state.orders[idx], ...action.payload }
         }
+      })
+      // Refund order
+      .addCase(refundAdminOrder.fulfilled, (state, action) => {
+        const idx = state.orders.findIndex((o) => o.id === action.payload.id)
+        if (idx >= 0) {
+          state.orders[idx] = { ...state.orders[idx], ...action.payload }
+        }
+      })
+      .addCase(refundAdminOrder.rejected, (state, action) => {
+        state.error = action.payload as string
       })
       // Update user role
       .addCase(updateAdminUserRole.fulfilled, (state, action) => {

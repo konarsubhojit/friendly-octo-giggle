@@ -2,6 +2,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { AdminNavLinksClient } from '@/features/admin/components/AdminNavLinksClient'
+import { ADMIN_PERMISSIONS, ROLE_PERMISSIONS } from '@/lib/constants/roles'
 
 vi.mock('next/link', () => ({
   default: ({
@@ -31,7 +32,12 @@ describe('AdminNavLinksClient', () => {
   })
 
   it('renders the Dashboard link', () => {
-    render(<AdminNavLinksClient failedEmailCount={0} />)
+    render(
+      <AdminNavLinksClient
+        failedEmailCount={0}
+        permissions={ADMIN_PERMISSIONS}
+      />
+    )
     expect(screen.getByRole('link', { name: 'Dashboard' })).toHaveAttribute(
       'href',
       '/admin'
@@ -39,7 +45,12 @@ describe('AdminNavLinksClient', () => {
   })
 
   it('renders Catalog, Management, System dropdown buttons', () => {
-    render(<AdminNavLinksClient failedEmailCount={0} />)
+    render(
+      <AdminNavLinksClient
+        failedEmailCount={0}
+        permissions={ADMIN_PERMISSIONS}
+      />
+    )
     expect(screen.getByRole('button', { name: /Catalog/i })).toBeInTheDocument()
     expect(
       screen.getByRole('button', { name: /Management/i })
@@ -48,20 +59,35 @@ describe('AdminNavLinksClient', () => {
   })
 
   it('renders Jump to... quick navigation button', () => {
-    render(<AdminNavLinksClient failedEmailCount={0} />)
+    render(
+      <AdminNavLinksClient
+        failedEmailCount={0}
+        permissions={ADMIN_PERMISSIONS}
+      />
+    )
     expect(
       screen.getByRole('button', { name: /Quick navigation/i })
     ).toBeInTheDocument()
   })
 
   it('Catalog dropdown is closed initially (no menu items visible)', () => {
-    render(<AdminNavLinksClient failedEmailCount={0} />)
+    render(
+      <AdminNavLinksClient
+        failedEmailCount={0}
+        permissions={ADMIN_PERMISSIONS}
+      />
+    )
     expect(screen.queryByRole('link', { name: 'Products' })).toBeNull()
     expect(screen.queryByRole('link', { name: 'Categories' })).toBeNull()
   })
 
   it('clicking Catalog button opens the dropdown with menu items', async () => {
-    render(<AdminNavLinksClient failedEmailCount={0} />)
+    render(
+      <AdminNavLinksClient
+        failedEmailCount={0}
+        permissions={ADMIN_PERMISSIONS}
+      />
+    )
     const catalogBtn = screen.getByRole('button', { name: /Catalog/i })
     fireEvent.click(catalogBtn)
     await waitFor(() => {
@@ -101,7 +127,12 @@ describe('AdminNavLinksClient', () => {
         toJSON: () => ({}),
       })
 
-    render(<AdminNavLinksClient failedEmailCount={0} />)
+    render(
+      <AdminNavLinksClient
+        failedEmailCount={0}
+        permissions={ADMIN_PERMISSIONS}
+      />
+    )
     fireEvent.click(screen.getByRole('button', { name: /Catalog/i }))
 
     await waitFor(() => {
@@ -136,7 +167,12 @@ describe('AdminNavLinksClient', () => {
       .spyOn(HTMLButtonElement.prototype, 'getBoundingClientRect')
       .mockImplementation(() => currentRect)
 
-    render(<AdminNavLinksClient failedEmailCount={0} />)
+    render(
+      <AdminNavLinksClient
+        failedEmailCount={0}
+        permissions={ADMIN_PERMISSIONS}
+      />
+    )
     fireEvent.click(screen.getByRole('button', { name: /Catalog/i }))
 
     await waitFor(() => {
@@ -166,13 +202,23 @@ describe('AdminNavLinksClient', () => {
   })
 
   it('Catalog dropdown button has aria-expanded=false initially', () => {
-    render(<AdminNavLinksClient failedEmailCount={0} />)
+    render(
+      <AdminNavLinksClient
+        failedEmailCount={0}
+        permissions={ADMIN_PERMISSIONS}
+      />
+    )
     const catalogBtn = screen.getByRole('button', { name: /Catalog/i })
     expect(catalogBtn).toHaveAttribute('aria-expanded', 'false')
   })
 
   it('Catalog dropdown button has aria-expanded=true when open', async () => {
-    render(<AdminNavLinksClient failedEmailCount={0} />)
+    render(
+      <AdminNavLinksClient
+        failedEmailCount={0}
+        permissions={ADMIN_PERMISSIONS}
+      />
+    )
     const catalogBtn = screen.getByRole('button', { name: /Catalog/i })
     fireEvent.click(catalogBtn)
     await waitFor(() => {
@@ -181,7 +227,12 @@ describe('AdminNavLinksClient', () => {
   })
 
   it('clicking a menu item closes the dropdown', async () => {
-    render(<AdminNavLinksClient failedEmailCount={0} />)
+    render(
+      <AdminNavLinksClient
+        failedEmailCount={0}
+        permissions={ADMIN_PERMISSIONS}
+      />
+    )
     const catalogBtn = screen.getByRole('button', { name: /Catalog/i })
     fireEvent.click(catalogBtn)
     await waitFor(() => screen.getByRole('menuitem', { name: 'Products' }))
@@ -192,7 +243,12 @@ describe('AdminNavLinksClient', () => {
   })
 
   it('Management dropdown opens with Orders, Users, Reviews links', async () => {
-    render(<AdminNavLinksClient failedEmailCount={0} />)
+    render(
+      <AdminNavLinksClient
+        failedEmailCount={0}
+        permissions={ADMIN_PERMISSIONS}
+      />
+    )
     fireEvent.click(screen.getByRole('button', { name: /Management/i }))
     await waitFor(() => screen.getByRole('menu'))
     expect(screen.getByRole('menuitem', { name: 'Orders' })).toHaveAttribute(
@@ -210,7 +266,12 @@ describe('AdminNavLinksClient', () => {
   })
 
   it('System dropdown opens with Search and Email Failures links', async () => {
-    render(<AdminNavLinksClient failedEmailCount={0} />)
+    render(
+      <AdminNavLinksClient
+        failedEmailCount={0}
+        permissions={ADMIN_PERMISSIONS}
+      />
+    )
     fireEvent.click(screen.getByRole('button', { name: /System/i }))
     await waitFor(() => screen.getByRole('menu'))
     expect(screen.getByRole('menuitem', { name: 'Search' })).toHaveAttribute(
@@ -223,21 +284,36 @@ describe('AdminNavLinksClient', () => {
   })
 
   it('shows failed email badge when failedEmailCount > 0', async () => {
-    render(<AdminNavLinksClient failedEmailCount={5} />)
+    render(
+      <AdminNavLinksClient
+        failedEmailCount={5}
+        permissions={ADMIN_PERMISSIONS}
+      />
+    )
     fireEvent.click(screen.getByRole('button', { name: /System/i }))
     await waitFor(() => screen.getByRole('menu'))
     expect(screen.getByText('5')).toBeInTheDocument()
   })
 
   it('shows 99+ badge when failedEmailCount > 99', async () => {
-    render(<AdminNavLinksClient failedEmailCount={150} />)
+    render(
+      <AdminNavLinksClient
+        failedEmailCount={150}
+        permissions={ADMIN_PERMISSIONS}
+      />
+    )
     fireEvent.click(screen.getByRole('button', { name: /System/i }))
     await waitFor(() => screen.getByRole('menu'))
     expect(screen.getByText('99+')).toBeInTheDocument()
   })
 
   it('does not show badge when failedEmailCount is 0', async () => {
-    render(<AdminNavLinksClient failedEmailCount={0} />)
+    render(
+      <AdminNavLinksClient
+        failedEmailCount={0}
+        permissions={ADMIN_PERMISSIONS}
+      />
+    )
     fireEvent.click(screen.getByRole('button', { name: /System/i }))
     await waitFor(() => screen.getByRole('menu'))
     expect(screen.queryByText('0')).toBeNull()
@@ -246,7 +322,10 @@ describe('AdminNavLinksClient', () => {
   it('clicking outside closes the dropdown', async () => {
     render(
       <div>
-        <AdminNavLinksClient failedEmailCount={0} />
+        <AdminNavLinksClient
+          failedEmailCount={0}
+          permissions={ADMIN_PERMISSIONS}
+        />
         <div data-testid="outside">outside</div>
       </div>
     )
@@ -259,7 +338,12 @@ describe('AdminNavLinksClient', () => {
   })
 
   it('clicking the backdrop button again closes the dropdown', async () => {
-    render(<AdminNavLinksClient failedEmailCount={0} />)
+    render(
+      <AdminNavLinksClient
+        failedEmailCount={0}
+        permissions={ADMIN_PERMISSIONS}
+      />
+    )
     const catalogBtn = screen.getByRole('button', { name: /Catalog/i })
     fireEvent.click(catalogBtn)
     await waitFor(() => screen.getByRole('menu'))
@@ -271,7 +355,12 @@ describe('AdminNavLinksClient', () => {
 
   describe('CommandPalette', () => {
     it('opens command palette when Jump to button is clicked', async () => {
-      render(<AdminNavLinksClient failedEmailCount={0} />)
+      render(
+        <AdminNavLinksClient
+          failedEmailCount={0}
+          permissions={ADMIN_PERMISSIONS}
+        />
+      )
       fireEvent.click(screen.getByRole('button', { name: /Quick navigation/i }))
       await waitFor(() => {
         expect(
@@ -281,7 +370,12 @@ describe('AdminNavLinksClient', () => {
     })
 
     it('shows all nav items in command palette', async () => {
-      render(<AdminNavLinksClient failedEmailCount={0} />)
+      render(
+        <AdminNavLinksClient
+          failedEmailCount={0}
+          permissions={ADMIN_PERMISSIONS}
+        />
+      )
       fireEvent.click(screen.getByRole('button', { name: /Quick navigation/i }))
       const dialog = await screen.findByRole('dialog')
       expect(dialog).toBeInTheDocument()
@@ -292,7 +386,12 @@ describe('AdminNavLinksClient', () => {
     })
 
     it('filters items when typing in command palette', async () => {
-      render(<AdminNavLinksClient failedEmailCount={0} />)
+      render(
+        <AdminNavLinksClient
+          failedEmailCount={0}
+          permissions={ADMIN_PERMISSIONS}
+        />
+      )
       fireEvent.click(screen.getByRole('button', { name: /Quick navigation/i }))
       await waitFor(() => screen.getByRole('dialog'))
       const input = screen.getByPlaceholderText('Jump to admin section...')
@@ -304,7 +403,12 @@ describe('AdminNavLinksClient', () => {
     })
 
     it("shows 'No matching sections' when filter has no results", async () => {
-      render(<AdminNavLinksClient failedEmailCount={0} />)
+      render(
+        <AdminNavLinksClient
+          failedEmailCount={0}
+          permissions={ADMIN_PERMISSIONS}
+        />
+      )
       fireEvent.click(screen.getByRole('button', { name: /Quick navigation/i }))
       await waitFor(() => screen.getByRole('dialog'))
       const input = screen.getByPlaceholderText('Jump to admin section...')
@@ -315,7 +419,12 @@ describe('AdminNavLinksClient', () => {
     })
 
     it('closes command palette when backdrop is clicked', async () => {
-      render(<AdminNavLinksClient failedEmailCount={0} />)
+      render(
+        <AdminNavLinksClient
+          failedEmailCount={0}
+          permissions={ADMIN_PERMISSIONS}
+        />
+      )
       fireEvent.click(screen.getByRole('button', { name: /Quick navigation/i }))
       await waitFor(() => screen.getByRole('dialog'))
       fireEvent.click(screen.getByRole('button', { name: /Close navigation/i }))
@@ -325,7 +434,12 @@ describe('AdminNavLinksClient', () => {
     })
 
     it('closes command palette on Escape key', async () => {
-      render(<AdminNavLinksClient failedEmailCount={0} />)
+      render(
+        <AdminNavLinksClient
+          failedEmailCount={0}
+          permissions={ADMIN_PERMISSIONS}
+        />
+      )
       fireEvent.click(screen.getByRole('button', { name: /Quick navigation/i }))
       await waitFor(() => screen.getByRole('dialog'))
       const input = screen.getByPlaceholderText('Jump to admin section...')
@@ -336,7 +450,12 @@ describe('AdminNavLinksClient', () => {
     })
 
     it('ArrowDown and ArrowUp navigate through items', async () => {
-      render(<AdminNavLinksClient failedEmailCount={0} />)
+      render(
+        <AdminNavLinksClient
+          failedEmailCount={0}
+          permissions={ADMIN_PERMISSIONS}
+        />
+      )
       fireEvent.click(screen.getByRole('button', { name: /Quick navigation/i }))
       await waitFor(() => screen.getByRole('dialog'))
       const input = screen.getByPlaceholderText('Jump to admin section...')
@@ -346,14 +465,24 @@ describe('AdminNavLinksClient', () => {
     })
 
     it('shows badge for email failures in command palette', async () => {
-      render(<AdminNavLinksClient failedEmailCount={3} />)
+      render(
+        <AdminNavLinksClient
+          failedEmailCount={3}
+          permissions={ADMIN_PERMISSIONS}
+        />
+      )
       fireEvent.click(screen.getByRole('button', { name: /Quick navigation/i }))
       await waitFor(() => screen.getByRole('dialog'))
       expect(screen.getByText('3')).toBeInTheDocument()
     })
 
     it('Ctrl+K keyboard shortcut opens command palette', async () => {
-      render(<AdminNavLinksClient failedEmailCount={0} />)
+      render(
+        <AdminNavLinksClient
+          failedEmailCount={0}
+          permissions={ADMIN_PERMISSIONS}
+        />
+      )
       fireEvent.keyDown(document, { key: 'k', ctrlKey: true })
       await waitFor(() => {
         expect(screen.getByRole('dialog')).toBeInTheDocument()
@@ -361,11 +490,53 @@ describe('AdminNavLinksClient', () => {
     })
 
     it('Cmd+K keyboard shortcut opens command palette', async () => {
-      render(<AdminNavLinksClient failedEmailCount={0} />)
+      render(
+        <AdminNavLinksClient
+          failedEmailCount={0}
+          permissions={ADMIN_PERMISSIONS}
+        />
+      )
       fireEvent.keyDown(document, { key: 'k', metaKey: true })
       await waitFor(() => {
         expect(screen.getByRole('dialog')).toBeInTheDocument()
       })
     })
+  })
+
+  it('hides catalog entries FULFILMENT cannot use', () => {
+    render(
+      <AdminNavLinksClient
+        failedEmailCount={0}
+        permissions={ROLE_PERMISSIONS.FULFILMENT}
+      />
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: /Catalog/i }))
+    expect(
+      screen.getByRole('menuitem', { name: 'Products' })
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole('menuitem', { name: 'Categories' })
+    ).not.toBeInTheDocument()
+  })
+
+  it('drops groups entirely when the role has none of their permissions', () => {
+    render(
+      <AdminNavLinksClient
+        failedEmailCount={0}
+        permissions={ROLE_PERMISSIONS.CUSTOMER}
+      />
+    )
+
+    expect(screen.getByRole('link', { name: 'Dashboard' })).toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: /Catalog/i })
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: /Management/i })
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: /System/i })
+    ).not.toBeInTheDocument()
   })
 })

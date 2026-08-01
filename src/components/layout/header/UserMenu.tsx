@@ -5,6 +5,7 @@ import Image from 'next/image'
 import { signOut } from 'next-auth/react'
 import Link from 'next/link'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
+import { isStaffRole } from '@/lib/constants/roles'
 
 export interface UserMenuUser {
   readonly name?: string | null
@@ -158,7 +159,7 @@ export function UserMenu({
             </svg>
             My Wishlist
           </Link>
-          {user.role === 'ADMIN' && (
+          {isStaffRole(user.role) && (
             <Link
               href="/admin"
               onClick={() => setMenuOpen(false)}

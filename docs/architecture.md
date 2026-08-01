@@ -33,7 +33,7 @@ Key current-state points:
 
 ### July 2026 capability update
 
-The runtime now also includes currency preferences, installable PWA metadata and offline fallback, a guest-accessible AI product assistant, staged checkout pages backed by durable checkout requests and a Vercel Queue consumer, advanced search suggestions/click analytics, account address management, admin import/export and bulk actions, checkout queue visibility, Prometheus metrics, and Sentry instrumentation. See [Feature Catalog](./features.md) for the user-facing inventory.
+The runtime now also includes currency preferences, installable PWA metadata and offline fallback, a guest-accessible AI product assistant, staged checkout pages backed by durable checkout requests processed by Inngest (with a Vercel Queue consumer as fallback), advanced search suggestions/click analytics, account address management, admin import/export and bulk actions, checkout queue visibility, Prometheus metrics, and Sentry instrumentation. See [Feature Catalog](./features.md) for the user-facing inventory.
 
 ## 2. System Overview
 
@@ -106,6 +106,7 @@ The dominant design principles in the current code are:
 | Upstash Redis                     | Cache, stale-while-revalidate, lightweight shared state |
 | Upstash Search                    | Product search index with DB fallback                   |
 | Upstash QStash                    | Signed async email event delivery                       |
+| Inngest                           | Durable, step-checkpointed checkout order processing    |
 | Vercel Blob                       | Hosted media storage                                    |
 | Vercel Edge Config                | Feature flags and shipping configuration                |
 | Vercel Analytics / Speed Insights | Runtime telemetry                                       |
@@ -149,10 +150,12 @@ Current schema highlights:
 - `Wishlist` and `Review`: user engagement features.
 - `ProductShare`: immutable short-link mapping for shareable product URLs.
 - `FailedEmail`: retry queue and delivery history for email workflows.
+- `NotificationPreference`: per-user transactional/marketing toggles for the email, push, and SMS channels. Missing rows fall back to code defaults.
+- `PushSubscription`: Web Push endpoints and keys per user/device, unique on `endpoint`.
 
 ### Relationship Model
 
-- Users have many orders, accounts, password history rows, and wishlist entries.
+- Users have many orders, accounts, password history rows, wishlist entries, and push subscriptions, plus at most one notification preference row.
 - Products have many variants, order items, cart items, wishlist entries, and reviews.
 - Orders own their line items via cascade delete.
 - Carts own cart items via cascade delete.
@@ -317,6 +320,53 @@ This means user identity, theme selection, currency formatting, and shared UI st
 
 ## 8. Async Work, Email, and Scheduled Jobs
 
+### Durable Checkout Processing
+
+The HTTP request the customer waits on never verifies payment or creates an
+order. `enqueueCheckoutForUser` validates the submission, persists a
+`CheckoutRequest` row, hands it to an orchestrator, and returns.
+
+Processing then runs as four independently repeatable steps, all exported from
+`features/cart/services/checkout-service.ts`:
+
+1. **Preflight** — skip when the request is missing, already has an order, or is
+   already settled. Read-only apart from a self-healing status write.
+2. **Claim** — compare-and-swap the row into `PROCESSING`. Duplicate publishes,
+   queue redeliveries, webhook triggers and durable retries all race here; only
+   the winner proceeds.
+3. **Create order** — verify payment and persist the order. These stay in one
+   call on purpose: "money confirmed" and "order exists" must either both happen
+   or neither, so there is never a window where a customer is charged with no
+   order. The step is idempotent in both directions: it returns any order that
+   already exists instead of creating a second one, and if a peer trigger wins
+   the race to the insert it adopts that order rather than recording a failure.
+4. **Record failure** — classify the error. Client-side failures (4xx) are
+   terminal; anything else resets to `PENDING` for another attempt.
+
+Two orchestrators run the same steps:
+
+| Orchestrator                                                   | Trigger                    | Behaviour on retry                                                                                        |
+| -------------------------------------------------------------- | -------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Inngest (`/api/inngest`, used when `INNGEST_EVENT_KEY` is set) | `checkout/request.created` | Each step is checkpointed, so a retry resumes after the last completed step and never re-verifies payment |
+| Vercel Queue (`/api/queue/checkout-orders`)                    | `checkout-orders` topic    | Whole pipeline re-runs; the claim and the unique constraints keep it safe                                 |
+
+`enqueueCheckoutForUser` prefers Inngest, falls back to the queue, and only as a
+last resort processes inline via `waitUntil`. The Inngest publish is given a
+bounded wall-clock budget so a degraded Inngest API hands over to the queue
+instead of holding the customer's request open until the platform kills it at
+`maxDuration`. The payment webhook is a third, independent trigger for the same
+steps.
+
+Two invariants keep a killed worker from stranding a request:
+
+- Every route that can hold a claim declares `maxDuration = 30`, which is below
+  `STALE_PROCESSING_CLAIM_MS`, so a live claim can never be stolen mid-flight.
+- `STALE_PROCESSING_CLAIM_MS` is below the queue's `retryAfterSeconds`, so the
+  redelivery that follows a killed worker can actually reclaim the request.
+
+Duplicate orders are impossible regardless: `Order.checkoutRequestId` and
+`Order.paymentTransactionId` are both unique.
+
 ### Async Email Delivery
 
 Email dispatch is event-driven.
@@ -328,7 +378,29 @@ The current flow is:
 3. The route optionally verifies the QStash signature.
 4. It validates the payload with Zod.
 5. It prevents duplicate sends by checking `FailedEmail` for already-sent records of the same reference.
-6. It dispatches either order confirmation or order status update email logic.
+6. It dispatches either order confirmation or order status update logic through `lib/notifications/order-notifications.ts`.
+
+### Notification Fan-out and Preferences
+
+`lib/notifications/order-notifications.ts` is the single fan-out point for order
+notifications and is used by the QStash worker as well as the direct fallbacks in
+order creation and admin status updates. For every send it:
+
+1. Resolves the recipient from the customer email. Guests (no user row) keep the
+   defaults, so receipts still reach them while marketing stays opt-in.
+2. Sends the email only when the transactional email channel is enabled, logging
+   `notification_suppressed_by_preference` otherwise.
+3. Sends Web Push only for signed-in recipients that enabled the push channel.
+
+### Web Push
+
+Push uses the PWA service worker (`public/sw.js`), which handles `push`,
+`notificationclick`, and `pushsubscriptionchange`. Delivery requires a VAPID key
+pair (`VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, optional `VAPID_SUBJECT`); when
+unset, push is skipped and email delivery is unaffected. Subscriptions are
+per-device, stored in `PushSubscription`, and endpoints the push service reports
+as `404`/`410` are deleted so revoked/expired grants do not accumulate. Push
+failures never block the email path.
 
 ### Email Providers
 

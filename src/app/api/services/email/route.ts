@@ -3,10 +3,12 @@ import { apiError, apiSuccess } from '@/lib/api-utils'
 import { getQStashReceiver } from '@/lib/qstash'
 import { QStashEmailEventSchema } from '@/lib/qstash-events'
 import type { z } from 'zod'
+import { getShippingMethodLabel } from '@/lib/shipping/methods'
 import {
-  sendOrderConfirmationEmail,
-  sendOrderStatusUpdateEmail,
-} from '@/lib/email'
+  notifyOrderConfirmation,
+  notifyOrderRefundUpdate,
+  notifyOrderStatusUpdate,
+} from '@/lib/notifications/order-notifications'
 import { isNonRetriableError } from '@/lib/email/retry'
 import { saveFailedEmail } from '@/lib/email/failed-emails'
 import type { EmailType } from '@/lib/email/failed-emails'
@@ -21,10 +23,14 @@ import {
   type CurrencyCode,
 } from '@/lib/currency'
 
-const resolveEmailType = (
-  eventType: 'order.created' | 'order.status_changed'
-): EmailType =>
-  eventType === 'order.created' ? 'order_confirmation' : 'order_status_update'
+const EMAIL_TYPE_BY_EVENT: Record<QStashEvent['type'], EmailType> = {
+  'order.created': 'order_confirmation',
+  'order.status_changed': 'order_status_update',
+  'order.refunded': 'order_refund_update',
+}
+
+const resolveEmailType = (eventType: QStashEvent['type']): EmailType =>
+  EMAIL_TYPE_BY_EVENT[eventType]
 
 const verifyQStashSignature = async (
   request: NextRequest,
@@ -50,17 +56,36 @@ const verifyQStashSignature = async (
 
 type QStashEvent = z.infer<typeof QStashEmailEventSchema>
 
-const dispatchEmail = (event: QStashEvent): void => {
+const dispatchEmail = async (event: QStashEvent): Promise<void> => {
   if (event.type === 'order.created') {
     const currency: CurrencyCode =
       event.data.currencyCode && isValidCurrencyCode(event.data.currencyCode)
         ? event.data.currencyCode
         : 'INR'
-    sendOrderConfirmationEmail({
+    await notifyOrderConfirmation({
       to: event.data.customerEmail,
       customerName: event.data.customerName,
       orderId: event.data.orderId,
+      subtotalAmount:
+        event.data.subtotalAmount === undefined
+          ? null
+          : formatPriceForCurrency(event.data.subtotalAmount, currency),
+      shippingAmount:
+        event.data.shippingAmount === undefined
+          ? null
+          : formatPriceForCurrency(event.data.shippingAmount, currency),
+      taxAmount:
+        event.data.taxAmount === undefined
+          ? null
+          : formatPriceForCurrency(event.data.taxAmount, currency),
+      shippingMethodLabel: event.data.shippingMethod
+        ? getShippingMethodLabel(event.data.shippingMethod)
+        : null,
       totalAmount: formatPriceForCurrency(event.data.totalAmount, currency),
+      discountAmount: event.data.discountAmount
+        ? formatPriceForCurrency(event.data.discountAmount, currency)
+        : null,
+      couponCode: event.data.couponCode ?? null,
       shippingAddress: event.data.customerAddress,
       items: event.data.items.map((item) => ({
         name: item.name,
@@ -69,8 +94,21 @@ const dispatchEmail = (event: QStashEvent): void => {
         variant: null,
       })),
     })
+  } else if (event.type === 'order.refunded') {
+    const currency: CurrencyCode = isValidCurrencyCode(event.data.currencyCode)
+      ? event.data.currencyCode
+      : 'INR'
+    await notifyOrderRefundUpdate({
+      to: event.data.customerEmail,
+      customerName: event.data.customerName,
+      orderId: event.data.orderId,
+      status: event.data.refundStatus,
+      refundAmount: formatPriceForCurrency(event.data.refundAmount, currency),
+      isPartial: event.data.isPartial,
+      reason: event.data.reason ?? null,
+    })
   } else {
-    sendOrderStatusUpdateEmail({
+    await notifyOrderStatusUpdate({
       to: event.data.customerEmail,
       customerName: event.data.customerName,
       orderId: event.data.orderId,
@@ -169,7 +207,7 @@ export const POST = async (request: NextRequest): Promise<NextResponse> => {
   }
 
   try {
-    dispatchEmail(event)
+    await dispatchEmail(event)
     logger.info(
       { messageId, orderId, eventType: event.type },
       'qstash_email_sent'
