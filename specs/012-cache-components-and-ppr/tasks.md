@@ -21,9 +21,9 @@ description: 'Task list for adopting Next.js 16 Cache Components and Partial Pre
 
 **Purpose**: Establish the cache-life and cache-tag vocabulary before any scope uses it. Nothing here changes rendering behavior, so it can land ahead of the flag.
 
-- [ ] T001 Create `src/lib/cache-tags.ts` exporting `productTag(id)`, `productListTag()`, `bestsellersTag()`, `categoriesTag()`, plus a `revalidateCacheTags(tags, context)` helper that calls `revalidateTag(tag, profile)` from `next/cache` (second argument is required in 16.2), swallows nothing silently, and reports failures through `logError` with an operation context so a tag failure never fails the originating write (FR-004, FR-012).
-- [ ] T002 Add the `catalog`, `product`, and `taxonomy` `cacheLife` profiles to `next.config.ts` using the values in `plan.md` (`stale`/`revalidate`/`expire`), keeping `cacheComponents` **off** in this task.
-- [ ] T003 [P] Add `__tests__/lib/cache-tags.test.ts` covering tag-string shape, deduplication of repeated ids, and that a throwing `revalidateTag` is logged and does not propagate.
+- [x] T001 Create `src/lib/cache-tags.ts` exporting `productTag(id)`, `productListTag()`, `bestsellersTag()`, `categoriesTag()`, plus a `revalidateCacheTags(tags, context)` helper that calls `revalidateTag(tag, profile)` from `next/cache` (second argument is required in 16.2), swallows nothing silently, and reports failures through `logError` with an operation context so a tag failure never fails the originating write (FR-004, FR-012).
+- [x] T002 Add the `catalog`, `product`, and `taxonomy` `cacheLife` profiles to `next.config.ts` using the values in `plan.md` (`stale`/`revalidate`/`expire`), keeping `cacheComponents` **off** in this task.
+- [x] T003 [P] Add `__tests__/lib/cache-tags.test.ts` covering tag-string shape, deduplication of repeated ids, and that a throwing `revalidateTag` is logged and does not propagate.
 
 ---
 
@@ -33,17 +33,17 @@ description: 'Task list for adopting Next.js 16 Cache Components and Partial Pre
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete.
 
-- [ ] T004 Call `unstable_rethrow(error)` from `next/navigation` as the first statement of `handleApiError` in `src/lib/api-utils.ts` so Next.js prerender bail-out signals propagate instead of being converted into JSON 500 responses (observed on `/api/products`, `/api/products/bestsellers`, `/api/search`, `/api/search/suggest`).
-- [ ] T005 In `src/lib/api-middleware.ts`, stop recording Next.js control-flow errors as `statusCode: 500` in `withLogging` and `withApiLogging`; rethrow them without emitting a request log line.
-- [ ] T006 [P] Add a `Suspense` boundary above `AppProviders` in `src/app/layout.tsx` so `makeStore()`'s `Math.random()` usage in `src/lib/store.ts` no longer aborts the prerender of otherwise-static pages.
-- [ ] T007 Remove all 60 `export const dynamic = 'force-dynamic'` declarations listed in the Class A and Class B tables of `plan.md` (47 route handlers under `src/app/api/`, 13 pages under `src/app/(public)/` and `src/app/admin/`).
-- [ ] T008 Remove all 11 `export const revalidate` declarations: the 8 marketing pages under `src/app/(public)/`, plus `src/app/(public)/shop/page.tsx`, `src/app/(public)/products/[id]/page.tsx`, and `src/app/api/categories/route.ts`.
-- [ ] T009 Remove `export const runtime = 'nodejs'` from `src/app/api/upload/route.ts` and confirm the Node-only Azure Blob path in `src/lib/image-storage.ts` still works under the default runtime; record the verification in the PR description.
-- [ ] T010 Add an explicit permission check plus `await connection()` to `src/app/admin/page.tsx`, which is the only admin page without a page-level auth call and therefore the only one Next.js attempts to prerender.
-- [ ] T011 Set `cacheComponents: true` in `next.config.ts`.
-- [ ] T012 Run `npm run build` and confirm it completes with the Cache Components banner and no prerender errors; capture the route table (`○` / `◐` / `ƒ`) as the migration baseline.
-- [ ] T013 [P] Extend `__tests__/lib/api-utils.test.ts` to assert that a Next.js control-flow error is rethrown by `handleApiError` while an ordinary `Error` still yields an API error response.
-- [ ] T014 [P] Extend `__tests__/lib/api-middleware.test.ts` to assert that control-flow errors are rethrown without a 500 request log.
+- [x] T004 Call `unstable_rethrow(error)` from `next/navigation` as the first statement of `handleApiError` in `src/lib/api-utils.ts` so Next.js prerender bail-out signals propagate instead of being converted into JSON 500 responses (observed on `/api/products`, `/api/products/bestsellers`, `/api/search`, `/api/search/suggest`).
+- [x] T005 In `src/lib/api-middleware.ts`, stop recording Next.js control-flow errors as `statusCode: 500` in `withLogging` and `withApiLogging`; rethrow them without emitting a request log line.
+- [x] T006 [P] Add a `Suspense` boundary above `AppProviders` in `src/app/layout.tsx` so `makeStore()`'s `Math.random()` usage in `src/lib/store.ts` no longer aborts the prerender of otherwise-static pages.
+- [x] T007 Remove all 60 `export const dynamic = 'force-dynamic'` declarations listed in the Class A and Class B tables of `plan.md` (47 route handlers under `src/app/api/`, 13 pages under `src/app/(public)/` and `src/app/admin/`).
+- [x] T008 Remove all 11 `export const revalidate` declarations: the 8 marketing pages under `src/app/(public)/`, plus `src/app/(public)/shop/page.tsx`, `src/app/(public)/products/[id]/page.tsx`, and `src/app/api/categories/route.ts`.
+- [x] T009 Remove `export const runtime = 'nodejs'` from `src/app/api/upload/route.ts` and confirm the Node-only Azure Blob path in `src/lib/image-storage.ts` still works under the default runtime; record the verification in the PR description.
+- [x] T010 Add an explicit permission check plus `await connection()` to `src/app/admin/page.tsx`, which is the only admin page without a page-level auth call and therefore the only one Next.js attempts to prerender.
+- [x] T011 Set `cacheComponents: true` in `next.config.ts`.
+- [x] T012 Run `npm run build` and confirm it completes with the Cache Components banner and no prerender errors; capture the route table (`○` / `◐` / `ƒ`) as the migration baseline.
+- [x] T013 [P] Extend `__tests__/lib/api-utils.test.ts` to assert that a Next.js control-flow error is rethrown by `handleApiError` while an ordinary `Error` still yields an API error response.
+- [x] T014 [P] Extend `__tests__/lib/api-middleware.test.ts` to assert that control-flow errors are rethrown without a 500 request log.
 
 **Checkpoint**: `npm run build` passes with Cache Components enabled and no route's data-fetching behavior has changed yet.
 
@@ -57,18 +57,18 @@ description: 'Task list for adopting Next.js 16 Cache Components and Partial Pre
 
 ### Tests for User Story 1
 
-- [ ] T015 [P] [US1] Add a no-JavaScript assertion to `playwright-tests/public-pages.spec.ts` that `/shop` initial HTML contains product cards and category chips.
-- [ ] T016 [P] [US1] Add a no-JavaScript assertion to `playwright-tests/product-navigation.spec.ts` that a product detail route's initial HTML contains name, description, price, and variant options.
+- [x] T015 [P] [US1] Add a no-JavaScript assertion to `playwright-tests/public-pages.spec.ts` that `/shop` initial HTML contains product cards and category chips.
+- [x] T016 [P] [US1] Add a no-JavaScript assertion to `playwright-tests/product-navigation.spec.ts` that a product detail route's initial HTML contains name, description, price, and variant options.
 
 ### Implementation for User Story 1
 
-- [ ] T017 [US1] Extract the bestsellers read in `src/app/(public)/shop/page.tsx` into a `"use cache"` function that declares `cacheLife('catalog')` and `cacheTag(bestsellersTag(), productListTag())`, reading the database through `db.products.findBestsellers()` rather than `cacheProductsBestsellers` (no Redis inside a cached scope — `plan.md` R8).
-- [ ] T018 [US1] Extract the category-chip read in `src/app/(public)/shop/page.tsx` into a `"use cache"` function with `cacheLife('taxonomy')` and `cacheTag(categoriesTag())`.
-- [ ] T019 [US1] Keep the `searchParams`-driven catalog search in `src/app/(public)/shop/page.tsx` inside the existing `Suspense` boundary and confirm `ShopCatalogFallback` still renders `BestsellerCardSkeleton`/`ProductCardSkeleton` for the streamed region (FR-009).
-- [ ] T020 [US1] Convert `getProduct` in `src/app/(public)/products/[id]/page.tsx` to a `"use cache"` function with `cacheLife('product')` and `cacheTag(productTag(id))`, calling `db.products.findById(id, false)` so the Redis wrapper is bypassed inside the cached scope.
-- [ ] T021 [US1] Move the per-request parts of `src/app/(public)/products/[id]/page.tsx` (the `isAiEnabled()` Edge Config read and the `searchParams` variant selection) out of the cached scope and behind a `Suspense` boundary with a skeleton from `src/components/skeletons/`.
-- [ ] T022 [US1] Convert `GET` in `src/app/api/categories/route.ts` to a `"use cache"` handler with `cacheLife('taxonomy')` and `cacheTag(categoriesTag())`, retaining the existing `Cache-Control` header.
-- [ ] T023 [US1] Audit every new cached scope for session, cookie, header, or currency-dependent reads and confirm none are present (FR-013); currency conversion must remain a client-side concern in `CurrencyContext`.
+- [x] T017 [US1] Extract the bestsellers read in `src/app/(public)/shop/page.tsx` into a `"use cache"` function that declares `cacheLife('catalog')` and `cacheTag(bestsellersTag(), productListTag())`, reading the database through `db.products.findBestsellers()` rather than `cacheProductsBestsellers` (no Redis inside a cached scope — `plan.md` R8).
+- [x] T018 [US1] Extract the category-chip read in `src/app/(public)/shop/page.tsx` into a `"use cache"` function with `cacheLife('taxonomy')` and `cacheTag(categoriesTag())`.
+- [x] T019 [US1] Keep the `searchParams`-driven catalog search in `src/app/(public)/shop/page.tsx` inside the existing `Suspense` boundary and confirm `ShopCatalogFallback` still renders `BestsellerCardSkeleton`/`ProductCardSkeleton` for the streamed region (FR-009).
+- [x] T020 [US1] Convert `getProduct` in `src/app/(public)/products/[id]/page.tsx` to a `"use cache"` function with `cacheLife('product')` and `cacheTag(productTag(id))`, calling `db.products.findById(id, false)` so the Redis wrapper is bypassed inside the cached scope.
+- [x] T021 [US1] Move the per-request parts of `src/app/(public)/products/[id]/page.tsx` (the `isAiEnabled()` Edge Config read and the `searchParams` variant selection) out of the cached scope and behind a `Suspense` boundary with a skeleton from `src/components/skeletons/`.
+- [x] T022 [US1] Convert `GET` in `src/app/api/categories/route.ts` to a `"use cache"` handler with `cacheLife('taxonomy')` and `cacheTag(categoriesTag())`, retaining the existing `Cache-Control` header.
+- [x] T023 [US1] Audit every new cached scope for session, cookie, header, or currency-dependent reads and confirm none are present (FR-013); currency conversion must remain a client-side concern in `CurrencyContext`.
 
 **Checkpoint**: catalog markup is in the initial HTML; `npm run build` still passes.
 
@@ -82,17 +82,17 @@ description: 'Task list for adopting Next.js 16 Cache Components and Partial Pre
 
 ### Tests for User Story 2
 
-- [ ] T024 [P] [US2] Extend `__tests__/lib/cache.test.ts` to assert that `invalidateProductCaches` revalidates `productTag(id)` and `productListTag()` in addition to the Redis patterns.
-- [ ] T025 [P] [US2] Add `__tests__/features/orders/services/order-cache.test.ts` asserting that `invalidateOrderCaches` revalidates `productTag(...)` per affected product plus `bestsellersTag()`.
-- [ ] T026 [P] [US2] Extend the tests under `__tests__/app/api/admin/categories/` to assert `categoriesTag()` revalidation on create, update, delete, and reorder.
+- [x] T024 [P] [US2] Extend `__tests__/lib/cache.test.ts` to assert that `invalidateProductCaches` revalidates `productTag(id)` and `productListTag()` in addition to the Redis patterns.
+- [x] T025 [P] [US2] Add `__tests__/features/orders/services/order-cache.test.ts` asserting that `invalidateOrderCaches` revalidates `productTag(...)` per affected product plus `bestsellersTag()`.
+- [x] T026 [P] [US2] Extend the tests under `__tests__/app/api/admin/categories/` to assert `categoriesTag()` revalidation on create, update, delete, and reorder.
 
 ### Implementation for User Story 2
 
-- [ ] T027 [US2] Call `revalidateCacheTags` from `invalidateProductCaches` in `src/lib/cache.ts` so all 12 existing call sites (`src/app/api/admin/products/**`, `src/app/api/admin/variants/**`, `src/app/api/admin/import/products/route.ts`, `src/lib/db-queries.ts`) inherit tag revalidation without duplicated code (FR-005, Principle VIII).
-- [ ] T028 [US2] Add `categoriesTag()` revalidation to the category mutation handlers under `src/app/api/admin/categories/` (`route.ts`, `[id]/route.ts`, `reorder/route.ts`).
-- [ ] T029 [US2] Add product and bestsellers tag revalidation to `invalidateOrderCaches` in `src/features/orders/services/order-cache.ts`, which the durable `invalidateOrderCachesFunction` in `src/features/orders/inngest/side-effects.ts` already invokes with `productIds` (FR-006).
-- [ ] T030 [US2] Confirm soft deletes revalidate listing tags so a deleted product disappears from `/shop` on the next request rather than surviving in a stale listing (spec Edge Cases).
-- [ ] T031 [US2] Verify a failing `revalidateTag` is logged with operation context and does not fail the originating write, and that the `cacheLife` bound still guarantees eventual freshness (FR-012).
+- [x] T027 [US2] Call `revalidateCacheTags` from `invalidateProductCaches` in `src/lib/cache.ts` so all 12 existing call sites (`src/app/api/admin/products/**`, `src/app/api/admin/variants/**`, `src/app/api/admin/import/products/route.ts`, `src/lib/db-queries.ts`) inherit tag revalidation without duplicated code (FR-005, Principle VIII).
+- [x] T028 [US2] Add `categoriesTag()` revalidation to the category mutation handlers under `src/app/api/admin/categories/` (`route.ts`, `[id]/route.ts`, `reorder/route.ts`).
+- [x] T029 [US2] Add product and bestsellers tag revalidation to `invalidateOrderCaches` in `src/features/orders/services/order-cache.ts`, which the durable `invalidateOrderCachesFunction` in `src/features/orders/inngest/side-effects.ts` already invokes with `productIds` (FR-006).
+- [x] T030 [US2] Confirm soft deletes revalidate listing tags so a deleted product disappears from `/shop` on the next request rather than surviving in a stale listing (spec Edge Cases).
+- [x] T031 [US2] Verify a failing `revalidateTag` is logged with operation context and does not fail the originating write, and that the `cacheLife` bound still guarantees eventual freshness (FR-012).
 
 **Checkpoint**: writes propagate on the first subsequent request; User Stories 1 and 2 both hold.
 
@@ -106,7 +106,7 @@ description: 'Task list for adopting Next.js 16 Cache Components and Partial Pre
 
 ### Tests for User Story 3
 
-- [ ] T032 [P] [US3] Add a two-session isolation spec to `playwright-tests/` that signs in as two users and asserts `/cart`, `/orders`, `/account`, and `/admin` return only the requesting user's data (SC-005).
+- [x] T032 [P] [US3] Add a two-session isolation spec to `playwright-tests/` that signs in as two users and asserts `/cart`, `/orders`, `/account`, and `/admin` return only the requesting user's data (SC-005).
 - [ ] T033 [P] [US3] Extend `playwright-tests/admin-views.spec.ts` to assert an unauthorized role is still rejected by the `src/proxy.ts` admin gate and that no cached admin content is served (FR-008 acceptance 4).
 
 ### Implementation for User Story 3
