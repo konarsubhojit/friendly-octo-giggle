@@ -18,8 +18,6 @@ import { invalidateProductCaches } from '@/lib/cache'
 import { revalidateTag } from 'next/cache'
 import { serializeVariant } from '@/lib/serializers'
 
-export const dynamic = 'force-dynamic'
-
 class VariantGoneError extends Error {
   constructor() {
     super('Variant is no longer available')

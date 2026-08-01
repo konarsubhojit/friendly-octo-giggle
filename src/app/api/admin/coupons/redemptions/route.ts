@@ -3,8 +3,6 @@ import { checkAdminAuth } from '@/features/admin/services/admin-auth'
 import { apiError, apiSuccess, handleApiError } from '@/lib/api-utils'
 import { serializeRedemptionSummary } from '@/features/admin/services/coupon-admin'
 
-export const dynamic = 'force-dynamic'
-
 /** Coupon usage / redemption report shown alongside the sales analytics. */
 export async function GET() {
   const authCheck = await checkAdminAuth('coupons:manage')

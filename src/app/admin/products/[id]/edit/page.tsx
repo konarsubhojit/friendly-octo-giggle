@@ -10,8 +10,6 @@ import { drizzleDb } from '@/lib/db'
 import { products } from '@/lib/schema'
 import { serializeVariant } from '@/lib/serializers'
 
-export const dynamic = 'force-dynamic'
-
 interface PageProps {
   readonly params: Promise<{ id: string }>
 }

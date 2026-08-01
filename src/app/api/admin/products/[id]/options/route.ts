@@ -13,8 +13,6 @@ import { checkAdminAuth } from '@/features/admin/services/admin-auth'
 import { invalidateProductCaches } from '@/lib/cache'
 import { revalidateTag } from 'next/cache'
 
-export const dynamic = 'force-dynamic'
-
 const MAX_OPTIONS_PER_PRODUCT = 5
 
 const CreateOptionWithValuesSchema = z.object({

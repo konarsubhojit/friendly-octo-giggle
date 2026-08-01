@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { unstable_rethrow } from 'next/navigation'
 import { ZodError, type ZodType } from 'zod'
 import { logError } from '@/lib/logger'
 
@@ -126,6 +127,13 @@ export const handleValidationError = (error: ZodError<unknown>) => {
 }
 
 export const handleApiError = (error: unknown) => {
+  // Next.js uses thrown values for control flow (redirect, notFound, and the
+  // prerender bail-out signal raised when a route handler reads request data
+  // during `next build`). These must reach the framework untouched — catching
+  // them here would turn a legitimate bail-out into a JSON 500 and break the
+  // Cache Components build.
+  unstable_rethrow(error)
+
   logError({ error, context: 'api_error' })
 
   if (error instanceof JsonBodyParseError) {

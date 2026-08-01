@@ -8,8 +8,6 @@ import { checkAdminAuth } from '@/features/admin/services/admin-auth'
 import { invalidateProductCaches } from '@/lib/cache'
 import { revalidateTag } from 'next/cache'
 
-export const dynamic = 'force-dynamic'
-
 const RouteParamsSchema = z.object({
   id: z.string().min(1, 'Product ID is required'),
   optionId: z.string().min(1, 'Option ID is required'),

@@ -26,8 +26,6 @@ import {
 } from '@/lib/search-discovery'
 import { withStoreName } from '@/lib/constants/store'
 
-export const revalidate = 60
-
 const SHOP_INITIAL_SIZE = 24
 const SHOP_BATCH_SIZE = 20
 

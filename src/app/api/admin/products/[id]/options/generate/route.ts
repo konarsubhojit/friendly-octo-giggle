@@ -19,8 +19,6 @@ import { checkAdminAuth } from '@/features/admin/services/admin-auth'
 import { invalidateProductCaches } from '@/lib/cache'
 import { revalidateTag } from 'next/cache'
 
-export const dynamic = 'force-dynamic'
-
 const GenerateOptionsSchema = z.object({
   optionNames: z
     .array(

@@ -4,8 +4,6 @@ import { categories } from '@/lib/schema'
 import { isNull, asc } from 'drizzle-orm'
 import { buildPublicCacheHeader } from '@/lib/cache'
 
-export const revalidate = 60
-
 export async function GET() {
   try {
     const list = await drizzleDb

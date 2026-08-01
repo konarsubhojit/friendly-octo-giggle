@@ -8,8 +8,6 @@ import { isAiEnabled } from '@/lib/edge-config'
 import { logError } from '@/lib/logger'
 import { withStoreName } from '@/lib/constants/store'
 
-export const revalidate = 60
-
 /**
  * React `cache()` deduplicates this call within the same server request,
  * so both `generateMetadata` and the page component share a single DB query.

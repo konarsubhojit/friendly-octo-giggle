@@ -14,8 +14,6 @@ import {
 import { verifyCartSessionCookieValue } from '@/features/cart/services/cart-session'
 import { assertOwnership } from '@/lib/ownership'
 
-export const dynamic = 'force-dynamic'
-
 const toCartOwner = (cart: {
   userId: string | null
   sessionId: string | null

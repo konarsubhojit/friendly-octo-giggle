@@ -14,8 +14,6 @@ import {
 import { primaryDrizzleDb } from '@/lib/db'
 import { products } from '@/lib/schema'
 
-export const dynamic = 'force-dynamic'
-
 const ImportRequestSchema = z.object({
   csv: z.string().min(1),
   dryRun: z.boolean().optional().default(true),

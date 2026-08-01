@@ -13,8 +13,6 @@ import {
   parseJsonBody,
 } from '@/lib/api-utils'
 
-export const dynamic = 'force-dynamic'
-
 const ProductBulkSchema = z.discriminatedUnion('operation', [
   z.object({
     operation: z.literal('bulk_price_update'),

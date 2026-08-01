@@ -12,8 +12,6 @@ import { revalidateTag } from 'next/cache'
 import { invalidateProductCaches } from '@/lib/cache'
 import { indexProduct, removeProduct } from '@/lib/search'
 
-export const dynamic = 'force-dynamic'
-
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }

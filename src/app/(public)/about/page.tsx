@@ -6,8 +6,6 @@ import {
 } from '@/components/ui/DecorativeElements'
 import { STORE_NAME, withStoreName } from '@/lib/constants/store'
 
-export const revalidate = 3600
-
 export const metadata = {
   title: withStoreName('About Us'),
   description: `Learn more about ${STORE_NAME}, our mission, values, and the team behind our handmade decorations and wearables.`,

@@ -11,8 +11,6 @@ import {
   updateUserAddress,
 } from '@/features/account/services/address-service'
 
-export const dynamic = 'force-dynamic'
-
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }

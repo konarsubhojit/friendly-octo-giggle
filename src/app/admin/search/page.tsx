@@ -7,8 +7,6 @@ import {
 import SearchReindexClient from '@/features/admin/components/SearchReindexClient'
 import { requireAdminPermission } from '@/features/admin/services/admin-page-auth'
 
-export const dynamic = 'force-dynamic'
-
 export default async function AdminSearchPage() {
   await requireAdminPermission('system:manage', '/admin/search')
 

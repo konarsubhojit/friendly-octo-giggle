@@ -10,8 +10,6 @@ import {
 import { logError } from '@/lib/logger'
 import { z } from 'zod'
 
-export const dynamic = 'force-dynamic'
-
 const AddToWishlistSchema = z.object({
   productId: z.string().min(1, 'productId is required'),
 })

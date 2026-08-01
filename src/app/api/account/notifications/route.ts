@@ -12,8 +12,6 @@ import {
 } from '@/features/account/services/notification-preferences'
 import { getVapidPublicKey, isPushConfigured } from '@/lib/notifications/push'
 
-export const dynamic = 'force-dynamic'
-
 export async function GET() {
   try {
     const session = await auth()

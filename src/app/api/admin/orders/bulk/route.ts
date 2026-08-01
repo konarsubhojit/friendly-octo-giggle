@@ -13,8 +13,6 @@ import {
 } from '@/lib/api-utils'
 import { OrderStatus } from '@/lib/types'
 
-export const dynamic = 'force-dynamic'
-
 const BulkOrderSchema = z.object({
   orderIds: z.array(z.string().min(1)).min(1).max(1000),
   status: z.enum(OrderStatus),

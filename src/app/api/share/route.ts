@@ -4,8 +4,6 @@ import { apiSuccess, handleApiError, parseJsonBody } from '@/lib/api-utils'
 import { CreateShareSchema } from '@/features/product/validations'
 import { withLogging } from '@/lib/api-middleware'
 
-export const dynamic = 'force-dynamic'
-
 const handlePost = async (request: NextRequest) => {
   try {
     const { productId, variantId } = await parseJsonBody(

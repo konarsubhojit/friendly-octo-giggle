@@ -15,8 +15,6 @@ import { invalidateProductCaches, cacheAdminProductsList } from '@/lib/cache'
 import { indexProduct, searchProductIds } from '@/lib/search'
 import { checkAdminAuth } from '@/features/admin/services/admin-auth'
 
-export const dynamic = 'force-dynamic'
-
 const PAGE_SIZE = 20
 
 type SearchFilterResult =

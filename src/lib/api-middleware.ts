@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server'
+import { unstable_rethrow } from 'next/navigation'
 import { logApiRequest, generateRequestId, Timer } from './logger'
 import { auth } from './auth'
 
@@ -58,6 +59,11 @@ const createLoggingWrapper = (options: LoggingOptions = {}) => {
         response.headers.set('X-Request-ID', requestId)
         return response
       } catch (error) {
+        // Next.js control-flow signals (redirect, notFound, prerender
+        // bail-out) are not request failures. Rethrow them before the timer
+        // and the request log record them as an HTTP 500.
+        unstable_rethrow(error)
+
         const duration = timer.end({ error: true })
 
         logApiRequest({
@@ -100,6 +106,11 @@ export const withLogging = <TArgs extends unknown[]>(
       response.headers.set('X-Request-ID', requestId)
       return response
     } catch (error) {
+      // Next.js control-flow signals (redirect, notFound, prerender bail-out)
+      // are not request failures. Rethrow them before the timer and the
+      // request log record them as an HTTP 500.
+      unstable_rethrow(error)
+
       const duration = timer.end({ error: true })
 
       logApiRequest({

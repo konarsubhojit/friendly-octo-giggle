@@ -11,9 +11,10 @@ import { type ImageStorageProvider, uploadImage } from '@/lib/image-storage'
 
 // The Azure Blob upload path in `image-storage.ts` depends on Node.js APIs
 // (`Buffer`, `@azure/storage-blob` stream handling) that are not available on
-// the Edge runtime. Pin this route to the Node.js runtime so deployments on
-// Vercel (or any platform that might default to Edge) don't fail at runtime.
-export const runtime = 'nodejs'
+// the Edge runtime. Node.js is the default runtime for App Router route
+// handlers, so no `runtime` segment config is needed — and Cache Components
+// rejects one. Any future change that opts this route into the Edge runtime
+// would break the Azure provider.
 
 const MAGIC_BYTE_READ_LENGTH = 16
 const MAX_FORM_DATA_BODY_SIZE = MAX_FILE_SIZE + 1024 * 1024

@@ -27,8 +27,6 @@ import {
 import { logError } from '@/lib/logger'
 import type { CheckoutRequestStatusResponse } from '@/lib/types'
 
-export const dynamic = 'force-dynamic'
-
 /**
  * Ceiling for one connection.
  *

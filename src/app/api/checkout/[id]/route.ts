@@ -7,8 +7,6 @@ import {
 import { withLogging } from '@/lib/api-middleware'
 import { logError } from '@/lib/logger'
 
-export const dynamic = 'force-dynamic'
-
 const handleGet = async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }

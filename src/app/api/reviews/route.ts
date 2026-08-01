@@ -15,8 +15,6 @@ import {
 } from '@/features/product/validations'
 import { withLogging } from '@/lib/api-middleware'
 
-export const dynamic = 'force-dynamic'
-
 const handleGet = async (request: NextRequest) => {
   const { searchParams } = new URL(request.url)
   const productId = searchParams.get('productId')

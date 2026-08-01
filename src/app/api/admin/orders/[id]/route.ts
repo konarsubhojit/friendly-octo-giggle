@@ -22,8 +22,6 @@ import { settlesPaymentOnDelivery } from '@/lib/payments'
 import { restockOrderItems } from '@/features/orders/services/order-restock'
 import { waitUntil } from '@vercel/functions'
 
-export const dynamic = 'force-dynamic'
-
 /**
  * Settle providers that collect payment at delivery (e.g. Cash on Delivery).
  * Confirming delivery is the settlement event for those orders.

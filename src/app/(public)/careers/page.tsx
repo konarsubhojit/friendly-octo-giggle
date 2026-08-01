@@ -2,8 +2,6 @@ import Footer from '@/components/layout/Footer'
 import Link from 'next/link'
 import { STORE_NAME, withStoreName } from '@/lib/constants/store'
 
-export const revalidate = 3600
-
 export const metadata = {
   title: withStoreName('Careers'),
   description: `Join the ${STORE_NAME} team. Explore open positions and opportunities.`,

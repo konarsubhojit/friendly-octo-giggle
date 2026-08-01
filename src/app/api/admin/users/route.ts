@@ -6,8 +6,6 @@ import { apiSuccess, apiError, handleApiError } from '@/lib/api-utils'
 import { checkAdminAuth } from '@/features/admin/services/admin-auth'
 import { cacheAdminUsersList } from '@/lib/cache'
 
-export const dynamic = 'force-dynamic'
-
 const PAGE_SIZE = 20
 
 const parseLimit = (param: string | null, defaultSize: number): number =>
