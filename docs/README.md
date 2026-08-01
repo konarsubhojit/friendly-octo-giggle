@@ -77,8 +77,8 @@ This is a highly scalable e-commerce platform designed for serverless deployment
 - **Wishlist**: Per-user product wishlist
 - **AI Product Assistant**: AI-powered product Q&A via AI SDK and RAG
 - **Admin Panel**: Product, order, user, category, review, and email-failure management
-- **Checkout Flow**: Policy confirmation, address collection, Vercel Queue-backed order creation
-- **Email System**: Async delivery via QStash with retry and failed-email tracking
+- **Checkout Flow**: Policy confirmation, address collection, Inngest-backed order creation
+- **Email System**: Async delivery via Inngest with retry and failed-email tracking
 - **Feature Flags**: Vercel Edge Config for maintenance mode, sale mode, and shipping settings
 
 ### Technical Highlights
@@ -89,7 +89,7 @@ This is a highly scalable e-commerce platform designed for serverless deployment
 - **Type Safety**: Full TypeScript with Zod validation
 - **Modern Stack**: Next.js 16, Drizzle ORM, Tailwind CSS v4
 - **AI Integration**: Product assistant powered by AI SDK and RAG
-- **Queue-Based Checkout**: Vercel Queues for reliable order processing
+- **Durable Checkout**: Inngest step functions for reliable order processing
 - **Scalable**: Connection pooling, read replicas, edge-ready architecture
 - **Observable**: Structured logging with Pino
 
@@ -114,9 +114,9 @@ Use the catalog as the product-level index and the API and architecture guides f
 | **Logging**        | Pino                                |
 | **Image Storage**  | Vercel Blob                         |
 | **Search**         | Upstash Search (with DB fallback)   |
-| **Queues**         | Vercel Queues (checkout)            |
+| **Workflows**      | Inngest (durable step functions)    |
 | **AI**             | AI SDK (product assistant)          |
-| **Email**          | MailerSend / Google SMTP via QStash |
+| **Email**          | MailerSend / Google SMTP            |
 | **Feature Flags**  | Vercel Edge Config                  |
 
 ## 🔧 System Requirements

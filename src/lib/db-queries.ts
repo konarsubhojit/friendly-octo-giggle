@@ -57,13 +57,15 @@ export const CLAIM_HOLDER_MAX_DURATION_SECONDS = 30
  * A checkout request left in `PROCESSING` for longer than this is treated as
  * abandoned (e.g. the worker crashed) and may be reclaimed by a retry.
  *
- * The value sits inside a hard window:
- * - **Above** `CLAIM_HOLDER_MAX_DURATION_SECONDS`, so a live worker can never
- *   have its claim stolen mid-flight.
- * - **Below** the queue's `retryAfterSeconds` (60s in `vercel.json`), so the
- *   redelivery that follows a killed worker can actually reclaim the request.
- *   A longer window strands the request: the redelivery finds it `PROCESSING`,
- *   returns early, acks, and no further delivery ever arrives.
+ * The value sits above `CLAIM_HOLDER_MAX_DURATION_SECONDS`, so a live claim
+ * holder can never have its claim stolen mid-flight: the platform kills the
+ * invocation before the window expires.
+ *
+ * There is no longer an upper bound tied to a redelivery interval. The claim
+ * is taken in its own memoized Inngest step, so a retry of a later step
+ * resumes behind the existing claim rather than racing to re-take it. The
+ * window now only has to cover the inline `waitUntil` fallback and a run that
+ * dies before any step checkpointed.
  */
 export const STALE_PROCESSING_CLAIM_MS = 45 * 1000
 

@@ -1,7 +1,7 @@
-// Architecture note: Checkout uses API routes + Vercel Queue rather than
-// server actions. The queue provides durable delivery, automatic retries,
-// and idempotency via checkout request IDs — critical for payment-adjacent
-// workflows where exactly-once processing matters. See also
+// Architecture note: Checkout uses API routes plus a durable Inngest function
+// rather than server actions. The event gives durable delivery, per-step
+// retries, and idempotency keyed on the checkout request id — critical for
+// payment-adjacent workflows where exactly-once processing matters. See also
 // features/orders/actions/orders.ts for the server action counterpart used
 // for simpler order reads and search operations.
 
@@ -11,7 +11,6 @@ import {
   createOrderForUser,
   isOrderRequestError,
 } from '@/features/orders/services/order-service'
-import { send } from '@/lib/queue'
 import {
   CHECKOUT_QUEUE_LAG_OPERATION,
   logBusinessEvent,
@@ -44,8 +43,6 @@ import { publishWithTimeout } from '@/lib/inngest/dispatch'
 import { checkoutSession } from '@/lib/inngest/sessions'
 import { checkoutRequestCreated } from '@/features/cart/inngest/events'
 import type { CheckoutPaymentInput } from '@/lib/types'
-
-export const CHECKOUT_QUEUE_TOPIC = 'checkout-orders'
 
 export interface CheckoutSessionUser {
   readonly id: string
@@ -318,14 +315,14 @@ const publishCheckoutEvent = (checkoutRequestId: string): Promise<void> =>
 /**
  * Hand a checkout request to its durable orchestrator.
  *
- * Inngest is preferred when configured: each pipeline step checkpoints
+ * Inngest is the single orchestrator: each pipeline step checkpoints
  * independently, so a retry resumes after the last completed step instead of
- * replaying payment verification. The Vercel Queue remains the fallback so a
- * deployment without Inngest credentials — or a transient Inngest outage —
- * still processes checkouts durably.
+ * replaying payment verification.
  *
- * Throws when every durable transport fails, letting the caller decide on the
- * inline last resort.
+ * Throws when the event cannot be published, letting the caller fall back to
+ * the inline last resort. That fallback is the only remaining safety net now
+ * that the parallel Vercel Queue consumer is gone — two orchestrators writing
+ * the same order row was the risk it traded against.
  */
 const dispatchCheckoutProcessing = async ({
   checkoutRequestId,
@@ -334,24 +331,22 @@ const dispatchCheckoutProcessing = async ({
   checkoutRequestId: string
   userId: string
 }): Promise<void> => {
-  if (isInngestConfigured()) {
-    try {
-      await publishCheckoutEvent(checkoutRequestId)
-      return
-    } catch (error) {
-      logError({
-        error,
-        context: 'checkout_inngest_publish_failed_falling_back_to_queue',
-        additionalInfo: { checkoutRequestId, userId },
-      })
-    }
+  if (!isInngestConfigured()) {
+    throw new Error(
+      'Inngest is not configured; no durable orchestrator is available'
+    )
   }
 
-  await send(
-    CHECKOUT_QUEUE_TOPIC,
-    { checkoutRequestId },
-    { idempotencyKey: `checkout-request:${checkoutRequestId}` }
-  )
+  try {
+    await publishCheckoutEvent(checkoutRequestId)
+  } catch (error) {
+    logError({
+      error,
+      context: 'checkout_inngest_publish_failed',
+      additionalInfo: { checkoutRequestId, userId },
+    })
+    throw error
+  }
 }
 
 export const enqueueCheckoutForUser = async ({
@@ -418,7 +413,7 @@ export const enqueueCheckoutForUser = async ({
   } catch (error) {
     logError({
       error,
-      context: 'checkout_queue_publish_failed_using_inline_fallback',
+      context: 'checkout_dispatch_failed_using_inline_fallback',
       additionalInfo: {
         checkoutRequestId: checkoutRequest.id,
         userId: user.id,

@@ -10,7 +10,8 @@ const {
   mockLogBusinessEvent,
   mockLogError,
   mockLogPerformance,
-  mockSend,
+  mockInngestSend,
+  mockIsInngestConfigured,
   mockCreateOrderForUser,
   mockEnsurePaymentProviderConfigured,
 } = vi.hoisted(() => ({
@@ -23,7 +24,8 @@ const {
   mockLogBusinessEvent: vi.fn(),
   mockLogError: vi.fn(),
   mockLogPerformance: vi.fn(),
-  mockSend: vi.fn(),
+  mockInngestSend: vi.fn(),
+  mockIsInngestConfigured: vi.fn(() => true),
   mockCreateOrderForUser: vi.fn(),
   mockEnsurePaymentProviderConfigured: vi.fn(),
 }))
@@ -50,8 +52,9 @@ vi.mock('@/lib/logger', () => ({
   CHECKOUT_QUEUE_LAG_OPERATION: 'queue.checkout.lag',
 }))
 
-vi.mock('@/lib/queue', () => ({
-  send: mockSend,
+vi.mock('@/lib/inngest/client', () => ({
+  inngest: { send: mockInngestSend },
+  isInngestConfigured: mockIsInngestConfigured,
 }))
 
 vi.mock('@/features/orders/services/order-service', () => ({
@@ -110,12 +113,12 @@ describe('checkout-service', () => {
   })
 
   describe('enqueueCheckoutForUser', () => {
-    it('creates checkout request and publishes to queue', async () => {
+    it('creates a checkout request and publishes its processing event', async () => {
       mockDbCheckoutRequestsCreate.mockResolvedValue({
         id: 'cr1abc',
         status: 'PENDING',
       })
-      mockSend.mockResolvedValue(undefined)
+      mockInngestSend.mockResolvedValue(undefined)
 
       const result = await enqueueCheckoutForUser({
         body: {
@@ -141,7 +144,9 @@ describe('checkout-service', () => {
 
       expect(result.checkoutRequestId).toBe('cr1abc')
       expect(result.status).toBe('PENDING')
-      expect(mockSend).toHaveBeenCalled()
+      expect(mockInngestSend).toHaveBeenCalledWith(
+        expect.objectContaining({ name: 'checkout/request.created' })
+      )
       expect(mockLogBusinessEvent).toHaveBeenCalledWith(
         expect.objectContaining({
           event: 'checkout_request_queued',
@@ -150,12 +155,12 @@ describe('checkout-service', () => {
       )
     })
 
-    it('falls back to inline processing when queue publish fails', async () => {
+    it('falls back to inline processing when the publish fails', async () => {
       mockDbCheckoutRequestsCreate.mockResolvedValue({
         id: 'cr2abcd',
         status: 'PENDING',
       })
-      mockSend.mockRejectedValue(new Error('Queue down'))
+      mockInngestSend.mockRejectedValue(new Error('Inngest down'))
 
       const result = await enqueueCheckoutForUser({
         body: {
@@ -182,7 +187,7 @@ describe('checkout-service', () => {
       expect(result.checkoutRequestId).toBe('cr2abcd')
       expect(mockLogError).toHaveBeenCalledWith(
         expect.objectContaining({
-          context: 'checkout_queue_publish_failed_using_inline_fallback',
+          context: 'checkout_dispatch_failed_using_inline_fallback',
         })
       )
     })
@@ -192,7 +197,7 @@ describe('checkout-service', () => {
         id: 'cr4abcd',
         status: 'PENDING',
       })
-      mockSend.mockResolvedValue(undefined)
+      mockInngestSend.mockResolvedValue(undefined)
 
       await enqueueCheckoutForUser({
         body: {
@@ -241,7 +246,7 @@ describe('checkout-service', () => {
         id: 'cr3abcd',
         status: 'PENDING',
       })
-      mockSend.mockResolvedValue(undefined)
+      mockInngestSend.mockResolvedValue(undefined)
 
       await enqueueCheckoutForUser({
         body: {

@@ -20,7 +20,8 @@ const m = vi.hoisted(() => ({
   logBusinessEvent: vi.fn(),
   logError: vi.fn(),
   logPerformance: vi.fn(),
-  send: vi.fn(),
+  inngestSend: vi.fn(),
+  isInngestConfigured: vi.fn(() => true),
   createOrderForUser: vi.fn(),
   ensurePaymentProviderConfigured: vi.fn(),
   waitUntil: vi.fn(),
@@ -46,7 +47,10 @@ vi.mock('@/lib/logger', () => ({
   CHECKOUT_QUEUE_LAG_OPERATION: 'queue.checkout.lag',
 }))
 
-vi.mock('@/lib/queue', () => ({ send: m.send }))
+vi.mock('@/lib/inngest/client', () => ({
+  inngest: { send: m.inngestSend },
+  isInngestConfigured: m.isInngestConfigured,
+}))
 
 class OrderRequestError extends Error {
   status: number
@@ -126,7 +130,8 @@ const checkoutRow = {
 beforeEach(() => {
   vi.clearAllMocks()
   m.create.mockResolvedValue({ id: 'cr1abc', status: 'PENDING' })
-  m.send.mockResolvedValue(undefined)
+  m.inngestSend.mockResolvedValue(undefined)
+  m.isInngestConfigured.mockReturnValue(true)
   m.updateStatus.mockResolvedValue(undefined)
   m.claimForProcessing.mockResolvedValue(true)
   m.findFirstByCheckoutRequestId.mockResolvedValue(null)

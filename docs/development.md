@@ -37,9 +37,8 @@ NEXTAUTH_URL=http://localhost:3000
 GOOGLE_CLIENT_ID=your-google-client-id
 GOOGLE_CLIENT_SECRET=your-google-client-secret
 LOG_LEVEL=debug  # development only - high log volume, impacts performance
-QSTASH_TOKEN=your-qstash-token
-QSTASH_CURRENT_SIGNING_KEY=your-qstash-current-signing-key
-QSTASH_NEXT_SIGNING_KEY=your-qstash-next-signing-key
+INNGEST_EVENT_KEY=your-inngest-event-key
+INNGEST_SIGNING_KEY=your-inngest-signing-key
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
@@ -47,7 +46,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 > **Note**: `LOG_LEVEL=debug` logs all cache hits, database queries, and detailed operations. This is useful for development debugging but creates excessive log volume and may impact performance in production. Always use `info` or `warn` level in production.
 
-> **Note**: Checkout orchestration and email delivery are intentionally separate. Checkout requests are persisted and sent to Vercel Queues, while emails still use the QStash worker route. If Vercel Queue publishing is unavailable in local development, the checkout service falls back to inline background processing so local checkout still works.
+> **Note**: All background work runs on Inngest. Checkout requests are persisted first and then published as `checkout/request.created`. If Inngest is unconfigured or unreachable in local development, the checkout service falls back to inline background processing so local checkout still works.
 
 > **Note**: Recovery for transient checkout worker failures is automatic in the consumer. The queue retries transient failures, and after the retry threshold is exhausted the consumer marks the checkout request as failed with the last recovery message for admin visibility.
 
@@ -67,19 +66,17 @@ npm run db:migrate  # Apply migrations
 npm run db:seed     # Seed database
 ```
 
-### Queue and Worker Setup
+### Workflow Setup
 
-For local or preview environments where you want to test the real Vercel Queue path:
+For local or preview environments where you want to exercise the real durable path:
 
 ```bash
-npm i -g vercel
-vercel link
-vercel env pull
+npx inngest-cli@latest dev
 ```
 
-- The checkout worker handler lives at `/api/queue/checkout-orders` and is bound by the `checkout-orders` trigger in `vercel.json`.
-- The email worker remains separate at `/api/services/email` and still requires the QStash keys above.
-- Admin queue visibility is available at `/admin/checkout-requests`.
+- Every background function is served from `/api/inngest`; the dev server discovers them automatically.
+- Set `INNGEST_EVENT_KEY` and `INNGEST_SIGNING_KEY` to publish to a hosted environment instead.
+- Admin checkout visibility is available at `/admin/checkout-requests`.
 
 ---
 
@@ -89,7 +86,7 @@ vercel env pull
 | ----------------------------------- | -------------------------------------------------------------------------------------------------- |
 | Product search and suggestions      | `src/lib/search`, `src/lib/search-discovery.ts`, `src/components/SearchBar.tsx`                    |
 | AI product assistant                | `src/features/product/components/ProductAssistant.tsx`, `src/lib/ai`, `/api/ai/products/[id]/chat` |
-| Cart and staged checkout            | `src/features/cart`, `/api/cart`, `/api/checkout`, `/api/queue/checkout-orders`                    |
+| Cart and staged checkout            | `src/features/cart`, `/api/cart`, `/api/checkout`, `src/features/cart/inngest`                     |
 | Account, addresses, and preferences | `src/features/account`, `/api/account`, `/api/account/addresses`                                   |
 | Admin operations                    | `src/features/admin`, `/api/admin`                                                                 |
 | PWA and offline behavior            | `src/components/pwa`, `src/app/manifest.ts`, localized `/offline` route                            |

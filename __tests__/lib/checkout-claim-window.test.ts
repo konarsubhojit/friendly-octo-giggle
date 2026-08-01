@@ -7,43 +7,40 @@ import {
 } from '@/lib/db-queries'
 
 /**
- * The stale-claim window has to sit inside a hard band. Outside it, a checkout
- * request can be stranded in `PROCESSING` forever (window too long) or have a
- * live worker's claim stolen mid-flight (window too short), so it is asserted
- * against the real deployment config rather than trusted to review.
+ * The stale-claim window has to outlive every invocation that can hold a
+ * `PROCESSING` claim. If it does not, a live claim holder can have its claim
+ * stolen mid-flight and two workers race to create the same order.
+ *
+ * The route budgets are read from source rather than imported, because
+ * importing either route pulls its whole dependency graph (auth, database)
+ * into a test that only cares about one exported number.
  */
-describe('checkout claim window', () => {
-  const vercelConfig = JSON.parse(
-    readFileSync(join(process.cwd(), 'vercel.json'), 'utf8')
-  ) as {
-    functions: Record<
-      string,
-      {
-        maxDuration: number
-        experimentalTriggers?: { retryAfterSeconds?: number }[]
-      }
-    >
+const declaredMaxDuration = (routePath: string): number => {
+  const source = readFileSync(join(process.cwd(), routePath), 'utf8')
+  const match = /export const maxDuration = (\d+)/.exec(source)
+
+  if (!match) {
+    throw new Error(`${routePath} does not declare a maxDuration`)
   }
 
-  const consumer =
-    vercelConfig.functions['src/app/api/queue/checkout-orders/route.ts']
+  return Number(match[1])
+}
 
+describe('checkout claim window', () => {
   it('outlives the longest possible claim holder', () => {
     expect(STALE_PROCESSING_CLAIM_MS).toBeGreaterThan(
       CLAIM_HOLDER_MAX_DURATION_SECONDS * 1000
     )
-    expect(consumer.maxDuration).toBeLessThanOrEqual(
-      CLAIM_HOLDER_MAX_DURATION_SECONDS
-    )
   })
 
-  it('expires before the queue redelivers, so a killed worker can be reclaimed', () => {
-    const retryAfterSeconds =
-      consumer.experimentalTriggers?.[0]?.retryAfterSeconds
-
-    expect(retryAfterSeconds).toBeGreaterThan(0)
-    expect(STALE_PROCESSING_CLAIM_MS).toBeLessThan(
-      (retryAfterSeconds as number) * 1000
+  it.each([
+    // Runs every durable checkout step.
+    ['src/app/api/inngest/route.ts'],
+    // Runs the inline `waitUntil` fallback when the event cannot be published.
+    ['src/app/api/orders/route.ts'],
+  ])('caps %s at the claim-holder ceiling', (routePath) => {
+    expect(declaredMaxDuration(routePath)).toBeLessThanOrEqual(
+      CLAIM_HOLDER_MAX_DURATION_SECONDS
     )
   })
 })

@@ -15,7 +15,7 @@ Operational telemetry covers API latency/errors, cache effectiveness, business e
 
 - Search: `/api/search` → `/api/search/suggest` → `/api/search/click`.
 - Guest AI: `/api/ai/products/[id]/chat`, checking rate limits and stock-privacy outcomes without logging raw client addresses.
-- Checkout: `/api/checkout` → `/api/queue/checkout-orders` → order and email events.
+- Checkout: `/api/checkout` → `checkout/request.created` → `order/created` → email, search, and cache events.
 - Admin operations: bulk product/order updates, CSV import/export, and search reindexing.
 - Scheduled work: exchange-rate refresh and failed-email retries.
 
@@ -48,7 +48,7 @@ The current tracing setup captures Next.js server/client activity and errors thr
 
 - checkout flow (`/api/checkout`, queue processing)
 - auth flow (`/api/auth/*`)
-- email flow (`/api/services/email`, retry jobs)
+- email flow (Inngest email functions, retry jobs)
 
 ## Alerting Recommendations
 

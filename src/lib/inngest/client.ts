@@ -18,8 +18,9 @@ export const INNGEST_APP_ID = 'friendly-octo-giggle'
  * path, so request-signature verification must use the same key the
  * `INNGEST_EVENT_KEY ⇒ INNGEST_SIGNING_KEY` refinement guarantees is present.
  *
- * The event key is optional so the app still boots (and falls back to the
- * Vercel Queue) in environments where Inngest is not configured yet.
+ * The event key is optional so the app still boots in environments where
+ * Inngest is not configured yet. Publishers degrade to their own inline
+ * fallbacks in that case rather than dropping the work.
  *
  * `scoreMiddleware()` is what puts `step.score()` on the step tooling. Without
  * it registered here the tool is absent at runtime, so every function that
