@@ -9,7 +9,6 @@ const {
   mockLogBusinessEvent,
   mockLogError,
   mockLogPerformance,
-  mockSend,
   mockInngestSend,
   mockIsInngestConfigured,
   mockCreateOrderForUser,
@@ -23,7 +22,6 @@ const {
   mockLogBusinessEvent: vi.fn(),
   mockLogError: vi.fn(),
   mockLogPerformance: vi.fn(),
-  mockSend: vi.fn(),
   mockInngestSend: vi.fn(),
   mockIsInngestConfigured: vi.fn(),
   mockCreateOrderForUser: vi.fn(),
@@ -54,10 +52,6 @@ vi.mock('@/lib/logger', () => ({
   logError: mockLogError,
   logPerformance: mockLogPerformance,
   CHECKOUT_QUEUE_LAG_OPERATION: 'queue.checkout.lag',
-}))
-
-vi.mock('@/lib/queue', () => ({
-  send: mockSend,
 }))
 
 vi.mock('@/lib/inngest/client', () => ({
@@ -110,7 +104,6 @@ describe('checkout dispatch', () => {
       id: 'cr9abcd',
       status: 'PENDING',
     })
-    mockSend.mockResolvedValue(undefined)
     mockInngestSend.mockResolvedValue(undefined)
   })
 
@@ -125,24 +118,19 @@ describe('checkout dispatch', () => {
         data: { checkoutRequestId: 'cr9abcd' },
       })
     )
-    expect(mockSend).not.toHaveBeenCalled()
     expect(mockWaitUntil).not.toHaveBeenCalled()
   })
 
-  it('uses the queue when Inngest is not configured', async () => {
+  it('falls back to inline processing when Inngest is not configured', async () => {
     mockIsInngestConfigured.mockReturnValue(false)
 
     await enqueueCheckoutForUser({ body: checkoutBody, user: testUser })
 
     expect(mockInngestSend).not.toHaveBeenCalled()
-    expect(mockSend).toHaveBeenCalledWith(
-      'checkout-orders',
-      { checkoutRequestId: 'cr9abcd' },
-      { idempotencyKey: 'checkout-request:cr9abcd' }
-    )
+    expect(mockWaitUntil).toHaveBeenCalledTimes(1)
   })
 
-  it('falls back to the queue when the Inngest publish fails', async () => {
+  it('falls back to inline processing when the Inngest publish fails', async () => {
     mockIsInngestConfigured.mockReturnValue(true)
     mockInngestSend.mockRejectedValue(new Error('Inngest down'))
 
@@ -150,31 +138,15 @@ describe('checkout dispatch', () => {
 
     expect(mockLogError).toHaveBeenCalledWith(
       expect.objectContaining({
-        context: 'checkout_inngest_publish_failed_falling_back_to_queue',
-      })
-    )
-    expect(mockSend).toHaveBeenCalledTimes(1)
-    expect(mockWaitUntil).not.toHaveBeenCalled()
-  })
-
-  it('falls back to inline processing only when every transport fails', async () => {
-    mockIsInngestConfigured.mockReturnValue(true)
-    mockInngestSend.mockRejectedValue(new Error('Inngest down'))
-    mockSend.mockRejectedValue(new Error('Queue down'))
-
-    await enqueueCheckoutForUser({ body: checkoutBody, user: testUser })
-
-    expect(mockLogError).toHaveBeenCalledWith(
-      expect.objectContaining({
-        context: 'checkout_queue_publish_failed_using_inline_fallback',
+        context: 'checkout_dispatch_failed_using_inline_fallback',
       })
     )
     expect(mockWaitUntil).toHaveBeenCalledTimes(1)
   })
 
   // An unbounded publish would hold the customer's request open until the
-  // platform kills it, so neither fallback would ever run.
-  it('stops waiting on a hung Inngest publish and uses the queue', async () => {
+  // platform kills it, so the inline fallback would never run.
+  it('stops waiting on a hung Inngest publish and processes inline', async () => {
     vi.useFakeTimers()
     try {
       mockIsInngestConfigured.mockReturnValue(true)
@@ -190,11 +162,10 @@ describe('checkout dispatch', () => {
 
       expect(mockLogError).toHaveBeenCalledWith(
         expect.objectContaining({
-          context: 'checkout_inngest_publish_failed_falling_back_to_queue',
+          context: 'checkout_dispatch_failed_using_inline_fallback',
         })
       )
-      expect(mockSend).toHaveBeenCalledTimes(1)
-      expect(mockWaitUntil).not.toHaveBeenCalled()
+      expect(mockWaitUntil).toHaveBeenCalledTimes(1)
     } finally {
       vi.useRealTimers()
     }

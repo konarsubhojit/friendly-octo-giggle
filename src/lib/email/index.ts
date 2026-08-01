@@ -9,11 +9,17 @@ export {
   escapeHtml,
 } from './templates'
 
-export { sendEmail, type EmailMessage } from './providers'
+export { sendEmail, deliverEmail, EmailDeliveryError } from './providers'
+export type {
+  EmailMessage,
+  EmailDeliveryResult,
+  EmailProviderName,
+} from './providers'
 
 export { sendWithRetry } from './retry'
 
 import { sendWithRetry } from './retry'
+import { deliverEmail, type EmailDeliveryResult } from './providers'
 import {
   orderConfirmationTemplate,
   orderStatusUpdateTemplate,
@@ -24,6 +30,35 @@ import {
   type OrderRefundUpdateData,
   type AbandonedCartReminderData,
 } from './templates'
+
+/**
+ * Awaitable counterparts of the `send*` helpers below.
+ *
+ * The `send*` helpers hand off to `waitUntil` and resolve immediately, which
+ * makes them useless inside a durable step: the step would report success
+ * while the send was still in flight, and a failure would never be retried.
+ * These `deliver*` helpers await the send and propagate its failure instead,
+ * so an Inngest step can retry it.
+ */
+export const deliverOrderConfirmationEmail = (
+  data: OrderConfirmationData
+): Promise<EmailDeliveryResult> =>
+  deliverEmail({ to: data.to, ...orderConfirmationTemplate(data) })
+
+export const deliverOrderStatusUpdateEmail = (
+  data: OrderStatusUpdateData
+): Promise<EmailDeliveryResult> =>
+  deliverEmail({ to: data.to, ...orderStatusUpdateTemplate(data) })
+
+export const deliverOrderRefundUpdateEmail = (
+  data: OrderRefundUpdateData
+): Promise<EmailDeliveryResult> =>
+  deliverEmail({ to: data.to, ...orderRefundUpdateTemplate(data) })
+
+export const deliverAbandonedCartReminderEmail = (
+  data: AbandonedCartReminderData
+): Promise<EmailDeliveryResult> =>
+  deliverEmail({ to: data.to, ...abandonedCartReminderTemplate(data) })
 
 export const sendOrderConfirmationEmail = (
   data: OrderConfirmationData

@@ -40,8 +40,6 @@ Admin endpoints require authentication via NextAuth session with ADMIN role.
 - `/api/categories` (GET)
 - `/api/cart` (GET, POST, DELETE)
 - `/api/cart/items/[id]` (PATCH, DELETE)
-- `/api/checkout` (POST)
-- `/api/checkout/[id]` (GET)
 - `/api/reviews` (GET; writes require a session)
 - `/api/search` (GET)
 - `/api/search/suggest` (GET)
@@ -60,6 +58,10 @@ Admin endpoints require authentication via NextAuth session with ADMIN role.
 - `/api/account/notifications` (GET, PATCH)
 - `/api/account/push-subscriptions` (POST, DELETE)
 - `/api/auth/change-password` (POST)
+- `/api/checkout` (POST)
+- `/api/checkout/[id]` (GET)
+- `/api/checkout/[id]/stream` (GET) — Server-Sent Events; pushes the checkout
+  request's status until it settles
 - `/api/orders` (GET, POST)
 - `/api/orders/[id]` (GET)
 - `/api/wishlist` (GET, POST)
@@ -94,12 +96,10 @@ Admin endpoints require authentication via NextAuth session with ADMIN role.
 - `/api/admin/search/reindex` (POST)
 - `/api/upload` (POST)
 
-**Service Endpoints**: Internal use (QStash, cron, queues)
+**Service Endpoints**: Internal use
 
-- `/api/services/email` (POST) — QStash email worker
-- `/api/cron/retry-emails` (GET) — Retry failed emails
-- `/api/cron/refresh-rates` (GET) — Refresh exchange rates
-- `/api/queue/checkout-orders` (POST) — Vercel Queue consumer
+- `/api/inngest` (GET/POST/PUT) — Inngest serve endpoint for every background
+  function (checkout, email, search indexing, cache invalidation, scheduled jobs)
 - `/api/payments/webhook` (POST) — Razorpay webhook (legacy path, kept for the registered URL)
 - `/api/payments/webhook/[provider]` (POST) — provider-scoped payment webhook, dispatched to the registered gateway
 - `/api/metrics` (GET) — Prometheus metrics; restrict at the network layer in production
@@ -107,7 +107,7 @@ Admin endpoints require authentication via NextAuth session with ADMIN role.
 ## Current capability notes
 
 - AI product chat accepts guests using a one-way hashed guest identity. Chat history persistence is authenticated-user-only, and responses intentionally avoid exact stock counts.
-- Checkout creation is idempotent and asynchronous: `POST /api/checkout` records a request and the queue consumer creates the order.
+- Checkout creation is idempotent and asynchronous: `POST /api/checkout` records a request and an Inngest function creates the order. Clients wait for the result on `GET /api/checkout/{id}/stream`, which pushes the terminal status over Server-Sent Events (backed by Inngest Realtime, with a status re-read behind it) instead of being polled. `GET /api/checkout/{id}` remains the one-shot status read.
 - Payment providers sit behind the `PaymentGateway` interface (`src/lib/payments/`). `POST /api/checkout` accepts `payment.provider` values of `RAZORPAY` (with `orderId`, `paymentId` and `signature`) or `COD` (no gateway references — Cash on Delivery orders stay `PENDING` and settle to `PAID` when an admin marks them `DELIVERED`).
 - Optional Redis and search integrations fail open to database-backed behavior where supported.
 - Order notifications honour the per-user notification preferences on every send path. Web push requires VAPID keys; when they are absent push is skipped and email is unaffected.

@@ -12,6 +12,12 @@ import {
   type CheckoutSkipReason,
 } from '@/features/cart/services/checkout-service'
 import { logError } from '@/lib/logger'
+import {
+  CHECKOUT_SLO_MS,
+  SCORE_NAMES,
+  type ScoringStep,
+} from '@/lib/inngest/scores'
+import { isOrderRequestError } from '@/features/orders/services/order-service'
 
 /**
  * Retries after the first attempt. Five total attempts keeps parity with the
@@ -25,9 +31,20 @@ export const CHECKOUT_FUNCTION_RETRIES = 4
  * Declared structurally so the pipeline body can be run against a plain fake in
  * tests without reconstructing an Inngest execution context.
  */
-export interface CheckoutStepRunner {
+export interface CheckoutStepRunner extends ScoringStep {
   run<T>(id: string, handler: () => T | Promise<T>): Promise<T>
 }
+
+/**
+ * Stock moving under a customer mid-checkout surfaces as a 409.
+ *
+ * Scored separately from other failures because it is not a defect in this
+ * pipeline: a rising rate means the reservation window between "added to cart"
+ * and "payment settled" is too wide, which is a product decision rather than a
+ * bug to chase in the run logs.
+ */
+const isStockConflict = (error: unknown): boolean =>
+  isOrderRequestError(error) && error.status === 409
 
 /** Outcome of a durable run, returned for run history and tests. */
 export type CheckoutRunResult =
@@ -56,11 +73,19 @@ export type CheckoutRunResult =
 export const runCheckoutRequestSteps = async ({
   event,
   step,
+  attempt = 0,
 }: {
   event: { data: unknown }
   step: CheckoutStepRunner
+  /** Zero-based retry counter supplied by Inngest. */
+  attempt?: number
 }): Promise<CheckoutRunResult> => {
   const { checkoutRequestId } = CheckoutQueueMessageSchema.parse(event.data)
+
+  // Memoized so the elapsed time measures the whole durable pipeline, not just
+  // the final attempt: a retry replays this step's checkpointed value rather
+  // than resetting the clock, which is exactly the number the customer feels.
+  const startedAt = await step.run('mark-start', () => Date.now())
 
   // Step 1 — idempotency guard. Returns a narrow, JSON-safe projection so the
   // checkpointed value never carries non-serializable row fields.
@@ -72,6 +97,14 @@ export const runCheckoutRequestSteps = async ({
   })
 
   if (preflight.action === 'skip') {
+    // A skip is a *successful* run by Inngest's reckoning but produced no
+    // order. Without this score the dashboard cannot tell "nothing failed"
+    // apart from "nothing happened", which is how a regression that skips
+    // every request would stay invisible.
+    await step.score('score-outcome', {
+      name: SCORE_NAMES.checkoutCompleted,
+      value: false,
+    })
     return { checkoutRequestId, outcome: 'skipped', reason: preflight.reason }
   }
 
@@ -99,6 +132,10 @@ export const runCheckoutRequestSteps = async ({
   })
 
   if (!claim.claimed) {
+    await step.score('score-outcome', {
+      name: SCORE_NAMES.checkoutCompleted,
+      value: false,
+    })
     return {
       checkoutRequestId,
       outcome: 'already-processing',
@@ -116,6 +153,19 @@ export const runCheckoutRequestSteps = async ({
         error
       )
 
+      // A live score rather than `step.score()`: this path always ends in a
+      // throw, so a memoized score placed after the step would never be
+      // reached. Written from inside the step so it lands on that step's
+      // trace, and swallowed on failure so telemetry can never be the reason
+      // a checkout error is reported as something else.
+      if (isStockConflict(error)) {
+        await inngest
+          .score({ name: SCORE_NAMES.stockConflict, value: true })
+          .catch((scoreError: unknown) => {
+            logError({ error: scoreError, context: 'checkout_score_failed' })
+          })
+      }
+
       if (terminal) {
         // Client-side failures never succeed on a retry.
         throw new NonRetriableError(
@@ -126,6 +176,36 @@ export const runCheckoutRequestSteps = async ({
 
       throw error
     }
+  })
+
+  await step.score('score-outcome', {
+    name: SCORE_NAMES.checkoutCompleted,
+    value: true,
+  })
+  await step.score('score-stock-conflict', {
+    name: SCORE_NAMES.stockConflict,
+    value: false,
+  })
+  // Isolates gateway flakiness from defects in this pipeline: a retry here
+  // means the payment provider needed a second ask, not that the code is
+  // wrong.
+  await step.score('score-payment-first-attempt', {
+    name: SCORE_NAMES.paymentVerifiedFirstAttempt,
+    value: attempt === 0,
+  })
+
+  // Feeds the same intent as `ORDER_PROCESSING_BUCKETS_MS` in `lib/metrics`,
+  // but survives a cold start and is queryable per-deploy. The boolean is the
+  // one that answers "can the client-side completion poll be replaced with a
+  // push yet?" without eyeballing a histogram.
+  const elapsedMs = Date.now() - startedAt
+  await step.score('score-latency', {
+    name: SCORE_NAMES.checkoutLatencyMs,
+    value: elapsedMs,
+  })
+  await step.score('score-slo', {
+    name: SCORE_NAMES.checkoutWithinSlo,
+    value: elapsedMs <= CHECKOUT_SLO_MS,
   })
 
   return { checkoutRequestId, orderId, outcome: 'completed' }

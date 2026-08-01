@@ -1,7 +1,7 @@
-// Architecture note: Checkout uses API routes + Vercel Queue rather than
-// server actions. The queue provides durable delivery, automatic retries,
-// and idempotency via checkout request IDs — critical for payment-adjacent
-// workflows where exactly-once processing matters. See also
+// Architecture note: Checkout uses API routes plus a durable Inngest function
+// rather than server actions. The event gives durable delivery, per-step
+// retries, and idempotency keyed on the checkout request id — critical for
+// payment-adjacent workflows where exactly-once processing matters. See also
 // features/orders/actions/orders.ts for the server action counterpart used
 // for simpler order reads and search operations.
 
@@ -11,7 +11,6 @@ import {
   createOrderForUser,
   isOrderRequestError,
 } from '@/features/orders/services/order-service'
-import { send } from '@/lib/queue'
 import {
   CHECKOUT_QUEUE_LAG_OPERATION,
   logBusinessEvent,
@@ -39,11 +38,12 @@ import {
   requiresPaymentSignature,
 } from '@/lib/payments/providers'
 import { toShippingMethod } from '@/lib/shipping'
-import { inngest, isInngestConfigured } from '@/lib/inngest/client'
+import { isInngestConfigured } from '@/lib/inngest/client'
+import { publishWithTimeout } from '@/lib/inngest/dispatch'
+import { publishCheckoutStatus } from '@/lib/inngest/realtime'
+import { checkoutSession } from '@/lib/inngest/sessions'
 import { checkoutRequestCreated } from '@/features/cart/inngest/events'
 import type { CheckoutPaymentInput } from '@/lib/types'
-
-export const CHECKOUT_QUEUE_TOPIC = 'checkout-orders'
 
 export interface CheckoutSessionUser {
   readonly id: string
@@ -185,16 +185,37 @@ const buildRetryExhaustedMessage = (
   return `Automatic recovery stopped after ${deliveryCount} attempts: ${reason}`
 }
 
+/**
+ * Write a checkout request's status and announce it when it is terminal.
+ *
+ * Every settlement in this service goes through here — the durable run, the
+ * inline fallback, the payment webhook, the retry-exhaustion handler and the
+ * status self-heal — so putting the Realtime announcement at this single seam
+ * is what lets the payment page wait on a push instead of polling, whichever
+ * path actually settles the request.
+ *
+ * The announcement is best-effort and cannot fail the write: the status row
+ * stays the source of truth and `GET /api/checkout/{id}/stream` re-reads it on
+ * a timer, so a lost message costs the customer a few seconds, never an order.
+ */
 const updateCheckoutRequestStatus = async (
   checkoutRequestId: string,
   status: CheckoutRequestStatus,
-  errorMessage: string | null
+  errorMessage: string | null,
+  orderId: string | null = null
 ) => {
   await db.checkoutRequests.updateStatus(
     checkoutRequestId,
     status,
     errorMessage
   )
+
+  await publishCheckoutStatus({
+    checkoutRequestId,
+    status,
+    orderId,
+    error: status === 'FAILED' ? errorMessage : null,
+  })
 }
 
 const findCheckoutRequestById = (checkoutRequestId: string) =>
@@ -263,7 +284,12 @@ export const recoverCheckoutRequestAfterRetryExhaustion = async ({
   const existingOrder = await findCreatedOrderForCheckout(checkoutRequestId)
 
   if (existingOrder) {
-    await updateCheckoutRequestStatus(checkoutRequestId, 'COMPLETED', null)
+    await updateCheckoutRequestStatus(
+      checkoutRequestId,
+      'COMPLETED',
+      null,
+      existingOrder.id
+    )
     return
   }
 
@@ -290,65 +316,40 @@ export const recoverCheckoutRequestAfterRetryExhaustion = async ({
 }
 
 /**
- * Wall-clock budget for publishing the checkout event.
+ * Publish the checkout event, giving up on the wait after a fixed budget.
  *
  * This runs inside the request the customer is waiting on, and the Inngest SDK
  * retries a failed publish up to five times with no timeout of its own. Left
  * unbounded, a degraded Inngest API would hold the route open until the
  * platform kills it at `maxDuration`, so neither the queue fallback below nor
- * the caller's inline fallback would ever run and the request would be stranded
- * in `PENDING` with no orchestrator.
- */
-const INNGEST_PUBLISH_TIMEOUT_MS = 5_000
-
-class InngestPublishTimeoutError extends Error {
-  constructor(timeoutMs: number) {
-    super(`Inngest publish did not complete within ${timeoutMs}ms`)
-    this.name = 'InngestPublishTimeoutError'
-  }
-}
-
-/**
- * Publish the checkout event, giving up on the wait after a fixed budget.
+ * the caller's inline fallback would ever run and the request would be
+ * stranded in `PENDING` with no orchestrator. `publishWithTimeout` owns that
+ * budget for every producer in the app.
  *
- * A publish that lands after the timeout is harmless: the resulting run shares
- * the same compare-and-swap claim as the queue delivery, so at most one of them
- * creates an order. `Promise.race` subscribes to the publish promise, so a late
- * rejection is already handled and cannot surface as an unhandled rejection.
+ * The session key is attached here rather than in the function, because it has
+ * to be on the *first* event for the whole downstream fan-out — confirmation
+ * email, search index, cache invalidation — to appear under one
+ * `checkout_request_id` in the dashboard.
  */
-const publishCheckoutEvent = async (
-  checkoutRequestId: string
-): Promise<void> => {
-  const publish = inngest
-    .send(checkoutRequestCreated.create({ checkoutRequestId }))
-    .then(() => undefined)
-
-  let timer: ReturnType<typeof setTimeout> | undefined
-  const timeout = new Promise<never>((_resolve, reject) => {
-    timer = setTimeout(
-      () => reject(new InngestPublishTimeoutError(INNGEST_PUBLISH_TIMEOUT_MS)),
-      INNGEST_PUBLISH_TIMEOUT_MS
+const publishCheckoutEvent = (checkoutRequestId: string): Promise<void> =>
+  publishWithTimeout(
+    checkoutRequestCreated.create(
+      { checkoutRequestId },
+      { meta: { sessions: checkoutSession(checkoutRequestId) } }
     )
-  })
-
-  try {
-    await Promise.race([publish, timeout])
-  } finally {
-    clearTimeout(timer)
-  }
-}
+  )
 
 /**
  * Hand a checkout request to its durable orchestrator.
  *
- * Inngest is preferred when configured: each pipeline step checkpoints
+ * Inngest is the single orchestrator: each pipeline step checkpoints
  * independently, so a retry resumes after the last completed step instead of
- * replaying payment verification. The Vercel Queue remains the fallback so a
- * deployment without Inngest credentials — or a transient Inngest outage —
- * still processes checkouts durably.
+ * replaying payment verification.
  *
- * Throws when every durable transport fails, letting the caller decide on the
- * inline last resort.
+ * Throws when the event cannot be published, letting the caller fall back to
+ * the inline last resort. That fallback is the only remaining safety net now
+ * that the parallel Vercel Queue consumer is gone — two orchestrators writing
+ * the same order row was the risk it traded against.
  */
 const dispatchCheckoutProcessing = async ({
   checkoutRequestId,
@@ -357,24 +358,22 @@ const dispatchCheckoutProcessing = async ({
   checkoutRequestId: string
   userId: string
 }): Promise<void> => {
-  if (isInngestConfigured()) {
-    try {
-      await publishCheckoutEvent(checkoutRequestId)
-      return
-    } catch (error) {
-      logError({
-        error,
-        context: 'checkout_inngest_publish_failed_falling_back_to_queue',
-        additionalInfo: { checkoutRequestId, userId },
-      })
-    }
+  if (!isInngestConfigured()) {
+    throw new Error(
+      'Inngest is not configured; no durable orchestrator is available'
+    )
   }
 
-  await send(
-    CHECKOUT_QUEUE_TOPIC,
-    { checkoutRequestId },
-    { idempotencyKey: `checkout-request:${checkoutRequestId}` }
-  )
+  try {
+    await publishCheckoutEvent(checkoutRequestId)
+  } catch (error) {
+    logError({
+      error,
+      context: 'checkout_inngest_publish_failed',
+      additionalInfo: { checkoutRequestId, userId },
+    })
+    throw error
+  }
 }
 
 export const enqueueCheckoutForUser = async ({
@@ -441,7 +440,7 @@ export const enqueueCheckoutForUser = async ({
   } catch (error) {
     logError({
       error,
-      context: 'checkout_queue_publish_failed_using_inline_fallback',
+      context: 'checkout_dispatch_failed_using_inline_fallback',
       additionalInfo: {
         checkoutRequestId: checkoutRequest.id,
         userId: user.id,
@@ -482,7 +481,12 @@ export const getCheckoutRequestStatusForUser = async ({
   const existingOrder = await findCreatedOrderForCheckout(checkoutRequestId)
 
   if (existingOrder && checkoutRequest.status !== 'COMPLETED') {
-    await updateCheckoutRequestStatus(checkoutRequestId, 'COMPLETED', null)
+    await updateCheckoutRequestStatus(
+      checkoutRequestId,
+      'COMPLETED',
+      null,
+      existingOrder.id
+    )
   }
 
   return buildCheckoutStatusResponse(
@@ -563,7 +567,12 @@ export const resolveCheckoutSettlement = async (
   const existingOrder = await findCreatedOrderForCheckout(checkoutRequestId)
   if (existingOrder) {
     if (checkoutRequest.status !== 'COMPLETED') {
-      await updateCheckoutRequestStatus(checkoutRequestId, 'COMPLETED', null)
+      await updateCheckoutRequestStatus(
+        checkoutRequestId,
+        'COMPLETED',
+        null,
+        existingOrder.id
+      )
     }
     return { settled: true, reason: 'order_exists' }
   }
@@ -641,7 +650,12 @@ const settleWithExistingOrder = async (
   const existingOrder = await findCreatedOrderForCheckout(checkoutRequestId)
   if (!existingOrder) return null
 
-  await updateCheckoutRequestStatus(checkoutRequestId, 'COMPLETED', null)
+  await updateCheckoutRequestStatus(
+    checkoutRequestId,
+    'COMPLETED',
+    null,
+    existingOrder.id
+  )
   return existingOrder.id
 }
 
@@ -732,7 +746,12 @@ const runCheckoutOrderCreation = async (
     throw error
   }
 
-  await updateCheckoutRequestStatus(checkoutRequestId, 'COMPLETED', null)
+  await updateCheckoutRequestStatus(
+    checkoutRequestId,
+    'COMPLETED',
+    null,
+    result.order.id
+  )
 
   logBusinessEvent({
     event: 'checkout_request_completed',

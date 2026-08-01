@@ -16,37 +16,18 @@ import { OrderStatusEnum } from '@/features/orders/validations'
 import { z } from 'zod'
 import { invalidateUserOrderCaches } from '@/lib/cache'
 import { ORDER_SEARCH_SCHEMA } from '@/features/orders/services/orders-search-index'
+import {
+  mapOrderRowToSummary,
+  redisOrderKey,
+  redisUserOrdersKey,
+  writeOrderToRedis as writeOrderToRedisMirror,
+  type OrderItemRecord,
+  type OrderSummary,
+} from '@/features/orders/services/order-mirror'
 
 type ActionResult<T> =
   | { success: true; data: T }
   | { success: false; error: string }
-
-interface OrderItemRecord {
-  productId: string
-  variantId?: string | null
-  quantity: number
-  price: number
-  customizationNote?: string | null
-}
-
-export interface OrderSummary {
-  id: string
-  userId: string | null
-  customerName: string
-  customerEmail: string
-  customerAddress: string
-  addressLine1?: string | null
-  addressLine2?: string | null
-  addressLine3?: string | null
-  pinCode?: string | null
-  city?: string | null
-  state?: string | null
-  total: number
-  status: string
-  items: OrderItemRecord[]
-  createdAt: string
-  productNames?: string
-}
 
 const OrderItemInputSchema = z.object({
   productId: z.string().min(1),
@@ -71,45 +52,12 @@ const CreateOrderActionSchema = z.object({
 
 type CreateOrderActionInput = z.infer<typeof CreateOrderActionSchema>
 
-const redisOrderKey = (orderId: string) => `order:${orderId}`
-const redisUserOrdersKey = (userId: string) => `user:orders:${userId}`
-
-export const writeOrderToRedis = async (order: OrderSummary): Promise<void> => {
-  const redis = getRedisClient()
-  if (!redis) return
-
-  try {
-    const pipeline = redis.pipeline()
-    pipeline.hset(redisOrderKey(order.id), {
-      id: order.id,
-      userId: order.userId ?? '',
-      customerName: order.customerName,
-      customerEmail: order.customerEmail,
-      customerAddress: order.customerAddress,
-      addressLine1: order.addressLine1 ?? '',
-      addressLine2: order.addressLine2 ?? '',
-      addressLine3: order.addressLine3 ?? '',
-      pinCode: order.pinCode ?? '',
-      city: order.city ?? '',
-      state: order.state ?? '',
-      items: JSON.stringify(order.items),
-      total: String(order.total),
-      status: order.status,
-      createdAt: order.createdAt,
-      productNames: order.productNames ?? '',
-    })
-    if (order.userId) {
-      pipeline.sadd(redisUserOrdersKey(order.userId), order.id)
-    }
-    await pipeline.exec()
-  } catch (error) {
-    logError({
-      error,
-      context: 'order_redis_write',
-      additionalInfo: { orderId: order.id },
-    })
-  }
-}
+/**
+ * Re-exported so existing callers (and their test doubles) keep importing the
+ * mirror from this module while the implementation lives in the service layer.
+ */
+export const writeOrderToRedis = async (order: OrderSummary): Promise<void> =>
+  writeOrderToRedisMirror(order)
 
 const parseRedisHash = (hash: Record<string, unknown>): OrderSummary | null => {
   if (!hash.id || typeof hash.id !== 'string') return null
@@ -131,54 +79,6 @@ const parseRedisHash = (hash: Record<string, unknown>): OrderSummary | null => {
     createdAt: (hash.createdAt as string) ?? '',
   }
 }
-
-interface OrderWithItemsRow {
-  readonly id: string
-  readonly userId: string | null
-  readonly customerName: string
-  readonly customerEmail: string
-  readonly customerAddress: string
-  readonly addressLine1: string | null
-  readonly addressLine2: string | null
-  readonly addressLine3: string | null
-  readonly pinCode: string | null
-  readonly city: string | null
-  readonly state: string | null
-  readonly totalAmount: number
-  readonly status: string
-  readonly createdAt: Date
-  readonly items: ReadonlyArray<{
-    readonly productId: string
-    readonly variantId: string | null
-    readonly quantity: number
-    readonly price: number
-    readonly customizationNote: string | null
-  }>
-}
-
-const mapOrderRowToSummary = (row: OrderWithItemsRow): OrderSummary => ({
-  id: row.id,
-  userId: row.userId,
-  customerName: row.customerName,
-  customerEmail: row.customerEmail,
-  customerAddress: row.customerAddress,
-  addressLine1: row.addressLine1,
-  addressLine2: row.addressLine2,
-  addressLine3: row.addressLine3,
-  pinCode: row.pinCode,
-  city: row.city,
-  state: row.state,
-  total: row.totalAmount,
-  status: row.status,
-  items: row.items.map((item) => ({
-    productId: item.productId,
-    variantId: item.variantId ?? null,
-    quantity: item.quantity,
-    price: item.price,
-    customizationNote: item.customizationNote ?? null,
-  })),
-  createdAt: row.createdAt.toISOString(),
-})
 
 const fetchOrdersFromDb = async (userId: string): Promise<OrderSummary[]> => {
   const rows = await db.orders.findManyByUserId(userId)

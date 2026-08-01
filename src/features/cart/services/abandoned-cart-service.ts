@@ -26,7 +26,11 @@ import {
   productVariants,
   products,
 } from '@/lib/schema'
-import { sendAbandonedCartReminderEmail } from '@/lib/email'
+import {
+  deliverAbandonedCartReminderEmail,
+  sendAbandonedCartReminderEmail,
+} from '@/lib/email'
+import type { AbandonedCartTone } from '@/lib/email/templates'
 import {
   formatPriceForCurrency,
   isValidCurrencyCode,
@@ -40,8 +44,23 @@ import { env } from '@/lib/env'
 const FIRST_REMINDER_IDLE_MS = 24 * 60 * 60 * 1000 // 24 hours
 const SECOND_REMINDER_IDLE_MS = 72 * 60 * 60 * 1000 // 72 hours
 
-/** Maximum number of reminders sent per cron run (safety throttle). */
+/**
+ * Maximum number of reminders sent per cron run (safety throttle).
+ *
+ * A hard cap silently drops the overflow, so the durable path uses
+ * `SCAN_BATCH_SIZE` and lets Inngest's throttle govern send rate instead.
+ */
 const MAX_BATCH_SIZE = 50
+
+/**
+ * Ceiling for the durable scan.
+ *
+ * Higher than `MAX_BATCH_SIZE` because the durable path fans each candidate
+ * out to its own run: throughput is bounded by the reminder function's
+ * `throttle`, not by how many sends fit in one invocation. Still bounded, so a
+ * backlog cannot produce an unbounded fan-out.
+ */
+const SCAN_BATCH_SIZE = 500
 
 // ─── Types ───────────────────────────────────────────────
 
@@ -71,7 +90,8 @@ export interface AbandonedCartCronResult {
  */
 const findIdleCartsForReminder = async (
   idleThresholdMs: number,
-  maxReminders: number
+  maxReminders: number,
+  limit: number = MAX_BATCH_SIZE
 ): Promise<
   Array<{
     cartId: string
@@ -123,7 +143,7 @@ const findIdleCartsForReminder = async (
     .having(
       sql`cast(coalesce(count(distinct ${abandonedCartReminders.id}), 0) as int) < ${maxReminders}`
     )
-    .limit(MAX_BATCH_SIZE)
+    .limit(limit)
 
   return rows.map((r) => ({
     cartId: r.cartId,
@@ -337,3 +357,113 @@ export const processAbandonedCartReminders =
 
     return { firstReminders, secondReminders, errors, results }
   }
+
+// ─── Durable (Inngest) API ────────────────────────────────
+
+/** One cart that is due a reminder, with which reminder it is due. */
+export interface AbandonedCartCandidate {
+  readonly cartId: string
+  readonly userId: string
+  readonly reminderNumber: 1 | 2
+}
+
+/**
+ * Find every cart due a reminder, in one pass.
+ *
+ * Split out from `processAbandonedCartReminders` so the durable scan function
+ * can fan each candidate out to its own run instead of sending them all inside
+ * one invocation. The de-duplication between the two waves is preserved: a
+ * cart eligible for its first reminder is never also queued for its second in
+ * the same run.
+ */
+export const findAbandonedCartCandidates = async (): Promise<
+  AbandonedCartCandidate[]
+> => {
+  const [firstCandidates, secondCandidates] = await Promise.all([
+    findIdleCartsForReminder(FIRST_REMINDER_IDLE_MS, 1, SCAN_BATCH_SIZE),
+    findIdleCartsForReminder(SECOND_REMINDER_IDLE_MS, 2, SCAN_BATCH_SIZE),
+  ])
+
+  const firstCartIds = new Set(firstCandidates.map((c) => c.cartId))
+
+  return [
+    ...firstCandidates.map((c) => ({
+      cartId: c.cartId,
+      userId: c.userId,
+      reminderNumber: 1 as const,
+    })),
+    ...secondCandidates
+      .filter((c) => !firstCartIds.has(c.cartId) && c.reminderCount >= 1)
+      .map((c) => ({
+        cartId: c.cartId,
+        userId: c.userId,
+        reminderNumber: 2 as const,
+      })),
+  ]
+}
+
+/** Why a reminder was not sent, when that is a correct outcome. */
+export type AbandonedCartSkipReason = 'user_not_found' | 'cart_empty'
+
+export type AbandonedCartDeliveryResult =
+  | { readonly sent: true; readonly itemCount: number }
+  | { readonly sent: false; readonly reason: AbandonedCartSkipReason }
+
+/**
+ * Send one reminder and record it.
+ *
+ * Unlike `processCart` this awaits the email and lets a delivery failure
+ * propagate, so the calling step retries instead of recording a reminder that
+ * was never actually delivered. The reminder row is written only after a
+ * successful send, which is what keeps the per-cart cap honest.
+ */
+export const deliverAbandonedCartReminder = async ({
+  cartId,
+  userId,
+  reminderNumber,
+  tone,
+}: AbandonedCartCandidate & {
+  tone: AbandonedCartTone
+}): Promise<AbandonedCartDeliveryResult> => {
+  const user = await drizzleDb.query.users.findFirst({
+    where: eq(users.id, userId),
+    columns: { email: true, name: true, currencyPreference: true },
+  })
+
+  if (!user) return { sent: false, reason: 'user_not_found' }
+
+  const currencyCode: CurrencyCode =
+    user.currencyPreference && isValidCurrencyCode(user.currencyPreference)
+      ? user.currencyPreference
+      : 'INR'
+
+  const items = await fetchCartEmailItems(cartId, currencyCode)
+
+  // The cart can be emptied (or checked out) between the scan and this run.
+  if (items.length === 0) return { sent: false, reason: 'cart_empty' }
+
+  await deliverAbandonedCartReminderEmail({
+    to: user.email,
+    customerName: user.name ?? user.email,
+    cartUrl: buildCartUrl(),
+    items,
+    reminderNumber,
+    tone,
+  })
+
+  await recordReminder(cartId, userId, reminderNumber)
+
+  logBusinessEvent({
+    event: 'abandoned_cart_reminder_sent',
+    details: {
+      cartId,
+      userId,
+      reminderNumber,
+      tone,
+      itemCount: items.length,
+    },
+    success: true,
+  })
+
+  return { sent: true, itemCount: items.length }
+}

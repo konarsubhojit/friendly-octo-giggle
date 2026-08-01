@@ -30,8 +30,8 @@ The core storefront requires PostgreSQL and NextAuth configuration. Enable newer
 
 - Redis and Upstash Search: caching, suggestions, product search, order search, and search-index administration.
 - AI provider credentials: product assistant generation; guest requests use a hashed network identity and authenticated users receive persisted history.
-- Vercel Queues: durable checkout processing through the `checkout-orders` topic.
-- QStash and an email provider: asynchronous transactional email and retries.
+- Inngest: durable checkout processing, transactional email, order side-effects, and scheduled jobs.
+- An email provider: transactional email delivery.
 - Vercel Blob: admin image upload.
 - Web Push (VAPID) credentials: browser push notifications for order-status changes. See [Web push setup](#web-push-setup).
 - Sentry: server, edge, and browser tracing/error capture.
@@ -114,11 +114,11 @@ vercel env add REDIS_URL
 vercel --prod
 ```
 
-**Step 3.1: Configure the two async delivery paths separately**
+**Step 3.1: Configure the async workflow orchestrator**
 
-- Checkout orchestration runs on Inngest when `INNGEST_EVENT_KEY` is set, and falls back to Vercel Queues (`@vercel/queue` plus the trigger in `vercel.json`) otherwise.
-- Transactional email remains on the separate QStash worker path at `/api/services/email`.
-- Keep these concerns isolated in production. Do not replace the QStash email path with the checkout queue unless you explicitly want to redesign email delivery semantics.
+All background work — checkout order creation, transactional email, search
+indexing, cache invalidation and scheduled jobs — runs on Inngest, served from
+the single endpoint `/api/inngest`.
 
 **Runtime budget:** Fluid Compute is enabled for this project, so the platform
 ceiling is 300s. The routes that can hold a `PROCESSING` claim on a checkout
@@ -127,7 +127,7 @@ request deliberately declare a much lower `maxDuration = 30`; see
 ties the two together. Raising either value without the other can strand a
 checkout request.
 
-Required Inngest setup (optional — skip to stay on Vercel Queues):
+Required Inngest setup:
 
 ```env
 INNGEST_EVENT_KEY=...
@@ -135,26 +135,28 @@ INNGEST_SIGNING_KEY=...
 ```
 
 - Register the app at `https://your-domain.com/api/inngest` in the Inngest dashboard.
-- Rollout: set both keys and redeploy. New checkouts publish `checkout/request.created`; in-flight queue messages keep draining through `/api/queue/checkout-orders`, so the two run side by side with no cutover window.
-- Rollback: unset `INNGEST_EVENT_KEY` and redeploy. Publishing reverts to the queue immediately; already-published Inngest runs finish on their own.
-- Both orchestrators call the same steps and share the same compare-and-swap claim, so a request can never be processed twice.
+- Scheduled work (failed-email retries, exchange-rate refresh, abandoned-cart
+  scan) is declared as `cron` triggers on Inngest functions, so no platform cron
+  configuration is required.
+- If `INNGEST_EVENT_KEY` is unset, checkout still completes: the API route
+  processes the request inline via `waitUntil` as a last-resort safety net. That
+  path has no durability or retries, so treat an unset key as an outage, not a
+  supported configuration.
+- Inngest Realtime carries the checkout settlement push consumed by
+  `GET /api/checkout/{id}/stream`. It needs no extra keys or middleware, and the
+  SDK stays server-side — the browser only ever speaks Server-Sent Events. With
+  no event key the stream still settles the customer's wait from its own status
+  re-reads, just less promptly.
+- The stream route declares `maxDuration = 60` and closes each connection
+  shortly before that, so the browser reconnects on a clean end rather than a
+  platform kill. It holds no checkout claim, so it is exempt from the
+  `maxDuration = 30` rule above. Any proxy in front of the app must not buffer
+  `text/event-stream` responses, or the push arrives no sooner than a poll would
+  have.
 
-Required Vercel Queue setup:
-
-```bash
-vercel link
-vercel env pull
-```
-
-- Ensure the project has the `checkout-orders` topic trigger enabled from `vercel.json`.
-- Prefer setting a stable deployment region so the queue client does not fall back to the default `iad1` region unexpectedly.
-
-Required email environment variables remain separate:
+Email provider environment variables remain separate:
 
 ```env
-QSTASH_TOKEN=...
-QSTASH_CURRENT_SIGNING_KEY=...
-QSTASH_NEXT_SIGNING_KEY=...
 NEXT_PUBLIC_APP_URL=https://your-domain.com
 ```
 
@@ -172,9 +174,9 @@ npm run db:seed
 - Edge runtime compatible with minor adjustments
 - Built-in CDN for static assets
 - Automatic HTTPS
-- Order checkout requests are persisted first, then handed to Vercel Queues for background order creation.
-- Recovery for transient checkout failures is automatic in the queue consumer; the admin page is for visibility, not manual requeue actions.
-- Email delivery failures are still monitored independently from checkout queue health.
+- Order checkout requests are persisted first, then handed to Inngest for background order creation.
+- Recovery for transient checkout failures is automatic through Inngest retries; the admin page is for visibility, not manual requeue actions.
+- Email delivery failures surface as failed Inngest runs and as rows in `failedEmails`, independently of checkout health.
 
 ---
 
@@ -340,9 +342,9 @@ railway run npm run db:seed
 - [ ] Admin panel accessible
 - [ ] Product listing displays correctly
 - [ ] Order creation works
-- [ ] Checkout queue worker is consuming `checkout-orders`
+- [ ] Inngest app is registered and `process-checkout-request` runs are succeeding
 - [ ] Checkout requests appear in `/admin/checkout-requests`
-- [ ] Transactional email still flows through the QStash worker
+- [ ] Transactional email functions are running on Inngest
 - [ ] Cache invalidation working
 
 ## Monitoring

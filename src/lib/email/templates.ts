@@ -63,6 +63,15 @@ export interface AbandonedCartItem {
   variant?: string | null
 }
 
+/**
+ * Copy registers for the recovery reminder.
+ *
+ * These are the arms of the `reminder-copy` step experiment, so the union has
+ * to stay in sync with the variant names declared in the abandoned-cart
+ * function.
+ */
+export type AbandonedCartTone = 'gentle' | 'urgency'
+
 export interface AbandonedCartReminderData {
   to: string
   customerName: string
@@ -70,6 +79,11 @@ export interface AbandonedCartReminderData {
   items: AbandonedCartItem[]
   /** 1 for the 24-hour nudge, 2 for the 72-hour follow-up. */
   reminderNumber: 1 | 2
+  /**
+   * Copy register. `gentle` is the long-standing wording; `urgency` leans on
+   * scarcity. Optional so every existing caller keeps the original copy.
+   */
+  tone?: AbandonedCartTone
 }
 
 // ─── Helpers ────────────────────────────────────────────
@@ -407,17 +421,66 @@ export const orderRefundUpdateTemplate = (data: OrderRefundUpdateData) => {
   }
 }
 
+interface AbandonedCartCopy {
+  readonly headline: string
+  readonly subheadline: string
+  readonly subject: string
+  readonly textIntro: string
+}
+
+/**
+ * Copy for each arm of the reminder experiment.
+ *
+ * `gentle` reproduces the original wording verbatim so the control arm is a
+ * true baseline; `urgency` is the scarcity-led challenger.
+ */
+const abandonedCartCopy = (
+  tone: AbandonedCartTone,
+  reminderNumber: 1 | 2
+): AbandonedCartCopy => {
+  if (tone === 'urgency') {
+    return reminderNumber === 1
+      ? {
+          headline: 'Your cart is reserved for a little longer 🌸',
+          subheadline:
+            'these handcrafted pieces are made in small batches and your cart is not held indefinitely.',
+          subject: 'Your cart is only held for a little longer 🌸',
+          textIntro:
+            'These handcrafted pieces are made in small batches — your cart is not held indefinitely.',
+        }
+      : {
+          headline: 'Last chance before your cart clears 🌸',
+          subheadline:
+            "your cart has been waiting a while and stock on these pieces is limited. Once they're gone, they're gone.",
+          subject: 'Last chance before your cart clears 🌸',
+          textIntro:
+            "Your cart has been waiting a while and stock is limited — once these are gone, they're gone.",
+        }
+  }
+
+  return reminderNumber === 1
+    ? {
+        headline: 'You left something behind 🌸',
+        subheadline:
+          "it looks like you left some beautiful items in your cart. They're still here whenever you're ready.",
+        subject: 'You left something in your cart 🌸',
+        textIntro: 'You left some items in your cart.',
+      }
+    : {
+        headline: 'Still waiting for you 🌸',
+        subheadline:
+          'your cart is still waiting! These handcrafted items are popular and stock is limited.',
+        subject: 'Your cart is still waiting for you 🌸',
+        textIntro: 'Your cart is still waiting — stock is limited!',
+      }
+}
+
 export const abandonedCartReminderTemplate = (
   data: AbandonedCartReminderData
 ) => {
-  const headline =
-    data.reminderNumber === 1
-      ? 'You left something behind 🌸'
-      : 'Still waiting for you 🌸'
-  const subheadline =
-    data.reminderNumber === 1
-      ? `Hi ${escapeHtml(data.customerName)}, it looks like you left some beautiful items in your cart. They're still here whenever you're ready.`
-      : `Hi ${escapeHtml(data.customerName)}, your cart is still waiting! These handcrafted items are popular and stock is limited.`
+  const copy = abandonedCartCopy(data.tone ?? 'gentle', data.reminderNumber)
+  const headline = copy.headline
+  const subheadline = `Hi ${escapeHtml(data.customerName)}, ${copy.subheadline}`
 
   const itemsHtml = data.items
     .map(
@@ -466,11 +529,8 @@ export const abandonedCartReminderTemplate = (
     .join('\n')
 
   return {
-    subject:
-      data.reminderNumber === 1
-        ? `You left something in your cart 🌸`
-        : `Your cart is still waiting for you 🌸`,
+    subject: copy.subject,
     html: emailWrapper(bodyHtml),
-    text: `Hi ${data.customerName},\n\n${data.reminderNumber === 1 ? 'You left some items in your cart.' : "Your cart is still waiting — stock is limited!"}\n\nItems:\n${itemLines}\n\nReturn to your cart: ${data.cartUrl}\n\nThank you for shopping with ${STORE_NAME}!`,
+    text: `Hi ${data.customerName},\n\n${copy.textIntro}\n\nItems:\n${itemLines}\n\nReturn to your cart: ${data.cartUrl}\n\nThank you for shopping with ${STORE_NAME}!`,
   }
 }

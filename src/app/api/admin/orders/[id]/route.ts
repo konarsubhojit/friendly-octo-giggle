@@ -13,9 +13,9 @@ import { cacheAdminOrderById, invalidateAdminOrderCaches } from '@/lib/cache'
 import { serializeOrder } from '@/lib/serializers'
 import { UpdateOrderStatusSchema } from '@/features/orders/validations'
 import { notifyOrderStatusUpdate } from '@/lib/notifications/order-notifications'
-import { getQStashClient } from '@/lib/qstash'
-import type { OrderStatusChangedEvent } from '@/lib/qstash-events'
-import { env } from '@/lib/env'
+import { orderStatusChanged } from '@/features/orders/inngest/events'
+import { dispatchWorkflowEvent } from '@/lib/inngest/dispatch'
+import { orderSession } from '@/lib/inngest/sessions'
 import { logBusinessEvent, logError } from '@/lib/logger'
 import { getRedisClient } from '@/lib/redis'
 import { settlesPaymentOnDelivery } from '@/lib/payments'
@@ -111,52 +111,44 @@ const dispatchStatusNotification = async (
   const trackingNumber = update.trackingNumber ?? order.trackingNumber ?? null
   const shippingProvider =
     update.shippingProvider ?? order.shippingProvider ?? null
-  const statusEvent: OrderStatusChangedEvent = {
-    type: 'order.status_changed',
-    data: {
-      orderId: order.id,
-      customerEmail: order.customerEmail,
-      customerName: order.customerName,
-      newStatus: update.status as
-        | 'PROCESSING'
-        | 'SHIPPED'
-        | 'DELIVERED'
-        | 'CANCELLED',
-      trackingNumber,
-      shippingProvider,
-    },
-  }
 
-  try {
-    const workerUrl = `${env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'}/api/services/email`
-    const publishResult = await getQStashClient().publishJSON({
-      url: workerUrl,
-      body: statusEvent,
-    })
-    logBusinessEvent({
-      event: 'order_status_email_queued',
-      details: {
+  const dispatchResult = await dispatchWorkflowEvent({
+    event: orderStatusChanged.create(
+      {
         orderId: order.id,
-        eventType: statusEvent.type,
-        messageId: publishResult.messageId,
+        userId: order.userId,
+        customerEmail: order.customerEmail,
+        customerName: order.customerName,
+        newStatus: update.status,
+        trackingNumber,
+        shippingProvider,
       },
-      success: true,
-    })
-  } catch (publishError) {
-    logError({
-      error: publishError,
-      context: 'qstash_publish_failed_using_fallback',
-      additionalInfo: { orderId: order.id, eventType: statusEvent.type },
-    })
-    await notifyOrderStatusUpdate({
-      to: order.customerEmail,
-      customerName: order.customerName,
+      // Keeps every status change for this order — created, shipped,
+      // delivered, days apart — in one session.
+      { meta: { sessions: orderSession(order.id) } }
+    ),
+    context: 'order_status_changed_publish_failed',
+    details: { orderId: order.id, newStatus: update.status },
+    fallback: () =>
+      notifyOrderStatusUpdate({
+        to: order.customerEmail,
+        customerName: order.customerName,
+        orderId: order.id,
+        status: update.status,
+        trackingNumber,
+        shippingProvider,
+      }),
+  })
+
+  logBusinessEvent({
+    event: 'order_status_email_queued',
+    details: {
       orderId: order.id,
-      status: update.status,
-      trackingNumber,
-      shippingProvider,
-    })
-  }
+      newStatus: update.status,
+      dispatch: dispatchResult,
+    },
+    success: true,
+  })
 }
 
 export const PATCH = async (

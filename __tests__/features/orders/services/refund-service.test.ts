@@ -5,7 +5,7 @@ const {
   mockDbUpdate,
   mockFindPreferences,
   mockGetPaymentGateway,
-  mockPublishJSON,
+  mockDispatchWorkflowEvent,
   mockNotifyOrderRefundUpdate,
   mockInvalidateAdminOrderCaches,
   mockRecordAdminAuditLog,
@@ -31,7 +31,7 @@ const {
     mockDbUpdate: vi.fn(),
     mockFindPreferences: vi.fn(),
     mockGetPaymentGateway: vi.fn(),
-    mockPublishJSON: vi.fn(),
+    mockDispatchWorkflowEvent: vi.fn(),
     mockNotifyOrderRefundUpdate: vi.fn(),
     mockInvalidateAdminOrderCaches: vi.fn(),
     mockRecordAdminAuditLog: vi.fn(),
@@ -92,8 +92,8 @@ vi.mock('@/lib/env', () => ({
   env: { NEXT_PUBLIC_APP_URL: 'http://localhost:3000' },
 }))
 
-vi.mock('@/lib/qstash', () => ({
-  getQStashClient: () => ({ publishJSON: mockPublishJSON }),
+vi.mock('@/lib/inngest/dispatch', () => ({
+  dispatchWorkflowEvent: mockDispatchWorkflowEvent,
 }))
 
 vi.mock('@/lib/notifications/order-notifications', () => ({
@@ -196,7 +196,7 @@ beforeEach(() => {
   })
   mockGetPaymentGateway.mockReturnValue({ refund: gatewayRefund })
   mockFindPreferences.mockResolvedValue({ currencyPreference: 'INR' })
-  mockPublishJSON.mockResolvedValue({ messageId: 'msg_1' })
+  mockDispatchWorkflowEvent.mockResolvedValue('published')
   mockRecordAdminAuditLog.mockResolvedValue(undefined)
   mockDbUpdate.mockImplementation(() => chain([]))
 })
@@ -235,9 +235,9 @@ describe('refundOrder', () => {
     expect(mockRecordAdminAuditLog).toHaveBeenCalledWith(
       expect.objectContaining({ entity: 'order', action: 'refund' })
     )
-    expect(mockPublishJSON).toHaveBeenCalledWith(
+    expect(mockDispatchWorkflowEvent).toHaveBeenCalledWith(
       expect.objectContaining({
-        body: expect.objectContaining({ type: 'order.refunded' }),
+        event: expect.objectContaining({ name: 'order/refunded' }),
       })
     )
   })
@@ -375,7 +375,7 @@ describe('reconcileRefundWebhook', () => {
       'order1',
       'user1'
     )
-    expect(mockPublishJSON).toHaveBeenCalled()
+    expect(mockDispatchWorkflowEvent).toHaveBeenCalled()
   })
 
   it('does not restock a shipped order from a refund webhook', async () => {
@@ -402,7 +402,7 @@ describe('reconcileRefundWebhook', () => {
     })
 
     await expect(reconcileRefundWebhook(webhook)).resolves.toBeNull()
-    expect(mockPublishJSON).not.toHaveBeenCalled()
+    expect(mockDispatchWorkflowEvent).not.toHaveBeenCalled()
   })
 
   it('ignores a delivery for an unknown payment', async () => {
@@ -438,7 +438,7 @@ describe('reconcileRefundWebhook', () => {
     ).rejects.toThrow('Invalid refund amount in webhook payload')
   })
 
-  it('falls back to sending the email inline when QStash is unavailable', async () => {
+  it('falls back to sending the email inline when Inngest is unavailable', async () => {
     queueTransaction({
       select: [
         [paidOrder],
@@ -448,7 +448,12 @@ describe('reconcileRefundWebhook', () => {
       ],
       update: [[], [], [{ id: 'order1' }], []],
     })
-    mockPublishJSON.mockRejectedValueOnce(new Error('QStash down'))
+    mockDispatchWorkflowEvent.mockImplementationOnce(
+      async ({ fallback }: { fallback?: () => Promise<void> }) => {
+        await fallback?.()
+        return 'fallback'
+      }
+    )
 
     await reconcileRefundWebhook(webhook)
 

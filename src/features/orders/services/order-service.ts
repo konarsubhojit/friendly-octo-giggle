@@ -15,7 +15,6 @@ export {
   persistOrder,
   invalidateOrderRelatedCaches,
   dispatchOrderNotifications,
-  type OrderNotificationPublisher,
   type OrderCacheInvalidator,
 } from './create-order-service'
 
