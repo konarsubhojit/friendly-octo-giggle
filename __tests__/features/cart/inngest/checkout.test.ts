@@ -50,13 +50,18 @@ const CHECKOUT_REQUEST_ID = 'cr12345'
  */
 const createStepRunner = () => {
   const ids: string[] = []
+  const scores: { name: string; value: number | boolean }[] = []
   const step: CheckoutStepRunner = {
     run: async (id, handler) => {
       ids.push(id)
       return handler()
     },
+    score: async (id, score) => {
+      ids.push(id)
+      scores.push(score)
+    },
   }
-  return { step, ids }
+  return { step, ids, scores }
 }
 
 describe('processCheckoutRequestFunction', () => {
@@ -92,9 +97,15 @@ describe('processCheckoutRequestFunction', () => {
     })
 
     expect(ids).toEqual([
+      'mark-start',
       'preflight-checkout-request',
       'claim-checkout-request',
       'create-order',
+      'score-outcome',
+      'score-stock-conflict',
+      'score-payment-first-attempt',
+      'score-latency',
+      'score-slo',
     ])
     expect(result).toEqual({
       checkoutRequestId: CHECKOUT_REQUEST_ID,
@@ -115,6 +126,7 @@ describe('processCheckoutRequestFunction', () => {
         checkpoints.push(value)
         return value
       },
+      score: async () => {},
     }
 
     await runCheckoutRequestSteps({
@@ -122,7 +134,7 @@ describe('processCheckoutRequestFunction', () => {
       step,
     })
 
-    expect(checkpoints[0]).toEqual({ action: 'process' })
+    expect(checkpoints[1]).toEqual({ action: 'process' })
   })
 
   it('stops without claiming when preflight says the request is settled', async () => {
@@ -142,7 +154,11 @@ describe('processCheckoutRequestFunction', () => {
       outcome: 'skipped',
       reason: 'order_exists',
     })
-    expect(ids).toEqual(['preflight-checkout-request'])
+    expect(ids).toEqual([
+      'mark-start',
+      'preflight-checkout-request',
+      'score-outcome',
+    ])
     expect(mockClaimCheckoutRequest).not.toHaveBeenCalled()
   })
 

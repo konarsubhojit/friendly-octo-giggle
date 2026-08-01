@@ -457,13 +457,19 @@ export async function proxy(request: NextRequest) {
   }
 
   // ── Maintenance mode (Edge Config) ────────────────────
-  // Skip for admin paths, API health, cron, and auth routes so operators
-  // can still access the system during maintenance.
+  // Skip for admin paths, API health, the Inngest serve endpoint, and auth
+  // routes so operators can still access the system during maintenance.
+  //
+  // `/api/inngest` is exempt because it is how the durable orchestrator
+  // invokes every background function. Returning 503 there would not pause
+  // the work — Inngest would retry each run until its attempts were exhausted
+  // and then fail it, so a maintenance window would silently destroy queued
+  // emails and order side-effects rather than defer them.
   const isExemptFromMaintenance =
     pathname.startsWith(ADMIN_PATH_PREFIX) ||
     pathname.startsWith(ADMIN_API_PREFIX) ||
     pathname.startsWith('/api/health') ||
-    pathname.startsWith('/api/cron') ||
+    pathname.startsWith('/api/inngest') ||
     pathname.startsWith('/api/auth') ||
     pathname.startsWith('/auth')
 

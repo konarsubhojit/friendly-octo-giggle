@@ -39,7 +39,9 @@ import {
   requiresPaymentSignature,
 } from '@/lib/payments/providers'
 import { toShippingMethod } from '@/lib/shipping'
-import { inngest, isInngestConfigured } from '@/lib/inngest/client'
+import { isInngestConfigured } from '@/lib/inngest/client'
+import { publishWithTimeout } from '@/lib/inngest/dispatch'
+import { checkoutSession } from '@/lib/inngest/sessions'
 import { checkoutRequestCreated } from '@/features/cart/inngest/events'
 import type { CheckoutPaymentInput } from '@/lib/types'
 
@@ -290,53 +292,28 @@ export const recoverCheckoutRequestAfterRetryExhaustion = async ({
 }
 
 /**
- * Wall-clock budget for publishing the checkout event.
+ * Publish the checkout event, giving up on the wait after a fixed budget.
  *
  * This runs inside the request the customer is waiting on, and the Inngest SDK
  * retries a failed publish up to five times with no timeout of its own. Left
  * unbounded, a degraded Inngest API would hold the route open until the
  * platform kills it at `maxDuration`, so neither the queue fallback below nor
- * the caller's inline fallback would ever run and the request would be stranded
- * in `PENDING` with no orchestrator.
- */
-const INNGEST_PUBLISH_TIMEOUT_MS = 5_000
-
-class InngestPublishTimeoutError extends Error {
-  constructor(timeoutMs: number) {
-    super(`Inngest publish did not complete within ${timeoutMs}ms`)
-    this.name = 'InngestPublishTimeoutError'
-  }
-}
-
-/**
- * Publish the checkout event, giving up on the wait after a fixed budget.
+ * the caller's inline fallback would ever run and the request would be
+ * stranded in `PENDING` with no orchestrator. `publishWithTimeout` owns that
+ * budget for every producer in the app.
  *
- * A publish that lands after the timeout is harmless: the resulting run shares
- * the same compare-and-swap claim as the queue delivery, so at most one of them
- * creates an order. `Promise.race` subscribes to the publish promise, so a late
- * rejection is already handled and cannot surface as an unhandled rejection.
+ * The session key is attached here rather than in the function, because it has
+ * to be on the *first* event for the whole downstream fan-out — confirmation
+ * email, search index, cache invalidation — to appear under one
+ * `checkout_request_id` in the dashboard.
  */
-const publishCheckoutEvent = async (
-  checkoutRequestId: string
-): Promise<void> => {
-  const publish = inngest
-    .send(checkoutRequestCreated.create({ checkoutRequestId }))
-    .then(() => undefined)
-
-  let timer: ReturnType<typeof setTimeout> | undefined
-  const timeout = new Promise<never>((_resolve, reject) => {
-    timer = setTimeout(
-      () => reject(new InngestPublishTimeoutError(INNGEST_PUBLISH_TIMEOUT_MS)),
-      INNGEST_PUBLISH_TIMEOUT_MS
+const publishCheckoutEvent = (checkoutRequestId: string): Promise<void> =>
+  publishWithTimeout(
+    checkoutRequestCreated.create(
+      { checkoutRequestId },
+      { meta: { sessions: checkoutSession(checkoutRequestId) } }
     )
-  })
-
-  try {
-    await Promise.race([publish, timeout])
-  } finally {
-    clearTimeout(timer)
-  }
-}
+  )
 
 /**
  * Hand a checkout request to its durable orchestrator.

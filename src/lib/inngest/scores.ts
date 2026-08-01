@@ -34,6 +34,8 @@ export const SCORE_NAMES = {
   abandonedCartRecovered: 'abandoned-cart-recovered',
   /** Tool use — did the upstream FX provider answer on the first attempt? */
   exchangeRatesRefreshed: 'exchange-rates-refreshed',
+  /** Tool use — did the payment gateway settle without needing a retry? */
+  paymentVerifiedFirstAttempt: 'payment-verified-first-attempt',
   /** Quality — did the order reach the Redis search mirror? */
   orderIndexed: 'order-indexed',
 } as const
