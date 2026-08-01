@@ -36,19 +36,20 @@ export class InngestPublishTimeoutError extends Error {
 }
 
 /**
- * Publish, giving up on the *wait* after a fixed budget.
+ * Wait for an Inngest API call, giving up on the *wait* after a fixed budget.
  *
- * A publish that lands after the timeout is not cancelled and is harmless:
- * every consumer is idempotent, so the late event either does nothing or does
- * the same thing the fallback already did. `Promise.race` subscribes to the
- * publish promise first, so a late rejection is already handled and cannot
- * surface as an unhandled rejection.
+ * A call that lands after the timeout is not cancelled and is harmless: every
+ * consumer is idempotent, so the late event either does nothing or does the
+ * same thing the fallback already did. The passed promise is handled before
+ * the race, so a late rejection cannot surface as an unhandled rejection.
+ *
+ * Shared with the Realtime publisher so every producer answers to one budget.
  */
-export const publishWithTimeout = async (
-  payload: WorkflowEventPayload,
+export const raceWithTimeout = async (
+  operation: Promise<unknown>,
   timeoutMs: number = INNGEST_PUBLISH_TIMEOUT_MS
 ): Promise<void> => {
-  const publish = inngest.send(payload).then(() => undefined)
+  const settled = operation.then(() => undefined)
 
   let timer: ReturnType<typeof setTimeout> | undefined
   const timeout = new Promise<never>((_resolve, reject) => {
@@ -59,11 +60,19 @@ export const publishWithTimeout = async (
   })
 
   try {
-    await Promise.race([publish, timeout])
+    await Promise.race([settled, timeout])
   } finally {
     clearTimeout(timer)
   }
 }
+
+/**
+ * Publish, giving up on the *wait* after a fixed budget.
+ */
+export const publishWithTimeout = (
+  payload: WorkflowEventPayload,
+  timeoutMs: number = INNGEST_PUBLISH_TIMEOUT_MS
+): Promise<void> => raceWithTimeout(inngest.send(payload), timeoutMs)
 
 export interface WorkflowDispatchOptions {
   /** Created event payload, built with the event type's `create()`. */

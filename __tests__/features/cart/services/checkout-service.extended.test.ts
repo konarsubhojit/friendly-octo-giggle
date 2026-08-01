@@ -25,6 +25,7 @@ const m = vi.hoisted(() => ({
   createOrderForUser: vi.fn(),
   ensurePaymentProviderConfigured: vi.fn(),
   waitUntil: vi.fn(),
+  publishCheckoutStatus: vi.fn(),
 }))
 
 vi.mock('@/lib/db', () => ({
@@ -50,6 +51,10 @@ vi.mock('@/lib/logger', () => ({
 vi.mock('@/lib/inngest/client', () => ({
   inngest: { send: m.inngestSend },
   isInngestConfigured: m.isInngestConfigured,
+}))
+
+vi.mock('@/lib/inngest/realtime', () => ({
+  publishCheckoutStatus: m.publishCheckoutStatus,
 }))
 
 class OrderRequestError extends Error {
@@ -136,6 +141,55 @@ beforeEach(() => {
   m.claimForProcessing.mockResolvedValue(true)
   m.findFirstByCheckoutRequestId.mockResolvedValue(null)
   m.createOrderForUser.mockResolvedValue({ order: { id: 'ord1' } })
+  m.publishCheckoutStatus.mockResolvedValue(true)
+})
+
+describe('checkout settlement announcements', () => {
+  it('announces a completion with the order the customer is waiting for', async () => {
+    m.findById.mockResolvedValue({ ...checkoutRow, userId: 'user1' })
+    m.findFirstByCheckoutRequestId.mockResolvedValue({ id: 'ord1' })
+
+    await getCheckoutRequestStatusForUser({
+      checkoutRequestId: 'cr2xy89',
+      userId: 'user1',
+    })
+
+    expect(m.publishCheckoutStatus).toHaveBeenCalledWith({
+      checkoutRequestId: 'cr2xy89',
+      status: 'COMPLETED',
+      orderId: 'ord1',
+      error: null,
+    })
+  })
+
+  it('announces a failure with its reason', async () => {
+    m.findById.mockResolvedValue(checkoutRow)
+    m.createOrderForUser.mockRejectedValue(
+      new OrderRequestError('Out of stock', 400)
+    )
+
+    await processCheckoutRequestById('cr2xy89')
+
+    expect(m.publishCheckoutStatus).toHaveBeenCalledWith({
+      checkoutRequestId: 'cr2xy89',
+      status: 'FAILED',
+      orderId: null,
+      error: 'Out of stock',
+    })
+  })
+
+  it('announces the order created by a durable run', async () => {
+    m.findById.mockResolvedValue(checkoutRow)
+
+    await processCheckoutRequestById('cr2xy89')
+
+    expect(m.publishCheckoutStatus).toHaveBeenCalledWith({
+      checkoutRequestId: 'cr2xy89',
+      status: 'COMPLETED',
+      orderId: 'ord1',
+      error: null,
+    })
+  })
 })
 
 describe('enqueueCheckoutForUser (extended)', () => {

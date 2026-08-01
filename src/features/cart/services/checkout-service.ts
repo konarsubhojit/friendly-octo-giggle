@@ -40,6 +40,7 @@ import {
 import { toShippingMethod } from '@/lib/shipping'
 import { isInngestConfigured } from '@/lib/inngest/client'
 import { publishWithTimeout } from '@/lib/inngest/dispatch'
+import { publishCheckoutStatus } from '@/lib/inngest/realtime'
 import { checkoutSession } from '@/lib/inngest/sessions'
 import { checkoutRequestCreated } from '@/features/cart/inngest/events'
 import type { CheckoutPaymentInput } from '@/lib/types'
@@ -184,16 +185,37 @@ const buildRetryExhaustedMessage = (
   return `Automatic recovery stopped after ${deliveryCount} attempts: ${reason}`
 }
 
+/**
+ * Write a checkout request's status and announce it when it is terminal.
+ *
+ * Every settlement in this service goes through here — the durable run, the
+ * inline fallback, the payment webhook, the retry-exhaustion handler and the
+ * status self-heal — so putting the Realtime announcement at this single seam
+ * is what lets the payment page wait on a push instead of polling, whichever
+ * path actually settles the request.
+ *
+ * The announcement is best-effort and cannot fail the write: the status row
+ * stays the source of truth and `GET /api/checkout/{id}/stream` re-reads it on
+ * a timer, so a lost message costs the customer a few seconds, never an order.
+ */
 const updateCheckoutRequestStatus = async (
   checkoutRequestId: string,
   status: CheckoutRequestStatus,
-  errorMessage: string | null
+  errorMessage: string | null,
+  orderId: string | null = null
 ) => {
   await db.checkoutRequests.updateStatus(
     checkoutRequestId,
     status,
     errorMessage
   )
+
+  await publishCheckoutStatus({
+    checkoutRequestId,
+    status,
+    orderId,
+    error: status === 'FAILED' ? errorMessage : null,
+  })
 }
 
 const findCheckoutRequestById = (checkoutRequestId: string) =>
@@ -262,7 +284,12 @@ export const recoverCheckoutRequestAfterRetryExhaustion = async ({
   const existingOrder = await findCreatedOrderForCheckout(checkoutRequestId)
 
   if (existingOrder) {
-    await updateCheckoutRequestStatus(checkoutRequestId, 'COMPLETED', null)
+    await updateCheckoutRequestStatus(
+      checkoutRequestId,
+      'COMPLETED',
+      null,
+      existingOrder.id
+    )
     return
   }
 
@@ -454,7 +481,12 @@ export const getCheckoutRequestStatusForUser = async ({
   const existingOrder = await findCreatedOrderForCheckout(checkoutRequestId)
 
   if (existingOrder && checkoutRequest.status !== 'COMPLETED') {
-    await updateCheckoutRequestStatus(checkoutRequestId, 'COMPLETED', null)
+    await updateCheckoutRequestStatus(
+      checkoutRequestId,
+      'COMPLETED',
+      null,
+      existingOrder.id
+    )
   }
 
   return buildCheckoutStatusResponse(
@@ -535,7 +567,12 @@ export const resolveCheckoutSettlement = async (
   const existingOrder = await findCreatedOrderForCheckout(checkoutRequestId)
   if (existingOrder) {
     if (checkoutRequest.status !== 'COMPLETED') {
-      await updateCheckoutRequestStatus(checkoutRequestId, 'COMPLETED', null)
+      await updateCheckoutRequestStatus(
+        checkoutRequestId,
+        'COMPLETED',
+        null,
+        existingOrder.id
+      )
     }
     return { settled: true, reason: 'order_exists' }
   }
@@ -613,7 +650,12 @@ const settleWithExistingOrder = async (
   const existingOrder = await findCreatedOrderForCheckout(checkoutRequestId)
   if (!existingOrder) return null
 
-  await updateCheckoutRequestStatus(checkoutRequestId, 'COMPLETED', null)
+  await updateCheckoutRequestStatus(
+    checkoutRequestId,
+    'COMPLETED',
+    null,
+    existingOrder.id
+  )
   return existingOrder.id
 }
 
@@ -704,7 +746,12 @@ const runCheckoutOrderCreation = async (
     throw error
   }
 
-  await updateCheckoutRequestStatus(checkoutRequestId, 'COMPLETED', null)
+  await updateCheckoutRequestStatus(
+    checkoutRequestId,
+    'COMPLETED',
+    null,
+    result.order.id
+  )
 
   logBusinessEvent({
     event: 'checkout_request_completed',
