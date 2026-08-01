@@ -1,5 +1,4 @@
 import { z } from 'zod'
-import { revalidateTag } from 'next/cache'
 import { ProductInputSchema } from '@/features/product/validations'
 import { parseCsv } from '@/features/admin/services/admin-csv'
 import { checkAdminAuth } from '@/features/admin/services/admin-auth'
@@ -120,7 +119,6 @@ export const POST = async (request: Request) => {
     })
 
     await invalidateProductCaches()
-    revalidateTag('products', 'max')
 
     return apiSuccess({
       ...report,

@@ -8,7 +8,6 @@ const mockUpdateSet = vi.hoisted(() =>
 const mockUpdate = vi.hoisted(() => vi.fn(() => ({ set: mockUpdateSet })))
 const mockInvalidateProductCaches = vi.hoisted(() => vi.fn())
 const mockRecordAdminAuditLog = vi.hoisted(() => vi.fn())
-const mockRevalidateTag = vi.hoisted(() => vi.fn())
 
 vi.mock('@/features/admin/services/admin-auth', () => ({
   checkAdminAuth: mockCheckAdminAuth,
@@ -39,10 +38,6 @@ vi.mock('@/lib/cache', () => ({
 
 vi.mock('@/features/admin/services/admin-audit-log', () => ({
   recordAdminAuditLog: mockRecordAdminAuditLog,
-}))
-
-vi.mock('next/cache', () => ({
-  revalidateTag: mockRevalidateTag,
 }))
 
 vi.mock('drizzle-orm', async () => {
@@ -108,6 +103,5 @@ describe('POST /api/admin/products/bulk', () => {
     expect(response.status).toBe(200)
     expect(mockInvalidateProductCaches).toHaveBeenCalledWith(['p1', 'p2'])
     expect(mockRecordAdminAuditLog).toHaveBeenCalled()
-    expect(mockRevalidateTag).toHaveBeenCalledWith('products', 'max')
   })
 })

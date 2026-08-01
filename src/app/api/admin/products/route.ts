@@ -10,7 +10,6 @@ import {
   parseOffsetParam,
   parseJsonBody,
 } from '@/lib/api-utils'
-import { revalidateTag } from 'next/cache'
 import { invalidateProductCaches, cacheAdminProductsList } from '@/lib/cache'
 import { indexProduct, searchProductIds } from '@/lib/search'
 import { checkAdminAuth } from '@/features/admin/services/admin-auth'
@@ -180,7 +179,6 @@ export const POST = async (request: NextRequest) => {
 
     const product = await db.products.create(validated)
 
-    revalidateTag('products', {})
 
     await invalidateProductCaches()
 

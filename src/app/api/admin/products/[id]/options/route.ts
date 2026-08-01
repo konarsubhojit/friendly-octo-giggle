@@ -11,7 +11,6 @@ import {
 } from '@/lib/api-utils'
 import { checkAdminAuth } from '@/features/admin/services/admin-auth'
 import { invalidateProductCaches } from '@/lib/cache'
-import { revalidateTag } from 'next/cache'
 
 const MAX_OPTIONS_PER_PRODUCT = 5
 
@@ -163,7 +162,6 @@ export async function POST(
       return apiError('Failed to create option', 500)
     }
 
-    revalidateTag('products', {})
     await invalidateProductCaches(id)
 
     const serialized = {

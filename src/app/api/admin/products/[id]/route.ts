@@ -8,7 +8,6 @@ import {
   parseJsonBody,
 } from '@/lib/api-utils'
 import { checkAdminAuth } from '@/features/admin/services/admin-auth'
-import { revalidateTag } from 'next/cache'
 import { invalidateProductCaches } from '@/lib/cache'
 import { indexProduct, removeProduct } from '@/lib/search'
 
@@ -31,7 +30,6 @@ export async function PUT(
       return apiError('Product not found', 404)
     }
 
-    revalidateTag('products', {})
 
     await invalidateProductCaches(id)
 
@@ -61,7 +59,6 @@ export async function DELETE(
       return apiError('Product not found', 404)
     }
 
-    revalidateTag('products', {})
 
     await invalidateProductCaches(id)
 

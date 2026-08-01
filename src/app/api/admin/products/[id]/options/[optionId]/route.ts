@@ -6,7 +6,6 @@ import { z } from 'zod'
 import { apiSuccess, apiError, handleApiError } from '@/lib/api-utils'
 import { checkAdminAuth } from '@/features/admin/services/admin-auth'
 import { invalidateProductCaches } from '@/lib/cache'
-import { revalidateTag } from 'next/cache'
 
 const RouteParamsSchema = z.object({
   id: z.string().min(1, 'Product ID is required'),
@@ -42,7 +41,6 @@ export async function DELETE(
       .delete(productOptions)
       .where(eq(productOptions.id, optionId))
 
-    revalidateTag('products', {})
     await invalidateProductCaches(id)
 
     return apiSuccess({ deleted: true })

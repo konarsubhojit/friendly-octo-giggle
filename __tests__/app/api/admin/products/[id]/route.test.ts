@@ -19,18 +19,15 @@ vi.mock('@/features/admin/services/admin-auth', () => ({
   checkAdminAuth: vi.fn(),
 }))
 vi.mock('@/lib/logger', () => ({ logError: vi.fn() }))
-vi.mock('next/cache', () => ({ revalidateTag: vi.fn() }))
 vi.mock('@/lib/cache', () => ({ invalidateProductCaches: vi.fn() }))
 
 import { db } from '@/lib/db'
-import { revalidateTag } from 'next/cache'
 import { invalidateProductCaches } from '@/lib/cache'
 import { checkAdminAuth } from '@/features/admin/services/admin-auth'
 
 const mockCheckAdminAuth = vi.mocked(checkAdminAuth)
 const mockProductsUpdate = vi.mocked(db.products.update)
 const mockProductsDelete = vi.mocked(db.products.delete)
-const mockRevalidateTag = vi.mocked(revalidateTag)
 const mockInvalidateProductCaches = vi.mocked(invalidateProductCaches)
 
 describe('PUT /api/admin/products/[id]', () => {
@@ -141,7 +138,6 @@ describe('PUT /api/admin/products/[id]', () => {
       name: 'Updated Product',
       images: [],
     })
-    expect(mockRevalidateTag).toHaveBeenCalledWith('products', {})
     expect(mockInvalidateProductCaches).toHaveBeenCalledWith('p1')
   })
 
@@ -255,7 +251,6 @@ describe('DELETE /api/admin/products/[id]', () => {
     expect(json.data.message).toBe('Product deleted')
     expect(json.data.id).toBe('p1')
     expect(mockProductsDelete).toHaveBeenCalledWith('p1')
-    expect(mockRevalidateTag).toHaveBeenCalledWith('products', {})
     expect(mockInvalidateProductCaches).toHaveBeenCalledWith('p1')
   })
 })

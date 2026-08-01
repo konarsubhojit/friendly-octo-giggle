@@ -34,7 +34,13 @@ vi.mock('drizzle-orm', () => ({
 }))
 vi.mock('@/lib/logger', () => ({ logError: vi.fn() }))
 
+vi.mock('@/lib/cache-tags', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/cache-tags')>()),
+  revalidateCacheTags: vi.fn(),
+}))
+
 import { PATCH } from '@/app/api/admin/categories/reorder/route'
+import { categoriesTag, revalidateCacheTags } from '@/lib/cache-tags'
 
 function makeRequest(body: unknown) {
   return new Request('http://localhost/api/admin/categories/reorder', {
@@ -121,6 +127,22 @@ describe('PATCH /api/admin/categories/reorder', () => {
       expect.objectContaining({ sortOrder: 1, updatedAt: expect.any(Date) })
     )
     expect(mockWhere).toHaveBeenCalledTimes(2)
+    expect(revalidateCacheTags).toHaveBeenCalledWith(
+      [categoriesTag()],
+      'admin_category_reorder'
+    )
+  })
+
+  it('does not revalidate the categories tag when the transaction fails', async () => {
+    mockAuth.mockResolvedValue({ user: { role: 'ADMIN' } })
+    mockTransaction.mockRejectedValueOnce(new Error('tx failed'))
+
+    const response = await PATCH(
+      makeRequest({ items: [{ id: 'c1', sortOrder: 0 }] })
+    )
+
+    expect(response.status).toBe(500)
+    expect(revalidateCacheTags).not.toHaveBeenCalled()
   })
 
   it('returns 500 when the transaction throws', async () => {

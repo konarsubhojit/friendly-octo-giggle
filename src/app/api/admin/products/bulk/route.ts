@@ -1,6 +1,5 @@
 import { z } from 'zod'
 import { and, inArray, isNull, sql } from 'drizzle-orm'
-import { revalidateTag } from 'next/cache'
 import { drizzleDb } from '@/lib/db'
 import { products, productVariants } from '@/lib/schema'
 import { checkAdminAuth } from '@/features/admin/services/admin-auth'
@@ -152,7 +151,6 @@ export const POST = async (request: Request) => {
     })
 
     await invalidateProductCaches(payload.productIds)
-    revalidateTag('products', 'max')
 
     return apiSuccess({
       operation: payload.operation,

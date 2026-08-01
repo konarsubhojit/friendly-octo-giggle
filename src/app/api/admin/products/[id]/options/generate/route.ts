@@ -17,7 +17,6 @@ import {
 } from '@/lib/api-utils'
 import { checkAdminAuth } from '@/features/admin/services/admin-auth'
 import { invalidateProductCaches } from '@/lib/cache'
-import { revalidateTag } from 'next/cache'
 
 const GenerateOptionsSchema = z.object({
   optionNames: z
@@ -191,7 +190,6 @@ export async function POST(
       })
     })
 
-    revalidateTag('products', {})
     await invalidateProductCaches(id)
 
     const serialized = result.map((opt) => ({

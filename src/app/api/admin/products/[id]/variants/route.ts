@@ -15,7 +15,6 @@ import {
 } from '@/lib/api-utils'
 import { checkAdminAuth } from '@/features/admin/services/admin-auth'
 import { invalidateProductCaches } from '@/lib/cache'
-import { revalidateTag } from 'next/cache'
 import { serializeVariant } from '@/lib/serializers'
 
 const MAX_VARIANTS_PER_PRODUCT = 25
@@ -118,7 +117,6 @@ export async function POST(
       )
     }
 
-    revalidateTag('products', {})
     await invalidateProductCaches(id)
 
     return apiSuccess({ variant: serializeVariant(variant) }, 201)
