@@ -362,6 +362,39 @@ Two invariants keep a killed worker from stranding a request:
 Duplicate orders are impossible regardless: `Order.checkoutRequestId` and
 `Order.paymentTransactionId` are both unique.
 
+### Checkout Settlement Push
+
+The payment page does not ask whether the order exists yet; it is told.
+
+Every settlement in `checkout-service.ts` goes through one status writer, which
+announces terminal statuses on a per-request Inngest Realtime channel
+(`checkout:{id}`). Whichever path settles the request — the durable run, the
+inline `waitUntil` fallback, the payment webhook, the retry-exhaustion handler
+or the status self-heal — the announcement happens at that single seam.
+
+`GET /api/checkout/{id}/stream` bridges the channel to the browser as
+Server-Sent Events, which keeps the Inngest SDK server-side: the browser needs
+no subscription token and ships no extra client bundle. The route authorizes the
+request once (the status read doubles as the ownership check, so another
+customer's request is a 404 before any subscription opens), emits the current
+status immediately, then holds the connection for a window shorter than the
+platform's request ceiling so it can close cleanly and let the browser reopen.
+
+Realtime is an accelerator, not the contract:
+
+- The `CheckoutRequest` row stays the source of truth. The bridge re-reads it on
+  a timer behind the subscription — slowly when Realtime is connected, briskly
+  when it is not — so a dropped message, or an environment with no Inngest keys
+  at all, still settles the wait.
+- The announcement is best-effort and bounded by the same publish budget as
+  event dispatch. It runs after the status write, and cannot fail it.
+- The browser (`features/cart/services/checkout-stream.ts`) reconnects on a
+  stream that ends without a settlement and gives up only at its own deadline.
+
+The customer-visible win is latency: settlement arrives when the order exists
+rather than at the next poll tick. The systemic win is that the wait no longer
+spends rate-limit budget per tick on a bucket shared with the rest of the API.
+
 ### Async Email Delivery
 
 Email dispatch is event-driven.

@@ -36,8 +36,10 @@ export const inngest = new Inngest({
 /**
  * Whether Inngest is wired up for this environment.
  *
- * Used to pick the checkout orchestrator: with a key present, checkout work is
- * published as an Inngest event; without one it keeps using the Vercel Queue.
+ * Gates both halves of the background runtime: with a key present, checkout
+ * work is published as an Inngest event and settlements are announced over
+ * Realtime; without one, checkout falls back to inline processing and the
+ * checkout stream falls back to its own status re-reads.
  */
 export const isInngestConfigured = (): boolean =>
   Boolean(env.INNGEST_EVENT_KEY?.trim())

@@ -142,6 +142,17 @@ INNGEST_SIGNING_KEY=...
   processes the request inline via `waitUntil` as a last-resort safety net. That
   path has no durability or retries, so treat an unset key as an outage, not a
   supported configuration.
+- Inngest Realtime carries the checkout settlement push consumed by
+  `GET /api/checkout/{id}/stream`. It needs no extra keys or middleware, and the
+  SDK stays server-side — the browser only ever speaks Server-Sent Events. With
+  no event key the stream still settles the customer's wait from its own status
+  re-reads, just less promptly.
+- The stream route declares `maxDuration = 60` and closes each connection
+  shortly before that, so the browser reconnects on a clean end rather than a
+  platform kill. It holds no checkout claim, so it is exempt from the
+  `maxDuration = 30` rule above. Any proxy in front of the app must not buffer
+  `text/event-stream` responses, or the push arrives no sooner than a poll would
+  have.
 
 Email provider environment variables remain separate:
 

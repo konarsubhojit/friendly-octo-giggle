@@ -56,9 +56,9 @@ export interface ScoringStep {
 /**
  * Customer-visible checkout budget.
  *
- * The payment page polls until the order exists, so this is the threshold that
- * decides whether that wait feels instant. Scoring against it answers "can the
- * poll be replaced with a push yet?" with data instead of intuition.
+ * The payment page waits — now on a push — until the order exists, so this is
+ * the threshold that decides whether that wait feels instant. Scoring against
+ * it keeps the settlement latency the customer actually sees on the record.
  */
 export const CHECKOUT_SLO_MS = 10_000
 

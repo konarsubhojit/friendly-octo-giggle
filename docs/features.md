@@ -15,7 +15,7 @@
 - Signed guest cart cookie, authenticated cart persistence, guest-to-account merge, stock-aware quantity controls, variant labels, and customization notes.
 - Address capture and Indian pincode lookup, shipping pricing, order-policy acknowledgment, and recoverable validation/errors.
 - Staged shipping, payment, review, and confirmation pages.
-- Idempotent checkout requests persisted before Inngest processing, with status polling and duplicate-order protection.
+- Idempotent checkout requests persisted before Inngest processing, with a pushed completion status (Realtime → SSE) and duplicate-order protection.
 - Pluggable payment gateways behind a single `PaymentGateway` interface: Razorpay (online capture with signed verification and webhook reconciliation) and Cash on Delivery (order stays `PENDING` and settles to `PAID` when delivery is confirmed).
 - Authenticated order history, hybrid order search, compact item summaries, detail/status tracking, and transactional emails.
 
