@@ -1,11 +1,9 @@
 import { CouponConflictError, db, StockConflictError } from '@/lib/db'
 import { formatStructuredAddress } from '@/lib/address-utils'
-import { invalidateCache } from '@/lib/redis'
-import { invalidateUserOrderCaches } from '@/lib/cache'
+import { invalidateOrderCaches } from '@/features/orders/services/order-cache'
 import { CreateOrderInput, OrderItemInput } from '@/lib/types'
 import {
   logBusinessEvent,
-  logError,
   logPerformance,
   ORDER_CREATE_OPERATION,
 } from '@/lib/logger'
@@ -21,9 +19,9 @@ import {
   type ShippingMethodName,
 } from '@/lib/shipping'
 import { notifyOrderConfirmation } from '@/lib/notifications/order-notifications'
-import type { OrderCreatedEvent } from '@/lib/qstash-events'
-import { getQStashClient } from '@/lib/qstash'
-import { env } from '@/lib/env'
+import { orderCreated } from '@/features/orders/inngest/events'
+import { dispatchWorkflowEvent } from '@/lib/inngest/dispatch'
+import { checkoutSession, orderSession, mergeSessions } from '@/lib/inngest/sessions'
 import { waitUntil } from '@vercel/functions'
 import { writeOrderToRedis } from '@/features/orders/actions/orders'
 import {
@@ -116,13 +114,6 @@ interface HydratedOrder {
   createdAt: Date
   updatedAt: Date
   items: HydratedOrderItem[]
-}
-
-export interface OrderNotificationPublisher {
-  publishOrderCreated: (input: {
-    url: string
-    event: OrderCreatedEvent
-  }) => Promise<{ messageId?: string }>
 }
 
 export interface OrderCacheInvalidator {
@@ -366,25 +357,8 @@ const buildOrderItemValues = (
   })
 }
 
-const getDefaultNotificationPublisher = (): OrderNotificationPublisher => ({
-  publishOrderCreated: async ({ url, event }) =>
-    getQStashClient().publishJSON({
-      url,
-      body: event,
-    }),
-})
-
 const getDefaultOrderCacheInvalidator = (): OrderCacheInvalidator => ({
-  invalidateOrderCaches: async ({ userId, productIds }) => {
-    const uniqueProductIds = [...new Set(productIds)]
-    await Promise.all([
-      invalidateCache('admin:orders:*'),
-      invalidateUserOrderCaches(userId),
-      ...uniqueProductIds.map((productId) =>
-        invalidateCache(`product:${productId}`)
-      ),
-    ])
-  },
+  invalidateOrderCaches,
 })
 
 export const validateOrderInput = ({
@@ -514,16 +488,28 @@ export const invalidateOrderRelatedCaches = async ({
   })
 }
 
+/**
+ * Announce that the order exists.
+ *
+ * The producer states a fact and stops there: the confirmation email, the
+ * Redis search mirror and the cache invalidation are all subscribers to
+ * `order/created`, each retried independently and visible in one trace. That
+ * replaces a QStash publish whose failure path sent mail from inside this
+ * request — the largest tail-latency source on the order path.
+ *
+ * The fallback keeps the legacy in-process notification for environments where
+ * Inngest is not configured, so a missing event key degrades latency rather
+ * than losing a customer's confirmation.
+ */
 export const dispatchOrderNotifications = async ({
   hydratedOrder,
   userId,
-  publisher = getDefaultNotificationPublisher(),
+  checkoutRequestId,
 }: {
   hydratedOrder: HydratedOrder
   userId: string
-  publisher?: OrderNotificationPublisher
+  checkoutRequestId?: string | null
 }) => {
-  const workerUrl = `${env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'}/api/services/email`
   const userRecord = await db.users.findPreferences(userId)
   const currencyCode: CurrencyCode =
     userRecord?.currencyPreference &&
@@ -531,85 +517,111 @@ export const dispatchOrderNotifications = async ({
       ? userRecord.currencyPreference
       : 'INR'
 
-  const emailEvent: OrderCreatedEvent = {
-    type: 'order.created',
-    data: {
-      orderId: hydratedOrder.id,
-      customerEmail: hydratedOrder.customerEmail,
-      customerName: hydratedOrder.customerName,
-      customerAddress: hydratedOrder.customerAddress,
-      subtotalAmount: hydratedOrder.subtotalAmount,
-      shippingAmount: hydratedOrder.shippingAmount,
-      taxAmount: hydratedOrder.taxAmount,
-      shippingMethod: hydratedOrder.shippingMethod ?? undefined,
-      totalAmount: hydratedOrder.totalAmount,
-      discountAmount: hydratedOrder.discountAmount || undefined,
-      couponCode: hydratedOrder.couponCode,
-      currencyCode,
-      items: hydratedOrder.items.map((item) => ({
-        name: item.product.name,
-        quantity: item.quantity,
-        price: item.price,
-      })),
-    },
-  }
+  const items = hydratedOrder.items.map((item) => ({
+    name: item.product.name,
+    quantity: item.quantity,
+    price: item.price,
+  }))
 
-  try {
-    const publishResult = await publisher.publishOrderCreated({
-      url: workerUrl,
-      event: emailEvent,
-    })
-    logBusinessEvent({
-      event: 'order_email_queued',
-      details: {
+  const dispatchResult = await dispatchWorkflowEvent({
+    event: orderCreated.create(
+      {
         orderId: hydratedOrder.id,
-        eventType: emailEvent.type,
-        messageId: publishResult.messageId,
+        userId,
+        checkoutRequestId: checkoutRequestId ?? null,
+        customerEmail: hydratedOrder.customerEmail,
+        customerName: hydratedOrder.customerName,
+        customerAddress: hydratedOrder.customerAddress,
+        subtotalAmount: hydratedOrder.subtotalAmount,
+        shippingAmount: hydratedOrder.shippingAmount,
+        taxAmount: hydratedOrder.taxAmount,
+        shippingMethod: hydratedOrder.shippingMethod ?? undefined,
+        totalAmount: hydratedOrder.totalAmount,
+        discountAmount: hydratedOrder.discountAmount || undefined,
+        couponCode: hydratedOrder.couponCode,
+        currencyCode,
+        items,
+        productIds: [
+          ...new Set(hydratedOrder.items.map((item) => item.productId)),
+        ],
       },
-      success: true,
-    })
-  } catch (publishError) {
-    logError({
-      error: publishError,
-      context: 'qstash_publish_failed_using_fallback',
-      additionalInfo: {
-        orderId: hydratedOrder.id,
-        eventType: emailEvent.type,
-      },
-    })
-    await notifyOrderConfirmation({
-      to: hydratedOrder.customerEmail,
-      customerName: hydratedOrder.customerName,
+      {
+        meta: {
+          sessions: mergeSessions(
+            orderSession(hydratedOrder.id),
+            // Widens the checkout session to cover everything the order goes
+            // on to trigger, so a "charged but no email" report is one lookup.
+            checkoutRequestId ? checkoutSession(checkoutRequestId) : undefined
+          ),
+        },
+      }
+    ),
+    context: 'order_created_publish_failed',
+    details: { orderId: hydratedOrder.id },
+    fallback: () =>
+      dispatchOrderCreatedInline({ hydratedOrder, userId, currencyCode }),
+  })
+
+  logBusinessEvent({
+    event: 'order_created_dispatched',
+    details: {
       orderId: hydratedOrder.id,
-      subtotalAmount: formatPriceForCurrency(
-        hydratedOrder.subtotalAmount,
-        currencyCode
-      ),
-      shippingAmount: formatPriceForCurrency(
-        hydratedOrder.shippingAmount,
-        currencyCode
-      ),
-      taxAmount: formatPriceForCurrency(hydratedOrder.taxAmount, currencyCode),
-      shippingMethodLabel: hydratedOrder.shippingMethod
-        ? getShippingMethodLabel(hydratedOrder.shippingMethod)
-        : null,
-      totalAmount: formatPriceForCurrency(
-        hydratedOrder.totalAmount,
-        currencyCode
-      ),
-      discountAmount: hydratedOrder.discountAmount
-        ? formatPriceForCurrency(hydratedOrder.discountAmount, currencyCode)
-        : null,
-      couponCode: hydratedOrder.couponCode,
-      shippingAddress: hydratedOrder.customerAddress,
-      items: hydratedOrder.items.map((item) => ({
-        name: item.product.name,
-        quantity: item.quantity,
-        price: formatPriceForCurrency(item.price, currencyCode),
-        variant: null,
-      })),
-    })
-  }
+      dispatch: dispatchResult,
+    },
+    success: true,
+  })
+}
+
+/**
+ * Last-resort handling when `order/created` could not be published.
+ *
+ * Mirrors what the subscribers would have done — notify, mirror to Redis —
+ * without their durability. Deliberately fire-and-forget for the email so the
+ * customer's response is never held open by a mail provider.
+ */
+const dispatchOrderCreatedInline = async ({
+  hydratedOrder,
+  userId,
+  currencyCode,
+}: {
+  hydratedOrder: HydratedOrder
+  userId: string
+  currencyCode: CurrencyCode
+}) => {
+  waitUntil(mirrorOrderToRedis({ hydratedOrder, userId }))
+
+  await notifyOrderConfirmation({
+    to: hydratedOrder.customerEmail,
+    customerName: hydratedOrder.customerName,
+    orderId: hydratedOrder.id,
+    subtotalAmount: formatPriceForCurrency(
+      hydratedOrder.subtotalAmount,
+      currencyCode
+    ),
+    shippingAmount: formatPriceForCurrency(
+      hydratedOrder.shippingAmount,
+      currencyCode
+    ),
+    taxAmount: formatPriceForCurrency(hydratedOrder.taxAmount, currencyCode),
+    shippingMethodLabel: hydratedOrder.shippingMethod
+      ? getShippingMethodLabel(hydratedOrder.shippingMethod)
+      : null,
+    totalAmount: formatPriceForCurrency(
+      hydratedOrder.totalAmount,
+      currencyCode
+    ),
+    discountAmount: hydratedOrder.discountAmount
+      ? formatPriceForCurrency(hydratedOrder.discountAmount, currencyCode)
+      : null,
+    couponCode: hydratedOrder.couponCode,
+    shippingAddress: hydratedOrder.customerAddress,
+    items: hydratedOrder.items.map((item) => ({
+      name: item.product.name,
+      quantity: item.quantity,
+      price: formatPriceForCurrency(item.price, currencyCode),
+      variant: null,
+    })),
+  })
 }
 
 const fetchProductsForOrder = async (
@@ -698,12 +710,45 @@ const getHydratedOrderOrThrow = async (
   return fullOrder as HydratedOrder
 }
 
-const logAndQueueOrderRecord = ({
+/**
+ * Project a hydrated order into the Redis mirror shape and write it.
+ *
+ * Only used by the fallback path now — the `index-order-for-search` function
+ * owns the mirror on the happy path, where a failure is retried instead of
+ * silently desynchronising search from Postgres.
+ */
+const mirrorOrderToRedis = ({
   hydratedOrder,
   userId,
 }: {
   hydratedOrder: HydratedOrder
   userId: string
+}): Promise<void> =>
+  writeOrderToRedis({
+    id: hydratedOrder.id,
+    userId,
+    customerName: hydratedOrder.customerName,
+    customerEmail: hydratedOrder.customerEmail,
+    customerAddress: hydratedOrder.customerAddress,
+    total: hydratedOrder.totalAmount,
+    status: hydratedOrder.status,
+    items: hydratedOrder.items.map((item) => ({
+      productId: item.productId,
+      variantId: item.variantId,
+      quantity: item.quantity,
+      price: item.price,
+      customizationNote: item.customizationNote ?? null,
+    })),
+    createdAt: hydratedOrder.createdAt.toISOString(),
+    productNames: [
+      ...new Set(hydratedOrder.items.map((item) => item.product.name)),
+    ].join(', '),
+  })
+
+const logOrderCreated = ({
+  hydratedOrder,
+}: {
+  hydratedOrder: HydratedOrder
 }) => {
   logBusinessEvent({
     event: 'order_created',
@@ -715,29 +760,6 @@ const logAndQueueOrderRecord = ({
     },
     success: true,
   })
-
-  waitUntil(
-    writeOrderToRedis({
-      id: hydratedOrder.id,
-      userId,
-      customerName: hydratedOrder.customerName,
-      customerEmail: hydratedOrder.customerEmail,
-      customerAddress: hydratedOrder.customerAddress,
-      total: hydratedOrder.totalAmount,
-      status: hydratedOrder.status,
-      items: hydratedOrder.items.map((item) => ({
-        productId: item.productId,
-        variantId: item.variantId,
-        quantity: item.quantity,
-        price: item.price,
-        customizationNote: item.customizationNote ?? null,
-      })),
-      createdAt: hydratedOrder.createdAt.toISOString(),
-      productNames: [
-        ...new Set(hydratedOrder.items.map((item) => item.product.name)),
-      ].join(', '),
-    })
-  )
 }
 
 /**
@@ -865,9 +887,13 @@ const runOrderCreation = async ({
     checkoutRequestId,
   })
   const hydratedOrder = await getHydratedOrderOrThrow(order.id)
-  logAndQueueOrderRecord({ hydratedOrder, userId: user.id })
+  logOrderCreated({ hydratedOrder })
   await invalidateOrderRelatedCaches({ userId: user.id, items: body.items })
-  await dispatchOrderNotifications({ hydratedOrder, userId: user.id })
+  await dispatchOrderNotifications({
+    hydratedOrder,
+    userId: user.id,
+    checkoutRequestId,
+  })
   return serializeCreatedOrder(hydratedOrder)
 }
 

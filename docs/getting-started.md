@@ -202,13 +202,11 @@ friendly-octo-giggle/
 │   │   │   ├── cart/          # Cart APIs
 │   │   │   ├── categories/    # Public categories API
 │   │   │   ├── checkout/      # Checkout orchestration API
-│   │   │   ├── cron/          # Scheduled jobs (retry-emails, refresh-rates)
 │   │   │   ├── orders/        # Order APIs
 │   │   │   ├── products/      # Product APIs (list, detail, bestsellers)
-│   │   │   ├── queue/         # Vercel Queue consumer (checkout-orders)
 │   │   │   ├── reviews/       # Reviews API
 │   │   │   ├── search/        # Product search API
-│   │   │   ├── services/      # Service endpoints (email worker)
+│   │   │   ├── inngest/       # Inngest serve endpoint (all background functions)
 │   │   │   ├── ai/            # AI product assistant API
 │   │   │   ├── wishlist/      # Wishlist APIs
 │   │   │   ├── share/         # Short-link sharing API

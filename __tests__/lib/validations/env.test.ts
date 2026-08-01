@@ -46,7 +46,7 @@ describe('EnvSchema', () => {
     }
   })
 
-  it('requires QStash keys in production when not in build phase', () => {
+  it('requires app URL and auth secret in production when not in build phase', () => {
     vi.stubEnv('NEXT_PHASE', '')
 
     const result = EnvSchema.safeParse({
@@ -57,15 +57,12 @@ describe('EnvSchema', () => {
     expect(result.success).toBe(false)
     if (!result.success) {
       const paths = result.error.issues.map((i) => i.path[0])
-      expect(paths).toContain('QSTASH_TOKEN')
-      expect(paths).toContain('QSTASH_CURRENT_SIGNING_KEY')
-      expect(paths).toContain('QSTASH_NEXT_SIGNING_KEY')
       expect(paths).toContain('NEXT_PUBLIC_APP_URL')
       expect(paths).toContain('NEXTAUTH_SECRET')
     }
   })
 
-  it('skips QStash validation during build phase', () => {
+  it('skips production key validation during build phase', () => {
     vi.stubEnv('NEXT_PHASE', 'phase-production-build')
 
     const result = EnvSchema.safeParse({
@@ -82,9 +79,6 @@ describe('EnvSchema', () => {
     const result = EnvSchema.safeParse({
       ...baseEnv,
       NODE_ENV: 'production',
-      QSTASH_TOKEN: 'tok_test',
-      QSTASH_CURRENT_SIGNING_KEY: 'sig_current',
-      QSTASH_NEXT_SIGNING_KEY: 'sig_next',
       NEXT_PUBLIC_APP_URL: 'https://example.com',
       NEXTAUTH_SECRET: 'super-secret-value',
     })
@@ -98,9 +92,6 @@ describe('EnvSchema', () => {
     const result = EnvSchema.safeParse({
       ...baseEnv,
       NODE_ENV: 'production',
-      QSTASH_TOKEN: 'tok_test',
-      QSTASH_CURRENT_SIGNING_KEY: 'sig_current',
-      QSTASH_NEXT_SIGNING_KEY: 'sig_next',
       NEXT_PUBLIC_APP_URL: 'https://example.com',
       NEXTAUTH_SECRET: '   ', // whitespace only
     })
@@ -118,9 +109,6 @@ describe('EnvSchema', () => {
     const result = EnvSchema.safeParse({
       ...baseEnv,
       NODE_ENV: 'production',
-      QSTASH_TOKEN: 'tok_test',
-      QSTASH_CURRENT_SIGNING_KEY: 'sig_current',
-      QSTASH_NEXT_SIGNING_KEY: 'sig_next',
       NEXT_PUBLIC_APP_URL: 'https://example.com',
       // NEXTAUTH_SECRET intentionally omitted
     })

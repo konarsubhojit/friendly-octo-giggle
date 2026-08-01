@@ -2,12 +2,7 @@ import { z } from 'zod'
 import { PAYMENT_PROVIDERS } from '@/lib/payments/providers'
 
 // Keys that must be present in production (outside of the build phase).
-const QSTASH_REQUIRED_KEYS = [
-  'QSTASH_TOKEN',
-  'QSTASH_CURRENT_SIGNING_KEY',
-  'QSTASH_NEXT_SIGNING_KEY',
-  'NEXT_PUBLIC_APP_URL',
-] as const
+const PRODUCTION_REQUIRED_KEYS = ['NEXT_PUBLIC_APP_URL'] as const
 
 const AUTH_REQUIRED_KEYS = ['NEXTAUTH_SECRET'] as const
 
@@ -18,7 +13,7 @@ const validateProductionKeys = (data: EnvData, ctx: z.RefinementCtx) => {
   const isBuildPhase = process.env.NEXT_PHASE === 'phase-production-build'
   if (data.NODE_ENV !== 'production' || isBuildPhase) return
 
-  QSTASH_REQUIRED_KEYS.forEach((key) => {
+  PRODUCTION_REQUIRED_KEYS.forEach((key) => {
     if (!data[key]) {
       ctx.addIssue({
         code: 'custom',
@@ -148,9 +143,6 @@ const BaseEnvSchema = z.object({
   GOOGLE_SMTP_USER: z.string().optional(),
   GOOGLE_SMTP_APP_PASSWORD: z.string().optional(),
   GOOGLE_SMTP_FROM_EMAIL: z.string().optional(),
-  QSTASH_TOKEN: z.string().optional(),
-  QSTASH_CURRENT_SIGNING_KEY: z.string().optional(),
-  QSTASH_NEXT_SIGNING_KEY: z.string().optional(),
   INNGEST_EVENT_KEY: z.string().optional(),
   INNGEST_SIGNING_KEY: z.string().optional(),
   NEXT_PUBLIC_APP_URL: z.url().optional(),

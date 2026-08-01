@@ -8,13 +8,17 @@ import {
 import { primaryDrizzleDb } from '@/lib/db'
 import { users, verificationTokens } from '@/lib/schema'
 import { eq, or } from 'drizzle-orm'
-import { logAuthEvent, logError } from '@/lib/logger'
+import { logAuthEvent } from '@/lib/logger'
 import {
   createEmailVerificationIdentifier,
   generateEmailVerificationToken,
 } from '@/features/auth/services/email-verification'
-import { getQStashClient } from '@/lib/qstash'
+import { emailVerificationRequested } from '@/features/auth/inngest/events'
+import { createEmailVerificationEmail } from '@/features/auth/inngest/templates'
+import { dispatchWorkflowEvent } from '@/lib/inngest/dispatch'
+import { deliverEmail } from '@/lib/email'
 import { env } from '@/lib/env'
+import { randomUUID } from 'node:crypto'
 
 export async function POST(request: NextRequest) {
   try {
@@ -79,25 +83,26 @@ export async function POST(request: NextRequest) {
 
     const appBaseUrl = env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
     const verifyUrl = `${appBaseUrl}/auth/verify-email?token=${encodeURIComponent(plainToken)}&identifier=${encodeURIComponent(identifier)}`
-    try {
-      await getQStashClient().publishJSON({
-        url: `${appBaseUrl}/api/services/email-verification-email`,
-        body: {
-          type: 'auth.email_verification_requested',
-          data: {
-            to: email,
-            customerName: name,
-            verifyUrl,
-          },
-        },
-      })
-    } catch (publishError) {
-      logError({
-        error: publishError,
-        context: 'email_verification_qstash_publish_failed',
-        additionalInfo: { email, userId: newUser.id },
-      })
-    }
+
+    // One `inngest.send` instead of a QStash publish that had to come back in
+    // as a second inbound HTTP request — this is on the signup critical path.
+    await dispatchWorkflowEvent({
+      event: emailVerificationRequested.create({
+        to: email,
+        customerName: name,
+        verifyUrl,
+        // Fresh per issued token, so a duplicate publish collapses but a
+        // genuine "resend" still sends.
+        requestId: randomUUID(),
+      }),
+      context: 'email_verification_publish_failed',
+      details: { userId: newUser.id },
+      fallback: () =>
+        deliverEmail({
+          to: email,
+          ...createEmailVerificationEmail({ customerName: name, verifyUrl }),
+        }).then(() => undefined),
+    })
 
     logAuthEvent({
       event: 'register',

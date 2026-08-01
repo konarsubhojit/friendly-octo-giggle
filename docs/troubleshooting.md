@@ -618,7 +618,7 @@ Confirm the configured AI provider credentials and rate-limit storage. Guest cha
 
 ### Checkout remains pending or fails
 
-Inspect `/admin/checkout-requests`, queue lag at `/api/metrics`, and the `checkout-orders` Vercel Queue trigger. Reusing the same checkout idempotency key should resolve to the existing request rather than create a duplicate order.
+Inspect `/admin/checkout-requests`, dispatch lag at `/api/metrics`, and the `process-checkout-request` runs in the Inngest dashboard. Reusing the same checkout idempotency key should resolve to the existing request rather than create a duplicate order.
 
 ### Install banner or offline page is missing
 

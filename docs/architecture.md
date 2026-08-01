@@ -25,7 +25,7 @@ Key current-state points:
 - The application uses Neon PostgreSQL through Drizzle with a primary connection plus an optional read replica via `withReplicas`.
 - Authentication is handled by NextAuth v5 with Google OAuth, Microsoft Entra ID, and credentials-based login.
 - Sessions use JWT strategy with secure cookies, while the Drizzle adapter persists auth-related records such as users, accounts, and verification tokens.
-- Redis, Upstash Search, QStash, MailerSend, Google SMTP, and Vercel Edge Config are all optional integrations; the codebase degrades gracefully when those environment variables are absent.
+- Redis, Upstash Search, MailerSend, Google SMTP, and Vercel Edge Config are all optional integrations; the codebase degrades gracefully when those environment variables are absent.
 - Email delivery is asynchronous and event-driven, with failed-email persistence plus retry cron jobs.
 - Exchange rates are refreshed on a schedule and cached by UTC date.
 
@@ -33,7 +33,7 @@ Key current-state points:
 
 ### July 2026 capability update
 
-The runtime now also includes currency preferences, installable PWA metadata and offline fallback, a guest-accessible AI product assistant, staged checkout pages backed by durable checkout requests processed by Inngest (with a Vercel Queue consumer as fallback), advanced search suggestions/click analytics, account address management, admin import/export and bulk actions, checkout queue visibility, Prometheus metrics, and Sentry instrumentation. See [Feature Catalog](./features.md) for the user-facing inventory.
+The runtime now also includes currency preferences, installable PWA metadata and offline fallback, a guest-accessible AI product assistant, staged checkout pages backed by durable checkout requests processed by Inngest, advanced search suggestions/click analytics, account address management, admin import/export and bulk actions, checkout queue visibility, Prometheus metrics, and Sentry instrumentation. See [Feature Catalog](./features.md) for the user-facing inventory.
 
 ## 2. System Overview
 
@@ -62,7 +62,7 @@ The architecture is a serverless-first e-commerce system built around a small nu
 │  • Neon PostgreSQL via Drizzle ORM                           │
 │  • Optional Upstash Redis cache                              │
 │  • Optional Upstash Search index                             │
-│  • Optional QStash delivery for async email events           │
+│  • Inngest durable workflows for all background work         │
 │  • Optional Vercel Edge Config for feature/shipping config   │
 │  • Vercel Blob for product images                            │
 └──────────────────────────────────────────────────────────────┘
@@ -105,8 +105,7 @@ The dominant design principles in the current code are:
 | --------------------------------- | ------------------------------------------------------- |
 | Upstash Redis                     | Cache, stale-while-revalidate, lightweight shared state |
 | Upstash Search                    | Product search index with DB fallback                   |
-| Upstash QStash                    | Signed async email event delivery                       |
-| Inngest                           | Durable, step-checkpointed checkout order processing    |
+| Inngest                           | Durable, step-checkpointed background workflows         |
 | Vercel Blob                       | Hosted media storage                                    |
 | Vercel Edge Config                | Feature flags and shipping configuration                |
 | Vercel Analytics / Speed Insights | Runtime telemetry                                       |
@@ -343,19 +342,15 @@ Processing then runs as four independently repeatable steps, all exported from
 4. **Record failure** — classify the error. Client-side failures (4xx) are
    terminal; anything else resets to `PENDING` for another attempt.
 
-Two orchestrators run the same steps:
+Inngest (`/api/inngest`, triggered by `checkout/request.created`) is the sole
+orchestrator. Each step is checkpointed, so a retry resumes after the last
+completed step and never re-verifies payment.
 
-| Orchestrator                                                   | Trigger                    | Behaviour on retry                                                                                        |
-| -------------------------------------------------------------- | -------------------------- | --------------------------------------------------------------------------------------------------------- |
-| Inngest (`/api/inngest`, used when `INNGEST_EVENT_KEY` is set) | `checkout/request.created` | Each step is checkpointed, so a retry resumes after the last completed step and never re-verifies payment |
-| Vercel Queue (`/api/queue/checkout-orders`)                    | `checkout-orders` topic    | Whole pipeline re-runs; the claim and the unique constraints keep it safe                                 |
-
-`enqueueCheckoutForUser` prefers Inngest, falls back to the queue, and only as a
-last resort processes inline via `waitUntil`. The Inngest publish is given a
-bounded wall-clock budget so a degraded Inngest API hands over to the queue
+`enqueueCheckoutForUser` publishes to Inngest and, only if that publish fails or
+Inngest is unconfigured, processes inline via `waitUntil`. The publish is given a
+bounded wall-clock budget so a degraded Inngest API hands over to the inline path
 instead of holding the customer's request open until the platform kills it at
-`maxDuration`. The payment webhook is a third, independent trigger for the same
-steps.
+`maxDuration`. The payment webhook is an independent trigger for the same steps.
 
 Two invariants keep a killed worker from stranding a request:
 
@@ -367,24 +362,59 @@ Two invariants keep a killed worker from stranding a request:
 Duplicate orders are impossible regardless: `Order.checkoutRequestId` and
 `Order.paymentTransactionId` are both unique.
 
+### Checkout Settlement Push
+
+The payment page does not ask whether the order exists yet; it is told.
+
+Every settlement in `checkout-service.ts` goes through one status writer, which
+announces terminal statuses on a per-request Inngest Realtime channel
+(`checkout:{id}`). Whichever path settles the request — the durable run, the
+inline `waitUntil` fallback, the payment webhook, the retry-exhaustion handler
+or the status self-heal — the announcement happens at that single seam.
+
+`GET /api/checkout/{id}/stream` bridges the channel to the browser as
+Server-Sent Events, which keeps the Inngest SDK server-side: the browser needs
+no subscription token and ships no extra client bundle. The route authorizes the
+request once (the status read doubles as the ownership check, so another
+customer's request is a 404 before any subscription opens), emits the current
+status immediately, then holds the connection for a window shorter than the
+platform's request ceiling so it can close cleanly and let the browser reopen.
+
+Realtime is an accelerator, not the contract:
+
+- The `CheckoutRequest` row stays the source of truth. The bridge re-reads it on
+  a timer behind the subscription — slowly when Realtime is connected, briskly
+  when it is not — so a dropped message, or an environment with no Inngest keys
+  at all, still settles the wait.
+- The announcement is best-effort and bounded by the same publish budget as
+  event dispatch. It runs after the status write, and cannot fail it.
+- The browser (`features/cart/services/checkout-stream.ts`) reconnects on a
+  stream that ends without a settlement and gives up only at its own deadline.
+
+The customer-visible win is latency: settlement arrives when the order exists
+rather than at the next poll tick. The systemic win is that the wait no longer
+spends rate-limit budget per tick on a bucket shared with the rest of the API.
+
 ### Async Email Delivery
 
 Email dispatch is event-driven.
 
 The current flow is:
 
-1. Domain code emits a QStash-compatible event payload.
-2. `POST /api/services/email` receives the event.
-3. The route optionally verifies the QStash signature.
-4. It validates the payload with Zod.
-5. It prevents duplicate sends by checking `FailedEmail` for already-sent records of the same reference.
-6. It dispatches either order confirmation or order status update logic through `lib/notifications/order-notifications.ts`.
+1. Domain code publishes a typed event (`order/created`, `order/status.changed`,
+   `order/refunded`, `auth/*.requested`) through `dispatchWorkflowEvent()`.
+2. An Inngest function consumes it. Payloads are Zod-validated at the event
+   boundary via `eventType()`.
+3. Duplicate sends are prevented by the function's `idempotency` key rather than
+   a database lookup.
+4. Each function dispatches through `lib/notifications/order-notifications.ts`
+   and, on terminal failure, records the message via `onFailure`.
 
 ### Notification Fan-out and Preferences
 
 `lib/notifications/order-notifications.ts` is the single fan-out point for order
-notifications and is used by the QStash worker as well as the direct fallbacks in
-order creation and admin status updates. For every send it:
+notifications and is used by the Inngest email functions as well as the direct
+fallbacks in order creation and admin status updates. For every send it:
 
 1. Resolves the recipient from the customer email. Guests (no user row) keep the
    defaults, so receipts still reach them while marketing stays opt-in.
@@ -416,19 +446,21 @@ Non-successful sends are tracked in the `FailedEmail` table with:
 - full error history
 - timestamps for created, last attempted, and sent
 
-Retry behavior currently caps cron retries at 20 records per run and 5 attempts per record.
+Retry behavior currently caps scheduled retries at 20 records per run and 5 attempts per record.
 
 ### Scheduled Jobs
 
-Vercel cron is now part of the architecture:
+Scheduled work is declared as `cron` triggers on Inngest functions, so there is
+no separate cron endpoint to authenticate:
 
-- `/api/cron/retry-emails` every 15 minutes
-- `/api/cron/refresh-rates` every 6 hours
+- `retry-failed-emails` daily at 02:30 UTC
+- `refresh-exchange-rates` every 6 hours
+- `scan-abandoned-carts` daily at 10:00 UTC
 
-Both routes require either:
+Each scan fans out one event per item rather than looping in a single
+invocation, so a slow provider cannot stall the batch and every item retries
+independently.
 
-- `Authorization: Bearer <CRON_SECRET>` when a secret is configured, or
-- the expected `vercel-cron` user agent fallback
 
 ### Exchange Rate Refresh
 
@@ -453,7 +485,7 @@ Current security controls visible in code include:
 - `Referrer-Policy` and `Permissions-Policy` headers
 - secure auth cookies in production
 - request validation with Zod across env and API inputs
-- QStash signature verification for async email entry points
+- Inngest signature verification on the `/api/inngest` serve endpoint
 
 ### Environment Validation
 

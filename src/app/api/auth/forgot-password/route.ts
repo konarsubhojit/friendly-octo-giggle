@@ -11,9 +11,13 @@ import {
 import { apiSuccess } from '@/lib/api-utils'
 import { primaryDrizzleDb } from '@/lib/db'
 import { users, verificationTokens } from '@/lib/schema'
-import { getQStashClient } from '@/lib/qstash'
+import { passwordResetRequested } from '@/features/auth/inngest/events'
+import { createPasswordResetEmail } from '@/features/auth/inngest/templates'
+import { dispatchWorkflowEvent } from '@/lib/inngest/dispatch'
+import { deliverEmail } from '@/lib/email'
 import { logError } from '@/lib/logger'
 import { env } from '@/lib/env'
+import { randomUUID } from 'node:crypto'
 
 const SUCCESS_MESSAGE =
   'If an account exists for that email, you will receive a password reset link shortly.'
@@ -63,25 +67,23 @@ export async function POST(request: NextRequest) {
 
     const resetUrl = `${env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'}/auth/reset-password?token=${encodeURIComponent(plainToken)}&identifier=${encodeURIComponent(identifier)}`
 
-    try {
-      await getQStashClient().publishJSON({
-        url: `${env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'}/api/services/password-reset-email`,
-        body: {
-          type: 'password.reset_requested',
-          data: {
-            to: user.email,
-            customerName: user.name ?? 'there',
-            resetUrl,
-          },
-        },
-      })
-    } catch (publishError) {
-      logError({
-        error: publishError,
-        context: 'password_reset_qstash_publish_failed',
-        additionalInfo: { email: user.email, userId: user.id },
-      })
-    }
+    const customerName = user.name ?? 'there'
+
+    await dispatchWorkflowEvent({
+      event: passwordResetRequested.create({
+        to: user.email,
+        customerName,
+        resetUrl,
+        requestId: randomUUID(),
+      }),
+      context: 'password_reset_publish_failed',
+      details: { userId: user.id },
+      fallback: () =>
+        deliverEmail({
+          to: user.email,
+          ...createPasswordResetEmail({ customerName, resetUrl }),
+        }).then(() => undefined),
+    })
     return apiSuccess({ message: SUCCESS_MESSAGE })
   } catch (error) {
     logError({

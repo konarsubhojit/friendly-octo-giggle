@@ -15,12 +15,10 @@ import {
   selectCart,
   fetchCart,
 } from '@/features/cart/store/cartSlice'
-import { apiClient, ApiError } from '@/lib/api-client'
+import { apiClient } from '@/lib/api-client'
 import type { AppDispatch } from '@/lib/store'
-import type {
-  CheckoutEnqueueResponse,
-  CheckoutRequestStatusResponse,
-} from '@/lib/types'
+import type { CheckoutEnqueueResponse } from '@/lib/types'
+import { awaitCheckoutSettlement } from '@/features/cart/services/checkout-stream'
 import { useCurrency } from '@/contexts/CurrencyContext'
 import {
   buildCheckoutPricingSummaryFromLineItems,
@@ -32,16 +30,6 @@ import { Button } from '@/components/ui/Button'
 import { GradientHeading } from '@/components/ui/GradientHeading'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import Link from 'next/link'
-
-const CHECKOUT_POLL_INITIAL_INTERVAL_MS = 2_000
-const CHECKOUT_POLL_MAX_INTERVAL_MS = 15_000
-const CHECKOUT_POLL_BACKOFF_FACTOR = 1.5
-const CHECKOUT_POLL_MAX_ATTEMPTS = 20
-
-const delay = (ms: number) =>
-  new Promise<void>((resolve) => {
-    globalThis.setTimeout(resolve, ms)
-  })
 
 interface CouponPreviewResponse {
   data: {
@@ -131,52 +119,6 @@ export default function CheckoutPaymentPage() {
     [lineItems, pendingCheckout]
   )
 
-  const pollCheckoutRequest = async (
-    checkoutRequestId: string
-  ): Promise<CheckoutRequestStatusResponse> => {
-    for (let attempt = 0; attempt < CHECKOUT_POLL_MAX_ATTEMPTS; attempt++) {
-      try {
-        const checkoutStatus =
-          await apiClient.get<CheckoutRequestStatusResponse>(
-            `/api/checkout/${checkoutRequestId}`
-          )
-
-        if (checkoutStatus.status === 'COMPLETED') {
-          return checkoutStatus
-        }
-
-        if (checkoutStatus.status === 'FAILED') {
-          throw new Error(checkoutStatus.error ?? 'Checkout failed')
-        }
-
-        setCheckoutMessage("We're processing your order…")
-      } catch (error) {
-        if (error instanceof ApiError && error.status === 429) {
-          // Honour the Retry-After header so we don't burn through the budget.
-          const waitMs = Math.max(error.retryAfter ?? 60, 1) * 1000
-          setCheckoutMessage('Please wait a moment before retrying…')
-          await delay(waitMs)
-          continue
-        }
-        // Any other error (including FAILED status above) bubbles up.
-        throw error
-      }
-
-      // Exponential backoff: start fast to catch quick completions, then slow
-      // down to avoid hitting the rate limiter on longer Inngest runs.
-      const nextInterval = Math.min(
-        CHECKOUT_POLL_INITIAL_INTERVAL_MS *
-          Math.pow(CHECKOUT_POLL_BACKOFF_FACTOR, attempt),
-        CHECKOUT_POLL_MAX_INTERVAL_MS
-      )
-      await delay(nextInterval)
-    }
-
-    throw new Error(
-      'Checkout is taking longer than expected. Please check your orders shortly.'
-    )
-  }
-
   const handleConfirm = () => {
     if (!pendingCheckout) return
     const sessionUser = session?.user
@@ -218,9 +160,13 @@ export default function CheckoutPaymentPage() {
           }
         )
 
-        const completedCheckout = await pollCheckoutRequest(
-          enqueueResult.checkoutRequestId
-        )
+        // One connection, held open by the server until the checkout run
+        // announces its terminal status — no polling, and no rate-limit
+        // budget spent on the wait.
+        const completedCheckout = await awaitCheckoutSettlement({
+          checkoutRequestId: enqueueResult.checkoutRequestId,
+          onProgress: () => setCheckoutMessage("We're processing your order…"),
+        })
 
         if (!completedCheckout.orderId) {
           throw new Error('Checkout completed without an order reference.')
