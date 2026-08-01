@@ -142,6 +142,13 @@ const buildStatusStream = ({
         return
       }
 
+      // A settlement announced while the subscription was still connecting is
+      // not replayed to it. Without this read the customer would wait for the
+      // next backstop tick for an order that already exists — the exact stall
+      // this route exists to remove.
+      await recheck()
+      if (!controller) return
+
       recheckTimer = setInterval(
         recheck,
         subscription

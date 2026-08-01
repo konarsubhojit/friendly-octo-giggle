@@ -165,9 +165,22 @@ describe('GET /api/checkout/[id]/stream', () => {
     expect(close).toHaveBeenCalled()
   })
 
+  it('catches a settlement announced while the subscription was connecting', async () => {
+    mockGetCheckoutRequestStatusForUser
+      .mockResolvedValueOnce(PENDING)
+      .mockResolvedValue(COMPLETED)
+    mockSubscribeToCheckoutStatus.mockResolvedValue({ close: vi.fn() })
+
+    const response = await call()
+
+    await expect(readEvents(response)).resolves.toEqual([PENDING, COMPLETED])
+    expect(mockGetCheckoutRequestStatusForUser).toHaveBeenCalledTimes(2)
+  })
+
   it('settles from the status re-read when realtime is unavailable', async () => {
     vi.useFakeTimers()
     mockGetCheckoutRequestStatusForUser
+      .mockResolvedValueOnce(PENDING)
       .mockResolvedValueOnce(PENDING)
       .mockResolvedValue(COMPLETED)
 
