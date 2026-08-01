@@ -20,7 +20,7 @@ Specifications define expected behavior; [the implemented feature catalog](../do
 
 Specifications 012-023 are proposed work, grouped into three epics. Each is drafted against the verified state of the working tree rather than against documentation, and each opens with a `Baseline (verified 2026-08-01)` section recording what was checked.
 
-### Epic — Phase 1: Foundation
+### Epic — Phase 1: Foundation — rendering model, CI truth, and stack modernization
 
 Framework capability the project pays for but does not use, plus the verification and documentation gaps that make every later change riskier than it needs to be.
 
