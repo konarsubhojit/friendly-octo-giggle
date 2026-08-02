@@ -59,7 +59,6 @@ export default defineConfig({
         'src/lib/constants/categories.ts',
         'src/lib/constants/checkout-policies.ts',
         'src/lib/search/**',
-        'src/lib/ai/**',
         'src/proxy.ts',
         'proxy.ts',
         'src/types/**',
