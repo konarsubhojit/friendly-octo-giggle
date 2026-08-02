@@ -39,14 +39,16 @@
     - .specify/templates/tasks-template.md — ✅ aligned
     - .specify/templates/checklist-template.md — ✅ aligned
   Follow-up TODOs:
-    - The codebase is not yet compliant with the amended
-      Principle IV. Feature `012-cache-components-and-ppr` is the
-      migration that brings it into compliance; until it lands,
-      the existing `dynamic` / `revalidate` / `runtime` exports
-      are a known, tracked deviation.
-    - `docs/architecture.md` and `docs/development.md` still
-      describe the ISR-first model and are updated as part of
-      that feature (Governance step 3).
+    - None. Feature `012-cache-components-and-ppr` landed the
+      migration that brings the codebase into compliance with the
+      amended Principle IV: `cacheComponents: true` is enabled,
+      every `dynamic` / `revalidate` / `runtime` segment export
+      has been removed, public catalog reads use `"use cache"`
+      with named `cacheLife` profiles and `cacheTag` values from
+      `lib/cache-tags.ts`, and writes invalidate both Redis and
+      cache tags with tag failures logged and non-fatal.
+      `docs/architecture.md` and `docs/development.md` were
+      updated in the same change set (Governance step 3).
 -->
 
 # The Kiyon Store Constitution

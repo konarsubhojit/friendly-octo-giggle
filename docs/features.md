@@ -31,7 +31,7 @@
 
 - Web app manifest, install prompt, icons, screenshots, shortcuts, service-worker registration, and localized offline fallback.
 - Web push order-status notifications delivered through the PWA service worker, with per-device opt-in and automatic cleanup of expired or revoked subscriptions.
-- Public ISR/server rendering, image placeholders, responsive images, skeletons, error boundaries, and mobile-safe layouts.
+- Public pages served via Cache Components (prerendered shell with streamed per-request holes), image placeholders, responsive images, skeletons, error boundaries, and mobile-safe layouts.
 - Optional Redis caching with stampede prevention and stale-while-revalidate; core reads degrade to PostgreSQL when optional infrastructure is absent.
 
 ## Administration

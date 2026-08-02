@@ -107,13 +107,13 @@ description: 'Task list for adopting Next.js 16 Cache Components and Partial Pre
 ### Tests for User Story 3
 
 - [x] T032 [P] [US3] Add a two-session isolation spec to `playwright-tests/` that signs in as two users and asserts `/cart`, `/orders`, `/account`, and `/admin` return only the requesting user's data (SC-005).
-- [ ] T033 [P] [US3] Extend `playwright-tests/admin-views.spec.ts` to assert an unauthorized role is still rejected by the `src/proxy.ts` admin gate and that no cached admin content is served (FR-008 acceptance 4).
+- [x] T033 [P] [US3] Extend `playwright-tests/admin-views.spec.ts` to assert an unauthorized role is still rejected by the `src/proxy.ts` admin gate and that no cached admin content is served (FR-008 acceptance 4).
 
 ### Implementation for User Story 3
 
-- [ ] T034 [US3] Walk the Class A and Class B tables in `plan.md` against the post-migration build output and confirm every listed route reports `ƒ` or a `◐` whose dynamic hole contains all session-derived data; correct any mismatch at the source.
-- [ ] T035 [US3] Confirm no cached scope emits `Set-Cookie` or a session-derived header, and that `auth()` is never called inside a `"use cache"` boundary (FR-008, FR-013).
-- [ ] T036 [US3] Record the final classification decision for every remaining dynamic surface in `plan.md` so each has a written justification (FR-007, SC-006).
+- [x] T034 [US3] Walk the Class A and Class B tables in `plan.md` against the post-migration build output and confirm every listed route reports `ƒ` or a `◐` whose dynamic hole contains all session-derived data; correct any mismatch at the source.
+- [x] T035 [US3] Confirm no cached scope emits `Set-Cookie` or a session-derived header, and that `auth()` is never called inside a `"use cache"` boundary (FR-008, FR-013).
+- [x] T036 [US3] Record the final classification decision for every remaining dynamic surface in `plan.md` so each has a written justification (FR-007, SC-006).
 
 **Checkpoint**: all three P1 stories are independently verifiable.
 
@@ -125,9 +125,9 @@ description: 'Task list for adopting Next.js 16 Cache Components and Partial Pre
 
 **Independent Test**: Inspect the build output for prerendered `/products/[id]` entries, then request a product outside that set and confirm it renders and is retained.
 
-- [ ] T037 [US4] Add `generateStaticParams` to `src/app/(public)/products/[id]/page.tsx` returning a bounded, documented set of product ids (bestsellers first), reusing the existing `db.products` helpers (FR-011).
-- [ ] T038 [US4] Wrap the static-params query so an unreachable database at build time degrades to an empty list, logging through `logError`, instead of failing the build (spec US4 acceptance 3).
-- [ ] T039 [US4] Confirm the build output lists the intended prerendered product routes and that a non-prebuilt product still renders on first request.
+- [x] T037 [US4] Add `generateStaticParams` to `src/app/(public)/products/[id]/page.tsx` returning a bounded, documented set of product ids (bestsellers first), reusing the existing `db.products` helpers (FR-011).
+- [x] T038 [US4] Wrap the static-params query so an unreachable database at build time degrades to an empty list, logging through `logError`, instead of failing the build (spec US4 acceptance 3).
+- [x] T039 [US4] Confirm the build output lists the intended prerendered product routes and that a non-prebuilt product still renders on first request.
 
 **Checkpoint**: all four user stories are complete.
 
@@ -135,9 +135,9 @@ description: 'Task list for adopting Next.js 16 Cache Components and Partial Pre
 
 ## Phase 7: Polish & Cross-Cutting Concerns
 
-- [ ] T040 [P] Update `docs/architecture.md` sections 1, 7, and the ISR-first summary to describe the Cache Components model and the Cache Components / Redis / database division of responsibility (FR-010, FR-015).
-- [ ] T041 [P] Update `docs/development.md` guidance that currently recommends `revalidate = 60` for public pages so it teaches `"use cache"` + `cacheLife` + `cacheTag` instead (FR-015).
-- [ ] T042 [P] Clear the follow-up TODO in `.specify/memory/constitution.md` once this feature lands, and confirm the implementation matches amended Principle IV (no segment configs, `"use cache"` scopes carry `cacheLife` + `cacheTag`, no Redis read nested inside a cached scope, writes invalidate both layers) and amended Principle VI (`unstable_rethrow` before logging or response conversion).
+- [x] T040 [P] Update `docs/architecture.md` sections 1, 7, and the ISR-first summary to describe the Cache Components model and the Cache Components / Redis / database division of responsibility (FR-010, FR-015).
+- [x] T041 [P] Update `docs/development.md` guidance that currently recommends `revalidate = 60` for public pages so it teaches `"use cache"` + `cacheLife` + `cacheTag` instead (FR-015).
+- [x] T042 [P] Clear the follow-up TODO in `.specify/memory/constitution.md` once this feature lands, and confirm the implementation matches amended Principle IV (no segment configs, `"use cache"` scopes carry `cacheLife` + `cacheTag`, no Redis read nested inside a cached scope, writes invalidate both layers) and amended Principle VI (`unstable_rethrow` before logging or response conversion).
 - [ ] T043 Measure Largest Contentful Paint for `/shop` and a product detail route before and after, and record both numbers; a regression on either blocks the change (SC-003).
 - [ ] T044 Verify all cached public routes still render from the database with Redis credentials removed (SC-007).
 - [ ] T045 Run the full Playwright suite against a production build and record the result (SC-008); coordinate with `013-e2e-in-continuous-integration`, which owns making that suite runnable.
