@@ -131,10 +131,13 @@ async function ProductDetail({
   readonly product: Product
   readonly searchParams: Promise<{ v?: string }>
 }) {
-  const [{ v: initialVariantId }, aiEnabled] = await Promise.all([
-    searchParams,
-    isAiEnabled(),
-  ])
+  // Awaited in sequence, not with `Promise.all`. `isAiEnabled` reads
+  // `Date.now()` for the Edge Config in-process TTL, and Cache Components only
+  // permits reading the current time once request data has been read. Starting
+  // both promises together would let the clock read win the race and fail the
+  // prerender of every statically generated product route.
+  const { v: initialVariantId } = await searchParams
+  const aiEnabled = await isAiEnabled()
 
   return (
     <ProductClient
