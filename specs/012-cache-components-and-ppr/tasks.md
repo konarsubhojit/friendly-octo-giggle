@@ -138,11 +138,11 @@ description: 'Task list for adopting Next.js 16 Cache Components and Partial Pre
 - [x] T040 [P] Update `docs/architecture.md` sections 1, 7, and the ISR-first summary to describe the Cache Components model and the Cache Components / Redis / database division of responsibility (FR-010, FR-015).
 - [x] T041 [P] Update `docs/development.md` guidance that currently recommends `revalidate = 60` for public pages so it teaches `"use cache"` + `cacheLife` + `cacheTag` instead (FR-015).
 - [x] T042 [P] Clear the follow-up TODO in `.specify/memory/constitution.md` once this feature lands, and confirm the implementation matches amended Principle IV (no segment configs, `"use cache"` scopes carry `cacheLife` + `cacheTag`, no Redis read nested inside a cached scope, writes invalidate both layers) and amended Principle VI (`unstable_rethrow` before logging or response conversion).
-- [ ] T043 Measure Largest Contentful Paint for `/shop` and a product detail route before and after, and record both numbers; a regression on either blocks the change (SC-003).
-- [ ] T044 Verify all cached public routes still render from the database with Redis credentials removed (SC-007).
-- [ ] T045 Run the full Playwright suite against a production build and record the result (SC-008); coordinate with `013-e2e-in-continuous-integration`, which owns making that suite runnable.
-- [ ] T046 Confirm the whole change set is a single revertable commit (FR-014) — a partial revert cannot build, because Next.js rejects `cacheComponents` combined with any segment config.
-- [ ] T047 Run `npm run lint`, `npx tsc --noEmit -p tsconfig.check.json`, `npm test`, and `npm run build` and fix every failure (SC-001).
+- [x] T043 Measure Largest Contentful Paint for `/shop` and a product detail route before and after, and record both numbers; a regression on either blocks the change (SC-003). Measured with headless Chrome over the DevTools Protocol against `next start` for both trees; no route regresses. Numbers in `plan.md` → Release validation → T043.
+- [x] T044 Verify all cached public routes still render from the database with Redis credentials removed (SC-007). Verified against a production build with the Upstash Redis variables stripped from the server process; results in `plan.md` → Release validation → T044.
+- [ ] T045 Run the full Playwright suite against a production build and record the result (SC-008); coordinate with `013-e2e-in-continuous-integration`, which owns making that suite runnable. **Deferred** — the suite is not runnable yet (`playwright.config.ts` probes the removed `/en/shop` URL and `global-setup.ts` needs seeded credentials); see `plan.md` → Release validation → T045.
+- [x] T046 Confirm the whole change set is a single revertable commit (FR-014) — a partial revert cannot build, because Next.js rejects `cacheComponents` combined with any segment config. Confirmed: the set reverse-applies cleanly, the reverted tree builds, and reverting only the config flag fails compilation; evidence in `plan.md` → Release validation → T046.
+- [x] T047 Run `npm run lint`, `npx tsc --noEmit -p tsconfig.check.json`, `npm test`, and `npm run build` and fix every failure (SC-001). All four pass; recorded in `plan.md` → Release validation → T047.
 
 ---
 

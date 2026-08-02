@@ -262,6 +262,61 @@ docs/architecture.md, docs/development.md   # FR-015
 
 The change set is one commit. Reverting it restores `cacheComponents: false` (absent) together with all 72 segment configs in the same operation, because Next.js rejects the two states in combination — a partial revert cannot build, which is what makes the single-commit rule enforceable rather than aspirational.
 
+## Release validation (T043–T047, verified 2026-08-02)
+
+All measurements below were taken against the dev database (5 published products, 6 categories) on one machine, with the migrated tree and the pre-migration tree (`develop`, `c35a86c`) built and served in turn from the same shell, the same environment variables, and the same `next start` port.
+
+### T047 — Quality gates (SC-001)
+
+| Command                                   | Result                                                                                             |
+| ----------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `npm run lint`                            | pass, no findings                                                                                  |
+| `npx tsc --noEmit -p tsconfig.check.json` | pass                                                                                               |
+| `npm test`                                | pass — 293 files, 3446 tests                                                                       |
+| `npm run build`                           | pass — Cache Components enabled, 94 routes, 5 `/products/[id]` routes prerendered from the catalog |
+
+The build was additionally run with an unreachable database to confirm the degradation paths: `generateStaticParams` logged `product_static_params` and fell back to the stand-in id (R9), `getCachedBestsellers` logged `shop_bestsellers_fetch` and returned an empty rail (R10), and the build still completed.
+
+### T044 — Redis unavailable (SC-007)
+
+Procedure: production build served with `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`, and `REDIS_URL` removed from the server process (confirmed through `/proc/<pid>/environ`), so `getRedisClient()` returns `null` for every call. Each route was requested without JavaScript (plain HTTP) and checked for database-derived content.
+
+| Route                       | Status | Database content in the response                    |
+| --------------------------- | ------ | --------------------------------------------------- |
+| `/`                         | 200    | static marketing shell (no catalog read)            |
+| `/shop`                     | 200    | catalog product names present in the initial HTML   |
+| `/products/ruJaxwb`         | 200    | product name present in the HTML                    |
+| `/api/categories`           | 200    | all six categories, cached scope reading Postgres   |
+| `/api/products`             | 200    | product payload                                     |
+| `/api/products/bestsellers` | 200    | bestseller payload                                  |
+
+No errors were logged for the run. This is the expected shape: the cached scopes read the database directly (`db.products.findBestsellers({ withCache: false })`, `db.products.findById(id, false)`, `drizzleDb`), and every uncached read goes through `getCachedData`, which invokes its fetcher when no Redis client exists.
+
+### T043 — Largest Contentful Paint before and after (SC-003)
+
+Method: headless Chrome 150 driven over the DevTools Protocol against `next start`, `Emulation.setCPUThrottlingRate: 4` and `Network.emulateNetworkConditions` at 10 Mbps / 40 ms, LCP read from a `PerformanceObserver` (`buffered: true`) 4 s after `load`. Warm figures are the median of five navigations after a discarded warm-up; cold figures are the first navigation against a freshly started server.
+
+| Route               | LCP before (warm) | LCP after (warm) | LCP before (cold) | LCP after (cold) | LCP element |
+| ------------------- | ----------------- | ---------------- | ----------------- | ---------------- | ----------- |
+| `/shop`             | 192 ms            | 192 ms           | 220 ms            | 196 ms           | `<h1>`      |
+| `/products/ruJaxwb` | 584 ms            | 568 ms           | 608 ms            | 608 ms           | `<img>`     |
+| `/`                 | 180 ms            | 184 ms           | —                 | —                | `<h1>`      |
+
+No route regresses. `/shop` improves by 24 ms on a cold server, which is the case this feature targets: the shell no longer waits on a database round trip. The `/` delta of 4 ms sits inside the sample spread (before 176–196 ms, after 168–204 ms) and is noise. Product detail LCP is bound by the remote hero image, not by rendering, which is why it is unchanged.
+
+These are local, single-machine numbers taken over loopback; they are directionally sound for a same-machine before/after comparison but are not field data. `@vercel/speed-insights` is already mounted, so real-user LCP for the same three routes should be read from Speed Insights after the deployment lands.
+
+### T046 — Single revertable change set (FR-014)
+
+- The change set is `origin/develop...HEAD`: 9 commits, 127 files, +2409/−573. Squash-merging it produces the single commit FR-014 requires.
+- `git diff origin/develop...HEAD | git apply -R --check` reverse-applies cleanly, so the whole set reverts as one unit.
+- The reverted state builds: `develop` at `c35a86c` was checked out into a scratch worktree and `npm run build` completed there in this same session.
+- A partial revert does not build, as claimed: setting `cacheComponents: false` while the `"use cache"` scopes remain fails compilation with `To use "use cache", please enable the feature flag cacheComponents in your Next.js config` at `src/app/(public)/products/[id]/page.tsx`, `src/app/(public)/shop/page.tsx` (both scopes), and `src/app/api/categories/route.ts`. The reverse case is R2.
+
+### T045 — Playwright against a production build (SC-008)
+
+Deferred, not satisfied. The suite is not runnable as it stands: `playwright.config.ts` still probes `/en/shop`, which is not in the route tree, and `global-setup.ts` requires credentials for a seeded account. Making the suite runnable is owned by `013-e2e-in-continuous-integration`, which this feature already declares as a dependency. The Playwright specs added by this feature (`public-pages.spec.ts`, `product-navigation.spec.ts`, `session-isolation.spec.ts`, `admin-views.spec.ts`) are committed and will be exercised when 013 lands. The rendering claims those specs assert were verified here by other means: the no-JavaScript shell content in the T044 table above, and the classification table in this plan.
+
 ## Complexity Tracking
 
 | Violation                                                                                      | Why needed                                                                                                                               | Simpler alternative rejected because                                                                                                                                                                                                             |
