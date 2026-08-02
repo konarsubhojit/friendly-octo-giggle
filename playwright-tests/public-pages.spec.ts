@@ -62,3 +62,33 @@ test.describe('public page coverage', () => {
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
   })
 })
+
+/**
+ * Server-rendered content guard for the Cache Components migration.
+ *
+ * With JavaScript disabled the browser receives only what the server streamed,
+ * so anything asserted here provably came from the prerendered shell or a
+ * server-rendered Suspense boundary rather than a client-side fetch. React
+ * streams resolved boundaries into hidden containers and swaps them in with an
+ * inline script, so counts (which match hidden nodes) are asserted instead of
+ * visibility.
+ */
+test.describe('shop renders server-side without JavaScript', () => {
+  test.use({ javaScriptEnabled: false })
+
+  test('initial HTML contains product cards and category chips', async ({
+    page,
+  }) => {
+    await expectRendersWithoutError(page, '/shop')
+
+    await expect(
+      page.locator('a[href*="/products/"]'),
+      'product cards must be in the server-rendered HTML'
+    ).not.toHaveCount(0)
+
+    await expect(
+      page.locator('nav[aria-label="Browse by category"] a'),
+      'category chips must be in the server-rendered HTML'
+    ).not.toHaveCount(0)
+  })
+})

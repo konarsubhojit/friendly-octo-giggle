@@ -8,8 +8,6 @@ import {
 } from '@/features/admin/services/admin-csv'
 import { apiError, handleApiError } from '@/lib/api-utils'
 
-export const dynamic = 'force-dynamic'
-
 export const GET = async () => {
   const authCheck = await checkAdminAuth('users:manage')
   if (!authCheck.authorized) {

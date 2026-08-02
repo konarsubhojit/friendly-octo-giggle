@@ -6,8 +6,6 @@ import { getCart, getCartIdentity } from '@/features/cart/services/cart-service'
 import type { Cart } from '@/lib/types'
 import CartClient from '@/app/(public)/cart/CartClient'
 
-export const dynamic = 'force-dynamic'
-
 export default async function CartPage() {
   const session = await auth()
 

@@ -1,23 +1,34 @@
 <!--
   Sync Impact Report
   ==================
-  Version change: 1.1.0 → 1.2.0
-  Bump rationale: MINOR — new architectural constraints added
-    (Edge Config, Vercel Cron Jobs, CRON_SECRET auth pattern),
-    no existing principles removed or redefined.
+  Version change: 1.2.0 → 2.0.0
+  Bump rationale: MAJOR — an existing principle is redefined in a
+    backward-incompatible way. Principle IV previously mandated ISR
+    via route segment `revalidate`; it now mandates the Next.js
+    Cache Components model and prohibits route segment config
+    outright. Code that complied with the previous rule is
+    non-compliant under the new one, which is the governance
+    definition of a MAJOR change.
   Modified principles:
-    - IV. Serverless & Caching Architecture — expanded to cover
-      Edge Config for ultra-low-latency configuration reads and
-      Vercel Cron Jobs for scheduled tasks.
-    - V. Security by Default — added CRON_SECRET bearer token
-      requirement for cron endpoints.
+    - IV. Serverless & Caching Architecture — replaced the
+      ISR/`revalidate` mandate with the Cache Components mandate
+      (`"use cache"` + `cacheLife` + `cacheTag`, per-request by
+      default, `Suspense` around per-request regions, no session
+      or request-scoped reads inside a cached scope). Prohibited
+      `export const dynamic`, `revalidate`, and `runtime`.
+      Clarified that Redis and Cache Components are alternatives
+      rather than layers, and that writes MUST invalidate both
+      Redis and cache tags, with tag failures logged and
+      non-fatal.
+    - VI. Observability & Structured Logging — added the
+      requirement that framework control-flow errors be re-thrown
+      via `unstable_rethrow` before logging or response
+      conversion, so prerender bail-out signals are never
+      reported or served as failures.
   Added sections:
-    - Edge Config (lib/edge-config.ts) in Technology &
-      Architecture Constraints for feature flags and shipping
-      configuration.
-    - Cron Jobs (vercel.json) in Technology & Architecture
-      Constraints for scheduled email retries and exchange
-      rate refresh.
+    - Technology & Architecture Constraints → Framework bullet
+      now names Cache Components, the shared `cacheLife` profiles
+      in `next.config.ts`, and `lib/cache-tags.ts`.
   Removed sections: None
   Templates requiring updates:
     - .specify/templates/plan-template.md — ✅ aligned
@@ -25,10 +36,19 @@
       generically)
     - .specify/templates/spec-template.md — ✅ aligned (no
       constitution-specific references)
-    - .specify/templates/tasks-template.md — ✅ aligned (phase
-      structure compatible with new constraints)
+    - .specify/templates/tasks-template.md — ✅ aligned
     - .specify/templates/checklist-template.md — ✅ aligned
-  Follow-up TODOs: None
+  Follow-up TODOs:
+    - None. Feature `012-cache-components-and-ppr` landed the
+      migration that brings the codebase into compliance with the
+      amended Principle IV: `cacheComponents: true` is enabled,
+      every `dynamic` / `revalidate` / `runtime` segment export
+      has been removed, public catalog reads use `"use cache"`
+      with named `cacheLife` profiles and `cacheTag` values from
+      `lib/cache-tags.ts`, and writes invalidate both Redis and
+      cache tags with tag failures logged and non-fatal.
+      `docs/architecture.md` and `docs/development.md` were
+      updated in the same change set (Governance step 3).
 -->
 
 # The Kiyon Store Constitution
@@ -71,18 +91,37 @@ functions (Vercel/AWS Lambda). No in-memory state may persist
 across requests. Background work (e.g., stale-while-revalidate
 cache refresh) MUST use `void (async () => { ... })()` — never
 `setImmediate` or `setTimeout`, as those are not guaranteed to
-complete in serverless runtimes. Frequently-read data MUST be
-cached via Redis using `getCachedData` from `lib/redis.ts` with
-stampede prevention and stale-while-revalidate. Cache MUST be
-invalidated on writes via `invalidateCache`. API responses MUST
-include appropriate `Cache-Control` headers. Static pages MUST
-use ISR with `revalidate` instead of `force-dynamic` where
-possible. Deferred background jobs (email, webhooks) MUST use
-QStash via `lib/qstash.ts` rather than in-process execution.
-Runtime configuration that is read often but changes rarely
-(feature flags, shipping rates) MUST use Vercel Edge Config
-via `lib/edge-config.ts` for sub-millisecond reads — with
-hardcoded defaults as fallback when `EDGE_CONFIG` is unavailable.
+complete in serverless runtimes.
+
+Rendering MUST follow the Next.js Cache Components model:
+everything is per-request by default, and cacheable work is
+opted in by wrapping it in a `"use cache"` scope that declares
+an explicit `cacheLife` profile and `cacheTag` set. Route
+segment configuration (`export const dynamic`, `revalidate`,
+`runtime`) MUST NOT be used — Next.js rejects it once Cache
+Components is enabled. Per-request regions of an otherwise
+prerenderable page MUST sit behind a `Suspense` boundary with a
+skeleton fallback. A `"use cache"` scope MUST NOT read sessions,
+cookies, headers, or any request-scoped state.
+
+Redis via `getCachedData` from `lib/redis.ts` remains the
+cross-request cache for work Cache Components cannot cover
+(session-scoped reads and route handlers serving authenticated
+data), with stampede prevention and stale-while-revalidate. A
+Redis read MUST NOT be nested inside a `"use cache"` scope —
+the two layers are alternatives, never stacked. Writes MUST
+invalidate every layer they affect: `invalidateCache` for Redis
+and `revalidateTag` for each affected cache tag. Tag
+revalidation failures MUST be logged and MUST NOT fail the
+originating write. API responses MUST include appropriate
+`Cache-Control` headers.
+
+Deferred background jobs (email, webhooks) MUST use QStash via
+`lib/qstash.ts` rather than in-process execution. Runtime
+configuration that is read often but changes rarely (feature
+flags, shipping rates) MUST use Vercel Edge Config via
+`lib/edge-config.ts` for sub-millisecond reads — with hardcoded
+defaults as fallback when `EDGE_CONFIG` is unavailable.
 Scheduled recurring tasks (email retries, rate refresh) MUST
 use Vercel Cron Jobs configured in `vercel.json`.
 
@@ -111,7 +150,11 @@ context. Logging MUST use Pino via `lib/logger.ts` (structured
 JSON in production, pretty-print in development). `LOG_LEVEL`
 MUST be `info` or higher in production. Error responses MUST use
 `handleApiError` from `lib/api-utils.ts` to ensure consistent
-error shape and logging.
+error shape and logging. Framework control-flow errors (prerender
+bail-out signals, `redirect`, `notFound`) MUST be re-thrown via
+`unstable_rethrow` before any error is logged or converted into a
+response, so caching and navigation signals are never reported or
+served as failures.
 
 ### VII. Simplicity & YAGNI
 
@@ -136,7 +179,10 @@ files to isolate dependency graphs.
 ## Technology & Architecture Constraints
 
 - **Framework**: Next.js 16 with App Router (`app/` directory).
-  Legacy `pages/` directory MUST NOT be used.
+  Legacy `pages/` directory MUST NOT be used. Cache Components
+  (`cacheComponents: true` in `next.config.ts`) is the rendering
+  model; shared `cacheLife` profiles are declared there and cache
+  tag helpers live in `lib/cache-tags.ts`.
 - **Database**: PostgreSQL via Neon Serverless, accessed only
   through Drizzle ORM (`lib/db.ts`). Schema changes MUST generate
   a Drizzle migration (`npm run db:generate`) — direct DB
@@ -216,4 +262,4 @@ project documentation. Amendments require:
 Runtime development guidance is maintained in
 `.github/copilot-instructions.md` and `docs/development.md`.
 
-**Version**: 1.2.0 | **Ratified**: 2026-03-19 | **Last Amended**: 2026-03-24
+**Version**: 2.0.0 | **Ratified**: 2026-03-19 | **Last Amended**: 2026-08-01

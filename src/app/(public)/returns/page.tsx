@@ -7,8 +7,6 @@ import {
 } from '@/lib/constants/checkout-policies'
 import { withStoreName } from '@/lib/constants/store'
 
-export const revalidate = 3600
-
 export const metadata = {
   title: withStoreName('Returns & Refunds'),
   description:

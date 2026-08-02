@@ -2,8 +2,6 @@ import { serve } from 'inngest/next'
 import { inngest } from '@/lib/inngest/client'
 import { inngestFunctions } from '@/lib/inngest/registry'
 
-export const dynamic = 'force-dynamic'
-
 /**
  * Budget for a single step invocation.
  *

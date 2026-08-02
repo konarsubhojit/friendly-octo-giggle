@@ -71,7 +71,6 @@ vi.mock('@/lib/serializers', () => ({
   }),
 }))
 vi.mock('@/lib/logger', () => ({ logError: vi.fn() }))
-vi.mock('next/cache', () => ({ revalidateTag: vi.fn() }))
 vi.mock('@/lib/cache', () => ({ invalidateProductCaches: vi.fn() }))
 vi.mock('drizzle-orm', () => ({
   eq: vi.fn((...args: unknown[]) => args),

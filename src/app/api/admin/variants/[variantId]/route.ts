@@ -15,10 +15,7 @@ import {
 } from '@/lib/api-utils'
 import { checkAdminAuth } from '@/features/admin/services/admin-auth'
 import { invalidateProductCaches } from '@/lib/cache'
-import { revalidateTag } from 'next/cache'
 import { serializeVariant } from '@/lib/serializers'
-
-export const dynamic = 'force-dynamic'
 
 class VariantGoneError extends Error {
   constructor() {
@@ -118,7 +115,6 @@ export async function PUT(
       return [updatedVariant]
     })
 
-    revalidateTag('products', {})
     await invalidateProductCaches(existing.productId)
 
     return apiSuccess({ variant: serializeVariant(updated) })
@@ -199,7 +195,6 @@ export async function DELETE(
       throw txError
     }
 
-    revalidateTag('products', {})
     await invalidateProductCaches(existing.productId)
 
     return apiSuccess({

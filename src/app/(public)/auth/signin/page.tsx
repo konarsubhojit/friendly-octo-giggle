@@ -2,8 +2,6 @@ import Link from 'next/link'
 import { signIn } from '@/lib/auth'
 import SignInClient from './SignInClient'
 
-export const dynamic = 'force-dynamic'
-
 function SignInHeader() {
   return (
     <div className="text-center mb-6">

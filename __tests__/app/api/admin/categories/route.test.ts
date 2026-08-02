@@ -31,7 +31,13 @@ vi.mock('drizzle-orm', () => ({
   max: vi.fn(),
 }))
 
+vi.mock('@/lib/cache-tags', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/cache-tags')>()),
+  revalidateCacheTags: vi.fn(),
+}))
+
 import { GET, POST } from '@/app/api/admin/categories/route'
+import { categoriesTag, revalidateCacheTags } from '@/lib/cache-tags'
 
 describe('admin/categories API', () => {
   beforeEach(() => {
@@ -167,6 +173,10 @@ describe('admin/categories API', () => {
 
       expect(response.status).toBe(201)
       expect(body.data.category.name).toBe('New Category')
+      expect(revalidateCacheTags).toHaveBeenCalledWith(
+        [categoriesTag()],
+        'admin_category_create'
+      )
     })
 
     it('returns 409 for duplicate active category', async () => {
@@ -244,6 +254,10 @@ describe('admin/categories API', () => {
       const response = await POST(request)
 
       expect(response.status).toBe(201)
+      expect(revalidateCacheTags).toHaveBeenCalledWith(
+        [categoriesTag()],
+        'admin_category_reactivate'
+      )
     })
   })
 })

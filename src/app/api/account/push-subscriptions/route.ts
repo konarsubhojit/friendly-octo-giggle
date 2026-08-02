@@ -14,8 +14,6 @@ import {
   savePushSubscription,
 } from '@/features/account/services/push-subscription-service'
 
-export const dynamic = 'force-dynamic'
-
 /** Registers (or refreshes) the caller's browser push subscription. */
 export async function POST(request: Request) {
   try {

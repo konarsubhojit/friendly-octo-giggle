@@ -10,6 +10,11 @@
 
 import { invalidateCache } from '@/lib/redis'
 import { invalidateUserOrderCaches } from '@/lib/cache'
+import {
+  bestsellersTag,
+  productTag,
+  revalidateCacheTags,
+} from '@/lib/cache-tags'
 
 export interface InvalidateOrderCachesInput {
   readonly userId?: string | null
@@ -27,6 +32,15 @@ export const invalidateOrderCaches = async ({
   productIds = [],
 }: InvalidateOrderCachesInput): Promise<void> => {
   const uniqueProductIds = [...new Set(productIds)]
+
+  // An order changes sales volume, so the cached bestsellers rail and each
+  // ordered product's cached detail scope are both stale. Tag revalidation runs
+  // before the Redis work because it must happen even if Redis rejects, and it
+  // never throws (failures are logged inside `revalidateCacheTags`).
+  revalidateCacheTags(
+    [bestsellersTag(), ...uniqueProductIds.map(productTag)],
+    'invalidate_order_caches'
+  )
 
   await Promise.all([
     invalidateCache('admin:orders:*'),

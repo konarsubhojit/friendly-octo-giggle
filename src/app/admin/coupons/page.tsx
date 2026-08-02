@@ -12,8 +12,6 @@ import {
 } from '@/features/admin/services/coupon-admin'
 import { formatMoneyValue } from '@/lib/money'
 
-export const dynamic = 'force-dynamic'
-
 export default async function AdminCouponsPage() {
   const authCheck = await checkAdminAuth('coupons:manage')
   if (!authCheck.authorized) {

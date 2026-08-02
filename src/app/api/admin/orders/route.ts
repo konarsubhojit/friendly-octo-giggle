@@ -14,8 +14,6 @@ import { serializeOrders } from '@/lib/serializers'
 import { OrderStatus } from '@/lib/types'
 import { cacheAdminOrdersList } from '@/lib/cache'
 
-export const dynamic = 'force-dynamic'
-
 const PAGE_SIZE = 20
 
 const parseLimit = (limitParam: string | null): number =>

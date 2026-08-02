@@ -10,8 +10,6 @@ import {
 import { CheckoutRequestStatusEnum } from '@/features/orders/validations'
 import { requireAdminPermission } from '@/features/admin/services/admin-page-auth'
 
-export const dynamic = 'force-dynamic'
-
 interface AdminCheckoutRequestsPageProps {
   readonly searchParams?: Promise<{
     search?: string

@@ -1041,6 +1041,14 @@ const products = await drizzleDb.query.products.findMany({
 
 ### Redis Caching
 
+Redis and Cache Components are two separate layers with two separate jobs.
+Redis (`getCachedData`) owns cross-instance data reuse for route handlers —
+cart, orders, admin lists, exchange rates, share/pincode lookups, and public
+API payloads. Cache Components (`"use cache"`) owns render output for the
+prerendered public shell. **Never nest a Redis read inside a `"use cache"`
+scope**: it stores the same rows twice under two independent expiries and
+splits invalidation across two systems.
+
 **Cache expensive queries**
 
 ```typescript
@@ -1064,14 +1072,35 @@ await db.products.create(data)
 await invalidateCache('products:*')
 ```
 
+`invalidateProductCaches` in `src/lib/cache.ts` already does both halves — the
+Redis pattern deletes and the `revalidateCacheTags` call — so call it rather
+than invalidating the two layers separately at each site.
+
 ### Next.js Optimization
 
 **Storefront performance budgets**
 
 - Home, shop, and product pages should target: **LCP ≤ 2.5s**, **INP ≤ 200ms**, **CLS ≤ 0.1**, and **TBT ≤ 200ms**
 - Keep first-load JavaScript lean on key storefront routes; treat a **10% bundle growth** as a regression that needs review
-- Prefer `revalidate = 60` for public storefront pages unless telemetry shows stale content is unacceptable
+- Public storefront pages use the Cache Components model: wrap the shared, non-personalized read in a `"use cache"` scope with an explicit `cacheLife` profile and entity-keyed `cacheTag` values, and leave genuinely per-request regions inside a `Suspense` boundary. Do not add `export const revalidate` or `export const dynamic` — Next.js 16.2 fails the build when either is combined with `cacheComponents`.
 - Use `npm run analyze` locally (or in CI with `ANALYZE=true`) to inspect route bundles before merging
+
+**Declaring a route per-request**
+
+Without segment configuration, a route that renders per-request data but never
+reads request data would be prerendered. Declare it explicitly:
+
+```typescript
+import { connection } from 'next/server'
+
+export async function GET() {
+  await connection() // never prerender: this response changes every request
+  return new NextResponse(renderPrometheusMetrics())
+}
+```
+
+Routes that already call `auth()`, `cookies()`, `headers()`, or read
+`searchParams` are self-classifying and need nothing extra.
 
 **Use Server Components for data fetching**
 
@@ -1270,19 +1299,27 @@ export default async function AdminPage() {
 ### Data fetching with cache
 
 ```typescript
-import { unstable_cache } from 'next/cache';
+import { cacheLife, cacheTag } from 'next/cache';
+import { db } from '@/lib/db';
+import { bestsellersTag, productListTag } from '@/lib/cache-tags';
 
-const getCachedProducts = unstable_cache(
-  async () => await db.products.findAll(),
-  ['products'],
-  { revalidate: 60 }
-);
+async function getCachedBestsellers() {
+  'use cache';
+  cacheLife('catalog');                       // named profile from next.config.ts
+  cacheTag(bestsellersTag(), productListTag()); // how writes invalidate this scope
 
-export default async function ProductsPage() {
-  const products = await getCachedProducts();
+  // `withCache: false` — a "use cache" scope must not nest a Redis read.
+  return db.products.findBestsellers({ withCache: false });
+}
+
+export default async function BestsellersRail() {
+  const products = await getCachedBestsellers();
   return <ProductGrid products={products} />;
 }
 ```
+
+`unstable_cache` and `export const revalidate` are not used in this codebase;
+Next.js 16.2 rejects segment configuration when `cacheComponents` is enabled.
 
 ### Form handling with validation
 

@@ -6,8 +6,6 @@ import Footer from '@/components/layout/Footer'
 import type { Product } from '@/lib/types'
 import WishlistClient from '@/app/(public)/wishlist/WishlistClient'
 
-export const dynamic = 'force-dynamic'
-
 export default async function WishlistPage() {
   const session = await auth()
 

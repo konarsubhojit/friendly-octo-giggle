@@ -51,10 +51,6 @@ vi.mock('@/lib/cache', () => ({
   invalidateProductCaches: vi.fn(),
 }))
 
-vi.mock('next/cache', () => ({
-  revalidateTag: vi.fn(),
-}))
-
 vi.mock('@/lib/api-utils', async () => {
   const actual =
     await vi.importActual<typeof import('@/lib/api-utils')>('@/lib/api-utils')

@@ -12,6 +12,12 @@ import {
   getRedisClient,
 } from './redis'
 import { logCacheOperation, logError } from './logger'
+import {
+  bestsellersTag,
+  productListTag,
+  productTag,
+  revalidateCacheTags,
+} from './cache-tags'
 
 // Cache key patterns
 export const CACHE_KEYS = {
@@ -295,6 +301,19 @@ export const invalidateProductCaches = async (
   } catch (error) {
     logError({ error, context: 'cache_invalidation' })
   }
+
+  // Cache Components tags are revalidated outside the try/catch above so a
+  // Redis outage cannot leave the prerendered catalog stale. `productListTag`
+  // and `bestsellersTag` cover the listing scopes because a create, delete, or
+  // soft delete changes catalog membership even when no id is supplied.
+  revalidateCacheTags(
+    [
+      productListTag(),
+      bestsellersTag(),
+      ...normalizeCacheKeys(productIds).map(productTag),
+    ],
+    'invalidate_product_caches'
+  )
 }
 
 export const invalidateCartCache = async (

@@ -176,3 +176,44 @@ describe('withLogging', () => {
     expect(handler).toHaveBeenCalledOnce()
   })
 })
+
+describe('Next.js control-flow errors', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  const throwControlFlowSignal = async () => {
+    const { notFound } = await import('next/navigation')
+    notFound()
+  }
+
+  it('withLogging rethrows control-flow errors without a 500 request log', async () => {
+    const { withLogging } = await import('@/lib/api-middleware')
+    const { logApiRequest } = await import('@/lib/logger')
+    const wrapped = withLogging(throwControlFlowSignal as never)
+
+    await expect(wrapped(mockRequest())).rejects.toThrow()
+    expect(logApiRequest).not.toHaveBeenCalled()
+  })
+
+  it('withApiLogging rethrows control-flow errors without a 500 request log', async () => {
+    const { withApiLogging } = await import('@/lib/api-middleware')
+    const { logApiRequest } = await import('@/lib/logger')
+    const wrapped = withApiLogging(throwControlFlowSignal as never)
+
+    await expect(wrapped(mockRequest())).rejects.toThrow()
+    expect(logApiRequest).not.toHaveBeenCalled()
+  })
+
+  it('still logs a 500 for an ordinary handler failure', async () => {
+    const { withLogging } = await import('@/lib/api-middleware')
+    const { logApiRequest } = await import('@/lib/logger')
+    const handler = vi.fn().mockRejectedValue(new Error('Crash'))
+    const wrapped = withLogging(handler)
+
+    await expect(wrapped(mockRequest())).rejects.toThrow('Crash')
+    expect(logApiRequest).toHaveBeenCalledWith(
+      expect.objectContaining({ statusCode: 500 })
+    )
+  })
+})

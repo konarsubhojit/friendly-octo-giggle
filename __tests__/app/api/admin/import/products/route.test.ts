@@ -19,10 +19,6 @@ vi.mock('@/lib/schema', () => ({
   products: {},
 }))
 
-vi.mock('next/cache', () => ({
-  revalidateTag: vi.fn(),
-}))
-
 vi.mock('@/lib/cache', () => ({
   invalidateProductCaches: mockInvalidateProductCaches,
 }))

@@ -10,6 +10,21 @@ const nextConfig: NextConfig = {
   // india-pincode reads data/pincodes.json.gz at runtime via fs —
   // keep it out of the Turbopack bundle so the data file is resolvable.
   serverExternalPackages: ['india-pincode'],
+  // Cache Components: the public shell is prerendered and per-request regions
+  // stream into Suspense holes. Incompatible with `export const dynamic` /
+  // `revalidate` / `runtime` segment configs, which is why none remain.
+  cacheComponents: true,
+  // Named `cacheLife` profiles for every `"use cache"` scope in the app.
+  // Values are anchored to the matching `CACHE_TTL` entries in src/lib/cache.ts
+  // so the Cache Components layer and the Redis layer cannot disagree.
+  cacheLife: {
+    // Catalog listings and bestsellers (CACHE_TTL.PRODUCTS_LIST = 600).
+    catalog: { stale: 60, revalidate: 300, expire: 3600 },
+    // Product detail (CACHE_TTL.PRODUCT_DETAIL = 900).
+    product: { stale: 60, revalidate: 900, expire: 3600 },
+    // Category taxonomy (CACHE_TTL.CATEGORIES_LIST = 3600).
+    taxonomy: { stale: 300, revalidate: 3600, expire: 86400 },
+  },
   images: {
     formats: ['image/avif', 'image/webp'],
     remotePatterns: [

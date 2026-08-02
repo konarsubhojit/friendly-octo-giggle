@@ -87,13 +87,11 @@ vi.mock('@/lib/db', () => ({
   },
 }))
 
-vi.mock('@/lib/cache', () => ({
-  cacheCategoriesList: vi.fn(async (fetcher: () => Promise<unknown>) =>
-    fetcher()
-  ),
-  cacheProductsBestsellers: vi.fn(async (fetcher: () => Promise<unknown>) =>
-    fetcher()
-  ),
+// `"use cache"` is a no-op string literal under Vitest, but `cacheLife`/
+// `cacheTag` throw when called outside a real cache scope, so they are stubbed.
+vi.mock('next/cache', () => ({
+  cacheLife: vi.fn(),
+  cacheTag: vi.fn(),
 }))
 
 vi.mock('@/lib/search-discovery', () => ({
@@ -188,6 +186,41 @@ describe('app/shop/page', () => {
 
     expect(
       screen.getByRole('heading', { level: 1, name: 'Shop' })
+    ).toBeInTheDocument()
+  }, 15000)
+
+  it('reads bestsellers without the Redis sold-count cache', async () => {
+    mockFindBestsellers.mockResolvedValue([
+      {
+        id: 'prod003',
+        name: 'Daisy Chain',
+        description: 'desc',
+        image: '/daisy.jpg',
+        category: 'Flowers',
+        soldCount: 9,
+        variants: [{ price: 15, stock: 3 }],
+      },
+    ])
+
+    const { ShopBestsellers } = await import('@/app/(public)/shop/page')
+    const view = await ShopBestsellers()
+
+    render(view)
+
+    expect(mockFindBestsellers).toHaveBeenCalledWith({ withCache: false })
+    expect(screen.getByText('Daisy Chain')).toBeInTheDocument()
+  }, 15000)
+
+  it('degrades to an empty bestsellers rail when the database read fails', async () => {
+    mockFindBestsellers.mockRejectedValueOnce(new Error('db unreachable'))
+
+    const { ShopBestsellers } = await import('@/app/(public)/shop/page')
+    const view = await ShopBestsellers()
+
+    render(view)
+
+    expect(
+      screen.getByRole('heading', { level: 2, name: 'Bestsellers' })
     ).toBeInTheDocument()
   }, 15000)
 

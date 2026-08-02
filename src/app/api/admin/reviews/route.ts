@@ -5,8 +5,6 @@ import { desc, eq, and, SQL } from 'drizzle-orm'
 import { apiSuccess, apiError, handleApiError } from '@/lib/api-utils'
 import { checkAdminAuth } from '@/features/admin/services/admin-auth'
 
-export const dynamic = 'force-dynamic'
-
 export const GET = async (request: NextRequest) => {
   const authCheck = await checkAdminAuth('reviews:moderate')
   if (!authCheck.authorized) {

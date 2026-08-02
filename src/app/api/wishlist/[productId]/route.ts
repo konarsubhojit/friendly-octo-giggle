@@ -4,8 +4,6 @@ import { db } from '@/lib/db'
 import { apiSuccess, apiError, handleApiError } from '@/lib/api-utils'
 import { logError } from '@/lib/logger'
 
-export const dynamic = 'force-dynamic'
-
 /**
  * DELETE /api/wishlist/[productId]
  * Removes a product from the authenticated user's wishlist.

@@ -11,9 +11,6 @@ import {
 } from '@/lib/api-utils'
 import { checkAdminAuth } from '@/features/admin/services/admin-auth'
 import { invalidateProductCaches } from '@/lib/cache'
-import { revalidateTag } from 'next/cache'
-
-export const dynamic = 'force-dynamic'
 
 export const PATCH = async (
   request: NextRequest,
@@ -40,7 +37,6 @@ export const PATCH = async (
       )
     })
 
-    revalidateTag('products', {})
     await invalidateProductCaches(productId)
 
     return apiSuccess({ reordered: true })

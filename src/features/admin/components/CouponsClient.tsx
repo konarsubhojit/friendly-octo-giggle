@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/Button'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import { apiClient } from '@/lib/api-client'
 import { formatMoneyValue } from '@/lib/money'
-import { DISCOUNT_TYPES } from '@/features/cart/services/coupon-service'
+import { DISCOUNT_TYPES } from '@/lib/constants/discounts'
 import type {
   AdminCouponRecord,
   AdminCouponRedemptionSummary,

@@ -8,8 +8,6 @@ import {
 import CategoriesClient from '@/features/admin/components/CategoriesClient'
 import { requireAdminPermission } from '@/features/admin/services/admin-page-auth'
 
-export const dynamic = 'force-dynamic'
-
 export default async function AdminCategoriesPage() {
   await requireAdminPermission('products:write', '/admin/categories')
 

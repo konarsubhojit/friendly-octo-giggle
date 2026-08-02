@@ -193,6 +193,16 @@ export default defineConfig({
       },
       testMatch: '**/public-pages.spec.ts',
     },
+    // Session isolation — manages its own browser contexts (one authenticated
+    // from the stored state, one anonymous), so no storageState is set here.
+    {
+      name: 'session-isolation',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1280, height: 800 },
+      },
+      testMatch: '**/session-isolation.spec.ts',
+    },
     // Variant options E2E — tests storefront + admin option manager
     {
       name: 'variant-options',

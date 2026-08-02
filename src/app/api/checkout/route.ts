@@ -9,8 +9,6 @@ import { withLogging } from '@/lib/api-middleware'
 import { apiError, isJsonBodyParseError, parseJsonBody } from '@/lib/api-utils'
 import { logBusinessEvent, logError } from '@/lib/logger'
 
-export const dynamic = 'force-dynamic'
-
 /**
  * Bounds how long this route can hold a `PROCESSING` claim on a checkout
  * request. Must stay at or below `STALE_PROCESSING_CLAIM_MS` (see

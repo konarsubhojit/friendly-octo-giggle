@@ -2,8 +2,6 @@ import { apiSuccess, apiError, handleApiError } from '@/lib/api-utils'
 import { checkAdminAuth } from '@/features/admin/services/admin-auth'
 import { getAdminSalesDashboardData } from '@/features/admin/services/admin-sales'
 
-export const dynamic = 'force-dynamic'
-
 export async function GET() {
   const authCheck = await checkAdminAuth('analytics:read')
   if (!authCheck.authorized) {

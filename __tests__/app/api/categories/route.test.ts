@@ -6,6 +6,13 @@ const { mockDrizzleDb } = vi.hoisted(() => ({
   },
 }))
 
+// `"use cache"` is inert under Vitest, but `cacheLife`/`cacheTag` throw when
+// called outside a real cache scope.
+vi.mock('next/cache', () => ({
+  cacheLife: vi.fn(),
+  cacheTag: vi.fn(),
+}))
+
 vi.mock('@/lib/db', () => ({ drizzleDb: mockDrizzleDb }))
 vi.mock('@/lib/schema', () => ({
   categories: {

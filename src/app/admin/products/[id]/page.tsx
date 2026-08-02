@@ -13,8 +13,6 @@ import {
   getVariantTotalStock,
 } from '@/features/product/variant-utils'
 
-export const dynamic = 'force-dynamic'
-
 interface PageProps {
   readonly params: Promise<{ id: string }>
 }

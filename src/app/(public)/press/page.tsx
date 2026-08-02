@@ -2,8 +2,6 @@ import Footer from '@/components/layout/Footer'
 import Link from 'next/link'
 import { STORE_NAME, withStoreName } from '@/lib/constants/store'
 
-export const revalidate = 3600
-
 export const metadata = {
   title: withStoreName('Press'),
   description: `Latest press releases, media mentions, and press resources for ${STORE_NAME}.`,

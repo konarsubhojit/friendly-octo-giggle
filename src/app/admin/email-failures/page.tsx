@@ -8,8 +8,6 @@ import {
 import { EmailFailuresClient } from '@/features/admin/components/EmailFailuresClient'
 import { requireAdminPermission } from '@/features/admin/services/admin-page-auth'
 
-export const dynamic = 'force-dynamic'
-
 const fetchEmailFailures = async () => {
   const records = await drizzleDb
     .select()

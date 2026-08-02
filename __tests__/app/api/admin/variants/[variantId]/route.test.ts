@@ -4,7 +4,6 @@ import { NextRequest } from 'next/server'
 const {
   mockCheckAdminAuth,
   mockInvalidateProductCaches,
-  mockRevalidateTag,
   mockFindFirst,
   mockFindMany,
   mockUpdate,
@@ -14,7 +13,6 @@ const {
 } = vi.hoisted(() => ({
   mockCheckAdminAuth: vi.fn(async () => ({ authorized: true })),
   mockInvalidateProductCaches: vi.fn(),
-  mockRevalidateTag: vi.fn(),
   mockFindFirst: vi.fn(),
   mockFindMany: vi.fn(),
   mockUpdate: vi.fn(),
@@ -106,10 +104,6 @@ vi.mock('@/features/admin/services/admin-auth', () => ({
 
 vi.mock('@/lib/cache', () => ({
   invalidateProductCaches: mockInvalidateProductCaches,
-}))
-
-vi.mock('next/cache', () => ({
-  revalidateTag: mockRevalidateTag,
 }))
 
 vi.mock('drizzle-orm', () => ({

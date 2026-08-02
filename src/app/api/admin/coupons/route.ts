@@ -12,8 +12,6 @@ import {
 } from '@/lib/api-utils'
 import { serializeCoupon } from '@/features/admin/services/coupon-admin'
 
-export const dynamic = 'force-dynamic'
-
 export async function GET() {
   const authCheck = await checkAdminAuth('coupons:manage')
   if (!authCheck.authorized) {

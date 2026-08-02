@@ -9,6 +9,7 @@ import { drizzleDb } from '@/lib/db'
 import { categories } from '@/lib/schema'
 import { isNull, asc, eq, max } from 'drizzle-orm'
 import { z } from 'zod/v4'
+import { categoriesTag, revalidateCacheTags } from '@/lib/cache-tags'
 
 const CreateCategorySchema = z.object({
   name: z.string().min(1, 'Name is required').max(100),
@@ -79,6 +80,8 @@ export async function POST(request: Request) {
           .where(eq(categories.id, cat.id))
           .returning()
 
+        revalidateCacheTags([categoriesTag()], 'admin_category_reactivate')
+
         return apiSuccess(
           {
             category: {
@@ -98,6 +101,8 @@ export async function POST(request: Request) {
       .insert(categories)
       .values({ name: name.trim(), sortOrder: nextSortOrder })
       .returning()
+
+    revalidateCacheTags([categoriesTag()], 'admin_category_create')
 
     return apiSuccess(
       {
