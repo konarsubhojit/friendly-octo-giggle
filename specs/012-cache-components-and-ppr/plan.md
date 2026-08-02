@@ -273,7 +273,7 @@ All measurements below were taken against the dev database (5 published products
 | `npm run lint`                            | pass, no findings                                                                                  |
 | `npx tsc --noEmit -p tsconfig.check.json` | pass                                                                                               |
 | `npm test`                                | pass — 293 files, 3446 tests                                                                       |
-| `npm run build`                           | pass — Cache Components enabled, 94 routes, 5 `/products/[id]` routes prerendered from the catalog |
+| `npm run build`                           | pass — Cache Components enabled, 98 pages generated, 5 `/products/[id]` routes prerendered from the catalog |
 
 The build was additionally run with an unreachable database to confirm the degradation paths: `generateStaticParams` logged `product_static_params` and fell back to the stand-in id (R9), `getCachedBestsellers` logged `shop_bestsellers_fetch` and returned an empty rail (R10), and the build still completed.
 
