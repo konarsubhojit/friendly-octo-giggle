@@ -66,7 +66,12 @@ export enum OrderStatus {
   CANCELLED = 'CANCELLED',
 }
 
-export type PaymentStatus = 'PENDING' | 'PAID' | 'FAILED' | 'REFUNDED'
+export type PaymentStatus =
+  | 'PENDING'
+  | 'PAID'
+  | 'FAILED'
+  | 'REFUNDED'
+  | 'PARTIALLY_REFUNDED'
 
 export type PaymentProvider = PaymentProviderName
 
