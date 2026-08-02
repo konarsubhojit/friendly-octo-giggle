@@ -56,6 +56,12 @@ Each finding below was produced by temporarily enabling `cacheComponents` and ru
 - **R7 — Tag API shape in 16.2.** `revalidateTag(tag, profile)` takes a **required second argument** (`string | { expire?: number }`). `updateTag(tag)` is Server-Action-only (read-your-own-writes), so the admin mutation _route handlers_ in this codebase must use `revalidateTag`. Both are imported from `next/cache`.
 - **R8 — `Date.now()` and `crypto.randomUUID()` are permitted inside a `"use cache"` scope** (the cache work-unit store is exempt from the sync-IO guard), so nesting `getCachedData` inside `"use cache"` will not fail the build. It is nonetheless rejected by design: it would double-cache, put a Redis round trip inside the prerender path, and split invalidation across two systems. Cached scopes read the database directly.
 
+### Additional findings (verified 2026-08-02 during Phase 4–7 implementation)
+
+- **R9 — `generateStaticParams` may not return an empty array under Cache Components.** Doing so aborts the build with `EmptyGenerateStaticParamsError` (Next.js error code `E898`, thrown from `next/dist/build/static-paths/app.js` whenever `isRoutePPREnabled` and the result set is empty). Spec US4 acceptance 3 — "degrade to prerendering no product routes instead of failing" — therefore has no literal expression. It is satisfied by returning a single stand-in id, `__no_products__`, which no 7-character Base62 product id can hold, so it can never shadow a real product.
+- **R10 — An error thrown out of a `"use cache"` scope aborts that route's prerender even when a caller catches it.** Observed on `/products/__no_products__`: `getProduct` catches the rejection from `getCachedProduct` and returns `null`, yet the build still reported `Error occurred prerendering page` and exited. The resolution keeps the rethrow (a failed read must never be cached) and instead resolves the stand-in id to `null` **before** entering the cached scope, so the degraded build performs no query that can fail. The same constraint explains why `getCachedBestsellers` in `src/app/(public)/shop/page.tsx` absorbs its own failure rather than delegating it.
+- **R11 — `/api/metrics` was prerendered as `○` after its `force-dynamic` export was removed.** The handler renders in-process Prometheus counters, so a static route would have served the build-time snapshot (all zeros) for the lifetime of the deployment; the `Cache-Control: no-store` header does not prevent this, because it governs downstream caches rather than Next.js's own static output. The route now calls `await connection()`. `/api/health` remains `○` deliberately: it returns a constant literal, so a prerendered response is both correct and faster.
+
 ## Route classification (FR-007)
 
 Every current `force-dynamic` (60), `revalidate` (11) and `runtime` (1) declaration, with its post-migration class.
@@ -112,6 +118,45 @@ Every one of these reads a session, request body, search params, headers or a we
 ### Unclassified-but-affected public reads (no config today, no change required)
 
 `src/app/api/products/route.ts`, `src/app/api/products/[id]/route.ts`, `src/app/api/products/bestsellers/route.ts`, `src/app/api/search*`, `src/app/api/exchange-rates/route.ts` keep their Redis caching and their `Cache-Control` headers. They are consumed by client components, not by the prerender, and stay dynamic.
+
+## Verified post-migration classification (FR-007, SC-006, verified 2026-08-02)
+
+`npm run build` reports **117 routes**: 23 static (`○`), 21 partially prerendered (`◐`), and 73 dynamic (`ƒ`). The `force-dynamic` count in `src/app` is **0**, down from 60; `revalidate` is 0, down from 11; `runtime` is 0, down from 1. Every remaining dynamic surface is justified below, so no route relies on an unrecorded decision.
+
+### Static (`○`) — 23 routes
+
+| Route(s)                                                                                       | Why a prerendered response is correct                                                                                                                  |
+| ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `/`                                                                                            | `redirect('/shop')` and nothing else.                                                                                                                  |
+| `/about`, `/blog`, `/careers`, `/contact`, `/help`, `/press`, `/returns`, `/shipping`           | Class C marketing pages; constants only.                                                                                                               |
+| `/account`, `/checkout/{shipping,review,payment,confirmation}`                                 | Client components that fetch their own per-user data after hydration. The server renders no session-derived markup, so the shell carries no user data. |
+| `/auth/{register,forgot-password,reset-password,verify-email}`                                  | Client forms; the token/`searchParams` reads happen in the browser.                                                                                    |
+| `/offline`, `/manifest.webmanifest`, `/sitemap.xml`, `/_not-found`                              | Static assets and constant metadata.                                                                                                                   |
+| `/api/health`                                                                                  | Returns a constant literal. Prerendering it is both correct and faster than a cold start (contrast `/api/metrics` in R11).                              |
+
+### Partially prerendered (`◐`) — 21 routes
+
+| Route(s)                                                    | Static shell                              | Dynamic hole                                                                        |
+| ----------------------------------------------------------- | ----------------------------------------- | ----------------------------------------------------------------------------------- |
+| `/shop`                                                     | Heading, bestsellers rail (cached)        | `searchParams`-driven catalog grid                                                  |
+| `/products/[id]`                                            | Product record (cached, 20 ids prebuilt)  | AI feature flag and `?v=` variant preselection                                       |
+| `/cart`, `/orders`, `/orders/[id]`, `/wishlist`             | Layout chrome                             | Everything behind the page-body `auth()` call                                        |
+| `/auth/signin`, `/auth/error`                               | Form chrome                               | `searchParams` (`callbackUrl`, `error`) read client-side                             |
+| `/admin` and the 12 other `/admin/**` pages                 | Layout chrome                             | Everything behind `checkAdminAuth` / `requireAdminPermission` (and `connection()` on `/admin`) |
+
+No `◐` shell contains session-derived markup: the four `"use cache"` scopes in the codebase (`src/app/(public)/shop/page.tsx` ×2, `src/app/(public)/products/[id]/page.tsx`, `src/app/api/categories/route.ts`) read only `db`/`drizzleDb`, and neither they nor `src/lib/db-queries.ts` call `auth()`, `cookies()`, or `headers()` (FR-008, FR-013, T035).
+
+### Dynamic (`ƒ`) — 73 routes
+
+| Group                                                                                                                                                    | Count | Justification                                                                                                                                                                              |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Session-scoped and mutating handlers: `/api/admin/**` (33), `/api/account/**` (5), `/api/cart/**` (3), `/api/checkout/**` (3), `/api/orders/**` (2), `/api/wishlist/**` (2), `/api/payments/webhook/**` (2), `/api/reviews`, `/api/share`, `/api/inngest` | 53    | Class A, reconciled against the build. Each reads a session, request body, search params, a stream, or a webhook signature. Dynamic is the default under Cache Components; none carries a segment config. The plan's original count of 47 omitted `/api/account`, the three `/api/admin/categories` handlers, `/api/admin/reviews/[id]`, and `/api/admin/search/reindex`. |
+| `/api/auth/**` (6) and `/api/upload`                                                                                                                     | 7     | Credential handling and multipart uploads; both read the request body. `/api/upload` no longer pins `runtime = 'nodejs'` (Class E) — Node.js is already the default for route handlers.     |
+| Public read APIs: `/api/products` (3), `/api/search` (3), `/api/exchange-rates`, `/api/pincode/[code]`, `/api/reviews/vote`, `/api/ai/products/[id]/chat` | 10    | Consumed by client components, not by the prerender. They keep their Redis caching and `Cache-Control` headers rather than moving into a `"use cache"` scope.                              |
+| `/api/categories`                                                                                                                                        | 1     | Handler is dynamic, but its body is a `"use cache"` scope, so the query is cached and tag-invalidated while the response headers stay per-request.                                          |
+| `/api/metrics`                                                                                                                                           | 1     | In-process Prometheus counters; opts out of prerendering with `connection()` (R11).                                                                                                        |
+| `/s/[key]`                                                                                                                                               | 1     | Short-link resolution followed by a redirect; the key is request data.                                                                                                                     |
+
 
 ## Cache design
 
