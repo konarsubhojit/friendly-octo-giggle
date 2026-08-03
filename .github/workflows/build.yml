@@ -113,6 +113,12 @@ jobs:
             exit 1
           fi
 
+      # sonar.coverage.exclusions below is limited to framework-owned route
+      # entrypoints (page/layout/loading/error), declarative schema, and
+      # config-like bootstrap modules (db, env, redis, logger, email provider
+      # wiring, constant tables) plus type-only declarations. Security-relevant
+      # sources such as src/proxy.ts and src/lib/search/** are intentionally NOT
+      # excluded so the security perimeter stays covered and scanned.
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v8
         if: github.ref == 'refs/heads/develop' || github.base_ref == 'develop'
@@ -123,7 +129,7 @@ jobs:
           args: >
             -Dsonar.qualitygate.wait=true
             -Dsonar.qualitygate.timeout=600
-            -Dsonar.coverage.exclusions=src/app/**/page.tsx,src/app/**/layout.tsx,src/app/**/loading.tsx,src/app/**/error.tsx,src/lib/schema.ts,src/lib/db.ts,src/lib/env.ts,src/lib/redis.ts,src/lib/logger.ts,src/lib/email/providers.ts,src/lib/constants/categories.ts,src/lib/constants/checkout-policies.ts,src/lib/search/**,src/proxy.ts,src/types/**
+            -Dsonar.coverage.exclusions=src/app/**/page.tsx,src/app/**/layout.tsx,src/app/**/loading.tsx,src/app/**/error.tsx,src/lib/schema.ts,src/lib/db.ts,src/lib/env.ts,src/lib/redis.ts,src/lib/logger.ts,src/lib/email/providers.ts,src/lib/constants/categories.ts,src/lib/constants/checkout-policies.ts,src/types/**
 
   deepsource:
     name: DeepSource Analysis
