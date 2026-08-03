@@ -89,6 +89,13 @@ const mapGatewayStatus = (status: string): RefundStatus => {
   return 'PENDING'
 }
 
+/** Payment states that still hold money we are able to refund. */
+const REFUNDABLE_PAYMENT_STATUSES = new Set([
+  'PAID',
+  'REFUNDED',
+  'PARTIALLY_REFUNDED',
+])
+
 interface LockedOrder {
   id: string
   userId: string | null
@@ -168,7 +175,7 @@ const prepareRefund = async ({
       throw new RefundRequestError('Order has no payment to refund')
     }
 
-    if (order.paymentStatus !== 'PAID' && order.paymentStatus !== 'REFUNDED') {
+    if (!REFUNDABLE_PAYMENT_STATUSES.has(order.paymentStatus)) {
       throw new RefundRequestError(
         'Only paid orders can be refunded',
         order.paymentStatus === 'PENDING' ? 409 : 400
@@ -252,7 +259,11 @@ const settleRefund = async ({
 
     await tx
       .update(orders)
-      .set({ paymentStatus: 'REFUNDED', updatedAt: new Date() })
+      .set({
+        paymentStatus:
+          prepared.refundableBalance > 0 ? 'PARTIALLY_REFUNDED' : 'REFUNDED',
+        updatedAt: new Date(),
+      })
       .where(eq(orders.id, prepared.order.id))
 
     if (
@@ -593,12 +604,14 @@ export const reconcileRefundWebhook = async (
       const refundedTotal = sumMoney(reserved.map((row) => row.amount))
       const isPartial = roundMoney(order.amountPaid - refundedTotal) > 0
 
+      let paymentStatus: 'PAID' | 'REFUNDED' | 'PARTIALLY_REFUNDED' = 'PAID'
+      if (refundedTotal > 0) {
+        paymentStatus = isPartial ? 'PARTIALLY_REFUNDED' : 'REFUNDED'
+      }
+
       await tx
         .update(orders)
-        .set({
-          paymentStatus: refundedTotal > 0 ? 'REFUNDED' : 'PAID',
-          updatedAt: new Date(),
-        })
+        .set({ paymentStatus, updatedAt: new Date() })
         .where(eq(orders.id, order.id))
 
       let restocked = false

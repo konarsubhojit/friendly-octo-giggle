@@ -54,6 +54,7 @@ export const PaymentStatusEnum = z.enum([
   'PAID',
   'FAILED',
   'REFUNDED',
+  'PARTIALLY_REFUNDED',
 ])
 
 export const CheckoutRequestStatusEnum = z.enum([

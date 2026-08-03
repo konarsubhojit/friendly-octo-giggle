@@ -70,6 +70,7 @@ export const paymentStatusEnum = pgEnum('PaymentStatus', [
   'PAID',
   'FAILED',
   'REFUNDED',
+  'PARTIALLY_REFUNDED',
 ])
 
 export const paymentProviderEnum = pgEnum('PaymentProvider', PAYMENT_PROVIDERS)

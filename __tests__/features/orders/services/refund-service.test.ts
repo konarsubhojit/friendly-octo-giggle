@@ -187,6 +187,18 @@ const queueTransaction = (results: {
 
 const gatewayRefund = vi.fn()
 
+/** The `paymentStatus` persisted on the order inside a transaction, if any. */
+const persistedPaymentStatus = (tx: TxMocks): string | undefined => {
+  for (const { value } of tx.update.mock.results) {
+    const node = value as { set: ReturnType<typeof vi.fn> }
+    for (const [payload] of node.set.mock.calls) {
+      const status = (payload as { paymentStatus?: string }).paymentStatus
+      if (status) return status
+    }
+  }
+  return undefined
+}
+
 beforeEach(() => {
   vi.clearAllMocks()
   gatewayRefund.mockResolvedValue({
@@ -254,6 +266,51 @@ describe('refundOrder', () => {
     })
     expect(result.refundableBalance).toBe(60)
     expect(result.restocked).toBe(false)
+  })
+
+  it('marks a partially refunded order PARTIALLY_REFUNDED', async () => {
+    queueTransaction({ select: [[paidOrder], []], insert: [[{ id: 'ref1' }]] })
+    const settle = queueTransaction({ update: [[], []] })
+
+    await refundOrder({ orderId: 'order1', amount: 40 })
+
+    expect(persistedPaymentStatus(settle)).toBe('PARTIALLY_REFUNDED')
+  })
+
+  it('marks a fully refunded order REFUNDED', async () => {
+    queueTransaction({ select: [[paidOrder], []], insert: [[{ id: 'ref1' }]] })
+    const settle = queueTransaction({
+      select: [[{ variantId: 'v1', quantity: 2 }]],
+      update: [[], [], [{ id: 'order1' }], []],
+    })
+
+    await refundOrder({ orderId: 'order1' })
+
+    expect(persistedPaymentStatus(settle)).toBe('REFUNDED')
+  })
+
+  it('promotes a partially refunded order to REFUNDED once the balance clears', async () => {
+    queueTransaction({
+      select: [
+        [{ ...paidOrder, paymentStatus: 'PARTIALLY_REFUNDED' }],
+        [{ amount: 40 }],
+      ],
+      insert: [[{ id: 'ref2' }]],
+    })
+    const settle = queueTransaction({
+      select: [[{ variantId: 'v1', quantity: 2 }]],
+      update: [[], [], [{ id: 'order1' }], []],
+    })
+
+    const result = await refundOrder({ orderId: 'order1' })
+
+    expect(gatewayRefund).toHaveBeenCalledWith({
+      paymentTransactionId: 'pay_123',
+      amount: 60,
+    })
+    expect(result.refundedTotal).toBe(100)
+    expect(result.refundableBalance).toBe(0)
+    expect(persistedPaymentStatus(settle)).toBe('REFUNDED')
   })
 
   it('does not restock an order that has already shipped', async () => {
@@ -376,6 +433,25 @@ describe('reconcileRefundWebhook', () => {
       'user1'
     )
     expect(mockDispatchWorkflowEvent).toHaveBeenCalled()
+  })
+
+  it('marks the order PARTIALLY_REFUNDED when a balance remains', async () => {
+    const tx = queueTransaction({
+      select: [
+        [{ ...paidOrder, status: 'PROCESSING' }],
+        [{ id: 'ref1', amount: 40, status: 'PENDING', reason: null }],
+        [{ amount: 40 }],
+      ],
+      update: [[], []],
+    })
+
+    const outcome = await reconcileRefundWebhook({
+      ...webhook,
+      amountInMinorUnits: 4000,
+    })
+
+    expect(outcome).toMatchObject({ isPartial: true, restocked: false })
+    expect(persistedPaymentStatus(tx)).toBe('PARTIALLY_REFUNDED')
   })
 
   it('does not restock a shipped order from a refund webhook', async () => {
