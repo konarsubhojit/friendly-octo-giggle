@@ -170,38 +170,14 @@ jobs:
           flags: unittests
           fail_ci_if_error: false
 
-  deploy-preview:
-    name: Deploy to Vercel Preview
-    runs-on: ubuntu-latest
-    needs: [build]
-    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: Deploy to Vercel Preview
-        run: npx --yes vercel@latest deploy --token=${{ secrets.VERCEL_TOKEN }}
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-
-  deploy-production:
-    name: Deploy to Vercel Production
-    runs-on: ubuntu-latest
-    needs: [build]
-    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: Deploy to Vercel Production
-        run: npx --yes vercel@latest deploy --prod --token=${{ secrets.VERCEL_TOKEN }}
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-
+  # Migrations must complete before the new code is deployed, otherwise the new
+  # revision serves traffic against the old schema. Migrations must therefore be
+  # written expand/contract style so the currently deployed (old) code keeps
+  # working against the new schema. See docs/deployment.md#database-migrations.
   database-migrations-preview:
     name: Run Database Migrations (Preview)
     runs-on: ubuntu-latest
-    needs: [deploy-preview]
+    needs: [build]
     if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
     steps:
       - uses: actions/checkout@v7
@@ -229,7 +205,7 @@ jobs:
   database-migrations-production:
     name: Run Database Migrations (Production)
     runs-on: ubuntu-latest
-    needs: [deploy-production]
+    needs: [build]
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     steps:
       - uses: actions/checkout@v7
@@ -250,6 +226,34 @@ jobs:
           npx vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
           cp .vercel/.env.production.local .env.local
           npm run db:migrate
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+  deploy-preview:
+    name: Deploy to Vercel Preview
+    runs-on: ubuntu-latest
+    needs: [database-migrations-preview]
+    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Deploy to Vercel Preview
+        run: npx --yes vercel@latest deploy --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+  deploy-production:
+    name: Deploy to Vercel Production
+    runs-on: ubuntu-latest
+    needs: [database-migrations-production]
+    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Deploy to Vercel Production
+        run: npx --yes vercel@latest deploy --prod --token=${{ secrets.VERCEL_TOKEN }}
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}

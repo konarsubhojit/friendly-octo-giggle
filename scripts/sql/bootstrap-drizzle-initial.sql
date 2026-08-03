@@ -80,8 +80,11 @@ SELECT drizzle.ensure_public_enum(
 
 SELECT drizzle.ensure_public_enum(
   'PaymentStatus',
-  'CREATE TYPE public."PaymentStatus" AS ENUM (''PENDING'', ''PAID'', ''FAILED'', ''REFUNDED'')'
+  'CREATE TYPE public."PaymentStatus" AS ENUM (''PENDING'', ''PAID'', ''FAILED'', ''REFUNDED'', ''PARTIALLY_REFUNDED'')'
 );
+
+-- Widen an existing enum created before partial refunds were tracked separately.
+ALTER TYPE public."PaymentStatus" ADD VALUE IF NOT EXISTS 'PARTIALLY_REFUNDED';
 
 SELECT drizzle.ensure_public_enum(
   'RefundStatus',
@@ -1722,6 +1725,13 @@ INSERT INTO drizzle.__drizzle_migrations (hash, created_at)
 SELECT '76a7409fd380278c705031a124d6ec2c45074a32aa5bd40727018669e8064d08', 1753574832000
 WHERE NOT EXISTS (
   SELECT 1 FROM drizzle.__drizzle_migrations WHERE created_at = 1753574832000
+);
+
+-- 0014_partially_refunded_payment_status
+INSERT INTO drizzle.__drizzle_migrations (hash, created_at)
+SELECT 'ac1d03c3c3fe63ccd277a072caa461cba9dbedbb6fd20e16a2cf8e6097a0ead9', 1785696565550
+WHERE NOT EXISTS (
+  SELECT 1 FROM drizzle.__drizzle_migrations WHERE created_at = 1785696565550
 );
 
 DROP FUNCTION drizzle.ensure_public_enum(text, text);

@@ -79,8 +79,19 @@ const BASE_CURRENCY = 'INR' as const
 /** Providers whose money never reached us, so there is nothing to refund. */
 const NON_REFUNDABLE_PROVIDERS = new Set(['COD'])
 
+/**
+ * Orders already marked `REFUNDED` stay listed because rows refunded before
+ * `PARTIALLY_REFUNDED` existed may still carry a balance; the service rejects
+ * the request when nothing is left to refund.
+ */
+const REFUNDABLE_PAYMENT_STATUSES = new Set([
+  'PAID',
+  'REFUNDED',
+  'PARTIALLY_REFUNDED',
+])
+
 const isRefundable = (order: AdminOrder): boolean =>
-  (order.paymentStatus === 'PAID' || order.paymentStatus === 'REFUNDED') &&
+  REFUNDABLE_PAYMENT_STATUSES.has(order.paymentStatus ?? '') &&
   !NON_REFUNDABLE_PROVIDERS.has(order.paymentProvider ?? '')
 
 interface RefundSectionProps {

@@ -41,6 +41,7 @@ const PAYMENT_STATUS_LABEL: Record<string, string> = {
   PAID: 'Paid',
   FAILED: 'Payment Failed',
   REFUNDED: 'Refunded',
+  PARTIALLY_REFUNDED: 'Partially Refunded',
 }
 
 interface OrderListCardProps {
