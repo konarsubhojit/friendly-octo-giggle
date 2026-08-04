@@ -36,6 +36,7 @@ vi.mock('@/lib/logger', () => ({ logBusinessEvent: mockLogBusinessEvent }))
 import {
   searchCatalog,
   suggestSearchTerms,
+  type SearchQueryOptions,
   type SearchSort,
 } from '@/lib/search-discovery'
 
@@ -109,10 +110,10 @@ const catalogSelects = [
   ],
 ]
 
-const baseOptions = {
+const baseOptions: SearchQueryOptions = {
   q: 'thing',
-  sort: 'relevance' as SearchSort,
-  variant: 'all' as const,
+  sort: 'relevance',
+  variant: 'all',
   limit: 10,
   offset: 0,
 }
