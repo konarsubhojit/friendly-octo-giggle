@@ -14,6 +14,58 @@
 - `playwright.config.ts` defines a project matrix including `desktop-chrome`, `mobile-chrome`, `admin-desktop`, and `admin-mobile`, with a global setup and shared mock data.
 - The repository's mandatory pre-PR gates are `npm run lint`, `npx tsc --noEmit`, `npm test`, and `npm run build`; browser verification is documented as mandatory for UI changes but is not mechanically enforced.
 
+### Re-verified 2026-08-04
+
+- `.github/workflows/build.yml` now defines nine jobs — `test`, `build`, `sonarqube`, `deepsource`, `codecov`, `database-migrations-preview`, `database-migrations-production`, `deploy-preview`, and `deploy-production`. **Still none of them runs Playwright.** The 2026-08-01 count of three jobs is stale.
+- Application source now lives under `src/`, so runtime paths are `src/lib/env.ts`, `src/lib/db.ts`, and `src/lib/redis.ts` rather than repository-root equivalents.
+- `playwright.config.ts` declares **18** projects, three of which point at spec files that do not exist: `desktop-chrome` and `mobile-chrome` match `**/ui-changes.spec.ts`, and `locale-links` matches only `**/locale-links.spec.ts`. `playwright-tests/` still holds 16 spec files and every one of them is matched by some project.
+- Localization rot is wider than first recorded. Beyond `latest-features.spec.ts`, `playwright-tests/public-pages.spec.ts` lines 30–31 still list `/es` and `/es/shop` in its static route table, and `playwright.config.ts` line 21 still probes `${BASE_URL}/en/shop` as the local server readiness check.
+- `package.json` declares no `test:e2e` script; the suite is invoked as `npx playwright test`.
+- `@playwright/test` is declared as `^1.62.0` and locked at `1.62.0`, which is the key the browser-binary cache required by FR-004 must use.
+
+## Clarifications
+
+### Session 2026-08-04
+
+- **Q1**: How does the application obtain a database when the end-to-end suite runs in continuous integration?  
+  **A**: Both mechanisms, for different reasons — the job provisions an ephemeral PostgreSQL instance for its own lifetime, applies the repository's committed migrations to it, and loads a committed fixture seed, while the blocking projects continue to intercept their browser-observable API traffic through the existing mock helpers.  
+  **Rationale**: `src/lib/env.ts` validates `DATABASE_URL` at import time and `src/lib/db.ts` builds its connection pool from `env.DATABASE_URL` at module load, so no server-rendered route can render without a database, and Playwright route interception never reaches Server Component reads — mocks alone cannot remove the dependency, and a database alone cannot make assertions deterministic. Two consequences follow: `src/lib/db.ts` connects through `@neondatabase/serverless` (locked at `1.1.0`), which speaks a hosted WebSocket protocol rather than plain PostgreSQL wire protocol, so the ephemeral instance must be fronted by that driver's proxy configuration; and no cache service is provisioned, because `src/lib/redis.ts` returns `null` and falls through to the underlying fetcher when the Upstash variables are absent.
+- **Q2**: How does CI obtain the admin session the eight authenticated projects need, and what happens on fork pull requests?  
+  **A**: `playwright-tests/global-setup.ts` runs unchanged and signs in against the ephemeral CI database using an account created by the fixture seed; because that database is created and destroyed inside the job and holds only fixtures, its credentials are ordinary non-secret job values, so fork pull requests run exactly the same blocking set as branch pull requests.  
+  **Rationale**: `global-setup.ts` reads plain `COPILOT_DEV_EMAIL` and `COPILOT_DEV_PASS` environment variables and only throws when both those variables and a cached state file are absent, and `.github/workflows/build.yml` already sets literal non-secret `DATABASE_URL` and `NEXTAUTH_SECRET` values for its `build` job, so this reuses an established pattern with no source change and no repository secret.
+- **Q3**: What is the CI time budget referenced by FR-011 and SC-006, and how is the suite parallelized to meet it?  
+  **A**: The end-to-end job completes within 15 minutes of wall-clock time and total pull-request CI stays within 30 minutes, achieved by splitting the blocking set across four parallel shards whose individual reports are merged into one, with an enforced job timeout above the budget.  
+  **Rationale**: The suite declares 103 statically written cases across 16 files plus roughly 34 dynamically generated ones, and `playwright.config.ts` caps a test at 30 seconds (60 for `variant-options`), so a quarter of the blocking set fits inside 15 minutes with browser binaries cached per FR-004 and dependencies installed through the same `npm ci` path the existing jobs use.
+- **Q4**: What criteria decide blocking versus advisory, and what is the initial classification of every declared project?  
+  **A**: Four criteria decide it, and all eighteen declared projects are assigned in the table below — fourteen blocking, three advisory, one removed.  
+  **Rationale**: FR-006 requires a classification for every project, and an unstated rule cannot be applied to new projects or defended when a maintainer wants an inconvenient suite downgraded.
+- **Q5**: Which artifacts outside the spec files must this feature deliver, and what does "required status check" concretely mean when branch protection is not a repository file?  
+  **A**: Harness repair is in scope — project definitions whose patterns match no file are removed or repointed, the local server configuration supports both a development run and a CI production-build run with a readiness probe that targets a route that exists, and a single documented command runs the suite; enforcement is delivered as a stably named end-to-end job plus a recorded, verifiable enablement step against the default branch `develop`.  
+  **Rationale**: The suite cannot run at all until `playwright.config.ts` line 21 stops probing the removed `/en/shop` route and its three dead project definitions are resolved, and `.github/` contains no ruleset or settings file, so protection can only be delivered as a nameable job plus a documented enablement step.
+
+Q4 applies four criteria. A project is blocking only when every browser-observable dependency is intercepted by the suite's own mocks or satisfied by the CI database and its seed; its assertions are deterministic, with no screenshot comparison, no timing or layout heuristic, and no reliance on data the seed does not guarantee; it needs no secret beyond the ephemeral test account, and any optional credential produces a skip rather than a failure; and it passes ten consecutive runs on an unmodified default-branch checkout. A project failing any of the first three criteria is advisory. A project failing only the fourth is quarantined into advisory with a tracked issue, per User Story 3. No project may mix blocking and advisory spec files, so the screenshot audit is confined to the advisory projects rather than riding along with `admin-views.spec.ts`.
+
+| Project                       | Initial classification | Basis                                                                                                                                      |
+| ----------------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `ai-stock-privacy`            | Blocking               | Intercepts the assistant and exchange-rate calls and asserts a privacy invariant that does not depend on catalog contents.                 |
+| `orders-list`                 | Blocking               | Every order and rate response is intercepted from the shared mock data.                                                                    |
+| `latest-features`             | Blocking               | Deterministic once the removed localization assertions are gone.                                                                           |
+| `password-validation-desktop` | Blocking               | Public form validation with no data dependency.                                                                                            |
+| `account-password-validation` | Blocking               | Intercepts the account endpoint and needs only the seeded session.                                                                         |
+| `admin-desktop`               | Blocking               | Every admin endpoint is intercepted from the shared mock data.                                                                             |
+| `admin-mobile`                | Blocking               | Same coverage at the mobile viewport.                                                                                                      |
+| `cart`                        | Blocking               | Stateful cart, checkout, and rate interception make it self-contained.                                                                     |
+| `accessibility-public`        | Blocking               | Rule-based audit over a fixed route list, deterministic given deterministic markup.                                                        |
+| `accessibility-authenticated` | Blocking               | Same audit using the seeded session.                                                                                                       |
+| `product-navigation`          | Blocking               | Discovers product links at runtime, so it survives catalog changes.                                                                        |
+| `public-pages`                | Blocking               | Deterministic once the removed locale routes are gone.                                                                                     |
+| `session-isolation`           | Blocking               | Guards the Cache Components isolation invariant; its optional second-account case skips when that credential is absent.                    |
+| `variant-options`             | Blocking               | Admitted only because the seed guarantees a product carrying variant options, and it fails loudly rather than silently when that is false. |
+| `desktop-chrome`              | Advisory               | Reduces to screenshot and touch-target heuristics with no pass or fail contract once its dead pattern is dropped.                          |
+| `mobile-chrome`               | Advisory               | Same heuristics at the mobile viewport.                                                                                                    |
+| `orders-live`                 | Advisory               | Writes through the real checkout path, depends on a product identifier no committed seed provides, and asserts conditionally.              |
+| `locale-links`                | Removed                | Its only pattern matches a spec file that does not exist, and the behavior it guarded was removed with localization.                       |
+
 ## User Scenarios & Testing _(mandatory)_
 
 ### User Story 1 - Pull requests are blocked by browser regressions (Priority: P1)
@@ -74,24 +126,33 @@ The suite is stable enough that a red result is believed, and non-deterministic 
 - A build failure must fail fast and skip the end-to-end job rather than reporting a misleading browser error.
 - Browser binary installation must be cached; a cache miss must slow the job rather than fail it.
 - Advisory suites must never mark the workflow red, and blocking suites must never be silently downgraded to advisory.
+- The application's data access layer targets a hosted database protocol, so an ephemeral CI database must be exposed in a form that layer accepts; otherwise every server-rendered route fails in a way that resembles an application regression rather than an environment fault.
+- The CI database is created and destroyed inside the job, so no run may depend on data left behind by an earlier run, and a run must not be considered green because a fixture happened to survive.
+- A project whose required fixture is missing from the seed must fail loudly during setup rather than skipping its assertions or passing vacuously.
+- An advisory project that reports a problem by logging instead of failing must not be counted as coverage for the journey it walks through.
 
 ## Requirements _(mandatory)_
 
 ### Functional Requirements
 
 - **FR-001**: `.github/workflows/build.yml` MUST define an end-to-end job that runs the Playwright suite on pull requests and on pushes to the default branch.
-- **FR-002**: The end-to-end job MUST run against a production build of the application, matching the deployed rendering path.
+- **FR-002**: The end-to-end job MUST run against a production build of the application, matching the deployed rendering path. The test harness MUST support both that mode and a local development run, selected by environment rather than by editing the configuration, and its server readiness probe MUST target a route that exists in the current route tree.
 - **FR-003**: The end-to-end job MUST depend on a successful build and MUST NOT run when the build fails.
 - **FR-004**: Playwright browser binaries MUST be cached between runs, keyed on the Playwright version.
 - **FR-005**: The job MUST publish the HTML report, traces, and failure screenshots as artifacts with a bounded retention period.
-- **FR-006**: Every Playwright project MUST be explicitly classified as blocking or advisory, and the classification MUST be recorded in the workflow and in `docs/development.md`.
+- **FR-006**: Every Playwright project MUST be explicitly classified as blocking or advisory against published criteria — dependencies fully satisfied by the CI environment or by the suite's own interception, deterministic assertions, and no reliance on an unavailable secret — and the classification MUST be recorded in the workflow and in `docs/development.md`. No project may mix blocking and advisory spec files.
 - **FR-007**: All assertions referencing removed localization behavior MUST be deleted or rewritten against current behavior.
 - **FR-008**: Every remaining spec file MUST be audited against current shipped behavior, and each obsolete assertion MUST be corrected or removed with a recorded reason.
 - **FR-009**: Tests MUST NOT be weakened — removing assertions, widening matchers, or skipping cases to force a green run is prohibited.
-- **FR-010**: The suite MUST run without production secrets and MUST skip, not fail, any check that genuinely requires an unavailable secret.
-- **FR-011**: Long-running suites MUST be parallelized or sharded so the end-to-end job stays within the documented CI time budget.
+- **FR-010**: The suite MUST run without production secrets. The end-to-end environment MUST be provisioned entirely from ephemeral, non-secret values so a pull request from a fork executes the same blocking set as a pull request from a branch in the repository, and any check that genuinely requires an unavailable secret MUST skip rather than fail.
+- **FR-011**: Long-running suites MUST be parallelized or sharded so the end-to-end job completes within 15 minutes of wall-clock time, and the job MUST carry an enforced timeout above that budget so a hung run fails rather than idling.
 - **FR-012**: `docs/development.md` MUST document how to run, debug, and extend the suite locally, including the blocking and advisory split.
-- **FR-013**: The end-to-end job MUST be configured as a required status check for merges into the default branch.
+- **FR-013**: The end-to-end job MUST carry a stable, unique name and MUST be enforced as a required status check for merges into the default branch. Because branch protection is not stored in the repository, the enablement step and the means of verifying it MUST be recorded in `docs/development.md`.
+- **FR-014**: The end-to-end environment MUST provision an ephemeral database for the lifetime of the job, apply the repository's committed migrations to it, and load a committed deterministic seed. The seed MUST contain every fixture the blocking projects require, including at least one catalog product carrying variant options. The application MUST reach that database through its existing data access layer without altering production behavior.
+- **FR-015**: Authenticated projects MUST obtain their session by signing in against the ephemeral CI database using an account created by that seed. Session state MUST NOT be committed to the repository, and the account's credentials MUST NOT be repository secrets.
+- **FR-016**: Every Playwright project definition MUST resolve to at least one existing spec file; definitions whose patterns match no file MUST be removed or repointed.
+- **FR-017**: A single documented command MUST run the suite, and CI MUST invoke that same command rather than a divergent one.
+- **FR-018**: Advisory classification MUST NOT be used to retire coverage. An advisory project MUST still execute on every run, publish its artifacts, and carry a tracked reason and a condition for promotion into the blocking set.
 
 ### Key Entities
 
@@ -99,6 +160,7 @@ The suite is stable enough that a red result is believed, and non-deterministic 
 - **Blocking Suite**: A spec file whose failure prevents merge.
 - **Advisory Suite**: A spec file that produces artifacts and diagnostics without gating merge, such as the UX screenshot audit.
 - **Suite Audit Record**: The per-file outcome of the assertion audit — retained, rewritten, or removed — with justification.
+- **Fixture Seed**: The committed, deterministic data set loaded into the ephemeral CI database, defining the catalog, orders, and test account that blocking projects are allowed to rely on.
 
 ## Success Criteria _(mandatory)_
 
@@ -109,8 +171,11 @@ The suite is stable enough that a red result is believed, and non-deterministic 
 - **SC-003**: Ten consecutive runs of the blocking suite against the same commit produce identical results.
 - **SC-004**: A deliberately introduced regression in a covered journey is detected by the suite.
 - **SC-005**: No test in the repository asserts localization behavior that was removed.
-- **SC-006**: Total CI wall-clock time for a pull request stays within the documented budget.
+- **SC-006**: Total CI wall-clock time for a pull request stays within 30 minutes, and the end-to-end job itself completes within 15 minutes.
 - **SC-007**: Failure artifacts for a failed run are downloadable and contain a trace for each failed test.
+- **SC-008**: A pull request opened from a fork runs the same blocking set as one opened from a branch in the repository, with no blocking project skipped and no failure attributable to an unavailable secret.
+- **SC-009**: Every Playwright project resolves to at least one existing spec file, and every project appears exactly once in the published blocking or advisory classification.
+- **SC-010**: The blocking suite passes with no external service credentials configured, using only the database the job provisions, migrates, and seeds itself.
 
 ## Out of Scope
 
@@ -120,5 +185,6 @@ The suite is stable enough that a red result is believed, and non-deterministic 
 
 ## Dependencies
 
-- Blocks `012-cache-components-and-ppr`, which changes the rendering model and needs a trustworthy browser-level signal.
+- Discharges a deferred obligation from `012-cache-components-and-ppr`, which has already landed. That feature's task T045 — run the full Playwright suite against a production build and record the result — was deferred to this feature because the suite is not runnable today, so `013` no longer blocks `012`; completing `013` satisfies T045.
+- Guards the Cache Components rendering model that `012-cache-components-and-ppr` introduced. `playwright-tests/session-isolation.spec.ts` exists for exactly that purpose, and it is in the blocking set so a personalized response leaking into a prerendered shell fails the pull request rather than reaching production.
 - Coordinates with `014-documentation-and-instruction-reconciliation` for the coverage claims in `docs/features.md`.
