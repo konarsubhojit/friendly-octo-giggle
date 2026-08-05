@@ -13,7 +13,7 @@ Three constraints shape the design, all verified on the runner rather than assum
 2. `src/proxy.ts:361-372` returns a 301 to `https://` for every plain-HTTP request outside development, and `next start` cannot serve TLS. Injecting `x-forwarded-proto: https` does not help: Playwright's readiness probe follows the redirect into a dead port, and Next.js then rewrites the three `src/proxy.ts` auth redirects to absolute `https://localhost:3000` locations the browser cannot reach. Resolved by a second CI-only gate, `E2E_ALLOW_INSECURE_HTTP` (research R11-R16).
 3. Traces are currently `off` — `playwright.config.ts` sets no `trace` option — so SC-007 cannot be met without enabling `trace: 'retain-on-failure'` (research R20).
 
-The delivered shape is one blocking lane of four shards plus one advisory lane, both hanging off the existing `build` job, merged by a single gate job named **`End-to-End Suite`** that becomes the required status check.
+The delivered shape is one blocking lane of four shards plus one advisory lane, both hanging off the existing `build` job, merged by a single gate job named **`End-to-End Suite`** that becomes the required status check. A third lane, `e2e-preview-smoke`, runs a read-only subset against the deployed preview after a `develop` push; it is advisory, off the pull-request critical path, and deliberately outside the gate's `needs:`.
 
 ## Technical Context
 
@@ -71,11 +71,11 @@ No `data-model.md` is produced. The feature introduces no application entities; 
 ### Source Code (repository root)
 
 ```text
-.github/workflows/build.yml            # Add e2e-blocking, e2e-advisory, e2e jobs; upload .next from build
+.github/workflows/build.yml            # Add e2e-blocking, e2e-advisory, e2e, e2e-preview-smoke jobs; upload .next from build; capture the preview deployment URL
 playwright.config.ts                   # Repair webServer probe, dead projects, ux-audit split; add trace/retries/workers/forbidOnly
 package.json                           # Add test:e2e (and the CI-mode server script it invokes)
 playwright-tests/
-├── global-setup.ts                    # Unchanged behavior; signs in against the seeded CI account
+├── global-setup.ts                    # Signs in against the seeded CI account; gains an explicit no-auth mode for the smoke lane
 ├── mock-data.ts                       # Unchanged
 ├── latest-features.spec.ts            # Delete the Spanish-route case
 ├── public-pages.spec.ts               # Delete the two /es routes
@@ -143,6 +143,8 @@ All 18 declared projects, matching the spec's Q4 table exactly. Auth requirement
 
 Totals: **14 blocking projects / 151 cases**, **3 advisory projects / 40 cases**, **1 project removed**. Pre-repair 230 instances reconcile as 151 + 40 + 36 (the two `ux-audit` groups leaving the admin projects) + 2 (locale routes) + 1 (Spanish-route case) = 230.
 
+Six of the blocking projects also run in the post-deployment smoke lane against the deployed preview: `public-pages`, `accessibility-public`, `product-navigation`, `ai-stock-privacy`, `session-isolation`, and `latest-features`, totalling 47 cases. Appearing in both lanes is not a mixed classification — a project's class describes the gate it feeds, and the smoke lane feeds none. The other eight blocking projects are excluded because they declare a `storageState` (`orders-list`, `account-password-validation`, `admin-desktop`, `admin-mobile`, `cart`, `accessibility-authenticated`, `variant-options`) or would write to the shared preview database (`variant-options`), and `password-validation-desktop` is excluded because it exercises a pure client-side form with nothing deployment-specific to observe.
+
 Shard membership is assigned by Playwright's `--shard=k/4`, not pinned by hand, so it stays balanced as files grow (research Decision 3). The measured pre-repair assignment over the 14 blocking projects was 56 / 43 / 52 / 39 cases; removing the two 18-case `ux-audit` groups that currently sit in shards 2 and 3 brings the post-repair spread to roughly 25-40 per shard. The floor is set by `admin-views.spec.ts` at 25 cases, which research R19 proves is indivisible.
 
 ## Suite audit ledger
@@ -178,14 +180,16 @@ One row per spec file. Sixteen files exist; `locale-links.spec.ts` and `ui-chang
 
 Three new jobs in `.github/workflows/build.yml`, plus one added step in the existing `build` job.
 
-| Job id         | `name:` (check surface)                      | `needs:`       | Blocking | Notes                                                                                                          |
-| -------------- | -------------------------------------------- | -------------- | -------- | -------------------------------------------------------------------------------------------------------------- |
-| `build`        | existing                                     | `test`         | yes      | Gains an `actions/upload-artifact@v7` step publishing `.next` minus `.next/cache`, retention 1 day             |
-| `e2e-blocking` | `E2E Blocking (shard ${{ matrix.shard }}/4)` | `build`        | yes      | `strategy.matrix.shard: [1,2,3,4]`, `fail-fast: false`, `timeout-minutes: 20`                                  |
-| `e2e-advisory` | `E2E Advisory`                               | `build`        | no       | `continue-on-error: true`, `timeout-minutes: 20`                                                               |
-| `e2e`          | **`End-to-End Suite`**                       | `e2e-blocking` | yes      | Merges the four blob reports, uploads the merged HTML report, fails if any shard failed. `timeout-minutes: 10` |
+| Job id                | `name:` (check surface)                      | `needs:`         | Blocking | Notes                                                                                                                                    |
+| --------------------- | -------------------------------------------- | ---------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `build`               | existing                                     | `test`           | yes      | Gains an `actions/upload-artifact@v7` step publishing `.next` minus `.next/cache`, retention 1 day                                       |
+| `e2e-blocking`        | `E2E Blocking (shard ${{ matrix.shard }}/4)` | `build`          | yes      | `strategy.matrix.shard: [1,2,3,4]`, `fail-fast: false`, `timeout-minutes: 20`                                                            |
+| `e2e-advisory`        | `E2E Advisory`                               | `build`          | no       | `continue-on-error: true`, `timeout-minutes: 20`                                                                                         |
+| `e2e`                 | **`End-to-End Suite`**                       | `e2e-blocking`   | yes      | Merges the four blob reports, uploads the merged HTML report, fails if any shard failed. `timeout-minutes: 10`                           |
+| `deploy-preview`      | existing                                     | existing         | n/a      | Gains a step output carrying the URL `vercel deploy` printed, exposed as a job `outputs:` value                                          |
+| `e2e-preview-smoke`   | `E2E Preview Smoke`                          | `deploy-preview` | no       | `continue-on-error: true`, `timeout-minutes: 15`, guarded on a non-empty deployment URL. Outside the gate's `needs:` and off the PR path |
 
-**The required status check is the job named `End-to-End Suite`.** It is a non-matrix job, so GitHub publishes exactly one check with that literal string, which satisfies FR-013's "stable, unique name". The matrix job names carry a shard suffix and are deliberately not the required check; `e2e-advisory` is excluded from `needs:` so an advisory failure cannot gate merge.
+**The required status check is the job named `End-to-End Suite`.** It is a non-matrix job, so GitHub publishes exactly one check with that literal string, which satisfies FR-013's "stable, unique name". The matrix job names carry a shard suffix and are deliberately not the required check; `e2e-advisory` is excluded from `needs:` so an advisory failure cannot gate merge. `e2e-preview-smoke` is likewise excluded, and additionally cannot appear on a pull request at all because `deploy-preview` only runs on a `develop` push.
 
 ### Triggers
 
@@ -239,6 +243,22 @@ The advisory job is identical except that step 11 selects the three advisory pro
 
 Playwright's own `webServer` starts the application, so no separate server step is needed and the readiness probe on `${BASE_URL}/shop` doubles as a check that migrations and the seed actually took: if the seed failed, `/shop` cannot render and the probe times out, failing the job during setup rather than producing vacuous passes.
 
+### Post-deployment smoke lane
+
+`e2e-preview-smoke` exists to observe the one class of fault the local lane structurally cannot: Vercel edge behavior, the genuine `src/proxy.ts` HTTPS path that `E2E_ALLOW_INSECURE_HTTP` suppresses locally, Cache Components prerendering on the real runtime, and environment misconfiguration. It gates nothing (FR-019) and does not count as coverage for any journey the blocking lane owns (FR-022).
+
+**Target resolution.** `deploy-preview` currently discards the URL `vercel deploy` prints. It gains a step that captures stdout into a step output, and the job gains an `outputs:` mapping so `e2e-preview-smoke` can read it as `PLAYWRIGHT_BASE_URL`. FR-020 forbids substituting a hardcoded alias: `vercel deploy` without `--prod` mints a per-deployment host and moves no alias, so an alias names a host rather than the revision under test, and the workflow's `cancel-in-progress: true` concurrency makes that a race.
+
+**Skip rather than fail.** The job carries an `if:` guard on the captured URL being non-empty, so an unavailable `VERCEL_TOKEN` — the permanent condition on fork pull requests — leaves the lane skipped. Combined with `continue-on-error: true`, no failure mode of this lane can turn a contributor's pull request red (FR-023, and the spec's fork edge case).
+
+**Readiness gate.** Before the suite runs, a bounded poll requests `${PLAYWRIGHT_BASE_URL}/shop` until it answers 200, with a cap well inside `timeout-minutes: 15`. A cold deployment is therefore a wait, not a reported breakage.
+
+**Project subset.** Exactly the six read-only projects named in spec Q6: `public-pages`, `accessibility-public`, `product-navigation`, `ai-stock-privacy`, `session-isolation`, `latest-features`. Selected with repeated `--project=` flags on the same `npm run test:e2e` entry point FR-017 mandates. Everything holding a `storageState` is excluded because it would need a real credential; `variant-options` and `orders-live` are excluded because they write; `cart` and the two checkout files are excluded because they are meaningful only under interception; `ux-audit` is excluded because it has no pass-or-fail contract.
+
+**No-authentication mode.** `playwright-tests/global-setup.ts` throws today when `COPILOT_DEV_EMAIL` and `COPILOT_DEV_PASS` are both absent and no cached state file exists. The smoke lane must not be handed placeholder credentials, so setup gains an explicit `PLAYWRIGHT_SKIP_AUTH` path that returns without signing in. The existing throw is untouched for every other invocation, so this widens no assertion and weakens no lane (FR-009, FR-021). `session-isolation.spec.ts` builds its own contexts and its optional second-account case already skips when that credential is absent, so it is safe in a lane with no stored state; the other five projects declare no `storageState` in `playwright.config.ts`.
+
+**Environment.** Only `PLAYWRIGHT_BASE_URL` and `PLAYWRIGHT_SKIP_AUTH` are set. No database, no proxy sidecar, no `E2E_WS_PROXY`, no `E2E_ALLOW_INSECURE_HTTP` — the point of this lane is the deployed configuration, so injecting the CI gates would defeat it.
+
 ### Caching strategy
 
 | Cache               | Key                                               | Restore behavior on miss                      |
@@ -257,6 +277,7 @@ The version comes from the installed package rather than from `package.json`'s `
 | `e2e-traces-<shard>`  | `e2e-blocking` | `test-results/` — traces and failure screenshots | 14 days   |
 | `e2e-report`          | `e2e`          | Merged HTML report across all four shards        | 14 days   |
 | `e2e-advisory-report` | `e2e-advisory` | HTML report, traces, and `ux-audit` screenshots  | 14 days   |
+| `e2e-preview-smoke-report` | `e2e-preview-smoke` | HTML report and traces from the deployed run | 14 days   |
 
 `trace: 'retain-on-failure'` must be added to `playwright.config.ts` for these to contain anything — traces are currently off (research R20). `screenshot: 'only-on-failure'` is already set at `playwright.config.ts:35`.
 
@@ -264,8 +285,7 @@ The version comes from the installed package rather than from `package.json`'s `
 
 | Setting                         | Now                   | After                                              | Why                                                                        |
 | ------------------------------- | --------------------- | -------------------------------------------------- | -------------------------------------------------------------------------- |
-| `webServer.url`                 | `${BASE_URL}/en/shop` | `${BASE_URL}/shop`                                 | The probed route was removed (FR-002)                                      |
-| `webServer.command`             | `npm run dev`         | CI-mode branch selects the production-build server | FR-002 requires both modes, selected by environment                        |
+| `webServer.url`                 | `${BASE_URL}/en/shop` | `${BASE_URL}/shop`                                 | The probed route was removed (FR-002)                                      || `webServer.command`             | `npm run dev`         | CI-mode branch selects the production-build server | FR-002 requires both modes, selected by environment                        |
 | `webServer.reuseExistingServer` | `true`                | `!process.env.CI`                                  | Prevents a stale server being reused in a job                              |
 | `trace`                         | unset (off)           | `'retain-on-failure'`                              | SC-007 requires a trace per failed test                                    |
 | `retries`                       | unset (0)             | `0`, explicitly                                    | Decision 8; makes the intent legible rather than incidental                |
@@ -321,6 +341,8 @@ Worst realistic case is 5:10 cold overhead plus 2:40 pessimistic tests, or 7:50,
 
 **Total pull-request CI.** The critical path is `test` → `build` → `e2e-blocking` → `e2e`. Against the current workflow's observed shape that is roughly 4 + 5 + 8 + 1 = 18 minutes, inside the 30-minute budget with headroom. `e2e-advisory` runs in parallel with `e2e-blocking` and carries the same 20-minute cap, so it cannot extend the critical path — it is not in the gate's `needs:`.
 
+**Smoke lane.** It is off the pull-request critical path entirely, because `deploy-preview` runs only on a `develop` push, so SC-006's 30-minute budget is untouched no matter what the lane costs. Budgeted at roughly 6 minutes: about 1:30 checkout, `npm ci`, and browser restore; up to 2:00 in the readiness poll for a cold deployment; and 47 cases over two workers at an 8-second pessimistic median, or 3:10. `timeout-minutes: 15` sits above that with room for a slow deployment, and `continue-on-error: true` means even a timeout is inert.
+
 ## Rollback
 
 The change set is designed to be revertible as a unit and to degrade safely at each stage.
@@ -328,6 +350,7 @@ The change set is designed to be revertible as a unit and to degrade safely at e
 | Stage                                 | Action                                                                                                                                                       | Effect                                                                                                                                                              |
 | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 1. The required check proves unstable | Remove `End-to-End Suite` from the branch-protection required list. No commit needed.                                                                        | Merges unblock within seconds. The job still runs and still publishes artifacts.                                                                                    |
+| 0. The smoke lane is noisy or unwanted | Delete the `e2e-preview-smoke` job. Optionally also revert the `deploy-preview` URL-capture step and the `PLAYWRIGHT_SKIP_AUTH` branch.                     | Nothing depends on it: it is not in any `needs:`, it is already `continue-on-error: true`, and it never runs on a pull request. Removing it changes no gate.        |
 | 2. The instability is in one project  | Move that project from the blocking lane to the advisory lane and record the tracked reason and promotion condition, per FR-018 and the spec's User Story 3. | Coverage is retained; the gate stops flapping. One workflow line and one docs row.                                                                                  |
 | 3. The whole feature must go          | Revert the single squashed commit.                                                                                                                           | `.github/workflows/build.yml` returns to nine jobs, `playwright.config.ts` to its current 18 projects, and the two environment gates disappear from the Zod schema. |
 

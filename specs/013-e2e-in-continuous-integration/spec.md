@@ -43,6 +43,12 @@
   **A**: Harness repair is in scope — project definitions whose patterns match no file are removed or repointed, the local server configuration supports both a development run and a CI production-build run with a readiness probe that targets a route that exists, and a single documented command runs the suite; enforcement is delivered as a stably named end-to-end job plus a recorded, verifiable enablement step against the default branch `develop`.  
   **Rationale**: The suite cannot run at all until `playwright.config.ts` line 21 stops probing the removed `/en/shop` route and its three dead project definitions are resolved, and `.github/` contains no ruleset or settings file, so protection can only be delivered as a nameable job plus a documented enablement step.
 
+- **Q6**: Should the suite run against the deployed Vercel preview URL instead of a locally served production build?
+  **A**: No for the gating lane, yes as an additional advisory post-deployment smoke lane that runs on `develop` pushes only, against the URL that deployment itself emits.
+  **Rationale**: Six independently disqualifying facts block the deployed target from being the gate. (1) `.github/workflows/build.yml` gates `deploy-preview` on `github.ref == 'refs/heads/develop' && github.event_name == 'push'` and it `needs: [database-migrations-preview]`, which carries the same condition, so nothing in that path ever runs on a pull request; a suite hanging off it would run after merge and could not satisfy FR-001, FR-013, SC-001, or User Story 1. (2) That path reads `VERCEL_TOKEN`, `VERCEL_ORG_ID`, and `VERCEL_PROJECT_ID`, none of which a fork pull request receives, against FR-010 and SC-008. (3) The preview database is long-lived and shared, so it can satisfy neither FR-014's ephemeral-migrate-seed requirement nor SC-003's ten identical runs — seeding it is destructive, and not seeding it makes `variant-options` and `product-navigation` depend on whatever rows happen to exist. (4) Against a deployed environment the `COPILOT_DEV_EMAIL` and `COPILOT_DEV_PASS` that `playwright-tests/global-setup.ts` reads stop being literal fixture values and become real administrator credentials for a real database, which FR-015 forbids. (5) `npx vercel deploy` without `--prod` mints a unique per-deployment URL and moves no project alias, so a hardcoded host such as `kiyontest.vercel.app` resolves to whatever revision that domain currently points at rather than the commit under test — and with `cancel-in-progress: true` concurrency that is a race, not a stable target. (6) `variant-options` and `orders-live` write through the real application path, so they must never touch a shared environment. What the deployed target does add, and what the local lane structurally cannot observe, is Vercel edge behavior, the genuine `src/proxy.ts` HTTPS path that the local lane deliberately suppresses through `E2E_ALLOW_INSECURE_HTTP`, Cache Components prerendering on the real runtime, and environment misconfiguration. That value is real but it is post-merge value, so it is delivered as a third lane rather than by weakening the gate.
+
+The smoke lane carries the six projects that read without writing and depend on no fixture the deployed environment cannot be assumed to hold: `public-pages`, `accessibility-public`, `product-navigation`, `ai-stock-privacy`, `session-isolation`, and `latest-features`. Every project requiring `storageState` is excluded because it would need a real credential; `variant-options` and `orders-live` are excluded because they write; `cart`, `checkout-policy`, and `checkout-error-recovery` are excluded because they are meaningful only with interception, which would defeat the purpose of testing a deployment; the `ux-audit` screenshot heuristics are excluded because they have no pass-or-fail contract anywhere. A project's presence in both the blocking lane and the smoke lane is not a mixed classification: classification attaches to the gate a project feeds, and the smoke lane gates nothing.
+
 Q4 applies four criteria. A project is blocking only when every browser-observable dependency is intercepted by the suite's own mocks or satisfied by the CI database and its seed; its assertions are deterministic, with no screenshot comparison, no timing or layout heuristic, and no reliance on data the seed does not guarantee; it needs no secret beyond the ephemeral test account, and any optional credential produces a skip rather than a failure; and it passes ten consecutive runs on an unmodified default-branch checkout. A project failing any of the first three criteria is advisory. A project failing only the fourth is quarantined into advisory with a tracked issue, per User Story 3. No project may mix blocking and advisory spec files, so the screenshot audit is confined to the advisory projects rather than riding along with `admin-views.spec.ts`.
 
 | Project                       | Initial classification | Basis                                                                                                                                      |
@@ -130,6 +136,8 @@ The suite is stable enough that a red result is believed, and non-deterministic 
 - The CI database is created and destroyed inside the job, so no run may depend on data left behind by an earlier run, and a run must not be considered green because a fixture happened to survive.
 - A project whose required fixture is missing from the seed must fail loudly during setup rather than skipping its assertions or passing vacuously.
 - An advisory project that reports a problem by logging instead of failing must not be counted as coverage for the journey it walks through.
+- The post-deployment smoke lane depends on a deployment credential that a fork pull request never receives. Its absence must leave the lane skipped rather than failed, so it can never turn a pull request red for a reason the contributor cannot act on.
+- A deployment that is still warming when the smoke lane starts must be waited for within a bounded window rather than reported as a broken deployment.
 
 ## Requirements _(mandatory)_
 
@@ -153,6 +161,11 @@ The suite is stable enough that a red result is believed, and non-deterministic 
 - **FR-016**: Every Playwright project definition MUST resolve to at least one existing spec file; definitions whose patterns match no file MUST be removed or repointed.
 - **FR-017**: A single documented command MUST run the suite, and CI MUST invoke that same command rather than a divergent one.
 - **FR-018**: Advisory classification MUST NOT be used to retire coverage. An advisory project MUST still execute on every run, publish its artifacts, and carry a tracked reason and a condition for promotion into the blocking set.
+- **FR-019**: A post-deployment smoke lane MUST run a named, read-only, non-mutating subset of the suite against the deployed preview environment after a successful deployment from the default branch, and it MUST NOT be the required pull-request status check.
+- **FR-020**: The smoke lane's target MUST be the deployment URL emitted by the deployment step that produced the revision under test. A hardcoded project alias MUST NOT be used, because an alias identifies a host rather than a revision.
+- **FR-021**: The smoke lane MUST NOT write to the shared preview database and MUST NOT require an account credential. Any project that declares a `storageState` or writes through the real application path is excluded from it, and the test harness MUST provide an explicit no-authentication mode rather than being fed placeholder credentials.
+- **FR-022**: Smoke-lane execution MUST NOT be counted as coverage for any journey the blocking lane already owns, consistent with FR-018. The lane's purpose is to detect deployment-environment faults, not to substitute for the gate.
+- **FR-023**: The smoke lane MUST skip cleanly when the deployment credential is unavailable, and MUST NOT fail for that reason.
 
 ### Key Entities
 
@@ -161,6 +174,7 @@ The suite is stable enough that a red result is believed, and non-deterministic 
 - **Advisory Suite**: A spec file that produces artifacts and diagnostics without gating merge, such as the UX screenshot audit.
 - **Suite Audit Record**: The per-file outcome of the assertion audit — retained, rewritten, or removed — with justification.
 - **Fixture Seed**: The committed, deterministic data set loaded into the ephemeral CI database, defining the catalog, orders, and test account that blocking projects are allowed to rely on.
+- **Smoke Lane**: The post-deployment run of a read-only project subset against the URL a deployment emitted. It gates nothing, holds no credential, and writes nothing.
 
 ## Success Criteria _(mandatory)_
 
@@ -176,12 +190,14 @@ The suite is stable enough that a red result is believed, and non-deterministic 
 - **SC-008**: A pull request opened from a fork runs the same blocking set as one opened from a branch in the repository, with no blocking project skipped and no failure attributable to an unavailable secret.
 - **SC-009**: Every Playwright project resolves to at least one existing spec file, and every project appears exactly once in the published blocking or advisory classification.
 - **SC-010**: The blocking suite passes with no external service credentials configured, using only the database the job provisions, migrates, and seeds itself.
+- **SC-011**: A preview deployment broken in a way the local lane cannot observe — an edge redirect, a prerendering fault, or an environment misconfiguration — is detected by the smoke lane within one run of the default-branch push that produced it.
 
 ## Out of Scope
 
 - Adding new feature coverage beyond repairing existing suites; new journeys are covered by the specs that introduce them.
 - Visual-regression baseline comparison for the screenshot audit.
 - Load, performance, or soak testing.
+- Promoting the post-deployment smoke lane into a gate, and running it against the production deployment. A check that fails after a production deploy is an alert rather than a gate and belongs with monitoring; promotion of the preview smoke lane is deferred until it has produced ten consecutive green runs.
 
 ## Dependencies
 

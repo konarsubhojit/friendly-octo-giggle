@@ -11,8 +11,11 @@ This feature exposes no HTTP API. Its externally observable surface is the set o
 | `e2e-blocking` | `E2E Blocking (shard ${{ matrix.shard }}/4)` | `shard: [1, 2, 3, 4]` | `[build]`        | `false`             | `20`              |
 | `e2e-advisory` | `E2E Advisory`                               | none                  | `[build]`        | `true`              | `20`              |
 | `e2e`          | `End-to-End Suite`                           | none                  | `[e2e-blocking]` | `false`             | `10`              |
+| `e2e-preview-smoke` | `E2E Preview Smoke`                     | none                  | `[deploy-preview]` | `true`            | `15`              |
 
 `strategy.fail-fast` is `false` on `e2e-blocking`, so one failing shard does not cancel the other three and every shard publishes its artifacts.
+
+`e2e-preview-smoke` is not part of the pull-request graph at all: `deploy-preview` runs only on a push to `develop`, so the lane can never appear as a check on a pull request. It is additionally guarded on the deployment URL being non-empty, so an unavailable `VERCEL_TOKEN` leaves it skipped rather than failed (FR-023).
 
 ## Required status check
 
@@ -74,6 +77,8 @@ Every value below is a literal in the workflow file. None is a secret, none is a
 | `COPILOT_DEV_EMAIL`       | fixture address           | `playwright-tests/global-setup.ts`                                                                   |
 | `COPILOT_DEV_PASS`        | fixture password          | `playwright-tests/global-setup.ts`                                                                   |
 
+The smoke lane sets a disjoint, much smaller environment — `PLAYWRIGHT_BASE_URL` resolved from the deployment output and `PLAYWRIGHT_SKIP_AUTH=true`, and nothing else. It provisions no database, starts no proxy, and sets neither `E2E_` gate, because its whole purpose is to exercise the deployed configuration rather than a synthesized one.
+
 Both `E2E_` variables are declared optional in `src/lib/validations/env.ts`. When absent, the code paths they gate do not execute — that inertness is covered by unit tests in `__tests__/lib/` and is what keeps production behavior unchanged (FR-014).
 
 ## Commands
@@ -83,6 +88,7 @@ Both `E2E_` variables are declared optional in `src/lib/validations/env.ts`. Whe
 | `e2e-blocking` | `npm run test:e2e -- --shard=${{ matrix.shard }}/4 --reporter=blob`                          |
 | `e2e-advisory` | `npm run test:e2e -- --project=desktop-chrome --project=mobile-chrome --project=orders-live` |
 | `e2e`          | `npx playwright merge-reports --reporter html ./all-blob-reports`                            |
+| `e2e-preview-smoke` | `npm run test:e2e -- --project=public-pages --project=accessibility-public --project=product-navigation --project=ai-stock-privacy --project=session-isolation --project=latest-features` |
 
 FR-017 requires CI to invoke the same documented command a contributor runs. `npm run test:e2e` is that command in every case; only flags differ.
 
@@ -95,6 +101,7 @@ FR-017 requires CI to invoke the same documented command a contributor runs. `np
 | `e2e-traces-<shard>`  | `e2e-blocking` | `test-results/` — traces, failure screenshots | 14 days   | `if: always()`   |
 | `e2e-report`          | `e2e`          | Merged HTML report across all four shards     | 14 days   | `if: always()`   |
 | `e2e-advisory-report` | `e2e-advisory` | HTML report, traces, `ux-audit` screenshots   | 14 days   | `if: always()`   |
+| `e2e-preview-smoke-report` | `e2e-preview-smoke` | HTML report and traces from the deployed run | 14 days | `if: always()` |
 
 Traces exist only because `playwright.config.ts` sets `trace: 'retain-on-failure'`. Removing that setting silently empties the trace artifacts and breaks SC-007 without failing any job — treat it as a contract term, not a preference.
 
@@ -110,6 +117,8 @@ Traces exist only because `playwright.config.ts` sets `trace: 'retain-on-failure
 | Browser cache miss                              | success, slower                            | any            | success                    | no                                                         |
 | Database or proxy service fails to become ready | failure during setup                       | any            | failure                    | **yes**                                                    |
 | Seed fails, leaving `/shop` unrenderable        | failure on the `webServer` readiness probe | any            | failure                    | **yes**                                                    |
+
+`e2e-preview-smoke` never appears in this table's "merge blocked" column, under any condition. It is `continue-on-error: true`, it is in no job's `needs:`, and `deploy-preview` does not run on pull requests, so all three independently guarantee it cannot gate a merge. A smoke-lane failure is a post-merge signal about the deployed environment and is triaged as such.
 
 The last row is deliberate. A blocking project whose fixture is missing must fail loudly during setup rather than skip its assertions or pass vacuously, per the spec's edge cases. The readiness probe on `${BASE_URL}/shop` is what makes that automatic.
 
