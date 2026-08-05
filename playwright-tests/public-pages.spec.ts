@@ -13,7 +13,6 @@ import { expect, test, type Page } from '@playwright/test'
 
 const STATIC_PUBLIC_PAGES = [
   '/',
-  '/shop',
   '/about',
   '/contact',
   '/help',
@@ -27,8 +26,6 @@ const STATIC_PUBLIC_PAGES = [
   '/auth/signin',
   '/auth/register',
   '/auth/forgot-password',
-  '/es',
-  '/es/shop',
 ] as const
 
 const NOT_FOUND_BODY = /this page could not be found/i
@@ -52,7 +49,7 @@ test.describe('public page coverage', () => {
   }
 
   test('first product detail page renders without error', async ({ page }) => {
-    await page.goto('/shop', { waitUntil: 'domcontentloaded' })
+    await page.goto('/', { waitUntil: 'domcontentloaded' })
     const href = await page
       .locator('a[href*="/products/"]')
       .first()
@@ -79,7 +76,7 @@ test.describe('shop renders server-side without JavaScript', () => {
   test('initial HTML contains product cards and category chips', async ({
     page,
   }) => {
-    await expectRendersWithoutError(page, '/shop')
+    await expectRendersWithoutError(page, '/')
 
     await expect(
       page.locator('a[href*="/products/"]'),

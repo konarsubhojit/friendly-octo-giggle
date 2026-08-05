@@ -57,7 +57,7 @@ export default function CheckoutShippingPage() {
               title="Your cart is empty"
               message="Add products before entering shipping details."
               ctaText="Browse Products"
-              ctaHref="/shop"
+              ctaHref="/"
               className="py-0"
             />
           </Card>

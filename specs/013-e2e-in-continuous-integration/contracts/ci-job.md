@@ -44,7 +44,7 @@ Inherited from the workflow, unchanged: pull requests and pushes to the default 
 | npm dependencies     | `npm ci` with `actions/setup-node@v7` `cache: npm` | Node 24, matching the existing jobs                              |
 | Chromium binary      | `~/.cache/ms-playwright` cache                     | Key `${{ runner.os }}-playwright-<installed version>`            |
 | Schema               | `npx drizzle-kit migrate`                          | Applies the committed `drizzle/` files; needs no WebSocket proxy |
-| Fixture data         | `node scripts/seed-e2e-fixtures.mjs`               | Contract in [fixture-seed.md](./fixture-seed.md)                 |
+| Fixture data         | `npx tsx scripts/seed-e2e-fixtures.ts`               | Contract in [fixture-seed.md](./fixture-seed.md)                 |
 
 **No repository secret is read by either end-to-end job.** This is a contract, not an implementation detail: it is what makes SC-008 hold.
 
@@ -116,11 +116,11 @@ Traces exist only because `playwright.config.ts` sets `trace: 'retain-on-failure
 | A shard exceeds `timeout-minutes: 20`           | failure                                    | any            | failure                    | **yes**                                                    |
 | Browser cache miss                              | success, slower                            | any            | success                    | no                                                         |
 | Database or proxy service fails to become ready | failure during setup                       | any            | failure                    | **yes**                                                    |
-| Seed fails, leaving `/shop` unrenderable        | failure on the `webServer` readiness probe | any            | failure                    | **yes**                                                    |
+| Seed fails, leaving `/` unrenderable        | failure on the `webServer` readiness probe | any            | failure                    | **yes**                                                    |
 
 `e2e-preview-smoke` never appears in this table's "merge blocked" column, under any condition. It is `continue-on-error: true`, it is in no job's `needs:`, and `deploy-preview` does not run on pull requests, so all three independently guarantee it cannot gate a merge. A smoke-lane failure is a post-merge signal about the deployed environment and is triaged as such.
 
-The last row is deliberate. A blocking project whose fixture is missing must fail loudly during setup rather than skip its assertions or pass vacuously, per the spec's edge cases. The readiness probe on `${BASE_URL}/shop` is what makes that automatic.
+The last row is deliberate. A blocking project whose fixture is missing must fail loudly during setup rather than skip its assertions or pass vacuously, per the spec's edge cases. The readiness probe on `${BASE_URL}/` is what makes that automatic.
 
 `retries` is `0` in the blocking lane. A reported failure is a single observed failure with no retry masking, which is what makes SC-003's "ten consecutive runs produce identical results" a measurable statement.
 

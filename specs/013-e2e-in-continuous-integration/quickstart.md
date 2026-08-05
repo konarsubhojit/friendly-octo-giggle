@@ -13,7 +13,7 @@ npm run dev          # in one terminal; serves https://localhost:3000
 npm run test:e2e     # in another
 ```
 
-`playwright.config.ts` defaults `PLAYWRIGHT_BASE_URL` to `https://localhost:3000`, matching the `--experimental-https` server that `npm run dev` starts, and `webServer.reuseExistingServer` picks up the server you already have running. If you skip the first terminal, Playwright starts the dev server itself and waits for `/shop` to respond.
+`playwright.config.ts` defaults `PLAYWRIGHT_BASE_URL` to `https://localhost:3000`, matching the `--experimental-https` server that `npm run dev` starts, and `webServer.reuseExistingServer` picks up the server you already have running. If you skip the first terminal, Playwright starts the dev server itself and waits for `/` to respond.
 
 Browsers must be installed once:
 
@@ -74,12 +74,12 @@ export COPILOT_DEV_PASS='e2e-local-password'
 
 ```bash
 npx drizzle-kit migrate
-node scripts/seed-e2e-fixtures.mjs
+npx tsx scripts/seed-e2e-fixtures.ts
 npm run build
 npm run test:e2e
 ```
 
-`npm run test:e2e` starts the production server itself and waits for `/shop`. If the seed did not take, `/shop` cannot render and the readiness probe times out — that is intentional, and it is what stops a run from passing vacuously on an empty database.
+`npm run test:e2e` starts the production server itself and waits for `/`. If the seed did not take, `/` cannot render and the readiness probe times out — that is intentional, and it is what stops a run from passing vacuously on an empty database.
 
 ### 2d. Tear down
 
@@ -159,7 +159,7 @@ Playwright assigns whole `(project, file)` groups to shards, so a shard is a sta
 
    The trace viewer gives the action timeline, a DOM snapshot before and after every step, the console log, and the network log. Traces are captured with `retain-on-failure`, so a passing test produces none.
 
-5. If the failure is a timeout on the `webServer` readiness probe rather than on a test, the cause is upstream of Playwright: check the `drizzle-kit migrate` and `node scripts/seed-e2e-fixtures.mjs` step logs. A failed seed leaves `/shop` unable to render.
+5. If the failure is a timeout on the `webServer` readiness probe rather than on a test, the cause is upstream of Playwright: check the `drizzle-kit migrate` and `npx tsx scripts/seed-e2e-fixtures.ts` step logs. A failed seed leaves `/` unable to render.
 
 6. The blocking lane runs with `retries: 0`, so a failure is a single observed failure, not a residue after retries. If you believe it is flaky, reproduce it locally with the CI environment from section 2 and run the project ten times before concluding anything — and if it is genuinely flaky, quarantine it into the advisory lane with a tracked reason and a promotion condition rather than adding retries.
 

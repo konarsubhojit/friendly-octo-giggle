@@ -358,8 +358,15 @@ export async function proxy(request: NextRequest) {
   }
 
   // ── HTTPS redirect (production only) ──────────────────
+  // `next start` cannot serve TLS, so the CI end-to-end lane exercises the
+  // production build over plain HTTP and opts out via E2E_ALLOW_INSECURE_HTTP.
+  // The variable is never set in any deployed environment.
   const proto = request.headers.get('x-forwarded-proto') || 'http'
-  if (process.env.NODE_ENV !== 'development' && proto === 'http') {
+  if (
+    process.env.NODE_ENV !== 'development' &&
+    process.env.E2E_ALLOW_INSECURE_HTTP !== 'true' &&
+    proto === 'http'
+  ) {
     const host = request.headers.get('host') || ''
     return withResponseHeaders(
       NextResponse.redirect(

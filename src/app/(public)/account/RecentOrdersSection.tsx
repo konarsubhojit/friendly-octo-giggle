@@ -139,7 +139,7 @@ export function RecentOrdersSection() {
           title="No orders yet"
           message="Once you place an order, the latest updates will appear here."
           ctaText="Browse Products"
-          ctaHref="/shop"
+          ctaHref="/"
           className="py-4"
         />
       )

@@ -97,7 +97,7 @@ export default function CheckoutConfirmationPage() {
 
         <div className="mt-6 flex flex-col gap-3 sm:flex-row">
           <Link
-            href="/shop"
+            href="/"
             className="inline-flex items-center justify-center rounded-xl border border-[var(--border-warm)] px-5 py-2.5 text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--accent-blush)] transition-colors"
           >
             Continue shopping

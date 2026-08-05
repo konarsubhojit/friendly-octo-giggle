@@ -90,6 +90,246 @@ jobs:
           path: .next/cache
           key: ${{ runner.os }}-nextjs-${{ hashFiles('package-lock.json', 'src/**/*.ts', 'src/**/*.tsx', 'src/**/*.js', 'src/**/*.jsx', 'src/**/*.css', 'app/**/*.ts', 'app/**/*.tsx', 'pages/**/*.ts', 'pages/**/*.tsx', 'next.config.*') }}
 
+  e2e-blocking:
+    name: E2E Blocking (shard ${{ matrix.shard }}/4)
+    runs-on: ubuntu-latest
+    needs: [build]
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: e2e
+          POSTGRES_PASSWORD: e2e
+          POSTGRES_DB: e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+      wsproxy:
+        image: ghcr.io/neondatabase/wsproxy:latest
+        env:
+          APPEND_PORT: 'postgres:5432'
+          ALLOW_ADDR_REGEX: '.*'
+          LOG_TRAFFIC: 'false'
+        ports:
+          - 5488:80
+    env:
+      # Literal, job-scoped, non-secret values. The database is created and
+      # destroyed inside this job, so a fork pull request runs the identical set.
+      PGE2E_USER: e2e
+      PGE2E_PASSWORD: e2e
+      PGE2E_DB: e2e
+      COPILOT_DEV_EMAIL: e2e-admin@example.test
+      COPILOT_DEV_PASS: E2eFixturePass!234
+      E2E_WS_PROXY: localhost:5488/v2
+      E2E_ALLOW_INSECURE_HTTP: 'true'
+      NEXTAUTH_SECRET: e2e-fixture-secret-not-used-outside-ci
+      AUTH_TRUST_HOST: 'true'
+      NEXTAUTH_URL: http://127.0.0.1:3000
+      PLAYWRIGHT_BASE_URL: http://127.0.0.1:3000
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Compose ephemeral database URL
+        run: |
+          echo "DATABASE_URL=postgresql://${PGE2E_USER}:${PGE2E_PASSWORD}@localhost:5432/${PGE2E_DB}" >> "$GITHUB_ENV"
+
+      - name: Apply migrations
+        run: npm run db:migrate
+
+      - name: Seed fixtures
+        run: npx tsx scripts/seed-e2e-fixtures.ts
+
+      - name: Build application
+        run: npm run build
+
+      - name: Run blocking projects
+        run: |
+          npx playwright test \
+            --project=ai-stock-privacy \
+            --project=orders-list \
+            --project=latest-features \
+            --project=password-validation-desktop \
+            --project=account-password-validation \
+            --project=admin-desktop \
+            --project=admin-mobile \
+            --project=cart \
+            --project=accessibility-public \
+            --project=accessibility-authenticated \
+            --project=product-navigation \
+            --project=public-pages \
+            --project=session-isolation \
+            --project=variant-options \
+            --shard=${{ matrix.shard }}/4
+
+      - name: Upload blob report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-blocking-blob-${{ matrix.shard }}
+          path: playwright-tests/blob-report/
+          retention-days: 7
+
+  e2e:
+    name: End-to-End Suite
+    runs-on: ubuntu-latest
+    needs: [e2e-blocking]
+    if: always()
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download shard blob reports
+        if: needs.e2e-blocking.result != 'skipped'
+        uses: actions/download-artifact@v7
+        with:
+          pattern: e2e-blocking-blob-*
+          path: all-blob-reports
+          merge-multiple: true
+
+      - name: Merge shard reports
+        if: needs.e2e-blocking.result != 'skipped'
+        run: npx playwright merge-reports --reporter=html ./all-blob-reports
+        env:
+          PLAYWRIGHT_HTML_OUTPUT_DIR: playwright-tests/report
+
+      - name: Upload merged report
+        if: needs.e2e-blocking.result != 'skipped'
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-blocking-report
+          path: playwright-tests/report/
+          retention-days: 7
+
+      - name: Report aggregate shard result
+        run: |
+          echo "e2e-blocking result: ${{ needs.e2e-blocking.result }}"
+          test "${{ needs.e2e-blocking.result }}" = "success"
+
+  e2e-advisory:
+    name: E2E Advisory
+    runs-on: ubuntu-latest
+    needs: [build]
+    timeout-minutes: 20
+    continue-on-error: true
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: e2e
+          POSTGRES_PASSWORD: e2e
+          POSTGRES_DB: e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+      wsproxy:
+        image: ghcr.io/neondatabase/wsproxy:latest
+        env:
+          APPEND_PORT: 'postgres:5432'
+          ALLOW_ADDR_REGEX: '.*'
+          LOG_TRAFFIC: 'false'
+        ports:
+          - 5488:80
+    env:
+      PGE2E_USER: e2e
+      PGE2E_PASSWORD: e2e
+      PGE2E_DB: e2e
+      COPILOT_DEV_EMAIL: e2e-admin@example.test
+      COPILOT_DEV_PASS: E2eFixturePass!234
+      E2E_WS_PROXY: localhost:5488/v2
+      E2E_ALLOW_INSECURE_HTTP: 'true'
+      NEXTAUTH_SECRET: e2e-fixture-secret-not-used-outside-ci
+      AUTH_TRUST_HOST: 'true'
+      NEXTAUTH_URL: http://127.0.0.1:3000
+      PLAYWRIGHT_BASE_URL: http://127.0.0.1:3000
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Compose ephemeral database URL
+        run: |
+          echo "DATABASE_URL=postgresql://${PGE2E_USER}:${PGE2E_PASSWORD}@localhost:5432/${PGE2E_DB}" >> "$GITHUB_ENV"
+
+      - name: Apply migrations
+        run: npm run db:migrate
+
+      - name: Seed fixtures
+        run: npx tsx scripts/seed-e2e-fixtures.ts
+
+      - name: Build application
+        run: npm run build
+
+      - name: Run advisory projects
+        run: |
+          npx playwright test \
+            --project=desktop-chrome \
+            --project=mobile-chrome \
+            --project=orders-live
+
+      - name: Upload advisory report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-advisory-report
+          path: playwright-tests/blob-report/
+          retention-days: 7
+
   sonarqube:
     name: SonarQube Scan
     runs-on: ubuntu-latest
@@ -241,11 +481,17 @@ jobs:
     runs-on: ubuntu-latest
     needs: [database-migrations-preview]
     if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+    outputs:
+      deployment-url: ${{ steps.deploy.outputs.url }}
     steps:
       - uses: actions/checkout@v7
 
       - name: Deploy to Vercel Preview
-        run: npx --yes vercel@latest deploy --token=${{ secrets.VERCEL_TOKEN }}
+        id: deploy
+        run: |
+          set -euo pipefail
+          url="$(npx --yes vercel@latest deploy --token=${{ secrets.VERCEL_TOKEN }})"
+          echo "url=${url}" >> "$GITHUB_OUTPUT"
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
@@ -263,3 +509,77 @@ jobs:
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+  e2e-preview-smoke:
+    name: E2E Preview Smoke
+    runs-on: ubuntu-latest
+    needs: [deploy-preview]
+    if: needs.deploy-preview.result == 'success'
+    timeout-minutes: 15
+    continue-on-error: true
+    env:
+      PLAYWRIGHT_BASE_URL: ${{ needs.deploy-preview.outputs.deployment-url }}
+      # The lane runs only unauthenticated, read-only projects, so it must never
+      # be handed a credential for the shared preview database (FR-021).
+      PLAYWRIGHT_SKIP_AUTH: 'true'
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Verify a deployment URL was captured
+        run: |
+          set -euo pipefail
+          if [ -z "${PLAYWRIGHT_BASE_URL}" ]; then
+            echo "No deployment URL was emitted; skipping the smoke lane."
+            exit 0
+          fi
+          echo "Smoke target: ${PLAYWRIGHT_BASE_URL}"
+
+      - name: Set up Node.js
+        if: env.PLAYWRIGHT_BASE_URL != ''
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        if: env.PLAYWRIGHT_BASE_URL != ''
+        run: npm ci
+
+      - name: Install Playwright browsers
+        if: env.PLAYWRIGHT_BASE_URL != ''
+        run: npx playwright install --with-deps chromium
+
+      - name: Wait for the deployment to become ready
+        if: env.PLAYWRIGHT_BASE_URL != ''
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 30); do
+            status="$(curl -s -o /dev/null -w '%{http_code}' -L "${PLAYWRIGHT_BASE_URL}/" || echo 000)"
+            if [ "${status}" = "200" ]; then
+              echo "Deployment ready after ${attempt} attempt(s)."
+              exit 0
+            fi
+            echo "Attempt ${attempt}: storefront root returned ${status}; retrying."
+            sleep 10
+          done
+          echo "Deployment did not become ready within the bounded retry window."
+          exit 1
+
+      - name: Run read-only smoke projects
+        if: env.PLAYWRIGHT_BASE_URL != ''
+        run: |
+          npx playwright test \
+            --project=public-pages \
+            --project=accessibility-public \
+            --project=product-navigation \
+            --project=ai-stock-privacy \
+            --project=session-isolation \
+            --project=latest-features
+
+      - name: Upload smoke report
+        if: always() && env.PLAYWRIGHT_BASE_URL != ''
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-preview-smoke-report
+          path: playwright-tests/blob-report/
+          retention-days: 7

@@ -1,4 +1,4 @@
-import { Pool } from '@neondatabase/serverless'
+import { neonConfig, Pool } from '@neondatabase/serverless'
 import { drizzle } from 'drizzle-orm/neon-serverless'
 import {
   products,
@@ -126,6 +126,17 @@ const schema = {
 }
 
 // ─── Connection Pool (singleton for serverless) ─────────
+
+// The driver speaks the Neon WebSocket protocol, which a plain Postgres server
+// does not implement. CI runs a wsproxy sidecar in front of its ephemeral
+// database and points E2E_WS_PROXY at it; production never sets this, so the
+// branch is inert outside CI.
+if (env.E2E_WS_PROXY) {
+  neonConfig.wsProxy = () => env.E2E_WS_PROXY as string
+  neonConfig.useSecureWebSocket = false
+  neonConfig.pipelineTLS = false
+  neonConfig.pipelineConnect = false
+}
 
 const globalForDb = globalThis as unknown as {
   writePool: Pool | undefined

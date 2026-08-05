@@ -12,7 +12,6 @@ const ADMIN_PROJECTS = new Set(['admin-desktop', 'admin-mobile'])
 
 const PUBLIC_ROUTES = [
   { slug: 'home', path: '/' },
-  { slug: 'shop', path: '/shop' },
   { slug: 'about', path: '/about' },
   { slug: 'contact', path: '/contact' },
   { slug: 'shipping', path: '/shipping' },
@@ -144,7 +143,7 @@ test.describe('public route UX audit', () => {
       'Public route audit only runs on public desktop/mobile projects.'
     )
 
-    await page.goto('/shop', { waitUntil: 'domcontentloaded' })
+    await page.goto('/', { waitUntil: 'domcontentloaded' })
     await page
       .locator('a[href^="/products/"]')
       .first()

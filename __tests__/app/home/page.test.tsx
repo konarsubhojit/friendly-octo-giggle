@@ -111,7 +111,7 @@ vi.mock('@/lib/logger', () => ({
   logError: vi.fn(),
 }))
 
-describe('app/shop/page', () => {
+describe('app/home/page', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.useRealTimers()
@@ -157,9 +157,9 @@ describe('app/shop/page', () => {
     })
   })
 
-  it('uses catalog search response for initial shop products and sort', async () => {
+  it('uses catalog search response for initial home products and sort', async () => {
     const { ShopCatalog, parseShopFilters } =
-      await import('@/app/(public)/shop/page')
+      await import('@/app/(public)/page')
     const filters = parseShopFilters({ q: 'flowers', sort: 'price_desc' })
     const view = await ShopCatalog({ filters })
 
@@ -178,9 +178,9 @@ describe('app/shop/page', () => {
     expect(screen.getByText('Grid sort: price_desc')).toBeInTheDocument()
   }, 15000)
 
-  it('renders the static shop heading shell immediately', async () => {
-    const { default: ShopPage } = await import('@/app/(public)/shop/page')
-    const view = await ShopPage({ searchParams: Promise.resolve({}) })
+  it('renders the static home heading shell immediately', async () => {
+    const { default: HomePage } = await import('@/app/(public)/page')
+    const view = await HomePage({ searchParams: Promise.resolve({}) })
 
     render(view)
 
@@ -202,7 +202,7 @@ describe('app/shop/page', () => {
       },
     ])
 
-    const { ShopBestsellers } = await import('@/app/(public)/shop/page')
+    const { ShopBestsellers } = await import('@/app/(public)/page')
     const view = await ShopBestsellers()
 
     render(view)
@@ -214,7 +214,7 @@ describe('app/shop/page', () => {
   it('degrades to an empty bestsellers rail when the database read fails', async () => {
     mockFindBestsellers.mockRejectedValueOnce(new Error('db unreachable'))
 
-    const { ShopBestsellers } = await import('@/app/(public)/shop/page')
+    const { ShopBestsellers } = await import('@/app/(public)/page')
     const view = await ShopBestsellers()
 
     render(view)
@@ -224,13 +224,13 @@ describe('app/shop/page', () => {
     ).toBeInTheDocument()
   }, 15000)
 
-  it('renders empty shop state when data fetches time out', async () => {
+  it('renders empty home state when data fetches time out', async () => {
     mockWithTimeout.mockRejectedValueOnce(
       new Error('shop_initial_data timed out after 5000ms')
     )
 
     const { ShopCatalog, parseShopFilters } =
-      await import('@/app/(public)/shop/page')
+      await import('@/app/(public)/page')
     const view = await ShopCatalog({ filters: parseShopFilters({}) })
 
     render(view)

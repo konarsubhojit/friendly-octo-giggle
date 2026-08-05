@@ -30,7 +30,7 @@ const HeroTextColumn = () => {
         stitch at a time.
       </p>
       <Link
-        href="/shop"
+        href="/"
         className="inline-flex items-center gap-2 px-8 py-3.5 bg-[var(--btn-primary)] text-white rounded-full font-bold hover:bg-[var(--btn-primary-hover)] transition-all duration-300 shadow-warm hover:shadow-warm-lg hover:scale-105 focus-warm animate-fade-in-up animation-delay-200"
       >
         Explore Shop <span aria-hidden="true">→</span>

@@ -21,6 +21,13 @@ export const AUTH_STATE_PATH = path.join(__dirname, '.auth', 'admin.json')
 const BASE_URL = process.env.PLAYWRIGHT_BASE_URL ?? 'https://localhost:3000'
 
 export default async function globalSetup() {
+  // The post-deployment smoke lane runs only unauthenticated projects against a
+  // shared environment, so it must never be handed a real credential. This gate
+  // is opt-in and leaves the throw below intact for every other lane (FR-021).
+  if (process.env.PLAYWRIGHT_SKIP_AUTH === 'true') {
+    return
+  }
+
   const authDir = path.dirname(AUTH_STATE_PATH)
   if (!fs.existsSync(authDir)) {
     fs.mkdirSync(authDir, { recursive: true })

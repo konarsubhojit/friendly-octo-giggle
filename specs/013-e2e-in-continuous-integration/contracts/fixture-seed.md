@@ -1,6 +1,6 @@
 # Contract: Fixture Seed
 
-**Feature**: `013-e2e-in-continuous-integration` | **Artifact**: `scripts/seed-e2e-fixtures.mjs`
+**Feature**: `013-e2e-in-continuous-integration` | **Artifact**: `scripts/seed-e2e-fixtures.ts`
 
 The fixture seed is the only data a blocking Playwright project is permitted to assume. Anything not guaranteed below is not promised and must be intercepted with `page.route` instead. Weakening or removing a guarantee is a breaking change for every consumer listed against it.
 
@@ -8,8 +8,8 @@ The fixture seed is the only data a blocking Playwright project is permitted to 
 
 | Property          | Value                                                                                                       |
 | ----------------- | ----------------------------------------------------------------------------------------------------------- |
-| Location          | `scripts/seed-e2e-fixtures.mjs`                                                                             |
-| Invocation        | `node scripts/seed-e2e-fixtures.mjs`                                                                        |
+| Location          | `scripts/seed-e2e-fixtures.ts`                                                                             |
+| Invocation        | `npx tsx scripts/seed-e2e-fixtures.ts`                                                                        |
 | Preconditions     | `DATABASE_URL` set; `npx drizzle-kit migrate` has completed successfully                                    |
 | Runs before       | The application server starts                                                                               |
 | Connection        | Direct `pg` TCP, not the Neon WebSocket driver — the seed needs no proxy, exactly as `drizzle-kit` does not |
@@ -42,10 +42,10 @@ At least one active `Product` that:
 - belongs to a `Category`,
 - carries at least one image,
 - has stock above zero,
-- renders as a card on `/shop`,
+- renders as a card on the storefront root `/`,
 - has a detail page reachable by following that card.
 
-Consumers: `public-pages.spec.ts` (product detail via the shop grid), `product-navigation.spec.ts` (grid links and the bestseller link), `accessibility.spec.ts` (its "Product" route navigates from `/shop`), and the `webServer` readiness probe on `${BASE_URL}/shop`.
+Consumers: `public-pages.spec.ts` (product detail via the shop grid), `product-navigation.spec.ts` (grid links and the bestseller link), `accessibility.spec.ts` (its "Product" route navigates from `/`), and the `webServer` readiness probe on `${BASE_URL}/`.
 
 `src/lib/db-queries.ts:272+` builds bestsellers with a LEFT JOIN, so a product with no order history still appears. The seed therefore needs no orders to satisfy `product-navigation.spec.ts`.
 

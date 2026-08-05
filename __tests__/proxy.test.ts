@@ -271,7 +271,7 @@ describe('proxy rate limiting', () => {
   })
 
   it('adds nonce-based CSP headers without unsafe-inline', async () => {
-    const response = await proxy(createRequest('/shop'))
+    const response = await proxy(createRequest('/'))
     const nonce = response.headers.get('x-nonce')
     const csp = response.headers.get('Content-Security-Policy')
 
@@ -285,5 +285,51 @@ describe('proxy rate limiting', () => {
     expect(config.matcher).toContain(
       '/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|map)$).*)'
     )
+  })
+})
+
+describe('E2E_ALLOW_INSECURE_HTTP gate', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.stubEnv('NEXTAUTH_SECRET', 'test-secret')
+    mockGetToken.mockResolvedValue(null)
+    mockGetFeatureFlags.mockResolvedValue({ maintenanceMode: false })
+    mockGeneralLimit.mockResolvedValue({
+      success: true,
+      limit: 100,
+      remaining: 99,
+      reset: MOCK_RESET_TIMESTAMP,
+    })
+  })
+
+  const plainHttpRequest = () =>
+    createRequest('/about', { 'x-forwarded-proto': 'http' })
+
+  it('redirects plain HTTP to HTTPS outside development when the gate is unset', async () => {
+    vi.stubEnv('NODE_ENV', 'production')
+    vi.stubEnv('E2E_ALLOW_INSECURE_HTTP', '')
+
+    const response = await proxy(plainHttpRequest())
+
+    expect(response.status).toBe(301)
+    expect(response.headers.get('location')).toMatch(/^https:\/\//)
+  })
+
+  it('still redirects when the gate holds any value other than the literal "true"', async () => {
+    vi.stubEnv('NODE_ENV', 'production')
+    vi.stubEnv('E2E_ALLOW_INSECURE_HTTP', 'false')
+
+    const response = await proxy(plainHttpRequest())
+
+    expect(response.status).toBe(301)
+  })
+
+  it('serves plain HTTP without redirecting when the gate is explicitly enabled', async () => {
+    vi.stubEnv('NODE_ENV', 'production')
+    vi.stubEnv('E2E_ALLOW_INSECURE_HTTP', 'true')
+
+    const response = await proxy(plainHttpRequest())
+
+    expect(response.status).not.toBe(301)
   })
 })

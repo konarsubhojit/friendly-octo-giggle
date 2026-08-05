@@ -8,6 +8,8 @@
     "analyze": "ANALYZE=true next build",
     "build": "next build",
     "start": "next start",
+    "start:e2e": "next start --hostname 127.0.0.1 --port 3000",
+    "test:e2e": "playwright test",
     "lint": "eslint .",
     "lint:strict": "eslint . --max-warnings 0",
     "format": "prettier --write .",

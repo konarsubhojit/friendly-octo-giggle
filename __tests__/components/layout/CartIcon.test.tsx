@@ -49,7 +49,9 @@ describe('CartIcon', () => {
 
   it('renders a link to /cart', () => {
     renderCartIcon()
-    const link = screen.getByRole('link', { name: /shopping cart/i })
+    const link = screen.getByRole('link', {
+      name: new RegExp('shopping cart', 'i'),
+    })
     expect(link.getAttribute('href')).toBe('/cart')
   })
 

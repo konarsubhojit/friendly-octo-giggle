@@ -130,7 +130,7 @@ The two tracked reasons and promotion conditions:
 
 ## Decision 7 — Fixture seed placement and determinism
 
-**Decision**: `scripts/seed-e2e-fixtures.mjs`, plain ESM, run with `node` after `drizzle-kit migrate`. It imports table definitions from `src/lib/schema.ts` and hashes the test account password with `bcryptjs` directly at cost 12. All catalog identifiers are fixed 7-character Base62 literals. The script is idempotent: it deletes its own rows by known id before inserting.
+**Decision**: `scripts/seed-e2e-fixtures.ts`, plain ESM, run with `node` after `drizzle-kit migrate`. It imports table definitions from `src/lib/schema.ts` and hashes the test account password with `bcryptjs` directly at cost 12. All catalog identifiers are fixed 7-character Base62 literals. The script is idempotent: it deletes its own rows by known id before inserting.
 
 **Rationale**: R25 rules out importing `hashPassword` from `src/features/auth/services/password.ts`, because that module pulls in `primaryDrizzleDb` and would construct the Neon pool as a side effect of seeding — before the proxy configuration is relevant and for no reason. Calling `bcryptjs` directly with the same cost produces a self-describing hash that `compare` accepts unchanged, so the divergence is in the call site only, not in the artifact. Importing `src/lib/schema.ts` is safe (R25) and is what keeps the seed in lockstep with `drizzle/`: a column the migrations add and the seed must fill becomes a type error rather than a runtime surprise.
 

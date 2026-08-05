@@ -5,35 +5,11 @@ import { render, screen } from '@testing-library/react'
 vi.mock('@/components/skeletons/HeaderSkeleton', () => ({
   default: () => <div data-testid="header-skeleton">HeaderSkeleton</div>,
 }))
-vi.mock('@/components/skeletons/HeroSkeleton', () => ({
-  default: () => <div data-testid="hero-skeleton">HeroSkeleton</div>,
-}))
 vi.mock('@/components/skeletons/ProductCardSkeleton', () => ({
   default: () => (
     <div data-testid="product-card-skeleton">ProductCardSkeleton</div>
   ),
 }))
-
-describe('app/loading.tsx – Root Loading', () => {
-  it('renders without crashing', async () => {
-    const { default: Loading } = await import('@/app/(public)/loading')
-    const { container } = render(<Loading />)
-    expect(container).toBeTruthy()
-  })
-
-  it('renders HeroSkeleton only (no product card skeletons)', async () => {
-    const { default: Loading } = await import('@/app/(public)/loading')
-    render(<Loading />)
-    expect(screen.getByTestId('hero-skeleton')).toBeInTheDocument()
-    expect(screen.queryAllByTestId('product-card-skeleton')).toHaveLength(0)
-  })
-
-  it('does not render a footer skeleton', async () => {
-    const { default: Loading } = await import('@/app/(public)/loading')
-    const { container } = render(<Loading />)
-    expect(container.querySelector('footer')).toBeNull()
-  })
-})
 
 describe('app/products/loading.tsx – Products Loading', () => {
   it('renders without crashing', async () => {
@@ -135,24 +111,24 @@ describe('app/wishlist/loading.tsx – Wishlist Loading', () => {
   })
 })
 
-describe('app/shop/loading.tsx – Shop Loading', () => {
+describe('app/(public)/loading.tsx – Home Loading', () => {
   it('renders without crashing', async () => {
-    const { default: ShopLoading } = await import('@/app/(public)/shop/loading')
-    const { container } = render(<ShopLoading />)
+    const { default: HomeLoading } = await import('@/app/(public)/loading')
+    const { container } = render(<HomeLoading />)
     expect(container).toBeTruthy()
   })
 
   it('uses pt-8 spacing (not pt-28)', async () => {
-    const { default: ShopLoading } = await import('@/app/(public)/shop/loading')
-    const { container } = render(<ShopLoading />)
+    const { default: HomeLoading } = await import('@/app/(public)/loading')
+    const { container } = render(<HomeLoading />)
     const section = container.querySelector('section')
     expect(section?.className).toContain('pt-8')
     expect(section?.className).not.toContain('pt-28')
   })
 
   it('contains animate-pulse elements', async () => {
-    const { default: ShopLoading } = await import('@/app/(public)/shop/loading')
-    const { container } = render(<ShopLoading />)
+    const { default: HomeLoading } = await import('@/app/(public)/loading')
+    const { container } = render(<HomeLoading />)
     expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(
       0
     )

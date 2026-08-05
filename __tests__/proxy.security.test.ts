@@ -70,7 +70,7 @@ describe('proxy security perimeter', () => {
       const proxy = await importProxy()
 
       const response = await proxy(
-        createRequest('https://example.com/shop?page=2', {
+        createRequest('https://example.com/?page=2', {
           'x-forwarded-proto': 'http',
           host: 'example.com',
         })
@@ -78,7 +78,7 @@ describe('proxy security perimeter', () => {
 
       expect(response.status).toBe(301)
       expect(response.headers.get('location')).toBe(
-        'https://example.com/shop?page=2'
+        'https://example.com/?page=2'
       )
       // Security headers are still attached to the redirect.
       expect(response.headers.get('Content-Security-Policy')).toContain(
@@ -103,7 +103,7 @@ describe('proxy security perimeter', () => {
       vi.stubEnv('NODE_ENV', 'production')
       const proxy = await importProxy()
 
-      const response = await proxy(createRequest('https://example.com/shop'))
+      const response = await proxy(createRequest('https://example.com/'))
 
       expect(response.status).toBe(200)
       expect(response.headers.get('location')).toBeNull()
@@ -113,7 +113,7 @@ describe('proxy security perimeter', () => {
       const proxy = await importProxy()
 
       const response = await proxy(
-        createRequest('http://localhost:3000/shop', {
+        createRequest('http://localhost:3000/', {
           'x-forwarded-proto': 'http',
           host: 'localhost:3000',
         })
@@ -225,7 +225,7 @@ describe('proxy security perimeter', () => {
     it('returns an HTML 503 page for non-API routes', async () => {
       const proxy = await importProxy()
 
-      const response = await proxy(createRequest('https://example.com/shop'))
+      const response = await proxy(createRequest('https://example.com/'))
 
       expect(response.status).toBe(503)
       expect(response.headers.get('Content-Type')).toBe(
@@ -254,7 +254,7 @@ describe('proxy security perimeter', () => {
       mockGetFeatureFlags.mockRejectedValue(new Error('edge config down'))
       const proxy = await importProxy()
 
-      const response = await proxy(createRequest('https://example.com/shop'))
+      const response = await proxy(createRequest('https://example.com/'))
 
       expect(response.status).toBe(200)
     })

@@ -38,7 +38,7 @@ const formatViolations = (
 const navigateToFirstProduct = async (
   page: import('@playwright/test').Page
 ): Promise<void> => {
-  await page.goto('/shop')
+  await page.goto('/')
   await page.waitForLoadState('networkidle')
   const firstProductLink = page.locator('a[href^="/products/"]').first()
   await expect(firstProductLink).toBeVisible()
@@ -55,7 +55,6 @@ test.describe('Accessibility – public pages', () => {
     navigate?: (page: import('@playwright/test').Page) => Promise<void>
   }> = [
     { name: 'Home', path: '/' },
-    { name: 'Shop', path: '/shop' },
     { name: 'Product', navigate: navigateToFirstProduct },
     { name: 'About', path: '/about' },
     { name: 'Blog', path: '/blog' },

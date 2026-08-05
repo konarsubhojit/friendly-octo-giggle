@@ -130,6 +130,8 @@ const BaseEnvSchema = z.object({
   READ_DATABASE_URL: z.string().optional(),
   NEXTAUTH_SECRET: z.string().optional(),
   AUTH_TRUST_HOST: z.enum(['true', 'false']).optional(),
+  E2E_WS_PROXY: z.string().optional(),
+  E2E_ALLOW_INSECURE_HTTP: z.enum(['true', 'false']).optional(),
   REDIS_URL: z.string().optional(),
   UPSTASH_REDIS_REST_URL: z.url().optional(),
   UPSTASH_REDIS_REST_TOKEN: z.string().optional(),

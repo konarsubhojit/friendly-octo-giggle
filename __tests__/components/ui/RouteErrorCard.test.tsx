@@ -102,13 +102,13 @@ describe('RouteErrorCard (public variant)', () => {
         reset={vi.fn()}
         title="Error"
         fallbackMessage="Fallback"
-        secondaryHref="/shop"
+        secondaryHref="/"
         secondaryLabel="Continue shopping"
       />
     )
     const link = screen.getByText('Continue shopping')
     expect(link).toBeInTheDocument()
-    expect(link).toHaveAttribute('href', '/shop')
+    expect(link).toHaveAttribute('href', '/')
   })
 
   it('does not render secondary link when props are absent', () => {

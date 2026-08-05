@@ -401,7 +401,7 @@ test.describe('Cart page – navigation', () => {
 
     const continueLink = page.getByRole('link', { name: /continue shopping/i })
     await expect(continueLink).toBeVisible()
-    await expect(continueLink).toHaveAttribute('href', '/shop')
+    await expect(continueLink).toHaveAttribute('href', '/')
   })
 
   test('"Browse Products" link in empty cart navigates to shop', async ({
@@ -416,7 +416,7 @@ test.describe('Cart page – navigation', () => {
 
     const browseLink = page.getByRole('link', { name: /browse products/i })
     await expect(browseLink).toBeVisible()
-    await expect(browseLink).toHaveAttribute('href', '/shop')
+    await expect(browseLink).toHaveAttribute('href', '/')
   })
 
   test('product name in cart item links to product page', async ({ page }) => {

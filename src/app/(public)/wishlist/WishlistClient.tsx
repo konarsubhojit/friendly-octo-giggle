@@ -163,7 +163,7 @@ const WishlistClient = ({
               title="No saved items yet"
               message="Browse our collection and tap the heart icon to save items you love."
               ctaText="Shop Now"
-              ctaHref="/shop"
+              ctaHref="/"
               className="py-0"
             />
           </div>

@@ -30,7 +30,7 @@ export default function WishlistError({ error, reset }: ErrorProps) {
           />
         </svg>
       }
-      secondaryHref="/shop"
+      secondaryHref="/"
       secondaryLabel="Continue shopping"
     />
   )

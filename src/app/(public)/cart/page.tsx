@@ -18,7 +18,7 @@ export default async function CartPage() {
             message="Please sign in to view your cart and place orders."
           />
           <Link
-            href="/shop"
+            href="/"
             className="block mt-4 text-[var(--text-muted)] hover:text-[var(--text-secondary)] font-medium text-center"
           >
             Continue Shopping

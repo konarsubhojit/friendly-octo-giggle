@@ -33,7 +33,7 @@ test.describe('product navigation (no 404 regression)', () => {
   test('every shop product link points at a product detail URL', async ({
     page,
   }) => {
-    await page.goto('/shop', { waitUntil: 'domcontentloaded' })
+    await page.goto('/', { waitUntil: 'domcontentloaded' })
     const hrefs = await getGridProductHrefs(page)
     expect(
       hrefs.length,
@@ -49,7 +49,7 @@ test.describe('product navigation (no 404 regression)', () => {
   test('clicking a bestseller opens the product page (not 404)', async ({
     page,
   }) => {
-    await page.goto('/shop', { waitUntil: 'domcontentloaded' })
+    await page.goto('/', { waitUntil: 'domcontentloaded' })
     const bestseller = page
       .getByRole('link', { name: /view bestseller/i })
       .first()
@@ -63,7 +63,7 @@ test.describe('product navigation (no 404 regression)', () => {
   test('clicking a product grid card opens the product page (not 404)', async ({
     page,
   }) => {
-    await page.goto('/shop', { waitUntil: 'domcontentloaded' })
+    await page.goto('/', { waitUntil: 'domcontentloaded' })
     const hrefs = await getGridProductHrefs(page)
     expect(hrefs.length).toBeGreaterThan(0)
     const card = page.locator(`a[href="${hrefs[0]}"]`).first()
@@ -95,7 +95,7 @@ test.describe('product navigation (no 404 regression)', () => {
         },
       })
     )
-    await page.goto('/shop', { waitUntil: 'networkidle' })
+    await page.goto('/', { waitUntil: 'networkidle' })
 
     await page
       .getByRole('button', { name: /search products/i })
@@ -117,16 +117,18 @@ test.describe('product navigation (no 404 regression)', () => {
     await expect(page.getByText(/this page could not be found/i)).toHaveCount(0)
   })
 
-  test('applying a shop filter keeps the URL on /shop', async ({ page }) => {
-    await page.goto('/shop', { waitUntil: 'domcontentloaded' })
+  test('applying a shop filter keeps the URL on the storefront root', async ({
+    page,
+  }) => {
+    await page.goto('/', { waitUntil: 'domcontentloaded' })
     await page
       .getByRole('combobox', { name: /sort products/i })
       .selectOption('newest')
     await page.getByRole('button', { name: /^apply$/i }).click()
     // The shop filter navigates via router.push(). A query string is only
-    // added for non-default filters, so assert the /shop path rather than
+    // added for non-default filters, so assert the storefront root rather than
     // requiring a `?`.
-    await expect(page).toHaveURL(/\/shop(\?|#|$)/)
+    await expect(page).toHaveURL(/\/(\?|#|$)/)
     await expect(page.getByText(/this page could not be found/i)).toHaveCount(0)
   })
 })
@@ -147,7 +149,7 @@ test.describe('product detail renders server-side without JavaScript', () => {
   test('initial HTML contains name, description, price and variant options', async ({
     page,
   }) => {
-    await page.goto('/shop', { waitUntil: 'load' })
+    await page.goto('/', { waitUntil: 'load' })
 
     const card = page.locator('a[href*="/products/"]').first()
     const href = await card.getAttribute('href')

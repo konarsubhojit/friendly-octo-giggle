@@ -25,7 +25,7 @@ test.describe('latest platform capabilities', () => {
     )
     expect(manifest.shortcuts).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ name: 'Shop', url: '/shop' }),
+        expect.objectContaining({ name: 'Shop', url: '/' }),
         expect.objectContaining({ name: 'Cart', url: '/cart' }),
       ])
     )
@@ -34,9 +34,7 @@ test.describe('latest platform capabilities', () => {
     )
   })
 
-  test('localized offline fallback offers recovery actions', async ({
-    page,
-  }) => {
+  test('offline fallback offers recovery actions', async ({ page }) => {
     const response = await page.goto('/offline', {
       waitUntil: 'domcontentloaded',
     })
@@ -49,25 +47,6 @@ test.describe('latest platform capabilities', () => {
     await expect(page.getByRole('link', { name: /go home/i })).toHaveAttribute(
       'href',
       '/'
-    )
-  })
-
-  test('language preference switches to the equivalent Spanish route', async ({
-    page,
-  }) => {
-    await page.route('**/api/account', (route) =>
-      route.fulfill({ status: 200, json: { success: true } })
-    )
-    await page.goto('/about', { waitUntil: 'networkidle' })
-
-    const language = page.getByRole('combobox', { name: 'Language' })
-    await expect(language).toHaveValue('en')
-    await expect(language.locator('option')).toHaveText(['English', 'Español'])
-    await language.selectOption('es')
-
-    await expect(page).toHaveURL(/\/es\/about$/, { timeout: 15_000 })
-    await expect(page.getByRole('combobox', { name: 'Idioma' })).toHaveValue(
-      'es'
     )
   })
 

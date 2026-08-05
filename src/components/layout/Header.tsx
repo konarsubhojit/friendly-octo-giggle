@@ -77,7 +77,7 @@ export default function Header() {
 
             <nav className="hidden items-center gap-4 md:flex xl:gap-8">
               <Link
-                href="/shop"
+                href="/"
                 className="text-[var(--text-secondary)] hover:text-[var(--accent-rose)] transition-all duration-300 font-semibold px-3 py-1.5 rounded-full hover:bg-[var(--accent-blush)]/50"
               >
                 Shop

@@ -36,6 +36,7 @@ vi.mock('@/lib/logger', () => ({ logBusinessEvent: mockLogBusinessEvent }))
 import {
   searchCatalog,
   suggestSearchTerms,
+  type SearchQueryOptions,
   type SearchSort,
 } from '@/lib/search-discovery'
 
@@ -118,7 +119,7 @@ const baseOptions = {
 }
 
 const runCatalog = (
-  overrides: Partial<typeof baseOptions> & Record<string, unknown> = {}
+  overrides: Partial<SearchQueryOptions> & Record<string, unknown> = {}
 ) => {
   mockFindAllMinimal.mockResolvedValue(catalogRows)
   queueSelectResults(catalogSelects)

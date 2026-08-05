@@ -45,7 +45,7 @@ export default function manifest(): MetadataRoute.Manifest {
         name: 'Shop',
         short_name: 'Shop',
         description: 'Browse all products',
-        url: '/shop',
+        url: '/',
         icons: [{ src: '/icons/icon-192.png', sizes: '192x192' }],
       },
       {

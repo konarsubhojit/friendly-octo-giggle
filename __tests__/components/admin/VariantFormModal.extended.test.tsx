@@ -169,7 +169,7 @@ describe('VariantFormModal (extended)', () => {
     )
     const addButton = screen.getByText('+ Add Image')
     expect(addButton).toBeDisabled()
-    fireEvent.click(addButton, {}, { skipPointerEventsCheck: true })
+    fireEvent.click(addButton)
     expect(screen.getByText(/Additional Images \(10\//)).toBeInTheDocument()
   })
 

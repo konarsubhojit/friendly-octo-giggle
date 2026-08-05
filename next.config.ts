@@ -43,6 +43,17 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  async redirects() {
+    return [
+      // The storefront moved from /shop to /. Kept permanently so existing
+      // inbound links, PWA shortcuts, and indexed URLs resolve rather than 404.
+      {
+        source: '/shop',
+        destination: '/',
+        permanent: true,
+      },
+    ]
+  },
   async headers() {
     return [
       {

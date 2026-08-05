@@ -27,10 +27,10 @@ describe('Hero', () => {
     expect(screen.getByText(/crocheted flowers/i)).toBeTruthy()
   })
 
-  it('renders Explore Shop link pointing to /shop', () => {
+  it('renders Explore Shop link pointing to /', () => {
     render(<Hero />)
     const link = screen.getByText(/Explore Shop/).closest('a')
-    expect(link?.getAttribute('href')).toBe('/shop')
+    expect(link?.getAttribute('href')).toBe('/')
   })
 
   it('renders feature badges', () => {

@@ -268,7 +268,7 @@ describe('ProductClient', () => {
     ).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Shop' })).toHaveAttribute(
       'href',
-      '/shop'
+      '/'
     )
   })
 
@@ -326,7 +326,7 @@ describe('ProductClient', () => {
     // Out-of-stock panel has a "Browse Products" link
     expect(
       screen.getByRole('link', { name: 'Browse Products' })
-    ).toHaveAttribute('href', '/shop')
+    ).toHaveAttribute('href', '/')
     expect(screen.queryByRole('button', { name: /Add to Cart/i })).toBeNull()
   })
 
@@ -1511,7 +1511,7 @@ describe('ProductClient', () => {
     // Out-of-stock panel shows "Browse Products" link
     expect(
       screen.getByRole('link', { name: 'Browse Products' })
-    ).toHaveAttribute('href', '/shop')
+    ).toHaveAttribute('href', '/')
     expect(
       screen.queryByRole('button', { name: /Add to Cart/i })
     ).not.toBeInTheDocument()
@@ -1642,7 +1642,7 @@ describe('ProductClient', () => {
     // Out-of-stock panel replaces add-to-cart
     expect(
       screen.getByRole('link', { name: 'Browse Products' })
-    ).toHaveAttribute('href', '/shop')
+    ).toHaveAttribute('href', '/')
     expect(
       screen.queryByRole('button', { name: /Add to Cart/i })
     ).not.toBeInTheDocument()

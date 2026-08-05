@@ -25,7 +25,7 @@ test.beforeAll(() => {
 })
 
 async function navigateToProductWithOptions(page: Page): Promise<string> {
-  await page.goto('/shop', { waitUntil: 'networkidle' })
+  await page.goto('/', { waitUntil: 'networkidle' })
   const hrefs = await page
     .locator('a[href*="/products/"]')
     .evaluateAll(

@@ -98,7 +98,7 @@ test('full order flow: shop → cart → checkout → orders list', async ({
   await suppressExchangeRates(page)
 
   // ── 3a: Visit shop page ────────────────────────────────────────────────────
-  await page.goto('/shop')
+  await page.goto('/')
   await page.waitForLoadState('networkidle')
   await page.screenshot({ path: shot('shop-page') })
   console.log('✓ Shop page loaded')
