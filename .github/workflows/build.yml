@@ -320,6 +320,8 @@ jobs:
           npx playwright test \
             --project=desktop-chrome \
             --project=mobile-chrome \
+            --project=ux-audit-admin-desktop \
+            --project=ux-audit-admin-mobile \
             --project=orders-live
 
       - name: Upload advisory report

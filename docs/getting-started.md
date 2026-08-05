@@ -99,7 +99,7 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ## Verify the current feature set
 
-After startup, browse the storefront at `/shop`. Verify `/manifest.webmanifest` and `/offline` for PWA support, product search and suggestions from the header, and the shipping → payment → review → confirmation checkout route sequence. Admin users can additionally verify categories, checkout requests, search indexes, sales, reviews, imports/exports, and bulk actions under `/admin`.
+After startup, browse the storefront at `/`. Verify `/manifest.webmanifest` and `/offline` for PWA support, product search and suggestions from the header, and the shipping → payment → review → confirmation checkout route sequence. Admin users can additionally verify categories, checkout requests, search indexes, sales, reviews, imports/exports, and bulk actions under `/admin`.
 
 Optional integrations are intentionally degradable: without Redis or Upstash Search, database-backed storefront flows continue; without AI provider credentials, product chat is unavailable; and queue, email, Blob, Sentry, and Edge Config capabilities require their corresponding environment variables. See [Feature Catalog](./features.md) for the complete matrix.
 

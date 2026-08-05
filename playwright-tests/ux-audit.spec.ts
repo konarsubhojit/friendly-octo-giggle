@@ -8,7 +8,10 @@ const __dirname = dirname(__filename)
 const SCREENSHOT_DIR = join(__dirname, 'screenshots', 'ux-audit')
 
 const PUBLIC_PROJECTS = new Set(['desktop-chrome', 'mobile-chrome'])
-const ADMIN_PROJECTS = new Set(['admin-desktop', 'admin-mobile'])
+const ADMIN_PROJECTS = new Set([
+  'ux-audit-admin-desktop',
+  'ux-audit-admin-mobile',
+])
 
 const PUBLIC_ROUTES = [
   { slug: 'home', path: '/' },

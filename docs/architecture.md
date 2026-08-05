@@ -212,7 +212,7 @@ The current public read path prefers Server Components and direct DB access.
 
 Example pattern:
 
-1. A page such as `/shop` renders on the server.
+1. A page such as the storefront root `/` renders on the server.
 2. It fetches categories and bestsellers directly from Drizzle.
 3. It optionally uses Upstash Search to resolve matching product IDs.
 4. It falls back to DB search when the search service is unavailable.
@@ -576,7 +576,7 @@ The storefront runs on the Cache Components model. A production build reports
 117 routes: 23 fully static (`○`), 21 partially prerendered (`◐`), and 73
 dynamic (`ƒ`).
 
-- `/shop` — static shell plus a cached bestsellers rail; the `searchParams`-driven catalog grid streams into a `Suspense` hole.
+- `/` — the storefront. Static shell plus a cached bestsellers rail; the `searchParams`-driven catalog grid streams into a `Suspense` hole. `/shop` permanently redirects here.
 - `/products/[id]` — cached product read with `cacheLife('product')` and `cacheTag(productTag(id))`; the AI feature flag and `?v=` variant preselection stream separately. The top 20 products by sales volume are prerendered at build time via `generateStaticParams`, and the rest are generated on demand.
 - Cart, orders, wishlist, account, and every `/admin` surface read session state outside any cached scope, so no personalized markup can enter the shell.
 - User- and admin-specific APIs stay dynamic route handlers.

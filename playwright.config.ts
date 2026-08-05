@@ -58,6 +58,26 @@ export default defineConfig({
       use: { ...devices['Pixel 5'], viewport: { width: 393, height: 851 } },
       testMatch: '**/ux-audit.spec.ts',
     },
+    // UX screenshot audit over admin routes — advisory, authenticated. Kept in
+    // its own projects so no project mixes blocking and advisory spec files.
+    {
+      name: 'ux-audit-admin-desktop',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1280, height: 800 },
+        storageState: './playwright-tests/.auth/admin.json',
+      },
+      testMatch: '**/ux-audit.spec.ts',
+    },
+    {
+      name: 'ux-audit-admin-mobile',
+      use: {
+        ...devices['Pixel 5'],
+        viewport: { width: 393, height: 851 },
+        storageState: './playwright-tests/.auth/admin.json',
+      },
+      testMatch: '**/ux-audit.spec.ts',
+    },
     // Product assistant regression — public desktop coverage.
     {
       name: 'ai-stock-privacy',
@@ -113,7 +133,7 @@ export default defineConfig({
         viewport: { width: 1280, height: 800 },
         storageState: './playwright-tests/.auth/admin.json',
       },
-      testMatch: ['**/admin-views.spec.ts', '**/ux-audit.spec.ts'],
+      testMatch: '**/admin-views.spec.ts',
     },
     // Admin views — authenticated admin session (mobile)
     {
@@ -123,7 +143,7 @@ export default defineConfig({
         viewport: { width: 393, height: 851 },
         storageState: './playwright-tests/.auth/admin.json',
       },
-      testMatch: ['**/admin-views.spec.ts', '**/ux-audit.spec.ts'],
+      testMatch: '**/admin-views.spec.ts',
     },
     // Cart tests — authenticated admin session (desktop)
     {

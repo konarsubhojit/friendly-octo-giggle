@@ -356,6 +356,14 @@ The change set is designed to be revertible as a unit and to degrade safely at e
 
 Nothing outside the revert needs undoing: the database and both service containers are destroyed with the job, no migration is added, no session state is committed, and the two CI-only gates are inert when their variables are absent — which is the state the revert restores.
 
+## Settled open items
+
+| Question                                                                              | Resolution                                                                                                                                                                                                                                             |
+| ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Should the smoke lane also run on `master` pushes against the production deployment?  | **No.** A check that reports after a production deploy is an alert, not a gate, and belongs with monitoring rather than continuous integration. Adding it would also put read traffic and a browser session against production on every release.        |
+| Should `deploy-preview` gain `--wait` or an explicit per-branch alias?                | **No.** Capturing the URL `vercel deploy` prints on stdout identifies the exact revision, which is what FR-020 requires, and it adds no Vercel-side resource. The smoke lane's own bounded readiness poll already absorbs a cold start.                 |
+| How is the no-mixing rule satisfied for `ux-audit.spec.ts` on admin routes?           | The audit was removed from `admin-desktop` and `admin-mobile` and given its own `ux-audit-admin-desktop` and `ux-audit-admin-mobile` advisory projects, so no project matches both a blocking and an advisory spec file (FR-006).                       |
+
 ## Complexity Tracking
 
 | Violation                                                                            | Why Needed                                                                                                                                                                                                                                  | Simpler Alternative Rejected Because                                                                                                                                                                                                                                                             |

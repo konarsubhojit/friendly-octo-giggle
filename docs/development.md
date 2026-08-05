@@ -535,8 +535,108 @@ npm run test:coverage  # Run tests with coverage report
 For E2E tests:
 
 ```bash
-npm install -D @playwright/test  # E2E tests
+npx playwright install chromium   # once, to fetch the browser binary
+npm run test:e2e                  # run the whole suite
+npm run test:e2e -- --project=cart --headed   # one project, watching the browser
+npm run test:e2e -- --debug       # step through with the Playwright inspector
 ```
+
+`playwright.config.ts` defaults `PLAYWRIGHT_BASE_URL` to `https://localhost:3000`
+and starts `npm run dev` for you, waiting until the storefront root answers.
+Set `PLAYWRIGHT_BASE_URL` to any non-localhost URL and the local server is not
+started at all, which is how the deployed smoke lane reuses the same config.
+
+Authenticated projects reuse a session captured once by
+`playwright-tests/global-setup.ts` from `COPILOT_DEV_EMAIL` and
+`COPILOT_DEV_PASS`. Put both in `.env.local` before running them.
+
+#### The three end-to-end lanes
+
+CI runs the suite in three lanes. Only the first one can block a merge.
+
+| Lane                | Trigger                                | Target                                                    | Gating                                                    |
+| ------------------- | -------------------------------------- | --------------------------------------------------------- | --------------------------------------------------------- |
+| `e2e-blocking`      | every push and pull request            | local production build + ephemeral Postgres + fixture seed | Aggregated by the **`End-to-End Suite`** required check    |
+| `e2e-advisory`      | every push and pull request            | same local target                                          | `continue-on-error` — publishes artifacts, never gates     |
+| `e2e-preview-smoke` | `develop` pushes, after `deploy-preview` | the URL that deployment emitted                            | `continue-on-error` — advisory only                        |
+
+**Blocking projects** (14): `ai-stock-privacy`, `orders-list`,
+`latest-features`, `password-validation-desktop`,
+`account-password-validation`, `admin-desktop`, `admin-mobile`, `cart`,
+`accessibility-public`, `accessibility-authenticated`, `product-navigation`,
+`public-pages`, `session-isolation`, `variant-options`. They run across four
+shards whose blob reports are merged into one HTML report.
+
+**Advisory projects** (3): `desktop-chrome` and `mobile-chrome` reduce to
+screenshot and touch-target heuristics with no pass-or-fail contract;
+`orders-live` writes through the real checkout path and asserts conditionally.
+Advisory never means retired — these still execute on every run and publish
+artifacts, and each carries a condition for promotion into the blocking set.
+
+**Smoke projects** (6): `public-pages`, `accessibility-public`,
+`product-navigation`, `ai-stock-privacy`, `session-isolation`,
+`latest-features`. The lane exists to catch faults the local lane structurally
+cannot see — Vercel edge behaviour, the real `src/proxy.ts` HTTPS path,
+prerendering on the actual runtime, and environment misconfiguration.
+
+It targets the URL `vercel deploy` printed for that specific deployment, never
+a project alias such as `kiyontest.vercel.app`, because an alias names a host
+rather than the revision under test. Its projects are read-only, so the lane
+never writes to the shared preview database, and it sets
+`PLAYWRIGHT_SKIP_AUTH=true` so it is never handed a real credential. When no
+deployment URL is available — which is the case for every fork pull request —
+the lane skips cleanly instead of failing. A smoke failure is never counted as
+coverage for a journey the blocking lane already owns.
+
+The required status check is the literal job name **`End-to-End Suite`**.
+Renaming that job silently disables branch protection.
+
+#### Enabling the required check
+
+The workflow can define the job but cannot make it required — that lives in
+repository settings, which `.github/` does not track. A maintainer enables it
+once:
+
+1. **Settings → Branches → Branch protection rules**, editing the rule for the
+   default branch (or adding one).
+2. Enable **Require status checks to pass before merging**, then search for and
+   select **`End-to-End Suite`**. The check only appears in that list after it
+   has reported on at least one commit, so let the workflow run once first.
+3. Enable **Require branches to be up to date before merging** so the gate
+   evaluates the merged result rather than a stale base.
+
+Verify it took by opening a pull request that deliberately breaks a blocking
+journey and confirming the merge button is disabled with `End-to-End Suite`
+listed as the reason. `e2e-blocking`, `e2e-advisory`, and `e2e-preview-smoke`
+must **not** be added as required checks: the shards are aggregated by the gate
+job, and the other two are advisory by design.
+
+#### The ephemeral CI database
+
+Blocking and advisory lanes provision Postgres 16 as a service container. The
+application reaches it through `@neondatabase/serverless`, which speaks a
+WebSocket protocol plain Postgres does not implement, so a
+`ghcr.io/neondatabase/wsproxy` sidecar sits in front of it. Two CI-only
+environment gates make this work, both inert whenever unset:
+
+- `E2E_WS_PROXY` — points the Neon driver at the sidecar and disables TLS
+  pipelining. Never set in any deployed environment.
+- `E2E_ALLOW_INSECURE_HTTP` — suppresses the production HTTP→HTTPS redirect in
+  `src/proxy.ts`, because `next start` cannot serve TLS. Only the literal
+  string `true` has any effect.
+
+`__tests__/lib/db-ws-proxy.test.ts` and `__tests__/proxy.test.ts` assert that
+both gates are inert when unset, so neither can quietly change production
+behaviour.
+
+Migrations run first, then `npx tsx scripts/seed-e2e-fixtures.ts` loads the
+committed fixture seed. The seed is the only data a blocking project may
+assume; anything else must be intercepted with `page.route`. Its guarantees are
+specified in
+`specs/013-e2e-in-continuous-integration/contracts/fixture-seed.md`. Because the
+database is created and destroyed inside the job and holds only fixtures, its
+credentials are ordinary non-secret job values — which is exactly what lets a
+fork pull request run the identical blocking set.
 
 ---
 
