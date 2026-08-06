@@ -554,11 +554,11 @@ Authenticated projects reuse a session captured once by
 
 CI runs the suite in three lanes. Only the first one can block a merge.
 
-| Lane                | Trigger                                | Target                                                    | Gating                                                    |
-| ------------------- | -------------------------------------- | --------------------------------------------------------- | --------------------------------------------------------- |
-| `e2e-blocking`      | every push and pull request            | local production build + ephemeral Postgres + fixture seed | Aggregated by the **`End-to-End Suite`** required check    |
-| `e2e-advisory`      | every push and pull request            | same local target                                          | `continue-on-error` — publishes artifacts, never gates     |
-| `e2e-preview-smoke` | `develop` pushes, after `deploy-preview` | the URL that deployment emitted                            | `continue-on-error` — advisory only                        |
+| Lane                | Trigger                                  | Target                                                     | Gating                                                  |
+| ------------------- | ---------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------- |
+| `e2e-blocking`      | every push and pull request              | local production build + ephemeral Postgres + fixture seed | Aggregated by the **`End-to-End Suite`** required check |
+| `e2e-advisory`      | every push and pull request              | same local target                                          | `continue-on-error` — publishes artifacts, never gates  |
+| `e2e-preview-smoke` | `develop` pushes, after `deploy-preview` | the URL that deployment emitted                            | `continue-on-error` — advisory only                     |
 
 **Blocking projects** (14): `ai-stock-privacy`, `orders-list`,
 `latest-features`, `password-validation-desktop`,

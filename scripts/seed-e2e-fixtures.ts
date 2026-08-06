@@ -213,14 +213,38 @@ const seedVariantMatrix = async (
   ])
 
   await database.insert(productVariantOptionValues).values([
-    { variantId: VARIANT_IDS.smallRed, optionValueId: OPTION_VALUE_IDS.sizeSmall },
-    { variantId: VARIANT_IDS.smallRed, optionValueId: OPTION_VALUE_IDS.colorRed },
-    { variantId: VARIANT_IDS.smallBlue, optionValueId: OPTION_VALUE_IDS.sizeSmall },
-    { variantId: VARIANT_IDS.smallBlue, optionValueId: OPTION_VALUE_IDS.colorBlue },
-    { variantId: VARIANT_IDS.largeRed, optionValueId: OPTION_VALUE_IDS.sizeLarge },
-    { variantId: VARIANT_IDS.largeRed, optionValueId: OPTION_VALUE_IDS.colorRed },
-    { variantId: VARIANT_IDS.largeBlue, optionValueId: OPTION_VALUE_IDS.sizeLarge },
-    { variantId: VARIANT_IDS.largeBlue, optionValueId: OPTION_VALUE_IDS.colorBlue },
+    {
+      variantId: VARIANT_IDS.smallRed,
+      optionValueId: OPTION_VALUE_IDS.sizeSmall,
+    },
+    {
+      variantId: VARIANT_IDS.smallRed,
+      optionValueId: OPTION_VALUE_IDS.colorRed,
+    },
+    {
+      variantId: VARIANT_IDS.smallBlue,
+      optionValueId: OPTION_VALUE_IDS.sizeSmall,
+    },
+    {
+      variantId: VARIANT_IDS.smallBlue,
+      optionValueId: OPTION_VALUE_IDS.colorBlue,
+    },
+    {
+      variantId: VARIANT_IDS.largeRed,
+      optionValueId: OPTION_VALUE_IDS.sizeLarge,
+    },
+    {
+      variantId: VARIANT_IDS.largeRed,
+      optionValueId: OPTION_VALUE_IDS.colorRed,
+    },
+    {
+      variantId: VARIANT_IDS.largeBlue,
+      optionValueId: OPTION_VALUE_IDS.sizeLarge,
+    },
+    {
+      variantId: VARIANT_IDS.largeBlue,
+      optionValueId: OPTION_VALUE_IDS.colorBlue,
+    },
   ])
 }
 

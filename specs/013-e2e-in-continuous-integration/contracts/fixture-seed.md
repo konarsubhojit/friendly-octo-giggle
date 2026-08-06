@@ -8,8 +8,8 @@ The fixture seed is the only data a blocking Playwright project is permitted to 
 
 | Property          | Value                                                                                                       |
 | ----------------- | ----------------------------------------------------------------------------------------------------------- |
-| Location          | `scripts/seed-e2e-fixtures.ts`                                                                             |
-| Invocation        | `npx tsx scripts/seed-e2e-fixtures.ts`                                                                        |
+| Location          | `scripts/seed-e2e-fixtures.ts`                                                                              |
+| Invocation        | `npx tsx scripts/seed-e2e-fixtures.ts`                                                                      |
 | Preconditions     | `DATABASE_URL` set; `npx drizzle-kit migrate` has completed successfully                                    |
 | Runs before       | The application server starts                                                                               |
 | Connection        | Direct `pg` TCP, not the Neon WebSocket driver — the seed needs no proxy, exactly as `drizzle-kit` does not |

@@ -6,12 +6,12 @@ This feature exposes no HTTP API. Its externally observable surface is the set o
 
 ## Job inventory
 
-| Job id         | `name:`                                      | Matrix                | `needs:`         | `continue-on-error` | `timeout-minutes` |
-| -------------- | -------------------------------------------- | --------------------- | ---------------- | ------------------- | ----------------- |
-| `e2e-blocking` | `E2E Blocking (shard ${{ matrix.shard }}/4)` | `shard: [1, 2, 3, 4]` | `[build]`        | `false`             | `20`              |
-| `e2e-advisory` | `E2E Advisory`                               | none                  | `[build]`        | `true`              | `20`              |
-| `e2e`          | `End-to-End Suite`                           | none                  | `[e2e-blocking]` | `false`             | `10`              |
-| `e2e-preview-smoke` | `E2E Preview Smoke`                     | none                  | `[deploy-preview]` | `true`            | `15`              |
+| Job id              | `name:`                                      | Matrix                | `needs:`           | `continue-on-error` | `timeout-minutes` |
+| ------------------- | -------------------------------------------- | --------------------- | ------------------ | ------------------- | ----------------- |
+| `e2e-blocking`      | `E2E Blocking (shard ${{ matrix.shard }}/4)` | `shard: [1, 2, 3, 4]` | `[build]`          | `false`             | `20`              |
+| `e2e-advisory`      | `E2E Advisory`                               | none                  | `[build]`          | `true`              | `20`              |
+| `e2e`               | `End-to-End Suite`                           | none                  | `[e2e-blocking]`   | `false`             | `10`              |
+| `e2e-preview-smoke` | `E2E Preview Smoke`                          | none                  | `[deploy-preview]` | `true`              | `15`              |
 
 `strategy.fail-fast` is `false` on `e2e-blocking`, so one failing shard does not cancel the other three and every shard publishes its artifacts.
 
@@ -44,7 +44,7 @@ Inherited from the workflow, unchanged: pull requests and pushes to the default 
 | npm dependencies     | `npm ci` with `actions/setup-node@v7` `cache: npm` | Node 24, matching the existing jobs                              |
 | Chromium binary      | `~/.cache/ms-playwright` cache                     | Key `${{ runner.os }}-playwright-<installed version>`            |
 | Schema               | `npx drizzle-kit migrate`                          | Applies the committed `drizzle/` files; needs no WebSocket proxy |
-| Fixture data         | `npx tsx scripts/seed-e2e-fixtures.ts`               | Contract in [fixture-seed.md](./fixture-seed.md)                 |
+| Fixture data         | `npx tsx scripts/seed-e2e-fixtures.ts`             | Contract in [fixture-seed.md](./fixture-seed.md)                 |
 
 **No repository secret is read by either end-to-end job.** This is a contract, not an implementation detail: it is what makes SC-008 hold.
 
@@ -83,25 +83,25 @@ Both `E2E_` variables are declared optional in `src/lib/validations/env.ts`. Whe
 
 ## Commands
 
-| Job            | Command                                                                                      |
-| -------------- | -------------------------------------------------------------------------------------------- |
-| `e2e-blocking` | `npm run test:e2e -- --shard=${{ matrix.shard }}/4 --reporter=blob`                          |
-| `e2e-advisory` | `npm run test:e2e -- --project=desktop-chrome --project=mobile-chrome --project=orders-live` |
-| `e2e`          | `npx playwright merge-reports --reporter html ./all-blob-reports`                            |
+| Job                 | Command                                                                                                                                                                                   |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `e2e-blocking`      | `npm run test:e2e -- --shard=${{ matrix.shard }}/4 --reporter=blob`                                                                                                                       |
+| `e2e-advisory`      | `npm run test:e2e -- --project=desktop-chrome --project=mobile-chrome --project=orders-live`                                                                                              |
+| `e2e`               | `npx playwright merge-reports --reporter html ./all-blob-reports`                                                                                                                         |
 | `e2e-preview-smoke` | `npm run test:e2e -- --project=public-pages --project=accessibility-public --project=product-navigation --project=ai-stock-privacy --project=session-isolation --project=latest-features` |
 
 FR-017 requires CI to invoke the same documented command a contributor runs. `npm run test:e2e` is that command in every case; only flags differ.
 
 ## Artifacts
 
-| Artifact name         | Producer       | Contents                                      | Retention | Upload condition |
-| --------------------- | -------------- | --------------------------------------------- | --------- | ---------------- |
-| `next-build`          | `build`        | `.next` excluding `.next/cache`               | 1 day     | on success       |
-| `blob-report-<shard>` | `e2e-blocking` | Playwright blob report for that shard         | 14 days   | `if: always()`   |
-| `e2e-traces-<shard>`  | `e2e-blocking` | `test-results/` — traces, failure screenshots | 14 days   | `if: always()`   |
-| `e2e-report`          | `e2e`          | Merged HTML report across all four shards     | 14 days   | `if: always()`   |
-| `e2e-advisory-report` | `e2e-advisory` | HTML report, traces, `ux-audit` screenshots   | 14 days   | `if: always()`   |
-| `e2e-preview-smoke-report` | `e2e-preview-smoke` | HTML report and traces from the deployed run | 14 days | `if: always()` |
+| Artifact name              | Producer            | Contents                                      | Retention | Upload condition |
+| -------------------------- | ------------------- | --------------------------------------------- | --------- | ---------------- |
+| `next-build`               | `build`             | `.next` excluding `.next/cache`               | 1 day     | on success       |
+| `blob-report-<shard>`      | `e2e-blocking`      | Playwright blob report for that shard         | 14 days   | `if: always()`   |
+| `e2e-traces-<shard>`       | `e2e-blocking`      | `test-results/` — traces, failure screenshots | 14 days   | `if: always()`   |
+| `e2e-report`               | `e2e`               | Merged HTML report across all four shards     | 14 days   | `if: always()`   |
+| `e2e-advisory-report`      | `e2e-advisory`      | HTML report, traces, `ux-audit` screenshots   | 14 days   | `if: always()`   |
+| `e2e-preview-smoke-report` | `e2e-preview-smoke` | HTML report and traces from the deployed run  | 14 days   | `if: always()`   |
 
 Traces exist only because `playwright.config.ts` sets `trace: 'retain-on-failure'`. Removing that setting silently empties the trace artifacts and breaks SC-007 without failing any job — treat it as a contract term, not a preference.
 
@@ -116,7 +116,7 @@ Traces exist only because `playwright.config.ts` sets `trace: 'retain-on-failure
 | A shard exceeds `timeout-minutes: 20`           | failure                                    | any            | failure                    | **yes**                                                    |
 | Browser cache miss                              | success, slower                            | any            | success                    | no                                                         |
 | Database or proxy service fails to become ready | failure during setup                       | any            | failure                    | **yes**                                                    |
-| Seed fails, leaving `/` unrenderable        | failure on the `webServer` readiness probe | any            | failure                    | **yes**                                                    |
+| Seed fails, leaving `/` unrenderable            | failure on the `webServer` readiness probe | any            | failure                    | **yes**                                                    |
 
 `e2e-preview-smoke` never appears in this table's "merge blocked" column, under any condition. It is `continue-on-error: true`, it is in no job's `needs:`, and `deploy-preview` does not run on pull requests, so all three independently guarantee it cannot gate a merge. A smoke-lane failure is a post-merge signal about the deployed environment and is triaged as such.
 
