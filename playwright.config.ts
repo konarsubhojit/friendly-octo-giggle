@@ -236,7 +236,17 @@ export default defineConfig({
   reporter: isCI
     ? [
         ['github'],
-        ['blob', { outputDir: 'playwright-tests/blob-report' }],
+        [
+          'blob',
+          {
+            outputDir: 'playwright-tests/blob-report',
+            // Playwright derives the default blob name from the `--project`
+            // selection, and the fourteen blocking projects overflow the
+            // filesystem's 255-byte name limit (ENAMETOOLONG). Name the archive
+            // after the shard instead; shard-less runs get a single `report.zip`.
+            fileName: `report-${process.env.PLAYWRIGHT_SHARD_INDEX ?? '1'}.zip`,
+          },
+        ],
       ]
     : [
         ['list'],

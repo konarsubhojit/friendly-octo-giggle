@@ -207,6 +207,34 @@ describe('proxy rate limiting', () => {
     expect(response.headers.get('Retry-After')).toBeTruthy()
   })
 
+  it('degrades to in-memory limiting on strict paths when the end-to-end lane opts in', async () => {
+    vi.stubEnv('E2E_ALLOW_INSECURE_HTTP', 'true')
+    mockGetStrictLimiter.mockReturnValue(null)
+
+    const response = await proxy(
+      createRequest('/api/auth/callback/credentials', {
+        'cf-connecting-ip': '203.0.113.90',
+      })
+    )
+
+    expect(response.status).not.toBe(503)
+    expect(response.headers.get('X-RateLimit-Limit')).toBe('10')
+  })
+
+  it('degrades to in-memory limiting when a strict limiter call fails in the end-to-end lane', async () => {
+    vi.stubEnv('E2E_ALLOW_INSECURE_HTTP', 'true')
+    mockStrictLimit.mockRejectedValue(new Error('upstash down'))
+
+    const response = await proxy(
+      createRequest('/api/auth/register', {
+        'cf-connecting-ip': '203.0.113.91',
+      })
+    )
+
+    expect(response.status).not.toBe(503)
+    expect(response.headers.get('X-RateLimit-Limit')).toBe('10')
+  })
+
   it('degrades to in-memory limiting when the general limiter call fails', async () => {
     mockGeneralLimit.mockRejectedValue(new Error('upstash down'))
 

@@ -285,6 +285,28 @@ function getInMemoryAiRateLimitResult(
   )
 }
 
+// Strict paths fail closed when the Upstash limiter is unavailable, which is
+// correct everywhere except the end-to-end lane: it runs a production build
+// with no Upstash credentials, so `/api/auth/callback/credentials` would answer
+// 503 and no authenticated project could ever sign in. The same opt-in flag
+// that allows plain HTTP there degrades the strict limiter to the in-memory
+// window instead, keeping the route bounded. It is never set in a deployed
+// environment.
+const isStrictInMemoryFallbackAllowed = (): boolean =>
+  process.env.E2E_ALLOW_INSECURE_HTTP === 'true'
+
+function getInMemoryStrictRateLimitResult(
+  identifier: string,
+  pathname: string
+): RateLimitResult {
+  return getInMemoryRateLimitResult(
+    generalRateLimitStore,
+    identifier,
+    pathname,
+    STRICT_RATE_LIMIT_MAX_REQUESTS
+  )
+}
+
 function getInMemoryGeneralRateLimitResult(
   identifier: string,
   pathname: string
@@ -427,13 +449,20 @@ export async function proxy(request: NextRequest) {
 
     if (!limiter) {
       if (isStrictPath) {
-        return withResponseHeaders(
-          buildRateLimitUnavailableResponse(fallbackLimit)
+        if (!isStrictInMemoryFallbackAllowed()) {
+          return withResponseHeaders(
+            buildRateLimitUnavailableResponse(fallbackLimit)
+          )
+        }
+        rateLimitResult = getInMemoryStrictRateLimitResult(identifier, pathname)
+      } else {
+        // General sensitive paths: fall back to the in-memory limiter so the
+        // route is never left fully unbounded when Upstash is unavailable.
+        rateLimitResult = getInMemoryGeneralRateLimitResult(
+          identifier,
+          pathname
         )
       }
-      // General sensitive paths: fall back to the in-memory limiter so the
-      // route is never left fully unbounded when Upstash is unavailable.
-      rateLimitResult = getInMemoryGeneralRateLimitResult(identifier, pathname)
     } else {
       try {
         const result = await limiter.limit(identifier)
@@ -445,15 +474,22 @@ export async function proxy(request: NextRequest) {
         }
       } catch {
         if (isStrictPath) {
-          return withResponseHeaders(
-            buildRateLimitUnavailableResponse(fallbackLimit)
+          if (!isStrictInMemoryFallbackAllowed()) {
+            return withResponseHeaders(
+              buildRateLimitUnavailableResponse(fallbackLimit)
+            )
+          }
+          rateLimitResult = getInMemoryStrictRateLimitResult(
+            identifier,
+            pathname
+          )
+        } else {
+          // General sensitive paths: degrade to in-memory limiting on error.
+          rateLimitResult = getInMemoryGeneralRateLimitResult(
+            identifier,
+            pathname
           )
         }
-        // General sensitive paths: degrade to in-memory limiting on error.
-        rateLimitResult = getInMemoryGeneralRateLimitResult(
-          identifier,
-          pathname
-        )
       }
     }
 

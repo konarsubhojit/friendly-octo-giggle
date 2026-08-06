@@ -188,6 +188,8 @@ jobs:
             --project=session-isolation \
             --project=variant-options \
             --shard=${{ matrix.shard }}/4
+        env:
+          PLAYWRIGHT_SHARD_INDEX: ${{ matrix.shard }}
 
       - name: Upload blob report
         if: always()
