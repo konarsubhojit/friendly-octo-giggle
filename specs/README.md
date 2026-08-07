@@ -18,18 +18,19 @@ Specifications define expected behavior; [the implemented feature catalog](../do
 
 ## Next-phase specifications
 
-Specifications 012-023 are proposed work, grouped into three epics. Each is drafted against the verified state of the working tree rather than against documentation, and each opens with a `Baseline (verified 2026-08-01)` section recording what was checked.
+Specifications 012, 014-023 are proposed work, grouped into three epics. Each is drafted against the verified state of the working tree rather than against documentation, and each opens with a `Baseline (verified 2026-08-01)` section recording what was checked.
 
-### Epic — Phase 1: Foundation — rendering model, CI truth, and stack modernization
+### Epic — Phase 1: Foundation — rendering model and stack modernization
 
-Framework capability the project pays for but does not use, plus the verification and documentation gaps that make every later change riskier than it needs to be.
+Framework capability the project pays for but does not use, plus the documentation gaps that make every later change riskier than it needs to be.
 
 | Spec | Capability                                   | Problem it addresses                                                                                    |
 | ---- | -------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
 | 012  | Cache Components and PPR                     | 60 `force-dynamic` route segments, no `generateStaticParams`, zero use of `"use cache"` on Next.js 16.2 |
-| 013  | E2E in continuous integration                | Playwright suites exist but never run in CI, so a permanently failing suite went unnoticed              |
 | 014  | Documentation and instruction reconciliation | README, docs, and the constitution reference commands, files, and services that do not exist            |
 | 015  | Build and DX modernization                   | React Compiler, typed routes, Turbopack filesystem cache, and package-import optimization all unadopted |
+
+Specification 013, "E2E in continuous integration", was withdrawn on 2026-08-07 and its directory removed. Running the Playwright suite in CI and repairing its drifted assertions is currently unowned; any specification that needs browser-level verification must arrange it itself.
 
 ### Epic — Phase 2: Correctness and commerce depth
 

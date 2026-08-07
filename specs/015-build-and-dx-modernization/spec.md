@@ -3,7 +3,7 @@
 **Feature Branch**: `015-build-and-dx-modernization`  
 **Created**: 2026-08-01  
 **Status**: Draft  
-**Epic**: Phase 1 — Foundation: rendering model, CI truth, and stack modernization  
+**Epic**: Phase 1 — Foundation: rendering model and stack modernization  
 **Input**: Enable the build-level capabilities the installed toolchain already ships — React Compiler, typed routes, the Turbopack filesystem cache, and package-import optimization — so the application gets automatic memoization, link-level type safety, and materially faster builds.
 
 ## Baseline (verified 2026-08-01)
@@ -137,4 +137,4 @@ Heavy client dependencies are imported at module granularity so unused code does
 ## Dependencies
 
 - Independent of `012-cache-components-and-ppr`, but both change build output, so they should land in separate pull requests with separate measurements.
-- Benefits from `013-e2e-in-continuous-integration` for browser-level verification that automatic memoization did not alter behavior.
+- Browser-level verification that automatic memoization did not alter behavior is desirable but unowned; the specification that would have enabled the Playwright suite in CI (`013-e2e-in-continuous-integration`) was withdrawn on 2026-08-07.

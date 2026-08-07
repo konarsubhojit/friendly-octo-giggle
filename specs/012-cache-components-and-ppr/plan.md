@@ -315,7 +315,7 @@ These are local, single-machine numbers taken over loopback; they are directiona
 
 ### T045 — Playwright against a production build (SC-008)
 
-Deferred, not satisfied. The suite is not runnable as it stands: `playwright.config.ts` still probes `/en/shop`, which is not in the route tree, and `global-setup.ts` requires credentials for a seeded account. Making the suite runnable is owned by `013-e2e-in-continuous-integration`, which this feature already declares as a dependency. The Playwright specs added by this feature (`public-pages.spec.ts`, `product-navigation.spec.ts`, `session-isolation.spec.ts`, `admin-views.spec.ts`) are committed and will be exercised when 013 lands. The rendering claims those specs assert were verified here by other means: the no-JavaScript shell content in the T044 table above, and the classification table in this plan.
+Deferred, not satisfied. The suite is not runnable as it stands: `playwright.config.ts` still probes `/en/shop`, which is not in the route tree, and `global-setup.ts` requires credentials for a seeded account. Making the suite runnable was owned by `013-e2e-in-continuous-integration`, which this feature declared as a dependency until that specification was withdrawn on 2026-08-07; the repair is now unowned. The Playwright specs added by this feature (`public-pages.spec.ts`, `product-navigation.spec.ts`, `session-isolation.spec.ts`, `admin-views.spec.ts`) are committed and will be exercised once the suite is repaired. The rendering claims those specs assert were verified here by other means: the no-JavaScript shell content in the T044 table above, and the classification table in this plan.
 
 ## Complexity Tracking
 

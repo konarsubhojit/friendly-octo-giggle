@@ -149,6 +149,6 @@ Moving mutations off the thunk and `api-client` path preserves the behavior thos
 
 ## Dependencies
 
-- Should follow `013-e2e-in-continuous-integration`, because interaction changes are best verified at the browser level.
+- Interaction changes are best verified at the browser level, but the specification that would have made the Playwright suite a CI gate (`013-e2e-in-continuous-integration`) was withdrawn on 2026-08-07; verification is therefore this specification's own responsibility.
 - Should follow `015-build-and-dx-modernization` so compiler-driven memoization changes and interaction changes are measured separately.
 - Interacts with `012-cache-components-and-ppr`, since mutation revalidation targets the cache tags that specification introduces.
