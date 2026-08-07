@@ -13,7 +13,7 @@
 **Non-negotiable inherited behaviors** — these apply even when the agent file is not loaded:
 
 - **Autonomous execution** — never ask "shall I proceed?"; announce the action and execute it. Stop only for a hard blocker via the Escalation Protocol.
-- **Pre-PR validation** — `npm run lint`, `npx tsc --noEmit`, `npm test`, and `npm run build` must all pass before any commit or PR. `npm run build` is mandatory; it is the only gate that catches Next.js route-type and ISR/manifest errors.
+- **Pre-PR validation** — `npm run lint`, `npx tsc --noEmit -p tsconfig.check.json`, `npm test`, `npm run build`, and `npm run docs:check` must all pass before any commit or PR. `npm run build` is mandatory; it is the only gate that catches Next.js route-type and prerender/manifest errors.
 - **Mandatory final gate** — before the final commit, run the [`branch-diff-review`](./skills/branch-diff-review/SKILL.md) skill, then **always** run [`branch-diff-remediate`](./skills/branch-diff-remediate/SKILL.md). Loop the pair until the verdict is `READY TO COMMIT` with an empty remediation queue. `BLOCKER`, `CRITICAL`, and `MAJOR` findings all block the commit.
 - **SonarQube analysis** — run `sonarqube_analyze_file` on every file you create or modify, plus `sonarqube_list_potential_security_issues` on auth, API, upload, and DB code.
 - **Documented decisions** — record the rationale for every significant design or trade-off decision.
@@ -24,27 +24,41 @@
 
 This is a highly scalable e-commerce website built with Next.js 16, TypeScript, PostgreSQL, Redis, and NextAuth for authentication. It's designed to run as serverless on-demand functions.
 
+**This file is the single architecture description for agent consumption.** No
+other file in the repository restates the stack or the directory layout;
+`.github/copilot/instructions.md` defers here. When this file and the working
+tree disagree, **the code is authoritative** — correct this file rather than the
+code, and `npm run docs:check` guards the mechanically checkable claims.
+
 ## Technology Stack
 
-- **Framework**: Next.js 16.1.6 with App Router (TypeScript 5.9)
-- **React**: 19.2.4
-- **Database**: PostgreSQL (Neon Serverless) with Drizzle ORM 0.45
-- **State Management**: Redux Toolkit 2.11 (cart, orders, admin, wishlist slices)
-- **Currency**: CurrencyContext with INR default, `useCurrency()` hook
-- **Theme**: ThemeContext with default/baby-pink themes, `useTheme()` hook
-- **Cache**: Redis (@upstash/redis 1.37, HTTP-based) with stampede prevention and Redis Search for orders
-- **Authentication**: NextAuth.js v5 (beta.30) with Google OAuth + credentials (email/password), DrizzleAdapter
-- **Password**: bcryptjs 3.0 with password history tracking (`lib/password.ts`)
-- **Email**: Nodemailer 7.0 + SendGrid, modular email system (`lib/email/` — providers, templates, retry, failed-emails)
-- **Styling**: Tailwind CSS v4.1
-- **Validation**: Zod 4.3 for runtime type checking
-- **IDs**: Base62 short IDs (7-char alphanumeric) via `lib/short-id.ts` for products, orders, carts, and related entities. Uses `varchar(7)` in DB schema.
-- **Logging**: Pino (structured JSON in production, pretty-print in dev)
-- **Testing**: Vitest 4.0 with jsdom + React Testing Library 16.3 + @testing-library/jest-dom
-- **E2E Testing**: Playwright 1.58 with axe-core accessibility testing
-- **Image Storage**: Vercel Blob
+Versions below are the ranges declared in `package.json`. When they and
+`package.json` disagree, `package.json` is authoritative.
+
+- **Framework**: Next.js 16.3 with App Router, Cache Components enabled (TypeScript 6.0)
+- **React**: 19.2
+- **Database**: PostgreSQL (Neon Serverless) with Drizzle ORM 0.45 (`src/lib/db.ts`)
+- **State Management**: Redux Toolkit 2.12; slices live in their owning feature module under `src/features/*/store/`
+- **Currency**: `CurrencyContext` with INR as the stored base currency, `useCurrency()` hook (`src/lib/currency.ts`)
+- **Theme**: `ThemeContext` with default/baby-pink themes, `useTheme()` hook
+- **Cache**: Upstash Redis 1.38 (HTTP-based) with stampede prevention (`src/lib/redis.ts`), plus Next.js Cache Components tags (`src/lib/cache-tags.ts`)
+- **Search**: Upstash Search 0.1 with SQL fallback (`src/lib/search/`)
+- **Authentication**: NextAuth.js v5 (5.0.0-beta.32) with Google OAuth + email/password + phone/password, DrizzleAdapter, **JWT sessions** (`src/lib/auth.config.ts`)
+- **Password**: bcryptjs 3.0 with password history tracking (`src/features/auth/services/password.ts`)
+- **Background jobs**: Inngest 4.13 durable functions (`src/lib/inngest/`), registered in `src/lib/inngest/registry.ts` and served by `/api/inngest`
+- **Email**: Nodemailer 9.0, modular email system (`src/lib/email/` — providers, templates, retry, failed-emails)
+- **Payments**: provider registry in `src/lib/payments/` (Razorpay and cash-on-delivery)
+- **Styling**: Tailwind CSS v4.3
+- **Validation**: Zod 4.4 for runtime type checking (`src/lib/validations/`)
+- **IDs**: Base62 short IDs (7-char alphanumeric) via `src/lib/short-id.ts` for products, orders, carts, and related entities. Uses `varchar(7)` in DB schema.
+- **Logging**: Pino 10 (structured JSON in production, pretty-print in dev) (`src/lib/logger.ts`)
+- **Error monitoring**: Sentry 10 (`sentry.*.config.ts`, `src/instrumentation.ts`)
+- **Testing**: Vitest 4.1 with jsdom + React Testing Library 16.3 + @testing-library/jest-dom
+- **E2E Testing**: Playwright 1.62 with axe-core accessibility testing
+- **Image Storage**: Vercel Blob 2.5 or Azure Blob Storage 12.33, selected in `src/lib/image-storage.ts`
+- **Edge Config**: Vercel Edge Config 1.4 for feature flags and shipping config (`src/lib/edge-config.ts`)
 - **Analytics**: Vercel Analytics
-- **API Client**: `lib/api-client.ts` — typed HTTP abstraction for Redux thunks (DIP pattern)
+- **API Client**: `src/lib/api-client.ts` — typed HTTP abstraction for Redux thunks (DIP pattern)
 
 ## Code Style Guidelines
 
@@ -53,7 +67,7 @@ This is a highly scalable e-commerce website built with Next.js 16, TypeScript, 
 - Use strict TypeScript everywhere
 - Prefer type inference over explicit types when obvious
 - Use Zod schemas for runtime validation
-- Define types in `lib/types.ts` or `lib/validations.ts`
+- Define types in `src/lib/types.ts` or under `src/lib/validations/`
 - Use modern TypeScript features (satisfies, const assertions, template literals)
 
 ```typescript
@@ -93,7 +107,7 @@ export function InteractiveButton() {
 
 ### API Routes
 
-- Use `lib/api-utils.ts` helpers for responses
+- Use `src/lib/api-utils.ts` helpers for responses
 - Always validate input with Zod schemas
 - Use proper HTTP status codes
 - Handle errors with `handleApiError`
@@ -114,8 +128,8 @@ export async function POST(request: NextRequest) {
 
 ### Database (Drizzle ORM)
 
-- Always use Drizzle client from `lib/db.ts`
-- `lib/db.ts` exposes three clients:
+- Always use Drizzle client from `src/lib/db.ts`
+- `src/lib/db.ts` exposes three clients:
   - `drizzleDb` — read-replica composite (default for Server Components and public reads)
   - `primaryDrizzleDb` — primary/writer (use for auth, account, cart mutations, order status, admin writes, any read-after-write flow)
   - `readDrizzleDb` — replica reader (rarely imported directly; `drizzleDb` routes reads here automatically)
@@ -154,7 +168,7 @@ npm run db:generate
 
 **Migration Workflow:**
 
-1. Modify `lib/schema.ts` with your changes
+1. Modify `src/lib/schema.ts` with your changes
 2. Run `npm run db:generate` to generate the migration
 3. Review the generated SQL in `drizzle/` directory
 4. Run `npm run db:migrate` to apply to development
@@ -172,7 +186,7 @@ npm run db:generate
 
 ### Caching Strategy
 
-- Use `getCachedData` from `lib/redis.ts` for read-heavy endpoints
+- Use `getCachedData` from `src/lib/redis.ts` for read-heavy endpoints
 - Set appropriate TTL (60s for products)
 - Invalidate cache on writes with `invalidateCache`
 - Use stale-while-revalidate pattern
@@ -189,21 +203,34 @@ const data = await getCachedData(
 
 ### Authentication
 
-- Use `auth()` from `lib/auth.ts` to get session
-- Supports Google OAuth + email/password credentials
-- Check user role for admin routes
-- Use `ProtectedRoute` component for protected pages
+- Use `auth()` from `src/lib/auth.ts` to get the session in Server Components
+- Sessions are **JWT**, not database-backed (`session.strategy: 'jwt'` in
+  `src/lib/auth.config.ts`). `src/proxy.ts` gates admin routes by reading the
+  JWT with `getToken` from `next-auth/jwt`, which keeps the Drizzle adapter out
+  of the edge bundle.
+- Supports Google OAuth + email/password + phone/password credentials
+- Admin **API routes** MUST use `checkAdminAuth` from
+  `src/features/admin/services/admin-auth.ts`; admin **pages** MUST use
+  `requireAdminPermission` from
+  `src/features/admin/services/admin-page-auth.ts`. Inline auth checks in
+  individual route files are prohibited.
+- Use the `ProtectedRoute` component (`src/components/ui/ProtectedRoute.tsx`)
+  for client-side protected pages
 - Never expose sensitive data in client components
 - Registration: `POST /api/auth/register` with email, password, name
 - Password change: `POST /api/auth/change-password` (requires session)
-- Password history tracked via `lib/password.ts` (prevents reuse of last 2 passwords)
+- Password history tracked via `src/features/auth/services/password.ts` (prevents reuse of last 2 passwords)
 
 ```typescript
-import { auth } from '@/lib/auth'
+import { connection } from 'next/server'
+import { checkAdminAuth } from '@/features/admin/services/admin-auth'
 
 export default async function AdminPage() {
-  const session = await auth()
-  if (session?.user?.role !== 'ADMIN') {
+  // Admin screens are per-request; state that explicitly under Cache Components
+  await connection()
+
+  const authCheck = await checkAdminAuth('analytics:read')
+  if (!authCheck.authorized) {
     redirect('/')
   }
   // Admin content
@@ -212,122 +239,87 @@ export default async function AdminPage() {
 
 ## File Structure
 
-```
-app/
-  ├── api/
-  │   ├── admin/
-  │   │   ├── orders/route.ts, [id]/route.ts
-  │   │   ├── products/route.ts, [id]/route.ts, [id]/variations/route.ts, [id]/variations/[variationId]/route.ts
-  │   │   ├── users/route.ts, [id]/route.ts
-  │   │   ├── reviews/route.ts
-  │   │   ├── email-failures/route.ts
-  │   │   └── sales/route.ts
-  │   ├── auth/[...nextauth]/route.ts, register/route.ts, change-password/route.ts
-  │   ├── account/route.ts
-  │   ├── cart/route.ts, items/[id]/route.ts
-  │   ├── orders/route.ts, [id]/route.ts
-  │   ├── products/route.ts, [id]/route.ts, bestsellers/route.ts
-  │   ├── reviews/route.ts
-  │   ├── wishlist/route.ts, [productId]/route.ts
-  │   ├── share/route.ts
-  │   ├── exchange-rates/route.ts
-  │   ├── upload/route.ts
-  │   ├── dev/copilot-auth/     # Dev-only auth helper
-  │   └── health/route.ts
-  ├── auth/              # Sign-in, register, and auth error pages
-  ├── admin/             # Admin panel (dashboard, products, orders, users, reviews, email-failures)
-  ├── account/           # User account/profile page
-  ├── products/          # Product listing and detail pages (with ProductClient.tsx)
-  ├── orders/            # Order listing and detail pages
-  ├── cart/              # Shopping cart
-  ├── shop/              # Shop page with loading state
-  ├── wishlist/          # Wishlist page with loading state
-  ├── s/[key]/           # Short-link redirects
-  ├── contact/           # Contact page with ContactForm component
-  ├── about/, blog/, careers/, help/, press/, returns/, shipping/
-  ├── error.tsx          # Global error boundary
-  ├── loading.tsx        # Global loading skeleton
-  ├── layout.tsx         # Root layout (providers: Redux, Currency, Theme, Session, Toast, Analytics)
-  └── page.tsx           # Home page
-lib/
-  ├── db.ts             # Drizzle client (Neon Serverless)
-  ├── schema.ts         # Drizzle schema (all tables)
-  ├── short-id.ts       # Base62 7-char ID generator
-  ├── redis.ts          # Redis utilities (getCachedData, stampede prevention)
-  ├── cache.ts          # Cache key patterns and TTL constants
-  ├── auth.ts           # NextAuth v5 config (Google OAuth + credentials, DrizzleAdapter)
-  ├── password.ts       # Password hashing (bcryptjs) + history tracking
-  ├── api-client.ts     # Typed HTTP client for Redux thunks (DIP abstraction)
-  ├── types.ts          # Type definitions
-  ├── validations.ts    # Zod schemas
-  ├── api-utils.ts      # API helpers (apiSuccess, apiError, handleApiError)
-  ├── api-middleware.ts  # withApiLogging wrapper (requestId, timer, user context)
-  ├── logger.ts         # Pino structured logging (createLogger, logApiRequest, Timer)
-  ├── env.ts            # Environment variable validation
-  ├── store.ts          # Redux store (cart, orders, admin, wishlist)
-  ├── hooks.ts          # Custom React hooks (useLocalStorage, etc.)
-  ├── serializers.ts    # Data serialization helpers
-  ├── upload-constants.ts # Upload config constants
-  ├── email.ts          # Re-export from lib/email/ (backward compat)
-  ├── email/            # Modular email system
-  │   ├── index.ts        # Public API (sendOrderConfirmationEmail, etc.)
-  │   ├── providers.ts    # Provider init and transport (Nodemailer/SendGrid)
-  │   ├── templates.ts    # HTML email templates
-  │   ├── retry.ts        # Email retry logic
-  │   └── failed-emails.ts # Failed email tracking and admin queries
-  ├── constants/
-  │   ├── categories.ts   # Product categories (PRODUCT_CATEGORIES, CATEGORY_FILTERS)
-  │   └── error-messages.ts # Centralized form/API error message constants
-  └── features/
-      ├── cart/cartSlice.ts     # Cart state + async thunks
-      ├── orders/ordersSlice.ts # Orders state + async thunks
-      ├── admin/adminSlice.ts   # Admin state + async thunks (products, orders, users)
-      └── wishlist/wishlistSlice.ts # Wishlist state + async thunks
-contexts/
-  ├── CurrencyContext.tsx # Currency context (INR default, supports USD/EUR/GBP)
-  └── ThemeContext.tsx   # Theme context (default/baby-pink themes)
-components/
-  ├── layout/           # Header, HeaderWrapper, Footer, CartIcon
-  ├── ui/               # AuthComponents, CurrencySelector, ThemeSelector, ReviewForm, StarRating,
-  │                       # NewsletterForm, ErrorBoundary, Badge, Card, ConfirmDialog, DynamicForm,
-  │                       # EmptyState, LoadingSpinner, LoadingOverlay, GradientButton, GradientHeading,
-  │                       # AlertBanner, WishlistButton, UserMenu, ProtectedRoute, SelectInput, TextInput, etc.
-  ├── admin/            # ProductFormModal, ProductEditForm, ProductEditPageForm, DeleteConfirmModal,
-  │                       # VariationFormModal, VariationList, AdminHeaderNav, AdminNavLinks, AdminBreadcrumbs,
-  │                       # AdminSearchForm, AdminOrderCard, OrdersByStatusCard, TopProductsTable,
-  │                       # EmailFailuresClient, RoleBadge, RoleAction, UserRow, UsersTable, UserAvatar
-  ├── auth/             # LoginModal, OAuthButtons, PasswordStrengthChecklist, PasswordToggleButton,
-  │                       # CopilotDevLoginButton
-  ├── cart/             # CartItemRow
-  ├── orders/           # OrderListCard, OrdersSearchForm
-  ├── product/          # ImageCarousel, ProductStockBadge, ShareButton, VariationButton
-  ├── icons/            # CheckIcon, CircleIcon, EyeIcon, EyeOffIcon, GoogleIcon, MicrosoftIcon
-  ├── providers/        # StoreProvider, SessionProvider
-  ├── sections/         # Hero, ProductGrid, QuickAddButton, RecentlyViewed, ReviewsSection, StockBadge
-  └── skeletons/        # HeaderSkeleton, HeroSkeleton, ProductCardSkeleton
-scripts/
-  ├── export-product-data.ts  # Export product data
-  ├── import-product-data.ts  # Import product data
-  └── reset-db.ts             # Reset database
-docs/                     # Project documentation
-  ├── api-reference.md, architecture.md, deployment.md,
-  ├── development.md, getting-started.md, troubleshooting.md
-drizzle/
-  └── 0000-0003.sql     # 4 migration files
-playwright-tests/         # E2E tests with Playwright
-  ├── accessibility.spec.ts, admin-views.spec.ts, cart.spec.ts,
-  ├── products.spec.ts, ui-changes.spec.ts, password-validation.spec.ts,
-  ├── account-password-validation.spec.ts, fixed-background.spec.ts
-  ├── global-setup.ts, mock-data.ts
-  └── screenshots/      # Screenshot artifacts
+All application code lives under `src/`. Route segments are in `src/app/`,
+domain modules in `src/features/`, shared utilities in `src/lib/`, and
+presentational components in `src/components/`. Do not create top-level
+`app/`, `lib/`, or `components/` directories.
+
+```text
+src/
+  app/                    # Next.js App Router
+    (public)/             # Storefront route group: shop, products, cart,
+                          #   checkout, orders, account, auth, wishlist,
+                          #   s/[key] short links, offline, and marketing pages
+    admin/                # Admin panel route segments
+    api/                  # Route handlers: account, admin, ai, auth, cart,
+                          #   categories, checkout, exchange-rates, health,
+                          #   inngest, metrics, orders, payments, pincode,
+                          #   products, reviews, search, share, upload, wishlist
+    globals.css           # The only global stylesheet
+    layout.tsx            # Root layout (providers: Redux, Currency, Theme,
+                          #   Session, Toast, Analytics)
+    global-error.tsx, manifest.ts, sitemap.ts
+  features/               # Domain modules; each owns its components, hooks,
+                          #   services, Redux store slice, and validations
+    account/ admin/ ai/ auth/ cart/ orders/ payments/ product/ wishlist/
+  lib/                    # Cross-cutting shared utilities
+    db.ts                 # Drizzle clients (primary + read replica)
+    schema.ts             # Drizzle schema (all tables)
+    db-queries.ts         # Shared typed query helpers
+    short-id.ts           # Base62 7-char ID generator
+    redis.ts              # Redis utilities (getCachedData, stampede prevention)
+    cache.ts              # Cache key patterns and TTL constants
+    cache-tags.ts         # Cache Components tag helpers + revalidateCacheTags
+    auth.ts, auth.config.ts # NextAuth v5 config (JWT sessions, DrizzleAdapter)
+    api-client.ts         # Typed HTTP client for Redux thunks (DIP abstraction)
+    api-utils.ts          # apiSuccess, apiError, handleApiError
+    api-middleware.ts     # withLogging / withApiLogging wrappers
+    logger.ts             # Pino structured logging
+    metrics.ts            # Prometheus metric collection
+    env.ts                # Environment variable validation
+    store.ts              # Redux store assembly
+    currency.ts, money.ts # INR-based pricing and formatting
+    edge-config.ts        # Vercel Edge Config (feature flags, shipping config)
+    image-storage.ts      # Vercel Blob / Azure Blob provider selection
+    rate-limit.ts, ownership.ts, serializers.ts, types.ts
+    validations/          # Zod schemas: index, api, env, payment, primitives
+    inngest/              # Durable background work
+      client.ts dispatch.ts registry.ts realtime.ts sessions.ts scores.ts
+      functions/          # Cron-triggered: email-retry.ts, exchange-rates.ts
+    search/               # Upstash Search + SQL fallback
+      client.ts index.ts product-search.ts
+    email/                # index, providers, templates, retry, failed-emails
+    payments/             # gateway, registry, providers, razorpay, cod, errors
+    ai/                   # gateway, product-rag, ai-cache
+    notifications/, shipping/, constants/
+  components/             # Presentational, feature-agnostic components
+    layout/ ui/ sections/ skeletons/ icons/ providers/ pwa/ SearchBar.tsx
+  contexts/               # CurrencyContext.tsx, ThemeContext.tsx
+  hooks/                  # useDebounce, useFetch, useFormState, useLocalStorage,
+                          #   useModalState, useMutation, useCursorPagination
+  server/                 # Server-only loaders (pincode-loader.ts)
+  types/                  # Ambient declarations (next-auth.d.ts)
+  proxy.ts                # Edge proxy: HTTPS enforcement and admin JWT gate
+  instrumentation.ts, instrumentation-client.ts
+
+__tests__/                # Vitest suites, mirroring the src/ path of the
+                          #   module under test
+playwright-tests/         # Playwright E2E specs and fixtures
+scripts/                  # apply-idempotent-bootstrap.mjs,
+                          #   create-orders-search-index.ts, sql/
+drizzle/                  # Generated SQL migrations
+docs/                     # api-reference, architecture, deployment, development,
+                          #   features, getting-started, observability,
+                          #   troubleshooting
+specs/                    # Feature specifications, plans, and task lists
 ```
 
 ## Common Patterns
 
 ### Creating a New API Endpoint
 
-1. Define Zod schema in `lib/validations.ts`
-2. Create route in `app/api/[name]/route.ts`
+1. Define Zod schema under `src/lib/validations/` (or the owning feature's `validations.ts`)
+2. Create route in `src/app/api/[name]/route.ts`
 3. Validate input with schema
 4. Use Drizzle for database operations
 5. Handle errors properly
@@ -335,7 +327,7 @@ playwright-tests/         # E2E tests with Playwright
 
 ### Adding a New Feature
 
-1. Update Drizzle schema in `lib/schema.ts` if needed
+1. Update Drizzle schema in `src/lib/schema.ts` if needed
 2. Run `npx drizzle-kit generate` and `npx drizzle-kit migrate`
 3. Create types/validations
 4. Add Redux slice if state is shared across pages
@@ -359,21 +351,20 @@ playwright-tests/         # E2E tests with Playwright
 
 ### State Management (Redux)
 
-- Cart state: `lib/features/cart/cartSlice.ts`
-- Orders state: `lib/features/orders/ordersSlice.ts`
-- Admin state: `lib/features/admin/adminSlice.ts` (products, orders, users)
-- Wishlist state: `lib/features/wishlist/wishlistSlice.ts`
+- Slices live in their owning feature module under `src/features/<domain>/store/`
+  and are assembled into the store in `src/lib/store.ts`
 - Use `useSelector` + `useDispatch<AppDispatch>()` in client components
 - Keep UI-only state (modals, forms) as local `useState`
 - Use Redux for data shared across pages or fetched from APIs
-- All thunks use `lib/api-client.ts` typed HTTP abstraction (never raw `fetch`)
+- All thunks use `src/lib/api-client.ts` typed HTTP abstraction (never raw `fetch`)
 
 ### Component Best Practices
 
 - **Organized folder structure**: Place components in appropriate folders
-  - `components/layout/` - Reusable layout components (Header, Footer, CartIcon)
-  - `components/ui/` - Generic UI components (forms, buttons, error boundaries)
-  - `components/sections/` - Page-specific sections (Hero, ProductGrid)
+  - `src/components/layout/` - Reusable layout components (Header, Footer, CartIcon)
+  - `src/components/ui/` - Generic UI components (forms, buttons, error boundaries)
+  - `src/components/sections/` - Page-specific sections (Hero, ProductGrid)
+  - `src/features/<domain>/components/` - Components owned by a single domain
 - Use Server Components by default, add 'use client' only when needed
 - Keep components focused and single-purpose
 - Extract shared logic into hooks or utilities
@@ -387,76 +378,103 @@ playwright-tests/         # E2E tests with Playwright
 - Use proper indexes in Drizzle schema
 - Implement pagination for large datasets
 
-## Performance Optimizations
+## Rendering Model — Cache Components
 
-This project implements several Next.js 16 performance optimizations:
+`next.config.ts` sets `cacheComponents: true`. Everything is **per-request by
+default**; cacheable work is opted in explicitly. Route segment configuration
+(`export const dynamic`, `export const revalidate`, `export const runtime`) is
+**rejected by Next.js** under this model and must never be added.
 
-### Static Generation with ISR
+### Opting into caching
 
-- **Removed `force-dynamic`**: Pages use Incremental Static Regeneration (ISR) instead of dynamic rendering
-- **Revalidation timing**: Static pages revalidate every 60 seconds
-- **Benefits**: Faster page loads, reduced database load, better caching
-
-### Direct Database Access
-
-- **No HTTP fetches in Server Components**: Database queries happen directly in components
-- **Eliminates roundtrip overhead**: No network latency between server component and API route
-- **Simplified architecture**: Fewer layers, easier debugging
-
-### API Route Optimizations
-
-- **Cache headers**: All API routes include proper Cache-Control headers
-- **Stale-while-revalidate**: Responses can be cached while background revalidation occurs
-- **Redis caching**: Frequently accessed data cached with stampede prevention
-
-### Static Params Generation
-
-- **`generateStaticParams`**: Pre-generates pages for top 20 products at build time
-- **Incremental builds**: Additional product pages generated on-demand and cached
-- **SEO benefits**: Core product pages indexed immediately
-
-### Implementation Examples
+Wrap the cacheable work in a `"use cache"` scope that declares both a named
+`cacheLife` profile and a `cacheTag` set:
 
 ```typescript
-// ISR with revalidation
-export const revalidate = 60
+import { cacheLife, cacheTag } from 'next/cache'
+import { productTag } from '@/lib/cache-tags'
 
-// Direct database queries in Server Components
-const products = await drizzleDb.query.products.findMany()
-
-// API routes with cache headers
-return NextResponse.json(data, {
-  headers: {
-    'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=30',
-  },
-})
-
-// Static params generation
-export async function generateStaticParams() {
-  const products = await drizzleDb.query.products.findMany({
-    limit: 20,
-    orderBy: asc(schema.products.id),
-  })
-  return products.map((product) => ({ id: product.id }))
+async function getProduct(id: string) {
+  'use cache'
+  cacheLife('product')
+  cacheTag(productTag(id))
+  return db.products.findById(id, false)
 }
 ```
 
+The shared `cacheLife` profiles are declared in `next.config.ts` and anchored to
+the matching `CACHE_TTL` entries in `src/lib/cache.ts`:
+
+| Profile    | Use                              | stale / revalidate / expire |
+| ---------- | -------------------------------- | --------------------------- |
+| `catalog`  | Catalog listings and bestsellers | 60 / 300 / 3600             |
+| `product`  | Product detail                   | 60 / 900 / 3600             |
+| `taxonomy` | Category taxonomy                | 300 / 3600 / 86400          |
+
+### Rules for a cached scope
+
+- A `"use cache"` scope MUST NOT read sessions, cookies, headers, or any
+  request-scoped state.
+- A Redis read MUST NOT be nested inside a `"use cache"` scope. Redis and Cache
+  Components are alternatives, never layers — pass `withCache: false` to the
+  `db.*` helpers inside a cached scope.
+- Per-request regions of an otherwise prerenderable page MUST sit behind a
+  `Suspense` boundary with a skeleton from `src/components/skeletons/`.
+
+### Invalidation
+
+Writes MUST invalidate every layer they affect: `invalidateCache` for Redis and
+`revalidateCacheTags` from `src/lib/cache-tags.ts` for cache tags. Tag failures
+are logged and never fail the originating write.
+
+### Control-flow errors
+
+`handleApiError` in `src/lib/api-utils.ts` calls `unstable_rethrow(error)`
+first, so prerender bail-out signals, `redirect`, and `notFound` propagate
+instead of being converted into JSON 500 responses. Any new `try`/`catch` around
+a render or fetch path must do the same.
+
+### Direct database access
+
+Server Components query the database directly through `src/lib/db-queries.ts` —
+never by fetching the project's own API routes over HTTP.
+
+### Static params
+
+`src/app/(public)/products/[id]/page.tsx` prebuilds the top products via
+`generateStaticParams`; every other product page is generated on demand and
+cached. A database that is unreachable at build time degrades to a stand-in
+rather than failing the build.
+
 ## Commands Reference
 
+This is the complete list of scripts defined in `package.json`. No other
+`npm run` command exists; `npm run docs:check` fails on any Markdown reference
+to a script outside this list.
+
 ```bash
-npm run dev          # Start dev server
-npm run dev:https    # Start dev server with experimental HTTPS
+npm run dev          # Start dev server over HTTPS (experimental self-signed cert)
+npm run analyze      # Production build with the bundle analyzer enabled
 npm run build        # Build for production — REQUIRED pre-PR check (see "Pre-PR Validation")
+npm run start        # Start the production server
 npm run lint         # ESLint check — REQUIRED pre-PR check
+npm run lint:strict  # ESLint, failing on any warning
+npm run format       # Rewrite files with Prettier
+npm run format:check # Check Prettier formatting
+npm run docs:check   # Documentation drift check — REQUIRED pre-PR check
 npm run db:generate  # Generate Drizzle migrations
 npm run db:migrate   # Apply migrations
+npm run db:bootstrap # Apply the full current schema idempotently
 npm run db:push      # Push schema directly (no migration file)
 npm run db:studio    # Open Drizzle Studio GUI
-npm run db:seed      # Seed database
+npm run redis:orders:index # Create/backfill the Redis orders search index
 npm run test         # Run unit tests (single run) — REQUIRED pre-PR check
 npm run test:watch   # Run unit tests (watch mode)
 npm run test:coverage # Run unit tests with coverage
 ```
+
+There is no `db:seed` script and no plain-HTTP dev script. The project ships no
+sample-data seeding; `db:bootstrap` creates schema only.
 
 ## Testing Checklist
 
@@ -478,96 +496,22 @@ npm run test:coverage # Run unit tests with coverage
 
 ### Test Coverage Areas
 
-| Area                | Test File                                                                     | Tests |
-| ------------------- | ----------------------------------------------------------------------------- | ----- |
-| Zod schemas         | `__tests__/lib/validations.test.ts`                                           | 49    |
-| API utilities       | `__tests__/lib/api-utils.test.ts`                                             | 13    |
-| API NextResponse    | `__tests__/lib/api-utils-nextresponse.test.ts`                                | 12    |
-| API middleware      | `__tests__/lib/api-middleware.test.ts`                                        | 9     |
-| Serializers         | `__tests__/lib/serializers.test.ts`                                           | 8     |
-| Upload constants    | `__tests__/lib/upload-constants.test.ts`                                      | 14    |
-| Short ID            | `__tests__/lib/short-id.test.ts`                                              | 3     |
-| Redis cache         | `__tests__/lib/redis.test.ts`                                                 | 12    |
-| Cache utilities     | `__tests__/lib/cache.test.ts`                                                 | 30    |
-| Env validation      | `__tests__/lib/env.test.ts`                                                   | 4     |
-| Types               | `__tests__/lib/types.test.ts`                                                 | 3     |
-| Schema              | `__tests__/lib/schema.test.ts`                                                | 7     |
-| Hooks               | `__tests__/lib/hooks.test.ts`                                                 | 27    |
-| Auth                | `__tests__/lib/auth.test.ts`                                                  |       |
-| Database            | `__tests__/lib/db.test.ts`                                                    |       |
-| Logger              | `__tests__/lib/logger.test.ts`                                                |       |
-| Password            | `__tests__/lib/password.test.ts`                                              |       |
-| Email               | `__tests__/lib/email.test.ts`                                                 |       |
-| Email failed        | `__tests__/lib/email/failed-emails.test.ts`                                   |       |
-| Email retry         | `__tests__/lib/email/retry.test.ts`                                           |       |
-| Error messages      | `__tests__/lib/constants/error-messages.test.ts`                              |       |
-| Cart slice          | `__tests__/lib/features/cart/cartSlice.test.ts`                               | 15    |
-| Cart thunks         | `__tests__/lib/features/cart/cartSlice.thunks.test.ts`                        | 11    |
-| Orders slice        | `__tests__/lib/features/orders/ordersSlice.test.ts`                           | 17    |
-| Orders thunks       | `__tests__/lib/features/orders/ordersSlice.thunks.test.ts`                    | 12    |
-| Admin slice         | `__tests__/lib/features/admin/adminSlice.test.ts`                             | 22    |
-| Admin thunks        | `__tests__/lib/features/admin/adminSlice.thunks.test.ts`                      | 14    |
-| Redux store         | `__tests__/lib/store.test.ts`                                                 | 5     |
-| Header              | `__tests__/components/layout/Header.test.tsx`                                 | 13    |
-| CartIcon            | `__tests__/components/layout/CartIcon.test.tsx`                               | 4     |
-| Footer              | `__tests__/components/layout/Footer.test.tsx`                                 | 10    |
-| AuthComponents      | `__tests__/components/ui/AuthComponents.test.tsx`                             | 14    |
-| CurrencySelector    | `__tests__/components/ui/CurrencySelector.test.tsx`                           | 5     |
-| ErrorBoundary       | `__tests__/components/ui/ErrorBoundary.test.tsx`                              | 15    |
-| NewsletterForm      | `__tests__/components/ui/NewsletterForm.test.tsx`                             | 5     |
-| ConfirmDialog       | `__tests__/components/ui/ConfirmDialog.test.tsx`                              |       |
-| ReviewForm          | `__tests__/components/ui/ReviewForm.test.tsx`                                 |       |
-| StarRating          | `__tests__/components/ui/StarRating.test.tsx`                                 |       |
-| ThemeSelector       | `__tests__/components/ui/ThemeSelector.test.tsx`                              |       |
-| UI Components       | `__tests__/components/ui/UIComponents.test.tsx`                               |       |
-| ProductFormModal    | `__tests__/components/admin/ProductFormModal.test.tsx`                        | 22    |
-| DeleteConfirmModal  | `__tests__/components/admin/DeleteConfirmModal.test.tsx`                      | 6     |
-| VariationFormModal  | `__tests__/components/admin/VariationFormModal.test.tsx`                      |       |
-| VariationList       | `__tests__/components/admin/VariationList.test.tsx`                           |       |
-| LoginModal          | `__tests__/components/auth/LoginModal.test.tsx`                               |       |
-| SharedAuth          | `__tests__/components/auth/SharedAuthComponents.test.tsx`                     |       |
-| ShareButton         | `__tests__/components/product/ShareButton.test.tsx`                           |       |
-| Hero                | `__tests__/components/sections/Hero.test.tsx`                                 | 5     |
-| ProductGrid         | `__tests__/components/sections/ProductGrid.test.tsx`                          | 10    |
-| ReviewsSection      | `__tests__/components/sections/ReviewsSection.test.tsx`                       |       |
-| Skeletons           | `__tests__/components/skeletons/Skeletons.test.tsx`                           | 7     |
-| Providers           | `__tests__/components/providers/Providers.test.tsx`                           | 3     |
-| CurrencyContext     | `__tests__/contexts/CurrencyContext.test.tsx`                                 | 12    |
-| ThemeContext        | `__tests__/contexts/ThemeContext.test.tsx`                                    |       |
-| Error pages         | `__tests__/app/error-pages.test.tsx`                                          |       |
-| Loading pages       | `__tests__/app/loading-pages.test.tsx`                                        |       |
-| Account page        | `__tests__/app/account/page.test.ts`                                          |       |
-| SignIn client       | `__tests__/app/auth/signin/SignInClient.test.tsx`                             |       |
-| ContactForm         | `__tests__/app/contact/ContactForm.test.tsx`                                  |       |
-| Short-link route    | `__tests__/app/s/route.test.ts`                                               |       |
-| Health API          | `__tests__/app/api/health/route.test.ts`                                      | 1     |
-| Account API         | `__tests__/app/api/account/route.test.ts`                                     |       |
-| Auth register API   | `__tests__/app/api/auth/register/route.test.ts`                               |       |
-| Auth change-pw API  | `__tests__/app/api/auth/change-password/route.test.ts`                        |       |
-| Auth route API      | `__tests__/app/api/auth/route.test.ts`                                        |       |
-| Cart API            | `__tests__/app/api/cart/route.test.ts`                                        |       |
-| Cart items API      | `__tests__/app/api/cart/items/[id]/route.test.ts`                             |       |
-| Exchange rates API  | `__tests__/app/api/exchange-rates/route.test.ts`                              |       |
-| Orders API          | `__tests__/app/api/orders/route.test.ts`                                      |       |
-| Orders [id] API     | `__tests__/app/api/orders/[id]/route.test.ts`                                 |       |
-| Products API        | `__tests__/app/api/products/route.test.ts`                                    |       |
-| Products [id] API   | `__tests__/app/api/products/[id]/route.test.ts`                               |       |
-| Bestsellers API     | `__tests__/app/api/products/bestsellers/route.test.ts`                        |       |
-| Reviews API         | `__tests__/app/api/reviews/route.test.ts`                                     |       |
-| Share API           | `__tests__/app/api/share/route.test.ts`                                       |       |
-| Upload API          | `__tests__/app/api/upload/route.test.ts`                                      |       |
-| Admin orders API    | `__tests__/app/api/admin/orders/route.test.ts`                                |       |
-| Admin orders [id]   | `__tests__/app/api/admin/orders/[id]/route.test.ts`                           |       |
-| Admin products API  | `__tests__/app/api/admin/products/route.test.ts`                              |       |
-| Admin products [id] | `__tests__/app/api/admin/products/[id]/route.test.ts`                         |       |
-| Admin variations    | `__tests__/app/api/admin/products/[id]/variations/route.test.ts`              |       |
-| Admin var soft-del  | `__tests__/app/api/admin/products/[id]/variations/soft-delete-orders.test.ts` |       |
-| Admin users API     | `__tests__/app/api/admin/users/route.test.ts`                                 |       |
-| Admin users [id]    | `__tests__/app/api/admin/users/[id]/route.test.ts`                            |       |
-| Admin reviews API   | `__tests__/app/api/admin/reviews/route.test.ts`                               |       |
-| Admin sales API     | `__tests__/app/api/admin/sales/route.test.ts`                                 |       |
-| Admin email-fail    | `__tests__/app/api/admin/email-failures/route.test.ts`                        |       |
-| **Total**           | **87 test files**                                                             |       |
+`__tests__/` is the inventory. It mirrors the `src/` path of the module under
+test, so the test file for `src/lib/cache-tags.ts` is
+`__tests__/lib/cache-tags.test.ts` and the test file for
+`src/features/orders/services/order-cache.ts` is
+`__tests__/features/orders/services/order-cache.test.ts`.
+
+Do not maintain a table of test files here. It drifts within days — the table
+this replaced claimed 87 files against an actual 300. Reproduce the current
+count instead:
+
+```bash
+find __tests__ -name '*.test.ts' -o -name '*.test.tsx' | wc -l
+```
+
+As of 2026-08-07 that reports **300**. To find the tests covering a module,
+mirror its path under `__tests__/` rather than searching this file.
 
 ### Writing New Tests
 
@@ -597,11 +541,13 @@ npm run test:coverage # Run unit tests with coverage
 
 ## SSL/HTTPS Setup
 
-- **Development**: HTTPS redirect disabled (localhost doesn't have SSL)
+- **Development**: `npm run dev` runs `next dev --experimental-https`, so the
+  local server is HTTPS with a self-signed certificate. The production HTTPS
+  redirect stays disabled locally.
 - **Production**: Auto-redirects HTTP → HTTPS via proxy
 - **NEXTAUTH_URL**: Must use `https://` in production (set in `.env.production`)
 - **Strict-Transport-Security**: Enabled for 1 year (max-age=31536000)
-- **Proxy**: `proxy.ts` enforces HTTPS in production only
+- **Proxy**: `src/proxy.ts` enforces HTTPS in production only
 - **Vercel**: Automatically provides SSL certificate
 
 **To Deploy with HTTPS:**
@@ -630,13 +576,14 @@ npm run test:coverage # Run unit tests with coverage
 
 ## Pre-PR Validation (MANDATORY)
 
-Before opening or updating a pull request, the agent **MUST** run all four commands locally and confirm each one passes. Skipping `npm run build` is the single most common cause of CI/Vercel deploy failures on this repo (Next.js route-type errors and missing `.nft.json` manifests only surface in `next build`, not in `tsc --noEmit`).
+Before opening or updating a pull request, the agent **MUST** run all five commands locally and confirm each one passes. Skipping `npm run build` is the single most common cause of CI/Vercel deploy failures on this repo (Next.js route-type errors and missing `.nft.json` manifests only surface in `next build`, not in `tsc --noEmit`).
 
 ```bash
-npm run lint        # ESLint — style & a11y rules
-npx tsc --noEmit    # TypeScript type-check
-npm test            # Vitest unit tests
-npm run build       # Next.js production build — REQUIRED, catches route & ISR errors
+npm run lint                        # ESLint — style & a11y rules
+npx tsc --noEmit -p tsconfig.check.json  # TypeScript type-check (the config CI uses)
+npm test                            # Vitest unit tests
+npm run build                       # Next.js production build — REQUIRED, catches route & prerender errors
+npm run docs:check                  # Documentation drift — npm scripts and workflow paths must resolve
 ```
 
 If any command fails, fix the failures (or revert the change) before opening / updating the PR. Do not rely on `parallel_validation` to catch Next.js build-only errors — it does not run `next build`.
@@ -699,17 +646,17 @@ This project uses Next.js App Router conventions for error boundaries and loadin
 
 ### Error Boundaries
 
-- `app/error.tsx` - Global error boundary
-- `app/products/error.tsx` - Products section error handling
-- `app/orders/error.tsx` - Orders section error handling
-- `app/cart/error.tsx` - Cart section error handling
-- `app/admin/error.tsx` - Admin section error handling
+- `src/app/global-error.tsx` - Root error boundary
+- `src/app/(public)/error.tsx` - Storefront route-group error boundary
+- `src/app/(public)/{products,orders,cart,checkout,account,auth,shop,wishlist}/error.tsx`
+- `src/app/admin/error.tsx` - Admin section error handling
 
 ### Loading States
 
-- `app/loading.tsx` - Global loading skeleton
-- `app/products/loading.tsx` - Products listing skeleton
-- `app/products/[id]/loading.tsx` - Product detail skeleton
+- `src/app/(public)/loading.tsx` - Storefront loading skeleton
+- `src/app/(public)/products/loading.tsx` - Products listing skeleton
+- `src/app/(public)/products/[id]/loading.tsx` - Product detail skeleton
+- `src/app/admin/loading.tsx` - Admin loading skeleton
 
 ### Component Props Pattern
 
@@ -728,7 +675,7 @@ export default function MyComponent({ data, onAction }: MyComponentProps) {
 
 ## Environment Variable Validation
 
-Environment variables are validated at startup using `lib/env.ts`:
+Environment variables are validated at startup using `src/lib/env.ts`:
 
 - `DATABASE_URL` - Required PostgreSQL connection string
 - `REDIS_URL` - Optional Redis URL (defaults to localhost:6379)
@@ -754,6 +701,7 @@ Always use Zod schemas for request body validation:
 
 ```typescript
 import { AddToCartSchema } from '@/lib/validations'
+// '@/*' resolves to './src/*', so this is src/lib/validations/index.ts
 import { apiError, handleValidationError } from '@/lib/api-utils'
 
 export async function POST(request: NextRequest) {
