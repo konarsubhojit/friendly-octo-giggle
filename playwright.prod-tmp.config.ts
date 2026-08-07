@@ -8,7 +8,8 @@ import { defineConfig } from '@playwright/test'
 // is managed.
 export default defineConfig({
   ...base,
-  testDir: '/home/runner/work/friendly-octo-giggle/friendly-octo-giggle/playwright-tests',
+  testDir:
+    '/home/runner/work/friendly-octo-giggle/friendly-octo-giggle/playwright-tests',
   webServer: undefined,
   use: {
     ...base.use,
