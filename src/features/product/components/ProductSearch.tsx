@@ -197,9 +197,9 @@ export default function ProductSearch({ onNavigate }: ProductSearchProps) {
     }
   }, [query])
 
-  const openDialog = useCallback(() => {
+  const openDialog = () => {
     setOpen(true)
-  }, [])
+  }
 
   const closeDialog = useCallback(() => {
     setOpen(false)
@@ -233,35 +233,29 @@ export default function ProductSearch({ onNavigate }: ProductSearchProps) {
   // Clamp activeIndex — automatically resets when results shrink
   const clampedIndex = activeIndex >= results.length ? -1 : activeIndex
 
-  const navigate = useCallback(
-    (productId: string) => {
-      closeDialog()
-      onNavigate?.()
-      router.push(`/products/${productId}`)
-    },
-    [router, closeDialog, onNavigate]
-  )
+  const navigate = (productId: string) => {
+    closeDialog()
+    onNavigate?.()
+    router.push(`/products/${productId}`)
+  }
 
   // Keyboard navigation
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === 'ArrowDown') {
-        e.preventDefault()
-        setActiveIndex((prev) => (prev < results.length - 1 ? prev + 1 : 0))
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault()
-        setActiveIndex((prev) => (prev > 0 ? prev - 1 : results.length - 1))
-      } else if (
-        e.key === 'Enter' &&
-        clampedIndex >= 0 &&
-        results[clampedIndex]
-      ) {
-        e.preventDefault()
-        navigate(results[clampedIndex].id)
-      }
-    },
-    [results, clampedIndex, navigate]
-  )
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setActiveIndex((prev) => (prev < results.length - 1 ? prev + 1 : 0))
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setActiveIndex((prev) => (prev > 0 ? prev - 1 : results.length - 1))
+    } else if (
+      e.key === 'Enter' &&
+      clampedIndex >= 0 &&
+      results[clampedIndex]
+    ) {
+      e.preventDefault()
+      navigate(results[clampedIndex].id)
+    }
+  }
 
   // Scroll active item into view
   useEffect(() => {

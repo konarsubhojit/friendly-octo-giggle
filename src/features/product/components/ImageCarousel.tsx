@@ -108,7 +108,7 @@ const ImageCarousel = ({
 
   // ─── Touch handlers ────────────────────────────────────────────────────────
 
-  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+  const handleTouchStart = (e: React.TouchEvent) => {
     if (e.touches.length === 1) {
       touchStartX.current = e.touches[0].clientX
       touchStartY.current = e.touches[0].clientY
@@ -117,72 +117,66 @@ const ImageCarousel = ({
       touchStartDist.current = getTouchDistance(e.touches)
       isSwiping.current = false
     }
-  }, [])
+  }
 
-  const resetTouchState = useCallback(() => {
+  const resetTouchState = () => {
     touchStartX.current = 0
     touchStartY.current = 0
     touchStartDist.current = 0
     isSwiping.current = false
-  }, [])
+  }
 
-  const handleTouchMove = useCallback(
-    (e: React.TouchEvent) => {
-      if (e.touches.length === 2 && touchStartDist.current > 0) {
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (e.touches.length === 2 && touchStartDist.current > 0) {
+      e.preventDefault()
+      isSwiping.current = false
+      // Track pinch in touchmove (changedTouches in touchend only has
+      // the *lifted* finger, so scale detection must happen here)
+      const currentDist = getTouchDistance(e.touches)
+      const ratio = currentDist / touchStartDist.current
+      if (ratio >= PINCH_ZOOM_SCALE) {
+        setIsZoomed(true)
+      } else if (ratio <= 1 / PINCH_ZOOM_SCALE) {
+        setIsZoomed(false)
+      }
+      return
+    }
+
+    if (e.touches.length === 1) {
+      const dx = Math.abs(e.touches[0].clientX - touchStartX.current)
+      const dy = Math.abs(e.touches[0].clientY - touchStartY.current)
+      const shouldSwipe = isSwiping.current || (dx > dy && dx > 10)
+      // Predominantly horizontal — prevent page scroll while swiping
+      if (shouldSwipe) {
         e.preventDefault()
-        isSwiping.current = false
-        // Track pinch in touchmove (changedTouches in touchend only has
-        // the *lifted* finger, so scale detection must happen here)
-        const currentDist = getTouchDistance(e.touches)
-        const ratio = currentDist / touchStartDist.current
-        if (ratio >= PINCH_ZOOM_SCALE) {
-          setIsZoomed(true)
-        } else if (ratio <= 1 / PINCH_ZOOM_SCALE) {
-          setIsZoomed(false)
-        }
-        return
+        isSwiping.current = true
       }
+    }
+  }
 
-      if (e.touches.length === 1) {
-        const dx = Math.abs(e.touches[0].clientX - touchStartX.current)
-        const dy = Math.abs(e.touches[0].clientY - touchStartY.current)
-        const shouldSwipe = isSwiping.current || (dx > dy && dx > 10)
-        // Predominantly horizontal — prevent page scroll while swiping
-        if (shouldSwipe) {
-          e.preventDefault()
-          isSwiping.current = true
-        }
-      }
-    },
-    [setIsZoomed]
-  )
-
-  const handleTouchEnd = useCallback(
-    (e: React.TouchEvent) => {
-      if (isZoomed || e.changedTouches.length !== 1 || total <= 1) {
-        resetTouchState()
-        return
-      }
-
-      if (e.changedTouches.length === 1) {
-        const deltaX = e.changedTouches[0].clientX - touchStartX.current
-        const deltaY = e.changedTouches[0].clientY - touchStartY.current
-
-        if (
-          Math.abs(deltaX) > SWIPE_THRESHOLD &&
-          Math.abs(deltaX) > Math.abs(deltaY)
-        ) {
-          if (deltaX < 0) {
-            goNext()
-          } else {
-            goPrev()
-          }
-        }
-      }
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (isZoomed || e.changedTouches.length !== 1 || total <= 1) {
       resetTouchState()
-    },
-    [goNext, goPrev, isZoomed, resetTouchState, total]
-  )
+      return
+    }
+
+    if (e.changedTouches.length === 1) {
+      const deltaX = e.changedTouches[0].clientX - touchStartX.current
+      const deltaY = e.changedTouches[0].clientY - touchStartY.current
+
+      if (
+        Math.abs(deltaX) > SWIPE_THRESHOLD &&
+        Math.abs(deltaX) > Math.abs(deltaY)
+      ) {
+        if (deltaX < 0) {
+          goNext()
+        } else {
+          goPrev()
+        }
+      }
+    }
+    resetTouchState()
+  }
 
   const handleImageClick = useCallback(() => {
     if (isZoomed) setIsZoomed(false)

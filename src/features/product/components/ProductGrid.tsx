@@ -6,7 +6,6 @@ import {
   startTransition,
   useCallback,
   useEffect,
-  useMemo,
   useRef,
   useState,
 } from 'react'
@@ -265,7 +264,7 @@ ProductImageArea.displayName = 'ProductImageArea'
 
 const ProductCard = memo(
   ({ product, formatPrice, index, query }: ProductCardProps) => {
-    const trackClick = useCallback(() => {
+    const trackClick = () => {
       const body = JSON.stringify({
         productId: product.id,
         query: query || undefined,
@@ -282,7 +281,7 @@ const ProductCard = memo(
         body,
         keepalive: true,
       })
-    }, [product.id, query])
+    }
 
     return (
       <div
@@ -542,9 +541,9 @@ const ProductGrid = ({
     return () => observer.disconnect()
   }, [loadMore])
 
-  const resetHref = useMemo<Route>(() => '/shop#products', [])
+  const resetHref: Route = '/shop#products'
 
-  const applySearchState = useCallback(() => {
+  const applySearchState = () => {
     const params = buildSearchParams({
       searchDraft,
       categoryDraft,
@@ -560,18 +559,7 @@ const ProductGrid = ({
     router.push(query ? `/shop?${query}#products` : resetHref, {
       scroll: false,
     })
-  }, [
-    searchDraft,
-    categoryDraft,
-    sortDraft,
-    minPriceDraft,
-    maxPriceDraft,
-    inStockDraft,
-    minRatingDraft,
-    variantDraft,
-    router,
-    resetHref,
-  ])
+  }
 
   return (
     <main
