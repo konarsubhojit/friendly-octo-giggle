@@ -1,6 +1,6 @@
 # Implemented Feature Catalog
 
-**Verified against the application routes and services on 2026-07-12.** This catalog describes shipped behavior; feature specifications under `specs/` provide acceptance criteria and traceability.
+**Verified against the application routes and services on 2026-08-07.** This catalog describes shipped behavior; feature specifications under `specs/` provide acceptance criteria and traceability. Where this catalog and the code disagree, the code is authoritative.
 
 ## Storefront and discovery
 
@@ -29,7 +29,7 @@
 
 ## PWA and resilience
 
-- Web app manifest, install prompt, icons, screenshots, shortcuts, service-worker registration, and localized offline fallback.
+- Web app manifest, install prompt, icons, screenshots, shortcuts, service-worker registration, and an offline fallback route.
 - Web push order-status notifications delivered through the PWA service worker, with per-device opt-in and automatic cleanup of expired or revoked subscriptions.
 - Public pages served via Cache Components (prerendered shell with streamed per-request holes), image placeholders, responsive images, skeletons, error boundaries, and mobile-safe layouts.
 - Optional Redis caching with stampede prevention and stale-while-revalidate; core reads degrade to PostgreSQL when optional infrastructure is absent.
@@ -54,7 +54,13 @@ Unit and integration tests live under `__tests__/`. Playwright suites cover publ
 
 ```bash
 npm run lint
-npx tsc --noEmit
+npx tsc --noEmit -p tsconfig.check.json
 npm test
 npm run build
+npm run docs:check
 ```
+
+Playwright is not currently runnable end to end: `playwright.config.ts` probes a
+`/en/shop` URL removed with localization in PR #407, and
+`playwright-tests/latest-features.spec.ts` still asserts Spanish routing.
+Repairing the suite is unowned; see `specs/README.md`.
