@@ -234,8 +234,8 @@ Error: relation "Product" already exists
 
    ```bash
    npx drizzle-kit drop
+   npm run db:bootstrap
    npm run db:migrate
-   npm run db:seed
    ```
 
 2. **Apply pending migrations:**
@@ -1168,7 +1168,7 @@ grep "cache_operation" logs/*.log | grep -c "miss"
 curl https://yourdomain.com/api/metrics
 ```
 
-See `docs/observability.md` for metric names, alert thresholds, and synthetic uptime checks.
+See `docs/observability.md` for metric names and alert thresholds.
 
 ### Health Checks
 
@@ -1270,15 +1270,15 @@ export function rateLimit(ip: string, limit = 100) {
 
 ```bash
 # Development
-npm run dev                  # Start dev server
+npm run dev                 # Start dev server (HTTPS, self-signed cert)
 npm run build               # Build for production
 npm run start               # Start production server
 
 # Database
 npm run db:generate         # Generate Drizzle migrations
 npm run db:migrate          # Apply migrations
-npx drizzle-kit push        # Push schema changes directly
-npm run db:seed             # Seed database
+npm run db:push             # Push schema changes directly
+npm run db:bootstrap        # Idempotent full-schema bootstrap
 
 # Troubleshooting
 rm -rf .next                # Clear Next.js cache

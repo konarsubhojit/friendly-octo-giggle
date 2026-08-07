@@ -77,17 +77,18 @@ https://your-domain.com/api/auth/callback/google
 ### 4. Set Up Database
 
 ```bash
-# Generate Drizzle migrations
-npm run db:generate
+# Apply the full current schema idempotently
+npm run db:bootstrap
 
-# Run migrations
+# Apply any migrations added since the bootstrap file was regenerated
 npm run db:migrate
-
-# Seed initial products
-npm run db:seed
 ```
 
-The seed script creates 6 sample products to get you started.
+`npm run db:bootstrap` is safe on an empty database and on a partially migrated
+one; it records every bundled migration as applied, so `npm run db:migrate`
+becomes a no-op immediately afterwards. It applies schema only — the project
+ships no sample-data seeding, so your database starts empty and you create your
+first products through the admin UI.
 
 ### 5. Start Development Server
 
@@ -95,7 +96,9 @@ The seed script creates 6 sample products to get you started.
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+Open [https://localhost:3000](https://localhost:3000) in your browser. The dev
+server runs over HTTPS with an experimental self-signed certificate, so your
+browser will show a certificate warning on first load.
 
 ## Verify the current feature set
 
@@ -159,7 +162,7 @@ psql $DATABASE_URL -c "UPDATE \"User\" SET role = 'ADMIN' WHERE email = 'your-em
 ### Development
 
 ```bash
-npm run dev              # Start development server on :3000
+npm run dev              # Start development server on :3000 over HTTPS
 npm run build            # Build for production
 npm run start            # Start production server
 npm run lint             # Run ESLint
@@ -170,14 +173,14 @@ npm run lint             # Run ESLint
 ```bash
 npm run db:generate      # Generate Drizzle migrations
 npm run db:migrate       # Run database migrations
-npm run db:seed          # Seed test data
-npx drizzle-kit studio   # Open database GUI
+npm run db:bootstrap     # Idempotent full-schema bootstrap
+npm run db:studio        # Open database GUI
 ```
 
 ### Migrations
 
 ```bash
-# Generate a new migration after editing lib/schema.ts
+# Generate a new migration after editing src/lib/schema.ts
 npm run db:generate
 
 # Apply pending migrations

@@ -3,7 +3,7 @@
 **Feature Branch**: `012-cache-components-and-ppr`  
 **Created**: 2026-08-01  
 **Status**: Draft  
-**Epic**: Phase 1 — Foundation: rendering model, CI truth, and stack modernization  
+**Epic**: Phase 1 — Foundation: rendering model and stack modernization  
 **Input**: Adopt the Next.js 16 Cache Components model (`cacheComponents`, `"use cache"`, `cacheLife`, `cacheTag`) so the storefront serves a prerendered static shell with streamed dynamic holes, replacing the legacy segment-level `revalidate` / `force-dynamic` model.
 
 ## Baseline (verified 2026-08-01)
@@ -142,5 +142,5 @@ The most-requested product detail pages are generated at build time and the rema
 
 ## Dependencies
 
-- Requires `013-e2e-in-continuous-integration` so the rendering change is validated by an end-to-end suite that actually runs in CI.
+- Would benefit from an end-to-end suite that runs in CI so the rendering change is validated at the browser level. The specification that owned that work (`013-e2e-in-continuous-integration`) was withdrawn on 2026-08-07, so no such dependency is currently tracked.
 - Benefits from `015-build-and-dx-modernization` for build-time feedback but does not require it.

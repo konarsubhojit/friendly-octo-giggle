@@ -167,8 +167,12 @@ Run migrations **before** the new code is deployed (see
 ```bash
 # In your local project with DATABASE_URL pointing to production
 npm run db:migrate
-npm run db:seed
 ```
+
+On a database that has never been initialized, run `npm run db:bootstrap` first;
+it applies the full current schema idempotently and marks every bundled
+migration as applied. The project ships no sample-data seeding, so a new
+production database starts empty.
 
 **Vercel-specific notes:**
 
@@ -328,8 +332,8 @@ Add in Cloudflare Pages dashboard:
 
 ```bash
 # Use Railway CLI
+railway run npm run db:bootstrap
 railway run npm run db:migrate
-railway run npm run db:seed
 ```
 
 ---
