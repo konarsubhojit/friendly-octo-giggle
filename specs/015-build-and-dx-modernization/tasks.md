@@ -89,9 +89,9 @@ description: 'Task list for enabling React Compiler, typed routes, the Turbopack
 - [x] T026 [US1] Remove manual memoization from `src/features/product/components/` (`BestsellersScroller`, `ImageCarousel`, `ProductGrid`, `ProductSearch`, `ReviewsSection`, `ShareButton`) and `src/features/product/hooks/useRecentlyViewed.ts`, verifying against the product suites under `__tests__/`.
 - [x] T027 [US1] Remove manual memoization from `src/features/admin/components/` (`AdminNavLinksClient`, `CategoriesClient`, `OptionManager`, `VariantFormModal`, `VariantList`), verifying against the admin suites.
 - [x] T028 [US1] Remove manual memoization from `src/app/(public)/account/` (`AccountClient`, `NotificationsSection`, `PasswordSection`, `PreferencesSection`, `ProfileSection`), verifying against the account suites.
-- [ ] T029 [US1] Skip `src/features/admin/components/CouponsClient.tsx` — it is the one memoized module with no referencing suite (`plan.md` R10). Record the skip and its reason in `plan.md`.
-- [ ] T030 [US1] Leave manual memoization in place in every component listed in the bailout register (FR-008), and state that in the register rather than implying it.
-- [ ] T031 [P] [US1] _Optional, unblocks T029_: add `__tests__/features/admin/components/CouponsClient.test.tsx` covering the component's rendering and coupon interactions, then remove its memoization under the same rule as every other module.
+- [x] T029 [US1] ~~Skip~~ `src/features/admin/components/CouponsClient.tsx` — resolved rather than skipped: T031 supplied the missing suite, so the module became eligible and its memoization was removed with everything else. Recorded in `plan.md` (Memoization removal policy).
+- [x] T030 [US1] Leave manual memoization in place in every component listed in the bailout register (FR-008), and state that in the register rather than implying it. The register is empty, so nothing is retained on bailout grounds; `plan.md` now states that explicitly and adds a separate "Memoization deliberately retained" table for the effect-dependency contracts that survive.
+- [x] T031 [P] [US1] _Optional, unblocks T029_: add `__tests__/features/admin/components/CouponsClient.test.tsx` covering the component's rendering and coupon interactions, then remove its memoization under the same rule as every other module.
 
 **Checkpoint**: the compiler is on, all suites pass, the bailout register is filled, and each removal is an isolated commit.
 

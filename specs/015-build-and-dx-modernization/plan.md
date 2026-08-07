@@ -132,8 +132,8 @@ component outward instead of fixing it.
   4. `src/features/admin/components/` (6 files) — excluding `CouponsClient.tsx` (R10).
   5. `src/app/(public)/account/` (5 files).
   6. Remaining single-file modules, only as capacity allows.
-- A module is eligible only when an existing suite references it. `CouponsClient.tsx` is not eligible; it keeps its manual memoization and is recorded as such.
-- Any component the compiler bails out on keeps its manual memoization (FR-008) and is recorded in the bailout register with the reason.
+- A module is eligible only when an existing suite references it. `CouponsClient.tsx` was the one memoized module with no referencing suite; `__tests__/features/admin/components/CouponsClient.test.tsx` was written for it (T031), which made it eligible, and its `setField` memoization was removed under the same rule as every other module. **The skip recorded by T029 therefore no longer applies** — no module in the removal scope remains excluded for lack of coverage.
+- Any component the compiler bails out on keeps its manual memoization (FR-008) and is recorded in the bailout register with the reason. The register is empty, so no component is retained on those grounds (see below).
 - After each removal commit, `npm test` and `npm run lint` must pass; a new `react-hooks/preserve-manual-memoization` diagnostic is a signal that the removal was unsafe and must be reverted rather than suppressed.
 
 ## Compiler bailout register (SC-006)
@@ -161,7 +161,23 @@ Evidence, collected 2026-08-07 with `reactCompiler: true` in place:
 Because the register is empty, FR-008 ("do not remove manual memoization from a
 component the compiler could not optimize") constrains nothing here: every
 component compiles, so eligibility for removal is decided solely by test
-coverage (FR-007).
+coverage (FR-007). No component retains manual memoization _because of a
+bailout_ (T030) — the memoization that survives the removal commits survives for
+a different, stated reason.
+
+### Memoization deliberately retained (not bailouts)
+
+Recorded 2026-08-07 after the T024–T029 removal commits. Each entry is a value
+whose **referential identity is a contract with a `useEffect` dependency array**,
+not a render-time optimization; removing it would change how often an effect
+re-runs, which is behavior rather than performance.
+
+| Module                                                  | Retained value                                         | Why                                                                                        |
+| ------------------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
+| `src/features/admin/components/AdminNavLinksClient.tsx` | `updateMenuPosition`                                   | Listed in the scroll/resize listener effect's deps; a new identity re-binds both listeners |
+| `src/features/admin/components/VariantFormModal.tsx`    | `primaryImagePreviewUrl`, `additionalImagePreviewUrls` | Each creates an object URL — a side effect — that the paired effect revokes on cleanup     |
+| `src/app/(public)/account/AccountClient.tsx`            | `fetchProfile`                                         | Listed in the profile-load effect's deps; a new identity re-fetches on every render        |
+| `src/app/(public)/account/NotificationsSection.tsx`     | `loadSettings`                                         | Listed in the settings-load effect's deps, same failure mode                               |
 
 ### The unit suite now exercises compiled output
 
