@@ -84,7 +84,7 @@ description: 'Task list for enabling React Compiler, typed routes, the Turbopack
 
 > Each task below is its own commit. After each, `npm run lint` and `npm test` must pass. A new `react-hooks/preserve-manual-memoization` diagnostic means the removal was unsafe: revert it, never suppress it (FR-007).
 
-- [ ] T024 [US1] Remove manual `useMemo`/`useCallback` from `src/hooks/` — `useCursorPagination.ts`, `useFetch.ts`, `useFormState.ts`, `useLocalStorage.ts`, `useModalState.ts`, `useMutation.ts` — verifying against `__tests__/hooks/`.
+- [x] T024 [US1] Remove manual `useMemo`/`useCallback` from `src/hooks/` — `useCursorPagination.ts`, `useFetch.ts`, `useFormState.ts`, `useLocalStorage.ts`, `useModalState.ts`, `useMutation.ts` — verifying against `__tests__/hooks/`.
 - [ ] T025 [US1] Review `src/contexts/CurrencyContext.tsx` and `src/contexts/ThemeContext.tsx` for consumers that depend on the context value's referential identity **before** removing anything (spec edge case), then remove where safe, verifying against `__tests__/contexts/`.
 - [ ] T026 [US1] Remove manual memoization from `src/features/product/components/` (`BestsellersScroller`, `ImageCarousel`, `ProductGrid`, `ProductSearch`, `ReviewsSection`, `ShareButton`) and `src/features/product/hooks/useRecentlyViewed.ts`, verifying against the product suites under `__tests__/`.
 - [ ] T027 [US1] Remove manual memoization from `src/features/admin/components/` (`AdminNavLinksClient`, `CategoriesClient`, `OptionManager`, `VariantFormModal`, `VariantList`), verifying against the admin suites.

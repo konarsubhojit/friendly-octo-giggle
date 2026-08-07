@@ -216,30 +216,33 @@ export const useCursorPagination = <T>({
       ? Math.max(1, Math.ceil(totalCount / pageSize))
       : currentPage + trailingPageCount
 
-  const handleSearch = useCallback(
-    (e: React.BaseSyntheticEvent) => {
-      e.preventDefault()
-      syncPageCursors([null])
-      setCurrentPage(1)
-      setCursor(null)
-      setSearch(searchInput.trim())
-    },
-    [searchInput, syncPageCursors]
-  )
+  // The handlers below are plain functions: the React Compiler memoizes them,
+  // and none of them is read as a dependency by a hook that re-runs on
+  // identity change. `syncPageCursors`, `fetchPageData` and `doFetch` above
+  // keep their `useCallback` deliberately — `doFetch` is a `useEffect`
+  // dependency, so its identity is a behavioral contract rather than an
+  // optimization (spec 015 memoization policy).
+  const handleSearch = (e: React.BaseSyntheticEvent) => {
+    e.preventDefault()
+    syncPageCursors([null])
+    setCurrentPage(1)
+    setCursor(null)
+    setSearch(searchInput.trim())
+  }
 
-  const handleFirst = useCallback(() => {
+  const handleFirst = () => {
     if (currentPage === 1) return
     setCurrentPage(1)
     setCursor(null)
-  }, [currentPage])
+  }
 
-  const handleNext = useCallback(() => {
+  const handleNext = () => {
     if (!nextCursor || !hasMore) return
     setCurrentPage((prev) => prev + 1)
     setCursor(nextCursor)
-  }, [hasMore, nextCursor])
+  }
 
-  const handlePrev = useCallback(() => {
+  const handlePrev = () => {
     if (currentPage === 1) return
 
     const prevCursor = pageCursorsRef.current[currentPage - 2]
@@ -251,36 +254,33 @@ export const useCursorPagination = <T>({
 
     setCurrentPage((prev) => prev - 1)
     setCursor(prevCursor)
-  }, [currentPage, pageSize])
+  }
 
-  const handlePageSelect = useCallback(
-    (page: number) => {
-      const targetPage = Math.min(Math.max(1, page), totalPages)
-      if (targetPage === currentPage) return
+  const handlePageSelect = (page: number) => {
+    const targetPage = Math.min(Math.max(1, page), totalPages)
+    if (targetPage === currentPage) return
 
-      if (targetPage === 1) {
-        handleFirst()
-        return
-      }
+    if (targetPage === 1) {
+      handleFirst()
+      return
+    }
 
-      const knownCursor = pageCursorsRef.current[targetPage - 1]
-      if (knownCursor === undefined) {
-        pendingOffsetRef.current = (targetPage - 1) * pageSize
-        setCurrentPage(targetPage)
-        return
-      }
-
+    const knownCursor = pageCursorsRef.current[targetPage - 1]
+    if (knownCursor === undefined) {
+      pendingOffsetRef.current = (targetPage - 1) * pageSize
       setCurrentPage(targetPage)
-      setCursor(knownCursor)
-    },
-    [currentPage, handleFirst, pageSize, totalPages]
-  )
+      return
+    }
 
-  const handleLast = useCallback(() => {
+    setCurrentPage(targetPage)
+    setCursor(knownCursor)
+  }
+
+  const handleLast = () => {
     handlePageSelect(totalPages)
-  }, [handlePageSelect, totalPages])
+  }
 
-  const handleRefresh = useCallback(() => {
+  const handleRefresh = () => {
     syncPageCursors([null])
     setCurrentPage(1)
     setTotalCount(0)
@@ -289,7 +289,7 @@ export const useCursorPagination = <T>({
     setHasMore(false)
     setSearch('')
     setSearchInput('')
-  }, [syncPageCursors])
+  }
 
   return {
     items,

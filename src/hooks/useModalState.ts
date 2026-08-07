@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState } from 'react'
 
 export const useModalState = <T = undefined>(): {
   isOpen: boolean
@@ -11,15 +11,15 @@ export const useModalState = <T = undefined>(): {
   const [isOpen, setIsOpen] = useState(false)
   const [data, setData] = useState<T | null>(null)
 
-  const open = useCallback((payload?: T) => {
+  const open = (payload?: T) => {
     setData(payload ?? null)
     setIsOpen(true)
-  }, [])
+  }
 
-  const close = useCallback(() => {
+  const close = () => {
     setIsOpen(false)
     setData(null)
-  }, [])
+  }
 
   return { isOpen, data, open, close }
 }
