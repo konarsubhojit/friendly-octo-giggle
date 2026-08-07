@@ -1,5 +1,6 @@
 'use client'
 
+import type { Route } from 'next'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
@@ -7,7 +8,7 @@ import { createPortal } from 'react-dom'
 import type { AdminPermission } from '@/lib/constants/roles'
 
 interface NavItem {
-  readonly href: string
+  readonly href: Route
   readonly label: string
   readonly badge?: number
   readonly keywords?: readonly string[]
@@ -17,7 +18,7 @@ interface NavItem {
 
 interface NavGroup {
   readonly label: string
-  readonly href?: string
+  readonly href?: Route
   readonly items?: readonly NavItem[]
 }
 

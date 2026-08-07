@@ -1,15 +1,23 @@
+import type { Route } from 'next'
 import Link from 'next/link'
 
-export interface BreadcrumbItem {
+/**
+ * A single crumb. `T` carries the literal type of a dynamic route so a
+ * template-literal href such as `/admin/products/${id}` is checked against the
+ * generated route tree instead of being cast (spec 015, US2).
+ */
+export interface BreadcrumbItem<T extends string = string> {
   readonly label: string
-  readonly href?: string
+  readonly href?: Route<T>
 }
 
-interface AdminBreadcrumbsProps {
-  readonly items: BreadcrumbItem[]
+interface AdminBreadcrumbsProps<T extends string> {
+  readonly items: readonly BreadcrumbItem<T>[]
 }
 
-export default function AdminBreadcrumbs({ items }: AdminBreadcrumbsProps) {
+export default function AdminBreadcrumbs<T extends string>({
+  items,
+}: AdminBreadcrumbsProps<T>) {
   return (
     <nav aria-label="Breadcrumb">
       <ol className="flex flex-wrap items-center gap-2 text-sm text-slate-500 dark:text-slate-400">

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
+import type { Route } from 'next'
 import dynamic from 'next/dynamic'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
@@ -78,7 +79,13 @@ const ProductClient = ({
       }
       const qs = params.toString()
       const search = qs ? `?${qs}` : ''
-      router.replace(`${pathname}${search}`, { scroll: false })
+      // The single documented typed-routes escape hatch in this codebase
+      // (spec 015, US2 acceptance 3). `usePathname()` is typed `string`
+      // because it reflects the URL at runtime, so a same-page query-string
+      // update cannot be proven against the static route tree. The target is
+      // the current path by construction — never a literal a typo could
+      // reach — so the narrowing cannot hide a wrong route.
+      router.replace(`${pathname}${search}` as Route, { scroll: false })
     },
     [router, pathname, searchParams]
   )

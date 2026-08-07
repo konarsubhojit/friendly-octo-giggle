@@ -10,6 +10,13 @@ const nextConfig: NextConfig = {
   // india-pincode reads data/pincodes.json.gz at runtime via fs —
   // keep it out of the Turbopack bundle so the data file is resolvable.
   serverExternalPackages: ['india-pincode'],
+  // Typed routes: internal `href`/`redirect`/`router` targets are checked
+  // against the real route tree, so a mistyped route is a compile error rather
+  // than a production 404. Stable and top-level in Next.js 16.3 —
+  // `experimental.typedRoutes` is deprecated. Route props are declared as
+  // `Route` (imported from `next`); an `as Route` cast is not the remedy for a
+  // type error here, a corrected route string is.
+  typedRoutes: true,
   // Cache Components: the public shell is prerendered and per-request regions
   // stream into Suspense holes. Incompatible with `export const dynamic` /
   // `revalidate` / `runtime` segment configs, which is why none remain.

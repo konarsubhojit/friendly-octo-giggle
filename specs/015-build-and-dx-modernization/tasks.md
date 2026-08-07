@@ -49,17 +49,17 @@ description: 'Task list for enabling React Compiler, typed routes, the Turbopack
 
 ### Implementation for User Story 2
 
-- [ ] T007 [US2] Set `typedRoutes: true` at the **top level** of `next.config.ts` — not under `experimental`, where it is deprecated in 16.3 (`plan.md` R3).
-- [ ] T008 [P] [US2] Type the `href` prop as `Route` (imported from `next`) in `src/components/ui/CtaButton.tsx` (line 16).
-- [ ] T009 [P] [US2] Type the route values forwarded to `Link` in `src/components/ui/RouteErrorCard.tsx` (lines 97, 137).
-- [ ] T010 [P] [US2] Type the breadcrumb item `href` in `src/features/admin/components/AdminBreadcrumbs.tsx` (line 26).
-- [ ] T011 [P] [US2] Type the nav-item `href` used by `Link` and `router.push` in `src/features/admin/components/AdminNavLinksClient.tsx` (lines 258, 343, 467).
-- [ ] T012 [P] [US2] Type the checkout step `href` in `src/features/cart/components/CheckoutProgress.tsx` (line 43).
-- [ ] T013 [P] [US2] Type the `router.push` target and the reset `href` in `src/features/product/components/ProductGrid.tsx` (lines 559, 802).
-- [ ] T014 [US2] Add the single permitted escape hatch in `src/app/(public)/products/[id]/ProductClient.tsx` (line 81), where `usePathname()` returns `string` and a same-page query-string update cannot be statically typed. Comment it with the reason and keep it to that one call site (US2 acceptance 3, FR spec edge case forbidding widespread casting).
-- [ ] T015 [US2] Run `npx tsc --noEmit -p tsconfig.check.json` and confirm zero errors (FR-002, from the 11 recorded in the `plan.md` defect table).
-- [ ] T016 [US2] Prove the feature works: temporarily point one internal `href` at a nonexistent route, confirm the type check fails, revert, and record the evidence in the PR description (SC-002).
-- [ ] T017 [US2] Run `npm run lint`, `npm test` and `npm run build`; confirm no route-related runtime change.
+- [x] T007 [US2] Set `typedRoutes: true` at the **top level** of `next.config.ts` — not under `experimental`, where it is deprecated in 16.3 (`plan.md` R3).
+- [x] T008 [P] [US2] Type the `href` prop as `Route` (imported from `next`) in `src/components/ui/CtaButton.tsx` (line 16).
+- [x] T009 [P] [US2] Type the route values forwarded to `Link` in `src/components/ui/RouteErrorCard.tsx` (lines 97, 137).
+- [x] T010 [P] [US2] Type the breadcrumb item `href` in `src/features/admin/components/AdminBreadcrumbs.tsx` (line 26).
+- [x] T011 [P] [US2] Type the nav-item `href` used by `Link` and `router.push` in `src/features/admin/components/AdminNavLinksClient.tsx` (lines 258, 343, 467).
+- [x] T012 [P] [US2] Type the checkout step `href` in `src/features/cart/components/CheckoutProgress.tsx` (line 43).
+- [x] T013 [P] [US2] Type the `router.push` target and the reset `href` in `src/features/product/components/ProductGrid.tsx` (lines 559, 802).
+- [x] T014 [US2] Add the single permitted escape hatch in `src/app/(public)/products/[id]/ProductClient.tsx` (line 81), where `usePathname()` returns `string` and a same-page query-string update cannot be statically typed. Comment it with the reason and keep it to that one call site (US2 acceptance 3, FR spec edge case forbidding widespread casting).
+- [x] T015 [US2] Run `npx tsc --noEmit -p tsconfig.check.json` and confirm zero errors (FR-002, from the 11 recorded in the `plan.md` defect table).
+- [x] T016 [US2] Prove the feature works: temporarily point one internal `href` at a nonexistent route, confirm the type check fails, revert, and record the evidence in the PR description (SC-002).
+- [x] T017 [US2] Run `npm run lint`, `npm test` and `npm run build`; confirm no route-related runtime change.
 
 **Checkpoint**: route typos are compile-time failures and the four gates pass. This capability is complete and revertable on its own.
 

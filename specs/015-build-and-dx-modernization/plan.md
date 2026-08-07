@@ -103,6 +103,25 @@ All 11 errors, verified 2026-08-07. Each is a component that accepts a route as 
 
 The last row is the only genuine escape-hatch candidate: `usePathname()` returns `string`, so a same-page query-string update cannot be statically typed. It gets a single, commented, explicitly reviewed narrowing at that one site (US2 acceptance 3). Every other row is a data-shape fix, not an escape hatch.
 
+### What fixing the 11 exposed (implementation, 2026-08-07)
+
+Typing the props surfaced two further errors that the flag alone could not
+reach, because they only appear once the prop is narrower than `string`. Both
+are recorded here rather than in the table above, since neither was visible in
+the Phase 0 probe:
+
+| File                                        | Finding                                                                                | Disposition                                                                                                                                         |
+| ------------------------------------------- | -------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/app/(public)/cart/error.tsx`           | `secondaryHref="/products"` — **there is no `/products` route**, only `/products/[id]` | **Real defect fixed.** The "Continue shopping" link in the cart error boundary was a 404. Corrected to `/shop`, and `error-pages.test.tsx` updated. |
+| `src/app/admin/products/[id]/edit/page.tsx` | breadcrumb `href: \`/admin/products/${id}\``rejected against a non-generic`Route`      | `BreadcrumbItem` and `AdminPageShell` are now generic in the route literal (`Route<T>`), so dynamic hrefs check against the real route tree.        |
+
+The first is precisely the class of defect US2 exists to catch, found on the
+first run of the feature it justifies, in a user-facing error path.
+
+`EmptyState.ctaHref` was typed as `Route` alongside `CtaButton.href`, since it
+forwards straight into it; leaving it `string` would have moved the error one
+component outward instead of fixing it.
+
 ## Memoization removal policy (US1, FR-007, FR-008)
 
 - The compiler compiles; manual memoization is removed only to reduce noise, never to make the compiler work. Nothing about correctness depends on the removals, so any module may be skipped without cost.
