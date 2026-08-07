@@ -125,38 +125,37 @@ Every one of these reads a session, request body, search params, headers or a we
 
 ### Static (`○`) — 23 routes
 
-| Route(s)                                                                                       | Why a prerendered response is correct                                                                                                                  |
-| ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `/`                                                                                            | `redirect('/shop')` and nothing else.                                                                                                                  |
-| `/about`, `/blog`, `/careers`, `/contact`, `/help`, `/press`, `/returns`, `/shipping`           | Class C marketing pages; constants only.                                                                                                               |
-| `/account`, `/checkout/{shipping,review,payment,confirmation}`                                 | Client components that fetch their own per-user data after hydration. The server renders no session-derived markup, so the shell carries no user data. |
-| `/auth/{register,forgot-password,reset-password,verify-email}`                                  | Client forms; the token/`searchParams` reads happen in the browser.                                                                                    |
-| `/offline`, `/manifest.webmanifest`, `/sitemap.xml`, `/_not-found`                              | Static assets and constant metadata.                                                                                                                   |
-| `/api/health`                                                                                  | Returns a constant literal. Prerendering it is both correct and faster than a cold start (contrast `/api/metrics` in R11).                              |
+| Route(s)                                                                              | Why a prerendered response is correct                                                                                                                  |
+| ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `/`                                                                                   | `redirect('/shop')` and nothing else.                                                                                                                  |
+| `/about`, `/blog`, `/careers`, `/contact`, `/help`, `/press`, `/returns`, `/shipping` | Class C marketing pages; constants only.                                                                                                               |
+| `/account`, `/checkout/{shipping,review,payment,confirmation}`                        | Client components that fetch their own per-user data after hydration. The server renders no session-derived markup, so the shell carries no user data. |
+| `/auth/{register,forgot-password,reset-password,verify-email}`                        | Client forms; the token/`searchParams` reads happen in the browser.                                                                                    |
+| `/offline`, `/manifest.webmanifest`, `/sitemap.xml`, `/_not-found`                    | Static assets and constant metadata.                                                                                                                   |
+| `/api/health`                                                                         | Returns a constant literal. Prerendering it is both correct and faster than a cold start (contrast `/api/metrics` in R11).                             |
 
 ### Partially prerendered (`◐`) — 21 routes
 
-| Route(s)                                                    | Static shell                              | Dynamic hole                                                                        |
-| ----------------------------------------------------------- | ----------------------------------------- | ----------------------------------------------------------------------------------- |
-| `/shop`                                                     | Heading, bestsellers rail (cached)        | `searchParams`-driven catalog grid                                                  |
-| `/products/[id]`                                            | Product record (cached, 20 ids prebuilt)  | AI feature flag and `?v=` variant preselection                                       |
-| `/cart`, `/orders`, `/orders/[id]`, `/wishlist`             | Layout chrome                             | Everything behind the page-body `auth()` call                                        |
-| `/auth/signin`, `/auth/error`                               | Form chrome                               | `searchParams` (`callbackUrl`, `error`) read client-side                             |
-| `/admin` and the 12 other `/admin/**` pages                 | Layout chrome                             | Everything behind `checkAdminAuth` / `requireAdminPermission` (and `connection()` on `/admin`) |
+| Route(s)                                        | Static shell                             | Dynamic hole                                                                                   |
+| ----------------------------------------------- | ---------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `/shop`                                         | Heading, bestsellers rail (cached)       | `searchParams`-driven catalog grid                                                             |
+| `/products/[id]`                                | Product record (cached, 20 ids prebuilt) | AI feature flag and `?v=` variant preselection                                                 |
+| `/cart`, `/orders`, `/orders/[id]`, `/wishlist` | Layout chrome                            | Everything behind the page-body `auth()` call                                                  |
+| `/auth/signin`, `/auth/error`                   | Form chrome                              | `searchParams` (`callbackUrl`, `error`) read client-side                                       |
+| `/admin` and the 12 other `/admin/**` pages     | Layout chrome                            | Everything behind `checkAdminAuth` / `requireAdminPermission` (and `connection()` on `/admin`) |
 
 No `◐` shell contains session-derived markup: the four `"use cache"` scopes in the codebase (`src/app/(public)/shop/page.tsx` ×2, `src/app/(public)/products/[id]/page.tsx`, `src/app/api/categories/route.ts`) read only `db`/`drizzleDb`, and neither they nor `src/lib/db-queries.ts` call `auth()`, `cookies()`, or `headers()` (FR-008, FR-013, T035).
 
 ### Dynamic (`ƒ`) — 73 routes
 
-| Group                                                                                                                                                    | Count | Justification                                                                                                                                                                              |
-| -------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Group                                                                                                                                                                                                                                                     | Count | Justification                                                                                                                                                                                                                                                                                                                                                             |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Session-scoped and mutating handlers: `/api/admin/**` (33), `/api/account/**` (5), `/api/cart/**` (3), `/api/checkout/**` (3), `/api/orders/**` (2), `/api/wishlist/**` (2), `/api/payments/webhook/**` (2), `/api/reviews`, `/api/share`, `/api/inngest` | 53    | Class A, reconciled against the build. Each reads a session, request body, search params, a stream, or a webhook signature. Dynamic is the default under Cache Components; none carries a segment config. The plan's original count of 47 omitted `/api/account`, the three `/api/admin/categories` handlers, `/api/admin/reviews/[id]`, and `/api/admin/search/reindex`. |
-| `/api/auth/**` (6) and `/api/upload`                                                                                                                     | 7     | Credential handling and multipart uploads; both read the request body. `/api/upload` no longer pins `runtime = 'nodejs'` (Class E) — Node.js is already the default for route handlers.     |
-| Public read APIs: `/api/products` (3), `/api/search` (3), `/api/exchange-rates`, `/api/pincode/[code]`, `/api/reviews/vote`, `/api/ai/products/[id]/chat` | 10    | Consumed by client components, not by the prerender. They keep their Redis caching and `Cache-Control` headers rather than moving into a `"use cache"` scope.                              |
-| `/api/categories`                                                                                                                                        | 1     | Handler is dynamic, but its body is a `"use cache"` scope, so the query is cached and tag-invalidated while the response headers stay per-request.                                          |
-| `/api/metrics`                                                                                                                                           | 1     | In-process Prometheus counters; opts out of prerendering with `connection()` (R11).                                                                                                        |
-| `/s/[key]`                                                                                                                                               | 1     | Short-link resolution followed by a redirect; the key is request data.                                                                                                                     |
-
+| `/api/auth/**` (6) and `/api/upload`                                                                                                                                                                                                                      | 7     | Credential handling and multipart uploads; both read the request body. `/api/upload` no longer pins `runtime = 'nodejs'` (Class E) — Node.js is already the default for route handlers.                                                                                                                                                                                   |
+| Public read APIs: `/api/products` (3), `/api/search` (3), `/api/exchange-rates`, `/api/pincode/[code]`, `/api/reviews/vote`, `/api/ai/products/[id]/chat`                                                                                                 | 10    | Consumed by client components, not by the prerender. They keep their Redis caching and `Cache-Control` headers rather than moving into a `"use cache"` scope.                                                                                                                                                                                                             |
+| `/api/categories`                                                                                                                                                                                                                                         | 1     | Handler is dynamic, but its body is a `"use cache"` scope, so the query is cached and tag-invalidated while the response headers stay per-request.                                                                                                                                                                                                                        |
+| `/api/metrics`                                                                                                                                                                                                                                            | 1     | In-process Prometheus counters; opts out of prerendering with `connection()` (R11).                                                                                                                                                                                                                                                                                       |
+| `/s/[key]`                                                                                                                                                                                                                                                | 1     | Short-link resolution followed by a redirect; the key is request data.                                                                                                                                                                                                                                                                                                    |
 
 ## Cache design
 
@@ -268,11 +267,11 @@ All measurements below were taken against the dev database (5 published products
 
 ### T047 — Quality gates (SC-001)
 
-| Command                                   | Result                                                                                             |
-| ----------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| `npm run lint`                            | pass, no findings                                                                                  |
-| `npx tsc --noEmit -p tsconfig.check.json` | pass                                                                                               |
-| `npm test`                                | pass — 293 files, 3446 tests                                                                       |
+| Command                                   | Result                                                                                                      |
+| ----------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `npm run lint`                            | pass, no findings                                                                                           |
+| `npx tsc --noEmit -p tsconfig.check.json` | pass                                                                                                        |
+| `npm test`                                | pass — 293 files, 3446 tests                                                                                |
 | `npm run build`                           | pass — Cache Components enabled, 98 pages generated, 5 `/products/[id]` routes prerendered from the catalog |
 
 The build was additionally run with an unreachable database to confirm the degradation paths: `generateStaticParams` logged `product_static_params` and fell back to the stand-in id (R9), `getCachedBestsellers` logged `shop_bestsellers_fetch` and returned an empty rail (R10), and the build still completed.
@@ -281,14 +280,14 @@ The build was additionally run with an unreachable database to confirm the degra
 
 Procedure: production build served with `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`, and `REDIS_URL` removed from the server process (confirmed through `/proc/<pid>/environ`), so `getRedisClient()` returns `null` for every call. Each route was requested without JavaScript (plain HTTP) and checked for database-derived content.
 
-| Route                       | Status | Database content in the response                    |
-| --------------------------- | ------ | --------------------------------------------------- |
-| `/`                         | 200    | static marketing shell (no catalog read)            |
-| `/shop`                     | 200    | catalog product names present in the initial HTML   |
-| `/products/ruJaxwb`         | 200    | product name present in the HTML                    |
-| `/api/categories`           | 200    | all six categories, cached scope reading Postgres   |
-| `/api/products`             | 200    | product payload                                     |
-| `/api/products/bestsellers` | 200    | bestseller payload                                  |
+| Route                       | Status | Database content in the response                  |
+| --------------------------- | ------ | ------------------------------------------------- |
+| `/`                         | 200    | static marketing shell (no catalog read)          |
+| `/shop`                     | 200    | catalog product names present in the initial HTML |
+| `/products/ruJaxwb`         | 200    | product name present in the HTML                  |
+| `/api/categories`           | 200    | all six categories, cached scope reading Postgres |
+| `/api/products`             | 200    | product payload                                   |
+| `/api/products/bestsellers` | 200    | bestseller payload                                |
 
 No errors were logged for the run. This is the expected shape: the cached scopes read the database directly (`db.products.findBestsellers({ withCache: false })`, `db.products.findById(id, false)`, `drizzleDb`), and every uncached read goes through `getCachedData`, which invokes its fetcher when no Redis client exists.
 
