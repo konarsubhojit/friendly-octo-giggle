@@ -96,6 +96,7 @@ const mockOrder = {
   discountAmount: 0,
   couponId: null,
   couponCode: null,
+  stockRestoredAt: null,
   createdAt: new Date('2025-01-05'),
   updatedAt: new Date('2025-01-05'),
 }
