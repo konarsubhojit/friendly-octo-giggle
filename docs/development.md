@@ -21,8 +21,8 @@ npm run db:generate
 # Create and apply database migration
 npm run db:migrate -- --name your_migration_name
 
-# Seed database with test data
-npm run db:seed
+# Apply the full current schema idempotently (empty or partially migrated database)
+npm run db:bootstrap
 ```
 
 ### Environment Setup
@@ -53,18 +53,26 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 ### Development Commands
 
 ```bash
-npm run dev         # Start dev server over HTTP (port 3000)
-npm run dev:https   # Start dev server over HTTPS (experimental, self-signed cert)
+npm run dev         # Start dev server over HTTPS on port 3000 (experimental, self-signed cert)
 npm run build       # Build production bundle
+npm run analyze     # Build with the bundle analyzer enabled
 npm run start       # Start production server
 npm run lint        # Run ESLint (flat config)
+npm run lint:strict # Run ESLint, failing on any warning
+npm run format      # Rewrite files with Prettier
+npm run format:check # Check Prettier formatting
 npm run test        # Run unit tests (single run)
 npm run test:watch  # Run unit tests (watch mode)
 npm run test:coverage # Run unit tests with coverage
 npm run db:generate # Generate Drizzle migrations
 npm run db:migrate  # Apply migrations
-npm run db:seed     # Seed database
+npm run db:bootstrap # Idempotent full-schema bootstrap
+npm run db:push     # Push schema directly, without a migration file
+npm run db:studio   # Open Drizzle Studio
+npm run redis:orders:index # Create/backfill the Redis orders search index
 ```
+
+There is no plain-HTTP dev script; `npm run dev` is `next dev --experimental-https`.
 
 ### Workflow Setup
 

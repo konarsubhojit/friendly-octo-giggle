@@ -12,13 +12,20 @@ cd friendly-octo-giggle
 npm install
 cp .env.example .env
 # Edit .env with your credentials
-npm run db:generate
+npm run db:bootstrap
 npm run db:migrate
-npm run db:seed
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000)
+Open [https://localhost:3000](https://localhost:3000). `npm run dev` serves HTTPS
+with an experimental self-signed certificate, so your browser will warn on first
+load.
+
+`npm run db:bootstrap` applies the full current schema idempotently and records
+every bundled migration as applied, so it works on an empty database and on a
+partially migrated one. It creates schema only — the project ships no sample-data
+seeding, so a fresh database starts empty and you create your first products
+through the admin UI.
 
 ## 📚 Documentation
 
@@ -91,18 +98,15 @@ Complete documentation is available in the [`/docs`](./docs) folder:
 ## 🧪 Development
 
 ```bash
-# Development server (HTTP)
+# Development server (HTTPS with an experimental self-signed certificate;
+# there is no plain-HTTP dev script)
 npm run dev
 
-# Development server (HTTPS, experimental)
-npm run dev:https
-
 # Database commands
-npm run db:generate    # Generate Drizzle migrations
+npm run db:generate    # Generate Drizzle migrations from src/lib/schema.ts
 npm run db:migrate     # Run migrations
-npm run db:bootstrap   # Idempotent bootstrap for partially initialized databases
+npm run db:bootstrap   # Idempotent schema bootstrap for empty or partially initialized databases
 npm run redis:orders:index # Create/backfill the Redis orders search index
-npm run db:seed        # Seed test data
 
 # Testing
 npm run test           # Run unit tests
