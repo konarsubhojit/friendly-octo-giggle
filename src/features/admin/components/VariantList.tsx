@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, lazy, Suspense } from 'react'
+import { useState, lazy, Suspense } from 'react'
 import Image from 'next/image'
 import type { ProductVariant } from '@/lib/types'
 import toast from 'react-hot-toast'
@@ -414,61 +414,55 @@ const VariantList = ({ productId, initialVariants }: VariantListProps) => {
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
   const [reorderSaving, setReorderSaving] = useState(false)
 
-  const handleDragStart = useCallback((index: number) => {
+  const handleDragStart = (index: number) => {
     setDragSourceIndex(index)
-  }, [])
+  }
 
-  const handleDragOver = useCallback(
-    (e: React.DragEvent, index: number) => {
-      e.preventDefault()
-      if (dragSourceIndex !== index) setDragOverIndex(index)
-    },
-    [dragSourceIndex]
-  )
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault()
+    if (dragSourceIndex !== index) setDragOverIndex(index)
+  }
 
-  const handleDrop = useCallback(
-    async (targetIndex: number) => {
-      const sourceIndex = dragSourceIndex
-      setDragSourceIndex(null)
-      setDragOverIndex(null)
-      if (sourceIndex === null || sourceIndex === targetIndex) return
-
-      const reordered = reorder(variants, sourceIndex, targetIndex).map(
-        (v, idx) => ({ ...v, sortOrder: idx })
-      )
-      const previous = variants
-      setVariants(reordered)
-      setReorderSaving(true)
-      try {
-        const res = await fetch(
-          `/api/admin/products/${productId}/variants/reorder`,
-          {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              items: reordered.map(({ id, sortOrder }) => ({ id, sortOrder })),
-            }),
-          }
-        )
-        if (!res.ok) {
-          const data = await res.json().catch(() => null)
-          throw new Error(data?.error ?? 'Failed to save order')
-        }
-        toast.success('Order saved')
-      } catch (err) {
-        setVariants(previous)
-        toast.error(err instanceof Error ? err.message : 'Failed to save order')
-      } finally {
-        setReorderSaving(false)
-      }
-    },
-    [variants, productId, dragSourceIndex]
-  )
-
-  const handleDragEnd = useCallback(() => {
+  const handleDrop = async (targetIndex: number) => {
+    const sourceIndex = dragSourceIndex
     setDragSourceIndex(null)
     setDragOverIndex(null)
-  }, [])
+    if (sourceIndex === null || sourceIndex === targetIndex) return
+
+    const reordered = reorder(variants, sourceIndex, targetIndex).map(
+      (v, idx) => ({ ...v, sortOrder: idx })
+    )
+    const previous = variants
+    setVariants(reordered)
+    setReorderSaving(true)
+    try {
+      const res = await fetch(
+        `/api/admin/products/${productId}/variants/reorder`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            items: reordered.map(({ id, sortOrder }) => ({ id, sortOrder })),
+          }),
+        }
+      )
+      if (!res.ok) {
+        const data = await res.json().catch(() => null)
+        throw new Error(data?.error ?? 'Failed to save order')
+      }
+      toast.success('Order saved')
+    } catch (err) {
+      setVariants(previous)
+      toast.error(err instanceof Error ? err.message : 'Failed to save order')
+    } finally {
+      setReorderSaving(false)
+    }
+  }
+
+  const handleDragEnd = () => {
+    setDragSourceIndex(null)
+    setDragOverIndex(null)
+  }
 
   const totalVariantStock = getVariantTotalStock(variants)
   const stockedVariants = variants.filter((variant) => variant.stock > 0).length

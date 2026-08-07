@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef } from 'react'
 import toast from 'react-hot-toast'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
 
@@ -250,7 +250,7 @@ const CategoriesClient = ({ initialCategories }: CategoriesClientProps) => {
     }
   }
 
-  const handleRename = useCallback(async (id: string, name: string) => {
+  const handleRename = async (id: string, name: string) => {
     try {
       const res = await fetch(`/api/admin/categories/${id}`, {
         method: 'PUT',
@@ -267,7 +267,7 @@ const CategoriesClient = ({ initialCategories }: CategoriesClientProps) => {
         err instanceof Error ? err.message : 'Failed to rename category'
       )
     }
-  }, [])
+  }
 
   const handleDelete = async () => {
     if (!deleteTarget) return
@@ -292,61 +292,55 @@ const CategoriesClient = ({ initialCategories }: CategoriesClientProps) => {
     }
   }
 
-  const handleDragStart = useCallback((index: number) => {
+  const handleDragStart = (index: number) => {
     setDragSourceIndex(index)
-  }, [])
+  }
 
-  const handleDragOver = useCallback(
-    (e: React.DragEvent, index: number) => {
-      e.preventDefault()
-      if (dragSourceIndex !== index) setDragOverIndex(index)
-    },
-    [dragSourceIndex]
-  )
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault()
+    if (dragSourceIndex !== index) setDragOverIndex(index)
+  }
 
-  const handleDrop = useCallback(
-    async (targetIndex: number) => {
-      const sourceIndex = dragSourceIndex
-      setDragSourceIndex(null)
-      setDragOverIndex(null)
-      if (sourceIndex === null || sourceIndex === targetIndex) return
-
-      const reordered = reorder(cats, sourceIndex, targetIndex).map(
-        (cat, idx) => ({
-          ...cat,
-          sortOrder: idx,
-        })
-      )
-      const previous = cats
-      setCats(reordered)
-      setSaving(true)
-      try {
-        const res = await fetch('/api/admin/categories/reorder', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            items: reordered.map(({ id, sortOrder }) => ({ id, sortOrder })),
-          }),
-        })
-        if (!res.ok) {
-          const data = await res.json().catch(() => null)
-          throw new Error(data?.error ?? 'Failed to save order')
-        }
-        toast.success('Order saved')
-      } catch (err) {
-        setCats(previous)
-        toast.error(err instanceof Error ? err.message : 'Failed to save order')
-      } finally {
-        setSaving(false)
-      }
-    },
-    [cats, dragSourceIndex]
-  )
-
-  const handleDragEnd = useCallback(() => {
+  const handleDrop = async (targetIndex: number) => {
+    const sourceIndex = dragSourceIndex
     setDragSourceIndex(null)
     setDragOverIndex(null)
-  }, [])
+    if (sourceIndex === null || sourceIndex === targetIndex) return
+
+    const reordered = reorder(cats, sourceIndex, targetIndex).map(
+      (cat, idx) => ({
+        ...cat,
+        sortOrder: idx,
+      })
+    )
+    const previous = cats
+    setCats(reordered)
+    setSaving(true)
+    try {
+      const res = await fetch('/api/admin/categories/reorder', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: reordered.map(({ id, sortOrder }) => ({ id, sortOrder })),
+        }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => null)
+        throw new Error(data?.error ?? 'Failed to save order')
+      }
+      toast.success('Order saved')
+    } catch (err) {
+      setCats(previous)
+      toast.error(err instanceof Error ? err.message : 'Failed to save order')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleDragEnd = () => {
+    setDragSourceIndex(null)
+    setDragOverIndex(null)
+  }
 
   return (
     <>
