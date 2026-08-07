@@ -77,7 +77,7 @@ description: 'Task list for enabling React Compiler, typed routes, the Turbopack
 - [x] T019 [US1] Set `reactCompiler: true` at the **top level** of `next.config.ts` (`plan.md` R2). Do not enable `experimental.turbopackRustReactCompiler`; it is out of scope.
 - [x] T020 [US1] Run `npm run build` and confirm it succeeds; record the compile-step and total-build delta against the T002 baseline in `plan.md` (`plan.md` R5 measured +6.5 s warm in the sandbox — re-measure here).
 - [x] T021 [US1] Run `npm test` and confirm every previously passing suite still passes (US1 acceptance 2).
-- [ ] T022 [US1] Run the Playwright suite against a production build and confirm it passes with the compiler on (SC-005).
+- [ ] T022 [US1] Run the Playwright suite against a production build and confirm it passes with the compiler on (SC-005). **Deferred**: blocked on the drifted, unowned Playwright suite (localization assertions removed from the product in PR #407 but never repaired in the test tree). Recorded in `plan.md` **Deferred tasks** and in `specs/README.md`.
 - [x] T023 [US1] Collect compiler bailouts and fill the bailout register in `plan.md` — one row per component with its reason and memoization disposition. Use the `eslint-plugin-react-hooks` compiler diagnostics already active through `npm run lint` (`plan.md` R11), plus build output. An empty register is a valid result and must be stated explicitly (SC-006, US1 acceptance 3).
 
 ### Memoization removal — one module per commit, covered modules only
@@ -135,13 +135,13 @@ description: 'Task list for enabling React Compiler, typed routes, the Turbopack
 
 ## Phase 7: Polish & Cross-Cutting Concerns
 
-- [ ] T046 Document the enabled build capabilities in `docs/development.md`: which flags are on, which are on by default and deliberately not re-declared, and why (FR-012).
-- [ ] T047 Document the memoization policy under the compiler in `docs/development.md`: do not add `useMemo`/`useCallback` by hand; if a component needs one, that is a signal to check the bailout register (FR-012).
-- [ ] T048 Document how to clear a corrupt Turbopack cache (`rm -rf .next/cache/turbopack`) and what to expect afterwards, in `docs/development.md` (FR-012).
-- [ ] T049 Document the typed-routes contract in `docs/development.md`: route props are typed as `Route`, and `as` casts are not the remedy for a type error — a wrong route string is.
-- [ ] T050 Run all five gates one final time — `npm run lint`, `npx tsc --noEmit -p tsconfig.check.json`, `npm test`, `npm run build`, `npm run docs:check` — with every capability enabled (FR-011, SC-001).
-- [ ] T051 Verify SC-007 by checking out each capability commit and reverting it in isolation, confirming the other three still build and pass.
-- [ ] T052 Update `specs/README.md` to move 015 from "Proposed; not planned" to its post-implementation status.
+- [x] T046 Document the enabled build capabilities in `docs/development.md`: which flags are on, which are on by default and deliberately not re-declared, and why (FR-012). Done in the **Build capabilities** section, including the "Deliberately not declared" paragraph covering `turbopackFileSystemCacheForDev`, `turbopackFileSystemCacheForBuild`, `turbopackInferModuleSideEffects` and `optimizePackageImports`.
+- [x] T047 Document the memoization policy under the compiler in `docs/development.md`: do not add `useMemo`/`useCallback` by hand; if a component needs one, that is a signal to check the bailout register (FR-012). Done in **Memoization policy under the React Compiler**, which also names the two cases that still justify a manual memo and forbids suppressing `react-hooks/preserve-manual-memoization`.
+- [x] T048 Document how to clear a corrupt Turbopack cache (`rm -rf .next/cache/turbopack`) and what to expect afterwards, in `docs/development.md` (FR-012). Done in **Clearing a corrupt Turbopack cache**, including the byte-identical-output guarantee and the `turbo-persistence` panic signature.
+- [x] T049 Document the typed-routes contract in `docs/development.md`: route props are typed as `Route`, and `as` casts are not the remedy for a type error — a wrong route string is. Done in **Typed routes**, which also records the single permitted escape hatch and the generic `Route<T>` pattern used for dynamic segments.
+- [x] T050 Run all five gates one final time — `npm run lint`, `npx tsc --noEmit -p tsconfig.check.json`, `npm test`, `npm run build`, `npm run docs:check` — with every capability enabled (FR-011, SC-001). All five pass; results recorded in the `plan.md` **Final verification** section (302 test files / 3 562 tests, 56.5 s cold build, 126 Markdown files scanned).
+- [x] T051 Verify SC-007 by checking out each capability commit and reverting it in isolation, confirming the other three still build and pass. The branch history is squashed, so isolation was proven by applying each revert to the working tree and re-running that capability's gate; the per-capability results are in the `plan.md` **Revert isolation** table.
+- [x] T052 Update `specs/README.md` to move 015 from "Proposed; not planned" to its post-implementation status. The status table now reads "Implemented; T022 and T038 deferred" and the epic table records the null result for package-import optimization.
 
 ---
 

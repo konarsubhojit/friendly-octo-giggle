@@ -355,6 +355,56 @@ already met and no path change is needed (T036).
 
 Absolute numbers are sandbox-specific and are not portable to CI or to a developer laptop; only the before/after delta on the _same_ machine is meaningful. Every figure quoted in the PR must name its machine and cache state.
 
+## Final verification (Phase 7, 2026-08-07)
+
+### Five gates with every capability enabled (T050, FR-011, SC-001)
+
+Run on the implementation sandbox (2 vCPU GitHub Actions runner, Node 22) with
+`typedRoutes: true` and `reactCompiler: true` both on and the working tree at
+the final state of this branch.
+
+| Gate                                      | Result                               |
+| ----------------------------------------- | ------------------------------------ |
+| `npm run lint`                            | pass, zero warnings                  |
+| `npx tsc --noEmit -p tsconfig.check.json` | pass, zero errors                    |
+| `npm test`                                | pass — 302 files, 3 562 tests        |
+| `npm run build`                           | pass — 56.5 s cold (`.next` removed) |
+| `npm run docs:check`                      | pass — 126 Markdown files scanned    |
+
+### Revert isolation (T051, SC-007)
+
+The four landed capabilities were verified to be independently revertable. The
+branch's git history is squashed, so isolation was proven the way it actually
+matters — by applying each revert to the working tree and re-running that
+capability's gate from the Capability inventory — rather than by checking out a
+commit per capability.
+
+| Capability                      | Revert applied                                                  | Result with the other capabilities still on                                                                                                                                           |
+| ------------------------------- | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2 — Typed routes                | delete `typedRoutes: true` from `next.config.ts`                | `tsc` clean, `npm run build` succeeds; `Route`-typed props remain valid because `Route` is exported by `next` regardless of the flag                                                  |
+| 3 — React Compiler              | delete `reactCompiler: true` from `next.config.ts`              | `tsc` clean, `npm run build` succeeds; the unit suite is unaffected because `vitest.config.mts` configures the Babel plugin itself, independently of `next.config.ts`                 |
+| 4 — CI cache key                | restore the previous key block in `.github/workflows/build.yml` | no coupling to any other capability — the key is consumed only by `actions/cache`, and Turbopack validates its own entries, so a stale or missed key costs time and never correctness |
+| 5 — Package-import optimization | nothing landed (measured null result, T042–T045)                | nothing to revert                                                                                                                                                                     |
+
+`next.config.ts` was restored to its committed state after each probe;
+`git diff` is empty on the file.
+
+### Deferred tasks
+
+- **T022** — running the Playwright suite against a production build with the
+  compiler on. Blocked on the drifted, unowned Playwright suite recorded in
+  `specs/README.md`: `playwright-tests/latest-features.spec.ts` still asserts
+  Spanish locale routing and `playwright.config.ts` probes a `/en/shop` URL that
+  the route tree no longer contains, both removed with localization in PR #407.
+  Repairing that suite is outside this feature's scope and would make its
+  "no product behavior change" claim false. SC-005 therefore rests on the unit
+  suite (3 562 tests) until the suite has an owner.
+- **T038** — the CI build-job duration after the cache-key change. Deferred by
+  construction, as recorded under [CI cache key](#ci-cache-key-us3-fr-005): no
+  entry has ever been saved under the new key, so the first run on this branch
+  necessarily misses and falls through `restore-keys`. Read the exact-match hit
+  and the job duration off the second and later build runs on this PR.
+
 ## Project Structure
 
 ### Documentation (this feature)
