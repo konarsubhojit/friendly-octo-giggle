@@ -30,7 +30,6 @@ export async function PUT(
       return apiError('Product not found', 404)
     }
 
-
     await invalidateProductCaches(id)
 
     void indexProduct(product)
@@ -58,7 +57,6 @@ export async function DELETE(
     if (!deleted) {
       return apiError('Product not found', 404)
     }
-
 
     await invalidateProductCaches(id)
 

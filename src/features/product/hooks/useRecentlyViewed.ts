@@ -1,6 +1,5 @@
 'use client'
 
-import { useCallback } from 'react'
 import { useLocalStorage } from '@/hooks/useLocalStorage'
 
 const RECENTLY_VIEWED_KEY = 'kiyon_recently_viewed'
@@ -24,22 +23,19 @@ export const useRecentlyViewed = (): {
     RecentlyViewedProduct[]
   >(RECENTLY_VIEWED_KEY, [])
 
-  const trackProduct = useCallback(
-    (product: RecentlyViewedProduct) => {
-      setRecentlyViewed((prev) => {
-        const filtered = prev.filter((p) => p.id !== product.id)
-        return [{ ...product, viewedAt: Date.now() }, ...filtered].slice(
-          0,
-          RECENTLY_VIEWED_MAX
-        )
-      })
-    },
-    [setRecentlyViewed]
-  )
+  const trackProduct = (product: RecentlyViewedProduct) => {
+    setRecentlyViewed((prev) => {
+      const filtered = prev.filter((p) => p.id !== product.id)
+      return [{ ...product, viewedAt: Date.now() }, ...filtered].slice(
+        0,
+        RECENTLY_VIEWED_MAX
+      )
+    })
+  }
 
-  const clearHistory = useCallback(() => {
+  const clearHistory = () => {
     setRecentlyViewed([])
-  }, [setRecentlyViewed])
+  }
 
   return { recentlyViewed, trackProduct, clearHistory }
 }

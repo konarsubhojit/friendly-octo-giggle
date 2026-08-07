@@ -164,7 +164,9 @@ describe('dispatchWorkflowEvent', () => {
     // a telemetry-only failure must not fail their request.
     expect(result).toBe('fallback')
     expect(mockLogError).toHaveBeenCalledWith(
-      expect.objectContaining({ context: 'test_publish_failed_fallback_failed' })
+      expect.objectContaining({
+        context: 'test_publish_failed_fallback_failed',
+      })
     )
   })
 })

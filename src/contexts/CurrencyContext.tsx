@@ -4,8 +4,6 @@ import {
   createContext,
   useContext,
   useState,
-  useCallback,
-  useMemo,
   useEffect,
   type ReactNode,
 } from 'react'
@@ -189,50 +187,30 @@ export function CurrencyProvider({
 
   const config = CURRENCIES[currency]
 
-  const convertPrice = useCallback(
-    (priceInINR: number): number => {
-      return convertMoney(parseMoney(priceInINR) ?? 0, rates[currency])
-    },
-    [rates, currency]
-  )
+  const convertPrice = (priceInINR: number): number => {
+    return convertMoney(parseMoney(priceInINR) ?? 0, rates[currency])
+  }
 
-  const formatPrice = useCallback(
-    (priceInINR: number): string => {
-      const converted = convertMoney(
-        parseMoney(priceInINR) ?? 0,
-        rates[currency]
-      )
-      return new Intl.NumberFormat(config.locale, {
-        style: 'currency',
-        currency: config.code,
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      }).format(converted)
-    },
-    [config, rates, currency]
-  )
+  const formatPrice = (priceInINR: number): string => {
+    const converted = convertMoney(parseMoney(priceInINR) ?? 0, rates[currency])
+    return new Intl.NumberFormat(config.locale, {
+      style: 'currency',
+      currency: config.code,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(converted)
+  }
 
-  const value: CurrencyContextValue = useMemo(
-    () => ({
-      currency,
-      setCurrency,
-      formatPrice,
-      convertPrice,
-      currencySymbol: config.symbol,
-      availableCurrencies: Object.keys(CURRENCIES) as CurrencyCode[],
-      rates,
-      ratesLoading,
-    }),
-    [
-      currency,
-      setCurrency,
-      formatPrice,
-      convertPrice,
-      config.symbol,
-      rates,
-      ratesLoading,
-    ]
-  )
+  const value: CurrencyContextValue = {
+    currency,
+    setCurrency,
+    formatPrice,
+    convertPrice,
+    currencySymbol: config.symbol,
+    availableCurrencies: Object.keys(CURRENCIES) as CurrencyCode[],
+    rates,
+    ratesLoading,
+  }
 
   return (
     <CurrencyContext.Provider value={value}>

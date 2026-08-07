@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Card } from '@/components/ui/Card'
 import { ThemeSelector } from '@/components/ui/ThemeSelector'
 import { useCurrency, type CurrencyCode } from '@/contexts/CurrencyContext'
@@ -25,22 +25,19 @@ export function PreferencesSection({ profile }: PreferencesSectionProps) {
     }
   }, [profile?.currencyPreference, setCurrency])
 
-  const handleCurrencyChange = useCallback(
-    async (code: CurrencyCode) => {
-      setCurrency(code)
-      setSaving(true)
-      try {
-        await fetch('/api/account', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ currencyPreference: code }),
-        })
-      } finally {
-        setSaving(false)
-      }
-    },
-    [setCurrency]
-  )
+  const handleCurrencyChange = async (code: CurrencyCode) => {
+    setCurrency(code)
+    setSaving(true)
+    try {
+      await fetch('/api/account', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currencyPreference: code }),
+      })
+    } finally {
+      setSaving(false)
+    }
+  }
 
   return (
     <Card className="p-6 sm:p-8 mb-6">

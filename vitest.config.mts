@@ -3,7 +3,17 @@ import react from '@vitejs/plugin-react'
 import tsconfigPaths from 'vite-tsconfig-paths'
 
 export default defineConfig({
-  plugins: [tsconfigPaths(), react()],
+  plugins: [
+    tsconfigPaths(),
+    // Run components through the React Compiler in unit tests too, so the code
+    // the suite exercises is the code the production build ships
+    // (`reactCompiler: true` in next.config.ts). Without this, Vitest would
+    // test the uncompiled sources and a compiler-introduced regression could
+    // pass 3 500+ green tests unnoticed.
+    react({
+      babel: { plugins: [['babel-plugin-react-compiler', {}]] },
+    }),
+  ],
   test: {
     environment: 'node',
     pool: 'threads',

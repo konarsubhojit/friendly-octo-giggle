@@ -605,6 +605,33 @@ Reserve `bash` for things that genuinely require a shell: running tests/builds (
 
 **MANDATORY**: Always test UI/UX changes with Playwright before completing tasks.
 
+### Agent environment: build `.env` from the `COPILOT_`-prefixed variables
+
+The Copilot task environment injects real service credentials under a
+`COPILOT_` prefix. Before starting the dev server for browser validation,
+write a local `.env` (git-ignored) that maps them onto the names the app
+expects, then run the dev server against it and drive it with the Playwright
+MCP browser tools:
+
+| App variable                         | Source environment variable                  |
+| ------------------------------------ | -------------------------------------------- |
+| `DATABASE_URL`                       | `COPILOT_DATABASE_URL`                       |
+| `UPSTASH_REDIS_REST_URL`             | `COPILOT_UPSTASH_REDIS_REST_URL`             |
+| `UPSTASH_REDIS_REST_TOKEN`           | `COPILOT_UPSTASH_REDIS_REST_TOKEN`           |
+| `UPSTASH_SEARCH_REST_URL`            | `COPILOT_UPSTASH_SEARCH_REST_URL`            |
+| `UPSTASH_SEARCH_REST_TOKEN`          | `COPILOT_UPSTASH_SEARCH_REST_TOKEN`          |
+| `UPSTASH_SEARCH_REST_READONLY_TOKEN` | `COPILOT_UPSTASH_SEARCH_REST_READONLY_TOKEN` |
+| `BLOB_READ_WRITE_TOKEN`              | `COPILOT_BLOB_READ_WRITE_TOKEN`              |
+
+`NEXTAUTH_SECRET` is generated locally; `NEXTAUTH_URL` and
+`NEXT_PUBLIC_BASE_URL` point at `https://localhost:3000` because `npm run dev`
+serves over HTTPS with a self-signed certificate. Sign-in flows use
+`COPILOT_DEV_EMAIL` / `COPILOT_DEV_PASS`. Never commit `.env` and never echo a
+credential value into logs, a commit, or a PR description. When the Playwright
+MCP browser tools are unavailable in a session, fall back to the repository's
+own Playwright suite (`npx playwright test`) against the same dev server and
+say so explicitly in the summary.
+
 ### Testing Process
 
 1. **Start dev server** with mock data if database is unavailable

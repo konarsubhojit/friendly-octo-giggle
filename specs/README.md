@@ -24,11 +24,11 @@ Specifications 012, 014-023 are proposed work, grouped into three epics. Each is
 
 Framework capability the project pays for but does not use, plus the documentation gaps that make every later change riskier than it needs to be.
 
-| Spec | Capability                                   | Problem it addresses                                                                                    |
-| ---- | -------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| 012  | Cache Components and PPR                     | 60 `force-dynamic` route segments, no `generateStaticParams`, zero use of `"use cache"` on Next.js 16.2 |
-| 014  | Documentation and instruction reconciliation | README, docs, and the constitution reference commands, files, and services that do not exist            |
-| 015  | Build and DX modernization                   | React Compiler, typed routes, Turbopack filesystem cache, and package-import optimization all unadopted |
+| Spec | Capability                                   | Problem it addresses                                                                                                                                                                                                                                                                              |
+| ---- | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 012  | Cache Components and PPR                     | 60 `force-dynamic` route segments, no `generateStaticParams`, zero use of `"use cache"` on Next.js 16.2                                                                                                                                                                                           |
+| 014  | Documentation and instruction reconciliation | README, docs, and the constitution reference commands, files, and services that do not exist                                                                                                                                                                                                      |
+| 015  | Build and DX modernization                   | React Compiler, typed routes, Turbopack filesystem cache, and package-import optimization all unadopted — **implemented**; typed routes and the React Compiler are on, the Turbopack cache was already on by default, and package-import optimization measured as a null result and was not added |
 
 Specification 013, "E2E in continuous integration", was withdrawn on 2026-08-07 and its directory removed. Running the Playwright suite in CI and repairing its drifted assertions is currently unowned; any specification that needs browser-level verification must arrange it itself.
 
@@ -36,7 +36,7 @@ Specification 013, "E2E in continuous integration", was withdrawn on 2026-08-07 
 
 ## Status
 
-Every specification directory carries a `spec.md`. Directories 001-012 and 014 additionally carry a `plan.md` and a `tasks.md`; 015-023 are specifications only, awaiting planning.
+Every specification directory carries a `spec.md`. Directories 001-012, 014 and 015 additionally carry a `plan.md` and a `tasks.md`; 016-023 are specifications only, awaiting planning.
 
 | Spec    | Directory                                          | Artifacts         | Status                                                        |
 | ------- | -------------------------------------------------- | ----------------- | ------------------------------------------------------------- |
@@ -54,7 +54,7 @@ Every specification directory carries a `spec.md`. Directories 001-012 and 014 a
 | 012     | `012-cache-components-and-ppr`                     | spec, plan, tasks | Implemented; T045 deferred on the unrepaired Playwright suite |
 | ~~013~~ | —                                                  | —                 | Withdrawn 2026-08-07; directory removed                       |
 | 014     | `014-documentation-and-instruction-reconciliation` | spec, plan, tasks | In progress                                                   |
-| 015     | `015-build-and-dx-modernization`                   | spec              | Proposed; not planned                                         |
+| 015     | `015-build-and-dx-modernization`                   | spec, plan, tasks | Implemented; T022 and T038 deferred (see below)               |
 | 016     | `016-inventory-reservation`                        | spec              | Proposed; not planned                                         |
 | 017     | `017-personalized-recommendations`                 | spec              | Proposed; not planned                                         |
 | 018     | `018-self-service-returns`                         | spec              | Proposed; not planned                                         |
@@ -63,6 +63,8 @@ Every specification directory carries a `spec.md`. Directories 001-012 and 014 a
 | 021     | `021-interaction-modernization`                    | spec              | Proposed; not planned                                         |
 | 022     | `022-loyalty-and-store-credit`                     | spec              | Proposed; not planned                                         |
 | 023     | `023-payment-methods-expansion`                    | spec              | Proposed; not planned                                         |
+
+**015 deferred tasks.** T022 (run the Playwright suite against a production build with the compiler on) is blocked on the unowned, drifted Playwright suite described above. T038 (record the CI build-job duration on both sides of the cache-key change) cannot be read until the new key has been saved and restored at least once, which requires two build runs on the branch.
 
 ### Epic — Phase 2: Correctness and commerce depth
 

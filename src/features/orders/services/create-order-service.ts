@@ -21,7 +21,11 @@ import {
 import { notifyOrderConfirmation } from '@/lib/notifications/order-notifications'
 import { orderCreated } from '@/features/orders/inngest/events'
 import { dispatchWorkflowEvent } from '@/lib/inngest/dispatch'
-import { checkoutSession, orderSession, mergeSessions } from '@/lib/inngest/sessions'
+import {
+  checkoutSession,
+  orderSession,
+  mergeSessions,
+} from '@/lib/inngest/sessions'
 import { waitUntil } from '@vercel/functions'
 import { writeOrderToRedis } from '@/features/orders/actions/orders'
 import {

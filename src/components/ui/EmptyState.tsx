@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import type { Route } from 'next'
 import { EmptyStateIcon } from '@/components/ui/EmptyStateIcon'
 import { CtaButton } from '@/components/ui/CtaButton'
 
@@ -10,7 +11,7 @@ interface EmptyStateProps {
   /** Text for the optional call-to-action link button. */
   readonly ctaText?: string
   /** href for the optional call-to-action link. Takes precedence over `onCtaClick`. */
-  readonly ctaHref?: string
+  readonly ctaHref?: Route
   /** Click handler for the optional call-to-action button (used when there is no href). */
   readonly onCtaClick?: () => void
   readonly className?: string

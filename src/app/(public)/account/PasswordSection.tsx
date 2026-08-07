@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useState } from 'react'
 import { DynamicForm, type SubmitResult } from '@/components/ui/DynamicForm'
 import { Card } from '@/components/ui/Card'
 import { API_ERRORS } from '@/lib/constants/error-messages'
@@ -10,31 +10,30 @@ export function PasswordSection() {
   const [isChanging, setIsChanging] = useState(false)
   const [success, setSuccess] = useState('')
 
-  const handleSubmit = useCallback(
-    async (values: Readonly<Record<string, string>>): Promise<SubmitResult> => {
-      try {
-        const res = await fetch('/api/auth/change-password', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            currentPassword: values.currentPassword,
-            newPassword: values.newPassword,
-            confirmNewPassword: values.confirmNewPassword,
-          }),
-        })
-        const data = await res.json()
-        if (res.ok) {
-          setSuccess('Password changed successfully.')
-          setIsChanging(false)
-        } else {
-          return data.error || API_ERRORS.AUTH_CHANGE_FAILED
-        }
-      } catch {
-        return API_ERRORS.AUTH_CHANGE_FAILED
+  const handleSubmit = async (
+    values: Readonly<Record<string, string>>
+  ): Promise<SubmitResult> => {
+    try {
+      const res = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          currentPassword: values.currentPassword,
+          newPassword: values.newPassword,
+          confirmNewPassword: values.confirmNewPassword,
+        }),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setSuccess('Password changed successfully.')
+        setIsChanging(false)
+      } else {
+        return data.error || API_ERRORS.AUTH_CHANGE_FAILED
       }
-    },
-    []
-  )
+    } catch {
+      return API_ERRORS.AUTH_CHANGE_FAILED
+    }
+  }
 
   return (
     <Card className="p-6 sm:p-8">

@@ -29,9 +29,9 @@ vi.mock('@/features/cart/services/checkout-service', () => ({
 }))
 
 vi.mock('@/lib/inngest/realtime', async () => {
-  const actual = await vi.importActual<
-    typeof import('@/lib/inngest/realtime')
-  >('@/lib/inngest/realtime')
+  const actual = await vi.importActual<typeof import('@/lib/inngest/realtime')>(
+    '@/lib/inngest/realtime'
+  )
   return {
     isTerminalCheckoutStatus: actual.isTerminalCheckoutStatus,
     subscribeToCheckoutStatus: mockSubscribeToCheckoutStatus,

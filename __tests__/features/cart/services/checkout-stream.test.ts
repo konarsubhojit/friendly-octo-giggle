@@ -41,7 +41,9 @@ const mockFetch = vi.fn()
 
 describe('parseStatusFrames', () => {
   it('returns every complete frame in the buffer', () => {
-    const { statuses, rest } = parseStatusFrames(frame(PENDING) + frame(COMPLETED))
+    const { statuses, rest } = parseStatusFrames(
+      frame(PENDING) + frame(COMPLETED)
+    )
 
     expect(statuses).toEqual([PENDING, COMPLETED])
     expect(rest).toBe('')
@@ -65,13 +67,17 @@ describe('parseStatusFrames', () => {
   })
 
   it('skips a frame that is not valid JSON', () => {
-    const { statuses } = parseStatusFrames('data: not-json\n\n' + frame(COMPLETED))
+    const { statuses } = parseStatusFrames(
+      'data: not-json\n\n' + frame(COMPLETED)
+    )
 
     expect(statuses).toEqual([COMPLETED])
   })
 
   it('skips a payload that is not a status', () => {
-    const { statuses } = parseStatusFrames('data: {"foo":1}\n\n' + frame(COMPLETED))
+    const { statuses } = parseStatusFrames(
+      'data: {"foo":1}\n\n' + frame(COMPLETED)
+    )
 
     expect(statuses).toEqual([COMPLETED])
   })
@@ -114,8 +120,10 @@ describe('awaitCheckoutSettlement', () => {
 
   it('reassembles a status split across chunks', async () => {
     mockFetch.mockResolvedValue(
-      streamResponse([`data: ${JSON.stringify(COMPLETED).slice(0, 20)}`,
-        `${JSON.stringify(COMPLETED).slice(20)}\n\n`])
+      streamResponse([
+        `data: ${JSON.stringify(COMPLETED).slice(0, 20)}`,
+        `${JSON.stringify(COMPLETED).slice(20)}\n\n`,
+      ])
     )
 
     await expect(

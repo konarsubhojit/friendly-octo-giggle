@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useId, useState } from 'react'
+import { useId, useState } from 'react'
 import toast from 'react-hot-toast'
 import { Button } from '@/components/ui/Button'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
@@ -131,12 +131,12 @@ export default function CouponsClient({
   )
   const formId = useId()
 
-  const setField = useCallback(
-    <K extends keyof CouponFormState>(key: K, value: CouponFormState[K]) => {
-      setForm((current) => ({ ...current, [key]: value }))
-    },
-    []
-  )
+  const setField = <K extends keyof CouponFormState>(
+    key: K,
+    value: CouponFormState[K]
+  ) => {
+    setForm((current) => ({ ...current, [key]: value }))
+  }
 
   const handleCreate = async (event: React.FormEvent) => {
     event.preventDefault()

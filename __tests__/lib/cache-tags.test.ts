@@ -22,9 +22,8 @@ describe('cache tag helpers', () => {
   })
 
   it('exposes stable listing tags', async () => {
-    const { productListTag, bestsellersTag, categoriesTag } = await import(
-      '@/lib/cache-tags'
-    )
+    const { productListTag, bestsellersTag, categoriesTag } =
+      await import('@/lib/cache-tags')
     expect(productListTag()).toBe('products:list')
     expect(bestsellersTag()).toBe('products:bestsellers')
     expect(categoriesTag()).toBe('categories:list')

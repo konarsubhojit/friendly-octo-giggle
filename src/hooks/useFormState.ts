@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState } from 'react'
 
 export const useFormState = <T extends Record<string, unknown>>(
   initialState: T
@@ -18,31 +18,29 @@ export const useFormState = <T extends Record<string, unknown>>(
   const [values, setValues] = useState<T>(initialState)
   const [errors, setErrors] = useState<Partial<Record<keyof T, string>>>({})
 
-  const handleChange = useCallback((name: keyof T, value: unknown) => {
+  const handleChange = (name: keyof T, value: unknown) => {
     setValues((prev) => ({ ...prev, [name]: value }))
     setErrors((prev) => {
       const { [name]: _removed, ...rest } = prev
       return rest as Partial<Record<keyof T, string>>
     })
-  }, [])
+  }
 
-  const handleSubmit = useCallback(
+  const handleSubmit =
     (onSubmit: (values: T) => void | Promise<void>) =>
-      async (e: React.SyntheticEvent<HTMLFormElement>) => {
-        e.preventDefault()
-        await onSubmit(values)
-      },
-    [values]
-  )
+    async (e: React.SyntheticEvent<HTMLFormElement>) => {
+      e.preventDefault()
+      await onSubmit(values)
+    }
 
-  const setError = useCallback((name: keyof T, error: string) => {
+  const setError = (name: keyof T, error: string) => {
     setErrors((prev) => ({ ...prev, [name]: error }))
-  }, [])
+  }
 
-  const reset = useCallback(() => {
+  const reset = () => {
     setValues(initialState)
     setErrors({})
-  }, [initialState])
+  }
 
   const isValid = Object.keys(errors).length === 0
 

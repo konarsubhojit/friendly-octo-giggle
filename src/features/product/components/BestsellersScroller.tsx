@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useRef } from 'react'
+import { useRef } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import type { ProductGridItem } from '@/features/product/components/ProductGrid'
@@ -13,7 +13,7 @@ interface BestsellersScrollerProps {
 export function BestsellersScroller({ bestsellers }: BestsellersScrollerProps) {
   const scrollRef = useRef<HTMLUListElement>(null)
 
-  const scroll = useCallback((direction: 'left' | 'right') => {
+  const scroll = (direction: 'left' | 'right') => {
     const container = scrollRef.current
     if (!container) return
     const cardWidth = container.querySelector('a')?.offsetWidth ?? 220
@@ -22,7 +22,7 @@ export function BestsellersScroller({ bestsellers }: BestsellersScrollerProps) {
       left: direction === 'right' ? cardWidth + gap : -(cardWidth + gap),
       behavior: 'smooth',
     })
-  }, [])
+  }
 
   if (bestsellers.length === 0) {
     return (

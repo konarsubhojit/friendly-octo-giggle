@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import type { ProductOption, ProductVariant } from '@/lib/types'
 import toast from 'react-hot-toast'
 
@@ -47,7 +47,7 @@ export default function OptionManager({
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
   // Live preview: parse variant SKUs with the current option names + delimiter
-  const skuPreview = useMemo(() => {
+  const skuPreview = (() => {
     const names = optionNames
       .split(',')
       .map((n) => n.trim())
@@ -68,7 +68,7 @@ export default function OptionManager({
       })
     }
     return { names, rows }
-  }, [optionNames, delimiter, variants])
+  })()
 
   const handleGenerate = async () => {
     const names = optionNames

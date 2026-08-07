@@ -49,7 +49,7 @@ const createStep = () => {
   return {
     scores,
     step: {
-      run: async <T,>(_id: string, handler: () => T | Promise<T>) => handler(),
+      run: async <T>(_id: string, handler: () => T | Promise<T>) => handler(),
       score: async (
         _id: string,
         score: { name: string; value: number | boolean }
@@ -129,9 +129,7 @@ describe('order email functions', () => {
         to: 'customer@example.com',
         orderId: 'ord1234',
         totalAmount: expect.stringContaining('200'),
-        items: [
-          expect.objectContaining({ name: 'Widget', quantity: 2 }),
-        ],
+        items: [expect.objectContaining({ name: 'Widget', quantity: 2 })],
       })
     )
     expect(result).toMatchObject({

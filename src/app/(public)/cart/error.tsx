@@ -18,7 +18,7 @@ export default function CartError({ error, reset }: ErrorProps) {
       icon={
         <CartGlyph className="inline-block h-[2.8rem] w-[2.8rem] shrink-0 text-[var(--accent-sage)]" />
       }
-      secondaryHref="/products"
+      secondaryHref="/shop"
       secondaryLabel="Continue shopping"
     />
   )

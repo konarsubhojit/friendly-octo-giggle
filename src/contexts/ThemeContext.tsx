@@ -5,8 +5,6 @@ import {
   useContext,
   useState,
   useEffect,
-  useMemo,
-  useCallback,
   type ReactNode,
 } from 'react'
 
@@ -117,19 +115,20 @@ export const ThemeProvider = ({
     }
   }, [theme])
 
-  const handleThemeChange = useCallback((next: ThemeId) => {
+  const handleThemeChange = (next: ThemeId) => {
     try {
       localStorage.setItem(THEME_STORAGE_KEY, next)
     } catch {
       // localStorage unavailable — continue without persistence
     }
     setTheme(next)
-  }, [])
+  }
 
-  const value = useMemo<ThemeContextValue>(
-    () => ({ theme, setTheme: handleThemeChange, themes: THEMES }),
-    [theme, handleThemeChange]
-  )
+  const value: ThemeContextValue = {
+    theme,
+    setTheme: handleThemeChange,
+    themes: THEMES,
+  }
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
 }

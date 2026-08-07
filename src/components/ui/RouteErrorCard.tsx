@@ -1,6 +1,7 @@
 'use client'
 
 import type { ReactNode } from 'react'
+import type { Route } from 'next'
 import Link from 'next/link'
 
 interface RouteErrorCardProps {
@@ -13,7 +14,7 @@ interface RouteErrorCardProps {
   /** SVG or other icon element placed inside the themed icon circle. */
   readonly icon?: ReactNode
   /** href for the optional secondary action link. Requires `secondaryLabel`. */
-  readonly secondaryHref?: string
+  readonly secondaryHref?: Route
   /** Label for the optional secondary action link. Requires `secondaryHref`. */
   readonly secondaryLabel?: string
   /**
@@ -38,7 +39,7 @@ interface RouteErrorCardProps {
  *       reset={reset}
  *       title="Error Loading Cart"
  *       fallbackMessage="Failed to load your shopping cart"
- *       secondaryHref="/products"
+ *       secondaryHref="/shop"
  *       secondaryLabel="Continue shopping"
  *     />
  *   )

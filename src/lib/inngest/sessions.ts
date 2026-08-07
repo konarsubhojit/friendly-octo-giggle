@@ -62,7 +62,8 @@ const buildSession = (
 /** Session for a checkout request, spanning its whole processing pipeline. */
 export const checkoutSession = (
   checkoutRequestId: string | null | undefined
-): EventSessions => buildSession(SESSION_KEYS.checkoutRequest, checkoutRequestId)
+): EventSessions =>
+  buildSession(SESSION_KEYS.checkoutRequest, checkoutRequestId)
 
 /** Session for an order, spanning creation through status changes and refunds. */
 export const orderSession = (

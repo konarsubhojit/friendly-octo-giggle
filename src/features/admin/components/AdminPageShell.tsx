@@ -20,8 +20,8 @@ export interface AdminMetric {
   readonly tone?: AdminTone
 }
 
-interface AdminPageShellProps {
-  readonly breadcrumbs: readonly BreadcrumbItem[]
+interface AdminPageShellProps<T extends string> {
+  readonly breadcrumbs: readonly BreadcrumbItem<T>[]
   readonly eyebrow?: string
   readonly title: string
   readonly description: string
@@ -111,7 +111,7 @@ export function AdminPanel({
   )
 }
 
-export function AdminPageShell({
+export function AdminPageShell<T extends string>({
   breadcrumbs,
   eyebrow,
   title,
@@ -119,10 +119,10 @@ export function AdminPageShell({
   actions,
   metrics,
   children,
-}: AdminPageShellProps) {
+}: AdminPageShellProps<T>) {
   return (
     <main className="mx-auto flex min-w-0 max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
-      <AdminBreadcrumbs items={[...breadcrumbs]} />
+      <AdminBreadcrumbs items={breadcrumbs} />
 
       <section className="relative overflow-hidden rounded-[2rem] border border-slate-200/70 bg-[radial-gradient(circle_at_top_left,_rgba(56,189,248,0.18),_transparent_30%),radial-gradient(circle_at_top_right,_rgba(16,185,129,0.16),_transparent_26%),linear-gradient(180deg,_rgba(255,255,255,0.98),_rgba(248,250,252,0.96))] p-6 shadow-[0_28px_70px_-48px_rgba(15,23,42,0.55)] sm:p-8 dark:border-slate-700/70 dark:bg-[radial-gradient(circle_at_top_left,_rgba(14,165,233,0.22),_transparent_24%),radial-gradient(circle_at_top_right,_rgba(16,185,129,0.16),_transparent_20%),linear-gradient(180deg,_rgba(15,23,42,0.98),_rgba(15,23,42,0.94),_rgba(17,24,39,0.92))] dark:shadow-[0_28px_70px_-48px_rgba(2,6,23,0.95)]">
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-sky-300 to-transparent dark:via-sky-400/70" />

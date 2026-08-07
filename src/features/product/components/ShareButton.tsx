@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import type { CSSProperties } from 'react'
 
 interface ShareButtonProps {
@@ -228,37 +228,37 @@ export const ShareButton = ({ productId, variantId }: ShareButtonProps) => {
     }
   }, [])
 
-  const scheduleErrorReset = useCallback(() => {
+  const scheduleErrorReset = () => {
     if (errorTimeoutRef.current !== null) {
       clearTimeout(errorTimeoutRef.current)
     }
     setShareState('error')
     errorTimeoutRef.current = setTimeout(() => setShareState('idle'), 3000)
-  }, [])
+  }
 
-  const applyShareResponse = useCallback(
-    async (data: { success: boolean; data?: { shareUrl: string } }) => {
-      if (data.success && data.data) {
-        const url = data.data.shareUrl
+  const applyShareResponse = async (data: {
+    success: boolean
+    data?: { shareUrl: string }
+  }) => {
+    if (data.success && data.data) {
+      const url = data.data.shareUrl
 
-        // Compute panel position from current button bounds before state update
-        if (buttonRef.current) {
-          setPanelStyle(
-            computePanelStyle(buttonRef.current.getBoundingClientRect())
-          )
-        }
-
-        // Auto-copy to clipboard immediately
-        copyTextToClipboard(url)
-        setAutoCopied(true)
-        setShareUrl(url)
-        setShareState('ready')
-      } else {
-        scheduleErrorReset()
+      // Compute panel position from current button bounds before state update
+      if (buttonRef.current) {
+        setPanelStyle(
+          computePanelStyle(buttonRef.current.getBoundingClientRect())
+        )
       }
-    },
-    [scheduleErrorReset]
-  )
+
+      // Auto-copy to clipboard immediately
+      copyTextToClipboard(url)
+      setAutoCopied(true)
+      setShareUrl(url)
+      setShareState('ready')
+    } else {
+      scheduleErrorReset()
+    }
+  }
 
   const handleShare = async () => {
     if (shareState === 'ready' && shareUrl) {

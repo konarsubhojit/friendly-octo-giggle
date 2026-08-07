@@ -94,8 +94,7 @@ export const sendAbandonedCartReminderFunction = inngest.createFunction(
     triggers: [abandonedCartReminderDue],
     retries: ABANDONED_CART_RETRIES,
     // One reminder per cart per number, however many times the scan queues it.
-    idempotency:
-      'event.data.cartId + "-" + event.data.reminderNumber',
+    idempotency: 'event.data.cartId + "-" + event.data.reminderNumber',
     // Marketing volume must never crowd out transactional mail on the shared
     // provider quota.
     concurrency: { limit: 5 },
