@@ -54,7 +54,12 @@ vi.mock('@/lib/schema', () => ({
   cartItems: { cartId: {}, productId: {}, variantId: {}, quantity: {} },
   users: { id: {}, email: {}, name: {}, currencyPreference: {} },
   notificationPreferences: { userId: {}, marketingEmail: {} },
-  abandonedCartReminders: { id: {}, cartId: {}, userId: {}, reminderNumber: {} },
+  abandonedCartReminders: {
+    id: {},
+    cartId: {},
+    userId: {},
+    reminderNumber: {},
+  },
   productVariants: { id: {}, price: {} },
   products: { id: {}, name: {} },
 }))
@@ -86,7 +91,9 @@ vi.mock('drizzle-orm', () => {
 
 vi.mock('@/lib/currency', () => ({
   formatPriceForCurrency: vi.fn((_price: number, _code: string) => '₹499.00'),
-  isValidCurrencyCode: vi.fn((code: string) => ['INR', 'USD', 'EUR', 'GBP'].includes(code)),
+  isValidCurrencyCode: vi.fn((code: string) =>
+    ['INR', 'USD', 'EUR', 'GBP'].includes(code)
+  ),
 }))
 
 // ─── Chainable Drizzle select builder ─────────────────────
@@ -152,7 +159,12 @@ describe('processAbandonedCartReminders', () => {
       .mockReturnValueOnce(makeSelectChain([]))
       .mockReturnValueOnce(
         makeItemsSelectChain([
-          { productName: 'Test Product', quantity: 2, price: 499, variantId: 'var001' },
+          {
+            productName: 'Test Product',
+            quantity: 2,
+            price: 499,
+            variantId: 'var001',
+          },
         ])
       )
 
@@ -190,7 +202,12 @@ describe('processAbandonedCartReminders', () => {
       )
       .mockReturnValueOnce(
         makeItemsSelectChain([
-          { productName: 'Another Product', quantity: 1, price: 299, variantId: 'var002' },
+          {
+            productName: 'Another Product',
+            quantity: 1,
+            price: 299,
+            variantId: 'var002',
+          },
         ])
       )
 
@@ -275,7 +292,12 @@ describe('processAbandonedCartReminders', () => {
       )
       .mockReturnValueOnce(
         makeItemsSelectChain([
-          { productName: 'Shared Product', quantity: 1, price: 199, variantId: 'var005' },
+          {
+            productName: 'Shared Product',
+            quantity: 1,
+            price: 199,
+            variantId: 'var005',
+          },
         ])
       )
 
@@ -306,7 +328,12 @@ describe('processAbandonedCartReminders', () => {
       .mockReturnValueOnce(makeSelectChain([]))
       .mockReturnValueOnce(
         makeItemsSelectChain([
-          { productName: 'Product', quantity: 1, price: 100, variantId: 'var006' },
+          {
+            productName: 'Product',
+            quantity: 1,
+            price: 100,
+            variantId: 'var006',
+          },
         ])
       )
 

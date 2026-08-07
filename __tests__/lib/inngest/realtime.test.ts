@@ -67,8 +67,10 @@ describe('checkout realtime channel', () => {
 
   it('rejects a payload whose id is not a short id', () => {
     expect(
-      CheckoutStatusMessageSchema.safeParse({ ...COMPLETED, checkoutRequestId: 'x' })
-        .success
+      CheckoutStatusMessageSchema.safeParse({
+        ...COMPLETED,
+        checkoutRequestId: 'x',
+      }).success
     ).toBe(false)
   })
 

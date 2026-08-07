@@ -179,7 +179,6 @@ export const POST = async (request: NextRequest) => {
 
     const product = await db.products.create(validated)
 
-
     await invalidateProductCaches()
 
     void indexProduct(product)

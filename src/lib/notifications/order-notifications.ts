@@ -77,7 +77,10 @@ const deliverNotification = async ({
   const emailAllowed = allows(recipient, 'transactional', 'email')
 
   if (!emailAllowed) {
-    logger.info({ orderId, channel: 'email' }, 'notification_suppressed_by_preference')
+    logger.info(
+      { orderId, channel: 'email' },
+      'notification_suppressed_by_preference'
+    )
   }
 
   const emailResult = emailAllowed ? await deliverEmailFor() : SUPPRESSED

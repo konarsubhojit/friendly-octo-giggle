@@ -81,13 +81,13 @@ The dominant design principles in the current code are:
 
 ### Frontend
 
-| Technology    | Version | Purpose                                               |
-| ------------- | ------- | ----------------------------------------------------- |
-| React         | 19.2.4  | Rendering, client interactivity, server components    |
+| Technology    | Version | Purpose                                                          |
+| ------------- | ------- | ---------------------------------------------------------------- |
+| React         | 19.2.4  | Rendering, client interactivity, server components               |
 | Next.js       | 16.1.6  | App Router, route handlers, Cache Components, image optimization |
-| TypeScript    | 5.9.3   | Static typing across app, services, and tests         |
-| Tailwind CSS  | 4.1.18  | Styling system and design tokens                      |
-| Redux Toolkit | 2.11.2  | Shared client state for cart, orders, admin, wishlist |
+| TypeScript    | 5.9.3   | Static typing across app, services, and tests                    |
+| Tailwind CSS  | 4.1.18  | Styling system and design tokens                                 |
+| Redux Toolkit | 2.11.2  | Shared client state for cart, orders, admin, wishlist            |
 
 ### Backend and Domain Services
 
@@ -272,11 +272,11 @@ Variant behavior in the live codebase is more capable than the earlier document 
 The application has two independent caches. Confusing them is the most common
 source of stale-data bugs, so the boundary is explicit:
 
-| Layer                            | Owns                                                                                                          | Does **not** own                                                        |
-| -------------------------------- | ------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| Cache Components (`"use cache"`) | Render output for the prerendered public shell, invalidated by tag                                            | Cross-instance data reuse for route handlers                            |
-| Redis (`getCachedData`)          | Cart, orders, admin lists, sales, exchange rates, share/pincode lookups, and the payloads of public read APIs | Anything inside a `"use cache"` scope — a nested Redis read is banned    |
-| PostgreSQL                       | The correctness floor: every cached path degrades to a direct query                                           | —                                                                       |
+| Layer                            | Owns                                                                                                          | Does **not** own                                                      |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| Cache Components (`"use cache"`) | Render output for the prerendered public shell, invalidated by tag                                            | Cross-instance data reuse for route handlers                          |
+| Redis (`getCachedData`)          | Cart, orders, admin lists, sales, exchange rates, share/pincode lookups, and the payloads of public read APIs | Anything inside a `"use cache"` scope — a nested Redis read is banned |
+| PostgreSQL                       | The correctness floor: every cached path degrades to a direct query                                           | —                                                                     |
 
 A `"use cache"` scope must never nest a Redis read. Doing so stores the same
 rows twice under two independent expiries and splits invalidation across two
@@ -305,12 +305,12 @@ Every cached scope names a profile explicitly; an implicit lifetime is a defect,
 not a default. Time bounds are the safety net — tags are the freshness
 mechanism. The tag vocabulary lives in `src/lib/cache-tags.ts`:
 
-| Helper             | Tag                    | Revalidated by                                                            |
-| ------------------ | ---------------------- | ------------------------------------------------------------------------- |
-| `productTag(id)`   | `product:<id>`         | product/variant/option writes; order stock side effects                   |
-| `productListTag()` | `products:list`        | anything that changes catalog membership (create, delete, bulk, import)   |
-| `bestsellersTag()` | `products:bestsellers` | order creation side effects, product delete                               |
-| `categoriesTag()`  | `categories:list`      | category create, update, delete, reorder                                  |
+| Helper             | Tag                    | Revalidated by                                                          |
+| ------------------ | ---------------------- | ----------------------------------------------------------------------- |
+| `productTag(id)`   | `product:<id>`         | product/variant/option writes; order stock side effects                 |
+| `productListTag()` | `products:list`        | anything that changes catalog membership (create, delete, bulk, import) |
+| `bestsellersTag()` | `products:bestsellers` | order creation side effects, product delete                             |
+| `categoriesTag()`  | `categories:list`      | category create, update, delete, reorder                                |
 
 `revalidateCacheTags(tags, context)` is called from the same functions that
 already perform Redis invalidation (`invalidateProductCaches` in
@@ -517,7 +517,6 @@ no separate cron endpoint to authenticate:
 Each scan fans out one event per item rather than looping in a single
 invocation, so a slow provider cannot stall the batch and every item retries
 independently.
-
 
 ### Exchange Rate Refresh
 
