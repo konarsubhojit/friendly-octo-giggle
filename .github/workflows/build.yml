@@ -35,6 +35,9 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Documentation drift check
+        run: npm run docs:check
+
       - name: Type check
         run: npx tsc --noEmit -p tsconfig.check.json
 

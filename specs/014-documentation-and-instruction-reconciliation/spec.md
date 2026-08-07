@@ -12,10 +12,14 @@ Documented instructions have drifted materially from the implementation. Each of
 
 **Commands that do not exist**
 
+<!-- doc-drift-ignore-next-block --> <!-- This block is an inventory of the commands that do not exist; naming them is the point. -->
+
 - `npm run db:seed` is referenced by `README.md`, `docs/getting-started.md`, `docs/development.md`, `docs/deployment.md`, and `docs/troubleshooting.md`. `package.json` defines no such script.
 - `npm run dev:https` is referenced by `README.md` and `docs/development.md`. No such script exists; `npm run dev` already runs `next dev --experimental-https`, so the documented HTTP/HTTPS distinction is inverted.
 
 **Files and workflows that do not exist**
+
+<!-- doc-drift-ignore-next-block --> <!-- This block is an inventory of the workflows that do not exist; naming them is the point. -->
 
 - `docs/observability.md` cites `.github/workflows/synthetic-uptests.yml`. The repository contains only `build.yml` and `copilot-setup-steps.yml`.
 - `.specify/memory/constitution.md` mandates QStash via `lib/qstash.ts`, `lib/qstash-events.ts`, service endpoints under `app/api/services/`, Vercel Cron Jobs in `vercel.json`, cron routes under `app/api/cron/`, `checkAdminAuth` from `lib/admin-auth.ts`, `lib/search.ts`, `lib/search-service.ts`, and Zod schemas in `lib/validations.ts`. **None of these paths exist.** Background work now runs on Inngest (`src/lib/inngest/`), admin auth lives in `src/features/admin/services/admin-auth.ts`, search lives in `src/lib/search/`, and validations live in `src/lib/validations/`.

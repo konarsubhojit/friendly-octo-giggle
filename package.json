@@ -18,6 +18,7 @@
     "redis:orders:index": "tsx scripts/create-orders-search-index.ts",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
+    "docs:check": "node scripts/check-doc-drift.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage"

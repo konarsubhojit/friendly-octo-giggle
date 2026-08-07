@@ -63,6 +63,8 @@ Every other referenced script resolves.
 
 ### R4 — The nonexistent workflow
 
+<!-- doc-drift-ignore-next-block --> <!-- Records the nonexistent workflow this feature removed; naming it is the point. -->
+
 `docs/observability.md:10` cites `.github/workflows/synthetic-uptests.yml`. `.github/workflows/` contains only `build.yml` and `copilot-setup-steps.yml`. `build.yml` runs on `push` to `develop`/`master` and on pull requests, with jobs `test`, `build`, `sonarqube`, DeepSource, and Codecov.
 
 ### R5 — Constitution path drift is broader than the spec recorded

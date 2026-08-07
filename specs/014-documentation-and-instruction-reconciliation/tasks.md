@@ -46,6 +46,8 @@ Confirmed unchanged: 17 defined scripts with no `db:seed` and no `dev:https`; 16
 
 ### Implementation for User Story 1
 
+<!-- doc-drift-ignore-next-block --> <!-- These tasks name the removed commands and workflow they instruct the reader to replace. -->
+
 - [ ] T003 [US1] In `README.md`, replace `npm run db:seed` in the Quick Start block (line 17) with `npm run db:bootstrap` and remove `npm run db:seed` from the development command list (line 105), describing `db:bootstrap` as idempotent database initialization (DR-001, FR-002).
 - [ ] T004 [US1] In `README.md`, delete the `npm run dev:https` entry (line 98) and rewrite the `npm run dev` comment (line 94) to state that the dev server runs over HTTPS with an experimental self-signed certificate (DR-002, FR-003).
 - [ ] T005 [P] [US1] In `docs/getting-started.md`, replace `npm run db:seed` at both occurrences (lines 87 and 173) with `npm run db:bootstrap` and correct the surrounding "seed test data" prose to describe idempotent bootstrap (DR-001).
@@ -77,7 +79,7 @@ Confirmed unchanged: 17 defined scripts with no `db:seed` and no `dev:https`; 16
 - [ ] T018 [US2] In `.github/copilot-instructions.md`, replace the File Structure section with the `src/`-rooted layout: `src/app/`, `src/features/{account,admin,ai,auth,cart,orders,payments,product,wishlist}/`, `src/lib/`, `src/components/`, `src/contexts/`, `src/hooks/`, `src/server/`, `src/types/` (FR-010).
 - [ ] T019 [US2] In `.github/copilot-instructions.md`, correct the Technology Stack and Commands Reference sections against `package.json`: the 17 defined scripts exactly, with no `db:seed` (line 455) and no `dev:https` (line 448), and `npm run dev` documented as HTTPS (FR-010, FR-001).
 - [ ] T020 [US2] In `.github/copilot-instructions.md`, delete the hand-maintained test inventory table and replace it with a pointer to `__tests__/`, the current aggregate (300 files), and the command that reproduces the count, so the number can be re-derived rather than maintained (DR-005, FR-011).
-- [ ] T021 [US2] Replace the body of `.github/copilot/instructions.md` with a pointer to `.github/copilot-instructions.md`, deleting the independent architecture restatement including its Prisma ORM v7 and ioredis claims and its `npm run db:seed` reference (line 230) (DR-006, FR-017, FR-018).
+- [ ] T021 [US2] Replace the body of `.github/copilot/instructions.md` with a pointer to `.github/copilot-instructions.md`, deleting the independent architecture restatement including its Prisma ORM v7 and ioredis claims and its `db:seed` reference (line 230) (DR-006, FR-017, FR-018).
 - [ ] T022 [US2] Resolve every path referenced by `.specify/memory/constitution.md` and `.github/copilot-instructions.md` against the tree and record the resolution list in the PR description; any unresolved path is a defect in T012–T020, not an acceptable residual (SC-002).
 - [ ] T023 [US2] Confirm exactly one file states the project architecture for agent consumption and that every technology it names appears in `package.json` dependencies (SC-008).
 
