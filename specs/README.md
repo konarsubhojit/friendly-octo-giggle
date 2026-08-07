@@ -36,7 +36,7 @@ Specification 013, "E2E in continuous integration", was withdrawn on 2026-08-07 
 
 ## Status
 
-Every specification directory carries a `spec.md`. Directories 001-012 and 014 additionally carry a `plan.md` and a `tasks.md`; 015-023 are specifications only, awaiting planning.
+Every specification directory carries a `spec.md`. Directories 001-012, 014 and 015 additionally carry a `plan.md` and a `tasks.md`; 016-023 are specifications only, awaiting planning.
 
 | Spec    | Directory                                          | Artifacts         | Status                                                        |
 | ------- | -------------------------------------------------- | ----------------- | ------------------------------------------------------------- |
@@ -54,7 +54,7 @@ Every specification directory carries a `spec.md`. Directories 001-012 and 014 a
 | 012     | `012-cache-components-and-ppr`                     | spec, plan, tasks | Implemented; T045 deferred on the unrepaired Playwright suite |
 | ~~013~~ | —                                                  | —                 | Withdrawn 2026-08-07; directory removed                       |
 | 014     | `014-documentation-and-instruction-reconciliation` | spec, plan, tasks | In progress                                                   |
-| 015     | `015-build-and-dx-modernization`                   | spec              | Proposed; not planned                                         |
+| 015     | `015-build-and-dx-modernization`                   | spec, plan, tasks | Planned; not implemented                                      |
 | 016     | `016-inventory-reservation`                        | spec              | Proposed; not planned                                         |
 | 017     | `017-personalized-recommendations`                 | spec              | Proposed; not planned                                         |
 | 018     | `018-self-service-returns`                         | spec              | Proposed; not planned                                         |
