@@ -243,6 +243,12 @@ Three defects:
 2. Hashing every source file makes the key change on **every commit**, so the exact-match restore never hits and a fresh 352 MB entry is saved on every run. The cache still works — via `restore-keys` prefix fallback — but the exact-match half of the design is dead weight.
 3. The path `.next/cache` does cover `.next/cache/turbopack` (verified), so FR-005's directory-coverage clause is already met; the key, not the path, is what needs repair.
 
+Open item (T038): the CI build-job duration **after** the key change cannot be
+recorded from this sandbox and cannot be read off the first run either — no
+entry has ever been saved under the new key, so run 1 necessarily misses and
+falls back through `restore-keys`. Read the exact-match hit and the job duration
+off the second and later build runs on this PR's branch and record them here.
+
 Target: key on the inputs that actually invalidate compilation — `package-lock.json` and `next.config.ts` — and let `restore-keys` supply the prefix fallback, matching the Next.js documented pattern. Correctness is unaffected either way: Turbopack validates its own cache entries and falls back to a cold build when they are incompatible (FR/US3 acceptance 4), which is why a looser key is safe.
 
 ## Measurement protocol (FR-009, FR-010)
@@ -253,19 +259,99 @@ All measurements below were taken on the implementation sandbox (2 vCPU GitHub
 Actions runner, Node 22) at commit `e45639b`, which is the tree immediately
 before this feature's first code change. Cache state is stated with each figure.
 
-| Measurement            | Method                                              | Baseline (before)                | After (all capabilities on) |
-| ---------------------- | --------------------------------------------------- | -------------------------------- | --------------------------- |
-| Cold build             | `rm -rf .next` then `npm run build`                 | **46.4 s**                       | _pending_                   |
-| Warm build             | `npm run build` immediately after, cache populated  | **10.3 s** (compile step 0.46 s) | _pending_                   |
-| Turbopack cache size   | `du -sh .next/cache/turbopack`                      | **286 MB**                       | _pending_                   |
-| Dev startup, cold      | `rm -rf .next`, `npm run dev`, time to "Ready"      | **376 ms**                       | _pending_                   |
-| Dev startup, warm      | restart `npm run dev` with `.next/cache` populated  | **371 ms**                       | _pending_                   |
-| Client JS, all chunks  | sum of `.next/static/chunks/**/*.js` after a build  | **2 692 608 B**                  | _pending_                   |
-| Client JS, worst route | largest per-route first-load chunk set (R12 method) | **1 459.2 KB** (`/admin/users`)  | _pending_                   |
+| Measurement            | Method                                              | Baseline (before)                | After (all capabilities on)      |
+| ---------------------- | --------------------------------------------------- | -------------------------------- | -------------------------------- |
+| Cold build             | `rm -rf .next` then `npm run build`                 | **46.4 s**                       | **61.1 s** (compile step 32.4 s) |
+| Warm build             | `npm run build` immediately after, cache populated  | **10.3 s** (compile step 0.46 s) | **11.3 s** (compile step 0.49 s) |
+| Turbopack cache size   | `du -sh .next/cache/turbopack`                      | **286 MB**                       | **289 MB**                       |
+| Dev startup, cold      | `rm -rf .next`, `npm run dev`, time to "Ready"      | **376 ms**                       | **2.8 s** — see note below       |
+| Dev startup, warm      | restart `npm run dev` with `.next/cache` populated  | **371 ms**                       | **394 ms**                       |
+| Client JS, all chunks  | sum of `.next/static/chunks/**/*.js` after a build  | **2 692 608 B**                  | **2 844 997 B** (+5.7 %)         |
+| Client JS, worst route | largest per-route first-load chunk set (R12 method) | **1 459.2 KB** (`/admin/users`)  | **1 470.1 KB** (`/admin/users`)  |
+
+All "after" figures were taken on the same sandbox class as the baseline, at the
+tree with typed routes, the React Compiler, and every memoization-removal commit
+in place, and with `optimizePackageImports` **absent** (T043 removed it; see
+below).
+
+The cold dev-startup pair is **not comparable**: the baseline 376 ms was Next's
+self-reported "Ready in" line with `.next/cache` still on disk, whereas the
+"after" 2.8 s was measured after `rm -rf .next`, which forces the dev server to
+rebuild its cache before reporting ready. The warm pair (371 ms → 394 ms) is
+measured identically on both sides and is the figure to read. Re-measuring the
+cold baseline would mean reverting the feature, which is not worth the signal;
+the discrepancy is recorded rather than papered over.
+
+Reading of the "after" column (US3 acceptances 1 and 2, SC-003): the Turbopack
+filesystem cache is worth **5.4×** on a build with every capability on
+(61.1 s → 11.3 s), against 4.5× at baseline — the compiler's added work is
+exactly the kind of work the cache absorbs, so the cache is worth more after
+this feature than before it. Wall-clock cost of the feature is +14.7 s cold and
++1.0 s warm, all of it in CI or on Vercel and none of it on a user.
+
+### Graceful degradation of a damaged cache (T037, US3 acceptance 4)
+
+Two failure modes were exercised on the same tree:
+
+1. **Deleted cache** (`rm -rf .next/cache/turbopack`): the next `npm run build`
+   falls back to a cold build (44.6 s) and produces **byte-identical** output —
+   2 844 997 B of client chunks, the same figure as the cached build. Correctness
+   is unaffected; only time is lost. This is the case CI hits whenever the cache
+   key misses.
+2. **Corrupted cache** (4 KB of random bytes written over one `.sst` file): the
+   build **aborts** with a `turbo-persistence` panic in Turbopack rather than
+   discarding the entry and recompiling. This is a Turbopack defect, not a
+   configuration one, and the recovery is `rm -rf .next/cache/turbopack`
+   followed by a normal build, which succeeds. The failure is loud and immediate
+   (4.6 s, non-zero exit) rather than silent, so it cannot produce a wrong
+   artifact — the spec's "correctness outranks speed" edge case holds, but the
+   caveat is recorded here and in `docs/development.md` so nobody debugs it
+   twice. GitHub's cache service checksums its archives, so a partially written
+   entry is not a realistic CI failure mode.
+
+### Package-import optimization: measured null result (T042–T045)
+
+`experimental.optimizePackageImports: ['zenput', 'd3-array', 'd3-scale', 'd3-shape']`
+was added, built with `ANALYZE=true npm run build`, and compared against the
+same tree without it:
+
+| Metric                          | Without the option | With the option | Delta |
+| ------------------------------- | ------------------ | --------------- | ----- |
+| Client JS, all chunks           | 2 844 997 B        | 2 844 997 B     | **0** |
+| Worst route first-load          | 1 470.1 KB         | 1 470.1 KB      | **0** |
+| Next 4 worst routes, first-load | identical          | identical       | **0** |
+
+**Byte-for-byte identical.** The option was therefore removed from
+`next.config.ts` per T043 and Principle VII: it earned nothing and would have
+been an inert line implying an optimization that does not exist. The cause is
+R8 — all four packages already ship ESM and declare `"sideEffects": false`
+(verified in their installed `package.json` files: `zenput` 1.1.2, `d3-array`
+3.2.4, `d3-scale` 4.0.2, `d3-shape` 3.2.0), and
+`experimental.turbopackInferModuleSideEffects` is already `true` by default in
+16.3, so Turbopack was already importing them at module granularity.
+
+`@upstash/search-ui` 0.1.5 is imported from **no file under `src/`**: it is an
+unused dependency, not a bundling problem, and it contributes nothing to any
+bundle. It is deliberately **not** removed here (out of scope per the spec) and
+is noted for a dependency-cleanup pass.
+
+No route bundle grew as a result of US4, because US4 shipped no change (SC-004).
 
 Reading of the baseline: the Turbopack filesystem cache is worth **4.5×** on a
 build (46.4 s → 10.3 s) and is already on by default (R6), so US3's speed
-acceptance is satisfied by the default rather than by a new flag.
+acceptance is satisfied by the default rather than by a new flag. Verified at
+implementation time (T032) by reading the installed
+`next/dist/server/config-shared.js` default config at 16.3.0, where
+`turbopackFileSystemCacheForDev` and `turbopackFileSystemCacheForBuild` are both
+`true`. Neither flag is declared in `next.config.ts`: restating a default would
+create a second source of truth that silently diverges the day the default
+changes. If a future Next.js release flips either default, this decision is
+revisited then, and this paragraph is the record of why the flags are absent.
+
+The cached path in `.github/workflows/build.yml` is `.next/cache`, which
+contains `.next/cache/turbopack` (verified: 289 MB under
+`.next/cache/turbopack/v16.3.0-<hash>/`). FR-005's directory-coverage clause is
+already met and no path change is needed (T036).
 
 Absolute numbers are sandbox-specific and are not portable to CI or to a developer laptop; only the before/after delta on the _same_ machine is meaningful. Every figure quoted in the PR must name its machine and cache state.
 

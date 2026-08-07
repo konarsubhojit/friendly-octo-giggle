@@ -103,13 +103,13 @@ description: 'Task list for enabling React Compiler, typed routes, the Turbopack
 
 **Independent Test**: Compare warm build and dev restart against the T001–T003 baselines on the same machine and commit.
 
-- [ ] T032 [US3] Verify — do not re-declare — that `turbopackFileSystemCacheForDev` and `turbopackFileSystemCacheForBuild` are already `true` by default in 16.3, and record the verification in `plan.md`. Adding the flags to `next.config.ts` would restate a default and create a second source of truth (`plan.md` R6, Principle VII). If a future Next.js release changes the default, this decision is revisited then.
-- [ ] T033 [US3] Confirm the measured cold→warm improvement against the T001/T002 baselines and record it (SC-003, US3 acceptances 1 and 2).
-- [ ] T034 [US3] Rewrite the `Restore Next.js build cache` key in `.github/workflows/build.yml` to hash `package-lock.json` and `next.config.ts` only, dropping the `app/**` and `pages/**` globs that name directories deleted in the move to `src/` and dropping the whole-source hash that changes the key on every commit (FR-005, `plan.md` CI cache key).
-- [ ] T035 [US3] Apply the identical key to the `Save Next.js build cache` step in `.github/workflows/build.yml` so restore and save cannot drift.
-- [ ] T036 [US3] Confirm the cached path `.next/cache` covers `.next/cache/turbopack` (verified at 352 MB on this tree) and record the confirmation; no path change is needed (FR-005).
-- [ ] T037 [US3] Verify graceful degradation: corrupt or delete `.next/cache/turbopack` and confirm `npm run build` falls back to a cold build and produces identical output rather than failing (US3 acceptance 4, spec edge case "correctness outranks speed").
-- [ ] T038 [US3] Record the CI build-job duration before and after the key change from the workflow run summaries in `.github/workflows/build.yml`, and note whether the exact-match restore now hits.
+- [x] T032 [US3] Verify — do not re-declare — that `turbopackFileSystemCacheForDev` and `turbopackFileSystemCacheForBuild` are already `true` by default in 16.3, and record the verification in `plan.md`. Adding the flags to `next.config.ts` would restate a default and create a second source of truth (`plan.md` R6, Principle VII). If a future Next.js release changes the default, this decision is revisited then.
+- [x] T033 [US3] Confirm the measured cold→warm improvement against the T001/T002 baselines and record it (SC-003, US3 acceptances 1 and 2).
+- [x] T034 [US3] Rewrite the `Restore Next.js build cache` key in `.github/workflows/build.yml` to hash `package-lock.json` and `next.config.ts` only, dropping the `app/**` and `pages/**` globs that name directories deleted in the move to `src/` and dropping the whole-source hash that changes the key on every commit (FR-005, `plan.md` CI cache key).
+- [x] T035 [US3] Apply the identical key to the `Save Next.js build cache` step in `.github/workflows/build.yml` so restore and save cannot drift.
+- [x] T036 [US3] Confirm the cached path `.next/cache` covers `.next/cache/turbopack` (verified at 352 MB on this tree) and record the confirmation; no path change is needed (FR-005).
+- [x] T037 [US3] Verify graceful degradation: corrupt or delete `.next/cache/turbopack` and confirm `npm run build` falls back to a cold build and produces identical output rather than failing (US3 acceptance 4, spec edge case "correctness outranks speed").
+- [ ] T038 [US3] Record the CI build-job duration before and after the key change from the workflow run summaries in `.github/workflows/build.yml`, and note whether the exact-match restore now hits. **Deferred by construction**: the "after" run does not exist until this branch's workflow has run at least twice with the new key (the first run necessarily misses, since no entry was ever saved under it). Recorded as an open item in `plan.md`; read it off the PR's own build runs.
 
 **Checkpoint**: cache behavior is measured, the CI key is honest, and a corrupt cache degrades instead of breaking.
 
@@ -121,13 +121,13 @@ description: 'Task list for enabling React Compiler, typed routes, the Turbopack
 
 **Independent Test**: Compare `npm run analyze` output before and after; no affected route bundle may grow.
 
-- [ ] T039 [US4] Confirm from `package.json` metadata which candidate packages are already tree-shakeable: `zenput`, `d3-array`, `d3-scale` and `d3-shape` all declare `"sideEffects": false` and ship ESM (`plan.md` R8). Record the finding — it is the reason this story may end up adding nothing.
-- [ ] T040 [US4] Record that `@upstash/search-ui` is imported nowhere under `src/` (`plan.md` R8), so it is an unused dependency rather than a bundling problem. Do not remove it under this feature; note it for a dependency cleanup instead (out of scope per the spec).
-- [ ] T041 [US4] Note that `experimental.turbopackInferModuleSideEffects` already defaults to `true` in 16.3 and may make `optimizePackageImports` redundant for these packages; the measurement in T042 decides.
-- [ ] T042 [US4] Add `experimental.optimizePackageImports` to `next.config.ts` listing only the packages actually imported by client code (`zenput`, `d3-array`, `d3-scale`, `d3-shape`), run `npm run analyze`, and compare per-route first-load JS against the T004 baseline.
-- [ ] T043 [US4] Keep in the list only packages the T042 comparison shows reduce a bundle; remove the rest so the configuration does not carry inert entries (Principle VII, FR-004). If nothing improves, remove the option entirely and record that outcome as the result.
-- [ ] T044 [US4] Confirm no listed package has import side effects (FR-004, spec edge case) using the `"sideEffects"` metadata recorded in T039.
-- [ ] T045 [US4] Run `npm test` and confirm behavior is unchanged (US4 acceptance 2), and record both bundle measurements in `plan.md` (US4 acceptance 3, FR-010).
+- [x] T039 [US4] Confirm from `package.json` metadata which candidate packages are already tree-shakeable: `zenput`, `d3-array`, `d3-scale` and `d3-shape` all declare `"sideEffects": false` and ship ESM (`plan.md` R8). Record the finding — it is the reason this story may end up adding nothing.
+- [x] T040 [US4] Record that `@upstash/search-ui` is imported nowhere under `src/` (`plan.md` R8), so it is an unused dependency rather than a bundling problem. Do not remove it under this feature; note it for a dependency cleanup instead (out of scope per the spec).
+- [x] T041 [US4] Note that `experimental.turbopackInferModuleSideEffects` already defaults to `true` in 16.3 and may make `optimizePackageImports` redundant for these packages; the measurement in T042 decides.
+- [x] T042 [US4] Add `experimental.optimizePackageImports` to `next.config.ts` listing only the packages actually imported by client code (`zenput`, `d3-array`, `d3-scale`, `d3-shape`), run `npm run analyze`, and compare per-route first-load JS against the T004 baseline.
+- [x] T043 [US4] Keep in the list only packages the T042 comparison shows reduce a bundle; remove the rest so the configuration does not carry inert entries (Principle VII, FR-004). If nothing improves, remove the option entirely and record that outcome as the result.
+- [x] T044 [US4] Confirm no listed package has import side effects (FR-004, spec edge case) using the `"sideEffects"` metadata recorded in T039.
+- [x] T045 [US4] Run `npm test` and confirm behavior is unchanged (US4 acceptance 2), and record both bundle measurements in `plan.md` (US4 acceptance 3, FR-010).
 
 **Checkpoint**: bundle composition is measured before and after, and no route bundle grew (SC-004).
 

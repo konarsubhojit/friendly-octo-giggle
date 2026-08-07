@@ -69,12 +69,20 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Key on the inputs that actually invalidate compilation — the lockfile
+      # and the Next.js config. Hashing every source file made the key change
+      # on every commit, so the exact-match restore never hit and a fresh
+      # ~350 MB entry was saved on every run; `restore-keys` supplies the
+      # prefix fallback. `.next/cache` covers `.next/cache/turbopack`.
+      # Turbopack validates its own entries and falls back to a cold build when
+      # they are incompatible, which is what makes a looser key safe.
+      # The save step below must use this exact key or restore can never hit.
       - name: Restore Next.js build cache
         id: restore-nextjs-cache
         uses: actions/cache/restore@v6
         with:
           path: .next/cache
-          key: ${{ runner.os }}-nextjs-${{ hashFiles('package-lock.json', 'src/**/*.ts', 'src/**/*.tsx', 'src/**/*.js', 'src/**/*.jsx', 'src/**/*.css', 'app/**/*.ts', 'app/**/*.tsx', 'pages/**/*.ts', 'pages/**/*.tsx', 'next.config.*') }}
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('package-lock.json', 'next.config.ts') }}
           restore-keys: |
             ${{ runner.os }}-nextjs-
 
@@ -91,7 +99,7 @@ jobs:
         uses: actions/cache/save@v6
         with:
           path: .next/cache
-          key: ${{ runner.os }}-nextjs-${{ hashFiles('package-lock.json', 'src/**/*.ts', 'src/**/*.tsx', 'src/**/*.js', 'src/**/*.jsx', 'src/**/*.css', 'app/**/*.ts', 'app/**/*.tsx', 'pages/**/*.ts', 'pages/**/*.tsx', 'next.config.*') }}
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('package-lock.json', 'next.config.ts') }}
 
   sonarqube:
     name: SonarQube Scan
