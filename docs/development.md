@@ -88,6 +88,91 @@ npx inngest-cli@latest dev
 
 ---
 
+### Build capabilities
+
+`next.config.ts` turns on two build-level capabilities beyond Cache Components.
+Both are top-level, stable options in Next.js 16.3 — neither belongs under
+`experimental`, where the 16.2-era names are deprecated.
+
+| Flag            | What it does                                                                       |
+| --------------- | ---------------------------------------------------------------------------------- |
+| `typedRoutes`   | Checks internal `href` / `redirect` / `router` targets against the real route tree |
+| `reactCompiler` | Memoizes client components automatically at build time                             |
+
+`reactCompiler` requires the `babel-plugin-react-compiler` devDependency. It is
+build-time only and never reaches the browser; without it the build aborts with
+an explicit resolution error rather than silently shipping unoptimized output.
+`vitest.config.mts` passes the same plugin to `@vitejs/plugin-react`, so
+`npm run test` exercises compiled components rather than the raw sources.
+
+**Deliberately not declared.** `turbopackFileSystemCacheForDev`,
+`turbopackFileSystemCacheForBuild` and `turbopackInferModuleSideEffects` are all
+`true` by default in 16.3. Restating a default in `next.config.ts` would create
+a second source of truth that silently diverges the day the default changes, so
+the flags are absent on purpose. `experimental.optimizePackageImports` is
+likewise absent: it was measured against this codebase and changed the client
+bundle by zero bytes, because every candidate package already ships ESM with
+`"sideEffects": false`. See `specs/015-build-and-dx-modernization/plan.md` for
+the measurements.
+
+### Memoization policy under the React Compiler
+
+Do not add `useMemo` or `useCallback` by hand. The compiler memoizes client
+components automatically, so a hand-written wrapper is at best redundant and at
+worst a stale dependency array waiting to happen.
+
+Two cases still justify one, and both are about behavior rather than speed:
+
+- The value's **referential identity is a dependency of a `useEffect`**, so a
+  new identity re-runs the effect. Keep the memo and say so in a comment.
+- The value's creation is a **side effect** that must happen once — an object
+  URL that a cleanup revokes, for example.
+
+If a component seems to need memoization for performance, that is a signal to
+check the compiler bailout register in
+`specs/015-build-and-dx-modernization/plan.md` rather than to add a wrapper. If
+`npm run lint` reports `react-hooks/preserve-manual-memoization` after you
+remove a memo, the removal was unsafe: put it back. Never suppress the rule.
+
+### Typed routes
+
+Internal route values are typed as `Route`, imported from `next`:
+
+```typescript
+import type { Route } from 'next'
+
+interface CtaButtonProps {
+  readonly href?: Route
+}
+```
+
+When the type checker rejects a route string, the remedy is a **corrected route
+string**, not an `as Route` cast — the whole point of the flag is that a route
+that does not exist fails the build instead of 404ing in production. Dynamic
+segments are expressed by making the component generic in the route literal
+(`Route<T>`), as `BreadcrumbItem` and `AdminPageShell` do, rather than widening
+to `string`. Exactly one escape hatch exists in the codebase, in
+`src/app/(public)/products/[id]/ProductClient.tsx`, where `usePathname()`
+returns `string` and a same-page query-string update cannot be statically typed;
+it is commented with that reason.
+
+### Clearing a corrupt Turbopack cache
+
+The Turbopack filesystem cache lives in `.next/cache/turbopack`. Deleting it is
+always safe:
+
+```bash
+rm -rf .next/cache/turbopack
+```
+
+The next build recompiles from scratch — roughly 45 s versus 11 s warm on a
+2-vCPU machine — and produces **byte-identical** output. Only time is lost.
+
+If a build dies with a `turbo-persistence` panic and `Aborting.`, the cache has
+been damaged rather than merely invalidated; Turbopack does not recover from
+that on its own. Delete the directory and rebuild. The failure is loud and
+non-zero-exit, so a damaged cache can never yield a wrong artifact.
+
 ### Current feature development map
 
 | Area                                | Primary implementation                                                                             |
