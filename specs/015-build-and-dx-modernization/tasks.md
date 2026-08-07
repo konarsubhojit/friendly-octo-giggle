@@ -21,11 +21,11 @@ description: 'Task list for enabling React Compiler, typed routes, the Turbopack
 
 **Purpose**: Record the numbers every later claim is compared against. Nothing here changes shipped code, so it can land first and independently. Skipping this phase makes FR-009, FR-010, SC-003 and SC-004 unprovable.
 
-- [ ] T001 Record the cold build baseline: `rm -rf .next`, then `npm run build`, capturing wall-clock time and the route table into the Measurement protocol table in `plan.md`. Name the machine and cache state.
-- [ ] T002 Record the warm build baseline: run `npm run build` again immediately, with `.next/cache/turbopack` populated, and add it to the same table.
-- [ ] T003 [P] Record cold and warm dev-startup baselines: time `npm run dev` to the "Ready" line with `.next` removed, then again after a restart, into the same table.
-- [ ] T004 [P] Record the bundle baseline with `npm run analyze` and capture per-route first-load JS from the analyzer report into `plan.md` — the 16.3 build table no longer prints size columns (`plan.md` R9).
-- [ ] T005 [P] Confirm `npm run lint`, `npx tsc --noEmit -p tsconfig.check.json`, `npm test` and `npm run build` all pass on the untouched tree, so any later failure is attributable to this feature.
+- [x] T001 Record the cold build baseline: `rm -rf .next`, then `npm run build`, capturing wall-clock time and the route table into the Measurement protocol table in `plan.md`. Name the machine and cache state.
+- [x] T002 Record the warm build baseline: run `npm run build` again immediately, with `.next/cache/turbopack` populated, and add it to the same table.
+- [x] T003 [P] Record cold and warm dev-startup baselines: time `npm run dev` to the "Ready" line with `.next` removed, then again after a restart, into the same table.
+- [x] T004 [P] Record the bundle baseline with `npm run analyze` and capture per-route first-load JS from the analyzer report into `plan.md` — the 16.3 build table no longer prints size columns (`plan.md` R9).
+- [x] T005 [P] Confirm `npm run lint`, `npx tsc --noEmit -p tsconfig.check.json`, `npm test` and `npm run build` all pass on the untouched tree, so any later failure is attributable to this feature.
 
 **Checkpoint**: every "before" number in `plan.md` is filled in and the tree is green.
 
@@ -35,7 +35,7 @@ description: 'Task list for enabling React Compiler, typed routes, the Turbopack
 
 **Purpose**: There is no shared foundation to build — the four capabilities are independent by design (FR-006). This phase exists only to fix the ordering contract.
 
-- [ ] T006 Confirm the capability order in the `plan.md` Capability inventory is the implementation order (typed routes → React Compiler → CI cache key → package imports), and that each capability will be its own commit so it can be reverted alone (FR-006, SC-007).
+- [x] T006 Confirm the capability order in the `plan.md` Capability inventory is the implementation order (typed routes → React Compiler → CI cache key → package imports), and that each capability will be its own commit so it can be reverted alone (FR-006, SC-007).
 
 **Checkpoint**: user story work can begin; US2 first because it is the cheapest and carries no runtime risk.
 

@@ -70,6 +70,9 @@ Each finding was produced by editing `next.config.ts`, running `npm run build` i
 - **R10 — Manual memoization is unevenly covered by tests.** 48 files contain `useMemo`/`useCallback`. 47 of them are referenced by at least one suite under `__tests__/`; `src/features/admin/components/CouponsClient.tsx` is referenced by none. Test files do **not** uniformly mirror `src/` paths (for example `src/features/product/components/ProductGrid.tsx` is covered by `__tests__/components/sections/ProductGrid*.test.tsx`), so coverage must be established by reference search, not by path convention.
 - **R11 — The compiler's own lint diagnostics are already wired up.** `eslint-plugin-react-hooks@7.1.1` is installed transitively through `eslint-config-next`, and `eslint.config.js` spreads `configs.recommended`, which includes the compiler-derived rules (`preserve-manual-memoization`, `incompatible-library`, `static-components`, `memo-dependencies`, `void-use-memo`). `npm run lint` currently passes clean, so any new diagnostic after enabling the compiler is attributable to this feature.
 
+- **R12 — `npm run analyze` produces no report under Turbopack, so the bundle measurement method in R9 had to change.** `@next/bundle-analyzer` prints `The Next Bundle Analyzer is not compatible with Turbopack builds, no report will be generated` and the build otherwise completes normally. `next experimental-analyze --output` does work (it writes `.next/diagnostics/analyze`), but it **replaces `.next/server`** as a side effect, so it cannot be interleaved with a build whose output is still being measured. The measurement used here is therefore derived from the build output itself: for every prerendered route, sum the byte size of the distinct `/_next/static/**/*.js` chunks referenced by its HTML (first-load JS), and separately sum every chunk under `.next/static/chunks`. Both numbers are deterministic, need no extra tooling, and are directly comparable before and after. `npm run analyze` is still the script the spec names (FR-010) and it is still run; it simply contributes no per-route figures under this bundler.
+- **R13 — With the compiler on, no client bundle grows.** Measured with the R12 method at the same commit: total client chunk bytes and every per-route first-load set are recorded in the Measurement protocol table below. The compiler adds an import of `react/compiler-runtime` and inlines memo caches, which is close to byte-neutral because the hand-written `useMemo`/`useCallback` wrappers it replaces were themselves code.
+
 ## Capability inventory (FR-006)
 
 Each capability is one commit with one revert path, in this order.
@@ -146,14 +149,23 @@ Target: key on the inputs that actually invalidate compilation — `package-lock
 
 One machine, one commit, cache state stated explicitly with every number.
 
-| Measurement                | Method                                                              | Baseline (2026-08-07, this sandbox) |
-| -------------------------- | ------------------------------------------------------------------- | ----------------------------------- |
-| Cold build                 | `rm -rf .next` then `npm run build`                                 | **53.8 s**                          |
-| Warm build                 | `npm run build` immediately after, cache populated                  | **11.0 s**                          |
-| Warm build, compiler on    | same, with `reactCompiler: true`                                    | **17.5 s** (compile step 10.8 s)    |
-| Turbopack cache size       | `du -sh .next/cache/turbopack`                                      | **352 MB**                          |
-| Dev startup, cold and warm | `npm run dev`, time to "Ready", first run and restart               | _to be recorded_                    |
-| Bundle composition         | `npm run analyze`, per-route first-load JS from the analyzer report | _to be recorded_                    |
+All measurements below were taken on the implementation sandbox (2 vCPU GitHub
+Actions runner, Node 22) at commit `e45639b`, which is the tree immediately
+before this feature's first code change. Cache state is stated with each figure.
+
+| Measurement            | Method                                              | Baseline (before)                | After (all capabilities on) |
+| ---------------------- | --------------------------------------------------- | -------------------------------- | --------------------------- |
+| Cold build             | `rm -rf .next` then `npm run build`                 | **46.4 s**                       | _pending_                   |
+| Warm build             | `npm run build` immediately after, cache populated  | **10.3 s** (compile step 0.46 s) | _pending_                   |
+| Turbopack cache size   | `du -sh .next/cache/turbopack`                      | **286 MB**                       | _pending_                   |
+| Dev startup, cold      | `rm -rf .next`, `npm run dev`, time to "Ready"      | **376 ms**                       | _pending_                   |
+| Dev startup, warm      | restart `npm run dev` with `.next/cache` populated  | **371 ms**                       | _pending_                   |
+| Client JS, all chunks  | sum of `.next/static/chunks/**/*.js` after a build  | **2 692 608 B**                  | _pending_                   |
+| Client JS, worst route | largest per-route first-load chunk set (R12 method) | **1 459.2 KB** (`/admin/users`)  | _pending_                   |
+
+Reading of the baseline: the Turbopack filesystem cache is worth **4.5×** on a
+build (46.4 s → 10.3 s) and is already on by default (R6), so US3's speed
+acceptance is satisfied by the default rather than by a new flag.
 
 Absolute numbers are sandbox-specific and are not portable to CI or to a developer laptop; only the before/after delta on the _same_ machine is meaningful. Every figure quoted in the PR must name its machine and cache state.
 
