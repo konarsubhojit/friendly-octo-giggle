@@ -73,12 +73,12 @@ description: 'Task list for enabling React Compiler, typed routes, the Turbopack
 
 ### Enablement
 
-- [ ] T018 [US1] Add `babel-plugin-react-compiler` to `devDependencies` in `package.json` via `npm install --save-dev babel-plugin-react-compiler` — the build aborts with an explicit resolution error without it, which is how FR-001's "fail loudly" clause is satisfied (`plan.md` R4). It is build-time only and never reaches the browser.
-- [ ] T019 [US1] Set `reactCompiler: true` at the **top level** of `next.config.ts` (`plan.md` R2). Do not enable `experimental.turbopackRustReactCompiler`; it is out of scope.
-- [ ] T020 [US1] Run `npm run build` and confirm it succeeds; record the compile-step and total-build delta against the T002 baseline in `plan.md` (`plan.md` R5 measured +6.5 s warm in the sandbox — re-measure here).
-- [ ] T021 [US1] Run `npm test` and confirm every previously passing suite still passes (US1 acceptance 2).
+- [x] T018 [US1] Add `babel-plugin-react-compiler` to `devDependencies` in `package.json` via `npm install --save-dev babel-plugin-react-compiler` — the build aborts with an explicit resolution error without it, which is how FR-001's "fail loudly" clause is satisfied (`plan.md` R4). It is build-time only and never reaches the browser.
+- [x] T019 [US1] Set `reactCompiler: true` at the **top level** of `next.config.ts` (`plan.md` R2). Do not enable `experimental.turbopackRustReactCompiler`; it is out of scope.
+- [x] T020 [US1] Run `npm run build` and confirm it succeeds; record the compile-step and total-build delta against the T002 baseline in `plan.md` (`plan.md` R5 measured +6.5 s warm in the sandbox — re-measure here).
+- [x] T021 [US1] Run `npm test` and confirm every previously passing suite still passes (US1 acceptance 2).
 - [ ] T022 [US1] Run the Playwright suite against a production build and confirm it passes with the compiler on (SC-005).
-- [ ] T023 [US1] Collect compiler bailouts and fill the bailout register in `plan.md` — one row per component with its reason and memoization disposition. Use the `eslint-plugin-react-hooks` compiler diagnostics already active through `npm run lint` (`plan.md` R11), plus build output. An empty register is a valid result and must be stated explicitly (SC-006, US1 acceptance 3).
+- [x] T023 [US1] Collect compiler bailouts and fill the bailout register in `plan.md` — one row per component with its reason and memoization disposition. Use the `eslint-plugin-react-hooks` compiler diagnostics already active through `npm run lint` (`plan.md` R11), plus build output. An empty register is a valid result and must be stated explicitly (SC-006, US1 acceptance 3).
 
 ### Memoization removal — one module per commit, covered modules only
 

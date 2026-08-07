@@ -17,6 +17,14 @@ const nextConfig: NextConfig = {
   // `Route` (imported from `next`); an `as Route` cast is not the remedy for a
   // type error here, a corrected route string is.
   typedRoutes: true,
+  // React Compiler: client components are memoized automatically, so
+  // re-render correctness no longer depends on hand-placed `useMemo` /
+  // `useCallback` dependency arrays. Top-level and stable in Next.js 16.3.
+  // Requires `babel-plugin-react-compiler` (a devDependency); without it the
+  // build aborts with an explicit resolution error rather than silently
+  // shipping unoptimized output, which is what spec 015 FR-001 asks for.
+  // Cost is build time only: the compile step goes from ~0.5 s to ~10 s.
+  reactCompiler: true,
   // Cache Components: the public shell is prerendered and per-request regions
   // stream into Suspense holes. Incompatible with `export const dynamic` /
   // `revalidate` / `runtime` segment configs, which is why none remain.

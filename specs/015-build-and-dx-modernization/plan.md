@@ -138,13 +138,78 @@ component outward instead of fixing it.
 
 ## Compiler bailout register (SC-006)
 
-The register is a table in this plan, filled during implementation, with one row per component the compiler could not optimize:
+The register is a table in this plan, with one row per component the compiler
+could not optimize.
 
-| Component                        | Reason reported | Memoization disposition |
-| -------------------------------- | --------------- | ----------------------- |
-| _(filled during implementation)_ |                 |                         |
+**The register is empty. That is the measured result, not an unperformed check.**
 
-Sources for the register, in order of preference: the compiler diagnostics surfaced by `npm run lint` through `eslint-plugin-react-hooks` (R11), and the build output when `reactCompiler` is configured with a logger. If the register comes back empty, that is a result and is recorded as such — not an excuse to skip the check.
+| Component | Reason reported | Memoization disposition |
+| --------- | --------------- | ----------------------- |
+| _(none)_  | —               | —                       |
+
+Evidence, collected 2026-08-07 with `reactCompiler: true` in place:
+
+- `npx react-compiler-healthcheck --src "src/**/*.{ts,tsx}" --verbose` reports
+  **"Successfully compiled 252 out of 252 components"**, no incompatible-library
+  usage, and no `StrictMode` obstruction.
+- `npm run lint` is clean, so none of the compiler-derived
+  `eslint-plugin-react-hooks` rules — `preserve-manual-memoization`,
+  `incompatible-library`, `static-components`, `memo-dependencies`,
+  `void-use-memo`, `unsupported-syntax` — fires on any file (R11).
+- `npm run build` completes with no compiler diagnostic in its output.
+
+Because the register is empty, FR-008 ("do not remove manual memoization from a
+component the compiler could not optimize") constrains nothing here: every
+component compiles, so eligibility for removal is decided solely by test
+coverage (FR-007).
+
+### The unit suite now exercises compiled output
+
+Vitest builds through `@vitejs/plugin-react` and never reads `next.config.ts`,
+so by default `npm test` would run the **uncompiled** sources: a green suite
+would prove the hand-written logic still works, but would say nothing about the
+code the production build actually ships. A compiler-introduced regression could
+pass 3 557 green tests unnoticed.
+
+`vitest.config.mts` therefore passes `babel-plugin-react-compiler` to the React
+plugin, so the suite compiles components exactly as the build does. All 301
+files / 3 557 tests pass with the compiler in the pipeline, and the suite
+duration is unchanged (≈100 s). This closes the gap between what the tests cover
+and what users receive, and makes US1 acceptance 2 a real check rather than a
+formality.
+
+## What the React Compiler costs (US1, measured 2026-08-07)
+
+Same machine, same commit, `reactCompiler` toggled and a **cold** build each
+time so no stale chunk from a previous build can be counted.
+
+| Metric                                         | Compiler off | Compiler on | Delta               |
+| ---------------------------------------------- | ------------ | ----------- | ------------------- |
+| Cold build, wall clock                         | 46.4 s       | 58.1 s      | +11.7 s             |
+| Cold build, compile step                       | 22.0 s       | 28.9 s      | +6.9 s              |
+| Warm build (cache populated)                   | 10.3 s       | 12.6 s      | +2.3 s              |
+| Client JS, all chunks, raw                     | 2 692 584 B  | 2 846 296 B | +153 712 B (+5.7 %) |
+| Client JS, all chunks, gzip                    | 790 221 B    | 861 323 B   | +71 102 B (+9.0 %)  |
+| Worst route first-load, gzip (`/admin/orders`) | 404.3 KB     | 410.8 KB    | +6.5 KB (+1.6 %)    |
+| Best route delta, gzip (`/_global-error`)      | —            | —           | +0.2 KB (+0.3 %)    |
+
+**This contradicts SC-004 as literally written** ("No route bundle is larger
+than its recorded baseline"), and the contradiction is reported rather than
+smoothed over. Every route grows between 0.3 % and 1.8 % gzipped, because the
+compiler emits a per-component memo cache array and an import of
+`react/compiler-runtime`. SC-004 was written under US4, where it means "import
+optimization must not make bundles worse"; it holds in that scope. Under US1 it
+does not, and cannot: automatic memoization is bytes-for-renders by
+construction.
+
+The trade is deliberate and is recorded so a future reader can re-decide it:
+~1.6 % more gzipped JS on the worst route, in exchange for removing an entire
+class of stale-dependency-array defect across 133 client files. If that trade is
+ever judged wrong, capability 3 reverts by deleting one line of
+`next.config.ts`; nothing else in the feature depends on it.
+
+Build-time cost lands in CI and on Vercel, never on a user, and the Turbopack
+cache absorbs most of it on incremental builds (+2.3 s warm).
 
 ## CI cache key (US3, FR-005)
 
