@@ -86,31 +86,28 @@ export function NotificationsSection() {
     }
   }, [settings])
 
-  const savePreference = useCallback(
-    async (key: PreferenceKey, value: boolean) => {
-      setBusy(true)
-      setError('')
-      try {
-        const res = await fetch('/api/account/notifications', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ [key]: value }),
-        })
-        const data = await res.json()
-        if (!data.success) throw new Error('save failed')
-        setSettings((current) =>
-          current ? { ...current, preferences: data.data.preferences } : current
-        )
-      } catch {
-        setError('Could not save your notification preferences.')
-      } finally {
-        setBusy(false)
-      }
-    },
-    []
-  )
+  const savePreference = async (key: PreferenceKey, value: boolean) => {
+    setBusy(true)
+    setError('')
+    try {
+      const res = await fetch('/api/account/notifications', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ [key]: value }),
+      })
+      const data = await res.json()
+      if (!data.success) throw new Error('save failed')
+      setSettings((current) =>
+        current ? { ...current, preferences: data.data.preferences } : current
+      )
+    } catch {
+      setError('Could not save your notification preferences.')
+    } finally {
+      setBusy(false)
+    }
+  }
 
-  const enablePush = useCallback(async () => {
+  const enablePush = async () => {
     if (!settings?.vapidPublicKey) return
     setBusy(true)
     setError('')
@@ -139,9 +136,9 @@ export function NotificationsSection() {
     } finally {
       setBusy(false)
     }
-  }, [settings, savePreference])
+  }
 
-  const disablePush = useCallback(async () => {
+  const disablePush = async () => {
     setBusy(true)
     setError('')
     try {
@@ -162,7 +159,7 @@ export function NotificationsSection() {
     } finally {
       setBusy(false)
     }
-  }, [savePreference])
+  }
 
   const preferences = settings?.preferences
 

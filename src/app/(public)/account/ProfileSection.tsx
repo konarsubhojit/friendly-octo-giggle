@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useState } from 'react'
 import { DynamicForm, type SubmitResult } from '@/components/ui/DynamicForm'
 import { Card } from '@/components/ui/Card'
 import { API_ERRORS } from '@/lib/constants/error-messages'
@@ -21,32 +21,31 @@ export function ProfileSection({
   const [isEditing, setIsEditing] = useState(false)
   const [success, setSuccess] = useState('')
 
-  const handleSubmit = useCallback(
-    async (values: Readonly<Record<string, string>>): Promise<SubmitResult> => {
-      try {
-        const res = await fetch('/api/account', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: values.name || undefined,
-            email: values.email || undefined,
-            phoneNumber: values.phoneNumber || null,
-          }),
-        })
-        const data = await res.json()
-        if (res.ok) {
-          setSuccess('Profile updated successfully.')
-          setIsEditing(false)
-          onProfileUpdated()
-        } else {
-          return data.error ?? API_ERRORS.PROFILE_UPDATE
-        }
-      } catch {
-        return API_ERRORS.PROFILE_UPDATE
+  const handleSubmit = async (
+    values: Readonly<Record<string, string>>
+  ): Promise<SubmitResult> => {
+    try {
+      const res = await fetch('/api/account', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: values.name || undefined,
+          email: values.email || undefined,
+          phoneNumber: values.phoneNumber || null,
+        }),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setSuccess('Profile updated successfully.')
+        setIsEditing(false)
+        onProfileUpdated()
+      } else {
+        return data.error ?? API_ERRORS.PROFILE_UPDATE
       }
-    },
-    [onProfileUpdated]
-  )
+    } catch {
+      return API_ERRORS.PROFILE_UPDATE
+    }
+  }
 
   return (
     <Card className="p-6 sm:p-8 mb-6">
