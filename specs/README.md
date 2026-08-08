@@ -55,7 +55,7 @@ Every specification directory carries a `spec.md`. Directories 001-012 and 014-0
 | ~~013~~ | —                                                  | —                 | Withdrawn 2026-08-07; directory removed                       |
 | 014     | `014-documentation-and-instruction-reconciliation` | spec, plan, tasks | In progress                                                   |
 | 015     | `015-build-and-dx-modernization`                   | spec, plan, tasks | Implemented; T022 and T038 deferred (see below)               |
-| 016     | `016-inventory-reservation`                        | spec, plan, tasks | Planned; not implemented                                      |
+| 016     | `016-inventory-reservation`                        | spec, plan, tasks | Implemented                                                   |
 | 017     | `017-personalized-recommendations`                 | spec              | Proposed; not planned                                         |
 | 018     | `018-self-service-returns`                         | spec              | Proposed; not planned                                         |
 | 019     | `019-stock-and-price-alerts`                       | spec              | Proposed; not planned                                         |
@@ -72,7 +72,7 @@ One real correctness defect, then the commerce capability whose absence is most 
 
 | Spec | Capability                   | Problem it addresses                                                                             |
 | ---- | ---------------------------- | ------------------------------------------------------------------------------------------------ |
-| 016  | Inventory reservation        | Stock is validated at checkout request but decremented later, leaving a measured oversell window |
+| 016  | Inventory reservation        | Stock is validated at checkout request but decremented later, leaving a measured oversell window — **implemented**; holds are taken at request acceptance, consumed with the order, and expired by a five-minute sweep |
 | 017  | Personalized recommendations | Recommendations are static; browsing and purchase history are not used                           |
 | 018  | Self-service returns         | Refunds are admin-only; customers have no return request path                                    |
 | 019  | Stock and price alerts       | Out-of-stock demand and price sensitivity are entirely uncaptured                                |

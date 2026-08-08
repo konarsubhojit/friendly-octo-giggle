@@ -419,6 +419,65 @@ Two invariants keep a killed worker from stranding a request:
 Duplicate orders are impossible regardless: `Order.checkoutRequestId` and
 `Order.paymentTransactionId` are both unique.
 
+### Inventory Reservation
+
+Because the order — and therefore the stock decrement — is created by the
+durable pipeline rather than by the request the customer waits on, the units a
+shopper has committed to are still on the shelf for as long as the queue takes.
+Reservations close that window by taking an explicit hold at request acceptance.
+
+`features/orders/services/stock-reservation.ts` is the only module that writes
+reservation state. It owns two pieces of storage:
+
+- `StockReservation` — the ledger. One row per checkout request × variant, with
+  status `HELD`, `CONSUMED`, `RELEASED` or `EXPIRED`, an `expiresAt` stamp, and
+  `UNIQUE (checkoutRequestId, variantId)` so a replayed grant cannot double-hold.
+- `ProductVariant.reservedStock` — a denormalised counter of units currently
+  held. Availability is `stock - reservedStock`, computed on read and never
+  stored.
+
+The grant is a single conditional statement per variant:
+
+```sql
+UPDATE "ProductVariant"
+   SET "reservedStock" = "reservedStock" + $q
+ WHERE id = $v AND "deletedAt" IS NULL AND stock - "reservedStock" >= $q
+RETURNING id
+```
+
+Zero rows updated *is* the denial — the same compare-and-swap idiom the codebase
+uses for coupon `usageCount` and the order stock decrement, so no two concurrent
+requests can be granted the same last unit. The grant is all-or-nothing and
+locks variants in sorted id order to avoid deadlock between overlapping carts.
+
+Every transition is claim-shaped, so replays are harmless:
+
+- **Consume** — inside the same transaction as the order insert and stock
+  decrement, `HELD → CONSUMED` and `reservedStock` drops by the consumed units.
+- **Release** — on terminal checkout failure and on retry exhaustion, best
+  effort: a failed release is logged and never masks the original failure.
+- **Expire** — `expire-stock-reservations` runs every five minutes, claims at
+  most 500 rows whose `expiresAt` has passed **by the database clock**, and
+  returns their units. The 30-minute TTL is far longer than the pipeline's
+  worst observed latency, so expiry only ever reclaims abandoned holds.
+
+Restock (`Order.stockRestoredAt`) credits `stock` only. Reserved units are
+already accounted for by the ledger, so a cancellation never inflates the
+counter.
+
+Availability is deliberately kept **out** of `"use cache"` catalog scopes: a
+cached page may show a slightly stale number, but every rejecting decision point
+— add to cart, cart read, order validation — recomputes it per request. Order
+validation runs on behalf of a request that already holds its own reservation,
+so it adds that request's held quantities back before comparing.
+
+Admin surfaces expose the split: the checkout-requests dashboard shows
+reservation state and expiry, variant views show on-hand / reserved / available,
+and a manual release (`orders:update`, audit-logged) exists for a stuck request.
+Editing a variant's stock below its reserved quantity is rejected with 409.
+`application_stock_reservations_total` counts each outcome
+(`granted`, `denied`, `consumed`, `released`, `expired`, `manually_released`).
+
 ### Checkout Settlement Push
 
 The payment page does not ask whether the order exists yet; it is told.
@@ -513,6 +572,7 @@ no separate cron endpoint to authenticate:
 - `retry-failed-emails` daily at 02:30 UTC
 - `refresh-exchange-rates` every 6 hours
 - `scan-abandoned-carts` daily at 10:00 UTC
+- `expire-stock-reservations` every 5 minutes
 
 Each scan fans out one event per item rather than looping in a single
 invocation, so a slow provider cannot stall the batch and every item retries

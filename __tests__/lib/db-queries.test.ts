@@ -524,12 +524,13 @@ describe('db.products.findMinimalByIds', () => {
         variants: [{ price: 100, stock: 5, reservedStock: 2 }],
       },
     ])
-    mockSelect.mockReturnValue({
+    const emptySoldCountChain = {
       from: vi.fn().mockReturnThis(),
       innerJoin: vi.fn().mockReturnThis(),
       where: vi.fn().mockReturnThis(),
       groupBy: vi.fn().mockResolvedValue([]),
-    })
+    }
+    mockSelect.mockReturnValue(emptySoldCountChain)
 
     const [result] = await db.products.findMinimalByIds(['prod001'])
 
@@ -547,12 +548,13 @@ describe('db.products.findMinimalByIds', () => {
         variants: [{ price: 100, stock: 1, reservedStock: 4 }],
       },
     ])
-    mockSelect.mockReturnValue({
+    const emptySoldCountChain = {
       from: vi.fn().mockReturnThis(),
       innerJoin: vi.fn().mockReturnThis(),
       where: vi.fn().mockReturnThis(),
       groupBy: vi.fn().mockResolvedValue([]),
-    })
+    }
+    mockSelect.mockReturnValue(emptySoldCountChain)
 
     const [result] = await db.products.findMinimalByIds(['prod001'])
 
