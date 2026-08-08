@@ -60,7 +60,10 @@ vi.mock('drizzle-orm', () => ({
   lte: (...args: unknown[]): Predicate => ({ kind: 'lte', args }),
   inArray: (...args: unknown[]): Predicate => ({ kind: 'inArray', args }),
   asc: (column: unknown) => column,
-  sql: (strings: TemplateStringsArray, ...params: unknown[]): SqlDescriptor => ({
+  sql: (
+    strings: TemplateStringsArray,
+    ...params: unknown[]
+  ): SqlDescriptor => ({
     kind: 'sql',
     text: strings.join('?'),
     params,
@@ -93,10 +96,15 @@ const store = {
 }
 
 const isSql = (value: unknown): value is SqlDescriptor =>
-  typeof value === 'object' && value !== null && (value as SqlDescriptor).kind === 'sql'
+  typeof value === 'object' &&
+  value !== null &&
+  (value as SqlDescriptor).kind === 'sql'
 
 const isPredicate = (value: unknown): value is Predicate =>
-  typeof value === 'object' && value !== null && 'kind' in (value as Predicate) && !isSql(value)
+  typeof value === 'object' &&
+  value !== null &&
+  'kind' in (value as Predicate) &&
+  !isSql(value)
 
 /** Evaluate one of the module's predicates against a candidate row. */
 const matches = (predicate: unknown, row: Record<string, unknown>): boolean => {
@@ -208,8 +216,7 @@ const makeClient = () => ({
         )
         affected.forEach((row) => applySet(row, payload))
         const result = {
-          returning: () =>
-            Promise.resolve(affected.map((row) => ({ ...row }))),
+          returning: () => Promise.resolve(affected.map((row) => ({ ...row }))),
           then: (resolve: (value: unknown) => unknown) =>
             Promise.resolve(affected.length).then(resolve),
         }
@@ -247,7 +254,7 @@ const makeClient = () => ({
 
 const fakeDb = {
   ...makeClient(),
-  transaction: async <T,>(callback: (tx: unknown) => Promise<T>): Promise<T> => {
+  transaction: async <T>(callback: (tx: unknown) => Promise<T>): Promise<T> => {
     const snapshot = {
       variants: store.variants.map((row) => ({ ...row })),
       reservations: store.reservations.map((row) => ({ ...row })),
@@ -314,8 +321,7 @@ describe('reserveForCheckoutRequest', () => {
       items: [{ variantId: 'v1', quantity: 1 }],
     })
 
-    const heldFor =
-      store.reservations[0].expiresAt.getTime() - Date.now()
+    const heldFor = store.reservations[0].expiresAt.getTime() - Date.now()
     expect(heldFor).toBeGreaterThan((RESERVATION_TTL_MINUTES - 1) * 60_000)
     expect(RESERVATION_TTL_MINUTES).toBe(30)
   })
@@ -536,7 +542,9 @@ describe('consumeForCheckoutRequest', () => {
       checkoutRequestId: 'cr1',
       items: [{ variantId: 'v1', quantity: 1 }],
     })
-    await fakeDb.transaction((tx) => consumeForCheckoutRequest(tx as never, 'cr1'))
+    await fakeDb.transaction((tx) =>
+      consumeForCheckoutRequest(tx as never, 'cr1')
+    )
 
     const replay = await fakeDb.transaction((tx) =>
       consumeForCheckoutRequest(tx as never, 'cr1')

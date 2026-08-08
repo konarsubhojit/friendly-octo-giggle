@@ -26,11 +26,14 @@ const mockRelease = vi.mocked(releaseForCheckoutRequest)
 const mockAudit = vi.mocked(recordAdminAuditLog)
 
 const makeRequest = (body: unknown = { reason: 'stuck request' }) =>
-  new NextRequest('http://localhost/api/admin/checkout-requests/cr1/reservations/release', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  })
+  new NextRequest(
+    'http://localhost/api/admin/checkout-requests/cr1/reservations/release',
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }
+  )
 
 const params = Promise.resolve({ checkoutRequestId: 'cr1abcd' })
 

@@ -36,10 +36,7 @@ export async function POST(
     })
 
     if (settlement.reservations > 0) {
-      recordStockReservationMetric(
-        'manually_released',
-        settlement.reservations
-      )
+      recordStockReservationMetric('manually_released', settlement.reservations)
     }
 
     await recordAdminAuditLog({

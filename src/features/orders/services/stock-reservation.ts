@@ -105,7 +105,10 @@ const normalizeItems = (
   const merged = new Map<string, number>()
   for (const item of items) {
     if (item.quantity <= 0) continue
-    merged.set(item.variantId, (merged.get(item.variantId) ?? 0) + item.quantity)
+    merged.set(
+      item.variantId,
+      (merged.get(item.variantId) ?? 0) + item.quantity
+    )
   }
   return [...merged.entries()]
     .map(([variantId, quantity]) => ({ variantId, quantity }))

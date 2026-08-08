@@ -12,7 +12,15 @@
  * module's branching with fakes.
  */
 
-import { describe, it, expect, beforeAll, beforeEach, afterAll, vi } from 'vitest'
+import {
+  describe,
+  it,
+  expect,
+  beforeAll,
+  beforeEach,
+  afterAll,
+  vi,
+} from 'vitest'
 
 const TEST_DATABASE_URL = process.env.RESERVATION_TEST_DATABASE_URL
 
@@ -20,7 +28,9 @@ vi.mock('@/lib/db', async () => {
   const { Pool } = await import('pg')
   const { drizzle } = await import('drizzle-orm/node-postgres')
   const schema = await import('@/lib/schema')
-  const pool = new Pool({ connectionString: process.env.RESERVATION_TEST_DATABASE_URL })
+  const pool = new Pool({
+    connectionString: process.env.RESERVATION_TEST_DATABASE_URL,
+  })
   const database = drizzle(pool, { schema })
   return {
     primaryDrizzleDb: database,

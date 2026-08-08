@@ -445,7 +445,7 @@ UPDATE "ProductVariant"
 RETURNING id
 ```
 
-Zero rows updated *is* the denial — the same compare-and-swap idiom the codebase
+Zero rows updated _is_ the denial — the same compare-and-swap idiom the codebase
 uses for coupon `usageCount` and the order stock decrement, so no two concurrent
 requests can be granted the same last unit. The grant is all-or-nothing and
 locks variants in sorted id order to avoid deadlock between overlapping carts.

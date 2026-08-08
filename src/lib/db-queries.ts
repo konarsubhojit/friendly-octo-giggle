@@ -607,7 +607,8 @@ export const db = {
           where: and(inArray(products.id, ids), isNull(products.deletedAt)),
           with: {
             variants: {
-              where: (variant, operators) => operators.isNull(variant.deletedAt),
+              where: (variant, operators) =>
+                operators.isNull(variant.deletedAt),
             },
           },
         }),

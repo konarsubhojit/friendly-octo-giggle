@@ -71,7 +71,10 @@ export default function ReleaseReservationButton({
         Release
       </button>
       {error ? (
-        <p className="mt-1 text-xs text-rose-700 dark:text-rose-300" role="alert">
+        <p
+          className="mt-1 text-xs text-rose-700 dark:text-rose-300"
+          role="alert"
+        >
           {error}
         </p>
       ) : null}

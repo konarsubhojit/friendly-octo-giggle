@@ -31,7 +31,8 @@ type FunctionInternals = {
   }>
 }
 
-const internals = expireStockReservationsFunction as unknown as FunctionInternals
+const internals =
+  expireStockReservationsFunction as unknown as FunctionInternals
 
 const scores: Array<{ name: string; value: number | boolean }> = []
 
