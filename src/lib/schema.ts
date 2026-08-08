@@ -11,6 +11,7 @@ import {
   json,
   boolean,
   uniqueIndex,
+  check,
 } from 'drizzle-orm/pg-core'
 import { relations, sql } from 'drizzle-orm'
 import type { AdapterAccountType } from '@auth/core/adapters'
@@ -63,6 +64,20 @@ export const checkoutRequestStatusEnum = pgEnum('CheckoutRequestStatus', [
   'PROCESSING',
   'COMPLETED',
   'FAILED',
+])
+
+/**
+ * Lifecycle of a stock hold.
+ *
+ * `HELD` is the only state that counts against `ProductVariant.reservedStock`;
+ * every other value is terminal and is reached by a conditional update that
+ * claims the row, so a replay claims nothing and changes nothing.
+ */
+export const stockReservationStatusEnum = pgEnum('StockReservationStatus', [
+  'HELD',
+  'CONSUMED',
+  'RELEASED',
+  'EXPIRED',
 ])
 
 export const paymentStatusEnum = pgEnum('PaymentStatus', [
@@ -342,6 +357,17 @@ export const productVariants = pgTable(
     sku: text('sku'),
     price: money('price').notNull(),
     stock: integer('stock').notNull(),
+    /**
+     * Units held by live checkout reservations.
+     *
+     * Denormalised sum of `StockReservation.quantity` for rows still `HELD`.
+     * It exists so the reservation grant can be a single conditional
+     * `UPDATE ... WHERE stock - "reservedStock" >= q` and so availability
+     * (`stock - reservedStock`) is readable from a row every catalog query
+     * already selects. Only `features/orders/services/stock-reservation.ts`
+     * and the order transaction may change it.
+     */
+    reservedStock: integer('reservedStock').notNull().default(0),
     /** Shipping weight of one unit; null falls back to the engine default. */
     weightGrams: integer('weightGrams'),
     image: text('image'),
@@ -354,6 +380,10 @@ export const productVariants = pgTable(
   (t) => [
     index('ProductVariant_productId_idx').on(t.productId),
     index('ProductVariant_deletedAt_idx').on(t.deletedAt),
+    check(
+      'ProductVariant_reservedStock_non_negative',
+      sql`${t.reservedStock} >= 0`
+    ),
   ]
 )
 
@@ -563,6 +593,49 @@ export const orderItems = pgTable(
     index('OrderItem_orderId_idx').on(t.orderId),
     index('OrderItem_productId_idx').on(t.productId),
     index('OrderItem_variantId_idx').on(t.variantId),
+  ]
+)
+
+/**
+ * One hold on a quantity of one variant, for one checkout request.
+ *
+ * The ledger is the audit trail and the unit of expiry;
+ * `ProductVariant.reservedStock` carries the summed live holds that the grant
+ * tests against. `UNIQUE (checkoutRequestId, variantId)` is what makes the
+ * grant idempotent under Inngest retries and duplicate submissions: a replay
+ * collides on the constraint and reuses the existing row instead of holding a
+ * second set of units.
+ */
+export const stockReservations = pgTable(
+  'StockReservation',
+  {
+    id: varchar('id', { length: 7 })
+      .primaryKey()
+      .$defaultFn(() => generateShortId()),
+    checkoutRequestId: varchar('checkoutRequestId', { length: 7 })
+      .notNull()
+      .references(() => checkoutRequests.id, { onDelete: 'cascade' }),
+    variantId: varchar('variantId', { length: 7 })
+      .notNull()
+      .references(() => productVariants.id, { onDelete: 'cascade' }),
+    quantity: integer('quantity').notNull(),
+    status: stockReservationStatusEnum('status').default('HELD').notNull(),
+    /** Compared against the database clock, never an instance clock. */
+    expiresAt: timestamp('expiresAt', { mode: 'date' }).notNull(),
+    /** When the hold left `HELD`; null while it is live. */
+    settledAt: timestamp('settledAt', { mode: 'date' }),
+    createdAt: timestamp('createdAt', { mode: 'date' }).defaultNow().notNull(),
+    updatedAt: timestamp('updatedAt', { mode: 'date' }).defaultNow().notNull(),
+  },
+  (t) => [
+    unique('StockReservation_checkoutRequestId_variantId_key').on(
+      t.checkoutRequestId,
+      t.variantId
+    ),
+    index('StockReservation_status_expiresAt_idx').on(t.status, t.expiresAt),
+    index('StockReservation_variantId_status_idx').on(t.variantId, t.status),
+    index('StockReservation_checkoutRequestId_idx').on(t.checkoutRequestId),
+    check('StockReservation_quantity_positive', sql`${t.quantity} > 0`),
   ]
 )
 
@@ -974,6 +1047,7 @@ export const productVariantsRelations = relations(
     optionValues: many(productVariantOptionValues),
     orderItems: many(orderItems),
     cartItems: many(cartItems),
+    reservations: many(stockReservations),
   })
 )
 
@@ -993,7 +1067,7 @@ export const productVariantOptionValuesRelations = relations(
 
 export const checkoutRequestsRelations = relations(
   checkoutRequests,
-  ({ one }) => ({
+  ({ one, many }) => ({
     user: one(users, {
       fields: [checkoutRequests.userId],
       references: [users.id],
@@ -1001,6 +1075,21 @@ export const checkoutRequestsRelations = relations(
     order: one(orders, {
       fields: [checkoutRequests.id],
       references: [orders.checkoutRequestId],
+    }),
+    reservations: many(stockReservations),
+  })
+)
+
+export const stockReservationsRelations = relations(
+  stockReservations,
+  ({ one }) => ({
+    checkoutRequest: one(checkoutRequests, {
+      fields: [stockReservations.checkoutRequestId],
+      references: [checkoutRequests.id],
+    }),
+    variant: one(productVariants, {
+      fields: [stockReservations.variantId],
+      references: [productVariants.id],
     }),
   })
 )

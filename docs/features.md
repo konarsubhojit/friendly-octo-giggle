@@ -16,6 +16,7 @@
 - Address capture and Indian pincode lookup, shipping pricing, order-policy acknowledgment, and recoverable validation/errors.
 - Staged shipping, payment, review, and confirmation pages.
 - Idempotent checkout requests persisted before Inngest processing, with a pushed completion status (Realtime → SSE) and duplicate-order protection.
+- Inventory reservations taken atomically at checkout acceptance, consumed with the order, released on failure, and expired by a five-minute sweep, so queued requests cannot oversell the shelf.
 - Pluggable payment gateways behind a single `PaymentGateway` interface: Razorpay (online capture with signed verification and webhook reconciliation) and Cash on Delivery (order stays `PENDING` and settles to `PAID` when delivery is confirmed).
 - Authenticated order history, hybrid order search, compact item summaries, detail/status tracking, and transactional emails.
 
@@ -40,6 +41,7 @@
 - Product option generation, variant reorder, category drag/reorder, soft deletion, image upload, and stock management.
 - Bulk product/order actions, product CSV import, CSV exports for products/orders/users/reviews, and sales export.
 - Order status/tracking controls, user role changes, review moderation, search reindexing, queue visibility, and audit logging.
+- Reservation visibility on checkout requests and variants (on-hand/reserved/available), audited manual release of a stuck hold, and rejection of stock edits below reserved quantity.
 
 ## Platform operations
 

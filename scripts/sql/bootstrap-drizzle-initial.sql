@@ -92,6 +92,11 @@ SELECT drizzle.ensure_public_enum(
 );
 
 SELECT drizzle.ensure_public_enum(
+  'StockReservationStatus',
+  'CREATE TYPE public."StockReservationStatus" AS ENUM (''HELD'', ''CONSUMED'', ''RELEASED'', ''EXPIRED'')'
+);
+
+SELECT drizzle.ensure_public_enum(
   'UserRole',
   'CREATE TYPE public."UserRole" AS ENUM (''CUSTOMER'', ''ADMIN'', ''SUPPORT'', ''FULFILMENT'')'
 );
@@ -440,6 +445,18 @@ CREATE TABLE IF NOT EXISTS public."WebhookEvent" (
   "processedAt" timestamp without time zone
 );
 
+CREATE TABLE IF NOT EXISTS public."StockReservation" (
+  "id" character varying(7) NOT NULL,
+  "checkoutRequestId" character varying(7) NOT NULL,
+  "variantId" character varying(7) NOT NULL,
+  "quantity" integer NOT NULL,
+  "status" public."StockReservationStatus" DEFAULT 'HELD' NOT NULL,
+  "expiresAt" timestamp without time zone NOT NULL,
+  "settledAt" timestamp without time zone,
+  "createdAt" timestamp without time zone DEFAULT now() NOT NULL,
+  "updatedAt" timestamp without time zone DEFAULT now() NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS public."Wishlist" (
   "id" character varying(7) NOT NULL,
   "userId" text NOT NULL,
@@ -560,6 +577,7 @@ ALTER TABLE public."ProductVariant" ADD COLUMN IF NOT EXISTS "deletedAt" timesta
 ALTER TABLE public."ProductVariant" ADD COLUMN IF NOT EXISTS "createdAt" timestamp without time zone DEFAULT now() NOT NULL;
 ALTER TABLE public."ProductVariant" ADD COLUMN IF NOT EXISTS "updatedAt" timestamp without time zone DEFAULT now() NOT NULL;
 ALTER TABLE public."ProductVariant" ADD COLUMN IF NOT EXISTS "weightGrams" integer;
+ALTER TABLE public."ProductVariant" ADD COLUMN IF NOT EXISTS "reservedStock" integer DEFAULT 0 NOT NULL;
 
 ALTER TABLE public."Review" ADD COLUMN IF NOT EXISTS "orderId" character varying(10);
 ALTER TABLE public."Review" ADD COLUMN IF NOT EXISTS "userId" text;
@@ -836,6 +854,50 @@ BEGIN
       AND (conname = 'ProductVariant_pkey' OR pg_get_constraintdef(oid) = 'PRIMARY KEY (id)')
   ) THEN
     EXECUTE 'ALTER TABLE public."ProductVariant" ADD CONSTRAINT "ProductVariant_pkey" PRIMARY KEY (id)';
+  END IF;
+END
+$$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."StockReservation"'::regclass
+      AND (conname = 'StockReservation_pkey' OR pg_get_constraintdef(oid) = 'PRIMARY KEY (id)')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."StockReservation" ADD CONSTRAINT "StockReservation_pkey" PRIMARY KEY (id)';
+  END IF;
+END
+$$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."StockReservation"'::regclass
+      AND (conname = 'StockReservation_checkoutRequestId_variantId_key' OR pg_get_constraintdef(oid) = 'UNIQUE ("checkoutRequestId", "variantId")')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."StockReservation" ADD CONSTRAINT "StockReservation_checkoutRequestId_variantId_key" UNIQUE ("checkoutRequestId", "variantId")';
+  END IF;
+END
+$$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."StockReservation"'::regclass
+      AND conname = 'StockReservation_quantity_positive'
+  ) THEN
+    EXECUTE 'ALTER TABLE public."StockReservation" ADD CONSTRAINT "StockReservation_quantity_positive" CHECK ("quantity" > 0)';
+  END IF;
+END
+$$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."ProductVariant"'::regclass
+      AND conname = 'ProductVariant_reservedStock_non_negative'
+  ) THEN
+    EXECUTE 'ALTER TABLE public."ProductVariant" ADD CONSTRAINT "ProductVariant_reservedStock_non_negative" CHECK ("reservedStock" >= 0)';
   END IF;
 END
 $$;
@@ -1536,6 +1598,28 @@ DO $$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."StockReservation"'::regclass
+      AND (conname = 'StockReservation_checkoutRequestId_CheckoutRequest_id_fk' OR pg_get_constraintdef(oid) = 'FOREIGN KEY ("checkoutRequestId") REFERENCES "CheckoutRequest"(id) ON DELETE CASCADE')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."StockReservation" ADD CONSTRAINT "StockReservation_checkoutRequestId_CheckoutRequest_id_fk" FOREIGN KEY ("checkoutRequestId") REFERENCES "CheckoutRequest"(id) ON DELETE CASCADE';
+  END IF;
+END
+$$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."StockReservation"'::regclass
+      AND (conname = 'StockReservation_variantId_ProductVariant_id_fk' OR pg_get_constraintdef(oid) = 'FOREIGN KEY ("variantId") REFERENCES "ProductVariant"(id) ON DELETE CASCADE')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."StockReservation" ADD CONSTRAINT "StockReservation_variantId_ProductVariant_id_fk" FOREIGN KEY ("variantId") REFERENCES "ProductVariant"(id) ON DELETE CASCADE';
+  END IF;
+END
+$$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
     WHERE conrelid = 'public."Refund"'::regclass
       AND (conname = 'Refund_orderId_Order_id_fk' OR pg_get_constraintdef(oid) = 'FOREIGN KEY ("orderId") REFERENCES "Order"(id) ON DELETE CASCADE')
   ) THEN
@@ -1609,6 +1693,9 @@ CREATE INDEX IF NOT EXISTS "Coupon_endsAt_idx" ON public."Coupon" USING btree ("
 CREATE INDEX IF NOT EXISTS "CouponRedemption_couponId_idx" ON public."CouponRedemption" USING btree ("couponId");
 CREATE INDEX IF NOT EXISTS "CouponRedemption_userId_idx" ON public."CouponRedemption" USING btree ("userId");
 CREATE INDEX IF NOT EXISTS "CouponRedemption_createdAt_idx" ON public."CouponRedemption" USING btree ("createdAt");
+CREATE INDEX IF NOT EXISTS "StockReservation_status_expiresAt_idx" ON public."StockReservation" USING btree (status, "expiresAt");
+CREATE INDEX IF NOT EXISTS "StockReservation_variantId_status_idx" ON public."StockReservation" USING btree ("variantId", status);
+CREATE INDEX IF NOT EXISTS "StockReservation_checkoutRequestId_idx" ON public."StockReservation" USING btree ("checkoutRequestId");
 CREATE INDEX IF NOT EXISTS "Product_category_idx" ON public."Product" USING btree (category);
 CREATE INDEX IF NOT EXISTS "Product_createdAt_idx" ON public."Product" USING btree ("createdAt");
 CREATE INDEX IF NOT EXISTS "Product_deletedAt_idx" ON public."Product" USING btree ("deletedAt");
@@ -1732,6 +1819,13 @@ INSERT INTO drizzle.__drizzle_migrations (hash, created_at)
 SELECT 'ac1d03c3c3fe63ccd277a072caa461cba9dbedbb6fd20e16a2cf8e6097a0ead9', 1785696565550
 WHERE NOT EXISTS (
   SELECT 1 FROM drizzle.__drizzle_migrations WHERE created_at = 1785696565550
+);
+
+-- 0015_stock_reservations
+INSERT INTO drizzle.__drizzle_migrations (hash, created_at)
+SELECT '41bdff6f9153a0d1985bad0117e314375432b47e728f359df446123025399adb', 1786149568311
+WHERE NOT EXISTS (
+  SELECT 1 FROM drizzle.__drizzle_migrations WHERE created_at = 1786149568311
 );
 
 DROP FUNCTION drizzle.ensure_public_enum(text, text);

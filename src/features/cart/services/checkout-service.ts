@@ -43,6 +43,11 @@ import { publishWithTimeout } from '@/lib/inngest/dispatch'
 import { publishCheckoutStatus } from '@/lib/inngest/realtime'
 import { checkoutSession } from '@/lib/inngest/sessions'
 import { checkoutRequestCreated } from '@/features/cart/inngest/events'
+import {
+  getReservationsForCheckoutRequests,
+  releaseForCheckoutRequest,
+  reserveForCheckoutRequest,
+} from '@/features/orders/services/stock-reservation'
 import type { CheckoutPaymentInput } from '@/lib/types'
 
 export interface CheckoutSessionUser {
@@ -63,6 +68,12 @@ export interface AdminCheckoutRequestRecord {
   readonly orderId: string | null
   readonly createdAt: string
   readonly updatedAt: string
+  /** Live hold for this request; `null` once every reservation has settled. */
+  readonly reservation: {
+    readonly heldQuantity: number
+    readonly status: string
+    readonly expiresAt: string | null
+  } | null
 }
 
 interface RecentCheckoutRequestFilters {
@@ -220,9 +231,30 @@ const updateCheckoutRequestStatus = async (
 
 const findCheckoutRequestById = (checkoutRequestId: string) =>
   db.checkoutRequests.findById(checkoutRequestId)
-
 const findCreatedOrderForCheckout = (checkoutRequestId: string) =>
   db.orders.findFirstByCheckoutRequestId(checkoutRequestId)
+
+/**
+ * Return the held units for a request that has just reached `FAILED`.
+ *
+ * Best-effort by design: the request is already terminal, and the expiry sweep
+ * is the backstop, so a release failure must not mask the original error or
+ * turn a terminal failure into a retry.
+ */
+const releaseReservationsForFailedRequest = async (
+  checkoutRequestId: string,
+  reason: string
+): Promise<void> => {
+  try {
+    await releaseForCheckoutRequest({ checkoutRequestId, reason })
+  } catch (error) {
+    logError({
+      error,
+      context: 'checkout_reservation_release_failed',
+      additionalInfo: { checkoutRequestId, reason },
+    })
+  }
+}
 
 export const getRecentCheckoutRequests = async (
   filters: RecentCheckoutRequestFilters = {}
@@ -232,7 +264,7 @@ export const getRecentCheckoutRequests = async (
 
   const normalizedSearch = search?.trim().toLowerCase() ?? ''
 
-  return rows
+  const filtered = rows
     .map((row) => ({
       id: row.id,
       userId: row.userId,
@@ -270,6 +302,26 @@ export const getRecentCheckoutRequests = async (
       )
     })
     .slice(0, limit)
+
+  // One batched lookup for the whole page; a per-row query would make this
+  // dashboard 50 round trips.
+  const reservations = await getReservationsForCheckoutRequests(
+    filtered.map((record) => record.id)
+  )
+
+  return filtered.map((record) => {
+    const summary = reservations.get(record.id)
+    return {
+      ...record,
+      reservation: summary
+        ? {
+            heldQuantity: summary.heldQuantity,
+            status: summary.status,
+            expiresAt: summary.expiresAt?.toISOString() ?? null,
+          }
+        : null,
+    }
+  })
 }
 
 export const recoverCheckoutRequestAfterRetryExhaustion = async ({
@@ -303,6 +355,10 @@ export const recoverCheckoutRequestAfterRetryExhaustion = async ({
 
   const errorMessage = buildRetryExhaustedMessage(deliveryCount, error)
   await updateCheckoutRequestStatus(checkoutRequestId, 'FAILED', errorMessage)
+  await releaseReservationsForFailedRequest(
+    checkoutRequestId,
+    'retry_exhausted'
+  )
 
   logBusinessEvent({
     event: 'checkout_request_retry_exhausted',
@@ -430,6 +486,39 @@ export const enqueueCheckoutForUser = async ({
     paymentTransactionId: storedPayment?.paymentId ?? null,
     paymentSignature: storedPayment?.signature ?? null,
     status: 'PENDING',
+  })
+
+  // Hold the stock before the request reaches the queue. Everything after this
+  // point works against units this request already owns, so the window between
+  // validation and the pipeline's decrement can no longer be oversold.
+  const reservation = await reserveForCheckoutRequest({
+    checkoutRequestId: checkoutRequest.id,
+    items: normalized.items,
+  })
+
+  if (!reservation.granted) {
+    const reason = `Insufficient stock for ${reservation.unavailableVariantIds.join(', ')}`
+    await updateCheckoutRequestStatus(checkoutRequest.id, 'FAILED', reason)
+    logBusinessEvent({
+      event: 'checkout_reservation_denied',
+      details: {
+        checkoutRequestId: checkoutRequest.id,
+        userId: user.id,
+        unavailableVariantIds: reservation.unavailableVariantIds,
+      },
+      success: false,
+    })
+    throw new CheckoutRequestError(reason, 409)
+  }
+
+  logBusinessEvent({
+    event: 'checkout_reservation_granted',
+    details: {
+      checkoutRequestId: checkoutRequest.id,
+      userId: user.id,
+      variantCount: reservation.heldVariantIds.length,
+    },
+    success: true,
   })
 
   try {
@@ -804,6 +893,10 @@ export const recordCheckoutProcessingFailure = async (
       checkoutRequestId,
       'FAILED',
       error.message
+    )
+    await releaseReservationsForFailedRequest(
+      checkoutRequestId,
+      'checkout_failed'
     )
     logBusinessEvent({
       event: 'checkout_request_failed',

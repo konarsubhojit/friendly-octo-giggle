@@ -407,7 +407,7 @@ describe('order-service', () => {
             {
               id: 'p1',
               name: 'Widget',
-              variants: [{ id: 'v1', price: 75, stock: 5 }],
+              variants: [{ id: 'v1', price: 75, stock: 5, availableStock: 5 }],
             },
           ] as never
         )
@@ -423,7 +423,7 @@ describe('order-service', () => {
             {
               id: 'p1',
               name: 'Widget',
-              variants: [{ id: 'v1', price: 75, stock: 1 }],
+              variants: [{ id: 'v1', price: 75, stock: 1, availableStock: 1 }],
             },
           ] as never
         )
@@ -473,7 +473,7 @@ describe('order-service', () => {
             {
               id: 'p1',
               name: 'Widget',
-              variants: [{ id: 'v1', price: 100, stock: 1 }],
+              variants: [{ id: 'v1', price: 100, stock: 1, availableStock: 1 }],
             },
           ] as never,
           totals: {
@@ -690,7 +690,7 @@ describe('order-service', () => {
         {
           id: 'p1',
           name: 'Widget',
-          variants: [{ id: 'v1', price: 100, stock: 0 }],
+          variants: [{ id: 'v1', price: 100, stock: 0, availableStock: 0 }],
         },
       ])
 
@@ -719,7 +719,7 @@ describe('order-service', () => {
         {
           id: 'p1',
           name: 'Widget',
-          variants: [{ id: 'v1', price: 120, stock: 5 }],
+          variants: [{ id: 'v1', price: 120, stock: 5, availableStock: 5 }],
         },
       ])
 
@@ -766,7 +766,7 @@ describe('order-service', () => {
         {
           id: 'p1',
           name: 'Widget',
-          variants: [{ id: 'v1', price: 100, stock: 10 }],
+          variants: [{ id: 'v1', price: 100, stock: 10, availableStock: 10 }],
         },
       ])
 
@@ -849,7 +849,7 @@ describe('order-service', () => {
         {
           id: 'p1',
           name: 'Widget',
-          variants: [{ id: 'v1', price: 100, stock: 10 }],
+          variants: [{ id: 'v1', price: 100, stock: 10, availableStock: 10 }],
         },
       ])
       mockDbOrdersCreateWithItems.mockResolvedValue({ id: 'ord_cod' })
@@ -940,7 +940,7 @@ describe('order-service', () => {
         {
           id: 'p1',
           name: 'Widget',
-          variants: [{ id: 'v1', price: 100, stock: 10 }],
+          variants: [{ id: 'v1', price: 100, stock: 10, availableStock: 10 }],
         },
       ])
 
@@ -1005,7 +1005,7 @@ describe('order-service', () => {
         {
           id: 'p1',
           name: 'Widget',
-          variants: [{ id: 'v1', price: 100, stock: 10 }],
+          variants: [{ id: 'v1', price: 100, stock: 10, availableStock: 10 }],
         },
       ])
 
@@ -1043,7 +1043,7 @@ describe('order-service', () => {
         {
           id: 'p1',
           name: 'Widget',
-          variants: [{ id: 'v1', price: 50, stock: 10 }],
+          variants: [{ id: 'v1', price: 50, stock: 10, availableStock: 10 }],
         },
       ])
 
@@ -1119,7 +1119,7 @@ describe('order-service', () => {
         {
           id: 'p1',
           name: 'Widget',
-          variants: [{ id: 'v1', price: 100, stock: 1 }],
+          variants: [{ id: 'v1', price: 100, stock: 1, availableStock: 1 }],
         },
       ])
 
@@ -1152,12 +1152,12 @@ describe('order-service', () => {
         {
           id: 'p1',
           name: 'Widget A',
-          variants: [{ id: 'v1', price: 100, stock: 5 }],
+          variants: [{ id: 'v1', price: 100, stock: 5, availableStock: 5 }],
         },
         {
           id: 'p2',
           name: 'Widget B',
-          variants: [{ id: 'v2', price: 50, stock: 1 }],
+          variants: [{ id: 'v2', price: 50, stock: 1, availableStock: 1 }],
         },
       ])
 
@@ -1236,7 +1236,7 @@ describe('order-service', () => {
             id: 'p1',
             name: 'Widget',
             category: 'cat-a',
-            variants: [{ id: 'v1', price: 100, stock: 10 }],
+            variants: [{ id: 'v1', price: 100, stock: 10, availableStock: 10 }],
           },
         ])
         mockDbCouponsCountUserRedemptions.mockResolvedValue({})

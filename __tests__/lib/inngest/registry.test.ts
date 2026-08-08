@@ -15,6 +15,7 @@ const EXPECTED_FUNCTION_IDS = [
   'scan-abandoned-carts',
   'send-abandoned-cart-reminder',
   'refresh-exchange-rates',
+  'expire-stock-reservations',
   'cart-recovery-scorer',
 ]
 

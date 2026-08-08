@@ -34,6 +34,7 @@ const mockVariant = {
   sku: null,
   price: 150,
   stock: 0,
+  reservedStock: 0,
   weightGrams: null,
   image: null,
   images: [] as string[],

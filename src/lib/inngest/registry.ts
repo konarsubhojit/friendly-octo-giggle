@@ -32,6 +32,7 @@ import {
   retrySingleEmailFunction,
 } from '@/lib/inngest/functions/email-retry'
 import { refreshExchangeRatesFunction } from '@/lib/inngest/functions/exchange-rates'
+import { expireStockReservationsFunction } from '@/lib/inngest/functions/stock-reservations'
 
 export const inngestFunctions = [
   processCheckoutRequestFunction,
@@ -46,5 +47,6 @@ export const inngestFunctions = [
   scanAbandonedCartsFunction,
   sendAbandonedCartReminderFunction,
   refreshExchangeRatesFunction,
+  expireStockReservationsFunction,
   cartRecoveryScorer,
 ] as const

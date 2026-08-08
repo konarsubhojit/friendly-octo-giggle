@@ -90,7 +90,7 @@ describe('VariantList', () => {
   it('renders variant cards with correct data', () => {
     render(<VariantList productId="abc1234" initialVariants={[mockVariant]} />)
     expect(screen.getByText('RED-LG')).toBeInTheDocument()
-    expect(screen.getByText('25 in stock')).toBeInTheDocument()
+    expect(screen.getByText('25 on hand')).toBeInTheDocument()
     expect(screen.getByText('Variants (1)')).toBeInTheDocument()
   })
 
@@ -191,7 +191,7 @@ describe('VariantList', () => {
     })
 
     await waitFor(() => {
-      expect(screen.getByText('30 in stock')).toBeInTheDocument()
+      expect(screen.getByText('30 on hand')).toBeInTheDocument()
       expect(screen.getByText('$200.00')).toBeInTheDocument()
     })
   })

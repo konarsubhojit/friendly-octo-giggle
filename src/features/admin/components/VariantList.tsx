@@ -6,6 +6,7 @@ import type { ProductVariant } from '@/lib/types'
 import toast from 'react-hot-toast'
 import { useCurrency } from '@/contexts/CurrencyContext'
 import { getVariantTotalStock } from '@/features/product/variant-utils'
+import { availableUnits } from '@/lib/stock-availability'
 
 const VariantFormModal = lazy(
   () => import('@/features/admin/components/VariantFormModal')
@@ -289,7 +290,11 @@ const VariantCard = ({
                   )}
                 </p>
                 <p className="text-xs text-slate-500">
-                  {variant.stock} in stock
+                  {variant.stock} on hand
+                </p>
+                <p className="text-xs text-slate-500">
+                  {variant.reservedStock ?? 0} reserved ·{' '}
+                  {availableUnits(variant)} available
                 </p>
               </div>
             </div>
@@ -465,6 +470,14 @@ const VariantList = ({ productId, initialVariants }: VariantListProps) => {
   }
 
   const totalVariantStock = getVariantTotalStock(variants)
+  const totalReservedStock = variants.reduce(
+    (sum, variant) => sum + (variant.reservedStock ?? 0),
+    0
+  )
+  const totalAvailableStock = variants.reduce(
+    (sum, variant) => sum + availableUnits(variant),
+    0
+  )
   const stockedVariants = variants.filter((variant) => variant.stock > 0).length
 
   const handleAddClick = () => {
@@ -706,10 +719,26 @@ const VariantList = ({ productId, initialVariants }: VariantListProps) => {
         <div className="flex flex-wrap gap-3">
           <div className="rounded-2xl bg-slate-100 px-4 py-3 text-sm dark:bg-slate-800/90">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-              Total stock
+              On hand
             </p>
             <p className="mt-2 text-lg font-bold text-slate-950 dark:text-slate-50">
               {totalVariantStock}
+            </p>
+          </div>
+          <div className="rounded-2xl bg-amber-50 px-4 py-3 text-sm dark:bg-amber-950/40">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700">
+              Reserved
+            </p>
+            <p className="mt-2 text-lg font-bold text-slate-950 dark:text-slate-50">
+              {totalReservedStock}
+            </p>
+          </div>
+          <div className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm dark:bg-emerald-950/40">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">
+              Available
+            </p>
+            <p className="mt-2 text-lg font-bold text-slate-950 dark:text-slate-50">
+              {totalAvailableStock}
             </p>
           </div>
           <div className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm dark:bg-emerald-950/40">

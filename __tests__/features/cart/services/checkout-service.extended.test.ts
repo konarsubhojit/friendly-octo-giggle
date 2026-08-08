@@ -71,6 +71,18 @@ vi.mock('@/features/orders/services/order-service', () => ({
     error instanceof Error && 'status' in error,
 }))
 
+const mockReserveForCheckoutRequest = vi.hoisted(() =>
+  vi.fn(async () => ({ granted: true, heldVariantIds: [] }))
+)
+const mockReleaseForCheckoutRequest = vi.hoisted(() =>
+  vi.fn(async () => ({ reservations: 0, quantity: 0 }))
+)
+
+vi.mock('@/features/orders/services/stock-reservation', () => ({
+  reserveForCheckoutRequest: mockReserveForCheckoutRequest,
+  releaseForCheckoutRequest: mockReleaseForCheckoutRequest,
+}))
+
 vi.mock('@/lib/payments', () => ({
   ensurePaymentProviderConfigured: m.ensurePaymentProviderConfigured,
   PaymentConfigurationError: PaymentConfigError,
