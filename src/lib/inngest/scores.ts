@@ -40,6 +40,8 @@ export const SCORE_NAMES = {
   reservationExpirySweepDrained: 'reservation-expiry-sweep-drained',
   /** Quality — did the order reach the Redis search mirror? */
   orderIndexed: 'order-indexed',
+  /** Quality — did the nightly scoring run write any usable affinity pairs? */
+  affinityComputed: 'affinity-computed',
 } as const
 
 /**

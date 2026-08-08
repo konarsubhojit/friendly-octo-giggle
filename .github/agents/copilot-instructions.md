@@ -1,8 +1,11 @@
 # friendly-octo-giggle Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2026-04-05
+Auto-generated from all feature plans. Last updated: 2026-08-08
 
 ## Active Technologies
+
+- TypeScript 6.0 (strict), React 19.2, Next.js 16.3 App Router + Drizzle ORM 0.45, Inngest 4.13, Upstash Redis 1.38, Zod 4.4, Tailwind CSS v4.3 (017-personalized-recommendations)
+- PostgreSQL (Neon Serverless) — one new table `ProductAffinityScore`; Upstash Redis for read caching (017-personalized-recommendations)
 
 - TypeScript 6.0.2 with `strict: true` + React 19.2, Next.js 16.2 (App Router), zenput@1.0.1, (004-zenput-admin-integration)
 - N/A — no schema or data layer changes (004-zenput-admin-integration)
@@ -36,11 +39,11 @@ TypeScript 5.9 on Next.js 16.1.6 (App Router): Follow standard conventions
 
 ## Recent Changes
 
+- 017-personalized-recommendations: Added TypeScript 6.0 (strict), React 19.2, Next.js 16.3 App Router + Drizzle ORM 0.45, Inngest 4.13, Upstash Redis 1.38, Zod 4.4, Tailwind CSS v4.3
+
 - 004-zenput-admin-integration: Added TypeScript 6.0.2 with `strict: true` + React 19.2, Next.js 16.2 (App Router), zenput@1.0.1,
 
 - 003-order-policy-dialog: Added TypeScript 5.9.3, React 19.2.4, Next.js 16.1.6 + Next.js App Router, Redux Toolkit, NextAuth v5 beta, Tailwind CSS v4, react-hot-toast, Zod, Drizzle ORM
-
-- 002-admin-variation-management: Added TypeScript 5.9, React 19.2, Next.js 16.1 + Drizzle ORM 0.45, Redux Toolkit 2.11, Zod 4.3, Tailwind CSS v4.1, NextAuth v5, Vercel Blob
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->

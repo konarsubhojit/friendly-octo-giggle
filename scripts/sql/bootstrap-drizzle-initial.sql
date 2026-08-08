@@ -464,6 +464,16 @@ CREATE TABLE IF NOT EXISTS public."Wishlist" (
   "createdAt" timestamp without time zone DEFAULT now() NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS public."ProductAffinityScore" (
+  "id" character varying(7) NOT NULL,
+  "anchorProductId" character varying(7) NOT NULL,
+  "recommendedProductId" character varying(7) NOT NULL,
+  "score" double precision NOT NULL,
+  "support" integer NOT NULL,
+  "source" text DEFAULT 'combined' NOT NULL,
+  "computedAt" timestamp without time zone DEFAULT now() NOT NULL
+);
+
 -- ─── Column catch-up ─────────────────────────────────────
 -- Adds columns introduced by later migrations to databases created from an
 -- earlier snapshot. Columns that are NOT NULL without a default are omitted
@@ -905,6 +915,50 @@ DO $$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."ProductAffinityScore"'::regclass
+      AND (conname = 'ProductAffinityScore_pkey' OR pg_get_constraintdef(oid) = 'PRIMARY KEY (id)')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."ProductAffinityScore" ADD CONSTRAINT "ProductAffinityScore_pkey" PRIMARY KEY (id)';
+  END IF;
+END
+$$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."ProductAffinityScore"'::regclass
+      AND (conname = 'ProductAffinityScore_anchor_recommended_key' OR pg_get_constraintdef(oid) = 'UNIQUE ("anchorProductId", "recommendedProductId")')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."ProductAffinityScore" ADD CONSTRAINT "ProductAffinityScore_anchor_recommended_key" UNIQUE ("anchorProductId", "recommendedProductId")';
+  END IF;
+END
+$$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."ProductAffinityScore"'::regclass
+      AND conname = 'ProductAffinityScore_no_self_reference'
+  ) THEN
+    EXECUTE 'ALTER TABLE public."ProductAffinityScore" ADD CONSTRAINT "ProductAffinityScore_no_self_reference" CHECK ("anchorProductId" <> "recommendedProductId")';
+  END IF;
+END
+$$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."ProductAffinityScore"'::regclass
+      AND conname = 'ProductAffinityScore_support_positive'
+  ) THEN
+    EXECUTE 'ALTER TABLE public."ProductAffinityScore" ADD CONSTRAINT "ProductAffinityScore_support_positive" CHECK ("support" >= 1)';
+  END IF;
+END
+$$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
     WHERE conrelid = 'public."Review"'::regclass
       AND (conname = 'Review_pkey' OR pg_get_constraintdef(oid) = 'PRIMARY KEY (id)')
   ) THEN
@@ -1239,6 +1293,28 @@ BEGIN
       AND (conname = 'Address_userId_User_id_fk' OR pg_get_constraintdef(oid) = 'FOREIGN KEY ("userId") REFERENCES "User"(id) ON DELETE CASCADE')
   ) THEN
     EXECUTE 'ALTER TABLE public."Address" ADD CONSTRAINT "Address_userId_User_id_fk" FOREIGN KEY ("userId") REFERENCES "User"(id) ON DELETE CASCADE';
+  END IF;
+END
+$$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."ProductAffinityScore"'::regclass
+      AND (conname = 'ProductAffinityScore_anchorProductId_Product_id_fk' OR pg_get_constraintdef(oid) = 'FOREIGN KEY ("anchorProductId") REFERENCES "Product"(id) ON DELETE CASCADE')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."ProductAffinityScore" ADD CONSTRAINT "ProductAffinityScore_anchorProductId_Product_id_fk" FOREIGN KEY ("anchorProductId") REFERENCES "Product"(id) ON DELETE CASCADE';
+  END IF;
+END
+$$;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public."ProductAffinityScore"'::regclass
+      AND (conname = 'ProductAffinityScore_recommendedProductId_Product_id_fk' OR pg_get_constraintdef(oid) = 'FOREIGN KEY ("recommendedProductId") REFERENCES "Product"(id) ON DELETE CASCADE')
+  ) THEN
+    EXECUTE 'ALTER TABLE public."ProductAffinityScore" ADD CONSTRAINT "ProductAffinityScore_recommendedProductId_Product_id_fk" FOREIGN KEY ("recommendedProductId") REFERENCES "Product"(id) ON DELETE CASCADE';
   END IF;
 END
 $$;
@@ -1711,6 +1787,9 @@ CREATE INDEX IF NOT EXISTS "Refund_createdAt_idx" ON public."Refund" USING btree
 CREATE UNIQUE INDEX IF NOT EXISTS "Refund_gatewayRefundId_key" ON public."Refund" USING btree ("gatewayRefundId");
 CREATE INDEX IF NOT EXISTS "WebhookEvent_receivedAt_idx" ON public."WebhookEvent" USING btree ("receivedAt");
 CREATE INDEX IF NOT EXISTS "Wishlist_userId_idx" ON public."Wishlist" USING btree ("userId");
+CREATE INDEX IF NOT EXISTS "ProductAffinityScore_anchor_score_idx" ON public."ProductAffinityScore" USING btree ("anchorProductId", "score" DESC NULLS LAST);
+CREATE INDEX IF NOT EXISTS "ProductAffinityScore_recommendedProductId_idx" ON public."ProductAffinityScore" USING btree ("recommendedProductId");
+CREATE INDEX IF NOT EXISTS "ProductAffinityScore_computedAt_idx" ON public."ProductAffinityScore" USING btree ("computedAt");
 
 -- ─── Migration bookkeeping ───────────────────────────────
 -- Record every bundled migration so `drizzle-kit migrate` treats this database
@@ -1826,6 +1905,13 @@ INSERT INTO drizzle.__drizzle_migrations (hash, created_at)
 SELECT '41bdff6f9153a0d1985bad0117e314375432b47e728f359df446123025399adb', 1786149568311
 WHERE NOT EXISTS (
   SELECT 1 FROM drizzle.__drizzle_migrations WHERE created_at = 1786149568311
+);
+
+-- 0016_organic_selene
+INSERT INTO drizzle.__drizzle_migrations (hash, created_at)
+SELECT 'e4c7dc4d13b911d67954ef2ce25fd608918c5463195fa675e2291752a48fe44b', 1786158485623
+WHERE NOT EXISTS (
+  SELECT 1 FROM drizzle.__drizzle_migrations WHERE created_at = 1786158485623
 );
 
 DROP FUNCTION drizzle.ensure_public_enum(text, text);

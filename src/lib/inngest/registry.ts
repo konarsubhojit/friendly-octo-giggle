@@ -27,6 +27,7 @@ import {
   invalidateOrderCachesFunction,
 } from '@/features/orders/inngest/side-effects'
 import { sendAuthEmailFunction } from '@/features/auth/inngest/emails'
+import { computeProductAffinityFunction } from '@/features/recommendations/inngest/affinity'
 import {
   retryFailedEmailsFunction,
   retrySingleEmailFunction,
@@ -48,5 +49,6 @@ export const inngestFunctions = [
   sendAbandonedCartReminderFunction,
   refreshExchangeRatesFunction,
   expireStockReservationsFunction,
+  computeProductAffinityFunction,
   cartRecoveryScorer,
 ] as const

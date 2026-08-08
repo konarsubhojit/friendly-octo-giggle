@@ -94,6 +94,12 @@ const NAV_GROUPS: readonly NavGroup[] = [
         permission: 'system:manage',
       },
       {
+        href: '/admin/recommendations',
+        label: 'Recommendations',
+        keywords: ['affinity', 'scores', 'rails', 'cross-sell'],
+        permission: 'system:manage',
+      },
+      {
         href: '/admin/checkout-requests',
         label: 'Checkout Queue',
         keywords: ['checkout', 'queue', 'orders', 'worker'],

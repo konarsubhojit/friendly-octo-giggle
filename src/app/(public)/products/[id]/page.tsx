@@ -5,6 +5,8 @@ import type { Metadata } from 'next'
 import { Product } from '@/lib/types'
 import ProductClient from './ProductClient'
 import ProductDetailSkeleton from '@/components/skeletons/ProductDetailSkeleton'
+import RecommendationRailSkeleton from '@/components/skeletons/RecommendationRailSkeleton'
+import { ProductRecommendations } from '@/features/recommendations/components/RecommendationSections'
 import { db } from '@/lib/db'
 import { productTag } from '@/lib/cache-tags'
 import { isAiEnabled } from '@/lib/edge-config'
@@ -163,9 +165,22 @@ const ProductPage = async ({
   }
 
   return (
-    <Suspense fallback={<ProductDetailSkeleton />}>
-      <ProductDetail product={product} searchParams={searchParams} />
-    </Suspense>
+    <>
+      <Suspense fallback={<ProductDetailSkeleton />}>
+        <ProductDetail product={product} searchParams={searchParams} />
+      </Suspense>
+      {/*
+        Below the fold and in its own boundary, so the rail streams after the
+        product has painted. It is never awaited in the page body, which is
+        what keeps it off the LCP path.
+      */}
+      <Suspense fallback={<RecommendationRailSkeleton />}>
+        <ProductRecommendations
+          anchorProductId={product.id}
+          category={product.category}
+        />
+      </Suspense>
+    </>
   )
 }
 

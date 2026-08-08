@@ -8,6 +8,7 @@
 - Product catalog with category, price, stock, rating, variant-count, and sort controls.
 - Search suggestions, zero-result recovery, trending discovery, click analytics, and database fallback when hosted search is unavailable.
 - Product details with image galleries, multidimensional option selection, variant-specific price/stock/media, reviews and voting, sharing links, recently viewed products, and bestsellers.
+- Personalized recommendation rails on the product page, the cart, the `/shop` landing page, and the zero-result search state. Affinity scores are recomputed nightly at 04:00 UTC from three server-side signals over a rolling 180-day window: order co-purchase (weight 1.0), wishlist co-occurrence (0.5), and share co-occurrence (0.25). Associations backed by fewer than three distinct orders or shoppers are discarded during aggregation, which suppresses both statistical noise and any inference of an individual basket. Every surface falls back to category-scoped bestsellers when scores are absent, fully filtered out, or Redis is unavailable, so a rail is never empty and a cache outage never breaks a page. Recommendation responses expose an availability boolean only — never an inventory or sales count. Recently viewed products act as client-supplied anchor seeds at selection time and are never persisted server-side, so a guest leaves no profile behind.
 - AI product assistant for guests and authenticated customers. Guest identity is one-way hashed, history is persisted only for signed-in users, and exact stock counts are not disclosed.
 
 ## Cart, checkout, and orders
@@ -37,7 +38,8 @@
 
 ## Administration
 
-- Responsive dashboards for products, variants/options, categories, orders, checkout requests, users, reviews, sales, failed email, and search indexes.
+- Responsive dashboards for products, variants/options, categories, orders, checkout requests, users, reviews, sales, failed email, search indexes, and recommendation scores.
+- Recommendation status screen reporting the last score refresh, pair and anchor counts, and the active window and minimum-support thresholds, with a manual recompute that publishes the same event the nightly cron fires.
 - Product option generation, variant reorder, category drag/reorder, soft deletion, image upload, and stock management.
 - Bulk product/order actions, product CSV import, CSV exports for products/orders/users/reviews, and sales export.
 - Order status/tracking controls, user role changes, review moderation, search reindexing, queue visibility, and audit logging.
@@ -47,7 +49,7 @@
 
 - PostgreSQL with Drizzle, short public IDs, transactions, primary/read-replica routing, migrations, and idempotent bootstrap support.
 - Redis caching and order search, Upstash Search with SQL fallback, Vercel Blob, Inngest durable workflows, async email delivery, provider retries, and failed-email persistence.
-- Pino request logging with correlation IDs, Sentry instrumentation, Prometheus metrics, a `GET /api/health` liveness endpoint, scheduled exchange-rate refresh, and failed-email retry jobs.
+- Pino request logging with correlation IDs, Sentry instrumentation, Prometheus metrics, a `GET /api/health` liveness endpoint, scheduled exchange-rate refresh, product-affinity scoring, and failed-email retry jobs.
 - Zod request/environment validation, rate limiting, ownership checks, signed guest identifiers, secure webhook/worker verification, and cache invalidation after writes.
 
 ## Acceptance coverage

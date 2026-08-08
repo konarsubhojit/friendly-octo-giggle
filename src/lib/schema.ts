@@ -5,6 +5,7 @@ import {
   integer,
   timestamp,
   numeric,
+  doublePrecision,
   pgEnum,
   index,
   unique,
@@ -943,6 +944,64 @@ export const productShares = pgTable(
   (t) => [
     index('ProductShare_productId_idx').on(t.productId),
     index('ProductShare_variantId_idx').on(t.variantId),
+  ]
+)
+
+// ─── Product Affinity Scores ─────────────────────────────
+
+/**
+ * One directed association from an anchor product to a recommended product.
+ *
+ * Directed rather than symmetric: "shoppers who bought A also bought B" does
+ * not carry the same strength as the reverse when A is a staple and B is an
+ * add-on.
+ *
+ * Rows are written only by the scoring job, which enforces a minimum support
+ * floor in its aggregation so a pair backed by a single order — which would
+ * leak one shopper's basket — never reaches this table. `support` is stored
+ * alongside `score` so the scoring model can move from weighted counts to a
+ * normalised measure without a migration.
+ */
+export const productAffinityScores = pgTable(
+  'ProductAffinityScore',
+  {
+    id: varchar('id', { length: 7 })
+      .primaryKey()
+      .$defaultFn(() => generateShortId()),
+    anchorProductId: varchar('anchorProductId', { length: 7 })
+      .notNull()
+      .references(() => products.id, { onDelete: 'cascade' }),
+    recommendedProductId: varchar('recommendedProductId', { length: 7 })
+      .notNull()
+      .references(() => products.id, { onDelete: 'cascade' }),
+    /** Weighted association strength; higher is stronger. */
+    score: doublePrecision('score').notNull(),
+    /** Distinct orders or users backing the pair. */
+    support: integer('support').notNull(),
+    /** Dominant contributing signal. */
+    source: text('source').notNull().default('combined'),
+    computedAt: timestamp('computedAt', { mode: 'date' })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    unique('ProductAffinityScore_anchor_recommended_key').on(
+      t.anchorProductId,
+      t.recommendedProductId
+    ),
+    index('ProductAffinityScore_anchor_score_idx').on(
+      t.anchorProductId,
+      t.score.desc()
+    ),
+    index('ProductAffinityScore_recommendedProductId_idx').on(
+      t.recommendedProductId
+    ),
+    index('ProductAffinityScore_computedAt_idx').on(t.computedAt),
+    check(
+      'ProductAffinityScore_no_self_reference',
+      sql`${t.anchorProductId} <> ${t.recommendedProductId}`
+    ),
+    check('ProductAffinityScore_support_positive', sql`${t.support} >= 1`),
   ]
 )
 

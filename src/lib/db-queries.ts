@@ -109,6 +109,9 @@ export interface ProductListOptions {
 /**
  * Options for {@link db.products.findBestsellers}.
  *
+ * `category` scopes the result to one catalog category, which the
+ * recommendation fallback uses to keep a cold-start rail topically relevant.
+ *
  * `withCache` controls the Redis sold-count lookup only. Callers inside a
  * `"use cache"` scope must pass `false`: nesting a Redis round trip inside a
  * cached scope stores the same rows twice and splits invalidation across two
@@ -283,7 +286,7 @@ export const db = {
     findBestsellers: async (
       options: BestsellerOptions = {}
     ): Promise<Product[]> => {
-      const { limit = 5, withCache = true } = options
+      const { limit = 5, category, withCache = true } = options
 
       // Single SQL query: LEFT JOIN a sales-aggregate subquery so products
       // with no sales still appear (totalSold = 0), then sort + limit in DB.
@@ -317,7 +320,11 @@ export const db = {
         })
         .from(products)
         .leftJoin(salesSubquery, eq(products.id, salesSubquery.productId))
-        .where(isNull(products.deletedAt))
+        .where(
+          category
+            ? and(isNull(products.deletedAt), eq(products.category, category))
+            : isNull(products.deletedAt)
+        )
         .orderBy(
           desc(sql`coalesce(${salesSubquery.totalSold}, 0)`),
           desc(products.createdAt)

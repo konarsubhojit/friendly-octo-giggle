@@ -5,6 +5,9 @@ import ProductGrid, {
   type ProductGridItem,
 } from '@/features/product/components/ProductGrid'
 import { BestsellersScroller } from '@/features/product/components/BestsellersScroller'
+import RecommendationRailSkeleton from '@/components/skeletons/RecommendationRailSkeleton'
+import { PersonalizedRailSeeds } from '@/features/recommendations/components/PersonalizedRailSeeds'
+import { ZeroResultRecommendations } from '@/features/recommendations/components/RecommendationSections'
 import ProductCardSkeleton from '@/components/skeletons/ProductCardSkeleton'
 import BestsellerCardSkeleton from '@/components/skeletons/BestsellerCardSkeleton'
 import { cacheLife, cacheTag } from 'next/cache'
@@ -334,22 +337,39 @@ export async function ShopCatalog({
     shopData
 
   return (
-    <ProductGrid
-      products={products}
-      categories={categoryNames}
-      search={search}
-      selectedCategory={selectedCategory}
-      selectedSort={selectedSort}
-      minPrice={minPrice}
-      maxPrice={maxPrice}
-      inStock={inStock}
-      minRating={minRating}
-      variant={selectedVariant}
-      suggestions={suggestions}
-      trending={trending}
-      hasNextPage={hasNextPage}
-      batchSize={SHOP_BATCH_SIZE}
-    />
+    <>
+      <ProductGrid
+        products={products}
+        categories={categoryNames}
+        search={search}
+        selectedCategory={selectedCategory}
+        selectedSort={selectedSort}
+        minPrice={minPrice}
+        maxPrice={maxPrice}
+        inStock={inStock}
+        minRating={minRating}
+        variant={selectedVariant}
+        suggestions={suggestions}
+        trending={trending}
+        hasNextPage={hasNextPage}
+        batchSize={SHOP_BATCH_SIZE}
+      />
+      {/*
+        Rendered after the grid's own empty-state guidance, so the
+        recommendations supplement that copy rather than replace it. The active
+        category is passed through so the recovery never overrides the
+        shopper's stated filter.
+      */}
+      {products.length === 0 && (
+        <div className="mx-auto w-full max-w-[96rem] px-4 pb-6 sm:px-6 lg:px-8 xl:px-10 2xl:px-12">
+          <Suspense fallback={<RecommendationRailSkeleton />}>
+            <ZeroResultRecommendations
+              category={selectedCategory === 'All' ? null : selectedCategory}
+            />
+          </Suspense>
+        </div>
+      )}
+    </>
   )
 }
 
@@ -387,6 +407,15 @@ const ShopPage = ({ searchParams }: ShopPageProps) => {
       <Suspense fallback={<ShopBestsellersFallback />}>
         <ShopBestsellers />
       </Suspense>
+
+      {/*
+        Below the bestsellers rail it complements rather than replaces. A
+        Client Component, because its recently-viewed seeds only exist in the
+        browser; it renders its own skeleton while resolving.
+      */}
+      <section className="mx-auto w-full max-w-[96rem] px-4 pb-6 sm:px-6 lg:px-8 xl:px-10 2xl:px-12">
+        <PersonalizedRailSeeds />
+      </section>
 
       <Suspense fallback={<ShopCatalogFallback />}>
         <ShopCatalogSection searchParams={searchParams} />
