@@ -41,6 +41,13 @@ const state = {
     checkoutLagTotalMs: 0,
     checkoutLagMaxMs: 0,
   },
+  stockReservations: {
+    granted: 0,
+    denied: 0,
+    consumed: 0,
+    released: 0,
+    expired: 0,
+  },
   orders: {
     processingSamples: 0,
     processingTotalMs: 0,
@@ -119,6 +126,28 @@ export const recordCheckoutQueueLagMetric = (lagMs: number) => {
     state.queue.checkoutLagMaxMs,
     normalizedLag
   )
+}
+
+/** Lifecycle transitions counted for the reservation ledger. */
+export type StockReservationOutcome =
+  | 'granted'
+  | 'denied'
+  | 'consumed'
+  | 'released'
+  | 'expired'
+
+/**
+ * Count a reservation lifecycle transition.
+ *
+ * `count` is the number of ledger rows the transition claimed, so a sweep that
+ * expires 40 holds reports one call rather than forty.
+ */
+export const recordStockReservationMetric = (
+  outcome: StockReservationOutcome,
+  count = 1
+) => {
+  if (!Number.isFinite(count) || count <= 0) return
+  state.stockReservations[outcome] += Math.floor(count)
 }
 
 export const recordOrderProcessingMetric = (durationMs: number) => {
@@ -204,6 +233,13 @@ export const renderPrometheusMetrics = (): string => {
     '# HELP application_checkout_queue_lag_ms_max Max checkout queue lag in milliseconds.',
     '# TYPE application_checkout_queue_lag_ms_max gauge',
     `application_checkout_queue_lag_ms_max ${state.queue.checkoutLagMaxMs}`,
+    '# HELP application_stock_reservations_total Stock reservation lifecycle transitions.',
+    '# TYPE application_stock_reservations_total counter',
+    `application_stock_reservations_total{outcome="granted"} ${state.stockReservations.granted}`,
+    `application_stock_reservations_total{outcome="denied"} ${state.stockReservations.denied}`,
+    `application_stock_reservations_total{outcome="consumed"} ${state.stockReservations.consumed}`,
+    `application_stock_reservations_total{outcome="released"} ${state.stockReservations.released}`,
+    `application_stock_reservations_total{outcome="expired"} ${state.stockReservations.expired}`,
     ...renderOrderProcessingHistogram(),
   ]
 
@@ -238,6 +274,11 @@ export const resetMetrics = () => {
   state.queue.checkoutLagSamples = 0
   state.queue.checkoutLagTotalMs = 0
   state.queue.checkoutLagMaxMs = 0
+  state.stockReservations.granted = 0
+  state.stockReservations.denied = 0
+  state.stockReservations.consumed = 0
+  state.stockReservations.released = 0
+  state.stockReservations.expired = 0
   state.orders.processingSamples = 0
   state.orders.processingTotalMs = 0
   state.orders.processingMaxMs = 0
