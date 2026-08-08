@@ -47,6 +47,7 @@ const state = {
     consumed: 0,
     released: 0,
     expired: 0,
+    manually_released: 0,
   },
   orders: {
     processingSamples: 0,
@@ -135,6 +136,7 @@ export type StockReservationOutcome =
   | 'consumed'
   | 'released'
   | 'expired'
+  | 'manually_released'
 
 /**
  * Count a reservation lifecycle transition.
@@ -240,6 +242,7 @@ export const renderPrometheusMetrics = (): string => {
     `application_stock_reservations_total{outcome="consumed"} ${state.stockReservations.consumed}`,
     `application_stock_reservations_total{outcome="released"} ${state.stockReservations.released}`,
     `application_stock_reservations_total{outcome="expired"} ${state.stockReservations.expired}`,
+    `application_stock_reservations_total{outcome="manually_released"} ${state.stockReservations.manually_released}`,
     ...renderOrderProcessingHistogram(),
   ]
 
@@ -279,6 +282,7 @@ export const resetMetrics = () => {
   state.stockReservations.consumed = 0
   state.stockReservations.released = 0
   state.stockReservations.expired = 0
+  state.stockReservations.manually_released = 0
   state.orders.processingSamples = 0
   state.orders.processingTotalMs = 0
   state.orders.processingMaxMs = 0

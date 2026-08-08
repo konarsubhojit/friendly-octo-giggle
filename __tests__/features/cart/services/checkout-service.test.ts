@@ -69,10 +69,14 @@ const mockReserveForCheckoutRequest = vi.hoisted(() =>
 const mockReleaseForCheckoutRequest = vi.hoisted(() =>
   vi.fn(async () => ({ reservations: 0, quantity: 0 }))
 )
+const mockGetReservationsForCheckoutRequests = vi.hoisted(() =>
+  vi.fn(async () => new Map())
+)
 
 vi.mock('@/features/orders/services/stock-reservation', () => ({
   reserveForCheckoutRequest: mockReserveForCheckoutRequest,
   releaseForCheckoutRequest: mockReleaseForCheckoutRequest,
+  getReservationsForCheckoutRequests: mockGetReservationsForCheckoutRequests,
 }))
 
 vi.mock('@/lib/payments', () => ({

@@ -24,6 +24,13 @@ class VariantGoneError extends Error {
   }
 }
 
+class ReservedStockError extends Error {
+  constructor(readonly reservedStock: number) {
+    super('Stock cannot be set below the units currently reserved')
+    this.name = 'ReservedStockError'
+  }
+}
+
 class LastVariantError extends Error {
   constructor() {
     super('Cannot delete the last variant of a product')
@@ -79,18 +86,45 @@ export async function PUT(
     }
 
     const [updated] = await primaryDrizzleDb.transaction(async (tx) => {
+      // A stock correction must never fall below the units live checkout
+      // requests are already holding: those shoppers have been promised them,
+      // and the counter would then exceed on-hand stock and read as sold out.
+      const stockFloor =
+        validated.stock === undefined
+          ? undefined
+          : sql`${productVariants.reservedStock} <= ${validated.stock}`
+
       const [updatedVariant] = await tx
         .update(productVariants)
         .set(updateData)
         .where(
           and(
             eq(productVariants.id, variantId),
-            isNull(productVariants.deletedAt)
+            isNull(productVariants.deletedAt),
+            stockFloor
           )
         )
         .returning()
 
       if (!updatedVariant) {
+        const [current] = await tx
+          .select({ reservedStock: productVariants.reservedStock })
+          .from(productVariants)
+          .where(
+            and(
+              eq(productVariants.id, variantId),
+              isNull(productVariants.deletedAt)
+            )
+          )
+
+        if (
+          current &&
+          validated.stock !== undefined &&
+          current.reservedStock > validated.stock
+        ) {
+          throw new ReservedStockError(current.reservedStock)
+        }
+
         // Row was soft-deleted or removed between the initial find and this
         // UPDATE. Abort the transaction so we don't also mutate
         // productVariantOptionValues for a non-existent variant.
@@ -119,6 +153,12 @@ export async function PUT(
 
     return apiSuccess({ variant: serializeVariant(updated) })
   } catch (error) {
+    if (error instanceof ReservedStockError) {
+      return apiError(
+        `Stock cannot be set below the ${error.reservedStock} unit(s) currently reserved by open checkout requests`,
+        409
+      )
+    }
     if (error instanceof VariantGoneError) {
       return apiError('Variant not found', 404)
     }

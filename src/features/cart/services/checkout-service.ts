@@ -44,6 +44,7 @@ import { publishCheckoutStatus } from '@/lib/inngest/realtime'
 import { checkoutSession } from '@/lib/inngest/sessions'
 import { checkoutRequestCreated } from '@/features/cart/inngest/events'
 import {
+  getReservationsForCheckoutRequests,
   releaseForCheckoutRequest,
   reserveForCheckoutRequest,
 } from '@/features/orders/services/stock-reservation'
@@ -67,6 +68,12 @@ export interface AdminCheckoutRequestRecord {
   readonly orderId: string | null
   readonly createdAt: string
   readonly updatedAt: string
+  /** Live hold for this request; `null` once every reservation has settled. */
+  readonly reservation: {
+    readonly heldQuantity: number
+    readonly status: string
+    readonly expiresAt: string | null
+  } | null
 }
 
 interface RecentCheckoutRequestFilters {
@@ -257,7 +264,7 @@ export const getRecentCheckoutRequests = async (
 
   const normalizedSearch = search?.trim().toLowerCase() ?? ''
 
-  return rows
+  const filtered = rows
     .map((row) => ({
       id: row.id,
       userId: row.userId,
@@ -295,6 +302,26 @@ export const getRecentCheckoutRequests = async (
       )
     })
     .slice(0, limit)
+
+  // One batched lookup for the whole page; a per-row query would make this
+  // dashboard 50 round trips.
+  const reservations = await getReservationsForCheckoutRequests(
+    filtered.map((record) => record.id)
+  )
+
+  return filtered.map((record) => {
+    const summary = reservations.get(record.id)
+    return {
+      ...record,
+      reservation: summary
+        ? {
+            heldQuantity: summary.heldQuantity,
+            status: summary.status,
+            expiresAt: summary.expiresAt?.toISOString() ?? null,
+          }
+        : null,
+    }
+  })
 }
 
 export const recoverCheckoutRequestAfterRetryExhaustion = async ({

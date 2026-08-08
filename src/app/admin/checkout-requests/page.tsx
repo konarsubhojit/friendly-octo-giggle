@@ -9,6 +9,7 @@ import {
 } from '@/features/cart/services/checkout-service'
 import { CheckoutRequestStatusEnum } from '@/features/orders/validations'
 import { requireAdminPermission } from '@/features/admin/services/admin-page-auth'
+import ReleaseReservationButton from '@/features/admin/components/ReleaseReservationButton'
 
 interface AdminCheckoutRequestsPageProps {
   readonly searchParams?: Promise<{
@@ -34,6 +35,14 @@ const dateFormatter = new Intl.DateTimeFormat('en-IN', {
 })
 
 const formatTimestamp = (value: string) => dateFormatter.format(new Date(value))
+
+const describeReservation = (
+  reservation: AdminCheckoutRequestRecord['reservation']
+): string => {
+  if (!reservation) return 'None'
+  if (reservation.heldQuantity === 0) return reservation.status
+  return `${reservation.heldQuantity} held`
+}
 
 const truncate = (value: string, maxLength: number) =>
   value.length > maxLength ? `${value.slice(0, maxLength - 1)}…` : value
@@ -221,6 +230,14 @@ export default async function AdminCheckoutRequestsPage({
                         {record.orderId ?? 'Not created yet'}
                       </dd>
                     </div>
+                    <div>
+                      <dt className="text-xs text-slate-500 dark:text-slate-400">
+                        Reservation
+                      </dt>
+                      <dd className="mt-1 text-slate-700 dark:text-slate-200">
+                        {describeReservation(record.reservation)}
+                      </dd>
+                    </div>
                     <div className="text-right">
                       <dt className="text-xs text-slate-500 dark:text-slate-400">
                         Items
@@ -251,6 +268,7 @@ export default async function AdminCheckoutRequestsPage({
                     <th className="px-3 py-3">Request</th>
                     <th className="px-3 py-3">Customer</th>
                     <th className="px-3 py-3">State</th>
+                    <th className="px-3 py-3">Reservation</th>
                     <th className="px-3 py-3">Order</th>
                     <th className="px-3 py-3">Last Error</th>
                     <th className="px-3 py-3">Created</th>
@@ -291,6 +309,26 @@ export default async function AdminCheckoutRequestsPage({
                         >
                           {record.status}
                         </span>
+                      </td>
+                      <td className="px-3 py-4">
+                        <div className="text-xs font-semibold text-slate-950 dark:text-slate-50">
+                          {describeReservation(record.reservation)}
+                        </div>
+                        {record.reservation?.expiresAt ? (
+                          <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                            Expires{' '}
+                            <time dateTime={record.reservation.expiresAt}>
+                              {formatTimestamp(record.reservation.expiresAt)}
+                            </time>
+                          </div>
+                        ) : null}
+                        {record.reservation &&
+                        record.reservation.heldQuantity > 0 ? (
+                          <ReleaseReservationButton
+                            checkoutRequestId={record.id}
+                            heldQuantity={record.reservation.heldQuantity}
+                          />
+                        ) : null}
                       </td>
                       <td className="px-3 py-4">
                         {record.orderId ? (

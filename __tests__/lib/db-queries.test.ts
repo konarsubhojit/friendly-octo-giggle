@@ -463,7 +463,7 @@ describe('db.products.findMinimalByIds', () => {
         description: 'Roses',
         category: 'Flowers',
         image: 'rose.jpg',
-        variants: [{ price: 100, stock: 5 }],
+        variants: [{ price: 100, stock: 5, reservedStock: 0 }],
       },
       {
         id: 'prod002',
@@ -472,8 +472,8 @@ describe('db.products.findMinimalByIds', () => {
         category: 'Flowers',
         image: 'lily.jpg',
         variants: [
-          { price: 200, stock: 3 },
-          { price: 150, stock: 7 },
+          { price: 200, stock: 3, reservedStock: 0 },
+          { price: 150, stock: 7, reservedStock: 0 },
         ],
       },
     ]
@@ -511,6 +511,54 @@ describe('db.products.findMinimalByIds', () => {
     )
   })
 
+  it('reports availability rather than on-hand units', async () => {
+    // Two of the five units are held by another shopper's checkout request, so
+    // only three are still on sale. On-hand stock is untouched until commit.
+    mockProductsFindMany.mockResolvedValue([
+      {
+        id: 'prod001',
+        name: 'Rose',
+        description: 'Roses',
+        category: 'Flowers',
+        image: 'rose.jpg',
+        variants: [{ price: 100, stock: 5, reservedStock: 2 }],
+      },
+    ])
+    mockSelect.mockReturnValue({
+      from: vi.fn().mockReturnThis(),
+      innerJoin: vi.fn().mockReturnThis(),
+      where: vi.fn().mockReturnThis(),
+      groupBy: vi.fn().mockResolvedValue([]),
+    })
+
+    const [result] = await db.products.findMinimalByIds(['prod001'])
+
+    expect(result.stock).toBe(3)
+  })
+
+  it('never reports negative availability', async () => {
+    mockProductsFindMany.mockResolvedValue([
+      {
+        id: 'prod001',
+        name: 'Rose',
+        description: 'Roses',
+        category: 'Flowers',
+        image: 'rose.jpg',
+        variants: [{ price: 100, stock: 1, reservedStock: 4 }],
+      },
+    ])
+    mockSelect.mockReturnValue({
+      from: vi.fn().mockReturnThis(),
+      innerJoin: vi.fn().mockReturnThis(),
+      where: vi.fn().mockReturnThis(),
+      groupBy: vi.fn().mockResolvedValue([]),
+    })
+
+    const [result] = await db.products.findMinimalByIds(['prod001'])
+
+    expect(result.stock).toBe(0)
+  })
+
   it('returns empty array for empty IDs list without querying DB', async () => {
     const results = await db.products.findMinimalByIds([])
 
@@ -541,7 +589,7 @@ describe('db.products.findMinimalByIds', () => {
         description: 'Roses',
         category: 'Flowers',
         image: 'rose.jpg',
-        variants: [{ price: 100, stock: 5 }],
+        variants: [{ price: 100, stock: 5, reservedStock: 0 }],
       },
     ])
     const soldCountQueryChain = {
