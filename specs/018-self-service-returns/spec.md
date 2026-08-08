@@ -112,8 +112,8 @@ A customer can see where their return stands and what happens next, without cont
 - **FR-006**: The return lifecycle MUST be an explicit state machine with enforced transitions, and invalid transitions MUST be rejected.
 - **FR-007**: Administrators MUST have a returns queue guarded by a granular admin permission consistent with `src/lib/constants/roles.ts`.
 - **FR-008**: Approval and rejection MUST require a recorded reason and MUST write to the admin audit log.
-- **FR-009**: Marking a return received MUST restock each returned unit to its originating variant through the existing restock service.
-- **FR-010**: Refunds for received returns MUST be created through the existing refund service and linked to the return record.
+- **FR-009**: Marking a return received MUST restock each returned unit to its originating variant, using a return-scoped restock claim so that partial and repeated returns against one order each restock exactly once. The existing order-level restock service MUST NOT be reused for this, because its single order-level guard cannot express partial restock (see plan D1).
+- **FR-010**: Refunds for received returns MUST be created through the existing refund service and linked to the return record — except for Cash on Delivery orders, which follow FR-013's manual settlement path because the COD gateway has no refund capability.
 - **FR-011**: Partial-return refund amounts MUST reflect the items' paid price including their proportional share of applied discounts, following a documented shipping-refund rule.
 - **FR-012**: Restock and refund MUST each be idempotent; repeated processing of one return MUST NOT apply either twice.
 - **FR-013**: Cash on Delivery orders MUST follow a documented settlement path rather than a gateway refund.
@@ -129,7 +129,7 @@ A customer can see where their return stands and what happens next, without cont
 - **ReturnItem**: A requested quantity of one order item, carrying the computed refundable amount for that quantity.
 - **ReturnEvidence**: An uploaded image attached to a return request, validated and stored through the image-storage abstraction.
 - **Refund**: The existing refund record, extended with a link to the return that caused it.
-- **Return Window**: The configurable, category-aware period after delivery during which a return may be requested.
+- **Return Window**: The configurable, category-aware period after delivery during which a return may be requested. Not a database entity — it is runtime configuration held in Edge Config with a hardcoded fallback, keyed by category name (see plan research R2).
 
 ## Success Criteria _(mandatory)_
 

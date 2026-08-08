@@ -56,9 +56,9 @@ export function RecomputeButton() {
         {pending ? 'Queueing…' : 'Recompute now'}
       </button>
       {message && (
-        <p role="status" className="text-sm text-[var(--text-secondary)]">
+        <output className="text-sm text-[var(--text-secondary)]">
           {message}
-        </p>
+        </output>
       )}
     </div>
   )

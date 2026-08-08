@@ -3,6 +3,8 @@
 Auto-generated from all feature plans. Last updated: 2026-08-08
 
 ## Active Technologies
+- TypeScript 6.0 (strict), Node 22 serverless runtime + Next.js 16.3 (App Router, Cache Components), React 19.2, Drizzle ORM 0.45, Zod 4.4, NextAuth v5, Inngest 4.13, Redux Toolkit 2.12 (018-self-service-returns)
+- PostgreSQL (Neon Serverless) via Drizzle; evidence images via `src/lib/image-storage.ts` (Vercel Blob / Azure Blob) (018-self-service-returns)
 
 - TypeScript 6.0 (strict), React 19.2, Next.js 16.3 App Router + Drizzle ORM 0.45, Inngest 4.13, Upstash Redis 1.38, Zod 4.4, Tailwind CSS v4.3 (017-personalized-recommendations)
 - PostgreSQL (Neon Serverless) — one new table `ProductAffinityScore`; Upstash Redis for read caching (017-personalized-recommendations)
@@ -38,12 +40,12 @@ npm test && npm run lint
 TypeScript 5.9 on Next.js 16.1.6 (App Router): Follow standard conventions
 
 ## Recent Changes
+- 018-self-service-returns: Added TypeScript 6.0 (strict), Node 22 serverless runtime + Next.js 16.3 (App Router, Cache Components), React 19.2, Drizzle ORM 0.45, Zod 4.4, NextAuth v5, Inngest 4.13, Redux Toolkit 2.12
 
 - 017-personalized-recommendations: Added TypeScript 6.0 (strict), React 19.2, Next.js 16.3 App Router + Drizzle ORM 0.45, Inngest 4.13, Upstash Redis 1.38, Zod 4.4, Tailwind CSS v4.3
 
 - 004-zenput-admin-integration: Added TypeScript 6.0.2 with `strict: true` + React 19.2, Next.js 16.2 (App Router), zenput@1.0.1,
 
-- 003-order-policy-dialog: Added TypeScript 5.9.3, React 19.2.4, Next.js 16.1.6 + Next.js App Router, Redux Toolkit, NextAuth v5 beta, Tailwind CSS v4, react-hot-toast, Zod, Drizzle ORM
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->

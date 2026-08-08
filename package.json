@@ -18,6 +18,8 @@
     "redis:orders:index": "tsx scripts/create-orders-search-index.ts",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
+    "db:seed:preview": "node scripts/seed-preview-data.mjs",
+    "recommendations:measure": "tsx scripts/measure-affinity-scoring.ts",
     "docs:check": "node scripts/check-doc-drift.mjs",
     "test": "vitest run",
     "test:watch": "vitest",

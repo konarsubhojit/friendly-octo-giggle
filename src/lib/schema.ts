@@ -13,6 +13,7 @@ import {
   boolean,
   uniqueIndex,
   check,
+  primaryKey,
 } from 'drizzle-orm/pg-core'
 import { relations, sql } from 'drizzle-orm'
 import type { AdapterAccountType } from '@auth/core/adapters'
@@ -248,7 +249,15 @@ export const verificationTokens = pgTable(
     expires: timestamp('expires', { mode: 'date' }).notNull(),
   },
   (t) => [
-    unique('VerificationToken_identifier_token_key').on(t.identifier, t.token),
+    // Composite primary key rather than a bare unique constraint. The Auth.js
+    // adapter deletes this row when a token is redeemed, and Postgres refuses
+    // any DELETE on a table that is published for logical replication with
+    // neither a primary key nor an explicit replica identity. Without it,
+    // email verification and password reset both fail at the final step.
+    primaryKey({
+      name: 'VerificationToken_identifier_token_pk',
+      columns: [t.identifier, t.token],
+    }),
   ]
 )
 
@@ -399,7 +408,15 @@ export const productVariantOptionValues = pgTable(
       .references(() => productOptionValues.id, { onDelete: 'cascade' }),
   },
   (t) => [
-    unique('ProductVariantOptionValue_pk').on(t.variantId, t.optionValueId),
+    // Composite primary key, not a unique constraint: the pair already
+    // identifies the row, and a junction table published for logical
+    // replication cannot accept a DELETE without one. Re-assigning a
+    // variant's options deletes the old links, so admin variant edits depend
+    // on this.
+    primaryKey({
+      name: 'ProductVariantOptionValue_pk',
+      columns: [t.variantId, t.optionValueId],
+    }),
     index('ProductVariantOptionValue_variantId_idx').on(t.variantId),
     index('ProductVariantOptionValue_optionValueId_idx').on(t.optionValueId),
   ]

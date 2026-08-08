@@ -179,10 +179,22 @@ Next.js App Router monolith. All application code under `src/`; tests mirror the
 - [x] T052 Run `sonarqube_analyze_file` on every file created or modified, plus `sonarqube_list_potential_security_issues` on the four route handlers and `services/scoring.ts`; resolve all Blocker and Critical findings
 - [ ] T053 Measure LCP with Lighthouse against the production build on `/products/[id]`, `/cart`, and `/shop` — median of five runs per page, compared to a baseline captured before the rails were added. Fail on a regression greater than 100 ms or any crossing of the 2.5 s "good" threshold; if a rail is implicated, move its `Suspense` boundary further below the fold (SC-005)
   - **Deferred**: requires a Lighthouse baseline captured before the rails landed. Structurally mitigated: every rail sits below the fold behind its own `Suspense` boundary and is marked per-request with `connection()`, so `npm run build` confirms all three routes still report Partial Prerender (static shell + streamed rail) rather than becoming fully dynamic.
-- [ ] T058 Seed a representative order volume (≥ 5,000 orders across ≥ 500 products inside the 180-day window), invoke `computeProductAffinityFunction`, and record per-step and total wall time. Assert the run completes inside the Inngest step budget with headroom; if it does not, reduce `ANCHOR_BATCH_SIZE` or narrow `AFFINITY_WINDOW_DAYS` and re-measure (SC-006)
-  - **Deferred**: needs a seeded volume of >=5,000 orders, which the development database does not have. The three bounds it would validate (`AFFINITY_WINDOW_DAYS`, `ANCHOR_BATCH_SIZE` step chunking, `MAX_PAIRS_PER_ANCHOR`) are implemented and unit-tested.
+- [x] T058 Seed a representative order volume (≥ 5,000 orders across ≥ 500 products inside the 180-day window), invoke `computeProductAffinityFunction`, and record per-step and total wall time. Assert the run completes inside the Inngest step budget with headroom; if it does not, reduce `ANCHOR_BATCH_SIZE` or narrow `AFFINITY_WINDOW_DAYS` and re-measure (SC-006)
+  - **Measured 2026-08-08** against the preview database seeded by `npm run db:seed:preview` (2 000 products, 5 000 orders, 13 959 order items, 3 000 wishlist entries, 1 500 shares) via `npm run recommendations:measure`:
+
+    | Phase                    | Wall time              |
+    | ------------------------ | ---------------------- |
+    | `collect-purchase-pairs` | 1 612 ms (3 566 pairs) |
+    | `collect-wishlist-pairs` | 326 ms (12 pairs)      |
+    | `collect-share-pairs`    | 155 ms (96 pairs)      |
+    | merge + truncate         | 45 ms                  |
+    | write batches (2)        | 4 302 ms (3 674 rows)  |
+    | **Total**                | **6 442 ms**           |
+
+    Result: 3 674 pairs across 500 anchors, support min 3 / avg 4.3 / max 15. Completes in ~6.4 s against a 5 000-order window, so the existing bounds hold with a very wide margin and neither `ANCHOR_BATCH_SIZE` nor `AFFINITY_WINDOW_DAYS` needs narrowing. SC-006 satisfied.
+
 - [ ] T054 Execute the [quickstart.md](./quickstart.md) walkthrough end to end, including the privacy checks (no `stock` or `soldCount` field in any response, two users receiving different rails, guest writing nothing) and capture screenshots of the four surfaces for the PR
-  - **Deferred**: the quickstart walkthrough and PR screenshots need a running dev server with seeded catalog data. The privacy invariants it checks are asserted at the service layer (`selection.core.test.ts`) and in `playwright-tests/recommendations.spec.ts`.
+  - **Partially unblocked**: the preview database is now seeded (`npm run db:seed:preview`), so the catalog volume this task needs exists and 600 signed-in accounts are available for the two-shopper comparison. Still outstanding: running the walkthrough against a live server and capturing the four screenshots. The privacy invariants it checks are asserted at the service layer (`selection.core.test.ts`) and in `playwright-tests/recommendations.spec.ts`.
 - [x] T055 Run the full pre-PR gate: `npm run lint`, `npx tsc --noEmit -p tsconfig.check.json`, `npm test`, `npm run build`, `npm run docs:check`
 
 ---

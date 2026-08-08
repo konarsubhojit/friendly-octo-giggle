@@ -467,14 +467,18 @@ npm run db:migrate   # Apply migrations
 npm run db:bootstrap # Apply the full current schema idempotently
 npm run db:push      # Push schema directly (no migration file)
 npm run db:studio    # Open Drizzle Studio GUI
+npm run db:seed:preview # Seed a preview database with representative test data
+npm run recommendations:measure # Time the affinity scoring pipeline against real data
 npm run redis:orders:index # Create/backfill the Redis orders search index
 npm run test         # Run unit tests (single run) — REQUIRED pre-PR check
 npm run test:watch   # Run unit tests (watch mode)
 npm run test:coverage # Run unit tests with coverage
 ```
 
-There is no `db:seed` script and no plain-HTTP dev script. The project ships no
-sample-data seeding; `db:bootstrap` creates schema only.
+There is no plain-HTTP dev script. `db:bootstrap` creates schema only and
+inserts no rows. Sample data is provided separately by
+`npm run db:seed:preview`, which is guarded against production, marks every row
+it writes, and is fully reversible with `--reset`.
 
 ## Testing Checklist
 
