@@ -61,19 +61,17 @@ export function ShippingMethodSelector({
                 onChange={() => onChange(option.method)}
                 className="mt-1 h-4 w-4 accent-[var(--accent-rose)]"
               />
-              <span className="flex-1">
-                <span className="flex items-baseline justify-between gap-3">
-                  <span className="text-sm font-medium text-[var(--foreground)]">
-                    {option.label}
-                  </span>
-                  <span className="text-sm font-semibold text-[var(--accent-sage)]">
-                    {option.amount === 0 ? 'Free' : formatPrice(option.amount)}
-                  </span>
+              <span className="flex flex-1 flex-wrap items-baseline justify-between gap-x-3">
+                <span className="text-sm font-medium text-[var(--foreground)]">
+                  {option.label}
                 </span>
-                <span className="mt-0.5 block text-xs text-[var(--text-secondary)]">
+                <span className="text-sm font-semibold text-[var(--accent-sage)]">
+                  {option.amount === 0 ? 'Free' : formatPrice(option.amount)}
+                </span>
+                <span className="mt-0.5 block w-full text-xs text-[var(--text-secondary)]">
                   {option.description}
                 </span>
-                <span className="mt-0.5 block text-xs text-[var(--text-muted)]">
+                <span className="mt-0.5 block w-full text-xs text-[var(--text-muted)]">
                   {formatEstimate(option.estimatedDays)}
                 </span>
               </span>

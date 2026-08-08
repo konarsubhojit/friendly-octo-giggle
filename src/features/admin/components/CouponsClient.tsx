@@ -397,7 +397,7 @@ export default function CouponsClient({
                   setField('stackable', event.target.checked)
                 }
               />
-              Can be combined with other coupons
+              <span>Can be combined with other coupons</span>
             </label>
             <label
               className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200"
@@ -409,7 +409,7 @@ export default function CouponsClient({
                 checked={form.isActive}
                 onChange={(event) => setField('isActive', event.target.checked)}
               />
-              Active
+              <span>Active</span>
             </label>
           </div>
 

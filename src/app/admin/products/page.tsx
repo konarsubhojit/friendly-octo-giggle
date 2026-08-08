@@ -330,6 +330,7 @@ export default function ProductsManagement() {
       actions={
         <>
           <button
+            type="button"
             onClick={handleReset}
             disabled={loading}
             className="inline-flex items-center rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:text-slate-950 disabled:cursor-not-allowed disabled:opacity-60"
@@ -337,6 +338,7 @@ export default function ProductsManagement() {
             Refresh
           </button>
           <button
+            type="button"
             onClick={() => handleOpenModal()}
             className="inline-flex items-center rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
           >

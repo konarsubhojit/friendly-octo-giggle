@@ -76,8 +76,8 @@ export const normalizeStateName = (value: string | null | undefined): string =>
   typeof value === 'string'
     ? value
         .toLowerCase()
-        .replace(/&/g, 'and')
-        .replace(/[^a-z]+/g, ' ')
+        .replaceAll('&', 'and')
+        .replaceAll(/[^a-z]+/g, ' ')
         .trim()
     : ''
 
