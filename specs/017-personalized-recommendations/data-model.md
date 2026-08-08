@@ -180,5 +180,4 @@ failures are logged and never fail the job.
 - Purely additive: one `CREATE TABLE`, three `CREATE INDEX`, two FKs, two
   `CHECK` constraints. No column drop, no backfill, no rewrite of an existing
   table — zero-downtime by construction.
-- `scripts/sql/bootstrap-drizzle-initial.sql` is refreshed in the same commit
-  so `npm run db:bootstrap` stays current (Constitution workflow step 6).
+- Applied with `npm run db:migrate` (Constitution workflow step 6).

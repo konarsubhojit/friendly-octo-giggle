@@ -234,7 +234,6 @@ Error: relation "Product" already exists
 
    ```bash
    npx drizzle-kit drop
-   npm run db:bootstrap
    npm run db:migrate
    ```
 
@@ -244,13 +243,13 @@ Error: relation "Product" already exists
    npm run db:migrate
    ```
 
-3. **Bootstrap a partially initialized database:**
+3. **Repair a partially initialized database:**
 
    ```bash
-   npm run db:bootstrap
+   npm run db:push
    ```
 
-   Use this when the database already contains some of the app tables, enums, or indexes, but `drizzle.__drizzle_migrations` is missing or incomplete. The bootstrap SQL is idempotent and also inserts the expected migration rows into `drizzle.__drizzle_migrations` so later `npm run db:migrate` runs stay clean.
+   Use this when the database already contains some of the app tables, enums, or indexes, but `drizzle.__drizzle_migrations` is missing or incomplete. `db:push` reconciles the live schema with `src/lib/schema.ts` without writing a migration file. Prefer it only in development.
 
 4. **Resolve migration conflicts:**
 
@@ -1278,7 +1277,7 @@ npm run start               # Start production server
 npm run db:generate         # Generate Drizzle migrations
 npm run db:migrate          # Apply migrations
 npm run db:push             # Push schema changes directly
-npm run db:bootstrap        # Idempotent full-schema bootstrap
+npm run db:studio           # Open Drizzle Studio
 
 # Troubleshooting
 rm -rf .next                # Clear Next.js cache

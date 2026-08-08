@@ -48,7 +48,7 @@
 - [ ] T006 Add `deliveredAt` timestamp to the `orders` table and `returnRequestId` varchar(7) FK to the `refunds` table, and relax `refunds.paymentTransactionId` from `.notNull()` to nullable per [data-model.md](./data-model.md) M1/M2/M4, in [src/lib/schema.ts](src/lib/schema.ts)
 - [ ] T007 Add `returnRequestsRelations`, `returnItemsRelations`, `returnEvidenceRelations`, and extend `ordersRelations` with `returns: many(returnRequests)` in [src/lib/schema.ts](src/lib/schema.ts)
 - [ ] T008 Generate the migration with `npm run db:generate`, review the SQL, and hand-edit `drizzle/0017_self_service_returns.sql` to add the `deliveredAt` backfill (`UPDATE "Order" SET "deliveredAt" = "updatedAt" WHERE status = 'DELIVERED'`) with the comment recording that it is an approximation for historical rows, and to make index creation on the non-empty `Order` and `Refund` tables `CONCURRENTLY`
-- [ ] T009 Apply the migration with `npm run db:migrate`, then refresh [scripts/sql/bootstrap-drizzle-initial.sql](scripts/sql/bootstrap-drizzle-initial.sql) and verify `npm run db:bootstrap` still applies cleanly against an empty database (constitution workflow step 6)
+- [ ] T009 Apply the migration with `npm run db:migrate` and verify it applies cleanly against an empty database (constitution workflow step 6)
 
 ### Pure Functions — tests first
 
@@ -278,7 +278,7 @@ Phases 0–5 (T001–T051, including T018a and T046a). This is the smallest set 
 ### Recommended sequence
 
 1. **T001** — close the policy decision. Everything downstream is shaped by it.
-2. **Phase 1 + 2** — schema and pure logic. Verify `npm run db:bootstrap` and full green tests before touching a route.
+2. **Phase 1 + 2** — schema and pure logic. Verify `npm run db:migrate` and full green tests before touching a route.
 3. **Phase 3** — validate with a real customer session over HTTPS. Confirm the 404-not-403 ownership behaviour explicitly.
 4. **Phase 4** — validate with `SUPPORT` and `ADMIN` accounts, and with a staff account lacking the permission.
 5. **Phase 5** — **the highest-risk phase.** Verify idempotency by replaying every mutation and asserting stock and refund counts are unchanged. Test COD separately from gateway orders.

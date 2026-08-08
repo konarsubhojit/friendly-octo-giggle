@@ -234,9 +234,8 @@ files to isolate dependency graphs.
 - **Database**: PostgreSQL via Neon Serverless, accessed only
   through Drizzle ORM (`src/lib/db.ts`). Schema changes MUST
   generate a Drizzle migration (`npm run db:generate`) — direct DB
-  modification is prohibited. `npm run db:bootstrap` applies the
-  full current schema idempotently to an empty or partially
-  migrated database.
+  modification is prohibited. `npm run db:migrate` applies the
+  full current schema to an empty or partially migrated database.
 - **IDs**: Base62 7-character short IDs via `src/lib/short-id.ts`
   (`varchar(7)` in DB) for products, orders, carts, and related
   entities.
@@ -304,9 +303,7 @@ files to isolate dependency graphs.
    Playwright and screenshots captured.
 6. **Schema Changes**: `npm run db:generate` → review SQL →
    `npm run db:migrate` → test → commit both schema and
-   migration, and refresh
-   `scripts/sql/bootstrap-drizzle-initial.sql` so
-   `npm run db:bootstrap` stays current.
+   migration.
 7. **Security Scan**: Modified files MUST be analyzed with
    SonarQube (`sonarqube_analyze_file`). Blocker/Critical issues
    MUST be resolved before merge.

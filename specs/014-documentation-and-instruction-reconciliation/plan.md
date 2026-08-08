@@ -59,6 +59,8 @@ Every other referenced script resolves.
 
 ### R3 — Seeding has a real replacement
 
+<!-- doc-drift-ignore-next-block --> <!-- Historical record of the bootstrap script as it existed at the time of this feature; it has since been removed in favour of Drizzle migrations. -->
+
 `scripts/apply-idempotent-bootstrap.mjs` and `scripts/sql/` provide idempotent bootstrap, exposed as `npm run db:bootstrap` and already run as part of `npm run dev`. This is the supported alternative FR-002 asks for; no seed script needs to be written.
 
 ### R4 — The nonexistent workflow
@@ -90,6 +92,8 @@ Real replacements, all confirmed present: `src/lib/inngest/{client,dispatch,regi
 Prettier is configured (`.prettierrc.json`) and `npm run format:check` covers Markdown. There is no Markdown linter, so the drift checker must not attempt style enforcement. Vitest includes only `__tests__/**/*.test.{ts,tsx}`, so the checker's unit tests belong at `__tests__/scripts/check-doc-drift.test.ts`.
 
 ## Decisions
+
+<!-- doc-drift-ignore-next-block --> <!-- Historical decision record; DR-001 names the bootstrap script that existed at the time and has since been removed in favour of Drizzle migrations. -->
 
 | ID     | Decision                                                                                                                                                        | Rationale                                                                                                                                                   | Rejected alternative                                                                                    |
 | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |

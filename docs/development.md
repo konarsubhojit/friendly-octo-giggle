@@ -20,9 +20,6 @@ npm run db:generate
 
 # Create and apply database migration
 npm run db:migrate -- --name your_migration_name
-
-# Apply the full current schema idempotently (empty or partially migrated database)
-npm run db:bootstrap
 ```
 
 ### Environment Setup
@@ -66,10 +63,8 @@ npm run test:watch  # Run unit tests (watch mode)
 npm run test:coverage # Run unit tests with coverage
 npm run db:generate # Generate Drizzle migrations
 npm run db:migrate  # Apply migrations
-npm run db:bootstrap # Idempotent full-schema bootstrap
 npm run db:push     # Push schema directly, without a migration file
 npm run db:studio   # Open Drizzle Studio
-npm run redis:orders:index # Create/backfill the Redis orders search index
 ```
 
 There is no plain-HTTP dev script; `npm run dev` is `next dev --experimental-https`.
@@ -535,32 +530,9 @@ npx drizzle-kit migrate
 }
 ```
 
-### Keeping the bootstrap script in sync
-
-`npm run db:bootstrap` applies `scripts/sql/bootstrap-drizzle-initial.sql`, an
-idempotent snapshot of the **full current schema** that also records every
-bundled migration as applied, so `npm run db:migrate` becomes a no-op
-afterwards. It is safe to run against an empty database as well as one that is
-only partially migrated.
-
-Whenever a new file is added to `drizzle/`, refresh the bootstrap snapshot:
-
-1. Create a scratch database and apply every file in `drizzle/` in order.
-2. Mirror the resulting schema into `scripts/sql/bootstrap-drizzle-initial.sql`
-   using idempotent statements only (`CREATE TABLE IF NOT EXISTS`,
-   `ADD COLUMN IF NOT EXISTS`, guarded `DO $$ ... $$` blocks for constraints and
-   enum types, `CREATE INDEX IF NOT EXISTS`).
-3. Add an `INSERT ... WHERE NOT EXISTS` row for the new migration using its
-   `when` value from `drizzle/meta/_journal.json` and the SHA-256 hash of the
-   migration file.
-4. Verify on a scratch database that bootstrap-then-migrate and
-   migrate-only produce the same schema, and that re-running the bootstrap is a
-   no-op.
-
 ### Best Practices
 
 - ✅ Always review generated SQL before committing
-- ✅ Regenerate the bootstrap snapshot whenever a migration is added
 - ✅ Use descriptive migration names
 - ✅ Test migrations locally first
 - ✅ Keep migrations small and incremental

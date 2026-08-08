@@ -21,6 +21,8 @@ description: 'Task list for reconciling documentation, instruction files, and sp
 
 `plan.md` R1–R9 were re-checked against the tree while writing this list. All findings hold, with one correction that changes the wording DR-001 and DR-002 require:
 
+<!-- doc-drift-ignore-next-block --> <!-- Historical baseline note; the bootstrap script existed at the time and has since been removed in favour of Drizzle migrations. -->
+
 - **`scripts.dev` is `next dev --experimental-https`.** R2 records it as piping `node scripts/apply-idempotent-bootstrap.mjs` into `next dev`. It does not. `npm run dev` serves HTTPS (so DR-002 stands unchanged), but bootstrap is **not** run automatically, so DR-001's replacement prose must present `npm run db:bootstrap` as an explicit step, not as something `npm run dev` already does. T001 records this.
 
 Confirmed unchanged: 17 defined scripts with no `db:seed` and no `dev:https`; 16 Markdown drift occurrences rather than the 18 `plan.md` counts — 12 `db:seed` (`README.md`, `docs/getting-started.md`, `docs/development.md`, `docs/deployment.md`, and `docs/troubleshooting.md` carry two each, both Copilot instruction files carry one each), 3 `dev:https` (`README.md`, `docs/development.md`, `.github/copilot-instructions.md`), and 1 nonexistent workflow; `.github/workflows/` contains only `build.yml` and `copilot-setup-steps.yml`; `__tests__/` contains 300 test files against the 87 claimed; `src/features/` has nine modules and `src/lib/` has the Inngest, search, and validations directories the constitution should name.
@@ -30,6 +32,8 @@ Confirmed unchanged: 17 defined scripts with no `db:seed` and no `dev:https`; 16
 ## Phase 1: Setup (Shared Ground Truth)
 
 **Purpose**: Fix the replacement facts once, so four phases of prose corrections do not each invent their own wording. Produces no repository change beyond the correction ledger recorded in the PR description.
+
+<!-- doc-drift-ignore-next-block --> <!-- Historical task record; the bootstrap script existed at the time and has since been removed in favour of Drizzle migrations. -->
 
 - [x] T001 Record the corrected replacement facts in the PR description as the ledger every later task cites: `npm run dev` serves HTTPS with a self-signed certificate and there is no plain-HTTP dev script; `npm run db:bootstrap` (`scripts/apply-idempotent-bootstrap.mjs` plus `scripts/sql/`) is the supported initialization path and must be run explicitly; the only workflows are `.github/workflows/build.yml` and `.github/workflows/copilot-setup-steps.yml`.
 - [x] T002 [P] Enumerate every drift occurrence with `grep -rn "db:seed\|dev:https\|synthetic-uptests" --include="*.md" . --exclude-dir=node_modules` and paste the result into the PR description as the before-state; the same command must return only `specs/014-*` self-references after Phase 4.

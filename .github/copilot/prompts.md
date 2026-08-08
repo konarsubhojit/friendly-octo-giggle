@@ -47,7 +47,7 @@ Create a Drizzle migration to:
 - Generate it with npm run db:generate and review the SQL in drizzle/
 - Ensure backward compatibility
 - Include data migration if needed
-- Refresh scripts/sql/bootstrap-drizzle-initial.sql so db:bootstrap stays current
+- Apply it with npm run db:migrate
 ```
 
 ## Authentication & Authorization

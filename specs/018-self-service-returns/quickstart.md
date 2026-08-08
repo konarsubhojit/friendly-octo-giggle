@@ -55,12 +55,6 @@ npm run db:generate                     # → drizzle/0017_self_service_returns.
 npm run db:migrate
 ```
 
-Then refresh the bootstrap file, which constitution workflow step 6 requires:
-
-```bash
-npm run db:bootstrap                    # verify it still applies cleanly
-```
-
 ### 2. Pure functions (test-first — these carry the coverage number)
 
 | Module                                                     | Responsibility                                           |

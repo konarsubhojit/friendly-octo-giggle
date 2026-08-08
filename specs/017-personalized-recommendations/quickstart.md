@@ -14,9 +14,7 @@ npm run db:generate      # emits drizzle/<next-number>_product_affinity_scores.s
 npm run db:migrate
 ```
 
-Then refresh the bootstrap file so `npm run db:bootstrap` stays current
-(Constitution workflow step 6) and commit the schema edit, the migration, and
-the refreshed bootstrap SQL together.
+Then commit the schema edit and the migration together.
 
 Verify the table exists:
 

@@ -77,18 +77,13 @@ https://your-domain.com/api/auth/callback/google
 ### 4. Set Up Database
 
 ```bash
-# Apply the full current schema idempotently
-npm run db:bootstrap
-
-# Apply any migrations added since the bootstrap file was regenerated
+# Apply the schema
 npm run db:migrate
 ```
 
-`npm run db:bootstrap` is safe on an empty database and on a partially migrated
-one; it records every bundled migration as applied, so `npm run db:migrate`
-becomes a no-op immediately afterwards. It applies schema only — the project
-ships no sample-data seeding, so your database starts empty and you create your
-first products through the admin UI.
+`npm run db:migrate` applies schema only — the project ships no sample-data
+seeding, so your database starts empty and you create your first products
+through the admin UI.
 
 ### 5. Start Development Server
 
@@ -173,7 +168,7 @@ npm run lint             # Run ESLint
 ```bash
 npm run db:generate      # Generate Drizzle migrations
 npm run db:migrate       # Run database migrations
-npm run db:bootstrap     # Idempotent full-schema bootstrap
+npm run db:push          # Push schema directly, without a migration file
 npm run db:studio        # Open database GUI
 ```
 

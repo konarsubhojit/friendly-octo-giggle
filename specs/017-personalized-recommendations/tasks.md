@@ -38,7 +38,7 @@ Next.js App Router monolith. All application code under `src/`; tests mirror the
 
 - [x] T004 Add the `productAffinityScores` table to `src/lib/schema.ts` with columns `id`, `anchorProductId`, `recommendedProductId`, `score`, `support`, `source`, `computedAt`; unique `(anchorProductId, recommendedProductId)`; checks `anchorProductId <> recommendedProductId` and `support >= 1`; indexes `(anchorProductId, score DESC)`, `(recommendedProductId)`, `(computedAt)`; both FKs `ON DELETE CASCADE` per [data-model.md](./data-model.md)
 - [x] T005 Run `npm run db:generate`, review the emitted SQL, and confirm the generated migration file (whatever sequence number `db:generate` assigns — `0016_*` at time of writing, higher if a parallel feature lands first) is purely additive: one CREATE TABLE, three CREATE INDEX, no ALTER on an existing table
-- [x] T006 Apply with `npm run db:migrate` and refresh `scripts/sql/bootstrap-drizzle-initial.sql` to mirror the new migration so `npm run db:bootstrap` stays current
+- [x] T006 Apply with `npm run db:migrate`
 
 ### Cache configuration
 
@@ -180,7 +180,7 @@ Next.js App Router monolith. All application code under `src/`; tests mirror the
 - [ ] T053 Measure LCP with Lighthouse against the production build on `/products/[id]`, `/cart`, and `/shop` — median of five runs per page, compared to a baseline captured before the rails were added. Fail on a regression greater than 100 ms or any crossing of the 2.5 s "good" threshold; if a rail is implicated, move its `Suspense` boundary further below the fold (SC-005)
   - **Deferred**: requires a Lighthouse baseline captured before the rails landed. Structurally mitigated: every rail sits below the fold behind its own `Suspense` boundary and is marked per-request with `connection()`, so `npm run build` confirms all three routes still report Partial Prerender (static shell + streamed rail) rather than becoming fully dynamic.
 - [x] T058 Seed a representative order volume (≥ 5,000 orders across ≥ 500 products inside the 180-day window), invoke `computeProductAffinityFunction`, and record per-step and total wall time. Assert the run completes inside the Inngest step budget with headroom; if it does not, reduce `ANCHOR_BATCH_SIZE` or narrow `AFFINITY_WINDOW_DAYS` and re-measure (SC-006)
-  - **Measured 2026-08-08** against the preview database seeded by `npm run db:seed:preview` (2 000 products, 5 000 orders, 13 959 order items, 3 000 wishlist entries, 1 500 shares) via `npm run recommendations:measure`:
+  - **Measured 2026-08-08** against the preview database seeded by the preview seeding script then in the tree (2 000 products, 5 000 orders, 13 959 order items, 3 000 wishlist entries, 1 500 shares) via the affinity measurement script:
 
     | Phase                    | Wall time              |
     | ------------------------ | ---------------------- |
@@ -194,7 +194,7 @@ Next.js App Router monolith. All application code under `src/`; tests mirror the
     Result: 3 674 pairs across 500 anchors, support min 3 / avg 4.3 / max 15. Completes in ~6.4 s against a 5 000-order window, so the existing bounds hold with a very wide margin and neither `ANCHOR_BATCH_SIZE` nor `AFFINITY_WINDOW_DAYS` needs narrowing. SC-006 satisfied.
 
 - [ ] T054 Execute the [quickstart.md](./quickstart.md) walkthrough end to end, including the privacy checks (no `stock` or `soldCount` field in any response, two users receiving different rails, guest writing nothing) and capture screenshots of the four surfaces for the PR
-  - **Partially unblocked**: the preview database is now seeded (`npm run db:seed:preview`), so the catalog volume this task needs exists and 600 signed-in accounts are available for the two-shopper comparison. Still outstanding: running the walkthrough against a live server and capturing the four screenshots. The privacy invariants it checks are asserted at the service layer (`selection.core.test.ts`) and in `playwright-tests/recommendations.spec.ts`.
+  - **Partially unblocked**: the preview database is now seeded, so the catalog volume this task needs exists and 600 signed-in accounts are available for the two-shopper comparison. Still outstanding: running the walkthrough against a live server and capturing the four screenshots. The privacy invariants it checks are asserted at the service layer (`selection.core.test.ts`) and in `playwright-tests/recommendations.spec.ts`.
 - [x] T055 Run the full pre-PR gate: `npm run lint`, `npx tsc --noEmit -p tsconfig.check.json`, `npm test`, `npm run build`, `npm run docs:check`
 
 ---
